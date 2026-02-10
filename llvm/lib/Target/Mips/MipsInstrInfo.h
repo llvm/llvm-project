@@ -155,7 +155,7 @@ public:
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
       Register DestReg, int FrameIndex, const TargetRegisterClass *RC,
-      Register VReg,
+      Register VReg, unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override {
     loadRegFromStack(MBB, MBBI, DestReg, FrameIndex, RC, 0, Flags);
   }

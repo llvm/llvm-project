@@ -576,7 +576,7 @@ bool DependencyScanningAction::runInvocation(
       createScanCompilerInvocation(*OriginalInvocation, Service);
   auto ModCache = makeInProcessModuleCache(Service.getModuleCacheEntries());
   ScanInstanceStorage.emplace(std::move(ScanInvocation),
-                              std::move(PCHContainerOps), ModCache.get());
+                              std::move(PCHContainerOps), std::move(ModCache));
   CompilerInstance &ScanInstance = *ScanInstanceStorage;
 
   assert(!DiagConsumerFinished && "attempt to reuse finished consumer");
@@ -650,11 +650,11 @@ bool CompilerInstanceWithContext::initialize(
     canonicalizeDefines(OriginalInvocation->getPreprocessorOpts());
 
   // Create the CompilerInstance.
-  IntrusiveRefCntPtr<ModuleCache> ModCache =
+  std::shared_ptr<ModuleCache> ModCache =
       makeInProcessModuleCache(Worker.Service.getModuleCacheEntries());
   CIPtr = std::make_unique<CompilerInstance>(
       createScanCompilerInvocation(*OriginalInvocation, Worker.Service),
-      Worker.PCHContainerOps, ModCache.get());
+      Worker.PCHContainerOps, std::move(ModCache));
   auto &CI = *CIPtr;
 
   initializeScanCompilerInstance(
@@ -685,6 +685,11 @@ bool CompilerInstanceWithContext::computeDependencies(
     DependencyActionController &Controller) {
   assert(CIPtr && "CIPtr must be initialized before calling this method");
   auto &CI = *CIPtr;
+
+  // We need to reset the diagnostics, so that the diagnostics issued
+  // during a previous computeDependencies call do not affect the current call.
+  // If we do not reset, we may inherit fatal errors from a previous call.
+  CI.getDiagnostics().Reset();
 
   // We create this cleanup object because computeDependencies may exit
   // early with errors.

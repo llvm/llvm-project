@@ -165,6 +165,16 @@ struct Reference {
   SmallString<16> DocumentationFileName;
 };
 
+// A Context is a reference that holds a relative path from a certain Info's
+// location.
+struct Context : public Reference {
+  Context(SymbolID USR, StringRef Name, InfoType IT, StringRef QualName,
+          StringRef Path, SmallString<16> DocumentationFileName)
+      : Reference(USR, Name, IT, QualName, Path, DocumentationFileName) {}
+  explicit Context(const Info &I);
+  SmallString<128> RelativePath;
+};
+
 // Holds the children of a record or namespace.
 struct ScopeChildren {
   // Namespaces and Records are references because they will be properly
@@ -356,12 +366,20 @@ struct Info {
   // Unique identifier for the decl described by this Info.
   SymbolID USR = SymbolID();
 
+  // Currently only used for namespaces and records.
+  SymbolID ParentUSR = SymbolID();
+
   // InfoType of this particular Info.
   InfoType IT = InfoType::IT_default;
 
   // Comment description of this decl.
   std::vector<CommentInfo> Description;
+
+  SmallVector<Context, 4> Contexts;
 };
+
+inline Context::Context(const Info &I)
+    : Reference(I.USR, I.Name, I.IT, I.Name, I.Path, I.DocumentationFileName) {}
 
 // Info for namespaces.
 struct NamespaceInfo : public Info {

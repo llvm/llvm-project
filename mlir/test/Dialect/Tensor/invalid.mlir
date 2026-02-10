@@ -100,7 +100,7 @@ func.func @tensor.from_elements_wrong_elements_count() {
 
 func.func @tensor.generate(%m : index)
     -> tensor<?x3x?xf32> {
-  // expected-error @+1 {{must have as many index operands as dynamic extents in the result type}}
+  // expected-error @+1 {{incorrect number of dynamic sizes, has 1, expected 2}}
   %tnsr = tensor.generate %m {
     ^bb0(%i : index, %j : index, %k : index):
       %elem = arith.constant 8.0 : f32
@@ -688,5 +688,31 @@ func.func @test_empty_reassociation(%arg0: tensor<1x?xf32>) -> tensor<?x10xf32> 
   // expected-error@below {{'tensor.collapse_shape' op reassociation indices must not be empty}}
   %0 = tensor.collapse_shape %arg0 [[0, 1], []] : tensor<1x?xf32> into tensor<?x10xf32>
   return %0 : tensor<?x10xf32>
+}
+
+// -----
+
+func.func @collapse_shape_requires_ranked_tensor(%arg0: tensor<*xf32>) {
+  // expected-error@+1 {{custom op 'tensor.collapse_shape' invalid kind of type specified: expected builtin.tensor, but found 'tensor<*xf32>'}}
+  %0 = tensor.collapse_shape %arg0 [[0]] : tensor<*xf32> into tensor<f32>
+  return
+}
+
+// -----
+
+func.func @expand_shape_requires_ranked_tensor(%arg0: tensor<*xf32>) {
+  // expected-error@+1 {{custom op 'tensor.expand_shape' invalid kind of type specified: expected builtin.tensor, but found 'tensor<*xf32>'}}
+  %0 = tensor.expand_shape %arg0 [[0]] output_shape [1] : tensor<*xf32> into tensor<1xf32>
+  return
+}
+
+// -----
+
+
+func.func @no_fold_invalid_collapse() -> tensor<i64> {
+    %c = arith.constant dense<[1, 2, 3]> : tensor<3xi64>
+    // expected-error@below {{'tensor.collapse_shape' op number of elements must be preserved: 3 != 1}}
+    %0 = tensor.collapse_shape %c [] : tensor<3xi64> into tensor<i64>
+    return %0 : tensor<i64>
 }
 

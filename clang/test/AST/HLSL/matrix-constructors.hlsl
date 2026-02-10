@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -ast-dump -o - %s | FileCheck %s
 
+
 typedef float float2x1 __attribute__((matrix_type(2,1)));
 typedef float float2x3 __attribute__((matrix_type(2,3)));
 typedef float float2x2 __attribute__((matrix_type(2,2)));
@@ -232,8 +233,8 @@ void ok() {
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 2
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <IntegralToFloating>
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 4
-// CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 1
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 0
+// CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 1
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <IntegralToFloating>
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 5
 // CHECK-NEXT: MatrixSubscriptExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float' matrixcomponent
@@ -247,8 +248,8 @@ void ok() {
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 2
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <IntegralToFloating>
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 4
-// CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 0
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 1
+// CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 0
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <IntegralToFloating>
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 6
 float2x3 G = float2x3(float2x2(1,2,3,4), 5, 6);  

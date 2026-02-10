@@ -335,7 +335,7 @@ isl_bool isl_vec_is_zero(__isl_keep isl_vec *vec)
 {
 	if (!vec)
 		return isl_bool_error;
-	return isl_bool_ok(isl_seq_first_non_zero(vec->el, vec->size) < 0);
+	return isl_bool_ok(!isl_seq_any_non_zero(vec->el, vec->size));
 }
 
 isl_bool isl_vec_is_equal(__isl_keep isl_vec *vec1, __isl_keep isl_vec *vec2)

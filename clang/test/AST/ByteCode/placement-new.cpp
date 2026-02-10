@@ -522,3 +522,5 @@ constexpr int intDestArray() {
 static_assert(intDestArray() == 0); // both-error {{not an integral constant expression}} \
                                     // both-note {{in call to}}
 
+constexpr void invalidDest() { new (undefinedfunction()) int; } // both-error {{use of undeclared identifier 'undefinedfunction'}}
+static_assert((invalidDest(), true)); // both-error {{not an integral constant expression}}

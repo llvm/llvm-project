@@ -1609,7 +1609,7 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"cmdmsg", DefaultChar, Rank::scalar, Optionality::optional,
                 common::Intent::InOut}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
-    {"exit", {{"status", DefaultInt, Rank::scalar, Optionality::optional}}, {},
+    {"exit", {{"status", AnyInt, Rank::scalar, Optionality::optional}}, {},
         Rank::elemental, IntrinsicClass::impureSubroutine},
     {"free", {{"ptr", Addressable}}, {}},
     {"flush",
@@ -2569,7 +2569,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
           }
         }
         if (context.analyzingPDTComponentKindSelector() && expr &&
-            IsConstantExpr(*expr)) {
+            IsConstantExpr(*expr, &context)) {
           // Don't emit an error about a KIND= actual argument value when
           // processing a kind selector in a PDT component declaration before
           // it is instantianted, so long as it's a constant expression.

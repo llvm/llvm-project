@@ -2,7 +2,7 @@
 
 # Set attribute value if it is unset.
 def set_default(attr, value):
-  if not getattr(config, attr, None):
+  if getattr(config, attr, "") == "":
     setattr(config, attr, value)
 
 # Generic config options for all compiler-rt lit tests.

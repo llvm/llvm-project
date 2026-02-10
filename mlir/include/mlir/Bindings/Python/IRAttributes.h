@@ -13,6 +13,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
@@ -31,13 +32,13 @@ struct nb_buffer_info {
   ssize_t size = 0;
   const char *format = nullptr;
   ssize_t ndim = 0;
-  SmallVector<ssize_t, 4> shape;
-  SmallVector<ssize_t, 4> strides;
+  std::vector<ssize_t> shape;
+  std::vector<ssize_t> strides;
   bool readonly = false;
 
   nb_buffer_info(
       void *ptr, ssize_t itemsize, const char *format, ssize_t ndim,
-      SmallVector<ssize_t, 4> shape_in, SmallVector<ssize_t, 4> strides_in,
+      std::vector<ssize_t> shape_in, std::vector<ssize_t> strides_in,
       bool readonly = false,
       std::unique_ptr<Py_buffer, void (*)(Py_buffer *)> owned_view_in =
           std::unique_ptr<Py_buffer, void (*)(Py_buffer *)>(nullptr, nullptr));
@@ -77,6 +78,7 @@ public:
   using PyConcreteAttribute::PyConcreteAttribute;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirAffineMapAttrGetTypeID;
+  static inline const MlirStringRef name = mlirAffineMapAttrGetName();
 
   static void bindDerived(ClassTy &c);
 };
@@ -89,6 +91,7 @@ public:
   using PyConcreteAttribute::PyConcreteAttribute;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirIntegerSetAttrGetTypeID;
+  static inline const MlirStringRef name = mlirIntegerSetAttrGetName();
 
   static void bindDerived(ClassTy &c);
 };
@@ -291,6 +294,7 @@ public:
   using PyConcreteAttribute::PyConcreteAttribute;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirArrayAttrGetTypeID;
+  static inline const MlirStringRef name = mlirArrayAttrGetName();
 
   class PyArrayAttributeIterator {
   public:
@@ -321,6 +325,7 @@ public:
   using PyConcreteAttribute::PyConcreteAttribute;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirFloatAttrGetTypeID;
+  static inline const MlirStringRef name = mlirFloatAttrGetName();
 
   static void bindDerived(ClassTy &c);
 };
@@ -332,11 +337,12 @@ public:
   static constexpr IsAFunctionTy isaFunction = mlirAttributeIsAInteger;
   static constexpr const char *pyClassName = "IntegerAttr";
   using PyConcreteAttribute::PyConcreteAttribute;
+  static inline const MlirStringRef name = mlirIntegerAttrGetName();
 
   static void bindDerived(ClassTy &c);
 
 private:
-  static int64_t toPyInt(PyIntegerAttribute &self);
+  static nanobind::object toPyInt(PyIntegerAttribute &self);
 };
 
 /// Bool Attribute subclass - BoolAttr.
@@ -356,6 +362,7 @@ public:
   static constexpr IsAFunctionTy isaFunction = mlirAttributeIsASymbolRef;
   static constexpr const char *pyClassName = "SymbolRefAttr";
   using PyConcreteAttribute::PyConcreteAttribute;
+  static inline const MlirStringRef name = mlirSymbolRefAttrGetName();
 
   static PySymbolRefAttribute fromList(const std::vector<std::string> &symbols,
                                        PyMlirContext &context);
@@ -369,6 +376,7 @@ public:
   static constexpr IsAFunctionTy isaFunction = mlirAttributeIsAFlatSymbolRef;
   static constexpr const char *pyClassName = "FlatSymbolRefAttr";
   using PyConcreteAttribute::PyConcreteAttribute;
+  static inline const MlirStringRef name = mlirFlatSymbolRefAttrGetName();
 
   static void bindDerived(ClassTy &c);
 };
@@ -381,6 +389,7 @@ public:
   using PyConcreteAttribute::PyConcreteAttribute;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirOpaqueAttrGetTypeID;
+  static inline const MlirStringRef name = mlirOpaqueAttrGetName();
 
   static void bindDerived(ClassTy &c);
 };
@@ -454,11 +463,11 @@ private:
     Type *data = static_cast<Type *>(
         const_cast<void *>(mlirDenseElementsAttrGetRawData(*this)));
     // Prepare the shape for the buffer_info.
-    SmallVector<intptr_t, 4> shape;
+    std::vector<ssize_t> shape;
     for (intptr_t i = 0; i < rank; ++i)
       shape.push_back(mlirShapedTypeGetDimSize(shapedType, i));
     // Prepare the strides for the buffer_info.
-    SmallVector<intptr_t, 4> strides;
+    std::vector<ssize_t> strides;
     if (mlirDenseElementsAttrIsSplat(*this)) {
       // Splats are special, only the single value is stored.
       strides.assign(rank, 0);
@@ -507,6 +516,8 @@ public:
       mlirAttributeIsADenseResourceElements;
   static constexpr const char *pyClassName = "DenseResourceElementsAttr";
   using PyConcreteAttribute::PyConcreteAttribute;
+  static inline const MlirStringRef name =
+      mlirDenseResourceElementsAttrGetName();
 
   static PyDenseResourceElementsAttribute
   getFromBuffer(const nb_buffer &buffer, const std::string &name,
@@ -524,6 +535,7 @@ public:
   using PyConcreteAttribute::PyConcreteAttribute;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirDictionaryAttrGetTypeID;
+  static inline const MlirStringRef name = mlirDictionaryAttrGetName();
 
   intptr_t dunderLen() const;
 
@@ -555,6 +567,7 @@ public:
   using PyConcreteAttribute::PyConcreteAttribute;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirTypeAttrGetTypeID;
+  static inline const MlirStringRef name = mlirTypeAttrGetName();
 
   static void bindDerived(ClassTy &c);
 };
@@ -568,6 +581,7 @@ public:
   using PyConcreteAttribute::PyConcreteAttribute;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirUnitAttrGetTypeID;
+  static inline const MlirStringRef name = mlirUnitAttrGetName();
 
   static void bindDerived(ClassTy &c);
 };
@@ -581,6 +595,7 @@ public:
   using PyConcreteAttribute::PyConcreteAttribute;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirStridedLayoutAttrGetTypeID;
+  static inline const MlirStringRef name = mlirStridedLayoutAttrGetName();
 
   static void bindDerived(ClassTy &c);
 };

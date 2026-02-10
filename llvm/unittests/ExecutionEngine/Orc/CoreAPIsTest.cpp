@@ -1502,6 +1502,15 @@ TEST_F(CoreAPIsStandardTest, FailAfterPartialResolution) {
   EXPECT_TRUE(QueryHandlerRun) << "Query handler never ran";
 }
 
+TEST_F(CoreAPIsStandardTest, FailDefineDueToDefunctJITDylib) {
+  JITDylibSP FooJD(&ES.createBareJITDylib("FooJD"));
+
+  cantFail(ES.removeJITDylib(*FooJD));
+
+  EXPECT_THAT_ERROR(FooJD->define(absoluteSymbols({{Foo, FooSym}})),
+                    Failed<JITDylibDefunct>());
+}
+
 TEST_F(CoreAPIsStandardTest, FailDefineMaterializingDueToDefunctTracker) {
   // Check that a defunct resource tracker causes defineMaterializing to error
   // immediately.
