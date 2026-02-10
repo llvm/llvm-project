@@ -96,6 +96,61 @@ jobs:
           git submodule status
           git submodule
 
+      - name: Download LLVM, SPIRV and HIPIFY PR's stored in file
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: multiple-pr-build-params
+          path: .
+
+      - name: Source the multiple PR's of params
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          set -a
+          source ./${{ github.run_id }}_PR_params.env
+          set +a
+          echo "LLVM_PR_URL=$LLVM_PR_URL" >> "$GITHUB_ENV"
+          echo "SPIRV_PR_URL=$SPIRV_PR_URL" >> "$GITHUB_ENV"
+          echo "HIPIFY_PR_URL=$HIPIFY_PR_URL" >> "$GITHUB_ENV"
+
+      - name: Update submodule pointers from provided parameter PR values
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          git config --global --add safe.directory "$PWD"
+          # Function to get SHA with git-ls
+          get_pr_sha() {
+             local pr_url="$1"
+             local base_repo_url=$(echo "$pr_url" | sed 's|/pull/.*||')
+             local pr_num=$(echo "$pr_url" | sed 's|.*/pull/||')
+             git ls-remote "${base_repo_url}.git" "refs/pull/${pr_num}/head" | awk '{print $1}'
+          }
+
+          # LLVM PR
+          if [[ -n "$LLVM_PR_URL" ]]; then
+              LLVM_SHA="$(get_pr_sha "$LLVM_PR_URL")"
+              echo "LLVM head SHA: $LLVM_SHA"
+              git update-index --cacheinfo 160000,"$LLVM_SHA","compiler/amd-llvm"
+          fi
+
+          # SPIRV PR
+          if [[ -n "$SPIRV_PR_URL" ]]; then
+              SPIRV_SHA="$(get_pr_sha "$SPIRV_PR_URL")"
+              echo "SPIRV head SHA: $SPIRV_SHA"
+              git update-index --cacheinfo 160000,"$SPIRV_SHA","compiler/spirv-llvm-translator"
+          fi
+
+          # HIPIFY PR
+          if [[ -n "$HIPIFY_PR_URL" ]]; then
+              HIPIFY_SHA="$(get_pr_sha "$HIPIFY_PR_URL")"
+              echo "HIPIFY head SHA: $HIPIFY_SHA"
+              git update-index --cacheinfo 160000,"$HIPIFY_SHA","compiler/hipify"
+          fi
+          git config --global user.email "z1-cciauto@amd.com"
+          git config --global user.name "Z1 cciauto"
+          git commit -m "Update submodule references from PR URLs"
+          git submodule status
+          git submodule
+
       - name: "Map Current Directory to L Drive"
         id: subst
         shell: cmd
@@ -107,8 +162,7 @@ jobs:
           cd L:
           dir L:
           wmic logicaldisk get name
-
-
+          
       - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
           python-version: 3.12
@@ -181,7 +235,7 @@ jobs:
           ref: amd-staging
 
       - name: Apply patches
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
         run: |
              cp -v patches/amd-mainline/llvm-project/*.patch compiler/amd-llvm
              cd compiler/amd-llvm
@@ -193,7 +247,7 @@ jobs:
              cd -
 
       - name: TheRock and llvm SHA
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
         run: |
              git config --global --add safe.directory $PWD
              git log --oneline -1
@@ -204,7 +258,7 @@ jobs:
              cd -
 
       - name: Configure PR Projects
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
         env:
           cmake_preset: ${{ inputs.build_variant_cmake_preset }}
           amdgpu_families: ${{ inputs.amdgpu_families }}
@@ -218,7 +272,7 @@ jobs:
           python3 build_tools/github_actions/build_configure.py
 
       - name: Configure All Projects
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.event_name != 'pull_request' && github.event_name != 'workflow_dispatch'  }}
         env:
           cmake_preset: ${{ inputs.build_variant_cmake_preset }}
           amdgpu_families: ${{ inputs.amdgpu_families }}
