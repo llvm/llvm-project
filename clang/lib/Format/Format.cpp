@@ -3767,8 +3767,8 @@ tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
         Code.substr(Prev, (Pos != StringRef::npos ? Pos : Code.size()) - Prev);
 
     StringRef Trimmed = Line.trim();
-    if (Trimmed.empty()) {
-      // Skip empty lines.
+    if (Trimmed.empty() || PackageRegex.match(Trimmed)) {
+      // Skip empty line and package statement.
     } else if (isClangFormatOff(Trimmed)) {
       FormattingOff = true;
     } else if (isClangFormatOn(Trimmed)) {
