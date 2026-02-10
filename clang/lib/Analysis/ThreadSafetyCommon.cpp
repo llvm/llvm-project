@@ -356,10 +356,10 @@ til::SExpr *SExprBuilder::translate(const Stmt *S, CallingContext *Ctx) {
       llvm_unreachable("Invalid integer type");
   }
   case Stmt::StringLiteralClass:
-    return new (Arena) til::LiteralT(cast<StringLiteral>(S)->getString());
+    return new (Arena) til::LiteralT(cast<StringLiteral>(S)->getBytes());
   case Stmt::ObjCStringLiteralClass:
     return new (Arena)
-        til::LiteralT(cast<ObjCStringLiteral>(S)->getString()->getString());
+        til::LiteralT(cast<ObjCStringLiteral>(S)->getString()->getBytes());
 
   case Stmt::DeclStmtClass:
     return translateDeclStmt(cast<DeclStmt>(S), Ctx);

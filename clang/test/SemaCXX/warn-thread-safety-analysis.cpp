@@ -7770,3 +7770,39 @@ void testLoopConditionalReassignment(Foo *f1, Foo *f2, bool cond) {
   ptr->mu.Unlock(); // expected-warning{{releasing mutex 'ptr->mu' that was not held}}
 } // expected-warning{{mutex 'f1->mu' is still held at the end of function}}
 }  // namespace CapabilityAliases
+
+namespace WideStringLiteral {
+
+class Foo {
+ public:
+  Mutex mu;
+  Mutex* getMu(const wchar_t* s) { return &mu; }
+  Mutex* getMu2(const char16_t* s) { return &mu; }
+  Mutex* getMu3(const char32_t* s) { return &mu; }
+
+  int a GUARDED_BY(getMu(L"abc"));
+  int b GUARDED_BY(getMu2(u"abc"));
+  int c GUARDED_BY(getMu3(U"abc"));
+};
+
+Foo g_foo;
+
+void test() {
+  g_foo.getMu(L"abc")->Lock();
+  g_foo.a = 0;
+  g_foo.getMu(L"abc")->Unlock();
+}
+
+void test2() {
+  g_foo.getMu2(u"abc")->Lock();
+  g_foo.b = 0;
+  g_foo.getMu2(u"abc")->Unlock();
+}
+
+void test3() {
+  g_foo.getMu3(U"abc")->Lock();
+  g_foo.c = 0;
+  g_foo.getMu3(U"abc")->Unlock();
+}
+
+} // namespace WideStringLiteral

@@ -1,4 +1,4 @@
-//===-- Half-precision log2(x) function -----------------------------------===//
+//===-- Shared log10f function ----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/log2f16.h"
-#include "src/__support/math/log2f16.h"
+#ifndef LLVM_LIBC_SHARED_MATH_LOG10F_H
+#define LLVM_LIBC_SHARED_MATH_LOG10F_H
+
+#include "shared/libc_common.h"
+#include "src/__support/math/log10f.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(float16, log2f16, (float16 x)) { return math::log2f16(x); }
+using math::log10f;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_LOG10F_H
