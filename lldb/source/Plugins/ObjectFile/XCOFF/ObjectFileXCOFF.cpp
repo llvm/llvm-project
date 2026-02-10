@@ -167,7 +167,7 @@ bool ObjectFileXCOFF::MagicBytesMatch(DataExtractorSP &extractor_sp,
                                       lldb::addr_t data_offset,
                                       lldb::addr_t data_length) {
   DataExtractorSP magic_extractor_sp =
-      extractor_sp->GetSubsetExtractorSP(data_offset, data_length);
+      extractor_sp->GetSubsetExtractorSP(data_offset);
   // Need to set this as XCOFF is only compatible with Big Endian
   magic_extractor_sp->SetByteOrder(eByteOrderBig);
   lldb::offset_t offset = 0;

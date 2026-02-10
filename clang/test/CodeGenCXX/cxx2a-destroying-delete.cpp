@@ -41,11 +41,11 @@ void glob_delete_A(A *a) { ::delete a; }
 // CHECK: icmp eq ptr %[[a]], null
 // CHECK: br i1
 
-// CHECK-ITANIUM: call void @_ZN1AD1Ev(ptr noundef nonnull align 8 dereferenceable(8) %[[a]])
+// CHECK-ITANIUM: call void @_ZN1AD1Ev(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %[[a]])
 // CHECK-ITANIUM-NEXT: call void @_ZdlPvm(ptr noundef %[[a]], i64 noundef 8)
-// CHECK-MSABI64: call void @"??1A@@QEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(8) %[[a]])
+// CHECK-MSABI64: call void @"??1A@@QEAA@XZ"(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %[[a]])
 // CHECK-MSABI64-NEXT: call void @"??3@YAXPEAX_K@Z"(ptr noundef %[[a]], i64 noundef 8)
-// CHECK-MSABI32: call x86_thiscallcc void @"??1A@@QAE@XZ"(ptr noundef nonnull align 4 dereferenceable(4) %[[a]])
+// CHECK-MSABI32: call x86_thiscallcc void @"??1A@@QAE@XZ"(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %[[a]])
 // CHECK-MSABI32-NEXT: call void @"??3@YAXPAXI@Z"(ptr noundef %[[a]], i32 noundef 4)
 
 struct B {

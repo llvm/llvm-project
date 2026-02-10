@@ -91,21 +91,27 @@ _start:
 # CHECK-ALL-NEXT:      - Name:            __data_end
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           7
-# CHECK-ALL-NEXT:      - Name:            __stack_low
+# CHECK-ALL-NEXT:      - Name:            __rodata_start
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           8
-# CHECK-ALL-NEXT:      - Name:            __stack_high
+# CHECK-ALL-NEXT:      - Name:            __rodata_end
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           9
-# CHECK-ALL-NEXT:      - Name:            __global_base
+# CHECK-ALL-NEXT:      - Name:            __stack_low
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           10
-# CHECK-ALL-NEXT:      - Name:            __heap_base
+# CHECK-ALL-NEXT:      - Name:            __stack_high
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           11
-# CHECK-ALL-NEXT:      - Name:            __heap_end
+# CHECK-ALL-NEXT:      - Name:            __global_base
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           12
+# CHECK-ALL-NEXT:      - Name:            __heap_base
+# CHECK-ALL-NEXT:        Kind:            GLOBAL
+# CHECK-ALL-NEXT:        Index:           13
+# CHECK-ALL-NEXT:      - Name:            __heap_end
+# CHECK-ALL-NEXT:        Kind:            GLOBAL
+# CHECK-ALL-NEXT:        Index:           14
 # CHECK-ALL-NEXT:      - Name:            __memory_base
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           1
@@ -114,7 +120,7 @@ _start:
 # CHECK-ALL-NEXT:        Index:           2
 # CHECK-ALL-NEXT:      - Name:            __wasm_first_page_end
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
-# CHECK-ALL-NEXT:        Index:           13
+# CHECK-ALL-NEXT:        Index:           15
 # CHECK-ALL-NEXT:      - Name:            __tls_base
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           3
