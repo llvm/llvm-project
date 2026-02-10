@@ -25,6 +25,7 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -1125,6 +1126,42 @@ static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
   return true;
 }
 
+/// Compute ConstantRange bounds for \p V and push them as ConditionFact
+/// entries into \p WorkList. Trivial bounds are skipped.
+static void
+addConstantRangeFactsToWorkList(SmallVectorImpl<FactOrCheck> &WorkList,
+                                Value *V, DomTreeNode *DTN) {
+  Type *Ty = V->getType();
+  if (!Ty->isIntegerTy() || Ty->getIntegerBitWidth() > 64)
+    return;
+
+  ConstantRange UCR =
+      computeConstantRange(V, /*ForSigned=*/false, /*UseInstrInfo=*/true);
+  if (!UCR.isFullSet() && !UCR.isEmptySet()) {
+    APInt UMin = UCR.getUnsignedMin();
+    APInt UMax = UCR.getUnsignedMax();
+    if (!UMin.isZero())
+      WorkList.push_back(FactOrCheck::getConditionFact(
+          DTN, CmpInst::ICMP_UGE, V, ConstantInt::get(Ty, UMin)));
+    if (!UMax.isAllOnes())
+      WorkList.push_back(FactOrCheck::getConditionFact(
+          DTN, CmpInst::ICMP_ULE, V, ConstantInt::get(Ty, UMax)));
+  }
+
+  ConstantRange SCR =
+      computeConstantRange(V, /*ForSigned=*/true, /*UseInstrInfo=*/true);
+  if (SCR != UCR && !SCR.isFullSet() && !SCR.isEmptySet()) {
+    APInt SMin = SCR.getSignedMin();
+    APInt SMax = SCR.getSignedMax();
+    if (!SMin.isMinSignedValue())
+      WorkList.push_back(FactOrCheck::getConditionFact(
+          DTN, CmpInst::ICMP_SGE, V, ConstantInt::get(Ty, SMin)));
+    if (!SMax.isMaxSignedValue())
+      WorkList.push_back(FactOrCheck::getConditionFact(
+          DTN, CmpInst::ICMP_SLE, V, ConstantInt::get(Ty, SMax)));
+  }
+}
+
 void State::addInfoFor(BasicBlock &BB) {
   addInfoForInductions(BB);
   auto &DL = BB.getDataLayout();
@@ -1232,6 +1269,9 @@ void State::addInfoFor(BasicBlock &BB) {
           isGuaranteedNotToBePoison(BO))
         WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), BO));
     }
+
+    // Add range facts from computeConstantRange
+    addConstantRangeFactsToWorkList(WorkList, &I, DT.getNode(I.getParent()));
 
     GuaranteedToExecute &= isGuaranteedToTransferExecutionToSuccessor(&I);
   }
@@ -1843,7 +1883,14 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
   std::unique_ptr<Module> ReproducerModule(
       DumpReproducers ? new Module(F.getName(), F.getContext()) : nullptr);
 
-  // First, collect conditions implied by branches and blocks with their
+  // Add range facts for function parameters
+  DomTreeNode *EntryDTN = DT.getNode(&F.getEntryBlock());
+  if (EntryDTN) {
+    for (Argument &Arg : F.args())
+      addConstantRangeFactsToWorkList(S.WorkList, &Arg, EntryDTN);
+  }
+
+  // Collect conditions implied by branches and blocks with their
   // Dominator DFS in and out numbers.
   for (BasicBlock &BB : F) {
     if (!DT.getNode(&BB))
