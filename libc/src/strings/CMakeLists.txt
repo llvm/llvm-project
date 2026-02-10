@@ -3,7 +3,7 @@ function(add_bcmp bcmp_name)
     SRCS ${LIBC_SOURCE_DIR}/src/strings/bcmp.cpp
     HDRS ${LIBC_SOURCE_DIR}/src/strings/bcmp.h
     DEPENDS
-      libc.src.string.memory_utils.memory_utils
+      libc.src.string.memory_utils.inline_bcmp
     ${ARGN}
   )
 endfunction()
