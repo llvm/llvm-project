@@ -102,18 +102,17 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
 static std::optional<std::string>
 getAArch64TargetTuneCPUByTriple(const llvm::Triple &Triple) {
   // Apple Silicon macs default to the latest available target for tuning.
-  if (Triple.isTargetMachineMac() &&
-      Triple.getArch() == llvm::Triple::aarch64) {
+  if (Triple.isTargetMachineMac() && Triple.getArch() == llvm::Triple::aarch64)
     return "apple-m5";
-  }
+
   return std::nullopt;
 }
 
 /// \return the LLVM name of the AArch64 tune CPU we should target.
 /// Returns std::nullopt if no tune CPU should be specified.
 ///
-/// Note: Unlike getAArch64TargetCPU, this function does not resolve
-/// CPU aliases, as it is currently not used for target architecture feature
+/// Note: Unlike getAArch64TargetCPU, this function does not resolve CPU
+/// aliases, as it is currently not used for target architecture feature
 /// collection, but defers it to the backend.
 std::optional<std::string>
 aarch64::getAArch64TargetTuneCPU(const llvm::opt::ArgList &Args,
@@ -287,8 +286,8 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
   else if (success && (A = Args.getLastArg(options::OPT_mcpu_EQ)))
     success = getAArch64MicroArchFeaturesFromMcpu(D, A->getValue(), Args);
   else if (success) {
-    if (auto TuneCPUOpt = getAArch64TargetTuneCPUByTriple(Triple))
-      success = getAArch64MicroArchFeaturesFromMtune(D, *TuneCPUOpt, Args);
+    if (auto TuneCPU = getAArch64TargetTuneCPUByTriple(Triple))
+      success = getAArch64MicroArchFeaturesFromMtune(D, *TuneCPU, Args);
   }
 
   if (!success) {
