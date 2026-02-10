@@ -74,6 +74,13 @@ ThreadProperties &Thread::GetGlobalProperties() {
 #define LLDB_PROPERTIES_thread
 #include "TargetProperties.inc"
 
+void Thread::AppendGlobalPropertiesTo(Debugger &debugger) {
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_thread_properties_def.expected_path,
+      GetGlobalProperties().GetValueProperties(),
+      "Settings specific to threads.", /*is_global_property=*/true);
+}
+
 enum {
 #define LLDB_PROPERTIES_thread
 #include "TargetPropertiesEnum.inc"

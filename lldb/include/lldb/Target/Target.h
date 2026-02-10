@@ -278,6 +278,8 @@ public:
 
   bool GetDebugUtilityExpression() const;
 
+  TargetExperimentalProperties &GetExperimentalProperties();
+
 private:
   std::optional<bool>
   GetExperimentalPropertyValue(size_t prop_idx,

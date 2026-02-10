@@ -1018,6 +1018,8 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   // LLDB will start querying them during construction.
   m_collection_sp->Initialize(g_debugger_properties_def);
   Target::AppendGlobalPropertiesTo(*this);
+  Process::AppendGlobalPropertiesTo(*this);
+  Thread::AppendGlobalPropertiesTo(*this);
   Platform::AppendGlobalPropertiesTo(*this);
   ModuleList::AppendGlobalModuleListPropertiesTo(*this);
   Language::AppendGlobalLanguagePropertiesTo(*this);
