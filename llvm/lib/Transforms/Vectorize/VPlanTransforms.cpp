@@ -3205,7 +3205,7 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
 ///
 /// - Add a VPCurrentIterationPHIRecipe and related recipes to \p Plan and
 ///   replaces all uses except the canonical IV increment of
-///   VPCanonicalIVPHIRecipe with a VPEVLBasedIVPHIRecipe.
+///   VPCanonicalIVPHIRecipe with a VPCurrentIterationPHIRecipe.
 ///   VPCanonicalIVPHIRecipe is used only for loop iterations counting after
 ///   this transformation.
 ///
@@ -3264,7 +3264,7 @@ void VPlanTransforms::addExplicitVectorLength(
   auto *CanIVTy = LoopRegion->getCanonicalIVType();
   VPValue *StartV = CanonicalIVPHI->getStartValue();
 
-  // Create the CurrentIteration recipe in the main loop.
+  // Create the CurrentIteration recipe in the vector loop.
   auto *CurrentIteration =
       new VPCurrentIterationPHIRecipe(StartV, DebugLoc::getUnknown());
   CurrentIteration->insertAfter(CanonicalIVPHI);
@@ -3294,11 +3294,11 @@ void VPlanTransforms::addExplicitVectorLength(
   OpVPEVL = Builder.createScalarZExtOrTrunc(
       OpVPEVL, CanIVTy, I32Ty, CanonicalIVIncrement->getDebugLoc());
 
-  auto *NextIter =
-      Builder.createAdd(OpVPEVL, CurrentIteration,
-                        CanonicalIVIncrement->getDebugLoc(), "index.evl.next",
-                        {CanonicalIVIncrement->hasNoUnsignedWrap(),
-                         CanonicalIVIncrement->hasNoSignedWrap()});
+  auto *NextIter = Builder.createAdd(OpVPEVL, CurrentIteration,
+                                     CanonicalIVIncrement->getDebugLoc(),
+                                     "current.iteration.next",
+                                     {CanonicalIVIncrement->hasNoUnsignedWrap(),
+                                      CanonicalIVIncrement->hasNoSignedWrap()});
   CurrentIteration->addOperand(NextIter);
 
   VPValue *NextAVL =
@@ -3343,7 +3343,7 @@ void VPlanTransforms::convertToVariableLengthStep(VPlan &Plan) {
       VPBuilder(CurrentIteration)
           .createScalarPhi(
               {CurrentIteration->getStartValue(), CurrentIterationIncr},
-              CurrentIteration->getDebugLoc(), "evl.based.iv");
+              CurrentIteration->getDebugLoc(), "current.iteration.iv");
   CurrentIteration->replaceAllUsesWith(ScalarR);
   CurrentIteration->eraseFromParent();
 

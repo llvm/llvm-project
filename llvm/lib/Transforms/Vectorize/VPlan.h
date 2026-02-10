@@ -3758,8 +3758,8 @@ protected:
 
 /// A recipe for generating the phi node tracking the current scalar iteration
 /// index. It starts at the start value of the canonical induction and gets
-/// incremented by the number of scalar iterations processed per vector loop
-/// iteration.
+/// incremented by the number of scalar iterations processed by the vector loop
+/// iteration. The increment does not have to be loop invariant.
 class VPCurrentIterationPHIRecipe : public VPHeaderPHIRecipe {
 public:
   VPCurrentIterationPHIRecipe(VPValue *StartIV, DebugLoc DL)
