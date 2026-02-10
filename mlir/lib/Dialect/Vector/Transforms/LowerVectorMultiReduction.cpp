@@ -511,18 +511,39 @@ struct LowerVectorMultiReductionPass
 
 } // namespace
 
-void mlir::vector::populateVectorMultiReductionLoweringPatterns(
+void mlir::vector::populateVectorMultiReductionTransformationPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
     PatternBenefit benefit) {
-  patterns.add<InnerOuterDimReductionConversion, ReduceMultiDimReductionRank>(
-      patterns.getContext(), options, benefit);
   patterns.add<OneDimMultiReductionToTwoDim>(patterns.getContext(), benefit);
+  patterns.add<InnerOuterDimReductionConversion>(patterns.getContext(), options,
+                                                 benefit);
+}
+
+void mlir::vector::populateVectorMultiReductionFlatteningPatterns(
+    RewritePatternSet &patterns, VectorMultiReductionLowering options,
+    PatternBenefit benefit) {
+  patterns.add<ReduceMultiDimReductionRank>(patterns.getContext(), options,
+                                            benefit);
+}
+
+void mlir::vector::populateVectorMultiReductionUnrollingPatterns(
+    RewritePatternSet &patterns, VectorMultiReductionLowering options,
+    PatternBenefit benefit) {
   if (options == VectorMultiReductionLowering ::InnerReduction)
     patterns.add<TwoDimMultiReductionToReduction>(patterns.getContext(),
                                                   benefit);
   else
     patterns.add<TwoDimMultiReductionToElementWise>(patterns.getContext(),
                                                     benefit);
+}
+
+void mlir::vector::populateVectorMultiReductionLoweringPatterns(
+    RewritePatternSet &patterns, VectorMultiReductionLowering options,
+    PatternBenefit benefit) {
+  populateVectorMultiReductionTransformationPatterns(patterns, options,
+                                                     benefit);
+  populateVectorMultiReductionFlatteningPatterns(patterns, options, benefit);
+  populateVectorMultiReductionUnrollingPatterns(patterns, options, benefit);
 }
 
 std::unique_ptr<Pass> vector::createLowerVectorMultiReductionPass(
