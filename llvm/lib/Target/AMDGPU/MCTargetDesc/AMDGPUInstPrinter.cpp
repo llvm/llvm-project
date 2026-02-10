@@ -1661,6 +1661,19 @@ void AMDGPUInstPrinter::printSendMsg(const MCInst *MI, unsigned OpNo,
   }
 }
 
+void AMDGPUInstPrinter::printWaitEvent(const MCInst *MI, unsigned OpNo,
+                                       const MCSubtargetInfo &STI,
+                                       raw_ostream &O) {
+  using namespace llvm::AMDGPU::WaitEvent;
+  const uint16_t Imm16 = static_cast<uint16_t>(MI->getOperand(OpNo).getImm());
+
+  StringRef EventName = getWaitEventMaskName(Imm16, STI);
+  if (EventName.empty())
+    O << formatHex(static_cast<uint64_t>(Imm16));
+  else
+    O << EventName;
+}
+
 static void printSwizzleBitmask(const uint16_t AndMask,
                                 const uint16_t OrMask,
                                 const uint16_t XorMask,
