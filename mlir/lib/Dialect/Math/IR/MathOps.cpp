@@ -370,8 +370,7 @@ OpFoldResult math::IPowIOp::fold(FoldAdaptor adaptor) {
       [](const APInt &base, const APInt &power) -> std::optional<APInt> {
         unsigned width = base.getBitWidth();
         auto zeroValue = APInt::getZero(width);
-        // i1 folding is ambiguous with signed semantics
-        // Avoid folding.
+        // i1 folding is ambiguous with signed semantics, don't fold.
         if (width == 1)
           return {};
         APInt oneValue{width, 1ULL, /*isSigned=*/true};
