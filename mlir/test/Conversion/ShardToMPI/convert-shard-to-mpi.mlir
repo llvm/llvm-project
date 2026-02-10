@@ -151,9 +151,9 @@ module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 7> } {
   // CHECK-LABEL: func @allgather_tensor_0
   // CHECK-SAME: [[varg0:%.*]]: tensor<3x4xf32>
   func.func @allgather_tensor_0(%arg0 : tensor<3x4xf32>) -> tensor<12x4xf32> {
-    // CHECK: [[vc1_i32:%.*]] = arith.constant 1 : i32
-    // CHECK: [[vc2_i32:%.*]] = arith.constant 2 : i32
-    // CHECK: [[vc4:%.*]] = arith.constant 4 : index
+    // CHECK-DAG: [[vc1_i32:%.*]] = arith.constant 1 : i32
+    // CHECK-DAG: [[vc2_i32:%.*]] = arith.constant 2 : i32
+    // CHECK-DAG: [[vc4:%.*]] = arith.constant 4 : index
     // CHECK: [[v0:%.*]] = bufferization.to_buffer [[varg0]] : tensor<3x4xf32> to memref<3x4xf32>
     // CHECK: [[v1:%.*]] = mpi.comm_world : !mpi.comm
     // CHECK: [[vnewcomm:%.*]] = mpi.comm_split([[v1]], [[vc2_i32]], [[vc1_i32]]) : !mpi.comm
@@ -201,9 +201,9 @@ module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 7> } {
       // CHECK-SAME: [[varg0:%.*]]: memref<3x4xf32>
       // CHECK-SAME: -> memref<3x20xf32>
       %arg0 : memref<3x4xf32>) -> memref<3x20xf32> {
-    // CHECK: [[vc2_i32:%.*]] = arith.constant 2 : i32
-    // CHECK: [[vc1_i32:%.*]] = arith.constant 1 : i32
-    // CHECK: [[vc5:%.*]] = arith.constant 5 : index
+    // CHECK-DAG: [[vc2_i32:%.*]] = arith.constant 2 : i32
+    // CHECK-DAG: [[vc1_i32:%.*]] = arith.constant 1 : i32
+    // CHECK-DAG: [[vc5:%.*]] = arith.constant 5 : index
     // CHECK: [[v0:%.*]] = mpi.comm_world : !mpi.comm
     // CHECK: [[vnewcomm:%.*]] = mpi.comm_split([[v0]], [[vc1_i32]], [[vc2_i32]]) : !mpi.comm
     // CHECK: [[vsize:%.*]] = mpi.comm_size([[vnewcomm]]) : i32
