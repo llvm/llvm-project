@@ -1458,7 +1458,7 @@ private:
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __move_assign_alloc(__tree&, false_type) _NOEXCEPT {}
 
-  template <class _From, class _ValueT = _Tp, __enable_if_t<__is_tree_value_type_v<_ValueT>, int> = 0>
+  template <class _From, class _ValueT = _Tp>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
   __assign_value_sfinae(true_type, __get_node_value_type_t<value_type>& __lhs, _From&& __rhs) {
     __node_allocator& __na = __node_alloc();
@@ -1466,7 +1466,7 @@ private:
     __node_traits::construct(__na, std::addressof(__lhs), __rhs.first, std::move(__rhs.second));
   }
 
-  template <class _From, class _ValueT = _Tp, __enable_if_t<__is_tree_value_type_v<_ValueT>, int> = 0>
+  template <class _From, class _ValueT = _Tp>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
   __assign_value_sfinae(false_type, __get_node_value_type_t<value_type>&, _From&&) {
     // This method body should never be run. It only exists to allow for compilation. See note in __assign_value for
