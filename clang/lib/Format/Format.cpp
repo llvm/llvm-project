@@ -3778,15 +3778,15 @@ tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
       if (HasImport)
         AssociatedCommentLines.push_back(Line);
     } else if (Trimmed.starts_with("/*")) {
-      auto EndPos = Code.find("*/", SearchFrom + 2);
-      if (EndPos != StringRef::npos) {
-        Line = Code.substr(Prev, EndPos + 2 - Prev);
-        Pos = EndPos + 1;
-      }
-      if (!ImportsInBlock.empty())
+      Pos = Code.find("*/", Pos + 2);
+      if (Pos != StringRef::npos)
+        Pos = Code.find('\n', Pos + 2);
+      if (HasImport) {
+        // Extend `Line` for a multiline comment to include all lines the
+        // comment spans.
+        Line = GetLine();
         AssociatedCommentLines.push_back(Line);
-    } else if (PackageRegex.match(Trimmed)) {
-      // Skip package declarations.
+      }
     } else if (ImportRegex.match(Trimmed, &Matches)) {
       if (FormattingOff) {
         // If at least one import line has formatting turned off, turn off
