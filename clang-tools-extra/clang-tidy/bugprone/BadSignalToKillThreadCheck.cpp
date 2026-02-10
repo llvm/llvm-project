@@ -33,14 +33,32 @@ void BadSignalToKillThreadCheck::check(const MatchFinder::MatchResult &Result) {
            KeyValue.first->hasMacroDefinition();
   };
   const auto TryExpandAsInteger =
-      [](Preprocessor::macro_iterator It) -> std::optional<unsigned> {
+      [&Result](Preprocessor::macro_iterator It) -> std::optional<unsigned> {
     if (It == PP->macro_end())
       return std::nullopt;
     const MacroInfo *MI = PP->getMacroInfo(It->first);
     const Token &T = MI->tokens().back();
-    if (!T.isLiteral() || !T.getLiteralData())
+
+    if (!T.isLiteral())
       return std::nullopt;
-    const StringRef ValueStr = StringRef(T.getLiteralData(), T.getLength());
+
+    StringRef ValueStr;
+    if (T.getLiteralData()) {
+      ValueStr = StringRef(T.getLiteralData(), T.getLength());
+    } else {
+      const SourceManager *SM = Result.SourceManager;
+      const SourceLocation Loc = T.getLocation();
+      if (Loc.isInvalid())
+        return std::nullopt;
+      std::optional<StringRef> Buffer =
+          SM->getBufferDataOrNone(SM->getFileID(Loc));
+      if (!Buffer)
+        return std::nullopt;
+      const unsigned Offset = SM->getFileOffset(Loc);
+      if (Offset + T.getLength() > Buffer->size())
+        return std::nullopt;
+      ValueStr = Buffer->substr(Offset, T.getLength());
+    }
 
     llvm::APInt IntValue;
     constexpr unsigned AutoSenseRadix = 0;
