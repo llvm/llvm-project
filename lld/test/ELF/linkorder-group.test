@@ -31,7 +31,6 @@ Sections:
     Type:            SHT_GROUP
     Link:            .symtab
     Info:            foo
-    AddressAlign:    4
     Members:
       - SectionOrType:   GRP_COMDAT
       - SectionOrType:   .bss
