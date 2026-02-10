@@ -63,6 +63,32 @@ Value ComplexStructBuilder::imaginary(OpBuilder &builder, Location loc) {
 
 namespace {
 
+struct ConjOpLowering : public ConvertOpToLLVMPattern<complex::ConjOp> {
+  using ConvertOpToLLVMPattern<complex::ConjOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(complex::ConjOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = op->getLoc();
+
+    ComplexStructBuilder complexStruct(adaptor.getComplex());
+    Value imag = complexStruct.imaginary(rewriter, op.getLoc());
+
+    arith::FastMathFlagsAttr complexFMFAttr = op.getFastMathFlagsAttr();
+    LLVM::FastmathFlagsAttr fmf = LLVM::FastmathFlagsAttr::get(
+        op.getContext(),
+        convertArithFastMathFlagsToLLVM(complexFMFAttr.getValue()));
+
+    Value negImag = rewriter.create<LLVM::FNegOp>(loc, imag, fmf);
+
+    complexStruct.setImaginary(rewriter, loc, negImag);
+
+    rewriter.replaceOp(op, {complexStruct});
+    return success();
+  }
+};
+
+
 struct AbsOpConversion : public ConvertOpToLLVMPattern<complex::AbsOp> {
   using ConvertOpToLLVMPattern<complex::AbsOp>::ConvertOpToLLVMPattern;
 
@@ -334,6 +360,7 @@ void mlir::populateComplexToLLVMConversionPatterns(
   patterns.add<
       AbsOpConversion,
       AddOpConversion,
+      ConjOpLowering,
       ConstantOpLowering,
       CreateOpConversion,
       ImOpConversion,
