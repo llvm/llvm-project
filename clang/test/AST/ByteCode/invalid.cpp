@@ -164,3 +164,9 @@ namespace NamedLoops {
     } while (0);
   }
 }
+
+constexpr int invalidUnaryOrTypeTrait() {
+  return __builtin_vectorelements * 10; // both-error {{indirection requires pointer operand}}
+}
+
+static_assert(invalidUnaryOrTypeTrait() == 11, ""); // both-error {{not an integral constant expression}}
