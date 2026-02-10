@@ -1,14 +1,18 @@
-// RUN: %clang_cc1 -std=c90 -pedantic -Wno-comment -Wno-deprecated-non-prototype -Wimplicit-int -verify=c90 -x c %s
+// RUN: %clang_cc1 -std=c90 -pedantic -Wno-comment -Wno-deprecated-non-prototype -Wimplicit-int -fsyntax-only -verify=c90 -x c %s
 // RUN: cp %s %t
-// RUN: %clang_cc1 -std=c90 -pedantic -Wno-comment -Wno-deprecated-non-prototype -Wimplicit-int -fixit %t
-// RUN: %clang_cc1 -std=c90 -pedantic -Wno-comment -Wno-deprecated-non-prototype -Wimplicit-int -Werror -x c %t
+// RUN: not %clang_cc1 -std=c90 -pedantic -Wno-comment -Wno-deprecated-non-prototype -Wimplicit-int -Werror -fixit %t
+// RUN: %clang_cc1 -std=c90 -pedantic -Wno-comment -Wno-deprecated-non-prototype -Wimplicit-int -fsyntax-only -verify -x c %t
 // RUN: cat %t | FileCheck %s
-// RUN: %clang_cc1 -std=c99 -pedantic -Wno-deprecated-non-prototype -verify=c99 -x c %s
+//
+// RUN: %clang_cc1 -std=c99 -pedantic -Wno-deprecated-non-prototype -fsyntax-only -verify=c99 -x c %s
 // RUN: cp %s %t
 // RUN: not %clang_cc1 -std=c99 -pedantic -Wno-deprecated-non-prototype -fixit %t
-// RUN: %clang_cc1 -std=c99 -pedantic -Wno-deprecated-non-prototype -Werror -x c %t
+// RUN: %clang_cc1 -std=c99 -pedantic -Wno-deprecated-non-prototype -fsyntax-only -verify -x c %t
 // RUN: cat %t | FileCheck %s
-// RUN: %clang_cc1 -std=c23 -pedantic -verify=c23 -x c %s
+//
+// RUN: %clang_cc1 -std=c23 -pedantic -fsyntax-only -verify=c23 -x c %s
+
+// expected-no-diagnostics
 
 // CHECK: int imp0[4],imp1,imp2=5;
 imp0[4],imp1,imp2=5;
