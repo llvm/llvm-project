@@ -2,9 +2,9 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr="+wavefrontsize32" < %s | FileCheck -check-prefixes=GCN,GFX11,SDAG-GFX11 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr="+wavefrontsize32" < %s | FileCheck -check-prefixes=GCN,GFX10,SDAG-GFX10 %s
 
-; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1100 -mattr="+wavefrontsize32" < %s 2>%t | FileCheck -check-prefixes=GCN,GFX11,GISEL-GFX11 %s
+; RUN: llc -global-isel -new-reg-bank-select -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1100 -mattr="+wavefrontsize32" < %s 2>%t | FileCheck -check-prefixes=GCN,GFX11,GISEL-GFX11 %s
 ; RUN: FileCheck --check-prefix=ERR %s < %t
-; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1010 -mattr="+wavefrontsize32" < %s 2>%t | FileCheck -check-prefixes=GCN,GFX10,GISEL-GFX10 %s
+; RUN: llc -global-isel -new-reg-bank-select -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1010 -mattr="+wavefrontsize32" < %s 2>%t | FileCheck -check-prefixes=GCN,GFX10,GISEL-GFX10 %s
 ; RUN: FileCheck --check-prefix=ERR %s < %t
 
 ; Note: GlobalISel abort is disabled so we don't crash on i1 inputs.
@@ -19,1598 +19,848 @@ declare i32 @llvm.amdgcn.icmp.i16(i16, i16, i32) #0
 declare i32 @llvm.amdgcn.icmp.i1(i1, i1, i32) #0
 
 define amdgpu_kernel void @v_icmp_i32_eq(ptr addrspace(1) %out, i32 %src) {
-; SDAG-GFX11-LABEL: v_icmp_i32_eq:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_eq_u32_e64 s2, 0x64, s2
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_i32_eq:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_eq_u32_e64 s2, 0x64, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_i32_eq:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_eq_u32_e64 s2, 0x64, s2
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_i32_eq:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_clause 0x1
-; GISEL-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GISEL-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_eq_u32_e64 s2, 0x64, s2
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_i32_eq:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_clause 0x1
-; GISEL-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GISEL-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_eq_u32_e64 s2, 0x64, s2
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_i32_eq:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_eq_u32_e64 s2, 0x64, s2
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i32(i32 %src, i32 100, i32 32)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_i32(ptr addrspace(1) %out, i32 %src) {
-; SDAG-GFX11-LABEL: v_icmp_i32:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_endpgm
-;
-; SDAG-GFX10-LABEL: v_icmp_i32:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_i32:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    global_store_b32 v0, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_i32:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    global_store_dword v0, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GCN-LABEL: v_icmp_i32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i32(i32 %src, i32 100, i32 30)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_i32_ne(ptr addrspace(1) %out, i32 %src) {
-; SDAG-GFX11-LABEL: v_icmp_i32_ne:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_ne_u32_e64 s2, 0x64, s2
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_i32_ne:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_ne_u32_e64 s2, 0x64, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_i32_ne:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_ne_u32_e64 s2, 0x64, s2
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_i32_ne:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_clause 0x1
-; GISEL-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GISEL-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_ne_u32_e64 s2, 0x64, s2
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_i32_ne:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_clause 0x1
-; GISEL-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GISEL-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_ne_u32_e64 s2, 0x64, s2
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_i32_ne:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_ne_u32_e64 s2, 0x64, s2
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i32(i32 %src, i32 100, i32 33)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_i32_ugt(ptr addrspace(1) %out, i32 %src) {
-; SDAG-GFX11-LABEL: v_icmp_i32_ugt:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_lt_u32_e64 s2, 0x64, s2
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_i32_ugt:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_lt_u32_e64 s2, 0x64, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_i32_ugt:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_lt_u32_e64 s2, 0x64, s2
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_i32_ugt:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_clause 0x1
-; GISEL-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GISEL-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_lt_u32_e64 s2, 0x64, s2
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_i32_ugt:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_clause 0x1
-; GISEL-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GISEL-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_lt_u32_e64 s2, 0x64, s2
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_i32_ugt:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_lt_u32_e64 s2, 0x64, s2
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i32(i32 %src, i32 100, i32 34)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_i32_uge(ptr addrspace(1) %out, i32 %src) {
-; SDAG-GFX11-LABEL: v_icmp_i32_uge:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_le_u32_e64 s2, 0x64, s2
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_i32_uge:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_le_u32_e64 s2, 0x64, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_i32_uge:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_le_u32_e64 s2, 0x64, s2
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_i32_uge:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_clause 0x1
-; GISEL-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GISEL-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_le_u32_e64 s2, 0x64, s2
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_i32_uge:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_clause 0x1
-; GISEL-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GISEL-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_le_u32_e64 s2, 0x64, s2
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_i32_uge:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_le_u32_e64 s2, 0x64, s2
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i32(i32 %src, i32 100, i32 35)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_i32_ult(ptr addrspace(1) %out, i32 %src) {
-; SDAG-GFX11-LABEL: v_icmp_i32_ult:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_gt_u32_e64 s2, 0x64, s2
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_i32_ult:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_gt_u32_e64 s2, 0x64, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_i32_ult:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_gt_u32_e64 s2, 0x64, s2
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_i32_ult:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_clause 0x1
-; GISEL-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GISEL-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_gt_u32_e64 s2, 0x64, s2
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_i32_ult:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_clause 0x1
-; GISEL-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GISEL-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_gt_u32_e64 s2, 0x64, s2
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_i32_ult:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_gt_u32_e64 s2, 0x64, s2
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i32(i32 %src, i32 100, i32 36)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_i32_ule(ptr addrspace(1) %out, i32 %src) {
-; SDAG-GFX11-LABEL: v_icmp_i32_ule:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_ge_u32_e64 s2, 0x64, s2
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_i32_ule:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_ge_u32_e64 s2, 0x64, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_i32_ule:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_ge_u32_e64 s2, 0x64, s2
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_i32_ule:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_clause 0x1
-; GISEL-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GISEL-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_ge_u32_e64 s2, 0x64, s2
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_i32_ule:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_clause 0x1
-; GISEL-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GISEL-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_ge_u32_e64 s2, 0x64, s2
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_i32_ule:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_ge_u32_e64 s2, 0x64, s2
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i32(i32 %src, i32 100, i32 37)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_i32_sgt(ptr addrspace(1) %out, i32 %src) #1 {
-; SDAG-GFX11-LABEL: v_icmp_i32_sgt:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_lt_i32_e64 s2, 0x64, s2
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_i32_sgt:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_lt_i32_e64 s2, 0x64, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_i32_sgt:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_lt_i32_e64 s2, 0x64, s2
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_i32_sgt:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_clause 0x1
-; GISEL-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GISEL-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_lt_i32_e64 s2, 0x64, s2
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_i32_sgt:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_clause 0x1
-; GISEL-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GISEL-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_lt_i32_e64 s2, 0x64, s2
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_i32_sgt:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_lt_i32_e64 s2, 0x64, s2
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i32(i32 %src, i32 100, i32 38)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_i32_sge(ptr addrspace(1) %out, i32 %src) {
-; SDAG-GFX11-LABEL: v_icmp_i32_sge:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_le_i32_e64 s2, 0x64, s2
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_i32_sge:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_le_i32_e64 s2, 0x64, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_i32_sge:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_le_i32_e64 s2, 0x64, s2
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_i32_sge:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_clause 0x1
-; GISEL-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GISEL-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_le_i32_e64 s2, 0x64, s2
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_i32_sge:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_clause 0x1
-; GISEL-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GISEL-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_le_i32_e64 s2, 0x64, s2
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_i32_sge:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_le_i32_e64 s2, 0x64, s2
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i32(i32 %src, i32 100, i32 39)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_i32_slt(ptr addrspace(1) %out, i32 %src) {
-; SDAG-GFX11-LABEL: v_icmp_i32_slt:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_gt_i32_e64 s2, 0x64, s2
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_i32_slt:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_gt_i32_e64 s2, 0x64, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_i32_slt:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_gt_i32_e64 s2, 0x64, s2
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_i32_slt:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_clause 0x1
-; GISEL-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GISEL-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_gt_i32_e64 s2, 0x64, s2
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_i32_slt:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_clause 0x1
-; GISEL-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GISEL-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_gt_i32_e64 s2, 0x64, s2
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_i32_slt:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_gt_i32_e64 s2, 0x64, s2
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i32(i32 %src, i32 100, i32 40)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_i32_sle(ptr addrspace(1) %out, i32 %src) {
-; SDAG-GFX11-LABEL: v_icmp_i32_sle:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_ge_i32_e64 s2, 0x64, s2
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_i32_sle:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_ge_i32_e64 s2, 0x64, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_i32_sle:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_ge_i32_e64 s2, 0x64, s2
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_i32_sle:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_clause 0x1
-; GISEL-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GISEL-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_ge_i32_e64 s2, 0x64, s2
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_i32_sle:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_clause 0x1
-; GISEL-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GISEL-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_ge_i32_e64 s2, 0x64, s2
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_i32_sle:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_ge_i32_e64 s2, 0x64, s2
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i32(i32 %src, i32 100, i32 41)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_i64_eq(ptr addrspace(1) %out, i64 %src) {
-; SDAG-GFX11-LABEL: v_icmp_i64_eq:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_eq_u64_e64 s2, 0x64, s[2:3]
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_i64_eq:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_eq_u64_e64 s2, 0x64, s[2:3]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_i64_eq:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_eq_u64_e64 s2, 0x64, s[2:3]
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_i64_eq:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_eq_u64_e64 s2, 0x64, s[2:3]
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_i64_eq:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_eq_u64_e64 s2, 0x64, s[2:3]
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_i64_eq:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_eq_u64_e64 s2, 0x64, s[2:3]
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i64(i64 %src, i64 100, i32 32)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_i64_ne(ptr addrspace(1) %out, i64 %src) {
-; SDAG-GFX11-LABEL: v_icmp_i64_ne:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_ne_u64_e64 s2, 0x64, s[2:3]
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_i64_ne:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_ne_u64_e64 s2, 0x64, s[2:3]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_i64_ne:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_ne_u64_e64 s2, 0x64, s[2:3]
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_i64_ne:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_ne_u64_e64 s2, 0x64, s[2:3]
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_i64_ne:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_ne_u64_e64 s2, 0x64, s[2:3]
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_i64_ne:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_ne_u64_e64 s2, 0x64, s[2:3]
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i64(i64 %src, i64 100, i32 33)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_u64_ugt(ptr addrspace(1) %out, i64 %src) {
-; SDAG-GFX11-LABEL: v_icmp_u64_ugt:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_lt_u64_e64 s2, 0x64, s[2:3]
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_u64_ugt:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_lt_u64_e64 s2, 0x64, s[2:3]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_u64_ugt:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_lt_u64_e64 s2, 0x64, s[2:3]
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_u64_ugt:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_lt_u64_e64 s2, 0x64, s[2:3]
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_u64_ugt:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_lt_u64_e64 s2, 0x64, s[2:3]
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_u64_ugt:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_lt_u64_e64 s2, 0x64, s[2:3]
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i64(i64 %src, i64 100, i32 34)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_u64_uge(ptr addrspace(1) %out, i64 %src) {
-; SDAG-GFX11-LABEL: v_icmp_u64_uge:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_le_u64_e64 s2, 0x64, s[2:3]
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_u64_uge:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_le_u64_e64 s2, 0x64, s[2:3]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_u64_uge:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_le_u64_e64 s2, 0x64, s[2:3]
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_u64_uge:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_le_u64_e64 s2, 0x64, s[2:3]
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_u64_uge:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_le_u64_e64 s2, 0x64, s[2:3]
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_u64_uge:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_le_u64_e64 s2, 0x64, s[2:3]
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i64(i64 %src, i64 100, i32 35)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_u64_ult(ptr addrspace(1) %out, i64 %src) {
-; SDAG-GFX11-LABEL: v_icmp_u64_ult:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_gt_u64_e64 s2, 0x64, s[2:3]
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_u64_ult:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_gt_u64_e64 s2, 0x64, s[2:3]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_u64_ult:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_gt_u64_e64 s2, 0x64, s[2:3]
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_u64_ult:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_gt_u64_e64 s2, 0x64, s[2:3]
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_u64_ult:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_gt_u64_e64 s2, 0x64, s[2:3]
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_u64_ult:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_gt_u64_e64 s2, 0x64, s[2:3]
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i64(i64 %src, i64 100, i32 36)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_u64_ule(ptr addrspace(1) %out, i64 %src) {
-; SDAG-GFX11-LABEL: v_icmp_u64_ule:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_ge_u64_e64 s2, 0x64, s[2:3]
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_u64_ule:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_ge_u64_e64 s2, 0x64, s[2:3]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_u64_ule:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_ge_u64_e64 s2, 0x64, s[2:3]
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_u64_ule:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_ge_u64_e64 s2, 0x64, s[2:3]
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_u64_ule:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_ge_u64_e64 s2, 0x64, s[2:3]
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_u64_ule:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_ge_u64_e64 s2, 0x64, s[2:3]
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i64(i64 %src, i64 100, i32 37)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_i64_sgt(ptr addrspace(1) %out, i64 %src) {
-; SDAG-GFX11-LABEL: v_icmp_i64_sgt:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_lt_i64_e64 s2, 0x64, s[2:3]
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_i64_sgt:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_lt_i64_e64 s2, 0x64, s[2:3]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_i64_sgt:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_lt_i64_e64 s2, 0x64, s[2:3]
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_i64_sgt:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_lt_i64_e64 s2, 0x64, s[2:3]
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_i64_sgt:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_lt_i64_e64 s2, 0x64, s[2:3]
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_i64_sgt:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_lt_i64_e64 s2, 0x64, s[2:3]
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i64(i64 %src, i64 100, i32 38)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_i64_sge(ptr addrspace(1) %out, i64 %src) {
-; SDAG-GFX11-LABEL: v_icmp_i64_sge:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_le_i64_e64 s2, 0x64, s[2:3]
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_i64_sge:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_le_i64_e64 s2, 0x64, s[2:3]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_i64_sge:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_le_i64_e64 s2, 0x64, s[2:3]
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_i64_sge:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_le_i64_e64 s2, 0x64, s[2:3]
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_i64_sge:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_le_i64_e64 s2, 0x64, s[2:3]
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_i64_sge:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_le_i64_e64 s2, 0x64, s[2:3]
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i64(i64 %src, i64 100, i32 39)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_i64_slt(ptr addrspace(1) %out, i64 %src) {
-; SDAG-GFX11-LABEL: v_icmp_i64_slt:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_gt_i64_e64 s2, 0x64, s[2:3]
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_i64_slt:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_gt_i64_e64 s2, 0x64, s[2:3]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_i64_slt:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_gt_i64_e64 s2, 0x64, s[2:3]
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_i64_slt:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_gt_i64_e64 s2, 0x64, s[2:3]
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_i64_slt:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_gt_i64_e64 s2, 0x64, s[2:3]
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_i64_slt:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_gt_i64_e64 s2, 0x64, s[2:3]
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i64(i64 %src, i64 100, i32 40)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_i64_sle(ptr addrspace(1) %out, i64 %src) {
-; SDAG-GFX11-LABEL: v_icmp_i64_sle:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_ge_i64_e64 s2, 0x64, s[2:3]
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_i64_sle:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_ge_i64_e64 s2, 0x64, s[2:3]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_i64_sle:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_ge_i64_e64 s2, 0x64, s[2:3]
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_i64_sle:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_ge_i64_e64 s2, 0x64, s[2:3]
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_i64_sle:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_ge_i64_e64 s2, 0x64, s[2:3]
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_i64_sle:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_ge_i64_e64 s2, 0x64, s[2:3]
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i64(i64 %src, i64 100, i32 41)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_i16_eq(ptr addrspace(1) %out, i16 %src) {
-; SDAG-GFX11-LABEL: v_icmp_i16_eq:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_eq_u16_e64 s2, 0x64, s2
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_i16_eq:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_eq_u16_e64 s2, 0x64, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_i16_eq:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_eq_u16_e64 s2, 0x64, s2
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_i16_eq:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_clause 0x1
-; GISEL-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GISEL-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_eq_u16_e64 s2, 0x64, s2
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_i16_eq:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_clause 0x1
-; GISEL-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GISEL-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_eq_u16_e64 s2, 0x64, s2
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_i16_eq:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_eq_u16_e64 s2, 0x64, s2
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i16(i16 %src, i16 100, i32 32)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_i16(ptr addrspace(1) %out, i16 %src) {
-; SDAG-GFX11-LABEL: v_icmp_i16:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_endpgm
-;
-; SDAG-GFX10-LABEL: v_icmp_i16:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_i16:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    global_store_b32 v0, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_i16:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    global_store_dword v0, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GCN-LABEL: v_icmp_i16:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i16(i16 %src, i16 100, i32 30)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_i16_ne(ptr addrspace(1) %out, i16 %src) {
-; SDAG-GFX11-LABEL: v_icmp_i16_ne:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_ne_u16_e64 s2, 0x64, s2
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_i16_ne:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_ne_u16_e64 s2, 0x64, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_i16_ne:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_ne_u16_e64 s2, 0x64, s2
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_i16_ne:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_clause 0x1
-; GISEL-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GISEL-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_ne_u16_e64 s2, 0x64, s2
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_i16_ne:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_clause 0x1
-; GISEL-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GISEL-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_ne_u16_e64 s2, 0x64, s2
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_i16_ne:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_ne_u16_e64 s2, 0x64, s2
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i16(i16 %src, i16 100, i32 33)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_i16_ugt(ptr addrspace(1) %out, i16 %src) {
-; SDAG-GFX11-LABEL: v_icmp_i16_ugt:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_lt_u16_e64 s2, 0x64, s2
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_i16_ugt:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_lt_u16_e64 s2, 0x64, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_i16_ugt:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_lt_u16_e64 s2, 0x64, s2
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_i16_ugt:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_clause 0x1
-; GISEL-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GISEL-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_lt_u16_e64 s2, 0x64, s2
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_i16_ugt:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_clause 0x1
-; GISEL-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GISEL-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_lt_u16_e64 s2, 0x64, s2
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_i16_ugt:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_lt_u16_e64 s2, 0x64, s2
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i16(i16 %src, i16 100, i32 34)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_i16_uge(ptr addrspace(1) %out, i16 %src) {
-; SDAG-GFX11-LABEL: v_icmp_i16_uge:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_le_u16_e64 s2, 0x64, s2
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_i16_uge:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_le_u16_e64 s2, 0x64, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_i16_uge:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_le_u16_e64 s2, 0x64, s2
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_i16_uge:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_clause 0x1
-; GISEL-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GISEL-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_le_u16_e64 s2, 0x64, s2
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_i16_uge:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_clause 0x1
-; GISEL-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GISEL-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_le_u16_e64 s2, 0x64, s2
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_i16_uge:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_le_u16_e64 s2, 0x64, s2
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i16(i16 %src, i16 100, i32 35)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_i16_ult(ptr addrspace(1) %out, i16 %src) {
-; SDAG-GFX11-LABEL: v_icmp_i16_ult:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_gt_u16_e64 s2, 0x64, s2
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_i16_ult:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_gt_u16_e64 s2, 0x64, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_i16_ult:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_gt_u16_e64 s2, 0x64, s2
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_i16_ult:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_clause 0x1
-; GISEL-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GISEL-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_gt_u16_e64 s2, 0x64, s2
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_i16_ult:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_clause 0x1
-; GISEL-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GISEL-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_gt_u16_e64 s2, 0x64, s2
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_i16_ult:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_gt_u16_e64 s2, 0x64, s2
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i16(i16 %src, i16 100, i32 36)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_i16_ule(ptr addrspace(1) %out, i16 %src) {
-; SDAG-GFX11-LABEL: v_icmp_i16_ule:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_ge_u16_e64 s2, 0x64, s2
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_i16_ule:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_ge_u16_e64 s2, 0x64, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_i16_ule:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_ge_u16_e64 s2, 0x64, s2
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_i16_ule:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_clause 0x1
-; GISEL-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GISEL-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_ge_u16_e64 s2, 0x64, s2
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_i16_ule:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_clause 0x1
-; GISEL-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GISEL-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_ge_u16_e64 s2, 0x64, s2
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_i16_ule:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_ge_u16_e64 s2, 0x64, s2
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i16(i16 %src, i16 100, i32 37)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_i16_sgt(ptr addrspace(1) %out, i16 %src) #1 {
-; SDAG-GFX11-LABEL: v_icmp_i16_sgt:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_lt_i16_e64 s2, 0x64, s2
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_i16_sgt:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_lt_i16_e64 s2, 0x64, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_i16_sgt:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_lt_i16_e64 s2, 0x64, s2
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_i16_sgt:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_clause 0x1
-; GISEL-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GISEL-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_lt_i16_e64 s2, 0x64, s2
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_i16_sgt:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_clause 0x1
-; GISEL-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GISEL-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_lt_i16_e64 s2, 0x64, s2
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_i16_sgt:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_lt_i16_e64 s2, 0x64, s2
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i16(i16 %src, i16 100, i32 38)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_i16_sge(ptr addrspace(1) %out, i16 %src) {
-; SDAG-GFX11-LABEL: v_icmp_i16_sge:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_le_i16_e64 s2, 0x64, s2
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_i16_sge:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_le_i16_e64 s2, 0x64, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_i16_sge:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_le_i16_e64 s2, 0x64, s2
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_i16_sge:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_clause 0x1
-; GISEL-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GISEL-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_le_i16_e64 s2, 0x64, s2
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_i16_sge:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_clause 0x1
-; GISEL-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GISEL-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_le_i16_e64 s2, 0x64, s2
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_i16_sge:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_le_i16_e64 s2, 0x64, s2
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i16(i16 %src, i16 100, i32 39)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_i16_slt(ptr addrspace(1) %out, i16 %src) {
-; SDAG-GFX11-LABEL: v_icmp_i16_slt:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_gt_i16_e64 s2, 0x64, s2
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_i16_slt:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_gt_i16_e64 s2, 0x64, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_i16_slt:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_gt_i16_e64 s2, 0x64, s2
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_i16_slt:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_clause 0x1
-; GISEL-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GISEL-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_gt_i16_e64 s2, 0x64, s2
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_i16_slt:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_clause 0x1
-; GISEL-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GISEL-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_gt_i16_e64 s2, 0x64, s2
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_i16_slt:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_gt_i16_e64 s2, 0x64, s2
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i16(i16 %src, i16 100, i32 40)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @v_icmp_i16_sle(ptr addrspace(1) %out, i16 %src) {
-; SDAG-GFX11-LABEL: v_icmp_i16_sle:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_cmp_ge_i16_e64 s2, 0x64, s2
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-GFX11-NEXT:    s_endpgm
+; GFX11-LABEL: v_icmp_i16_sle:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_ge_i16_e64 s2, 0x64, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_endpgm
 ;
-; SDAG-GFX10-LABEL: v_icmp_i16_sle:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX10-NEXT:    v_cmp_ge_i16_e64 s2, 0x64, s2
-; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: v_icmp_i16_sle:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_clause 0x1
-; GISEL-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GISEL-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_cmp_ge_i16_e64 s2, 0x64, s2
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: v_icmp_i16_sle:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    s_clause 0x1
-; GISEL-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GISEL-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX10-NEXT:    v_cmp_ge_i16_e64 s2, 0x64, s2
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
-; GISEL-GFX10-NEXT:    s_endpgm
+; GFX10-LABEL: v_icmp_i16_sle:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_ge_i16_e64 s2, 0x64, s2
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i16(i16 %src, i16 100, i32 41)
   store i32 %result, ptr addrspace(1) %out
   ret void
@@ -1653,23 +903,9 @@ define amdgpu_kernel void @v_icmp_i1_ne0(ptr addrspace(1) %out, i32 %a, i32 %b) 
 }
 
 define amdgpu_ps void @test_intr_icmp_i32_invalid_cc(ptr addrspace(1) %out, i32 %src) {
-; SDAG-GFX11-LABEL: test_intr_icmp_i32_invalid_cc:
-; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_endpgm
-;
-; SDAG-GFX10-LABEL: test_intr_icmp_i32_invalid_cc:
-; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_endpgm
-;
-; GISEL-GFX11-LABEL: test_intr_icmp_i32_invalid_cc:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    global_store_b32 v[0:1], v0, off
-; GISEL-GFX11-NEXT:    s_endpgm
-;
-; GISEL-GFX10-LABEL: test_intr_icmp_i32_invalid_cc:
-; GISEL-GFX10:       ; %bb.0:
-; GISEL-GFX10-NEXT:    global_store_dword v[0:1], v0, off
-; GISEL-GFX10-NEXT:    s_endpgm
+; GCN-LABEL: test_intr_icmp_i32_invalid_cc:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i32(i32 %src, i32 100, i32 9999)
   store i32 %result, ptr addrspace(1) %out
   ret void
@@ -1677,4 +913,7 @@ define amdgpu_ps void @test_intr_icmp_i32_invalid_cc(ptr addrspace(1) %out, i32 
 
 attributes #0 = { nounwind readnone convergent }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; GCN: {{.*}}
+; GISEL-GFX10: {{.*}}
+; GISEL-GFX11: {{.*}}
+; SDAG-GFX10: {{.*}}
+; SDAG-GFX11: {{.*}}
