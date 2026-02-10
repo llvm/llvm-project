@@ -47,7 +47,6 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
-#include <condition_variable>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -463,7 +462,7 @@ static llvm::Error serveConnection(
       DAP_LOG(client_log, "client connected");
 
       MainLoop loop;
-      Transport transport(client_log, io, io);
+      Transport transport(client_log, loop, io, io);
       DAP dap(client_log, default_repl_mode, pre_init_commands, no_lldbinit,
               client_name, transport, loop);
 
@@ -738,7 +737,7 @@ int main(int argc, char *argv[]) {
   constexpr llvm::StringLiteral client_name = "stdio";
   MainLoop loop;
   Log client_log = log.WithPrefix("(stdio)");
-  Transport transport(client_log, input, output);
+  Transport transport(client_log, loop, input, output);
   DAP dap(client_log, default_repl_mode, pre_init_commands, no_lldbinit,
           client_name, transport, loop);
 
