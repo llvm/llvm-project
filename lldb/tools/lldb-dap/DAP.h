@@ -150,10 +150,9 @@ struct DAP final : public DAPTransport::MessageHandler {
 
   /// This is used to allow request_evaluate to handle empty expressions
   /// (ie the user pressed 'return' and expects the previous expression to
-  /// repeat). If the previous expression was a command, this string will be
-  /// empty; if the previous expression was a variable expression, this string
-  /// will contain that expression.
-  std::string last_nonempty_var_expression;
+  /// repeat). If the previous expression was a command, it will be empty.
+  /// Else it will contain the last valid variable expression.
+  std::string last_valid_variable_expression;
 
   /// The set of features supported by the connected client.
   llvm::DenseSet<ClientFeature> clientFeatures;
@@ -255,6 +254,8 @@ struct DAP final : public DAPTransport::MessageHandler {
   lldb::SBFrame GetLLDBFrame(const llvm::json::Object &arguments);
 
   void PopulateExceptionBreakpoints();
+
+  bool ProcessIsNotStopped();
 
   /// Attempt to determine if an expression is a variable expression or
   /// lldb command using a heuristic based on the first term of the

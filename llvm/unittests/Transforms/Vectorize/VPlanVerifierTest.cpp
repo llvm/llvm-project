@@ -113,7 +113,7 @@ TEST_F(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
   auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
-  auto *Blend = new VPBlendRecipe(Phi, {DefI, Plan.getTrue()}, {});
+  auto *Blend = new VPBlendRecipe(Phi, {DefI, Plan.getTrue()}, {}, {});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
@@ -166,7 +166,7 @@ TEST_F(VPVerifierTest, VPPhiIncomingValueDoesntDominateIncomingBlock) {
   VPInstruction *DefI =
       new VPInstruction(Instruction::Add, {Zero, Zero},
                         VPIRFlags::getDefaultFlags(Instruction::Add));
-  VPPhi *Phi = new VPPhi({DefI}, {});
+  VPPhi *Phi = new VPPhi({DefI}, {}, {});
   VPBB2->appendRecipe(Phi);
   VPBB2->appendRecipe(DefI);
   auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
