@@ -714,14 +714,10 @@ mlir_c_api_cc_library(
     name = "CAPIMath",
     srcs = ["lib/CAPI/Dialect/Math.cpp"],
     hdrs = ["include/mlir-c/Dialect/Math.h"],
-    capi_deps = [
-        ":CAPIIR",
-    ],
+    capi_deps = [":CAPIIR"],
+    header_deps = [":MathPassIncGen"],
     includes = ["include"],
-    deps = [
-        ":MathDialect",
-        ":MathPassIncGen",
-    ],
+    deps = [":MathDialect"],
 )
 
 mlir_c_api_cc_library(
@@ -856,14 +852,10 @@ mlir_c_api_cc_library(
     name = "CAPISCF",
     srcs = ["lib/CAPI/Dialect/SCF.cpp"],
     hdrs = ["include/mlir-c/Dialect/SCF.h"],
-    capi_deps = [
-        ":CAPIIR",
-    ],
+    capi_deps = [":CAPIIR"],
+    header_deps = [":SCFPassIncGen"],
     includes = ["include"],
-    deps = [
-        ":SCFDialect",
-        ":SCFPassIncGen",
-    ],
+    deps = [":SCFDialect"],
 )
 
 mlir_c_api_cc_library(
@@ -1430,7 +1422,6 @@ py_binary(
     name = "stubgen_runner",
     srcs = ["stubgen_runner.py"],
     data = ["@nanobind//:src/stubgen.py"],
-    visibility = ["//visibility:private"],
     deps = ["@rules_python//python/runfiles"],
 )
 
