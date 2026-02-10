@@ -11,9 +11,7 @@
 #include "mlir/Bindings/Python/IRTypes.h"
 // clang-format on
 
-#include <iterator>
 #include <optional>
-#include <type_traits>
 #include <vector>
 
 #include "mlir-c/BuiltinAttributes.h"
@@ -24,23 +22,6 @@
 namespace nb = nanobind;
 using namespace mlir;
 using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
-
-namespace {
-// Maps each element of a range through a function and returns the results in a
-// std::vector.
-template <typename Range, typename Fn>
-auto mapToVector(const Range &range, Fn fn) {
-  using OutT = std::decay_t<decltype(fn(*std::begin(range)))>;
-  std::vector<OutT> out;
-  out.reserve(std::distance(std::begin(range), std::end(range)));
-
-  for (const auto &x : range)
-    out.push_back(fn(x));
-
-  return out;
-}
-
-} // namespace
 
 namespace mlir {
 namespace python {
@@ -497,10 +478,11 @@ PyVectorType::getChecked(std::vector<int64_t> shape, PyType &elementType,
     if (scalable->size() != shape.size())
       throw nb::value_error("Expected len(scalable) == len(shape).");
 
-    std::vector<char> scalableDimFlags =
-        mapToVector(*scalable, [](const nb::handle &h) {
-          return static_cast<char>(nb::cast<bool>(h));
-        });
+    std::vector<char> scalableDimFlags;
+    scalableDimFlags.reserve(scalable->size());
+    for (const nb::handle &h : *scalable) {
+      scalableDimFlags.push_back(nb::cast<bool>(h) ? 1 : 0);
+    }
     type = mlirVectorTypeGetScalableChecked(
         loc, shape.size(), shape.data(),
         reinterpret_cast<const bool *>(scalableDimFlags.data()), elementType);
@@ -538,10 +520,11 @@ PyVectorType PyVectorType::get(std::vector<int64_t> shape, PyType &elementType,
     if (scalable->size() != shape.size())
       throw nb::value_error("Expected len(scalable) == len(shape).");
 
-    std::vector<char> scalableDimFlags =
-        mapToVector(*scalable, [](const nb::handle &h) {
-          return static_cast<char>(nb::cast<bool>(h));
-        });
+    std::vector<char> scalableDimFlags;
+    scalableDimFlags.reserve(scalable->size());
+    for (const nb::handle &h : *scalable) {
+      scalableDimFlags.push_back(nb::cast<bool>(h) ? 1 : 0);
+    }
     type = mlirVectorTypeGetScalable(
         shape.size(), shape.data(),
         reinterpret_cast<const bool *>(scalableDimFlags.data()), elementType);
