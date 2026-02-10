@@ -64,7 +64,7 @@ define i32 @cls64(i64 %t) {
 ; CHECKV5-LABEL: cls64:
 ; CHECKV5:       @ %bb.0:
 ; CHECKV5-NEXT:    cmp r1, #0
-; CHECKV5-NEXT:    mvnne r0, r0
+; CHECKV5-NEXT:    mvnmi r0, r0
 ; CHECKV5-NEXT:    clz r2, r0
 ; CHECKV5-NEXT:    eor r0, r1, r1, asr #31
 ; CHECKV5-NEXT:    mov r1, #1

@@ -9593,7 +9593,7 @@ SDValue TargetLowering::expandCTLS(SDNode *Node, SelectionDAG &DAG) const {
   SDValue Xor = DAG.getNode(ISD::XOR, dl, VT, Op, SignBit);
   SDValue Shl = DAG.getNode(ISD::SHL, dl, VT, Xor, OneShift);
   SDValue Or = DAG.getNode(ISD::OR, dl, VT, Shl, One);
-  return DAG.getNode(ISD::CTLZ, dl, VT, Or);
+  return DAG.getNode(ISD::CTLZ_ZERO_UNDEF, dl, VT, Or);
 }
 
 SDValue TargetLowering::expandVPCTLZ(SDNode *Node, SelectionDAG &DAG) const {
