@@ -732,9 +732,10 @@ public:
   ///
   /// Note that this function will never return a nullptr. It will also never
   /// manipulate the \p Offset in a way that would not match the difference
-  /// between the underlying value and the returned one. Thus, if no constant
-  /// offset was found, the returned value is the underlying one and \p Offset
-  /// is unchanged.
+  /// between the underlying value and the returned one. Thus, if a variable
+  /// offset is encountered during traversal, the returned value is the first
+  /// traversed Value that introduces a non-constant offset and \p Offset is the
+  /// accumulated constant offset up to that point.
   LLVM_ABI const Value *stripAndAccumulateConstantOffsets(
       const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
       bool AllowInvariantGroup = false,

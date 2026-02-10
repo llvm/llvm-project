@@ -88,5 +88,5 @@ for benchmark in spec_benchmarks:
 
     # If there were no errors, parse the SPEC results and the `time` output into LNT-compatible format and print them.
     print(f'RUN: %{{libcxx-dir}}/utils/parse-spec-results %{{temp}}/result/*.train.csv --output-format=lnt > %{{temp}}/results.lnt')
-    print(f'RUN: %{{libcxx-dir}}/utils/parse-time-output %{{temp}}/time.txt --benchmark {benchmark} --extract instructions max_rss cycles peak_memory >> %{{temp}}/results.lnt')
+    print(f'RUN: %{{libcxx-dir}}/utils/parse-time-output %{{temp}}/time.txt --benchmark {benchmark.replace(".", "_")} --extract instructions max_rss cycles peak_memory >> %{{temp}}/results.lnt')
     print(f'RUN: cat %{{temp}}/results.lnt')

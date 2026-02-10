@@ -52,6 +52,11 @@ static const MachineMemOperand::Flags MOLastUse =
 static const MachineMemOperand::Flags MOCooperative =
     MachineMemOperand::MOTargetFlag3;
 
+/// Mark the MMO of accesses to memory locations that are
+/// never written to by other threads.
+static const MachineMemOperand::Flags MOThreadPrivate =
+    MachineMemOperand::MOTargetFlag4;
+
 /// Utility to store machine instructions worklist.
 struct SIInstrWorklist {
   SIInstrWorklist() = default;
@@ -1673,11 +1678,7 @@ public:
   InstructionUniformity
   getGenericInstructionUniformity(const MachineInstr &MI) const;
 
-  const MIRFormatter *getMIRFormatter() const override {
-    if (!Formatter)
-      Formatter = std::make_unique<AMDGPUMIRFormatter>();
-    return Formatter.get();
-  }
+  const MIRFormatter *getMIRFormatter() const override;
 
   static unsigned getDSShaderTypeValue(const MachineFunction &MF);
 
