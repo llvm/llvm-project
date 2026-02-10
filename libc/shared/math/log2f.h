@@ -1,4 +1,4 @@
-//===-- Single-precision log2(x) function ---------------------------------===//
+//===-- Shared log2f function -----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/log2f.h"
+#ifndef LLVM_LIBC_SHARED_MATH_LOG2F_H
+#define LLVM_LIBC_SHARED_MATH_LOG2F_H
+
+#include "shared/libc_common.h"
 #include "src/__support/math/log2f.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(float, log2f, (float x)) { return math::log2f(x); }
+using math::log2f;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_LOG2F_H
