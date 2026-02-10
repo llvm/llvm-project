@@ -110,10 +110,10 @@ void populateVectorMultiReductionUnrollingPatterns(
 /// * populateVectorMultiReductionTransformationPatterns
 /// * populateVectorMultiReductionFlatteningPatterns
 /// * populateVectorMultiReductionUnrollingPatterns
-LLVM_DEPRECATED(
-    "Use populateVectorMultiReduction{Transformation,Flattening,Unrolling} "
-    "instead.",
-    "populateVectorMultiReductionLoweringPatterns")
+///
+/// This is just a convenience wrapper that we use in testing and is effectively
+/// deprecated.
+/// TODO: Delete.
 void populateVectorMultiReductionLoweringPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
     PatternBenefit benefit = 1);
