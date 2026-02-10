@@ -5678,38 +5678,41 @@ static bool transformToPartialReduction(const VPPartialReductionChain &Chain,
     ExitValue->replaceAllUsesWith(PartialRed);
   WidenRecipe->replaceAllUsesWith(PartialRed);
 
-  if (IsLastInChain) {
-    // Scale the PHI and ReductionStartVector by the VFScaleFactor
-    assert(RdxPhi->getVFScaleFactor() == 1 && "scale factor must not be set");
-    RdxPhi->setVFScaleFactor(ScaleFactor);
+  // We only need to update the PHI node once, which is when we find the
+  // last reduction in the chain.
+  if (!IsLastInChain)
+    return true;
 
-    auto *StartInst = cast<VPInstruction>(RdxPhi->getStartValue());
-    assert(StartInst->getOpcode() == VPInstruction::ReductionStartVector);
-    auto *NewScaleFactor = Plan.getConstantInt(32, ScaleFactor);
-    StartInst->setOperand(2, NewScaleFactor);
+  // Scale the PHI and ReductionStartVector by the VFScaleFactor
+  assert(RdxPhi->getVFScaleFactor() == 1 && "scale factor must not be set");
+  RdxPhi->setVFScaleFactor(ScaleFactor);
 
-    // If this is the last value in a sub-reduction chain, then update the PHI
-    // node to start at `0` and update the reduction-result to subtract from
-    // the PHI's start value.
-    if (RK == RecurKind::Sub) {
-      // Update start value of PHI node.
-      VPValue *OldStartValue = StartInst->getOperand(0);
-      StartInst->setOperand(0, StartInst->getOperand(1));
+  auto *StartInst = cast<VPInstruction>(RdxPhi->getStartValue());
+  assert(StartInst->getOpcode() == VPInstruction::ReductionStartVector);
+  auto *NewScaleFactor = Plan.getConstantInt(32, ScaleFactor);
+  StartInst->setOperand(2, NewScaleFactor);
 
-      // Replace reduction_result by 'sub (startval, reductionresult)'.
-      VPInstruction *RdxResult = vputils::findComputeReductionResult(RdxPhi);
-      assert(RdxResult && "Could not find reduction result");
+  // If this is the last value in a sub-reduction chain, then update the PHI
+  // node to start at `0` and update the reduction-result to subtract from
+  // the PHI's start value.
+  if (RK != RecurKind::Sub)
+    return true;
 
-      VPBuilder Builder = VPBuilder::getToInsertAfter(RdxResult);
-      constexpr unsigned SubOpc = Instruction::BinaryOps::Sub;
-      VPInstruction *NewResult = Builder.createNaryOp(
-          SubOpc, {OldStartValue, RdxResult},
-          VPIRFlags::getDefaultFlags(SubOpc), RdxPhi->getDebugLoc());
-      RdxResult->replaceUsesWithIf(
-          NewResult,
-          [&NewResult](VPUser &U, unsigned Idx) { return &U != NewResult; });
-    }
-  }
+  VPValue *OldStartValue = StartInst->getOperand(0);
+  StartInst->setOperand(0, StartInst->getOperand(1));
+
+  // Replace reduction_result by 'sub (startval, reductionresult)'.
+  VPInstruction *RdxResult = vputils::findComputeReductionResult(RdxPhi);
+  assert(RdxResult && "Could not find reduction result");
+
+  VPBuilder Builder = VPBuilder::getToInsertAfter(RdxResult);
+  constexpr unsigned SubOpc = Instruction::BinaryOps::Sub;
+  VPInstruction *NewResult = Builder.createNaryOp(
+      SubOpc, {OldStartValue, RdxResult}, VPIRFlags::getDefaultFlags(SubOpc),
+      RdxPhi->getDebugLoc());
+  RdxResult->replaceUsesWithIf(
+      NewResult,
+      [&NewResult](VPUser &U, unsigned Idx) { return &U != NewResult; });
 
   return true;
 }
