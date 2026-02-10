@@ -664,7 +664,7 @@ Value xegpu::subgroupReduction(Location loc, OpBuilder &builder, Value input,
     laneVal = makeArithReduction(builder, loc, kind, laneVal, shuffled);
   }
   return laneVal;
-};
+}
 
 Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
                                      TypedValue<VectorType> acc,
