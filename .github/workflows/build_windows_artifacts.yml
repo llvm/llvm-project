@@ -126,16 +126,18 @@ jobs:
           }
 
           # LLVM PR
-          if [[ -n "$LLVM_PR_URL" ]]; then
-              LLVM_SHA="$(get_pr_sha "$LLVM_PR_URL")"
-              echo "LLVM head SHA: $LLVM_SHA"
-              git update-index --cacheinfo 160000,"$LLVM_SHA","compiler/amd-llvm"
-          fi
+          LLVM_SHA="$(get_pr_sha "$LLVM_PR_URL")"
+          echo "LLVM head SHA: $LLVM_SHA"
+          git update-index --cacheinfo 160000,"$LLVM_SHA","compiler/amd-llvm"
 
           # SPIRV PR
           if [[ -n "$SPIRV_PR_URL" ]]; then
               SPIRV_SHA="$(get_pr_sha "$SPIRV_PR_URL")"
               echo "SPIRV head SHA: $SPIRV_SHA"
+              git update-index --cacheinfo 160000,"$SPIRV_SHA","compiler/spirv-llvm-translator"
+          else
+              SPIRV_SHA="$(git ls-remote https://github.com/ROCm/SPIRV-LLVM-Translator.git refs/heads/amd-staging | awk '{print $1}')"
+              echo "SPIRV PR NOT Passed, defaulting to the amd-staging tip : $SPIRV_SHA"
               git update-index --cacheinfo 160000,"$SPIRV_SHA","compiler/spirv-llvm-translator"
           fi
 
@@ -143,6 +145,10 @@ jobs:
           if [[ -n "$HIPIFY_PR_URL" ]]; then
               HIPIFY_SHA="$(get_pr_sha "$HIPIFY_PR_URL")"
               echo "HIPIFY head SHA: $HIPIFY_SHA"
+              git update-index --cacheinfo 160000,"$HIPIFY_SHA","compiler/hipify"
+          else
+              HIPIFY_SHA="$(git ls-remote https://github.com/ROCm/HIPIFY.git refs/heads/amd-staging | awk '{print $1}')"
+              echo "HIPIFY PR NOT Passed, defaulting to the amd-staging tip : $HIPIFY_SHA"
               git update-index --cacheinfo 160000,"$HIPIFY_SHA","compiler/hipify"
           fi
           git config --global user.email "z1-cciauto@amd.com"
