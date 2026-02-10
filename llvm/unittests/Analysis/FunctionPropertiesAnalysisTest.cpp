@@ -29,7 +29,6 @@ using namespace llvm;
 using namespace testing;
 
 namespace llvm {
-LLVM_ABI extern cl::opt<bool> EnableDetailedFunctionProperties;
 LLVM_ABI extern cl::opt<bool> BigBasicBlockInstructionThreshold;
 LLVM_ABI extern cl::opt<bool> MediumBasicBlockInstrutionThreshold;
 LLVM_ABI extern cl::opt<float> ir2vec::OpcWeight;
@@ -171,7 +170,6 @@ define internal i32 @top() {
   EXPECT_EQ(BranchesFeatures.MaxLoopDepth, 0);
   EXPECT_EQ(BranchesFeatures.TopLevelLoopCount, 0);
 
-  EnableDetailedFunctionProperties.setValue(true);
   FunctionPropertiesInfo DetailedBranchesFeatures = buildFPI(*BranchesFunction);
   EXPECT_EQ(DetailedBranchesFeatures.BasicBlocksWithSingleSuccessor, 2);
   EXPECT_EQ(DetailedBranchesFeatures.BasicBlocksWithTwoSuccessors, 1);
@@ -208,7 +206,6 @@ define internal i32 @top() {
   EXPECT_TRUE(
       DetailedBranchesFeatures.getFunctionEmbedding().approximatelyEquals(
           createEmbedder(*BranchesFunction)->getFunctionVector()));
-  EnableDetailedFunctionProperties.setValue(false);
 }
 
 TEST_F(FunctionPropertiesAnalysisTest, DifferentPredecessorSuccessorCounts) {
@@ -225,7 +222,6 @@ finally:
 )IR");
 
   Function *F1 = M->getFunction("f1");
-  EnableDetailedFunctionProperties.setValue(true);
   FunctionPropertiesInfo DetailedF1Properties = buildFPI(*F1);
   EXPECT_EQ(DetailedF1Properties.BasicBlocksWithSingleSuccessor, 0);
   EXPECT_EQ(DetailedF1Properties.BasicBlocksWithTwoSuccessors, 1);
@@ -261,7 +257,6 @@ finally:
   EXPECT_EQ(DetailedF1Properties.CallWithPointerArgumentCount, 0);
   EXPECT_TRUE(DetailedF1Properties.getFunctionEmbedding().approximatelyEquals(
       createEmbedder(*F1)->getFunctionVector()));
-  EnableDetailedFunctionProperties.setValue(false);
 }
 
 TEST_F(FunctionPropertiesAnalysisTest, InlineSameBBSimple) {
@@ -940,7 +935,6 @@ define i64 @f1(i64 %e) {
 )IR");
 
   Function *F1 = M->getFunction("f1");
-  EnableDetailedFunctionProperties.setValue(true);
   FunctionPropertiesInfo DetailedF1Properties = buildFPI(*F1);
   EXPECT_EQ(DetailedF1Properties.BasicBlocksWithSingleSuccessor, 0);
   EXPECT_EQ(DetailedF1Properties.BasicBlocksWithTwoSuccessors, 0);
@@ -976,7 +970,6 @@ define i64 @f1(i64 %e) {
   EXPECT_EQ(DetailedF1Properties.CallWithPointerArgumentCount, 0);
   EXPECT_TRUE(DetailedF1Properties.getFunctionEmbedding().approximatelyEquals(
       createEmbedder(*F1)->getFunctionVector()));
-  EnableDetailedFunctionProperties.setValue(false);
 }
 
 TEST_F(FunctionPropertiesAnalysisTest, IntrinsicCount) {
@@ -991,7 +984,6 @@ declare float @llvm.cos.f32(float)
 )IR");
 
   Function *F1 = M->getFunction("f1");
-  EnableDetailedFunctionProperties.setValue(true);
   FunctionPropertiesInfo DetailedF1Properties = buildFPI(*F1);
   EXPECT_EQ(DetailedF1Properties.IntrinsicCount, 1);
   EXPECT_EQ(DetailedF1Properties.DirectCallCount, 1);
@@ -1003,7 +995,6 @@ declare float @llvm.cos.f32(float)
   EXPECT_EQ(DetailedF1Properties.CallWithPointerArgumentCount, 0);
   EXPECT_TRUE(DetailedF1Properties.getFunctionEmbedding().approximatelyEquals(
       createEmbedder(*F1)->getFunctionVector()));
-  EnableDetailedFunctionProperties.setValue(false);
 }
 
 TEST_F(FunctionPropertiesAnalysisTest, FunctionCallMetrics) {
@@ -1026,7 +1017,6 @@ declare float @f5()
 )IR");
 
   Function *F1 = M->getFunction("f1");
-  EnableDetailedFunctionProperties.setValue(true);
   FunctionPropertiesInfo DetailedF1Properties = buildFPI(*F1);
   EXPECT_EQ(DetailedF1Properties.IntrinsicCount, 0);
   EXPECT_EQ(DetailedF1Properties.DirectCallCount, 4);
@@ -1038,7 +1028,6 @@ declare float @f5()
   EXPECT_EQ(DetailedF1Properties.CallWithPointerArgumentCount, 1);
   EXPECT_TRUE(DetailedF1Properties.getFunctionEmbedding().approximatelyEquals(
       createEmbedder(*F1)->getFunctionVector()));
-  EnableDetailedFunctionProperties.setValue(false);
 }
 
 TEST_F(FunctionPropertiesAnalysisTest, CriticalEdge) {
@@ -1064,12 +1053,10 @@ BottomBlock2:
 )IR");
 
   Function *F1 = M->getFunction("f1");
-  EnableDetailedFunctionProperties.setValue(true);
   FunctionPropertiesInfo DetailedF1Properties = buildFPI(*F1);
   EXPECT_EQ(DetailedF1Properties.CriticalEdgeCount, 1);
   EXPECT_TRUE(DetailedF1Properties.getFunctionEmbedding().approximatelyEquals(
       createEmbedder(*F1)->getFunctionVector()));
-  EnableDetailedFunctionProperties.setValue(false);
 }
 
 TEST_F(FunctionPropertiesAnalysisTest, FunctionReturnVectors) {
@@ -1089,14 +1076,12 @@ declare <4 x ptr> @f4()
 )IR");
 
   Function *F1 = M->getFunction("f1");
-  EnableDetailedFunctionProperties.setValue(true);
   FunctionPropertiesInfo DetailedF1Properties = buildFPI(*F1);
   EXPECT_EQ(DetailedF1Properties.CallReturnsVectorIntCount, 1);
   EXPECT_EQ(DetailedF1Properties.CallReturnsVectorFloatCount, 1);
   EXPECT_EQ(DetailedF1Properties.CallReturnsVectorPointerCount, 1);
   EXPECT_TRUE(DetailedF1Properties.getFunctionEmbedding().approximatelyEquals(
       createEmbedder(*F1)->getFunctionVector()));
-  EnableDetailedFunctionProperties.setValue(false);
 }
 
 TEST_F(FunctionPropertiesAnalysisTest, ReAddEdges) {

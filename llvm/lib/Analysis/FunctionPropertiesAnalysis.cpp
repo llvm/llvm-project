@@ -30,14 +30,9 @@ using namespace llvm;
 #define DEBUG_TYPE "func-properties-stats"
 
 #define FUNCTION_PROPERTY(Name, Description) STATISTIC(Num##Name, Description);
-#define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
-  STATISTIC(Num##Name, Description);
 #include "llvm/IR/FunctionProperties.def"
 
 namespace llvm {
-LLVM_ABI cl::opt<bool> EnableDetailedFunctionProperties(
-    "enable-detailed-function-properties", cl::Hidden, cl::init(false),
-    cl::desc("Whether or not to compute detailed function properties."));
 
 static cl::opt<unsigned> BigBasicBlockInstructionThreshold(
     "big-basic-block-instruction-threshold", cl::Hidden, cl::init(500),
@@ -96,100 +91,99 @@ void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
   }
   TotalInstructionCount += Direction * BB.sizeWithoutDebug();
 
-  if (EnableDetailedFunctionProperties) {
-    unsigned SuccessorCount = succ_size(&BB);
-    if (SuccessorCount == 1)
-      BasicBlocksWithSingleSuccessor += Direction;
-    else if (SuccessorCount == 2)
-      BasicBlocksWithTwoSuccessors += Direction;
-    else if (SuccessorCount > 2)
-      BasicBlocksWithMoreThanTwoSuccessors += Direction;
+  unsigned SuccessorCount = succ_size(&BB);
+  if (SuccessorCount == 1)
+    BasicBlocksWithSingleSuccessor += Direction;
+  else if (SuccessorCount == 2)
+    BasicBlocksWithTwoSuccessors += Direction;
+  else if (SuccessorCount > 2)
+    BasicBlocksWithMoreThanTwoSuccessors += Direction;
 
-    unsigned PredecessorCount = pred_size(&BB);
-    if (PredecessorCount == 1)
-      BasicBlocksWithSinglePredecessor += Direction;
-    else if (PredecessorCount == 2)
-      BasicBlocksWithTwoPredecessors += Direction;
-    else if (PredecessorCount > 2)
-      BasicBlocksWithMoreThanTwoPredecessors += Direction;
+  unsigned PredecessorCount = pred_size(&BB);
+  if (PredecessorCount == 1)
+    BasicBlocksWithSinglePredecessor += Direction;
+  else if (PredecessorCount == 2)
+    BasicBlocksWithTwoPredecessors += Direction;
+  else if (PredecessorCount > 2)
+    BasicBlocksWithMoreThanTwoPredecessors += Direction;
 
-    if (TotalInstructionCount > BigBasicBlockInstructionThreshold)
-      BigBasicBlocks += Direction;
-    else if (TotalInstructionCount > MediumBasicBlockInstructionThreshold)
-      MediumBasicBlocks += Direction;
+  if (TotalInstructionCount > BigBasicBlockInstructionThreshold)
+    BigBasicBlocks += Direction;
+  else if (TotalInstructionCount > MediumBasicBlockInstructionThreshold)
+    MediumBasicBlocks += Direction;
+  else
+    SmallBasicBlocks += Direction;
+
+  // Calculate critical edges by looking through all successors of a basic
+  // block that has multiple successors and finding ones that have multiple
+  // predecessors, which represent critical edges.
+  if (SuccessorCount > 1) {
+    for (const auto *Successor : successors(&BB)) {
+      if (pred_size(Successor) > 1)
+        CriticalEdgeCount += Direction;
+    }
+  }
+
+  ControlFlowEdgeCount += Direction * SuccessorCount;
+
+  const Instruction *TI = BB.getTerminator();
+  const int64_t InstructionSuccessorCount = TI->getNumSuccessors();
+  if (isa<BranchInst>(TI)) {
+    BranchInstructionCount += Direction;
+    BranchSuccessorCount += Direction * InstructionSuccessorCount;
+    const auto *BI = dyn_cast<BranchInst>(TI);
+    if (BI->isConditional())
+      ConditionalBranchCount += Direction;
     else
-      SmallBasicBlocks += Direction;
+      UnconditionalBranchCount += Direction;
+  } else if (isa<SwitchInst>(TI)) {
+    SwitchInstructionCount += Direction;
+    SwitchSuccessorCount += Direction * InstructionSuccessorCount;
+  }
 
-    // Calculate critical edges by looking through all successors of a basic
-    // block that has multiple successors and finding ones that have multiple
-    // predecessors, which represent critical edges.
-    if (SuccessorCount > 1) {
-      for (const auto *Successor : successors(&BB)) {
-        if (pred_size(Successor) > 1)
-          CriticalEdgeCount += Direction;
-      }
-    }
+  for (const Instruction &I : BB.instructionsWithoutDebug()) {
+    if (I.isCast())
+      CastInstructionCount += Direction;
 
-    ControlFlowEdgeCount += Direction * SuccessorCount;
+    if (I.getType()->isFloatTy())
+      FloatingPointInstructionCount += Direction;
+    else if (I.getType()->isIntegerTy())
+      IntegerInstructionCount += Direction;
 
-    const Instruction *TI = BB.getTerminator();
-    const int64_t InstructionSuccessorCount = TI->getNumSuccessors();
-    if (isa<BranchInst>(TI)) {
-      BranchInstructionCount += Direction;
-      BranchSuccessorCount += Direction * InstructionSuccessorCount;
-      const auto *BI = dyn_cast<BranchInst>(TI);
-      if (BI->isConditional())
-        ConditionalBranchCount += Direction;
+    if (isa<IntrinsicInst>(I))
+      ++IntrinsicCount;
+
+    if (const auto *Call = dyn_cast<CallInst>(&I)) {
+      if (Call->isIndirectCall())
+        IndirectCallCount += Direction;
       else
-        UnconditionalBranchCount += Direction;
-    } else if (isa<SwitchInst>(TI)) {
-      SwitchInstructionCount += Direction;
-      SwitchSuccessorCount += Direction * InstructionSuccessorCount;
-    }
+        DirectCallCount += Direction;
 
-    for (const Instruction &I : BB.instructionsWithoutDebug()) {
-      if (I.isCast())
-        CastInstructionCount += Direction;
+      if (Call->getType()->isIntegerTy())
+        CallReturnsIntegerCount += Direction;
+      else if (Call->getType()->isFloatingPointTy())
+        CallReturnsFloatCount += Direction;
+      else if (Call->getType()->isPointerTy())
+        CallReturnsPointerCount += Direction;
+      else if (Call->getType()->isVectorTy()) {
+        if (Call->getType()->getScalarType()->isIntegerTy())
+          CallReturnsVectorIntCount += Direction;
+        else if (Call->getType()->getScalarType()->isFloatingPointTy())
+          CallReturnsVectorFloatCount += Direction;
+        else if (Call->getType()->getScalarType()->isPointerTy())
+          CallReturnsVectorPointerCount += Direction;
+      }
 
-      if (I.getType()->isFloatTy())
-        FloatingPointInstructionCount += Direction;
-      else if (I.getType()->isIntegerTy())
-        IntegerInstructionCount += Direction;
+      if (Call->arg_size() > CallWithManyArgumentsThreshold)
+        CallWithManyArgumentsCount += Direction;
 
-      if (isa<IntrinsicInst>(I))
-        ++IntrinsicCount;
-
-      if (const auto *Call = dyn_cast<CallInst>(&I)) {
-        if (Call->isIndirectCall())
-          IndirectCallCount += Direction;
-        else
-          DirectCallCount += Direction;
-
-        if (Call->getType()->isIntegerTy())
-          CallReturnsIntegerCount += Direction;
-        else if (Call->getType()->isFloatingPointTy())
-          CallReturnsFloatCount += Direction;
-        else if (Call->getType()->isPointerTy())
-          CallReturnsPointerCount += Direction;
-        else if (Call->getType()->isVectorTy()) {
-          if (Call->getType()->getScalarType()->isIntegerTy())
-            CallReturnsVectorIntCount += Direction;
-          else if (Call->getType()->getScalarType()->isFloatingPointTy())
-            CallReturnsVectorFloatCount += Direction;
-          else if (Call->getType()->getScalarType()->isPointerTy())
-            CallReturnsVectorPointerCount += Direction;
-        }
-
-        if (Call->arg_size() > CallWithManyArgumentsThreshold)
-          CallWithManyArgumentsCount += Direction;
-
-        for (const auto &Arg : Call->args()) {
-          if (Arg->getType()->isPointerTy()) {
-            CallWithPointerArgumentCount += Direction;
-            break;
-          }
+      for (const auto &Arg : Call->args()) {
+        if (Arg->getType()->isPointerTy()) {
+          CallWithPointerArgumentCount += Direction;
+          break;
         }
       }
+    }
 
 #define COUNT_OPERAND(OPTYPE)                                                  \
   if (isa<OPTYPE>(Operand)) {                                                  \
@@ -197,25 +191,24 @@ void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
     continue;                                                                  \
   }
 
-      for (unsigned int OperandIndex = 0; OperandIndex < I.getNumOperands();
-           ++OperandIndex) {
-        Value *Operand = I.getOperand(OperandIndex);
-        COUNT_OPERAND(GlobalValue)
-        COUNT_OPERAND(ConstantInt)
-        COUNT_OPERAND(ConstantFP)
-        COUNT_OPERAND(Constant)
-        COUNT_OPERAND(Instruction)
-        COUNT_OPERAND(BasicBlock)
-        COUNT_OPERAND(InlineAsm)
-        COUNT_OPERAND(Argument)
+    for (unsigned int OperandIndex = 0; OperandIndex < I.getNumOperands();
+         ++OperandIndex) {
+      Value *Operand = I.getOperand(OperandIndex);
+      COUNT_OPERAND(GlobalValue)
+      COUNT_OPERAND(ConstantInt)
+      COUNT_OPERAND(ConstantFP)
+      COUNT_OPERAND(Constant)
+      COUNT_OPERAND(Instruction)
+      COUNT_OPERAND(BasicBlock)
+      COUNT_OPERAND(InlineAsm)
+      COUNT_OPERAND(Argument)
 
-        // We only get to this point if we haven't matched any of the other
-        // operand types.
-        UnknownOperandCount += Direction;
-      }
+      // We only get to this point if we haven't matched any of the other
+      // operand types.
+      UnknownOperandCount += Direction;
+    }
 
 #undef CHECK_OPERAND
-    }
   }
 
   if (IR2VecVocab) {
@@ -345,15 +338,9 @@ bool FunctionPropertiesInfo::operator==(
 void FunctionPropertiesInfo::print(raw_ostream &OS) const {
 #define FUNCTION_PROPERTY(Name, Description) OS << #Name ": " << Name << "\n";
 
-#define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
-  if (EnableDetailedFunctionProperties) {                                      \
-    OS << #Name ": " << Name << "\n";                                          \
-  }
-
 #include "llvm/IR/FunctionProperties.def"
 
 #undef FUNCTION_PROPERTY
-#undef DETAILED_FUNCTION_PROPERTY
 
   OS << "\n";
 }
@@ -382,8 +369,6 @@ FunctionPropertiesStatisticsPass::run(Function &F,
   auto &AnalysisResults = FAM.getResult<FunctionPropertiesAnalysis>(F);
 
 #define FUNCTION_PROPERTY(Name, Description) Num##Name += AnalysisResults.Name;
-#define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
-  Num##Name += AnalysisResults.Name;
 #include "llvm/IR/FunctionProperties.def"
 
   return PreservedAnalyses::all();
