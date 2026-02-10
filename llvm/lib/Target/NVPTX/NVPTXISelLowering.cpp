@@ -6166,14 +6166,22 @@ static bool isNonCoalescableBuildVector(const SDValue &BV) {
   if (Src0 != Src1)
     return true;
 
-  // Even adjacent index pairs such as {0, 1} and {2, 3} are coalescable
   auto *Idx0 = dyn_cast<ConstantSDNode>(Elt0.getOperand(1));
   auto *Idx1 = dyn_cast<ConstantSDNode>(Elt1.getOperand(1));
-  if (!Idx0 || !Idx1)
+  // If both indices are dynamic they will be lowered to
+  // loads and the vector will be spilled to local memory. The register
+  // allocator can easily place the results in adjacent registers.
+  if (!Idx0 && !Idx1)
     return false;
 
-  return !((Idx0->getZExtValue() % 2 == 0) &&
-           (Idx0->getZExtValue() + 1 == Idx1->getZExtValue()));
+  // If one index is dynamic and the other is constant, the value from the
+  // constant load will result in an additional register to pair with the result
+  // from the dynamic load. We consider this non-coalescable.
+  if ((Idx0 && !Idx1) || (!Idx0 && Idx1))
+    return true;
+
+  // Both are constant, adjacent pairs are coalescable
+  return std::abs(Idx0->getSExtValue() - Idx1->getSExtValue()) != 1;
 }
 
 /// Scalarize a v2f32 arithmetic node (FADD, FMUL, FSUB, FMA) when at least

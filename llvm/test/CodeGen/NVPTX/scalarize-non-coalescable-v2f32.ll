@@ -29,6 +29,45 @@ define <2 x float> @fma_non_coalescable(ptr addrspace(3) %p, <2 x float> %a, <2 
   ret <2 x float> %res
 }
 
+define <2 x float> @fma_constant_and_dynamic_index(i32 %idx, ptr addrspace(3) %p, <2 x float> %a, <2 x float> %c) {
+; CHECK-LABEL: fma_constant_and_dynamic_index(
+; CHECK:       {
+; CHECK-NEXT:    .local .align 8 .b8 __local_depot1[16];
+; CHECK-NEXT:    .reg .b64 %SP;
+; CHECK-NEXT:    .reg .b64 %SPL;
+; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b64 %rd<9>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    mov.b64 %SPL, __local_depot1;
+; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
+; CHECK-NEXT:    ld.param.b32 %rd1, [fma_constant_and_dynamic_index_param_0];
+; CHECK-NEXT:    and.b64 %rd2, %rd1, 3;
+; CHECK-NEXT:    shl.b64 %rd3, %rd2, 2;
+; CHECK-NEXT:    add.u64 %rd4, %SP, 0;
+; CHECK-NEXT:    add.s64 %rd5, %rd4, %rd3;
+; CHECK-NEXT:    ld.param.b64 %rd6, [fma_constant_and_dynamic_index_param_1];
+; CHECK-NEXT:    ld.shared.v2.b64 {%rd7, %rd8}, [%rd6];
+; CHECK-NEXT:    mov.b64 {%r1, _}, %rd7;
+; CHECK-NEXT:    ld.param.v2.b32 {%r2, %r3}, [fma_constant_and_dynamic_index_param_2];
+; CHECK-NEXT:    st.b64 [%SP+8], %rd8;
+; CHECK-NEXT:    st.b64 [%SP], %rd7;
+; CHECK-NEXT:    ld.b32 %r4, [%rd5];
+; CHECK-NEXT:    ld.param.v2.b32 {%r5, %r6}, [fma_constant_and_dynamic_index_param_3];
+; CHECK-NEXT:    fma.rn.f32 %r7, %r2, %r1, %r5;
+; CHECK-NEXT:    fma.rn.f32 %r8, %r3, %r4, %r6;
+; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r7, %r8};
+; CHECK-NEXT:    ret;
+  %ld  = load <4 x float>, ptr addrspace(3) %p, align 16
+  %e0  = extractelement <4 x float> %ld, i32 0
+  %e1  = extractelement <4 x float> %ld, i32 %idx
+  %bv0 = insertelement <2 x float> poison, float %e0, i32 0
+  %bv  = insertelement <2 x float> %bv0,  float %e1, i32 1
+  %mul = fmul <2 x float> %a, %bv
+  %res = fadd <2 x float> %mul, %c
+  ret <2 x float> %res
+}
+
 define <2 x float> @fma_shufflevector_non_coalescable(ptr addrspace(3) %p, <2 x float> %a, <2 x float> %c) {
 ; CHECK-LABEL: fma_shufflevector_non_coalescable(
 ; CHECK:       {
@@ -145,7 +184,7 @@ define <2 x float> @fsub_non_coalescable(ptr addrspace(3) %p, <2 x float> %a) {
   ret <2 x float> %sub
 }
 
-; Should remain vectorized
+; The rest of these tests should remain vectorized
 define <4 x float> @fma_adjacent_elements(ptr addrspace(3) %p, <2 x float> %a, <2 x float> %c) {
 ; CHECK-LABEL: fma_adjacent_elements(
 ; CHECK:       {
@@ -175,6 +214,86 @@ define <4 x float> @fma_adjacent_elements(ptr addrspace(3) %p, <2 x float> %a, <
   %res_hi = fadd <2 x float> %mul_hi, %c
   %out = shufflevector <2 x float> %res_lo, <2 x float> %res_hi, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x float> %out
+}
+
+define <4 x float> @fma_adjacent_swapped_elements(ptr addrspace(3) %p, <2 x float> %a, <2 x float> %c) {
+; CHECK-LABEL: fma_adjacent_swapped_elements(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b64 %rd<8>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [fma_adjacent_swapped_elements_param_0];
+; CHECK-NEXT:    ld.shared.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd2, [fma_adjacent_swapped_elements_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd3, [fma_adjacent_swapped_elements_param_2];
+; CHECK-NEXT:    mov.b64 %rd4, {%r2, %r1};
+; CHECK-NEXT:    mov.b64 %rd5, {%r4, %r3};
+; CHECK-NEXT:    fma.rn.f32x2 %rd6, %rd2, %rd4, %rd3;
+; CHECK-NEXT:    fma.rn.f32x2 %rd7, %rd2, %rd5, %rd3;
+; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd6, %rd7};
+; CHECK-NEXT:    ret;
+  %ld  = load <4 x float>, ptr addrspace(3) %p, align 16
+  %e0  = extractelement <4 x float> %ld, i32 0
+  %e1  = extractelement <4 x float> %ld, i32 1
+  %e2  = extractelement <4 x float> %ld, i32 2
+  %e3  = extractelement <4 x float> %ld, i32 3
+  %lo0 = insertelement <2 x float> poison, float %e1, i32 0
+  %lo  = insertelement <2 x float> %lo0,  float %e0, i32 1
+  %hi0 = insertelement <2 x float> poison, float %e3, i32 0
+  %hi  = insertelement <2 x float> %hi0,  float %e2, i32 1
+  %mul_lo = fmul <2 x float> %a, %lo
+  %res_lo = fadd <2 x float> %mul_lo, %c
+  %mul_hi = fmul <2 x float> %a, %hi
+  %res_hi = fadd <2 x float> %mul_hi, %c
+  %out = shufflevector <2 x float> %res_lo, <2 x float> %res_hi, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x float> %out
+}
+
+define <2 x float> @fma_both_dynamic_indices(i32 %i0, i32 %i1, ptr addrspace(3) %p, <2 x float> %a, <2 x float> %c) {
+; CHECK-LABEL: fma_both_dynamic_indices(
+; CHECK:       {
+; CHECK-NEXT:    .local .align 8 .b8 __local_depot9[32];
+; CHECK-NEXT:    .reg .b64 %SP;
+; CHECK-NEXT:    .reg .b64 %SPL;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<18>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    mov.b64 %SPL, __local_depot9;
+; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
+; CHECK-NEXT:    ld.param.b32 %rd1, [fma_both_dynamic_indices_param_0];
+; CHECK-NEXT:    and.b64 %rd2, %rd1, 3;
+; CHECK-NEXT:    shl.b64 %rd3, %rd2, 2;
+; CHECK-NEXT:    add.u64 %rd4, %SP, 16;
+; CHECK-NEXT:    add.s64 %rd5, %rd4, %rd3;
+; CHECK-NEXT:    ld.param.b32 %rd6, [fma_both_dynamic_indices_param_1];
+; CHECK-NEXT:    and.b64 %rd7, %rd6, 3;
+; CHECK-NEXT:    shl.b64 %rd8, %rd7, 2;
+; CHECK-NEXT:    add.u64 %rd9, %SP, 0;
+; CHECK-NEXT:    add.s64 %rd10, %rd9, %rd8;
+; CHECK-NEXT:    ld.param.b64 %rd11, [fma_both_dynamic_indices_param_2];
+; CHECK-NEXT:    ld.shared.v2.b64 {%rd12, %rd13}, [%rd11];
+; CHECK-NEXT:    st.b64 [%SP+24], %rd13;
+; CHECK-NEXT:    st.b64 [%SP+16], %rd12;
+; CHECK-NEXT:    ld.b32 %r1, [%rd5];
+; CHECK-NEXT:    st.b64 [%SP+8], %rd13;
+; CHECK-NEXT:    st.b64 [%SP], %rd12;
+; CHECK-NEXT:    ld.b32 %r2, [%rd10];
+; CHECK-NEXT:    ld.param.b64 %rd14, [fma_both_dynamic_indices_param_3];
+; CHECK-NEXT:    ld.param.b64 %rd15, [fma_both_dynamic_indices_param_4];
+; CHECK-NEXT:    mov.b64 %rd16, {%r1, %r2};
+; CHECK-NEXT:    fma.rn.f32x2 %rd17, %rd14, %rd16, %rd15;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd17;
+; CHECK-NEXT:    ret;
+  %ld  = load <4 x float>, ptr addrspace(3) %p, align 16
+  %e0  = extractelement <4 x float> %ld, i32 %i0
+  %e1  = extractelement <4 x float> %ld, i32 %i1
+  %bv0 = insertelement <2 x float> poison, float %e0, i32 0
+  %bv  = insertelement <2 x float> %bv0,  float %e1, i32 1
+  %mul = fmul <2 x float> %a, %bv
+  %res = fadd <2 x float> %mul, %c
+  ret <2 x float> %res
 }
 
 define <2 x float> @fma_shufflevector_adjacent_elements(ptr addrspace(3) %p, <2 x float> %a, <2 x float> %c) {
