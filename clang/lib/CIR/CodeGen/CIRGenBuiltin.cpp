@@ -1345,7 +1345,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
 
     assert(!cir::MissingFeatures::emitCheckedInBoundsGEP());
     if (getTarget().getTriple().isSystemZ()) {
-      llvm_unreachable("SYSTEMZ NYI");
+      cgm.errorNYI(e->getExprLoc(), "setjmp on SystemZ");
+      return {};
     }
 
     mlir::Value frameAddress =
@@ -1773,25 +1774,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__abnormal_termination:
   case Builtin::BI_abnormal_termination:
   case Builtin::BI_setjmpex:
-    return errorBuiltinNYI(*this, e, builtinID);
-  case Builtin::BI_setjmp: {
-    if (getTarget().getTriple().isOSMSVCRT() && e->getNumArgs() == 1 &&
-        e->getArg(0)->getType()->isPointerType()) {
-      if (getTarget().getTriple().getArch() == llvm::Triple::x86)
-        llvm_unreachable("NYI setjmp on x86");
-      else if (getTarget().getTriple().getArch() == llvm::Triple::aarch64) {
-        llvm_unreachable("NYI setjmp on aarch64");
-      }
-      llvm_unreachable("NYI setjmp on generic MSVCRT");
-    }
-    Address buf = emitPointerWithAlignment(e->getArg(0));
-    mlir::Location loc = getLoc(e->getExprLoc());
-    cir::PointerType ppTy = builder.getPointerTo(builder.getVoidPtrTy());
-    mlir::Value castBuf = builder.createBitcast(buf.getPointer(), ppTy);
-    auto op =
-        cir::EhSetjmpOp::create(builder, loc, castBuf, /*is_builtin = */ false);
-    return RValue::get(op);
-  }
+  case Builtin::BI_setjmp:
   case Builtin::BImove:
   case Builtin::BImove_if_noexcept:
   case Builtin::BIforward:

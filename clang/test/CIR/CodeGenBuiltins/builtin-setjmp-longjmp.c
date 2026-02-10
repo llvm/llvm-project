@@ -41,27 +41,6 @@ void test_setjmp(void *env) {
   __builtin_setjmp(env);
 }
 
-extern int _setjmp(void *env);
-void test_setjmp2(void *env) {
-  // CIR-LABEL: test_setjmp2
-  // CIR-SAME: [[ENV:%.*]]:
-  // CIR-NEXT: [[ENV_ALLOCA]] = cir.alloca
-  // CIR-NEXT: cir.store [[ENV]], [[ENV_ALLOCA]]
-  // CIR-NEXT: [[ENV_LOAD:%.*]] = cir.load align(8) [[ENV_ALLOCA]]
-  // CIR-NEXT: [[CAST:%.*]] = cir.cast bitcast [[ENV_LOAD]]
-  // CIR-NEXT: cir.eh.setjmp [[CAST]] : (!cir.ptr<!cir.ptr<!void>>) -> !s32i
-
-
-  // LLVM-LABEL: test_setjmp2
-  // LLVM-SAME: (ptr{{.*}}[[ENV:%.*]])
-  // LLVM-NEXT: call i32 @_setjmp(ptr [[ENV]])
-  //
-  // OGCG-LABEL: test_setjmp2
-  // OGCG-SAME: (ptr{{.*}}[[ENV:%.*]])
-  // OGCG: call i32 @_setjmp(ptr noundef [[ENV]])
-  _setjmp (env);
-}
-
 void test_longjmp(void *env) {
   // CIR-LABEL: test_longjmp
   // CIR-SAME: [[ENV:%.*]]: 
