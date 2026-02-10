@@ -74,7 +74,7 @@ are welcome:
 * iOS, tvOS, and watchOS device debugging on ARM and AArch64
 * Linux user-space debugging for i386, x86_64, ARM, AArch64, PPC64le, s390x
 * FreeBSD user-space debugging for i386, x86_64, ARM, AArch64, PPC
-* FreeBSD kernel debugging for i386, x86_64, AArch64
+* FreeBSD kernel debugging for i386, x86_64, AArch64, PPC64le
 * NetBSD user-space debugging for i386 and x86_64
 * Windows user-space debugging for i386, x86_64, ARM and AArch64 (*)
 

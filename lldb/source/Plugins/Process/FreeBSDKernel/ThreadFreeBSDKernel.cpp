@@ -15,9 +15,11 @@
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_i386.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_x86_64.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_ppc64le.h"
 #include "ProcessFreeBSDKernel.h"
 #include "RegisterContextFreeBSDKernel_arm64.h"
 #include "RegisterContextFreeBSDKernel_i386.h"
+#include "RegisterContextFreeBSDKernel_ppc64le.h"
 #include "RegisterContextFreeBSDKernel_x86_64.h"
 
 using namespace lldb;
@@ -61,6 +63,11 @@ ThreadFreeBSDKernel::CreateRegisterContextForFrame(StackFrame *frame) {
           std::make_shared<RegisterContextFreeBSDKernel_arm64>(
               *this, std::make_unique<RegisterInfoPOSIX_arm64>(arch, 0),
               m_pcb_addr);
+      break;
+    case llvm::Triple::ppc64le:
+      m_thread_reg_ctx_sp =
+          std::make_shared<RegisterContextFreeBSDKernel_ppc64le>(
+              *this, new RegisterInfoPOSIX_ppc64le(arch), m_pcb_addr);
       break;
     case llvm::Triple::x86:
       m_thread_reg_ctx_sp = std::make_shared<RegisterContextFreeBSDKernel_i386>(
