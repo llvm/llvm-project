@@ -4949,14 +4949,6 @@ void Parser::ParseLexedCAttribute(LateParsedAttribute &LA, bool EnterScope,
   }
 }
 
-void Parser::LateTypeAttrParserCallback(void *P, void *OLA, bool EnterScope,
-                                        ParsedAttributes &OutAttrs) {
-  auto *LA = static_cast<LateParsedAttribute *>(OLA);
-  auto *LTA = cast<LateParsedTypeAttribute>(LA);
-  return ((Parser *)(P))
-      ->ParseLexedTypeAttribute(*LTA, /*EnterScope=*/false, OutAttrs);
-}
-
 void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
                                   DeclSpec::TST TagType, RecordDecl *TagDecl) {
   PrettyDeclStackTraceEntry CrashInfo(Actions.Context, TagDecl, RecordLoc,
@@ -5045,7 +5037,7 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
         if (getLangOpts().ExperimentalLateParseAttributes) {
           auto *RD = dyn_cast<RecordDecl>(DS.getRepAsDecl());
           if (RD && !RD->isAnonymousStructOrUnion()) {
-              Actions.ProcessLateParsedTypeAttributes(RD);
+            Actions.ProcessLateParsedTypeAttributes(RD);
           }
         } else {
           DiagnoseCountAttributedTypeInUnnamedAnon(DS, *this);
@@ -5105,7 +5097,8 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
                       T.getOpenLocation(), T.getCloseLocation(), attrs);
   Scope *ParentScope = getCurScope()->getParent();
   assert(ParentScope);
-  if (getLangOpts().ExperimentalLateParseAttributes && !ParentScope->getEntity()->isRecord())
+  if (getLangOpts().ExperimentalLateParseAttributes &&
+      !ParentScope->getEntity()->isRecord())
     Actions.ProcessLateParsedTypeAttributes(TagDecl);
   StructScope.Exit();
   Actions.ActOnTagFinishDefinition(getCurScope(), TagDecl, T.getRange());
