@@ -24,7 +24,7 @@ class X86 : public TargetInfo {
 public:
   X86(Ctx &);
   RelExpr getRelExpr(RelType type, const Symbol &s,
-                     const uint8_t *loc) const final;
+                     const uint8_t *loc) const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   void writeGotPltHeader(uint8_t *buf) const override;
   RelType getDynRel(RelType type) const override;

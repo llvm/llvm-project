@@ -29,7 +29,7 @@ class X86_64 : public TargetInfo {
 public:
   X86_64(Ctx &);
   RelExpr getRelExpr(RelType type, const Symbol &s,
-                     const uint8_t *loc) const final;
+                     const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
   void writeGotPltHeader(uint8_t *buf) const override;
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
