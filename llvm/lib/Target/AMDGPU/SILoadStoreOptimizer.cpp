@@ -2378,9 +2378,7 @@ void SILoadStoreOptimizer::updateAsyncLDSAddress(MachineInstr &MI,
   if (!TII->usesASYNC_CNT(MI) || OffsetDiff == 0)
     return;
 
-  MachineOperand *LDSAddr = TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
-  if (!LDSAddr)
-    LDSAddr = TII->getNamedOperand(MI, AMDGPU::OpName::vdata);
+  MachineOperand *LDSAddr = TII->getNamedOperand(MI, MI.mayLoad() ? AMDGPU::OpName::vdst : AMDGPU::OpName::vdata);
   assert(LDSAddr);
 
   Register OldReg = LDSAddr->getReg();
