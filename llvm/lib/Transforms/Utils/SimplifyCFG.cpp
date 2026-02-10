@@ -3346,7 +3346,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
     SpeculatedStore->applyMergedLocation(BI->getDebugLoc(),
                                          SpeculatedStore->getDebugLoc());
     // The value stored is still conditional, but the store itself is now
-    // unconditonally executed, so we must be sure that any linked dbg.assign
+    // unconditionally executed, so we must be sure that any linked dbg.assign
     // intrinsics are tracking the new stored value (the result of the
     // select). If we don't, and the store were to be removed by another pass
     // (e.g. DSE), then we'd eventually end up emitting a location describing
@@ -4465,7 +4465,19 @@ static bool mergeConditionalStoreToAddress(
 
   QB.SetInsertPoint(T);
   StoreInst *SI = cast<StoreInst>(QB.CreateStore(QPHI, Address));
-  SI->setAAMetadata(PStore->getAAMetadata().merge(QStore->getAAMetadata()));
+  combineMetadataForCSE(QStore, PStore, true);
+  SI->copyMetadata(*QStore);
+  // Update any dbg.assign intrinsics to track the merged value (QPHI) instead
+  // of the original constant values, likely making these identical.
+  for (auto *DbgAssign : at::getDVRAssignmentMarkers(SI)) {
+    if (llvm::is_contained(DbgAssign->location_ops(),
+                           PStore->getValueOperand()))
+      DbgAssign->replaceVariableLocationOp(PStore->getValueOperand(), QPHI);
+    if (llvm::is_contained(DbgAssign->location_ops(),
+                           QStore->getValueOperand()))
+      DbgAssign->replaceVariableLocationOp(QStore->getValueOperand(), QPHI);
+  }
+
   // Choose the minimum alignment. If we could prove both stores execute, we
   // could use biggest one.  In this case, though, we only know that one of the
   // stores executes.  And we don't know it's safe to take the alignment from a
