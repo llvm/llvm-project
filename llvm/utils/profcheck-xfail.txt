@@ -208,7 +208,6 @@ Transforms/IndVarSimplify/invalidate-modified-lcssa-phi.ll
 Transforms/IndVarSimplify/pr45835.ll
 Transforms/IndVarSimplify/preserving-debugloc-rem-div.ll
 Transforms/InstCombine/2004-09-20-BadLoadCombine.ll
-Transforms/InstCombine/and-fcmp.ll
 Transforms/InstCombine/apint-div1.ll
 Transforms/InstCombine/apint-div2.ll
 Transforms/InstCombine/atomic.ll
