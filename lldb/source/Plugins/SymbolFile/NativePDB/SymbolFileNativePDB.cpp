@@ -2213,7 +2213,7 @@ VariableSP SymbolFileNativePDB::CreateLocalVariable(PdbCompilandSymId scope_id,
 
   if (is_constant) {
     CVSymbol sym = cii->m_debug_stream.readSymbolAtOffset(var_id.offset);
-    lldbassert(sym.kind() == S_CONSTANT);
+    assert(sym.kind() == S_CONSTANT);
     ConstantSym constant(sym.kind());
     cantFail(SymbolDeserializer::deserializeAs<ConstantSym>(sym, constant));
 
@@ -2227,9 +2227,8 @@ VariableSP SymbolFileNativePDB::CreateLocalVariable(PdbCompilandSymId scope_id,
   } else {
     // Get function block.
     Block *func_block = block;
-    while (func_block->GetParent()) {
+    while (func_block->GetParent())
       func_block = func_block->GetParent();
-    }
 
     Address addr;
     func_block->GetStartAddress(addr);
