@@ -1,9 +1,15 @@
-//===-- RegisterContextFreeBSDKernel_arm.h ----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of the RegisterContextFreeBSDKernel_arm
+/// class, which is used for reading registers from PCB on arm kernel dump.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNEL_ARM_H

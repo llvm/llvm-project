@@ -1,9 +1,15 @@
-//===-- RegisterContextFreeBSDKernel_arm.cpp ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the definition of the RegisterContextFreeBSDKernel_arm
+/// class, which is used for reading registers from PCB on arm kernel dump.
+///
 //===----------------------------------------------------------------------===//
 
 #include "RegisterContextFreeBSDKernel_arm.h"
@@ -44,7 +50,7 @@ bool RegisterContextFreeBSDKernel_arm::ReadRegister(
 
   // https://cgit.freebsd.org/src/tree/sys/arm/include/frame.h
   // struct pcb's first field is struct switchframe which is the only field used
-  // by debugger should be aligned by 8 bytes
+  // by debugger and should be aligned by 8 bytes.
   struct {
     llvm::support::ulittle32_t r4;
     llvm::support::ulittle32_t r5;
