@@ -572,11 +572,11 @@ mlir::Value HlfirLenLowering::lowerImpl(
     mlir::Type stmtResultType) {
   // LEN (STRING [, KIND])
   assert((loweredActuals.size() == 1 || loweredActuals.size() == 2) &&
-      loweredActuals[0].has_value());
+         loweredActuals[0].has_value());
   Fortran::lower::PreparedActualArgument &strArg =
       const_cast<Fortran::lower::PreparedActualArgument &>(*loweredActuals[0]);
-  return builder.createConvert(
-      loc, stmtResultType, strArg.genCharLength(loc, builder));
+  return builder.createConvert(loc, stmtResultType,
+                               strArg.genCharLength(loc, builder));
 }
 
 std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
