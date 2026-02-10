@@ -50,19 +50,18 @@ Contributions to Flang are done using GitHub Pull Requests and follow the
 
 -   Technical discussions as well as general updates on the Flang project.
 -   Join the [Flang Biweekly Call](https://lanl-us.webex.com/lanl-us/j.php?MTID=m0fcaebfcf6b4b4f506efd792a71a015c). Alternative ways to join the call are provided below.
-    - Alternative ways to join the call:
-        - Join with meeting number and password
-            - Meeting number (access code): 177 400 7047
-            - Meeting password: 6PCdCYKmN43
-	- Join by phone
-  	    - +1-415-655-0002 US Toll
-  	    - [Global call-in numbers](https://lanl-us.webex.com/lanl-us/globalcallin.php?MTID=ma8c4fc1f538bce541415427fbe89c85b)
-	- Join from a video system or application
-  	    - Dial [1774007047@lanl-us.webex.com](mailto:1774007047@lanl-us.webex.com)
-  	    - You can also dial 173.243.2.68 and enter your meeting number
+    - Join with meeting number and password
+        - Meeting number (access code): 177 400 7047
+        - Meeting password: 6PCdCYKmN43
+    - Join by phone
+        - +1-415-655-0002 US Toll
+        - [Global call-in numbers](https://lanl-us.webex.com/lanl-us/globalcallin.php?MTID=ma8c4fc1f538bce541415427fbe89c85b)
+    - Join from a video system or application
+        - Dial [1774007047@lanl-us.webex.com](mailto:1774007047@lanl-us.webex.com)
+        - You can also dial 173.243.2.68 and enter your meeting number
 -   Time: Every other Wednesday, 8:30 a.m. Pacific Time
 -   Calendar invite: https://drive.google.com/file/d/1rkfWCtIvQFcxN0Uz8YVwQGoX_BbzT8oc/view?usp=drive_link
--   Working agenda is available in this [Google Doc](https://docs.google.com/document/d/18DHhXjdzPQP20rmQiDsWbv1tHfqz8TjJiSPwI-wYbY8/edit).
+-   Working agenda is available in this [Google Doc](https://docs.google.com/document/d/18DHhXjdzPQP20rmQiDsWbv1tHfqz8TjJiSPwI-wYbY8/edit). The drafted agenda will be posted on Slack the day before the meeting. Edits to the agenda should be made directly in the Google Doc, but if this is not possible any replies to the Slack post will also be incorporated.
 -   Meeting minutes are available in the [MeetingNotes](https://github.com/llvm/llvm-project/blob/main/flang/docs/MeetingNotes) directory.
 -   Minutes from older meetings were posted on the [Flang forum](https://discourse.llvm.org/c/subprojects/flang). Search for `Flang Biweekly Sync - Notes`.
 
