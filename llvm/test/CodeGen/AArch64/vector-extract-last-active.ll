@@ -549,22 +549,34 @@ define i32 @extract_last_active_v3i32(<3 x i32> %a, <3 x i1> %c) {
   ret i32 %res
 }
 
-declare i8 @llvm.experimental.vector.extract.last.active.v16i8(<16 x i8>, <16 x i1>, i8)
-declare i16 @llvm.experimental.vector.extract.last.active.v8i16(<8 x i16>, <8 x i1>, i16)
-declare i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32>, <4 x i1>, i32)
-declare i64 @llvm.experimental.vector.extract.last.active.v2i64(<2 x i64>, <2 x i1>, i64)
-declare half @llvm.experimental.vector.extract.last.active.v8f16(<8 x half>, <8 x i1>, half)
-declare bfloat @llvm.experimental.vector.extract.last.active.v8bf16(<8 x bfloat>, <8 x i1>, bfloat)
-declare float @llvm.experimental.vector.extract.last.active.v4f32(<4 x float>, <4 x i1>, float)
-declare double @llvm.experimental.vector.extract.last.active.v2f64(<2 x double>, <2 x i1>, double)
-declare i8 @llvm.experimental.vector.extract.last.active.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i1>, i8)
-declare i16 @llvm.experimental.vector.extract.last.active.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i1>, i16)
-declare i32 @llvm.experimental.vector.extract.last.active.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, i32)
-declare i64 @llvm.experimental.vector.extract.last.active.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i1>, i64)
-declare half @llvm.experimental.vector.extract.last.active.nxv8f16(<vscale x 8 x half>, <vscale x 8 x i1>, half)
-declare bfloat @llvm.experimental.vector.extract.last.active.nxv8bf16(<vscale x 8 x bfloat>, <vscale x 8 x i1>, bfloat)
-declare float @llvm.experimental.vector.extract.last.active.nxv4f32(<vscale x 4 x float>, <vscale x 4 x i1>, float)
-declare double @llvm.experimental.vector.extract.last.active.nxv2f64(<vscale x 2 x double>, <vscale x 2 x i1>, double)
-declare i1 @llvm.experimental.vector.extract.last.active.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>, i1)
+define i8 @extract_last_active_split(<vscale x 32 x i8> %data, <vscale x 32 x i1> %mask, i8 %passthru) #0 {
+; CHECK-LABEL: extract_last_active_split:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    ptest p1, p1.b
+; CHECK-NEXT:    rdvl x10, #1
+; CHECK-NEXT:    str z1, [sp, #1, mul vl]
+; CHECK-NEXT:    str z0, [sp]
+; CHECK-NEXT:    lastb w8, p1, z2.b
+; CHECK-NEXT:    lastb w9, p0, z2.b
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-NEXT:    add x8, x8, x10
+; CHECK-NEXT:    rdvl x10, #2
+; CHECK-NEXT:    csel x8, x8, x9, ne
+; CHECK-NEXT:    sub x9, x10, #1
+; CHECK-NEXT:    cmp x8, x9
+; CHECK-NEXT:    csel x8, x8, x9, lo
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    ptest p0, p0.b
+; CHECK-NEXT:    ldrb w8, [x9, x8]
+; CHECK-NEXT:    csel w0, w8, w0, ne
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %res = call i8 @llvm.experimental.vector.extract.last.active.nxv32i8(<vscale x 32 x i8> %data, <vscale x 32 x i1> %mask, i8 %passthru)
+  ret i8 %res
+}
 
-attributes #0 = { "target-features"="+sve" vscale_range(1, 16) }
+attributes #0 = { nounwind "target-features"="+sve" vscale_range(1, 16) }

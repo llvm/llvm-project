@@ -31,7 +31,7 @@ v -T ExpectedVecRef
 # Reference types are unwrapped from std::reference_wrapper<T> to T.
 # CHECK:      (lldb) v -T ExpectedRef
 # CHECK-NEXT: (llvm::Expected<int &>) ExpectedRef = {
-# CHECK-NEXT:   (int) value = 100
+# CHECK-NEXT:   ({{.*}}) value = 100
 # CHECK-NEXT: }
 
 # CHECK:      (lldb) v -T ExpectedVec

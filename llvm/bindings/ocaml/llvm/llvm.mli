@@ -464,9 +464,6 @@ val create_context : unit -> llcontext
     [llvm::LLVMContext::~LLVMContext]. *)
 val dispose_context : llcontext -> unit
 
-(** See the function [LLVMGetGlobalContext]. *)
-val global_context : unit -> llcontext
-
 (** [mdkind_id context name] returns the MDKind ID that corresponds to the
     name [name] in the context [context].  See the function
     [llvm::LLVMContext::getMDKindID]. *)
