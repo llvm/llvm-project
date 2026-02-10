@@ -1765,7 +1765,7 @@ public:
 
   /// Return a freeze of V if any of the demanded elts may be undef or poison.
   /// If \p PoisonOnly is true, then only check for poison elements.
-  LLVM_ABI SDValue getFreeze(SDValue V, APInt DemandedElts,
+  LLVM_ABI SDValue getFreeze(SDValue V, const APInt &DemandedElts,
                              bool PoisonOnly = false);
 
   /// Return an AssertAlignSDNode.

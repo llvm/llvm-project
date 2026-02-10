@@ -2540,7 +2540,7 @@ SDValue SelectionDAG::getFreeze(SDValue V) {
   return getNode(ISD::FREEZE, SDLoc(V), V.getValueType(), V);
 }
 
-SDValue SelectionDAG::getFreeze(SDValue V, APInt DemandedElts,
+SDValue SelectionDAG::getFreeze(SDValue V, const APInt &DemandedElts,
                                 bool PoisonOnly) {
   if (isGuaranteedNotToBeUndefOrPoison(V, DemandedElts, PoisonOnly))
     return V;
