@@ -491,17 +491,19 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
   SplitModules.emplace_back(*LinkedFile);
 
   // Generate symbol table.
-  SmallVector<std::string> SymbolTable;
+  SmallVector<SmallString<0>> SymbolTable;
   for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
     Expected<std::unique_ptr<Module>> ModOrErr =
         getBitcodeModule(SplitModules[I], C);
     if (!ModOrErr)
       return ModOrErr.takeError();
 
-    std::string SymbolData;
+    SmallString<0> SymbolData;
     for (Function &F : **ModOrErr) {
-      if (isKernel(F))
-        SymbolData.append(F.getName().data(), F.getName().size() + 1);
+      if (isKernel(F)) {
+        SymbolData.append(F.getName());
+        SymbolData.push_back('\0');
+      }
     }
     SymbolTable.emplace_back(std::move(SymbolData));
   }
