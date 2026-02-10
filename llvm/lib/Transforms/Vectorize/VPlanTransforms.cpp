@@ -6061,14 +6061,12 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
                                          : GEPNoWrapFlags::none());
 
       // Create a new vector pointer for strided access.
-      auto *NewPtr = Builder.createVectorPointer(
+      VPValue *NewPtr = Builder.createVectorPointer(
           BasePtr, Type::getInt8Ty(Plan.getContext()), StrideInBytes,
           Ptr->getGEPNoWrapFlags(), Ptr->getDebugLoc());
 
-      VPValue *Mask;
-      if (VPValue *LoadMask = LoadR->getMask())
-        Mask = LoadMask;
-      else
+      VPValue *Mask = LoadR->getMask();
+      if (!Mask)
         Mask = Plan.getTrue();
       auto *StridedLoad = Builder.createWidenMemIntrinsic(
           *cast<LoadInst>(&Ingredient), {NewPtr, StrideInBytes, Mask, I32VF},
