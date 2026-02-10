@@ -9,9 +9,7 @@
 #ifndef LLDB_TARGET_THREADLIST_H
 #define LLDB_TARGET_THREADLIST_H
 
-#include <map>
 #include <mutex>
-#include <set>
 #include <vector>
 
 #include "lldb/Target/Thread.h"
@@ -19,6 +17,9 @@
 #include "lldb/Utility/Iterable.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
+
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 
 namespace lldb_private {
 
@@ -173,7 +174,8 @@ protected:
   /// Key: breakpoint address, Value: set of thread IDs stepping over it.
   /// When a thread finishes stepping, it's removed from the set. When the set
   /// becomes empty, the breakpoint is re-enabled.
-  std::map<lldb::addr_t, std::set<lldb::tid_t>> m_threads_stepping_over_bp;
+  llvm::DenseMap<lldb::addr_t, llvm::DenseSet<lldb::tid_t>>
+      m_threads_stepping_over_bp;
 
 private:
   ThreadList() = delete;

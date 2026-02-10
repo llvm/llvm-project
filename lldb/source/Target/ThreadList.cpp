@@ -20,6 +20,8 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -526,9 +528,9 @@ bool ThreadList::WillResume(RunDirection &direction) {
   // Go through the threads and see if any thread wants to run just itself.
   // if so then pick one and run it.
 
-  // Collect threads for batched vCont - multiple threads at the same breakpoint
-  // can be stepped together in a single vCont packet.
-  std::vector<ThreadSP> batched_step_threads;
+  // Collect threads for batched vCont for multiple threads at the same
+  // breakpoint.
+  llvm::SmallVector<ThreadSP> batched_step_threads;
 
   ThreadList run_me_only_list(m_process);
 
@@ -602,8 +604,8 @@ bool ThreadList::WillResume(RunDirection &direction) {
     // Pre-scan to find all threads that need to step over a breakpoint,
     // and group them by breakpoint address. This optimization allows us to
     // step multiple threads over the same breakpoint with minimal breakpoint
-    // swaps - only the last thread in each group will re-enable the breakpoint.
-    std::map<lldb::addr_t, std::vector<ThreadSP>> breakpoint_groups;
+    // swaps, only the last thread in each group will re-enable the breakpoint.
+    llvm::DenseMap<lldb::addr_t, llvm::SmallVector<ThreadSP>> breakpoint_groups;
     bool found_run_before_public_stop = false;
 
     for (pos = m_threads.begin(); pos != end; ++pos) {
@@ -620,7 +622,7 @@ bool ThreadList::WillResume(RunDirection &direction) {
           // You can't say "stop others" and also want yourself to be suspended.
           assert(thread_sp->GetCurrentPlan()->RunState() != eStateSuspended);
 
-          // Get the breakpoint address from the step-over-breakpoint plan
+          // Get the breakpoint address from the step-over-breakpoint plan.
           ThreadPlan *current_plan = thread_sp->GetCurrentPlan();
           if (current_plan &&
               current_plan->GetKind() == ThreadPlan::eKindStepOverBreakpoint) {
@@ -651,12 +653,13 @@ bool ThreadList::WillResume(RunDirection &direction) {
       // Also collect threads for batched vCont if multiple threads at same BP.
       for (auto &group : breakpoint_groups) {
         lldb::addr_t bp_addr = group.first;
-        std::vector<ThreadSP> &threads = group.second;
+        llvm::SmallVector<ThreadSP> &threads = group.second;
 
         if (threads.size() > 1) {
-          // Multiple threads stepping over the same breakpoint - use tracking
+          // Use tracking since multiple threads are stepping over the same
+          // breakpoint.
           for (ThreadSP &thread_sp : threads) {
-            // Register this thread as stepping over the breakpoint
+            // Register this thread as stepping over the breakpoint.
             RegisterThreadSteppingOverBreakpoint(bp_addr, thread_sp->GetID());
 
             // Set the plan to defer re-enabling (use callback instead).
@@ -670,19 +673,16 @@ bool ThreadList::WillResume(RunDirection &direction) {
             }
           }
 
-          // Collect for batched vCont - pick the largest group
-          if (threads.size() > batched_step_threads.size()) {
+          // Pick the largest group for batched vCont.
+          if (threads.size() > batched_step_threads.size())
             batched_step_threads = threads;
-          }
         }
-        // Single thread at breakpoint - keeps default behavior (re-enable
-        // directly)
+        // Keeps default behavior for a single thread at breakpoint.
       }
 
-      // If we found a batch, use the first thread as thread_to_run
-      if (!batched_step_threads.empty()) {
+      // If we found a batch, use the first thread as thread_to_run.
+      if (!batched_step_threads.empty())
         thread_to_run = batched_step_threads[0];
-      }
     }
   }
 
@@ -705,19 +705,18 @@ bool ThreadList::WillResume(RunDirection &direction) {
   if (!batched_step_threads.empty()) {
     // Batched stepping: all threads in the batch step together,
     // all other threads stay suspended.
-    std::set<lldb::tid_t> batch_tids;
-    for (ThreadSP &thread_sp : batched_step_threads) {
+    llvm::DenseSet<lldb::tid_t> batch_tids;
+    for (ThreadSP &thread_sp : batched_step_threads)
       batch_tids.insert(thread_sp->GetID());
-    }
 
     for (pos = m_threads.begin(); pos != end; ++pos) {
       ThreadSP thread_sp(*pos);
       if (batch_tids.count(thread_sp->GetID()) > 0) {
-        // This thread is in the batch - let it step
+        // This thread is in the batch, let it step.
         if (!thread_sp->ShouldResume(thread_sp->GetCurrentPlan()->RunState()))
           need_to_resume = false;
       } else {
-        // Not in the batch - suspend it
+        // Suspend it since it's not in the batch.
         thread_sp->ShouldResume(eStateSuspended);
       }
     }
@@ -929,7 +928,7 @@ void ThreadList::ThreadFinishedSteppingOverBreakpoint(addr_t breakpoint_addr,
 
   auto it = m_threads_stepping_over_bp.find(breakpoint_addr);
   if (it == m_threads_stepping_over_bp.end()) {
-    // No threads registered for this breakpoint - just re-enable it directly
+    // No threads registered for this breakpoint, re-enable directly.
     LLDB_LOGF(log,
               "ThreadList::%s: Thread 0x%" PRIx64
               " finished stepping over breakpoint at 0x%" PRIx64
@@ -937,13 +936,12 @@ void ThreadList::ThreadFinishedSteppingOverBreakpoint(addr_t breakpoint_addr,
               __FUNCTION__, tid, breakpoint_addr);
     BreakpointSiteSP bp_site_sp(
         m_process.GetBreakpointSiteList().FindByAddress(breakpoint_addr));
-    if (bp_site_sp) {
+    if (bp_site_sp)
       m_process.EnableBreakpointSite(bp_site_sp.get());
-    }
     return;
   }
 
-  // Remove this thread from the set
+  // Remove this thread from the set.
   it->second.erase(tid);
 
   LLDB_LOGF(log,
@@ -952,7 +950,7 @@ void ThreadList::ThreadFinishedSteppingOverBreakpoint(addr_t breakpoint_addr,
             " (%zu threads remaining)",
             __FUNCTION__, tid, breakpoint_addr, it->second.size());
 
-  // If no more threads are stepping over this breakpoint, re-enable it
+  // If no more threads are stepping over this breakpoint, re-enable it.
   if (it->second.empty()) {
     LLDB_LOGF(log,
               "ThreadList::%s: All threads finished stepping over breakpoint "
@@ -961,11 +959,10 @@ void ThreadList::ThreadFinishedSteppingOverBreakpoint(addr_t breakpoint_addr,
 
     BreakpointSiteSP bp_site_sp(
         m_process.GetBreakpointSiteList().FindByAddress(breakpoint_addr));
-    if (bp_site_sp) {
+    if (bp_site_sp)
       m_process.EnableBreakpointSite(bp_site_sp.get());
-    }
 
-    // Clean up the entry
+    // Clean up the entry.
     m_threads_stepping_over_bp.erase(it);
   }
 }

@@ -163,12 +163,11 @@ void ThreadPlanStepOverBreakpoint::ReenableBreakpointSite() {
       m_process.GetThreadList().ThreadFinishedSteppingOverBreakpoint(
           m_breakpoint_addr, GetThread().GetID());
     } else {
-      // Default behavior: re-enable the breakpoint directly
+      // Default behavior: re-enable the breakpoint directly.
       BreakpointSiteSP bp_site_sp(
           m_process.GetBreakpointSiteList().FindByAddress(m_breakpoint_addr));
-      if (bp_site_sp) {
+      if (bp_site_sp)
         m_process.EnableBreakpointSite(bp_site_sp.get());
-      }
     }
   }
 }
