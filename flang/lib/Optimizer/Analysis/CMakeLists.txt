@@ -1,5 +1,6 @@
 add_flang_library(FIRAnalysis
   AliasAnalysis.cpp
+  ArraySectionAnalyzer.cpp
   TBAAForest.cpp
 
   DEPENDS
