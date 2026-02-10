@@ -24282,7 +24282,8 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
             // Make sure to freeze the source vector in case any of the elements
             // overwritten by the insert may be poison. Otherwise those elements
             // could end up being poison instead of 0/-1 after the AND/OR.
-            CurVec = DAG.getFreeze(CurVec, InsertedEltMask, /*PoisonOnly=*/true);
+            CurVec =
+                DAG.getFreeze(CurVec, InsertedEltMask, /*PoisonOnly=*/true);
             return DAG.getNode(MaskOpcode, DL, VT, CurVec,
                                DAG.getBuildVector(VT, DL, Mask));
           };
