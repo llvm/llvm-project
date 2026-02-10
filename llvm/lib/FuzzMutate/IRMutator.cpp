@@ -124,7 +124,8 @@ static inline Instruction *getEffectiveTerminator(BasicBlock &BB) {
     // Certain intrinsics, such as @llvm.amdgcn.cs.chain, must be immediately
     // followed by an unreachable instruction..
     if (UnreachableInst *UI = dyn_cast<UnreachableInst>(BB.getTerminator())) {
-      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(UI->getPrevNode())) {
+      if (IntrinsicInst *II =
+              dyn_cast_if_present<IntrinsicInst>(UI->getPrevNode())) {
         return II;
       }
     }
