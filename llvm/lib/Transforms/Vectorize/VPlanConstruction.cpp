@@ -221,7 +221,8 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       // Phi node's operands may not have been visited at this point. We create
       // an empty VPInstruction that we will fix once the whole plain CFG has
       // been built.
-      NewR = VPIRBuilder.createScalarPhi({}, Phi->getDebugLoc(), "vec.phi");
+      NewR =
+          VPIRBuilder.createScalarPhi({}, Phi->getDebugLoc(), "vec.phi", *Phi);
       NewR->setUnderlyingValue(Phi);
       if (isHeaderBB(Phi->getParent(), LI->getLoopFor(Phi->getParent()))) {
         // Header phis need to be fixed after the VPBB for the latch has been
@@ -643,8 +644,31 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   // used, so it is safe.
   VPIRFlags Flags = vputils::getFlagsFromIndDesc(IndDesc);
 
-  return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, &Plan.getVF(),
-                                           IndDesc, Flags, DL);
+  auto *WideIV = new VPWidenIntOrFpInductionRecipe(
+      Phi, Start, Step, &Plan.getVF(), IndDesc, Flags, DL);
+
+  // Replace live-out extracts of WideIV's backedge value by ExitingIVValue
+  // recipes.
+  VPValue *BackedgeVal = PhiR->getOperand(1);
+  for (VPUser *U : to_vector(BackedgeVal->users())) {
+    if (!match(U, m_ExtractLastPart(m_VPValue())))
+      continue;
+    auto *ExtractLastPart = cast<VPInstruction>(U);
+    if (!match(ExtractLastPart->getSingleUser(),
+               m_ExtractLastLane(m_VPValue())))
+      continue;
+    auto *ExtractLastLane =
+        cast<VPInstruction>(ExtractLastPart->getSingleUser());
+    assert(is_contained(ExtractLastLane->getParent()->successors(),
+                        Plan.getScalarPreheader()) &&
+           "last lane must be extracted in the middle block");
+    VPBuilder Builder(ExtractLastLane);
+    ExtractLastLane->replaceAllUsesWith(Builder.createNaryOp(
+        VPInstruction::ExitingIVValue, {WideIV, BackedgeVal}));
+    ExtractLastLane->eraseFromParent();
+    ExtractLastPart->eraseFromParent();
+  }
+  return WideIV;
 }
 
 void VPlanTransforms::createHeaderPhiRecipes(
@@ -712,8 +736,7 @@ void VPlanTransforms::createHeaderPhiRecipes(
 }
 
 void VPlanTransforms::createInLoopReductionRecipes(
-    VPlan &Plan, const DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache,
-    const DenseSet<BasicBlock *> &BlocksNeedingPredication,
+    VPlan &Plan, const DenseSet<BasicBlock *> &BlocksNeedingPredication,
     ElementCount MinVF) {
   VPTypeAnalysis TypeInfo(Plan);
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
@@ -835,17 +858,18 @@ void VPlanTransforms::createInLoopReductionRecipes(
                 ? IndexOfFirstOperand + 1
                 : IndexOfFirstOperand;
         VecOp = CurrentLink->getOperand(VecOpId);
-        assert(VecOp != PreviousLink &&
-               CurrentLink->getOperand(CurrentLink->getNumOperands() - 1 -
-                                       (VecOpId - IndexOfFirstOperand)) ==
-                   PreviousLink &&
-               "PreviousLink must be the operand other than VecOp");
+        assert(
+            VecOp != PreviousLink &&
+            CurrentLink->getOperand(
+                cast<VPInstruction>(CurrentLink)->getNumOperandsWithoutMask() -
+                1 - (VecOpId - IndexOfFirstOperand)) == PreviousLink &&
+            "PreviousLink must be the operand other than VecOp");
       }
 
-      // Get block mask from BlockMaskCache if the block needs predication.
+      // Get block mask from CurrentLink, if it needs predication.
       VPValue *CondOp = nullptr;
       if (BlocksNeedingPredication.contains(CurrentLinkI->getParent()))
-        CondOp = BlockMaskCache.lookup(LinkVPBB);
+        CondOp = cast<VPInstruction>(CurrentLink)->getMask();
 
       assert(PhiR->getVFScaleFactor() == 1 &&
              "inloop reductions must be unscaled");
@@ -1464,8 +1488,20 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     }
 
     auto *FindIVPhiR = dyn_cast<VPReductionPHIRecipe>(FindIV);
-    if (!FindIVPhiR || !RecurrenceDescriptor::isFindLastIVRecurrenceKind(
+    if (!FindIVPhiR || !RecurrenceDescriptor::isFindIVRecurrenceKind(
                            FindIVPhiR->getRecurrenceKind()))
+      return false;
+
+    // Check if FindIVPhiR is a FindLast pattern by checking the MinMaxKind
+    // on its ComputeReductionResult. SMax/UMax indicates FindLast.
+    VPInstruction *FindIVResult =
+        vputils::findUserOf<VPInstruction::ComputeReductionResult>(
+            FindIVPhiR->getBackedgeValue());
+    assert(FindIVResult &&
+           "must be able to retrieve the FindIVResult VPInstruction");
+    RecurKind FindIVMinMaxKind = FindIVResult->getRecurKind();
+    if (FindIVMinMaxKind != RecurKind::SMax &&
+        FindIVMinMaxKind != RecurKind::UMax)
       return false;
 
     // TODO: Support cases where IVOp is the IV increment.

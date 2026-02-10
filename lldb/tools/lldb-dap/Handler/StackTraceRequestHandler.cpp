@@ -190,8 +190,7 @@ static bool FillStackFrames(DAP &dap, lldb::SBThread &thread,
 
 llvm::Expected<protocol::StackTraceResponseBody>
 StackTraceRequestHandler::Run(const protocol::StackTraceArguments &args) const {
-  const lldb::StateType process_state = dap.target.GetProcess().GetState();
-  if (!lldb::SBDebugger::StateIsStoppedState(process_state))
+  if (dap.ProcessIsNotStopped())
     return llvm::make_error<NotStoppedError>();
 
   lldb::SBThread thread = dap.GetLLDBThread(args.threadId);
