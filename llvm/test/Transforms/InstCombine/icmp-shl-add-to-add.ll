@@ -293,3 +293,19 @@ define i1 @icmp_slt_shl_nsw_add_nsw_fuzz(i32 %x, i32 %y) {
   %cmp = icmp slt i32 %shlx, %add
   ret i1 %cmp
 }
+
+; NOTE: This is a regression test for a miscompile discovered by fuzzing (unsigned comparison).
+define i1 @icmp_ugt_shl_nuw_add_nsw_fuzz(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_ugt_shl_nuw_add_nsw_fuzz(
+; CHECK-NEXT:    [[SHLX:%.*]] = shl nuw i32 [[X:%.*]], 5
+; CHECK-NEXT:    [[SHLY:%.*]] = shl nsw i32 [[Y:%.*]], 5
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[SHLY]], 32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[SHLX]], [[ADD]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shlx = shl nuw i32 %x, 5
+  %shly = shl nsw i32 %y, 5
+  %add = add nsw i32 %shly, 32
+  %cmp = icmp ugt i32 %shlx, %add
+  ret i1 %cmp
+}

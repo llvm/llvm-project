@@ -649,8 +649,9 @@ bool InstCombinerImpl::canEvaluateShifted(Value *V, unsigned NumBits,
   }
   case Instruction::Add: {
     auto *BinOp = cast<BinaryOperator>(I);
-    if (ShiftOp == Instruction::Shl || BinOp->hasNoUnsignedWrap() ||
-        BinOp->hasNoSignedWrap())
+    if (ShiftOp == Instruction::Shl ||
+        (ShiftOp == Instruction::LShr && BinOp->hasNoUnsignedWrap()) ||
+        (ShiftOp == Instruction::AShr && BinOp->hasNoSignedWrap()))
       return canEvaluateShifted(I->getOperand(0), NumBits, ShiftOp, I) &&
              canEvaluateShifted(I->getOperand(1), NumBits, ShiftOp, I);
 
