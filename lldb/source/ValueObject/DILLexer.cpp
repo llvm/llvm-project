@@ -113,23 +113,25 @@ static std::optional<llvm::StringRef> IsNumber(llvm::StringRef &remainder,
 
 static llvm::Error IsNotAllowedByMode(llvm::StringRef expr, Token token,
                                       lldb::DILMode mode) {
-  if (mode == lldb::eDILModeSimple &&
-      !token.IsOneOf({Token::identifier, Token::period, Token::eof})) {
-    std::string errMsg =
-        llvm::formatv("token '{0}' is not allowed in DIL simple mode",
-                      Token::GetTokenName(token.GetKind()));
-    return llvm::make_error<DILDiagnosticError>(expr, errMsg,
-                                                token.GetLocation());
-  } else if (mode == lldb::eDILModeLegacy &&
-             !token.IsOneOf({Token::identifier, Token::integer_constant,
-                             Token::period, Token::arrow, Token::star,
-                             Token::amp, Token::l_square, Token::r_square,
-                             Token::eof})) {
-    std::string errMsg =
-        llvm::formatv("token '{0}' is not allowed in DIL legacy mode",
-                      Token::GetTokenName(token.GetKind()));
-    return llvm::make_error<DILDiagnosticError>(expr, errMsg,
-                                                token.GetLocation());
+  switch (mode) {
+  case lldb::eDILModeSimple:
+    if (!token.IsOneOf({Token::identifier, Token::period, Token::eof})) {
+      return llvm::make_error<DILDiagnosticError>(
+          expr, llvm::formatv("{0} is not allowed in DIL simple mode", token),
+          token.GetLocation());
+    }
+    break;
+  case lldb::eDILModeLegacy:
+    if (!token.IsOneOf({Token::identifier, Token::integer_constant,
+                        Token::period, Token::arrow, Token::star, Token::amp,
+                        Token::l_square, Token::r_square, Token::eof})) {
+      return llvm::make_error<DILDiagnosticError>(
+          expr, llvm::formatv("{0} is not allowed in DIL legacy mode", token),
+          token.GetLocation());
+    }
+    break;
+  case lldb::eDILModeFull:
+    break;
   }
   return llvm::Error::success();
 }
