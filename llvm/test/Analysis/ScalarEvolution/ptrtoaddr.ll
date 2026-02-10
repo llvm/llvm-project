@@ -89,13 +89,12 @@ define void @ptrtoaddr_of_gep_with_unknown_int(ptr %in, ptr %out0, ptr %offset) 
   ret void
 }
 
-; FIXME: Currently not handled correctly.
 ; ptrtoaddr of a pointer with unstable representation should return SCEVUnknown.
 define void @ptrtoaddr_unstable(ptr addrspace(2) %in, ptr %out) {
 ; CHECK-LABEL: 'ptrtoaddr_unstable'
 ; CHECK-NEXT:  Classifying expressions for: @ptrtoaddr_unstable
 ; CHECK-NEXT:    %p = ptrtoaddr ptr addrspace(2) %in to i64
-; CHECK-NEXT:    --> (ptrtoaddr ptr addrspace(2) %in to i64) U: full-set S: full-set
+; CHECK-NEXT:    --> %p U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @ptrtoaddr_unstable
 ;
   %p = ptrtoaddr ptr addrspace(2) %in to i64
@@ -103,7 +102,6 @@ define void @ptrtoaddr_unstable(ptr addrspace(2) %in, ptr %out) {
   ret void
 }
 
-; FIXME: Currently not handled correctly.
 ; ptrtoaddr of GEP on unstable pointer should return SCEVUnknown.
 define void @ptrtoaddr_unstable_gep(ptr addrspace(2) %in, ptr %out) {
 ; CHECK-LABEL: 'ptrtoaddr_unstable_gep'
@@ -111,7 +109,7 @@ define void @ptrtoaddr_unstable_gep(ptr addrspace(2) %in, ptr %out) {
 ; CHECK-NEXT:    %gep = getelementptr inbounds i8, ptr addrspace(2) %in, i64 42
 ; CHECK-NEXT:    --> (42 + %in) U: full-set S: full-set
 ; CHECK-NEXT:    %p = ptrtoaddr ptr addrspace(2) %gep to i64
-; CHECK-NEXT:    --> (42 + (ptrtoaddr ptr addrspace(2) %in to i64)) U: full-set S: full-set
+; CHECK-NEXT:    --> %p U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @ptrtoaddr_unstable_gep
 ;
   %gep = getelementptr inbounds i8, ptr addrspace(2) %in, i64 42
@@ -120,13 +118,12 @@ define void @ptrtoaddr_unstable_gep(ptr addrspace(2) %in, ptr %out) {
   ret void
 }
 
-; FIXME: Currently not handled correctly.
 ; ptrtoaddr of nullptr in unstable address space should return SCEVUnknown.
 define void @ptrtoaddr_unstable_null(ptr %out) {
 ; CHECK-LABEL: 'ptrtoaddr_unstable_null'
 ; CHECK-NEXT:  Classifying expressions for: @ptrtoaddr_unstable_null
 ; CHECK-NEXT:    %p = ptrtoaddr ptr addrspace(2) null to i64
-; CHECK-NEXT:    --> 0 U: [0,1) S: [0,1)
+; CHECK-NEXT:    --> %p U: [0,1) S: [0,1)
 ; CHECK-NEXT:  Determining loop execution counts for: @ptrtoaddr_unstable_null
 ;
   %p = ptrtoaddr ptr addrspace(2) null to i64
