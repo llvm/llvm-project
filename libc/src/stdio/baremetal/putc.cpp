@@ -10,9 +10,9 @@
 
 #include "hdr/stdio_macros.h" // for EOF
 #include "hdr/types/FILE.h"
+#include "src/__support/File/baremetal/file.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
-#include "src/__support/File/baremetal/file.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/baremetal/file_internal.h"
 
