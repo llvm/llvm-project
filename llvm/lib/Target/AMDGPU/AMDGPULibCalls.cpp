@@ -1602,7 +1602,6 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
     }
   }
 
-  LLVMContext &context = aCI->getContext();
   Constant *nval0, *nval1;
   if (FuncVecSize == 1) {
     nval0 = ConstantFP::get(aCI->getType(), Val0[0]);
