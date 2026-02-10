@@ -13,6 +13,7 @@
 #include <optional>
 #include <unordered_map>
 
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -34,6 +35,7 @@
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -1556,15 +1558,29 @@ void ObjectFileELF::ParseRISCVAttributes(DataExtractor &data, uint64_t length,
   if (!value_or_opt)
     return;
 
-  auto isa_info = llvm::RISCVISAInfo::parseArchString(
-      std::get<llvm::StringRef>(*value_or_opt),
-      /* EnableExperimentalExtension=*/true);
-  if (llvm::errorToBool(isa_info.takeError()))
+  auto normalized_isa_info = llvm::RISCVISAInfo::parseNormalizedArchString(
+      std::get<llvm::StringRef>(*value_or_opt));
+  if (llvm::errorToBool(normalized_isa_info.takeError()))
     return;
 
   llvm::SubtargetFeatures features;
-  features.addFeaturesVector((*isa_info)->toFeatures());
+  features.addFeaturesVector((*normalized_isa_info)->toFeatures());
   arch_spec.SetSubtargetFeatures(std::move(features));
+
+  // Additional verification of the arch string. This is primarily needed to
+  // warn users if the executable file contains conflicting RISC-V extensions
+  // that could lead to invalid disassembler output.
+  auto isa_info = llvm::RISCVISAInfo::parseArchString(
+      std::get<llvm::StringRef>(*value_or_opt),
+      /* EnableExperimentalExtension=*/true);
+  if (auto error = isa_info.takeError()) {
+    StreamString ss;
+    ss << "The .riscv.attributes section contains an invalid RISC-V arch "
+          "string: "
+       << llvm::toString(std::move(error))
+       << "\n\tThis could result in misleading disassembler output.\n";
+    Debugger::ReportWarning(ss.GetString().str());
+  }
 }
 
 // GetSectionHeaderInfo
