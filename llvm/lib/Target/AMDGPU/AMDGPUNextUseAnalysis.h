@@ -17,6 +17,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_NEXT_USE_ANALYSIS_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 
@@ -26,7 +27,7 @@
 
 #include <algorithm>
 #include <limits>
-#include <set>
+
 
 using namespace llvm;
 
@@ -38,24 +39,57 @@ class NextUseResult {
   const MachineRegisterInfo *MRI;
   const SIRegisterInfo *TRI;
   MachineLoopInfo *LI;
+  const MachineFunction *MF = nullptr;
+  bool Analyzed = false;
 
 public:
   class VRegDistances {
   public:
     using Record = std::pair<LaneBitmask, int64_t>;
 
-  private:
-    struct CompareByDist {
-      bool operator()(const Record &LHS, const Record &RHS) const {
-        if (LHS.second != RHS.second)     // Different distances
-          return LHS.second < RHS.second; // Closest first
-        return LHS.first.getAsInteger() <
-               RHS.first.getAsInteger(); // Tiebreaker
-      }
-    };
-
   public:
-    using SortedRecords = std::set<Record, CompareByDist>;
+    /// Sorted container for (LaneBitmask, Distance) records.
+    /// Replaces std::set with SmallVector for cache-friendly inline storage.
+    /// Typical VRegs have 1-4 subreg records; SmallVector<,4> avoids all
+    /// heap allocation for the common case.
+    class SortedRecords {
+      SmallVector<Record, 4> Data;
+
+      static bool less(const Record &A, const Record &B) {
+        if (A.second != B.second)
+          return A.second < B.second;
+        return A.first.getAsInteger() < B.first.getAsInteger();
+      }
+
+    public:
+      using iterator = SmallVector<Record, 4>::iterator;
+      using const_iterator = SmallVector<Record, 4>::const_iterator;
+
+      iterator begin() { return Data.begin(); }
+      iterator end() { return Data.end(); }
+      const_iterator begin() const { return Data.begin(); }
+      const_iterator end() const { return Data.end(); }
+
+      bool empty() const { return Data.empty(); }
+      size_t size() const { return Data.size(); }
+
+      iterator find(const Record &R) {
+        return std::find(Data.begin(), Data.end(), R);
+      }
+      const_iterator find(const Record &R) const {
+        return std::find(Data.begin(), Data.end(), R);
+      }
+
+      std::pair<iterator, bool> insert(const Record &R) {
+        auto It = std::find(Data.begin(), Data.end(), R);
+        if (It != Data.end())
+          return {It, false};
+        auto Pos = std::lower_bound(Data.begin(), Data.end(), R, less);
+        return {Data.insert(Pos, R), true};
+      }
+
+      iterator erase(iterator It) { return Data.erase(It); }
+    };
     using iterator = DenseMap<unsigned, SortedRecords>::iterator;
     using const_iterator = DenseMap<unsigned, SortedRecords>::const_iterator;
 
@@ -111,23 +145,36 @@ public:
       return A < 0;
     }
 
-    bool insert(VRegMaskPair VMP, int64_t Dist) {
+    bool insert(VRegMaskPair VMP, int64_t Dist,
+                bool ForceCloserToEntry = false) {
       Record R(VMP.getLaneMask(), Dist);
       iterator MapIt = NextUseMap.find(VMP.getVReg());
       if (MapIt != NextUseMap.end()) {
         SortedRecords &Dists = MapIt->second;
 
         if (Dists.find(R) == Dists.end()) {
-          SmallVector<SortedRecords::iterator, 4> ToErase;
+          SmallVector<unsigned, 4> ToErase;
 
+          // When ForceCloserToEntry is set (backward walk), more negative
+          // stored values represent uses closer to the block entry and should
+          // win over less negative values. Only reverse for both-negative
+          // (repeated uses in backward walk). Mixed-sign (merge value vs
+          // backward-walk use) and both-non-negative already compare correctly.
+          auto closer = [ForceCloserToEntry](int64_t A, int64_t B) {
+            if (ForceCloserToEntry && A < 0 && B < 0)
+              return isCloserOrEqual(B, A);
+            return isCloserOrEqual(A, B);
+          };
+
+          unsigned Idx = 0;
           for (SortedRecords::iterator It = Dists.begin(); It != Dists.end();
-               ++It) {
+               ++It, ++Idx) {
             const Record &D = *It;
 
             // Check if existing use covers the new use
             if ((R.first & D.first) == R.first) {
               // Existing use covers new use - keep if existing is closer
-              if (isCloserOrEqual(D.second, R.second)) {
+              if (closer(D.second, R.second)) {
                 // Existing use is closer or equal -> reject new use
                 return false;
               }
@@ -137,9 +184,9 @@ public:
             // Check if new use covers existing use
             if ((D.first & R.first) == D.first) {
               // New use covers existing use - evict if new is closer
-              if (isCloserOrEqual(R.second, D.second)) {
+              if (closer(R.second, D.second)) {
                 // New use is closer -> mark existing for removal
-                ToErase.push_back(It);
+                ToErase.push_back(Idx);
               } else {
                 // New use is further -> reject it
                 return false;
@@ -147,10 +194,9 @@ public:
             }
           }
 
-          // Remove all records that the new use supersedes
-          for (SortedRecords::iterator It : ToErase) {
-            Dists.erase(It);
-          }
+          // Remove superseded records back-to-front to preserve indices
+          for (int I = (int)ToErase.size() - 1; I >= 0; --I)
+            Dists.erase(Dists.begin() + ToErase[I]);
 
           // Add new record
           return Dists.insert(R).second;
@@ -193,7 +239,7 @@ public:
           return false;
 
         for (const Record &R : OtherDists.second) {
-          SortedRecords::iterator I = Dists.find(R);
+          SortedRecords::const_iterator I = Dists.find(R);
           if (I == Dists.end())
             return false;
           if (R.second != I->second)
@@ -239,7 +285,7 @@ public:
 public:
 private:
   DenseMap<unsigned, VRegMaskPairSet> UsedInBlock;
-  DenseMap<unsigned, unsigned> LoopExits;
+  DenseSet<std::pair<unsigned, unsigned>> LoopExits;
   // Signed tag used to mark "outside current loop" in stored values.
   // Must be >> any finite distance you can accumulate in one function.
   static constexpr int64_t LoopTag = (int64_t)1 << 40; // ~1e12 headroom
@@ -250,6 +296,7 @@ private:
 
   void init(const MachineFunction &MF);
   void analyze(const MachineFunction &MF);
+  void ensureAnalyzed();
 
   // Core materialization: convert stored relative value + snapshot offset
   // to full materialized distance with bounds checking.
@@ -363,6 +410,10 @@ private:
   void clear() {
     NextUseMap.clear();
     LoopExits.clear();
+    UsedInBlock.clear();
+    EntryOff.clear();
+    Analyzed = false;
+    MF = nullptr;
   }
 
 public:
@@ -400,6 +451,7 @@ public:
   }
 
   VRegMaskPairSet &usedInBlock(MachineBasicBlock &MBB) {
+    ensureAnalyzed();
     return UsedInBlock[MBB.getNumber()];
   }
 
