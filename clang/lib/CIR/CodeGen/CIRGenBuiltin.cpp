@@ -1924,6 +1924,12 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return emitLibraryCall(*this, fd, e,
                            cgm.getBuiltinLibFunction(fd, builtinID));
 
+  // If this is a predefined lib function (e.g. malloc), emit the call
+  // using exactly the normal call path.
+  if (getContext().BuiltinInfo.isPredefinedLibFunction(builtinID))
+    return emitLibraryCall(*this, fd, e,
+                           emitScalarExpr(e->getCallee()).getDefiningOp());
+
   // See if we have a target specific intrinsic.
   std::string name = getContext().BuiltinInfo.getName(builtinID);
   Intrinsic::ID intrinsicID = Intrinsic::not_intrinsic;
