@@ -132,6 +132,8 @@ Changes to the RISC-V Backend
   `sspush`, `sspopchk`, `ssrdp`, `c.sspush`, `c.sspopchk`) are now always
   available in the assembler and disassembler without requiring their respective
   extensions.
+* Adds experimental assembler support for the 'Zvabd` (RISC-V Integer Vector
+  Absolute Difference) extension.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -178,6 +180,8 @@ Changes to LLDB
 ---------------
 
 * Support for FreeBSD on MIPS64 has been removed.
+* The minimum assumed version of FreeBSD is now 14. The effect of which is that watchpoints are
+  assumed to be supported.
 
 Changes to BOLT
 ---------------

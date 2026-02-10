@@ -119,6 +119,10 @@ public:
     return Floating(Mem, llvm::APFloatBase::SemanticsToEnum(Sem));
   }
 
+  /// Note that a step has been executed. If there are no more steps remaining,
+  /// diagnoses and returns \c false.
+  bool noteStep(CodePtr OpPC);
+
 private:
   friend class EvaluationResult;
   friend class InterpStateCCOverride;
@@ -146,6 +150,12 @@ public:
   SourceLocation EvalLocation;
   /// Declaration we're initializing/evaluting, if any.
   const VarDecl *EvaluatingDecl = nullptr;
+  /// Steps left during evaluation.
+  unsigned StepsLeft = 1;
+  /// Whether infinite evaluation steps have been requested. If this is false,
+  /// we use the StepsLeft value above.
+  const bool InfiniteSteps = false;
+
   /// Things needed to do speculative execution.
   SmallVectorImpl<PartialDiagnosticAt> *PrevDiags = nullptr;
   unsigned SpeculationDepth = 0;

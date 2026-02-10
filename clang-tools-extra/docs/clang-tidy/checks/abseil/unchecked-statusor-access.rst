@@ -229,6 +229,23 @@ assumes the return value of the accessor was mutated.
      }
    }
 
+.. _pointercalls:
+
+Assuming objects passed by pointer aren't changed
+-------------------------------------------------
+
+If you pass a ``absl::StatusOr`` object as a mutable pointer, the checker
+assumes the function call might change the object's state.  For example:
+
+.. code:: cpp
+
+   void f(absl::StatusOr<int> x) {
+     if (x.ok()) {
+       mutate(&x);
+       use(*x);  // unsafe: `mutate()` might have changed the state of `x`
+    }
+  }
+
 .. _uncommonapi:
 
 Relying on invariants of uncommon APIs
