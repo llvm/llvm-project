@@ -243,6 +243,25 @@ def ApplyLowerMultiReductionPatternsOp : Op<Transform_Dialect,
   }];
 }
 
+def ApplyUnrollMultiReductionPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.unroll_multi_reduction",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Populates patterns that unroll vector.multi_reduction operations by
+    progressively reducing rank. Terminal cases lower to either:
+    - vector.reduction (for 1-D reductions), or
+    - elementwise arith ops (when outermost dim is the only reduction dim).
+  }];
+
+  let arguments = (ins DefaultValuedAttr<VectorMultiReductionLoweringAttr,
+      "vector::VectorMultiReductionLowering::InnerParallel">:$lowering_strategy
+  );
+
+  let assemblyFormat = [{
+    (`lowering_strategy` `=` $lowering_strategy^)? attr-dict
+  }];
+}
+
 def ApplyLowerOuterProductPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_outerproduct",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
