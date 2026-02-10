@@ -1164,14 +1164,14 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
 
   // Otherwise we need to do a bunch of extra checks before returning Unordered.
   if (LHS.isOnePastEnd() && !RHS.isOnePastEnd() && !RHS.isZero() &&
-      RHS.getOffset() == 0) {
+      RHS.isBlockPointer() && RHS.getOffset() == 0) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
         << LHS.toDiagnosticString(S.getASTContext());
     return false;
   }
   if (RHS.isOnePastEnd() && !LHS.isOnePastEnd() && !LHS.isZero() &&
-      LHS.getOffset() == 0) {
+      LHS.isBlockPointer() && LHS.getOffset() == 0) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
         << RHS.toDiagnosticString(S.getASTContext());
@@ -1703,16 +1703,15 @@ bool InitBitField(InterpState &S, CodePtr OpPC, const Record::Field *F) {
 
   const Pointer &Field = Ptr.atField(F->Offset);
 
+  unsigned BitWidth = std::min(F->Decl->getBitWidthValue(), Value.bitWidth());
   if constexpr (needsAlloc<T>()) {
     T Result = S.allocAP<T>(Value.bitWidth());
-    if (T::isSigned())
-      Result.copy(Value.toAPSInt()
-                      .trunc(F->Decl->getBitWidthValue())
-                      .sextOrTrunc(Value.bitWidth()));
+    if constexpr (T::isSigned())
+      Result.copy(
+          Value.toAPSInt().trunc(BitWidth).sextOrTrunc(Value.bitWidth()));
     else
-      Result.copy(Value.toAPSInt()
-                      .trunc(F->Decl->getBitWidthValue())
-                      .zextOrTrunc(Value.bitWidth()));
+      Result.copy(
+          Value.toAPSInt().trunc(BitWidth).zextOrTrunc(Value.bitWidth()));
 
     Field.deref<T>() = Result;
   } else {
@@ -1735,16 +1734,15 @@ bool InitBitFieldActivate(InterpState &S, CodePtr OpPC,
 
   const Pointer &Field = Ptr.atField(F->Offset);
 
+  unsigned BitWidth = std::min(F->Decl->getBitWidthValue(), Value.bitWidth());
   if constexpr (needsAlloc<T>()) {
     T Result = S.allocAP<T>(Value.bitWidth());
-    if (T::isSigned())
-      Result.copy(Value.toAPSInt()
-                      .trunc(F->Decl->getBitWidthValue())
-                      .sextOrTrunc(Value.bitWidth()));
+    if constexpr (T::isSigned())
+      Result.copy(
+          Value.toAPSInt().trunc(BitWidth).sextOrTrunc(Value.bitWidth()));
     else
-      Result.copy(Value.toAPSInt()
-                      .trunc(F->Decl->getBitWidthValue())
-                      .zextOrTrunc(Value.bitWidth()));
+      Result.copy(
+          Value.toAPSInt().trunc(BitWidth).zextOrTrunc(Value.bitWidth()));
 
     Field.deref<T>() = Result;
   } else {
@@ -1973,8 +1971,7 @@ bool Load(InterpState &S, CodePtr OpPC) {
     return false;
   if (!Ptr.isBlockPointer())
     return false;
-  if (const Descriptor *D = Ptr.getFieldDesc();
-      !(D->isPrimitive() || D->isPrimitiveArray()) || D->getPrimType() != Name)
+  if (!Ptr.canDeref(Name))
     return false;
   S.Stk.push<T>(Ptr.deref<T>());
   return true;
@@ -1987,8 +1984,7 @@ bool LoadPop(InterpState &S, CodePtr OpPC) {
     return false;
   if (!Ptr.isBlockPointer())
     return false;
-  if (const Descriptor *D = Ptr.getFieldDesc();
-      !(D->isPrimitive() || D->isPrimitiveArray()) || D->getPrimType() != Name)
+  if (!Ptr.canDeref(Name))
     return false;
   S.Stk.push<T>(Ptr.deref<T>());
   return true;
@@ -2628,8 +2624,9 @@ static inline bool CastFloatingIntegralAP(InterpState &S, CodePtr OpPC,
   auto Status = F.convertToInteger(Result);
 
   // Float-to-Integral overflow check.
-  if ((Status & APFloat::opStatus::opInvalidOp) && F.isFinite())
-    return handleOverflow(S, OpPC, F.getAPFloat());
+  if ((Status & APFloat::opStatus::opInvalidOp) && F.isFinite() &&
+      !handleOverflow(S, OpPC, F.getAPFloat()))
+    return false;
 
   FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
 
@@ -2649,8 +2646,9 @@ static inline bool CastFloatingIntegralAPS(InterpState &S, CodePtr OpPC,
   auto Status = F.convertToInteger(Result);
 
   // Float-to-Integral overflow check.
-  if ((Status & APFloat::opStatus::opInvalidOp) && F.isFinite())
-    return handleOverflow(S, OpPC, F.getAPFloat());
+  if ((Status & APFloat::opStatus::opInvalidOp) && F.isFinite() &&
+      !handleOverflow(S, OpPC, F.getAPFloat()))
+    return false;
 
   FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
 

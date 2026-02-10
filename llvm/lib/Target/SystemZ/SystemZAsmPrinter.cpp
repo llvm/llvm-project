@@ -159,6 +159,36 @@ static MCInst lowerVecEltInsertion(const MachineInstr *MI, unsigned Opcode) {
       .addImm(0);
 }
 
+bool SystemZAsmPrinter::doInitialization(Module &M) {
+  SM.reset();
+
+  // In HLASM, the only way to represent aliases is to use the
+  // extra-label-at-definition strategy. This is similar to the AIX
+  // implementation with the additional caveat that all symbol attributes must
+  // be emitted before the label is emitted.
+  if (TM.getTargetTriple().isOSzOS()) {
+    // Construct an aliasing list for each GlobalObject.
+    for (const auto &Alias : M.aliases()) {
+      const GlobalObject *Aliasee = Alias.getAliaseeObject();
+      if (!Aliasee)
+        OutContext.reportError(
+            {}, "Alias without a base object is not yet supported on z/OS.");
+
+      bool IsFunc = isa<Function>(Aliasee->stripPointerCasts());
+      if (IsFunc) {
+        if (Alias.hasWeakLinkage() || Alias.hasLinkOnceLinkage())
+          OutContext.reportError({},
+                                 "Weak alias/reference not supported on z/OS");
+
+        GOAliasMap[Aliasee].push_back(&Alias);
+      } else
+        OutContext.reportError(
+            {}, "Only aliases to functions is supported in GOFF.");
+    }
+  }
+  return AsmPrinter::doInitialization(M);
+}
+
 // The XPLINK ABI requires that a no-op encoding the call type is emitted after
 // each call to a subroutine. This information can be used by the called
 // function to determine its entry point, e.g. for generating a backtrace. The
@@ -541,6 +571,7 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
       .addReg(SystemZMC::getRegAsGR64(MI->getOperand(2).getReg()));
     break;
 
+  case SystemZ::VLR16:
   case SystemZ::VLR32:
   case SystemZ::VLR64:
     LoweredMI = MCInstBuilder(SystemZ::VLR)
@@ -900,6 +931,27 @@ void SystemZAsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
 
 void SystemZAsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(
     const MachineInstr &MI, SystemZMCInstLower &Lower) {
+
+  const MachineFunction &MF = *(MI.getParent()->getParent());
+  const Function &F = MF.getFunction();
+
+  // If patchable-function-entry is set, emit in-function nops here.
+  if (F.hasFnAttribute("patchable-function-entry")) {
+    unsigned Num;
+    // get M-N from function attribute (CodeGenFunction subtracts N
+    // from M to yield the correct patchable-function-entry).
+    if (F.getFnAttribute("patchable-function-entry")
+            .getValueAsString()
+            .getAsInteger(10, Num))
+      return;
+    // Emit M-N 2-byte nops. Use getNop() here instead of emitNops()
+    // to keep it aligned with the common code implementation emitting
+    // the prefix nops.
+    for (unsigned I = 0; I < Num; ++I)
+      EmitToStreamer(*OutStreamer, MF.getSubtarget().getInstrInfo()->getNop());
+    return;
+  }
+  // Otherwise, emit xray sled.
   // .begin:
   //   j .end    # -> stmg    %r2, %r15, 16(%r15)
   //   nop
@@ -1762,6 +1814,58 @@ void SystemZAsmPrinter::emitPPA2(Module &M) {
   OutStreamer->popSection();
 }
 
+void SystemZAsmPrinter::emitGlobalAlias(const Module &M,
+                                        const GlobalAlias &GA) {
+  if (!TM.getTargetTriple().isOSzOS())
+    return AsmPrinter::emitGlobalAlias(M, GA);
+
+  // Aliased function labels have already been emitted for z/OS
+}
+
+const MCExpr *SystemZAsmPrinter::lowerConstant(const Constant *CV,
+                                               const Constant *BaseCV,
+                                               uint64_t Offset) {
+  const Triple &TargetTriple = TM.getTargetTriple();
+
+  if (TargetTriple.isOSzOS()) {
+    const GlobalAlias *GA = dyn_cast<GlobalAlias>(CV);
+    const GlobalVariable *GV = dyn_cast<GlobalVariable>(CV);
+    const Function *FV = dyn_cast<Function>(CV);
+    bool IsFunc = !GV && (FV || (GA && isa<Function>(GA->getAliaseeObject())));
+
+    MCSymbol *Sym = NULL;
+
+    if (GA)
+      Sym = getSymbol(GA);
+    else if (IsFunc)
+      Sym = getSymbol(FV);
+    else if (GV)
+      Sym = getSymbol(GV);
+
+    if (IsFunc) {
+      OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
+      if (FV->hasExternalLinkage())
+        return MCSpecifierExpr::create(MCSymbolRefExpr::create(Sym, OutContext),
+                                       SystemZ::S_VCon, OutContext);
+      // Trigger creation of function descriptor in ADA for internal
+      // functions.
+      unsigned Disp = ADATable.insert(Sym, SystemZII::MO_ADA_DIRECT_FUNC_DESC);
+      return MCBinaryExpr::createAdd(
+          MCSpecifierExpr::create(
+              MCSymbolRefExpr::create(
+                  getObjFileLowering().getADASection()->getBeginSymbol(),
+                  OutContext),
+              SystemZ::S_None, OutContext),
+          MCConstantExpr::create(Disp, OutContext), OutContext);
+    }
+    if (Sym) {
+      OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeObject);
+      return MCSymbolRefExpr::create(Sym, OutContext);
+    }
+  }
+  return AsmPrinter::lowerConstant(CV);
+}
+
 void SystemZAsmPrinter::emitFunctionEntryLabel() {
   const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
 
@@ -1821,6 +1925,18 @@ void SystemZAsmPrinter::emitFunctionEntryLabel() {
   }
 
   AsmPrinter::emitFunctionEntryLabel();
+
+  if (Subtarget.getTargetTriple().isOSzOS()) {
+    const Function *F = &MF->getFunction();
+    // Emit aliasing label for function entry point label.
+    for (const GlobalAlias *Alias : GOAliasMap[F]) {
+      MCSymbol *Sym = getSymbol(Alias);
+      OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
+      emitVisibility(Sym, Alias->getVisibility());
+      emitLinkage(Alias, Sym);
+      OutStreamer->emitLabel(Sym);
+    }
+  }
 }
 
 char SystemZAsmPrinter::ID = 0;

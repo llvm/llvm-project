@@ -18,6 +18,7 @@
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/dangling.h>
+#include <__ranges/reverse_view.h>
 #include <__ranges/subrange.h>
 #include <__utility/move.h>
 
@@ -49,7 +50,7 @@ struct __reverse_copy {
     requires indirectly_copyable<iterator_t<_Range>, _OutIter>
   _LIBCPP_HIDE_FROM_ABI constexpr reverse_copy_result<borrowed_iterator_t<_Range>, _OutIter>
   operator()(_Range&& __range, _OutIter __result) const {
-    auto __ret = ranges::copy(std::__reverse_range(__range), std::move(__result));
+    auto __ret = ranges::copy(__range | views::reverse, std::move(__result));
     return {ranges::next(ranges::begin(__range), ranges::end(__range)), std::move(__ret.out)};
   }
 };

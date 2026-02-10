@@ -841,6 +841,7 @@ namespace bswap {
   int h7 = __builtin_bswapg(0x1234) == 0x3412 ? 1 : f();
   int h8 = __builtin_bswapg(0x00001234) == 0x34120000 ? 1 : f();
   int h9 = __builtin_bswapg(0x0000000000001234) == 0x3412000000000000 ? 1 : f();
+  int h9a = __builtin_bswapg(true) == true ? 1 : f();
 #ifndef __AVR__
   int h10 = __builtin_bswapg((_BitInt(8))0x12) == (_BitInt(8))0x12 ? 1 : f();
   int h11 = __builtin_bswapg((_BitInt(16))0x1234) == (_BitInt(16))0x3412 ? 1 : f();
@@ -1152,6 +1153,37 @@ namespace shufflevector {
                                                                        // both-error {{index for __builtin_shufflevector not within the bounds of the input vectors; index of -1 found at position 0 is not permitted in a constexpr context}}
           vector4charConst1,
           vector4charConst2, -1, -1, -1, -1);
+
+  constexpr int discarded1() {
+    int i = 0;
+    vector4char a = {0};
+    __builtin_shufflevector((++i, a), a, 0); // both-warning {{expression result unused}}
+    return i;
+  }
+  static_assert(discarded1() == 1);
+
+  constexpr int discarded2() { // both-error {{never produces a constant expression}}
+    int i = 0;
+    vector4char a = {0};
+    __builtin_shufflevector((++i, a), a, -1); // both-error 2{{index for __builtin_shufflevector not within the bounds of the input vectors; index of -1 found at position 0 is not permitted in a constexpr context}} \
+                                              // both-warning {{expression result unused}}
+    return i;
+  }
+  static_assert(discarded2() == 1); // both-error {{not an integral constant expression}} \
+                                    // both-note {{in call to}}
+
+#if __cplusplus >= 202002L
+  constexpr int discarded3() {
+    int i = 0;
+    vector4char a;
+    __builtin_shufflevector((++i, a), a, 0); // both-note {{read of uninitialized object}} \
+                                             // both-warning {{expression result unused}}
+    return i;
+  }
+  static_assert(discarded3() == 1); // both-error {{not an integral constant expression}} \
+                                    // both-note {{in call to}}
+#endif
+
 }
 
 #endif
@@ -1902,4 +1934,16 @@ namespace NonBlockPointerStore {
   int a;
   void foo(void) { a *= __builtin_sadd_overflow(1, 2, 0); }
   void foo2(void) { a *= __builtin_addc(1, 2, 0, 0); }
+}
+
+namespace WcslenInvalidArg {
+
+  static_assert(__builtin_wcslen("x") == 'x'); // both-error {{cannot initialize a parameter of type 'const wchar_t *' with an lvalue of type 'const char[2]'}}
+  static_assert(__builtin_wcslen((const wchar_t *)"x") == 1); // both-error {{static assertion expression is not an integral constant expression}} \
+                                                              // both-note {{cast that performs the conversions of a reinterpret_cast}}
+  const unsigned char u8s[] = "hi";
+  static_assert(__builtin_wcslen((const wchar_t *)u8s) == 2); // both-error {{static assertion expression is not an integral constant expression}} \
+                                                              // both-note {{cast that performs the conversions of a reinterpret_cast}}
+  static_assert(__builtin_wcslen(L"x") == 1);
+
 }

@@ -457,6 +457,14 @@ defm McastLoadInsts : AMDGPUSubtargetFeature<"mcast-load-insts",
   "Has multicast load instructions"
 >;
 
+defm SWakeupImm : AMDGPUSubtargetFeature<"s-wakeup-imm",
+  "s_wakeup takes an immediate operand"
+>;
+
+defm SBarrierLeaveImm : AMDGPUSubtargetFeature<"s-barrier-leave-imm",
+  "s_barrier_leave takes an immediate operand"
+>;
+
 defm GFX950Insts : AMDGPUSubtargetFeature<"gfx950-insts",
   "Additional instructions for GFX950+",
   /*GenPredicate=*/1,
@@ -494,6 +502,15 @@ defm GFX12Insts : AMDGPUSubtargetFeature<"gfx12-insts",
 defm GFX1250Insts : AMDGPUSubtargetFeature<"gfx1250-insts",
   "Additional instructions for GFX1250+",
   /*GenPredicate=*/0
+>;
+
+defm GFX13Insts : AMDGPUSubtargetFeature<"gfx13-insts",
+  "Additional instructions for GFX13+",
+  /*GenPredicate=*/0,
+  /*GenAssemblerPredicate=*/0,
+  [FeatureSWakeupImm,
+   FeatureSBarrierLeaveImm,
+  ]
 >;
 
 defm GFX10_3Insts : AMDGPUSubtargetFeature<"gfx10-3-insts",
@@ -1431,6 +1448,29 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
   ]
 >;
 
+def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
+  "gfx13",
+  [FeatureFP64, FeatureMIMG_R128,
+   FeatureFlatAddressSpace, Feature16BitInsts,
+   FeatureInv2PiInlineImm, FeatureApertureRegs,
+   FeatureCIInsts, FeatureGFX8Insts, FeatureGFX9Insts, FeatureGFX10Insts,
+   FeatureGFX10_AEncoding, FeatureGFX10_BEncoding, FeatureGFX10_3Insts,
+   FeatureGFX11Insts, FeatureGFX12Insts, FeatureGFX13Insts, FeatureVOP3PInsts,
+   FeatureVOPDInsts, FeatureMovrel, FeatureFastFMAF32, FeatureDPP, FeatureIntClamp,
+   FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
+   FeatureAddNoCarryInsts, FeatureFmaMixInsts,
+   FeatureNoSdstCMPX, FeatureVscnt,
+   FeatureVOP3Literal, FeatureDPP8,
+   FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
+   FeatureA16, FeatureFastDenormalF32, FeatureG16,
+   FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess, FeatureImageInsts,
+   FeatureUnalignedDSAccess, FeatureTrue16BitInsts,
+   FeatureDefaultComponentBroadcast, FeatureMaxHardClauseLength32,
+   FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
+   FeatureIEEEMinimumMaximumInsts, FeatureMinimum3Maximum3F32,
+   FeatureMinimum3Maximum3F16, FeatureAgentScopeFineGrainedRemoteMemoryAtomics
+  ]
+>;
 //===----------------------------------------------------------------------===//
 
 class FeatureSet<list<SubtargetFeature> Features_> {
@@ -1841,6 +1881,13 @@ def FeatureISAVersion11_5_3 : FeatureSet<
   !listconcat(FeatureISAVersion11_5_Common.Features,
     [])>;
 
+def FeatureISAVersion11_7_0 : FeatureSet<
+  !listconcat(FeatureISAVersion11_Common.Features,
+    [FeatureSALUFloatInsts,
+     FeatureDPPSrc1SGPR,
+     FeatureFP8ConversionInsts,
+     FeatureDot11Insts])>;
+
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
    FeatureBackOffBarrier,
@@ -1965,6 +2012,88 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureXNACK,
    FeatureClusters,
    FeatureD16Writes32BitVgpr,
+   FeatureMcastLoadInsts
+]>;
+
+def FeatureISAVersion12_50 : FeatureSet<
+  !listconcat(FeatureISAVersion12_50_Common.Features,
+  [FeatureAddressableLocalMemorySize327680,
+   FeatureSetregVGPRMSBFixup,
+   FeatureCubeInsts,
+   FeatureLerpInst,
+   FeatureSadInsts,
+   FeatureQsadInsts,
+   FeatureCvtNormInsts,
+   FeatureCvtPkNormVOP2Insts,
+   FeatureCvtPkNormVOP3Insts])>;
+
+def FeatureISAVersion12_51 : FeatureSet<
+  !listconcat(FeatureISAVersion12_50_Common.Features,
+  [FeatureAddressableLocalMemorySize327680,
+   FeatureDPALU_DPP,
+   FeatureCubeInsts,
+   FeatureLerpInst,
+   FeatureSadInsts,
+   FeatureQsadInsts,
+   FeatureCvtNormInsts,
+   FeatureCvtPkNormVOP2Insts,
+   FeatureCvtPkNormVOP3Insts])>;
+
+def FeatureISAVersion12_Generic: FeatureSet<
+  !listconcat(FeatureISAVersion12.Features,
+    [FeatureRequiresCOV6])>;
+
+def FeatureISAVersion13 : FeatureSet<
+  [FeatureGFX13,
+   FeatureGFX1250Insts,
+   FeatureAddressableLocalMemorySize65536,
+   Feature64BitLiterals,
+   FeatureLDSBankCount32,
+   FeatureDLInsts,
+   FeatureFmacF64Inst,
+   FeatureDot7Insts,
+   FeatureDot8Insts,
+   FeatureNSAEncoding,
+   FeaturePartialNSAEncoding,
+   FeatureShaderCyclesRegister,
+   FeatureArchitectedFlatScratch,
+   FeatureArchitectedSGPRs,
+   FeatureAtomicFaddRtnInsts,
+   FeatureAtomicFaddNoRtnInsts,
+   FeatureAtomicDsPkAdd16Insts,
+   FeatureAtomicFlatPkAdd16Insts,
+   FeatureAtomicBufferGlobalPkAddF16Insts,
+   FeatureAtomicGlobalPkAddBF16Inst,
+   FeatureAtomicBufferPkAddBF16Inst,
+   FeatureFlatAtomicFaddF32Inst,
+   FeatureFP8ConversionInsts,
+   FeaturePackedTID,
+   FeatureVcmpxPermlaneHazard,
+   FeatureSALUFloatInsts,
+   FeaturePseudoScalarTrans,
+   FeatureRestrictedSOffset,
+   FeatureScalarDwordx3Loads,
+   FeatureDPPSrc1SGPR,
+   FeatureBitOp3Insts,
+   FeatureTanhInsts,
+   FeatureTensorCvtLutInsts,
+   FeatureTransposeLoadF4F6Insts,
+   Feature1_5xVGPRs,
+   FeatureBF16TransInsts,
+   FeatureBF16ConversionInsts,
+   FeatureBF16PackedInsts,
+   FeaturePrngInst,
+   FeaturePermlane16Swap,
+   FeatureAshrPkInsts,
+   FeatureAtomicFMinFMaxF64GlobalInsts,
+   FeatureAtomicFMinFMaxF64FlatInsts,
+   FeatureFmaMixBF16Insts,
+   FeatureGloballyAddressableScratch,
+   FeatureCvtPkF16F32Inst,
+   FeatureF16BF16ToFP6BF6ConversionScaleInsts,
+   FeatureIEEEMinimumMaximumInsts,
+   FeatureSWakeupBarrier,
+   FeatureClusters,
    FeatureCubeInsts,
    FeatureLerpInst,
    FeatureSadInsts,
@@ -1972,22 +2101,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
-   FeatureMcastLoadInsts
 ]>;
-
-def FeatureISAVersion12_50 : FeatureSet<
-  !listconcat(FeatureISAVersion12_50_Common.Features,
-  [FeatureAddressableLocalMemorySize327680,
-   FeatureSetregVGPRMSBFixup])>;
-
-def FeatureISAVersion12_51 : FeatureSet<
-  !listconcat(FeatureISAVersion12_50_Common.Features,
-  [FeatureAddressableLocalMemorySize327680,
-   FeatureDPALU_DPP])>;
-
-def FeatureISAVersion12_Generic: FeatureSet<
-  !listconcat(FeatureISAVersion12.Features,
-    [FeatureRequiresCOV6])>;
 
 //===----------------------------------------------------------------------===//
 
@@ -2161,6 +2275,11 @@ def isGFX8GFX9GFX10GFX11 :
             "Subtarget->getGeneration() == AMDGPUSubtarget::GFX11">,
   AssemblerPredicate<(all_of FeatureGFX8Insts, (not FeatureGFX12Insts))>;
 
+def isGFX8GFX9GFX10GFX11GFX12 :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&"
+            "Subtarget->getGeneration() < AMDGPUSubtarget::GFX13">,
+  AssemblerPredicate<(all_of FeatureGFX8Insts, (not FeatureGFX13Insts))>;
+
 def isGFX7Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS">,
   AssemblerPredicate<(all_of FeatureCIInsts)>;
@@ -2271,9 +2390,14 @@ def isGFX11Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11">,
   AssemblerPredicate<(all_of FeatureGFX11Insts)>;
 
+def isGFX11PlusNot12_50 :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11 &&"
+            "(Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13 || !Subtarget->hasGFX1250Insts())">,
+  AssemblerPredicate<(all_of FeatureGFX11Insts, (any_of FeatureGFX13Insts, (not FeatureGFX1250Insts)))>;
+
 def isGFX12Only :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12">,
-  AssemblerPredicate<(all_of FeatureGFX12Insts)>;
+  AssemblerPredicate<(all_of FeatureGFX12Insts, (not FeatureGFX13Insts))>;
 
 def isGFX12Not12_50 :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12 && !Subtarget->hasGFX1250Insts()">,
@@ -2284,12 +2408,13 @@ def isGFX12Plus :
   AssemblerPredicate<(all_of FeatureGFX12Insts)>;
 
 def isGFX12PlusNot12_50 :
-  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12 && !Subtarget->hasGFX1250Insts()">,
-  AssemblerPredicate<(all_of FeatureGFX12Insts, (not FeatureGFX1250Insts))>;
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12 &&"
+            "(Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13 || !Subtarget->hasGFX1250Insts())">,
+  AssemblerPredicate<(all_of FeatureGFX12Insts, (any_of FeatureGFX13Insts, (not FeatureGFX1250Insts)))>;
 
 def isGFX125xOnly :
-  Predicate<"Subtarget->hasGFX1250Insts()">,
-  AssemblerPredicate<(all_of FeatureGFX1250Insts)>;
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12 && Subtarget->hasGFX1250Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX1250Insts, (not FeatureGFX13Insts))>;
 
 def isGFX1250Plus :
   Predicate<"Subtarget->hasGFX1250Insts()">,
@@ -2300,8 +2425,18 @@ def isNotGFX1250Plus :
   AssemblerPredicate<(all_of (not FeatureGFX1250Insts))>;
 
 def isGFX940orGFX1250 :
-  Predicate<"Subtarget->hasGFX940Insts() || Subtarget->hasGFX1250Insts()">,
-  AssemblerPredicate<(any_of FeatureGFX940Insts, FeatureGFX1250Insts)>;
+  Predicate<"Subtarget->hasGFX940Insts() ||"
+            "(Subtarget->hasGFX1250Insts() && !Subtarget->hasGFX13Insts())">,
+  AssemblerPredicate<(any_of FeatureGFX940Insts,
+                     (all_of FeatureGFX1250Insts, (not FeatureGFX13Insts)))>;
+
+def isGFX13Only :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX13">,
+  AssemblerPredicate<(all_of FeatureGFX13Insts)>;
+
+def isGFX13Plus :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13">,
+  AssemblerPredicate<(all_of FeatureGFX13Insts)>;
 
 def HasAtomicCondSubClampFlatInsts :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12">,
@@ -2345,7 +2480,7 @@ def HasFormattedMUBUFInsts : Predicate<"Subtarget->hasFormattedMUBUFInsts()">,
   AssemblerPredicate<(all_of (not FeatureGFX1250Insts))>;
 
 def HasExportInsts : Predicate<"Subtarget->hasExportInsts()">,
-  AssemblerPredicate<(all_of (not FeatureGFX90AInsts), (not FeatureGFX1250Insts))>;
+  AssemblerPredicate<(any_of FeatureGFX13Insts, (all_of (not FeatureGFX90AInsts), (not FeatureGFX1250Insts)))>;
 
 def HasVINTERPEncoding : Predicate<"Subtarget->hasVINTERPEncoding()">,
   AssemblerPredicate<(all_of FeatureGFX11Insts, (not FeatureGFX1250Insts))>;

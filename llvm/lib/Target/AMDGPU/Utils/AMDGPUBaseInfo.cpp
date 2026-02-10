@@ -177,7 +177,13 @@ inline unsigned getVaSsrcBitWidth() { return 1; }
 inline unsigned getVaSsrcBitShift() { return 8; }
 
 /// \returns HoldCnt bit shift
-inline unsigned getHoldCntWidth() { return 1; }
+inline unsigned getHoldCntWidth(unsigned VersionMajor, unsigned VersionMinor) {
+  static constexpr const unsigned MinMajor = 10;
+  static constexpr const unsigned MinMinor = 3;
+  return std::tie(VersionMajor, VersionMinor) >= std::tie(MinMajor, MinMinor)
+             ? 1
+             : 0;
+}
 
 /// \returns HoldCnt bit shift
 inline unsigned getHoldCntBitShift() { return 7; }
@@ -187,6 +193,10 @@ inline unsigned getHoldCntBitShift() { return 7; }
 namespace llvm {
 
 namespace AMDGPU {
+
+iota_range<InstCounterType> inst_counter_types(InstCounterType MaxCounter) {
+  return enum_seq(LOAD_CNT, MaxCounter);
+}
 
 /// \returns true if the target supports signed immediate offset for SMRD
 /// instructions.
@@ -2074,7 +2084,19 @@ int encodeDepCtr(const StringRef Name, int64_t Val, unsigned &UsedOprMask,
 
 unsigned getVaVdstBitMask() { return (1 << getVaVdstBitWidth()) - 1; }
 
+unsigned getVaSdstBitMask() { return (1 << getVaSdstBitWidth()) - 1; }
+
+unsigned getVaSsrcBitMask() { return (1 << getVaSsrcBitWidth()) - 1; }
+
+unsigned getHoldCntBitMask(const IsaVersion &Version) {
+  return (1 << getHoldCntWidth(Version.Major, Version.Minor)) - 1;
+}
+
 unsigned getVmVsrcBitMask() { return (1 << getVmVsrcBitWidth()) - 1; }
+
+unsigned getVaVccBitMask() { return (1 << getVaVccBitWidth()) - 1; }
+
+unsigned getSaSdstBitMask() { return (1 << getSaSdstBitWidth()) - 1; }
 
 unsigned decodeFieldVmVsrc(unsigned Encoded) {
   return unpackBits(Encoded, getVmVsrcBitShift(), getVmVsrcBitWidth());
@@ -2100,8 +2122,9 @@ unsigned decodeFieldVaSsrc(unsigned Encoded) {
   return unpackBits(Encoded, getVaSsrcBitShift(), getVaSsrcBitWidth());
 }
 
-unsigned decodeFieldHoldCnt(unsigned Encoded) {
-  return unpackBits(Encoded, getHoldCntBitShift(), getHoldCntWidth());
+unsigned decodeFieldHoldCnt(unsigned Encoded, const IsaVersion &Version) {
+  return unpackBits(Encoded, getHoldCntBitShift(),
+                    getHoldCntWidth(Version.Major, Version.Minor));
 }
 
 unsigned encodeFieldVmVsrc(unsigned Encoded, unsigned VmVsrc) {
@@ -2158,13 +2181,15 @@ unsigned encodeFieldVaSsrc(unsigned VaSsrc, const MCSubtargetInfo &STI) {
   return encodeFieldVaSsrc(Encoded, VaSsrc);
 }
 
-unsigned encodeFieldHoldCnt(unsigned Encoded, unsigned HoldCnt) {
-  return packBits(HoldCnt, Encoded, getHoldCntBitShift(), getHoldCntWidth());
+unsigned encodeFieldHoldCnt(unsigned Encoded, unsigned HoldCnt,
+                            const IsaVersion &Version) {
+  return packBits(HoldCnt, Encoded, getHoldCntBitShift(),
+                  getHoldCntWidth(Version.Major, Version.Minor));
 }
 
 unsigned encodeFieldHoldCnt(unsigned HoldCnt, const MCSubtargetInfo &STI) {
   unsigned Encoded = getDefaultDepCtrEncoding(STI);
-  return encodeFieldHoldCnt(Encoded, HoldCnt);
+  return encodeFieldHoldCnt(Encoded, HoldCnt, getIsaVersion(STI.getCPU()));
 }
 
 } // namespace DepCtr
@@ -2514,7 +2539,7 @@ unsigned getNSAMaxSize(const MCSubtargetInfo &STI, bool HasSampler) {
 }
 
 unsigned getMaxNumUserSGPRs(const MCSubtargetInfo &STI) {
-  if (isGFX1250(STI))
+  if (isGFX1250Plus(STI))
     return 32;
   return 16;
 }
@@ -2581,13 +2606,25 @@ bool isGFX12(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX12];
 }
 
-bool isGFX12Plus(const MCSubtargetInfo &STI) { return isGFX12(STI); }
+bool isGFX12Plus(const MCSubtargetInfo &STI) {
+  return isGFX12(STI) || isGFX13Plus(STI);
+}
 
 bool isNotGFX12Plus(const MCSubtargetInfo &STI) { return !isGFX12Plus(STI); }
 
 bool isGFX1250(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX1250Insts] && !isGFX13(STI);
+}
+
+bool isGFX1250Plus(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX1250Insts];
 }
+
+bool isGFX13(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX13];
+}
+
+bool isGFX13Plus(const MCSubtargetInfo &STI) { return isGFX13(STI); }
 
 bool supportsWGP(const MCSubtargetInfo &STI) {
   if (isGFX1250(STI))

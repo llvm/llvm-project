@@ -174,9 +174,7 @@ static void printAllocatableOp(mlir::OpAsmPrinter &p, OP &op) {
   p.printOptionalAttrDict(op->getAttrs(), {"in_type", "operandSegmentSizes"});
 }
 
-/// Returns true if the given box value may be absent.
-/// The given value must have BaseBoxType.
-static bool mayBeAbsentBox(mlir::Value val) {
+bool fir::mayBeAbsentBox(mlir::Value val) {
   assert(mlir::isa<fir::BaseBoxType>(val.getType()) && "expected box argument");
   while (val) {
     mlir::Operation *defOp = val.getDefiningOp();
@@ -1117,17 +1115,16 @@ void fir::BoxAddrOp::build(mlir::OpBuilder &builder,
                            mlir::OperationState &result, mlir::Value val) {
   mlir::Type type =
       llvm::TypeSwitch<mlir::Type, mlir::Type>(val.getType())
-          .Case<fir::BaseBoxType>([&](fir::BaseBoxType ty) -> mlir::Type {
+          .Case([&](fir::BaseBoxType ty) -> mlir::Type {
             mlir::Type eleTy = ty.getEleTy();
             if (fir::isa_ref_type(eleTy))
               return eleTy;
             return fir::ReferenceType::get(eleTy);
           })
-          .Case<fir::BoxCharType>([&](fir::BoxCharType ty) -> mlir::Type {
+          .Case([&](fir::BoxCharType ty) -> mlir::Type {
             return fir::ReferenceType::get(ty.getEleTy());
           })
-          .Case<fir::BoxProcType>(
-              [&](fir::BoxProcType ty) { return ty.getEleTy(); })
+          .Case([&](fir::BoxProcType ty) { return ty.getEleTy(); })
           .Default([&](const auto &) { return mlir::Type{}; });
   assert(type && "bad val type");
   build(builder, result, type, val);
@@ -1727,11 +1724,11 @@ void fir::CoordinateOp::build(mlir::OpBuilder &builder,
   bool anyField = false;
   for (fir::IntOrValue index : coor) {
     llvm::TypeSwitch<fir::IntOrValue>(index)
-        .Case<mlir::IntegerAttr>([&](mlir::IntegerAttr intAttr) {
+        .Case([&](mlir::IntegerAttr intAttr) {
           fieldIndices.push_back(intAttr.getInt());
           anyField = true;
         })
-        .Case<mlir::Value>([&](mlir::Value value) {
+        .Case([&](mlir::Value value) {
           dynamicIndices.push_back(value);
           fieldIndices.push_back(fir::CoordinateOp::kDynamicIndex);
         });
@@ -1754,7 +1751,7 @@ void fir::CoordinateOp::print(mlir::OpAsmPrinter &p) {
     for (auto index : getIndices()) {
       p << ", ";
       llvm::TypeSwitch<fir::IntOrValue>(index)
-          .Case<mlir::IntegerAttr>([&](mlir::IntegerAttr intAttr) {
+          .Case([&](mlir::IntegerAttr intAttr) {
             if (auto recordType = llvm::dyn_cast<fir::RecordType>(eleTy)) {
               int fieldId = intAttr.getInt();
               if (fieldId < static_cast<int>(recordType.getNumFields())) {
@@ -1769,7 +1766,7 @@ void fir::CoordinateOp::print(mlir::OpAsmPrinter &p) {
             // investigated.
             p << intAttr;
           })
-          .Case<mlir::Value>([&](mlir::Value value) { p << value; });
+          .Case([&](mlir::Value value) { p << value; });
     }
   }
   p.printOptionalAttrDict(
@@ -1923,6 +1920,15 @@ fir::CoordinateIndicesAdaptor fir::CoordinateOp::getIndices() {
 std::optional<std::int64_t> fir::CoordinateOp::getViewOffset(mlir::OpResult) {
   // TODO: we can try to compute the constant offset.
   return std::nullopt;
+}
+
+mlir::Speculation::Speculatability fir::CoordinateOp::getSpeculatability() {
+  const mlir::Type refTy = getRef().getType();
+  if (fir::isa_ref_type(refTy))
+    return mlir::Speculation::Speculatable;
+
+  return mayBeAbsentBox(getRef()) ? mlir::Speculation::NotSpeculatable
+                                  : mlir::Speculation::Speculatable;
 }
 
 //===----------------------------------------------------------------------===//
@@ -5178,7 +5184,7 @@ bool fir::isDummyArgument(mlir::Value v) {
 mlir::Type fir::applyPathToType(mlir::Type eleTy, mlir::ValueRange path) {
   for (auto i = path.begin(), end = path.end(); eleTy && i < end;) {
     eleTy = llvm::TypeSwitch<mlir::Type, mlir::Type>(eleTy)
-                .Case<fir::RecordType>([&](fir::RecordType ty) {
+                .Case([&](fir::RecordType ty) {
                   if (auto *op = (*i++).getDefiningOp()) {
                     if (auto off = mlir::dyn_cast<fir::FieldIndexOp>(op))
                       return ty.getType(off.getFieldName());
@@ -5187,7 +5193,7 @@ mlir::Type fir::applyPathToType(mlir::Type eleTy, mlir::ValueRange path) {
                   }
                   return mlir::Type{};
                 })
-                .Case<fir::SequenceType>([&](fir::SequenceType ty) {
+                .Case([&](fir::SequenceType ty) {
                   bool valid = true;
                   const auto rank = ty.getDimension();
                   for (std::remove_const_t<decltype(rank)> ii = 0;
@@ -5195,13 +5201,13 @@ mlir::Type fir::applyPathToType(mlir::Type eleTy, mlir::ValueRange path) {
                     valid = i < end && fir::isa_integer((*i++).getType());
                   return valid ? ty.getEleTy() : mlir::Type{};
                 })
-                .Case<mlir::TupleType>([&](mlir::TupleType ty) {
+                .Case([&](mlir::TupleType ty) {
                   if (auto *op = (*i++).getDefiningOp())
                     if (auto off = mlir::dyn_cast<mlir::arith::ConstantOp>(op))
                       return ty.getType(fir::toInt(off));
                   return mlir::Type{};
                 })
-                .Case<mlir::ComplexType>([&](mlir::ComplexType ty) {
+                .Case([&](mlir::ComplexType ty) {
                   if (fir::isa_integer((*i++).getType()))
                     return ty.getElementType();
                   return mlir::Type{};
