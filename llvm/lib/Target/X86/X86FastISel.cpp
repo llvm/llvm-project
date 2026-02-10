@@ -3265,7 +3265,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   bool Is64Bit        = Subtarget->is64Bit();
   bool IsWin64        = Subtarget->isCallingConvWin64(CC);
 
-  // If the return type is ilegal, don't bother to promote it, just fall back to
+  // If the return type is illegal, don't bother to promote it, just fall back to
   // DAG ISel.
   MVT RetVT;
   if (!isTypeLegal(CLI.RetTy, RetVT) && !CLI.RetTy->isVoidTy())
