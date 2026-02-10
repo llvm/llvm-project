@@ -2207,8 +2207,8 @@ struct ConvertToStaticExpandShape : public OpRewritePattern<ExpandShapeOp> {
 
     for (const auto &[inputDim, innerReassoc] : llvm::enumerate(reassoc)) {
       for (uint64_t outDim : innerReassoc) {
-        // If the static output shape has a dynamic dim, we must consume an operand
-        // from the input list, even if the result type is static.
+        // If the static output shape has a dynamic dim, we must consume an
+        // operand from the input list, even if the result type is static.
         if (expandOp.getStaticOutputShape()[outDim] == ShapedType::kDynamic) {
           Value val = *outputIt;
           ++outputIt;
@@ -2216,9 +2216,9 @@ struct ConvertToStaticExpandShape : public OpRewritePattern<ExpandShapeOp> {
             continue;
 
           // If the cast's src type is dynamic, don't infer any of the
-          // corresponding expanded dimensions. `tensor.expand_shape` requires at
-          // least one of the expanded dimensions to be dynamic if the input is
-          // dynamic.
+          // corresponding expanded dimensions. `tensor.expand_shape` requires
+          // at least one of the expanded dimensions to be dynamic if the input
+          // is dynamic.
           if (ShapedType::isDynamic(castSrcShape[inputDim])) {
             dynamicOutputShape.push_back(val);
             continue;
