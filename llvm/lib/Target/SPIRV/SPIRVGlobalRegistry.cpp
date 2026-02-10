@@ -1902,9 +1902,6 @@ SPIRVGlobalRegistry::getOrCreateSPIRVBoolType(MachineInstr &I,
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVVectorType(
     SPIRVType *BaseType, unsigned NumElements, MachineIRBuilder &MIRBuilder,
     bool EmitIR) {
-  // SPIR-V doesn't support single-element vectors.
-  if (NumElements == 1)
-    return BaseType;
   return getOrCreateSPIRVType(
       FixedVectorType::get(const_cast<Type *>(getTypeForSPIRVType(BaseType)),
                            NumElements),
@@ -1914,9 +1911,6 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVVectorType(
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVVectorType(
     SPIRVType *BaseType, unsigned NumElements, MachineInstr &I,
     const SPIRVInstrInfo &TII) {
-  // SPIR-V doesn't support single-element vectors.
-  if (NumElements == 1)
-    return BaseType;
   Type *Ty = FixedVectorType::get(
       const_cast<Type *>(getTypeForSPIRVType(BaseType)), NumElements);
   if (const MachineInstr *MI = findMI(Ty, false, CurMF))
