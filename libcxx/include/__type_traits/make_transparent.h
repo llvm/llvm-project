@@ -24,23 +24,27 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // `less<>` from `less<T>`. This is useful in cases where conversions can be avoided (e.g. a string literal to a
 // std::string).
 
-template <class _Comparator>
+template <class _Tp, class _Comparator>
 struct __make_transparent {
   using type _LIBCPP_NODEBUG = _Comparator;
 };
 
-template <class _Comparator>
-using __make_transparent_t _LIBCPP_NODEBUG = typename __make_transparent<_Comparator>::type;
+template <class _Tp, class _Comparator>
+using __make_transparent_t _LIBCPP_NODEBUG = typename __make_transparent<_Tp, _Comparator>::type;
 
-template <class _Comparator, __enable_if_t<is_same<_Comparator, __make_transparent_t<_Comparator> >::value, int> = 0>
+template <class _Tp,
+          class _Comparator,
+          __enable_if_t<is_same<_Comparator, __make_transparent_t<_Tp, _Comparator> >::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _Comparator& __as_transparent(_Comparator& __comp) {
   return __comp;
 }
 
-template <class _Comparator, __enable_if_t<!is_same<_Comparator, __make_transparent_t<_Comparator> >::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI __make_transparent_t<_Comparator> __as_transparent(_Comparator&) {
+template <class _Tp,
+          class _Comparator,
+          __enable_if_t<!is_same<_Comparator, __make_transparent_t<_Tp, _Comparator> >::value, int> = 0>
+_LIBCPP_HIDE_FROM_ABI __make_transparent_t<_Tp, _Comparator> __as_transparent(_Comparator&) {
   static_assert(is_empty<_Comparator>::value);
-  return __make_transparent_t<_Comparator>();
+  return __make_transparent_t<_Tp, _Comparator>();
 }
 
 _LIBCPP_END_NAMESPACE_STD
