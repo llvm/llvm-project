@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@rules_cc//cc:defs.bzl", "cc_library")
 load("//llvm:lit_test.bzl", "package_path")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_sharded_ops", "td_library")
 
@@ -30,6 +31,7 @@ expand_template(
         "@LIT_SITE_CFG_IN_HEADER@": LIT_SITE_CFG_IN_HEADER,
         "@LLVM_TOOLS_DIR@": package_path("//llvm:BUILD"),
         "@ENABLE_SHARED@": "1",
+        "@BUILD_SHARED_LIBS@": "1",
         "@ENABLE_ASSERTIONS@": "1",
         "@MLIR_SOURCE_DIR@": package_path("//mlir:BUILD"),
         "@MLIR_TOOLS_DIR@": package_path("//mlir:BUILD"),
@@ -37,13 +39,16 @@ expand_template(
         # All disabled, but required to substituted because they are not in quotes.
         "@LLVM_BUILD_EXAMPLES@": "0",
         "@LLVM_HAS_NVPTX_TARGET@": "0",
+        "@LLVM_INCLUDE_SPIRV_TOOLS_TESTS@": "0",
         "@MLIR_ENABLE_CUDA_RUNNER@": "0",
         "@MLIR_ENABLE_ROCM_CONVERSIONS@": "0",
         "@MLIR_ENABLE_ROCM_RUNNER@": "0",
         "@MLIR_ENABLE_SYCL_RUNNER@": "0",
+        "@MLIR_ENABLE_LEVELZERO_RUNNER@": "0",
         "@MLIR_ENABLE_SPIRV_CPU_RUNNER@": "0",
         "@MLIR_ENABLE_VULKAN_RUNNER@": "0",
         "@MLIR_ENABLE_BINDINGS_PYTHON@": "0",
+        "@MLIR_ENABLE_XEVM_CONVERSIONS@": "0",
         "@MLIR_RUN_AMX_TESTS@": "0",
         "@MLIR_RUN_ARM_SVE_TESTS@": "0",
         "@MLIR_RUN_ARM_SME_TESTS@": "0",
@@ -110,11 +115,11 @@ td_library(
     name = "TestOpTdFiles",
     srcs = glob(["lib/Dialect/Test/*.td"]),
     deps = [
+        "//mlir:BufferizableOpInterfaceTdFiles",
         "//mlir:BufferizationTypeInterfacesTdFiles",
         "//mlir:BuiltinDialectTdFiles",
         "//mlir:CallInterfacesTdFiles",
         "//mlir:ControlFlowInterfacesTdFiles",
-        "//mlir:CopyOpInterfaceTdFiles",
         "//mlir:DLTIDialectTdFiles",
         "//mlir:DataLayoutInterfacesTdFiles",
         "//mlir:DestinationStyleOpInterfaceTdFiles",
@@ -127,6 +132,7 @@ td_library(
         "//mlir:OpBaseTdFiles",
         "//mlir:PtrTdFiles",
         "//mlir:SideEffectInterfacesTdFiles",
+        "//mlir:ValueBoundsOpInterfaceTdFiles",
     ],
 )
 
@@ -241,6 +247,7 @@ gentbl_cc_library(
     test = True,
     deps = [
         ":TestOpTdFiles",
+        "//mlir:BufferizableOpInterfaceTdFiles",
         "//mlir:BufferizationTypeInterfacesTdFiles",
         "//mlir:BuiltinDialectTdFiles",
     ],
@@ -277,6 +284,7 @@ cc_library(
         "//mlir:InferTypeOpInterface",
         "//mlir:LLVMToLLVMIRTranslation",
         "//mlir:Pass",
+        "//mlir:SCFDialect",
         "//mlir:ToLLVMIRTranslation",
         "//mlir:TransformUtils",
         "//mlir:Transforms",
@@ -372,11 +380,13 @@ cc_library(
         "//llvm:IRReader",
         "//llvm:Support",
         "//mlir:ArithDialect",
+        "//mlir:BufferizationDialect",
         "//mlir:BufferizationInterfaces",
         "//mlir:BytecodeOpInterface",
         "//mlir:CallOpInterfaces",
+        "//mlir:CommonFolders",
         "//mlir:ControlFlowInterfaces",
-        "//mlir:CopyOpInterface",
+        "//mlir:ControlFlowTransforms",
         "//mlir:DLTIDialect",
         "//mlir:DataLayoutInterfaces",
         "//mlir:DerivedAttributeOpInterface",
@@ -401,6 +411,7 @@ cc_library(
         "//mlir:Pass",
         "//mlir:PtrDialect",
         "//mlir:Reducer",
+        "//mlir:SCFTransforms",
         "//mlir:SideEffectInterfaces",
         "//mlir:Support",
         "//mlir:TensorDialect",
@@ -527,6 +538,7 @@ cc_library(
         "//mlir:MemRefToSPIRV",
         "//mlir:MemRefTransforms",
         "//mlir:Pass",
+        "//mlir:ReconcileUnrealizedCasts",
         "//mlir:Rewrite",
         "//mlir:SCFToSPIRV",
         "//mlir:SPIRVConversion",
@@ -609,6 +621,7 @@ cc_library(
         "//mlir:AffineDialect",
         "//mlir:Analysis",
         "//mlir:ArithDialect",
+        "//mlir:DialectUtils",
         "//mlir:FuncDialect",
         "//mlir:IR",
         "//mlir:InliningUtils",
@@ -898,8 +911,8 @@ cc_library(
 )
 
 cc_library(
-    name = "TestMesh",
-    srcs = glob(["lib/Dialect/Mesh/**/*.cpp"]),
+    name = "TestShard",
+    srcs = glob(["lib/Dialect/Shard/**/*.cpp"]),
     includes = ["lib/Dialect/Test"],
     deps = [
         ":TestDialect",
@@ -907,10 +920,10 @@ cc_library(
         "//mlir:DialectUtils",
         "//mlir:FuncDialect",
         "//mlir:IR",
-        "//mlir:MeshDialect",
-        "//mlir:MeshTransforms",
         "//mlir:Pass",
         "//mlir:SPIRVDialect",
+        "//mlir:ShardDialect",
+        "//mlir:ShardTransforms",
         "//mlir:Support",
         "//mlir:TransformUtils",
         "//mlir:Transforms",
@@ -938,6 +951,23 @@ cc_library(
         "//mlir:Support",
         "//mlir:TransformUtils",
         "//mlir:Transforms",
+    ],
+)
+
+cc_library(
+    name = "TestOpenACC",
+    srcs = glob(["lib/Dialect/OpenACC/*.cpp"]),
+    includes = ["lib/Dialect/Test"],
+    deps = [
+        "//llvm:Support",
+        "//mlir:ArithDialect",
+        "//mlir:FuncDialect",
+        "//mlir:IR",
+        "//mlir:MemRefDialect",
+        "//mlir:OpenACCAnalysis",
+        "//mlir:OpenACCDialect",
+        "//mlir:Pass",
+        "//mlir:Support",
     ],
 )
 
@@ -1193,13 +1223,19 @@ cc_library(
     srcs = glob(["lib/Dialect/XeGPU/*.cpp"]),
     includes = ["lib/Dialect/Test"],
     deps = [
+        "//llvm:Support",
+        "//mlir:ArithDialect",
         "//mlir:GPUDialect",
         "//mlir:IR",
+        "//mlir:IndexDialect",
+        "//mlir:MathDialect",
         "//mlir:MemRefDialect",
         "//mlir:Pass",
+        "//mlir:SCFTransforms",
         "//mlir:TransformUtils",
         "//mlir:VectorTransforms",
         "//mlir:XeGPUDialect",
         "//mlir:XeGPUTransforms",
+        "//mlir:XeGPUUtils",
     ],
 )

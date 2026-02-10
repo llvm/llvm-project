@@ -15,7 +15,10 @@
 #define LLVM_TARGET_TARGETOPTIONS_H
 
 #include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/IR/SystemLibraries.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 
 #include <memory>
 
@@ -23,14 +26,6 @@ namespace llvm {
 struct fltSemantics;
 class MachineFunction;
 class MemoryBuffer;
-
-namespace FloatABI {
-enum ABIType {
-  Default, // Target-specific (either soft or hard depending on triple, etc).
-  Soft,    // Soft float.
-  Hard     // Hard float.
-};
-}
 
 namespace FPOpFusion {
 enum FPOpFusionMode {
@@ -68,14 +63,6 @@ enum class BasicBlockSection {
           // seek to use Basic Block Sections, e.g. MachineFunctionSplitter.
           // This option cannot be set via the command line.
   None    // Do not use Basic Block Sections.
-};
-
-enum class EABI {
-  Unknown,
-  Default, // Default means not specified
-  EABI4,   // Target-specific (either 4, 5 or gnu depending on triple).
-  EABI5,
-  GNU
 };
 
 /// Identify a debugger for "tuning" the debug info.
@@ -132,9 +119,8 @@ enum CodeObjectVersionKind {
 class TargetOptions {
 public:
   TargetOptions()
-      : UnsafeFPMath(false), NoInfsFPMath(false), NoNaNsFPMath(false),
-        NoTrappingFPMath(true), NoSignedZerosFPMath(false),
-        ApproxFuncFPMath(false), EnableAIXExtendedAltivecABI(false),
+      : NoNaNsFPMath(false), NoTrappingFPMath(true), NoSignedZerosFPMath(false),
+        EnableAIXExtendedAltivecABI(false),
         HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
         GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
         EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
@@ -147,40 +133,27 @@ public:
         EmitStackSizeSection(false), EnableMachineOutliner(false),
         EnableMachineFunctionSplitter(false),
         EnableStaticDataPartitioning(false), SupportsDefaultOutlining(false),
-        EmitAddrsig(false), BBAddrMap(false), EmitCallSiteInfo(false),
-        SupportsDebugEntryValues(false), EnableDebugEntryValues(false),
-        ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
-        XRayFunctionIndex(true), DebugStrictDwarf(false), Hotpatch(false),
+        EmitAddrsig(false), BBAddrMap(false), EmitCallGraphSection(false),
+        EmitCallSiteInfo(false), SupportsDebugEntryValues(false),
+        EnableDebugEntryValues(false), ValueTrackingVariableLocations(false),
+        ForceDwarfFrameSection(false), XRayFunctionIndex(true),
+        DebugStrictDwarf(false), Hotpatch(false),
         PPCGenScalarMASSEntries(false), JMCInstrument(false),
         EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
-        VerifyArgABICompliance(true),
-        FPDenormalMode(DenormalMode::IEEE, DenormalMode::IEEE) {}
+        VerifyArgABICompliance(true) {}
 
   /// DisableFramePointerElim - This returns true if frame pointer elimination
   /// optimization should be disabled for the given machine function.
-  bool DisableFramePointerElim(const MachineFunction &MF) const;
+  LLVM_ABI bool DisableFramePointerElim(const MachineFunction &MF) const;
 
   /// FramePointerIsReserved - This returns true if the frame pointer must
   /// always either point to a new frame record or be un-modified in the given
   /// function.
-  bool FramePointerIsReserved(const MachineFunction &MF) const;
+  LLVM_ABI bool FramePointerIsReserved(const MachineFunction &MF) const;
 
   /// If greater than 0, override the default value of
   /// MCAsmInfo::BinutilsVersion.
   std::pair<int, int> BinutilsVersion{0, 0};
-
-  /// UnsafeFPMath - This flag is enabled when the
-  /// -enable-unsafe-fp-math flag is specified on the command line.  When
-  /// this flag is off (the default), the code generator is not allowed to
-  /// produce results that are "less precise" than IEEE allows.  This includes
-  /// use of X86 instructions like FSIN and FCOS instead of libcalls.
-  unsigned UnsafeFPMath : 1;
-
-  /// NoInfsFPMath - This flag is enabled when the
-  /// -enable-no-infs-fp-math flag is specified on the command line. When
-  /// this flag is off (the default), the code generator is not allowed to
-  /// assume the FP arithmetic arguments and results are never +-Infs.
-  unsigned NoInfsFPMath : 1;
 
   /// NoNaNsFPMath - This flag is enabled when the
   /// -enable-no-nans-fp-math flag is specified on the command line. When
@@ -199,12 +172,6 @@ public:
   /// argument or result as insignificant.
   unsigned NoSignedZerosFPMath : 1;
 
-  /// ApproxFuncFPMath - This flag is enabled when the
-  /// -enable-approx-func-fp-math is specified on the command line. This
-  /// specifies that optimizations are allowed to substitute math functions
-  /// with approximate calculations
-  unsigned ApproxFuncFPMath : 1;
-
   /// EnableAIXExtendedAltivecABI - This flag returns true when -vec-extabi is
   /// specified. The code generator is then able to use both volatile and
   /// nonvolitle vector registers. When false, the code generator only uses
@@ -219,7 +186,7 @@ public:
   /// truncations).  If this is enabled (set to true), the code generator must
   /// assume that the rounding mode may dynamically change.
   unsigned HonorSignDependentRoundingFPMathOption : 1;
-  bool HonorSignDependentRoundingFPMath() const;
+  LLVM_ABI bool HonorSignDependentRoundingFPMath() const;
 
   /// NoZerosInBSS - By default some codegens place zero-initialized data to
   /// .bss section. This flag disables such behaviour (necessary, e.g. for
@@ -333,6 +300,9 @@ public:
   /// to selectively generate basic block sections.
   std::shared_ptr<MemoryBuffer> BBSectionsFuncListBuf;
 
+  /// Emit section containing call graph metadata.
+  unsigned EmitCallGraphSection : 1;
+
   /// The flag enables call site info production. It is used only for debug
   /// info, and it is restricted only to optimized code. This can be used for
   /// something else, so that should be controlled in the frontend.
@@ -346,7 +316,7 @@ public:
   unsigned EnableDebugEntryValues : 1;
   /// NOTE: There are targets that still do not support the debug entry values
   /// production.
-  bool ShouldEmitDebugEntryValues() const;
+  LLVM_ABI bool ShouldEmitDebugEntryValues() const;
 
   // When set to true, use experimental new debug variable location tracking,
   // which seeks to follow the values of variables rather than their location,
@@ -392,7 +362,7 @@ public:
   /// Name of the stack usage file (i.e., .su file) if user passes
   /// -fstack-usage. If empty, it can be implied that -fstack-usage is not
   /// passed on the command line.
-  std::string StackUsageOutput;
+  std::string StackUsageFile;
 
   /// If greater than 0, override TargetLoweringBase::PrefLoopAlignment.
   unsigned LoopAlignment = 0;
@@ -433,25 +403,10 @@ public:
   /// Which debugger to tune for.
   DebuggerKind DebuggerTuning = DebuggerKind::Default;
 
-private:
-  /// Flushing mode to assume in default FP environment.
-  DenormalMode FPDenormalMode;
-
-  /// Flushing mode to assume in default FP environment, for float/vector of
-  /// float.
-  DenormalMode FP32DenormalMode;
+  /// Vector math library to use.
+  VectorLibrary VecLib = VectorLibrary::NoLibrary;
 
 public:
-  void setFPDenormalMode(DenormalMode Mode) { FPDenormalMode = Mode; }
-
-  void setFP32DenormalMode(DenormalMode Mode) { FP32DenormalMode = Mode; }
-
-  DenormalMode getRawFPDenormalMode() const { return FPDenormalMode; }
-
-  DenormalMode getRawFP32DenormalMode() const { return FP32DenormalMode; }
-
-  DenormalMode getDenormalMode(const fltSemantics &FPType) const;
-
   /// What exception model to use
   ExceptionHandling ExceptionModel = ExceptionHandling::None;
 

@@ -62,10 +62,16 @@ public:
     // having the right size in adjustToUnmodifiedline.
     if (Line.Level >= IndentForLevel.size())
       IndentForLevel.resize(Line.Level + 1, -1);
-    if (Style.IndentPPDirectives != FormatStyle::PPDIS_None &&
-        (Line.InPPDirective ||
-         (Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHash &&
-          Line.Type == LT_CommentAbovePPDirective))) {
+    if (Style.IndentPPDirectives == FormatStyle::PPDIS_Leave &&
+        (Line.InPPDirective || Line.Type == LT_CommentAbovePPDirective)) {
+      Indent = Line.InMacroBody
+                   ? (Line.Level - Line.PPLevel) * Style.IndentWidth +
+                         AdditionalIndent
+                   : Line.First->OriginalColumn;
+    } else if (Style.IndentPPDirectives != FormatStyle::PPDIS_None &&
+               (Line.InPPDirective ||
+                (Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHash &&
+                 Line.Type == LT_CommentAbovePPDirective))) {
       unsigned PPIndentWidth =
           (Style.PPIndentWidth >= 0) ? Style.PPIndentWidth : Style.IndentWidth;
       Indent = Line.InMacroBody
@@ -223,8 +229,6 @@ private:
   tryFitMultipleLinesInOne(LevelIndentTracker &IndentTracker,
                            ArrayRef<AnnotatedLine *>::const_iterator I,
                            ArrayRef<AnnotatedLine *>::const_iterator E) {
-    const unsigned Indent = IndentTracker.getIndent();
-
     // Can't join the last line with anything.
     if (I + 1 == E)
       return 0;
@@ -240,6 +244,7 @@ private:
       return 0;
     }
 
+    const auto Indent = IndentTracker.getIndent();
     if (Style.ColumnLimit > 0 && Indent > Style.ColumnLimit)
       return 0;
 
@@ -252,10 +257,13 @@ private:
                 : Limit - TheLine->Last->TotalLength;
 
     if (TheLine->Last->is(TT_FunctionLBrace) &&
-        TheLine->First == TheLine->Last &&
-        !Style.BraceWrapping.SplitEmptyFunction &&
-        NextLine.First->is(tok::r_brace)) {
-      return tryMergeSimpleBlock(I, E, Limit);
+        TheLine->First == TheLine->Last) {
+      const bool EmptyFunctionBody = NextLine.First->is(tok::r_brace);
+      if ((EmptyFunctionBody && !Style.BraceWrapping.SplitEmptyFunction) ||
+          (!EmptyFunctionBody &&
+           Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Always)) {
+        return tryMergeSimpleBlock(I, E, Limit);
+      }
     }
 
     const auto *PreviousLine = I != AnnotatedLines.begin() ? I[-1] : nullptr;
@@ -277,7 +285,8 @@ private:
       if (Tok && Tok->is(tok::kw_typedef))
         Tok = Tok->getNextNonComment();
       if (Tok && Tok->isOneOf(tok::kw_class, tok::kw_struct, tok::kw_union,
-                              tok::kw_extern, Keywords.kw_interface)) {
+                              tok::kw_extern, Keywords.kw_interface,
+                              Keywords.kw_record)) {
         return !Style.BraceWrapping.SplitEmptyRecord && EmptyBlock
                    ? tryMergeSimpleBlock(I, E, Limit)
                    : 0;
@@ -490,7 +499,8 @@ private:
         ShouldMerge = Style.AllowShortEnumsOnASingleLine;
       } else if (TheLine->Last->is(TT_CompoundRequirementLBrace)) {
         ShouldMerge = Style.AllowShortCompoundRequirementOnASingleLine;
-      } else if (TheLine->Last->isOneOf(TT_ClassLBrace, TT_StructLBrace)) {
+      } else if (TheLine->Last->isOneOf(TT_ClassLBrace, TT_StructLBrace,
+                                        TT_RecordLBrace)) {
         // NOTE: We use AfterClass (whereas AfterStruct exists) for both classes
         // and structs, but it seems that wrapping is still handled correctly
         // elsewhere.
@@ -498,8 +508,8 @@ private:
                       (NextLine.First->is(tok::r_brace) &&
                        !Style.BraceWrapping.SplitEmptyRecord);
       } else if (TheLine->InPPDirective ||
-                 !TheLine->First->isOneOf(tok::kw_class, tok::kw_enum,
-                                          tok::kw_struct)) {
+                 TheLine->First->isNoneOf(tok::kw_class, tok::kw_enum,
+                                          tok::kw_struct, Keywords.kw_record)) {
         // Try to merge a block with left brace unwrapped that wasn't yet
         // covered.
         ShouldMerge = !Style.BraceWrapping.AfterFunction ||
@@ -632,8 +642,10 @@ private:
         return 0;
       const auto N = MergedLines + LinesToBeMerged;
       // Check if there is even a line after the inner result.
-      if (std::distance(I, E) <= N)
+      if (auto Distance = std::distance(I, E);
+          static_cast<decltype(N)>(Distance) <= N) {
         return 0;
+      }
       // Check that the line after the inner result starts with a closing brace
       // which we are permitted to merge into one line.
       if (I[N]->First->is(TT_NamespaceRBrace) &&
@@ -678,8 +690,8 @@ private:
     }
     Limit = limitConsideringMacros(I + 1, E, Limit);
     AnnotatedLine &Line = **I;
-    if (Line.First->isNot(tok::kw_do) && Line.First->isNot(tok::kw_else) &&
-        Line.Last->isNot(tok::kw_else) && Line.Last->isNot(tok::r_paren)) {
+    if (Line.First->isNoneOf(tok::kw_do, tok::kw_else) &&
+        Line.Last->isNoneOf(tok::kw_else, tok::r_paren)) {
       return 0;
     }
     // Only merge `do while` if `do` is the only statement on the line.
@@ -865,7 +877,8 @@ private:
       if (ShouldMerge()) {
         // We merge empty blocks even if the line exceeds the column limit.
         Tok->SpacesRequiredBefore =
-            (Style.SpaceInEmptyBlock || Line.Last->is(tok::comment)) ? 1 : 0;
+            Style.SpaceInEmptyBraces != FormatStyle::SIEB_Never ||
+            Line.Last->is(tok::comment);
         Tok->CanBreakBefore = true;
         return 1;
       } else if (Limit != 0 && !Line.startsWithNamespace() &&
@@ -986,8 +999,10 @@ private:
   void join(AnnotatedLine &A, const AnnotatedLine &B) {
     assert(!A.Last->Next);
     assert(!B.First->Previous);
-    if (B.Affected)
+    if (B.Affected || B.LeadingEmptyLinesAffected) {
+      assert(B.Affected || A.Last->Children.empty());
       A.Affected = true;
+    }
     A.Last->Next = B.First;
     B.First->Previous = A.Last;
     B.First->CanBreakBefore = true;
@@ -1039,8 +1054,8 @@ static void markFinalized(FormatToken *Tok) {
 static void printLineState(const LineState &State) {
   llvm::dbgs() << "State: ";
   for (const ParenState &P : State.Stack) {
-    llvm::dbgs() << (P.Tok ? P.Tok->TokenText : "F") << "|" << P.Indent << "|"
-                 << P.LastSpace << "|" << P.NestedBlockIndent << " ";
+    llvm::dbgs() << (P.Tok ? P.Tok->TokenText : "F") << "|" << P.Indent.Total
+                 << "|" << P.LastSpace << "|" << P.NestedBlockIndent << " ";
   }
   llvm::dbgs() << State.NextToken->TokenText << "\n";
 }
@@ -1088,7 +1103,7 @@ protected:
     const FormatToken *LBrace = State.NextToken->getPreviousNonComment();
     bool HasLBrace = LBrace && LBrace->is(tok::l_brace) && LBrace->is(BK_Block);
     FormatToken &Previous = *State.NextToken->Previous;
-    if (Previous.Children.size() == 0 || (!HasLBrace && !LBrace->MacroParent)) {
+    if (Previous.Children.empty() || (!HasLBrace && !LBrace->MacroParent)) {
       // The previous token does not open a block. Nothing to do. We don't
       // assert so that we can simply call this function for all tokens.
       return true;
@@ -1098,7 +1113,7 @@ protected:
       const ParenState &P = State.Stack.back();
 
       int AdditionalIndent =
-          P.Indent - Previous.Children[0]->Level * Style.IndentWidth;
+          P.Indent.Total - Previous.Children[0]->Level * Style.IndentWidth;
       Penalty +=
           BlockFormatter->format(Previous.Children, DryRun, AdditionalIndent,
                                  /*FixBadIndentation=*/true);
@@ -1651,7 +1666,7 @@ void UnwrappedLineFormatter::formatFirstToken(
   // Preprocessor directives get indented before the hash only if specified. In
   // Javascript import statements are indented like normal statements.
   if (!Style.isJavaScript() &&
-      Style.IndentPPDirectives != FormatStyle::PPDIS_BeforeHash &&
+      Style.IndentPPDirectives < FormatStyle::PPDIS_BeforeHash &&
       (Line.Type == LT_PreprocessorDirective ||
        Line.Type == LT_ImportStatement)) {
     Indent = 0;

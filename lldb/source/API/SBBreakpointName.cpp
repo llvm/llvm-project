@@ -213,6 +213,7 @@ void SBBreakpointName::SetEnabled(bool enable) {
         m_impl_up->GetTarget()->GetAPIMutex());
 
   bp_name->GetOptions().SetEnabled(enable);
+  UpdateName(*bp_name);
 }
 
 void SBBreakpointName::UpdateName(BreakpointName &bp_name) {
@@ -303,7 +304,7 @@ void SBBreakpointName::SetCondition(const char *condition) {
   std::lock_guard<std::recursive_mutex> guard(
         m_impl_up->GetTarget()->GetAPIMutex());
 
-  bp_name->GetOptions().SetCondition(condition);
+  bp_name->GetOptions().SetCondition(StopCondition(condition));
   UpdateName(*bp_name);
 }
 
@@ -317,7 +318,8 @@ const char *SBBreakpointName::GetCondition() {
   std::lock_guard<std::recursive_mutex> guard(
       m_impl_up->GetTarget()->GetAPIMutex());
 
-  return ConstString(bp_name->GetOptions().GetConditionText()).GetCString();
+  return ConstString(bp_name->GetOptions().GetCondition().GetText())
+      .GetCString();
 }
 
 void SBBreakpointName::SetAutoContinue(bool auto_continue) {

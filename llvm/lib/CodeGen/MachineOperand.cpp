@@ -218,6 +218,19 @@ void MachineOperand::ChangeToBA(const BlockAddress *BA, int64_t Offset,
   setTargetFlags(TargetFlags);
 }
 
+void MachineOperand::ChangeToCPI(unsigned Idx, int Offset,
+                                 unsigned TargetFlags) {
+  assert((!isReg() || !isTied()) &&
+         "Cannot change a tied operand into a constant pool index");
+
+  removeRegFromUses();
+
+  OpKind = MO_ConstantPoolIndex;
+  setIndex(Idx);
+  setOffset(Offset);
+  setTargetFlags(TargetFlags);
+}
+
 void MachineOperand::ChangeToMCSymbol(MCSymbol *Sym, unsigned TargetFlags) {
   assert((!isReg() || !isTied()) &&
          "Cannot change a tied operand into an MCSymbol");
@@ -350,8 +363,9 @@ bool MachineOperand::isIdenticalTo(const MachineOperand &Other) const {
   case MachineOperand::MO_RegisterMask:
   case MachineOperand::MO_RegisterLiveOut: {
     // Shallow compare of the two RegMasks
-    const uint32_t *RegMask = getRegMask();
-    const uint32_t *OtherRegMask = Other.getRegMask();
+    const uint32_t *RegMask = isRegMask() ? getRegMask() : getRegLiveOut();
+    const uint32_t *OtherRegMask =
+        isRegMask() ? Other.getRegMask() : Other.getRegLiveOut();
     if (RegMask == OtherRegMask)
       return true;
 
@@ -380,6 +394,8 @@ bool MachineOperand::isIdenticalTo(const MachineOperand &Other) const {
     return getPredicate() == Other.getPredicate();
   case MachineOperand::MO_ShuffleMask:
     return getShuffleMask() == Other.getShuffleMask();
+  case MachineOperand::MO_LaneMask:
+    return getLaneMask() == Other.getLaneMask();
   }
   llvm_unreachable("Invalid machine operand type");
 }
@@ -421,7 +437,8 @@ hash_code llvm::hash_value(const MachineOperand &MO) {
     if (const MachineFunction *MF = getMFIfAvailable(MO)) {
       const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
       unsigned RegMaskSize = MachineOperand::getRegMaskSize(TRI->getNumRegs());
-      const uint32_t *RegMask = MO.getRegMask();
+      const uint32_t *RegMask =
+          MO.isRegMask() ? MO.getRegMask() : MO.getRegLiveOut();
       std::vector<stable_hash> RegMaskHashes(RegMask, RegMask + RegMaskSize);
       return hash_combine(MO.getType(), MO.getTargetFlags(),
                           stable_hash_combine(RegMaskHashes));
@@ -445,6 +462,9 @@ hash_code llvm::hash_value(const MachineOperand &MO) {
     return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getPredicate());
   case MachineOperand::MO_ShuffleMask:
     return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getShuffleMask());
+  case MachineOperand::MO_LaneMask:
+    return hash_combine(MO.getType(), MO.getTargetFlags(),
+                        MO.getLaneMask().getAsInteger());
   }
   llvm_unreachable("Invalid machine operand type");
 }
@@ -1004,11 +1024,11 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
   case MachineOperand::MO_Predicate: {
     auto Pred = static_cast<CmpInst::Predicate>(getPredicate());
-    OS << (CmpInst::isIntPredicate(Pred) ? "int" : "float") << "pred("
-       << Pred << ')';
+    OS << (CmpInst::isIntPredicate(Pred) ? "int" : "float") << "pred(" << Pred
+       << ')';
     break;
   }
-  case MachineOperand::MO_ShuffleMask:
+  case MachineOperand::MO_ShuffleMask: {
     OS << "shufflemask(";
     ArrayRef<int> Mask = getShuffleMask();
     StringRef Separator;
@@ -1022,6 +1042,14 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
 
     OS << ')';
     break;
+  }
+  case MachineOperand::MO_LaneMask: {
+    OS << "lanemask(";
+    LaneBitmask LaneMask = getLaneMask();
+    OS << "0x" << PrintLaneMask(LaneMask);
+    OS << ')';
+    break;
+  }
   }
 }
 
@@ -1272,6 +1300,10 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
   if (AAInfo.NoAlias) {
     OS << ", !noalias ";
     AAInfo.NoAlias->printAsOperand(OS, MST);
+  }
+  if (AAInfo.NoAliasAddrSpace) {
+    OS << ", !noalias.addrspace ";
+    AAInfo.NoAliasAddrSpace->printAsOperand(OS, MST);
   }
   if (getRanges()) {
     OS << ", !range ";

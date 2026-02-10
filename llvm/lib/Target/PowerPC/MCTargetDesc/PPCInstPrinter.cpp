@@ -13,7 +13,7 @@
 #include "MCTargetDesc/PPCInstPrinter.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCPredicates.h"
-#include "PPCMCExpr.h"
+#include "PPCMCAsmInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -430,6 +430,17 @@ void PPCInstPrinter::printS16ImmOperand(const MCInst *MI, unsigned OpNo,
     printOperand(MI, OpNo, STI, O);
 }
 
+void PPCInstPrinter::printS32ImmOperand(const MCInst *MI, unsigned OpNo,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  if (MI->getOperand(OpNo).isImm()) {
+    long long Value = MI->getOperand(OpNo).getImm();
+    assert(isInt<32>(Value) && "Invalid s32imm argument!");
+    O << (long long)Value;
+  } else
+    printOperand(MI, OpNo, STI, O);
+}
+
 void PPCInstPrinter::printS34ImmOperand(const MCInst *MI, unsigned OpNo,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
@@ -619,11 +630,11 @@ bool PPCInstPrinter::showRegistersWithPercentPrefix(const char *RegName) const {
 /// getVerboseConditionalRegName - This method expands the condition register
 /// when requested explicitly or targetting Darwin.
 const char *
-PPCInstPrinter::getVerboseConditionRegName(unsigned RegNum,
+PPCInstPrinter::getVerboseConditionRegName(MCRegister Reg,
                                            unsigned RegEncoding) const {
   if (!FullRegNames && !MAI.useFullRegisterNames())
     return nullptr;
-  if (RegNum < PPC::CR0EQ || RegNum > PPC::CR7UN)
+  if (Reg < PPC::CR0EQ || Reg > PPC::CR7UN)
     return nullptr;
   const char *CRBits[] = {
     "lt", "gt", "eq", "un",

@@ -94,6 +94,14 @@ func.func @avx512bf16_cvt_packed_f32_to_bf16_512(
   return %0 : vector<16xbf16>
 }
 
+// CHECK-LABEL: func @avx10_dot_i8_512
+func.func @avx10_dot_i8_512(%w: vector<16xi32>, %a: vector<64xi8>,
+    %b: vector<64xi8>) -> vector<16xi32> {
+  // CHECK: x86vector.avx10.dot.i8 {{.*}} : vector<64xi8> -> vector<16xi32>
+  %0 = x86vector.avx10.dot.i8 %w, %a, %b : vector<64xi8> -> vector<16xi32>
+  return %0 : vector<16xi32>
+}
+
 // CHECK-LABEL: func @avxbf16_cvt_packed_even_indexed_bf16_to_f32_128
 func.func @avxbf16_cvt_packed_even_indexed_bf16_to_f32_128(
   %a: memref<8xbf16>) -> vector<4xf32>
@@ -228,4 +236,20 @@ func.func @avx_dot(%a: vector<8xf32>, %b: vector<8xf32>) -> (vector<8xf32>)
   // CHECK: x86vector.avx.intr.dot {{.*}} : vector<8xf32>
   %0 = x86vector.avx.intr.dot %a, %b : vector<8xf32>
   return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @avx_dot_i8_128
+func.func @avx_dot_i8_128(%w: vector<4xi32>, %a: vector<16xi8>,
+    %b: vector<16xi8>) -> vector<4xi32> {
+  // CHECK: x86vector.avx.dot.i8 {{.*}} : vector<16xi8> -> vector<4xi32>
+  %0 = x86vector.avx.dot.i8 %w, %a, %b : vector<16xi8> -> vector<4xi32>
+  return %0 : vector<4xi32>
+}
+
+// CHECK-LABEL: func @avx_dot_i8_256
+func.func @avx_dot_i8_256(%w: vector<8xi32>, %a: vector<32xi8>,
+    %b: vector<32xi8>) -> vector<8xi32> {
+  // CHECK: x86vector.avx.dot.i8 {{.*}} : vector<32xi8> -> vector<8xi32>
+  %0 = x86vector.avx.dot.i8 %w, %a, %b : vector<32xi8> -> vector<8xi32>
+  return %0 : vector<8xi32>
 }

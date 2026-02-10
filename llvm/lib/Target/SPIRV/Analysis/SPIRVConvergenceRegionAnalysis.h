@@ -20,7 +20,6 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
 #include <optional>
-#include <unordered_set>
 
 namespace llvm {
 class IntrinsicInst;
@@ -73,7 +72,11 @@ public:
         Entry(std::move(CR.Entry)), Exits(std::move(CR.Exits)),
         Blocks(std::move(CR.Blocks)) {}
 
+  ~ConvergenceRegion() { releaseMemory(); }
+
+  ConvergenceRegion &operator=(ConvergenceRegion &&CR) = delete;
   ConvergenceRegion(const ConvergenceRegion &other) = delete;
+  ConvergenceRegion &operator=(const ConvergenceRegion &other) = delete;
 
   // Returns true if the given basic block belongs to this region, or to one of
   // its subregion.
@@ -100,6 +103,9 @@ public:
       : TopLevelRegion(TopLevelRegion) {}
 
   ~ConvergenceRegionInfo() { releaseMemory(); }
+
+  ConvergenceRegionInfo(const ConvergenceRegionInfo &LHS) = delete;
+  ConvergenceRegionInfo &operator=(const ConvergenceRegionInfo &LHS) = delete;
 
   ConvergenceRegionInfo(ConvergenceRegionInfo &&LHS)
       : TopLevelRegion(LHS.TopLevelRegion) {

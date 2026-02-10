@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c23 -pedantic -Wall -Wno-comment -verify=both,c23 %s
-// RUN: %clang_cc1 -fsyntax-only -std=c17 -pedantic -Wall -Wno-comment -Wno-c23-extensions -verify=both,c17 %s
+// RUN: %clang_cc1 -fsyntax-only -std=c23 -pedantic -Wall -Wno-comment -fexperimental-late-parse-attributes -verify=both,c23 %s
+// RUN: %clang_cc1 -fsyntax-only -std=c17 -pedantic -Wall -Wno-comment -Wno-c23-extensions -fexperimental-late-parse-attributes -verify=both,c17 %s
 
 /* WG14 N3037: Clang 21
  * Improved tag compatibility
@@ -7,6 +7,8 @@
  * Identical tag types have always been compatible across TU boundaries. This
  * paper made identical tag types compatible within the same TU.
  */
+
+int g0;
 
 struct foo { int a; } p;
 
@@ -30,11 +32,24 @@ void func2(PRODUCT(int, SUM(float, double)) y) { // c17-warning {{declaration of
 
 struct foop { struct { int x; }; }; // c17-note {{previous definition is here}}
 struct foop { struct { int x; }; }; // c17-error {{redefinition of 'foop'}}
+// Test the field lookup compatibility isn't sufficient, the structure of types should be compatible.
+struct AnonymousStructNotMatchingFields { // c17-note {{previous definition is here}}
+  struct { // c23-note {{field has name '' here}}
+    int x;
+  };
+};
+struct AnonymousStructNotMatchingFields { // c23-error {{type 'struct AnonymousStructNotMatchingFields' has incompatible definitions}} \
+                                             c17-error {{redefinition of 'AnonymousStructNotMatchingFields'}}
+  int x; // c23-note {{field has name 'x' here}}
+};
+
 union barp { int x; float y; };     // c17-note {{previous definition is here}}
 union barp { int x; float y; };     // c17-error {{redefinition of 'barp'}}
 typedef struct q { int x; } q_t;    // c17-note 2 {{previous definition is here}}
 typedef struct q { int x; } q_t;    // c17-error {{redefinition of 'q'}} \
-                                       c17-error-re {{typedef redefinition with different types ('struct (unnamed struct at {{.*}})' vs 'struct q')}}
+                                       c17-error-re {{typedef redefinition with different types ('struct (unnamed at {{.*}})' vs 'struct q')}}
+typedef struct { int x; } untagged_q_t; // both-note {{previous definition is here}}
+typedef struct { int x; } untagged_q_t; // both-error {{typedef redefinition with different types}}
 void func3(void) {
   struct S { int x; };       // c17-note {{previous definition is here}}
   struct T { struct S s; };  // c17-note {{previous definition is here}}
@@ -60,7 +75,7 @@ union purr { float y; int x; }; // c23-error {{type 'union purr' has incompatibl
 
 // The presence of an attribute makes two types not compatible.
 struct [[gnu::packed]] attr_test { // c17-note {{previous definition is here}} \
-                                      c23-note {{attribute 'packed' here}}
+                                      c23-note {{attribute 'gnu::packed' here}}
   int x;
 };
 
@@ -75,26 +90,23 @@ struct attr_test_2 { // c17-note {{previous definition is here}}
 
 struct [[gnu::packed]] attr_test_2 { // c17-error {{redefinition of 'attr_test_2'}} \
                                         c23-error {{type 'struct attr_test_2' has an attribute which currently causes the types to be treated as though they are incompatible}} \
-                                        c23-note {{attribute 'packed' here}}
+                                        c23-note {{attribute 'gnu::packed' here}}
   int x;
 };
 
 // This includes the same attribute on both types.
-struct [[gnu::packed]] attr_test_3 { // c17-note {{previous definition is here}} \
-                                       c23-note {{attribute 'packed' here}}
+struct [[gnu::packed]] attr_test_3 { // c17-note {{previous definition is here}}
   int x;
 };
 
-struct [[gnu::packed]] attr_test_3 { // c17-error {{redefinition of 'attr_test_3'}} \
-                                        c23-error {{type 'struct attr_test_3' has an attribute which currently causes the types to be treated as though they are incompatible}} \
-                                        c23-note {{attribute 'packed' here}}
+struct [[gnu::packed]] attr_test_3 { // c17-error {{redefinition of 'attr_test_3'}}
   int x;
 };
 
 // Everything which applies to the tag itself also applies to fields.
 struct field_attr_test_1 { // c17-note {{previous definition is here}}
   int x;
-  [[gnu::packed]] int y; // c23-note {{attribute 'packed' here}}
+  [[gnu::packed]] int y; // c23-note {{attribute 'gnu::packed' here}}
 };
 
 struct field_attr_test_1 { // c17-error {{redefinition of 'field_attr_test_1'}} \
@@ -104,7 +116,7 @@ struct field_attr_test_1 { // c17-error {{redefinition of 'field_attr_test_1'}} 
 };
 
 struct field_attr_test_2 { // c17-note {{previous definition is here}}
-  [[gnu::packed]] int x; // c23-note {{attribute 'packed' here}}
+  [[gnu::packed]] int x; // c23-note {{attribute 'gnu::packed' here}}
   int y;
 };
 
@@ -115,13 +127,12 @@ struct field_attr_test_2 { // c17-error {{redefinition of 'field_attr_test_2'}} 
 };
 
 struct field_attr_test_3 { // c17-note {{previous definition is here}}
-  [[gnu::packed]] int x;   // c23-note {{attribute 'packed' here}}
+  [[gnu::packed]] int x;
   int y;
 };
 
-struct field_attr_test_3 { // c17-error {{redefinition of 'field_attr_test_3'}} \
-                              c23-error {{type 'struct field_attr_test_3' has a member with an attribute which currently causes the types to be treated as though they are incompatible}}
-  int x [[gnu::packed]];   // c23-note {{attribute 'packed' here}}
+struct field_attr_test_3 { // c17-error {{redefinition of 'field_attr_test_3'}}
+  int x [[gnu::packed]];
   int y;
 };
 
@@ -259,18 +270,12 @@ enum Z1 { ZC = 1 }; // both-note {{previous definition is here}}
 enum Z2 { ZC = 1 }; // both-error {{redefinition of enumerator 'ZC'}}
 
 // Test attributes on the enumeration and enumerators.
-enum [[deprecated]] enum_attr_test_1 { // c17-note {{previous definition is here}} \
-                                          c23-note {{attribute 'deprecated' here}}
-  EAT1 [[deprecated]] // c17-note {{previous definition is here}} \
-                         c23-note {{attribute 'deprecated' here}}
+enum [[deprecated]] enum_attr_test_1 { // c17-note {{previous definition is here}}
+  EAT1 [[deprecated]] // c17-note {{previous definition is here}}
 };
 
-enum [[deprecated]] enum_attr_test_1 { // c17-error {{redefinition of 'enum_attr_test_1'}} \
-                                          c23-error {{type 'enum enum_attr_test_1' has an attribute which currently causes the types to be treated as though they are incompatible}} \
-                                          c23-error {{type 'enum enum_attr_test_1' has a member with an attribute which currently causes the types to be treated as though they are incompatible}} \
-                                          c23-note {{attribute 'deprecated' here}}
-  EAT1 [[deprecated]] // c17-error {{redefinition of enumerator 'EAT1'}} \
-                         c23-note {{attribute 'deprecated' here}}
+enum [[deprecated]] enum_attr_test_1 { // c17-error {{redefinition of 'enum_attr_test_1'}}
+  EAT1 [[deprecated]] // c17-error {{redefinition of enumerator 'EAT1'}}
 };
 
 enum [[deprecated]] enum_attr_test_2 { // c17-note {{previous definition is here}} \
@@ -351,13 +356,46 @@ struct array { int y; int x[0]; };   // c17-error {{redefinition of 'array'}} \
 struct array_2 { int y; int x[3]; };         // c17-note {{previous definition is here}}
 struct array_2 { int y; int x[1 + 1 + 1]; }; // c17-error {{redefinition of 'array_2'}}
 
-struct alignment { // c17-note {{previous definition is here}}
-  _Alignas(int) int x; // c23-note {{attribute '_Alignas' here}}
+struct alignment { // c17-note 4 {{previous definition is here}}
+  _Alignas(int) int x; // c23-note 2 {{attribute '_Alignas' here}}
+};
+
+struct alignment { // c17-error {{redefinition of 'alignment'}}
+  _Alignas(int) int x;
+};
+
+typedef int MyInt;
+
+struct alignment { // c17-error {{redefinition of 'alignment'}}
+  _Alignas(MyInt) int x;
 };
 
 struct alignment { // c17-error {{redefinition of 'alignment'}} \
                       c23-error {{type 'struct alignment' has a member with an attribute which currently causes the types to be treated as though they are incompatible}}
   int x;
+};
+
+struct alignment { // c17-error {{redefinition of 'alignment'}} \
+                      c23-error {{type 'struct alignment' has a member with an attribute which currently causes the types to be treated as though they are incompatible}}
+  _Alignas(4) int x; // c23-note {{attribute '_Alignas' here}}
+};
+
+struct alignment2 { // c17-note 3 {{previous definition is here}}
+  _Alignas(4) int x; // c23-note 2 {{attribute '_Alignas' here}}
+};
+
+struct alignment2 { // c17-error {{redefinition of 'alignment2'}}
+  _Alignas(4) int x;
+};
+
+struct alignment2 { // c17-error {{redefinition of 'alignment2'}} \
+                       c23-error {{type 'struct alignment2' has a member with an attribute which currently causes the types to be treated as though they are incompatible}}
+  _Alignas(4 * 1) int x; // c23-note {{attribute '_Alignas' here}}
+};
+
+struct alignment2 { // c17-error {{redefinition of 'alignment2'}} \
+                       c23-error {{type 'struct alignment2' has a member with an attribute which currently causes the types to be treated as though they are incompatible}}
+  _Alignas(8) int x; // c23-note {{attribute '_Alignas' here}}
 };
 
 // Both structures need to have a tag in order to be compatible within the same
@@ -389,15 +427,468 @@ void nontag_both_in_params(struct { int i; } Arg1, struct { int i; } Arg2) {
   _Static_assert(0 == _Generic(__typeof__(Arg1), __typeof__(Arg2) : 1, default : 0)); // both-warning {{passing a type argument as the first operand to '_Generic' is a C2y extension}}
 }
 
-struct InnerAnonStruct {
+struct InnerUnnamedStruct {
   struct {
     int i;
   } untagged;
-} inner_anon_tagged;
+} inner_unnamed_tagged;
+_Static_assert(0 == _Generic(inner_unnamed_tagged.untagged, struct { int i; } : 1, default : 0));
 
-_Static_assert(0 == _Generic(inner_anon_tagged.untagged, struct { int i; } : 1, default : 0));
+struct InnerUnnamedStruct_same {
+  struct {
+    int i;
+  } untagged;
+};
+struct InnerUnnamedStruct_differentNaming {
+  struct {
+    int i;
+  } untaggedDifferent;
+};
+struct InnerUnnamedStruct_differentShape {
+  float x;
+  struct {
+    int i;
+  } untagged;
+  int y;
+};
+void compare_unnamed_struct_from_different_outer_type(
+    struct InnerUnnamedStruct sameOuterType,
+    struct InnerUnnamedStruct_same matchingType,
+    struct InnerUnnamedStruct_differentNaming differentFieldName,
+    struct InnerUnnamedStruct_differentShape differentType) {
+  inner_unnamed_tagged.untagged = sameOuterType.untagged;
+  inner_unnamed_tagged.untagged = matchingType.untagged; // both-error-re {{assigning to 'struct (unnamed at {{.*}})' from incompatible type 'struct (unnamed at {{.*}})'}}
+  inner_unnamed_tagged.untagged = differentFieldName.untaggedDifferent; // both-error-re {{assigning to 'struct (unnamed at {{.*}})' from incompatible type 'struct (unnamed at {{.*}})'}}
+  inner_unnamed_tagged.untagged = differentType.untagged; // both-error-re {{assigning to 'struct (unnamed at {{.*}})' from incompatible type 'struct (unnamed at {{.*}})'}}
+}
 
 // Test the same thing with enumerations (test for unions is omitted because
 // unions and structures are both RecordDecl objects, whereas EnumDecl is not).
 enum { E_Untagged1 } nontag_enum; // both-note {{previous definition is here}}
 _Static_assert(0 == _Generic(nontag_enum, enum { E_Untagged1 } : 1, default : 0)); // both-error {{redefinition of enumerator 'E_Untagged1'}}
+
+// Test that enumerations with mixed underlying types are properly handled.
+enum GH150594_E1 : int { GH150594_Val1 };
+enum GH150594_E2 : int { GH150594_Val2 };
+enum GH150594_E3 { GH150594_Val3 };
+enum GH150594_E4 : int { GH150594_Val4 };
+void GH150594(void) {
+  extern enum GH150594_E1 Fn1(void); // both-note {{previous declaration is here}}
+  extern enum GH150594_E2 Fn2(void); // c17-note {{previous declaration is here}}
+  extern enum GH150594_E3 Fn3(void); // both-note {{previous declaration is here}}
+  extern enum GH150594_E4 Fn4(void); // both-note {{previous declaration is here}}
+  enum GH150594_E1 { GH150594_Val1 };
+  enum GH150594_E2 : int { GH150594_Val2 };
+  enum GH150594_E3 : int { GH150594_Val3 };
+  enum GH150594_E4 : short { GH150594_Val4 };
+  extern enum GH150594_E1 Fn1(void); // both-error {{conflicting types for 'Fn1'}}
+  extern enum GH150594_E2 Fn2(void); // c17-error {{conflicting types for 'Fn2'}}
+  extern enum GH150594_E3 Fn3(void); // both-error {{conflicting types for 'Fn3'}}
+  extern enum GH150594_E4 Fn4(void); // both-error {{conflicting types for 'Fn4'}}
+
+  // Show that two declarations in the same scope give expected diagnostics.
+  enum E1 { e1 };       // both-note {{previous declaration is here}}
+  enum E1 : int { e1 }; // both-error {{enumeration previously declared with nonfixed underlying type}}
+
+  enum E2 : int { e2 }; // both-note {{previous declaration is here}}
+  enum E2 { e2 };       // both-error {{enumeration previously declared with fixed underlying type}}
+
+  enum E3 : int { e3 };   // both-note {{previous declaration is here}}
+  enum E3 : short { e3 }; // both-error {{enumeration redeclared with different underlying type 'short' (was 'int')}}
+
+  typedef short foo;
+  enum E4 : foo { e4 };   // c17-note 2 {{previous definition is here}}
+  enum E4 : short { e4 }; // c17-error {{redefinition of 'E4'}} \
+                             c17-error {{redefinition of enumerator 'e4'}}
+
+  enum E5 : foo { e5 }; // both-note {{previous declaration is here}}
+  enum E5 : int { e5 }; // both-error {{enumeration redeclared with different underlying type 'int' (was 'foo' (aka 'short'))}}
+}
+
+// Test that enumerations are compatible with their underlying type, but still
+// diagnose when "same type" is required rather than merely "compatible type".
+enum E1 : int { e1 }; // Fixed underlying type
+enum E2 { e2 };       // Unfixed underlying type, defaults to int or unsigned int
+
+struct GH149965_1 { int h; };
+// This typeof trick is used to get the underlying type of the enumeration in a
+// platform agnostic way.
+struct GH149965_2 { __typeof__(+(enum E2){}) h; };
+void gh149965(void) {
+  extern struct GH149965_1 x1; // c17-note {{previous declaration is here}}
+  extern struct GH149965_2 x2; // c17-note {{previous declaration is here}}
+
+  // Both the structure and the variable declarations are fine because only a
+  // compatible type is required, not the same type, because the structures are
+  // declared in different scopes.
+  struct GH149965_1 { enum E1 h; };
+  struct GH149965_2 { enum E2 h; };
+
+  extern struct GH149965_1 x1; // c17-error {{redeclaration of 'x1'}}
+  extern struct GH149965_2 x2; // c17-error {{redeclaration of 'x2'}}
+
+  // However, in the same scope, the same type is required, not just compatible
+  // types.
+  // FIXME: this should be an error in both C17 and C23 mode.
+  struct GH149965_3 { int h; };     // c17-note {{previous definition is here}}
+  struct GH149965_3 { enum E1 h; }; // c17-error {{redefinition of 'GH149965_3'}}
+
+  // For Clang, the composite type after declaration merging is the enumeration
+  // type rather than an integer type.
+  enum E1 *eptr;
+  [[maybe_unused]] __typeof__(x1.h) *ptr = eptr;
+  enum E2 *eptr2;
+  [[maybe_unused]] __typeof__(x2.h) *ptr2 = eptr2;
+}
+
+struct __attribute__((availability(ios, introduced = 14), availability(macos, introduced = 12))) AvailS0 {
+  // c17-note@-1 4 {{previous definition is here}}
+  // c23-note@-2 2 {{attribute 'availability' here}}
+  int f0 __attribute__((availability(ios, introduced = 15, deprecated = 16)));
+  // c23-note@-1 {{attribute 'availability' here}}
+};
+
+struct __attribute__((availability(ios, introduced = 14), availability(macos, introduced = 12))) AvailS0 {
+  // c17-error@-1 {{redefinition of 'AvailS0'}}
+  int f0 __attribute__((availability(ios, introduced = 15, deprecated = 16)));
+};
+
+// The order of the attributes matters.
+struct __attribute__((availability(macos, introduced = 12), availability(ios, introduced = 14))) AvailS0 {
+  // c17-error@-1 {{redefinition of 'AvailS0'}}
+  // c23-error@-2 {{type 'struct AvailS0' has an attribute which currently causes the types to be treated as though they are incompatible}}
+  // c23-note@-3 {{attribute 'availability' here}}
+  int f0 __attribute__((availability(ios, introduced = 15, deprecated = 16)));
+};
+
+struct __attribute__((availability(ios, introduced = 14))) [[__maybe_unused__]] AvailS0 {
+  // c17-error@-1 {{redefinition of 'AvailS0'}}
+  // c23-error@-2 {{type 'struct AvailS0' has an attribute which currently causes the types to be treated as though they are incompatible}}
+  // c23-note@-3 {{attribute 'maybe_unused' here}}
+  int f0 __attribute__((availability(ios, introduced = 15, deprecated = 16)));
+};
+
+struct __attribute__((availability(ios, introduced = 14), availability(macos, introduced = 12))) AvailS0 {
+  // c17-error@-1 {{redefinition of 'AvailS0'}}
+  // c23-error@-2 {{type 'struct AvailS0' has a member with an attribute which currently causes the types to be treated as though they are incompatible}}
+  int f0 __attribute__((availability(macos, introduced = 13)));
+  // c23-note@-1 {{attribute 'availability' here}}
+};
+
+enum __attribute__((availability(macos, introduced = 12), warn_unused_result)) AvailE0 {
+  // c17-note@-1 {{previous definition is here}}
+  A_E0
+  // c17-note@-1 {{previous definition is here}}
+};
+
+enum __attribute__((availability(macos, introduced = 12), warn_unused_result)) AvailE0 {
+  // c17-error@-1 {{redefinition of 'AvailE0'}}
+  A_E0
+  // c17-error@-1 {{redefinition of enumerator 'A_E0'}}
+};
+
+enum __attribute__((enum_extensibility(closed))) AvailE1 {
+  // c17-note@-1 {{previous definition is here}}
+  A_E1
+  // c17-note@-1 {{previous definition is here}}
+};
+
+enum __attribute__((enum_extensibility(closed))) AvailE1 {
+  // c17-error@-1 {{redefinition of 'AvailE1'}}
+  A_E1
+  // c17-error@-1 {{redefinition of enumerator 'A_E1'}}
+};
+
+#pragma clang attribute push (__attribute__((availability(macos, introduced=12))), apply_to=record)
+struct AvailS1 {
+  // c17-note@-1 {{previous definition is here}}
+  // c23-note@-3 {{attribute 'availability' here}}
+  int a;
+};
+#pragma clang attribute pop
+
+struct __attribute__((availability(macos, introduced = 12))) AvailS1 {
+  // c17-error@-1 {{redefinition of 'AvailS1'}}
+  // c23-error@-2 {{type 'struct AvailS1' has an attribute which currently causes the types to be treated as though they are incompatible}}
+  // c23-note@-3 {{attribute 'availability' here}}
+  int a;
+};
+
+struct __attribute__((availability(macos, introduced = 12, message = "abc"))) AvailS2 {
+  // c17-note@-1 {{previous definition is here}}
+  // c23-note@-2 {{attribute 'availability' here}}
+  int a;
+};
+
+struct __attribute__((availability(macos, introduced = 12, message = "xyz"))) AvailS2 {
+  // c17-error@-1 {{redefinition of 'AvailS2'}}
+  // c23-error@-2 {{type 'struct AvailS2' has an attribute which currently causes the types to be treated as though they are incompatible}}
+  // c23-note@-3 {{attribute 'availability' here}}
+  int a;
+};
+
+struct __attribute__((availability(macos, introduced = 12, strict))) AvailS3 {
+  // c17-note@-1 {{previous definition is here}}
+  // c23-note@-2 {{attribute 'availability' here}}
+  int a;
+};
+
+struct __attribute__((availability(macos, introduced = 12))) AvailS3 {
+  // c17-error@-1 {{redefinition of 'AvailS3'}}
+  // c23-error@-2 {{type 'struct AvailS3' has an attribute which currently causes the types to be treated as though they are incompatible}}
+  // c23-note@-3 {{attribute 'availability' here}}
+  int a;
+};
+
+struct __attribute__((availability(macos, introduced = 12))) AvailS4 {
+  // c17-note@-1 {{previous definition is here}}
+  // c23-note@-2 {{attribute 'availability' here}}
+  int a;
+};
+
+struct __attribute__((availability(ios, introduced = 12))) AvailS4 {
+  // c17-error@-1 {{redefinition of 'AvailS4'}}
+  // c23-error@-2 {{type 'struct AvailS4' has an attribute which currently causes the types to be treated as though they are incompatible}}
+  // c23-note@-3 {{attribute 'availability' here}}
+  int a;
+};
+
+struct PreferredType0 {
+  // c17-note@-1 3 {{previous definition is here}}
+  [[clang::preferred_type(_Bool)]] int f : 1;
+  // c23-note@-1 {{attribute 'clang::preferred_type' here}}
+};
+
+struct PreferredType0 {
+  // c17-error@-1 {{redefinition of 'PreferredType0'}}
+  [[clang::preferred_type(_Bool)]] int f : 1;
+};
+
+typedef _Bool MyBool;
+
+struct PreferredType0 {
+  // c17-error@-1 {{redefinition of 'PreferredType0'}}
+  [[clang::preferred_type(MyBool)]] int f : 1;
+};
+
+struct PreferredType0 {
+  // c17-error@-1 {{redefinition of 'PreferredType0'}}
+  // c23-error@-2 {{type 'struct PreferredType0' has a member with an attribute which currently causes the types to be treated as though they are incompatible}}
+  [[clang::preferred_type(char)]] int f : 1;
+  // c23-note@-1 {{attribute 'clang::preferred_type' here}}
+};
+
+struct __attribute__((abi_tag("a", "b"))) ABITag0 {
+  // c17-note@-1 4 {{previous definition is here}}
+  // c23-note@-2 3 {{attribute 'abi_tag' here}}
+  int f;
+};
+
+struct __attribute__((abi_tag("a", "b"))) ABITag0 {
+  // c17-error@-1 {{redefinition of 'ABITag0'}}
+  int f;
+};
+
+struct __attribute__((abi_tag("a"))) ABITag0 {
+  // c17-error@-1 {{redefinition of 'ABITag0'}}
+  // c23-error@-2 {{type 'struct ABITag0' has an attribute which currently causes the types to be treated as though they are incompatible}}
+  // c23-note@-3 {{attribute 'abi_tag' here}}
+  int f;
+};
+
+struct __attribute__((abi_tag("a", "b", "c"))) ABITag0 {
+  // c17-error@-1 {{redefinition of 'ABITag0'}}
+  // c23-error@-2 {{type 'struct ABITag0' has an attribute which currently causes the types to be treated as though they are incompatible}}
+  // c23-note@-3 {{attribute 'abi_tag' here}}
+  int f;
+};
+
+struct __attribute__((abi_tag("a", "d"))) ABITag0 {
+  // c17-error@-1 {{redefinition of 'ABITag0'}}
+  // c23-error@-2 {{type 'struct ABITag0' has an attribute which currently causes the types to be treated as though they are incompatible}}
+  // c23-note@-3 {{attribute 'abi_tag' here}}
+  int f;
+};
+
+struct CountedBy0 {
+  // c17-note@-1 {{previous definition is here}}
+  int count;
+  int * __attribute__((counted_by(count))) p;
+};
+
+struct CountedBy0 {
+  // c17-error@-1 {{redefinition of 'CountedBy0'}}
+  int count;
+  int * __attribute__((counted_by(count))) p;
+};
+
+struct CountedBy1 {
+  // c17-note@-1 {{previous definition is here}}
+  int count0, count1;
+  int * __attribute__((counted_by(count0))) p;
+};
+
+struct CountedBy1 {
+  // c17-error@-1 {{redefinition of 'CountedBy1'}}
+  int count0, count1;
+  // FIXME: This should be rejected in c23.
+  int * __attribute__((counted_by(count1))) p;
+};
+
+struct __attribute__ ((lockable)) Lock {
+  int a;
+};
+
+struct GuardedBy0 {
+  // c17-note@-1 {{previous definition is here}}
+  struct Lock lock;
+  int b __attribute__((guarded_by(lock)));
+};
+
+struct GuardedBy0 {
+  // c17-error@-1 {{redefinition of 'GuardedBy0'}}
+  struct Lock lock;
+  int b __attribute__((guarded_by(lock)));
+};
+
+struct GuardedBy1 {
+  // c17-note@-1 {{previous definition is here}}
+  struct Lock lock0, lock1;
+  int b __attribute__((guarded_by(lock0)));
+  // c23-note@-1 {{attribute 'guarded_by' here}}
+};
+
+struct GuardedBy1 {
+  // c17-error@-1 {{redefinition of 'GuardedBy1'}}
+  // c23-error@-2 {{type 'struct GuardedBy1' has a member with an attribute which currently causes the types to be treated as though they are incompatible}}
+  struct Lock lock0, lock1;
+  int b __attribute__((guarded_by(lock1)));
+  // c23-note@-1 {{attribute 'guarded_by' here}}
+};
+
+struct Lock sharedLock0, sharedLock1;
+
+struct GuardedBy2 {
+  // c17-note@-1 {{previous definition is here}}
+  int b __attribute__((guarded_by(sharedLock0)));
+};
+
+struct GuardedBy2 {
+  // c17-error@-1 {{redefinition of 'GuardedBy2'}}
+  int b __attribute__((guarded_by(sharedLock0)));
+};
+
+struct GuardedBy3 {
+  // c17-note@-1 {{previous definition is here}}
+  int b __attribute__((guarded_by(sharedLock0)));
+  // c23-note@-1 {{attribute 'guarded_by' here}}
+};
+
+struct GuardedBy3 {
+  // c17-error@-1 {{redefinition of 'GuardedBy3'}}
+  // c23-error@-2 {{type 'struct GuardedBy3' has a member with an attribute which currently causes the types to be treated as though they are incompatible}}
+  int b __attribute__((guarded_by(sharedLock1)));
+  // c23-note@-1 {{attribute 'guarded_by' here}}
+};
+
+struct OuterLock {
+  struct Lock lock;
+};
+
+struct OuterLock outer0, outer1;
+
+struct GuardedBy4 {
+  // c17-note@-1 {{previous definition is here}}
+  int b __attribute__((guarded_by(outer0.lock)));
+};
+
+struct GuardedBy4 {
+  // c17-error@-1 {{redefinition of 'GuardedBy4'}}
+  int b __attribute__((guarded_by(outer0.lock)));
+};
+
+struct GuardedBy5 {
+  // c17-note@-1 {{previous definition is here}}
+  int b __attribute__((guarded_by(outer0.lock)));
+  // c23-note@-1 {{attribute 'guarded_by' here}}
+};
+
+struct GuardedBy5 {
+  // c17-error@-1 {{redefinition of 'GuardedBy5'}}
+  // c23-error@-2 {{type 'struct GuardedBy5' has a member with an attribute which currently causes the types to be treated as though they are incompatible}}
+  int b __attribute__((guarded_by(outer1.lock)));
+  // c23-note@-1 {{attribute 'guarded_by' here}}
+};
+
+struct GuardedBy6 {
+  // c17-note@-1 {{previous definition is here}}
+  int b __attribute__((guarded_by(lock)));
+  struct Lock lock;
+};
+
+struct GuardedBy6 {
+  // c17-error@-1 {{redefinition of 'GuardedBy6'}}
+  int b __attribute__((guarded_by(lock)));
+  struct Lock lock;
+};
+
+struct GuardedBy7 {
+  // c17-note@-1 {{previous definition is here}}
+  int b __attribute__((guarded_by(lock0)));
+  // c23-note@-1 {{attribute 'guarded_by' here}}
+  struct Lock lock0, lock1;
+};
+
+struct GuardedBy7 {
+  // c17-error@-1 {{redefinition of 'GuardedBy7'}}
+  // c23-error@-2 {{type 'struct GuardedBy7' has a member with an attribute which currently causes the types to be treated as though they are incompatible}}
+  int b __attribute__((guarded_by(lock1)));
+  // c23-note@-1 {{attribute 'guarded_by' here}}
+  struct Lock lock0, lock1;
+};
+
+struct GuardedBy8 {
+  // c17-note@-1 {{previous definition is here}}
+  int b __attribute__((guarded_by(lock)));
+  struct {
+    struct Lock lock;
+  };
+};
+
+struct GuardedBy8 {
+  // c17-error@-1 {{redefinition of 'GuardedBy8'}}
+  int b __attribute__((guarded_by(lock)));
+  struct {
+    struct Lock lock;
+  };
+};
+
+struct __attribute__((annotate("abc", &baz, &g0))) Annotate0 {
+  // c17-note@-1 {{previous definition is here}}
+  int a;
+};
+
+struct __attribute__((annotate("abc", &baz, &g0))) Annotate0 {
+  // c17-error@-1 {{redefinition of 'Annotate0'}}
+  int a;
+};
+
+struct __attribute__((annotate("abc", &baz, &g0))) Annotate1 {
+  // c17-note@-1 2 {{previous definition is here}}
+  // c23-note@-2 2 {{attribute 'annotate' here}}
+  int a;
+};
+
+struct __attribute__((annotate("abc", &bar, &g0))) Annotate1 {
+  // c17-error@-1 {{redefinition of 'Annotate1'}}
+  // c23-error@-2 {{type 'struct Annotate1' has an attribute which currently causes the types to be treated as though they are incompatible}}
+  // c23-note@-3 {{attribute 'annotate' here}}
+  int a;
+};
+
+struct __attribute__((annotate("abc", &baz, &g0, 2))) Annotate1 {
+  // c17-error@-1 {{redefinition of 'Annotate1'}}
+  // c23-error@-2 {{type 'struct Annotate1' has an attribute which currently causes the types to be treated as though they are incompatible}}
+  // c23-note@-3 {{attribute 'annotate' here}}
+  int a;
+};

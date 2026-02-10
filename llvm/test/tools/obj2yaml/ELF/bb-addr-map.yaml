@@ -14,7 +14,7 @@
 # VALID-NEXT:   - Name: .llvm_bb_addr_map
 # VALID-NEXT:     Type: SHT_LLVM_BB_ADDR_MAP
 # VALID-NEXT:     Entries:
-# VALID-NEXT:       - Version: 2
+# VALID-NEXT:       - Version: 3
 # VALID-NEXT:         BBRanges:
 ## The 'BaseAddress' field is omitted when it's zero.
 # VALID-NEXT:           - BBEntries:
@@ -30,15 +30,16 @@
 # VALID-NEXT:               AddressOffset: 0xFFFFFFFFFFFFFFF7
 # VALID-NEXT:               Size:          0xFFFFFFFFFFFFFFF8
 # VALID-NEXT:               Metadata:      0xFFFFFFFFFFFFFFF9
-# VALID-NEXT:       - Version: 2
-# VALID-NEXT:         Feature: 0x8
+# VALID-NEXT:       - Version: 3
+# VALID-NEXT:         Feature: 0x28
 # VALID-NEXT:         BBRanges:
 # VALID-NEXT:           - BaseAddress: 0xFFFFFFFFFFFFFF20
 # VALID-NEXT:             BBEntries:
-# VALID-NEXT:               - ID:            6
-# VALID-NEXT:                 AddressOffset: 0xA
-# VALID-NEXT:                 Size:          0xB
-# VALID-NEXT:                 Metadata:      0xC
+# VALID-NEXT:               - ID:              6
+# VALID-NEXT:                 AddressOffset:   0xA
+# VALID-NEXT:                 Size:            0xB
+# VALID-NEXT:                 Metadata:        0xC
+# VALID-NEXT:                 CallsiteEndOffsets: [ 0x1, 0x2 ]
 
 --- !ELF
 FileHeader:
@@ -50,7 +51,7 @@ Sections:
     Type:   SHT_LLVM_BB_ADDR_MAP
     ShSize: [[SIZE=<none>]]
     Entries:
-      - Version: 2
+      - Version: 3
         Feature: 0x0
         BBRanges:
           - BaseAddress: 0x0
@@ -67,17 +68,18 @@ Sections:
                 AddressOffset: 0xFFFFFFFFFFFFFFF7
                 Size:          0xFFFFFFFFFFFFFFF8
                 Metadata:      0xFFFFFFFFFFFFFFF9
-      - Version:   2
-        Feature:   0x8
+      - Version:   3
+        Feature:   0x28
         NumBBRanges: [[NUMBBRANGES=<none>]]
         BBRanges:
           - BaseAddress:   0xFFFFFFFFFFFFFF20
             NumBlocks: [[NUMBLOCKS=<none>]]
             BBEntries:
-             - ID:            6
-               AddressOffset: 0xA
-               Size:          0xB
-               Metadata:      0xC
+             - ID:              6
+               AddressOffset:   0xA
+               Size:            0xB
+               Metadata:        0xC
+               CallsiteEndOffsets: [ 0x1, 0x2 ]
 
 ## Check obj2yaml can dump empty .llvm_bb_addr_map sections.
 
@@ -159,6 +161,92 @@ Sections:
       - Version: 0
         BBRanges:
           - BaseAddress: 0x20
+
+## Check that obj2yaml can dump basic block hash in the .llvm_bb_addr_map section.
+
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: obj2yaml %t4 | FileCheck %s --check-prefix=BBHASH
+
+# BBHASH:      --- !ELF
+# BBHASH-NEXT: FileHeader:
+# BBHASH-NEXT:   Class: ELFCLASS64
+# BBHASH-NEXT:   Data:  ELFDATA2LSB
+# BBHASH-NEXT:   Type:  ET_EXEC
+# BBHASH-NEXT: Sections:
+# BBHASH-NEXT:   - Name: .llvm_bb_addr_map
+# BBHASH-NEXT:     Type: SHT_LLVM_BB_ADDR_MAP
+# BBHASH-NEXT:     Entries:
+# BBHASH-NEXT:       - Version: 4
+# BBHASH-NEXT:         Feature: 0x40
+# BBHASH-NEXT:         BBRanges:
+# BBHASH-NEXT:           - BBEntries:
+# BBHASH-NEXT:             - ID:            0
+# BBHASH-NEXT:               AddressOffset: 0x1
+# BBHASH-NEXT:               Size:          0x2
+# BBHASH-NEXT:               Metadata:      0x3
+# BBHASH-NEXT:               Hash:          0x1
+# BBHASH-NEXT:             - ID:            2
+# BBHASH-NEXT:               AddressOffset: 0x4
+# BBHASH-NEXT:               Size:          0x5
+# BBHASH-NEXT:               Metadata:      0x6
+# BBHASH-NEXT:               Hash:          0x2
+# BBHASH-NEXT:             - ID:            4
+# BBHASH-NEXT:               AddressOffset: 0xFFFFFFFFFFFFFFF7
+# BBHASH-NEXT:               Size:          0xFFFFFFFFFFFFFFF8
+# BBHASH-NEXT:               Metadata:      0xFFFFFFFFFFFFFFF9
+# BBHASH-NEXT:               Hash:          0x3
+# BBHASH-NEXT:       - Version: 4
+# BBHASH-NEXT:         Feature: 0x68
+# BBHASH-NEXT:         BBRanges:
+# BBHASH-NEXT:           - BaseAddress: 0xFFFFFFFFFFFFFF20
+# BBHASH-NEXT:             BBEntries:
+# BBHASH-NEXT:               - ID:              6
+# BBHASH-NEXT:                 AddressOffset:   0xA
+# BBHASH-NEXT:                 Size:            0xB
+# BBHASH-NEXT:                 Metadata:        0xC
+# BBHASH-NEXT:                 CallsiteEndOffsets: [ 0x1, 0x2 ]
+# BBHASH-NEXT:                 Hash:          0x123
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:   .llvm_bb_addr_map
+    Type:   SHT_LLVM_BB_ADDR_MAP
+    Entries:
+      - Version: 4
+        Feature: 0x40
+        BBRanges:
+          - BaseAddress: 0x0
+            BBEntries:
+              - ID:            0
+                AddressOffset: 0x1
+                Size:          0x2
+                Metadata:      0x3
+                Hash:          0x1
+              - ID:            2
+                AddressOffset: 0x4
+                Size:          0x5
+                Metadata:      0x6
+                Hash:          0x2
+              - ID:            4
+                AddressOffset: 0xFFFFFFFFFFFFFFF7
+                Size:          0xFFFFFFFFFFFFFFF8
+                Metadata:      0xFFFFFFFFFFFFFFF9
+                Hash:          0x3
+      - Version:   4
+        Feature:   0x68
+        BBRanges:
+          - BaseAddress:   0xFFFFFFFFFFFFFF20
+            BBEntries:
+             - ID:              6
+               AddressOffset:   0xA
+               Size:            0xB
+               Metadata:        0xC
+               CallsiteEndOffsets: [ 0x1, 0x2 ]
+               Hash:            0x123
 
 ## Check that obj2yaml uses the "Content" tag to describe an .llvm_bb_addr_map section
 ## when it can't extract the entries, for example, when the section is truncated, or

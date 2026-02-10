@@ -17,7 +17,7 @@ resume:
   invoke void @print(i32 1) to label %suspend unwind label %lpad
 
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   call void @print(i32 0) ; should not be present in f.resume
   ret ptr %hdl
 
@@ -26,8 +26,9 @@ lpad:
      cleanup
 
   call void @print(i32 2)
-  %need.resume = call i1 @llvm.coro.end(ptr null, i1 true, token none)
-  br i1 %need.resume, label %eh.resume, label %cleanup.cont
+  call void @llvm.coro.end(ptr null, i1 true, token none)
+  %in.ramp = call i1 @llvm.coro.is_in_ramp()
+  br i1 %in.ramp, label %cleanup.cont, label %eh.resume
 
 cleanup.cont:
   call void @print(i32 3) ; should not be present in f.resume
@@ -80,7 +81,7 @@ declare void @llvm.coro.destroy(ptr)
 declare token @llvm.coro.id(i32, ptr, ptr, ptr)
 declare ptr @llvm.coro.alloc(token)
 declare ptr @llvm.coro.begin(token, ptr)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 
 declare noalias ptr @malloc(i32)
 declare void @print(i32)

@@ -1285,7 +1285,7 @@ private:
     // Cache misses on the merged chain
     double MergedCounts = ChainPred->ExecutionCount + ChainSucc->ExecutionCount;
     double MergedSize = ChainPred->Size + ChainSucc->Size;
-    double MergedDensity = static_cast<double>(MergedCounts) / MergedSize;
+    double MergedDensity = MergedCounts / MergedSize;
     double NewScore = MergedCounts * missProbability(MergedDensity);
 
     return CurScore - NewScore;

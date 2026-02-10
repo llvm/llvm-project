@@ -117,7 +117,7 @@ removeEmptyPTLoad(Ctx &ctx, SmallVector<std::unique_ptr<PhdrEntry>, 0> &phdrs) {
   for (auto it2 = it; it2 != phdrs.end(); ++it2)
     removed.insert(it2->get());
   for (OutputSection *sec : ctx.outputSections)
-    if (removed.count(sec->ptLoad))
+    if (removed.contains(sec->ptLoad))
       sec->ptLoad = nullptr;
   phdrs.erase(it, phdrs.end());
 }
@@ -553,6 +553,19 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
   }
 }
 
+// Returns true if this is a variant of .data.rel.ro.
+static bool isRelRoDataSection(Ctx &ctx, StringRef secName) {
+  if (!secName.consume_front(".data.rel.ro"))
+    return false;
+  if (secName.empty())
+    return true;
+  // If -z keep-data-section-prefix is specified, additionally allow
+  // '.data.rel.ro.hot' and '.data.rel.ro.unlikely'.
+  if (ctx.arg.zKeepDataSectionPrefix)
+    return secName == ".hot" || secName == ".unlikely";
+  return false;
+}
+
 // Today's loaders have a feature to make segments read-only after
 // processing dynamic relocations to enhance security. PT_GNU_RELRO
 // is defined for that.
@@ -629,7 +642,7 @@ static bool isRelroSection(Ctx &ctx, const OutputSection *sec) {
   // magic section names.
   StringRef s = sec->name;
 
-  bool abiAgnostic = s == ".data.rel.ro" || s == ".bss.rel.ro" ||
+  bool abiAgnostic = isRelRoDataSection(ctx, s) || s == ".bss.rel.ro" ||
                      s == ".ctors" || s == ".dtors" || s == ".jcr" ||
                      s == ".eh_frame" || s == ".fini_array" ||
                      s == ".init_array" || s == ".preinit_array";
@@ -669,7 +682,7 @@ unsigned elf::getSectionRank(Ctx &ctx, OutputSection &osec) {
 
   // We want to put section specified by -T option first, so we
   // can start assigning VA starting from them later.
-  if (ctx.arg.sectionStartMap.count(osec.name))
+  if (ctx.arg.sectionStartMap.contains(osec.name))
     return rank;
   rank |= RF_NOT_ADDR_SET;
 
@@ -1482,15 +1495,14 @@ static void randomizeSectionPadding(Ctx &ctx) {
       if (auto *isd = dyn_cast<InputSectionDescription>(bc)) {
         SmallVector<InputSection *, 0> tmp;
         if (os->ptLoad != curPtLoad) {
-          tmp.push_back(make<RandomizePaddingSection>(
-              ctx, g() % ctx.arg.maxPageSize, os));
+          tmp.push_back(
+              make<PaddingSection>(ctx, g() % ctx.arg.maxPageSize, os));
           curPtLoad = os->ptLoad;
         }
         for (InputSection *isec : isd->sections) {
           // Probability of inserting padding is 1 in 16.
           if (g() % 16 == 0)
-            tmp.push_back(
-                make<RandomizePaddingSection>(ctx, isec->addralign, os));
+            tmp.push_back(make<PaddingSection>(ctx, isec->addralign, os));
           tmp.push_back(isec);
         }
         isd->sections = std::move(tmp);
@@ -1528,8 +1540,10 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   if (ctx.arg.randomizeSectionPadding)
     randomizeSectionPadding(ctx);
 
+  // Iterate until a fixed point is reached, skipping relocatable links since
+  // the final addresses are unavailable.
   uint32_t pass = 0, assignPasses = 0;
-  for (;;) {
+  while (!ctx.arg.relocatable) {
     bool changed = ctx.target->needsThunks
                        ? tc.createThunks(pass, ctx.outputSections)
                        : ctx.target->relaxOnce(pass);
@@ -1569,13 +1583,13 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       if (part.relrAuthDyn) {
         auto it = llvm::remove_if(
             part.relrAuthDyn->relocs, [this, &part](const RelativeReloc &elem) {
-              const Relocation &reloc = elem.inputSec->relocs()[elem.relocIdx];
+              Relocation &reloc = elem.inputSec->relocs()[elem.relocIdx];
               if (isInt<32>(reloc.sym->getVA(ctx, reloc.addend)))
                 return false;
+              reloc.expr = R_NONE;
               part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, elem.inputSec,
-                                      reloc.offset,
-                                      DynamicReloc::AddendOnlyWithTargetVA,
-                                      *reloc.sym, reloc.addend, R_ABS});
+                                      reloc.offset, false, *reloc.sym,
+                                      reloc.addend, R_ABS});
               return true;
             });
         changed |= (it != part.relrAuthDyn->relocs.end());
@@ -1589,6 +1603,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
         changed |= part.relrAuthDyn->updateAllocSize(ctx);
       if (part.memtagGlobalDescriptors)
         changed |= part.memtagGlobalDescriptors->updateAllocSize(ctx);
+      if (part.ehFrameHdr && part.ehFrameHdr->isNeeded())
+        changed |= part.ehFrameHdr->updateAllocSize(ctx);
     }
 
     std::pair<const OutputSection *, const Defined *> changes =
@@ -1613,6 +1629,10 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       // Spilling can change relative section order.
       finalizeOrderDependentContent();
     }
+    // If updateAllocSize reported errors (e.g. "unknown FDE size encoding" for
+    // part.ehFrameHdr), break to avoid duplicate diagnostics from the loop.
+    if (errCount(ctx))
+      break;
   }
   if (!ctx.arg.relocatable)
     ctx.target->finalizeRelax(pass);
@@ -1722,7 +1742,7 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
     for (size_t i = 0, e = sections.size(); i != e; ++i) {
       InputSection *next = i + 1 < sections.size() ? sections[i + 1] : nullptr;
       InputSection &sec = *sections[i];
-      numDeleted += ctx.target->deleteFallThruJmpInsn(sec, sec.file, next);
+      numDeleted += ctx.target->deleteFallThruJmpInsn(sec, next);
     }
     if (numDeleted > 0) {
       ctx.script->assignAddresses();
@@ -1785,10 +1805,10 @@ static void removeUnusedSyntheticSections(Ctx &ctx) {
       for (SectionCommand *cmd : osec->commands)
         if (auto *isd = dyn_cast<InputSectionDescription>(cmd))
           llvm::erase_if(isd->sections, [&](InputSection *isec) {
-            return unused.count(isec);
+            return unused.contains(isec);
           });
   llvm::erase_if(ctx.script->orphanSections, [&](const InputSectionBase *sec) {
-    return unused.count(sec);
+    return unused.contains(sec);
   });
 }
 
@@ -1929,7 +1949,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       for (SharedFile *file : ctx.sharedFiles) {
         bool allNeededIsKnown =
             llvm::all_of(file->dtNeeded, [&](StringRef needed) {
-              return ctx.symtab->soNames.count(CachedHashStringRef(needed));
+              return ctx.symtab->soNames.contains(CachedHashStringRef(needed));
             });
         if (!allNeededIsKnown)
           continue;
@@ -2097,20 +2117,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // Dynamic section must be the last one in this list and dynamic
     // symbol table section (dynSymTab) must be the first one.
     for (Partition &part : ctx.partitions) {
-      if (part.relaDyn) {
-        part.relaDyn->mergeRels();
-        // Compute DT_RELACOUNT to be used by part.dynamic.
-        part.relaDyn->partitionRels();
-        finalizeSynthetic(ctx, part.relaDyn.get());
-      }
-      if (part.relrDyn) {
-        part.relrDyn->mergeRels();
-        finalizeSynthetic(ctx, part.relrDyn.get());
-      }
-      if (part.relrAuthDyn) {
-        part.relrAuthDyn->mergeRels();
-        finalizeSynthetic(ctx, part.relrAuthDyn.get());
-      }
+      finalizeSynthetic(ctx, part.relaDyn.get());
+      finalizeSynthetic(ctx, part.relrDyn.get());
+      finalizeSynthetic(ctx, part.relrAuthDyn.get());
 
       finalizeSynthetic(ctx, part.dynSymTab.get());
       finalizeSynthetic(ctx, part.gnuHashTab.get());
@@ -2957,14 +2966,25 @@ static void fillTrap(std::array<uint8_t, 4> trapInstr, uint8_t *i,
     memcpy(i, trapInstr.data(), 4);
 }
 
-// Fill the last page of executable segments with trap instructions
-// instead of leaving them as zero. Even though it is not required by any
-// standard, it is in general a good thing to do for security reasons.
-//
-// We'll leave other pages in segments as-is because the rest will be
-// overwritten by output sections.
+// Fill executable segments with trap instructions. This includes both the
+// gaps between sections (due to alignment) and the tail padding to the page
+// boundary. Even though it is not required by any standard, it is in general
+// a good thing to do for security reasons.
 template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
   for (Partition &part : ctx.partitions) {
+    // Fill gaps between consecutive sections in the same executable segment.
+    OutputSection *prev = nullptr;
+    for (OutputSection *sec : ctx.outputSections) {
+      PhdrEntry *p = sec->ptLoad;
+      if (!p || !(p->p_flags & PF_X))
+        continue;
+      if (prev && prev->ptLoad == p)
+        fillTrap(ctx.target->trapInstr,
+                 ctx.bufferStart + alignDown(prev->offset + prev->size, 4),
+                 ctx.bufferStart + sec->offset);
+      prev = sec;
+    }
+
     // Fill the last page.
     for (std::unique_ptr<PhdrEntry> &p : part.phdrs)
       if (p->p_type == PT_LOAD && (p->p_flags & PF_X))

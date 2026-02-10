@@ -97,15 +97,15 @@ def testTypeIsInstance():
     t1 = Type.parse("i32", ctx)
     t2 = Type.parse("f32", ctx)
     # CHECK: True
-    print(IntegerType.isinstance(t1))
+    print(isinstance(t1, IntegerType))
     # CHECK: False
-    print(F32Type.isinstance(t1))
+    print(isinstance(t1, F32Type))
     # CHECK: False
-    print(FloatType.isinstance(t1))
+    print(isinstance(t1, FloatType))
     # CHECK: True
-    print(F32Type.isinstance(t2))
+    print(isinstance(t2, F32Type))
     # CHECK: True
-    print(FloatType.isinstance(t2))
+    print(isinstance(t2, FloatType))
 
 
 # CHECK-LABEL: TEST: testFloatTypeSubclasses
@@ -227,6 +227,20 @@ def testIntegerType():
         print("signed:", IntegerType.get_signed(8))
         # CHECK: unsigned: ui64
         print("unsigned:", IntegerType.get_unsigned(64))
+        # CHECK: signless: i8
+        print("signless:", IntegerType.get(8))
+        # CHECK: signless: i16
+        print("signless:", IntegerType.get(16, IntegerType.SIGNLESS))
+        # CHECK: signed: si8
+        print("signed:", IntegerType.get(8, IntegerType.SIGNED))
+        # CHECK: unsigned: ui64
+        print("unsigned:", IntegerType.get(64, IntegerType.UNSIGNED))
+        # CHECK: SIGNLESS
+        print(IntegerType.get(8).signedness)
+        # CHECK: SIGNED
+        print(IntegerType.get(8, IntegerType.SIGNED).signedness)
+        # CHECK: UNSIGNED
+        print(IntegerType.get(8, IntegerType.UNSIGNED).signedness)
 
 
 # CHECK-LABEL: TEST: testIndexType
@@ -330,8 +344,29 @@ def testConcreteShapedType():
         print("dim size:", vector.get_dim_size(1))
         # CHECK: is_dynamic_size: False
         print("is_dynamic_size:", vector.is_dynamic_size(3))
+        # CHECK: is_static_size: True
+        print("is_static_size:", vector.is_static_size(3))
         # CHECK: is_dynamic_stride_or_offset: False
         print("is_dynamic_stride_or_offset:", vector.is_dynamic_stride_or_offset(1))
+        # CHECK: is_static_stride_or_offset: True
+        print("is_static_stride_or_offset:", vector.is_static_stride_or_offset(1))
+
+        dynamic_size_val = vector.get_dynamic_size()
+        dynamic_stride_val = vector.get_dynamic_stride_or_offset()
+        # CHECK: is_dynamic_size_with_dynamic: True
+        print("is_dynamic_size_with_dynamic:", vector.is_dynamic_size(dynamic_size_val))
+        # CHECK: is_static_size_with_dynamic: False
+        print("is_static_size_with_dynamic:", vector.is_static_size(dynamic_size_val))
+        # CHECK: is_dynamic_stride_or_offset_with_dynamic: True
+        print(
+            "is_dynamic_stride_or_offset_with_dynamic:",
+            vector.is_dynamic_stride_or_offset(dynamic_stride_val),
+        )
+        # CHECK: is_static_stride_or_offset_with_dynamic: False
+        print(
+            "is_static_stride_or_offset_with_dynamic:",
+            vector.is_static_stride_or_offset(dynamic_stride_val),
+        )
         # CHECK: isinstance(ShapedType): True
         print("isinstance(ShapedType):", isinstance(vector, ShapedType))
 
@@ -350,11 +385,16 @@ def testAbstractShapedType():
 # CHECK-LABEL: TEST: testVectorType
 @run
 def testVectorType():
+    shape = [2, 3]
+    with Context():
+        f32 = F32Type.get()
+        # CHECK: unchecked vector type: vector<2x3xf32>
+        print("unchecked vector type:", VectorType.get_unchecked(shape, f32))
+
     with Context(), Location.unknown():
         f32 = F32Type.get()
-        shape = [2, 3]
-        # CHECK: vector type: vector<2x3xf32>
-        print("vector type:", VectorType.get(shape, f32))
+        # CHECK: checked vector type: vector<2x3xf32>
+        print("checked vector type:", VectorType.get(shape, f32))
 
         none = NoneType.get()
         try:
@@ -717,6 +757,49 @@ def testTypeIDs():
         vector_type = Type.parse("vector<2x3xf32>")
         # CHECK: True
         print(ShapedType(vector_type).typeid == vector_type.typeid)
+
+
+# CHECK-LABEL: TEST: testTypeName
+@run
+def testTypeName():
+    with Context():
+        # CHECK: builtin.integer
+        print(IntegerType.type_name)
+        # CHECK: builtin.index
+        print(IndexType.type_name)
+
+        # CHECK: builtin.f32
+        print(F32Type.type_name)
+        # CHECK: builtin.bf16
+        print(BF16Type.type_name)
+
+        # CHECK: builtin.none
+        print(NoneType.type_name)
+
+        # CHECK: builtin.complex
+        print(ComplexType.type_name)
+
+        # CHECK: builtin.vector
+        print(VectorType.type_name)
+
+        # CHECK: builtin.tensor
+        print(RankedTensorType.type_name)
+        # CHECK: builtin.unranked_tensor
+        print(UnrankedTensorType.type_name)
+
+        # CHECK: builtin.memref
+        print(MemRefType.type_name)
+        # CHECK: builtin.unranked_memref
+        print(UnrankedMemRefType.type_name)
+
+        # CHECK: builtin.tuple
+        print(TupleType.type_name)
+
+        # CHECK: builtin.function
+        print(FunctionType.type_name)
+
+        # CHECK: builtin.opaque
+        print(OpaqueType.type_name)
 
 
 # CHECK-LABEL: TEST: testConcreteTypesRoundTrip

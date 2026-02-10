@@ -29,394 +29,56 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp, mlir::Attribute attr,
 
 mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage);
 
-class CIRToLLVMBrCondOpLowering
-    : public mlir::OpConversionPattern<cir::BrCondOp> {
-public:
-  using mlir::OpConversionPattern<cir::BrCondOp>::OpConversionPattern;
+void convertSideEffectForCall(mlir::Operation *callOp, bool isNothrow,
+                              cir::SideEffect sideEffect,
+                              mlir::LLVM::MemoryEffectsAttr &memoryEffect,
+                              bool &noUnwind, bool &willReturn);
 
-  mlir::LogicalResult
-  matchAndRewrite(cir::BrCondOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
+struct LLVMBlockAddressInfo {
+  // Get the next tag index
+  uint32_t getTagIndex() { return blockTagOpIndex++; }
 
-class CIRToLLVMCastOpLowering : public mlir::OpConversionPattern<cir::CastOp> {
-  mlir::DataLayout const &dataLayout;
-
-  mlir::Type convertTy(mlir::Type ty) const;
-
-public:
-  CIRToLLVMCastOpLowering(const mlir::TypeConverter &typeConverter,
-                          mlir::MLIRContext *context,
-                          mlir::DataLayout const &dataLayout)
-      : OpConversionPattern(typeConverter, context), dataLayout(dataLayout) {}
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::CastOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMReturnOpLowering
-    : public mlir::OpConversionPattern<cir::ReturnOp> {
-public:
-  using mlir::OpConversionPattern<cir::ReturnOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::ReturnOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMCallOpLowering : public mlir::OpConversionPattern<cir::CallOp> {
-public:
-  using mlir::OpConversionPattern<cir::CallOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::CallOp op, OpAdaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override;
-};
-
-class CIRToLLVMAllocaOpLowering
-    : public mlir::OpConversionPattern<cir::AllocaOp> {
-  mlir::DataLayout const &dataLayout;
-
-public:
-  CIRToLLVMAllocaOpLowering(mlir::TypeConverter const &typeConverter,
-                            mlir::MLIRContext *context,
-                            mlir::DataLayout const &dataLayout)
-      : OpConversionPattern<cir::AllocaOp>(typeConverter, context),
-        dataLayout(dataLayout) {}
-
-  using mlir::OpConversionPattern<cir::AllocaOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::AllocaOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMLoadOpLowering : public mlir::OpConversionPattern<cir::LoadOp> {
-  mlir::DataLayout const &dataLayout;
-
-public:
-  CIRToLLVMLoadOpLowering(const mlir::TypeConverter &typeConverter,
-                          mlir::MLIRContext *context,
-                          mlir::DataLayout const &dataLayout)
-      : OpConversionPattern(typeConverter, context), dataLayout(dataLayout) {}
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::LoadOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMStoreOpLowering
-    : public mlir::OpConversionPattern<cir::StoreOp> {
-  mlir::DataLayout const &dataLayout;
-
-public:
-  CIRToLLVMStoreOpLowering(const mlir::TypeConverter &typeConverter,
-                           mlir::MLIRContext *context,
-                           mlir::DataLayout const &dataLayout)
-      : OpConversionPattern(typeConverter, context), dataLayout(dataLayout) {}
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::StoreOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMConstantOpLowering
-    : public mlir::OpConversionPattern<cir::ConstantOp> {
-public:
-  CIRToLLVMConstantOpLowering(const mlir::TypeConverter &typeConverter,
-                              mlir::MLIRContext *context)
-      : OpConversionPattern(typeConverter, context) {
-    setHasBoundedRewriteRecursion();
+  void mapBlockTag(cir::BlockAddrInfoAttr info, mlir::LLVM::BlockTagOp tagOp) {
+    auto result = blockInfoToTagOp.try_emplace(info, tagOp);
+    assert(result.second &&
+           "attempting to map a BlockTag operation that is already mapped");
   }
 
-  mlir::LogicalResult
-  matchAndRewrite(cir::ConstantOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMFuncOpLowering : public mlir::OpConversionPattern<cir::FuncOp> {
-  static mlir::StringRef getLinkageAttrNameString() { return "linkage"; }
-
-  void lowerFuncAttributes(
-      cir::FuncOp func, bool filterArgAndResAttrs,
-      mlir::SmallVectorImpl<mlir::NamedAttribute> &result) const;
-
-public:
-  using mlir::OpConversionPattern<cir::FuncOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::FuncOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMSwitchFlatOpLowering
-    : public mlir::OpConversionPattern<cir::SwitchFlatOp> {
-public:
-  using mlir::OpConversionPattern<cir::SwitchFlatOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::SwitchFlatOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMGetGlobalOpLowering
-    : public mlir::OpConversionPattern<cir::GetGlobalOp> {
-public:
-  using mlir::OpConversionPattern<cir::GetGlobalOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::GetGlobalOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMGlobalOpLowering
-    : public mlir::OpConversionPattern<cir::GlobalOp> {
-  const mlir::DataLayout &dataLayout;
-
-public:
-  CIRToLLVMGlobalOpLowering(const mlir::TypeConverter &typeConverter,
-                            mlir::MLIRContext *context,
-                            const mlir::DataLayout &dataLayout)
-      : OpConversionPattern(typeConverter, context), dataLayout(dataLayout) {
-    setHasBoundedRewriteRecursion();
+  // Lookup a BlockTagOp, may return nullptr if not yet registered.
+  mlir::LLVM::BlockTagOp lookupBlockTag(cir::BlockAddrInfoAttr info) const {
+    return blockInfoToTagOp.lookup(info);
   }
 
-  mlir::LogicalResult
-  matchAndRewrite(cir::GlobalOp op, OpAdaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override;
+  // Record an unresolved BlockAddressOp that needs patching later.
+  void addUnresolvedBlockAddress(mlir::LLVM::BlockAddressOp op,
+                                 cir::BlockAddrInfoAttr info) {
+    unresolvedBlockAddressOp.try_emplace(op, info);
+  }
+
+  void clearUnresolvedMap() { unresolvedBlockAddressOp.clear(); }
+
+  llvm::DenseMap<mlir::LLVM::BlockAddressOp, cir::BlockAddrInfoAttr> &
+  getUnresolvedBlockAddress() {
+    return unresolvedBlockAddressOp;
+  }
 
 private:
-  mlir::LogicalResult matchAndRewriteRegionInitializedGlobal(
-      cir::GlobalOp op, mlir::Attribute init,
-      mlir::ConversionPatternRewriter &rewriter) const;
-
-  void setupRegionInitializedLLVMGlobalOp(
-      cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const;
-
-  mutable mlir::LLVM::ComdatOp comdatOp = nullptr;
-  mlir::SymbolRefAttr getComdatAttr(cir::GlobalOp &op,
-                                    mlir::OpBuilder &builder) const;
+  // Maps a (function name, label name) pair to the corresponding BlockTagOp.
+  // Used to resolve CIR LabelOps into their LLVM BlockTagOp.
+  llvm::DenseMap<cir::BlockAddrInfoAttr, mlir::LLVM::BlockTagOp>
+      blockInfoToTagOp;
+  // Tracks BlockAddressOps that could not yet be fully resolved because
+  // their BlockTagOp was not available at the time of lowering. The map
+  // stores the unresolved BlockAddressOp along with its (function name, label
+  // name) pair so it can be patched later.
+  llvm::DenseMap<mlir::LLVM::BlockAddressOp, cir::BlockAddrInfoAttr>
+      unresolvedBlockAddressOp;
+  int32_t blockTagOpIndex;
 };
 
-class CIRToLLVMUnaryOpLowering
-    : public mlir::OpConversionPattern<cir::UnaryOp> {
-public:
-  using mlir::OpConversionPattern<cir::UnaryOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::UnaryOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMBinOpLowering : public mlir::OpConversionPattern<cir::BinOp> {
-  mlir::LLVM::IntegerOverflowFlags getIntOverflowFlag(cir::BinOp op) const;
-
-public:
-  using mlir::OpConversionPattern<cir::BinOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::BinOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMCmpOpLowering : public mlir::OpConversionPattern<cir::CmpOp> {
-public:
-  CIRToLLVMCmpOpLowering(const mlir::TypeConverter &typeConverter,
-                         mlir::MLIRContext *context)
-      : OpConversionPattern(typeConverter, context) {
-    setHasBoundedRewriteRecursion();
-  }
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::CmpOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMShiftOpLowering
-    : public mlir::OpConversionPattern<cir::ShiftOp> {
-public:
-  using mlir::OpConversionPattern<cir::ShiftOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::ShiftOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMSelectOpLowering
-    : public mlir::OpConversionPattern<cir::SelectOp> {
-public:
-  using mlir::OpConversionPattern<cir::SelectOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::SelectOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMBrOpLowering : public mlir::OpConversionPattern<cir::BrOp> {
-public:
-  using mlir::OpConversionPattern<cir::BrOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::BrOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMGetMemberOpLowering
-    : public mlir::OpConversionPattern<cir::GetMemberOp> {
-public:
-  using mlir::OpConversionPattern<cir::GetMemberOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::GetMemberOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMTrapOpLowering : public mlir::OpConversionPattern<cir::TrapOp> {
-public:
-  using mlir::OpConversionPattern<cir::TrapOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::TrapOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMPtrStrideOpLowering
-    : public mlir::OpConversionPattern<cir::PtrStrideOp> {
-  mlir::DataLayout const &dataLayout;
-
-public:
-  CIRToLLVMPtrStrideOpLowering(const mlir::TypeConverter &typeConverter,
-                               mlir::MLIRContext *context,
-                               mlir::DataLayout const &dataLayout)
-      : OpConversionPattern(typeConverter, context), dataLayout(dataLayout) {}
-  using mlir::OpConversionPattern<cir::PtrStrideOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::PtrStrideOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMBaseClassAddrOpLowering
-    : public mlir::OpConversionPattern<cir::BaseClassAddrOp> {
-public:
-  using mlir::OpConversionPattern<cir::BaseClassAddrOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::BaseClassAddrOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMStackSaveOpLowering
-    : public mlir::OpConversionPattern<cir::StackSaveOp> {
-public:
-  using mlir::OpConversionPattern<cir::StackSaveOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::StackSaveOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMStackRestoreOpLowering
-    : public mlir::OpConversionPattern<cir::StackRestoreOp> {
-public:
-  using OpConversionPattern<cir::StackRestoreOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::StackRestoreOp op, OpAdaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override;
-};
-
-class CIRToLLVMVecCreateOpLowering
-    : public mlir::OpConversionPattern<cir::VecCreateOp> {
-public:
-  using mlir::OpConversionPattern<cir::VecCreateOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::VecCreateOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMVecExtractOpLowering
-    : public mlir::OpConversionPattern<cir::VecExtractOp> {
-public:
-  using mlir::OpConversionPattern<cir::VecExtractOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::VecExtractOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMVecInsertOpLowering
-    : public mlir::OpConversionPattern<cir::VecInsertOp> {
-public:
-  using mlir::OpConversionPattern<cir::VecInsertOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::VecInsertOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMVecCmpOpLowering
-    : public mlir::OpConversionPattern<cir::VecCmpOp> {
-public:
-  using mlir::OpConversionPattern<cir::VecCmpOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::VecCmpOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMVecSplatOpLowering
-    : public mlir::OpConversionPattern<cir::VecSplatOp> {
-public:
-  using mlir::OpConversionPattern<cir::VecSplatOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::VecSplatOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMVecShuffleOpLowering
-    : public mlir::OpConversionPattern<cir::VecShuffleOp> {
-public:
-  using mlir::OpConversionPattern<cir::VecShuffleOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::VecShuffleOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMVecShuffleDynamicOpLowering
-    : public mlir::OpConversionPattern<cir::VecShuffleDynamicOp> {
-public:
-  using mlir::OpConversionPattern<
-      cir::VecShuffleDynamicOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::VecShuffleDynamicOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMVecTernaryOpLowering
-    : public mlir::OpConversionPattern<cir::VecTernaryOp> {
-public:
-  using mlir::OpConversionPattern<cir::VecTernaryOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::VecTernaryOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMComplexCreateOpLowering
-    : public mlir::OpConversionPattern<cir::ComplexCreateOp> {
-public:
-  using mlir::OpConversionPattern<cir::ComplexCreateOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::ComplexCreateOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
+#define GET_LLVM_LOWERING_PATTERNS
+#include "clang/CIR/Dialect/IR/CIRLowering.inc"
+#undef GET_LLVM_LOWERING_PATTERNS
 
 } // namespace direct
 } // namespace cir

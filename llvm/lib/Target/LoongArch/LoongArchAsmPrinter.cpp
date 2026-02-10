@@ -25,6 +25,7 @@
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace llvm;
 
@@ -161,7 +162,7 @@ bool LoongArchAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   else if (OffsetMO.isImm())
     OS << ", " << OffsetMO.getImm();
   else if (OffsetMO.isGlobal() || OffsetMO.isBlockAddress() ||
-           OffsetMO.isMCSymbol()) {
+           OffsetMO.isMCSymbol() || OffsetMO.isCPI()) {
     OS << ", ";
     MAI->printExpr(OS, *MCO.getExpr());
   } else
@@ -275,7 +276,7 @@ void LoongArchAsmPrinter::emitJumpTableInfo() {
     return;
 
   unsigned Size = getDataLayout().getPointerSize();
-  auto JT = JTI->getJumpTables();
+  const auto &JT = JTI->getJumpTables();
 
   // Emit an additional section to store the correlation info as pairs of
   // addresses, each pair contains the address of a jump instruction (jr) and
@@ -309,7 +310,8 @@ INITIALIZE_PASS(LoongArchAsmPrinter, "loongarch-asm-printer",
                 "LoongArch Assembly Printer", false, false)
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeLoongArchAsmPrinter() {
   RegisterAsmPrinter<LoongArchAsmPrinter> X(getTheLoongArch32Target());
   RegisterAsmPrinter<LoongArchAsmPrinter> Y(getTheLoongArch64Target());
 }

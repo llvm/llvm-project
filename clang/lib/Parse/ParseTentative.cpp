@@ -574,6 +574,9 @@ bool Parser::isCXXTypeId(TentativeCXXTypeIdContext Context, bool &isAmbiguous) {
     } else if (Context == TentativeCXXTypeIdContext::InTrailingReturnType) {
       TPR = TPResult::True;
       isAmbiguous = true;
+    } else if (Context == TentativeCXXTypeIdContext::AsReflectionOperand) {
+      TPR = TPResult::True;
+      isAmbiguous = true;
     } else
       TPR = TPResult::False;
   }
@@ -735,10 +738,12 @@ bool Parser::TrySkipAttributes() {
                      tok::kw_alignas) ||
          Tok.isRegularKeywordAttribute()) {
     if (Tok.is(tok::l_square)) {
+      if (!NextToken().is(tok::l_square))
+        return true;
+
       ConsumeBracket();
-      if (Tok.isNot(tok::l_square))
-        return false;
       ConsumeBracket();
+
       if (!SkipUntil(tok::r_square) || Tok.isNot(tok::r_square))
         return false;
       // Note that explicitly checking for `[[` and `]]` allows to fail as
@@ -1061,7 +1066,7 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
       return TPResult::False;
     }
 
-    if (Next.isNot(tok::coloncolon) && Next.isNot(tok::less)) {
+    if (Next.isNoneOf(tok::coloncolon, tok::less, tok::colon)) {
       // Determine whether this is a valid expression. If not, we will hit
       // a parse error one way or another. In that case, tell the caller that
       // this is ambiguous. Typo-correct to type and expression keywords and
@@ -1326,7 +1331,7 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
         Actions.RestoreNestedNameSpecifierAnnotation(Tok.getAnnotationValue(),
                                                      Tok.getAnnotationRange(),
                                                      SS);
-        if (SS.getScopeRep() && SS.getScopeRep()->isDependent()) {
+        if (SS.getScopeRep().isDependent()) {
           RevertingTentativeParsingAction PA(*this);
           ConsumeAnnotationToken();
           ConsumeToken();
@@ -1374,7 +1379,7 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
               // If we annotated then the current token should not still be ::
               // FIXME we may want to also check for tok::annot_typename but
               // currently don't have a test case.
-              if (Tok.isNot(tok::annot_cxxscope))
+              if (Tok.isNot(tok::annot_cxxscope) && Tok.isNot(tok::identifier))
                 break;
             }
 

@@ -8,9 +8,11 @@ add_clang_unittest(ClangAnalysisFlowSensitiveTests
   DataflowEnvironmentTest.cpp
   DebugSupportTest.cpp
   DeterminismTest.cpp
+  FormulaTest.cpp
   LoggerTest.cpp
   MapLatticeTest.cpp
   MatchSwitchTest.cpp
+  MockHeaders.cpp
   MultiVarConstantPropagationTest.cpp
   RecordOpsTest.cpp
   SignAnalysisTest.cpp
@@ -23,6 +25,8 @@ add_clang_unittest(ClangAnalysisFlowSensitiveTests
   TransferTest.cpp
   TypeErasedDataflowAnalysisTest.cpp
   UncheckedOptionalAccessModelTest.cpp
+  UncheckedStatusOrAccessModelTest.cpp
+  UncheckedStatusOrAccessModelTestFixture.cpp
   ValueTest.cpp
   WatchedLiteralsSolverTest.cpp
   CLANG_LIBS

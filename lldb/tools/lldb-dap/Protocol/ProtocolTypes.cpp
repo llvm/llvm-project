@@ -8,11 +8,14 @@
 
 #include "Protocol/ProtocolTypes.h"
 #include "JSONUtils.h"
+#include "ProtocolUtils.h"
+#include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
+#include <cassert>
 #include <optional>
 
 using namespace llvm;
@@ -44,7 +47,8 @@ bool fromJSON(const json::Value &Params, Source &S, json::Path P) {
   json::ObjectMapper O(Params, P);
   return O && O.map("name", S.name) && O.map("path", S.path) &&
          O.map("presentationHint", S.presentationHint) &&
-         O.map("sourceReference", S.sourceReference);
+         O.map("sourceReference", S.sourceReference) &&
+         O.map("adapterData", S.adapterData);
 }
 
 llvm::json::Value toJSON(Source::PresentationHint hint) {
@@ -65,10 +69,12 @@ llvm::json::Value toJSON(const Source &S) {
     result.insert({"name", *S.name});
   if (S.path)
     result.insert({"path", *S.path});
-  if (S.sourceReference)
+  if (S.sourceReference && (*S.sourceReference > LLDB_DAP_INVALID_SRC_REF))
     result.insert({"sourceReference", *S.sourceReference});
   if (S.presentationHint)
     result.insert({"presentationHint", *S.presentationHint});
+  if (S.adapterData)
+    result.insert({"adapterData", *S.adapterData});
 
   return result;
 }
@@ -86,14 +92,14 @@ bool fromJSON(const llvm::json::Value &Params, ExceptionBreakpointsFilter &EBF,
 json::Value toJSON(const ExceptionBreakpointsFilter &EBF) {
   json::Object result{{"filter", EBF.filter}, {"label", EBF.label}};
 
-  if (EBF.description)
-    result.insert({"description", *EBF.description});
+  if (!EBF.description.empty())
+    result.insert({"description", EBF.description});
   if (EBF.defaultState)
-    result.insert({"default", *EBF.defaultState});
+    result.insert({"default", EBF.defaultState});
   if (EBF.supportsCondition)
-    result.insert({"supportsCondition", *EBF.supportsCondition});
-  if (EBF.conditionDescription)
-    result.insert({"conditionDescription", *EBF.conditionDescription});
+    result.insert({"supportsCondition", EBF.supportsCondition});
+  if (!EBF.conditionDescription.empty())
+    result.insert({"conditionDescription", EBF.conditionDescription});
 
   return result;
 }
@@ -193,6 +199,123 @@ bool fromJSON(const llvm::json::Value &Params, ChecksumAlgorithm &CA,
 
   CA = *algorithm;
   return true;
+}
+
+bool fromJSON(const json::Value &Params, CompletionItemType &CIT,
+              json::Path P) {
+  auto raw_item_type = Params.getAsString();
+  if (!raw_item_type) {
+    P.report("expected a string");
+    return false;
+  }
+
+  std::optional<CompletionItemType> item_type =
+      StringSwitch<std::optional<CompletionItemType>>(*raw_item_type)
+          .Case("method", eCompletionItemTypeMethod)
+          .Case("function", eCompletionItemTypeFunction)
+          .Case("constructor", eCompletionItemTypeConstructor)
+          .Case("field", eCompletionItemTypeField)
+          .Case("variable", eCompletionItemTypeVariable)
+          .Case("class", eCompletionItemTypeClass)
+          .Case("interface", eCompletionItemTypeInterface)
+          .Case("module", eCompletionItemTypeModule)
+          .Case("property", eCompletionItemTypeProperty)
+          .Case("unit", eCompletionItemTypeUnit)
+          .Case("value", eCompletionItemTypeValue)
+          .Case("enum", eCompletionItemTypeEnum)
+          .Case("keyword", eCompletionItemTypeKeyword)
+          .Case("snippet", eCompletionItemTypeSnippet)
+          .Case("text", eCompletionItemTypeText)
+          .Case("color", eCompletionItemTypeColor)
+          .Case("file", eCompletionItemTypeFile)
+          .Case("reference", eCompletionItemTypeReference)
+          .Case("customcolor", eCompletionItemTypeCustomColor)
+          .Default(std::nullopt);
+
+  if (!item_type) {
+    P.report("unexpected value");
+    return false;
+  }
+
+  CIT = *item_type;
+  return true;
+}
+
+json::Value toJSON(const CompletionItemType &CIT) {
+  switch (CIT) {
+  case eCompletionItemTypeMethod:
+    return "method";
+  case eCompletionItemTypeFunction:
+    return "function";
+  case eCompletionItemTypeConstructor:
+    return "constructor";
+  case eCompletionItemTypeField:
+    return "field";
+  case eCompletionItemTypeVariable:
+    return "variable";
+  case eCompletionItemTypeClass:
+    return "class";
+  case eCompletionItemTypeInterface:
+    return "interface";
+  case eCompletionItemTypeModule:
+    return "module";
+  case eCompletionItemTypeProperty:
+    return "property";
+  case eCompletionItemTypeUnit:
+    return "unit";
+  case eCompletionItemTypeValue:
+    return "value";
+  case eCompletionItemTypeEnum:
+    return "enum";
+  case eCompletionItemTypeKeyword:
+    return "keyword";
+  case eCompletionItemTypeSnippet:
+    return "snippet";
+  case eCompletionItemTypeText:
+    return "text";
+  case eCompletionItemTypeColor:
+    return "color";
+  case eCompletionItemTypeFile:
+    return "file";
+  case eCompletionItemTypeReference:
+    return "reference";
+  case eCompletionItemTypeCustomColor:
+    return "customcolor";
+  }
+  llvm_unreachable("unhandled CompletionItemType.");
+}
+
+bool fromJSON(const json::Value &Params, CompletionItem &CI, json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("label", CI.label) && O.mapOptional("text", CI.text) &&
+         O.mapOptional("sortText", CI.sortText) &&
+         O.mapOptional("detail", CI.detail) && O.mapOptional("type", CI.type) &&
+         O.mapOptional("start", CI.start) &&
+         O.mapOptional("length", CI.length) &&
+         O.mapOptional("selectionStart", CI.selectionStart) &&
+         O.mapOptional("selectionLength", CI.selectionLength);
+}
+json::Value toJSON(const CompletionItem &CI) {
+  json::Object result{{"label", CI.label}};
+
+  if (!CI.text.empty())
+    result.insert({"text", CI.text});
+  if (!CI.sortText.empty())
+    result.insert({"sortText", CI.sortText});
+  if (!CI.detail.empty())
+    result.insert({"detail", CI.detail});
+  if (CI.type)
+    result.insert({"type", CI.type});
+  if (CI.start)
+    result.insert({"start", CI.start});
+  if (CI.length)
+    result.insert({"length", CI.length});
+  if (CI.selectionStart)
+    result.insert({"selectionStart", CI.selectionStart});
+  if (CI.selectionLength)
+    result.insert({"selectionLength", CI.selectionLength});
+
+  return result;
 }
 
 json::Value toJSON(const BreakpointModeApplicability &BMA) {
@@ -330,6 +453,8 @@ static llvm::StringLiteral ToString(AdapterFeature feature) {
     return "supportsWriteMemoryRequest";
   case eAdapterFeatureTerminateDebuggee:
     return "supportTerminateDebuggee";
+  case eAdapterFeatureSupportsModuleSymbolsRequest:
+    return "supportsModuleSymbolsRequest";
   }
   llvm_unreachable("unhandled adapter feature.");
 }
@@ -401,6 +526,8 @@ bool fromJSON(const llvm::json::Value &Params, AdapterFeature &feature,
                 eAdapterFeatureValueFormattingOptions)
           .Case("supportsWriteMemoryRequest", eAdapterFeatureWriteMemoryRequest)
           .Case("supportTerminateDebuggee", eAdapterFeatureTerminateDebuggee)
+          .Case("supportsModuleSymbolsRequest",
+                eAdapterFeatureSupportsModuleSymbolsRequest)
           .Default(std::nullopt);
 
   if (!parsedFeature) {
@@ -418,23 +545,41 @@ json::Value toJSON(const Capabilities &C) {
   for (const auto &feature : C.supportedFeatures)
     result.insert({ToString(feature), true});
 
-  if (C.exceptionBreakpointFilters && !C.exceptionBreakpointFilters->empty())
+  if (!C.exceptionBreakpointFilters.empty())
+    result.insert({"exceptionBreakpointFilters", C.exceptionBreakpointFilters});
+  if (!C.completionTriggerCharacters.empty())
     result.insert(
-        {"exceptionBreakpointFilters", *C.exceptionBreakpointFilters});
-  if (C.completionTriggerCharacters && !C.completionTriggerCharacters->empty())
+        {"completionTriggerCharacters", C.completionTriggerCharacters});
+  if (!C.additionalModuleColumns.empty())
+    result.insert({"additionalModuleColumns", C.additionalModuleColumns});
+  if (!C.supportedChecksumAlgorithms.empty())
     result.insert(
-        {"completionTriggerCharacters", *C.completionTriggerCharacters});
-  if (C.additionalModuleColumns && !C.additionalModuleColumns->empty())
-    result.insert({"additionalModuleColumns", *C.additionalModuleColumns});
-  if (C.supportedChecksumAlgorithms && !C.supportedChecksumAlgorithms->empty())
-    result.insert(
-        {"supportedChecksumAlgorithms", *C.supportedChecksumAlgorithms});
-  if (C.breakpointModes && !C.breakpointModes->empty())
-    result.insert({"breakpointModes", *C.breakpointModes});
+        {"supportedChecksumAlgorithms", C.supportedChecksumAlgorithms});
+  if (!C.breakpointModes.empty())
+    result.insert({"breakpointModes", C.breakpointModes});
 
   // lldb-dap extensions
-  if (C.lldbExtVersion && !C.lldbExtVersion->empty())
-    result.insert({"$__lldb_version", *C.lldbExtVersion});
+  if (!C.lldbExtVersion.empty())
+    result.insert({"$__lldb_version", C.lldbExtVersion});
+
+  return result;
+}
+
+bool fromJSON(const json::Value &Params, ExceptionFilterOptions &EFO,
+              json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("filterId", EFO.filterId) &&
+         O.mapOptional("condition", EFO.condition) &&
+         O.mapOptional("mode", EFO.mode);
+}
+
+json::Value toJSON(const ExceptionFilterOptions &EFO) {
+  json::Object result{{"filterId", EFO.filterId}};
+
+  if (!EFO.condition.empty())
+    result.insert({"condition", EFO.condition});
+  if (!EFO.mode.empty())
+    result.insert({"mode", EFO.mode});
 
   return result;
 }
@@ -855,19 +1000,10 @@ llvm::json::Value toJSON(const DisassembledInstruction::PresentationHint &PH) {
 bool fromJSON(const llvm::json::Value &Params, DisassembledInstruction &DI,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
-  std::string raw_address;
-  if (!O || !O.map("address", raw_address))
-    return false;
-
-  std::optional<lldb::addr_t> address = DecodeMemoryReference(raw_address);
-  if (!address) {
-    P.field("address").report("expected string encoded uint64_t");
-    return false;
-  }
-
-  DI.address = *address;
-
-  return O.map("instruction", DI.instruction) &&
+  return O &&
+         DecodeMemoryReference(Params, "address", DI.address, P,
+                               /*required=*/true) &&
+         O.map("instruction", DI.instruction) &&
          O.mapOptional("instructionBytes", DI.instructionBytes) &&
          O.mapOptional("symbol", DI.symbol) &&
          O.mapOptional("location", DI.location) &&
@@ -904,6 +1040,192 @@ llvm::json::Value toJSON(const DisassembledInstruction &DI) {
     result.insert({"endColumn", *DI.endColumn});
   if (DI.presentationHint)
     result.insert({"presentationHint", *DI.presentationHint});
+
+  return result;
+}
+
+json::Value toJSON(const Module &M) {
+  json::Object result{{"id", M.id}, {"name", M.name}};
+
+  if (!M.path.empty())
+    result.insert({"path", M.path});
+  if (M.isOptimized)
+    result.insert({"isOptimized", M.isOptimized});
+  if (M.isUserCode)
+    result.insert({"isUserCode", M.isUserCode});
+  if (!M.version.empty())
+    result.insert({"version", M.version});
+  if (!M.symbolStatus.empty())
+    result.insert({"symbolStatus", M.symbolStatus});
+  if (!M.symbolFilePath.empty())
+    result.insert({"symbolFilePath", M.symbolFilePath});
+  if (!M.dateTimeStamp.empty())
+    result.insert({"dateTimeStamp", M.dateTimeStamp});
+  if (!M.addressRange.empty())
+    result.insert({"addressRange", M.addressRange});
+  if (M.debugInfoSizeBytes != 0)
+    result.insert(
+        {"debugInfoSize", ConvertDebugInfoSizeToString(M.debugInfoSizeBytes)});
+
+  return result;
+}
+
+json::Value toJSON(const VariablePresentationHint &VPH) {
+  json::Object result{};
+
+  if (!VPH.kind.empty())
+    result.insert({"kind", VPH.kind});
+  if (!VPH.attributes.empty())
+    result.insert({"attributes", VPH.attributes});
+  if (!VPH.visibility.empty())
+    result.insert({"visibility", VPH.visibility});
+  if (VPH.lazy)
+    result.insert({"lazy", VPH.lazy});
+
+  return result;
+}
+
+bool fromJSON(const json::Value &Param, VariablePresentationHint &VPH,
+              json::Path Path) {
+  json::ObjectMapper O(Param, Path);
+  return O && O.mapOptional("kind", VPH.kind) &&
+         O.mapOptional("attributes", VPH.attributes) &&
+         O.mapOptional("visibility", VPH.visibility) &&
+         O.mapOptional("lazy", VPH.lazy);
+}
+
+json::Value toJSON(const Variable &V) {
+  json::Object result{{"name", V.name},
+                      {"variablesReference", V.variablesReference},
+                      {"value", V.value}};
+
+  if (!V.type.empty())
+    result.insert({"type", V.type});
+  if (V.presentationHint)
+    result.insert({"presentationHint", *V.presentationHint});
+  if (!V.evaluateName.empty())
+    result.insert({"evaluateName", V.evaluateName});
+  if (V.namedVariables)
+    result.insert({"namedVariables", V.namedVariables});
+  if (V.indexedVariables)
+    result.insert({"indexedVariables", V.indexedVariables});
+  if (V.memoryReference != LLDB_INVALID_ADDRESS)
+    result.insert(
+        {"memoryReference", EncodeMemoryReference(V.memoryReference)});
+  if (V.declarationLocationReference)
+    result.insert(
+        {"declarationLocationReference", V.declarationLocationReference});
+  if (V.valueLocationReference)
+    result.insert({"valueLocationReference", V.valueLocationReference});
+
+  return result;
+}
+
+bool fromJSON(const json::Value &Param, Variable &V, json::Path Path) {
+  json::ObjectMapper O(Param, Path);
+  return O && O.map("name", V.name) &&
+         O.map("variablesReference", V.variablesReference) &&
+         O.map("value", V.value) && O.mapOptional("type", V.type) &&
+         O.mapOptional("presentationHint", *V.presentationHint) &&
+         O.mapOptional("evaluateName", V.evaluateName) &&
+         O.mapOptional("namedVariables", V.namedVariables) &&
+         O.mapOptional("indexedVariables", V.indexedVariables) &&
+         O.mapOptional("declarationLocationReference",
+                       V.declarationLocationReference) &&
+         O.mapOptional("valueLocationReference", V.valueLocationReference) &&
+         DecodeMemoryReference(Param, "memoryReference", V.memoryReference,
+                               Path, /*required=*/false);
+}
+
+json::Value toJSON(const ExceptionBreakMode Mode) {
+  switch (Mode) {
+  case eExceptionBreakModeNever:
+    return "never";
+  case eExceptionBreakModeAlways:
+    return "always";
+  case eExceptionBreakModeUnhandled:
+    return "unhandled";
+  case eExceptionBreakModeUserUnhandled:
+    return "userUnhandled";
+  }
+  llvm_unreachable("unhandled exception breakMode.");
+}
+
+json::Value toJSON(const ExceptionDetails &ED) {
+  json::Object result;
+
+  if (!ED.message.empty())
+    result.insert({"message", ED.message});
+  if (!ED.typeName.empty())
+    result.insert({"typeName", ED.typeName});
+  if (!ED.fullTypeName.empty())
+    result.insert({"fullTypeName", ED.fullTypeName});
+  if (!ED.evaluateName.empty())
+    result.insert({"evaluateName", ED.evaluateName});
+  if (!ED.stackTrace.empty())
+    result.insert({"stackTrace", ED.stackTrace});
+  if (!ED.innerException.empty())
+    result.insert({"innerException", ED.innerException});
+
+  return result;
+}
+
+llvm::json::Value toJSON(const CompileUnit &CU) {
+  json::Object result{{"compileUnitPath", CU.compileUnitPath}};
+  return result;
+}
+
+bool fromJSON(const llvm::json::Value &Params, StackFrameFormat &SFF,
+              llvm::json::Path Path) {
+  json::ObjectMapper O(Params, Path);
+  return O && O.mapOptional("parameters", SFF.parameters) &&
+         O.mapOptional("parameterTypes", SFF.parameterTypes) &&
+         O.mapOptional("parameterNames", SFF.parameterNames) &&
+         O.mapOptional("parameterValues", SFF.parameterValues) &&
+         O.mapOptional("line", SFF.line) &&
+         O.mapOptional("module", SFF.module) &&
+         O.mapOptional("includeAll", SFF.includeAll);
+}
+
+llvm::json::Value toJSON(const StackFrame::PresentationHint &PH) {
+  switch (PH) {
+  case StackFrame::ePresentationHintNone:
+    return "";
+  case StackFrame::ePresentationHintNormal:
+    return "normal";
+  case StackFrame::ePresentationHintLabel:
+    return "label";
+  case StackFrame::ePresentationHintSubtle:
+    return "subtle";
+  }
+  llvm_unreachable("unhandled stackFrame presentationHint.");
+}
+
+llvm::json::Value toJSON(const StackFrame &SF) {
+  json::Object result{{"id", SF.id}, {"name", SF.name}};
+
+  if (SF.source) {
+    result.insert({"source", *SF.source});
+    assert(SF.line != LLDB_INVALID_LINE_NUMBER);
+    result.insert({"line", SF.line});
+    result.insert({"column", SF.column});
+    if (SF.endLine != 0 && SF.endLine != LLDB_INVALID_LINE_NUMBER)
+      result.insert({"endLine", SF.endLine});
+    if (SF.endColumn != 0 && SF.endColumn != LLDB_INVALID_COLUMN_NUMBER)
+      result.insert({"endColumn", SF.endColumn});
+  } else {
+    result.insert({"line", 0});
+    result.insert({"column", 0});
+  }
+  if (SF.canRestart)
+    result.insert({"canRestart", SF.canRestart});
+  if (SF.instructionPointerReference != LLDB_INVALID_ADDRESS)
+    result.insert({"instructionPointerReference",
+                   EncodeMemoryReference(SF.instructionPointerReference)});
+  if (SF.moduleId)
+    result.insert({"moduleId", *SF.moduleId});
+  if (SF.presentationHint != StackFrame::ePresentationHintNone)
+    result.insert({"presentationHint", SF.presentationHint});
 
   return result;
 }

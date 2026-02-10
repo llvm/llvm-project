@@ -1,4 +1,4 @@
-//===--- TypeMismatchCheck.h - clang-tidy------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_TYPE_MISMATCH_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_TYPE_MISMATCH_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_TYPEMISMATCHCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_TYPEMISMATCHCHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -22,7 +22,7 @@ namespace clang::tidy::mpi {
 /// null pointer constants are skipped, in the course of verification.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/mpi/type-mismatch.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/mpi/type-mismatch.html
 class TypeMismatchCheck : public ClangTidyCheck {
 public:
   TypeMismatchCheck(StringRef Name, ClangTidyContext *Context)
@@ -49,4 +49,4 @@ private:
 
 } // namespace clang::tidy::mpi
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_TYPE_MISMATCH_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_TYPEMISMATCHCHECK_H

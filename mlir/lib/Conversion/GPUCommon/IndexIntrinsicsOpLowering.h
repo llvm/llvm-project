@@ -17,7 +17,7 @@
 namespace mlir {
 namespace gpu {
 namespace index_lowering {
-enum class IndexKind : uint32_t { Other = 0, Block = 1, Grid = 2 };
+enum class IndexKind : uint32_t { Other = 0, Block = 1, Grid = 2, Cluster = 3 };
 enum class IntrType : uint32_t {
   None = 0,
   Id = 1,
@@ -59,13 +59,13 @@ public:
     Operation *newOp;
     switch (op.getDimension()) {
     case gpu::Dimension::x:
-      newOp = rewriter.create<XOp>(loc, IntegerType::get(context, 32));
+      newOp = XOp::create(rewriter, loc, IntegerType::get(context, 32));
       break;
     case gpu::Dimension::y:
-      newOp = rewriter.create<YOp>(loc, IntegerType::get(context, 32));
+      newOp = YOp::create(rewriter, loc, IntegerType::get(context, 32));
       break;
     case gpu::Dimension::z:
-      newOp = rewriter.create<ZOp>(loc, IntegerType::get(context, 32));
+      newOp = ZOp::create(rewriter, loc, IntegerType::get(context, 32));
       break;
     }
 
@@ -92,6 +92,13 @@ public:
           funcBounds = gridHelper.getAttr(funcOp);
         break;
       }
+      case IndexKind::Cluster: {
+        auto clusterHelper =
+            gpu::GPUDialect::KnownClusterSizeAttrHelper(op.getContext());
+        if (clusterHelper.isAttrPresent(funcOp))
+          funcBounds = clusterHelper.getAttr(funcOp);
+        break;
+      }
       case IndexKind::Other:
         break;
       }
@@ -103,6 +110,9 @@ public:
         break;
       case IndexKind::Grid:
         funcBounds = gpuFunc.getKnownGridSizeAttr();
+        break;
+      case IndexKind::Cluster:
+        funcBounds = gpuFunc.getKnownClusterSizeAttr();
         break;
       case IndexKind::Other:
         break;
@@ -124,11 +134,13 @@ public:
                                   rewriter.getContext(), 32, min, max));
     }
     if (indexBitwidth > 32) {
-      newOp = rewriter.create<LLVM::SExtOp>(
-          loc, IntegerType::get(context, indexBitwidth), newOp->getResult(0));
+      newOp = LLVM::SExtOp::create(rewriter, loc,
+                                   IntegerType::get(context, indexBitwidth),
+                                   newOp->getResult(0));
     } else if (indexBitwidth < 32) {
-      newOp = rewriter.create<LLVM::TruncOp>(
-          loc, IntegerType::get(context, indexBitwidth), newOp->getResult(0));
+      newOp = LLVM::TruncOp::create(rewriter, loc,
+                                    IntegerType::get(context, indexBitwidth),
+                                    newOp->getResult(0));
     }
 
     rewriter.replaceOp(op, newOp->getResults());

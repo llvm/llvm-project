@@ -79,7 +79,7 @@
 #  define ConvertUTF_RESTORE_WARNINGS \
     _Pragma("clang diagnostic pop")
 # endif
-#elif defined(__GNUC__) && __GNUC__ > 6
+#elif defined(__GNUC__)
 # define ConvertUTF_DISABLE_WARNINGS \
    _Pragma("GCC diagnostic push")    \
    _Pragma("GCC diagnostic ignored \"-Wimplicit-fallthrough\"")

@@ -435,8 +435,7 @@ bool MVETailPredication::TryConvertActiveLaneMask(Value *TripCount) {
     }
     LLVM_DEBUG(dbgs() << "ARM TP: Safe to insert VCTP. Start is " << *StartSCEV
                       << "\n");
-    SCEVExpander Expander(*SE, L->getHeader()->getDataLayout(),
-                          "start");
+    SCEVExpander Expander(*SE, "start");
     Instruction *Ins = L->getLoopPreheader()->getTerminator();
     Value *Start = Expander.expandCodeFor(StartSCEV, StartSCEV->getType(), Ins);
     LLVM_DEBUG(dbgs() << "ARM TP: Created start value " << *Start << "\n");
@@ -457,5 +456,4 @@ Pass *llvm::createMVETailPredicationPass() {
 
 char MVETailPredication::ID = 0;
 
-INITIALIZE_PASS_BEGIN(MVETailPredication, DEBUG_TYPE, DESC, false, false)
-INITIALIZE_PASS_END(MVETailPredication, DEBUG_TYPE, DESC, false, false)
+INITIALIZE_PASS(MVETailPredication, DEBUG_TYPE, DESC, false, false)

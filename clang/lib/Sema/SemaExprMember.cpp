@@ -14,11 +14,13 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 
@@ -492,13 +494,14 @@ CheckExtVectorComponent(Sema &S, QualType baseType, ExprValueKind &VK,
 
   QualType VT = S.Context.getExtVectorType(vecType->getElementType(), CompSize);
   // Now look up the TypeDefDecl from the vector type. Without this,
-  // diagostics look bad. We want extended vector types to appear built-in.
+  // diagnostics look bad. We want extended vector types to appear built-in.
   for (Sema::ExtVectorDeclsType::iterator
          I = S.ExtVectorDecls.begin(S.getExternalSource()),
          E = S.ExtVectorDecls.end();
        I != E; ++I) {
     if ((*I)->getUnderlyingType() == VT)
-      return S.Context.getTypedefType(*I);
+      return S.Context.getTypedefType(ElaboratedTypeKeyword::None,
+                                      /*Qualifier=*/std::nullopt, *I);
   }
 
   return VT; // should never get here (a typedef type should always be found).
@@ -881,7 +884,7 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
   // build a CXXDependentScopeMemberExpr.
   if (R.wasNotFoundInCurrentInstantiation() ||
       (R.getLookupName().getCXXOverloadedOperator() == OO_Equal &&
-       (SS.isSet() ? SS.getScopeRep()->isDependent()
+       (SS.isSet() ? SS.getScopeRep().isDependent()
                    : BaseExprType->isDependentType())))
     return ActOnDependentMemberExpr(BaseExpr, BaseExprType, IsArrow, OpLoc, SS,
                                     TemplateKWLoc, FirstQualifierInScope,
@@ -1125,8 +1128,9 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
       return ExprError();
     }
 
-    DeclResult VDecl = CheckVarTemplateId(VarTempl, TemplateKWLoc,
-                                          MemberNameInfo.getLoc(), *TemplateArgs);
+    DeclResult VDecl =
+        CheckVarTemplateId(VarTempl, TemplateKWLoc, MemberNameInfo.getLoc(),
+                           *TemplateArgs, /*SetWrittenArgs=*/false);
     if (VDecl.isInvalid())
       return ExprError();
 
@@ -1613,6 +1617,21 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
 
     return new (S.Context)
         ExtVectorElementExpr(ret, VK, BaseExpr.get(), *Member, MemberLoc);
+  }
+
+  if (S.getLangOpts().HLSL && BaseType->isConstantMatrixType()) {
+    IdentifierInfo *Member = MemberName.getAsIdentifierInfo();
+    ExprValueKind VK = BaseExpr.get()->getValueKind();
+    QualType Ret = S.HLSL().checkMatrixComponent(S, BaseType, VK, OpLoc, Member,
+                                                 MemberLoc);
+    if (Ret.isNull())
+      return ExprError();
+    Qualifiers BaseQ =
+        S.Context.getCanonicalType(BaseExpr.get()->getType()).getQualifiers();
+    Ret = S.Context.getQualifiedType(Ret, BaseQ);
+
+    return new (S.Context)
+        MatrixElementExpr(Ret, VK, BaseExpr.get(), *Member, MemberLoc);
   }
 
   // Adjust builtin-sel to the appropriate redefinition type if that's

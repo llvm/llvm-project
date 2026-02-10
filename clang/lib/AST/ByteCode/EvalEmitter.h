@@ -16,6 +16,7 @@
 #include "EvaluationResult.h"
 #include "InterpState.h"
 #include "PrimType.h"
+#include "Record.h"
 #include "Source.h"
 
 namespace clang {
@@ -37,9 +38,13 @@ public:
   EvaluationResult interpretExpr(const Expr *E,
                                  bool ConvertResultToRValue = false,
                                  bool DestroyToplevelScope = false);
-  EvaluationResult interpretDecl(const VarDecl *VD, bool CheckFullyInitialized);
+  EvaluationResult interpretDecl(const VarDecl *VD, const Expr *Init,
+                                 bool CheckFullyInitialized);
   /// Interpret the given Expr to a Pointer.
   EvaluationResult interpretAsPointer(const Expr *E, PtrCallback PtrCB);
+  /// Interpret the given expression as if it was in the body of the given
+  /// function, i.e. the parameters of the function are available for use.
+  bool interpretCall(const FunctionDecl *FD, const Expr *E);
 
   /// Clean up all resources.
   void cleanup();
@@ -56,7 +61,8 @@ protected:
 
   /// Methods implemented by the compiler.
   virtual bool visitExpr(const Expr *E, bool DestroyToplevelScope) = 0;
-  virtual bool visitDeclAndReturn(const VarDecl *VD, bool ConstantContext) = 0;
+  virtual bool visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
+                                  bool ConstantContext) = 0;
   virtual bool visitFunc(const FunctionDecl *F) = 0;
   virtual bool visit(const Expr *E) = 0;
   virtual bool emitBool(bool V, const Expr *E) = 0;
@@ -92,6 +98,7 @@ protected:
   ParamOffset LambdaThisCapture{0, false};
   /// Local descriptors.
   llvm::SmallVector<SmallVector<Local, 8>, 2> Descriptors;
+  std::optional<SourceInfo> LocOverride = std::nullopt;
 
 private:
   /// Current compilation context.

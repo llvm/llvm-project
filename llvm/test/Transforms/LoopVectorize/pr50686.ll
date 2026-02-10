@@ -6,40 +6,35 @@ define void @m(ptr nocapture %p, ptr nocapture %p2, i32 %q) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX9_1:%.*]] = getelementptr inbounds i32, ptr [[P2:%.*]], i64 1
 ; CHECK-NEXT:    [[ARRAYIDX9_2:%.*]] = getelementptr inbounds i32, ptr [[P2]], i64 2
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 252
 ; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[P2]], i64 12
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[P]], [[UGLYGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[P2]], [[UGLYGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX9_2]], align 4, !alias.scope [[META0:![0-9]+]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX9_1]], align 4, !alias.scope [[META0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[P2]], align 4, !alias.scope [[META0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i32 0, [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw i32 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub nsw i32 [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <4 x i32> poison, i32 [[TMP5]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT4]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[P2]], align 4, !alias.scope !0
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw <4 x i32> zeroinitializer, [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX9_1]], align 4, !alias.scope !0
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x i32> poison, i32 [[TMP3]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT2]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = sub nsw <4 x i32> [[TMP2]], [[BROADCAST_SPLAT3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX9_2]], align 4, !alias.scope !0
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <4 x i32> poison, i32 [[TMP5]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT4]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = sub nsw <4 x i32> [[TMP4]], [[BROADCAST_SPLAT5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i32 0
-; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[TMP8]], align 4, !alias.scope !3, !noalias !0
+; CHECK-NEXT:    store <4 x i32> [[BROADCAST_SPLAT5]], ptr [[TMP7]], align 4, !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 60
-; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 60
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 false, label [[FOR_END17:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 60, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 60, [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_COND5:%.*]]
 ; CHECK:       for.cond5:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_COND5]] ]
@@ -53,7 +48,7 @@ define void @m(ptr nocapture %p, ptr nocapture %p2, i32 %q) {
 ; CHECK-NEXT:    store i32 [[SUB_2]], ptr [[ARRAYIDX14]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 63
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END17]], label [[FOR_COND5]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END17:%.*]], label [[FOR_COND5]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       for.end17:
 ; CHECK-NEXT:    ret void
 ;

@@ -165,7 +165,8 @@ ModuleSP DynamicLoader::FindModuleViaTarget(const FileSpec &file) {
   if (ModuleSP module_sp = target.GetImages().FindFirstModule(module_spec))
     return module_sp;
 
-  if (ModuleSP module_sp = target.GetOrCreateModule(module_spec, false))
+  if (ModuleSP module_sp =
+          target.GetOrCreateModule(module_spec, /*notify=*/false))
     return module_sp;
 
   return nullptr;
@@ -175,13 +176,24 @@ ModuleSP DynamicLoader::LoadModuleAtAddress(const FileSpec &file,
                                             addr_t link_map_addr,
                                             addr_t base_addr,
                                             bool base_addr_is_offset) {
-  if (ModuleSP module_sp = FindModuleViaTarget(file)) {
+  ModuleSP module_sp = FindModuleViaTarget(file);
+  // We have a core file, try to load the image from memory if we didn't find
+  // the module.
+  if (!module_sp && !m_process->IsLiveDebugSession()) {
+    llvm::Expected<ModuleSP> memory_module_sp_or_err =
+        m_process->ReadModuleFromMemory(file, base_addr);
+    if (auto err = memory_module_sp_or_err.takeError())
+      LLDB_LOG_ERROR(GetLog(LLDBLog::DynamicLoader), std::move(err),
+                     "Failed to read module from memory: {0}");
+    else {
+      module_sp = *memory_module_sp_or_err;
+      m_process->GetTarget().GetImages().AppendIfNeeded(module_sp, false);
+    }
+  }
+  if (module_sp)
     UpdateLoadedSections(module_sp, link_map_addr, base_addr,
                          base_addr_is_offset);
-    return module_sp;
-  }
-
-  return nullptr;
+  return module_sp;
 }
 
 static ModuleSP ReadUnnamedMemoryModule(Process *process, addr_t addr,
@@ -191,7 +203,14 @@ static ModuleSP ReadUnnamedMemoryModule(Process *process, addr_t addr,
     snprintf(namebuf, sizeof(namebuf), "memory-image-0x%" PRIx64, addr);
     name = namebuf;
   }
-  return process->ReadModuleFromMemory(FileSpec(name), addr);
+  llvm::Expected<ModuleSP> module_sp_or_err =
+      process->ReadModuleFromMemory(FileSpec(name), addr);
+  if (auto err = module_sp_or_err.takeError()) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::DynamicLoader), std::move(err),
+                   "Failed to read module from memory: {0}");
+    return {};
+  }
+  return *module_sp_or_err;
 }
 
 ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
@@ -211,7 +230,7 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
   if (uuid.IsValid())
     prog_str << uuid.GetAsString();
   if (value_is_offset == 0 && value != LLDB_INVALID_ADDRESS) {
-    prog_str << "at 0x";
+    prog_str << " at 0x";
     prog_str.PutHex64(value);
   }
 
@@ -227,8 +246,11 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
     }
   }
   ModuleSpec module_spec;
+  module_spec.SetTarget(target.shared_from_this());
   module_spec.GetUUID() = uuid;
   FileSpec name_filespec(name);
+  if (FileSystem::Instance().Exists(name_filespec))
+    module_spec.GetFileSpec() = name_filespec;
 
   if (uuid.IsValid()) {
     Progress progress("Locating binary", prog_str.GetString().str());
@@ -236,8 +258,8 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
     // Has lldb already seen a module with this UUID?
     // Or have external lookup enabled in DebugSymbols on macOS.
     if (!module_sp)
-      error = ModuleList::GetSharedModule(module_spec, module_sp, nullptr,
-                                          nullptr, nullptr);
+      error =
+          ModuleList::GetSharedModule(module_spec, module_sp, nullptr, nullptr);
 
     // Can lldb's symbol/executable location schemes
     // find an executable and symbol file.

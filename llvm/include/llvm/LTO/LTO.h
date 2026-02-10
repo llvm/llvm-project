@@ -15,6 +15,8 @@
 #ifndef LLVM_LTO_LTO_H
 #define LLVM_LTO_LTO_H
 
+#include "llvm/IR/LLVMRemarkStreamer.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/Support/Compiler.h"
 #include <memory>
 
@@ -91,7 +93,7 @@ LLVM_ABI std::string getThinLTOOutputFile(StringRef Path, StringRef OldPrefix,
                                           StringRef NewPrefix);
 
 /// Setup optimization remarks.
-LLVM_ABI Expected<std::unique_ptr<ToolOutputFile>> setupLLVMOptimizationRemarks(
+LLVM_ABI Expected<LLVMRemarkFileHandle> setupLLVMOptimizationRemarks(
     LLVMContext &Context, StringRef RemarksFilename, StringRef RemarksPasses,
     StringRef RemarksFormat, bool RemarksWithHotness,
     std::optional<uint64_t> RemarksHotnessThreshold = 0, int Count = -1);
@@ -103,12 +105,6 @@ setupStatsFile(StringRef StatsFilename);
 /// Produces a container ordering for optimal multi-threaded processing. Returns
 /// ordered indices to elements in the input array.
 LLVM_ABI std::vector<int> generateModulesOrdering(ArrayRef<BitcodeModule *> R);
-
-/// Updates MemProf attributes (and metadata) based on whether the index
-/// has recorded that we are linking with allocation libraries containing
-/// the necessary APIs for downstream transformations.
-LLVM_ABI void updateMemProfAttributes(Module &Mod,
-                                      const ModuleSummaryIndex &Index);
 
 class LTO;
 struct SymbolResolution;
@@ -134,6 +130,17 @@ private:
   StringRef TargetTriple, SourceFileName, COFFLinkerOpts;
   std::vector<StringRef> DependentLibraries;
   std::vector<std::pair<StringRef, Comdat::SelectionKind>> ComdatTable;
+
+  MemoryBufferRef MbRef;
+  bool IsFatLTOObject = false;
+  // For distributed compilation, each input must exist as an individual bitcode
+  // file on disk and be identified by its ModuleID. Archive members and FatLTO
+  // objects violate this. So, in these cases we flag that the bitcode must be
+  // written out to a new standalone file.
+  bool SerializeForDistribution = false;
+  bool IsThinLTO = false;
+  StringRef ArchivePath;
+  StringRef MemberName;
 
 public:
   LLVM_ABI ~InputFile();
@@ -166,6 +173,12 @@ public:
     using irsymtab::Symbol::getSectionName;
     using irsymtab::Symbol::isExecutable;
     using irsymtab::Symbol::isUsed;
+
+    // Returns whether this symbol is a library call that LTO code generation
+    // may emit references to. Such symbols must be considered external, as
+    // removing them or modifying their interfaces would invalidate the code
+    // generator's knowledge about them.
+    bool isLibcall(const RTLIB::RuntimeLibcallsInfo &Libcalls) const;
   };
 
   /// A range over the symbols in this InputFile.
@@ -193,6 +206,31 @@ public:
 
   // Returns the only BitcodeModule from InputFile.
   LLVM_ABI BitcodeModule &getSingleBitcodeModule();
+  // Returns the primary BitcodeModule from InputFile.
+  LLVM_ABI BitcodeModule &getPrimaryBitcodeModule();
+  // Returns the memory buffer reference for this input file.
+  MemoryBufferRef getFileBuffer() const { return MbRef; }
+  // Returns true if this input should be serialized to disk for distribution.
+  // See the comment on SerializeForDistribution for details.
+  bool getSerializeForDistribution() const { return SerializeForDistribution; }
+  // Mark whether this input should be serialized to disk for distribution.
+  // See the comment on SerializeForDistribution for details.
+  void setSerializeForDistribution(bool SFD) { SerializeForDistribution = SFD; }
+  // Returns true if this bitcode came from a FatLTO object.
+  bool isFatLTOObject() const { return IsFatLTOObject; }
+  // Mark this bitcode as coming from a FatLTO object.
+  void fatLTOObject(bool FO) { IsFatLTOObject = FO; }
+
+  // Returns true if bitcode is ThinLTO.
+  bool isThinLTO() const { return IsThinLTO; }
+
+  // Store an archive path and a member name.
+  void setArchivePathAndName(StringRef Path, StringRef Name) {
+    ArchivePath = Path;
+    MemberName = Name;
+  }
+  StringRef getArchivePath() const { return ArchivePath; }
+  StringRef getMemberName() const { return MemberName; }
 
 private:
   ArrayRef<Symbol> module_symbols(unsigned I) const {
@@ -322,6 +360,8 @@ LLVM_ABI ThinBackend createInProcessThinBackend(
 /// distributor.
 /// RemoteCompiler specifies the path to a Clang executable to be invoked for
 /// the backend jobs.
+/// RemoteCompilerPrependArgs specifies a list of prepend arguments to be
+/// applied to the backend compilations.
 /// RemoteCompilerArgs specifies a list of arguments to be applied to the
 /// backend compilations.
 /// SaveTemps is a debugging tool that prevents temporary files created by this
@@ -331,6 +371,7 @@ LLVM_ABI ThinBackend createOutOfProcessThinBackend(
     bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
     StringRef LinkerOutputFile, StringRef Distributor,
     ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
+    ArrayRef<StringRef> RemoteCompilerPrependArgs,
     ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps);
 
 /// This ThinBackend writes individual module indexes to files, instead of
@@ -394,7 +435,7 @@ public:
   LLVM_ABI LTO(Config Conf, ThinBackend Backend = {},
                unsigned ParallelCodeGenParallelismLevel = 1,
                LTOKind LTOMode = LTOK_Default);
-  LLVM_ABI ~LTO();
+  LLVM_ABI virtual ~LTO();
 
   /// Add an input file to the LTO link, using the provided symbol resolutions.
   /// The symbol resolutions must appear in the enumeration order given by
@@ -421,6 +462,13 @@ public:
   /// by LTO but might not be visible from bitcode symbol table.
   LLVM_ABI static SmallVector<const char *>
   getRuntimeLibcallSymbols(const Triple &TT);
+
+protected:
+  // Called at the start of run().
+  virtual Error handleArchiveInputs() { return Error::success(); }
+
+  // Called before returning from run().
+  virtual void cleanup() {}
 
 private:
   Config Conf;
@@ -464,6 +512,19 @@ private:
     ModuleMapType ModuleMap;
     // The bitcode modules to compile, if specified by the LTO Config.
     std::optional<ModuleMapType> ModulesToCompile;
+
+    void setPrevailingModuleForGUID(GlobalValue::GUID GUID, StringRef Module) {
+      PrevailingModuleForGUID[GUID] = Module;
+    }
+    bool isPrevailingModuleForGUID(GlobalValue::GUID GUID,
+                                   StringRef Module) const {
+      auto It = PrevailingModuleForGUID.find(GUID);
+      return It != PrevailingModuleForGUID.end() && It->second == Module;
+    }
+
+  private:
+    // Make this private so all accesses must go through above accessor methods
+    // to avoid inadvertently creating new entries on lookups.
     DenseMap<GlobalValue::GUID, StringRef> PrevailingModuleForGUID;
   } ThinLTO;
 
@@ -540,23 +601,25 @@ private:
 
   void addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
                             ArrayRef<SymbolResolution> Res, unsigned Partition,
-                            bool InSummary);
+                            bool InSummary, const Triple &TT);
 
-  // These functions take a range of symbol resolutions [ResI, ResE) and consume
-  // the resolutions used by a single input module by incrementing ResI. After
-  // these functions return, [ResI, ResE) will refer to the resolution range for
-  // the remaining modules in the InputFile.
-  Error addModule(InputFile &Input, unsigned ModI,
-                  const SymbolResolution *&ResI, const SymbolResolution *ResE);
+  // These functions take a range of symbol resolutions and consume the
+  // resolutions used by a single input module. Functions return ranges refering
+  // to the resolutions for the remaining modules in the InputFile.
+  Expected<ArrayRef<SymbolResolution>>
+  addModule(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
+            unsigned ModI, ArrayRef<SymbolResolution> Res);
 
-  Expected<RegularLTOState::AddedModule>
-  addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
-                const SymbolResolution *&ResI, const SymbolResolution *ResE);
+  Expected<std::pair<RegularLTOState::AddedModule, ArrayRef<SymbolResolution>>>
+  addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
+                BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
+                ArrayRef<SymbolResolution> Res);
   Error linkRegularLTO(RegularLTOState::AddedModule Mod,
                        bool LivenessFromIndex);
 
-  Error addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
-                   const SymbolResolution *&ResI, const SymbolResolution *ResE);
+  Expected<ArrayRef<SymbolResolution>>
+  addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
+             ArrayRef<SymbolResolution> Res);
 
   Error runRegularLTO(AddStreamFn AddStream);
   Error runThinLTO(AddStreamFn AddStream, FileCache Cache,
@@ -577,7 +640,13 @@ private:
   DenseSet<GlobalValue::GUID> DynamicExportSymbols;
 
   // Diagnostic optimization remarks file
-  std::unique_ptr<ToolOutputFile> DiagnosticOutputFile;
+  LLVMRemarkFileHandle DiagnosticOutputFile;
+
+public:
+  virtual Expected<std::shared_ptr<lto::InputFile>>
+  addInput(std::unique_ptr<lto::InputFile> InputPtr) {
+    return std::shared_ptr<lto::InputFile>(InputPtr.release());
+  }
 };
 
 /// The resolution for a symbol. The linker must provide a SymbolResolution for

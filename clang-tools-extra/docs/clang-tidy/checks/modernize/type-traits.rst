@@ -4,7 +4,8 @@ modernize-type-traits
 =====================
 
 Converts standard library type traits of the form ``traits<...>::type`` and
-``traits<...>::value`` into ``traits_t<...>`` and ``traits_v<...>`` respectively.
+``traits<...>::value`` into ``traits_t<...>`` and
+``traits_v<...>`` respectively.
 
 For example:
 
@@ -37,4 +38,12 @@ Options
 
     #define IS_SIGNED(T) std::is_signed<T>::value
 
-  Defaults to `false`. 
+  Defaults to `false`.
+
+
+Limitations
+-----------
+
+Does not currently diagnose uses of type traits with nested name
+specifiers (e.g. ``std::chrono::is_clock``,
+``std::chrono::treat_as_floating_point``).

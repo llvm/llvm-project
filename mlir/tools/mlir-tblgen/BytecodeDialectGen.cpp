@@ -141,19 +141,19 @@ void Generator::emitParse(StringRef kind, const Record &x) {
                 kind == "attribute" ? "::mlir::Attribute" : "::mlir::Type",
                 x.getName());
   const DagInit *members = x.getValueAsDag("members");
-  SmallVector<std::string> argNames = llvm::to_vector(
-      map_range(members->getArgNames(), [](const StringInit *init) {
+  SmallVector<std::string> argNames =
+      llvm::map_to_vector(members->getArgNames(), [](const StringInit *init) {
         return init->getAsUnquotedString();
-      }));
+      });
   StringRef builder = x.getValueAsString("cBuilder").trim();
   emitParseHelper(kind, returnType, builder, members->getArgs(), argNames,
                   returnType + "()", os);
   os << "\n\n";
 }
 
-void printParseConditional(mlir::raw_indented_ostream &ios,
-                           ArrayRef<const Init *> args,
-                           ArrayRef<std::string> argNames) {
+static void printParseConditional(mlir::raw_indented_ostream &ios,
+                                  ArrayRef<const Init *> args,
+                                  ArrayRef<std::string> argNames) {
   ios << "if ";
   auto parenScope = ios.scope("(", ") {");
   ios.indent();
@@ -259,10 +259,9 @@ void Generator::emitParseHelper(StringRef kind, StringRef returnType,
     if (def->isSubClassOf("CompositeBytecode")) {
       const DagInit *members = def->getValueAsDag("members");
       args = llvm::to_vector(members->getArgs());
-      argNames = llvm::to_vector(
-          map_range(members->getArgNames(), [](const StringInit *init) {
-            return init->getAsUnquotedString();
-          }));
+      argNames = llvm::map_to_vector(
+          members->getArgNames(),
+          [](const StringInit *init) { return init->getAsUnquotedString(); });
     } else {
       args = {def->getDefInit()};
       argNames = {"temp"};

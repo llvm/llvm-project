@@ -10,10 +10,10 @@
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFLocationExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
@@ -25,8 +25,8 @@
 using namespace llvm;
 
 /// Get profile section.
-Expected<object::SectionRef> getInstrProfSection(const object::ObjectFile &Obj,
-                                                 InstrProfSectKind IPSK) {
+static Expected<object::SectionRef>
+getInstrProfSection(const object::ObjectFile &Obj, InstrProfSectKind IPSK) {
   // On COFF, the getInstrProfSectionName returns the section names may followed
   // by "$M". The linker removes the dollar and everything after it in the final
   // binary. Do the same to match.
@@ -54,12 +54,13 @@ const char *InstrProfCorrelator::NumCountersAttributeName = "Num Counters";
 
 llvm::Expected<std::unique_ptr<InstrProfCorrelator::Context>>
 InstrProfCorrelator::Context::get(std::unique_ptr<MemoryBuffer> Buffer,
-                                  const object::ObjectFile &Obj,
+                                  object::ObjectFile &Obj,
                                   ProfCorrelatorKind FileKind) {
   auto C = std::make_unique<Context>();
   auto CountersSection = getInstrProfSection(Obj, IPSK_cnts);
   if (auto Err = CountersSection.takeError())
     return std::move(Err);
+  Triple::ObjectFormatType ObjFormat = Obj.getTripleObjectFormat();
   if (FileKind == InstrProfCorrelator::BINARY) {
     auto DataSection = getInstrProfSection(Obj, IPSK_covdata);
     if (auto Err = DataSection.takeError())
@@ -77,13 +78,32 @@ InstrProfCorrelator::Context::get(std::unique_ptr<MemoryBuffer> Buffer,
     C->DataEnd = DataOrErr->data() + DataOrErr->size();
     C->NameStart = NameOrErr->data();
     C->NameSize = NameOrErr->size();
+
+    if (ObjFormat == Triple::MachO) {
+      std::string FullSectionName =
+          getInstrProfSectionName(IPSK_covdata, ObjFormat);
+      SmallVector<StringRef, 3> SegmentAndSection;
+      StringRef(FullSectionName).split(SegmentAndSection, ',', 2);
+      auto *MachO = static_cast<object::MachOObjectFile *>(&Obj);
+      Error Err = Error::success();
+      for (const object::MachOChainedFixupEntry &Entry :
+           MachO->fixupTable(Err)) {
+        if (Entry.isRebase() && Entry.segmentName() == SegmentAndSection[0] &&
+            Entry.sectionName() == SegmentAndSection[1]) {
+          C->MachOFixups[Entry.address() - DataSection->getAddress()] =
+              Entry.pointerValue();
+        }
+      }
+      if (Err)
+        return std::move(Err);
+    }
   }
   C->Buffer = std::move(Buffer);
   C->CountersSectionStart = CountersSection->getAddress();
   C->CountersSectionEnd = C->CountersSectionStart + CountersSection->getSize();
   // In COFF object file, there's a null byte at the beginning of the counter
   // section which doesn't exist in raw profile.
-  if (Obj.getTripleObjectFormat() == Triple::COFF)
+  if (ObjFormat == Triple::COFF)
     ++C->CountersSectionStart;
 
   C->ShouldSwapBytes = Obj.isLittleEndian() != sys::IsLittleEndianHost;
@@ -173,11 +193,10 @@ InstrProfCorrelator::get(std::unique_ptr<MemoryBuffer> Buffer,
 }
 
 std::optional<size_t> InstrProfCorrelator::getDataSize() const {
-  if (auto *C = dyn_cast<InstrProfCorrelatorImpl<uint32_t>>(this)) {
+  if (auto *C = dyn_cast<InstrProfCorrelatorImpl<uint32_t>>(this))
     return C->getDataSize();
-  } else if (auto *C = dyn_cast<InstrProfCorrelatorImpl<uint64_t>>(this)) {
+  if (auto *C = dyn_cast<InstrProfCorrelatorImpl<uint64_t>>(this))
     return C->getDataSize();
-  }
   return {};
 }
 
@@ -219,11 +238,11 @@ InstrProfCorrelatorImpl<IntPtrT>::get(
         instrprof_error::unable_to_correlate_profile,
         "unsupported debug info format (only DWARF is supported)");
   }
-  if (Obj.isELF() || Obj.isCOFF())
+  if (Obj.isELF() || Obj.isCOFF() || Obj.isMachO())
     return std::make_unique<BinaryInstrProfCorrelator<IntPtrT>>(std::move(Ctx));
   return make_error<InstrProfError>(
       instrprof_error::unable_to_correlate_profile,
-      "unsupported binary format (only ELF and COFF are supported)");
+      "unsupported binary format (only ELF, COFF, and Mach-O are supported)");
 }
 
 template <class IntPtrT>
@@ -318,9 +337,9 @@ DwarfInstrProfCorrelator<IntPtrT>::getLocation(const DWARFDie &Die) const {
     DataExtractor Data(Location.Expr, DICtx->isLittleEndian(), AddressSize);
     DWARFExpression Expr(Data, AddressSize);
     for (auto &Op : Expr) {
-      if (Op.getCode() == dwarf::DW_OP_addr) {
+      if (Op.getCode() == dwarf::DW_OP_addr)
         return Op.getRawOperand(0);
-      } else if (Op.getCode() == dwarf::DW_OP_addrx) {
+      if (Op.getCode() == dwarf::DW_OP_addrx) {
         uint64_t Index = Op.getRawOperand(0);
         if (auto SA = DU.getAddrOffsetSectionItem(Index))
           return SA->Address;
@@ -352,7 +371,7 @@ void DwarfInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
   bool UnlimitedWarnings = (MaxWarnings == 0);
   // -N suppressed warnings means we can emit up to N (unsuppressed) warnings
   int NumSuppressedWarnings = -MaxWarnings;
-  auto maybeAddProbe = [&](DWARFDie Die) {
+  auto MaybeAddProbe = [&](DWARFDie Die) {
     if (!isDIEOfProbe(Die))
       return;
     std::optional<const char *> FunctionName;
@@ -385,6 +404,9 @@ void DwarfInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
         NumCounters = AnnotationFormValue->getAsUnsignedConstant();
       }
     }
+    // If there is no function and no counter, assume it was dead-stripped
+    if (!FunctionPtr && !CounterPtr)
+      return;
     if (!FunctionName || !CFGHash || !CounterPtr || !NumCounters) {
       if (UnlimitedWarnings || ++NumSuppressedWarnings < 1) {
         WithColor::warning()
@@ -418,7 +440,7 @@ void DwarfInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
     if (Data) {
       InstrProfCorrelator::Probe P;
       P.FunctionName = *FunctionName;
-      if (auto Name = FnDie.getName(DINameKind::LinkageName))
+      if (const char *Name = FnDie.getName(DINameKind::LinkageName))
         P.LinkageName = Name;
       P.CFGHash = *CFGHash;
       P.CounterOffset = CounterOffset;
@@ -438,10 +460,10 @@ void DwarfInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
   };
   for (auto &CU : DICtx->normal_units())
     for (const auto &Entry : CU->dies())
-      maybeAddProbe(DWARFDie(CU.get(), &Entry));
+      MaybeAddProbe(DWARFDie(CU.get(), &Entry));
   for (auto &CU : DICtx->dwo_units())
     for (const auto &Entry : CU->dies())
-      maybeAddProbe(DWARFDie(CU.get(), &Entry));
+      MaybeAddProbe(DWARFDie(CU.get(), &Entry));
 
   if (!UnlimitedWarnings && NumSuppressedWarnings > 0)
     WithColor::warning() << format("Suppressed %d additional warnings\n",
@@ -476,6 +498,16 @@ void BinaryInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
     uint64_t CounterPtr = this->template maybeSwap<IntPtrT>(I->CounterPtr);
     uint64_t CountersStart = this->Ctx->CountersSectionStart;
     uint64_t CountersEnd = this->Ctx->CountersSectionEnd;
+    if (!this->Ctx->MachOFixups.empty()) {
+      uint64_t Offset = (uint64_t)&I->CounterPtr - (uint64_t)DataStart;
+      auto It = this->Ctx->MachOFixups.find(Offset);
+      if (It != this->Ctx->MachOFixups.end()) {
+        CounterPtr = It->second;
+      } else if (UnlimitedWarnings || ++NumSuppressedWarnings < 1) {
+        WithColor::warning() << format(
+            "Mach-O fixup not found for covdata offset 0x%llx\n", Offset);
+      }
+    }
     if (CounterPtr < CountersStart || CounterPtr >= CountersEnd) {
       if (UnlimitedWarnings || ++NumSuppressedWarnings < 1) {
         WithColor::warning()

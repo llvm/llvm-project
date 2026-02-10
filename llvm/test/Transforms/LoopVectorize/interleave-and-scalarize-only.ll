@@ -208,7 +208,7 @@ exit:
 ; DBG-NEXT:   vector.body:
 ; DBG-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; DBG-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for> = phi ir<0>, vp<[[SCALAR_STEPS:.+]]>
-; DBG-NEXT:     EMIT vp<[[TRUNC_IV:%.+]]> = trunc vp<[[CAN_IV]]> to i32
+; DBG-NEXT:     EMIT-SCALAR vp<[[TRUNC_IV:%.+]]> = trunc vp<[[CAN_IV]]> to i32
 ; DBG-NEXT:     vp<[[SCALAR_STEPS]]> = SCALAR-STEPS vp<[[TRUNC_IV]]>, ir<1>, vp<[[VF]]
 ; DBG-NEXT:     EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%for>, vp<[[SCALAR_STEPS]]>
 ; DBG-NEXT:     CLONE store vp<[[SPLICE]]>, ir<%dst>
@@ -219,7 +219,7 @@ exit:
 ; DBG-NEXT: Successor(s): middle.block
 ; DBG-EMPTY:
 ; DBG-NEXT: middle.block:
-; DBG-NEXT:   EMIT vp<[[RESUME_1:%.+]]> = extract-last-element vp<[[SCALAR_STEPS]]>
+; DBG-NEXT:   EMIT vp<[[RESUME_1_PART:%.+]]> = extract-last-part vp<[[SCALAR_STEPS]]>
 ; DBG-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq vp<[[TC]]>, vp<[[VEC_TC]]>
 ; DBG-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; DBG-NEXT: Successor(s): ir-bb<exit>, scalar.ph
@@ -229,7 +229,7 @@ exit:
 ; DBG-EMPTY:
 ; DBG-NEXT: scalar.ph:
 ; DBG-NEXT:  EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
-; DBG-NEXT:  EMIT-SCALAR vp<[[RESUME_P:%.*]]> = phi [ vp<[[RESUME_1]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; DBG-NEXT:  EMIT-SCALAR vp<[[RESUME_P:%.*]]> = phi [ vp<[[RESUME_1_PART]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; DBG-NEXT: Successor(s): ir-bb<loop>
 ; DBG-EMPTY:
 ; DBG-NEXT: ir-bb<loop>:
@@ -284,7 +284,7 @@ define i16 @reduction_with_casts() {
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add i32 [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label %scalar.ph
+; CHECK-NEXT:    br label %scalar.ph
 ;
 entry:
   br label %loop
@@ -380,3 +380,55 @@ exit:
   ret void
 }
 
+define void @pr179671(ptr align 8 dereferenceable(120) %p, ptr %a, i32 %b) {
+; CHECK-LABEL: define void @pr179671(
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi ptr [ %a, %vector.ph ], [ [[NEXT_GEP3:%.*]], %vector.body ]
+; CHECK-NEXT:    [[DOTCAST1:%.*]] = trunc i64 [[INDEX]] to i32
+; CHECK-NEXT:    [[TMP10:%.*]] = mul i32 [[DOTCAST1]], 3
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 %b, [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[OFFSET_IDX]], 3
+; CHECK-NEXT:    [[OFFSET_IDX2:%.*]] = mul i64 [[INDEX]], 128
+; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[OFFSET_IDX2]], 0
+; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[OFFSET_IDX2]], 128
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr null, i64 [[TMP15]]
+; CHECK-NEXT:    [[NEXT_GEP3]] = getelementptr i8, ptr null, i64 [[TMP12]]
+; CHECK-NEXT:    store ptr [[VECTOR_RECUR]], ptr [[NEXT_GEP]], align 8
+; CHECK-NEXT:    store ptr [[NEXT_GEP]], ptr [[NEXT_GEP3]], align 8
+; CHECK-NEXT:    store ptr [[NEXT_GEP3]], ptr [[INV_PTR:%.*]], align 8
+; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[TMP11]], 3
+; CHECK-NEXT:    store i32 [[TMP13]], ptr [[INV_PTR2:%.*]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC:%.*]]
+; CHECK-NEXT:    br i1 [[TMP14]], label %[[LOOP_1:.*]], label %vector.body
+entry:
+  %inv_ptr = getelementptr inbounds nuw i8, ptr %p, i64 24
+  %inv_ptr2 = getelementptr inbounds nuw i8, ptr %p, i64 40
+  br label %loop.header
+
+loop.header:
+  %load23 = phi i32 [ %b, %entry ], [ %sadd_val, %loop.5 ]
+  %load12 = phi ptr [ %a, %entry ], [ %phi_ptr1, %loop.5 ]
+  %phi_ptr1 = phi ptr [ null, %entry ], [ %phi_ptr_next, %loop.5 ]
+  %phi_ptr_next = getelementptr i8, ptr %phi_ptr1, i64 128
+  store ptr %load12, ptr %phi_ptr1, align 8
+  br label %loop.3
+
+loop.3:
+  store ptr %phi_ptr1, ptr %inv_ptr, align 8
+  %sadd_val = add i32 %load23, 3
+  %sadd_ov = icmp eq i32 %sadd_val, 8
+  br i1 %sadd_ov, label %exit.0, label %loop.5
+
+loop.5:
+  store i32 %sadd_val, ptr %inv_ptr2, align 8
+  br label %loop.header
+
+exit.0:
+  store i32 0, ptr %p, align 4
+  ret void
+
+exit:
+  ret void
+}

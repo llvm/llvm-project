@@ -49,6 +49,7 @@ class AssemblyAnnotationWriter;
 class Constant;
 class ConstantRange;
 class DataLayout;
+struct DenormalFPEnv;
 struct DenormalMode;
 class DISubprogram;
 enum LibFunc : unsigned;
@@ -523,6 +524,12 @@ public:
     return AttributeSets.getParamDereferenceableBytes(ArgNo);
   }
 
+  /// Extract the number of dead_on_return bytes for a parameter.
+  /// @param ArgNo Index of an argument, with 0 being the first function arg.
+  DeadOnReturnInfo getDeadOnReturnInfo(unsigned ArgNo) const {
+    return AttributeSets.getDeadOnReturnInfo(ArgNo);
+  }
+
   /// Extract the number of dereferenceable_or_null bytes for a
   /// parameter.
   /// @param ArgNo AttributeList ArgNo, referring to an argument.
@@ -711,14 +718,8 @@ public:
   /// function.
   DenormalMode getDenormalMode(const fltSemantics &FPType) const;
 
-  /// Return the representational value of "denormal-fp-math". Code interested
-  /// in the semantics of the function should use getDenormalMode instead.
-  DenormalMode getDenormalModeRaw() const;
-
-  /// Return the representational value of "denormal-fp-math-f32". Code
-  /// interested in the semantics of the function should use getDenormalMode
-  /// instead.
-  DenormalMode getDenormalModeF32Raw() const;
+  /// Return the representational value of the denormal_fpenv attribute.
+  DenormalFPEnv getDenormalFPEnv() const;
 
   /// copyAttributesFrom - copy all additional attributes (those not needed to
   /// create a Function) from the Function Src to this one.
@@ -783,9 +784,8 @@ public:
 
 private:
   // These need access to the underlying BB list.
-  LLVM_ABI_FRIEND friend void BasicBlock::removeFromParent();
-  LLVM_ABI_FRIEND friend iplist<BasicBlock>::iterator
-  BasicBlock::eraseFromParent();
+  LLVM_ABI friend void BasicBlock::removeFromParent();
+  LLVM_ABI friend iplist<BasicBlock>::iterator BasicBlock::eraseFromParent();
   template <class BB_t, class BB_i_t, class BI_t, class II_t>
   friend class InstIterator;
   friend class llvm::SymbolTableListTraits<llvm::BasicBlock>;

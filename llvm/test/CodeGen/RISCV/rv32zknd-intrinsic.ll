@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+zknd -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32ZKND
 
-declare i32 @llvm.riscv.aes32dsi(i32, i32, i32);
-
 define i32 @aes32dsi(i32 %a, i32 %b) nounwind {
 ; RV32ZKND-LABEL: aes32dsi:
 ; RV32ZKND:       # %bb.0:
@@ -12,8 +10,6 @@ define i32 @aes32dsi(i32 %a, i32 %b) nounwind {
     %val = call i32 @llvm.riscv.aes32dsi(i32 %a, i32 %b, i32 0)
     ret i32 %val
 }
-
-declare i32 @llvm.riscv.aes32dsmi(i32, i32, i32);
 
 define i32 @aes32dsmi(i32 %a, i32 %b) nounwind {
 ; RV32ZKND-LABEL: aes32dsmi:

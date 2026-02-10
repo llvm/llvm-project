@@ -23,10 +23,14 @@ struct support::adapt_operations<std::set<K>> {
 
   using InsertionResult = std::pair<typename std::set<K>::iterator, bool>;
   static auto get_iterator(InsertionResult const& result) { return result.first; }
+
+  template <class Allocator>
+  using rebind_alloc = std::set<K, std::less<K>, Allocator>;
 };
 
 int main(int argc, char** argv) {
   support::associative_container_benchmarks<std::set<int>>("std::set<int>");
+  support::associative_container_benchmarks<std::set<std::string>>("std::set<std::string>");
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();

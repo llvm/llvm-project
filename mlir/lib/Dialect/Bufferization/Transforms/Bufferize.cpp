@@ -14,14 +14,13 @@
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotModuleBufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Transforms/Passes.h"
+#include "llvm/Support/DebugLog.h"
 #include <optional>
 
 namespace mlir {
@@ -109,9 +108,9 @@ struct OneShotBufferizePass
                   "'unknown-type-conversion'");
         return signalPassFailure();
       }
-      opt.unknownTypeConverterFn = [=](Value value, Attribute memorySpace,
+      opt.unknownTypeConverterFn = [=](TensorType tensorType,
+                                       Attribute memorySpace,
                                        const BufferizationOptions &options) {
-        auto tensorType = cast<TensorType>(value.getType());
         if (unknownTypeConversionOption == LayoutMapOption::IdentityLayoutMap)
           return bufferization::getMemRefTypeWithStaticIdentityLayout(
               tensorType, memorySpace);
@@ -330,20 +329,16 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
               "blocks");
 
     // Bufferize the op.
-    LLVM_DEBUG(llvm::dbgs()
-               << "//===-------------------------------------------===//\n"
-               << "IR after bufferizing: " << nextOp->getName() << "\n");
+    LDBG(3) << "//===-------------------------------------------===//\n"
+            << "IR after bufferizing: " << nextOp->getName();
     rewriter.setInsertionPoint(nextOp);
     if (failed(
             bufferizableOp.bufferize(rewriter, options, bufferizationState))) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "failed to bufferize\n"
-                 << "//===-------------------------------------------===//\n");
+      LDBG(2) << "failed to bufferize\n"
+              << "//===-------------------------------------------===//";
       return nextOp->emitError("failed to bufferize op");
     }
-    LLVM_DEBUG(llvm::dbgs()
-               << *op
-               << "\n//===-------------------------------------------===//\n");
+    LDBG(3) << *op << "\n//===-------------------------------------------===//";
   }
 
   // Return early if the top-level op is entirely gone.
@@ -406,17 +401,17 @@ bufferization::bufferizeBlockSignature(Block *block, RewriterBase &rewriter,
   // Compute the new signature.
   SmallVector<Type> newTypes;
   for (BlockArgument &bbArg : block->getArguments()) {
-    auto tensorType = dyn_cast<TensorType>(bbArg.getType());
+    auto tensorType = dyn_cast<TensorLikeType>(bbArg.getType());
     if (!tensorType) {
       newTypes.push_back(bbArg.getType());
       continue;
     }
 
-    FailureOr<BaseMemRefType> memrefType =
+    FailureOr<BufferLikeType> bufferType =
         bufferization::getBufferType(bbArg, options, state);
-    if (failed(memrefType))
+    if (failed(bufferType))
       return failure();
-    newTypes.push_back(*memrefType);
+    newTypes.push_back(*bufferType);
   }
 
   // Change the type of all block arguments.
@@ -436,8 +431,8 @@ bufferization::bufferizeBlockSignature(Block *block, RewriterBase &rewriter,
     // Replace all uses of the original tensor bbArg.
     rewriter.setInsertionPointToStart(block);
     if (!bbArgUses.empty()) {
-      Value toTensorOp = rewriter.create<bufferization::ToTensorOp>(
-          bbArg.getLoc(), tensorType, bbArg);
+      Value toTensorOp = bufferization::ToTensorOp::create(
+          rewriter, bbArg.getLoc(), tensorType, bbArg);
       for (OpOperand *use : bbArgUses)
         use->set(toTensorOp);
     }
@@ -463,18 +458,18 @@ bufferization::bufferizeBlockSignature(Block *block, RewriterBase &rewriter,
         newOperands.push_back(operand);
         continue;
       }
-      FailureOr<BaseMemRefType> operandBufferType =
+      FailureOr<BufferLikeType> operandBufferType =
           bufferization::getBufferType(operand, options, state);
       if (failed(operandBufferType))
         return failure();
       rewriter.setInsertionPointAfterValue(operand);
-      Value bufferizedOperand = rewriter.create<bufferization::ToBufferOp>(
-          operand.getLoc(), *operandBufferType, operand);
+      Value bufferizedOperand = bufferization::ToBufferOp::create(
+          rewriter, operand.getLoc(), *operandBufferType, operand);
       // A cast is needed if the operand and the block argument have different
       // bufferized types.
       if (type != *operandBufferType)
-        bufferizedOperand = rewriter.create<memref::CastOp>(
-            operand.getLoc(), type, bufferizedOperand);
+        bufferizedOperand = memref::CastOp::create(rewriter, operand.getLoc(),
+                                                   type, bufferizedOperand);
       newOperands.push_back(bufferizedOperand);
     }
     operands.getMutableForwardedOperands().assign(newOperands);

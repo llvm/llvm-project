@@ -16,7 +16,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
-#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 #include <string>
@@ -28,22 +27,19 @@ PreservedAnalyses EmbedBitcodePass::run(Module &M, ModuleAnalysisManager &AM) {
     reportFatalUsageError("Can only embed the module once");
 
   Triple T(M.getTargetTriple());
-  if (T.getObjectFormat() != Triple::ELF)
-    reportFatalUsageError(
-        "EmbedBitcode pass currently only supports ELF object format");
+  if (T.getObjectFormat() != Triple::ELF && T.getObjectFormat() != Triple::COFF)
+    reportFatalUsageError("EmbedBitcode pass currently only supports COFF and "
+                          "ELF object formats");
 
   std::string Data;
   raw_string_ostream OS(Data);
-  // Clone the module with Thin LTO, since ThinLTOBitcodeWriterPass changes
-  // vtable linkage that would break the non-lto object code for FatLTO.
   if (IsThinLTO)
-    ThinLTOBitcodeWriterPass(OS, /*ThinLinkOS=*/nullptr)
-        .run(*llvm::CloneModule(M), AM);
+    ThinLTOBitcodeWriterPass(OS, /*ThinLinkOS=*/nullptr).run(M, AM);
   else
     BitcodeWriterPass(OS, /*ShouldPreserveUseListOrder=*/false, EmitLTOSummary)
         .run(M, AM);
 
   embedBufferInModule(M, MemoryBufferRef(Data, "ModuleData"), ".llvm.lto");
 
-  return PreservedAnalyses::all();
+  return PreservedAnalyses::none();
 }

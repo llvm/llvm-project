@@ -6,18 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/stdint_proxy.h" // uintptr_t
+#include "src/pthread/pthread_create.h"
+#include "src/pthread/pthread_join.h"
 #include "src/pthread/pthread_mutex_destroy.h"
 #include "src/pthread/pthread_mutex_init.h"
 #include "src/pthread/pthread_mutex_lock.h"
 #include "src/pthread/pthread_mutex_unlock.h"
-
-#include "src/pthread/pthread_create.h"
-#include "src/pthread/pthread_join.h"
-
 #include "test/IntegrationTest/test.h"
 
 #include <pthread.h>
-#include <stdint.h> // uintptr_t
 
 constexpr int START = 0;
 constexpr int MAX = 10000;
@@ -25,7 +23,7 @@ constexpr int MAX = 10000;
 pthread_mutex_t mutex;
 static int shared_int = START;
 
-void *counter(void *arg) {
+void *counter([[maybe_unused]] void *arg) {
   int last_count = START;
   while (true) {
     LIBC_NAMESPACE::pthread_mutex_lock(&mutex);
@@ -74,7 +72,7 @@ void relay_counter() {
 pthread_mutex_t start_lock, step_lock;
 bool started, step;
 
-void *stepper(void *arg) {
+void *stepper([[maybe_unused]] void *arg) {
   LIBC_NAMESPACE::pthread_mutex_lock(&start_lock);
   started = true;
   LIBC_NAMESPACE::pthread_mutex_unlock(&start_lock);

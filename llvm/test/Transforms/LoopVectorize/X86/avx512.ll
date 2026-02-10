@@ -1,5 +1,5 @@
-; RUN: opt -mattr=+avx512f -passes=loop-vectorize -S < %s | llc -mattr=+avx512f | FileCheck %s
-; RUN: opt -mattr=+avx512vl,+prefer-256-bit -passes=loop-vectorize -S < %s | llc -mattr=+avx512f | FileCheck %s --check-prefix=CHECK-PREFER-AVX256
+; RUN: opt -mattr=+avx512f -passes=loop-vectorize -S < %s | FileCheck %s --check-prefixes=CHECK,CHECK-NO-PREFER
+; RUN: opt -mattr=+avx512vl,+prefer-256-bit -passes=loop-vectorize -S < %s | FileCheck %s --check-prefixes=CHECK,CHECK-PREFER-AVX256
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.9.0"
@@ -7,18 +7,19 @@ target triple = "x86_64-apple-macosx10.9.0"
 ; Verify that we generate 512-bit wide vectors for a basic integer memset
 ; loop.
 
-; CHECK-LABEL: _f:
-; CHECK: %vec.epilog.vector.body
-; CHECK: %ymm
-; CHECK: %vector.body
-; CHECK-NOT: %ymm
-; CHECK: vmovdqu64 %zmm{{.}},
+; CHECK-NO-PREFER-LABEL: @f(
+; CHECK-NO-PREFER: vector.body:
+; CHECK-NO-PREFER: store <16 x i32>
+; CHECK-NO-PREFER: vec.epilog.vector.body:
+; CHECK-NO-PREFER: store <8 x i32>
 
 ; Verify that we don't generate 512-bit wide vectors when subtarget feature says not to
 
-; CHECK-PREFER-AVX256-LABEL: f:
-; CHECK-PREFER-AVX256: vmovdqu %ymm{{.}},
-; CHECK-PREFER-AVX256-NOT: %zmm
+; CHECK-PREFER-AVX256-LABEL: @f(
+; CHECK-PREFER-AVX256: vector.body:
+; CHECK-PREFER-AVX256: store <8 x i32>
+; CHECK-PREFER-AVX256: vec.epilog.vector.body:
+; CHECK-PREFER-AVX256: store <4 x i32>
 
 define void @f(ptr %a, i32 %n) {
 entry:
@@ -47,13 +48,11 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; Verify that the "prefer-vector-width=256" attribute prevents the use of 512-bit
 ; vectors
 
-; CHECK-LABEL: _g:
-; CHECK: vmovdqu %ymm{{.}},
-; CHECK-NOT: %zmm
-
-; CHECK-PREFER-AVX256-LABEL: g:
-; CHECK-PREFER-AVX256: vmovdqu %ymm{{.}},
-; CHECK-PREFER-AVX256-NOT: %zmm
+; CHECK-LABEL: @g(
+; CHECK: vector.body:
+; CHECK: store <8 x i32>
+; CHECK: vec.epilog.vector.body:
+; CHECK: store <4 x i32>
 
 define void @g(ptr %a, i32 %n) "prefer-vector-width"="256" {
 entry:
@@ -82,19 +81,11 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; Verify that the "prefer-vector-width=512" attribute override the subtarget
 ; vectors
 
-; CHECK-LABEL: _h:
-; CHECK: %vec.epilog.vector.body
-; CHECK: %ymm
-; CHECK: %vector.body
-; CHECK: vmovdqu64 %zmm{{.}},
-; CHECK-NOT: %ymm
-
-; CHECK-PREFER-AVX256-LABEL: h:
-; CHECK-PREFER-AVX256: %vec.epilog.vector.body
-; CHECK-PREFER-AVX256: %ymm
-; CHECK-PREFER-AVX256: %vector.body
-; CHECK-PREFER-AVX256: vmovdqu64 %zmm{{.}},
-; CHECK-PREFER-AVX256-NOT: %ymm
+; CHECK-LABEL: @h(
+; CHECK: vector.body:
+; CHECK: store <16 x i32>
+; CHECK: vec.epilog.vector.body:
+; CHECK: store <8 x i32>
 
 define void @h(ptr %a, i32 %n) "prefer-vector-width"="512" {
 entry:

@@ -24,11 +24,9 @@ B fail;
 // CHECK-LABEL: define dso_local noundef nonnull align 8 dereferenceable(8) ptr @_Z1fP1A(
 // CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] personality ptr @__gxx_personality_v0 {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[EXN_SLOT:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[EHSELECTOR_SLOT:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
@@ -61,11 +59,9 @@ B fail;
 // WITH-NONZERO-DEFAULT-AS-LABEL: define spir_func noundef align 8 dereferenceable(8) ptr addrspace(4) @_Z1fP1A(
 // WITH-NONZERO-DEFAULT-AS-SAME: ptr addrspace(4) noundef [[A:%.*]]) addrspace(4) #[[ATTR0:[0-9]+]] personality ptr addrspace(4) @__gxx_personality_v0 {
 // WITH-NONZERO-DEFAULT-AS-NEXT:  entry:
-// WITH-NONZERO-DEFAULT-AS-NEXT:    [[RETVAL:%.*]] = alloca ptr addrspace(4), align 8
 // WITH-NONZERO-DEFAULT-AS-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(4), align 8
 // WITH-NONZERO-DEFAULT-AS-NEXT:    [[EXN_SLOT:%.*]] = alloca ptr addrspace(4), align 8
 // WITH-NONZERO-DEFAULT-AS-NEXT:    [[EHSELECTOR_SLOT:%.*]] = alloca i32, align 4
-// WITH-NONZERO-DEFAULT-AS-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
 // WITH-NONZERO-DEFAULT-AS-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
 // WITH-NONZERO-DEFAULT-AS-NEXT:    store ptr addrspace(4) [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
 // WITH-NONZERO-DEFAULT-AS-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
@@ -111,9 +107,9 @@ const B& f(A *a) {
 // CHECK: attributes #[[ATTR3]] = { nounwind }
 // CHECK: attributes #[[ATTR4]] = { noreturn }
 //.
-// WITH-NONZERO-DEFAULT-AS: attributes #[[ATTR0]] = { mustprogress noinline optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+16-bit-insts,+ashr-pk-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-buffer-pk-add-bf16-inst,+atomic-ds-pk-add-16-insts,+atomic-fadd-rtn-insts,+atomic-flat-pk-add-16-insts,+atomic-global-pk-add-bf16-inst,+bf8-cvt-scale-insts,+bitop3-insts,+ci-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot11-insts,+dot12-insts,+dot13-insts,+dot2-insts,+dot3-insts,+dot4-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dot8-insts,+dot9-insts,+dpp,+f16bf16-to-fp6bf6-cvt-scale-insts,+f32-to-f16bf16-cvt-sr-insts,+fp4-cvt-scale-insts,+fp6bf6-cvt-scale-insts,+fp8-conversion-insts,+fp8-cvt-scale-insts,+fp8-insts,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx12-insts,+gfx8-insts,+gfx9-insts,+gfx90a-insts,+gfx940-insts,+gfx950-insts,+gws,+image-insts,+mai-insts,+permlane16-swap,+permlane32-swap,+prng-inst,+s-memrealtime,+s-memtime-inst,+vmem-to-lds-load-insts,+wavefrontsize32,+wavefrontsize64" }
+// WITH-NONZERO-DEFAULT-AS: attributes #[[ATTR0]] = { mustprogress noinline optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+16-bit-insts,+ashr-pk-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-buffer-pk-add-bf16-inst,+atomic-ds-pk-add-16-insts,+atomic-fadd-rtn-insts,+atomic-flat-pk-add-16-insts,+atomic-global-pk-add-bf16-inst,+bf16-cvt-insts,+bf16-trans-insts,+bf8-cvt-scale-insts,+bitop3-insts,+ci-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot11-insts,+dot12-insts,+dot13-insts,+dot2-insts,+dot3-insts,+dot4-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dot8-insts,+dot9-insts,+dpp,+f16bf16-to-fp6bf6-cvt-scale-insts,+f32-to-f16bf16-cvt-sr-insts,+fp4-cvt-scale-insts,+fp6bf6-cvt-scale-insts,+fp8-conversion-insts,+fp8-cvt-scale-insts,+fp8-insts,+fp8e5m3-insts,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx12-insts,+gfx1250-insts,+gfx8-insts,+gfx9-insts,+gfx90a-insts,+gfx940-insts,+gfx950-insts,+gws,+image-insts,+mai-insts,+permlane16-swap,+permlane32-swap,+prng-inst,+s-memrealtime,+s-memtime-inst,+setprio-inc-wg-inst,+tanh-insts,+tensor-cvt-lut-insts,+transpose-load-f4f6-insts,+vmem-pref-insts,+vmem-to-lds-load-insts,+wavefrontsize32,+wavefrontsize64" }
 // WITH-NONZERO-DEFAULT-AS: attributes #[[ATTR1:[0-9]+]] = { nounwind willreturn memory(read) }
-// WITH-NONZERO-DEFAULT-AS: attributes #[[ATTR2:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+16-bit-insts,+ashr-pk-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-buffer-pk-add-bf16-inst,+atomic-ds-pk-add-16-insts,+atomic-fadd-rtn-insts,+atomic-flat-pk-add-16-insts,+atomic-global-pk-add-bf16-inst,+bf8-cvt-scale-insts,+bitop3-insts,+ci-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot11-insts,+dot12-insts,+dot13-insts,+dot2-insts,+dot3-insts,+dot4-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dot8-insts,+dot9-insts,+dpp,+f16bf16-to-fp6bf6-cvt-scale-insts,+f32-to-f16bf16-cvt-sr-insts,+fp4-cvt-scale-insts,+fp6bf6-cvt-scale-insts,+fp8-conversion-insts,+fp8-cvt-scale-insts,+fp8-insts,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx12-insts,+gfx8-insts,+gfx9-insts,+gfx90a-insts,+gfx940-insts,+gfx950-insts,+gws,+image-insts,+mai-insts,+permlane16-swap,+permlane32-swap,+prng-inst,+s-memrealtime,+s-memtime-inst,+vmem-to-lds-load-insts,+wavefrontsize32,+wavefrontsize64" }
+// WITH-NONZERO-DEFAULT-AS: attributes #[[ATTR2:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+16-bit-insts,+ashr-pk-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-buffer-pk-add-bf16-inst,+atomic-ds-pk-add-16-insts,+atomic-fadd-rtn-insts,+atomic-flat-pk-add-16-insts,+atomic-global-pk-add-bf16-inst,+bf16-cvt-insts,+bf16-trans-insts,+bf8-cvt-scale-insts,+bitop3-insts,+ci-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot11-insts,+dot12-insts,+dot13-insts,+dot2-insts,+dot3-insts,+dot4-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dot8-insts,+dot9-insts,+dpp,+f16bf16-to-fp6bf6-cvt-scale-insts,+f32-to-f16bf16-cvt-sr-insts,+fp4-cvt-scale-insts,+fp6bf6-cvt-scale-insts,+fp8-conversion-insts,+fp8-cvt-scale-insts,+fp8-insts,+fp8e5m3-insts,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx12-insts,+gfx1250-insts,+gfx8-insts,+gfx9-insts,+gfx90a-insts,+gfx940-insts,+gfx950-insts,+gws,+image-insts,+mai-insts,+permlane16-swap,+permlane32-swap,+prng-inst,+s-memrealtime,+s-memtime-inst,+setprio-inc-wg-inst,+tanh-insts,+tensor-cvt-lut-insts,+transpose-load-f4f6-insts,+vmem-pref-insts,+vmem-to-lds-load-insts,+wavefrontsize32,+wavefrontsize64" }
 // WITH-NONZERO-DEFAULT-AS: attributes #[[ATTR3]] = { nounwind }
 // WITH-NONZERO-DEFAULT-AS: attributes #[[ATTR4]] = { noreturn }
 //.

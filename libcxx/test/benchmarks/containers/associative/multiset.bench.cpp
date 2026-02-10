@@ -22,10 +22,14 @@ struct support::adapt_operations<std::multiset<K>> {
 
   using InsertionResult = typename std::multiset<K>::iterator;
   static auto get_iterator(InsertionResult const& result) { return result; }
+
+  template <class Allocator>
+  using rebind_alloc = std::multiset<K, std::less<K>, Allocator>;
 };
 
 int main(int argc, char** argv) {
   support::associative_container_benchmarks<std::multiset<int>>("std::multiset<int>");
+  support::associative_container_benchmarks<std::multiset<std::string>>("std::multiset<std::string>");
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();

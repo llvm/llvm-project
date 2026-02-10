@@ -1,6 +1,8 @@
 add_lldb_library(lldbPluginProcessAIX
   NativeProcessAIX.cpp
   NativeThreadAIX.cpp
+  NativeRegisterContextAIX.cpp
+  NativeRegisterContextAIX_ppc64.cpp
 
   LINK_COMPONENTS
     Support

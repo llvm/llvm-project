@@ -1,4 +1,4 @@
-//===--- ReturnBracedInitListCheck.cpp - clang-tidy------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -54,7 +54,7 @@ void ReturnBracedInitListCheck::check(const MatchFinder::MatchResult &Result) {
       Result.Nodes.getNodeAs<CXXConstructExpr>("ctor");
 
   // Don't make replacements in macro.
-  SourceLocation Loc = MatchedConstructExpr->getExprLoc();
+  const SourceLocation Loc = MatchedConstructExpr->getExprLoc();
   if (Loc.isMacroID())
     return;
 
@@ -88,7 +88,7 @@ void ReturnBracedInitListCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   // Range for constructor name and opening brace.
-  CharSourceRange CtorCallSourceRange = CharSourceRange::getTokenRange(
+  const CharSourceRange CtorCallSourceRange = CharSourceRange::getTokenRange(
       Loc, CallParensRange.getBegin().getLocWithOffset(-1));
 
   Diag << FixItHint::CreateRemoval(CtorCallSourceRange)

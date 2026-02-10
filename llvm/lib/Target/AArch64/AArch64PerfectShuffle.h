@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_AARCH64_AARCH64PERFECTSHUFFLE_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace llvm {
 
@@ -6621,35 +6622,53 @@ inline unsigned getPerfectShuffleCost(llvm::ArrayRef<int> M) {
 }
 
 /// Return true for zip1 or zip2 masks of the form:
-///  <0,  8, 1,  9, 2, 10, 3, 11> or
-///  <4, 12, 5, 13, 6, 14, 7, 15>
+///  <0,  8, 1,  9, 2, 10, 3, 11> (WhichResultOut = 0, OperandOrderOut = 0) or
+///  <4, 12, 5, 13, 6, 14, 7, 15> (WhichResultOut = 1, OperandOrderOut = 0) or
+///  <8,  0, 9,  1, 10, 2, 11, 3> (WhichResultOut = 0, OperandOrderOut = 1) or
+///  <12, 4, 13, 5, 14, 6, 15, 7> (WhichResultOut = 1, OperandOrderOut = 1)
 inline bool isZIPMask(ArrayRef<int> M, unsigned NumElts,
-                      unsigned &WhichResultOut) {
+                      unsigned &WhichResultOut, unsigned &OperandOrderOut) {
   if (NumElts % 2 != 0)
     return false;
-  // Check the first non-undef element for which half to use.
-  unsigned WhichResult = 2;
-  for (unsigned i = 0; i != NumElts / 2; i++) {
-    if (M[i * 2] >= 0) {
-      WhichResult = ((unsigned)M[i * 2] == i ? 0 : 1);
-      break;
-    } else if (M[i * 2 + 1] >= 0) {
-      WhichResult = ((unsigned)M[i * 2 + 1] == NumElts + i ? 0 : 1);
-      break;
+
+  // "Result" corresponds to "WhichResultOut", selecting between zip1 and zip2.
+  // "Order" corresponds to "OperandOrderOut", selecting the order of operands
+  // for the instruction (flipped or not).
+  bool Result0Order0 = true; // WhichResultOut = 0, OperandOrderOut = 0
+  bool Result1Order0 = true; // WhichResultOut = 1, OperandOrderOut = 0
+  bool Result0Order1 = true; // WhichResultOut = 0, OperandOrderOut = 1
+  bool Result1Order1 = true; // WhichResultOut = 1, OperandOrderOut = 1
+  // Check all elements match.
+  for (unsigned i = 0; i != NumElts; i += 2) {
+    if (M[i] >= 0) {
+      unsigned EvenElt = (unsigned)M[i];
+      if (EvenElt != i / 2)
+        Result0Order0 = false;
+      if (EvenElt != NumElts / 2 + i / 2)
+        Result1Order0 = false;
+      if (EvenElt != NumElts + i / 2)
+        Result0Order1 = false;
+      if (EvenElt != NumElts + NumElts / 2 + i / 2)
+        Result1Order1 = false;
+    }
+    if (M[i + 1] >= 0) {
+      unsigned OddElt = (unsigned)M[i + 1];
+      if (OddElt != NumElts + i / 2)
+        Result0Order0 = false;
+      if (OddElt != NumElts + NumElts / 2 + i / 2)
+        Result1Order0 = false;
+      if (OddElt != i / 2)
+        Result0Order1 = false;
+      if (OddElt != NumElts / 2 + i / 2)
+        Result1Order1 = false;
     }
   }
-  if (WhichResult == 2)
+
+  if (Result0Order0 + Result1Order0 + Result0Order1 + Result1Order1 != 1)
     return false;
 
-  // Check all elements match.
-  unsigned Idx = WhichResult * NumElts / 2;
-  for (unsigned i = 0; i != NumElts; i += 2) {
-    if ((M[i] >= 0 && (unsigned)M[i] != Idx) ||
-        (M[i + 1] >= 0 && (unsigned)M[i + 1] != Idx + NumElts))
-      return false;
-    Idx += 1;
-  }
-  WhichResultOut = WhichResult;
+  WhichResultOut = (Result0Order0 || Result0Order1) ? 0 : 1;
+  OperandOrderOut = (Result0Order0 || Result1Order0) ? 0 : 1;
   return true;
 }
 
@@ -6681,18 +6700,53 @@ inline bool isUZPMask(ArrayRef<int> M, unsigned NumElts,
 }
 
 /// Return true for trn1 or trn2 masks of the form:
-///  <0, 8, 2, 10, 4, 12, 6, 14> or
-///  <1, 9, 3, 11, 5, 13, 7, 15>
+///  <0, 8, 2, 10, 4, 12, 6, 14> (WhichResultOut = 0, OperandOrderOut = 0) or
+///  <1, 9, 3, 11, 5, 13, 7, 15> (WhichResultOut = 1, OperandOrderOut = 0) or
+///  <8, 0, 10, 2, 12, 4, 14, 6> (WhichResultOut = 0, OperandOrderOut = 1) or
+///  <9, 1, 11, 3, 13, 5, 15, 7> (WhichResultOut = 1, OperandOrderOut = 1) or
 inline bool isTRNMask(ArrayRef<int> M, unsigned NumElts,
-                      unsigned &WhichResult) {
+                      unsigned &WhichResultOut, unsigned &OperandOrderOut) {
   if (NumElts % 2 != 0)
     return false;
-  WhichResult = (M[0] == 0 ? 0 : 1);
-  for (unsigned i = 0; i < NumElts; i += 2) {
-    if ((M[i] >= 0 && (unsigned)M[i] != i + WhichResult) ||
-        (M[i + 1] >= 0 && (unsigned)M[i + 1] != i + NumElts + WhichResult))
-      return false;
+
+  // "Result" corresponds to "WhichResultOut", selecting between trn1 and trn2.
+  // "Order" corresponds to "OperandOrderOut", selecting the order of operands
+  // for the instruction (flipped or not).
+  bool Result0Order0 = true; // WhichResultOut = 0, OperandOrderOut = 0
+  bool Result1Order0 = true; // WhichResultOut = 1, OperandOrderOut = 0
+  bool Result0Order1 = true; // WhichResultOut = 0, OperandOrderOut = 1
+  bool Result1Order1 = true; // WhichResultOut = 1, OperandOrderOut = 1
+  // Check all elements match.
+  for (unsigned i = 0; i != NumElts; i += 2) {
+    if (M[i] >= 0) {
+      unsigned EvenElt = (unsigned)M[i];
+      if (EvenElt != i)
+        Result0Order0 = false;
+      if (EvenElt != i + 1)
+        Result1Order0 = false;
+      if (EvenElt != NumElts + i)
+        Result0Order1 = false;
+      if (EvenElt != NumElts + i + 1)
+        Result1Order1 = false;
+    }
+    if (M[i + 1] >= 0) {
+      unsigned OddElt = (unsigned)M[i + 1];
+      if (OddElt != NumElts + i)
+        Result0Order0 = false;
+      if (OddElt != NumElts + i + 1)
+        Result1Order0 = false;
+      if (OddElt != i)
+        Result0Order1 = false;
+      if (OddElt != i + 1)
+        Result1Order1 = false;
+    }
   }
+
+  if (Result0Order0 + Result1Order0 + Result0Order1 + Result1Order1 != 1)
+    return false;
+
+  WhichResultOut = (Result0Order0 || Result0Order1) ? 0 : 1;
+  OperandOrderOut = (Result0Order0 || Result1Order0) ? 0 : 1;
   return true;
 }
 
@@ -6721,6 +6775,47 @@ inline bool isREVMask(ArrayRef<int> M, unsigned EltSize, unsigned NumElts,
   }
 
   return true;
+}
+
+/// isDUPQMask - matches a splat of equivalent lanes within segments of a given
+///              number of elements.
+inline std::optional<unsigned> isDUPQMask(ArrayRef<int> Mask, unsigned Segments,
+                                          unsigned SegmentSize) {
+  unsigned Lane = unsigned(Mask[0]);
+
+  // Make sure there's no size changes.
+  if (SegmentSize * Segments != Mask.size())
+    return std::nullopt;
+
+  // Check the first index corresponds to one of the lanes in the first segment.
+  if (Lane >= SegmentSize)
+    return std::nullopt;
+
+  // Check that all lanes match the first, adjusted for segment.
+  // Undef/poison lanes (<0) are also accepted.
+  if (all_of(enumerate(Mask), [&](auto P) {
+        const unsigned SegmentIndex = P.index() / SegmentSize;
+        return P.value() < 0 ||
+               unsigned(P.value()) == Lane + SegmentIndex * SegmentSize;
+      }))
+    return Lane;
+
+  return std::nullopt;
+}
+
+/// isDUPFirstSegmentMask - matches a splat of the first 128b segment.
+inline bool isDUPFirstSegmentMask(ArrayRef<int> Mask, unsigned Segments,
+                                  unsigned SegmentSize) {
+  // Make sure there's no size changes.
+  if (SegmentSize * Segments != Mask.size())
+    return false;
+
+  // Check that all lanes refer to the equivalent lane in the first segment.
+  // Undef/poison lanes (<0) are also accepted.
+  return all_of(enumerate(Mask), [&](auto P) {
+    const unsigned IndexWithinSegment = P.index() % SegmentSize;
+    return P.value() < 0 || unsigned(P.value()) == IndexWithinSegment;
+  });
 }
 
 } // namespace llvm

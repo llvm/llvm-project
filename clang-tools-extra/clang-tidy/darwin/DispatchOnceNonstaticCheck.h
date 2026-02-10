@@ -1,4 +1,4 @@
-//===--- DispatchOnceNonstaticCheck.h - clang-tidy --------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace clang::tidy::darwin {
 /// storage duration, as required by the libdispatch documentation.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/darwin/dispatch-once-nonstatic.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/darwin/dispatch-once-nonstatic.html
 class DispatchOnceNonstaticCheck : public ClangTidyCheck {
 public:
   DispatchOnceNonstaticCheck(StringRef Name, ClangTidyContext *Context)

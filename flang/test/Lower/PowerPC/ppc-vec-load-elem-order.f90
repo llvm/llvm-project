@@ -394,7 +394,7 @@ subroutine vec_xl_testi8a(arg1, arg2, res)
   vector(integer(1)) :: res
   res = vec_xl(arg1, arg2)
 
-  
+
 ! LLVMIR: %[[arg1:.*]] = load i8, ptr %0, align 1
 ! LLVMIR: %[[addr:.*]] = getelementptr i8, ptr %1, i8 %[[arg1]]
 ! LLVMIR: %[[ld:.*]] = load <16 x i8>, ptr %[[addr]], align 1
@@ -481,7 +481,7 @@ subroutine vec_xl_be_testi8a(arg1, arg2, res)
   vector(integer(1)) :: res
   res = vec_xl_be(arg1, arg2)
 
-  
+
 ! LLVMIR: %4 = load i8, ptr %0, align 1
 ! LLVMIR: %5 = getelementptr i8, ptr %1, i8 %4
 ! LLVMIR: %6 = load <16 x i8>, ptr %5, align 1

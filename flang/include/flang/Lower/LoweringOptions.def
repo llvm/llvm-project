@@ -34,6 +34,10 @@ ENUM_LOWERINGOPT(NoPPCNativeVecElemOrder, unsigned, 1, 0)
 /// On by default.
 ENUM_LOWERINGOPT(Underscoring, unsigned, 1, 1)
 
+/// If true, respect parentheses in expression evaluation.
+/// On by default.
+ENUM_LOWERINGOPT(ProtectParens, unsigned, 1, 1)
+
 /// If true, assume the behavior of integer overflow is defined
 /// (i.e. wraps around as two's complement). Off by default.
 ENUM_LOWERINGOPT(IntegerWrapAround, unsigned, 1, 0)
@@ -65,6 +69,24 @@ ENUM_LOWERINGOPT(RepackArraysWhole, unsigned, 1, 0)
 
 /// If true, CUDA Fortran runtime check is inserted.
 ENUM_LOWERINGOPT(CUDARuntimeCheck, unsigned, 1, 0)
+
+/// If true, do not generate definition for runtime type info global objects of
+/// derived types defined in other compilation units.
+ENUM_LOWERINGOPT(SkipExternalRttiDefinition, unsigned, 1, 0)
+
+/// If true, convert complex number division to runtime on the frontend.
+/// If false, lower to the complex dialect of MLIR.
+/// On by default.
+ENUM_LOWERINGOPT(ComplexDivisionToRuntime, unsigned, 1, 1)
+
+/// When true, it registers MLIRDiagnosticsHandler for the duration
+/// of the lowering pipeline.
+ENUM_LOWERINGOPT(RegisterMLIRDiagnosticsHandler, unsigned, 1, 1)
+
+/// If true, preserve USE statement information during PFT building for
+/// debug info generation. Should be enabled when debug info level is above
+/// LineTablesOnly. Off by default.
+ENUM_LOWERINGOPT(PreserveUseDebugInfo, unsigned, 1, 0)
 
 #undef LOWERINGOPT
 #undef ENUM_LOWERINGOPT

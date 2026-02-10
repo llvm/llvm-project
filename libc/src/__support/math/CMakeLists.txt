@@ -1,4 +1,526 @@
 add_header_library(
+  acos
+  HDRS
+    acos.h
+  DEPENDS
+    .asin_utils
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.cpu_features
+)
+
+add_header_library(
+  acosf
+  HDRS
+    acosf.h
+  DEPENDS
+    .inv_trigf_utils
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  acosf16
+  HDRS
+    acosf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  acosh_float_constants
+  HDRS
+    acosh_float_constants.h
+  DEPENDS
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  acoshf_utils
+  HDRS
+    acoshf_utils.h
+  DEPENDS
+    .acosh_float_constants
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+)
+
+add_header_library(
+  acoshf
+  HDRS
+    acoshf.h
+  DEPENDS
+    .acoshf_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  acoshf16
+  HDRS
+    acoshf16.h
+  DEPENDS
+    .acoshf_utils
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  acospif16
+  HDRS
+    acospif16.h
+  DEPENDS
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  asin_utils
+  HDRS
+    asin_utils.h
+  DEPENDS
+    libc.src.__support.integer_literals
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  asin
+  HDRS
+    asin.h
+  DEPENDS
+    .asin_utils
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
+)
+
+add_header_library(
+  asinhf
+  HDRS
+    asinhf.h
+  DEPENDS
+    .acoshf_utils
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  asinhf16
+  HDRS
+    asinhf16.h
+  DEPENDS
+    .acoshf_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  atan_utils
+  HDRS
+    atan_utils.h
+  DEPENDS
+    libc.src.__support.integer_literals
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  atan
+  HDRS
+    atan.h
+  DEPENDS
+    .atan_utils
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  atan2
+  HDRS
+    atan2.h
+  DEPENDS
+    .atan_utils
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  atan2f
+  HDRS
+    atan2f_float.h
+    atan2f.h
+  DEPENDS
+    .inv_trigf_utils
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  atan2f128
+  HDRS
+    atan2f128.h
+  DEPENDS
+    .atan_utils
+    libc.src.__support.integer_literals
+    libc.src.__support.uint128
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  atanf
+  HDRS
+    atanf_float.h
+    atanf.h
+  DEPENDS
+    .inv_trigf_utils
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  atanf16
+  HDRS
+    atanf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  atanhf
+  HDRS
+    atanhf.h
+  DEPENDS
+    .acoshf_utils
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  atanhf16
+  HDRS
+    atanhf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  asinf
+  HDRS
+    asinf.h
+  DEPENDS
+    .inv_trigf_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
+)
+
+add_header_library(
+  asinf16
+  HDRS
+    asinf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  cbrt
+  HDRS
+    cbrt.h
+  DEPENDS
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.macros.optimization
+    libc.src.__support.integer_literals
+)
+
+add_header_library(
+  cbrtf
+  HDRS
+    cbrtf.h
+  DEPENDS
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  common_constants
+  HDRS
+    common_constants.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.number_pair
+)
+
+add_header_library(
+  cos
+  HDRS
+    cos.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.errno.errno
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.math.range_reduction_double
+    libc.src.__support.math.sincos_eval
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  cosf
+  HDRS
+    cosf.h
+  DEPENDS
+    .sincosf_utils
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  cosf16
+  HDRS
+    cosf16.h
+  DEPENDS
+    .sincosf16_utils
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  coshf
+  HDRS
+    coshf.h
+  DEPENDS
+    .sinhfcoshf_utils
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  coshf16
+  HDRS
+    coshf16.h
+  DEPENDS
+    .expxf16_utils
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  cospif
+  HDRS
+    cospif.h
+  DEPENDS
+    .sincosf_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  cospif16
+  HDRS
+    cospif16.h
+  DEPENDS
+    .sincosf16_utils
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  dsqrtl
+  HDRS
+    dsqrtl.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.sqrt
+)
+
+add_header_library(
+  exp10m1f
+  HDRS
+    exp10m1f.h
+  DEPENDS
+    .exp10f_utils
+    libc.src.errno.errno
+    libc.src.__support.common
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  exp10m1f16
+  HDRS
+    exp10m1f16.h
+  DEPENDS
+    .exp10f16_utils
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
+)
+
+add_header_library(
+  erff
+  HDRS
+    erff.h
+  DEPENDS
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
   exp_float_constants
   HDRS
     exp_float_constants.h
@@ -20,5 +542,1029 @@ add_header_library(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  expf16_utils
+  HDRS
+    expf16_utils.h
+  DEPENDS
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.macros.attributes
+    libc.include.llvm-libc-macros.float16_macros
+)
+
+add_header_library(
+  expf16
+  HDRS
+    expf16.h
+  DEPENDS
+    .expf16_utils
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+    libc.include.llvm-libc-macros.float16_macros
+)
+
+add_header_library(
+  expxf16_utils
+  HDRS
+    expxf16_utils.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.macros.attributes
+    libc.src.__support.math.expf16_utils
+    libc.src.__support.math.exp10_float16_constants
+)
+
+add_header_library(
+  ffmal
+  HDRS
+    ffmal.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  f16sqrt
+  HDRS
+    f16sqrt.h
+  DEPENDS
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  f16sqrtl
+  HDRS
+    f16sqrtl.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.sqrt
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  frexpf128
+  HDRS
+    frexpf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_header_library(
+  fsqrt
+  HDRS
+    fsqrt.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.sqrt
+)
+
+add_header_library(
+  fsqrtl
+  HDRS
+    fsqrtl.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.sqrt
+)
+
+add_header_library(
+  inv_trigf_utils
+  HDRS
+    inv_trigf_utils.h
+  DEPENDS
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.common
+)
+
+add_header_library(
+  frexpf16
+  HDRS
+    frexpf16.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_header_library(
+  frexpf
+  HDRS
+    frexpf.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_header_library(
+  f16fma
+  HDRS
+    f16fma.h
+  DEPENDS
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.macros.config
+    libc.include.llvm-libc-macros.float16_macros
+)
+
+add_header_library(
+  f16fmaf
+  HDRS
+    f16fmaf.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.fma
+    libc.include.llvm-libc-macros.float16_macros
+)
+
+add_header_library(
+  f16fmaf128
+  HDRS
+    f16fmaf128.h
+  DEPENDS
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.include.llvm-libc-types.float128
+    libc.include.llvm-libc-macros.float16_macros
+)
+
+add_header_library(
+  f16fmal
+  HDRS
+    f16fmal.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.fma
+    libc.include.llvm-libc-macros.float16_macros
+)
+
+add_header_library(
+  ilogb
+  HDRS
+    ilogb.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_header_library(
+  ilogbf16
+  HDRS
+    ilogbf16.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.include.llvm-libc-macros.float16_macros
+)
+
+add_header_library(
+  ilogbf128
+  HDRS
+    ilogbf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.include.llvm-libc-types.float128
+)
+
+add_header_library(
+  llogbf16
+  HDRS
+    llogbf16.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.include.llvm-libc-macros.float16_macros
+)
+
+add_header_library(
+  ilogbf
+  HDRS
+    ilogbf.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_header_library(
+  ldexpf128
+  HDRS
+    ldexpf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.include.llvm-libc-types.float128
+)
+
+add_header_library(
+  llogbf128
+  HDRS
+    llogbf128.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.include.llvm-libc-types.float128
+)
+
+add_header_library(
+  ldexpf16
+  HDRS
+    ldexpf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.include.llvm-libc-macros.float16_macros
+)
+
+add_header_library(
+  ldexpf
+  HDRS
+    ldexpf.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_header_library(
+  llogbf
+  HDRS
+    llogbf.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  logf16
+  HDRS
+    logf16.h
+  DEPENDS
+    .expxf16_utils
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.common
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
+    libc.include.llvm-libc-macros.float16_macros
+)
+
+add_header_library(
+  exp_constants
+  HDRS
+    exp_constants.h
+  DEPENDS
+    libc.src.__support.FPUtil.triple_double
+)
+
+add_header_library(
+  exp_utils
+  HDRS
+    exp_utils.h
+  DEPENDS
+    libc.src.__support.CPP.optional
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_header_library(
+  exp
+  HDRS
+    exp.h
+  DEPENDS
+    .exp_constants
+    .exp_utils
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.optional
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.FPUtil.triple_double
+    libc.src.__support.integer_literals
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  exp2
+  HDRS
+    exp2.h
+  DEPENDS
+    .common_constants
+    .exp_utils
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.optional
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.FPUtil.triple_double
+    libc.src.__support.integer_literals
+    libc.src.__support.macros.optimization
+    libc.src.errno.errno
+)
+
+add_header_library(
+  exp2f
+  HDRS
+    exp2f.h
+  DEPENDS
+    .exp10f_utils
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+    libc.src.__support.common
+    libc.src.errno.errno
+)
+
+add_header_library(
+  exp2f16
+  HDRS
+    exp2f16.h
+  DEPENDS
+    .expxf16_utils
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  exp2m1f
+  HDRS
+    exp2m1f.h
+  DEPENDS
+    .exp10f_utils
+    libc.src.errno.errno
+    libc.src.__support.common
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
+)
+
+add_header_library(
+  exp2m1f16
+  HDRS
+    exp2m1f16.h
+  DEPENDS
+    .expxf16_utils
+    libc.src.__support.common
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
+)
+
+add_header_library(
+  exp10
+  HDRS
+    exp10.h
+  DEPENDS
+    .exp_constants
+    .exp_utils
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.optional
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.FPUtil.triple_double
+    libc.src.__support.integer_literals
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  exp10f_utils
+  HDRS
+    exp10f_utils.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.common
+    libc.src.__support.math.exp_utils
+)
+
+add_header_library(
+  exp10f
+  HDRS
+    exp10f.h
+  DEPENDS
+    .exp10f_utils
+    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  exp10_float16_constants
+  HDRS
+    exp10_float16_constants.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.CPP.array
+)
+
+add_header_library(
+  exp10f16_utils
+  HDRS
+    exp10f16_utils.h
+  DEPENDS
+    .expf16_utils
+    .exp10_float16_constants
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_header_library(
+  exp10f16
+  HDRS
+    exp10f16.h
+  DEPENDS
+    .exp10f16_utils
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
+)
+
+add_header_library(
+  expm1
+  HDRS
+    expm1.h
+  DEPENDS
+    .common_constants
+    .exp_constants
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.FPUtil.triple_double
+    libc.src.__support.integer_literals
+    libc.src.__support.macros.optimization
+    libc.src.errno.errno
+)
+
+add_header_library(
+  expm1f
+  HDRS
+    expm1f.h
+  DEPENDS
+    .common_constants
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+    libc.src.errno.errno
+)
+
+add_header_library(
+  expm1f16
+  HDRS
+    expm1f16.h
+  DEPENDS
+    .expxf16_utils
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  fsqrtf128
+  HDRS
+    fsqrtf128.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.sqrt
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  hypotf
+  HDRS
+    hypotf.h
+  DEPENDS
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  ilogbl
+  HDRS
+    ilogbl.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  range_reduction_double
+  HDRS
+    range_reduction_double_common.h
+    range_reduction_double_fma.h
+    range_reduction_double_nofma.h
+  DEPENDS
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.common
+    libc.src.__support.integer_literals
+)
+
+add_header_library(
+  range_reduction
+  HDRS
+    range_reduction.h
+    range_reduction_fma.h
+  DEPENDS
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.common
+)
+
+add_header_library(
+  rsqrtf
+  HDRS
+    rsqrtf.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  rsqrtf16
+  HDRS
+    rsqrtf16.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  sqrtf16
+  HDRS
+    sqrtf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.sqrt
+    libc.include.llvm-libc-macros.float16_macros
+)
+
+add_header_library(
+  sincos_eval
+  HDRS
+    sincos_eval.h
+  DEPENDS
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.integer_literals
+)
+
+add_header_library(
+  sincosf
+  HDRS
+    sincosf.h
+  DEPENDS
+    .sincosf_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
+)
+
+add_header_library(
+  sincosf_utils
+  HDRS
+    sincosf_utils.h
+    sincosf_float_eval.h
+  DEPENDS
+    .range_reduction
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.common
+)
+
+add_header_library(
+  sincosf16_utils
+  HDRS
+    sincosf16_utils.h
+  DEPENDS
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.common
+)
+
+add_header_library(
+  sinhfcoshf_utils
+  HDRS
+    sinhfcoshf_utils.h
+  DEPENDS
+    .exp10f_utils
+    libc.src.__support.FPUtil.multiply_add
+)
+
+add_header_library(
+  sinpif
+  HDRS
+    sinpif.h
+  DEPENDS
+    .sincosf_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  llogb
+  HDRS
+    llogb.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  log
+  HDRS
+    log.h
+  DEPENDS
+    .log_range_reduction
+    .common_constants
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.integer_literals
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  log10
+  HDRS
+    log10.h
+  DEPENDS
+    .common_constants
+    .log_range_reduction
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.integer_literals
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  log1p
+  HDRS
+    log1p.h
+  DEPENDS
+    .common_constants
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.integer_literals
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  log2
+  HDRS
+    log2.h
+  DEPENDS
+    .common_constants
+    .log_range_reduction
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.integer_literals
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  logbf128
+  HDRS
+    logbf128.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  logbf16
+  HDRS
+    logbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  logbf
+  HDRS
+    logbf.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_header_library(
+  logf
+  HDRS
+    logf.h
+  DEPENDS
+    .common_constants
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
+)
+
+add_header_library(
+  log_range_reduction
+  HDRS
+    log_range_reduction.h
+  DEPENDS
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.math.common_constants
+    libc.src.__support.uint128
+)
+
+add_header_library(
+  sin
+  HDRS
+    sin.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.errno.errno
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.math.range_reduction_double
+    libc.src.__support.math.sincos_eval
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  sinf
+  HDRS
+    sinf.h
+  DEPENDS
+    .range_reduction
+    .sincosf_utils
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  sinf16
+  HDRS
+    sinf16.h
+  DEPENDS
+    .sincosf16_utils
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  sinhf
+  HDRS
+    sinhf.h
+  DEPENDS
+    .sinhfcoshf_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  sinhf16
+  HDRS
+    sinhf16.h
+  DEPENDS
+    .expxf16_utils
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  sqrt
+  HDRS
+    sqrt.h
+  DEPENDS
+    libc.src.__support.FPUtil.sqrt
+)
+
+add_header_library(
+  sqrtf
+  HDRS
+    sqrtf.h
+  DEPENDS
+    libc.src.__support.FPUtil.sqrt
+)
+
+add_header_library(
+  dfmal
+  HDRS
+    dfmal.h
+  DEPENDS
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  dfmaf128
+  HDRS
+    dfmaf128.h
+  DEPENDS
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.include.llvm-libc-types.float128
+)
+
+add_header_library(
+  sqrtf128
+  HDRS
+    sqrtf128.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.common
+    libc.src.__support.macros.optimization
+    libc.src.__support.uint128
+    libc.include.llvm-libc-types.float128
+)
+
+add_header_library(
+  tan
+  HDRS
+    tan.h
+  DEPENDS
+    .range_reduction_double
+    libc.hdr.errno_macros
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  tanf
+  HDRS
+    tanf.h
+  DEPENDS
+    .range_reduction
+    .sincosf_utils
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
     libc.src.__support.macros.optimization
 )

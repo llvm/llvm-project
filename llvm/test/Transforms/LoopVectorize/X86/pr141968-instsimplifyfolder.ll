@@ -3,28 +3,28 @@
 
 target triple = "x86_64"
 
-define i8 @pr141968(i1 %cond, i8 %v) {
-; CHECK-LABEL: define i8 @pr141968(
-; CHECK-SAME: i1 [[COND:%.*]], i8 [[V:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+define void @pr141968(i1 %cond, i8 %v, ptr %p) {
+; CHECK-LABEL: define void @pr141968(
+; CHECK-SAME: i1 [[COND:%.*]], i8 [[V:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ZEXT_TRUE:%.*]] = zext i1 true to i16
 ; CHECK-NEXT:    [[SEXT:%.*]] = sext i8 [[V]] to i16
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i1> poison, i1 [[COND]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i1> [[BROADCAST_SPLATINSERT]], <16 x i1> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = xor <16 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_SDIV_CONTINUE30:.*]] ]
+; CHECK-NEXT:    br label %[[COND_FALSE:.*]]
+; CHECK:       [[COND_FALSE]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[LOOP_HEADER]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_SDIV_CONTINUE30:.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i1> [[TMP0]], i32 0
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[PRED_SDIV_IF:.*]], label %[[PRED_SDIV_CONTINUE:.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[PRED_SDIV_IF:.*]], label %[[LOOP_LATCH:.*]]
 ; CHECK:       [[PRED_SDIV_IF]]:
-; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE]]
-; CHECK:       [[PRED_SDIV_CONTINUE]]:
+; CHECK-NEXT:    br label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <16 x i1> [[TMP0]], i32 1
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_SDIV_IF1:.*]], label %[[PRED_SDIV_CONTINUE2:.*]]
-; CHECK:       [[PRED_SDIV_IF1]]:
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[EXIT:.*]], label %[[PRED_SDIV_CONTINUE2:.*]]
+; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE2]]
 ; CHECK:       [[PRED_SDIV_CONTINUE2]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <16 x i1> [[TMP0]], i32 2
@@ -97,33 +97,15 @@ define i8 @pr141968(i1 %cond, i8 %v) {
 ; CHECK:       [[PRED_SDIV_IF29]]:
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE30]]
 ; CHECK:       [[PRED_SDIV_CONTINUE30]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT31:%.*]] = insertelement <16 x i8> poison, i8 [[V]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT32:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT31]], <16 x i8> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[BROADCAST_SPLAT]], <16 x i8> zeroinitializer, <16 x i8> [[BROADCAST_SPLAT32]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[COND]], i8 0, i8 [[V]]
+; CHECK-NEXT:    store i8 [[PREDPHI]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[INDEX_NEXT]], 256
-; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[COND_FALSE]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <16 x i8> [[PREDPHI]], i32 15
-; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ 0, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
-; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_LATCH]], label %[[COND_FALSE:.*]]
-; CHECK:       [[COND_FALSE]]:
-; CHECK-NEXT:    [[SDIV:%.*]] = sdiv i16 [[SEXT]], [[ZEXT_TRUE]]
-; CHECK-NEXT:    [[SDIV_TRUNC:%.*]] = trunc i16 [[SDIV]] to i8
-; CHECK-NEXT:    br label %[[LOOP_LATCH]]
-; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[RET:%.*]] = phi i8 [ [[SDIV_TRUNC]], %[[COND_FALSE]] ], [ 0, %[[LOOP_HEADER]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i8 [[IV_NEXT]], 0
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RET_LCSSA:%.*]] = phi i8 [ [[RET]], %[[LOOP_LATCH]] ], [ [[TMP18]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i8 [[RET_LCSSA]]
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   %zext.true = zext i1 true to i16
@@ -141,10 +123,11 @@ cond.false:                                       ; preds = %loop.header
 
 loop.latch:                                       ; preds = %cond.false, %loop.header
   %ret = phi i8 [ %sdiv.trunc, %cond.false ], [ 0, %loop.header ]
+  store i8 %ret, ptr %p, align 1
   %iv.next = add i8 %iv, 1
   %exitcond = icmp eq i8 %iv.next, 0
   br i1 %exitcond, label %exit, label %loop.header
 
 exit:                                             ; preds = %loop.latch
-  ret i8 %ret
+  ret void
 }

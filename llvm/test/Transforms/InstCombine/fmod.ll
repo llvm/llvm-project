@@ -99,7 +99,7 @@ entry:
   ret fp128 %call
 }
 
-define float @test_noinf_nozero_dazpreservesign(float nofpclass(inf) %f, float nofpclass(zero) %g) "denormal-fp-math"="preserve-sign,preserve-sign" {
+define float @test_noinf_nozero_dazpreservesign(float nofpclass(inf) %f, float nofpclass(zero) %g) denormal_fpenv(preservesign) {
 ; CHECK-LABEL: define float @test_noinf_nozero_dazpreservesign(
 ; CHECK-SAME: float nofpclass(inf) [[F:%.*]], float nofpclass(zero) [[G:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -111,7 +111,7 @@ entry:
   ret float %call
 }
 
-define float @test_noinf_nozero_dazdynamic(float nofpclass(inf) %f, float nofpclass(zero) %g) "denormal-fp-math"="dynamic,dynamic" {
+define float @test_noinf_nozero_dazdynamic(float nofpclass(inf) %f, float nofpclass(zero) %g) denormal_fpenv(dynamic) {
 ; CHECK-LABEL: define float @test_noinf_nozero_dazdynamic(
 ; CHECK-SAME: float nofpclass(inf) [[F:%.*]], float nofpclass(zero) [[G:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:

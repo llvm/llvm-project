@@ -2,6 +2,7 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=instruction-select -verify-machineinstrs %s -o -  | FileCheck -check-prefix=GCN %s
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -run-pass=instruction-select -verify-machineinstrs %s -o -  | FileCheck -check-prefix=GCN %s
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -run-pass=instruction-select -verify-machineinstrs %s -o -  | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass=instruction-select %s -o -  | FileCheck -check-prefix=GCN %s
 
 ---
 name: smin_s32_ss

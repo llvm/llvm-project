@@ -295,36 +295,36 @@ attributes #7 = { builtin }
 
 ; DOT: digraph "postbuild" {
 ; DOT: 	label="postbuild";
-; DOT: 	Node[[BAR:0x[a-z0-9]+]] [shape=record,tooltip="N[[BAR]] ContextIds: 1 2",fillcolor="mediumorchid1",style="filled",label="{OrigId: Alloc0\n_Z3barv -\> _Znam}"];
-; DOT: 	Node[[FOO:0x[a-z0-9]+]] [shape=record,tooltip="N[[FOO]] ContextIds: 3 4",fillcolor="mediumorchid1",style="filled",label="{OrigId: 2732490490862098848\nnull call (external)}"];
+; DOT: 	Node[[BAR:0x[a-z0-9]+]] [shape=record,tooltip="N[[BAR]] ContextIds: 1 2",fillcolor="mediumorchid1",style="filled",label="{OrigId: Alloc0{{.*}}\n_Z3barv -\> _Znam}"];
+; DOT: 	Node[[FOO:0x[a-z0-9]+]] [shape=record,tooltip="N[[FOO]] ContextIds: 3 4",fillcolor="mediumorchid1",style="filled",label="{OrigId: 2732490490862098848{{.*}}\nnull call (external)}"];
 ; DOT: 	Node[[FOO]] -> Node[[BAZ:0x[a-z0-9]+]][tooltip="ContextIds: 3 4",fillcolor="mediumorchid1"
-; DOT: 	Node[[MAIN1:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN1]] ContextIds: 1 3",fillcolor="brown1",style="filled",label="{OrigId: 8632435727821051414\nmain -\> _Z3foov}"];
+; DOT: 	Node[[MAIN1:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN1]] ContextIds: 1 3",fillcolor="brown1",style="filled",label="{OrigId: 8632435727821051414{{.*}}\nmain -\> _Z3foov}"];
 ; DOT: 	Node[[MAIN1]] -> Node[[FOO]][tooltip="ContextIds: 3",fillcolor="brown1"
 ; DOT: 	Node[[MAIN1]] -> Node[[FOO2:0x[a-z0-9]+]][tooltip="ContextIds: 1",fillcolor="brown1"
-; DOT: 	Node[[MAIN2:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN2]] ContextIds: 2 4",fillcolor="cyan",style="filled",label="{OrigId: 15025054523792398438\nmain -\> _Z3foov}"];
+; DOT: 	Node[[MAIN2:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN2]] ContextIds: 2 4",fillcolor="cyan",style="filled",label="{OrigId: 15025054523792398438{{.*}}\nmain -\> _Z3foov}"];
 ; DOT: 	Node[[MAIN2]] -> Node[[FOO]][tooltip="ContextIds: 4",fillcolor="cyan"
 ; DOT: 	Node[[MAIN2]] -> Node[[FOO2]][tooltip="ContextIds: 2",fillcolor="cyan"
-; DOT: 	Node[[BAZ]] [shape=record,tooltip="N[[BAZ]] ContextIds: 3 4",fillcolor="mediumorchid1",style="filled",label="{OrigId: Alloc2\n_Z3bazv -\> _Znam}"];
-; DOT: 	Node[[FOO2]] [shape=record,tooltip="N[[FOO2]] ContextIds: 1 2",fillcolor="mediumorchid1",style="filled",label="{OrigId: 0\n_Z3foov -\> _Z3barv}"];
+; DOT: 	Node[[BAZ]] [shape=record,tooltip="N[[BAZ]] ContextIds: 3 4",fillcolor="mediumorchid1",style="filled",label="{OrigId: Alloc2{{.*}}\n_Z3bazv -\> _Znam}"];
+; DOT: 	Node[[FOO2]] [shape=record,tooltip="N[[FOO2]] ContextIds: 1 2",fillcolor="mediumorchid1",style="filled",label="{OrigId: 0{{.*}}\n_Z3foov -\> _Z3barv}"];
 ; DOT: 	Node[[FOO2]] -> Node[[BAR]][tooltip="ContextIds: 1 2",fillcolor="mediumorchid1"
 ; DOT: }
 
 
 ; DOTCLONED: digraph "cloned" {
 ; DOTCLONED: 	label="cloned";
-; DOTCLONED: 	Node[[BAR:0x[a-z0-9]+]] [shape=record,tooltip="N[[BAR]] ContextIds: 1",fillcolor="brown1",style="filled",label="{OrigId: Alloc0\n_Z3barv -\> _Znam}"];
-; DOTCLONED: 	Node[[FOO2:0x[a-z0-9]+]] [shape=record,tooltip="N[[FOO2]] ContextIds: 3 4",fillcolor="mediumorchid1",style="filled",label="{OrigId: 2732490490862098848\nnull call (external)}"];
+; DOTCLONED: 	Node[[BAR:0x[a-z0-9]+]] [shape=record,tooltip="N[[BAR]] ContextIds: 1",fillcolor="brown1",style="filled",label="{OrigId: Alloc0{{.*}}\n_Z3barv -\> _Znam}"];
+; DOTCLONED: 	Node[[FOO2:0x[a-z0-9]+]] [shape=record,tooltip="N[[FOO2]] ContextIds: 3 4",fillcolor="mediumorchid1",style="filled",label="{OrigId: 2732490490862098848{{.*}}\nnull call (external)}"];
 ; DOTCLONED: 	Node[[FOO2]] -> Node[[BAZ:0x[a-z0-9]+]][tooltip="ContextIds: 3 4",fillcolor="mediumorchid1"
-; DOTCLONED: 	Node[[MAIN1:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN1]] ContextIds: 1 3",fillcolor="brown1",style="filled",label="{OrigId: 8632435727821051414\nmain -\> _Z3foov}"];
+; DOTCLONED: 	Node[[MAIN1:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN1]] ContextIds: 1 3",fillcolor="brown1",style="filled",label="{OrigId: 8632435727821051414{{.*}}\nmain -\> _Z3foov}"];
 ; DOTCLONED: 	Node[[MAIN1]] -> Node[[FOO2]][tooltip="ContextIds: 3",fillcolor="brown1"
 ; DOTCLONED: 	Node[[MAIN1]] -> Node[[FOO:0x[a-z0-9]+]][tooltip="ContextIds: 1",fillcolor="brown1"
-; DOTCLONED: 	Node[[MAIN2:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN2]] ContextIds: 2 4",fillcolor="cyan",style="filled",label="{OrigId: 15025054523792398438\nmain -\> _Z3foov}"];
+; DOTCLONED: 	Node[[MAIN2:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN2]] ContextIds: 2 4",fillcolor="cyan",style="filled",label="{OrigId: 15025054523792398438{{.*}}\nmain -\> _Z3foov}"];
 ; DOTCLONED: 	Node[[MAIN2]] -> Node[[FOO2]][tooltip="ContextIds: 4",fillcolor="cyan"
 ; DOTCLONED: 	Node[[MAIN2]] -> Node[[FOO3:0x[a-z0-9]+]][tooltip="ContextIds: 2",fillcolor="cyan"
-; DOTCLONED: 	Node[[BAZ]] [shape=record,tooltip="N[[BAZ]] ContextIds: 3 4",fillcolor="mediumorchid1",style="filled",label="{OrigId: Alloc2\n_Z3bazv -\> _Znam}"];
-; DOTCLONED: 	Node[[FOO]] [shape=record,tooltip="N[[FOO]] ContextIds: 1",fillcolor="brown1",style="filled",label="{OrigId: 0\n_Z3foov -\> _Z3barv}"];
+; DOTCLONED: 	Node[[BAZ]] [shape=record,tooltip="N[[BAZ]] ContextIds: 3 4",fillcolor="mediumorchid1",style="filled",label="{OrigId: Alloc2{{.*}}\n_Z3bazv -\> _Znam}"];
+; DOTCLONED: 	Node[[FOO]] [shape=record,tooltip="N[[FOO]] ContextIds: 1",fillcolor="brown1",style="filled",label="{OrigId: 0{{.*}}\n_Z3foov -\> _Z3barv}"];
 ; DOTCLONED: 	Node[[FOO]] -> Node[[BAR]][tooltip="ContextIds: 1",fillcolor="brown1"
-; DOTCLONED: 	Node[[FOO3]] [shape=record,tooltip="N[[FOO3]] ContextIds: 2",fillcolor="cyan",color="blue",style="filled,bold,dashed",label="{OrigId: 0\n_Z3foov -\> _Z3barv}"];
+; DOTCLONED: 	Node[[FOO3]] [shape=record,tooltip="N[[FOO3]] ContextIds: 2",fillcolor="cyan",color="blue",style="filled,bold,dashed",label="{OrigId: 0{{.*}}\n_Z3foov -\> _Z3barv}"];
 ; DOTCLONED: 	Node[[FOO3]] -> Node[[BAR2:0x[a-z0-9]+]][tooltip="ContextIds: 2",fillcolor="cyan"
-; DOTCLONED: 	Node[[BAR2]] [shape=record,tooltip="N[[BAR2]] ContextIds: 2",fillcolor="cyan",color="blue",style="filled,bold,dashed",label="{OrigId: Alloc0\n_Z3barv -\> _Znam}"];
+; DOTCLONED: 	Node[[BAR2]] [shape=record,tooltip="N[[BAR2]] ContextIds: 2",fillcolor="cyan",color="blue",style="filled,bold,dashed",label="{OrigId: Alloc0{{.*}}\n_Z3barv -\> _Znam}"];
 ; DOTCLONED: }

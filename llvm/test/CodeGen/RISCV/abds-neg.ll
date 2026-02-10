@@ -2221,7 +2221,7 @@ define i32 @abd_subnsw_i32(i32 %a, i32 %b) nounwind {
 ;
 ; RV64I-LABEL: abd_subnsw_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    sub a0, a0, a1
 ; RV64I-NEXT:    sraiw a1, a0, 31
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    subw a0, a1, a0
@@ -2236,7 +2236,7 @@ define i32 @abd_subnsw_i32(i32 %a, i32 %b) nounwind {
 ;
 ; RV64ZBB-LABEL: abd_subnsw_i32:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    subw a0, a0, a1
+; RV64ZBB-NEXT:    sub a0, a0, a1
 ; RV64ZBB-NEXT:    sraiw a1, a0, 31
 ; RV64ZBB-NEXT:    xor a0, a0, a1
 ; RV64ZBB-NEXT:    subw a0, a1, a0
@@ -2258,7 +2258,7 @@ define i32 @abd_subnsw_i32_undef(i32 %a, i32 %b) nounwind {
 ;
 ; RV64I-LABEL: abd_subnsw_i32_undef:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    sub a0, a0, a1
 ; RV64I-NEXT:    sraiw a1, a0, 31
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    subw a0, a1, a0
@@ -2273,7 +2273,7 @@ define i32 @abd_subnsw_i32_undef(i32 %a, i32 %b) nounwind {
 ;
 ; RV64ZBB-LABEL: abd_subnsw_i32_undef:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    subw a0, a0, a1
+; RV64ZBB-NEXT:    sub a0, a0, a1
 ; RV64ZBB-NEXT:    sraiw a1, a0, 31
 ; RV64ZBB-NEXT:    xor a0, a0, a1
 ; RV64ZBB-NEXT:    subw a0, a1, a0
@@ -2670,18 +2670,3 @@ define i128 @abd_subnsw_i128_undef(i128 %a, i128 %b) nounwind {
   ret i128 %nabs
 }
 
-declare i8 @llvm.abs.i8(i8, i1)
-declare i16 @llvm.abs.i16(i16, i1)
-declare i32 @llvm.abs.i32(i32, i1)
-declare i64 @llvm.abs.i64(i64, i1)
-declare i128 @llvm.abs.i128(i128, i1)
-
-declare i8 @llvm.smax.i8(i8, i8)
-declare i16 @llvm.smax.i16(i16, i16)
-declare i32 @llvm.smax.i32(i32, i32)
-declare i64 @llvm.smax.i64(i64, i64)
-
-declare i8 @llvm.smin.i8(i8, i8)
-declare i16 @llvm.smin.i16(i16, i16)
-declare i32 @llvm.smin.i32(i32, i32)
-declare i64 @llvm.smin.i64(i64, i64)

@@ -19,6 +19,7 @@
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/ExecutionEngine/Orc/UnwindInfoRegistrationPlugin.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
@@ -616,14 +617,11 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
       [](const JITDylibSearchOrder &SO) { return SO; });
   StringRef WrapperToCall = "__orc_rt_jit_dlopen_wrapper";
   bool dlupdate = false;
-  const Triple &TT = ES.getTargetTriple();
-  if (TT.isOSBinFormatMachO() || TT.isOSBinFormatELF()) {
-    if (InitializedDylib.contains(&JD)) {
-      WrapperToCall = "__orc_rt_jit_dlupdate_wrapper";
-      dlupdate = true;
-    } else
-      InitializedDylib.insert(&JD);
-  }
+  if (InitializedDylib.contains(&JD)) {
+    WrapperToCall = "__orc_rt_jit_dlupdate_wrapper";
+    dlupdate = true;
+  } else
+    InitializedDylib.insert(&JD);
 
   if (auto WrapperAddr =
           ES.lookup(MainSearchOrder, J.mangleAndIntern(WrapperToCall))) {
@@ -631,16 +629,19 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
       int32_t result;
       auto E = ES.callSPSWrapper<SPSDLUpdateSig>(WrapperAddr->getAddress(),
                                                  result, DSOHandles[&JD]);
-      if (result)
+      if (E)
+        return E;
+      else if (result)
         return make_error<StringError>("dlupdate failed",
                                        inconvertibleErrorCode());
-      return E;
-    }
-    return ES.callSPSWrapper<SPSDLOpenSig>(WrapperAddr->getAddress(),
-                                           DSOHandles[&JD], JD.getName(),
-                                           int32_t(ORC_RT_RTLD_LAZY));
+    } else
+      return ES.callSPSWrapper<SPSDLOpenSig>(WrapperAddr->getAddress(),
+                                             DSOHandles[&JD], JD.getName(),
+                                             int32_t(ORC_RT_RTLD_LAZY));
   } else
     return WrapperAddr.takeError();
+
+  return Error::success();
 }
 
 Error ORCPlatformSupport::deinitialize(orc::JITDylib &JD) {

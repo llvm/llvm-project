@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn < %s | FileCheck --check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}rcp_uint:
 ; GCN: v_rcp_iflag_f32_e32
@@ -42,5 +42,5 @@ define amdgpu_kernel void @rcp_sint_denorm(ptr addrspace(1) %in, ptr addrspace(1
 
 !0 = !{float 2.500000e+00}
 
-attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #1 = { "denormal-fp-math-f32"="ieee,ieee" }
+attributes #0 = { denormal_fpenv(float: preservesign) }
+attributes #1 = { denormal_fpenv(float: ieee|ieee) }

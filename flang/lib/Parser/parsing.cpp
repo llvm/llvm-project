@@ -85,6 +85,7 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
   if (options.features.IsEnabled(LanguageFeature::OpenACC) ||
       (options.prescanAndReformat && noneOfTheAbove)) {
     prescanner.AddCompilerDirectiveSentinel("$acc");
+    prescanner.AddCompilerDirectiveSentinel("@acc");
   }
   if (options.features.IsEnabled(LanguageFeature::OpenMP) ||
       (options.prescanAndReformat && noneOfTheAbove)) {
@@ -96,8 +97,8 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
     prescanner.AddCompilerDirectiveSentinel("$cuf");
     prescanner.AddCompilerDirectiveSentinel("@cuf");
   }
-  if (options.features.IsEnabled(LanguageFeature::CUDA)) {
-    preprocessor_.Define("_CUDA", "1");
+  for (const auto &sentinel : options.compilerDirectiveSentinels) {
+    prescanner.AddCompilerDirectiveSentinel(sentinel);
   }
   ProvenanceRange range{allSources.AddIncludedFile(
       *sourceFile, ProvenanceRange{}, options.isModuleFile)};
@@ -285,6 +286,8 @@ void Parsing::Parse(llvm::raw_ostream &out) {
       .set_log(&log_);
   ParseState parseState{cooked()};
   parseState.set_inFixedForm(options_.isFixedForm).set_userState(&userState);
+  // Don't bother managing message buffers when parsing module files.
+  parseState.set_deferMessages(options_.isModuleFile);
   parseTree_ = program.Parse(parseState);
   CHECK(
       !parseState.anyErrorRecovery() || parseState.messages().AnyFatalError());

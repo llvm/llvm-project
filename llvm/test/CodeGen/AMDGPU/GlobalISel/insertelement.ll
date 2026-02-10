@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GPRIDX %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10PLUS,GFX10 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11 %s
-; RUN: not --crash llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not --crash llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -verify-machineinstrs -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
 
 ; FIXME: Need constant bus fixup pre-gfx10 for movrel
 ; ERR: Bad machine code: VOP* instruction violates constant bus restriction
@@ -2024,31 +2024,30 @@ entry:
 define amdgpu_ps <8 x float> @dyn_insertelement_v8f32_s_s_s_add_1(<8 x float> inreg %vec, float inreg %val, i32 inreg %idx) {
 ; GPRIDX-LABEL: dyn_insertelement_v8f32_s_s_s_add_1:
 ; GPRIDX:       ; %bb.0: ; %entry
-; GPRIDX-NEXT:    s_add_i32 s11, s11, 1
-; GPRIDX-NEXT:    s_cmp_eq_u32 s11, 0
-; GPRIDX-NEXT:    s_cselect_b32 s0, s10, s2
-; GPRIDX-NEXT:    s_cmp_eq_u32 s11, 1
-; GPRIDX-NEXT:    s_cselect_b32 s1, s10, s3
-; GPRIDX-NEXT:    s_cmp_eq_u32 s11, 2
-; GPRIDX-NEXT:    s_cselect_b32 s2, s10, s4
-; GPRIDX-NEXT:    s_cmp_eq_u32 s11, 3
-; GPRIDX-NEXT:    s_cselect_b32 s3, s10, s5
-; GPRIDX-NEXT:    s_cmp_eq_u32 s11, 4
-; GPRIDX-NEXT:    s_cselect_b32 s4, s10, s6
-; GPRIDX-NEXT:    s_cmp_eq_u32 s11, 5
-; GPRIDX-NEXT:    s_cselect_b32 s5, s10, s7
-; GPRIDX-NEXT:    s_cmp_eq_u32 s11, 6
-; GPRIDX-NEXT:    s_cselect_b32 s6, s10, s8
-; GPRIDX-NEXT:    s_cmp_eq_u32 s11, 7
-; GPRIDX-NEXT:    s_cselect_b32 s7, s10, s9
-; GPRIDX-NEXT:    v_mov_b32_e32 v0, s0
-; GPRIDX-NEXT:    v_mov_b32_e32 v1, s1
-; GPRIDX-NEXT:    v_mov_b32_e32 v2, s2
-; GPRIDX-NEXT:    v_mov_b32_e32 v3, s3
-; GPRIDX-NEXT:    v_mov_b32_e32 v4, s4
-; GPRIDX-NEXT:    v_mov_b32_e32 v5, s5
-; GPRIDX-NEXT:    v_mov_b32_e32 v6, s6
-; GPRIDX-NEXT:    v_mov_b32_e32 v7, s7
+; GPRIDX-NEXT:    s_add_u32 s0, s11, 1
+; GPRIDX-NEXT:    s_cselect_b32 s1, s10, s2
+; GPRIDX-NEXT:    s_cmp_eq_u32 s0, 1
+; GPRIDX-NEXT:    s_cselect_b32 s2, s10, s3
+; GPRIDX-NEXT:    s_cmp_eq_u32 s0, 2
+; GPRIDX-NEXT:    s_cselect_b32 s3, s10, s4
+; GPRIDX-NEXT:    s_cmp_eq_u32 s0, 3
+; GPRIDX-NEXT:    s_cselect_b32 s4, s10, s5
+; GPRIDX-NEXT:    s_cmp_eq_u32 s0, 4
+; GPRIDX-NEXT:    s_cselect_b32 s5, s10, s6
+; GPRIDX-NEXT:    s_cmp_eq_u32 s0, 5
+; GPRIDX-NEXT:    s_cselect_b32 s6, s10, s7
+; GPRIDX-NEXT:    s_cmp_eq_u32 s0, 6
+; GPRIDX-NEXT:    s_cselect_b32 s7, s10, s8
+; GPRIDX-NEXT:    s_cmp_eq_u32 s0, 7
+; GPRIDX-NEXT:    s_cselect_b32 s0, s10, s9
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, s1
+; GPRIDX-NEXT:    v_mov_b32_e32 v1, s2
+; GPRIDX-NEXT:    v_mov_b32_e32 v2, s3
+; GPRIDX-NEXT:    v_mov_b32_e32 v3, s4
+; GPRIDX-NEXT:    v_mov_b32_e32 v4, s5
+; GPRIDX-NEXT:    v_mov_b32_e32 v5, s6
+; GPRIDX-NEXT:    v_mov_b32_e32 v6, s7
+; GPRIDX-NEXT:    v_mov_b32_e32 v7, s0
 ; GPRIDX-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: dyn_insertelement_v8f32_s_s_s_add_1:
@@ -6505,4 +6504,48 @@ define amdgpu_ps <5 x double> @dyn_insertelement_v5f64_v_v_v(<5 x double> %vec, 
 entry:
   %insert = insertelement <5 x double> %vec, double %val, i32 %idx
   ret <5 x double> %insert
+}
+
+; Found by fuzzer, reduced with llvm-reduce.
+define void @insert_very_small_from_very_large(<32 x i16> %L3, ptr %ptr) {
+; GPRIDX-LABEL: insert_very_small_from_very_large:
+; GPRIDX:       ; %bb.0: ; %bb
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GPRIDX-NEXT:    v_lshrrev_b32_e32 v0, 1, v0
+; GPRIDX-NEXT:    v_and_b32_e32 v0, 1, v0
+; GPRIDX-NEXT:    v_lshlrev_b16_e32 v0, 1, v0
+; GPRIDX-NEXT:    v_and_b32_e32 v0, 3, v0
+; GPRIDX-NEXT:    flat_store_byte v[16:17], v0
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GPRIDX-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: insert_very_small_from_very_large:
+; GFX10:       ; %bb.0: ; %bb
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 1, v0
+; GFX10-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX10-NEXT:    v_lshlrev_b16 v0, 1, v0
+; GFX10-NEXT:    v_and_b32_e32 v0, 3, v0
+; GFX10-NEXT:    flat_store_byte v[16:17], v0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: insert_very_small_from_very_large:
+; GFX11:       ; %bb.0: ; %bb
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_lshrrev_b16 v0.l, 1, v0.l
+; GFX11-NEXT:    v_and_b16 v0.l, v0.l, 1
+; GFX11-NEXT:    v_lshlrev_b16 v0.l, 1, v0.l
+; GFX11-NEXT:    v_and_b32_e32 v0, 3, v0
+; GFX11-NEXT:    flat_store_b8 v[16:17], v0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+bb:
+  %a = bitcast <32 x i16> %L3 to i512
+  %b = trunc i512 %a to i8
+  %c = trunc i8 %b to i2
+  %d = bitcast i2 %c to <2 x i1>
+  %insert = insertelement <2 x i1> %d, i1 false, i32 0
+  store <2 x i1> %insert, ptr %ptr, align 1
+  ret void
 }

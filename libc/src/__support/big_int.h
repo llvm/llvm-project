@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_BIG_INT_H
 #define LLVM_LIBC_SRC___SUPPORT_BIG_INT_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/bit.h" // countl_zero
 #include "src/__support/CPP/limits.h"
@@ -23,7 +24,6 @@
 #include "src/__support/number_pair.h"
 
 #include <stddef.h> // For size_t
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -95,10 +95,10 @@ LIBC_INLINE constexpr DoubleWide<word> mul2(word a, word b) {
 #endif
   else {
     using half_word = half_width_t<word>;
-    const auto shiftl = [](word value) -> word {
+    constexpr auto shiftl = [](word value) -> word {
       return value << cpp::numeric_limits<half_word>::digits;
     };
-    const auto shiftr = [](word value) -> word {
+    constexpr auto shiftr = [](word value) -> word {
       return value >> cpp::numeric_limits<half_word>::digits;
     };
     // Here we do a one digit multiplication where 'a' and 'b' are of type
@@ -111,19 +111,19 @@ LIBC_INLINE constexpr DoubleWide<word> mul2(word a, word b) {
     //    c         result
     // We convert 'lo' and 'hi' from 'half_word' to 'word' so multiplication
     // doesn't overflow.
-    const word a_lo = lo(a);
-    const word b_lo = lo(b);
-    const word a_hi = hi(a);
-    const word b_hi = hi(b);
-    const word step1 = b_lo * a_lo; // no overflow;
-    const word step2 = b_lo * a_hi; // no overflow;
-    const word step3 = b_hi * a_lo; // no overflow;
-    const word step4 = b_hi * a_hi; // no overflow;
+    word a_lo = lo(a);
+    word b_lo = lo(b);
+    word a_hi = hi(a);
+    word b_hi = hi(b);
+    word step1 = b_lo * a_lo; // no overflow;
+    word step2 = b_lo * a_hi; // no overflow;
+    word step3 = b_hi * a_lo; // no overflow;
+    word step4 = b_hi * a_hi; // no overflow;
     word lo_digit = step1;
     word hi_digit = step4;
-    const word no_carry = 0;
-    word carry;
-    word _; // unused carry variable.
+    word no_carry = 0;
+    word carry = 0;
+    [[maybe_unused]] word _ = 0; // unused carry variable.
     lo_digit = add_with_carry<word>(lo_digit, shiftl(step2), no_carry, carry);
     hi_digit = add_with_carry<word>(hi_digit, shiftr(step2), carry, _);
     lo_digit = add_with_carry<word>(lo_digit, shiftl(step3), no_carry, carry);

@@ -12,20 +12,18 @@
 #include <utility>
 #include <vector>
 
-#include "IRModule.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Interfaces.h"
 #include "mlir-c/Support.h"
+#include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/Nanobind.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
 
 namespace nb = nanobind;
 
 namespace mlir {
 namespace python {
-
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 constexpr static const char *constructorDoc =
     R"(Creates an interface from a given operation/opview object or from a
 subclass of OpView. Raises ValueError if the operation does not implement the
@@ -48,10 +46,10 @@ its return shaped type components. Raises ValueError on failure.)";
 
 namespace {
 
-/// Takes in an optional ist of operands and converts them into a SmallVector
-/// of MlirVlaues. Returns an empty SmallVector if the list is empty.
-llvm::SmallVector<MlirValue> wrapOperands(std::optional<nb::list> operandList) {
-  llvm::SmallVector<MlirValue> mlirOperands;
+/// Takes in an optional ist of operands and converts them into a std::vector
+/// of MlirVlaues. Returns an empty std::vector if the list is empty.
+std::vector<MlirValue> wrapOperands(std::optional<nb::list> operandList) {
+  std::vector<MlirValue> mlirOperands;
 
   if (!operandList || operandList->size() == 0) {
     return mlirOperands;
@@ -59,13 +57,15 @@ llvm::SmallVector<MlirValue> wrapOperands(std::optional<nb::list> operandList) {
 
   // Note: as the list may contain other lists this may not be final size.
   mlirOperands.reserve(operandList->size());
-  for (const auto &&it : llvm::enumerate(*operandList)) {
-    if (it.value().is_none())
+  for (size_t i = 0, e = operandList->size(); i < e; ++i) {
+    nb::handle operand = (*operandList)[i];
+    intptr_t index = static_cast<intptr_t>(i);
+    if (operand.is_none())
       continue;
 
     PyValue *val;
     try {
-      val = nb::cast<PyValue *>(it.value());
+      val = nb::cast<PyValue *>(operand);
       if (!val)
         throw nb::cast_error();
       mlirOperands.push_back(val->get());
@@ -76,7 +76,7 @@ llvm::SmallVector<MlirValue> wrapOperands(std::optional<nb::list> operandList) {
     }
 
     try {
-      auto vals = nb::cast<nb::sequence>(it.value());
+      auto vals = nb::cast<nb::sequence>(operand);
       for (nb::handle v : vals) {
         try {
           val = nb::cast<PyValue *>(v);
@@ -85,19 +85,19 @@ llvm::SmallVector<MlirValue> wrapOperands(std::optional<nb::list> operandList) {
           mlirOperands.push_back(val->get());
         } catch (nb::cast_error &err) {
           throw nb::value_error(
-              (llvm::Twine("Operand ") + llvm::Twine(it.index()) +
-               " must be a Value or Sequence of Values (" + err.what() + ")")
-                  .str()
+              nanobind::detail::join("Operand ", index,
+                                     " must be a Value or Sequence of Values (",
+                                     err.what(), ")")
                   .c_str());
         }
       }
       continue;
     } catch (nb::cast_error &err) {
-      throw nb::value_error((llvm::Twine("Operand ") + llvm::Twine(it.index()) +
-                             " must be a Value or Sequence of Values (" +
-                             err.what() + ")")
-                                .str()
-                                .c_str());
+      throw nb::value_error(
+          nanobind::detail::join("Operand ", index,
+                                 " must be a Value or Sequence of Values (",
+                                 err.what(), ")")
+              .c_str());
     }
 
     throw nb::cast_error();
@@ -106,11 +106,11 @@ llvm::SmallVector<MlirValue> wrapOperands(std::optional<nb::list> operandList) {
   return mlirOperands;
 }
 
-/// Takes in an optional vector of PyRegions and returns a SmallVector of
-/// MlirRegion. Returns an empty SmallVector if the list is empty.
-llvm::SmallVector<MlirRegion>
+/// Takes in an optional vector of PyRegions and returns a std::vector of
+/// MlirRegion. Returns an empty std::vector if the list is empty.
+std::vector<MlirRegion>
 wrapRegions(std::optional<std::vector<PyRegion>> regions) {
-  llvm::SmallVector<MlirRegion> mlirRegions;
+  std::vector<MlirRegion> mlirRegions;
 
   if (regions) {
     mlirRegions.reserve(regions->size());
@@ -195,7 +195,7 @@ public:
   static void bind(nb::module_ &m) {
     nb::class_<ConcreteIface> cls(m, ConcreteIface::pyClassName);
     cls.def(nb::init<nb::object, DefaultingPyMlirContext>(), nb::arg("object"),
-            nb::arg("context").none() = nb::none(), constructorDoc)
+            nb::arg("context") = nb::none(), constructorDoc)
         .def_prop_ro("operation", &PyConcreteOpInterface::getOperationObject,
                      operationDoc)
         .def_prop_ro("opview", &PyConcreteOpInterface::getOpView, opviewDoc);
@@ -212,22 +212,18 @@ public:
   /// Returns the operation instance from which this object was constructed.
   /// Throws a type error if this object was constructed from a subclass of
   /// OpView.
-  nb::object getOperationObject() {
-    if (operation == nullptr) {
+  nb::typed<nb::object, PyOperation> getOperationObject() {
+    if (operation == nullptr)
       throw nb::type_error("Cannot get an operation from a static interface");
-    }
-
     return operation->getRef().releaseObject();
   }
 
   /// Returns the opview of the operation instance from which this object was
   /// constructed. Throws a type error if this object was constructed form a
   /// subclass of OpView.
-  nb::object getOpView() {
-    if (operation == nullptr) {
+  nb::typed<nb::object, PyOpView> getOpView() {
+    if (operation == nullptr)
       throw nb::type_error("Cannot get an opview from a static interface");
-    }
-
     return operation->createOpView();
   }
 
@@ -277,9 +273,8 @@ public:
                    std::optional<std::vector<PyRegion>> regions,
                    DefaultingPyMlirContext context,
                    DefaultingPyLocation location) {
-    llvm::SmallVector<MlirValue> mlirOperands =
-        wrapOperands(std::move(operandList));
-    llvm::SmallVector<MlirRegion> mlirRegions = wrapRegions(std::move(regions));
+    std::vector<MlirValue> mlirOperands = wrapOperands(std::move(operandList));
+    std::vector<MlirRegion> mlirRegions = wrapRegions(std::move(regions));
 
     std::vector<PyType> inferredTypes;
     PyMlirContext &pyContext = context.resolve();
@@ -303,12 +298,11 @@ public:
 
   static void bindDerived(ClassTy &cls) {
     cls.def("inferReturnTypes", &PyInferTypeOpInterface::inferReturnTypes,
-            nb::arg("operands").none() = nb::none(),
-            nb::arg("attributes").none() = nb::none(),
-            nb::arg("properties").none() = nb::none(),
-            nb::arg("regions").none() = nb::none(),
-            nb::arg("context").none() = nb::none(),
-            nb::arg("loc").none() = nb::none(), inferReturnTypesDoc);
+            nb::arg("operands") = nb::none(),
+            nb::arg("attributes") = nb::none(),
+            nb::arg("properties") = nb::none(), nb::arg("regions") = nb::none(),
+            nb::arg("context") = nb::none(), nb::arg("loc") = nb::none(),
+            inferReturnTypesDoc);
   }
 };
 
@@ -332,6 +326,7 @@ public:
         .def_prop_ro(
             "element_type",
             [](PyShapedTypeComponents &self) { return self.elementType; },
+            nb::sig("def element_type(self) -> Type"),
             "Returns the element type of the shaped type components.")
         .def_static(
             "get",
@@ -362,10 +357,9 @@ public:
             "Returns whether the given shaped type component is ranked.")
         .def_prop_ro(
             "rank",
-            [](PyShapedTypeComponents &self) -> nb::object {
-              if (!self.ranked) {
-                return nb::none();
-              }
+            [](PyShapedTypeComponents &self) -> std::optional<nb::int_> {
+              if (!self.ranked)
+                return {};
               return nb::int_(self.shape.size());
             },
             "Returns the rank of the given ranked shaped type components. If "
@@ -373,10 +367,9 @@ public:
             "returned.")
         .def_prop_ro(
             "shape",
-            [](PyShapedTypeComponents &self) -> nb::object {
-              if (!self.ranked) {
-                return nb::none();
-              }
+            [](PyShapedTypeComponents &self) -> std::optional<nb::list> {
+              if (!self.ranked)
+                return {};
               return nb::list(self.shape);
             },
             "Returns the shape of the ranked shaped type components as a list "
@@ -436,9 +429,8 @@ public:
       std::optional<PyAttribute> attributes, void *properties,
       std::optional<std::vector<PyRegion>> regions,
       DefaultingPyMlirContext context, DefaultingPyLocation location) {
-    llvm::SmallVector<MlirValue> mlirOperands =
-        wrapOperands(std::move(operandList));
-    llvm::SmallVector<MlirRegion> mlirRegions = wrapRegions(std::move(regions));
+    std::vector<MlirValue> mlirOperands = wrapOperands(std::move(operandList));
+    std::vector<MlirRegion> mlirRegions = wrapRegions(std::move(regions));
 
     std::vector<PyShapedTypeComponents> inferredShapedTypeComponents;
     PyMlirContext &pyContext = context.resolve();
@@ -463,12 +455,10 @@ public:
   static void bindDerived(ClassTy &cls) {
     cls.def("inferReturnTypeComponents",
             &PyInferShapedTypeOpInterface::inferReturnTypeComponents,
-            nb::arg("operands").none() = nb::none(),
-            nb::arg("attributes").none() = nb::none(),
-            nb::arg("regions").none() = nb::none(),
-            nb::arg("properties").none() = nb::none(),
-            nb::arg("context").none() = nb::none(),
-            nb::arg("loc").none() = nb::none(), inferReturnTypeComponentsDoc);
+            nb::arg("operands") = nb::none(),
+            nb::arg("attributes") = nb::none(), nb::arg("regions") = nb::none(),
+            nb::arg("properties") = nb::none(), nb::arg("context") = nb::none(),
+            nb::arg("loc") = nb::none(), inferReturnTypeComponentsDoc);
   }
 };
 
@@ -477,6 +467,6 @@ void populateIRInterfaces(nb::module_ &m) {
   PyShapedTypeComponents::bind(m);
   PyInferShapedTypeOpInterface::bind(m);
 }
-
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python
 } // namespace mlir

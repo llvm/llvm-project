@@ -12,6 +12,7 @@
 
 #include "MipsMCAsmInfo.h"
 #include "MipsABIInfo.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -23,7 +24,8 @@ MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
                                    const MCTargetOptions &Options) {
   IsLittleEndian = TheTriple.isLittleEndian();
 
-  MipsABIInfo ABI = MipsABIInfo::computeTargetABI(TheTriple, "", Options);
+  MipsABIInfo ABI =
+      MipsABIInfo::computeTargetABI(TheTriple, Options.getABIName());
 
   if (TheTriple.isMIPS64() && !ABI.IsN32())
     CodePointerSize = CalleeSaveStackSlotSize = 8;
@@ -39,6 +41,7 @@ MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
   Data32bitsDirective         = "\t.4byte\t";
   Data64bitsDirective         = "\t.8byte\t";
   CommentString               = "#";
+  AllowDollarAtStartOfIdentifier = false;
   ZeroDirective               = "\t.space\t";
   UseAssignmentForEHBegin = true;
   SupportsDebugInformation = true;
@@ -57,6 +60,13 @@ MipsCOFFMCAsmInfo::MipsCOFFMCAsmInfo() {
   PrivateGlobalPrefix = ".L";
   PrivateLabelPrefix = ".L";
   AllowAtInName = true;
+}
+
+const MCSpecifierExpr *Mips::createGpOff(const MCExpr *Expr, Mips::Specifier S,
+                                         MCContext &Ctx) {
+  Expr = MCSpecifierExpr::create(Expr, Mips::S_GPREL, Ctx);
+  Expr = MCSpecifierExpr::create(Expr, Mips::S_NEG, Ctx);
+  return MCSpecifierExpr::create(Expr, S, Ctx);
 }
 
 static void printImpl(const MCAsmInfo &MAI, raw_ostream &OS,

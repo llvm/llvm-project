@@ -285,7 +285,6 @@ protected:
 
   // No-op intrinsics which we know don't escape the pointer to logic in
   // some other function.
-  void visitDbgInfoIntrinsic(DbgInfoIntrinsic &I) {}
   void visitMemIntrinsic(MemIntrinsic &I) {}
   void visitIntrinsicInst(IntrinsicInst &II) {
     switch (II.getIntrinsicID()) {

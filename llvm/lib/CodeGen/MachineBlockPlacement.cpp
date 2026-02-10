@@ -104,6 +104,12 @@ static cl::opt<unsigned> MaxBytesForAlignmentOverride(
              "alignment"),
     cl::init(0), cl::Hidden);
 
+static cl::opt<unsigned> PredecessorLimit(
+    "block-placement-predecessor-limit",
+    cl::desc("For blocks with more predecessors, certain layout optimizations"
+             "will be disabled to prevent quadratic compile time."),
+    cl::init(1000), cl::Hidden);
+
 // FIXME: Find a good default for this flag and remove the flag.
 static cl::opt<unsigned> ExitBlockBias(
     "block-placement-exit-block-bias",
@@ -632,9 +638,7 @@ class MachineBlockPlacementLegacy : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  MachineBlockPlacementLegacy() : MachineFunctionPass(ID) {
-    initializeMachineBlockPlacementLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  MachineBlockPlacementLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (skipFunction(MF.getFunction()))
@@ -694,7 +698,6 @@ static std::string getBlockName(const MachineBasicBlock *BB) {
   raw_string_ostream OS(Result);
   OS << printMBBReference(*BB);
   OS << " ('" << BB->getName() << "')";
-  OS.flush();
   return Result;
 }
 #endif
@@ -1030,6 +1033,11 @@ bool MachineBlockPlacement::isTrellis(
   SmallPtrSet<const MachineBasicBlock *, 8> SeenPreds;
 
   for (MachineBasicBlock *Succ : ViableSuccs) {
+    // Compile-time optimization: runtime is quadratic in the number of
+    // predecessors. For such uncommon cases, exit early.
+    if (Succ->pred_size() > PredecessorLimit)
+      return false;
+
     int PredCount = 0;
     for (auto *SuccPred : Succ->predecessors()) {
       // Allow triangle successors, but don't count them.
@@ -1470,6 +1478,11 @@ bool MachineBlockPlacement::hasBetterLayoutPredecessor(
 
   // There isn't a better layout when there are no unscheduled predecessors.
   if (SuccChain.UnscheduledPredecessors == 0)
+    return false;
+
+  // Compile-time optimization: runtime is quadratic in the number of
+  // predecessors. For such uncommon cases, exit early.
+  if (Succ->pred_size() > PredecessorLimit)
     return false;
 
   // There are two basic scenarios here:
@@ -3212,13 +3225,9 @@ bool MachineBlockPlacement::maybeTailDuplicateBlock(
     // Signal to outer function
     Removed = true;
 
-    // Conservative default.
-    bool InWorkList = true;
     // Remove from the Chain and Chain Map
     if (auto It = BlockToChain.find(RemBB); It != BlockToChain.end()) {
-      BlockChain *Chain = It->second;
-      InWorkList = Chain->UnscheduledPredecessors == 0;
-      Chain->remove(RemBB);
+      It->second->remove(RemBB);
       BlockToChain.erase(It);
     }
 
@@ -3228,11 +3237,10 @@ bool MachineBlockPlacement::maybeTailDuplicateBlock(
     }
 
     // Handle the Work Lists
-    if (InWorkList) {
-      SmallVectorImpl<MachineBasicBlock *> &RemoveList = BlockWorkList;
-      if (RemBB->isEHPad())
-        RemoveList = EHPadWorkList;
-      llvm::erase(RemoveList, RemBB);
+    if (RemBB->isEHPad()) {
+      llvm::erase(EHPadWorkList, RemBB);
+    } else {
+      llvm::erase(BlockWorkList, RemBB);
     }
 
     // Handle the filter set
@@ -3530,20 +3538,24 @@ MachineBlockPlacementPass::run(MachineFunction &MF,
   auto *MPDT = MachineBlockPlacement::allowTailDupPlacement(MF)
                    ? &MFAM.getResult<MachinePostDominatorTreeAnalysis>(MF)
                    : nullptr;
+  auto *MDT = MFAM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
   auto *PSI = MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
                   .getCachedResult<ProfileSummaryAnalysis>(
                       *MF.getFunction().getParent());
   if (!PSI)
     report_fatal_error("MachineBlockPlacement requires ProfileSummaryAnalysis",
                        false);
-
   MachineBlockPlacement MBP(MBPI, MLI, PSI, std::move(MBFI), MPDT,
                             AllowTailMerge);
 
-  if (!MBP.run(MF))
-    return PreservedAnalyses::all();
+  if (MBP.run(MF))
+    return getMachineFunctionPassPreservedAnalyses();
 
-  return getMachineFunctionPassPreservedAnalyses();
+  if (MDT)
+    MDT->updateBlockNumbers();
+  if (MPDT)
+    MPDT->updateBlockNumbers();
+  return PreservedAnalyses::all();
 }
 
 void MachineBlockPlacementPass::printPipeline(
@@ -3857,10 +3869,7 @@ class MachineBlockPlacementStatsLegacy : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  MachineBlockPlacementStatsLegacy() : MachineFunctionPass(ID) {
-    initializeMachineBlockPlacementStatsLegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
+  MachineBlockPlacementStatsLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override {
     auto *MBPI =

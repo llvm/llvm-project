@@ -26,7 +26,8 @@ using namespace llvm;
 
 class TestFrontendAction : public ASTFrontendAction {
 public:
-  TestFrontendAction(ExternalASTSource *Source) : Source(Source) {}
+  TestFrontendAction(IntrusiveRefCntPtr<ExternalASTSource> Source)
+      : Source(std::move(Source)) {}
 
 private:
   void ExecuteAction() override {
@@ -44,7 +45,8 @@ private:
   IntrusiveRefCntPtr<ExternalASTSource> Source;
 };
 
-bool testExternalASTSource(ExternalASTSource *Source, StringRef FileContents) {
+bool testExternalASTSource(llvm::IntrusiveRefCntPtr<ExternalASTSource> Source,
+                           StringRef FileContents) {
 
   auto Invocation = std::make_shared<CompilerInvocation>();
   Invocation->getPreprocessorOpts().addRemappedFile(
@@ -57,7 +59,8 @@ bool testExternalASTSource(ExternalASTSource *Source, StringRef FileContents) {
   CompilerInvocation::CreateFromArgs(*Invocation, Args, *InvocationDiags);
 
   CompilerInstance Compiler(std::move(Invocation));
-  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+  Compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
+  Compiler.createDiagnostics();
 
   TestFrontendAction Action(Source);
   return Compiler.ExecuteAction(Action);
@@ -80,6 +83,7 @@ TEST(ExternalASTSourceTest, FailedLookupOccursOnce) {
   };
 
   unsigned Calls = 0;
-  ASSERT_TRUE(testExternalASTSource(new TestSource(Calls), "int j, k = j;"));
+  ASSERT_TRUE(testExternalASTSource(
+      llvm::makeIntrusiveRefCnt<TestSource>(Calls), "int j, k = j;"));
   EXPECT_EQ(1u, Calls);
 }

@@ -1,6 +1,9 @@
 <!-- This document is written in Markdown and uses extra directives provided by
 MyST (https://myst-parser.readthedocs.io/en/latest/). -->
 
+<!-- If you want to modify sections/contents permanently, you should modify both
+ReleaseNotes.md and ReleaseNotesTemplate.txt. -->
+
 LLVM {{env.config.release}} Release Notes
 =========================================
 
@@ -56,36 +59,17 @@ Makes programs 10x faster by doing Special New Thing.
 Changes to the LLVM IR
 ----------------------
 
-* It is no longer permitted to inspect the uses of ConstantData. Use
-  count APIs will behave as if they have no uses (i.e. use_empty() is
-  always true).
+* Removed `llvm.convert.to.fp16` and `llvm.convert.from.fp16`
+  intrinsics. These are equivalent to `fptrunc` and `fpext` with half
+  with a bitcast.
 
-* The `nocapture` attribute has been replaced by `captures(none)`.
-* The constant expression variants of the following instructions have been
-  removed:
-
-  * `mul`
-
-* Updated semantics of `llvm.type.checked.load.relative` to match that of
-  `llvm.load.relative`.
-* Inline asm calls no longer accept ``label`` arguments. Use ``callbr`` instead.
-
-* Updated semantics of the `callbr` instruction to clarify that its
-  'indirect labels' are not expected to be reached by indirect (as in
-  register-controlled) branch instructions, and therefore are not
-  guaranteed to start with a `bti` or `endbr64` instruction, where
-  those exist.
+* "denormal-fp-math" and "denormal-fp-math-f32" string attributes were
+  migrated to first-class denormal_fpenv attribute.
 
 Changes to LLVM infrastructure
 ------------------------------
 
-* Removed support for target intrinsics being defined in the target directories
-  themselves (i.e., the `TargetIntrinsicInfo` class).
-* Fix Microsoft demangling of string literals to be stricter
-  (#GH129970))
-* Added the support for ``fmaximum`` and ``fminimum`` in ``atomicrmw`` instruction. The
-  comparison is expected to match the behavior of ``llvm.maximum.*`` and
-  ``llvm.minimum.*`` respectively.
+* Removed TypePromoteFloat legalization from SelectionDAG
 
 Changes to building LLVM
 ------------------------
@@ -96,33 +80,16 @@ Changes to TableGen
 Changes to Interprocedural Optimizations
 ----------------------------------------
 
+Changes to Vectorizers
+----------------------
+
 Changes to the AArch64 Backend
 ------------------------------
-
-* Added the `execute-only` target feature, which indicates that the generated
-  program code doesn't contain any inline data, and there are no data accesses
-  to code sections. On ELF targets this property is indicated by the
-  `SHF_AARCH64_PURECODE` section flag.
-  ([#125687](https://github.com/llvm/llvm-project/pull/125687),
-  [#132196](https://github.com/llvm/llvm-project/pull/132196),
-  [#133084](https://github.com/llvm/llvm-project/pull/133084))
 
 Changes to the AMDGPU Backend
 -----------------------------
 
-* Enabled the
-  [FWD_PROGRESS bit](https://llvm.org/docs/AMDGPUUsage.html#code-object-v3-kernel-descriptor)
-  for all GFX ISAs greater or equal to 10, for the AMDHSA OS.
-
-* Bump the default `.amdhsa_code_object_version` to 6. ROCm 6.3 is required to run any program compiled with COV6.
-
-* Add a new `amdgcn.load.to.lds` intrinsic that wraps the existing global.load.lds
-intrinsic and has the same semantics. This intrinsic allows using buffer fat pointers
-(`ptr addrspace(7)`) as arguments, allowing loads to LDS from these pointers to be
-represented in the IR without needing to use buffer resource intrinsics directly.
-This intrinsic is exposed to Clang as `__builtin_amdgcn_load_to_lds`, though
-buffer fat pointers are not yet enabled in Clang. Migration to this intrinsic is
-optional, and there are no plans to deprecate `amdgcn.global.load.lds`.
+* Initial support for gfx1310
 
 Changes to the ARM Backend
 --------------------------
@@ -136,20 +103,21 @@ Changes to the DirectX Backend
 Changes to the Hexagon Backend
 ------------------------------
 
-* The default Hexagon architecture version in ELF object files produced by
-  the tools such as llvm-mc is changed to v68. This version will be set if
-  the user does not provide the CPU version in the command line.
-
 Changes to the LoongArch Backend
 --------------------------------
 
-* Changing the default code model from `small` to `medium` for 64-bit.
-* Added inline asm support for the `q` constraint.
+* DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
+  to be used together when building for the LoongArch platform.
 
 Changes to the MIPS Backend
 ---------------------------
 
-* `-mcpu=i6400` and `-mcpu=i6500` were added.
+Changes to the NVPTX Backend
+----------------------------
+
+* The default SM version has been changed from `sm_30` to `sm_75`. `sm_75` is
+  the oldest GPU variant compatible with the widest range of recent major CUDA
+  Toolkit versions (11/12/13).
 
 Changes to the PowerPC Backend
 ------------------------------
@@ -157,59 +125,15 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
-* Adds experimental assembler support for the Qualcomm uC 'Xqcilb` (Long Branch)
-  extension.
-* Adds experimental assembler support for the Qualcomm uC 'Xqcili` (Load Large Immediate)
-  extension.
-* Adds experimental assembler support for the Qualcomm uC 'Xqcilia` (Large Immediate Arithmetic)
-  extension.
-* Adds experimental assembler support for the Qualcomm uC 'Xqcibm` (Bit Manipulation)
-  extension.
-* Adds experimental assembler support for the Qualcomm uC 'Xqcibi` (Branch Immediate)
-  extension.
-* Adds experimental assembler and code generation support for the Qualcomm
-  'Xqccmp' extension, which is a frame-pointer convention compatible version of
-  Zcmp.
-* Added non-quadratic ``log-vrgather`` cost model for ``vrgather.vv`` instruction
-* Adds experimental assembler support for the Qualcomm uC 'Xqcisim` (Simulation Hint)
-  extension.
-* Adds experimental assembler support for the Qualcomm uC 'Xqcisync` (Sync Delay)
-  extension.
-* Adds experimental assembler support for the Qualcomm uC 'Xqciio` (External Input Output)
-  extension.
-* Adds assembler support for the 'Zilsd` (Load/Store Pair Instructions)
-  extension.
-* Adds assembler support for the 'Zclsd` (Compressed Load/Store Pair Instructions)
-  extension.
-* Adds experimental assembler support for Zvqdotq.
-* Adds Support for Qualcomm's `qci-nest` and `qci-nonest` interrupt types, which
-  use instructions from `Xqciint` to save and restore some GPRs during interrupt
-  handlers.
-* When the experimental extension `Xqcili` is enabled, `qc.e.li` and `qc.li` may
-  now be used to materialize immediates.
-* Adds assembler support for ``.option exact``, which disables automatic compression,
-  and branch and linker relaxation. This can be disabled with ``.option noexact``,
-  which is also the default.
-* `-mcpu=xiangshan-kunminghu` was added.
-* `-mcpu=andes-n45` and `-mcpu=andes-nx45` were added.
-* `-mcpu=andes-a45` and `-mcpu=andes-ax45` were added.
-* Adds support for the 'Ziccamoc` (Main Memory Supports Atomics in Zacas) extension, which was introduced as an optional extension of the RISC-V Profiles specification.
-* Adds experimental assembler support for SiFive CLIC CSRs, under the names
-  `Zsfmclic` for the M-mode registers and `Zsfsclic` for the S-mode registers.
-* Adds Support for SiFive CLIC interrupt attributes, which automate writing CLIC
-  interrupt handlers without using inline assembly.
-* Adds assembler support for the Andes `XAndesperf` (Andes Performance extension).
-* `-mcpu=sifive-p870` was added.
-* Adds assembler support for the Andes `XAndesvpackfph` (Andes Vector Packed FP16 extension).
-* Adds assembler support for the Andes `XAndesvdot` (Andes Vector Dot Product extension).
-* Adds assembler support for the standard `Q` (Quad-Precision Floating Point) 
-  extension.
-* Adds experimental assembler support for the SiFive Xsfmm* Attached Matrix
-  Extensions.
-* `-mcpu=andes-a25` and `-mcpu=andes-ax25` were added.
-* The `Shlcofideleg` extension was added.
-* `-mcpu=sifive-x390` was added.
-* `-mtune=andes-45-series` was added.
+* `llvm-objdump` now has support for `--symbolize-operands` with RISC-V.
+* `-mcpu=spacemit-x100` was added.
+* Change P extension version to match the 019 draft specification. Encoded in `-march` as `0p19`.
+* Mnemonics for MOP/HINT-based instructions (`lpad`, `pause`, `ntl.*`, `c.ntl.*`,
+  `sspush`, `sspopchk`, `ssrdp`, `c.sspush`, `c.sspopchk`) are now always
+  available in the assembler and disassembler without requiring their respective
+  extensions.
+* Adds experimental assembler support for the 'Zvabd` (RISC-V Integer Vector
+  Absolute Difference) extension.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -217,13 +141,15 @@ Changes to the WebAssembly Backend
 Changes to the Windows Target
 -----------------------------
 
-* `fp128` is now passed indirectly, meaning it uses the same calling convention
-  as `i128`.
+* The `.seh_startchained` and `.seh_endchained` assembly instructions have been removed and replaced
+  with a new `.seh_splitchained` instruction.
 
 Changes to the X86 Backend
 --------------------------
 
-* `fp128` will now use `*f128` libcalls on 32-bit GNU targets as well.
+* `.att_syntax` directive is now emitted for assembly files when AT&T syntax is
+  in use. This matches the behaviour of Intel syntax and aids with
+  compatibility when changing the default Clang syntax to the Intel syntax.
 
 Changes to the OCaml bindings
 -----------------------------
@@ -234,78 +160,31 @@ Changes to the Python bindings
 Changes to the C API
 --------------------
 
-* The following functions for creating constant expressions have been removed,
-  because the underlying constant expressions are no longer supported. Instead,
-  an instruction should be created using the `LLVMBuildXYZ` APIs, which will
-  constant fold the operands if possible and create an instruction otherwise:
-
-  * `LLVMConstMul`
-  * `LLVMConstNUWMul`
-  * `LLVMConstNSWMul`
-
-* Added `LLVMConstDataArray` and `LLVMGetRawDataValues` to allow creating and
-  reading `ConstantDataArray` values without needing extra `LLVMValueRef`s for
-  individual elements.
-
-* Added ``LLVMDIBuilderCreateEnumeratorOfArbitraryPrecision`` for creating
-  debugging metadata of enumerators larger than 64 bits.
-
 Changes to the CodeGen infrastructure
 -------------------------------------
 
 Changes to the Metadata Info
----------------------------------
+----------------------------
 
 Changes to the Debug Info
----------------------------------
+-------------------------
 
 Changes to the LLVM tools
----------------------------------
+-------------------------
 
-* llvm-objcopy now supports the `--update-section` flag for intermediate Mach-O object files.
-* llvm-strip now supports continuing to process files on encountering an error.
-* In llvm-objcopy/llvm-strip's ELF port, `--discard-locals` and `--discard-all` now allow and preserve symbols referenced by relocations.
-  ([#47468](https://github.com/llvm/llvm-project/issues/47468))
-* llvm-addr2line now supports a `+` prefix when specifying an address.
+* `llvm-objcopy` no longer corrupts the symbol table when `--update-section` is called for ELF files.
+* `FileCheck` option `-check-prefix` now accepts a comma-separated list of
+  prefixes, making it an alias of the existing `-check-prefixes` option.
 
 Changes to LLDB
----------------------------------
+---------------
 
-* When building LLDB with Python support, the minimum version of Python is now
-  3.8.
-* LLDB now supports hardware watchpoints for AArch64 Windows targets. Windows
-  does not provide API to query the number of supported hardware watchpoints.
-  Therefore current implementation allows only 1 watchpoint, as tested with
-  Windows 11 on the Microsoft SQ2 and Snapdragon Elite X platforms.
-* LLDB now steps through C++ thunks. This fixes an issue where previously, it
-  wouldn't step into multiple inheritance virtual functions.
-* A statusline was added to command-line LLDB to show progress events and
-  information about the current state of the debugger at the bottom of the
-  terminal. This is on by default and can be configured using the
-  `show-statusline` and `statusline-format` settings. It is not currently
-  supported on Windows.
-* The `min-gdbserver-port` and `max-gdbserver-port` options have been removed
-  from `lldb-server`'s platform mode. Since the changes to `lldb-server`'s port
-  handling in LLDB 20, these options have had no effect.
-* LLDB now supports `process continue --reverse` when used with debug servers
-  supporting reverse execution, such as [rr](https://rr-project.org).
-  When using reverse execution, `process continue --forward` returns to the
-  forward execution.
-* LLDB now supports RISC-V 32-bit ELF core files.
-* LLDB now supports siginfo descriptions for Linux user-space signals. User space
-  signals will now have descriptions describing the method and sender.
-  ```
-    stop reason = SIGSEGV: sent by tkill system call (sender pid=649752, uid=2667987)
-  ```
-* ELF Cores can now have their siginfo structures inspected using `thread siginfo`.
-
-### Changes to lldb-dap
-
-* Breakpoints can now be set for specific columns within a line.
-* Function return value is now displayed on step-out.
+* Support for FreeBSD on MIPS64 has been removed.
+* The minimum assumed version of FreeBSD is now 14. The effect of which is that watchpoints are
+  assumed to be supported.
 
 Changes to BOLT
----------------------------------
+---------------
 
 Changes to Sanitizers
 ---------------------
@@ -315,8 +194,6 @@ Other Changes
 
 External Open Source Projects Using LLVM {{env.config.release}}
 ===============================================================
-
-* A project...
 
 Additional Information
 ======================

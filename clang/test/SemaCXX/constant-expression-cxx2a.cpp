@@ -927,7 +927,7 @@ namespace dynamic_alloc {
   constexpr void use_after_free() { // expected-error {{never produces a constant expression}}
     int *p = new int;
     delete p;
-    *p = 1; // expected-note {{assignment to heap allocated object that has been deleted}}
+    *p = 1; // expected-note {{read of heap allocated object that has been deleted}}
   }
   constexpr void use_after_free_2() { // expected-error {{never produces a constant expression}}
     struct X { constexpr void f() {} };
@@ -1195,13 +1195,13 @@ namespace dtor_call {
 
   constexpr void destroy_after_lifetime2() {
     A *p = []{ A a; return &a; }(); // expected-warning {{}} expected-note {{declared here}}
-    p->~A(); // expected-note {{destruction of variable whose lifetime has ended}}
+    p->~A(); // expected-note {{destruction of object outside its lifetime}}
   }
   static_assert((destroy_after_lifetime2(), true)); // expected-error {{}} expected-note {{in call}}
 
   constexpr void destroy_after_lifetime3() {
     A *p = []{ return &(A&)(A&&)A(); }(); // expected-warning {{}} expected-note {{temporary created here}}
-    p->~A(); // expected-note {{destruction of temporary whose lifetime has ended}}
+    p->~A(); // expected-note {{destruction of object outside its lifetime}}
   }
   static_assert((destroy_after_lifetime3(), true)); // expected-error {{}} expected-note {{in call}}
 
@@ -1241,8 +1241,9 @@ namespace dtor_call {
   }
 
   constexpr void destroy_past_end_array() { // expected-error {{never produces a constant expression}}
-    A a[2];
-    a[2].~A(); // expected-note {{destruction of dereferenced one-past-the-end pointer}}
+    A a[2]; // expected-note {{array 'a' declared here}}
+    a[2].~A(); // expected-note {{destruction of dereferenced one-past-the-end pointer}} \
+             // expected-warning {{array index 2 is past the end of the array}}
   }
 
   union As {
@@ -1497,3 +1498,16 @@ namespace GH67317 {
                               // expected-note {{subobject of type 'const unsigned char' is not initialized}}
     __builtin_bit_cast(unsigned char, *new char[3][1]);
 };
+
+namespace GH150705 {
+  struct A { };
+  struct B : A { };
+  struct C : A {
+    constexpr virtual int foo() const { return 0; }
+  };
+  constexpr auto p = &C::foo;
+  constexpr auto q = static_cast<int (A::*)() const>(p);
+  constexpr B b;
+  constexpr const A& a = b;
+  constexpr auto x = (a.*q)(); // expected-error {{constant expression}}
+}

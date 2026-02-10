@@ -15,6 +15,7 @@
 #include "src/__support/CPP/type_traits/remove_all_extents.h"
 #include "src/__support/CPP/type_traits/true_type.h"
 #include "src/__support/CPP/type_traits/type_identity.h"
+#include "src/__support/CPP/utility/declval.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
@@ -22,7 +23,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
 // is_destructible
-#if __has_builtin(__is_destructible)
+#if __has_builtin(__is_destructible) || defined(LIBC_COMPILER_IS_MSVC)
 template <typename T>
 struct is_destructible : bool_constant<__is_destructible(T)> {};
 #else

@@ -143,7 +143,7 @@ namespace cwg305 { // cwg305: no
   void h(B *b) {
     struct B {}; // #cwg305-h-B
     b->~B();
-    // expected-error@-1 {{destructor type 'B' in object destruction expression does not match the type 'B' (aka 'cwg305::A') of the object being destroyed}}
+    // expected-error@-1 {{destructor type 'B' in object destruction expression does not match the type 'B' (aka 'A') of the object being destroyed}}
     //   expected-note@#cwg305-h-B {{type 'B' found by destructor name lookup}}
   }
 
@@ -198,8 +198,8 @@ namespace cwg306 { // cwg306: dup 39
   Z<X>::X zx;
   Z<const X>::X zcx;
   // expected-error@-1 {{member 'X' found in multiple base classes of different types}}
-  //   expected-note@#cwg306-X {{member type 'cwg306::X' found}}
-  //   expected-note@#cwg306-typedef-X {{member type 'const cwg306::X' found}}
+  //   expected-note@#cwg306-X {{member type 'cwg306::X' found by ambiguous name lookup}}
+  //   expected-note@#cwg306-typedef-X {{member type 'const cwg306::X' found by ambiguous name lookup}}
 } // namespace cwg306
 
 // cwg307: na
@@ -601,7 +601,7 @@ namespace cwg336 { // cwg336: 2.7
     template<> template<class X> class A<int>::B {}; // #cwg336-B
     template<> template<> template<class T> void A<int>::B<double>::mf1(T t) {}
     // expected-error@-1 {{out-of-line definition of 'mf1' does not match any declaration in 'cwg336::Pre::A<int>::B<double>'}}
-    //   expected-note@#cwg336-B {{defined here}}
+    //   expected-note@#cwg336-B {{B defined here}}
     template<class Y> template<> void A<Y>::B<double>::mf2() {}
     // expected-error@-1 {{nested name specifier 'A<Y>::B<double>' for declaration does not refer into a class, class template or class template partial specialization}}
   }
@@ -652,8 +652,8 @@ namespace cwg339 { // cwg339: 2.8
     A<1> a = f(0);
     A<2> b = f(0.0f);
     A<3> c = f("foo");
-    // expected-error@-1 {{no matching function}}
-    //   expected-note@#cwg339-f {{candidate}}
+    // expected-error@-1 {{no matching function for call to 'f'}}
+    //   expected-note@#cwg339-f {{candidate template ignored: substitution failure [with T = const char *]: no matching function for call to 'xxx'}}
   }
 
 
@@ -770,10 +770,10 @@ namespace cwg347 { // cwg347: 2.7
   // expected-error@-1 {{no member named 'n' in 'cwg347::derived'}}
   void derived::f() {}
   // expected-error@-1 {{out-of-line definition of 'f' does not match any declaration in 'cwg347::derived'}}
-  //   expected-note@#cwg347-derived {{defined here}}
+  //   expected-note@#cwg347-derived {{derived defined here}}
   void derived::g() {}
   // expected-error@-1 {{out-of-line definition of 'g' does not match any declaration in 'cwg347::derived'}}
-  //   expected-note@#cwg347-derived {{defined here}}
+  //   expected-note@#cwg347-derived {{derived defined here}}
 } // namespace cwg347
 
 // cwg348: na
@@ -1027,8 +1027,8 @@ namespace cwg357 { // cwg357: 2.7
     void f() const; // #cwg357-f
   };
   template<typename T> void A<T>::f() {}
-  // expected-error@-1 {{out-of-line definition of 'f' does not match any declaration in 'A<T>'}}
-  //   expected-note@#cwg357-A {{defined here}}
+  // expected-error@-1 {{out-of-line definition of 'f' does not match any declaration in 'cwg357::A<T>'}}
+  //   expected-note@#cwg357-A {{A defined here}}
   //   expected-note@#cwg357-f {{member declaration does not match because it is const qualified}}
 
   struct B { // #cwg357-B
@@ -1036,7 +1036,7 @@ namespace cwg357 { // cwg357: 2.7
   };
   template<typename T> void B::f() const {}
   // expected-error@-1 {{out-of-line definition of 'f' does not match any declaration in 'cwg357::B'}}
-  //   expected-note@#cwg357-B {{defined here}}
+  //   expected-note@#cwg357-B {{B defined here}}
 } // namespace cwg357
 
 namespace cwg358 { // cwg358: 2.7
@@ -1128,10 +1128,10 @@ namespace cwg366 { // cwg366: 2.7
 
 namespace cwg367 { // cwg367: 2.7
   static_assert(__enable_constant_folding(true ? throw 0 : 4), "");
-  // expected-error@-1 {{expression is not an integral constant expression}}
+  // expected-error@-1 {{static assertion expression is not an integral constant expression}}
   static_assert(__enable_constant_folding(true ? 4 : throw 0), "");
   static_assert(__enable_constant_folding(true ? *new int : 4), "");
-  // expected-error@-1 {{expression is not an integral constant expression}}
+  // expected-error@-1 {{static assertion expression is not an integral constant expression}}
   //   expected-note@-2 {{read of uninitialized object is not allowed in a constant expression}}
   static_assert(__enable_constant_folding(true ? 4 : *new int), "");
 } // namespace cwg367
@@ -1321,7 +1321,7 @@ namespace cwg381 { // cwg381: 2.7
   void f() {
     E e;
     e.B::a = 0;
-    /* expected-error@-1 {{ambiguous conversion from derived class 'E' to base class 'cwg381::B':
+    /* expected-error@-1 {{ambiguous conversion from derived class 'E' to base class 'B':
     struct cwg381::E -> C -> B
     struct cwg381::E -> D -> B}} */
     F f;
@@ -1781,7 +1781,7 @@ namespace cwg398 { // cwg398: 2.7
       //   expected-note@#cwg398-f {{candidate template ignored: substitution failure [with T = B]: typename specifier refers to non-type member 'Y' in 'cwg398::example2::B'}}
       g<C>(0);
       // expected-error@-1 {{no matching function for call to 'g'}}
-      //   expected-note@#cwg398-g {{candidate template ignored: substitution failure [with T = C]: missing 'typename' prior to dependent type name 'C::N'}}
+      //   expected-note@#cwg398-g {{candidate template ignored: substitution failure [with T = C]: missing 'typename' prior to dependent type name 'C::N' (aka 'int')}}
       h<D>(0);
       // expected-error@-1 {{no matching function for call to 'h'}}
       //   expected-note@#cwg398-h {{candidate template ignored: substitution failure [with T = D]: 'TT' following the 'template' keyword does not refer to a template}}
@@ -1800,8 +1800,8 @@ namespace cwg399 { // cwg399: 11
 
   void f() {
     D_object.~B();
-    // expected-error@-1 {{destructor type 'cwg399::B' in object destruction expression does not match the type 'D' of the object being destroyed}}
-    //   expected-note@#cwg399-B {{type 'cwg399::B' found by destructor name lookup}}
+    // expected-error@-1 {{destructor type 'B' in object destruction expression does not match the type 'D' of the object being destroyed}}
+    //   expected-note@#cwg399-B {{type 'B' found by destructor name lookup}}
     D_object.B::~B();
     D_object.D::~B(); // FIXME: Missing diagnostic for this.
     B_ptr->~B();

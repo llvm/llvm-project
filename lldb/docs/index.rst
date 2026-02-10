@@ -73,7 +73,8 @@ are welcome:
 * iOS, tvOS, and watchOS simulator debugging on i386, x86_64 and AArch64
 * iOS, tvOS, and watchOS device debugging on ARM and AArch64
 * Linux user-space debugging for i386, x86_64, ARM, AArch64, PPC64le, s390x
-* FreeBSD user-space debugging for i386, x86_64, ARM, AArch64, MIPS64, PPC
+* FreeBSD user-space debugging for i386, x86_64, ARM, AArch64, PPC
+* FreeBSD kernel debugging for i386, x86_64, AArch64
 * NetBSD user-space debugging for i386 and x86_64
 * Windows user-space debugging for i386, x86_64, ARM and AArch64 (*)
 
@@ -86,6 +87,7 @@ current state, follow the links to their respective issues:
 
 * `RISC-V <https://github.com/llvm/llvm-project/issues/55383>`_
 * `LoongArch <https://github.com/llvm/llvm-project/issues/112693>`_
+* `WebAssembly <https://github.com/llvm/llvm-project/issues/150449>`_
 
 Get Involved
 ------------
@@ -135,6 +137,8 @@ interesting areas to contribute to lldb.
    use/ondemand
    use/aarch64-linux
    use/symbolfilejson
+   use/lldbdap
+   use/mcp
    use/troubleshooting
    use/links
    Man Page <man/lldb>
@@ -144,7 +148,6 @@ interesting areas to contribute to lldb.
    :maxdepth: 1
    :caption: Scripting LLDB
 
-   use/python
    use/python-reference
    Python API <python_api>
    Python Extensions <python_extensions>
@@ -170,7 +173,7 @@ interesting areas to contribute to lldb.
    resources/lldbplatformpackets
    resources/caveats
    resources/projects
-   resources/lldbdap
+   resources/lldbdap-contributing
    resources/addinglanguagesupport
    Public C++ API <https://lldb.llvm.org/cpp_reference/namespacelldb.html>
    Private C++ API <https://lldb.llvm.org/cpp_reference/index.html>

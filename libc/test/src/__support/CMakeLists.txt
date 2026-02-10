@@ -123,6 +123,8 @@ add_libc_test(
     str_to_float_test.cpp
     str_to_double_test.cpp
     str_to_long_double_test.cpp
+  HDRS
+    str_to_fp_test.h
   DEPENDS
     libc.src.__support.integer_literals
     libc.src.__support.str_to_float
@@ -136,6 +138,17 @@ add_libc_test(
     libc-support-tests
   SRCS
     str_to_integer_test.cpp
+  DEPENDS
+    libc.src.__support.integer_literals
+    libc.src.__support.str_to_integer
+)
+
+add_libc_test(
+  wcs_to_integer_test
+  SUITE
+    libc-support-tests
+  SRCS
+    wcs_to_integer_test.cpp
   DEPENDS
     libc.src.__support.integer_literals
     libc.src.__support.str_to_integer
@@ -254,6 +267,7 @@ add_libc_test(
   SRCS
     str_to_float_comparison_test.cpp
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.stdio.printf
     libc.src.stdio.fopen
     libc.src.stdio.fclose
@@ -266,6 +280,16 @@ add_libc_test(
     libc.src.__support.CPP.bit
 )
 
+add_libc_test(
+  weak_avl_test
+  SUITE
+    libc-support-tests
+  SRCS
+    weak_avl_test.cpp
+  DEPENDS
+    libc.src.__support.weak_avl
+)
+
 add_subdirectory(CPP)
 add_subdirectory(File)
 add_subdirectory(RPC)
@@ -275,9 +299,9 @@ add_subdirectory(fixed_point)
 add_subdirectory(HashTable)
 add_subdirectory(time)
 add_subdirectory(threads)
-
-# Requires access to uchar header which is not on macos
-# Therefore, cannot currently build this on macos in overlay mode
+# Requires access to uchar header which is not on MacOS
+# Cannot currently build this on MacOS in overlay mode
 if(NOT(LIBC_TARGET_OS_IS_DARWIN))
   add_subdirectory(wchar)
+  add_subdirectory(wctype)
 endif()

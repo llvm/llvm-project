@@ -10,13 +10,9 @@
 #include "mlir/Dialect/Quant/IR/QuantTypes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/Location.h"
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/APFloat.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/MathExtras.h"
-#include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 using namespace mlir;
 using namespace quant;
@@ -162,7 +158,7 @@ static Type parseAnyType(DialectAsmParser &parser) {
 /// Checks if the given scale value is within the valid range of the expressed
 /// type. The `expressedType` argument is the floating-point type used for
 /// expressing the quantized values, and `scale` is the double value to check.
-LogicalResult
+static LogicalResult
 isScaleInExpressedTypeRange(function_ref<InFlightDiagnostic()> emitError,
                             Type expressedType, double scale) {
   auto floatType = cast<FloatType>(expressedType);
@@ -415,19 +411,20 @@ static Type parseUniformType(DialectAsmParser &parser) {
     return parser.getChecked<UniformQuantizedPerAxisType>(
         typeFlags, storageType, expressedType, scales, zeroPoints,
         quantizedDimensions[0], storageTypeMin, storageTypeMax);
-  } else if (isSubChannel) {
+  }
+  if (isSubChannel) {
     SmallVector<APFloat> apFloatScales =
-        llvm::to_vector(llvm::map_range(scales, [&](double scale) -> APFloat {
+        llvm::map_to_vector(scales, [&](double scale) -> APFloat {
           APFloat apFloatScale(scale);
           bool unused;
           apFloatScale.convert(expressedType.getFloatSemantics(),
                                APFloat::rmNearestTiesToEven, &unused);
           return apFloatScale;
-        }));
-    SmallVector<APInt> apIntZeroPoints = llvm::to_vector(
-        llvm::map_range(zeroPoints, [&](int64_t zeroPoint) -> APInt {
+        });
+    SmallVector<APInt> apIntZeroPoints =
+        llvm::map_to_vector(zeroPoints, [&](int64_t zeroPoint) -> APInt {
           return APInt(storageType.getIntOrFloatBitWidth(), zeroPoint);
-        }));
+        });
     auto scalesRef = mlir::DenseElementsAttr::get(
         RankedTensorType::get(dims, expressedType), apFloatScales);
     auto zeroPointsRef = mlir::DenseElementsAttr::get(
@@ -583,10 +580,10 @@ static void printUniformQuantizedPerAxisType(UniformQuantizedPerAxisType type,
 ///   would print:
 ///
 ///     {{1.0, 2.0}, {3.0:1, 4.0:9}}
-void printDenseQuantizationParameters(ArrayRef<APFloat> scales,
-                                      ArrayRef<APInt> zeroPoints,
-                                      ArrayRef<int64_t> shape,
-                                      DialectAsmPrinter &out) {
+static void printDenseQuantizationParameters(ArrayRef<APFloat> scales,
+                                             ArrayRef<APInt> zeroPoints,
+                                             ArrayRef<int64_t> shape,
+                                             DialectAsmPrinter &out) {
   int64_t rank = shape.size();
   SmallVector<unsigned, 4> counter(rank, 0);
   unsigned openBrackets = 0;

@@ -538,3 +538,154 @@ body:             |
     RET_ReallyLR implicit $w0
 
 ...
+
+# WHILELO (predicate pair)
+---
+name:            whilelo_x2_b64_s64
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr64 }
+  - { id: 1, class: gpr64 }
+  - { id: 2, class: ppr }
+  - { id: 3, class: ppr2mul2 }
+  - { id: 4, class: ppr }
+  - { id: 5, class: ppr }
+  - { id: 6, class: gpr32 }
+  - { id: 7, class: gpr32 }
+liveins:
+  - { reg: '$x0', virtual-reg: '%0' }
+  - { reg: '$x1', virtual-reg: '%1' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1
+
+    ; CHECK-LABEL: name: whilelo_x2_b64_s64
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK-NEXT: [[PTRUE_D:%[0-9]+]]:ppr = PTRUE_D 31, implicit $vg
+    ; CHECK-NEXT: [[WHILELO_2PXX_D:%[0-9]+]]:ppr2mul2 = WHILELO_2PXX_D [[COPY]], [[COPY1]], implicit-def $nzcv
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:ppr = COPY [[WHILELO_2PXX_D]].psub0
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:ppr = COPY [[WHILELO_2PXX_D]].psub1
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:gpr32 = COPY $wzr
+    ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY4]], $wzr, 0, implicit $nzcv
+    ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:gpr64 = COPY $x0
+    %1:gpr64 = COPY $x1
+    %2:ppr = PTRUE_D 31, implicit $vg
+    %3:ppr2mul2 = WHILELO_2PXX_D %0, %1, implicit-def $nzcv
+    %4:ppr = COPY %3.psub0
+    %5:ppr = COPY %3.psub1
+    PTEST_PP_FIRST killed %2, killed %4, implicit-def $nzcv
+    %6:gpr32 = COPY $wzr
+    %7:gpr32 = CSINCWr %6, $wzr, 0, implicit $nzcv
+    $w0 = COPY %7
+    RET_ReallyLR implicit $w0
+...
+
+# PTEST is not redundant when it's Pg operand is a subregister copy, but not
+# from the first subregister of ppr2mul2
+---
+name:            whilelo_x2_b64_s64_psub1
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr64 }
+  - { id: 1, class: gpr64 }
+  - { id: 2, class: ppr }
+  - { id: 3, class: ppr2mul2 }
+  - { id: 4, class: ppr }
+  - { id: 5, class: ppr }
+  - { id: 6, class: gpr32 }
+  - { id: 7, class: gpr32 }
+liveins:
+  - { reg: '$x0', virtual-reg: '%0' }
+  - { reg: '$x1', virtual-reg: '%1' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1
+
+    ; CHECK-LABEL: name: whilelo_x2_b64_s64_psub1
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK-NEXT: [[PTRUE_D:%[0-9]+]]:ppr = PTRUE_D 31, implicit $vg
+    ; CHECK-NEXT: [[WHILELO_2PXX_D:%[0-9]+]]:ppr2mul2 = WHILELO_2PXX_D [[COPY]], [[COPY1]], implicit-def $nzcv
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:ppr = COPY [[WHILELO_2PXX_D]].psub0
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:ppr = COPY [[WHILELO_2PXX_D]].psub1
+    ; CHECK-NEXT: PTEST_PP_FIRST killed [[PTRUE_D]], killed [[COPY3]], implicit-def $nzcv
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:gpr32 = COPY $wzr
+    ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY4]], $wzr, 0, implicit $nzcv
+    ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:gpr64 = COPY $x0
+    %1:gpr64 = COPY $x1
+    %2:ppr = PTRUE_D 31, implicit $vg
+    %3:ppr2mul2 = WHILELO_2PXX_D %0, %1, implicit-def $nzcv
+    %4:ppr = COPY %3.psub0
+    %5:ppr = COPY %3.psub1
+    PTEST_PP_FIRST killed %2, killed %5, implicit-def $nzcv
+    %6:gpr32 = COPY $wzr
+    %7:gpr32 = CSINCWr %6, $wzr, 0, implicit $nzcv
+    $w0 = COPY %7
+    RET_ReallyLR implicit $w0
+...
+
+# PTEST is not redundant when it's Pg operand is a copy from subregister 0
+# if the condition is not FIRST_ACTIVE
+---
+name:            whilelo_x2_b64_s64_not_first
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr64 }
+  - { id: 1, class: gpr64 }
+  - { id: 2, class: ppr }
+  - { id: 3, class: ppr2mul2 }
+  - { id: 4, class: ppr }
+  - { id: 5, class: ppr }
+  - { id: 6, class: gpr32 }
+  - { id: 7, class: gpr32 }
+liveins:
+  - { reg: '$x0', virtual-reg: '%0' }
+  - { reg: '$x1', virtual-reg: '%1' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1
+
+    ; CHECK-LABEL: name: whilelo_x2_b64_s64_not_first
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK-NEXT: [[PTRUE_D:%[0-9]+]]:ppr = PTRUE_D 31, implicit $vg
+    ; CHECK-NEXT: [[WHILELO_2PXX_D:%[0-9]+]]:ppr2mul2 = WHILELO_2PXX_D [[COPY]], [[COPY1]], implicit-def $nzcv
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:ppr = COPY [[WHILELO_2PXX_D]].psub0
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:ppr = COPY [[WHILELO_2PXX_D]].psub1
+    ; CHECK-NEXT: PTEST_PP killed [[PTRUE_D]], killed [[COPY2]], implicit-def $nzcv
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:gpr32 = COPY $wzr
+    ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY4]], $wzr, 0, implicit $nzcv
+    ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:gpr64 = COPY $x0
+    %1:gpr64 = COPY $x1
+    %2:ppr = PTRUE_D 31, implicit $vg
+    %3:ppr2mul2 = WHILELO_2PXX_D %0, %1, implicit-def $nzcv
+    %4:ppr = COPY %3.psub0
+    %5:ppr = COPY %3.psub1
+    PTEST_PP killed %2, killed %4, implicit-def $nzcv
+    %6:gpr32 = COPY $wzr
+    %7:gpr32 = CSINCWr %6, $wzr, 0, implicit $nzcv
+    $w0 = COPY %7
+    RET_ReallyLR implicit $w0
+...

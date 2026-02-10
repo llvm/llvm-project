@@ -35,7 +35,7 @@ struct AMDGPUImageDMaskIntrinsic {
 };
 
 #define GET_AMDGPUImageDMaskIntrinsicTable_IMPL
-#include "InstCombineTables.inc"
+#include "AMDGPUGenSearchableTables.inc"
 
 } // end anonymous namespace
 
@@ -58,28 +58,6 @@ static APFloat fmed3AMDGCN(const APFloat &Src0, const APFloat &Src1,
     return maxnum(Src0, Src2);
 
   return maxnum(Src0, Src1);
-}
-
-enum class KnownIEEEMode { Unknown, On, Off };
-
-/// Return KnownIEEEMode::On if we know if the use context can assume
-/// "amdgpu-ieee"="true" and KnownIEEEMode::Off if we can assume
-/// "amdgpu-ieee"="false".
-static KnownIEEEMode fpenvIEEEMode(const Instruction &I,
-                                   const GCNSubtarget &ST) {
-  if (!ST.hasIEEEMode()) // Only mode on gfx12
-    return KnownIEEEMode::On;
-
-  const Function *F = I.getFunction();
-  if (!F)
-    return KnownIEEEMode::Unknown;
-
-  Attribute IEEEAttr = F->getFnAttribute("amdgpu-ieee");
-  if (IEEEAttr.isValid())
-    return IEEEAttr.getValueAsBool() ? KnownIEEEMode::On : KnownIEEEMode::Off;
-
-  return AMDGPU::isShader(F->getCallingConv()) ? KnownIEEEMode::Off
-                                               : KnownIEEEMode::On;
 }
 
 // Check if a value can be converted to a 16-bit value without losing
@@ -269,6 +247,66 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
                                        ArgTys[0] = User->getType();
                                      });
         }
+      }
+
+      // Only perform D16 folding if every user of the image sample is
+      // an ExtractElementInst immediately followed by an FPTrunc to half.
+      SmallVector<std::pair<ExtractElementInst *, FPTruncInst *>, 4>
+          ExtractTruncPairs;
+      bool AllHalfExtracts = true;
+
+      for (User *U : II.users()) {
+        auto *Ext = dyn_cast<ExtractElementInst>(U);
+        if (!Ext || !Ext->hasOneUse()) {
+          AllHalfExtracts = false;
+          break;
+        }
+
+        auto *Tr = dyn_cast<FPTruncInst>(*Ext->user_begin());
+        if (!Tr || !Tr->getType()->isHalfTy()) {
+          AllHalfExtracts = false;
+          break;
+        }
+
+        ExtractTruncPairs.emplace_back(Ext, Tr);
+      }
+
+      if (!ExtractTruncPairs.empty() && AllHalfExtracts) {
+        auto *VecTy = cast<VectorType>(II.getType());
+        Type *HalfVecTy =
+            VecTy->getWithNewType(Type::getHalfTy(II.getContext()));
+
+        // Obtain the original image sample intrinsic's signature
+        // and replace its return type with the half-vector for D16 folding
+        SmallVector<Type *, 8> SigTys;
+        Intrinsic::getIntrinsicSignature(II.getCalledFunction(), SigTys);
+        SigTys[0] = HalfVecTy;
+
+        Module *M = II.getModule();
+        Function *HalfDecl =
+            Intrinsic::getOrInsertDeclaration(M, ImageDimIntr->Intr, SigTys);
+
+        II.mutateType(HalfVecTy);
+        II.setCalledFunction(HalfDecl);
+
+        IRBuilder<> Builder(II.getContext());
+        for (auto &[Ext, Tr] : ExtractTruncPairs) {
+          Value *Idx = Ext->getIndexOperand();
+
+          Builder.SetInsertPoint(Tr);
+
+          Value *HalfExtract = Builder.CreateExtractElement(&II, Idx);
+          HalfExtract->takeName(Tr);
+
+          Tr->replaceAllUsesWith(HalfExtract);
+        }
+
+        for (auto &[Ext, Tr] : ExtractTruncPairs) {
+          IC.eraseInstFromFunction(*Tr);
+          IC.eraseInstFromFunction(*Ext);
+        }
+
+        return &II;
       }
     }
   }
@@ -515,6 +553,89 @@ static CallInst *rewriteCall(IRBuilderBase &B, CallInst &Old,
   return NewCall;
 }
 
+// Return true for sequences of instructions that effectively assign
+// each lane to its thread ID
+static bool isThreadID(const GCNSubtarget &ST, Value *V) {
+  // Case 1:
+  //   wave32: mbcnt_lo(-1, 0)
+  //   wave64: mbcnt_hi(-1, mbcnt_lo(-1, 0))
+  auto W32Pred = m_Intrinsic<Intrinsic::amdgcn_mbcnt_lo>(m_ConstantInt<-1>(),
+                                                         m_ConstantInt<0>());
+  auto W64Pred = m_Intrinsic<Intrinsic::amdgcn_mbcnt_hi>(
+      m_ConstantInt<-1>(), m_Intrinsic<Intrinsic::amdgcn_mbcnt_lo>(
+                               m_ConstantInt<-1>(), m_ConstantInt<0>()));
+  if (ST.isWave32() && match(V, W32Pred))
+    return true;
+  if (ST.isWave64() && match(V, W64Pred))
+    return true;
+
+  return false;
+}
+
+// Attempt to capture situations where the index argument matches
+// a DPP pattern, and convert to a DPP-based mov
+static std::optional<Instruction *>
+tryWaveShuffleDPP(const GCNSubtarget &ST, InstCombiner &IC, IntrinsicInst &II) {
+  Value *Val = II.getArgOperand(0);
+  Value *Idx = II.getArgOperand(1);
+  auto &B = IC.Builder;
+
+  // DPP16 Row Share requires known wave size, architecture support
+  if (!ST.isWaveSizeKnown() || !ST.hasDPPRowShare())
+    return std::nullopt;
+
+  Value *Tid;
+  uint64_t Mask;
+  uint64_t RowIdx;
+  bool CanDPP16RowShare = false;
+
+  // wave32 requires Mask & 0x1F == 0x10
+  // wave64 requires Mask & 0x3F == 0x30
+  uint64_t MaskCheck = (1UL << ST.getWavefrontSizeLog2()) - 1;
+  uint64_t MaskTarget = MaskCheck & 0xF0;
+
+  // DPP16 Row Share 0: Idx = Tid & Mask
+  auto RowShare0Pred = m_And(m_Value(Tid), m_ConstantInt(Mask));
+
+  // DPP16 Row Share (0 < Row < 15): Idx = (Tid & Mask) | RowIdx
+  auto RowSharePred =
+      m_Or(m_And(m_Value(Tid), m_ConstantInt(Mask)), m_ConstantInt(RowIdx));
+
+  // DPP16 Row Share 15: Idx = Tid | 0xF
+  auto RowShare15Pred = m_Or(m_Value(Tid), m_ConstantInt<0xF>());
+
+  if (match(Idx, RowShare0Pred) && isThreadID(ST, Tid)) {
+    if ((Mask & MaskCheck) != MaskTarget)
+      return std::nullopt;
+
+    RowIdx = 0;
+    CanDPP16RowShare = true;
+  } else if (match(Idx, RowSharePred) && isThreadID(ST, Tid) && RowIdx < 15 &&
+             RowIdx > 0) {
+    if ((Mask & MaskCheck) != MaskTarget)
+      return std::nullopt;
+
+    CanDPP16RowShare = true;
+  } else if (match(Idx, RowShare15Pred) && isThreadID(ST, Tid)) {
+    RowIdx = 15;
+    CanDPP16RowShare = true;
+  }
+
+  if (CanDPP16RowShare) {
+    CallInst *UpdateDPP =
+        B.CreateIntrinsic(Intrinsic::amdgcn_update_dpp, Val->getType(),
+                          {PoisonValue::get(Val->getType()), Val,
+                           B.getInt32(AMDGPU::DPP::ROW_SHARE0 | RowIdx),
+                           B.getInt32(0xF), B.getInt32(0xF), B.getFalse()});
+    UpdateDPP->takeName(&II);
+    UpdateDPP->copyMetadata(II);
+    return IC.replaceInstUsesWith(II, UpdateDPP);
+  }
+
+  // No valid DPP detected
+  return std::nullopt;
+}
+
 Instruction *
 GCNTTIImpl::hoistLaneIntrinsicThroughOperand(InstCombiner &IC,
                                              IntrinsicInst &II) const {
@@ -662,7 +783,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     break;
   }
   case Intrinsic::amdgcn_sqrt:
-  case Intrinsic::amdgcn_rsq: {
+  case Intrinsic::amdgcn_rsq:
+  case Intrinsic::amdgcn_tanh: {
     Value *Src = II.getArgOperand(0);
     if (isa<PoisonValue>(Src))
       return IC.replaceInstUsesWith(II, Src);
@@ -749,7 +871,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       if (Exp == APFloat::IEK_NaN || Exp == APFloat::IEK_Inf)
         Exp = 0;
 
-      return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), Exp));
+      return IC.replaceInstUsesWith(II,
+                                    ConstantInt::getSigned(II.getType(), Exp));
     }
 
     if (isa<PoisonValue>(Src))
@@ -993,6 +1116,14 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // s1 _nan: min(s0, s2)
     // s2 _nan: min(s0, s1)
 
+    // med3 behavior with infinity
+    // s0 +inf: max(s1, s2)
+    // s1 +inf: max(s0, s2)
+    // s2 +inf: max(s0, s1)
+    // s0 -inf: min(s1, s2)
+    // s1 -inf: min(s0, s2)
+    // s2 -inf: min(s0, s1)
+
     // Checking for NaN before canonicalization provides better fidelity when
     // mapping other operations onto fmed3 since the order of operands is
     // unchanged.
@@ -1001,51 +1132,64 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     const APFloat *ConstSrc1 = nullptr;
     const APFloat *ConstSrc2 = nullptr;
 
-    // TODO: Also can fold to 2 operands with infinities.
-    if ((match(Src0, m_APFloat(ConstSrc0)) && ConstSrc0->isNaN()) ||
+    if ((match(Src0, m_APFloat(ConstSrc0)) &&
+         (ConstSrc0->isNaN() || ConstSrc0->isInfinity())) ||
         isa<UndefValue>(Src0)) {
-      switch (fpenvIEEEMode(II, *ST)) {
+      const bool IsPosInfinity = ConstSrc0 && ConstSrc0->isPosInfinity();
+      switch (fpenvIEEEMode(II)) {
       case KnownIEEEMode::On:
         // TODO: If Src2 is snan, does it need quieting?
-        if (ConstSrc0 && ConstSrc0->isSignaling())
-          return IC.replaceInstUsesWith(II, Src2);
-        V = IC.Builder.CreateMinNum(Src1, Src2);
-        break;
-      case KnownIEEEMode::Off:
-        V = IC.Builder.CreateMinimumNum(Src1, Src2);
-        break;
-      case KnownIEEEMode::Unknown:
-        break;
-      }
-    } else if ((match(Src1, m_APFloat(ConstSrc1)) && ConstSrc1->isNaN()) ||
-               isa<UndefValue>(Src1)) {
-      switch (fpenvIEEEMode(II, *ST)) {
-      case KnownIEEEMode::On:
-        // TODO: If Src2 is snan, does it need quieting?
-        if (ConstSrc1 && ConstSrc1->isSignaling())
+        if (ConstSrc0 && ConstSrc0->isNaN() && ConstSrc0->isSignaling())
           return IC.replaceInstUsesWith(II, Src2);
 
-        V = IC.Builder.CreateMinNum(Src0, Src2);
+        V = IsPosInfinity ? IC.Builder.CreateMaxNum(Src1, Src2)
+                          : IC.Builder.CreateMinNum(Src1, Src2);
         break;
       case KnownIEEEMode::Off:
-        V = IC.Builder.CreateMinimumNum(Src0, Src2);
+        V = IsPosInfinity ? IC.Builder.CreateMaximumNum(Src1, Src2)
+                          : IC.Builder.CreateMinimumNum(Src1, Src2);
         break;
       case KnownIEEEMode::Unknown:
         break;
       }
-    } else if ((match(Src2, m_APFloat(ConstSrc2)) && ConstSrc2->isNaN()) ||
-               isa<UndefValue>(Src2)) {
-      switch (fpenvIEEEMode(II, *ST)) {
+    } else if ((match(Src1, m_APFloat(ConstSrc1)) &&
+                (ConstSrc1->isNaN() || ConstSrc1->isInfinity())) ||
+               isa<UndefValue>(Src1)) {
+      const bool IsPosInfinity = ConstSrc1 && ConstSrc1->isPosInfinity();
+      switch (fpenvIEEEMode(II)) {
       case KnownIEEEMode::On:
-        if (ConstSrc2 && ConstSrc2->isSignaling()) {
+        // TODO: If Src2 is snan, does it need quieting?
+        if (ConstSrc1 && ConstSrc1->isNaN() && ConstSrc1->isSignaling())
+          return IC.replaceInstUsesWith(II, Src2);
+
+        V = IsPosInfinity ? IC.Builder.CreateMaxNum(Src0, Src2)
+                          : IC.Builder.CreateMinNum(Src0, Src2);
+        break;
+      case KnownIEEEMode::Off:
+        V = IsPosInfinity ? IC.Builder.CreateMaximumNum(Src0, Src2)
+                          : IC.Builder.CreateMinimumNum(Src0, Src2);
+        break;
+      case KnownIEEEMode::Unknown:
+        break;
+      }
+    } else if ((match(Src2, m_APFloat(ConstSrc2)) &&
+                (ConstSrc2->isNaN() || ConstSrc2->isInfinity())) ||
+               isa<UndefValue>(Src2)) {
+      switch (fpenvIEEEMode(II)) {
+      case KnownIEEEMode::On:
+        if (ConstSrc2 && ConstSrc2->isNaN() && ConstSrc2->isSignaling()) {
           auto *Quieted = ConstantFP::get(II.getType(), ConstSrc2->makeQuiet());
           return IC.replaceInstUsesWith(II, Quieted);
         }
 
-        V = IC.Builder.CreateMinNum(Src0, Src1);
+        V = (ConstSrc2 && ConstSrc2->isPosInfinity())
+                ? IC.Builder.CreateMaxNum(Src0, Src1)
+                : IC.Builder.CreateMinNum(Src0, Src1);
         break;
       case KnownIEEEMode::Off:
-        V = IC.Builder.CreateMaximumNum(Src0, Src1);
+        V = (ConstSrc2 && ConstSrc2->isNegInfinity())
+                ? IC.Builder.CreateMinimumNum(Src0, Src1)
+                : IC.Builder.CreateMaximumNum(Src0, Src1);
         break;
       case KnownIEEEMode::Unknown:
         break;
@@ -1398,30 +1542,30 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (isa<PoisonValue>(Src) || isa<PoisonValue>(Segment))
       return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
 
-    if (isa<UndefValue>(Src)) {
-      auto *QNaN = ConstantFP::get(
-          II.getType(), APFloat::getQNaN(II.getType()->getFltSemantics()));
-      return IC.replaceInstUsesWith(II, QNaN);
-    }
-
-    const ConstantFP *Csrc = dyn_cast<ConstantFP>(Src);
-    if (!Csrc)
-      break;
+    if (isa<UndefValue>(Segment))
+      return IC.replaceInstUsesWith(II, ConstantFP::getZero(II.getType()));
 
     if (II.isStrictFP())
       break;
 
-    const APFloat &Fsrc = Csrc->getValueAPF();
-    if (Fsrc.isNaN()) {
-      auto *Quieted = ConstantFP::get(II.getType(), Fsrc.makeQuiet());
-      return IC.replaceInstUsesWith(II, Quieted);
-    }
-
-    const ConstantInt *Cseg = dyn_cast<ConstantInt>(Segment);
-    if (!Cseg)
+    const ConstantFP *CSrc = dyn_cast<ConstantFP>(Src);
+    if (!CSrc && !isa<UndefValue>(Src))
       break;
 
-    unsigned Exponent = (Fsrc.bitcastToAPInt().getZExtValue() >> 52) & 0x7ff;
+    // The instruction ignores special cases, and literally just extracts the
+    // exponents. Fold undef to nan, and index the table as normal.
+    APInt FSrcInt = CSrc ? CSrc->getValueAPF().bitcastToAPInt()
+                         : APFloat::getQNaN(II.getType()->getFltSemantics())
+                               .bitcastToAPInt();
+
+    const ConstantInt *Cseg = dyn_cast<ConstantInt>(Segment);
+    if (!Cseg) {
+      if (isa<UndefValue>(Src))
+        return IC.replaceInstUsesWith(II, ConstantFP::getZero(II.getType()));
+      break;
+    }
+
+    unsigned Exponent = FSrcInt.extractBitsAsZExtValue(11, 52);
     unsigned SegmentVal = Cseg->getValue().trunc(5).getZExtValue();
     unsigned Shift = SegmentVal * 53;
     if (Exponent > 1077)
@@ -1633,6 +1777,76 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         IID, {Src0->getType(), Src1->getType()}, Args, &II);
     NewII->takeName(&II);
     return IC.replaceInstUsesWith(II, NewII);
+  }
+  case Intrinsic::amdgcn_wmma_f32_16x16x128_f8f6f4:
+  case Intrinsic::amdgcn_wmma_scale_f32_16x16x128_f8f6f4:
+  case Intrinsic::amdgcn_wmma_scale16_f32_16x16x128_f8f6f4: {
+    Value *Src0 = II.getArgOperand(1);
+    Value *Src1 = II.getArgOperand(3);
+    unsigned FmtA = cast<ConstantInt>(II.getArgOperand(0))->getZExtValue();
+    uint64_t FmtB = cast<ConstantInt>(II.getArgOperand(2))->getZExtValue();
+    auto *Src0Ty = cast<FixedVectorType>(Src0->getType());
+    auto *Src1Ty = cast<FixedVectorType>(Src1->getType());
+
+    bool MadeChange = false;
+    unsigned Src0NumElts = AMDGPU::wmmaScaleF8F6F4FormatToNumRegs(FmtA);
+    unsigned Src1NumElts = AMDGPU::wmmaScaleF8F6F4FormatToNumRegs(FmtB);
+
+    // Depending on the used format, fewer registers are required so shrink the
+    // vector type.
+    if (Src0Ty->getNumElements() > Src0NumElts) {
+      Src0 = IC.Builder.CreateExtractVector(
+          FixedVectorType::get(Src0Ty->getElementType(), Src0NumElts), Src0,
+          IC.Builder.getInt64(0));
+      MadeChange = true;
+    }
+
+    if (Src1Ty->getNumElements() > Src1NumElts) {
+      Src1 = IC.Builder.CreateExtractVector(
+          FixedVectorType::get(Src1Ty->getElementType(), Src1NumElts), Src1,
+          IC.Builder.getInt64(0));
+      MadeChange = true;
+    }
+
+    if (!MadeChange)
+      return std::nullopt;
+
+    SmallVector<Value *, 13> Args(II.args());
+    Args[1] = Src0;
+    Args[3] = Src1;
+
+    CallInst *NewII = IC.Builder.CreateIntrinsic(
+        IID, {II.getArgOperand(5)->getType(), Src0->getType(), Src1->getType()},
+        Args, &II);
+    NewII->takeName(&II);
+    return IC.replaceInstUsesWith(II, NewII);
+  }
+  case Intrinsic::amdgcn_tensor_load_to_lds:
+  case Intrinsic::amdgcn_tensor_store_from_lds: {
+    Value *D2 = II.getArgOperand(2);
+    Value *D3 = II.getArgOperand(3);
+    // We know that not passing the second and third tensor DMA groups is
+    // equivalent to passing zeroes for those registers, so we rewrite to the
+    // shorter form here. Undef or poison are replaced by 0.
+    auto Pred = m_CombineOr(m_Zero(), m_Undef());
+    if (!match(D2, Pred) || !match(D3, Pred))
+      return std::nullopt;
+
+    auto ShortIntrinsic = IID == Intrinsic::amdgcn_tensor_load_to_lds
+                              ? Intrinsic::amdgcn_tensor_load_to_lds_d2
+                              : Intrinsic::amdgcn_tensor_store_from_lds_d2;
+    CallInst *NewII = IC.Builder.CreateIntrinsic(
+        ShortIntrinsic,
+        {II.getArgOperand(0), II.getArgOperand(1), II.getArgOperand(4)});
+    NewII->takeName(&II);
+    NewII->copyMetadata(II);
+    return IC.eraseInstFromFunction(II);
+  }
+  case Intrinsic::amdgcn_wave_shuffle: {
+    if (!ST->hasDPP())
+      return std::nullopt;
+
+    return tryWaveShuffleDPP(*ST, IC, II);
   }
   }
   if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =

@@ -70,11 +70,9 @@ struct ProgramPoint : public StorageUniquer::BaseStorage {
   ProgramPoint() {}
 
   /// Create a new program point from the given program point.
-  ProgramPoint(const ProgramPoint &point) {
-    this->block = point.getBlock();
-    this->point = point.getPoint();
-    this->op = point.getOperation();
-  }
+  ProgramPoint(const ProgramPoint &point)
+      : block(point.getBlock()), point(point.getPoint()),
+        op(point.getOperation()) {}
 
   static ProgramPoint *construct(StorageUniquer::StorageAllocator &alloc,
                                  KeyTy &&key) {
@@ -354,29 +352,7 @@ public:
 
   /// Erase any analysis state associated with the given lattice anchor.
   template <typename AnchorT>
-  void eraseState(AnchorT anchor) {
-    LatticeAnchor latticeAnchor(anchor);
-
-    // Update equivalentAnchorMap.
-    for (auto &&[TypeId, eqClass] : equivalentAnchorMap) {
-      if (!eqClass.contains(latticeAnchor)) {
-        continue;
-      }
-      llvm::EquivalenceClasses<LatticeAnchor>::member_iterator leaderIt =
-          eqClass.findLeader(latticeAnchor);
-
-      // Update analysis states with new leader if needed.
-      if (*leaderIt == latticeAnchor && ++leaderIt != eqClass.member_end()) {
-        analysisStates[*leaderIt][TypeId] =
-            std::move(analysisStates[latticeAnchor][TypeId]);
-      }
-
-      eqClass.erase(latticeAnchor);
-    }
-
-    // Update analysis states.
-    analysisStates.erase(latticeAnchor);
-  }
+  void eraseState(AnchorT anchor);
 
   /// Erase all analysis states.
   void eraseAllStates() {
@@ -501,7 +477,7 @@ private:
 /// these requirements.
 ///
 /// 1. Querying the state of a lattice anchor prior to visiting that anchor
-///    results in uninitialized state. Analyses must be aware of unintialized
+///    results in uninitialized state. Analyses must be aware of uninitialized
 ///    states.
 /// 2. Analysis states can reach fixpoints, where subsequent updates will never
 ///    trigger a change in the state.
@@ -559,6 +535,36 @@ private:
   /// Allow the framework to access the dependents.
   friend class DataFlowSolver;
 };
+
+//===----------------------------------------------------------------------===//
+// DataFlowSolver definition
+//===----------------------------------------------------------------------===//
+// This method is defined outside `DataFlowSolver` and after `AnalysisState`
+// to prevent issues around `AnalysisState` being used before it is defined.
+template <typename AnchorT>
+void DataFlowSolver::eraseState(AnchorT anchor) {
+  LatticeAnchor latticeAnchor(anchor);
+
+  // Update equivalentAnchorMap.
+  for (auto &&[TypeId, eqClass] : equivalentAnchorMap) {
+    if (!eqClass.contains(latticeAnchor)) {
+      continue;
+    }
+    llvm::EquivalenceClasses<LatticeAnchor>::member_iterator leaderIt =
+        eqClass.findLeader(latticeAnchor);
+
+    // Update analysis states with new leader if needed.
+    if (*leaderIt == latticeAnchor && ++leaderIt != eqClass.member_end()) {
+      analysisStates[*leaderIt][TypeId] =
+          std::move(analysisStates[latticeAnchor][TypeId]);
+    }
+
+    eqClass.erase(latticeAnchor);
+  }
+
+  // Update analysis states.
+  analysisStates.erase(latticeAnchor);
+}
 
 //===----------------------------------------------------------------------===//
 // DataFlowAnalysis

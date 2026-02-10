@@ -128,7 +128,7 @@ AbortWithPayloadFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
 
   Value *cur_value;
   StackFrame *frame = frame_sp.get();
-  ValueObjectListSP arguments_sp = ValueObjectListSP(new ValueObjectList());
+  ValueObjectListSP arguments_sp = std::make_shared<ValueObjectList>();
 
   auto add_to_arguments = [&](llvm::StringRef name, Value *value,
                               bool dynamic) {

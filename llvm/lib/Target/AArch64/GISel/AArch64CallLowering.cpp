@@ -17,8 +17,9 @@
 #include "AArch64ISelLowering.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64RegisterInfo.h"
+#include "AArch64SMEAttributes.h"
 #include "AArch64Subtarget.h"
-#include "Utils/AArch64SMEAttributes.h"
+#include "AArch64TargetMachine.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
@@ -125,12 +126,12 @@ struct AArch64OutgoingValueAssigner
     bool UseVarArgsCCForFixed = IsCalleeWin && State.isVarArg();
 
     bool Res;
-    if (Info.IsFixed && !UseVarArgsCCForFixed) {
+    if (!Flags.isVarArg() && !UseVarArgsCCForFixed) {
       if (!IsReturn)
         applyStackPassedSmallTypeDAGHack(OrigVT, ValVT, LocVT);
-      Res = AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, State);
+      Res = AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, Info.Ty, State);
     } else
-      Res = AssignFnVarArg(ValNo, ValVT, LocVT, LocInfo, Flags, State);
+      Res = AssignFnVarArg(ValNo, ValVT, LocVT, LocInfo, Flags, Info.Ty, State);
 
     StackSize = State.getStackSize();
     return Res;
@@ -361,7 +362,7 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
     unsigned MaxSize = MemTy.getSizeInBytes() * 8;
     // For varargs, we always want to extend them to 8 bytes, in which case
     // we disable setting a max.
-    if (!Arg.IsFixed)
+    if (Arg.Flags[0].isVarArg())
       MaxSize = 0;
 
     Register ValVReg = Arg.Regs[RegIndex];
@@ -577,6 +578,22 @@ static void handleMustTailForwardedRegisters(MachineIRBuilder &MIRBuilder,
 
 bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
   auto &F = MF.getFunction();
+  const auto &TM = static_cast<const AArch64TargetMachine &>(MF.getTarget());
+
+  const bool GlobalISelFlag =
+      getCGPassBuilderOption().EnableGlobalISelOption.value_or(false);
+
+  auto OptLevel = MF.getTarget().getOptLevel();
+  auto EnableGlobalISelAtO = TM.getEnableGlobalISelAtO();
+
+  // GlobalISel is currently only enabled when the opt level is less than or
+  // equal to EnableGlobalISelAt or it was explicitly enabled via the CLI. If we
+  // encounter this check, we know GlobalISel was enabled. If not by these two,
+  // it must have been used as part of the SDAG pipeline to use GlobalISel for
+  // optnone.
+  if (static_cast<unsigned>(OptLevel) > EnableGlobalISelAtO && !GlobalISelFlag)
+    return !F.hasOptNone();
+
   if (!EnableSVEGISel && (F.getReturnType()->isScalableTy() ||
                           llvm::any_of(F.args(), [](const Argument &A) {
                             return A.getType()->isScalableTy();
@@ -1421,6 +1438,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   } else if (Info.CFIType) {
     MIB->setCFIType(MF, Info.CFIType->getZExtValue());
   }
+  MIB->setDeactivationSymbol(MF, Info.DeactivationSymbol);
 
   MIB.add(Info.Callee);
 

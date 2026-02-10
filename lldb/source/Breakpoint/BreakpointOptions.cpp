@@ -99,29 +99,29 @@ BreakpointOptions::CommandData::CreateFromStructuredData(
 
 const char *BreakpointOptions::g_option_names[(
     size_t)BreakpointOptions::OptionNames::LastOptionName]{
-    "ConditionText", "IgnoreCount", 
-    "EnabledState", "OneShotState", "AutoContinue"};
+    "ConditionText", "IgnoreCount", "EnabledState", "OneShotState",
+    "AutoContinue"};
 
 // BreakpointOptions constructor
 BreakpointOptions::BreakpointOptions(bool all_flags_set)
     : m_callback(nullptr), m_baton_is_command_baton(false),
       m_callback_is_synchronous(false), m_enabled(true), m_one_shot(false),
-      m_ignore_count(0), m_condition_text_hash(0), m_inject_condition(false),
-      m_auto_continue(false), m_set_flags(0) {
+      m_ignore_count(0), m_inject_condition(false), m_auto_continue(false),
+      m_set_flags(0) {
   if (all_flags_set)
     m_set_flags.Set(~((Flags::ValueType)0));
 }
 
 BreakpointOptions::BreakpointOptions(const char *condition, bool enabled,
-                                     int32_t ignore, bool one_shot, 
+                                     int32_t ignore, bool one_shot,
                                      bool auto_continue)
     : m_callback(nullptr), m_baton_is_command_baton(false),
       m_callback_is_synchronous(false), m_enabled(enabled),
-      m_one_shot(one_shot), m_ignore_count(ignore), m_condition_text_hash(0),
+      m_one_shot(one_shot), m_ignore_count(ignore), m_condition(condition),
       m_inject_condition(false), m_auto_continue(auto_continue) {
   m_set_flags.Set(eEnabled | eIgnoreCount | eOneShot | eAutoContinue);
     if (condition && *condition != '\0') {
-      SetCondition(condition);
+      SetCondition(StopCondition(condition));
     }
 }
 
@@ -135,8 +135,7 @@ BreakpointOptions::BreakpointOptions(const BreakpointOptions &rhs)
       m_auto_continue(rhs.m_auto_continue), m_set_flags(rhs.m_set_flags) {
   if (rhs.m_thread_spec_up != nullptr)
     m_thread_spec_up = std::make_unique<ThreadSpec>(*rhs.m_thread_spec_up);
-  m_condition_text = rhs.m_condition_text;
-  m_condition_text_hash = rhs.m_condition_text_hash;
+  m_condition = rhs.m_condition;
 }
 
 // BreakpointOptions assignment operator
@@ -151,8 +150,7 @@ operator=(const BreakpointOptions &rhs) {
   m_ignore_count = rhs.m_ignore_count;
   if (rhs.m_thread_spec_up != nullptr)
     m_thread_spec_up = std::make_unique<ThreadSpec>(*rhs.m_thread_spec_up);
-  m_condition_text = rhs.m_condition_text;
-  m_condition_text_hash = rhs.m_condition_text_hash;
+  m_condition = rhs.m_condition;
   m_inject_condition = rhs.m_inject_condition;
   m_auto_continue = rhs.m_auto_continue;
   m_set_flags = rhs.m_set_flags;
@@ -187,13 +185,11 @@ void BreakpointOptions::CopyOverSetOptions(const BreakpointOptions &incoming)
   if (incoming.m_set_flags.Test(eCondition))
   {
     // If we're copying over an empty condition, mark it as unset.
-    if (incoming.m_condition_text.empty()) {
-      m_condition_text.clear();
-      m_condition_text_hash = 0;
+    if (!incoming.m_condition) {
+      m_condition = StopCondition();
       m_set_flags.Clear(eCondition);
     } else {
-      m_condition_text = incoming.m_condition_text;
-      m_condition_text_hash = incoming.m_condition_text_hash;
+      m_condition = incoming.m_condition;
       m_set_flags.Set(eCondition);
     }
   }
@@ -247,7 +243,7 @@ std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
       }
       set_options.Set(eOneShot);
   }
-  
+
   key = GetKey(OptionNames::AutoContinue);
   if (key && options_dict.HasKey(key)) {
     success = options_dict.GetValueForKeyAsBoolean(key, auto_continue);
@@ -258,7 +254,7 @@ std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
       }
       set_options.Set(eAutoContinue);
   }
-  
+
   key = GetKey(OptionNames::IgnoreCount);
   if (key && options_dict.HasKey(key)) {
     success = options_dict.GetValueForKeyAsInteger(key, ignore_count);
@@ -297,8 +293,8 @@ std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
   }
 
   auto bp_options = std::make_unique<BreakpointOptions>(
-      condition_ref.str().c_str(), enabled, 
-      ignore_count, one_shot, auto_continue);
+      condition_ref.str().c_str(), enabled, ignore_count, one_shot,
+      auto_continue);
   if (cmd_data_up) {
     if (cmd_data_up->interpreter == eScriptLanguageNone)
       bp_options->SetCommandDataCallback(cmd_data_up);
@@ -363,8 +359,8 @@ StructuredData::ObjectSP BreakpointOptions::SerializeToStructuredData() {
                                     m_ignore_count);
   if (m_set_flags.Test(eCondition))
     options_dict_sp->AddStringItem(GetKey(OptionNames::ConditionText),
-                                   m_condition_text);
-         
+                                   m_condition.GetText());
+
   if (m_set_flags.Test(eCallback) && m_baton_is_command_baton) {
     auto cmd_baton =
         std::static_pointer_cast<CommandBaton>(m_callback_baton_sp);
@@ -438,7 +434,8 @@ bool BreakpointOptions::InvokeCallback(StoppointCallbackContext *context,
         return m_callback(m_callback_baton_sp ? m_callback_baton_sp->data()
                                           : nullptr,
                       context, break_id, break_loc_id);
-    } else if (IsCallbackSynchronous()) {
+    }
+    if (IsCallbackSynchronous()) {
       return false;
     }
   }
@@ -463,29 +460,20 @@ bool BreakpointOptions::GetCommandLineCallbacks(StringList &command_list) {
   return true;
 }
 
-void BreakpointOptions::SetCondition(const char *condition) {
-  if (!condition || condition[0] == '\0') {
-    condition = "";
+void BreakpointOptions::SetCondition(StopCondition condition) {
+  if (!condition)
     m_set_flags.Clear(eCondition);
-  }
   else
     m_set_flags.Set(eCondition);
 
-  m_condition_text.assign(condition);
-  std::hash<std::string> hasher;
-  m_condition_text_hash = hasher(m_condition_text);
+  m_condition = std::move(condition);
 }
 
-const char *BreakpointOptions::GetConditionText(size_t *hash) const {
-  if (!m_condition_text.empty()) {
-    if (hash)
-      *hash = m_condition_text_hash;
-
-    return m_condition_text.c_str();
-  } else {
-    return nullptr;
-  }
+const StopCondition &BreakpointOptions::GetCondition() const {
+  return m_condition;
 }
+
+StopCondition &BreakpointOptions::GetCondition() { return m_condition; }
 
 const ThreadSpec *BreakpointOptions::GetThreadSpecNoCreate() const {
   return m_thread_spec_up.get();
@@ -555,10 +543,10 @@ void BreakpointOptions::GetDescription(Stream *s,
                                           s->GetIndentLevel());
     }
   }
-  if (!m_condition_text.empty()) {
+  if (m_condition) {
     if (level != eDescriptionLevelBrief) {
       s->EOL();
-      s->Printf("Condition: %s\n", m_condition_text.c_str());
+      s->Printf("Condition: %s\n", m_condition.GetText().data());
     }
   }
 }
@@ -652,5 +640,5 @@ void BreakpointOptions::Clear()
   m_baton_is_command_baton = false;
   m_callback_is_synchronous = false;
   m_enabled = false;
-  m_condition_text.clear();
+  m_condition = StopCondition();
 }

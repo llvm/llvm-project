@@ -37,6 +37,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalAlias.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
@@ -141,6 +142,10 @@ static cl::opt<int>
     InstrCost("inline-instr-cost", cl::Hidden, cl::init(5),
               cl::desc("Cost of a single instruction when inlining"));
 
+static cl::opt<int> InlineAsmInstrCost(
+    "inline-asm-instr-cost", cl::Hidden, cl::init(0),
+    cl::desc("Cost of a single inline asm instruction when inlining"));
+
 static cl::opt<int>
     MemAccessCost("inline-memaccess-cost", cl::Hidden, cl::init(0),
                   cl::desc("Cost of load/store instruction when inlining"));
@@ -175,6 +180,10 @@ static cl::opt<bool> DisableGEPConstOperand(
     "disable-gep-const-evaluation", cl::Hidden, cl::init(false),
     cl::desc("Disables evaluation of GetElementPtr with constant operands"));
 
+static cl::opt<bool> InlineAllViableCalls(
+    "inline-all-viable-calls", cl::Hidden, cl::init(false),
+    cl::desc("Inline all viable calls, even if they exceed the inlining "
+             "threshold"));
 namespace llvm {
 std::optional<int> getStringFnAttrAsInt(const Attribute &Attr) {
   if (Attr.isValid()) {
@@ -351,6 +360,9 @@ protected:
   /// for.
   virtual void onMissedSimplification() {}
 
+  /// Account for inline assembly instructions.
+  virtual void onInlineAsm(const InlineAsm &Arg) {}
+
   /// Start accounting potential benefits due to SROA for the given alloca.
   virtual void onInitializeSROAArg(AllocaInst *Arg) {}
 
@@ -382,6 +394,7 @@ protected:
   /// Number of bytes allocated statically by the callee.
   uint64_t AllocatedSize = 0;
   unsigned NumInstructions = 0;
+  unsigned NumInlineAsmInstructions = 0;
   unsigned NumVectorInstructions = 0;
 
   /// While we walk the potentially-inlined instructions, we build up and
@@ -391,7 +404,8 @@ protected:
   /// likely simplifications post-inlining. The most important aspect we track
   /// is CFG altering simplifications -- when we prove a basic block dead, that
   /// can cause dramatic shifts in the cost of inlining a function.
-  DenseMap<Value *, Constant *> SimplifiedValues;
+  /// Note: The simplified Value may be owned by the caller function.
+  DenseMap<Value *, Value *> SimplifiedValues;
 
   /// Keep track of the values which map back (through function arguments) to
   /// allocas on the caller stack which could be simplified through SROA.
@@ -432,7 +446,7 @@ protected:
   template <typename T> T *getDirectOrSimplifiedValue(Value *V) const {
     if (auto *Direct = dyn_cast<T>(V))
       return Direct;
-    return dyn_cast_if_present<T>(SimplifiedValues.lookup(V));
+    return getSimplifiedValue<T>(V);
   }
 
   // Custom simplification helper routines.
@@ -525,11 +539,33 @@ public:
 
   InlineResult analyze();
 
-  std::optional<Constant *> getSimplifiedValue(Instruction *I) {
-    auto It = SimplifiedValues.find(I);
-    if (It != SimplifiedValues.end())
-      return It->second;
-    return std::nullopt;
+  /// Lookup simplified Value. May return a value owned by the caller.
+  Value *getSimplifiedValueUnchecked(Value *V) const {
+    return SimplifiedValues.lookup(V);
+  }
+
+  /// Lookup simplified Value, but return nullptr if the simplified value is
+  /// owned by the caller.
+  template <typename T> T *getSimplifiedValue(Value *V) const {
+    Value *SimpleV = SimplifiedValues.lookup(V);
+    if (!SimpleV)
+      return nullptr;
+
+    // Skip checks if we know T is a global. This has a small, but measurable
+    // impact on compile-time.
+    if constexpr (std::is_base_of_v<Constant, T>)
+      return dyn_cast<T>(SimpleV);
+
+    // Make sure the simplified Value is owned by this function
+    if (auto *I = dyn_cast<Instruction>(SimpleV)) {
+      if (I->getFunction() != &F)
+        return nullptr;
+    } else if (auto *Arg = dyn_cast<Argument>(SimpleV)) {
+      if (Arg->getParent() != &F)
+        return nullptr;
+    } else if (!isa<Constant>(SimpleV))
+      return nullptr;
+    return dyn_cast<T>(SimpleV);
   }
 
   // Keep a bunch of stats about the cost savings found so we can print them
@@ -715,7 +751,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
       if (CA.analyze().isSuccess()) {
         // We were able to inline the indirect call! Subtract the cost from the
         // threshold to get the bonus we want to apply, but don't go below zero.
-        Cost -= std::max(0, CA.getThreshold() - CA.getCost());
+        addCost(-std::max(0, CA.getThreshold() - CA.getCost()));
       }
     } else
       // Otherwise simply add the cost for merely making the call.
@@ -754,6 +790,48 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
 
     addCost(SwitchCost);
   }
+
+  // Parses the inline assembly argument to account for its cost. Inline
+  // assembly instructions incur higher costs for inlining since they cannot be
+  // analyzed and optimized.
+  void onInlineAsm(const InlineAsm &Arg) override {
+    if (!InlineAsmInstrCost)
+      return;
+    SmallVector<StringRef, 4> AsmStrs;
+    Arg.collectAsmStrs(AsmStrs);
+    int SectionLevel = 0;
+    int InlineAsmInstrCount = 0;
+    for (StringRef AsmStr : AsmStrs) {
+      // Trim whitespaces and comments.
+      StringRef Trimmed = AsmStr.trim();
+      size_t hashPos = Trimmed.find('#');
+      if (hashPos != StringRef::npos)
+        Trimmed = Trimmed.substr(0, hashPos);
+      // Ignore comments.
+      if (Trimmed.empty())
+        continue;
+      // Filter out the outlined assembly instructions from the cost by keeping
+      // track of the section level and only accounting for instrutions at
+      // section level of zero. Note there will be duplication in outlined
+      // sections too, but is not accounted in the inlining cost model.
+      if (Trimmed.starts_with(".pushsection")) {
+        ++SectionLevel;
+        continue;
+      }
+      if (Trimmed.starts_with(".popsection")) {
+        --SectionLevel;
+        continue;
+      }
+      // Ignore directives and labels.
+      if (Trimmed.starts_with(".") || Trimmed.contains(":"))
+        continue;
+      if (SectionLevel == 0)
+        ++InlineAsmInstrCount;
+    }
+    NumInlineAsmInstructions += InlineAsmInstrCount;
+    addCost(InlineAsmInstrCount * InlineAsmInstrCost);
+  }
+
   void onMissedSimplification() override { addCost(InstrCost); }
 
   void onInitializeSROAArg(AllocaInst *Arg) override {
@@ -921,12 +999,11 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
         if (BranchInst *BI = dyn_cast<BranchInst>(&I)) {
           // Count a conditional branch as savings if it becomes unconditional.
           if (BI->isConditional() &&
-              isa_and_nonnull<ConstantInt>(
-                  SimplifiedValues.lookup(BI->getCondition()))) {
+              getSimplifiedValue<ConstantInt>(BI->getCondition())) {
             CurrentSavings += InstrCost;
           }
         } else if (SwitchInst *SI = dyn_cast<SwitchInst>(&I)) {
-          if (isa_and_present<ConstantInt>(SimplifiedValues.lookup(SI->getCondition())))
+          if (getSimplifiedValue<ConstantInt>(SI->getCondition()))
             CurrentSavings += InstrCost;
         } else if (Value *V = dyn_cast<Value>(&I)) {
           // Count an instruction as savings if we can fold it.
@@ -1114,7 +1191,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     // If this function uses the coldcc calling convention, prefer not to inline
     // it.
     if (F.getCallingConv() == CallingConv::Cold)
-      Cost += InlineConstants::ColdccPenalty;
+      addCost(InlineConstants::ColdccPenalty);
 
     LLVM_DEBUG(dbgs() << "      Initial cost: " << Cost << "\n");
 
@@ -1165,7 +1242,7 @@ public:
     return std::nullopt;
   }
 
-  virtual ~InlineCostCallAnalyzer() = default;
+  ~InlineCostCallAnalyzer() override = default;
   int getThreshold() const { return Threshold; }
   int getCost() const { return Cost; }
   int getStaticBonusApplied() const { return StaticBonusApplied; }
@@ -1423,10 +1500,17 @@ void InlineCostAnnotationWriter::emitInstructionAnnot(
     if (Record->hasThresholdChanged())
       OS << ", threshold delta = " << Record->getThresholdDelta();
   }
-  auto C = ICCA->getSimplifiedValue(const_cast<Instruction *>(I));
-  if (C) {
+  auto *V = ICCA->getSimplifiedValueUnchecked(const_cast<Instruction *>(I));
+  if (V) {
     OS << ", simplified to ";
-    (*C)->print(OS, true);
+    V->print(OS, true);
+    if (auto *VI = dyn_cast<Instruction>(V)) {
+      if (VI->getFunction() != I->getFunction())
+        OS << " (caller instruction)";
+    } else if (auto *VArg = dyn_cast<Argument>(V)) {
+      if (VArg->getParent() != I->getFunction())
+        OS << " (caller argument)";
+    }
   }
   OS << "\n";
 }
@@ -1483,7 +1567,7 @@ bool CallAnalyzer::isGEPFree(GetElementPtrInst &GEP) {
   SmallVector<Value *, 4> Operands;
   Operands.push_back(GEP.getOperand(0));
   for (const Use &Op : GEP.indices())
-    if (Constant *SimpleOp = SimplifiedValues.lookup(Op))
+    if (Constant *SimpleOp = getSimplifiedValue<Constant>(Op))
       Operands.push_back(SimpleOp);
     else
       Operands.push_back(Op);
@@ -1498,7 +1582,7 @@ bool CallAnalyzer::visitAlloca(AllocaInst &I) {
   // Check whether inlining will turn a dynamic alloca into a static
   // alloca and handle that case.
   if (I.isArrayAllocation()) {
-    Constant *Size = SimplifiedValues.lookup(I.getArraySize());
+    Constant *Size = getSimplifiedValue<Constant>(I.getArraySize());
     if (auto *AllocSize = dyn_cast_or_null<ConstantInt>(Size)) {
       // Sometimes a dynamic alloca could be converted into a static alloca
       // after this constant prop, and become a huge static alloca on an
@@ -1518,19 +1602,20 @@ bool CallAnalyzer::visitAlloca(AllocaInst &I) {
     }
   }
 
-  // Accumulate the allocated size.
   if (I.isStaticAlloca()) {
-    Type *Ty = I.getAllocatedType();
-    AllocatedSize = SaturatingAdd(DL.getTypeAllocSize(Ty).getKnownMinValue(),
-                                  AllocatedSize);
-  }
-
-  // FIXME: This is overly conservative. Dynamic allocas are inefficient for
-  // a variety of reasons, and so we would like to not inline them into
-  // functions which don't currently have a dynamic alloca. This simply
-  // disables inlining altogether in the presence of a dynamic alloca.
-  if (!I.isStaticAlloca())
+    // Accumulate the allocated size if constant and executed once.
+    // Note: if AllocSize is a vscale value, this is an underestimate of the
+    // allocated size, and it also requires some of the cost of a dynamic
+    // alloca, but is recorded here as a constant size alloca.
+    TypeSize AllocSize = I.getAllocationSize(DL).value_or(TypeSize::getZero());
+    AllocatedSize = SaturatingAdd(AllocSize.getKnownMinValue(), AllocatedSize);
+  } else {
+    // FIXME: This is overly conservative. Dynamic allocas are inefficient for
+    // a variety of reasons, and so we would like to not inline them into
+    // functions which don't currently have a dynamic alloca. This simply
+    // disables inlining altogether in the presence of a dynamic alloca.
     HasDynamicAlloca = true;
+  }
 
   return false;
 }
@@ -1644,7 +1729,7 @@ bool CallAnalyzer::canFoldInboundsGEP(GetElementPtrInst &I) {
     return false;
 
   // Add the result as a new mapping to Base + Offset.
-  ConstantOffsetPtrs[&I] = BaseAndOffset;
+  ConstantOffsetPtrs[&I] = std::move(BaseAndOffset);
 
   return true;
 }
@@ -2109,7 +2194,7 @@ void InlineCostCallAnalyzer::updateThreshold(CallBase &Call, Function &Callee) {
   // the cost of inlining it drops dramatically. It may seem odd to update
   // Cost in updateThreshold, but the bonus depends on the logic in this method.
   if (isSoleCallToLocalFunction(Call, F)) {
-    Cost -= LastCallToStaticBonus;
+    addCost(-LastCallToStaticBonus);
     StaticBonusApplied = LastCallToStaticBonus;
   }
 }
@@ -2287,9 +2372,18 @@ bool CallAnalyzer::visitStore(StoreInst &I) {
 }
 
 bool CallAnalyzer::visitExtractValue(ExtractValueInst &I) {
-  // Constant folding for extract value is trivial.
-  if (simplifyInstruction(I))
-    return true;
+  Value *Op = I.getAggregateOperand();
+
+  // Special handling, because we want to simplify extractvalue with a
+  // potential insertvalue from the caller.
+  if (Value *SimpleOp = getSimplifiedValueUnchecked(Op)) {
+    SimplifyQuery SQ(DL);
+    Value *SimpleV = simplifyExtractValueInst(SimpleOp, I.getIndices(), SQ);
+    if (SimpleV) {
+      SimplifiedValues[&I] = SimpleV;
+      return true;
+    }
+  }
 
   // SROA can't look through these, but they may be free.
   return Base::visitExtractValue(I);
@@ -2382,13 +2476,16 @@ bool CallAnalyzer::visitCallBase(CallBase &Call) {
   if (isa<CallInst>(Call) && cast<CallInst>(Call).cannotDuplicate())
     ContainsNoDuplicateCall = true;
 
+  if (InlineAsm *InlineAsmOp = dyn_cast<InlineAsm>(Call.getCalledOperand()))
+    onInlineAsm(*InlineAsmOp);
+
   Function *F = Call.getCalledFunction();
   bool IsIndirectCall = !F;
   if (IsIndirectCall) {
     // Check if this happens to be an indirect function call to a known function
     // in this inline context. If not, we've done all we can.
     Value *Callee = Call.getCalledOperand();
-    F = dyn_cast_or_null<Function>(SimplifiedValues.lookup(Callee));
+    F = getSimplifiedValue<Function>(Callee);
     if (!F || F->getFunctionType() != Call.getFunctionType()) {
       onCallArgumentSetup(Call);
 
@@ -2483,8 +2580,7 @@ bool CallAnalyzer::visitSelectInst(SelectInst &SI) {
 
   Constant *TrueC = getDirectOrSimplifiedValue<Constant>(TrueVal);
   Constant *FalseC = getDirectOrSimplifiedValue<Constant>(FalseVal);
-  Constant *CondC =
-      dyn_cast_or_null<Constant>(SimplifiedValues.lookup(SI.getCondition()));
+  Constant *CondC = getSimplifiedValue<Constant>(SI.getCondition());
 
   if (!CondC) {
     // Select C, X, X => X
@@ -2833,8 +2929,9 @@ InlineResult CallAnalyzer::analyze() {
   auto CAI = CandidateCall.arg_begin();
   for (Argument &FAI : F.args()) {
     assert(CAI != CandidateCall.arg_end());
-    if (Constant *C = dyn_cast<Constant>(CAI))
-      SimplifiedValues[&FAI] = C;
+    SimplifiedValues[&FAI] = *CAI;
+    if (isa<Constant>(*CAI))
+      ++NumConstantArgs;
 
     Value *PtrArg = *CAI;
     if (ConstantInt *C = stripAndComputeInBoundsConstantOffsets(PtrArg)) {
@@ -2849,7 +2946,6 @@ InlineResult CallAnalyzer::analyze() {
     }
     ++CAI;
   }
-  NumConstantArgs = SimplifiedValues.size();
   NumConstantOffsetPtrArgs = ConstantOffsetPtrs.size();
   NumAllocaArgs = SROAArgValues.size();
 
@@ -2885,7 +2981,7 @@ InlineResult CallAnalyzer::analyze() {
 
     onBlockStart(BB);
 
-    // Disallow inlining a blockaddress with uses other than strictly callbr.
+    // Disallow inlining a blockaddress.
     // A blockaddress only has defined behavior for an indirect branch in the
     // same function, and we do not currently support inlining indirect
     // branches.  But, the inliner may not see an indirect branch that ends up
@@ -2894,9 +2990,7 @@ InlineResult CallAnalyzer::analyze() {
     // invalid cross-function reference.
     // FIXME: pr/39560: continue relaxing this overt restriction.
     if (BB->hasAddressTaken())
-      for (User *U : BlockAddress::get(&*BB)->users())
-        if (!isa<CallBrInst>(*U))
-          return InlineResult::failure("blockaddress used outside of callbr");
+      return InlineResult::failure("blockaddress used");
 
     // Analyze the cost of this block. If we blow through the threshold, this
     // returns false, and we can bail on out.
@@ -2911,8 +3005,7 @@ InlineResult CallAnalyzer::analyze() {
     if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
       if (BI->isConditional()) {
         Value *Cond = BI->getCondition();
-        if (ConstantInt *SimpleCond =
-                dyn_cast_or_null<ConstantInt>(SimplifiedValues.lookup(Cond))) {
+        if (ConstantInt *SimpleCond = getSimplifiedValue<ConstantInt>(Cond)) {
           BasicBlock *NextBB = BI->getSuccessor(SimpleCond->isZero() ? 1 : 0);
           BBWorklist.insert(NextBB);
           KnownSuccessors[BB] = NextBB;
@@ -2922,8 +3015,7 @@ InlineResult CallAnalyzer::analyze() {
       }
     } else if (SwitchInst *SI = dyn_cast<SwitchInst>(TI)) {
       Value *Cond = SI->getCondition();
-      if (ConstantInt *SimpleCond =
-              dyn_cast_or_null<ConstantInt>(SimplifiedValues.lookup(Cond))) {
+      if (ConstantInt *SimpleCond = getSimplifiedValue<ConstantInt>(Cond)) {
         BasicBlock *NextBB = SI->findCaseValue(SimpleCond)->getCaseSuccessor();
         BBWorklist.insert(NextBB);
         KnownSuccessors[BB] = NextBB;
@@ -2970,6 +3062,7 @@ void InlineCostCallAnalyzer::print(raw_ostream &OS) {
   DEBUG_PRINT_STAT(NumConstantPtrDiffs);
   DEBUG_PRINT_STAT(NumInstructionsSimplified);
   DEBUG_PRINT_STAT(NumInstructions);
+  DEBUG_PRINT_STAT(NumInlineAsmInstructions);
   DEBUG_PRINT_STAT(SROACostSavings);
   DEBUG_PRINT_STAT(SROACostSavingsLost);
   DEBUG_PRINT_STAT(LoadEliminationCost);
@@ -3182,6 +3275,10 @@ InlineCost llvm::getInlineCost(
     return llvm::InlineCost::getNever(UserDecision->getFailureReason());
   }
 
+  if (InlineAllViableCalls && isInlineViable(*Callee).isSuccess())
+    return llvm::InlineCost::getAlways(
+        "Inlining forced by -inline-all-viable-calls");
+
   LLVM_DEBUG(llvm::dbgs() << "      Analyzing call of " << Callee->getName()
                           << "... (caller:" << Call.getCaller()->getName()
                           << ")\n");
@@ -3222,12 +3319,9 @@ InlineResult llvm::isInlineViable(Function &F) {
     if (isa<IndirectBrInst>(BB.getTerminator()))
       return InlineResult::failure("contains indirect branches");
 
-    // Disallow inlining of blockaddresses which are used by non-callbr
-    // instructions.
+    // Disallow inlining of blockaddresses.
     if (BB.hasAddressTaken())
-      for (User *U : BlockAddress::get(&BB)->users())
-        if (!isa<CallBrInst>(*U))
-          return InlineResult::failure("blockaddress used outside of callbr");
+      return InlineResult::failure("blockaddress used");
 
     for (auto &II : BB) {
       CallBase *Call = dyn_cast<CallBase>(&II);

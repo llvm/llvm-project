@@ -100,7 +100,7 @@ public:
     return ((__curent_state & __stop_requested_bit) != 0) || ((__curent_state >> __stop_source_counter_shift) != 0);
   }
 
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool __request_stop() noexcept {
+  _LIBCPP_HIDE_FROM_ABI bool __request_stop() noexcept {
     auto __cb_list_lock = __try_lock_for_request_stop();
     if (!__cb_list_lock.__owns_lock()) {
       return false;
@@ -137,7 +137,7 @@ public:
     return true;
   }
 
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool __add_callback(__stop_callback_base* __cb) noexcept {
+  _LIBCPP_HIDE_FROM_ABI bool __add_callback(__stop_callback_base* __cb) noexcept {
     // If it is already stop_requested. Do not try to request it again.
     const auto __give_up_trying_to_lock_condition = [__cb](__state_t __state) {
       if ((__state & __stop_requested_bit) != 0) {
@@ -164,7 +164,7 @@ public:
   }
 
   // called by the destructor of stop_callback
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void __remove_callback(__stop_callback_base* __cb) noexcept {
+  _LIBCPP_HIDE_FROM_ABI void __remove_callback(__stop_callback_base* __cb) noexcept {
     __callback_list_lock __cb_list_lock(__state_);
 
     // under below condition, the request_stop call just popped __cb from the list and could execute it now
@@ -192,7 +192,7 @@ public:
   }
 
 private:
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI __callback_list_lock __try_lock_for_request_stop() noexcept {
+  _LIBCPP_HIDE_FROM_ABI __callback_list_lock __try_lock_for_request_stop() noexcept {
     // If it is already stop_requested, do not try to request stop or lock the list again.
     const auto __lock_fail_condition = [](__state_t __state) { return (__state & __stop_requested_bit) != 0; };
 

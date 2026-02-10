@@ -87,8 +87,8 @@ bool hlfir::isFortranVariableType(mlir::Type type) {
         return mlir::isa<fir::BaseBoxType>(eleType) ||
                !fir::hasDynamicSize(eleType);
       })
-      .Case<fir::BaseBoxType, fir::BoxCharType>([](auto) { return true; })
-      .Case<fir::VectorType>([](auto) { return true; })
+      .Case<fir::BaseBoxType, fir::BoxCharType>([](mlir::Type) { return true; })
+      .Case([](fir::VectorType) { return true; })
       .Default([](mlir::Type) { return false; });
 }
 
@@ -201,13 +201,13 @@ mlir::Value hlfir::genExprShape(mlir::OpBuilder &builder,
   for (std::int64_t extent : expr.getShape()) {
     if (extent == hlfir::ExprType::getUnknownExtent())
       return {};
-    extents.emplace_back(builder.create<mlir::arith::ConstantOp>(
-        loc, indexTy, builder.getIntegerAttr(indexTy, extent)));
+    extents.emplace_back(mlir::arith::ConstantOp::create(
+        builder, loc, indexTy, builder.getIntegerAttr(indexTy, extent)));
   }
 
   fir::ShapeType shapeTy =
       fir::ShapeType::get(builder.getContext(), expr.getRank());
-  fir::ShapeOp shape = builder.create<fir::ShapeOp>(loc, shapeTy, extents);
+  fir::ShapeOp shape = fir::ShapeOp::create(builder, loc, shapeTy, extents);
   return shape.getResult();
 }
 

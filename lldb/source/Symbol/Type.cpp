@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <iterator>
+#include <memory>
 #include <optional>
 
 #include "lldb/Core/Module.h"
@@ -246,7 +247,7 @@ public:
   TypeAppendVisitor(TypeListImpl &type_list) : m_type_list(type_list) {}
 
   bool operator()(const lldb::TypeSP &type) {
-    m_type_list.Append(TypeImplSP(new TypeImpl(type)));
+    m_type_list.Append(std::make_shared<TypeImpl>(type));
     return true;
   }
 
@@ -530,9 +531,9 @@ lldb::TypeSP Type::GetTypedefType() {
 
 lldb::Format Type::GetFormat() { return GetForwardCompilerType().GetFormat(); }
 
-lldb::Encoding Type::GetEncoding(uint64_t &count) {
+lldb::Encoding Type::GetEncoding() {
   // Make sure we resolve our type if it already hasn't been.
-  return GetForwardCompilerType().GetEncoding(count);
+  return GetForwardCompilerType().GetEncoding();
 }
 
 bool Type::ReadFromMemory(ExecutionContext *exe_ctx, lldb::addr_t addr,
@@ -816,10 +817,12 @@ Type::GetTypeScopeAndBasename(llvm::StringRef name) {
     case ':':
       if (prev_is_colon && template_depth == 0) {
         llvm::StringRef scope_name = name.slice(name_begin, pos.index() - 1);
-        // The itanium demangler uses this string to represent anonymous
+        // The demanglers use these strings to represent anonymous
         // namespaces. Convert it to a more language-agnostic form (which is
         // also used in DWARF).
-        if (scope_name == "(anonymous namespace)")
+        if (scope_name == "(anonymous namespace)" ||
+            scope_name == "`anonymous namespace'" ||
+            scope_name == "`anonymous-namespace'")
           scope_name = "";
         result.scope.push_back(scope_name);
         name_begin = pos.index() + 1;

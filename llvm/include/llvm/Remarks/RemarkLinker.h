@@ -80,13 +80,12 @@ public:
   /// \p Buffer.
   /// \p Buffer can be either a standalone remark container or just
   /// metadata. This takes care of uniquing and merging the remarks.
-  LLVM_ABI Error link(StringRef Buffer,
-                      std::optional<Format> RemarkFormat = std::nullopt);
+  LLVM_ABI Error link(StringRef Buffer, Format RemarkFormat = Format::Auto);
 
   /// Link the remarks found in \p Obj by looking for the right section and
   /// calling the method above.
   LLVM_ABI Error link(const object::ObjectFile &Obj,
-                      std::optional<Format> RemarkFormat = std::nullopt);
+                      Format RemarkFormat = Format::Auto);
 
   /// Serialize the linked remarks to the stream \p OS, using the format \p
   /// RemarkFormat.
@@ -102,9 +101,7 @@ public:
   /// for (const Remark &R : RL.remarks() { [...] }
   using iterator = pointee_iterator<decltype(Remarks)::const_iterator>;
 
-  iterator_range<iterator> remarks() const {
-    return {Remarks.begin(), Remarks.end()};
-  }
+  iterator_range<iterator> remarks() const { return Remarks; }
 };
 
 /// Returns a buffer with the contents of the remarks section depending on the

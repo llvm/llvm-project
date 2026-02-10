@@ -18,8 +18,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPCELFStreamer.h"
+#include "PPCMCAsmInfo.h"
 #include "PPCMCCodeEmitter.h"
-#include "PPCMCExpr.h"
 #include "PPCMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -65,7 +65,7 @@ void PPCELFStreamer::emitPrefixedInstruction(const MCInst &Inst,
   MCFragment *InstructionFragment = getCurrentFragment();
   SMLoc InstLoc = Inst.getLoc();
   // Check if there was a last label emitted.
-  if (LastLabel && !LastLabel->isUnset() && LastLabelLoc.isValid() &&
+  if (LastLabel && LastLabel->isDefined() && LastLabelLoc.isValid() &&
       InstLoc.isValid()) {
     const SourceMgr *SourceManager = getContext().getSourceManager();
     unsigned InstLine = SourceManager->FindLineNumber(InstLoc);
@@ -82,8 +82,7 @@ void PPCELFStreamer::emitPrefixedInstruction(const MCInst &Inst,
 
 void PPCELFStreamer::emitInstruction(const MCInst &Inst,
                                      const MCSubtargetInfo &STI) {
-  PPCMCCodeEmitter *Emitter =
-      static_cast<PPCMCCodeEmitter*>(getAssembler().getEmitterPtr());
+  auto &Emitter = static_cast<PPCMCCodeEmitter &>(getAssembler().getEmitter());
 
   // If the instruction is a part of the GOT to PC-Rel link time optimization
   // instruction pair, return a value, otherwise return std::nullopt. A true
@@ -100,7 +99,7 @@ void PPCELFStreamer::emitInstruction(const MCInst &Inst,
     emitGOTToPCRelReloc(Inst);
 
   // Special handling is only for prefixed instructions.
-  if (!Emitter->isPrefixedInstruction(Inst)) {
+  if (!Emitter.isPrefixedInstruction(Inst)) {
     MCELFStreamer::emitInstruction(Inst, STI);
     return;
   }
@@ -155,13 +154,10 @@ void PPCELFStreamer::emitGOTToPCRelReloc(const MCInst &Inst) {
   const MCExpr *SubExpr2 =
       MCBinaryExpr::createSub(CurrentLocationExpr, SubExpr, getContext());
 
-  MCDataFragment *DF = static_cast<MCDataFragment *>(LabelSym->getFragment());
-  assert(DF && "Expecting a valid data fragment.");
-  MCFixupKind FixupKind = static_cast<MCFixupKind>(FirstLiteralRelocationKind +
-                                                   ELF::R_PPC64_PCREL_OPT);
-  DF->getFixups().push_back(
+  MCFragment *F = LabelSym->getFragment();
+  F->addFixup(
       MCFixup::create(LabelSym->getOffset() - 8, SubExpr2,
-                      FixupKind, Inst.getLoc()));
+                      FirstLiteralRelocationKind + ELF::R_PPC64_PCREL_OPT));
   emitLabel(CurrentLocation, Inst.getLoc());
 }
 

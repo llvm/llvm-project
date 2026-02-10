@@ -81,6 +81,7 @@ enum SpillOpcodeKey {
   SOK_AccumulatorSpill,
   SOK_UAccumulatorSpill,
   SOK_WAccumulatorSpill,
+  SOK_DMRpSpill,
   SOK_DMRSpill,
   SOK_SPESpill,
   SOK_PairedG8Spill,
@@ -119,6 +120,7 @@ enum PPCMachineCombinerPattern : unsigned {
    NoInstr,                                                                    \
    NoInstr,                                                                    \
    NoInstr,                                                                    \
+   NoInstr,                                                                    \
    PPC::EVLDD,                                                                 \
    PPC::RESTORE_QUADWORD}
 
@@ -134,6 +136,7 @@ enum PPCMachineCombinerPattern : unsigned {
    PPC::DFLOADf64,                                                             \
    PPC::DFLOADf32,                                                             \
    PPC::SPILLTOVSR_LD,                                                         \
+   NoInstr,                                                                    \
    NoInstr,                                                                    \
    NoInstr,                                                                    \
    NoInstr,                                                                    \
@@ -160,6 +163,7 @@ enum PPCMachineCombinerPattern : unsigned {
    NoInstr,                                                                    \
    NoInstr,                                                                    \
    NoInstr,                                                                    \
+   NoInstr,                                                                    \
    PPC::RESTORE_QUADWORD}
 
 #define FutureLoadOpcodes                                                      \
@@ -178,6 +182,7 @@ enum PPCMachineCombinerPattern : unsigned {
    PPC::RESTORE_ACC,                                                           \
    PPC::RESTORE_UACC,                                                          \
    PPC::RESTORE_WACC,                                                          \
+   PPC::RESTORE_DMRP,                                                          \
    PPC::RESTORE_DMR,                                                           \
    NoInstr,                                                                    \
    PPC::RESTORE_QUADWORD}
@@ -194,6 +199,7 @@ enum PPCMachineCombinerPattern : unsigned {
    PPC::STXSDX,                                                                \
    PPC::STXSSPX,                                                               \
    PPC::SPILLTOVSR_ST,                                                         \
+   NoInstr,                                                                    \
    NoInstr,                                                                    \
    NoInstr,                                                                    \
    NoInstr,                                                                    \
@@ -220,6 +226,7 @@ enum PPCMachineCombinerPattern : unsigned {
    NoInstr,                                                                    \
    NoInstr,                                                                    \
    NoInstr,                                                                    \
+   NoInstr,                                                                    \
    PPC::SPILL_QUADWORD}
 
 #define Pwr10StoreOpcodes                                                      \
@@ -237,6 +244,7 @@ enum PPCMachineCombinerPattern : unsigned {
    PPC::STXVP,                                                                 \
    PPC::SPILL_ACC,                                                             \
    PPC::SPILL_UACC,                                                            \
+   NoInstr,                                                                    \
    NoInstr,                                                                    \
    NoInstr,                                                                    \
    NoInstr,                                                                    \
@@ -258,6 +266,7 @@ enum PPCMachineCombinerPattern : unsigned {
    PPC::SPILL_ACC,                                                             \
    PPC::SPILL_UACC,                                                            \
    PPC::SPILL_WACC,                                                            \
+   PPC::SPILL_DMRP,                                                            \
    PPC::SPILL_DMR,                                                             \
    NoInstr,                                                                    \
    PPC::SPILL_QUADWORD}
@@ -270,7 +279,7 @@ enum PPCMachineCombinerPattern : unsigned {
 
 class PPCSubtarget;
 class PPCInstrInfo : public PPCGenInstrInfo {
-  PPCSubtarget &Subtarget;
+  const PPCSubtarget &Subtarget;
   const PPCRegisterInfo RI;
   const unsigned StoreSpillOpcodesArray[4][SOK_LastOpcodeSpill] =
       StoreOpcodesForSpill;
@@ -288,7 +297,8 @@ class PPCInstrInfo : public PPCGenInstrInfo {
   // Replace the instruction with single LI if possible. \p DefMI must be LI or
   // LI8.
   bool simplifyToLI(MachineInstr &MI, MachineInstr &DefMI,
-                    unsigned OpNoForForwarding, MachineInstr **KilledDef) const;
+                    unsigned OpNoForForwarding, MachineInstr **KilledDef,
+                    SmallSet<Register, 4> *RegsToUpdate = nullptr) const;
   // If the inst is imm-form and its register operand is produced by a ADDI, put
   // the imm into the inst directly and remove the ADDI if possible.
   bool transformToNewImmFormFedByAdd(MachineInstr &MI, MachineInstr &DefMI,
@@ -360,7 +370,7 @@ protected:
                                        unsigned OpIdx2) const override;
 
 public:
-  explicit PPCInstrInfo(PPCSubtarget &STI);
+  explicit PPCInstrInfo(const PPCSubtarget &STI);
 
   bool isLoadFromConstantPool(MachineInstr *I) const;
   const Constant *getConstantFromConstantPool(MachineInstr *I) const;
@@ -521,7 +531,7 @@ public:
                              unsigned &SubIdx) const override;
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
-  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
+  bool isReMaterializableImpl(const MachineInstr &MI) const override;
   Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
 
@@ -561,7 +571,8 @@ public:
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
       bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+
+      Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   // Emits a register spill without updating the register class for vector
@@ -570,13 +581,12 @@ public:
   void storeRegToStackSlotNoUpd(MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MBBI,
                                 unsigned SrcReg, bool isKill, int FrameIndex,
-                                const TargetRegisterClass *RC,
-                                const TargetRegisterInfo *TRI) const;
+                                const TargetRegisterClass *RC) const;
 
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
       Register DestReg, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      Register VReg, unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   // Emits a register reload without updating the register class for vector
@@ -585,8 +595,7 @@ public:
   void loadRegFromStackSlotNoUpd(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MBBI,
                                  unsigned DestReg, int FrameIndex,
-                                 const TargetRegisterClass *RC,
-                                 const TargetRegisterInfo *TRI) const;
+                                 const TargetRegisterClass *RC) const;
 
   unsigned getStoreOpcodeForSpill(const TargetRegisterClass *RC) const;
 

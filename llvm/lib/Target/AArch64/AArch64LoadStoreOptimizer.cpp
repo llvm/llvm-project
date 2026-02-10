@@ -42,7 +42,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
 #include <functional>
@@ -448,6 +447,10 @@ static unsigned getPreIndexedOpcode(unsigned Opc) {
   switch (Opc) {
   default:
     llvm_unreachable("Opcode has no pre-indexed equivalent!");
+  case AArch64::STRBui:
+    return AArch64::STRBpre;
+  case AArch64::STRHui:
+    return AArch64::STRHpre;
   case AArch64::STRSui:
     return AArch64::STRSpre;
   case AArch64::STRDui:
@@ -462,6 +465,10 @@ static unsigned getPreIndexedOpcode(unsigned Opc) {
     return AArch64::STRWpre;
   case AArch64::STRXui:
     return AArch64::STRXpre;
+  case AArch64::LDRBui:
+    return AArch64::LDRBpre;
+  case AArch64::LDRHui:
+    return AArch64::LDRHpre;
   case AArch64::LDRSui:
     return AArch64::LDRSpre;
   case AArch64::LDRDui:
@@ -553,6 +560,10 @@ static unsigned getPostIndexedOpcode(unsigned Opc) {
   switch (Opc) {
   default:
     llvm_unreachable("Opcode has no post-indexed wise equivalent!");
+  case AArch64::STRBui:
+    return AArch64::STRBpost;
+  case AArch64::STRHui:
+    return AArch64::STRHpost;
   case AArch64::STRSui:
   case AArch64::STURSi:
     return AArch64::STRSpost;
@@ -572,6 +583,10 @@ static unsigned getPostIndexedOpcode(unsigned Opc) {
   case AArch64::STRXui:
   case AArch64::STURXi:
     return AArch64::STRXpost;
+  case AArch64::LDRBui:
+    return AArch64::LDRBpost;
+  case AArch64::LDRHui:
+    return AArch64::LDRHpost;
   case AArch64::LDRSui:
   case AArch64::LDURSi:
     return AArch64::LDRSpost;
@@ -740,6 +755,8 @@ static bool isMergeableLdStUpdate(MachineInstr &MI, AArch64FunctionInfo &AFI) {
   default:
     return false;
   // Scaled instructions.
+  case AArch64::STRBui:
+  case AArch64::STRHui:
   case AArch64::STRSui:
   case AArch64::STRDui:
   case AArch64::STRQui:
@@ -747,6 +764,8 @@ static bool isMergeableLdStUpdate(MachineInstr &MI, AArch64FunctionInfo &AFI) {
   case AArch64::STRWui:
   case AArch64::STRHHui:
   case AArch64::STRBBui:
+  case AArch64::LDRBui:
+  case AArch64::LDRHui:
   case AArch64::LDRSui:
   case AArch64::LDRDui:
   case AArch64::LDRQui:
@@ -834,10 +853,10 @@ static bool isMergeableIndexLdSt(MachineInstr &MI, int &Scale) {
   }
 }
 
-static bool isRewritableImplicitDef(unsigned Opc) {
-  switch (Opc) {
+static bool isRewritableImplicitDef(const MachineOperand &MO) {
+  switch (MO.getParent()->getOpcode()) {
   default:
-    return false;
+    return MO.isRenamable();
   case AArch64::ORRWrs:
   case AArch64::ADDWri:
     return true;
@@ -1048,7 +1067,7 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
                         MI.getRegClassConstraint(OpIdx, TII, TRI))
                   MatchingReg = GetMatchingSubReg(RC);
                 else {
-                  if (!isRewritableImplicitDef(MI.getOpcode()))
+                  if (!isRewritableImplicitDef(MOP))
                     continue;
                   MatchingReg = GetMatchingSubReg(
                       TRI->getMinimalPhysRegClass(MOP.getReg()));
@@ -1081,8 +1100,8 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
           LLVM_DEBUG(dbgs() << "Renamed " << MI);
           return true;
         };
-    forAllMIsUntilDef(MergeForward ? *I : *std::prev(Paired), RegToRename, TRI,
-                      UINT32_MAX, UpdateMIs);
+    forAllMIsUntilDef(MergeForward ? *I : *Paired->getPrevNode(), RegToRename,
+                      TRI, UINT32_MAX, UpdateMIs);
 
 #if !defined(NDEBUG)
     // For forward merging store:
@@ -1193,7 +1212,8 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
       //   USE kill %w1   ; need to clear kill flag when moving STRWui downwards
       //   STRW %w0
       Register Reg = getLdStRegOp(*I).getReg();
-      for (MachineInstr &MI : make_range(std::next(I), Paired))
+      for (MachineInstr &MI :
+           make_range(std::next(I->getIterator()), Paired->getIterator()))
         MI.clearRegisterKills(Reg, TRI);
     }
   }
@@ -1384,6 +1404,25 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
     for (const MachineOperand &MOP : phys_regs_and_masks(*I))
       if (MOP.isReg() && MOP.isKill())
         DefinedInBB.addReg(MOP.getReg());
+
+  // Copy over any implicit-def operands. This is like MI.copyImplicitOps, but
+  // only copies implicit defs and makes sure that each operand is only added
+  // once in case of duplicates.
+  auto CopyImplicitOps = [&](MachineBasicBlock::iterator MI1,
+                             MachineBasicBlock::iterator MI2) {
+    SmallSetVector<Register, 4> Ops;
+    for (const MachineOperand &MO :
+         llvm::drop_begin(MI1->operands(), MI1->getDesc().getNumOperands()))
+      if (MO.isReg() && MO.isImplicit() && MO.isDef())
+        Ops.insert(MO.getReg());
+    for (const MachineOperand &MO :
+         llvm::drop_begin(MI2->operands(), MI2->getDesc().getNumOperands()))
+      if (MO.isReg() && MO.isImplicit() && MO.isDef())
+        Ops.insert(MO.getReg());
+    for (auto Op : Ops)
+      MIB.addDef(Op, RegState::Implicit);
+  };
+  CopyImplicitOps(I, Paired);
 
   // Erase the old instructions.
   I->eraseFromParent();
@@ -1666,7 +1705,7 @@ static bool areCandidatesToMergeOrPair(MachineInstr &FirstMI, MachineInstr &MI,
          "Given Opc should be a Load or Store with an immediate");
   // OpcA will be the first instruction in the pair.
   if (NonSExtOpc == getMatchingNonSExtOpcode(OpcB, &PairIsValidLdStrOpc)) {
-    Flags.setSExtIdx(NonSExtOpc == (unsigned)OpcA ? 1 : 0);
+    Flags.setSExtIdx(NonSExtOpc == OpcA ? 1 : 0);
     return true;
   }
 
@@ -1720,7 +1759,7 @@ static bool canRenameMOP(const MachineOperand &MOP,
     // them must be known. For example, in ORRWrs the implicit-def
     // corresponds to the result register.
     if (MOP.isImplicit() && MOP.isDef()) {
-      if (!isRewritableImplicitDef(MOP.getParent()->getOpcode()))
+      if (!isRewritableImplicitDef(MOP))
         return false;
       return TRI->isSuperOrSubRegisterEq(
           MOP.getParent()->getOperand(0).getReg(), MOP.getReg());
@@ -2529,31 +2568,63 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnForward(
     return E;
   }
 
-  for (unsigned Count = 0; MBBI != E && Count < Limit;
-       MBBI = next_nodbg(MBBI, E)) {
-    MachineInstr &MI = *MBBI;
+  unsigned Count = 0;
+  MachineBasicBlock *CurMBB = I->getParent();
+  // choice of next block to visit is liveins-based
+  bool VisitSucc = CurMBB->getParent()->getRegInfo().tracksLiveness();
 
-    // Don't count transient instructions towards the search limit since there
-    // may be different numbers of them if e.g. debug information is present.
-    if (!MI.isTransient())
-      ++Count;
+  while (true) {
+    for (MachineBasicBlock::iterator CurEnd = CurMBB->end();
+         MBBI != CurEnd && Count < Limit; MBBI = next_nodbg(MBBI, CurEnd)) {
+      MachineInstr &MI = *MBBI;
 
-    // If we found a match, return it.
-    if (isMatchingUpdateInsn(*I, MI, BaseReg, UnscaledOffset))
-      return MBBI;
+      // Don't count transient instructions towards the search limit since there
+      // may be different numbers of them if e.g. debug information is present.
+      if (!MI.isTransient())
+        ++Count;
 
-    // Update the status of what the instruction clobbered and used.
-    LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits, UsedRegUnits, TRI);
+      // If we found a match, return it.
+      if (isMatchingUpdateInsn(*I, MI, BaseReg, UnscaledOffset))
+        return MBBI;
 
-    // Otherwise, if the base register is used or modified, we have no match, so
-    // return early.
-    // If we are optimizing SP, do not allow instructions that may load or store
-    // in between the load and the optimized value update.
-    if (!ModifiedRegUnits.available(BaseReg) ||
-        !UsedRegUnits.available(BaseReg) ||
-        (BaseRegSP && MBBI->mayLoadOrStore()))
-      return E;
+      // Update the status of what the instruction clobbered and used.
+      LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits, UsedRegUnits,
+                                        TRI);
+
+      // Otherwise, if the base register is used or modified, we have no match,
+      // so return early. If we are optimizing SP, do not allow instructions
+      // that may load or store in between the load and the optimized value
+      // update.
+      if (!ModifiedRegUnits.available(BaseReg) ||
+          !UsedRegUnits.available(BaseReg) ||
+          (BaseRegSP && MBBI->mayLoadOrStore()))
+        return E;
+    }
+
+    if (!VisitSucc || Limit <= Count)
+      break;
+
+    // Try to go downward to successors along a CF path w/o side enters
+    // such that BaseReg is alive along it but not at its exits
+    MachineBasicBlock *SuccToVisit = nullptr;
+    unsigned LiveSuccCount = 0;
+    for (MachineBasicBlock *Succ : CurMBB->successors()) {
+      for (MCRegAliasIterator AI(BaseReg, TRI, true); AI.isValid(); ++AI) {
+        if (Succ->isLiveIn(*AI)) {
+          if (LiveSuccCount++)
+            return E;
+          if (Succ->pred_size() == 1)
+            SuccToVisit = Succ;
+          break;
+        }
+      }
+    }
+    if (!SuccToVisit)
+      break;
+    CurMBB = SuccToVisit;
+    MBBI = CurMBB->begin();
   }
+
   return E;
 }
 
@@ -3046,7 +3117,7 @@ bool AArch64LoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
     return false;
 
   Subtarget = &Fn.getSubtarget<AArch64Subtarget>();
-  TII = static_cast<const AArch64InstrInfo *>(Subtarget->getInstrInfo());
+  TII = Subtarget->getInstrInfo();
   TRI = Subtarget->getRegisterInfo();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 

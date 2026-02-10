@@ -38,11 +38,13 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/TemplateKinds.h"
 #include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -84,7 +86,7 @@ class CXXOperatorCallExpr final : public CallExpr {
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
 
-  SourceRange Range;
+  SourceLocation BeginLoc;
 
   // CXXOperatorCallExpr has some trailing objects belonging
   // to CallExpr. See CallExpr for the details.
@@ -158,9 +160,9 @@ public:
                : getOperatorLoc();
   }
 
-  SourceLocation getBeginLoc() const { return Range.getBegin(); }
-  SourceLocation getEndLoc() const { return Range.getEnd(); }
-  SourceRange getSourceRange() const { return Range; }
+  SourceLocation getBeginLoc() const { return BeginLoc; }
+  SourceLocation getEndLoc() const { return getSourceRangeImpl().getEnd(); }
+  SourceRange getSourceRange() const { return getSourceRangeImpl(); }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CXXOperatorCallExprClass;
@@ -977,8 +979,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<MSPropertyRefExpr *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<MSPropertyRefExpr *>(this)->children();
   }
 
   static bool classof(const Stmt *T) {
@@ -1711,6 +1712,19 @@ public:
     CXXConstructExprBits.IsImmediateEscalating = Set;
   }
 
+  /// Returns the WarnUnusedResultAttr that is declared on the callee
+  /// or its return type declaration, together with a NamedDecl that
+  /// refers to the declaration the attribute is attached to.
+  std::pair<const NamedDecl *, const WarnUnusedResultAttr *>
+  getUnusedResultAttr(const ASTContext &Ctx) const {
+    return getUnusedResultAttrImpl(getConstructor(), getType());
+  }
+
+  /// Returns true if this call expression should warn on unused results.
+  bool hasUnusedResultAttr(const ASTContext &Ctx) const {
+    return getUnusedResultAttr(Ctx).second != nullptr;
+  }
+
   SourceLocation getBeginLoc() const LLVM_READONLY;
   SourceLocation getEndLoc() const LLVM_READONLY;
   SourceRange getParenOrBraceRange() const { return ParenOrBraceRange; }
@@ -1727,8 +1741,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<CXXConstructExpr *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<CXXConstructExpr *>(this)->children();
   }
 };
 
@@ -2328,6 +2341,14 @@ struct ImplicitDeallocationParameters {
   SizedDeallocationMode PassSize;
 };
 
+/// The parameters to pass to a usual operator delete.
+struct UsualDeleteParams {
+  TypeAwareAllocationMode TypeAwareDelete = TypeAwareAllocationMode::No;
+  bool DestroyingDelete = false;
+  bool Size = false;
+  AlignedAllocationMode Alignment = AlignedAllocationMode::No;
+};
+
 /// Represents a new-expression for memory allocation and constructor
 /// calls, e.g: "new CXXNewExpr(foo)".
 class CXXNewExpr final
@@ -2780,7 +2801,7 @@ public:
   /// If the member name was qualified, retrieves the
   /// nested-name-specifier that precedes the member name. Otherwise, returns
   /// null.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return QualifierLoc.getNestedNameSpecifier();
   }
 
@@ -3221,7 +3242,7 @@ public:
   SourceLocation getNameLoc() const { return NameInfo.getLoc(); }
 
   /// Fetches the nested-name qualifier, if one was given.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return QualifierLoc.getNestedNameSpecifier();
   }
 
@@ -3257,7 +3278,49 @@ public:
   bool hasTemplateKeyword() const { return getTemplateKeywordLoc().isValid(); }
 
   /// Determines whether this expression had explicit template arguments.
-  bool hasExplicitTemplateArgs() const { return getLAngleLoc().isValid(); }
+  bool hasExplicitTemplateArgs() const {
+    if (!hasTemplateKWAndArgsInfo())
+      return false;
+    // FIXME: deduced function types can have "hidden" args and no <
+    // investigate that further, but ultimately maybe we want to model concepts
+    // reference with another kind of expression.
+    return (isConceptReference() || isVarDeclReference())
+               ? getTrailingASTTemplateKWAndArgsInfo()->NumTemplateArgs
+               : getLAngleLoc().isValid();
+  }
+
+  bool isConceptReference() const {
+    return getNumDecls() == 1 && [&]() {
+      if (auto *TTP = dyn_cast_or_null<TemplateTemplateParmDecl>(
+              getTrailingResults()->getDecl()))
+        return TTP->templateParameterKind() == TNK_Concept_template;
+      if (isa<ConceptDecl>(getTrailingResults()->getDecl()))
+        return true;
+      return false;
+    }();
+  }
+
+  bool isVarDeclReference() const {
+    return getNumDecls() == 1 && [&]() {
+      if (auto *TTP = dyn_cast_or_null<TemplateTemplateParmDecl>(
+              getTrailingResults()->getDecl()))
+        return TTP->templateParameterKind() == TNK_Var_template;
+      if (isa<VarTemplateDecl>(getTrailingResults()->getDecl()))
+        return true;
+      return false;
+    }();
+  }
+
+  TemplateDecl *getTemplateDecl() const {
+    assert(getNumDecls() == 1);
+    return dyn_cast_or_null<TemplateDecl>(getTrailingResults()->getDecl());
+  }
+
+  TemplateTemplateParmDecl *getTemplateTemplateDecl() const {
+    assert(getNumDecls() == 1);
+    return dyn_cast_or_null<TemplateTemplateParmDecl>(
+        getTrailingResults()->getDecl());
+  }
 
   TemplateArgumentLoc const *getTemplateArgs() const {
     if (!hasExplicitTemplateArgs())
@@ -3497,7 +3560,7 @@ public:
 
   /// Retrieve the nested-name-specifier that qualifies this
   /// declaration.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return QualifierLoc.getNestedNameSpecifier();
   }
 
@@ -3912,7 +3975,7 @@ public:
   }
 
   /// Retrieve the nested-name-specifier that qualifies the member name.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return QualifierLoc.getNestedNameSpecifier();
   }
 
@@ -5434,6 +5497,60 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == BuiltinBitCastExprClass;
+  }
+};
+
+/// Represents a C++26 reflect expression [expr.reflect]. The operand of the
+/// expression is either:
+///  - :: (global namespace),
+///  - a reflection-name,
+///  - a type-id, or
+///  - an id-expression.
+class CXXReflectExpr : public Expr {
+
+  // TODO(Reflection): add support for TemplateReference, NamespaceReference and
+  // DeclRefExpr
+  using operand_type = llvm::PointerUnion<const TypeSourceInfo *>;
+
+  SourceLocation CaretCaretLoc;
+  operand_type Operand;
+
+  CXXReflectExpr(SourceLocation CaretCaretLoc, const TypeSourceInfo *TSI);
+  CXXReflectExpr(EmptyShell Empty);
+
+public:
+  static CXXReflectExpr *Create(ASTContext &C, SourceLocation OperatorLoc,
+                                TypeSourceInfo *TL);
+
+  static CXXReflectExpr *CreateEmpty(ASTContext &C);
+
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return llvm::TypeSwitch<operand_type, SourceLocation>(Operand)
+        .Case<const TypeSourceInfo *>(
+            [](auto *Ptr) { return Ptr->getTypeLoc().getBeginLoc(); });
+  }
+
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return llvm::TypeSwitch<operand_type, SourceLocation>(Operand)
+        .Case<const TypeSourceInfo *>(
+            [](auto *Ptr) { return Ptr->getTypeLoc().getEndLoc(); });
+  }
+
+  /// Returns location of the '^^'-operator.
+  SourceLocation getOperatorLoc() const { return CaretCaretLoc; }
+
+  child_range children() {
+    // TODO(Reflection)
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    // TODO(Reflection)
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXReflectExprClass;
   }
 };
 

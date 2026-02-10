@@ -13,7 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZTargetStreamer.h"
+#include "SystemZHLASMAsmStreamer.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCGOFFStreamer.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 
 using namespace llvm;
@@ -33,8 +35,8 @@ void SystemZTargetStreamer::emitConstantPools() {
   EXRLTargets2Sym.clear();
 }
 
-void SystemZTargetHLASMStreamer::emitExtern(StringRef Sym) {
-  getStreamer().emitRawText(Twine(" EXTRN ") + Twine(Sym));
+SystemZHLASMAsmStreamer &SystemZTargetHLASMStreamer::getHLASMStreamer() {
+  return static_cast<SystemZHLASMAsmStreamer &>(getStreamer());
 }
 
 // HLASM statements can only perform a single operation at a time

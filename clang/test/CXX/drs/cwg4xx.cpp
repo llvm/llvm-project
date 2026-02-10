@@ -36,6 +36,15 @@ namespace cwg400 { // cwg400: 2.7
   // expected-error@-1 {{member 'a' found in multiple base classes of different types}}
   //   expected-note@#cwg400-A {{member type 'cwg400::A::a' found by ambiguous name lookup}}
   //   expected-note@#cwg400-B {{member type 'cwg400::B::a' found by ambiguous name lookup}}
+  struct F : A {};
+  struct G : A {
+    using G::A;
+    // expected-error@-1 {{using declaration refers to its own class}}
+    using G::a;
+    // expected-error@-1 {{using declaration refers to its own class}}
+    using F::a;
+    // expected-error@-1 {{using declaration refers into 'F', which is not a base class of 'G'}}
+  };
 } // namespace cwg400
 
 namespace cwg401 { // cwg401: 2.8
@@ -187,7 +196,7 @@ namespace cwg407 { // cwg407: 3.8
       using namespace A;
       using namespace B;
       struct S s;
-      // expected-error@-1 {{ambiguous}}
+      // expected-error@-1 {{reference to 'S' is ambiguous}}
       //   expected-note@#cwg407-A-S {{candidate found by name lookup is 'cwg407::UsingDir::A::S'}}
       //   expected-note@#cwg407-B-S {{candidate found by name lookup is 'cwg407::UsingDir::B::S'}}
     }
@@ -586,7 +595,7 @@ namespace cwg429 { // cwg429: 2.8 c++11
     static void operator delete(void*, size_t); // #cwg429-delete
   } *a = new (0) A;
   // since-cxx11-error@-1 {{'new' expression with placement arguments refers to non-placement 'operator delete'}}
-  //   since-cxx11-note@#cwg429-delete {{here}}
+  //   since-cxx11-note@#cwg429-delete {{'operator delete' declared here}}
   struct B {
     static void *operator new(size_t, size_t);
     static void operator delete(void*);
@@ -848,7 +857,7 @@ namespace cwg451 { // cwg451: 2.7
   const int b = 1 / 0; // #cwg451-b
   // expected-warning@-1 {{division by zero is undefined}}
   static_assert(b, "");
-  // expected-error@-1 {{expression is not an integral constant expression}}
+  // expected-error@-1 {{static assertion expression is not an integral constant expression}}
   //   expected-note@-2 {{initializer of 'b' is not a constant expression}}
   //   expected-note@#cwg451-b {{declared here}}
 } // namespace cwg451
@@ -873,7 +882,7 @@ namespace cwg456 { // cwg456: 3.4
 
   const bool f = false;
   void *q = f;
-  // cxx98-warning@-1 {{initialization of pointer of type 'void *' to null from a constant boolean}}
+  // cxx98-warning@-1 {{initialization of pointer of type 'void *' to null from a constant boolean expression}}
   // since-cxx11-error@-2 {{cannot initialize a variable of type 'void *' with an lvalue of type 'const bool'}}
 } // namespace cwg456
 
@@ -882,7 +891,7 @@ namespace cwg457 { // cwg457: 2.7
   const volatile int b = 1;
   static_assert(a, "");
   static_assert(b, "");
-  // expected-error@-1 {{expression is not an integral constant expression}}
+  // expected-error@-1 {{static assertion expression is not an integral constant expression}}
   //   expected-note@-2 {{read of volatile-qualified type 'const volatile int' is not allowed in a constant expression}}
 
   enum E {
@@ -1110,9 +1119,9 @@ namespace cwg477 { // cwg477: 3.5
     // expected-error@-1 {{'virtual' is invalid in friend declarations}}
   };
   explicit A::A() {}
-  // expected-error@-1 {{can only be specified inside the class definition}}
+  // expected-error@-1 {{'explicit' can only be specified inside the class definition}}
   virtual void A::f() {}
-  // expected-error@-1 {{can only be specified inside the class definition}}
+  // expected-error@-1 {{'virtual' can only be specified inside the class definition}}
 } // namespace cwg477
 
 namespace cwg478 { // cwg478: 2.7
@@ -1176,7 +1185,7 @@ namespace cwg480 { // cwg480: 2.7
 
   extern int D::*c;
   int A::*d = static_cast<int A::*>(c);
-  // expected-error@-1 {{conversion from pointer to member of class 'D' to pointer to member of class 'A' via virtual base 'cwg480::B' is not allowed}}
+  // expected-error@-1 {{conversion from pointer to member of class 'cwg480::D' to pointer to member of class 'A' via virtual base 'cwg480::B' is not allowed}}
 
   D *e;
   A *f = e;
@@ -1370,7 +1379,7 @@ namespace cwg487 { // cwg487: 2.7
   enum E { e };
   int operator+(int, E); // #cwg487-operator-plus
   static_assert(4 + e, "");
-  // expected-error@-1 {{expression is not an integral constant expression}}
+  // expected-error@-1 {{static assertion expression is not an integral constant expression}}
   //   since-cxx11-note@-2 {{non-constexpr function 'operator+' cannot be used in a constant expression}}
   //   since-cxx11-note@#cwg487-operator-plus {{declared here}}
 } // namespace cwg487
@@ -1386,7 +1395,7 @@ namespace cwg488 { // cwg488: 2.9 c++11
     enum E { e };
     f(e);
     // cxx98-error@-1 {{template argument uses local type 'E'}}
-    //   cxx98-note@-2 {{while substituting deduced template arguments}}
+    //   cxx98-note@-2 {{while substituting deduced template arguments into function template 'f' [with T = E]}}
   }
 } // namespace cwg488
 

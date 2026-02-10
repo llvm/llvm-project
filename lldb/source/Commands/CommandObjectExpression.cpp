@@ -13,6 +13,7 @@
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Host/StreamFile.h"
+#include "lldb/Host/common/DiagnosticsRendering.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -21,7 +22,6 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/DiagnosticsRendering.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
@@ -44,6 +44,9 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
   const int short_option = GetDefinitions()[option_idx].short_option;
 
   switch (short_option) {
+  case 'Q':
+    cpp_ignore_context_qualifiers = true;
+    break;
   case 'l':
     language = Language::GetLanguageTypeFromString(option_arg);
     if (language == eLanguageTypeUnknown) {
@@ -191,6 +194,7 @@ void CommandObjectExpression::CommandOptions::OptionParsingStarting(
   top_level = false;
   allow_jit = true;
   suppress_persistent_result = eLazyBoolCalculate;
+  cpp_ignore_context_qualifiers = false;
 }
 
 llvm::ArrayRef<OptionDefinition>
@@ -202,7 +206,7 @@ EvaluateExpressionOptions
 CommandObjectExpression::CommandOptions::GetEvaluateExpressionOptions(
     const Target &target, const OptionGroupValueObjectDisplay &display_opts) {
   EvaluateExpressionOptions options;
-  options.SetCoerceToId(display_opts.use_objc);
+  options.SetCoerceToId(display_opts.use_object_desc);
   options.SetUnwindOnError(unwind_on_error);
   options.SetIgnoreBreakpoints(ignore_breakpoints);
   options.SetKeepInMemory(true);
@@ -213,6 +217,7 @@ CommandObjectExpression::CommandOptions::GetEvaluateExpressionOptions(
   options.SetExecutionPolicy(
       allow_jit ? EvaluateExpressionOptions::default_execution_policy
                 : lldb_private::eExecutionPolicyNever);
+  options.SetCppIgnoreContextQualifiers(cpp_ignore_context_qualifiers);
 
   bool auto_apply_fixits;
   if (this->auto_apply_fixits == eLazyBoolCalculate)
@@ -241,11 +246,11 @@ CommandObjectExpression::CommandOptions::GetEvaluateExpressionOptions(
 bool CommandObjectExpression::CommandOptions::ShouldSuppressResult(
     const OptionGroupValueObjectDisplay &display_opts) const {
   // Explicitly disabling persistent results takes precedence over the
-  // m_verbosity/use_objc logic.
+  // m_verbosity/use_object_desc logic.
   if (suppress_persistent_result != eLazyBoolCalculate)
     return suppress_persistent_result == eLazyBoolYes;
 
-  return display_opts.use_objc &&
+  return display_opts.use_object_desc &&
          m_verbosity == eLanguageRuntimeDescriptionDisplayVerbosityCompact;
 }
 
@@ -332,7 +337,7 @@ Options *CommandObjectExpression::GetOptions() { return &m_option_group; }
 
 void CommandObjectExpression::HandleCompletion(CompletionRequest &request) {
   EvaluateExpressionOptions options;
-  options.SetCoerceToId(m_varobj_options.use_objc);
+  options.SetCoerceToId(m_varobj_options.use_object_desc);
   options.SetLanguage(m_command_options.language);
   options.SetExecutionPolicy(lldb_private::eExecutionPolicyNever);
   options.SetAutoApplyFixIts(false);
@@ -469,6 +474,9 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
           result.AppendError(toString(std::move(error)));
           return false;
         }
+
+        m_interpreter.PrintWarningsIfNecessary(result.GetOutputStream(),
+                                               m_cmd_name);
 
         if (suppress_result)
           if (auto result_var_sp =

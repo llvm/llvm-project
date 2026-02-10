@@ -47,21 +47,12 @@ define <8 x i32> @concat_extract_subvectors_poison(<8 x i32> %x) {
 ; broadcast loads are free on AVX (and blends are much cheap than general 2-operand shuffles)
 
 define  <4 x double> @blend_broadcasts_v4f64(ptr %p0, ptr %p1)  {
-; SSE-LABEL: define <4 x double> @blend_broadcasts_v4f64(
-; SSE-SAME: ptr [[P0:%.*]], ptr [[P1:%.*]]) #[[ATTR0]] {
-; SSE-NEXT:    [[LD0:%.*]] = load <4 x double>, ptr [[P0]], align 32
-; SSE-NEXT:    [[LD1:%.*]] = load <4 x double>, ptr [[P1]], align 32
-; SSE-NEXT:    [[BLEND:%.*]] = shufflevector <4 x double> [[LD0]], <4 x double> [[LD1]], <4 x i32> <i32 0, i32 4, i32 4, i32 0>
-; SSE-NEXT:    ret <4 x double> [[BLEND]]
-;
-; AVX-LABEL: define <4 x double> @blend_broadcasts_v4f64(
-; AVX-SAME: ptr [[P0:%.*]], ptr [[P1:%.*]]) #[[ATTR0]] {
-; AVX-NEXT:    [[LD0:%.*]] = load <4 x double>, ptr [[P0]], align 32
-; AVX-NEXT:    [[LD1:%.*]] = load <4 x double>, ptr [[P1]], align 32
-; AVX-NEXT:    [[BCST0:%.*]] = shufflevector <4 x double> [[LD0]], <4 x double> undef, <4 x i32> zeroinitializer
-; AVX-NEXT:    [[BCST1:%.*]] = shufflevector <4 x double> [[LD1]], <4 x double> undef, <4 x i32> zeroinitializer
-; AVX-NEXT:    [[BLEND:%.*]] = shufflevector <4 x double> [[BCST0]], <4 x double> [[BCST1]], <4 x i32> <i32 0, i32 5, i32 6, i32 3>
-; AVX-NEXT:    ret <4 x double> [[BLEND]]
+; CHECK-LABEL: define <4 x double> @blend_broadcasts_v4f64(
+; CHECK-SAME: ptr [[P0:%.*]], ptr [[P1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = load <1 x double>, ptr [[P0]], align 32
+; CHECK-NEXT:    [[TMP2:%.*]] = load <1 x double>, ptr [[P1]], align 32
+; CHECK-NEXT:    [[BLEND:%.*]] = shufflevector <1 x double> [[TMP1]], <1 x double> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 1, i32 0>
+; CHECK-NEXT:    ret <4 x double> [[BLEND]]
 ;
   %ld0 = load <4 x double>, ptr %p0, align 32
   %ld1 = load <4 x double>, ptr %p1, align 32
@@ -81,3 +72,39 @@ define <2 x float> @PR86068(<2 x float> %a0, <2 x float> %a1) {
   %s2 = shufflevector <2 x float> %s1, <2 x float> %a0, <2 x i32> <i32 0, i32 3>
   ret <2 x float> %s2
 }
+
+; ensure we don't combine cheap PSHUFB+UNPCK sequence to a costly v32i8 SK_PermuteTwoSrc shuffle.
+
+define void @PR161980(<4 x i64> %a, <4 x i64> %b, ptr %dst) {
+; CHECK-LABEL: define void @PR161980(
+; CHECK-SAME: <4 x i64> [[A:%.*]], <4 x i64> [[B:%.*]], ptr [[DST:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[I:%.*]] = bitcast <4 x i64> [[A]] to <32 x i8>
+; CHECK-NEXT:    [[I1:%.*]] = shufflevector <32 x i8> [[I]], <32 x i8> poison, <32 x i32> <i32 0, i32 1, i32 4, i32 5, i32 8, i32 9, i32 12, i32 13, i32 2, i32 3, i32 6, i32 7, i32 10, i32 11, i32 14, i32 15, i32 16, i32 17, i32 20, i32 21, i32 24, i32 25, i32 28, i32 29, i32 18, i32 19, i32 22, i32 23, i32 26, i32 27, i32 30, i32 31>
+; CHECK-NEXT:    [[I2:%.*]] = bitcast <32 x i8> [[I1]] to <4 x i64>
+; CHECK-NEXT:    [[I3:%.*]] = bitcast <4 x i64> [[B]] to <32 x i8>
+; CHECK-NEXT:    [[I4:%.*]] = shufflevector <32 x i8> [[I3]], <32 x i8> poison, <32 x i32> <i32 0, i32 1, i32 4, i32 5, i32 8, i32 9, i32 12, i32 13, i32 2, i32 3, i32 6, i32 7, i32 10, i32 11, i32 14, i32 15, i32 16, i32 17, i32 20, i32 21, i32 24, i32 25, i32 28, i32 29, i32 18, i32 19, i32 22, i32 23, i32 26, i32 27, i32 30, i32 31>
+; CHECK-NEXT:    [[I5:%.*]] = bitcast <32 x i8> [[I4]] to <4 x i64>
+; CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x i64> [[I2]], <4 x i64> [[I5]], <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+; CHECK-NEXT:    [[SHUFFLE_I9:%.*]] = shufflevector <4 x i64> [[I2]], <4 x i64> [[I5]], <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+; CHECK-NEXT:    store <4 x i64> [[SHUFFLE_I]], ptr [[DST]], align 1
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[DST]], i64 32
+; CHECK-NEXT:    store <4 x i64> [[SHUFFLE_I9]], ptr [[ADD_PTR]], align 1
+; CHECK-NEXT:    ret void
+;
+  %i = bitcast <4 x i64> %a to <32 x i8>
+  %i1 = shufflevector <32 x i8> %i, <32 x i8> poison, <32 x i32> <i32 0, i32 1, i32 4, i32 5, i32 8, i32 9, i32 12, i32 13, i32 2, i32 3, i32 6, i32 7, i32 10, i32 11, i32 14, i32 15, i32 16, i32 17, i32 20, i32 21, i32 24, i32 25, i32 28, i32 29, i32 18, i32 19, i32 22, i32 23, i32 26, i32 27, i32 30, i32 31>
+  %i2 = bitcast <32 x i8> %i1 to <4 x i64>
+  %i3 = bitcast <4 x i64> %b to <32 x i8>
+  %i4 = shufflevector <32 x i8> %i3, <32 x i8> poison, <32 x i32> <i32 0, i32 1, i32 4, i32 5, i32 8, i32 9, i32 12, i32 13, i32 2, i32 3, i32 6, i32 7, i32 10, i32 11, i32 14, i32 15, i32 16, i32 17, i32 20, i32 21, i32 24, i32 25, i32 28, i32 29, i32 18, i32 19, i32 22, i32 23, i32 26, i32 27, i32 30, i32 31>
+  %i5 = bitcast <32 x i8> %i4 to <4 x i64>
+  %shuffle.i = shufflevector <4 x i64> %i2, <4 x i64> %i5, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+  %shuffle.i9 = shufflevector <4 x i64> %i2, <4 x i64> %i5, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+  store <4 x i64> %shuffle.i, ptr %dst, align 1
+  %add.ptr = getelementptr inbounds nuw i8, ptr %dst, i64 32
+  store <4 x i64> %shuffle.i9, ptr %add.ptr, align 1
+  ret void
+}
+
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; AVX: {{.*}}
+; SSE: {{.*}}

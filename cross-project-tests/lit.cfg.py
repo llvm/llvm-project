@@ -19,7 +19,7 @@ config.name = "cross-project-tests"
 config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
 
 # suffixes: A list of file extensions to treat as test files.
-config.suffixes = [".c", ".cl", ".cpp", ".m"]
+config.suffixes = [".c", ".cl", ".cpp", ".m", ".test"]
 
 # excludes: A list of directories to exclude from the testsuite. The 'Inputs'
 # subdirectories contain auxiliary inputs for various tests in their parent
@@ -102,10 +102,12 @@ if "compiler-rt" in config.llvm_enabled_projects:
     config.available_features.add("compiler-rt")
 
 # Check which debuggers are available:
-lldb_path = llvm_config.use_llvm_tool("lldb", search_env="LLDB")
-
-if lldb_path is not None:
+lldb_dap_path = llvm_config.use_llvm_tool("lldb-dap")
+if lldb_dap_path is not None:
     config.available_features.add("lldb")
+
+if llvm_config.use_llvm_tool("llvm-ar"):
+    config.available_features.add("llvm-ar")
 
 
 def configure_dexter_substitutions():
@@ -115,10 +117,14 @@ def configure_dexter_substitutions():
     dexter_path = os.path.join(
         config.cross_project_tests_src_root, "debuginfo-tests", "dexter", "dexter.py"
     )
-    dexter_test_cmd = '"{}" "{}" test'.format(sys.executable, dexter_path)
-    if lldb_path is not None:
-        dexter_test_cmd += ' --lldb-executable "{}"'.format(lldb_path)
-    tools.append(ToolSubst("%dexter", dexter_test_cmd))
+    tools.append(ToolSubst("%dexter", f'"{sys.executable}" "{dexter_path}" test -v'))
+    if lldb_dap_path is not None:
+        tools.append(
+            ToolSubst(
+                "%dexter_lldb_args",
+                f'--lldb-executable "{lldb_dap_path}" --debugger lldb-dap --dap-message-log=-e',
+            )
+        )
 
     # For testing other bits of dexter that aren't under the "test" subcommand,
     # have a %dexter_base substitution.
@@ -142,32 +148,18 @@ def configure_dexter_substitutions():
         dependencies = ["clang", "lldb"]
         dexter_regression_test_c_builder = "clang"
         dexter_regression_test_cxx_builder = "clang++"
-        dexter_regression_test_debugger = "lldb"
+        dexter_regression_test_debugger = "lldb-dap"
+        dexter_regression_test_additional_flags = (
+            f'--lldb-executable "{lldb_dap_path}" --dap-message-log=-e'
+        )
         dexter_regression_test_c_flags = "-O0 -glldb -std=gnu11"
         dexter_regression_test_cxx_flags = "-O0 -glldb -std=gnu++11"
-        dexter_regression_test_additional_flags = '--lldb-executable "{}"'.format(
-            lldb_path
-        )
 
     tools.append(
-        ToolSubst("%dexter_regression_test_c_builder", dexter_regression_test_c_builder)
-    )
-    tools.append(
         ToolSubst(
-            "%dexter_regression_test_cxx_builder", dexter_regression_test_cxx_builder
+            "%dexter_regression_test_debugger_args",
+            f"--debugger {dexter_regression_test_debugger} {dexter_regression_test_additional_flags}",
         )
-    )
-    tools.append(
-        ToolSubst("%dexter_regression_test_debugger", dexter_regression_test_debugger)
-    )
-    # We don't need to distinguish cflags and ldflags because for Dexter
-    # regression tests we use clang to drive the linker, and so all flags will be
-    # passed in a single command.
-    tools.append(
-        ToolSubst("%dexter_regression_test_c_flags", dexter_regression_test_c_flags)
-    )
-    tools.append(
-        ToolSubst("%dexter_regression_test_cxx_flags", dexter_regression_test_cxx_flags)
     )
 
     # Typical command would take the form:
@@ -178,7 +170,7 @@ def configure_dexter_substitutions():
             '"{}"'.format(sys.executable),
             '"{}"'.format(dexter_path),
             "test",
-            "--fail-lt 1.0 -w",
+            "--fail-lt 1.0 -w -v",
             "--debugger",
             dexter_regression_test_debugger,
             dexter_regression_test_additional_flags,
@@ -237,15 +229,6 @@ if can_target_host():
     dependencies = configure_dexter_substitutions()
     if all(d in config.available_features for d in dependencies):
         config.available_features.add("dexter")
-        llvm_config.with_environment(
-            "PATHTOCLANG", add_host_triple(llvm_config.config.clang)
-        )
-        llvm_config.with_environment(
-            "PATHTOCLANGPP", add_host_triple(llvm_config.use_llvm_tool("clang++"))
-        )
-        llvm_config.with_environment(
-            "PATHTOCLANGCL", add_host_triple(llvm_config.use_llvm_tool("clang-cl"))
-        )
 else:
     print(
         "Host triple {} not supported. Skipping dexter tests in the "
@@ -257,16 +240,6 @@ tool_dirs = [config.llvm_tools_dir]
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
 lit.util.usePlatformSdkOnDarwin(config, lit_config)
-
-if platform.system() == "Darwin":
-    xcode_lldb_vers = subprocess.check_output(["xcrun", "lldb", "--version"]).decode(
-        "utf-8"
-    )
-    match = re.search(r"lldb-(\d+)", xcode_lldb_vers)
-    if match:
-        apple_lldb_vers = int(match.group(1))
-        if apple_lldb_vers < 1000:
-            config.available_features.add("apple-lldb-pre-1000")
 
 
 def get_gdb_version_string():
@@ -307,6 +280,77 @@ def get_clang_default_dwarf_version_string(triple):
     return match.group(1)
 
 
+def get_lldb_version_string():
+    """Return LLDB's version string, or None if lldb cannot be found or the
+    --version output is formatted unexpectedly.
+    """
+    try:
+        if platform.system() == "Darwin":
+            # On Darwin, use system lldb which has Apple-specific versioning.
+            cmd = ["xcrun", "lldb", "--version"]
+        else:
+            # On non-Darwin, use the locally-built lldb from llvm_tools_dir.
+            lldb_path = os.path.join(config.llvm_tools_dir, "lldb")
+            if not os.path.exists(lldb_path):
+                print(f"LLDB not found at {lldb_path}", file=sys.stderr)
+                return None
+            cmd = [lldb_path, "--version"]
+
+        lldb_vers_lines = subprocess.check_output(cmd).decode().splitlines()
+    except:
+        return None
+    if len(lldb_vers_lines) < 1:
+        print("Unkown LLDB version format (too few lines)", file=sys.stderr)
+        return None
+    match = re.search(r"lldb.*[ -]((\d|\.)+)", lldb_vers_lines[0].strip())
+    if match is None:
+        print(f"Unkown LLDB version format: {lldb_vers_lines[0]}", file=sys.stderr)
+        return None
+    return match.group(1)
+
+
+def set_lldb_formatters_compatibility_feature():
+    current_lldb_version = get_lldb_version_string()
+    if not current_lldb_version:
+        return
+
+    if platform.system() == "Darwin":
+        # The Apple LLDB version doesn't follow the LLVM release versioning.
+        min_required_lldb_version = "1700"
+    else:
+        # Minimum version required for SBType::FindDirectNestedType API
+        # which some LLVM data formatters depend on.
+        min_required_lldb_version = "19.0.0"
+
+    try:
+        from packaging import version
+    except:
+        lit_config.fatal("Running lldb tests requires the packaging package")
+        return
+
+    if version.parse(current_lldb_version) < version.parse(min_required_lldb_version):
+        raise ValueError(
+            f"using version {current_lldb_version} whereas a version >= {min_required_lldb_version} is required"
+        )
+
+    config.available_features.add("lldb-formatters-compatibility")
+
+
+def set_apple_lldb_pre_1000_feature():
+    apple_lldb_vers = get_lldb_version_string()
+    if not apple_lldb_vers:
+        return
+
+    try:
+        from packaging import version
+    except:
+        lit_config.fatal("Running lldb tests requires the packaging package")
+        return
+
+    if version.parse(apple_lldb_vers) < version.parse("1000"):
+        config.available_features.add("apple-lldb-pre-1000")
+
+
 # Some cross-project-tests use gdb, but not all versions of gdb are compatible
 # with clang's dwarf. Add feature `gdb-clang-incompatibility` to signal that
 # there's an incompatibility between clang's default dwarf version for this
@@ -327,6 +371,17 @@ if dwarf_version_string and gdb_version_string:
                 "XFAIL some tests: use gdb version >= 10.1 to restore test coverage",
                 file=sys.stderr,
             )
+
+try:
+    set_lldb_formatters_compatibility_feature()
+except ValueError as e:
+    print(
+        f"Marking some LLDB LLVM data-formatter tests as unsupported: {e}",
+        file=sys.stderr,
+    )
+
+if platform.system() == "Darwin":
+    set_apple_lldb_pre_1000_feature()
 
 llvm_config.feature_config([("--build-mode", {"Debug|RelWithDebInfo": "debug-info"})])
 

@@ -20,6 +20,7 @@
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/lldb-enumerations.h"
 
 #include <iterator>
 #include <mutex>
@@ -240,15 +241,21 @@ bool CompilerType::ShouldTreatScalarValueAsAddress() const {
   return false;
 }
 
-bool CompilerType::IsFloatingPointType(uint32_t &count,
-                                       bool &is_complex) const {
-  if (IsValid()) {
+bool CompilerType::IsComplexType() const {
+  return GetTypeClass() & eTypeClassComplexFloat ||
+         GetTypeClass() & eTypeClassComplexInteger;
+}
+
+bool CompilerType::IsFloatingPointType() const {
+  if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
-      return type_system_sp->IsFloatingPointType(m_type, count, is_complex);
-  }
-  count = 0;
-  is_complex = false;
+      return type_system_sp->IsFloatingPointType(m_type);
+
   return false;
+}
+
+bool CompilerType::IsRealFloatingPointType() const {
+  return IsFloatingPointType() && !IsComplexType() && !IsVectorType();
 }
 
 bool CompilerType::IsDefined() const {
@@ -330,12 +337,6 @@ bool CompilerType::IsInteger() const {
   return IsIntegerType(is_signed);
 }
 
-bool CompilerType::IsFloat() const {
-  uint32_t count = 0;
-  bool is_complex = false;
-  return IsFloatingPointType(count, is_complex);
-}
-
 bool CompilerType::IsEnumerationType() const {
   bool is_signed = false; // May be reset by the call below.
   return IsEnumerationType(is_signed);
@@ -354,12 +355,11 @@ bool CompilerType::IsSigned() const {
 }
 
 bool CompilerType::IsNullPtrType() const {
-  return GetCanonicalType().GetBasicTypeEnumeration() ==
-         lldb::eBasicTypeNullPtr;
+  return GetBasicTypeEnumeration() == lldb::eBasicTypeNullPtr;
 }
 
 bool CompilerType::IsBoolean() const {
-  return GetCanonicalType().GetBasicTypeEnumeration() == lldb::eBasicTypeBool;
+  return GetBasicTypeEnumeration() == lldb::eBasicTypeBool;
 }
 
 bool CompilerType::IsEnumerationIntegerTypeSigned() const {
@@ -374,30 +374,10 @@ bool CompilerType::IsScalarOrUnscopedEnumerationType() const {
 }
 
 bool CompilerType::IsPromotableIntegerType() const {
-  // Unscoped enums are always considered as promotable, even if their
-  // underlying type does not need to be promoted (e.g. "int").
-  if (IsUnscopedEnumerationType())
-    return true;
-
-  switch (GetCanonicalType().GetBasicTypeEnumeration()) {
-  case lldb::eBasicTypeBool:
-  case lldb::eBasicTypeChar:
-  case lldb::eBasicTypeSignedChar:
-  case lldb::eBasicTypeUnsignedChar:
-  case lldb::eBasicTypeShort:
-  case lldb::eBasicTypeUnsignedShort:
-  case lldb::eBasicTypeWChar:
-  case lldb::eBasicTypeSignedWChar:
-  case lldb::eBasicTypeUnsignedWChar:
-  case lldb::eBasicTypeChar16:
-  case lldb::eBasicTypeChar32:
-    return true;
-
-  default:
-    return false;
-  }
-
-  llvm_unreachable("All cases handled above.");
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsPromotableIntegerType(m_type);
+  return false;
 }
 
 bool CompilerType::IsPointerToVoid() const {
@@ -455,8 +435,7 @@ bool CompilerType::IsContextuallyConvertibleToBool() const {
 }
 
 bool CompilerType::IsBasicType() const {
-  return GetCanonicalType().GetBasicTypeEnumeration() !=
-         lldb::eBasicTypeInvalid;
+  return GetBasicTypeEnumeration() != lldb::eBasicTypeInvalid;
 }
 
 std::string CompilerType::TypeDescription() {
@@ -795,10 +774,10 @@ CompilerType::GetTypeBitAlign(ExecutionContextScope *exe_scope) const {
   return {};
 }
 
-lldb::Encoding CompilerType::GetEncoding(uint64_t &count) const {
+lldb::Encoding CompilerType::GetEncoding() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
-      return type_system_sp->GetEncoding(m_type, count);
+      return type_system_sp->GetEncoding(m_type);
   return lldb::eEncodingInvalid;
 }
 
@@ -1095,10 +1074,10 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
   if (IsAggregateType()) {
     return false; // Aggregate types don't have scalar values
   } else {
-    uint64_t count = 0;
-    lldb::Encoding encoding = GetEncoding(count);
+    // FIXME: check that type is scalar instead of checking encoding?
+    lldb::Encoding encoding = GetEncoding();
 
-    if (encoding == lldb::eEncodingInvalid || count != 1)
+    if (encoding == lldb::eEncodingInvalid || (GetTypeInfo() & eTypeIsComplex))
       return false;
 
     auto byte_size_or_err = GetByteSize(exe_scope);

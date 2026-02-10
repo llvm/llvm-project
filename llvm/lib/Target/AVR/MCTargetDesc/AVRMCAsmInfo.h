@@ -14,7 +14,7 @@
 #define LLVM_AVR_ASM_INFO_H
 
 #include "MCTargetDesc/AVRMCExpr.h"
-#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCAsmInfoELF.h"
 #include "llvm/MC/MCExpr.h"
 
 namespace llvm {
@@ -22,9 +22,13 @@ namespace llvm {
 class Triple;
 
 /// Specifies the format of AVR assembly files.
-class AVRMCAsmInfo : public MCAsmInfo {
+class AVRMCAsmInfo : public MCAsmInfoELF {
 public:
   explicit AVRMCAsmInfo(const Triple &TT, const MCTargetOptions &Options);
+  void printSpecifierExpr(raw_ostream &OS,
+                          const MCSpecifierExpr &Expr) const override;
+  bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,
+                                 const MCAssembler *Asm) const override;
 };
 
 namespace AVR {

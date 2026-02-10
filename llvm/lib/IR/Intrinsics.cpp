@@ -27,10 +27,12 @@
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/IntrinsicsS390.h"
+#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/IntrinsicsVE.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/IntrinsicsXCore.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/IR/Type.h"
 
 using namespace llvm;
@@ -38,7 +40,6 @@ using namespace llvm;
 /// Table of string intrinsic names indexed by enum value.
 #define GET_INTRINSIC_NAME_TABLE
 #include "llvm/IR/IntrinsicImpl.inc"
-#undef GET_INTRINSIC_NAME_TABLE
 
 StringRef Intrinsic::getBaseName(ID id) {
   assert(id < num_intrinsics && "Invalid intrinsic ID!");
@@ -194,7 +195,6 @@ std::string Intrinsic::getNameNoUnnamedTypes(ID Id, ArrayRef<Type *> Tys) {
 enum IIT_Info {
 #define GET_INTRINSIC_IITINFO
 #include "llvm/IR/IntrinsicImpl.inc"
-#undef GET_INTRINSIC_IITINFO
 };
 
 static void
@@ -206,7 +206,6 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
   bool IsScalableVector = (LastInfo == IIT_SCALABLE_VEC);
 
   IIT_Info Info = IIT_Info(Infos[NextElt++]);
-  unsigned StructElts = 2;
 
   switch (Info) {
   case IIT_Done:
@@ -389,28 +388,9 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
   case IIT_EMPTYSTRUCT:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Struct, 0));
     return;
-  case IIT_STRUCT9:
-    ++StructElts;
-    [[fallthrough]];
-  case IIT_STRUCT8:
-    ++StructElts;
-    [[fallthrough]];
-  case IIT_STRUCT7:
-    ++StructElts;
-    [[fallthrough]];
-  case IIT_STRUCT6:
-    ++StructElts;
-    [[fallthrough]];
-  case IIT_STRUCT5:
-    ++StructElts;
-    [[fallthrough]];
-  case IIT_STRUCT4:
-    ++StructElts;
-    [[fallthrough]];
-  case IIT_STRUCT3:
-    ++StructElts;
-    [[fallthrough]];
-  case IIT_STRUCT2: {
+  case IIT_STRUCT: {
+    unsigned StructElts = Infos[NextElt++] + 2;
+
     OutputTable.push_back(
         IITDescriptor::get(IITDescriptor::Struct, StructElts));
 
@@ -452,34 +432,43 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
 
 #define GET_INTRINSIC_GENERATOR_GLOBAL
 #include "llvm/IR/IntrinsicImpl.inc"
-#undef GET_INTRINSIC_GENERATOR_GLOBAL
 
 void Intrinsic::getIntrinsicInfoTableEntries(
     ID id, SmallVectorImpl<IITDescriptor> &T) {
-  static_assert(sizeof(IIT_Table[0]) == 2,
-                "Expect 16-bit entries in IIT_Table");
-  // Check to see if the intrinsic's type was expressible by the table.
-  uint16_t TableVal = IIT_Table[id - 1];
+  // Note that `FixedEncodingTy` is defined in IntrinsicImpl.inc and can be
+  // uint16_t or uint32_t based on the the value of `Use16BitFixedEncoding` in
+  // IntrinsicEmitter.cpp.
+  constexpr unsigned FixedEncodingBits = sizeof(FixedEncodingTy) * CHAR_BIT;
+  constexpr unsigned MSBPosition = FixedEncodingBits - 1;
+  // Mask with all bits 1 except the most significant bit.
+  constexpr unsigned Mask = (1U << MSBPosition) - 1;
 
-  // Decode the TableVal into an array of IITValues.
-  SmallVector<unsigned char> IITValues;
+  FixedEncodingTy TableVal = IIT_Table[id - 1];
+
+  // Array to hold the inlined fixed encoding values expanded from nibbles to
+  // bytes. Its size can be be atmost FixedEncodingBits / 4 i.e., number
+  // of nibbles that can fit in `FixedEncodingTy`.
+  unsigned char IITValues[FixedEncodingBits / 4];
+
   ArrayRef<unsigned char> IITEntries;
   unsigned NextElt = 0;
-  if (TableVal >> 15) {
+  // Check to see if the intrinsic's type was inlined in the fixed encoding
+  // table.
+  if (TableVal >> MSBPosition) {
     // This is an offset into the IIT_LongEncodingTable.
     IITEntries = IIT_LongEncodingTable;
 
     // Strip sentinel bit.
-    NextElt = TableVal & 0x7fff;
+    NextElt = TableVal & Mask;
   } else {
     // If the entry was encoded into a single word in the table itself, decode
     // it from an array of nibbles to an array of bytes.
     do {
-      IITValues.push_back(TableVal & 0xF);
+      IITValues[NextElt++] = TableVal & 0xF;
       TableVal >>= 4;
     } while (TableVal);
 
-    IITEntries = IITValues;
+    IITEntries = ArrayRef(IITValues).take_front(NextElt);
     NextElt = 0;
   }
 
@@ -617,13 +606,16 @@ FunctionType *Intrinsic::getType(LLVMContext &Context, ID id,
 bool Intrinsic::isOverloaded(ID id) {
 #define GET_INTRINSIC_OVERLOAD_TABLE
 #include "llvm/IR/IntrinsicImpl.inc"
-#undef GET_INTRINSIC_OVERLOAD_TABLE
+}
+
+bool Intrinsic::hasPrettyPrintedArgs(ID id){
+#define GET_INTRINSIC_PRETTY_PRINT_TABLE
+#include "llvm/IR/IntrinsicImpl.inc"
 }
 
 /// Table of per-target intrinsic name tables.
 #define GET_INTRINSIC_TARGET_DATA
 #include "llvm/IR/IntrinsicImpl.inc"
-#undef GET_INTRINSIC_TARGET_DATA
 
 bool Intrinsic::isTargetIntrinsic(Intrinsic::ID IID) {
   return IID > TargetInfos[0].Count;
@@ -660,20 +652,20 @@ static int lookupLLVMIntrinsicByName(ArrayRef<unsigned> NameOffsetTable,
       // `equal_range` requires the comparison to work with either side being an
       // offset or the value. Detect which kind each side is to set up the
       // compared strings.
-      StringRef LHSStr;
-      if constexpr (std::is_integral_v<decltype(LHS)>) {
-        LHSStr = IntrinsicNameTable[LHS];
-      } else {
+      const char *LHSStr;
+      if constexpr (std::is_integral_v<decltype(LHS)>)
+        LHSStr = IntrinsicNameTable.getCString(LHS);
+      else
         LHSStr = LHS;
-      }
-      StringRef RHSStr;
-      if constexpr (std::is_integral_v<decltype(RHS)>) {
-        RHSStr = IntrinsicNameTable[RHS];
-      } else {
+
+      const char *RHSStr;
+      if constexpr (std::is_integral_v<decltype(RHS)>)
+        RHSStr = IntrinsicNameTable.getCString(RHS);
+      else
         RHSStr = RHS;
-      }
-      return strncmp(LHSStr.data() + CmpStart, RHSStr.data() + CmpStart,
-                     CmpEnd - CmpStart) < 0;
+
+      return strncmp(LHSStr + CmpStart, RHSStr + CmpStart, CmpEnd - CmpStart) <
+             0;
     };
     LastLow = Low;
     std::tie(Low, High) = std::equal_range(Low, High, Name.data(), Cmp);
@@ -737,25 +729,67 @@ Intrinsic::ID Intrinsic::lookupIntrinsicID(StringRef Name) {
 /// This defines the "Intrinsic::getAttributes(ID id)" method.
 #define GET_INTRINSIC_ATTRIBUTES
 #include "llvm/IR/IntrinsicImpl.inc"
-#undef GET_INTRINSIC_ATTRIBUTES
 
-AttributeSet Intrinsic::getFnAttributes(LLVMContext &C, ID id) {
-  if (id == 0)
-    return AttributeSet();
-  uint16_t PackedID = IntrinsicsToAttributesMap[id - 1];
-  uint8_t FnAttrID = PackedID >> 8;
-  return getIntrinsicFnAttributeSet(C, FnAttrID);
+static Function *getOrInsertIntrinsicDeclarationImpl(Module *M,
+                                                     Intrinsic::ID id,
+                                                     ArrayRef<Type *> Tys,
+                                                     FunctionType *FT) {
+  Function *F = cast<Function>(
+      M->getOrInsertFunction(Tys.empty() ? Intrinsic::getName(id)
+                                         : Intrinsic::getName(id, Tys, M, FT),
+                             FT)
+          .getCallee());
+  if (F->getFunctionType() == FT)
+    return F;
+
+  // It's possible that a declaration for this intrinsic already exists with an
+  // incorrect signature, if the signature has changed, but this particular
+  // declaration has not been auto-upgraded yet. In that case, rename the
+  // invalid declaration and insert a new one with the correct signature. The
+  // invalid declaration will get upgraded later.
+  F->setName(F->getName() + ".invalid");
+  return cast<Function>(
+      M->getOrInsertFunction(Tys.empty() ? Intrinsic::getName(id)
+                                         : Intrinsic::getName(id, Tys, M, FT),
+                             FT)
+          .getCallee());
 }
 
 Function *Intrinsic::getOrInsertDeclaration(Module *M, ID id,
                                             ArrayRef<Type *> Tys) {
   // There can never be multiple globals with the same name of different types,
   // because intrinsics must be a specific type.
-  auto *FT = getType(M->getContext(), id, Tys);
-  return cast<Function>(
-      M->getOrInsertFunction(
-           Tys.empty() ? getName(id) : getName(id, Tys, M, FT), FT)
-          .getCallee());
+  FunctionType *FT = getType(M->getContext(), id, Tys);
+  return getOrInsertIntrinsicDeclarationImpl(M, id, Tys, FT);
+}
+
+Function *Intrinsic::getOrInsertDeclaration(Module *M, ID id, Type *RetTy,
+                                            ArrayRef<Type *> ArgTys) {
+  // If the intrinsic is not overloaded, use the non-overloaded version.
+  if (!Intrinsic::isOverloaded(id))
+    return getOrInsertDeclaration(M, id);
+
+  // Get the intrinsic signature metadata.
+  SmallVector<Intrinsic::IITDescriptor, 8> Table;
+  getIntrinsicInfoTableEntries(id, Table);
+  ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
+
+  FunctionType *FTy = FunctionType::get(RetTy, ArgTys, /*isVarArg=*/false);
+
+  // Automatically determine the overloaded types.
+  SmallVector<Type *, 4> OverloadTys;
+  [[maybe_unused]] Intrinsic::MatchIntrinsicTypesResult Res =
+      matchIntrinsicSignature(FTy, TableRef, OverloadTys);
+  assert(Res == Intrinsic::MatchIntrinsicTypes_Match &&
+         "intrinsic signature mismatch");
+
+  // If intrinsic requires vararg, recreate the FunctionType accordingly.
+  if (!matchIntrinsicVarArg(/*isVarArg=*/true, TableRef))
+    FTy = FunctionType::get(RetTy, ArgTys, /*isVarArg=*/true);
+
+  assert(TableRef.empty() && "Unprocessed descriptors remain");
+
+  return getOrInsertIntrinsicDeclarationImpl(M, id, OverloadTys, FTy);
 }
 
 Function *Intrinsic::getDeclarationIfExists(const Module *M, ID id) {
@@ -771,12 +805,10 @@ Function *Intrinsic::getDeclarationIfExists(Module *M, ID id,
 // This defines the "Intrinsic::getIntrinsicForClangBuiltin()" method.
 #define GET_LLVM_INTRINSIC_FOR_CLANG_BUILTIN
 #include "llvm/IR/IntrinsicImpl.inc"
-#undef GET_LLVM_INTRINSIC_FOR_CLANG_BUILTIN
 
 // This defines the "Intrinsic::getIntrinsicForMSBuiltin()" method.
 #define GET_LLVM_INTRINSIC_FOR_MS_BUILTIN
 #include "llvm/IR/IntrinsicImpl.inc"
-#undef GET_LLVM_INTRINSIC_FOR_MS_BUILTIN
 
 bool Intrinsic::isConstrainedFPIntrinsic(ID QID) {
   switch (QID) {
@@ -943,14 +975,18 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
 
     return Ty != NewTy;
   }
-  case IITDescriptor::OneNthEltsVecArgument:
+  case IITDescriptor::OneNthEltsVecArgument: {
     // If this is a forward reference, defer the check for later.
     if (D.getRefArgNumber() >= ArgTys.size())
       return IsDeferredCheck || DeferCheck(Ty);
-    return !isa<VectorType>(ArgTys[D.getRefArgNumber()]) ||
-           VectorType::getOneNthElementsVectorType(
-               cast<VectorType>(ArgTys[D.getRefArgNumber()]),
-               D.getVectorDivisor()) != Ty;
+    auto *VTy = dyn_cast<VectorType>(ArgTys[D.getRefArgNumber()]);
+    if (!VTy)
+      return true;
+    if (!VTy->getElementCount().isKnownMultipleOf(D.getVectorDivisor()))
+      return true;
+    return VectorType::getOneNthElementsVectorType(VTy, D.getVectorDivisor()) !=
+           Ty;
+  }
   case IITDescriptor::SameVecWidthArgument: {
     if (D.getArgumentNumber() >= ArgTys.size()) {
       // Defer check and subsequent check for the vector element type.
@@ -1132,3 +1168,30 @@ std::optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {
          "Shouldn't change the signature");
   return NewDecl;
 }
+
+struct InterleaveIntrinsic {
+  Intrinsic::ID Interleave, Deinterleave;
+};
+
+static InterleaveIntrinsic InterleaveIntrinsics[] = {
+    {Intrinsic::vector_interleave2, Intrinsic::vector_deinterleave2},
+    {Intrinsic::vector_interleave3, Intrinsic::vector_deinterleave3},
+    {Intrinsic::vector_interleave4, Intrinsic::vector_deinterleave4},
+    {Intrinsic::vector_interleave5, Intrinsic::vector_deinterleave5},
+    {Intrinsic::vector_interleave6, Intrinsic::vector_deinterleave6},
+    {Intrinsic::vector_interleave7, Intrinsic::vector_deinterleave7},
+    {Intrinsic::vector_interleave8, Intrinsic::vector_deinterleave8},
+};
+
+Intrinsic::ID Intrinsic::getInterleaveIntrinsicID(unsigned Factor) {
+  assert(Factor >= 2 && Factor <= 8 && "Unexpected factor");
+  return InterleaveIntrinsics[Factor - 2].Interleave;
+}
+
+Intrinsic::ID Intrinsic::getDeinterleaveIntrinsicID(unsigned Factor) {
+  assert(Factor >= 2 && Factor <= 8 && "Unexpected factor");
+  return InterleaveIntrinsics[Factor - 2].Deinterleave;
+}
+
+#define GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS
+#include "llvm/IR/IntrinsicImpl.inc"

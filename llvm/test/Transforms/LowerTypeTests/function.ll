@@ -1,7 +1,7 @@
-; RUN: opt -S -passes=lowertypetests -mtriple=i686-unknown-linux-gnu %s | FileCheck --check-prefixes=X86,X86-LINUX,NATIVE,JT8 %s
-; RUN: opt -S -passes=lowertypetests -mtriple=x86_64-unknown-linux-gnu %s | FileCheck --check-prefixes=X86,X86-LINUX,NATIVE,JT8 %s
-; RUN: opt -S -passes=lowertypetests -mtriple=i686-pc-win32 %s | FileCheck --check-prefixes=X86,X86-WIN32,NATIVE,JT8 %s
-; RUN: opt -S -passes=lowertypetests -mtriple=x86_64-pc-win32 %s | FileCheck --check-prefixes=X86,X86-WIN32,NATIVE,JT8 %s
+; RUN: opt -S -passes=lowertypetests -mtriple=i686-unknown-linux-gnu %s | FileCheck --check-prefixes=X86,NATIVE,JT8 %s
+; RUN: opt -S -passes=lowertypetests -mtriple=x86_64-unknown-linux-gnu %s | FileCheck --check-prefixes=X86,NATIVE,JT8 %s
+; RUN: opt -S -passes=lowertypetests -mtriple=i686-pc-win32 %s | FileCheck --check-prefixes=X86,NATIVE,JT8 %s
+; RUN: opt -S -passes=lowertypetests -mtriple=x86_64-pc-win32 %s | FileCheck --check-prefixes=X86,NATIVE,JT8 %s
 ; RUN: opt -S -passes=lowertypetests -mtriple=riscv32-unknown-linux-gnu %s | FileCheck --check-prefixes=RISCV,NATIVE,JT8 %s
 ; RUN: opt -S -passes=lowertypetests -mtriple=riscv64-unknown-linux-gnu %s | FileCheck --check-prefixes=RISCV,NATIVE,JT8 %s
 ; RUN: opt -S -passes=lowertypetests -mtriple=wasm32-unknown-unknown %s | FileCheck --check-prefix=WASM32 %s
@@ -28,14 +28,13 @@ target datalayout = "e-p:64:64"
 ; NATIVE: private constant [0 x i8] zeroinitializer
 ; WASM32: private constant [0 x i8] zeroinitializer
 
-; NATIVE: @f = alias void (), ptr @[[JT:.*]]
+; JT4: @f = alias [4 x i8], ptr @[[JT:.*]]
+; JT8: @f = alias [8 x i8], ptr @[[JT:.*]]
+; JT16: @f = alias [16 x i8], ptr @[[JT:.*]]
 
-; X86: @g = internal alias void (), getelementptr inbounds ([2 x [8 x i8]], ptr @[[JT]], i64 0, i64 1)
-; ARM: @g = internal alias void (), getelementptr inbounds ([2 x [4 x i8]], ptr @[[JT]], i64 0, i64 1)
-; THUMB: @g = internal alias void (), getelementptr inbounds ([2 x [4 x i8]], ptr @[[JT]], i64 0, i64 1)
-; THUMBV6M: @g = internal alias void (), getelementptr inbounds ([2 x [16 x i8]], ptr @[[JT]], i64 0, i64 1)
-; RISCV: @g = internal alias void (), getelementptr inbounds ([2 x [8 x i8]], ptr @[[JT]], i64 0, i64 1)
-; LOONGARCH64: @g = internal alias void (), getelementptr inbounds ([2 x [8 x i8]], ptr @[[JT]], i64 0, i64 1)
+; JT4: @g = internal alias [4 x i8], getelementptr inbounds ([2 x [4 x i8]], ptr @[[JT]], i64 0, i64 1)
+; JT8: @g = internal alias [8 x i8], getelementptr inbounds ([2 x [8 x i8]], ptr @[[JT]], i64 0, i64 1)
+; JT16: @g = internal alias [16 x i8], getelementptr inbounds ([2 x [16 x i8]], ptr @[[JT]], i64 0, i64 1)
 
 ; NATIVE: define hidden void @f.cfi()
 ; WASM32: define void @f() !type !{{[0-9]+}} !wasm.index ![[I0:[0-9]+]]
@@ -115,8 +114,7 @@ define i1 @foo(ptr %p) {
 
 ; NATIVE-SAME: "s"(ptr @g.cfi)
 
-; X86-LINUX: attributes #[[ATTR]] = { naked nocf_check noinline }
-; X86-WIN32: attributes #[[ATTR]] = { nocf_check noinline }
+; X86: attributes #[[ATTR]] = { naked nocf_check noinline }
 ; ARM: attributes #[[ATTR]] = { naked noinline
 ; THUMB: attributes #[[ATTR]] = { naked noinline "target-cpu"="cortex-a8" "target-features"="+thumb-mode" }
 ; THUMBV6M: attributes #[[ATTR]] = { naked noinline "target-features"="+thumb-mode" }

@@ -72,6 +72,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrItineraries.h"
@@ -110,6 +111,7 @@ STATISTIC(NumFailZeroMII, "Pipeliner abort due to zero MII");
 STATISTIC(NumFailNoSchedule, "Pipeliner abort due to no schedule found");
 STATISTIC(NumFailZeroStage, "Pipeliner abort due to zero stage");
 STATISTIC(NumFailLargeMaxStage, "Pipeliner abort due to too many stages");
+STATISTIC(NumFailTooManyStores, "Pipeliner abort due to too many stores");
 
 /// A command line option to turn software pipelining on or off.
 static cl::opt<bool> EnableSWP("enable-pipeliner", cl::Hidden, cl::init(true),
@@ -193,16 +195,22 @@ static cl::opt<bool>
     MVECodeGen("pipeliner-mve-cg", cl::Hidden, cl::init(false),
                cl::desc("Use the MVE code generator for software pipelining"));
 
-namespace llvm {
+/// A command line argument to limit the number of store instructions in the
+/// target basic block.
+static cl::opt<unsigned> SwpMaxNumStores(
+    "pipeliner-max-num-stores",
+    cl::desc("Maximum number of stores allwed in the target loop."), cl::Hidden,
+    cl::init(200));
 
 // A command line option to enable the CopyToPhi DAG mutation.
-cl::opt<bool> SwpEnableCopyToPhi("pipeliner-enable-copytophi", cl::ReallyHidden,
-                                 cl::init(true),
-                                 cl::desc("Enable CopyToPhi DAG Mutation"));
+cl::opt<bool>
+    llvm::SwpEnableCopyToPhi("pipeliner-enable-copytophi", cl::ReallyHidden,
+                             cl::init(true),
+                             cl::desc("Enable CopyToPhi DAG Mutation"));
 
 /// A command line argument to force pipeliner to use specified issue
 /// width.
-cl::opt<int> SwpForceIssueWidth(
+cl::opt<int> llvm::SwpForceIssueWidth(
     "pipeliner-force-issue-width",
     cl::desc("Force pipeliner to use specified issue width."), cl::Hidden,
     cl::init(-1));
@@ -217,8 +225,6 @@ static cl::opt<WindowSchedulingFlag> WindowSchedulingOption(
                           "Use window algorithm after SMS algorithm fails."),
                clEnumValN(WindowSchedulingFlag::WS_Force, "force",
                           "Use window algorithm instead of SMS algorithm.")));
-
-} // end namespace llvm
 
 unsigned SwingSchedulerDAG::Circuits::MaxPaths = 5;
 char MachinePipeliner::ID = 0;
@@ -285,10 +291,12 @@ class LoopCarriedOrderDepsTracker {
     InstrTag getTag() const { return InstrTag(getInt()); }
   };
 
-  /// Holds loads and stores with memory related information.
-  struct LoadStoreChunk {
+  /// Holds instructions that may form loop-carried order-dependencies, but not
+  /// global barriers.
+  struct NoBarrierInstsChunk {
     SmallVector<SUnitWithMemInfo, 4> Loads;
     SmallVector<SUnitWithMemInfo, 4> Stores;
+    SmallVector<SUnitWithMemInfo, 1> FPExceptions;
 
     void append(SUnit *SU);
   };
@@ -335,10 +343,19 @@ private:
   /// Tags to \p SU if the instruction may affect the order-dependencies.
   std::optional<InstrTag> getInstrTag(SUnit *SU) const;
 
-  void addLoopCarriedDepenenciesForChunks(const LoadStoreChunk &From,
-                                          const LoadStoreChunk &To);
+  void addLoopCarriedDepenenciesForChunks(const NoBarrierInstsChunk &From,
+                                          const NoBarrierInstsChunk &To);
+
+  /// Add a loop-carried order dependency between \p Src and \p Dst if we
+  /// cannot prove they are independent.
+  void addDependenciesBetweenSUs(const SUnitWithMemInfo &Src,
+                                 const SUnitWithMemInfo &Dst);
 
   void computeDependenciesAux();
+
+  void setLoopCarriedDep(const SUnit *Src, const SUnit *Dst) {
+    LoopCarried[Src->NodeNum].set(Dst->NodeNum);
+  }
 };
 
 } // end anonymous namespace
@@ -469,6 +486,61 @@ void MachinePipeliner::setPragmaPipelineOptions(MachineLoop &L) {
   }
 }
 
+/// Depth-first search to detect cycles among PHI dependencies.
+/// Returns true if a cycle is detected within the PHI-only subgraph.
+static bool hasPHICycleDFS(
+    unsigned Reg, const DenseMap<unsigned, SmallVector<unsigned, 2>> &PhiDeps,
+    SmallSet<unsigned, 8> &Visited, SmallSet<unsigned, 8> &RecStack) {
+
+  // If Reg is not a PHI-def it cannot contribute to a PHI cycle.
+  auto It = PhiDeps.find(Reg);
+  if (It == PhiDeps.end())
+    return false;
+
+  if (RecStack.count(Reg))
+    return true; // backedge.
+  if (Visited.count(Reg))
+    return false;
+
+  Visited.insert(Reg);
+  RecStack.insert(Reg);
+
+  for (unsigned Dep : It->second) {
+    if (hasPHICycleDFS(Dep, PhiDeps, Visited, RecStack))
+      return true;
+  }
+
+  RecStack.erase(Reg);
+  return false;
+}
+
+static bool hasPHICycle(const MachineBasicBlock *LoopHeader,
+                        const MachineRegisterInfo &MRI) {
+  DenseMap<unsigned, SmallVector<unsigned, 2>> PhiDeps;
+
+  // Collect PHI nodes and their dependencies.
+  for (const MachineInstr &MI : LoopHeader->phis()) {
+    unsigned DefReg = MI.getOperand(0).getReg();
+    auto Ins = PhiDeps.try_emplace(DefReg).first;
+
+    // PHI operands are (Reg, MBB) pairs starting at index 1.
+    for (unsigned I = 1; I < MI.getNumOperands(); I += 2)
+      Ins->second.push_back(MI.getOperand(I).getReg());
+  }
+
+  // DFS to detect cycles among PHI nodes.
+  SmallSet<unsigned, 8> Visited, RecStack;
+
+  // Start DFS from each PHI-def.
+  for (const auto &KV : PhiDeps) {
+    unsigned Reg = KV.first;
+    if (hasPHICycleDFS(Reg, PhiDeps, Visited, RecStack))
+      return true;
+  }
+
+  return false;
+}
+
 /// Return true if the loop can be software pipelined.  The algorithm is
 /// restricted to loops with a single basic block.  Make sure that the
 /// branch in the loop can be analyzed.
@@ -480,6 +552,11 @@ bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
              << "Not a single basic block: "
              << ore::NV("NumBlocks", L.getNumBlocks());
     });
+    return false;
+  }
+
+  if (hasPHICycle(L.getHeader(), MF->getRegInfo())) {
+    LLVM_DEBUG(dbgs() << "Cannot pipeline loop due to PHI cycle\n");
     return false;
   }
 
@@ -529,6 +606,23 @@ bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
       return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "canPipelineLoop",
                                                L.getStartLoc(), L.getHeader())
              << "No loop preheader found";
+    });
+    return false;
+  }
+
+  unsigned NumStores = 0;
+  for (MachineInstr &MI : *L.getHeader())
+    if (MI.mayStore())
+      ++NumStores;
+  if (NumStores > SwpMaxNumStores) {
+    LLVM_DEBUG(dbgs() << "Too many stores\n");
+    NumFailTooManyStores++;
+    ORE->emit([&]() {
+      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "canPipelineLoop",
+                                               L.getStartLoc(), L.getHeader())
+             << "Too many store instructions in the loop: "
+             << ore::NV("NumStores", NumStores) << " > "
+             << ore::NV("SwpMaxNumStores", SwpMaxNumStores) << ".";
     });
     return false;
   }
@@ -673,7 +767,7 @@ void SwingSchedulerDAG::schedule() {
   Topo.InitDAGTopologicalSorting();
   changeDependences();
   postProcessDAG();
-  DDG = std::make_unique<SwingSchedulerDDG>(SUnits, &EntrySU, &ExitSU);
+  DDG = std::make_unique<SwingSchedulerDDG>(SUnits, &EntrySU, &ExitSU, LCE);
   LLVM_DEBUG({
     dump();
     dbgs() << "===== Loop Carried Edges Begin =====\n";
@@ -962,7 +1056,8 @@ static bool hasLoopCarriedMemDep(const SUnitWithMemInfo &Src,
                                  const SUnitWithMemInfo &Dst,
                                  BatchAAResults &BAA,
                                  const TargetInstrInfo *TII,
-                                 const TargetRegisterInfo *TRI) {
+                                 const TargetRegisterInfo *TRI,
+                                 const SwingSchedulerDAG *SSD) {
   if (Src.isTriviallyDisjoint(Dst))
     return false;
   if (isSuccOrder(Src.SU, Dst.SU))
@@ -970,23 +1065,9 @@ static bool hasLoopCarriedMemDep(const SUnitWithMemInfo &Src,
 
   MachineInstr &SrcMI = *Src.SU->getInstr();
   MachineInstr &DstMI = *Dst.SU->getInstr();
-  // First, perform the cheaper check that compares the base register.
-  // If they are the same and the load offset is less than the store
-  // offset, then mark the dependence as loop carried potentially.
-  const MachineOperand *BaseOp1, *BaseOp2;
-  int64_t Offset1, Offset2;
-  bool Offset1IsScalable, Offset2IsScalable;
-  if (TII->getMemOperandWithOffset(SrcMI, BaseOp1, Offset1, Offset1IsScalable,
-                                   TRI) &&
-      TII->getMemOperandWithOffset(DstMI, BaseOp2, Offset2, Offset2IsScalable,
-                                   TRI)) {
-    if (BaseOp1->isIdenticalTo(*BaseOp2) &&
-        Offset1IsScalable == Offset2IsScalable && (int)Offset1 < (int)Offset2) {
-      assert(TII->areMemAccessesTriviallyDisjoint(SrcMI, DstMI) &&
-             "What happened to the chain edge?");
-      return true;
-    }
-  }
+
+  if (!SSD->mayOverlapInLaterIter(&SrcMI, &DstMI))
+    return false;
 
   // Second, the more expensive check that uses alias analysis on the
   // base registers. If they alias, and the load offset is less than
@@ -1013,11 +1094,16 @@ static bool hasLoopCarriedMemDep(const SUnitWithMemInfo &Src,
   return false;
 }
 
-void LoopCarriedOrderDepsTracker::LoadStoreChunk::append(SUnit *SU) {
+void LoopCarriedOrderDepsTracker::NoBarrierInstsChunk::append(SUnit *SU) {
   const MachineInstr *MI = SU->getInstr();
-  if (!MI->mayLoadOrStore())
-    return;
-  (MI->mayStore() ? Stores : Loads).emplace_back(SU);
+  if (MI->mayStore())
+    Stores.emplace_back(SU);
+  else if (MI->mayLoad())
+    Loads.emplace_back(SU);
+  else if (MI->mayRaiseFPException())
+    FPExceptions.emplace_back(SU);
+  else
+    llvm_unreachable("Unexpected instruction type.");
 }
 
 LoopCarriedOrderDepsTracker::LoopCarriedOrderDepsTracker(
@@ -1056,36 +1142,51 @@ LoopCarriedOrderDepsTracker::getInstrTag(SUnit *SU) const {
   return std::nullopt;
 }
 
+void LoopCarriedOrderDepsTracker::addDependenciesBetweenSUs(
+    const SUnitWithMemInfo &Src, const SUnitWithMemInfo &Dst) {
+  // Avoid self-dependencies.
+  if (Src.SU == Dst.SU)
+    return;
+
+  if (hasLoopCarriedMemDep(Src, Dst, *BAA, TII, TRI, DAG))
+    setLoopCarriedDep(Src.SU, Dst.SU);
+}
+
 void LoopCarriedOrderDepsTracker::addLoopCarriedDepenenciesForChunks(
-    const LoadStoreChunk &From, const LoadStoreChunk &To) {
-  // Add dependencies for load-to-store (WAR) from top to bottom.
+    const NoBarrierInstsChunk &From, const NoBarrierInstsChunk &To) {
+  // Add load-to-store dependencies (WAR).
   for (const SUnitWithMemInfo &Src : From.Loads)
     for (const SUnitWithMemInfo &Dst : To.Stores)
-      if (Src.SU->NodeNum < Dst.SU->NodeNum &&
-          hasLoopCarriedMemDep(Src, Dst, *BAA, TII, TRI))
-        LoopCarried[Src.SU->NodeNum].set(Dst.SU->NodeNum);
+      addDependenciesBetweenSUs(Src, Dst);
 
-  // TODO: The following dependencies are missed.
-  //
-  // - Dependencies for load-to-store from bottom to top.
-  // - Dependencies for store-to-load (RAW).
-  // - Dependencies for store-to-store (WAW).
+  // Add store-to-load dependencies (RAW).
+  for (const SUnitWithMemInfo &Src : From.Stores)
+    for (const SUnitWithMemInfo &Dst : To.Loads)
+      addDependenciesBetweenSUs(Src, Dst);
+
+  // Add store-to-store dependencies (WAW).
+  for (const SUnitWithMemInfo &Src : From.Stores)
+    for (const SUnitWithMemInfo &Dst : To.Stores)
+      addDependenciesBetweenSUs(Src, Dst);
 }
 
 void LoopCarriedOrderDepsTracker::computeDependenciesAux() {
-  SmallVector<LoadStoreChunk, 2> Chunks(1);
+  SmallVector<NoBarrierInstsChunk, 2> Chunks(1);
+  SUnit *FirstBarrier = nullptr;
+  SUnit *LastBarrier = nullptr;
   for (const auto &TSU : TaggedSUnits) {
     InstrTag Tag = TSU.getTag();
     SUnit *SU = TSU.getPointer();
     switch (Tag) {
     case InstrTag::Barrier:
+      if (!FirstBarrier)
+        FirstBarrier = SU;
+      LastBarrier = SU;
       Chunks.emplace_back();
       break;
     case InstrTag::LoadOrStore:
-      Chunks.back().append(SU);
-      break;
     case InstrTag::FPExceptions:
-      // TODO: Handle this properly.
+      Chunks.back().append(SU);
       break;
     }
   }
@@ -1093,12 +1194,58 @@ void LoopCarriedOrderDepsTracker::computeDependenciesAux() {
   // Add dependencies between memory operations. If there are one or more
   // barrier events between two memory instructions, we don't add a
   // loop-carried dependence for them.
-  for (const LoadStoreChunk &Chunk : Chunks)
+  for (const NoBarrierInstsChunk &Chunk : Chunks)
     addLoopCarriedDepenenciesForChunks(Chunk, Chunk);
 
-  // TODO: If there are multiple barrier instructions, dependencies from the
-  // last barrier instruction (or load/store below it) to the first barrier
-  // instruction (or load/store above it).
+  // There is no barrier instruction between load/store/fp-exception
+  // instructions in the same chunk. If there are one or more barrier
+  // instructions, the instructions sequence is as follows:
+  //
+  //   Loads/Stores/FPExceptions (Chunks.front())
+  //   Barrier (FirstBarrier)
+  //   Loads/Stores/FPExceptions
+  //   Barrier
+  //   ...
+  //   Loads/Stores/FPExceptions
+  //   Barrier (LastBarrier)
+  //   Loads/Stores/FPExceptions (Chunks.back())
+  //
+  // Since loads/stores/fp-exceptions must not be reordered across barrier
+  // instructions, and the order of barrier instructions must be preserved, add
+  // the following loop-carried dependences:
+  //
+  //       Loads/Stores/FPExceptions (Chunks.front()) <-----+
+  //  +--> Barrier (FirstBarrier) <----------------------+  |
+  //  |    Loads/Stores/FPExceptions                     |  |
+  //  |    Barrier                                       |  |
+  //  |    ...                                           |  |
+  //  |    Loads/Stores/FPExceptions                     |  |
+  //  |    Barrier (LastBarrier) ------------------------+--+
+  //  +--- Loads/Stores/FPExceptions (Chunks.back())
+  //
+  if (FirstBarrier) {
+    assert(LastBarrier && "Both barriers should be set.");
+
+    // LastBarrier -> Loads/Stores/FPExceptions in Chunks.front()
+    for (const SUnitWithMemInfo &Dst : Chunks.front().Loads)
+      setLoopCarriedDep(LastBarrier, Dst.SU);
+    for (const SUnitWithMemInfo &Dst : Chunks.front().Stores)
+      setLoopCarriedDep(LastBarrier, Dst.SU);
+    for (const SUnitWithMemInfo &Dst : Chunks.front().FPExceptions)
+      setLoopCarriedDep(LastBarrier, Dst.SU);
+
+    // Loads/Stores/FPExceptions in Chunks.back() -> FirstBarrier
+    for (const SUnitWithMemInfo &Src : Chunks.back().Loads)
+      setLoopCarriedDep(Src.SU, FirstBarrier);
+    for (const SUnitWithMemInfo &Src : Chunks.back().Stores)
+      setLoopCarriedDep(Src.SU, FirstBarrier);
+    for (const SUnitWithMemInfo &Src : Chunks.back().FPExceptions)
+      setLoopCarriedDep(Src.SU, FirstBarrier);
+
+    // LastBarrier -> FirstBarrier (if they are different)
+    if (FirstBarrier != LastBarrier)
+      setLoopCarriedDep(LastBarrier, FirstBarrier);
+  }
 }
 
 /// Add a chain edge between a load and store if the store can be an
@@ -1116,7 +1263,7 @@ LoopCarriedEdges SwingSchedulerDAG::addLoopCarriedDependences() {
     for (const int Succ : LCODTracker.getLoopCarried(I).set_bits())
       LCE.OrderDeps[&SUnits[I]].insert(&SUnits[Succ]);
 
-  LCE.modifySUnits(SUnits);
+  LCE.modifySUnits(SUnits, TII);
   return LCE;
 }
 
@@ -1159,8 +1306,19 @@ void SwingSchedulerDAG::updatePhiDependences() {
               HasPhiDef = Reg;
               // Add a chain edge to a dependent Phi that isn't an existing
               // predecessor.
-              if (SU->NodeNum < I.NodeNum && !I.isPred(SU))
-                I.addPred(SDep(SU, SDep::Barrier));
+
+              // %3:intregs = PHI %21:intregs, %bb.6, %7:intregs, %bb.1 - SU0
+              // %7:intregs = PHI %21:intregs, %bb.6, %13:intregs, %bb.1 - SU1
+              // %27:intregs = A2_zxtb %3:intregs - SU2
+              // %13:intregs = C2_muxri %45:predregs, 0, %46:intreg
+              // If we have dependent phis, SU0 should be the successor of SU1
+              // not the other way around. (it used to be SU1 is the successor
+              // of SU0). In some cases, SU0 is scheduled earlier than SU1
+              // resulting in bad IR as we do not have a value that can be used
+              // by SU2.
+
+              if (SU->NodeNum < I.NodeNum && !SU->isPred(&I))
+                SU->addPred(SDep(&I, SDep::Barrier));
             }
           }
         }
@@ -1454,7 +1612,11 @@ private:
 
   void dumpPSet(Register Reg) const {
     dbgs() << "Reg=" << printReg(Reg, TRI, 0, &MRI) << " PSet=";
-    for (auto PSetIter = MRI.getPressureSets(Reg); PSetIter.isValid();
+    // FIXME: The static_cast is a bug compensating bugs in the callers.
+    VirtRegOrUnit VRegOrUnit =
+        Reg.isVirtual() ? VirtRegOrUnit(Reg)
+                        : VirtRegOrUnit(static_cast<MCRegUnit>(Reg.id()));
+    for (auto PSetIter = MRI.getPressureSets(VRegOrUnit); PSetIter.isValid();
          ++PSetIter) {
       dbgs() << *PSetIter << ' ';
     }
@@ -1463,7 +1625,11 @@ private:
 
   void increaseRegisterPressure(std::vector<unsigned> &Pressure,
                                 Register Reg) const {
-    auto PSetIter = MRI.getPressureSets(Reg);
+    // FIXME: The static_cast is a bug compensating bugs in the callers.
+    VirtRegOrUnit VRegOrUnit =
+        Reg.isVirtual() ? VirtRegOrUnit(Reg)
+                        : VirtRegOrUnit(static_cast<MCRegUnit>(Reg.id()));
+    auto PSetIter = MRI.getPressureSets(VRegOrUnit);
     unsigned Weight = PSetIter.getWeight();
     for (; PSetIter.isValid(); ++PSetIter)
       Pressure[*PSetIter] += Weight;
@@ -1471,7 +1637,7 @@ private:
 
   void decreaseRegisterPressure(std::vector<unsigned> &Pressure,
                                 Register Reg) const {
-    auto PSetIter = MRI.getPressureSets(Reg);
+    auto PSetIter = MRI.getPressureSets(VirtRegOrUnit(Reg));
     unsigned Weight = PSetIter.getWeight();
     for (; PSetIter.isValid(); ++PSetIter) {
       auto &P = Pressure[*PSetIter];
@@ -1504,7 +1670,11 @@ private:
       if (MI.isDebugInstr())
         continue;
       for (auto &Use : ROMap[&MI].Uses) {
-        auto Reg = Use.RegUnit;
+        // FIXME: The static_cast is a bug.
+        Register Reg =
+            Use.VRegOrUnit.isVirtualReg()
+                ? Use.VRegOrUnit.asVirtualReg()
+                : Register(static_cast<unsigned>(Use.VRegOrUnit.asMCRegUnit()));
         // Ignore the variable that appears only on one side of phi instruction
         // because it's used only at the first iteration.
         if (MI.isPHI() && Reg != getLoopPhiReg(MI, OrigMBB))
@@ -1554,8 +1724,14 @@ private:
         Register Reg = getLoopPhiReg(*MI, OrigMBB);
         UpdateTargetRegs(Reg);
       } else {
-        for (auto &Use : ROMap.find(MI)->getSecond().Uses)
-          UpdateTargetRegs(Use.RegUnit);
+        for (auto &Use : ROMap.find(MI)->getSecond().Uses) {
+          // FIXME: The static_cast is a bug.
+          Register Reg = Use.VRegOrUnit.isVirtualReg()
+                             ? Use.VRegOrUnit.asVirtualReg()
+                             : Register(static_cast<unsigned>(
+                                   Use.VRegOrUnit.asMCRegUnit()));
+          UpdateTargetRegs(Reg);
+        }
       }
     }
 
@@ -1566,7 +1742,11 @@ private:
     DenseMap<Register, MachineInstr *> LastUseMI;
     for (MachineInstr *MI : llvm::reverse(OrderedInsts)) {
       for (auto &Use : ROMap.find(MI)->getSecond().Uses) {
-        auto Reg = Use.RegUnit;
+        // FIXME: The static_cast is a bug.
+        Register Reg =
+            Use.VRegOrUnit.isVirtualReg()
+                ? Use.VRegOrUnit.asVirtualReg()
+                : Register(static_cast<unsigned>(Use.VRegOrUnit.asMCRegUnit()));
         if (!TargetRegs.contains(Reg))
           continue;
         auto [Ite, Inserted] = LastUseMI.try_emplace(Reg, MI);
@@ -1580,8 +1760,8 @@ private:
     }
 
     Instr2LastUsesTy LastUses;
-    for (auto &Entry : LastUseMI)
-      LastUses[Entry.second].insert(Entry.first);
+    for (auto [Reg, MI] : LastUseMI)
+      LastUses[MI].insert(Reg);
     return LastUses;
   }
 
@@ -1620,7 +1800,12 @@ private:
     });
 
     const auto InsertReg = [this, &CurSetPressure](RegSetTy &RegSet,
-                                                   Register Reg) {
+                                                   VirtRegOrUnit VRegOrUnit) {
+      // FIXME: The static_cast is a bug.
+      Register Reg =
+          VRegOrUnit.isVirtualReg()
+              ? VRegOrUnit.asVirtualReg()
+              : Register(static_cast<unsigned>(VRegOrUnit.asMCRegUnit()));
       if (!Reg.isValid() || isReservedRegister(Reg))
         return;
 
@@ -1657,7 +1842,7 @@ private:
         const unsigned Iter = I - Stage;
 
         for (auto &Def : ROMap.find(MI)->getSecond().Defs)
-          InsertReg(LiveRegSets[Iter], Def.RegUnit);
+          InsertReg(LiveRegSets[Iter], Def.VRegOrUnit);
 
         for (auto LastUse : LastUses[MI]) {
           if (MI->isPHI()) {
@@ -2180,7 +2365,7 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   SmallVector<VRegMaskOrUnit, 8> LiveOutRegs;
-  SmallSet<Register, 4> Uses;
+  SmallSet<VirtRegOrUnit, 4> Uses;
   for (SUnit *SU : NS) {
     const MachineInstr *MI = SU->getInstr();
     if (MI->isPHI())
@@ -2188,9 +2373,10 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
     for (const MachineOperand &MO : MI->all_uses()) {
       Register Reg = MO.getReg();
       if (Reg.isVirtual())
-        Uses.insert(Reg);
+        Uses.insert(VirtRegOrUnit(Reg));
       else if (MRI.isAllocatable(Reg))
-        Uses.insert_range(TRI->regunits(Reg.asMCReg()));
+        for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
+          Uses.insert(VirtRegOrUnit(Unit));
     }
   }
   for (SUnit *SU : NS)
@@ -2198,12 +2384,14 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
       if (!MO.isDead()) {
         Register Reg = MO.getReg();
         if (Reg.isVirtual()) {
-          if (!Uses.count(Reg))
-            LiveOutRegs.emplace_back(Reg, LaneBitmask::getNone());
+          if (!Uses.count(VirtRegOrUnit(Reg)))
+            LiveOutRegs.emplace_back(VirtRegOrUnit(Reg),
+                                     LaneBitmask::getNone());
         } else if (MRI.isAllocatable(Reg)) {
           for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
-            if (!Uses.count(Unit))
-              LiveOutRegs.emplace_back(Unit, LaneBitmask::getNone());
+            if (!Uses.count(VirtRegOrUnit(Unit)))
+              LiveOutRegs.emplace_back(VirtRegOrUnit(Unit),
+                                       LaneBitmask::getNone());
         }
       }
   RPTracker.addLiveRegs(LiveOutRegs);
@@ -2676,6 +2864,11 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
       });
     } while (++NI != NE && scheduleFound);
 
+    // If a schedule is found, validate it against the validation-only
+    // dependencies.
+    if (scheduleFound)
+      scheduleFound = DDG->isValidSchedule(Schedule);
+
     // If a schedule is found, ensure non-pipelined instructions are in stage 0
     if (scheduleFound)
       scheduleFound =
@@ -3125,54 +3318,6 @@ bool SMSchedule::insert(SUnit *SU, int StartCycle, int EndCycle, int II) {
   return false;
 }
 
-// Return the cycle of the earliest scheduled instruction in the chain.
-int SMSchedule::earliestCycleInChain(const SwingSchedulerDDGEdge &Dep,
-                                     const SwingSchedulerDDG *DDG) {
-  SmallPtrSet<SUnit *, 8> Visited;
-  SmallVector<SwingSchedulerDDGEdge, 8> Worklist;
-  Worklist.push_back(Dep);
-  int EarlyCycle = INT_MAX;
-  while (!Worklist.empty()) {
-    const SwingSchedulerDDGEdge &Cur = Worklist.pop_back_val();
-    SUnit *PrevSU = Cur.getSrc();
-    if (Visited.count(PrevSU))
-      continue;
-    std::map<SUnit *, int>::const_iterator it = InstrToCycle.find(PrevSU);
-    if (it == InstrToCycle.end())
-      continue;
-    EarlyCycle = std::min(EarlyCycle, it->second);
-    for (const auto &IE : DDG->getInEdges(PrevSU))
-      if (IE.isOrderDep() || IE.isOutputDep())
-        Worklist.push_back(IE);
-    Visited.insert(PrevSU);
-  }
-  return EarlyCycle;
-}
-
-// Return the cycle of the latest scheduled instruction in the chain.
-int SMSchedule::latestCycleInChain(const SwingSchedulerDDGEdge &Dep,
-                                   const SwingSchedulerDDG *DDG) {
-  SmallPtrSet<SUnit *, 8> Visited;
-  SmallVector<SwingSchedulerDDGEdge, 8> Worklist;
-  Worklist.push_back(Dep);
-  int LateCycle = INT_MIN;
-  while (!Worklist.empty()) {
-    const SwingSchedulerDDGEdge &Cur = Worklist.pop_back_val();
-    SUnit *SuccSU = Cur.getDst();
-    if (Visited.count(SuccSU) || SuccSU->isBoundaryNode())
-      continue;
-    std::map<SUnit *, int>::const_iterator it = InstrToCycle.find(SuccSU);
-    if (it == InstrToCycle.end())
-      continue;
-    LateCycle = std::max(LateCycle, it->second);
-    for (const auto &OE : DDG->getOutEdges(SuccSU))
-      if (OE.isOrderDep() || OE.isOutputDep())
-        Worklist.push_back(OE);
-    Visited.insert(SuccSU);
-  }
-  return LateCycle;
-}
-
 /// If an instruction has a use that spans multiple iterations, then
 /// return true. These instructions are characterized by having a back-ege
 /// to a Phi, which contains a reference to another Phi.
@@ -3198,12 +3343,6 @@ void SMSchedule::computeStart(SUnit *SU, int *MaxEarlyStart, int *MinLateStart,
     for (SUnit *I : getInstructions(cycle)) {
       for (const auto &IE : DDG->getInEdges(SU)) {
         if (IE.getSrc() == I) {
-          // FIXME: Add reverse edge to `DDG` instead of calling
-          // `isLoopCarriedDep`
-          if (DAG->isLoopCarriedDep(IE)) {
-            int End = earliestCycleInChain(IE, DDG) + (II - 1);
-            *MinLateStart = std::min(*MinLateStart, End);
-          }
           int EarlyStart = cycle + IE.getLatency() - IE.getDistance() * II;
           *MaxEarlyStart = std::max(*MaxEarlyStart, EarlyStart);
         }
@@ -3211,12 +3350,6 @@ void SMSchedule::computeStart(SUnit *SU, int *MaxEarlyStart, int *MinLateStart,
 
       for (const auto &OE : DDG->getOutEdges(SU)) {
         if (OE.getDst() == I) {
-          // FIXME: Add reverse edge to `DDG` instead of calling
-          // `isLoopCarriedDep`
-          if (DAG->isLoopCarriedDep(OE)) {
-            int Start = latestCycleInChain(OE, DDG) + 1 - II;
-            *MaxEarlyStart = std::max(*MaxEarlyStart, Start);
-          }
           int LateStart = cycle - OE.getLatency() + OE.getDistance() * II;
           *MinLateStart = std::min(*MinLateStart, LateStart);
         }
@@ -3428,9 +3561,9 @@ bool SMSchedule::onlyHasLoopCarriedOutputOrOrderPreds(
 }
 
 /// Determine transitive dependences of unpipelineable instructions
-SmallSet<SUnit *, 8> SMSchedule::computeUnpipelineableNodes(
+SmallPtrSet<SUnit *, 8> SMSchedule::computeUnpipelineableNodes(
     SwingSchedulerDAG *SSD, TargetInstrInfo::PipelinerLoopInfo *PLI) {
-  SmallSet<SUnit *, 8> DoNotPipeline;
+  SmallPtrSet<SUnit *, 8> DoNotPipeline;
   SmallVector<SUnit *, 8> Worklist;
 
   for (auto &SU : SSD->SUnits)
@@ -3460,7 +3593,7 @@ SmallSet<SUnit *, 8> SMSchedule::computeUnpipelineableNodes(
 // and ensure that they are in stage 0.  If unable to do so, return false.
 bool SMSchedule::normalizeNonPipelinedInstructions(
     SwingSchedulerDAG *SSD, TargetInstrInfo::PipelinerLoopInfo *PLI) {
-  SmallSet<SUnit *, 8> DNP = computeUnpipelineableNodes(SSD, PLI);
+  SmallPtrSet<SUnit *, 8> DNP = computeUnpipelineableNodes(SSD, PLI);
 
   int NewLastCycle = INT_MIN;
   for (SUnit &SU : SSD->SUnits) {
@@ -4118,6 +4251,8 @@ SwingSchedulerDDG::getEdges(const SUnit *SU) const {
 
 void SwingSchedulerDDG::addEdge(const SUnit *SU,
                                 const SwingSchedulerDDGEdge &Edge) {
+  assert(!Edge.isValidationOnly() &&
+         "Validation-only edges are not expected here.");
   auto &Edges = getEdges(SU);
   if (Edge.getSrc() == SU)
     Edges.Succs.push_back(Edge);
@@ -4127,25 +4262,43 @@ void SwingSchedulerDDG::addEdge(const SUnit *SU,
 
 void SwingSchedulerDDG::initEdges(SUnit *SU) {
   for (const auto &PI : SU->Preds) {
-    SwingSchedulerDDGEdge Edge(SU, PI, false);
+    SwingSchedulerDDGEdge Edge(SU, PI, /*IsSucc=*/false,
+                               /*IsValidationOnly=*/false);
     addEdge(SU, Edge);
   }
 
   for (const auto &SI : SU->Succs) {
-    SwingSchedulerDDGEdge Edge(SU, SI, true);
+    SwingSchedulerDDGEdge Edge(SU, SI, /*IsSucc=*/true,
+                               /*IsValidationOnly=*/false);
     addEdge(SU, Edge);
   }
 }
 
 SwingSchedulerDDG::SwingSchedulerDDG(std::vector<SUnit> &SUnits, SUnit *EntrySU,
-                                     SUnit *ExitSU)
+                                     SUnit *ExitSU, const LoopCarriedEdges &LCE)
     : EntrySU(EntrySU), ExitSU(ExitSU) {
   EdgesVec.resize(SUnits.size());
 
+  // Add non-loop-carried edges based on the DAG.
   initEdges(EntrySU);
   initEdges(ExitSU);
   for (auto &SU : SUnits)
     initEdges(&SU);
+
+  // Add loop-carried edges, which are not represented in the DAG.
+  for (SUnit &SU : SUnits) {
+    SUnit *Src = &SU;
+    if (const LoopCarriedEdges::OrderDep *OD = LCE.getOrderDepOrNull(Src)) {
+      SDep Base(Src, SDep::Barrier);
+      Base.setLatency(1);
+      for (SUnit *Dst : *OD) {
+        SwingSchedulerDDGEdge Edge(Dst, Base, /*IsSucc=*/false,
+                                   /*IsValidationOnly=*/true);
+        Edge.setDistance(1);
+        ValidationOnlyEdges.push_back(Edge);
+      }
+    }
+  }
 }
 
 const SwingSchedulerDDG::EdgesType &
@@ -4158,17 +4311,73 @@ SwingSchedulerDDG::getOutEdges(const SUnit *SU) const {
   return getEdges(SU).Succs;
 }
 
-void LoopCarriedEdges::modifySUnits(std::vector<SUnit> &SUnits) {
-  // Currently this function simply adds all dependencies represented by this
-  // object. After we properly handle missed dependencies, the logic here will
-  // be more complex, as currently missed edges should not be added to the DAG.
+/// Check if \p Schedule doesn't violate the validation-only dependencies.
+bool SwingSchedulerDDG::isValidSchedule(const SMSchedule &Schedule) const {
+  unsigned II = Schedule.getInitiationInterval();
+
+  auto ExpandCycle = [&](SUnit *SU) {
+    int Stage = Schedule.stageScheduled(SU);
+    int Cycle = Schedule.cycleScheduled(SU);
+    return Cycle + (Stage * II);
+  };
+
+  for (const SwingSchedulerDDGEdge &Edge : ValidationOnlyEdges) {
+    SUnit *Src = Edge.getSrc();
+    SUnit *Dst = Edge.getDst();
+    if (!Src->isInstr() || !Dst->isInstr())
+      continue;
+    int CycleSrc = ExpandCycle(Src);
+    int CycleDst = ExpandCycle(Dst);
+    int MaxLateStart = CycleDst + Edge.getDistance() * II - Edge.getLatency();
+    if (CycleSrc > MaxLateStart) {
+      LLVM_DEBUG({
+        dbgs() << "Validation failed for edge from " << Src->NodeNum << " to "
+               << Dst->NodeNum << "\n";
+      });
+      return false;
+    }
+  }
+  return true;
+}
+
+void LoopCarriedEdges::modifySUnits(std::vector<SUnit> &SUnits,
+                                    const TargetInstrInfo *TII) {
   for (SUnit &SU : SUnits) {
     SUnit *Src = &SU;
     if (auto *OrderDep = getOrderDepOrNull(Src)) {
       SDep Dep(Src, SDep::Barrier);
       Dep.setLatency(1);
-      for (SUnit *Dst : *OrderDep)
-        Dst->addPred(Dep);
+      for (SUnit *Dst : *OrderDep) {
+        SUnit *From = Src;
+        SUnit *To = Dst;
+        if (From->NodeNum > To->NodeNum)
+          std::swap(From, To);
+
+        // Add a forward edge if the following conditions are met:
+        //
+        // - The instruction of the source node (FromMI) may read memory.
+        // - The instruction of the target node (ToMI) may modify memory, but
+        //   does not read it.
+        // - Neither instruction is a global barrier.
+        // - The load appears before the store in the original basic block.
+        // - There are no barrier or store instructions between the two nodes.
+        // - The target node is unreachable from the source node in the current
+        //   DAG.
+        //
+        // TODO: These conditions are inherited from a previous implementation,
+        // and some may no longer be necessary. For now, we conservatively
+        // retain all of them to avoid regressions, but the logic could
+        // potentially be simplified
+        MachineInstr *FromMI = From->getInstr();
+        MachineInstr *ToMI = To->getInstr();
+        if (FromMI->mayLoad() && !ToMI->mayLoad() && ToMI->mayStore() &&
+            !TII->isGlobalMemoryObject(FromMI) &&
+            !TII->isGlobalMemoryObject(ToMI) && !isSuccOrder(From, To)) {
+          SDep Pred = Dep;
+          Pred.setSUnit(From);
+          To->addPred(Pred);
+        }
+      }
     }
   }
 }

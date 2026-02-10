@@ -25,6 +25,13 @@ on:
         description: 'Upload documentation'
         required: false
         type: boolean
+    secrets:
+      LLVMBOT_WWW_RELEASES_PUSH:
+        description: "Secret used to push changes to llvmbot www-releases fork."
+        required: false
+      WWW_RELEASES_TOKEN:
+        description: "Secret used to create a PR with the documentation changes."
+        required: false
 
 jobs:
   release-documentation:
@@ -34,10 +41,10 @@ jobs:
       upload: ${{ inputs.upload && !contains(inputs.release-version, 'rc') }}
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
       - name: Setup Python env
-        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
           cache: 'pip'
           cache-dependency-path: './llvm/docs/requirements.txt'
@@ -59,14 +66,14 @@ jobs:
           ./llvm/utils/release/build-docs.sh -release "${{ inputs.release-version }}" -no-doxygen
 
       - name: Create Release Notes Artifact
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # 4.6.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # 6.0.0
         with:
           name: release-notes
           path: docs-build/html-export/
 
       - name: Clone www-releases
         if: env.upload
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           repository: ${{ github.repository_owner }}/www-releases
           ref: main
@@ -77,6 +84,7 @@ jobs:
       - name: Upload Release Notes
         if: env.upload
         env:
+          PUSH_TOKEN: ${{ secrets.LLVMBOT_WWW_RELEASES_PUSH }}
           GH_TOKEN: ${{ secrets.WWW_RELEASES_TOKEN }}
         run: |
           mkdir -p www-releases/${{ inputs.release-version }}
@@ -87,5 +95,5 @@ jobs:
           git config user.email "llvmbot@llvm.org"
           git config user.name "llvmbot"
           git commit -a -m "Add ${{ inputs.release-version }} documentation"
-          git push --force  "https://$GH_TOKEN@github.com/llvmbot/www-releases.git" HEAD:refs/heads/${{ inputs.release-version }}
-          gh pr create -f -B main -H ${{ inputs.release-version }} -R llvmbot/www-releases
+          git push --force  "https://$PUSH_TOKEN@github.com/llvmbot/www-releases.git" HEAD:refs/heads/${{ inputs.release-version }}
+          gh pr create -f -B main -H llvmbot:${{ inputs.release-version }}

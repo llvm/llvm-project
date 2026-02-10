@@ -4,10 +4,6 @@
 # Adds the name of the generated file to TABLEGEN_OUTPUT.
 include(LLVMDistributionSupport)
 
-# Clear out any pre-existing compile_commands file before processing. This
-# allows for generating a clean compile_commands on each configure.
-file(REMOVE ${CMAKE_BINARY_DIR}/tablegen_compile_commands.yml)
-
 function(tablegen project ofn)
   cmake_parse_arguments(ARG "" "" "DEPENDS;EXTRA_INCLUDES" ${ARGN})
 
@@ -21,6 +17,21 @@ function(tablegen project ofn)
     message(FATAL_ERROR "${project}_TABLEGEN_EXE not set")
   endif()
 
+  # Set the include directories
+  get_directory_property(tblgen_includes INCLUDE_DIRECTORIES)
+  list(PREPEND tblgen_includes ${ARG_EXTRA_INCLUDES})
+  list(PREPEND tblgen_includes ${CMAKE_CURRENT_SOURCE_DIR})
+  # Filter out any empty include items.
+  list(REMOVE_ITEM tblgen_includes "")
+
+  # Check for multi-output tablegen invocations BEFORE deciding on depfile mode.
+  # Ninja's depslog cannot handle multiple outputs with depfile, so we must use
+  # fallback mode (globbing) for these cases.
+  set(has_extra_outputs FALSE)
+  if("-gen-register-info" IN_LIST ARGN)
+    set(has_extra_outputs TRUE)
+  endif()
+
   # Use depfile instead of globbing arbitrary *.td(s) for Ninja. We force
   # CMake versions older than v3.30 on Windows to use the fallback behavior
   # due to a depfile parsing bug on Windows paths in versions prior to 3.30.
@@ -29,10 +40,28 @@ function(tablegen project ofn)
   # behavior as v3.22 and earlier fail to parse some depfiles that get
   # generated, and this behavior was fixed in CMake commit
   # e04a352cca523eba2ac0d60063a3799f5bb1c69e.
+  # CRITICAL: Ninja <1.10 has a depslog limitation: it cannot handle depfile
+  # mode when CMake generates implicit outputs (absolute path aliases for IDE
+  # support). For multi-output rules OR when using Ninja <1.10, we MUST use
+  # fallback mode (glob .td files) to avoid "multiple outputs aren't supported
+  # by depslog" errors.
   cmake_policy(GET CMP0116 cmp0116_state)
+  
+  # Check Ninja version to avoid depslog errors with implicit outputs
+  set(ninja_version_supports_depfile TRUE)
+  if(CMAKE_GENERATOR MATCHES "Ninja")
+    execute_process(COMMAND ${CMAKE_MAKE_PROGRAM} --version
+                    OUTPUT_VARIABLE ninja_version
+                    OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(ninja_version VERSION_LESS "1.10")
+      set(ninja_version_supports_depfile FALSE)
+    endif()
+  endif()
   if(CMAKE_GENERATOR MATCHES "Ninja" AND cmp0116_state STREQUAL NEW
      AND NOT (CMAKE_HOST_WIN32 AND CMAKE_VERSION VERSION_LESS 3.30)
-     AND NOT (CMAKE_VERSION VERSION_LESS 3.23))
+     AND NOT (CMAKE_VERSION VERSION_LESS 3.23)
+     AND NOT has_extra_outputs
+     AND ninja_version_supports_depfile)
     # CMake emits build targets as relative paths but Ninja doesn't identify
     # absolute path (in *.d) as relative path (in build.ninja). Post CMP0116,
     # CMake handles this discrepancy for us, otherwise we use the fallback
@@ -42,22 +71,16 @@ function(tablegen project ofn)
       -d ${ofn}.d
       DEPFILE ${ofn}.d
       )
-    set(local_tds)
     set(global_tds)
   else()
-    file(GLOB local_tds "*.td")
-    file(GLOB_RECURSE global_tds "${LLVM_MAIN_INCLUDE_DIR}/llvm/*.td")
+    set(include_td_dirs "${tblgen_includes}")
+    list(TRANSFORM include_td_dirs APPEND "/*.td")
+    file(GLOB global_tds ${include_td_dirs})
     set(additional_cmdline
       -o ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
       )
   endif()
 
-  if (IS_ABSOLUTE ${LLVM_TARGET_DEFINITIONS})
-    set(LLVM_TARGET_DEFINITIONS_ABSOLUTE ${LLVM_TARGET_DEFINITIONS})
-  else()
-    set(LLVM_TARGET_DEFINITIONS_ABSOLUTE
-      ${CMAKE_CURRENT_SOURCE_DIR}/${LLVM_TARGET_DEFINITIONS})
-  endif()
   if (LLVM_ENABLE_DAGISEL_COV AND "-gen-dag-isel" IN_LIST ARGN)
     list(APPEND LLVM_TABLEGEN_FLAGS "-instrument-coverage")
   endif()
@@ -67,6 +90,16 @@ function(tablegen project ofn)
   endif()
   if (LLVM_OMIT_DAGISEL_COMMENTS AND "-gen-dag-isel" IN_LIST ARGN)
     list(APPEND LLVM_TABLEGEN_FLAGS "-omit-comments")
+  endif()
+
+  set(EXTRA_OUTPUTS)
+  if("-gen-register-info" IN_LIST ARGN)
+    cmake_path(GET ofn STEM OUTPUT_BASENAME)
+    list(APPEND EXTRA_OUTPUTS
+         ${CMAKE_CURRENT_BINARY_DIR}/${OUTPUT_BASENAME}Enums.inc
+         ${CMAKE_CURRENT_BINARY_DIR}/${OUTPUT_BASENAME}Header.inc
+         ${CMAKE_CURRENT_BINARY_DIR}/${OUTPUT_BASENAME}MCDesc.inc
+         ${CMAKE_CURRENT_BINARY_DIR}/${OUTPUT_BASENAME}TargetDesc.inc)
   endif()
 
   # MSVC can't support long string literals ("long" > 65534 bytes)[1], so if there's
@@ -92,6 +125,25 @@ function(tablegen project ofn)
     list(APPEND LLVM_TABLEGEN_FLAGS "-no-warn-on-unused-template-args")
   endif()
 
+  # Build the absolute path for the current input file.
+  if (IS_ABSOLUTE ${LLVM_TARGET_DEFINITIONS})
+    set(LLVM_TARGET_DEFINITIONS_ABSOLUTE ${LLVM_TARGET_DEFINITIONS})
+  else()
+    set(LLVM_TARGET_DEFINITIONS_ABSOLUTE
+      ${CMAKE_CURRENT_SOURCE_DIR}/${LLVM_TARGET_DEFINITIONS})
+  endif()
+
+  # Append this file and its includes to the compile commands file.
+  # This file is used by the TableGen LSP Language Server (tblgen-lsp-server).
+  file(APPEND ${CMAKE_BINARY_DIR}/tablegen_compile_commands.yml
+      "--- !FileInfo:\n"
+      "  filepath: \"${LLVM_TARGET_DEFINITIONS_ABSOLUTE}\"\n"
+      "  includes: \"${tblgen_includes}\"\n"
+  )
+
+  # Prepend each include entry with -I for arguments.
+  list(TRANSFORM tblgen_includes PREPEND -I)
+
   # We need both _TABLEGEN_TARGET and _TABLEGEN_EXE in the  DEPENDS list
   # (both the target and the file) to have .inc files rebuilt on
   # a tablegen change, as cmake does not propagate file-level dependencies
@@ -101,37 +153,8 @@ function(tablegen project ofn)
   # dependency twice in the result file when
   # ("${${project}_TABLEGEN_TARGET}" STREQUAL "${${project}_TABLEGEN_EXE}")
   # but lets us having smaller and cleaner code here.
-  get_directory_property(tblgen_includes INCLUDE_DIRECTORIES)
-  list(APPEND tblgen_includes ${ARG_EXTRA_INCLUDES})
-
-  # Get the current set of include paths for this td file.
-  cmake_parse_arguments(ARG "" "" "DEPENDS;EXTRA_INCLUDES" ${ARGN})
-  get_directory_property(tblgen_includes INCLUDE_DIRECTORIES)
-  list(APPEND tblgen_includes ${ARG_EXTRA_INCLUDES})
-  # Filter out any empty include items.
-  list(REMOVE_ITEM tblgen_includes "")
-
-  # Build the absolute path for the current input file.
-  if (IS_ABSOLUTE ${LLVM_TARGET_DEFINITIONS})
-    set(LLVM_TARGET_DEFINITIONS_ABSOLUTE ${LLVM_TARGET_DEFINITIONS})
-  else()
-    set(LLVM_TARGET_DEFINITIONS_ABSOLUTE ${CMAKE_CURRENT_SOURCE_DIR}/${LLVM_TARGET_DEFINITIONS})
-  endif()
-
-  # Append this file and its includes to the compile commands file.
-  # This file is used by the TableGen LSP Language Server (tblgen-lsp-server).
-  file(APPEND ${CMAKE_BINARY_DIR}/tablegen_compile_commands.yml
-      "--- !FileInfo:\n"
-      "  filepath: \"${LLVM_TARGET_DEFINITIONS_ABSOLUTE}\"\n"
-      "  includes: \"${CMAKE_CURRENT_SOURCE_DIR};${tblgen_includes}\"\n"
-  )
-
-  # Filter out empty items before prepending each entry with -I
-  list(REMOVE_ITEM tblgen_includes "")
-  list(TRANSFORM tblgen_includes PREPEND -I)
-
   set(tablegen_exe ${${project}_TABLEGEN_EXE})
-  set(tablegen_depends ${${project}_TABLEGEN_TARGET} ${tablegen_exe})
+  set(tablegen_target ${${project}_TABLEGEN_TARGET})
 
   if(LLVM_PARALLEL_TABLEGEN_JOBS)
     set(LLVM_TABLEGEN_JOB_POOL JOB_POOL tablegen_job_pool)
@@ -139,8 +162,22 @@ function(tablegen project ofn)
     set(LLVM_TABLEGEN_JOB_POOL "")
   endif()
 
-  add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
-    COMMAND ${tablegen_exe} ${ARG_UNPARSED_ARGUMENTS} -I ${CMAKE_CURRENT_SOURCE_DIR}
+  # For Ninja with multiple outputs, we cannot add the target to DEPENDS due to
+  # depslog limitations. Instead, rely on the implicit tool dependency from COMMAND
+  # and the globbed .td files for proper dependency tracking.
+  # For single outputs or non-Ninja generators, include the target in DEPENDS.
+  set(tablegen_target_dep)
+  if(NOT EXTRA_OUTPUTS)
+    # Single output: safe to add explicit target dependency
+    set(tablegen_target_dep ${tablegen_target})
+  elseif(NOT CMAKE_GENERATOR MATCHES "Ninja")
+    # Multiple outputs but not Ninja: Ninja's depslog is not a constraint
+    set(tablegen_target_dep ${tablegen_target})
+  endif()
+  # Multiple outputs + Ninja: Don't add target dependency; rely on COMMAND implicit tracking
+
+  add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ofn} ${EXTRA_OUTPUTS}
+    COMMAND ${tablegen_exe} ${ARG_UNPARSED_ARGUMENTS}
     ${tblgen_includes}
     ${LLVM_TABLEGEN_FLAGS}
     ${LLVM_TARGET_DEFINITIONS_ABSOLUTE}
@@ -149,8 +186,8 @@ function(tablegen project ofn)
     # The file in LLVM_TARGET_DEFINITIONS may be not in the current
     # directory and local_tds may not contain it, so we must
     # explicitly list it here:
-    DEPENDS ${ARG_DEPENDS} ${tablegen_depends}
-      ${local_tds} ${global_tds}
+    DEPENDS ${ARG_DEPENDS} ${tablegen_target_dep}
+      ${global_tds}
     ${LLVM_TARGET_DEFINITIONS_ABSOLUTE}
     ${LLVM_TARGET_DEPENDS}
     ${LLVM_TABLEGEN_JOB_POOL}
@@ -259,3 +296,11 @@ macro(add_tablegen target project)
     set_property(GLOBAL APPEND PROPERTY ${export_upper}_EXPORTS ${target})
   endif()
 endmacro()
+
+# Make sure 'tablegen_compile_commands.yml' is only deleted once the very
+# first time this file is included.
+include_guard(GLOBAL)
+
+# Clear out any pre-existing compile_commands file before processing. This
+# allows for generating a clean compile_commands on each configure.
+file(REMOVE ${CMAKE_BINARY_DIR}/tablegen_compile_commands.yml)

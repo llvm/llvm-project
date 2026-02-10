@@ -21,6 +21,11 @@
 using namespace mlir;
 using namespace cir;
 
+namespace mlir {
+#define GEN_PASS_DEF_CIRSIMPLIFY
+#include "clang/CIR/Dialect/Passes.h.inc"
+} // namespace mlir
+
 //===----------------------------------------------------------------------===//
 // Rewrite patterns
 //===----------------------------------------------------------------------===//
@@ -97,8 +102,8 @@ private:
     // Check whether the region/block contains a cir.const followed by a
     // cir.yield that yields the value.
     auto yieldOp = mlir::cast<cir::YieldOp>(onlyBlock.getTerminator());
-    auto yieldValueDefOp = mlir::dyn_cast_if_present<cir::ConstantOp>(
-        yieldOp.getArgs()[0].getDefiningOp());
+    auto yieldValueDefOp =
+        yieldOp.getArgs()[0].getDefiningOp<cir::ConstantOp>();
     return yieldValueDefOp && yieldValueDefOp->getBlock() == &onlyBlock;
   }
 };
@@ -126,18 +131,13 @@ struct SimplifySelect : public OpRewritePattern<SelectOp> {
 
   LogicalResult matchAndRewrite(SelectOp op,
                                 PatternRewriter &rewriter) const final {
-    mlir::Operation *trueValueOp = op.getTrueValue().getDefiningOp();
-    mlir::Operation *falseValueOp = op.getFalseValue().getDefiningOp();
-    auto trueValueConstOp =
-        mlir::dyn_cast_if_present<cir::ConstantOp>(trueValueOp);
-    auto falseValueConstOp =
-        mlir::dyn_cast_if_present<cir::ConstantOp>(falseValueOp);
-    if (!trueValueConstOp || !falseValueConstOp)
+    auto trueValueOp = op.getTrueValue().getDefiningOp<cir::ConstantOp>();
+    auto falseValueOp = op.getFalseValue().getDefiningOp<cir::ConstantOp>();
+    if (!trueValueOp || !falseValueOp)
       return mlir::failure();
 
-    auto trueValue = mlir::dyn_cast<cir::BoolAttr>(trueValueConstOp.getValue());
-    auto falseValue =
-        mlir::dyn_cast<cir::BoolAttr>(falseValueConstOp.getValue());
+    auto trueValue = trueValueOp.getValueAttr<cir::BoolAttr>();
+    auto falseValue = falseValueOp.getValueAttr<cir::BoolAttr>();
     if (!trueValue || !falseValue)
       return mlir::failure();
 
@@ -260,11 +260,35 @@ struct SimplifySwitch : public OpRewritePattern<SwitchOp> {
   }
 };
 
+struct SimplifyVecSplat : public OpRewritePattern<VecSplatOp> {
+  using OpRewritePattern<VecSplatOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(VecSplatOp op,
+                                PatternRewriter &rewriter) const override {
+    mlir::Value splatValue = op.getValue();
+    auto constant = splatValue.getDefiningOp<cir::ConstantOp>();
+    if (!constant)
+      return mlir::failure();
+
+    auto value = constant.getValue();
+    if (!mlir::isa_and_nonnull<cir::IntAttr>(value) &&
+        !mlir::isa_and_nonnull<cir::FPAttr>(value))
+      return mlir::failure();
+
+    cir::VectorType resultType = op.getResult().getType();
+    SmallVector<mlir::Attribute, 16> elements(resultType.getSize(), value);
+    auto constVecAttr = cir::ConstVectorAttr::get(
+        resultType, mlir::ArrayAttr::get(getContext(), elements));
+
+    rewriter.replaceOpWithNewOp<cir::ConstantOp>(op, constVecAttr);
+    return mlir::success();
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // CIRSimplifyPass
 //===----------------------------------------------------------------------===//
 
-struct CIRSimplifyPass : public CIRSimplifyBase<CIRSimplifyPass> {
+struct CIRSimplifyPass : public impl::CIRSimplifyBase<CIRSimplifyPass> {
   using CIRSimplifyBase::CIRSimplifyBase;
 
   void runOnOperation() override;
@@ -275,7 +299,8 @@ void populateMergeCleanupPatterns(RewritePatternSet &patterns) {
   patterns.add<
     SimplifyTernary,
     SimplifySelect,
-    SimplifySwitch
+    SimplifySwitch,
+    SimplifyVecSplat
   >(patterns.getContext());
   // clang-format on
 }
@@ -288,7 +313,7 @@ void CIRSimplifyPass::runOnOperation() {
   // Collect operations to apply patterns.
   llvm::SmallVector<Operation *, 16> ops;
   getOperation()->walk([&](Operation *op) {
-    if (isa<TernaryOp, SelectOp, SwitchOp>(op))
+    if (isa<TernaryOp, SelectOp, SwitchOp, VecSplatOp>(op))
       ops.push_back(op);
   });
 

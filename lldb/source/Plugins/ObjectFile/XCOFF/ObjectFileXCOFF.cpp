@@ -19,6 +19,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -53,28 +54,30 @@ void ObjectFileXCOFF::Terminate() {
 }
 
 ObjectFile *ObjectFileXCOFF::CreateInstance(const lldb::ModuleSP &module_sp,
-                                            DataBufferSP data_sp,
+                                            DataExtractorSP extractor_sp,
                                             lldb::offset_t data_offset,
                                             const lldb_private::FileSpec *file,
                                             lldb::offset_t file_offset,
                                             lldb::offset_t length) {
-  if (!data_sp) {
-    data_sp = MapFileData(*file, length, file_offset);
+  if (!extractor_sp || !extractor_sp->HasData()) {
+    DataBufferSP data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp)
       return nullptr;
     data_offset = 0;
+    extractor_sp = std::make_shared<lldb_private::DataExtractor>(data_sp);
   }
-  if (!ObjectFileXCOFF::MagicBytesMatch(data_sp, data_offset, length))
+  if (!ObjectFileXCOFF::MagicBytesMatch(extractor_sp, data_offset, length))
     return nullptr;
   // Update the data to contain the entire file if it doesn't already
-  if (data_sp->GetByteSize() < length) {
-    data_sp = MapFileData(*file, length, file_offset);
+  if (extractor_sp->GetByteSize() < length) {
+    DataBufferSP data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp)
       return nullptr;
     data_offset = 0;
+    extractor_sp = std::make_shared<lldb_private::DataExtractor>(data_sp);
   }
   auto objfile_up = std::make_unique<ObjectFileXCOFF>(
-      module_sp, data_sp, data_offset, file, file_offset, length);
+      module_sp, extractor_sp, data_offset, file, file_offset, length);
   if (!objfile_up)
     return nullptr;
 
@@ -94,7 +97,7 @@ bool ObjectFileXCOFF::CreateBinary() {
 
   Log *log = GetLog(LLDBLog::Object);
 
-  auto memory_ref = llvm::MemoryBufferRef(toStringRef(m_data.GetData()),
+  auto memory_ref = llvm::MemoryBufferRef(toStringRef(m_data_nsp->GetData()),
                                           m_file.GetFilename().GetStringRef());
   llvm::file_magic magic = llvm::identify_magic(memory_ref.getBuffer());
 
@@ -124,12 +127,16 @@ ObjectFile *ObjectFileXCOFF::CreateMemoryInstance(
 }
 
 size_t ObjectFileXCOFF::GetModuleSpecifications(
-    const lldb_private::FileSpec &file, lldb::DataBufferSP &data_sp,
+    const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
     lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
   const size_t initial_count = specs.GetSize();
 
-  if (ObjectFileXCOFF::MagicBytesMatch(data_sp, 0, data_sp->GetByteSize())) {
+  if (!extractor_sp || !extractor_sp->HasData())
+    return 0;
+
+  if (ObjectFileXCOFF::MagicBytesMatch(extractor_sp, 0,
+                                       extractor_sp->GetByteSize())) {
     ArchSpec arch_spec =
         ArchSpec(eArchTypeXCOFF, XCOFF::TCPU_PPC64, LLDB_INVALID_CPUTYPE);
     ModuleSpec spec(file, arch_spec);
@@ -156,15 +163,15 @@ static uint32_t XCOFFHeaderSizeFromMagic(uint32_t magic) {
   return 0;
 }
 
-bool ObjectFileXCOFF::MagicBytesMatch(DataBufferSP &data_sp,
+bool ObjectFileXCOFF::MagicBytesMatch(DataExtractorSP &extractor_sp,
                                       lldb::addr_t data_offset,
                                       lldb::addr_t data_length) {
-  lldb_private::DataExtractor data;
-  data.SetData(data_sp, data_offset, data_length);
+  DataExtractorSP magic_extractor_sp =
+      extractor_sp->GetSubsetExtractorSP(data_offset);
   // Need to set this as XCOFF is only compatible with Big Endian
-  data.SetByteOrder(eByteOrderBig);
+  magic_extractor_sp->SetByteOrder(eByteOrderBig);
   lldb::offset_t offset = 0;
-  uint16_t magic = data.GetU16(&offset);
+  uint16_t magic = magic_extractor_sp->GetU16(&offset);
   return XCOFFHeaderSizeFromMagic(magic) != 0;
 }
 
@@ -188,7 +195,107 @@ AddressClass ObjectFileXCOFF::GetAddressClass(addr_t file_addr) {
   return AddressClass::eUnknown;
 }
 
-void ObjectFileXCOFF::ParseSymtab(Symtab &lldb_symtab) {}
+static lldb::SymbolType MapSymbolType(llvm::object::SymbolRef::Type sym_type) {
+  switch (sym_type) {
+  case llvm::object::SymbolRef::ST_Function:
+    return lldb::eSymbolTypeCode;
+  case llvm::object::SymbolRef::ST_Data:
+    return lldb::eSymbolTypeData;
+  case llvm::object::SymbolRef::ST_File:
+    return lldb::eSymbolTypeSourceFile;
+  default:
+    return lldb::eSymbolTypeInvalid;
+  }
+}
+
+void ObjectFileXCOFF::ParseSymtab(Symtab &lldb_symtab) {
+  Log *log = GetLog(LLDBLog::Object);
+  SectionList *sectionList = GetSectionList();
+
+  for (const auto &symbol_ref : m_binary->symbols()) {
+    llvm::object::XCOFFSymbolRef xcoff_sym_ref(symbol_ref);
+
+    llvm::Expected<llvm::StringRef> name_or_err = xcoff_sym_ref.getName();
+    if (!name_or_err) {
+      LLDB_LOG_ERROR(log, name_or_err.takeError(),
+                     "Unable to extract name from the xcoff symbol ref object");
+      continue;
+    }
+
+    llvm::StringRef symbolName = name_or_err.get();
+    // Remove the . prefix added during compilation. This prefix is usually
+    // added to differentiate between reference to the code and function
+    // descriptor. For instance, Adding .func will only allow user to put bp on
+    // .func, which is not known to the user, instead of func.
+    llvm::StringRef name_no_dot =
+        symbolName.starts_with(".") ? symbolName.drop_front() : symbolName;
+    auto storageClass = xcoff_sym_ref.getStorageClass();
+    // C_HIDEXT symbols are not needed to be exposed, with the exception of TOC
+    // which is responsible for storing references to global data
+    if (storageClass == XCOFF::C_HIDEXT && symbolName != "TOC") {
+
+      // Zero or muliple aux entries may suggest ambiguous data
+      if (xcoff_sym_ref.getNumberOfAuxEntries() != 1)
+        continue;
+
+      auto aux_csect_or_err = xcoff_sym_ref.getXCOFFCsectAuxRef();
+      if (!aux_csect_or_err) {
+        LLDB_LOG_ERROR(log, aux_csect_or_err.takeError(),
+                       "Unable to access xcoff csect aux ref object");
+        continue;
+      }
+
+      const llvm::object::XCOFFCsectAuxRef csect_aux = aux_csect_or_err.get();
+
+      // Only add hidden ext entries which come under Program Code, skip others
+      // as they are not useful as debugging data.
+      if (csect_aux.getStorageMappingClass() != XCOFF::XMC_PR)
+        continue;
+
+      // This does not apply to 32-bit,
+      // Only add csect symbols identified by the aux entry, as they are
+      // needed to reference section information. Skip others
+      if (m_binary->is64Bit())
+        if (csect_aux.getAuxType64() != XCOFF::AUX_CSECT)
+          continue;
+    }
+
+    Symbol symbol;
+    symbol.GetMangled().SetValue(ConstString(name_no_dot));
+
+    int16_t sectionNumber = xcoff_sym_ref.getSectionNumber();
+    // Note that XCOFF section headers are numbered from 1 and not 0.
+    size_t sectionIndex = static_cast<size_t>(sectionNumber - 1);
+    if (sectionNumber > 0) {
+      if (sectionIndex < sectionList->GetSize()) {
+
+        lldb::SectionSP section_sp =
+            sectionList->GetSectionAtIndex(sectionIndex);
+        if (!section_sp || section_sp->GetFileAddress() == LLDB_INVALID_ADDRESS)
+          continue;
+
+        lldb::addr_t file_addr = section_sp->GetFileAddress();
+        lldb::addr_t symbolValue = xcoff_sym_ref.getValue();
+        if (symbolValue < file_addr)
+          continue;
+
+        symbol.GetAddressRef() = Address(section_sp, symbolValue - file_addr);
+      }
+    }
+
+    Expected<llvm::object::SymbolRef::Type> sym_type_or_err =
+        symbol_ref.getType();
+    if (!sym_type_or_err) {
+      LLDB_LOG_ERROR(log, sym_type_or_err.takeError(),
+                     "Unable to access xcoff symbol type");
+      continue;
+    }
+
+    symbol.SetType(MapSymbolType(sym_type_or_err.get()));
+
+    lldb_symtab.AddSymbol(symbol);
+  }
+}
 
 bool ObjectFileXCOFF::IsStripped() { return false; }
 
@@ -294,12 +401,13 @@ ObjectFileXCOFF::MapFileDataWritable(const FileSpec &file, uint64_t Size,
 }
 
 ObjectFileXCOFF::ObjectFileXCOFF(const lldb::ModuleSP &module_sp,
-                                 DataBufferSP data_sp,
+                                 DataExtractorSP extractor_sp,
                                  lldb::offset_t data_offset,
                                  const FileSpec *file,
                                  lldb::offset_t file_offset,
                                  lldb::offset_t length)
-    : ObjectFile(module_sp, file, file_offset, length, data_sp, data_offset) {
+    : ObjectFile(module_sp, file, file_offset, length, extractor_sp,
+                 data_offset) {
   if (file)
     m_file = *file;
 }
@@ -308,4 +416,6 @@ ObjectFileXCOFF::ObjectFileXCOFF(const lldb::ModuleSP &module_sp,
                                  DataBufferSP header_data_sp,
                                  const lldb::ProcessSP &process_sp,
                                  addr_t header_addr)
-    : ObjectFile(module_sp, process_sp, header_addr, header_data_sp) {}
+    : ObjectFile(
+          module_sp, process_sp, header_addr,
+          std::make_shared<lldb_private::DataExtractor>(header_data_sp)) {}

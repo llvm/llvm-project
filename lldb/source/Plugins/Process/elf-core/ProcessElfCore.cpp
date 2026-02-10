@@ -84,8 +84,9 @@ bool ProcessElfCore::CanDebug(lldb::TargetSP target_sp,
   // For now we are just making sure the file exists for a given module
   if (!m_core_module_sp && FileSystem::Instance().Exists(m_core_file)) {
     ModuleSpec core_module_spec(m_core_file, target_sp->GetArchitecture());
+    core_module_spec.SetTarget(target_sp);
     Status error(ModuleList::GetSharedModule(core_module_spec, m_core_module_sp,
-                                             nullptr, nullptr, nullptr));
+                                             nullptr, nullptr));
     if (m_core_module_sp) {
       ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
       if (core_objfile && core_objfile->GetType() == ObjectFile::eTypeCoreFile)
@@ -99,7 +100,7 @@ bool ProcessElfCore::CanDebug(lldb::TargetSP target_sp,
 ProcessElfCore::ProcessElfCore(lldb::TargetSP target_sp,
                                lldb::ListenerSP listener_sp,
                                const FileSpec &core_file)
-    : PostMortemProcess(target_sp, listener_sp, core_file) {}
+    : PostMortemProcess(target_sp, listener_sp, core_file), m_uuids() {}
 
 // Destructor
 ProcessElfCore::~ProcessElfCore() {
@@ -257,16 +258,39 @@ Status ProcessElfCore::DoLoadCore() {
   // the main executable using data we found in the core file notes.
   lldb::ModuleSP exe_module_sp = GetTarget().GetExecutableModule();
   if (!exe_module_sp) {
-    // The first entry in the NT_FILE might be our executable
     if (!m_nt_file_entries.empty()) {
+      std::string executable_path = GetMainExecutablePath();
       ModuleSpec exe_module_spec;
       exe_module_spec.GetArchitecture() = arch;
-      exe_module_spec.GetUUID() = m_nt_file_entries[0].uuid;
-      exe_module_spec.GetFileSpec().SetFile(m_nt_file_entries[0].path,
+      exe_module_spec.GetUUID() = FindModuleUUID(executable_path);
+      exe_module_spec.GetFileSpec().SetFile(executable_path,
                                             FileSpec::Style::native);
       if (exe_module_spec.GetFileSpec()) {
         exe_module_sp =
             GetTarget().GetOrCreateModule(exe_module_spec, true /* notify */);
+        if (!exe_module_sp) {
+          // Create an ELF file from memory for the main executable. The dynamic
+          // loader requires the main executable so that it can extract the
+          // DT_DEBUG key/value pair from the dynamic section and get the list
+          // of shared libraries.
+          std::optional<lldb::addr_t> exe_header_addr;
+
+          // We need to find its load address
+          for (const NT_FILE_Entry &file_entry : m_nt_file_entries) {
+            if (file_entry.path == executable_path) {
+              exe_header_addr = file_entry.start;
+              break;
+            }
+          }
+          if (exe_header_addr) {
+            if (llvm::Expected<lldb::ModuleSP> module_sp_or_err =
+                    ReadModuleFromMemory(exe_module_spec.GetFileSpec(),
+                                         *exe_header_addr))
+              exe_module_sp = *module_sp_or_err;
+            else
+              llvm::consumeError(module_sp_or_err.takeError());
+          }
+        }
         if (exe_module_sp)
           GetTarget().SetExecutableModule(exe_module_sp, eLoadDependentsNo);
       }
@@ -277,20 +301,54 @@ Status ProcessElfCore::DoLoadCore() {
 
 void ProcessElfCore::UpdateBuildIdForNTFileEntries() {
   Log *log = GetLog(LLDBLog::Process);
+  m_uuids.clear();
   for (NT_FILE_Entry &entry : m_nt_file_entries) {
-    entry.uuid = FindBuidIdInCoreMemory(entry.start);
-    if (log && entry.uuid.IsValid())
-      LLDB_LOGF(log, "%s found UUID @ %16.16" PRIx64 ": %s \"%s\"",
-                __FUNCTION__, entry.start, entry.uuid.GetAsString().c_str(),
-                entry.path.c_str());
+    UUID uuid = FindBuidIdInCoreMemory(entry.start);
+    if (uuid.IsValid()) {
+      // Assert that either the path is not in the map or the UUID matches
+      assert(m_uuids.count(entry.path) == 0 || m_uuids[entry.path] == uuid);
+      m_uuids[entry.path] = uuid;
+      if (log)
+        LLDB_LOGF(log, "%s found UUID @ %16.16" PRIx64 ": %s \"%s\"",
+                  __FUNCTION__, entry.start, uuid.GetAsString().c_str(),
+                  entry.path.c_str());
+    }
   }
 }
 
+std::string ProcessElfCore::GetMainExecutablePath() {
+  // Always try to read the program name from core file memory first via the
+  // AUXV_AT_EXECFN entry. This value is the address of a null terminated C
+  // string that contains the program path.
+  AuxVector aux_vector(m_auxv);
+  std::string execfn_str;
+  if (auto execfn = aux_vector.GetAuxValue(AuxVector::AUXV_AT_EXECFN)) {
+    Status error;
+    if (ReadCStringFromMemory(*execfn, execfn_str, error))
+      return execfn_str;
+  }
+
+  if (m_nt_file_entries.empty())
+    return {};
+
+  // The first entry in the NT_FILE might be our executable
+  std::string executable_path = m_nt_file_entries[0].path;
+  // Prefer the NT_FILE entry matching m_executable_name as main executable.
+  for (const NT_FILE_Entry &file_entry : m_nt_file_entries)
+    if (llvm::StringRef(file_entry.path).ends_with("/" + m_executable_name)) {
+      executable_path = file_entry.path;
+      break;
+    }
+  return executable_path;
+}
+
 UUID ProcessElfCore::FindModuleUUID(const llvm::StringRef path) {
-  // Returns the gnu uuid from matched NT_FILE entry
-  for (NT_FILE_Entry &entry : m_nt_file_entries)
-    if (path == entry.path && entry.uuid.IsValid())
-      return entry.uuid;
+  // Lookup the UUID for the given path in the map.
+  // Note that this could be called by multiple threads so make sure
+  // we access the map in a thread safe way (i.e. don't use operator[]).
+  auto it = m_uuids.find(std::string(path));
+  if (it != m_uuids.end())
+    return it->second;
   return UUID();
 }
 
@@ -616,7 +674,6 @@ ProcessElfCore::parseSegment(const DataExtractor &segment) {
 llvm::Error ProcessElfCore::parseFreeBSDNotes(llvm::ArrayRef<CoreNote> notes) {
   ArchSpec arch = GetArchitecture();
   bool lp64 = (arch.GetMachine() == llvm::Triple::aarch64 ||
-               arch.GetMachine() == llvm::Triple::mips64 ||
                arch.GetMachine() == llvm::Triple::ppc64 ||
                arch.GetMachine() == llvm::Triple::x86_64);
   bool have_prstatus = false;
@@ -935,6 +992,7 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
         return status.ToError();
       thread_data.name.assign (prpsinfo.pr_fname, strnlen (prpsinfo.pr_fname, sizeof (prpsinfo.pr_fname)));
       SetID(prpsinfo.pr_pid);
+      m_executable_name = thread_data.name;
       break;
     }
     case ELF::NT_SIGINFO: {

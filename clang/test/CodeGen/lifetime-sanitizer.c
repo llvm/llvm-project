@@ -12,20 +12,23 @@
 // RUN: %clang -target aarch64-linux-gnu -S -emit-llvm -o - -O0 \
 // RUN:     -fsanitize=hwaddress -Xclang -disable-llvm-passes %s | \
 // RUN:     FileCheck %s -check-prefix=LIFETIME
+// RUN: %clang -target aarch64-linux-gnu -S -emit-llvm -o - -O0 \
+// RUN:     -fsanitize=memtag-stack -march=armv8a+memtag -Xclang -disable-llvm-passes %s | \
+// RUN:     FileCheck %s -check-prefix=LIFETIME
 
 extern int bar(char *A, int n);
 
 // CHECK-O0-NOT: @llvm.lifetime.start
 int foo(int n) {
   if (n) {
-    // LIFETIME: @llvm.lifetime.start.p0(i64 10, ptr {{.*}})
+    // LIFETIME: @llvm.lifetime.start.p0(ptr {{.*}})
     char A[10];
     return bar(A, 1);
-    // LIFETIME: @llvm.lifetime.end.p0(i64 10, ptr {{.*}})
+    // LIFETIME: @llvm.lifetime.end.p0(ptr {{.*}})
   } else {
-    // LIFETIME: @llvm.lifetime.start.p0(i64 20, ptr {{.*}})
+    // LIFETIME: @llvm.lifetime.start.p0(ptr {{.*}})
     char A[20];
     return bar(A, 2);
-    // LIFETIME: @llvm.lifetime.end.p0(i64 20, ptr {{.*}})
+    // LIFETIME: @llvm.lifetime.end.p0(ptr {{.*}})
   }
 }

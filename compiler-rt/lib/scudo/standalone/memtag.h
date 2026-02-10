@@ -108,7 +108,7 @@ inline void enableSystemMemoryTaggingTestOnly() {
 
 #else // !SCUDO_CAN_USE_MTE
 
-inline bool systemSupportsMemoryTagging() { return false; }
+inline constexpr bool systemSupportsMemoryTagging() { return false; }
 
 inline NORETURN bool systemDetectsMemoryTagFaultsTestOnly() {
   UNREACHABLE("memory tagging not supported");
@@ -261,9 +261,7 @@ inline uptr loadTag(uptr Ptr) {
 
 #else
 
-inline NORETURN bool systemSupportsMemoryTagging() {
-  UNREACHABLE("memory tagging not supported");
-}
+inline constexpr bool systemSupportsMemoryTagging() { return false; }
 
 inline NORETURN bool systemDetectsMemoryTagFaultsTestOnly() {
   UNREACHABLE("memory tagging not supported");

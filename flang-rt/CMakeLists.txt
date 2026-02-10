@@ -137,7 +137,12 @@ cmake_path(NORMAL_PATH FLANG_RT_INSTALL_RESOURCE_LIB_PATH)
 # Important: flang-rt user options must be prefixed with "FLANG_RT_". Variables
 # with this prefix will be forwarded in bootstrap builds.
 
-option(FLANG_RT_INCLUDE_TESTS "Generate build targets for the flang-rt unit and regression-tests." "${LLVM_INCLUDE_TESTS}")
+# TODO: Support tests for the GPU target.
+set(FLANG_RT_INCLUDE_TESTS_default ${LLVM_INCLUDE_TESTS})
+if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn|^nvptx")
+  set(FLANG_RT_INCLUDE_TESTS_default OFF)
+endif()
+option(FLANG_RT_INCLUDE_TESTS "Generate build targets for the flang-rt unit and regression-tests." "${FLANG_RT_INCLUDE_TESTS_default}")
 
 # Provide an interface to link against the LLVM libc/libc++ projects directly.
 set(FLANG_RT_SUPPORTED_PROVIDERS system llvm)
@@ -197,7 +202,7 @@ elseif (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "OpenMP")
       "gfx908;gfx90a;gfx90c;gfx940;gfx1010;gfx1030"
       "gfx1031;gfx1032;gfx1033;gfx1034;gfx1035;gfx1036"
       "gfx1100;gfx1101;gfx1102;gfx1103;gfx1150;gfx1151"
-      "gfx1152;gfx1153")
+      "gfx1152;gfx1153;gfx1170")
     set(all_nvptx_architectures
       "sm_35;sm_37;sm_50;sm_52;sm_53;sm_60;sm_61;sm_62"
       "sm_70;sm_72;sm_75;sm_80;sm_86;sm_89;sm_90")
@@ -220,15 +225,6 @@ endif()
 ########################
 # System Introspection #
 ########################
-
-# The GPU targets require a few mandatory arguments to make the standard CMake
-# check flags happy.
-if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn")
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nogpulib")
-elseif ("${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx")
-  set(CMAKE_REQUIRED_FLAGS
-      "${CMAKE_REQUIRED_FLAGS} -flto -c -Wno-unused-command-line-argument")
-endif()
 
 include(CheckCXXSymbolExists)
 include(CheckCXXSourceCompiles)
@@ -255,11 +251,11 @@ if (UNIX AND CMAKE_SYSTEM_NAME MATCHES "AIX")
   add_compile_definitions(_LARGE_FILE_API)
 endif ()
 
-# Check whether the compiler can undefine a macro using the "-U" flag.
+# Check whether the compiler can undefine a macro using the "-Wp,-U" flag.
 # Aternatively, we could use
 #   CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU"
 # but some older versions of CMake don't define it for GCC itself.
-check_cxx_compiler_flag("-UTESTFLAG" FLANG_RT_SUPPORTS_UNDEFINE_FLAG)
+check_cxx_compiler_flag("-Wp,-UTESTFLAG" FLANG_RT_SUPPORTS_UNDEFINE_FLAG)
 
 # Check whether -fno-lto is supported.
 check_cxx_compiler_flag(-fno-lto FLANG_RT_HAS_FNO_LTO_FLAG)
@@ -334,8 +330,24 @@ if (LLVM_INCLUDE_EXAMPLES)
 endif ()
 
 if (FLANG_RT_INCLUDE_TESTS)
-  add_subdirectory(unittests)
   add_subdirectory(test)
+  add_subdirectory(unittests)
 else ()
   add_custom_target(check-flang-rt)
+endif()
+
+###################
+# Install headers #
+###################
+
+if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+  add_llvm_install_targets(install-flang-rt-headers COMPONENT flang-rt-headers)
+
+  install(DIRECTORY include/flang-rt/runtime
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang-rt"
+    COMPONENT flang-rt-headers
+    FILES_MATCHING
+    PATTERN "*.h"
+    PATTERN ".git" EXCLUDE
+    PATTERN "CMakeFiles" EXCLUDE)
 endif()

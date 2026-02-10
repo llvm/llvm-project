@@ -4,14 +4,15 @@
 # Verify that an error message is provided if an input file is missing or incorrect
 
 RUN: not llvm-bolt-binary-analysis 2>&1 | FileCheck -check-prefix=NOFILEARG %s
-NOFILEARG:       llvm-bolt-binary-analysis: Not enough positional command line arguments specified!
-NOFILEARG-NEXT:  Must specify at least 1 positional argument: See: {{.*}}llvm-bolt-binary-analysis --help
+NOFILEARG:       llvm-bolt-binary-analysis{{(\.exe)?}}: Not enough positional command line arguments specified!
+NOFILEARG-NEXT:  Must specify at least 1 positional argument: See: {{.*}}llvm-bolt-binary-analysis{{(\.exe)?}} --help
 
 RUN: not llvm-bolt-binary-analysis non-existing-file 2>&1 | FileCheck -check-prefix=NONEXISTINGFILEARG %s
-NONEXISTINGFILEARG:       llvm-bolt-binary-analysis: 'non-existing-file': No such file or directory.
+# Don't check the OS-dependent message "No such file or directory".
+NONEXISTINGFILEARG:       llvm-bolt-binary-analysis{{(\.exe)?}}: 'non-existing-file': {{.*}}
 
 RUN: not llvm-bolt-binary-analysis %p/Inputs/dummy.txt 2>&1 | FileCheck -check-prefix=NOELFFILEARG %s
-NOELFFILEARG:       llvm-bolt-binary-analysis: '{{.*}}/Inputs/dummy.txt': The file was not recognized as a valid object file.
+NOELFFILEARG:       llvm-bolt-binary-analysis{{(\.exe)?}}: '{{.*}}/Inputs/dummy.txt': The file was not recognized as a valid object file.
 
 RUN: %clang %cflags -Wl,--emit-relocs %p/../../Inputs/asm_foo.s %p/../../Inputs/asm_main.c -o %t.exe
 RUN: llvm-bolt-binary-analysis %t.exe 2>&1 | FileCheck -check-prefix=VALIDELFFILEARG --allow-empty %s
@@ -26,12 +27,13 @@ RUN: llvm-bolt-binary-analysis --help 2>&1 | FileCheck -check-prefix=HELP %s
 
 HELP:       OVERVIEW: BinaryAnalysis
 HELP-EMPTY:
-HELP-NEXT:  USAGE: llvm-bolt-binary-analysis [options] <executable>
+HELP-NEXT:  USAGE: llvm-bolt-binary-analysis{{(\.exe)?}} [options] <executable>
 HELP-EMPTY:
 HELP-NEXT:  OPTIONS:
 HELP-EMPTY:
 HELP-NEXT:  BinaryAnalysis options:
 HELP-EMPTY:
+HELP-NEXT:   --auth-traps-on-failure - Assume authentication instructions always trap on failure
 HELP-NEXT:   --scanners=<value> - which gadget scanners to run
 HELP-NEXT:   =pacret - pac-ret: return address protection (subset of "pauth")
 HELP-NEXT:   =pauth - All Pointer Authentication scanners

@@ -15,7 +15,7 @@ constexpr int dead1() {
     F2 = &F;
   } // Ends lifetime of F.
 
-  return F2->a; // expected-note {{read of variable whose lifetime has ended}} \
+  return F2->a; // expected-note {{read of object outside its lifetime}} \
                 // ref-note {{read of object outside its lifetime is not allowed in a constant expression}}
 }
 static_assert(dead1() == 1, ""); // both-error {{not an integral constant expression}} \
@@ -26,13 +26,11 @@ struct S {
   int &&r; // both-note {{reference member declared here}}
   int t;
   constexpr S() : r(0), t(r) {} // both-error {{reference member 'r' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}} \
-                                // ref-note {{read of object outside its lifetime is not allowed in a constant expression}} \
-                                // expected-note {{temporary created here}} \
-                                // expected-note {{read of temporary whose lifetime has ended}}
+                                // both-note {{read of object outside its lifetime is not allowed in a constant expression}} \
+                                // expected-note {{temporary created here}}
 };
 constexpr int k1 = S().t; // both-error {{must be initialized by a constant expression}} \
-                          // ref-note {{in call to}} \
-                          // expected-note {{in call to}}
+                          // both-note {{in call to}}
 
 
 namespace MoveFnWorks {
@@ -95,14 +93,25 @@ namespace CallScope {
     int n = 0;
     constexpr int f() const { return 0; }
   };
-  constexpr Q *out_of_lifetime(Q q) { return &q; } // both-warning {{address of stack}}
+  constexpr Q *out_of_lifetime(Q q) { return &q; } // both-warning {{address of stack}} \
+                                                   // expected-note 2{{declared here}}
   constexpr int k3 = out_of_lifetime({})->n; // both-error {{must be initialized by a constant expression}} \
-                                             // expected-note {{read of temporary whose lifetime has ended}} \
-                                             // expected-note {{temporary created here}} \
+                                             // expected-note {{read of object outside its lifetime}} \
                                              // ref-note {{read of object outside its lifetime}}
 
   constexpr int k4 = out_of_lifetime({})->f(); // both-error {{must be initialized by a constant expression}} \
-                                               // expected-note {{member call on temporary whose lifetime has ended}} \
-                                               // expected-note {{temporary created here}} \
+                                               // expected-note {{member call on object outside its lifetime}} \
                                                // ref-note {{member call on object outside its lifetime}}
+}
+
+namespace ExprDoubleDestroy {
+  template <typename T>
+  constexpr bool test() {
+    T{}.~T(); // both-note {{lifetime has already ended}}
+    return true;
+  }
+
+  struct S { int x; };
+  constexpr bool t = test<S>(); // both-error {{must be initialized by a constant expression}} \
+                                // both-note {{in call to}}
 }

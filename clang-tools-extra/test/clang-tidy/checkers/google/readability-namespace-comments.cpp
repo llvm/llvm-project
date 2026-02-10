@@ -75,7 +75,7 @@ void h();
 // CHECK-MESSAGES: :[[@LINE+2]]:1: warning: anonymous namespace not terminated with
 // CHECK-MESSAGES: :[[@LINE-10]]:26: note: anonymous namespace starts here
 }
-// CHECK-FIXES: }  // namespace{{$}}
+// CHECK-FIXES: }  // namespace
 
 namespace [[]] {
 void hh();
@@ -89,7 +89,7 @@ void hh();
 // CHECK-MESSAGES: :[[@LINE+2]]:1: warning: anonymous namespace not terminated with
 // CHECK-MESSAGES: :[[@LINE-10]]:16: note: anonymous namespace starts here
 }
-// CHECK-FIXES: }  // namespace{{$}}
+// CHECK-FIXES: }  // namespace
 
 namespace short1 {
 namespace short2 {

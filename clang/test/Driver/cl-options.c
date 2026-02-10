@@ -54,11 +54,13 @@
 // fpfast: -funsafe-math-optimizations
 // fpfast: -ffast-math
 
-// RUN: %clang_cl /fp:fast /fp:precise -### -- %s 2>&1 | FileCheck -check-prefix=fpprecise %s
+// RUN: %clang_cl /fp:fast /fp:precise -Wno-overriding-complex-range -### -- %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=fpprecise %s
 // fpprecise-NOT: -funsafe-math-optimizations
 // fpprecise-NOT: -ffast-math
 
-// RUN: %clang_cl /fp:fast /fp:strict -### -- %s 2>&1 | FileCheck -check-prefix=fpstrict %s
+// RUN: %clang_cl /fp:fast /fp:strict -Wno-overriding-complex-range -### -- %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=fpstrict %s
 // fpstrict-NOT: -funsafe-math-optimizations
 // fpstrict-NOT: -ffast-math
 // fpstrict: -ffp-contract=off
@@ -90,16 +92,21 @@
 // RUN: not %clang_cl -### /FAcsu -fprofile-instr-generate -fprofile-instr-use=file -- %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MIX-GEN-USE %s
 // CHECK-NO-MIX-GEN-USE: '{{[a-z=-]*}}' not allowed with '{{[a-z=-]*}}'
 
+// RUN: rm -rf %t && mkdir %t
+// RUN: llvm-profdata merge -o %t/somefile.prof %S/Inputs/a.proftext
+// RUN: llvm-profdata merge -o %t/default.profdata %S/Inputs/a.proftext
+// RUN: cd %t
+
 // RUN: %clang_cl -### /FA -fprofile-instr-use -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE %s
 // RUN: %clang_cl -### /FA -fprofile-use -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE %s
-// RUN: %clang_cl -### /FA -fprofile-instr-use=/tmp/somefile.prof -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE-FILE %s
-// RUN: %clang_cl -### /FA -fprofile-use=/tmp/somefile.prof -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE-FILE %s
+// RUN: %clang_cl -### /FA -fprofile-instr-use=%t/somefile.prof -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE-FILE %s
+// RUN: %clang_cl -### /FA -fprofile-use=%t/somefile.prof -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE-FILE %s
 // RUN: %clang_cl -### /FAcsu -fprofile-instr-use -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE %s
 // RUN: %clang_cl -### /FAcsu -fprofile-use -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE %s
-// RUN: %clang_cl -### /FAcsu -fprofile-instr-use=/tmp/somefile.prof -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE-FILE %s
-// RUN: %clang_cl -### /FAcsu -fprofile-use=/tmp/somefile.prof -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE-FILE %s
-// CHECK-PROFILE-USE: "-fprofile-instrument-use-path=default.profdata"
-// CHECK-PROFILE-USE-FILE: "-fprofile-instrument-use-path=/tmp/somefile.prof"
+// RUN: %clang_cl -### /FAcsu -fprofile-instr-use=%t/somefile.prof -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE-FILE %s
+// RUN: %clang_cl -### /FAcsu -fprofile-use=%t/somefile.prof -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE-FILE %s
+// CHECK-PROFILE-USE: "-fprofile-instrument-use-path={{.*}}default.profdata"
+// CHECK-PROFILE-USE-FILE: "-fprofile-instrument-use-path={{.*}}somefile.prof"
 
 // RUN: %clang_cl /GA -### -- %s 2>&1 | FileCheck -check-prefix=GA %s
 // GA: -ftls-model=local-exec
@@ -361,6 +368,12 @@
 
 // RUN: %clang_cl -c -### /std:c11 -- %s 2>&1 | FileCheck -check-prefix CHECK-C11 %s
 // CHECK-C11: -std=c11
+
+// RUN: %clang_cl -c -### /std:c17 -- %s 2>&1 | FileCheck -check-prefix CHECK-C17 %s
+// CHECK-C17: -std=c17
+
+// RUN: %clang_cl -c -### /std:clatest -- %s 2>&1 | FileCheck -check-prefix CHECK-CLATEST %s
+// CHECK-CLATEST: -std=c23
 
 // For some warning ids, we can map from MSVC warning to Clang warning.
 // RUN: %clang_cl -wd4005 -wd4100 -wd4910 -wd4996 -wd12345678 -### -- %s 2>&1 | FileCheck -check-prefix=Wno %s
@@ -705,6 +718,7 @@
 // RUN:     -resource-dir=asdf \
 // RUN:     -Wunused-variable \
 // RUN:     -fmacro-backtrace-limit=0 \
+// RUN:     -fmacro-prefix-map=../.. \
 // RUN:     -fstandalone-debug \
 // RUN:     -feliminate-unused-debug-types \
 // RUN:     -fno-eliminate-unused-debug-types \
@@ -722,6 +736,7 @@
 // RUN:     -fno-profile-instr-use \
 // RUN:     -fcs-profile-generate \
 // RUN:     -fcs-profile-generate=dir \
+// RUN:     -fpseudo-probe-for-profiling \
 // RUN:     -ftime-trace \
 // RUN:     -fmodules \
 // RUN:     -fno-modules \
@@ -732,6 +747,7 @@
 // RUN:     -fsystem-module \
 // RUN:     -fmodule-map-file=foo \
 // RUN:     -fmodule-file=foo \
+// RUN:     -fmodules-disable-diagnostic-validation \
 // RUN:     -fmodules-ignore-macro=foo \
 // RUN:     -fmodules-strict-decluse \
 // RUN:     -fmodules-decluse \
@@ -821,7 +837,11 @@
 // ARM64EC_OVERRIDE: warning: /arm64EC has been overridden by specified target: x86_64-pc-windows-msvc; option ignored
 
 // RUN: %clang_cl /d2epilogunwind /c -### -- %s 2>&1 | FileCheck %s --check-prefix=EPILOGUNWIND
-// EPILOGUNWIND: -fwinx64-eh-unwindv2
+// EPILOGUNWIND: -fwinx64-eh-unwindv2=best-effort
+
+// RUN: %clang_cl /d2epilogunwindrequirev2 /c -### -- %s 2>&1 | FileCheck %s --check-prefix=EPILOGUNWINDREQUIREV2
+// RUN: %clang_cl /d2epilogunwindrequirev2 /d2epilogunwind /c -### -- %s 2>&1 | FileCheck %s --check-prefix=EPILOGUNWINDREQUIREV2
+// EPILOGUNWINDREQUIREV2: -fwinx64-eh-unwindv2=require
 
 // RUN: %clang_cl /funcoverride:override_me1 /funcoverride:override_me2 /c -### -- %s 2>&1 | FileCheck %s --check-prefix=FUNCOVERRIDE
 // FUNCOVERRIDE: -loader-replaceable-function=override_me1

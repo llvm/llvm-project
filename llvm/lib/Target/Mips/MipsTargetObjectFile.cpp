@@ -189,5 +189,5 @@ MipsTargetObjectFile::getDebugThreadLocalSymbol(const MCSymbol *Sym) const {
   const MCExpr *Expr = MCSymbolRefExpr::create(Sym, getContext());
   Expr = MCBinaryExpr::createAdd(
       Expr, MCConstantExpr::create(0x8000, getContext()), getContext());
-  return MipsMCExpr::create(Mips::S_DTPREL, Expr, getContext());
+  return MCSpecifierExpr::create(Expr, Mips::S_DTPREL, getContext());
 }

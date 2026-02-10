@@ -14,6 +14,8 @@
 #ifndef LLVM_TRANSFORMS_IPO_H
 #define LLVM_TRANSFORMS_IPO_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 class ModulePass;

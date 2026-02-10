@@ -898,7 +898,7 @@ void CommentASTToXMLConverter::visitFullComment(const FullComment *C) {
     {
       // Print line and column number.
       SourceLocation Loc = DI->CurrentDecl->getLocation();
-      std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
+      FileIDAndOffset LocInfo = SM.getDecomposedLoc(Loc);
       FileID FID = LocInfo.first;
       unsigned FileOffset = LocInfo.second;
 
@@ -1065,7 +1065,7 @@ void CommentASTToXMLConverter::visitFullComment(const FullComment *C) {
       if (AA->getUnavailable())
         Result << "<Unavailable/>";
 
-      IdentifierInfo *Environment = AA->getEnvironment();
+      const IdentifierInfo *Environment = AA->getEnvironment();
       if (Environment) {
         Result << "<Environment>" << Environment->getName() << "</Environment>";
       }

@@ -353,13 +353,6 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
     } else if (isa<CallInst>(CurInst) || isa<InvokeInst>(CurInst)) {
       CallBase &CB = *cast<CallBase>(&*CurInst);
 
-      // Debug info can safely be ignored here.
-      if (isa<DbgInfoIntrinsic>(CB)) {
-        LLVM_DEBUG(dbgs() << "Ignoring debug info.\n");
-        ++CurInst;
-        continue;
-      }
-
       // Cannot handle inline asm.
       if (CB.isInlineAsm()) {
         LLVM_DEBUG(dbgs() << "Found inline asm, can not evaluate.\n");
@@ -438,10 +431,9 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
           Value *PtrArg = getVal(II->getArgOperand(1));
           Value *Ptr = PtrArg->stripPointerCasts();
           if (GlobalVariable *GV = dyn_cast<GlobalVariable>(Ptr)) {
-            Type *ElemTy = GV->getValueType();
+            uint64_t MinGVSize = GV->getGlobalSize(DL);
             if (!Size->isMinusOne() &&
-                Size->getValue().getLimitedValue() >=
-                    DL.getTypeStoreSize(ElemTy)) {
+                Size->getValue().getLimitedValue() >= MinGVSize) {
               Invariants.insert(GV);
               LLVM_DEBUG(dbgs() << "Found a global var that is an invariant: "
                                 << *GV << "\n");

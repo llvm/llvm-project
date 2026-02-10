@@ -802,7 +802,7 @@ Print the dynamic type of the result of an expression
 
 LLDB does this automatically if determining the dynamic type does not require
 running the target (in C++, running the target is never needed). This default is
-controlled by the `target.prefer-dynamic-value` setting. If that is disabled, it
+controlled by the ``target.prefer-dynamic-value`` setting. If that is disabled, it
 can be re-enabled on a per-command basis:
 
 .. code-block:: shell
@@ -812,7 +812,7 @@ can be re-enabled on a per-command basis:
   (lldb) expr -d no-run-target -- someCPPObjectPtr
 
 Note that printing of the dynamic type of references is not possible with the
-`expr` command. The workaround is to take the address of the reference and
+``expr`` command. The workaround is to take the address of the reference and
 instruct lldb to print the children of the resulting pointer.
 
 .. code-block:: shell
@@ -1125,6 +1125,20 @@ Save binary memory data starting at ``0x1000`` and ending at ``0x2000`` to a fil
 
   (lldb) memory read --outfile /tmp/mem.bin --binary 0x1000 0x2000
   (lldb) me r -o /tmp/mem.bin -b 0x1000 0x2000
+
+
+Print information about memory regions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: shell
+
+  (gdb) info proc mappings
+
+.. code-block:: shell
+
+  (lldb) memory region --all
+  (lldb) me reg --all
+
 
 Get information about a specific heap allocation (macOS only)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

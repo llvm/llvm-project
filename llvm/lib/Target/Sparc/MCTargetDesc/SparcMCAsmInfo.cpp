@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "SparcMCAsmInfo.h"
-#include "SparcMCExpr.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCExpr.h"

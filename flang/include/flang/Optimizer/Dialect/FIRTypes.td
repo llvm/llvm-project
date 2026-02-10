@@ -330,7 +330,8 @@ def fir_RecordType : FIR_Type<"Record", "type"> {
 
   let extraClassDeclaration = [{
     using TypePair = std::pair<std::string, mlir::Type>;
-    using TypeList = std::vector<TypePair>;
+    using TypeList = llvm::ArrayRef<TypePair>;
+    using TypeVector = llvm::SmallVector<TypePair>;
     TypeList getTypeList() const;
     TypeList getLenParamList() const;
 
@@ -596,6 +597,7 @@ def AnyLogicalLike : TypeConstraint<Or<[BoolLike.predicate,
     fir_LogicalType.predicate]>, "any logical">;
 def AnyRealLike : TypeConstraint<FloatLike.predicate, "any real">;
 def AnyIntegerType : Type<AnyIntegerLike.predicate, "any integer">;
+def AnyLogicalType : Type<AnyLogicalLike.predicate, "any logical">;
 
 def AnyFirComplexLike :  TypeConstraint<CPred<"::fir::isa_complex($_self)">,
   "any floating point complex type">;
@@ -609,9 +611,10 @@ def AnyCompositeLike : TypeConstraint<Or<[fir_RecordType.predicate,
     "any composite">;
 
 // Reference types
-def AnyReferenceLike : TypeConstraint<Or<[fir_ReferenceType.predicate,
-    fir_HeapType.predicate, fir_PointerType.predicate,
-    fir_LLVMPointerType.predicate]>, "any reference">;
+def AnyReferenceLike
+    : Type<Or<[fir_ReferenceType.predicate, fir_HeapType.predicate,
+               fir_PointerType.predicate, fir_LLVMPointerType.predicate]>,
+           "any reference">;
 
 def FuncType : TypeConstraint<FunctionType.predicate, "function type">;
 
@@ -625,8 +628,10 @@ def AnyBoxLike : TypeConstraint<Or<[fir_BoxType.predicate,
     fir_BoxCharType.predicate, fir_BoxProcType.predicate,
     fir_ClassType.predicate]>, "any box">;
 
-def BoxOrClassType : TypeConstraint<Or<[fir_BoxType.predicate,
-    fir_ClassType.predicate]>, "box or class">;
+def BoxOrClassLike
+    : TypeConstraint<Or<[fir_BoxType.predicate, fir_ClassType.predicate]>,
+                     "box or class">;
+def BoxOrClassType : Type<BoxOrClassLike.predicate, "box or class">;
 
 def AnyRefOrBoxLike : TypeConstraint<Or<[AnyReferenceLike.predicate,
     AnyBoxLike.predicate, FunctionType.predicate]>,

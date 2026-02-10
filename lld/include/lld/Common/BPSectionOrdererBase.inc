@@ -161,7 +161,7 @@ auto BPOrderer<D>::computeOrder(
     sectionToIdx.try_emplace(isec, i);
 
   BPFunctionNode::UtilityNodeT maxUN = 0;
-  DenseMap<unsigned, UtilityNodes> startupSectionIdxUNs;
+  MapVector<unsigned, UtilityNodes> startupSectionIdxUNs;
   // Used to define the initial order for startup functions.
   DenseMap<unsigned, size_t> sectionIdxToTimestamp;
   std::unique_ptr<InstrProfReader> reader;
@@ -177,7 +177,7 @@ auto BPOrderer<D>::computeOrder(
     }
     auto &traces = reader->getTemporalProfTraces();
 
-    DenseMap<unsigned, BPFunctionNode::UtilityNodeT> sectionIdxToFirstUN;
+    MapVector<unsigned, BPFunctionNode::UtilityNodeT> sectionIdxToFirstUN;
     for (size_t traceIdx = 0; traceIdx < traces.size(); traceIdx++) {
       uint64_t currentSize = 0, cutoffSize = 1;
       size_t cutoffTimestamp = 1;
@@ -224,7 +224,7 @@ auto BPOrderer<D>::computeOrder(
   SmallVector<unsigned> sectionIdxsForFunctionCompression,
       sectionIdxsForDataCompression;
   for (unsigned sectionIdx = 0; sectionIdx < sections.size(); sectionIdx++) {
-    if (startupSectionIdxUNs.count(sectionIdx))
+    if (startupSectionIdxUNs.contains(sectionIdx))
       continue;
     const auto *isec = sections[sectionIdx];
     if (D::isCodeSection(*isec)) {
@@ -292,45 +292,54 @@ auto BPOrderer<D>::computeOrder(
     bp.run(nodesForDataCompression);
   }
 
-  unsigned numStartupSections = 0;
-  unsigned numCodeCompressionSections = 0;
-  unsigned numDuplicateCodeSections = 0;
-  unsigned numDataCompressionSections = 0;
-  unsigned numDuplicateDataSections = 0;
+  unsigned numStartupSections = 0, startupSize = 0;
+  unsigned numCodeCompressionSections = 0, codeCompressionSize = 0;
+  unsigned numDuplicateCodeSections = 0, duplicateCodeSize = 0;
+  unsigned numDataCompressionSections = 0, dataCompressionSize = 0;
+  unsigned numDuplicateDataSections = 0, duplicateDataSize = 0;
   SetVector<const Section *> orderedSections;
   // Order startup functions,
   for (auto &node : nodesForStartup) {
     const auto *isec = sections[node.Id];
-    if (orderedSections.insert(isec))
+    if (orderedSections.insert(isec)) {
+      startupSize += D::getSize(*isec);
       ++numStartupSections;
+    }
   }
   // then functions for compression,
   for (auto &node : nodesForFunctionCompression) {
     const auto *isec = sections[node.Id];
-    if (orderedSections.insert(isec))
+    if (orderedSections.insert(isec)) {
+      codeCompressionSize += D::getSize(*isec);
       ++numCodeCompressionSections;
-
+    }
     auto It = duplicateSectionIdxs.find(node.Id);
     if (It == duplicateSectionIdxs.end())
       continue;
     for (auto dupSecIdx : It->getSecond()) {
       const auto *dupIsec = sections[dupSecIdx];
-      if (orderedSections.insert(dupIsec))
+      if (orderedSections.insert(dupIsec)) {
+        duplicateCodeSize += D::getSize(*dupIsec);
         ++numDuplicateCodeSections;
+      }
     }
   }
   // then data for compression.
   for (auto &node : nodesForDataCompression) {
     const auto *isec = sections[node.Id];
-    if (orderedSections.insert(isec))
+    if (orderedSections.insert(isec)) {
+      dataCompressionSize += D::getSize(*isec);
       ++numDataCompressionSections;
+    }
     auto It = duplicateSectionIdxs.find(node.Id);
     if (It == duplicateSectionIdxs.end())
       continue;
     for (auto dupSecIdx : It->getSecond()) {
       const auto *dupIsec = sections[dupSecIdx];
-      if (orderedSections.insert(dupIsec))
+      if (orderedSections.insert(dupIsec)) {
+        duplicateDataSize += D::getSize(*dupIsec);
         ++numDuplicateDataSections;
+      }
     }
   }
 
@@ -339,14 +348,21 @@ auto BPOrderer<D>::computeOrder(
         numStartupSections + numCodeCompressionSections +
         numDuplicateCodeSections + numDataCompressionSections +
         numDuplicateDataSections;
-    dbgs()
-        << "Ordered " << numTotalOrderedSections
-        << " sections using balanced partitioning:\n  Functions for startup: "
-        << numStartupSections
-        << "\n  Functions for compression: " << numCodeCompressionSections
-        << "\n  Duplicate functions: " << numDuplicateCodeSections
-        << "\n  Data for compression: " << numDataCompressionSections
-        << "\n  Duplicate data: " << numDuplicateDataSections << "\n";
+    unsigned totalOrderedSize = startupSize + codeCompressionSize +
+                                duplicateCodeSize + dataCompressionSize +
+                                duplicateDataSize;
+    dbgs() << "Ordered " << numTotalOrderedSections << " sections ("
+           << totalOrderedSize << " bytes) using balanced partitioning:\n";
+    dbgs() << "  Functions for startup: " << numStartupSections << " ("
+           << startupSize << " bytes)\n";
+    dbgs() << "  Functions for compression: " << numCodeCompressionSections
+           << " (" << codeCompressionSize << " bytes)\n";
+    dbgs() << "  Duplicate functions: " << numDuplicateCodeSections << " ("
+           << duplicateCodeSize << " bytes)\n";
+    dbgs() << "  Data for compression: " << numDataCompressionSections << " ("
+           << dataCompressionSize << " bytes)\n";
+    dbgs() << "  Duplicate data: " << numDuplicateDataSections << " ("
+           << duplicateDataSize << " bytes)\n";
 
     if (!profilePath.empty()) {
       // Evaluate this function order for startup

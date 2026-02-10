@@ -8,9 +8,11 @@
 
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
@@ -33,7 +35,7 @@ TEST(CompilerInstance, DefaultVFSOverlayFromInvocation) {
 
   SmallString<256> CurrentPath;
   sys::fs::current_path(CurrentPath);
-  sys::fs::make_absolute(CurrentPath, FileName);
+  sys::path::make_absolute(CurrentPath, FileName);
 
   // Mount the VFS file itself on the path 'virtual.file'. Makes this test
   // a bit shorter than creating a new dummy file just for this purpose.
@@ -71,7 +73,8 @@ TEST(CompilerInstance, DefaultVFSOverlayFromInvocation) {
   // Create a minimal CompilerInstance which should use the VFS we specified
   // in the CompilerInvocation (as we don't explicitly set our own).
   CompilerInstance Instance(std::move(CInvok));
-  Instance.setDiagnostics(Diags.get());
+  Instance.setDiagnostics(Diags);
+  Instance.createVirtualFileSystem();
   Instance.createFileManager();
 
   // Check if the virtual file exists which means that our VFS is used by the
@@ -91,10 +94,10 @@ TEST(CompilerInstance, AllowDiagnosticLogWithUnownedDiagnosticConsumer) {
   llvm::raw_string_ostream DiagnosticsOS(DiagnosticOutput);
   auto DiagPrinter =
       std::make_unique<TextDiagnosticPrinter>(DiagnosticsOS, DiagOpts);
-  CompilerInstance Instance;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      Instance.createDiagnostics(*llvm::vfs::getRealFileSystem(), DiagOpts,
-                                 DiagPrinter.get(), /*ShouldOwnClient=*/false);
+      CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
+                                          DiagOpts, DiagPrinter.get(),
+                                          /*ShouldOwnClient=*/false);
 
   Diags->Report(diag::err_expected) << "no crash";
   ASSERT_EQ(DiagnosticOutput, "error: expected no crash\n");
@@ -135,8 +138,9 @@ TEST(CompilerInstance, MultipleInputsCleansFileIDs) {
   ASSERT_TRUE(CInvok) << "could not create compiler invocation";
 
   CompilerInstance Instance(std::move(CInvok));
-  Instance.setDiagnostics(Diags.get());
-  Instance.createFileManager(VFS);
+  Instance.setVirtualFileSystem(VFS);
+  Instance.setDiagnostics(Diags);
+  Instance.createFileManager();
 
   // Run once for `a.cc` and then for `a.h`. This makes sure we get the same
   // file ID for `b.h` in the second run as `a.h` from first run.
@@ -147,5 +151,50 @@ TEST(CompilerInstance, MultipleInputsCleansFileIDs) {
   EXPECT_TRUE(Instance.ExecuteAction(Act)) << "Failed to execute action";
   EXPECT_FALSE(Diags->hasErrorOccurred());
   EXPECT_EQ(Diags->getNumWarnings(), 0u);
+}
+
+TEST(CompilerInstance, SingleModuleParseModeCallback) {
+  auto VFS = makeIntrusiveRefCnt<vfs::InMemoryFileSystem>();
+  VFS->addFile("module.modulemap", 0,
+               MemoryBuffer::getMemBuffer(R"(module m { header "m.h" })"));
+  VFS->addFile("m.h", 0, MemoryBuffer::getMemBuffer(""));
+  VFS->addFile("tu.c", 0, MemoryBuffer::getMemBuffer(R"(#include "m.h")"));
+
+  auto Invocation = createInvocation(
+      {"clang", "tu.c", "-fmodules", "-fmodules-cache-path=/"});
+  Invocation->getPreprocessorOpts().SingleModuleParseMode = true;
+
+  CompilerInstance Instance(std::move(Invocation));
+  Instance.createVirtualFileSystem(VFS);
+  Instance.createFileManager();
+  Instance.createDiagnostics();
+
+  struct ModuleLoadSkippedCallback : PPCallbacks {
+    std::vector<std::string> &SkippedModules;
+    ModuleLoadSkippedCallback(std::vector<std::string> &SkippedModules)
+        : SkippedModules(SkippedModules) {}
+    void moduleLoadSkipped(Module *Skipped) override {
+      SkippedModules.emplace_back(Skipped->getFullModuleName());
+    }
+  };
+
+  struct MyAction : SyntaxOnlyAction {
+    std::vector<std::string> &SkippedModules;
+    MyAction(std::vector<std::string> &SkippedModules)
+        : SkippedModules(SkippedModules) {}
+    bool BeginSourceFileAction(CompilerInstance &CI) override {
+      auto Cb = std::make_unique<ModuleLoadSkippedCallback>(SkippedModules);
+      CI.getPreprocessor().addPPCallbacks(std::move(Cb));
+      return SyntaxOnlyAction::BeginInvocation(CI);
+    }
+  };
+
+  std::vector<std::string> SkippedModules;
+  MyAction Action(SkippedModules);
+  bool Success = Instance.ExecuteAction(Action);
+
+  ASSERT_TRUE(Success);
+  ASSERT_EQ(SkippedModules.size(), 1u);
+  EXPECT_EQ(SkippedModules[0], "m");
 }
 } // anonymous namespace

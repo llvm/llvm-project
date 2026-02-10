@@ -189,6 +189,7 @@ private:
   Value *optimizeMemSet(CallInst *CI, IRBuilderBase &B);
   Value *optimizeRealloc(CallInst *CI, IRBuilderBase &B);
   Value *optimizeNew(CallInst *CI, IRBuilderBase &B, LibFunc &Func);
+  Value *maybeOptimizeNoBuiltinOperatorNew(CallInst *CI, IRBuilderBase &B);
   Value *optimizeWcslen(CallInst *CI, IRBuilderBase &B);
   Value *optimizeBCopy(CallInst *CI, IRBuilderBase &B);
 
@@ -203,7 +204,8 @@ private:
   Value *replacePowWithExp(CallInst *Pow, IRBuilderBase &B);
   Value *replacePowWithSqrt(CallInst *Pow, IRBuilderBase &B);
   Value *optimizeExp2(CallInst *CI, IRBuilderBase &B);
-  Value *optimizeFMinFMax(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeFMinFMax(CallInst *CI, IRBuilderBase &B, Intrinsic::ID IID);
+  Value *optimizeFMinimumnumFMaximumnum(CallInst *CI, IRBuilderBase &B);
   Value *optimizeLog(CallInst *CI, IRBuilderBase &B);
   Value *optimizeSqrt(CallInst *CI, IRBuilderBase &B);
   Value *optimizeFMod(CallInst *CI, IRBuilderBase &B);

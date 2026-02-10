@@ -55,6 +55,20 @@ TEST(GlobalCompilationDatabaseTest, FallbackCommand) {
                                            testPath("foo/bar")));
 }
 
+TEST(GlobalCompilationDatabaseTest, FallbackWorkingDirectory) {
+  MockFS TFS;
+  DirectoryBasedGlobalCompilationDatabase::Options CDBOpts(TFS);
+  CDBOpts.applyFallbackWorkingDirectory(testPath("foo"));
+  EXPECT_EQ(CDBOpts.FallbackWorkingDirectory, testPath("foo"));
+
+  DirectoryBasedGlobalCompilationDatabase DB(CDBOpts);
+  auto Cmd = DB.getFallbackCommand(testPath("foo/src/bar.cc"));
+  EXPECT_EQ(Cmd.Directory, testPath("foo"));
+  EXPECT_THAT(Cmd.CommandLine,
+              ElementsAre("clang", testPath("foo/src/bar.cc")));
+  EXPECT_EQ(Cmd.Output, "");
+}
+
 static tooling::CompileCommand cmd(llvm::StringRef File, llvm::StringRef Arg) {
   return tooling::CompileCommand(
       testRoot(), File, {"clang", std::string(Arg), std::string(File)}, "");

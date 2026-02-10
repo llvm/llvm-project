@@ -22,7 +22,7 @@ class BPFTargetMachine;
 class InstructionSelector;
 class PassRegistry;
 
-static const char *BPF_TRAP = "__bpf_trap";
+#define BPF_TRAP "__bpf_trap"
 
 ModulePass *createBPFCheckAndAdjustIR();
 
