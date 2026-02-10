@@ -785,6 +785,30 @@ namespace APValues {
   constexpr const A &w = get<A{1, &g, &A::n, "hello"}>;
 }
 
+namespace InitFromAPValues {
+  template <auto a> struct S {
+    static constexpr auto &ref = a;
+  };
+
+  union U1 { int x, y; };
+  static_assert(S<U1{1}>::ref.x == 1);
+  static_assert(S<U1{1}>::ref.y == 1); // both-error {{static assertion expression is not an integral constant expression}} \
+                                       // both-note {{read of member 'y' of union with active member 'x' is not allowed in a constant expression}}
+
+  union U2 {
+    bool x;
+    constexpr U2() {}
+  };
+  static_assert(S<U2{}>::ref.x); // both-error {{static assertion expression is not an integral constant expression}} \
+                                 // both-note {{read of member 'x' of union with no active member is not allowed in a constant expression}}
+
+  union U3 {
+    struct S { int x; };
+    S s;
+  };
+  static_assert(S<U3{2}>::ref.s.x == 2);
+}
+
 namespace self_referencing {
   struct S {
     S* ptr = nullptr;

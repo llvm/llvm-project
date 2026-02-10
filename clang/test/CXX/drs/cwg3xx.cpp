@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 -verify=expected,cxx98-14,cxx98-17,cxx98-20,cxx98 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 -verify=expected,cxx98-14,cxx98-17,cxx98-20,cxx11-14,since-cxx11 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 -verify=expected,cxx98-14,cxx98-17,cxx98-20,cxx11-14,since-cxx11 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 -verify=expected,cxx98-17,cxx98-20,since-cxx11,since-cxx17 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 -verify=expected,cxx98-20,cxx20-23,since-cxx11,since-cxx17 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 -verify=expected,cxx20-23,cxx23,since-cxx11,since-cxx17,since-cxx23 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c -verify=expected,cxx20-23,cxx23,since-cxx11,since-cxx17,since-cxx23 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 -verify=expected,cxx98-14,cxx98-17,cxx98-20,cxx98 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 -verify=expected,cxx98-14,cxx98-17,cxx98-20,cxx11-14,since-cxx11 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 -verify=expected,cxx98-14,cxx98-17,cxx98-20,cxx11-14,since-cxx11 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 -verify=expected,cxx98-17,cxx98-20,since-cxx11,since-cxx17 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 -verify=expected,cxx98-20,cxx20-23,since-cxx11,since-cxx17 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 -verify=expected,cxx20-23,cxx23,since-cxx11,since-cxx17,since-cxx23 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c -verify=expected,cxx20-23,cxx23,since-cxx11,since-cxx17,since-cxx23 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -16,6 +16,19 @@
 #else
 #define __enable_constant_folding
 #endif
+
+namespace std {
+template<bool Cond, typename T = void>
+struct enable_if;
+
+template<typename T>
+struct enable_if<true, T> {
+  typedef T type;
+};
+
+template<typename T>
+struct enable_if<false, T> { };
+} // namespace std
 
 namespace cwg300 { // cwg300: 2.7
   template<typename R, typename A> void f(R (&)(A)) {}
@@ -198,8 +211,8 @@ namespace cwg306 { // cwg306: dup 39
   Z<X>::X zx;
   Z<const X>::X zcx;
   // expected-error@-1 {{member 'X' found in multiple base classes of different types}}
-  //   expected-note@#cwg306-X {{member type 'cwg306::X' found}}
-  //   expected-note@#cwg306-typedef-X {{member type 'const cwg306::X' found}}
+  //   expected-note@#cwg306-X {{member type 'cwg306::X' found by ambiguous name lookup}}
+  //   expected-note@#cwg306-typedef-X {{member type 'const cwg306::X' found by ambiguous name lookup}}
 } // namespace cwg306
 
 // cwg307: na
@@ -432,25 +445,7 @@ namespace cwg328 { // cwg328: 2.7
   //   expected-note@#cwg328-A {{forward declaration of 'cwg328::A'}}
 } // namespace cwg328
 
-namespace cwg329 { // cwg329: 3.5
-  struct B {};
-  template<typename T> struct A : B {
-    friend void f(A a) { g(a); }
-    friend void h(A a) { g(a); }
-    // expected-error@-1 {{use of undeclared identifier 'g'}}
-    //   expected-note@#cwg329-h-call {{in instantiation of member function 'cwg329::h' requested here}}
-    friend void i(B b) {} // #cwg329-i
-    // expected-error@-1 {{redefinition of 'i'}}
-    //   expected-note@#cwg329-b {{in instantiation of template class 'cwg329::A<char>' requested here}}
-    //   expected-note@#cwg329-i {{previous definition is here}}
-  };
-  A<int> a;
-  A<char> b; // #cwg329-b
-
-  void test() {
-    h(a); // #cwg329-h-call
-  }
-} // namespace cwg329
+// cwg329 is in cwg329.cpp
 
 namespace cwg330 { // cwg330: 7
   // Conversions between P and Q will be allowed by P0388.
@@ -560,13 +555,13 @@ namespace cwg331 { // cwg331: 11
 
 namespace cwg332 { // cwg332: dup 577
   void f(volatile void);
-  // expected-error@-1 {{'void' as parameter must not have type qualifiers}}
-  // cxx20-23-warning@-2 {{volatile-qualified parameter type 'volatile void' is deprecated}}
+  // cxx20-23-warning@-1 {{volatile-qualified parameter type 'volatile void' is deprecated}}
+  // expected-error@-2 {{'void' as parameter must not have type qualifiers}}
   void g(const void);
   // expected-error@-1 {{'void' as parameter must not have type qualifiers}}
   void h(int n, volatile void);
-  // expected-error@-1 {{'void' must be the first and only parameter if specified}}
-  // cxx20-23-warning@-2 {{volatile-qualified parameter type 'volatile void' is deprecated}}
+  // cxx20-23-warning@-1 {{volatile-qualified parameter type 'volatile void' is deprecated}}
+  // expected-error@-2 {{'void' must be the first and only parameter if specified}}
 } // namespace cwg332
 
 namespace cwg333 { // cwg333: 2.7
@@ -601,7 +596,7 @@ namespace cwg336 { // cwg336: 2.7
     template<> template<class X> class A<int>::B {}; // #cwg336-B
     template<> template<> template<class T> void A<int>::B<double>::mf1(T t) {}
     // expected-error@-1 {{out-of-line definition of 'mf1' does not match any declaration in 'cwg336::Pre::A<int>::B<double>'}}
-    //   expected-note@#cwg336-B {{defined here}}
+    //   expected-note@#cwg336-B {{B defined here}}
     template<class Y> template<> void A<Y>::B<double>::mf2() {}
     // expected-error@-1 {{nested name specifier 'A<Y>::B<double>' for declaration does not refer into a class, class template or class template partial specialization}}
   }
@@ -652,8 +647,8 @@ namespace cwg339 { // cwg339: 2.8
     A<1> a = f(0);
     A<2> b = f(0.0f);
     A<3> c = f("foo");
-    // expected-error@-1 {{no matching function}}
-    //   expected-note@#cwg339-f {{candidate}}
+    // expected-error@-1 {{no matching function for call to 'f'}}
+    //   expected-note@#cwg339-f {{candidate template ignored: substitution failure [with T = const char *]: no matching function for call to 'xxx'}}
   }
 
 
@@ -746,10 +741,9 @@ namespace cwg345 { // cwg345: 2.7
   // expected-error@-1 {{typename specifier refers to non-type member 'X' in 'cwg345::A'}}
   //   expected-note@#cwg345-f-a {{in instantiation of function template specialization 'cwg345::f<cwg345::A>' requested here}}
   //   expected-note@#cwg345-int-X {{referenced member 'X' is declared here}}
-  void f(A a, B b) {
-    f(b);
-    f(a); // #cwg345-f-a
-  }
+
+  template void f<A>(A); // #cwg345-f-a
+  template void f<B>(B);
 } // namespace cwg345
 
 // cwg346: na
@@ -770,34 +764,31 @@ namespace cwg347 { // cwg347: 2.7
   // expected-error@-1 {{no member named 'n' in 'cwg347::derived'}}
   void derived::f() {}
   // expected-error@-1 {{out-of-line definition of 'f' does not match any declaration in 'cwg347::derived'}}
-  //   expected-note@#cwg347-derived {{defined here}}
+  //   expected-note@#cwg347-derived {{derived defined here}}
   void derived::g() {}
   // expected-error@-1 {{out-of-line definition of 'g' does not match any declaration in 'cwg347::derived'}}
-  //   expected-note@#cwg347-derived {{defined here}}
+  //   expected-note@#cwg347-derived {{derived defined here}}
 } // namespace cwg347
 
 // cwg348: na
 
 namespace cwg349 { // cwg349: no
   struct A {
-    template <class T> operator T ***() {
-      int ***p = 0;
-      return p;
-      // cxx98-20-error@-1 {{cannot initialize return object of type 'const int ***' with an lvalue of type 'int ***'}}
-      // since-cxx23-error@-2 {{cannot initialize return object of type 'const int ***' with an rvalue of type 'int ***'}}
-      //   expected-note@#cwg349-p1 {{in instantiation of function template specialization 'cwg349::A::operator const int ***<const int>' requested here}}
-    }
+    template <class T, typename std::enable_if<!__is_const(T), int>::type = 0>
+    // cxx98-error@-1 {{default template arguments for a function template are a C++11 extension}}
+    operator T ***(); // #cwg349-A
   };
 
   // FIXME: This is valid.
   A a;
   const int *const *const *p1 = a; // #cwg349-p1
+  // expected-error@-1 {{no viable conversion from 'A' to 'const int *const *const *'}}
+  //   expected-note@#cwg349-A {{candidate template ignored: requirement '!__is_const(const int)' was not satisfied [with T = const int]}}
 
   struct B {
-    template <class T> operator T ***() {
-      const int ***p = 0;
-      return p;
-    }
+    template <class T, typename std::enable_if<__is_const(T), int>::type = 0>
+    // cxx98-error@-1 {{default template arguments for a function template are a C++11 extension}}
+    operator T ***();
   };
 
   // FIXME: This is invalid.
@@ -1028,7 +1019,7 @@ namespace cwg357 { // cwg357: 2.7
   };
   template<typename T> void A<T>::f() {}
   // expected-error@-1 {{out-of-line definition of 'f' does not match any declaration in 'cwg357::A<T>'}}
-  //   expected-note@#cwg357-A {{defined here}}
+  //   expected-note@#cwg357-A {{A defined here}}
   //   expected-note@#cwg357-f {{member declaration does not match because it is const qualified}}
 
   struct B { // #cwg357-B
@@ -1036,7 +1027,7 @@ namespace cwg357 { // cwg357: 2.7
   };
   template<typename T> void B::f() const {}
   // expected-error@-1 {{out-of-line definition of 'f' does not match any declaration in 'cwg357::B'}}
-  //   expected-note@#cwg357-B {{defined here}}
+  //   expected-note@#cwg357-B {{B defined here}}
 } // namespace cwg357
 
 namespace cwg358 { // cwg358: 2.7
@@ -1128,10 +1119,10 @@ namespace cwg366 { // cwg366: 2.7
 
 namespace cwg367 { // cwg367: 2.7
   static_assert(__enable_constant_folding(true ? throw 0 : 4), "");
-  // expected-error@-1 {{expression is not an integral constant expression}}
+  // expected-error@-1 {{static assertion expression is not an integral constant expression}}
   static_assert(__enable_constant_folding(true ? 4 : throw 0), "");
   static_assert(__enable_constant_folding(true ? *new int : 4), "");
-  // expected-error@-1 {{expression is not an integral constant expression}}
+  // expected-error@-1 {{static assertion expression is not an integral constant expression}}
   //   expected-note@-2 {{read of uninitialized object is not allowed in a constant expression}}
   static_assert(__enable_constant_folding(true ? 4 : *new int), "");
 } // namespace cwg367
@@ -1296,13 +1287,10 @@ namespace cwg374 { // cwg374: 7
 // cwg376: na
 
 namespace cwg377 { // cwg377: 2.7
-  enum E {
-  // expected-error@-1 {{enumeration values exceed range of largest integer}}
-    a = -__LONG_LONG_MAX__ - 1,
-    // cxx98-error@-1 {{'long long' is a C++11 extension}}
-    b = 2 * (unsigned long long)__LONG_LONG_MAX__
-    // cxx98-error@-1 {{'long long' is a C++11 extension}}
-    // cxx98-error@-2 {{'long long' is a C++11 extension}}
+  enum E { // #cwg377-E
+  // expected-error@#cwg377-E {{enumeration values exceed range of largest integer}}
+    a = -__LONG_MAX__ - 1,
+    b = 2 * (unsigned long)__LONG_MAX__
   };
 } // namespace cwg377
 
@@ -1617,24 +1605,7 @@ namespace cwg389 { // cwg389: no
   }
 } // namespace cwg389
 
-namespace cwg390 { // cwg390: 3.3
-  template<typename T>
-  struct A {
-    A() { f(); }
-    // expected-warning@-1 {{call to pure virtual member function 'f' has undefined behavior; overrides of 'f' in subclasses are not available in the constructor of 'cwg390::A<int>'}}
-    //   expected-note@#cwg390-A-int {{in instantiation of member function 'cwg390::A<int>::A' requested here}}
-    //   expected-note@#cwg390-f {{'f' declared here}}
-    virtual void f() = 0; // #cwg390-f
-    virtual ~A() = 0;
-  };
-  template<typename T> A<T>::~A() { T::error; }
-  // expected-error@-1 {{type 'int' cannot be used prior to '::' because it has no members}}
-  //   expected-note@#cwg390-A-int {{in instantiation of member function 'cwg390::A<int>::~A' requested here}}
-  template<typename T> void A<T>::f() { T::error; } // ok, not odr-used
-  struct B : A<int> { // #cwg390-A-int
-    void f() {}
-  } b;
-} // namespace cwg390
+// cwg390 is in cwg390.cpp
 
 namespace cwg391 { // cwg391: 2.8 c++11
   // FIXME: Should this apply to C++98 too?
@@ -1684,7 +1655,8 @@ void h() {
 namespace cwg395 { // cwg395: 3.0
   struct S {
     template <typename T, int N>(&operator T())[N];
-    // expected-error@-1 {{cannot specify any part of a return type in the declaration of a conversion function}}
+    // cxx98-error@-1 {{cannot specify any part of a return type in the declaration of a conversion function}}
+    // since-cxx11-error@-2 {{cannot specify any part of a return type in the declaration of a conversion function; use an alias template to declare a conversion to 'T (&)[N]'}}
     template <typename T, int N> operator(T (&)[N])();
     // expected-error@-1 {{expected ')'}}
     //   expected-note@-2 {{to match this '('}}
@@ -1694,9 +1666,9 @@ namespace cwg395 { // cwg395: 3.0
     template <typename T, typename U> operator T (U::*)()() const { return 0; }
     // expected-error@-1 {{a type specifier is required for all declarations}}
     // expected-error@-2 {{conversion function cannot have any parameters}}
-    // expected-error@-3 {{cannot specify any part of a return type in the declaration of a conversion function}}
-    // expected-error@-4 {{conversion function cannot convert to a function type}}
-
+    // cxx98-error@-3 {{cannot specify any part of a return type in the declaration of a conversion function}}
+    // since-cxx11-error@-4 {{cannot specify any part of a return type in the declaration of a conversion function; use an alias template to declare a conversion to 'T (())() const'}}
+    // expected-error@-5 {{conversion function cannot convert to a function type}}
   };
 
   struct null1_t {
@@ -1781,7 +1753,7 @@ namespace cwg398 { // cwg398: 2.7
       //   expected-note@#cwg398-f {{candidate template ignored: substitution failure [with T = B]: typename specifier refers to non-type member 'Y' in 'cwg398::example2::B'}}
       g<C>(0);
       // expected-error@-1 {{no matching function for call to 'g'}}
-      //   expected-note@#cwg398-g {{candidate template ignored: substitution failure [with T = C]: missing 'typename' prior to dependent type name 'C::N'}}
+      //   expected-note@#cwg398-g {{candidate template ignored: substitution failure [with T = C]: missing 'typename' prior to dependent type name 'C::N' (aka 'int')}}
       h<D>(0);
       // expected-error@-1 {{no matching function for call to 'h'}}
       //   expected-note@#cwg398-h {{candidate template ignored: substitution failure [with T = D]: 'TT' following the 'template' keyword does not refer to a template}}

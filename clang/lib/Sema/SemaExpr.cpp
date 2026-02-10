@@ -18,7 +18,7 @@
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTMutationListener.h"
-#include "clang/AST/Attrs.inc"
+#include "clang/AST/Attr.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
@@ -30,6 +30,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/MangleNumberingContext.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
@@ -6822,9 +6823,10 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
 
         // First, ensure that the Arg is an RValue.
         if (ArgExprs[Idx]->isGLValue()) {
-          ArgExprs[Idx] = ImplicitCastExpr::Create(
-              Context, ArgExprs[Idx]->getType(), CK_NoOp, ArgExprs[Idx],
-              nullptr, VK_PRValue, FPOptionsOverride());
+          ExprResult Res = DefaultLvalueConversion(ArgExprs[Idx]);
+          if (Res.isInvalid())
+            return ExprError();
+          ArgExprs[Idx] = Res.get();
         }
 
         // Construct a new arg type with address space of Param
@@ -14136,6 +14138,9 @@ static bool CheckForModifiableLvalue(Expr *E, SourceLocation Loc, Sema &S) {
   case Expr::MLV_DuplicateVectorComponents:
     DiagID = diag::err_typecheck_duplicate_vector_components_not_mlvalue;
     break;
+  case Expr::MLV_DuplicateMatrixComponents:
+    DiagID = diag::err_typecheck_duplicate_matrix_components_not_mlvalue;
+    break;
   case Expr::MLV_NoSetterProperty:
     llvm_unreachable("readonly properties should be processed differently");
   case Expr::MLV_InvalidMessageExpression:
@@ -17919,6 +17924,16 @@ void Sema::PushExpressionEvaluationContextForFunction(
     else
       Current.InImmediateFunctionContext = FD->isConsteval();
   }
+}
+
+ExprResult Sema::ActOnCXXReflectExpr(SourceLocation CaretCaretLoc,
+                                     TypeSourceInfo *TSI) {
+  return BuildCXXReflectExpr(CaretCaretLoc, TSI);
+}
+
+ExprResult Sema::BuildCXXReflectExpr(SourceLocation CaretCaretLoc,
+                                     TypeSourceInfo *TSI) {
+  return CXXReflectExpr::Create(Context, CaretCaretLoc, TSI);
 }
 
 namespace {
