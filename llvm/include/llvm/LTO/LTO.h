@@ -673,6 +673,10 @@ private:
   // Setup optimization remarks according to the provided configuration.
   Error setupOptimizationRemarks();
 
+  // LibFuncs that could have been part of the LTO unit, but was not typically
+  // because they weren't extracted from their libraries. Such functions cannot
+  // safely be called, since they have already lost their only opportunity to be
+  // defined.
   SmallVector<StringRef> BitcodeLibFuncs;
 
 public:
