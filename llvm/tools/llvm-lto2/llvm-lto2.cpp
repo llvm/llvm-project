@@ -234,6 +234,11 @@ static cl::opt<bool>
     AllVtablesHaveTypeInfos("all-vtables-have-type-infos", cl::Hidden,
                             cl::desc("All vtables have type infos"));
 
+// Specifying a function here states that it is a library function that could
+// have been part of the LTO unit, but was not, typically because it wasn't
+// extracted from a library. Such functions cannot safely be called, since they
+// have already lost their only opportunity to be defined.
+//
 // FIXME: Listing all bitcode libfunc symbols here is clunky. A higher-level way
 // to indicate which TUs made it into the link might be better, but this would
 // required more detailed tracking of the sources of constructs in the IR.
