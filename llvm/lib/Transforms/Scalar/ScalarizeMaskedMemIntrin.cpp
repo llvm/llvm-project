@@ -1062,7 +1062,7 @@ static void scalarizeMaskedFirstFaultingLoad(const DataLayout &DL, CallInst *CI,
   // %first.active = extractelement <N x i1> %mask, i64 0
   // br i1 %first.active, label %load.ff.first.lane, label %load.ff.result
   Value *FirstActive =
-      Builder.CreateExtractElement(Mask, 0ul, Twine("first.active"));
+      Builder.CreateExtractElement(Mask, uint64_t(0ull), Twine("first.active"));
   Instruction *ThenTerm =
       SplitBlockAndInsertIfThen(FirstActive, CI,
                                 /*Unreachable=*/false,
@@ -1079,9 +1079,11 @@ static void scalarizeMaskedFirstFaultingLoad(const DataLayout &DL, CallInst *CI,
   ThenBlock->setName("load.ff.first.lane");
   Builder.SetInsertPoint(ThenBlock->getTerminator());
   LoadInst *Load = Builder.CreateAlignedLoad(ScalarTy, Ptr, AlignVal);
-  Value *OneLaneData = Builder.CreateInsertElement(PoisonData, Load, 0ul);
+  Value *OneLaneData =
+      Builder.CreateInsertElement(PoisonData, Load, uint64_t(0ull));
   Value *OneLaneMask = Builder.CreateInsertElement(
-      EmptyMask, Constant::getAllOnesValue(MaskTy->getElementType()), 0ul);
+      EmptyMask, Constant::getAllOnesValue(MaskTy->getElementType()),
+      uint64_t(0ull));
 
   // Now we just select between the two based on the check of the first lane
   //
