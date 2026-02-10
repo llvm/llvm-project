@@ -678,6 +678,34 @@ define i64 @wmacc_commute(i32 %a, i32 %b, i64 %c) nounwind {
   ret i64 %result
 }
 
+define i64 @wmaccsu(i32 %a, i32 %b, i64 %c) nounwind {
+; CHECK-LABEL: wmaccsu:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wmaccsu a2, a0, a1
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:    ret
+  %aext = sext i32 %a to i64
+  %bext = zext i32 %b to i64
+  %mul = mul i64 %aext, %bext
+  %result = add i64 %c, %mul
+  ret i64 %result
+}
+
+define i64 @wmaccsu_commute(i32 %a, i32 %b, i64 %c) nounwind {
+; CHECK-LABEL: wmaccsu_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wmaccsu a2, a0, a1
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:    ret
+  %aext = sext i32 %a to i64
+  %bext = zext i32 %b to i64
+  %mul = mul i64 %aext, %bext
+  %result = add i64 %mul, %c
+  ret i64 %result
+}
+
 ; Negative test: multiply result has multiple uses, should not combine
 define void @wmaccu_multiple_uses(i32 %a, i32 %b, i64 %c, ptr %out1, ptr %out2) nounwind {
 ; CHECK-LABEL: wmaccu_multiple_uses:

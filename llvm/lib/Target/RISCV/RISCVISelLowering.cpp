@@ -1005,7 +1005,16 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX}, VT,
                          Legal);
 
-      setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Custom);
+      if (Subtarget.hasStdExtZvabd()) {
+        setOperationAction(ISD::ABS, VT, Legal);
+        // Only SEW=8/16 are supported in Zvabd.
+        if (VT.getVectorElementType() == MVT::i8 ||
+            VT.getVectorElementType() == MVT::i16)
+          setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Legal);
+        else
+          setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Custom);
+      } else
+        setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Custom);
 
       // Custom-lower extensions and truncations from/to mask types.
       setOperationAction({ISD::ANY_EXTEND, ISD::SIGN_EXTEND, ISD::ZERO_EXTEND},
@@ -7536,6 +7545,8 @@ static unsigned getRISCVVLOp(SDValue Op) {
   OP_CASE(SMAX)
   OP_CASE(UMIN)
   OP_CASE(UMAX)
+  OP_CASE(ABDS)
+  OP_CASE(ABDU)
   OP_CASE(STRICT_FADD)
   OP_CASE(STRICT_FSUB)
   OP_CASE(STRICT_FMUL)
@@ -8828,8 +8839,14 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerToScalableOp(Op, DAG);
   case ISD::ABDS:
   case ISD::ABDU: {
-    SDLoc dl(Op);
     EVT VT = Op->getValueType(0);
+    // Only SEW=8/16 are supported in Zvabd.
+    if (Subtarget.hasStdExtZvabd() && VT.isVector() &&
+        (VT.getVectorElementType() == MVT::i8 ||
+         VT.getVectorElementType() == MVT::i16))
+      return lowerToScalableOp(Op, DAG);
+
+    SDLoc dl(Op);
     SDValue LHS = DAG.getFreeze(Op->getOperand(0));
     SDValue RHS = DAG.getFreeze(Op->getOperand(1));
     bool IsSigned = Op->getOpcode() == ISD::ABDS;
@@ -13754,17 +13771,22 @@ SDValue RISCVTargetLowering::lowerABS(SDValue Op, SelectionDAG &DAG) const {
   } else
     std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
-  SDValue SplatZero = DAG.getNode(
-      RISCVISD::VMV_V_X_VL, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
-      DAG.getConstant(0, DL, Subtarget.getXLenVT()), VL);
-  SDValue NegX = DAG.getNode(RISCVISD::SUB_VL, DL, ContainerVT, SplatZero, X,
-                             DAG.getUNDEF(ContainerVT), Mask, VL);
-  SDValue Max = DAG.getNode(RISCVISD::SMAX_VL, DL, ContainerVT, X, NegX,
-                            DAG.getUNDEF(ContainerVT), Mask, VL);
-
+  SDValue Result;
+  if (Subtarget.hasStdExtZvabd()) {
+    Result = DAG.getNode(RISCVISD::ABS_VL, DL, ContainerVT, X,
+                         DAG.getUNDEF(ContainerVT), Mask, VL);
+  } else {
+    SDValue SplatZero = DAG.getNode(
+        RISCVISD::VMV_V_X_VL, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
+        DAG.getConstant(0, DL, Subtarget.getXLenVT()), VL);
+    SDValue NegX = DAG.getNode(RISCVISD::SUB_VL, DL, ContainerVT, SplatZero, X,
+                               DAG.getUNDEF(ContainerVT), Mask, VL);
+    Result = DAG.getNode(RISCVISD::SMAX_VL, DL, ContainerVT, X, NegX,
+                         DAG.getUNDEF(ContainerVT), Mask, VL);
+  }
   if (VT.isFixedLengthVector())
-    Max = convertFromScalableVector(VT, Max, DAG, Subtarget);
-  return Max;
+    Result = convertFromScalableVector(VT, Result, DAG, Subtarget);
+  return Result;
 }
 
 SDValue RISCVTargetLowering::lowerToScalableOp(SDValue Op,
@@ -21045,6 +21067,8 @@ static SDValue performSHLCombine(SDNode *N,
 // (WMACCU x, y, a, b).
 // Combine (ADDD (SMUL_LOHI x, y).0, (SMUL_LOHI x, y).1, a, b) into
 // (WMACC x, y, a, b).
+// Combine (ADDD (WMULSU x, y).0, (WMULSU x, y).1, a, b) into
+// (WMACCSU x, y, a, b).
 static SDValue combineADDDToWMACC(SDNode *N, SelectionDAG &DAG,
                                   const RISCVSubtarget &Subtarget) {
   assert(N->getOpcode() == RISCVISD::ADDD && "Expected ADDD");
@@ -21052,28 +21076,30 @@ static SDValue combineADDDToWMACC(SDNode *N, SelectionDAG &DAG,
          "ADDD requires RV32 with P extension");
 
   // ADDD has 4 operands: (op0_lo, op0_hi, op1_lo, op1_hi)
-  // Try to match UMUL_LOHI or SMUL_LOHI in either operand pair due to
+  // Try to match UMUL_LOHI, SMUL_LOHI, or WMULSU in either operand pair due to
   // commutativity
   SDValue Op0Lo = N->getOperand(0);
   SDValue Op0Hi = N->getOperand(1);
   SDValue Op1Lo = N->getOperand(2);
   SDValue Op1Hi = N->getOperand(3);
 
+  auto IsSupportedMul = [](unsigned Opc) {
+    return Opc == ISD::UMUL_LOHI || Opc == ISD::SMUL_LOHI ||
+           Opc == RISCVISD::WMULSU;
+  };
+
   SDNode *MulNode = nullptr;
   SDValue AddLo, AddHi;
 
-  // Check if first operand pair is UMUL_LOHI or SMUL_LOHI
-  if ((Op0Lo.getOpcode() == ISD::UMUL_LOHI ||
-       Op0Lo.getOpcode() == ISD::SMUL_LOHI) &&
-      Op0Lo.getNode() == Op0Hi.getNode() && Op0Lo.getResNo() == 0 &&
-      Op0Hi.getResNo() == 1) {
+  // Check if first operand pair is a supported multiply
+  if (IsSupportedMul(Op0Lo.getOpcode()) && Op0Lo.getNode() == Op0Hi.getNode() &&
+      Op0Lo.getResNo() == 0 && Op0Hi.getResNo() == 1) {
     MulNode = Op0Lo.getNode();
     AddLo = Op1Lo;
     AddHi = Op1Hi;
   }
-  // Check if second operand pair is UMUL_LOHI or SMUL_LOHI (commutative case)
-  else if ((Op1Lo.getOpcode() == ISD::UMUL_LOHI ||
-            Op1Lo.getOpcode() == ISD::SMUL_LOHI) &&
+  // Check if second operand pair is a supported multiply (commutative case)
+  else if (IsSupportedMul(Op1Lo.getOpcode()) &&
            Op1Lo.getNode() == Op1Hi.getNode() && Op1Lo.getResNo() == 0 &&
            Op1Hi.getResNo() == 1) {
     MulNode = Op1Lo.getNode();
@@ -21091,10 +21117,22 @@ static SDValue combineADDDToWMACC(SDNode *N, SelectionDAG &DAG,
   SDValue MulOp0 = MulNode->getOperand(0);
   SDValue MulOp1 = MulNode->getOperand(1);
 
-  // Create WMACCU or WMACC node: (m1, m2, addlo, addhi) -> (lo, hi)
+  // Create WMACCU, WMACC, or WMACCSU node: (m1, m2, addlo, addhi) -> (lo, hi)
   SDLoc DL(N);
-  bool IsSigned = MulNode->getOpcode() == ISD::SMUL_LOHI;
-  unsigned Opc = IsSigned ? RISCVISD::WMACC : RISCVISD::WMACCU;
+  unsigned Opc;
+  switch (MulNode->getOpcode()) {
+  default:
+    llvm_unreachable("Unexpected multiply opcode");
+  case ISD::UMUL_LOHI:
+    Opc = RISCVISD::WMACCU;
+    break;
+  case ISD::SMUL_LOHI:
+    Opc = RISCVISD::WMACC;
+    break;
+  case RISCVISD::WMULSU:
+    Opc = RISCVISD::WMACCSU;
+    break;
+  }
   return DAG.getNode(Opc, DL, DAG.getVTList(MVT::i32, MVT::i32), MulOp0, MulOp1,
                      AddLo, AddHi);
 }

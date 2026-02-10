@@ -232,7 +232,7 @@ void CustomSection::finalizeInputSections() {
     return;
 
   mergedSection->finalizeContents();
-  inputSections = newSections;
+  inputSections = std::move(newSections);
 }
 
 void CustomSection::finalizeContents() {

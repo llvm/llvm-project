@@ -1089,6 +1089,8 @@ def VReg32OrOffClass : AsmOperandClass {
 
 def SendMsg : CustomOperand<i32>;
 
+def WaitEvent : CustomOperand<i16>;
+
 def Swizzle : CustomOperand<i16, 1>;
 
 def Endpgm : CustomOperand<i16, 1>;
