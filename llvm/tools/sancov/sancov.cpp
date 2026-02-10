@@ -724,8 +724,9 @@ findSanitizerCovFunctions(const object::ObjectFile &O) {
       failIfError(NameOrErr);
       StringRef Name = NameOrErr.get();
 
-      if (isCoveragePointSymbol(Name) || 
-         (Name.starts_with(".") && isCoveragePointSymbol(Name.drop_front(1)))) {
+      if (isCoveragePointSymbol(Name) ||
+          (Name.starts_with(".") &&
+           isCoveragePointSymbol(Name.drop_front(1)))) {
         Result.insert(Address);
       }
     }
