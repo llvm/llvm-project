@@ -132,98 +132,117 @@ trySplitLastAxisInResharding(ImplicitLocOpBuilder &builder, GridOp grid,
   return std::nullopt;
 }
 
-// Detect if the resharding is of type e.g.
-// [[0, 1, 2]] -> [[0, 1]].
-// If detected, returns the corresponding tensor axis grid axis pair.
-static std::optional<std::tuple<int64_t, GridAxis>>
-detectUnsplitLastAxisInResharding(const Sharding &sourceSharding,
+// Detect if the resharding removes trailing split Axes along a tensor
+// dimension, e.g.
+// [[0, 1, 2]] -> [[0, 1]], [[0, 1, 2]] -> [0] or [[0, 1, 2]] -> [].
+// If detected, returns the corresponding (tensor dim, grid axes) pair, where
+// the "grid axes" are the removed trailing split axes.
+static std::optional<std::tuple<int64_t, SmallVector<GridAxis>>>
+detectUnsplitLastAxesInResharding(const Sharding &sourceSharding,
                                   const Sharding &targetSharding) {
-  for (size_t tensorAxis = 0; tensorAxis < sourceSharding.getSplitAxes().size();
-       ++tensorAxis) {
-    if (targetSharding.getSplitAxes().size() > tensorAxis) {
-      if (sourceSharding.getSplitAxes()[tensorAxis].size() !=
-          targetSharding.getSplitAxes()[tensorAxis].size() + 1)
+  for (size_t tensorDim = 0; tensorDim < sourceSharding.getSplitAxes().size();
+       ++tensorDim) {
+    if (targetSharding.getSplitAxes().size() > tensorDim) {
+      // No match if the target sharding does not have less split axes than the
+      // source sharding along the current tensor dimension.
+      if (sourceSharding.getSplitAxes()[tensorDim].size() <=
+          targetSharding.getSplitAxes()[tensorDim].size())
         continue;
-      if (!llvm::equal(
-              llvm::make_range(
-                  sourceSharding.getSplitAxes()[tensorAxis]
-                      .asArrayRef()
-                      .begin(),
-                  sourceSharding.getSplitAxes()[tensorAxis].asArrayRef().end() -
-                      1),
-              targetSharding.getSplitAxes()[tensorAxis].asArrayRef()))
+      // No match if the split axes of the target sharding are different from
+      // the first split axes of the source sharding.
+      if (!std::equal(
+              targetSharding.getSplitAxes()[tensorDim].asArrayRef().begin(),
+              targetSharding.getSplitAxes()[tensorDim].asArrayRef().end(),
+              sourceSharding.getSplitAxes()[tensorDim].asArrayRef().begin()))
         continue;
     } else {
-      if (sourceSharding.getSplitAxes()[tensorAxis].size() != 1)
+      // Here the target dimension is replicated; there is nothing to do if the
+      // source dimension is also replicated.
+      if (sourceSharding.getSplitAxes()[tensorDim].size() == 0)
         continue;
     }
-    return std::make_tuple(
-        tensorAxis,
-        sourceSharding.getSplitAxes()[tensorAxis].asArrayRef().back());
+    // This is a match. Return the current tensor dimension and the trailing
+    // grid axis of the source sharding along this dimension.
+    SmallVector<GridAxis> unsplitAxes;
+    size_t dimOff = tensorDim >= targetSharding.getSplitAxes().size()
+                        ? 0
+                        : targetSharding.getSplitAxes()[tensorDim].size();
+    for (auto a =
+             sourceSharding.getSplitAxes()[tensorDim].asArrayRef().begin() +
+             dimOff;
+         a != sourceSharding.getSplitAxes()[tensorDim].asArrayRef().end(); ++a)
+      unsplitAxes.push_back(*a);
+    return std::make_tuple(tensorDim, unsplitAxes);
   }
   return std::nullopt;
 }
 
-static Sharding targetShardingInUnsplitLastAxis(MLIRContext *ctx,
+// Return the resulting Sharding if the unsplit last axes resharding is applied.
+static Sharding targetShardingInUnsplitLastAxes(MLIRContext *ctx,
                                                 const Sharding &sourceSharding,
-                                                int64_t splitTensorAxis) {
-  SmallVector<GridAxesAttr> targetShardingSplitAxes =
+                                                int64_t splitTensorDim,
+                                                size_t numUnsplitAxes) {
+  SmallVector<GridAxesAttr> resSplitAxes =
       llvm::to_vector(sourceSharding.getSplitAxes());
-  assert(static_cast<int64_t>(targetShardingSplitAxes.size()) >
-         splitTensorAxis);
-  auto targetSplitAxes =
-      llvm::to_vector(targetShardingSplitAxes[splitTensorAxis].asArrayRef());
-
-  targetSplitAxes.pop_back();
-  targetShardingSplitAxes[splitTensorAxis] =
-      GridAxesAttr::get(ctx, targetSplitAxes);
-  return Sharding::get(sourceSharding.getGridAttr(), targetShardingSplitAxes);
+  assert(static_cast<int64_t>(resSplitAxes.size()) > splitTensorDim);
+  ArrayRef<GridAxis> srcSplitAxes = resSplitAxes[splitTensorDim].asArrayRef();
+  assert(srcSplitAxes.size() >= numUnsplitAxes);
+  size_t numSplitAxes = srcSplitAxes.size() - numUnsplitAxes;
+  SmallVector<GridAxis> newSplitAxes(srcSplitAxes.begin(),
+                                     srcSplitAxes.begin() + numSplitAxes);
+  resSplitAxes[splitTensorDim] = GridAxesAttr::get(ctx, newSplitAxes);
+  return Sharding::get(sourceSharding.getGridAttr(), resSplitAxes);
 }
 
-static ShapedType allGatherResultShapeInUnsplitLastAxis(
-    ShapedType sourceShape, int64_t splitCount, int64_t splitTensorAxis) {
-  SmallVector<int64_t> targetShape = llvm::to_vector(sourceShape.getShape());
-  targetShape[splitTensorAxis] =
-      gatherDimension(targetShape[splitTensorAxis], splitCount);
-  return sourceShape.cloneWith(targetShape, sourceShape.getElementType());
+// Return the resulting Tensor type after applying the unsplit last axes
+// resharding.
+static ShapedType allGatherResultTypeInUnsplitLastAxes(
+    ShapedType sourceType, int64_t splitTensorDim, ArrayRef<int64_t> gridShape,
+    ArrayRef<GridAxis> unsplitAxes) {
+  SmallVector<int64_t> targetShape = llvm::to_vector(sourceType.getShape());
+  for (GridAxis gridAxis : unsplitAxes)
+    targetShape[splitTensorDim] =
+        gatherDimension(targetShape[splitTensorDim], gridShape[gridAxis]);
+  return sourceType.cloneWith(targetShape, sourceType.getElementType());
 }
 
-static std::tuple<TypedValue<ShapedType>, Sharding> unsplitLastAxisInResharding(
+// Perform the resharding for the unsplit last axes case.
+// This basically performs an all-gather along the unsplit grid axes.
+static std::tuple<TypedValue<ShapedType>, Sharding> unsplitLastAxesInResharding(
     ImplicitLocOpBuilder &builder, Sharding sourceSharding,
     ShapedType sourceUnshardedShape, TypedValue<ShapedType> sourceShard,
-    GridOp grid, int64_t splitTensorAxis, GridAxis splitGridAxis) {
+    GridOp grid, int64_t splitTensorDim, ArrayRef<GridAxis> unsplitAxes) {
   MLIRContext *ctx = builder.getContext();
   builder.setInsertionPointAfterValue(sourceShard);
 
-  Sharding targetSharding = targetShardingInUnsplitLastAxis(
-      ctx, std::move(sourceSharding), splitTensorAxis);
-  ShapedType allGatherResultShape = allGatherResultShapeInUnsplitLastAxis(
-      sourceShard.getType(), grid.getShape()[splitGridAxis], splitTensorAxis);
+  Sharding targetSharding = targetShardingInUnsplitLastAxes(
+      ctx, std::move(sourceSharding), splitTensorDim, unsplitAxes.size());
+  ShapedType allGatherResultType = allGatherResultTypeInUnsplitLastAxes(
+      sourceShard.getType(), splitTensorDim, grid.getShape(), unsplitAxes);
   Value allGatherResult = AllGatherOp::create(
       builder,
-      RankedTensorType::get(allGatherResultShape.getShape(),
-                            allGatherResultShape.getElementType()),
-      grid.getSymName(), SmallVector<GridAxis>({splitGridAxis}), sourceShard,
-      APInt(64, splitTensorAxis));
-  ShapedType targetShape =
+      RankedTensorType::get(allGatherResultType.getShape(),
+                            allGatherResultType.getElementType()),
+      grid.getSymName(), unsplitAxes, sourceShard, APInt(64, splitTensorDim));
+  ShapedType targetType =
       shardShapedType(sourceUnshardedShape, grid, targetSharding);
   TypedValue<ShapedType> targetShard =
-      tensor::CastOp::create(builder, targetShape, allGatherResult).getResult();
+      tensor::CastOp::create(builder, targetType, allGatherResult).getResult();
   return {targetShard, targetSharding};
 }
 
 static std::optional<std::tuple<TypedValue<ShapedType>, Sharding>>
-tryUnsplitLastAxisInResharding(ImplicitLocOpBuilder &builder, GridOp grid,
+tryUnsplitLastAxesInResharding(ImplicitLocOpBuilder &builder, GridOp grid,
                                const Sharding &sourceSharding,
                                Sharding targetSharding,
                                ShapedType sourceUnshardedShape,
                                TypedValue<ShapedType> sourceShard) {
-  if (auto detectRes = detectUnsplitLastAxisInResharding(
+  if (auto detectRes = detectUnsplitLastAxesInResharding(
           sourceSharding, std::move(targetSharding))) {
-    auto [tensorAxis, gridAxis] = detectRes.value();
-    return unsplitLastAxisInResharding(builder, sourceSharding,
+    auto [tensorDim, gridAxes] = detectRes.value();
+    return unsplitLastAxesInResharding(builder, sourceSharding,
                                        sourceUnshardedShape, sourceShard, grid,
-                                       tensorAxis, gridAxis);
+                                       tensorDim, gridAxes);
   }
 
   return std::nullopt;
@@ -477,7 +496,7 @@ reshard(ImplicitLocOpBuilder &builder, GridOp grid,
                    trySplitLastAxisInResharding(builder, grid, sourceSharding,
                                                 targetSharding, sourceShard)) {
       std::tie(targetShard, actualTargetSharding) = tryRes.value();
-    } else if (auto tryRes = tryUnsplitLastAxisInResharding(
+    } else if (auto tryRes = tryUnsplitLastAxesInResharding(
                    builder, grid, sourceSharding, targetSharding,
                    sourceUnshardedValue.getType(), sourceShard)) {
       std::tie(targetShard, actualTargetSharding) = tryRes.value();
