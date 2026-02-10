@@ -6139,7 +6139,7 @@ static SDValue PerformADDCombine(SDNode *N,
 
 /// Check if a v2f32 BUILD_VECTOR provably packs values from non-adjacent
 /// register pairs (non-coalescable).
-static bool isNonCoalescableBuildVector(SDValue BV) {
+static bool isNonCoalescableBuildVector(const SDValue &BV) {
   if (BV.getOpcode() != ISD::BUILD_VECTOR || BV.getValueType() != MVT::v2f32)
     return false;
 
