@@ -1152,13 +1152,14 @@ static void transferStatusOrPtrArgumentCall(const CallExpr *Expr,
   for (size_t I = 0; I < Expr->getNumArgs(); ++I) {
     auto *Arg = Expr->getArg(I);
     auto Type = Arg->getType();
-    if (!Type->isPointerOrReferenceType() ||
-        Type->getPointeeType().isConstQualified() ||
-        !isStatusOrType(Type->getPointeeType()))
-      continue;
-    if (auto *PointeeLoc = getPointeeLocation(*Arg, State.Env)) {
-      auto &StatusLoc = locForStatus(*PointeeLoc);
-      initializeStatus(StatusLoc, State.Env);
+    if (Type->isPointerType()) {
+      auto PointeeType = Type->getPointeeType();
+      if (!PointeeType.isConstQualified() && isStatusOrType(PointeeType)) {
+        if (auto *PointeeLoc = getPointeeLocation(*Arg, State.Env)) {
+          auto &StatusLoc = locForStatus(*PointeeLoc);
+          initializeStatus(StatusLoc, State.Env);
+        }
+      }
     }
   }
 }
