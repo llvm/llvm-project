@@ -1700,6 +1700,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI_abnormal_termination:
   case Builtin::BI_setjmpex:
   case Builtin::BI_setjmp:
+    return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BImove:
   case Builtin::BImove_if_noexcept:
   case Builtin::BIforward:
