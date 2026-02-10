@@ -20831,8 +20831,16 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
         if (!TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, InterVT))
           break;
 
+        // In case of big-endian the offset is normalized to zero, denoting
+        // the last bit. For big-endian we need to transform the extraction
+        // to the last sub-vector.
+        unsigned ExtIdx = 0;
+        if (DAG.getDataLayout().isBigEndian()) {
+          ExtIdx =
+              InterVT.getVectorNumElements() - LDMemType.getVectorNumElements();
+        }
         Val = DAG.getExtractSubvector(SDLoc(LD), LDMemType,
-                                      DAG.getBitcast(InterVT, Val), 0);
+                                      DAG.getBitcast(InterVT, Val), ExtIdx);
       } else if (!STMemType.isVector() && !LDMemType.isVector() &&
                  STMemType.isInteger() && LDMemType.isInteger())
         Val = DAG.getNode(ISD::TRUNCATE, SDLoc(LD), LDMemType, Val);
