@@ -2499,6 +2499,7 @@ static llvm::Expected<bool> areShortNamesEnabled(llvm::StringRef Path8) {
   SmallVector<wchar_t, MAX_PATH> Path16;
   if (std::error_code EC = sys::windows::widenPath(Dir, Path16))
     return llvm::errorCodeToError(EC);
+  Path16.push_back(L'\0');
 
   WIN32_FIND_DATAW Data;
   HANDLE H = ::FindFirstFileW(Path16.data(), &Data);
