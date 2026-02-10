@@ -1218,6 +1218,8 @@ static bool isSignedCharDefault(const llvm::Triple &Triple) {
   case llvm::Triple::ppc64le:
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
   case llvm::Triple::systemz:
   case llvm::Triple::xcore:
   case llvm::Triple::xtensa:
@@ -1564,6 +1566,8 @@ void Clang::RenderTargetOptions(const llvm::Triple &EffectiveTriple,
 
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
     AddRISCVTargetArgs(Args, CmdArgs);
     break;
 
@@ -5659,8 +5663,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
             << Name << Triple.getArchName();
     } else if (Name == "SLEEF" || Name == "ArmPL") {
       if (Triple.getArch() != llvm::Triple::aarch64 &&
-          Triple.getArch() != llvm::Triple::aarch64_be &&
-          Triple.getArch() != llvm::Triple::riscv64)
+          Triple.getArch() != llvm::Triple::aarch64_be && !Triple.isRISCV64())
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << Name << Triple.getArchName();
     }
@@ -5673,6 +5676,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.addOptOutFlag(CmdArgs, options::OPT_fdelete_null_pointer_checks,
                      options::OPT_fno_delete_null_pointer_checks);
+
+  Args.addOptOutFlag(CmdArgs, options::OPT_flifetime_dse,
+                     options::OPT_fno_lifetime_dse);
 
   // LLVM Code Generator Options.
 
@@ -6668,6 +6674,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_offload_via_llvm, false) &&
       (JA.isDeviceOffloading(Action::OFK_None) ||
        JA.isDeviceOffloading(Action::OFK_OpenMP))) {
+
+    // Determine if target-fast optimizations should be enabled
+    bool TargetFastUsed =
+        Args.hasFlag(options::OPT_fopenmp_target_fast,
+                     options::OPT_fno_openmp_target_fast, OFastEnabled);
     switch (D.getOpenMPRuntime(Args)) {
     case Driver::OMPRT_OMP:
     case Driver::OMPRT_IOMP5:
@@ -6718,10 +6729,19 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                        options::OPT_fno_openmp_assume_threads_oversubscription,
                        /*Default=*/false))
         CmdArgs.push_back("-fopenmp-assume-threads-oversubscription");
-      if (Args.hasArg(options::OPT_fopenmp_assume_no_thread_state))
+
+      // Handle -fopenmp-assume-no-thread-state (implied by target-fast)
+      if (Args.hasFlag(options::OPT_fopenmp_assume_no_thread_state,
+                       options::OPT_fno_openmp_assume_no_thread_state,
+                       /*Default=*/TargetFastUsed))
         CmdArgs.push_back("-fopenmp-assume-no-thread-state");
-      if (Args.hasArg(options::OPT_fopenmp_assume_no_nested_parallelism))
+
+      // Handle -fopenmp-assume-no-nested-parallelism (implied by target-fast)
+      if (Args.hasFlag(options::OPT_fopenmp_assume_no_nested_parallelism,
+                       options::OPT_fno_openmp_assume_no_nested_parallelism,
+                       /*Default=*/TargetFastUsed))
         CmdArgs.push_back("-fopenmp-assume-no-nested-parallelism");
+
       if (Args.hasArg(options::OPT_fopenmp_offload_mandatory))
         CmdArgs.push_back("-fopenmp-offload-mandatory");
       if (Args.hasArg(options::OPT_fopenmp_force_usm))
@@ -8857,6 +8877,8 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
 
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
     AddRISCVTargetArgs(Args, CmdArgs);
     break;
 
@@ -9203,6 +9225,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_v,
       OPT_cuda_path_EQ,
       OPT_rocm_path_EQ,
+      OPT_hip_path_EQ,
       OPT_O_Group,
       OPT_g_Group,
       OPT_g_flags_Group,

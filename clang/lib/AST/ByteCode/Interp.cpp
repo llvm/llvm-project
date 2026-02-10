@@ -38,21 +38,21 @@ static bool RetValue(InterpState &S, CodePtr &Pt) {
 
 static bool Jmp(InterpState &S, CodePtr &PC, int32_t Offset) {
   PC += Offset;
-  return true;
+  return S.noteStep(PC);
 }
 
 static bool Jt(InterpState &S, CodePtr &PC, int32_t Offset) {
   if (S.Stk.pop<bool>()) {
     PC += Offset;
   }
-  return true;
+  return S.noteStep(PC);
 }
 
 static bool Jf(InterpState &S, CodePtr &PC, int32_t Offset) {
   if (!S.Stk.pop<bool>()) {
     PC += Offset;
   }
-  return true;
+  return S.noteStep(PC);
 }
 
 // https://github.com/llvm/llvm-project/issues/102513
@@ -1548,6 +1548,8 @@ bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckTemporary(S, OpPC, Ptr.block(), AK_Destroy))
     return false;
   if (!CheckRange(S, OpPC, Ptr, AK_Destroy))
+    return false;
+  if (!CheckLifetime(S, OpPC, Ptr.getLifetime(), AK_Destroy))
     return false;
 
   // Can't call a dtor on a global variable.
