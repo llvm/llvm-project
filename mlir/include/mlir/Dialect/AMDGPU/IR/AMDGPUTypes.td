@@ -77,8 +77,8 @@ def AMDGPU_DsBarrierStateType : AMDGPU_Type<"DsBarrierState", "ds_barrier_state"
     Type that encodes the state of an in-LDS barrier as used by the atomic barrier
     instructions introduced on gfx1250.
 
-    It consists of a 28-bit count of the number of pending arrivals at the barrier (the
-    *pending count*) in bits [27:0], a 4-bit *phase* in bits [31:28], and the 32-bit count
+    It consists of a 29-bit count of the number of pending arrivals at the barrier (the
+    *pending count*) in bits [28:0], a 3-bit *phase* in bits [31:29], and the 32-bit count
     to re-initialize the pending count to on phase change (the *init count*) in bits [63:32].
 
     When an instruction (either one of the explicit arrival primitives or tensor data

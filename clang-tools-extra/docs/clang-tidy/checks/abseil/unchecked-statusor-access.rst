@@ -24,7 +24,7 @@ ok (e.g. by passing a value to its constructor).
 Below we list some examples of safe and unsafe ``StatusOr<T>`` access
 patterns.
 
-Note: If the check isn’t behaving as you would have expected on a code
+Note: If the check isn't behaving as you would have expected on a code
 snippet, please `report it <http://github.com/llvm/llvm-project/issues/new>`__.
 
 False negatives

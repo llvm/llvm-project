@@ -124,7 +124,7 @@ public:
   // jump consecutively, it tries to flip the conditional jump to convert the
   // direct jump into a fall thru and delete it.  Returns true if a jump
   // instruction can be deleted.
-  virtual bool deleteFallThruJmpInsn(InputSection &is, InputFile *file,
+  virtual bool deleteFallThruJmpInsn(InputSection &is,
                                      InputSection *nextIS) const {
     return false;
   }

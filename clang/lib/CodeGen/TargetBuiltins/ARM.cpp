@@ -1721,6 +1721,9 @@ Function *CodeGenFunction::LookupNeonLLVMIntrinsic(unsigned IntrinsicID,
   return CGM.getIntrinsic(IntrinsicID, Tys);
 }
 
+//===----------------------------------------------------------------------===//
+//  Emit-helpers
+//===----------------------------------------------------------------------===//
 static Value *EmitCommonNeonSISDBuiltinExpr(
     CodeGenFunction &CGF, const ARMVectorIntrinsicInfo &SISDInfo,
     SmallVectorImpl<Value *> &Ops, const CallExpr *E) {
@@ -2494,13 +2497,15 @@ CodeGenFunction::EmitAArch64CompareBuiltinExpr(Value *Op, llvm::Type *Ty,
     Op = Builder.CreateBitCast(Op, Ty);
   }
 
+  Constant *zero = Constant::getNullValue(Op->getType());
+
   if (CmpInst::isFPPredicate(Pred)) {
     if (Pred == CmpInst::FCMP_OEQ)
-      Op = Builder.CreateFCmp(Pred, Op, Constant::getNullValue(Op->getType()));
+      Op = Builder.CreateFCmp(Pred, Op, zero);
     else
-      Op = Builder.CreateFCmpS(Pred, Op, Constant::getNullValue(Op->getType()));
+      Op = Builder.CreateFCmpS(Pred, Op, zero);
   } else {
-    Op = Builder.CreateICmp(Pred, Op, Constant::getNullValue(Op->getType()));
+    Op = Builder.CreateICmp(Pred, Op, zero);
   }
 
   llvm::Type *ResTy = Ty;

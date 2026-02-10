@@ -1994,6 +1994,8 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
     Module = getPreprocessor().getHeaderSearchInfo().lookupModule(
         ModuleName, ImportLoc, true, !IsInclusionDirective);
     if (Module) {
+      if (PPCallbacks *PPCb = getPreprocessor().getPPCallbacks())
+        PPCb->moduleLoadSkipped(Module);
       // Mark the module and its submodules as if they were loaded from a PCM.
       // This prevents emission of the "missing submodule" diagnostic below.
       std::vector Worklist{Module};

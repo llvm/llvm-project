@@ -43,6 +43,9 @@ void test_builtin_elementwise_abs(int i, double d, float4 v, int3 iv, unsigned u
 
   uv = __builtin_elementwise_abs(uv);
   // expected-error@-1 {{1st argument must be a scalar or vector of signed integer or floating-point types (was 'unsigned4' (vector of 4 'unsigned int' values))}}
+
+  i = __builtin_elementwise_abs(&i);
+  // expected-error@-1 {{1st argument must be a scalar or vector of signed integer or floating-point types (was 'int *')}}
 }
 
 void test_builtin_elementwise_add_sat(int i, short s, double d, float4 v, int3 iv, unsigned3 uv, int *p) {
