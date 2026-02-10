@@ -21,11 +21,11 @@
 
 #include "../test_text_encoding.h"
 
-constexpr void test_ctor(std::string_view str, std::string_view expect, std::text_encoding::id expect_id) {
+constexpr void test_ctor(std::string_view str, std::text_encoding::id expect_id) {
   std::text_encoding te = std::text_encoding(str);
 
   assert(te.mib() == expect_id);
-  assert(te.name() == expect);
+  assert(te.name() == str);
 }
 
 constexpr void test_primary_encoding_spellings() {
@@ -53,27 +53,27 @@ constexpr bool test() {
   }
 
   {
-    test_ctor("U_T_F-8", "U_T_F-8", std::text_encoding::UTF8);
+    test_ctor("U_T_F-8", std::text_encoding::UTF8);
   }
 
   {
-    test_ctor("utf8", "utf8", std::text_encoding::UTF8);
+    test_ctor("utf8", std::text_encoding::UTF8);
   }
 
   {
-    test_ctor("u.t.f-008", "u.t.f-008", std::text_encoding::UTF8);
+    test_ctor("u.t.f-008", std::text_encoding::UTF8);
   }
 
   {
-    test_ctor("utf-80", "utf-80", std::text_encoding::other);
+    test_ctor("utf-80", std::text_encoding::other);
   }
 
   {
-    test_ctor("iso885931988", "iso885931988", std::text_encoding::ISOLatin3);
+    test_ctor("iso885931988", std::text_encoding::ISOLatin3);
   }
 
   {
-    test_ctor("iso00885931988", "iso00885931988", std::text_encoding::ISOLatin3);
+    test_ctor("iso00885931988", std::text_encoding::ISOLatin3);
   }
 
   {

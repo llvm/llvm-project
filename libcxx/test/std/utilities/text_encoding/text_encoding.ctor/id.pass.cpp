@@ -22,17 +22,17 @@
 
 using id = std::text_encoding::id;
 
-constexpr void id_ctor(id i, id expect_id, std::string_view expect_name) {
+constexpr void id_ctor(id i, std::string_view expect_name) {
   std::text_encoding te = std::text_encoding(i);
 
-  assert(te.mib() == expect_id);
+  assert(te.mib() == i);
   assert(expect_name == te.name());
   assert(std::ranges::contains(te.aliases(), expect_name));
 }
 
 constexpr void id_ctors() {
   for (auto pair : unique_encoding_data) {
-    id_ctor(id(pair.mib), id(pair.mib), pair.name);
+    id_ctor(id(pair.mib), pair.name);
   }
 }
 
