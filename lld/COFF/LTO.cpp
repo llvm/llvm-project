@@ -55,9 +55,8 @@ lto::Config BitcodeCompiler::createConfig() {
     options.FunctionSections = true;
     options.DataSections = true;
 
-    if (emitAsm) {
+    if (emitAsm)
       options.MCOptions.AsmVerbose = true;
-    }
   };
 
   for (StringRef C : ctx.config.mllvmOpts)
