@@ -28,7 +28,7 @@ using namespace lldb_private;
 using namespace lldb_private::process_freebsd;
 
 // Translation between RegisterInfoPosix_riscv64 and reg.h
-// https://github.com/freebsd/freebsd-src/blob/main/sys/riscv/include/reg.h:
+// https://cgit.freebsd.org/src/tree/sys/riscv/include/reg.h:
 //
 // struct reg {
 // 	__uint64_t	ra;		/* return address */
@@ -50,10 +50,6 @@ using namespace lldb_private::process_freebsd;
 // struct dbreg {
 // 	int dummy;
 // };
-
-// ============================================================================
-// Static Conversion Functions between FreeBSD and POSIX
-// ============================================================================
 
 void NativeRegisterContextFreeBSD_riscv64::FreeBSDToPOSIXGPR(
     const struct reg &freebsd_gpr, RegisterInfoPOSIX_riscv64::GPR &posix_gpr) {
@@ -145,10 +141,6 @@ void NativeRegisterContextFreeBSD_riscv64::POSIXToFreeBSDFPR(
   freebsd_fpr.fp_fcsr = static_cast<uint64_t>(posix_fpr.fcsr);
 }
 
-// ============================================================================
-// Constructor and Setup
-// ============================================================================
-
 NativeRegisterContextFreeBSD *
 NativeRegisterContextFreeBSD::CreateHostNativeRegisterContextFreeBSD(
     const ArchSpec &target_arch, NativeThreadFreeBSD &native_thread) {
@@ -172,10 +164,6 @@ NativeRegisterContextFreeBSD_riscv64::GetRegisterInfo() const {
       *m_register_info_interface_up);
 }
 
-// ============================================================================
-// Register Set Information
-// ============================================================================
-
 uint32_t NativeRegisterContextFreeBSD_riscv64::GetRegisterSetCount() const {
   return GetRegisterInfo().GetRegisterSetCount();
 }
@@ -196,10 +184,6 @@ void NativeRegisterContextFreeBSD_riscv64::InvalidateAllRegisters() {
   m_gpr_is_valid = false;
   m_fpr_is_valid = false;
 }
-
-// ============================================================================
-// Ptrace Wrappers
-// ============================================================================
 
 Status NativeRegisterContextFreeBSD_riscv64::ReadGPR() {
   if (m_gpr_is_valid)
@@ -246,10 +230,6 @@ Status NativeRegisterContextFreeBSD_riscv64::WriteFPR() {
 
   return error;
 }
-
-// ============================================================================
-// Single Register Access Helpers
-// ============================================================================
 
 Status
 NativeRegisterContextFreeBSD_riscv64::GetGPRValue(uint32_t reg_index,
@@ -386,10 +366,6 @@ Status NativeRegisterContextFreeBSD_riscv64::SetGPRValue(uint32_t reg_index,
   }
 }
 
-// ============================================================================
-// Single Register Read/Write
-// ============================================================================
-
 Status
 NativeRegisterContextFreeBSD_riscv64::ReadRegister(const RegisterInfo *reg_info,
                                                    RegisterValue &reg_value) {
@@ -424,18 +400,18 @@ NativeRegisterContextFreeBSD_riscv64::ReadRegister(const RegisterInfo *reg_info,
     uint32_t fpr_index =
         reg - GetRegisterInfo().GetRegisterInfo()[reg].kinds[eRegisterKindLLDB];
 
-    if (fpr_index < 32) {
+    if (fpr_index < 32)
       reg_value = m_fpr.fp_x[fpr_index][0]; // Lower 64 bits
-    } else if (fpr_index == 32) {
+    else if (fpr_index == 32)
       reg_value = static_cast<uint32_t>(m_fpr.fp_fcsr);
-    } else {
+    else
       return Status::FromErrorString("invalid FPR index");
-    }
 
     return Status();
   }
 
-  return Status::FromErrorString("unsupported register type");
+  return Status::FromErrorStringWithFormat("unsupported register type: %u",
+                                           reg);
 }
 
 Status NativeRegisterContextFreeBSD_riscv64::WriteRegister(
@@ -481,16 +457,12 @@ Status NativeRegisterContextFreeBSD_riscv64::WriteRegister(
     return WriteFPR();
   }
 
-  return Status::FromErrorString("unsupported register type");
+  return Status::FromErrorStringWithFormat("unsupported register type: %u",
+                                           reg);
 }
-
-// ============================================================================
-// Bulk Register Read/Write (using conversion functions)
-// ============================================================================
 
 Status NativeRegisterContextFreeBSD_riscv64::ReadAllRegisterValues(
     lldb::WritableDataBufferSP &data_sp) {
-  // Read from kernel
   Status error = ReadGPR();
   if (error.Fail())
     return error;
@@ -504,7 +476,8 @@ Status NativeRegisterContextFreeBSD_riscv64::ReadAllRegisterValues(
                             sizeof(RegisterInfoPOSIX_riscv64::FPR);
   data_sp = std::make_shared<DataBufferHeap>(total_size, 0);
   if (!data_sp || !data_sp->GetBytes())
-    return Status::FromErrorString("failed to allocate data buffer");
+    return Status::FromErrorString(
+        "failed to allocate data buffer for POSIX-layout register data");
 
   // Get pointers to GPR and FPR sections of buffer
   auto *gpr_dst =
@@ -548,7 +521,6 @@ Status NativeRegisterContextFreeBSD_riscv64::WriteAllRegisterValues(
   POSIXToFreeBSDGPR(*gpr_src, m_gpr);
   POSIXToFreeBSDFPR(*fpr_src, m_fpr);
 
-  // Write to kernel
   Status error = WriteGPR();
   if (error.Fail())
     return error;
