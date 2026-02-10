@@ -1449,7 +1449,7 @@ void BitcodeFile::parse() {
           symtab.addRegular(this, symName, nullptr, fakeSC, 0, objSym.isWeak());
     }
     symbols.push_back(sym);
-    if (objSym.isUsed() || objSym.isLibcall(tli, libcalls))
+    if (objSym.isUsed())
       symtab.ctx.config.gcroot.push_back(sym);
   }
   directives = saver.save(obj->getCOFFLinkerOpts());
