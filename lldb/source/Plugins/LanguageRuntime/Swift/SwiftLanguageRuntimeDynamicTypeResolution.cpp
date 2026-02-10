@@ -2231,7 +2231,8 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Class(
     lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
     Address &address, Value::ValueType &value_type,
     llvm::ArrayRef<uint8_t> &local_buffer) {
-  auto [instance_ptr, address_type] = in_value.GetPointerValue();
+  auto [ptr, address_type] = in_value.GetPointerValue();
+  lldb::addr_t instance_ptr = ptr;
   value_type = Value::GetValueTypeFromAddressType(address_type);
 
   if (instance_ptr == LLDB_INVALID_ADDRESS || instance_ptr == 0)
