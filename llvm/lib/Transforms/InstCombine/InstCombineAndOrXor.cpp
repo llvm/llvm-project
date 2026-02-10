@@ -3348,6 +3348,9 @@ Value *InstCombinerImpl::matchSelectFromAndOr(Value *A, Value *B, Value *C,
       D = Builder.CreateNot(D);
     Value *BitcastD = Builder.CreateBitCast(D, SelTy);
     Value *Select = Builder.CreateSelect(Cond, BitcastB, BitcastD);
+    if (!ProfcheckDisableMetadataFixes)
+      if (auto *I = dyn_cast<Instruction>(Select))
+        setExplicitlyUnknownBranchWeightsIfProfiled(*I, DEBUG_TYPE, &F);
     return Builder.CreateBitCast(Select, OrigType);
   }
 
