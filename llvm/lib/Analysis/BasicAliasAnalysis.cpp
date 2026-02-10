@@ -757,7 +757,7 @@ ModRefInfo BasicAAResult::getModRefInfoMask(const MemoryLocation &Loc,
                                             AAQueryInfo &AAQI,
                                             bool IgnoreLocals) {
   assert(Visited.empty() && "Visited must be cleared after use!");
-  auto _ = make_scope_exit([&] { Visited.clear(); });
+  llvm::scope_exit _([&] { Visited.clear(); });
 
   unsigned MaxLookup = 8;
   SmallVector<const Value *, 16> Worklist;

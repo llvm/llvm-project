@@ -71,6 +71,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK: using PredicateBitset = llvm::Bitset<MAX_SUBTARGET_PREDICATES>;
 
 // CHECK-LABEL: #ifdef GET_GLOBALISEL_TEMPORARIES_DECL
+// CHECK-EMPTY:
 // CHECK-NEXT:    mutable MatcherState State;
 // CHECK-NEXT:    typedef ComplexRendererFns(MyTargetInstructionSelector::*ComplexMatcherMemFn)(MachineOperand &) const;
 // CHECK-NEXT:    typedef void(MyTargetInstructionSelector::*CustomRendererFn)(MachineInstrBuilder &, const MachineInstr &, int) const;
@@ -85,12 +86,15 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    bool testMOPredicate_MO(unsigned PredicateID, const MachineOperand &MO, const MatcherState &State) const override;
 // CHECK-NEXT:    bool testSimplePredicate(unsigned PredicateID) const override;
 // CHECK-NEXT:    bool runCustomAction(unsigned FnID, const MatcherState &State, NewMIVector &OutMIs) const override;
-// CHECK-NEXT:  #endif // ifdef GET_GLOBALISEL_TEMPORARIES_DECL
+// CHECK-EMPTY:
+// CHECK-NEXT:  #endif // GET_GLOBALISEL_TEMPORARIES_DECL
 
 // CHECK-LABEL: #ifdef GET_GLOBALISEL_TEMPORARIES_INIT
+// CHECK-EMPTY:
 // CHECK-NEXT:    , State(3),
 // CHECK-NEXT:    ExecInfo(TypeObjects, NumTypeObjects, FeatureBitsets, ComplexPredicateFns, CustomRenderers)
-// CHECK-NEXT:  #endif // ifdef GET_GLOBALISEL_TEMPORARIES_INIT
+// CHECK-EMPTY:
+// CHECK-NEXT:  #endif // GET_GLOBALISEL_TEMPORARIES_INIT
 
 // CHECK-LABEL: // LLT Objects.
 // CHECK-NEXT:  enum {
@@ -155,7 +159,8 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 // CHECK-LABEL: // PatFrag predicates.
 // CHECK-NEXT:  enum {
-// CHECK-NEXT:   GICXXPred_MI_Predicate_frag = GICXXPred_Invalid + 1,
+// CHECK-NEXT:   GICXXPred_MI_Predicate_ffloor_nnan = GICXXPred_Invalid + 1,
+// CHECK-NEXT:   GICXXPred_MI_Predicate_frag,
 // CHECK-NEXT:   GICXXPred_MI_Predicate_or_disjoint,
 // CHECK-NEXT:  };
 
@@ -306,7 +311,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // R19C-NEXT:    // (select:{ *:[i32] } GPR32:{ *:[i32] }:$src1, (complex_rr:{ *:[i32] } GPR32:{ *:[i32] }:$src2a, GPR32:{ *:[i32] }:$src2b), (select:{ *:[i32] } GPR32:{ *:[i32] }:$src3, complex:{ *:[i32] }:$src4, (complex:{ *:[i32] } i32imm:{ *:[i32] }:$src5a, i32imm:{ *:[i32] }:$src5b)))  =>  (INSN3:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2b, GPR32:{ *:[i32] }:$src2a, (INSN4:{ *:[i32] } GPR32:{ *:[i32] }:$src3, complex:{ *:[i32] }:$src4, i32imm:{ *:[i32] }:$src5a, i32imm:{ *:[i32] }:$src5b))
 // R19C-NEXT:    GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
 // R19C-NEXT:    GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(MyTarget::INSN4),
-// R19C-NEXT:    GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
+// R19C-NEXT:    GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define)),
 // R19C-NEXT:    GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/1, /*OpIdx*/1, // src3
 // R19C-NEXT:    GIR_ComplexRenderer, /*InsnID*/1, /*RendererID*/GIMT_Encode2(1),
 // R19C-NEXT:    GIR_ComplexSubOperandRenderer, /*InsnID*/1, /*RendererID*/GIMT_Encode2(2), /*SubOperand*/0, // src5a

@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir -triple x86_64-linux-pc %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir -triple x86_64-linux-pc %s -o %t.ll
+// RUN: FileCheck --input-file=%t.ll %s
 
 struct NoCopyConstruct {};
 
@@ -43,7 +44,7 @@ struct HasDtor {
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
 // CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!rec_NoCopyConstruct> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!rec_NoCopyConstruct> {{.*}}):
-// CHECK-NEXT: cir.call @_ZN15NoCopyConstructC1ERKS_(%[[ARG_TO]], %[[ARG_FROM]]) nothrow : (!cir.ptr<!rec_NoCopyConstruct>, !cir.ptr<!rec_NoCopyConstruct>) -> ()
+// CHECK-NEXT: cir.copy %[[ARG_FROM]] to %[[ARG_TO]] : !cir.ptr<!rec_NoCopyConstruct>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 //
@@ -63,7 +64,7 @@ struct HasDtor {
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
 // CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!rec_NonDefaultCtor> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!rec_NonDefaultCtor> {{.*}}):
-// CHECK-NEXT: cir.call @_ZN14NonDefaultCtorC1ERKS_(%[[ARG_TO]], %[[ARG_FROM]]) nothrow : (!cir.ptr<!rec_NonDefaultCtor>, !cir.ptr<!rec_NonDefaultCtor>) -> ()
+// CHECK-NEXT: cir.copy %[[ARG_FROM]] to %[[ARG_TO]] : !cir.ptr<!rec_NonDefaultCtor>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 //
@@ -73,7 +74,7 @@ struct HasDtor {
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
 // CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!rec_HasDtor> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!rec_HasDtor> {{.*}}):
-// CHECK-NEXT: cir.call @_ZN7HasDtorC1ERKS_(%[[ARG_TO]], %[[ARG_FROM]]) nothrow : (!cir.ptr<!rec_HasDtor>, !cir.ptr<!rec_HasDtor>) -> ()
+// CHECK-NEXT: cir.copy %[[ARG_FROM]] to %[[ARG_TO]] : !cir.ptr<!rec_HasDtor>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } destroy {
 // CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasDtor> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasDtor> {{.*}}):
@@ -176,7 +177,7 @@ struct HasDtor {
 // CHECK-NEXT: %[[STRIDE_FROM:.*]] = cir.ptr_stride %[[DECAY_FROM]], %[[ITR_LOAD]] : (!cir.ptr<!rec_NoCopyConstruct>, !u64i) -> !cir.ptr<!rec_NoCopyConstruct>
 // CHECK-NEXT: %[[DECAY_TO:.*]] = cir.cast array_to_ptrdecay %[[ARG_TO]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> -> !cir.ptr<!rec_NoCopyConstruct>
 // CHECK-NEXT: %[[STRIDE_TO:.*]] = cir.ptr_stride %[[DECAY_TO]], %[[ITR_LOAD]] : (!cir.ptr<!rec_NoCopyConstruct>, !u64i) -> !cir.ptr<!rec_NoCopyConstruct>
-// CHECK-NEXT: cir.call @_ZN15NoCopyConstructC1ERKS_(%[[STRIDE_TO]], %[[STRIDE_FROM]]) nothrow : (!cir.ptr<!rec_NoCopyConstruct>, !cir.ptr<!rec_NoCopyConstruct>) -> ()
+// CHECK-NEXT: cir.copy %[[STRIDE_FROM]] to %[[STRIDE_TO]] : !cir.ptr<!rec_NoCopyConstruct>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -246,7 +247,7 @@ struct HasDtor {
 // CHECK-NEXT: %[[STRIDE_FROM:.*]] = cir.ptr_stride %[[DECAY_FROM]], %[[ITR_LOAD]] : (!cir.ptr<!rec_NonDefaultCtor>, !u64i) -> !cir.ptr<!rec_NonDefaultCtor>
 // CHECK-NEXT: %[[DECAY_TO:.*]] = cir.cast array_to_ptrdecay %[[ARG_TO]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> -> !cir.ptr<!rec_NonDefaultCtor>
 // CHECK-NEXT: %[[STRIDE_TO:.*]] = cir.ptr_stride %[[DECAY_TO]], %[[ITR_LOAD]] : (!cir.ptr<!rec_NonDefaultCtor>, !u64i) -> !cir.ptr<!rec_NonDefaultCtor>
-// CHECK-NEXT: cir.call @_ZN14NonDefaultCtorC1ERKS_(%[[STRIDE_TO]], %[[STRIDE_FROM]]) nothrow : (!cir.ptr<!rec_NonDefaultCtor>, !cir.ptr<!rec_NonDefaultCtor>) -> ()
+// CHECK-NEXT: cir.copy %[[STRIDE_FROM]] to %[[STRIDE_TO]] : !cir.ptr<!rec_NonDefaultCtor>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -281,7 +282,7 @@ struct HasDtor {
 // CHECK-NEXT: %[[STRIDE_FROM:.*]] = cir.ptr_stride %[[DECAY_FROM]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasDtor>, !u64i) -> !cir.ptr<!rec_HasDtor>
 // CHECK-NEXT: %[[DECAY_TO:.*]] = cir.cast array_to_ptrdecay %[[ARG_TO]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>> -> !cir.ptr<!rec_HasDtor>
 // CHECK-NEXT: %[[STRIDE_TO:.*]] = cir.ptr_stride %[[DECAY_TO]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasDtor>, !u64i) -> !cir.ptr<!rec_HasDtor>
-// CHECK-NEXT: cir.call @_ZN7HasDtorC1ERKS_(%[[STRIDE_TO]], %[[STRIDE_FROM]]) nothrow : (!cir.ptr<!rec_HasDtor>, !cir.ptr<!rec_HasDtor>) -> ()
+// CHECK-NEXT: cir.copy %[[STRIDE_FROM]] to %[[STRIDE_TO]] : !cir.ptr<!rec_HasDtor>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i

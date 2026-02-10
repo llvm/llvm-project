@@ -20,75 +20,75 @@ jobs:
         include:
           - os: ubuntu-24.04
             build_type: Debug
-            c_compiler: clang-22
-            cpp_compiler: clang++-22
+            c_compiler: clang-21
+            cpp_compiler: clang++-21
             target: x86_64-unknown-linux-llvm
             include_scudo: ON
           - os: ubuntu-24.04
             build_type: Release
-            c_compiler: clang-22
-            cpp_compiler: clang++-22
+            c_compiler: clang-21
+            cpp_compiler: clang++-21
             target: x86_64-unknown-linux-llvm
             include_scudo: ON
           - os: ubuntu-24.04
             build_type: MinSizeRel
-            c_compiler: clang-22
-            cpp_compiler: clang++-22
+            c_compiler: clang-21
+            cpp_compiler: clang++-21
             target: x86_64-unknown-linux-llvm
             include_scudo: ON
           - os: ubuntu-24.04-arm
             build_type: Debug
-            c_compiler: clang-22
-            cpp_compiler: clang++-22
+            c_compiler: clang-21
+            cpp_compiler: clang++-21
             target: aarch64-unknown-linux-llvm
             include_scudo: ON
           - os: ubuntu-24.04
             build_type: Debug
-            c_compiler: clang-22
-            cpp_compiler: clang++-22
+            c_compiler: clang-21
+            cpp_compiler: clang++-21
             target: x86_64-unknown-uefi-llvm
             include_scudo: OFF
           - os: ubuntu-24.04
             build_type: MinSizeRel
-            c_compiler: clang-22
-            cpp_compiler: clang++-22
+            c_compiler: clang-21
+            cpp_compiler: clang++-21
             target: armv6m-none-eabi
             include_scudo: OFF
           - os: ubuntu-24.04
             build_type: MinSizeRel
-            c_compiler: clang-22
-            cpp_compiler: clang++-22
+            c_compiler: clang-21
+            cpp_compiler: clang++-21
             target: armv7m-none-eabi
             include_scudo: OFF
           - os: ubuntu-24.04
             build_type: MinSizeRel
-            c_compiler: clang-22
-            cpp_compiler: clang++-22
+            c_compiler: clang-21
+            cpp_compiler: clang++-21
             target: armv7em-none-eabi
             include_scudo: OFF
           - os: ubuntu-24.04
             build_type: MinSizeRel
-            c_compiler: clang-22
-            cpp_compiler: clang++-22
+            c_compiler: clang-21
+            cpp_compiler: clang++-21
             target: armv8m.main-none-eabi
             include_scudo: OFF
           - os: ubuntu-24.04
             build_type: MinSizeRel
-            c_compiler: clang-22
-            cpp_compiler: clang++-22
+            c_compiler: clang-21
+            cpp_compiler: clang++-21
             target: armv8.1m.main-none-eabi
             include_scudo: OFF
           - os: ubuntu-24.04
             build_type: MinSizeRel
-            c_compiler: clang-22
-            cpp_compiler: clang++-22
+            c_compiler: clang-21
+            cpp_compiler: clang++-21
             target: riscv32-unknown-elf
             include_scudo: OFF
           # TODO: add back gcc build when it is fixed
           # - c_compiler: gcc
           #   cpp_compiler: g++
     steps:
-    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
     
     # Libc's build is relatively small comparing with other components of LLVM.
     # A fresh fullbuild takes about 190MiB of uncompressed disk space, which can
@@ -97,7 +97,7 @@ jobs:
     # Do not use direct GHAC access even though it is supported by sccache. GHAC rejects
     # frequent small object writes.
     - name: Setup ccache
-      uses: hendrikmuhs/ccache-action@bfa03e1de4d7f7c3e80ad9109feedd05c4f5a716 # v1.2.19
+      uses: hendrikmuhs/ccache-action@5ebbd400eff9e74630f759d94ddd7b6c26299639 # v1.2.20
       with:
         max-size: 1G
         key: libc_fullbuild_${{ matrix.c_compiler }}
@@ -111,7 +111,7 @@ jobs:
       run: |
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
-        sudo ./llvm.sh 22
+        sudo ./llvm.sh 21
         sudo apt-get update
         sudo apt-get install -y libmpfr-dev libgmp-dev libmpc-dev ninja-build linux-libc-dev
         sudo ln -sf /usr/include/$(uname -p)-linux-gnu/asm /usr/include/asm

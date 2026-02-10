@@ -14,6 +14,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// TODO: uses or report_fatal_error (which is also deprecated) /
+//       ReportFatalUsageError in this file should be refactored, as per LLVM
+//       best practices, to rely on the Diagnostic infrastructure.
+
 #include "SPIRVModuleAnalysis.h"
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "MCTargetDesc/SPIRVMCTargetDesc.h"
@@ -935,7 +939,7 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
                     Capability::SampledImageArrayDynamicIndexing,
                     Capability::StorageBufferArrayDynamicIndexing,
                     Capability::StorageImageArrayDynamicIndexing,
-                    Capability::DerivativeControl});
+                    Capability::DerivativeControl, Capability::MinLod});
 
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
@@ -1071,6 +1075,39 @@ static bool isBFloat16Type(const SPIRVType *TypeDef) {
 #define ATOM_FLT_REQ_EXT_MSG(ExtName)                                          \
   "The atomic float instruction requires the following SPIR-V "                \
   "extension: SPV_EXT_shader_atomic_float" ExtName
+static void AddAtomicVectorFloatRequirements(const MachineInstr &MI,
+                                             SPIRV::RequirementHandler &Reqs,
+                                             const SPIRVSubtarget &ST) {
+  SPIRVType *VecTypeDef =
+      MI.getMF()->getRegInfo().getVRegDef(MI.getOperand(1).getReg());
+
+  const unsigned Rank = VecTypeDef->getOperand(2).getImm();
+  if (Rank != 2 && Rank != 4)
+    reportFatalUsageError("Result type of an atomic vector float instruction "
+                          "must be a 2-component or 4 component vector");
+
+  SPIRVType *EltTypeDef =
+      MI.getMF()->getRegInfo().getVRegDef(VecTypeDef->getOperand(1).getReg());
+
+  if (EltTypeDef->getOpcode() != SPIRV::OpTypeFloat ||
+      EltTypeDef->getOperand(1).getImm() != 16)
+    reportFatalUsageError(
+        "The element type for the result type of an atomic vector float "
+        "instruction must be a 16-bit floating-point scalar");
+
+  if (isBFloat16Type(EltTypeDef))
+    reportFatalUsageError(
+        "The element type for the result type of an atomic vector float "
+        "instruction cannot be a bfloat16 scalar");
+  if (!ST.canUseExtension(SPIRV::Extension::SPV_NV_shader_atomic_fp16_vector))
+    reportFatalUsageError(
+        "The atomic float16 vector instruction requires the following SPIR-V "
+        "extension: SPV_NV_shader_atomic_fp16_vector");
+
+  Reqs.addExtension(SPIRV::Extension::SPV_NV_shader_atomic_fp16_vector);
+  Reqs.addCapability(SPIRV::Capability::AtomicFloat16VectorNV);
+}
+
 static void AddAtomicFloatRequirements(const MachineInstr &MI,
                                        SPIRV::RequirementHandler &Reqs,
                                        const SPIRVSubtarget &ST) {
@@ -1078,6 +1115,10 @@ static void AddAtomicFloatRequirements(const MachineInstr &MI,
          "Expect register operand in atomic float instruction");
   Register TypeReg = MI.getOperand(1).getReg();
   SPIRVType *TypeDef = MI.getMF()->getRegInfo().getVRegDef(TypeReg);
+
+  if (TypeDef->getOpcode() == SPIRV::OpTypeVector)
+    return AddAtomicVectorFloatRequirements(MI, Reqs, ST);
+
   if (TypeDef->getOpcode() != SPIRV::OpTypeFloat)
     report_fatal_error("Result type of an atomic float instruction must be a "
                        "floating-point type scalar");
@@ -1357,6 +1398,18 @@ void addPrintfRequirements(const MachineInstr &MI,
   }
 }
 
+static void addImageOperandReqs(const MachineInstr &MI,
+                                SPIRV::RequirementHandler &Reqs,
+                                const SPIRVSubtarget &ST, unsigned OpIdx) {
+  if (MI.getNumOperands() <= OpIdx)
+    return;
+  uint32_t Mask = MI.getOperand(OpIdx).getImm();
+  for (uint32_t I = 0; I < 32; ++I)
+    if (Mask & (1U << I))
+      Reqs.getAndAddRequirements(SPIRV::OperandCategory::ImageOperandOperand,
+                                 1U << I, ST);
+}
+
 void addInstrRequirements(const MachineInstr &MI,
                           SPIRV::ModuleAnalysisInfo &MAI,
                           const SPIRVSubtarget &ST) {
@@ -1395,6 +1448,21 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::Int16);
     else if (BitWidth == 8)
       Reqs.addCapability(SPIRV::Capability::Int8);
+    else if (BitWidth == 4 &&
+             ST.canUseExtension(SPIRV::Extension::SPV_INTEL_int4)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_int4);
+      Reqs.addCapability(SPIRV::Capability::Int4TypeINTEL);
+    } else if (BitWidth != 32) {
+      if (!ST.canUseExtension(
+              SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers))
+        reportFatalUsageError(
+            "OpTypeInt type with a width other than 8, 16, 32 or 64 bits "
+            "requires the following SPIR-V extension: "
+            "SPV_ALTERA_arbitrary_precision_integers");
+      Reqs.addExtension(
+          SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers);
+      Reqs.addCapability(SPIRV::Capability::ArbitraryPrecisionIntegersALTERA);
+    }
     break;
   }
   case SPIRV::OpDot: {
@@ -1594,6 +1662,48 @@ void addInstrRequirements(const MachineInstr &MI,
     }
     break;
   }
+  case SPIRV::OpImageQueryFormat: {
+    Register ResultReg = MI.getOperand(0).getReg();
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    static const unsigned CompareOps[] = {
+        SPIRV::OpIEqual,       SPIRV::OpINotEqual,
+        SPIRV::OpUGreaterThan, SPIRV::OpUGreaterThanEqual,
+        SPIRV::OpULessThan,    SPIRV::OpULessThanEqual,
+        SPIRV::OpSGreaterThan, SPIRV::OpSGreaterThanEqual,
+        SPIRV::OpSLessThan,    SPIRV::OpSLessThanEqual};
+
+    auto CheckAndAddExtension = [&](int64_t ImmVal) {
+      if (ImmVal == 4323 || ImmVal == 4324) {
+        if (ST.canUseExtension(SPIRV::Extension::SPV_EXT_image_raw10_raw12))
+          Reqs.addExtension(SPIRV::Extension::SPV_EXT_image_raw10_raw12);
+        else
+          report_fatal_error("This requires the "
+                             "SPV_EXT_image_raw10_raw12 extension");
+      }
+    };
+
+    for (MachineInstr &UseInst : MRI.use_instructions(ResultReg)) {
+      unsigned Opc = UseInst.getOpcode();
+
+      if (Opc == SPIRV::OpSwitch) {
+        for (const MachineOperand &Op : UseInst.operands())
+          if (Op.isImm())
+            CheckAndAddExtension(Op.getImm());
+      } else if (llvm::is_contained(CompareOps, Opc)) {
+        for (unsigned i = 1; i < UseInst.getNumOperands(); ++i) {
+          Register UseReg = UseInst.getOperand(i).getReg();
+          MachineInstr *ConstInst = MRI.getVRegDef(UseReg);
+          if (ConstInst && ConstInst->getOpcode() == SPIRV::OpConstantI) {
+            int64_t ImmVal = ConstInst->getOperand(2).getImm();
+            if (ImmVal)
+              CheckAndAddExtension(ImmVal);
+          }
+        }
+      }
+    }
+    break;
+  }
+
   case SPIRV::OpGroupNonUniformShuffle:
   case SPIRV::OpGroupNonUniformShuffleXor:
     Reqs.addCapability(SPIRV::Capability::GroupNonUniformShuffle);
@@ -1670,6 +1780,12 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::ExpectAssumeKHR);
     }
     break;
+  case SPIRV::OpFmaKHR:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_fma)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_KHR_fma);
+      Reqs.addCapability(SPIRV::Capability::FmaKHR);
+    }
+    break;
   case SPIRV::OpPtrCastToCrossWorkgroupINTEL:
   case SPIRV::OpCrossWorkgroupCastToPtrINTEL:
     if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_usm_storage_classes)) {
@@ -1691,6 +1807,27 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addExtension(SPIRV::Extension::SPV_KHR_subgroup_rotate);
     Reqs.addCapability(SPIRV::Capability::GroupNonUniformRotateKHR);
     Reqs.addCapability(SPIRV::Capability::GroupNonUniform);
+    break;
+  case SPIRV::OpFixedCosALTERA:
+  case SPIRV::OpFixedSinALTERA:
+  case SPIRV::OpFixedCosPiALTERA:
+  case SPIRV::OpFixedSinPiALTERA:
+  case SPIRV::OpFixedExpALTERA:
+  case SPIRV::OpFixedLogALTERA:
+  case SPIRV::OpFixedRecipALTERA:
+  case SPIRV::OpFixedSqrtALTERA:
+  case SPIRV::OpFixedSinCosALTERA:
+  case SPIRV::OpFixedSinCosPiALTERA:
+  case SPIRV::OpFixedRsqrtALTERA:
+    if (!ST.canUseExtension(
+            SPIRV::Extension::SPV_ALTERA_arbitrary_precision_fixed_point))
+      report_fatal_error("This instruction requires the "
+                         "following SPIR-V extension: "
+                         "SPV_ALTERA_arbitrary_precision_fixed_point",
+                         false);
+    Reqs.addExtension(
+        SPIRV::Extension::SPV_ALTERA_arbitrary_precision_fixed_point);
+    Reqs.addCapability(SPIRV::Capability::ArbitraryPrecisionFixedPointALTERA);
     break;
   case SPIRV::OpGroupIMulKHR:
   case SPIRV::OpGroupFMulKHR:
@@ -2009,6 +2146,21 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpSUDotAccSat:
     AddDotProductRequirements(MI, Reqs, ST);
     break;
+  case SPIRV::OpImageSampleImplicitLod:
+    Reqs.addCapability(SPIRV::Capability::Shader);
+    addImageOperandReqs(MI, Reqs, ST, 4);
+    break;
+  case SPIRV::OpImageSampleExplicitLod:
+    addImageOperandReqs(MI, Reqs, ST, 4);
+    break;
+  case SPIRV::OpImageSampleDrefImplicitLod:
+    Reqs.addCapability(SPIRV::Capability::Shader);
+    addImageOperandReqs(MI, Reqs, ST, 5);
+    break;
+  case SPIRV::OpImageSampleDrefExplicitLod:
+    Reqs.addCapability(SPIRV::Capability::Shader);
+    addImageOperandReqs(MI, Reqs, ST, 5);
+    break;
   case SPIRV::OpImageRead: {
     Register ImageReg = MI.getOperand(2).getReg();
     SPIRVType *TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(
@@ -2048,6 +2200,59 @@ void addInstrRequirements(const MachineInstr &MI,
           false);
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_long_composites);
     Reqs.addCapability(SPIRV::Capability::LongCompositesINTEL);
+    break;
+  }
+  case SPIRV::OpArbitraryFloatEQALTERA:
+  case SPIRV::OpArbitraryFloatGEALTERA:
+  case SPIRV::OpArbitraryFloatGTALTERA:
+  case SPIRV::OpArbitraryFloatLEALTERA:
+  case SPIRV::OpArbitraryFloatLTALTERA:
+  case SPIRV::OpArbitraryFloatCbrtALTERA:
+  case SPIRV::OpArbitraryFloatCosALTERA:
+  case SPIRV::OpArbitraryFloatCosPiALTERA:
+  case SPIRV::OpArbitraryFloatExp10ALTERA:
+  case SPIRV::OpArbitraryFloatExp2ALTERA:
+  case SPIRV::OpArbitraryFloatExpALTERA:
+  case SPIRV::OpArbitraryFloatExpm1ALTERA:
+  case SPIRV::OpArbitraryFloatHypotALTERA:
+  case SPIRV::OpArbitraryFloatLog10ALTERA:
+  case SPIRV::OpArbitraryFloatLog1pALTERA:
+  case SPIRV::OpArbitraryFloatLog2ALTERA:
+  case SPIRV::OpArbitraryFloatLogALTERA:
+  case SPIRV::OpArbitraryFloatRecipALTERA:
+  case SPIRV::OpArbitraryFloatSinCosALTERA:
+  case SPIRV::OpArbitraryFloatSinCosPiALTERA:
+  case SPIRV::OpArbitraryFloatSinALTERA:
+  case SPIRV::OpArbitraryFloatSinPiALTERA:
+  case SPIRV::OpArbitraryFloatSqrtALTERA:
+  case SPIRV::OpArbitraryFloatACosALTERA:
+  case SPIRV::OpArbitraryFloatACosPiALTERA:
+  case SPIRV::OpArbitraryFloatAddALTERA:
+  case SPIRV::OpArbitraryFloatASinALTERA:
+  case SPIRV::OpArbitraryFloatASinPiALTERA:
+  case SPIRV::OpArbitraryFloatATan2ALTERA:
+  case SPIRV::OpArbitraryFloatATanALTERA:
+  case SPIRV::OpArbitraryFloatATanPiALTERA:
+  case SPIRV::OpArbitraryFloatCastFromIntALTERA:
+  case SPIRV::OpArbitraryFloatCastALTERA:
+  case SPIRV::OpArbitraryFloatCastToIntALTERA:
+  case SPIRV::OpArbitraryFloatDivALTERA:
+  case SPIRV::OpArbitraryFloatMulALTERA:
+  case SPIRV::OpArbitraryFloatPowALTERA:
+  case SPIRV::OpArbitraryFloatPowNALTERA:
+  case SPIRV::OpArbitraryFloatPowRALTERA:
+  case SPIRV::OpArbitraryFloatRSqrtALTERA:
+  case SPIRV::OpArbitraryFloatSubALTERA: {
+    if (!ST.canUseExtension(
+            SPIRV::Extension::SPV_ALTERA_arbitrary_precision_floating_point))
+      report_fatal_error(
+          "Floating point instructions can't be translated correctly without "
+          "enabled SPV_ALTERA_arbitrary_precision_floating_point extension!",
+          false);
+    Reqs.addExtension(
+        SPIRV::Extension::SPV_ALTERA_arbitrary_precision_floating_point);
+    Reqs.addCapability(
+        SPIRV::Capability::ArbitraryPrecisionFloatingPointALTERA);
     break;
   }
   case SPIRV::OpSubgroupMatrixMultiplyAccumulateINTEL: {
@@ -2150,8 +2355,15 @@ void addInstrRequirements(const MachineInstr &MI,
     break;
   }
   case SPIRV::OpDPdxCoarse:
-  case SPIRV::OpDPdyCoarse: {
+  case SPIRV::OpDPdyCoarse:
+  case SPIRV::OpDPdxFine:
+  case SPIRV::OpDPdyFine: {
     Reqs.addCapability(SPIRV::Capability::DerivativeControl);
+    break;
+  }
+  case SPIRV::OpLoopControlINTEL: {
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_unstructured_loop_controls);
+    Reqs.addCapability(SPIRV::Capability::UnstructuredLoopControlsINTEL);
     break;
   }
 

@@ -1,6 +1,7 @@
-; RUN: llc < %s -mattr=+sign-ext -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s --check-prefix=NOSIGNEXT
-
+; RUN: llc < %s -mattr=+sign-ext -fast-isel=0 -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s
+; RUN: llc < %s -mattr=-sign-ext -asm-verbose=false -fast-isel=0 -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s --check-prefix=NOSIGNEXT
+; RUN: llc < %s -mattr=+sign-ext -fast-isel=1 -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s
+; RUN: llc < %s -mattr=-sign-ext -asm-verbose=false -fast-isel=1 -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s --check-prefix=NOSIGNEXT
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: i32_extend8_s:

@@ -4190,9 +4190,11 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
     TypeNameOS << "uint32";
     break;
   case BuiltinType::Long:
+  case BuiltinType::LongLong:
     TypeNameOS << "int64";
     break;
   case BuiltinType::ULong:
+  case BuiltinType::ULongLong:
     TypeNameOS << "uint64";
     break;
   case BuiltinType::Float16:
@@ -4203,6 +4205,9 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
     break;
   case BuiltinType::Double:
     TypeNameOS << "float64";
+    break;
+  case BuiltinType::BFloat16:
+    TypeNameOS << "bfloat16";
     break;
   default:
     llvm_unreachable("unexpected element type for fixed-length RVV vector!");
@@ -4946,11 +4951,18 @@ recurse:
     E = cast<ConstantExpr>(E)->getSubExpr();
     goto recurse;
 
+  case Expr::CXXReflectExprClass: {
+    // TODO(Reflection): implement this after introducing std::meta::info
+    assert(false && "unimplemented");
+    break;
+  }
+
   // FIXME: invent manglings for all these.
   case Expr::BlockExprClass:
   case Expr::ChooseExprClass:
   case Expr::CompoundLiteralExprClass:
   case Expr::ExtVectorElementExprClass:
+  case Expr::MatrixElementExprClass:
   case Expr::GenericSelectionExprClass:
   case Expr::ObjCEncodeExprClass:
   case Expr::ObjCIsaExprClass:
@@ -5479,6 +5491,15 @@ recurse:
     Out << "ix";
     mangleExpression(AE->getLHS());
     mangleExpression(AE->getRHS());
+    break;
+  }
+
+  case Expr::MatrixSingleSubscriptExprClass: {
+    NotPrimaryExpr();
+    const MatrixSingleSubscriptExpr *ME = cast<MatrixSingleSubscriptExpr>(E);
+    Out << "ix";
+    mangleExpression(ME->getBase());
+    mangleExpression(ME->getRowIdx());
     break;
   }
 
@@ -6040,6 +6061,8 @@ void CXXNameMangler::mangleCXXDtorType(CXXDtorType T) {
   case Dtor_Comdat:
     Out << "D5";
     break;
+  case Dtor_VectorDeleting:
+    llvm_unreachable("Itanium ABI does not use vector deleting dtors");
   }
 }
 

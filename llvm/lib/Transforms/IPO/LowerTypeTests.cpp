@@ -48,12 +48,14 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/ModuleSummaryIndexYAML.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
@@ -780,11 +782,11 @@ Value *LowerTypeTestsModule::lowerTypeTestCall(Metadata *TypeId, CallInst *CI,
   if (TIL.TheKind == TypeTestResolution::AllOnes)
     return OffsetInRange;
 
-  // See if the intrinsic is used in the following common pattern:
-  //   br(llvm.type.test(...), thenbb, elsebb)
-  // where nothing happens between the type test and the br.
-  // If so, create slightly simpler IR.
-  if (CI->hasOneUse())
+  if (CI->hasOneUse()) {
+    // See if the intrinsic is used in the following common pattern:
+    //   br(llvm.type.test(...), thenbb, elsebb)
+    // where nothing happens between the type test and the br.
+    // If so, create slightly simpler IR.
     if (auto *Br = dyn_cast<BranchInst>(*CI->user_begin()))
       if (CI->getNextNode() == Br) {
         BasicBlock *Then = InitialBB->splitBasicBlock(CI->getIterator());
@@ -801,8 +803,25 @@ Value *LowerTypeTestsModule::lowerTypeTestCall(Metadata *TypeId, CallInst *CI,
         IRBuilder<> ThenB(CI);
         return createBitSetTest(ThenB, TIL, BitOffset);
       }
+    // Also look for the pattern llvm.cond.loop(not(llvm.type.test)) and
+    // generate a separate llvm.cond.loop for the first phase of the check if
+    // found.
+    if (auto *Xor = dyn_cast<BinaryOperator>(*CI->user_begin());
+        CI->getNextNode() == Xor && Xor->getOpcode() == BinaryOperator::Xor &&
+        Xor->getOperand(1) == ConstantInt::getTrue(M.getContext()) &&
+        Xor->hasOneUse()) {
+      if (auto *CondLoop = dyn_cast<IntrinsicInst>(*Xor->user_begin());
+          Xor->getNextNode() == CondLoop &&
+          CondLoop->getIntrinsicID() == Intrinsic::cond_loop) {
+        B.CreateIntrinsic(Intrinsic::cond_loop, B.CreateNot(OffsetInRange));
+        return createBitSetTest(B, TIL, BitOffset);
+      }
+    }
+  }
 
-  IRBuilder<> ThenB(SplitBlockAndInsertIfThen(OffsetInRange, CI, false));
+  MDBuilder MDB(M.getContext());
+  IRBuilder<> ThenB(SplitBlockAndInsertIfThen(OffsetInRange, CI, false,
+                                              MDB.createLikelyBranchWeights()));
 
   // Now that we know that the offset is in range and aligned, load the
   // appropriate bit from the bitset.
@@ -847,7 +866,7 @@ void LowerTypeTestsModule::buildBitSetsFromGlobalVariables(
     }
 
     GlobalInits.push_back(GV->getInitializer());
-    uint64_t InitSize = DL.getTypeAllocSize(GV->getValueType());
+    uint64_t InitSize = GV->getGlobalSize(DL);
     CurOffset = GVOffset + InitSize;
 
     // Compute the amount of padding that we'd like for the next element.
@@ -997,10 +1016,12 @@ LowerTypeTestsModule::importTypeId(StringRef TypeId) {
       GV->setMetadata(LLVMContext::MD_absolute_symbol,
                       MDNode::get(M.getContext(), {MinC, MaxC}));
     };
-    if (AbsWidth == IntPtrTy->getBitWidth())
-      SetAbsRange(~0ull, ~0ull); // Full set.
-    else
+    if (AbsWidth == IntPtrTy->getBitWidth()) {
+      uint64_t AllOnes = IntPtrTy->getBitMask();
+      SetAbsRange(AllOnes, AllOnes); // Full set.
+    } else {
       SetAbsRange(0, 1ull << AbsWidth);
+    }
     return C;
   };
 
@@ -1450,8 +1471,7 @@ void LowerTypeTestsModule::replaceWeakDeclarationWithJumpTablePtr(
   // Can not RAUW F with an expression that uses F. Replace with a temporary
   // placeholder first.
   Function *PlaceholderFn =
-      Function::Create(cast<FunctionType>(F->getValueType()),
-                       GlobalValue::ExternalWeakLinkage,
+      Function::Create(F->getFunctionType(), GlobalValue::ExternalWeakLinkage,
                        F->getAddressSpace(), "", &M);
   replaceCfiUses(F, PlaceholderFn, IsJumpTableCanonical);
 
@@ -1554,12 +1574,7 @@ void LowerTypeTestsModule::createJumpTable(
 
   // Align the whole table by entry size.
   F->setAlignment(Align(getJumpTableEntrySize(JumpTableArch)));
-  // Skip prologue.
-  // Disabled on win32 due to https://llvm.org/bugs/show_bug.cgi?id=28641#c3.
-  // Luckily, this function does not get any prologue even without the
-  // attribute.
-  if (OS != Triple::Win32)
-    F->addFnAttr(Attribute::Naked);
+  F->addFnAttr(Attribute::Naked);
   if (JumpTableArch == Triple::arm)
     F->addFnAttr("target-features", "-thumb-mode");
   if (JumpTableArch == Triple::thumb) {

@@ -27,6 +27,7 @@ def SIEncodingFamily {
   int GFX11 = 10;
   int GFX12 = 11;
   int GFX1250 = 12;
+  int GFX13 = 13;
 }
 
 //===----------------------------------------------------------------------===//
@@ -40,6 +41,7 @@ class GFXGen<Predicate pred, string dn, string suffix, int sub> {
   int Subtarget = sub;
 }
 
+def GFX13Gen         : GFXGen<isGFX13Only, "GFX13", "_gfx13", SIEncodingFamily.GFX13>;
 def GFX1250Gen       : GFXGen<isGFX125xOnly, "GFX1250", "_gfx1250", SIEncodingFamily.GFX1250>;
 def GFX12Not12_50Gen : GFXGen<isGFX12Not12_50, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
 def GFX12Gen : GFXGen<isGFX12Only, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
@@ -809,6 +811,8 @@ defm atomic_load_add : SIAtomicM0Glue2 <"LOAD_ADD">;
 defm atomic_load_sub : SIAtomicM0Glue2 <"LOAD_SUB">;
 defm atomic_load_uinc_wrap : SIAtomicM0Glue2 <"LOAD_UINC_WRAP">;
 defm atomic_load_udec_wrap : SIAtomicM0Glue2 <"LOAD_UDEC_WRAP">;
+defm atomic_load_usub_cond : SIAtomicM0Glue2 <"LOAD_USUB_COND">;
+defm atomic_load_usub_sat : SIAtomicM0Glue2 <"LOAD_USUB_SAT">;
 defm atomic_load_and : SIAtomicM0Glue2 <"LOAD_AND">;
 defm atomic_load_min : SIAtomicM0Glue2 <"LOAD_MIN">;
 defm atomic_load_max : SIAtomicM0Glue2 <"LOAD_MAX">;
@@ -954,6 +958,9 @@ def InlineImmFP64 : FPImmLeaf<f64, [{
   return isInlineImmediate(Imm);
 }]>;
 
+def fpimm_pos_zero : FPImmLeaf<fAny, [{
+  return Imm.isZero() && !Imm.isNegative();
+}]>;
 
 class VGPRImm <dag frag> : PatLeaf<frag, [{
   return isVGPRImm(N);
@@ -982,6 +989,11 @@ def fp16_zeros_high_16bits : PatLeaf<(f16 VGPR_32:$src), [{
   return fp16SrcZerosHighBits(N->getOpcode());
 }]>;
 
+
+class build_vector_fpimm_pos_zero_v2<VTVec vec> : PatLeaf<
+  (vec (build_vector (vec.ElementType fpimm_pos_zero),
+                     (vec.ElementType fpimm_pos_zero)))>;
+
 def MFMALdScaleXForm : SDNodeXForm<timm, [{
   unsigned Val = N->getZExtValue();
   unsigned New = 0;
@@ -992,11 +1004,13 @@ def MFMALdScaleXForm : SDNodeXForm<timm, [{
   return CurDAG->getTargetConstant(New, SDLoc(N), MVT::i32);
 }]>;
 
-def is_canonicalized : PatLeaf<(fAny srcvalue:$src), [{
+def fcanonicalize_canonicalized
+    : PatFrag<(ops node:$op), (fcanonicalize node:$op), [{
   const SITargetLowering &Lowering =
       *static_cast<const SITargetLowering *>(getTargetLowering());
-  return Lowering.isCanonicalized(*CurDAG, Op);
+  return Lowering.isCanonicalized(*CurDAG, Op->getOperand(0), N->getFlags());
 }]> {
+  // FIXME: This predicate for GlobalISel is dead code.
   let GISelPredicateCode = [{
     const SITargetLowering *TLI = static_cast<const SITargetLowering *>(
         MF.getSubtarget().getTargetLowering());
@@ -1074,6 +1088,8 @@ def VReg32OrOffClass : AsmOperandClass {
 }
 
 def SendMsg : CustomOperand<i32>;
+
+def WaitEvent : CustomOperand<i16>;
 
 def Swizzle : CustomOperand<i16, 1>;
 
@@ -1188,12 +1204,12 @@ class NamedIntOperand<string prefix, bit Optional = 1, string name = NAME>
                     !if(AlwaysPrint, "true", "false")#"); }";
 }
 
-class NamedBitOperand<string Id, string Name = NAME>
+class NamedBitOperand<string Id, string Name = NAME, bit AlwaysIgnoreNegative = 0>
     : CustomOperand<i1, 1, Name> {
   let PredicateMethod = "isImmTy<AMDGPUOperand::"#ImmTy#">";
   let ParserMethod =
     "[this](OperandVector &Operands) -> ParseStatus { "#
-    "return parseNamedBit(\""#Id#"\", Operands, AMDGPUOperand::"#ImmTy#"); }";
+    "return parseNamedBit(\""#Id#"\", Operands, AMDGPUOperand::"#ImmTy# !if(AlwaysIgnoreNegative, ", true", ", false")#"); }";
   let PrintMethod = "[this](const MCInst *MI, unsigned OpNo, "#
     "const MCSubtargetInfo &STI, raw_ostream &O) { "#
     "printNamedBit(MI, OpNo, O, \""#Id#"\"); }";
@@ -1258,8 +1274,10 @@ def R128A16 : CustomOperand<i1, 1>;
 def A16 : NamedBitOperand<"a16">;
 def D16 : NamedBitOperand<"d16">;
 def LWE : NamedBitOperand<"lwe">;
-def exp_compr : NamedBitOperand<"compr", "ExpCompr">;
-def exp_vm : NamedBitOperand<"vm", "ExpVM">;
+def exp_compr : NamedBitOperand<"compr", "ExpCompr", 1>;
+def exp_vm : NamedBitOperand<"vm", "ExpVM", 1>;
+def exp_done : NamedBitOperand<"done", "Done", 1>;
+def exp_row_en : NamedBitOperand<"row_en", "RowEn", 1>;
 
 def FORMAT : CustomOperand<i8>;
 
@@ -3355,7 +3373,8 @@ def getMCOpcodeGen : InstrMapping {
                    [!cast<string>(SIEncodingFamily.GFX940)],
                    [!cast<string>(SIEncodingFamily.GFX11)],
                    [!cast<string>(SIEncodingFamily.GFX12)],
-                   [!cast<string>(SIEncodingFamily.GFX1250)]];
+                   [!cast<string>(SIEncodingFamily.GFX1250)],
+                   [!cast<string>(SIEncodingFamily.GFX13)]];
 }
 
 // Get equivalent SOPK instruction.

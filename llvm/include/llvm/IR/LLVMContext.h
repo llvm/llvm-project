@@ -377,6 +377,9 @@ inline LLVMContextRef *wrap(const LLVMContext **Tys) {
   return reinterpret_cast<LLVMContextRef*>(const_cast<LLVMContext**>(Tys));
 }
 
+/// Get the deprecated global context for use by the C API.
+LLVM_ABI LLVMContextRef getGlobalContextForCAPI();
+
 } // end namespace llvm
 
 #endif // LLVM_IR_LLVMCONTEXT_H

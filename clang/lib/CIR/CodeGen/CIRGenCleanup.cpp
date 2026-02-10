@@ -97,7 +97,7 @@ EHScopeStack::getInnermostActiveNormalCleanup() const {
 char *EHScopeStack::allocate(size_t size) {
   size = llvm::alignTo(size, ScopeStackAlignment);
   if (!startOfBuffer) {
-    unsigned capacity = llvm::PowerOf2Ceil(std::max(size, 1024ul));
+    unsigned capacity = llvm::PowerOf2Ceil(std::max<size_t>(size, 1024ul));
     startOfBuffer = std::make_unique<char[]>(capacity);
     startOfData = endOfBuffer = startOfBuffer.get() + capacity;
   } else if (static_cast<size_t>(startOfData - startOfBuffer.get()) < size) {
@@ -147,11 +147,23 @@ void *EHScopeStack::pushCleanup(CleanupKind kind, size_t size) {
 
   assert(!cir::MissingFeatures::innermostEHScope());
 
-  EHCleanupScope *scope = new (buffer) EHCleanupScope(
-      size, branchFixups.size(), innermostNormalCleanup, innermostEHScope);
+  // Per C++ [except.terminate], it is implementation-defined whether none,
+  // some, or all cleanups are called before std::terminate. Thus, when
+  // terminate is the current EH scope, we may skip adding any EH cleanup
+  // scopes.
+  if (innermostEHScope != stable_end() &&
+      find(innermostEHScope)->getKind() == EHScope::Terminate)
+    isEHCleanup = false;
+
+  EHCleanupScope *scope = new (buffer)
+      EHCleanupScope(isNormalCleanup, isEHCleanup, size, branchFixups.size(),
+                     innermostNormalCleanup, innermostEHScope);
 
   if (isNormalCleanup)
     innermostNormalCleanup = stable_begin();
+
+  if (isEHCleanup)
+    innermostEHScope = stable_begin();
 
   if (isLifetimeMarker)
     cgf->cgm.errorNYI("push lifetime marker cleanup");
@@ -210,11 +222,12 @@ EHCatchScope *EHScopeStack::pushCatch(unsigned numHandlers) {
   return scope;
 }
 
-static void emitCleanup(CIRGenFunction &cgf, EHScopeStack::Cleanup *cleanup) {
+static void emitCleanup(CIRGenFunction &cgf, EHScopeStack::Cleanup *cleanup,
+                        EHScopeStack::Cleanup::Flags flags) {
   // Ask the cleanup to emit itself.
   assert(cgf.haveInsertPoint() && "expected insertion point");
-  assert(!cir::MissingFeatures::ehCleanupFlags());
-  cleanup->emit(cgf);
+  assert(!cir::MissingFeatures::ehCleanupActiveFlag());
+  cleanup->emit(cgf, flags);
   assert(cgf.haveInsertPoint() && "cleanup ended with no insertion point?");
 }
 
@@ -284,7 +297,11 @@ void CIRGenFunction::popCleanupBlock() {
         reinterpret_cast<EHScopeStack::Cleanup *>(cleanupBufferHeap.get());
   }
 
-  assert(!cir::MissingFeatures::ehCleanupFlags());
+  EHScopeStack::Cleanup::Flags cleanupFlags;
+  if (scope.isNormalCleanup())
+    cleanupFlags.setIsNormalCleanupKind();
+  if (scope.isEHCleanup())
+    cleanupFlags.setIsEHCleanupKind();
 
   // If we have a fallthrough and no other need for the cleanup,
   // emit it directly.
@@ -292,7 +309,7 @@ void CIRGenFunction::popCleanupBlock() {
     assert(!cir::MissingFeatures::ehCleanupScopeRequiresEHCleanup());
     ehStack.popCleanup();
     scope.markEmitted();
-    emitCleanup(*this, cleanup);
+    emitCleanup(*this, cleanup, cleanupFlags);
   } else {
     // Otherwise, the best approach is to thread everything through
     // the cleanup block and then try to clean up after ourselves.
@@ -354,7 +371,7 @@ void CIRGenFunction::popCleanupBlock() {
     ehStack.popCleanup();
     assert(ehStack.hasNormalCleanups() == hasEnclosingCleanups);
 
-    emitCleanup(*this, cleanup);
+    emitCleanup(*this, cleanup, cleanupFlags);
 
     // Append the prepared cleanup prologue from above.
     assert(!cir::MissingFeatures::cleanupAppendInsts());

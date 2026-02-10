@@ -29,8 +29,8 @@
 %struct.anon = type <{ i32, double }>
 @astruct = global [1 x %struct.anon] [%struct.anon <{ i32 1, double 7.000000e+00 }>], align 1
 
-%struct.anon2 = type { double, i32 }
-@bstruct = global [1 x %struct.anon2] [%struct.anon2 { double 7.000000e+00 , i32 1}], align 8
+%struct.anon2 = type { double, i32, [4 x i8] }
+@bstruct = global [1 x %struct.anon2] [%struct.anon2 { double 7.000000e+00 , i32 1, [4 x i8] undef }], align 8
 
 @a = common global i32 0, align 4
 @b = common global i64 0, align 8

@@ -13,7 +13,7 @@ define void @loop(i32 %tid, ptr %array) #0 {
 ; CHECK:       for.cond.i:
 ; CHECK-NEXT:    [[I_0_I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC_I:%.*]], [[FOR_BODY_I:%.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token [[TMP0]]) ]
-; CHECK-NEXT:    [[CMP_I:%.*]] = icmp ult i32 [[I_0_I]], 8
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp samesign ult i32 [[I_0_I]], 8
 ; CHECK-NEXT:    br i1 [[CMP_I]], label [[FOR_BODY_I]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       for.body.i:
 ; CHECK-NEXT:    [[CMP1_I:%.*]] = icmp eq i32 [[I_0_I]], [[TID:%.*]]

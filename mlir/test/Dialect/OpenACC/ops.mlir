@@ -731,6 +731,59 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
 
 // -----
 
+// Test acc.kernels with private and firstprivate operands, similar to acc.serial.
+
+acc.private.recipe @privatization_memref_10_f32 : memref<10xf32> init {
+^bb0(%arg0: memref<10xf32>):
+  %0 = memref.alloc() : memref<10xf32>
+  acc.yield %0 : memref<10xf32>
+} destroy {
+^bb0(%arg0: memref<10xf32>):
+  memref.dealloc %arg0 : memref<10xf32>
+  acc.terminator
+}
+
+acc.private.recipe @privatization_memref_10_10_f32 : memref<10x10xf32> init {
+^bb0(%arg0: memref<10x10xf32>):
+  %1 = memref.alloc() : memref<10x10xf32>
+  acc.yield %1 : memref<10x10xf32>
+} destroy {
+^bb0(%arg0: memref<10x10xf32>):
+  memref.dealloc %arg0 : memref<10x10xf32>
+  acc.terminator
+}
+
+acc.firstprivate.recipe @firstprivatization_memref_10xf32 : memref<10xf32> init {
+^bb0(%arg0: memref<10xf32>):
+  %2 = memref.alloca() : memref<10xf32>
+  acc.yield %2 : memref<10xf32>
+} copy {
+^bb0(%arg0: memref<10xf32>, %arg1: memref<10xf32>):
+  memref.copy %arg0, %arg1 : memref<10xf32> to memref<10xf32>
+  acc.terminator
+} destroy {
+^bb0(%arg0: memref<10xf32>):
+  acc.terminator
+}
+
+func.func @testkernelspriv(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
+  %priv_a = acc.private varPtr(%a : memref<10xf32>) recipe(@privatization_memref_10_f32) -> memref<10xf32>
+  %priv_c = acc.private varPtr(%c : memref<10x10xf32>) recipe(@privatization_memref_10_10_f32) -> memref<10x10xf32>
+  %firstp = acc.firstprivate varPtr(%b : memref<10xf32>) varType(tensor<10xf32>) recipe(@firstprivatization_memref_10xf32) -> memref<10xf32>
+  acc.kernels firstprivate(%firstp : memref<10xf32>) private(%priv_a, %priv_c : memref<10xf32>, memref<10x10xf32>) {
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @testkernelspriv(
+// CHECK: %[[PRIV_A:.*]] = acc.private varPtr(%{{.*}} : memref<10xf32>) recipe(@privatization_memref_10_f32) -> memref<10xf32>
+// CHECK: %[[PRIV_C:.*]] = acc.private varPtr(%{{.*}} : memref<10x10xf32>) recipe(@privatization_memref_10_10_f32) -> memref<10x10xf32>
+// CHECK: %[[FIRSTP:.*]] = acc.firstprivate varPtr(%{{.*}} : memref<10xf32>) varType(tensor<10xf32>) recipe(@firstprivatization_memref_10xf32) -> memref<10xf32>
+// CHECK: acc.kernels firstprivate(%[[FIRSTP]] : memref<10xf32>) private(%[[PRIV_A]], %[[PRIV_C]] : memref<10xf32>, memref<10x10xf32>) {
+// CHECK-NEXT: }
+
+// -----
+
 func.func @testdataop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
   %ifCond = arith.constant true
 
@@ -1602,6 +1655,35 @@ func.func @acc_reduc_test(%a : memref<i64>) -> () {
 
 // -----
 
+acc.reduction.recipe @reduction_add_memref_i64 : memref<i64> reduction_operator <add> init {
+^bb0(%arg0: memref<i64>):
+  %c0_i64 = arith.constant 0 : i64
+  %alloca = memref.alloca() : memref<i64>
+  memref.store %c0_i64, %alloca[] : memref<i64>
+  acc.yield %alloca : memref<i64>
+} combiner {
+^bb0(%arg0: memref<i64>, %arg1: memref<i64>):
+  %0 = memref.load %arg0[] : memref<i64>
+  %1 = memref.load %arg1[] : memref<i64>
+  %2 = arith.addi %0, %1 : i64
+  memref.store %2, %arg0[] : memref<i64>
+  acc.yield %arg0 : memref<i64>
+}
+
+func.func @acc_kernels_reduc_test(%a : memref<i64>) -> () {
+  %reduction_a = acc.reduction varPtr(%a : memref<i64>) recipe(@reduction_add_memref_i64) -> memref<i64>
+  acc.kernels reduction(%reduction_a : memref<i64>) {
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @acc_kernels_reduc_test(
+// CHECK-SAME:    %[[ARG0:.*]]: memref<i64>)
+// CHECK:         %[[REDUCTION_A:.*]] = acc.reduction varPtr(%[[ARG0]] : memref<i64>) recipe(@reduction_add_memref_i64) -> memref<i64>
+// CHECK-NEXT:    acc.kernels reduction(%[[REDUCTION_A]] : memref<i64>)
+
+// -----
+
 func.func @testdeclareop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
   %0 = acc.copyin varPtr(%a : memref<f32>) -> memref<f32>
   // copyin(zero)
@@ -1725,6 +1807,59 @@ acc.routine @acc_func_rout9 func(@acc_func) bind("acc_func_gpu_gang_dim1") gang(
 // CHECK: acc.routine @acc_func_rout7 func(@acc_func) bind("acc_func_gpu_imp_gang") gang implicit
 // CHECK: acc.routine @acc_func_rout8 func(@acc_func) bind("acc_func_gpu_vector_nohost") vector nohost
 // CHECK: acc.routine @acc_func_rout9 func(@acc_func) bind("acc_func_gpu_gang_dim1") gang(dim: 1 : i64)
+
+// -----
+
+// Test acc.specialized_routine attribute for specialized device functions
+acc.routine @routine_seq func(@device_func_seq) seq
+acc.routine @routine_gang func(@device_func_gang) gang
+acc.routine @routine_gang_dim2 func(@device_func_gang_dim2) gang(dim: 2 : i64)
+acc.routine @routine_gang_dim3 func(@device_func_gang_dim3) gang(dim: 3 : i64)
+acc.routine @routine_worker func(@device_func_worker) worker
+acc.routine @routine_vector func(@device_func_vector) vector
+
+func.func @device_func_seq() attributes {acc.specialized_routine = #acc.specialized_routine<@routine_seq, <seq>, "host_func_seq">} {
+  return
+}
+
+func.func @device_func_gang() attributes {acc.specialized_routine = #acc.specialized_routine<@routine_gang, <gang_dim1>, "host_func_gang">} {
+  return
+}
+
+func.func @device_func_gang_dim2() attributes {acc.specialized_routine = #acc.specialized_routine<@routine_gang_dim2, <gang_dim2>, "host_func_gang_dim2">} {
+  return
+}
+
+func.func @device_func_gang_dim3() attributes {acc.specialized_routine = #acc.specialized_routine<@routine_gang_dim3, <gang_dim3>, "host_func_gang_dim3">} {
+  return
+}
+
+func.func @device_func_worker() attributes {acc.specialized_routine = #acc.specialized_routine<@routine_worker, <worker>, "host_func_worker">} {
+  return
+}
+
+func.func @device_func_vector() attributes {acc.specialized_routine = #acc.specialized_routine<@routine_vector, <vector>, "host_func_vector">} {
+  return
+}
+
+// CHECK: acc.routine @routine_seq func(@device_func_seq) seq
+// CHECK: acc.routine @routine_gang func(@device_func_gang) gang
+// CHECK: acc.routine @routine_gang_dim2 func(@device_func_gang_dim2) gang(dim: 2 : i64)
+// CHECK: acc.routine @routine_gang_dim3 func(@device_func_gang_dim3) gang(dim: 3 : i64)
+// CHECK: acc.routine @routine_worker func(@device_func_worker) worker
+// CHECK: acc.routine @routine_vector func(@device_func_vector) vector
+// CHECK-LABEL: func.func @device_func_seq()
+// CHECK: attributes {acc.specialized_routine = #acc.specialized_routine<@routine_seq, <seq>, "host_func_seq">}
+// CHECK-LABEL: func.func @device_func_gang()
+// CHECK: attributes {acc.specialized_routine = #acc.specialized_routine<@routine_gang, <gang_dim1>, "host_func_gang">}
+// CHECK-LABEL: func.func @device_func_gang_dim2()
+// CHECK: attributes {acc.specialized_routine = #acc.specialized_routine<@routine_gang_dim2, <gang_dim2>, "host_func_gang_dim2">}
+// CHECK-LABEL: func.func @device_func_gang_dim3()
+// CHECK: attributes {acc.specialized_routine = #acc.specialized_routine<@routine_gang_dim3, <gang_dim3>, "host_func_gang_dim3">}
+// CHECK-LABEL: func.func @device_func_worker()
+// CHECK: attributes {acc.specialized_routine = #acc.specialized_routine<@routine_worker, <worker>, "host_func_worker">}
+// CHECK-LABEL: func.func @device_func_vector()
+// CHECK: attributes {acc.specialized_routine = #acc.specialized_routine<@routine_vector, <vector>, "host_func_vector">}
 
 // -----
 

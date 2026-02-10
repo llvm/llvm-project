@@ -61,13 +61,13 @@ define void @loop_1_callbr(i1 %PredEntry, i1 %PredB, i1 %PredC, i1 %PredD) {
 ; CHECK-NEXT:    br label [[B:%.*]]
 ; CHECK:       B:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDB:%.*]])
-; CHECK-NEXT:            to label [[C:%.*]] [label %B.target.E]
+; CHECK-NEXT:            to label [[C:%.*]] [label [[B_TARGET_E:%.*]]]
 ; CHECK:       C:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDC:%.*]])
-; CHECK-NEXT:            to label [[D:%.*]] [label %C.target.F]
+; CHECK-NEXT:            to label [[D:%.*]] [label [[C_TARGET_F:%.*]]]
 ; CHECK:       D:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDD:%.*]])
-; CHECK-NEXT:            to label [[A]] [label %D.target.F]
+; CHECK-NEXT:            to label [[A]] [label [[D_TARGET_F:%.*]]]
 ; CHECK:       E:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       F:
@@ -83,7 +83,7 @@ define void @loop_1_callbr(i1 %PredEntry, i1 %PredB, i1 %PredC, i1 %PredD) {
 ; CHECK:       D.target.F:
 ; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD]]
 ; CHECK:       loop.exit.guard:
-; CHECK-NEXT:    [[GUARD_X:%.*]] = phi i1 [ true, [[B_TARGET_E:%.*]] ], [ false, [[C_TARGET_F:%.*]] ], [ false, [[D_TARGET_F:%.*]] ]
+; CHECK-NEXT:    [[GUARD_X:%.*]] = phi i1 [ true, [[B_TARGET_E]] ], [ false, [[C_TARGET_F]] ], [ false, [[D_TARGET_F]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_X]], label [[X:%.*]], label [[Y]]
 ;
 entry:
@@ -175,13 +175,13 @@ define void @loop_2_callbr(i1 %PredA, i1 %PredB, i1 %PredC) {
 ; CHECK-NEXT:    br label [[A:%.*]]
 ; CHECK:       A:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDA:%.*]])
-; CHECK-NEXT:            to label [[B:%.*]] [label %A.target.X]
+; CHECK-NEXT:            to label [[B:%.*]] [label [[A_TARGET_X:%.*]]]
 ; CHECK:       B:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDB:%.*]])
-; CHECK-NEXT:            to label [[C:%.*]] [label %B.target.Y]
+; CHECK-NEXT:            to label [[C:%.*]] [label [[B_TARGET_Y:%.*]]]
 ; CHECK:       C:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDC:%.*]])
-; CHECK-NEXT:            to label [[D:%.*]] [label %C.target.Z]
+; CHECK-NEXT:            to label [[D:%.*]] [label [[C_TARGET_Z:%.*]]]
 ; CHECK:       D:
 ; CHECK-NEXT:    br label [[A]]
 ; CHECK:       X:
@@ -199,7 +199,7 @@ define void @loop_2_callbr(i1 %PredA, i1 %PredB, i1 %PredC) {
 ; CHECK:       C.target.Z:
 ; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD]]
 ; CHECK:       loop.exit.guard:
-; CHECK-NEXT:    [[GUARD_X:%.*]] = phi i1 [ true, [[A_TARGET_X:%.*]] ], [ false, [[B_TARGET_Y:%.*]] ], [ false, [[C_TARGET_Z:%.*]] ]
+; CHECK-NEXT:    [[GUARD_X:%.*]] = phi i1 [ true, [[A_TARGET_X]] ], [ false, [[B_TARGET_Y]] ], [ false, [[C_TARGET_Z]] ]
 ; CHECK-NEXT:    [[GUARD_Y:%.*]] = phi i1 [ false, [[A_TARGET_X]] ], [ true, [[B_TARGET_Y]] ], [ false, [[C_TARGET_Z]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_X]], label [[X:%.*]], label [[LOOP_EXIT_GUARD1:%.*]]
 ; CHECK:       loop.exit.guard1:
@@ -228,6 +228,33 @@ Y:
 
 Z:
   br label %exit
+
+exit:
+  ret void
+}
+
+; Test that UnifyLoopExits handles callbr with duplicate successors correctly.
+; The exit block appears twice as a successor of the callbr instruction.
+define void @callbr_duplicate_successors() {
+; CHECK-LABEL: @callbr_duplicate_successors(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    callbr void asm sideeffect "", "!i,!i"()
+; CHECK-NEXT:            to label [[LOOP_TARGET_EXIT:%.*]] [label [[LOOP]], label [[LOOP_TARGET_EXIT1:%.*]]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       loop.target.exit:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       loop.target.exit1:
+; CHECK-NEXT:    br label [[EXIT]]
+;
+entry:
+  br label %loop
+
+loop:
+  callbr void asm sideeffect "", "!i,!i"()
+  to label %exit [label %loop, label %exit]
 
 exit:
   ret void

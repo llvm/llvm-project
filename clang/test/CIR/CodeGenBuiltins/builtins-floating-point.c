@@ -67,3 +67,24 @@ long double my_exp2l(long double f) {
   // LLVM: %{{.*}} = call fp128 @llvm.exp2.f128(fp128 %{{.*}})
   // OGCG: %{{.*}} = call fp128 @llvm.exp2.f128(fp128 %{{.*}})
 }
+
+float floorf(float f) {
+  return __builtin_floorf(f);
+  // CIR: %{{.*}} = cir.floor %{{.*}} : !cir.float
+  // LLVM: %{{.*}} = call float @llvm.floor.f32(float %{{.*}})
+  // OGCG: %{{.*}} = call float @llvm.floor.f32(float %{{.*}})
+}
+
+double floor(double f) {
+  return __builtin_floor(f);
+  // CIR: %{{.*}} = cir.floor %{{.*}} : !cir.double
+  // LLVM: %{{.*}} = call double @llvm.floor.f64(double %{{.*}})
+  // OGCG: %{{.*}} = call double @llvm.floor.f64(double %{{.*}})
+}
+
+long double floorl(long double f) {
+  return __builtin_floorl(f);
+  // CIR: %{{.*}} = cir.floor %{{.*}} : !cir.long_double<!cir.f128>
+  // LLVM: %{{.*}} = call fp128 @llvm.floor.f128(fp128 %{{.*}})
+  // OGCG: %{{.*}} = call fp128 @llvm.floor.f128(fp128 %{{.*}})
+}

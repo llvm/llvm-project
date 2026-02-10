@@ -214,6 +214,8 @@ public:
       if (Value *GlobalElem =
               Global->getNumOperands() > 0 ? Global->getOperand(0) : nullptr)
         ElementTy = findDeducedCompositeType(GlobalElem);
+      else if (const Function *Fn = dyn_cast<Function>(Global))
+        ElementTy = SPIRV::getOriginalFunctionType(*Fn);
     }
     return ElementTy ? ElementTy : Global->getValueType();
   }
@@ -276,7 +278,7 @@ public:
   }
 
   // Get or create a SPIR-V type corresponding the given LLVM IR type,
-  // and map it to the given VReg by creating an ASSIGN_TYPE instruction.
+  // and map it to the given VReg.
   SPIRVType *assignTypeToVReg(const Type *Type, Register VReg,
                               MachineIRBuilder &MIRBuilder,
                               SPIRV::AccessQualifier::AccessQualifier AQ,
@@ -290,7 +292,7 @@ public:
                                   const SPIRVInstrInfo &TII);
 
   // In cases where the SPIR-V type is already known, this function can be
-  // used to map it to the given VReg via an ASSIGN_TYPE instruction.
+  // used to map it to the given VReg.
   void assignSPIRVTypeToVReg(SPIRVType *Type, Register VReg,
                              const MachineFunction &MF);
 
@@ -518,6 +520,10 @@ public:
   Register getOrCreateConstInt(uint64_t Val, MachineInstr &I,
                                SPIRVType *SpvType, const SPIRVInstrInfo &TII,
                                bool ZeroAsNull = true);
+  Register getOrCreateConstInt(const APInt &Val, MachineInstr &I,
+                               const SPIRVType *SpvType,
+                               const SPIRVInstrInfo &TII,
+                               bool ZeroAsNull = true);
   Register createConstInt(const ConstantInt *CI, MachineInstr &I,
                           SPIRVType *SpvType, const SPIRVInstrInfo &TII,
                           bool ZeroAsNull);
@@ -532,6 +538,10 @@ public:
 
   Register getOrCreateConstVector(uint64_t Val, MachineInstr &I,
                                   SPIRVType *SpvType, const SPIRVInstrInfo &TII,
+                                  bool ZeroAsNull = true);
+  Register getOrCreateConstVector(const APInt &Val, MachineInstr &I,
+                                  const SPIRVType *SpvType,
+                                  const SPIRVInstrInfo &TII,
                                   bool ZeroAsNull = true);
   Register getOrCreateConstVector(APFloat Val, MachineInstr &I,
                                   SPIRVType *SpvType, const SPIRVInstrInfo &TII,
@@ -612,6 +622,9 @@ public:
                                          bool IsWritable, bool EmitIr = false);
 
   SPIRVType *getOrCreatePaddingType(MachineIRBuilder &MIRBuilder);
+
+  SPIRVType *getOrCreateVulkanPushConstantType(MachineIRBuilder &MIRBuilder,
+                                               Type *ElemType);
 
   SPIRVType *getOrCreateLayoutType(MachineIRBuilder &MIRBuilder,
                                    const TargetExtType *T, bool EmitIr = false);

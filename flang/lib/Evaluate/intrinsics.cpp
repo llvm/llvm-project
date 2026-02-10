@@ -132,6 +132,7 @@ static constexpr TypePattern DefaultChar{CharType, KindCode::defaultCharKind};
 static constexpr TypePattern DefaultLogical{
     LogicalType, KindCode::defaultLogicalKind};
 static constexpr TypePattern BOZ{IntType, KindCode::typeless};
+static constexpr TypePattern CChar{CharType, KindCode::defaultCharKind};
 static constexpr TypePattern EventType{DerivedType, KindCode::eventType};
 static constexpr TypePattern IeeeFlagType{DerivedType, KindCode::ieeeFlagType};
 static constexpr TypePattern IeeeRoundType{
@@ -517,6 +518,10 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
                 Optionality::required, common::Intent::In,
                 {ArgFlag::canBeMoldNull}}},
         DefaultLogical, Rank::scalar, IntrinsicClass::inquiryFunction},
+    {"__builtin_f_c_string",
+        {{"string", CChar, Rank::scalar},
+            {"asis", AnyLogical, Rank::scalar, Optionality::optional}},
+        CChar, Rank::scalar, IntrinsicClass::transformationalFunction},
     {"failed_images", {OptionalTEAM, SizeDefaultKIND}, KINDInt, Rank::vector,
         IntrinsicClass::transformationalFunction},
     {"findloc",
@@ -654,6 +659,11 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         {{"i", OperandUnsigned}, {"j", OperandUnsigned, Rank::elementalOrBOZ}},
         OperandUnsigned},
     {"ior", {{"i", BOZ}, {"j", SameIntOrUnsigned}}, SameIntOrUnsigned},
+    {"irand",
+        {{"i", TypePattern{IntType, KindCode::exactKind, 4}, Rank::scalar,
+            Optionality::optional}},
+        TypePattern{IntType, KindCode::exactKind, 4}, Rank::scalar,
+        IntrinsicClass::impureFunction},
     {"ishft", {{"i", SameIntOrUnsigned}, {"shift", AnyInt}}, SameIntOrUnsigned},
     {"ishftc",
         {{"i", SameIntOrUnsigned}, {"shift", AnyInt},
@@ -872,6 +882,11 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             common::Intent::In,
             {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         DefaultInt, Rank::scalar, IntrinsicClass::inquiryFunction},
+    {"rand",
+        {{"i", TypePattern{IntType, KindCode::exactKind, 4}, Rank::scalar,
+            Optionality::optional}},
+        TypePattern{RealType, KindCode::exactKind, 4}, Rank::scalar,
+        IntrinsicClass::impureFunction},
     {"range",
         {{"x", AnyNumeric, Rank::anyOrAssumedRank, Optionality::required,
             common::Intent::In,
@@ -1594,7 +1609,7 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"cmdmsg", DefaultChar, Rank::scalar, Optionality::optional,
                 common::Intent::InOut}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
-    {"exit", {{"status", DefaultInt, Rank::scalar, Optionality::optional}}, {},
+    {"exit", {{"status", AnyInt, Rank::scalar, Optionality::optional}}, {},
         Rank::elemental, IntrinsicClass::impureSubroutine},
     {"free", {{"ptr", Addressable}}, {}},
     {"flush",
@@ -1705,6 +1720,8 @@ static const IntrinsicInterface intrinsicSubroutine[]{
         {}, Rank::scalar, IntrinsicClass::impureSubroutine},
     {"second", {{"time", DefaultReal, Rank::scalar}}, {}, Rank::scalar,
         IntrinsicClass::impureSubroutine},
+    {"__builtin_show_descriptor", {{"d", AnyData, Rank::anyOrAssumedRank}}, {},
+        Rank::elemental, IntrinsicClass::impureSubroutine},
     {"system",
         {{"command", DefaultChar, Rank::scalar},
             {"exitstat", DefaultInt, Rank::scalar, Optionality::optional,
@@ -2552,7 +2569,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
           }
         }
         if (context.analyzingPDTComponentKindSelector() && expr &&
-            IsConstantExpr(*expr)) {
+            IsConstantExpr(*expr, &context)) {
           // Don't emit an error about a KIND= actual argument value when
           // processing a kind selector in a PDT component declaration before
           // it is instantianted, so long as it's a constant expression.
@@ -2826,7 +2843,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             name, characteristics::Procedure{std::move(dummyArgs), attrs}},
         std::move(rearranged)};
   } else {
-    attrs.set(characteristics::Procedure::Attr::Pure);
+    if (intrinsicClass != IntrinsicClass::impureFunction /* RAND and IRAND */)
+      attrs.set(characteristics::Procedure::Attr::Pure);
     characteristics::TypeAndShape typeAndShape{resultType.value(), resultRank};
     characteristics::FunctionResult funcResult{std::move(typeAndShape)};
     characteristics::Procedure chars{
@@ -3584,8 +3602,13 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
           // presence of DIM=, use messages from a later entry if
           // the messages from an earlier entry complain about the
           // DIM= argument and it wasn't specified with a keyword.
+          // Also prefer later messages when earlier ones are about
+          // argument count mismatches, as a later entry that accepts
+          // the right number of arguments will give more specific errors.
+          bool preferLaterError{false};
           for (const auto &m : buffer.messages()) {
-            if (m.ToString().find("'dim='") != std::string::npos) {
+            std::string text{m.ToString()};
+            if (text.find("'dim='") != std::string::npos) {
               bool hadDimKeyword{false};
               for (const auto &a : arguments) {
                 if (a) {
@@ -3596,10 +3619,19 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
                 }
               }
               if (!hadDimKeyword) {
-                buffer = std::move(localBuffer);
+                preferLaterError = true;
               }
               break;
+            } else if (text.find("too many actual arguments") !=
+                std::string::npos) {
+              // Prefer messages from an entry that matched the argument
+              // count, as those will be more specific about what's wrong
+              preferLaterError = true;
+              break;
             }
+          }
+          if (preferLaterError) {
+            buffer = std::move(localBuffer);
           }
           localBuffer.clear();
         }

@@ -17,6 +17,7 @@
 include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMAttrDefs.td"
+include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
 include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.td"
 include "flang/Optimizer/Dialect/FIRDialect.td"
@@ -80,7 +81,10 @@ def AnyRefOfConstantSizeAggregateType : TypeConstraint<
 // Memory SSA operations
 //===----------------------------------------------------------------------===//
 
-def fir_AllocaOp : fir_Op<"alloca", [AttrSizedOperandSegments]> {
+def fir_AllocaOp : fir_Op<"alloca", [
+  AttrSizedOperandSegments,
+  DeclareOpInterfaceMethods<PromotableAllocationOpInterface>
+]> {
   let summary = "allocate storage for a temporary on the stack given a type";
   let description = [{
     This primitive operation is used to allocate an object on the stack.  A
@@ -266,7 +270,7 @@ def fir_AllocMemOp : fir_Op<"allocmem", [AttrSizedOperandSegments]> {
   }];
 }
 
-def fir_FreeMemOp : fir_Op<"freemem", [MemoryEffects<[MemFree]>]> {
+def fir_FreeMemOp : fir_Op<"freemem", []> {
   let summary = "free a heap object";
 
   let description = [{
@@ -288,8 +292,11 @@ def fir_FreeMemOp : fir_Op<"freemem", [MemoryEffects<[MemFree]>]> {
   let assemblyFormat = "$heapref attr-dict `:` qualified(type($heapref))";
 }
 
-def fir_LoadOp : fir_OneResultOp<"load", [FirAliasTagOpInterface,
-                                          DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+def fir_LoadOp : fir_OneResultOp<"load", [
+  FirAliasTagOpInterface,
+  DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+  DeclareOpInterfaceMethods<PromotableMemOpInterface>
+]> {
   let summary = "load a value from a memory reference";
   let description = [{
     Load a value from a memory reference into an ssa-value (virtual register).
@@ -319,8 +326,11 @@ def fir_LoadOp : fir_OneResultOp<"load", [FirAliasTagOpInterface,
   }];
 }
 
-def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface,
-                                   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+def fir_StoreOp : fir_Op<"store", [
+  FirAliasTagOpInterface,
+  DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+  DeclareOpInterfaceMethods<PromotableMemOpInterface>
+]> {
   let summary = "store an SSA-value to a memory location";
 
   let description = [{
@@ -351,6 +361,43 @@ def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface,
   let extraClassDeclaration = [{
     static mlir::Type elementType(mlir::Type refType);
   }];
+}
+
+// NOTE on memory effects: The allocation effect (MemAlloc) is to ensure
+// this operation is not removed by dead code elimination as a dead read
+// on the argument: the prefetch happens as a side effect.
+def fir_PrefetchOp : fir_Op<"prefetch", [MemoryEffects<[MemAlloc<DefaultResource>]>]> {
+  let summary = "prefetch a memory reference";
+
+  let description = [{
+    The prefetch is a hint to the code generator that the memory reference will
+    be used in the near future. The prefetch is not guaranteed to be executed.
+
+    ```
+      %a = ... -> !fir.ref<i32>
+      fir.prefetch %a {read, data, localityHint = 3 : i32} : !fir.ref<i32>
+      // ...
+      fir.load %a : !fir.ref<i32> // use the prefetched value
+    ```
+    Here,
+    `memref'      : address to be prefetched
+    `rw'          : rw specifier >
+                     represented as read (default) or write with values
+                     0 and 1, respectively
+    `localityHint': temporal locality specifier >
+                     value ranging from 0 - no locality to 3 - extremely local
+    `cacheType'   : cache type specifier >
+                     represented as instruction or data (default) with values
+                     0 and 1, respectively
+  }];
+
+  /// NOTE: The numerical values used here is in reference to the LLVM LangRef
+  let arguments =
+      (ins AnyReferenceLike : $memref, UnitAttr : $rw,
+       ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<3>]> : $localityHint,
+       UnitAttr : $cacheType);
+
+  let hasCustomAssemblyFormat = 1;
 }
 
 def fir_CopyOp : fir_Op<"copy", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
@@ -809,6 +856,7 @@ def fir_HasValueOp : fir_Op<"has_value", [Terminator, HasParent<"GlobalOp">]> {
 //===----------------------------------------------------------------------===//
 
 def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments,
+                                   ConditionallySpeculatable,
                                    fir_FortranObjectViewOpInterface]> {
   let summary = "boxes a given reference and (optional) dimension information";
 
@@ -876,10 +924,14 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments,
     // FortranObjectViewOpInterface methods:
     mlir::Value getViewSource(mlir::OpResult) { return getMemref(); }
     std::optional<std::int64_t> getViewOffset(mlir::OpResult);
+
+    // Interface method for ConditionallySpeculatable.
+    mlir::Speculation::Speculatability getSpeculatability();
   }];
 }
 
 def fir_ReboxOp : fir_Op<"rebox", [NoMemoryEffect, AttrSizedOperandSegments,
+                                   ConditionallySpeculatable,
                                    fir_FortranObjectViewOpInterface]> {
   let summary =
       "create a box given another box and (optional) dimension information";
@@ -935,6 +987,9 @@ def fir_ReboxOp : fir_Op<"rebox", [NoMemoryEffect, AttrSizedOperandSegments,
     // FortranObjectViewOpInterface methods:
     mlir::Value getViewSource(mlir::OpResult) { return getBox(); }
     std::optional<std::int64_t> getViewOffset(mlir::OpResult);
+
+    // Interface method for ConditionallySpeculatable.
+    mlir::Speculation::Speculatability getSpeculatability();
   }];
 }
 
@@ -1086,6 +1141,7 @@ def fir_UnboxProcOp : fir_SimpleOp<"unboxproc", [NoMemoryEffect]> {
 
 def fir_BoxAddrOp
     : fir_SimpleOneResultOp<"box_addr", [NoMemoryEffect,
+                                         ConditionallySpeculatable,
                                          fir_FortranObjectViewOpInterface]> {
   let summary = "return a memory reference to the boxed value";
 
@@ -1114,6 +1170,9 @@ def fir_BoxAddrOp
     // FortranObjectViewOpInterface methods:
     mlir::Value getViewSource(mlir::OpResult) { return getVal(); }
     std::optional<std::int64_t> getViewOffset(mlir::OpResult);
+
+    // Interface method for ConditionallySpeculatable.
+    mlir::Speculation::Speculatability getSpeculatability();
   }];
 }
 
@@ -1136,7 +1195,8 @@ def fir_BoxCharLenOp : fir_SimpleOp<"boxchar_len", [NoMemoryEffect]> {
   let hasFolder = 1;
 }
 
-def fir_BoxDimsOp : fir_Op<"box_dims", [NoMemoryEffect]> {
+def fir_BoxDimsOp
+    : fir_Op<"box_dims", [NoMemoryEffect, ConditionallySpeculatable]> {
   let summary = "return the dynamic dimension information for the boxed value";
 
   let description = [{
@@ -1168,6 +1228,8 @@ def fir_BoxDimsOp : fir_Op<"box_dims", [NoMemoryEffect]> {
     mlir::Value getLowerBound() {return getResult(0);};
     mlir::Value getExtent() {return getResult(1);};
     mlir::Value getByteStride() {return getResult(2);};
+    // Interface method for ConditionallySpeculatable.
+    mlir::Speculation::Speculatability getSpeculatability();
   }];
 }
 
@@ -1840,7 +1902,7 @@ def fir_ArrayCoorOp
 }
 
 def fir_CoordinateOp
-    : fir_Op<"coordinate_of", [NoMemoryEffect,
+    : fir_Op<"coordinate_of", [NoMemoryEffect, ConditionallySpeculatable,
                                fir_FortranObjectViewOpInterface]> {
 
   let summary = "Finds the coordinate (location) of a value in memory";
@@ -1897,6 +1959,9 @@ def fir_CoordinateOp
     // FortranObjectViewOpInterface methods:
     mlir::Value getViewSource(mlir::OpResult) { return getRef(); }
     std::optional<std::int64_t> getViewOffset(mlir::OpResult);
+
+    // Interface method for ConditionallySpeculatable.
+    mlir::Speculation::Speculatability getSpeculatability();
   }];
 }
 
@@ -1930,7 +1995,7 @@ def fir_ExtractValueOp : fir_OneResultOp<"extract_value", [NoMemoryEffect]> {
   }];
 }
 
-def fir_FieldIndexOp : fir_OneResultOp<"field_index", [NoMemoryEffect]> {
+def fir_FieldIndexOp : fir_OneResultOp<"field_index", [Pure]> {
   let summary = "create a field index value from a field identifier";
 
   let description = [{
@@ -1965,7 +2030,7 @@ def fir_FieldIndexOp : fir_OneResultOp<"field_index", [NoMemoryEffect]> {
   }];
 }
 
-def fir_ShapeOp : fir_Op<"shape", [NoMemoryEffect]> {
+def fir_ShapeOp : fir_Op<"shape", [Pure]> {
 
   let summary = "generate an abstract shape vector of type `!fir.shape`";
 
@@ -1994,7 +2059,7 @@ def fir_ShapeOp : fir_Op<"shape", [NoMemoryEffect]> {
   let builders = [OpBuilder<(ins "mlir::ValueRange":$extents)>];
 }
 
-def fir_ShapeShiftOp : fir_Op<"shape_shift", [NoMemoryEffect]> {
+def fir_ShapeShiftOp : fir_Op<"shape_shift", [Pure]> {
 
   let summary = [{
     generate an abstract shape and shift vector of type `!fir.shapeshift`
@@ -2044,7 +2109,7 @@ def fir_ShapeShiftOp : fir_Op<"shape_shift", [NoMemoryEffect]> {
   }];
 }
 
-def fir_ShiftOp : fir_Op<"shift", [NoMemoryEffect]> {
+def fir_ShiftOp : fir_Op<"shift", [Pure]> {
 
   let summary = "generate an abstract shift vector of type `!fir.shift`";
 
@@ -2071,7 +2136,7 @@ def fir_ShiftOp : fir_Op<"shift", [NoMemoryEffect]> {
   let hasVerifier = 1;
 }
 
-def fir_SliceOp : fir_Op<"slice", [NoMemoryEffect, AttrSizedOperandSegments]> {
+def fir_SliceOp : fir_Op<"slice", [Pure, AttrSizedOperandSegments]> {
 
   let summary = "generate an abstract slice vector of type `!fir.slice`";
 
@@ -2242,9 +2307,9 @@ def fir_LenParamIndexOp : fir_OneResultOp<"len_param_index", [NoMemoryEffect]> {
 // Fortran loops
 //===----------------------------------------------------------------------===//
 
-def fir_ResultOp : fir_Op<"result",
-    [NoMemoryEffect, ReturnLike, Terminator,
-     ParentOneOf<["IfOp", "DoLoopOp", "IterWhileOp"]>]> {
+def fir_ResultOp
+    : fir_Op<"result", [Pure, ReturnLike, Terminator,
+                        ParentOneOf<["IfOp", "DoLoopOp", "IterWhileOp"]>]> {
   let summary = "special terminator for use in fir region operations";
 
   let description = [{
@@ -2392,7 +2457,8 @@ def fir_IfOp
     : region_Op<
           "if", [DeclareOpInterfaceMethods<
                      RegionBranchOpInterface, ["getRegionInvocationBounds",
-                                               "getEntrySuccessorRegions"]>,
+                                               "getEntrySuccessorRegions",
+                                               "getSuccessorInputs"]>,
                  RecursiveMemoryEffects, NoRegionArguments,
                  WeightedRegionBranchOpInterface]> {
   let summary = "if-then-else conditional operation";
@@ -2862,6 +2928,7 @@ def fir_VolatileCastOp : fir_SimpleOneResultOp<"volatile_cast", [Pure]> {
 
 def fir_ConvertOp
     : fir_SimpleOneResultOp<"convert", [NoMemoryEffect, ViewLikeOpInterface,
+                                        ConditionallySpeculatable,
                                         fir_FortranObjectViewOpInterface]> {
   let summary = "encapsulates all Fortran entity type conversions";
 
@@ -2907,6 +2974,9 @@ def fir_ConvertOp
     // FortranObjectViewOpInterface methods:
     mlir::Value getViewSource(mlir::OpResult) { return getValue(); }
     std::optional<std::int64_t> getViewOffset(mlir::OpResult) { return 0; }
+
+    // Interface method for ConditionallySpeculatable.
+    mlir::Speculation::Speculatability getSpeculatability();
   }];
   let hasCanonicalizer = 1;
 }
@@ -3092,6 +3162,58 @@ def fir_GlobalLenOp : fir_Op<"global_len", []> {
   }];
 }
 
+def fir_UseStmtOp
+    : fir_Op<"use_stmt", [MemoryEffects<[MemWrite<DebuggingResource>]>]> {
+  let summary = "Represents a Fortran USE statement";
+  let description = [{
+    This operation records a Fortran USE statement with its associated only/rename
+    information. It has no runtime effect but preserves semantic information for
+    debug information generation.
+
+    The operation captures:
+    - The module being used (via module_name string)
+    - Symbol references to symbols imported via the ONLY clause (if present)
+    - Symbol renames (local_name and symbol reference)
+
+    Examples:
+    ```
+      // USE mod1
+      fir.use_stmt "mod1"
+
+      // USE mod1, ONLY: var2
+      fir.use_stmt "mod1" only_symbols [@_QMmod1Evar2]
+
+      // USE mod2, var4 => var3
+      fir.use_stmt "mod2" renames [#fir.use_rename<"var4", @_QMmod2Evar3>]
+
+      // USE mod2, ONLY: var1, renamed => original
+      fir.use_stmt "mod2" only_symbols [@_QMmod2Evar1]
+                   renames [#fir.use_rename<"renamed", @_QMmod2Eoriginal>]
+    ```
+  }];
+
+  let arguments = (ins StrAttr:$module_name,
+      OptionalAttr<ArrayAttr>:$only_symbols, OptionalAttr<ArrayAttr>:$renames);
+
+  let assemblyFormat = [{
+    $module_name
+    (`only_symbols` `[` $only_symbols^ `]`)?
+    (`renames` `[` $renames^ `]`)?
+    attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    /// Returns true if this is a USE with ONLY clause
+    bool hasOnlyClause() { return getOnlySymbols().has_value(); }
+
+    /// Returns true if this has any renames
+    bool hasRenames() { return getRenames().has_value(); }
+
+    /// Returns true if this imports the entire module (no ONLY clause)
+    bool importsAll() { return !hasOnlyClause(); }
+  }];
+}
+
 def ImplicitFirTerminator : SingleBlockImplicitTerminator<"FirEndOp">;
 
 def fir_TypeInfoOp : fir_Op<"type_info",
@@ -3107,9 +3229,12 @@ def fir_TypeInfoOp : fir_Op<"type_info",
     between method identifiers and corresponding `FuncOp` symbols.
     The ordering of associations in the map is determined by the front end.
 
-    The "no_init" flag indicates that this type has no components requiring default
-    initialization (including setting allocatable component to a clean deallocated
-    state).
+    The "abstract" flag indicates that this type is an ABSTRACT derived type and
+    that it cannot be instantiated.
+
+    The "no_init" flag indicates that this type has no components requiring
+    default initialization (including setting allocatable component to a clean
+    deallocated state).
 
     The "no_destroy" flag indicates that there are no allocatable components
     that require deallocation.
@@ -3118,7 +3243,8 @@ def fir_TypeInfoOp : fir_Op<"type_info",
     for its parents ,or for components.
 
     ```
-      fir.type_info @_QMquuzTfoo noinit nofinal : !fir.type<_QMquuzTfoo{i:i32}> dispatch_table {
+      fir.type_info @_QMquuzTfoo abstract noinit nofinal
+        : !fir.type<_QMquuzTfoo{i:i32}> dispatch_table {
         fir.dt_entry method1, @_QFNMquuzTfooPmethod1AfooR
         fir.dt_entry method2, @_QFNMquuzTfooPmethod2AfooII
       }
@@ -3129,6 +3255,7 @@ def fir_TypeInfoOp : fir_Op<"type_info",
     SymbolNameAttr:$sym_name,
     TypeAttr:$type,
     OptionalAttr<TypeAttr>:$parent_type,
+    UnitAttr:$abstract,
     UnitAttr:$no_init,
     UnitAttr:$no_destroy,
     UnitAttr:$no_final
@@ -3147,8 +3274,9 @@ def fir_TypeInfoOp : fir_Op<"type_info",
   ];
 
   let assemblyFormat = [{
-    $sym_name (`noinit` $no_init^)? (`nodestroy` $no_destroy^)?
-    (`nofinal` $no_final^)? (`extends` $parent_type^)? attr-dict `:` $type
+    $sym_name (`abstract` $abstract^)? (`noinit` $no_init^)?
+    (`nodestroy` $no_destroy^)? (`nofinal` $no_final^)?
+    (`extends` $parent_type^)? attr-dict `:` $type
     (`dispatch_table` $dispatch_table^)?
     (`component_info` $component_info^)?
   }];
@@ -3174,23 +3302,34 @@ def fir_DTEntryOp : fir_Op<"dt_entry", [HasParent<"TypeInfoOp">]> {
   let summary = "map entry in a dispatch table";
 
   let description = [{
-    An entry in a dispatch table.  Allows a function symbol to be bound
-    to a specifier method identifier.  A dispatch operation uses the dynamic
+    An entry in a dispatch table. Allows a function symbol to be bound
+    to a specifier method identifier. A dispatch operation uses the dynamic
     type of a distinguished argument to determine an exact dispatch table
     and uses the method identifier to select the type-bound procedure to
     be called.
 
+    The optional "deferred" flag indicates that the binding is a DEFERRED
+    type-bound procedure (declared but without an implementation at this
+    type level).
+
     ```
+      // Non-deferred binding
       fir.dt_entry method_name, @uniquedProcedure
+
+      // Deferred binding
+      fir.dt_entry method_name, @uniquedProcedure deferred
     ```
   }];
 
-  let arguments = (ins StrAttr:$method, SymbolRefAttr:$proc);
+  let arguments = (ins StrAttr:$method, SymbolRefAttr:$proc, UnitAttr:$deferred);
 
   let hasCustomAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
     static constexpr llvm::StringRef getProcAttrNameStr() { return "proc"; }
+    static constexpr llvm::StringRef getDeferredAttrNameStr() {
+      return "deferred";
+    }
   }];
 }
 

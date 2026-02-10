@@ -486,8 +486,7 @@ namespace {
       if (VT == MVT::i64) {
         Zero = SDValue(
             CurDAG->getMachineNode(
-                TargetOpcode::SUBREG_TO_REG, dl, MVT::i64,
-                CurDAG->getTargetConstant(0, dl, MVT::i64), Zero,
+                TargetOpcode::SUBREG_TO_REG, dl, MVT::i64, Zero,
                 CurDAG->getTargetConstant(X86::sub_32bit, dl, MVT::i32)),
             0);
       }
@@ -1720,11 +1719,11 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
     }
     // Attempt to remove vectors moves that were inserted to zero upper bits.
     case TargetOpcode::SUBREG_TO_REG: {
-      unsigned SubRegIdx = N->getConstantOperandVal(2);
+      unsigned SubRegIdx = N->getConstantOperandVal(1);
       if (SubRegIdx != X86::sub_xmm && SubRegIdx != X86::sub_ymm)
         continue;
 
-      SDValue Move = N->getOperand(1);
+      SDValue Move = N->getOperand(0);
       if (!Move.isMachineOpcode())
         continue;
 
@@ -1764,7 +1763,7 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
 
     // Producing instruction is another vector instruction. We can drop the
     // move.
-    CurDAG->UpdateNodeOperands(N, N->getOperand(0), In, N->getOperand(2));
+    CurDAG->UpdateNodeOperands(N, In, N->getOperand(1));
     MadeChange = true;
     }
     }
@@ -1852,6 +1851,11 @@ bool X86DAGToDAGISel::foldOffsetIntoAddress(uint64_t Offset,
         !isDispSafeForFrameIndexOrRegBase((uint32_t)Val) &&
         !AM.hasBaseOrIndexReg())
       return true;
+  } else if (Subtarget->is16Bit()) {
+    // In 16-bit mode, displacements are limited to [-65535,65535] for FK_Data_2
+    // fixups of unknown signedness. See X86AsmBackend::applyFixup.
+    if (Val < -(int64_t)UINT16_MAX || Val > (int64_t)UINT16_MAX)
+      return true;
   } else if (AM.hasBaseOrIndexReg() && !isDispSafeForFrameIndexOrRegBase(Val))
     // For 32-bit X86, make sure the displacement still isn't close to the
     // expressible limit.
@@ -1875,8 +1879,8 @@ bool X86DAGToDAGISel::matchLoadInAddress(LoadSDNode *N, X86ISelAddressMode &AM,
   // For more information see http://people.redhat.com/drepper/tls.pdf
   if (isNullConstant(Address) && AM.Segment.getNode() == nullptr &&
       !IndirectTlsSegRefs &&
-      (Subtarget->isTargetGlibc() || Subtarget->isTargetAndroid() ||
-       Subtarget->isTargetFuchsia())) {
+      (Subtarget->isTargetGlibc() || Subtarget->isTargetMusl() ||
+       Subtarget->isTargetAndroid() || Subtarget->isTargetFuchsia())) {
     if (Subtarget->isTarget64BitILP32() && !AllowSegmentRegForX32)
       return true;
     switch (N->getPointerInfo().getAddrSpace()) {
@@ -3311,7 +3315,8 @@ bool X86DAGToDAGISel::isSExtAbsoluteSymbolRef(unsigned Width, SDNode *N) const {
   // space, so globals can be a sign extended 32-bit immediate.
   // In other code models, small globals are in the low 2GB of the address
   // space, so sign extending them is equivalent to zero extending them.
-  return Width == 32 && !TM.isLargeGlobalValue(GV);
+  return TM.getCodeModel() != CodeModel::Large && Width == 32 &&
+         !TM.isLargeGlobalValue(GV);
 }
 
 X86::CondCode X86DAGToDAGISel::getCondFromNode(SDNode *N) const {
@@ -4032,9 +4037,17 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
 
   SDLoc DL(Node);
 
-  // Truncate the shift amount.
-  NBits = CurDAG->getNode(ISD::TRUNCATE, DL, MVT::i8, NBits);
-  insertDAGNode(*CurDAG, SDValue(Node, 0), NBits);
+  if (NBits.getSimpleValueType() != MVT::i8) {
+    // Truncate the shift amount.
+    NBits = CurDAG->getNode(ISD::TRUNCATE, DL, MVT::i8, NBits);
+    insertDAGNode(*CurDAG, SDValue(Node, 0), NBits);
+  }
+
+  // Turn (i32)(x & imm8) into (i32)x & imm32.
+  ConstantSDNode *Imm = nullptr;
+  if (NBits->getOpcode() == ISD::AND)
+    if ((Imm = dyn_cast<ConstantSDNode>(NBits->getOperand(1))))
+      NBits = NBits->getOperand(0);
 
   // Insert 8-bit NBits into lowest 8 bits of 32-bit register.
   // All the other bits are undefined, we do not care about them.
@@ -4048,6 +4061,13 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
                                          MVT::i32, ImplDef, NBits, SRIdxVal),
                   0);
   insertDAGNode(*CurDAG, SDValue(Node, 0), NBits);
+
+  if (Imm) {
+    NBits =
+        CurDAG->getNode(ISD::AND, DL, MVT::i32, NBits,
+                        CurDAG->getConstant(Imm->getZExtValue(), DL, MVT::i32));
+    insertDAGNode(*CurDAG, SDValue(Node, 0), NBits);
+  }
 
   // We might have matched the amount of high bits to be cleared,
   // but we want the amount of low bits to be kept, so negate it then.
@@ -5953,13 +5973,11 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         case MVT::i32:
           break;
         case MVT::i64:
-          ClrNode =
-              SDValue(CurDAG->getMachineNode(
-                          TargetOpcode::SUBREG_TO_REG, dl, MVT::i64,
-                          CurDAG->getTargetConstant(0, dl, MVT::i64), ClrNode,
-                          CurDAG->getTargetConstant(X86::sub_32bit, dl,
-                                                    MVT::i32)),
-                      0);
+          ClrNode = SDValue(
+              CurDAG->getMachineNode(
+                  TargetOpcode::SUBREG_TO_REG, dl, MVT::i64, ClrNode,
+                  CurDAG->getTargetConstant(X86::sub_32bit, dl, MVT::i32)),
+              0);
           break;
         default:
           llvm_unreachable("Unexpected division source");

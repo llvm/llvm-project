@@ -197,7 +197,7 @@ private:
 
 /// Prints the elements in "range" separated by commas and surrounded by "[]".
 template <typename Range>
-void printBracketedRange(const Range &range, llvm::raw_ostream &os) {
+static void printBracketedRange(const Range &range, llvm::raw_ostream &os) {
   os << '[';
   llvm::interleaveComma(range, os);
   os << ']';

@@ -41,11 +41,26 @@ InFlightDiagnostic OpenACCSupport::emitNYI(Location loc, const Twine &message) {
   return mlir::emitError(loc, "not yet implemented: " + message);
 }
 
+remark::detail::InFlightRemark
+OpenACCSupport::emitRemark(Operation *op,
+                           std::function<std::string()> messageFn,
+                           llvm::StringRef category) {
+  if (impl)
+    return impl->emitRemark(op, std::move(messageFn), category);
+  return acc::emitRemark(op, messageFn(), category);
+}
+
 bool OpenACCSupport::isValidSymbolUse(Operation *user, SymbolRefAttr symbol,
                                       Operation **definingOpPtr) {
   if (impl)
     return impl->isValidSymbolUse(user, symbol, definingOpPtr);
   return acc::isValidSymbolUse(user, symbol, definingOpPtr);
+}
+
+bool OpenACCSupport::isValidValueUse(Value v, Region &region) {
+  if (impl)
+    return impl->isValidValueUse(v, region);
+  return acc::isValidValueUse(v, region);
 }
 
 } // namespace acc

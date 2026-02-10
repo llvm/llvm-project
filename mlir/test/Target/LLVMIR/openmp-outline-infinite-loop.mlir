@@ -21,9 +21,11 @@ llvm.func @parallel_infinite_loop() -> () {
 // CHECK:       omp.region.cont:                                  ; No predecessors!
 // CHECK:         br label %[[VAL_4:.*]]
 // CHECK:       omp.par.pre_finalize:                             ; preds = %[[VAL_5:.*]]
-// CHECK:         br label %[[VAL_6:.*]]
-// CHECK:       omp.par.exit:                                     ; preds = %[[VAL_4]]
+// CHECK:         br label %[[FINI:.*]]
+// CHECK:       [[OMP_PAR_EXIT:omp.par.exit]]:                                     ; preds = %[[FINI]]
 // CHECK:         ret void
+// CHECK:       [[FINI]]:
+// CHECK:         br label %[[OMP_PAR_EXIT]]
 // CHECK:       }
 
 // CHECK-LABEL: define internal void @parallel_infinite_loop..omp_par(

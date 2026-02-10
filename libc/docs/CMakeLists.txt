@@ -86,7 +86,7 @@ if (SPHINX_FOUND)
 
       # docgen invocation.
       add_custom_target(${stem_rst}
-        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../utils/docgen/docgen.py ${stem}.h >
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../utils/docgen/docgen.py ${stem}.h >
                 ${CMAKE_CURRENT_BINARY_DIR}/headers/${stem}.rst)
       # depend on the docgen invocation.
       add_dependencies(docs-libc-html ${stem_rst})
