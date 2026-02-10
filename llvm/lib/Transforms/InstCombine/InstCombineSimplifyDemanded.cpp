@@ -147,6 +147,19 @@ bool InstCombinerImpl::SimplifyDemandedInstructionBits(Instruction &Inst) {
   return SimplifyDemandedInstructionBits(Inst, Known);
 }
 
+bool InstCombinerImpl::SimplifyDemandedInstructionFPClass(Instruction &Inst) {
+  KnownFPClass Known;
+
+  Value *V =
+      SimplifyDemandedUseFPClass(&Inst, fcAllFlags, Known, /*CtxI=*/&Inst);
+  if (!V)
+    return false;
+  if (V == &Inst)
+    return true;
+  replaceInstUsesWith(Inst, V);
+  return true;
+}
+
 /// This form of SimplifyDemandedBits simplifies the specified instruction
 /// operand if possible, updating it in place. It returns true if it made any
 /// change and false otherwise.
@@ -603,6 +616,12 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
     DemandedFromLHS.clearLowBits(NTZ);
     if (ShrinkDemandedConstant(I, 0, DemandedFromLHS) ||
         SimplifyDemandedBits(I, 0, DemandedFromLHS, LHSKnown, Q, Depth + 1))
+      return disableWrapFlagsBasedOnUnusedHighBits(I, NLZ);
+
+    unsigned NtzLHS = (~DemandedMask & LHSKnown.Zero).countr_one();
+    APInt DemandedFromRHS = DemandedFromOps;
+    DemandedFromRHS.clearLowBits(NtzLHS);
+    if (ShrinkDemandedConstant(I, 1, DemandedFromRHS))
       return disableWrapFlagsBasedOnUnusedHighBits(I, NLZ);
 
     // If we are known to be adding zeros to every bit below
@@ -2303,7 +2322,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                                     unsigned Depth) {
   assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
   assert(Known == KnownFPClass() && "expected uninitialized state");
-  assert(I->hasOneUse() && "wrong version called");
 
   Type *VTy = I->getType();
 

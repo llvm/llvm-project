@@ -1291,7 +1291,7 @@ def INIT_UNDEF : StandardPseudoInstruction {
 }
 def SUBREG_TO_REG : StandardPseudoInstruction {
   let OutOperandList = (outs unknown:$dst);
-  let InOperandList = (ins unknown:$implsrc, unknown:$subsrc, i32imm:$subidx);
+  let InOperandList = (ins unknown:$subsrc, i32imm:$subidx);
   let AsmString = "";
   let hasSideEffects = false;
 }
