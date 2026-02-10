@@ -15,8 +15,6 @@
 ; CHECK:  DC XL4'00000008'
 ; CHECK:  ENTRY void_test
 ; CHECK: L#func_end0 DS 0H
-; CHECK: stdin#C CSECT
-; CHECK: C_CODE64 CATTR
 ; CHECK: * PPA1
 ; CHECK: L#PPA1_void_test_0 DS 0H
 ; CHECK: * Version
