@@ -159,6 +159,52 @@ struct R2 : std::ranges::view_base {
   iterator end() const { return iterator{last}; }
 };
 
+struct MoveOnlyIterator {
+  using It = int*;
+
+  It it_;
+
+  using iterator_category = std::input_iterator_tag;
+  using value_type        = int;
+  using difference_type   = std::ptrdiff_t;
+  using reference         = int&;
+
+  constexpr explicit MoveOnlyIterator(It it) : it_(it) {}
+  MoveOnlyIterator(MoveOnlyIterator&&)                 = default;
+  MoveOnlyIterator& operator=(MoveOnlyIterator&&)      = default;
+  MoveOnlyIterator(const MoveOnlyIterator&)            = delete;
+  MoveOnlyIterator& operator=(const MoveOnlyIterator&) = delete;
+
+  constexpr reference operator*() const { return *it_; }
+
+  constexpr MoveOnlyIterator& operator++() {
+    ++it_;
+    return *this;
+  }
+  constexpr MoveOnlyIterator operator++(int) { return MoveOnlyIterator(it_++); }
+
+  friend constexpr bool operator==(const MoveOnlyIterator& x, const MoveOnlyIterator& y) { return x.it_ == y.it_; }
+  friend constexpr bool operator!=(const MoveOnlyIterator& x, const MoveOnlyIterator& y) { return x.it_ != y.it_; }
+};
+
+struct MoveOnlyView : std::ranges::view_base {
+  int* b;
+  int* e;
+  constexpr MoveOnlyView() = default;
+  constexpr MoveOnlyView(int* b, int* e) : b(b), e(e) {}
+  MoveOnlyView(const MoveOnlyView&) = delete;
+  constexpr MoveOnlyView(MoveOnlyView&& other) : b(other.b), e(other.e) {}
+  MoveOnlyView& operator=(const MoveOnlyView&) = delete;
+  constexpr MoveOnlyView& operator=(MoveOnlyView&& other) {
+    b = other.b;
+    e = other.e;
+    return *this;
+  }
+
+  constexpr auto begin() const { return MoveOnlyIterator{b}; }
+  constexpr auto end() const { return MoveOnlyIterator{e}; }
+};
+
 template <typename... Ts>
 concept ConcatViewConstraintsPass = requires(Ts&&... a) { std::views::concat(a...); };
 
@@ -228,6 +274,13 @@ int main(int, char**) {
     {
       // concat-indirectly-readable is ill-formed
       static_assert(!ConcatViewConstraintsPass<BadView, BadView>);
+    }
+
+    {
+      // concatable fails when there is a MoveOnly& and MoveOnly
+      // Let Fs be a pack containing MoveOnly& and MoveOnly
+      // common_reference_with<concat_reference_t<Fs...>, concat_value_t<Fs...>> fails
+      static_assert(!ConcatViewConstraintsPass<MoveOnlyView&, MoveOnlyView>);
     }
   }
 

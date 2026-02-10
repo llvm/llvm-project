@@ -279,6 +279,42 @@ int main() {
   }
 
   {
+    // valueless by exception test operator--(int)
+    flag = false;
+    Range<0> r1;
+    Range<1> r2;
+
+    auto cv    = std::views::concat(r1, r2);
+    auto iter1 = cv.begin();
+    auto iter2 = std::ranges::next(cv.begin(), 4);
+    flag       = true;
+    try {
+      iter1 = std::move(iter2);
+      assert(false);
+    } catch (...) {
+      TEST_LIBCPP_ASSERT_FAILURE([&] { iter1--; }(), "Trying to decrement a valueless iterator of concat_view.");
+    }
+  }
+
+  {
+    // valueless by exception test operator++(int)
+    flag = false;
+    Range<0> r1;
+    Range<1> r2;
+
+    auto cv    = std::views::concat(r1, r2);
+    auto iter1 = cv.begin();
+    auto iter2 = std::ranges::next(cv.begin(), 4);
+    flag       = true;
+    try {
+      iter1 = std::move(iter2);
+      assert(false);
+    } catch (...) {
+      TEST_LIBCPP_ASSERT_FAILURE([&] { iter1++; }(), "Trying to increment a valueless iterator of concat_view.");
+    }
+  }
+
+  {
     // valueless by exception test operator++
     flag = false;
     Range<0> r1;
@@ -311,6 +347,120 @@ int main() {
       assert(false);
     } catch (...) {
       TEST_LIBCPP_ASSERT_FAILURE([&] { iter1 += 1; }(), "Trying to increment a valueless iterator of concat_view.");
+    }
+  }
+
+  {
+    // valueless by exception test operator-=
+    // this one eventually calls operator+= inside the function
+    flag = false;
+    Range<0> r1;
+    Range<1> r2;
+
+    auto cv    = std::views::concat(r1, r2);
+    auto iter1 = cv.begin();
+    auto iter2 = std::ranges::next(cv.begin(), 4);
+    flag       = true;
+    try {
+      iter1 = std::move(iter2);
+      assert(false);
+    } catch (...) {
+      TEST_LIBCPP_ASSERT_FAILURE([&] { iter1 -= 1; }(), "Trying to increment a valueless iterator of concat_view.");
+    }
+  }
+
+  {
+    // valueless by exception test operator-=
+    // this one eventually calls operator+= inside the function
+    flag = false;
+    Range<0> r1;
+    Range<1> r2;
+
+    auto cv    = std::views::concat(r1, r2);
+    auto iter1 = cv.begin();
+    auto iter2 = std::ranges::next(cv.begin(), 4);
+    flag       = true;
+    try {
+      iter1 = std::move(iter2);
+      assert(false);
+    } catch (...) {
+      TEST_LIBCPP_ASSERT_FAILURE([&] { iter1[1]; }(), "Trying to increment a valueless iterator of concat_view.");
+    }
+  }
+
+  {
+    // valueless by exception test operator+(it, n)
+    flag = false;
+    Range<0> r1;
+    Range<1> r2;
+
+    auto cv    = std::views::concat(r1, r2);
+    auto iter1 = cv.begin();
+    auto iter2 = std::ranges::next(cv.begin(), 4);
+    flag       = true;
+    try {
+      iter1 = std::move(iter2);
+      assert(false);
+    } catch (...) {
+      TEST_LIBCPP_ASSERT_FAILURE([&] { [[maybe_unused]] auto iter3 = iter1 + 1; }(),
+                                 "Trying to increment a valueless iterator of concat_view.");
+    }
+  }
+
+  {
+    // valueless by exception test operator+(n, it)
+    flag = false;
+    Range<0> r1;
+    Range<1> r2;
+
+    auto cv    = std::views::concat(r1, r2);
+    auto iter1 = cv.begin();
+    auto iter2 = std::ranges::next(cv.begin(), 4);
+    flag       = true;
+    try {
+      iter1 = std::move(iter2);
+      assert(false);
+    } catch (...) {
+      TEST_LIBCPP_ASSERT_FAILURE([&] { [[maybe_unused]] auto iter3 = iter1 + 1; }(),
+                                 "Trying to increment a valueless iterator of concat_view.");
+    }
+  }
+
+  {
+    // valueless by exception test operator-(it, default_sentinel)
+    flag = false;
+    Range<0> r1;
+    Range<1> r2;
+
+    auto cv    = std::views::concat(r1, r2);
+    auto iter1 = cv.begin();
+    auto iter2 = std::ranges::next(cv.begin(), 4);
+    flag       = true;
+    try {
+      iter1 = std::move(iter2);
+      assert(false);
+    } catch (...) {
+      TEST_LIBCPP_ASSERT_FAILURE([&] { [[maybe_unused]] auto iter3 = iter1 - std::default_sentinel_t{}; }(),
+                                 "Trying to subtract a valuess iterators of concat_view from the default sentinel.");
+    }
+  }
+
+  {
+    // valueless by exception test operator-(default_sentinel, it)
+    flag = false;
+    Range<0> r1;
+    Range<1> r2;
+
+    auto cv    = std::views::concat(r1, r2);
+    auto iter1 = cv.begin();
+    auto iter2 = std::ranges::next(cv.begin(), 4);
+    flag       = true;
+    try {
+      iter1 = std::move(iter2);
+      assert(false);
+    } catch (...) {
+      TEST_LIBCPP_ASSERT_FAILURE([&] { [[maybe_unused]] auto iter3 = iter1 - std::default_sentinel_t{}; }(),
+                                 "Trying to subtract a valuess iterators of concat_view from the default sentinel.");
     }
   }
 
@@ -391,6 +541,25 @@ int main() {
   }
 
   {
+    // valueless by exception test operator<=>
+    flag = false;
+    Range<0> r1;
+    Range<1> r2;
+
+    auto cv    = std::views::concat(r1, r2);
+    auto iter1 = cv.begin();
+    auto iter2 = std::ranges::next(cv.begin(), 4);
+    flag       = true;
+    try {
+      iter1 = std::move(iter2);
+      assert(false);
+    } catch (...) {
+      TEST_LIBCPP_ASSERT_FAILURE(
+          [&] { (void)(iter1 <=> iter2); }(), "Trying to compare a valueless iterator of concat_view.");
+    }
+  }
+
+  {
     // valueless by exception test operator- between two iterators
     flag = false;
     Range<0> r1;
@@ -425,6 +594,44 @@ int main() {
     } catch (...) {
       TEST_LIBCPP_ASSERT_FAILURE(
           [&] { (void)(iter1 - 1); }(), "Trying to subtract a valuess iterators of concat_view.");
+    }
+  }
+
+  {
+    // valueless by exception test iter_move(it)
+    flag = false;
+    Range<0> r1;
+    Range<1> r2;
+
+    auto cv    = std::views::concat(r1, r2);
+    auto iter1 = cv.begin();
+    auto iter2 = std::ranges::next(cv.begin(), 4);
+    flag       = true;
+    try {
+      iter1 = std::move(iter2);
+      assert(false);
+    } catch (...) {
+      TEST_LIBCPP_ASSERT_FAILURE([&] { [[maybe_unused]] auto iter3 = std::ranges::iter_move(iter1); }(),
+                                 "Trying to apply iter_move to a valueless iterator of concat_view.");
+    }
+  }
+
+  {
+    // valueless by exception test iter_swap(iter1, iter2)
+    flag = false;
+    Range<0> r1;
+    Range<1> r2;
+
+    auto cv    = std::views::concat(r1, r2);
+    auto iter1 = cv.begin();
+    auto iter2 = std::ranges::next(cv.begin(), 4);
+    flag       = true;
+    try {
+      iter1 = std::move(iter2);
+      assert(false);
+    } catch (...) {
+      TEST_LIBCPP_ASSERT_FAILURE([&] { std::ranges::iter_swap(iter1, iter2); }(),
+                                 "Trying to swap iterators of concat_view where at least one iterator is valueless.");
     }
   }
 

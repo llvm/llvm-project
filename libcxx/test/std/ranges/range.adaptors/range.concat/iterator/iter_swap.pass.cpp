@@ -102,7 +102,7 @@ constexpr bool test() {
     Elem a2[2]{{3}, {4}};
 
     ViewA v1{IteratorA(a1), SentinelA(IteratorA(a1 + 2))};
-    ViewA v2{IteratorA(a2), SentinelA(IteratorA(a2 + 2))};
+    ViewB v2{IteratorB(a2), SentinelB(IteratorB(a2 + 2))};
 
     std::ranges::concat_view cv(v1, v2);
 
