@@ -1781,6 +1781,9 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
         Ext->hasOneUse()) {
       Value *Add = isa<ZExtInst>(Ext) ? InstCombiner::AddOne(C)
                                       : InstCombiner::SubOne(C);
+      if (!ProfcheckDisableMetadataFixes)
+        return replaceInstUsesWith(
+            I, createSelectInstWithUnknownProfile(Cond, Add, A));
       return replaceInstUsesWith(I, Builder.CreateSelect(Cond, Add, A));
     }
   }
