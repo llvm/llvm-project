@@ -117,11 +117,10 @@ getAArch64TargetTuneCPUByTriple(const llvm::Triple &Triple) {
 std::optional<std::string>
 aarch64::getAArch64TargetTuneCPU(const llvm::opt::ArgList &Args,
                                  const llvm::Triple &Triple) {
-  std::string TuneCPU;
   // -mtune has highest priority, then -mcpu
   if (Arg *A = Args.getLastArg(options::OPT_mtune_EQ)) {
     StringRef Mtune = A->getValue();
-    TuneCPU = Mtune.lower();
+    std::string TuneCPU = Mtune.lower();
 
     if (TuneCPU == "native")
       return std::string(llvm::sys::getHostCPUName());
