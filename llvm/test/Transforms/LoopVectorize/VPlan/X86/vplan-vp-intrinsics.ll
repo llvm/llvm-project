@@ -1,5 +1,3 @@
-; REQUIRES: asserts
-
 ; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize -force-vector-width=4 \
 ; RUN: -force-tail-folding-style=data-with-evl \
 ; RUN: -prefer-predicate-over-epilogue=predicate-dont-vectorize \

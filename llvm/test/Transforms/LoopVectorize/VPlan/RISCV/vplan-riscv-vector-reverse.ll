@@ -4,7 +4,6 @@
 ;  for (int i = N-1; i >= 0; --i)
 ;    a[i] = b[i] + 1.0;
 
-; REQUIRES: asserts
 ; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v \
 ; RUN: -debug-only=loop-vectorize -scalable-vectorization=on \
 ; RUN: -disable-output < %s 2>&1 | FileCheck %s
