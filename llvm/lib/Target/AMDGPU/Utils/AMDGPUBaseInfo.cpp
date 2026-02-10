@@ -194,6 +194,10 @@ namespace llvm {
 
 namespace AMDGPU {
 
+iota_range<InstCounterType> inst_counter_types(InstCounterType MaxCounter) {
+  return enum_seq(LOAD_CNT, MaxCounter);
+}
+
 /// \returns true if the target supports signed immediate offset for SMRD
 /// instructions.
 bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST) {
@@ -355,8 +359,8 @@ unsigned getAddrSizeMIMGOp(const MIMGBaseOpcodeInfo *BaseOpcode,
 }
 
 struct MUBUFInfo {
-  uint32_t Opcode;
-  uint32_t BaseOpcode;
+  uint16_t Opcode;
+  uint16_t BaseOpcode;
   uint8_t elements;
   bool has_vaddr;
   bool has_srsrc;
@@ -366,8 +370,8 @@ struct MUBUFInfo {
 };
 
 struct MTBUFInfo {
-  uint32_t Opcode;
-  uint32_t BaseOpcode;
+  uint16_t Opcode;
+  uint16_t BaseOpcode;
   uint8_t elements;
   bool has_vaddr;
   bool has_srsrc;
@@ -375,25 +379,25 @@ struct MTBUFInfo {
 };
 
 struct SMInfo {
-  uint32_t Opcode;
+  uint16_t Opcode;
   bool IsBuffer;
 };
 
 struct VOPInfo {
-  uint32_t Opcode;
+  uint16_t Opcode;
   bool IsSingle;
 };
 
 struct VOPC64DPPInfo {
-  uint32_t Opcode;
+  uint16_t Opcode;
 };
 
 struct VOPCDPPAsmOnlyInfo {
-  uint32_t Opcode;
+  uint16_t Opcode;
 };
 
 struct VOP3CDPPAsmOnlyInfo {
-  uint32_t Opcode;
+  uint16_t Opcode;
 };
 
 struct VOPDComponentInfo {
@@ -404,7 +408,7 @@ struct VOPDComponentInfo {
 };
 
 struct VOPDInfo {
-  uint32_t Opcode;
+  uint16_t Opcode;
   uint16_t OpX;
   uint16_t OpY;
   uint16_t Subtarget;
@@ -412,7 +416,7 @@ struct VOPDInfo {
 };
 
 struct VOPTrue16Info {
-  uint32_t Opcode;
+  uint16_t Opcode;
   bool IsTrue16;
 };
 
@@ -420,12 +424,12 @@ struct VOPTrue16Info {
 #define GET_FP4FP8DstByteSelTable_IMPL
 
 struct DPMACCInstructionInfo {
-  uint32_t Opcode;
+  uint16_t Opcode;
   bool IsDPMACCInstruction;
 };
 
 struct FP4FP8DstByteSelInfo {
-  uint32_t Opcode;
+  uint16_t Opcode;
   bool HasFP8DstByteSel;
   bool HasFP4DstByteSel;
 };
@@ -808,7 +812,7 @@ unsigned mapWMMA3AddrTo2AddrOpcode(unsigned Opc) {
 // Wrapper for Tablegen'd function.  enum Subtarget is not defined in any
 // header files, so we need to wrap it in a function that takes unsigned
 // instead.
-int64_t getMCOpcode(uint32_t Opcode, unsigned Gen) {
+int getMCOpcode(uint16_t Opcode, unsigned Gen) {
   return getMCOpcodeGen(Opcode, static_cast<Subtarget>(Gen));
 }
 

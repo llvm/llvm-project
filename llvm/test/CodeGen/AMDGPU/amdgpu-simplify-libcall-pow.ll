@@ -2462,6 +2462,20 @@ define float @test_pow_f32_known_positive_x__known_integral_sitofp(float nofpcla
   ret float %pow
 }
 
+define float @test_pow_f32__known_positive_x__known_integral_y(float nofpclass(ninf nnorm nsub nzero) %x, i32 %y.int) #0 {
+; CHECK-LABEL: define float @test_pow_f32__known_positive_x__known_integral_y
+; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[X:%.*]], i32 [[Y_INT:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[Y:%.*]] = sitofp i32 [[Y_INT]] to float
+; CHECK-NEXT:    [[CALL:%.*]] = tail call float @_Z4powrff(float [[X]], float [[Y]])
+; CHECK-NEXT:    ret float [[CALL]]
+;
+entry:
+  %y = sitofp i32 %y.int to float
+  %call = tail call float @_Z3powff(float %x, float %y)
+  ret float %call
+}
+
 define float @test_pow_afn_f32_known_positive_x__known_integral_sitofp(float nofpclass(ninf nsub nnorm) %x, i32 %y) {
 ; CHECK-LABEL: define float @test_pow_afn_f32_known_positive_x__known_integral_sitofp
 ; CHECK-SAME: (float nofpclass(ninf nsub nnorm) [[X:%.*]], i32 [[Y:%.*]]) {
