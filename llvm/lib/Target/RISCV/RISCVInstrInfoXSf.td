@@ -20,15 +20,15 @@ def VCIXVS2VS1 : RISCVVConstraint<VS2 = 1, VS1 = 1>;
 class VCIXType<bits<4> val, string suffix> {
   bits<4> Val = val;
   string Suffix = suffix;
-  bit Vs2IsImmediate = 0;   // Whether vs2 is an immediate
+  bit Vs2IsSource = 1;      // Whether vs2 is a register source
   bit VdIsSource = 0;       // Whether vd appears in ins as a source operand
   bit IsWidening = 0;       // Whether this is a widening instruction (XVW)
 }
 
-def VCIX_X   : VCIXType<0b0000, "">   { let Vs2IsImmediate = 1; }
-def VCIX_XV  : VCIXType<0b0010, "v">;
-def VCIX_XVV : VCIXType<0b1010, "vv"> { let VdIsSource = 1; }
-def VCIX_XVW : VCIXType<0b1111, "vw"> { let VdIsSource = 1; let IsWidening = 1; }
+def VCIX_Rs1   : VCIXType<0b0000, "">   { let Vs2IsSource = 0; }
+def VCIX_Rs1V  : VCIXType<0b0010, "v">;
+def VCIX_Rs1VV : VCIXType<0b1010, "vv"> { let VdIsSource = 1; }
+def VCIX_Rs1VW : VCIXType<0b1111, "vw"> { let VdIsSource = 1; let IsWidening = 1; }
 
 // Helper class to encapsulate Rs1-related properties
 class VCIXRs1Info<DAGOperand ty, bits<3> funct3, string prefix, string name,
@@ -72,46 +72,44 @@ def tsimm5 : RISCVOp, TImmLeaf<XLenVT, [{return isInt<5>(Imm);}]> {
   let OperandType = "OPERAND_SIMM5";
 }
 
-class VCIXInfo<VCIXType type, VCIXRs1Info rs1info, bit HaveOutputDst> {
-  bit HasOutput = HaveOutputDst;
+class VCIXInfo<VCIXType type, VCIXRs1Info rs1info, bit hasOutput> {
+  bit HasOutput = hasOutput;
   VCIXRs1Info Rs1 = rs1info;
-  defvar suffix = rs1info.Prefix # type.Suffix;
+  defvar Suffix = rs1info.Prefix # type.Suffix;
 
-  string OpcodeStr = !if(HaveOutputDst, "sf.vc.v." # suffix,
-                                        "sf.vc." # suffix);
+  string OpcodeStr = !if(hasOutput, "sf.vc.v." # Suffix,
+                                    "sf.vc." # Suffix);
   bits<4> Funct6_hi4 = type.Val;
   bits<3> Funct3 = rs1info.Funct3;
 
   // TyRd is VR when there's an output or vd is a source operand, otherwise uimm5
-  defvar TyRd = !if(!or(HaveOutputDst, type.VdIsSource), VR, uimm5);
+  defvar TyRd = !if(!or(hasOutput, type.VdIsSource), VR, uimm5);
 
-  // TyRs2 is uimm5 when vs2 is an immediate, otherwise VR
-  defvar TyRs2 = !if(type.Vs2IsImmediate, uimm5, VR);
+  dag Outs = !cond(!not(hasOutput): (outs),
+                   type.VdIsSource: (outs TyRd:$vd_wb),
+                   true:            (outs TyRd:$vd));
 
-  dag Outs = !cond(!not(HaveOutputDst): (outs),
-                   type.VdIsSource:     (outs TyRd:$vd_wb),
-                   true:                (outs TyRd:$vd));
-
-  // Vd operand: omitted from ins when HaveOutputDst and not a source operand
-  defvar VdOp = !if(!and(HaveOutputDst, !not(type.VdIsSource)),
+  // Vd operand: omitted from ins when hasOutput and not a source operand
+  defvar VdOp = !if(!and(hasOutput, !not(type.VdIsSource)),
                     (ins), (ins TyRd:$vd));
 
-  // Vs2 operand
+  // TyRs2 is uimm5 when vs2 is an immediate, otherwise VR
+  defvar TyRs2 = !if(type.Vs2IsSource, VR, uimm5);
   defvar Vs2Op = (ins TyRs2:$vs2);
 
-  // Build Ins DAG: swap vd and vs2 order when vs2 is an immediate
-  dag Ins = !if(type.Vs2IsImmediate,
-                !con(rs1info.Funct6Op, Vs2Op, VdOp, rs1info.Op),
-                !con(rs1info.Funct6Op, VdOp, Vs2Op, rs1info.Op));
+  // Build Ins DAG: swap vd and vs2 order when vs2 is not a register source
+  dag Ins = !if(type.Vs2IsSource,
+                !con(rs1info.Funct6Op, VdOp, Vs2Op, rs1info.Op),
+                !con(rs1info.Funct6Op, Vs2Op, VdOp, rs1info.Op));
 
-  string ArgStr = !if(type.Vs2IsImmediate,
-                      rs1info.Funct6Name # ", $vs2, $vd, " # rs1info.Name,
-                      rs1info.Funct6Name # ", $vd, $vs2, " # rs1info.Name);
+  string ArgStr = !if(type.Vs2IsSource,
+                      rs1info.Funct6Name # ", $vd, $vs2, " # rs1info.Name,
+                      rs1info.Funct6Name # ", $vs2, $vd, " # rs1info.Name);
 
-  string Constraints = !if(!and(HaveOutputDst, type.VdIsSource),
+  string Constraints = !if(!and(hasOutput, type.VdIsSource),
                            "$vd = $vd_wb", "");
 
-  RISCVVConstraint RVVConstraint = !if(!and(HaveOutputDst, type.IsWidening),
+  RISCVVConstraint RVVConstraint = !if(!and(hasOutput, type.IsWidening),
                                        !if(rs1info.IsVR, VCIXVS2VS1, VCIXVS2),
                                        NoConstraint);
 }
@@ -187,26 +185,26 @@ multiclass CustomSiFiveVCIXorVCIF<VCIXInfo info> {
 }
 
 multiclass CustomSiFiveVCIX<VCIXType type, VCIXRs1Info rs1> {
-  defm SF_VC_ # NAME   : CustomSiFiveVCIXorVCIF<VCIXInfo<type, rs1, HaveOutputDst=0>>;
-  defm SF_VC_V_ # NAME : CustomSiFiveVCIXorVCIF<VCIXInfo<type, rs1, HaveOutputDst=1>>;
+  defm SF_VC_ # NAME   : CustomSiFiveVCIXorVCIF<VCIXInfo<type, rs1, hasOutput=0>>;
+  defm SF_VC_V_ # NAME : CustomSiFiveVCIXorVCIF<VCIXInfo<type, rs1, hasOutput=1>>;
 }
 
 let Predicates = [HasVendorXSfvcp], mayLoad = 0, mayStore = 0,
     hasSideEffects = 1, hasNoSchedulingInfo = 1, DecoderNamespace = "XSfvector" in {
-  defm X   : CustomSiFiveVCIX<VCIX_X,   VCIX_GPR>,   Sched<[]>;
-  defm I   : CustomSiFiveVCIX<VCIX_X,   VCIX_simm5>, Sched<[]>;
-  defm XV  : CustomSiFiveVCIX<VCIX_XV,  VCIX_GPR>,   Sched<[]>;
-  defm IV  : CustomSiFiveVCIX<VCIX_XV,  VCIX_simm5>, Sched<[]>;
-  defm VV  : CustomSiFiveVCIX<VCIX_XV,  VCIX_VR>,    Sched<[]>;
-  defm FV  : CustomSiFiveVCIX<VCIX_XV,  VCIX_FPR32>, Sched<[]>;
-  defm XVV : CustomSiFiveVCIX<VCIX_XVV, VCIX_GPR>,   Sched<[]>;
-  defm IVV : CustomSiFiveVCIX<VCIX_XVV, VCIX_simm5>, Sched<[]>;
-  defm VVV : CustomSiFiveVCIX<VCIX_XVV, VCIX_VR>,    Sched<[]>;
-  defm FVV : CustomSiFiveVCIX<VCIX_XVV, VCIX_FPR32>, Sched<[]>;
-  defm XVW : CustomSiFiveVCIX<VCIX_XVW, VCIX_GPR>,   Sched<[]>;
-  defm IVW : CustomSiFiveVCIX<VCIX_XVW, VCIX_simm5>, Sched<[]>;
-  defm VVW : CustomSiFiveVCIX<VCIX_XVW, VCIX_VR>,    Sched<[]>;
-  defm FVW : CustomSiFiveVCIX<VCIX_XVW, VCIX_FPR32>, Sched<[]>;
+  defm X   : CustomSiFiveVCIX<VCIX_Rs1,   VCIX_GPR>,   Sched<[]>;
+  defm I   : CustomSiFiveVCIX<VCIX_Rs1,   VCIX_simm5>, Sched<[]>;
+  defm XV  : CustomSiFiveVCIX<VCIX_Rs1V,  VCIX_GPR>,   Sched<[]>;
+  defm IV  : CustomSiFiveVCIX<VCIX_Rs1V,  VCIX_simm5>, Sched<[]>;
+  defm VV  : CustomSiFiveVCIX<VCIX_Rs1V,  VCIX_VR>,    Sched<[]>;
+  defm FV  : CustomSiFiveVCIX<VCIX_Rs1V,  VCIX_FPR32>, Sched<[]>;
+  defm XVV : CustomSiFiveVCIX<VCIX_Rs1VV, VCIX_GPR>,   Sched<[]>;
+  defm IVV : CustomSiFiveVCIX<VCIX_Rs1VV, VCIX_simm5>, Sched<[]>;
+  defm VVV : CustomSiFiveVCIX<VCIX_Rs1VV, VCIX_VR>,    Sched<[]>;
+  defm FVV : CustomSiFiveVCIX<VCIX_Rs1VV, VCIX_FPR32>, Sched<[]>;
+  defm XVW : CustomSiFiveVCIX<VCIX_Rs1VW, VCIX_GPR>,   Sched<[]>;
+  defm IVW : CustomSiFiveVCIX<VCIX_Rs1VW, VCIX_simm5>, Sched<[]>;
+  defm VVW : CustomSiFiveVCIX<VCIX_Rs1VW, VCIX_VR>,    Sched<[]>;
+  defm FVW : CustomSiFiveVCIX<VCIX_Rs1VW, VCIX_FPR32>, Sched<[]>;
 }
 
 // For XSfvqmaccdod/qoq and XSfvfwmaccqqq
