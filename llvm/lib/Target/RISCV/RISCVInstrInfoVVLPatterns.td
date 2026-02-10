@@ -1955,6 +1955,26 @@ multiclass VPatAVGADDVL_VV_VX_RM<SDNode vop, int vxrm, string suffix = ""> {
   }
 }
 
+multiclass VPatUnaryVL_V<SDPatternOperator op, string instruction_name,
+                         Predicate predicate = HasStdExtZvbb> {
+  foreach vti = AllIntegerVectors in {
+    let Predicates = !listconcat([predicate],
+                                 GetVTypePredicates<vti>.Predicates) in {
+      def : Pat<(vti.Vector (op (vti.Vector vti.RegClass:$rs1),
+                                (vti.Vector vti.RegClass:$passthru),
+                                (vti.Mask VMV0:$vm),
+                                VLOpFrag)),
+                (!cast<Instruction>(instruction_name#"_V_"#vti.LMul.MX#"_MASK")
+                   vti.RegClass:$passthru,
+                   vti.RegClass:$rs1,
+                   (vti.Mask VMV0:$vm),
+                   GPR:$vl,
+                   vti.Log2SEW,
+                   TAIL_AGNOSTIC)>;
+    }
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Patterns.
 //===----------------------------------------------------------------------===//
