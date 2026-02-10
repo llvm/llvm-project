@@ -29,6 +29,7 @@ class EntityIdTable;
 /// \see EntityIdTable
 class EntityId {
   friend class EntityIdTable;
+  friend class TestFixture;
 
   size_t Index;
 

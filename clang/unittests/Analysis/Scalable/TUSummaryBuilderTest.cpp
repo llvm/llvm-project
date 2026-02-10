@@ -41,8 +41,7 @@ static TUSummary makeFakeSummary() {
 [[nodiscard]]
 static EntityId addTestEntity(TUSummaryBuilder &Builder, llvm::StringRef USR) {
   EntityName EN(USR, "", /*Namespace=*/{});
-  EntityLinkage MockLinkage;
-  return Builder.addEntity(EN, MockLinkage);
+  return Builder.addEntity(EN);
 }
 
 template <class ConcreteEntitySummary>
@@ -139,12 +138,11 @@ TEST_F(TUSummaryBuilderTest, AddEntity) {
   EntityName EN1("c:@F@foo", "", /*Namespace=*/{});
   EntityName EN2("c:@F@bar", "", /*Namespace=*/{});
 
-  EntityLinkage MockLinkage;
-  EntityId ID = Builder.addEntity(EN1, MockLinkage);
-  EntityId IDAlias = Builder.addEntity(EN1, MockLinkage);
+  EntityId ID = Builder.addEntity(EN1);
+  EntityId IDAlias = Builder.addEntity(EN1);
   EXPECT_EQ(ID, IDAlias); // Idenpotency
 
-  EntityId ID2 = Builder.addEntity(EN2, MockLinkage);
+  EntityId ID2 = Builder.addEntity(EN2);
   EXPECT_NE(ID, ID2);
   EXPECT_NE(IDAlias, ID2);
 
@@ -152,14 +150,6 @@ TEST_F(TUSummaryBuilderTest, AddEntity) {
   EXPECT_EQ(IdTable.count(), 2U);
   EXPECT_TRUE(IdTable.contains(EN1));
   EXPECT_TRUE(IdTable.contains(EN2));
-
-  const auto &Entities = getEntities(Summary);
-  EXPECT_EQ(Entities.size(), 2U);
-  ASSERT_EQ(Entities.count(ID), 1U);
-  EXPECT_EQ(Entities.find(ID)->second, MockLinkage);
-
-  ASSERT_EQ(Entities.count(ID2), 1U);
-  EXPECT_EQ(Entities.find(ID2)->second, MockLinkage);
 }
 
 TEST_F(TUSummaryBuilderTest, TUSummaryBuilderAddSingleFact) {

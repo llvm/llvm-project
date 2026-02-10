@@ -22,8 +22,8 @@ template <class T> static std::string asString(const T &Obj) {
 }
 
 void TestFixture::PrintTo(const EntityId &E, std::ostream *OS) {
-  *OS << asString(E);
+  *OS << "EntityId(" << E.Index << ")";
 }
 void TestFixture::PrintTo(const SummaryName &N, std::ostream *OS) {
-  *OS << asString(N);
+  *OS << "SummaryName(" << N.Name << ")";
 }
