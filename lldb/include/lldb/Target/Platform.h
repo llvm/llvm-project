@@ -353,8 +353,8 @@ public:
   /// instead of the "normal" encoding. This function attempts to determine
   /// a size hint for the size of the instruction at address \a addr, and
   /// return 0, 2 or 4, with 2 and 4 corresponding to the estimated size
-  /// and zero meaning no applicable hint. Returns the estimated size in bytes 
-  /// of the instruction for this target at the given address, or 0 if no 
+  /// and zero meaning no applicable hint. Returns the estimated size in bytes
+  /// of the instruction for this target at the given address, or 0 if no
   /// estimate is available.
   size_t GetTrapOpcodeSizeHint(Target &target, Address addr,
                                llvm::ArrayRef<uint8_t> bytes);
