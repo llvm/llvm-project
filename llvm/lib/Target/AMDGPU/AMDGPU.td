@@ -1885,7 +1885,8 @@ def FeatureISAVersion11_7_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
-     FeatureFP8ConversionInsts])>;
+     FeatureFP8ConversionInsts,
+     FeatureDot11Insts])>;
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
