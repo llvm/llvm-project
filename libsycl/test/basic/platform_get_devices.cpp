@@ -63,6 +63,9 @@ int Check(const T1 &LHS, const T2 &RHS, std::string TestName) {
 
 int CheckDeviceType(const sycl::platform &P, sycl::info::device_type DevType,
                     std::vector<sycl::device> &AllDevices) {
+  // This check verifies data of device with specific device_type and if it is
+  // correctly chosen among all devices (device_type::all).
+  // Though there is no point to check device_type::all here.
   assert(DevType != sycl::info::device_type::all);
   int Failures = 0;
 
