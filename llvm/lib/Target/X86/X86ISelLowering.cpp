@@ -18364,8 +18364,8 @@ static SDValue lower1BitShuffle(const SDLoc &DL, ArrayRef<int> Mask,
     const unsigned Width = std::max<unsigned>(NumElts, 8u);
     MVT IntVT = MVT::getIntegerVT(Width);
 
-    APInt MaskVlaue = (~Zeroable).zextOrTrunc(Width);
-    SDValue MaskNode = DAG.getConstant(MaskVlaue, DL, IntVT);
+    APInt MaskValue = (~Zeroable).zextOrTrunc(Width);
+    SDValue MaskNode = DAG.getConstant(MaskValue, DL, IntVT);
 
     MVT MaskVecVT = MVT::getVectorVT(MVT::i1, Width);
     SDValue MaskVecNode = DAG.getBitcast(MaskVecVT, MaskNode);
