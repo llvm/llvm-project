@@ -32,9 +32,12 @@ Example:
     ExpensiveToCopy Copy(Value);
   }
 
-If the parameter is not const, only copied or assigned once and has a
-non-trivial move-constructor or move-assignment operator respectively the check
-will suggest to move it.
+If the parameter is not const, and only copied or assigned once, the check will
+suggest a move in the following scenarios:
+
+1. the parameter has a non-trivial move-constructor or move-assignment operator
+   respectively;
+2. the parameter is passed to a function accepting it as a universal reference.
 
 Example:
 
@@ -52,6 +55,34 @@ Will become:
 
   void setValue(string Value) {
     Field = std::move(Value);
+  }
+
+Example:
+
+.. code-block:: c++
+
+  template <typename T>
+  void setValue(T &&Value) {
+    Field = std::forward<T>(Value);
+  }
+
+  void bar(string Value) {
+    setValue(Value);
+  }
+
+Will become:
+
+.. code-block:: c++
+
+  #include <utility>
+
+  template <typename T>
+  void setValue(T &&Value) {
+    Field = std::forward<T>(Value);
+  }
+
+  void bar(string Value) {
+    setValue(std::move(Value);
   }
 
 Because the fix-it needs to change the signature of the function, it may break
