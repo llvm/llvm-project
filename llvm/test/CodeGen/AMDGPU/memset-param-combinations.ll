@@ -1184,15 +1184,15 @@ define void @memset_p3_sz1055_align_4_varsetval(ptr addrspace(3) align 4 %dst, i
 ; GFX942-SDAG-NEXT:  ; %bb.2: ; %static-memset-post-expansion
 ; GFX942-SDAG-NEXT:    s_mov_b32 s0, 0x4040404
 ; GFX942-SDAG-NEXT:    v_add_u32_e32 v2, 0x400, v0
-; GFX942-SDAG-NEXT:    v_add_u32_e32 v3, 0x408, v0
 ; GFX942-SDAG-NEXT:    v_perm_b32 v4, v1, v1, s0
-; GFX942-SDAG-NEXT:    ds_write2_b32 v3, v4, v4 offset1:1
 ; GFX942-SDAG-NEXT:    ds_write2_b32 v2, v4, v4 offset1:1
 ; GFX942-SDAG-NEXT:    v_add_u32_e32 v2, 0x410, v0
 ; GFX942-SDAG-NEXT:    ds_write2_b32 v2, v4, v4 offset1:1
-; GFX942-SDAG-NEXT:    ds_write_b32 v0, v4 offset:1048
 ; GFX942-SDAG-NEXT:    v_lshlrev_b16_e32 v2, 8, v1
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v3, 0x408, v0
 ; GFX942-SDAG-NEXT:    v_or_b32_sdwa v2, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX942-SDAG-NEXT:    ds_write2_b32 v3, v4, v4 offset1:1
+; GFX942-SDAG-NEXT:    ds_write_b32 v0, v4 offset:1048
 ; GFX942-SDAG-NEXT:    ds_write_b16 v0, v2 offset:1052
 ; GFX942-SDAG-NEXT:    ds_write_b8 v0, v1 offset:1054
 ; GFX942-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1217,6 +1217,8 @@ define void @memset_p3_sz1055_align_4_varsetval(ptr addrspace(3) align 4 %dst, i
 ; GFX942-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v8, vcc, 0x100, v8
 ; GFX942-GISEL-NEXT:    ds_write2_b64 v10, v[2:3], v[4:5] offset1:1
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v9, vcc, 0, v9, vcc
 ; GFX942-GISEL-NEXT:    ds_write2_b64 v10, v[2:3], v[4:5] offset0:2 offset1:3
 ; GFX942-GISEL-NEXT:    ds_write2_b64 v10, v[2:3], v[4:5] offset0:4 offset1:5
 ; GFX942-GISEL-NEXT:    ds_write2_b64 v10, v[2:3], v[4:5] offset0:6 offset1:7
@@ -1232,7 +1234,6 @@ define void @memset_p3_sz1055_align_4_varsetval(ptr addrspace(3) align 4 %dst, i
 ; GFX942-GISEL-NEXT:    ds_write2_b64 v10, v[2:3], v[4:5] offset0:26 offset1:27
 ; GFX942-GISEL-NEXT:    ds_write2_b64 v10, v[2:3], v[4:5] offset0:28 offset1:29
 ; GFX942-GISEL-NEXT:    ds_write2_b64 v10, v[2:3], v[4:5] offset0:30 offset1:31
-; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v9, vcc, 0, v9, vcc
 ; GFX942-GISEL-NEXT:    v_add_u32_e32 v10, 0x100, v10
 ; GFX942-GISEL-NEXT:    v_cmp_lt_u64_e32 vcc, v[8:9], v[6:7]
 ; GFX942-GISEL-NEXT:    s_cbranch_vccnz .LBB8_1
@@ -1363,6 +1364,8 @@ define void @memset_p3_sz2048_align_4_varsetval(ptr addrspace(3) align 4 %dst, i
 ; GFX942-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v8, vcc, 0x100, v8
 ; GFX942-GISEL-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset1:1
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v9, vcc, 0, v9, vcc
 ; GFX942-GISEL-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset0:2 offset1:3
 ; GFX942-GISEL-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset0:4 offset1:5
 ; GFX942-GISEL-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset0:6 offset1:7
@@ -1378,7 +1381,6 @@ define void @memset_p3_sz2048_align_4_varsetval(ptr addrspace(3) align 4 %dst, i
 ; GFX942-GISEL-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset0:26 offset1:27
 ; GFX942-GISEL-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset0:28 offset1:29
 ; GFX942-GISEL-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset0:30 offset1:31
-; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v9, vcc, 0, v9, vcc
 ; GFX942-GISEL-NEXT:    v_add_u32_e32 v0, 0x100, v0
 ; GFX942-GISEL-NEXT:    v_cmp_lt_u64_e32 vcc, v[8:9], v[6:7]
 ; GFX942-GISEL-NEXT:    s_cbranch_vccnz .LBB9_1

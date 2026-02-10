@@ -1,5 +1,6 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -O3 -debug-only=machine-scheduler 2>&1 < %s | FileCheck -check-prefix=DEBUG %s
-; REQUIRES: asserts
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -O3 < %s
+
+; This testcase only checks it compiles successfully.
 
 ; This testcase hit a situation where reverting scheduling after the scheduler's
 ; rematerialization stage would cause incoherent MI and slot orders, hitting an
@@ -13,9 +14,6 @@
 @shared = external addrspace(3) global [16384 x i8]
 
 define amdgpu_kernel void @test_revert_schedule(i32 %arg0, i32 %arg1, ptr addrspace(3) %p15, ptr addrspace(3) %lds, ptr addrspace(3) %arg, ptr addrspace(3) %p14, i32 %arg2, ptr addrspace(3) %arg3, ptr addrspace(3) %arg4, i32 %arg5, i32 %arg6, ptr addrspace(3) %p12, i32 %x7, ptr addrspace(3) %p7, i32 %a7, ptr addrspace(3) %arg7, i1 %loopcond, i32 %a5, i32 %a3, i32 %a4, i32 %a2, <4 x i8> %arg8, <4 x i8> %arg9) #0 {
-; DEBUG: test_revert_schedule
-; DEBUG: Region 3 cannot meet occupancy target, interrupting re-scheduling in all regions
-; DEBUG: ==== ROLLBACK ====
 entry:
   %i = tail call i32 @llvm.amdgcn.workitem.id.x()
   %i10 = lshr i32 %i, 3

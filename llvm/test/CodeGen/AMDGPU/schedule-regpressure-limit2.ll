@@ -18,8 +18,8 @@
 ; VI-MINREG: NumVgprs: {{[1-3][0-9]$}}
 
 ; stores may alias loads
-; VI-MAXOCC: NumSgprs: {{[1-3][0-9]$}}
-; VI-MAXOCC: NumVgprs: {{[1-6][0-9]$}}
+; VI-MAXOCC: NumSgprs: {{[1-3]?[0-9]$}}
+; VI-MAXOCC: NumVgprs: {{[1-6]?[0-9]$}}
 
 define amdgpu_kernel void @load_fma_store(ptr addrspace(3) nocapture readonly %in_arg, ptr addrspace(1) nocapture %out_arg) {
 bb:

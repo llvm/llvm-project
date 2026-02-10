@@ -43,6 +43,17 @@ public:
   }
 };
 
+uint64_t getMemFlagsBySubtarget(const GCNSubtarget &ST) {
+  constexpr uint64_t MemFlags = SIInstrFlags::MTBUF | SIInstrFlags::MUBUF |
+                                SIInstrFlags::SMRD | SIInstrFlags::FLAT |
+                                SIInstrFlags::MIMG | SIInstrFlags::VIMAGE |
+                                SIInstrFlags::VSAMPLE;
+  // Don't bundle DS-instrs on CDNA3/CDNA4.
+  if (ST.hasGFX940Insts())
+    return MemFlags;
+  return MemFlags | SIInstrFlags::DS;
+}
+
 class SIPostRABundler {
 public:
   bool run(MachineFunction &MF);
@@ -52,6 +63,8 @@ private:
 
   SmallSet<Register, 16> Defs;
 
+  uint64_t MemFlags;
+
   void collectUsedRegUnits(const MachineInstr &MI,
                            BitVector &UsedRegUnits) const;
 
@@ -59,11 +72,6 @@ private:
   bool isDependentLoad(const MachineInstr &MI) const;
   bool canBundle(const MachineInstr &MI, const MachineInstr &NextMI) const;
 };
-
-constexpr uint64_t MemFlags = SIInstrFlags::MTBUF | SIInstrFlags::MUBUF |
-                              SIInstrFlags::SMRD | SIInstrFlags::DS |
-                              SIInstrFlags::FLAT | SIInstrFlags::MIMG |
-                              SIInstrFlags::VIMAGE | SIInstrFlags::VSAMPLE;
 
 } // End anonymous namespace.
 
@@ -141,9 +149,11 @@ PreservedAnalyses SIPostRABundlerPass::run(MachineFunction &MF,
 
 bool SIPostRABundler::run(MachineFunction &MF) {
 
-  TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  TRI = ST.getRegisterInfo();
   BitVector BundleUsedRegUnits(TRI->getNumRegUnits());
   BitVector KillUsedRegUnits(TRI->getNumRegUnits());
+  MemFlags = getMemFlagsBySubtarget(ST);
 
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
