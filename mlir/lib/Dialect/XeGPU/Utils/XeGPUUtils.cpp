@@ -16,11 +16,13 @@
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
+#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 #include <numeric>
@@ -101,6 +103,35 @@ mlir::xegpu::getDistributedVectorType(VectorType originalType,
   return xegpu::getDistributedVectorType(helperTdescTy);
 }
 
+FailureOr<VectorType>
+xegpu::getDistVecTypeBasedOnLaneLayout(xegpu::DistributeLayoutAttr layout,
+                                       VectorType originalType) {
+  if (!layout)
+    return failure();
+  assert((isa<xegpu::LayoutAttr>(layout) || isa<xegpu::SliceAttr>(layout)) &&
+         "Expecting a valid layout.");
+  SmallVector<int64_t> effectiveLaneLayout =
+      layout.getEffectiveLaneLayoutAsInt();
+  assert(static_cast<size_t>(originalType.getRank()) >=
+             effectiveLaneLayout.size() &&
+         "Rank of the original vector type should be greater or equal to the "
+         "size of the lane layout to distribute the vector type.");
+  SmallVector<int64_t> distributedShape(originalType.getShape());
+  // Only distribute the last `laneLayout.size()` dimensions. The remaining
+  // dimensions are not distributed.
+  unsigned distributionStart =
+      originalType.getRank() - effectiveLaneLayout.size();
+  for (auto [i, dim] : llvm::enumerate(originalType.getShape())) {
+    if (i < distributionStart)
+      continue;
+    // Check if the dimension can be distributed evenly.
+    if (dim % effectiveLaneLayout[i - distributionStart] != 0)
+      return failure();
+    distributedShape[i] = dim / effectiveLaneLayout[i - distributionStart];
+  }
+  return VectorType::get(distributedShape, originalType.getElementType());
+}
+
 std::string xegpu::getTemporaryLayoutName(const OpOperand &operand) {
   const StringRef prefix("layout_operand_");
   unsigned idx = const_cast<OpOperand &>(operand).getOperandNumber();
@@ -139,7 +170,7 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
 
   if (auto arg = dyn_cast<BlockArgument>(value)) {
     auto *parentOp = arg.getOwner()->getParentOp();
-    if (auto loop = dyn_cast<LoopLikeOpInterface>(parentOp)) {
+    if (auto loop = dyn_cast_if_present<LoopLikeOpInterface>(parentOp)) {
       OpOperand *tiedInit = loop.getTiedLoopInit(arg);
       if (tiedInit)
         return getDistributeLayoutAttr(tiedInit->get());
@@ -186,8 +217,7 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
     return layout;
   }
 
-  auto layout = getDistributeLayoutAttr(opr.get());
-  return layout;
+  return nullptr;
 }
 
 // Returns the permanent layout attribute for the given result if it's
@@ -335,75 +365,6 @@ template void xegpu::setTemporaryLayout<mlir::OpResult>(
 template void xegpu::setTemporaryLayout<mlir::OpOperand>(
     const mlir::OpOperand &operand,
     const mlir::xegpu::DistributeLayoutAttr layout);
-
-void xegpu::recoverTemporaryLayoutsDeprecated(Operation *op) {
-  op->walk([&](Operation *nestOp) {
-    for (OpOperand &opr : nestOp->getOpOperands()) {
-      auto layout = getDistributeLayoutAttr(opr.get());
-      setDistributeLayoutAttr(opr, layout);
-    }
-
-    for (OpResult result : nestOp->getOpResults()) {
-      auto layout = getDistributeLayoutAttr(result);
-      setDistributeLayoutAttr(result, layout);
-    }
-  });
-}
-
-/// Attach layout attributes to all vector-type operands of operations within
-/// the given operation's region. Reports an error if any vector operand lacks
-/// a layout attribute.
-bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
-  auto result = rootOp->walk([&](Operation *op) {
-    for (OpOperand &operand : op->getOpOperands()) {
-      // Layouts are needed for vector type only.
-      if (!isa<VectorType>(operand.get().getType()))
-        continue;
-      auto layout = xegpu::getDistributeLayoutAttr(operand.get());
-      if (!layout) {
-        op->emitError("Could not find layout attribute for operand ")
-            << operand.getOperandNumber() << " of operation " << op->getName();
-        return WalkResult::interrupt();
-      }
-      xegpu::setDistributeLayoutAttr(operand, layout);
-    }
-    return WalkResult::advance();
-  });
-  return !result.wasInterrupted();
-}
-
-template <typename T, typename>
-void xegpu::removeLayoutAttr(const T &operandOrResult) {
-  Operation *owner = operandOrResult.getOwner();
-  std::string name = xegpu::getTemporaryLayoutName(operandOrResult);
-  if (owner->hasAttrOfType<DistributeLayoutAttr>(name))
-    owner->removeAttr(name);
-}
-
-// Explicit instantiation for OpResult
-template void
-xegpu::removeLayoutAttr<mlir::OpResult>(const mlir::OpResult &result);
-
-// Explicit instantiation for OpOperand
-template void
-xegpu::removeLayoutAttr<mlir::OpOperand>(const mlir::OpOperand &operand);
-
-void xegpu::removeLayoutAttrs(Operation *op) {
-  op->walk([&](Operation *nestOp) {
-    for (OpOperand &opr : nestOp->getOpOperands())
-      removeLayoutAttr(opr);
-    for (OpResult result : nestOp->getOpResults())
-      removeLayoutAttr(result);
-    if (op->hasAttrOfType<DistributeLayoutAttr>("layout"))
-      op->removeAttr("layout");
-    if (op->hasAttrOfType<DistributeLayoutAttr>("layout_a"))
-      op->removeAttr("layout_a");
-    if (op->hasAttrOfType<DistributeLayoutAttr>("layout_b"))
-      op->removeAttr("layout_b");
-    if (op->hasAttrOfType<DistributeLayoutAttr>("layout_cd"))
-      op->removeAttr("layout_cd");
-  });
-}
 
 SmallVector<Value>
 xegpu::extractVectorsWithShapeFromValue(OpBuilder &builder, Location loc,
@@ -696,3 +657,82 @@ template int xegpu::getLargestDivisor<int>(int dim, ArrayRef<int> candidates,
 template int
 xegpu::getLargestDivisor<unsigned>(unsigned dim, ArrayRef<unsigned> candidates,
                                    ArrayRef<unsigned> candidateMultiples);
+
+bool xegpu::requirePacked(const xegpu::LayoutAttr layout) {
+  if (!layout)
+    return false;
+  auto laneData = layout.getEffectiveLaneDataAsInt();
+  if (laneData.size() != 2)
+    return false;
+  return laneData[0] != 1;
+}
+
+bool xegpu::requireTranspose(const xegpu::LayoutAttr layout,
+                             const xegpu::uArch::uArch *uArch) {
+  // Return false for unsupported targets.
+  // TODO: Add more support or move to target info.
+  if (uArch->getName().equals_insensitive("pvc") &&
+      uArch->getName().equals_insensitive("bmg"))
+    return false;
+  if (!layout)
+    return false;
+  auto laneLayout = layout.getEffectiveLaneLayoutAsInt();
+  if (laneLayout.size() != 2)
+    return false;
+  return laneLayout[0] == uArch->getSubgroupSize() && laneLayout[1] == 1;
+}
+
+// Check if dst shape is an expansion of src shape by inserting unit dimensions.
+// Returns true if all dimensions in src match corresponding dimensions in dst
+// (after skipping unit dimensions), and populates expandedUnitDims with the
+// indices of the unit dimensions in dst that were added (not present in src).
+// Example: src=[2,3], dst=[1,2,3,1] -> true, expandedUnitDims=[0,3]
+bool xegpu::matchUnitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
+                                  SmallVector<int64_t> &expandedUnitDims) {
+  // All unit dimensions in dst that don't appear in src are the expanded
+  // unit dimensions
+  size_t srcIdx = 0;
+  for (size_t dstIdx = 0; dstIdx < dst.size(); ++dstIdx)
+    if (srcIdx < src.size() && src[srcIdx] == dst[dstIdx])
+      srcIdx++;
+    else if (dst[dstIdx] == 1)
+      expandedUnitDims.push_back(dstIdx);
+    else
+      return false;
+  return srcIdx == src.size();
+}
+
+// Checks if dst shape is an expansion of src shape where each dimension in src
+// is split into one or more consecutive dimensions in dst whose product equals
+// the original dimension. Populates splitDimGroups with groups of dst indices
+// that correspond to each src dimension. Example: src=[6,4], dst=[2,3,2,2] ->
+// true
+bool xegpu::matchSplitDimExpansion(
+    ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
+    SmallVector<SmallVector<int64_t>> &splitDimGroups) {
+  // each dim in src can be mapped to one or more dims in dst whose product
+  // equals to the src dim
+  size_t srcIdx = 0;
+  int64_t accumulatedSize = 1;
+  SmallVector<int64_t> currentDstDims;
+
+  splitDimGroups.clear();
+  for (size_t dstIdx = 0; dstIdx < dst.size(); ++dstIdx) {
+    if (srcIdx >= src.size())
+      return false;
+    accumulatedSize *= dst[dstIdx];
+    currentDstDims.push_back(dstIdx);
+
+    if (accumulatedSize == src[srcIdx]) {
+      // Record the mapping: srcIdx -> currentDstDims
+      splitDimGroups.push_back(currentDstDims);
+      // move to next src dim
+      srcIdx++;
+      accumulatedSize = 1;
+      currentDstDims.clear();
+    } else if (accumulatedSize > src[srcIdx]) {
+      return false;
+    }
+  }
+  return srcIdx == src.size();
+}

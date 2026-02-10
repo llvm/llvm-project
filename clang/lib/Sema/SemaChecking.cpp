@@ -29,7 +29,6 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/FormatString.h"
 #include "clang/AST/IgnoreExpr.h"
-#include "clang/AST/Mangle.h"
 #include "clang/AST/NSAPI.h"
 #include "clang/AST/NonTrivialTypeVisitor.h"
 #include "clang/AST/OperationKinds.h"
@@ -47,7 +46,6 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/OpenCLOptions.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/PartialDiagnostic.h"
@@ -1142,53 +1140,6 @@ static bool ProcessFormatStringLiteral(const Expr *FormatExpr,
   return false;
 }
 
-/// Returns true if:
-/// - The sanitizers are enabled.
-/// - `Decl` does not have attributes preventing sanitizer instrumentation.
-/// - `Decl` or its location is not included in the no-sanitize list.
-static bool isSanitizationEnabledForDecl(ASTContext &Context,
-                                         const NamedDecl *Decl,
-                                         SanitizerMask TheSanitizerMask) {
-  // Check that the sanitizer is enabled globally.
-  const SanitizerMask EnabledSanitizerMask =
-      Context.getLangOpts().Sanitize.Mask;
-  if (!(EnabledSanitizerMask & TheSanitizerMask))
-    return false;
-
-  // Check that the source file is not included in the no sanitize list.
-  const auto &NoSanitizeList = Context.getNoSanitizeList();
-  if (NoSanitizeList.containsLocation(TheSanitizerMask,
-                                      Decl->getSourceRange().getBegin()))
-    return false;
-
-  // Check that the declaration name is not included in the no sanitize list.
-  // NB no-sanitize lists use mangled names.
-  std::unique_ptr<MangleContext> MC(Context.createMangleContext());
-  std::string MangledName;
-  if (MC->shouldMangleDeclName(Decl)) {
-    llvm::raw_string_ostream S = llvm::raw_string_ostream(MangledName);
-    MC->mangleName(Decl, S);
-  } else {
-    MangledName = Decl->getName();
-  }
-  if (NoSanitizeList.containsFunction(TheSanitizerMask, MangledName))
-    return false;
-
-  // Check that the declaration does not have the
-  // "disable_sanitizer_instrumentation" attribute.
-  if (Decl->hasAttr<DisableSanitizerInstrumentationAttr>())
-    return false;
-
-  // Check that the declaration does not have a "no_sanitize" attribute matching
-  // this sanitizer mask.
-  for (const NoSanitizeAttr *Attr : Decl->specific_attrs<NoSanitizeAttr>()) {
-    if (Attr->getMask() & TheSanitizerMask)
-      return false;
-  }
-
-  return true;
-}
-
 void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
                                                CallExpr *TheCall) {
   if (TheCall->isValueDependent() || TheCall->isTypeDependent() ||
@@ -1266,12 +1217,12 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
       return std::nullopt;
 
     const Expr *ObjArg = TheCall->getArg(NewIndex);
-    uint64_t Result;
-    if (!ObjArg->tryEvaluateObjectSize(Result, getASTContext(), BOSType))
-      return std::nullopt;
-
-    // Get the object size in the target's size_t width.
-    return llvm::APSInt::getUnsigned(Result).extOrTrunc(SizeTypeWidth);
+    if (std::optional<uint64_t> ObjSize =
+            ObjArg->tryEvaluateObjectSize(getASTContext(), BOSType)) {
+      // Get the object size in the target's size_t width.
+      return llvm::APSInt::getUnsigned(*ObjSize).extOrTrunc(SizeTypeWidth);
+    }
+    return std::nullopt;
   };
 
   auto ComputeStrLenArgument =
@@ -1282,11 +1233,13 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     unsigned NewIndex = *IndexOptional;
 
     const Expr *ObjArg = TheCall->getArg(NewIndex);
-    uint64_t Result;
-    if (!ObjArg->tryEvaluateStrLen(Result, getASTContext()))
-      return std::nullopt;
-    // Add 1 for null byte.
-    return llvm::APSInt::getUnsigned(Result + 1).extOrTrunc(SizeTypeWidth);
+
+    if (std::optional<uint64_t> Result =
+            ObjArg->tryEvaluateStrLen(getASTContext())) {
+      // Add 1 for null byte.
+      return llvm::APSInt::getUnsigned(*Result + 1).extOrTrunc(SizeTypeWidth);
+    }
+    return std::nullopt;
   };
 
   std::optional<llvm::APSInt> SourceSize;
@@ -1888,6 +1841,32 @@ static ExprResult PointerAuthAuthAndResign(Sema &S, CallExpr *Call) {
   return Call;
 }
 
+static ExprResult PointerAuthAuthLoadRelativeAndSign(Sema &S, CallExpr *Call) {
+  if (S.checkArgCount(Call, 6))
+    return ExprError();
+  if (checkPointerAuthEnabled(S, Call))
+    return ExprError();
+  const Expr *AddendExpr = Call->getArg(5);
+  bool AddendIsConstInt = AddendExpr->isIntegerConstantExpr(S.Context);
+  if (!AddendIsConstInt) {
+    const Expr *Arg = Call->getArg(5)->IgnoreParenImpCasts();
+    DeclRefExpr *DRE = cast<DeclRefExpr>(Call->getCallee()->IgnoreParenCasts());
+    FunctionDecl *FDecl = cast<FunctionDecl>(DRE->getDecl());
+    S.Diag(Arg->getBeginLoc(), diag::err_constant_integer_last_arg_type)
+        << FDecl->getDeclName() << Arg->getSourceRange();
+  }
+  if (checkPointerAuthValue(S, Call->getArgs()[0], PAO_Auth) ||
+      checkPointerAuthKey(S, Call->getArgs()[1]) ||
+      checkPointerAuthValue(S, Call->getArgs()[2], PAO_Discriminator) ||
+      checkPointerAuthKey(S, Call->getArgs()[3]) ||
+      checkPointerAuthValue(S, Call->getArgs()[4], PAO_Discriminator) ||
+      !AddendIsConstInt)
+    return ExprError();
+
+  Call->setType(Call->getArgs()[0]->getType());
+  return Call;
+}
+
 static ExprResult PointerAuthStringDiscriminator(Sema &S, CallExpr *Call) {
   if (checkPointerAuthEnabled(S, Call))
     return ExprError();
@@ -2166,6 +2145,8 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
     return AMDGPU().CheckAMDGCNBuiltinFunctionCall(BuiltinID, TheCall);
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
     return RISCV().CheckBuiltinFunctionCall(TI, BuiltinID, TheCall);
   case llvm::Triple::loongarch32:
   case llvm::Triple::loongarch64:
@@ -2219,7 +2200,7 @@ checkMathBuiltinElementType(Sema &S, SourceLocation Loc, QualType ArgTy,
     }
     break;
   case Sema::EltwiseBuiltinArgTyRestriction::SignedIntOrFloatTy:
-    if (EltTy->isUnsignedIntegerType()) {
+    if (!EltTy->isSignedIntegerType() && !EltTy->isRealFloatingType()) {
       return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
              << 1 << /* scalar or vector */ 5 << /* signed int */ 2
              << /* or fp */ 1 << ArgTy;
@@ -2298,7 +2279,8 @@ static bool BuiltinBswapg(Sema &S, CallExpr *TheCall) {
     return true;
   }
   if (const auto *BT = dyn_cast<BitIntType>(ArgTy)) {
-    if (BT->getNumBits() % 16 != 0 && BT->getNumBits() != 8) {
+    if (BT->getNumBits() % 16 != 0 && BT->getNumBits() != 8 &&
+        BT->getNumBits() != 1) {
       S.Diag(Arg->getBeginLoc(), diag::err_bswapg_invalid_bit_width)
           << ArgTy << BT->getNumBits();
       return true;
@@ -2372,6 +2354,105 @@ static bool BuiltinCountZeroBitsGeneric(Sema &S, CallExpr *TheCall) {
     }
   }
 
+  return false;
+}
+
+class RotateIntegerConverter : public Sema::ContextualImplicitConverter {
+  unsigned ArgIndex;
+  bool OnlyUnsigned;
+
+  Sema::SemaDiagnosticBuilder emitError(Sema &S, SourceLocation Loc,
+                                        QualType T) {
+    return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
+           << ArgIndex << /*scalar*/ 1
+           << (OnlyUnsigned ? /*unsigned integer*/ 3 : /*integer*/ 1)
+           << /*no fp*/ 0 << T;
+  }
+
+public:
+  RotateIntegerConverter(unsigned ArgIndex, bool OnlyUnsigned)
+      : ContextualImplicitConverter(/*Suppress=*/false,
+                                    /*SuppressConversion=*/true),
+        ArgIndex(ArgIndex), OnlyUnsigned(OnlyUnsigned) {}
+
+  bool match(QualType T) override {
+    return OnlyUnsigned ? T->isUnsignedIntegerType() : T->isIntegerType();
+  }
+
+  Sema::SemaDiagnosticBuilder diagnoseNoMatch(Sema &S, SourceLocation Loc,
+                                              QualType T) override {
+    return emitError(S, Loc, T);
+  }
+
+  Sema::SemaDiagnosticBuilder diagnoseIncomplete(Sema &S, SourceLocation Loc,
+                                                 QualType T) override {
+    return emitError(S, Loc, T);
+  }
+
+  Sema::SemaDiagnosticBuilder diagnoseExplicitConv(Sema &S, SourceLocation Loc,
+                                                   QualType T,
+                                                   QualType ConvTy) override {
+    return emitError(S, Loc, T);
+  }
+
+  Sema::SemaDiagnosticBuilder noteExplicitConv(Sema &S, CXXConversionDecl *Conv,
+                                               QualType ConvTy) override {
+    return S.Diag(Conv->getLocation(), diag::note_conv_function_declared_at);
+  }
+
+  Sema::SemaDiagnosticBuilder diagnoseAmbiguous(Sema &S, SourceLocation Loc,
+                                                QualType T) override {
+    return emitError(S, Loc, T);
+  }
+
+  Sema::SemaDiagnosticBuilder noteAmbiguous(Sema &S, CXXConversionDecl *Conv,
+                                            QualType ConvTy) override {
+    return S.Diag(Conv->getLocation(), diag::note_conv_function_declared_at);
+  }
+
+  Sema::SemaDiagnosticBuilder diagnoseConversion(Sema &S, SourceLocation Loc,
+                                                 QualType T,
+                                                 QualType ConvTy) override {
+    llvm_unreachable("conversion functions are permitted");
+  }
+};
+
+/// Checks that __builtin_stdc_rotate_{left,right} was called with two
+/// arguments, that the first argument is an unsigned integer type, and that
+/// the second argument is an integer type.
+static bool BuiltinRotateGeneric(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCount(TheCall, 2))
+    return true;
+
+  // First argument (value to rotate) must be unsigned integer type.
+  RotateIntegerConverter Arg0Converter(1, /*OnlyUnsigned=*/true);
+  ExprResult Arg0Res = S.PerformContextualImplicitConversion(
+      TheCall->getArg(0)->getBeginLoc(), TheCall->getArg(0), Arg0Converter);
+  if (Arg0Res.isInvalid())
+    return true;
+
+  Expr *Arg0 = Arg0Res.get();
+  TheCall->setArg(0, Arg0);
+
+  QualType Arg0Ty = Arg0->getType();
+  if (!Arg0Ty->isUnsignedIntegerType())
+    return true;
+
+  // Second argument (rotation count) must be integer type.
+  RotateIntegerConverter Arg1Converter(2, /*OnlyUnsigned=*/false);
+  ExprResult Arg1Res = S.PerformContextualImplicitConversion(
+      TheCall->getArg(1)->getBeginLoc(), TheCall->getArg(1), Arg1Converter);
+  if (Arg1Res.isInvalid())
+    return true;
+
+  Expr *Arg1 = Arg1Res.get();
+  TheCall->setArg(1, Arg1);
+
+  QualType Arg1Ty = Arg1->getType();
+  if (!Arg1Ty->isIntegerType())
+    return true;
+
+  TheCall->setType(Arg0Ty);
   return false;
 }
 
@@ -3234,6 +3315,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     return PointerAuthSignGenericData(*this, TheCall);
   case Builtin::BI__builtin_ptrauth_auth_and_resign:
     return PointerAuthAuthAndResign(*this, TheCall);
+  case Builtin::BI__builtin_ptrauth_auth_load_relative_and_sign:
+    return PointerAuthAuthLoadRelativeAndSign(*this, TheCall);
   case Builtin::BI__builtin_ptrauth_string_discriminator:
     return PointerAuthStringDiscriminator(*this, TheCall);
 
@@ -3623,6 +3706,12 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_clzg:
   case Builtin::BI__builtin_ctzg:
     if (BuiltinCountZeroBitsGeneric(*this, TheCall))
+      return ExprError();
+    break;
+
+  case Builtin::BI__builtin_stdc_rotate_left:
+  case Builtin::BI__builtin_stdc_rotate_right:
+    if (BuiltinRotateGeneric(*this, TheCall))
       return ExprError();
     break;
 
@@ -4270,7 +4359,6 @@ bool Sema::CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
   CheckAbsoluteValueFunction(TheCall, FDecl);
   CheckMaxUnsignedZero(TheCall, FDecl);
   CheckInfNaNFunction(TheCall, FDecl);
-  CheckUseOfAtomicThreadFenceWithTSan(TheCall, FDecl);
 
   if (getLangOpts().ObjC)
     ObjC().DiagnoseCStringFormatDirectiveInCFAPI(FDecl, Args, NumArgs);
@@ -4553,6 +4641,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__atomic_or_fetch:
   case AtomicExpr::AO__atomic_xor_fetch:
   case AtomicExpr::AO__atomic_nand_fetch:
+  case AtomicExpr::AO__atomic_fetch_uinc:
+  case AtomicExpr::AO__atomic_fetch_udec:
   case AtomicExpr::AO__scoped_atomic_fetch_and:
   case AtomicExpr::AO__scoped_atomic_fetch_or:
   case AtomicExpr::AO__scoped_atomic_fetch_xor:
@@ -4561,8 +4651,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__scoped_atomic_or_fetch:
   case AtomicExpr::AO__scoped_atomic_xor_fetch:
   case AtomicExpr::AO__scoped_atomic_nand_fetch:
-  case AtomicExpr::AO__scoped_atomic_uinc_wrap:
-  case AtomicExpr::AO__scoped_atomic_udec_wrap:
+  case AtomicExpr::AO__scoped_atomic_fetch_uinc:
+  case AtomicExpr::AO__scoped_atomic_fetch_udec:
     Form = Arithmetic;
     break;
 
@@ -10147,23 +10237,6 @@ void Sema::CheckMaxUnsignedZero(const CallExpr *Call,
         << FixItHint::CreateRemoval(RemovalRange);
 }
 
-//===--- CHECK: Warn on use of `std::atomic_thread_fence` with TSan. ------===//
-void Sema::CheckUseOfAtomicThreadFenceWithTSan(const CallExpr *Call,
-                                               const FunctionDecl *FDecl) {
-  // Thread sanitizer currently does not support `std::atomic_thread_fence`,
-  // leading to false positives. Example issue:
-  // https://github.com/llvm/llvm-project/issues/52942
-
-  if (!Call || !FDecl || !IsStdFunction(FDecl, "atomic_thread_fence"))
-    return;
-
-  const NamedDecl *Caller = getCurFunctionOrMethodDecl(/*AllowLambda=*/true);
-  if (!isSanitizationEnabledForDecl(Context, Caller, SanitizerKind::Thread))
-    return;
-
-  Diag(Call->getExprLoc(), diag::warn_atomic_thread_fence_with_tsan);
-}
-
 //===--- CHECK: Standard memory functions ---------------------------------===//
 
 /// Takes the expression passed to the size_t parameter of functions
@@ -15379,6 +15452,10 @@ void Sema::CheckArrayAccess(const Expr *expr) {
       }
       case Stmt::MemberExprClass: {
         expr = cast<MemberExpr>(expr)->getBase();
+        break;
+      }
+      case Stmt::CXXMemberCallExprClass: {
+        expr = cast<CXXMemberCallExpr>(expr)->getImplicitObjectArgument();
         break;
       }
       case Stmt::ArraySectionExprClass: {

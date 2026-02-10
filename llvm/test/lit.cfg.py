@@ -31,8 +31,8 @@ if lit_shell_env:
 # testFormat: The test format to use to interpret tests.
 extra_substitutions = extra_substitutions = (
     [
-        (r"FileCheck .*", "cat > /dev/null"),
         (r"not FileCheck .*", "cat > /dev/null"),
+        (r"FileCheck .*", "cat > /dev/null"),
     ]
     if config.enable_profcheck
     else []
@@ -69,6 +69,10 @@ if config.enable_profcheck:
     config.excludes.append("Instrumentation")
     # profiling doesn't work quite well on GPU, excluding
     config.excludes.append("AMDGPU")
+    # TODO targets where profiling may make sense but will be addressed later
+    config.excludes.extend(
+        ["Hexagon", "NVPTX", "PowerPC", "RISCV", "SPARC", "WebAssembly"]
+    )
     # these passes aren't hooked up to the pass pipeline:
     config.excludes.append("IRCE")
 
@@ -231,6 +235,7 @@ tools.extend(
         "dsymutil",
         "lli",
         "lli-child-target",
+        "llubi",
         "llvm-ar",
         "llvm-as",
         "llvm-addr2line",

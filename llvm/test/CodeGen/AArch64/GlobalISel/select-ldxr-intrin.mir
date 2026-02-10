@@ -21,7 +21,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDXRB:%[0-9]+]]:gpr32 = LDXRB [[COPY]] :: (volatile load (s8) from %ir.addr)
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, [[LDXRB]], %subreg.sub_32
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG [[LDXRB]], %subreg.sub_32
     ; CHECK-NEXT: $x1 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x1
     %0:gpr(p0) = COPY $x0
@@ -44,7 +44,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDXRH:%[0-9]+]]:gpr32 = LDXRH [[COPY]] :: (volatile load (s16) from %ir.addr)
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, [[LDXRH]], %subreg.sub_32
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG [[LDXRH]], %subreg.sub_32
     ; CHECK-NEXT: $x1 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x1
     %0:gpr(p0) = COPY $x0
@@ -67,7 +67,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDXRW:%[0-9]+]]:gpr32 = LDXRW [[COPY]] :: (volatile load (s32) from %ir.addr)
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, [[LDXRW]], %subreg.sub_32
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG [[LDXRW]], %subreg.sub_32
     ; CHECK-NEXT: $x1 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x1
     %0:gpr(p0) = COPY $x0

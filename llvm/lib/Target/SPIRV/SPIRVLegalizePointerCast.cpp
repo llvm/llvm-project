@@ -194,7 +194,7 @@ class SPIRVLegalizePointerCast : public FunctionPass {
 
       Types = {Element->getType(), ElementPtr->getType()};
       Align NewAlign = commonAlignment(Alignment, i * ElemSize);
-      Args = {Element, ElementPtr, B.getInt16(2), B.getInt8(NewAlign.value())};
+      Args = {Element, ElementPtr, B.getInt16(2), B.getInt32(NewAlign.value())};
       B.CreateIntrinsic(Intrinsic::spv_store, {Types}, {Args});
     }
   }
@@ -357,13 +357,12 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     Type *FromTy = Src->getType();
 
     auto *S_VT = dyn_cast<FixedVectorType>(FromTy);
-    auto *D_ST = dyn_cast<StructType>(ToTy);
     auto *D_VT = dyn_cast<FixedVectorType>(ToTy);
     auto *D_AT = dyn_cast<ArrayType>(ToTy);
 
     B.SetInsertPoint(BadStore);
-    if (D_ST && isTypeFirstElementAggregate(FromTy, D_ST))
-      storeToFirstValueAggregate(B, Src, Dst, D_ST, Alignment);
+    if (isTypeFirstElementAggregate(FromTy, ToTy))
+      storeToFirstValueAggregate(B, Src, Dst, ToTy, Alignment);
     else if (D_VT && S_VT)
       storeVectorFromVector(B, Src, Dst, Alignment);
     else if (D_VT && !S_VT && FromTy == D_VT->getElementType())
