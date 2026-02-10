@@ -11,8 +11,6 @@
 
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/Symbol/CompilerType.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include <memory>
 
 namespace lldb_private {
 
@@ -57,39 +55,6 @@ struct DataStack : public std::vector<DataStackElement> {
     DataStackElement el = back();
     pop_back();
     return el;
-  }
-};
-
-using BytecodeBytes = std::unique_ptr<llvm::MemoryBuffer>;
-
-struct SyntheticProviderDefinition {
-  BytecodeBytes init;
-  BytecodeBytes update;
-  BytecodeBytes num_children;
-  BytecodeBytes get_child_at_index;
-  BytecodeBytes get_child_index;
-
-  bool SetBytecode(Signatures sig, BytecodeBytes bytecode) {
-    switch (sig) {
-    case Signatures::sig_init:
-      init = std::move(bytecode);
-      break;
-    case Signatures::sig_update:
-      update = std::move(bytecode);
-      break;
-    case Signatures::sig_get_num_children:
-      num_children = std::move(bytecode);
-      break;
-    case Signatures::sig_get_child_at_index:
-      get_child_at_index = std::move(bytecode);
-      break;
-    case Signatures::sig_get_child_index:
-      get_child_index = std::move(bytecode);
-      break;
-    default:
-      return false;
-    }
-    return true;
   }
 };
 

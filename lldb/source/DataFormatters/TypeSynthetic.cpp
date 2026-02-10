@@ -256,16 +256,15 @@ std::string ScriptedSyntheticChildren::GetDescription() {
 }
 
 BytecodeSyntheticChildren::FrontEnd::FrontEnd(
-    ValueObject &backend,
-    FormatterBytecode::SyntheticProviderDefinition &definition)
-    : SyntheticChildrenFrontEnd(backend), m_definition(definition) {
+    ValueObject &backend, SyntheticBytecodeImplementation &impl)
+    : SyntheticChildrenFrontEnd(backend), m_impl(impl) {
   FormatterBytecode::DataStack data(backend.GetSP());
-  if (!m_definition.init) {
+  if (!m_impl.init) {
     m_self = std::move(data);
     return;
   }
 
-  FormatterBytecode::ControlStack control = {m_definition.init->getBuffer()};
+  FormatterBytecode::ControlStack control = {m_impl.init->getBuffer()};
   llvm::Error error =
       FormatterBytecode::Interpret(control, data, FormatterBytecode::sig_init);
   if (error) {
@@ -279,10 +278,10 @@ BytecodeSyntheticChildren::FrontEnd::FrontEnd(
 }
 
 lldb::ChildCacheState BytecodeSyntheticChildren::FrontEnd::Update() {
-  if (!m_definition.update)
+  if (!m_impl.update)
     return ChildCacheState::eRefetch;
 
-  FormatterBytecode::ControlStack control = {m_definition.update->getBuffer()};
+  FormatterBytecode::ControlStack control = {m_impl.update->getBuffer()};
   FormatterBytecode::DataStack data = m_self;
   llvm::Error error = FormatterBytecode::Interpret(
       control, data, FormatterBytecode::sig_update);
@@ -300,11 +299,10 @@ lldb::ChildCacheState BytecodeSyntheticChildren::FrontEnd::Update() {
 
 llvm::Expected<uint32_t>
 BytecodeSyntheticChildren::FrontEnd::CalculateNumChildren() {
-  if (!m_definition.num_children)
+  if (!m_impl.num_children)
     return 0;
 
-  FormatterBytecode::ControlStack control = {
-      m_definition.num_children->getBuffer()};
+  FormatterBytecode::ControlStack control = {m_impl.num_children->getBuffer()};
   FormatterBytecode::DataStack data = m_self;
   llvm::Error error = FormatterBytecode::Interpret(
       control, data, FormatterBytecode::sig_get_num_children);
@@ -332,11 +330,11 @@ BytecodeSyntheticChildren::FrontEnd::CalculateNumChildren() {
 
 lldb::ValueObjectSP
 BytecodeSyntheticChildren::FrontEnd::GetChildAtIndex(uint32_t idx) {
-  if (!m_definition.get_child_at_index)
+  if (!m_impl.get_child_at_index)
     return {};
 
   FormatterBytecode::ControlStack control = {
-      m_definition.get_child_at_index->getBuffer()};
+      m_impl.get_child_at_index->getBuffer()};
   FormatterBytecode::DataStack data = m_self;
   data.emplace_back((uint64_t)idx);
   llvm::Error error = FormatterBytecode::Interpret(
@@ -362,11 +360,11 @@ BytecodeSyntheticChildren::FrontEnd::GetChildAtIndex(uint32_t idx) {
 
 llvm::Expected<size_t>
 BytecodeSyntheticChildren::FrontEnd::GetIndexOfChildWithName(ConstString name) {
-  if (m_definition.get_child_index)
+  if (m_impl.get_child_index)
     return -1;
 
   FormatterBytecode::ControlStack control = {
-      m_definition.get_child_index->getBuffer()};
+      m_impl.get_child_index->getBuffer()};
   FormatterBytecode::DataStack data = m_self;
   data.emplace_back(name.GetString());
   llvm::Error error = FormatterBytecode::Interpret(

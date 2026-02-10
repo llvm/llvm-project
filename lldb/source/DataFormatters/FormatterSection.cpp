@@ -133,6 +133,20 @@ void LoadTypeSummariesForModule(ModuleSP module_sp) {
       });
 }
 
+static BytecodeSyntheticChildren::SyntheticBytecodeImplementation
+CreateSyntheticImpl(
+    llvm::MutableArrayRef<std::unique_ptr<llvm::MemoryBuffer>> methods) {
+  using Signatures = FormatterBytecode::Signatures;
+  BytecodeSyntheticChildren::SyntheticBytecodeImplementation impl;
+  impl.init = std::move(methods[Signatures::sig_init]);
+  impl.update = std::move(methods[Signatures::sig_update]);
+  impl.num_children = std::move(methods[Signatures::sig_get_num_children]);
+  impl.get_child_at_index =
+      std::move(methods[Signatures::sig_get_child_at_index]);
+  impl.get_child_index = std::move(methods[Signatures::sig_get_child_index]);
+  return impl;
+}
+
 void LoadFormattersForModule(ModuleSP module_sp) {
   ForEachFormatterInModule(
       *module_sp, eSectionTypeLLDBFormatters,
@@ -147,8 +161,9 @@ void LoadFormattersForModule(ModuleSP module_sp) {
         llvm::DataExtractor::Cursor cursor(0);
         uint64_t flags = extractor.getULEB128(cursor);
 
-        FormatterBytecode::BytecodeBytes summary;
-        FormatterBytecode::SyntheticProviderDefinition synthetic;
+        std::unique_ptr<llvm::MemoryBuffer> summary_func_up;
+        std::array<std::unique_ptr<llvm::MemoryBuffer>, kSignatureCount>
+            synthetic_methods;
         using Signatures = FormatterBytecode::Signatures;
         while (cursor && cursor.tell() < extractor.size()) {
           auto signature = static_cast<Signatures>(extractor.getU8(cursor));
@@ -160,14 +175,11 @@ void LoadFormattersForModule(ModuleSP module_sp) {
             break;
           }
           auto buffer_up = llvm::MemoryBuffer::getMemBufferCopy(bytecode);
-          if (signature == Signatures::sig_summary) {
-            summary = std::move(buffer_up);
-            continue;
-          }
-
-          bool supported =
-              synthetic.SetBytecode(signature, std::move(buffer_up));
-          if (!supported)
+          if (signature == Signatures::sig_summary)
+            summary_func_up = std::move(buffer_up);
+          else if (signature <= Signatures::sig_update)
+            synthetic_methods[signature] = std::move(buffer_up);
+          else
             LLDB_LOG(GetLog(LLDBLog::DataFormatters),
                      "Unsupported formatter signature {0} for '{1}' in {2}",
                      signature, type_name, module_sp->GetFileSpec());
@@ -177,23 +189,24 @@ void LoadFormattersForModule(ModuleSP module_sp) {
         if (type_name.front() == '^')
           match_type = eFormatterMatchRegex;
 
-        // First, handle a summary provider.
-        if (summary) {
+        if (summary_func_up) {
           auto summary_sp = std::make_shared<BytecodeSummaryFormat>(
-              TypeSummaryImpl::Flags(flags), std::move(summary));
+              TypeSummaryImpl::Flags(flags), std::move(summary_func_up));
           category->AddTypeSummary(type_name, match_type, summary_sp);
           LLDB_LOG(GetLog(LLDBLog::DataFormatters),
                    "Loaded embedded type summary for '{0}' from {1}.",
                    type_name, module_sp->GetFileSpec());
-          return;
+        } else {
+          BytecodeSyntheticChildren::SyntheticBytecodeImplementation impl =
+              CreateSyntheticImpl(synthetic_methods);
+          auto synthetic_children_sp =
+              std::make_shared<BytecodeSyntheticChildren>(std::move(impl));
+          category->AddTypeSynthetic(type_name, match_type,
+                                     synthetic_children_sp);
+          LLDB_LOG(GetLog(LLDBLog::DataFormatters),
+                   "Loaded embedded type synthetic for '{0}' from {1}.",
+                   type_name, module_sp->GetFileSpec());
         }
-
-        auto synthetic_sp =
-            std::make_shared<BytecodeSyntheticChildren>(std::move(synthetic));
-        category->AddTypeSynthetic(type_name, match_type, synthetic_sp);
-        LLDB_LOG(GetLog(LLDBLog::DataFormatters),
-                 "Loaded embedded type synthetic for '{0}' from {1}.",
-                 type_name, module_sp->GetFileSpec());
       });
 }
 } // namespace lldb_private

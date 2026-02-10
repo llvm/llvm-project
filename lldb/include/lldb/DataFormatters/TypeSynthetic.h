@@ -483,10 +483,19 @@ private:
 /// Formatter bytecode documentation can be found in
 /// lldb/docs/resources/formatterbytecode.rst
 class BytecodeSyntheticChildren : public SyntheticChildren {
+public:
+  struct SyntheticBytecodeImplementation {
+    std::unique_ptr<llvm::MemoryBuffer> init;
+    std::unique_ptr<llvm::MemoryBuffer> update;
+    std::unique_ptr<llvm::MemoryBuffer> num_children;
+    std::unique_ptr<llvm::MemoryBuffer> get_child_at_index;
+    std::unique_ptr<llvm::MemoryBuffer> get_child_index;
+  };
+
+private:
   class FrontEnd : public SyntheticChildrenFrontEnd {
   public:
-    FrontEnd(ValueObject &backend,
-             FormatterBytecode::SyntheticProviderDefinition &definition);
+    FrontEnd(ValueObject &backend, SyntheticBytecodeImplementation &impl);
 
     lldb::ChildCacheState Update() override;
     llvm::Expected<uint32_t> CalculateNumChildren() override;
@@ -494,14 +503,13 @@ class BytecodeSyntheticChildren : public SyntheticChildren {
     llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
   private:
-    const FormatterBytecode::SyntheticProviderDefinition &m_definition;
+    const SyntheticBytecodeImplementation &m_impl;
     FormatterBytecode::DataStack m_self;
   };
 
 public:
-  BytecodeSyntheticChildren(
-      FormatterBytecode::SyntheticProviderDefinition &&definition)
-      : SyntheticChildren({}), m_definition(std::move(definition)) {}
+  BytecodeSyntheticChildren(SyntheticBytecodeImplementation &&impl)
+      : SyntheticChildren({}), m_impl(std::move(impl)) {}
 
   bool IsScripted() override { return false; }
 
@@ -510,11 +518,11 @@ public:
   SyntheticChildrenFrontEnd::UniquePointer
   GetFrontEnd(ValueObject &backend) override {
     return SyntheticChildrenFrontEnd::UniquePointer(
-        new FrontEnd(backend, m_definition));
+        new FrontEnd(backend, m_impl));
   }
 
 private:
-  FormatterBytecode::SyntheticProviderDefinition m_definition;
+  SyntheticBytecodeImplementation m_impl;
 };
 
 } // namespace lldb_private
