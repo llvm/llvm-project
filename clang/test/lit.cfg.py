@@ -429,6 +429,9 @@ if config.have_llvm_driver:
 if os.path.exists(os.path.join(config.clang_obj_root, 'TeSt')):
     config.available_features.add('case_insensitive_build_dir')
 
+if config.clang_enable_cir:
+    config.available_features.add("cir-enabled")
+
 # Some tests perform deep recursion, which requires a larger pthread stack size
 # than the relatively low default of 192 KiB for 64-bit processes on AIX. The
 # `AIXTHREAD_STK` environment variable provides a non-intrusive way to request
