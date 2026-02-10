@@ -40,7 +40,6 @@ module Clang_Basic {
   textual header "clang/Basic/ABIVersions.def"
   textual header "clang/Basic/AMDGPUTypes.def"
   textual header "clang/Basic/BuiltinHeaders.def"
-  textual header "clang/Basic/BuiltinsAArch64.def"
   textual header "clang/Basic/BuiltinsAArch64NeonSVEBridge.def"
   textual header "clang/Basic/BuiltinsAArch64NeonSVEBridge_cg.def"
   textual header "clang/Basic/BuiltinsARM.def"
