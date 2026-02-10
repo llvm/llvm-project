@@ -1460,7 +1460,7 @@ private:
 
   template <class _From, class _ValueT = _Tp>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
-  __assign_value_sfinae(true_type, __get_node_value_type_t<value_type>& __lhs, _From&& __rhs) {
+  __assign_value_tag_dispatch(true_type, __get_node_value_type_t<value_type>& __lhs, _From&& __rhs) {
     __node_allocator& __na = __node_alloc();
     __node_traits::destroy(__na, std::addressof(__lhs));
     __node_traits::construct(__na, std::addressof(__lhs), __rhs.first, std::move(__rhs.second));
@@ -1468,7 +1468,7 @@ private:
 
   template <class _From, class _ValueT = _Tp>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
-  __assign_value_sfinae(false_type, __get_node_value_type_t<value_type>&, _From&&) {
+  __assign_value_tag_dispatch(false_type, __get_node_value_type_t<value_type>&, _From&&) {
     // This method body should never be run. It only exists to allow for compilation. See note in __assign_value for
     // more information.
   }
@@ -1487,9 +1487,10 @@ private:
       // so we must copy it to not perform undefined behavior which
       // is disallowed during constant evaluation.
 
-      __assign_value_sfinae(std::integral_constant<bool, std::is_copy_constructible_v<decltype(__rhs.first)>>(),
-                            std::forward<decltype(__lhs)>(__lhs),
-                            std::forward<decltype(__rhs)>(__rhs));
+      __assign_value_tag_dispatch(
+          std::integral_constant<bool, std::is_copy_constructible_v<decltype(__rhs.first)>>(),
+          std::forward<decltype(__lhs)>(__lhs),
+          std::forward<decltype(__rhs)>(__rhs));
 
     } else
 #endif
@@ -1571,12 +1572,13 @@ private:
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_holder
-  __construct_node_sfinae(true_type, _Args&&... __args) {
+  __construct_node_tag_dispatch(true_type, _Args&&... __args) {
     return __construct_node(std::forward<_Args>(__args)...);
   }
 
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_holder __construct_node_sfinae(false_type, _Args&&...) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_holder
+  __construct_node_tag_dispatch(false_type, _Args&&...) {
     // This method body should never be run. It only exists to allow for compilation for the false_type overload, during
     // constant evaluation branch. See note in __assign_value for more information.
 
@@ -1595,7 +1597,7 @@ private:
 
 #if _LIBCPP_STD_VER >= 26
       if constexpr (std::is_copy_constructible_v<decltype(__val.first)>) {
-        return __construct_node_sfinae(
+        return __construct_node_tag_dispatch(
             std::integral_constant<bool, std::is_copy_constructible_v<decltype(__val.first)>>(),
             std::forward<decltype(__val.first)>(__val.first),
             std::move(__val.second));
