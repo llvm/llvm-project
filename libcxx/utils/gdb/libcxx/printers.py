@@ -359,18 +359,15 @@ class StdVectorPrinter(object):
             self.capacity = self.val["__cap_"] * bits_per_word
             self.iterator = self._VectorBoolIterator(begin, self.length, bits_per_word)
         else:
-            for i in self.val.type.fields():
-                if i.is_base_class:
-                    base = val[i]
-                    break
-
-            begin = base["__begin_"]
-            if self.val.type.fields()[0].is_base_class:
-                boundary = base["__boundary_"]
-                capacity = base["__capacity_"]
+            layout = self.val["__layout_"]
+            if layout:
+                begin = layout["__begin_"]
+                boundary = layout["__boundary_"]
+                capacity = layout["__capacity_"]
             else:
-                boundary = base["__end_"]
-                capacity = base["__cap_"]
+                begin = self.val["__begin_"]
+                boundary = self.val["__end_"]
+                capacity = self.val["__cap_"]
 
             # We test for integers because `vector<T>::size_type` is required to
             # be an unsigned integer, whereas `vector<T>::pointer` can be any

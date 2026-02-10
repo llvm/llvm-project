@@ -222,7 +222,7 @@ public:
     __other.__swap_layouts(__begin_, __boundary_, __capacity_);
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_layout(__vector_layout& __other) _NOEXCEPT {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_without_allocator(__vector_layout& __other) _NOEXCEPT {
     __begin_    = __other.__begin_;
     __boundary_ = __other.__boundary_;
     __capacity_ = __other.__capacity_;
