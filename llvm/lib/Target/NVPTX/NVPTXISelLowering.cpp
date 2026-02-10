@@ -6207,9 +6207,7 @@ static SDValue PerformScalarizeV2F32Op(SDNode *N,
 
   // Only scalarize when at least one operand is a BUILD_VECTOR whose elements
   // are guaranteed to reside in different register pairs.
-  if (!any_of(N->ops(), [](const SDValue &Op) {
-        return isNonCoalescableBuildVector(Op);
-      }))
+  if (none_of(N->ops(), isNonCoalescableBuildVector))
     return SDValue();
 
   SelectionDAG &DAG = DCI.DAG;
