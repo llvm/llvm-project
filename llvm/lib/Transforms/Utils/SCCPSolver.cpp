@@ -91,7 +91,7 @@ bool SCCPSolver::tryToReplaceWithConstant(Value *V) {
     const auto &LV = getLatticeValueFor(V);
     if (LV.mayHaveDifferentProvenance()) {
       bool MadeChange = false;
-      const auto &DL = cast<Instruction>(V)->getDataLayout();
+      const auto &DL = I->getDataLayout();
 
       V->replaceUsesWithIf(Const, [&](Use &U) {
         bool CanReplace = canReplacePointersInUseIfEqual(U, Const, DL);
@@ -381,10 +381,9 @@ bool SCCPSolver::simplifyInstsInBlock(BasicBlock &BB,
     if (tryToReplaceWithConstant(&Inst)) {
       if (isInstructionTriviallyDead(&Inst)) {
         Inst.eraseFromParent();
+        MadeChanges = true;
         ++InstRemovedStat;
       }
-
-      MadeChanges = true;
     } else if (replaceSignedInst(*this, InsertedValues, Inst)) {
       MadeChanges = true;
       ++InstReplacedStat;
