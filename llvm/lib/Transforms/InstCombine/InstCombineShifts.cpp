@@ -18,6 +18,10 @@
 using namespace llvm;
 using namespace PatternMatch;
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
+
 #define DEBUG_TYPE "instcombine"
 
 bool canTryToConstantAddTwoShiftAmounts(Value *Sh0, Value *ShAmt0, Value *Sh1,
@@ -1454,7 +1458,10 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       if (SrcTyBitWidth == 1) {
         auto *NewC = ConstantInt::get(
             Ty, APInt::getLowBitsSet(BitWidth, BitWidth - ShAmtC));
-        return SelectInst::Create(X, NewC, ConstantInt::getNullValue(Ty));
+        auto *SI = SelectInst::Create(X, NewC, ConstantInt::getNullValue(Ty));
+        if (!ProfcheckDisableMetadataFixes)
+          setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE, &F);
+        return SI;
       }
 
       if ((!Ty->isIntegerTy() || shouldChangeType(Ty, X->getType())) &&
