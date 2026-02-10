@@ -3,10 +3,7 @@
 # Configuration file for the 'lit' test runner.
 
 import os
-import re
 import subprocess
-import textwrap
-import shlex
 
 from lit.llvm import llvm_config
 import lit.formats

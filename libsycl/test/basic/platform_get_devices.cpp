@@ -4,7 +4,7 @@
 //
 // Tests platform::get_devices for each device type.
 
-#include <sycl.hpp>
+#include <sycl/sycl.hpp>
 
 #include <algorithm>
 #include <iostream>
@@ -41,7 +41,7 @@ std::string DeviceTypeToString(sycl::info::device_type DevType) {
   case sycl::info::device_type::host:
     return "device_type::host";
   default:
-    return "UNKNOWN";
+    return "unknown";
   }
 }
 
@@ -53,12 +53,12 @@ std::string GenerateDeviceDescription(sycl::info::device_type DevType,
 
 template <typename T1, typename T2>
 int Check(const T1 &LHS, const T2 &RHS, std::string TestName) {
-  if (LHS != RHS) {
-    std::cerr << "Failed check " << LHS << " != " << RHS << ": " << TestName
-              << std::endl;
-    return 1;
-  }
-  return 0;
+  if (LHS == RHS)
+    return 0;
+
+  std::cerr << "Failed check " << LHS << " != " << RHS << ": " << TestName
+            << std::endl;
+  return 1;
 }
 
 int CheckDeviceType(const sycl::platform &P, sycl::info::device_type DevType,
@@ -85,7 +85,7 @@ int CheckDeviceType(const sycl::platform &P, sycl::info::device_type DevType,
     return Failures;
   }
 
-  // Count devices with the type;
+  // Count devices with the type.
   size_t DevCount = 0;
   for (sycl::device Device : Devices)
     DevCount += (Device.get_info<sycl::info::device::device_type>() == DevType);
