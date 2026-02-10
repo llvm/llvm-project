@@ -12,7 +12,6 @@
 #include "clang/Analysis/Scalable/Model/BuildNamespace.h"
 #include "clang/Analysis/Scalable/Model/EntityId.h"
 #include "clang/Analysis/Scalable/Model/EntityIdTable.h"
-#include "clang/Analysis/Scalable/Model/EntityLinkage.h"
 #include "clang/Analysis/Scalable/Model/SummaryName.h"
 #include "clang/Analysis/Scalable/TUSummary/EntitySummary.h"
 #include <map>
@@ -25,7 +24,6 @@ class TUSummary {
   /// Identifies the translation unit.
   BuildNamespace TUNamespace;
   EntityIdTable IdTable;
-  std::map<EntityId, EntityLinkage> Entities;
 
   std::map<SummaryName, std::map<EntityId, std::unique_ptr<EntitySummary>>>
       Data;

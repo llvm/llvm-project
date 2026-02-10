@@ -14,7 +14,6 @@
 namespace clang::ssaf {
 
 class EntityId;
-class EntityLinkage;
 class EntityName;
 class EntitySummary;
 class TUSummary;
@@ -25,7 +24,7 @@ public:
 
   /// Add an entity to the summary and return its EntityId.
   /// If the entity already exists, returns the existing ID (idempotent).
-  EntityId addEntity(const EntityName &E, const EntityLinkage &Linkage);
+  EntityId addEntity(const EntityName &E);
 
   /// Add analysis-specific fact data for an entity.
   /// Precondition: The ContributingEntity must have been added via addEntity().
