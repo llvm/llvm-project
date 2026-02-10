@@ -2291,7 +2291,8 @@ void OMPClausePrinter::VisitOMPDeviceClause(OMPDeviceClause *Node) {
 void OMPClausePrinter::VisitOMPNumTeamsClause(OMPNumTeamsClause *Node) {
   if (!Node->varlist_empty()) {
     OS << "num_teams(";
-    // Handle lower-bound:upper-bound syntax when there are exactly 2 expressions
+    // Handle lower-bound:upper-bound syntax when there are exactly 2
+    // expressions
     if (Node->varlist_size() == 2) {
       auto *I = Node->varlist_begin();
       (*I)->printPretty(OS, nullptr, Policy, 0);
@@ -2301,7 +2302,8 @@ void OMPClausePrinter::VisitOMPNumTeamsClause(OMPNumTeamsClause *Node) {
     } else {
       // For single expression or other cases, use comma-separated list
       bool First = true;
-      for (auto *I = Node->varlist_begin(), *E = Node->varlist_end(); I != E; ++I) {
+      for (auto *I = Node->varlist_begin(), *E = Node->varlist_end(); I != E;
+           ++I) {
         if (!First)
           OS << ",";
         First = false;

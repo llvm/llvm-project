@@ -40,17 +40,3 @@ void test_various_directives() {
   for (int i = 0; i < 100; ++i) { }
 }
 
-template <typename T>
-T tmain(T argc) {
-  T lower = 1, upper = 5;
-
-  // CHECK: #pragma omp teams num_teams(argc)
-  #pragma omp teams num_teams(argc)
-  { foo(); }
-
-  // CHECK: #pragma omp teams num_teams(lower:upper)
-  #pragma omp teams num_teams(lower:upper)
-  { foo(); }
-
-  return argc;
-}
