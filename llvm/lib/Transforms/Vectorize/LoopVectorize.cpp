@@ -374,6 +374,11 @@ cl::opt<bool> llvm::VPlanPrintAfterAll(
 cl::list<std::string> llvm::VPlanPrintAfterPasses(
     "vplan-print-after", cl::Hidden,
     cl::desc("Print VPlans after specified VPlan transformations (regexp)."));
+
+cl::opt<bool> llvm::VPlanPrintLimitToVectorRegion(
+    "vplan-print-limit-to-vector-region", cl::init(false), cl::Hidden,
+    cl::desc("Limit VPlan printing to vector loop region in "
+             "`-vplan-print-after*` if the plan has one."));
 #endif
 
 // This flag enables the stress testing of the VPlan H-CFG construction in the
@@ -8234,7 +8239,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // ---------------------------------------------------------------------------
   // Predicate and linearize the top-level loop region.
   // ---------------------------------------------------------------------------
-  VPlanTransforms::introduceMasksAndLinearize(*Plan, CM.foldTailByMasking());
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::introduceMasksAndLinearize, *Plan,
+                           CM.foldTailByMasking());
 
   // ---------------------------------------------------------------------------
   // Construct wide recipes and apply predication for original scalar

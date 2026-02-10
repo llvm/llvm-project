@@ -41,6 +41,7 @@ LLVM_ABI_FOR_TEST extern cl::opt<bool> EnableWideActiveLaneMask;
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintAfterAll;
 LLVM_ABI_FOR_TEST extern cl::list<std::string> VPlanPrintAfterPasses;
+LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintLimitToVectorRegion;
 #endif
 
 struct VPlanTransforms {
@@ -63,7 +64,10 @@ struct VPlanTransforms {
             << "VPlan for loop in '"
             << Plan.getScalarHeader()->getIRBasicBlock()->getParent()->getName()
             << "' after " << PassName << '\n';
-        dbgs() << Plan << '\n';
+        if (VPlanPrintLimitToVectorRegion && Plan.getVectorLoopRegion())
+          Plan.getVectorLoopRegion()->print(dbgs());
+        else
+          dbgs() << Plan << '\n';
       }
 #endif
       if (VerifyEachVPlan && EnableVerify)
