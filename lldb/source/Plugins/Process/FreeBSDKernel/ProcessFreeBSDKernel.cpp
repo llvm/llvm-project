@@ -12,6 +12,8 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/DynamicLoader.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
 #include "Plugins/DynamicLoader/FreeBSD-Kernel/DynamicLoaderFreeBSDKernel.h"
@@ -321,6 +323,7 @@ void ProcessFreeBSDKernel::ShowCrashInfo() {
         results.GetTypeMap().GetTypeAtIndex(0)->GetForwardCompilerType();
 
     uint32_t num_fields = msgbuf_type.GetNumFields();
+    int field_found = 0;
     for (uint32_t i = 0; i < num_fields; i++) {
       std::string field_name;
       uint64_t field_offset = 0;
@@ -330,14 +333,25 @@ void ProcessFreeBSDKernel::ShowCrashInfo() {
       msgbuf_type.GetFieldAtIndex(i, field_name, &field_offset,
                                   &field_bitfield_bit_size, &field_is_bitfield);
 
-      if (field_name == "msg_ptr")
+      if (field_name == "msg_ptr") {
         offset_msg_ptr = field_offset / 8; // Convert bits to bytes
-      else if (field_name == "msg_size")
+        field_found++;
+      } else if (field_name == "msg_size") {
         offset_msg_size = field_offset / 8;
-      else if (field_name == "msg_wseq")
+        field_found++;
+      } else if (field_name == "msg_wseq") {
         offset_msg_wseq = field_offset / 8;
-      else if (field_name == "msg_rseq")
+        field_found++;
+      } else if (field_name == "msg_rseq") {
         offset_msg_rseq = field_offset / 8;
+        field_found++;
+      }
+    }
+
+    if (field_found != 4) {
+      LLDB_LOGF(GetLog(LLDBLog::Object),
+                "FreeBSDKernel: Could not find all required fields for msgbuf");
+      return;
     }
   } else {
     // Fallback: use hardcoded offsets based on struct layout
