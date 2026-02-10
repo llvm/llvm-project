@@ -201,9 +201,25 @@ static void emitXATTR(raw_ostream &OS, StringRef Name, bool IsIndirectReference,
   OS << Name << " XATTR ";
   OS << Sep << "LINKAGE(" << (Linkage == GOFF::ESD_LT_OS ? "OS" : "XPLINK")
      << ")";
-  if (Executable != GOFF::ESD_EXE_Unspecified)
-    OS << Sep << "REFERENCE("
-       << (Executable == GOFF::ESD_EXE_CODE ? "CODE" : "DATA") << ")";
+
+  const bool NotUnspecified = (Executable != GOFF::ESD_EXE_Unspecified);
+  if (NotUnspecified || IsIndirectReference) {
+    OS << Sep << "REFERENCE(";
+    bool RequiresComma = false;
+
+    if (NotUnspecified) {
+      OS << (Executable == GOFF::ESD_EXE_CODE ? "CODE" : "DATA");
+      RequiresComma = true;
+    }
+
+    if (IsIndirectReference) {
+      if (RequiresComma)
+        OS << ",";
+      OS << "INDIRECT";
+    }
+
+    OS << ")";
+  }
   if (BindingScope != GOFF::ESD_BSC_Unspecified) {
     OS << Sep << "SCOPE(";
     switch (BindingScope) {
