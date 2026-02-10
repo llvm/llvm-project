@@ -33,7 +33,7 @@ void BadSignalToKillThreadCheck::check(const MatchFinder::MatchResult &Result) {
            KeyValue.first->hasMacroDefinition();
   };
   const auto TryExpandAsInteger =
-      [&Result](Preprocessor::macro_iterator It) -> std::optional<unsigned> {
+      [](Preprocessor::macro_iterator It) -> std::optional<unsigned> {
     if (It == PP->macro_end())
       return std::nullopt;
     const MacroInfo *MI = PP->getMacroInfo(It->first);
@@ -42,23 +42,12 @@ void BadSignalToKillThreadCheck::check(const MatchFinder::MatchResult &Result) {
     if (!T.isLiteral())
       return std::nullopt;
 
-    StringRef ValueStr;
-    if (T.getLiteralData()) {
-      ValueStr = StringRef(T.getLiteralData(), T.getLength());
-    } else {
-      const SourceManager *SM = Result.SourceManager;
-      const SourceLocation Loc = T.getLocation();
-      if (Loc.isInvalid())
-        return std::nullopt;
-      std::optional<StringRef> Buffer =
-          SM->getBufferDataOrNone(SM->getFileID(Loc));
-      if (!Buffer)
-        return std::nullopt;
-      const unsigned Offset = SM->getFileOffset(Loc);
-      if (Offset + T.getLength() > Buffer->size())
-        return std::nullopt;
-      ValueStr = Buffer->substr(Offset, T.getLength());
-    }
+    const char *Buffer = nullptr;
+    bool Invalid = false;
+    const unsigned Length = PP->getSpelling(T, Buffer, &Invalid);
+    if (Invalid)
+      return std::nullopt;
+    StringRef ValueStr(Buffer, Length);
 
     llvm::APInt IntValue;
     constexpr unsigned AutoSenseRadix = 0;
