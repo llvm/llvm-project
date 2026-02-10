@@ -1910,12 +1910,13 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     CurDAG->RemoveDeadNode(Node);
     return;
   }
+  case RISCVISD::WMACCSU:
   case RISCVISD::WMACCU:
   case RISCVISD::WMACC: {
     assert(!Subtarget->is64Bit() && Subtarget->hasStdExtP() &&
            "Unexpected opcode");
 
-    // WMACCU/WMACC has 4 operands: (m1, m2, addlo, addhi) -> (lo, hi)
+    // WMACCU/WMACC/WMACCSU has 4 operands: (m1, m2, addlo, addhi) -> (lo, hi)
     SDValue M1 = Node->getOperand(0);
     SDValue M2 = Node->getOperand(1);
     SDValue AddLo = Node->getOperand(2);
@@ -1930,8 +1931,20 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
                                                  MVT::Untyped, AccOps),
                           0);
 
-    unsigned Opc =
-        Node->getOpcode() == RISCVISD::WMACCU ? RISCV::WMACCU : RISCV::WMACC;
+    unsigned Opc;
+    switch (Node->getOpcode()) {
+    default:
+      llvm_unreachable("Unexpected WMACC opcode");
+    case RISCVISD::WMACCU:
+      Opc = RISCV::WMACCU;
+      break;
+    case RISCVISD::WMACC:
+      Opc = RISCV::WMACC;
+      break;
+    case RISCVISD::WMACCSU:
+      Opc = RISCV::WMACCSU;
+      break;
+    }
 
     // Instruction format: WMACCU rd, rs1, rs2 (rd is accumulator, comes first)
     MachineSDNode *New =

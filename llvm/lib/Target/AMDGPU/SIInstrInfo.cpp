@@ -180,6 +180,10 @@ bool SIInstrInfo::resultDependsOnExec(const MachineInstr &MI) const {
     return false;
   }
 
+  // If it is not convergent it does not depend on EXEC.
+  if (!MI.isConvergent())
+    return false;
+
   switch (MI.getOpcode()) {
   default:
     break;
@@ -9790,7 +9794,14 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
               LiteralSize = 8;
             break;
           case AMDGPU::OPERAND_REG_IMM_INT64:
-            if (!Op.isImm() || !AMDGPU::isValid32BitLiteral(Op.getImm(), false))
+            // A 32-bit literal is only valid when the value fits in BOTH signed
+            // and unsigned 32-bit ranges [0, 2^31-1], matching the MC code
+            // emitter's getLit64Encoding logic. This is because of the lack of
+            // abilility to tell signedness of the literal, therefore we need to
+            // be conservative and assume values outside this range require a
+            // 64-bit literal encoding (8 bytes).
+            if (!Op.isImm() || !isInt<32>(Op.getImm()) ||
+                !isUInt<32>(Op.getImm()))
               LiteralSize = 8;
             break;
           }
