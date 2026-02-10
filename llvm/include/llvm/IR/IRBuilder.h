@@ -2486,14 +2486,12 @@ private:
 public:
   CallInst *CreateCall(FunctionType *FTy, Value *Callee,
                        ArrayRef<Value *> Args = {}, const Twine &Name = "",
-                       MDNode *FPMathTag = nullptr,
-                       FastMathFlags *uFMF = nullptr) {
+                       MDNode *FPMathTag = nullptr) {
     CallInst *CI = CallInst::Create(FTy, Callee, Args, DefaultOperandBundles);
     if (IsFPConstrained)
       setConstrainedFPCallAttr(CI);
-    if (isa<FPMathOperator>(CI)) {
-      setFPAttrs(CI, FPMathTag, uFMF ? (FMF | *uFMF) : FMF);
-    }
+    if (isa<FPMathOperator>(CI))
+      setFPAttrs(CI, FPMathTag, FMF);
     return Insert(CI, Name);
   }
 
@@ -2509,10 +2507,9 @@ public:
   }
 
   CallInst *CreateCall(FunctionCallee Callee, ArrayRef<Value *> Args = {},
-                       const Twine &Name = "", MDNode *FPMathTag = nullptr,
-                       FastMathFlags *uFMF = nullptr) {
+                       const Twine &Name = "", MDNode *FPMathTag = nullptr) {
     return CreateCall(Callee.getFunctionType(), Callee.getCallee(), Args, Name,
-                      FPMathTag, uFMF);
+                      FPMathTag);
   }
 
   CallInst *CreateCall(FunctionCallee Callee, ArrayRef<Value *> Args,
@@ -2525,8 +2522,7 @@ public:
   LLVM_ABI CallInst *CreateConstrainedFPCall(
       Function *Callee, ArrayRef<Value *> Args, const Twine &Name = "",
       std::optional<RoundingMode> Rounding = std::nullopt,
-      std::optional<fp::ExceptionBehavior> Except = std::nullopt,
-      FastMathFlags *FMF = nullptr);
+      std::optional<fp::ExceptionBehavior> Except = std::nullopt);
 
   LLVM_ABI Value *CreateSelectWithUnknownProfile(Value *C, Value *True,
                                                  Value *False,
