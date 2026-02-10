@@ -18624,7 +18624,7 @@ bool AArch64TargetLowering::lowerInterleavedStore(Instruction *Store,
   //
   // - Only when not optimizing for size, as STNP lowering can increase size.
   // - Don't skip if the interleaving factor is greater than 2, as the shuffling
-  // overhead becomes higher.
+  //   overhead becomes higher.
   // - Don't skip if the store value types which are not directly legal.
   Function *F = SI->getFunction();
   if (Factor == 2 && SI->hasMetadata(LLVMContext::MD_nontemporal) &&
