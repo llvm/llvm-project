@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include <algorithm>
-#include <bit>
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -125,12 +125,10 @@ Raises:
 namespace {
 /// Local helper checking if the current machine is little endian.
 bool isLittleEndian() {
-#if defined(__cpp_lib_endian)
-  return std::endian::native == std::endian::little;
-#else
   const uint16_t value = 1;
-  return *reinterpret_cast<const uint8_t *>(&value) == 1;
-#endif
+  unsigned char first_byte = 0;
+  std::memcpy(&first_byte, &value, 1);
+  return first_byte == 1;
 }
 
 /// Local helper adapted from llvm::scope_exit.
