@@ -732,9 +732,9 @@ private:
   // Visitors to walk an AST and generate destructors of temporaries in
   // full expression.
   CFGBlock *VisitForTemporaries(Stmt *E, bool ExternallyDestructed,
-                                   TempDtorContext &Context);
-  CFGBlock *VisitChildrenForTemporaries(Stmt *E,  bool ExternallyDestructed,
-                                           TempDtorContext &Context);
+                                TempDtorContext &Context);
+  CFGBlock *VisitChildrenForTemporaries(Stmt *E, bool ExternallyDestructed,
+                                        TempDtorContext &Context);
   CFGBlock *VisitBinaryOperatorForTemporaries(BinaryOperator *E,
                                                  bool ExternallyDestructed,
                                                  TempDtorContext &Context);
@@ -742,11 +742,12 @@ private:
                                                       TempDtorContext &Context);
   CFGBlock *VisitCXXBindTemporaryExprForTemporaryDtors(
       CXXBindTemporaryExpr *E, bool ExternallyDestructed, TempDtorContext &Context);
-  CFGBlock *VisitConditionalOperatorForTemporaries(
-      AbstractConditionalOperator *E, bool ExternallyDestructed,
-      TempDtorContext &Context);
+  CFGBlock *
+  VisitConditionalOperatorForTemporaries(AbstractConditionalOperator *E,
+                                         bool ExternallyDestructed,
+                                         TempDtorContext &Context);
   void InsertTempDecisionBlock(const TempDtorContext &Context,
-                                   CFGBlock *FalseSucc = nullptr);
+                               CFGBlock *FalseSucc = nullptr);
 
   // NYS == Not Yet Supported
   CFGBlock *NYS() {
@@ -1831,11 +1832,12 @@ CFGBlock *CFGBuilder::addInitializer(CXXCtorInitializer *I) {
   if (Init) {
     HasTemporaries = isa<ExprWithCleanups>(Init);
 
-    if (BuildOpts.AddTemporaryDtors && HasTemporaries) {
+    if (HasTemporaries &&
+        (BuildOpts.AddTemporaryDtors || BuildOpts.AddLifetime)) {
       // Generate destructors for temporaries in initialization expression.
       TempDtorContext Context;
       VisitForTemporaries(cast<ExprWithCleanups>(Init)->getSubExpr(),
-                             /*ExternallyDestructed=*/false, Context);
+                          /*ExternallyDestructed=*/false, Context);
 
       addFullExprCleanupMarker(Context);
     }
@@ -3159,11 +3161,12 @@ CFGBlock *CFGBuilder::VisitDeclSubExpr(DeclStmt *DS) {
   if (Init) {
     HasTemporaries = isa<ExprWithCleanups>(Init);
 
-    if (BuildOpts.AddTemporaryDtors && HasTemporaries) {
+    if (HasTemporaries &&
+        (BuildOpts.AddTemporaryDtors || BuildOpts.AddLifetime)) {
       // Generate destructors for temporaries in initialization expression.
       TempDtorContext Context;
       VisitForTemporaries(cast<ExprWithCleanups>(Init)->getSubExpr(),
-                             /*ExternallyDestructed=*/true, Context);
+                          /*ExternallyDestructed=*/true, Context);
 
       addFullExprCleanupMarker(Context);
     }
@@ -4985,7 +4988,7 @@ CFGBlock *CFGBuilder::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
 CFGBlock *CFGBuilder::VisitExprWithCleanups(ExprWithCleanups *E,
                                             AddStmtChoice asc,
                                             bool ExternallyDestructed) {
-  if (BuildOpts.AddTemporaryDtors) {
+  if (BuildOpts.AddTemporaryDtors || BuildOpts.AddLifetime) {
     // If adding implicit destructors visit the full expression for adding
     // destructors of temporaries.
     TempDtorContext Context;
@@ -5129,7 +5132,7 @@ CFGBlock *CFGBuilder::VisitIndirectGotoStmt(IndirectGotoStmt *I) {
 }
 
 CFGBlock *CFGBuilder::VisitForTemporaries(Stmt *E, bool ExternallyDestructed,
-                                             TempDtorContext &Context) {
+                                          TempDtorContext &Context) {
 
 tryAgain:
   if (!E) {
@@ -5145,8 +5148,7 @@ tryAgain:
 
     case Stmt::BinaryOperatorClass:
       return VisitBinaryOperatorForTemporaries(cast<BinaryOperator>(E),
-                                                  ExternallyDestructed,
-                                                  Context);
+                                               ExternallyDestructed, Context);
 
     case Stmt::CXXOperatorCallExprClass:
       return VisitCXXOperatorCallExprForTemporaryDtors(
@@ -5194,7 +5196,7 @@ tryAgain:
       // Visit the skipped comma operator left-hand sides for other temporaries.
       for (const Expr *CommaLHS : CommaLHSs) {
         VisitForTemporaries(const_cast<Expr *>(CommaLHS),
-                               /*ExternallyDestructed=*/false, Context);
+                            /*ExternallyDestructed=*/false, Context);
       }
       goto tryAgain;
     }
@@ -5235,21 +5237,22 @@ tryAgain:
 }
 
 CFGBlock *CFGBuilder::VisitChildrenForTemporaries(Stmt *E,
-                                                     bool ExternallyDestructed,
-                                                     TempDtorContext &Context) {
+                                                  bool ExternallyDestructed,
+                                                  TempDtorContext &Context) {
   if (isa<LambdaExpr>(E)) {
     // Do not visit the children of lambdas; they have their own CFGs.
     return Block;
   }
 
-  // When visiting children for destructors or lifetime markers we want to visit them in reverse
-  // order that they will appear in the CFG.  Because the CFG is built
-  // bottom-up, this means we visit them in their natural order, which
+  // When visiting children for destructors or lifetime markers we want to visit
+  // them in reverse order that they will appear in the CFG.  Because the CFG is
+  // built bottom-up, this means we visit them in their natural order, which
   // reverses them in the CFG.
   CFGBlock *B = Block;
   for (Stmt *Child : E->children())
     if (Child)
-      if (CFGBlock *R = VisitForTemporaries(Child, ExternallyDestructed, Context))
+      if (CFGBlock *R =
+              VisitForTemporaries(Child, ExternallyDestructed, Context))
         B = R;
 
   return B;
@@ -5261,7 +5264,8 @@ CFGBlock *CFGBuilder::VisitBinaryOperatorForTemporaries(
     // For the comma operator, the LHS expression is evaluated before the RHS
     // expression, so prepend temporary destructors for the LHS first.
     CFGBlock *LHSBlock = VisitForTemporaries(E->getLHS(), false, Context);
-    CFGBlock *RHSBlock = VisitForTemporaries(E->getRHS(), ExternallyDestructed, Context);
+    CFGBlock *RHSBlock =
+        VisitForTemporaries(E->getRHS(), ExternallyDestructed, Context);
     return RHSBlock ? RHSBlock : LHSBlock;
   }
 
@@ -5314,9 +5318,8 @@ CFGBlock *CFGBuilder::VisitCXXBindTemporaryExprForTemporaryDtors(
   // First add destructors for temporaries in subexpression.
   // Because VisitCXXBindTemporaryExpr calls setDestructed:
   CFGBlock *B = VisitForTemporaries(E->getSubExpr(), true, Context);
-  if (!ExternallyDestructed && 
-    BuildOpts.AddImplicitDtors && 
-    BuildOpts.AddTemporaryDtors) {
+  if (!ExternallyDestructed && BuildOpts.AddImplicitDtors &&
+      BuildOpts.AddTemporaryDtors) {
     // If lifetime of temporary is not prolonged (by assigning to constant
     // reference) add destructor for it.
 
@@ -5347,7 +5350,7 @@ CFGBlock *CFGBuilder::VisitCXXBindTemporaryExprForTemporaryDtors(
 }
 
 void CFGBuilder::InsertTempDecisionBlock(const TempDtorContext &Context,
-                                             CFGBlock *FalseSucc) {
+                                         CFGBlock *FalseSucc) {
   if (!Context.TerminatorExpr) {
     // If no temporary was found, we do not need to insert a decision point.
     return;
@@ -5379,7 +5382,8 @@ CFGBlock *CFGBuilder::VisitConditionalOperatorForTemporaries(
 
   Block = ConditionBlock;
   Succ = ConditionSucc;
-  TempDtorContext FalseContext(bothKnownTrue(Context.KnownExecuted, NegatedVal));
+  TempDtorContext FalseContext(
+      bothKnownTrue(Context.KnownExecuted, NegatedVal));
   VisitForTemporaries(E->getFalseExpr(), ExternallyDestructed, FalseContext);
 
   if (TrueContext.TerminatorExpr && FalseContext.TerminatorExpr) {
