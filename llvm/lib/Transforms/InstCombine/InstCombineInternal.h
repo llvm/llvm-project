@@ -472,6 +472,7 @@ private:
   Value *simplifyNonNullOperand(Value *V, bool HasDereferenceable,
                                 unsigned Depth = 0);
 
+public:
   /// Create `select C, S1, S2`. Use only when the profile cannot be calculated
   /// from existing profile metadata: if the Function has profiles, this will
   /// set the profile of this select to "unknown".
@@ -484,7 +485,6 @@ private:
     return Sel;
   }
 
-public:
   /// Create and insert the idiom we use to indicate a block is unreachable
   /// without having to rewrite the CFG from within InstCombine.
   void CreateNonTerminatorUnreachable(Instruction *InsertAt) {
