@@ -496,11 +496,22 @@ struct LowerVectorMultiReductionPass
     Operation *op = getOperation();
     MLIRContext *context = op->getContext();
 
-    RewritePatternSet loweringPatterns(context);
-    populateVectorMultiReductionLoweringPatterns(loweringPatterns,
-                                                 this->loweringStrategy);
+    RewritePatternSet patterns(context);
+    mlir::vector::populateVectorMultiReductionTransformationPatterns(
+        patterns, this->loweringStrategy);
+    if (failed(applyPatternsGreedily(op, std::move(patterns))))
+      signalPassFailure();
 
-    if (failed(applyPatternsGreedily(op, std::move(loweringPatterns))))
+    RewritePatternSet flatteningPatterns(context);
+    mlir::vector::populateVectorMultiReductionFlatteningPatterns(
+        flatteningPatterns, this->loweringStrategy);
+    if (failed(applyPatternsGreedily(op, std::move(flatteningPatterns))))
+      signalPassFailure();
+
+    RewritePatternSet unrollingPatterns(context);
+    mlir::vector::populateVectorMultiReductionUnrollingPatterns(
+        unrollingPatterns, this->loweringStrategy);
+    if (failed(applyPatternsGreedily(op, std::move(unrollingPatterns))))
       signalPassFailure();
   }
 
