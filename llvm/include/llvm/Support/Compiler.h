@@ -778,7 +778,8 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 #define LLVM_TARGET_SSE42
 #endif
 
-#if __has_builtin(__builtin_cpu_supports)
+#if __has_builtin(__builtin_cpu_supports) &&                                   \
+    (defined(__linux__) || defined(__APPLE__))
 #define LLVM_CPU_SUPPORTS(feature) __builtin_cpu_supports(feature)
 #else
 #define LLVM_CPU_SUPPORTS(feature) 0
