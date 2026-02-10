@@ -454,7 +454,7 @@ QualType Descriptor::getDataType(const ASTContext &Ctx) const {
     return ElemType;
   };
 
-  if (isDynAlloc())
+  if (getDynAllocKind() != DynAllocKind::None)
     return MakeArrayType(asExpr()->getType()->getPointeeType());
 
   return getType();
