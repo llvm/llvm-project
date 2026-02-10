@@ -531,13 +531,23 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
 
   if (RISCV::GPRPairRegClass.contains(DstReg, SrcReg)) {
-    if (STI.isRV32() && STI.hasStdExtZdinx()) {
-      // On RV32_Zdinx, FMV.D will move a pair of registers to another pair of
-      // registers, in one instruction.
-      BuildMI(MBB, MBBI, DL, get(RISCV::FSGNJ_D_IN32X), DstReg)
-          .addReg(SrcReg, getRenamableRegState(RenamableSrc))
-          .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc));
-      return;
+    if (STI.isRV32()) {
+      if (STI.hasStdExtZdinx()) {
+        // On RV32_Zdinx, FMV.D will move a pair of registers to another pair of
+        // registers, in one instruction.
+        BuildMI(MBB, MBBI, DL, get(RISCV::FSGNJ_D_IN32X), DstReg)
+            .addReg(SrcReg, getRenamableRegState(RenamableSrc))
+            .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc));
+        return;
+      }
+
+      if (STI.hasStdExtP()) {
+        // On RV32P, `addd` is a GPR Pair Add
+        BuildMI(MBB, MBBI, DL, get(RISCV::ADDD), DstReg)
+          .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc))
+          .addReg(RISCV::X0_Pair);
+        return;
+      }
     }
 
     MCRegister EvenReg = TRI->getSubReg(SrcReg, RISCV::sub_gpr_even);
