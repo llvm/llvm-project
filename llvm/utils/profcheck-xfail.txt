@@ -245,7 +245,6 @@ Transforms/InstCombine/pow-1.ll
 Transforms/InstCombine/pow-3.ll
 Transforms/InstCombine/pow-sqrt.ll
 Transforms/InstCombine/select-min-max.ll
-Transforms/InstCombine/select-select.ll
 Transforms/InstCombine/shift.ll
 Transforms/InstCombine/simplify-demanded-fpclass.ll
 Transforms/InstCombine/sink-not-into-another-hand-of-logical-and.ll
