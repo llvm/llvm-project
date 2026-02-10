@@ -30,32 +30,33 @@ define i1 @icmp_ne(i1 %x, i1 %y) {
   ret i1 %result
 }
 
-define i1 @icmp_eq_comm(i1 %x, i1 %y) {
-; CHECK-LABEL: define i1 @icmp_eq_comm(
-; CHECK-SAME: i1 [[X:%.*]], i1 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[Y]], true
-; CHECK-NEXT:    [[RESULT:%.*]] = and i1 [[X]], [[TMP1]]
-; CHECK-NEXT:    ret i1 [[RESULT]]
+; Basic test cases with vector types
+define <4 x i1> @icmp_eq_vec(<4 x i1> %x, <4 x i1> %y) {
+; CHECK-LABEL: define <4 x i1> @icmp_eq_vec(
+; CHECK-SAME: <4 x i1> [[X:%.*]], <4 x i1> [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[Y]], splat (i1 true)
+; CHECK-NEXT:    [[RESULT:%.*]] = and <4 x i1> [[X]], [[TMP1]]
+; CHECK-NEXT:    ret <4 x i1> [[RESULT]]
 ;
-  %x.ext = zext i1 %x to i32
-  %y.ext = zext i1 %y to i32
-  %shl = shl i32 %x.ext, %y.ext
-  %result = icmp eq i32 1, %shl
-  ret i1 %result
+  %x.ext = zext <4 x i1> %x to <4 x i32>
+  %y.ext = zext <4 x i1> %y to <4 x i32>
+  %shl = shl <4 x i32> %x.ext, %y.ext
+  %result = icmp eq <4 x i32> %shl, <i32 1, i32 1, i32 1, i32 1>
+  ret <4 x i1> %result
 }
 
-define i1 @icmp_ne_comm(i1 %x, i1 %y) {
-; CHECK-LABEL: define i1 @icmp_ne_comm(
-; CHECK-SAME: i1 [[X:%.*]], i1 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[X]], true
-; CHECK-NEXT:    [[RESULT:%.*]] = or i1 [[Y]], [[TMP1]]
-; CHECK-NEXT:    ret i1 [[RESULT]]
+define <4 x i1> @icmp_ne_vec(<4 x i1> %x, <4 x i1> %y) {
+; CHECK-LABEL: define <4 x i1> @icmp_ne_vec(
+; CHECK-SAME: <4 x i1> [[X:%.*]], <4 x i1> [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[X]], splat (i1 true)
+; CHECK-NEXT:    [[RESULT:%.*]] = or <4 x i1> [[Y]], [[TMP1]]
+; CHECK-NEXT:    ret <4 x i1> [[RESULT]]
 ;
-  %x.ext = zext i1 %x to i32
-  %y.ext = zext i1 %y to i32
-  %shl = shl i32 %x.ext, %y.ext
-  %result = icmp ne i32 1, %shl
-  ret i1 %result
+  %x.ext = zext <4 x i1> %x to <4 x i32>
+  %y.ext = zext <4 x i1> %y to <4 x i32>
+  %shl = shl <4 x i32> %x.ext, %y.ext
+  %result = icmp ne <4 x i32> %shl, <i32 1, i32 1, i32 1, i32 1>
+  ret <4 x i1> %result
 }
 
 ; Different zext target bit width
@@ -87,9 +88,37 @@ define i1 @icmp_ne_64(i1 %x, i1 %y) {
   ret i1 %result
 }
 
+define <4 x i1> @icmp_eq_vec_64(<4 x i1> %x, <4 x i1> %y) {
+; CHECK-LABEL: define <4 x i1> @icmp_eq_vec_64(
+; CHECK-SAME: <4 x i1> [[X:%.*]], <4 x i1> [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[Y]], splat (i1 true)
+; CHECK-NEXT:    [[RESULT:%.*]] = and <4 x i1> [[X]], [[TMP1]]
+; CHECK-NEXT:    ret <4 x i1> [[RESULT]]
+;
+  %x.ext = zext <4 x i1> %x to <4 x i64>
+  %y.ext = zext <4 x i1> %y to <4 x i64>
+  %shl = shl <4 x i64> %x.ext, %y.ext
+  %result = icmp eq <4 x i64> %shl, <i64 1, i64 1, i64 1, i64 1>
+  ret <4 x i1> %result
+}
+
+define <4 x i1> @icmp_ne_vec_64(<4 x i1> %x, <4 x i1> %y) {
+; CHECK-LABEL: define <4 x i1> @icmp_ne_vec_64(
+; CHECK-SAME: <4 x i1> [[X:%.*]], <4 x i1> [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[X]], splat (i1 true)
+; CHECK-NEXT:    [[RESULT:%.*]] = or <4 x i1> [[Y]], [[TMP1]]
+; CHECK-NEXT:    ret <4 x i1> [[RESULT]]
+;
+  %x.ext = zext <4 x i1> %x to <4 x i64>
+  %y.ext = zext <4 x i1> %y to <4 x i64>
+  %shl = shl <4 x i64> %x.ext, %y.ext
+  %result = icmp ne <4 x i64> %shl, <i64 1, i64 1, i64 1, i64 1>
+  ret <4 x i1> %result
+}
+
 ; Negative test: Comparing against 3, not 1
-define i1 @icmp_eq_zero_negative(i1 %x, i1 %y) {
-; CHECK-LABEL: define i1 @icmp_eq_zero_negative(
+define i1 @icmp_eq_non_one_negative(i1 %x, i1 %y) {
+; CHECK-LABEL: define i1 @icmp_eq_non_one_negative(
 ; CHECK-SAME: i1 [[X:%.*]], i1 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[X_EXT:%.*]] = zext i1 [[X]] to i32
 ; CHECK-NEXT:    [[Y_EXT:%.*]] = zext i1 [[Y]] to i32
@@ -102,6 +131,22 @@ define i1 @icmp_eq_zero_negative(i1 %x, i1 %y) {
   %shl = shl i32 %x.ext, %y.ext
   %result = icmp eq i32 %shl, 3
   ret i1 %result
+}
+
+define <4 x i1> @icmp_eq_non_one_negative_vec(<4 x i1> %x, <4 x i1> %y) {
+; CHECK-LABEL: define <4 x i1> @icmp_eq_non_one_negative_vec(
+; CHECK-SAME: <4 x i1> [[X:%.*]], <4 x i1> [[Y:%.*]]) {
+; CHECK-NEXT:    [[X_EXT:%.*]] = zext <4 x i1> [[X]] to <4 x i64>
+; CHECK-NEXT:    [[Y_EXT:%.*]] = zext <4 x i1> [[Y]] to <4 x i64>
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw <4 x i64> [[X_EXT]], [[Y_EXT]]
+; CHECK-NEXT:    [[RESULT:%.*]] = icmp eq <4 x i64> [[SHL]], <i64 3, i64 3, i64 1, i64 1>
+; CHECK-NEXT:    ret <4 x i1> [[RESULT]]
+;
+  %x.ext = zext <4 x i1> %x to <4 x i64>
+  %y.ext = zext <4 x i1> %y to <4 x i64>
+  %shl = shl <4 x i64> %x.ext, %y.ext
+  %result = icmp eq <4 x i64> %shl, <i64 3, i64 3, i64 1, i64 1>
+  ret <4 x i1> %result
 }
 
 ; Negative test: Non-i1 source type
@@ -119,4 +164,20 @@ define i1 @icmp_eq_non_i1_negative(i8 %x, i8 %y) {
   %shl = shl i32 %x.ext, %y.ext
   %result = icmp eq i32 %shl, 1
   ret i1 %result
+}
+
+define <4 x i1> @icmp_eq_non_i1_negative_vec(<4 x i8> %x, <4 x i8> %y) {
+; CHECK-LABEL: define <4 x i1> @icmp_eq_non_i1_negative_vec(
+; CHECK-SAME: <4 x i8> [[X:%.*]], <4 x i8> [[Y:%.*]]) {
+; CHECK-NEXT:    [[X_EXT:%.*]] = zext <4 x i8> [[X]] to <4 x i64>
+; CHECK-NEXT:    [[Y_EXT:%.*]] = zext nneg <4 x i8> [[Y]] to <4 x i64>
+; CHECK-NEXT:    [[SHL:%.*]] = shl <4 x i64> [[X_EXT]], [[Y_EXT]]
+; CHECK-NEXT:    [[RESULT:%.*]] = icmp eq <4 x i64> [[SHL]], splat (i64 1)
+; CHECK-NEXT:    ret <4 x i1> [[RESULT]]
+;
+  %x.ext = zext <4 x i8> %x to <4 x i64>
+  %y.ext = zext <4 x i8> %y to <4 x i64>
+  %shl = shl <4 x i64> %x.ext, %y.ext
+  %result = icmp eq <4 x i64> %shl, <i64 1, i64 1, i64 1, i64 1>
+  ret <4 x i1> %result
 }

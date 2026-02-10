@@ -7900,19 +7900,18 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     Value *A, *B;
     CmpPredicate CmpPred;
 
-    if (match(&I,
-              m_c_ICmp(CmpPred, m_Shl(m_ZExt(m_Value(A)), m_ZExt(m_Value(B))),
-                       m_One())) &&
-        A->getType()->isIntegerTy(1) && B->getType()->isIntegerTy(1)) {
+    if (match(&I, m_ICmp(CmpPred, m_Shl(m_ZExt(m_Value(A)), m_ZExt(m_Value(B))),
+                         m_One())) &&
+        A->getType()->isIntOrIntVectorTy(1) &&
+        B->getType()->isIntOrIntVectorTy(1)) {
 
-      if (CmpPred == ICmpInst::ICMP_EQ) {
+      if (CmpPred == ICmpInst::ICMP_EQ)
         return replaceInstUsesWith(I,
                                    Builder.CreateAnd(A, Builder.CreateNot(B)));
-      }
-      if (CmpPred == ICmpInst::ICMP_NE) {
+
+      if (CmpPred == ICmpInst::ICMP_NE)
         return replaceInstUsesWith(I,
                                    Builder.CreateOr(Builder.CreateNot(A), B));
-      }
     }
   }
 
