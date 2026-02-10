@@ -20,11 +20,11 @@
 ; CHECK-NEXT: %[[CSplat:.*]] = shufflevector <4 x i32> %[[CVal0]], <4 x i32> poison, <4 x i32> zeroinitializer
 
 ; CHECK-LABEL: vector.body:
-; CHECK: %[[Ind:.*]] = phi i64 [ 0, %vector.ph ], [ %[[IndNext:.*]], %[[ForInc:.*]] ]
-; CHECK: %[[VecInd:.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %vector.ph ], [ %[[VecIndNext:.*]], %[[ForInc]] ]
+; CHECK: %[[Ind:.*]] = phi i64 [ 0, %vector.ph ], [ %[[IndNext:.*]], %vector.latch ]
+; CHECK: %[[VecInd:.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %vector.ph ], [ %[[VecIndNext:.*]], %vector.latch ]
 ; CHECK: %[[AAddr:.*]] = getelementptr inbounds [1024 x i32], ptr @A, i64 0, <4 x i64> %[[VecInd]]
 ; CHECK: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %[[CSplat]], <4 x ptr> align 4 %[[AAddr]], <4 x i1> splat (i1 true))
-; CHECK: br i1 %[[ZeroTripChk]], label %[[InnerForPh:.*]], label %[[OuterInc:.*]]
+; CHECK: br i1 %[[ZeroTripChk]], label %[[InnerForPh:.*]], label %vector.latch
 
 ; CHECK: [[InnerForPh]]:
 ; CHECK: %[[WideAVal:.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 %[[AAddr]], <4 x i1> splat (i1 true), <4 x i32> poison)
@@ -44,11 +44,10 @@
 ; CHECK: br i1 %[[InnerCond]], label %[[InnerCrit:.*]], label %[[InnerForBody]]
 
 ; CHECK: [[InnerCrit]]:
-; CHECK: %[[StorePhi:.*]] = phi <4 x i32> [ %[[AccumPhiNext]], %[[InnerForBody]] ]
-; CHECK: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %[[StorePhi]], <4 x ptr> align 4 %[[AAddr]], <4 x i1> splat (i1 true))
-; CHECK:  br label %[[ForInc]]
+; CHECK: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %[[AccumPhiNext]], <4 x ptr> align 4 %[[AAddr]], <4 x i1> splat (i1 true))
+; CHECK:  br label %vector.latch
 
-; CHECK: [[ForInc]]:
+; CHECK: vector.latch:
 ; CHECK: %[[IndNext]] = add nuw i64 %[[Ind]], 4
 ; CHECK: %[[VecIndNext]] = add nuw nsw <4 x i64> %[[VecInd]], splat (i64 4)
 ; CHECK: %[[Cmp:.*]] = icmp eq i64 %[[IndNext]], {{.*}}

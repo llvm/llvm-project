@@ -43,6 +43,7 @@ set(UBSAN_HEADERS
   )
 
 include_directories(..)
+include_directories(../../include)
 
 set(UBSAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 append_list_if(MSVC /Zl UBSAN_CFLAGS)

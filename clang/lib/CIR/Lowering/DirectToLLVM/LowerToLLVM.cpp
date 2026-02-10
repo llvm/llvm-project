@@ -812,12 +812,14 @@ getLLVMMemOrder(std::optional<cir::MemOrder> memorder) {
   llvm_unreachable("unknown memory order");
 }
 
+static llvm::StringRef getLLVMSyncScope(cir::SyncScopeKind syncScope) {
+  return syncScope == cir::SyncScopeKind::SingleThread ? "singlethread" : "";
+}
+
 static std::optional<llvm::StringRef>
 getLLVMSyncScope(std::optional<cir::SyncScopeKind> syncScope) {
   if (syncScope.has_value())
-    return syncScope.value() == cir::SyncScopeKind::SingleThread
-               ? "singlethread"
-               : "";
+    return getLLVMSyncScope(*syncScope);
   return std::nullopt;
 }
 
@@ -851,9 +853,10 @@ mlir::LogicalResult CIRToLLVMAtomicXchgOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   assert(!cir::MissingFeatures::atomicSyncScopeID());
   mlir::LLVM::AtomicOrdering llvmOrder = getLLVMMemOrder(adaptor.getMemOrder());
+  llvm::StringRef llvmSyncScope = getLLVMSyncScope(adaptor.getSyncScope());
   rewriter.replaceOpWithNewOp<mlir::LLVM::AtomicRMWOp>(
       op, mlir::LLVM::AtomicBinOp::xchg, adaptor.getPtr(), adaptor.getVal(),
-      llvmOrder);
+      llvmOrder, llvmSyncScope);
   return mlir::success();
 }
 
@@ -1290,6 +1293,7 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
     auto llvmSrcTy = mlir::cast<mlir::IntegerType>(llvmSrcVal.getType());
     auto llvmDstTy =
         mlir::cast<mlir::IntegerType>(getTypeConverter()->convertType(dstTy));
+
     if (llvmSrcTy.getWidth() == llvmDstTy.getWidth())
       rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(castOp, llvmDstTy,
                                                          llvmSrcVal);
