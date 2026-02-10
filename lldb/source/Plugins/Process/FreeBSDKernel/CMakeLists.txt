@@ -13,6 +13,7 @@ endif()
 
 add_lldb_library(lldbPluginProcessFreeBSDKernel PLUGIN
   ProcessFreeBSDKernel.cpp
+  RegisterContextFreeBSDKernel_arm.cpp
   RegisterContextFreeBSDKernel_arm64.cpp
   RegisterContextFreeBSDKernel_i386.cpp
   RegisterContextFreeBSDKernel_x86_64.cpp
