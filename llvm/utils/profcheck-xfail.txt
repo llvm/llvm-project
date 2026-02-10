@@ -244,7 +244,6 @@ Transforms/InstCombine/or-fcmp.ll
 Transforms/InstCombine/pow-1.ll
 Transforms/InstCombine/pow-3.ll
 Transforms/InstCombine/pow-sqrt.ll
-Transforms/InstCombine/select-factorize.ll
 Transforms/InstCombine/select-min-max.ll
 Transforms/InstCombine/select-of-symmetric-selects.ll
 Transforms/InstCombine/select-select.ll
