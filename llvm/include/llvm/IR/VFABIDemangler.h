@@ -132,6 +132,20 @@ struct VFInfo {
   /// if any exist.
   std::optional<unsigned> getParamIndexForOptionalMask() const {
     unsigned ParamCount = Shape.Parameters.size();
+
+#ifndef NDEBUG
+    unsigned NumMaskParams = 0, MaskIdx = 0;
+    for (unsigned I = 0; I < ParamCount; I++) {
+      if (Shape.Parameters[I].ParamKind == VFParamKind::GlobalPredicate) {
+        NumMaskParams++;
+        MaskIdx = I;
+      }
+    }
+    assert(NumMaskParams <= 1 && "Unexpected number of mask parameters");
+    assert((!NumMaskParams || MaskIdx == (ParamCount - 1)) &&
+           "Mask parameter in unexpected position");
+#endif
+
     if (!ParamCount || Shape.Parameters[ParamCount - 1].ParamKind !=
                            VFParamKind::GlobalPredicate)
       return std::nullopt;
