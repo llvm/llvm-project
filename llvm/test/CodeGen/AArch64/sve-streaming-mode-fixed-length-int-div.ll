@@ -1791,61 +1791,30 @@ define void @udiv_constantsplat_v8i32(ptr %a)  {
 ; NONEON-NOSVE-LABEL: udiv_constantsplat_v8i32:
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    ldp q1, q0, [x0]
-; NONEON-NOSVE-NEXT:    mov w8, #8969 // =0x2309
-; NONEON-NOSVE-NEXT:    movk w8, #22765, lsl #16
+; NONEON-NOSVE-NEXT:    mov x8, #301989888 // =0x12000000
+; NONEON-NOSVE-NEXT:    movk x8, #55878, lsl #32
+; NONEON-NOSVE-NEXT:    movk x8, #689, lsl #48
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #-64]!
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 64
 ; NONEON-NOSVE-NEXT:    ldr w9, [sp, #28]
-; NONEON-NOSVE-NEXT:    umull x10, w9, w8
-; NONEON-NOSVE-NEXT:    lsr x10, x10, #32
-; NONEON-NOSVE-NEXT:    sub w9, w9, w10
-; NONEON-NOSVE-NEXT:    add w9, w10, w9, lsr #1
-; NONEON-NOSVE-NEXT:    lsr w11, w9, #6
+; NONEON-NOSVE-NEXT:    umulh x10, x9, x8
 ; NONEON-NOSVE-NEXT:    ldr w9, [sp, #24]
-; NONEON-NOSVE-NEXT:    umull x10, w9, w8
-; NONEON-NOSVE-NEXT:    lsr x10, x10, #32
-; NONEON-NOSVE-NEXT:    sub w9, w9, w10
-; NONEON-NOSVE-NEXT:    add w9, w10, w9, lsr #1
-; NONEON-NOSVE-NEXT:    lsr w9, w9, #6
-; NONEON-NOSVE-NEXT:    stp w9, w11, [sp, #56]
+; NONEON-NOSVE-NEXT:    umulh x9, x9, x8
+; NONEON-NOSVE-NEXT:    stp w9, w10, [sp, #56]
 ; NONEON-NOSVE-NEXT:    ldr w9, [sp, #20]
-; NONEON-NOSVE-NEXT:    umull x10, w9, w8
-; NONEON-NOSVE-NEXT:    lsr x10, x10, #32
-; NONEON-NOSVE-NEXT:    sub w9, w9, w10
-; NONEON-NOSVE-NEXT:    add w9, w10, w9, lsr #1
-; NONEON-NOSVE-NEXT:    lsr w11, w9, #6
+; NONEON-NOSVE-NEXT:    umulh x10, x9, x8
 ; NONEON-NOSVE-NEXT:    ldr w9, [sp, #16]
-; NONEON-NOSVE-NEXT:    umull x10, w9, w8
-; NONEON-NOSVE-NEXT:    lsr x10, x10, #32
-; NONEON-NOSVE-NEXT:    sub w9, w9, w10
-; NONEON-NOSVE-NEXT:    add w9, w10, w9, lsr #1
-; NONEON-NOSVE-NEXT:    lsr w9, w9, #6
-; NONEON-NOSVE-NEXT:    stp w9, w11, [sp, #48]
+; NONEON-NOSVE-NEXT:    umulh x9, x9, x8
+; NONEON-NOSVE-NEXT:    stp w9, w10, [sp, #48]
 ; NONEON-NOSVE-NEXT:    ldr w9, [sp, #12]
-; NONEON-NOSVE-NEXT:    umull x10, w9, w8
-; NONEON-NOSVE-NEXT:    lsr x10, x10, #32
-; NONEON-NOSVE-NEXT:    sub w9, w9, w10
-; NONEON-NOSVE-NEXT:    add w9, w10, w9, lsr #1
-; NONEON-NOSVE-NEXT:    lsr w11, w9, #6
+; NONEON-NOSVE-NEXT:    umulh x10, x9, x8
 ; NONEON-NOSVE-NEXT:    ldr w9, [sp, #8]
-; NONEON-NOSVE-NEXT:    umull x10, w9, w8
-; NONEON-NOSVE-NEXT:    lsr x10, x10, #32
-; NONEON-NOSVE-NEXT:    sub w9, w9, w10
-; NONEON-NOSVE-NEXT:    add w9, w10, w9, lsr #1
-; NONEON-NOSVE-NEXT:    lsr w9, w9, #6
-; NONEON-NOSVE-NEXT:    stp w9, w11, [sp, #40]
+; NONEON-NOSVE-NEXT:    umulh x9, x9, x8
+; NONEON-NOSVE-NEXT:    stp w9, w10, [sp, #40]
 ; NONEON-NOSVE-NEXT:    ldr w9, [sp, #4]
-; NONEON-NOSVE-NEXT:    umull x10, w9, w8
-; NONEON-NOSVE-NEXT:    lsr x10, x10, #32
-; NONEON-NOSVE-NEXT:    sub w9, w9, w10
-; NONEON-NOSVE-NEXT:    add w9, w10, w9, lsr #1
-; NONEON-NOSVE-NEXT:    lsr w10, w9, #6
+; NONEON-NOSVE-NEXT:    umulh x10, x9, x8
 ; NONEON-NOSVE-NEXT:    ldr w9, [sp]
-; NONEON-NOSVE-NEXT:    umull x8, w9, w8
-; NONEON-NOSVE-NEXT:    lsr x8, x8, #32
-; NONEON-NOSVE-NEXT:    sub w9, w9, w8
-; NONEON-NOSVE-NEXT:    add w8, w8, w9, lsr #1
-; NONEON-NOSVE-NEXT:    lsr w8, w8, #6
+; NONEON-NOSVE-NEXT:    umulh x8, x9, x8
 ; NONEON-NOSVE-NEXT:    stp w8, w10, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #32]
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [x0]

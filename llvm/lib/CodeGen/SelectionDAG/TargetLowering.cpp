@@ -12,6 +12,7 @@
 
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/Analysis.h"
@@ -6791,6 +6792,7 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   const unsigned SVTBits = SVT.getSizeInBits();
 
   bool UseNPQ = false, UsePreShift = false, UsePostShift = false;
+  bool Use33BitOptimization = false;
   SmallVector<SDValue, 16> PreShifts, PostShifts, MagicFactors, NPQFactors;
 
   auto BuildUDIVPattern = [&](ConstantSDNode *C) {
@@ -6812,23 +6814,51 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
           UnsignedDivisionByConstantInfo::get(
               Divisor, std::min(KnownLeadingZeros, Divisor.countl_zero()));
 
-      MagicFactor = DAG.getConstant(magics.Magic.zext(SVTBits), dl, SVT);
+      // Our Approach: For 32-bit division with IsAdd (33-bit
+      // magic case), use optimized method: preshift c by (64-a) bits to
+      // eliminate runtime shift. This requires 64x64->128 bit multiplication.
+      // Only apply to scalar types since SIMD lacks 64x64->128 high multiply.
+      // Note: IsAdd=true implies PreShift=0 by algorithm design.
+      // Check if 64-bit MULHU is available before applying this optimization.
+      EVT WideVT64 = EVT::getIntegerVT(*DAG.getContext(), 64);
+      bool Has64BitMULHU =
+          isOperationLegalOrCustom(ISD::MULHU, WideVT64, IsAfterLegalization) ||
+          isOperationLegalOrCustom(ISD::UMUL_LOHI, WideVT64,
+                                   IsAfterLegalization);
+      if (EltBits == 32 && !VT.isVector() && Has64BitMULHU && magics.IsAdd) {
+        // For IsAdd case, actual magic constant is 2^32 + Magic (33-bit)
+        unsigned OriginalShift = magics.PostShift + 33;
+        APInt RealMagic = APInt(65, 1).shl(32) + magics.Magic.zext(65); // 2^32 + Magic
+        Use33BitOptimization = true;
+        // Shift the constant left by (64 - OriginalShift) to avoid runtime shift
+        APInt ShiftedMagic = RealMagic.shl(64 - OriginalShift).trunc(64);
+        MagicFactor = DAG.getConstant(ShiftedMagic, dl,
+                                       EVT::getIntegerVT(*DAG.getContext(), 64));
+        PreShift = DAG.getConstant(0, dl, ShSVT);
+        PostShift = DAG.getConstant(0, dl, ShSVT);
+        NPQFactor = DAG.getConstant(APInt::getZero(SVTBits), dl, SVT);
+        UseNPQ = false;
+        UsePreShift = false;
+        UsePostShift = false;
+      } else {
+        MagicFactor = DAG.getConstant(magics.Magic.zext(SVTBits), dl, SVT);
 
-      assert(magics.PreShift < Divisor.getBitWidth() &&
-             "We shouldn't generate an undefined shift!");
-      assert(magics.PostShift < Divisor.getBitWidth() &&
-             "We shouldn't generate an undefined shift!");
-      assert((!magics.IsAdd || magics.PreShift == 0) &&
-             "Unexpected pre-shift");
-      PreShift = DAG.getConstant(magics.PreShift, dl, ShSVT);
-      PostShift = DAG.getConstant(magics.PostShift, dl, ShSVT);
-      NPQFactor = DAG.getConstant(
-          magics.IsAdd ? APInt::getOneBitSet(SVTBits, EltBits - 1)
-                       : APInt::getZero(SVTBits),
-          dl, SVT);
-      UseNPQ |= magics.IsAdd;
-      UsePreShift |= magics.PreShift != 0;
-      UsePostShift |= magics.PostShift != 0;
+        assert(magics.PreShift < Divisor.getBitWidth() &&
+               "We shouldn't generate an undefined shift!");
+        assert(magics.PostShift < Divisor.getBitWidth() &&
+               "We shouldn't generate an undefined shift!");
+        assert((!magics.IsAdd || magics.PreShift == 0) &&
+               "Unexpected pre-shift");
+        PreShift = DAG.getConstant(magics.PreShift, dl, ShSVT);
+        PostShift = DAG.getConstant(magics.PostShift, dl, ShSVT);
+        NPQFactor = DAG.getConstant(
+            magics.IsAdd ? APInt::getOneBitSet(SVTBits, EltBits - 1)
+                         : APInt::getZero(SVTBits),
+            dl, SVT);
+        UseNPQ |= magics.IsAdd;
+        UsePreShift |= magics.PreShift != 0;
+        UsePostShift |= magics.PostShift != 0;
+      }
     }
 
     PreShifts.push_back(PreShift);
@@ -6864,6 +6894,46 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
     PostShift = PostShifts[0];
   }
 
+  // Our Approach: Use optimized 33-bit method for 32-bit division
+  if (Use33BitOptimization) {
+    // x is i32, MagicFactor is pre-shifted i64 constant
+    // Compute: (i64(x) * MagicFactor) >> 64
+    EVT WideVT = EVT::getIntegerVT(*DAG.getContext(), 64);
+    SDValue X64 = DAG.getNode(ISD::ZERO_EXTEND, dl, WideVT, N0);
+
+    // Get the pre-shifted constant (it's already in MagicFactor as i64)
+    SDValue MagicFactor64 = isa<ConstantSDNode>(MagicFactor)
+        ? MagicFactor
+        : MagicFactors[0];
+
+    SDValue Result;
+    // Perform 64x64 -> 128 multiplication and extract high 64 bits
+    if (isOperationLegalOrCustom(ISD::MULHU, WideVT, IsAfterLegalization)) {
+      SDValue High = DAG.getNode(ISD::MULHU, dl, WideVT, X64, MagicFactor64);
+      Created.push_back(High.getNode());
+      // Truncate back to i32
+      Result = DAG.getNode(ISD::TRUNCATE, dl, VT, High);
+    } else if (isOperationLegalOrCustom(ISD::UMUL_LOHI, WideVT, IsAfterLegalization)) {
+      SDValue LoHi = DAG.getNode(ISD::UMUL_LOHI, dl,
+                                  DAG.getVTList(WideVT, WideVT),
+                                  X64, MagicFactor64);
+      SDValue High = SDValue(LoHi.getNode(), 1);
+      Created.push_back(LoHi.getNode());
+      Result = DAG.getNode(ISD::TRUNCATE, dl, VT, High);
+    } else {
+      // Fallback to standard path if 64-bit MULHU is not available
+      Use33BitOptimization = false;
+      goto standard_path;
+    }
+
+    // Handle divisor == 1 case with SELECT
+    EVT SetCCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+    SDValue One = DAG.getConstant(1, dl, VT);
+    SDValue IsOne = DAG.getSetCC(dl, SetCCVT, N1, One, ISD::SETEQ);
+    return DAG.getSelect(dl, VT, IsOne, N0, Result);
+  }
+
+standard_path:
   SDValue Q = N0;
   if (UsePreShift) {
     Q = DAG.getNode(ISD::SRL, dl, VT, Q, PreShift);
