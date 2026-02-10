@@ -31,13 +31,11 @@
 #include "swift/Serialization/SerializationOptions.h"
 #include "swift/SymbolGraphGen/SymbolGraphOptions.h"
 
-#include "clang/Basic/DarwinSDKInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Target/TargetOptions.h"
 
 #include <memory>
-#include <optional>
 
 namespace swift {
 enum class IRGenDebugInfoLevel : unsigned;
@@ -255,8 +253,6 @@ public:
   swift::DiagnosticEngine &GetDiagnosticEngine();
 
   swift::SearchPathOptions &GetSearchPathOptions();
-
-  std::optional<clang::DarwinSDKInfo> &GetSDKInfo();
 
   swift::SerializationOptions &GetSerializationOptions();
 
