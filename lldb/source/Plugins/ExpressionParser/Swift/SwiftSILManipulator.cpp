@@ -58,7 +58,7 @@ swift::SILValue SwiftSILManipulator::emitLValueForVariable(
              "UnsafeMutablePointer") != std::string::npos);
 
   swift::CanType unsafe_mutable_pointer_can_type =
-      struct_argument->getType().getSwiftRValueType();
+      struct_argument->getType().getASTType();
 
   swift::BoundGenericStructType *unsafe_mutable_pointer_struct_type =
       llvm::cast<swift::BoundGenericStructType>(

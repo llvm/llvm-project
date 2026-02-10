@@ -5440,12 +5440,10 @@ swift::irgen::IRGenModule &SwiftASTContext::GetIRGenModule() {
 
     // Create a target machine.
     llvm::TargetMachine *target_machine = llvm_target->createTargetMachine(
-        llvm_triple.str(),
-        "generic", // cpu
-        "",        // features
-        *getTargetOptions(),
-        llvm::Reloc::Static, // TODO verify with Sean, Default went away
-        std::nullopt, optimization_level);
+        llvm_triple,
+        /*cpu=*/"generic",
+        /*features=*/"", *getTargetOptions(), llvm::Reloc::Static, std::nullopt,
+        optimization_level);
     if (target_machine) {
       // Set the module's string representation.
       const llvm::DataLayout data_layout = target_machine->createDataLayout();
@@ -8566,7 +8564,7 @@ LLVM_DUMP_METHOD void SwiftASTContext::dump(opaque_compiler_type_t type) const {
     return;
   swift::Type swift_type =
       const_cast<SwiftASTContext *>(this)->GetSwiftType(type);
-  swift_type.dump();
+  swift_type.dump(llvm::errs());
 }
 #endif
 
