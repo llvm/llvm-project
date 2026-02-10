@@ -272,6 +272,18 @@ func.func @no_fold(%arg0: index) -> !shape.shape {
 
 // -----
 
+// GH#178820: Verify from_extents doesn't crash on poison operands.
+// CHECK-LABEL: func @from_extents_poison
+func.func @from_extents_poison() -> !shape.shape {
+  // CHECK: %[[POISON:.*]] = ub.poison : index
+  // CHECK: shape.from_extents %[[POISON]]
+  %0 = ub.poison : index
+  %ret = shape.from_extents %0 : index
+  return %ret : !shape.shape
+}
+
+// -----
+
 // Cast constant size to index and fold it away.
 // CHECK-LABEL: func @const_size_to_index
 func.func @const_size_to_index() -> index {

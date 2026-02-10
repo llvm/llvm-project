@@ -23,7 +23,7 @@
 #include "orc-rt-c/WrapperFunction.h"
 
 #include <cassert>
-#include <condition_variable>
+#include <future>
 #include <memory>
 #include <mutex>
 #include <vector>
@@ -163,7 +163,6 @@ public:
 private:
   struct ShutdownInfo {
     bool Complete = false;
-    std::condition_variable CompleteCV;
     std::vector<std::unique_ptr<ResourceManager>> ResourceMgrs;
     std::vector<OnShutdownCompleteFn> OnCompletes;
   };

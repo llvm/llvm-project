@@ -794,8 +794,7 @@ ObjectFile *ObjectFileMachO::CreateInstance(const lldb::ModuleSP &module_sp,
     extractor_sp = std::make_shared<DataExtractor>(data_sp);
   }
 
-  if (!ObjectFileMachO::MagicBytesMatch(extractor_sp->GetSharedDataBuffer(),
-                                        data_offset, length))
+  if (!ObjectFileMachO::MagicBytesMatch(extractor_sp, data_offset, length))
     return nullptr;
 
   // Update the data to contain the entire file if it doesn't already
@@ -817,7 +816,9 @@ ObjectFile *ObjectFileMachO::CreateInstance(const lldb::ModuleSP &module_sp,
 ObjectFile *ObjectFileMachO::CreateMemoryInstance(
     const lldb::ModuleSP &module_sp, WritableDataBufferSP data_sp,
     const ProcessSP &process_sp, lldb::addr_t header_addr) {
-  if (ObjectFileMachO::MagicBytesMatch(data_sp, 0, data_sp->GetByteSize())) {
+  DataExtractorSP extractor_sp = std::make_shared<DataExtractor>(data_sp);
+  if (ObjectFileMachO::MagicBytesMatch(extractor_sp, 0,
+                                       extractor_sp->GetByteSize())) {
     std::unique_ptr<ObjectFile> objfile_up(
         new ObjectFileMachO(module_sp, data_sp, process_sp, header_addr));
     if (objfile_up.get() && objfile_up->ParseHeader())
@@ -827,29 +828,32 @@ ObjectFile *ObjectFileMachO::CreateMemoryInstance(
 }
 
 size_t ObjectFileMachO::GetModuleSpecifications(
-    const lldb_private::FileSpec &file, lldb::DataBufferSP &data_sp,
+    const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
     lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
   const size_t initial_count = specs.GetSize();
+  if (!extractor_sp || !extractor_sp->HasData())
+    return initial_count;
 
-  if (ObjectFileMachO::MagicBytesMatch(data_sp, 0, data_sp->GetByteSize())) {
-    DataExtractor data;
-    data.SetData(data_sp);
+  if (ObjectFileMachO::MagicBytesMatch(extractor_sp, 0,
+                                       extractor_sp->GetByteSize())) {
     llvm::MachO::mach_header header;
-    if (ParseHeader(data, &data_offset, header)) {
+    if (ParseHeader(extractor_sp, &data_offset, header)) {
       size_t header_and_load_cmds =
           header.sizeofcmds + MachHeaderSizeFromMagic(header.magic);
-      if (header_and_load_cmds >= data_sp->GetByteSize()) {
-        data_sp = MapFileData(file, header_and_load_cmds, file_offset);
-        data.SetData(data_sp);
+      if (header_and_load_cmds >= extractor_sp->GetByteSize()) {
+        DataBufferSP file_data_sp =
+            MapFileData(file, header_and_load_cmds, file_offset);
+        if (file_data_sp)
+          extractor_sp->SetData(file_data_sp);
         data_offset = MachHeaderSizeFromMagic(header.magic);
       }
-      if (data_sp) {
+      if (extractor_sp && extractor_sp->HasData()) {
         ModuleSpec base_spec;
         base_spec.GetFileSpec() = file;
         base_spec.SetObjectOffset(file_offset);
         base_spec.SetObjectSize(length);
-        GetAllArchSpecs(header, data, data_offset, base_spec, specs);
+        GetAllArchSpecs(header, *extractor_sp, data_offset, base_spec, specs);
       }
     }
   }
@@ -906,17 +910,15 @@ ConstString ObjectFileMachO::GetSectionNameLLDBNoNlist() {
   return g_section_name_lldb_no_nlist;
 }
 
-bool ObjectFileMachO::MagicBytesMatch(DataBufferSP data_sp,
+bool ObjectFileMachO::MagicBytesMatch(DataExtractorSP extractor_sp,
                                       lldb::addr_t data_offset,
                                       lldb::addr_t data_length) {
-  DataExtractor data;
-  data.SetData(data_sp, data_offset, data_length);
-  lldb::offset_t offset = 0;
-  uint32_t magic = data.GetU32(&offset);
+  lldb::offset_t offset = data_offset;
+  uint32_t magic = extractor_sp->GetU32(&offset);
 
   offset += 4; // cputype
   offset += 4; // cpusubtype
-  uint32_t filetype = data.GetU32(&offset);
+  uint32_t filetype = extractor_sp->GetU32(&offset);
 
   // A fileset has a Mach-O header but is not an
   // individual file and must be handled via an
@@ -955,41 +957,41 @@ ObjectFileMachO::ObjectFileMachO(const lldb::ModuleSP &module_sp,
   ::memset(&m_dysymtab, 0, sizeof(m_dysymtab));
 }
 
-bool ObjectFileMachO::ParseHeader(DataExtractor &data,
+bool ObjectFileMachO::ParseHeader(DataExtractorSP &extractor_sp,
                                   lldb::offset_t *data_offset_ptr,
                                   llvm::MachO::mach_header &header) {
-  data.SetByteOrder(endian::InlHostByteOrder());
+  extractor_sp->SetByteOrder(endian::InlHostByteOrder());
   // Leave magic in the original byte order
-  header.magic = data.GetU32(data_offset_ptr);
+  header.magic = extractor_sp->GetU32(data_offset_ptr);
   bool can_parse = false;
   bool is_64_bit = false;
   switch (header.magic) {
   case MH_MAGIC:
-    data.SetByteOrder(endian::InlHostByteOrder());
-    data.SetAddressByteSize(4);
+    extractor_sp->SetByteOrder(endian::InlHostByteOrder());
+    extractor_sp->SetAddressByteSize(4);
     can_parse = true;
     break;
 
   case MH_MAGIC_64:
-    data.SetByteOrder(endian::InlHostByteOrder());
-    data.SetAddressByteSize(8);
+    extractor_sp->SetByteOrder(endian::InlHostByteOrder());
+    extractor_sp->SetAddressByteSize(8);
     can_parse = true;
     is_64_bit = true;
     break;
 
   case MH_CIGAM:
-    data.SetByteOrder(endian::InlHostByteOrder() == eByteOrderBig
-                          ? eByteOrderLittle
-                          : eByteOrderBig);
-    data.SetAddressByteSize(4);
+    extractor_sp->SetByteOrder(endian::InlHostByteOrder() == eByteOrderBig
+                                   ? eByteOrderLittle
+                                   : eByteOrderBig);
+    extractor_sp->SetAddressByteSize(4);
     can_parse = true;
     break;
 
   case MH_CIGAM_64:
-    data.SetByteOrder(endian::InlHostByteOrder() == eByteOrderBig
-                          ? eByteOrderLittle
-                          : eByteOrderBig);
-    data.SetAddressByteSize(8);
+    extractor_sp->SetByteOrder(endian::InlHostByteOrder() == eByteOrderBig
+                                   ? eByteOrderLittle
+                                   : eByteOrderBig);
+    extractor_sp->SetAddressByteSize(8);
     is_64_bit = true;
     can_parse = true;
     break;
@@ -999,7 +1001,7 @@ bool ObjectFileMachO::ParseHeader(DataExtractor &data,
   }
 
   if (can_parse) {
-    data.GetU32(data_offset_ptr, &header.cputype, 6);
+    extractor_sp->GetU32(data_offset_ptr, &header.cputype, 6);
     if (is_64_bit)
       *data_offset_ptr += 4;
     return true;
@@ -2493,31 +2495,32 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       exports_trie_load_command.dataoff += linkedit_slide;
     }
 
-    nlist_data.SetData(*m_data_nsp, symtab_load_command.symoff,
-                       nlist_data_byte_size);
-    strtab_data.SetData(*m_data_nsp, symtab_load_command.stroff,
-                        strtab_data_byte_size);
+    nlist_data = *m_data_nsp->GetSubsetExtractorSP(symtab_load_command.symoff,
+                                                   nlist_data_byte_size);
+    strtab_data = *m_data_nsp->GetSubsetExtractorSP(symtab_load_command.stroff,
+                                                    strtab_data_byte_size);
 
     // We shouldn't have exports data from both the LC_DYLD_INFO command
     // AND the LC_DYLD_EXPORTS_TRIE command in the same binary:
     lldbassert(!((dyld_info.export_size > 0)
                  && (exports_trie_load_command.datasize > 0)));
     if (dyld_info.export_size > 0) {
-      dyld_trie_data.SetData(*m_data_nsp, dyld_info.export_off,
-                             dyld_info.export_size);
+      dyld_trie_data = *m_data_nsp->GetSubsetExtractorSP(dyld_info.export_off,
+                                                         dyld_info.export_size);
     } else if (exports_trie_load_command.datasize > 0) {
-      dyld_trie_data.SetData(*m_data_nsp, exports_trie_load_command.dataoff,
-                             exports_trie_load_command.datasize);
+      dyld_trie_data =
+          *m_data_nsp->GetSubsetExtractorSP(exports_trie_load_command.dataoff,
+                                            exports_trie_load_command.datasize);
     }
 
     if (dysymtab.nindirectsyms != 0) {
-      indirect_symbol_index_data.SetData(*m_data_nsp, dysymtab.indirectsymoff,
-                                         dysymtab.nindirectsyms * 4);
+      indirect_symbol_index_data = *m_data_nsp->GetSubsetExtractorSP(
+          dysymtab.indirectsymoff, dysymtab.nindirectsyms * 4);
     }
     if (function_starts_load_command.cmd) {
-      function_starts_data.SetData(*m_data_nsp,
-                                   function_starts_load_command.dataoff,
-                                   function_starts_load_command.datasize);
+      function_starts_data = *m_data_nsp->GetSubsetExtractorSP(
+          function_starts_load_command.dataoff,
+          function_starts_load_command.datasize);
     }
   }
 
@@ -5734,8 +5737,9 @@ void ObjectFileMachO::GetProcessSharedCacheUUID(Process *process,
     DynamicLoader *dl = process->GetDynamicLoader();
     LazyBool using_shared_cache;
     LazyBool private_shared_cache;
+    FileSpec sc_filepath;
     dl->GetSharedCacheInformation(base_addr, uuid, using_shared_cache,
-                                  private_shared_cache);
+                                  private_shared_cache, sc_filepath);
   }
   Log *log(GetLog(LLDBLog::Symbols | LLDBLog::Process));
   LLDB_LOGF(

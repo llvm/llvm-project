@@ -398,7 +398,7 @@ class FLAT_Global_Load_LDS_Pseudo <string opName, bit EnableSaddr = 0, bit IsAsy
        !if(EnableSaddr, (ins SReg_64:$saddr, VGPR_32:$vaddr), (ins VReg_64_AlignTarget:$vaddr)),
        (ins flat_offset:$offset, CPol_0:$cpol)),
   !if(IsAsync, " $vdst,", "")#" $vaddr"#!if(EnableSaddr, ", $saddr", ", off")#"$offset$cpol"> {
-  let LGKM_CNT = !not(IsAsync);
+  let LGKM_CNT = 0;
   let VM_CNT = !not(IsAsync);
   let ASYNC_CNT = IsAsync;
   let is_flat_global = 1;
@@ -2389,13 +2389,13 @@ let WaveSizePredicate = isWave32,  OtherPredicates = [HasTransposeLoadF4F6Insts]
 }
 
 let OtherPredicates = [isGFX125xOnly] in {
-  def  : FlatLoadPat_CPOL <FLAT_LOAD_MONITOR_B32,  int_amdgcn_flat_load_monitor_b32,  i32>;
-  def  : FlatLoadPat_CPOL <FLAT_LOAD_MONITOR_B64,  int_amdgcn_flat_load_monitor_b64,  v2i32>;
-  def  : FlatLoadPat_CPOL <FLAT_LOAD_MONITOR_B128, int_amdgcn_flat_load_monitor_b128, v4i32>;
+  def  : FlatLoadPat <FLAT_LOAD_MONITOR_B32,  AMDGPUflat_load_monitor,  i32>;
+  def  : FlatLoadPat <FLAT_LOAD_MONITOR_B64,  AMDGPUflat_load_monitor,  v2i32>;
+  def  : FlatLoadPat <FLAT_LOAD_MONITOR_B128, AMDGPUflat_load_monitor, v4i32>;
 
-  defm : GlobalFLATLoadPats_CPOL <GLOBAL_LOAD_MONITOR_B32,  int_amdgcn_global_load_monitor_b32,  i32>;
-  defm : GlobalFLATLoadPats_CPOL <GLOBAL_LOAD_MONITOR_B64,  int_amdgcn_global_load_monitor_b64,  v2i32>;
-  defm : GlobalFLATLoadPats_CPOL <GLOBAL_LOAD_MONITOR_B128, int_amdgcn_global_load_monitor_b128, v4i32>;
+  defm : GlobalFLATLoadPats <GLOBAL_LOAD_MONITOR_B32,  AMDGPUglobal_load_monitor,  i32>;
+  defm : GlobalFLATLoadPats <GLOBAL_LOAD_MONITOR_B64,  AMDGPUglobal_load_monitor,  v2i32>;
+  defm : GlobalFLATLoadPats <GLOBAL_LOAD_MONITOR_B128, AMDGPUglobal_load_monitor, v4i32>;
 } // End SubtargetPredicate = isGFX125xOnly
 
 let OtherPredicates = [isGFX1250Plus] in {
