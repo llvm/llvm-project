@@ -2554,6 +2554,32 @@ func.func @fold_expand_of_cast(%arg0 : tensor<10x10xf32>)
 
 // -----
 
+// CHECK-LABEL: func @fold_expand_of_cast_mixed_shape
+// CHECK-SAME: %[[ARG0:.*]]: tensor<4x8xf32>
+func.func @fold_expand_of_cast_mixed_shape(%arg0: tensor<4x8xf32>) -> (index, index, index) {
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c8 = arith.constant 8 : index
+  %0 = tensor.cast %arg0 : tensor<4x8xf32> to tensor<?x?xf32>
+  %1 = tensor.expand_shape %0 [[0, 1], [2]] output_shape [%c1, %c4, %c8] : tensor<?x?xf32> into tensor<1x?x?xf32>
+
+  %idx0 = arith.constant 0 : index
+  %idx1 = arith.constant 1 : index
+  %idx2 = arith.constant 2 : index
+
+  %dim0 = tensor.dim %1, %idx0 : tensor<1x?x?xf32>
+  %dim1 = tensor.dim %1, %idx1 : tensor<1x?x?xf32>
+  %dim2 = tensor.dim %1, %idx2 : tensor<1x?x?xf32>
+
+  // CHECK: %[[C1:.*]] = arith.constant 1 : index
+  // CHECK: %[[C4:.*]] = arith.constant 4 : index
+  // CHECK: %[[C8:.*]] = arith.constant 8 : index
+  // CHECK: return %[[C1]], %[[C4]], %[[C8]]
+  return %dim0, %dim1, %dim2 : index, index, index
+}
+
+// -----
+
 func.func @sink_expand_of_cast(%arg0 : tensor<?x10xf32>)
     -> tensor<?x?x?xf32> {
   %c1 = arith.constant 1 : index
