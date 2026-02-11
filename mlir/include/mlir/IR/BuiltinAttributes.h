@@ -199,11 +199,7 @@ public:
   ///
   /// The format of the raw buffer is a densely packed array of values that
   /// can be bitcast to the storage format of the element type specified.
-  /// Types that are not byte aligned will be:
-  ///   - For bitwidth > 1: Rounded up to the next byte.
-  ///   - For bitwidth = 1: Packed into 8bit bytes with bits corresponding to
-  ///     the linear order of the shape type from MSB to LSB, padded to on the
-  ///     right.
+  /// Types that are not byte aligned will be rounded up to the next byte.
   static DenseElementsAttr getFromRawBuffer(ShapedType type,
                                             ArrayRef<char> rawBuffer);
 
