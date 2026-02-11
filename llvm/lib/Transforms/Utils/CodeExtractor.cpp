@@ -461,6 +461,7 @@ Instruction *CodeExtractor::allocateVar(BasicBlock *BB,
 
 Instruction *CodeExtractor::deallocateVar(BasicBlock *, BasicBlock::iterator,
                                           Value *, Type *) {
+  // Default alloca instructions created by allocateVar are released implicitly.
   return nullptr;
 }
 
