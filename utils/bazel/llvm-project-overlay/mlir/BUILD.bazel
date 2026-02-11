@@ -1317,7 +1317,7 @@ cc_binary(
 
 py_binary(
     name = "stubgen_runner",
-    srcs = ["stubgen_runner.py"],
+    srcs = ["lib/Bindings/Python/stubgen_runner.py"],
     data = ["@nanobind//:src/stubgen.py"],
     deps = ["@rules_python//python/runfiles"],
 )
