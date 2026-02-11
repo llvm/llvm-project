@@ -22,6 +22,8 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 
+#include "llvm/Support/Endian.h"
+
 using namespace lldb_private;
 using namespace lldb;
 
@@ -335,4 +337,32 @@ UnwindPlanSP ArchitectureArm::GetArchitectureUnwindPlan(
     new_plan->AppendRow(row);
   }
   return new_plan;
+}
+
+bool ArchitectureArm::IsValidTrapInstruction(
+    llvm::ArrayRef<uint8_t> reference, llvm::ArrayRef<uint8_t> observed) const {
+  if (reference.size() > observed.size())
+    return false;
+
+  if (reference.size() == 2) {
+    auto ref_bytes = llvm::support::endian::read16le(reference.data());
+    auto obs_bytes = llvm::support::endian::read16le(observed.data());
+    if (ref_bytes == obs_bytes)
+      return true;
+    // LLDB uses an undef instruction encoding for breakpoints -
+    // perhaps we have an actual BKPT in the inferior.
+    uint16_t mask = 0xF0;
+    if ((obs_bytes & mask) == 0xBE00)
+      return true;
+  } else if (reference.size() == 4) {
+    auto ref_bytes = llvm::support::endian::read32le(reference.data());
+    auto obs_bytes = llvm::support::endian::read32le(observed.data());
+    if (ref_bytes == obs_bytes)
+      return true;
+    uint32_t mask = 0x0FF000F0;
+    uint32_t bkpt_pattern = 0xE1200070;
+    if ((obs_bytes & mask) == bkpt_pattern)
+      return true;
+  }
+  return false;
 }

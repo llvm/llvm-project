@@ -40,6 +40,7 @@ bool RegisterContextFreeBSDKernel_i386::ReadRegister(
   if (m_pcb_addr == LLDB_INVALID_ADDRESS)
     return false;
 
+  // https://cgit.freebsd.org/src/tree/sys/i386/include/pcb.h
   struct {
     llvm::support::ulittle32_t edi;
     llvm::support::ulittle32_t esi;
