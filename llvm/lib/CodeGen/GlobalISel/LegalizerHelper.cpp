@@ -7585,7 +7585,7 @@ LegalizerHelper::narrowScalarCTLS(MachineInstr &MI, unsigned TypeIdx,
   auto HiIsSign = B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1), Hi, Sign);
 
   // Invert Lo if Hi is negative. Then count the leading zeros. If there are no
-  // leading zeros, then the MSB of Lo is different than the MSB of high.
+  // leading zeros, then the MSB of Lo is different than the MSB of Hi.
   // Otherwise the leading zeros represent additional sign bits of the original
   // value.
   auto LoInv = B.buildXor(DstTy, Lo, Sign);
