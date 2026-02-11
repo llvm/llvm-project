@@ -20831,14 +20831,6 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
         if (!TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, LDMemType))
           break;
 
-        // Avoid infinite loop: Don't transform loads from fixed stack objects,
-        // as legalization expands extract_subvector to such loads.
-        SDValue LDBase = LD->getBasePtr();
-        if (LDBase.getOpcode() == ISD::ADD)
-          LDBase = LDBase.getOperand(0);
-        if (LDBase.getOpcode() == ISD::FrameIndex)
-          break;
-
         // In case of big-endian the offset is normalized to zero, denoting
         // the last bit. For big-endian we need to transform the extraction
         // to the last sub-vector.
