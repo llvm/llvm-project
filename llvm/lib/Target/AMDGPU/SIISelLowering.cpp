@@ -17181,10 +17181,10 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
       const uint64_t Mask32 = maskTrailingOnes<uint64_t>(32);
       const uint64_t CRHSInt = CRHSVal.getZExtValue();
 
-      if (/* setcc v.64, 0xXXXX'XXXX'0000'0000, lt/ge */
+      if ( // setcc v.64, 0xXXXX'XXXX'0000'0000, lt/ge
           ((CRHSInt & Mask32) == 0 && (CC == ISD::SETULT || CC == ISD::SETUGE ||
                                        CC == ISD::SETLT || CC == ISD::SETGE)) ||
-          /* setcc v.64, 0xXXXX'XXXX'FFFF'FFFF, le/gt */
+          // setcc v.64, 0xXXXX'XXXX'FFFF'FFFF, le/gt
           ((CRHSInt & Mask32) == Mask32 &&
            (CC == ISD::SETULE || CC == ISD::SETUGT || CC == ISD::SETLE ||
             CC == ISD::SETGT)))
