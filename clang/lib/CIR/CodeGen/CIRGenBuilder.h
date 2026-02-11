@@ -362,6 +362,10 @@ public:
     return getConstantInt(loc, getUInt64Ty(), c);
   }
 
+  //
+  // UnaryOp creation helpers
+  // -------------------------
+  //
   mlir::Value createNeg(mlir::Value value) {
 
     if (auto intTy = mlir::dyn_cast<cir::IntType>(value.getType())) {
@@ -373,6 +377,18 @@ public:
     }
 
     llvm_unreachable("negation for the given type is NYI");
+  }
+
+  mlir::Value createFNeg(mlir::Value value) {
+    assert(mlir::isa<cir::FPTypeInterface>(value.getType()) &&
+           "Non-fp input type!");
+
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+
+    return cir::UnaryOp::create(*this, value.getLoc(), value.getType(),
+                                cir::UnaryOpKind::Minus, value);
   }
 
   cir::IsFPClassOp createIsFPClass(mlir::Location loc, mlir::Value src,
@@ -414,6 +430,7 @@ public:
 
     return cir::BinOp::create(*this, loc, cir::BinOpKind::Add, lhs, rhs);
   }
+
   mlir::Value createFMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
     assert(!cir::MissingFeatures::fpConstraints());
@@ -658,6 +675,22 @@ public:
                                       storageType, info.name, info.size, offset,
                                       info.isSigned, isLvalueVolatile,
                                       addr.getAlignment().getAsAlign().value());
+  }
+
+  mlir::Value createMaskedLoad(mlir::Location loc, mlir::Type ty,
+                               mlir::Value ptr, llvm::Align alignment,
+                               mlir::Value mask, mlir::Value passThru) {
+    assert(mlir::isa<cir::VectorType>(ty) && "Type should be vector");
+    assert(mask && "Mask should not be all-ones (null)");
+
+    if (!passThru)
+      passThru = this->getConstant(loc, cir::PoisonAttr::get(ty));
+
+    auto alignAttr =
+        this->getI64IntegerAttr(static_cast<int64_t>(alignment.value()));
+
+    return cir::VecMaskedLoadOp::create(*this, loc, ty, ptr, mask, passThru,
+                                        alignAttr);
   }
 
   cir::VecShuffleOp
