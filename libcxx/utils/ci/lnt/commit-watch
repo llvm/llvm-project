@@ -15,6 +15,7 @@ import os
 import pathlib
 import subprocess
 import sys
+import time
 
 
 def directory_path(string):
@@ -74,41 +75,45 @@ def get_all_libcxx_commits(git_repo: str) -> Set[str]:
 def main(argv):
     parser = argparse.ArgumentParser(
         prog='commit-watch',
-        description='Watch for libc++ commits to run benchmarks on, and run the specified command on them.')
-    parser.add_argument('--machine', type=str, required=True,
-        help='The name of the machine that we are producing results for on the LNT instance.')
-    parser.add_argument('--test-suite', type=str, required=True,
-        help='The name of the test suite that we are producing results for on the LNT instance.')
+        description='Watch for libc++ commits to run benchmarks on and print them to standard output.')
     parser.add_argument('--lnt-url', type=str, required=True,
         help='The URL of the LNT instance to use as the source of truth for finding already-benchmarked commits.')
+    parser.add_argument('--test-suite', type=str, required=True,
+        help='The name of the test suite that we are producing results for on the LNT instance.')
+    parser.add_argument('--machine', type=str, required=True,
+        help='The name of the machine that we are producing results for on the LNT instance.')
     parser.add_argument('--git-repo', type=directory_path, default=os.getcwd(),
         help='Optional path to the Git repository to use. By default, the current working directory is used.')
-    parser.add_argument('callback', nargs=argparse.REMAINDER,
-        help='The command to run on each commit that we determine to require benchmarking. Should be provided last and '
-             'separated from other arguments with a `--`.')
+    parser.add_argument('-v', '--verbose', action='count', default=0,
+        help='Verbosity level: passing the option multiple times increases the level.')
     args = parser.parse_args(argv)
 
-    logging.basicConfig(level=logging.INFO)
-
-    # Gather callback command
-    if not args.callback:
-        raise ValueError('A callback must be provided')
-    elif args.callback[0] != '--':
-        raise ValueError('For clarity, the callback must be separated from other options by --')
-    callback = args.callback[1:]
+    VERY_VERBOSE = logging.DEBUG - 1
+    if args.verbose == 1:
+        logging.basicConfig(level=logging.INFO)
+    elif args.verbose == 2:
+        logging.basicConfig(level=logging.DEBUG)
+    elif args.verbose > 2:
+        logging.basicConfig(level=VERY_VERBOSE)
 
     while True:
-        logging.info(f'Getting benchmarked commits for {args.machine}')
-        benchmarked_commits = get_benchmarked_commits(args.lnt_url, args.test_suite, args.machine)
-
         logging.info(f'Getting all libc++ commits in {args.git_repo}')
         all_commits = get_all_libcxx_commits(args.git_repo)
+        logging.log(VERY_VERBOSE, f'Found all libc++ commits: {all_commits}')
 
-        # Invoke the callback, processing most recent commits first
+        logging.info(f'Getting benchmarked commits for {args.machine}')
+        benchmarked_commits = get_benchmarked_commits(args.lnt_url, args.test_suite, args.machine)
+        logging.debug(f'Found benchmarked commits: {benchmarked_commits}')
+
+        # Print the next commit that should be benchmarked
         commits_to_benchmark = git_sort_revlist(args.git_repo, list(all_commits - benchmarked_commits))
         most_recent = commits_to_benchmark[-1]
-        logging.info(f'Benchmarking libc++ at {most_recent}')
-        subprocess.check_call(callback + [most_recent])
+        logging.info(f'Selected {most_recent}')
+        print(most_recent, flush=True)
+
+        # Sleep between runs to ensure that the process reading data has time to make the
+        # submission, and also to avoid busy-polling.
+        time.sleep(5)
 
 
 if __name__ == '__main__':

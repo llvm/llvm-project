@@ -18,12 +18,14 @@ EOF
 lnt admin --config lnt-admin-config.yaml --testsuite libcxx test-suite add libcxx/utils/ci/lnt/schema.yaml
 
 # Then, watch for libc++ commits and submit benchmark results to the locally-running instance
-libcxx/utils/ci/lnt/commit-watch --machine my-laptop --test-suite libcxx --lnt-url http://localhost:8000 -- \
-    libcxx/utils/ci/lnt/run-benchmarks                                                                      \
-    --test-suite-commit abcdef09                                                                            \
-    --lnt-url http://localhost:8000                                                                         \
-    --machine my-laptop                                                                                     \
-    --test-suite libcxx                                                                                     \
-    --compiler clang++                                                                                      \
-    --benchmark-commit
+libcxx/utils/ci/lnt/commit-watch --lnt-url http://localhost:8000 --test-suite libcxx --machine my-laptop |      \
+    while read commit; do                                                                                       \
+        libcxx/utils/ci/lnt/run-benchmarks                                                                      \
+            --test-suite-commit abcdef09                                                                        \
+            --lnt-url http://localhost:8000                                                                     \
+            --machine my-laptop                                                                                 \
+            --test-suite libcxx                                                                                 \
+            --compiler clang++                                                                                  \
+            --benchmark-commit ${commit}                                                                        \
+    done
 ```
