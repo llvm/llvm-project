@@ -2240,7 +2240,7 @@ bool RewriteMFMAFormStage::initHeuristics(
         // registers to be different types even though the actual operand is
         // the same size.
         const TargetRegisterClass *VUseRC = DAG.MRI.getRegClass(Src2->getReg());
-        const TargetRegisterClass *AUseRC = SRI->getEquivalentVGPRClass(VUseRC);
+        const TargetRegisterClass *AUseRC = SRI->getEquivalentAGPRClass(VUseRC);
         DAG.MRI.setRegClass(Src2->getReg(), AUseRC);
       }
       Changed = true;
