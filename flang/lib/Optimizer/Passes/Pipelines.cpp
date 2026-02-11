@@ -290,7 +290,8 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
           pm, hlfir::createInlineHLFIRCopyIn);
     }
   }
-  pm.addPass(hlfir::createLowerHLFIROrderedAssignments());
+  pm.addPass(hlfir::createLowerHLFIROrderedAssignments(
+      {/*tryFusingAssignments=*/optLevel.isOptimizingForSpeed()}));
   pm.addPass(hlfir::createLowerHLFIRIntrinsics());
 
   hlfir::BufferizeHLFIROptions bufferizeOptions;
