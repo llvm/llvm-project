@@ -245,19 +245,17 @@ public:
     __other.__reset_without_allocator();
   }
 
-  /// `__relocate` relocates the objects in `[__begin_, __size())` into the front of `__buffer` and
-  /// swaps the buffers of `*this` and `__buffer`. It is assumed that `__buffer` provides space for
-  /// exactly `__size()` objects in the front. This function has a strong exception guarantee.
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __relocate(_SplitBuffer& __buffer) {
     __annotate_delete();
-    auto __relocation_begin = __buffer.begin() - __size();
-    std::__uninitialized_allocator_relocate(__alloc_, std::__to_address(__begin_), std::__to_address(__end_ptr()), std::__to_address(__relocation_begin));
-    __buffer.__set_valid_range(__relocation_begin, __buffer.end());
-    __set_boundary(__zero_relative_to_begin());
-
-    __swap_layouts(__buffer);
-    __buffer.__set_data(__buffer.begin());
+    __buffer.__relocate(__begin_, __boundary_, __capacity_);
     __annotate_new(__size());
+  }
+
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __relocate_with_pivot(_SplitBuffer& __buffer, pointer __pivot) {
+    __annotate_delete();
+    auto __result = __buffer.__relocate_with_pivot(__pivot, __begin_, __boundary_, __capacity_);
+    __annotate_new(__size());
+    return __result;
   }
 
   // Methods below this line must be implemented per vector layout.
@@ -276,12 +274,6 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_capacity(size_type __n) _NOEXCEPT;
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_capacity(pointer __ptr) _NOEXCEPT;
 
-  /// `__relocate_with_pivot` relocates the objects in `[__begin_, __p)` into the front of `__buffer`,
-  /// the objects in `[__p, end())` into the back of `__buffer` and swaps the buffers of `*this` and
-  /// `__buffer`. It is assumed that `__buffer` provides space for exactly `(__p - __begin_ptr())`
-  /// objects in the front and space for at least `(__size() - __p)` objects in the back. This function
-  /// has a strong exception guarantee if `__begin_ == __p || __size() == __p`.
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __relocate_with_pivot(_SplitBuffer& __buffer, pointer __p);
 
   /// Returns `__begin_` if `__boundary_type` is `pointer`, and `0` if it is `size_type`.
   ///
@@ -411,39 +403,6 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename __vector_layout<_Tp
 __vector_layout<_Tp, _Alloc>::__zero_boundary_type() _NOEXCEPT {
   return 0;
 }
-
-template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __vector_layout<_Tp, _Alloc>::pointer __vector_layout<_Tp, _Alloc>::__relocate_with_pivot(_SplitBuffer& __buffer, pointer __p)
-{
-  __annotate_delete();
-  pointer __result = __buffer.begin();
-  pointer __end = __end_ptr();
-
-  // We relocate elements in reverse order to ensure that a throwing relocation operation leaves the
-  // vector in a valid state.
-  std::__uninitialized_allocator_relocate(
-    __alloc_,
-    std::__to_address(__p),
-    std::__to_address(__end),
-    std::__to_address(__buffer.end()));
-  auto __relocated_so_far = __end - __p;
-  __buffer.__set_sentinel(__buffer.size() + __relocated_so_far);
-  __boundary_ -= __relocated_so_far; // The objects in [__p, __boundary_) have been destroyed by relocating them.
-  auto __new_begin = __buffer.begin() - __boundary_;
-
-  std::__uninitialized_allocator_relocate(
-    __alloc_,
-    std::__to_address(__begin_),
-    std::__to_address(__p),
-    std::__to_address(__new_begin));
-  __buffer.__set_valid_range(__new_begin, __buffer.size() + __boundary_);
-  __boundary_ = 0; // All the objects have been destroyed by relocating them.
-
-  __swap_layouts(__buffer);
-  __buffer.__set_data(__buffer.begin());
-  __annotate_new(__boundary_);
-  return __result;
-}
 #else
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20
@@ -536,37 +495,6 @@ template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename __vector_layout<_Tp, _Alloc>::__boundary_type
 __vector_layout<_Tp, _Alloc>::__zero_boundary_type() _NOEXCEPT {
   return nullptr;
-}
-
-template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __vector_layout<_Tp, _Alloc>::pointer __vector_layout<_Tp, _Alloc>::__relocate_with_pivot(_SplitBuffer& __buffer, pointer __p)
-{
-  __annotate_delete();
-  pointer __ret = __buffer.begin();
-
-  // Relocate [__p, __boundary_) first to avoid having a hole in [__begin_, __boundary_)
-  // in case something in [__begin_, __p) throws.
-  std::__uninitialized_allocator_relocate(
-      __alloc_,
-      std::__to_address(__p),
-      std::__to_address(__boundary_),
-      std::__to_address(__buffer.end()));
-  auto __relocated_so_far = __boundary_ - __p;
-  __buffer.__set_sentinel(__buffer.end() + __relocated_so_far);
-  __boundary_      = __p; // The objects in [__p, __boundary_) have been destroyed by relocating them.
-  auto __new_begin = __buffer.begin() - (__p - __begin_);
-
-  std::__uninitialized_allocator_relocate(
-      __alloc_,
-      std::__to_address(__begin_),
-      std::__to_address(__p),
-      std::__to_address(__new_begin));
-  __buffer.__set_valid_range(__new_begin, __buffer.end());
-  __boundary_ = __begin_; // All the objects have been destroyed by relocating them.
-  __swap_layouts(__buffer);
-  __buffer.__set_data(__buffer.begin());
-  __annotate_new(__size());
-  return __ret;
 }
 #endif // _LIBCPP_ABI_SIZE_BASED_VECTOR
 
