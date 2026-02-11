@@ -43,34 +43,35 @@ static std::string getThinLTOOutputFile(Ctx &ctx, StringRef modulePath) {
                                    ctx.arg.thinLTOPrefixReplaceNew);
 }
 
+static std::shared_ptr<MemoryBuffer> getMemoryBuffer(Ctx &ctx) {
+  if (ctx.arg.ltoBasicBlockSections.empty() ||
+      ctx.arg.ltoBasicBlockSections == "all" ||
+      ctx.arg.ltoBasicBlockSections == "labels" ||
+      ctx.arg.ltoBasicBlockSections == "none")
+    return nullptr;
+
+  ErrorOr<std::unique_ptr<MemoryBuffer>> mbOrErr =
+      MemoryBuffer::getFile(ctx.arg.ltoBasicBlockSections.str());
+  if (!mbOrErr) {
+    ErrAlways(ctx) << "cannot open " << ctx.arg.ltoBasicBlockSections << ":"
+                   << mbOrErr.getError().message();
+  }
+  return std::move(*mbOrErr);
+}
+
 static lto::Config createConfig(Ctx &ctx) {
   lto::Config c;
 
-  std::shared_ptr<MemoryBuffer> MBPtr;
-  if (!ctx.arg.ltoBasicBlockSections.empty()) {
-    if (ctx.arg.ltoBasicBlockSections == "all") {
-    } else if (ctx.arg.ltoBasicBlockSections == "labels") {
-    } else if (ctx.arg.ltoBasicBlockSections == "none") {
-    } else {
-      ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
-          MemoryBuffer::getFile(ctx.arg.ltoBasicBlockSections.str());
-      if (!MBOrErr) {
-        ErrAlways(ctx) << "cannot open " << ctx.arg.ltoBasicBlockSections << ":"
-                       << MBOrErr.getError().message();
-      } else {
-        MBPtr = std::move(*MBOrErr);
-      }
-    }
-  }
+  std::shared_ptr<MemoryBuffer> mbPtr = getMemoryBuffer(ctx);
 
   // Set up the callback to modify TargetOptions.
   c.ModifyTargetOptions =
-      [&ctx, MB = std::move(MBPtr)](TargetOptions &Options) -> void {
+      [&ctx, mb = std::move(mbPtr)](TargetOptions &options) -> void {
     // LLD supports the new relocations and address-significance tables.
-    Options.EmitAddrsig = true;
+    options.EmitAddrsig = true;
     // Always emit a section per function/datum with LTO.
-    Options.FunctionSections = true;
-    Options.DataSections = true;
+    options.FunctionSections = true;
+    options.DataSections = true;
 
     // Check if basic block sections must be used.
     // Allowed values for --lto-basic-block-sections are "all",
@@ -78,26 +79,26 @@ static lto::Config createConfig(Ctx &ctx) {
     // equivalent of -fbasic-block-sections= flag in clang.
     if (!ctx.arg.ltoBasicBlockSections.empty()) {
       if (ctx.arg.ltoBasicBlockSections == "all") {
-        Options.BBSections = BasicBlockSection::All;
+        options.BBSections = BasicBlockSection::All;
       } else if (ctx.arg.ltoBasicBlockSections == "labels") {
-        Options.BBAddrMap = true;
+        options.BBAddrMap = true;
         Warn(ctx)
             << "'--lto-basic-block-sections=labels' is deprecated; Please use "
                "'--lto-basic-block-address-map' instead";
       } else if (ctx.arg.ltoBasicBlockSections == "none") {
-        Options.BBSections = BasicBlockSection::None;
+        options.BBSections = BasicBlockSection::None;
       } else {
-        Options.BBSectionsFuncListBuf = std::move(MB);
-        Options.BBSections = BasicBlockSection::List;
+        options.BBSectionsFuncListBuf = std::move(mb);
+        options.BBSections = BasicBlockSection::List;
       }
     }
 
-    Options.BBAddrMap = ctx.arg.ltoBBAddrMap;
+    options.BBAddrMap = ctx.arg.ltoBBAddrMap;
 
-    Options.UniqueBasicBlockSectionNames =
+    options.UniqueBasicBlockSectionNames =
         ctx.arg.ltoUniqueBasicBlockSectionNames;
     if (ctx.arg.ltoEmitAsm) {
-      Options.MCOptions.AsmVerbose = true;
+      options.MCOptions.AsmVerbose = true;
     }
   };
 
