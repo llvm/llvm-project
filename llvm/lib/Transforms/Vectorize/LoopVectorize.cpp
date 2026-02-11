@@ -7158,37 +7158,6 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
     }
   }
 
-  // The VPlan may have been transformed such that the original loop exit
-  // condition, and the instructions that are used only by it, no longer
-  // exists, but we expect the transformed version to have the same cost.
-  // Therefore mark all such instructions as seen.
-  SmallVector<BasicBlock *> Exiting;
-  CostCtx.CM.TheLoop->getExitingBlocks(Exiting);
-  SetVector<Instruction *> ExitInstrs;
-  // Collect all exit conditions.
-  for (BasicBlock *EB : Exiting) {
-    auto *Term = dyn_cast<BranchInst>(EB->getTerminator());
-    if (!Term)
-      continue;
-    if (auto *CondI = dyn_cast<Instruction>(Term->getOperand(0)))
-      ExitInstrs.insert(CondI);
-  }
-  // Collect all instructions only feeding the exit conditions.
-  for (unsigned I = 0; I != ExitInstrs.size(); ++I) {
-    Instruction *CondI = ExitInstrs[I];
-    SeenInstrs.insert(CondI);
-    for (Value *Op : CondI->operands()) {
-      auto *OpI = dyn_cast<Instruction>(Op);
-      if (!OpI || CostCtx.skipCostComputation(OpI, VF.isVector()) ||
-          any_of(OpI->users(), [&ExitInstrs, TheLoop](User *U) {
-            return TheLoop->contains(cast<Instruction>(U)->getParent()) &&
-                   !ExitInstrs.contains(cast<Instruction>(U));
-          }))
-        continue;
-      ExitInstrs.insert(OpI);
-    }
-  }
-
   // Return true if the loop contains any instructions that are not also part of
   // the VPlan or are skipped for VPlan-based cost computations. This indicates
   // that the VPlan contains extra simplifications.
@@ -7375,12 +7344,12 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   assert(
       (BestFactor.Width == LegacyVF.Width || BestPlan.hasEarlyExit() ||
        !Legal->getLAI()->getSymbolicStrides().empty() || UsesEVLGatherScatter ||
+       planContainsDifferentCompares(BestPlan, CostCtx, OrigLoop,
+                                     BestFactor.Width) ||
        planContainsAdditionalSimplifications(
            getPlanFor(BestFactor.Width), CostCtx, OrigLoop, BestFactor.Width) ||
        planContainsAdditionalSimplifications(
-           getPlanFor(LegacyVF.Width), CostCtx, OrigLoop, LegacyVF.Width) ||
-       planContainsDifferentCompares(BestPlan, CostCtx, OrigLoop,
-                                     BestFactor.Width)) &&
+           getPlanFor(LegacyVF.Width), CostCtx, OrigLoop, LegacyVF.Width)) &&
       " VPlan cost model and legacy cost model disagreed");
   assert((BestFactor.Width.isScalar() || BestFactor.ScalarCost > 0) &&
          "when vectorizing, the scalar cost must be computed.");
