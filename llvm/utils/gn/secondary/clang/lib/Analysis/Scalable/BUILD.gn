@@ -17,6 +17,7 @@ static_library("Scalable") {
     "Model/EntityName.cpp",
     "Serialization/SerializationFormat.cpp",
     "Serialization/SerializationFormatRegistry.cpp",
+    "TUSummary/EntitySummary.cpp",
     "TUSummary/ExtractorRegistry.cpp",
   ]
 }
