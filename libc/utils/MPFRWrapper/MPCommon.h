@@ -200,6 +200,7 @@ public:
   MPFRNumber cosh() const;
   MPFRNumber cospi() const;
   MPFRNumber erf() const;
+  MPFRNumber erfc() const;
   MPFRNumber exp() const;
   MPFRNumber exp2() const;
   MPFRNumber exp2m1() const;

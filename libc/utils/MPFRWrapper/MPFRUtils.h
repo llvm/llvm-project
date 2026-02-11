@@ -40,6 +40,7 @@ enum class Operation : int {
   Cosh,
   Cospi,
   Erf,
+  Erfc,
   Exp,
   Exp2,
   Exp2m1,
