@@ -9,15 +9,7 @@
 
 ## About these notes
 
-This directory combines the notes from the LLVM Flang Technical Calls
-and the LLVM Flang Community Calls. This was done to make the Community Call 
-notes more easily available than before.
-
-## Helpful definitions
-
--   "LLVM Flang" is the Fortran 2018 compiler being developed as part of the 
-LLVM project, and located in the LLVM monorepo ([github.com/llvm/llvm-project](http://github.com/llvm/llvm-project)).  
--   "Classic Flang" is the Fortran 2003/2008 compiler located at [github.com/flang-compiler/flang](http://github.com/flang-compiler/flang).
+This directory combines the notes from the Flang Technical and Community Calls. This was done to make the call notes more easily available than before. All references to Flang in these documents refer to the Fortran compiler being developed as part of the LLVM project and located in the LLVM monorepo ([github.com/llvm/llvm-project](http://github.com/llvm/llvm-project)). Information about "Classic Flang", a separate and independent Fortran compiler, can be found at [github.com/flang-compiler/flang](http://github.com/flang-compiler/flang).
 
 ## Call Information
 - Details about the call can be found in [GettingInvolved.md](https://github.com/llvm/llvm-project/blob/main/flang/docs/GettingInvolved.md) under the heading "Flang Biweekly Call"
@@ -25,13 +17,10 @@ LLVM project, and located in the LLVM monorepo ([github.com/llvm/llvm-project](h
 ## Flang Community
 
 * **Websites:**  
-  * **LLVM Flang:** [https://flang.llvm.org](https://flang.llvm.org)   
-  * **Classic Flang:** [https://github.com/flang-compiler/flang](https://github.com/flang-compiler/flang) 
+  * **Flang:** [https://flang.llvm.org](https://flang.llvm.org)   
 
 * **Issues:**  
-  * Issues for LLVM Flang should be reported in GitHub: [https://github.com/llvm/llvm-project/issues](https://github.com/llvm/llvm-project/issues). Please use the "flang" tag for flang-related issues.
-  * Issues for Classic Flang should be reported to the GitHub issues section at either [https://github.com/flang-compiler/flang/issues](https://github.com/flang-compiler/flang/issues)
-  or [flang-compiler/flang-driver](https://github.com/flang-compiler/flang-driver) as appropriate
+  * Issues for Flang should be reported in GitHub: [https://github.com/llvm/llvm-project/issues](https://github.com/llvm/llvm-project/issues). Please use the "flang" tag for flang-related issues.
 
 * **LLVM mailing lists and Discourse channels:** There are now two communication channels hosted by llvm.org:  
   * The Flang Discourse channel (used primarily for discussions): [https://discourse.llvm.org/c/subprojects/flang/33](https://discourse.llvm.org/c/subprojects/flang/33)
@@ -39,14 +28,5 @@ LLVM project, and located in the LLVM monorepo ([github.com/llvm/llvm-project](h
 
 * **Slack:** The [flang-compiler.slack.com](http://flang-compiler.slack.com)
 workspace is used for informal real-time communication in the Flang community.  
-  * Classic Flang \- use the Slack channel \#classic-flang-pull-requests to
- coordinate what pull requests you are working on
-
-* **LLVM Flang Development:**  
-  * On GitHub: The source code for LLVM Flang is available on [https://github.com/llvm/llvm-project/tree/main/flang](https://github.com/llvm/llvm-project/tree/main/flang). It is recommended to start in the "docs" directory.  
-
-* **Classic Flang Development:**  
-  * Outstanding pull requests: [https://github.com/flang-compiler/flang/pulls](https://github.com/flang-compiler/flang/pulls)
-  for the current list of 
-pull requests  
-  * Current status of Fortran 2008 features can be found at [https://github.com/flang-compiler/flang/wiki/Fortran-2008](https://github.com/flang-compiler/flang/wiki/Fortran-2008). 
+* **Flang Development:**  
+  * On GitHub: The source code for Flang is available on [https://github.com/llvm/llvm-project/tree/main/flang](https://github.com/llvm/llvm-project/tree/main/flang). It is recommended to start in the "docs" directory.  
