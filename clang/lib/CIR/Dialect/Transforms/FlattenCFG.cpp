@@ -177,144 +177,6 @@ public:
   }
 };
 
-// TODO(cir): Move CleanupExit and collectExits into
-//    CIRCleanupScopeOpFlattening after multi-exit handling is implemented.
-//    They're here for now so that we can use them to emit errors for the
-//    not-yet-implemented multi-exit case.
-
-struct CleanupExit {
-  // An operation that exits the cleanup scope (yield, break, continue,
-  // return, etc.)
-  mlir::Operation *exitOp;
-
-  // A unique identifier for this exit's destination (used for switch dispatch
-  // when there are multiple exits).
-  int destinationId;
-
-  CleanupExit(mlir::Operation *op, int id) : exitOp(op), destinationId(id) {}
-};
-
-// Collect all operations that exit a cleanup scope body. Return, goto, break,
-// and continue can all require branches through the cleanup region. When a loop
-// is encountered, only return and goto are collected because break and continue
-// are handled by the loop and stay within the cleanup scope. When a switch is
-// encountered, return, goto and continue are collected because they may all
-// branch through the cleanup, but break is local to the switch. When a nested
-// cleanup scope is encountered, we recursively collect exits since any return,
-// goto, break, or continue from the nested cleanup will also branch through the
-// outer cleanup.
-//
-// Note that goto statements may not necessarily exit the cleanup scope, but
-// for now we conservatively assume that they do. We'll need more nuanced
-// handling of that when multi-exit flattening is implemented.
-//
-// This function assigns unique destination IDs to each exit, which will be used
-// when multi-exit flattening is implemented.
-static void collectExits(mlir::Region &cleanupBodyRegion,
-                         llvm::SmallVectorImpl<CleanupExit> &exits,
-                         int &nextId) {
-  // Collect yield terminators from the body region. We do this separately
-  // because yields in nested operations, including those in nested cleanup
-  // scopes, won't branch through the outer cleanup region.
-  for (mlir::Block &block : cleanupBodyRegion) {
-    auto *terminator = block.getTerminator();
-    if (isa<cir::YieldOp>(terminator))
-      exits.emplace_back(terminator, nextId++);
-  }
-
-  // Lambda to walk a loop and collect only returns and gotos.
-  // Break and continue inside loops are handled by the loop itself.
-  // Loops don't require special handling for nested switch or cleanup scopes
-  // because break and continue never branch out of the loop.
-  auto collectExitsInLoop = [&](mlir::Operation *loopOp) {
-    loopOp->walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *nestedOp) {
-      if (isa<cir::ReturnOp, cir::GotoOp>(nestedOp))
-        exits.emplace_back(nestedOp, nextId++);
-      return mlir::WalkResult::advance();
-    });
-  };
-
-  // Forward declaration for mutual recursion.
-  std::function<void(mlir::Region &, bool)> collectExitsInCleanup;
-  std::function<void(mlir::Operation *)> collectExitsInSwitch;
-
-  // Lambda to collect exits from a switch. Collects return/goto/continue but
-  // not break (handled by switch). For nested loops/cleanups, recurses.
-  collectExitsInSwitch = [&](mlir::Operation *switchOp) {
-    switchOp->walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *nestedOp) {
-      if (isa<cir::CleanupScopeOp>(nestedOp)) {
-        // Walk the nested cleanup, but ignore break statements because they
-        // will be handled by the switch we are currently walking.
-        collectExitsInCleanup(
-            cast<cir::CleanupScopeOp>(nestedOp).getBodyRegion(),
-            /*ignoreBreak=*/true);
-        return mlir::WalkResult::skip();
-      } else if (isa<cir::LoopOpInterface>(nestedOp)) {
-        collectExitsInLoop(nestedOp);
-        return mlir::WalkResult::skip();
-      } else if (isa<cir::ReturnOp, cir::GotoOp, cir::ContinueOp>(nestedOp)) {
-        exits.emplace_back(nestedOp, nextId++);
-      }
-      return mlir::WalkResult::advance();
-    });
-  };
-
-  // Lambda to collect exits from a cleanup scope body region. This collects
-  // break (optionally), continue, return, and goto, handling nested loops,
-  // switches, and cleanups appropriately.
-  collectExitsInCleanup = [&](mlir::Region &region, bool ignoreBreak) {
-    region.walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *op) {
-      // We need special handling for break statements because if this cleanup
-      // scope was nested within a switch op, break will be handled by the
-      // switch operation and therefore won't exit the cleanup scope enclosing
-      // the switch. We're only collecting exits from the cleanup that started
-      // this walk. Exits from nested cleanups will be handled when we flatten
-      // the nested cleanup.
-      if (!ignoreBreak && isa<cir::BreakOp>(op)) {
-        exits.emplace_back(op, nextId++);
-      } else if (isa<cir::ContinueOp, cir::ReturnOp, cir::GotoOp>(op)) {
-        exits.emplace_back(op, nextId++);
-      } else if (isa<cir::CleanupScopeOp>(op)) {
-        // Recurse into nested cleanup's body region.
-        collectExitsInCleanup(cast<cir::CleanupScopeOp>(op).getBodyRegion(),
-                              /*ignoreBreak=*/ignoreBreak);
-        return mlir::WalkResult::skip();
-      } else if (isa<cir::LoopOpInterface>(op)) {
-        // This kicks off a separate walk rather than continuing to dig deeper
-        // in the current walk because we need to handle break and continue
-        // differently inside loops.
-        collectExitsInLoop(op);
-        return mlir::WalkResult::skip();
-      } else if (isa<cir::SwitchOp>(op)) {
-        // This kicks off a separate walk rather than continuing to dig deeper
-        // in the current walk because we need to handle break differently
-        // inside switches.
-        collectExitsInSwitch(op);
-        return mlir::WalkResult::skip();
-      }
-      return mlir::WalkResult::advance();
-    });
-  };
-
-  // Collect exits from the body region.
-  collectExitsInCleanup(cleanupBodyRegion, /*ignoreBreak=*/false);
-}
-
-// Check if this operation is within a cleanup scope or contains a cleanup
-// scope with multiple exits. Either of these are unimplemented conditions and
-// should trigger an error for now. This is a temporary check that is only
-// needed until multi-exit cleanup flattening is implemented.
-static bool enclosedByCleanupScopeWithMultipleExits(mlir::Operation *op) {
-  int nextId = 0;
-  cir::CleanupScopeOp cleanupParent =
-      op->getParentOfType<cir::CleanupScopeOp>();
-  if (!cleanupParent)
-    return false;
-  llvm::SmallVector<CleanupExit> exits;
-  collectExits(cleanupParent.getBodyRegion(), exits, nextId);
-  return exits.size() > 1;
-}
-
 class CIRSwitchOpFlattening : public mlir::OpRewritePattern<cir::SwitchOp> {
 public:
   using OpRewritePattern<cir::SwitchOp>::OpRewritePattern;
@@ -373,13 +235,6 @@ public:
                               }).wasInterrupted();
     if (hasNestedCleanup)
       return mlir::failure();
-
-    // Don't flatten switches that contain cleanup scopes with multiple exits
-    // (break/continue/return/goto). Those cleanup scopes need multi-exit
-    // handling (destination slot + switch dispatch) which is not yet
-    // implemented.
-    if (enclosedByCleanupScopeWithMultipleExits(op))
-      return op->emitError("cannot lower switch: cleanup with multiple exits");
 
     llvm::SmallVector<CaseOp> cases;
     op.collectCases(cases);
@@ -584,13 +439,6 @@ public:
     if (hasNestedCleanup)
       return mlir::failure();
 
-    // Don't flatten loops that contain cleanup scopes with multiple exits
-    // (break/continue/return/goto). Those cleanup scopes need multi-exit
-    // handling (destination slot + switch dispatch) which is not yet
-    // implemented.
-    if (enclosedByCleanupScopeWithMultipleExits(op))
-      return op->emitError("cannot lower loop: cleanup with multiple exits");
-
     // Setup CFG blocks.
     mlir::Block *entry = rewriter.getInsertionBlock();
     mlir::Block *exit =
@@ -756,6 +604,124 @@ class CIRCleanupScopeOpFlattening
     : public mlir::OpRewritePattern<cir::CleanupScopeOp> {
 public:
   using OpRewritePattern<cir::CleanupScopeOp>::OpRewritePattern;
+
+  struct CleanupExit {
+    // An operation that exits the cleanup scope (yield, break, continue,
+    // return, etc.)
+    mlir::Operation *exitOp;
+  
+    // A unique identifier for this exit's destination (used for switch dispatch
+    // when there are multiple exits).
+    int destinationId;
+  
+    CleanupExit(mlir::Operation *op, int id) : exitOp(op), destinationId(id) {}
+  };
+
+  // Collect all operations that exit a cleanup scope body. Return, goto, break,
+  // and continue can all require branches through the cleanup region. When a
+  // loop is encountered, only return and goto are collected because break and
+  // continue are handled by the loop and stay within the cleanup scope. When a
+  // switch is encountered, return, goto and continue are collected because they
+  // may all branch through the cleanup, but break is local to the switch. When
+  // a nested cleanup scope is encountered, we recursively collect exits since
+  // any return, goto, break, or continue from the nested cleanup will also
+  // branch through the outer cleanup.
+  //
+  // Note that goto statements may not necessarily exit the cleanup scope, but
+  // for now we conservatively assume that they do. We'll need more nuanced
+  // handling of that when multi-exit flattening is implemented.
+  //
+  // This function assigns unique destination IDs to each exit, which are
+  // used when multi-exit cleanup scopes are flattened.
+  void collectExits(mlir::Region &cleanupBodyRegion,
+                    llvm::SmallVectorImpl<CleanupExit> &exits,
+                    int &nextId) const {
+    // Collect yield terminators from the body region. We do this separately
+    // because yields in nested operations, including those in nested cleanup
+    // scopes, won't branch through the outer cleanup region.
+    for (mlir::Block &block : cleanupBodyRegion) {
+      auto *terminator = block.getTerminator();
+      if (isa<cir::YieldOp>(terminator))
+        exits.emplace_back(terminator, nextId++);
+    }
+  
+    // Lambda to walk a loop and collect only returns and gotos.
+    // Break and continue inside loops are handled by the loop itself.
+    // Loops don't require special handling for nested switch or cleanup scopes
+    // because break and continue never branch out of the loop.
+    auto collectExitsInLoop = [&](mlir::Operation *loopOp) {
+      loopOp->walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *nestedOp) {
+        if (isa<cir::ReturnOp, cir::GotoOp>(nestedOp))
+          exits.emplace_back(nestedOp, nextId++);
+        return mlir::WalkResult::advance();
+      });
+    };
+  
+    // Forward declaration for mutual recursion.
+    std::function<void(mlir::Region &, bool)> collectExitsInCleanup;
+    std::function<void(mlir::Operation *)> collectExitsInSwitch;
+  
+    // Lambda to collect exits from a switch. Collects return/goto/continue but
+    // not break (handled by switch). For nested loops/cleanups, recurses.
+    collectExitsInSwitch = [&](mlir::Operation *switchOp) {
+      switchOp->walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *nestedOp) {
+        if (isa<cir::CleanupScopeOp>(nestedOp)) {
+          // Walk the nested cleanup, but ignore break statements because they
+          // will be handled by the switch we are currently walking.
+          collectExitsInCleanup(
+              cast<cir::CleanupScopeOp>(nestedOp).getBodyRegion(),
+              /*ignoreBreak=*/true);
+          return mlir::WalkResult::skip();
+        } else if (isa<cir::LoopOpInterface>(nestedOp)) {
+          collectExitsInLoop(nestedOp);
+          return mlir::WalkResult::skip();
+        } else if (isa<cir::ReturnOp, cir::GotoOp, cir::ContinueOp>(nestedOp)) {
+          exits.emplace_back(nestedOp, nextId++);
+        }
+        return mlir::WalkResult::advance();
+      });
+    };
+  
+    // Lambda to collect exits from a cleanup scope body region. This collects
+    // break (optionally), continue, return, and goto, handling nested loops,
+    // switches, and cleanups appropriately.
+    collectExitsInCleanup = [&](mlir::Region &region, bool ignoreBreak) {
+      region.walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *op) {
+        // We need special handling for break statements because if this cleanup
+        // scope was nested within a switch op, break will be handled by the
+        // switch operation and therefore won't exit the cleanup scope enclosing
+        // the switch. We're only collecting exits from the cleanup that started
+        // this walk. Exits from nested cleanups will be handled when we flatten
+        // the nested cleanup.
+        if (!ignoreBreak && isa<cir::BreakOp>(op)) {
+          exits.emplace_back(op, nextId++);
+        } else if (isa<cir::ContinueOp, cir::ReturnOp, cir::GotoOp>(op)) {
+          exits.emplace_back(op, nextId++);
+        } else if (isa<cir::CleanupScopeOp>(op)) {
+          // Recurse into nested cleanup's body region.
+          collectExitsInCleanup(cast<cir::CleanupScopeOp>(op).getBodyRegion(),
+                                /*ignoreBreak=*/ignoreBreak);
+          return mlir::WalkResult::skip();
+        } else if (isa<cir::LoopOpInterface>(op)) {
+          // This kicks off a separate walk rather than continuing to dig deeper
+          // in the current walk because we need to handle break and continue
+          // differently inside loops.
+          collectExitsInLoop(op);
+          return mlir::WalkResult::skip();
+        } else if (isa<cir::SwitchOp>(op)) {
+          // This kicks off a separate walk rather than continuing to dig deeper
+          // in the current walk because we need to handle break differently
+          // inside switches.
+          collectExitsInSwitch(op);
+          return mlir::WalkResult::skip();
+        }
+        return mlir::WalkResult::advance();
+      });
+    };
+  
+    // Collect exits from the body region.
+    collectExitsInCleanup(cleanupBodyRegion, /*ignoreBreak=*/false);
+  }
 
   mlir::LogicalResult
   createExitTerminator(mlir::Operation *exitOp, mlir::Location loc,
