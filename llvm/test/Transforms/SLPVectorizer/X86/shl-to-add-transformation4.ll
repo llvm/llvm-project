@@ -7,26 +7,27 @@ define fastcc i32 @test(ptr %0, i16 %1, i32 %2) {
 ; CHECK-LABEL: define fastcc i32 @test(
 ; CHECK-SAME: ptr [[TMP0:%.*]], i16 [[TMP1:%.*]], i32 [[TMP2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CONV_2:%.*]] = zext i16 [[TMP1]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[TMP0]], align 2
-; CHECK-NEXT:    [[ADD68:%.*]] = add i32 [[TMP2]], 1
 ; CHECK-NEXT:    [[CONV_3_1:%.*]] = zext i16 [[TMP3]] to i32
-; CHECK-NEXT:    [[ADD68_1:%.*]] = add i32 [[CONV_3_1]], -1
-; CHECK-NEXT:    [[ADD118_1:%.*]] = or i32 [[ADD68]], [[ADD68_1]]
-; CHECK-NEXT:    [[CMP16_I:%.*]] = icmp slt i32 [[ADD118_1]], 0
-; CHECK-NEXT:    [[SUB2_I2:%.*]] = sub i32 0, [[TMP2]]
+; CHECK-NEXT:    [[CONV_2:%.*]] = zext i16 [[TMP1]] to i32
 ; CHECK-NEXT:    [[ADD56_1:%.*]] = or i32 [[TMP2]], [[CONV_3_1]]
+; CHECK-NEXT:    [[ADD68_1:%.*]] = add i32 [[CONV_3_1]], -1
 ; CHECK-NEXT:    [[ADD37_1:%.*]] = add i32 [[CONV_2]], 1
+; CHECK-NEXT:    [[ADD68:%.*]] = add i32 [[TMP2]], 1
 ; CHECK-NEXT:    [[MUL137:%.*]] = shl i32 [[ADD56_1]], 1
+; CHECK-NEXT:    [[ADD118_1:%.*]] = or i32 [[ADD68]], [[ADD68_1]]
 ; CHECK-NEXT:    [[SUB138:%.*]] = sub i32 [[ADD37_1]], [[MUL137]]
-; CHECK-NEXT:    [[CMP16_I45:%.*]] = icmp slt i32 [[SUB138]], 0
-; CHECK-NEXT:    [[SUB2_I44:%.*]] = sub i32 0, [[ADD56_1]]
-; CHECK-NEXT:    [[RETVAL_0_I46:%.*]] = select i1 [[CMP16_I45]], i32 [[SUB2_I44]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @dequant_coef, i64 12), align 4
-; CHECK-NEXT:    [[MUL175_3635:%.*]] = mul i32 [[RETVAL_0_I46]], [[TMP4]]
-; CHECK-NEXT:    [[RETVAL_0_I:%.*]] = select i1 [[CMP16_I]], i32 [[SUB2_I2]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @dequant_coef, i64 16), align 16
-; CHECK-NEXT:    [[MUL175_1:%.*]] = mul i32 [[RETVAL_0_I]], [[TMP5]]
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> poison, i32 [[SUB138]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> [[TMP4]], i32 [[ADD118_1]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt <2 x i32> [[TMP5]], zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> poison, i32 [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> [[TMP7]], i32 [[ADD56_1]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = sub <2 x i32> zeroinitializer, [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = select <2 x i1> [[TMP6]], <2 x i32> [[TMP9]], <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = load <2 x i32>, ptr getelementptr inbounds nuw (i8, ptr @dequant_coef, i64 12), align 4
+; CHECK-NEXT:    [[TMP12:%.*]] = mul <2 x i32> [[TMP10]], [[TMP11]]
+; CHECK-NEXT:    [[MUL175_3635:%.*]] = extractelement <2 x i32> [[TMP12]], i32 0
+; CHECK-NEXT:    [[MUL175_1:%.*]] = extractelement <2 x i32> [[TMP12]], i32 1
 ; CHECK-NEXT:    [[ADD300:%.*]] = or i32 [[MUL175_3635]], [[MUL175_1]]
 ; CHECK-NEXT:    ret i32 [[ADD300]]
 ;
