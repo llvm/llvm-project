@@ -399,55 +399,56 @@ public:
                              ExplodedNode *Pred);
 };
 
-class IndirectGotoNodeBuilder {
-  const CoreEngine &Eng;
-  const CFGBlock *Src;
+class IndirectGotoNodeBuilder : public NodeBuilder {
   const CFGBlock &DispatchBlock;
-  const Expr *E;
-  ExplodedNode *Pred;
+  const Expr *Target;
 
 public:
-  IndirectGotoNodeBuilder(ExplodedNode *Pred, const CFGBlock *Src,
-                          const Expr *E, const CFGBlock *Dispatch,
-                          const CoreEngine *Eng)
-      : Eng(*Eng), Src(Src), DispatchBlock(*Dispatch), E(E), Pred(Pred) {}
+  IndirectGotoNodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
+                          NodeBuilderContext &Ctx, const Expr *Tgt,
+                          const CFGBlock *Dispatch)
+      : NodeBuilder(SrcNode, DstSet, Ctx), DispatchBlock(*Dispatch),
+        Target(Tgt) {
+    // The indirect goto node builder does not generate autotransitions.
+    takeNodes(SrcNode);
+  }
 
   using iterator = CFGBlock::const_succ_iterator;
 
   iterator begin() { return DispatchBlock.succ_begin(); }
   iterator end() { return DispatchBlock.succ_end(); }
 
+  using NodeBuilder::generateNode;
+
   ExplodedNode *generateNode(const CFGBlock *Block, ProgramStateRef State,
-                             bool IsSink = false);
+                             ExplodedNode *Pred);
 
-  const Expr *getTarget() const { return E; }
-
-  ProgramStateRef getState() const { return Pred->State; }
+  const Expr *getTarget() const { return Target; }
 
   const LocationContext *getLocationContext() const {
-    return Pred->getLocationContext();
+    return C.getLocationContext();
   }
 };
 
-class SwitchNodeBuilder {
-  const CoreEngine &Eng;
-  const CFGBlock *Src;
-  ExplodedNode *Pred;
-
+class SwitchNodeBuilder : public NodeBuilder {
 public:
-  SwitchNodeBuilder(ExplodedNode *P, const CFGBlock *S, CoreEngine &E)
-      : Eng(E), Src(S), Pred(P) {}
+  SwitchNodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
+                    const NodeBuilderContext &Ctx)
+      : NodeBuilder(SrcNode, DstSet, Ctx) {
+    // The switch node builder does not generate autotransitions.
+    takeNodes(SrcNode);
+  }
 
   using iterator = CFGBlock::const_succ_reverse_iterator;
 
-  iterator begin() { return Src->succ_rbegin() + 1; }
-  iterator end() { return Src->succ_rend(); }
+  iterator begin() { return C.getBlock()->succ_rbegin() + 1; }
+  iterator end() { return C.getBlock()->succ_rend(); }
 
   ExplodedNode *generateCaseStmtNode(const CFGBlock *Block,
-                                     ProgramStateRef State);
+                                     ProgramStateRef State, ExplodedNode *Pred);
 
   ExplodedNode *generateDefaultCaseNode(ProgramStateRef State,
-                                        bool IsSink = false);
+                                        ExplodedNode *Pred);
 };
 
 } // namespace ento
