@@ -134,7 +134,7 @@ TEST_F(InferConvolutionDimsTest, Conv2DPairing) {
 
   // Create Conv2DOp where the standard loop order is (oh, ow, kh, kw).
   OpBuilder builder(ctx.get());
-  auto conv2DOp = createConv2DOp(builder, oh, ow, kh, kw);
+  linalg::Conv2DOp conv2DOp = createConv2DOp(builder, oh, ow, kh, kw);
   FailureOr<ConvolutionDimensions> origDims = inferConvolutionDims(conv2DOp);
   ASSERT_TRUE(succeeded(origDims));
   ASSERT_EQ(origDims->outputImage.size(), 2u);
