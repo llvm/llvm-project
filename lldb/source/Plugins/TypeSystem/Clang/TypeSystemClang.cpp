@@ -3474,28 +3474,14 @@ bool TypeSystemClang::IsReferenceType(lldb::opaque_compiler_type_t type,
 }
 
 bool TypeSystemClang::IsFloatingPointType(lldb::opaque_compiler_type_t type) {
-  if (type) {
-    clang::QualType qual_type(GetCanonicalQualType(type));
+  if (!type)
+    return false;
 
-    if (const clang::BuiltinType *BT = llvm::dyn_cast<clang::BuiltinType>(
-            qual_type->getCanonicalTypeInternal())) {
-      clang::BuiltinType::Kind kind = BT->getKind();
-      if (kind >= clang::BuiltinType::Float &&
-          kind <= clang::BuiltinType::LongDouble)
-        return true;
-    } else if (const clang::ComplexType *CT =
-                   llvm::dyn_cast<clang::ComplexType>(
-                       qual_type->getCanonicalTypeInternal())) {
-      if (IsFloatingPointType(CT->getElementType().getAsOpaquePtr()))
-        return true;
-    } else if (const clang::VectorType *VT = llvm::dyn_cast<clang::VectorType>(
-                   qual_type->getCanonicalTypeInternal())) {
-      if (IsFloatingPointType(VT->getElementType().getAsOpaquePtr()))
-        return true;
-    }
-  }
+  clang::QualType qual_type(GetCanonicalQualType(type));
+  if (qual_type.isNull())
+    return false;
 
-  return false;
+  return qual_type->isFloatingType();
 }
 
 bool TypeSystemClang::IsDefined(lldb::opaque_compiler_type_t type) {

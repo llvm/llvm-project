@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLDB_DATAFORMATTERS_FORMATTERBYTECODE_H
+#define LLDB_DATAFORMATTERS_FORMATTERBYTECODE_H
+
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/Symbol/CompilerType.h"
 
@@ -34,6 +37,7 @@ enum Signatures : uint8_t {
 };
 
 using ControlStackElement = llvm::StringRef;
+using ControlStack = std::vector<ControlStackElement>;
 using DataStackElement =
     std::variant<std::string, uint64_t, int64_t, lldb::ValueObjectSP,
                  CompilerType, Selectors>;
@@ -53,8 +57,9 @@ struct DataStack : public std::vector<DataStackElement> {
     return el;
   }
 };
-llvm::Error Interpret(std::vector<ControlStackElement> &control,
-                      DataStack &data, Selectors sel);
+
+llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig);
+
 } // namespace FormatterBytecode
 
 std::string toString(FormatterBytecode::OpCodes op);
@@ -62,3 +67,5 @@ std::string toString(FormatterBytecode::Selectors sel);
 std::string toString(FormatterBytecode::Signatures sig);
 
 } // namespace lldb_private
+
+#endif
