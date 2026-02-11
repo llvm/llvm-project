@@ -440,9 +440,7 @@ void PyOpOperandIterator::bind(nb::module_ &m) {
 // PyThreadPool
 //------------------------------------------------------------------------------
 
-PyThreadPool::PyThreadPool() {
-  threadPool = mlirLlvmThreadPoolCreate();
-}
+PyThreadPool::PyThreadPool() { threadPool = mlirLlvmThreadPoolCreate(); }
 
 PyThreadPool::~PyThreadPool() {
   if (threadPool.ptr)
