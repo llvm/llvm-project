@@ -148,7 +148,7 @@ protected:
   unsigned m_loc_is_const_data : 1;
   /// Non-zero if variable is static member of a class or struct.
   unsigned m_static_member : 1;
-  // The value of DW_AT_LLVM_tag_offset if present.
+  /// The value of DW_AT_LLVM_tag_offset if present.
   std::optional<uint64_t> m_tag_offset;
 
 private:
