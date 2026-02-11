@@ -3157,25 +3157,13 @@ void PreRARematStage::finalizeGCNSchedStage() {
     DAG.LIS->removeInterval(Reg);
     DAG.LIS->createAndComputeVirtRegInterval(Reg);
   }
-  for (unsigned I : RecomputeRP.set_bits()) {
 #ifdef EXPENSIVE_CHECKS
-    // Check for correct slot indices order in regions in which reverts and/or
-    // rollbacks may have happened.
-    MachineBasicBlock::iterator It = skipDebugInstructionsForward(
-        DAG.Regions[I].first, DAG.Regions[I].second);
-    if (It != DAG.Regions[I].second) {
-      SlotIndex CurrentIdx = DAG.LIS->getInstructionIndex(*It++);
-      for (; It != DAG.Regions[I].second; ++It) {
-        if (!It->isDebugInstr()) {
-          SlotIndex NextIndex = DAG.LIS->getInstructionIndex(*It);
-          assert(CurrentIdx < NextIndex && "inconsistent MI slots");
-          CurrentIdx = NextIndex;
-        }
-      }
-    }
+  // In particular, we want to check for coherent MI/slot order in regions in
+  // which reverts and/or rollbacks may have happened.
+  MF.verify();
 #endif
+  for (unsigned I : RecomputeRP.set_bits())
     DAG.Pressure[I] = DAG.getRealRegPressure(I);
-  }
 
   GCNSchedStage::finalizeGCNSchedStage();
 }
