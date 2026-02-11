@@ -34,8 +34,15 @@ RegionInfo kRegions[kNumSizeClasses];
 // Pointers to the start of each mapped region
 static uptr region_bases[kNumSizeClasses];
 
-// Free list heads for each region (simple bump allocator for now)
+// Bump pointer: next fresh address to allocate from in each region
 static uptr region_next_alloc[kNumSizeClasses];
+
+// Segregated free lists: one singly-linked list per size class
+// Free blocks store a pointer to the next free block at their start
+struct FreeBlock {
+  FreeBlock *next;
+};
+static FreeBlock *free_lists[kNumSizeClasses];
 
 static void InitRegionTable() {
   for (uptr i = 0; i < kNumSizeClasses; i++) {
@@ -43,6 +50,7 @@ static void InitRegionTable() {
     kRegions[i].size = size;
     kRegions[i].alignment = size;
     kRegions[i].mask = ~(size - 1);
+    free_lists[i] = nullptr;
   }
 }
 
@@ -58,7 +66,7 @@ static bool InitMemoryRegions() {
     bool success = MmapFixedNoReserve(region_start, kRegionSize, "lowfat_region");
     
     if (!success) {
-      Printf("LowFat: Failed to map region %zu at 0x%zx\n", i, region_start);
+      // Printf("LowFat: Failed to map region %zu at 0x%zx\n", i, region_start);
       return false;
     }
     
@@ -66,9 +74,73 @@ static bool InitMemoryRegions() {
     region_next_alloc[i] = region_start;
   }
   
-  Printf("LowFat: Mapped %zu regions starting at 0x%zx\n", 
-         kNumSizeClasses, kRegionBase);
+  // Printf("LowFat: Mapped %zu regions starting at 0x%zx\n", 
+  //        kNumSizeClasses, kRegionBase);
   return true;
+}
+
+// Allocate from a LowFat region
+// First checks the free list, then falls back to bump allocation
+static void *Allocate(uptr size) {
+  // Printf("LowFat: allocating %zu bytes\n", size);
+  if (size == 0)
+    size = 1;
+  
+  uptr class_index = SizeClassIndex(size);
+  if (class_index >= kNumSizeClasses) {
+    // Printf("LowFat: allocation size %zu exceeds max size class\n", size);
+    return nullptr;
+  }
+  
+  uptr alloc_size = SizeClassToSize(class_index);
+  
+  // 1. Try free list first
+  FreeBlock *block = free_lists[class_index];
+  if (block) {
+    free_lists[class_index] = block->next;
+    // Zero the memory (free list pointer was stored here)
+    internal_memset(block, 0, alloc_size);
+    return (void *)block;
+  }
+  
+  // 2. Fall back to bump allocation
+  uptr region_end = GetRegionStart(class_index) + kRegionSize;
+  uptr addr = region_next_alloc[class_index];
+  
+  // Ensure alignment (should already be aligned)
+  addr = (addr + alloc_size - 1) & ~(alloc_size - 1);
+  
+  if (addr + alloc_size > region_end) {
+    // Printf("LowFat: region %zu exhausted\n", class_index);
+    return nullptr;
+  }
+  
+  region_next_alloc[class_index] = addr + alloc_size;
+  return (void *)addr;
+}
+
+// Free a LowFat allocation by adding it to the free list
+static void Deallocate(void *ptr) {
+  if (!ptr)
+    return;
+  
+  uptr addr = (uptr)ptr;
+  // Printf("LowFat: freeing ptr 0x%zx\n", addr);
+  
+  // Validate this is a LowFat pointer
+  if (!IsLowFatPointer(addr)) {
+    // Printf("LowFat: __lf_free called on non-LowFat pointer 0x%zx\n", addr);
+    return;
+  }
+  
+  uptr region = GetRegionIndex(addr);
+  // Printf("LowFat: freed region %zu (size class %zu bytes)\n", 
+  //        region, SizeClassToSize(region));
+  
+  // Add to the head of the free list for this size class
+  FreeBlock *block = (FreeBlock *)ptr;
+  block->next = free_lists[region];
+  free_lists[region] = block;
 }
 
 static void PrintErrorAndDie(uptr ptr, uptr base, uptr bound) {
@@ -110,29 +182,36 @@ void __lf_init() {
   if (__lowfat::lowfat_inited)
     return;
 
-  Printf("LowFat Sanitizer: initializing runtime\n");
+  // Printf("LowFat Sanitizer: initializing runtime\n");
 
   __lowfat::InitRegionTable();
   
   if (!__lowfat::InitMemoryRegions()) {
-    Printf("LowFat Sanitizer: failed to initialize memory regions\n");
+    // Printf("LowFat Sanitizer: failed to initialize memory regions\n");
     Die();
   }
 
-  Printf("LowFat Sanitizer: initialized runtime\n");
+  // Printf("LowFat Sanitizer: initialized runtime\n");
 
   __lowfat::lowfat_inited = true;
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __lf_check_bounds(uptr ptr, uptr size) {
-  if (!__lowfat::IsLowFatPointer(ptr)) { // Not a LowFat-managed pointer, skip check
+  // Printf("LowFat: check_bounds(ptr=0x%zx, size=%zu)", ptr, size);
+  if (!__lowfat::IsLowFatPointer(ptr)) {
+    // Printf(" → not LowFat, skipping\n");
     return;
   }
+  
+  uptr base = __lowfat::GetBase(ptr);
+  uptr alloc_size = __lowfat::GetSize(ptr);
+  bool in_bounds = __lowfat::CheckBounds(ptr, size);
+  // Printf(" → base=0x%zx, alloc=%zu, end=0x%zx, %s\n",
+  //        base, alloc_size, base + alloc_size,
+  //        in_bounds ? "OK" : "OOB!");
 
-  if (!__lowfat::CheckBounds(ptr, size)) {
-    uptr base = __lowfat::GetBase(ptr);
-    uptr alloc_size = __lowfat::GetSize(ptr);
+  if (!in_bounds) {
     __lowfat::PrintErrorAndDie(ptr, base, alloc_size);
   }
 }
@@ -150,6 +229,16 @@ uptr __lf_get_base(uptr ptr) {
 SANITIZER_INTERFACE_ATTRIBUTE
 uptr __lf_get_size(uptr ptr) {
   return __lowfat::GetSize(ptr);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void *__lf_malloc(uptr size) {
+  return __lowfat::Allocate(size);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __lf_free(void *ptr) {
+  __lowfat::Deallocate(ptr);
 }
 
 }  // extern "C"
