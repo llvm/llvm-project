@@ -42,8 +42,6 @@ __mmask16 test_mm_cmp_epi8_mask_imm3(__m128i __a, __m128i __b) {
 
 __mmask16 test_mm_cmp_epi8_mask_imm7(__m128i __a, __m128i __b) {
   // CIR-LABEL: test_mm_cmp_epi8_mask_imm7
-  // CIR: cir.const #cir.zero : !cir.vector<16 x !cir.int<s, 1>>
-  // CIR: cir.cast bitcast {{%.*}} : !cir.vector<16 x !cir.int<s, 1>> -> !u16i
   // CIR: cir.const #cir.int<-1> : !cir.int<s, 1>
   // CIR: cir.vec.splat {{%.*}} : !cir.int<s, 1>, !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{%.*}} : !cir.vector<16 x !cir.int<s, 1>> -> !u16i
