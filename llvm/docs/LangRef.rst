@@ -2081,7 +2081,9 @@ For example:
     Calls to functions annotated with ``allockind`` are subject to allocation
     elision: Calls to allocator functions can be removed, and the allocation
     served from a virtual allocator instead. Notably, this is allowed even if
-    the allocator calls have side-effects.
+    the allocator calls have side-effects. In other words, for each allocation
+    there there is a non-deterministic choice between calling the allocator as
+    usual, or using a virtual, side-effect-free allocator instead.
 
     If multiple allocation functions operate on the same allocation,
     allocation elision is only allowed for pairs of "alloc" and "free" with the
