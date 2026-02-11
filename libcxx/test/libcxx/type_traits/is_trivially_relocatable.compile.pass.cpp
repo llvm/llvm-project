@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// With PFP we return different values for __libcpp_is_trivially_relocatable.
+// UNSUPPORTED: pfp
+
 #include <__type_traits/is_trivially_relocatable.h>
 #include <array>
 #include <deque>

@@ -79,6 +79,14 @@ if (NOT "${LIBCXX_ASSERTION_SEMANTIC}" IN_LIST LIBCXX_SUPPORTED_ASSERTION_SEMANT
   message(FATAL_ERROR
     "Unsupported assertion semantic: '${LIBCXX_ASSERTION_SEMANTIC}'. Supported values are ${LIBCXX_SUPPORTED_ASSERTION_SEMANTICS}.")
 endif()
+set(LIBCXX_SUPPORTED_PFP none untagged tagged)
+set(LIBCXX_PFP none CACHE STRING
+  "Specify whether to build with pointer field protection.
+   Supported values are ${LIBCXX_SUPPORTED_PFP}.")
+if (NOT "${LIBCXX_PFP}" IN_LIST LIBCXX_SUPPORTED_PFP)
+  message(FATAL_ERROR
+    "Unsupported PFP mode: '${LIBCXX_PFP}'. Supported values are ${LIBCXX_SUPPORTED_PFP}.")
+endif()
 set(LIBCXX_ASSERTION_HANDLER_FILE
   "vendor/llvm/default_assertion_handler.in"
   CACHE STRING
@@ -580,6 +588,17 @@ function(cxx_add_rtti_flags target)
   endif()
 endfunction()
 
+function(cxx_add_pfp_flags target)
+  if (LIBCXX_PFP STREQUAL untagged)
+    target_add_compile_flags_if_supported(${target} PUBLIC
+      -fexperimental-pointer-field-protection-abi)
+  elseif (LIBCXX_PFP STREQUAL tagged)
+    target_add_compile_flags_if_supported(${target} PUBLIC
+      -fexperimental-pointer-field-protection-abi
+      -fexperimental-pointer-field-protection-tagged)
+  endif()
+endfunction()
+
 # Modules flags ===============================================================
 # FIXME The libc++ sources are fundamentally non-modular. They need special
 # versions of the headers in order to provide C++03 and legacy ABI definitions.
@@ -857,6 +876,7 @@ function(cxx_add_common_build_flags target)
   cxx_add_windows_flags(${target})
   cxx_add_exception_flags(${target})
   cxx_add_rtti_flags(${target})
+  cxx_add_pfp_flags(${target})
   cxx_add_module_flags(${target})
   cxx_link_system_libraries(${target})
   target_link_libraries(${target} PRIVATE cxx-sanitizer-flags)

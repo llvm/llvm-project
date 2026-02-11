@@ -365,6 +365,11 @@ generic-ubsan)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-ubsan.cmake"
     check-runtimes
 ;;
+generic-pfp)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-pfp.cmake"
+    check-runtimes
+;;
 #
 # Various build configurations
 #
