@@ -738,13 +738,14 @@ void LayoutInfoPropagation::visitDpasOp(
     dpasBLayout = LayoutInfo(anchorLayoutB);
     dpasCDLayout = LayoutInfo(anchorLayoutCD);
   } else {
+    LayoutInfo consumerLayout = results[0]->getValue();
+    if (!consumerLayout.isAssigned())
+      return;
+
     auto uArch = getUArch(getChipStr(dpas).value_or(""));
     VectorType aTy = dpas.getLhsType();
     VectorType bTy = dpas.getRhsType();
     VectorType cdTy = dpas.getResultType();
-    LayoutInfo consumerLayout = results[0]->getValue();
-    if (!consumerLayout.isAssigned())
-      dpas.emitWarning("No consumer layout was found for the DPAS result.");
 
     auto consumerLayoutAttr =
         dyn_cast_if_present<xegpu::DistributeLayoutAttr>(consumerLayout.get());
