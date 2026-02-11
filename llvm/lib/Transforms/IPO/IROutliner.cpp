@@ -2203,25 +2203,13 @@ void createSwitchStatement(
   }
 }
 
-/// Fill the new function that will serve as the replacement function for all of
-/// the extracted regions of a certain structure from the first region in the
-/// list of regions.  Replace this first region's extracted function with the
-/// new overall function.
-///
-/// \param [in] M - The module we are outlining from.
-/// \param [in] CurrentGroup - The group of regions to be outlined.
-/// \param [in,out] OutputStoreBBs - The output blocks for each different
-/// set of stores needed for the different functions.
-/// \param [in,out] FuncsToRemove - Extracted functions to erase from module
-/// once outlining is complete.
-/// \param [in] OutputMappings - Extracted functions to erase from module
-/// once outlining is complete.
-static void fillOverallFunction(
+void IROutliner::fillOverallFunction(
     Module &M, OutlinableGroup &CurrentGroup,
     std::vector<DenseMap<Value *, BasicBlock *>> &OutputStoreBBs,
-    std::vector<Function *> &FuncsToRemove,
-    const DenseMap<Value *, Value *> &OutputMappings) {
+    std::vector<Function *> &FuncsToRemove) {
   OutlinableRegion *CurrentOS = CurrentGroup.Regions[0];
+
+  TargetTransformInfo &TTI = getTTI(*CurrentOS->StartBB->getParent());
 
   // Move first extracted function's instructions into new function.
   LLVM_DEBUG(dbgs() << "Move instructions from "
@@ -2231,8 +2219,14 @@ static void fillOverallFunction(
                    *CurrentGroup.OutlinedFunction, CurrentGroup.EndBBs);
 
   // Transfer the attributes from the function to the new function.
-  for (Attribute A : CurrentOS->ExtractedFunction->getAttributes().getFnAttrs())
+  for (Attribute A :
+       CurrentOS->ExtractedFunction->getAttributes().getFnAttrs()) {
+    if (!TTI.shouldCopyAttributeWhenOutliningFrom(CurrentOS->ExtractedFunction,
+                                                  A))
+      continue;
+
     CurrentGroup.OutlinedFunction->addFnAttr(A);
+  }
 
   // Create a new set of output blocks for the first extracted function.
   DenseMap<Value *, BasicBlock *> NewBBs;
@@ -2274,8 +2268,7 @@ void IROutliner::deduplicateExtractedSections(
 
   OutlinableRegion *CurrentOS;
 
-  fillOverallFunction(M, CurrentGroup, OutputStoreBBs, FuncsToRemove,
-                      OutputMappings);
+  fillOverallFunction(M, CurrentGroup, OutputStoreBBs, FuncsToRemove);
 
   for (unsigned Idx = 1; Idx < CurrentGroup.Regions.size(); Idx++) {
     CurrentOS = CurrentGroup.Regions[Idx];
@@ -2418,7 +2411,7 @@ void IROutliner::pruneIncompatibleRegions(
     if (FnForCurrCand.hasOptNone())
       continue;
 
-    if (FnForCurrCand.hasFnAttribute("nooutline")) {
+    if (FnForCurrCand.hasFnAttribute(Attribute::NoOutline)) {
       LLVM_DEBUG({
         dbgs() << "... Skipping function with nooutline attribute: "
                << FnForCurrCand.getName() << "\n";
