@@ -2278,7 +2278,8 @@ static bool pointsToLastObject(const Pointer &Ptr) {
 }
 
 /// Does Ptr point to the last object AND to a flexible array member?
-static bool isUserWritingOffTheEnd(const ASTContext &Ctx, const Pointer &Ptr) {
+static bool isUserWritingOffTheEnd(const ASTContext &Ctx, const Pointer &Ptr,
+                                   bool InvalidBase) {
   auto isFlexibleArrayMember = [&](const Descriptor *FieldDesc) {
     using FAMKind = LangOptions::StrictFlexArraysLevelKind;
     FAMKind StrictFlexArraysLevel =
@@ -2300,7 +2301,7 @@ static bool isUserWritingOffTheEnd(const ASTContext &Ctx, const Pointer &Ptr) {
   if (!FieldDesc->isArray())
     return false;
 
-  return Ptr.isDummy() && pointsToLastObject(Ptr) &&
+  return InvalidBase && pointsToLastObject(Ptr) &&
          isFlexibleArrayMember(FieldDesc);
 }
 
@@ -2311,6 +2312,14 @@ UnsignedOrNone evaluateBuiltinObjectSize(const ASTContext &ASTCtx,
 
   if (Ptr.isDummy() && Ptr.getType()->isPointerType())
     return std::nullopt;
+
+  bool InvalidBase = false;
+
+  if (Ptr.isDummy()) {
+    if (const VarDecl *VD = Ptr.getDeclDesc()->asVarDecl();
+        VD && VD->getType()->isPointerType())
+      InvalidBase = true;
+  }
 
   // According to the GCC documentation, we want the size of the subobject
   // denoted by the pointer. But that's not quite right -- what we actually
@@ -2326,14 +2335,17 @@ UnsignedOrNone evaluateBuiltinObjectSize(const ASTContext &ASTCtx,
   bool ReportMinimum = (Kind & 2u);
   if (!UseFieldDesc || DetermineForCompleteObject) {
     // Lower bound, so we can't fall back to this.
-    if (ReportMinimum && !DetermineForCompleteObject)
+    if (ReportMinimum && UseFieldDesc && !DetermineForCompleteObject)
       return std::nullopt;
 
     // Can't read beyond the pointer decl desc.
     if (!UseFieldDesc && !ReportMinimum && DeclDesc->getType()->isPointerType())
       return std::nullopt;
+
+    if (InvalidBase)
+      return std::nullopt;
   } else {
-    if (isUserWritingOffTheEnd(ASTCtx, Ptr)) {
+    if (isUserWritingOffTheEnd(ASTCtx, Ptr, InvalidBase)) {
       // If we cannot determine the size of the initial allocation, then we
       // can't given an accurate upper-bound. However, we are still able to give
       // conservative lower-bounds for Type=3.
@@ -6098,6 +6110,11 @@ static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
 }
 
 bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest) {
+  if (!Src.isBlockPointer() || Src.getFieldDesc()->isPrimitive())
+    return false;
+  if (!Dest.isBlockPointer() || Dest.getFieldDesc()->isPrimitive())
+    return false;
+
   return copyComposite(S, OpPC, Src, Dest);
 }
 

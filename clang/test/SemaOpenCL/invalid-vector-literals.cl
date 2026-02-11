@@ -10,4 +10,8 @@ void vector_literals_invalid()
   int4 b = (int4)(1,2,3,4,5); // expected-error{{excess elements in vector}}
   int8 d = (int8)(a,(float4)(1)); // expected-error{{initializing 'int' with an expression of incompatible type 'float4'}}
   ((int4)(0)).x = 8; // expected-error{{expression is not assignable}}
+  int arr[4];
+  int4 e = (int4)(arr); // expected-error{{initializing 'int4' (vector of 4 'int' values) with an expression of incompatible type '__private int[4]'}}
+  int *p = arr;
+  int4 f = (int4)(p); // expected-error{{initializing 'int4' (vector of 4 'int' values) with an expression of incompatible type '__private int *__private'}}
 }

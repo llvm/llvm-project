@@ -31,9 +31,11 @@ set(sources
   X86AvoidTrailingCall.cpp
   X86CallFrameOptimization.cpp
   X86CallingConv.cpp
+  X86CleanupLocalDynamicTLS.cpp
   X86CmovConversion.cpp
   X86CodeGenPassBuilder.cpp
   X86DomainReassignment.cpp
+  X86GlobalBaseReg.cpp
   X86LowerTileCopy.cpp
   X86LowerAMXType.cpp
   X86LowerAMXIntrinsics.cpp
@@ -58,6 +60,7 @@ set(sources
   X86ISelLoweringCall.cpp
   X86IndirectBranchTracking.cpp
   X86IndirectThunks.cpp
+  X86InsertX87Wait.cpp
   X86InterleavedAccess.cpp
   X86InstCombineIntrinsic.cpp
   X86InstrFMA3Info.cpp
@@ -86,7 +89,6 @@ set(sources
   X86VZeroUpper.cpp
   X86WinEHState.cpp
   X86WinEHUnwindV2.cpp
-  X86InsertWait.cpp
   GISel/X86CallLowering.cpp
   GISel/X86InstructionSelector.cpp
   GISel/X86LegalizerInfo.cpp

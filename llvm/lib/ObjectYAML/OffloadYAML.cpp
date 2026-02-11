@@ -38,6 +38,7 @@ void ScalarEnumerationTraits<object::OffloadKind>::enumeration(
   ECase(OFK_OpenMP);
   ECase(OFK_Cuda);
   ECase(OFK_HIP);
+  ECase(OFK_SYCL);
   ECase(OFK_LAST);
 #undef ECase
   IO.enumFallback<Hex16>(Value);
@@ -50,8 +51,8 @@ void MappingTraits<OffloadYAML::Binary>::mapping(IO &IO,
   IO.mapTag("!Offload", true);
   IO.mapOptional("Version", O.Version);
   IO.mapOptional("Size", O.Size);
-  IO.mapOptional("EntryOffset", O.EntryOffset);
-  IO.mapOptional("EntrySize", O.EntrySize);
+  IO.mapOptional("EntriesOffset", O.EntriesOffset);
+  IO.mapOptional("EntriesCount", O.EntriesCount);
   IO.mapRequired("Members", O.Members);
   IO.setContext(nullptr);
 }

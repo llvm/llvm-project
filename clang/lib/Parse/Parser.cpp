@@ -1188,7 +1188,8 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // declaration-specifiers are completely optional in the grammar.
   if (getLangOpts().isImplicitIntRequired() && D.getDeclSpec().isEmpty()) {
     Diag(D.getIdentifierLoc(), diag::warn_missing_type_specifier)
-        << D.getDeclSpec().getSourceRange();
+        << D.getDeclSpec().getSourceRange()
+        << FixItHint::CreateInsertion(D.getDeclSpec().getBeginLoc(), "int ");
     const char *PrevSpec;
     unsigned DiagID;
     const PrintingPolicy &Policy = Actions.getASTContext().getPrintingPolicy();
