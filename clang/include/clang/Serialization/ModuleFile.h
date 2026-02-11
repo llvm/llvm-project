@@ -293,7 +293,7 @@ public:
 
   /// Captures the high-level result of validating input files.
   ///
-  /// Useful when encounter an invalid input file. This way can check what kind
+  /// Useful when encountering an invalid input file. This way, we can check what kind
   /// of validation has been done already and can try to figure out why an
   /// invalid file hasn't been discovered earlier.
   InputFilesValidation InputFilesValidationStatus =
