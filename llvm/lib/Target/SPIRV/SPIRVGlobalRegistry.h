@@ -25,8 +25,63 @@
 
 namespace llvm {
 class SPIRVSubtarget;
+/// @deprecated Use SPIRVTypeInst instead
+/// SPIRVType is supposed to represent a MachineInstr that defines a SPIRV Type
+/// (e.g. an OpTypeInt intruction). It is misused in several places and we're
+/// getting rid of it.
 using SPIRVType = const MachineInstr;
+
 using StructOffsetDecorator = std::function<void(Register)>;
+
+class SPIRVTypeInst {
+  const MachineInstr *MI;
+
+public:
+  static bool definesATypeRegister(const MachineInstr &MI) {
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    return MRI.getRegClass(MI.getOperand(0).getReg()) == &SPIRV::TYPERegClass;
+  }
+
+  SPIRVTypeInst(const MachineInstr &MI) : SPIRVTypeInst(&MI) {}
+  SPIRVTypeInst(const MachineInstr *MI) : MI(MI) {
+    // A SPIRV Type whose result is not a type is invalid.
+    assert(!MI || definesATypeRegister(*MI));
+  }
+
+  // No need to verify the register since it's already verified by the copied
+  // object.
+  SPIRVTypeInst(const SPIRVTypeInst &Other) : MI(Other.MI) {}
+
+  SPIRVTypeInst &operator=(const SPIRVTypeInst &Other) {
+    MI = Other.MI;
+    return *this;
+  }
+
+  const MachineInstr &operator*() const { return *MI; }
+  const MachineInstr *operator->() const { return MI; }
+  operator const MachineInstr *() const { return MI; }
+
+  bool operator==(const SPIRVTypeInst &Other) const { return MI == Other.MI; }
+  bool operator!=(const SPIRVTypeInst &Other) const { return MI != Other.MI; }
+
+  bool operator==(const MachineInstr *Other) const { return MI == Other; }
+  bool operator!=(const MachineInstr *Other) const { return MI != Other; }
+
+  operator bool() const { return MI; }
+
+  unsigned getHashValue() const {
+    return DenseMapInfo<const MachineInstr *>::getHashValue(MI);
+  }
+};
+
+template <> struct DenseMapInfo<SPIRVTypeInst> {
+  static SPIRVTypeInst getEmptyKey() { return SPIRVTypeInst(nullptr); }
+  static SPIRVTypeInst getTombstoneKey() { return SPIRVTypeInst(nullptr); }
+  static unsigned getHashValue(SPIRVTypeInst Ty) { return Ty.getHashValue(); }
+  static bool isEqual(SPIRVTypeInst Ty1, SPIRVTypeInst Ty2) {
+    return Ty1 == Ty2;
+  }
+};
 
 class SPIRVGlobalRegistry : public SPIRVIRMapping {
   // Registers holding values which have types associated with them.
