@@ -14,8 +14,6 @@ using namespace llvm;
 llvm::TextEncodingConverter *
 TextEncodingConfig::getConverter(ConversionAction Action) const {
   switch (Action) {
-  case CA_ToSystemEncoding:
-    return ToSystemEncodingConverter;
   case CA_ToExecEncoding:
     return ToExecEncodingConverter;
   default:
@@ -32,18 +30,6 @@ TextEncodingConfig::setConvertersFromOptions(TextEncodingConfig &TEC,
   TEC.SystemEncoding = TInfo.getTriple().getDefaultNarrowTextEncoding();
   TEC.ExecEncoding =
       Opts.ExecEncoding.empty() ? TEC.InternalEncoding : Opts.ExecEncoding;
-
-  // Create converter between internal and system encoding
-  if (TEC.InternalEncoding != TEC.SystemEncoding) {
-    ErrorOr<TextEncodingConverter> ErrorOrConverter =
-        llvm::TextEncodingConverter::create(TEC.InternalEncoding,
-                                            TEC.SystemEncoding);
-    if (ErrorOrConverter)
-      TEC.ToSystemEncodingConverter =
-          new TextEncodingConverter(std::move(*ErrorOrConverter));
-    else
-      return ErrorOrConverter.getError();
-  }
 
   // Create converter between internal and exec encoding specified
   // in fexec-charset option.
