@@ -24,9 +24,11 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
@@ -268,6 +270,8 @@ static void processBasicBlock(MachineBasicBlock &MBB,
   BlockStates[MBB.getNumber()].ExitState = CurState;
 }
 
+/// Loop over all of the basic blocks, inserting vzeroupper instructions before
+/// function calls.
 static bool issueVZeroUpper(MachineFunction &MF) {
   if (!UseVZeroUpper)
     return false;
@@ -277,6 +281,7 @@ static bool issueVZeroUpper(MachineFunction &MF) {
     return false;
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
+
   bool FnHasLiveInYmmOrZmm = checkFnHasLiveInYmmOrZmm(MRI);
 
   // Fast check: if the function doesn't use any ymm/zmm registers, we don't
