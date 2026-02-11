@@ -86,6 +86,10 @@ STATISTIC(NumTailCalls, "Number of tail calls");
 extern cl::opt<bool> EmitJalrReloc;
 extern cl::opt<bool> NoZeroDivCheck;
 
+static cl::opt<bool> UseMipsTailCalls("mips-tail-calls", cl::Hidden,
+                                      cl::desc("MIPS: permit tail calls."),
+                                      cl::init(false));
+
 static const MCPhysReg Mips64DPRegs[8] = {
   Mips::D12_64, Mips::D13_64, Mips::D14_64, Mips::D15_64,
   Mips::D16_64, Mips::D17_64, Mips::D18_64, Mips::D19_64
@@ -220,7 +224,8 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::BlockAddress,       MVT::i32,   Custom);
   setOperationAction(ISD::GlobalTLSAddress,   MVT::i32,   Custom);
   setOperationAction(ISD::JumpTable,          MVT::i32,   Custom);
-  setOperationAction(ISD::ConstantPool,       MVT::i32,   Custom);
+  if (!Subtarget.inMips16Mode())
+    setOperationAction(ISD::ConstantPool, MVT::i32, Custom);
   setOperationAction(ISD::SELECT,             MVT::f32,   Custom);
   setOperationAction(ISD::SELECT,             MVT::f64,   Custom);
   setOperationAction(ISD::SELECT,             MVT::i32,   Custom);
@@ -268,7 +273,8 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::BlockAddress,       MVT::i64,   Custom);
     setOperationAction(ISD::GlobalTLSAddress,   MVT::i64,   Custom);
     setOperationAction(ISD::JumpTable,          MVT::i64,   Custom);
-    setOperationAction(ISD::ConstantPool,       MVT::i64,   Custom);
+    if (!Subtarget.inMips16Mode())
+      setOperationAction(ISD::ConstantPool, MVT::i64, Custom);
     setOperationAction(ISD::SELECT,             MVT::i64,   Custom);
     if (Subtarget.hasMips64r6()) {
       setOperationAction(ISD::LOAD,               MVT::i64,   Legal);
@@ -412,7 +418,10 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
                        ISD::OR, ISD::ADD, ISD::SUB, ISD::AssertZext, ISD::SHL,
                        ISD::SIGN_EXTEND});
 
-  if (Subtarget.isGP64bit())
+  // R5900 has no LL/SC instructions for atomic operations
+  if (Subtarget.isR5900())
+    setMaxAtomicSizeInBitsSupported(0);
+  else if (Subtarget.isGP64bit())
     setMaxAtomicSizeInBitsSupported(64);
   else
     setMaxAtomicSizeInBitsSupported(32);
@@ -441,9 +450,9 @@ MipsTargetLowering::create(const MipsTargetMachine &TM,
 }
 
 // Create a fast isel object.
-FastISel *
-MipsTargetLowering::createFastISel(FunctionLoweringInfo &funcInfo,
-                                  const TargetLibraryInfo *libInfo) const {
+FastISel *MipsTargetLowering::createFastISel(
+    FunctionLoweringInfo &funcInfo, const TargetLibraryInfo *libInfo,
+    const LibcallLoweringInfo *libcallLowering) const {
   const MipsTargetMachine &TM =
       static_cast<const MipsTargetMachine &>(funcInfo.MF->getTarget());
 
@@ -458,7 +467,8 @@ MipsTargetLowering::createFastISel(FunctionLoweringInfo &funcInfo,
       Subtarget.useXGOT())
     UseFastISel = false;
 
-  return UseFastISel ? Mips::createFastISel(funcInfo, libInfo) : nullptr;
+  return UseFastISel ? Mips::createFastISel(funcInfo, libInfo, libcallLowering)
+                     : nullptr;
 }
 
 EVT MipsTargetLowering::getSetCCResultType(const DataLayout &, LLVMContext &,
@@ -1799,7 +1809,8 @@ MachineBasicBlock *MipsTargetLowering::emitAtomicBinaryPartword(
   BuildMI(BB, DL, TII->get(ABI.GetPtrAndOp()), AlignedAddr)
     .addReg(Ptr).addReg(MaskLSB2);
   BuildMI(BB, DL, TII->get(Mips::ANDi), PtrLSB2)
-      .addReg(Ptr, 0, ArePtrs64bit ? Mips::sub_32 : 0).addImm(3);
+      .addReg(Ptr, {}, ArePtrs64bit ? Mips::sub_32 : 0)
+      .addImm(3);
   if (Subtarget.isLittle()) {
     BuildMI(BB, DL, TII->get(Mips::SLL), ShiftAmt).addReg(PtrLSB2).addImm(3);
   } else {
@@ -1986,7 +1997,8 @@ MachineBasicBlock *MipsTargetLowering::emitAtomicCmpSwapPartword(
   BuildMI(BB, DL, TII->get(ArePtrs64bit ? Mips::AND64 : Mips::AND), AlignedAddr)
     .addReg(Ptr).addReg(MaskLSB2);
   BuildMI(BB, DL, TII->get(Mips::ANDi), PtrLSB2)
-      .addReg(Ptr, 0, ArePtrs64bit ? Mips::sub_32 : 0).addImm(3);
+      .addReg(Ptr, {}, ArePtrs64bit ? Mips::sub_32 : 0)
+      .addImm(3);
   if (Subtarget.isLittle()) {
     BuildMI(BB, DL, TII->get(Mips::SLL), ShiftAmt).addReg(PtrLSB2).addImm(3);
   } else {
@@ -3334,23 +3346,41 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (MF.getTarget().Options.EmitCallGraphSection && CB && CB->isIndirectCall())
     CSInfo = MachineFunction::CallSiteInfo(*CB);
 
-  // Check if it's really possible to do a tail call. Restrict it to functions
-  // that are part of this compilation unit.
-  bool InternalLinkage = false;
-  if (IsTailCall) {
-    IsTailCall = isEligibleForTailCallOptimization(
-        CCInfo, StackSize, *MF.getInfo<MipsFunctionInfo>());
-    if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
-      InternalLinkage = G->getGlobal()->hasInternalLinkage();
-      IsTailCall &= (InternalLinkage || G->getGlobal()->hasLocalLinkage() ||
-                     G->getGlobal()->hasPrivateLinkage() ||
-                     G->getGlobal()->hasHiddenVisibility() ||
-                     G->getGlobal()->hasProtectedVisibility());
-     }
+  // Check if it's really possible to do a tail call.
+  // For non-musttail calls, restrict to functions that won't require $gp
+  // restoration. In PIC mode, calling external functions via tail call can
+  // cause issues with $gp register handling (see D24763).
+  bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
+  bool CalleeIsLocal = true;
+  if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
+    const GlobalValue *GV = G->getGlobal();
+    bool HasLocalLinkage = GV->hasLocalLinkage() || GV->hasPrivateLinkage();
+    bool HasHiddenVisibility =
+        GV->hasHiddenVisibility() || GV->hasProtectedVisibility();
+    if (GV->isDeclarationForLinker())
+      CalleeIsLocal = HasLocalLinkage || HasHiddenVisibility;
+    else
+      CalleeIsLocal = GV->isDSOLocal();
   }
-  if (!IsTailCall && CLI.CB && CLI.CB->isMustTailCall())
-    report_fatal_error("failed to perform tail call elimination on a call "
-                       "site marked musttail");
+
+  if (IsTailCall) {
+    if (!UseMipsTailCalls) {
+      IsTailCall = false;
+      if (IsMustTail)
+        report_fatal_error("failed to perform tail call elimination on a call "
+                           "site marked musttail");
+    } else {
+      bool Eligible = isEligibleForTailCallOptimization(
+          CCInfo, StackSize, *MF.getInfo<MipsFunctionInfo>());
+      if (!Eligible || !CalleeIsLocal) {
+        IsTailCall = false;
+        if (IsMustTail)
+          report_fatal_error(
+              "failed to perform tail call elimination on a call "
+              "site marked musttail");
+      }
+    }
+  }
 
   if (IsTailCall)
     ++NumTailCalls;
@@ -3525,6 +3555,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     }
   }
 
+  bool InternalLinkage = false;
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
     if (Subtarget.isTargetCOFF() &&
         G->getGlobal()->hasDLLImportStorageClass()) {

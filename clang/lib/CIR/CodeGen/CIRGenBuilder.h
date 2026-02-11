@@ -189,6 +189,22 @@ public:
     return getType<cir::RecordType>(nameAttr, kind);
   }
 
+  //
+  // Operation creation helpers
+  // --------------------------
+  //
+  cir::MemCpyOp createMemCpy(mlir::Location loc, mlir::Value dst,
+                             mlir::Value src, mlir::Value len) {
+    return cir::MemCpyOp::create(*this, loc, dst, src, len);
+  }
+
+  cir::MemSetOp createMemSet(mlir::Location loc, mlir::Value dst,
+                             mlir::Value val, mlir::Value len) {
+    assert(val.getType() == getUInt8Ty());
+    return cir::MemSetOp::create(*this, loc, dst, val, len);
+  }
+  // ---------------------------
+
   cir::DataMemberAttr getDataMemberAttr(cir::DataMemberType ty,
                                         unsigned memberIndex) {
     return cir::DataMemberAttr::get(ty, memberIndex);
@@ -346,6 +362,10 @@ public:
     return getConstantInt(loc, getUInt64Ty(), c);
   }
 
+  //
+  // UnaryOp creation helpers
+  // -------------------------
+  //
   mlir::Value createNeg(mlir::Value value) {
 
     if (auto intTy = mlir::dyn_cast<cir::IntType>(value.getType())) {
@@ -359,6 +379,18 @@ public:
     llvm_unreachable("negation for the given type is NYI");
   }
 
+  mlir::Value createFNeg(mlir::Value value) {
+    assert(mlir::isa<cir::FPTypeInterface>(value.getType()) &&
+           "Non-fp input type!");
+
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+
+    return cir::UnaryOp::create(*this, value.getLoc(), value.getType(),
+                                cir::UnaryOpKind::Minus, value);
+  }
+
   cir::IsFPClassOp createIsFPClass(mlir::Location loc, mlir::Value src,
                                    cir::FPClassTest flags) {
     return cir::IsFPClassOp::create(*this, loc, src, flags);
@@ -368,6 +400,10 @@ public:
   cir::ConstantOp getNullDataMemberPtr(cir::DataMemberType ty,
                                        mlir::Location loc) {
     return cir::ConstantOp::create(*this, loc, getNullDataMemberAttr(ty));
+  }
+
+  cir::ConstantOp getNullMethodPtr(cir::MethodType ty, mlir::Location loc) {
+    return cir::ConstantOp::create(*this, loc, getNullMethodAttr(ty));
   }
 
   // TODO: split this to createFPExt/createFPTrunc when we have dedicated cast
@@ -394,6 +430,7 @@ public:
 
     return cir::BinOp::create(*this, loc, cir::BinOpKind::Add, lhs, rhs);
   }
+
   mlir::Value createFMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
     assert(!cir::MissingFeatures::fpConstraints());
@@ -667,6 +704,15 @@ public:
     cir::ConstantOp poison =
         getConstant(loc, cir::PoisonAttr::get(vec1.getType()));
     return createVecShuffle(loc, vec1, poison, mask);
+  }
+
+  template <typename... Operands>
+  mlir::Value emitIntrinsicCallOp(mlir::Location loc, const llvm::StringRef str,
+                                  const mlir::Type &resTy, Operands &&...op) {
+    return cir::LLVMIntrinsicCallOp::create(*this, loc,
+                                            this->getStringAttr(str), resTy,
+                                            std::forward<Operands>(op)...)
+        .getResult();
   }
 };
 

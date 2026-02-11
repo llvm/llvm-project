@@ -36,7 +36,6 @@
 #include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/Unicode.h"
 #include "llvm/Support/UnicodeCharRanges.h"
-
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -46,7 +45,7 @@
 #include <optional>
 #include <string>
 
-#if defined(__i386__) || defined(__x86_64__)
+#ifdef __SSE4_2__
 #include <nmmintrin.h>
 #endif
 
@@ -71,6 +70,17 @@ tok::ObjCKeywordKind Token::getObjCKeywordID() const {
     return tok::objc_not_keyword;
   const IdentifierInfo *specId = getIdentifierInfo();
   return specId ? specId->getObjCKeywordID() : tok::objc_not_keyword;
+}
+
+bool Token::isModuleContextualKeyword(bool AllowExport) const {
+  if (AllowExport && is(tok::kw_export))
+    return true;
+  if (isOneOf(tok::kw_import, tok::kw_module))
+    return true;
+  if (isNot(tok::identifier))
+    return false;
+  const auto *II = getIdentifierInfo();
+  return II->isImportKeyword() || II->isModuleKeyword();
 }
 
 /// Determine whether the token kind starts a simple-type-specifier.
@@ -1920,21 +1930,10 @@ bool Lexer::LexUnicodeIdentifierStart(Token &Result, uint32_t C,
   return true;
 }
 
-static const char *fastParseASCIIIdentifierScalar(const char *CurPtr) {
-  unsigned char C = *CurPtr;
-  while (isAsciiIdentifierContinue(C))
-    C = *++CurPtr;
-  return CurPtr;
-}
-
-// Fast path for lexing ASCII identifiers using SSE4.2 instructions.
-// Only enabled on x86/x86_64 when building with a compiler that supports
-// the 'target' attribute, which is used for runtime dispatch. Otherwise, we
-// fall back to the scalar implementation.
-#if (defined(__i386__) || defined(__x86_64__)) && defined(__has_attribute) &&  \
-    __has_attribute(target) && !defined(_MSC_VER)
-__attribute__((target("sse4.2"))) static const char *
-fastParseASCIIIdentifierSSE42(const char *CurPtr, const char *BufferEnd) {
+static const char *
+fastParseASCIIIdentifier(const char *CurPtr,
+                         [[maybe_unused]] const char *BufferEnd) {
+#ifdef __SSE4_2__
   alignas(16) static constexpr char AsciiIdentifierRange[16] = {
       '_', '_', 'A', 'Z', 'a', 'z', '0', '9',
   };
@@ -1954,20 +1953,12 @@ fastParseASCIIIdentifierSSE42(const char *CurPtr, const char *BufferEnd) {
       continue;
     return CurPtr;
   }
-
-  return fastParseASCIIIdentifierScalar(CurPtr);
-}
-
-__attribute__((target("sse4.2"))) static const char *
-fastParseASCIIIdentifier(const char *CurPtr, const char *BufferEnd) {
-  return fastParseASCIIIdentifierSSE42(CurPtr, BufferEnd);
-}
-
-__attribute__((target("default")))
 #endif
-static const char *fastParseASCIIIdentifier(const char *CurPtr,
-                                            const char *BufferEnd) {
-  return fastParseASCIIIdentifierScalar(CurPtr);
+
+  unsigned char C = *CurPtr;
+  while (isAsciiIdentifierContinue(C))
+    C = *++CurPtr;
+  return CurPtr;
 }
 
 bool Lexer::LexIdentifierContinue(Token &Result, const char *CurPtr) {
@@ -4039,11 +4030,23 @@ LexStart:
   case 'h': case 'i': case 'j': case 'k': case 'l': case 'm': case 'n':
   case 'o': case 'p': case 'q': case 'r': case 's': case 't':    /*'u'*/
   case 'v': case 'w': case 'x': case 'y': case 'z':
-  case '_':
+  case '_': {
     // Notify MIOpt that we read a non-whitespace/non-comment token.
     MIOpt.ReadToken();
-    return LexIdentifierContinue(Result, CurPtr);
 
+    // LexIdentifierContinue may trigger HandleEndOfFile which would
+    // normally destroy this Lexer. However, the Preprocessor now defers
+    // lexer destruction until the stack of Lexer unwinds (LexLevel == 0),
+    // so it's safe to access member variables after this call returns.
+    bool returnedToken = LexIdentifierContinue(Result, CurPtr);
+
+    if (returnedToken && !LexingRawMode && !Is_PragmaLexer &&
+        !ParsingPreprocessorDirective && LangOpts.CPlusPlusModules &&
+        Result.isModuleContextualKeyword() &&
+        PP->HandleModuleContextualKeyword(Result, TokAtPhysicalStartOfLine))
+      goto HandleDirective;
+    return returnedToken;
+  }
   case '$':   // $ in identifiers.
     if (LangOpts.DollarIdents) {
       if (!isLexingRawMode())
@@ -4246,8 +4249,12 @@ LexStart:
         // it's actually the start of a preprocessing directive.  Callback to
         // the preprocessor to handle it.
         // TODO: -fpreprocessed mode??
-        if (TokAtPhysicalStartOfLine && !LexingRawMode && !Is_PragmaLexer)
+        if (TokAtPhysicalStartOfLine && !LexingRawMode && !Is_PragmaLexer) {
+          // We parsed a # character and it's the start of a preprocessing
+          // directive.
+          FormTokenWithChars(Result, CurPtr, tok::hash);
           goto HandleDirective;
+        }
 
         Kind = tok::hash;
       }
@@ -4367,6 +4374,9 @@ LexStart:
     if (Char == '=') {
       CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
       Kind = tok::caretequal;
+    } else if (LangOpts.Reflection && Char == '^') {
+      CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
+      Kind = tok::caretcaret;
     } else {
       if (LangOpts.OpenCL && Char == '^')
         Diag(CurPtr, diag::err_opencl_logical_exclusive_or);
@@ -4434,8 +4444,12 @@ LexStart:
       // it's actually the start of a preprocessing directive.  Callback to
       // the preprocessor to handle it.
       // TODO: -fpreprocessed mode??
-      if (TokAtPhysicalStartOfLine && !LexingRawMode && !Is_PragmaLexer)
+      if (TokAtPhysicalStartOfLine && !LexingRawMode && !Is_PragmaLexer) {
+        // We parsed a # character and it's the start of a preprocessing
+        // directive.
+        FormTokenWithChars(Result, CurPtr, tok::hash);
         goto HandleDirective;
+      }
 
       Kind = tok::hash;
     }
@@ -4525,9 +4539,6 @@ LexStart:
   return true;
 
 HandleDirective:
-  // We parsed a # character and it's the start of a preprocessing directive.
-
-  FormTokenWithChars(Result, CurPtr, tok::hash);
   PP->HandleDirective(Result);
 
   if (PP->hadModuleLoaderFatalFailure())
@@ -4550,6 +4561,10 @@ const char *Lexer::convertDependencyDirectiveToken(
   Result.setKind(DDTok.Kind);
   Result.setFlag((Token::TokenFlags)DDTok.Flags);
   Result.setLength(DDTok.Length);
+  if (Result.is(tok::raw_identifier))
+    Result.setRawIdentifierData(TokPtr);
+  else if (Result.isLiteral())
+    Result.setLiteralData(TokPtr);
   BufferPtr = TokPtr + DDTok.Length;
   return TokPtr;
 }
@@ -4607,15 +4622,18 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
     Result.setRawIdentifierData(TokPtr);
     if (!isLexingRawMode()) {
       const IdentifierInfo *II = PP->LookUpIdentifierInfo(Result);
+      if (LangOpts.CPlusPlusModules && Result.isModuleContextualKeyword() &&
+          PP->HandleModuleContextualKeyword(Result, Result.isAtStartOfLine())) {
+        PP->HandleDirective(Result);
+        return false;
+      }
       if (II->isHandleIdentifierCase())
         return PP->HandleIdentifier(Result);
     }
     return true;
   }
-  if (Result.isLiteral()) {
-    Result.setLiteralData(TokPtr);
+  if (Result.isLiteral())
     return true;
-  }
   if (Result.is(tok::colon)) {
     // Convert consecutive colons to 'tok::coloncolon'.
     if (*BufferPtr == ':') {

@@ -23,7 +23,6 @@
 #include "gtest/gtest.h"
 #include <optional>
 
-using namespace llvm;
 using namespace mlir;
 using namespace testing;
 namespace {
@@ -35,9 +34,9 @@ TEST(Remark, TestOutputOptimizationRemark) {
   std::string categoryInliner("Inliner");
   std::string categoryReroller("Reroller");
   std::string myPassname1("myPass1");
-  SmallString<64> tmpPathStorage;
-  sys::fs::createUniquePath("remarks-%%%%%%.yaml", tmpPathStorage,
-                            /*MakeAbsolute=*/true);
+  llvm::SmallString<64> tmpPathStorage;
+  llvm::sys::fs::createUniquePath("remarks-%%%%%%.yaml", tmpPathStorage,
+                                  /*MakeAbsolute=*/true);
   std::string yamlFile =
       std::string(tmpPathStorage.data(), tmpPathStorage.size());
   ASSERT_FALSE(yamlFile.empty());
@@ -96,7 +95,7 @@ TEST(Remark, TestOutputOptimizationRemark) {
   }
 
   // Read the file
-  auto bufferOrErr = MemoryBuffer::getFile(yamlFile);
+  auto bufferOrErr = llvm::MemoryBuffer::getFile(yamlFile);
   ASSERT_TRUE(static_cast<bool>(bufferOrErr)) << "Failed to open remarks file";
   std::string content = bufferOrErr.get()->getBuffer().str();
 
@@ -154,8 +153,8 @@ TEST(Remark, TestNoOutputOptimizationRemark) {
   std::string categoryFailName("myImportantCategory");
   std::string myPassname1("myPass1");
   SmallString<64> tmpPathStorage;
-  sys::fs::createUniquePath("remarks-%%%%%%.yaml", tmpPathStorage,
-                            /*MakeAbsolute=*/true);
+  llvm::sys::fs::createUniquePath("remarks-%%%%%%.yaml", tmpPathStorage,
+                                  /*MakeAbsolute=*/true);
   std::string yamlFile =
       std::string(tmpPathStorage.data(), tmpPathStorage.size());
   ASSERT_FALSE(yamlFile.empty());
@@ -383,7 +382,7 @@ TEST(Remark, TestRemarkFinal) {
 TEST(Remark, TestArgWithAttribute) {
   MLIRContext context;
 
-  SmallVector<Attribute> elements;
+  llvm::SmallVector<Attribute> elements;
   elements.push_back(IntegerAttr::get(IntegerType::get(&context, 32), 1));
   elements.push_back(IntegerAttr::get(IntegerType::get(&context, 32), 2));
   elements.push_back(IntegerAttr::get(IntegerType::get(&context, 32), 3));
@@ -409,5 +408,84 @@ TEST(Remark, TestArgWithAttribute) {
   EXPECT_FALSE(argWithoutAttr.hasAttribute());
   EXPECT_FALSE(argWithoutAttr.getAttribute()); // Returns null Attribute
   EXPECT_EQ(argWithoutAttr.val, "Value");
+}
+
+// Test that Remark correctly owns its string data and doesn't have
+// use-after-free issues when the original strings go out of scope.
+// This is particularly important for RemarkEmittingPolicyFinal which
+// stores remarks and emits them later during finalize().
+TEST(Remark, TestRemarkOwnsStringData) {
+  testing::internal::CaptureStderr();
+
+  // These are the expected values we'll check for in the output.
+  // They must match what we create in the inner scope below.
+  const char *expectedCategory = "DynamicCategory";
+  const char *expectedName = "DynamicRemarkName";
+  const char *expectedFunction = "dynamicFunction";
+  const char *expectedMessage = "Dynamic message content";
+
+  {
+    MLIRContext context;
+    Location loc = FileLineColLoc::get(&context, "test.cpp", 42, 10);
+
+    // Setup with RemarkEmittingPolicyFinal - this stores remarks and emits
+    // them only when the engine is destroyed (during finalize).
+    // Note: The 'passed' filter must be set for remark::passed() to emit.
+    mlir::remark::RemarkCategories cats{
+        /*all=*/std::nullopt,
+        /*passed=*/expectedCategory, // Enable passed remarks for this category
+        /*missed=*/std::nullopt,
+        /*analysis=*/std::nullopt,
+        /*failed=*/std::nullopt};
+
+    std::unique_ptr<remark::RemarkEmittingPolicyFinal> policy =
+        std::make_unique<remark::RemarkEmittingPolicyFinal>();
+    LogicalResult isEnabled = remark::enableOptimizationRemarks(
+        context, std::make_unique<MyCustomStreamer>(), std::move(policy), cats,
+        /*printAsEmitRemarks=*/true);
+    ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
+
+    // Create dynamic strings in an inner scope that will go out of scope
+    // BEFORE the RemarkEngine is destroyed and finalize() is called.
+    {
+      std::string dynamicCategory(expectedCategory);
+      std::string dynamicName(expectedName);
+      std::string dynamicFunction(expectedFunction);
+      std::string dynamicSubCategory("DynamicSubCategory");
+      std::string dynamicMessage(expectedMessage);
+
+      // Emit a remark with all dynamic strings
+      remark::passed(loc, remark::RemarkOpts::name(dynamicName)
+                              .category(dynamicCategory)
+                              .subCategory(dynamicSubCategory)
+                              .function(dynamicFunction))
+          << dynamicMessage;
+
+      // dynamicCategory, dynamicName, dynamicFunction, dynamicSubCategory,
+      // and dynamicMessage all go out of scope here!
+    }
+
+    // At this point, all the dynamic strings have been destroyed.
+    // The Remark stored in RemarkEmittingPolicyFinal must have its own
+    // copies of the string data, otherwise we'd have dangling pointers.
+
+    // Context destruction triggers RemarkEngine destruction, which calls
+    // finalize() on the policy, which then emits the stored remarks.
+    // If Remark doesn't own its strings, this would crash or produce garbage.
+  }
+
+  llvm::errs().flush();
+  std::string errOut = ::testing::internal::GetCapturedStderr();
+
+  // Verify the output contains our expected strings - this proves the
+  // Remark correctly copied and owns the string data.
+  EXPECT_NE(errOut.find(expectedCategory), std::string::npos)
+      << "Expected category not found in output. Got: " << errOut;
+  EXPECT_NE(errOut.find(expectedName), std::string::npos)
+      << "Expected name not found in output. Got: " << errOut;
+  EXPECT_NE(errOut.find(expectedFunction), std::string::npos)
+      << "Expected function not found in output. Got: " << errOut;
+  EXPECT_NE(errOut.find(expectedMessage), std::string::npos)
+      << "Expected message not found in output. Got: " << errOut;
 }
 } // namespace

@@ -20,7 +20,6 @@
 namespace nb = nanobind;
 
 using namespace nanobind::literals;
-using namespace llvm;
 using namespace mlir;
 using namespace mlir::python::nanobind_adaptors;
 
@@ -43,8 +42,8 @@ struct StructType : PyConcreteType<StructType> {
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get_literal",
-        [](const std::vector<PyType> &elements, bool packed, MlirLocation loc,
-           DefaultingPyMlirContext context) {
+        [](const std::vector<PyType> &elements, bool packed,
+           DefaultingPyLocation loc, DefaultingPyMlirContext context) {
           python::CollectDiagnosticsToStringScope scope(
               mlirLocationGetContext(loc));
           std::vector<MlirType> elements_(elements.size());
@@ -135,7 +134,7 @@ struct StructType : PyConcreteType<StructType> {
             return std::nullopt;
 
           MlirStringRef stringRef = mlirLLVMStructTypeGetIdentifier(type);
-          return StringRef(stringRef.data, stringRef.length).str();
+          return std::string(stringRef.data, stringRef.length);
         });
 
     c.def_prop_ro("body", [](const StructType &type) -> nb::object {

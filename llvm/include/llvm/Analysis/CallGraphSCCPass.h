@@ -111,18 +111,13 @@ public:
   const CallGraph &getCallGraph() { return CG; }
 };
 
-LLVM_ABI void initializeDummyCGSCCPassPass(PassRegistry &);
-
 /// This pass is required by interprocedural register allocation. It forces
 /// codegen to follow bottom up order on call graph.
 class DummyCGSCCPass : public CallGraphSCCPass {
 public:
   LLVM_ABI static char ID;
 
-  DummyCGSCCPass() : CallGraphSCCPass(ID) {
-    PassRegistry &Registry = *PassRegistry::getPassRegistry();
-    initializeDummyCGSCCPassPass(Registry);
-  }
+  DummyCGSCCPass() : CallGraphSCCPass(ID) {}
 
   bool runOnSCC(CallGraphSCC &SCC) override { return false; }
 

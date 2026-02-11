@@ -117,8 +117,8 @@ protected:
 #    include <__assert>
 #    include <__fwd/streambuf.h>
 #    include <__locale>
+#    include <__memory/valid_range.h>
 #    include <__type_traits/is_same.h>
-#    include <__utility/is_valid_range.h>
 #    include <__utility/scope_guard.h>
 #    include <climits>
 #    include <ios>
@@ -150,35 +150,35 @@ public:
   virtual ~basic_streambuf() {}
 
   // 27.6.2.2.1 locales:
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 locale pubimbue(const locale& __loc) {
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 locale pubimbue(const locale& __loc) {
     imbue(__loc);
     locale __r = __loc_;
     __loc_     = __loc;
     return __r;
   }
 
-  [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 locale getloc() const { return __loc_; }
+  [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 locale getloc() const { return __loc_; }
 
   // 27.6.2.2.2 buffer and positioning:
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 basic_streambuf* pubsetbuf(char_type* __s, streamsize __n) {
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 basic_streambuf* pubsetbuf(char_type* __s, streamsize __n) {
     return setbuf(__s, __n);
   }
 
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 pos_type
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 pos_type
   pubseekoff(off_type __off, ios_base::seekdir __way, ios_base::openmode __which = ios_base::in | ios_base::out) {
     return seekoff(__off, __way, __which);
   }
 
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 pos_type
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 pos_type
   pubseekpos(pos_type __sp, ios_base::openmode __which = ios_base::in | ios_base::out) {
     return seekpos(__sp, __which);
   }
 
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 int pubsync() { return sync(); }
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 int pubsync() { return sync(); }
 
   // Get and put areas:
   // 27.6.2.2.3 Get area:
-  [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 streamsize in_avail() {
+  [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 streamsize in_avail() {
     __check_invariants();
     auto __guard = std::__make_scope_guard([this] { this->__check_invariants(); });
 
@@ -187,7 +187,7 @@ public:
     return showmanyc();
   }
 
-  [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 int_type snextc() {
+  [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 int_type snextc() {
     __check_invariants();
     auto __guard = std::__make_scope_guard([this] { this->__check_invariants(); });
 
@@ -196,7 +196,7 @@ public:
     return sgetc();
   }
 
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 int_type sbumpc() {
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 int_type sbumpc() {
     __check_invariants();
     auto __guard = std::__make_scope_guard([this] { this->__check_invariants(); });
 
@@ -207,7 +207,7 @@ public:
     return __c;
   }
 
-  [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 int_type sgetc() {
+  [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 int_type sgetc() {
     __check_invariants();
     auto __guard = std::__make_scope_guard([this] { this->__check_invariants(); });
 
@@ -216,10 +216,10 @@ public:
     return traits_type::to_int_type(*gptr());
   }
 
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 streamsize sgetn(char_type* __s, streamsize __n) { return xsgetn(__s, __n); }
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 streamsize sgetn(char_type* __s, streamsize __n) { return xsgetn(__s, __n); }
 
   // 27.6.2.2.4 Putback:
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 int_type sputbackc(char_type __c) {
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 int_type sputbackc(char_type __c) {
     __check_invariants();
     auto __guard = std::__make_scope_guard([this] { this->__check_invariants(); });
 
@@ -229,7 +229,7 @@ public:
     return traits_type::to_int_type(*gptr());
   }
 
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 int_type sungetc() {
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 int_type sungetc() {
     __check_invariants();
     auto __guard = std::__make_scope_guard([this] { this->__check_invariants(); });
 
@@ -240,7 +240,7 @@ public:
   }
 
   // 27.6.2.2.5 Put area:
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 int_type sputc(char_type __c) {
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 int_type sputc(char_type __c) {
     __check_invariants();
     auto __guard = std::__make_scope_guard([this] { this->__check_invariants(); });
 
@@ -251,7 +251,7 @@ public:
     return traits_type::to_int_type(__c);
   }
 
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 streamsize sputn(const char_type* __s, streamsize __n) {
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 streamsize sputn(const char_type* __s, streamsize __n) {
     return xsputn(__s, __n);
   }
 
@@ -292,12 +292,12 @@ protected:
   _LIBCPP_HIDE_FROM_ABI char_type* gptr() const { return __ninp_; }
   _LIBCPP_HIDE_FROM_ABI char_type* egptr() const { return __einp_; }
 
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 void gbump(int __n) { __ninp_ += __n; }
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 void gbump(int __n) { __ninp_ += __n; }
 
   // gbump takes an int, so it might not be able to represent the offset we want to add.
   _LIBCPP_HIDE_FROM_ABI void __gbump_ptrdiff(ptrdiff_t __n) { __ninp_ += __n; }
 
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 void setg(char_type* __gbeg, char_type* __gnext, char_type* __gend) {
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 void setg(char_type* __gbeg, char_type* __gnext, char_type* __gend) {
     _LIBCPP_ASSERT_VALID_INPUT_RANGE(std::__is_valid_range(__gbeg, __gnext), "[gbeg, gnext) must be a valid range");
     _LIBCPP_ASSERT_VALID_INPUT_RANGE(std::__is_valid_range(__gbeg, __gend), "[gbeg, gend) must be a valid range");
     _LIBCPP_ASSERT_VALID_INPUT_RANGE(std::__is_valid_range(__gnext, __gend), "[gnext, gend) must be a valid range");
@@ -311,11 +311,11 @@ protected:
   _LIBCPP_HIDE_FROM_ABI char_type* pptr() const { return __nout_; }
   _LIBCPP_HIDE_FROM_ABI char_type* epptr() const { return __eout_; }
 
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 void pbump(int __n) { __nout_ += __n; }
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 void pbump(int __n) { __nout_ += __n; }
 
   _LIBCPP_HIDE_FROM_ABI void __pbump(streamsize __n) { __nout_ += __n; }
 
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 void setp(char_type* __pbeg, char_type* __pend) {
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 void setp(char_type* __pbeg, char_type* __pend) {
     _LIBCPP_ASSERT_VALID_INPUT_RANGE(std::__is_valid_range(__pbeg, __pend), "[pbeg, pend) must be a valid range");
     __bout_ = __nout_ = __pbeg;
     __eout_           = __pend;
