@@ -1,5 +1,4 @@
-//===-- include/flang-rt/runtime/type-info-cache.h ----------------*- C++
-//-*-===//
+//===-- include/flang-rt/runtime/type-info-cache.h --------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +9,9 @@
 // Cache for concrete PDT (Parameterized Derived Type) instantiations.
 //
 // For types with LEN parameters, layout depends on runtime values. This cache
-// stores resolved "concrete types" keyed by (generic_type, len_values...) so
-// that all instances with identical LEN values share the same type description.
+// stores resolved "concrete types" keyed by (generic_type, len_values...)
+// so that all instances with identical LEN values share the same type
+// description.
 //
 //===----------------------------------------------------------------------===//
 
