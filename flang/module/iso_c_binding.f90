@@ -20,6 +20,7 @@ module iso_c_binding
     c_null_ptr => __builtin_c_null_ptr, &
     c_ptr => __builtin_c_ptr, &
     c_sizeof => sizeof, &
+    f_c_string => __builtin_f_c_string, &
     operator(==), operator(/=)
 
   implicit none
@@ -29,7 +30,7 @@ module iso_c_binding
   private
 
   public :: c_associated, c_funloc, c_funptr, c_f_pointer, c_loc, &
-    c_null_funptr, c_null_ptr, c_ptr, c_sizeof, &
+    c_null_funptr, c_null_ptr, c_ptr, c_sizeof, f_c_string, &
     operator(==), operator(/=)
 
   ! Table 18.2 (in clause 18.3.1)
