@@ -162,12 +162,14 @@ invoke(FnT &&Fn, ArgsT &&...Args) { // NOLINT(readability-identifier-naming)
 /// Check if elements in a range \p R are sorted with respect to a comparator \p
 /// C. constexpr allows use in static_assert
 /// TODO: Use std::is_sorted once upgraded to C++20 since that becomes constexpr
-template <typename It, typename Cmp = std::less<>>
-constexpr bool is_sorted_constexpr(It First, It Last, Cmp C = Cmp{}) {
+template <typename R, typename Cmp = std::less<>>
+constexpr bool is_sorted_constexpr(R &&Range, Cmp C = Cmp{}) {
+  auto First = adl_begin(Range);
+  auto Last = adl_end(Range);
   if (First == Last)
     return true;
-  It Prev = First;
-  for (It I = std::next(First); I != Last; ++I) {
+  auto Prev = First;
+  for (auto I = std::next(First); I != Last; ++I) {
     if (C(*I, *Prev))
       return false;
     Prev = I;

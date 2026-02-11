@@ -1939,31 +1939,27 @@ TEST(STLExtrasTest, AdjacentFind) {
 
 // Compile-time tests for llvm::is_sorted_constexpr
 static constexpr std::array<int, 0> CEmpty{};
-static_assert(is_sorted_constexpr(CEmpty.begin(), CEmpty.end()),
-              "Empty range should be sorted");
+static_assert(is_sorted_constexpr(CEmpty), "Empty range should be sorted");
 
 static constexpr std::array<int, 1> CSingle{{42}};
-static_assert(is_sorted_constexpr(CSingle.begin(), CSingle.end()),
+static_assert(is_sorted_constexpr(CSingle),
               "Single element range should be sorted");
-static_assert(is_sorted_constexpr(CSingle.begin(), CSingle.end(),
-                                  std::greater<>()),
+static_assert(is_sorted_constexpr(CSingle, std::greater<>()),
               "Single element range should be sorted with std::greater");
 
 static constexpr std::array<int, 5> CSorted{{1, 2, 2, 3, 5}};
-static_assert(is_sorted_constexpr(CSorted.begin(), CSorted.end()),
+static_assert(is_sorted_constexpr(CSorted),
               "Non-descending order with duplicates should be sorted");
-static_assert(is_sorted_constexpr(CSorted.begin(), CSorted.end(),
-                                  std::less<>()),
+static_assert(is_sorted_constexpr(CSorted, std::less<>()),
               "Explicit std::less non-descending order should be sorted");
-static_assert(!is_sorted_constexpr(CSorted.begin(), CSorted.end(),
-                                   std::greater<>()),
+static_assert(!is_sorted_constexpr(CSorted, std::greater<>()),
               "Non-descending order should not be sorted by std::greater");
 
 static constexpr std::array<int, 5> CUnsorted{{1, 3, 2, 4, 5}};
-static_assert(!is_sorted_constexpr(CUnsorted.begin(), CUnsorted.end()),
+static_assert(!is_sorted_constexpr(CUnsorted),
               "Unsorted range should not be sorted");
 
 static constexpr std::array<int, 5> CDesc{{9, 7, 7, 3, 0}};
-static_assert(is_sorted_constexpr(CDesc.begin(), CDesc.end(), std::greater<>()),
+static_assert(is_sorted_constexpr(CDesc, std::greater<>()),
               "Non-ascending order with std::greater should be sorted");
 } // namespace
