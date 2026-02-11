@@ -116,6 +116,7 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
   # ShadowCallStack does not yet provide a runtime with compiler-rt, the tests
   # include their own minimal runtime
   add_subdirectory(shadowcallstack)
+  add_subdirectory(pfp)
 endif()
 
 # Now that we've traversed all the directories and know all the lit testsuites,
