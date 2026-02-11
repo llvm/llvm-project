@@ -101,8 +101,8 @@ public:
 
     switch (ISD) {
     default:
-      return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                           Op2Info);
+      return BaseT::getArithmeticInstrCostImpl(Opcode, Ty, CostKind, Op1Info,
+                                               Op2Info);
     case ISD::MUL:
     case ISD::SDIV:
     case ISD::UDIV:
@@ -112,8 +112,8 @@ public:
       // instruction cost was arbitrarily chosen to reduce the desirability
       // of emitting arithmetic instructions that are emulated in software.
       // TODO: Investigate the performance impact given specialized lowerings.
-      return 64 * BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                                Op2Info);
+      return 64 * BaseT::getArithmeticInstrCostImpl(Opcode, Ty, CostKind,
+                                                    Op1Info, Op2Info);
     }
   }
 };

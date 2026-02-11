@@ -138,7 +138,7 @@ public:
   getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override;
   unsigned getLoadStoreVecRegBitWidth(unsigned AS) const override;
   unsigned getMaxInterleaveFactor(ElementCount VF) const override;
-  InstructionCost getArithmeticInstrCost(
+  InstructionCost getArithmeticInstrCostImpl(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},

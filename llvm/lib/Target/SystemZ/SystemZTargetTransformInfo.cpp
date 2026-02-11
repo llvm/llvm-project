@@ -546,8 +546,8 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
 
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info, Args, CxtI);
+    return BaseT::getArithmeticInstrCostImpl(Opcode, Ty, CostKind, Op1Info,
+                                             Op2Info, Args, CxtI);
 
   // TODO: return a good value for BB-VECTORIZER that includes the
   // immediate loads, which we do not want to count for the loop
@@ -720,8 +720,8 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
   }
 
   // Fallback to the default implementation.
-  return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                       Args, CxtI);
+  return BaseT::getArithmeticInstrCostImpl(Opcode, Ty, CostKind, Op1Info,
+                                           Op2Info, Args, CxtI);
 }
 
 InstructionCost
