@@ -2290,7 +2290,7 @@ public:
   using SliceableT = Sliceable<PyOpOperandList, PyOpOperand>;
 
   PyOpOperands(PyOperationRef operation, intptr_t startIndex = 0,
-                    intptr_t length = -1, intptr_t step = 1)
+               intptr_t length = -1, intptr_t step = 1)
       : Sliceable(startIndex,
                   length == -1 ? mlirOperationGetNumOperands(operation->get())
                                : length,

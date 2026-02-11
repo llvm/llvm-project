@@ -319,9 +319,7 @@ def OpValParamInParamOpValOutTransformOpInterface():
         def allow_repeated_handle_operands(_op: OpValParamInParamOpValOut) -> bool:
             return False
 
-    TransformOpInterfaceFallbackModel.attach(
-        OpValParamInParamOpValOut.OPERATION_NAME
-    )
+    TransformOpInterfaceFallbackModel.attach(OpValParamInParamOpValOut.OPERATION_NAME)
 
     # TransformOpInterface-implementing ops are also required to implement MemoryEffectsOpInterface. The above defined fallback model works for this op.
     MemoryEffectsOpInterfaceFallbackModel.attach(
