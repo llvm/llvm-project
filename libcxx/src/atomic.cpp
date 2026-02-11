@@ -100,8 +100,7 @@ template <std::size_t _Size>
 static void __platform_wait_on_address(void const* __ptr, void const* __val, uint64_t __timeout_ns) {
   static_assert(_Size == 8 || _Size == 4, "Can only wait on 8 bytes or 4 bytes value");
   auto __timeout_us = __timeout_ns == 0 ? 0 : static_cast<uint32_t>(__timeout_ns / 1000);
-  if constexpr (_Size == 4)
-  {
+  if constexpr (_Size == 4) {
     alignas(uint32_t) char buffer[_Size];
     std::memcpy(&buffer, const_cast<const void*>(__val), _Size);
     __ulock_wait(
