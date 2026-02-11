@@ -1848,6 +1848,10 @@ void OperationFormat::genParserOperandTypeResolution(
   // separately.
   for (unsigned i = 0, e = op.getNumOperands(); i != e; ++i) {
     NamedTypeConstraint &operand = op.getOperand(i);
+    // Optional operands may not be present; guard resolution to avoid
+    // out-of-bounds access on the (potentially empty) types vector.
+    if (operand.isOptional())
+      body << "  if (!" << operand.name << "Operands.empty()) {\n";
     body << "  if (parser.resolveOperands(" << operand.name << "Operands, ";
 
     // Resolve the type of this operand.
@@ -1856,6 +1860,8 @@ void OperationFormat::genParserOperandTypeResolution(
 
     body << ", " << operand.name
          << "OperandsLoc, result.operands))\n    return ::mlir::failure();\n";
+    if (operand.isOptional())
+      body << "  }\n";
   }
 }
 

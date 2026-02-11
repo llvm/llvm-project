@@ -667,6 +667,17 @@ def FormatTypesMatchContextOp : TEST_Op<"format_types_match_context", [
   let assemblyFormat = "attr-dict $value `:` type($value)";
 }
 
+def FormatTypesMatchOptionalOp : TEST_Op<"format_types_match_optional", [
+    OptionalTypesMatchWith<"optional type matches result", 
+                           "result", "optional", "$_self">
+  ]> {
+  let arguments = (ins Optional<AnyType>:$optional);
+  let results = (outs Optional<AnyType>:$result);
+  let assemblyFormat = [{
+    (`(` $optional^ `:` type($result) `)`)? attr-dict
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // InferTypeOpInterface type inference in assembly format
 //===----------------------------------------------------------------------===//

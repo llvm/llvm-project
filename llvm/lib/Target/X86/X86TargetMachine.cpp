@@ -578,7 +578,7 @@ void X86PassConfig::addPreEmitPass() {
     addPass(createX86FixupVectorConstantsLegacyPass());
   }
   addPass(createX86CompressEVEXLegacyPass());
-  addPass(createX86InsertX87waitPass());
+  addPass(createX86InsertX87WaitLegacyPass());
 }
 
 void X86PassConfig::addPreEmitPass2() {
