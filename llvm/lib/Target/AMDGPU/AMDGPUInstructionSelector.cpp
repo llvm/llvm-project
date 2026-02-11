@@ -5856,8 +5856,9 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
                                       AMDGPUAS::GLOBAL_ADDRESS,
                                       SIInstrFlags::FlatGlobal)) {
               // If the MSB of the first operand of the addition is known to be
-              // zero, which is followed by zext, we are sure overflow would not
-              // happen for the addition.
+              // zero, which is followed by zext, this makes sure:
+              // a.) for unsigned VOffset, no overflow would happen.
+              // b.) for signed VOffset, the value can be properly encoded.
               if (matchZeroExtendFromS32OrS32(PtrBaseOffset) &&
                   VT->signBitIsZero(VOffsetDef->getOperand(1).getReg())) {
                 VOffset = VOffsetDef->getOperand(1).getReg();
