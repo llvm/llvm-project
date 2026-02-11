@@ -20,6 +20,7 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
 
+#include "lldb/DataFormatters/FormatterBytecode.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/ValueObject/ValueObject.h"
 
@@ -474,6 +475,56 @@ private:
   const ScriptedSyntheticChildren &
   operator=(const ScriptedSyntheticChildren &) = delete;
 };
+
+/// A synthetic formatter that is defined in LLDB formmater bytecode.
+///
+/// See `BytecodeSummaryFormat` for the corresponding summary formatter.
+///
+/// Formatter bytecode documentation can be found in
+/// lldb/docs/resources/formatterbytecode.rst
+class BytecodeSyntheticChildren : public SyntheticChildren {
+public:
+  struct SyntheticBytecodeImplementation {
+    std::unique_ptr<llvm::MemoryBuffer> init;
+    std::unique_ptr<llvm::MemoryBuffer> update;
+    std::unique_ptr<llvm::MemoryBuffer> num_children;
+    std::unique_ptr<llvm::MemoryBuffer> get_child_at_index;
+    std::unique_ptr<llvm::MemoryBuffer> get_child_index;
+  };
+
+private:
+  class FrontEnd : public SyntheticChildrenFrontEnd {
+  public:
+    FrontEnd(ValueObject &backend, SyntheticBytecodeImplementation &impl);
+
+    lldb::ChildCacheState Update() override;
+    llvm::Expected<uint32_t> CalculateNumChildren() override;
+    lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
+    llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+
+  private:
+    const SyntheticBytecodeImplementation &m_impl;
+    FormatterBytecode::DataStack m_self;
+  };
+
+public:
+  BytecodeSyntheticChildren(SyntheticBytecodeImplementation &&impl)
+      : SyntheticChildren({}), m_impl(std::move(impl)) {}
+
+  bool IsScripted() override { return false; }
+
+  std::string GetDescription() override;
+
+  SyntheticChildrenFrontEnd::UniquePointer
+  GetFrontEnd(ValueObject &backend) override {
+    return SyntheticChildrenFrontEnd::UniquePointer(
+        new FrontEnd(backend, m_impl));
+  }
+
+private:
+  SyntheticBytecodeImplementation m_impl;
+};
+
 } // namespace lldb_private
 
 #endif // LLDB_DATAFORMATTERS_TYPESYNTHETIC_H

@@ -211,9 +211,6 @@ define amdgpu_ps void @vcc_to_scc(float inreg %a, i32 inreg %b, i32 inreg %c, pt
 ; NEW_RBS:       ; %bb.0:
 ; NEW_RBS-NEXT:    v_cmp_eq_f32_e64 s0, s0, 0
 ; NEW_RBS-NEXT:    s_cmp_lg_u32 s0, 0
-; NEW_RBS-NEXT:    s_cselect_b32 s0, 1, 0
-; NEW_RBS-NEXT:    s_and_b32 s0, s0, 1
-; NEW_RBS-NEXT:    s_cmp_lg_u32 s0, 0
 ; NEW_RBS-NEXT:    s_cselect_b32 s0, s1, s2
 ; NEW_RBS-NEXT:    v_mov_b32_e32 v2, s0
 ; NEW_RBS-NEXT:    global_store_dword v[0:1], v2, off
