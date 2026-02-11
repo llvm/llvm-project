@@ -170,3 +170,6 @@ constexpr int invalidUnaryOrTypeTrait() {
 }
 
 static_assert(invalidUnaryOrTypeTrait() == 11, ""); // both-error {{not an integral constant expression}}
+
+/// Pointer::toRValue() of a function type.
+void foo() { *(void (*)()) ""; } // both-warning {{expression result unused}}
