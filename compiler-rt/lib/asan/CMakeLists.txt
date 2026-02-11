@@ -59,13 +59,10 @@ set(ASAN_CXX_SOURCES
 
 set(ASAN_STATIC_SOURCES
   asan_rtl_static.cpp
+  # Note that only x86_64 targets using a constant shadow offset use functions
+  # in this, but that's gated via macro checks in the file itself.
+  asan_rtl_x86_64.S
   )
-
-if ("x86_64" IN_LIST ASAN_SUPPORTED_ARCH AND NOT WIN32 AND NOT APPLE)
-  list(APPEND ASAN_STATIC_SOURCES
-    asan_rtl_x86_64.S
-  )
-endif()
 
 set(ASAN_PREINIT_SOURCES
   asan_preinit.cpp
