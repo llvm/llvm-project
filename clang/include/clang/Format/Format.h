@@ -2450,9 +2450,75 @@ struct FormatStyle {
     BBO_RespectPrecedence
   };
 
+  /// A rule that specifies how to break a specific set of binary operators.
+  /// \version 23
+  struct BinaryOperationBreakRule {
+    /// The list of operator tokens this rule applies to,
+    /// e.g. ``["&&", "||"]``.
+    std::vector<std::string> Operators;
+    /// The break style for these operators (defaults to ``OnePerLine``).
+    BreakBinaryOperationsStyle Style;
+    /// Minimum number of chained operators before the rule triggers.
+    /// ``0`` means always break (when the line is too long).
+    unsigned MinChainLength;
+    bool operator==(const BinaryOperationBreakRule &R) const {
+      return Operators == R.Operators && Style == R.Style &&
+             MinChainLength == R.MinChainLength;
+    }
+    bool operator!=(const BinaryOperationBreakRule &R) const {
+      return !(*this == R);
+    }
+  };
+
+  /// Options for ``BreakBinaryOperations``.
+  ///
+  /// If specified as a simple string (e.g. ``OnePerLine``), it behaves like
+  /// the original enum and applies to all binary operators.
+  ///
+  /// If specified as a struct, allows per-operator configuration:
+  /// \code{.yaml}
+  ///   BreakBinaryOperations:
+  ///     Default: Never
+  ///     PerOperator:
+  ///       - Operators: ['&&', '||']
+  ///         Style: OnePerLine
+  ///         MinChainLength: 3
+  /// \endcode
+  /// \version 23
+  struct BreakBinaryOperationsOptions {
+    /// The default break style for operators not covered by ``PerOperator``.
+    BreakBinaryOperationsStyle Default;
+    /// Per-operator override rules.
+    std::vector<BinaryOperationBreakRule> PerOperator;
+    const BinaryOperationBreakRule *findRuleForOperator(StringRef Op) const {
+      for (const auto &Rule : PerOperator) {
+        for (const auto &O : Rule.Operators)
+          if (O == Op)
+            return &Rule;
+      }
+      return nullptr;
+    }
+    BreakBinaryOperationsStyle getStyleForOperator(StringRef Op) const {
+      if (const auto *Rule = findRuleForOperator(Op))
+        return Rule->Style;
+      return Default;
+    }
+    unsigned getMinChainLengthForOperator(StringRef Op) const {
+      if (const auto *Rule = findRuleForOperator(Op))
+        return Rule->MinChainLength;
+      return 0;
+    }
+    bool operator==(const BreakBinaryOperationsOptions &R) const {
+      return Default == R.Default && PerOperator == R.PerOperator;
+    }
+    bool operator!=(const BreakBinaryOperationsOptions &R) const {
+      return !(*this == R);
+    }
+  };
+
   /// The break binary operations style to use.
   /// \version 20
-  BreakBinaryOperationsStyle BreakBinaryOperations;
+  BreakBinaryOperationsOptions BreakBinaryOperations;
 
   /// Different ways to break initializers.
   enum BreakConstructorInitializersStyle : int8_t {

@@ -3613,42 +3613,66 @@ the configuration (without a prefix: ``Auto``).
 
 .. _BreakBinaryOperations:
 
-**BreakBinaryOperations** (``BreakBinaryOperationsStyle``) :versionbadge:`clang-format 20` :ref:`¶ <BreakBinaryOperations>`
+**BreakBinaryOperations** (``BreakBinaryOperationsOptions``) :versionbadge:`clang-format 20` :ref:`¶ <BreakBinaryOperations>`
   The break binary operations style to use.
 
-  Possible values:
+  Nested configuration flags:
 
-  * ``BBO_Never`` (in configuration: ``Never``)
-    Don't break binary operations
+  Options for ``BreakBinaryOperations``.
 
-    .. code-block:: c++
+  If specified as a simple string (e.g. ``OnePerLine``), it behaves like
+  the original enum and applies to all binary operators.
 
-       aaa + bbbb * ccccc - ddddd +
-       eeeeeeeeeeeeeeee;
+  If specified as a struct, allows per-operator configuration:
 
-  * ``BBO_OnePerLine`` (in configuration: ``OnePerLine``)
-    Binary operations will either be all on the same line, or each operation
-    will have one line each.
+  .. code-block:: yaml
 
-    .. code-block:: c++
+    BreakBinaryOperations:
+      Default: Never
+      PerOperator:
+        - Operators: ['&&', '||']
+          Style: OnePerLine
+          MinChainLength: 3
 
-       aaa +
-       bbbb *
-       ccccc -
-       ddddd +
-       eeeeeeeeeeeeeeee;
+  * ``BreakBinaryOperationsStyle Default`` :versionbadge:`clang-format 23`
 
-  * ``BBO_RespectPrecedence`` (in configuration: ``RespectPrecedence``)
-    Binary operations of a particular precedence that exceed the column
-    limit will have one line each.
+    The default break style for operators not covered by ``PerOperator``.
 
-    .. code-block:: c++
+    Possible values:
 
-       aaa +
-       bbbb * ccccc -
-       ddddd +
-       eeeeeeeeeeeeeeee;
+    * ``BBO_Never`` (in configuration: ``Never``)
+      Don't break binary operations
 
+      .. code-block:: c++
+
+         aaa + bbbb * ccccc - ddddd +
+         eeeeeeeeeeeeeeee;
+
+    * ``BBO_OnePerLine`` (in configuration: ``OnePerLine``)
+      Binary operations will either be all on the same line, or each operation
+      will have one line each.
+
+      .. code-block:: c++
+
+         aaa +
+         bbbb *
+         ccccc -
+         ddddd +
+         eeeeeeeeeeeeeeee;
+
+    * ``BBO_RespectPrecedence`` (in configuration: ``RespectPrecedence``)
+      Binary operations of a particular precedence that exceed the column
+      limit will have one line each.
+
+      .. code-block:: c++
+
+         aaa +
+         bbbb * ccccc -
+         ddddd +
+         eeeeeeeeeeeeeeee;
+
+
+  * ``std::vector<BinaryOperationBreakRule> PerOperator`` Per-operator override rules.
 
 
 .. _BreakConstructorInitializers:

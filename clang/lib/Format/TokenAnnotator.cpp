@@ -3276,14 +3276,22 @@ public:
       parse(Precedence + 1);
 
       int CurrentPrecedence = getCurrentPrecedence();
-      if (Style.BreakBinaryOperations == FormatStyle::BBO_OnePerLine &&
-          CurrentPrecedence > prec::Conditional &&
+      if (CurrentPrecedence > prec::Conditional &&
           CurrentPrecedence < prec::PointerToMember) {
-        // When BreakBinaryOperations is set to BreakAll,
-        // all operations will be on the same line or on individual lines.
-        // Override precedence to avoid adding fake parenthesis which could
-        // group operations of a different precedence level on the same line
-        CurrentPrecedence = prec::Additive;
+        // Check whether this operator's effective style is OnePerLine.
+        // If so, override precedence to avoid adding fake parenthesis which
+        // could group operations of a different precedence level on the same
+        // line.
+        auto EffStyle = Style.BreakBinaryOperations.Default;
+        if (Current) {
+          if (const auto *Rule =
+                  Style.BreakBinaryOperations.findRuleForOperator(
+                      Current->TokenText)) {
+            EffStyle = Rule->Style;
+          }
+        }
+        if (EffStyle == FormatStyle::BBO_OnePerLine)
+          CurrentPrecedence = prec::Additive;
       }
 
       if (Precedence == CurrentPrecedence && Current &&

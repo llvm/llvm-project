@@ -453,13 +453,41 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("BreakBeforeBinaryOperators: true", BreakBeforeBinaryOperators,
               FormatStyle::BOS_All);
 
-  Style.BreakBinaryOperations = FormatStyle::BBO_Never;
+  Style.BreakBinaryOperations = {FormatStyle::BBO_Never, {}};
   CHECK_PARSE("BreakBinaryOperations: OnePerLine", BreakBinaryOperations,
-              FormatStyle::BBO_OnePerLine);
+              FormatStyle::BreakBinaryOperationsOptions(
+                  {FormatStyle::BBO_OnePerLine, {}}));
   CHECK_PARSE("BreakBinaryOperations: RespectPrecedence", BreakBinaryOperations,
-              FormatStyle::BBO_RespectPrecedence);
-  CHECK_PARSE("BreakBinaryOperations: Never", BreakBinaryOperations,
-              FormatStyle::BBO_Never);
+              FormatStyle::BreakBinaryOperationsOptions(
+                  {FormatStyle::BBO_RespectPrecedence, {}}));
+  CHECK_PARSE(
+      "BreakBinaryOperations: Never", BreakBinaryOperations,
+      FormatStyle::BreakBinaryOperationsOptions({FormatStyle::BBO_Never, {}}));
+
+  // Structured form
+  Style.BreakBinaryOperations = {FormatStyle::BBO_Never, {}};
+  CHECK_PARSE("BreakBinaryOperations:\n"
+              "  Default: OnePerLine",
+              BreakBinaryOperations,
+              FormatStyle::BreakBinaryOperationsOptions(
+                  {FormatStyle::BBO_OnePerLine, {}}));
+
+  Style.BreakBinaryOperations = {FormatStyle::BBO_Never, {}};
+  EXPECT_EQ(0, parseConfiguration("BreakBinaryOperations:\n"
+                                  "  Default: Never\n"
+                                  "  PerOperator:\n"
+                                  "    - Operators: ['&&', '||']\n"
+                                  "      Style: OnePerLine\n"
+                                  "      MinChainLength: 3",
+                                  &Style)
+                   .value());
+  EXPECT_EQ(Style.BreakBinaryOperations.Default, FormatStyle::BBO_Never);
+  ASSERT_EQ(Style.BreakBinaryOperations.PerOperator.size(), 1u);
+  std::vector<std::string> ExpectedOps = {"&&", "||"};
+  EXPECT_EQ(Style.BreakBinaryOperations.PerOperator[0].Operators, ExpectedOps);
+  EXPECT_EQ(Style.BreakBinaryOperations.PerOperator[0].Style,
+            FormatStyle::BBO_OnePerLine);
+  EXPECT_EQ(Style.BreakBinaryOperations.PerOperator[0].MinChainLength, 3u);
 
   Style.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
   CHECK_PARSE("BreakConstructorInitializers: BeforeComma",

@@ -28403,7 +28403,9 @@ TEST_F(FormatTest, SpaceBetweenKeywordAndLiteral) {
 
 TEST_F(FormatTest, BreakBinaryOperations) {
   auto Style = getLLVMStyleWithColumns(60);
-  EXPECT_EQ(Style.BreakBinaryOperations, FormatStyle::BBO_Never);
+  FormatStyle::BreakBinaryOperationsOptions ExpectedDefault = {
+      FormatStyle::BBO_Never, {}};
+  EXPECT_EQ(Style.BreakBinaryOperations, ExpectedDefault);
 
   // Logical operations
   verifyFormat("if (condition1 && condition2) {\n"
@@ -28442,7 +28444,7 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "    longOperand_3_;",
                Style);
 
-  Style.BreakBinaryOperations = FormatStyle::BBO_OnePerLine;
+  Style.BreakBinaryOperations = {FormatStyle::BBO_OnePerLine, {}};
 
   // Logical operations
   verifyFormat("if (condition1 && condition2) {\n"
@@ -28527,7 +28529,7 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "    longOperand_3_;",
                Style);
 
-  Style.BreakBinaryOperations = FormatStyle::BBO_RespectPrecedence;
+  Style.BreakBinaryOperations = {FormatStyle::BBO_RespectPrecedence, {}};
   verifyFormat("result = op1 + op2 * op3 - op4;", Style);
 
   verifyFormat("result = operand1 +\n"
@@ -28559,7 +28561,7 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "    longOperand_3_;",
                Style);
 
-  Style.BreakBinaryOperations = FormatStyle::BBO_OnePerLine;
+  Style.BreakBinaryOperations = {FormatStyle::BBO_OnePerLine, {}};
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_NonAssignment;
 
   // Logical operations
@@ -28640,7 +28642,7 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "    >> longOperand_3_;",
                Style);
 
-  Style.BreakBinaryOperations = FormatStyle::BBO_RespectPrecedence;
+  Style.BreakBinaryOperations = {FormatStyle::BBO_RespectPrecedence, {}};
   verifyFormat("result = op1 + op2 * op3 - op4;", Style);
 
   verifyFormat("result = operand1\n"
@@ -28670,6 +28672,89 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "    >> longOperand_1\n"
                "    >> longOperand_2\n"
                "    >> longOperand_3_;",
+               Style);
+}
+
+TEST_F(FormatTest, BreakBinaryOperationsPerOperator) {
+  auto Style = getLLVMStyleWithColumns(60);
+
+  // Per-operator override: && and || are OnePerLine, rest is Never (default).
+  FormatStyle::BinaryOperationBreakRule LogicalRule;
+  LogicalRule.Operators = {"&&", "||"};
+  LogicalRule.Style = FormatStyle::BBO_OnePerLine;
+  LogicalRule.MinChainLength = 0;
+
+  Style.BreakBinaryOperations.Default = FormatStyle::BBO_Never;
+  Style.BreakBinaryOperations.PerOperator = {LogicalRule};
+
+  // Logical operators break one-per-line when line is too long.
+  verifyFormat("bool x = loooooooooooooongcondition1 &&\n"
+               "         loooooooooooooongcondition2 &&\n"
+               "         loooooooooooooongcondition3;",
+               Style);
+
+  // Arithmetic operators stay with default (Never) — no forced break.
+  verifyFormat("int x = loooooooooooooongop1 + looooooooongop2 +\n"
+               "        loooooooooooooooooooooongop3;",
+               Style);
+
+  // Short logical chain that fits on one line stays on one line.
+  verifyFormat("bool x = a && b && c;", Style);
+
+  // Multiple PerOperator groups: && and || plus | operators.
+  FormatStyle::BinaryOperationBreakRule BitwiseOrRule;
+  BitwiseOrRule.Operators = {"|"};
+  BitwiseOrRule.Style = FormatStyle::BBO_OnePerLine;
+  BitwiseOrRule.MinChainLength = 0;
+
+  Style.BreakBinaryOperations.PerOperator = {LogicalRule, BitwiseOrRule};
+
+  // | operators should break one-per-line.
+  verifyFormat("int x = loooooooooooooooooongval1 |\n"
+               "        loooooooooooooooooongval2 |\n"
+               "        loooooooooooooooooongval3;",
+               Style);
+
+  // && still works in multi-group configuration.
+  verifyFormat("bool x = loooooooooooooongcondition1 &&\n"
+               "         loooooooooooooongcondition2 &&\n"
+               "         loooooooooooooongcondition3;",
+               Style);
+
+  // + operators stay with default (Never) even with multi-group.
+  verifyFormat("int x = loooooooooooooongop1 + looooooooongop2 +\n"
+               "        loooooooooooooooooooooongop3;",
+               Style);
+}
+
+TEST_F(FormatTest, BreakBinaryOperationsMinChainLength) {
+  auto Style = getLLVMStyleWithColumns(60);
+
+  // MinChainLength = 3: chains shorter than 3 don't force breaks.
+  FormatStyle::BinaryOperationBreakRule LogicalRule;
+  LogicalRule.Operators = {"&&", "||"};
+  LogicalRule.Style = FormatStyle::BBO_OnePerLine;
+  LogicalRule.MinChainLength = 3;
+
+  Style.BreakBinaryOperations.Default = FormatStyle::BBO_Never;
+  Style.BreakBinaryOperations.PerOperator = {LogicalRule};
+
+  // Chain of 2 — should NOT force one-per-line (below MinChainLength).
+  verifyFormat("bool x = loooooooooooooongcondition1 &&\n"
+               "         loooooooooooooongcondition2;",
+               Style);
+
+  // Chain of 3 — should force one-per-line.
+  verifyFormat("bool x = loooooooooooooongcondition1 &&\n"
+               "         loooooooooooooongcondition2 &&\n"
+               "         loooooooooooooongcondition3;",
+               Style);
+
+  // Chain of 4 — should force one-per-line.
+  verifyFormat("bool x = looooooooooongcondition1 &&\n"
+               "         looooooooooongcondition2 &&\n"
+               "         looooooooooongcondition3 &&\n"
+               "         looooooooooongcondition4;",
                Style);
 }
 
