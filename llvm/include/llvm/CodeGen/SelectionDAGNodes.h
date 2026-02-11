@@ -435,7 +435,6 @@ public:
                             NonNeg | NoNaNs | NoInfs | SameSign | InBounds,
     FastMathFlags = NoNaNs | NoInfs | NoSignedZeros | AllowReciprocal |
                     AllowContract | ApproximateFuncs | AllowReassociation,
-
   };
 
   /// Default constructor turns off all optimization flags.
@@ -487,6 +486,7 @@ public:
   bool hasNoFPExcept() const { return Flags & NoFPExcept; }
   bool hasUnpredictable() const { return Flags & Unpredictable; }
   bool hasInBounds() const { return Flags & InBounds; }
+
   bool operator==(const SDNodeFlags &Other) const {
     return Flags == Other.Flags;
   }

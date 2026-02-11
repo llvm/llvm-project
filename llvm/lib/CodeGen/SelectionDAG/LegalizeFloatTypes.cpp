@@ -1572,7 +1572,7 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
   case ISD::POISON:
   case ISD::UNDEF:        SplitRes_UNDEF(N, Lo, Hi); break;
   case ISD::SELECT:       SplitRes_Select(N, Lo, Hi); break;
-  case ISD::CTSELECT:     SplitRes_Select(N, Lo, Hi); break;
+  case ISD::CTSELECT:     SplitRes_CTSELECT(N, Lo, Hi); break;
   case ISD::SELECT_CC:    SplitRes_SELECT_CC(N, Lo, Hi); break;
 
   case ISD::MERGE_VALUES:       ExpandRes_MERGE_VALUES(N, ResNo, Lo, Hi); break;
@@ -2930,7 +2930,7 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
       break;
     case ISD::SELECT:     R = PromoteFloatRes_SELECT(N); break;
     case ISD::CTSELECT:
-      R = PromoteFloatRes_SELECT(N);
+      R = PromoteFloatRes_CTSELECT(N);
       break;
     case ISD::SELECT_CC:  R = PromoteFloatRes_SELECT_CC(N); break;
 
@@ -3238,6 +3238,11 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_SELECT(SDNode *N) {
                      N->getOperand(0), TrueVal, FalseVal);
 }
 
+SDValue DAGTypeLegalizer::PromoteFloatRes_CTSELECT(SDNode *N) {
+  // Keep CTSELECT behavior aligned with SELECT promotion logic.
+  return PromoteFloatRes_SELECT(N);
+}
+
 // Construct a new SELECT_CC node with the promoted true- and false- values.
 // The operands used for comparison are promoted by PromoteFloatOp_SELECT_CC.
 SDValue DAGTypeLegalizer::PromoteFloatRes_SELECT_CC(SDNode *N) {
@@ -3419,7 +3424,7 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::SELECT:      R = SoftPromoteHalfRes_SELECT(N); break;
   case ISD::CTSELECT:
-    R = SoftPromoteHalfRes_SELECT(N);
+    R = SoftPromoteHalfRes_CTSELECT(N);
     break;
   case ISD::SELECT_CC:   R = SoftPromoteHalfRes_SELECT_CC(N); break;
   case ISD::STRICT_SINT_TO_FP:
@@ -3663,6 +3668,13 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_SELECT(SDNode *N) {
   SDValue Op2 = GetSoftPromotedHalf(N->getOperand(2));
   return DAG.getSelect(SDLoc(N), Op1.getValueType(), N->getOperand(0), Op1,
                        Op2);
+}
+
+SDValue DAGTypeLegalizer::SoftPromoteHalfRes_CTSELECT(SDNode *N) {
+  SDValue Op1 = GetSoftPromotedHalf(N->getOperand(1));
+  SDValue Op2 = GetSoftPromotedHalf(N->getOperand(2));
+  return DAG.getCTSelect(SDLoc(N), Op1.getValueType(), N->getOperand(0), Op1,
+                         Op2);
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_SELECT_CC(SDNode *N) {
