@@ -620,8 +620,11 @@ struct AsyncModuleCompile : PPCallbacks {
       return;
     // We should build the PCM.
     // FIXME: Pass the correct BaseFS to the worker FS.
-    auto VFS = llvm::makeIntrusiveRefCnt<DependencyScanningWorkerFilesystem>(
-        Service.getSharedCache(), llvm::vfs::getRealFileSystem());
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
+        llvm::makeIntrusiveRefCnt<DependencyScanningWorkerFilesystem>(
+            Service.getSharedCache(), llvm::vfs::getRealFileSystem());
+    VFS = createVFSFromCompilerInvocation(CI.getInvocation(),
+                                          CI.getDiagnostics(), std::move(VFS));
     auto DC = std::make_unique<DiagnosticConsumer>();
     auto MC = makeInProcessModuleCache(Service.getModuleCacheEntries());
     CompilerInstance::ThreadSafeCloneConfig CloneConfig(std::move(VFS), *DC,
