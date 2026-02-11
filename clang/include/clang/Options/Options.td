@@ -27,7 +27,7 @@ def GlobalDocumentation {
 #endif
 
 // Use this to generate program specific documentation, for example:
-// StringForProgram<"Control how %Program behaves.".str
+// StringForProgram<"Control how %Program behaves.">.str
 class StringForProgram<string _str> {
   string str = !subst("%Program", GlobalDocumentation.Program, _str);
 }
