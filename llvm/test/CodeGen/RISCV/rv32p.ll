@@ -337,7 +337,6 @@ define i64 @slli_i64(i64 %x) {
   ret i64 %a
 }
 
-; FIXME: Use nsrl
 define i64 @srl_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: srl_i64:
 ; CHECK:       # %bb.0:
@@ -364,7 +363,6 @@ define i64 @srli_i64(i64 %x) {
   ret i64 %a
 }
 
-; FIXME: Use nsra
 define i64 @sra_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: sra_i64:
 ; CHECK:       # %bb.0:
