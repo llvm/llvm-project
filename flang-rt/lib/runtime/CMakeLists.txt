@@ -12,6 +12,9 @@ find_package(Backtrace)
 set(HAVE_BACKTRACE ${Backtrace_FOUND})
 set(BACKTRACE_HEADER ${Backtrace_HEADER})
 
+# Include the RPC utilities from the `libc` project.
+include(FindLibcCommonUtils)
+
 # List of files that are buildable for all devices.
 set(supported_sources
   ${FLANG_SOURCE_DIR}/lib/Decimal/binary-to-decimal.cpp
@@ -90,6 +93,9 @@ set(host_sources
   time-intrinsic.cpp
   unit-map.cpp
 )
+if (TARGET llvm-libc-common-utilities)
+  list(APPEND host_sources io-api-server.cpp)
+endif()
 
 # Sources that can be compiled directly for the GPU.
 set(gpu_sources
@@ -137,6 +143,7 @@ set(gpu_sources
   reduce.cpp
   reduction.cpp
   temporary-stack.cpp
+  io-api-gpu.cpp
 )
 
 file(GLOB_RECURSE public_headers

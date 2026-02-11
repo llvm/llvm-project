@@ -17,6 +17,10 @@
 #include "shared/rpc_opcodes.h"
 #include "shared/rpc_server.h"
 
+#if __has_include("flang/Runtime/io-api.h")
+#include "flang/Runtime/io-api.h"
+#endif
+
 using namespace llvm;
 using namespace omp;
 using namespace target;
@@ -110,6 +114,12 @@ runServer(plugin::GenericDeviceTy &Device, void *Buffer,
 
   if (Status == rpc::RPC_UNHANDLED_OPCODE)
     Status = LIBC_NAMESPACE::shared::handle_libc_opcodes(*Port, NumLanes);
+
+#if __has_include("flang/Runtime/io-api.h")
+  if (Status == rpc::RPC_UNHANDLED_OPCODE)
+    Status = static_cast<rpc::Status>(
+        Fortran::runtime::io::IONAME(HandleRPCOpcodes)(&*Port, NumLanes));
+#endif
 
   return Status;
 }

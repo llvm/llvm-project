@@ -35,6 +35,10 @@ endif()
 include(FindLibcCommonUtils)
 target_link_libraries(PluginCommon PRIVATE llvm-libc-common-utilities)
 
+if (TARGET flang_rt.runtime.static)
+  target_link_libraries(PluginCommon PRIVATE flang_rt.runtime.static)
+endif()
+
 # Define the TARGET_NAME and DEBUG_PREFIX.
 target_compile_definitions(PluginCommon PRIVATE
   TARGET_NAME=PluginInterface
