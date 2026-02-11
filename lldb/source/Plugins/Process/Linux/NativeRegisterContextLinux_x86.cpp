@@ -1,4 +1,4 @@
-//===-- NativeRegisterContextLinux_x86_64.cpp -----------------------------===//
+//===-- NativeRegisterContextLinux_x86.cpp --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,7 @@
 
 #if defined(__i386__) || defined(__x86_64__)
 
-#include "NativeRegisterContextLinux_x86_64.h"
+#include "NativeRegisterContextLinux_x86.h"
 #include "Plugins/Process/Linux/NativeThreadLinux.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_i386.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_x86_64.h"
@@ -253,7 +253,7 @@ std::unique_ptr<NativeRegisterContextLinux>
 NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
     const ArchSpec &target_arch, NativeThreadLinux &native_thread) {
   return std::unique_ptr<NativeRegisterContextLinux>(
-      new NativeRegisterContextLinux_x86_64(target_arch, native_thread));
+      new NativeRegisterContextLinux_x86(target_arch, native_thread));
 }
 
 llvm::Expected<ArchSpec>
@@ -262,7 +262,7 @@ NativeRegisterContextLinux::DetermineArchitecture(lldb::tid_t tid) {
       tid, RegisterContextLinux_x86_64::GetGPRSizeStatic());
 }
 
-// NativeRegisterContextLinux_x86_64 members.
+// NativeRegisterContextLinux_x86 members.
 
 static std::unique_ptr<RegisterContextLinux_x86>
 CreateRegisterInfoInterface(const ArchSpec &target_arch) {
@@ -295,7 +295,7 @@ static std::size_t GetXSTATESize() {
   return std::max<std::size_t>(ecx, sizeof(FPR));
 }
 
-NativeRegisterContextLinux_x86_64::NativeRegisterContextLinux_x86_64(
+NativeRegisterContextLinux_x86::NativeRegisterContextLinux_x86(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
     : NativeRegisterContextRegisterInfo(
           native_thread, CreateRegisterInfoInterface(target_arch).release()),
@@ -375,7 +375,7 @@ NativeRegisterContextLinux_x86_64::NativeRegisterContextLinux_x86_64(
 
 // CONSIDER after local and llgs debugging are merged, register set support can
 // be moved into a base x86-64 class with IsRegisterSetAvailable made virtual.
-uint32_t NativeRegisterContextLinux_x86_64::GetRegisterSetCount() const {
+uint32_t NativeRegisterContextLinux_x86::GetRegisterSetCount() const {
   uint32_t sets = 0;
   for (uint32_t set_index = 0; set_index < k_num_register_sets; ++set_index) {
     if (IsRegisterSetAvailable(set_index))
@@ -385,7 +385,7 @@ uint32_t NativeRegisterContextLinux_x86_64::GetRegisterSetCount() const {
   return sets;
 }
 
-uint32_t NativeRegisterContextLinux_x86_64::GetUserRegisterCount() const {
+uint32_t NativeRegisterContextLinux_x86::GetUserRegisterCount() const {
   uint32_t count = 0;
   for (uint32_t set_index = 0; set_index < k_num_register_sets; ++set_index) {
     const RegisterSet *set = GetRegisterSet(set_index);
@@ -396,7 +396,7 @@ uint32_t NativeRegisterContextLinux_x86_64::GetUserRegisterCount() const {
 }
 
 const RegisterSet *
-NativeRegisterContextLinux_x86_64::GetRegisterSet(uint32_t set_index) const {
+NativeRegisterContextLinux_x86::GetRegisterSet(uint32_t set_index) const {
   if (!IsRegisterSetAvailable(set_index))
     return nullptr;
 
@@ -414,7 +414,7 @@ NativeRegisterContextLinux_x86_64::GetRegisterSet(uint32_t set_index) const {
 }
 
 Status
-NativeRegisterContextLinux_x86_64::ReadRegister(const RegisterInfo *reg_info,
+NativeRegisterContextLinux_x86::ReadRegister(const RegisterInfo *reg_info,
                                                 RegisterValue &reg_value) {
   Status error;
 
@@ -566,7 +566,7 @@ NativeRegisterContextLinux_x86_64::ReadRegister(const RegisterInfo *reg_info,
   return error;
 }
 
-void NativeRegisterContextLinux_x86_64::UpdateXSTATEforWrite(
+void NativeRegisterContextLinux_x86::UpdateXSTATEforWrite(
     uint32_t reg_index) {
   XSAVE_HDR::XFeature &xstate_bv = m_xstate->xsave.header.xstate_bv;
   if (IsFPR(reg_index)) {
@@ -582,7 +582,7 @@ void NativeRegisterContextLinux_x86_64::UpdateXSTATEforWrite(
   }
 }
 
-Status NativeRegisterContextLinux_x86_64::WriteRegister(
+Status NativeRegisterContextLinux_x86::WriteRegister(
     const RegisterInfo *reg_info, const RegisterValue &reg_value) {
   assert(reg_info && "reg_info is null");
 
@@ -697,7 +697,7 @@ Status NativeRegisterContextLinux_x86_64::WriteRegister(
       "write strategy unknown");
 }
 
-Status NativeRegisterContextLinux_x86_64::ReadAllRegisterValues(
+Status NativeRegisterContextLinux_x86::ReadAllRegisterValues(
     lldb::WritableDataBufferSP &data_sp) {
   Status error;
 
@@ -724,7 +724,7 @@ Status NativeRegisterContextLinux_x86_64::ReadAllRegisterValues(
            ++reg) {
         if (!CopyXSTATEtoYMM(reg, byte_order)) {
           error = Status::FromErrorStringWithFormat(
-              "NativeRegisterContextLinux_x86_64::%s "
+              "NativeRegisterContextLinux_x86::%s "
               "CopyXSTATEtoYMM() failed for reg num "
               "%" PRIu32,
               __FUNCTION__, reg);
@@ -738,7 +738,7 @@ Status NativeRegisterContextLinux_x86_64::ReadAllRegisterValues(
            ++reg) {
         if (!CopyXSTATEtoMPX(reg)) {
           error = Status::FromErrorStringWithFormat(
-              "NativeRegisterContextLinux_x86_64::%s "
+              "NativeRegisterContextLinux_x86::%s "
               "CopyXSTATEtoMPX() failed for reg num "
               "%" PRIu32,
               __FUNCTION__, reg);
@@ -767,13 +767,13 @@ Status NativeRegisterContextLinux_x86_64::ReadAllRegisterValues(
   return error;
 }
 
-Status NativeRegisterContextLinux_x86_64::WriteAllRegisterValues(
+Status NativeRegisterContextLinux_x86::WriteAllRegisterValues(
     const lldb::DataBufferSP &data_sp) {
   Status error;
 
   if (!data_sp) {
     error = Status::FromErrorStringWithFormat(
-        "NativeRegisterContextLinux_x86_64::%s invalid data_sp provided",
+        "NativeRegisterContextLinux_x86::%s invalid data_sp provided",
         __FUNCTION__);
     return error;
   }
@@ -788,7 +788,7 @@ Status NativeRegisterContextLinux_x86_64::WriteAllRegisterValues(
   const uint8_t *src = data_sp->GetBytes();
   if (src == nullptr) {
     error = Status::FromErrorStringWithFormat(
-        "NativeRegisterContextLinux_x86_64::%s "
+        "NativeRegisterContextLinux_x86::%s "
         "DataBuffer::GetBytes() returned a null "
         "pointer",
         __FUNCTION__);
@@ -819,7 +819,7 @@ Status NativeRegisterContextLinux_x86_64::WriteAllRegisterValues(
            ++reg) {
         if (!CopyYMMtoXSTATE(reg, byte_order)) {
           error = Status::FromErrorStringWithFormat(
-              "NativeRegisterContextLinux_x86_64::%s "
+              "NativeRegisterContextLinux_x86::%s "
               "CopyYMMtoXSTATE() failed for reg num "
               "%" PRIu32,
               __FUNCTION__, reg);
@@ -833,7 +833,7 @@ Status NativeRegisterContextLinux_x86_64::WriteAllRegisterValues(
            ++reg) {
         if (!CopyMPXtoXSTATE(reg)) {
           error = Status::FromErrorStringWithFormat(
-              "NativeRegisterContextLinux_x86_64::%s "
+              "NativeRegisterContextLinux_x86::%s "
               "CopyMPXtoXSTATE() failed for reg num "
               "%" PRIu32,
               __FUNCTION__, reg);
@@ -846,10 +846,10 @@ Status NativeRegisterContextLinux_x86_64::WriteAllRegisterValues(
   return error;
 }
 
-bool NativeRegisterContextLinux_x86_64::IsCPUFeatureAvailable(
+bool NativeRegisterContextLinux_x86::IsCPUFeatureAvailable(
     RegSet feature_code) const {
   if (m_xstate_type == XStateType::Invalid) {
-    if (const_cast<NativeRegisterContextLinux_x86_64 *>(this)->ReadFPR().Fail())
+    if (const_cast<NativeRegisterContextLinux_x86 *>(this)->ReadFPR().Fail())
       return false;
   }
   switch (feature_code) {
@@ -870,7 +870,7 @@ bool NativeRegisterContextLinux_x86_64::IsCPUFeatureAvailable(
   return false;
 }
 
-bool NativeRegisterContextLinux_x86_64::IsRegisterSetAvailable(
+bool NativeRegisterContextLinux_x86::IsRegisterSetAvailable(
     uint32_t set_index) const {
   uint32_t num_sets = k_num_register_sets - k_num_extended_register_sets;
 
@@ -886,22 +886,22 @@ bool NativeRegisterContextLinux_x86_64::IsRegisterSetAvailable(
   return false;
 }
 
-bool NativeRegisterContextLinux_x86_64::IsGPR(uint32_t reg_index) const {
+bool NativeRegisterContextLinux_x86::IsGPR(uint32_t reg_index) const {
   // GPRs come first.
   return reg_index <= m_reg_info.last_gpr;
 }
 
-bool NativeRegisterContextLinux_x86_64::IsFPR(uint32_t reg_index) const {
+bool NativeRegisterContextLinux_x86::IsFPR(uint32_t reg_index) const {
   return (m_reg_info.first_fpr <= reg_index &&
           reg_index <= m_reg_info.last_fpr);
 }
 
-bool NativeRegisterContextLinux_x86_64::IsDR(uint32_t reg_index) const {
+bool NativeRegisterContextLinux_x86::IsDR(uint32_t reg_index) const {
   return (m_reg_info.first_dr <= reg_index &&
           reg_index <= m_reg_info.last_dr);
 }
 
-Status NativeRegisterContextLinux_x86_64::WriteFPR() {
+Status NativeRegisterContextLinux_x86::WriteFPR() {
   switch (m_xstate_type) {
   case XStateType::FXSAVE:
     return WriteRegisterSet(
@@ -914,14 +914,14 @@ Status NativeRegisterContextLinux_x86_64::WriteFPR() {
   }
 }
 
-bool NativeRegisterContextLinux_x86_64::IsAVX(uint32_t reg_index) const {
+bool NativeRegisterContextLinux_x86::IsAVX(uint32_t reg_index) const {
   if (!IsCPUFeatureAvailable(RegSet::avx))
     return false;
   return (m_reg_info.first_ymm <= reg_index &&
           reg_index <= m_reg_info.last_ymm);
 }
 
-bool NativeRegisterContextLinux_x86_64::CopyXSTATEtoYMM(
+bool NativeRegisterContextLinux_x86::CopyXSTATEtoYMM(
     uint32_t reg_index, lldb::ByteOrder byte_order) {
   if (!IsAVX(reg_index))
     return false;
@@ -937,7 +937,7 @@ bool NativeRegisterContextLinux_x86_64::CopyXSTATEtoYMM(
   return false; // unsupported or invalid byte order
 }
 
-bool NativeRegisterContextLinux_x86_64::CopyYMMtoXSTATE(
+bool NativeRegisterContextLinux_x86::CopyYMMtoXSTATE(
     uint32_t reg, lldb::ByteOrder byte_order) {
   if (!IsAVX(reg))
     return false;
@@ -953,7 +953,7 @@ bool NativeRegisterContextLinux_x86_64::CopyYMMtoXSTATE(
   return false; // unsupported or invalid byte order
 }
 
-void *NativeRegisterContextLinux_x86_64::GetFPRBuffer() {
+void *NativeRegisterContextLinux_x86::GetFPRBuffer() {
   switch (m_xstate_type) {
   case XStateType::FXSAVE:
     return &m_xstate->fxsave;
@@ -964,7 +964,7 @@ void *NativeRegisterContextLinux_x86_64::GetFPRBuffer() {
   }
 }
 
-size_t NativeRegisterContextLinux_x86_64::GetFPRSize() {
+size_t NativeRegisterContextLinux_x86::GetFPRSize() {
   switch (m_xstate_type) {
   case XStateType::FXSAVE:
     return sizeof(m_xstate->fxsave);
@@ -975,7 +975,7 @@ size_t NativeRegisterContextLinux_x86_64::GetFPRSize() {
   }
 }
 
-Status NativeRegisterContextLinux_x86_64::ReadFPR() {
+Status NativeRegisterContextLinux_x86::ReadFPR() {
   Status error;
 
   // Probe XSAVE and if it is not supported fall back to FXSAVE.
@@ -996,14 +996,14 @@ Status NativeRegisterContextLinux_x86_64::ReadFPR() {
   return Status::FromErrorString("Unrecognized FPR type.");
 }
 
-bool NativeRegisterContextLinux_x86_64::IsMPX(uint32_t reg_index) const {
+bool NativeRegisterContextLinux_x86::IsMPX(uint32_t reg_index) const {
   if (!IsCPUFeatureAvailable(RegSet::mpx))
     return false;
   return (m_reg_info.first_mpxr <= reg_index &&
           reg_index <= m_reg_info.last_mpxc);
 }
 
-bool NativeRegisterContextLinux_x86_64::CopyXSTATEtoMPX(uint32_t reg) {
+bool NativeRegisterContextLinux_x86::CopyXSTATEtoMPX(uint32_t reg) {
   if (!IsMPX(reg))
     return false;
 
@@ -1019,7 +1019,7 @@ bool NativeRegisterContextLinux_x86_64::CopyXSTATEtoMPX(uint32_t reg) {
   return true;
 }
 
-bool NativeRegisterContextLinux_x86_64::CopyMPXtoXSTATE(uint32_t reg) {
+bool NativeRegisterContextLinux_x86::CopyMPXtoXSTATE(uint32_t reg) {
   if (!IsMPX(reg))
     return false;
 
@@ -1034,14 +1034,14 @@ bool NativeRegisterContextLinux_x86_64::CopyMPXtoXSTATE(uint32_t reg) {
 }
 
 uint32_t
-NativeRegisterContextLinux_x86_64::GetPtraceOffset(uint32_t reg_index) {
+NativeRegisterContextLinux_x86::GetPtraceOffset(uint32_t reg_index) {
   // If register is MPX, remove extra factor from gdb offset
   return GetRegisterInfoAtIndex(reg_index)->byte_offset -
          (IsMPX(reg_index) ? 128 : 0);
 }
 
 std::optional<NativeRegisterContextLinux::SyscallData>
-NativeRegisterContextLinux_x86_64::GetSyscallData() {
+NativeRegisterContextLinux_x86::GetSyscallData() {
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86: {
     static const uint8_t Int80[] = {0xcd, 0x80};
@@ -1063,7 +1063,7 @@ NativeRegisterContextLinux_x86_64::GetSyscallData() {
 }
 
 std::optional<NativeRegisterContextLinux::MmapData>
-NativeRegisterContextLinux_x86_64::GetMmapData() {
+NativeRegisterContextLinux_x86::GetMmapData() {
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86:
     return MmapData{192, 91};
@@ -1074,7 +1074,7 @@ NativeRegisterContextLinux_x86_64::GetMmapData() {
   }
 }
 
-const RegisterInfo *NativeRegisterContextLinux_x86_64::GetDR(int num) const {
+const RegisterInfo *NativeRegisterContextLinux_x86::GetDR(int num) const {
   assert(num >= 0 && num <= 7);
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86:

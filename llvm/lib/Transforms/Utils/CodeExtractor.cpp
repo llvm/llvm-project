@@ -970,6 +970,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::NoFree:
       case Attribute::NoImplicitFloat:
       case Attribute::NoInline:
+      case Attribute::NoOutline:
       case Attribute::NonLazyBind:
       case Attribute::NoRedZone:
       case Attribute::NoUnwind:
