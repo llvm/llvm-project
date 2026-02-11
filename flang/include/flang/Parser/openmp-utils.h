@@ -270,8 +270,8 @@ struct ExecutionPartIterator {
     Construct(IteratorType b, IteratorType e,
         const ExecutionPartConstruct *c = nullptr)
         : range(b, e), owner(c) {}
-    template <typename C>
-    Construct(C &&r, const ExecutionPartConstruct *c = nullptr)
+    template <typename R>
+    Construct(const R &r, const ExecutionPartConstruct *c = nullptr)
         : range(r), owner(c) {}
     Construct(const Construct &c) = default;
     IteratorRange range;
@@ -286,8 +286,8 @@ struct ExecutionPartIterator {
     stack_.emplace_back(b, e, c);
     adjust();
   }
-  template <typename C>
-  ExecutionPartIterator(C &&range, Step stepping = Step::Default,
+  template <typename R>
+  ExecutionPartIterator(const R &range, Step stepping = Step::Default,
       const ExecutionPartConstruct *construct = nullptr)
       : ExecutionPartIterator(range.begin(), range.end(), stepping, construct) {
   }
@@ -344,7 +344,8 @@ template <typename Iterator = ExecutionPartIterator> struct ExecutionPartRange {
       Step stepping = Step::Default,
       const ExecutionPartConstruct *owner = nullptr)
       : begin_(begin, end, stepping, owner), end_() {}
-  ExecutionPartRange(const Block &range, Step stepping = Step::Default,
+  template <typename R>
+  ExecutionPartRange(const R &range, Step stepping = Step::Default,
       const ExecutionPartConstruct *owner = nullptr)
       : ExecutionPartRange(range.begin(), range.end(), stepping, owner) {}
 
