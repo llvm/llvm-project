@@ -79,6 +79,6 @@ int main(int, char**)
     test(log_start);
   }
 
-  return 1;
+  return 0;
 
 }
