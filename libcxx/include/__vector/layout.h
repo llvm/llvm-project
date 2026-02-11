@@ -177,7 +177,7 @@ public:
     return std::__to_address(__begin_);
   }
 
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _Tp const* const __data() const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _Tp const* __data() const _NOEXCEPT {
     return std::__to_address(__begin_);
   }
 
