@@ -14,6 +14,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <memory>
 
@@ -69,7 +70,7 @@ TEST(SerializationFormatRegistryTest, Roundtrip) {
   ASSERT_TRUE(Format);
 
   auto LoadedSummaryOrErr = Format->readTUSummary("input");
-  ASSERT_TRUE(!!LoadedSummaryOrErr);
+  ASSERT_THAT_EXPECTED(LoadedSummaryOrErr, Succeeded());
   TUSummary LoadedSummary = std::move(*LoadedSummaryOrErr);
 
   // Create a temporary output directory
@@ -80,7 +81,7 @@ TEST(SerializationFormatRegistryTest, Roundtrip) {
       [&] { sys::fs::remove_directories(OutputDir); });
 
   auto WriteErr = Format->writeTUSummary(LoadedSummary, OutputDir);
-  ASSERT_FALSE(!!WriteErr);
+  ASSERT_THAT_ERROR(std::move(WriteErr), Succeeded());
 
   EXPECT_EQ(readFilesFromDir(OutputDir),
             (std::map<std::string, std::string>{
