@@ -32,7 +32,7 @@ Example:
     ExpensiveToCopy Copy(Value);
   }
 
-If the parameter is not const, and only copied or assigned once, the check will
+If the parameter is not ``const``, and only copied or assigned once, the check will
 suggest a move in the following scenarios:
 
 1. the parameter has a non-trivial move-constructor or move-assignment operator
