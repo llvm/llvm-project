@@ -677,6 +677,22 @@ public:
                                       addr.getAlignment().getAsAlign().value());
   }
 
+  mlir::Value createMaskedLoad(mlir::Location loc, mlir::Type ty,
+                               mlir::Value ptr, llvm::Align alignment,
+                               mlir::Value mask, mlir::Value passThru) {
+    assert(mlir::isa<cir::VectorType>(ty) && "Type should be vector");
+    assert(mask && "Mask should not be all-ones (null)");
+
+    if (!passThru)
+      passThru = this->getConstant(loc, cir::PoisonAttr::get(ty));
+
+    auto alignAttr =
+        this->getI64IntegerAttr(static_cast<int64_t>(alignment.value()));
+
+    return cir::VecMaskedLoadOp::create(*this, loc, ty, ptr, mask, passThru,
+                                        alignAttr);
+  }
+
   cir::VecShuffleOp
   createVecShuffle(mlir::Location loc, mlir::Value vec1, mlir::Value vec2,
                    llvm::ArrayRef<mlir::Attribute> maskAttrs) {

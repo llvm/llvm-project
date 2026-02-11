@@ -363,3 +363,367 @@ __m256i test_mm256_shuffle_i64x2(__m256i a, __m256i b) {
   // OGCG: shufflevector <4 x i64> %{{.+}}, <4 x i64> %{{.+}}, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
   return _mm256_shuffle_i64x2(a, b, 0x03);
 }
+
+__m128 test_mm_mask_loadu_ps(__m128 __W, __mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm_mask_loadu_ps
+  // CIR: cir.vec.masked_load align(1) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>>, <4 x !cir.int<s, 1>>, <4 x !cir.float> -> !cir.vector<4 x !cir.float>
+                                                           
+  // LLVM-LABEL: test_mm_mask_loadu_ps
+  // LLVM: [[MASK4:%.*]] = shufflevector <8 x i1> %{{.+}}, <8 x i1> %{{.+}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // LLVM: call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 1 %{{.+}}, <4 x i1> [[MASK4]], <4 x float> %{{.+}})
+
+  // OGCG-LABEL: test_mm_mask_loadu_ps
+  // OGCG: [[MASK4:%.*]] = shufflevector <8 x i1> %{{.+}}, <8 x i1> %{{.+}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // OGCG: call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 1 %{{.+}}, <4 x i1> [[MASK4]], <4 x float> %{{.+}})
+  return _mm_mask_loadu_ps(__W, __U, __P);
+}
+
+__m128 test_mm_maskz_loadu_ps(__mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm_maskz_loadu_ps
+  // CIR: cir.vec.masked_load align(1) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>>, <4 x !cir.int<s, 1>>, <4 x !cir.float> -> !cir.vector<4 x !cir.float>
+
+  // LLVM-LABEL: test_mm_maskz_loadu_ps
+  // LLVM: [[MASK4:%.*]] = shufflevector <8 x i1> %{{.+}}, <8 x i1> %{{.+}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // LLVM: call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 1 %{{.+}}, <4 x i1> [[MASK4]], <4 x float> %{{.+}})
+
+  // OGCG-LABEL: test_mm_maskz_loadu_ps
+  // OGCG: [[MASK4:%.*]] = shufflevector <8 x i1> %{{.+}}, <8 x i1> %{{.+}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // OGCG: call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 1 %{{.+}}, <4 x i1> [[MASK4]], <4 x float> %{{.+}})
+  return _mm_maskz_loadu_ps(__U, __P); 
+}
+
+__m256 test_mm256_mask_loadu_ps(__m256 __W, __mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm256_mask_loadu_ps
+  // CIR: cir.vec.masked_load align(1) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<8 x !cir.float>>, <8 x !cir.int<s, 1>>, <8 x !cir.float> -> !cir.vector<8 x !cir.float>
+
+  // LLVM-LABEL: test_mm256_mask_loadu_ps
+  // LLVM: @llvm.masked.load.v8f32.p0(ptr align 1 %{{.*}}, <8 x i1> %{{.*}}, <8 x float> %{{.*}})
+
+  // OGCG-LABEL: @test_mm256_mask_loadu_ps
+  // OGCG: @llvm.masked.load.v8f32.p0(ptr align 1 %{{.*}}, <8 x i1> %{{.*}}, <8 x float> %{{.*}})
+  return _mm256_mask_loadu_ps(__W, __U, __P); 
+}
+
+__m256 test_mm256_maskz_loadu_ps(__mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm256_maskz_loadu_ps
+  // CIR: cir.vec.masked_load align(1) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<8 x !cir.float>>, <8 x !cir.int<s, 1>>, <8 x !cir.float> -> !cir.vector<8 x !cir.float>
+
+  // LLVM-LABEL: test_mm256_maskz_loadu_ps
+  // LLVM: @llvm.masked.load.v8f32.p0(ptr align 1 %{{.*}}, <8 x i1> %{{.*}}, <8 x float> %{{.*}})
+
+  // OGCG-LABEL: @test_mm256_maskz_loadu_ps
+  // OGCG: @llvm.masked.load.v8f32.p0(ptr align 1 %{{.*}}, <8 x i1> %{{.*}}, <8 x float> %{{.*}})
+  return _mm256_maskz_loadu_ps(__U, __P); 
+}
+
+__m256d test_mm256_mask_loadu_pd(__m256d __W, __mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm256_mask_loadu_pd
+  // CIR: cir.vec.masked_load align(1) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<4 x !cir.double>>, <4 x !cir.int<s, 1>>, <4 x !cir.double> -> !cir.vector<4 x !cir.double>
+  
+  // LLVM-LABEL: @test_mm256_mask_loadu_pd
+  // LLVM: @llvm.masked.load.v4f64.p0(ptr align 1 %{{.*}}, <4 x i1> %{{.*}}, <4 x double> %{{.*}})
+
+  // OGCG-LABEL: @test_mm256_mask_loadu_pd
+  // OGCG: @llvm.masked.load.v4f64.p0(ptr align 1 %{{.*}}, <4 x i1> %{{.*}}, <4 x double> %{{.*}})
+  return _mm256_mask_loadu_pd(__W, __U, __P); 
+}
+
+__m128i test_mm_mask_loadu_epi32(__m128i __W, __mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm_mask_loadu_epi32
+  // CIR: cir.vec.masked_load align(1) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>, <4 x !cir.int<s, 1>>, <4 x !s32i> -> !cir.vector<4 x !s32i>
+
+  // LLVM-LABEL: @test_mm_mask_loadu_epi32
+  // LLVM: @llvm.masked.load.v4i32.p0(ptr align 1 %{{.*}}, <4 x i1> %{{.*}}, <4 x i32> %{{.*}})
+
+  // OGCG-LABEL: @test_mm_mask_loadu_epi32
+  // OGCG: @llvm.masked.load.v4i32.p0(ptr align 1 %{{.*}}, <4 x i1> %{{.*}}, <4 x i32> %{{.*}})
+  return _mm_mask_loadu_epi32(__W, __U, __P); 
+}
+
+__m256i test_mm256_mask_loadu_epi32(__m256i __W, __mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm256_mask_loadu_epi32
+  // CIR: cir.vec.masked_load align(1) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<8 x !s32i>>, <8 x !cir.int<s, 1>>, <8 x !s32i> -> !cir.vector<8 x !s32i>
+
+  // LLVM-LABEL: @test_mm256_mask_loadu_epi32
+  // LLVM: @llvm.masked.load.v8i32.p0(ptr align 1 %{{.*}}, <8 x i1> %{{.*}}, <8 x i32> %{{.*}})
+
+  // OGCG-LABEL: @test_mm256_mask_loadu_epi32
+  // OGCG: @llvm.masked.load.v8i32.p0(ptr align 1 %{{.*}}, <8 x i1> %{{.*}}, <8 x i32> %{{.*}})
+  return _mm256_mask_loadu_epi32(__W, __U, __P); 
+}
+
+__m128i test_mm_mask_loadu_epi64(__m128i __W, __mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm_mask_loadu_epi64
+  // CIR: cir.vec.masked_load align(1) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<2 x !s64i>>, <2 x !cir.int<s, 1>>, <2 x !s64i> -> !cir.vector<2 x !s64i>
+
+  // LLVM-LABEL: @test_mm_mask_loadu_epi64
+  // LLVM: @llvm.masked.load.v2i64.p0(ptr align 1 %{{.*}}, <2 x i1> %{{.*}}, <2 x i64> %{{.*}})
+
+  // OGCG-LABEL: @test_mm_mask_loadu_epi64
+  // OGCG: @llvm.masked.load.v2i64.p0(ptr align 1 %{{.*}}, <2 x i1> %{{.*}}, <2 x i64> %{{.*}})
+  return _mm_mask_loadu_epi64(__W, __U, __P); 
+}
+
+__m256i test_mm256_mask_loadu_epi64(__m256i __W, __mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm256_mask_loadu_epi64
+  // CIR: cir.vec.masked_load align(1) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<4 x !s64i>>, <4 x !cir.int<s, 1>>, <4 x !s64i> -> !cir.vector<4 x !s64i>
+
+  // LLVM-LABEL: @test_mm256_mask_loadu_epi64
+  // LLVM: @llvm.masked.load.v4i64.p0(ptr align 1 %{{.*}}, <4 x i1> %{{.*}}, <4 x i64> %{{.*}})
+
+  // OGCG-LABEL: @test_mm256_mask_loadu_epi64
+  // OGCG: @llvm.masked.load.v4i64.p0(ptr align 1 %{{.*}}, <4 x i1> %{{.*}}, <4 x i64> %{{.*}})
+  return _mm256_mask_loadu_epi64(__W, __U, __P); 
+}
+
+__m256i test_mm256_maskz_loadu_epi64(__mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm256_maskz_loadu_epi64
+  // CIR: cir.vec.masked_load align(1) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<4 x !s64i>>, <4 x !cir.int<s, 1>>, <4 x !s64i> -> !cir.vector<4 x !s64i>
+
+  // LLVM-LABEL: @test_mm256_maskz_loadu_epi64
+  // LLVM: @llvm.masked.load.v4i64.p0(ptr align 1 %{{.*}}, <4 x i1> %{{.*}}, <4 x i64> %{{.*}})
+
+  // OGCG-LABEL: @test_mm256_maskz_loadu_epi64
+  // OGCG: @llvm.masked.load.v4i64.p0(ptr align 1 %{{.*}}, <4 x i1> %{{.*}}, <4 x i64> %{{.*}})
+  return _mm256_maskz_loadu_epi64(__U, __P); 
+}
+
+__m128 test_mm_mask_load_ps(__m128 __W, __mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm_mask_load_ps
+  // CIR: cir.vec.masked_load align(16) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>>, <4 x !cir.int<s, 1>>, <4 x !cir.float> -> !cir.vector<4 x !cir.float>
+
+  // LLVM-LABEL: @test_mm_mask_load_ps
+  // LLVM: @llvm.masked.load.v4f32.p0(ptr align 16 %{{.*}}, <4 x i1> %{{.*}}, <4 x float> %{{.*}})
+
+  // OGCG-LABEL: @test_mm_mask_load_ps
+  // OGCG: @llvm.masked.load.v4f32.p0(ptr align 16 %{{.*}}, <4 x i1> %{{.*}}, <4 x float> %{{.*}})
+  return _mm_mask_load_ps(__W, __U, __P); 
+}
+
+__m128 test_mm_maskz_load_ps(__mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm_maskz_load_ps
+  // CIR: cir.vec.masked_load align(16) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>>, <4 x !cir.int<s, 1>>, <4 x !cir.float> -> !cir.vector<4 x !cir.float>
+
+  // LLVM-LABEL: @test_mm_maskz_load_ps
+  // LLVM: @llvm.masked.load.v4f32.p0(ptr align 16 %{{.*}}, <4 x i1> %{{.*}}, <4 x float> %{{.*}})
+
+  // OGCG-LABEL: @test_mm_maskz_load_ps
+  // OGCG: @llvm.masked.load.v4f32.p0(ptr align 16 %{{.*}}, <4 x i1> %{{.*}}, <4 x float> %{{.*}})
+  return _mm_maskz_load_ps(__U, __P); 
+}
+
+__m256 test_mm256_mask_load_ps(__m256 __W, __mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm256_mask_load_ps
+  // CIR: cir.vec.masked_load align(32) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<8 x !cir.float>>, <8 x !cir.int<s, 1>>, <8 x !cir.float> -> !cir.vector<8 x !cir.float>
+
+  // LLVM-LABEL: @test_mm256_mask_load_ps
+  // LLVM: @llvm.masked.load.v8f32.p0(ptr align 32 %{{.*}}, <8 x i1> %{{.*}}, <8 x float> %{{.*}})
+
+  // OGCG-LABEL: @test_mm256_mask_load_ps
+  // OGCG: @llvm.masked.load.v8f32.p0(ptr align 32 %{{.*}}, <8 x i1> %{{.*}}, <8 x float> %{{.*}})
+  return _mm256_mask_load_ps(__W, __U, __P); 
+}
+
+__m256 test_mm256_maskz_load_ps(__mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm256_maskz_load_ps
+  // CIR: cir.vec.masked_load align(32) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<8 x !cir.float>>, <8 x !cir.int<s, 1>>, <8 x !cir.float> -> !cir.vector<8 x !cir.float>
+
+  // LLVM-LABEL: @test_mm256_maskz_load_ps
+  // LLVM: @llvm.masked.load.v8f32.p0(ptr align 32 %{{.*}}, <8 x i1> %{{.*}}, <8 x float> %{{.*}})
+
+  // OGCG-LABEL: @test_mm256_maskz_load_ps
+  // OGCG: @llvm.masked.load.v8f32.p0(ptr align 32 %{{.*}}, <8 x i1> %{{.*}}, <8 x float> %{{.*}})
+  return _mm256_maskz_load_ps(__U, __P); 
+}
+
+__m128d test_mm_mask_load_pd(__m128d __W, __mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm_mask_load_pd
+  // CIR: cir.vec.masked_load align(16) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<2 x !cir.double>>, <2 x !cir.int<s, 1>>, <2 x !cir.double> -> !cir.vector<2 x !cir.double>
+
+  // LLVM-LABEL: @test_mm_mask_load_pd
+  // LLVM: @llvm.masked.load.v2f64.p0(ptr align 16 %{{.*}}, <2 x i1> %{{.*}}, <2 x double> %{{.*}})
+
+  // OGCG-LABEL: @test_mm_mask_load_pd
+  // OGCG: @llvm.masked.load.v2f64.p0(ptr align 16 %{{.*}}, <2 x i1> %{{.*}}, <2 x double> %{{.*}})
+  return _mm_mask_load_pd(__W, __U, __P); 
+}
+
+__m128d test_mm_maskz_load_pd(__mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm_maskz_load_pd
+  // CIR: cir.vec.masked_load align(16) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<2 x !cir.double>>, <2 x !cir.int<s, 1>>, <2 x !cir.double> -> !cir.vector<2 x !cir.double>
+
+  // LLVM-LABEL: @test_mm_maskz_load_pd
+  // LLVM: @llvm.masked.load.v2f64.p0(ptr align 16 %{{.*}}, <2 x i1> %{{.*}}, <2 x double> %{{.*}})
+
+  // OGCG-LABEL: @test_mm_maskz_load_pd
+  // OGCG: @llvm.masked.load.v2f64.p0(ptr align 16 %{{.*}}, <2 x i1> %{{.*}}, <2 x double> %{{.*}})
+  return _mm_maskz_load_pd(__U, __P); 
+}
+
+__m128d test_mm_maskz_loadu_pd(__mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm_maskz_loadu_pd
+  // CIR: cir.vec.masked_load align(1) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<2 x !cir.double>>, <2 x !cir.int<s, 1>>, <2 x !cir.double> -> !cir.vector<2 x !cir.double>
+
+  // LLVM-LABEL: @test_mm_maskz_loadu_pd
+  // LLVM: @llvm.masked.load.v2f64.p0(ptr align 1 %{{.*}}, <2 x i1> %{{.*}}, <2 x double> %{{.*}})
+
+  // OGCG-LABEL: @test_mm_maskz_loadu_pd
+  // OGCG: @llvm.masked.load.v2f64.p0(ptr align 1 %{{.*}}, <2 x i1> %{{.*}}, <2 x double> %{{.*}})
+  return _mm_maskz_loadu_pd(__U, __P); 
+}
+
+__m256d test_mm256_mask_load_pd(__m256d __W, __mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm256_mask_load_pd
+  // CIR: cir.vec.masked_load align(32) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<4 x !cir.double>>, <4 x !cir.int<s, 1>>, <4 x !cir.double> -> !cir.vector<4 x !cir.double>
+
+  // LLVM-LABEL: @test_mm256_mask_load_pd
+  // LLVM: @llvm.masked.load.v4f64.p0(ptr align 32 %{{.*}}, <4 x i1> %{{.*}}, <4 x double> %{{.*}})
+
+  // OGCG-LABEL: @test_mm256_mask_load_pd
+  // OGCG: @llvm.masked.load.v4f64.p0(ptr align 32 %{{.*}}, <4 x i1> %{{.*}}, <4 x double> %{{.*}})
+  return _mm256_mask_load_pd(__W, __U, __P); 
+}
+
+__m256d test_mm256_maskz_load_pd(__mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm256_maskz_load_pd
+  // CIR: cir.vec.masked_load align(32) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<4 x !cir.double>>, <4 x !cir.int<s, 1>>, <4 x !cir.double> -> !cir.vector<4 x !cir.double>
+
+  // LLVM-LABEL: @test_mm256_maskz_load_pd
+  // LLVM: @llvm.masked.load.v4f64.p0(ptr align 32 %{{.*}}, <4 x i1> %{{.*}}, <4 x double> %{{.*}})
+
+  // OGCG-LABEL: @test_mm256_maskz_load_pd
+  // OGCG: @llvm.masked.load.v4f64.p0(ptr align 32 %{{.*}}, <4 x i1> %{{.*}}, <4 x double> %{{.*}})
+  return _mm256_maskz_load_pd(__U, __P); 
+}
+
+__m256d test_mm256_maskz_loadu_pd(__mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm256_maskz_loadu_pd
+  // CIR: cir.vec.masked_load align(1) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<4 x !cir.double>>, <4 x !cir.int<s, 1>>, <4 x !cir.double> -> !cir.vector<4 x !cir.double>
+
+  // LLVM-LABEL: @test_mm256_maskz_loadu_pd
+  // LLVM: @llvm.masked.load.v4f64.p0(ptr align 1 %{{.*}}, <4 x i1> %{{.*}}, <4 x double> %{{.*}})
+
+  // OGCG-LABEL: @test_mm256_maskz_loadu_pd
+  // OGCG: @llvm.masked.load.v4f64.p0(ptr align 1 %{{.*}}, <4 x i1> %{{.*}}, <4 x double> %{{.*}})
+  return _mm256_maskz_loadu_pd(__U, __P); 
+}
+
+__m128i test_mm_mask_load_epi32(__m128i __W, __mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm_mask_load_epi32
+  // CIR: cir.vec.masked_load align(16) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>, <4 x !cir.int<s, 1>>, <4 x !s32i> -> !cir.vector<4 x !s32i>
+
+  // LLVM-LABEL: @test_mm_mask_load_epi32
+  // LLVM: @llvm.masked.load.v4i32.p0(ptr align 16 %{{.*}}, <4 x i1> %{{.*}}, <4 x i32> %{{.*}})
+
+  // OGCG-LABEL: @test_mm_mask_load_epi32
+  // OGCG: @llvm.masked.load.v4i32.p0(ptr align 16 %{{.*}}, <4 x i1> %{{.*}}, <4 x i32> %{{.*}})
+  return _mm_mask_load_epi32(__W, __U, __P); 
+}
+
+__m128i test_mm_maskz_load_epi32(__mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm_maskz_load_epi32
+  // CIR: cir.vec.masked_load align(16) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>, <4 x !cir.int<s, 1>>, <4 x !s32i> -> !cir.vector<4 x !s32i>
+
+  // LLVM-LABEL: @test_mm_maskz_load_epi32
+  // LLVM: @llvm.masked.load.v4i32.p0(ptr align 16 %{{.*}}, <4 x i1> %{{.*}}, <4 x i32> %{{.*}})
+
+  // OGCG-LABEL: @test_mm_maskz_load_epi32
+  // OGCG: @llvm.masked.load.v4i32.p0(ptr align 16 %{{.*}}, <4 x i1> %{{.*}}, <4 x i32> %{{.*}})
+  return _mm_maskz_load_epi32(__U, __P); 
+}
+
+__m128i test_mm_maskz_loadu_epi32(__mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm_maskz_loadu_epi32
+  // CIR: cir.vec.masked_load align(1) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>, <4 x !cir.int<s, 1>>, <4 x !s32i> -> !cir.vector<4 x !s32i>
+
+  // LLVM-LABEL: @test_mm_maskz_loadu_epi32
+  // LLVM: @llvm.masked.load.v4i32.p0(ptr align 1 %{{.*}}, <4 x i1> %{{.*}}, <4 x i32> %{{.*}})
+
+  // OGCG-LABEL: @test_mm_maskz_loadu_epi32
+  // OGCG: @llvm.masked.load.v4i32.p0(ptr align 1 %{{.*}}, <4 x i1> %{{.*}}, <4 x i32> %{{.*}})
+  return _mm_maskz_loadu_epi32(__U, __P); 
+}
+
+__m256i test_mm256_maskz_load_epi32(__mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm256_maskz_load_epi32
+  // CIR: cir.vec.masked_load align(32) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<8 x !s32i>>, <8 x !cir.int<s, 1>>, <8 x !s32i> -> !cir.vector<8 x !s32i>
+
+  // LLVM-LABEL: @test_mm256_maskz_load_epi32
+  // LLVM: @llvm.masked.load.v8i32.p0(ptr align 32 %{{.*}}, <8 x i1> %{{.*}}, <8 x i32> %{{.*}})
+
+  // OGCG-LABEL: @test_mm256_maskz_load_epi32
+  // OGCG: @llvm.masked.load.v8i32.p0(ptr align 32 %{{.*}}, <8 x i1> %{{.*}}, <8 x i32> %{{.*}})
+  return _mm256_maskz_load_epi32(__U, __P); 
+}
+
+__m256i test_mm256_maskz_loadu_epi32(__mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm256_maskz_loadu_epi32
+  // CIR: cir.vec.masked_load align(1) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<8 x !s32i>>, <8 x !cir.int<s, 1>>, <8 x !s32i> -> !cir.vector<8 x !s32i>
+
+  // LLVM-LABEL: @test_mm256_maskz_loadu_epi32
+  // LLVM: @llvm.masked.load.v8i32.p0(ptr align 1 %{{.*}}, <8 x i1> %{{.*}}, <8 x i32> %{{.*}})
+
+  // OGCG-LABEL: @test_mm256_maskz_loadu_epi32
+  // OGCG: @llvm.masked.load.v8i32.p0(ptr align 1 %{{.*}}, <8 x i1> %{{.*}}, <8 x i32> %{{.*}})
+  return _mm256_maskz_loadu_epi32(__U, __P); 
+}
+
+__m128i test_mm_mask_load_epi64(__m128i __W, __mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm_mask_load_epi64
+  // CIR: cir.vec.masked_load align(16) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<2 x !s64i>>, <2 x !cir.int<s, 1>>, <2 x !s64i> -> !cir.vector<2 x !s64i>
+
+  // LLVM-LABEL: @test_mm_mask_load_epi64
+  // LLVM: @llvm.masked.load.v2i64.p0(ptr align 16 %{{.*}}, <2 x i1> %{{.*}}, <2 x i64> %{{.*}})
+
+  // OGCG-LABEL: @test_mm_mask_load_epi64
+  // OGCG: @llvm.masked.load.v2i64.p0(ptr align 16 %{{.*}}, <2 x i1> %{{.*}}, <2 x i64> %{{.*}})  
+  return _mm_mask_load_epi64(__W, __U, __P); 
+}
+
+__m128i test_mm_maskz_loadu_epi64(__mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm_maskz_loadu_epi64
+  // CIR: cir.vec.masked_load align(1) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<2 x !s64i>>, <2 x !cir.int<s, 1>>, <2 x !s64i> -> !cir.vector<2 x !s64i>
+
+  // LLVM-LABEL: @test_mm_maskz_loadu_epi64
+  // LLVM: @llvm.masked.load.v2i64.p0(ptr align 1 %{{.*}}, <2 x i1> %{{.*}}, <2 x i64> %{{.*}})
+
+  // OGCG-LABEL: @test_mm_maskz_loadu_epi64
+  // OGCG: @llvm.masked.load.v2i64.p0(ptr align 1 %{{.*}}, <2 x i1> %{{.*}}, <2 x i64> %{{.*}})  
+  return _mm_maskz_loadu_epi64(__U, __P); 
+}
+
+__m128i test_mm_maskz_load_epi64(__mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm_maskz_load_epi64
+  // CIR: cir.vec.masked_load align(16) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<2 x !s64i>>, <2 x !cir.int<s, 1>>, <2 x !s64i> -> !cir.vector<2 x !s64i>
+
+  // LLVM-LABEL: @test_mm_maskz_load_epi64
+  // LLVM: @llvm.masked.load.v2i64.p0(ptr align 16 %{{.*}}, <2 x i1> %{{.*}}, <2 x i64> %{{.*}})
+
+  // OGCG-LABEL: @test_mm_maskz_load_epi64
+  // OGCG: @llvm.masked.load.v2i64.p0(ptr align 16 %{{.*}}, <2 x i1> %{{.*}}, <2 x i64> %{{.*}})  
+  return _mm_maskz_load_epi64(__U, __P); 
+}
+
+__m256i test_mm256_mask_load_epi64(__m256i __W, __mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm256_mask_load_epi64
+  // CIR: cir.vec.masked_load align(32) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<4 x !s64i>>, <4 x !cir.int<s, 1>>, <4 x !s64i> -> !cir.vector<4 x !s64i>
+
+  // LLVM-LABEL: @test_mm256_mask_load_epi64
+  // LLVM: @llvm.masked.load.v4i64.p0(ptr align 32 %{{.*}}, <4 x i1> %{{.*}}, <4 x i64> %{{.*}})
+
+  // OGCG-LABEL: @test_mm256_mask_load_epi64
+  // OGCG: @llvm.masked.load.v4i64.p0(ptr align 32 %{{.*}}, <4 x i1> %{{.*}}, <4 x i64> %{{.*}}) 
+  return _mm256_mask_load_epi64(__W, __U, __P); 
+}
+
+__m256i test_mm256_maskz_load_epi64(__mmask8 __U, void const *__P) {
+  // CIR-LABEL: _mm256_maskz_load_epi64
+  // CIR: cir.vec.masked_load align(32) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<4 x !s64i>>, <4 x !cir.int<s, 1>>, <4 x !s64i> -> !cir.vector<4 x !s64i>
+
+  // LLVM-LABEL: @test_mm256_maskz_load_epi64
+  // LLVM: @llvm.masked.load.v4i64.p0(ptr align 32 %{{.*}}, <4 x i1> %{{.*}}, <4 x i64> %{{.*}})
+
+  // OGCG-LABEL: @test_mm256_maskz_load_epi64
+  // OGCG: @llvm.masked.load.v4i64.p0(ptr align 32 %{{.*}}, <4 x i1> %{{.*}}, <4 x i64> %{{.*}})  
+  return _mm256_maskz_load_epi64(__U, __P); 
+}
