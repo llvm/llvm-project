@@ -10242,6 +10242,34 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
     // TODO: Return ConstantRange.
     setLimitsForBinOp(*BO, Lower, Upper, IIQ, ForSigned);
     CR = ConstantRange::getNonEmpty(Lower, Upper);
+    if (BO->getOpcode() == Instruction::Add ||
+        BO->getOpcode() == Instruction::Sub) {
+      ConstantRange LHS = computeConstantRange(
+          BO->getOperand(0), ForSigned, UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      ConstantRange RHS = computeConstantRange(
+          BO->getOperand(1), ForSigned, UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      unsigned NoWrapKind = 0;
+      if (IIQ.hasNoUnsignedWrap(BO))
+        NoWrapKind |= OverflowingBinaryOperator::NoUnsignedWrap;
+      if (IIQ.hasNoSignedWrap(BO))
+        NoWrapKind |= OverflowingBinaryOperator::NoSignedWrap;
+      ConstantRange OpCR = BO->getOpcode() == Instruction::Add
+                               ? LHS.addWithNoWrap(RHS, NoWrapKind)
+                               : LHS.subWithNoWrap(RHS, NoWrapKind);
+      CR = CR.intersectWith(OpCR);
+    }
+  } else if (auto *SExt = dyn_cast<SExtInst>(V)) {
+    CR = computeConstantRange(SExt->getOperand(0), ForSigned, UseInstrInfo, AC,
+                              CtxI, DT, Depth + 1)
+             .signExtend(BitWidth);
+  } else if (auto *ZExt = dyn_cast<ZExtInst>(V)) {
+    CR = computeConstantRange(ZExt->getOperand(0), ForSigned, UseInstrInfo, AC,
+                              CtxI, DT, Depth + 1)
+             .zeroExtend(BitWidth);
+  } else if (auto *Trunc = dyn_cast<TruncInst>(V)) {
+    CR = computeConstantRange(Trunc->getOperand(0), ForSigned, UseInstrInfo, AC,
+                              CtxI, DT, Depth + 1)
+             .truncate(BitWidth);
   } else if (auto *II = dyn_cast<IntrinsicInst>(V))
     CR = getRangeForIntrinsic(*II, UseInstrInfo);
   else if (auto *SI = dyn_cast<SelectInst>(V)) {
