@@ -18,5 +18,3 @@ foo:
 # CHECK: .bundle_lock align_to_end
   add     %rbx, %rdx
   .bundle_unlock
-
-

@@ -82,15 +82,14 @@ void MCELFStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCFragment &F,
 void MCELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   MCAssembler &Asm = getAssembler();
   MCFragment *CF = getCurrentFragment();
-  if (Asm.isBundlingEnabled() && CF) {
+  if (Asm.isBundlingEnabled()) {
     if (isBundleLocked()) {
       getContext().reportError(
           getStartTokLoc(),
           "unterminated .bundle_lock when changing a section");
       // Clean up bundle state to allow continuing.
       MCSection *CurSec = CF->getParent();
-      if (CurSec->isBundleLocked())
-        CurSec->setIsBundleLocked(false);
+      CurSec->setIsBundleLocked(false);
       BundleBA = nullptr;
     }
 
@@ -335,7 +334,9 @@ void MCELFStreamer::emitIdent(StringRef IdentString) {
 }
 
 void MCELFStreamer::emitBundleAlignMode(Align Alignment) {
-  assert(Log2(Alignment) <= 30 && "Invalid bundle alignment");
+  if (Log2(Alignment) > 30)
+    getContext().reportError(getStartTokLoc(),
+                             ".bundle_align_mode alignment must be <= 30");
   MCAssembler &Assembler = getAssembler();
   setAllowAutoPadding(true);
 

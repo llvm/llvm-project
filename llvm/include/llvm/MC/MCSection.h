@@ -489,12 +489,13 @@ class MCBoundaryAlignFragment : public MCFragment {
   /// is not meaningful before that.
   uint64_t Size = 0;
 
-  bool AlignToEnd;
+  /// If true, align the last instruction in the fragment to the end of the
+  /// fragment.
+  bool AlignToEnd = false;
 
 public:
   MCBoundaryAlignFragment(Align AlignBoundary, const MCSubtargetInfo &STI)
-      : MCFragment(FT_BoundaryAlign), AlignBoundary(AlignBoundary),
-        AlignToEnd(false) {
+      : MCFragment(FT_BoundaryAlign), AlignBoundary(AlignBoundary) {
     this->STI = &STI;
   }
 
@@ -559,6 +560,8 @@ private:
   // fragment may not be fully resolved.
   unsigned FirstLinkerRelaxable = -1u;
 
+  /// If bundle-locked, we ensure all instructions in the section are placed in
+  /// the same bundle.
   bool IsBundleLocked;
 
   /// Whether this section has had instructions emitted into it.

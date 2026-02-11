@@ -477,14 +477,14 @@ void X86_MC::emitInstruction(MCObjectStreamer &S, const MCInst &Inst,
 /// the ObjectStreamer emits the instruction to the current fragment. If not, it
 /// creates a new BA to group bundled fragments.
 void X86AsmBackend::emitInstructionBeginBundle(MCObjectStreamer &OS) {
-  assert(OS.getAssembler().isBundlingEnabled());
+  assert(Asm->isBundlingEnabled());
 
   if (OS.getCurrentSectionOnly()->isBundleLocked()) {
     OS.getCurrentFragment()->setAllowAutoPadding(true);
     return;
   }
   PendingBA = OS.newSpecialFragment<MCBoundaryAlignFragment>(
-      Align(OS.getAssembler().getBundleAlignSize()), STI);
+      Align(Asm->getBundleAlignSize()), STI);
   PendingBA->setLastFragment(OS.getCurrentFragment());
 
   OS.getCurrentFragment()->setAllowAutoPadding(true);
@@ -495,7 +495,7 @@ void X86AsmBackend::emitInstructionBeginBundle(MCObjectStreamer &OS) {
 /// is not locked, finalize pending BA Fragment. emitBundleUnlock will close the
 /// fragment and start a new empty fragment.
 void X86AsmBackend::emitInstructionEndBundle(MCObjectStreamer &OS) {
-  assert(OS.getAssembler().isBundlingEnabled());
+  assert(Asm->isBundlingEnabled());
 
   MCFragment *CF = OS.getCurrentFragment();
 
@@ -509,14 +509,14 @@ void X86AsmBackend::emitInstructionEndBundle(MCObjectStreamer &OS) {
   PendingBA = nullptr;
 
   CF->getParent()->ensureMinAlignment(
-      Align(OS.getAssembler().getBundleAlignSize()));
+      Align(Asm->getBundleAlignSize()));
 }
 
 /// Insert BoundaryAlignFragment before instructions to align branches.
 void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
                                          const MCInst &Inst,
                                          const MCSubtargetInfo &STI) {
-  if (OS.getAssembler().isBundlingEnabled())
+  if (Asm->isBundlingEnabled())
     return emitInstructionBeginBundle(OS);
   bool CanPadInst = canPadInst(Inst, OS);
   if (CanPadInst)
@@ -580,7 +580,7 @@ void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
 /// Set the last fragment to be aligned for the BoundaryAlignFragment.
 void X86AsmBackend::emitInstructionEnd(MCObjectStreamer &OS,
                                        const MCInst &Inst) {
-  if (OS.getAssembler().isBundlingEnabled())
+  if (Asm->isBundlingEnabled())
     return emitInstructionEndBundle(OS);
   // Update PrevInstOpcode here, canPadInst() reads that.
   MCFragment *CF = OS.getCurrentFragment();
@@ -1004,9 +1004,8 @@ bool X86AsmBackend::dividePadInBundle(const MCAssembler &Asm,
 
   // FT_Align sizes will be recalculated by layoutSection(),
   // FT_BoundaryAlign sizes are adjusted here.
-  if (auto *BF = dyn_cast<MCBoundaryAlignFragment>(LastF)) {
+  if (auto *BF = dyn_cast<MCBoundaryAlignFragment>(LastF))
     BF->setSize(RemainingSize);
-  }
 
   return Changed;
 }
@@ -1031,9 +1030,8 @@ bool X86AsmBackend::optimizeBundleNops(const MCAssembler &Asm) const {
         }
       }
 
-      if (Asm.getFragmentOffset(F) % Asm.getBundleAlignSize() == 0) {
+      if (Asm.getFragmentOffset(F) % Asm.getBundleAlignSize() == 0)
         Bundle.clear(); // start a new bundle
-      }
       Bundle.push_back(&F);
     }
   }

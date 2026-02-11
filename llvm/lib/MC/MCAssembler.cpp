@@ -1031,17 +1031,6 @@ void MCAssembler::layoutSection(MCSection &Sec) {
   for (MCFragment &F : Sec) {
     F.Offset = Offset;
 
-    // Bundling increases the number of MCBoundaryAlignFragment, lazy-relaxing
-    // BA becomes quadratically inefficient. This if statement eagerly decides
-    // BA size.
-    if (isBundlingEnabled() && F.getKind() == MCFragment::FT_BoundaryAlign) {
-      auto &BF = cast<MCBoundaryAlignFragment>(F);
-      if (!BF.getLastFragment())
-        continue;
-      uint64_t NewSize = computeBoundaryAlignSize(BF);
-      BF.setSize(NewSize);
-    }
-
     if (F.getKind() == MCFragment::FT_Align) {
       Offset += F.getFixedSize();
       unsigned Size = offsetToAlignment(Offset, F.getAlignment());
@@ -1066,6 +1055,15 @@ void MCAssembler::layoutSection(MCSection &Sec) {
         F.getParent()->ContentStorage.resize(F.VarContentEnd);
       Offset += Size;
     } else {
+      // Bundling increases the number of MCBoundaryAlignFragment, lazy-relaxing
+      // BA becomes quadratically inefficient. Eagerly decide BA size.
+      if (F.getKind() == MCFragment::FT_BoundaryAlign && isBundlingEnabled()) {
+        auto &BF = cast<MCBoundaryAlignFragment>(F);
+        if (!BF.getLastFragment())
+          continue;
+        uint64_t NewSize = computeBoundaryAlignSize(BF);
+        BF.setSize(NewSize);
+      }
       Offset += computeFragmentSize(F);
     }
   }
