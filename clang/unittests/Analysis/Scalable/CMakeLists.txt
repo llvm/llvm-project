@@ -28,4 +28,3 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   FrontendOpenMP
   Support
   )
-
