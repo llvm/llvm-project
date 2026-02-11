@@ -2284,12 +2284,12 @@ PyOpOperandList PyOpOperandList::slice(intptr_t startIndex, intptr_t length,
 /// random access is cheap. The (returned) OpOperand list is associated with the
 /// operation whose operands these are, and thus extends the lifetime of this
 /// operation.
-class PyOpOpOperandList : public Sliceable<PyOpOpOperandList, PyOpOperand> {
+class PyOpOperands : public Sliceable<PyOpOperands, PyOpOperand> {
 public:
-  static constexpr const char *pyClassName = "OpOpOperandList";
+  static constexpr const char *pyClassName = "OpOperands";
   using SliceableT = Sliceable<PyOpOperandList, PyOpOperand>;
 
-  PyOpOpOperandList(PyOperationRef operation, intptr_t startIndex = 0,
+  PyOpOperands(PyOperationRef operation, intptr_t startIndex = 0,
                     intptr_t length = -1, intptr_t step = 1)
       : Sliceable(startIndex,
                   length == -1 ? mlirOperationGetNumOperands(operation->get())
@@ -2299,7 +2299,7 @@ public:
 
 private:
   /// Give the parent CRTP class access to hook implementations below.
-  friend class Sliceable<PyOpOpOperandList, PyOpOperand>;
+  friend class Sliceable<PyOpOperands, PyOpOperand>;
 
   intptr_t getRawNumElements() {
     operation->checkValid();
@@ -2311,8 +2311,8 @@ private:
     return PyOpOperand(opOperand);
   }
 
-  PyOpOpOperandList slice(intptr_t startIndex, intptr_t length, intptr_t step) {
-    return PyOpOpOperandList(operation, startIndex, length, step);
+  PyOpOperands slice(intptr_t startIndex, intptr_t length, intptr_t step) {
+    return PyOpOperands(operation, startIndex, length, step);
   }
 
   PyOperationRef operation;
@@ -3701,7 +3701,7 @@ void populateIRCore(nb::module_ &m) {
       .def_prop_ro(
           "op_operands",
           [](PyOperationBase &self) {
-            return PyOpOpOperandList(self.getOperation().getRef());
+            return PyOpOperands(self.getOperation().getRef());
           },
           "Returns the list of op operands.")
       .def_prop_ro(
@@ -4985,7 +4985,7 @@ void populateIRCore(nb::module_ &m) {
   PyOpAttributeMap::bind(m);
   PyOpOperandIterator::bind(m);
   PyOpOperandList::bind(m);
-  PyOpOpOperandList::bind(m);
+  PyOpOperands::bind(m);
   PyOpResultList::bind(m);
   PyOpSuccessors::bind(m);
   PyRegionIterator::bind(m);

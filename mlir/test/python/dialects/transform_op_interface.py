@@ -94,8 +94,8 @@ class GetNamedAttributeOp(MyTransform.Operation, name="get_named_attribute"):
 
     @classmethod
     def attach_interface_impls(cls, ctx=None):
-        cls.TransformOpInterfaceFallbackModel.attach(cls.OPERATION_NAME, ctx)
-        MemoryEffectsOpInterfaceFallbackModel.attach(cls.OPERATION_NAME, ctx)
+        cls.TransformOpInterfaceFallbackModel.attach(cls.OPERATION_NAME, context=ctx)
+        MemoryEffectsOpInterfaceFallbackModel.attach(cls.OPERATION_NAME, context=ctx)
 
     class TransformOpInterfaceFallbackModel(transform.TransformOpInterface):
         @staticmethod
@@ -127,8 +127,8 @@ class PrintParamOp(MyTransform.Operation, name="print_param"):
 
     @classmethod
     def attach_interface_impls(cls, ctx=None):
-        cls.TransformOpInterfaceFallbackModel.attach(cls.OPERATION_NAME, ctx)
-        MemoryEffectsOpInterfaceFallbackModel.attach(cls.OPERATION_NAME, ctx)
+        cls.TransformOpInterfaceFallbackModel.attach(cls.OPERATION_NAME, context=ctx)
+        MemoryEffectsOpInterfaceFallbackModel.attach(cls.OPERATION_NAME, context=ctx)
 
     class TransformOpInterfaceFallbackModel(transform.TransformOpInterface):
         @staticmethod
@@ -320,12 +320,12 @@ def OpValParamInParamOpValOutTransformOpInterface():
             return False
 
     TransformOpInterfaceFallbackModel.attach(
-        OpValParamInParamOpValOut.OPERATION_NAME, ir.Context.current
+        OpValParamInParamOpValOut.OPERATION_NAME
     )
 
     # TransformOpInterface-implementing ops are also required to implement MemoryEffectsOpInterface. The above defined fallback model works for this op.
     MemoryEffectsOpInterfaceFallbackModel.attach(
-        OpValParamInParamOpValOut.OPERATION_NAME, ir.Context.current
+        OpValParamInParamOpValOut.OPERATION_NAME
     )
 
     with schedule_boilerplate() as (schedule, named_seq):

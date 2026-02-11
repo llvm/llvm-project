@@ -18,9 +18,6 @@
 #include "mlir-c/Interfaces.h"
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/IRCore.h"
-//#include "llvm/ADT/STLExtras.h"
-//#include "llvm/ADT/SmallVector.h"
-//#include "mlir/Bindings/Python/Nanobind.h"
 
 namespace nb = nanobind;
 
@@ -354,10 +351,10 @@ public:
   /// Attach a new MemoryEffectsOpInterface FallbackModel to the named
   /// operation. The FallbackModel acts as a trampoline for callbacks on the
   /// Python class.
-  static void attach(nb::object &pySubclass, const std::string &opName,
+  static void attach(nb::object &target, const std::string &opName,
                      DefaultingPyMlirContext ctx) {
     MlirMemoryEffectsOpInterfaceCallbacks callbacks;
-    callbacks.userData = pySubclass.ptr();
+    callbacks.userData = target.ptr();
     nb::handle(static_cast<PyObject *>(callbacks.userData)).inc_ref();
     callbacks.construct = nullptr;
     callbacks.destruct = [](void *userData) {
@@ -386,10 +383,18 @@ public:
         ctx->get(), wrap(StringRef(opName.c_str())), callbacks);
   }
 
-  static void bindDerived(ClassTy &memoryEffectsOpInterfaceClass) {
-    memoryEffectsOpInterfaceClass.attr("attach") =
-        classmethod(&PyMemoryEffectsOpInterface::attach, nb::arg("cls"),
-                    nb::arg("op_name"), nb::arg("ctx") = nb::none());
+  static void bindDerived(ClassTy &cls) {
+    cls.attr("attach") = classmethod(
+        [](const nb::object &cls, const nb::object &opName, nb::object target,
+           DefaultingPyMlirContext context) {
+          if (target.is_none())
+            target = cls;
+          return attach(target, nb::cast<std::string>(opName), context);
+        },
+        nb::arg("cls"), nb::arg("op_name"), nb::kw_only(),
+        nb::arg("target").none() = nb::none(),
+        nb::arg("context").none() = nb::none(),
+        "Attach the interface subclass to the given operation name.");
   }
 };
 

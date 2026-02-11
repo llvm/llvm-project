@@ -45,7 +45,7 @@ public:
 
   MlirTransformResults get() const { return results; }
 
-  void setOps(MlirValue result, const nanobind::list &ops) {
+  void setOps(PyValue &result, const nb::list &ops) {
     std::vector<MlirOperation> opsVec;
     opsVec.reserve(ops.size());
     for (auto op : ops) {
@@ -54,7 +54,7 @@ public:
     mlirTransformResultsSetOps(results, result, opsVec.size(), opsVec.data());
   }
 
-  void setValues(MlirValue result, const nanobind::list &values) {
+  void setValues(PyValue &result, const nb::list &values) {
     std::vector<MlirValue> valuesVec;
     valuesVec.reserve(values.size());
     for (auto item : values) {
@@ -64,7 +64,7 @@ public:
                                   valuesVec.data());
   }
 
-  void setParams(MlirValue result, const nanobind::list &params) {
+  void setParams(PyValue &result, const nb::list &params) {
     std::vector<MlirAttribute> paramsVec;
     paramsVec.reserve(params.size());
     for (auto item : params) {
@@ -101,42 +101,6 @@ public:
 
   MlirTransformState get() const { return state; }
 
-  nanobind::list getPayloadOps(MlirValue value) {
-    nanobind::list result;
-    mlirTransformStateForEachPayloadOp(
-        state, value,
-        [](MlirOperation op, void *userData) {
-          PyMlirContextRef context =
-              PyMlirContext::forContext(mlirOperationGetContext(op));
-          auto opview = PyOperation::forOperation(context, op)->createOpView();
-          static_cast<nanobind::list *>(userData)->append(opview);
-        },
-        &result);
-    return result;
-  }
-
-  nanobind::list getPayloadValues(MlirValue value) {
-    nanobind::list result;
-    mlirTransformStateForEachPayloadValue(
-        state, value,
-        [](MlirValue val, void *userData) {
-          static_cast<nanobind::list *>(userData)->append(val);
-        },
-        &result);
-    return result;
-  }
-
-  nanobind::list getParams(MlirValue value) {
-    nanobind::list result;
-    mlirTransformStateForEachParam(
-        state, value,
-        [](MlirAttribute attr, void *userData) {
-          static_cast<nanobind::list *>(userData)->append(attr);
-        },
-        &result);
-    return result;
-  }
-
   static void bind(nanobind::module_ &m) {
     nb::class_<PyTransformState>(m, "TransformState")
         .def(nb::init<MlirTransformState>())
@@ -153,6 +117,42 @@ public:
   }
 
 private:
+  nanobind::list getPayloadOps(PyValue &value) {
+    nanobind::list result;
+    mlirTransformStateForEachPayloadOp(
+        state, value,
+        [](MlirOperation op, void *userData) {
+          PyMlirContextRef context =
+              PyMlirContext::forContext(mlirOperationGetContext(op));
+          auto opview = PyOperation::forOperation(context, op)->createOpView();
+          static_cast<nanobind::list *>(userData)->append(opview);
+        },
+        &result);
+    return result;
+  }
+
+  nanobind::list getPayloadValues(PyValue &value) {
+    nanobind::list result;
+    mlirTransformStateForEachPayloadValue(
+        state, value,
+        [](MlirValue val, void *userData) {
+          static_cast<nanobind::list *>(userData)->append(val);
+        },
+        &result);
+    return result;
+  }
+
+  nanobind::list getParams(PyValue &value) {
+    nanobind::list result;
+    mlirTransformStateForEachParam(
+        state, value,
+        [](MlirAttribute attr, void *userData) {
+          static_cast<nanobind::list *>(userData)->append(attr);
+        },
+        &result);
+    return result;
+  }
+
   MlirTransformState state;
 };
 
@@ -170,12 +170,12 @@ public:
 
   /// Attach a new TransformOpInterface FallbackModel to the named operation.
   /// The FallbackModel acts as a trampoline for callbacks on the Python class.
-  static void attach(nb::object &pyClass, const std::string &opName,
+  static void attach(nb::object &target, const std::string &opName,
                      DefaultingPyMlirContext ctx) {
     // Prepare the callbacks that will be used by the FallbackModel.
     MlirTransformOpInterfaceCallbacks callbacks;
     // Make the pointer to the Python class available to the callbacks.
-    callbacks.userData = pyClass.ptr();
+    callbacks.userData = target.ptr();
     nb::handle(static_cast<PyObject *>(callbacks.userData)).inc_ref();
 
     // The above ref bump is all we need as initialization, no need to run the
@@ -230,10 +230,18 @@ public:
         ctx->get(), wrap(StringRef(opName.c_str())), callbacks);
   }
 
-  static void bindDerived(ClassTy &transformOpInterfaceClass) {
-    transformOpInterfaceClass.attr("attach") =
-        classmethod(&PyTransformOpInterface::attach, nb::arg("cls"),
-                    nb::arg("op_name"), nb::arg("ctx") = nb::none());
+  static void bindDerived(ClassTy &cls) {
+    cls.attr("attach") = classmethod(
+        [](const nb::object &cls, const nb::object &opName, nb::object target,
+           DefaultingPyMlirContext context) {
+          if (target.is_none())
+            target = cls;
+          return attach(target, nb::cast<std::string>(opName), context);
+        },
+        nb::arg("cls"), nb::arg("op_name"), nb::kw_only(),
+        nb::arg("target").none() = nb::none(),
+        nb::arg("context").none() = nb::none(),
+        "Attach the interface subclass to the given operation name.");
   }
 };
 

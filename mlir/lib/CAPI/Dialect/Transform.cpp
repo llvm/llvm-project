@@ -285,11 +285,7 @@ void mlirTransformOpInterfaceAttachFallbackModel(
   std::optional<RegisteredOperationName> opInfo =
       RegisteredOperationName::lookup(unwrap(opName), unwrap(ctx));
 
-  if (!opInfo.has_value()) {
-    llvm::errs() << "Operation '" << unwrap(opName)
-                 << "' not found in context\n";
-    return;
-  }
+  assert(opInfo.has_value() && "operation not found in context");
 
   // NB: the following default-constructs the FallbackModel _without_ being able
   // to provide arguments.
@@ -327,12 +323,10 @@ void mlirTransformProducesHandle(MlirValue *results, intptr_t numResults,
   // `OpResult`s to a single `ResultRange` (and neither is `ResultRange` exposed
   // to Python). `producesHandle` iterates over the given `ResultRange` anyway.
   SmallVectorImpl<MemoryEffects::EffectInstance> &effectList = *unwrap(effects);
-  for (intptr_t i = 0; i < numResults; ++i)
-    TypeSwitch<Value, void>(unwrap(results[i]))
-        .Case<OpResult>([&](OpResult opResult) {
-          transform::producesHandle(ResultRange(opResult), effectList);
-        })
-        .DefaultUnreachable("expected an OpResult");
+  for (intptr_t i = 0; i < numResults; ++i) {
+    auto opResult = cast<OpResult>(unwrap(results[i]));
+    transform::producesHandle(ResultRange(opResult), effectList);
+  }
 }
 
 /// Set the effect of potentially modifying payload IR.
