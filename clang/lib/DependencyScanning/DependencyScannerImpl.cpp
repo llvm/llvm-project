@@ -17,6 +17,7 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/AdvisoryLock.h"
+#include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
 
@@ -642,13 +643,16 @@ struct AsyncModuleCompile : PPCallbacks {
     std::thread([Lock = std::move(Lock), ModCI1 = std::move(ModCI1),
                  ModCI2 = std::move(ModCI2), DC = std::move(DC),
                  Service = &Service] {
-      // Quickly discovers and compiles modules for the real scan below.
-      SingleModuleWithAsyncModuleCompiles Action1(*Service);
-      (void)ModCI1->ExecuteAction(Action1);
-      // The real scan below.
-      ModCI2->getPreprocessorOpts().SingleModuleParseMode = false;
-      GenerateModuleFromModuleMapAction Action2;
-      (void)ModCI2->ExecuteAction(Action2);
+      llvm::CrashRecoveryContext CRC;
+      (void)CRC.RunSafely([&] {
+        // Quickly discovers and compiles modules for the real scan below.
+        SingleModuleWithAsyncModuleCompiles Action1(*Service);
+        (void)ModCI1->ExecuteAction(Action1);
+        // The real scan below.
+        ModCI2->getPreprocessorOpts().SingleModuleParseMode = false;
+        GenerateModuleFromModuleMapAction Action2;
+        (void)ModCI2->ExecuteAction(Action2);
+      });
     }).detach();
   }
 };
