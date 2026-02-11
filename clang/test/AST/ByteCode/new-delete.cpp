@@ -117,6 +117,12 @@ constexpr int AutoArray() {
 
 static_assert(AutoArray() == 3);
 
+namespace ThisPtrInRunRecordDestructor {
+  struct S {
+    constexpr ~S() { delete new S; };
+  };
+}
+
 #if 0
 consteval int largeArray1(bool b) {
   if (b) {
