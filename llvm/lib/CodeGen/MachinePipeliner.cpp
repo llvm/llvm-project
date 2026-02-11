@@ -72,6 +72,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrItineraries.h"
@@ -290,10 +291,12 @@ class LoopCarriedOrderDepsTracker {
     InstrTag getTag() const { return InstrTag(getInt()); }
   };
 
-  /// Holds loads and stores with memory related information.
-  struct LoadStoreChunk {
+  /// Holds instructions that may form loop-carried order-dependencies, but not
+  /// global barriers.
+  struct NoBarrierInstsChunk {
     SmallVector<SUnitWithMemInfo, 4> Loads;
     SmallVector<SUnitWithMemInfo, 4> Stores;
+    SmallVector<SUnitWithMemInfo, 1> FPExceptions;
 
     void append(SUnit *SU);
   };
@@ -340,8 +343,8 @@ private:
   /// Tags to \p SU if the instruction may affect the order-dependencies.
   std::optional<InstrTag> getInstrTag(SUnit *SU) const;
 
-  void addLoopCarriedDepenenciesForChunks(const LoadStoreChunk &From,
-                                          const LoadStoreChunk &To);
+  void addLoopCarriedDepenenciesForChunks(const NoBarrierInstsChunk &From,
+                                          const NoBarrierInstsChunk &To);
 
   /// Add a loop-carried order dependency between \p Src and \p Dst if we
   /// cannot prove they are independent.
@@ -349,6 +352,10 @@ private:
                                  const SUnitWithMemInfo &Dst);
 
   void computeDependenciesAux();
+
+  void setLoopCarriedDep(const SUnit *Src, const SUnit *Dst) {
+    LoopCarried[Src->NodeNum].set(Dst->NodeNum);
+  }
 };
 
 } // end anonymous namespace
@@ -1087,11 +1094,16 @@ static bool hasLoopCarriedMemDep(const SUnitWithMemInfo &Src,
   return false;
 }
 
-void LoopCarriedOrderDepsTracker::LoadStoreChunk::append(SUnit *SU) {
+void LoopCarriedOrderDepsTracker::NoBarrierInstsChunk::append(SUnit *SU) {
   const MachineInstr *MI = SU->getInstr();
-  if (!MI->mayLoadOrStore())
-    return;
-  (MI->mayStore() ? Stores : Loads).emplace_back(SU);
+  if (MI->mayStore())
+    Stores.emplace_back(SU);
+  else if (MI->mayLoad())
+    Loads.emplace_back(SU);
+  else if (MI->mayRaiseFPException())
+    FPExceptions.emplace_back(SU);
+  else
+    llvm_unreachable("Unexpected instruction type.");
 }
 
 LoopCarriedOrderDepsTracker::LoopCarriedOrderDepsTracker(
@@ -1137,11 +1149,11 @@ void LoopCarriedOrderDepsTracker::addDependenciesBetweenSUs(
     return;
 
   if (hasLoopCarriedMemDep(Src, Dst, *BAA, TII, TRI, DAG))
-    LoopCarried[Src.SU->NodeNum].set(Dst.SU->NodeNum);
+    setLoopCarriedDep(Src.SU, Dst.SU);
 }
 
 void LoopCarriedOrderDepsTracker::addLoopCarriedDepenenciesForChunks(
-    const LoadStoreChunk &From, const LoadStoreChunk &To) {
+    const NoBarrierInstsChunk &From, const NoBarrierInstsChunk &To) {
   // Add load-to-store dependencies (WAR).
   for (const SUnitWithMemInfo &Src : From.Loads)
     for (const SUnitWithMemInfo &Dst : To.Stores)
@@ -1159,19 +1171,22 @@ void LoopCarriedOrderDepsTracker::addLoopCarriedDepenenciesForChunks(
 }
 
 void LoopCarriedOrderDepsTracker::computeDependenciesAux() {
-  SmallVector<LoadStoreChunk, 2> Chunks(1);
+  SmallVector<NoBarrierInstsChunk, 2> Chunks(1);
+  SUnit *FirstBarrier = nullptr;
+  SUnit *LastBarrier = nullptr;
   for (const auto &TSU : TaggedSUnits) {
     InstrTag Tag = TSU.getTag();
     SUnit *SU = TSU.getPointer();
     switch (Tag) {
     case InstrTag::Barrier:
+      if (!FirstBarrier)
+        FirstBarrier = SU;
+      LastBarrier = SU;
       Chunks.emplace_back();
       break;
     case InstrTag::LoadOrStore:
-      Chunks.back().append(SU);
-      break;
     case InstrTag::FPExceptions:
-      // TODO: Handle this properly.
+      Chunks.back().append(SU);
       break;
     }
   }
@@ -1179,12 +1194,58 @@ void LoopCarriedOrderDepsTracker::computeDependenciesAux() {
   // Add dependencies between memory operations. If there are one or more
   // barrier events between two memory instructions, we don't add a
   // loop-carried dependence for them.
-  for (const LoadStoreChunk &Chunk : Chunks)
+  for (const NoBarrierInstsChunk &Chunk : Chunks)
     addLoopCarriedDepenenciesForChunks(Chunk, Chunk);
 
-  // TODO: If there are multiple barrier instructions, dependencies from the
-  // last barrier instruction (or load/store below it) to the first barrier
-  // instruction (or load/store above it).
+  // There is no barrier instruction between load/store/fp-exception
+  // instructions in the same chunk. If there are one or more barrier
+  // instructions, the instructions sequence is as follows:
+  //
+  //   Loads/Stores/FPExceptions (Chunks.front())
+  //   Barrier (FirstBarrier)
+  //   Loads/Stores/FPExceptions
+  //   Barrier
+  //   ...
+  //   Loads/Stores/FPExceptions
+  //   Barrier (LastBarrier)
+  //   Loads/Stores/FPExceptions (Chunks.back())
+  //
+  // Since loads/stores/fp-exceptions must not be reordered across barrier
+  // instructions, and the order of barrier instructions must be preserved, add
+  // the following loop-carried dependences:
+  //
+  //       Loads/Stores/FPExceptions (Chunks.front()) <-----+
+  //  +--> Barrier (FirstBarrier) <----------------------+  |
+  //  |    Loads/Stores/FPExceptions                     |  |
+  //  |    Barrier                                       |  |
+  //  |    ...                                           |  |
+  //  |    Loads/Stores/FPExceptions                     |  |
+  //  |    Barrier (LastBarrier) ------------------------+--+
+  //  +--- Loads/Stores/FPExceptions (Chunks.back())
+  //
+  if (FirstBarrier) {
+    assert(LastBarrier && "Both barriers should be set.");
+
+    // LastBarrier -> Loads/Stores/FPExceptions in Chunks.front()
+    for (const SUnitWithMemInfo &Dst : Chunks.front().Loads)
+      setLoopCarriedDep(LastBarrier, Dst.SU);
+    for (const SUnitWithMemInfo &Dst : Chunks.front().Stores)
+      setLoopCarriedDep(LastBarrier, Dst.SU);
+    for (const SUnitWithMemInfo &Dst : Chunks.front().FPExceptions)
+      setLoopCarriedDep(LastBarrier, Dst.SU);
+
+    // Loads/Stores/FPExceptions in Chunks.back() -> FirstBarrier
+    for (const SUnitWithMemInfo &Src : Chunks.back().Loads)
+      setLoopCarriedDep(Src.SU, FirstBarrier);
+    for (const SUnitWithMemInfo &Src : Chunks.back().Stores)
+      setLoopCarriedDep(Src.SU, FirstBarrier);
+    for (const SUnitWithMemInfo &Src : Chunks.back().FPExceptions)
+      setLoopCarriedDep(Src.SU, FirstBarrier);
+
+    // LastBarrier -> FirstBarrier (if they are different)
+    if (FirstBarrier != LastBarrier)
+      setLoopCarriedDep(LastBarrier, FirstBarrier);
+  }
 }
 
 /// Add a chain edge between a load and store if the store can be an
@@ -3257,54 +3318,6 @@ bool SMSchedule::insert(SUnit *SU, int StartCycle, int EndCycle, int II) {
   return false;
 }
 
-// Return the cycle of the earliest scheduled instruction in the chain.
-int SMSchedule::earliestCycleInChain(const SwingSchedulerDDGEdge &Dep,
-                                     const SwingSchedulerDDG *DDG) {
-  SmallPtrSet<SUnit *, 8> Visited;
-  SmallVector<SwingSchedulerDDGEdge, 8> Worklist;
-  Worklist.push_back(Dep);
-  int EarlyCycle = INT_MAX;
-  while (!Worklist.empty()) {
-    const SwingSchedulerDDGEdge &Cur = Worklist.pop_back_val();
-    SUnit *PrevSU = Cur.getSrc();
-    if (Visited.count(PrevSU))
-      continue;
-    std::map<SUnit *, int>::const_iterator it = InstrToCycle.find(PrevSU);
-    if (it == InstrToCycle.end())
-      continue;
-    EarlyCycle = std::min(EarlyCycle, it->second);
-    for (const auto &IE : DDG->getInEdges(PrevSU))
-      if (IE.isOrderDep() || IE.isOutputDep())
-        Worklist.push_back(IE);
-    Visited.insert(PrevSU);
-  }
-  return EarlyCycle;
-}
-
-// Return the cycle of the latest scheduled instruction in the chain.
-int SMSchedule::latestCycleInChain(const SwingSchedulerDDGEdge &Dep,
-                                   const SwingSchedulerDDG *DDG) {
-  SmallPtrSet<SUnit *, 8> Visited;
-  SmallVector<SwingSchedulerDDGEdge, 8> Worklist;
-  Worklist.push_back(Dep);
-  int LateCycle = INT_MIN;
-  while (!Worklist.empty()) {
-    const SwingSchedulerDDGEdge &Cur = Worklist.pop_back_val();
-    SUnit *SuccSU = Cur.getDst();
-    if (Visited.count(SuccSU) || SuccSU->isBoundaryNode())
-      continue;
-    std::map<SUnit *, int>::const_iterator it = InstrToCycle.find(SuccSU);
-    if (it == InstrToCycle.end())
-      continue;
-    LateCycle = std::max(LateCycle, it->second);
-    for (const auto &OE : DDG->getOutEdges(SuccSU))
-      if (OE.isOrderDep() || OE.isOutputDep())
-        Worklist.push_back(OE);
-    Visited.insert(SuccSU);
-  }
-  return LateCycle;
-}
-
 /// If an instruction has a use that spans multiple iterations, then
 /// return true. These instructions are characterized by having a back-ege
 /// to a Phi, which contains a reference to another Phi.
@@ -3330,12 +3343,6 @@ void SMSchedule::computeStart(SUnit *SU, int *MaxEarlyStart, int *MinLateStart,
     for (SUnit *I : getInstructions(cycle)) {
       for (const auto &IE : DDG->getInEdges(SU)) {
         if (IE.getSrc() == I) {
-          // FIXME: Add reverse edge to `DDG` instead of calling
-          // `isLoopCarriedDep`
-          if (DAG->isLoopCarriedDep(IE)) {
-            int End = earliestCycleInChain(IE, DDG) + (II - 1);
-            *MinLateStart = std::min(*MinLateStart, End);
-          }
           int EarlyStart = cycle + IE.getLatency() - IE.getDistance() * II;
           *MaxEarlyStart = std::max(*MaxEarlyStart, EarlyStart);
         }
@@ -3343,12 +3350,6 @@ void SMSchedule::computeStart(SUnit *SU, int *MaxEarlyStart, int *MinLateStart,
 
       for (const auto &OE : DDG->getOutEdges(SU)) {
         if (OE.getDst() == I) {
-          // FIXME: Add reverse edge to `DDG` instead of calling
-          // `isLoopCarriedDep`
-          if (DAG->isLoopCarriedDep(OE)) {
-            int Start = latestCycleInChain(OE, DDG) + 1 - II;
-            *MaxEarlyStart = std::max(*MaxEarlyStart, Start);
-          }
           int LateStart = cycle - OE.getLatency() + OE.getDistance() * II;
           *MinLateStart = std::min(*MinLateStart, LateStart);
         }
