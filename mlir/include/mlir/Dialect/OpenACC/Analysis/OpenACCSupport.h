@@ -298,7 +298,8 @@ public:
   /// Get or optionally create a GPU module in the given module.
   ///
   /// \param mod The module to search or create the GPU module in.
-  /// \param create If true (default), create the GPU module if it doesn't exist.
+  /// \param create If true (default), create the GPU module if it doesn't
+  /// exist.
   /// \param name The name for the GPU module. If empty, implementation uses its
   ///        default name.
   /// \return The GPU module if found or created, std::nullopt otherwise.
