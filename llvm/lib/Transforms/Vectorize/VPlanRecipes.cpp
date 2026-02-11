@@ -267,18 +267,6 @@ void VPRecipeBase::moveBefore(VPBasicBlock &BB,
 }
 
 InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
-  // Skip the reverse operation cost for the mask.
-  // TODO: Remove this once redundant mask reverse operations can be eliminated
-  // by VPlanTransforms::cse before cost computation.
-  auto SkipReverseMask = [this]() {
-    if (!match(this,
-               m_CombineOr(m_Reverse(m_VPValue()),
-                           m_Intrinsic<Intrinsic::experimental_vp_reverse>())))
-      return false;
-    auto *Def = cast<VPSingleDefRecipe>(this);
-    auto *Mem = dyn_cast_or_null<VPWidenMemoryRecipe>(Def->getSingleUser());
-    return Mem && Mem->getMask() == Def;
-  };
   // Get the underlying instruction for the recipe, if there is one. It is used
   // to
   //   * decide if cost computation should be skipped for this recipe,
@@ -292,7 +280,7 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
     UI = &WidenMem->getIngredient();
 
   InstructionCost RecipeCost;
-  if ((UI && Ctx.skipCostComputation(UI, VF.isVector())) || SkipReverseMask()) {
+  if (UI && Ctx.skipCostComputation(UI, VF.isVector())) {
     RecipeCost = 0;
   } else {
     RecipeCost = computeCost(VF, Ctx);
@@ -1247,8 +1235,13 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   }
   case VPInstruction::Reverse: {
     assert(VF.isVector() && "Reverse operation must be vector type");
-    auto *VectorTy = cast<VectorType>(
-        toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF));
+    Type *EltTy = Ctx.Types.inferScalarType(getOperand(0));
+    // Skip the reverse operation cost for the mask.
+    // FIXME: Remove this once redundant mask reverse operations can be
+    // eliminated by VPlanTransforms::cse before cost computation.
+    if (EltTy->isIntegerTy(1))
+      return 0;
+    auto *VectorTy = cast<VectorType>(toVectorTy(EltTy, VF));
     return Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy,
                                   VectorTy, /*Mask=*/{}, Ctx.CostKind,
                                   /*Index=*/0);
@@ -1916,6 +1909,13 @@ static InstructionCost getCostForIntrinsics(Intrinsic::ID ID,
                                             const VPRecipeWithIRFlags &R,
                                             ElementCount VF,
                                             VPCostContext &Ctx) {
+  Type *ScalarRetTy = Ctx.Types.inferScalarType(&R);
+  // Skip the reverse operation cost for the mask.
+  // FIXME: Remove this once redundant mask reverse operations can be eliminated
+  // by VPlanTransforms::cse before cost computation.
+  if (ID == Intrinsic::experimental_vp_reverse && ScalarRetTy->isIntegerTy(1))
+    return InstructionCost(0);
+
   // Some backends analyze intrinsic arguments to determine cost. Use the
   // underlying value for the operand if it has one. Otherwise try to use the
   // operand of the underlying call instruction, if there is one. Otherwise
@@ -1935,7 +1935,6 @@ static InstructionCost getCostForIntrinsics(Intrinsic::ID ID,
     Arguments.push_back(V);
   }
 
-  Type *ScalarRetTy = Ctx.Types.inferScalarType(&R);
   Type *RetTy = VF.isVector() ? toVectorizedTy(ScalarRetTy, VF) : ScalarRetTy;
   SmallVector<Type *> ParamTys;
   for (const VPValue *Op : Operands) {
