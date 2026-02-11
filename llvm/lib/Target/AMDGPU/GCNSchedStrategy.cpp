@@ -2184,6 +2184,7 @@ bool RewriteMFMAFormStage::initHeuristics(
 
       int ReplacementOp = AMDGPU::getMFMASrcCVDstAGPROp(MI.getOpcode());
       assert(ReplacementOp != -1);
+
       RewriteCands.push_back({&MI, MI.getOpcode()});
       MI.setDesc(TII->get(ReplacementOp));
 
@@ -2350,8 +2351,6 @@ double RewriteMFMAFormStage::getRewriteCost(
 
     MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
     assert(Src2);
-    if (!Src2->isReg())
-      continue;
 
     // Have to get src types separately since subregs may cause C and D
     // registers to be different types even though the actual operand is
