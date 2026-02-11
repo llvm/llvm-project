@@ -1850,7 +1850,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
 
   // Remove layout attributes from SCF ops
   getOperation()->walk([](Operation *op) {
-    if (isa<scf::SCFDialect>(op->getDialect())) {
+    if (isa<RegionBranchOpInterface, RegionBranchTerminatorOpInterface>(op)) {
       xegpu::removeLayoutAttrs(op);
     }
   });
