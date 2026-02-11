@@ -134,7 +134,7 @@ public:
   // [vector.cons], construct/copy/destroy
   //
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector()
-    _NOEXCEPT_(is_nothrow_default_constructible<allocator_type>::value) {}
+      _NOEXCEPT_(is_nothrow_default_constructible<allocator_type>::value) {}
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit vector(const allocator_type& __a)
 #if _LIBCPP_STD_VER <= 14
       _NOEXCEPT_(is_nothrow_copy_constructible<allocator_type>::value)
@@ -478,7 +478,8 @@ public:
     _LIBCPP_ASSERT_INTERNAL(
         size() < capacity(), "We assume that we have enough space to insert an element at the end of the vector");
     _ConstructTransaction __tx(*this, 1);
-    __alloc_traits::construct(this->__layout_.__alloc(), std::__to_address(__tx.__pos_), std::forward<_Args>(__args)...);
+    __alloc_traits::construct(
+        this->__layout_.__alloc(), std::__to_address(__tx.__pos_), std::forward<_Args>(__args)...);
     ++__tx.__pos_;
   }
 
@@ -592,9 +593,18 @@ private:
   //  Postcondition:  capacity() >= __n
   //  Postcondition:  size() == 0
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __vallocate(size_type __n) {
-    _LIBCPP_ASSERT_INTERNAL(__layout_.__begin_ptr() == nullptr, "vector::__vallocate can only be called on a vector that hasn't allocated memory. This vector either already owns a buffer, or a deallocation function didn't reset the layout's begin pointer.");
-    _LIBCPP_ASSERT_INTERNAL(__layout_.__empty(), "vector::__vallocate can only be called on a vector that hasn't allocated memory. This vector either already owns a buffer, or a deallocation function didn't reset the layout's size.");
-    _LIBCPP_ASSERT_INTERNAL(__layout_.__capacity() == 0, "vector::__vallocate can only be called on a vector that hasn't allocated memory. This vector either already owns a buffer, or a deallocation function didn't reset the layout's capacity.");
+    _LIBCPP_ASSERT_INTERNAL(
+        __layout_.__begin_ptr() == nullptr,
+        "vector::__vallocate can only be called on a vector that hasn't allocated memory. This vector either already "
+        "owns a buffer, or a deallocation function didn't reset the layout's begin pointer.");
+    _LIBCPP_ASSERT_INTERNAL(
+        __layout_.__empty(),
+        "vector::__vallocate can only be called on a vector that hasn't allocated memory. This vector either already "
+        "owns a buffer, or a deallocation function didn't reset the layout's size.");
+    _LIBCPP_ASSERT_INTERNAL(
+        __layout_.__capacity() == 0,
+        "vector::__vallocate can only be called on a vector that hasn't allocated memory. This vector either already "
+        "owns a buffer, or a deallocation function didn't reset the layout's capacity.");
     _LIBCPP_ASSERT_INTERNAL(__n > 0, "vector::__vallocate cannot allocate 0 bytes");
 
     if (__n > max_size())
@@ -907,8 +917,8 @@ template <class _InputIterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 vector<_Tp, _Allocator>::__construct_at_end(_InputIterator __first, _Sentinel __last, size_type __n) {
   _ConstructTransaction __tx(*this, __n);
-  __tx.__pos_ =
-      std::__uninitialized_allocator_copy(this->__layout_.__alloc(), std::move(__first), std::move(__last), __tx.__pos_);
+  __tx.__pos_ = std::__uninitialized_allocator_copy(
+      this->__layout_.__alloc(), std::move(__first), std::move(__last), __tx.__pos_);
 }
 
 template <class _Tp, class _Allocator>
@@ -918,7 +928,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI vector<_Tp, _Allocato
 #else
     _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
 #endif
-    : __layout_(std::move(__x.__layout_)) {}
+    : __layout_(std::move(__x.__layout_)) {
+}
 
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI
@@ -1250,13 +1261,19 @@ vector<_Tp, _Allocator>::__insert_with_sentinel(const_iterator __position, _Inpu
     _SplitBuffer __merged(
         __recommend(size() + __v.size()), __off, __layout_.__alloc()); // has `__off` positions available at the front
     std::__uninitialized_allocator_relocate(
-        __layout_.__alloc(), std::__to_address(__old_last), std::__to_address(__layout_.__end_ptr()), std::__to_address(__merged.end()));
-    __guard.__complete(); // Release the guard once objects in [__old_last_, __layout_.__end_ptr()) have been successfully
-                          // relocated.
+        __layout_.__alloc(),
+        std::__to_address(__old_last),
+        std::__to_address(__layout_.__end_ptr()),
+        std::__to_address(__merged.end()));
+    __guard.__complete(); // Release the guard once objects in [__old_last_, __layout_.__end_ptr()) have been
+                          // successfully relocated.
     __merged.__set_sentinel(__merged.end() + (__layout_.__end_ptr() - __old_last));
     __layout_.__set_boundary(__old_last);
     std::__uninitialized_allocator_relocate(
-        __layout_.__alloc(), std::__to_address(__v.begin()), std::__to_address(__v.end()), std::__to_address(__merged.end()));
+        __layout_.__alloc(),
+        std::__to_address(__v.begin()),
+        std::__to_address(__v.end()),
+        std::__to_address(__merged.end()));
     __merged.__set_sentinel(__merged.size() + __v.size());
     __v.__set_sentinel(__v.begin());
     __p = __layout_.__relocate_with_pivot(__merged, __p);

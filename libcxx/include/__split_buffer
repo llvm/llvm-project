@@ -199,16 +199,14 @@ public:
   /// `__relocate` relocates the objects in `[__begin_, __size())` into the front of `__buffer` and
   /// swaps the buffers of `*this` and `__buffer`. It is assumed that `__buffer` provides space for
   /// exactly `__size()` objects in the front. This function has a strong exception guarantee.
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __relocate(pointer& __first, pointer& __last, pointer& __capacity) {
-    auto __size = __last - __first;
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
+  __relocate(pointer& __first, pointer& __last, pointer& __capacity) {
+    auto __size      = __last - __first;
     auto __new_begin = __begin_ - __size;
     std::__uninitialized_allocator_relocate(
-      __alloc_,
-      std::__to_address(__first),
-      std::__to_address(__last),
-      std::__to_address(__new_begin));
+        __alloc_, std::__to_address(__first), std::__to_address(__last), std::__to_address(__new_begin));
     __begin_ = __new_begin;
-    __last = __first;
+    __last   = __first;
 
     __swap_layouts(__first, __last, __capacity);
     __front_cap_ = __begin_;
@@ -219,27 +217,21 @@ public:
   /// `__buffer`. It is assumed that `__buffer` provides space for exactly `(__p - __begin_ptr())`
   /// objects in the front and space for at least `(__size() - __p)` objects in the back. This function
   /// has a strong exception guarantee if `__begin_ == __p || __size() == __p`.
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __relocate_with_pivot(pointer __pivot, pointer& __first, pointer& __last, pointer& __capacity)
-  {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer
+  __relocate_with_pivot(pointer __pivot, pointer& __first, pointer& __last, pointer& __capacity) {
     pointer __result = __begin_;
 
     // Relocate [__p, __last) first to avoid having a hole in [__first, __last)
     // in case something in [__first, __p) throws.
     std::__uninitialized_allocator_relocate(
-        __alloc_,
-        std::__to_address(__pivot),
-        std::__to_address(__last),
-        std::__to_address(__end_));
+        __alloc_, std::__to_address(__pivot), std::__to_address(__last), std::__to_address(__end_));
     auto __relocated_so_far = __last - __pivot;
     __end_ += __relocated_so_far;
-    __last = __pivot;  // The objects in [__p, __last) have been destroyed by relocating them.
+    __last = __pivot; // The objects in [__p, __last) have been destroyed by relocating them.
 
     auto __new_begin = __begin_ - (__pivot - __first);
     std::__uninitialized_allocator_relocate(
-      __alloc_,
-      std::__to_address(__first),
-      std::__to_address(__pivot),
-      std::__to_address(__new_begin));
+        __alloc_, std::__to_address(__first), std::__to_address(__pivot), std::__to_address(__new_begin));
     __begin_ = __new_begin;
 
     __last = __first; // All the objects have been destroyed by relocating them.
@@ -406,14 +398,12 @@ public:
   /// `__relocate` relocates the objects in `[__begin_, __size())` into the front of `__buffer` and
   /// swaps the buffers of `*this` and `__buffer`. It is assumed that `__buffer` provides space for
   /// exactly `__size()` objects in the front. This function has a strong exception guarantee.
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __relocate(pointer& __first, size_type& __n, size_type& __capacity) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
+  __relocate(pointer& __first, size_type& __n, size_type& __capacity) {
     auto __new_begin = __begin_ - __n;
-    auto __last = __first + __n;
+    auto __last      = __first + __n;
     std::__uninitialized_allocator_relocate(
-      __alloc_,
-      std::__to_address(__first),
-      std::__to_address(__last),
-      std::__to_address(__new_begin));
+        __alloc_, std::__to_address(__first), std::__to_address(__last), std::__to_address(__new_begin));
     __set_valid_range(__new_begin, end());
     __n = 0;
 
@@ -426,29 +416,23 @@ public:
   /// `__buffer`. It is assumed that `__buffer` provides space for exactly `(__p - __begin_ptr())`
   /// objects in the front and space for at least `(__size() - __p)` objects in the back. This function
   /// has a strong exception guarantee if `__begin_ == __p || __size() == __p`.
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __relocate_with_pivot(pointer __pivot, pointer& __first, size_type& __n, size_type& __capacity)
-  {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer
+  __relocate_with_pivot(pointer __pivot, pointer& __first, size_type& __n, size_type& __capacity) {
     pointer __result = __begin_;
-    pointer __last = __first + __n;
+    pointer __last   = __first + __n;
 
     // We relocate elements in reverse order to ensure that a throwing relocation operation leaves the
     // buffer in a valid state.
     std::__uninitialized_allocator_relocate(
-      __alloc_,
-      std::__to_address(__pivot),
-      std::__to_address(__last),
-      std::__to_address(end()));
+        __alloc_, std::__to_address(__pivot), std::__to_address(__last), std::__to_address(end()));
 
     auto const __relocated_so_far = __last - __pivot;
     __size_ += __relocated_so_far;
-    __n -= __relocated_so_far;  // The objects in [__pivot, __last) have been destroyed by relocating them.
+    __n -= __relocated_so_far; // The objects in [__pivot, __last) have been destroyed by relocating them.
 
     auto __new_begin = __begin_ - __n;
     std::__uninitialized_allocator_relocate(
-      __alloc_,
-      std::__to_address(__first),
-      std::__to_address(__pivot),
-      std::__to_address(__new_begin));
+        __alloc_, std::__to_address(__first), std::__to_address(__pivot), std::__to_address(__new_begin));
     __begin_ = __new_begin;
     __size_ += __n;
     __n = 0; // All the objects have been destroyed by relocating them.
