@@ -842,7 +842,8 @@ def ist        : SDNode<"ISD::STORE"      , SDTIStore,
 
 def vector_shuffle : SDNode<"ISD::VECTOR_SHUFFLE", SDTVecShuffle, []>;
 def vector_reverse : SDNode<"ISD::VECTOR_REVERSE", SDTVecReverse>;
-def vector_splice : SDNode<"ISD::VECTOR_SPLICE", SDTVecSlice, []>;
+def vector_splice_left : SDNode<"ISD::VECTOR_SPLICE_LEFT", SDTVecSlice, []>;
+def vector_splice_right : SDNode<"ISD::VECTOR_SPLICE_RIGHT", SDTVecSlice, []>;
 def build_vector : SDNode<"ISD::BUILD_VECTOR", SDTypeProfile<1, -1, []>, []>;
 def splat_vector : SDNode<"ISD::SPLAT_VECTOR", SDTypeProfile<1, 1, []>, []>;
 def step_vector : SDNode<"ISD::STEP_VECTOR", SDTypeProfile<1, 1,
@@ -916,6 +917,10 @@ def convergencectrl_loop   : SDNode<"ISD::CONVERGENCECTRL_LOOP",
                                       [SDTCisVT<0,untyped>, SDTCisVT<1,untyped>]>>;
 def convergencectrl_glue   : SDNode<"ISD::CONVERGENCECTRL_GLUE",
                                     SDTypeProfile<0, 1, [SDTCisVT<0, untyped>]>>;
+
+def sponentry : SDNode<
+  "ISD::SPONENTRY", SDTypeProfile <1, 0, [SDTCisPtrTy<0>]>
+>;
 
 //===----------------------------------------------------------------------===//
 // Selection DAG Condition Codes
@@ -1199,6 +1204,14 @@ def zext_nneg : PatFrag<(ops node:$src), (zext node:$src), [{
 def sext_like : PatFrags<(ops node:$src),
                          [(zext_nneg node:$src),
                           (sext node:$src)]>;
+
+def ffloor_nnan : PatFrag<(ops node:$src), (ffloor node:$src), [{
+  return N->getFlags().hasNoNaNs();
+}]> {
+  let GISelPredicateCode = [{
+    return MI.getFlag(MachineInstr::FmNoNans);
+  }];
+}
 
 // null_frag - The null pattern operator is used in multiclass instantiations
 // which accept an SDPatternOperator for use in matching patterns for internal

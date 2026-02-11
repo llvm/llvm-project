@@ -38,7 +38,12 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
 
 set( LIBCLC_MIN_LLVM 3.9.0 )
 
-set( LIBCLC_TARGETS_TO_BUILD "all"
+# A runtimes cross-build should only use the requested target.
+set( LIBCLC_DEFAULT_TARGET "all" )
+if( LLVM_RUNTIMES_BUILD AND LLVM_DEFAULT_TARGET_TRIPLE MATCHES "^nvptx|^amdgcn" )
+  set( LIBCLC_DEFAULT_TARGET ${LLVM_DEFAULT_TARGET_TRIPLE} )
+endif()
+set( LIBCLC_TARGETS_TO_BUILD ${LIBCLC_DEFAULT_TARGET}
     CACHE STRING "Semicolon-separated list of libclc targets to build, or 'all'." )
 
 option( ENABLE_RUNTIME_SUBNORMAL "Enable runtime linking of subnormal support." OFF )
@@ -82,7 +87,10 @@ else()
   # In-tree configuration
   set( LIBCLC_STANDALONE_BUILD FALSE )
 
-  set( LLVM_PACKAGE_VERSION ${LLVM_VERSION} )
+  if( NOT LLVM_PACKAGE_VERSION )
+    set( LLVM_PACKAGE_VERSION ${LLVM_VERSION} )
+  endif()
+  set( PACKAGE_VERSION ${LLVM_PACKAGE_VERSION} )
 
   # Note that we check this later (for both build types) but we can provide a
   # more useful error message when built in-tree. We assume that LLVM tools are
@@ -102,12 +110,10 @@ else()
   # in-tree build we place the libraries in clang's resource driectory.
   include(GetClangResourceDir)
   get_clang_resource_dir( LIBCLC_INSTALL_DIR )
-  cmake_path( APPEND LIBCLC_INSTALL_DIR "lib" "libclc" )
+  cmake_path( APPEND LIBCLC_INSTALL_DIR "lib" )
 
-  # Note we do not adhere to LLVM_ENABLE_PER_TARGET_RUNTIME_DIR.
   cmake_path( GET LLVM_LIBRARY_OUTPUT_INTDIR PARENT_PATH LIBCLC_OUTPUT_LIBRARY_DIR )
   cmake_path( APPEND LIBCLC_OUTPUT_LIBRARY_DIR ${LIBCLC_INSTALL_DIR} )
-  file( MAKE_DIRECTORY ${LIBCLC_OUTPUT_LIBRARY_DIR} )
 endif()
 
 if( EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )
@@ -154,6 +160,7 @@ set( LIBCLC_TARGETS_ALL
   r600--
   nvptx64--
   nvptx64--nvidiacl
+  nvptx64-nvidia-cuda
 )
 
 # The mesa3d environment is only available since LLVM 4.0
@@ -205,6 +212,7 @@ set( clspv--_devices none )
 set( clspv64--_devices none )
 set( nvptx64--_devices none )
 set( nvptx64--nvidiacl_devices none )
+set( nvptx64-nvidia-cuda_devices none )
 set( spirv-mesa3d-_devices none )
 set( spirv64-mesa3d-_devices none )
 
@@ -221,7 +229,9 @@ set( tahiti_aliases pitcairn verde oland hainan bonaire kabini kaveri hawaii
   gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036
   gfx1100 gfx1101 gfx1102 gfx1103
   gfx1150 gfx1151 gfx1152 gfx1153
+  gfx1170
   gfx1200 gfx1201 gfx1250 gfx1251
+  gfx1310
 )
 
 # pkg-config file
@@ -306,6 +316,9 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     set( DARCH amdgcn-amdhsa )
   else()
     set( DARCH ${ARCH} )
+  endif()
+  if ( "${OS}" STREQUAL cuda )
+    set( OS nvidiacl )
   endif()
 
   # Append a variety of target- and triple-based directories to search,
@@ -395,6 +408,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       -D${CLC_TARGET_DEFINE}
       # All libclc builtin libraries see CLC headers
       -I${CMAKE_CURRENT_SOURCE_DIR}/clc/include
+      -include opencl-c-base.h
       # Error on undefined macros
       -Werror=undef
       -fdiscard-value-names
@@ -432,6 +446,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     add_libclc_builtin_set(
       CLC_INTERNAL
       ARCH ${ARCH}
+      DEVICE ${d}
       ARCH_SUFFIX clc-${arch_suffix}
       TRIPLE ${clang_triple}
       COMPILE_FLAGS ${build_flags}
@@ -440,18 +455,20 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     )
 
     list( APPEND build_flags
-      -Xclang -fdeclare-opencl-builtins -Xclang -finclude-default-header
+      -Xclang -fdeclare-opencl-builtins
       -I${CMAKE_CURRENT_SOURCE_DIR}/opencl/include
     )
 
     add_libclc_builtin_set(
       ARCH ${ARCH}
+      DEVICE ${d}
       ARCH_SUFFIX ${arch_suffix}
       TRIPLE ${clang_triple}
       COMPILE_FLAGS ${build_flags}
       OPT_FLAGS ${opt_flags}
       LIB_FILES ${opencl_lib_files}
       ALIASES ${${d}_aliases}
+      OUTPUT_FILENAME libclc
       PARENT_TARGET libclc-opencl-builtins
       # Link in the CLC builtins and internalize their symbols
       INTERNAL_LINK_DEPENDENCIES builtins.link.clc-${arch_suffix}

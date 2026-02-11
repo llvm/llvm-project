@@ -179,10 +179,11 @@ struct VectorContractToPackedTypeDotProduct
                       "RHS) dim and acc dim of size 4/8/16.");
 
     if (lhsTy.getElementType().isSignlessInteger(8) && nonUnitDimValue != 4 &&
-        nonUnitDimValue != 8)
+        nonUnitDimValue != 8 && nonUnitDimValue != 16 &&
+        nonUnitDimAcc.front() == nonUnitDimValue)
       return rewriter.notifyMatchFailure(
           contractOp, "Int8 dot-product operation expects non-unit (LHR or "
-                      "RHS) dim and acc dim of size 4/8.");
+                      "RHS) dim and acc dim of size 4/8/16.");
 
     ArrayRef<int64_t> lhsShape = lhsTy.getShape();
     llvm::SmallVector<int64_t> nonUnitDimLhs;
@@ -244,7 +245,7 @@ struct VectorContractToPackedTypeDotProduct
         }
       }
 
-      // If the accumulators are shuffled we get nullptr else the 
+      // If the accumulators are shuffled we get nullptr else the
       // transfer_read or load operations.
       Operation *accRead =
           traceToVectorReadLikeParentOperation(contractOp.getAcc());
@@ -290,7 +291,7 @@ struct VectorContractToPackedTypeDotProduct
                                                       : contractOp.getLhs();
       }
 
-      // Validate and shuffle the accumulator 
+      // Validate and shuffle the accumulator
       if (accRead) {
         // Trace back to the load or transfer_read operations of the contract
         // accumulators.
@@ -382,10 +383,17 @@ struct VectorContractToPackedTypeDotProduct
     }
 
     if (lhsTy.getElementType().isSignlessInteger(8)) {
-      dp = x86vector::DotInt8Op::create(
-          rewriter, loc,
-          VectorType::get(nonUnitDimValue, rewriter.getIntegerType(32)),
-          castAcc, bitcastUnitDimPkType, castNonUnitDim);
+      if (nonUnitDimAcc.front() == 16) {
+        dp = x86vector::AVX10DotInt8Op::create(
+            rewriter, loc,
+            VectorType::get(nonUnitDimValue, rewriter.getIntegerType(32)),
+            castAcc, bitcastUnitDimPkType, castNonUnitDim);
+      } else {
+        dp = x86vector::DotInt8Op::create(
+            rewriter, loc,
+            VectorType::get(nonUnitDimValue, rewriter.getIntegerType(32)),
+            castAcc, bitcastUnitDimPkType, castNonUnitDim);
+      }
     }
 
     if (!dp)

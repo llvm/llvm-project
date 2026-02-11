@@ -58,8 +58,8 @@ not provide all C-ABI functionality (such as Windows).
 cmake -S <path-to-llvm-project-source>/llvm     \
   -GNinja                                       \
   -DCMAKE_BUILD_TYPE=Release                    \
-  -DLLVM_ENABLE_PROJECTS="clang;flang;openmp"   \
-  -DLLVM_ENABLE_RUNTIMES="compiler-rt;flang-rt" \
+  -DLLVM_ENABLE_PROJECTS="clang;flang"   \
+  -DLLVM_ENABLE_RUNTIMES="compiler-rt;flang-rt;openmp" \
   ...
 ```
 

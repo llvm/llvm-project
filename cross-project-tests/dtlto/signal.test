@@ -1,42 +1,52 @@
 REQUIRES: ld.lld
 
 # Test that if a link is terminated by a signal (or the equivalent on
-# Windows), e.g. CTRL-C, DTLTO temporary files are cleaned up.
+# Windows), e.g. CTRL-C, DTLTO temporary files are cleaned up. We use
+# archives in this test as the handling for archives requires a superset
+# of the temporary files used for object inputs.
 
 RUN: rm -rf %t && split-file %s %t && cd %t
 
 RUN: %clang --target=x86_64-linux-gnu -O2 t1.c t2.c -flto=thin -c
 
-DEFINE: %{kill-dtlto} = %python killer.py %clang --target=x86_64-linux-gnu \
-DEFINE:   -nostdlib -O2 -flto=thin -fuse-ld=lld t1.o t2.o \
-DEFINE:   -fthinlto-distributor=%python \
-DEFINE:   -Xthinlto-distributor=local_codegen_and_wait.py
+RUN: llvm-ar rcs t.a t1.o t2.o
+
+DEFINE: %{tdir} = dummy-to-make-lit-work
+DEFINE: %{kill-dtlto} = mkdir %{tdir} && %python %S/test_temps.py %{tdir} kill \
+DEFINE:   %clang --target=x86_64-linux-gnu -nostdlib -O2 -flto=thin \
+DEFINE:     -fuse-ld=lld -Wl,--whole-archive t.a -o %{tdir}/t.elf -shared \
+DEFINE:     -fthinlto-distributor=%python \
+DEFINE:     -Xthinlto-distributor=%S/local_codegen_and_wait.py
 
 # Check that all temporary files are removed if the process is aborted.
-RUN: mkdir none
-RUN: %{kill-dtlto} -o none/t.elf
-RUN: ls none | FileCheck %s --allow-empty --check-prefix=EMPTY
+REDEFINE: %{tdir} = empty
+RUN: %{kill-dtlto}
+RUN: ls %{tdir} | FileCheck %s --allow-empty --check-prefix=EMPTY
 
 EMPTY-NOT: {{.}}
 
-# Check that --save-temps preserves all the files.
-RUN: rm send-signal && mkdir all
-RUN: %{kill-dtlto} -Wl,--save-temps -o all/t.elf
-RUN: ls all | sort | FileCheck %s --check-prefixes=BOOKEND,TEMPS,INDEX
+# Check that --save-temps preserves temporary files if the process is aborted.
+REDEFINE: %{tdir} = savetemps
+RUN: %{kill-dtlto} -Wl,--save-temps
+RUN: ls %{tdir} | sort | FileCheck %s --check-prefixes=BOOKEND,TEMPS,INDEX,OTHER
 
-# Check that --thinlto-emit-index-files preserves the index files.
-RUN: rm send-signal && mkdir index
-RUN: %{kill-dtlto} -Wl,--thinlto-emit-index-files -o index/t.elf
-RUN: ls index | sort | FileCheck %s --check-prefixes=BOOKEND,INDEX
+# Check that --thinlto-emit-index-files preserves the index files if the process
+# is aborted.
+REDEFINE: %{tdir} = index
+RUN: %{kill-dtlto} -Wl,--thinlto-emit-index-files
+RUN: ls %{tdir} | sort | FileCheck %s --check-prefixes=BOOKEND,INDEX
 
 # No files are expected before.
 BOOKEND-NOT: {{.}}
-TEMPS: {{^}}t.[[#]].dist-file.json{{$}}
-TEMPS: {{^}}t.elf.{{.+$}}
-TEMPS: {{^}}t1.1.[[#]].native.o{{$}}
-INDEX: {{^}}t1.1.[[#]].native.o.thinlto.bc{{$}}
-TEMPS: {{^}}t2.2.[[#]].native.o{{$}}
-INDEX: {{^}}t2.2.[[#]].native.o.thinlto.bc{{$}}
+TEMPS: {{^}}t.[[#PID:]].dist-file.json{{$}}
+# Filename composition: <archive>(<member> at <offset>).<task>.<pid>.<task>.<pid>.native.o.
+TEMPS: {{^}}t.a(t1.o at [[#T1_OFFSET:]]).1.[[#%X,HEXPID:]].1.[[#PID]].native.o{{$}}
+INDEX: {{^}}t.a(t1.o at [[#T1_OFFSET:]]).1.[[#%X,HEXPID:]].1.[[#PID:]].native.o.thinlto.bc{{$}}
+TEMPS: {{^}}t.a(t1.o at [[#T1_OFFSET]]).1.[[#%X,HEXPID]].o{{$}}
+TEMPS: {{^}}t.a(t2.o at [[#T2_OFFSET:]]).2.[[#%X,HEXPID]].2.[[#PID]].native.o{{$}}
+INDEX: {{^}}t.a(t2.o at [[#T2_OFFSET:]]).2.[[#%X,HEXPID]].2.[[#PID]].native.o.thinlto.bc{{$}}
+TEMPS: {{^}}t.a(t2.o at [[#T2_OFFSET]]).2.[[#%X,HEXPID]].o{{$}}
+OTHER: {{^}}t.elf.resolution.txt{{$}}
 # No files are expected after.
 BOOKEND-NOT: {{.}}
 
@@ -45,45 +55,3 @@ __attribute__((retain)) int t1(int x) { return x; }
 
 #--- t2.c
 __attribute__((retain)) int t2(int x) { return x; }
-
-#--- local_codegen_and_wait.py
-"""Perform codegen locally, create "send-signal" file and wait."""
-from pathlib import Path
-import json, subprocess, sys, time
-
-# Load the DTLTO information from the input JSON file.
-data = json.loads(Path(sys.argv[-1]).read_bytes())
-
-# Iterate over the jobs and execute the codegen tool.
-for job in data["jobs"]:
-    subprocess.check_call(data["common"]["args"] + job["args"])
-Path("send-signal").touch()
-while True:
-    time.sleep(1)
-
-#--- killer.py
-"""Run command, wait for "send-signal" file to exist, and then send a
-termination signal."""
-import os, sys, time, signal, subprocess
-
-if os.name == "nt":
-    # CREATE_NEW_PROCESS_GROUP is used so that p.send_signal(CTRL_BREAK_EVENT)
-    # does not get sent to the LIT processes that are running the test.
-    kwargs = {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
-else:
-    # Makes the child a process-group leader so os.killpg(p.pid, SIGINT) works.
-    kwargs = {"start_new_session": True}
-
-p = subprocess.Popen(sys.argv[1:], **kwargs)
-
-while not os.path.exists("send-signal"):
-    time.sleep(0.05)
-
-if os.name == "nt":
-    # Note that CTRL_C_EVENT does not appear to work for clang.
-    p.send_signal(signal.CTRL_BREAK_EVENT)
-else:
-    os.killpg(p.pid, signal.SIGINT)
-p.wait()
-
-sys.exit(0 if p.returncode != 0 else 1)

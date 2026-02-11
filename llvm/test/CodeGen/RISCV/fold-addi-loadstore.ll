@@ -502,8 +502,8 @@ define dso_local i32 @load_ga() local_unnamed_addr #0 {
 ;
 ; RV32IXQCILI-LABEL: load_ga:
 ; RV32IXQCILI:       # %bb.0:
-; RV32IXQCILI-NEXT:    qc.e.li a0, ga
-; RV32IXQCILI-NEXT:    lw a0, 4(a0)
+; RV32IXQCILI-NEXT:    qc.e.li a0, ga+4
+; RV32IXQCILI-NEXT:    lw a0, 0(a0)
 ; RV32IXQCILI-NEXT:    ret
 ;
 ; RV32I-MEDIUM-LABEL: load_ga:
@@ -713,8 +713,8 @@ define dso_local ptr @load_ba_2() nounwind {
 ; RV32IXQCILI:       # %bb.0: # %entry
 ; RV32IXQCILI-NEXT:  .Ltmp1: # Block address taken
 ; RV32IXQCILI-NEXT:  # %bb.1: # %label
-; RV32IXQCILI-NEXT:    qc.e.li a0, .Ltmp1
-; RV32IXQCILI-NEXT:    lw a0, 8(a0)
+; RV32IXQCILI-NEXT:    qc.e.li a0, .Ltmp1+8
+; RV32IXQCILI-NEXT:    lw a0, 0(a0)
 ; RV32IXQCILI-NEXT:    ret
 ;
 ; RV32I-MEDIUM-LABEL: load_ba_2:
@@ -1383,10 +1383,8 @@ define i32 @crash() {
 ;
 ; RV32IXQCILI-LABEL: crash:
 ; RV32IXQCILI:       # %bb.0: # %entry
-; RV32IXQCILI-NEXT:    li a0, 1
-; RV32IXQCILI-NEXT:    qc.e.li a1, g
-; RV32IXQCILI-NEXT:    add a0, a0, a1
-; RV32IXQCILI-NEXT:    lbu a0, 400(a0)
+; RV32IXQCILI-NEXT:    qc.e.li a0, g+401
+; RV32IXQCILI-NEXT:    lbu a0, 0(a0)
 ; RV32IXQCILI-NEXT:    seqz a0, a0
 ; RV32IXQCILI-NEXT:    sw a0, 0(zero)
 ; RV32IXQCILI-NEXT:    li a0, 0

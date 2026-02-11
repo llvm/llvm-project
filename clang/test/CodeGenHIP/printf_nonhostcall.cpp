@@ -13,9 +13,7 @@ extern "C" __device__ int printf(const char *format, ...);
 
 // CHECK-LABEL: define dso_local noundef i32 @_Z4foo1v
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[S:%.*]] = alloca ptr, align 8, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[S_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[S]] to ptr
 // CHECK-NEXT:    store ptr addrspacecast (ptr addrspace(4) @.str to ptr), ptr [[S_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ASCAST]], align 8
@@ -70,9 +68,7 @@ extern "C" __device__ int printf(const char *format, ...);
 //
 // CHECK_CONSTRAINED-LABEL: define dso_local noundef i32 @_Z4foo1v
 // CHECK_CONSTRAINED-NEXT:  entry:
-// CHECK_CONSTRAINED-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK_CONSTRAINED-NEXT:    [[S:%.*]] = alloca ptr, align 8, addrspace(5)
-// CHECK_CONSTRAINED-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK_CONSTRAINED-NEXT:    [[S_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[S]] to ptr
 // CHECK_CONSTRAINED-NEXT:    store ptr addrspacecast (ptr addrspace(4) @.str to ptr), ptr [[S_ASCAST]], align 8
 // CHECK_CONSTRAINED-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ASCAST]], align 8
@@ -134,9 +130,7 @@ __device__ char *dstr;
 __device__ const
 // CHECK-LABEL: define dso_local noundef i32 @_Z4foo2v
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[LCVAL:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[LCVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[LCVAL]] to ptr
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspacecast (ptr addrspace(1) @dstr to ptr), align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr addrspacecast (ptr addrspace(1) @dstr to ptr), align 8
@@ -186,9 +180,7 @@ __device__ const
 //
 // CHECK_CONSTRAINED-LABEL: define dso_local noundef i32 @_Z4foo2v
 // CHECK_CONSTRAINED-NEXT:  entry:
-// CHECK_CONSTRAINED-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK_CONSTRAINED-NEXT:    [[LCVAL:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK_CONSTRAINED-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK_CONSTRAINED-NEXT:    [[LCVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[LCVAL]] to ptr
 // CHECK_CONSTRAINED-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspacecast (ptr addrspace(1) @dstr to ptr), align 8
 // CHECK_CONSTRAINED-NEXT:    [[TMP1:%.*]] = load ptr, ptr addrspacecast (ptr addrspace(1) @dstr to ptr), align 8
@@ -255,8 +247,6 @@ __device__ _BitInt(128) Int128 = 45637;
 
 // CHECK-LABEL: define dso_local noundef i32 @_Z4foo3v
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    store i32 25, ptr addrspacecast (ptr addrspace(3) @_ZZ4foo3vE1s to ptr), align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspacecast (ptr addrspace(3) @_ZZ4foo3vE1s to ptr), align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr addrspacecast (ptr addrspace(1) @g to ptr), align 2
@@ -316,8 +306,6 @@ __device__ _BitInt(128) Int128 = 45637;
 //
 // CHECK_CONSTRAINED-LABEL: define dso_local noundef i32 @_Z4foo3v
 // CHECK_CONSTRAINED-NEXT:  entry:
-// CHECK_CONSTRAINED-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK_CONSTRAINED-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK_CONSTRAINED-NEXT:    store i32 25, ptr addrspacecast (ptr addrspace(3) @_ZZ4foo3vE1s to ptr), align 4
 // CHECK_CONSTRAINED-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspacecast (ptr addrspace(3) @_ZZ4foo3vE1s to ptr), align 4
 // CHECK_CONSTRAINED-NEXT:    [[TMP1:%.*]] = load i16, ptr addrspacecast (ptr addrspace(1) @g to ptr), align 2
@@ -384,9 +372,7 @@ __device__ int foo3() {
 //A non trivial case,
 // CHECK-LABEL: define dso_local noundef i32 @_Z4foo4v
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[S:%.*]] = alloca ptr, align 8, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[S_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[S]] to ptr
 // CHECK-NEXT:    store ptr addrspacecast (ptr addrspace(4) @.str.4 to ptr), ptr [[S_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ASCAST]], align 8
@@ -429,9 +415,7 @@ __device__ int foo3() {
 //
 // CHECK_CONSTRAINED-LABEL: define dso_local noundef i32 @_Z4foo4v
 // CHECK_CONSTRAINED-NEXT:  entry:
-// CHECK_CONSTRAINED-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK_CONSTRAINED-NEXT:    [[S:%.*]] = alloca ptr, align 8, addrspace(5)
-// CHECK_CONSTRAINED-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK_CONSTRAINED-NEXT:    [[S_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[S]] to ptr
 // CHECK_CONSTRAINED-NEXT:    store ptr addrspacecast (ptr addrspace(4) @.str.4 to ptr), ptr [[S_ASCAST]], align 8
 // CHECK_CONSTRAINED-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ASCAST]], align 8

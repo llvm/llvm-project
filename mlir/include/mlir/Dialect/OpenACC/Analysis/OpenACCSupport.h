@@ -50,22 +50,17 @@
 #ifndef MLIR_DIALECT_OPENACC_ANALYSIS_OPENACCSUPPORT_H
 #define MLIR_DIALECT_OPENACC_ANALYSIS_OPENACCSUPPORT_H
 
+#include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/IR/Remarks.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Pass/AnalysisManager.h"
 #include "llvm/ADT/StringRef.h"
+#include <functional>
 #include <memory>
 #include <string>
 
 namespace mlir {
 namespace acc {
-
-// Forward declarations
-enum class RecipeKind : uint32_t;
-bool isValidSymbolUse(Operation *user, SymbolRefAttr symbol,
-                      Operation **definingOpPtr);
-remark::detail::InFlightRemark emitRemark(Operation *op, const Twine &message,
-                                          llvm::StringRef category);
 
 namespace detail {
 /// This class contains internal trait classes used by OpenACCSupport.
@@ -91,7 +86,7 @@ struct OpenACCSupportTraits {
     // emitted. When not provided, in the default implementation, the category
     // is "openacc".
     virtual remark::detail::InFlightRemark
-    emitRemark(Operation *op, const Twine &message,
+    emitRemark(Operation *op, std::function<std::string()> messageFn,
                llvm::StringRef category) = 0;
 
     /// Check if a symbol use is valid for use in an OpenACC region.
@@ -126,8 +121,9 @@ struct OpenACCSupportTraits {
       decltype(std::declval<ImplT>().emitRemark(std::declval<Args>()...));
 
   template <typename ImplT>
-  using has_emitRemark = llvm::is_detected<emitRemark_t, ImplT, Operation *,
-                                           const Twine &, llvm::StringRef>;
+  using has_emitRemark =
+      llvm::is_detected<emitRemark_t, ImplT, Operation *,
+                        std::function<std::string()>, llvm::StringRef>;
 
   /// This class wraps a concrete OpenACCSupport implementation and forwards
   /// interface calls to it. This provides type erasure, allowing different
@@ -152,13 +148,13 @@ struct OpenACCSupportTraits {
       return impl.emitNYI(loc, message);
     }
 
-    remark::detail::InFlightRemark emitRemark(Operation *op,
-                                              const Twine &message,
-                                              llvm::StringRef category) final {
+    remark::detail::InFlightRemark
+    emitRemark(Operation *op, std::function<std::string()> messageFn,
+               llvm::StringRef category) final {
       if constexpr (has_emitRemark<ImplT>::value)
-        return impl.emitRemark(op, message, category);
+        return impl.emitRemark(op, std::move(messageFn), category);
       else
-        return acc::emitRemark(op, message, category);
+        return acc::emitRemark(op, messageFn(), category);
     }
 
     bool isValidSymbolUse(Operation *user, SymbolRefAttr symbol,
@@ -170,10 +166,10 @@ struct OpenACCSupportTraits {
     }
 
     bool isValidValueUse(Value v, Region &region) final {
-      if constexpr (has_isValidSymbolUse<ImplT>::value)
+      if constexpr (has_isValidValueUse<ImplT>::value)
         return impl.isValidValueUse(v, region);
       else
-        return false;
+        return acc::isValidValueUse(v, region);
     }
 
   private:
@@ -228,6 +224,21 @@ public:
   ///         unsupported case.
   InFlightDiagnostic emitNYI(Location loc, const Twine &message);
 
+  /// Emit an OpenACC remark with lazy message generation.
+  ///
+  /// The messageFn is only invoked if remarks are enabled for the given
+  /// operation, allowing callers to avoid constructing expensive messages
+  /// when remarks are disabled.
+  ///
+  /// \param op The operation to emit the remark for.
+  /// \param messageFn A callable that returns the remark message.
+  /// \param category Optional category for the remark. Defaults to "openacc".
+  /// \return An in-flight remark object that can be used to append
+  ///         additional information to the remark.
+  remark::detail::InFlightRemark
+  emitRemark(Operation *op, std::function<std::string()> messageFn,
+             llvm::StringRef category = "openacc");
+
   /// Emit an OpenACC remark.
   ///
   /// \param op The operation to emit the remark for.
@@ -237,7 +248,12 @@ public:
   ///         additional information to the remark.
   remark::detail::InFlightRemark
   emitRemark(Operation *op, const Twine &message,
-             llvm::StringRef category = "openacc");
+             llvm::StringRef category = "openacc") {
+    return emitRemark(op, std::function<std::string()>([msg = message.str()]() {
+                        return msg;
+                      }),
+                      category);
+  }
 
   /// Check if a symbol use is valid for use in an OpenACC region.
   ///

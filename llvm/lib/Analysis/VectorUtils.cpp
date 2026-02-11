@@ -65,6 +65,12 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::smul_fix_sat:
   case Intrinsic::umul_fix:
   case Intrinsic::umul_fix_sat:
+  case Intrinsic::uadd_with_overflow:
+  case Intrinsic::sadd_with_overflow:
+  case Intrinsic::usub_with_overflow:
+  case Intrinsic::ssub_with_overflow:
+  case Intrinsic::umul_with_overflow:
+  case Intrinsic::smul_with_overflow:
   case Intrinsic::sqrt: // Begin floating-point.
   case Intrinsic::asin:
   case Intrinsic::acos:
@@ -130,15 +136,6 @@ bool llvm::isTriviallyScalarizable(Intrinsic::ID ID,
   if (TTI && Intrinsic::isTargetIntrinsic(ID))
     return TTI->isTargetIntrinsicTriviallyScalarizable(ID);
 
-  switch (ID) {
-  case Intrinsic::uadd_with_overflow:
-  case Intrinsic::sadd_with_overflow:
-  case Intrinsic::ssub_with_overflow:
-  case Intrinsic::usub_with_overflow:
-  case Intrinsic::umul_with_overflow:
-  case Intrinsic::smul_with_overflow:
-    return true;
-  }
   return false;
 }
 
@@ -457,7 +454,7 @@ bool llvm::getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
     return true;
 
   // Simple case of a shuffle with zeroinitializer.
-  if (all_of(Mask, [](int Elt) { return Elt == 0; })) {
+  if (all_of(Mask, equal_to(0))) {
     DemandedLHS.setBit(0);
     return true;
   }

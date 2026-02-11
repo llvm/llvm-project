@@ -18,6 +18,7 @@
 #include <cassert>
 #include <concepts>
 #include <optional>
+#include <utility>
 
 #include "test_macros.h"
 
@@ -260,8 +261,9 @@ constexpr bool test() {
 
 #if TEST_STD_VER >= 26
 constexpr bool test_ref() {
-  // Test & overload
-  {
+  // Test "overloads", only the const (no ref-qualifier) and_then() should be called
+
+  { // &
     // Without & qualifier on F's operator()
     {
       int j = 42;
@@ -276,21 +278,21 @@ constexpr bool test_ref() {
     {
       int j = 42;
       std::optional<int&> i{j};
+      auto& io = i;
       RefQual l{};
       NORefQual nl{};
-      std::same_as<std::optional<int>> decltype(auto) r = i.and_then(l);
+      std::same_as<std::optional<int>> decltype(auto) r = io.and_then(l);
 
       assert(r == 1);
-      assert(i.and_then(nl) == std::nullopt);
+      assert(io.and_then(nl) == std::nullopt);
     }
   }
 
-  // Test const& overload
-  {
+  { // const&
     // Without & qualifier on F's operator()
     {
       int j = 42;
-      std::optional<const int&> i{j};
+      const std::optional<const int&> i{j};
       std::same_as<std::optional<int>> decltype(auto) r = i.and_then(CLVal{});
 
       assert(r == 1);
@@ -309,7 +311,8 @@ constexpr bool test_ref() {
       assert(i.and_then(nl) == std::nullopt);
     }
   }
-  // Test && overload
+
+  // &&
   {
     //With & qualifier on F's operator()
     {
@@ -318,11 +321,11 @@ constexpr bool test_ref() {
       std::same_as<std::optional<int>> decltype(auto) r = i.and_then(RVRefQual{});
 
       assert(r == 1);
-      assert(i.and_then(NORVRefQual{}) == std::nullopt);
+      assert(std::move(i).and_then(NORVRefQual{}) == std::nullopt);
     }
   }
 
-  // Test const&& overload
+  // const&&
   {
     //With & qualifier on F's operator()
     {
@@ -330,10 +333,10 @@ constexpr bool test_ref() {
       const std::optional<int&> i{j};
       const RVCRefQual l{};
       const NORVCRefQual nl{};
-      std::same_as<std::optional<int>> decltype(auto) r = i.and_then(std::move(l));
+      std::same_as<std::optional<int>> decltype(auto) r = std::move(i).and_then(std::move(l));
 
       assert(r == 1);
-      assert(i.and_then(std::move(nl)) == std::nullopt);
+      assert(std::move(i).and_then(std::move(nl)) == std::nullopt);
     }
   }
   return true;

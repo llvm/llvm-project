@@ -22,6 +22,7 @@
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/IntegerSet.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/raw_ostream.h"
@@ -2211,10 +2212,9 @@ IntegerSet mlir::affine::simplifyIntegerSet(IntegerSet set) {
 
 static void unpackOptionalValues(ArrayRef<std::optional<Value>> source,
                                  SmallVector<Value> &target) {
-  target =
-      llvm::to_vector<4>(llvm::map_range(source, [](std::optional<Value> val) {
-        return val.has_value() ? *val : Value();
-      }));
+  target = llvm::map_to_vector<4>(source, [](std::optional<Value> val) {
+    return val.has_value() ? *val : Value();
+  });
 }
 
 /// Bound an identifier `pos` in a given FlatAffineValueConstraints with

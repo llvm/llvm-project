@@ -397,6 +397,19 @@ def int_amdgcn_s_wait_loadcnt        : AMDGPUWaitIntrinsic;
 def int_amdgcn_s_wait_samplecnt      : AMDGPUWaitIntrinsic;
 def int_amdgcn_s_wait_storecnt       : AMDGPUWaitIntrinsic;
 
+// Request the hardware to allocate the given number of VGPRs. The actual number
+// of allocated VGPRs may be rounded up to match hardware block boundaries.
+// It is the responsibility of the calling code to ensure it does not allocate
+// below the VGPR requirements of the current shader. This intrinsic is only
+// available on targets that support dynamic VGPR mode.
+def int_amdgcn_s_alloc_vgpr : DefaultAttrsIntrinsic<
+    [llvm_i1_ty], // Returns true if the allocation succeeded, false otherwise.
+    [llvm_i32_ty], // The number of VGPRs to allocate.
+    [NoUndef<RetIndex>, NoUndef<ArgIndex<0>>,
+     IntrNoMem, IntrHasSideEffects, IntrConvergent
+    ]
+>;
+
 def int_amdgcn_div_scale : PureIntrinsic<
   // 1st parameter: Numerator
   // 2nd parameter: Denominator
@@ -1998,9 +2011,9 @@ class AMDGPURawBufferLoadLDS : Intrinsic <
   [IntrWillReturn, NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>,
    ImmArg<ArgIndex<6>>, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<0>;
 def int_amdgcn_raw_buffer_load_lds : AMDGPURawBufferLoadLDS;
+def int_amdgcn_raw_buffer_load_async_lds : AMDGPURawBufferLoadLDS;
 
 class AMDGPURawPtrBufferLoadLDS :
-  ClangBuiltin<"__builtin_amdgcn_raw_ptr_buffer_load_lds">,
   Intrinsic <
   [],
   [AMDGPUBufferRsrcTy,        // rsrc(SGPR)
@@ -2021,7 +2034,11 @@ class AMDGPURawPtrBufferLoadLDS :
    WriteOnly<ArgIndex<1>>, NoCapture<ArgIndex<1>>,
    ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>,
    ImmArg<ArgIndex<6>>, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<0>;
-def int_amdgcn_raw_ptr_buffer_load_lds : AMDGPURawPtrBufferLoadLDS;
+def int_amdgcn_raw_ptr_buffer_load_lds : AMDGPURawPtrBufferLoadLDS,
+      ClangBuiltin<"__builtin_amdgcn_raw_ptr_buffer_load_lds">;
+def int_amdgcn_raw_ptr_buffer_load_async_lds : AMDGPURawPtrBufferLoadLDS,
+      ClangBuiltin<"__builtin_amdgcn_raw_ptr_buffer_load_async_lds">;
+
 
 class AMDGPUStructBufferLoadLDS : Intrinsic <
   [],
@@ -2042,9 +2059,9 @@ class AMDGPUStructBufferLoadLDS : Intrinsic <
   [IntrWillReturn, NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<6>>,
    ImmArg<ArgIndex<7>>, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<0>;
 def int_amdgcn_struct_buffer_load_lds : AMDGPUStructBufferLoadLDS;
+def int_amdgcn_struct_buffer_load_async_lds : AMDGPUStructBufferLoadLDS;
 
 class AMDGPUStructPtrBufferLoadLDS :
-  ClangBuiltin<"__builtin_amdgcn_struct_ptr_buffer_load_lds">,
   Intrinsic <
   [],
   [AMDGPUBufferRsrcTy,        // rsrc(SGPR)
@@ -2066,7 +2083,10 @@ class AMDGPUStructPtrBufferLoadLDS :
    WriteOnly<ArgIndex<1>>, NoCapture<ArgIndex<1>>,
    ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<6>>,
    ImmArg<ArgIndex<7>>, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<0>;
-def int_amdgcn_struct_ptr_buffer_load_lds : AMDGPUStructPtrBufferLoadLDS;
+def int_amdgcn_struct_ptr_buffer_load_lds : AMDGPUStructPtrBufferLoadLDS,
+  ClangBuiltin<"__builtin_amdgcn_struct_ptr_buffer_load_lds">;
+def int_amdgcn_struct_ptr_buffer_load_async_lds : AMDGPUStructPtrBufferLoadLDS,
+  ClangBuiltin<"__builtin_amdgcn_struct_ptr_buffer_load_async_lds">;
 
 def int_amdgcn_s_buffer_prefetch_data : DefaultAttrsIntrinsic <
   [],
@@ -2684,6 +2704,16 @@ def int_amdgcn_call_whole_wave:
              llvm_vararg_ty], // The arguments to the callee.
             [IntrConvergent]>;
 
+// <result> llvm.amdgcn.wave.shuffle <value> <id>
+// value and result can be a 32bit floating-point or
+// integer type, and must be the same type. Any index
+// value that's outside the valid range will wrap around,
+// and reading from an inactive lane will return poison.
+def int_amdgcn_wave_shuffle :
+  DefaultAttrsIntrinsic<[llvm_any_ty],                    // return type
+                        [LLVMMatchType<0>, llvm_i32_ty],  // arg types
+                        [IntrConvergent, IntrNoMem]>;     // flags
+
 //===----------------------------------------------------------------------===//
 // CI+ Intrinsics
 //===----------------------------------------------------------------------===//
@@ -2784,10 +2814,9 @@ class AMDGPULoadToLDS :
      ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, IntrNoCallback, IntrNoFree],
      "", [SDNPMemOperand]>;
 def int_amdgcn_load_to_lds : AMDGPULoadToLDS;
+def int_amdgcn_load_async_to_lds : AMDGPULoadToLDS;
 
-class AMDGPUGlobalLoadLDS
-    : ClangBuiltin<"__builtin_amdgcn_global_load_lds">,
-      Intrinsic<
+class AMDGPUGlobalLoadLDS : Intrinsic<
           [],
           [LLVMQualPointerType<1>, // Base global pointer to load from
            LLVMQualPointerType<3>, // LDS base pointer to store to
@@ -2803,7 +2832,8 @@ class AMDGPUGlobalLoadLDS
            ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>,
            IntrNoCallback, IntrNoFree],
           "", [SDNPMemOperand]>;
-def int_amdgcn_global_load_lds : AMDGPUGlobalLoadLDS;
+def int_amdgcn_global_load_lds : AMDGPUGlobalLoadLDS, ClangBuiltin<"__builtin_amdgcn_global_load_lds">;
+def int_amdgcn_global_load_async_lds : AMDGPUGlobalLoadLDS, ClangBuiltin<"__builtin_amdgcn_global_load_async_lds">;
 
 // This is IntrHasSideEffects because it reads from a volatile hardware register.
 def int_amdgcn_pops_exiting_wave_id :
@@ -2894,9 +2924,23 @@ class IntDSBVHStackRtn<LLVMType vdst, LLVMType data1> :
 def int_amdgcn_ds_bvh_stack_rtn : IntDSBVHStackRtn<vdst  = llvm_i32_ty,
                                                    data1 = llvm_v4i32_ty>;
 
+// Emit s_wait_event instruction. Note that between gfx11 and gfx12,
+// the bit for the export_ready event changed. gfx11 expects bit 0 to
+// be 0, and gfx12 expects bit 1 to be 0. Thus, an immediate value of
+// 2 can be used as the universal value for export_ready.
+def int_amdgcn_s_wait_event :
+  ClangBuiltin<"__builtin_amdgcn_s_wait_event">,
+  Intrinsic<[], [llvm_i16_ty],
+  [ImmArg<ArgIndex<0>>, IntrNoMem, IntrNoCallback, IntrNoFree,
+   IntrHasSideEffects, IntrWillReturn]
+>;
+
+// Emits same instruction as s_wait_event, with a hardcoded immediate
+// value. FIXME: This should be removed
 def int_amdgcn_s_wait_event_export_ready :
   ClangBuiltin<"__builtin_amdgcn_s_wait_event_export_ready">,
-  Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects, IntrWillReturn]
+  Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects, IntrWillReturn,
+                     IntrNoCallback, IntrNoFree]
 >;
 
 // WMMA (Wave Matrix Multiply-Accumulate) intrinsics
@@ -3902,7 +3946,7 @@ def int_amdgcn_global_store_async_from_lds_b128 :
   ClangBuiltin<"__builtin_amdgcn_global_store_async_from_lds_b128">, AMDGPUAsyncGlobalStoreFromLDS;
 
 // WMMA intrinsics.
-class AMDGPUWmmaIntrinsicModsAB<LLVMType AB, LLVMType CD> :
+class AMDGPUWmmaIntrinsicModsABClamp<LLVMType AB, LLVMType CD> :
   Intrinsic<
     [CD], // %D
     [
@@ -3913,8 +3957,9 @@ class AMDGPUWmmaIntrinsicModsAB<LLVMType AB, LLVMType CD> :
       LLVMMatchType<0>,               // %C
       llvm_i1_ty,       // matrix_a_reuse
       llvm_i1_ty,       // matrix_b_reuse
+      llvm_i1_ty,       // %clamp
     ],
-    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<6>>,
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<6>>, ImmArg<ArgIndex<7>>,
      IntrWillReturn, IntrNoCallback, IntrNoFree, IntrNoCreateUndefOrPoison]
 >;
 
@@ -4079,7 +4124,7 @@ def int_amdgcn_wmma_f32_16x16x128_fp8_fp8 : AMDGPUWmmaIntrinsicModsC<llvm_anyint
 def int_amdgcn_wmma_f32_16x16x128_fp8_bf8 : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x128_bf8_fp8 : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x128_bf8_bf8 : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_i32_16x16x64_iu8      : AMDGPUWmmaIntrinsicModsAB<llvm_anyint_ty, llvm_anyint_ty>;
+def int_amdgcn_wmma_i32_16x16x64_iu8      : AMDGPUWmmaIntrinsicModsABClamp<llvm_anyint_ty, llvm_anyint_ty>;
 def int_amdgcn_wmma_f32_16x16x128_f8f6f4  : AMDGPUWmmaIntrinsicModsC_MatrixFMT;
 def int_amdgcn_wmma_scale_f32_16x16x128_f8f6f4   : AMDGPUWmmaScaleIntrinsicModsC<llvm_i32_ty>;
 def int_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4 : AMDGPUWmmaScaleIntrinsicModsC<llvm_i64_ty>;
@@ -4105,6 +4150,24 @@ class AMDGPUSWmmacIntrinsicABIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType I
      ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<6>>, ImmArg<ArgIndex<7>>]
 >;
 
+class AMDGPUSWmmacIntrinsicABIdxClamp<LLVMType A, LLVMType B, LLVMType CD, LLVMType Index> :
+  Intrinsic<
+    [CD], // %D
+    [
+      llvm_i1_ty,       // %A_mod:  0 - none, 1 - neg
+      A,                // %A
+      llvm_i1_ty,       // %B_mod:  0 - none, 1 - neg
+      B,                // %B
+      LLVMMatchType<0>, // %C
+      Index,            // %Sparsity index for A
+      llvm_i1_ty,       // matrix_a_reuse
+      llvm_i1_ty,       // matrix_b_reuse
+      llvm_i1_ty,       // %clamp
+    ],
+    [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCreateUndefOrPoison,
+     ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<6>>, ImmArg<ArgIndex<7>>, ImmArg<ArgIndex<8>>]
+>;
+
 defset list<Intrinsic> AMDGPUSWMMACIntrinsicsGFX1250 = {
 def int_amdgcn_swmmac_f32_16x16x64_f16      : AMDGPUSWmmacIntrinsicABIdx<llvm_anyfloat_ty, llvm_anyfloat_ty, llvm_anyfloat_ty, llvm_anyint_ty>;
 def int_amdgcn_swmmac_f32_16x16x64_bf16     : AMDGPUSWmmacIntrinsicABIdx<llvm_anyfloat_ty, llvm_anyfloat_ty, llvm_anyfloat_ty, llvm_anyint_ty>;
@@ -4119,7 +4182,7 @@ def int_amdgcn_swmmac_f16_16x16x128_fp8_fp8 : AMDGPUSWmmacIntrinsicIdxReuse<llvm
 def int_amdgcn_swmmac_f16_16x16x128_fp8_bf8 : AMDGPUSWmmacIntrinsicIdxReuse<llvm_anyint_ty, llvm_anyint_ty, llvm_anyfloat_ty, llvm_anyint_ty>;
 def int_amdgcn_swmmac_f16_16x16x128_bf8_fp8 : AMDGPUSWmmacIntrinsicIdxReuse<llvm_anyint_ty, llvm_anyint_ty, llvm_anyfloat_ty, llvm_anyint_ty>;
 def int_amdgcn_swmmac_f16_16x16x128_bf8_bf8 : AMDGPUSWmmacIntrinsicIdxReuse<llvm_anyint_ty, llvm_anyint_ty, llvm_anyfloat_ty, llvm_anyint_ty>;
-def int_amdgcn_swmmac_i32_16x16x128_iu8     : AMDGPUSWmmacIntrinsicABIdx<llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty>;
+def int_amdgcn_swmmac_i32_16x16x128_iu8     : AMDGPUSWmmacIntrinsicABIdxClamp<llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty>;
 }
 
 
@@ -4179,13 +4242,12 @@ class AMDGPULoadMonitor<LLVMType ptr_ty>:
   Intrinsic<
     [llvm_any_ty],
     [ptr_ty,
-     llvm_i32_ty],  // gfx12+ cachepolicy:
-                    //   bits [0-2] = th
-                    //   bits [3-4] = scope
+     llvm_i32_ty,            // C ABI Atomic Ordering ID
+     llvm_metadata_ty],      // syncscope
     [IntrArgMemOnly, IntrReadMem, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
      IntrWillReturn, IntrConvergent, IntrNoCallback, IntrNoFree],
     "",
-    [SDNPMemOperand]
+    [SDNPMemOperand, SDNPMayLoad]
   >;
 
 def int_amdgcn_flat_load_monitor_b32    : AMDGPULoadMonitor<flat_ptr_ty>;

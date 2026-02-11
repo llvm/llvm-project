@@ -222,6 +222,70 @@ define i32 @cls_i32_2(i32 %x) {
   ret i32 %e
 }
 
+; The result is in the range [1-31], so we don't need an andi after the cls.
+define i32 @cls_i32_knownbits(i32 %x) {
+; CHECK-LABEL: cls_i32_knownbits:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    clsw a0, a0
+; CHECK-NEXT:    ret
+  %a = ashr i32 %x, 31
+  %b = xor i32 %x, %a
+  %c = call i32 @llvm.ctlz.i32(i32 %b, i1 false)
+  %d = sub i32 %c, 1
+  %e = and i32 %d, 31
+  ret i32 %e
+}
+
+; There are at least 16 redundant sign bits so we don't need an ori after the clsw.
+define i32 @cls_i32_knownbits_2(i16 signext %x) {
+; CHECK-LABEL: cls_i32_knownbits_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    clsw a0, a0
+; CHECK-NEXT:    ret
+  %sext = sext i16 %x to i32
+  %a = ashr i32 %sext, 31
+  %b = xor i32 %sext, %a
+  %c = call i32 @llvm.ctlz.i32(i32 %b, i1 false)
+  %d = sub i32 %c, 1
+  %e = or i32 %d, 16
+  ret i32 %e
+}
+
+; There are at least 24 redundant sign bits so we don't need an ori after the clsw.
+define i32 @cls_i32_knownbits_3(i8 signext %x) {
+; CHECK-LABEL: cls_i32_knownbits_3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    clsw a0, a0
+; CHECK-NEXT:    ret
+  %sext = sext i8 %x to i32
+  %a = ashr i32 %sext, 31
+  %b = xor i32 %sext, %a
+  %c = call i32 @llvm.ctlz.i32(i32 %b, i1 false)
+  %d = sub i32 %c, 1
+  %e = or i32 %d, 24
+  ret i32 %e
+}
+
+; Negative test. We only know there is at least 1 redundant sign bit. We can't
+; remove the ori.
+define i32 @cls_i32_knownbits_4(i32 signext %x) {
+; CHECK-LABEL: cls_i32_knownbits_4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 33
+; CHECK-NEXT:    srai a0, a0, 33
+; CHECK-NEXT:    clsw a0, a0
+; CHECK-NEXT:    ori a0, a0, 1
+; CHECK-NEXT:    ret
+  %shl = shl i32 %x, 1
+  %ashr = ashr i32 %shl, 1
+  %a = ashr i32 %ashr, 31
+  %b = xor i32 %ashr, %a
+  %c = call i32 @llvm.ctlz.i32(i32 %b, i1 false)
+  %d = sub i32 %c, 1
+  %e = or i32 %d, 1
+  ret i32 %e
+}
+
 define i64 @cls_i64(i64 %x) {
 ; CHECK-LABEL: cls_i64:
 ; CHECK:       # %bb.0:
@@ -245,6 +309,25 @@ define i64 @cls_i64_2(i64 %x) {
   %d = or i64 %c, 1
   %e = call i64 @llvm.ctlz.i64(i64 %d, i1 true)
   ret i64 %e
+}
+
+; Check that the range max in ctls cls knownbits
+; is not set to 32
+define i64 @cls_i64_not_32(i64 %x) {
+; CHECK-LABEL: cls_i64_not_32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srai a0, a0, 16
+; CHECK-NEXT:    cls a0, a0
+; CHECK-NEXT:    ori a0, a0, 16
+; CHECK-NEXT:    ret
+  %val = ashr i64 %x, 16
+  %a = ashr i64 %val, 63
+  %b = xor i64 %val, %a
+  %c = shl i64 %b, 1
+  %d = or i64 %c, 1
+  %e = call i64 @llvm.ctlz.i64(i64 %d, i1 true)
+  %f = or i64 %e, 16
+  ret i64 %f
 }
 
 define i128 @slx_i128(i128 %x, i128 %y) {
@@ -294,4 +377,139 @@ define i128 @srxi_i128(i128 %x) {
 ; CHECK-NEXT:    ret
   %a = lshr i128 %x, 49
   ret i128 %a
+}
+
+; Test bitwise merge: (mask & b) | (~mask & a)
+define i64 @merge_i64(i64 %mask, i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: merge_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    merge a0, a1, a2
+; CHECK-NEXT:    ret
+  %and1 = and i64 %mask, %b
+  %not = xor i64 %mask, -1
+  %and2 = and i64 %not, %a
+  %or = or i64 %and1, %and2
+  ret i64 %or
+}
+
+; Test MERGE with swapped a/b arguments
+define i64 @merge_i64_2(i64 %mask, i64 %b, i64 %a) nounwind {
+; CHECK-LABEL: merge_i64_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    merge a0, a2, a1
+; CHECK-NEXT:    ret
+  %and1 = and i64 %mask, %b
+  %not = xor i64 %mask, -1
+  %and2 = and i64 %not, %a
+  %or = or i64 %and1, %and2
+  ret i64 %or
+}
+
+; Test MVM: result overwrites rs1 (%a)
+define i64 @mvm_i64(i64 %a, i64 %mask, i64 %b) nounwind {
+; CHECK-LABEL: mvm_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mvm a0, a2, a1
+; CHECK-NEXT:    ret
+  %and1 = and i64 %mask, %b
+  %not = xor i64 %mask, -1
+  %and2 = and i64 %not, %a
+  %or = or i64 %and1, %and2
+  ret i64 %or
+}
+
+; Test MVM with mask as last argument
+define i64 @mvm_i64_2(i64 %a, i64 %b, i64 %mask) nounwind {
+; CHECK-LABEL: mvm_i64_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mvm a0, a1, a2
+; CHECK-NEXT:    ret
+  %and1 = and i64 %mask, %b
+  %not = xor i64 %mask, -1
+  %and2 = and i64 %not, %a
+  %or = or i64 %and1, %and2
+  ret i64 %or
+}
+
+; Test MVMN: result overwrites rs2 (%b)
+define i64 @mvmn_i64(i64 %b, i64 %mask, i64 %a) nounwind {
+; CHECK-LABEL: mvmn_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mvmn a0, a2, a1
+; CHECK-NEXT:    ret
+  %and1 = and i64 %mask, %b
+  %not = xor i64 %mask, -1
+  %and2 = and i64 %not, %a
+  %or = or i64 %and1, %and2
+  ret i64 %or
+}
+
+; Test MVMN with mask as last argument
+define i64 @mvmn_i64_2(i64 %b, i64 %a, i64 %mask) nounwind {
+; CHECK-LABEL: mvmn_i64_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mvmn a0, a1, a2
+; CHECK-NEXT:    ret
+  %and1 = and i64 %mask, %b
+  %not = xor i64 %mask, -1
+  %and2 = and i64 %not, %a
+  %or = or i64 %and1, %and2
+  ret i64 %or
+}
+
+; Test case where none of the source operands can be overwritten,
+; requiring a mv before merge
+define i64 @merge_i64_mv(i64 %mask, i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: merge_i64_mv:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mv a3, a0
+; CHECK-NEXT:    merge a3, a1, a2
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    add a0, a3, a0
+; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    ret
+  %and1 = and i64 %mask, %b
+  %not = xor i64 %mask, -1
+  %and2 = and i64 %not, %a
+  %or = or i64 %and1, %and2
+  %sum1 = add i64 %or, %mask
+  %sum2 = add i64 %sum1, %a
+  %sum3 = add i64 %sum2, %b
+  ret i64 %sum3
+}
+
+; Test alternate merge pattern: (a ^ b) & mask ^ a
+define i64 @merge_xor_i64(i64 %mask, i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: merge_xor_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    merge a0, a1, a2
+; CHECK-NEXT:    ret
+  %xor1 = xor i64 %a, %b
+  %and = and i64 %xor1, %mask
+  %xor2 = xor i64 %and, %a
+  ret i64 %xor2
+}
+
+; Test alternate merge pattern with different argument order for MVM
+define i64 @mvm_xor_i64(i64 %a, i64 %mask, i64 %b) nounwind {
+; CHECK-LABEL: mvm_xor_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mvm a0, a2, a1
+; CHECK-NEXT:    ret
+  %xor1 = xor i64 %a, %b
+  %and = and i64 %xor1, %mask
+  %xor2 = xor i64 %and, %a
+  ret i64 %xor2
+}
+
+; Test alternate merge pattern with different argument order for MVMN
+define i64 @mvmn_xor_i64(i64 %b, i64 %mask, i64 %a) nounwind {
+; CHECK-LABEL: mvmn_xor_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mvmn a0, a2, a1
+; CHECK-NEXT:    ret
+  %xor1 = xor i64 %a, %b
+  %and = and i64 %xor1, %mask
+  %xor2 = xor i64 %and, %a
+  ret i64 %xor2
 }

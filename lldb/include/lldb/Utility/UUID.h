@@ -115,4 +115,26 @@ private:
 };
 } // namespace lldb_private
 
+namespace llvm {
+
+/// DenseMapInfo implementation.
+/// \{
+template <> struct DenseMapInfo<lldb_private::UUID> {
+  static inline lldb_private::UUID getEmptyKey() {
+    return lldb_private::UUID();
+  }
+  static inline lldb_private::UUID getTombstoneKey() {
+    return lldb_private::UUID();
+  }
+  static unsigned getHashValue(lldb_private::UUID uuid) {
+    return DenseMapInfo<llvm::ArrayRef<uint8_t>>::getHashValue(uuid.GetBytes());
+  }
+  static bool isEqual(lldb_private::UUID LHS, lldb_private::UUID RHS) {
+    return LHS == RHS;
+  }
+};
+/// \}
+
+} // namespace llvm
+
 #endif // LLDB_UTILITY_UUID_H
