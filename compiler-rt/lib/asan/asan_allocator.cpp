@@ -93,6 +93,11 @@ class ChunkHeader {
   atomic_uint8_t chunk_state;
   u8 alloc_type : 2;
   u8 lsan_tag : 2;
+#if SANITIZER_WINDOWS
+  // True if this was a zero-size allocation upgraded to size 1.
+  // Used to report the original size (0) to the user via HeapSize/RtlSizeHeap.
+  u8 from_zero_alloc : 1;
+#endif
 
   // align < 8 -> 0
   // else      -> log2(min(align, 512)) - 2
@@ -610,6 +615,9 @@ struct Allocator {
     uptr chunk_beg = user_beg - kChunkHeaderSize;
     AsanChunk *m = reinterpret_cast<AsanChunk *>(chunk_beg);
     m->alloc_type = alloc_type;
+#if SANITIZER_WINDOWS
+    m->from_zero_alloc = upgraded_from_zero;
+#endif
     CHECK(size);
     m->SetUsedSize(size);
     m->user_requested_alignment_log = user_requested_alignment_log;
@@ -863,8 +871,22 @@ struct Allocator {
     return m->UsedSize();
   }
 
+#if SANITIZER_WINDOWS
+  // Returns true if the allocation at p was a zero-size request that was
+  // internally upgraded to size 1.
+  bool FromZeroAllocation(uptr p) {
+    return reinterpret_cast<AsanChunk *>(p - kChunkHeaderSize)->from_zero_alloc;
+  }
+#endif
+
   uptr AllocationSizeFast(uptr p) {
+#if SANITIZER_WINDOWS
+    AsanChunk *c = reinterpret_cast<AsanChunk *>(p - kChunkHeaderSize);
+    if (c->from_zero_alloc) return 0;
+    return c->UsedSize();
+#else
     return reinterpret_cast<AsanChunk *>(p - kChunkHeaderSize)->UsedSize();
+#endif
   }
 
   AsanChunkView FindHeapChunkByAddress(uptr addr) {
@@ -1125,6 +1147,14 @@ uptr asan_malloc_usable_size(const void *ptr, uptr pc, uptr bp) {
     GET_STACK_TRACE_FATAL(pc, bp);
     ReportMallocUsableSizeNotOwned((uptr)ptr, &stack);
   }
+#if SANITIZER_WINDOWS
+  // Zero-size allocations are internally upgraded to size 1, but we should
+  // report the originally requested size (0) to the user via
+  // HeapSize/RtlSizeHeap.
+  if (usable_size > 0 &&
+      instance.FromZeroAllocation(reinterpret_cast<uptr>(ptr)))
+    return 0;
+#endif
   return usable_size;
 }
 
@@ -1222,7 +1252,14 @@ void asan_delete_array_sized_aligned(void *ptr, uptr size, uptr alignment,
 }
 
 uptr asan_mz_size(const void *ptr) {
+#if SANITIZER_WINDOWS
+  uptr size = instance.AllocationSize(reinterpret_cast<uptr>(ptr));
+  if (size > 0 && instance.FromZeroAllocation(reinterpret_cast<uptr>(ptr)))
+    return 0;
+  return size;
+#else
   return instance.AllocationSize(reinterpret_cast<uptr>(ptr));
+#endif
 }
 
 void asan_mz_force_lock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
@@ -1366,6 +1403,13 @@ uptr __sanitizer_get_allocated_size(const void *p) {
     GET_STACK_TRACE_FATAL_HERE;
     ReportSanitizerGetAllocatedSizeNotOwned(ptr, &stack);
   }
+#if SANITIZER_WINDOWS
+  // Zero-size allocations are internally upgraded to size 1, but report
+  // the originally requested size (0) to the user via
+  // HeapSize/RtlSizeHeap.
+  if (instance.FromZeroAllocation(ptr))
+    return 0;
+#endif
   return allocated_size;
 }
 
