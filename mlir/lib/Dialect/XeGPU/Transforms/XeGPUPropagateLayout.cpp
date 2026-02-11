@@ -738,22 +738,22 @@ void LayoutInfoPropagation::visitDpasOp(
     dpasBLayout = LayoutInfo(anchorLayoutB);
     dpasCDLayout = LayoutInfo(anchorLayoutCD);
   } else {
-    LayoutInfo consumerLayout = results[0]->getValue();
-    if (!consumerLayout.isAssigned())
-      return;
-
     auto uArch = getUArch(getChipStr(dpas).value_or(""));
     VectorType aTy = dpas.getLhsType();
     VectorType bTy = dpas.getRhsType();
     VectorType cdTy = dpas.getResultType();
 
-    auto consumerLayoutAttr =
-        dyn_cast_if_present<xegpu::DistributeLayoutAttr>(consumerLayout.get());
+    xegpu::DistributeLayoutAttr consumerLayoutAttr = nullptr;
     xegpu::DistributeLayoutAttr requiredCDLayoutAttr, requiredALayout,
         requiredBLayout;
 
     int numSg = 0;
     if (layoutKind == xegpu::LayoutKind::Subgroup) {
+      LayoutInfo consumerLayout = results[0]->getValue();
+      if (!consumerLayout.isAssigned())
+        return;
+      consumerLayoutAttr =
+          dyn_cast<xegpu::DistributeLayoutAttr>(consumerLayout.get());
       auto numSgOrErr = getNumSg(dpas, uArch->getSubgroupSize());
       if (failed(numSgOrErr)) {
         dpas.emitWarning(
