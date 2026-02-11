@@ -141,6 +141,20 @@ LogicalResult transform::TransformDialect::verifyOperationAttribute(
                                         "operations with symbol tables";
     }
 
+    // Pre-verify calls and callables because call graph construction below
+    // assumes they are valid, but this verifier runs before verifying the
+    // nested operations.
+    WalkResult walkResult = op->walk([](Operation *nested) {
+      if (!isa<CallableOpInterface, CallOpInterface>(nested))
+        return WalkResult::advance();
+
+      if (failed(verify(nested, /*verifyRecursively=*/false)))
+        return WalkResult::interrupt();
+      return WalkResult::advance();
+    });
+    if (walkResult.wasInterrupted())
+      return failure();
+
     const mlir::CallGraph callgraph(op);
     for (auto scc = llvm::scc_begin(&callgraph); !scc.isAtEnd(); ++scc) {
       if (!scc.hasCycle())
