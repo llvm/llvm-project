@@ -1426,11 +1426,6 @@ LogicalResult DecomposeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
 // Generic DownscaleSizeOneWindowedConvolution
 //===----------------------------------------------------------------------===//
 //
-// This pattern rewrites 2-D convolution/pooling/depthwise ops with size-1
-// window dimensions into lower-dimensional ops. It uses inferConvolutionDims
-// to work with any layout and handles both named ops and equivalent
-// linalg.generic ops uniformly.
-//
 /// Returns the indices of affine map results that reference any of the given
 /// dimensions.
 static SmallVector<unsigned>
@@ -1509,43 +1504,43 @@ linalg::downscaleSizeOneWindowedConvolution(RewriterBase &rewriter,
   if (failed(maybeDims))
     return failure();
 
-  // Must be 2D Conv.
+  // Requires exactly 2 spatial dimensions to downscale to 1D.
   if (maybeDims->outputImage.size() != 2 || maybeDims->filterLoop.size() != 2)
     return failure();
 
   if (op.hasPureBufferSemantics())
     return failure();
 
-  // Get loop domain indices.
-  unsigned ohLoopIdx = maybeDims->outputImage[0];
-  unsigned owLoopIdx = maybeDims->outputImage[1];
-  unsigned khLoopIdx = maybeDims->filterLoop[0];
-  unsigned kwLoopIdx = maybeDims->filterLoop[1];
+  // Get loop domain indices for spatial dimensions.
+  unsigned outSpatial0 = maybeDims->outputImage[0];
+  unsigned outSpatial1 = maybeDims->outputImage[1];
+  unsigned filterSpatial0 = maybeDims->filterLoop[0];
+  unsigned filterSpatial1 = maybeDims->filterLoop[1];
 
   // Get sizes from loop bounds.
   SmallVector<int64_t, 4> loopRanges = op.getStaticLoopRanges();
-  int64_t ohSize = loopRanges[ohLoopIdx];
-  int64_t owSize = loopRanges[owLoopIdx];
-  int64_t khSize = loopRanges[khLoopIdx];
-  int64_t kwSize = loopRanges[kwLoopIdx];
+  int64_t outSize0 = loopRanges[outSpatial0];
+  int64_t outSize1 = loopRanges[outSpatial1];
+  int64_t filterSize0 = loopRanges[filterSpatial0];
+  int64_t filterSize1 = loopRanges[filterSpatial1];
 
-  // Check if we can downscale.
-  bool canRemoveH = (khSize == 1 && ohSize == 1);
-  bool canRemoveW = (kwSize == 1 && owSize == 1);
-  if (!canRemoveH && !canRemoveW)
+  // Check if we can downscale by removing a spatial dimension.
+  bool canRemoveSpatial0 = (filterSize0 == 1 && outSize0 == 1);
+  bool canRemoveSpatial1 = (filterSize1 == 1 && outSize1 == 1);
+  if (!canRemoveSpatial0 && !canRemoveSpatial1)
     return failure();
 
-  // Prefer removing H if both are possible.
-  bool removeH = canRemoveH;
+  // Prioritize dropping the leading spatial dimension if both are removable.
+  bool removeSpatial0 = canRemoveSpatial0;
 
   // Determine which loop dims to remove (output spatial + corresponding filter)
   SmallVector<unsigned> loopDimsToRemove;
-  if (removeH) {
-    loopDimsToRemove.push_back(ohLoopIdx);
-    loopDimsToRemove.push_back(khLoopIdx);
+  if (removeSpatial0) {
+    loopDimsToRemove.push_back(outSpatial0);
+    loopDimsToRemove.push_back(filterSpatial0);
   } else {
-    loopDimsToRemove.push_back(owLoopIdx);
-    loopDimsToRemove.push_back(kwLoopIdx);
+    loopDimsToRemove.push_back(outSpatial1);
+    loopDimsToRemove.push_back(filterSpatial1);
   }
   // Sort for correct index compression when removing dimensions from affine
   // maps.
@@ -1632,6 +1627,21 @@ linalg::downscaleSizeOneWindowedConvolution(RewriterBase &rewriter,
   rewriter.replaceOp(op, result);
   return resultOp;
 }
+
+namespace {
+/// Pattern wrapper around `downscaleSizeOneWindowedConvolution`.
+struct DownscaleSizeOneWindowedConvolution final
+    : public OpInterfaceRewritePattern<LinalgOp> {
+  DownscaleSizeOneWindowedConvolution(MLIRContext *context,
+                                      PatternBenefit benefit = 1)
+      : OpInterfaceRewritePattern<LinalgOp>(context, benefit) {}
+
+  LogicalResult matchAndRewrite(LinalgOp op,
+                                PatternRewriter &rewriter) const override {
+    return linalg::downscaleSizeOneWindowedConvolution(rewriter, op);
+  }
+};
+} // namespace
 
 void linalg::populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,
                                                   PatternBenefit benefit) {

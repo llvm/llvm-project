@@ -484,7 +484,7 @@ transform::DecomposeOp::applyToOne(transform::TransformRewriter &rewriter,
                                    LinalgOp target,
                                    transform::ApplyToEachResultList &results,
                                    transform::TransformState &state) {
-  FailureOr<linalg::GenericOp> res =
+  FailureOr<linalg::LinalgOp> res =
       downscaleSizeOneWindowedConvolution(rewriter, target);
   if (succeeded(res)) {
     results.push_back(*res);

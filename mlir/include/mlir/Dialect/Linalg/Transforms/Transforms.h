@@ -1647,19 +1647,6 @@ FailureOr<linalg::GenericOp> deduplicateOperandsAndRemoveDeadResults(
 FailureOr<LinalgOp> downscaleSizeOneWindowedConvolution(RewriterBase &rewriter,
                                                         LinalgOp op);
 
-/// Pattern wrapper around `downscaleSizeOneWindowedConvolution`.
-struct DownscaleSizeOneWindowedConvolution final
-    : public OpInterfaceRewritePattern<LinalgOp> {
-  DownscaleSizeOneWindowedConvolution(MLIRContext *context,
-                                      PatternBenefit benefit = 1)
-      : OpInterfaceRewritePattern<LinalgOp>(context, benefit) {}
-
-  LogicalResult matchAndRewrite(LinalgOp op,
-                                PatternRewriter &rewriter) const override {
-    return downscaleSizeOneWindowedConvolution(rewriter, op);
-  }
-};
-
 ///
 /// Linalg generalization pattern.
 ///

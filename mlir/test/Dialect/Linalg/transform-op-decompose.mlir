@@ -329,6 +329,34 @@ func.func @batchless_pooling_chw_min(%input: tensor<8x1x14xf32>, %filter: tensor
   return %0 : tensor<8x1x12xf32>
 }
 
+#map_cross_i = affine_map<(d0, d1, d2, d3) -> (d0 + d3, d1 + d2)>
+#map_cross_f = affine_map<(d0, d1, d2, d3) -> (d2, d3)>
+#map_cross_o = affine_map<(d0, d1, d2, d3) -> (d0, d1)>
+
+// CHECK-LABEL: @cross_conv_nonstandard_loop_order
+// CHECK-SAME:    %[[ARG0:.+]]: tensor<1x15xf32>
+// CHECK-SAME:    %[[ARG1:.+]]: tensor<3x1xf32>
+// CHECK-SAME:    %[[ARG2:.+]]: tensor<1x12xf32>
+func.func @cross_conv_nonstandard_loop_order(%input: tensor<1x15xf32>, %filter: tensor<3x1xf32>, %output: tensor<1x12xf32>) -> tensor<1x12xf32> {
+  // CHECK:       %[[SLICE0:.+]] = tensor.extract_slice %[[ARG0]]
+  // CHECK:       %[[SLICE1:.+]] = tensor.extract_slice %[[ARG1]]
+  // CHECK:       %[[SLICE2:.+]] = tensor.extract_slice %[[ARG2]]
+  // CHECK:       %[[SLICERES:.+]] = linalg.conv_1d
+  // CHECK:       %[[RES:.+]] = tensor.insert_slice %[[SLICERES]] into %[[ARG2]]
+  // CHECK:       return %[[RES]]
+  %0 = linalg.generic {
+    indexing_maps = [#map_cross_i, #map_cross_f, #map_cross_o],
+    iterator_types = ["parallel", "parallel", "reduction", "reduction"]
+  } ins(%input, %filter : tensor<1x15xf32>, tensor<3x1xf32>)
+    outs(%output : tensor<1x12xf32>) {
+  ^bb0(%in: f32, %fil: f32, %out: f32):
+    %mul = arith.mulf %in, %fil : f32
+    %add = arith.addf %out, %mul : f32
+    linalg.yield %add : f32
+  } -> tensor<1x12xf32>
+  return %0 : tensor<1x12xf32>
+}
+
 func.func @softmax(%arg0: tensor<2x16x32xf32>, %dst: tensor<2x16x32xf32>) -> tensor<2x16x32xf32> {
   %1 = linalg.softmax dimension(2) ins(%arg0 : tensor<2x16x32xf32>) outs(%dst: tensor<2x16x32xf32>) -> tensor<2x16x32xf32>
   return %1 : tensor<2x16x32xf32>
