@@ -2303,11 +2303,8 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
       SpillCost *= (int64_t)RelativeFreq;
 
     // If we have increased spilling in any block, just bail.
-    if (SpillCost > 0) {
-      LLVM_DEBUG(dbgs() << "RewriteMFMAFormStage: Rewrite rejected.\n");
+    if (SpillCost > 0)
       return SpillCost;
-    }
-    LLVM_DEBUG(dbgs() << "RewriteMFMAFormStage: Rewrite successful.\n");
 
     if (SpillCost < BestSpillCost)
       BestSpillCost = SpillCost;
