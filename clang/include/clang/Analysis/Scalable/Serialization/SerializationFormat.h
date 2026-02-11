@@ -19,7 +19,6 @@
 #include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ExtensibleRTTI.h"
-#include "llvm/Support/VirtualFileSystem.h"
 
 namespace clang::ssaf {
 
