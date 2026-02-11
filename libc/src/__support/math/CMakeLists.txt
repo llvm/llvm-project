@@ -1293,6 +1293,14 @@ add_header_library(
 )
 
 add_header_library(
+  logb
+  HDRS
+    logb.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_header_library(
   log10
   HDRS
     log10.h
