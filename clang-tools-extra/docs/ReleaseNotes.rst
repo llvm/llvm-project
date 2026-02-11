@@ -144,6 +144,12 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/argument-comment>` to also check for C++11
   inherited constructors.
 
+- Improved :doc:`bugprone-exception-escape
+  <clang-tidy/checks/bugprone/exception-escape>` check by adding
+  `TreatFunctionsWithoutSpecificationAsThrowing` option to support reporting
+  for unannotated functions, enabling reporting when no explicit ``throw``
+  is seen and allowing separate tuning for known and unknown implementations.
+
 - Improved :doc:`bugprone-macro-parentheses
   <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
   definition in the warning message if the macro is defined on command line.
