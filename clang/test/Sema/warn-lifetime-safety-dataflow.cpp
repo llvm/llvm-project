@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fexperimental-lifetime-safety -mllvm -debug-only=LifetimeFacts -Wexperimental-lifetime-safety %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -mllvm -debug-only=LifetimeFacts -Wlifetime-safety %s 2>&1 | FileCheck %s
 // REQUIRES: asserts
 
 struct MyObj {
@@ -27,7 +27,7 @@ MyObj* return_local_addr() {
 // CHECK-NEXT:       Src:  [[O_P]] (Decl: p, Type : MyObj *)
 // CHECK:   Expire ([[L_X]] (Path: x))
 // CHECK:   Expire ({{[0-9]+}} (Path: p))
-// CHECK:   OriginEscapes ([[O_RET_VAL]] (Expr: ImplicitCastExpr, Type : MyObj *))
+// CHECK:   OriginEscapes ([[O_RET_VAL]] (Expr: ImplicitCastExpr, Type : MyObj *), via Return)
 }
 
 // Loan Expiration (Automatic Variable, C++)

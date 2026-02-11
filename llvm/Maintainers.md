@@ -186,7 +186,7 @@ i@maskray.me (email), [MaskRay](https://github.com/MaskRay) (GitHub)
 #### Windows ABI and codegen
 
 Reid Kleckner \
-rnk@google.com (email), [rnk](https://github.com/rnk) (GitHub)
+rnk@llvm.org (email), [rnk](https://github.com/rnk) (GitHub)
 
 ### Backends / Targets
 
@@ -275,7 +275,7 @@ jholewinski@nvidia.com (email), [jholewinski](https://github.com/jholewinski) (G
 Artem Belevich \
 tra@google.com (email), [Artem-B](https://github.com/Artem-B) (GitHub) \
 Alex MacLean \
-amaclean@nvidia.com (email), [AlexMaclean](https://github.com/AlexMaclean) (GitHub) \
+amaclean@nvidia.com (email), [AlexMaclean](https://github.com/AlexMaclean) (GitHub)
 
 #### PowerPC backend
 
@@ -484,7 +484,7 @@ echristo@gmail.com (email), [echristo](https://github.com/echristo) (GitHub)
 #### Exception handling
 
 Reid Kleckner \
-rnk@google.com (email), [rnk](https://github.com/rnk) (GitHub)
+rnk@llvm.org (email), [rnk](https://github.com/rnk) (GitHub)
 
 #### LLVM Buildbot
 

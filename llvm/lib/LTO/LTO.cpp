@@ -1229,7 +1229,7 @@ Error LTO::checkPartiallySplit() {
 Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
   llvm::scope_exit CleanUp([this]() { cleanup(); });
 
-  if (Error EC = handleArchiveInputs())
+  if (Error EC = serializeInputsForDistribution())
     return EC;
 
   // Compute "dead" symbols, we don't want to import/export these!
@@ -1325,7 +1325,7 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
       // Don't do anything if no instance of this common was prevailing.
       continue;
     GlobalVariable *OldGV = RegularLTO.CombinedModule->getNamedGlobal(I.first);
-    if (OldGV && DL.getTypeAllocSize(OldGV->getValueType()) == I.second.Size) {
+    if (OldGV && OldGV->getGlobalSize(DL) == I.second.Size) {
       // Don't create a new global if the type is already correct, just make
       // sure the alignment is correct.
       OldGV->setAlignment(I.second.Alignment);

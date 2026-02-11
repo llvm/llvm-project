@@ -1340,6 +1340,12 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
       *Subtype = X86::AMDFAM1AH_ZNVER5;
       break; //  "znver5"
     }
+    if ((Model >= 0x50 && Model <= 0x5f) || (Model >= 0x80 && Model <= 0xcf) ||
+        (Model >= 0xd8 && Model <= 0xe7)) {
+      CPU = "znver6";
+      *Subtype = X86::AMDFAM1AH_ZNVER6;
+      break; //  "znver6"
+    }
     break;
 
   default:
@@ -2167,8 +2173,12 @@ StringMap<bool> sys::getHostCPUFeatures() {
   bool HasAVX10 = HasLeaf7Subleaf1 && ((EDX >> 19) & 1);
   bool HasAPXF = HasLeaf7Subleaf1 && ((EDX >> 21) & 1) && HasAPXSave;
   Features["egpr"] = HasAPXF;
+#ifndef _WIN32
+  // TODO: We may need to check OS or MSVC version once unwinder opcodes
+  // support PUSH2/POP2/PPX.
   Features["push2pop2"] = HasAPXF;
   Features["ppx"] = HasAPXF;
+#endif
   Features["ndd"] = HasAPXF;
   Features["ccmp"] = HasAPXF;
   Features["nf"] = HasAPXF;
@@ -2393,7 +2403,7 @@ StringMap<bool> sys::getHostCPUFeatures() {
       IsProcessorFeaturePresent(PF_ARM_SVE_F64MM_INSTRUCTIONS_AVAILABLE);
   Features["i8mm"] =
       IsProcessorFeaturePresent(PF_ARM_V82_I8MM_INSTRUCTIONS_AVAILABLE);
-  Features["fp16"] =
+  Features["fullfp16"] =
       IsProcessorFeaturePresent(PF_ARM_V82_FP16_INSTRUCTIONS_AVAILABLE);
   Features["bf16"] =
       IsProcessorFeaturePresent(PF_ARM_V86_BF16_INSTRUCTIONS_AVAILABLE);

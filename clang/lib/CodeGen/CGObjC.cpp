@@ -2415,7 +2415,9 @@ static llvm::Value *emitOptimizedARCReturnCall(llvm::Value *value,
   emitAutoreleasedReturnValueMarker(CGF);
 
   // Add operand bundle "clang.arc.attachedcall" to the call instead of emitting
-  // retainRV or claimRV calls in the IR.
+  // retainRV or claimRV calls in the IR. We currently do this only when the
+  // optimization level isn't -O0 since global-isel, which is currently run at
+  // -O0, doesn't know about the operand bundle.
   ObjCEntrypoints &EPs = CGF.CGM.getObjCEntrypoints();
   llvm::Function *&EP = IsRetainRV
                             ? EPs.objc_retainAutoreleasedReturnValue
@@ -2427,8 +2429,11 @@ static llvm::Value *emitOptimizedARCReturnCall(llvm::Value *value,
 
   llvm::Triple::ArchType Arch = CGF.CGM.getTriple().getArch();
 
-  if (Arch == llvm::Triple::x86_64 ||
-      (Arch == llvm::Triple::aarch64 || Arch == llvm::Triple::aarch64_32)) {
+  // FIXME: Do this on all targets and at -O0 too. This can be enabled only if
+  // the target backend knows how to handle the operand bundle.
+  if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0 &&
+      (Arch == llvm::Triple::aarch64 || Arch == llvm::Triple::aarch64_32 ||
+       Arch == llvm::Triple::x86_64)) {
     llvm::Value *bundleArgs[] = {EP};
     llvm::OperandBundleDef OB("clang.arc.attachedcall", bundleArgs);
     auto *oldCall = cast<llvm::CallBase>(value);
