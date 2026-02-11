@@ -228,6 +228,9 @@ Improvements to Clang's diagnostics
   when accessing a member function on a past-the-end array element.
   (#GH179128)
 
+- ``-Wunsafe-buffer-usage`` now warns about unsafe two-parameter constructors of
+  ``std::string_view`` (pointer and size), consistent with the existing warning for ``std::span``.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
