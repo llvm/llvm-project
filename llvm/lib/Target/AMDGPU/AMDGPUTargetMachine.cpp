@@ -22,6 +22,7 @@
 #include "AMDGPUCtorDtorLowering.h"
 #include "AMDGPUExportClustering.h"
 #include "AMDGPUExportKernelRuntimeHandles.h"
+#include "AMDGPUHazardLatency.h"
 #include "AMDGPUIGroupLP.h"
 #include "AMDGPUISelDAGToDAG.h"
 #include "AMDGPULowerVGPREncoding.h"
@@ -158,10 +159,14 @@ public:
   Error addRegAssignmentOptimized(PassManagerWrapper &PMW) const;
   void addPreRegAlloc(PassManagerWrapper &PMW) const;
   Error addFastRegAlloc(PassManagerWrapper &PMW) const;
-  void addOptimizedRegAlloc(PassManagerWrapper &PMW) const;
+  Error addOptimizedRegAlloc(PassManagerWrapper &PMW) const;
   void addPreSched2(PassManagerWrapper &PMW) const;
   void addPostBBSections(PassManagerWrapper &PMW) const;
 
+private:
+  Error validateRegAllocOptions() const;
+
+public:
   /// Check if a pass is enabled given \p Opt option. The option always
   /// overrides defaults if explicitly used. Otherwise its default will be used
   /// given that a pass shall work at an optimization \p Level minimum.
@@ -242,6 +247,63 @@ static cl::opt<WWMRegisterRegAlloc::FunctionPassCtor, false,
     WWMRegAlloc("wwm-regalloc", cl::Hidden,
                 cl::init(&useDefaultRegisterAllocator),
                 cl::desc("Register allocator to use for WWM registers"));
+
+// New pass manager register allocator options for AMDGPU
+static cl::opt<RegAllocType, false, RegAllocTypeParser> SGPRRegAllocNPM(
+    "sgpr-regalloc-npm", cl::Hidden, cl::init(RegAllocType::Default),
+    cl::desc("Register allocator for SGPRs (new pass manager)"));
+
+static cl::opt<RegAllocType, false, RegAllocTypeParser> VGPRRegAllocNPM(
+    "vgpr-regalloc-npm", cl::Hidden, cl::init(RegAllocType::Default),
+    cl::desc("Register allocator for VGPRs (new pass manager)"));
+
+static cl::opt<RegAllocType, false, RegAllocTypeParser> WWMRegAllocNPM(
+    "wwm-regalloc-npm", cl::Hidden, cl::init(RegAllocType::Default),
+    cl::desc("Register allocator for WWM registers (new pass manager)"));
+
+/// Check if the given RegAllocType is supported for AMDGPU NPM register
+/// allocation. Only Fast and Greedy are supported; Basic and PBQP are not.
+static Error checkRegAllocSupported(RegAllocType RAType, StringRef RegName) {
+  if (RAType == RegAllocType::Basic || RAType == RegAllocType::PBQP) {
+    return make_error<StringError>(
+        Twine("unsupported register allocator '") +
+            (RAType == RegAllocType::Basic ? "basic" : "pbqp") + "' for " +
+            RegName + " registers",
+        inconvertibleErrorCode());
+  }
+  return Error::success();
+}
+
+Error AMDGPUCodeGenPassBuilder::validateRegAllocOptions() const {
+  // 1. Generic --regalloc-npm is not supported for AMDGPU.
+  if (Opt.RegAlloc != RegAllocType::Unset) {
+    return make_error<StringError>(
+        "-regalloc-npm not supported for amdgcn. Use -sgpr-regalloc-npm, "
+        "-vgpr-regalloc-npm, and -wwm-regalloc-npm",
+        inconvertibleErrorCode());
+  }
+
+  // 2. Legacy PM regalloc options are not compatible with NPM.
+  if (SGPRRegAlloc.getNumOccurrences() > 0 ||
+      VGPRRegAlloc.getNumOccurrences() > 0 ||
+      WWMRegAlloc.getNumOccurrences() > 0) {
+    return make_error<StringError>(
+        "-sgpr-regalloc, -vgpr-regalloc, and -wwm-regalloc are legacy PM "
+        "options. Use -sgpr-regalloc-npm, -vgpr-regalloc-npm, and "
+        "-wwm-regalloc-npm with the new pass manager",
+        inconvertibleErrorCode());
+  }
+
+  // 3. Only Fast and Greedy allocators are supported for AMDGPU.
+  if (auto Err = checkRegAllocSupported(SGPRRegAllocNPM, "SGPR"))
+    return Err;
+  if (auto Err = checkRegAllocSupported(WWMRegAllocNPM, "WWM"))
+    return Err;
+  if (auto Err = checkRegAllocSupported(VGPRRegAllocNPM, "VGPR"))
+    return Err;
+
+  return Error::success();
+}
 
 static void initializeDefaultSGPRRegisterAllocatorOnce() {
   RegisterRegAlloc::FunctionPassCtor Ctor = SGPRRegisterRegAlloc::getDefault();
@@ -653,6 +715,7 @@ createGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
   DAG->addMutation(createAMDGPUMacroFusionDAGMutation());
   DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
   DAG->addMutation(createAMDGPUBarrierLatencyDAGMutation(C->MF));
+  DAG->addMutation(createAMDGPUHazardLatencyDAGMutation(C->MF));
   return DAG;
 }
 
@@ -674,6 +737,7 @@ createGCNMaxMemoryClauseMachineScheduler(MachineSchedContext *C) {
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
   DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
   DAG->addMutation(createAMDGPUBarrierLatencyDAGMutation(C->MF));
+  DAG->addMutation(createAMDGPUHazardLatencyDAGMutation(C->MF));
   return DAG;
 }
 
@@ -1216,6 +1280,7 @@ GCNTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
     DAG->addMutation(createVOPDPairingMutation());
   DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
   DAG->addMutation(createAMDGPUBarrierLatencyDAGMutation(C->MF));
+  DAG->addMutation(createAMDGPUHazardLatencyDAGMutation(C->MF));
   return DAG;
 }
 //===----------------------------------------------------------------------===//
@@ -2323,12 +2388,17 @@ Error AMDGPUCodeGenPassBuilder::addFastRegAlloc(PassManagerWrapper &PMW) const {
 
 Error AMDGPUCodeGenPassBuilder::addRegAssignmentFast(
     PassManagerWrapper &PMW) const {
-  // TODO: handle default regalloc override error (with regalloc-npm)
+  if (auto Err = validateRegAllocOptions())
+    return Err;
 
   addMachineFunctionPass(GCNPreRALongBranchRegPass(), PMW);
 
-  addMachineFunctionPass(RegAllocFastPass({onlyAllocateSGPRs, "sgpr", false}),
-                         PMW);
+  // SGPR allocation - default to fast at -O0.
+  if (SGPRRegAllocNPM == RegAllocType::Greedy)
+    addMachineFunctionPass(RAGreedyPass({onlyAllocateSGPRs, "sgpr"}), PMW);
+  else
+    addMachineFunctionPass(RegAllocFastPass({onlyAllocateSGPRs, "sgpr", false}),
+                           PMW);
 
   // Equivalent of PEI for SGPRs.
   addMachineFunctionPass(SILowerSGPRSpillsPass(), PMW);
@@ -2336,20 +2406,26 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentFast(
   // To Allocate wwm registers used in whole quad mode operations (for shaders).
   addMachineFunctionPass(SIPreAllocateWWMRegsPass(), PMW);
 
-  // For allocating other wwm register operands.
-  addMachineFunctionPass(RegAllocFastPass({onlyAllocateWWMRegs, "wwm", false}),
-                         PMW);
+  // WWM allocation - default to fast at -O0.
+  if (WWMRegAllocNPM == RegAllocType::Greedy)
+    addMachineFunctionPass(RAGreedyPass({onlyAllocateWWMRegs, "wwm"}), PMW);
+  else
+    addMachineFunctionPass(
+        RegAllocFastPass({onlyAllocateWWMRegs, "wwm", false}), PMW);
 
   addMachineFunctionPass(SILowerWWMCopiesPass(), PMW);
   addMachineFunctionPass(AMDGPUReserveWWMRegsPass(), PMW);
 
-  // For allocating per-thread VGPRs.
-  addMachineFunctionPass(RegAllocFastPass({onlyAllocateVGPRs, "vgpr"}), PMW);
+  // VGPR allocation - default to fast at -O0.
+  if (VGPRRegAllocNPM == RegAllocType::Greedy)
+    addMachineFunctionPass(RAGreedyPass({onlyAllocateVGPRs, "vgpr"}), PMW);
+  else
+    addMachineFunctionPass(RegAllocFastPass({onlyAllocateVGPRs, "vgpr"}), PMW);
 
   return Error::success();
 }
 
-void AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(
+Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(
     PassManagerWrapper &PMW) const {
   if (EnableDCEInRA)
     insertPass<DetectDeadLanesPass>(DeadMachineInstructionElimPass());
@@ -2385,7 +2461,7 @@ void AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(
   if (TM.getOptLevel() > CodeGenOptLevel::Less)
     insertPass<MachineSchedulerPass>(SIFormMemoryClausesPass());
 
-  Base::addOptimizedRegAlloc(PMW);
+  return Base::addOptimizedRegAlloc(PMW);
 }
 
 void AMDGPUCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) const {
@@ -2395,11 +2471,17 @@ void AMDGPUCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) const {
 
 Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
     PassManagerWrapper &PMW) const {
-  // TODO: Check --regalloc-npm option
+  if (auto Err = validateRegAllocOptions())
+    return Err;
 
   addMachineFunctionPass(GCNPreRALongBranchRegPass(), PMW);
 
-  addMachineFunctionPass(RAGreedyPass({onlyAllocateSGPRs, "sgpr"}), PMW);
+  // SGPR allocation - default to greedy at -O1 and above.
+  if (SGPRRegAllocNPM == RegAllocType::Fast)
+    addMachineFunctionPass(RegAllocFastPass({onlyAllocateSGPRs, "sgpr", false}),
+                           PMW);
+  else
+    addMachineFunctionPass(RAGreedyPass({onlyAllocateSGPRs, "sgpr"}), PMW);
 
   // Commit allocated register changes. This is mostly necessary because too
   // many things rely on the use lists of the physical registers, such as the
@@ -2418,14 +2500,21 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
   // To Allocate wwm registers used in whole quad mode operations (for shaders).
   addMachineFunctionPass(SIPreAllocateWWMRegsPass(), PMW);
 
-  // For allocating other wwm register operands.
-  addMachineFunctionPass(RAGreedyPass({onlyAllocateWWMRegs, "wwm"}), PMW);
+  // WWM allocation - default to greedy at -O1 and above.
+  if (WWMRegAllocNPM == RegAllocType::Fast)
+    addMachineFunctionPass(
+        RegAllocFastPass({onlyAllocateWWMRegs, "wwm", false}), PMW);
+  else
+    addMachineFunctionPass(RAGreedyPass({onlyAllocateWWMRegs, "wwm"}), PMW);
   addMachineFunctionPass(SILowerWWMCopiesPass(), PMW);
   addMachineFunctionPass(VirtRegRewriterPass(false), PMW);
   addMachineFunctionPass(AMDGPUReserveWWMRegsPass(), PMW);
 
-  // For allocating per-thread VGPRs.
-  addMachineFunctionPass(RAGreedyPass({onlyAllocateVGPRs, "vgpr"}), PMW);
+  // VGPR allocation - default to greedy at -O1 and above.
+  if (VGPRRegAllocNPM == RegAllocType::Fast)
+    addMachineFunctionPass(RegAllocFastPass({onlyAllocateVGPRs, "vgpr"}), PMW);
+  else
+    addMachineFunctionPass(RAGreedyPass({onlyAllocateVGPRs, "vgpr"}), PMW);
 
   addPreRewrite(PMW);
   addMachineFunctionPass(VirtRegRewriterPass(true), PMW);
