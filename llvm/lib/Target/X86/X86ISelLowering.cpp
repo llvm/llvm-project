@@ -1156,6 +1156,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::AND, MVT::i128, Custom);
     setOperationAction(ISD::OR, MVT::i128, Custom);
     setOperationAction(ISD::XOR, MVT::i128, Custom);
+    setOperationAction(ISD::SELECT, MVT::i128, Custom);
 
     if (Subtarget.hasPCLMUL()) {
       for (auto VT : {MVT::i64, MVT::v4i32, MVT::v2i64}) {
@@ -1512,6 +1513,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::AND, MVT::i256, Custom);
     setOperationAction(ISD::OR, MVT::i256, Custom);
     setOperationAction(ISD::XOR, MVT::i256, Custom);
+    setOperationAction(ISD::SELECT, MVT::i256, Custom);
 
     // (fp_to_int:v8i16 (v8f32 ..)) requires the result type to be promoted
     // even though v8i16 is a legal type.
@@ -1886,6 +1888,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::XOR, MVT::i512, Custom);
     setOperationAction(ISD::ADD, MVT::i512, Custom);
     setOperationAction(ISD::SUB, MVT::i512, Custom);
+    setOperationAction(ISD::SELECT, MVT::i512, Custom);
 
     for (MVT VT : { MVT::v16i1, MVT::v16i8 }) {
       setOperationPromotedToType(ISD::FP_TO_SINT       , VT, MVT::v16i32);
@@ -2934,6 +2937,9 @@ static bool mayFoldIntoVector(SDValue Op, const SelectionDAG &DAG,
     case ISD::SUB:
       return mayFoldIntoVector(Op.getOperand(0), DAG, Subtarget) &&
              mayFoldIntoVector(Op.getOperand(1), DAG, Subtarget);
+    case ISD::SELECT:
+      return mayFoldIntoVector(Op.getOperand(1), DAG, Subtarget) &&
+             mayFoldIntoVector(Op.getOperand(2), DAG, Subtarget);
     }
   }
   return X86::mayFoldLoad(Op, Subtarget, AssumeSingleUse,
@@ -18361,9 +18367,17 @@ static SDValue lower1BitShuffle(const SDLoc &DL, ArrayRef<int> Mask,
     return Zeroable[M.index()] || (M.value() == (int)M.index());
   });
   if (IsBlendWithZero) {
-    EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
-    SDValue BlendMask = DAG.getConstant(~Zeroable, DL, IntVT);
-    return DAG.getNode(ISD::AND, DL, VT, V1, DAG.getBitcast(VT, BlendMask));
+    const unsigned Width = std::max<unsigned>(NumElts, 8u);
+    MVT IntVT = MVT::getIntegerVT(Width);
+
+    APInt MaskValue = (~Zeroable).zextOrTrunc(Width);
+    SDValue MaskNode = DAG.getConstant(MaskValue, DL, IntVT);
+
+    MVT MaskVecVT = MVT::getVectorVT(MVT::i1, Width);
+    SDValue MaskVecNode = DAG.getBitcast(MaskVecVT, MaskNode);
+
+    SDValue MaskVec = DAG.getExtractSubvector(DL, VT, MaskVecNode, 0);
+    return DAG.getNode(ISD::AND, DL, VT, V1, MaskVec);
   }
 
   MVT ExtVT;
@@ -34291,6 +34305,36 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     Results.push_back(DAG.getBitcast(VT, Op));
     return;
   }
+  case ISD::SELECT: {
+    SDValue Cond = N->getOperand(0);
+    SDValue TVal = N->getOperand(1);
+    SDValue FVal = N->getOperand(2);
+    EVT VT = N->getValueType(0);
+    assert((VT == MVT::i128 || VT == MVT::i256 || VT == MVT::i512) &&
+           "Unexpected VT!");
+    // See if this is free to perform on the FPU to avoid splitting.
+    if (Cond.getValueType() != MVT::i1 ||
+        !mayFoldIntoVector(TVal, DAG, Subtarget) ||
+        !mayFoldIntoVector(FVal, DAG, Subtarget))
+      return;
+    // Splat selection bit to all-bit selection mask.
+    MVT VecVT = MVT::getVectorVT(MVT::i32, VT.getSizeInBits() / 32);
+    MVT CondVT = VecVT.changeVectorElementType(MVT::i1);
+    if (isTypeLegal(CondVT)) {
+      MVT CondIntVT = MVT::getIntegerVT(CondVT.getVectorNumElements());
+      Cond = DAG.getNode(ISD::SIGN_EXTEND, dl, CondIntVT, Cond);
+      Cond = DAG.getBitcast(CondVT, Cond);
+    } else {
+      Cond = DAG.getNode(ISD::SIGN_EXTEND, dl, MVT::i32, Cond);
+      Cond = DAG.getSetCC(dl, CondVT, DAG.getConstant(0, dl, VecVT),
+                          DAG.getSplatBuildVector(VecVT, dl, Cond),
+                          ISD::CondCode::SETGT);
+    }
+    SDValue Op = DAG.getSelect(dl, VecVT, Cond, DAG.getBitcast(VecVT, TVal),
+                               DAG.getBitcast(VecVT, FVal));
+    Results.push_back(DAG.getBitcast(VT, Op));
+    return;
+  }
   case ISD::ADD:
   case ISD::SUB: {
     // TODO: ISD::UADDO_CARRY
@@ -43600,6 +43644,10 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
     if (auto *Msk = dyn_cast<ConstantSDNode>(peekThroughBitcasts(ExpMask)))
       if (Msk->getAPIntValue().isMask())
         return DAG.getSelect(DL, VT, ExpMask, ExpVec, PassThru);
+    // If ExpVec is splat value, then all elements are already in place - just
+    // use a select.
+    if (DAG.isSplatValue(ExpVec, /*AllowUndefs=*/false))
+      return DAG.getSelect(DL, VT, ExpMask, ExpVec, PassThru);
     return SDValue();
   }
   case X86ISD::VPERMV: {
@@ -44940,6 +44988,9 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     case X86ISD::PCMPGT:
     case X86ISD::PMULUDQ:
     case X86ISD::PMULDQ:
+    case X86ISD::MULHRS:
+    case X86ISD::VPMADDUBSW:
+    case X86ISD::VPMADDWD:
     case X86ISD::VSHLV:
     case X86ISD::VSRLV:
     case X86ISD::VSRAV:
@@ -58522,7 +58573,11 @@ static bool needCarryOrOverflowFlag(SDValue Flags) {
 static bool onlyZeroFlagUsed(SDValue Flags) {
   assert(Flags.getValueType() == MVT::i32 && "Unexpected VT!");
 
-  for (const SDNode *User : Flags->users()) {
+  for (const SDUse &Use : Flags->uses()) {
+    // Only check things that use the flags.
+    if (Use.getResNo() != Flags.getResNo())
+      continue;
+    const SDNode *User = Use.getUser();
     unsigned CCOpNo;
     switch (User->getOpcode()) {
     default:

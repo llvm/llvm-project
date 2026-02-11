@@ -75,6 +75,11 @@ public:
                                    unsigned OpIdx) const;
   bool insertLogicalCopyOnResult(MachineInstr &I,
                                  SPIRVType *NewResultType) const;
+
+  AtomicExpansionKind
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const override;
+  AtomicExpansionKind
+  shouldCastAtomicRMWIInIR(AtomicRMWInst *RMWI) const override;
 };
 } // namespace llvm
 

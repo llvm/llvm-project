@@ -126,6 +126,7 @@ public:
     ImmTySMEMOffsetMod,
     ImmTyCPol,
     ImmTyTFE,
+    ImmTyIsAsync,
     ImmTyD16,
     ImmTyClamp,
     ImmTyOModSI,
@@ -149,6 +150,7 @@ public:
     ImmTyHwreg,
     ImmTyOff,
     ImmTySendMsg,
+    ImmTyWaitEvent,
     ImmTyInterpSlot,
     ImmTyInterpAttr,
     ImmTyInterpAttrChan,
@@ -967,6 +969,7 @@ public:
   bool isSDelayALU() const;
   bool isHwreg() const;
   bool isSendMsg() const;
+  bool isWaitEvent() const;
   bool isSplitBarrier() const;
   bool isSwizzle() const;
   bool isSMRDOffset8() const;
@@ -1119,6 +1122,7 @@ public:
     case ImmTyIndexKey16bit: OS << "index_key"; break;
     case ImmTyIndexKey32bit: OS << "index_key"; break;
     case ImmTyTFE: OS << "TFE"; break;
+    case ImmTyIsAsync: OS << "IsAsync"; break;
     case ImmTyD16: OS << "D16"; break;
     case ImmTyFORMAT: OS << "FORMAT"; break;
     case ImmTyClamp: OS << "Clamp"; break;
@@ -1148,6 +1152,7 @@ public:
     case ImmTyRowEn: OS << "RowEn"; break;
     case ImmTyHwreg: OS << "Hwreg"; break;
     case ImmTySendMsg: OS << "SendMsg"; break;
+    case ImmTyWaitEvent: OS << "WaitEvent"; break;
     case ImmTyInterpSlot: OS << "InterpSlot"; break;
     case ImmTyInterpAttr: OS << "InterpAttr"; break;
     case ImmTyInterpAttrChan: OS << "InterpAttrChan"; break;
@@ -1783,7 +1788,7 @@ private:
     bool IsSymbolic = false;
     bool IsDefined = false;
 
-    OperandInfoTy(int64_t Val) : Val(Val) {}
+    constexpr OperandInfoTy(int64_t Val) : Val(Val) {}
   };
 
   struct StructuredOpField : OperandInfoTy {
@@ -1792,8 +1797,8 @@ private:
     unsigned Width;
     bool IsDefined = false;
 
-    StructuredOpField(StringLiteral Id, StringLiteral Desc, unsigned Width,
-                      int64_t Default)
+    constexpr StructuredOpField(StringLiteral Id, StringLiteral Desc,
+                                unsigned Width, int64_t Default)
         : OperandInfoTy(Default), Id(Id), Desc(Desc), Width(Width) {}
     virtual ~StructuredOpField() = default;
 
@@ -1924,6 +1929,7 @@ public:
 
   ParseStatus parseExpTgt(OperandVector &Operands);
   ParseStatus parseSendMsg(OperandVector &Operands);
+  ParseStatus parseWaitEvent(OperandVector &Operands);
   ParseStatus parseInterpSlot(OperandVector &Operands);
   ParseStatus parseInterpAttr(OperandVector &Operands);
   ParseStatus parseSOPPBrTarget(OperandVector &Operands);
@@ -8249,6 +8255,41 @@ bool AMDGPUOperand::isSendMsg() const {
   return isImmTy(ImmTySendMsg);
 }
 
+ParseStatus AMDGPUAsmParser::parseWaitEvent(OperandVector &Operands) {
+  using namespace llvm::AMDGPU::WaitEvent;
+
+  SMLoc Loc = getLoc();
+  int64_t ImmVal = 0;
+
+  StructuredOpField DontWaitExportReady("dont_wait_export_ready", "bit value",
+                                        1, 0);
+  StructuredOpField ExportReady("export_ready", "bit value", 1, 0);
+
+  StructuredOpField *TargetBitfield =
+      isGFX11() ? &DontWaitExportReady : &ExportReady;
+
+  ParseStatus Res = parseStructuredOpFields({TargetBitfield});
+  if (Res.isNoMatch() && parseExpr(ImmVal, "structured immediate"))
+    Res = ParseStatus::Success;
+  else if (Res.isSuccess()) {
+    if (!validateStructuredOpFields({TargetBitfield}))
+      return ParseStatus::Failure;
+    ImmVal = TargetBitfield->Val;
+  }
+
+  if (!Res.isSuccess())
+    return ParseStatus::Failure;
+
+  if (!isUInt<16>(ImmVal))
+    return Error(Loc, "invalid immediate: only 16-bit values are legal");
+
+  Operands.push_back(AMDGPUOperand::CreateImm(this, ImmVal, Loc,
+                                              AMDGPUOperand::ImmTyWaitEvent));
+  return ParseStatus::Success;
+}
+
+bool AMDGPUOperand::isWaitEvent() const { return isImmTy(ImmTyWaitEvent); }
+
 //===----------------------------------------------------------------------===//
 // v_interp
 //===----------------------------------------------------------------------===//
@@ -9525,6 +9566,8 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
       Opc == AMDGPU::V_CVT_SCALEF32_PK_FP4_BF16_vi ||
       Opc == AMDGPU::V_CVT_SR_BF8_F32_vi ||
       Opc == AMDGPU::V_CVT_SR_FP8_F32_vi ||
+      Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_gfx11 ||
+      Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_gfx11 ||
       Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_gfx12 ||
       Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_gfx12) {
     Inst.addOperand(MCOperand::createImm(0)); // Placeholder for src2_mods
@@ -9534,7 +9577,19 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
   // Adding vdst_in operand is already covered for these DPP instructions in
   // cvtVOP3DPP.
   if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vdst_in) &&
-      !(Opc == AMDGPU::V_CVT_PK_BF8_F32_t16_e64_dpp_gfx12 ||
+      !(Opc == AMDGPU::V_CVT_PK_BF8_F32_t16_e64_dpp_gfx11 ||
+        Opc == AMDGPU::V_CVT_PK_FP8_F32_t16_e64_dpp_gfx11 ||
+        Opc == AMDGPU::V_CVT_PK_BF8_F32_t16_e64_dpp8_gfx11 ||
+        Opc == AMDGPU::V_CVT_PK_FP8_F32_t16_e64_dpp8_gfx11 ||
+        Opc == AMDGPU::V_CVT_PK_BF8_F32_fake16_e64_dpp_gfx11 ||
+        Opc == AMDGPU::V_CVT_PK_FP8_F32_fake16_e64_dpp_gfx11 ||
+        Opc == AMDGPU::V_CVT_PK_BF8_F32_fake16_e64_dpp8_gfx11 ||
+        Opc == AMDGPU::V_CVT_PK_FP8_F32_fake16_e64_dpp8_gfx11 ||
+        Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp_gfx11 ||
+        Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp8_gfx11 ||
+        Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp_gfx11 ||
+        Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp8_gfx11 ||
+        Opc == AMDGPU::V_CVT_PK_BF8_F32_t16_e64_dpp_gfx12 ||
         Opc == AMDGPU::V_CVT_PK_FP8_F32_t16_e64_dpp_gfx12 ||
         Opc == AMDGPU::V_CVT_PK_BF8_F32_t16_e64_dpp8_gfx12 ||
         Opc == AMDGPU::V_CVT_PK_FP8_F32_t16_e64_dpp8_gfx12 ||

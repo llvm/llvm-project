@@ -701,6 +701,18 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known.Zero.setBitsFrom(LowBits);
     break;
   }
+  case TargetOpcode::G_CTLS: {
+    Register Reg = MI.getOperand(1).getReg();
+    unsigned MinRedundantSignBits = computeNumSignBits(Reg, Depth + 1) - 1;
+
+    unsigned MaxUpperRedundantSignBits = MRI.getType(Reg).getScalarSizeInBits();
+
+    ConstantRange Range(APInt(BitWidth, MinRedundantSignBits),
+                        APInt(BitWidth, MaxUpperRedundantSignBits));
+
+    Known = Range.toKnownBits();
+    break;
+  }
   case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
     GExtractVectorElement &Extract = cast<GExtractVectorElement>(MI);
     Register InVec = Extract.getVectorReg();
