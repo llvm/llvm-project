@@ -384,7 +384,7 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   fir::addCompilerGeneratedNamesConversionPass(pm);
 
   if (config.VScaleMin != 0)
-    pm.addPass(fir::createVScaleAttr({{config.VScaleMin, config.VScaleMax}}));
+    pm.addPass(fir::createVScaleAttr({config.VScaleMin, config.VScaleMax}));
 
   // Add function attributes
   mlir::LLVM::framePointerKind::FramePointerKind framePointerKind;
