@@ -828,7 +828,7 @@ namespace muliple_read_volatile {
                         // cxx17-warning@-1 {{unsequenced accesses to volatile qualified 'v1'}}
     x = v1 + (y++, v1); // cxx11-warning {{unsequenced accesses to volatile qualified 'v1'}}
                         // cxx17-warning@-1 {{unsequenced accesses to volatile qualified 'v1'}}
-    x = v1 + y || y;    // cxx11-warning {{unsequenced accesses to volatile qualified 'v1'}}
+    x = v1 + v1 || y;   // cxx11-warning {{unsequenced accesses to volatile qualified 'v1'}}
                         // cxx17-warning@-1 {{unsequenced accesses to volatile qualified 'v1'}}
   }
   
@@ -840,4 +840,4 @@ namespace muliple_read_volatile {
     x = (v1, v1); // no-warning
     x = v1 || v1; // no-warning
   }
-} // namespace volatiles
+} // namespace muliple_read_volatile
