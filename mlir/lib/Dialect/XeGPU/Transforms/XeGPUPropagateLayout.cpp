@@ -602,6 +602,11 @@ void LayoutInfoPropagation::visitPrefetchNdOp(
     auto tdescTy = prefetch.getTensorDescType();
 
     auto uArch = getUArch(getChipStr(prefetch).value_or(""));
+    if (!uArch) {
+      prefetch.emitWarning(
+          "Missing target attribute, unable to assign layout.");
+      return;
+    }
     const auto *uArchInstruction =
         dyn_cast<xegpu::uArch::Subgroup2DBlockPrefetchInstruction>(
             uArch->getInstruction(
@@ -656,6 +661,10 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
   SmallVector<int64_t> reductionDims(reduction.getReductionDims());
 
   auto uArch = getUArch(xegpu::getChipStr(reduction).value_or(""));
+  if (!uArch) {
+    reduction.emitWarning("Missing target attribute, unable to assign layout.");
+    return;
+  }
   auto consumerLayoutAttr =
       dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
 
@@ -773,6 +782,10 @@ void LayoutInfoPropagation::visitDpasOp(
       cTy = dpas.getAccType();
 
     auto uArch = getUArch(getChipStr(dpas).value_or(""));
+    if (!uArch) {
+      dpas.emitWarning("Missing target attribute, unable to assign layout.");
+      return;
+    }
     const int subgroupSize = uArch->getSubgroupSize();
     const auto *uArchInstruction =
         dyn_cast<xegpu::uArch::SubgroupMatrixMultiplyAcc>(uArch->getInstruction(
@@ -951,6 +964,10 @@ void LayoutInfoPropagation::visitStoreNdOp(
     storeLayout = LayoutInfo(anchorLayout);
   } else {
     auto uArch = getUArch(getChipStr(store).value_or(""));
+    if (!uArch) {
+      store.emitWarning("Missing target attribute, unable to assign layout.");
+      return;
+    }
     const auto *uArchInstruction =
         dyn_cast<xegpu::uArch::Subgroup2DBlockStoreInstruction>(
             uArch->getInstruction(
@@ -1080,6 +1097,10 @@ void LayoutInfoPropagation::visitVectorBitcastOp(
   auto consumerLayoutAttr =
       dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
   auto uArch = getUArch(xegpu::getChipStr(bitcast).value_or(""));
+  if (!uArch) {
+    bitcast.emitWarning("Missing target attribute, unable to assign layout.");
+    return;
+  }
   auto requiredResLayoutAttr = setupBitCastResultLayout(
       layoutKind, srcVecType, resVecType, consumerLayoutAttr, uArch);
 
@@ -1110,6 +1131,11 @@ void LayoutInfoPropagation::visitInsertStridedSliceOp(
   auto consumerLayoutAttr =
       dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
   auto uArch = getUArch(xegpu::getChipStr(insertStridedSlice).value_or(""));
+  if (!uArch) {
+    insertStridedSlice.emitWarning(
+        "Missing target attribute, unable to assign layout.");
+    return;
+  }
 
   auto requiredResLayoutAttr = xegpu::setupInsertStridedSliceResultLayout(
       layoutKind, srcVecType, resVecType, consumerLayoutAttr, uArch);
@@ -1134,6 +1160,10 @@ void LayoutInfoPropagation::visitLoadGatherOp(
   xegpu::DistributeLayoutAttr requiredAnchorLayoutAttr;
   xegpu::DistributeLayoutAttr anchorLayoutAttr = load.getLayoutAttr();
   auto uArch = getUArch(getChipStr(load).value_or(""));
+  if (!uArch) {
+    load.emitWarning("Missing target attribute, unable to assign layout.");
+    return;
+  }
   auto subgroupSize = uArch->getSubgroupSize();
   VectorType resVecTy = load.getValueType();
   int chunkSize = load.getChunkSize().value_or(1);
@@ -1193,6 +1223,11 @@ void LayoutInfoPropagation::visitCreateDescOp(
   if (!descLayout.isAssigned())
     return;
   auto uArch = getUArch(getChipStr(createDesc).value_or(""));
+  if (!uArch) {
+    createDesc.emitWarning(
+        "Missing target attribute, unable to assign layout.");
+    return;
+  }
   // For offset operand propagate 1D default layout.
   LayoutInfo layout = getDefaultSIMTLayoutInfo(createDesc->getContext(), 1,
                                                uArch->getSubgroupSize());
@@ -1208,6 +1243,11 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   xegpu::DistributeLayoutAttr requiredAnchorLayoutAttr;
   xegpu::DistributeLayoutAttr anchorLayoutAttr = storeScatter.getLayoutAttr();
   auto uArch = getUArch(getChipStr(storeScatter).value_or(""));
+  if (!uArch) {
+    storeScatter.emitWarning(
+        "Missing target attribute, unable to assign layout.");
+    return;
+  }
   auto subgroupSize = uArch->getSubgroupSize();
   VectorType srcVecTy = storeScatter.getValueType();
   int chunkSize = storeScatter.getChunkSize().value_or(1);
@@ -1270,6 +1310,11 @@ void LayoutInfoPropagation::visitLoadMatrixOp(
         llvm::cast<VectorType>(loadMatrixOp.getRes().getType());
     assert(resVecTy.getRank() == 2 && "Expecting 2D vector for store matrix.");
     auto uArch = getUArch(getChipStr(loadMatrixOp).value_or(""));
+    if (!uArch) {
+      loadMatrixOp.emitWarning(
+          "Missing target attribute, unable to assign layout.");
+      return;
+    }
     auto requiredAnchorLayoutAttr = xegpu::setupLoadMatrixAnchorLayout(
         layoutKind, resVecTy, consumerLayoutAttr, uArch);
     loadMatrixOp.setLayoutAttr(requiredAnchorLayoutAttr);
@@ -1289,6 +1334,11 @@ void LayoutInfoPropagation::visitStoreMatrixOp(
         llvm::cast<VectorType>(storeMatrix.getData().getType());
     assert(srcVecTy.getRank() == 2 && "Expecting 2D vector for store matrix.");
     auto uArch = getUArch(getChipStr(storeMatrix).value_or(""));
+    if (!uArch) {
+      storeMatrix.emitWarning(
+          "Missing target attribute, unable to assign layout.");
+      return;
+    }
     auto requiredAnchorLayoutAttr =
         xegpu::setupStoreMatrixAnchorLayout(layoutKind, srcVecTy, uArch);
     storeMatrix.setLayoutAttr(requiredAnchorLayoutAttr);

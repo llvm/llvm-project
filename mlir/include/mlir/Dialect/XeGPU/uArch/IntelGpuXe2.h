@@ -292,11 +292,8 @@ struct BMGuArch : public Xe2Plus {
 inline const uArch *getUArch(llvm::StringRef archName) {
   if (archName.equals_insensitive("pvc"))
     return PVCuArch::getInstance();
-  else if (archName.equals_insensitive("bmg"))
+  if (archName.equals_insensitive("bmg"))
     return BMGuArch::getInstance();
-  else
-    llvm_unreachable("No matching uArch found");
-
   return nullptr;
 }
 
