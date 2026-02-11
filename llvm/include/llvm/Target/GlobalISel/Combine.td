@@ -1946,6 +1946,20 @@ def APlusBMinusCPlusA : GICombineRule<
           (G_SUB $sub1, $B, $add1),
           (G_ADD $root, $A, $sub1)),
    (apply (G_SUB $root, $B, $C))>;
+  
+// fold (A - (0 - B)) to (A + B)
+def AMinusZeroMinusB : GICombineRule<
+   (defs root:$root),
+   (match (G_SUB $sub1, 0, $B),
+          (G_SUB $root, $A, $sub1)),
+   (apply (G_ADD $root, $A, $B))>;
+
+// fold A - (A - B) -> B
+def AMinusBMinusA: GICombineRule<
+   (defs root:$root),
+   (match (G_SUB $add, $A, $B),
+          (G_SUB $root, $A, $add)),
+   (apply (GIReplaceReg $root, $B))>;
 
 // fold (A+C1)-C2 -> A+(C1-C2)
 def APlusC1MinusC2: GICombineRule<
@@ -2008,6 +2022,8 @@ def integer_reassoc_combines: GICombineGroup<[
   AMinusBPlusBMinusC,
   APlusBMinusAplusC,
   APlusBMinusCPlusA,
+  AMinusZeroMinusB,
+  AMinusBMinusA,
   APlusC1MinusC2,
   C2MinusAPlusC1,
   AMinusC1MinusC2,

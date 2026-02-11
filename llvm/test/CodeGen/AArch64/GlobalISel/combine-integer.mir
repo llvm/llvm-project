@@ -413,3 +413,46 @@ body:             |
     $x0 = COPY %add
     RET_ReallyLR implicit $x0
 
+...
+---
+name:   AMinusZeroMinusB
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+
+
+    ; CHECK-LABEL: name: AMinusZeroMinusB
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(s64) = COPY $x0
+    ; CHECK-NEXT: %b:_(s64) = COPY $x1
+    ; CHECK-NEXT: %sub2:_(s64) = G_ADD %a, %b
+    ; CHECK-NEXT: $x0 = COPY %sub2(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %a:_(s64) = COPY $x0
+    %b:_(s64) = COPY $x1
+    %c1:_(s64) = G_CONSTANT i64 0
+    %sub1:_(s64) = G_SUB %c1, %b
+    %sub2:_(s64) = G_SUB %a, %sub1
+    $x0 = COPY %sub2
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:   AMinusBMinusA
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+
+    ; CHECK-LABEL: name: AMinusBMinusA
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %b:_(s64) = COPY $x1
+    ; CHECK-NEXT: $x0 = COPY %b(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %a:_(s64) = COPY $x0
+    %b:_(s64) = COPY $x1
+    %sub:_(s64) = G_SUB %a, %b
+    %add:_(s64) = G_SUB %a, %sub
+    $x0 = COPY %add
+    RET_ReallyLR implicit $x0
