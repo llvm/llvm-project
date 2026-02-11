@@ -20828,7 +20828,15 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
 
         EVT InterVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
                                        StMemSize.divideCoefficientBy(EltSize));
-        if (!TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, InterVT))
+        if (!TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, LDMemType))
+          break;
+
+        // Avoid infinite loop: Don't transform loads from fixed stack objects,
+        // as legalization expands extract_subvector to such loads.
+        SDValue LDBase = LD->getBasePtr();
+        if (LDBase.getOpcode() == ISD::ADD)
+          LDBase = LDBase.getOperand(0);
+        if (LDBase.getOpcode() == ISD::FrameIndex)
           break;
 
         // In case of big-endian the offset is normalized to zero, denoting
@@ -20839,6 +20847,9 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
           ExtIdx =
               InterVT.getVectorNumElements() - LDMemType.getVectorNumElements();
         }
+
+        if (!TLI.isExtractSubvectorCheap(LDMemType, InterVT, ExtIdx))
+          break;
         Val = DAG.getExtractSubvector(SDLoc(LD), LDMemType,
                                       DAG.getBitcast(InterVT, Val), ExtIdx);
       } else if (!STMemType.isVector() && !LDMemType.isVector() &&
