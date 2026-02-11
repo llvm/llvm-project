@@ -293,7 +293,6 @@ struct VectorContractBF16ToFMA
 
     // Non-unit dimensions should match the vector length of BF16.
     unsigned int nonUnitDim = nonUnitDimAcc.front();
-
     if (nonUnitDim != 4 && nonUnitDim != 8)
       return rewriter.notifyMatchFailure(
           contractOp, "BF16 packed load operation expects non-unit (LHR or "
@@ -374,6 +373,55 @@ struct VectorContractBF16ToFMA
         VectorType::get(nonUnitDimAcc.front(), rewriter.getF32Type());
 
     if (!isVnni) {
+
+      // Validate and shuffle the accumulator
+      Operation *accReadOp0 =
+          traceToVectorReadLikeParentOperation(contractOp.getAcc());
+      Operation *accReadOp1 =
+          traceToVectorReadLikeParentOperation(pairContractOp.getAcc());
+
+      // Iterate dowm to find the users of contact operations until it is store
+      // or transfer_write.
+      Operation *resultWriteOp0 =
+          traceToVectorWriteLikeUserOperation(contractOp.getResult());
+      Operation *resultWriteOp1 =
+          traceToVectorWriteLikeUserOperation(pairContractOp.getResult());
+
+      if (!accReadOp0 || !accReadOp1)
+        return rewriter.notifyMatchFailure(
+            contractOp,
+            "Operands doesn't have load or transfer_read as it's parent op");
+
+      if (!resultWriteOp0 || !resultWriteOp1)
+        return rewriter.notifyMatchFailure(
+            contractOp,
+            "The use of contract operations are neither vector.store "
+            "or transfer_write");
+
+      if (contractOp->getBlock() == accReadOp1->getBlock() &&
+          contractOp->isBeforeInBlock(accReadOp1))
+        return rewriter.notifyMatchFailure(
+            contractOp, "The load/read operation of pair contract operation is "
+                        "after the contractOp");
+
+      if (pairContractOp->getBlock() == resultWriteOp0->getBlock() &&
+          resultWriteOp0->isBeforeInBlock(pairContractOp)) {
+        return rewriter.notifyMatchFailure(
+            contractOp, "The store/write operation of contract operation is "
+                        "before the pair contract operation");
+      }
+
+      // Shuffle the accumulators of the contract operations.
+      shuffleAfterReadLikeOp(rewriter, accReadOp0, accReadOp1, contractOp,
+                             pairContractOp, nonUnitDim, accTy);
+
+      rewriter.setInsertionPoint(contractOp);
+
+      castAcc = vector::ShapeCastOp::create(
+          rewriter, loc,
+          VectorType::get(nonUnitDimAcc.front(), accTy.getElementType()),
+          contractOp.getAcc());
+
       auto loadBcstBF16ElementToF32 = x86vector::BcstToPackedF32Op::create(
           rewriter, loc, dstType, unitDimSubview[0]);
       auto loadEvenIdxElementF32 =
@@ -404,6 +452,10 @@ struct VectorContractBF16ToFMA
       auto castOddFma = vector::ShapeCastOp::create(rewriter, pairContOpLoc,
                                                     accTyPairCont, oddIdxFMA);
       rewriter.replaceOp(pairContractOp, castOddFma);
+
+      // Shuffle the output of contract operations before it's use.
+      shuffleBeforeWriteLikeOp(rewriter, resultWriteOp0, resultWriteOp1,
+                               nonUnitDim, accTy);
 
       return success();
     }

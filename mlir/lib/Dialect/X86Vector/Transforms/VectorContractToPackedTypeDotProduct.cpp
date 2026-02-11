@@ -207,7 +207,7 @@ struct VectorContractToPackedTypeDotProduct
 
     bool rhsHasMultipleNonUnitDims = (nonUnitDimRhs.size() - 1) > 0;
     int64_t extraFlatDim = rhsHasMultipleNonUnitDims ? nonUnitDimLhs.front()
-                                                     : nonUnitDimRhs.size();
+                                                     : nonUnitDimRhs.front();
 
     if (!isVnni && (extraFlatDim != blockingFactor))
       return rewriter.notifyMatchFailure(
@@ -227,7 +227,7 @@ struct VectorContractToPackedTypeDotProduct
 
     // If the A or B matrix vector of the contact operation is not packed, then
     // find it's pair contract operation and pack (shuffle) them to VNNI packed.
-    if (!isVnni && !isNonUnitDimOperandShuffled(nonUnitDimOperand)) {
+    if (!isVnni) {
       vector::ContractionOp pairContractOp;
       Operation *nextOp = contractOp;
       while ((nextOp = nextOp->getNextNode())) {
@@ -244,40 +244,99 @@ struct VectorContractToPackedTypeDotProduct
         }
       }
 
-      if (!pairContractOp)
+      // If the accumulators are shuffled we get nullptr else the 
+      // transfer_read or load operations.
+      Operation *accRead =
+          traceToVectorReadLikeParentOperation(contractOp.getAcc());
+
+      if (!pairContractOp &&
+          (!isNonUnitDimOperandShuffled(nonUnitDimOperand) || accRead))
         return rewriter.notifyMatchFailure(contractOp,
                                            "Could not find a contract pair");
 
-      Value nonUnitDimOperandPairContract = rhsHasMultipleNonUnitDims
-                                                ? pairContractOp.getRhs()
-                                                : pairContractOp.getLhs();
+      if (!isNonUnitDimOperandShuffled(nonUnitDimOperand)) {
+        Value nonUnitDimOperandPairContract = rhsHasMultipleNonUnitDims
+                                                  ? pairContractOp.getRhs()
+                                                  : pairContractOp.getLhs();
 
-      // Get the non-packed A or B matrix's vector<32xbf16> elements.
-      Operation *nonUnitDimReadOp =
-          traceToVectorReadLikeParentOperation(nonUnitDimOperand);
-      Operation *nonUnitDimReadOpPairContract =
-          traceToVectorReadLikeParentOperation(nonUnitDimOperandPairContract);
+        // Get the non-packed A or B matrix's vector<32xbf16> elements.
+        Operation *nonUnitDimReadOp =
+            traceToVectorReadLikeParentOperation(nonUnitDimOperand);
+        Operation *nonUnitDimReadOpPairContract =
+            traceToVectorReadLikeParentOperation(nonUnitDimOperandPairContract);
 
-      if (!nonUnitDimReadOp || !nonUnitDimReadOpPairContract)
-        return rewriter.notifyMatchFailure(
-            contractOp, "Could not find a valid contract pair");
+        if (!nonUnitDimReadOp || !nonUnitDimReadOpPairContract)
+          return rewriter.notifyMatchFailure(
+              contractOp, "Could not find a valid contract pair");
 
-      if (contractOp->getBlock() == nonUnitDimReadOpPairContract->getBlock() &&
-          contractOp->isBeforeInBlock(nonUnitDimReadOpPairContract))
-        return rewriter.notifyMatchFailure(
-            contractOp, "The load/read operation of pair contract operation is "
-                        "after the contractOp");
+        if (contractOp->getBlock() ==
+                nonUnitDimReadOpPairContract->getBlock() &&
+            contractOp->isBeforeInBlock(nonUnitDimReadOpPairContract))
+          return rewriter.notifyMatchFailure(
+              contractOp,
+              "The load/read operation of pair contract operation is "
+              "after the contractOp");
 
-      VectorType nonUnitDimTy = rhsHasMultipleNonUnitDims
-                                    ? contractOp.getRhsType()
-                                    : contractOp.getLhsType();
+        VectorType nonUnitDimTy = rhsHasMultipleNonUnitDims
+                                      ? contractOp.getRhsType()
+                                      : contractOp.getLhsType();
 
-      packNonUnitDimOperandToVNNI(
-          rewriter, nonUnitDimReadOp, nonUnitDimReadOpPairContract, contractOp,
-          pairContractOp, blockingFactor * nonUnitDimValue, nonUnitDimTy);
+        packNonUnitDimOperandToVNNI(
+            rewriter, nonUnitDimReadOp, nonUnitDimReadOpPairContract,
+            contractOp, pairContractOp, blockingFactor * nonUnitDimValue,
+            nonUnitDimTy);
 
-      nonUnitDimOperand =
-          rhsHasMultipleNonUnitDims ? contractOp.getRhs() : contractOp.getLhs();
+        nonUnitDimOperand = rhsHasMultipleNonUnitDims ? contractOp.getRhs()
+                                                      : contractOp.getLhs();
+      }
+
+      // Validate and shuffle the accumulator 
+      if (accRead) {
+        // Trace back to the load or transfer_read operations of the contract
+        // accumulators.
+        Operation *accReadOp0 =
+            traceToVectorReadLikeParentOperation(contractOp.getAcc());
+        Operation *accReadOp1 =
+            traceToVectorReadLikeParentOperation(pairContractOp.getAcc());
+
+        // Iterate dowm to find the users of contact operations until it is
+        // store or transfer_write.
+        Operation *resultWriteOp0 =
+            traceToVectorWriteLikeUserOperation(contractOp.getResult());
+        Operation *resultWriteOp1 =
+            traceToVectorWriteLikeUserOperation(pairContractOp.getResult());
+
+        if (!accReadOp0 || !accReadOp1)
+          return rewriter.notifyMatchFailure(
+              contractOp,
+              "Operands doesn't have load or transfer_read as it's parent op");
+
+        if (!resultWriteOp0 || !resultWriteOp1)
+          return rewriter.notifyMatchFailure(
+              contractOp,
+              "The use of contract operations are neither vector.store "
+              "or transfer_write");
+
+        if (contractOp->getBlock() == accReadOp1->getBlock() &&
+            contractOp->isBeforeInBlock(accReadOp1))
+          return rewriter.notifyMatchFailure(
+              contractOp,
+              "The load/read operation of pair contract operation is "
+              "after the contractOp");
+
+        if (pairContractOp->getBlock() == resultWriteOp0->getBlock() &&
+            resultWriteOp0->isBeforeInBlock(pairContractOp))
+          return rewriter.notifyMatchFailure(
+              contractOp, "The store/write operation of contract operation is "
+                          "before the pair contract operation");
+        // Shuffle the accumulators of the contract operations.
+        shuffleAfterReadLikeOp(rewriter, accReadOp0, accReadOp1, contractOp,
+                               pairContractOp, nonUnitDimValue, accTy);
+
+        // Shuffle the output of contract operations before it's use.
+        shuffleBeforeWriteLikeOp(rewriter, resultWriteOp0, resultWriteOp1,
+                                 nonUnitDimValue, accTy);
+      }
     }
 
     rewriter.setInsertionPoint(contractOp);

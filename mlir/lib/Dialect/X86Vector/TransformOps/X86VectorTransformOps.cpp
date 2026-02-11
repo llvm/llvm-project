@@ -42,11 +42,6 @@ void mlir::transform::ApplySinkVectorProducerOpsPatternsOp::populatePatterns(
   x86vector::populateSinkVectorProducerOpsPatterns(patterns);
 }
 
-void mlir::transform::ApplyShuffleBF16VectorContractResultPatternsOp::
-    populatePatterns(RewritePatternSet &patterns) {
-  x86vector::populateShuffleBF16VectorContractResultPatterns(patterns);
-}
-
 //===----------------------------------------------------------------------===//
 // Transform op registration
 //===----------------------------------------------------------------------===//

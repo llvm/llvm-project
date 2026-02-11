@@ -335,7 +335,6 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86vector.shuffle_bf16_vector_contract_result
       transform.apply_patterns.x86vector.vector_contract_to_packed_type_dot_product
     } : !transform.any_op
     transform.yield
@@ -851,7 +850,6 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86vector.shuffle_bf16_vector_contract_result
       transform.apply_patterns.x86vector.vector_contract_to_packed_type_dot_product
     } : !transform.any_op
     transform.yield
@@ -916,7 +914,6 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86vector.shuffle_bf16_vector_contract_result
       transform.apply_patterns.x86vector.vector_contract_to_packed_type_dot_product
     } : !transform.any_op
     transform.yield
@@ -980,7 +977,6 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86vector.shuffle_bf16_vector_contract_result
       transform.apply_patterns.x86vector.vector_contract_to_packed_type_dot_product
     } : !transform.any_op
     transform.yield
@@ -1045,7 +1041,276 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86vector.shuffle_bf16_vector_contract_result
+      transform.apply_patterns.x86vector.vector_contract_to_packed_type_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+!vecA = vector<1x1xbf16>
+!vecB = vector<1x16xbf16>
+!vecC = vector<1x16xf32>
+!memrefA = memref<4x2xbf16>
+!memrefB = memref<2x64xbf16>
+!memrefC = memref<2x64xf32>
+#map = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map1 = affine_map<(d0,  d1, d2) -> (d2, d1)>
+#map2 = affine_map<(d0,  d1, d2) -> (d0, d1)>
+func.func @negative_contracts_not_in_order(
+  %arg0: !memrefA, %arg1: !memrefB, %arg2: !memrefC) -> !memrefC
+{
+  %c0 = arith.constant 0 : index
+  %c16 = arith.constant 16 : index
+  %c32 = arith.constant 32 : index
+  %0 = ub.poison : bf16
+  %32 = ub.poison : f32
+  %1 = vector.load %arg0[%c0, %c0] :
+        !memrefA, !vecA
+  %2 = vector.load %arg1[%c0, %c0] :
+        !memrefB, !vecB
+  %3 = vector.load %arg1[%c0, %c32] :
+        !memrefB, !vecB
+  %4 = vector.load %arg2[%c0, %c0] :
+        !memrefC, !vecC
+  %5 = vector.load %arg2[%c0, %c16] :
+        !memrefC, !vecC
+
+  %7 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %3, %5
+    : !vecA, !vecB into !vecC
+
+  %6 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %2, %4
+    : !vecA, !vecB into !vecC
+
+  vector.store %6, %arg2[%c0, %c0] : !memrefC, !vecC
+  vector.store %7, %arg2[%c0, %c16] : !memrefC, !vecC
+
+  return %arg2 : !memrefC
+}
+
+// CHECK-LABEL: @negative_contracts_not_in_order
+// CHECK-NOT: vector.shuffle
+// CHECK-NOT: vector.shuffle
+// CHECK: vector.contract
+// CHECK-NOT: vector.shuffle
+// CHECK-NOT: vector.shuffle
+// CHECK: vector.store
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86vector.vector_contract_to_packed_type_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+!vecA = vector<1x1xbf16>
+!vecB = vector<1x32xbf16>
+!vecC = vector<1x32xf32>
+!memrefA = memref<4x2xbf16>
+!memrefB = memref<2x64xbf16>
+!memrefC = memref<2x64xf32>
+#map = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map1 = affine_map<(d0,  d1, d2) -> (d2, d1)>
+#map2 = affine_map<(d0,  d1, d2) -> (d0, d1)>
+func.func @negative_dim_is_32(
+  %arg0: !memrefA, %arg1: !memrefB, %arg2: !memrefC) -> !memrefC
+{
+  %c0 = arith.constant 0 : index
+  %c32 = arith.constant 32 : index
+  %0 = ub.poison : bf16
+  %32 = ub.poison : f32
+  %1 = vector.load %arg0[%c0, %c0] :
+        !memrefA, !vecA
+  %2 = vector.load %arg1[%c0, %c0] :
+        !memrefB, !vecB
+  %3 = vector.load %arg1[%c0, %c32] :
+        !memrefB, !vecB
+  %4 = vector.load %arg2[%c0, %c0] :
+        !memrefC, !vecC
+  %5 = vector.load %arg2[%c0, %c32] :
+        !memrefC, !vecC
+
+  %6 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %2, %4
+    : !vecA, !vecB into !vecC
+
+  %7 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %3, %5
+    : !vecA, !vecB into !vecC
+
+  vector.store %6, %arg2[%c0, %c0] : !memrefC, !vecC
+  vector.store %7, %arg2[%c0, %c32] : !memrefC, !vecC
+
+  return %arg2 : !memrefC
+}
+
+// CHECK-LABEL: @negative_dim_is_32
+// CHECK-NOT: vector.shuffle
+// CHECK-NOT: vector.shuffle
+// CHECK: vector.contract
+// CHECK-NOT: vector.shuffle
+// CHECK-NOT: vector.shuffle
+// CHECK: vector.store
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86vector.vector_contract_to_packed_type_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+!vecA = vector<1x1xbf16>
+!vecB = vector<1x16xbf16>
+!vecC = vector<1x16xf32>
+!memrefA = memref<4x2xbf16>
+!memrefB = memref<2x64xbf16>
+!memrefC = memref<2x64xf32>
+#map = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map1 = affine_map<(d0,  d1, d2) -> (d2, d1)>
+#map2 = affine_map<(d0,  d1, d2) -> (d0, d1)>
+func.func @negative_offset_diff_is_32(
+  %arg0: !memrefA, %arg1: !memrefB, %arg2: !memrefC) -> !memrefC
+{
+  %c0 = arith.constant 0 : index
+  %c16 = arith.constant 16 : index
+  %c32 = arith.constant 32 : index
+  %0 = ub.poison : bf16
+  %32 = ub.poison : f32
+  %1 = vector.load %arg0[%c0, %c0] :
+        !memrefA, !vecA
+  %2 = vector.load %arg1[%c0, %c0] :
+        !memrefB, !vecB
+  %3 = vector.load %arg1[%c0, %c32] :
+        !memrefB, !vecB
+  %4 = vector.load %arg2[%c0, %c0] :
+        !memrefC, !vecC
+  %5 = vector.load %arg2[%c0, %c16] :
+        !memrefC, !vecC
+
+  %6 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %2, %4
+    : !vecA, !vecB into !vecC
+
+  %7 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %3, %5
+    : !vecA, !vecB into !vecC
+
+  vector.store %6, %arg2[%c0, %c0] : !memrefC, !vecC
+  vector.store %7, %arg2[%c0, %c16] : !memrefC, !vecC
+
+  return %arg2 : !memrefC
+}
+
+// CHECK-LABEL: @negative_offset_diff_is_32
+// CHECK-NOT: vector.shuffle
+// CHECK-NOT: vector.shuffle
+// CHECK: vector.contract
+// CHECK-NOT: vector.shuffle
+// CHECK-NOT: vector.shuffle
+// CHECK: vector.store
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86vector.vector_contract_to_packed_type_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+!vecA = vector<1x1xbf16>
+!vecB = vector<1x16xbf16>
+!vecC = vector<1x16xf32>
+!memrefA = memref<4x2xbf16>
+!memrefB = memref<2x64xbf16>
+!memrefC = memref<2x64xf32>
+#map = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map1 = affine_map<(d0,  d1, d2) -> (d2, d1)>
+#map2 = affine_map<(d0,  d1, d2) -> (d0, d1)>
+func.func @negative_dynamic_offset(
+  %arg0: !memrefA, %arg1: !memrefB, %arg2: !memrefC, %arg3: index) -> !memrefC
+{
+  %c0 = arith.constant 0 : index
+  %c16 = arith.constant 16 : index
+  %0 = ub.poison : bf16
+  %32 = ub.poison : f32
+  %1 = vector.load %arg0[%c0, %c0] :
+        !memrefA, !vecA
+  %2 = vector.load %arg1[%c0, %c0] :
+        !memrefB, !vecB
+  %3 = vector.load %arg1[%c0, %arg3] :
+        !memrefB, !vecB
+  %4 = vector.load %arg2[%c0, %c0] :
+        !memrefC, !vecC
+  %5 = vector.load %arg2[%c0, %c16] :
+        !memrefC, !vecC
+
+  %6 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %2, %4
+    : !vecA, !vecB into !vecC
+
+  %7 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %3, %5
+    : !vecA, !vecB into !vecC
+
+  vector.store %6, %arg2[%c0, %c0] : !memrefC, !vecC
+  vector.store %7, %arg2[%c0, %c16] : !memrefC, !vecC
+
+  return %arg2 : !memrefC
+}
+
+// CHECK-LABEL: @negative_dynamic_offset
+// CHECK-NOT: vector.shuffle
+// CHECK-NOT: vector.shuffle
+// CHECK: vector.contract
+// CHECK-NOT: vector.shuffle
+// CHECK-NOT: vector.shuffle
+// CHECK: vector.store
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
       transform.apply_patterns.x86vector.vector_contract_to_packed_type_dot_product
     } : !transform.any_op
     transform.yield

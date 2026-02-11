@@ -364,6 +364,10 @@ bool validatePairVectorContract(vector::ContractionOp contractOp,
         srcBuff = readOp.getOperand(0);
         indexVals = SmallVector<OpFoldResult>(readOp.getIndices().begin(),
                                               readOp.getIndices().end());
+      })
+      .Case<vector::ShapeCastOp>([&](vector::ShapeCastOp op) {
+        srcBuff = op.getSource();
+        indexVals.clear();
       });
 
   Value srcBuffPairContOp;
@@ -373,10 +377,21 @@ bool validatePairVectorContract(vector::ContractionOp contractOp,
         srcBuffPairContOp = readOp.getOperand(0);
         indexValsPairContOp = SmallVector<OpFoldResult>(
             readOp.getIndices().begin(), readOp.getIndices().end());
+      })
+      .Case<vector::ShapeCastOp>([&](vector::ShapeCastOp op) {
+        srcBuffPairContOp = op.getSource();
+        indexVals.clear();
       });
 
   if (!srcBuff || !srcBuffPairContOp)
     return false;
+
+  auto shuffleLw = srcBuff.getDefiningOp<vector::ShuffleOp>();
+  auto shuffleHw = srcBuffPairContOp.getDefiningOp<vector::ShuffleOp>();
+
+  if (shuffleLw && shuffleHw)
+    return shuffleLw.getV1() == shuffleHw.getV1() &&
+           shuffleLw.getV2() == shuffleHw.getV2();
 
   if (!(srcBuff == srcBuffPairContOp))
     return false;
