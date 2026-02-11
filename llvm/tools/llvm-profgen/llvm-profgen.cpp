@@ -79,6 +79,10 @@ static cl::opt<std::string> DataAccessProfileFilename(
              "-D`) consisting of memory access events."),
     cl::cat(ProfGenCategory));
 
+static cl::opt<std::string> ETMPath("etm", cl::value_desc("etm"),
+                                    cl::desc("Path of raw ETM trace file"),
+                                    cl::cat(ProfGenCategory));
+
 // Validate the command line input.
 static void validateCommandLine() {
   // Allow the missing perfscript if we only use to show binary disassembly.
@@ -89,15 +93,18 @@ static void validateCommandLine() {
     bool HasUnsymbolizedProfile =
         UnsymbolizedProfFilename.getNumOccurrences() > 0;
     bool HasSampleProfile = SampleProfFilename.getNumOccurrences() > 0;
-    uint16_t S =
-        HasPerfData + HasPerfScript + HasUnsymbolizedProfile + HasSampleProfile;
+    bool HasEtm = ETMPath.getNumOccurrences() > 0;
+    uint16_t S = HasPerfData + HasPerfScript + HasUnsymbolizedProfile +
+                 HasSampleProfile + HasEtm;
     if (S != 1) {
       std::string Msg =
-          S > 1
-              ? "`--perfscript`, `--perfdata` and `--unsymbolized-profile` "
-                "cannot be used together."
-              : "Perf input file is missing, please use one of `--perfscript`, "
-                "`--perfdata` and `--unsymbolized-profile` for the input.";
+          S > 1 ? "Only one of `--perfscript`, `--perfdata`, "
+                  "`--unsymbolized-profile`, "
+                  "`--sample-profile` or `--etm` can be used."
+                : "Perf input file is missing. Please provide one of "
+                  "`--perfscript`, "
+                  "`--perfdata`, `--unsymbolized-profile`, `--sample-profile`, "
+                  "`--etm`.";
       exitWithError(Msg);
     }
 
@@ -112,6 +119,7 @@ static void validateCommandLine() {
     CheckFileExists(HasPerfScript, PerfScriptFilename);
     CheckFileExists(HasUnsymbolizedProfile, UnsymbolizedProfFilename);
     CheckFileExists(HasSampleProfile, SampleProfFilename);
+    CheckFileExists(HasEtm, ETMPath);
   }
 
   if (!llvm::sys::fs::exists(BinaryPath)) {
@@ -139,6 +147,9 @@ static PerfInputFile getPerfInputFile() {
   } else if (UnsymbolizedProfFilename.getNumOccurrences()) {
     File.InputFile = UnsymbolizedProfFilename;
     File.Format = PerfFormat::UnsymbolizedProfile;
+  } else if (ETMPath.getNumOccurrences()) {
+    File.InputFile = ETMPath;
+    File.Format = PerfFormat::ETMFormat;
   }
   return File;
 }

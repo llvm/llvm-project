@@ -24,6 +24,11 @@ At least one of the following commands are required:
   Path of perf-script trace created by Linux perf tool with `script`
   command(the raw perf.data should be profiled with -b).
 
+.. option:: --etm=<string>
+
+  Path of the ETM trace file created by ARM CoreSight trace tools.
+  Requires the OpenCSD library to be enabled during the build.
+
 .. option:: --binary=<string[,string,...]>
 
   Path of the input profiled binary files.
