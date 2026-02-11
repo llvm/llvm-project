@@ -93,10 +93,9 @@ def main(argv):
     # Gather callback command
     if not args.callback:
         raise ValueError('A callback must be provided')
-    else:
-        if args.callback[0] != '--':
-            raise ValueError('For clarity, the callback must be separated from other options by --')
-        callback = args.callback[1:]
+    elif args.callback[0] != '--':
+        raise ValueError('For clarity, the callback must be separated from other options by --')
+    callback = args.callback[1:]
 
     while True:
         logging.info(f'Getting benchmarked commits for {args.machine}')
