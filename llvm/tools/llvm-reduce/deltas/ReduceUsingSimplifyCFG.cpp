@@ -97,7 +97,7 @@ void llvm::reduceUnconditionalBranchDeltaPass(Oracle &O,
         continue;
 
       BasicBlock *Succ = BR->getSuccessor(0);
-      Succ->removePredecessor(&BB, true);
+      Succ->removePredecessor(&BB, /*KeepOneInputPHIs=*/true);
       BR->eraseFromParent();
       ToSimplify.push_back(&BB);
 
