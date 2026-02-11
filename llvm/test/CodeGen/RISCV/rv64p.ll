@@ -333,11 +333,45 @@ define i64 @cls_i64_not_32(i64 %x) {
 define i128 @sll_i128(i128 %x, i128 %y) {
 ; CHECK-LABEL: sll_i128:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a4, a2, -64
+; CHECK-NEXT:    sll a3, a0, a2
+; CHECK-NEXT:    bltz a4, .LBB27_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:    j .LBB27_3
+; CHECK-NEXT:  .LBB27_2:
+; CHECK-NEXT:    sll a1, a1, a2
+; CHECK-NEXT:    not a2, a2
+; CHECK-NEXT:    srli a0, a0, 1
+; CHECK-NEXT:    srl a0, a0, a2
+; CHECK-NEXT:    or a1, a1, a0
+; CHECK-NEXT:  .LBB27_3:
+; CHECK-NEXT:    srai a0, a4, 63
+; CHECK-NEXT:    and a0, a0, a3
+; CHECK-NEXT:    ret
+  %b = shl i128 %x, %y
+  ret i128 %b
+}
+
+define i128 @sll_small_i128(i128 %x, i128 %y) {
+; CHECK-LABEL: sll_small_i128:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sll a3, a0, a2
 ; CHECK-NEXT:    slx a1, a0, a2
 ; CHECK-NEXT:    mv a0, a3
 ; CHECK-NEXT:    ret
   %a = and i128 %y, 63
+  %b = shl i128 %x, %a
+  ret i128 %b
+}
+
+define i128 @sll_large_i128(i128 %x, i128 %y) {
+; CHECK-LABEL: sll_large_i128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sll a1, a0, a2
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %a = or i128 %y, 64
   %b = shl i128 %x, %a
   ret i128 %b
 }
@@ -353,14 +387,58 @@ define i128 @slli_i128(i128 %x) {
   ret i128 %a
 }
 
+define i128 @slli_i128_large(i128 %x) {
+; CHECK-LABEL: slli_i128_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a1, a0, 7
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %a = shl i128 %x, 71
+  ret i128 %a
+}
+
 define i128 @srl_i128(i128 %x, i128 %y) {
 ; CHECK-LABEL: srl_i128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a4, a2, -64
+; CHECK-NEXT:    srl a3, a1, a2
+; CHECK-NEXT:    bltz a4, .LBB32_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a0, a3
+; CHECK-NEXT:    j .LBB32_3
+; CHECK-NEXT:  .LBB32_2:
+; CHECK-NEXT:    srl a0, a0, a2
+; CHECK-NEXT:    not a2, a2
+; CHECK-NEXT:    slli a1, a1, 1
+; CHECK-NEXT:    sll a1, a1, a2
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:  .LBB32_3:
+; CHECK-NEXT:    srai a1, a4, 63
+; CHECK-NEXT:    and a1, a1, a3
+; CHECK-NEXT:    ret
+  %b = lshr i128 %x, %y
+  ret i128 %b
+}
+
+define i128 @srl_small_i128(i128 %x, i128 %y) {
+; CHECK-LABEL: srl_small_i128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srl a3, a1, a2
 ; CHECK-NEXT:    srx a0, a1, a2
 ; CHECK-NEXT:    mv a1, a3
 ; CHECK-NEXT:    ret
   %a = and i128 %y, 63
+  %b = lshr i128 %x, %a
+  ret i128 %b
+}
+
+define i128 @srl_large_i128(i128 %x, i128 %y) {
+; CHECK-LABEL: srl_large_i128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srl a0, a1, a2
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    ret
+  %a = or i128 %y, 64
   %b = lshr i128 %x, %a
   ret i128 %b
 }
@@ -379,14 +457,58 @@ define i128 @srli_i128(i128 %x) {
   ret i128 %a
 }
 
+define i128 @srli_i128_large(i128 %x) {
+; CHECK-LABEL: srli_i128_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srli a0, a1, 7
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    ret
+  %a = lshr i128 %x, 71
+  ret i128 %a
+}
+
 define i128 @sra_i128(i128 %x, i128 %y) {
 ; CHECK-LABEL: sra_i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi a2, a2, 31
-; CHECK-NEXT:    srx a0, a1, a2
+; CHECK-NEXT:    mv a3, a1
+; CHECK-NEXT:    addi a4, a2, -64
 ; CHECK-NEXT:    sra a1, a1, a2
+; CHECK-NEXT:    bltz a4, .LBB37_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    srai a3, a3, 63
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    mv a1, a3
 ; CHECK-NEXT:    ret
-  %a = and i128 %y, 31
+; CHECK-NEXT:  .LBB37_2:
+; CHECK-NEXT:    srl a0, a0, a2
+; CHECK-NEXT:    not a2, a2
+; CHECK-NEXT:    slli a3, a3, 1
+; CHECK-NEXT:    sll a2, a3, a2
+; CHECK-NEXT:    or a0, a0, a2
+; CHECK-NEXT:    ret
+  %b = ashr i128 %x, %y
+  ret i128 %b
+}
+
+define i128 @sra_small_i128(i128 %x, i128 %y) {
+; CHECK-LABEL: sra_small_i128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sra a3, a1, a2
+; CHECK-NEXT:    srx a0, a1, a2
+; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:    ret
+  %a = and i128 %y, 63
+  %b = ashr i128 %x, %a
+  ret i128 %b
+}
+
+define i128 @sra_large_i128(i128 %x, i128 %y) {
+; CHECK-LABEL: sra_large_i128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sra a0, a1, a2
+; CHECK-NEXT:    srai a1, a1, 63
+; CHECK-NEXT:    ret
+  %a = or i128 %y, 64
   %b = ashr i128 %x, %a
   ret i128 %b
 }
@@ -402,6 +524,16 @@ define i128 @srai_i128(i128 %x) {
 ; CHECK-NEXT:    mv a0, a2
 ; CHECK-NEXT:    ret
   %a = ashr i128 %x, 49
+  ret i128 %a
+}
+
+define i128 @srai_i128_large(i128 %x) {
+; CHECK-LABEL: srai_i128_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srai a0, a1, 7
+; CHECK-NEXT:    srai a1, a1, 63
+; CHECK-NEXT:    ret
+  %a = ashr i128 %x, 71
   ret i128 %a
 }
 
