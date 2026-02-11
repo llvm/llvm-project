@@ -109,7 +109,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @innerreduction(%root : !transform.any_op {transform.readonly}) {
     %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op {
-      transform.apply_patterns.vector.lower_multi_reduction_transformation lowering_strategy = "innerreduction"
+      transform.apply_patterns.vector.reorder_multi_reduction_dims lowering_strategy = "innerreduction"
     } : !transform.op<"func.func">
     transform.yield
   }
@@ -117,7 +117,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @innerparallel(%root : !transform.any_op {transform.readonly}) {
     %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op {
-      transform.apply_patterns.vector.lower_multi_reduction_transformation lowering_strategy = "innerparallel"
+      transform.apply_patterns.vector.reorder_multi_reduction_dims lowering_strategy = "innerparallel"
     } : !transform.op<"func.func">
     transform.yield
   }

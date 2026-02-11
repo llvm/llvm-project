@@ -100,11 +100,11 @@ def enum_configurable_patterns():
         lowering_strategy=vector.VectorMultiReductionLowering.InnerReduction
     )
 
-    # CHECK: transform.apply_patterns.vector.lower_multi_reduction_transformation
-    vector.ApplyLowerMultiReductionTransformationPatternsOp()
-    # CHECK: transform.apply_patterns.vector.lower_multi_reduction_transformation
+    # CHECK: transform.apply_patterns.vector.reorder_multi_reduction_dims
+    vector.ApplyReorderMultiReductionDimsPatternsOp()
+    # CHECK: transform.apply_patterns.vector.reorder_multi_reduction_dims
     # CHECK-SAME: lowering_strategy = innerreduction
-    vector.ApplyLowerMultiReductionTransformationPatternsOp(
+    vector.ApplyReorderMultiReductionDimsPatternsOp(
         lowering_strategy=vector.VectorMultiReductionLowering.InnerReduction
     )
 
