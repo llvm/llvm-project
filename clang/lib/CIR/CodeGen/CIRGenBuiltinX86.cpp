@@ -384,8 +384,8 @@ emitX86MaskedCompare(CIRGenBuilderTy &builder, unsigned cc, bool isSigned,
         cir::VectorType::get(builder.getSIntNTy(1), numElts);
     llvm::APInt allOnes = llvm::APInt::getAllOnes(1);
     cmp = cir::VecSplatOp::create(
-       builder, loc, resultTy,
-       builder.getConstAPInt(loc, builder.getSIntNTy(1), allOnes));
+        builder, loc, resultTy,
+        builder.getConstAPInt(loc, builder.getSIntNTy(1), allOnes));
   } else {
     cir::CmpOpKind pred;
     switch (cc) {
