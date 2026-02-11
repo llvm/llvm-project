@@ -1703,16 +1703,15 @@ bool InitBitField(InterpState &S, CodePtr OpPC, const Record::Field *F) {
 
   const Pointer &Field = Ptr.atField(F->Offset);
 
+  unsigned BitWidth = std::min(F->Decl->getBitWidthValue(), Value.bitWidth());
   if constexpr (needsAlloc<T>()) {
     T Result = S.allocAP<T>(Value.bitWidth());
-    if (T::isSigned())
-      Result.copy(Value.toAPSInt()
-                      .trunc(F->Decl->getBitWidthValue())
-                      .sextOrTrunc(Value.bitWidth()));
+    if constexpr (T::isSigned())
+      Result.copy(
+          Value.toAPSInt().trunc(BitWidth).sextOrTrunc(Value.bitWidth()));
     else
-      Result.copy(Value.toAPSInt()
-                      .trunc(F->Decl->getBitWidthValue())
-                      .zextOrTrunc(Value.bitWidth()));
+      Result.copy(
+          Value.toAPSInt().trunc(BitWidth).zextOrTrunc(Value.bitWidth()));
 
     Field.deref<T>() = Result;
   } else {
@@ -1735,16 +1734,15 @@ bool InitBitFieldActivate(InterpState &S, CodePtr OpPC,
 
   const Pointer &Field = Ptr.atField(F->Offset);
 
+  unsigned BitWidth = std::min(F->Decl->getBitWidthValue(), Value.bitWidth());
   if constexpr (needsAlloc<T>()) {
     T Result = S.allocAP<T>(Value.bitWidth());
-    if (T::isSigned())
-      Result.copy(Value.toAPSInt()
-                      .trunc(F->Decl->getBitWidthValue())
-                      .sextOrTrunc(Value.bitWidth()));
+    if constexpr (T::isSigned())
+      Result.copy(
+          Value.toAPSInt().trunc(BitWidth).sextOrTrunc(Value.bitWidth()));
     else
-      Result.copy(Value.toAPSInt()
-                      .trunc(F->Decl->getBitWidthValue())
-                      .zextOrTrunc(Value.bitWidth()));
+      Result.copy(
+          Value.toAPSInt().trunc(BitWidth).zextOrTrunc(Value.bitWidth()));
 
     Field.deref<T>() = Result;
   } else {
