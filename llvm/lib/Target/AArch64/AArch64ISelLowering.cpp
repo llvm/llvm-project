@@ -24022,6 +24022,59 @@ static SDValue performZExtUZPCombine(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::AND, DL, VT, BC, DAG.getConstant(Mask, DL, VT));
 }
 
+// Combine:
+//   sext(duplane(insert_subvector(undef, trunc(X), 0), idx))
+// Into:
+//   duplane(X, idx)
+// This eliminates XTN/SSHLL sequences when splatting from boolean vectors.
+static SDValue performSExtDuplaneTruncCombine(SDNode *N, SelectionDAG &DAG) {
+  SDValue Dup = N->getOperand(0);
+  unsigned DupOpc = Dup.getOpcode();
+  if (!Dup->hasOneUse() ||
+      (DupOpc != AArch64ISD::DUPLANE8 && DupOpc != AArch64ISD::DUPLANE16 &&
+       DupOpc != AArch64ISD::DUPLANE32))
+    return SDValue();
+
+  SDValue Insert = Dup.getOperand(0);
+  if (!Insert.hasOneUse() || Insert.getOpcode() != ISD::INSERT_SUBVECTOR ||
+      !Insert.getOperand(0).isUndef() || !isNullConstant(Insert.getOperand(2)))
+    return SDValue();
+
+  SDValue Trunc = Insert.getOperand(1);
+  if (!Trunc.hasOneUse() || Trunc.getOpcode() != ISD::TRUNCATE)
+    return SDValue();
+
+  SDValue Src = Trunc.getOperand(0);
+  EVT SrcVT = Src.getValueType();
+  EVT DstVT = N->getValueType(0);
+  if (SrcVT != DstVT || !SrcVT.isFixedLengthVector())
+    return SDValue();
+
+  unsigned NewDupOpc;
+  switch (SrcVT.getScalarSizeInBits()) {
+  case 16:
+    NewDupOpc = AArch64ISD::DUPLANE16;
+    break;
+  case 32:
+    NewDupOpc = AArch64ISD::DUPLANE32;
+    break;
+  case 64:
+    NewDupOpc = AArch64ISD::DUPLANE64;
+    break;
+  default:
+    return SDValue();
+  }
+
+  SDLoc DL(N);
+  EVT WideVT = SrcVT.is64BitVector()
+                   ? SrcVT.getDoubleNumVectorElementsVT(*DAG.getContext())
+                   : SrcVT;
+  SDValue WideSrc =
+      DAG.getNode(ISD::INSERT_SUBVECTOR, DL, WideVT, DAG.getUNDEF(WideVT), Src,
+                  DAG.getConstant(0, DL, MVT::i64));
+  return DAG.getNode(NewDupOpc, DL, DstVT, WideSrc, Dup.getOperand(1));
+}
+
 static SDValue performExtendCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     SelectionDAG &DAG) {
@@ -24070,6 +24123,9 @@ static SDValue performExtendCombine(SDNode *N,
     return DAG.getNode(AArch64ISD::REV16, SDLoc(N), N->getValueType(0),
                        NewAnyExtend);
   }
+
+  if (SDValue R = performSExtDuplaneTruncCombine(N, DAG))
+    return R;
 
   return SDValue();
 }
