@@ -22,6 +22,7 @@
 #include "flang/Support/Fortran.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <climits>
 #include <cmath>
 #include <map>
 #include <string>
@@ -1743,6 +1744,26 @@ static const IntrinsicInterface intrinsicSubroutine[]{
         {{"seconds", AnyInt, Rank::scalar, Optionality::required,
             common::Intent::In}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"tokenize",
+        {{"string", SameCharNoLen, Rank::scalar, Optionality::required,
+             common::Intent::In},
+            {"set", SameCharNoLen, Rank::scalar, Optionality::required,
+                common::Intent::In},
+            {"tokens", SameCharNoLen, Rank::vector, Optionality::required,
+                common::Intent::Out},
+            {"separator", SameCharNoLen, Rank::vector, Optionality::optional,
+                common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::pureSubroutine},
+    {"tokenize",
+        {{"string", SameCharNoLen, Rank::scalar, Optionality::required,
+             common::Intent::In},
+            {"set", SameCharNoLen, Rank::scalar, Optionality::required,
+                common::Intent::In},
+            {"first", AnyInt, Rank::vector, Optionality::required,
+                common::Intent::Out},
+            {"last", AnyInt, Rank::vector, Optionality::required,
+                common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::pureSubroutine},
     {"unlink",
         {{"path", DefaultChar, Rank::scalar, Optionality::required,
              common::Intent::In},
@@ -3496,6 +3517,24 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
           arg ? arg->sourceLocation() : context.messages().at(),
           "Argument of LOC() must be an object or procedure"_err_en_US);
     }
+  } else if (name == "tokenize") {
+    // Both forms of TOKENIZE have at least 4 dummy arguments, and the last two
+    // must be allocatable.
+    const auto &dummies{
+        call.specificIntrinsic.characteristics.value().dummyArguments};
+    for (int i{2}; i < 4; ++i) {
+      const auto &arg{call.arguments[i]};
+      if (arg) {
+        if (const auto *expr{arg->UnwrapExpr()}) {
+          if (!IsAllocatableDesignator(*expr)) {
+            ok = false;
+            context.messages().Say(arg->sourceLocation(),
+                "'%s=' argument to 'tokenize' must be ALLOCATABLE"_err_en_US,
+                dummies[i].name);
+          }
+        }
+      }
+    }
   }
   return ok;
 }
@@ -3556,15 +3595,81 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
     }
   }
 
+  // Find the specific subroutine and match the actual arguments against its
+  // dummy argument patterns. If there are multiple specific subroutines with
+  // the same name, try them in order.  If one matches, clear out the errors.
+  // If none match, keep the messages from the form whose dummy argument
+  // types and keywords best match the actual arguments supplied.
   if (call.isSubroutineCall) {
     const std::string &name{ResolveAlias(call.name)};
     auto subrRange{subroutines_.equal_range(name)};
+    parser::Messages subrErrors;
+    int bestScore{INT_MIN};
+    parser::Messages localBuffer;
+    parser::Messages *finalBuffer{context.messages().messages()};
+    parser::ContextualMessages localMessages{
+        context.messages().at(), finalBuffer ? &localBuffer : nullptr};
+    FoldingContext localContext{context, localMessages};
     for (auto iter{subrRange.first}; iter != subrRange.second; ++iter) {
       if (auto specificCall{iter->second->Match(
-              call, defaults_, arguments, context, builtinsScope_)}) {
+              call, defaults_, arguments, localContext, builtinsScope_)}) {
+        if (finalBuffer) {
+          finalBuffer->Annex(std::move(localBuffer));
+        }
         ApplySpecificChecks(*specificCall, context);
         return specificCall;
       }
+      // Match failed.  Compute a score reflecting how well the actual
+      // arguments correspond to this form's dummy arguments: count the
+      // number of positional arguments whose type category matches the
+      // corresponding dummy's expected categories, plus the number of
+      // keyword arguments whose keyword name matches a dummy in this form,
+      // minus the number of required dummies that cannot be satisfied by
+      // the number of arguments provided.  Keep the error messages from
+      // the form with the highest score, preferring an earlier form on
+      // ties.
+      const auto *iface{iter->second};
+      int dummyCount{iface->CountArguments()};
+      int numRequired{0};
+      for (int j{0}; j < dummyCount; ++j) {
+        if (iface->dummy[j].optionality == Optionality::required) {
+          ++numRequired;
+        }
+      }
+      int score{0};
+      int positionalIndex{0};
+      for (const auto &arg : arguments) {
+        if (arg) {
+          if (auto kw{arg->keyword()}) {
+            for (int k{0}; k < dummyCount; ++k) {
+              if (kw == iface->dummy[k].keyword) {
+                ++score;
+                break;
+              }
+            }
+          } else {
+            if (positionalIndex < dummyCount) {
+              if (auto type{arg->GetType()}) {
+                if (iface->dummy[positionalIndex].typePattern.categorySet.test(
+                        type->category())) {
+                  ++score;
+                }
+              }
+            }
+            ++positionalIndex;
+          }
+        }
+      }
+      score -= std::max(0, numRequired - static_cast<int>(arguments.size()));
+      if (score > bestScore) {
+        bestScore = score;
+        subrErrors = std::move(localBuffer);
+      } else {
+        localBuffer.clear();
+      }
+    }
+    if (finalBuffer) {
+      finalBuffer->Annex(std::move(subrErrors));
     }
     if (IsIntrinsicFunction(call.name) && !IsDualIntrinsic(call.name)) {
       context.messages().Say(

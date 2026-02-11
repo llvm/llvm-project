@@ -128,6 +128,22 @@ mlir::Value genVerify(fir::FirOpBuilder &builder, mlir::Location loc, int kind,
                       mlir::Value setBase, mlir::Value setLen,
                       mlir::Value back);
 
+/// Generate call to TOKENIZE runtime (Form 1).
+/// Splits \p stringBox into tokens based on separator characters in \p setBox.
+/// \p tokensBox must be an unallocated allocatable array that receives the
+/// token substrings. \p separatorBox is optional and receives separator chars.
+void genTokenize(fir::FirOpBuilder &builder, mlir::Location loc,
+                 mlir::Value tokensBox, mlir::Value separatorBox,
+                 mlir::Value stringBox, mlir::Value setBox);
+
+/// Generate call to TOKENIZE runtime (Form 2).
+/// Returns token positions rather than substrings.
+/// \p firstBox and \p lastBox must be unallocated allocatable integer arrays
+/// that receive the starting and ending positions of each token.
+void genTokenizePositions(fir::FirOpBuilder &builder, mlir::Location loc,
+                          mlir::Value firstBox, mlir::Value lastBox,
+                          mlir::Value stringBox, mlir::Value setBox);
+
 } // namespace fir::runtime
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_CHARACTER_H

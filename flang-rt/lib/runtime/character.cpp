@@ -17,6 +17,7 @@
 #include "flang/Runtime/freestanding-tools.h"
 #include <algorithm>
 #include <cstring>
+#include <iostream>
 
 namespace Fortran::runtime {
 
@@ -571,6 +572,419 @@ static RT_API_ATTRS void MaxMin(Descriptor &accumulator, const Descriptor &x,
   }
 }
 
+template <typename CHAR>
+static inline RT_API_ATTRS bool TokenizeIsInSet(
+    CHAR ch, const CHAR *set, std::size_t setChars) {
+  for (std::size_t j{0}; j < setChars; ++j) {
+    if (set[j] == ch) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Pad the token with spaces.
+template <typename CHAR>
+static inline RT_API_ATTRS void TokenizeFillBlanks(
+    CHAR *to, std::size_t chars) {
+  if (chars == 0) {
+    return;
+  }
+  if constexpr (std::is_same_v<CHAR, char>) {
+    runtime::memset(to, ' ', chars);
+  } else {
+    for (std::size_t j{0}; j < chars; ++j) {
+      to[j] = static_cast<CHAR>(' ');
+    }
+  }
+}
+
+struct TokenizeAnalysis {
+  std::size_t tokenCount{0};
+  std::size_t maxTokenLen{0}; // in characters
+};
+
+template <typename CHAR>
+static RT_API_ATTRS TokenizeAnalysis AnalyzeTokenize(const CHAR *str,
+    std::size_t strChars, const CHAR *set, std::size_t setChars) {
+  TokenizeAnalysis analysis;
+  if (strChars == 0) {
+    return analysis;
+  }
+  if (setChars == 0) {
+    analysis.tokenCount = 1;
+    analysis.maxTokenLen = strChars;
+    return analysis;
+  }
+
+  // Split STRING at each delimiter character. This produces empty tokens
+  // when delimiters are consecutive or when STRING starts/ends with a
+  // delimiter.
+  std::size_t tokenStart{0};
+  for (std::size_t pos{0}; pos < strChars; ++pos) {
+    if (TokenizeIsInSet(str[pos], set, setChars)) {
+      analysis.maxTokenLen = std::max(analysis.maxTokenLen, pos - tokenStart);
+      analysis.tokenCount++;
+      tokenStart = pos + 1;
+    }
+  }
+  analysis.maxTokenLen = std::max(analysis.maxTokenLen, strChars - tokenStart);
+  analysis.tokenCount++;
+
+  return analysis;
+}
+// Allocates and populates the result arrays for TOKENIZE Form 1.
+template <typename CHAR>
+static RT_API_ATTRS void TokenizeFillForm1(Descriptor &tokens,
+    Descriptor *separator, const Descriptor &string, const CHAR *str,
+    std::size_t strChars, const CHAR *set, std::size_t setChars,
+    const TokenizeAnalysis &analysis, Terminator &terminator) {
+
+  // (Re)allocate TOKENS.
+  if (tokens.IsAllocated()) {
+    tokens.Deallocate();
+  }
+  SubscriptValue tokensExtent[1]{
+      static_cast<SubscriptValue>(analysis.tokenCount)};
+  std::size_t tokenElemBytes{
+      analysis.tokenCount == 0 ? 0 : analysis.maxTokenLen * sizeof(CHAR)};
+  tokens.Establish(string.type(), tokenElemBytes, nullptr, 1, tokensExtent,
+      CFI_attribute_allocatable);
+  tokens.GetDimension(0).SetBounds(1, tokensExtent[0]);
+  if (tokens.Allocate(kNoAsyncObject) != CFI_SUCCESS) {
+    terminator.Crash("TOKENIZE: could not allocate TOKENS array");
+  }
+
+  // (Re)allocate SEPARATOR if present.
+  std::size_t sepCount{analysis.tokenCount > 0 ? analysis.tokenCount - 1 : 0};
+  std::size_t sepElemBytes{sizeof(CHAR)};
+  if (separator) {
+    if (separator->IsAllocated()) {
+      separator->Deallocate();
+    }
+    SubscriptValue sepExtent[1]{static_cast<SubscriptValue>(sepCount)};
+    separator->Establish(string.type(), sepElemBytes, nullptr, 1, sepExtent,
+        CFI_attribute_allocatable);
+    separator->GetDimension(0).SetBounds(1, sepExtent[0]);
+    if (separator->Allocate(kNoAsyncObject) != CFI_SUCCESS) {
+      terminator.Crash("TOKENIZE: could not allocate SEPARATOR array");
+    }
+  }
+
+  if (analysis.tokenCount == 0) {
+    return;
+  }
+
+  // Populate tokens and separators.
+  if (setChars == 0) {
+    // One token (possibly empty) equal to STRING.
+    if (tokenElemBytes > 0) {
+      CHAR *tokDest{tokens.OffsetElement<CHAR>(0)};
+      TokenizeFillBlanks(tokDest, analysis.maxTokenLen);
+      if (strChars > 0) {
+        runtime::memcpy(tokDest, str, strChars * sizeof(CHAR));
+      }
+    }
+    return;
+  }
+
+  std::size_t tokenIndex{0};
+  std::size_t sepIndex{0};
+
+  auto storeToken = [&](std::size_t tokenStart, std::size_t tokenEnd) {
+    std::size_t tokenLen{tokenEnd - tokenStart};
+    if (tokenElemBytes > 0) {
+      // Each element is stored in a fixed-size slot of `tokenElemBytes`.
+      CHAR *tokDest{tokens.OffsetElement<CHAR>(tokenIndex * tokenElemBytes)};
+      TokenizeFillBlanks(tokDest, analysis.maxTokenLen);
+      if (tokenLen > 0) {
+        runtime::memcpy(tokDest, str + tokenStart, tokenLen * sizeof(CHAR));
+      }
+    }
+    ++tokenIndex;
+  };
+
+  // Split at each delimiter character, producing empty tokens at boundaries
+  // and between consecutive delimiters.
+  std::size_t tokenStart{0};
+  for (std::size_t pos{0}; pos < strChars; ++pos) {
+    if (TokenizeIsInSet(str[pos], set, setChars)) {
+      storeToken(tokenStart, pos);
+      if (separator) {
+        CHAR *sepDest{separator->OffsetElement<CHAR>(sepIndex * sepElemBytes)};
+        sepDest[0] = str[pos];
+        ++sepIndex;
+      }
+      tokenStart = pos + 1;
+    }
+  }
+  storeToken(tokenStart, strChars);
+}
+
+template <int KIND>
+static RT_API_ATTRS void TokenizeStoreIntAt(
+    const Descriptor &result, std::size_t at, std::int64_t value) {
+  StoreIntegerAt<KIND>{}(result, at, value);
+}
+
+using TokenizeStoreIntFn = void (*)(
+    const Descriptor &, std::size_t, std::int64_t);
+
+static RT_API_ATTRS TokenizeStoreIntFn GetTokenizeStoreIntFn(
+    int kind, Terminator &terminator, const char *which) {
+  switch (kind) {
+  case 1:
+    return &TokenizeStoreIntAt<1>;
+  case 2:
+    return &TokenizeStoreIntAt<2>;
+  case 4:
+    return &TokenizeStoreIntAt<4>;
+  case 8:
+    return &TokenizeStoreIntAt<8>;
+  case 16:
+    return &TokenizeStoreIntAt<16>;
+  default:
+    terminator.Crash(
+        "TOKENIZE: unsupported INTEGER kind=%d for %s", kind, which);
+  }
+}
+
+template <typename CHAR>
+static RT_API_ATTRS void TokenizeFillPositions(Descriptor &first,
+    Descriptor &last, const CHAR *str, std::size_t strChars, const CHAR *set,
+    std::size_t setChars, TokenizeStoreIntFn storeFirst,
+    TokenizeStoreIntFn storeLast, Terminator &terminator) {
+  if (strChars == 0) {
+    return;
+  }
+  if (setChars == 0) {
+    storeFirst(first, 0, 1);
+    storeLast(last, 0, static_cast<std::int64_t>(strChars));
+    return;
+  }
+
+  std::size_t tokenIndex{0};
+  std::size_t tokenStart{0};
+  for (std::size_t pos{0}; pos < strChars; ++pos) {
+    if (TokenizeIsInSet(str[pos], set, setChars)) {
+      storeFirst(first, tokenIndex, static_cast<std::int64_t>(tokenStart + 1));
+      storeLast(last, tokenIndex, static_cast<std::int64_t>(pos));
+      ++tokenIndex;
+      tokenStart = pos + 1;
+    }
+  }
+  storeFirst(first, tokenIndex, static_cast<std::int64_t>(tokenStart + 1));
+  storeLast(last, tokenIndex, static_cast<std::int64_t>(strChars));
+  ++tokenIndex;
+
+  // Sanity check: we should have filled exactly the allocated extent.
+  if (tokenIndex != static_cast<std::size_t>(first.GetDimension(0).Extent())) {
+    terminator.Crash("TOKENIZE: internal error populating FIRST/LAST");
+  }
+}
+
+// Tokenize Form 1 implementation.
+static RT_API_ATTRS void TokenizeImpl(Descriptor &tokens, Descriptor *separator,
+    const Descriptor &string, const Descriptor &set, Terminator &terminator) {
+  RUNTIME_CHECK(terminator, string.rank() == 0);
+  RUNTIME_CHECK(terminator, set.rank() == 0);
+  RUNTIME_CHECK(terminator, string.raw().type == set.raw().type);
+  RUNTIME_CHECK(terminator, tokens.rank() == 1);
+  RUNTIME_CHECK(terminator, tokens.IsAllocatable());
+  if (separator) {
+    RUNTIME_CHECK(terminator, separator->rank() == 1);
+    RUNTIME_CHECK(terminator, separator->IsAllocatable());
+  }
+
+  switch (string.raw().type) {
+  case CFI_type_char: {
+    std::size_t strBytes{string.ElementBytes()};
+    std::size_t setBytes{set.ElementBytes()};
+    std::size_t strChars{strBytes};
+    std::size_t setChars{setBytes};
+    const char *str{
+        strBytes == 0 ? nullptr : string.OffsetElement<const char>()};
+    const char *setPtr{
+        setBytes == 0 ? nullptr : set.OffsetElement<const char>()};
+    auto analysis{AnalyzeTokenize(str, strChars, setPtr, setChars)};
+    TokenizeFillForm1(tokens, separator, string, str, strChars, setPtr,
+        setChars, analysis, terminator);
+    break;
+  }
+  case CFI_type_char16_t: {
+    std::size_t strBytes{string.ElementBytes()};
+    std::size_t setBytes{set.ElementBytes()};
+    std::size_t strChars{strBytes >> 1};
+    std::size_t setChars{setBytes >> 1};
+    const char16_t *str{
+        strBytes == 0 ? nullptr : string.OffsetElement<const char16_t>()};
+    const char16_t *setPtr{
+        setBytes == 0 ? nullptr : set.OffsetElement<const char16_t>()};
+    auto analysis{AnalyzeTokenize(str, strChars, setPtr, setChars)};
+    TokenizeFillForm1(tokens, separator, string, str, strChars, setPtr,
+        setChars, analysis, terminator);
+    break;
+  }
+  case CFI_type_char32_t: {
+    std::size_t strBytes{string.ElementBytes()};
+    std::size_t setBytes{set.ElementBytes()};
+    std::size_t strChars{strBytes >> 2};
+    std::size_t setChars{setBytes >> 2};
+    const char32_t *str{
+        strBytes == 0 ? nullptr : string.OffsetElement<const char32_t>()};
+    const char32_t *setPtr{
+        setBytes == 0 ? nullptr : set.OffsetElement<const char32_t>()};
+    auto analysis{AnalyzeTokenize(str, strChars, setPtr, setChars)};
+    TokenizeFillForm1(tokens, separator, string, str, strChars, setPtr,
+        setChars, analysis, terminator);
+    break;
+  }
+  default:
+    terminator.Crash("TOKENIZE: bad string type code %d",
+        static_cast<int>(string.raw().type));
+  }
+}
+
+// Tokenize Form 2 implementation.
+static RT_API_ATTRS void TokenizePositionsImpl(Descriptor &first,
+    Descriptor &last, const Descriptor &string, const Descriptor &set,
+    Terminator &terminator) {
+  RUNTIME_CHECK(terminator, string.rank() == 0);
+  RUNTIME_CHECK(terminator, set.rank() == 0);
+  RUNTIME_CHECK(terminator, string.raw().type == set.raw().type);
+  RUNTIME_CHECK(terminator, first.rank() == 1);
+  RUNTIME_CHECK(terminator, last.rank() == 1);
+  RUNTIME_CHECK(terminator, first.IsAllocatable());
+  RUNTIME_CHECK(terminator, last.IsAllocatable());
+
+  auto firstCK{first.type().GetCategoryAndKind()};
+  auto lastCK{last.type().GetCategoryAndKind()};
+  if (!firstCK || firstCK->first != TypeCategory::Integer) {
+    terminator.Crash("TOKENIZE: FIRST is not an INTEGER array");
+  }
+  if (!lastCK || lastCK->first != TypeCategory::Integer) {
+    terminator.Crash("TOKENIZE: LAST is not an INTEGER array");
+  }
+  int firstKind{firstCK->second};
+  int lastKind{lastCK->second};
+  auto storeFirst{GetTokenizeStoreIntFn(firstKind, terminator, "FIRST")};
+  auto storeLast{GetTokenizeStoreIntFn(lastKind, terminator, "LAST")};
+
+  // Count tokens.
+  std::size_t tokenCount{0};
+  switch (string.raw().type) {
+  case CFI_type_char: {
+    std::size_t strBytes{string.ElementBytes()};
+    std::size_t setBytes{set.ElementBytes()};
+    std::size_t strChars{strBytes};
+    std::size_t setChars{setBytes};
+    const char *str{
+        strBytes == 0 ? nullptr : string.OffsetElement<const char>()};
+    const char *setPtr{
+        setBytes == 0 ? nullptr : set.OffsetElement<const char>()};
+    tokenCount = AnalyzeTokenize(str, strChars, setPtr, setChars).tokenCount;
+    break;
+  }
+  case CFI_type_char16_t: {
+    std::size_t strBytes{string.ElementBytes()};
+    std::size_t setBytes{set.ElementBytes()};
+    std::size_t strChars{strBytes >> 1};
+    std::size_t setChars{setBytes >> 1};
+    const char16_t *str{
+        strBytes == 0 ? nullptr : string.OffsetElement<const char16_t>()};
+    const char16_t *setPtr{
+        setBytes == 0 ? nullptr : set.OffsetElement<const char16_t>()};
+    tokenCount = AnalyzeTokenize(str, strChars, setPtr, setChars).tokenCount;
+    break;
+  }
+  case CFI_type_char32_t: {
+    std::size_t strBytes{string.ElementBytes()};
+    std::size_t setBytes{set.ElementBytes()};
+    std::size_t strChars{strBytes >> 2};
+    std::size_t setChars{setBytes >> 2};
+    const char32_t *str{
+        strBytes == 0 ? nullptr : string.OffsetElement<const char32_t>()};
+    const char32_t *setPtr{
+        setBytes == 0 ? nullptr : set.OffsetElement<const char32_t>()};
+    tokenCount = AnalyzeTokenize(str, strChars, setPtr, setChars).tokenCount;
+    break;
+  }
+  default:
+    terminator.Crash("TOKENIZE: bad string type code %d",
+        static_cast<int>(string.raw().type));
+  }
+
+  // (Re)allocate FIRST/LAST.
+  if (first.IsAllocated()) {
+    first.Deallocate();
+  }
+  if (last.IsAllocated()) {
+    last.Deallocate();
+  }
+  SubscriptValue extent[1]{static_cast<SubscriptValue>(tokenCount)};
+  first.Establish(TypeCategory::Integer, firstKind, nullptr, 1, extent,
+      CFI_attribute_allocatable);
+  first.GetDimension(0).SetBounds(1, extent[0]);
+  last.Establish(TypeCategory::Integer, lastKind, nullptr, 1, extent,
+      CFI_attribute_allocatable);
+  last.GetDimension(0).SetBounds(1, extent[0]);
+  if (first.Allocate(kNoAsyncObject) != CFI_SUCCESS) {
+    terminator.Crash("TOKENIZE: could not allocate FIRST array");
+  }
+  if (last.Allocate(kNoAsyncObject) != CFI_SUCCESS) {
+    terminator.Crash("TOKENIZE: could not allocate LAST array");
+  }
+
+  if (tokenCount == 0) {
+    return;
+  }
+
+  // Populate FIRST/LAST.
+  switch (string.raw().type) {
+  case CFI_type_char: {
+    std::size_t strBytes{string.ElementBytes()};
+    std::size_t setBytes{set.ElementBytes()};
+    std::size_t strChars{strBytes};
+    std::size_t setChars{setBytes};
+    const char *str{
+        strBytes == 0 ? nullptr : string.OffsetElement<const char>()};
+    const char *setPtr{
+        setBytes == 0 ? nullptr : set.OffsetElement<const char>()};
+    TokenizeFillPositions(first, last, str, strChars, setPtr, setChars,
+        storeFirst, storeLast, terminator);
+    break;
+  }
+  case CFI_type_char16_t: {
+    std::size_t strBytes{string.ElementBytes()};
+    std::size_t setBytes{set.ElementBytes()};
+    std::size_t strChars{strBytes >> 1};
+    std::size_t setChars{setBytes >> 1};
+    const char16_t *str{
+        strBytes == 0 ? nullptr : string.OffsetElement<const char16_t>()};
+    const char16_t *setPtr{
+        setBytes == 0 ? nullptr : set.OffsetElement<const char16_t>()};
+    TokenizeFillPositions(first, last, str, strChars, setPtr, setChars,
+        storeFirst, storeLast, terminator);
+    break;
+  }
+  case CFI_type_char32_t: {
+    std::size_t strBytes{string.ElementBytes()};
+    std::size_t setBytes{set.ElementBytes()};
+    std::size_t strChars{strBytes >> 2};
+    std::size_t setChars{setBytes >> 2};
+    const char32_t *str{
+        strBytes == 0 ? nullptr : string.OffsetElement<const char32_t>()};
+    const char32_t *setPtr{
+        setBytes == 0 ? nullptr : set.OffsetElement<const char32_t>()};
+    TokenizeFillPositions(first, last, str, strChars, setPtr, setChars,
+        storeFirst, storeLast, terminator);
+    break;
+  }
+  default:
+    break;
+  }
+}
+
 extern "C" {
 RT_EXT_API_GROUP_BEGIN
 
@@ -916,6 +1330,22 @@ void RTDEF(CharacterMax)(Descriptor &accumulator, const Descriptor &x,
 void RTDEF(CharacterMin)(Descriptor &accumulator, const Descriptor &x,
     const char *sourceFile, int sourceLine) {
   MaxMin<true>(accumulator, x, sourceFile, sourceLine);
+}
+
+// TOKENIZE Form 1 entry point
+void RTDEF(Tokenize)(Descriptor &tokens, Descriptor *separator,
+    const Descriptor &string, const Descriptor &set, const char *sourceFile,
+    int sourceLine) {
+  Terminator terminator{sourceFile, sourceLine};
+  TokenizeImpl(tokens, separator, string, set, terminator);
+}
+
+// TOKENIZE Form 2 entry point
+void RTDEF(TokenizePositions)(Descriptor &first, Descriptor &last,
+    const Descriptor &string, const Descriptor &set, const char *sourceFile,
+    int sourceLine) {
+  Terminator terminator{sourceFile, sourceLine};
+  TokenizePositionsImpl(first, last, string, set, terminator);
 }
 
 RT_EXT_API_GROUP_END

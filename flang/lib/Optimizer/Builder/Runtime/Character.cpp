@@ -272,6 +272,35 @@ void fir::runtime::genVerifyDescriptor(fir::FirOpBuilder &builder,
                      kind);
 }
 
+void fir::runtime::genTokenize(fir::FirOpBuilder &builder, mlir::Location loc,
+                               mlir::Value tokensBox, mlir::Value separatorBox,
+                               mlir::Value stringBox, mlir::Value setBox) {
+  auto func = fir::runtime::getRuntimeFunc<mkRTKey(Tokenize)>(loc, builder);
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(5));
+  auto args =
+      fir::runtime::createArguments(builder, loc, fTy, tokensBox, separatorBox,
+                                    stringBox, setBox, sourceFile, sourceLine);
+  fir::CallOp::create(builder, loc, func, args);
+}
+
+void fir::runtime::genTokenizePositions(
+    fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value firstBox,
+    mlir::Value lastBox, mlir::Value stringBox, mlir::Value setBox) {
+  auto func =
+      fir::runtime::getRuntimeFunc<mkRTKey(TokenizePositions)>(loc, builder);
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(5));
+  auto args =
+      fir::runtime::createArguments(builder, loc, fTy, firstBox, lastBox,
+                                    stringBox, setBox, sourceFile, sourceLine);
+  fir::CallOp::create(builder, loc, func, args);
+}
+
 mlir::Value fir::runtime::genVerify(fir::FirOpBuilder &builder,
                                     mlir::Location loc, int kind,
                                     mlir::Value stringBase,

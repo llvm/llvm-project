@@ -435,6 +435,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genTeamNumber(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genTime(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  void genTokenize(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genTrailz(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genTransfer(mlir::Type,
                                  llvm::ArrayRef<fir::ExtendedValue>);
