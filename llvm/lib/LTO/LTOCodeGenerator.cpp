@@ -394,10 +394,12 @@ bool LTOCodeGenerator::determineTarget() {
   if (Config.CPU.empty())
     Config.CPU = lto::getThinLTODefaultCPU(MergedModule->getTargetTriple());
 
-  // If data-sections is not explicitly set or unset, set data-sections by
-  // default to match the behaviour of lld and gold plugin.
-  if (!codegen::getExplicitDataSections())
-    TO.DataSections = true;
+  Config.ModifyTargetOptions = [](TargetOptions &Options) {
+    // If data-sections is not explicitly set or unset, set data-sections by
+    // default to match the behaviour of lld and gold plugin.
+    if (!codegen::getExplicitDataSections())
+      Options.DataSections = true;
+  };
 
   TargetMach = createTargetMachine();
   assert(TargetMach && "Unable to create target machine");
