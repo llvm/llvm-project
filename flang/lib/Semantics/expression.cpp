@@ -2812,22 +2812,13 @@ static int CompareCudaMatchingDistance(
   if (x.isInfinite) {
     return 0;
   }
-  std::size_t n{x.perArg.size()};
-  if (n > y.perArg.size()) {
-    n = y.perArg.size();
-  }
-  for (std::size_t i{0}; i < n; ++i) {
-    if (x.perArg[i] < y.perArg[i]) {
-      return -1;
-    }
-    if (x.perArg[i] > y.perArg[i]) {
-      return 1;
-    }
-  }
-  if (x.perArg.size() < y.perArg.size()) {
+  CHECK(x.perArg.size() == y.perArg.size());
+  if (std::lexicographical_compare(
+          x.perArg.begin(), x.perArg.end(), y.perArg.begin(), y.perArg.end())) {
     return -1;
   }
-  if (x.perArg.size() > y.perArg.size()) {
+  if (std::lexicographical_compare(
+          y.perArg.begin(), y.perArg.end(), x.perArg.begin(), x.perArg.end())) {
     return 1;
   }
   return 0;
