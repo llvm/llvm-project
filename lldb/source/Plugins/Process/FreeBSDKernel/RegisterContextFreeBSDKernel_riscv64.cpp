@@ -9,7 +9,7 @@
 /// \file
 /// This file contains the definition of the
 /// RegisterContextFreeBSDKernel_riscv64 class, which is used for reading
-/// registers from PCB on riscv64 kernel dump.
+/// registers from PCB in riscv64 kernel dump.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -66,9 +66,9 @@ bool RegisterContextFreeBSDKernel_riscv64::ReadRegister(
   uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
   switch (reg) {
   case gpr_pc_riscv:
-  // Supply the RA as PC as well to simulate the PC as if the thread had just
-  // returned.
   case gpr_ra_riscv:
+    // Supply the RA as PC as well to simulate the PC as if the thread had just
+    // returned.
     value = pcb.ra;
     break;
   case gpr_sp_riscv:

@@ -9,7 +9,7 @@
 /// \file
 /// This file contains the declaration of the
 /// RegisterContextFreeBSDKernel_riscv64 class, which is used for reading
-/// registers from PCB on riscv64 kernel dump.
+/// registers from PCB in riscv64 kernel dump.
 ///
 //===----------------------------------------------------------------------===//
 
