@@ -18,7 +18,7 @@ for more information about LIT.
 `libsycl` is integrated via `LLVM_ENABLE_RUNTIMES` and is not visible as a top
 level target. The same is applicable to tests. To run `check-sycl` tests you need
 to prepend `<build>/runtimes/runtimes-bins/` to the paths of all tests.
-For example, to run all the libsycl tests you can do:
+For example, to run all the `libsycl` tests you can do:
 ```bash
 <build>/bin/llvm-lit <build>/runtimes/runtimes-bins/libsycl/test
 ```
@@ -26,7 +26,7 @@ For example, to run all the libsycl tests you can do:
 To run an individual test, use the path to it instead.
 
 If you are using `ninja` as your build system, you can run all the tests in the
-libsycl testsuite as:
+`libsycl` testsuite as:
 
 ```bash
  ninja -C <build>/runtimes/runtimes-bins check-sycl
