@@ -67,7 +67,7 @@ TUSummary MockSerializationFormat::readTUSummary(llvm::StringRef Path) {
     assert(InfoEntry.ForSummary == Name);
 
     SpecialFileRepresentation Repr{(*InputFile)->getBuffer().str()};
-    auto &Table = getIdTableForDeserialization(Summary);
+    auto &Table = getIdTable(Summary);
 
     std::unique_ptr<EntitySummary> Result = InfoEntry.Deserialize(Repr, Table);
     if (!Result) // TODO: Handle error.
