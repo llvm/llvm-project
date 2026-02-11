@@ -263,31 +263,31 @@ struct ExecutionPartIterator {
     Default = Into,
   };
 
-  using IteratorType = parser::Block::const_iterator;
+  using IteratorType = Block::const_iterator;
   using IteratorRange = llvm::iterator_range<IteratorType>;
 
   struct Construct {
     Construct(IteratorType b, IteratorType e,
-        const parser::ExecutionPartConstruct *c = nullptr)
+        const ExecutionPartConstruct *c = nullptr)
         : range(b, e), owner(c) {}
     template <typename C>
-    Construct(C &&r, const parser::ExecutionPartConstruct *c = nullptr)
+    Construct(C &&r, const ExecutionPartConstruct *c = nullptr)
         : range(r), owner(c) {}
     IteratorRange range;
-    const parser::ExecutionPartConstruct *owner = nullptr;
+    const ExecutionPartConstruct *owner = nullptr;
   };
 
   ExecutionPartIterator() = default;
 
   ExecutionPartIterator(IteratorType b, IteratorType e, Step s = Step::Default,
-      const parser::ExecutionPartConstruct *c = nullptr)
+      const ExecutionPartConstruct *c = nullptr)
       : stepping_(s) {
     stack_.emplace_back(b, e, c);
     adjust();
   }
   template <typename C>
   ExecutionPartIterator(C &&range, Step stepping = Step::Default,
-      const parser::ExecutionPartConstruct *construct = nullptr)
+      const ExecutionPartConstruct *construct = nullptr)
       : ExecutionPartIterator(range.begin(), range.end(), stepping, construct) {
   }
 
@@ -339,12 +339,12 @@ private:
 template <typename Iterator = ExecutionPartIterator> struct ExecutionPartRange {
   using Step = typename Iterator::Step;
 
-  ExecutionPartRange(parser::Block::const_iterator begin,
-      parser::Block::const_iterator end, Step stepping = Step::Default,
-      const parser::ExecutionPartConstruct *owner = nullptr)
+  ExecutionPartRange(Block::const_iterator begin, Block::const_iterator end,
+      Step stepping = Step::Default,
+      const ExecutionPartConstruct *owner = nullptr)
       : begin_(begin, end, stepping, owner), end_() {}
-  ExecutionPartRange(const parser::Block &range, Step stepping = Step::Default,
-      const parser::ExecutionPartConstruct *owner = nullptr)
+  ExecutionPartRange(const Block &range, Step stepping = Step::Default,
+      const ExecutionPartConstruct *owner = nullptr)
       : ExecutionPartRange(range.begin(), range.end(), stepping, owner) {}
 
   Iterator begin() const { return begin_; }
@@ -357,7 +357,7 @@ private:
 struct LoopNestIterator : public ExecutionPartIterator {
   LoopNestIterator() = default;
   LoopNestIterator(IteratorType b, IteratorType e, Step s = Step::Default,
-      const parser::ExecutionPartConstruct *c = nullptr)
+      const ExecutionPartConstruct *c = nullptr)
       : ExecutionPartIterator(b, e, s, c) {
     adjust();
   }
@@ -369,7 +369,7 @@ struct LoopNestIterator : public ExecutionPartIterator {
   }
 
 private:
-  static bool isLoop(const parser::ExecutionPartConstruct &c);
+  static bool isLoop(const ExecutionPartConstruct &c);
 
   void adjust() {
     while (valid() && !isLoop(**this)) {

@@ -216,10 +216,10 @@ void ExecutionPartIterator::step() {
   // position is a DO-loop or a loop construct, step into it.
   if (valid()) {
     IteratorType where{at()};
-    if (auto *loop{parser::omp::GetOmpLoop(*where)}) {
-      stack_.emplace_back(std::get<parser::Block>(loop->t), &*where);
-    } else if (auto *loop{parser::omp::GetDoConstruct(*where)}) {
-      stack_.emplace_back(std::get<parser::Block>(loop->t), &*where);
+    if (auto *loop{GetOmpLoop(*where)}) {
+      stack_.emplace_back(std::get<Block>(loop->t), &*where);
+    } else if (auto *loop{GetDoConstruct(*where)}) {
+      stack_.emplace_back(std::get<Block>(loop->t), &*where);
     } else {
       stack_.back().range =
           IteratorRange(std::next(where), stack_.back().range.end());
@@ -248,17 +248,17 @@ void ExecutionPartIterator::adjust() {
         stack_.back().range =
             IteratorRange(std::next(at()), stack_.back().range.end());
       }
-    } else if (auto *block{parser::omp::GetFortranBlockConstruct(*at())}) {
-      stack_.emplace_back(std::get<parser::Block>(block->t), &*at());
+    } else if (auto *block{GetFortranBlockConstruct(*at())}) {
+      stack_.emplace_back(std::get<Block>(block->t), &*at());
     } else {
       break;
     }
   }
 }
 
-bool LoopNestIterator::isLoop(const parser::ExecutionPartConstruct &c) {
-  return parser::Unwrap<parser::OpenMPLoopConstruct>(c) != nullptr ||
-      parser::Unwrap<parser::DoConstruct>(c) != nullptr;
+bool LoopNestIterator::isLoop(const ExecutionPartConstruct &c) {
+  return Unwrap<OpenMPLoopConstruct>(c) != nullptr ||
+      Unwrap<DoConstruct>(c) != nullptr;
 }
 
 } // namespace Fortran::parser::omp
