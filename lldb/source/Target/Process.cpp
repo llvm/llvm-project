@@ -4006,6 +4006,8 @@ void Process::StopPrivateStateThread() {
         log,
         "Went to stop the private state thread, but it was already invalid.");
   }
+  delete m_current_private_state_thread;
+  m_current_private_state_thread = nullptr;
 }
 
 void Process::ControlPrivateStateThread(uint32_t signal) {
