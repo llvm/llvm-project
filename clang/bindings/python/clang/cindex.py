@@ -110,9 +110,7 @@ if TYPE_CHECKING:
     # The type that is compatible with os.fspath:
     # str, bytes, or os.PathLikes that return either of these two
     StrBytesPath: TypeAlias = TUnion[str, bytes, os.PathLike[str], os.PathLike[bytes]]
-    InMemoryFile: TypeAlias = (
-        "tuple[StrBytesPath, TUnion[str, bytes, TextIOWrapper]]"
-    )
+    InMemoryFile: TypeAlias = "tuple[StrBytesPath, TUnion[str, bytes, TextIOWrapper]]"
     LibFunc: TypeAlias = TUnion[
         "tuple[str, Optional[list[Any]]]",
         "tuple[str, Optional[list[Any]], Any]",
