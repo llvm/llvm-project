@@ -116,7 +116,9 @@ public:
   bool processThreadLimit(lower::StatementContext &stmtCtx,
                           mlir::omp::ThreadLimitClauseOps &result) const;
   bool processUntied(mlir::omp::UntiedClauseOps &result) const;
-
+  bool
+  processDynGroupprivate(lower::StatementContext &stmtCtx,
+                         mlir::omp::DynGroupprivateClauseOps &result) const;
   bool processDetach(mlir::omp::DetachClauseOps &result) const;
   // 'Repeatable' clauses: They can appear multiple times in the clause list.
   bool processAffinity(mlir::omp::AffinityClauseOps &result) const;

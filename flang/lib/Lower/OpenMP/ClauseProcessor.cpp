@@ -689,6 +689,53 @@ bool ClauseProcessor::processThreadLimit(
   return false;
 }
 
+bool ClauseProcessor::processDynGroupprivate(
+    lower::StatementContext &stmtCtx,
+    mlir::omp::DynGroupprivateClauseOps &result) const {
+  using DynGroupprivate = omp::clause::DynGroupprivate;
+  if (auto *clause = findUniqueClause<DynGroupprivate>()) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    mlir::MLIRContext *context = firOpBuilder.getContext();
+
+    // Process AccessGroup modifier (cgroup)
+    if (auto accessGroup =
+            std::get<std::optional<DynGroupprivate::AccessGroup>>(clause->t)) {
+      switch (*accessGroup) {
+      case DynGroupprivate::AccessGroup::Cgroup:
+        result.accessGroup = mlir::omp::AccessGroupModifierAttr::get(
+            context, mlir::omp::AccessGroupModifier::cgroup);
+        break;
+      }
+    }
+
+    // Process Fallback modifier (abort, default_mem, null)
+    if (auto fallback =
+            std::get<std::optional<DynGroupprivate::Fallback>>(clause->t)) {
+      switch (*fallback) {
+      case DynGroupprivate::Fallback::Abort:
+        result.fallback = mlir::omp::FallbackModifierAttr::get(
+            context, mlir::omp::FallbackModifier::abort);
+        break;
+      case DynGroupprivate::Fallback::Default_Mem:
+        result.fallback = mlir::omp::FallbackModifierAttr::get(
+            context, mlir::omp::FallbackModifier::default_mem);
+        break;
+      case DynGroupprivate::Fallback::Null:
+        result.fallback = mlir::omp::FallbackModifierAttr::get(
+            context, mlir::omp::FallbackModifier::null);
+        break;
+      }
+    }
+
+    // Process size expression
+    const auto &sizeExpr = std::get<SomeExpr>(clause->t);
+    result.dynGroupprivateSize =
+        fir::getBase(converter.genExprValue(sizeExpr, stmtCtx));
+    return true;
+  }
+  return false;
+}
+
 bool ClauseProcessor::processUntied(mlir::omp::UntiedClauseOps &result) const {
   return markClauseOccurrence<omp::clause::Untied>(result.untied);
 }
