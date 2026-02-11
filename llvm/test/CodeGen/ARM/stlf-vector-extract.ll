@@ -3,14 +3,6 @@
 ; RUN: llc < %s -mtriple=arm-eabi -mattr=+v7,+neon | FileCheck %s --check-prefix=LE
 
 define <2 x i32> @test_offset_load(ptr %p, <4 x i32> %v) {
-; CHECK-LABEL: test_offset_load:
-; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr d17, [sp]
-; CHECK-NEXT:    vmov r1, r12, d17
-; CHECK-NEXT:    vmov d16, r3, r2
-; CHECK-NEXT:    vst1.64 {d16, d17}, [r0:128]
-; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    bx lr
 ; BE-LABEL: test_offset_load:
 ; BE:       @ %bb.0:
 ; BE-NEXT:    vldr d17, [sp]
