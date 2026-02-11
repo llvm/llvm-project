@@ -300,8 +300,7 @@ mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
   const bool isTargetDevice =
       (cgm.getLangOpts().OpenMPIsTargetDevice && (t.isNVPTX() || t.isAMDGCN()));
   if (isTargetDevice) {
-    cgm.errorNYI(
-        "emitCXXTryStmt: OpenMP target region offloaded to GPU");
+    cgm.errorNYI("emitCXXTryStmt: OpenMP target region offloaded to GPU");
     return mlir::success();
   }
 
