@@ -457,4 +457,10 @@
 #  define _LIBCPP_DEPRECATED_WITH_CHAR8_T
 #endif
 
+#if __has_cpp_attribute(_Clang::__no_field_protection__)
+#  define _LIBCPP_DISABLE_POINTER_FIELD_PROTECTION [[_Clang::__no_field_protection__]]
+#else
+#  define _LIBCPP_DISABLE_POINTER_FIELD_PROTECTION
+#endif
+
 #endif // _LIBCPP___CONFIGURATION_ATTRIBUTES_H
