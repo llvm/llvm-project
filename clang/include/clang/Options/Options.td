@@ -1965,8 +1965,7 @@ defm lifetime_safety : BoolFOption<
   LangOpts<"EnableLifetimeSafety">, DefaultTrue,
   PosFlag<SetTrue, [], [CC1Option], "Enable">,
   NegFlag<SetFalse, [], [CC1Option], "Disable">,
-  BothFlags<[], [CC1Option],
-          " experimental lifetime safety for C++">>;
+  BothFlags<[], [CC1Option], " lifetime safety for C++">>;
 
 defm lifetime_safety_inference
     : BoolFOption<"lifetime-safety-inference",
@@ -1974,7 +1973,7 @@ defm lifetime_safety_inference
                   PosFlag<SetTrue, [], [CC1Option], "Enable">,
                   NegFlag<SetFalse, [], [CC1Option], "Disable">,
                   BothFlags<[], [CC1Option],
-                            " experimental lifetime safety inference for C++">>;
+                            " lifetime safety inference for C++">>;
 
 defm lifetime_safety_tu_analysis
     : BoolFOption<"experimental-lifetime-safety-tu-analysis",
@@ -2724,6 +2723,13 @@ defm sanitize_handler_preserve_all_regs
           NegFlag<SetFalse, [], [],
                   "Disable handlers with preserve_all calling convention">>,
       Group<f_clang_Group>;
+defm sanitize_trap_loop : BoolOption<"f", "sanitize-trap-loop",
+  CodeGenOpts<"SanitizeTrapLoop">, DefaultFalse,
+  PosFlag<SetTrue, [], [],
+          "Use infinite loops in trapping mode">,
+  NegFlag<SetFalse, [], [],
+          "Do not use infinite loops in trapping mode">>,
+  Group<f_clang_Group>;
 def fsanitize_link_runtime : Flag<["-"], "fsanitize-link-runtime">,
                            Group<f_clang_Group>;
 def fno_sanitize_link_runtime : Flag<["-"], "fno-sanitize-link-runtime">,
@@ -2964,6 +2970,20 @@ or passing a null pointer to a function parameter annotated with the "nonnull"
 attribute as undefined behavior. (And, thus the optimizer may assume that any
 pointer used in such a way must not have been null and optimize away the
 branches accordingly.) On by default.}]>;
+
+defm lifetime_dse
+    : BoolFOption<"lifetime-dse", CodeGenOpts<"StrictLifetimes">, DefaultTrue,
+                  NegFlag<SetFalse, [], [ClangOption, CC1Option],
+                          "Do not aggressively delete stores after the end of "
+                          "an object's lifetime">,
+                  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+                          "Aggressively delete stores after the end of an "
+                          "object's lifetime">,
+                  BothFlags<[], [ClangOption, CLOption]>>,
+      DocBrief<
+          [{When enabled, mark an object dead after its destructor returns which allows the
+the optimizer to perform more aggressive optimizations in some cases, particularly dead
+store elimination.}]>;
 
 defm use_line_directives : BoolFOption<"use-line-directives",
   PreprocessorOutputOpts<"UseLineDirectives">, DefaultFalse,
@@ -3784,6 +3804,11 @@ defm application_extension : BoolFOption<"application-extension",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Restrict code to those available for App Extensions">,
   NegFlag<SetFalse>>;
+defm reflection : BoolFOption<"reflection",
+  LangOpts<"Reflection">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option],
+          "Enable C++26 reflection">,
+  NegFlag<SetFalse>>, ShouldParseIf<cplusplus.KeyPath>;
 defm sized_deallocation : BoolFOption<"sized-deallocation",
   LangOpts<"SizedDeallocation">, Default<cpp14.KeyPath>,
   PosFlag<SetTrue, [], [], "Enable C++14 sized global deallocation functions">,
@@ -3986,9 +4011,13 @@ def fno_openmp_assume_threads_oversubscription : Flag<["-"], "fno-openmp-assume-
 def fopenmp_assume_no_thread_state : Flag<["-"], "fopenmp-assume-no-thread-state">,
   HelpText<"Assert no thread in a parallel region modifies an ICV">,
   MarshallingInfoFlag<LangOpts<"OpenMPNoThreadState">>;
+def fno_openmp_assume_no_thread_state : Flag<["-"], "fno-openmp-assume-no-thread-state">,
+  HelpText<"Assert that a thread in a parallel region may modify an ICV">;
 def fopenmp_assume_no_nested_parallelism : Flag<["-"], "fopenmp-assume-no-nested-parallelism">,
   HelpText<"Assert no nested parallel regions in the GPU">,
   MarshallingInfoFlag<LangOpts<"OpenMPNoNestedParallelism">>;
+def fno_openmp_assume_no_nested_parallelism : Flag<["-"], "fno-openmp-assume-no-nested-parallelism">,
+  HelpText<"Assert that a nested parallel region may be used in the GPU">;
 
 } // let Group = f_Group
 } // let Visibility = [ClangOption, CC1Option, FC1Option]
@@ -4012,6 +4041,13 @@ def fopenmp_target_new_runtime : Flag<["-"], "fopenmp-target-new-runtime">,
   Group<f_Group>, Flags<[HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
 def fno_openmp_target_new_runtime : Flag<["-"], "fno-openmp-target-new-runtime">,
   Group<f_Group>, Flags<[HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
+def fopenmp_target_fast : Flag<["-"], "fopenmp-target-fast">,
+  Group<f_Group>, Flags<[NoArgumentUnused, HelpHidden]>,
+  Visibility<[ClangOption]>,
+  HelpText<"Assert common GPU usage patterns to enable OpenMP runtime optimizations">;
+def fno_openmp_target_fast : Flag<["-"], "fno-openmp-target-fast">,
+  Group<f_Group>, Flags<[NoArgumentUnused, HelpHidden]>,
+  Visibility<[ClangOption]>;
 defm openmp_optimistic_collapse : BoolFOption<"openmp-optimistic-collapse",
   LangOpts<"OpenMPOptimisticCollapse">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option]>,
@@ -5260,14 +5296,18 @@ def mmacos_version_min_EQ : Joined<["-"], "mmacos-version-min=">,
 def : Joined<["-"], "mmacosx-version-min=">,
   Visibility<[ClangOption, CC1Option, FC1Option, FlangOption]>,
   Group<m_Group>, Alias<mmacos_version_min_EQ>;
+def moutline
+    : Flag<["-"], "moutline">,
+      Group<f_clang_Group>,
+      Visibility<[ClangOption, CC1Option]>,
+      HelpText<"Enable function outlining (AArch64,Arm,RISC-V,X86 only)">;
+def mno_outline
+    : Flag<["-"], "mno-outline">,
+      Group<f_clang_Group>,
+      Visibility<[ClangOption, CC1Option]>,
+      HelpText<"Disable function outlining (AArch64,Arm,RISC-V,X86 only)">;
 def mms_bitfields : Flag<["-"], "mms-bitfields">, Group<m_Group>,
   HelpText<"Set the default structure layout to be compatible with the Microsoft compiler standard">;
-def moutline : Flag<["-"], "moutline">, Group<f_clang_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-    HelpText<"Enable function outlining (AArch64 only)">;
-def mno_outline : Flag<["-"], "mno-outline">, Group<f_clang_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-    HelpText<"Disable function outlining (AArch64 only)">;
 def mno_ms_bitfields : Flag<["-"], "mno-ms-bitfields">, Group<m_Group>,
   HelpText<"Do not set the default structure layout to be compatible with the Microsoft compiler standard">;
 def fms_layout_compatibility_EQ : Joined<["-"], "fms-layout-compatibility=">,
@@ -5566,6 +5606,8 @@ def mbulk_memory_opt : Flag<["-"], "mbulk-memory-opt">, Group<m_wasm_Features_Gr
 def mno_bulk_memory_opt : Flag<["-"], "mno-bulk-memory-opt">, Group<m_wasm_Features_Group>;
 def mcall_indirect_overlong : Flag<["-"], "mcall-indirect-overlong">, Group<m_wasm_Features_Group>;
 def mno_call_indirect_overlong : Flag<["-"], "mno-call-indirect-overlong">, Group<m_wasm_Features_Group>;
+def mcompact_imports : Flag<["-"], "mcompact-imports">, Group<m_wasm_Features_Group>;
+def mno_compact_imports : Flag<["-"], "mno-compact-imports">, Group<m_wasm_Features_Group>;
 def mexception_handing : Flag<["-"], "mexception-handling">, Group<m_wasm_Features_Group>;
 def mno_exception_handing : Flag<["-"], "mno-exception-handling">, Group<m_wasm_Features_Group>;
 def mextended_const : Flag<["-"], "mextended-const">, Group<m_wasm_Features_Group>;
