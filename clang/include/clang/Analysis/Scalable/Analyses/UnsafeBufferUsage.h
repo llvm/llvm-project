@@ -78,6 +78,8 @@ class UnsafeBufferUsageEntitySummary : public EntitySummary {
       : EntitySummary(SummaryName{"UnsafeBufferUsage"}),
         UnsafeBuffers(std::move(UnsafeBuffers)) {}
 
+  UnsafeBufferUsageEntitySummary() = delete;
+
 public:
   using const_iterator = PointerKindVariableSet::const_iterator;
 
@@ -100,17 +102,39 @@ public:
 
 class UnsafeBufferUsageTUSummaryBuilder : public TUSummaryBuilder {
 public:
+  UnsafeBufferUsageTUSummaryBuilder(class TUSummary &Summary)
+      : TUSummaryBuilder(Summary) {};
+
   PointerKindVariable buildPointerKindVariable(EntityId Entity,
                                                unsigned PointerLevel) {
+
     return {Entity, PointerLevel};
   }
 
   std::unique_ptr<UnsafeBufferUsageEntitySummary>
-  buildUnsafeBufferUsageEntitySummary(PointerKindVariableSet &&UnsafeBuffers) {
+  buildUnsafeBufferUsageEntitySummary(EntityId Contributor,
+                                      PointerKindVariableSet &&UnsafeBuffers) {
     return std::unique_ptr<UnsafeBufferUsageEntitySummary>(
         new UnsafeBufferUsageEntitySummary(std::move(UnsafeBuffers)));
   }
 };
+
+class UnsafeBufferUsageTUSummaryExtractor : public TUSummaryExtractor {
+  UnsafeBufferUsageTUSummaryBuilder &builder() {
+    return static_cast<UnsafeBufferUsageTUSummaryBuilder &>(SummaryBuilder);
+  }
+
+public:
+  explicit UnsafeBufferUsageTUSummaryExtractor(
+      UnsafeBufferUsageTUSummaryBuilder &Builder)
+      : TUSummaryExtractor(Builder) {}
+
+  // FIXME: need some general traversal in the Base class
+  std::unique_ptr<UnsafeBufferUsageEntitySummary>
+  extractEntitySummary(EntityId Contributor, const Decl *ContributorDefn,
+                       ASTContext &Ctx);
+};
+
 } // namespace clang::ssaf
 
 #endif // LLVM_CLANG_ANALYSIS_SCALABLE_ANALYSES_UNSAFEBUFFERUSAGE_H

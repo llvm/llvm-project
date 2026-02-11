@@ -10,6 +10,7 @@ add_clang_library(clangAnalysisScalable
   Serialization/SerializationFormat.cpp
   Serialization/SerializationFormatRegistry.cpp
   TUSummary/ExtractorRegistry.cpp
+  Analyses/UnsafeBufferUsage.cpp
 
   LINK_LIBS
   clangAST
