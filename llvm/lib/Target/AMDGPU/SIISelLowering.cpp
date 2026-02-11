@@ -18662,6 +18662,11 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT:
     Known.Zero.setHighBits(16);
     break;
+  case AMDGPU::G_AMDGPU_COPY_SCC_VCC:
+    // G_AMDGPU_COPY_SCC_VCC converts a uniform boolean in VCC to SGPR s32,
+    // producing exactly 0 or 1.
+    Known.Zero.setHighBits(Known.getBitWidth() - 1);
+    break;
   case AMDGPU::G_AMDGPU_SMED3:
   case AMDGPU::G_AMDGPU_UMED3: {
     auto [Dst, Src0, Src1, Src2] = MI->getFirst4Regs();
