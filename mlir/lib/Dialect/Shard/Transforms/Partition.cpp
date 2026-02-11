@@ -262,7 +262,7 @@ public:
 
 /// Move a split axis between tensor dimensions:
 /// e.g. [[0], []] -> [[], [0]].
-class MoveLastSplitAxisPattern : public ReshardingPattern {
+class MoveSplitAxisPattern : public ReshardingPattern {
   // Detect if the resharding moves a single split axis from one tensor
   // dimension to another tensor dimension. If detected, returns the
   // corresponding (tgt_tensor_dim, grid_axis) pair.
@@ -459,11 +459,13 @@ static TypedValue<ShapedType> reshard(ImplicitLocOpBuilder &builder,
   assert(unshardedSrc.getType().getRank() == tgtShardType.getRank());
 
   // Each pattern's tryApply checks its own applicability preconditions.
-  std::array<std::unique_ptr<ReshardingPattern>, 4> patterns = {
-      std::make_unique<UpdateHaloPattern>(),
-      std::make_unique<MoveLastSplitAxisPattern>(),
-      std::make_unique<SplitLastAxisPattern>(),
-      std::make_unique<UnsplitLastAxesPattern>()};
+  static UpdateHaloPattern updateHaloPattern;
+  static MoveSplitAxisPattern moveSplitAxisPattern;
+  static SplitLastAxisPattern splitLastAxisPattern;
+  static UnsplitLastAxesPattern unsplitLastAxesPattern;
+  static ReshardingPattern *patterns[] = {
+      &updateHaloPattern, &moveSplitAxisPattern, &splitLastAxisPattern,
+      &unsplitLastAxesPattern};
   TypedValue<ShapedType> currentShard = shardedSrc;
   Sharding currentSharding = srcSharding;
   for (int64_t dim = 0;

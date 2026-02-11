@@ -78,7 +78,7 @@ func.func @unsplit_last_axes_all(%in2: tensor<48x48xi8>) -> tensor<48x48xi8> {
 }
 
 // CHECK-LABEL: func.func @unsplit_all_dims(
-// CHECK-SAME:[[varg0:%.*]]: tensor<3x2x4x5xi8>) -> tensor<6x10x16x15xi8> {
+// CHECK-SAME: [[varg0:%.*]]: tensor<3x2x4x5xi8>) -> tensor<6x10x16x15xi8> {
 func.func @unsplit_all_dims(%arg: tensor<6x10x16x15xi8>) -> tensor<6x10x16x15xi8> {
   %sharding1 = shard.sharding @grid_4d split_axes = [[0], [3], [2], [1]] : !shard.sharding
   %arg_sharded = shard.shard %arg to %sharding1 : tensor<6x10x16x15xi8>
@@ -122,7 +122,7 @@ func.func @move_split_axis(
 }
 
 // CHECK-LABEL: func.func @unsplit_and_split(
-// CHECK-SAME:[[varg0:%.*]]: tensor<3x10x10x15xi8>) -> tensor<6x10x2x15xi8> {
+// CHECK-SAME: [[varg0:%.*]]: tensor<3x10x10x15xi8>) -> tensor<6x10x2x15xi8> {
 func.func @unsplit_and_split(%arg: tensor<6x10x120x15xi8>) -> tensor<6x10x120x15xi8> {
   %sharding1 = shard.sharding @grid_4d split_axes = [[0], [], [1,2]] : !shard.sharding
   %arg_sharded = shard.shard %arg to %sharding1 : tensor<6x10x120x15xi8>
@@ -135,7 +135,7 @@ func.func @unsplit_and_split(%arg: tensor<6x10x120x15xi8>) -> tensor<6x10x120x15
 }
 
 // CHECK-LABEL: func.func @move_and_split(
-// CHECK-SAME:[[varg0:%.*]]: tensor<3x10x10x15xi8>) -> tensor<6x5x2x15xi8> {
+// CHECK-SAME: [[varg0:%.*]]: tensor<3x10x10x15xi8>) -> tensor<6x5x2x15xi8> {
 func.func @move_and_split(%arg: tensor<6x10x120x15xi8>) -> tensor<6x10x120x15xi8> {
   %sharding1 = shard.sharding @grid_4d split_axes = [[0], [], [1,2]] : !shard.sharding
   %arg_sharded = shard.shard %arg to %sharding1 : tensor<6x10x120x15xi8>
@@ -148,7 +148,7 @@ func.func @move_and_split(%arg: tensor<6x10x120x15xi8>) -> tensor<6x10x120x15xi8
 }
 
 // CHECK-LABEL: func.func @move_and_unsplit(
-// CHECK-SAME:[[varg0:%.*]]: tensor<3x10x10x15xi8>) -> tensor<6x5x40x15xi8> {
+// CHECK-SAME: [[varg0:%.*]]: tensor<3x10x10x15xi8>) -> tensor<6x5x40x15xi8> {
 func.func @move_and_unsplit(%arg: tensor<6x10x120x15xi8>) -> tensor<6x10x120x15xi8> {
   %sharding1 = shard.sharding @grid_4d split_axes = [[0], [], [1,2]] : !shard.sharding
   %arg_sharded = shard.shard %arg to %sharding1 : tensor<6x10x120x15xi8>
@@ -161,7 +161,7 @@ func.func @move_and_unsplit(%arg: tensor<6x10x120x15xi8>) -> tensor<6x10x120x15x
 }
 
 // CHECK-LABEL: func.func @unsplit_move_split(
-// CHECK-SAME:[[varg0:%.*]]: tensor<3x5x120x3xi8>) -> tensor<6x20x30x1xi8>
+// CHECK-SAME: [[varg0:%.*]]: tensor<3x5x120x3xi8>) -> tensor<6x20x30x1xi8>
 func.func @unsplit_move_split(%arg: tensor<6x20x120x15xi8>) -> tensor<6x20x120x15xi8> {
   %sharding1 = shard.sharding @grid_4d split_axes = [[0], [2], [], [3]] : !shard.sharding
   %arg_sharded = shard.shard %arg to %sharding1 : tensor<6x20x120x15xi8>

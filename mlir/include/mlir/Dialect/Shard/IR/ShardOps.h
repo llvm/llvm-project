@@ -86,7 +86,7 @@ inline Diagnostic &operator<<(Diagnostic &diag, const Sharding &sharding) {
   std::string str;
   llvm::raw_string_ostream os(str);
   os << sharding;
-  return diag << str;
+  return diag << os.str();
 }
 
 } // namespace shard
