@@ -23,7 +23,7 @@
 #include <vector>
 
 namespace lldb_private {
-  class StackFrame;
+class StackFrame;
 }
 
 namespace lldb_private::dil {

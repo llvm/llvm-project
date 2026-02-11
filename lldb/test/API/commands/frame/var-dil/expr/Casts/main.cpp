@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
     bool bval;
   };
 
-  struct myGlobalName secondStruct= {42, false};
+  struct myGlobalName secondStruct = {42, false};
 
   return 0; // Set a breakpoint here
 }
