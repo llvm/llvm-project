@@ -4005,16 +4005,7 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
     VPValue *CondToExit;
   };
 
-  // Helper to check if a VPValue's definition dominates the latch.
-  // Live-in values (with no defining recipe) dominate everything.
   VPDominatorTree VPDT(Plan);
-  [[maybe_unused]] auto DominatesLatch = [&VPDT, LatchVPBB](VPValue *V) {
-    VPRecipeBase *DefRecipe = V->getDefiningRecipe();
-    if (!DefRecipe)
-      return true;
-    return VPDT.properlyDominates(DefRecipe->getParent(), LatchVPBB);
-  };
-
   VPBuilder Builder(LatchVPBB->getTerminator());
   SmallVector<EarlyExitInfo> Exits;
   for (VPIRBasicBlock *ExitBlock : Plan.getExitBlocks()) {
@@ -4032,7 +4023,10 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
       auto *CondToEarlyExit = TrueSucc == ExitBlock
                                   ? CondOfEarlyExitingVPBB
                                   : Builder.createNot(CondOfEarlyExitingVPBB);
-      assert(DominatesLatch(CondOfEarlyExitingVPBB) &&
+      assert((isa<VPIRValue>(CondOfEarlyExitingVPBB) ||
+              VPDT.properlyDominates(
+                  CondOfEarlyExitingVPBB->getDefiningRecipe()->getParent(),
+                  LatchVPBB)) &&
              "exit condition must dominate the latch");
       Exits.push_back({
           EarlyExitingVPBB,
@@ -4052,8 +4046,8 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
   // to avoid poison propagation from later exit conditions when an earlier
   // exit is taken.
   VPValue *Combined = Exits[0].CondToExit;
-  for (const auto &[_, _1, CondToExit] : drop_begin(Exits))
-    Combined = Builder.createLogicalOr(Combined, CondToExit);
+  for (const EarlyExitInfo &Info : drop_begin(Exits))
+    Combined = Builder.createLogicalOr(Combined, Info.CondToExit);
 
   VPValue *IsAnyExitTaken =
       Builder.createNaryOp(VPInstruction::AnyOf, {Combined});
@@ -4106,8 +4100,9 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
   //    IR %phi = phi ... (extra operand: vp<%exit.val> from
   //                                      vector.early.exit.I)
   //
-  for (auto [Exit, VectorEarlyExitVPBB] : zip(Exits, VectorEarlyExitVPBBs)) {
-    auto &[EarlyExitingVPBB, EarlyExitVPBB, CondToExit] = Exit;
+  for (auto [Exit, VectorEarlyExitVPBB] :
+       zip_equal(Exits, VectorEarlyExitVPBBs)) {
+    auto &[EarlyExitingVPBB, EarlyExitVPBB, _] = Exit;
     // Adjust the phi nodes in EarlyExitVPBB.
     //   1. remove incoming values from EarlyExitingVPBB,
     //   2. extract the incoming value at FirstActiveLane
