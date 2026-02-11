@@ -1,4 +1,5 @@
-//===- X86IssueVZeroUpper.cpp - AVX vzeroupper instruction inserter ------------===//
+//===- X86IssueVZeroUpper.cpp - AVX vzeroupper instruction inserter
+//------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -42,58 +43,58 @@ using namespace llvm;
 #define DEBUG_TYPE "x86-issue-vzero-upper"
 
 static cl::opt<bool>
-UseVZeroUpper("x86-use-vzeroupper", cl::Hidden,
-  cl::desc("Minimize AVX to SSE transition penalty"),
-  cl::init(true));
+    UseVZeroUpper("x86-use-vzeroupper", cl::Hidden,
+                  cl::desc("Minimize AVX to SSE transition penalty"),
+                  cl::init(true));
 
 STATISTIC(NumVZU, "Number of vzeroupper instructions inserted");
 
 namespace {
 
-  class X86IssueVZeroUpperLegacy : public MachineFunctionPass {
-  public:
-    static char ID;
-    X86IssueVZeroUpperLegacy() : MachineFunctionPass(ID) {}
+class X86IssueVZeroUpperLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+  X86IssueVZeroUpperLegacy() : MachineFunctionPass(ID) {}
 
-    StringRef getPassName() const override { return "X86 vzeroupper inserter"; }
+  StringRef getPassName() const override { return "X86 vzeroupper inserter"; }
 
-    bool runOnMachineFunction(MachineFunction &MF) override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
-    MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().setNoVRegs();
-    }
-  };
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
+};
 
-  enum BlockExitState { PASS_THROUGH, EXITS_CLEAN, EXITS_DIRTY };
+enum BlockExitState { PASS_THROUGH, EXITS_CLEAN, EXITS_DIRTY };
 
-  // Core algorithm state:
-  // BlockState - Each block is either:
-  //   - PASS_THROUGH: There are neither YMM/ZMM dirtying instructions nor
-  //                   vzeroupper instructions in this block.
-  //   - EXITS_CLEAN: There is (or will be) a vzeroupper instruction in this
-  //                  block that will ensure that YMM/ZMM is clean on exit.
-  //   - EXITS_DIRTY: An instruction in the block dirties YMM/ZMM and no
-  //                  subsequent vzeroupper in the block clears it.
-  //
-  // AddedToDirtySuccessors - This flag is raised when a block is added to the
-  //                          DirtySuccessors list to ensure that it's not
-  //                          added multiple times.
-  //
-  // FirstUnguardedCall - Records the location of the first unguarded call in
-  //                      each basic block that may need to be guarded by a
-  //                      vzeroupper. We won't know whether it actually needs
-  //                      to be guarded until we discover a predecessor that
-  //                      is DIRTY_OUT.
-  struct BlockState {
-    BlockExitState ExitState = PASS_THROUGH;
-    bool AddedToDirtySuccessors = false;
-    MachineBasicBlock::iterator FirstUnguardedCall;
+// Core algorithm state:
+// BlockState - Each block is either:
+//   - PASS_THROUGH: There are neither YMM/ZMM dirtying instructions nor
+//                   vzeroupper instructions in this block.
+//   - EXITS_CLEAN: There is (or will be) a vzeroupper instruction in this
+//                  block that will ensure that YMM/ZMM is clean on exit.
+//   - EXITS_DIRTY: An instruction in the block dirties YMM/ZMM and no
+//                  subsequent vzeroupper in the block clears it.
+//
+// AddedToDirtySuccessors - This flag is raised when a block is added to the
+//                          DirtySuccessors list to ensure that it's not
+//                          added multiple times.
+//
+// FirstUnguardedCall - Records the location of the first unguarded call in
+//                      each basic block that may need to be guarded by a
+//                      vzeroupper. We won't know whether it actually needs
+//                      to be guarded until we discover a predecessor that
+//                      is DIRTY_OUT.
+struct BlockState {
+  BlockExitState ExitState = PASS_THROUGH;
+  bool AddedToDirtySuccessors = false;
+  MachineBasicBlock::iterator FirstUnguardedCall;
 
-    BlockState() = default;
-  };
+  BlockState() = default;
+};
 
-  using BlockStateMap = SmallVector<BlockState, 8>;
-  using DirtySuccessorsWorkList = SmallVector<MachineBasicBlock *, 8>;
+using BlockStateMap = SmallVector<BlockState, 8>;
+using DirtySuccessorsWorkList = SmallVector<MachineBasicBlock *, 8>;
 } // end anonymous namespace
 
 char X86IssueVZeroUpperLegacy::ID = 0;
@@ -103,11 +104,14 @@ FunctionPass *llvm::createX86IssueVZeroUpperLegacyPass() {
 }
 
 #ifndef NDEBUG
-static const char* getBlockExitStateName(BlockExitState ST) {
+static const char *getBlockExitStateName(BlockExitState ST) {
   switch (ST) {
-    case PASS_THROUGH: return "Pass-through";
-    case EXITS_DIRTY: return "Exits-dirty";
-    case EXITS_CLEAN: return "Exits-clean";
+  case PASS_THROUGH:
+    return "Pass-through";
+  case EXITS_DIRTY:
+    return "Exits-dirty";
+  case EXITS_CLEAN:
+    return "Exits-clean";
   }
   llvm_unreachable("Invalid block exit state.");
 }
@@ -313,7 +317,8 @@ static bool issueVZeroUpper(MachineFunction &MF) {
   // unguarded call in each block, and add successors of dirty blocks to the
   // DirtySuccessors list.
   for (MachineBasicBlock &MBB : MF)
-    processBasicBlock(MBB, BlockStates, DirtySuccessors, IsX86INTR, TII, EverMadeChange);
+    processBasicBlock(MBB, BlockStates, DirtySuccessors, IsX86INTR, TII,
+                      EverMadeChange);
 
   // If any YMM/ZMM regs are live-in to this function, add the entry block to
   // the DirtySuccessors list
@@ -354,5 +359,7 @@ bool X86IssueVZeroUpperLegacy::runOnMachineFunction(MachineFunction &MF) {
 PreservedAnalyses
 X86IssueVZeroUpperPass::run(MachineFunction &MF,
                             MachineFunctionAnalysisManager &MFAM) {
-  return issueVZeroUpper(MF) ? getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>() : PreservedAnalyses::all();
+  return issueVZeroUpper(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                   .preserveSet<CFGAnalyses>()
+                             : PreservedAnalyses::all();
 }
