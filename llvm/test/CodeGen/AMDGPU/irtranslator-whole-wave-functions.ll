@@ -118,7 +118,8 @@ define amdgpu_cs void @call(i32 %x, ptr %p) {
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @callee
   ; CHECK-NEXT:   $vgpr0 = COPY [[COPY]](s32)
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV1]](p0), @callee, csr_amdgpu_si_gfx, implicit $vgpr0, implicit-def $vgpr0
+  ; CHECK-NEXT:   [[SI_CALL:%[0-9]+]]:_(s64) = G_SI_CALL [[GV1]](p0), @callee, csr_amdgpu_si_gfx, implicit $vgpr0, implicit-def $vgpr0
+  ; CHECK-NEXT:   $sgpr30_sgpr31 = COPY [[SI_CALL]](s64)
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   G_STORE [[COPY3]](s32), [[MV]](p0) :: (store (s32) into %ir.p)

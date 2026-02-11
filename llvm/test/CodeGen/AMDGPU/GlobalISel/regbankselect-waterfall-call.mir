@@ -33,7 +33,8 @@ body: |
     ; CHECK-NEXT: %g_ptr:sgpr(p0) = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p0) = COPY %g_ptr(p0)
     ; CHECK-NEXT: %func_ptr:vgpr(p0) = G_LOAD [[COPY]](p0) :: (load (p0))
-    ; CHECK-NEXT: $sgpr2_sgpr3 = G_SI_CALL [[MV]](p0), 0, csr_amdgpu
+    ; CHECK-NEXT: %ret_addr:sgpr(s64) = G_SI_CALL [[MV]](p0), 0, csr_amdgpu
+    ; CHECK-NEXT: $sgpr30_sgpr31 = COPY %ret_addr(s64)
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $scc
     ; CHECK-NEXT: $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
     ; CHECK-NEXT: SI_WATERFALL_LOOP %bb.1, implicit $exec
@@ -44,13 +45,14 @@ body: |
     ; CHECK-NEXT: $exec = S_MOV_B64_term [[S_MOV_B64_]]
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: .4:
-    ; CHECK-NEXT: S_SETPC_B64_return undef $sgpr2_sgpr3
+    ; CHECK-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31
    ADJCALLSTACKUP 0, 0, implicit-def $scc
    %g_ptr:_(p0) = COPY $sgpr0_sgpr1
    %func_ptr:_(p0) = G_LOAD %g_ptr(p0) :: (load (p0))
-   $sgpr2_sgpr3 = G_SI_CALL %func_ptr, 0, csr_amdgpu
+   %ret_addr:_(s64) = G_SI_CALL %func_ptr, 0, csr_amdgpu
+   $sgpr30_sgpr31 = COPY %ret_addr
    ADJCALLSTACKDOWN 0, 0, implicit-def $scc
-   S_SETPC_B64_return undef $sgpr2_sgpr3
+   S_SETPC_B64_return undef $sgpr30_sgpr31
 
 ...
 
@@ -86,7 +88,8 @@ body: |
     ; CHECK-NEXT: %g_ptr:sgpr(p4) = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p4) = COPY %g_ptr(p4)
     ; CHECK-NEXT: %func_ptr:vgpr(p4) = G_LOAD [[COPY]](p4) :: (load (p4))
-    ; CHECK-NEXT: $sgpr2_sgpr3 = G_SI_CALL [[MV]](p4), 0, csr_amdgpu
+    ; CHECK-NEXT: %ret_addr:sgpr(s64) = G_SI_CALL [[MV]](p4), 0, csr_amdgpu
+    ; CHECK-NEXT: $sgpr30_sgpr31 = COPY %ret_addr(s64)
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $scc
     ; CHECK-NEXT: $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
     ; CHECK-NEXT: SI_WATERFALL_LOOP %bb.1, implicit $exec
@@ -97,13 +100,14 @@ body: |
     ; CHECK-NEXT: $exec = S_MOV_B64_term [[S_MOV_B64_]]
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: .4:
-    ; CHECK-NEXT: S_SETPC_B64_return undef $sgpr2_sgpr3
+    ; CHECK-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31
    ADJCALLSTACKUP 0, 0, implicit-def $scc
    %g_ptr:_(p4) = COPY $sgpr0_sgpr1
    %func_ptr:_(p4) = G_LOAD %g_ptr(p4) :: (load (p4))
-   $sgpr2_sgpr3 = G_SI_CALL %func_ptr, 0, csr_amdgpu
+   %ret_addr:_(s64) = G_SI_CALL %func_ptr, 0, csr_amdgpu
+   $sgpr30_sgpr31 = COPY %ret_addr
    ADJCALLSTACKDOWN 0, 0, implicit-def $scc
-   S_SETPC_B64_return undef $sgpr2_sgpr3
+   S_SETPC_B64_return undef $sgpr30_sgpr31
 
 ...
 
@@ -139,7 +143,8 @@ body: |
     ; CHECK-NEXT: %g_ptr:sgpr(p0) = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p0) = COPY %g_ptr(p0)
     ; CHECK-NEXT: %func_ptr:vgpr(p0) = G_LOAD [[COPY]](p0) :: (load (p0))
-    ; CHECK-NEXT: $sgpr2_sgpr3 = G_SI_CALL [[MV]](p0), 0, csr_amdgpu, implicit $sgpr4, implicit $sgpr5, implicit-def $vgpr0
+    ; CHECK-NEXT: %ret_addr:sgpr(s64) = G_SI_CALL [[MV]](p0), 0, csr_amdgpu, implicit $sgpr4, implicit $sgpr5, implicit-def $vgpr0
+    ; CHECK-NEXT: $sgpr30_sgpr31 = COPY %ret_addr(s64)
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $scc
     ; CHECK-NEXT: $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
     ; CHECK-NEXT: SI_WATERFALL_LOOP %bb.1, implicit $exec
@@ -150,13 +155,14 @@ body: |
     ; CHECK-NEXT: $exec = S_MOV_B64_term [[S_MOV_B64_]]
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: .4:
-    ; CHECK-NEXT: S_SETPC_B64_return undef $sgpr2_sgpr3
+    ; CHECK-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31
    ADJCALLSTACKUP 0, 0, implicit-def $scc
    %g_ptr:_(p0) = COPY $sgpr0_sgpr1
    %func_ptr:_(p0) = G_LOAD %g_ptr(p0) :: (load (p0))
-   $sgpr2_sgpr3 = G_SI_CALL %func_ptr, 0, csr_amdgpu, implicit $sgpr4, implicit $sgpr5, implicit-def $vgpr0
+   %ret_addr:_(s64) = G_SI_CALL %func_ptr, 0, csr_amdgpu, implicit $sgpr4, implicit $sgpr5, implicit-def $vgpr0
+   $sgpr30_sgpr31 = COPY %ret_addr
    ADJCALLSTACKDOWN 0, 0, implicit-def $scc
-   S_SETPC_B64_return undef $sgpr2_sgpr3
+   S_SETPC_B64_return undef $sgpr30_sgpr31
 
 ...
 
@@ -192,7 +198,8 @@ body: |
     ; CHECK-NEXT: %g_ptr:sgpr(p4) = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p4) = COPY %g_ptr(p4)
     ; CHECK-NEXT: %func_ptr:vgpr(p4) = G_LOAD [[COPY]](p4) :: (load (p4))
-    ; CHECK-NEXT: $sgpr2_sgpr3 = G_SI_CALL [[MV]](p4), 0, csr_amdgpu, implicit $sgpr4, implicit $sgpr5, implicit-def $vgpr0
+    ; CHECK-NEXT: %ret_addr:sgpr(s64) = G_SI_CALL [[MV]](p4), 0, csr_amdgpu, implicit $sgpr4, implicit $sgpr5, implicit-def $vgpr0
+    ; CHECK-NEXT: $sgpr30_sgpr31 = COPY %ret_addr(s64)
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $scc
     ; CHECK-NEXT: $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
     ; CHECK-NEXT: SI_WATERFALL_LOOP %bb.1, implicit $exec
@@ -203,13 +210,14 @@ body: |
     ; CHECK-NEXT: $exec = S_MOV_B64_term [[S_MOV_B64_]]
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: .4:
-    ; CHECK-NEXT: S_SETPC_B64_return undef $sgpr2_sgpr3
+    ; CHECK-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31
    ADJCALLSTACKUP 0, 0, implicit-def $scc
    %g_ptr:_(p4) = COPY $sgpr0_sgpr1
    %func_ptr:_(p4) = G_LOAD %g_ptr(p4) :: (load (p4))
-   $sgpr2_sgpr3 = G_SI_CALL %func_ptr, 0, csr_amdgpu, implicit $sgpr4, implicit $sgpr5, implicit-def $vgpr0
+   %ret_addr:_(s64) = G_SI_CALL %func_ptr, 0, csr_amdgpu, implicit $sgpr4, implicit $sgpr5, implicit-def $vgpr0
+   $sgpr30_sgpr31 = COPY %ret_addr
    ADJCALLSTACKDOWN 0, 0, implicit-def $scc
-   S_SETPC_B64_return undef $sgpr2_sgpr3
+   S_SETPC_B64_return undef $sgpr30_sgpr31
 
 ...
 
