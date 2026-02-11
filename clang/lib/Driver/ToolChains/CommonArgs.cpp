@@ -3068,15 +3068,25 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
   }
 }
 
-void tools::addOpenCLBuiltinsLib(const Driver &D,
+void tools::addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
                                  const llvm::opt::ArgList &DriverArgs,
                                  llvm::opt::ArgStringList &CC1Args) {
-  const Arg *A = DriverArgs.getLastArg(options::OPT_libclc_lib_EQ);
-  if (!A)
-    return;
 
-  // If the namespec is of the form :filename we use it exactly.
-  StringRef LibclcNamespec(A->getValue());
+  StringRef LibclcNamespec;
+  const Arg *A = DriverArgs.getLastArg(options::OPT_libclc_lib_EQ);
+  if (A) {
+    // If the namespec is of the form :filename we use it exactly.
+    LibclcNamespec = A->getValue();
+  } else {
+    if (!TT.isAMDGPU() || TT.getEnvironment() != llvm::Triple::LLVM)
+      return;
+
+    // TODO: Should this accept following -stdlib to override?
+    if (DriverArgs.hasArg(options::OPT_no_offloadlib,
+                          options::OPT_nodefaultlibs, options::OPT_nostdlib))
+      return;
+  }
+
   bool FilenameSearch = LibclcNamespec.consume_front(":");
   if (FilenameSearch) {
     SmallString<128> LibclcFile(LibclcNamespec);
