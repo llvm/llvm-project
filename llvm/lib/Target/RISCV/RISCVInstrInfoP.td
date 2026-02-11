@@ -1495,6 +1495,14 @@ def riscv_subd : RVSDNode<"SUBD", SDT_RISCVIntBinOpD>;
 
 def riscv_wmulsu : RVSDNode<"WMULSU", SDTIntBinHiLoOp>;
 
+// Narrowing shift: res = lo, hi, shamt.
+def SDT_RISCVNarrowingShift : SDTypeProfile<1, 3, [SDTCisVT<0, i32>,
+                                                   SDTCisVT<1, i32>,
+                                                   SDTCisVT<2, i32>,
+                                                   SDTCisVT<3, i32>]>;
+def riscv_nsrl : RVSDNode<"NSRL", SDT_RISCVNarrowingShift>;
+def riscv_nsra : RVSDNode<"NSRA", SDT_RISCVNarrowingShift>;
+
 // Averaging subtraction, (a - b) >> 2
 def riscv_asub : RVSDNode<"ASUB", SDTIntBinOp>;
 def riscv_asubu : RVSDNode<"ASUBU", SDTIntBinOp>;
