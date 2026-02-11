@@ -10303,7 +10303,7 @@ SDValue RISCVTargetLowering::lowerShiftRightParts(SDValue Op, SelectionDAG &DAG,
         DAG.getNode(ISD::AND, DL, VT, Shamt, DAG.getConstant(31, DL, VT));
     SDValue HiRes =
         DAG.getNode(IsSRA ? ISD::SRA : ISD::SRL, DL, VT, Hi, ShamtMasked);
-    
+
     // Create a mask that is -1 when Shamt >= 32, 0 otherwise.
     // FIXME: We should use a select and let LowerSelect make the
     // optimizations.
