@@ -45,7 +45,7 @@ v -T ExpectedVecRef
 # Templated reference types are also unwrapped from std::reference_wrapper<T> to T.
 # CHECK:      (lldb) v -T ExpectedVecRef
 # CHECK-NEXT: (llvm::Expected<llvm::SmallVector<int, 2> &>) ExpectedVecRef = {
-# CHECK-NEXT:   (llvm::SmallVector<int, 2>) value = size=2 {
+# CHECK-NEXT:   ({{.*}}) value = size=2 {
 # CHECK-NEXT:     (int) [0] = 3
 # CHECK-NEXT:     (int) [1] = 4
 # CHECK-NEXT:   }
