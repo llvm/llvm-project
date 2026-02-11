@@ -1219,7 +1219,7 @@ Error LTO::checkPartiallySplit() {
 Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
   llvm::scope_exit CleanUp([this]() { cleanup(); });
 
-  if (Error EC = handleArchiveInputs())
+  if (Error EC = serializeInputsForDistribution())
     return EC;
 
   // Compute "dead" symbols, we don't want to import/export these!
