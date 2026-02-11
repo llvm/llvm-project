@@ -7,7 +7,7 @@
 #
 # ===----------------------------------------------------------------------===##
 
-from typing import List, Set
+from typing import List, Optional, Set
 import argparse
 import json
 import logging
@@ -75,13 +75,16 @@ def get_all_libcxx_commits(git_repo: str) -> Set[str]:
 def main(argv):
     parser = argparse.ArgumentParser(
         prog='commit-watch',
-        description='Watch for libc++ commits to run benchmarks on and print them to standard output.')
+        description='Watch for libc++ commits to run benchmarks on and print them to standard output.',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--lnt-url', type=str, required=True,
         help='The URL of the LNT instance to use as the source of truth for finding already-benchmarked commits.')
     parser.add_argument('--test-suite', type=str, required=True,
         help='The name of the test suite that we are producing results for on the LNT instance.')
     parser.add_argument('--machine', type=str, required=True,
         help='The name of the machine that we are producing results for on the LNT instance.')
+    parser.add_argument('-d', '--delay', type=int, required=False, default=10,
+        help='The delay (in seconds) to wait before successive polls.')
     parser.add_argument('--git-repo', type=directory_path, default=os.getcwd(),
         help='Optional path to the Git repository to use. By default, the current working directory is used.')
     parser.add_argument('-v', '--verbose', action='count', default=0,
@@ -96,24 +99,33 @@ def main(argv):
     elif args.verbose > 2:
         logging.basicConfig(level=VERY_VERBOSE)
 
+    last_commit: Optional[str] = None # last commit printed
     while True:
-        logging.info(f'Getting all libc++ commits in {args.git_repo}')
+        logging.info(f'Fetching all libc++ commits in {args.git_repo}')
         all_commits = get_all_libcxx_commits(args.git_repo)
         logging.log(VERY_VERBOSE, f'Found all libc++ commits: {all_commits}')
 
-        logging.info(f'Getting benchmarked commits for {args.machine}')
+        logging.info(f'Getting benchmarked commits for {args.machine} from {args.lnt_url}')
         benchmarked_commits = get_benchmarked_commits(args.lnt_url, args.test_suite, args.machine)
-        logging.debug(f'Found benchmarked commits: {benchmarked_commits}')
+        logging.log(VERY_VERBOSE, f'Found benchmarked commits: {benchmarked_commits}')
 
-        # Print the next commit that should be benchmarked
-        commits_to_benchmark = git_sort_revlist(args.git_repo, list(all_commits - benchmarked_commits))
-        most_recent = commits_to_benchmark[-1]
-        logging.info(f'Selected {most_recent}')
-        print(most_recent, flush=True)
+        # Print the next commit that should be benchmarked, but only when it changes over the one
+        # that we just printed. This ensures that we don't repeatedly print that the same benchmark
+        # should be benchmarked, which would otherwise happen when we are running the benchmarks but
+        # have not submitted to LNT yet.
+        commits_to_benchmark = all_commits - benchmarked_commits
+        if not commits_to_benchmark:
+            logging.info('No more commits to benchmark')
+        else:
+            commits_to_benchmark = git_sort_revlist(args.git_repo, list(commits_to_benchmark))
+            most_recent = commits_to_benchmark[-1]
+            if most_recent != last_commit:
+                logging.info(f'Selected {most_recent}')
+                print(most_recent, flush=True)
+                last_commit = most_recent
 
-        # Sleep between runs to ensure that the process reading data has time to make the
-        # submission, and also to avoid busy-polling.
-        time.sleep(5)
+        logging.debug(f'Waiting {args.delay}s before next poll')
+        time.sleep(args.delay)
 
 
 if __name__ == '__main__':
