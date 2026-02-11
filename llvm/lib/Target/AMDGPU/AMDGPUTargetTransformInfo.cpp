@@ -1341,8 +1341,60 @@ bool GCNTTIImpl::isProfitableToSinkOperands(Instruction *I,
     if (any_of(Ops, [&](Use *U) { return U->get() == Op.get(); }))
       continue;
 
-    if (match(&Op, m_FAbs(m_Value())) || match(&Op, m_FNeg(m_Value())))
+    if (match(&Op, m_FAbs(m_Value())) || match(&Op, m_FNeg(m_Value()))) {
       Ops.push_back(&Op);
+      continue;
+    }
+
+    // Check for zero-cost multiple use InsertElement/ExtractElement
+    // instructions
+    if (Instruction *OpInst = dyn_cast<Instruction>(Op.get())) {
+      if (OpInst->getType()->isVectorTy() && OpInst->getNumOperands() > 1) {
+        Instruction *VecOpInst = dyn_cast<Instruction>(OpInst->getOperand(0));
+        if (VecOpInst && VecOpInst->hasOneUse())
+          continue;
+
+        if (getVectorInstrCost(OpInst->getOpcode(), OpInst->getType(),
+                               TTI::TCK_RecipThroughput, 0,
+                               OpInst->getOperand(0),
+                               OpInst->getOperand(1)) == 0) {
+          Ops.push_back(&Op);
+          continue;
+        }
+      }
+    }
+
+    if (auto *Shuffle = dyn_cast<ShuffleVectorInst>(Op.get())) {
+
+      unsigned EltSize = DL.getTypeSizeInBits(
+          cast<VectorType>(Shuffle->getType())->getElementType());
+
+      // For i32 (or greater) shufflevectors, these will be lowered into a
+      // series of insert / extract elements, which will be coalesced away.
+      if (EltSize < 16 || !ST->has16BitInsts())
+        continue;
+
+      int NumSubElts, SubIndex;
+      if (Shuffle->changesLength()) {
+        if (Shuffle->increasesLength() && Shuffle->isIdentityWithPadding()) {
+          Ops.push_back(&Op);
+          continue;
+        }
+
+        if ((Shuffle->isExtractSubvectorMask(SubIndex) ||
+             Shuffle->isInsertSubvectorMask(NumSubElts, SubIndex)) &&
+            !(SubIndex & 0x1)) {
+          Ops.push_back(&Op);
+          continue;
+        }
+      }
+
+      if (Shuffle->isReverse() || Shuffle->isZeroEltSplat() ||
+          Shuffle->isSingleSource()) {
+        Ops.push_back(&Op);
+        continue;
+      }
+    }
   }
 
   return !Ops.empty();
