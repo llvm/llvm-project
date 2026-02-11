@@ -82,7 +82,7 @@ Will become:
   }
 
   void bar(string Value) {
-    setValue(std::move(Value);
+    setValue(std::move(Value));
   }
 
 Because the fix-it needs to change the signature of the function, it may break
