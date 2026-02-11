@@ -882,7 +882,7 @@ public:
       __enable_if_t<is_same<_CharT, value_type>::value && is_same<_Traits, char_traits<value_type> >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI friend basic_ostream<_CharT, _Traits>&
   operator<<(basic_ostream<_CharT, _Traits>& __os, const path& __p) {
-    __os << std::__quoted(__p.native());
+    __os << std::quoted(__p.native());
     return __os;
   }
 
@@ -892,7 +892,7 @@ public:
       __enable_if_t<!is_same<_CharT, value_type>::value || !is_same<_Traits, char_traits<value_type> >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI friend basic_ostream<_CharT, _Traits>&
   operator<<(basic_ostream<_CharT, _Traits>& __os, const path& __p) {
-    __os << std::__quoted(__p.string<_CharT, _Traits>());
+    __os << std::quoted(__p.string<_CharT, _Traits>());
     return __os;
   }
 
@@ -900,7 +900,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI friend basic_istream<_CharT, _Traits>&
   operator>>(basic_istream<_CharT, _Traits>& __is, path& __p) {
     basic_string<_CharT, _Traits> __tmp;
-    __is >> std::__quoted(__tmp);
+    __is >> std::quoted(__tmp);
     __p = __tmp;
     return __is;
   }
