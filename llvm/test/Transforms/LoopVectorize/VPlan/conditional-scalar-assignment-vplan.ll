@@ -2,8 +2,6 @@
 ; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize \
 ; RUN: -force-vector-width=4 -disable-output 2>&1 < %s | FileCheck %s
 
-; REQUIRES: asserts
-
 ; This function is derived from the following C program:
 ; int simple_csa_int_select(int N, int *data, int a) {
 ;   int t = -1;
