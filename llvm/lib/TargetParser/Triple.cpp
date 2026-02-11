@@ -79,7 +79,8 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
   case systemz:        return "s390x";
   case tce:            return "tce";
   case tcele:          return "tcele";
-  case tcele64:        return "tcele64";
+  case tcele64:
+    return "tcele64";
   case thumb:          return "thumb";
   case thumbeb:        return "thumbeb";
   case ve:             return "ve";
@@ -1915,7 +1916,9 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::spirv64:
     T.setArch(Triple::spirv32, getSubArch());
     break;
-  case Triple::tcele64:        T.setArch(Triple::tcele);   break;
+  case Triple::tcele64:
+    T.setArch(Triple::tcele);
+    break;
   case Triple::wasm64:         T.setArch(Triple::wasm32);  break;
   case Triple::x86_64:         T.setArch(Triple::x86);     break;
   }
@@ -1997,7 +2000,9 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::spirv32:
     T.setArch(Triple::spirv64, getSubArch());
     break;
-  case Triple::tcele:           T.setArch(Triple::tcele64);    break;
+  case Triple::tcele:
+    T.setArch(Triple::tcele64);
+    break;
   case Triple::thumb:           T.setArch(Triple::aarch64);    break;
   case Triple::thumbeb:         T.setArch(Triple::aarch64_be); break;
   case Triple::wasm32:          T.setArch(Triple::wasm64);     break;

@@ -83,31 +83,34 @@ public:
     sparcv9,     // Sparcv9: Sparcv9
     sparcel,     // Sparc: (endianness = little). NB: 'Sparcle' is a CPU variant
     systemz,     // SystemZ: s390x
-    tce,         // OpenASIP (http://openasip.org) / big endian 32b targets: tce
-    tcele,       // OpenASIP (http://openasip.org) / little endian 32b targets: tcele
-    tcele64,     // OpenASIP (http://openasip.org) / little endian 64b targets: tcele
-    thumb,       // Thumb (little endian): thumb, thumbv.*
-    thumbeb,     // Thumb (big endian): thumbeb
-    x86,         // X86: i[3-9]86
-    x86_64,      // X86-64: amd64, x86_64
-    xcore,       // XCore: xcore
-    xtensa,      // Tensilica: Xtensa
-    nvptx,       // NVPTX: 32-bit
-    nvptx64,     // NVPTX: 64-bit
-    amdil,       // AMDIL
-    amdil64,     // AMDIL with 64-bit pointers
-    hsail,       // AMD HSAIL
-    hsail64,     // AMD HSAIL with 64-bit pointers
-    spir,        // SPIR: standard portable IR for OpenCL 32-bit version
-    spir64,      // SPIR: standard portable IR for OpenCL 64-bit version
-    spirv,       // SPIR-V with logical memory layout.
-    spirv32,     // SPIR-V with 32-bit pointers
-    spirv64,     // SPIR-V with 64-bit pointers
-    kalimba,     // Kalimba: generic kalimba
-    shave,       // SHAVE: Movidius vector VLIW processors
-    lanai,       // Lanai: Lanai 32-bit
-    wasm32,      // WebAssembly with 32-bit pointers
-    wasm64,      // WebAssembly with 64-bit pointers
+    // OpenASIP (http://openasip.org) / big endian 32b targets: tce
+    tce,
+    // OpenASIP (http://openasip.org) / little endian 32b targets: tcele
+    tcele,
+    // OpenASIP (http://openasip.org) / little endian 64b targets: tcele
+    tcele64,
+    thumb,          // Thumb (little endian): thumb, thumbv.*
+    thumbeb,        // Thumb (big endian): thumbeb
+    x86,            // X86: i[3-9]86
+    x86_64,         // X86-64: amd64, x86_64
+    xcore,          // XCore: xcore
+    xtensa,         // Tensilica: Xtensa
+    nvptx,          // NVPTX: 32-bit
+    nvptx64,        // NVPTX: 64-bit
+    amdil,          // AMDIL
+    amdil64,        // AMDIL with 64-bit pointers
+    hsail,          // AMD HSAIL
+    hsail64,        // AMD HSAIL with 64-bit pointers
+    spir,           // SPIR: standard portable IR for OpenCL 32-bit version
+    spir64,         // SPIR: standard portable IR for OpenCL 64-bit version
+    spirv,          // SPIR-V with logical memory layout.
+    spirv32,        // SPIR-V with 32-bit pointers
+    spirv64,        // SPIR-V with 64-bit pointers
+    kalimba,        // Kalimba: generic kalimba
+    shave,          // SHAVE: Movidius vector VLIW processors
+    lanai,          // Lanai: Lanai 32-bit
+    wasm32,         // WebAssembly with 32-bit pointers
+    wasm64,         // WebAssembly with 64-bit pointers
     renderscript32, // 32-bit RenderScript
     renderscript64, // 64-bit RenderScript
     ve,             // NEC SX-Aurora Vector Engine
