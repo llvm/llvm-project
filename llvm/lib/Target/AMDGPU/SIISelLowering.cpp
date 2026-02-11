@@ -17181,21 +17181,15 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
       const uint64_t Mask32 = maskTrailingOnes<uint64_t>(32);
       const uint64_t CRHSInt = CRHSVal.getZExtValue();
 
-      ISD::CondCode NewCC = ISD::SETCC_INVALID;
-
-      if ((CRHSInt & Mask32) == 0 && (CC == ISD::SETULT || CC == ISD::SETUGE ||
-                                      CC == ISD::SETLT || CC == ISD::SETGE)) {
-        NewCC = CC;
-      } else if ((CRHSInt & Mask32) == Mask32 &&
-                 (CC == ISD::SETULE || CC == ISD::SETUGT || CC == ISD::SETLE ||
-                  CC == ISD::SETGT)) {
-        NewCC = CC;
-      }
-
-      if (NewCC != ISD::SETCC_INVALID)
+      if (/* setcc v.64, 0xXXXX'XXXX'0000'0000, lt/ge */
+          ((CRHSInt & Mask32) == 0 && (CC == ISD::SETULT || CC == ISD::SETUGE ||
+                                       CC == ISD::SETLT || CC == ISD::SETGE)) ||
+          /* setcc v.64, 0xXXXX'XXXX'FFFF'FFFF, le/gt */
+          ((CRHSInt & Mask32) == Mask32 &&
+           (CC == ISD::SETULE || CC == ISD::SETUGT || CC == ISD::SETLE ||
+            CC == ISD::SETGT)))
         return DAG.getSetCC(SL, N->getValueType(0), getHiHalf64(LHS, DAG),
-                            DAG.getConstant(CRHSInt >> 32, SL, MVT::i32),
-                            NewCC);
+                            DAG.getConstant(CRHSInt >> 32, SL, MVT::i32), CC);
     }
   }
 
