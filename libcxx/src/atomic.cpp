@@ -149,10 +149,15 @@ static void __platform_wait_on_address(void const* __ptr, void const* __val, May
   if constexpr (is_same_v<MaybeTimeout, NoTimeout>) {
     _umtx_op(const_cast<void*>(__ptr), UMTX_OP_WAIT, *reinterpret_cast<__cxx_contention_t*>(&buffer), nullptr, nullptr);
   } else {
-    __libcpp_thread_poll_with_backoff(
-        [=]() -> bool { return std::memcmp(const_cast<const void*>(__ptr), __val, _Size) != 0; },
-        __libcpp_timed_backoff_policy(),
-        std::chrono::nanoseconds(__timeout_ns));
+    timespec timeout{};
+    timeout.tv_sec  = __timeout_ns / 1'000'000'000;
+    timeout.tv_nsec = __timeout_ns % 1'000'000'000;
+
+    _umtx_op(const_cast<void*>(__ptr),
+             UMTX_OP_WAIT,
+             *reinterpret_cast<__cxx_contention_t*>(&buffer),
+             static_cast<void*>(static_cast<uintptr_t>(sizeof(timeout))),
+             &timeout);
   }
 }
 
