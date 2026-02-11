@@ -910,6 +910,8 @@ bool CompilerInstanceWithContext::computeDependencies(
                          FileType, PrevFID, IDLocation);
   }
 
+  // FIXME: Scan modules asynchronously here as well.
+
   SrcLocOffset++;
   SmallVector<IdentifierLoc, 2> Path;
   IdentifierInfo *ModuleID = PP.getIdentifierInfo(ModuleName);
