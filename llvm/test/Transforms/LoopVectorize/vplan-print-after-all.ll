@@ -19,12 +19,14 @@
 ; CHECK: VPlan after VPlanTransforms::truncateToMinimalBitwidths
 ; CHECK: VPlan after removeRedundantCanonicalIVs
 ; CHECK: VPlan after removeRedundantInductionCasts
+; CHECK: VPlan after reassociateHeaderMask
 ; CHECK: VPlan after simplifyRecipes
 ; CHECK: VPlan after removeDeadRecipes
 ; CHECK: VPlan after simplifyBlends
 ; CHECK: VPlan after legalizeAndOptimizeInductions
 ; CHECK: VPlan after narrowToSingleScalarRecipes
 ; CHECK: VPlan after removeRedundantExpandSCEVRecipes
+; CHECK: VPlan after reassociateHeaderMask
 ; CHECK: VPlan after simplifyRecipes
 ; CHECK: VPlan after removeBranchOnConst
 ; CHECK: VPlan after removeDeadRecipes

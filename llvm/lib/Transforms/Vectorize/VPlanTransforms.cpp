@@ -1612,7 +1612,7 @@ static void reassociateHeaderMask(VPlan &Plan) {
   if (!HeaderMask)
     return;
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
-      Plan.getEntry());
+      Plan.getVectorLoopRegion());
   VPValue *X, *Y;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT))
     for (VPRecipeBase &R : make_early_inc_range(*VPBB))
