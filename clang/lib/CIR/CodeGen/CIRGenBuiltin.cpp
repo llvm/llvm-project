@@ -1344,8 +1344,23 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_elementwise_canonicalize:
   case Builtin::BI__builtin_elementwise_copysign:
   case Builtin::BI__builtin_elementwise_fma:
-  case Builtin::BI__builtin_elementwise_fshl:
-  case Builtin::BI__builtin_elementwise_fshr:
+    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin_elementwise_fshl: {
+    mlir::Location loc = getLoc(e->getExprLoc());
+    mlir::Value a = emitScalarExpr(e->getArg(0));
+    mlir::Value b = emitScalarExpr(e->getArg(1));
+    mlir::Value c = emitScalarExpr(e->getArg(2));
+    return RValue::get(builder.emitIntrinsicCallOp(loc, "fshl", a.getType(),
+                                                   mlir::ValueRange{a, b, c}));
+  }
+  case Builtin::BI__builtin_elementwise_fshr: {
+    mlir::Location loc = getLoc(e->getExprLoc());
+    mlir::Value a = emitScalarExpr(e->getArg(0));
+    mlir::Value b = emitScalarExpr(e->getArg(1));
+    mlir::Value c = emitScalarExpr(e->getArg(2));
+    return RValue::get(builder.emitIntrinsicCallOp(loc, "fshr", a.getType(),
+                                                   mlir::ValueRange{a, b, c}));
+  }
   case Builtin::BI__builtin_elementwise_add_sat:
   case Builtin::BI__builtin_elementwise_sub_sat:
   case Builtin::BI__builtin_elementwise_max:
