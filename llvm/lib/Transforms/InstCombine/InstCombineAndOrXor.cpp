@@ -5179,26 +5179,21 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
   return nullptr;
 }
 
-// ((X + C) & M) ^ M --> ((-1 − C) − X) & M
+// ((X + C) & M) ^ M --> (~C − X) & M
 static Instruction *foldMaskedAddXorPattern(BinaryOperator &I,
                                             InstCombiner::BuilderTy &Builder) {
-  Value *InnerVal;
-  const APInt *AndMask, *XorMask, *AddC;
+  Value *X, *Mask, *AddC;
   BinaryOperator *AddInst;
 
-  if (match(&I,
-            m_Xor(m_OneUse(m_And(m_OneUse(m_CombineAnd(
-                                     m_BinOp(AddInst),
-                                     m_Add(m_Value(InnerVal), m_APInt(AddC)))),
-                                 m_APInt(AndMask))),
-                  m_APInt(XorMask))) &&
-      *AndMask == *XorMask) {
-    APInt NewConst = ~(*AddC);
-    auto *NewSub = Builder.CreateSub(ConstantInt::get(I.getType(), NewConst),
-                                     InnerVal, "", AddInst->hasNoUnsignedWrap(),
-                                     AddInst->hasNoSignedWrap());
-    return BinaryOperator::CreateAnd(NewSub,
-                                     ConstantInt::get(I.getType(), *AndMask));
+  if (match(&I, m_Xor(m_OneUse(m_And(m_OneUse(m_CombineAnd(
+                                         m_BinOp(AddInst),
+                                         m_Add(m_Value(X), m_Value(AddC)))),
+                                     m_Value(Mask))),
+                      m_Deferred(Mask)))) {
+    Value *NotC = Builder.CreateNot(AddC);
+    Value *NewSub = Builder.CreateSub(NotC, X, "", AddInst->hasNoUnsignedWrap(),
+                                      AddInst->hasNoSignedWrap());
+    return BinaryOperator::CreateAnd(NewSub, Mask);
   }
 
   return nullptr;
