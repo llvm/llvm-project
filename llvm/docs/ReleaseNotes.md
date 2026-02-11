@@ -59,8 +59,17 @@ Makes programs 10x faster by doing Special New Thing.
 Changes to the LLVM IR
 ----------------------
 
+* Removed `llvm.convert.to.fp16` and `llvm.convert.from.fp16`
+  intrinsics. These are equivalent to `fptrunc` and `fpext` with half
+  with a bitcast.
+
+* "denormal-fp-math" and "denormal-fp-math-f32" string attributes were
+  migrated to first-class denormal_fpenv attribute.
+
 Changes to LLVM infrastructure
 ------------------------------
+
+* Removed TypePromoteFloat legalization from SelectionDAG
 
 Changes to building LLVM
 ------------------------
@@ -79,6 +88,8 @@ Changes to the AArch64 Backend
 
 Changes to the AMDGPU Backend
 -----------------------------
+
+* Initial support for gfx1310
 
 Changes to the ARM Backend
 --------------------------
@@ -101,11 +112,28 @@ Changes to the LoongArch Backend
 Changes to the MIPS Backend
 ---------------------------
 
+Changes to the NVPTX Backend
+----------------------------
+
+* The default SM version has been changed from `sm_30` to `sm_75`. `sm_75` is
+  the oldest GPU variant compatible with the widest range of recent major CUDA
+  Toolkit versions (11/12/13).
+
 Changes to the PowerPC Backend
 ------------------------------
 
 Changes to the RISC-V Backend
 -----------------------------
+
+* `llvm-objdump` now has support for `--symbolize-operands` with RISC-V.
+* `-mcpu=spacemit-x100` was added.
+* Change P extension version to match the 019 draft specification. Encoded in `-march` as `0p19`.
+* Mnemonics for MOP/HINT-based instructions (`lpad`, `pause`, `ntl.*`, `c.ntl.*`,
+  `sspush`, `sspopchk`, `ssrdp`, `c.sspush`, `c.sspopchk`) are now always
+  available in the assembler and disassembler without requiring their respective
+  extensions.
+* Adds experimental assembler support for the 'Zvabd` (RISC-V Integer Vector
+  Absolute Difference) extension.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -113,8 +141,15 @@ Changes to the WebAssembly Backend
 Changes to the Windows Target
 -----------------------------
 
+* The `.seh_startchained` and `.seh_endchained` assembly instructions have been removed and replaced
+  with a new `.seh_splitchained` instruction.
+
 Changes to the X86 Backend
 --------------------------
+
+* `.att_syntax` directive is now emitted for assembly files when AT&T syntax is
+  in use. This matches the behaviour of Intel syntax and aids with
+  compatibility when changing the default Clang syntax to the Intel syntax.
 
 Changes to the OCaml bindings
 -----------------------------
@@ -138,9 +173,15 @@ Changes to the LLVM tools
 -------------------------
 
 * `llvm-objcopy` no longer corrupts the symbol table when `--update-section` is called for ELF files.
+* `FileCheck` option `-check-prefix` now accepts a comma-separated list of
+  prefixes, making it an alias of the existing `-check-prefixes` option.
 
 Changes to LLDB
 ---------------
+
+* Support for FreeBSD on MIPS64 has been removed.
+* The minimum assumed version of FreeBSD is now 14. The effect of which is that watchpoints are
+  assumed to be supported.
 
 Changes to BOLT
 ---------------

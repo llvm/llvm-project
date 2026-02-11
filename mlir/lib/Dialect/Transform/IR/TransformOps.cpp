@@ -35,6 +35,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
@@ -113,12 +114,17 @@ void transform::AlternativesOp::getSuccessorRegions(
                                             ->getParentRegion()
                                             ->getRegionNumber() +
                                         1)) {
-    regions.emplace_back(&alternative, !getOperands().empty()
-                                           ? alternative.getArguments()
-                                           : Block::BlockArgListType());
+    regions.emplace_back(&alternative);
   }
   if (!point.isParent())
-    regions.push_back(RegionSuccessor::parent(getResults()));
+    regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange
+transform::AlternativesOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isParent())
+    return getOperation()->getResults();
+  return successor.getSuccessor()->getArguments();
 }
 
 void transform::AlternativesOp::getRegionInvocationBounds(
@@ -168,8 +174,8 @@ transform::AlternativesOp::apply(transform::TransformRewriter &rewriter,
     // visible handle) to the cloned scope operations. This effectively prevents
     // the transformation from accessing any IR outside the scope.
     auto scope = state.make_region_scope(reg);
-    auto clones = llvm::to_vector(
-        llvm::map_range(originals, [](Operation *op) { return op->clone(); }));
+    auto clones = llvm::map_to_vector(
+        originals, [](Operation *op) { return op->clone(); });
     llvm::scope_exit deleteClones([&] {
       for (Operation *clone : clones)
         clone->erase();
@@ -1738,7 +1744,7 @@ void transform::ForeachOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   Region *bodyRegion = &getBody();
   if (point.isParent()) {
-    regions.emplace_back(bodyRegion, bodyRegion->getArguments());
+    regions.emplace_back(bodyRegion);
     return;
   }
 
@@ -1746,8 +1752,13 @@ void transform::ForeachOp::getSuccessorRegions(
   assert(point.getTerminatorPredecessorOrNull()->getParentRegion() ==
              &getBody() &&
          "unexpected region index");
-  regions.emplace_back(bodyRegion, bodyRegion->getArguments());
-  regions.push_back(RegionSuccessor::parent(getResults()));
+  regions.emplace_back(bodyRegion);
+  regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange transform::ForeachOp::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(getResults())
+                              : ValueRange(getBody().getArguments());
 }
 
 OperandRange
@@ -2496,6 +2507,17 @@ verifyNamedSequenceOp(transform::NamedSequenceOp op, bool emitWarnings) {
   if (op.getBody().front().empty())
     return emitSilenceableFailure(op) << "expected a non-empty body block";
 
+  // Check that all operations in the body implement TransformOpInterface
+  for (Operation &child : op.getBody().front().without_terminator()) {
+    if (!isa<transform::TransformOpInterface>(child)) {
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableFailure(&child)
+          << "expected children ops to implement TransformOpInterface";
+      diag.attachNote(child.getLoc()) << "op without interface";
+      return diag;
+    }
+  }
+
   Operation *terminator = &op.getBody().front().back();
   if (!isa<transform::YieldOp>(terminator)) {
     DiagnosedSilenceableFailure diag = emitSilenceableFailure(op)
@@ -2648,13 +2670,13 @@ transform::SplitHandleOp::apply(transform::TransformRewriter &rewriter,
                                 transform::TransformState &state) {
   int64_t numPayloads =
       llvm::TypeSwitch<Type, int64_t>(getHandle().getType())
-          .Case<TransformHandleTypeInterface>([&](auto x) {
+          .Case([&](TransformHandleTypeInterface x) {
             return llvm::range_size(state.getPayloadOps(getHandle()));
           })
-          .Case<TransformValueHandleTypeInterface>([&](auto x) {
+          .Case([&](TransformValueHandleTypeInterface x) {
             return llvm::range_size(state.getPayloadValues(getHandle()));
           })
-          .Case<TransformParamTypeInterface>([&](auto x) {
+          .Case([&](TransformParamTypeInterface x) {
             return llvm::range_size(state.getParams(getHandle()));
           })
           .DefaultUnreachable("unknown transform dialect type interface");
@@ -2873,7 +2895,7 @@ static bool isValueUsePotentialConsumer(OpOperand &use) {
   return isHandleConsumed(use.get(), iface);
 }
 
-LogicalResult
+static LogicalResult
 checkDoubleConsume(Value value,
                    function_ref<InFlightDiagnostic()> reportError) {
   OpOperand *potentialConsumer = nullptr;
@@ -2969,16 +2991,23 @@ void transform::SequenceOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (point.isParent()) {
     Region *bodyRegion = &getBody();
-    regions.emplace_back(bodyRegion, getNumOperands() != 0
-                                         ? bodyRegion->getArguments()
-                                         : Block::BlockArgListType());
+    regions.emplace_back(bodyRegion);
     return;
   }
 
   assert(point.getTerminatorPredecessorOrNull()->getParentRegion() ==
              &getBody() &&
          "unexpected region index");
-  regions.push_back(RegionSuccessor::parent(getResults()));
+  regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange
+transform::SequenceOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (getNumOperands() == 0)
+    return ValueRange();
+  if (successor.isParent())
+    return getResults();
+  return getBody().getArguments();
 }
 
 void transform::SequenceOp::getRegionInvocationBounds(

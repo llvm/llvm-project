@@ -37,8 +37,10 @@ private:
   AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *) const override;
   bool shouldScalarizeBinop(SDValue VecOp) const override;
-  FastISel *createFastISel(FunctionLoweringInfo &FuncInfo,
-                           const TargetLibraryInfo *LibInfo) const override;
+  FastISel *
+  createFastISel(FunctionLoweringInfo &FuncInfo,
+                 const TargetLibraryInfo *LibInfo,
+                 const LibcallLoweringInfo *LibcallLowering) const override;
   MVT getScalarShiftAmountTy(const DataLayout &DL, EVT) const override;
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
@@ -59,8 +61,8 @@ private:
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;
-  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
-                          MachineFunction &MF,
+  void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
+                          const CallBase &I, MachineFunction &MF,
                           unsigned Intrinsic) const override;
 
   void computeKnownBitsForTargetNode(const SDValue Op, KnownBits &Known,
@@ -117,6 +119,8 @@ private:
   SDValue LowerAccessVectorElement(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerShift(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFMIN(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFMAX(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerStore(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerMUL_LOHI(SDValue Op, SelectionDAG &DAG) const;
@@ -131,7 +135,8 @@ private:
 
 namespace WebAssembly {
 FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
-                         const TargetLibraryInfo *libInfo);
+                         const TargetLibraryInfo *libInfo,
+                         const LibcallLoweringInfo *libcallLowering);
 } // end namespace WebAssembly
 
 } // end namespace llvm

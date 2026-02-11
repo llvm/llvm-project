@@ -64,4 +64,3 @@ static void crash_if_crash_tests_unsupported() {
   __builtin_trap();
 #endif
 }
-

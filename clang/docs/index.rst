@@ -123,7 +123,9 @@ Design Documents
    ControlFlowIntegrityDesign
    HardwareAssistedAddressSanitizerDesign.rst
    ConstantInterpreter
+   LLVMExceptionHandlingCodeGen
    ClangIRCodeDuplication
+   ClangIRCleanupAndEHDesign
 
 Indices and tables
 ==================

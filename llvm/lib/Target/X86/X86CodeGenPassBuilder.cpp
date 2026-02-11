@@ -105,12 +105,10 @@ Error X86CodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {
   // For ELF, cleanup any local-dynamic TLS accesses
   if (TM.getTargetTriple().isOSBinFormatELF() &&
       getOptLevel() != CodeGenOptLevel::None) {
-    // TODO(boomanaiden154): Add CleanupLocalDynamicTLSPass here once it has
-    // been ported.
+    addMachineFunctionPass(X86CleanupLocalDynamicTLSPass(), PMW);
   }
 
-  // TODO(boomanaiden154): Add X86GlobalPassRegPass here once it has been
-  // ported.
+  addMachineFunctionPass(X86GlobalBaseRegPass(), PMW);
   addMachineFunctionPass(X86ArgumentStackSlotPass(), PMW);
   return Error::success();
 }
@@ -158,8 +156,7 @@ void X86CodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) const {
   // mitigation. This is to prevent slow downs due to
   // analyses needed by the LVIHardening pass when compiling at -O0.
   if (getOptLevel() != CodeGenOptLevel::None) {
-    // TODO(boomanaiden154): Add X86LoadValueInjectionLoadHardeningPass here
-    // once it has been ported.
+    addMachineFunctionPass(X86LoadValueInjectionLoadHardeningPass(), PMW);
   }
 }
 
@@ -175,8 +172,7 @@ void X86CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
     addMachineFunctionPass(BreakFalseDepsPass(), PMW);
   }
 
-  // TODO(boomanaiden154): Add X86IndirectBranchTrackingPass here once it has
-  // been ported.
+  addMachineFunctionPass(X86IndirectBranchTrackingPass(), PMW);
   // TODO(boomanaiden154): Add X86IssueVZeroUpperPass here once it has been
   // ported.
 
@@ -205,12 +201,11 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {
   // passes don't move the code around the LFENCEs in a way that will hurt the
   // correctness of this pass. This placement has been shown to work based on
   // hand inspection of the codegen output.
-  // TODO(boomanaiden154): Add X86SpeculativeExecutionSideEffectSuppresionPass
-  // here once it has been ported.
+  addMachineFunctionPass(X86SpeculativeExecutionSideEffectSuppressionPass(),
+                         PMW);
   // TODO(boomanaiden154): Add X86IndirectThunksPass here
   // once it has been ported.
-  // TODO(boomanaiden154): Add X86ReturnThunksPass here
-  // once it has been ported.
+  addMachineFunctionPass(X86ReturnThunksPass(), PMW);
 
   // Insert extra int3 instructions after trailing call instructions to avoid
   // issues in the unwinder.
@@ -222,19 +217,21 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {
   // instructions.
   if (!TT.isOSDarwin() &&
       (!TT.isOSWindows() ||
-       MAI->getExceptionHandlingType() == ExceptionHandling::DwarfCFI))
-    addMachineFunctionPass(CFIInstrInserterPass(), PMW);
+       MAI->getExceptionHandlingType() == ExceptionHandling::DwarfCFI)) {
+    // TODO(boomanaiden154): Add CFInstrInserterPass here when it has been
+    // ported.
+  }
 
   if (TT.isOSWindows()) {
     // Identify valid longjmp targets for Windows Control Flow Guard.
-    addMachineFunctionPass(CFGuardLongjmpPass(), PMW);
+    // TODO(boomanaiden154): Add CFGuardLongjmpPass here when it has been
+    // ported.
     // Identify valid eh continuation targets for Windows EHCont Guard.
     // TODO(boomanaiden154): Add EHContGuardTargetsPass when it has been
     // ported.
   }
 
-  // TODO(boomanaiden154): Add X86LoadValueInjectionRetHardeningPass here once
-  // it has been ported.
+  addMachineFunctionPass(X86LoadValueInjectionRetHardeningPass(), PMW);
 
   // Insert pseudo probe annotation for callsite profiling
   // TODO(boomanaiden154): Add PseudoProberInserterPass here once it has been
@@ -248,8 +245,7 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {
   // Analyzes and emits pseudos to support Win x64 Unwind V2. This pass must run
   // after all real instructions have been added to the epilog.
   if (TT.isOSWindows() && TT.isX86_64()) {
-    // TODO(boomanaiden154): Add X86WinEHUnwindV2Pass here once it has been
-    // ported.
+    addMachineFunctionPass(X86WinEHUnwindV2Pass(), PMW);
   }
 }
 
