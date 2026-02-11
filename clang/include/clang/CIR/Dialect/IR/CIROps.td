@@ -666,6 +666,51 @@ def CIR_LoadOp : CIR_Op<"load", [
 }
 
 //===----------------------------------------------------------------------===//
+// MaskLoadOp
+//===----------------------------------------------------------------------===//
+
+def CIR_VecMaskedLoadOp : CIR_Op<"vec.masked_load", [
+  TypesMatchWith<"type of 'result' must match pointee type of 'addr'",
+    "addr", "result", "mlir::cast<cir::PointerType>($_self).getPointee()">
+]> {
+  let summary = "Masked vector load from memory";
+  let description = [{
+    `cir.masked_load` conditionally loads elements from memory based on a mask.
+    Elements for which the mask is false are taken from `pass_thru`.
+
+    This operation corresponds to LLVM's masked load op (`llvm.intr.maskedload`)
+    and lower directly to it.
+
+    `alignment` can be provided to override the default alignment derived from
+    the pointee/element type data layout.
+
+    Example:
+
+    ```mlir
+    %v = cir.masked_load align(16) %ptr, %mask, %passthru
+         : !cir.ptr<i32>, <4xi1>, <4xi32> -> <4xi32>
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PointerType, "base address (points to element type)", [MemRead]>:$addr,
+    CIR_VectorType:$mask,
+    CIR_VectorType:$pass_thru,
+    OptionalAttr<IntValidAlignment<I64Attr>>:$alignment
+  );
+
+  let results = (outs CIR_AnyType:$result);
+
+  let assemblyFormat = [{
+    (`align` `(` $alignment^ `)`)? 
+    $addr `,` $mask `,` $pass_thru
+    `:` qualified(type($addr)) `,` type($mask) `,` type($pass_thru)
+    `->` type($result)
+    attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // StoreOp
 //===----------------------------------------------------------------------===//
 
