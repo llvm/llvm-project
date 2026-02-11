@@ -193,7 +193,6 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(IndentCaseBlocks);
   CHECK_PARSE_BOOL(IndentCaseLabels);
   CHECK_PARSE_BOOL(IndentExportBlock);
-  CHECK_PARSE_BOOL(IndentGotoLabels);
   CHECK_PARSE_BOOL(IndentRequiresClause);
   CHECK_PARSE_BOOL_FIELD(IndentRequiresClause, "IndentRequires");
   CHECK_PARSE_BOOL(IndentWrappedFunctionNames);
@@ -891,6 +890,20 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::IEBS_Indent);
   CHECK_PARSE("IndentExternBlock: false", IndentExternBlock,
               FormatStyle::IEBS_NoIndent);
+
+  Style.IndentGotoLabels = FormatStyle::IGLS_NoIndent;
+  CHECK_PARSE("IndentGotoLabels: LeftAlign", IndentGotoLabels,
+              FormatStyle::IGLS_LeftAlign);
+  CHECK_PARSE("IndentGotoLabels: NoIndent", IndentGotoLabels,
+              FormatStyle::IGLS_NoIndent);
+  CHECK_PARSE("IndentGotoLabels: Indent", IndentGotoLabels,
+              FormatStyle::IGLS_Indent);
+  CHECK_PARSE("IndentGotoLabels: HalfIndent", IndentGotoLabels,
+              FormatStyle::IGLS_HalfIndent);
+  CHECK_PARSE("IndentGotoLabels: false", IndentGotoLabels,
+              FormatStyle::IGLS_LeftAlign);
+  CHECK_PARSE("IndentGotoLabels: true", IndentGotoLabels,
+              FormatStyle::IGLS_NoIndent);
 
   Style.BitFieldColonSpacing = FormatStyle::BFCS_None;
   CHECK_PARSE("BitFieldColonSpacing: Both", BitFieldColonSpacing,
