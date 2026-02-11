@@ -1,15 +1,16 @@
-# PDT Implementation: Concrete Type Instantiation
+<!--===- docs/PDT_ConcreteTypes.md
 
-This document describes the design for implementing Parameterized Derived Types
-(PDTs) with LEN type parameters in Flang using a "concrete type" approach. This
-strategy resolves LEN-dependent type layouts at runtime and caches the results,
-combining the flexibility of runtime evaluation with the performance of
-pre-computed offsets.
+   Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+   See https://llvm.org/LICENSE.txt for license information.
+   SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+-->
 
-## Problem Statement
+# Parameterized Derived Types with LEN Type Parameters
 
-For PDTs with LEN parameters, component offsets depend on runtime values:
+## The LEN Type Parameter Runtime Problem
+
+For PDTs with LEN parameters, component offsets can depend either entirely or partially on runtime values:
 
 ```fortran
 ! Simple PDT with LEN type parameter
@@ -37,19 +38,13 @@ type :: nestedType(A, B)
 end type
 ```
 
-The `after_str` component's offset cannot be determined at compile time because
-`N` is a LEN parameter whose value is only known on instantiation.
 
 
-## Solution: Concrete Type Instantiation
+## Proposed Solution: Concrete Type Instantiation
 
-The concrete type approach creates resolved type descriptions lazily at runtime
-and caches them. All instances with identical LEN values share the same
-concrete type, providing O(1) component access after initial instantiation.
+The concrete type approach creates resolved type descriptions lazily at runtime and caches them. All instances with identical LEN values share the same concrete type, providing O(1) component access after initial instantiation.
 
-For any specific set of LEN values, the type layout is fully determined. All
-instances of `pdt(10)` have identical component offsets. Rather than
-recomputing offsets on each access, we resolve them once and cache the result.
+For any specific set of LEN values, the type layout is fully determined. For example, all instances of `pdt(10)` will have identical component offsets. Rather than recomputing offsets on each access, we resolve them once and cache the result.
 
 
 ### Architecture Overview
@@ -143,11 +138,12 @@ class Component {
 };
 ```
 
-The `characterLen_` and `bounds_` fields use `Value` to express LEN-dependent
-sizes. The `alignment_` field stores `log2(alignment)` for correct layout
-computation on heterogeneous systems (CPU/GPU). We add a public method for
-changing `offset_` so we can create the ConcreteType members with proper
-offsets.
+The `characterLen_` field and the `Value` elements within `bounds_` use the `Value::Genre::LenParameter` mechanism to express LEN-dependent sizes and extents.
+
+The `alignment_` field stores `log2(alignment)` for correct layout
+computation on heterogeneous systems (CPU/GPU).
+
+We also add/expose a public method for changing `offset_` so we can create the ConcreteType members with proper offsets.
 
 ### DescriptorAddendum
 
@@ -161,25 +157,16 @@ class DescriptorAddendum {
 };
 ```
 
-The `len_` field is changed from a fixed-size `TypeParameterValue len_[1]`
-array to `FlexibleArray<TypeParameterValue>`. This template wraps a single
-inline element `len_ntry_` and provides `operator[]` via pointer arithmetic,
-emulating a C flexible array member. Note that this is a different
-`FlexibleArray` from the one in `ISO_Fortran_binding.h` used for `dim`;
-that version inherits from `T` and indexes via `this`-pointer arithmetic. The
-`DescriptorAddendum::SizeInBytes()` calculation accounts for the one
-inline element: additional LEN parameters beyond the first require trailing
-storage allocated immediately after the struct.
+The `len_` field is changed from a fixed-size `TypeParameterValue len_[1]` array to `FlexibleArray<TypeParameterValue>`. This template wraps a single inline element `len_ntry_` and provides `operator[]` via pointer arithmetic in order to emulate a C flexible array member.
+
+Note that this is a slightly different `FlexibleArray` from the one in `ISO_Fortran_binding.h` used for `dim`; that version inherits from `T` and indexes via `this`-pointer arithmetic. 
 
 
 ## KIND Type Parameter Instantiation
 
-Flang already uses an instantiation pattern for KIND type parameters that serves
-as our initial model for LEN parameter handling.
+Flang already uses an instantiation pattern for KIND type parameters that serves as our initial model for LEN parameter handling.
 
-For KIND parameters, the compiler generates a separate `DerivedType` at compile
-time for each unique KIND instantiation. Each instantiated type points back to
-the original uninstantiated type via `uninstantiated_`:
+For KIND parameters, the compiler generates a separate `DerivedType` at compile time for each unique KIND instantiation. Each instantiated type points back to the original uninstantiated type via `uninstantiated_`:
 
 ```
 +--------------------+                  +---------------------------+
@@ -202,14 +189,13 @@ the original uninstantiated type via `uninstantiated_`:
 +-------------------+                  +----------------------+
 ```
 
-Descriptors A and B both store the same pointer (`0x7fff8a001000`) in
-their `derivedType_` field, referencing a single shared generic `DerivedType`
-structure.
+Here, descriptors `A` and `B` both store the same pointer (`0x7fff8a001000`) in their `derivedType_` field, referencing a single shared generic `DerivedType` structure.
 
-The `SameTypeAs` intrinsic in `derived-api` uses this pattern: if direct pointer comparison fails, it compares `uninstantiatedType()` pointers. This allows type matching across module boundaries.
+The `SameTypeAs` intrinsic in `derived-api` uses this pattern:
+if direct pointer comparison fails, it compares `uninstantiatedType()`
+pointers which allows for Type matching across module boundaries.
 
-For LEN parameters, we apply the same pattern but create concrete types at
-runtime:
+For LEN parameters, we apply the same pattern but create concrete types at runtime:
 
 - Concrete type's `uninstantiated_` points to the generic type
 - Cache key: `(genericType, len_values...)` for uniqueing the DerivedType
@@ -229,19 +215,14 @@ GetConcreteType(const DerivedType &genericType,
                 Terminator &terminator);
 ```
 
-1. If `genericType.LenParameters() == 0`, return `&genericType` (no LEN params)
-2. If `genericType.uninstantiatedType() != &genericType`, return `&genericType`
-   (already a concrete type from a previous call)
+1. If `genericType.LenParameters() == 0`, return `&genericType`
+2. If `genericType.uninstantiatedType() != &genericType`, it is already a Concrete type; return `&genericType`
 3. Compute hash from `(genericType*, len_values...)`
 4. Check cache; if found, return cached concrete type
 5. Create new concrete type with resolved offsets
 6. Insert into cache; return pointer
 
-Step 2 handles the case where a descriptor's `derivedType_` was previously set
-to a concrete type, and a subsequent operation (e.g., `AllocatableAllocate`)
-passes that already-resolved type back to `GetConcreteType`. Concrete types
-have `uninstantiatedType_` pointing to the original generic; generic types
-point to themselves.
+Step 2 handles the case where a descriptor's `derivedType_` was previously set to a concrete type, and a subsequent operation (e.g., `AllocatableAllocate`) passes that already-resolved type back to `GetConcreteType`. Concrete types have `uninstantiatedType_` pointing to the original generic; generic types point to themselves.
 
 
 ### Concrete Type Creation
@@ -249,13 +230,12 @@ point to themselves.
 When creating a new concrete type:
 
 1. Allocate `sizeof(DerivedType) + numComponents * sizeof(Component)`
-2. `memcpy` the generic type (Assumption: generic uses immutable metadata)
+2. `memcpy` the generic type (**Assumption: generic uses immutable metadata**)
 3. Duplicate the components of the `Component[]` array
 4. Patch the pointer members of `DerivedType`:
    - Set `component_` descriptor to point to new Component array
    - Set `uninstantiated_` to point back to generic type
-5. For each component, resolve/compute actual offset based on
-   alignment and sizes (which themselves may depend on the LEN values)
+5. For each component, resolve/compute actual offset based on alignment and sizes
 6. Set sizeInBytes to the final padded size of the resolved type
 
 
@@ -264,19 +244,11 @@ When creating a new concrete type:
 Component offsets are computed sequentially, respecting alignment. Each
 component's size is determined by its genre:
 
-- **Non-Data genres** (Allocatable, Pointer, Automatic): the component stores
-  a Descriptor, so its size is `Descriptor::SizeInBytes(rank, ...)` and
-  alignment is `alignof(Descriptor)`.
-- **Nested PDT with LEN parameters** (Data genre, Derived category):
-  `GetConcreteType` is called recursively, depth-first, to resolve the inner
-  type. The resolved `sizeInBytes` is then used as the element size,
-  and the component's `derivedType_` pointer is updated to the concrete type.
-- **All other Data components** (intrinsic types, non-PDT derived, KIND-only
-  PDT): element byte size times element count.
+- **Non-Data genres** (Allocatable, Pointer, Automatic): the component stores a Descriptor, so its size is `Descriptor::SizeInBytes(rank, ...)` and alignment is `alignof(Descriptor)`.
+- **Nested PDT with LEN parameters** (Data genre, Derived category): `GetConcreteType` is called recursively, depth-first, to resolve the inner type. The resolved `sizeInBytes` is then used as the element size, and the component's `derivedType_` pointer is updated to the concrete type.
+- **All other Data components** (intrinsic types, non-PDT derived, KIND-only PDT): element byte size times element count.
 
-For array components, the element count is computed from the bounds (which
-may themselves be LEN-dependent `Value` expressions resolved against the
-parent descriptor).
+For array components, the element count is computed from the bounds - which may themselves be nested LEN-dependent `Value` expressions.
 
 ```cpp
 // Simplified view of ResolveComponentOffsets
@@ -292,13 +264,10 @@ sizeInBytes = alignTo(currentOffset, maxAlignment);
 
 ### Cache Design
 
-The cache uses a custom dynamically-resizing hash table (`ConcreteTypeCache`)
-that relies only on C-style memory management (`malloc`, `calloc`, `free`).
-The hash value is used directly as the lookup key to avoid heap allocation
-on every query:
+The cache uses a custom dynamically-sized hash table (`ConcreteTypeCache`) that relies only on C-style memory management (`malloc`, `calloc`, `free`), and uses the hash value directly as the lookup key:
 
 ```cpp
-// Hash combining formula based on Boost's hash_combine.
+// Hashing, based on Boost's hash_combine.
 std::uint64_t
 ComputeConcreteTypeHash(const DerivedType &genericType,
                         const DescriptorAddendum &addendum,
@@ -314,35 +283,19 @@ ComputeConcreteTypeHash(const DerivedType &genericType,
 }
 ```
 
-The hash table starts with 31 buckets (tunable at build time using
--DFLANG_RT_PDT_CACHE_INITIAL_BUCKET_CNT), each holding a linked list of
-`CacheEntry` nodes, and the bucket count doubles when the average load reaches
-2 entries per bucket (again, tunable at build time using the define
--DFLANG_RT_PDT_CACHE_MAX_LOAD_FACTOR). Bucket arrays are allocated with
-`std::calloc` while linked-list entries (`CacheEntry` nodes) use the runtime's
-`New<T>` / `FreeMemory` allocator. The concrete `DerivedType` objects themselves
-are allocated with `std::calloc`, not `New<T>`.
+The hash table starts with 31 buckets (currently tunable at build time using `-DFLANG_RT_PDT_CACHE_INITIAL_BUCKET_CNT`), each holding a linked list of `CacheEntry` nodes, and the bucket count doubles when the average load reaches 2 entries per bucket (again, currently tunable at build time using the define `-DFLANG_RT_PDT_CACHE_MAX_LOAD_FACTOR`).
+
+Bucket arrays are allocated with `std::calloc` while linked-list entries (`CacheEntry` nodes) use the runtime's `New<T>` / `FreeMemory` allocator. The concrete `DerivedType` objects themselves are allocated with `std::calloc`, not `New<T>`.
 
 Hash collisions are theoretically possible but extremely unlikely given a
-64-bit hash space. Note that `Find()` compares only hash values and does not
-verify the full key (`genericType` pointer + LEN values) after a match. A
-collision between two distinct `(genericType, len_values)` combinations would
-therefore silently return the wrong concrete type -- a correctness bug, not
-merely a performance issue. If collision resistance becomes a concern, a
-full-key equality check should be added to `Find()`.
+64-bit hash space. Note that `Find()` compares only hash values, and does not verify the full key (`genericType` pointer + LEN values) after a match. A collision between two distinct `(genericType, len_values)` combinations would therefore silently return the wrong concrete type - a correctness bug, not merely a performance issue. If collision resistance becomes a concern, a full-key equality check could be added to `Find()`.
 
-Concrete types are never freed (like generic types). The runtime currently
-assumes single-threaded allocation; if concurrent PDT allocation becomes a
-requirement, the existing `Lock` class from `lock.h` can be used.
+Concrete types are never freed. The runtime currently assumes single-threaded allocation; if concurrent PDT allocation becomes a requirement, the existing `Lock` class from `lock.h` could be used.
 
 
 ### Device Compilation
 
-GPU device code cannot use the host-side cache (which relies on `malloc` and
-dynamic data structures). When `RT_DEVICE_COMPILATION` is defined,
-`GetConcreteType` provides a pre-implementation stub that passes through types
-without LEN parameters or already-concrete types, and crashes for actual LEN
-instantiation requests:
+GPU device code cannot use the host-side cache (which relies on `malloc` and dynamic data structures). When `RT_DEVICE_COMPILATION` is defined, `GetConcreteType` currrently provides a pre-implementation stub that passes through types without LEN parameters or already-concrete types, and crashes for actual LEN instantiation requests:
 
 ```cpp
 #ifdef RT_DEVICE_COMPILATION
@@ -357,17 +310,15 @@ RT_API_ATTRS const DerivedType *GetConcreteType(...) {
 
 ## Lowering Strategy
 
-All LEN parameter expressions--even constant literals--are evaluated at runtime
-and stored in the descriptor's `len_` Flexible array. This uniform approach
-simplifies lowering by avoiding special-case code paths.
+All LEN parameter expressions are evaluated at runtime and stored in the descriptor's `len_` Flexible array.
 
 ```fortran
 type(pdt(4, n+1, m*2)) :: x
 ```
 
-Lowers to:
+will lower to:
 
-```mlir
+```
 %len0 = arith.constant 4
 %len1 = arith.addi %n, %c1
 %len2 = arith.muli %m, %c2
@@ -378,8 +329,8 @@ call @AllocatableSetDerivedLength(%desc, 2, %len2)
 call @AllocatableAllocate(%desc)  // internally calls GetConcreteType
 ```
 
-LEN parameters do not affect type identity.
-`SAME_TYPE_AS(pdt(4), pdt(2+2))` returns `.TRUE.` because both evaluate to the same LEN value and thus the same member offsets. The cache correctly de-duplicates based on the resolved values.
+Note that LEN parameters do not affect type identity within the cache. `SAME_TYPE_AS(pdt(4), pdt(2+2))` returns `.TRUE.` because both evaluate to the same LEN value and thus the same member offsets. Thus the Concrete type cache will automatically de-duplicate based on the resolved LEN parameter values.
+
 
 ## Integration Points
 
@@ -394,25 +345,5 @@ LEN parameters do not affect type identity.
 | `assign.cpp` | `AllocateAssignmentLHS` | Resolves for LHS reallocation |
 | `type-info.cpp` | `ResolveDerivedTypeForComponent` | Resolves nested PDT components within `EstablishDescriptor` |
 
-## Comparison of Approaches
-
-| Aspect | Outlined | Inlined | Concrete Types |
-|--------|----------|---------|----------------|
-| Compile-time work | High | Low | Low |
-| Runtime work | None | Per-access | One-time |
-| Runtime LEN values | Not possible | Supported | Supported |
-| Access performance | Fast | Slower | Fast |
-| Memory overhead | Per-instantiation | Per-component | Cache only |
-
-## Remaining Work
-
-The runtime implementation is complete.
-The following compiler-side work remains:
-
-1. For nested PDT components, verify the compiler emits `lenValue_` arrays
-   that map parent LEN parameters to child LEN parameters.
-
-2. Verify lowering correctly populates `DescriptorAddendum` LEN values via
-   `AllocatableSetDerivedLength` before calling allocation APIs.
-
-3. End-to-end testing with Fortran programs exercising PDTs with LEN parameters.
+## Version
+1.0 - Initial posting

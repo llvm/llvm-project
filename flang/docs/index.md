@@ -91,6 +91,7 @@ on how to get in touch with us and to learn more about the current status.
    Overview
    ParallelMultiImageFortranRuntime
    ParameterizedDerivedTypes
+   PDT_ConcreteTypes
    ParserCombinators
    Parsing
    PolymorphicEntities
