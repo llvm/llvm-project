@@ -57,6 +57,7 @@
 ; O0-NEXT: xray-instrumentation
 ; O0-NEXT: patchable-function
 ; O0-NEXT: x86-indirect-branch-tracking
+; O0-NEXT: x86-issue-vzero-upper
 ; O0-NEXT: x86-compress-evex
 ; O0-NEXT: FuncletLayoutPass
 ; O0-NEXT: remove-loads-into-fake-uses
@@ -172,6 +173,7 @@
 ; O2-NEXT: x86-fixup-leas
 ; O2-NEXT: x86-fixup-inst-tuning
 ; O2-NEXT: x86-fixup-inst-tuning
+; O2-NEXT: x86-issue-vzero-upper
 ; O2-NEXT: x86-compress-evex
 ; O2-NEXT: FuncletLayoutPass
 ; O2-NEXT: remove-loads-into-fake-uses
@@ -234,6 +236,7 @@
 ; O0-WINDOWS-NEXT: xray-instrumentation
 ; O0-WINDOWS-NEXT: patchable-function
 ; O0-WINDOWS-NEXT: x86-indirect-branch-tracking
+; O0-WINDOWS-NEXT: x86-issue-vzero-upper
 ; O0-WINDOWS-NEXT: x86-compress-evex
 ; O0-WINDOWS-NEXT: FuncletLayoutPass
 ; O0-WINDOWS-NEXT: remove-loads-into-fake-uses
@@ -352,6 +355,7 @@
 ; O3-WINDOWS-NEXT: x86-fixup-leas
 ; O3-WINDOWS-NEXT: x86-fixup-inst-tuning
 ; O3-WINDOWS-NEXT: x86-fixup-inst-tuning
+; O3-WINDOWS-NEXT: x86-issue-vzero-upper
 ; O3-WINDOWS-NEXT: x86-compress-evex
 ; O3-WINDOWS-NEXT: FuncletLayoutPass
 ; O3-WINDOWS-NEXT: remove-loads-into-fake-uses
