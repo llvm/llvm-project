@@ -43,6 +43,7 @@ static_library("Common") {
     "Strings.cpp",
     "TargetOptionsCommandFlags.cpp",
     "Timer.cpp",
+    "Utils.cpp",
     "Version.cpp",
   ]
 }

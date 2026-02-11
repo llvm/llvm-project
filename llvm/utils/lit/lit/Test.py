@@ -151,7 +151,9 @@ def toMetricValue(value):
 class Result(object):
     """Wrapper for the results of executing an individual test."""
 
-    def __init__(self, code, output="", elapsed=None):
+    def __init__(
+        self, code, output="", elapsed=None, attempts=1, max_allowed_attempts=None
+    ):
         # The result code.
         self.code = code
         # The test output.
@@ -164,6 +166,10 @@ class Result(object):
         self.metrics = {}
         # The micro-test results reported by this test.
         self.microResults = {}
+        # How often was the test run?
+        self.attempts = attempts
+        # How many attempts were allowed for this test
+        self.max_allowed_attempts = max_allowed_attempts
 
     def addMetric(self, name, value):
         """
@@ -241,6 +247,9 @@ class Test:
         # and will be honored when the test result is supplied.
         self.xfails = []
 
+        # Exclude this test if it's xfail.
+        self.exclude_xfail = False
+
         # If true, ignore all items in self.xfails.
         self.xfail_not = False
 
@@ -297,6 +306,11 @@ class Test:
 
     def getFullName(self):
         return self.suite.config.name + " :: " + "/".join(self.path_in_suite)
+
+    def getSummaryName(self, printPathRelativeCWD):
+        if printPathRelativeCWD:
+            return os.path.relpath(self.getFilePath())
+        return self.getFullName()
 
     def getFilePath(self):
         if self.file_path:

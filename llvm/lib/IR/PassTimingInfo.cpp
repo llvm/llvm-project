@@ -32,10 +32,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "time-passes"
 
-namespace llvm {
+using namespace llvm;
 
-bool TimePassesIsEnabled = false;
-bool TimePassesPerRun = false;
+bool llvm::TimePassesIsEnabled = false;
+bool llvm::TimePassesPerRun = false;
 
 static cl::opt<bool, true> EnableTiming(
     "time-passes", cl::location(TimePassesIsEnabled), cl::Hidden,
@@ -63,16 +63,9 @@ public:
 private:
   StringMap<unsigned> PassIDCountMap; ///< Map that counts instances of passes
   DenseMap<PassInstanceID, std::unique_ptr<Timer>> TimingData; ///< timers for pass instances
-  TimerGroup TG;
+  TimerGroup *PassTG = nullptr;
 
 public:
-  /// Default constructor for yet-inactive timeinfo.
-  /// Use \p init() to activate it.
-  PassTimingInfo();
-
-  /// Print out timing information and release timers.
-  ~PassTimingInfo();
-
   /// Initializes the static \p TheTimeInfo member to a non-null value when
   /// -time-passes is enabled. Leaves it null otherwise.
   ///
@@ -94,14 +87,6 @@ private:
 
 static ManagedStatic<sys::SmartMutex<true>> TimingInfoMutex;
 
-PassTimingInfo::PassTimingInfo() : TG("pass", "Pass execution timing report") {}
-
-PassTimingInfo::~PassTimingInfo() {
-  // Deleting the timers accumulates their info into the TG member.
-  // Then TG member is (implicitly) deleted, actually printing the report.
-  TimingData.clear();
-}
-
 void PassTimingInfo::init() {
   if (TheTimeInfo || !TimePassesIsEnabled)
     return;
@@ -110,12 +95,16 @@ void PassTimingInfo::init() {
   // This guarantees that the object will be constructed after static globals,
   // thus it will be destroyed before them.
   static ManagedStatic<PassTimingInfo> TTI;
+  if (!TTI->PassTG)
+    TTI->PassTG = &NamedRegionTimer::getNamedTimerGroup(
+        TimePassesHandler::PassGroupName, TimePassesHandler::PassGroupDesc);
   TheTimeInfo = &*TTI;
 }
 
 /// Prints out timing information and then resets the timers.
 void PassTimingInfo::print(raw_ostream *OutStream) {
-  TG.print(OutStream ? *OutStream : *CreateInfoOutputFile(), true);
+  assert(PassTG && "PassTG is null, did you call PassTimingInfo::Init()?");
+  PassTG->print(OutStream ? *OutStream : *CreateInfoOutputFile(), true);
 }
 
 Timer *PassTimingInfo::newPassTimer(StringRef PassID, StringRef PassDesc) {
@@ -124,7 +113,8 @@ Timer *PassTimingInfo::newPassTimer(StringRef PassID, StringRef PassDesc) {
   // Appending description with a pass-instance number for all but the first one
   std::string PassDescNumbered =
       num <= 1 ? PassDesc.str() : formatv("{0} #{1}", PassDesc, num).str();
-  return new Timer(PassID, PassDescNumbered, TG);
+  assert(PassTG && "PassTG is null, did you call PassTimingInfo::Init()?");
+  return new Timer(PassID, PassDescNumbered, *PassTG);
 }
 
 Timer *PassTimingInfo::getPassTimer(Pass *P, PassInstanceID Pass) {
@@ -149,7 +139,7 @@ PassTimingInfo *PassTimingInfo::TheTimeInfo;
 } // namespace legacy
 } // namespace
 
-Timer *getPassTimer(Pass *P) {
+Timer *llvm::getPassTimer(Pass *P) {
   legacy::PassTimingInfo::init();
   if (legacy::PassTimingInfo::TheTimeInfo)
     return legacy::PassTimingInfo::TheTimeInfo->getPassTimer(P, P);
@@ -158,7 +148,7 @@ Timer *getPassTimer(Pass *P) {
 
 /// If timing is enabled, report the times collected up to now and then reset
 /// them.
-void reportAndResetTimings(raw_ostream *OutStream) {
+void llvm::reportAndResetTimings(raw_ostream *OutStream) {
   if (legacy::PassTimingInfo::TheTimeInfo)
     legacy::PassTimingInfo::TheTimeInfo->print(OutStream);
 }
@@ -193,9 +183,7 @@ Timer &TimePassesHandler::getPassTimer(StringRef PassID, bool IsPass) {
 }
 
 TimePassesHandler::TimePassesHandler(bool Enabled, bool PerRun)
-    : PassTG("pass", "Pass execution timing report"),
-      AnalysisTG("analysis", "Analysis execution timing report"),
-      Enabled(Enabled), PerRun(PerRun) {}
+    : Enabled(Enabled), PerRun(PerRun) {}
 
 TimePassesHandler::TimePassesHandler()
     : TimePassesHandler(TimePassesIsEnabled, TimePassesPerRun) {}
@@ -327,5 +315,3 @@ void TimePassesHandler::registerCallbacks(PassInstrumentationCallbacks &PIC) {
   PIC.registerAfterAnalysisCallback(
       [this](StringRef P, Any) { this->stopAnalysisTimer(P); });
 }
-
-} // namespace llvm

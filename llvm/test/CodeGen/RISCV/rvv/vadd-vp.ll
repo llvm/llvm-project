@@ -4,8 +4,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,RV64
 
-declare <vscale x 8 x i7> @llvm.vp.add.nxv8i7(<vscale x 8 x i7>, <vscale x 8 x i7>, <vscale x 8 x i1>, i32)
-
 define <vscale x 8 x i7> @vadd_vx_nxv8i7(<vscale x 8 x i7> %a, i7 signext %b, <vscale x 8 x i1> %mask, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vx_nxv8i7:
 ; CHECK:       # %bb.0:
@@ -17,8 +15,6 @@ define <vscale x 8 x i7> @vadd_vx_nxv8i7(<vscale x 8 x i7> %a, i7 signext %b, <v
   %v = call <vscale x 8 x i7> @llvm.vp.add.nxv8i7(<vscale x 8 x i7> %a, <vscale x 8 x i7> %vb, <vscale x 8 x i1> %mask, i32 %evl)
   ret <vscale x 8 x i7> %v
 }
-
-declare <vscale x 1 x i8> @llvm.vp.add.nxv1i8(<vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i1>, i32)
 
 define <vscale x 1 x i8> @vadd_vv_nxv1i8(<vscale x 1 x i8> %va, <vscale x 1 x i8> %b, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_nxv1i8:
@@ -96,8 +92,6 @@ define <vscale x 1 x i8> @vadd_vi_nxv1i8_unmasked(<vscale x 1 x i8> %va, i32 zer
   ret <vscale x 1 x i8> %v
 }
 
-declare <vscale x 2 x i8> @llvm.vp.add.nxv2i8(<vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x i8> @vadd_vv_nxv2i8(<vscale x 2 x i8> %va, <vscale x 2 x i8> %b, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_nxv2i8:
 ; CHECK:       # %bb.0:
@@ -161,8 +155,6 @@ define <vscale x 2 x i8> @vadd_vi_nxv2i8_unmasked(<vscale x 2 x i8> %va, i32 zer
   %v = call <vscale x 2 x i8> @llvm.vp.add.nxv2i8(<vscale x 2 x i8> %va, <vscale x 2 x i8> splat (i8 -1), <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x i8> %v
 }
-
-declare <vscale x 3 x i8> @llvm.vp.add.nxv3i8(<vscale x 3 x i8>, <vscale x 3 x i8>, <vscale x 3 x i1>, i32)
 
 define <vscale x 3 x i8> @vadd_vv_nxv3i8(<vscale x 3 x i8> %va, <vscale x 3 x i8> %b, <vscale x 3 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_nxv3i8:
@@ -228,8 +220,6 @@ define <vscale x 3 x i8> @vadd_vi_nxv3i8_unmasked(<vscale x 3 x i8> %va, i32 zer
   ret <vscale x 3 x i8> %v
 }
 
-declare <vscale x 4 x i8> @llvm.vp.add.nxv4i8(<vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i1>, i32)
-
 define <vscale x 4 x i8> @vadd_vv_nxv4i8(<vscale x 4 x i8> %va, <vscale x 4 x i8> %b, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_nxv4i8:
 ; CHECK:       # %bb.0:
@@ -293,8 +283,6 @@ define <vscale x 4 x i8> @vadd_vi_nxv4i8_unmasked(<vscale x 4 x i8> %va, i32 zer
   %v = call <vscale x 4 x i8> @llvm.vp.add.nxv4i8(<vscale x 4 x i8> %va, <vscale x 4 x i8> splat (i8 -1), <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x i8> %v
 }
-
-declare <vscale x 8 x i8> @llvm.vp.add.nxv8i8(<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x i8> @vadd_vv_nxv8i8(<vscale x 8 x i8> %va, <vscale x 8 x i8> %b, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_nxv8i8:
@@ -360,8 +348,6 @@ define <vscale x 8 x i8> @vadd_vi_nxv8i8_unmasked(<vscale x 8 x i8> %va, i32 zer
   ret <vscale x 8 x i8> %v
 }
 
-declare <vscale x 16 x i8> @llvm.vp.add.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i1>, i32)
-
 define <vscale x 16 x i8> @vadd_vv_nxv16i8(<vscale x 16 x i8> %va, <vscale x 16 x i8> %b, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_nxv16i8:
 ; CHECK:       # %bb.0:
@@ -426,8 +412,6 @@ define <vscale x 16 x i8> @vadd_vi_nxv16i8_unmasked(<vscale x 16 x i8> %va, i32 
   ret <vscale x 16 x i8> %v
 }
 
-declare <vscale x 32 x i8> @llvm.vp.add.nxv32i8(<vscale x 32 x i8>, <vscale x 32 x i8>, <vscale x 32 x i1>, i32)
-
 define <vscale x 32 x i8> @vadd_vv_nxv32i8(<vscale x 32 x i8> %va, <vscale x 32 x i8> %b, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_nxv32i8:
 ; CHECK:       # %bb.0:
@@ -491,8 +475,6 @@ define <vscale x 32 x i8> @vadd_vi_nxv32i8_unmasked(<vscale x 32 x i8> %va, i32 
   %v = call <vscale x 32 x i8> @llvm.vp.add.nxv32i8(<vscale x 32 x i8> %va, <vscale x 32 x i8> splat (i8 -1), <vscale x 32 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 32 x i8> %v
 }
-
-declare <vscale x 64 x i8> @llvm.vp.add.nxv64i8(<vscale x 64 x i8>, <vscale x 64 x i8>, <vscale x 64 x i1>, i32)
 
 define <vscale x 64 x i8> @vadd_vv_nxv64i8(<vscale x 64 x i8> %va, <vscale x 64 x i8> %b, <vscale x 64 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_nxv64i8:
@@ -560,8 +542,6 @@ define <vscale x 64 x i8> @vadd_vi_nxv64i8_unmasked(<vscale x 64 x i8> %va, i32 
 
 ; Test that split-legalization works when the mask itself needs splitting.
 
-declare <vscale x 128 x i8> @llvm.vp.add.nxv128i8(<vscale x 128 x i8>, <vscale x 128 x i8>, <vscale x 128 x i1>, i32)
-
 define <vscale x 128 x i8> @vadd_vi_nxv128i8(<vscale x 128 x i8> %va, <vscale x 128 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vi_nxv128i8:
 ; CHECK:       # %bb.0:
@@ -609,8 +589,6 @@ define <vscale x 128 x i8> @vadd_vi_nxv128i8_unmasked(<vscale x 128 x i8> %va, i
   %v = call <vscale x 128 x i8> @llvm.vp.add.nxv128i8(<vscale x 128 x i8> %va, <vscale x 128 x i8> splat (i8 -1), <vscale x 128 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 128 x i8> %v
 }
-
-declare <vscale x 1 x i16> @llvm.vp.add.nxv1i16(<vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i1>, i32)
 
 define <vscale x 1 x i16> @vadd_vv_nxv1i16(<vscale x 1 x i16> %va, <vscale x 1 x i16> %b, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_nxv1i16:
@@ -676,8 +654,6 @@ define <vscale x 1 x i16> @vadd_vi_nxv1i16_unmasked(<vscale x 1 x i16> %va, i32 
   ret <vscale x 1 x i16> %v
 }
 
-declare <vscale x 2 x i16> @llvm.vp.add.nxv2i16(<vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x i16> @vadd_vv_nxv2i16(<vscale x 2 x i16> %va, <vscale x 2 x i16> %b, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_nxv2i16:
 ; CHECK:       # %bb.0:
@@ -741,8 +717,6 @@ define <vscale x 2 x i16> @vadd_vi_nxv2i16_unmasked(<vscale x 2 x i16> %va, i32 
   %v = call <vscale x 2 x i16> @llvm.vp.add.nxv2i16(<vscale x 2 x i16> %va, <vscale x 2 x i16> splat (i16 -1), <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x i16> %v
 }
-
-declare <vscale x 4 x i16> @llvm.vp.add.nxv4i16(<vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i1>, i32)
 
 define <vscale x 4 x i16> @vadd_vv_nxv4i16(<vscale x 4 x i16> %va, <vscale x 4 x i16> %b, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_nxv4i16:
@@ -808,8 +782,6 @@ define <vscale x 4 x i16> @vadd_vi_nxv4i16_unmasked(<vscale x 4 x i16> %va, i32 
   ret <vscale x 4 x i16> %v
 }
 
-declare <vscale x 8 x i16> @llvm.vp.add.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i1>, i32)
-
 define <vscale x 8 x i16> @vadd_vv_nxv8i16(<vscale x 8 x i16> %va, <vscale x 8 x i16> %b, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_nxv8i16:
 ; CHECK:       # %bb.0:
@@ -873,8 +845,6 @@ define <vscale x 8 x i16> @vadd_vi_nxv8i16_unmasked(<vscale x 8 x i16> %va, i32 
   %v = call <vscale x 8 x i16> @llvm.vp.add.nxv8i16(<vscale x 8 x i16> %va, <vscale x 8 x i16> splat (i16 -1), <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x i16> %v
 }
-
-declare <vscale x 16 x i16> @llvm.vp.add.nxv16i16(<vscale x 16 x i16>, <vscale x 16 x i16>, <vscale x 16 x i1>, i32)
 
 define <vscale x 16 x i16> @vadd_vv_nxv16i16(<vscale x 16 x i16> %va, <vscale x 16 x i16> %b, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_nxv16i16:
@@ -940,8 +910,6 @@ define <vscale x 16 x i16> @vadd_vi_nxv16i16_unmasked(<vscale x 16 x i16> %va, i
   ret <vscale x 16 x i16> %v
 }
 
-declare <vscale x 32 x i16> @llvm.vp.add.nxv32i16(<vscale x 32 x i16>, <vscale x 32 x i16>, <vscale x 32 x i1>, i32)
-
 define <vscale x 32 x i16> @vadd_vv_nxv32i16(<vscale x 32 x i16> %va, <vscale x 32 x i16> %b, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_nxv32i16:
 ; CHECK:       # %bb.0:
@@ -1005,8 +973,6 @@ define <vscale x 32 x i16> @vadd_vi_nxv32i16_unmasked(<vscale x 32 x i16> %va, i
   %v = call <vscale x 32 x i16> @llvm.vp.add.nxv32i16(<vscale x 32 x i16> %va, <vscale x 32 x i16> splat (i16 -1), <vscale x 32 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 32 x i16> %v
 }
-
-declare <vscale x 1 x i32> @llvm.vp.add.nxv1i32(<vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i1>, i32)
 
 define <vscale x 1 x i32> @vadd_vv_nxv1i32(<vscale x 1 x i32> %va, <vscale x 1 x i32> %b, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_nxv1i32:
@@ -1072,8 +1038,6 @@ define <vscale x 1 x i32> @vadd_vi_nxv1i32_unmasked(<vscale x 1 x i32> %va, i32 
   ret <vscale x 1 x i32> %v
 }
 
-declare <vscale x 2 x i32> @llvm.vp.add.nxv2i32(<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x i32> @vadd_vv_nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x i32> %b, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_nxv2i32:
 ; CHECK:       # %bb.0:
@@ -1137,8 +1101,6 @@ define <vscale x 2 x i32> @vadd_vi_nxv2i32_unmasked(<vscale x 2 x i32> %va, i32 
   %v = call <vscale x 2 x i32> @llvm.vp.add.nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x i32> splat (i32 -1), <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x i32> %v
 }
-
-declare <vscale x 4 x i32> @llvm.vp.add.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i1>, i32)
 
 define <vscale x 4 x i32> @vadd_vv_nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 x i32> %b, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_nxv4i32:
@@ -1204,8 +1166,6 @@ define <vscale x 4 x i32> @vadd_vi_nxv4i32_unmasked(<vscale x 4 x i32> %va, i32 
   ret <vscale x 4 x i32> %v
 }
 
-declare <vscale x 8 x i32> @llvm.vp.add.nxv8i32(<vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i1>, i32)
-
 define <vscale x 8 x i32> @vadd_vv_nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i32> %b, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_nxv8i32:
 ; CHECK:       # %bb.0:
@@ -1269,8 +1229,6 @@ define <vscale x 8 x i32> @vadd_vi_nxv8i32_unmasked(<vscale x 8 x i32> %va, i32 
   %v = call <vscale x 8 x i32> @llvm.vp.add.nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i32> splat (i32 -1), <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x i32> %v
 }
-
-declare <vscale x 16 x i32> @llvm.vp.add.nxv16i32(<vscale x 16 x i32>, <vscale x 16 x i32>, <vscale x 16 x i1>, i32)
 
 define <vscale x 16 x i32> @vadd_vv_nxv16i32(<vscale x 16 x i32> %va, <vscale x 16 x i32> %b, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_nxv16i32:
@@ -1338,8 +1296,6 @@ define <vscale x 16 x i32> @vadd_vi_nxv16i32_unmasked(<vscale x 16 x i32> %va, i
 
 ; Test that split-legalization works then the mask needs manual splitting.
 
-declare <vscale x 32 x i32> @llvm.vp.add.nxv32i32(<vscale x 32 x i32>, <vscale x 32 x i32>, <vscale x 32 x i1>, i32)
-
 define <vscale x 32 x i32> @vadd_vi_nxv32i32(<vscale x 32 x i32> %va, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vi_nxv32i32:
 ; CHECK:       # %bb.0:
@@ -1391,73 +1347,66 @@ define <vscale x 32 x i32> @vadd_vi_nxv32i32_unmasked(<vscale x 32 x i32> %va, i
 
 ; Test splitting when the %evl is a constant (albeit an unknown one).
 
-declare i32 @llvm.vscale.i32()
-
-; FIXME: The upper half of the operation is doing nothing.
-; FIXME: The branches comparing vscale vs. vscale should be constant-foldable.
-
 define <vscale x 32 x i32> @vadd_vi_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, <vscale x 32 x i1> %m) {
-; CHECK-LABEL: vadd_vi_nxv32i32_evl_nx8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv1r.v v24, v0
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    srli a2, a0, 2
-; CHECK-NEXT:    slli a1, a0, 1
-; CHECK-NEXT:    vslidedown.vx v0, v0, a2
-; CHECK-NEXT:    sub a2, a0, a1
-; CHECK-NEXT:    sltu a3, a0, a2
-; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    and a2, a3, a2
-; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
-; CHECK-NEXT:    vadd.vi v16, v16, -1, v0.t
-; CHECK-NEXT:    bltu a0, a1, .LBB120_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:  .LBB120_2:
-; CHECK-NEXT:    vmv1r.v v0, v24
-; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; CHECK-NEXT:    vadd.vi v8, v8, -1, v0.t
-; CHECK-NEXT:    ret
+; RV32-LABEL: vadd_vi_nxv32i32_evl_nx8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    srli a1, a0, 2
+; RV32-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; RV32-NEXT:    vadd.vi v8, v8, -1, v0.t
+; RV32-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
+; RV32-NEXT:    vslidedown.vx v0, v0, a1
+; RV32-NEXT:    slli a1, a0, 1
+; RV32-NEXT:    sub a1, a0, a1
+; RV32-NEXT:    sltu a0, a0, a1
+; RV32-NEXT:    addi a0, a0, -1
+; RV32-NEXT:    and a0, a0, a1
+; RV32-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; RV32-NEXT:    vadd.vi v16, v16, -1, v0.t
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vadd_vi_nxv32i32_evl_nx8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
+; RV64-NEXT:    vmv1r.v v24, v0
+; RV64-NEXT:    csrr a0, vlenb
+; RV64-NEXT:    srli a2, a0, 2
+; RV64-NEXT:    slli a1, a0, 1
+; RV64-NEXT:    vslidedown.vx v0, v0, a2
+; RV64-NEXT:    sub a2, a0, a1
+; RV64-NEXT:    sltu a3, a0, a2
+; RV64-NEXT:    addi a3, a3, -1
+; RV64-NEXT:    and a2, a3, a2
+; RV64-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; RV64-NEXT:    vadd.vi v16, v16, -1, v0.t
+; RV64-NEXT:    bltu a0, a1, .LBB120_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:  .LBB120_2:
+; RV64-NEXT:    vmv1r.v v0, v24
+; RV64-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; RV64-NEXT:    vadd.vi v8, v8, -1, v0.t
+; RV64-NEXT:    ret
   %evl = call i32 @llvm.vscale.i32()
   %evl0 = mul i32 %evl, 8
   %v = call <vscale x 32 x i32> @llvm.vp.add.nxv32i32(<vscale x 32 x i32> %va, <vscale x 32 x i32> splat (i32 -1), <vscale x 32 x i1> %m, i32 %evl0)
   ret <vscale x 32 x i32> %v
 }
 
-; FIXME: The upper half of the operation is doing nothing but we don't catch
-; that on RV64; we issue a usubsat(and (vscale x 16), 0xffffffff, vscale x 16)
-; (the "original" %evl is the "and", due to known-bits issues with legalizing
-; the i32 %evl to i64) and this isn't detected as 0.
-; This could be resolved in the future with more detailed KnownBits analysis
-; for ISD::VSCALE.
+; The attribute vscale_range(2,1024) given here can remove the zero_extend for
+; the i32 %evl to i64 on RV64 through KnownBits analysis.
 
-define <vscale x 32 x i32> @vadd_vi_nxv32i32_evl_nx16(<vscale x 32 x i32> %va, <vscale x 32 x i1> %m) {
-; RV32-LABEL: vadd_vi_nxv32i32_evl_nx16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
-; RV32-NEXT:    vadd.vi v8, v8, -1, v0.t
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: vadd_vi_nxv32i32_evl_nx16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    csrr a0, vlenb
-; RV64-NEXT:    srli a0, a0, 2
-; RV64-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
-; RV64-NEXT:    vslidedown.vx v24, v0, a0
-; RV64-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
-; RV64-NEXT:    vadd.vi v8, v8, -1, v0.t
-; RV64-NEXT:    vmv1r.v v0, v24
-; RV64-NEXT:    vsetivli zero, 0, e32, m8, ta, ma
-; RV64-NEXT:    vadd.vi v16, v16, -1, v0.t
-; RV64-NEXT:    ret
+define <vscale x 32 x i32> @vadd_vi_nxv32i32_evl_nx16(<vscale x 32 x i32> %va, <vscale x 32 x i1> %m) vscale_range(2,1024) {
+; CHECK-LABEL: vadd_vi_nxv32i32_evl_nx16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vadd.vi v8, v8, -1, v0.t
+; CHECK-NEXT:    ret
   %evl = call i32 @llvm.vscale.i32()
   %evl0 = mul i32 %evl, 16
   %v = call <vscale x 32 x i32> @llvm.vp.add.nxv32i32(<vscale x 32 x i32> %va, <vscale x 32 x i32> splat (i32 -1), <vscale x 32 x i1> %m, i32 %evl0)
   ret <vscale x 32 x i32> %v
 }
-
-declare <vscale x 1 x i64> @llvm.vp.add.nxv1i64(<vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i1>, i32)
 
 define <vscale x 1 x i64> @vadd_vv_nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i64> %b, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_nxv1i64:
@@ -1551,8 +1500,6 @@ define <vscale x 1 x i64> @vadd_vi_nxv1i64_unmasked(<vscale x 1 x i64> %va, i32 
   ret <vscale x 1 x i64> %v
 }
 
-declare <vscale x 2 x i64> @llvm.vp.add.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x i64> @vadd_vv_nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 x i64> %b, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_nxv2i64:
 ; CHECK:       # %bb.0:
@@ -1645,8 +1592,6 @@ define <vscale x 2 x i64> @vadd_vi_nxv2i64_unmasked(<vscale x 2 x i64> %va, i32 
   ret <vscale x 2 x i64> %v
 }
 
-declare <vscale x 4 x i64> @llvm.vp.add.nxv4i64(<vscale x 4 x i64>, <vscale x 4 x i64>, <vscale x 4 x i1>, i32)
-
 define <vscale x 4 x i64> @vadd_vv_nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 x i64> %b, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_nxv4i64:
 ; CHECK:       # %bb.0:
@@ -1738,8 +1683,6 @@ define <vscale x 4 x i64> @vadd_vi_nxv4i64_unmasked(<vscale x 4 x i64> %va, i32 
   %v = call <vscale x 4 x i64> @llvm.vp.add.nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 x i64> splat (i64 -1), <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x i64> %v
 }
-
-declare <vscale x 8 x i64> @llvm.vp.add.nxv8i64(<vscale x 8 x i64>, <vscale x 8 x i64>, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x i64> @vadd_vv_nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i64> %b, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_nxv8i64:

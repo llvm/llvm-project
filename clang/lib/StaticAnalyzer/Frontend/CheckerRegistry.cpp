@@ -8,9 +8,9 @@
 
 #include "clang/StaticAnalyzer/Frontend/CheckerRegistry.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -19,8 +19,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 
 using namespace clang;
 using namespace ento;
@@ -223,7 +221,7 @@ void CheckerRegistry::initializeRegistry(const CheckerManager &Mgr) {
       continue;
     }
 
-    Tmp.insert(Deps.begin(), Deps.end());
+    Tmp.insert_range(Deps);
 
     // Enable the checker.
     Tmp.insert(&Checker);

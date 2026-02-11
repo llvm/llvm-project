@@ -34,7 +34,7 @@ namespace llvm {
 
 AVRTargetLowering::AVRTargetLowering(const AVRTargetMachine &TM,
                                      const AVRSubtarget &STI)
-    : TargetLowering(TM), Subtarget(STI) {
+    : TargetLowering(TM, STI), Subtarget(STI) {
   // Set up the register classes.
   addRegisterClass(MVT::i8, &AVR::GPR8RegClass);
   addRegisterClass(MVT::i16, &AVR::DREGSRegClass);
@@ -198,60 +198,8 @@ AVRTargetLowering::AVRTargetLowering(const AVRTargetMachine &TM,
     // improvements in how we treat 16-bit "registers" to be feasible.
   }
 
-  // Division and modulus rtlib functions
-  setLibcallName(RTLIB::SDIVREM_I8, "__divmodqi4");
-  setLibcallName(RTLIB::SDIVREM_I16, "__divmodhi4");
-  setLibcallName(RTLIB::SDIVREM_I32, "__divmodsi4");
-  setLibcallName(RTLIB::UDIVREM_I8, "__udivmodqi4");
-  setLibcallName(RTLIB::UDIVREM_I16, "__udivmodhi4");
-  setLibcallName(RTLIB::UDIVREM_I32, "__udivmodsi4");
-
-  // Several of the runtime library functions use a special calling conv
-  setLibcallCallingConv(RTLIB::SDIVREM_I8, CallingConv::AVR_BUILTIN);
-  setLibcallCallingConv(RTLIB::SDIVREM_I16, CallingConv::AVR_BUILTIN);
-  setLibcallCallingConv(RTLIB::UDIVREM_I8, CallingConv::AVR_BUILTIN);
-  setLibcallCallingConv(RTLIB::UDIVREM_I16, CallingConv::AVR_BUILTIN);
-
-  // Trigonometric rtlib functions
-  setLibcallName(RTLIB::SIN_F32, "sin");
-  setLibcallName(RTLIB::COS_F32, "cos");
-
   setMinFunctionAlignment(Align(2));
   setMinimumJumpTableEntries(UINT_MAX);
-}
-
-const char *AVRTargetLowering::getTargetNodeName(unsigned Opcode) const {
-#define NODE(name)                                                             \
-  case AVRISD::name:                                                           \
-    return #name
-
-  switch (Opcode) {
-  default:
-    return nullptr;
-    NODE(RET_GLUE);
-    NODE(RETI_GLUE);
-    NODE(CALL);
-    NODE(WRAPPER);
-    NODE(LSL);
-    NODE(LSLW);
-    NODE(LSR);
-    NODE(LSRW);
-    NODE(ROL);
-    NODE(ROR);
-    NODE(ASR);
-    NODE(ASRW);
-    NODE(LSLLOOP);
-    NODE(LSRLOOP);
-    NODE(ROLLOOP);
-    NODE(RORLOOP);
-    NODE(ASRLOOP);
-    NODE(BRCOND);
-    NODE(CMP);
-    NODE(CMPC);
-    NODE(TST);
-    NODE(SELECT_CC);
-#undef NODE
-  }
 }
 
 EVT AVRTargetLowering::getSetCCResultType(const DataLayout &DL, LLVMContext &,
@@ -557,17 +505,20 @@ SDValue AVRTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   SDValue InChain = DAG.getEntryNode();
 
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
   for (SDValue const &Value : Op->op_values()) {
-    Entry.Node = Value;
-    Entry.Ty = Value.getValueType().getTypeForEVT(*DAG.getContext());
+    TargetLowering::ArgListEntry Entry(
+        Value, Value.getValueType().getTypeForEVT(*DAG.getContext()));
     Entry.IsSExt = IsSigned;
     Entry.IsZExt = !IsSigned;
     Args.push_back(Entry);
   }
 
-  SDValue Callee = DAG.getExternalSymbol(getLibcallName(LC),
-                                         getPointerTy(DAG.getDataLayout()));
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
+  if (LCImpl == RTLIB::Unsupported)
+    return SDValue();
+
+  SDValue Callee =
+      DAG.getExternalSymbol(LCImpl, getPointerTy(DAG.getDataLayout()));
 
   Type *RetTy = (Type *)StructType::get(Ty, Ty);
 
@@ -575,7 +526,8 @@ SDValue AVRTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(InChain)
-      .setLibCallee(getLibcallCallingConv(LC), RetTy, Callee, std::move(Args))
+      .setLibCallee(DAG.getLibcalls().getLibcallImplCallingConv(LCImpl), RetTy,
+                    Callee, std::move(Args))
       .setInRegister()
       .setSExtResult(IsSigned)
       .setZExtResult(!IsSigned);
@@ -721,7 +673,7 @@ SDValue AVRTargetLowering::getAVRCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
       default: {
         // Turn lhs < rhs with lhs constant into rhs >= lhs+1, this allows
         // us to  fold the constant into the cmp instruction.
-        RHS = DAG.getConstant(C->getSExtValue() + 1, DL, VT);
+        RHS = DAG.getSignedConstant(C->getSExtValue() + 1, DL, VT);
         CC = ISD::SETGE;
         break;
       }
@@ -765,7 +717,10 @@ SDValue AVRTargetLowering::getAVRCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     // Turn lhs < rhs with lhs constant into rhs >= lhs+1, this allows us to
     // fold the constant into the cmp instruction.
     if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS)) {
-      RHS = DAG.getConstant(C->getSExtValue() + 1, DL, VT);
+      // Doing a "icmp ugt i16 65535, %0" comparison should have been converted
+      // already to something else. Assert to make sure this assumption holds.
+      assert((!C->isAllOnes()) && "integer overflow in comparison transform");
+      RHS = DAG.getConstant(C->getZExtValue() + 1, DL, VT);
       CC = ISD::SETUGE;
       break;
     }
@@ -1123,14 +1078,17 @@ bool AVRTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
                                                    ISD::MemIndexedMode &AM,
                                                    SelectionDAG &DAG) const {
   EVT VT;
+  SDValue Ptr;
   SDLoc DL(N);
 
   if (const LoadSDNode *LD = dyn_cast<LoadSDNode>(N)) {
     VT = LD->getMemoryVT();
+    Ptr = LD->getBasePtr();
     if (LD->getExtensionType() != ISD::NON_EXTLOAD)
       return false;
   } else if (const StoreSDNode *ST = dyn_cast<StoreSDNode>(N)) {
     VT = ST->getMemoryVT();
+    Ptr = ST->getBasePtr();
     // We can not store to program memory.
     if (AVR::isProgramMemoryAccess(ST))
       return false;
@@ -1167,6 +1125,12 @@ bool AVRTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
         return false;
 
     Base = Op->getOperand(0);
+
+    // Post-indexing updates the base, so it's not a valid transform
+    // if that's not the same as the load's pointer.
+    if (Ptr != Base)
+      return false;
+
     Offset = DAG.getConstant(RHSC, DL, MVT::i8);
     AM = ISD::POST_INC;
 
@@ -2041,8 +2005,8 @@ static void insertMultibyteShift(MachineInstr &MI, MachineBasicBlock *BB,
       ShrExtendReg = MRI.createVirtualRegister(&AVR::GPR8RegClass);
       Register Tmp = MRI.createVirtualRegister(&AVR::GPR8RegClass);
       BuildMI(*BB, MI, dl, TII.get(AVR::ADDRdRr), Tmp)
-          .addReg(Regs[0].first, 0, Regs[0].second)
-          .addReg(Regs[0].first, 0, Regs[0].second);
+          .addReg(Regs[0].first, {}, Regs[0].second)
+          .addReg(Regs[0].first, {}, Regs[0].second);
       BuildMI(*BB, MI, dl, TII.get(AVR::SBCRdRr), ShrExtendReg)
           .addReg(Tmp)
           .addReg(Tmp);
@@ -2090,7 +2054,7 @@ static void insertMultibyteShift(MachineInstr &MI, MachineBasicBlock *BB,
       size_t Idx = ShiftLeft ? I : Regs.size() - I - 1;
       Register SwapReg = MRI.createVirtualRegister(&AVR::LD8RegClass);
       BuildMI(*BB, MI, dl, TII.get(AVR::SWAPRd), SwapReg)
-          .addReg(Regs[Idx].first, 0, Regs[Idx].second);
+          .addReg(Regs[Idx].first, {}, Regs[Idx].second);
       if (I != 0) {
         Register R = MRI.createVirtualRegister(&AVR::GPR8RegClass);
         BuildMI(*BB, MI, dl, TII.get(AVR::EORRdRr), R)
@@ -2126,12 +2090,12 @@ static void insertMultibyteShift(MachineInstr &MI, MachineBasicBlock *BB,
       Register InSubreg = Regs[I].second;
       if (I == (ssize_t)Regs.size() - 1) { // first iteration
         BuildMI(*BB, MI, dl, TII.get(AVR::ADDRdRr), Out)
-            .addReg(In, 0, InSubreg)
-            .addReg(In, 0, InSubreg);
+            .addReg(In, {}, InSubreg)
+            .addReg(In, {}, InSubreg);
       } else {
         BuildMI(*BB, MI, dl, TII.get(AVR::ADCRdRr), Out)
-            .addReg(In, 0, InSubreg)
-            .addReg(In, 0, InSubreg);
+            .addReg(In, {}, InSubreg)
+            .addReg(In, {}, InSubreg);
       }
       Regs[I] = std::pair(Out, 0);
     }
@@ -2145,9 +2109,9 @@ static void insertMultibyteShift(MachineInstr &MI, MachineBasicBlock *BB,
       Register InSubreg = Regs[I].second;
       if (I == 0) {
         unsigned Opc = ArithmeticShift ? AVR::ASRRd : AVR::LSRRd;
-        BuildMI(*BB, MI, dl, TII.get(Opc), Out).addReg(In, 0, InSubreg);
+        BuildMI(*BB, MI, dl, TII.get(Opc), Out).addReg(In, {}, InSubreg);
       } else {
-        BuildMI(*BB, MI, dl, TII.get(AVR::RORRd), Out).addReg(In, 0, InSubreg);
+        BuildMI(*BB, MI, dl, TII.get(AVR::RORRd), Out).addReg(In, {}, InSubreg);
       }
       Regs[I] = std::pair(Out, 0);
     }
@@ -2208,26 +2172,26 @@ AVRTargetLowering::insertWideShift(MachineInstr &MI,
       (Opc != ISD::SRA || (ShiftAmt < 16 || ShiftAmt >= 22))) {
     // Use the resulting registers starting with the least significant byte.
     BuildMI(*BB, MI, dl, TII.get(AVR::REG_SEQUENCE), MI.getOperand(0).getReg())
-        .addReg(Registers[3].first, 0, Registers[3].second)
+        .addReg(Registers[3].first, {}, Registers[3].second)
         .addImm(AVR::sub_lo)
-        .addReg(Registers[2].first, 0, Registers[2].second)
+        .addReg(Registers[2].first, {}, Registers[2].second)
         .addImm(AVR::sub_hi);
     BuildMI(*BB, MI, dl, TII.get(AVR::REG_SEQUENCE), MI.getOperand(1).getReg())
-        .addReg(Registers[1].first, 0, Registers[1].second)
+        .addReg(Registers[1].first, {}, Registers[1].second)
         .addImm(AVR::sub_lo)
-        .addReg(Registers[0].first, 0, Registers[0].second)
+        .addReg(Registers[0].first, {}, Registers[0].second)
         .addImm(AVR::sub_hi);
   } else {
     // Use the resulting registers starting with the most significant byte.
     BuildMI(*BB, MI, dl, TII.get(AVR::REG_SEQUENCE), MI.getOperand(1).getReg())
-        .addReg(Registers[0].first, 0, Registers[0].second)
+        .addReg(Registers[0].first, {}, Registers[0].second)
         .addImm(AVR::sub_hi)
-        .addReg(Registers[1].first, 0, Registers[1].second)
+        .addReg(Registers[1].first, {}, Registers[1].second)
         .addImm(AVR::sub_lo);
     BuildMI(*BB, MI, dl, TII.get(AVR::REG_SEQUENCE), MI.getOperand(0).getReg())
-        .addReg(Registers[2].first, 0, Registers[2].second)
+        .addReg(Registers[2].first, {}, Registers[2].second)
         .addImm(AVR::sub_hi)
-        .addReg(Registers[3].first, 0, Registers[3].second)
+        .addReg(Registers[3].first, {}, Registers[3].second)
         .addImm(AVR::sub_lo);
   }
 

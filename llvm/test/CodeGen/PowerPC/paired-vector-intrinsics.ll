@@ -52,34 +52,34 @@ declare { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1>)
 define void @disass_pair(ptr %ptr1, ptr %ptr2, ptr %ptr3) {
 ; CHECK-LABEL: disass_pair:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv v3, 0(r3)
 ; CHECK-NEXT:    lxv vs0, 16(r3)
-; CHECK-NEXT:    stxv v3, 0(r4)
+; CHECK-NEXT:    lxv vs1, 0(r3)
+; CHECK-NEXT:    stxv vs1, 0(r4)
 ; CHECK-NEXT:    stxv vs0, 0(r5)
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-NOMMA-LABEL: disass_pair:
 ; CHECK-NOMMA:       # %bb.0: # %entry
-; CHECK-NOMMA-NEXT:    lxv v3, 0(r3)
 ; CHECK-NOMMA-NEXT:    lxv vs0, 16(r3)
-; CHECK-NOMMA-NEXT:    stxv v3, 0(r4)
+; CHECK-NOMMA-NEXT:    lxv vs1, 0(r3)
+; CHECK-NOMMA-NEXT:    stxv vs1, 0(r4)
 ; CHECK-NOMMA-NEXT:    stxv vs0, 0(r5)
 ; CHECK-NOMMA-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: disass_pair:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv v3, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    stxv vs0, 0(r4)
-; CHECK-BE-NEXT:    stxv v3, 0(r5)
+; CHECK-BE-NEXT:    stxv vs1, 0(r5)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-BE-NOMMA-LABEL: disass_pair:
 ; CHECK-BE-NOMMA:       # %bb.0: # %entry
-; CHECK-BE-NOMMA-NEXT:    lxv v3, 16(r3)
 ; CHECK-BE-NOMMA-NEXT:    lxv vs0, 0(r3)
+; CHECK-BE-NOMMA-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NOMMA-NEXT:    stxv vs0, 0(r4)
-; CHECK-BE-NOMMA-NEXT:    stxv v3, 0(r5)
+; CHECK-BE-NOMMA-NEXT:    stxv vs1, 0(r5)
 ; CHECK-BE-NOMMA-NEXT:    blr
 entry:
   %0 = load <256 x i1>, ptr %ptr1, align 32

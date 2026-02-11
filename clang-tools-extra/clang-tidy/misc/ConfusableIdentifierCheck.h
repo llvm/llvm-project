@@ -1,5 +1,4 @@
-//===--- ConfusableIdentifierCheck.h - clang-tidy
-//-------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_CONFUSABLE_IDENTIFIER_CHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_CONFUSABLE_IDENTIFIER_CHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_CONFUSABLEIDENTIFIERCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_CONFUSABLEIDENTIFIERCHECK_H
 
 #include "../ClangTidyCheck.h"
-#include <unordered_map>
+#include "llvm/ADT/DenseMap.h"
 
 namespace clang::tidy::misc {
 
@@ -22,7 +21,7 @@ namespace clang::tidy::misc {
 class ConfusableIdentifierCheck : public ClangTidyCheck {
 public:
   ConfusableIdentifierCheck(StringRef Name, ClangTidyContext *Context);
-  ~ConfusableIdentifierCheck();
+  ~ConfusableIdentifierCheck() override;
 
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
@@ -31,25 +30,15 @@ public:
     return TK_IgnoreUnlessSpelledInSource;
   }
 
-  struct ContextInfo {
-    const DeclContext *PrimaryContext;
-    const DeclContext *NonTransparentContext;
-    llvm::SmallVector<const DeclContext *> PrimaryContexts;
-    llvm::SmallVector<const CXXRecordDecl *> Bases;
-  };
-
 private:
-  struct Entry {
-    const NamedDecl *Declaration;
-    const ContextInfo *Info;
-  };
+  void addDeclToCheck(const NamedDecl *ND, const Decl *Parent);
 
-  const ContextInfo *getContextInfo(const DeclContext *DC);
-
-  llvm::StringMap<llvm::SmallVector<Entry>> Mapper;
-  std::unordered_map<const DeclContext *, ContextInfo> ContextInfos;
+  llvm::DenseMap<
+      const IdentifierInfo *,
+      llvm::SmallVector<std::pair<const NamedDecl *, const Decl *>, 1>>
+      NameToDecls;
 };
 
 } // namespace clang::tidy::misc
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_CONFUSABLE_IDENTIFIER_CHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_CONFUSABLEIDENTIFIERCHECK_H

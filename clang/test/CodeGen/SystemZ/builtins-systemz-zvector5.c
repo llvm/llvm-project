@@ -1,8 +1,8 @@
 // REQUIRES: systemz-registered-target
-// RUN: %clang_cc1 -target-cpu arch15 -triple s390x-linux-gnu \
+// RUN: %clang_cc1 -target-cpu z17 -triple s390x-linux-gnu \
 // RUN: -O2 -fzvector -flax-vector-conversions=none \
 // RUN: -Wall -Wno-unused -Werror -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -target-cpu arch15 -triple s390x-linux-gnu \
+// RUN: %clang_cc1 -target-cpu z17 -triple s390x-linux-gnu \
 // RUN: -O2 -fzvector -flax-vector-conversions=none \
 // RUN: -Wall -Wno-unused -Werror -S %s -o - | FileCheck %s --check-prefix=CHECK-ASM
 
@@ -246,7 +246,7 @@ void test_integer(void) {
   // CHECK-ASM: vctzq
 
   vslll = vec_abs(vslll);
-  // CHECK-ASM: vlcq
+  // CHECK-ASM: vlpq
 
   vslll = vec_avg(vslll, vslll);
   // CHECK: call i128 @llvm.s390.vavgq(i128 %{{.*}}, i128 %{{.*}})

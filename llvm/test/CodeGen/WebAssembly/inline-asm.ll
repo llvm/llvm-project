@@ -129,7 +129,18 @@ entry:
   ret i32 %ret
 }
 
+; CHECK-LABEL: v128_load
+; CHECK: local.get 0
+; CHECK-NEXT: v128.load 0
+; CHECK-NEXT: local.set 1
+define <4 x i32> @v128_load(ptr %v) #1 {
+entry:
+  %0 = tail call <4 x i32> asm "local.get $1\0Av128.load 0\0Alocal.set $0", "=r,r"(ptr %v)
+  ret <4 x i32> %0
+}
+
 attributes #0 = { nounwind }
+attributes #1 = { "target-features"="+simd128" }
 
 !0 = !{i32 47}
 !1 = !{i32 145}

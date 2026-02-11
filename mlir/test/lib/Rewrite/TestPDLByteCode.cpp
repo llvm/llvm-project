@@ -55,6 +55,13 @@ static LogicalResult customTypeResultConstraint(PatternRewriter &rewriter,
   return failure();
 }
 
+// Custom constraint that always returns failure
+static LogicalResult customConstraintFailure(PatternRewriter & /*rewriter*/,
+                                             PDLResultList & /*results*/,
+                                             ArrayRef<PDLValue> /*args*/) {
+  return failure();
+}
+
 // Custom constraint that returns a type range of variable length if the op is
 // named test.success_op
 static LogicalResult customTypeRangeResultConstraint(PatternRewriter &rewriter,
@@ -69,6 +76,19 @@ static LogicalResult customTypeRangeResultConstraint(PatternRewriter &rewriter,
       types.push_back(rewriter.getF32Type());
     }
     results.push_back(TypeRange(types));
+    return success();
+  }
+  return failure();
+}
+
+// Custom constraint that returns a value range if the op is named
+// test.success_op
+static LogicalResult customValueRangeResultConstraint(PatternRewriter &rewriter,
+                                                      PDLResultList &results,
+                                                      ArrayRef<PDLValue> args) {
+  auto *op = args[0].cast<Operation *>();
+  if (op->getName().getStringRef() == "test.success_op") {
+    results.push_back(op->getOperands()); // Returns ValueRange
     return success();
   }
   return failure();
@@ -150,8 +170,12 @@ struct TestPDLByteCodePass
                                           customValueResultConstraint);
     pdlPattern.registerConstraintFunction("op_constr_return_type",
                                           customTypeResultConstraint);
+    pdlPattern.registerConstraintFunction("op_multiple_returns_failure",
+                                          customConstraintFailure);
     pdlPattern.registerConstraintFunction("op_constr_return_type_range",
                                           customTypeRangeResultConstraint);
+    pdlPattern.registerConstraintFunction("op_constr_return_value_range",
+                                          customValueRangeResultConstraint);
     pdlPattern.registerRewriteFunction("creator", customCreate);
     pdlPattern.registerRewriteFunction("var_creator",
                                        customVariadicResultCreate);

@@ -7,9 +7,9 @@ define amdgpu_cs void @uniform(i32 inreg %v) {
 ; CHECK-LABEL: @uniform(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CC:%.*]] = icmp eq i32 [[V:%.*]], 0
-; CHECK-NEXT:    br i1 [[CC]], label [[IF:%.*]], label [[END:%.*]], !structurizecfg.uniform !0
+; CHECK-NEXT:    br i1 [[CC]], label [[IF:%.*]], label [[END:%.*]], !structurizecfg.uniform [[META0:![0-9]+]]
 ; CHECK:       if:
-; CHECK-NEXT:    br label [[END]], !structurizecfg.uniform !0
+; CHECK-NEXT:    br label [[END]], !structurizecfg.uniform [[META0]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret void
 ;
@@ -37,14 +37,14 @@ define amdgpu_cs void @nonuniform(ptr addrspace(4) %ptr) {
 ; CHECK-NEXT:    [[CC2:%.*]] = icmp eq i32 [[V]], 0
 ; CHECK-NEXT:    br i1 [[CC2]], label [[END_LOOP:%.*]], label [[FLOW1:%.*]]
 ; CHECK:       Flow:
-; CHECK-NEXT:    [[TMP0]] = phi i32 [ [[TMP2:%.*]], [[FLOW1]] ], [ undef, [[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0]] = phi i32 [ [[TMP2:%.*]], [[FLOW1]] ], [ poison, [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ [[TMP3:%.*]], [[FLOW1]] ], [ true, [[FOR_BODY]] ]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       end.loop:
 ; CHECK-NEXT:    [[I_INC:%.*]] = add i32 [[I]], 1
 ; CHECK-NEXT:    br label [[FLOW1]]
 ; CHECK:       Flow1:
-; CHECK-NEXT:    [[TMP2]] = phi i32 [ [[I_INC]], [[END_LOOP]] ], [ undef, [[MID_LOOP]] ]
+; CHECK-NEXT:    [[TMP2]] = phi i32 [ [[I_INC]], [[END_LOOP]] ], [ poison, [[MID_LOOP]] ]
 ; CHECK-NEXT:    [[TMP3]] = phi i1 [ false, [[END_LOOP]] ], [ true, [[MID_LOOP]] ]
 ; CHECK-NEXT:    br label [[FLOW]]
 ; CHECK:       for.end:
@@ -85,7 +85,7 @@ define amdgpu_cs void @uniform_branch_to_nonuniform_subregions(ptr addrspace(4) 
 ; CHECK-LABEL: @uniform_branch_to_nonuniform_subregions(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[DATA:%.*]], 42
-; CHECK-NEXT:    br i1 [[C]], label [[UNIFORM_FOR_BODY:%.*]], label [[FOR_BODY:%.*]], !structurizecfg.uniform !0
+; CHECK-NEXT:    br i1 [[C]], label [[UNIFORM_FOR_BODY:%.*]], label [[FOR_BODY:%.*]], !structurizecfg.uniform [[META0]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP0:%.*]], [[FLOW1:%.*]] ]
 ; CHECK-NEXT:    [[CC:%.*]] = icmp ult i32 [[I]], 4
@@ -95,14 +95,14 @@ define amdgpu_cs void @uniform_branch_to_nonuniform_subregions(ptr addrspace(4) 
 ; CHECK-NEXT:    [[CC2:%.*]] = icmp eq i32 [[V]], 0
 ; CHECK-NEXT:    br i1 [[CC2]], label [[END_LOOP:%.*]], label [[FLOW2:%.*]]
 ; CHECK:       Flow1:
-; CHECK-NEXT:    [[TMP0]] = phi i32 [ [[TMP2:%.*]], [[FLOW2]] ], [ undef, [[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0]] = phi i32 [ [[TMP2:%.*]], [[FLOW2]] ], [ poison, [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ [[TMP3:%.*]], [[FLOW2]] ], [ true, [[FOR_BODY]] ]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       end.loop:
 ; CHECK-NEXT:    [[I_INC:%.*]] = add i32 [[I]], 1
 ; CHECK-NEXT:    br label [[FLOW2]]
 ; CHECK:       Flow2:
-; CHECK-NEXT:    [[TMP2]] = phi i32 [ [[I_INC]], [[END_LOOP]] ], [ undef, [[MID_LOOP]] ]
+; CHECK-NEXT:    [[TMP2]] = phi i32 [ [[I_INC]], [[END_LOOP]] ], [ poison, [[MID_LOOP]] ]
 ; CHECK-NEXT:    [[TMP3]] = phi i1 [ false, [[END_LOOP]] ], [ true, [[MID_LOOP]] ]
 ; CHECK-NEXT:    br label [[FLOW1]]
 ; CHECK:       for.end:
@@ -118,14 +118,14 @@ define amdgpu_cs void @uniform_branch_to_nonuniform_subregions(ptr addrspace(4) 
 ; CHECK-NEXT:    [[UNIFORM_CC2:%.*]] = icmp eq i32 [[UNIFORM_V]], 0
 ; CHECK-NEXT:    br i1 [[UNIFORM_CC2]], label [[UNIFORM_END_LOOP:%.*]], label [[FLOW5:%.*]]
 ; CHECK:       Flow4:
-; CHECK-NEXT:    [[TMP4]] = phi i32 [ [[TMP6:%.*]], [[FLOW5]] ], [ undef, [[UNIFORM_FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP4]] = phi i32 [ [[TMP6:%.*]], [[FLOW5]] ], [ poison, [[UNIFORM_FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi i1 [ [[TMP7:%.*]], [[FLOW5]] ], [ true, [[UNIFORM_FOR_BODY]] ]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[UNIFORM_FOR_END:%.*]], label [[UNIFORM_FOR_BODY]]
 ; CHECK:       uniform.end.loop:
 ; CHECK-NEXT:    [[UNIFORM_I_INC:%.*]] = add i32 [[UNIFORM_I]], 1
 ; CHECK-NEXT:    br label [[FLOW5]]
 ; CHECK:       Flow5:
-; CHECK-NEXT:    [[TMP6]] = phi i32 [ [[UNIFORM_I_INC]], [[UNIFORM_END_LOOP]] ], [ undef, [[UNIFORM_MID_LOOP]] ]
+; CHECK-NEXT:    [[TMP6]] = phi i32 [ [[UNIFORM_I_INC]], [[UNIFORM_END_LOOP]] ], [ poison, [[UNIFORM_MID_LOOP]] ]
 ; CHECK-NEXT:    [[TMP7]] = phi i1 [ false, [[UNIFORM_END_LOOP]] ], [ true, [[UNIFORM_MID_LOOP]] ]
 ; CHECK-NEXT:    br label [[FLOW4]]
 ; CHECK:       uniform.for.end:

@@ -54,7 +54,7 @@ namespace InitDecl {
 constexpr char g(char const (&x)[2]) {
     return 'x';
   if (auto [a, b] = x) // both-error {{an array type is not allowed here}} \
-                       // both-warning {{ISO C++17 does not permit structured binding declaration in a condition}}
+                       // both-warning {{structured binding declaration in a condition is a C++2c extension}}
     ;
 }
 static_assert(g("x") == 'x');

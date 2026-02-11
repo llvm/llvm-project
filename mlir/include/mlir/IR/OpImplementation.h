@@ -15,10 +15,24 @@
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectInterface.h"
+#include "mlir/IR/OpAsmSupport.h"
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/SMLoc.h"
 #include <optional>
+
+namespace {
+// reference https://stackoverflow.com/a/16000226
+template <typename T, typename = void>
+struct HasStaticName : std::false_type {};
+
+template <typename T>
+struct HasStaticName<T,
+                     typename std::enable_if<
+                         std::is_same<::llvm::StringLiteral,
+                                      std::decay_t<decltype(T::name)>>::value,
+                         void>::type> : std::true_type {};
+} // namespace
 
 namespace mlir {
 class AsmParsedResourceEntry;
@@ -116,10 +130,35 @@ public:
   /// Return the raw output stream used by this printer.
   virtual raw_ostream &getStream() const;
 
+  /// Print a newline and indent the printer to the start of the current
+  /// operation/attribute/type.
+  /// Note: For attributes and types this method should only be used in
+  /// custom dialects. Usage in upstream MLIR dialects is currently disallowed.
+  virtual void printNewline();
+
+  /// Increase indentation.
+  virtual void increaseIndent();
+
+  /// Decrease indentation.
+  virtual void decreaseIndent();
+
   /// Print the given floating point value in a stabilized form that can be
   /// roundtripped through the IR. This is the companion to the 'parseFloat'
   /// hook on the AsmParser.
   virtual void printFloat(const APFloat &value);
+
+  /// Print the given integer value. This is useful to force a uint8_t/int8_t to
+  /// be printed as an integer instead of a char.
+  template <typename IntT>
+  std::enable_if_t<std::is_integral_v<IntT>, void> printInteger(IntT value) {
+    // Handle int8_t/uint8_t specially to avoid printing as char
+    if constexpr (std::is_same_v<IntT, int8_t> ||
+                  std::is_same_v<IntT, uint8_t>) {
+      getStream() << static_cast<int>(value);
+    } else {
+      getStream() << value;
+    }
+  }
 
   virtual void printType(Type type);
   virtual void printAttribute(Attribute attr);
@@ -179,6 +218,9 @@ public:
   /// Print the given attribute without its type. The corresponding parser must
   /// provide a valid type for the attribute.
   virtual void printAttributeWithoutType(Attribute attr);
+
+  /// Print the given named attribute.
+  virtual void printNamedAttribute(NamedAttribute attr);
 
   /// Print the alias for the given attribute, return failure if no alias could
   /// be printed.
@@ -418,16 +460,6 @@ public:
   /// Print a loc(...) specifier if printing debug info is enabled.
   virtual void printOptionalLocationSpecifier(Location loc) = 0;
 
-  /// Print a newline and indent the printer to the start of the current
-  /// operation.
-  virtual void printNewline() = 0;
-
-  /// Increase indentation.
-  virtual void increaseIndent() = 0;
-
-  /// Decrease indentation.
-  virtual void decreaseIndent() = 0;
-
   /// Print a block argument in the usual format of:
   ///   %ssaName : type {attr1=42} loc("here")
   /// where location printing is controlled by the standard internal option.
@@ -641,6 +673,12 @@ public:
 
   /// Parse a '+' token if present.
   virtual ParseResult parseOptionalPlus() = 0;
+
+  /// Parse a '/' token.
+  virtual ParseResult parseSlash() = 0;
+
+  /// Parse a '/' token if present.
+  virtual ParseResult parseOptionalSlash() = 0;
 
   /// Parse a '-' token.
   virtual ParseResult parseMinus() = 0;
@@ -1237,8 +1275,13 @@ public:
 
     // Check for the right kind of type.
     result = llvm::dyn_cast<TypeT>(type);
-    if (!result)
-      return emitError(loc, "invalid kind of type specified");
+    if (!result) {
+      InFlightDiagnostic diag =
+          emitError(loc, "invalid kind of type specified");
+      if constexpr (HasStaticName<TypeT>::value)
+        diag << ": expected " << TypeT::name << ", but found " << type;
+      return diag;
+    }
 
     return success();
   }
@@ -1269,8 +1312,13 @@ public:
 
     // Check for the right kind of Type.
     result = llvm::dyn_cast<TypeT>(type);
-    if (!result)
-      return emitError(loc, "invalid kind of Type specified");
+    if (!result) {
+      InFlightDiagnostic diag =
+          emitError(loc, "invalid kind of type specified");
+      if constexpr (HasStaticName<TypeT>::value)
+        diag << ": expected " << TypeT::name << ", but found " << type;
+      return diag;
+    }
     return success();
   }
 
@@ -1306,8 +1354,13 @@ public:
 
     // Check for the right kind of type.
     result = llvm::dyn_cast<TypeType>(type);
-    if (!result)
-      return emitError(loc, "invalid kind of type specified");
+    if (!result) {
+      InFlightDiagnostic diag =
+          emitError(loc, "invalid kind of type specified");
+      if constexpr (HasStaticName<TypeType>::value)
+        diag << ": expected " << TypeType::name << ", but found " << type;
+      return diag;
+    }
 
     return success();
   }
@@ -1603,10 +1656,12 @@ public:
                   SmallVectorImpl<Value> &result) {
     size_t operandSize = llvm::range_size(operands);
     size_t typeSize = llvm::range_size(types);
-    if (operandSize != typeSize)
-      return emitError(loc)
+    if (operandSize != typeSize) {
+      // If no location was provided, report errors at the beginning of the op.
+      return emitError(loc.isValid() ? loc : getNameLoc())
              << "number of operands and types do not match: got " << operandSize
              << " operands and " << typeSize << " types";
+    }
 
     for (auto [operand, type] : llvm::zip_equal(operands, types))
       if (resolveOperand(operand, type, result))
@@ -1725,90 +1780,6 @@ public:
 };
 
 //===--------------------------------------------------------------------===//
-// Dialect OpAsm interface.
-//===--------------------------------------------------------------------===//
-
-/// A functor used to set the name of the result. See 'getAsmResultNames' below
-/// for more details.
-using OpAsmSetNameFn = function_ref<void(StringRef)>;
-
-/// A functor used to set the name of the start of a result group of an
-/// operation. See 'getAsmResultNames' below for more details.
-using OpAsmSetValueNameFn = function_ref<void(Value, StringRef)>;
-
-/// A functor used to set the name of blocks in regions directly nested under
-/// an operation.
-using OpAsmSetBlockNameFn = function_ref<void(Block *, StringRef)>;
-
-class OpAsmDialectInterface
-    : public DialectInterface::Base<OpAsmDialectInterface> {
-public:
-  OpAsmDialectInterface(Dialect *dialect) : Base(dialect) {}
-
-  //===------------------------------------------------------------------===//
-  // Aliases
-  //===------------------------------------------------------------------===//
-
-  /// Holds the result of `getAlias` hook call.
-  enum class AliasResult {
-    /// The object (type or attribute) is not supported by the hook
-    /// and an alias was not provided.
-    NoAlias,
-    /// An alias was provided, but it might be overriden by other hook.
-    OverridableAlias,
-    /// An alias was provided and it should be used
-    /// (no other hooks will be checked).
-    FinalAlias
-  };
-
-  /// Hooks for getting an alias identifier alias for a given symbol, that is
-  /// not necessarily a part of this dialect. The identifier is used in place of
-  /// the symbol when printing textual IR. These aliases must not contain `.` or
-  /// end with a numeric digit([0-9]+).
-  virtual AliasResult getAlias(Attribute attr, raw_ostream &os) const {
-    return AliasResult::NoAlias;
-  }
-  virtual AliasResult getAlias(Type type, raw_ostream &os) const {
-    return AliasResult::NoAlias;
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Resources
-  //===--------------------------------------------------------------------===//
-
-  /// Declare a resource with the given key, returning a handle to use for any
-  /// references of this resource key within the IR during parsing. The result
-  /// of `getResourceKey` on the returned handle is permitted to be different
-  /// than `key`.
-  virtual FailureOr<AsmDialectResourceHandle>
-  declareResource(StringRef key) const {
-    return failure();
-  }
-
-  /// Return a key to use for the given resource. This key should uniquely
-  /// identify this resource within the dialect.
-  virtual std::string
-  getResourceKey(const AsmDialectResourceHandle &handle) const {
-    llvm_unreachable(
-        "Dialect must implement `getResourceKey` when defining resources");
-  }
-
-  /// Hook for parsing resource entries. Returns failure if the entry was not
-  /// valid, or could otherwise not be processed correctly. Any necessary errors
-  /// can be emitted via the provided entry.
-  virtual LogicalResult parseResource(AsmParsedResourceEntry &entry) const;
-
-  /// Hook for building resources to use during printing. The given `op` may be
-  /// inspected to help determine what information to include.
-  /// `referencedResources` contains all of the resources detected when printing
-  /// 'op'.
-  virtual void
-  buildResources(Operation *op,
-                 const SetVector<AsmDialectResourceHandle> &referencedResources,
-                 AsmResourceBuilder &builder) const {}
-};
-
-//===--------------------------------------------------------------------===//
 // Custom printers and parsers.
 //===--------------------------------------------------------------------===//
 
@@ -1826,7 +1797,13 @@ ParseResult parseDimensionList(OpAsmParser &parser,
 
 /// The OpAsmOpInterface, see OpAsmInterface.td for more details.
 #include "mlir/IR/OpAsmOpInterface.h.inc"
-#include "mlir/IR/OpAsmTypeInterface.h.inc"
+
+//===--------------------------------------------------------------------===//
+// Dialect OpAsm interface.
+//===--------------------------------------------------------------------===//
+
+/// The OpAsmDialectInterface, see OpAsmDialectInterface.td
+#include "mlir/IR/OpAsmDialectInterface.h.inc"
 
 namespace llvm {
 template <>

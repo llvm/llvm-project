@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -test-vector-sink-patterns -split-input-file | FileCheck %s
+// RUN: mlir-opt -transform-preload-library='transform-library-paths=%p/vector-sink-transform.mlir' -transform-interpreter -split-input-file %s | FileCheck %s
 
 //-----------------------------------------------------------------------------
 // [Pattern: ReorderElementwiseOpsOnBroadcast]
@@ -39,7 +40,7 @@ func.func @broadcast_scalar_with_bcast_scalable(%arg1: index, %arg2: index) -> v
 // CHECK:           %[[BCAST:.*]] = vector.broadcast %[[ADD]] : index to vector<1x4xindex>
 // CHECK:           return %[[BCAST]] : vector<1x4xindex>
 func.func @broadcast_scalar_with_bcast_and_splat(%arg1: index, %arg2: index) -> vector<1x4xindex> {
-  %0 = vector.splat %arg1 : vector<1x4xindex>
+  %0 = vector.broadcast %arg1 : index to vector<1x4xindex>
   %1 = vector.broadcast %arg2 : index to vector<1x4xindex>
   %2 = arith.addi %0, %1 : vector<1x4xindex>
   return %2 : vector<1x4xindex>
@@ -52,7 +53,7 @@ func.func @broadcast_scalar_with_bcast_and_splat(%arg1: index, %arg2: index) -> 
 // CHECK:           %[[BCAST:.*]] = vector.broadcast %[[ADD]] : index to vector<1x[4]xindex>
 // CHECK:           return %[[BCAST]] : vector<1x[4]xindex>
 func.func @broadcast_scalar_with_bcast_and_splat_scalable(%arg1: index, %arg2: index) -> vector<1x[4]xindex> {
-  %0 = vector.splat %arg1 : vector<1x[4]xindex>
+  %0 = vector.broadcast %arg1 : index to vector<1x[4]xindex>
   %1 = vector.broadcast %arg2 : index to vector<1x[4]xindex>
   %2 = arith.addi %0, %1 : vector<1x[4]xindex>
   return %2 : vector<1x[4]xindex>
@@ -93,12 +94,12 @@ func.func @broadcast_vector_scalable(%arg1: vector<[4]xf32>, %arg2: vector<[4]xf
 // CHECK-LABEL:   func.func @broadcast_scalar_and_vec(
 // CHECK-SAME:       %[[ARG1:.*]]: index,
 // CHECK-SAME:       %[[ARG2:.*]]: vector<4xindex>) -> vector<1x4xindex> {
-// CHECK:            %[[SPLAT:.*]] = vector.splat %[[ARG1]] : vector<1x4xindex>
+// CHECK:            %[[SPLAT:.*]] = vector.broadcast %[[ARG1]] : index to vector<1x4xindex>
 // CHECK:            %[[BCAST:.*]] = vector.broadcast %[[ARG2]] : vector<4xindex> to vector<1x4xindex>
 // CHECK:            %[[ADD:.*]] = arith.addi %[[SPLAT]], %[[BCAST]] : vector<1x4xindex>
 // CHECK:            return %[[ADD]] : vector<1x4xindex>
 func.func @broadcast_scalar_and_vec(%arg1: index, %arg2: vector<4xindex>) -> vector<1x4xindex> {
-  %0 = vector.splat %arg1 : vector<1x4xindex>
+  %0 = vector.broadcast %arg1 : index to vector<1x4xindex>
   %1 = vector.broadcast %arg2 : vector<4xindex> to vector<1x4xindex>
   %2 = arith.addi %0, %1 : vector<1x4xindex>
   return %2 : vector<1x4xindex>
@@ -107,12 +108,12 @@ func.func @broadcast_scalar_and_vec(%arg1: index, %arg2: vector<4xindex>) -> vec
 // CHECK-LABEL:   func.func @broadcast_scalar_and_vec_scalable(
 // CHECK-SAME:       %[[ARG1:.*]]: index,
 // CHECK-SAME:       %[[ARG2:.*]]: vector<[4]xindex>) -> vector<1x[4]xindex> {
-// CHECK:            %[[SPLAT:.*]] = vector.splat %[[ARG1]] : vector<1x[4]xindex>
+// CHECK:            %[[SPLAT:.*]] = vector.broadcast %[[ARG1]] : index to vector<1x[4]xindex>
 // CHECK:            %[[BCAST:.*]] = vector.broadcast %[[ARG2]] : vector<[4]xindex> to vector<1x[4]xindex>
 // CHECK:            %[[ADD:.*]] = arith.addi %[[SPLAT]], %[[BCAST]] : vector<1x[4]xindex>
 // CHECK:            return %[[ADD]] : vector<1x[4]xindex>
 func.func @broadcast_scalar_and_vec_scalable(%arg1: index, %arg2: vector<[4]xindex>) -> vector<1x[4]xindex> {
-  %0 = vector.splat %arg1 : vector<1x[4]xindex>
+  %0 = vector.broadcast %arg1 : index to vector<1x[4]xindex>
   %1 = vector.broadcast %arg2 : vector<[4]xindex> to vector<1x[4]xindex>
   %2 = arith.addi %0, %1 : vector<1x[4]xindex>
   return %2 : vector<1x[4]xindex>
@@ -179,13 +180,14 @@ func.func @negative_not_elementwise() -> vector<2x2xf32> {
 
 // -----
 
-// The source and the result for arith.cmp have different types - not supported
+// The source and the result for arith.cmp have different types
 
-// CHECK-LABEL: func.func @negative_source_and_result_mismatch
-//       CHECK:   %[[BROADCAST:.+]] = vector.broadcast
-//       CHECK:   %[[RETURN:.+]] = arith.cmpf uno, %[[BROADCAST]], %[[BROADCAST]]
-//       CHECK:   return %[[RETURN]]
-func.func @negative_source_and_result_mismatch(%arg0 : f32, %arg1 : vector<1xf32>) -> vector<1xi1> {
+// CHECK-LABEL: func.func @source_and_result_mismatch(
+//  CHECK-SAME: %[[ARG0:.+]]: f32)
+//       CHECK:   %[[COMPARE:.+]] = arith.cmpf uno, %[[ARG0]], %[[ARG0]]
+//       CHECK:   %[[BROADCAST:.+]] = vector.broadcast %[[COMPARE]] : i1 to vector<1xi1>
+//       CHECK:   return %[[BROADCAST]]
+func.func @source_and_result_mismatch(%arg0 : f32) -> vector<1xi1> {
   %0 = vector.broadcast %arg0 : f32 to vector<1xf32>
   %1 = arith.cmpf uno, %0, %0 : vector<1xf32>
   return %1 : vector<1xi1>
@@ -207,6 +209,130 @@ func.func @negative_op_only_supports_vectors(%arg0 : f32) -> vector<1xf32> {
   %0 = vector.broadcast %arg0 : f32 to vector<1xf32>
   %1 = vector.fma %0, %0, %0 : vector<1xf32>
   return %1 : vector<1xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_scalar_and_splat_const(
+// CHECK-SAME:     %[[ARG_0:.*]]: index) -> vector<1x4xindex> {
+// CHECK:           %[[NEW_CST:.*]] = arith.constant 2 : index
+// CHECK:           %[[ADD:.*]] = arith.addi %[[ARG_0]], %[[NEW_CST]] : index
+// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[ADD]] : index to vector<1x4xindex>
+// CHECK:           return %[[BCAST]] : vector<1x4xindex>
+
+func.func @broadcast_scalar_and_splat_const(%arg0: index) -> vector<1x4xindex> {
+  %0 = vector.broadcast %arg0 : index to vector<1x4xindex>
+  %cst = arith.constant dense<2> : vector<1x4xindex>
+  %2 = arith.addi %0, %cst : vector<1x4xindex>
+  return %2 : vector<1x4xindex>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_scalar_and_splat_const_const_first(
+// CHECK-SAME:     %[[ARG_0:.*]]: index) -> vector<1x4xindex> {
+// CHECK:           %[[NEW_CST:.*]] = arith.constant 2 : index
+// CHECK:           %[[SUB:.*]] = arith.subi %[[NEW_CST]], %[[ARG_0]] : index
+// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[SUB]] : index to vector<1x4xindex>
+// CHECK:           return %[[BCAST]] : vector<1x4xindex>
+
+func.func @broadcast_scalar_and_splat_const_const_first(%arg0: index) -> vector<1x4xindex> {
+  %0 = vector.broadcast %arg0 : index to vector<1x4xindex>
+  %cst = arith.constant dense<2> : vector<1x4xindex>
+  %2 = arith.subi %cst, %0 : vector<1x4xindex>
+  return %2 : vector<1x4xindex>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_vector_and_splat_const(
+// CHECK-SAME:     %[[ARG_0:.*]]: vector<4xf32>) -> vector<3x4xf32> {
+// CHECK:           %[[NEW_CST:.*]] = arith.constant dense<2.000000e+00> : vector<4xf32>
+// CHECK:           %[[ADD:.*]] = arith.mulf %[[ARG_0]], %[[NEW_CST]] : vector<4xf32>
+// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[ADD]] : vector<4xf32> to vector<3x4xf32>
+// CHECK:           return %[[BCAST]] : vector<3x4xf32>
+
+func.func @broadcast_vector_and_splat_const(%arg0: vector<4xf32>) -> vector<3x4xf32> {
+  %0 = vector.broadcast %arg0 : vector<4xf32> to vector<3x4xf32>
+  %cst = arith.constant dense<2.000000e+00> : vector<3x4xf32>
+  %2 = arith.mulf %0, %cst : vector<3x4xf32>
+  return %2 : vector<3x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @negative_broadcast_with_non_splat_const(
+// CHECK-SAME:     %[[ARG_0:.*]]: index) -> vector<1x4xindex> {
+// CHECK-DAG:       %[[BCAST:.*]] = vector.broadcast %[[ARG_0]] : index to vector<1x4xindex>
+// CHECK-DAG:       %[[CST:.*]] = arith.constant dense<{{\[}}[0, 1, 2, 3]]> : vector<1x4xindex>
+// CHECK:           %[[ADD:.*]] = arith.addi %[[BCAST]], %[[CST]] : vector<1x4xindex>
+// CHECK:           return %[[ADD]] : vector<1x4xindex>
+
+func.func @negative_broadcast_with_non_splat_const(%arg0: index) -> vector<1x4xindex> {
+  %0 = vector.broadcast %arg0 : index to vector<1x4xindex>
+  %cst = arith.constant dense<[[0, 1, 2, 3]]> : vector<1x4xindex>
+  %2 = arith.addi %0, %cst : vector<1x4xindex>
+  return %2 : vector<1x4xindex>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_scalar_mixed_type(
+// CHECK-SAME:     %[[ARG_0:.*]]: f16) -> vector<1x4xf32> {
+// CHECK:           %[[EXTF:.*]] = arith.extf %[[ARG_0]] : f16 to f32
+// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[EXTF]] : f32 to vector<1x4xf32>
+// CHECK:           return %[[BCAST]] : vector<1x4xf32>
+
+func.func @broadcast_scalar_mixed_type(%arg0: f16) -> vector<1x4xf32> {
+  %0 = vector.broadcast %arg0 : f16 to vector<1x4xf16>
+  %1 = arith.extf %0 : vector<1x4xf16> to vector<1x4xf32>
+  return %1 : vector<1x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_vector_mixed_type(
+// CHECK-SAME:     %[[ARG_0:.*]]: vector<4xf16>) -> vector<3x4xf32> {
+// CHECK:           %[[EXTF:.*]] = arith.extf %[[ARG_0]] : vector<4xf16> to vector<4xf32>
+// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[EXTF]] : vector<4xf32> to vector<3x4xf32>
+// CHECK:           return %[[BCAST]] : vector<3x4xf32>
+
+func.func @broadcast_vector_mixed_type(%arg0: vector<4xf16>) -> vector<3x4xf32> {
+  %0 = vector.broadcast %arg0 : vector<4xf16> to vector<3x4xf16>
+  %1 = arith.extf %0 : vector<3x4xf16> to vector<3x4xf32>
+  return %1 : vector<3x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_scalar_and_splat_const_mixed_type(
+// CHECK-SAME:     %[[ARG_0:.*]]: f32) -> vector<1x4xf32> {
+// CHECK:           %[[NEW_CST:.*]] = arith.constant 3 : i32
+// CHECK:           %[[POW:.*]] = math.fpowi %[[ARG_0]], %[[NEW_CST]] : f32, i32
+// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[POW]] : f32 to vector<1x4xf32>
+// CHECK:           return %[[BCAST]] : vector<1x4xf32>
+
+func.func @broadcast_scalar_and_splat_const_mixed_type(%arg0: f32) -> vector<1x4xf32> {
+  %0 = vector.broadcast %arg0 : f32 to vector<1x4xf32>
+  %cst = arith.constant dense<3> : vector<1x4xi32>
+  %2 = math.fpowi %0, %cst : vector<1x4xf32>, vector<1x4xi32>
+  return %2 : vector<1x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_vector_and_splat_const_mixed_type(
+// CHECK-SAME:     %[[ARG_0:.*]]: vector<4xf32>) -> vector<3x4xf32> {
+// CHECK:           %[[NEW_CST:.*]] = arith.constant dense<3> : vector<4xi32>
+// CHECK:           %[[POW:.*]] = math.fpowi %[[ARG_0]], %[[NEW_CST]] : vector<4xf32>, vector<4xi32>
+// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[POW]] : vector<4xf32> to vector<3x4xf32>
+// CHECK:           return %[[BCAST]] : vector<3x4xf32>
+
+func.func @broadcast_vector_and_splat_const_mixed_type(%arg0: vector<4xf32>) -> vector<3x4xf32> {
+  %0 = vector.broadcast %arg0 : vector<4xf32> to vector<3x4xf32>
+  %cst = arith.constant dense<3> : vector<3x4xi32>
+  %2 = math.fpowi %0, %cst : vector<3x4xf32>, vector<3x4xi32>
+  return %2 : vector<3x4xf32>
 }
 
 //===----------------------------------------------------------------------===//
@@ -254,6 +380,21 @@ func.func @broadcast_scalar_extsi_scalable(%a : i8) -> vector<2x[4]xi32> {
   %b = vector.broadcast %a : i8 to vector<2x[4]xi8>
   %r = arith.extsi %b : vector<2x[4]xi8> to vector<2x[4]xi32>
   return %r : vector<2x[4]xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @negative_broadcast_cast_non_vector_result
+// CHECK-SAME: (%[[ARG:.*]]: i64)
+// CHECK: %[[BCAST:.*]] = vector.broadcast %[[ARG]] : i64 to vector<26x7xi64>
+// CHECK: %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[BCAST]] : vector<26x7xi64> to !llvm.array<26 x vector<7xi64>>
+// CHECK: return %[[CAST]] : !llvm.array<26 x vector<7xi64>>
+/// This test ensures that the `ReorderCastOpsOnBroadcast` pattern does not
+/// attempt to reorder a cast operation that produces a non-vector result type.
+func.func @negative_broadcast_cast_non_vector_result(%arg0: i64) -> !llvm.array<26 x vector<7xi64>> {
+  %0 = vector.broadcast %arg0 : i64 to vector<26x7xi64>
+  %1 = builtin.unrealized_conversion_cast %0 : vector<26x7xi64> to !llvm.array<26 x vector<7xi64>>
+  return %1 : !llvm.array<26 x vector<7xi64>>
 }
 
 //===----------------------------------------------------------------------===//
@@ -422,4 +563,305 @@ func.func @transpose_elementwise_diff_map_scalable(%a : vector<[4]x6x3x2xf32>, %
   %bt = vector.transpose %b, [0, 2, 1, 3]: vector<6x2x[4]x3xf32> to vector<6x[4]x2x3xf32>
   %r = arith.addf %at, %bt : vector<6x[4]x2x3xf32>
   return %r : vector<6x[4]x2x3xf32>
+}
+
+// -----
+
+//-----------------------------------------------------------------------------
+// [Pattern: ExtractOpFromElementwise]
+//-----------------------------------------------------------------------------
+
+// CHECK-LABEL: @extract_elementwise_scalar
+//  CHECK-SAME:   (%[[ARG0:.*]]: vector<4xf32>, %[[ARG1:.*]]: vector<4xf32>)
+func.func @extract_elementwise_scalar(%arg0: vector<4xf32>, %arg1: vector<4xf32>) -> f32 {
+// CHECK:   %[[EXT0:.*]] = vector.extract %[[ARG0]][1] : f32 from vector<4xf32>
+// CHECK:   %[[EXT1:.*]] = vector.extract %[[ARG1]][1] : f32 from vector<4xf32>
+// CHECK:   %[[RES:.*]] = arith.addf %[[EXT0]], %[[EXT1]] : f32
+// CHECK:   return %[[RES]] : f32
+  %0 = arith.addf %arg0, %arg1 : vector<4xf32>
+  %1 = vector.extract %0[1] : f32 from vector<4xf32>
+  return %1 : f32
+}
+
+// CHECK-LABEL: @extract_elementwise_arg_res_different_types
+//  CHECK-SAME:   (%[[ARG0:.*]]: vector<4xindex>)
+func.func @extract_elementwise_arg_res_different_types(%arg0: vector<4xindex>) -> i64 {
+// CHECK:   %[[EXT:.*]] = vector.extract %[[ARG0]][1] : index from vector<4xindex>
+// CHECK:   %[[RES:.*]] = arith.index_cast %[[EXT]] : index to i64
+// CHECK:   return %[[RES]] : i64
+  %0 = arith.index_cast %arg0: vector<4xindex> to vector<4xi64>
+  %1 = vector.extract %0[1] : i64 from vector<4xi64>
+  return %1 : i64
+}
+
+// CHECK-LABEL: @extract_elementwise_vec
+//  CHECK-SAME:   (%[[ARG0:.*]]: vector<2x4xf32>, %[[ARG1:.*]]: vector<2x4xf32>)
+func.func @extract_elementwise_vec(%arg0: vector<2x4xf32>, %arg1: vector<2x4xf32>) -> vector<4xf32> {
+// CHECK:   %[[EXT0:.*]] = vector.extract %[[ARG0]][1] : vector<4xf32> from vector<2x4xf32>
+// CHECK:   %[[EXT1:.*]] = vector.extract %[[ARG1]][1] : vector<4xf32> from vector<2x4xf32>
+// CHECK:   %[[RES:.*]] = arith.addf %[[EXT0]], %[[EXT1]] : vector<4xf32>
+// CHECK:   return %[[RES]] : vector<4xf32>
+  %0 = arith.addf %arg0, %arg1 : vector<2x4xf32>
+  %1 = vector.extract %0[1] : vector<4xf32> from vector<2x4xf32>
+  return %1 : vector<4xf32>
+}
+
+// CHECK-LABEL: @negative_extract_elementwise_no_single_use
+//  CHECK-SAME:   (%[[ARG0:.*]]: vector<4xf32>, %[[ARG1:.*]]: vector<4xf32>)
+func.func @negative_extract_elementwise_no_single_use(%arg0: vector<4xf32>, %arg1: vector<4xf32>) -> (f32, vector<4xf32>) {
+// Do not propagate extract, as elementwise has other uses.
+// CHECK:   %[[ELT:.*]] = arith.addf %[[ARG0]], %[[ARG1]] : vector<4xf32>
+// CHECK:   %[[EXT:.*]] = vector.extract %[[ELT]][1] : f32 from vector<4xf32>
+// CHECK:   return %[[EXT]], %[[ELT]] : f32, vector<4xf32>
+  %0 = arith.addf %arg0, %arg1 : vector<4xf32>
+  %1 = vector.extract %0[1] : f32 from vector<4xf32>
+  return %1, %0 : f32, vector<4xf32>
+}
+
+// CHECK-LABEL: @negative_extract_elementwise_not_one_res
+//  CHECK-SAME:   (%[[ARG0:.*]]: vector<4xi32>, %[[ARG1:.*]]: vector<4xi32>)
+func.func @negative_extract_elementwise_not_one_res(%arg0: vector<4xi32>, %arg1: vector<4xi32>) -> i32 {
+// Do not propagate extract, as elementwise has more than 1 result.
+// CHECK:   %[[LOW:.*]], %[[HIGH:.*]] = arith.mulsi_extended %[[ARG0]], %[[ARG1]] : vector<4xi32>
+// CHECK:   %[[EXT:.*]] = vector.extract %[[LOW]][1] : i32 from vector<4xi32>
+// CHECK:   return %[[EXT]] : i32
+  %low, %hi = arith.mulsi_extended %arg0, %arg1 : vector<4xi32>
+  %1 = vector.extract %low[1] : i32 from vector<4xi32>
+  return %1 : i32
+}
+
+// CHECK-LABEL: @negative_extract_not_elementwise
+//  CHECK-SAME:   (%[[ARG0:.*]]: vector<4xi64>)
+func.func @negative_extract_not_elementwise(%arg0: vector<4xi64>) -> i64 {
+// `test.increment` is not an elemewise op.
+// CHECK:   %[[INC:.*]] = test.increment %[[ARG0]] : vector<4xi64>
+// CHECK:   %[[RES:.*]] = vector.extract %[[INC]][1] : i64 from vector<4xi64>
+// CHECK:   return %[[RES]] : i64
+  %0 = test.increment %arg0: vector<4xi64>
+  %1 = vector.extract %0[1] : i64 from vector<4xi64>
+  return %1 : i64
+}
+
+// CHECK-LABEL: @negative_extract_vec_fma
+//  CHECK-SAME:   (%[[ARG0:.*]]: vector<4xf32>, %[[ARG1:.*]]: vector<4xf32>, %[[ARG2:.*]]: vector<4xf32>)
+func.func @negative_extract_vec_fma(%arg0: vector<4xf32>, %arg1: vector<4xf32>, %arg2: vector<4xf32>) -> f32 {
+// `vector.fma` doesn't suppport scalars.
+// CHECK:   %[[FMA:.*]] = vector.fma %[[ARG0]], %[[ARG1]], %[[ARG2]] : vector<4xf32>
+// CHECK:   %[[RES:.*]] = vector.extract %[[FMA]][1] : f32 from vector<4xf32>
+// CHECK:   return %[[RES]] : f32
+  %0 = vector.fma %arg0, %arg1, %arg2: vector<4xf32>
+  %1 = vector.extract %0[1] : f32 from vector<4xf32>
+  return %1 : f32
+}
+
+// CHECK-LABEL: @negative_extract_dynamic_pos
+func.func @negative_extract_dynamic_pos(%arg0: vector<4xf32>, %arg1 : vector<4xf32>, %idx : vector<4xindex>) -> f32 {
+  // CHECK-NOT: vector.extract
+  // CHECK: arith.addf %{{.*}}, %{{.*}} : vector<4xf32>
+  // CHECK: vector.extract
+  // CHECK: vector.extract
+  %0 = arith.addf %arg0, %arg1 : vector<4xf32>
+  %1 = vector.extract %idx[0] : index from vector<4xindex>
+  %2 = vector.extract %0[%1] : f32 from vector<4xf32>
+  return %2 : f32
+}
+
+//-----------------------------------------------------------------------------
+// [Pattern: ExtractOpFromLoad]
+//-----------------------------------------------------------------------------
+
+// CHECK-LABEL: @extract_load_scalar
+//  CHECK-SAME:   (%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: index)
+func.func @extract_load_scalar(%arg0: memref<?xf32>, %arg1: index) -> f32 {
+// CHECK:   %[[RES:.*]] = memref.load %[[ARG0]][%[[ARG1]]] : memref<?xf32>
+// CHECK:   return %[[RES]] : f32
+  %0 = vector.load %arg0[%arg1] : memref<?xf32>, vector<4xf32>
+  %1 = vector.extract %0[0] : f32 from vector<4xf32>
+  return %1 : f32
+}
+
+// CHECK-LABEL: @extract_load_index
+//  CHECK-SAME:   (%[[ARG0:.*]]: memref<?xindex>, %[[ARG1:.*]]: index)
+func.func @extract_load_index(%arg0: memref<?xindex>, %arg1: index) -> index {
+// CHECK:   %[[RES:.*]] = memref.load %[[ARG0]][%[[ARG1]]] : memref<?xindex>
+// CHECK:   return %[[RES]] : index
+  %0 = vector.load %arg0[%arg1] : memref<?xindex>, vector<4xindex>
+  %1 = vector.extract %0[0] : index from vector<4xindex>
+  return %1 : index
+}
+
+// CHECK-LABEL: @extract_load_scalar_non_zero_off
+//  CHECK-SAME:   (%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: index)
+func.func @extract_load_scalar_non_zero_off(%arg0: memref<?xf32>, %arg1: index) -> f32 {
+// CHECK:   %[[C1:.*]] = arith.constant 1 : index
+// CHECK:   %[[OFF:.*]] = arith.addi %[[ARG1]], %[[C1]] overflow<nsw> : index
+// CHECK:   %[[RES:.*]] = memref.load %[[ARG0]][%[[OFF]]] : memref<?xf32>
+// CHECK:   return %[[RES]] : f32
+  %0 = vector.load %arg0[%arg1] : memref<?xf32>, vector<4xf32>
+  %1 = vector.extract %0[1] : f32 from vector<4xf32>
+  return %1 : f32
+}
+
+// CHECK-LABEL: @extract_load_scalar_dyn_off
+//  CHECK-SAME:   (%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index)
+func.func @extract_load_scalar_dyn_off(%arg0: memref<?xf32>, %arg1: index, %arg2: index) -> f32 {
+// CHECK:   %[[OFF:.*]] = arith.addi %[[ARG1]], %[[ARG2]] overflow<nsw> : index
+// CHECK:   %[[RES:.*]] = memref.load %[[ARG0]][%[[OFF]]] : memref<?xf32>
+// CHECK:   return %[[RES]] : f32
+  %0 = vector.load %arg0[%arg1] : memref<?xf32>, vector<4xf32>
+  %1 = vector.extract %0[%arg2] : f32 from vector<4xf32>
+  return %1 : f32
+}
+
+// CHECK-LABEL: @extract_load_vec_non_zero_off
+//  CHECK-SAME:   (%[[ARG0:.*]]: memref<?x?xf32>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index)
+func.func @extract_load_vec_non_zero_off(%arg0: memref<?x?xf32>, %arg1: index, %arg2: index) -> vector<4xf32> {
+// CHECK:   %[[C1:.*]] = arith.constant 1 : index
+// CHECK:   %[[OFF:.*]] = arith.addi %[[ARG1]], %[[C1]] overflow<nsw> : index
+// CHECK:   %[[RES:.*]] = vector.load %[[ARG0]][%[[OFF]], %[[ARG2]]] : memref<?x?xf32>, vector<4xf32>
+// CHECK:   return %[[RES]] : vector<4xf32>
+  %0 = vector.load %arg0[%arg1, %arg2] : memref<?x?xf32>, vector<2x4xf32>
+  %1 = vector.extract %0[1] : vector<4xf32> from vector<2x4xf32>
+  return %1 : vector<4xf32>
+}
+
+// CHECK-LABEL: @extract_load_scalar_non_zero_off_2d_src_memref
+//  CHECK-SAME:   (%[[ARG0:.*]]: memref<?x?xf32>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index)
+func.func @extract_load_scalar_non_zero_off_2d_src_memref(%arg0: memref<?x?xf32>, %arg1: index, %arg2: index) -> f32 {
+// CHECK:   %[[C1:.*]] = arith.constant 1 : index
+// CHECK:   %[[OFF:.*]] = arith.addi %[[ARG2]], %[[C1]] overflow<nsw> : index
+// CHECK:   %[[RES:.*]] = memref.load %[[ARG0]][%[[ARG1]], %[[OFF]]] : memref<?x?xf32>
+// CHECK:   return %[[RES]] : f32
+  %0 = vector.load %arg0[%arg1, %arg2] : memref<?x?xf32>, vector<4xf32>
+  %1 = vector.extract %0[1] : f32 from vector<4xf32>
+  return %1 : f32
+}
+
+// CHECK-LABEL: @extract_load_vec_high_rank
+//  CHECK-SAME:   (%[[ARG0:.*]]: memref<?x?x?xf32>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index)
+func.func @extract_load_vec_high_rank(%arg0: memref<?x?x?xf32>, %arg1: index, %arg2: index, %arg3: index) -> vector<4xf32> {
+// CHECK:   %[[C1:.*]] = arith.constant 1 : index
+// CHECK:   %[[OFF:.*]] = arith.addi %[[ARG2]], %[[C1]] overflow<nsw> : index
+// CHECK:   %[[RES:.*]] = vector.load %[[ARG0]][%[[ARG1]], %[[OFF]], %[[ARG3]]] : memref<?x?x?xf32>, vector<4xf32>
+// CHECK:   return %[[RES]] : vector<4xf32>
+  %0 = vector.load %arg0[%arg1, %arg2, %arg3] : memref<?x?x?xf32>, vector<2x4xf32>
+  %1 = vector.extract %0[1] : vector<4xf32> from vector<2x4xf32>
+  return %1 : vector<4xf32>
+}
+
+// CHECK-LABEL: @negative_extract_load_scalar_from_memref_of_vec
+//  CHECK-SAME:   (%[[ARG0:.*]]: memref<?xvector<4xf32>>, %[[ARG1:.*]]: index)
+func.func @negative_extract_load_scalar_from_memref_of_vec(%arg0: memref<?xvector<4xf32>>, %arg1: index) -> f32 {
+// CHECK:   %[[RES:.*]] = vector.load %[[ARG0]][%[[ARG1]]] : memref<?xvector<4xf32>>, vector<4xf32>
+// CHECK:   %[[EXT:.*]] = vector.extract %[[RES]][0] : f32 from vector<4xf32>
+// CHECK:   return %[[EXT]] : f32
+  %0 = vector.load %arg0[%arg1] : memref<?xvector<4xf32>>, vector<4xf32>
+  %1 = vector.extract %0[0] : f32 from vector<4xf32>
+  return %1 : f32
+}
+
+// CHECK-LABEL: @negative_extract_load_scalar_from_memref_of_i1
+//  CHECK-SAME:   (%[[ARG0:.*]]: memref<?xi1>, %[[ARG1:.*]]: index)
+func.func @negative_extract_load_scalar_from_memref_of_i1(%arg0: memref<?xi1>, %arg1: index) -> i1 {
+// Subbyte types are tricky, ignore them for now.
+// CHECK:   %[[RES:.*]] = vector.load %[[ARG0]][%[[ARG1]]] : memref<?xi1>, vector<8xi1>
+// CHECK:   %[[EXT:.*]] = vector.extract %[[RES]][0] : i1 from vector<8xi1>
+// CHECK:   return %[[EXT]] : i1
+  %0 = vector.load %arg0[%arg1] : memref<?xi1>, vector<8xi1>
+  %1 = vector.extract %0[0] : i1 from vector<8xi1>
+  return %1 : i1
+}
+
+// CHECK-LABEL: @negative_extract_load_no_single_use
+//  CHECK-SAME:   (%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: index)
+func.func @negative_extract_load_no_single_use(%arg0: memref<?xf32>, %arg1: index) -> (f32, vector<4xf32>) {
+// CHECK:   %[[RES:.*]] = vector.load %[[ARG0]][%[[ARG1]]] : memref<?xf32>, vector<4xf32>
+// CHECK:   %[[EXT:.*]] = vector.extract %[[RES]][0] : f32 from vector<4xf32>
+// CHECK:   return %[[EXT]], %[[RES]] : f32, vector<4xf32>
+  %0 = vector.load %arg0[%arg1] : memref<?xf32>, vector<4xf32>
+  %1 = vector.extract %0[0] : f32 from vector<4xf32>
+  return %1, %0 : f32, vector<4xf32>
+}
+
+// CHECK-LABEL: @negative_extract_load_scalable
+//  CHECK-SAME:   (%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: index)
+func.func @negative_extract_load_scalable(%arg0: memref<?xf32>, %arg1: index) -> f32 {
+// CHECK:   %[[RES:.*]] = vector.load %[[ARG0]][%[[ARG1]]] : memref<?xf32>, vector<[1]xf32>
+// CHECK:   %[[EXT:.*]] = vector.extract %[[RES]][0] : f32 from vector<[1]xf32>
+// CHECK:   return %[[EXT]] : f32
+  %0 = vector.load %arg0[%arg1] : memref<?xf32>, vector<[1]xf32>
+  %1 = vector.extract %0[0] : f32 from vector<[1]xf32>
+  return %1 : f32
+}
+
+//-----------------------------------------------------------------------------
+// [Pattern: StoreOpFromBroadcast]
+//-----------------------------------------------------------------------------
+
+// CHECK-LABEL: @store_splat
+//  CHECK-SAME:   (%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: f32)
+func.func @store_splat(%arg0: memref<?xf32>, %arg1: index, %arg2: f32) {
+// CHECK:   memref.store %[[ARG2]], %[[ARG0]][%[[ARG1]]] : memref<?xf32>
+  %0 = vector.broadcast %arg2 : f32 to vector<1xf32>
+  vector.store %0, %arg0[%arg1] : memref<?xf32>, vector<1xf32>
+  return
+}
+
+// CHECK-LABEL: @store_broadcast
+//  CHECK-SAME:   (%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: f32)
+func.func @store_broadcast(%arg0: memref<?xf32>, %arg1: index, %arg2: f32) {
+// CHECK:   memref.store %[[ARG2]], %[[ARG0]][%[[ARG1]]] : memref<?xf32>
+  %0 = vector.broadcast %arg2 : f32 to vector<1xf32>
+  vector.store %0, %arg0[%arg1] : memref<?xf32>, vector<1xf32>
+  return
+}
+
+// CHECK-LABEL: @store_broadcast_1d_to_2d
+//  CHECK-SAME:   (%[[ARG0:.*]]: memref<?x?xf32>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: vector<1xf32>)
+func.func @store_broadcast_1d_to_2d(%arg0: memref<?x?xf32>, %arg1: index, %arg2: index, %arg3: vector<1xf32>) {
+// CHECK:   vector.store %[[ARG3]], %[[ARG0]][%[[ARG1]], %[[ARG2]]] : memref<?x?xf32>, vector<1xf32>
+  %0 = vector.broadcast %arg3 : vector<1xf32> to vector<1x1xf32>
+  vector.store %0, %arg0[%arg1, %arg2] : memref<?x?xf32>, vector<1x1xf32>
+  return
+}
+
+// CHECK-LABEL: @negative_store_scalable
+//  CHECK-SAME:   (%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: f32)
+func.func @negative_store_scalable(%arg0: memref<?xf32>, %arg1: index, %arg2: f32) {
+// CHECK:   %[[RES:.*]] = vector.broadcast %[[ARG2]] : f32 to vector<[1]xf32>
+// CHECK:   vector.store %[[RES]], %[[ARG0]][%[[ARG1]]] : memref<?xf32>, vector<[1]xf32>
+  %0 = vector.broadcast %arg2 : f32 to vector<[1]xf32>
+  vector.store %0, %arg0[%arg1] : memref<?xf32>, vector<[1]xf32>
+  return
+}
+
+// CHECK-LABEL: @negative_store_memref_of_vec
+//  CHECK-SAME:   (%[[ARG0:.*]]: memref<?xvector<1xf32>>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: f32)
+func.func @negative_store_memref_of_vec(%arg0: memref<?xvector<1xf32>>, %arg1: index, %arg2: f32) {
+// CHECK:   %[[RES:.*]] = vector.broadcast %[[ARG2]] : f32 to vector<1xf32>
+// CHECK:   vector.store %[[RES]], %[[ARG0]][%[[ARG1]]] : memref<?xvector<1xf32>>, vector<1xf32>
+  %0 = vector.broadcast %arg2 : f32 to vector<1xf32>
+  vector.store %0, %arg0[%arg1] : memref<?xvector<1xf32>>, vector<1xf32>
+  return
+}
+
+// CHECK-LABEL: @negative_store_more_than_one_element
+//  CHECK-SAME:   (%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: f32)
+func.func @negative_store_more_than_one_element(%arg0: memref<?xf32>, %arg1: index, %arg2: f32) {
+// CHECK:   %[[RES:.*]] = vector.broadcast %[[ARG2]] : f32 to vector<4xf32>
+// CHECK:   vector.store %[[RES]], %[[ARG0]][%[[ARG1]]] : memref<?xf32>, vector<4xf32>
+  %0 = vector.broadcast %arg2 : f32 to vector<4xf32>
+  vector.store %0, %arg0[%arg1] : memref<?xf32>, vector<4xf32>
+  return
+}
+
+// CHECK-LABEL: @negative_store_no_single_use
+//  CHECK-SAME:   (%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: f32)
+func.func @negative_store_no_single_use(%arg0: memref<?xf32>, %arg1: index, %arg2: f32) -> vector<1xf32> {
+// CHECK:   %[[RES:.*]] = vector.broadcast %[[ARG2]] : f32 to vector<1xf32>
+// CHECK:   vector.store %[[RES]], %[[ARG0]][%[[ARG1]]] : memref<?xf32>, vector<1xf32>
+// CHECK:   return %[[RES:.*]] : vector<1xf32>
+  %0 = vector.broadcast %arg2 : f32 to vector<1xf32>
+  vector.store %0, %arg0[%arg1] : memref<?xf32>, vector<1xf32>
+  return %0 : vector<1xf32>
 }

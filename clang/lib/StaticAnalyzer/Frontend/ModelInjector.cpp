@@ -8,17 +8,16 @@
 
 #include "ModelInjector.h"
 #include "clang/AST/Decl.h"
-#include "clang/Basic/IdentifierTable.h"
+#include "clang/AST/DeclObjC.h"
+#include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Basic/Stack.h"
-#include "clang/AST/DeclObjC.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/StaticAnalyzer/Frontend/FrontendActions.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/FileSystem.h"
 #include <utility>
@@ -26,7 +25,15 @@
 using namespace clang;
 using namespace ento;
 
-ModelInjector::ModelInjector(CompilerInstance &CI) : CI(CI) {}
+ModelInjector::ModelInjector(CompilerInstance &CI) : CI(CI) {
+  if (CI.getAnalyzerOpts().ShouldEmitErrorsOnInvalidConfigValue &&
+      !CI.getAnalyzerOpts().ModelPath.empty()) {
+    auto S = CI.getVirtualFileSystem().status(CI.getAnalyzerOpts().ModelPath);
+    if (!S || S->getType() != llvm::sys::fs::file_type::directory_file)
+      CI.getDiagnostics().Report(diag::err_analyzer_config_invalid_input)
+          << "model-path" << "a filename";
+  }
+}
 
 Stmt *ModelInjector::getBody(const FunctionDecl *D) {
   onBodySynthesis(D);
@@ -45,8 +52,8 @@ void ModelInjector::onBodySynthesis(const NamedDecl *D) {
   if (Bodies.count(D->getName()) != 0)
     return;
 
-  SourceManager &SM = CI.getSourceManager();
-  FileID mainFileID = SM.getMainFileID();
+  llvm::IntrusiveRefCntPtr<SourceManager> SM = CI.getSourceManagerPtr();
+  FileID mainFileID = SM->getMainFileID();
 
   llvm::StringRef modelPath = CI.getAnalyzerOpts().ModelPath;
 
@@ -58,7 +65,7 @@ void ModelInjector::onBodySynthesis(const NamedDecl *D) {
   else
     fileName = llvm::StringRef(D->getName().str() + ".model");
 
-  if (!llvm::sys::fs::exists(fileName.str())) {
+  if (!CI.getVirtualFileSystem().exists(fileName)) {
     Bodies[D->getName()] = nullptr;
     return;
   }
@@ -75,21 +82,22 @@ void ModelInjector::onBodySynthesis(const NamedDecl *D) {
 
   // Modules are parsed by a separate CompilerInstance, so this code mimics that
   // behavior for models
-  CompilerInstance Instance(CI.getPCHContainerOperations());
-  Instance.setInvocation(std::move(Invocation));
+  CompilerInstance Instance(std::move(Invocation),
+                            CI.getPCHContainerOperations());
+  Instance.setVirtualFileSystem(CI.getVirtualFileSystemPtr());
   Instance.createDiagnostics(
-      CI.getVirtualFileSystem(),
       new ForwardingDiagnosticConsumer(CI.getDiagnosticClient()),
       /*ShouldOwnClient=*/true);
 
-  Instance.getDiagnostics().setSourceManager(&SM);
+  Instance.getDiagnostics().setSourceManager(SM.get());
 
   // The instance wants to take ownership, however DisableFree frontend option
   // is set to true to avoid double free issues
-  Instance.setFileManager(&CI.getFileManager());
-  Instance.setSourceManager(&SM);
+  Instance.setVirtualFileSystem(CI.getVirtualFileSystemPtr());
+  Instance.setFileManager(CI.getFileManagerPtr());
+  Instance.setSourceManager(SM);
   Instance.setPreprocessor(CI.getPreprocessorPtr());
-  Instance.setASTContext(&CI.getASTContext());
+  Instance.setASTContext(CI.getASTContextPtr());
 
   Instance.getPreprocessor().InitializeForModelFile();
 
@@ -110,5 +118,5 @@ void ModelInjector::onBodySynthesis(const NamedDecl *D) {
   // the main file id is changed to the model file during parsing and it needs
   // to be reset to the former main file id after parsing of the model file
   // is done.
-  SM.setMainFileID(mainFileID);
+  SM->setMainFileID(mainFileID);
 }

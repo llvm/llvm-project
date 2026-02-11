@@ -83,7 +83,7 @@ public:
 
   /// Add the parameters of Source to this result.
   void addParamsFrom(const ValidatorResult &Source) {
-    Parameters.insert(Source.Parameters.begin(), Source.Parameters.end());
+    Parameters.insert_range(Source.Parameters);
   }
 
   /// Merge a result.
@@ -154,6 +154,10 @@ public:
     if (Type == SCEVType::IV)
       return ValidatorResult(SCEVType::INVALID);
     return ValidatorResult(SCEVType::PARAM, Expr);
+  }
+
+  ValidatorResult visitPtrToAddrExpr(const SCEVPtrToAddrExpr *Expr) {
+    return visit(Expr->getOperand());
   }
 
   ValidatorResult visitPtrToIntExpr(const SCEVPtrToIntExpr *Expr) {
@@ -633,7 +637,7 @@ static bool isAffineExpr(Value *V, const Region *R, Loop *Scope,
     return false;
 
   auto ResultParams = Result.getParameters();
-  Params.insert(ResultParams.begin(), ResultParams.end());
+  Params.insert_range(ResultParams);
 
   return true;
 }

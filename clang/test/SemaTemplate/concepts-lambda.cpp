@@ -307,3 +307,63 @@ void test() {
 }
 
 }
+
+namespace GH128175 {
+
+template <class> void f() {
+  [i{0}] {
+    [&] {
+      [&] {
+        []()
+          requires true
+        {}();
+      }();
+    }();
+  }();
+}
+
+template void f<int>();
+
+}
+
+namespace GH133719 {
+
+template <class T>
+constexpr auto f{[] (auto arg) {
+  return [a{arg}] {
+      [] () requires true {}();
+  };
+}};
+
+void foo() {
+  f<int>(0);
+}
+
+}
+
+namespace GH147772 {
+
+template<int...>
+struct seq {};
+
+using arr = char[1];
+
+struct foo {
+	template<int... i>
+	constexpr foo(seq<i...>) requires requires {
+		arr { [](auto) requires(i, true) { return 0; }(i)... };
+	} {}
+};
+
+constexpr auto bar = foo(seq<0>());
+}
+
+namespace GH147650 {
+template <int> int b;
+template <int b>
+void f()
+    requires requires { [] { (void)b; static_assert(b == 42); }; } {}
+void test() {
+    f<42>();
+}
+}

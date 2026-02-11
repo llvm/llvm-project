@@ -23,7 +23,7 @@
 
 extern "C" {
 
-static void DescribeIEEESignaledExceptions() {
+[[maybe_unused]] static void DescribeIEEESignaledExceptions() {
 #ifdef fetestexcept // a macro in some environments; omit std::
   auto excepts{fetestexcept(FE_ALL_EXCEPT)};
 #else
@@ -65,8 +65,25 @@ static void CloseAllExternalUnits(const char *why) {
   Fortran::runtime::io::ExternalFileUnit::CloseAll(handler);
 }
 
-[[noreturn]] void RTNAME(StopStatement)(
+[[noreturn]] RT_API_ATTRS void RTNAME(StopStatement)(
     int code, bool isErrorStop, bool quiet) {
+#if defined(RT_DEVICE_COMPILATION)
+  if (Fortran::runtime::executionEnvironment.noStopMessage && code == 0) {
+    quiet = true;
+  }
+  if (!quiet) {
+    if (isErrorStop) {
+      std::printf("Fortran ERROR STOP");
+    } else {
+      std::printf("Fortran STOP");
+    }
+    if (code != EXIT_SUCCESS) {
+      std::printf(": code %d\n", code);
+    }
+    std::printf("\n");
+  }
+  Fortran::runtime::DeviceTrap();
+#else
   CloseAllExternalUnits("STOP statement");
   if (Fortran::runtime::executionEnvironment.noStopMessage && code == 0) {
     quiet = true;
@@ -79,11 +96,26 @@ static void CloseAllExternalUnits(const char *why) {
     std::fputc('\n', stderr);
     DescribeIEEESignaledExceptions();
   }
-  std::exit(code);
+  if (isErrorStop)
+    Fortran::runtime::ErrorExit(code);
+  else
+    Fortran::runtime::NormalExit(code);
+#endif
 }
 
-[[noreturn]] void RTNAME(StopStatementText)(
+[[noreturn]] RT_API_ATTRS void RTNAME(StopStatementText)(
     const char *code, std::size_t length, bool isErrorStop, bool quiet) {
+#if defined(RT_DEVICE_COMPILATION)
+  if (!quiet) {
+    if (Fortran::runtime::executionEnvironment.noStopMessage && !isErrorStop) {
+      std::printf("%s\n", code);
+    } else {
+      std::printf(
+          "Fortran %s: %s\n", isErrorStop ? "ERROR STOP" : "STOP", code);
+    }
+  }
+  Fortran::runtime::DeviceTrap();
+#else
   CloseAllExternalUnits("STOP statement");
   if (!quiet) {
     if (Fortran::runtime::executionEnvironment.noStopMessage && !isErrorStop) {
@@ -95,10 +127,11 @@ static void CloseAllExternalUnits(const char *why) {
     DescribeIEEESignaledExceptions();
   }
   if (isErrorStop) {
-    std::exit(EXIT_FAILURE);
+    Fortran::runtime::ErrorExit(EXIT_FAILURE);
   } else {
-    std::exit(EXIT_SUCCESS);
+    Fortran::runtime::NormalExit(EXIT_SUCCESS);
   }
+#endif
 }
 
 static bool StartPause() {
@@ -114,7 +147,7 @@ static void EndPause() {
   std::fflush(nullptr);
   if (std::fgetc(stdin) == EOF) {
     CloseAllExternalUnits("PAUSE statement");
-    std::exit(EXIT_SUCCESS);
+    Fortran::runtime::ErrorExit(EXIT_SUCCESS);
   }
 }
 
@@ -142,19 +175,31 @@ void RTNAME(PauseStatementText)(const char *code, std::size_t length) {
 }
 
 [[noreturn]] void RTNAME(FailImageStatement)() {
-  Fortran::runtime::NotifyOtherImagesOfFailImageStatement();
   CloseAllExternalUnits("FAIL IMAGE statement");
-  std::exit(EXIT_FAILURE);
+  Fortran::runtime::NotifyOtherImagesOfFailImageStatement();
+  Fortran::runtime::NormalExit(EXIT_FAILURE);
 }
 
 [[noreturn]] void RTNAME(ProgramEndStatement)() {
   CloseAllExternalUnits("END statement");
-  std::exit(EXIT_SUCCESS);
+  Fortran::runtime::NormalExit(EXIT_SUCCESS);
+}
+
+void RTNAME(RegisterImagesNormalEndCallback)(void (*callback)(int)) {
+  Fortran::runtime::SetNormalEndCallback(callback);
+}
+
+void RTNAME(RegisterImagesErrorCallback)(void (*callback)(int)) {
+  Fortran::runtime::SetErrorCallback(callback);
+}
+
+void RTNAME(RegisterFailImageCallback)(void (*callback)(void)) {
+  Fortran::runtime::SetFailImageCallback(callback);
 }
 
 [[noreturn]] void RTNAME(Exit)(int status) {
   CloseAllExternalUnits("CALL EXIT()");
-  std::exit(status);
+  Fortran::runtime::NormalExit(status);
 }
 
 static RT_NOINLINE_ATTR void PrintBacktrace() {
@@ -192,7 +237,7 @@ static RT_NOINLINE_ATTR void PrintBacktrace() {
 
 RT_OPTNONE_ATTR void FORTRAN_PROCEDURE_NAME(backtrace)() { PrintBacktrace(); }
 
-[[noreturn]] void RTNAME(ReportFatalUserError)(
+[[noreturn]] RT_API_ATTRS void RTNAME(ReportFatalUserError)(
     const char *message, const char *source, int line) {
   Fortran::runtime::Terminator{source, line}.Crash(message);
 }

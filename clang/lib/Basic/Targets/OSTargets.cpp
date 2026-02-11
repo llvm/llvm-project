@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "OSTargets.h"
+#include "AArch64.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -220,6 +221,8 @@ static void addVisualCDefines(const LangOptions &Opts, MacroBuilder &Builder) {
     Builder.defineMacro("_MSC_FULL_VER", Twine(Opts.MSCompatibilityVersion));
     // FIXME We cannot encode the revision information into 32-bits
     Builder.defineMacro("_MSC_BUILD", Twine(1));
+    // Exposed by MSVC, used in their stddef.h.
+    Builder.defineMacro("_CRT_USE_BUILTIN_OFFSETOF", Twine(1));
 
     if (Opts.CPlusPlus11 && Opts.isCompatibleWithMSVC(LangOptions::MSVC2015))
       Builder.defineMacro("_HAS_CHAR16_T_LANGUAGE_SUPPORT", Twine(1));

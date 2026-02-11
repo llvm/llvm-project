@@ -15,7 +15,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -26,6 +25,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -52,7 +52,7 @@ GlobalVariable *IRBuilderBase::CreateGlobalString(StringRef Str,
       *M, StrConstant->getType(), true, GlobalValue::PrivateLinkage,
       StrConstant, Name, nullptr, GlobalVariable::NotThreadLocal, AddressSpace);
   GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-  GV->setAlignment(Align(1));
+  GV->setAlignment(M->getDataLayout().getPrefTypeAlign(getInt8Ty()));
   return GV;
 }
 
@@ -61,19 +61,119 @@ Type *IRBuilderBase::getCurrentFunctionReturnType() const {
   return BB->getParent()->getReturnType();
 }
 
-DebugLoc IRBuilderBase::getCurrentDebugLocation() const {
-  for (auto &KV : MetadataToCopy)
-    if (KV.first == LLVMContext::MD_dbg)
-      return {cast<DILocation>(KV.second)};
-
-  return {};
-}
+DebugLoc IRBuilderBase::getCurrentDebugLocation() const { return StoredDL; }
 void IRBuilderBase::SetInstDebugLocation(Instruction *I) const {
-  for (const auto &KV : MetadataToCopy)
-    if (KV.first == LLVMContext::MD_dbg) {
-      I->setDebugLoc(DebugLoc(KV.second));
-      return;
+  // We prefer to set our current debug location if any has been set, but if
+  // our debug location is empty and I has a valid location, we shouldn't
+  // overwrite it.
+  I->setDebugLoc(StoredDL.orElse(I->getDebugLoc()));
+}
+
+Value *IRBuilderBase::CreateAggregateCast(Value *V, Type *DestTy) {
+  Type *SrcTy = V->getType();
+  if (SrcTy == DestTy)
+    return V;
+
+  if (SrcTy->isAggregateType()) {
+    unsigned NumElements;
+    if (SrcTy->isStructTy()) {
+      assert(DestTy->isStructTy() && "Expected StructType");
+      assert(SrcTy->getStructNumElements() == DestTy->getStructNumElements() &&
+             "Expected StructTypes with equal number of elements");
+      NumElements = SrcTy->getStructNumElements();
+    } else {
+      assert(SrcTy->isArrayTy() && DestTy->isArrayTy() && "Expected ArrayType");
+      assert(SrcTy->getArrayNumElements() == DestTy->getArrayNumElements() &&
+             "Expected ArrayTypes with equal number of elements");
+      NumElements = SrcTy->getArrayNumElements();
     }
+
+    Value *Result = PoisonValue::get(DestTy);
+    for (unsigned I = 0; I < NumElements; ++I) {
+      Type *ElementTy = SrcTy->isStructTy() ? DestTy->getStructElementType(I)
+                                            : DestTy->getArrayElementType();
+      Value *Element =
+          CreateAggregateCast(CreateExtractValue(V, ArrayRef(I)), ElementTy);
+
+      Result = CreateInsertValue(Result, Element, ArrayRef(I));
+    }
+    return Result;
+  }
+
+  return CreateBitOrPointerCast(V, DestTy);
+}
+
+Value *IRBuilderBase::CreateBitPreservingCastChain(const DataLayout &DL,
+                                                   Value *V, Type *NewTy) {
+  Type *OldTy = V->getType();
+
+  if (OldTy == NewTy)
+    return V;
+
+  assert(!(isa<IntegerType>(OldTy) && isa<IntegerType>(NewTy)) &&
+         "Integer types must be the exact same to convert.");
+
+  // A variant of bitcast that supports a mixture of fixed and scalable types
+  // that are know to have the same size.
+  auto CreateBitCastLike = [this](Value *In, Type *Ty) -> Value * {
+    Type *InTy = In->getType();
+    if (InTy == Ty)
+      return In;
+
+    if (isa<FixedVectorType>(InTy) && isa<ScalableVectorType>(Ty)) {
+      // For vscale_range(2) expand <4 x i32> to <vscale x 4 x i16> -->
+      //   <4 x i32> to <vscale x 2 x i32> to <vscale x 4 x i16>
+      auto *VTy = VectorType::getWithSizeAndScalar(cast<VectorType>(Ty), InTy);
+      return CreateBitCast(
+          CreateInsertVector(VTy, PoisonValue::get(VTy), In, getInt64(0)), Ty);
+    }
+
+    if (isa<ScalableVectorType>(InTy) && isa<FixedVectorType>(Ty)) {
+      // For vscale_range(2) expand <vscale x 4 x i16> to <4 x i32> -->
+      //   <vscale x 4 x i16> to <vscale x 2 x i32> to <4 x i32>
+      auto *VTy = VectorType::getWithSizeAndScalar(cast<VectorType>(InTy), Ty);
+      return CreateExtractVector(Ty, CreateBitCast(In, VTy), getInt64(0));
+    }
+
+    return CreateBitCast(In, Ty);
+  };
+
+  // See if we need inttoptr for this type pair. May require additional bitcast.
+  if (OldTy->isIntOrIntVectorTy() && NewTy->isPtrOrPtrVectorTy()) {
+    // Expand <2 x i32> to i8* --> <2 x i32> to i64 to i8*
+    // Expand i128 to <2 x i8*> --> i128 to <2 x i64> to <2 x i8*>
+    // Expand <4 x i32> to <2 x i8*> --> <4 x i32> to <2 x i64> to <2 x i8*>
+    // Directly handle i64 to i8*
+    return CreateIntToPtr(CreateBitCastLike(V, DL.getIntPtrType(NewTy)), NewTy);
+  }
+
+  // See if we need ptrtoint for this type pair. May require additional bitcast.
+  if (OldTy->isPtrOrPtrVectorTy() && NewTy->isIntOrIntVectorTy()) {
+    // Expand <2 x i8*> to i128 --> <2 x i8*> to <2 x i64> to i128
+    // Expand i8* to <2 x i32> --> i8* to i64 to <2 x i32>
+    // Expand <2 x i8*> to <4 x i32> --> <2 x i8*> to <2 x i64> to <4 x i32>
+    // Expand i8* to i64 --> i8* to i64 to i64
+    return CreateBitCastLike(CreatePtrToInt(V, DL.getIntPtrType(OldTy)), NewTy);
+  }
+
+  if (OldTy->isPtrOrPtrVectorTy() && NewTy->isPtrOrPtrVectorTy()) {
+    unsigned OldAS = OldTy->getPointerAddressSpace();
+    unsigned NewAS = NewTy->getPointerAddressSpace();
+    // To convert pointers with different address spaces (they are already
+    // checked convertible, i.e. they have the same pointer size), so far we
+    // cannot use `bitcast` (which has restrict on the same address space) or
+    // `addrspacecast` (which is not always no-op casting). Instead, use a pair
+    // of no-op `ptrtoint`/`inttoptr` casts through an integer with the same bit
+    // size.
+    if (OldAS != NewAS) {
+      return CreateIntToPtr(
+          CreateBitCastLike(CreatePtrToInt(V, DL.getIntPtrType(OldTy)),
+                            DL.getIntPtrType(NewTy)),
+          NewTy);
+    }
+  }
+
+  return CreateBitCastLike(V, NewTy);
 }
 
 CallInst *
@@ -86,23 +186,35 @@ IRBuilderBase::createCallHelper(Function *Callee, ArrayRef<Value *> Ops,
   return CI;
 }
 
-Value *IRBuilderBase::CreateVScale(Constant *Scaling, const Twine &Name) {
-  assert(isa<ConstantInt>(Scaling) && "Expected constant integer");
-  if (cast<ConstantInt>(Scaling)->isZero())
-    return Scaling;
-  CallInst *CI =
-      CreateIntrinsic(Intrinsic::vscale, {Scaling->getType()}, {}, {}, Name);
-  return cast<ConstantInt>(Scaling)->isOne() ? CI : CreateMul(CI, Scaling);
+static Value *CreateVScaleMultiple(IRBuilderBase &B, Type *Ty, uint64_t Scale) {
+  Value *VScale = B.CreateVScale(Ty);
+  if (Scale == 1)
+    return VScale;
+
+  return B.CreateNUWMul(VScale, ConstantInt::get(Ty, Scale));
 }
 
-Value *IRBuilderBase::CreateElementCount(Type *DstType, ElementCount EC) {
-  Constant *MinEC = ConstantInt::get(DstType, EC.getKnownMinValue());
-  return EC.isScalable() ? CreateVScale(MinEC) : MinEC;
+Value *IRBuilderBase::CreateElementCount(Type *Ty, ElementCount EC) {
+  if (EC.isFixed() || EC.isZero())
+    return ConstantInt::get(Ty, EC.getKnownMinValue());
+
+  return CreateVScaleMultiple(*this, Ty, EC.getKnownMinValue());
 }
 
-Value *IRBuilderBase::CreateTypeSize(Type *DstType, TypeSize Size) {
-  Constant *MinSize = ConstantInt::get(DstType, Size.getKnownMinValue());
-  return Size.isScalable() ? CreateVScale(MinSize) : MinSize;
+Value *IRBuilderBase::CreateTypeSize(Type *Ty, TypeSize Size) {
+  if (Size.isFixed() || Size.isZero())
+    return ConstantInt::get(Ty, Size.getKnownMinValue());
+
+  return CreateVScaleMultiple(*this, Ty, Size.getKnownMinValue());
+}
+
+Value *IRBuilderBase::CreateAllocationSize(Type *DestTy, AllocaInst *AI) {
+  const DataLayout &DL = BB->getDataLayout();
+  TypeSize ElemSize = DL.getTypeAllocSize(AI->getAllocatedType());
+  Value *Size = CreateTypeSize(DestTy, ElemSize);
+  if (AI->isArrayAllocation())
+    Size = CreateMul(CreateZExtOrTrunc(AI->getArraySize(), DestTy), Size);
+  return Size;
 }
 
 Value *IRBuilderBase::CreateStepVector(Type *DstType, const Twine &Name) {
@@ -125,9 +237,11 @@ Value *IRBuilderBase::CreateStepVector(Type *DstType, const Twine &Name) {
   unsigned NumEls = cast<FixedVectorType>(DstType)->getNumElements();
 
   // Create a vector of consecutive numbers from zero to VF.
+  // It's okay if the values wrap around.
   SmallVector<Constant *, 8> Indices;
   for (unsigned i = 0; i < NumEls; ++i)
-    Indices.push_back(ConstantInt::get(STy, i));
+    Indices.push_back(
+        ConstantInt::get(STy, i, /*IsSigned=*/false, /*ImplicitTrunc=*/true));
 
   // Add the consecutive indices to the vector value.
   return ConstantVector::get(Indices);
@@ -135,8 +249,7 @@ Value *IRBuilderBase::CreateStepVector(Type *DstType, const Twine &Name) {
 
 CallInst *IRBuilderBase::CreateMemSet(Value *Ptr, Value *Val, Value *Size,
                                       MaybeAlign Align, bool isVolatile,
-                                      MDNode *TBAATag, MDNode *ScopeTag,
-                                      MDNode *NoAliasTag) {
+                                      const AAMDNodes &AAInfo) {
   Value *Ops[] = {Ptr, Val, Size, getInt1(isVolatile)};
   Type *Tys[] = {Ptr->getType(), Size->getType()};
 
@@ -144,49 +257,28 @@ CallInst *IRBuilderBase::CreateMemSet(Value *Ptr, Value *Val, Value *Size,
 
   if (Align)
     cast<MemSetInst>(CI)->setDestAlignment(*Align);
-
-  // Set the TBAA info if present.
-  if (TBAATag)
-    CI->setMetadata(LLVMContext::MD_tbaa, TBAATag);
-
-  if (ScopeTag)
-    CI->setMetadata(LLVMContext::MD_alias_scope, ScopeTag);
-
-  if (NoAliasTag)
-    CI->setMetadata(LLVMContext::MD_noalias, NoAliasTag);
-
+  CI->setAAMetadata(AAInfo);
   return CI;
 }
 
 CallInst *IRBuilderBase::CreateMemSetInline(Value *Dst, MaybeAlign DstAlign,
                                             Value *Val, Value *Size,
-                                            bool IsVolatile, MDNode *TBAATag,
-                                            MDNode *ScopeTag,
-                                            MDNode *NoAliasTag) {
+                                            bool IsVolatile,
+                                            const AAMDNodes &AAInfo) {
   Value *Ops[] = {Dst, Val, Size, getInt1(IsVolatile)};
   Type *Tys[] = {Dst->getType(), Size->getType()};
 
   CallInst *CI = CreateIntrinsic(Intrinsic::memset_inline, Tys, Ops);
 
   if (DstAlign)
-    cast<MemSetInlineInst>(CI)->setDestAlignment(*DstAlign);
-
-  // Set the TBAA info if present.
-  if (TBAATag)
-    CI->setMetadata(LLVMContext::MD_tbaa, TBAATag);
-
-  if (ScopeTag)
-    CI->setMetadata(LLVMContext::MD_alias_scope, ScopeTag);
-
-  if (NoAliasTag)
-    CI->setMetadata(LLVMContext::MD_noalias, NoAliasTag);
-
+    cast<MemSetInst>(CI)->setDestAlignment(*DstAlign);
+  CI->setAAMetadata(AAInfo);
   return CI;
 }
 
 CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemSet(
     Value *Ptr, Value *Val, Value *Size, Align Alignment, uint32_t ElementSize,
-    MDNode *TBAATag, MDNode *ScopeTag, MDNode *NoAliasTag) {
+    const AAMDNodes &AAInfo) {
 
   Value *Ops[] = {Ptr, Val, Size, getInt32(ElementSize)};
   Type *Tys[] = {Ptr->getType(), Size->getType()};
@@ -194,25 +286,16 @@ CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemSet(
   CallInst *CI =
       CreateIntrinsic(Intrinsic::memset_element_unordered_atomic, Tys, Ops);
 
-  cast<AtomicMemSetInst>(CI)->setDestAlignment(Alignment);
-
-  // Set the TBAA info if present.
-  if (TBAATag)
-    CI->setMetadata(LLVMContext::MD_tbaa, TBAATag);
-
-  if (ScopeTag)
-    CI->setMetadata(LLVMContext::MD_alias_scope, ScopeTag);
-
-  if (NoAliasTag)
-    CI->setMetadata(LLVMContext::MD_noalias, NoAliasTag);
-
+  cast<AnyMemSetInst>(CI)->setDestAlignment(Alignment);
+  CI->setAAMetadata(AAInfo);
   return CI;
 }
 
-CallInst *IRBuilderBase::CreateMemTransferInst(
-    Intrinsic::ID IntrID, Value *Dst, MaybeAlign DstAlign, Value *Src,
-    MaybeAlign SrcAlign, Value *Size, bool isVolatile, MDNode *TBAATag,
-    MDNode *TBAAStructTag, MDNode *ScopeTag, MDNode *NoAliasTag) {
+CallInst *IRBuilderBase::CreateMemTransferInst(Intrinsic::ID IntrID, Value *Dst,
+                                               MaybeAlign DstAlign, Value *Src,
+                                               MaybeAlign SrcAlign, Value *Size,
+                                               bool isVolatile,
+                                               const AAMDNodes &AAInfo) {
   assert((IntrID == Intrinsic::memcpy || IntrID == Intrinsic::memcpy_inline ||
           IntrID == Intrinsic::memmove) &&
          "Unexpected intrinsic ID");
@@ -226,28 +309,13 @@ CallInst *IRBuilderBase::CreateMemTransferInst(
     MCI->setDestAlignment(*DstAlign);
   if (SrcAlign)
     MCI->setSourceAlignment(*SrcAlign);
-
-  // Set the TBAA info if present.
-  if (TBAATag)
-    CI->setMetadata(LLVMContext::MD_tbaa, TBAATag);
-
-  // Set the TBAA Struct info if present.
-  if (TBAAStructTag)
-    CI->setMetadata(LLVMContext::MD_tbaa_struct, TBAAStructTag);
-
-  if (ScopeTag)
-    CI->setMetadata(LLVMContext::MD_alias_scope, ScopeTag);
-
-  if (NoAliasTag)
-    CI->setMetadata(LLVMContext::MD_noalias, NoAliasTag);
-
+  MCI->setAAMetadata(AAInfo);
   return CI;
 }
 
 CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemCpy(
     Value *Dst, Align DstAlign, Value *Src, Align SrcAlign, Value *Size,
-    uint32_t ElementSize, MDNode *TBAATag, MDNode *TBAAStructTag,
-    MDNode *ScopeTag, MDNode *NoAliasTag) {
+    uint32_t ElementSize, const AAMDNodes &AAInfo) {
   assert(DstAlign >= ElementSize &&
          "Pointer alignment must be at least element size");
   assert(SrcAlign >= ElementSize &&
@@ -259,24 +327,10 @@ CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemCpy(
       CreateIntrinsic(Intrinsic::memcpy_element_unordered_atomic, Tys, Ops);
 
   // Set the alignment of the pointer args.
-  auto *AMCI = cast<AtomicMemCpyInst>(CI);
+  auto *AMCI = cast<AnyMemCpyInst>(CI);
   AMCI->setDestAlignment(DstAlign);
   AMCI->setSourceAlignment(SrcAlign);
-
-  // Set the TBAA info if present.
-  if (TBAATag)
-    CI->setMetadata(LLVMContext::MD_tbaa, TBAATag);
-
-  // Set the TBAA Struct info if present.
-  if (TBAAStructTag)
-    CI->setMetadata(LLVMContext::MD_tbaa_struct, TBAAStructTag);
-
-  if (ScopeTag)
-    CI->setMetadata(LLVMContext::MD_alias_scope, ScopeTag);
-
-  if (NoAliasTag)
-    CI->setMetadata(LLVMContext::MD_noalias, NoAliasTag);
-
+  AMCI->setAAMetadata(AAInfo);
   return CI;
 }
 
@@ -360,8 +414,7 @@ CallInst *IRBuilderBase::CreateFree(Value *Source,
 
 CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemMove(
     Value *Dst, Align DstAlign, Value *Src, Align SrcAlign, Value *Size,
-    uint32_t ElementSize, MDNode *TBAATag, MDNode *TBAAStructTag,
-    MDNode *ScopeTag, MDNode *NoAliasTag) {
+    uint32_t ElementSize, const AAMDNodes &AAInfo) {
   assert(DstAlign >= ElementSize &&
          "Pointer alignment must be at least element size");
   assert(SrcAlign >= ElementSize &&
@@ -375,21 +428,7 @@ CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemMove(
   // Set the alignment of the pointer args.
   CI->addParamAttr(0, Attribute::getWithAlignment(CI->getContext(), DstAlign));
   CI->addParamAttr(1, Attribute::getWithAlignment(CI->getContext(), SrcAlign));
-
-  // Set the TBAA info if present.
-  if (TBAATag)
-    CI->setMetadata(LLVMContext::MD_tbaa, TBAATag);
-
-  // Set the TBAA Struct info if present.
-  if (TBAAStructTag)
-    CI->setMetadata(LLVMContext::MD_tbaa_struct, TBAAStructTag);
-
-  if (ScopeTag)
-    CI->setMetadata(LLVMContext::MD_alias_scope, ScopeTag);
-
-  if (NoAliasTag)
-    CI->setMetadata(LLVMContext::MD_noalias, NoAliasTag);
-
+  CI->setAAMetadata(AAInfo);
   return CI;
 }
 
@@ -457,28 +496,16 @@ CallInst *IRBuilderBase::CreateFPMinimumReduce(Value *Src) {
   return getReductionIntrinsic(Intrinsic::vector_reduce_fminimum, Src);
 }
 
-CallInst *IRBuilderBase::CreateLifetimeStart(Value *Ptr, ConstantInt *Size) {
+CallInst *IRBuilderBase::CreateLifetimeStart(Value *Ptr) {
   assert(isa<PointerType>(Ptr->getType()) &&
          "lifetime.start only applies to pointers.");
-  if (!Size)
-    Size = getInt64(-1);
-  else
-    assert(Size->getType() == getInt64Ty() &&
-           "lifetime.start requires the size to be an i64");
-  Value *Ops[] = { Size, Ptr };
-  return CreateIntrinsic(Intrinsic::lifetime_start, {Ptr->getType()}, Ops);
+  return CreateIntrinsic(Intrinsic::lifetime_start, {Ptr->getType()}, {Ptr});
 }
 
-CallInst *IRBuilderBase::CreateLifetimeEnd(Value *Ptr, ConstantInt *Size) {
+CallInst *IRBuilderBase::CreateLifetimeEnd(Value *Ptr) {
   assert(isa<PointerType>(Ptr->getType()) &&
          "lifetime.end only applies to pointers.");
-  if (!Size)
-    Size = getInt64(-1);
-  else
-    assert(Size->getType() == getInt64Ty() &&
-           "lifetime.end requires the size to be an i64");
-  Value *Ops[] = { Size, Ptr };
-  return CreateIntrinsic(Intrinsic::lifetime_end, {Ptr->getType()}, Ops);
+  return CreateIntrinsic(Intrinsic::lifetime_end, {Ptr->getType()}, {Ptr});
 }
 
 CallInst *IRBuilderBase::CreateInvariantStart(Value *Ptr, ConstantInt *Size) {
@@ -498,10 +525,10 @@ CallInst *IRBuilderBase::CreateInvariantStart(Value *Ptr, ConstantInt *Size) {
 }
 
 static MaybeAlign getAlign(Value *Ptr) {
-  if (auto *O = dyn_cast<GlobalObject>(Ptr))
-    return O->getAlign();
+  if (auto *V = dyn_cast<GlobalVariable>(Ptr))
+    return V->getAlign();
   if (auto *A = dyn_cast<GlobalAlias>(Ptr))
-    return A->getAliaseeObject()->getAlign();
+    return getAlign(A->getAliaseeObject());
   return {};
 }
 
@@ -552,9 +579,11 @@ CallInst *IRBuilderBase::CreateMaskedLoad(Type *Ty, Value *Ptr, Align Alignment,
   if (!PassThru)
     PassThru = PoisonValue::get(Ty);
   Type *OverloadedTypes[] = { Ty, PtrTy };
-  Value *Ops[] = {Ptr, getInt32(Alignment.value()), Mask, PassThru};
-  return CreateMaskedIntrinsic(Intrinsic::masked_load, Ops,
-                               OverloadedTypes, Name);
+  Value *Ops[] = {Ptr, Mask, PassThru};
+  CallInst *CI =
+      CreateMaskedIntrinsic(Intrinsic::masked_load, Ops, OverloadedTypes, Name);
+  CI->addParamAttr(0, Attribute::getWithAlignment(CI->getContext(), Alignment));
+  return CI;
 }
 
 /// Create a call to a Masked Store intrinsic.
@@ -570,8 +599,11 @@ CallInst *IRBuilderBase::CreateMaskedStore(Value *Val, Value *Ptr,
   assert(DataTy->isVectorTy() && "Val should be a vector");
   assert(Mask && "Mask should not be all-ones (null)");
   Type *OverloadedTypes[] = { DataTy, PtrTy };
-  Value *Ops[] = {Val, Ptr, getInt32(Alignment.value()), Mask};
-  return CreateMaskedIntrinsic(Intrinsic::masked_store, Ops, OverloadedTypes);
+  Value *Ops[] = {Val, Ptr, Mask};
+  CallInst *CI =
+      CreateMaskedIntrinsic(Intrinsic::masked_store, Ops, OverloadedTypes);
+  CI->addParamAttr(1, Attribute::getWithAlignment(CI->getContext(), Alignment));
+  return CI;
 }
 
 /// Create a call to a Masked intrinsic, with given intrinsic Id,
@@ -609,12 +641,14 @@ CallInst *IRBuilderBase::CreateMaskedGather(Type *Ty, Value *Ptrs,
     PassThru = PoisonValue::get(Ty);
 
   Type *OverloadedTypes[] = {Ty, PtrsTy};
-  Value *Ops[] = {Ptrs, getInt32(Alignment.value()), Mask, PassThru};
+  Value *Ops[] = {Ptrs, Mask, PassThru};
 
   // We specify only one type when we create this intrinsic. Types of other
   // arguments are derived from this type.
-  return CreateMaskedIntrinsic(Intrinsic::masked_gather, Ops, OverloadedTypes,
-                               Name);
+  CallInst *CI = CreateMaskedIntrinsic(Intrinsic::masked_gather, Ops,
+                                       OverloadedTypes, Name);
+  CI->addParamAttr(0, Attribute::getWithAlignment(CI->getContext(), Alignment));
+  return CI;
 }
 
 /// Create a call to a Masked Scatter intrinsic.
@@ -634,11 +668,14 @@ CallInst *IRBuilderBase::CreateMaskedScatter(Value *Data, Value *Ptrs,
     Mask = getAllOnesMask(NumElts);
 
   Type *OverloadedTypes[] = {DataTy, PtrsTy};
-  Value *Ops[] = {Data, Ptrs, getInt32(Alignment.value()), Mask};
+  Value *Ops[] = {Data, Ptrs, Mask};
 
   // We specify only one type when we create this intrinsic. Types of other
   // arguments are derived from this type.
-  return CreateMaskedIntrinsic(Intrinsic::masked_scatter, Ops, OverloadedTypes);
+  CallInst *CI =
+      CreateMaskedIntrinsic(Intrinsic::masked_scatter, Ops, OverloadedTypes);
+  CI->addParamAttr(1, Attribute::getWithAlignment(CI->getContext(), Alignment));
+  return CI;
 }
 
 /// Create a call to Masked Expand Load intrinsic
@@ -713,21 +750,13 @@ getStatepointBundles(std::optional<ArrayRef<T1>> TransitionArgs,
                      std::optional<ArrayRef<T2>> DeoptArgs,
                      ArrayRef<T3> GCArgs) {
   std::vector<OperandBundleDef> Rval;
-  if (DeoptArgs) {
-    SmallVector<Value*, 16> DeoptValues;
-    llvm::append_range(DeoptValues, *DeoptArgs);
-    Rval.emplace_back("deopt", DeoptValues);
-  }
-  if (TransitionArgs) {
-    SmallVector<Value*, 16> TransitionValues;
-    llvm::append_range(TransitionValues, *TransitionArgs);
-    Rval.emplace_back("gc-transition", TransitionValues);
-  }
-  if (GCArgs.size()) {
-    SmallVector<Value*, 16> LiveValues;
-    llvm::append_range(LiveValues, GCArgs);
-    Rval.emplace_back("gc-live", LiveValues);
-  }
+  if (DeoptArgs)
+    Rval.emplace_back("deopt", SmallVector<Value *, 16>(*DeoptArgs));
+  if (TransitionArgs)
+    Rval.emplace_back("gc-transition",
+                      SmallVector<Value *, 16>(*TransitionArgs));
+  if (GCArgs.size())
+    Rval.emplace_back("gc-live", SmallVector<Value *, 16>(GCArgs));
   return Rval;
 }
 
@@ -913,24 +942,12 @@ CallInst *IRBuilderBase::CreateIntrinsic(Type *RetTy, Intrinsic::ID ID,
                                          const Twine &Name) {
   Module *M = BB->getModule();
 
-  SmallVector<Intrinsic::IITDescriptor> Table;
-  Intrinsic::getIntrinsicInfoTableEntries(ID, Table);
-  ArrayRef<Intrinsic::IITDescriptor> TableRef(Table);
-
   SmallVector<Type *> ArgTys;
   ArgTys.reserve(Args.size());
   for (auto &I : Args)
     ArgTys.push_back(I->getType());
-  FunctionType *FTy = FunctionType::get(RetTy, ArgTys, false);
-  SmallVector<Type *> OverloadTys;
-  Intrinsic::MatchIntrinsicTypesResult Res =
-      matchIntrinsicSignature(FTy, TableRef, OverloadTys);
-  (void)Res;
-  assert(Res == Intrinsic::MatchIntrinsicTypes_Match && TableRef.empty() &&
-         "Wrong types for intrinsic!");
-  // TODO: Handle varargs intrinsics.
 
-  Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, OverloadTys);
+  Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, RetTy, ArgTys);
   return createCallHelper(Fn, Args, Name, FMFSource);
 }
 
@@ -945,6 +962,26 @@ CallInst *IRBuilderBase::CreateConstrainedFPBinOp(
 
   CallInst *C = CreateIntrinsic(ID, {L->getType()},
                                 {L, R, RoundingV, ExceptV}, nullptr, Name);
+  setConstrainedFPCallAttr(C);
+  setFPAttrs(C, FPMathTag, UseFMF);
+  return C;
+}
+
+CallInst *IRBuilderBase::CreateConstrainedFPIntrinsic(
+    Intrinsic::ID ID, ArrayRef<Type *> Types, ArrayRef<Value *> Args,
+    FMFSource FMFSource, const Twine &Name, MDNode *FPMathTag,
+    std::optional<RoundingMode> Rounding,
+    std::optional<fp::ExceptionBehavior> Except) {
+  Value *RoundingV = getConstrainedFPRounding(Rounding);
+  Value *ExceptV = getConstrainedFPExcept(Except);
+
+  FastMathFlags UseFMF = FMFSource.get(FMF);
+
+  llvm::SmallVector<Value *, 5> ExtArgs(Args);
+  ExtArgs.push_back(RoundingV);
+  ExtArgs.push_back(ExceptV);
+
+  CallInst *C = CreateIntrinsic(ID, Types, ExtArgs, nullptr, Name);
   setConstrainedFPCallAttr(C);
   setFPAttrs(C, FPMathTag, UseFMF);
   return C;
@@ -1037,9 +1074,7 @@ CallInst *IRBuilderBase::CreateConstrainedFPCall(
     Function *Callee, ArrayRef<Value *> Args, const Twine &Name,
     std::optional<RoundingMode> Rounding,
     std::optional<fp::ExceptionBehavior> Except) {
-  llvm::SmallVector<Value *, 6> UseArgs;
-
-  append_range(UseArgs, Args);
+  llvm::SmallVector<Value *, 6> UseArgs(Args);
 
   if (Intrinsic::hasConstrainedFPRoundingModeOperand(Callee->getIntrinsicID()))
     UseArgs.push_back(getConstrainedFPRounding(Rounding));
@@ -1048,6 +1083,28 @@ CallInst *IRBuilderBase::CreateConstrainedFPCall(
   CallInst *C = CreateCall(Callee, UseArgs, Name);
   setConstrainedFPCallAttr(C);
   return C;
+}
+
+Value *IRBuilderBase::CreateSelectWithUnknownProfile(Value *C, Value *True,
+                                                     Value *False,
+                                                     StringRef PassName,
+                                                     const Twine &Name) {
+  Value *Ret = CreateSelectFMF(C, True, False, {}, Name);
+  if (auto *SI = dyn_cast<SelectInst>(Ret)) {
+    setExplicitlyUnknownBranchWeightsIfProfiled(*SI, PassName);
+  }
+  return Ret;
+}
+
+Value *IRBuilderBase::CreateSelectFMFWithUnknownProfile(Value *C, Value *True,
+                                                        Value *False,
+                                                        FMFSource FMFSource,
+                                                        StringRef PassName,
+                                                        const Twine &Name) {
+  Value *Ret = CreateSelectFMF(C, True, False, FMFSource, Name);
+  if (auto *SI = dyn_cast<SelectInst>(Ret))
+    setExplicitlyUnknownBranchWeightsIfProfiled(*SI, PassName);
+  return Ret;
 }
 
 Value *IRBuilderBase::CreateSelect(Value *C, Value *True, Value *False,
@@ -1132,32 +1189,47 @@ Value *IRBuilderBase::CreateVectorReverse(Value *V, const Twine &Name) {
   return CreateShuffleVector(V, ShuffleMask, Name);
 }
 
-Value *IRBuilderBase::CreateVectorSplice(Value *V1, Value *V2, int64_t Imm,
-                                         const Twine &Name) {
-  assert(isa<VectorType>(V1->getType()) && "Unexpected type");
-  assert(V1->getType() == V2->getType() &&
-         "Splice expects matching operand types!");
-
-  if (auto *VTy = dyn_cast<ScalableVectorType>(V1->getType())) {
-    Module *M = BB->getParent()->getParent();
-    Function *F =
-        Intrinsic::getOrInsertDeclaration(M, Intrinsic::vector_splice, VTy);
-
-    Value *Ops[] = {V1, V2, getInt32(Imm)};
-    return Insert(CallInst::Create(F, Ops), Name);
-  }
-
-  unsigned NumElts = cast<FixedVectorType>(V1->getType())->getNumElements();
-  assert(((-Imm <= NumElts) || (Imm < NumElts)) &&
-         "Invalid immediate for vector splice!");
-
-  // Keep the original behaviour for fixed vector
+static SmallVector<int, 8> getSpliceMask(int64_t Imm, unsigned NumElts) {
   unsigned Idx = (NumElts + Imm) % NumElts;
   SmallVector<int, 8> Mask;
   for (unsigned I = 0; I < NumElts; ++I)
     Mask.push_back(Idx + I);
+  return Mask;
+}
 
-  return CreateShuffleVector(V1, V2, Mask);
+Value *IRBuilderBase::CreateVectorSpliceLeft(Value *V1, Value *V2,
+                                             Value *Offset, const Twine &Name) {
+  assert(isa<VectorType>(V1->getType()) && "Unexpected type");
+  assert(V1->getType() == V2->getType() &&
+         "Splice expects matching operand types!");
+
+  // Emit a shufflevector for fixed vectors with a constant offset
+  if (auto *COffset = dyn_cast<ConstantInt>(Offset))
+    if (auto *FVTy = dyn_cast<FixedVectorType>(V1->getType()))
+      return CreateShuffleVector(
+          V1, V2,
+          getSpliceMask(COffset->getZExtValue(), FVTy->getNumElements()));
+
+  return CreateIntrinsic(Intrinsic::vector_splice_left, V1->getType(),
+                         {V1, V2, Offset}, {}, Name);
+}
+
+Value *IRBuilderBase::CreateVectorSpliceRight(Value *V1, Value *V2,
+                                              Value *Offset,
+                                              const Twine &Name) {
+  assert(isa<VectorType>(V1->getType()) && "Unexpected type");
+  assert(V1->getType() == V2->getType() &&
+         "Splice expects matching operand types!");
+
+  // Emit a shufflevector for fixed vectors with a constant offset
+  if (auto *COffset = dyn_cast<ConstantInt>(Offset))
+    if (auto *FVTy = dyn_cast<FixedVectorType>(V1->getType()))
+      return CreateShuffleVector(
+          V1, V2,
+          getSpliceMask(-COffset->getZExtValue(), FVTy->getNumElements()));
+
+  return CreateIntrinsic(Intrinsic::vector_splice_right, V1->getType(),
+                         {V1, V2, Offset}, {}, Name);
 }
 
 Value *IRBuilderBase::CreateVectorSplat(unsigned NumElts, Value *V,
@@ -1180,9 +1252,32 @@ Value *IRBuilderBase::CreateVectorSplat(ElementCount EC, Value *V,
   return CreateShuffleVector(V, Zeros, Name + ".splat");
 }
 
-Value *IRBuilderBase::CreatePreserveArrayAccessIndex(
-    Type *ElTy, Value *Base, unsigned Dimension, unsigned LastIndex,
-    MDNode *DbgInfo) {
+Value *IRBuilderBase::CreateVectorInterleave(ArrayRef<Value *> Ops,
+                                             const Twine &Name) {
+  assert(Ops.size() >= 2 && Ops.size() <= 8 &&
+         "Unexpected number of operands to interleave");
+
+  // Make sure all operands are the same type.
+  assert(isa<VectorType>(Ops[0]->getType()) && "Unexpected type");
+
+#ifndef NDEBUG
+  for (unsigned I = 1; I < Ops.size(); I++) {
+    assert(Ops[I]->getType() == Ops[0]->getType() &&
+           "Vector interleave expects matching operand types!");
+  }
+#endif
+
+  unsigned IID = Intrinsic::getInterleaveIntrinsicID(Ops.size());
+  auto *SubvecTy = cast<VectorType>(Ops[0]->getType());
+  Type *DestTy = VectorType::get(SubvecTy->getElementType(),
+                                 SubvecTy->getElementCount() * Ops.size());
+  return CreateIntrinsic(IID, {DestTy}, Ops, {}, Name);
+}
+
+Value *IRBuilderBase::CreatePreserveArrayAccessIndex(Type *ElTy, Value *Base,
+                                                     unsigned Dimension,
+                                                     unsigned LastIndex,
+                                                     MDNode *DbgInfo) {
   auto *BaseType = Base->getType();
   assert(isa<PointerType>(BaseType) &&
          "Invalid Base ptr type for preserve.array.access.index.");

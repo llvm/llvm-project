@@ -7,9 +7,11 @@
 
 ; CHECK-LABEL: Pass Arguments:
 ; CHECK-NEXT: Target Library Information
+; CHECK-NEXT: Runtime Library Function Analysis
 ; CHECK-NEXT: Target Pass Configuration
 ; CHECK-NEXT: Machine Module Information
 ; CHECK-NEXT: Target Transform Information
+; CHECK-NEXT: Library Function Lowering Analysis
 ; CHECK-NEXT: Create Garbage Collector Module Metadata
 ; CHECK-NEXT: Assumption Cache Tracker
 ; CHECK-NEXT: Profile summary info
@@ -17,8 +19,7 @@
 ; CHECK-NEXT:   ModulePass Manager
 ; CHECK-NEXT:     Pre-ISel Intrinsic Lowering
 ; CHECK-NEXT:     FunctionPass Manager
-; CHECK-NEXT:       Expand large div/rem
-; CHECK-NEXT:       Expand large fp convert
+; CHECK-NEXT:       Expand IR instructions
 ; CHECK-NEXT:       Expand Atomic instructions
 ; CHECK-NEXT:       Lower AMX intrinsics
 ; CHECK-NEXT:       Lower AMX type for load/store
@@ -41,6 +42,7 @@
 ; CHECK-NEXT:       Argument Stack Rebase
 ; CHECK-NEXT:       Finalize ISel and expand pseudo-instructions
 ; CHECK-NEXT:       Local Stack Slot Allocation
+; CHECK-NEXT:       X86 Suppress APX features for relocation
 ; CHECK-NEXT:       X86 speculative load hardening
 ; CHECK-NEXT:       X86 EFLAGS copy lowering
 ; CHECK-NEXT:       X86 DynAlloca Expander
@@ -67,8 +69,6 @@
 ; CHECK-NEXT:       X86 Indirect Branch Tracking
 ; CHECK-NEXT:       X86 vzeroupper inserter
 ; CHECK-NEXT:       Compressing EVEX instrs when possible
-; CHECK-NEXT:       X86 Discriminate Memory Operands
-; CHECK-NEXT:       X86 Insert Cache Prefetches
 ; CHECK-NEXT:       X86 insert wait instruction
 ; CHECK-NEXT:       Contiguously Lay Out Funclets
 ; CHECK-NEXT:       Remove Loads Into Fake Uses

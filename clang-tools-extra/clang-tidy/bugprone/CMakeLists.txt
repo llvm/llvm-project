@@ -12,16 +12,23 @@ add_clang_library(clangTidyBugproneModule STATIC
   BoolPointerImplicitConversionCheck.cpp
   BranchCloneCheck.cpp
   BugproneTidyModule.cpp
+  CapturingThisInMemberVariableCheck.cpp
   CastingThroughVoidCheck.cpp
   ChainedComparisonCheck.cpp
+  CommandProcessorCheck.cpp
   ComparePointerToMemberVirtualFunctionCheck.cpp
   CopyConstructorInitCheck.cpp
+  CopyConstructorMutatesArgumentCheck.cpp
   CrtpConstructorAccessibilityCheck.cpp
   DanglingHandleCheck.cpp
+  DefaultOperatorNewOnOveralignedTypeCheck.cpp
+  DerivedMethodShadowingBaseMethodCheck.cpp
   DynamicStaticInitializersCheck.cpp
   EasilySwappableParametersCheck.cpp
   EmptyCatchCheck.cpp
+  ExceptionCopyConstructorThrowsCheck.cpp
   ExceptionEscapeCheck.cpp
+  FloatLoopCounterCheck.cpp
   FoldInitTypeCheck.cpp
   ForwardDeclarationNamespaceCheck.cpp
   ForwardingReferenceOverloadCheck.cpp
@@ -29,6 +36,8 @@ add_clang_library(clangTidyBugproneModule STATIC
   InaccurateEraseCheck.cpp
   IncorrectEnableIfCheck.cpp
   IncorrectEnableSharedFromThisCheck.cpp
+  InvalidEnumDefaultInitializationCheck.cpp
+  UnintendedCharOstreamOutputCheck.cpp
   ReturnConstRefFromParameterCheck.cpp
   SuspiciousStringviewDataUsageCheck.cpp
   SwitchMissingDefaultCaseCheck.cpp
@@ -40,6 +49,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   LambdaFunctionNameCheck.cpp
   MacroParenthesesCheck.cpp
   MacroRepeatedSideEffectsCheck.cpp
+  MisleadingSetterOfReferenceCheck.cpp
   MisplacedOperatorInStrlenInAllocCheck.cpp
   MisplacedPointerArithmeticInAllocCheck.cpp
   MisplacedWideningCastCheck.cpp
@@ -56,6 +66,8 @@ add_clang_library(clangTidyBugproneModule STATIC
   ParentVirtualCallCheck.cpp
   PointerArithmeticOnPolymorphicObjectCheck.cpp
   PosixReturnCheck.cpp
+  RandomGeneratorSeedCheck.cpp
+  RawMemoryCallOnNonTrivialTypeCheck.cpp
   RedundantBranchConditionCheck.cpp
   ReservedIdentifierCheck.cpp
   ReturnConstRefFromParameterCheck.cpp
@@ -67,6 +79,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   SmartPtrArrayMismatchCheck.cpp
   SpuriouslyWakeUpFunctionsCheck.cpp
   StandaloneEmptyCheck.cpp
+  StdNamespaceModificationCheck.cpp
   StringConstructorCheck.cpp
   StringIntegerAssignmentCheck.cpp
   StringLiteralWithEmbeddedNulCheck.cpp
@@ -85,8 +98,10 @@ add_clang_library(clangTidyBugproneModule STATIC
   TaggedUnionMemberCountCheck.cpp
   TerminatingContinueCheck.cpp
   ThrowKeywordMissingCheck.cpp
+  ThrowingStaticInitializationCheck.cpp
   TooSmallLoopVariableCheck.cpp
   UncheckedOptionalAccessCheck.cpp
+  UncheckedStringToNumberConversionCheck.cpp
   UndefinedMemoryManipulationCheck.cpp
   UndelegatedConstructorCheck.cpp
   UnhandledExceptionAtNewCheck.cpp
@@ -117,6 +132,7 @@ clang_target_link_libraries(clangTidyBugproneModule
   clangASTMatchers
   clangBasic
   clangLex
+  clangSema
   clangTooling
   clangTransformer
   )

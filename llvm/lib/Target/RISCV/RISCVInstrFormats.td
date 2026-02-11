@@ -30,37 +30,44 @@
 class InstFormat<bits<5> val> {
   bits<5> Value = val;
 }
-def InstFormatPseudo : InstFormat<0>;
-def InstFormatR      : InstFormat<1>;
-def InstFormatR4     : InstFormat<2>;
-def InstFormatI      : InstFormat<3>;
-def InstFormatS      : InstFormat<4>;
-def InstFormatB      : InstFormat<5>;
-def InstFormatU      : InstFormat<6>;
-def InstFormatJ      : InstFormat<7>;
-def InstFormatCR     : InstFormat<8>;
-def InstFormatCI     : InstFormat<9>;
-def InstFormatCSS    : InstFormat<10>;
-def InstFormatCIW    : InstFormat<11>;
-def InstFormatCL     : InstFormat<12>;
-def InstFormatCS     : InstFormat<13>;
-def InstFormatCA     : InstFormat<14>;
-def InstFormatCB     : InstFormat<15>;
-def InstFormatCJ     : InstFormat<16>;
-def InstFormatCU     : InstFormat<17>;
-def InstFormatCLB    : InstFormat<18>;
-def InstFormatCLH    : InstFormat<19>;
-def InstFormatCSB    : InstFormat<20>;
-def InstFormatCSH    : InstFormat<21>;
-def InstFormatOther  : InstFormat<22>;
+def InstFormatPseudo        : InstFormat<0>;
+def InstFormatR             : InstFormat<1>;
+def InstFormatR4            : InstFormat<2>;
+def InstFormatI             : InstFormat<3>;
+def InstFormatS             : InstFormat<4>;
+def InstFormatB             : InstFormat<5>;
+def InstFormatU             : InstFormat<6>;
+def InstFormatJ             : InstFormat<7>;
+def InstFormatCR            : InstFormat<8>;
+def InstFormatCI            : InstFormat<9>;
+def InstFormatCSS           : InstFormat<10>;
+def InstFormatCIW           : InstFormat<11>;
+def InstFormatCL            : InstFormat<12>;
+def InstFormatCS            : InstFormat<13>;
+def InstFormatCA            : InstFormat<14>;
+def InstFormatCB            : InstFormat<15>;
+def InstFormatCJ            : InstFormat<16>;
+def InstFormatCU            : InstFormat<17>;
+def InstFormatCLB           : InstFormat<18>;
+def InstFormatCLH           : InstFormat<19>;
+def InstFormatCSB           : InstFormat<20>;
+def InstFormatCSH           : InstFormat<21>;
+def InstFormatQC_EAI        : InstFormat<22>;
+def InstFormatQC_EI         : InstFormat<23>;
+def InstFormatQC_EB         : InstFormat<24>;
+def InstFormatQC_EJ         : InstFormat<25>;
+def InstFormatQC_ES         : InstFormat<26>;
+def InstFormatNDS_BRANCH_10 : InstFormat<27>;
+def InstFormatOther         : InstFormat<31>;
 
-class RISCVVConstraint<bits<3> val> {
-  bits<3> Value = val;
+
+class RISCVVConstraint<bit VS2 = 0, bit VS1 = 0, bit VM = 0> {
+  bits<3> Value = {VM, VS1, VS2};
 }
-def NoConstraint  : RISCVVConstraint<0b000>;
-def VS2Constraint : RISCVVConstraint<0b001>;
-def VS1Constraint : RISCVVConstraint<0b010>;
-def VMConstraint  : RISCVVConstraint<0b100>;
+def NoConstraint  : RISCVVConstraint<>;
+def VS2Constraint : RISCVVConstraint<VS2 = 1>;
+def VS1Constraint : RISCVVConstraint<VS1 = 1>;
+def VMConstraint  : RISCVVConstraint<VM = 1>;
 
 // Illegal instructions:
 //
@@ -93,24 +100,15 @@ def VMConstraint  : RISCVVConstraint<0b100>;
 //
 // * vcompress: The destination vector register group cannot overlap the
 // source vector register group or the source mask register
-def WidenV       : RISCVVConstraint<!or(VS2Constraint.Value,
-                                        VS1Constraint.Value,
-                                        VMConstraint.Value)>;
-def WidenW       : RISCVVConstraint<!or(VS1Constraint.Value,
-                                        VMConstraint.Value)>;
-def WidenCvt     : RISCVVConstraint<!or(VS2Constraint.Value,
-                                        VMConstraint.Value)>;
-def Iota         : RISCVVConstraint<!or(VS2Constraint.Value,
-                                        VMConstraint.Value)>;
-def SlideUp      : RISCVVConstraint<!or(VS2Constraint.Value,
-                                        VMConstraint.Value)>;
-def Vrgather     : RISCVVConstraint<!or(VS2Constraint.Value,
-                                        VS1Constraint.Value,
-                                        VMConstraint.Value)>;
-def Vcompress    : RISCVVConstraint<!or(VS2Constraint.Value,
-                                        VS1Constraint.Value)>;
-def Sha2Constraint : RISCVVConstraint<!or(VS2Constraint.Value,
-                                          VS1Constraint.Value)>;
+def WidenVNoMask : RISCVVConstraint<VS2 = 1, VS1 = 1>;
+def WidenV       : RISCVVConstraint<VS2 = 1, VS1 = 1, VM = 1>;
+def WidenW       : RISCVVConstraint<VS1 = 1, VM = 1>;
+def WidenCvt     : RISCVVConstraint<VS2 = 1, VM = 1>;
+def Iota         : RISCVVConstraint<VS2 = 1, VM = 1>;
+def SlideUp      : RISCVVConstraint<VS2 = 1, VM = 1>;
+def Vrgather     : RISCVVConstraint<VS2 = 1, VS1 = 1, VM = 1>;
+def Vcompress    : RISCVVConstraint<VS2 = 1, VS1 = 1>;
+def Sha2Constraint : RISCVVConstraint<VS2 = 1, VS1 = 1>;
 
 // The following opcode names match those given in Table 19.1 in the
 // RISC-V User-level ISA specification ("RISC-V base opcode map").
@@ -137,6 +135,7 @@ def OPC_MISC_MEM  : RISCVOpcode<"MISC_MEM",  0b0001111>;
 def OPC_OP_IMM    : RISCVOpcode<"OP_IMM",    0b0010011>;
 def OPC_AUIPC     : RISCVOpcode<"AUIPC",     0b0010111>;
 def OPC_OP_IMM_32 : RISCVOpcode<"OP_IMM_32", 0b0011011>;
+def OPC_0011111   : RISCVOpcode<"",          0b0011111>;
 def OPC_STORE     : RISCVOpcode<"STORE",     0b0100011>;
 def OPC_STORE_FP  : RISCVOpcode<"STORE_FP",  0b0100111>;
 def OPC_CUSTOM_1  : RISCVOpcode<"CUSTOM_1",  0b0101011>;
@@ -144,6 +143,7 @@ def OPC_AMO       : RISCVOpcode<"AMO",       0b0101111>;
 def OPC_OP        : RISCVOpcode<"OP",        0b0110011>;
 def OPC_LUI       : RISCVOpcode<"LUI",       0b0110111>;
 def OPC_OP_32     : RISCVOpcode<"OP_32",     0b0111011>;
+def OPC_0111111   : RISCVOpcode<"",          0b0111111>;
 def OPC_MADD      : RISCVOpcode<"MADD",      0b1000011>;
 def OPC_MSUB      : RISCVOpcode<"MSUB",      0b1000111>;
 def OPC_NMSUB     : RISCVOpcode<"NMSUB",     0b1001011>;
@@ -151,6 +151,7 @@ def OPC_NMADD     : RISCVOpcode<"NMADD",     0b1001111>;
 def OPC_OP_FP     : RISCVOpcode<"OP_FP",     0b1010011>;
 def OPC_OP_V      : RISCVOpcode<"OP_V",      0b1010111>;
 def OPC_CUSTOM_2  : RISCVOpcode<"CUSTOM_2",  0b1011011>;
+def OPC_1011111   : RISCVOpcode<"",          0b1011111>;
 def OPC_BRANCH    : RISCVOpcode<"BRANCH",    0b1100011>;
 def OPC_JALR      : RISCVOpcode<"JALR",      0b1100111>;
 def OPC_JAL       : RISCVOpcode<"JAL",       0b1101111>;
@@ -165,15 +166,23 @@ class EltDeps<bit vl, bit mask> {
 
 def EltDepsNone      : EltDeps<vl=0, mask=0>;
 def EltDepsVL        : EltDeps<vl=1, mask=0>;
+def EltDepsMask      : EltDeps<vl=0, mask=1>;
 def EltDepsVLMask    : EltDeps<vl=1, mask=1>;
 
-class EEW <bits<2> val> {
+class EEW<bits<2> val> {
   bits<2> Value = val;
 }
 def EEW1     : EEW<0>;
 def EEWSEWx1 : EEW<1>;
 def EEWSEWx2 : EEW<2>;
 def EEWSEWx4 : EEW<3>;
+
+class AltFmtType<bits<2> val> {
+  bits<2> Value = val;
+}
+def DONT_CARE_ALTFMT : AltFmtType<0>;
+def IS_NOT_ALTFMT    : AltFmtType<1>;
+def IS_ALTFMT        : AltFmtType<2>;
 
 class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
                    list<dag> pattern, InstFormat format> : Instruction {
@@ -184,7 +193,9 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   let AsmString = opcodestr # !if(!empty(argstr), "", "\t" # argstr);
   let Pattern = pattern;
 
-  let TSFlags{4-0} = format.Value;
+  InstFormat Format = format;
+
+  let TSFlags{4-0} = Format.Value;
 
   // Defaults
   RISCVVConstraint RVVConstraint = NoConstraint;
@@ -193,36 +204,33 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   bits<3> VLMul = 0;
   let TSFlags{10-8} = VLMul;
 
-  bit ForceTailAgnostic = false;
-  let TSFlags{11} = ForceTailAgnostic;
-
   bit IsTiedPseudo = 0;
-  let TSFlags{12} = IsTiedPseudo;
+  let TSFlags{11} = IsTiedPseudo;
 
   bit HasSEWOp = 0;
-  let TSFlags{13} = HasSEWOp;
+  let TSFlags{12} = HasSEWOp;
 
   bit HasVLOp = 0;
-  let TSFlags{14} = HasVLOp;
+  let TSFlags{13} = HasVLOp;
 
   bit HasVecPolicyOp = 0;
-  let TSFlags{15} = HasVecPolicyOp;
+  let TSFlags{14} = HasVecPolicyOp;
 
   bit IsRVVWideningReduction = 0;
-  let TSFlags{16} = IsRVVWideningReduction;
+  let TSFlags{15} = IsRVVWideningReduction;
 
   bit UsesMaskPolicy = 0;
-  let TSFlags{17} = UsesMaskPolicy;
+  let TSFlags{16} = UsesMaskPolicy;
 
   // Indicates that the result can be considered sign extended from bit 31. Some
   // instructions with this flag aren't W instructions, but are either sign
   // extended from a smaller size, always outputs a small integer, or put zeros
   // in bits 63:31. Used by the SExtWRemoval pass.
   bit IsSignExtendingOpW = 0;
-  let TSFlags{18} = IsSignExtendingOpW;
+  let TSFlags{17} = IsSignExtendingOpW;
 
   bit HasRoundModeOp = 0;
-  let TSFlags{19} =  HasRoundModeOp;
+  let TSFlags{18} =  HasRoundModeOp;
 
   // This is only valid when HasRoundModeOp is set to 1. HasRoundModeOp is set
   // to 1 for vector fixed-point or floating-point intrinsics. This bit is
@@ -230,7 +238,7 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   // fixed-point / floating-point instructions and emit appropriate read/write
   // to the correct CSR.
   bit UsesVXRM = 0;
-  let TSFlags{20} =  UsesVXRM;
+  let TSFlags{19} =  UsesVXRM;
 
   // Indicates whether these instructions can partially overlap between source
   // registers and destination registers according to the vector spec.
@@ -239,30 +247,47 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   // 2 -> narrowing case
   // 3 -> widening case
   bits<2> TargetOverlapConstraintType = 0;
-  let TSFlags{22-21} = TargetOverlapConstraintType;
+  let TSFlags{21-20} = TargetOverlapConstraintType;
 
   // Most vector instructions are elementwise, but some may depend on the value
   // of VL (e.g. vslide1down.vx), and others may depend on the VL and mask
   // (e.g. vredsum.vs, viota.m). Mark these instructions so that peepholes avoid
   // changing their VL and/or mask.
   EltDeps ElementsDependOn = EltDepsNone;
-  let TSFlags{23} = ElementsDependOn.VL;
-  let TSFlags{24} = ElementsDependOn.Mask;
+  let TSFlags{22} = ElementsDependOn.VL;
+  let TSFlags{23} = ElementsDependOn.Mask;
 
   // Indicates the EEW of a vector instruction's destination operand.
   EEW DestEEW = EEWSEWx1;
-  let TSFlags{26-25} = DestEEW.Value;
+  let TSFlags{25-24} = DestEEW.Value;
+
+  // Some vector instructions like vslidedown/vrgather will read elements past
+  // VL, and should be marked to make sure RISCVVLOptimizer doesn't reduce its
+  // operands' VLs.
+  bit ReadsPastVL = 0;
+  let TSFlags{26} = ReadsPastVL;
+
+  // 0 -> Don't care about altfmt bit in VTYPE.
+  // 1 -> Is not altfmt.
+  // 2 -> Is altfmt(BF16).
+  AltFmtType AltFmtType = DONT_CARE_ALTFMT;
+  let TSFlags{28-27} = AltFmtType.Value;
+
+  // XSfmmbase
+  bit HasTWidenOp = 0;
+  let TSFlags{29} = HasTWidenOp;
+
+  bit HasTmOp = 0;
+  let TSFlags{30} = HasTmOp;
+
+  bit HasTkOp = 0;
+  let TSFlags{31} = HasTkOp;
 }
 
 class RVInst<dag outs, dag ins, string opcodestr, string argstr,
              list<dag> pattern, InstFormat format>
     : RVInstCommon<outs, ins, opcodestr, argstr, pattern, format> {
   field bits<32> Inst;
-  // SoftFail is a field the disassembler can use to provide a way for
-  // instructions to not match without killing the whole decode process. It is
-  // mainly used for ARM, but Tablegen expects this field to exist or it fails
-  // to build the decode table.
-  field bits<32> SoftFail = 0;
   let Size = 4;
 }
 
@@ -270,7 +295,6 @@ class RVInst48<dag outs, dag ins, string opcodestr, string argstr,
                list<dag> pattern, InstFormat format>
     : RVInstCommon<outs, ins, opcodestr, argstr, pattern, format> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
   let Size = 6;
 }
 
@@ -278,15 +302,15 @@ class RVInst64<dag outs, dag ins, string opcodestr, string argstr,
                list<dag> pattern, InstFormat format>
     : RVInstCommon<outs, ins, opcodestr, argstr, pattern, format> {
   field bits<64> Inst;
-  field bits<64> SoftFail = 0;
   let Size = 8;
 }
 
 // Pseudo instructions
 class Pseudo<dag outs, dag ins, list<dag> pattern, string opcodestr = "", string argstr = "">
-    : RVInst<outs, ins, opcodestr, argstr, pattern, InstFormatPseudo> {
+    : RVInstCommon<outs, ins, opcodestr, argstr, pattern, InstFormatPseudo> {
   let isPseudo = 1;
   let isCodeGenOnly = 1;
+  let Size = 4;
 }
 
 class PseudoQuietFCMP<DAGOperand Ty>
@@ -297,8 +321,8 @@ class PseudoQuietFCMP<DAGOperand Ty>
 }
 
 // Pseudo load instructions.
-class PseudoLoad<string opcodestr>
-    : Pseudo<(outs GPR:$rd), (ins bare_symbol:$addr), [], opcodestr, "$rd, $addr"> {
+class PseudoLoad<string opcodestr, DAGOperand rdty = GPR>
+    : Pseudo<(outs rdty:$rd), (ins bare_symbol:$addr), [], opcodestr, "$rd, $addr"> {
   let hasSideEffects = 0;
   let mayLoad = 1;
   let mayStore = 0;
@@ -316,7 +340,7 @@ class PseudoFloatLoad<string opcodestr, RegisterClass rdty>
 }
 
 // Pseudo store instructions.
-class PseudoStore<string opcodestr, RegisterClass rsty = GPR>
+class PseudoStore<string opcodestr, DAGOperand rsty = GPR>
     : Pseudo<(outs GPR:$tmp), (ins rsty:$rs, bare_symbol:$addr), [], opcodestr, "$rs, $addr, $tmp"> {
   let hasSideEffects = 0;
   let mayLoad = 0;
@@ -482,6 +506,22 @@ class RVInstB<bits<3> funct3, RISCVOpcode opcode, dag outs, dag ins,
   let Inst{31} = imm12{11};
   let Inst{30-25} = imm12{9-4};
   let Inst{24-20} = rs2;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = funct3;
+  let Inst{11-8} = imm12{3-0};
+  let Inst{7} = imm12{10};
+  let Inst{6-0} = opcode.Value;
+}
+
+class RVInstBIMM<bits<3> funct3, RISCVOpcode opcode, dag outs, dag ins,
+                 string opcodestr, string argstr>
+    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatB> {
+  bits<12> imm12;
+  bits<5> cimm;
+  bits<5> rs1;
+  let Inst{31} = imm12{11};
+  let Inst{30-25} = imm12{9-4};
+  let Inst{24-20} = cimm;
   let Inst{19-15} = rs1;
   let Inst{14-12} = funct3;
   let Inst{11-8} = imm12{3-0};

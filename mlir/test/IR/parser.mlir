@@ -730,6 +730,10 @@ func.func @densetensorattr() -> () {
   "complex_attr"(){bar = dense<(1.000000e+00,0.000000e+00)> : tensor<complex<f32>>} : () -> ()
   // CHECK: dense<[(1.000000e+00,0.000000e+00), (2.000000e+00,2.000000e+00)]> : tensor<2xcomplex<f32>>
   "complex_attr"(){bar = dense<[(1.000000e+00,0.000000e+00), (2.000000e+00,2.000000e+00)]> : tensor<2xcomplex<f32>>} : () -> ()
+  // CHECK: dense<> : tensor<0xcomplex<i64>>
+  "complex_attr"(){bar = dense<> : tensor<0xcomplex<i64>>} : () -> ()
+  // CHECK: dense<> : tensor<2x0xcomplex<i64>>
+  "complex_attr"(){bar = dense<> : tensor<2x0xcomplex<i64>>} : () -> ()
   return
 }
 
@@ -1165,6 +1169,15 @@ func.func @op_with_region_args() {
   return
 }
 
+// Test parsing an operation name from within another op custom syntax.
+
+// CHECK-LABEL: @custom_name_api
+func.func @custom_name_api() {
+  // CHECK: test.parse_custom_operation_name_api(builtin.module)
+  test.parse_custom_operation_name_api(builtin.module)
+  return
+}
+
 // Test allowing different name scopes for regions isolated from above.
 
 // CHECK-LABEL: func @op_with_passthrough_region_args
@@ -1216,6 +1229,13 @@ func.func @parse_wrapped_keyword_test() {
 func.func @parse_base64_test() {
   // GENERIC: "test.parse_b64"() <{b64 = "hello world"}>
   test.parse_b64 "aGVsbG8gd29ybGQ="
+  return
+}
+
+// CHECK-LABEL: func @parse_slash_test
+func.func @parse_slash_test() {
+  // CHECK: "test.slash_attr"() <{attr = #test.slash_attr<1 / 2>}> : () -> ()
+  "test.slash_attr"() { attr = #test.slash_attr<1 / 2> } : () -> ()
   return
 }
 

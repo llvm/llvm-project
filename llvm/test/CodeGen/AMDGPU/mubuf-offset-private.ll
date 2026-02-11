@@ -51,7 +51,7 @@ define amdgpu_kernel void @load_private_offset_i8() #0 {
 define amdgpu_kernel void @sextload_private_offset_i8(ptr addrspace(1) %out) #0 {
   %load = load volatile i8, ptr addrspace(5) inttoptr (i32 8 to ptr addrspace(5))
   %sextload = sext i8 %load to i32
-  store i32 %sextload, ptr addrspace(1) undef
+  store i32 %sextload, ptr addrspace(1) poison
   ret void
 }
 
@@ -60,7 +60,7 @@ define amdgpu_kernel void @sextload_private_offset_i8(ptr addrspace(1) %out) #0 
 define amdgpu_kernel void @zextload_private_offset_i8(ptr addrspace(1) %out) #0 {
   %load = load volatile i8, ptr addrspace(5) inttoptr (i32 8 to ptr addrspace(5))
   %zextload = zext i8 %load to i32
-  store i32 %zextload, ptr addrspace(1) undef
+  store i32 %zextload, ptr addrspace(1) poison
   ret void
 }
 
@@ -76,7 +76,7 @@ define amdgpu_kernel void @load_private_offset_i16() #0 {
 define amdgpu_kernel void @sextload_private_offset_i16(ptr addrspace(1) %out) #0 {
   %load = load volatile i16, ptr addrspace(5) inttoptr (i32 8 to ptr addrspace(5))
   %sextload = sext i16 %load to i32
-  store i32 %sextload, ptr addrspace(1) undef
+  store i32 %sextload, ptr addrspace(1) poison
   ret void
 }
 
@@ -85,7 +85,7 @@ define amdgpu_kernel void @sextload_private_offset_i16(ptr addrspace(1) %out) #0
 define amdgpu_kernel void @zextload_private_offset_i16(ptr addrspace(1) %out) #0 {
   %load = load volatile i16, ptr addrspace(5) inttoptr (i32 8 to ptr addrspace(5))
   %zextload = zext i16 %load to i32
-  store i32 %zextload, ptr addrspace(1) undef
+  store i32 %zextload, ptr addrspace(1) poison
   ret void
 }
 
@@ -144,12 +144,12 @@ define amdgpu_kernel void @store_private_offset_i8_max_offset_plus2() #0 {
 ; SICIVI: buffer_store_dword v{{[0-9]+}}, [[ADDR1]], s{{\[[0-9]+:[0-9]+\]}}, 0 offen{{$}}
 
 ; GFX9: global_load_dword [[VADDR:v[0-9]+]],
-; GFX9: v_lshlrev_b32_e32 [[ADDR:v[0-9]+]], 2, [[VADDR]]
+; GFX9: v_lshl_add_u32 [[ADDR:v[0-9]+]], [[VADDR]], 2, s{{[0-9]+}}
 ; GFX9-NOT [[ADDR]]
 ; GFX9: buffer_store_dword v{{[0-9]+}}, [[ADDR]], s{{\[[0-9]+:[0-9]+\]}}, 0 offen offset:32
 define amdgpu_kernel void @store_private_unknown_bits_vaddr() #0 {
   %alloca = alloca [16 x i32], align 4, addrspace(5)
-  %vaddr = load volatile i32, ptr addrspace(1) undef
+  %vaddr = load volatile i32, ptr addrspace(1) poison
   %vaddr.off = add i32 %vaddr, 8
   %gep = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %vaddr.off
   store volatile i32 9, ptr addrspace(5) %gep

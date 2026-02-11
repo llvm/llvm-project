@@ -59,6 +59,7 @@ struct Config {
     std::optional<std::string> FixedCDBPath;
   };
 
+  enum class BuiltinHeaderPolicy { Clangd, QueryDriver };
   /// Controls how the compile command for the current file is determined.
   struct {
     /// Edits to apply to the compile command, in sequence.
@@ -66,6 +67,10 @@ struct Config {
         Edits;
     /// Where to search for compilation databases for this file's flags.
     CDBSearchSpec CDBSearch = {CDBSearchSpec::Ancestors, std::nullopt};
+
+    /// Whether to use clangd's own builtin headers, or ones from the system
+    /// include extractor, if available.
+    BuiltinHeaderPolicy BuiltinHeaders = BuiltinHeaderPolicy::Clangd;
   } CompileFlags;
 
   enum class BackgroundPolicy { Build, Skip };
@@ -142,6 +147,22 @@ struct Config {
     FullPlaceholders,
   };
 
+  enum class HeaderInsertionPolicy {
+    IWYU,       // Include what you use
+    NeverInsert // Never insert headers as part of code completion
+  };
+
+  enum class CodePatternsPolicy {
+    All, // Suggest all code patterns and snippets
+    None // Suggest none of the code patterns and snippets
+  };
+
+  enum class MacroFilterPolicy {
+    ExactPrefix, // Suggest macros if the prefix matches exactly
+    FuzzyMatch,  // Fuzzy-match macros if they do not have "_" as prefix or
+                 // suffix
+  };
+
   /// Configures code completion feature.
   struct {
     /// Whether code completion includes results that are not visible in current
@@ -149,12 +170,21 @@ struct Config {
     bool AllScopes = true;
     /// controls the completion options for argument lists.
     ArgumentListsPolicy ArgumentLists = ArgumentListsPolicy::FullPlaceholders;
+    /// Controls if headers should be inserted when completions are accepted
+    HeaderInsertionPolicy HeaderInsertion = HeaderInsertionPolicy::IWYU;
+    /// Enables code patterns & snippets suggestions
+    CodePatternsPolicy CodePatterns = CodePatternsPolicy::All;
+    /// Controls how macros are filtered
+    MacroFilterPolicy MacroFilter = MacroFilterPolicy::ExactPrefix;
   } Completion;
 
   /// Configures hover feature.
   struct {
     /// Whether hover show a.k.a type.
     bool ShowAKA = true;
+    /// Limit the number of characters returned when hovering a macro;
+    /// 0 is no limit.
+    uint32_t MacroContentsLimit = 2048;
   } Hover;
 
   struct {
@@ -177,6 +207,19 @@ struct Config {
     /// Controls highlighting modifiers that are disabled.
     std::vector<std::string> DisabledModifiers;
   } SemanticTokens;
+
+  enum class CommentFormatPolicy {
+    /// Treat comments as plain text.
+    PlainText,
+    /// Treat comments as Markdown.
+    Markdown,
+    /// Treat comments as doxygen.
+    Doxygen,
+  };
+
+  struct {
+    CommentFormatPolicy CommentFormat = CommentFormatPolicy::PlainText;
+  } Documentation;
 };
 
 } // namespace clangd

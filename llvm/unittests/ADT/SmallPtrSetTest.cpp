@@ -57,7 +57,7 @@ TEST(SmallPtrSetTest, GrowthTest) {
 
 
   SmallPtrSet<int *, 4> s;
-  typedef SmallPtrSet<int *, 4>::iterator iter;
+  using iter = SmallPtrSet<int *, 4>::iterator;
 
   s.insert(&buf[0]);
   s.insert(&buf[1]);
@@ -411,6 +411,25 @@ TEST(SmallPtrSetTest, RemoveIf) {
   EXPECT_FALSE(Removed);
 }
 
+TEST(SmallPtrSetTest, CtorRange) {
+  int V0 = 0;
+  int V1 = 1;
+  int V2 = 2;
+  int *Args[] = {&V2, &V0, &V1};
+  SmallPtrSet<int *, 4> Set(llvm::from_range, Args);
+  EXPECT_THAT(Set, UnorderedElementsAre(&V0, &V1, &V2));
+}
+
+TEST(SmallPtrSetTest, InsertRange) {
+  int V0 = 0;
+  int V1 = 1;
+  int V2 = 2;
+  SmallPtrSet<int *, 4> Set;
+  int *Args[] = {&V2, &V0, &V1};
+  Set.insert_range(Args);
+  EXPECT_THAT(Set, UnorderedElementsAre(&V0, &V1, &V2));
+}
+
 TEST(SmallPtrSetTest, Reserve) {
   // Check that we don't do anything silly when using reserve().
   SmallPtrSet<int *, 4> Set;
@@ -456,4 +475,8 @@ TEST(SmallPtrSetTest, Reserve) {
   EXPECT_EQ(Set.capacity(), 128u);
   EXPECT_EQ(Set.size(), 6u);
   EXPECT_THAT(Set, UnorderedElementsAre(&Vals[0], &Vals[1], &Vals[2], &Vals[3], &Vals[4], &Vals[5]));
+
+  // Reserving 192 should result in 256 buckets.
+  Set.reserve(192);
+  EXPECT_EQ(Set.capacity(), 256u);
 }

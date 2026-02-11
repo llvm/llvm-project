@@ -1,7 +1,6 @@
 ; RUN: opt -passes=licm < %s -S | FileCheck %s
 ; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<target-ir>,require<scalar-evolution>,require<opt-remark-emit>,loop-mssa(licm)' < %s -S | FileCheck %s
 
-; RUN: opt -passes=licm < %s -S --try-experimental-debuginfo-iterators | FileCheck %s
 
 define void @dgefa(i1 %arg) nounwind ssp {
 entry:

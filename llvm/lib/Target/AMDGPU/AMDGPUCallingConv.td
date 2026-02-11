@@ -14,6 +14,10 @@
 class CCIfNotInReg<CCAction A> : CCIf<"!ArgFlags.isInReg()", A> {}
 class CCIfExtend<CCAction A>
   : CCIf<"ArgFlags.isSExt() || ArgFlags.isZExt()", A>;
+class CCIfOrigTypeShaderCCIsSGPR<CCAction A>
+  : CCIf<[{(!OrigTy->getScalarType()->isFloatTy() &&
+            !OrigTy->getScalarType()->isHalfTy()) }], A>;
+
 
 // Calling convention for SI
 def CC_SI_Gfx : CallingConv<[
@@ -56,14 +60,15 @@ def CC_SI_SHADER : CallingConv<[
   >>>
 ]>;
 
+
 def RetCC_SI_Shader : CallingConv<[
   CCIfType<[i1, i16], CCIfExtend<CCPromoteToType<i32>>>,
-  CCIfType<[i32, i16, v2i16] , CCAssignToReg<
+  CCIfType<[i32, i16, v2i16], CCIfOrigTypeShaderCCIsSGPR<CCAssignToReg<
     !foreach(i, !range(0, 44), !cast<Register>("SGPR"#i))  // SGPR0-43
-  >>,
+  >>>,
 
   // 32*4 + 4 is the minimum for a fetch shader with 32 outputs.
-  CCIfType<[f32, f16, v2f16, bf16, v2bf16] , CCAssignToReg<
+  CCIfType<[f32, f16, v2f16, bf16, v2bf16, i32, i16, v2i16] , CCAssignToReg<
     !foreach(i, !range(0, 136), !cast<Register>("VGPR"#i))  // VGPR0-135
   >>
 ]>;
@@ -91,7 +96,15 @@ def CSR_AMDGPU_AGPRs : CalleeSavedRegs<
 >;
 
 def CSR_AMDGPU_SGPRs : CalleeSavedRegs<
-  (sequence "SGPR%u", 30, 105)
+  // Ensure that s30-s31 (return address), s32 (stack pointer), s33 (frame pointer),
+  // and s34 (base pointer) are callee-saved. The striped layout starts from s40,
+  // with a stripe width of 8. The last stripe is 10 wide instead of 8, to avoid
+  // ending with a 2-wide stripe.
+  (add (sequence "SGPR%u", 30, 39),
+       (sequence "SGPR%u", 48, 55),
+       (sequence "SGPR%u", 64, 71),
+       (sequence "SGPR%u", 80, 87),
+       (sequence "SGPR%u", 96, 105))
 >;
 
 def CSR_AMDGPU_SI_Gfx_SGPRs : CalleeSavedRegs<

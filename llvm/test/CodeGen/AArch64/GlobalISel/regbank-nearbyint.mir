@@ -14,10 +14,11 @@ body:             |
 
     ; CHECK-LABEL: name: test_v4f16.nearbyint
     ; CHECK: liveins: $d0
-    ; CHECK: [[COPY:%[0-9]+]]:fpr(<4 x s16>) = COPY $d0
-    ; CHECK: [[FNEARBYINT:%[0-9]+]]:fpr(<4 x s16>) = G_FNEARBYINT [[COPY]]
-    ; CHECK: $d0 = COPY [[FNEARBYINT]](<4 x s16>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(<4 x s16>) = COPY $d0
+    ; CHECK-NEXT: [[FNEARBYINT:%[0-9]+]]:fpr(<4 x s16>) = G_FNEARBYINT [[COPY]]
+    ; CHECK-NEXT: $d0 = COPY [[FNEARBYINT]](<4 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<4 x s16>) = COPY $d0
     %1:_(<4 x s16>) = G_FNEARBYINT %0
     $d0 = COPY %1(<4 x s16>)
@@ -36,10 +37,11 @@ body:             |
 
     ; CHECK-LABEL: name: test_v8f16.nearbyint
     ; CHECK: liveins: $q0
-    ; CHECK: [[COPY:%[0-9]+]]:fpr(<8 x s16>) = COPY $q0
-    ; CHECK: [[FNEARBYINT:%[0-9]+]]:fpr(<8 x s16>) = G_FNEARBYINT [[COPY]]
-    ; CHECK: $q0 = COPY [[FNEARBYINT]](<8 x s16>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(<8 x s16>) = COPY $q0
+    ; CHECK-NEXT: [[FNEARBYINT:%[0-9]+]]:fpr(<8 x s16>) = G_FNEARBYINT [[COPY]]
+    ; CHECK-NEXT: $q0 = COPY [[FNEARBYINT]](<8 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<8 x s16>) = COPY $q0
     %1:_(<8 x s16>) = G_FNEARBYINT %0
     $q0 = COPY %1(<8 x s16>)
@@ -58,10 +60,11 @@ body:             |
 
     ; CHECK-LABEL: name: test_v2f32.nearbyint
     ; CHECK: liveins: $d0
-    ; CHECK: [[COPY:%[0-9]+]]:fpr(<2 x s32>) = COPY $d0
-    ; CHECK: [[FNEARBYINT:%[0-9]+]]:fpr(<2 x s32>) = G_FNEARBYINT [[COPY]]
-    ; CHECK: $d0 = COPY [[FNEARBYINT]](<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: [[FNEARBYINT:%[0-9]+]]:fpr(<2 x s32>) = G_FNEARBYINT [[COPY]]
+    ; CHECK-NEXT: $d0 = COPY [[FNEARBYINT]](<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<2 x s32>) = COPY $d0
     %1:_(<2 x s32>) = G_FNEARBYINT %0
     $d0 = COPY %1(<2 x s32>)
@@ -80,10 +83,11 @@ body:             |
 
     ; CHECK-LABEL: name: test_v2f64.nearbyint
     ; CHECK: liveins: $q0
-    ; CHECK: [[COPY:%[0-9]+]]:fpr(<2 x s64>) = COPY $q0
-    ; CHECK: [[FNEARBYINT:%[0-9]+]]:fpr(<2 x s64>) = G_FNEARBYINT [[COPY]]
-    ; CHECK: $q0 = COPY [[FNEARBYINT]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: [[FNEARBYINT:%[0-9]+]]:fpr(<2 x s64>) = G_FNEARBYINT [[COPY]]
+    ; CHECK-NEXT: $q0 = COPY [[FNEARBYINT]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<2 x s64>) = COPY $q0
     %1:_(<2 x s64>) = G_FNEARBYINT %0
     $q0 = COPY %1(<2 x s64>)
@@ -102,10 +106,11 @@ body:             |
 
     ; CHECK-LABEL: name: test_f32.nearbyint
     ; CHECK: liveins: $s0
-    ; CHECK: [[COPY:%[0-9]+]]:fpr(s32) = COPY $s0
-    ; CHECK: [[FNEARBYINT:%[0-9]+]]:fpr(s32) = G_FNEARBYINT [[COPY]]
-    ; CHECK: $s0 = COPY [[FNEARBYINT]](s32)
-    ; CHECK: RET_ReallyLR implicit $s0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(s32) = COPY $s0
+    ; CHECK-NEXT: [[FNEARBYINT:%[0-9]+]]:fpr(s32) = G_FNEARBYINT [[COPY]]
+    ; CHECK-NEXT: $s0 = COPY [[FNEARBYINT]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $s0
     %0:_(s32) = COPY $s0
     %1:_(s32) = G_FNEARBYINT %0
     $s0 = COPY %1(s32)
@@ -124,10 +129,11 @@ body:             |
 
     ; CHECK-LABEL: name: test_f64.nearbyint
     ; CHECK: liveins: $d0
-    ; CHECK: [[COPY:%[0-9]+]]:fpr(s64) = COPY $d0
-    ; CHECK: [[FNEARBYINT:%[0-9]+]]:fpr(s64) = G_FNEARBYINT [[COPY]]
-    ; CHECK: $d0 = COPY [[FNEARBYINT]](s64)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(s64) = COPY $d0
+    ; CHECK-NEXT: [[FNEARBYINT:%[0-9]+]]:fpr(s64) = G_FNEARBYINT [[COPY]]
+    ; CHECK-NEXT: $d0 = COPY [[FNEARBYINT]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(s64) = COPY $d0
     %1:_(s64) = G_FNEARBYINT %0
     $d0 = COPY %1(s64)
@@ -146,10 +152,11 @@ body:             |
 
     ; CHECK-LABEL: name: test_f16.nearbyint
     ; CHECK: liveins: $h0
-    ; CHECK: [[COPY:%[0-9]+]]:fpr(s16) = COPY $h0
-    ; CHECK: [[FNEARBYINT:%[0-9]+]]:fpr(s16) = G_FNEARBYINT [[COPY]]
-    ; CHECK: $h0 = COPY [[FNEARBYINT]](s16)
-    ; CHECK: RET_ReallyLR implicit $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(s16) = COPY $h0
+    ; CHECK-NEXT: [[FNEARBYINT:%[0-9]+]]:fpr(s16) = G_FNEARBYINT [[COPY]]
+    ; CHECK-NEXT: $h0 = COPY [[FNEARBYINT]](s16)
+    ; CHECK-NEXT: RET_ReallyLR implicit $h0
     %0:_(s16) = COPY $h0
     %1:_(s16) = G_FNEARBYINT %0
     $h0 = COPY %1(s16)

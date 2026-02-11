@@ -96,7 +96,7 @@ void RuntimeLibrary::loadLibrary(StringRef LibPath, BOLTLinker &Linker,
 
   if (Magic == file_magic::archive) {
     Error Err = Error::success();
-    object::Archive Archive(B.get()->getMemBufferRef(), Err);
+    object::Archive Archive(B->getMemBufferRef(), Err);
     for (const object::Archive::Child &C : Archive.children(Err)) {
       std::unique_ptr<object::Binary> Bin = cantFail(C.getAsBinary());
       if (object::ObjectFile *Obj = dyn_cast<object::ObjectFile>(&*Bin))
@@ -105,9 +105,9 @@ void RuntimeLibrary::loadLibrary(StringRef LibPath, BOLTLinker &Linker,
     check_error(std::move(Err), B->getBufferIdentifier());
   } else if (Magic == file_magic::elf_relocatable ||
              Magic == file_magic::elf_shared_object) {
-    std::unique_ptr<object::ObjectFile> Obj = cantFail(
-        object::ObjectFile::createObjectFile(B.get()->getMemBufferRef()),
-        "error creating in-memory object");
+    std::unique_ptr<object::ObjectFile> Obj =
+        cantFail(object::ObjectFile::createObjectFile(B->getMemBufferRef()),
+                 "error creating in-memory object");
     Linker.loadObject(Obj->getMemoryBufferRef(), MapSections);
   } else {
     errs() << "BOLT-ERROR: unrecognized library format: " << LibPath << "\n";

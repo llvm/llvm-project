@@ -42,5 +42,6 @@ const int * h(const int * (*p)[10],  int *(*q)[9]) {
 }
 
 // POINTER-TBAA: [[PTRARRAY_TBAA]] = !{[[PTRARRAY_TY:!.+]], [[PTRARRAY_TY]], i64 0}
-// POINTER-TBAA: [[PTRARRAY_TY]] = !{!"p2 int", [[ANYPTR:!.+]], i64 0}
+// POINTER-TBAA: [[PTRARRAY_TY]] = !{!"p2 int", [[ANYP2PTR:!.+]], i64 0}
+// POINTER-TBAA: [[ANYP2PTR]] = !{!"any p2 pointer", [[ANYPTR:!.+]],
 // POINTER-TBAA: [[ANYPTR]] = !{!"any pointer"

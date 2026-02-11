@@ -25,8 +25,8 @@ export namespace std {
 
     using std::chrono::duration_values;
 
-    // using std::chrono::is_clock;
-    // using std::chrono::is_clock_v;
+    using std::chrono::is_clock;
+    using std::chrono::is_clock_v;
 
     // [time.duration.nonmember], duration arithmetic
     using std::chrono::operator+;
@@ -103,13 +103,11 @@ export namespace std {
     using std::chrono::tai_seconds;
     using std::chrono::tai_time;
 
-#    if 0
     // [time.clock.gps], class gps_clock
     using std::chrono::gps_clock;
 
     using std::chrono::gps_seconds;
     using std::chrono::gps_time;
-#    endif
 #  endif // _LIBCPP_ENABLE_EXPERIMENTAL
 #endif   //  _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
 
@@ -285,6 +283,10 @@ export namespace std {
     using std::chrono::September;
 
   } // namespace chrono
+
+#if _LIBCPP_STD_VER >= 26
+  using std::hash;
+#endif
 
 } // namespace std
 export namespace std::inline literals::inline chrono_literals {

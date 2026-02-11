@@ -11,7 +11,6 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Magic.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -33,6 +32,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/Windows/WindowsSupport.h"
+#include "llvm/Support/WindowsError.h"
+#include <fileapi.h>
 #include <windows.h>
 #include <winerror.h>
 #endif
@@ -256,14 +257,14 @@ TEST(Support, Path) {
 
   {
     SmallString<32> Relative("foo.cpp");
-    sys::fs::make_absolute("/root", Relative);
+    path::make_absolute("/root", Relative);
     Relative[5] = '/'; // Fix up windows paths.
     ASSERT_EQ("/root/foo.cpp", Relative);
   }
 
   {
     SmallString<32> Relative("foo.cpp");
-    sys::fs::make_absolute("//root", Relative);
+    path::make_absolute("//root", Relative);
     Relative[6] = '/'; // Fix up windows paths.
     ASSERT_EQ("//root/foo.cpp", Relative);
   }
@@ -824,8 +825,6 @@ TEST_F(FileSystemTest, RealPathNoReadPerm) {
   ASSERT_NO_ERROR(fs::remove_directories(Twine(TestDirectory) + "/noreadperm"));
 }
 TEST_F(FileSystemTest, RemoveDirectoriesNoExePerm) {
-  SmallString<64> Expanded;
-
   ASSERT_NO_ERROR(
       fs::create_directories(Twine(TestDirectory) + "/noexeperm/foo"));
   ASSERT_TRUE(fs::exists(Twine(TestDirectory) + "/noexeperm/foo"));
@@ -965,7 +964,6 @@ TEST_F(FileSystemTest, TempFileCollisions) {
   FileRemover Cleanup(TestDirectory);
   SmallString<128> Model = TestDirectory;
   path::append(Model, "%.tmp");
-  SmallString<128> Path;
   std::vector<fs::TempFile> TempFiles;
 
   auto TryCreateTempFile = [&]() {
@@ -1055,9 +1053,7 @@ TEST_F(FileSystemTest, CreateDir) {
   do {
     LongPathWithUnixSeparators.append("/DirNameWith19Charss");
   } while (LongPathWithUnixSeparators.size() < 260);
-  std::replace(LongPathWithUnixSeparators.begin(),
-               LongPathWithUnixSeparators.end(),
-               '\\', '/');
+  llvm::replace(LongPathWithUnixSeparators, '\\', '/');
   ASSERT_NO_ERROR(fs::create_directories(Twine(LongPathWithUnixSeparators)));
   // cleanup
   ASSERT_NO_ERROR(fs::remove_directories(Twine(TestDirectory) +
@@ -1434,7 +1430,7 @@ TEST_F(FileSystemTest, FileMapping) {
     fs::mapped_file_region mfr(fs::convertFDToNativeFile(FileDescriptor),
                                fs::mapped_file_region::readwrite, Size, 0, EC);
     ASSERT_NO_ERROR(EC);
-    std::copy(Val.begin(), Val.end(), mfr.data());
+    llvm::copy(Val, mfr.data());
     // Explicitly add a 0.
     mfr.data()[Val.size()] = 0;
 
@@ -1475,6 +1471,43 @@ TEST_F(FileSystemTest, FileMapping) {
     ASSERT_EQ(close(FD), 0);
   }
   ASSERT_NO_ERROR(fs::remove(TempPath));
+}
+
+TEST_F(FileSystemTest, FileMappingSync) {
+  // Create a temp file.
+  SmallString<0> TempPath(TestDirectory);
+  sys::path::append(TempPath, "test-%%%%");
+  auto TempFileOrError = fs::TempFile::create(TempPath);
+  ASSERT_TRUE((bool)TempFileOrError);
+  fs::TempFile File = std::move(*TempFileOrError);
+  StringRef Content("hello there");
+  std::string FileName = File.TmpName;
+  ASSERT_NO_ERROR(
+      fs::resize_file_before_mapping_readwrite(File.FD, Content.size()));
+  {
+    // Map in the file and write some content.
+    std::error_code EC;
+    fs::mapped_file_region MFR(fs::convertFDToNativeFile(File.FD),
+                               fs::mapped_file_region::readwrite,
+                               Content.size(), 0, EC);
+
+    // Keep the file so it can be read.
+    ASSERT_FALSE((bool)File.keep());
+
+    // Write content through mapped memory.
+    ASSERT_NO_ERROR(EC);
+    llvm::copy(Content, MFR.data());
+
+    // Synchronize to file system.
+    ASSERT_FALSE((bool)MFR.sync());
+
+    // Check the file content using file IO APIs.
+    auto Buffer = MemoryBuffer::getFile(FileName);
+    ASSERT_TRUE((bool)Buffer);
+    ASSERT_EQ(Content, Buffer->get()->getBuffer());
+  }
+  // Manually remove the test file.
+  ASSERT_FALSE((bool)fs::remove(FileName));
 }
 
 TEST(Support, NormalizePath) {
@@ -1768,7 +1801,7 @@ TEST_F(FileSystemTest, OpenDirectoryAsFileForRead) {
   EXPECT_EQ(errorToErrorCode(FD.takeError()), errc::is_a_directory);
 #else
   ASSERT_THAT_EXPECTED(FD, Succeeded());
-  auto Close = make_scope_exit([&] { fs::closeFile(*FD); });
+  scope_exit Close([&] { fs::closeFile(*FD); });
   Expected<size_t> BytesRead =
       fs::readNativeFile(*FD, MutableArrayRef(&*Buf.begin(), Buf.size()));
   EXPECT_EQ(errorToErrorCode(BytesRead.takeError()), errc::is_a_directory);
@@ -1994,7 +2027,7 @@ TEST_F(FileSystemTest, readNativeFile) {
     Expected<fs::file_t> FD = fs::openNativeFileForRead(NonExistantFile);
     if (!FD)
       return FD.takeError();
-    auto Close = make_scope_exit([&] { fs::closeFile(*FD); });
+    llvm::scope_exit Close([&] { fs::closeFile(*FD); });
     if (Expected<size_t> BytesRead = fs::readNativeFile(
             *FD, MutableArrayRef(&*Buf.begin(), Buf.size())))
       return Buf.substr(0, *BytesRead);
@@ -2015,7 +2048,7 @@ TEST_F(FileSystemTest, readNativeFileToEOF) {
     Expected<fs::file_t> FD = fs::openNativeFileForRead(NonExistantFile);
     if (!FD)
       return FD.takeError();
-    auto Close = make_scope_exit([&] { fs::closeFile(*FD); });
+    llvm::scope_exit Close([&] { fs::closeFile(*FD); });
     if (ChunkSize)
       return fs::readNativeFileToEOF(*FD, V, *ChunkSize);
     return fs::readNativeFileToEOF(*FD, V);
@@ -2058,7 +2091,7 @@ TEST_F(FileSystemTest, readNativeFileSlice) {
   FileRemover Cleanup(NonExistantFile);
   Expected<fs::file_t> FD = fs::openNativeFileForRead(NonExistantFile);
   ASSERT_THAT_EXPECTED(FD, Succeeded());
-  auto Close = make_scope_exit([&] { fs::closeFile(*FD); });
+  llvm::scope_exit Close([&] { fs::closeFile(*FD); });
   const auto &Read = [&](size_t Offset,
                          size_t ToRead) -> Expected<std::string> {
     std::string Buf(ToRead, '?');
@@ -2442,7 +2475,7 @@ TEST_F(FileSystemTest, widenPath) {
   EXPECT_EQ(Result, Expected);
 
   // Check that Unix separators are handled correctly.
-  std::replace(Input.begin(), Input.end(), '\\', '/');
+  llvm::replace(Input, '\\', '/');
   ASSERT_NO_ERROR(windows::widenPath(Input, Result));
   EXPECT_EQ(Result, Expected);
 
@@ -2454,6 +2487,163 @@ TEST_F(FileSystemTest, widenPath) {
 #endif
 
 #ifdef _WIN32
+/// Checks whether short 8.3 form names are enabled in the given UTF-8 path.
+static llvm::Expected<bool> areShortNamesEnabled(llvm::StringRef Path8) {
+  // Create a directory under Path8 with a name long enough that Windows will
+  // provide a short 8.3 form name, if short 8.3 form names are enabled.
+  SmallString<MAX_PATH> Dir(Path8);
+  path::append(Dir, "verylongdir");
+  if (std::error_code EC = fs::create_directories(Dir))
+    return llvm::errorCodeToError(EC);
+  scope_exit Close([&] { fs::remove_directories(Dir); });
+
+  SmallVector<wchar_t, MAX_PATH> Path16;
+  if (std::error_code EC = sys::windows::widenPath(Dir, Path16))
+    return llvm::errorCodeToError(EC);
+
+  WIN32_FIND_DATAW Data;
+  HANDLE H = ::FindFirstFileW(Path16.data(), &Data);
+  if (H == INVALID_HANDLE_VALUE)
+    return llvm::errorCodeToError(llvm::mapWindowsError(::GetLastError()));
+  ::FindClose(H);
+
+  return (Data.cAlternateFileName[0] != L'\0');
+}
+
+/// Returns the short 8.3 form path for the given UTF-8 path, or an empty string
+/// on failure. Uses Win32 GetShortPathNameW.
+static std::string getShortPathName(llvm::StringRef Path8) {
+  // Convert UTF-8 to UTF-16.
+  SmallVector<wchar_t, MAX_PATH> Path16;
+  if (std::error_code EC = sys::windows::widenPath(Path8, Path16))
+    return {};
+
+  // Get the required buffer size for the short 8.3 form path (includes null
+  // terminator).
+  DWORD Required = ::GetShortPathNameW(Path16.data(), nullptr, 0);
+  if (Required == 0)
+    return {};
+
+  SmallVector<wchar_t, MAX_PATH> ShortPath;
+  ShortPath.resize_for_overwrite(Required);
+
+  DWORD Written =
+      ::GetShortPathNameW(Path16.data(), ShortPath.data(), Required);
+  if (Written == 0 || Written >= Required)
+    return {};
+
+  ShortPath.truncate(Written);
+
+  SmallString<MAX_PATH> Utf8Result;
+  if (std::error_code EC = sys::windows::UTF16ToUTF8(
+          ShortPath.data(), ShortPath.size(), Utf8Result))
+    return {};
+
+  return std::string(Utf8Result);
+}
+
+/// Returns true if the two paths refer to the same file or directory by
+/// comparing their UniqueIDs.
+static bool sameEntity(llvm::StringRef P1, llvm::StringRef P2) {
+  fs::UniqueID ID1, ID2;
+  return !fs::getUniqueID(P1, ID1) && !fs::getUniqueID(P2, ID2) && ID1 == ID2;
+}
+
+/// Removes the Windows long path path prefix (\\?\ or \\?\UNC\) from the given
+/// UTF-8 path, if present.
+static std::string stripPrefix(llvm::StringRef P) {
+  if (P.starts_with(R"(\\?\UNC\)"))
+    return "\\" + P.drop_front(7).str();
+  if (P.starts_with(R"(\\?\)"))
+    return P.drop_front(4).str();
+  return P.str();
+}
+
+TEST_F(FileSystemTest, makeLongFormPath) {
+  auto Enabled = areShortNamesEnabled(TestDirectory.str());
+  ASSERT_TRUE(static_cast<bool>(Enabled))
+      << llvm::toString(Enabled.takeError());
+  if (!*Enabled)
+    GTEST_SKIP() << "Short 8.3 form names not enabled in: " << TestDirectory;
+
+  // Setup: A test directory longer than 8 characters for which a distinct
+  // short 8.3 form name will be created on Windows. Typically, 123456~1.
+  constexpr const char *OneDir = "\\123456789"; // >8 chars
+
+  // Setup: Create a path where even if all components were reduced to short 8.3
+  // form names, the total length would exceed MAX_PATH.
+  SmallString<MAX_PATH * 2> Deep(TestDirectory);
+  const size_t NLevels = (MAX_PATH / 8) + 1;
+  for (size_t I = 0; I < NLevels; ++I)
+    Deep.append(OneDir);
+
+  ASSERT_NO_ERROR(fs::create_directories(Deep));
+
+  // Setup: Create prefixed and non-prefixed short 8.3 form paths from the deep
+  // test path we just created.
+  std::string DeepShortWithPrefix = getShortPathName(Deep);
+  ASSERT_TRUE(StringRef(DeepShortWithPrefix).starts_with(R"(\\?\)"))
+      << "Expected prefixed short 8.3 form path, got: " << DeepShortWithPrefix;
+  std::string DeepShort = stripPrefix(DeepShortWithPrefix);
+
+  // Setup: Create a short 8.3 form path for the first-level directory.
+  SmallString<MAX_PATH> FirstLevel(TestDirectory);
+  FirstLevel.append(OneDir);
+  std::string Short = getShortPathName(FirstLevel);
+  ASSERT_FALSE(Short.empty())
+      << "Expected short 8.3 form path for test directory.";
+
+  // Setup: Create a short 8.3 form path with . and .. components for the
+  // first-level directory.
+  llvm::SmallString<MAX_PATH> WithDots(FirstLevel);
+  llvm::sys::path::append(WithDots, ".", "..", OneDir);
+  std::string DotAndDotDot = getShortPathName(WithDots);
+  ASSERT_FALSE(DotAndDotDot.empty())
+      << "Expected short 8.3 form path for test directory.";
+  auto ContainsDotAndDotDot = [](llvm::StringRef S) {
+    return S.contains("\\.\\") && S.contains("\\..\\");
+  };
+  ASSERT_TRUE(ContainsDotAndDotDot(DotAndDotDot))
+      << "Expected '.' and '..' components in: " << DotAndDotDot;
+
+  // Case 1: Non-existent short 8.3 form path.
+  SmallString<MAX_PATH> NoExist("NotEre~1");
+  ASSERT_FALSE(fs::exists(NoExist));
+  SmallString<MAX_PATH> NoExistResult;
+  EXPECT_TRUE(windows::makeLongFormPath(NoExist, NoExistResult));
+  EXPECT_TRUE(NoExistResult.empty());
+
+  // Case 2: Valid short 8.3 form path.
+  SmallString<MAX_PATH> ShortResult;
+  ASSERT_FALSE(windows::makeLongFormPath(Short, ShortResult));
+  EXPECT_TRUE(sameEntity(Short, ShortResult));
+
+  // Case 3: Valid . and .. short 8.3 form path.
+  SmallString<MAX_PATH> DotAndDotDotResult;
+  ASSERT_FALSE(windows::makeLongFormPath(DotAndDotDot, DotAndDotDotResult));
+  EXPECT_TRUE(sameEntity(DotAndDotDot, DotAndDotDotResult));
+  // Assert that '.' and '..' remain as path components.
+  ASSERT_TRUE(ContainsDotAndDotDot(DotAndDotDotResult));
+
+  // Case 4: Deep short 8.3 form path without \\?\ prefix.
+  SmallString<MAX_PATH> DeepResult;
+  ASSERT_FALSE(windows::makeLongFormPath(DeepShort, DeepResult));
+  EXPECT_TRUE(sameEntity(DeepShort, DeepResult));
+  EXPECT_FALSE(StringRef(DeepResult).starts_with(R"(\\?\)"))
+      << "Expected unprefixed result, got: " << DeepResult;
+
+  // Case 5: Deep short 8.3 form path with \\?\ prefix.
+  SmallString<MAX_PATH> DeepPrefixedResult;
+  ASSERT_FALSE(
+      windows::makeLongFormPath(DeepShortWithPrefix, DeepPrefixedResult));
+  EXPECT_TRUE(sameEntity(DeepShortWithPrefix, DeepPrefixedResult));
+  EXPECT_TRUE(StringRef(DeepPrefixedResult).starts_with(R"(\\?\)"))
+      << "Expected prefixed result, got: " << DeepPrefixedResult;
+
+  // Cleanup.
+  ASSERT_NO_ERROR(fs::remove_directories(TestDirectory.str()));
+}
+
 // Windows refuses lock request if file region is already locked by the same
 // process. POSIX system in this case updates the existing lock.
 TEST_F(FileSystemTest, FileLocker) {

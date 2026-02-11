@@ -77,7 +77,8 @@ module m
     !CHECK: error: Actual argument associated with INTENT(IN OUT) dummy argument 'op=' is not definable
     !CHECK: because: 'objp' is an INTENT(IN) dummy argument
     call test3a(objp)
-    !CHECK: error: Actual argument associated with procedure pointer dummy argument 'pp=' may not be INTENT(IN)
+    !CHECK: error: Actual argument associated with INTENT(IN OUT) procedure pointer dummy argument 'pp=' is not definable
+    !CHECK: because: 'procp' is an INTENT(IN) dummy argument
     call test3b(procp)
   end subroutine
   subroutine test3a(op)

@@ -20,7 +20,9 @@ export namespace std {
     using std::ranges::in_value_result;
 #endif
     using std::ranges::min_max_result;
-    // using std::ranges::out_value_result;
+#if _LIBCPP_STD_VER >= 23
+    using std::ranges::out_value_result;
+#endif
   } // namespace ranges
 
   // [alg.nonmodifying], non-modifying sequence operations
@@ -354,9 +356,11 @@ export namespace std {
   // [alg.shift], shift
   using std::shift_left;
 
+#if _LIBCPP_STD_VER >= 23
   namespace ranges {
-    // using std::ranges::shift_left;
+    using std::ranges::shift_left;
   }
+#endif // _LIBCPP_STD_VER >= 23
 
   using std::shift_right;
 

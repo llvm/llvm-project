@@ -34,10 +34,41 @@ MarkedJTDataRegions("mark-data-regions", cl::init(true),
   cl::desc("Mark code section jump table data regions."),
   cl::Hidden);
 
+const MCAsmInfo::AtSpecifier atSpecifiers[] = {
+    {X86::S_ABS8, "ABS8"},
+    {X86::S_DTPOFF, "DTPOFF"},
+    {X86::S_DTPREL, "DTPREL"},
+    {X86::S_GOT, "GOT"},
+    {X86::S_GOTENT, "GOTENT"},
+    {X86::S_GOTNTPOFF, "GOTNTPOFF"},
+    {X86::S_GOTOFF, "GOTOFF"},
+    {X86::S_GOTPCREL, "GOTPCREL"},
+    {X86::S_GOTPCREL_NORELAX, "GOTPCREL_NORELAX"},
+    {X86::S_GOTREL, "GOTREL"},
+    {X86::S_GOTTPOFF, "GOTTPOFF"},
+    {X86::S_INDNTPOFF, "INDNTPOFF"},
+    {MCSymbolRefExpr::VK_COFF_IMGREL32, "IMGREL"},
+    {X86::S_NTPOFF, "NTPOFF"},
+    {X86::S_PCREL, "PCREL"},
+    {X86::S_PLT, "PLT"},
+    {X86::S_PLTOFF, "PLTOFF"},
+    {X86::S_COFF_SECREL, "SECREL32"},
+    {X86::S_SIZE, "SIZE"},
+    {X86::S_TLSCALL, "tlscall"},
+    {X86::S_TLSDESC, "tlsdesc"},
+    {X86::S_TLSGD, "TLSGD"},
+    {X86::S_TLSLD, "TLSLD"},
+    {X86::S_TLSLDM, "TLSLDM"},
+    {X86::S_TLVP, "TLVP"},
+    {X86::S_TLVPPAGE, "TLVPPAGE"},
+    {X86::S_TLVPPAGEOFF, "TLVPPAGEOFF"},
+    {X86::S_TPOFF, "TPOFF"},
+};
+
 void X86MCAsmInfoDarwin::anchor() { }
 
 X86MCAsmInfoDarwin::X86MCAsmInfoDarwin(const Triple &T) {
-  bool is64Bit = T.getArch() == Triple::x86_64;
+  bool is64Bit = T.isX86_64();
   if (is64Bit)
     CodePointerSize = CalleeSaveStackSlotSize = 8;
 
@@ -52,6 +83,8 @@ X86MCAsmInfoDarwin::X86MCAsmInfoDarwin(const Triple &T) {
   // for .S files on other systems.  Perhaps this is because the file system
   // wasn't always case preserving or something.
   CommentString = "##";
+
+  AllowDollarAtStartOfIdentifier = false;
 
   SupportsDebugInformation = true;
   UseDataRegionDirectives = MarkedJTDataRegions;
@@ -69,6 +102,8 @@ X86MCAsmInfoDarwin::X86MCAsmInfoDarwin(const Triple &T) {
   // (actually, must, since otherwise the non-extern relocations we produce
   // overwhelm ld64's tiny little mind and it fails).
   DwarfFDESymbolsUseAbsDiff = true;
+
+  initializeAtSpecifiers(atSpecifiers);
 }
 
 X86_64MCAsmInfoDarwin::X86_64MCAsmInfoDarwin(const Triple &Triple)
@@ -78,7 +113,7 @@ X86_64MCAsmInfoDarwin::X86_64MCAsmInfoDarwin(const Triple &Triple)
 void X86ELFMCAsmInfo::anchor() { }
 
 X86ELFMCAsmInfo::X86ELFMCAsmInfo(const Triple &T) {
-  bool is64Bit = T.getArch() == Triple::x86_64;
+  bool is64Bit = T.isX86_64();
   bool isX32 = T.isX32();
 
   // For ELF, x86-64 pointer size depends on the ABI.
@@ -90,12 +125,15 @@ X86ELFMCAsmInfo::X86ELFMCAsmInfo(const Triple &T) {
   CalleeSaveStackSlotSize = is64Bit ? 8 : 4;
 
   AssemblerDialect = X86AsmSyntax;
+  AllowDollarAtStartOfIdentifier = false;
 
   // Debug Information
   SupportsDebugInformation = true;
 
   // Exceptions handling
   ExceptionsType = ExceptionHandling::DwarfCFI;
+
+  initializeAtSpecifiers(atSpecifiers);
 }
 
 const MCExpr *
@@ -103,8 +141,7 @@ X86_64MCAsmInfoDarwin::getExprForPersonalitySymbol(const MCSymbol *Sym,
                                                    unsigned Encoding,
                                                    MCStreamer &Streamer) const {
   MCContext &Context = Streamer.getContext();
-  const MCExpr *Res =
-    MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_GOTPCREL, Context);
+  const MCExpr *Res = MCSymbolRefExpr::create(Sym, X86::S_GOTPCREL, Context);
   const MCExpr *Four = MCConstantExpr::create(4, Context);
   return MCBinaryExpr::createAdd(Res, Four, Context);
 }
@@ -112,7 +149,7 @@ X86_64MCAsmInfoDarwin::getExprForPersonalitySymbol(const MCSymbol *Sym,
 void X86MCAsmInfoMicrosoft::anchor() { }
 
 X86MCAsmInfoMicrosoft::X86MCAsmInfoMicrosoft(const Triple &Triple) {
-  if (Triple.getArch() == Triple::x86_64) {
+  if (Triple.isX86_64()) {
     PrivateGlobalPrefix = ".L";
     PrivateLabelPrefix = ".L";
     CodePointerSize = 8;
@@ -127,8 +164,11 @@ X86MCAsmInfoMicrosoft::X86MCAsmInfoMicrosoft(const Triple &Triple) {
   ExceptionsType = ExceptionHandling::WinEH;
 
   AssemblerDialect = X86AsmSyntax;
+  AllowDollarAtStartOfIdentifier = false;
 
   AllowAtInName = true;
+
+  initializeAtSpecifiers(atSpecifiers);
 }
 
 void X86MCAsmInfoMicrosoftMASM::anchor() { }
@@ -147,9 +187,9 @@ X86MCAsmInfoMicrosoftMASM::X86MCAsmInfoMicrosoftMASM(const Triple &Triple)
 void X86MCAsmInfoGNUCOFF::anchor() { }
 
 X86MCAsmInfoGNUCOFF::X86MCAsmInfoGNUCOFF(const Triple &Triple) {
-  assert(Triple.isOSWindowsOrUEFI() &&
+  assert((Triple.isOSWindows() || Triple.isUEFI()) &&
          "Windows and UEFI are the only supported COFF targets");
-  if (Triple.getArch() == Triple::x86_64) {
+  if (Triple.isX86_64()) {
     PrivateGlobalPrefix = ".L";
     PrivateLabelPrefix = ".L";
     CodePointerSize = 8;
@@ -162,4 +202,7 @@ X86MCAsmInfoGNUCOFF::X86MCAsmInfoGNUCOFF(const Triple &Triple) {
   AssemblerDialect = X86AsmSyntax;
 
   AllowAtInName = true;
+  AllowDollarAtStartOfIdentifier = false;
+
+  initializeAtSpecifiers(atSpecifiers);
 }

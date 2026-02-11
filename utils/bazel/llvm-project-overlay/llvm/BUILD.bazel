@@ -2,9 +2,14 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_python//python:defs.bzl", "py_binary")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_filegroup", "td_library")
 load(":binary_alias.bzl", "binary_alias")
 load(":config.bzl", "llvm_config_defines")
@@ -174,6 +179,7 @@ llvm_config_target_defines = [
 cc_library(
     name = "config",
     hdrs = [
+        "include/llvm/Config/Targets.h",
         "include/llvm/Config/abi-breaking.h",
         "include/llvm/Config/llvm-config.h",
     ],
@@ -205,18 +211,70 @@ cc_library(
     deps = [":config"],
 )
 
-genrule(
+write_file(
     name = "generate_vcs_revision",
-    outs = ["include/llvm/Support/VCSRevision.h"],
-    cmd = "echo '#undef LLVM_REVISION' >> $@\n" +
-          "echo '#undef LLVM_REPOSITORY' >> $@\n",
+    out = "include/llvm/Support/VCSRevision.h",
+    content = [
+        "#undef LLVM_REVISION",
+        "#undef LLVM_REPOSITORY",
+    ],
 )
 
-genrule(
+write_file(
     name = "generate_static_extension_registry",
-    outs = ["include/llvm/Support/Extension.def"],
-    cmd = "echo -e '// extension handlers' >> $@\n" +
-          "echo -e '#undef HANDLE_EXTENSION' >> $@\n",
+    out = "include/llvm/Support/Extension.def",
+    content = [
+        "// extension handlers",
+        "#undef HANDLE_EXTENSION",
+    ],
+)
+
+config_setting(
+    name = "is_windows_clang_mingw",
+    constraint_values = ["@platforms//os:windows"],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "clang"},
+)
+
+config_setting(
+    name = "is_windows_clang_cl",
+    constraint_values = ["@platforms//os:windows"],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "clang-cl"},
+)
+
+config_setting(
+    name = "is_windows_msvc",
+    constraint_values = ["@platforms//os:windows"],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "msvc-cl"},
+)
+
+config_setting(
+    name = "is_x86_64_windows_clang_mingw",
+    constraint_values = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:windows",
+    ],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "clang"},
+)
+
+BLAKE3_x86_64_ASM_SOURCE_PATTERNS = [
+    "lib/Support/BLAKE3/blake3_avx2_x86-64_%s.S",
+    "lib/Support/BLAKE3/blake3_avx512_x86-64_%s.S",
+    "lib/Support/BLAKE3/blake3_sse2_x86-64_%s.S",
+    "lib/Support/BLAKE3/blake3_sse41_x86-64_%s.S",
+]
+
+filegroup(
+    name = "blake3_x86_64_asm",
+    srcs = select({
+        ":is_x86_64_windows_clang_mingw": [
+            pattern % "windows_gnu"
+            for pattern in BLAKE3_x86_64_ASM_SOURCE_PATTERNS
+        ],
+        "//conditions:default": [
+            pattern % "unix"
+            for pattern in BLAKE3_x86_64_ASM_SOURCE_PATTERNS
+        ],
+    }),
 )
 
 cc_library(
@@ -226,6 +284,7 @@ cc_library(
         "lib/Support/*.cpp",
         "lib/Support/*.h",
         "lib/Support/*.inc",
+        "lib/Support/LSP/*.cpp",
         # To avoid a dependency cycle.
         "include/llvm/Option/*.h",
     ]) + select({
@@ -246,12 +305,7 @@ cc_library(
         "@platforms//cpu:aarch64": [
             "lib/Support/BLAKE3/blake3_neon.c",
         ],
-        "@platforms//cpu:x86_64": [
-            "lib/Support/BLAKE3/blake3_avx2_x86-64_unix.S",
-            "lib/Support/BLAKE3/blake3_avx512_x86-64_unix.S",
-            "lib/Support/BLAKE3/blake3_sse2_x86-64_unix.S",
-            "lib/Support/BLAKE3/blake3_sse41_x86-64_unix.S",
-        ],
+        "@platforms//cpu:x86_64": [":blake3_x86_64_asm"],
         "//conditions:default": [
         ],
     }),
@@ -268,6 +322,7 @@ cc_library(
         "include/llvm-c/ExternC.h",
         "include/llvm-c/Support.h",
         "include/llvm-c/Types.h",
+        "include/llvm-c/Visibility.h",
         "include/llvm-c/blake3.h",
         "include/llvm/ExecutionEngine/JITSymbol.h",
         "include/llvm/Support/Extension.def",
@@ -277,9 +332,7 @@ cc_library(
     defines = select({
         "@platforms//cpu:aarch64": [
         ],
-        "//conditions:default": [
-            "BLAKE3_USE_NEON=0",
-        ],
+        "//conditions:default": ["BLAKE3_USE_NEON=0"],
     }) + select({
         "@platforms//cpu:x86_64": [
         ],
@@ -292,7 +345,21 @@ cc_library(
     }),
     includes = ["include"],
     linkopts = select({
-        "@platforms//os:windows": [
+        ":is_windows_clang_mingw": [
+            "-lole32",
+            "-luuid",
+            "-lws2_32",
+            "-lntdll",
+        ],
+        ":is_windows_clang_cl": [
+            "ole32.lib",
+            "uuid.lib",
+            "ws2_32.lib",
+            "ntdll.lib",
+        ],
+        ":is_windows_msvc": [
+            "ole32.lib",
+            "uuid.lib",
             "ws2_32.lib",
             "ntdll.lib",
         ],
@@ -318,14 +385,15 @@ cc_library(
     deps = [
         ":config",
         ":Demangle",
+        "//third-party/siphash",
         # We unconditionally depend on the custom LLVM zlib wrapper. This will
         # be an empty library unless zlib is enabled, in which case it will
         # both provide the necessary dependencies and configuration defines.
-        "@llvm_zlib//:zlib",
+        "//third-party:zlib",
         # We unconditionally depend on the custom LLVM zstd wrapper. This will
         # be an empty library unless zstd is enabled, in which case it will
         # both provide the necessary dependencies and configuration defines.
-        "@llvm_zstd//:zstd",
+        "//third-party:zstd",
     ],
 )
 
@@ -377,6 +445,7 @@ cc_library(
     hdrs = glob(["include/llvm/TableGen/*.h"]),
     copts = llvm_copts,
     deps = [
+        ":FrontendDirective",
         ":Support",
         ":config",
     ],
@@ -390,9 +459,7 @@ cc_library(
             "include/llvm/*.h",
             "include/llvm/IR/*.h",
         ],
-        exclude = [
-            "include/llvm/LinkAllPasses.h",
-        ],
+        exclude = ["include/llvm/LinkAllPasses.h"],
     ) + [
         "include/llvm-c/Comdat.h",
         "include/llvm-c/DebugInfo.h",
@@ -402,13 +469,28 @@ cc_library(
 )
 
 cc_library(
+    name = "BinaryFormatELF",
+    srcs = [
+        "include/llvm/TargetParser/Triple.h",
+        "lib/BinaryFormat/ELF.cpp",
+    ],
+    hdrs = ["include/llvm/BinaryFormat/ELF.h"],
+    copts = llvm_copts,
+    includes = ["include"],
+    textual_hdrs = glob([
+        "include/llvm/BinaryFormat/*.def",
+        "include/llvm/BinaryFormat/ELFRelocs/*.def",
+    ]),
+    deps = [":Support"],
+)
+
+cc_library(
     name = "BinaryFormat",
-    srcs = glob([
-        "lib/BinaryFormat/*.cpp",
-    ]),
-    hdrs = glob([
-        "include/llvm/BinaryFormat/*.h",
-    ]),
+    srcs = glob(
+        include = ["lib/BinaryFormat/*.cpp"],
+        exclude = ["lib/BinaryFormat/ELF.cpp"],
+    ),
+    hdrs = glob(["include/llvm/BinaryFormat/*.h"]),
     copts = llvm_copts,
     includes = ["include"],
     textual_hdrs = glob([
@@ -416,6 +498,8 @@ cc_library(
         "include/llvm/BinaryFormat/ELFRelocs/*.def",
     ]),
     deps = [
+        ":BinaryFormatELF",
+        ":PPCTargetParser",
         ":Support",
         ":TargetParser",
     ],
@@ -490,6 +574,7 @@ cc_library(
         ":DebugInfo",
         ":DebugInfoCodeView",
         ":DebugInfoDWARF",
+        ":DebugInfoDWARFLowLevel",
         ":DebugInfoPDB",
         ":Demangle",
         ":MC",
@@ -541,6 +626,22 @@ cc_library(
 )
 
 cc_library(
+    name = "DWARFCFIChecker",
+    srcs = glob([
+        "lib/DWARFCFIChecker/*.cpp",
+        "lib/DWARFCFIChecker/*.h",
+    ]),
+    hdrs = glob(["include/llvm/DWARFCFIChecker/*.h"]),
+    copts = llvm_copts,
+    deps = [
+        ":BinaryFormat",
+        ":DebugInfoDWARFLowLevel",
+        ":MC",
+        ":Support",
+    ],
+)
+
+cc_library(
     name = "MC",
     srcs = glob([
         "lib/MC/*.cpp",
@@ -552,6 +653,7 @@ cc_library(
     deps = [
         ":BinaryFormat",
         ":DebugInfoCodeView",
+        ":DebugInfoDWARFLowLevel",
         ":Support",
         ":TargetParser",
         ":config",
@@ -569,8 +671,23 @@ cc_library(
     deps = [
         ":BinaryFormat",
         ":DebugInfo",
+        ":DebugInfoDWARFLowLevel",
         ":MC",
         ":Object",
+        ":Support",
+        ":TargetParser",
+    ],
+)
+
+cc_library(
+    name = "DebugInfoDWARFLowLevel",
+    srcs = glob([
+        "lib/DebugInfo/DWARF/LowLevel/*.cpp",
+    ]),
+    hdrs = glob(["include/llvm/DebugInfo/DWARF/LowLevel/*.h"]),
+    copts = llvm_copts,
+    deps = [
+        ":BinaryFormat",
         ":Support",
         ":TargetParser",
     ],
@@ -607,6 +724,7 @@ cc_library(
         ":DebugInfo",
         ":DebugInfoBTF",
         ":DebugInfoDWARF",
+        ":DebugInfoGSYM",
         ":DebugInfoPDB",
         ":Demangle",
         ":Object",
@@ -651,6 +769,9 @@ cc_binary(
         "utils/TableGen/Basic/DirectiveEmitter.cpp",
         "utils/TableGen/Basic/IntrinsicEmitter.cpp",
         "utils/TableGen/Basic/RISCVTargetDefEmitter.cpp",
+        "utils/TableGen/Basic/RuntimeLibcalls.cpp",
+        "utils/TableGen/Basic/RuntimeLibcalls.h",
+        "utils/TableGen/Basic/RuntimeLibcallsEmitter.cpp",
         "utils/TableGen/Basic/SDNodeProperties.cpp",
         "utils/TableGen/Basic/SDNodeProperties.h",
         "utils/TableGen/Basic/SequenceToOffsetTable.h",
@@ -670,9 +791,7 @@ cc_binary(
 
 cc_library(
     name = "TableGenGlobalISel",
-    srcs = [
-        "utils/TableGen/Common/GlobalISel/CodeExpander.cpp",
-    ],
+    srcs = ["utils/TableGen/Common/GlobalISel/CodeExpander.cpp"],
     hdrs = [
         # We have to include these headers here as well as in the `hdrs` below
         # to allow the `.cpp` files to use file-relative-inclusion to find
@@ -720,14 +839,13 @@ cc_binary(
             "utils/TableGen/Common/GlobalISel/CodeExpander.cpp",
             "utils/TableGen/llvm-min-tblgen.cpp",
         ],
-    ) + [
-        "include/llvm/TargetParser/SubtargetFeature.h",
-    ],
+    ) + ["include/llvm/TargetParser/SubtargetFeature.h"],
     copts = llvm_copts,
     includes = ["utils/TableGen"],
     stamp = 0,
     deps = [
         ":CodeGenTypes",
+        ":Option",
         ":Support",
         ":TableGen",
         ":TableGenGlobalISel",
@@ -739,11 +857,16 @@ cc_binary(
 )
 
 gentbl_cc_library(
+    name = "target_library_info_gen",
+    tbl_outs = {"include/llvm/Analysis/TargetLibraryInfo.inc": ["-gen-target-library-info"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "include/llvm/Analysis/TargetLibraryInfo.td",
+    deps = [":CommonTargetTdFiles"],
+)
+
+gentbl_cc_library(
     name = "intrinsic_enums_gen",
-    tbl_outs = [(
-        ["-gen-intrinsic-enums"],
-        "include/llvm/IR/IntrinsicEnums.inc",
-    )],
+    tbl_outs = {"include/llvm/IR/IntrinsicEnums.inc": ["-gen-intrinsic-enums"]},
     tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/IR/Intrinsics.td",
     deps = [":CommonTargetTdFiles"],
@@ -751,21 +874,26 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "intrinsics_impl_gen",
-    tbl_outs = [(
-        ["-gen-intrinsic-impl"],
-        "include/llvm/IR/IntrinsicImpl.inc",
-    )],
+    tbl_outs = {"include/llvm/IR/IntrinsicImpl.inc": ["-gen-intrinsic-impl"]},
     tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/IR/Intrinsics.td",
     deps = [":CommonTargetTdFiles"],
 )
 
 gentbl_cc_library(
+    name = "runtime_libcalls_gen",
+    tbl_outs = {"include/llvm/IR/RuntimeLibcalls.inc": ["-gen-runtime-libcalls"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "include/llvm/IR/RuntimeLibcalls.td",
+    deps = [
+        ":IRTdFiles",
+        ":TableGenTdFiles",
+    ],
+)
+
+gentbl_cc_library(
     name = "vt_gen",
-    tbl_outs = [(
-        ["-gen-vt"],
-        "include/llvm/CodeGen/GenVT.inc",
-    )],
+    tbl_outs = {"include/llvm/CodeGen/GenVT.inc": ["-gen-vt"]},
     tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/CodeGen/ValueTypes.td",
 )
@@ -851,13 +979,10 @@ llvm_target_intrinsics_list = [
     gentbl_cc_library(
         name = "intrinsic_" + target["name"] + "_gen",
         includes = ["include"],
-        tbl_outs = [(
-            [
-                "-gen-intrinsic-enums",
-                "-intrinsic-prefix=" + target["intrinsic_prefix"],
-            ],
-            "include/llvm/IR/Intrinsics" + target["name"] + ".h",
-        )],
+        tbl_outs = {"include/llvm/IR/Intrinsics" + target["name"] + ".h": [
+            "-gen-intrinsic-enums",
+            "-intrinsic-prefix=" + target["intrinsic_prefix"],
+        ]},
         tblgen = ":llvm-min-tblgen",
         td_file = "include/llvm/IR/Intrinsics.td",
         deps = [
@@ -869,10 +994,7 @@ llvm_target_intrinsics_list = [
 
 gentbl_cc_library(
     name = "attributes_gen",
-    tbl_outs = [(
-        ["-gen-attrs"],
-        "include/llvm/IR/Attributes.inc",
-    )],
+    tbl_outs = {"include/llvm/IR/Attributes.inc": ["-gen-attrs"]},
     tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/IR/Attributes.td",
 )
@@ -888,9 +1010,7 @@ cc_library(
         "include/llvm/Bitstream/BitstreamReader.h",
     ],
     copts = llvm_copts,
-    deps = [
-        ":Support",
-    ],
+    deps = [":Support"],
 )
 
 cc_library(
@@ -901,9 +1021,7 @@ cc_library(
         "include/llvm/Bitstream/BitstreamWriter.h",
     ],
     copts = llvm_copts,
-    deps = [
-        ":Support",
-    ],
+    deps = [":Support"],
 )
 
 cc_library(
@@ -962,18 +1080,20 @@ cc_library(
             "include/llvm/*.h",
             "include/llvm/IR/*.h",
         ],
-        exclude = [
-            "include/llvm/LinkAllPasses.h",
-        ],
+        exclude = ["include/llvm/LinkAllPasses.h"],
     ) + [
         "include/llvm-c/Comdat.h",
         "include/llvm-c/DebugInfo.h",
         "include/llvm/Analysis/SimplifyQuery.h",
         "include/llvm/Analysis/ValueTracking.h",
         "include/llvm/Analysis/WithCache.h",
+        "include/llvm/ProfileData/InstrProf.h",
+        "include/llvm/ProfileData/InstrProfData.inc",
     ] + [":llvm_intrinsics_headers"],
     copts = llvm_copts,
-    textual_hdrs = glob(["include/llvm/IR/*.def"]),
+    textual_hdrs = glob([
+        "include/llvm/IR/*.def",
+    ]),
     deps = [
         ":BinaryFormat",
         ":Demangle",
@@ -984,6 +1104,7 @@ cc_library(
         ":config",
         ":intrinsic_enums_gen",
         ":intrinsics_impl_gen",
+        ":runtime_libcalls_gen",
     ],
 )
 
@@ -1026,6 +1147,15 @@ cc_library(
         ":TargetParser",
         ":config",
     ],
+)
+
+cc_library(
+    name = "Telemetry",
+    srcs = glob(["lib/Telemetry/*.cpp"]),
+    hdrs = glob(["include/llvm/Telemetry/*.h"]),
+    copts = llvm_copts,
+    includes = ["include"],
+    deps = [":Support"],
 )
 
 cc_library(
@@ -1153,6 +1283,7 @@ cc_library(
         ":Core",
         ":DebugInfo",
         ":DebugInfoDWARF",
+        ":DebugInfoDWARFLowLevel",
         ":Demangle",
         ":Object",
         ":Support",
@@ -1181,30 +1312,28 @@ cc_library(
 cc_library(
     name = "Analysis",
     srcs = glob(
-        [
-            "lib/Analysis/*.cpp",
-        ],
+        ["lib/Analysis/*.cpp"],
     ),
     hdrs = glob(
         [
             "include/llvm/Analysis/*.h",
             "include/llvm/Analysis/Utils/*.h",
         ],
-    ) + [
-        "include/llvm-c/Analysis.h",
-    ],
-    copts = llvm_copts,
+    ) + ["include/llvm-c/Analysis.h"],
+    copts = llvm_copts + ["-ftrapping-math"],
     textual_hdrs = glob([
         "include/llvm/Analysis/*.def",
     ]),
     deps = [
         ":BinaryFormat",
         ":Core",
+        ":FrontendHLSL",
         ":Object",
         ":ProfileData",
         ":Support",
         ":TargetParser",
         ":config",
+        ":target_library_info_gen",
     ],
 )
 
@@ -1264,6 +1393,7 @@ cc_library(
 filegroup(
     name = "common_target_td_sources",
     srcs = glob([
+        "include/llvm/Analysis/*.td",
         "include/llvm/CodeGen/*.td",
         "include/llvm/Frontend/Directive/*.td",
         "include/llvm/IR/Intrinsics*.td",
@@ -1286,6 +1416,12 @@ td_library(
 )
 
 td_library(
+    name = "TableGenTdFiles",
+    srcs = glob(["include/llvm/TableGen/*.td"]),
+    includes = ["include"],
+)
+
+td_library(
     name = "CommonTargetTdFiles",
     srcs = [":common_target_td_sources"],
     includes = ["include"],
@@ -1300,10 +1436,7 @@ td_library(
 
 gentbl_cc_library(
     name = "ARMTargetParserDefGen",
-    tbl_outs = [(
-        ["-gen-arm-target-def"],
-        "include/llvm/TargetParser/ARMTargetParserDef.inc",
-    )],
+    tbl_outs = {"include/llvm/TargetParser/ARMTargetParserDef.inc": ["-gen-arm-target-def"]},
     tblgen = ":llvm-min-tblgen",
     td_file = "lib/Target/ARM/ARM.td",
     deps = [
@@ -1321,10 +1454,7 @@ td_library(
 
 gentbl_cc_library(
     name = "AArch64TargetParserDefGen",
-    tbl_outs = [(
-        ["-gen-arm-target-def"],
-        "include/llvm/TargetParser/AArch64TargetParserDef.inc",
-    )],
+    tbl_outs = {"include/llvm/TargetParser/AArch64TargetParserDef.inc": ["-gen-arm-target-def"]},
     tblgen = ":llvm-min-tblgen",
     td_file = "lib/Target/AArch64/AArch64.td",
     deps = [
@@ -1340,12 +1470,23 @@ td_library(
     ]),
 )
 
+td_library(
+    name = "PPCTargetTdFiles",
+    srcs = glob([
+        "lib/Target/PowerPC/**/*.td",
+    ]),
+)
+
+td_library(
+    name = "WebAssemblyTargetTdFiles",
+    srcs = glob([
+        "lib/Target/WebAssembly/**/*.td",
+    ]),
+)
+
 gentbl_cc_library(
     name = "RISCVTargetParserDefGen",
-    tbl_outs = [(
-        ["-gen-riscv-target-def"],
-        "include/llvm/TargetParser/RISCVTargetParserDef.inc",
-    )],
+    tbl_outs = {"include/llvm/TargetParser/RISCVTargetParserDef.inc": ["-gen-riscv-target-def"]},
     tblgen = ":llvm-min-tblgen",
     td_file = "lib/Target/RISCV/RISCV.td",
     deps = [
@@ -1354,11 +1495,36 @@ gentbl_cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "PPCGenTargetFeaturesGen",
+    tbl_outs = {"include/llvm/TargetParser/PPCGenTargetFeatures.inc": ["-gen-target-features"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/PowerPC/PPC.td",
+    deps = [
+        ":CommonTargetTdFiles",
+        ":PPCTargetTdFiles",
+    ],
+)
+
+cc_library(
+    name = "PPCTargetParser",
+    srcs = ["lib/TargetParser/PPCTargetParser.cpp"],
+    hdrs = ["include/llvm/TargetParser/PPCTargetParser.h"],
+    copts = llvm_copts,
+    includes = ["include"],
+    deps = [
+        ":PPCGenTargetFeaturesGen",
+        ":Support",
+        ":TargetParser",
+    ],
+)
+
 cc_library(
     name = "TargetParser",
-    srcs = glob([
-        "lib/TargetParser/*.cpp",
-    ]) + select({
+    srcs = glob(
+        include = ["lib/TargetParser/*.cpp"],
+        exclude = ["lib/TargetParser/PPCTargetParser.cpp"],
+    ) + select({
         "@platforms//os:windows": glob([
             "lib/TargetParser/Windows/*.inc",
         ]),
@@ -1366,9 +1532,7 @@ cc_library(
             "lib/TargetParser/Unix/*.inc",
         ]),
     }),
-    hdrs = glob([
-        "include/llvm/TargetParser/*.h",
-    ]),
+    hdrs = glob(["include/llvm/TargetParser/*.h"]),
     copts = llvm_copts,
     includes = ["include"],
     textual_hdrs = [
@@ -1381,6 +1545,7 @@ cc_library(
         "include/llvm/TargetParser/*.def",
     ]),
     deps = [
+        ":BinaryFormatELF",
         ":Support",
         ":config",
     ],
@@ -1429,21 +1594,6 @@ td_library(
     srcs = glob([
         "lib/Target/AMDGPU/**/*.td",
     ]),
-)
-
-gentbl_cc_library(
-    name = "InstCombineTableGen",
-    strip_include_prefix = "lib/Target/AMDGPU",
-    tbl_outs = [(
-        ["-gen-searchable-tables"],
-        "lib/Target/AMDGPU/InstCombineTables.inc",
-    )],
-    tblgen = ":llvm-tblgen",
-    td_file = "lib/Target/AMDGPU/InstCombineTables.td",
-    deps = [
-        ":AMDGPUTargetTdFiles",
-        ":CommonTargetTdFiles",
-    ],
 )
 
 cc_library(
@@ -1522,6 +1672,7 @@ cc_library(
         ":Core",
         ":Support",
         ":Target",
+        ":TargetParser",
         ":TransformUtils",
         ":config",
     ],
@@ -1612,6 +1763,9 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":Analysis",
+        ":Core",
+        ":ProfileData",
+        ":Support",
         ":TargetParser",
     ],
 )
@@ -1626,7 +1780,9 @@ cc_library(
     ]),
     copts = llvm_copts,
     deps = [
+        ":BinaryFormat",
         ":Core",
+        ":MC",
         ":Support",
     ],
 )
@@ -1662,12 +1818,7 @@ td_library(
 
 gentbl_filegroup(
     name = "omp_gen",
-    tbl_outs = [
-        (
-            ["--gen-directive-decl"],
-            "include/llvm/Frontend/OpenMP/OMP.h.inc",
-        ),
-    ],
+    tbl_outs = {"include/llvm/Frontend/OpenMP/OMP.h.inc": ["--gen-directive-decl"]},
     tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/Frontend/OpenMP/OMP.td",
     deps = [":OmpTdFiles"],
@@ -1675,12 +1826,7 @@ gentbl_filegroup(
 
 gentbl_filegroup(
     name = "omp_gen_impl",
-    tbl_outs = [
-        (
-            ["--gen-directive-impl"],
-            "include/llvm/Frontend/OpenMP/OMP.inc",
-        ),
-    ],
+    tbl_outs = {"include/llvm/Frontend/OpenMP/OMP.inc": ["--gen-directive-impl"]},
     tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/Frontend/OpenMP/OMP.td",
     deps = [":OmpTdFiles"],
@@ -1722,6 +1868,7 @@ cc_library(
         ":Core",
         ":Demangle",
         ":FrontendAtomic",
+        ":FrontendDirective",
         ":FrontendOffloading",
         ":MC",
         ":Scalar",
@@ -1743,12 +1890,7 @@ td_library(
 
 gentbl_filegroup(
     name = "acc_gen",
-    tbl_outs = [
-        (
-            ["--gen-directive-decl"],
-            "include/llvm/Frontend/OpenACC/ACC.h.inc",
-        ),
-    ],
+    tbl_outs = {"include/llvm/Frontend/OpenACC/ACC.h.inc": ["--gen-directive-decl"]},
     tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/Frontend/OpenACC/ACC.td",
     deps = [":AccTdFiles"],
@@ -1756,15 +1898,17 @@ gentbl_filegroup(
 
 gentbl_filegroup(
     name = "acc_gen_impl",
-    tbl_outs = [
-        (
-            ["--gen-directive-impl"],
-            "include/llvm/Frontend/OpenACC/ACC.inc",
-        ),
-    ],
+    tbl_outs = {"include/llvm/Frontend/OpenACC/ACC.inc": ["--gen-directive-impl"]},
     tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/Frontend/OpenACC/ACC.td",
     deps = [":AccTdFiles"],
+)
+
+cc_library(
+    name = "FrontendDirective",
+    srcs = glob(["lib/Frontend/Directive/*.cpp"]),
+    hdrs = glob(["include/llvm/Frontend/Directive/*.h"]),
+    deps = [":Support"],
 )
 
 cc_library(
@@ -1779,6 +1923,7 @@ cc_library(
     deps = [
         ":Analysis",
         ":Core",
+        ":FrontendDirective",
         ":Support",
         ":TransformUtils",
     ],
@@ -1875,6 +2020,7 @@ cc_library(
         ":BitReader",
         ":BitWriter",
         ":Core",
+        ":Demangle",
         ":FrontendOpenMP",
         ":IRPrinter",
         ":IRReader",
@@ -2035,6 +2181,7 @@ cc_library(
         ":Core",
         ":DebugInfoCodeView",
         ":DebugInfoDWARF",
+        ":DebugInfoDWARFLowLevel",
         ":IPO",
         ":IRPrinter",
         ":Instrumentation",
@@ -2087,7 +2234,13 @@ llvm_target_lib_list = [lib for lib in [
             ),
             (
                 ["-gen-register-info"],
-                "lib/Target/AArch64/AArch64GenRegisterInfo.inc",
+                [
+                    "lib/Target/AArch64/AArch64GenRegisterInfo.inc",
+                    "lib/Target/AArch64/AArch64GenRegisterInfoEnums.inc",
+                    "lib/Target/AArch64/AArch64GenRegisterInfoMCDesc.inc",
+                    "lib/Target/AArch64/AArch64GenRegisterInfoHeader.inc",
+                    "lib/Target/AArch64/AArch64GenRegisterInfoTargetDesc.inc",
+                ],
             ),
             (
                 ["-gen-instr-info"],
@@ -2161,6 +2314,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/AArch64/AArch64GenCallingConv.inc",
             ),
             (
+                ["-gen-sd-node-info"],
+                "lib/Target/AArch64/AArch64GenSDNodeInfo.inc",
+            ),
+            (
                 ["-gen-subtarget"],
                 "lib/Target/AArch64/AArch64GenSubtargetInfo.inc",
             ),
@@ -2188,7 +2345,13 @@ llvm_target_lib_list = [lib for lib in [
             ),
             (
                 ["-gen-register-info"],
-                "lib/Target/ARM/ARMGenRegisterInfo.inc",
+                [
+                    "lib/Target/ARM/ARMGenRegisterInfo.inc",
+                    "lib/Target/ARM/ARMGenRegisterInfoEnums.inc",
+                    "lib/Target/ARM/ARMGenRegisterInfoMCDesc.inc",
+                    "lib/Target/ARM/ARMGenRegisterInfoHeader.inc",
+                    "lib/Target/ARM/ARMGenRegisterInfoTargetDesc.inc",
+                ],
             ),
             (
                 ["-gen-searchable-tables"],
@@ -2231,6 +2394,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/ARM/ARMGenCallingConv.inc",
             ),
             (
+                ["-gen-sd-node-info"],
+                "lib/Target/ARM/ARMGenSDNodeInfo.inc",
+            ),
+            (
                 ["-gen-subtarget"],
                 "lib/Target/ARM/ARMGenSubtargetInfo.inc",
             ),
@@ -2250,7 +2417,13 @@ llvm_target_lib_list = [lib for lib in [
             ),
             (
                 ["-gen-register-info"],
-                "lib/Target/AMDGPU/AMDGPUGenRegisterInfo.inc",
+                [
+                    "lib/Target/AMDGPU/AMDGPUGenRegisterInfo.inc",
+                    "lib/Target/AMDGPU/AMDGPUGenRegisterInfoEnums.inc",
+                    "lib/Target/AMDGPU/AMDGPUGenRegisterInfoMCDesc.inc",
+                    "lib/Target/AMDGPU/AMDGPUGenRegisterInfoHeader.inc",
+                    "lib/Target/AMDGPU/AMDGPUGenRegisterInfoTargetDesc.inc",
+                ],
             ),
             (
                 ["-gen-instr-info"],
@@ -2285,16 +2458,24 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/AMDGPU/AMDGPUGenSubtargetInfo.inc",
             ),
             (
-                ["-gen-disassembler"],
+                [
+                    "-gen-disassembler",
+                    "--specialize-decoders-per-bitwidth",
+                    "-ignore-non-decodable-operands",
+                    "-ignore-fully-defined-operands",
+                ],
                 "lib/Target/AMDGPU/AMDGPUGenDisassemblerTables.inc",
             ),
             (
                 ["-gen-searchable-tables"],
                 "lib/Target/AMDGPU/AMDGPUGenSearchableTables.inc",
             ),
+            (
+                ["-gen-sd-node-info"],
+                "lib/Target/AMDGPU/AMDGPUGenSDNodeInfo.inc",
+            ),
         ],
         "tbl_deps": [
-            ":InstCombineTableGen",
             ":amdgpu_isel_target_gen",
             ":r600_target_gen",
         ],
@@ -2333,7 +2514,17 @@ llvm_target_lib_list = [lib for lib in [
             ),
             (
                 ["-gen-register-info"],
-                "lib/Target/AVR/AVRGenRegisterInfo.inc",
+                [
+                    "lib/Target/AVR/AVRGenRegisterInfo.inc",
+                    "lib/Target/AVR/AVRGenRegisterInfoEnums.inc",
+                    "lib/Target/AVR/AVRGenRegisterInfoMCDesc.inc",
+                    "lib/Target/AVR/AVRGenRegisterInfoHeader.inc",
+                    "lib/Target/AVR/AVRGenRegisterInfoTargetDesc.inc",
+                ],
+            ),
+            (
+                ["-gen-sd-node-info"],
+                "lib/Target/AVR/AVRGenSDNodeInfo.inc",
             ),
             (
                 ["-gen-subtarget"],
@@ -2383,11 +2574,21 @@ llvm_target_lib_list = [lib for lib in [
             ),
             (
                 ["-gen-register-info"],
-                "lib/Target/BPF/BPFGenRegisterInfo.inc",
+                [
+                    "lib/Target/BPF/BPFGenRegisterInfo.inc",
+                    "lib/Target/BPF/BPFGenRegisterInfoEnums.inc",
+                    "lib/Target/BPF/BPFGenRegisterInfoMCDesc.inc",
+                    "lib/Target/BPF/BPFGenRegisterInfoHeader.inc",
+                    "lib/Target/BPF/BPFGenRegisterInfoTargetDesc.inc",
+                ],
             ),
             (
                 ["-gen-subtarget"],
                 "lib/Target/BPF/BPFGenSubtargetInfo.inc",
+            ),
+            (
+                ["-gen-sd-node-info"],
+                "lib/Target/BPF/BPFGenSDNodeInfo.inc",
             ),
         ],
     },
@@ -2429,7 +2630,17 @@ llvm_target_lib_list = [lib for lib in [
             ),
             (
                 ["-gen-register-info"],
-                "lib/Target/Hexagon/HexagonGenRegisterInfo.inc",
+                [
+                    "lib/Target/Hexagon/HexagonGenRegisterInfo.inc",
+                    "lib/Target/Hexagon/HexagonGenRegisterInfoEnums.inc",
+                    "lib/Target/Hexagon/HexagonGenRegisterInfoMCDesc.inc",
+                    "lib/Target/Hexagon/HexagonGenRegisterInfoHeader.inc",
+                    "lib/Target/Hexagon/HexagonGenRegisterInfoTargetDesc.inc",
+                ],
+            ),
+            (
+                ["-gen-sd-node-info"],
+                "lib/Target/Hexagon/HexagonGenSDNodeInfo.inc",
             ),
             (
                 ["-gen-subtarget"],
@@ -2471,7 +2682,17 @@ llvm_target_lib_list = [lib for lib in [
             ),
             (
                 ["-gen-register-info"],
-                "lib/Target/Lanai/LanaiGenRegisterInfo.inc",
+                [
+                    "lib/Target/Lanai/LanaiGenRegisterInfo.inc",
+                    "lib/Target/Lanai/LanaiGenRegisterInfoEnums.inc",
+                    "lib/Target/Lanai/LanaiGenRegisterInfoMCDesc.inc",
+                    "lib/Target/Lanai/LanaiGenRegisterInfoHeader.inc",
+                    "lib/Target/Lanai/LanaiGenRegisterInfoTargetDesc.inc",
+                ],
+            ),
+            (
+                ["-gen-sd-node-info"],
+                "lib/Target/Lanai/LanaiGenSDNodeInfo.inc",
             ),
             (
                 ["-gen-subtarget"],
@@ -2513,7 +2734,17 @@ llvm_target_lib_list = [lib for lib in [
             ),
             (
                 ["-gen-register-info"],
-                "lib/Target/LoongArch/LoongArchGenRegisterInfo.inc",
+                [
+                    "lib/Target/LoongArch/LoongArchGenRegisterInfo.inc",
+                    "lib/Target/LoongArch/LoongArchGenRegisterInfoEnums.inc",
+                    "lib/Target/LoongArch/LoongArchGenRegisterInfoMCDesc.inc",
+                    "lib/Target/LoongArch/LoongArchGenRegisterInfoHeader.inc",
+                    "lib/Target/LoongArch/LoongArchGenRegisterInfoTargetDesc.inc",
+                ],
+            ),
+            (
+                ["-gen-sd-node-info"],
+                "lib/Target/LoongArch/LoongArchGenSDNodeInfo.inc",
             ),
             (
                 ["-gen-subtarget"],
@@ -2542,7 +2773,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/Mips/MipsGenDAGISel.inc",
             ),
             (
-                ["-gen-disassembler"],
+                [
+                    "-gen-disassembler",
+                    "-ignore-non-decodable-operands",
+                ],
                 "lib/Target/Mips/MipsGenDisassemblerTables.inc",
             ),
             (
@@ -2582,7 +2816,19 @@ llvm_target_lib_list = [lib for lib in [
             ),
             (
                 ["-gen-register-info"],
-                "lib/Target/Mips/MipsGenRegisterInfo.inc",
+                [
+                    "lib/Target/Mips/MipsGenRegisterInfo.inc",
+                    "lib/Target/Mips/MipsGenRegisterInfoEnums.inc",
+                    "lib/Target/Mips/MipsGenRegisterInfoMCDesc.inc",
+                    "lib/Target/Mips/MipsGenRegisterInfoHeader.inc",
+                    "lib/Target/Mips/MipsGenRegisterInfoTargetDesc.inc",
+                ],
+            ),
+            (
+                ["-gen-sd-node-info"],
+                [
+                    "lib/Target/Mips/MipsGenSDNodeInfo.inc",
+                ],
             ),
             (
                 ["-gen-subtarget"],
@@ -2615,16 +2861,26 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/MSP430/MSP430GenDisassemblerTables.inc",
             ),
             (
-                ["-gen-emitter"],
-                "lib/Target/MSP430/MSP430GenMCCodeEmitter.inc",
-            ),
-            (
                 ["-gen-instr-info"],
                 "lib/Target/MSP430/MSP430GenInstrInfo.inc",
             ),
             (
+                ["-gen-emitter"],
+                "lib/Target/MSP430/MSP430GenMCCodeEmitter.inc",
+            ),
+            (
                 ["-gen-register-info"],
-                "lib/Target/MSP430/MSP430GenRegisterInfo.inc",
+                [
+                    "lib/Target/MSP430/MSP430GenRegisterInfo.inc",
+                    "lib/Target/MSP430/MSP430GenRegisterInfoEnums.inc",
+                    "lib/Target/MSP430/MSP430GenRegisterInfoMCDesc.inc",
+                    "lib/Target/MSP430/MSP430GenRegisterInfoHeader.inc",
+                    "lib/Target/MSP430/MSP430GenRegisterInfoTargetDesc.inc",
+                ],
+            ),
+            (
+                ["-gen-sd-node-info"],
+                "lib/Target/MSP430/MSP430GenSDNodeInfo.inc",
             ),
             (
                 ["-gen-subtarget"],
@@ -2638,7 +2894,13 @@ llvm_target_lib_list = [lib for lib in [
         "tbl_outs": [
             (
                 ["-gen-register-info"],
-                "lib/Target/NVPTX/NVPTXGenRegisterInfo.inc",
+                [
+                    "lib/Target/NVPTX/NVPTXGenRegisterInfo.inc",
+                    "lib/Target/NVPTX/NVPTXGenRegisterInfoEnums.inc",
+                    "lib/Target/NVPTX/NVPTXGenRegisterInfoMCDesc.inc",
+                    "lib/Target/NVPTX/NVPTXGenRegisterInfoHeader.inc",
+                    "lib/Target/NVPTX/NVPTXGenRegisterInfoTargetDesc.inc",
+                ],
             ),
             (
                 ["-gen-instr-info"],
@@ -2655,6 +2917,10 @@ llvm_target_lib_list = [lib for lib in [
             (
                 ["-gen-subtarget"],
                 "lib/Target/NVPTX/NVPTXGenSubtargetInfo.inc",
+            ),
+            (
+                ["-gen-sd-node-info"],
+                "lib/Target/NVPTX/NVPTXGenSDNodeInfo.inc",
             ),
         ],
     },
@@ -2676,7 +2942,13 @@ llvm_target_lib_list = [lib for lib in [
             ),
             (
                 ["-gen-register-info"],
-                "lib/Target/PowerPC/PPCGenRegisterInfo.inc",
+                [
+                    "lib/Target/PowerPC/PPCGenRegisterInfo.inc",
+                    "lib/Target/PowerPC/PPCGenRegisterInfoEnums.inc",
+                    "lib/Target/PowerPC/PPCGenRegisterInfoMCDesc.inc",
+                    "lib/Target/PowerPC/PPCGenRegisterInfoHeader.inc",
+                    "lib/Target/PowerPC/PPCGenRegisterInfoTargetDesc.inc",
+                ],
             ),
             (
                 ["-gen-instr-info"],
@@ -2714,6 +2986,10 @@ llvm_target_lib_list = [lib for lib in [
                 ["-gen-exegesis"],
                 "lib/Target/PowerPC/PPCGenExegesis.inc",
             ),
+            (
+                ["-gen-sd-node-info"],
+                "lib/Target/PowerPC/PPCGenSDNodeInfo.inc",
+            ),
         ],
     },
     {
@@ -2737,7 +3013,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/RISCV/RISCVGenDAGISel.inc",
             ),
             (
-                ["-gen-disassembler"],
+                [
+                    "-gen-disassembler",
+                    "--specialize-decoders-per-bitwidth",
+                ],
                 "lib/Target/RISCV/RISCVGenDisassemblerTables.inc",
             ),
             (
@@ -2762,7 +3041,13 @@ llvm_target_lib_list = [lib for lib in [
             ),
             (
                 ["-gen-register-info"],
-                "lib/Target/RISCV/RISCVGenRegisterInfo.inc",
+                [
+                    "lib/Target/RISCV/RISCVGenRegisterInfo.inc",
+                    "lib/Target/RISCV/RISCVGenRegisterInfoEnums.inc",
+                    "lib/Target/RISCV/RISCVGenRegisterInfoMCDesc.inc",
+                    "lib/Target/RISCV/RISCVGenRegisterInfoHeader.inc",
+                    "lib/Target/RISCV/RISCVGenRegisterInfoTargetDesc.inc",
+                ],
             ),
             (
                 ["-gen-subtarget"],
@@ -2775,6 +3060,10 @@ llvm_target_lib_list = [lib for lib in [
             (
                 ["-gen-exegesis"],
                 "lib/Target/RISCV/RISCVGenExegesis.inc",
+            ),
+            (
+                ["-gen-sd-node-info"],
+                "lib/Target/RISCV/RISCVGenSDNodeInfo.inc",
             ),
         ],
         "tbl_deps": [
@@ -2799,7 +3088,13 @@ llvm_target_lib_list = [lib for lib in [
             ),
             (
                 ["-gen-register-info"],
-                "lib/Target/Sparc/SparcGenRegisterInfo.inc",
+                [
+                    "lib/Target/Sparc/SparcGenRegisterInfo.inc",
+                    "lib/Target/Sparc/SparcGenRegisterInfoEnums.inc",
+                    "lib/Target/Sparc/SparcGenRegisterInfoMCDesc.inc",
+                    "lib/Target/Sparc/SparcGenRegisterInfoHeader.inc",
+                    "lib/Target/Sparc/SparcGenRegisterInfoTargetDesc.inc",
+                ],
             ),
             (
                 ["-gen-instr-info"],
@@ -2824,6 +3119,13 @@ llvm_target_lib_list = [lib for lib in [
             (
                 ["-gen-searchable-tables"],
                 "lib/Target/Sparc/SparcGenSearchableTables.inc",
+            ),
+            (
+                [
+                    "-gen-sd-node-info",
+                    "-sdnode-namespace=SPISD",
+                ],
+                "lib/Target/Sparc/SparcGenSDNodeInfo.inc",
             ),
         ],
     },
@@ -2860,7 +3162,13 @@ llvm_target_lib_list = [lib for lib in [
             ),
             (
                 ["-gen-register-info"],
-                "lib/Target/SPIRV/SPIRVGenRegisterInfo.inc",
+                [
+                    "lib/Target/SPIRV/SPIRVGenRegisterInfo.inc",
+                    "lib/Target/SPIRV/SPIRVGenRegisterInfoEnums.inc",
+                    "lib/Target/SPIRV/SPIRVGenRegisterInfoMCDesc.inc",
+                    "lib/Target/SPIRV/SPIRVGenRegisterInfoHeader.inc",
+                    "lib/Target/SPIRV/SPIRVGenRegisterInfoTargetDesc.inc",
+                ],
             ),
             (
                 ["-gen-searchable-tables"],
@@ -2913,11 +3221,21 @@ llvm_target_lib_list = [lib for lib in [
             ),
             (
                 ["-gen-register-info"],
-                "lib/Target/SystemZ/SystemZGenRegisterInfo.inc",
+                [
+                    "lib/Target/SystemZ/SystemZGenRegisterInfo.inc",
+                    "lib/Target/SystemZ/SystemZGenRegisterInfoEnums.inc",
+                    "lib/Target/SystemZ/SystemZGenRegisterInfoMCDesc.inc",
+                    "lib/Target/SystemZ/SystemZGenRegisterInfoHeader.inc",
+                    "lib/Target/SystemZ/SystemZGenRegisterInfoTargetDesc.inc",
+                ],
             ),
             (
                 ["-gen-subtarget"],
                 "lib/Target/SystemZ/SystemZGenSubtargetInfo.inc",
+            ),
+            (
+                ["-gen-sd-node-info"],
+                "lib/Target/SystemZ/SystemZGenSDNodeInfo.inc",
             ),
         ],
     },
@@ -2955,11 +3273,21 @@ llvm_target_lib_list = [lib for lib in [
             ),
             (
                 ["-gen-register-info"],
-                "lib/Target/VE/VEGenRegisterInfo.inc",
+                [
+                    "lib/Target/VE/VEGenRegisterInfo.inc",
+                    "lib/Target/VE/VEGenRegisterInfoEnums.inc",
+                    "lib/Target/VE/VEGenRegisterInfoMCDesc.inc",
+                    "lib/Target/VE/VEGenRegisterInfoHeader.inc",
+                    "lib/Target/VE/VEGenRegisterInfoTargetDesc.inc",
+                ],
             ),
             (
                 ["-gen-subtarget"],
                 "lib/Target/VE/VEGenSubtargetInfo.inc",
+            ),
+            (
+                ["-gen-sd-node-info"],
+                "lib/Target/VE/VEGenSDNodeInfo.inc",
             ),
         ],
     },
@@ -2967,6 +3295,10 @@ llvm_target_lib_list = [lib for lib in [
         "name": "WebAssembly",
         "short_name": "WebAssembly",
         "tbl_outs": [
+            (
+                ["-gen-register-bank"],
+                "lib/Target/WebAssembly/WebAssemblyGenRegisterBank.inc",
+            ),
             (
                 ["-gen-disassembler"],
                 "lib/Target/WebAssembly/WebAssemblyGenDisassemblerTables.inc",
@@ -2993,7 +3325,13 @@ llvm_target_lib_list = [lib for lib in [
             ),
             (
                 ["-gen-register-info"],
-                "lib/Target/WebAssembly/WebAssemblyGenRegisterInfo.inc",
+                [
+                    "lib/Target/WebAssembly/WebAssemblyGenRegisterInfo.inc",
+                    "lib/Target/WebAssembly/WebAssemblyGenRegisterInfoEnums.inc",
+                    "lib/Target/WebAssembly/WebAssemblyGenRegisterInfoMCDesc.inc",
+                    "lib/Target/WebAssembly/WebAssemblyGenRegisterInfoHeader.inc",
+                    "lib/Target/WebAssembly/WebAssemblyGenRegisterInfoTargetDesc.inc",
+                ],
             ),
             (
                 ["-gen-subtarget"],
@@ -3003,6 +3341,13 @@ llvm_target_lib_list = [lib for lib in [
                 ["-gen-asm-matcher"],
                 "lib/Target/WebAssembly/WebAssemblyGenAsmMatcher.inc",
             ),
+            (
+                ["-gen-sd-node-info"],
+                "lib/Target/WebAssembly/WebAssemblyGenSDNodeInfo.inc",
+            ),
+        ],
+        "tbl_deps": [
+            ":webassembly_isel_target_gen",
         ],
     },
     {
@@ -3015,7 +3360,13 @@ llvm_target_lib_list = [lib for lib in [
             ),
             (
                 ["-gen-register-info"],
-                "lib/Target/X86/X86GenRegisterInfo.inc",
+                [
+                    "lib/Target/X86/X86GenRegisterInfo.inc",
+                    "lib/Target/X86/X86GenRegisterInfoEnums.inc",
+                    "lib/Target/X86/X86GenRegisterInfoMCDesc.inc",
+                    "lib/Target/X86/X86GenRegisterInfoHeader.inc",
+                    "lib/Target/X86/X86GenRegisterInfoTargetDesc.inc",
+                ],
             ),
             (
                 ["-gen-disassembler"],
@@ -3051,6 +3402,20 @@ llvm_target_lib_list = [lib for lib in [
             (
                 ["-gen-global-isel"],
                 "lib/Target/X86/X86GenGlobalISel.inc",
+            ),
+            (
+                [
+                    "-gen-global-isel-combiner",
+                    "-combiners=X86PreLegalizerCombiner",
+                ],
+                "lib/Target/X86/X86GenPreLegalizeGICombiner.inc",
+            ),
+            (
+                [
+                    "-gen-global-isel-combiner",
+                    "-combiners=X86PostLegalizerCombiner",
+                ],
+                "lib/Target/X86/X86GenPostLegalizeGICombiner.inc",
             ),
             (
                 ["-gen-callingconv"],
@@ -3110,11 +3475,73 @@ llvm_target_lib_list = [lib for lib in [
             ),
             (
                 ["-gen-register-info"],
-                "lib/Target/XCore/XCoreGenRegisterInfo.inc",
+                [
+                    "lib/Target/XCore/XCoreGenRegisterInfo.inc",
+                    "lib/Target/XCore/XCoreGenRegisterInfoEnums.inc",
+                    "lib/Target/XCore/XCoreGenRegisterInfoMCDesc.inc",
+                    "lib/Target/XCore/XCoreGenRegisterInfoHeader.inc",
+                    "lib/Target/XCore/XCoreGenRegisterInfoTargetDesc.inc",
+                ],
+            ),
+            (
+                ["-gen-sd-node-info"],
+                "lib/Target/XCore/XCoreGenSDNodeInfo.inc",
             ),
             (
                 ["-gen-subtarget"],
                 "lib/Target/XCore/XCoreGenSubtargetInfo.inc",
+            ),
+        ],
+    },
+    {
+        "name": "Xtensa",
+        "short_name": "Xtensa",
+        "tbl_outs": [
+            (
+                ["-gen-asm-writer"],
+                "lib/Target/Xtensa/XtensaGenAsmWriter.inc",
+            ),
+            (
+                ["-gen-asm-matcher"],
+                "lib/Target/Xtensa/XtensaGenAsmMatcher.inc",
+            ),
+            (
+                ["-gen-callingconv"],
+                "lib/Target/Xtensa/XtensaGenCallingConv.inc",
+            ),
+            (
+                ["-gen-dag-isel"],
+                "lib/Target/Xtensa/XtensaGenDAGISel.inc",
+            ),
+            (
+                ["-gen-disassembler"],
+                "lib/Target/Xtensa/XtensaGenDisassemblerTables.inc",
+            ),
+            (
+                ["-gen-instr-info"],
+                "lib/Target/Xtensa/XtensaGenInstrInfo.inc",
+            ),
+            (
+                ["-gen-emitter"],
+                "lib/Target/Xtensa/XtensaGenMCCodeEmitter.inc",
+            ),
+            (
+                ["-gen-register-info"],
+                [
+                    "lib/Target/Xtensa/XtensaGenRegisterInfo.inc",
+                    "lib/Target/Xtensa/XtensaGenRegisterInfoEnums.inc",
+                    "lib/Target/Xtensa/XtensaGenRegisterInfoMCDesc.inc",
+                    "lib/Target/Xtensa/XtensaGenRegisterInfoHeader.inc",
+                    "lib/Target/Xtensa/XtensaGenRegisterInfoTargetDesc.inc",
+                ],
+            ),
+            (
+                ["-gen-sd-node-info"],
+                "lib/Target/Xtensa/XtensaGenSDNodeInfo.inc",
+            ),
+            (
+                ["-gen-subtarget"],
+                "lib/Target/Xtensa/XtensaGenSubtargetInfo.inc",
             ),
         ],
     },
@@ -3128,33 +3555,21 @@ cc_library(
 gentbl_cc_library(
     name = "amdgpu_isel_target_gen",
     strip_include_prefix = "lib/Target/AMDGPU",
-    tbl_outs = [
-        (
-            ["-gen-global-isel"],
-            "lib/Target/AMDGPU/AMDGPUGenGlobalISel.inc",
-        ),
-        (
-            [
-                "-gen-global-isel-combiner",
-                "-combiners=AMDGPUPreLegalizerCombiner",
-            ],
-            "lib/Target/AMDGPU/AMDGPUGenPreLegalizeGICombiner.inc",
-        ),
-        (
-            [
-                "-gen-global-isel-combiner",
-                "-combiners=AMDGPUPostLegalizerCombiner",
-            ],
-            "lib/Target/AMDGPU/AMDGPUGenPostLegalizeGICombiner.inc",
-        ),
-        (
-            [
-                "-gen-global-isel-combiner",
-                "-combiners=AMDGPURegBankCombiner",
-            ],
-            "lib/Target/AMDGPU/AMDGPUGenRegBankGICombiner.inc",
-        ),
-    ],
+    tbl_outs = {
+        "lib/Target/AMDGPU/AMDGPUGenGlobalISel.inc": ["-gen-global-isel"],
+        "lib/Target/AMDGPU/AMDGPUGenPreLegalizeGICombiner.inc": [
+            "-gen-global-isel-combiner",
+            "-combiners=AMDGPUPreLegalizerCombiner",
+        ],
+        "lib/Target/AMDGPU/AMDGPUGenPostLegalizeGICombiner.inc": [
+            "-gen-global-isel-combiner",
+            "-combiners=AMDGPUPostLegalizerCombiner",
+        ],
+        "lib/Target/AMDGPU/AMDGPUGenRegBankGICombiner.inc": [
+            "-gen-global-isel-combiner",
+            "-combiners=AMDGPURegBankCombiner",
+        ],
+    },
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/AMDGPU/AMDGPUGISel.td",
     deps = [
@@ -3193,7 +3608,13 @@ gentbl_cc_library(
         ),
         (
             ["-gen-register-info"],
-            "lib/Target/AMDGPU/R600GenRegisterInfo.inc",
+            [
+                "lib/Target/AMDGPU/R600GenRegisterInfo.inc",
+                "lib/Target/AMDGPU/R600GenRegisterInfoEnums.inc",
+                "lib/Target/AMDGPU/R600GenRegisterInfoMCDesc.inc",
+                "lib/Target/AMDGPU/R600GenRegisterInfoHeader.inc",
+                "lib/Target/AMDGPU/R600GenRegisterInfoTargetDesc.inc",
+            ],
         ),
         (
             ["-gen-subtarget"],
@@ -3211,33 +3632,21 @@ gentbl_cc_library(
 gentbl_cc_library(
     name = "riscv_isel_target_gen",
     strip_include_prefix = "lib/Target/RISCV",
-    tbl_outs = [
-        (
-            ["-gen-global-isel"],
-            "lib/Target/RISCV/RISCVGenGlobalISel.inc",
-        ),
-        (
-            [
-                "-gen-global-isel-combiner",
-                "-combiners=RISCVO0PreLegalizerCombiner",
-            ],
-            "lib/Target/RISCV/RISCVGenO0PreLegalizeGICombiner.inc",
-        ),
-        (
-            [
-                "-gen-global-isel-combiner",
-                "-combiners=RISCVPostLegalizerCombiner",
-            ],
-            "lib/Target/RISCV/RISCVGenPostLegalizeGICombiner.inc",
-        ),
-        (
-            [
-                "-gen-global-isel-combiner",
-                "-combiners=RISCVPreLegalizerCombiner",
-            ],
-            "lib/Target/RISCV/RISCVGenPreLegalizeGICombiner.inc",
-        ),
-    ],
+    tbl_outs = {
+        "lib/Target/RISCV/RISCVGenGlobalISel.inc": ["-gen-global-isel"],
+        "lib/Target/RISCV/RISCVGenO0PreLegalizeGICombiner.inc": [
+            "-gen-global-isel-combiner",
+            "-combiners=RISCVO0PreLegalizerCombiner",
+        ],
+        "lib/Target/RISCV/RISCVGenPostLegalizeGICombiner.inc": [
+            "-gen-global-isel-combiner",
+            "-combiners=RISCVPostLegalizerCombiner",
+        ],
+        "lib/Target/RISCV/RISCVGenPreLegalizeGICombiner.inc": [
+            "-gen-global-isel-combiner",
+            "-combiners=RISCVPreLegalizerCombiner",
+        ],
+    },
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/RISCV/RISCVGISel.td",
     deps = [
@@ -3246,20 +3655,39 @@ gentbl_cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "webassembly_isel_target_gen",
+    strip_include_prefix = "lib/Target/WebAssembly",
+    tbl_outs = {
+        "lib/Target/WebAssembly/WebAssemblyGenGlobalISel.inc": ["-gen-global-isel"],
+        "lib/Target/WebAssembly/WebAssemblyGenPreLegalizeGICombiner.inc": [
+            "-gen-global-isel-combiner",
+            "-combiners=WebAssemblyPreLegalizerCombiner",
+        ],
+        "lib/Target/WebAssembly/WebAssemblyGenPostLegalizeGICombiner.inc": [
+            "-gen-global-isel-combiner",
+            "-combiners=WebAssemblyPostLegalizerCombiner",
+        ],
+    },
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/WebAssembly/WebAssemblyGISel.td",
+    deps = [
+        ":CommonTargetTdFiles",
+        ":WebAssemblyTargetTdFiles",
+    ],
+)
+
 [[
     [gentbl_cc_library(
         name = target["name"] + "CommonTableGen",
         strip_include_prefix = "lib/Target/" + target["name"],
-        tbl_outs = [(
-            # MSVC isn't happy with long string literals, while other compilers
-            # which support them get significant compile time improvements with
-            # them enabled. Ideally this flag would only be enabled on Windows via
-            # a select() on `@platforms//os:windows,`, but that would
-            # require refactoring gentbl from a macro into a rule.
-            # TODO(#92): Refactor gentbl to support this use
-            args + ["--long-string-literals=0"],
-            out,
-        ) for (args, out) in target["tbl_outs"]],
+        # MSVC isn't happy with long string literals, while other compilers
+        # which support them get significant compile time improvements with
+        # them enabled. Ideally this flag would only be enabled on Windows via
+        # a select() on `@platforms//os:windows,`, but that would
+        # require refactoring gentbl from a macro into a rule.
+        # TODO(#92): Refactor gentbl to support this use
+        tbl_outs = target["tbl_outs"],
         tblgen = ":llvm-tblgen",
         td_file = "lib/Target/" + target["name"] + "/" + target["short_name"] + ".td",
         td_srcs = glob(
@@ -3361,6 +3789,8 @@ gentbl_cc_library(
         name = target["name"] + "CodeGen",
         srcs = glob(
             [
+                "lib/Target/" + target["name"] + "/Analysis/*.cpp",
+                "lib/Target/" + target["name"] + "/Analysis/*.h",
                 "lib/Target/" + target["name"] + "/GISel/*.cpp",
                 "lib/Target/" + target["name"] + "/GISel/*.h",
                 "lib/Target/" + target["name"] + "/*.cpp",
@@ -3396,7 +3826,6 @@ gentbl_cc_library(
             ":TransformUtils",
             ":Vectorize",
             ":config",
-            ":" + target["name"] + "Analysis",
             ":" + target["name"] + "CommonTableGen",
             ":" + target["name"] + "Info",
             ":" + target["name"] + "UtilsAndDesc",
@@ -3501,24 +3930,6 @@ gentbl_cc_library(
             ":" + target["name"] + "UtilsAndDesc",
         ],
     )],
-    [cc_library(
-        name = target["name"] + "Analysis",
-        srcs = glob(
-            [
-                "lib/Target/" + target["name"] + "/Analysis/*.cpp",
-                "lib/Target/" + target["name"] + "/Analysis/*.h",
-            ],
-            allow_empty = True,
-        ),
-        copts = llvm_copts,
-        features = ["-layering_check"],
-        deps = [
-            ":Analysis",
-            ":Core",
-            ":Support",
-            ":TransformUtils",
-        ],
-    )],
 ] for target in llvm_target_lib_list]
 
 cc_library(
@@ -3600,6 +4011,31 @@ cc_library(
 )
 
 cc_library(
+    name = "Plugins",
+    srcs = ["lib/Plugins/PassPlugin.cpp"],
+    hdrs = ["include/llvm/Plugins/PassPlugin.h"],
+    copts = llvm_copts,
+    includes = ["include"],
+    deps = [
+        ":Support",
+    ],
+)
+
+cc_library(
+    name = "DTLTO",
+    srcs = ["lib/DTLTO/DTLTO.cpp"],
+    hdrs = ["include/llvm/DTLTO/DTLTO.h"],
+    copts = llvm_copts,
+    deps = [
+        ":BinaryFormat",
+        ":Core",
+        ":LTO",
+        ":Object",
+        ":Support",
+    ],
+)
+
+cc_library(
     name = "LTO",
     srcs = glob([
         "lib/LTO/*.cpp",
@@ -3628,6 +4064,7 @@ cc_library(
         ":ObjCARC",
         ":Object",
         ":Passes",
+        ":Plugins",
         ":Remarks",
         ":Scalar",
         ":Support",
@@ -3656,9 +4093,7 @@ cc_library(
             "include/llvm/ExecutionEngine/MCJIT*.h",
             "include/llvm/ExecutionEngine/OProfileWrapper.h",
         ],
-    ) + [
-        "include/llvm-c/ExecutionEngine.h",
-    ],
+    ) + ["include/llvm-c/ExecutionEngine.h"],
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
@@ -3699,10 +4134,7 @@ cc_library(
 gentbl_cc_library(
     name = "JITLinkTableGen",
     strip_include_prefix = "lib/ExecutionEngine/JITLink",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "lib/ExecutionEngine/JITLink/COFFOptions.inc",
-    )],
+    tbl_outs = {"lib/ExecutionEngine/JITLink/COFFOptions.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "lib/ExecutionEngine/JITLink/COFFOptions.td",
     deps = [":OptParserTdFiles"],
@@ -3771,9 +4203,7 @@ cc_library(
         "@platforms//os:windows": [],
         "@platforms//os:freebsd": [],
         "@platforms//os:macos": [],
-        "//conditions:default": [
-            "-lrt",
-        ],
+        "//conditions:default": ["-lrt"],
     }),
     deps = [
         ":Analysis",
@@ -3836,9 +4266,11 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
+        ":Core",
         ":DebugInfo",
         ":DebugInfoDWARF",
         ":JITLink",
+        ":Object",
         ":OrcJIT",
         ":OrcShared",
         ":Support",
@@ -3895,6 +4327,7 @@ cc_library(
         ":CodeGenTypes",
         ":DWARFLinkerBase",
         ":DebugInfoDWARF",
+        ":DebugInfoDWARFLowLevel",
         ":MC",
         ":Support",
         ":Target",
@@ -3913,6 +4346,7 @@ cc_library(
         ":BinaryFormat",
         ":CodeGen",
         ":DebugInfoDWARF",
+        ":DebugInfoDWARFLowLevel",
         ":Support",
         ":Target",
     ],
@@ -3942,10 +4376,7 @@ cc_library(
 gentbl_cc_library(
     name = "DllOptionsTableGen",
     strip_include_prefix = "lib/ToolDrivers/llvm-dlltool",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "lib/ToolDrivers/llvm-dlltool/Options.inc",
-    )],
+    tbl_outs = {"lib/ToolDrivers/llvm-dlltool/Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "lib/ToolDrivers/llvm-dlltool/Options.td",
     deps = [":OptParserTdFiles"],
@@ -4195,10 +4626,7 @@ cc_library(
 gentbl_cc_library(
     name = "DsymutilTableGen",
     strip_include_prefix = "tools/dsymutil",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/dsymutil/Options.inc",
-    )],
+    tbl_outs = {"tools/dsymutil/Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/dsymutil/Options.td",
     deps = [":OptParserTdFiles"],
@@ -4211,15 +4639,25 @@ cc_library(
         "tools/dsymutil/*.h",
     ]),
     copts = llvm_copts,
+    linkopts = select({
+        "@platforms//os:macos": [
+            "-framework",
+            "CoreFoundation",
+        ],
+        "//conditions:default": [],
+    }),
     deps = [
         ":AllTargetsCodeGens",
         ":BinaryFormat",
+        ":BitReader",
+        ":BitstreamReader",
         ":CodeGen",
         ":CodeGenTypes",
         ":DWARFLinker",
         ":DWARFLinkerParallel",
         ":DebugInfo",
         ":DebugInfoDWARF",
+        ":DebugInfoDWARFLowLevel",
         ":DsymutilTableGen",
         ":MC",
         ":Object",
@@ -4260,6 +4698,7 @@ cc_binary(
         ":IRReader",
         ":MC",
         ":Passes",
+        ":Plugins",
         ":Remarks",
         ":Scalar",
         ":Support",
@@ -4289,7 +4728,7 @@ cc_binary(
             "-Wl,--export-dynamic-symbol=__gxx_personality_v0",
             "-Wl,--export-dynamic-symbol=__cxa_allocate_exception",
             "-Wl,--export-dynamic-symbol=__cxa_throw",
-            "-Wl,--export-dynamic-symbol=llvm_orc_registerJITLoaderGDBWrapper",
+            "-Wl,--export-dynamic-symbol=llvm_orc_registerJITLoaderGDBAllocAction",
             "-Wl,--export-dynamic-symbol=llvm_orc_registerEHFrameSectionWrapper",
             "-Wl,--export-dynamic-symbol=llvm_orc_deregisterEHFrameSectionWrapper",
         ],
@@ -4314,6 +4753,23 @@ cc_binary(
         ":OrcTargetProcess",
         ":Support",
         ":TargetParser",
+        ":config",
+    ],
+)
+
+cc_binary(
+    name = "llubi",
+    srcs = glob([
+        "tools/llubi/*.cpp",
+        "tools/llubi/lib/*.cpp",
+        "tools/llubi/lib/*.h",
+    ]),
+    stamp = 0,
+    deps = [
+        ":Analysis",
+        ":Core",
+        ":IRReader",
+        ":Support",
         ":config",
     ],
 )
@@ -4407,10 +4863,7 @@ cc_binary(
 gentbl_cc_library(
     name = "CGDataOptsTableGen",
     strip_include_prefix = "tools/llvm-cgdata",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/llvm-cgdata/Opts.inc",
-    )],
+    tbl_outs = {"tools/llvm-cgdata/Opts.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-cgdata/Opts.td",
     deps = [":OptParserTdFiles"],
@@ -4484,10 +4937,7 @@ cc_binary(
 gentbl_cc_library(
     name = "CvtResTableGen",
     strip_include_prefix = "tools/llvm-cvtres",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/llvm-cvtres/Opts.inc",
-    )],
+    tbl_outs = {"tools/llvm-cvtres/Opts.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-cvtres/Opts.td",
     deps = [":OptParserTdFiles"],
@@ -4542,10 +4992,7 @@ cc_binary(
 gentbl_cc_library(
     name = "CxxfiltOptsTableGen",
     strip_include_prefix = "tools/llvm-cxxfilt",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/llvm-cxxfilt/Opts.inc",
-    )],
+    tbl_outs = {"tools/llvm-cxxfilt/Opts.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-cxxfilt/Opts.td",
     deps = [":OptParserTdFiles"],
@@ -4589,10 +5036,7 @@ cc_binary(
 gentbl_cc_library(
     name = "DebugInfodFindOptsTableGen",
     strip_include_prefix = "tools/llvm-debuginfod-find",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/llvm-debuginfod-find/Opts.inc",
-    )],
+    tbl_outs = {"tools/llvm-debuginfod-find/Opts.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-debuginfod-find/Opts.td",
     deps = [":OptParserTdFiles"],
@@ -4649,20 +5093,20 @@ cc_binary(
         ":BinaryFormat",
         ":DebugInfo",
         ":DebugInfoDWARF",
+        ":DebugInfoDWARFLowLevel",
+        ":IRReader",
         ":MC",
         ":Object",
         ":Support",
         ":TargetParser",
+        ":ir_headers",
     ],
 )
 
 gentbl_cc_library(
     name = "DwarfutilOptionsTableGen",
     strip_include_prefix = "tools/llvm-dwarfutil",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/llvm-dwarfutil/Options.inc",
-    )],
+    tbl_outs = {"tools/llvm-dwarfutil/Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-dwarfutil/Options.td",
     deps = [":OptParserTdFiles"],
@@ -4683,6 +5127,7 @@ cc_binary(
         ":DWARFLinker",
         ":DWARFLinkerParallel",
         ":DebugInfoDWARF",
+        ":DebugInfoDWARFLowLevel",
         ":DwarfutilOptionsTableGen",
         ":MC",
         ":ObjCopy",
@@ -4697,10 +5142,7 @@ cc_binary(
 gentbl_cc_library(
     name = "DwpOptionsTableGen",
     strip_include_prefix = "tools/llvm-dwp",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/llvm-dwp/Opts.inc",
-    )],
+    tbl_outs = {"tools/llvm-dwp/Opts.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-dwp/Opts.td",
     deps = [":OptParserTdFiles"],
@@ -4771,10 +5213,7 @@ cc_binary(
 gentbl_cc_library(
     name = "GSYMUtilOptionsTableGen",
     strip_include_prefix = "tools/llvm-gsymutil",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/llvm-gsymutil/Opts.inc",
-    )],
+    tbl_outs = {"tools/llvm-gsymutil/Opts.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-gsymutil/Opts.td",
     deps = [":OptParserTdFiles"],
@@ -4808,10 +5247,7 @@ llvm_driver_cc_binary(
 gentbl_cc_library(
     name = "IfsOptionsTableGen",
     strip_include_prefix = "tools/llvm-ifs",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/llvm-ifs/Opts.inc",
-    )],
+    tbl_outs = {"tools/llvm-ifs/Opts.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-ifs/Opts.td",
     deps = [":OptParserTdFiles"],
@@ -4861,7 +5297,7 @@ cc_binary(
             "-Wl,--export-dynamic-symbol=__gxx_personality_v0",
             "-Wl,--export-dynamic-symbol=__cxa_allocate_exception",
             "-Wl,--export-dynamic-symbol=__cxa_throw",
-            "-Wl,--export-dynamic-symbol=llvm_orc_registerJITLoaderGDBWrapper",
+            "-Wl,--export-dynamic-symbol=llvm_orc_registerJITLoaderGDBAllocAction",
         ],
     }),
     stamp = 0,
@@ -4891,10 +5327,7 @@ cc_binary(
 gentbl_cc_library(
     name = "LibtoolDarwinOptionsTableGen",
     strip_include_prefix = "tools/llvm-libtool-darwin",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/llvm-libtool-darwin/Opts.inc",
-    )],
+    tbl_outs = {"tools/llvm-libtool-darwin/Opts.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-libtool-darwin/Opts.td",
     deps = [":OptParserTdFiles"],
@@ -4952,10 +5385,7 @@ cc_binary(
 gentbl_cc_library(
     name = "LipoOptsTableGen",
     strip_include_prefix = "tools/llvm-lipo",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/llvm-lipo/LipoOpts.inc",
-    )],
+    tbl_outs = {"tools/llvm-lipo/LipoOpts.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-lipo/LipoOpts.td",
     deps = [":OptParserTdFiles"],
@@ -5021,6 +5451,7 @@ cc_binary(
         ":Core",
         ":LTO",
         ":Passes",
+        ":Plugins",
         ":Remarks",
         ":Support",
     ],
@@ -5038,6 +5469,7 @@ cc_binary(
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
         ":AllTargetsDisassemblers",
+        ":DWARFCFIChecker",
         ":MC",
         ":MCDisassembler",
         ":MCParser",
@@ -5049,9 +5481,7 @@ cc_binary(
 
 cc_binary(
     name = "llvm-mca",
-    srcs = [
-        "tools/llvm-mca/llvm-mca.cpp",
-    ],
+    srcs = ["tools/llvm-mca/llvm-mca.cpp"],
     copts = llvm_copts,
     stamp = 0,
     deps = [
@@ -5071,10 +5501,7 @@ cc_binary(
 gentbl_cc_library(
     name = "MlTableGen",
     strip_include_prefix = "tools/llvm-ml",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/llvm-ml/Opts.inc",
-    )],
+    tbl_outs = {"tools/llvm-ml/Opts.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-ml/Opts.td",
     deps = [":OptParserTdFiles"],
@@ -5107,6 +5534,11 @@ llvm_driver_cc_binary(
     deps = [":llvm-ml-lib"],
 )
 
+binary_alias(
+    name = "llvm-ml64",
+    binary = ":llvm-ml",
+)
+
 cc_binary(
     name = "llvm-modextract",
     srcs = glob([
@@ -5126,10 +5558,7 @@ cc_binary(
 gentbl_cc_library(
     name = "MtTableGen",
     strip_include_prefix = "tools/llvm-mt",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/llvm-mt/Opts.inc",
-    )],
+    tbl_outs = {"tools/llvm-mt/Opts.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-mt/Opts.td",
     deps = [":OptParserTdFiles"],
@@ -5157,10 +5586,7 @@ llvm_driver_cc_binary(
 gentbl_cc_library(
     name = "NmOptsTableGen",
     strip_include_prefix = "tools/llvm-nm",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/llvm-nm/Opts.inc",
-    )],
+    tbl_outs = {"tools/llvm-nm/Opts.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-nm/Opts.td",
     deps = [":OptParserTdFiles"],
@@ -5200,10 +5626,7 @@ td_library(
 gentbl_cc_library(
     name = "llvm-objcopy-opts",
     strip_include_prefix = "tools/llvm-objcopy",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/llvm-objcopy/ObjcopyOpts.inc",
-    )],
+    tbl_outs = {"tools/llvm-objcopy/ObjcopyOpts.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-objcopy/ObjcopyOpts.td",
     deps = [
@@ -5215,10 +5638,7 @@ gentbl_cc_library(
 gentbl_cc_library(
     name = "llvm-installnametool-opts",
     strip_include_prefix = "tools/llvm-objcopy",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/llvm-objcopy/InstallNameToolOpts.inc",
-    )],
+    tbl_outs = {"tools/llvm-objcopy/InstallNameToolOpts.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-objcopy/InstallNameToolOpts.td",
     deps = [
@@ -5230,10 +5650,7 @@ gentbl_cc_library(
 gentbl_cc_library(
     name = "llvm-strip-opts",
     strip_include_prefix = "tools/llvm-objcopy",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/llvm-objcopy/StripOpts.inc",
-    )],
+    tbl_outs = {"tools/llvm-objcopy/StripOpts.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-objcopy/StripOpts.td",
     deps = [
@@ -5245,10 +5662,7 @@ gentbl_cc_library(
 gentbl_cc_library(
     name = "llvm-bitcode-strip-opts",
     strip_include_prefix = "tools/llvm-objcopy",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/llvm-objcopy/BitcodeStripOpts.inc",
-    )],
+    tbl_outs = {"tools/llvm-objcopy/BitcodeStripOpts.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-objcopy/BitcodeStripOpts.td",
     deps = [
@@ -5331,6 +5745,7 @@ cc_library(
         ":DebugInfo",
         ":DebugInfoBTF",
         ":DebugInfoDWARF",
+        ":DebugInfoDWARFLowLevel",
         ":Debuginfod",
         ":Demangle",
         ":MC",
@@ -5355,10 +5770,7 @@ llvm_driver_cc_binary(
 gentbl_cc_library(
     name = "ObjdumpOptsTableGen",
     strip_include_prefix = "tools/llvm-objdump",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/llvm-objdump/ObjdumpOpts.inc",
-    )],
+    tbl_outs = {"tools/llvm-objdump/ObjdumpOpts.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-objdump/ObjdumpOpts.td",
     deps = [":OptParserTdFiles"],
@@ -5372,10 +5784,7 @@ binary_alias(
 gentbl_cc_library(
     name = "OtoolOptsTableGen",
     strip_include_prefix = "tools/llvm-objdump",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/llvm-objdump/OtoolOpts.inc",
-    )],
+    tbl_outs = {"tools/llvm-objdump/OtoolOpts.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-objdump/OtoolOpts.td",
     deps = [":OptParserTdFiles"],
@@ -5393,6 +5802,36 @@ cc_binary(
         ":Demangle",
         ":Remarks",
         ":Support",
+    ],
+)
+
+cc_binary(
+    name = "llvm-offload-wrapper",
+    srcs = glob([
+        "tools/llvm-offload-wrapper/*.cpp",
+    ]),
+    copts = llvm_copts,
+    stamp = 0,
+    deps = [
+        ":BitWriter",
+        ":Core",
+        ":FrontendOffloading",
+        ":Object",
+        ":Option",
+        ":Support",
+        ":TargetParser",
+        ":intrinsic_enums_gen",
+    ],
+)
+
+cc_binary(
+    name = "llvm-offload-binary",
+    srcs = glob(["tools/llvm-offload-binary/*.cpp"]),
+    stamp = 0,
+    deps = [
+        "//llvm:BinaryFormat",
+        "//llvm:Object",
+        "//llvm:Support",
     ],
 )
 
@@ -5430,7 +5869,7 @@ cc_library(
     ],
 )
 
-llvm_driver_cc_binary(
+cc_binary(
     name = "llvm-profdata",
     stamp = 0,
     deps = [":llvm-profdata-lib"],
@@ -5449,6 +5888,7 @@ cc_binary(
         ":AllTargetsDisassemblers",
         ":Core",
         ":DebugInfoDWARF",
+        ":DebugInfoPDB",
         ":Demangle",
         ":IPO",
         ":MC",
@@ -5464,10 +5904,7 @@ cc_binary(
 gentbl_cc_library(
     name = "RcTableGen",
     strip_include_prefix = "tools/llvm-rc",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/llvm-rc/Opts.inc",
-    )],
+    tbl_outs = {"tools/llvm-rc/Opts.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-rc/Opts.td",
     deps = [":OptParserTdFiles"],
@@ -5476,10 +5913,7 @@ gentbl_cc_library(
 gentbl_cc_library(
     name = "WindresTableGen",
     strip_include_prefix = "tools/llvm-rc",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/llvm-rc/WindresOpts.inc",
-    )],
+    tbl_outs = {"tools/llvm-rc/WindresOpts.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-rc/WindresOpts.td",
     deps = [":OptParserTdFiles"],
@@ -5524,10 +5958,7 @@ binary_alias(
 gentbl_cc_library(
     name = "ReadobjOptsTableGen",
     strip_include_prefix = "tools/llvm-readobj",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/llvm-readobj/Opts.inc",
-    )],
+    tbl_outs = {"tools/llvm-readobj/Opts.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-readobj/Opts.td",
     deps = [":OptParserTdFiles"],
@@ -5567,6 +5998,12 @@ binary_alias(
     binary = ":llvm-readobj",
 )
 
+# Workaround inability to put `.def` files into `srcs`.
+cc_library(
+    name = "llvm-reduce-defs-lib",
+    textual_hdrs = glob(["tools/llvm-reduce/*.def"]),
+)
+
 cc_binary(
     name = "llvm-reduce",
     srcs = glob([
@@ -5594,6 +6031,23 @@ cc_binary(
         ":TargetParser",
         ":TransformUtils",
         ":config",
+        ":llvm-reduce-defs-lib",
+    ],
+)
+
+cc_binary(
+    name = "llvm-remarkutil",
+    srcs = glob([
+        "tools/llvm-remarkutil/**/*.cpp",
+        "tools/llvm-remarkutil/**/*.h",
+    ]),
+    copts = llvm_copts,
+    includes = ["tools/llvm-remarkutil"],
+    stamp = 0,
+    deps = [
+        ":Demangle",
+        ":Remarks",
+        ":Support",
     ],
 )
 
@@ -5620,10 +6074,7 @@ cc_binary(
 gentbl_cc_library(
     name = "SizeOptsTableGen",
     strip_include_prefix = "tools/llvm-size",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/llvm-size/Opts.inc",
-    )],
+    tbl_outs = {"tools/llvm-size/Opts.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-size/Opts.td",
     deps = [":OptParserTdFiles"],
@@ -5659,6 +6110,7 @@ cc_binary(
         ":AllTargetsCodeGens",
         ":BitWriter",
         ":Core",
+        ":IPO",
         ":IRPrinter",
         ":IRReader",
         ":MC",
@@ -5672,10 +6124,7 @@ cc_binary(
 gentbl_cc_library(
     name = "StringsOptsTableGen",
     strip_include_prefix = "tools/llvm-strings",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/llvm-strings/Opts.inc",
-    )],
+    tbl_outs = {"tools/llvm-strings/Opts.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-strings/Opts.td",
     deps = [":OptParserTdFiles"],
@@ -5699,10 +6148,7 @@ cc_binary(
 gentbl_cc_library(
     name = "SymbolizerOptsTableGen",
     strip_include_prefix = "tools/llvm-symbolizer",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/llvm-symbolizer/Opts.inc",
-    )],
+    tbl_outs = {"tools/llvm-symbolizer/Opts.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-symbolizer/Opts.td",
     deps = [":OptParserTdFiles"],
@@ -5793,6 +6239,7 @@ cc_library(
         ":Instrumentation",
         ":MC",
         ":Passes",
+        ":Plugins",
         ":Remarks",
         ":Scalar",
         ":Support",
@@ -5813,10 +6260,7 @@ cc_binary(
 gentbl_cc_library(
     name = "SancovOptsTableGen",
     strip_include_prefix = "tools/sancov",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/sancov/Opts.inc",
-    )],
+    tbl_outs = {"tools/sancov/Opts.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/sancov/Opts.td",
     deps = [":OptParserTdFiles"],
@@ -5873,6 +6317,11 @@ cc_binary(
     ],
 )
 
+filegroup(
+    name = "gdb-scripts",
+    srcs = glob(["utils/gdb-scripts/*"]),
+)
+
 ################################################################################
 # Begin testonly libraries
 
@@ -5916,9 +6365,10 @@ py_binary(
 py_binary(
     name = "extract_ir",
     srcs = [
+        "utils/mlgo-utils/extract_ir.py",
         "utils/mlgo-utils/mlgo/__init__.py",
-        "utils/mlgo-utils/mlgo/corpus/extract_ir.py",
         "utils/mlgo-utils/mlgo/corpus/extract_ir_lib.py",
+        "utils/mlgo-utils/mlgo/corpus/flags.py",
     ],
     imports = ["utils/mlgo-utils"],
 )
@@ -5926,9 +6376,10 @@ py_binary(
 py_binary(
     name = "combine_training_corpus",
     srcs = [
+        "utils/mlgo-utils/combine_training_corpus.py",
         "utils/mlgo-utils/mlgo/__init__.py",
-        "utils/mlgo-utils/mlgo/corpus/combine_training_corpus.py",
         "utils/mlgo-utils/mlgo/corpus/combine_training_corpus_lib.py",
+        "utils/mlgo-utils/mlgo/corpus/flags.py",
     ],
     imports = ["utils/mlgo-utils"],
 )
@@ -5936,8 +6387,8 @@ py_binary(
 py_binary(
     name = "make_corpus",
     srcs = [
+        "utils/mlgo-utils/make_corpus.py",
         "utils/mlgo-utils/mlgo/__init__.py",
-        "utils/mlgo-utils/mlgo/corpus/make_corpus.py",
         "utils/mlgo-utils/mlgo/corpus/make_corpus_lib.py",
     ],
     imports = ["utils/mlgo-utils"],
@@ -5954,6 +6405,13 @@ cc_library(
         ":Support",
         "//third-party/unittest:gmock",
     ],
+)
+
+cc_library(
+    name = "TestingDemangle",
+    testonly = True,
+    copts = llvm_copts,
+    textual_hdrs = glob(["include/llvm/Testing/Demangle/*.inc"]),
 )
 
 cc_library(
@@ -6020,6 +6478,7 @@ cc_binary(
         ":IRReader",
         ":Linker",
         ":Passes",
+        ":Plugins",
         ":Scalar",
         ":Support",
         ":TargetParser",
@@ -6096,6 +6555,7 @@ cc_binary(
         ":Object",
         ":OrcJIT",
         ":Passes",
+        ":Plugins",
         ":Remarks",
         ":Scalar",
         ":Support",
@@ -6205,10 +6665,7 @@ cc_binary(
 gentbl_cc_library(
     name = "ReadTAPIOptsTableGen",
     strip_include_prefix = "tools/llvm-readtapi",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/llvm-readtapi/TapiOpts.inc",
-    )],
+    tbl_outs = {"tools/llvm-readtapi/TapiOpts.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-readtapi/TapiOpts.td",
     deps = [":OptParserTdFiles"],
@@ -6237,10 +6694,7 @@ cc_binary(
 gentbl_cc_library(
     name = "TLICheckerOptsTableGen",
     strip_include_prefix = "tools/llvm-tli-checker",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/llvm-tli-checker/Opts.inc",
-    )],
+    tbl_outs = {"tools/llvm-tli-checker/Opts.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-tli-checker/Opts.td",
     deps = [":OptParserTdFiles"],
@@ -6270,6 +6724,69 @@ cc_binary(
         ":TLICheckerOptsTableGen",
         ":TargetParser",
         ":TextAPI",
+        ":config",
+    ],
+)
+
+cc_binary(
+    name = "llvm-sim",
+    testonly = True,
+    srcs = glob([
+        "tools/llvm-sim/*.cpp",
+    ]),
+    copts = llvm_copts,
+    stamp = 0,
+    deps = [
+        ":Analysis",
+        ":Core",
+        ":IRReader",
+        ":Support",
+        ":config",
+    ],
+)
+
+cc_binary(
+    name = "llvm-ir2vec",
+    testonly = True,
+    srcs = glob(
+        [
+            "tools/llvm-ir2vec/**/*.cpp",
+            "tools/llvm-ir2vec/lib/*.h",
+        ],
+        exclude = ["tools/llvm-ir2vec/Bindings/*.cpp"],
+    ),
+    copts = llvm_copts,
+    includes = ["tools/llvm-ir2vec/lib"],
+    stamp = 0,
+    deps = [
+        ":AllTargetsAsmParsers",
+        ":AllTargetsCodeGens",
+        ":AllTargetsMCAs",
+        ":Analysis",
+        ":CodeGen",
+        ":Core",
+        ":IRReader",
+        ":MC",
+        ":Support",
+        ":Target",
+        ":TargetParser",
+        ":config",
+    ],
+)
+
+cc_binary(
+    name = "llvm-ctxprof-util",
+    testonly = True,
+    srcs = glob([
+        "tools/llvm-ctxprof-util/*.cpp",
+    ]),
+    copts = llvm_copts,
+    stamp = 0,
+    deps = [
+        ":Core",
+        ":Object",
+        ":ProfileData",
+        ":Support",
         ":config",
     ],
 )

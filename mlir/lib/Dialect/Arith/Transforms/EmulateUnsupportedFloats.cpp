@@ -42,33 +42,31 @@ struct EmulateUnsupportedFloatsPass
 
 struct EmulateFloatPattern final : ConversionPattern {
   EmulateFloatPattern(const TypeConverter &converter, MLIRContext *ctx)
-      : ConversionPattern(converter, Pattern::MatchAnyOpTypeTag(), 1, ctx) {}
+      : ConversionPattern::ConversionPattern(
+            converter, Pattern::MatchAnyOpTypeTag(), 1, ctx) {}
 
-  LogicalResult match(Operation *op) const override;
-  void rewrite(Operation *op, ArrayRef<Value> operands,
-               ConversionPatternRewriter &rewriter) const override;
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override;
 };
 } // end namespace
 
-LogicalResult EmulateFloatPattern::match(Operation *op) const {
+LogicalResult EmulateFloatPattern::matchAndRewrite(
+    Operation *op, ArrayRef<Value> operands,
+    ConversionPatternRewriter &rewriter) const {
   if (getTypeConverter()->isLegal(op))
     return failure();
   // The rewrite doesn't handle cloning regions.
   if (op->getNumRegions() != 0)
     return failure();
-  return success();
-}
 
-void EmulateFloatPattern::rewrite(Operation *op, ArrayRef<Value> operands,
-                                  ConversionPatternRewriter &rewriter) const {
   Location loc = op->getLoc();
   const TypeConverter *converter = getTypeConverter();
   SmallVector<Type> resultTypes;
   if (failed(converter->convertTypes(op->getResultTypes(), resultTypes))) {
     // Note to anyone looking for this error message: this is a "can't happen".
     // If you're seeing it, there's a bug.
-    op->emitOpError("type conversion failed in float emulation");
-    return;
+    return op->emitOpError("type conversion failed in float emulation");
   }
   Operation *expandedOp =
       rewriter.create(loc, op->getName().getIdentifier(), operands, resultTypes,
@@ -77,12 +75,13 @@ void EmulateFloatPattern::rewrite(Operation *op, ArrayRef<Value> operands,
   for (auto [res, oldType, newType] : llvm::zip_equal(
            MutableArrayRef{newResults}, op->getResultTypes(), resultTypes)) {
     if (oldType != newType) {
-      auto truncFOp = rewriter.create<arith::TruncFOp>(loc, oldType, res);
+      auto truncFOp = arith::TruncFOp::create(rewriter, loc, oldType, res);
       truncFOp.setFastmath(arith::FastMathFlags::contract);
       res = truncFOp.getResult();
     }
   }
   rewriter.replaceOp(op, newResults);
+  return success();
 }
 
 void mlir::arith::populateEmulateUnsupportedFloatsConversions(
@@ -99,7 +98,7 @@ void mlir::arith::populateEmulateUnsupportedFloatsConversions(
   });
   converter.addTargetMaterialization(
       [](OpBuilder &b, Type target, ValueRange input, Location loc) {
-        auto extFOp = b.create<arith::ExtFOp>(loc, target, input);
+        auto extFOp = arith::ExtFOp::create(b, loc, target, input);
         extFOp.setFastmath(arith::FastMathFlags::contract);
         return extFOp;
       });
@@ -119,12 +118,12 @@ void mlir::arith::populateEmulateUnsupportedFloatsLegality(
         return converter.isLegal(op);
       });
   // Manually mark arithmetic-performing vector instructions.
-  target.addDynamicallyLegalOp<
-      vector::ContractionOp, vector::ReductionOp, vector::MultiDimReductionOp,
-      vector::FMAOp, vector::OuterProductOp, vector::MatmulOp, vector::ScanOp>(
+  target.addDynamicallyLegalOp<vector::ContractionOp, vector::ReductionOp,
+                               vector::MultiDimReductionOp, vector::FMAOp,
+                               vector::OuterProductOp, vector::ScanOp>(
       [&](Operation *op) { return converter.isLegal(op); });
   target.addLegalOp<arith::BitcastOp, arith::ExtFOp, arith::TruncFOp,
-                    arith::ConstantOp, vector::SplatOp>();
+                    arith::ConstantOp, arith::SelectOp, vector::BroadcastOp>();
 }
 
 void EmulateUnsupportedFloatsPass::runOnOperation() {

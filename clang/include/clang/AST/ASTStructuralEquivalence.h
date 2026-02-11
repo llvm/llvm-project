@@ -43,6 +43,9 @@ struct StructuralEquivalenceContext {
   /// key: (from, to, IgnoreTemplateParmDepth)
   using NonEquivalentDeclSet = llvm::DenseSet<std::tuple<Decl *, Decl *, int>>;
 
+  /// The language options to use for making a structural equivalence check.
+  const LangOptions &LangOpts;
+
   /// AST contexts for which we are checking structural equivalence.
   ASTContext &FromCtx, &ToCtx;
 
@@ -57,6 +60,19 @@ struct StructuralEquivalenceContext {
   /// Declaration (from, to) pairs that are known not to be equivalent
   /// (which we have already complained about).
   NonEquivalentDeclSet &NonEquivalentDecls;
+
+  /// RAII helper that is used to suppress diagnostics during attribute
+  /// equivalence checking.
+  struct AttrScopedAttrEquivalenceContext {
+    AttrScopedAttrEquivalenceContext(StructuralEquivalenceContext &Ctx)
+        : Ctx(Ctx), OldComplain(Ctx.Complain) {
+      Ctx.Complain = false;
+    }
+    ~AttrScopedAttrEquivalenceContext() { Ctx.Complain = OldComplain; }
+
+    StructuralEquivalenceContext &Ctx;
+    bool OldComplain;
+  };
 
   StructuralEquivalenceKind EqKind;
 
@@ -76,15 +92,17 @@ struct StructuralEquivalenceContext {
   /// Whether to ignore comparing the depth of template param(TemplateTypeParm)
   bool IgnoreTemplateParmDepth;
 
-  StructuralEquivalenceContext(ASTContext &FromCtx, ASTContext &ToCtx,
+  StructuralEquivalenceContext(const LangOptions &LangOpts, ASTContext &FromCtx,
+                               ASTContext &ToCtx,
                                NonEquivalentDeclSet &NonEquivalentDecls,
                                StructuralEquivalenceKind EqKind,
                                bool StrictTypeSpelling = false,
                                bool Complain = true,
                                bool ErrorOnTagTypeMismatch = false,
                                bool IgnoreTemplateParmDepth = false)
-      : FromCtx(FromCtx), ToCtx(ToCtx), NonEquivalentDecls(NonEquivalentDecls),
-        EqKind(EqKind), StrictTypeSpelling(StrictTypeSpelling),
+      : LangOpts(LangOpts), FromCtx(FromCtx), ToCtx(ToCtx),
+        NonEquivalentDecls(NonEquivalentDecls), EqKind(EqKind),
+        StrictTypeSpelling(StrictTypeSpelling),
         ErrorOnTagTypeMismatch(ErrorOnTagTypeMismatch), Complain(Complain),
         IgnoreTemplateParmDepth(IgnoreTemplateParmDepth) {}
 
@@ -123,12 +141,15 @@ struct StructuralEquivalenceContext {
   ///
   /// FIXME: This is needed by ASTImporter and ASTStructureEquivalence. It
   /// probably makes more sense in some other common place then here.
-  static std::optional<unsigned>
-  findUntaggedStructOrUnionIndex(RecordDecl *Anon);
+  static UnsignedOrNone findUntaggedStructOrUnionIndex(RecordDecl *Anon);
 
   // If ErrorOnTagTypeMismatch is set, return the error, otherwise get the
   // relevant warning for the input error diagnostic.
   unsigned getApplicableDiagnostic(unsigned ErrorDiagnostic);
+
+  /// Iterate over the decl pairs in DeclsToCheck until either an inequivalent
+  /// pair is found or the queue is empty.
+  bool checkDeclQueue();
 
 private:
   /// Finish checking all of the structural equivalences.
@@ -147,6 +168,16 @@ private:
   /// false if they are for sure not.
   bool CheckKindSpecificEquivalence(Decl *D1, Decl *D2);
 };
+
+/// Expose these functions so that they can be called by the functions that
+/// check equivalence of attribute arguments.
+namespace ASTStructuralEquivalence {
+bool isEquivalent(StructuralEquivalenceContext &Context, QualType T1,
+                  QualType T2);
+bool isEquivalent(StructuralEquivalenceContext &Context, const Stmt *S1,
+                  const Stmt *S2);
+bool isEquivalent(const IdentifierInfo *Name1, const IdentifierInfo *Name2);
+} // namespace ASTStructuralEquivalence
 
 } // namespace clang
 

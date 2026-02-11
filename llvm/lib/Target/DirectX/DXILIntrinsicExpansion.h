@@ -8,7 +8,6 @@
 #ifndef LLVM_TARGET_DIRECTX_DXILINTRINSICEXPANSION_H
 #define LLVM_TARGET_DIRECTX_DXILINTRINSICEXPANSION_H
 
-#include "DXILResource.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 

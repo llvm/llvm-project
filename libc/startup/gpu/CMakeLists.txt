@@ -34,12 +34,16 @@ function(add_startup_object name)
       RUNTIME_OUTPUT_DIRECTORY ${LIBC_LIBRARY_DIR}
       RUNTIME_OUTPUT_NAME ${name}.o)
     target_link_options(${fq_target_name}.exe PRIVATE
+                        ${LIBC_COMPILE_OPTIONS_DEFAULT}
                         "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm")
   endif()
 endfunction()
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
   add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
+else()
+  message(WARNING "Cannot build 'crt1.o' for ${LIBC_TARGET_ARCHITECTURE} yet.")
+  return()
 endif()
 
 add_startup_object(

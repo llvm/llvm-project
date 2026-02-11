@@ -90,7 +90,7 @@ Y Outer<X>::Inner1<Y>::ReallyInner::value3 = Y();
 
 template<typename X>
 template<typename Y>
-Y Outer<X>::Inner1<Y*>::ReallyInner::value4; // expected-error{{Outer<X>::Inner1<Y *>::ReallyInner::}}
+Y Outer<X>::Inner1<Y*>::ReallyInner::value4; // expected-error{{'Outer<X>::Inner1<Y *>::ReallyInner'}}
 
 
 template<typename T>
@@ -152,14 +152,14 @@ namespace PR10924 {
 
   template< class Topology, class ctype >
   template< int codim >
-  class ReferenceElement< Topology, ctype > :: BaryCenterArray // expected-error{{out-of-line definition of 'BaryCenterArray' does not match any declaration in 'ReferenceElement<Topology, ctype>'}}
+  class ReferenceElement< Topology, ctype > :: BaryCenterArray // expected-error{{out-of-line definition of 'BaryCenterArray' does not match any declaration in 'PR10924::ReferenceElement<Topology, ctype>'}}
   {
   };
 }
 
 class Outer1 {
     template <typename T> struct X;
-    template <typename T> int X<T>::func() {} //  expected-error{{out-of-line definition of 'func' from class 'X<T>' without definition}}
+    template <typename T> int X<T>::func() {} //  expected-error{{out-of-line definition of 'func' from class 'Outer1::X<T>' without definition}}
 };
 
 namespace RefPack {

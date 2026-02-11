@@ -356,7 +356,8 @@ bool ABISysV_s390x::GetArgumentValues(Thread &thread, ValueList &values) const {
     // We currently only support extracting values with Clang QualTypes. Do we
     // care about others?
     CompilerType compiler_type = value->GetCompilerType();
-    std::optional<uint64_t> bit_size = compiler_type.GetBitSize(&thread);
+    std::optional<uint64_t> bit_size =
+        llvm::expectedToOptional(compiler_type.GetBitSize(&thread));
     if (!bit_size)
       return false;
     bool is_signed;
@@ -392,8 +393,6 @@ Status ABISysV_s390x::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   Thread *thread = frame_sp->GetThread().get();
 
   bool is_signed;
-  uint32_t count;
-  bool is_complex;
 
   RegisterContext *reg_ctx = thread->GetRegisterContext().get();
 
@@ -422,42 +421,37 @@ Status ABISysV_s390x::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
           "We don't support returning longer than 64 bit "
           "integer values at present.");
     }
-  } else if (compiler_type.IsFloatingPointType(count, is_complex)) {
-    if (is_complex)
-      error = Status::FromErrorString(
-          "We don't support returning complex values at present");
-    else {
-      std::optional<uint64_t> bit_width =
-          compiler_type.GetBitSize(frame_sp.get());
-      if (!bit_width) {
-        error = Status::FromErrorString("can't get type size");
+  } else if (compiler_type.IsRealFloatingPointType()) {
+    std::optional<uint64_t> bit_width =
+        llvm::expectedToOptional(compiler_type.GetBitSize(frame_sp.get()));
+    if (!bit_width) {
+      error = Status::FromErrorString("can't get type size");
+      return error;
+    }
+    if (*bit_width <= 64) {
+      const RegisterInfo *f0_info = reg_ctx->GetRegisterInfoByName("f0", 0);
+      RegisterValue f0_value;
+      DataExtractor data;
+      Status data_error;
+      size_t num_bytes = new_value_sp->GetData(data, data_error);
+      if (data_error.Fail()) {
+        error = Status::FromErrorStringWithFormat(
+            "Couldn't convert return value to raw data: %s",
+            data_error.AsCString());
         return error;
       }
-      if (*bit_width <= 64) {
-        const RegisterInfo *f0_info = reg_ctx->GetRegisterInfoByName("f0", 0);
-        RegisterValue f0_value;
-        DataExtractor data;
-        Status data_error;
-        size_t num_bytes = new_value_sp->GetData(data, data_error);
-        if (data_error.Fail()) {
-          error = Status::FromErrorStringWithFormat(
-              "Couldn't convert return value to raw data: %s",
-              data_error.AsCString());
-          return error;
-        }
 
-        unsigned char buffer[8];
-        ByteOrder byte_order = data.GetByteOrder();
+      unsigned char buffer[8];
+      ByteOrder byte_order = data.GetByteOrder();
 
-        data.CopyByteOrderedData(0, num_bytes, buffer, 8, byte_order);
-        f0_value.SetBytes(buffer, 8, byte_order);
-        reg_ctx->WriteRegister(f0_info, f0_value);
-        set_it_simple = true;
-      } else {
-        // FIXME - don't know how to do long doubles yet.
-        error = Status::FromErrorString(
-            "We don't support returning float values > 64 bits at present");
-      }
+      data.CopyByteOrderedData(0, num_bytes, buffer, 8, byte_order);
+      f0_value.SetBytes(buffer, 8, byte_order);
+      reg_ctx->WriteRegister(f0_info, f0_value);
+      set_it_simple = true;
+    } else {
+      // FIXME - don't know how to do long doubles yet.
+      error = Status::FromErrorString(
+          "We don't support returning float values > 64 bits at present");
     }
   }
 
@@ -496,7 +490,7 @@ ValueObjectSP ABISysV_s390x::GetReturnValueObjectSimple(
     if (type_flags & eTypeIsInteger) {
       // Extract the register context so we can read arguments from registers.
       std::optional<uint64_t> byte_size =
-          return_compiler_type.GetByteSize(&thread);
+          llvm::expectedToOptional(return_compiler_type.GetByteSize(&thread));
       if (!byte_size)
         return return_valobj_sp;
       uint64_t raw_value = thread.GetRegisterContext()->ReadRegisterAsUnsigned(
@@ -543,7 +537,7 @@ ValueObjectSP ABISysV_s390x::GetReturnValueObjectSimple(
         // Don't handle complex yet.
       } else {
         std::optional<uint64_t> byte_size =
-            return_compiler_type.GetByteSize(&thread);
+            llvm::expectedToOptional(return_compiler_type.GetByteSize(&thread));
         if (byte_size && *byte_size <= sizeof(long double)) {
           const RegisterInfo *f0_info = reg_ctx->GetRegisterInfoByName("f0", 0);
           RegisterValue f0_value;
@@ -617,29 +611,27 @@ ValueObjectSP ABISysV_s390x::GetReturnValueObjectImpl(
   return return_valobj_sp;
 }
 
-bool ABISysV_s390x::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+UnwindPlanSP ABISysV_s390x::CreateFunctionEntryUnwindPlan() {
+  UnwindPlan::Row row;
 
   // Our Call Frame Address is the stack pointer value + 160
-  row->GetCFAValue().SetIsRegisterPlusOffset(dwarf_r15_s390x, 160);
+  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_r15_s390x, 160);
 
   // The previous PC is in r14
-  row->SetRegisterLocationToRegister(dwarf_pswa_s390x, dwarf_r14_s390x, true);
+  row.SetRegisterLocationToRegister(dwarf_pswa_s390x, dwarf_r14_s390x, true);
 
   // All other registers are the same.
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("s390x at-func-entry default");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(std::move(row));
+  plan_sp->SetSourceName("s390x at-func-entry default");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  return plan_sp;
 }
 
-bool ABISysV_s390x::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
+UnwindPlanSP ABISysV_s390x::CreateDefaultUnwindPlan() {
   // There's really no default way to unwind on s390x. Trust the .eh_frame CFI,
   // which should always be good.
-  return false;
+  return nullptr;
 }
 
 bool ABISysV_s390x::GetFallbackRegisterLocation(

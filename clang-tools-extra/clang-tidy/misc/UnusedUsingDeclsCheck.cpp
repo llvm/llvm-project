@@ -1,4 +1,4 @@
-//===--- UnusedUsingDeclsCheck.cpp - clang-tidy----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -71,11 +71,7 @@ void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
                          templateArgument().bind("used")))),
                      this);
   Finder->addMatcher(userDefinedLiteral().bind("used"), this);
-  Finder->addMatcher(
-      loc(elaboratedType(unless(hasQualifier(nestedNameSpecifier())),
-                         hasUnqualifiedDesugaredType(
-                             type(asTagDecl(tagDecl().bind("used")))))),
-      this);
+  Finder->addMatcher(loc(asTagDecl(tagDecl().bind("used"))), this);
   // Cases where we can identify the UsingShadowDecl directly, rather than
   // just its target.
   // FIXME: cover more cases in this way, as the AST supports it.
@@ -135,7 +131,7 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
       return;
     }
     if (const auto *ECD = dyn_cast<EnumConstantDecl>(Used)) {
-      if (const auto *ET = ECD->getType()->getAs<EnumType>())
+      if (const auto *ET = ECD->getType()->getAsCanonical<EnumType>())
         removeFromFoundDecls(ET->getDecl());
     }
   };
@@ -165,9 +161,8 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
       return;
     }
 
-    if (Used->getKind() == TemplateArgument::Declaration) {
+    if (Used->getKind() == TemplateArgument::Declaration)
       RemoveNamedDecl(Used->getAsDecl());
-    }
     return;
   }
 
@@ -177,15 +172,22 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
   }
   // Check the uninstantiated template function usage.
   if (const auto *ULE = Result.Nodes.getNodeAs<UnresolvedLookupExpr>("used")) {
-    for (const NamedDecl *ND : ULE->decls()) {
+    for (const NamedDecl *ND : ULE->decls())
       if (const auto *USD = dyn_cast<UsingShadowDecl>(ND))
         removeFromFoundDecls(USD->getTargetDecl()->getCanonicalDecl());
-    }
     return;
   }
   // Check user-defined literals
-  if (const auto *UDL = Result.Nodes.getNodeAs<UserDefinedLiteral>("used"))
-    removeFromFoundDecls(UDL->getCalleeDecl());
+  if (const auto *UDL = Result.Nodes.getNodeAs<UserDefinedLiteral>("used")) {
+    const Decl *CalleeDecl = UDL->getCalleeDecl();
+    if (const auto *FD = dyn_cast<FunctionDecl>(CalleeDecl)) {
+      if (const FunctionTemplateDecl *FPT = FD->getPrimaryTemplate()) {
+        removeFromFoundDecls(FPT);
+        return;
+      }
+    }
+    removeFromFoundDecls(CalleeDecl);
+  }
 }
 
 void UnusedUsingDeclsCheck::removeFromFoundDecls(const Decl *D) {

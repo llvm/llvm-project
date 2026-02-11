@@ -214,13 +214,14 @@ Available checks are:
      the wrong dynamic type, or that its lifetime has not begun or has ended.
      Incompatible with ``-fno-rtti``. Link must be performed by ``clang++``, not
      ``clang``, to make sure C++-specific parts of the runtime library and C++
-     standard libraries are present.
+     standard libraries are present. The check is not a part of the ``undefined``
+     group. Also it does not support ``-fsanitize-trap=vptr``.
 
 You can also use the following check groups:
   -  ``-fsanitize=undefined``: All of the checks listed above other than
      ``float-divide-by-zero``, ``unsigned-integer-overflow``,
-     ``implicit-conversion``, ``local-bounds`` and the ``nullability-*`` group
-     of checks.
+     ``implicit-conversion``, ``local-bounds``, ``vptr`` and the
+     ``nullability-*`` group of checks.
   -  ``-fsanitize=undefined-trap``: Deprecated alias of
      ``-fsanitize=undefined``.
   -  ``-fsanitize=implicit-integer-truncation``: Catches lossy integral
@@ -378,6 +379,20 @@ contains possible signed integer overflow, you can use
 This attribute may not be
 supported by other compilers, so consider using it together with
 ``#if defined(__clang__)``.
+
+Interaction of Inlining with Disabling Sanitizer Instrumentation
+-----------------------------------------------------------------
+
+Unlike many of the other sanitizers (e.g., ASan/MSan, TSan), UBSan is largely
+compatible with inlining, both the compiler's heuristic inlining as well as
+``__attribute__((always_inline))``.
+
+There are (at least) two exceptions:
+
+* inlining may change the layout of variables, which can affect whether
+  the `alignment` check detects an under-aligned variable
+* combining `__attribute((no_sanitize("local-bounds")))` with
+  `__attribute((always_inline))` is not supported
 
 Suppressing Errors in Recompiled Code (Ignorelist)
 --------------------------------------------------

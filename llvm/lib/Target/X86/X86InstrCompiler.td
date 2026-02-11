@@ -258,6 +258,8 @@ let isPseudo = 1, isMeta = 1, isNotDuplicable = 1, SchedRW = [WriteSystem] in {
                             "#SEH_PushFrame $mode", []>;
   def SEH_EndPrologue : I<0, Pseudo, (outs), (ins),
                             "#SEH_EndPrologue", []>;
+  def SEH_UnwindVersion : I<0, Pseudo, (outs), (ins i1imm:$version),
+                            "#SEH_UnwindVersion $version", []>;
 }
 
 // Epilog instructions:
@@ -266,6 +268,14 @@ let isPseudo = 1, isMeta = 1, SchedRW = [WriteSystem] in {
                             "#SEH_BeginEpilogue", []>;
   def SEH_EndEpilogue : I<0, Pseudo, (outs), (ins),
                             "#SEH_EndEpilogue", []>;
+  def SEH_UnwindV2Start : I<0, Pseudo, (outs), (ins),
+                            "#SEH_UnwindV2Start", []>;
+}
+
+// Chain instructions:
+let isPseudo = 1, isMeta = 1, SchedRW = [WriteSystem] in {
+  def SEH_SplitChainedAtEndOfBlock : I<0, Pseudo, (outs), (ins),
+                            "#SEH_SplitChainedAtEndOfBlock", []>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -320,7 +330,7 @@ def MOV32r0  : I<0, Pseudo, (outs GR32:$dst), (ins), "",
 let AddedComplexity = 10 in {
 def : Pat<(i8 0), (EXTRACT_SUBREG (MOV32r0), sub_8bit)>;
 def : Pat<(i16 0), (EXTRACT_SUBREG (MOV32r0), sub_16bit)>;
-def : Pat<(i64 0), (SUBREG_TO_REG (i64 0), (MOV32r0), sub_32bit)>;
+def : Pat<(i64 0), (SUBREG_TO_REG (MOV32r0), sub_32bit)>;
 }
 
 let Predicates = [OptForSize, Not64BitMode],
@@ -1083,27 +1093,27 @@ defm LXADD : ATOMIC_RMW_BINOP<0xc0, 0xc1, "xadd", "atomic_load_add">, TB, LOCK;
  * (see below the RELEASE_MOV* / ACQUIRE_MOV* pseudo-instructions)
  */
 multiclass RELEASE_BINOP_MI<string Name, SDNode op> {
-  def : Pat<(atomic_store_8 (op (atomic_load_8 addr:$dst), (i8 imm:$src)),
+  def : Pat<(atomic_store_8 (op (atomic_load_nonext_8 addr:$dst), (i8 imm:$src)),
                             addr:$dst),
             (!cast<Instruction>(Name#"8mi") addr:$dst, imm:$src)>;
-  def : Pat<(atomic_store_16 (op (atomic_load_16 addr:$dst), (i16 imm:$src)),
+  def : Pat<(atomic_store_16 (op (atomic_load_nonext_16 addr:$dst), (i16 imm:$src)),
                              addr:$dst),
             (!cast<Instruction>(Name#"16mi") addr:$dst, imm:$src)>;
-  def : Pat<(atomic_store_32 (op (atomic_load_32 addr:$dst), (i32 imm:$src)),
+  def : Pat<(atomic_store_32 (op (atomic_load_nonext_32 addr:$dst), (i32 imm:$src)),
                              addr:$dst),
             (!cast<Instruction>(Name#"32mi") addr:$dst, imm:$src)>;
-  def : Pat<(atomic_store_64 (op (atomic_load_64 addr:$dst), (i64immSExt32:$src)),
+  def : Pat<(atomic_store_64 (op (atomic_load_nonext_64 addr:$dst), (i64immSExt32:$src)),
                              addr:$dst),
             (!cast<Instruction>(Name#"64mi32") addr:$dst, (i64immSExt32:$src))>;
-  def : Pat<(atomic_store_8 (op (atomic_load_8 addr:$dst), (i8 GR8:$src)), addr:$dst),
+  def : Pat<(atomic_store_8 (op (atomic_load_nonext_8 addr:$dst), (i8 GR8:$src)), addr:$dst),
             (!cast<Instruction>(Name#"8mr") addr:$dst, GR8:$src)>;
-  def : Pat<(atomic_store_16 (op (atomic_load_16 addr:$dst), (i16 GR16:$src)),
+  def : Pat<(atomic_store_16 (op (atomic_load_nonext_16 addr:$dst), (i16 GR16:$src)),
                              addr:$dst),
             (!cast<Instruction>(Name#"16mr") addr:$dst, GR16:$src)>;
-  def : Pat<(atomic_store_32 (op (atomic_load_32 addr:$dst), (i32 GR32:$src)),
+  def : Pat<(atomic_store_32 (op (atomic_load_nonext_32 addr:$dst), (i32 GR32:$src)),
                              addr:$dst),
             (!cast<Instruction>(Name#"32mr") addr:$dst, GR32:$src)>;
-  def : Pat<(atomic_store_64 (op (atomic_load_64 addr:$dst), (i64 GR64:$src)),
+  def : Pat<(atomic_store_64 (op (atomic_load_nonext_64 addr:$dst), (i64 GR64:$src)),
                              addr:$dst),
             (!cast<Instruction>(Name#"64mr") addr:$dst, GR64:$src)>;
 }
@@ -1116,23 +1126,23 @@ defm : RELEASE_BINOP_MI<"SUB", sub>;
 // Atomic load + floating point patterns.
 // FIXME: This could also handle SIMD operations with *ps and *pd instructions.
 multiclass ATOMIC_LOAD_FP_BINOP_MI<string Name, SDNode op> {
-  def : Pat<(op FR32:$src1, (bitconvert (i32 (atomic_load_32 addr:$src2)))),
+  def : Pat<(op FR32:$src1, (bitconvert (i32 (atomic_load_nonext_32 addr:$src2)))),
             (!cast<Instruction>(Name#"SSrm") FR32:$src1, addr:$src2)>,
             Requires<[UseSSE1]>;
-  def : Pat<(op FR32:$src1, (bitconvert (i32 (atomic_load_32 addr:$src2)))),
+  def : Pat<(op FR32:$src1, (bitconvert (i32 (atomic_load_nonext_32 addr:$src2)))),
             (!cast<Instruction>("V"#Name#"SSrm") FR32:$src1, addr:$src2)>,
             Requires<[UseAVX]>;
-  def : Pat<(op FR32X:$src1, (bitconvert (i32 (atomic_load_32 addr:$src2)))),
+  def : Pat<(op FR32X:$src1, (bitconvert (i32 (atomic_load_nonext_32 addr:$src2)))),
             (!cast<Instruction>("V"#Name#"SSZrm") FR32X:$src1, addr:$src2)>,
             Requires<[HasAVX512]>;
 
-  def : Pat<(op FR64:$src1, (bitconvert (i64 (atomic_load_64 addr:$src2)))),
+  def : Pat<(op FR64:$src1, (bitconvert (i64 (atomic_load_nonext_64 addr:$src2)))),
             (!cast<Instruction>(Name#"SDrm") FR64:$src1, addr:$src2)>,
             Requires<[UseSSE1]>;
-  def : Pat<(op FR64:$src1, (bitconvert (i64 (atomic_load_64 addr:$src2)))),
+  def : Pat<(op FR64:$src1, (bitconvert (i64 (atomic_load_nonext_64 addr:$src2)))),
             (!cast<Instruction>("V"#Name#"SDrm") FR64:$src1, addr:$src2)>,
             Requires<[UseAVX]>;
-  def : Pat<(op FR64X:$src1, (bitconvert (i64 (atomic_load_64 addr:$src2)))),
+  def : Pat<(op FR64X:$src1, (bitconvert (i64 (atomic_load_nonext_64 addr:$src2)))),
             (!cast<Instruction>("V"#Name#"SDZrm") FR64X:$src1, addr:$src2)>,
             Requires<[HasAVX512]>;
 }
@@ -1155,27 +1165,27 @@ multiclass RELEASE_UNOP<string Name, dag dag8, dag dag16, dag dag32,
 
 let Predicates = [UseIncDec] in {
   defm : RELEASE_UNOP<"INC",
-      (add (atomic_load_8  addr:$dst), (i8 1)),
-      (add (atomic_load_16 addr:$dst), (i16 1)),
-      (add (atomic_load_32 addr:$dst), (i32 1)),
-      (add (atomic_load_64 addr:$dst), (i64 1))>;
+      (add (atomic_load_nonext_8  addr:$dst), (i8 1)),
+      (add (atomic_load_nonext_16 addr:$dst), (i16 1)),
+      (add (atomic_load_nonext_32 addr:$dst), (i32 1)),
+      (add (atomic_load_nonext_64 addr:$dst), (i64 1))>;
   defm : RELEASE_UNOP<"DEC",
-      (add (atomic_load_8  addr:$dst), (i8 -1)),
-      (add (atomic_load_16 addr:$dst), (i16 -1)),
-      (add (atomic_load_32 addr:$dst), (i32 -1)),
-      (add (atomic_load_64 addr:$dst), (i64 -1))>;
+      (add (atomic_load_nonext_8  addr:$dst), (i8 -1)),
+      (add (atomic_load_nonext_16 addr:$dst), (i16 -1)),
+      (add (atomic_load_nonext_32 addr:$dst), (i32 -1)),
+      (add (atomic_load_nonext_64 addr:$dst), (i64 -1))>;
 }
 
 defm : RELEASE_UNOP<"NEG",
-    (ineg (i8 (atomic_load_8  addr:$dst))),
-    (ineg (i16 (atomic_load_16 addr:$dst))),
-    (ineg (i32 (atomic_load_32 addr:$dst))),
-    (ineg (i64 (atomic_load_64 addr:$dst)))>;
+    (ineg (i8 (atomic_load_nonext_8  addr:$dst))),
+    (ineg (i16 (atomic_load_nonext_16 addr:$dst))),
+    (ineg (i32 (atomic_load_nonext_32 addr:$dst))),
+    (ineg (i64 (atomic_load_nonext_64 addr:$dst)))>;
 defm : RELEASE_UNOP<"NOT",
-    (not (i8 (atomic_load_8  addr:$dst))),
-    (not (i16 (atomic_load_16 addr:$dst))),
-    (not (i32 (atomic_load_32 addr:$dst))),
-    (not (i64 (atomic_load_64 addr:$dst)))>;
+    (not (i8 (atomic_load_nonext_8  addr:$dst))),
+    (not (i16 (atomic_load_nonext_16 addr:$dst))),
+    (not (i32 (atomic_load_nonext_32 addr:$dst))),
+    (not (i64 (atomic_load_nonext_64 addr:$dst)))>;
 
 def : Pat<(atomic_store_8 (i8 imm:$src), addr:$dst),
           (MOV8mi addr:$dst, imm:$src)>;
@@ -1195,10 +1205,26 @@ def : Pat<(atomic_store_32 GR32:$src, addr:$dst),
 def : Pat<(atomic_store_64 GR64:$src, addr:$dst),
           (MOV64mr addr:$dst, GR64:$src)>;
 
-def : Pat<(i8  (atomic_load_8 addr:$src)),  (MOV8rm addr:$src)>;
-def : Pat<(i16 (atomic_load_16 addr:$src)), (MOV16rm addr:$src)>;
-def : Pat<(i32 (atomic_load_32 addr:$src)), (MOV32rm addr:$src)>;
-def : Pat<(i64 (atomic_load_64 addr:$src)), (MOV64rm addr:$src)>;
+def : Pat<(i8  (atomic_load_nonext_8 addr:$src)),  (MOV8rm addr:$src)>;
+def : Pat<(i16 (atomic_load_nonext_16 addr:$src)), (MOV16rm addr:$src)>;
+def : Pat<(i32 (atomic_load_nonext_32 addr:$src)), (MOV32rm addr:$src)>;
+def : Pat<(i64 (atomic_load_nonext_64 addr:$src)), (MOV64rm addr:$src)>;
+
+// load atomic <2 x i16>
+def : Pat<(v4i32 (scalar_to_vector (i32 (atomic_load_32 addr:$src)))),
+  (MOVDI2PDIrm addr:$src)>, Requires<[UseSSE2]>;
+def : Pat<(v4i32 (scalar_to_vector (i32 (atomic_load_32 addr:$src)))),
+  (VMOVSSrm addr:$src)>, Requires<[UseAVX]>;
+def : Pat<(v4i32 (scalar_to_vector (i32 (atomic_load_32 addr:$src)))),
+  (VMOVSSZrm addr:$src)>, Requires<[HasAVX512]>;
+
+// load atomic <2 x i32,float>
+def : Pat<(v2i64 (scalar_to_vector (i64 (atomic_load_64 addr:$src)))),
+  (MOV64toPQIrm addr:$src)>, Requires<[UseSSE2]>;
+def : Pat<(v2i64 (scalar_to_vector (i64 (atomic_load_64 addr:$src)))),
+  (VMOV64toPQIrm addr:$src)>, Requires<[UseAVX]>;
+def : Pat<(v2i64 (scalar_to_vector (i64 (atomic_load_64 addr:$src)))),
+  (VMOV64toPQIZrm addr:$src)>, Requires<[HasAVX512]>;
 
 // Floating point loads/stores.
 def : Pat<(atomic_store_32 (i32 (bitconvert (f32 FR32:$src))), addr:$dst),
@@ -1215,18 +1241,18 @@ def : Pat<(atomic_store_64 (i64 (bitconvert (f64 FR64:$src))), addr:$dst),
 def : Pat<(atomic_store_64 (i64 (bitconvert (f64 FR64:$src))), addr:$dst),
           (VMOVSDmr addr:$dst, FR64:$src)>, Requires<[HasAVX512]>;
 
-def : Pat<(f32 (bitconvert (i32 (atomic_load_32 addr:$src)))),
+def : Pat<(f32 (bitconvert (i32 (atomic_load_nonext_32 addr:$src)))),
           (MOVSSrm_alt addr:$src)>, Requires<[UseSSE1]>;
-def : Pat<(f32 (bitconvert (i32 (atomic_load_32 addr:$src)))),
+def : Pat<(f32 (bitconvert (i32 (atomic_load_nonext_32 addr:$src)))),
           (VMOVSSrm_alt addr:$src)>, Requires<[UseAVX]>;
-def : Pat<(f32 (bitconvert (i32 (atomic_load_32 addr:$src)))),
+def : Pat<(f32 (bitconvert (i32 (atomic_load_nonext_32 addr:$src)))),
           (VMOVSSZrm_alt addr:$src)>, Requires<[HasAVX512]>;
 
-def : Pat<(f64 (bitconvert (i64 (atomic_load_64 addr:$src)))),
+def : Pat<(f64 (bitconvert (i64 (atomic_load_nonext_64 addr:$src)))),
           (MOVSDrm_alt addr:$src)>, Requires<[UseSSE2]>;
-def : Pat<(f64 (bitconvert (i64 (atomic_load_64 addr:$src)))),
+def : Pat<(f64 (bitconvert (i64 (atomic_load_nonext_64 addr:$src)))),
           (VMOVSDrm_alt addr:$src)>, Requires<[UseAVX]>;
-def : Pat<(f64 (bitconvert (i64 (atomic_load_64 addr:$src)))),
+def : Pat<(f64 (bitconvert (i64 (atomic_load_nonext_64 addr:$src)))),
           (VMOVSDZrm_alt addr:$src)>, Requires<[HasAVX512]>;
 
 //===----------------------------------------------------------------------===//
@@ -1252,8 +1278,17 @@ def : Pat<(i64 (X86Wrapper tconstpool  :$dst)),
           (MOV64ri32 tconstpool  :$dst)>, Requires<[KernelCode]>;
 def : Pat<(i64 (X86Wrapper tjumptable  :$dst)),
           (MOV64ri32 tjumptable  :$dst)>, Requires<[KernelCode]>;
-def : Pat<(i64 (X86Wrapper tglobaladdr :$dst)),
-          (MOV64ri32 tglobaladdr :$dst)>, Requires<[KernelCode]>;
+
+// If the globaladdr is an absolute_symbol, don't bother using the sign extending
+// instruction since there's no benefit to using it with absolute symbols.
+def globalAddrNoAbsSym : PatLeaf<(tglobaladdr:$dst), [{
+  auto *GA = cast<GlobalAddressSDNode>(N);
+  return !GA->getGlobal()->getAbsoluteSymbolRange();
+}]>;
+def : Pat<(i64 (X86Wrapper globalAddrNoAbsSym:$dst)),
+          (MOV64ri32 tglobaladdr:$dst)>,
+      Requires<[KernelCode]>;
+
 def : Pat<(i64 (X86Wrapper texternalsym:$dst)),
           (MOV64ri32 texternalsym:$dst)>, Requires<[KernelCode]>;
 def : Pat<(i64 (X86Wrapper mcsym:$dst)),
@@ -1309,6 +1344,8 @@ def : Pat<(X86call_rvmarker (i64 tglobaladdr:$rvfunc), (i64 texternalsym:$dst)),
 def : Pat<(X86call_rvmarker (i64 tglobaladdr:$rvfunc), (i64 tglobaladdr:$dst)),
           (CALL64pcrel32_RVMARKER tglobaladdr:$rvfunc, tglobaladdr:$dst)>;
 
+def : Pat<(X86imp_call (i64 tglobaladdr:$dst)),
+          (CALL64pcrel32 tglobaladdr:$dst)>;
 
 // Tailcall stuff. The TCRETURN instructions execute after the epilog, so they
 // can never use callee-saved registers. That is the purpose of the GR64_TC
@@ -1318,9 +1355,13 @@ def : Pat<(X86call_rvmarker (i64 tglobaladdr:$rvfunc), (i64 tglobaladdr:$dst)),
 // %r11. This happens when calling a vararg function with 6 arguments.
 //
 // Match an X86tcret that uses less than 7 volatile registers.
-def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
-          (TCRETURNri ptr_rc_tailcall:$dst, timm:$off)>,
-          Requires<[Not64BitMode, NotUseIndirectThunkCalls]>;
+def : Pat<(X86tcret GR32_TC:$dst, timm:$off),
+          (TCRETURNri GR32_TC:$dst, timm:$off)>,
+          Requires<[Not64BitMode, IsNotHiPECCFunc, NotUseIndirectThunkCalls]>;
+
+def : Pat<(X86tcret GR32:$dst, timm:$off),
+          (TCRETURN_HIPE32ri GR32:$dst, timm:$off)>,
+          Requires<[Not64BitMode, IsHiPECCFunc, NotUseIndirectThunkCalls]>;
 
 // FIXME: This is disabled for 32-bit PIC mode because the global base
 // register which is part of the address mode may be assigned a
@@ -1340,13 +1381,33 @@ def : Pat<(X86tcret (i32 texternalsym:$dst), timm:$off),
 
 def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
           (TCRETURNri64 ptr_rc_tailcall:$dst, timm:$off)>,
-          Requires<[In64BitMode, NotUseIndirectThunkCalls]>;
+          Requires<[In64BitMode, IsNotWin64CCFunc, NotUseIndirectThunkCalls, ImportCallOptimizationDisabled]>;
+
+def : Pat<(X86tcret GR64_TCW64:$dst, timm:$off),
+          (TCRETURN_WIN64ri GR64_TCW64:$dst, timm:$off)>,
+          Requires<[IsWin64CCFunc, NotUseIndirectThunkCalls, ImportCallOptimizationDisabled]>;
+
+def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
+          (TCRETURNri64_ImpCall ptr_rc_tailcall:$dst, timm:$off)>,
+          Requires<[In64BitMode, NotUseIndirectThunkCalls, ImportCallOptimizationEnabled]>;
 
 // Don't fold loads into X86tcret requiring more than 6 regs.
 // There wouldn't be enough scratch registers for base+index.
 def : Pat<(X86tcret_6regs (load addr:$dst), timm:$off),
           (TCRETURNmi64 addr:$dst, timm:$off)>,
-          Requires<[In64BitMode, NotUseIndirectThunkCalls]>;
+          Requires<[In64BitMode, IsNotWin64CCFunc, NotUseIndirectThunkCalls]>;
+
+def : Pat<(X86tcret_6regs (load addr:$dst), timm:$off),
+          (TCRETURN_WINmi64 addr:$dst, timm:$off)>,
+          Requires<[IsWin64CCFunc, NotUseIndirectThunkCalls]>;
+
+def : Pat<(X86tcret_globaladdr tglobaladdr:$dst, timm:$off),
+          (TCRETURNmi64 RIP, 1, zero_reg, tglobaladdr:$dst, zero_reg, timm:$off)>,
+          Requires<[In64BitMode, IsNotWin64CCFunc]>;
+
+def : Pat<(X86tcret_globaladdr tglobaladdr:$dst, timm:$off),
+          (TCRETURN_WINmi64 RIP, 1, zero_reg, tglobaladdr:$dst, zero_reg, timm:$off)>,
+          Requires<[IsWin64CCFunc]>;
 
 def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
           (INDIRECT_THUNK_TCRETURN64 ptr_rc_tailcall:$dst, timm:$off)>,
@@ -1372,6 +1433,9 @@ def : Pat<(X86call (i32 texternalsym:$dst)),
 def : Pat<(X86call (i32 imm:$dst)),
           (CALLpcrel32 imm:$dst)>, Requires<[CallImmAddr]>;
 
+def : Pat<(X86call_globaladdr tglobaladdr:$dst),
+          (CALL64m RIP, 1, zero_reg, tglobaladdr:$dst, zero_reg)>;
+
 // Comparisons.
 
 // TEST R,R is smaller than CMP R,0
@@ -1392,7 +1456,7 @@ def : Pat<(zextloadi16i1 addr:$src),
           (EXTRACT_SUBREG (MOVZX32rm8 addr:$src), sub_16bit)>;
 def : Pat<(zextloadi32i1 addr:$src), (MOVZX32rm8 addr:$src)>;
 def : Pat<(zextloadi64i1 addr:$src),
-          (SUBREG_TO_REG (i64 0), (MOVZX32rm8 addr:$src), sub_32bit)>;
+          (SUBREG_TO_REG (MOVZX32rm8 addr:$src), sub_32bit)>;
 
 // extload bool -> extload byte
 // When extloading from 16-bit and smaller memory locations into 64-bit
@@ -1413,13 +1477,13 @@ def : Pat<(extloadi32i16 addr:$src), (MOVZX32rm16 addr:$src)>;
 // NOTE: The extloadi64i32 pattern needs to be first as it will try to form
 // 32-bit loads for 4 byte aligned i8/i16 loads.
 def : Pat<(extloadi64i32 addr:$src),
-          (SUBREG_TO_REG (i64 0), (MOV32rm addr:$src), sub_32bit)>;
+          (SUBREG_TO_REG (MOV32rm addr:$src), sub_32bit)>;
 def : Pat<(extloadi64i1 addr:$src),
-          (SUBREG_TO_REG (i64 0), (MOVZX32rm8 addr:$src), sub_32bit)>;
+          (SUBREG_TO_REG (MOVZX32rm8 addr:$src), sub_32bit)>;
 def : Pat<(extloadi64i8 addr:$src),
-          (SUBREG_TO_REG (i64 0), (MOVZX32rm8 addr:$src), sub_32bit)>;
+          (SUBREG_TO_REG (MOVZX32rm8 addr:$src), sub_32bit)>;
 def : Pat<(extloadi64i16 addr:$src),
-          (SUBREG_TO_REG (i64 0), (MOVZX32rm16 addr:$src), sub_32bit)>;
+          (SUBREG_TO_REG (MOVZX32rm16 addr:$src), sub_32bit)>;
 
 // anyext. Define these to do an explicit zero-extend to
 // avoid partial-register updates.
@@ -1432,9 +1496,9 @@ def : Pat<(i32 (anyext GR16:$src)),
           (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR16:$src, sub_16bit)>;
 
 def : Pat<(i64 (anyext GR8 :$src)),
-          (SUBREG_TO_REG (i64 0), (MOVZX32rr8  GR8  :$src), sub_32bit)>;
+          (SUBREG_TO_REG (MOVZX32rr8  GR8  :$src), sub_32bit)>;
 def : Pat<(i64 (anyext GR16:$src)),
-          (SUBREG_TO_REG (i64 0), (MOVZX32rr16 GR16 :$src), sub_32bit)>;
+          (SUBREG_TO_REG (MOVZX32rr16 GR16 :$src), sub_32bit)>;
 def : Pat<(i64 (anyext GR32:$src)),
           (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR32:$src, sub_32bit)>;
 
@@ -1443,9 +1507,9 @@ def : Pat<(i32 (anyext_sdiv GR8:$src)), (MOVSX32rr8 GR8:$src)>;
 // In the case of a 32-bit def that is known to implicitly zero-extend,
 // we can use a SUBREG_TO_REG.
 def : Pat<(i64 (zext def32:$src)),
-          (SUBREG_TO_REG (i64 0), GR32:$src, sub_32bit)>;
+          (SUBREG_TO_REG GR32:$src, sub_32bit)>;
 def : Pat<(i64 (and (anyext def32:$src), 0x00000000FFFFFFFF)),
-          (SUBREG_TO_REG (i64 0), GR32:$src, sub_32bit)>;
+          (SUBREG_TO_REG GR32:$src, sub_32bit)>;
 
 //===----------------------------------------------------------------------===//
 // Pattern match OR as ADD
@@ -1612,7 +1676,6 @@ let AddedComplexity = 1 in {
   let Predicates = [NoNDD] in {
     def : Pat<(and GR64:$src, i64immZExt32:$imm),
               (SUBREG_TO_REG
-                (i64 0),
                 (AND32ri
                   (EXTRACT_SUBREG GR64:$src, sub_32bit),
                   (i32 (GetLo32XForm imm:$imm))),
@@ -1621,7 +1684,6 @@ let AddedComplexity = 1 in {
   let Predicates = [HasNDD] in {
     def : Pat<(and GR64:$src, i64immZExt32:$imm),
               (SUBREG_TO_REG
-                (i64 0),
                 (AND32ri_ND
                   (EXTRACT_SUBREG GR64:$src, sub_32bit),
                   (i32 (GetLo32XForm imm:$imm))),
@@ -1647,18 +1709,15 @@ def : Pat<(and GR16:$src1, 0xff),
 
 // r & (2^32-1) ==> movz
 def : Pat<(and GR64:$src, 0x00000000FFFFFFFF),
-          (SUBREG_TO_REG (i64 0),
-                         (MOV32rr (EXTRACT_SUBREG GR64:$src, sub_32bit)),
+          (SUBREG_TO_REG (MOV32rr (EXTRACT_SUBREG GR64:$src, sub_32bit)),
                          sub_32bit)>;
 // r & (2^16-1) ==> movz
 def : Pat<(and GR64:$src, 0xffff),
-          (SUBREG_TO_REG (i64 0),
-                      (MOVZX32rr16 (i16 (EXTRACT_SUBREG GR64:$src, sub_16bit))),
-                      sub_32bit)>;
+          (SUBREG_TO_REG (MOVZX32rr16 (i16 (EXTRACT_SUBREG GR64:$src, sub_16bit))),
+                         sub_32bit)>;
 // r & (2^8-1) ==> movz
 def : Pat<(and GR64:$src, 0xff),
-          (SUBREG_TO_REG (i64 0),
-                         (MOVZX32rr8 (i8 (EXTRACT_SUBREG GR64:$src, sub_8bit))),
+          (SUBREG_TO_REG (MOVZX32rr8 (i8 (EXTRACT_SUBREG GR64:$src, sub_8bit))),
                          sub_32bit)>;
 } // AddedComplexity = 1
 
@@ -1782,19 +1841,16 @@ def : Pat<(srl (and_su GR32:$src, immff00_ffff), (i8 8)),
 // h-register extract and zero-extend.
 def : Pat<(and (srl_su GR64:$src, (i8 8)), (i64 255)),
           (SUBREG_TO_REG
-            (i64 0),
             (MOVZX32rr8_NOREX
               (EXTRACT_SUBREG GR64:$src, sub_8bit_hi)),
             sub_32bit)>;
 def : Pat<(i64 (zext (srl_su GR16:$src, (i8 8)))),
           (SUBREG_TO_REG
-            (i64 0),
             (MOVZX32rr8_NOREX
               (EXTRACT_SUBREG GR16:$src, sub_8bit_hi)),
             sub_32bit)>;
 def : Pat<(i64 (anyext (srl_su GR16:$src, (i8 8)))),
           (SUBREG_TO_REG
-            (i64 0),
             (MOVZX32rr8_NOREX
               (EXTRACT_SUBREG GR16:$src, sub_8bit_hi)),
             sub_32bit)>;
@@ -2189,15 +2245,15 @@ defm : EFLAGSDefiningPats<"_ND", HasNDD>;
 let Predicates = [HasZU] in {
   // zext (mul reg/mem, imm) -> imulzu
   def : Pat<(i32 (zext (i16 (mul GR16:$src1, imm:$src2)))),
-            (SUBREG_TO_REG (i32 0), (IMULZU16rri GR16:$src1, imm:$src2), sub_16bit)>;
+            (SUBREG_TO_REG (IMULZU16rri GR16:$src1, imm:$src2), sub_16bit)>;
   def : Pat<(i32 (zext (i16 (mul (loadi16 addr:$src1), imm:$src2)))),
-            (SUBREG_TO_REG (i32 0), (IMULZU16rmi addr:$src1, imm:$src2), sub_16bit)>;
+            (SUBREG_TO_REG (IMULZU16rmi addr:$src1, imm:$src2), sub_16bit)>;
   def : Pat<(i64 (zext (i16 (mul GR16:$src1, imm:$src2)))),
-            (SUBREG_TO_REG (i64 0), (IMULZU16rri GR16:$src1, imm:$src2), sub_16bit)>;
+            (SUBREG_TO_REG (IMULZU16rri GR16:$src1, imm:$src2), sub_16bit)>;
   def : Pat<(i64 (zext (i16 (mul (loadi16 addr:$src1), imm:$src2)))),
-            (SUBREG_TO_REG (i64 0), (IMULZU16rmi addr:$src1, imm:$src2), sub_16bit)>;
+            (SUBREG_TO_REG (IMULZU16rmi addr:$src1, imm:$src2), sub_16bit)>;
 }
-  
+
 // mul reg, imm
 def : Pat<(mul GR16:$src1, imm:$src2),
           (IMUL16rri GR16:$src1, imm:$src2)>;

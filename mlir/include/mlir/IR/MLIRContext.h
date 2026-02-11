@@ -34,6 +34,9 @@ class MLIRContextImpl;
 class RegisteredOperationName;
 class StorageUniquer;
 class IRUnit;
+namespace remark::detail {
+class RemarkEngine;
+} // namespace remark::detail
 
 /// MLIRContext is the top-level object for a collection of MLIR operations. It
 /// holds immortal uniqued objects like types, and the tables used to unique
@@ -211,6 +214,13 @@ public:
 
   /// Returns the diagnostic engine for this context.
   DiagnosticEngine &getDiagEngine();
+
+  /// Returns the remark engine for this context, or nullptr if none has been
+  /// set.
+  remark::detail::RemarkEngine *getRemarkEngine();
+
+  /// Set the remark engine for this context.
+  void setRemarkEngine(std::unique_ptr<remark::detail::RemarkEngine> engine);
 
   /// Returns the storage uniquer used for creating affine constructs.
   StorageUniquer &getAffineUniquer();

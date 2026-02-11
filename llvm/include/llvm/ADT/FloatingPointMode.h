@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -74,16 +75,16 @@ struct DenormalMode {
     Invalid = -1,
 
     /// IEEE-754 denormal numbers preserved.
-    IEEE,
+    IEEE = 0,
 
     /// The sign of a flushed-to-zero number is preserved in the sign of 0
-    PreserveSign,
+    PreserveSign = 1,
 
     /// Denormals are flushed to positive zero.
-    PositiveZero,
+    PositiveZero = 2,
 
     /// Denormals have unknown treatment.
-    Dynamic
+    Dynamic = 3
   };
 
   /// Denormal flushing mode for floating point instruction results in the
@@ -129,19 +130,30 @@ struct DenormalMode {
     return DenormalMode(DenormalModeKind::Dynamic, DenormalModeKind::Dynamic);
   }
 
-  bool operator==(DenormalMode Other) const {
+  constexpr uint32_t toIntValue() const {
+    assert(Input != Invalid && Output != Invalid);
+    return (static_cast<uint32_t>(Input) << 2) | static_cast<uint32_t>(Output);
+  }
+
+  static constexpr DenormalMode createFromIntValue(uint32_t Data) {
+    uint32_t OutputMode = Data & 0x3;
+    uint32_t InputMode = (Data >> 2) & 0x3;
+
+    return {static_cast<DenormalModeKind>(OutputMode),
+            static_cast<DenormalModeKind>(InputMode)};
+  }
+
+  constexpr bool operator==(DenormalMode Other) const {
     return Output == Other.Output && Input == Other.Input;
   }
 
-  bool operator!=(DenormalMode Other) const {
+  constexpr bool operator!=(DenormalMode Other) const {
     return !(*this == Other);
   }
 
-  bool isSimple() const {
-    return Input == Output;
-  }
+  constexpr bool isSimple() const { return Input == Output; }
 
-  bool isValid() const {
+  constexpr bool isValid() const {
     return Output != DenormalModeKind::Invalid &&
            Input != DenormalModeKind::Invalid;
   }
@@ -152,16 +164,38 @@ struct DenormalMode {
            Input == DenormalModeKind::PositiveZero;
   }
 
+  /// Return true if input denormals may be implicitly treated as 0.
+  constexpr bool inputsMayBeZero() const {
+    return inputsAreZero() || Input == DenormalMode::Dynamic;
+  }
+
   /// Return true if output denormals should be flushed to 0.
   constexpr bool outputsAreZero() const {
     return Output == DenormalModeKind::PreserveSign ||
            Output == DenormalModeKind::PositiveZero;
   }
 
+  /// Return true if output denormals may be implicitly treated as 0.
+  constexpr bool outputsMayBeZero() const {
+    return outputsAreZero() || Output == DenormalMode::Dynamic;
+  }
+
+  /// Return true if input denormals could be flushed to +0.
+  constexpr bool inputsMayBePositiveZero() const {
+    return Input == DenormalMode::PositiveZero ||
+           Input == DenormalMode::Dynamic;
+  }
+
+  /// Return true if output denormals could be flushed to +0.
+  constexpr bool outputsMayBePositiveZero() const {
+    return Output == DenormalMode::PositiveZero ||
+           Output == DenormalMode::Dynamic;
+  }
+
   /// Get the effective denormal mode if the mode if this caller calls into a
   /// function with \p Callee. This promotes dynamic modes to the mode of the
   /// caller.
-  DenormalMode mergeCalleeMode(DenormalMode Callee) const {
+  constexpr DenormalMode mergeCalleeMode(DenormalMode Callee) const {
     DenormalMode MergedMode = Callee;
     if (Callee.Input == DenormalMode::Dynamic)
       MergedMode.Input = Input;
@@ -170,7 +204,8 @@ struct DenormalMode {
     return MergedMode;
   }
 
-  inline void print(raw_ostream &OS) const;
+  inline void print(raw_ostream &OS, bool Legacy = true,
+                    bool OmitIfSame = false) const;
 
   inline std::string str() const {
     std::string storage;
@@ -190,23 +225,24 @@ inline DenormalMode::DenormalModeKind
 parseDenormalFPAttributeComponent(StringRef Str) {
   // Assume ieee on unspecified attribute.
   return StringSwitch<DenormalMode::DenormalModeKind>(Str)
-      .Cases("", "ieee", DenormalMode::IEEE)
-      .Case("preserve-sign", DenormalMode::PreserveSign)
-      .Case("positive-zero", DenormalMode::PositiveZero)
+      .Cases({"", "ieee"}, DenormalMode::IEEE)
+      .Cases({"preservesign", "preserve-sign"}, DenormalMode::PreserveSign)
+      .Cases({"positivezero", "positive-zero"}, DenormalMode::PositiveZero)
       .Case("dynamic", DenormalMode::Dynamic)
       .Default(DenormalMode::Invalid);
 }
 
 /// Return the name used for the denormal handling mode used by the
 /// expected names from the denormal-fp-math attribute.
-inline StringRef denormalModeKindName(DenormalMode::DenormalModeKind Mode) {
+constexpr StringRef denormalModeKindName(DenormalMode::DenormalModeKind Mode,
+                                         bool LegacyName = true) {
   switch (Mode) {
   case DenormalMode::IEEE:
     return "ieee";
   case DenormalMode::PreserveSign:
-    return "preserve-sign";
+    return LegacyName ? "preserve-sign" : "preservesign";
   case DenormalMode::PositiveZero:
-    return "positive-zero";
+    return LegacyName ? "positive-zero" : "positivezero";
   case DenormalMode::Dynamic:
     return "dynamic";
   default:
@@ -230,8 +266,71 @@ inline DenormalMode parseDenormalFPAttribute(StringRef Str) {
   return Mode;
 }
 
-void DenormalMode::print(raw_ostream &OS) const {
-  OS << denormalModeKindName(Output) << ',' << denormalModeKindName(Input);
+void DenormalMode::print(raw_ostream &OS, bool Legacy, bool OmitIfSame) const {
+  OS << denormalModeKindName(Output, Legacy);
+  if (!OmitIfSame || Input != Output) {
+    OS << (Legacy ? ',' : '|');
+    OS << denormalModeKindName(Input, Legacy);
+  }
+}
+
+/// Represents the full denormal controls for a function, including the default
+/// mode and the f32 specific override.
+struct DenormalFPEnv {
+private:
+  static constexpr unsigned BitsPerEntry = 2;
+  static constexpr unsigned BitsPerMode = 4;
+  static constexpr unsigned ModeMask = (1 << BitsPerMode) - 1;
+
+public:
+  DenormalMode DefaultMode;
+  DenormalMode F32Mode;
+
+  constexpr DenormalFPEnv(DenormalMode BaseMode,
+                          DenormalMode FloatMode = DenormalMode::getInvalid())
+      : DefaultMode(BaseMode),
+        F32Mode(FloatMode.Output == DenormalMode::Invalid ? BaseMode.Output
+                                                          : FloatMode.Output,
+                FloatMode.Input == DenormalMode::Invalid ? BaseMode.Input
+                                                         : FloatMode.Input) {}
+
+  static constexpr DenormalFPEnv getDefault() {
+    return DenormalFPEnv(DenormalMode::getIEEE(), DenormalMode::getIEEE());
+  }
+
+  constexpr uint32_t toIntValue() const {
+    assert(DefaultMode.isValid() && F32Mode.isValid());
+    uint32_t Data =
+        DefaultMode.toIntValue() | (F32Mode.toIntValue() << BitsPerMode);
+
+    assert(isUInt<8>(Data));
+    return Data;
+  }
+
+  static constexpr DenormalFPEnv createFromIntValue(uint32_t Data) {
+    return {DenormalMode::createFromIntValue(Data),
+            DenormalMode::createFromIntValue(Data >> BitsPerMode)};
+  }
+
+  constexpr bool operator==(DenormalFPEnv Other) const {
+    return DefaultMode == Other.DefaultMode && F32Mode == Other.F32Mode;
+  }
+
+  constexpr bool operator!=(DenormalFPEnv Other) const {
+    return !(*this == Other);
+  }
+
+  LLVM_ABI void print(raw_ostream &OS, bool OmitIfSame = true) const;
+
+  DenormalFPEnv mergeCalleeMode(DenormalFPEnv Callee) const {
+    return DenormalFPEnv{DefaultMode.mergeCalleeMode(Callee.DefaultMode),
+                         F32Mode.mergeCalleeMode(Callee.F32Mode)};
+  }
+};
+
+inline raw_ostream &operator<<(raw_ostream &OS, DenormalFPEnv FPEnv) {
+  FPEnv.print(OS);
+  return OS;
 }
 
 /// Floating-point class tests, supported by 'is_fpclass' intrinsic. Actual
@@ -267,17 +366,51 @@ enum FPClassTest : unsigned {
 LLVM_DECLARE_ENUM_AS_BITMASK(FPClassTest, /* LargestValue */ fcPosInf);
 
 /// Return the test mask which returns true if the value's sign bit is flipped.
-FPClassTest fneg(FPClassTest Mask);
+LLVM_ABI FPClassTest fneg(FPClassTest Mask);
 
 /// Return the test mask which returns true after fabs is applied to the value.
-FPClassTest inverse_fabs(FPClassTest Mask);
+LLVM_ABI FPClassTest inverse_fabs(FPClassTest Mask);
 
 /// Return the test mask which returns true if the value could have the same set
 /// of classes, but with a different sign.
-FPClassTest unknown_sign(FPClassTest Mask);
+LLVM_ABI FPClassTest unknown_sign(FPClassTest Mask);
 
 /// Write a human readable form of \p Mask to \p OS
-raw_ostream &operator<<(raw_ostream &OS, FPClassTest Mask);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, FPClassTest Mask);
+
+/// Returns true if all values in \p LHS must be less than or equal to those in
+/// \p RHS. That is, the comparison `fcmp ogt LHS, RHS` will always return
+/// false.
+///
+/// If \p OrderedZeroSign is true, -0 will be treated as ordered less than +0,
+/// unlike fcmp.
+LLVM_ABI bool cannotOrderStrictlyGreater(FPClassTest LHS, FPClassTest RHS,
+                                         bool OrderedZeroSign = false);
+
+/// Returns true if all values in \p LHS must be less than those in \p RHS. That
+/// is, the comparison `fcmp oge LHS, RHS` will always return false.
+//
+// If \p OrderedZeroSign is true, -0 will be treated as ordered less than +0,
+// unlike fcmp.
+LLVM_ABI bool cannotOrderStrictlyGreaterEq(FPClassTest LHS, FPClassTest RHS,
+                                           bool OrderedZeroSign = false);
+
+/// Returns true if all values in \p LHS must be greater than or equal to those
+/// in \p RHS. That is, the comparison `fcmp olt LHS, RHS` will always return
+/// false.
+///
+/// If \p OrderedZeroSign is true, -0 will be treated as ordered less than +0,
+/// unlike fcmp.
+LLVM_ABI bool cannotOrderStrictlyLess(FPClassTest LHS, FPClassTest RHS,
+                                      bool OrderedZeroSign = false);
+
+/// Returns true if all values in \p LHS must be greater than to those in \p
+/// RHS. That is, the comparison `fcmp ole LHS, RHS` will always return false.
+///
+/// If \p OrderedZeroSign is true, -0 will be treated as ordered less than +0,
+/// unlike fcmp.
+LLVM_ABI bool cannotOrderStrictlyLessEq(FPClassTest LHS, FPClassTest RHS,
+                                        bool OrderedZeroSign = false);
 
 } // namespace llvm
 

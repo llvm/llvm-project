@@ -46,6 +46,7 @@
 #include <cstring>
 #include <dirent.h>
 #include <dlfcn.h>
+#include <memory>
 #include <optional>
 #include <pwd.h>
 
@@ -188,7 +189,7 @@ std::optional<ModuleSpec> SymbolLocatorDebugSymbols::LocateExecutableObjectFile(
             exe_spec.GetFileSpec() = module_spec.GetFileSpec();
             exe_spec.GetUUID() = module_spec.GetUUID();
             ModuleSP module_sp;
-            module_sp.reset(new Module(exe_spec));
+            module_sp = std::make_shared<Module>(exe_spec);
             if (module_sp && module_sp->GetObjectFile() &&
                 module_sp->MatchesModuleSpec(exe_spec)) {
               success = true;
@@ -207,8 +208,9 @@ std::optional<ModuleSpec> SymbolLocatorDebugSymbols::LocateExecutableObjectFile(
 
             // If we found it and it has the correct UUID, let's proceed with
             // creating a module from the memory contents.
-            if (image_info.uuid && (!module_spec.GetUUID() ||
-                                    module_spec.GetUUID() == image_info.uuid)) {
+            if (image_info.GetUUID() &&
+                (!module_spec.GetUUID() ||
+                 module_spec.GetUUID() == image_info.GetUUID())) {
               success = true;
               return_module_spec.GetFileSpec() = module_spec.GetFileSpec();
               LLDB_LOGF(log,
@@ -630,7 +632,7 @@ static int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
             exe_spec.GetFileSpec() = module_spec.GetFileSpec();
             exe_spec.GetUUID() = module_spec.GetUUID();
             ModuleSP module_sp;
-            module_sp.reset(new Module(exe_spec));
+            module_sp = std::make_shared<Module>(exe_spec);
             if (module_sp && module_sp->GetObjectFile() &&
                 module_sp->MatchesModuleSpec(exe_spec)) {
               success = true;
@@ -649,8 +651,9 @@ static int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
 
             // If we found it and it has the correct UUID, let's proceed with
             // creating a module from the memory contents.
-            if (image_info.uuid && (!module_spec.GetUUID() ||
-                                    module_spec.GetUUID() == image_info.uuid)) {
+            if (image_info.GetUUID() &&
+                (!module_spec.GetUUID() ||
+                 module_spec.GetUUID() == image_info.GetUUID())) {
               success = true;
               return_module_spec.GetFileSpec() = module_spec.GetFileSpec();
               LLDB_LOGF(log,

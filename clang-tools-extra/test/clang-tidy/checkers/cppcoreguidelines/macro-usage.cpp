@@ -47,4 +47,6 @@
 #define DLLEXPORTS __declspec(dllimport)
 #endif
 
+#define ATTRIBUTE_MACRO(...) __attribute__(__VA_ARGS__)
+
 #endif

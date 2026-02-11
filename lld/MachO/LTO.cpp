@@ -13,7 +13,6 @@
 #include "Symbols.h"
 #include "Target.h"
 
-#include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Filesystem.h"
 #include "lld/Common/Strings.h"
@@ -25,7 +24,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/ObjCARC.h"
 
 using namespace lld;
 using namespace lld::macho;
@@ -60,11 +58,22 @@ static lto::Config createConfig() {
   c.CSIRProfile = std::string(config->csProfilePath);
   c.RunCSIRInstr = config->csProfileGenerate;
   c.PGOWarnMismatch = config->pgoWarnMismatch;
+  c.DisableVerify = config->disableVerify;
   c.OptLevel = config->ltoo;
   c.CGOptLevel = config->ltoCgo;
   if (config->saveTemps)
     checkError(c.addSaveTemps(config->outputFile.str() + ".",
                               /*UseInputModulePath=*/true));
+
+  if (config->emitLLVM) {
+    llvm::StringRef outputFile = config->outputFile;
+    c.PreCodeGenModuleHook = [outputFile](size_t task, const Module &m) {
+      if (std::unique_ptr<raw_fd_ostream> os = openLTOOutputFile(outputFile))
+        WriteBitcodeToFile(m, *os, false);
+      return false;
+    };
+  }
+
   return c;
 }
 

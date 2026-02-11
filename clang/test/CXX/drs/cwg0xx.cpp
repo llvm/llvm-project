@@ -90,6 +90,8 @@ namespace cwg5 { // cwg5: 3.1
   const C c = e;
 } // namespace cwg5
 
+// cwg6 is in cwg6.cpp
+
 namespace cwg7 { // cwg7: 3.4
   class A { public: ~A(); };
   class B : virtual private A {}; // #cwg7-B
@@ -244,7 +246,7 @@ namespace cwg16 { // cwg16: 2.8
       // expected-error@#cwg16-A-f-call {{'A' is a private member of 'cwg16::A'}}
       //   expected-note@#cwg16-B {{constrained by implicitly private inheritance here}}
       //   expected-note@#cwg16-A {{member is declared here}}
-      // expected-error@#cwg16-A-f-call {{cannot cast 'cwg16::C' to its private base class 'cwg16::A'}}
+      // expected-error@#cwg16-A-f-call {{cannot cast 'cwg16::C' to its private base class 'A'}}
       //   expected-note@#cwg16-B {{implicitly declared private here}}
     }
   };
@@ -333,14 +335,14 @@ namespace cwg25 { // cwg25: 4
   //   since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
   void (A::*g)() throw () = f;
   // cxx98-14-error@-1 {{target exception specification is not superset of source}}
-  // since-cxx17-error@-2 {{different exception specifications}}
+  // since-cxx17-error@-2 {{cannot initialize a variable of type 'void (A::*)() throw()' with an lvalue of type 'void (A::*)() throw(int)': different exception specifications}}
   void (A::*g2)() throw () = 0;
   void (A::*h)() throw (int, char) = f;
   // since-cxx17-error@-1 {{ISO C++17 does not allow dynamic exception specifications}}
   //   since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
   void (A::*i)() throw () = &A::f;
   // cxx98-14-error@-1 {{target exception specification is not superset of source}}
-  // since-cxx17-error@-2 {{different exception specifications}}
+  // since-cxx17-error@-2 {{cannot initialize a variable of type 'void (A::*)() throw()' with an rvalue of type 'void (A::*)() throw(int)': different exception specifications}}
   void (A::*i2)() throw () = 0;
   void (A::*j)() throw (int, char) = &A::f;
   // since-cxx17-error@-1 {{ISO C++17 does not allow dynamic exception specifications}}
@@ -348,11 +350,11 @@ namespace cwg25 { // cwg25: 4
   void x() {
     g2 = f;
     // cxx98-14-error@-1 {{target exception specification is not superset of source}}
-    // since-cxx17-error@-2 {{different exception specifications}}
+    // since-cxx17-error@-2 {{assigning to 'void (A::*)() throw()' from incompatible type 'void (A::*)() throw(int)': different exception specifications}}
     h = f;
     i2 = &A::f;
     // cxx98-14-error@-1 {{target exception specification is not superset of source}}
-    // since-cxx17-error@-2 {{different exception specifications}}
+    // since-cxx17-error@-2 {{assigning to 'void (A::*)() throw()' from incompatible type 'void (A::*)() throw(int)': different exception specifications}}
     j = &A::f;
   }
 } // namespace cwg25
@@ -482,7 +484,7 @@ namespace cwg33 { // cwg33: 9
 
   template<typename T> void t(X::S);
   template<typename T, typename U = void> void u(X::S);
-  // expected-error@-1 0-1 {{default template arguments for a function template are a C++11 extension}}
+  // cxx98-error@-1 {{default template arguments for a function template are a C++11 extension}}
   void templ() { f(t<int>); f(u<int>); }
 
   // Even though v<int> cannot select the first overload, ADL considers it
@@ -706,7 +708,7 @@ namespace cwg39 { // cwg39: no
     struct cwg39::PR5916::D -> C -> A}} */
     //   expected-note@#cwg39-A-n {{member found by ambiguous name lookup}}
 
-    // expected-error@#cwg39-sizeof {{unknown type name}}
+    // expected-error@#cwg39-sizeof {{unknown type name 'n'}}
 #if __cplusplus >= 201103L
     decltype(D::n) n;
     /* since-cxx11-error@-1
@@ -838,7 +840,7 @@ namespace cwg52 { // cwg52: 2.8
   // expected-error@#cwg52-k {{'A' is a private member of 'cwg52::A'}}
   //   expected-note@#cwg52-B {{constrained by private inheritance here}}
   //   expected-note@#cwg52-A {{member is declared here}}
-  // expected-error@#cwg52-k {{cannot cast 'struct B' to its private base class 'cwg52::A'}}
+  // expected-error@#cwg52-k {{cannot cast 'struct B' to its private base class 'A'}}
   //   expected-note@#cwg52-B {{declared private here}}
 } // namespace cwg52
 
@@ -868,7 +870,7 @@ namespace cwg54 { // cwg54: 2.8
   // expected-error@-1 {{cannot cast private base class 'cwg54::A' to 'cwg54::B'}}
   //   expected-note@#cwg54-B {{declared private here}}
   int B::*smba = static_cast<int B::*>(&A::a);
-  // expected-error@-1 {{cannot cast private base class 'cwg54::A' to 'B'}}
+  // expected-error@-1 {{cannot cast private base class 'A' to 'B'}}
   //   expected-note@#cwg54-B {{declared private here}}
 
   V &svb = static_cast<V&>(b);
@@ -880,7 +882,7 @@ namespace cwg54 { // cwg54: 2.8
   B *spbv = static_cast<B*>(&v);
   // expected-error@-1 {{cannot cast 'cwg54::V *' to 'B *' via virtual base 'cwg54::V'}}
   int B::*smbv = static_cast<int B::*>(&V::v);
-  // expected-error@-1 {{conversion from pointer to member of class 'cwg54::V' to pointer to member of class 'B' via virtual base 'cwg54::V' is not allowed}}
+  // expected-error@-1 {{conversion from pointer to member of class 'V' to pointer to member of class 'B' via virtual base 'cwg54::V' is not allowed}}
 
   A &cab = (A&)(b);
   A *cpab = (A*)(&b);
@@ -898,7 +900,7 @@ namespace cwg54 { // cwg54: 2.8
   B *cpbv = (B*)(&v);
   // expected-error@-1 {{cannot cast 'cwg54::V *' to 'B *' via virtual base 'cwg54::V'}}
   int B::*cmbv = (int B::*)(&V::v);
-  // expected-error@-1 {{conversion from pointer to member of class 'cwg54::V' to pointer to member of class 'B' via virtual base 'cwg54::V' is not allowed}}
+  // expected-error@-1 {{conversion from pointer to member of class 'V' to pointer to member of class 'B' via virtual base 'cwg54::V' is not allowed}}
 } // namespace cwg54
 
 namespace cwg55 { // cwg55: 2.7
@@ -1040,12 +1042,15 @@ namespace cwg62 { // cwg62: 2.9
   //   cxx98-note@#cwg62-unnamed {{unnamed type used in template argument was declared here}}
   NoNameForLinkagePtr p1 = get<NoNameForLinkagePtr>();
   // cxx98-error@-1 {{template argument uses unnamed type}}
+  //   cxx98-note@-2 {{while substituting explicitly-specified template arguments into function template 'get'}}
   //   cxx98-note@#cwg62-unnamed {{unnamed type used in template argument was declared here}}
   NoNameForLinkagePtr p2 = get<const NoNameForLinkagePtr>();
   // cxx98-error@-1 {{template argument uses unnamed type}}
+  //   cxx98-note@-2 {{while substituting explicitly-specified template arguments into function template 'get'}}
   //   cxx98-note@#cwg62-unnamed {{unnamed type used in template argument was declared here}}
   int n1 = take(noNameForLinkagePtr);
   // cxx98-error@-1 {{template argument uses unnamed type}}
+  //   cxx98-note@-2 {{while substituting deduced template arguments into function template 'take' [with T = NoNameForLinkagePtr]}}
   //   cxx98-note@#cwg62-unnamed {{unnamed type used in template argument was declared here}}
 
   X<Danger> x4;
@@ -1053,17 +1058,19 @@ namespace cwg62 { // cwg62: 2.9
   void f() {
     struct NoLinkage {};
     X<NoLinkage> a;
-    // cxx98-error@-1 {{template argument uses local type }}
+    // cxx98-error@-1 {{template argument uses local type 'NoLinkage'}}
     X<const NoLinkage> b;
-    // cxx98-error@-1 {{template argument uses local type }}
+    // cxx98-error@-1 {{template argument uses local type 'NoLinkage'}}
     get<NoLinkage>();
-    // cxx98-error@-1 {{template argument uses local type }}
+    // cxx98-error@-1 {{template argument uses local type 'NoLinkage'}}
+    //   cxx98-note@-2 {{while substituting explicitly-specified template arguments into function template 'get'}}
     get<const NoLinkage>();
-    // cxx98-error@-1 {{template argument uses local type }}
+    // cxx98-error@-1 {{template argument uses local type 'NoLinkage'}}
+    //   cxx98-note@-2 {{while substituting explicitly-specified template arguments into function template 'get'}}
     X<void (*)(NoLinkage A::*)> c;
-    // cxx98-error@-1 {{template argument uses local type }}
+    // cxx98-error@-1 {{template argument uses local type 'NoLinkage'}}
     X<int NoLinkage::*> d;
-    // cxx98-error@-1 {{template argument uses local type }}
+    // cxx98-error@-1 {{template argument uses local type 'NoLinkage'}}
   }
 } // namespace cwg62
 
@@ -1371,9 +1378,10 @@ namespace cwg92 { // cwg92: 4 c++17
   // considered in this context. In C++17, we *do* perform an implicit
   // conversion (which performs initialization), and the exception specification
   // is part of the type of the parameter, so this is invalid.
-  template<void() throw()> struct X {}; // since-cxx17-note {{template parameter is declared here}}
+  template<void() throw()> struct X {}; // #cwg92-X
   X<&f> xp;
   // since-cxx17-error@-1 {{value of type 'void (*)() throw(int, float)' is not implicitly convertible to 'void (*)() throw()'}}
+  //   since-cxx17-note@#cwg92-X {{template parameter is declared here}}
 
   template<void() throw(int)> struct Y {};
   // since-cxx17-error@-1 {{ISO C++17 does not allow dynamic exception specifications}}
@@ -1433,33 +1441,7 @@ namespace cwg97 { // cwg97: 2.7
   };
 } // namespace cwg97
 
-namespace cwg98 { // cwg98: 2.7
-  void test(int n) {
-    switch (n) {
-      try { // #cwg98-try
-        case 0:
-        // expected-error@-1 {{cannot jump from switch statement to this case label}}
-        //   expected-note@#cwg98-try {{jump bypasses initialization of try block}}
-        x:
-          throw n;
-      } catch (...) { // #cwg98-catch
-        case 1:
-        // expected-error@-1 {{cannot jump from switch statement to this case label}}
-        //   expected-note@#cwg98-catch {{jump bypasses initialization of catch block}}
-        y:
-          throw n;
-      }
-      case 2:
-        goto x;
-        // expected-error@-1 {{cannot jump from this goto statement to its label}}
-        //   expected-note@#cwg98-try {{jump bypasses initialization of try block}}
-      case 3:
-        goto y;
-        // expected-error@-1 {{cannot jump from this goto statement to its label}}
-        //   expected-note@#cwg98-catch {{jump bypasses initialization of catch block}}
-    }
-  }
-} // namespace cwg98
+// cwg98 is in cwg98.cpp
 
 namespace cwg99 { // cwg99: sup 214
   template<typename T> void f(T&);

@@ -8,14 +8,15 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   commit-access-review:
     if: github.repository_owner == 'llvm'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Fetch LLVM sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       
       - name: Install dependencies
         run: |
@@ -28,7 +29,15 @@ jobs:
           python3 .github/workflows/commit-access-review.py $GITHUB_TOKEN
 
       - name: Upload Triage List
-        uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: triagers
           path: triagers.log
+
+      - name: Create the issue
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          # There is a limit to the number of mentions you can have in one comment, so
+          # we need to limit the number of users we mention.
+          cat triagers.log | head -n 25 | python3 .github/workflows/commit-create-issue.py $GITHUB_TOKEN

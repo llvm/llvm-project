@@ -4,8 +4,6 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+v,+zvkb -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK-ZVKB
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+zvkb -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK-ZVKB
 
-declare <1 x i8> @llvm.fshl.v1i8(<1 x i8>, <1 x i8>, <1 x i8>)
-
 define <1 x i8> @vrol_vv_v1i8(<1 x i8> %a, <1 x i8> %b) {
 ; CHECK-LABEL: vrol_vv_v1i8:
 ; CHECK:       # %bb.0:
@@ -50,8 +48,6 @@ define <1 x i8> @vrol_vx_v1i8(<1 x i8> %a, i8 %b) {
   %x = call <1 x i8> @llvm.fshl.v1i8(<1 x i8> %a, <1 x i8> %a, <1 x i8> %b.splat)
   ret <1 x i8> %x
 }
-
-declare <2 x i8> @llvm.fshl.v2i8(<2 x i8>, <2 x i8>, <2 x i8>)
 
 define <2 x i8> @vrol_vv_v2i8(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: vrol_vv_v2i8:
@@ -98,8 +94,6 @@ define <2 x i8> @vrol_vx_v2i8(<2 x i8> %a, i8 %b) {
   ret <2 x i8> %x
 }
 
-declare <4 x i8> @llvm.fshl.v4i8(<4 x i8>, <4 x i8>, <4 x i8>)
-
 define <4 x i8> @vrol_vv_v4i8(<4 x i8> %a, <4 x i8> %b) {
 ; CHECK-LABEL: vrol_vv_v4i8:
 ; CHECK:       # %bb.0:
@@ -144,8 +138,6 @@ define <4 x i8> @vrol_vx_v4i8(<4 x i8> %a, i8 %b) {
   %x = call <4 x i8> @llvm.fshl.v4i8(<4 x i8> %a, <4 x i8> %a, <4 x i8> %b.splat)
   ret <4 x i8> %x
 }
-
-declare <8 x i8> @llvm.fshl.v8i8(<8 x i8>, <8 x i8>, <8 x i8>)
 
 define <8 x i8> @vrol_vv_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: vrol_vv_v8i8:
@@ -192,8 +184,6 @@ define <8 x i8> @vrol_vx_v8i8(<8 x i8> %a, i8 %b) {
   ret <8 x i8> %x
 }
 
-declare <16 x i8> @llvm.fshl.v16i8(<16 x i8>, <16 x i8>, <16 x i8>)
-
 define <16 x i8> @vrol_vv_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: vrol_vv_v16i8:
 ; CHECK:       # %bb.0:
@@ -238,8 +228,6 @@ define <16 x i8> @vrol_vx_v16i8(<16 x i8> %a, i8 %b) {
   %x = call <16 x i8> @llvm.fshl.v16i8(<16 x i8> %a, <16 x i8> %a, <16 x i8> %b.splat)
   ret <16 x i8> %x
 }
-
-declare <32 x i8> @llvm.fshl.v32i8(<32 x i8>, <32 x i8>, <32 x i8>)
 
 define <32 x i8> @vrol_vv_v32i8(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-LABEL: vrol_vv_v32i8:
@@ -290,8 +278,6 @@ define <32 x i8> @vrol_vx_v32i8(<32 x i8> %a, i8 %b) {
   ret <32 x i8> %x
 }
 
-declare <64 x i8> @llvm.fshl.v64i8(<64 x i8>, <64 x i8>, <64 x i8>)
-
 define <64 x i8> @vrol_vv_v64i8(<64 x i8> %a, <64 x i8> %b) {
 ; CHECK-LABEL: vrol_vv_v64i8:
 ; CHECK:       # %bb.0:
@@ -341,8 +327,6 @@ define <64 x i8> @vrol_vx_v64i8(<64 x i8> %a, i8 %b) {
   ret <64 x i8> %x
 }
 
-declare <1 x i16> @llvm.fshl.v1i16(<1 x i16>, <1 x i16>, <1 x i16>)
-
 define <1 x i16> @vrol_vv_v1i16(<1 x i16> %a, <1 x i16> %b) {
 ; CHECK-LABEL: vrol_vv_v1i16:
 ; CHECK:       # %bb.0:
@@ -387,8 +371,6 @@ define <1 x i16> @vrol_vx_v1i16(<1 x i16> %a, i16 %b) {
   %x = call <1 x i16> @llvm.fshl.v1i16(<1 x i16> %a, <1 x i16> %a, <1 x i16> %b.splat)
   ret <1 x i16> %x
 }
-
-declare <2 x i16> @llvm.fshl.v2i16(<2 x i16>, <2 x i16>, <2 x i16>)
 
 define <2 x i16> @vrol_vv_v2i16(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-LABEL: vrol_vv_v2i16:
@@ -435,8 +417,6 @@ define <2 x i16> @vrol_vx_v2i16(<2 x i16> %a, i16 %b) {
   ret <2 x i16> %x
 }
 
-declare <4 x i16> @llvm.fshl.v4i16(<4 x i16>, <4 x i16>, <4 x i16>)
-
 define <4 x i16> @vrol_vv_v4i16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: vrol_vv_v4i16:
 ; CHECK:       # %bb.0:
@@ -481,8 +461,6 @@ define <4 x i16> @vrol_vx_v4i16(<4 x i16> %a, i16 %b) {
   %x = call <4 x i16> @llvm.fshl.v4i16(<4 x i16> %a, <4 x i16> %a, <4 x i16> %b.splat)
   ret <4 x i16> %x
 }
-
-declare <8 x i16> @llvm.fshl.v8i16(<8 x i16>, <8 x i16>, <8 x i16>)
 
 define <8 x i16> @vrol_vv_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: vrol_vv_v8i16:
@@ -529,8 +507,6 @@ define <8 x i16> @vrol_vx_v8i16(<8 x i16> %a, i16 %b) {
   ret <8 x i16> %x
 }
 
-declare <16 x i16> @llvm.fshl.v16i16(<16 x i16>, <16 x i16>, <16 x i16>)
-
 define <16 x i16> @vrol_vv_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-LABEL: vrol_vv_v16i16:
 ; CHECK:       # %bb.0:
@@ -575,8 +551,6 @@ define <16 x i16> @vrol_vx_v16i16(<16 x i16> %a, i16 %b) {
   %x = call <16 x i16> @llvm.fshl.v16i16(<16 x i16> %a, <16 x i16> %a, <16 x i16> %b.splat)
   ret <16 x i16> %x
 }
-
-declare <32 x i16> @llvm.fshl.v32i16(<32 x i16>, <32 x i16>, <32 x i16>)
 
 define <32 x i16> @vrol_vv_v32i16(<32 x i16> %a, <32 x i16> %b) {
 ; CHECK-LABEL: vrol_vv_v32i16:
@@ -627,8 +601,6 @@ define <32 x i16> @vrol_vx_v32i16(<32 x i16> %a, i16 %b) {
   ret <32 x i16> %x
 }
 
-declare <1 x i32> @llvm.fshl.v1i32(<1 x i32>, <1 x i32>, <1 x i32>)
-
 define <1 x i32> @vrol_vv_v1i32(<1 x i32> %a, <1 x i32> %b) {
 ; CHECK-LABEL: vrol_vv_v1i32:
 ; CHECK:       # %bb.0:
@@ -675,8 +647,6 @@ define <1 x i32> @vrol_vx_v1i32(<1 x i32> %a, i32 %b) {
   %x = call <1 x i32> @llvm.fshl.v1i32(<1 x i32> %a, <1 x i32> %a, <1 x i32> %b.splat)
   ret <1 x i32> %x
 }
-
-declare <2 x i32> @llvm.fshl.v2i32(<2 x i32>, <2 x i32>, <2 x i32>)
 
 define <2 x i32> @vrol_vv_v2i32(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: vrol_vv_v2i32:
@@ -725,8 +695,6 @@ define <2 x i32> @vrol_vx_v2i32(<2 x i32> %a, i32 %b) {
   ret <2 x i32> %x
 }
 
-declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
-
 define <4 x i32> @vrol_vv_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: vrol_vv_v4i32:
 ; CHECK:       # %bb.0:
@@ -773,8 +741,6 @@ define <4 x i32> @vrol_vx_v4i32(<4 x i32> %a, i32 %b) {
   %x = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %a, <4 x i32> %a, <4 x i32> %b.splat)
   ret <4 x i32> %x
 }
-
-declare <8 x i32> @llvm.fshl.v8i32(<8 x i32>, <8 x i32>, <8 x i32>)
 
 define <8 x i32> @vrol_vv_v8i32(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-LABEL: vrol_vv_v8i32:
@@ -823,8 +789,6 @@ define <8 x i32> @vrol_vx_v8i32(<8 x i32> %a, i32 %b) {
   ret <8 x i32> %x
 }
 
-declare <16 x i32> @llvm.fshl.v16i32(<16 x i32>, <16 x i32>, <16 x i32>)
-
 define <16 x i32> @vrol_vv_v16i32(<16 x i32> %a, <16 x i32> %b) {
 ; CHECK-LABEL: vrol_vv_v16i32:
 ; CHECK:       # %bb.0:
@@ -872,8 +836,6 @@ define <16 x i32> @vrol_vx_v16i32(<16 x i32> %a, i32 %b) {
   ret <16 x i32> %x
 }
 
-declare <1 x i64> @llvm.fshl.v1i64(<1 x i64>, <1 x i64>, <1 x i64>)
-
 define <1 x i64> @vrol_vv_v1i64(<1 x i64> %a, <1 x i64> %b) {
 ; CHECK-LABEL: vrol_vv_v1i64:
 ; CHECK:       # %bb.0:
@@ -920,8 +882,6 @@ define <1 x i64> @vrol_vx_v1i64(<1 x i64> %a, i64 %b) {
   %x = call <1 x i64> @llvm.fshl.v1i64(<1 x i64> %a, <1 x i64> %a, <1 x i64> %b.splat)
   ret <1 x i64> %x
 }
-
-declare <2 x i64> @llvm.fshl.v2i64(<2 x i64>, <2 x i64>, <2 x i64>)
 
 define <2 x i64> @vrol_vv_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: vrol_vv_v2i64:
@@ -986,8 +946,6 @@ define <2 x i64> @vrol_vx_v2i64(<2 x i64> %a, i64 %b) {
   ret <2 x i64> %x
 }
 
-declare <4 x i64> @llvm.fshl.v4i64(<4 x i64>, <4 x i64>, <4 x i64>)
-
 define <4 x i64> @vrol_vv_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-LABEL: vrol_vv_v4i64:
 ; CHECK:       # %bb.0:
@@ -1016,12 +974,12 @@ define <4 x i64> @vrol_vx_v4i64(<4 x i64> %a, i64 %b) {
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vmv.v.x v10, a0
 ; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v12, 0
-; RV32-NEXT:    vwsub.vx v14, v12, a0
+; RV32-NEXT:    vmv.v.i v14, 0
+; RV32-NEXT:    vwsub.vx v12, v14, a0
 ; RV32-NEXT:    li a0, 63
 ; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV32-NEXT:    vand.vx v10, v10, a0
-; RV32-NEXT:    vand.vx v12, v14, a0
+; RV32-NEXT:    vand.vx v12, v12, a0
 ; RV32-NEXT:    vsrl.vv v12, v8, v12
 ; RV32-NEXT:    vsll.vv v8, v8, v10
 ; RV32-NEXT:    vor.vv v8, v8, v12
@@ -1051,8 +1009,6 @@ define <4 x i64> @vrol_vx_v4i64(<4 x i64> %a, i64 %b) {
   ret <4 x i64> %x
 }
 
-declare <8 x i64> @llvm.fshl.v8i64(<8 x i64>, <8 x i64>, <8 x i64>)
-
 define <8 x i64> @vrol_vv_v8i64(<8 x i64> %a, <8 x i64> %b) {
 ; CHECK-LABEL: vrol_vv_v8i64:
 ; CHECK:       # %bb.0:
@@ -1081,12 +1037,12 @@ define <8 x i64> @vrol_vx_v8i64(<8 x i64> %a, i64 %b) {
 ; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32-NEXT:    vmv.v.x v12, a0
 ; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV32-NEXT:    vmv.v.i v16, 0
-; RV32-NEXT:    vwsub.vx v20, v16, a0
+; RV32-NEXT:    vmv.v.i v20, 0
+; RV32-NEXT:    vwsub.vx v16, v20, a0
 ; RV32-NEXT:    li a0, 63
 ; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; RV32-NEXT:    vand.vx v12, v12, a0
-; RV32-NEXT:    vand.vx v16, v20, a0
+; RV32-NEXT:    vand.vx v16, v16, a0
 ; RV32-NEXT:    vsrl.vv v16, v8, v16
 ; RV32-NEXT:    vsll.vv v8, v8, v12
 ; RV32-NEXT:    vor.vv v8, v8, v16

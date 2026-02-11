@@ -53,22 +53,21 @@ void PPCXCOFFStreamer::emitPrefixedInstruction(const MCInst &Inst,
 
 void PPCXCOFFStreamer::emitInstruction(const MCInst &Inst,
                                        const MCSubtargetInfo &STI) {
-  PPCMCCodeEmitter *Emitter =
-      static_cast<PPCMCCodeEmitter *>(getAssembler().getEmitterPtr());
+  auto &Emitter = static_cast<PPCMCCodeEmitter &>(getAssembler().getEmitter());
 
   // Special handling is only for prefixed instructions.
-  if (!Emitter->isPrefixedInstruction(Inst)) {
+  if (!Emitter.isPrefixedInstruction(Inst)) {
     MCXCOFFStreamer::emitInstruction(Inst, STI);
     return;
   }
   emitPrefixedInstruction(Inst, STI);
 }
 
-MCXCOFFStreamer *
-llvm::createPPCXCOFFStreamer(MCContext &Context,
-                             std::unique_ptr<MCAsmBackend> MAB,
-                             std::unique_ptr<MCObjectWriter> OW,
-                             std::unique_ptr<MCCodeEmitter> Emitter) {
-  return new PPCXCOFFStreamer(Context, std::move(MAB), std::move(OW),
+MCStreamer *
+llvm::createPPCXCOFFStreamer(const Triple &, MCContext &C,
+                             std::unique_ptr<MCAsmBackend> &&MAB,
+                             std::unique_ptr<MCObjectWriter> &&OW,
+                             std::unique_ptr<MCCodeEmitter> &&Emitter) {
+  return new PPCXCOFFStreamer(C, std::move(MAB), std::move(OW),
                               std::move(Emitter));
 }

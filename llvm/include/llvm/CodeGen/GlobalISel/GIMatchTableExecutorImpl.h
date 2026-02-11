@@ -25,7 +25,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -33,8 +32,6 @@
 #include "llvm/Support/CodeGenCoverage.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/LEB128.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -61,7 +58,7 @@ bool GIMatchTableExecutor::executeMatchTable(
   // Bypass the flag check on the instruction, and only look at the MCInstrDesc.
   bool NoFPException = !State.MIs[0]->getDesc().mayRaiseFPException();
 
-  const uint16_t Flags = State.MIs[0]->getFlags();
+  const uint32_t Flags = State.MIs[0]->getFlags();
 
   enum RejectAction { RejectAndGiveUp, RejectAndResume };
   auto handleReject = [&]() -> RejectAction {
@@ -80,7 +77,7 @@ bool GIMatchTableExecutor::executeMatchTable(
     for (auto MIB : OutMIs) {
       // Set the NoFPExcept flag when no original matched instruction could
       // raise an FP exception, but the new instruction potentially might.
-      uint16_t MIBFlags = Flags;
+      uint32_t MIBFlags = Flags | MIB.getInstr()->getFlags();
       if (NoFPException && MIB->mayRaiseFPException())
         MIBFlags |= MachineInstr::NoFPExcept;
       if (Observer)
@@ -406,6 +403,26 @@ bool GIMatchTableExecutor::executeMatchTable(
           State.MIs[InsnID]->getOperand(1).getFPImm()->getValueAPF();
 
       if (!testImmPredicate_APFloat(Predicate, Value))
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+      break;
+    }
+    case GIM_CheckLeafOperandPredicate: {
+      uint64_t InsnID = readULEB();
+      uint64_t OpIdx = readULEB();
+      uint16_t Predicate = readU16();
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx
+                             << ": GIM_CheckLeafOperandPredicate(MIs[" << InsnID
+                             << "]->getOperand(" << OpIdx
+                             << "), Predicate=" << Predicate << ")\n");
+      assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+      assert(State.MIs[InsnID]->getOperand(OpIdx).isReg() &&
+             "Expected register operand");
+      assert(Predicate > GICXXPred_Invalid && "Expected a valid predicate");
+      MachineOperand &MO = State.MIs[InsnID]->getOperand(OpIdx);
+
+      if (!testMOPredicate_MO(Predicate, MO, State))
         if (handleReject() == RejectAndGiveUp)
           return false;
       break;
@@ -1140,7 +1157,7 @@ bool GIMatchTableExecutor::executeMatchTable(
       uint16_t SubRegIdx = readU16();
       assert(OutMIs[NewInsnID] && "Attempted to add to undefined instruction");
       OutMIs[NewInsnID].addReg(State.MIs[OldInsnID]->getOperand(OpIdx).getReg(),
-                               0, SubRegIdx);
+                               {}, SubRegIdx);
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIR_CopySubReg(OutMIs["
                              << NewInsnID << "], MIs[" << OldInsnID << "], "
@@ -1151,13 +1168,14 @@ bool GIMatchTableExecutor::executeMatchTable(
     case GIR_AddImplicitDef: {
       uint64_t InsnID = readULEB();
       uint16_t RegNum = readU16();
-      uint16_t Flags = readU16();
+      RegState Flags = static_cast<RegState>(readU16());
       assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
       Flags |= RegState::Implicit;
       OutMIs[InsnID].addDef(RegNum, Flags);
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIR_AddImplicitDef(OutMIs["
-                             << InsnID << "], " << RegNum << ")\n");
+                             << InsnID << "], " << RegNum << ", "
+                             << static_cast<uint16_t>(Flags) << ")\n");
       break;
     }
 
@@ -1175,13 +1193,13 @@ bool GIMatchTableExecutor::executeMatchTable(
     case GIR_AddRegister: {
       uint64_t InsnID = readULEB();
       uint16_t RegNum = readU16();
-      uint16_t RegFlags = readU16();
+      RegState RegFlags = static_cast<RegState>(readU16());
       assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
       OutMIs[InsnID].addReg(RegNum, RegFlags);
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
-                      dbgs()
-                          << CurrentIdx << ": GIR_AddRegister(OutMIs[" << InsnID
-                          << "], " << RegNum << ", " << RegFlags << ")\n");
+                      dbgs() << CurrentIdx << ": GIR_AddRegister(OutMIs["
+                             << InsnID << "], " << RegNum << ", "
+                             << static_cast<uint16_t>(RegFlags) << ")\n");
       break;
     }
     case GIR_AddIntrinsicID: {
@@ -1243,9 +1261,9 @@ bool GIMatchTableExecutor::executeMatchTable(
     case GIR_AddTempSubRegister: {
       uint64_t InsnID = readULEB();
       uint64_t TempRegID = readULEB();
-      uint16_t TempRegFlags = 0;
+      RegState TempRegFlags = {};
       if (MatcherOpcode != GIR_AddSimpleTempRegister)
-        TempRegFlags = readU16();
+        TempRegFlags = static_cast<RegState>(readU16());
       uint16_t SubReg = 0;
       if (MatcherOpcode == GIR_AddTempSubRegister)
         SubReg = readU16();
@@ -1259,7 +1277,7 @@ bool GIMatchTableExecutor::executeMatchTable(
           dbgs() << CurrentIdx << ": GIR_AddTempRegister(OutMIs[" << InsnID
                  << "], TempRegisters[" << TempRegID << "]";
           if (SubReg) dbgs() << '.' << TRI.getSubRegIndexName(SubReg);
-          dbgs() << ", " << TempRegFlags << ")\n");
+          dbgs() << ", " << static_cast<uint16_t>(TempRegFlags) << ")\n");
       break;
     }
 

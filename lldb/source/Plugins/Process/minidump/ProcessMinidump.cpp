@@ -86,11 +86,12 @@ void HashElfTextSection(ModuleSP module_sp, std::vector<uint8_t> &breakpad_uuid,
   // The breakpad code has a bug where it might access beyond the end of a
   // .text section by up to 15 bytes, so we must ensure we round up to the
   // next kMDGUIDSize byte boundary.
-  DataExtractor data;
+  DataExtractorSP extractor_sp;
   const size_t text_size = sect_sp->GetFileSize();
   const size_t read_size = std::min<size_t>(
       llvm::alignTo(text_size, kMDGUIDSize), kBreakpadPageSize);
-  sect_sp->GetObjectFile()->GetData(sect_sp->GetFileOffset(), read_size, data);
+  sect_sp->GetObjectFile()->GetData(sect_sp->GetFileOffset(), read_size,
+                                    extractor_sp);
 
   breakpad_uuid.assign(kMDGUIDSize, 0);
   facebook_uuid.assign(kMDGUIDSize, 0);
@@ -105,8 +106,8 @@ void HashElfTextSection(ModuleSP module_sp, std::vector<uint8_t> &breakpad_uuid,
   // sources, including the error where it might has an extra 15 bytes past the
   // end of the .text section if the .text section is less than a page size in
   // length.
-  const uint8_t *ptr = data.GetDataStart();
-  const uint8_t *ptr_end = data.GetDataEnd();
+  const uint8_t *ptr = extractor_sp->GetDataStart();
+  const uint8_t *ptr_end = extractor_sp->GetDataEnd();
   while (ptr < ptr_end) {
     for (unsigned i = 0; i < kMDGUIDSize; i++) {
       breakpad_uuid[i] ^= ptr[i];
@@ -322,11 +323,14 @@ size_t ProcessMinidump::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
 size_t ProcessMinidump::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
                                      Status &error) {
 
-  llvm::ArrayRef<uint8_t> mem = m_minidump_parser->GetMemory(addr, size);
-  if (mem.empty()) {
-    error = Status::FromErrorString("could not parse memory info");
+  llvm::Expected<llvm::ArrayRef<uint8_t>> mem_maybe =
+      m_minidump_parser->GetMemory(addr, size);
+  if (!mem_maybe) {
+    error = Status::FromError(mem_maybe.takeError());
     return 0;
   }
+
+  llvm::ArrayRef<uint8_t> mem = *mem_maybe;
 
   std::memcpy(buf, mem.data(), mem.size());
   return mem.size();
@@ -405,7 +409,7 @@ void ProcessMinidump::BuildMemoryRegions() {
         to_add.back().SetName(module_sp->GetFileSpec().GetPath().c_str());
       }
     }
-    return true;
+    return IterationAction::Continue;
   });
   m_memory_regions->insert(m_memory_regions->end(), to_add.begin(),
                            to_add.end());

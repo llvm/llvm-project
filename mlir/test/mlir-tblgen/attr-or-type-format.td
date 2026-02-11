@@ -200,7 +200,7 @@ def AttrE : TestAttr<"TestH"> {
 
 def TestEnum : I32EnumAttr<"TestEnum", "TestEnumType", [
   I32EnumAttrCase<"first", 0>,
-  I32EnumAttrCase<"second", 1>
+  I32EnumAttrCase<"second", 1>,
 ]> {
   let genSpecializedAttr = 0;
 }
@@ -213,6 +213,20 @@ def TestEnum : I32EnumAttr<"TestEnum", "TestEnumType", [
 // ATTR-NEXT: getValue()
 def EnumAttrA : EnumAttr<Test_Dialect, TestEnum, "EnumAttrA"> {
   let assemblyFormat = "custom<Foo>($value)";
+}
+
+def TestEnumB : I32EnumAttr<"TestEnumB", "TestEnumType", [
+  I32EnumAttrCase<"Plus", 0, "+">,
+  I32EnumAttrCase<"LongString", 1, "dash-separated-sentence">,
+  I32EnumAttrCase<"Other", 2>
+]> {
+  let genSpecializedAttr = 0;
+}
+
+// ATTR-LABEL: TestEnumBAttr::parse
+// ATTR: parseKeywordOrString(
+def EnumAttrB : EnumAttr<Test_Dialect, TestEnumB, "EnumAttrB"> {
+  let assemblyFormat = "$value";
 }
 
 /// Test type parser and printer that mix variables and struct are generated
@@ -734,6 +748,84 @@ def TypeS : TestType<"TestS"> {
   let mnemonic = "type_s";
   let genVerifyDecl = 1;
   let assemblyFormat = "$a";
+}
+
+/// Test that a `struct` with nested `custom` parser and printer are generated correctly.
+
+// ATTR:    ::mlir::Attribute TestTAttr::parse(::mlir::AsmParser &odsParser,
+// ATTR:                                       ::mlir::Type odsType) {
+// ATTR:      bool _seen_v0 = false;
+// ATTR:      bool _seen_v1 = false;
+// ATTR:      bool _seen_v2 = false;
+// ATTR:      const auto _loop_body = [&](::llvm::StringRef _paramKey) -> bool {
+// ATTR:        if (odsParser.parseEqual())
+// ATTR:          return {};
+// ATTR:        if (!_seen_v0 && _paramKey == "v0") {
+// ATTR:          _seen_v0 = true;
+// ATTR:          _result_v0 = ::parseAttrParamA(odsParser, odsType);
+// ATTR:          if (::mlir::failed(_result_v0))
+// ATTR:            return {};
+// ATTR:        } else if (!_seen_v1 && _paramKey == "v1") {
+// ATTR:          _seen_v1 = true;
+// ATTR:          {
+// ATTR:            auto odsCustomResult = parseNestedCustom(odsParser,
+// ATTR-NEXT:         ::mlir::detail::unwrapForCustomParse(_result_v1));
+// ATTR:            if (::mlir::failed(odsCustomResult)) return {};
+// ATTR:            if (::mlir::failed(_result_v1)) {
+// ATTR:              odsParser.emitError(odsCustomLoc, "custom parser failed to parse parameter 'v1'");
+// ATTR:              return {};
+// ATTR:            }
+// ATTR:          }
+// ATTR:        } else if (!_seen_v2 && _paramKey == "v2") {
+// ATTR:          _seen_v2 = true;
+// ATTR:          _result_v2 = ::mlir::FieldParser<AttrParamB>::parse(odsParser);
+// ATTR:          if (::mlir::failed(_result_v2)) {
+// ATTR:            odsParser.emitError(odsParser.getCurrentLocation(), "failed to parse AttrT parameter 'v2' which is to be a `AttrParamB`");
+// ATTR:            return {};
+// ATTR:          }
+// ATTR:        } else {
+// ATTR:          return {};
+// ATTR:        }
+// ATTR:        return true;
+// ATTR:      }
+// ATTR:      do {
+// ATTR:        ::llvm::StringRef _paramKey;
+// ATTR:        if (odsParser.parseKeyword(&_paramKey)) {
+// ATTR:          odsParser.emitError(odsParser.getCurrentLocation(),
+// ATTR-NEXT:                         "expected a parameter name in struct");
+// ATTR:          return {};
+// ATTR:        }
+// ATTR:        if (!_loop_body(_paramKey)) return {};
+// ATTR:      } while(!odsParser.parseOptionalComma());
+// ATTR:      if (!_seen_v0)
+// ATTR:      if (!_seen_v1)
+// ATTR:      return TestTAttr::get(odsParser.getContext(),
+// ATTR:          TestParamA((*_result_v0)),
+// ATTR:          TestParamB((*_result_v1)),
+// ATTR:           AttrParamB((_result_v2.value_or(AttrParamB()))));
+// ATTR:    }
+
+// ATTR:      void TestTAttr::print(::mlir::AsmPrinter &odsPrinter) const {
+// ATTR:        odsPrinter << "v0 = ";
+// ATTR:        ::printAttrParamA(odsPrinter, getV0());
+// ATTR:        odsPrinter << ", ";
+// ATTR:        odsPrinter << "v1 = ";
+// ATTR:        printNestedCustom(odsPrinter,
+// ATTR-NEXT:     getV1());
+// ATTR:        if (!(getV2() == AttrParamB())) {
+// ATTR:          odsPrinter << "v2 = ";
+// ATTR:          odsPrinter.printStrippedAttrOrType(getV2());
+// ATTR:      }
+
+def AttrT : TestAttr<"TestT"> {
+  let parameters = (ins
+      AttrParamA:$v0,
+      AttrParamB:$v1,
+      OptionalParameter<"AttrParamB">:$v2
+  );
+
+  let mnemonic = "attr_t";
+  let assemblyFormat = "`{` struct($v0, custom<NestedCustom>($v1), $v2) `}`";
 }
 
 // DEFAULT_TYPE_PARSER: TestDialect::parseType(::mlir::DialectAsmParser &parser)

@@ -36,13 +36,13 @@ module Clang_Basic {
   requires cplusplus
   umbrella "clang/Basic"
 
-  textual header "clang/Basic/AArch64SVEACLETypes.def"
+  textual header "clang/Basic/AArch64ACLETypes.def"
+  textual header "clang/Basic/ABIVersions.def"
   textual header "clang/Basic/AMDGPUTypes.def"
   textual header "clang/Basic/BuiltinHeaders.def"
   textual header "clang/Basic/BuiltinsAArch64.def"
   textual header "clang/Basic/BuiltinsAArch64NeonSVEBridge.def"
   textual header "clang/Basic/BuiltinsAArch64NeonSVEBridge_cg.def"
-  textual header "clang/Basic/BuiltinsAMDGPU.def"
   textual header "clang/Basic/BuiltinsARM.def"
   textual header "clang/Basic/BuiltinsHexagonMapCustomDep.def"
   textual header "clang/Basic/BuiltinsLoongArchBase.def"
@@ -135,7 +135,17 @@ module Clang_Frontend {
 
 module Clang_FrontendTool { requires cplusplus umbrella "clang/FrontendTool" module * { export * } }
 module Clang_Index { requires cplusplus umbrella "clang/Index" module * { export * } }
-module Clang_Lex { requires cplusplus umbrella "clang/Lex" module * { export * } }
+
+module Clang_Lex {
+  requires cplusplus
+  umbrella "clang/Lex"
+
+  textual header "clang/Lex/HLSLRootSignatureTokenKinds.def"
+
+  module * { export * }
+}
+
+module Clang_Options { requires cplusplus umbrella "clang/Options" module * { export * } }
 module Clang_Parse { requires cplusplus umbrella "clang/Parse" module * { export * } }
 module Clang_Rewrite { requires cplusplus umbrella "clang/Rewrite/Core" module * { export * } }
 module Clang_RewriteFrontend { requires cplusplus umbrella "clang/Rewrite/Frontend" module * { export * } }

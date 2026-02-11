@@ -241,7 +241,7 @@ public:
   StringRef sourceFile;
   uint32_t andFeatures = 0;
   bool hasCommonSyms = false;
-  ArrayRef<uint8_t> aarch64PauthAbiCoreInfo;
+  std::optional<AArch64PauthAbiCoreInfo> aarch64PauthAbiCoreInfo;
 };
 
 // .o file.
@@ -341,10 +341,16 @@ public:
   // This is actually a vector of Elf_Verdef pointers.
   SmallVector<const void *, 0> verdefs;
 
-  // If the output file needs Elf_Verneed data structures for this file, this is
-  // a vector of Elf_Vernaux version identifiers that map onto the entries in
-  // Verdefs, otherwise it is empty.
-  SmallVector<uint32_t, 0> vernauxs;
+  // Parallel to verdefs. If a version definition is referenced by a relocatable
+  // file, the entry records the assigned Vernaux index in the output file and
+  // whether all references are weak.
+  struct VerneedInfo {
+    uint16_t id = 0;
+    // True if all references to this version are weak. Used to set
+    // VER_FLG_WEAK.
+    bool weak = true;
+  };
+  SmallVector<VerneedInfo, 0> verneedInfo;
 
   SmallVector<StringRef, 0> dtNeeded;
   StringRef soName;
@@ -364,6 +370,8 @@ private:
   template <typename ELFT>
   std::vector<uint32_t> parseVerneed(const llvm::object::ELFFile<ELFT> &obj,
                                      const typename ELFT::Shdr *sec);
+  template <typename ELFT>
+  void parseGnuAndFeatures(const llvm::object::ELFFile<ELFT> &obj);
 };
 
 class BinaryFile : public InputFile {

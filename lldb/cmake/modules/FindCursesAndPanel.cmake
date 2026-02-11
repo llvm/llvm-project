@@ -6,15 +6,25 @@
 
 include(CMakePushCheckState)
 
-function(lldb_check_curses_tinfo CURSES_LIBRARIES CURSES_HAS_TINFO)
+function(lldb_check_curses_tinfo CURSES_INCLUDE_DIRS CURSES_LIBRARIES CURSES_HAS_TINFO)
   cmake_reset_check_state()
+  set(CMAKE_REQUIRED_INCLUDES "${CURSES_INCLUDE_DIRS}")
   set(CMAKE_REQUIRED_LIBRARIES "${CURSES_LIBRARIES}")
   # acs_map is one of many symbols that are part of tinfo but could
   # be bundled in curses.
   check_symbol_exists(acs_map "curses.h" CURSES_HAS_TINFO)
 endfunction()
 
-if(CURSES_INCLUDE_DIRS AND CURSES_LIBRARIES AND TINFO_LIBRARIES AND PANEL_LIBRARIES)
+if(CURSES_INCLUDE_DIRS AND CURSES_LIBRARIES AND PANEL_LIBRARIES)
+  if(NOT HAS_TERMINFO_SYMBOLS)
+    lldb_check_curses_tinfo("${CURSES_INCLUDE_DIRS}"
+                            "${CURSES_LIBRARIES}"
+                            CURSES_HAS_TINFO)
+    if(NOT CURSES_HAS_TINFO)
+      message(WARNING "CURSES_LIBRARIES was provided manually but is missing terminfo symbols")
+    endif()
+    mark_as_advanced(CURSES_HAS_TINFO)
+  endif()
   set(CURSESANDPANEL_FOUND TRUE)
 else()
   find_package(Curses QUIET)
@@ -25,8 +35,10 @@ else()
     # Sometimes the curses libraries define their own terminfo symbols,
     # other times they're extern and are defined by a separate terminfo library.
     # Auto-detect which.
-    lldb_check_curses_tinfo("${CURSES_LIBRARIES}" CURSES_HAS_TINFO)
-    if (NOT CURSES_HAS_TINFO)
+    lldb_check_curses_tinfo("${CURSES_INCLUDE_DIRS}"
+                            "${CURSES_LIBRARIES}"
+                            CURSES_HAS_TINFO)
+    if(NOT CURSES_HAS_TINFO)
       message(STATUS "curses library missing terminfo symbols, looking for tinfo separately")
       find_library(TINFO_LIBRARIES NAMES tinfo DOC "The curses tinfo library" QUIET)
       list(APPEND CURSES_LIBRARIES "${TINFO_LIBRARIES}")

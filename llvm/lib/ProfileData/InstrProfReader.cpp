@@ -18,7 +18,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/InstrProf.h"
-#include "llvm/ProfileData/MemProf.h"
+// #include "llvm/ProfileData/MemProf.h"
+#include "llvm/ProfileData/MemProfRadixTree.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SymbolRemappingReader.h"
 #include "llvm/Support/Endian.h"
@@ -1096,7 +1097,7 @@ public:
                                SmallVectorImpl<char> &Out) {
     Out.reserve(OrigName.size() + Replacement.size() - ExtractedName.size());
     Out.insert(Out.end(), OrigName.begin(), ExtractedName.begin());
-    Out.insert(Out.end(), Replacement.begin(), Replacement.end());
+    llvm::append_range(Out, Replacement);
     Out.insert(Out.end(), ExtractedName.end(), OrigName.end());
   }
 
@@ -1170,8 +1171,8 @@ bool IndexedInstrProfReader::hasFormat(const MemoryBuffer &DataBuffer) {
 
   if (DataBuffer.getBufferSize() < 8)
     return false;
-  uint64_t Magic = endian::read<uint64_t, llvm::endianness::little, aligned>(
-      DataBuffer.getBufferStart());
+  uint64_t Magic = endian::read<uint64_t, aligned>(DataBuffer.getBufferStart(),
+                                                   llvm::endianness::little);
   // Verify that it's magical.
   return Magic == IndexedInstrProf::Magic;
 }
@@ -1185,10 +1186,10 @@ IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
   if (Version >= IndexedInstrProf::Version4) {
     const IndexedInstrProf::Summary *SummaryInLE =
         reinterpret_cast<const IndexedInstrProf::Summary *>(Cur);
-    uint64_t NFields = endian::byte_swap<uint64_t, llvm::endianness::little>(
-        SummaryInLE->NumSummaryFields);
-    uint64_t NEntries = endian::byte_swap<uint64_t, llvm::endianness::little>(
-        SummaryInLE->NumCutoffEntries);
+    uint64_t NFields = endian::byte_swap<uint64_t>(
+        SummaryInLE->NumSummaryFields, llvm::endianness::little);
+    uint64_t NEntries = endian::byte_swap<uint64_t>(
+        SummaryInLE->NumCutoffEntries, llvm::endianness::little);
     uint32_t SummarySize =
         IndexedInstrProf::Summary::getSize(NFields, NEntries);
     std::unique_ptr<IndexedInstrProf::Summary> SummaryData =
@@ -1197,7 +1198,7 @@ IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
     const uint64_t *Src = reinterpret_cast<const uint64_t *>(SummaryInLE);
     uint64_t *Dst = reinterpret_cast<uint64_t *>(SummaryData.get());
     for (unsigned I = 0; I < SummarySize / sizeof(uint64_t); I++)
-      Dst[I] = endian::byte_swap<uint64_t, llvm::endianness::little>(Src[I]);
+      Dst[I] = endian::byte_swap<uint64_t>(Src[I], llvm::endianness::little);
 
     SummaryEntryVector DetailedSummary;
     for (unsigned I = 0; I < SummaryData->NumCutoffEntries; I++) {
@@ -1228,129 +1229,6 @@ IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
     Summary = Builder.getSummary();
     return Cur;
   }
-}
-
-Error IndexedMemProfReader::deserializeV2(const unsigned char *Start,
-                                          const unsigned char *Ptr) {
-  // The value returned from RecordTableGenerator.Emit.
-  const uint64_t RecordTableOffset =
-      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-  // The offset in the stream right before invoking
-  // FrameTableGenerator.Emit.
-  const uint64_t FramePayloadOffset =
-      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-  // The value returned from FrameTableGenerator.Emit.
-  const uint64_t FrameTableOffset =
-      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-
-  // The offset in the stream right before invoking
-  // CallStackTableGenerator.Emit.
-  uint64_t CallStackPayloadOffset = 0;
-  // The value returned from CallStackTableGenerator.Emit.
-  uint64_t CallStackTableOffset = 0;
-  if (Version >= memprof::Version2) {
-    CallStackPayloadOffset =
-        support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-    CallStackTableOffset =
-        support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-  }
-
-  // Read the schema.
-  auto SchemaOr = memprof::readMemProfSchema(Ptr);
-  if (!SchemaOr)
-    return SchemaOr.takeError();
-  Schema = SchemaOr.get();
-
-  // Now initialize the table reader with a pointer into data buffer.
-  MemProfRecordTable.reset(MemProfRecordHashTable::Create(
-      /*Buckets=*/Start + RecordTableOffset,
-      /*Payload=*/Ptr,
-      /*Base=*/Start, memprof::RecordLookupTrait(Version, Schema)));
-
-  // Initialize the frame table reader with the payload and bucket offsets.
-  MemProfFrameTable.reset(MemProfFrameHashTable::Create(
-      /*Buckets=*/Start + FrameTableOffset,
-      /*Payload=*/Start + FramePayloadOffset,
-      /*Base=*/Start));
-
-  if (Version >= memprof::Version2)
-    MemProfCallStackTable.reset(MemProfCallStackHashTable::Create(
-        /*Buckets=*/Start + CallStackTableOffset,
-        /*Payload=*/Start + CallStackPayloadOffset,
-        /*Base=*/Start));
-
-  return Error::success();
-}
-
-Error IndexedMemProfReader::deserializeV3(const unsigned char *Start,
-                                          const unsigned char *Ptr) {
-  // The offset in the stream right before invoking
-  // CallStackTableGenerator.Emit.
-  const uint64_t CallStackPayloadOffset =
-      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-  // The offset in the stream right before invoking RecordTableGenerator.Emit.
-  const uint64_t RecordPayloadOffset =
-      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-  // The value returned from RecordTableGenerator.Emit.
-  const uint64_t RecordTableOffset =
-      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-
-  // Read the schema.
-  auto SchemaOr = memprof::readMemProfSchema(Ptr);
-  if (!SchemaOr)
-    return SchemaOr.takeError();
-  Schema = SchemaOr.get();
-
-  FrameBase = Ptr;
-  CallStackBase = Start + CallStackPayloadOffset;
-
-  // Compute the number of elements in the radix tree array.  Since we use this
-  // to reserve enough bits in a BitVector, it's totally OK if we overestimate
-  // this number a little bit because of padding just before the next section.
-  RadixTreeSize = (RecordPayloadOffset - CallStackPayloadOffset) /
-                  sizeof(memprof::LinearFrameId);
-
-  // Now initialize the table reader with a pointer into data buffer.
-  MemProfRecordTable.reset(MemProfRecordHashTable::Create(
-      /*Buckets=*/Start + RecordTableOffset,
-      /*Payload=*/Start + RecordPayloadOffset,
-      /*Base=*/Start, memprof::RecordLookupTrait(memprof::Version3, Schema)));
-
-  return Error::success();
-}
-
-Error IndexedMemProfReader::deserialize(const unsigned char *Start,
-                                        uint64_t MemProfOffset) {
-  const unsigned char *Ptr = Start + MemProfOffset;
-
-  // Read the MemProf version number.
-  const uint64_t FirstWord =
-      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-
-  if (FirstWord == memprof::Version2 || FirstWord == memprof::Version3) {
-    // Everything is good.  We can proceed to deserialize the rest.
-    Version = static_cast<memprof::IndexedVersion>(FirstWord);
-  } else {
-    return make_error<InstrProfError>(
-        instrprof_error::unsupported_version,
-        formatv("MemProf version {} not supported; "
-                "requires version between {} and {}, inclusive",
-                FirstWord, memprof::MinimumSupportedVersion,
-                memprof::MaximumSupportedVersion));
-  }
-
-  switch (Version) {
-  case memprof::Version2:
-    if (Error E = deserializeV2(Start, Ptr))
-      return E;
-    break;
-  case memprof::Version3:
-    if (Error E = deserializeV3(Start, Ptr))
-      return E;
-    break;
-  }
-
-  return Error::success();
 }
 
 Error IndexedInstrProfReader::readHeader() {
@@ -1417,7 +1295,7 @@ Error IndexedInstrProfReader::readHeader() {
     // Writer first writes the length of compressed string, and then the actual
     // content.
     const char *VTableNamePtr = (const char *)Ptr;
-    if (VTableNamePtr > (const char *)DataBuffer->getBufferEnd())
+    if (VTableNamePtr > DataBuffer->getBufferEnd())
       return make_error<InstrProfError>(instrprof_error::truncated);
 
     VTableName = StringRef(VTableNamePtr, CompressedVTableNamesLen);
@@ -1491,7 +1369,7 @@ InstrProfSymtab &IndexedInstrProfReader::getSymtab() {
   return *Symtab;
 }
 
-Expected<InstrProfRecord> IndexedInstrProfReader::getInstrProfRecord(
+Expected<NamedInstrProfRecord> IndexedInstrProfReader::getInstrProfRecord(
     StringRef FuncName, uint64_t FuncHash, StringRef DeprecatedFuncName,
     uint64_t *MismatchedFuncSum) {
   ArrayRef<NamedInstrProfRecord> Data;
@@ -1579,16 +1457,6 @@ getMemProfRecordV2(const memprof::IndexedMemProfRecord &IndexedRecord,
   return Record;
 }
 
-static Expected<memprof::MemProfRecord>
-getMemProfRecordV3(const memprof::IndexedMemProfRecord &IndexedRecord,
-                   const unsigned char *FrameBase,
-                   const unsigned char *CallStackBase) {
-  memprof::LinearFrameIdConverter FrameIdConv(FrameBase);
-  memprof::LinearCallStackIdConverter CSIdConv(CallStackBase, FrameIdConv);
-  memprof::MemProfRecord Record = IndexedRecord.toMemProfRecord(CSIdConv);
-  return Record;
-}
-
 Expected<memprof::MemProfRecord>
 IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
   // TODO: Add memprof specific errors.
@@ -1608,13 +1476,20 @@ IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
     assert(MemProfCallStackTable && "MemProfCallStackTable must be available");
     return getMemProfRecordV2(IndexedRecord, *MemProfFrameTable,
                               *MemProfCallStackTable);
+  // Combine V3 and V4 cases as the record conversion logic is the same.
   case memprof::Version3:
+  case memprof::Version4:
     assert(!MemProfFrameTable && "MemProfFrameTable must not be available");
     assert(!MemProfCallStackTable &&
            "MemProfCallStackTable must not be available");
     assert(FrameBase && "FrameBase must be available");
     assert(CallStackBase && "CallStackBase must be available");
-    return getMemProfRecordV3(IndexedRecord, FrameBase, CallStackBase);
+    {
+      memprof::LinearFrameIdConverter FrameIdConv(FrameBase);
+      memprof::LinearCallStackIdConverter CSIdConv(CallStackBase, FrameIdConv);
+      memprof::MemProfRecord Record = IndexedRecord.toMemProfRecord(CSIdConv);
+      return Record;
+    }
   }
 
   return make_error<InstrProfError>(
@@ -1628,7 +1503,7 @@ IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
 DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>>
 IndexedMemProfReader::getMemProfCallerCalleePairs() const {
   assert(MemProfRecordTable);
-  assert(Version == memprof::Version3);
+  assert(Version == memprof::Version3 || Version == memprof::Version4);
 
   memprof::LinearFrameIdConverter FrameIdConv(FrameBase);
   memprof::CallerCalleePairExtractor Extractor(CallStackBase, FrameIdConv,
@@ -1677,13 +1552,46 @@ memprof::AllMemProfData IndexedMemProfReader::getAllMemProfData() const {
     Pair.Record = std::move(*Record);
     AllMemProfData.HeapProfileRecords.push_back(std::move(Pair));
   }
+  // Populate the data access profiles for yaml output.
+  if (DataAccessProfileData != nullptr) {
+    AllMemProfData.YamlifiedDataAccessProfiles.Records.reserve(
+        DataAccessProfileData->getRecords().size());
+    AllMemProfData.YamlifiedDataAccessProfiles.KnownColdSymbols.reserve(
+        DataAccessProfileData->getKnownColdSymbols().size());
+    AllMemProfData.YamlifiedDataAccessProfiles.KnownColdStrHashes.reserve(
+        DataAccessProfileData->getKnownColdHashes().size());
+    for (const auto &[SymHandleRef, RecordRef] :
+         DataAccessProfileData->getRecords())
+      AllMemProfData.YamlifiedDataAccessProfiles.Records.push_back(
+          memprof::DataAccessProfRecord(SymHandleRef, RecordRef.AccessCount,
+                                        RecordRef.Locations));
+    for (StringRef ColdSymbol : DataAccessProfileData->getKnownColdSymbols())
+      AllMemProfData.YamlifiedDataAccessProfiles.KnownColdSymbols.push_back(
+          ColdSymbol.str());
+    for (uint64_t Hash : DataAccessProfileData->getKnownColdHashes())
+      AllMemProfData.YamlifiedDataAccessProfiles.KnownColdStrHashes.push_back(
+          Hash);
+    llvm::stable_sort(AllMemProfData.YamlifiedDataAccessProfiles.Records,
+                      [](const llvm::memprof::DataAccessProfRecord &lhs,
+                         const llvm::memprof::DataAccessProfRecord &rhs) {
+                        return lhs.AccessCount > rhs.AccessCount;
+                      });
+    llvm::stable_sort(
+        AllMemProfData.YamlifiedDataAccessProfiles.KnownColdSymbols,
+        [](const std::string &lhs, const std::string &rhs) {
+          return lhs < rhs;
+        });
+    llvm::stable_sort(
+        AllMemProfData.YamlifiedDataAccessProfiles.KnownColdStrHashes,
+        [](const uint64_t &lhs, const uint64_t &rhs) { return lhs < rhs; });
+  }
   return AllMemProfData;
 }
 
 Error IndexedInstrProfReader::getFunctionCounts(StringRef FuncName,
                                                 uint64_t FuncHash,
                                                 std::vector<uint64_t> &Counts) {
-  Expected<InstrProfRecord> Record = getInstrProfRecord(FuncName, FuncHash);
+  auto Record = getInstrProfRecord(FuncName, FuncHash);
   if (Error E = Record.takeError())
     return error(std::move(E));
 
@@ -1694,7 +1602,7 @@ Error IndexedInstrProfReader::getFunctionCounts(StringRef FuncName,
 Error IndexedInstrProfReader::getFunctionBitmap(StringRef FuncName,
                                                 uint64_t FuncHash,
                                                 BitVector &Bitmap) {
-  Expected<InstrProfRecord> Record = getInstrProfRecord(FuncName, FuncHash);
+  auto Record = getInstrProfRecord(FuncName, FuncHash);
   if (Error E = Record.takeError())
     return error(std::move(E));
 
@@ -1709,8 +1617,8 @@ Error IndexedInstrProfReader::getFunctionBitmap(StringRef FuncName,
         std::memset(W, 0, sizeof(W));
         std::memcpy(W, &BitmapBytes[I], N);
         I += N;
-        return support::endian::read<XTy, llvm::endianness::little,
-                                     support::aligned>(W);
+        return support::endian::read<XTy, support::aligned>(
+            W, llvm::endianness::little);
       },
       Bitmap, Bitmap);
   assert(I == E);

@@ -8,7 +8,6 @@
 
 #include "DynamicLoaderDarwin.h"
 
-#include "DynamicLoaderDarwinProperties.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -27,6 +26,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
+#include "lldb/Target/ThreadPlanStepInstruction.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -79,17 +79,6 @@ void DynamicLoaderDarwin::DidLaunch() {
   SetNotificationBreakpoint();
 }
 
-void DynamicLoaderDarwin::CreateSettings(lldb_private::Debugger &debugger) {
-  if (!PluginManager::GetSettingForDynamicLoaderPlugin(
-          debugger, DynamicLoaderDarwinProperties::GetSettingName())) {
-    const bool is_global_setting = true;
-    PluginManager::CreateSettingForDynamicLoaderPlugin(
-        debugger,
-        DynamicLoaderDarwinProperties::GetGlobal().GetValueProperties(),
-        "Properties for the DynamicLoaderDarwin plug-in.", is_global_setting);
-  }
-}
-
 // Clear out the state of this class.
 void DynamicLoaderDarwin::Clear(bool clear_process) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
@@ -135,32 +124,56 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
   if (module_sp || !can_create)
     return module_sp;
 
-  if (HostInfo::GetArchitecture().IsCompatibleMatch(target.GetArchitecture())) {
+  // See if we have this binary in the Target or the global Module
+  // cache already.
+  module_sp = target.GetOrCreateModule(module_spec, /*notify=*/false);
+
+  if (!module_sp &&
+      HostInfo::GetArchitecture().IsCompatibleMatch(target.GetArchitecture())) {
     // When debugging on the host, we are most likely using the same shared
     // cache as our inferior. The dylibs from the shared cache might not
     // exist on the filesystem, so let's use the images in our own memory
     // to create the modules.
     // Check if the requested image is in our shared cache.
-    SharedCacheImageInfo image_info =
-        HostInfo::GetSharedCacheImageInfo(module_spec.GetFileSpec().GetPath());
+    SharedCacheImageInfo image_info;
+    addr_t sc_base_addr;
+    UUID sc_uuid;
+    LazyBool using_sc;
+    LazyBool private_sc;
+    FileSpec sc_path;
+    if (GetSharedCacheInformation(sc_base_addr, sc_uuid, using_sc, private_sc,
+                                  sc_path) &&
+        sc_uuid)
+      image_info = HostInfo::GetSharedCacheImageInfo(
+          module_spec.GetFileSpec().GetPath(), sc_uuid);
+    else
+      image_info = HostInfo::GetSharedCacheImageInfo(
+          module_spec.GetFileSpec().GetPath());
 
     // If we found it and it has the correct UUID, let's proceed with
     // creating a module from the memory contents.
-    if (image_info.uuid &&
-        (!module_spec.GetUUID() || module_spec.GetUUID() == image_info.uuid)) {
-      ModuleSpec shared_cache_spec(module_spec.GetFileSpec(), image_info.uuid,
-                                   image_info.data_sp);
+    if (image_info.GetUUID() &&
+        (!module_spec.GetUUID() ||
+         module_spec.GetUUID() == image_info.GetUUID())) {
+      ModuleSpec shared_cache_spec(module_spec.GetFileSpec(),
+                                   image_info.GetUUID(),
+                                   image_info.GetExtractor());
       module_sp =
           target.GetOrCreateModule(shared_cache_spec, false /* notify */);
     }
   }
   // We'll call Target::ModulesDidLoad after all the modules have been
   // added to the target, don't let it be called for every one.
-  if (!module_sp)
-    module_sp = target.GetOrCreateModule(module_spec, false /* notify */);
-  if (!module_sp || module_sp->GetObjectFile() == nullptr)
-    module_sp = m_process->ReadModuleFromMemory(image_info.file_spec,
-                                                image_info.address);
+  if (!module_sp || module_sp->GetObjectFile() == nullptr) {
+    llvm::Expected<ModuleSP> module_sp_or_err = m_process->ReadModuleFromMemory(
+        image_info.file_spec, image_info.address);
+    if (auto err = module_sp_or_err.takeError()) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::DynamicLoader), std::move(err),
+                     "Failed to load module from memory: {0}");
+      return {};
+    }
+    module_sp = *module_sp_or_err;
+  }
 
   if (did_create_ptr)
     *did_create_ptr = (bool)module_sp;
@@ -670,8 +683,7 @@ DynamicLoaderDarwin::PreloadModulesFromImageInfos(
         image_info, FindTargetModuleForImageInfo(image_info, true, nullptr));
   };
   auto it = image_infos.begin();
-  bool is_parallel_load =
-      DynamicLoaderDarwinProperties::GetGlobal().GetEnableParallelImageLoad();
+  bool is_parallel_load = m_process->GetTarget().GetParallelModuleLoad();
   if (is_parallel_load) {
     llvm::ThreadPoolTaskGroup taskGroup(Debugger::GetThreadPool());
     for (size_t i = 0; i < size; ++i, ++it) {
@@ -734,19 +746,26 @@ bool DynamicLoaderDarwin::AddModulesUsingPreloadedModules(
                                                                true /* notify */);
               if (!commpage_image_module_sp ||
                   commpage_image_module_sp->GetObjectFile() == nullptr) {
-                commpage_image_module_sp = m_process->ReadModuleFromMemory(
-                    image_info.file_spec, image_info.address);
-                // Always load a memory image right away in the target in case
-                // we end up trying to read the symbol table from memory... The
-                // __LINKEDIT will need to be mapped so we can figure out where
-                // the symbol table bits are...
-                bool changed = false;
-                UpdateImageLoadAddress(commpage_image_module_sp.get(),
-                                       image_info);
-                target.GetImages().Append(commpage_image_module_sp);
-                if (changed) {
-                  image_info.load_stop_id = m_process->GetStopID();
-                  loaded_module_list.AppendIfNeeded(commpage_image_module_sp);
+                llvm::Expected<ModuleSP> module_sp_or_err =
+                    m_process->ReadModuleFromMemory(image_info.file_spec,
+                                                    image_info.address);
+                if (auto err = module_sp_or_err.takeError()) {
+                  LLDB_LOG_ERROR(log, std::move(err),
+                                 "Failed to read module from memory: {0}");
+                } else {
+                  // Always load a memory image right away in the target in case
+                  // we end up trying to read the symbol table from memory...
+                  // The __LINKEDIT will need to be mapped so we can figure out
+                  // where the symbol table bits are...
+                  commpage_image_module_sp = *module_sp_or_err;
+                  bool changed = false;
+                  UpdateImageLoadAddress(commpage_image_module_sp.get(),
+                                         image_info);
+                  target.GetImages().Append(commpage_image_module_sp);
+                  if (changed) {
+                    image_info.load_stop_id = m_process->GetStopID();
+                    loaded_module_list.AppendIfNeeded(commpage_image_module_sp);
+                  }
                 }
               }
             }
@@ -884,7 +903,6 @@ void DynamicLoaderDarwin::PrivateInitialize(Process *process) {
                StateAsCString(m_process->GetState()));
   Clear(true);
   m_process = process;
-  m_process->GetTarget().ClearAllLoadedSections();
 }
 
 // Member function that gets called when the process state changes.
@@ -929,22 +947,22 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
   StackFrame *current_frame = thread.GetStackFrameAtIndex(0).get();
   const SymbolContext &current_context =
       current_frame->GetSymbolContext(eSymbolContextSymbol);
-  Symbol *current_symbol = current_context.symbol;
+  const Symbol *current_symbol = current_context.symbol;
   Log *log = GetLog(LLDBLog::Step);
   TargetSP target_sp(thread.CalculateTarget());
 
   if (current_symbol != nullptr) {
     std::vector<Address> addresses;
 
+    ConstString current_name =
+        current_symbol->GetMangled().GetName(Mangled::ePreferMangled);
     if (current_symbol->IsTrampoline()) {
-      ConstString trampoline_name =
-          current_symbol->GetMangled().GetName(Mangled::ePreferMangled);
 
-      if (trampoline_name) {
+      if (current_name) {
         const ModuleList &images = target_sp->GetImages();
 
         SymbolContextList code_symbols;
-        images.FindSymbolsWithNameAndType(trampoline_name, eSymbolTypeCode,
+        images.FindSymbolsWithNameAndType(current_name, eSymbolTypeCode,
                                           code_symbols);
         for (const SymbolContext &context : code_symbols) {
           Address addr = context.GetFunctionOrSymbolAddress();
@@ -958,11 +976,11 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
         }
 
         SymbolContextList reexported_symbols;
-        images.FindSymbolsWithNameAndType(
-            trampoline_name, eSymbolTypeReExported, reexported_symbols);
+        images.FindSymbolsWithNameAndType(current_name, eSymbolTypeReExported,
+                                          reexported_symbols);
         for (const SymbolContext &context : reexported_symbols) {
           if (context.symbol) {
-            Symbol *actual_symbol =
+            const Symbol *actual_symbol =
                 context.symbol->ResolveReExportedSymbol(*target_sp.get());
             if (actual_symbol) {
               const Address actual_symbol_addr = actual_symbol->GetAddress();
@@ -981,7 +999,7 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
         }
 
         SymbolContextList indirect_symbols;
-        images.FindSymbolsWithNameAndType(trampoline_name, eSymbolTypeResolver,
+        images.FindSymbolsWithNameAndType(current_name, eSymbolTypeResolver,
                                           indirect_symbols);
 
         for (const SymbolContext &context : indirect_symbols) {
@@ -1021,7 +1039,7 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
       // and if they do, resolve them:
       std::vector<lldb::addr_t> load_addrs;
       for (Address address : addresses) {
-        Symbol *symbol = address.CalculateSymbolContextSymbol();
+        const Symbol *symbol = address.CalculateSymbolContextSymbol();
         if (symbol && symbol->IsIndirect()) {
           Status error;
           Address symbol_address = symbol->GetAddress();
@@ -1041,6 +1059,23 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
       thread_plan_sp = std::make_shared<ThreadPlanRunToAddress>(
           thread, load_addrs, stop_others);
     }
+    // One more case we have to consider is "branch islands".  These are regular
+    // TEXT symbols but their names end in .island plus maybe a .digit suffix.
+    // They are to allow arm64 code to branch further than the size of the
+    // address slot allows.  We just need to single-instruction step in that
+    // case.
+    static const char *g_branch_island_pattern = "\\.island\\.?[0-9]*$";
+    static RegularExpression g_branch_island_regex(g_branch_island_pattern);
+
+    bool is_branch_island = g_branch_island_regex.Execute(current_name);
+    if (!thread_plan_sp && is_branch_island) {
+      thread_plan_sp = std::make_shared<ThreadPlanStepInstruction>(
+          thread,
+          /* step_over= */ false, /* stop_others */ false, eVoteNoOpinion,
+          eVoteNoOpinion);
+      LLDB_LOG(log, "Stepping one instruction over branch island: '{0}'.",
+               current_name);
+    }
   } else {
     LLDB_LOGF(log, "Could not find symbol for step through.");
   }
@@ -1049,7 +1084,8 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
 }
 
 void DynamicLoaderDarwin::FindEquivalentSymbols(
-    lldb_private::Symbol *original_symbol, lldb_private::ModuleList &images,
+    const lldb_private::Symbol *original_symbol,
+    lldb_private::ModuleList &images,
     lldb_private::SymbolContextList &equivalent_symbols) {
   ConstString trampoline_name =
       original_symbol->GetMangled().GetName(Mangled::ePreferMangled);
@@ -1064,7 +1100,6 @@ void DynamicLoaderDarwin::FindEquivalentSymbols(
   RegularExpression equivalent_name_regex(equivalent_regex_buf);
   images.FindSymbolsMatchingRegExAndType(equivalent_name_regex, eSymbolTypeCode,
                                          equivalent_symbols);
-
 }
 
 lldb::ModuleSP DynamicLoaderDarwin::GetPThreadLibraryModule() {
@@ -1155,9 +1190,8 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
   //  size_t offset;
   // }
   //
-  // The strategy is to take get_addr, call it with the address of the
-  // containing TLS_Thunk structure, and add the offset to the resulting
-  // pointer to get the data block.
+  // The strategy is to take get_addr and call it with the address of the
+  // containing TLS_Thunk structure.
   //
   // On older apple platforms, the key is treated as a pthread_key_t and passed
   // to pthread_getspecific. The pointer returned from that call is added to
@@ -1186,7 +1220,7 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
       const addr_t tls_data = evaluate_tls_address(
           thunk_load_addr, llvm::ArrayRef<addr_t>(tls_load_addr));
       if (tls_data != LLDB_INVALID_ADDRESS)
-        return tls_data + tls_offset;
+        return tls_data;
     }
   }
 

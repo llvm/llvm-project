@@ -13,7 +13,7 @@
 // register. That taint register can then be used to mask off registers with
 // sensitive data when executing under miss-speculation, a.k.a. "transient
 // execution".
-// This pass is aimed at mitigating against SpectreV1-style vulnarabilities.
+// This pass is aimed at mitigating against SpectreV1-style vulnerabilities.
 //
 // It also implements speculative load hardening, i.e. using the taint register
 // to automatically mask off loaded data.
@@ -126,9 +126,7 @@ public:
 
   static char ID;
 
-  AArch64SpeculationHardening() : MachineFunctionPass(ID) {
-    initializeAArch64SpeculationHardeningPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64SpeculationHardening() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
 

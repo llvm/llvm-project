@@ -5,11 +5,12 @@ from lldbsuite.test import lldbutil
 
 import re
 
+@skipIf(macos_version=[">=", "15.4"], asan=True)
 class LibCxxInternalsRecognizerTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @add_test_categories(["libc++"])
-    @skipIf(compiler="clang", compiler_version=["<", "16.0"])
+    @skipIf(compiler="clang", compiler_version=["<", "21.0"])
     def test_frame_recognizer(self):
         """Test that implementation details of libc++ are hidden"""
         self.build()
@@ -23,7 +24,7 @@ class LibCxxInternalsRecognizerTestCase(TestBase):
             # We never hide the frame of the entry-point into the standard library, even
             # if the name starts with `__` which usually indicates an internal function.
             "ranges_sort_less(int, int)": [
-                re.compile("ranges::__sort::(__fn::)?operator\(\)"),
+                re.compile(r"ranges::__sort::(__fn::)?operator\(\)"),
                 "test_algorithms",
             ],
             # `ranges::views::transform` internally uses `std::invoke`, and that
@@ -40,6 +41,7 @@ class LibCxxInternalsRecognizerTestCase(TestBase):
             "Callable::operator()(int) const": ["::invoke", "test_invoke"],
             # Containers
             "MyKey::operator<(MyKey const&) const": [
+                "::operator()",
                 "less",
                 "::emplace",
                 "test_containers",

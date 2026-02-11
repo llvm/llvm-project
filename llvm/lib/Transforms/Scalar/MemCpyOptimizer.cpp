@@ -47,6 +47,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -106,6 +107,9 @@ struct MemsetRange {
 };
 
 } // end anonymous namespace
+
+static bool overreadUndefContents(MemorySSA *MSSA, MemCpyInst *MemCpy,
+                                  MemIntrinsic *MemSrc, BatchAAResults &BAA);
 
 bool MemsetRange::isProfitableToUseMemset(const DataLayout &DL) const {
   // If we found more than 4 stores to merge or 16 bytes, use memset.
@@ -638,17 +642,19 @@ bool MemCpyOptPass::processStoreOfLoad(StoreInst *SI, LoadInst *LI,
       (EnableMemCpyOptWithoutLibcalls ||
        (TLI->has(LibFunc_memcpy) && TLI->has(LibFunc_memmove)))) {
     MemoryLocation LoadLoc = MemoryLocation::get(LI);
-    MemoryUseOrDef *LoadAccess = MSSA->getMemoryAccess(LI),
-                   *StoreAccess = MSSA->getMemoryAccess(SI);
 
-    // We use MSSA to check if an instruction may store to the memory we load
-    // from in between the load and the store. If such an instruction is found,
-    // we try to promote there instead of at the store position.
-    auto *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
-        StoreAccess->getDefiningAccess(), LoadLoc, BAA);
-    Instruction *P = MSSA->dominates(LoadAccess, Clobber)
-                         ? cast<MemoryUseOrDef>(Clobber)->getMemoryInst()
-                         : SI;
+    // We use alias analysis to check if an instruction may store to
+    // the memory we load from in between the load and the store. If
+    // such an instruction is found, we try to promote there instead
+    // of at the store position.
+    // TODO: Can use MSSA for this.
+    Instruction *P = SI;
+    for (auto &I : make_range(++LI->getIterator(), SI->getIterator())) {
+      if (isModSet(BAA.getModRefInfo(&I, LoadLoc))) {
+        P = &I;
+        break;
+      }
+    }
 
     // If we found an instruction that may write to the loaded memory,
     // we can try to promote at this position instead of the store
@@ -725,7 +731,7 @@ bool MemCpyOptPass::processStoreOfLoad(StoreInst *SI, LoadInst *LI,
       if (performStackMoveOptzn(LI, SI, DestAlloca, SrcAlloca,
                                 DL.getTypeStoreSize(T), BAA)) {
         // Avoid invalidating the iterator.
-        BBI = SI->getNextNonDebugInstruction()->getIterator();
+        BBI = SI->getNextNode()->getIterator();
         eraseInstruction(SI);
         eraseInstruction(LI);
         ++NumMemCpyInstr;
@@ -863,16 +869,12 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   if (!srcAlloca)
     return false;
 
-  ConstantInt *srcArraySize = dyn_cast<ConstantInt>(srcAlloca->getArraySize());
-  if (!srcArraySize)
-    return false;
-
   const DataLayout &DL = cpyLoad->getDataLayout();
-  TypeSize SrcAllocaSize = DL.getTypeAllocSize(srcAlloca->getAllocatedType());
-  // We can't optimize scalable types.
-  if (SrcAllocaSize.isScalable())
+  // We can't optimize scalable types or variable-length allocas.
+  std::optional<TypeSize> SrcAllocaSize = srcAlloca->getAllocationSize(DL);
+  if (!SrcAllocaSize || SrcAllocaSize->isScalable())
     return false;
-  uint64_t srcSize = SrcAllocaSize * srcArraySize->getZExtValue();
+  uint64_t srcSize = SrcAllocaSize->getFixedValue();
 
   if (cpySize < srcSize)
     return false;
@@ -910,7 +912,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   // move the bitcast as well, which we don't handle.
   if (SkippedLifetimeStart) {
     auto *LifetimeArg =
-        dyn_cast<Instruction>(SkippedLifetimeStart->getOperand(1));
+        dyn_cast<Instruction>(SkippedLifetimeStart->getOperand(0));
     if (LifetimeArg && LifetimeArg->getParent() == C->getParent() &&
         C->comesBefore(LifetimeArg))
       return false;
@@ -994,8 +996,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
     // or src pointer.
     Value *DestObj = getUnderlyingObject(cpyDest);
     if (!isIdentifiedFunctionLocal(DestObj) ||
-        PointerMayBeCapturedBefore(DestObj, /* ReturnCaptures */ true,
-                                   /* StoreCaptures */ true, C, DT,
+        PointerMayBeCapturedBefore(DestObj, /* ReturnCaptures */ true, C, DT,
                                    /* IncludeI */ true))
       return false;
 
@@ -1006,8 +1007,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
       // Lifetime of srcAlloca ends at lifetime.end.
       if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
         if (II->getIntrinsicID() == Intrinsic::lifetime_end &&
-            II->getArgOperand(1)->stripPointerCasts() == srcAlloca &&
-            cast<ConstantInt>(II->getArgOperand(0))->uge(srcSize))
+            II->getArgOperand(0) == srcAlloca)
           break;
       }
 
@@ -1103,16 +1103,17 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
 bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
                                                   MemCpyInst *MDep,
                                                   BatchAAResults &BAA) {
+  // We can only optimize non-volatile memcpy's.
+  if (MDep->isVolatile())
+    return false;
+
   // If dep instruction is reading from our current input, then it is a noop
   // transfer and substituting the input won't change this instruction. Just
   // ignore the input and let someone else zap MDep. This handles cases like:
   //    memcpy(a <- a)
   //    memcpy(b <- a)
-  if (M->getSource() == MDep->getSource())
-    return false;
-
-  // We can only optimize non-volatile memcpy's.
-  if (MDep->isVolatile())
+  // This also avoids infinite loops.
+  if (BAA.isMustAlias(MDep->getDest(), MDep->getSource()))
     return false;
 
   int64_t MForwardOffset = 0;
@@ -1127,20 +1128,35 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
     MForwardOffset = *Offset;
   }
 
-  // The length of the memcpy's must be the same, or the preceding one
-  // must be larger than the following one.
-  if (MForwardOffset != 0 || MDep->getLength() != M->getLength()) {
+  Value *CopyLength = M->getLength();
+
+  // The length of the memcpy's must be the same, or the preceding one must be
+  // larger than the following one, or the contents of the overread must be
+  // undefined bytes of a defined size.
+  if (MForwardOffset != 0 || MDep->getLength() != CopyLength) {
     auto *MDepLen = dyn_cast<ConstantInt>(MDep->getLength());
-    auto *MLen = dyn_cast<ConstantInt>(M->getLength());
-    if (!MDepLen || !MLen ||
-        MDepLen->getZExtValue() < MLen->getZExtValue() + MForwardOffset)
+    auto *MLen = dyn_cast<ConstantInt>(CopyLength);
+    // This could be converted to a runtime test (%CopyLength =
+    // min(max(0, MDepLen - MForwardOffset), MLen)), but it is
+    // unclear if that is useful
+    if (!MDepLen || !MLen)
       return false;
+    if (MDepLen->getZExtValue() < MLen->getZExtValue() + MForwardOffset) {
+      if (!overreadUndefContents(MSSA, M, MDep, BAA))
+        return false;
+      if (MDepLen->getZExtValue() <= (uint64_t)MForwardOffset)
+        return false; // Should not reach here (there is obviously no aliasing
+                      // with MDep), so just bail in case it had incomplete info
+                      // somehow
+      CopyLength = ConstantInt::get(CopyLength->getType(),
+                                    MDepLen->getZExtValue() - MForwardOffset);
+    }
   }
 
   IRBuilder<> Builder(M);
   auto *CopySource = MDep->getSource();
   Instruction *NewCopySource = nullptr;
-  auto CleanupOnRet = llvm::make_scope_exit([&] {
+  llvm::scope_exit CleanupOnRet([&] {
     if (NewCopySource && NewCopySource->use_empty())
       // Safety: It's safe here because we will only allocate more instructions
       // after finishing all BatchAA queries, but we have to be careful if we
@@ -1150,9 +1166,13 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
       eraseInstruction(NewCopySource);
   });
   MaybeAlign CopySourceAlign = MDep->getSourceAlign();
-  // We just need to calculate the actual size of the copy.
-  auto MCopyLoc = MemoryLocation::getForSource(MDep).getWithNewSize(
-      MemoryLocation::getForSource(M).Size);
+  auto MCopyLoc = MemoryLocation::getForSource(MDep);
+  // Truncate the size of the MDep access to just the bytes read
+  if (MDep->getLength() != CopyLength) {
+    auto *ConstLength = cast<ConstantInt>(CopyLength);
+    MCopyLoc = MCopyLoc.getWithNewSize(
+        LocationSize::precise(ConstLength->getZExtValue()));
+  }
 
   // When the forwarding offset is greater than 0, we transform
   //    memcpy(d1 <- s1)
@@ -1175,10 +1195,6 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
     if (CopySourceAlign)
       CopySourceAlign = commonAlignment(*CopySourceAlign, MForwardOffset);
   }
-
-  // Avoid infinite loops
-  if (BAA.isMustAlias(M->getSource(), CopySource))
-    return false;
 
   // Verify that the copied-from memory doesn't change in between the two
   // transfers.  For example, in:
@@ -1211,7 +1227,7 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
     // Don't convert llvm.memcpy.inline into memmove because memmove can be
     // lowered as a call, and that is not allowed for llvm.memcpy.inline (and
     // there is no inline version of llvm.memmove)
-    if (isa<MemCpyInlineInst>(M))
+    if (M->isForceInlined())
       return false;
     UseMemMove = true;
   }
@@ -1225,20 +1241,19 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
   // example we could be moving from movaps -> movq on x86.
   Instruction *NewM;
   if (UseMemMove)
-    NewM =
-        Builder.CreateMemMove(M->getDest(), M->getDestAlign(), CopySource,
-                              CopySourceAlign, M->getLength(), M->isVolatile());
-  else if (isa<MemCpyInlineInst>(M)) {
+    NewM = Builder.CreateMemMove(M->getDest(), M->getDestAlign(), CopySource,
+                                 CopySourceAlign, CopyLength, M->isVolatile());
+  else if (M->isForceInlined())
     // llvm.memcpy may be promoted to llvm.memcpy.inline, but the converse is
     // never allowed since that would allow the latter to be lowered as a call
     // to an external function.
     NewM = Builder.CreateMemCpyInline(M->getDest(), M->getDestAlign(),
-                                      CopySource, CopySourceAlign,
-                                      M->getLength(), M->isVolatile());
-  } else
-    NewM =
-        Builder.CreateMemCpy(M->getDest(), M->getDestAlign(), CopySource,
-                             CopySourceAlign, M->getLength(), M->isVolatile());
+                                      CopySource, CopySourceAlign, CopyLength,
+                                      M->isVolatile());
+  else
+    NewM = Builder.CreateMemCpy(M->getDest(), M->getDestAlign(), CopySource,
+                                CopySourceAlign, CopyLength, M->isVolatile());
+
   NewM->copyMetadata(*M, LLVMContext::MD_DIAssignID);
 
   assert(isa<MemoryDef>(MSSA->getMemoryAccess(M)));
@@ -1348,6 +1363,10 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
   Value *SizeDiff = Builder.CreateSub(DestSize, SrcSize);
   Value *MemsetLen = Builder.CreateSelect(
       Ule, ConstantInt::getNullValue(DestSize->getType()), SizeDiff);
+  // FIXME (#167968): we could explore estimating the branch_weights based on
+  // value profiling data about the 2 sizes.
+  if (auto *SI = dyn_cast<SelectInst>(MemsetLen))
+    setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
   Instruction *NewMemSet =
       Builder.CreateMemSet(Builder.CreatePtrAdd(Dest, SrcSize),
                            MemSet->getOperand(1), MemsetLen, Alignment);
@@ -1365,39 +1384,35 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
   return true;
 }
 
-/// Determine whether the instruction has undefined content for the given Size,
+/// Determine whether the pointer V had only undefined content (due to Def),
 /// either because it was freshly alloca'd or started its lifetime.
 static bool hasUndefContents(MemorySSA *MSSA, BatchAAResults &AA, Value *V,
-                             MemoryDef *Def, Value *Size) {
+                             MemoryDef *Def) {
   if (MSSA->isLiveOnEntryDef(Def))
     return isa<AllocaInst>(getUnderlyingObject(V));
 
-  if (auto *II = dyn_cast_or_null<IntrinsicInst>(Def->getMemoryInst())) {
-    if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
-      auto *LTSize = cast<ConstantInt>(II->getArgOperand(0));
+  if (auto *II = dyn_cast_or_null<IntrinsicInst>(Def->getMemoryInst()))
+    if (II->getIntrinsicID() == Intrinsic::lifetime_start)
+      if (auto *Alloca = dyn_cast<AllocaInst>(getUnderlyingObject(V)))
+        return II->getArgOperand(0) == Alloca;
 
-      if (auto *CSize = dyn_cast<ConstantInt>(Size)) {
-        if (AA.isMustAlias(V, II->getArgOperand(1)) &&
-            LTSize->getZExtValue() >= CSize->getZExtValue())
-          return true;
-      }
+  return false;
+}
 
-      // If the lifetime.start covers a whole alloca (as it almost always
-      // does) and we're querying a pointer based on that alloca, then we know
-      // the memory is definitely undef, regardless of how exactly we alias.
-      // The size also doesn't matter, as an out-of-bounds access would be UB.
-      if (auto *Alloca = dyn_cast<AllocaInst>(getUnderlyingObject(V))) {
-        if (getUnderlyingObject(II->getArgOperand(1)) == Alloca) {
-          const DataLayout &DL = Alloca->getDataLayout();
-          if (std::optional<TypeSize> AllocaSize =
-                  Alloca->getAllocationSize(DL))
-            if (*AllocaSize == LTSize->getValue())
-              return true;
-        }
-      }
-    }
-  }
-
+// If the memcpy is larger than the previous, but the memory was undef prior to
+// that, we can just ignore the tail. Technically we're only interested in the
+// bytes from 0..MemSrcOffset and MemSrcLength+MemSrcOffset..CopySize here, but
+// as we can't easily represent this location (hasUndefContents uses mustAlias
+// which cannot deal with offsets), we use the full 0..CopySize range.
+static bool overreadUndefContents(MemorySSA *MSSA, MemCpyInst *MemCpy,
+                                  MemIntrinsic *MemSrc, BatchAAResults &BAA) {
+  MemoryLocation MemCpyLoc = MemoryLocation::getForSource(MemCpy);
+  MemoryUseOrDef *MemSrcAccess = MSSA->getMemoryAccess(MemSrc);
+  MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
+      MemSrcAccess->getDefiningAccess(), MemCpyLoc, BAA);
+  if (auto *MD = dyn_cast<MemoryDef>(Clobber))
+    if (hasUndefContents(MSSA, BAA, MemCpy->getSource(), MD))
+      return true;
   return false;
 }
 
@@ -1412,55 +1427,74 @@ static bool hasUndefContents(MemorySSA *MSSA, BatchAAResults &AA, Value *V,
 ///   memset(dst1, c, dst1_size);
 ///   memset(dst2, c, dst2_size);
 /// \endcode
-/// When dst2_size <= dst1_size.
 bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
                                                MemSetInst *MemSet,
                                                BatchAAResults &BAA) {
-  // Make sure that memcpy(..., memset(...), ...), that is we are memsetting and
-  // memcpying from the same address. Otherwise it is hard to reason about.
-  if (!BAA.isMustAlias(MemSet->getRawDest(), MemCpy->getRawSource()))
-    return false;
-
   Value *MemSetSize = MemSet->getLength();
   Value *CopySize = MemCpy->getLength();
 
-  if (MemSetSize != CopySize) {
-    // Make sure the memcpy doesn't read any more than what the memset wrote.
-    // Don't worry about sizes larger than i64.
+  int64_t MOffset = 0;
+  const DataLayout &DL = MemCpy->getModule()->getDataLayout();
+  // We can only transforms memcpy's where the dest of one is the source of the
+  // other, or they have a known offset.
+  if (MemCpy->getSource() != MemSet->getDest()) {
+    std::optional<int64_t> Offset =
+        MemCpy->getSource()->getPointerOffsetFrom(MemSet->getDest(), DL);
+    if (!Offset)
+      return false;
+    // On positive offsets, the memcpy source is at a offset into the memset'd
+    // region. On negative offsets, the copy starts at a offset prior to the
+    // previously memset'd area, namely, we memcpy from a partially initialized
+    // region.
+    MOffset = *Offset;
+  }
 
-    // A known memset size is required.
+  if (MOffset != 0 || MemSetSize != CopySize) {
+    // Make sure the memcpy doesn't read any more than what the memset wrote,
+    // other than undef. Likewise, the memcpy should not read from an area not
+    // covered by the memset unless undef bytes. Don't worry about sizes larger
+    // than i64.
     auto *CMemSetSize = dyn_cast<ConstantInt>(MemSetSize);
-    if (!CMemSetSize)
-      return false;
-
-    // A known memcpy size is also required.
     auto *CCopySize = dyn_cast<ConstantInt>(CopySize);
-    if (!CCopySize)
-      return false;
-    if (CCopySize->getZExtValue() > CMemSetSize->getZExtValue()) {
-      // If the memcpy is larger than the memset, but the memory was undef prior
-      // to the memset, we can just ignore the tail. Technically we're only
-      // interested in the bytes from MemSetSize..CopySize here, but as we can't
-      // easily represent this location, we use the full 0..CopySize range.
-      MemoryLocation MemCpyLoc = MemoryLocation::getForSource(MemCpy);
-      bool CanReduceSize = false;
-      MemoryUseOrDef *MemSetAccess = MSSA->getMemoryAccess(MemSet);
-      MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
-          MemSetAccess->getDefiningAccess(), MemCpyLoc, BAA);
-      if (auto *MD = dyn_cast<MemoryDef>(Clobber))
-        if (hasUndefContents(MSSA, BAA, MemCpy->getSource(), MD, CopySize))
-          CanReduceSize = true;
-
-      if (!CanReduceSize)
+    if (!CMemSetSize || !CCopySize || MOffset < 0 ||
+        CCopySize->getZExtValue() + MOffset > CMemSetSize->getZExtValue()) {
+      if (!overreadUndefContents(MSSA, MemCpy, MemSet, BAA))
         return false;
-      CopySize = MemSetSize;
+
+      if (CMemSetSize && CCopySize) {
+        uint64_t MemSetSizeVal = CMemSetSize->getZExtValue();
+        uint64_t MemCpySizeVal = CCopySize->getZExtValue();
+        uint64_t NewSize;
+
+        if (MOffset < 0) {
+          // Offset from beginning of the initialized region.
+          uint64_t Offset = -MOffset;
+          NewSize = MemCpySizeVal <= Offset ? 0 : MemCpySizeVal - Offset;
+        } else if (MOffset == 0) {
+          NewSize = MemSetSizeVal;
+        } else {
+          NewSize =
+              MemSetSizeVal <= (uint64_t)MOffset ? 0 : MemSetSizeVal - MOffset;
+        }
+        CopySize = ConstantInt::get(CopySize->getType(), NewSize);
+      } else {
+        if (MOffset < 0)
+          return false;
+      }
     }
   }
 
   IRBuilder<> Builder(MemCpy);
+  Value *DestPtr = MemCpy->getRawDest();
+  MaybeAlign Align = MemCpy->getDestAlign();
+  if (MOffset < 0) {
+    DestPtr = Builder.CreatePtrAdd(DestPtr, Builder.getInt64(-MOffset));
+    if (Align)
+      Align = commonAlignment(*Align, -MOffset);
+  }
+
   Instruction *NewM =
-      Builder.CreateMemSet(MemCpy->getRawDest(), MemSet->getOperand(1),
-                           CopySize, MemCpy->getDestAlign());
+      Builder.CreateMemSet(DestPtr, MemSet->getOperand(1), CopySize, Align);
   auto *LastDef = cast<MemoryDef>(MSSA->getMemoryAccess(MemCpy));
   auto *NewAccess = MSSAU->createMemoryAccessAfter(NewM, nullptr, LastDef);
   MSSAU->insertDef(cast<MemoryDef>(NewAccess), /*RenameUses=*/true);
@@ -1496,12 +1530,13 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   // Check that copy is full with static size.
   const DataLayout &DL = DestAlloca->getDataLayout();
   std::optional<TypeSize> SrcSize = SrcAlloca->getAllocationSize(DL);
-  if (!SrcSize || Size != *SrcSize) {
-    LLVM_DEBUG(dbgs() << "Stack Move: Source alloca size mismatch\n");
-    return false;
-  }
   std::optional<TypeSize> DestSize = DestAlloca->getAllocationSize(DL);
-  if (!DestSize || Size != *DestSize) {
+  if (!SrcSize || !DestSize)
+    return false;
+  if (*SrcSize != *DestSize)
+    if (!SrcSize->isFixed() || !DestSize->isFixed())
+      return false;
+  if (Size != *DestSize) {
     LLVM_DEBUG(dbgs() << "Stack Move: Destination alloca size mismatch\n");
     return false;
   }
@@ -1509,38 +1544,33 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   if (!SrcAlloca->isStaticAlloca() || !DestAlloca->isStaticAlloca())
     return false;
 
+  // Check if it will be legal to combine allocas without breaking dominator.
+  bool MoveSrc = !DT->dominates(SrcAlloca, DestAlloca);
+  if (MoveSrc) {
+    if (!DT->dominates(DestAlloca, SrcAlloca))
+      return false;
+  }
+
   // Check that src and dest are never captured, unescaped allocas. Also
   // find the nearest common dominator and postdominator for all users in
   // order to shrink wrap the lifetimes, and instructions with noalias metadata
   // to remove them.
 
   SmallVector<Instruction *, 4> LifetimeMarkers;
-  SmallSet<Instruction *, 4> NoAliasInstrs;
-  bool SrcNotDom = false;
-
-  // Recursively track the user and check whether modified alias exist.
-  auto IsDereferenceableOrNull = [](Value *V, const DataLayout &DL) -> bool {
-    bool CanBeNull, CanBeFreed;
-    return V->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
-  };
+  SmallPtrSet<Instruction *, 4> AAMetadataInstrs;
 
   auto CaptureTrackingWithModRef =
-      [&](Instruction *AI,
-          function_ref<bool(Instruction *)> ModRefCallback) -> bool {
+      [&](Instruction *AI, function_ref<bool(Instruction *)> ModRefCallback,
+          bool &AddressCaptured) -> bool {
     SmallVector<Instruction *, 8> Worklist;
     Worklist.push_back(AI);
     unsigned MaxUsesToExplore = getDefaultMaxUsesToExploreForCaptureTracking();
     Worklist.reserve(MaxUsesToExplore);
-    SmallSet<const Use *, 20> Visited;
+    SmallPtrSet<const Use *, 20> Visited;
     while (!Worklist.empty()) {
-      Instruction *I = Worklist.back();
-      Worklist.pop_back();
+      Instruction *I = Worklist.pop_back_val();
       for (const Use &U : I->uses()) {
         auto *UI = cast<Instruction>(U.getUser());
-        // If any use that isn't dominated by SrcAlloca exists, we move src
-        // alloca to the entry before the transformation.
-        if (!DT->dominates(SrcAlloca, UI))
-          SrcNotDom = true;
 
         if (Visited.size() >= MaxUsesToExplore) {
           LLVM_DEBUG(
@@ -1550,41 +1580,38 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
         }
         if (!Visited.insert(&U).second)
           continue;
-        UseCaptureInfo CI =
-            DetermineUseCaptureKind(U, AI, IsDereferenceableOrNull);
-        // TODO(captures): Make this more precise.
-        if (CI.isPassthrough()) {
-          Worklist.push_back(UI);
-          continue;
-        }
-
-        if (capturesAnything(CI))
+        UseCaptureInfo CI = DetermineUseCaptureKind(U, AI);
+        if (capturesAnyProvenance(CI.UseCC))
           return false;
+        AddressCaptured |= capturesAddress(CI.UseCC);
 
-        if (UI->isLifetimeStartOrEnd()) {
-          // We note the locations of these intrinsic calls so that we can
-          // delete them later if the optimization succeeds, this is safe
-          // since both llvm.lifetime.start and llvm.lifetime.end intrinsics
-          // practically fill all the bytes of the alloca with an undefined
-          // value, although conceptually marked as alive/dead.
-          int64_t Size = cast<ConstantInt>(UI->getOperand(0))->getSExtValue();
-          if (Size < 0 || Size == DestSize) {
+        if (UI->mayReadOrWriteMemory()) {
+          if (UI->isLifetimeStartOrEnd()) {
+            // We note the locations of these intrinsic calls so that we can
+            // delete them later if the optimization succeeds, this is safe
+            // since both llvm.lifetime.start and llvm.lifetime.end intrinsics
+            // practically fill all the bytes of the alloca with an undefined
+            // value, although conceptually marked as alive/dead.
             LifetimeMarkers.push_back(UI);
             continue;
           }
+          AAMetadataInstrs.insert(UI);
+
+          if (!ModRefCallback(UI))
+            return false;
         }
-        if (UI->hasMetadata(LLVMContext::MD_noalias))
-          NoAliasInstrs.insert(UI);
-        if (!ModRefCallback(UI))
-          return false;
+
+        if (capturesAnything(CI.ResultCC)) {
+          Worklist.push_back(UI);
+          continue;
+        }
       }
     }
     return true;
   };
 
-  // Check that dest has no Mod/Ref, from the alloca to the Store, except full
-  // size lifetime intrinsics. And collect modref inst for the reachability
-  // check.
+  // Check that dest has no Mod/Ref, from the alloca to the Store. And collect
+  // modref inst for the reachability check.
   ModRefInfo DestModRef = ModRefInfo::NoModRef;
   MemoryLocation DestLoc(DestAlloca, LocationSize::precise(Size));
   SmallVector<BasicBlock *, 8> ReachabilityWorklist;
@@ -1623,7 +1650,9 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     return true;
   };
 
-  if (!CaptureTrackingWithModRef(DestAlloca, DestModRefCallback))
+  bool DestAddressCaptured = false;
+  if (!CaptureTrackingWithModRef(DestAlloca, DestModRefCallback,
+                                 DestAddressCaptured))
     return false;
   // Bailout if Dest may have any ModRef before Store.
   if (!ReachabilityWorklist.empty() &&
@@ -1649,17 +1678,33 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     return true;
   };
 
-  if (!CaptureTrackingWithModRef(SrcAlloca, SrcModRefCallback))
+  bool SrcAddressCaptured = false;
+  if (!CaptureTrackingWithModRef(SrcAlloca, SrcModRefCallback,
+                                 SrcAddressCaptured))
     return false;
 
-  // We can do the transformation. First, move the SrcAlloca to the start of the
-  // BB.
-  if (SrcNotDom)
-    SrcAlloca->moveBefore(*SrcAlloca->getParent(),
-                          SrcAlloca->getParent()->getFirstInsertionPt());
+  // If both the source and destination address are captured, the fact that they
+  // are no longer two separate allocations may be observed.
+  if (DestAddressCaptured && SrcAddressCaptured)
+    return false;
+
+  // We can now do the transformation. First move the Src if it was after Dest.
+  if (MoveSrc)
+    SrcAlloca->moveBefore(DestAlloca->getIterator());
+
   // Align the allocas appropriately.
   SrcAlloca->setAlignment(
       std::max(SrcAlloca->getAlign(), DestAlloca->getAlign()));
+
+  // Size the allocas appropriately.
+  if (*SrcSize != *DestSize) {
+    // Only possible if both sizes are fixed (due to earlier check)
+    // Set Src to the type and array size of Dest if Dest was larger
+    if (DestSize->getFixedValue() > SrcSize->getFixedValue()) {
+      SrcAlloca->setAllocatedType(DestAlloca->getAllocatedType());
+      SrcAlloca->setOperand(0, DestAlloca->getArraySize());
+    }
+  }
 
   // Merge the two allocas.
   DestAlloca->replaceAllUsesWith(SrcAlloca);
@@ -1677,13 +1722,18 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   }
 
   // As this transformation can cause memory accesses that didn't previously
-  // alias to begin to alias one another, we remove !noalias metadata from any
-  // uses of either alloca. This is conservative, but more precision doesn't
-  // seem worthwhile right now.
-  for (Instruction *I : NoAliasInstrs)
+  // alias to begin to alias one another, we remove !alias.scope, !noalias,
+  // !tbaa and !tbaa_struct metadata from any uses of either alloca.
+  // This is conservative, but more precision doesn't seem worthwhile
+  // right now.
+  for (Instruction *I : AAMetadataInstrs) {
+    I->setMetadata(LLVMContext::MD_alias_scope, nullptr);
     I->setMetadata(LLVMContext::MD_noalias, nullptr);
+    I->setMetadata(LLVMContext::MD_tbaa, nullptr);
+    I->setMetadata(LLVMContext::MD_tbaa_struct, nullptr);
+  }
 
-  LLVM_DEBUG(dbgs() << "Stack Move: Performed staack-move optimization\n");
+  LLVM_DEBUG(dbgs() << "Stack Move: Performed stack-move optimization\n");
   NumStackMove++;
   return true;
 }
@@ -1803,7 +1853,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
       }
     }
 
-    if (hasUndefContents(MSSA, BAA, M->getSource(), MD, M->getLength())) {
+    if (hasUndefContents(MSSA, BAA, M->getSource(), MD)) {
       LLVM_DEBUG(dbgs() << "Removed memcpy from undef\n");
       eraseInstruction(M);
       ++NumMemCpyInstr;
@@ -1826,7 +1876,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
   if (performStackMoveOptzn(M, M, DestAlloca, SrcAlloca,
                             TypeSize::getFixed(Len->getZExtValue()), BAA)) {
     // Avoid invalidating the iterator.
-    BBI = M->getNextNonDebugInstruction()->getIterator();
+    BBI = M->getNextNode()->getIterator();
     eraseInstruction(M);
     ++NumMemCpyInstr;
     return true;

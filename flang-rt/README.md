@@ -58,8 +58,8 @@ not provide all C-ABI functionality (such as Windows).
 cmake -S <path-to-llvm-project-source>/llvm     \
   -GNinja                                       \
   -DCMAKE_BUILD_TYPE=Release                    \
-  -DLLVM_ENABLE_PROJECTS="clang;flang;openmp"   \
-  -DLLVM_ENABLE_RUNTIMES="compiler-rt;flang-rt" \
+  -DLLVM_ENABLE_PROJECTS="clang;flang"   \
+  -DLLVM_ENABLE_RUNTIMES="compiler-rt;flang-rt;openmp" \
   ...
 ```
 
@@ -88,10 +88,15 @@ as `CMAKE_CXX_COMPILER`, `CMAKE_CXX_COMPILER`, and `CMAKE_Fortran_COMPILER`.
 Flang-RT to ensure they are using the same ABI. The C and C++ compiler
 can be any compiler supporting the same ABI.
 
-In addition to the compiler, the build be able to find LLVM development tools
-such as `lit` and `FileCheck` that are not found in an LLVM's install
+In addition to the compiler, the build must be able to find LLVM development
+tools such as `lit` and `FileCheck` that are not found in an LLVM's install
 directory. Use `CMAKE_BINARY_DIR` to point to directory where LLVM has
-been built. A simple build configuration might look like the following:
+been built. When building Flang as part of a bootstrapping build
+(`LLVM_ENABLE_PROJECTS=flang`), Flang-RT is automatically added
+unless configured with `-DFLANG_ENABLE_FLANG_RT=OFF`. Add that option to avoid
+having two conflicting versions of the same library.
+
+A simple build configuration might look like the following:
 
 ```bash
 cmake -S <path-to-llvm-project-source>/runtimes              \

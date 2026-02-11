@@ -15,6 +15,7 @@
 #define LLVM_CLANG_LEX_PPCALLBACKS_H
 
 #include "clang/Basic/DiagnosticIDs.h"
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/ModuleLoader.h"
@@ -210,6 +211,13 @@ public:
                             ModuleIdPath Path,
                             const Module *Imported) {
   }
+
+  /// Callback invoked whenever a module load was skipped due to enabled
+  /// single-module-parse-mode.
+  ///
+  /// \param Skipped The module that was not loaded.
+  ///
+  virtual void moduleLoadSkipped(Module *Skipped) {}
 
   /// Callback invoked when the end of the main file is reached.
   ///
@@ -498,10 +506,10 @@ public:
   }
 
   bool EmbedFileNotFound(StringRef FileName) override {
-    bool Skip = First->FileNotFound(FileName);
+    bool Skip = First->EmbedFileNotFound(FileName);
     // Make sure to invoke the second callback, no matter if the first already
     // returned true to skip the file.
-    Skip |= Second->FileNotFound(FileName);
+    Skip |= Second->EmbedFileNotFound(FileName);
     return Skip;
   }
 
@@ -551,6 +559,11 @@ public:
                     const Module *Imported) override {
     First->moduleImport(ImportLoc, Path, Imported);
     Second->moduleImport(ImportLoc, Path, Imported);
+  }
+
+  void moduleLoadSkipped(Module *Skipped) override {
+    First->moduleLoadSkipped(Skipped);
+    Second->moduleLoadSkipped(Skipped);
   }
 
   void EndOfMainFile() override {

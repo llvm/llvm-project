@@ -83,10 +83,10 @@ static void PrintOps(Instruction *I, const SmallVectorImpl<ValueEntry> &Ops) {
   Module *M = I->getModule();
   dbgs() << Instruction::getOpcodeName(I->getOpcode()) << " "
        << *Ops[0].Op->getType() << '\t';
-  for (unsigned i = 0, e = Ops.size(); i != e; ++i) {
+  for (const ValueEntry &Op : Ops) {
     dbgs() << "[ ";
-    Ops[i].Op->printAsOperand(dbgs(), false, M);
-    dbgs() << ", #" << Ops[i].Rank << "] ";
+    Op.Op->printAsOperand(dbgs(), false, M);
+    dbgs() << ", #" << Op.Rank << "] ";
   }
 }
 #endif
@@ -241,8 +241,10 @@ void ReassociatePass::canonicalizeOperands(Instruction *I) {
   Value *RHS = I->getOperand(1);
   if (LHS == RHS || isa<Constant>(RHS))
     return;
-  if (isa<Constant>(LHS) || getRank(RHS) < getRank(LHS))
+  if (isa<Constant>(LHS) || getRank(RHS) < getRank(LHS)) {
     cast<BinaryOperator>(I)->swapOperands();
+    MadeChange = true;
+  }
 }
 
 static BinaryOperator *CreateAdd(Value *S1, Value *S2, const Twine &Name,
@@ -380,7 +382,7 @@ using RepeatedValue = std::pair<Value *, uint64_t>;
 static bool LinearizeExprTree(Instruction *I,
                               SmallVectorImpl<RepeatedValue> &Ops,
                               ReassociatePass::OrderedSet &ToRedo,
-                              reassociate::OverflowTracking &Flags) {
+                              OverflowTracking &Flags) {
   assert((isa<UnaryOperator>(I) || isa<BinaryOperator>(I)) &&
          "Expected a UnaryOperator or BinaryOperator!");
   LLVM_DEBUG(dbgs() << "LINEARIZE: " << *I << '\n');
@@ -420,7 +422,7 @@ static bool LinearizeExprTree(Instruction *I,
   using LeafMap = DenseMap<Value *, uint64_t>;
   LeafMap Leaves; // Leaf -> Total weight so far.
   SmallVector<Value *, 8> LeafOrder; // Ensure deterministic leaf output order.
-  const DataLayout DL = I->getDataLayout();
+  const DataLayout &DL = I->getDataLayout();
 
 #ifndef NDEBUG
   SmallPtrSet<Value *, 8> Visited; // For checking the iteration scheme.
@@ -429,15 +431,13 @@ static bool LinearizeExprTree(Instruction *I,
     // We examine the operands of this binary operator.
     auto [I, Weight] = Worklist.pop_back_val();
 
-    if (isa<OverflowingBinaryOperator>(I)) {
-      Flags.HasNUW &= I->hasNoUnsignedWrap();
-      Flags.HasNSW &= I->hasNoSignedWrap();
-    }
+    Flags.mergeFlags(*I);
 
     for (unsigned OpIdx = 0; OpIdx < I->getNumOperands(); ++OpIdx) { // Visit operands.
       Value *Op = I->getOperand(OpIdx);
       LLVM_DEBUG(dbgs() << "OPERAND: " << *Op << " (" << Weight << ")\n");
-      assert(!Op->use_empty() && "No uses, so how did we get to it?!");
+      assert((!Op->hasUseList() || !Op->use_empty()) &&
+             "No uses, so how did we get to it?!");
 
       // If this is a binary operation of the right kind with only one use then
       // add its operands to the expression.
@@ -731,15 +731,7 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
           ExpressionChangedStart->clearSubclassOptionalData();
           ExpressionChangedStart->setFastMathFlags(Flags);
         } else {
-          ExpressionChangedStart->clearSubclassOptionalData();
-          if (ExpressionChangedStart->getOpcode() == Instruction::Add ||
-              (ExpressionChangedStart->getOpcode() == Instruction::Mul &&
-               Flags.AllKnownNonZero)) {
-            if (Flags.HasNUW)
-              ExpressionChangedStart->setHasNoUnsignedWrap();
-            if (Flags.HasNSW && (Flags.AllKnownNonNegative || Flags.HasNUW))
-              ExpressionChangedStart->setHasNoSignedWrap();
-          }
+          Flags.applyFlags(*ExpressionChangedStart);
         }
       }
 
@@ -762,8 +754,7 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
   }
 
   // Throw away any left over nodes from the original expression.
-  for (BinaryOperator *BO : NodesToRewrite)
-    RedoInsts.insert(BO);
+  RedoInsts.insert_range(NodesToRewrite);
 }
 
 /// Insert instructions before the instruction pointed to by BI,
@@ -887,7 +878,7 @@ static Value *NegateValue(Value *V, Instruction *BI,
 // only that it mostly looks like one.
 static bool isLoadCombineCandidate(Instruction *Or) {
   SmallVector<Instruction *, 8> Worklist;
-  SmallSet<Instruction *, 8> Visited;
+  SmallPtrSet<Instruction *, 8> Visited;
 
   auto Enqueue = [&](Value *V) {
     auto *I = dyn_cast<Instruction>(V);
@@ -1051,7 +1042,7 @@ static BinaryOperator *ConvertShiftToMul(Instruction *Shl) {
   // bitwidth - 1.
   bool NSW = cast<BinaryOperator>(Shl)->hasNoSignedWrap();
   bool NUW = cast<BinaryOperator>(Shl)->hasNoUnsignedWrap();
-  unsigned BitWidth = Shl->getType()->getIntegerBitWidth();
+  unsigned BitWidth = Shl->getType()->getScalarSizeInBits();
   if (NSW && (NUW || SA->getValue().ult(BitWidth - 1)))
     Mul->setHasNoSignedWrap(true);
   Mul->setHasNoUnsignedWrap(NUW);
@@ -1087,19 +1078,24 @@ static unsigned FindInOperandList(const SmallVectorImpl<ValueEntry> &Ops,
 
 /// Emit a tree of add instructions, summing Ops together
 /// and returning the result.  Insert the tree before I.
-static Value *EmitAddTreeOfValues(BasicBlock::iterator It,
+static Value *EmitAddTreeOfValues(Instruction *I,
                                   SmallVectorImpl<WeakTrackingVH> &Ops) {
   if (Ops.size() == 1) return Ops.back();
 
   Value *V1 = Ops.pop_back_val();
-  Value *V2 = EmitAddTreeOfValues(It, Ops);
-  return CreateAdd(V2, V1, "reass.add", It, &*It);
+  Value *V2 = EmitAddTreeOfValues(I, Ops);
+  auto *NewAdd = CreateAdd(V2, V1, "reass.add", I->getIterator(), I);
+  NewAdd->setDebugLoc(I->getDebugLoc());
+  return NewAdd;
 }
 
 /// If V is an expression tree that is a multiplication sequence,
 /// and if this sequence contains a multiply by Factor,
 /// remove Factor from the tree and return the new tree.
-Value *ReassociatePass::RemoveFactorFromExpression(Value *V, Value *Factor) {
+/// If new instructions are inserted to generate this tree, DL should be used
+/// as the DebugLoc for these instructions.
+Value *ReassociatePass::RemoveFactorFromExpression(Value *V, Value *Factor,
+                                                   DebugLoc DL) {
   BinaryOperator *BO = isReassociableOp(V, Instruction::Mul, Instruction::FMul);
   if (!BO)
     return nullptr;
@@ -1109,10 +1105,8 @@ Value *ReassociatePass::RemoveFactorFromExpression(Value *V, Value *Factor) {
   MadeChange |= LinearizeExprTree(BO, Tree, RedoInsts, Flags);
   SmallVector<ValueEntry, 8> Factors;
   Factors.reserve(Tree.size());
-  for (unsigned i = 0, e = Tree.size(); i != e; ++i) {
-    RepeatedValue E = Tree[i];
+  for (const RepeatedValue &E : Tree)
     Factors.append(E.second, ValueEntry(getRank(E.first), E.first));
-  }
 
   bool FoundFactor = false;
   bool NeedsNegate = false;
@@ -1163,8 +1157,10 @@ Value *ReassociatePass::RemoveFactorFromExpression(Value *V, Value *Factor) {
     V = BO;
   }
 
-  if (NeedsNegate)
+  if (NeedsNegate) {
     V = CreateNeg(V, "neg", InsertPt, BO);
+    cast<Instruction>(V)->setDebugLoc(DL);
+  }
 
   return V;
 }
@@ -1383,8 +1379,8 @@ Value *ReassociatePass::OptimizeXor(Instruction *I,
   APInt ConstOpnd(Ty->getScalarSizeInBits(), 0);
 
   // Step 1: Convert ValueEntry to XorOpnd
-  for (unsigned i = 0, e = Ops.size(); i != e; ++i) {
-    Value *V = Ops[i].Op;
+  for (const ValueEntry &Op : Ops) {
+    Value *V = Op.Op;
     const APInt *C;
     // TODO: Support non-splat vectors.
     if (match(V, m_APInt(C))) {
@@ -1517,9 +1513,13 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
 
       // Insert a new multiply.
       Type *Ty = TheOp->getType();
-      Constant *C = Ty->isIntOrIntVectorTy() ?
-        ConstantInt::get(Ty, NumFound) : ConstantFP::get(Ty, NumFound);
+      // Truncate if NumFound overflows the type.
+      Constant *C = Ty->isIntOrIntVectorTy()
+                        ? ConstantInt::get(Ty, NumFound, /*IsSigned=*/false,
+                                           /*ImplicitTrunc=*/true)
+                        : ConstantFP::get(Ty, NumFound);
       Instruction *Mul = CreateMul(TheOp, C, "factor", I->getIterator(), I);
+      Mul->setDebugLoc(I->getDebugLoc());
 
       // Now that we have inserted a multiply, optimize it. This allows us to
       // handle cases that require multiple factoring steps, such as this:
@@ -1588,9 +1588,9 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
   // where they are actually the same multiply.
   unsigned MaxOcc = 0;
   Value *MaxOccVal = nullptr;
-  for (unsigned i = 0, e = Ops.size(); i != e; ++i) {
+  for (const ValueEntry &Op : Ops) {
     BinaryOperator *BOp =
-        isReassociableOp(Ops[i].Op, Instruction::Mul, Instruction::FMul);
+        isReassociableOp(Op.Op, Instruction::Mul, Instruction::FMul);
     if (!BOp)
       continue;
 
@@ -1665,7 +1665,8 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
       if (!BOp)
         continue;
 
-      if (Value *V = RemoveFactorFromExpression(Ops[i].Op, MaxOccVal)) {
+      if (Value *V = RemoveFactorFromExpression(Ops[i].Op, MaxOccVal,
+                                                I->getDebugLoc())) {
         // The factorized operand may occur several times.  Convert them all in
         // one fell swoop.
         for (unsigned j = Ops.size(); j != i;) {
@@ -1683,7 +1684,7 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
     DummyInst->deleteValue();
 
     unsigned NumAddedValues = NewMulOps.size();
-    Value *V = EmitAddTreeOfValues(I->getIterator(), NewMulOps);
+    Value *V = EmitAddTreeOfValues(I, NewMulOps);
 
     // Now that we have inserted the add tree, optimize it. This allows us to
     // handle cases that require multiple factoring steps, such as this:
@@ -1695,6 +1696,7 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
 
     // Create the multiply.
     Instruction *V2 = CreateMul(V, MaxOccVal, "reass.mul", I->getIterator(), I);
+    V2->setDebugLoc(I->getDebugLoc());
 
     // Rerun associate on the multiply in case the inner expression turned into
     // a multiply.  We want to make sure that we keep things in canonical form.
@@ -2624,32 +2626,32 @@ PreservedAnalyses ReassociatePass::run(Function &F, FunctionAnalysisManager &) {
 
 namespace {
 
-  class ReassociateLegacyPass : public FunctionPass {
-    ReassociatePass Impl;
+class ReassociateLegacyPass : public FunctionPass {
+  ReassociatePass Impl;
 
-  public:
-    static char ID; // Pass identification, replacement for typeid
+public:
+  static char ID; // Pass identification, replacement for typeid
 
-    ReassociateLegacyPass() : FunctionPass(ID) {
-      initializeReassociateLegacyPassPass(*PassRegistry::getPassRegistry());
-    }
+  ReassociateLegacyPass() : FunctionPass(ID) {
+    initializeReassociateLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
 
-    bool runOnFunction(Function &F) override {
-      if (skipFunction(F))
-        return false;
+  bool runOnFunction(Function &F) override {
+    if (skipFunction(F))
+      return false;
 
-      FunctionAnalysisManager DummyFAM;
-      auto PA = Impl.run(F, DummyFAM);
-      return !PA.areAllPreserved();
-    }
+    FunctionAnalysisManager DummyFAM;
+    auto PA = Impl.run(F, DummyFAM);
+    return !PA.areAllPreserved();
+  }
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesCFG();
-      AU.addPreserved<AAResultsWrapperPass>();
-      AU.addPreserved<BasicAAWrapperPass>();
-      AU.addPreserved<GlobalsAAWrapperPass>();
-    }
-  };
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addPreserved<AAResultsWrapperPass>();
+    AU.addPreserved<BasicAAWrapperPass>();
+    AU.addPreserved<GlobalsAAWrapperPass>();
+  }
+};
 
 } // end anonymous namespace
 

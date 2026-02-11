@@ -16,6 +16,22 @@ bb2:
 
 ; // -----
 
+; CHECK-LABEL: @cond_br_expected
+define i64 @cond_br_expected(i1 %arg1, i64 %arg2) {
+entry:
+  ; CHECK: llvm.cond_br
+  ; CHECK-SAME: weights([1, 2000])
+  br i1 %arg1, label %bb1, label %bb2, !prof !0
+bb1:
+  ret i64 %arg2
+bb2:
+  ret i64 %arg2
+}
+
+!0 = !{!"branch_weights", !"expected", i32 1, i32 2000}
+
+; // -----
+
 ; CHECK-LABEL: @simple_switch(
 define i32 @simple_switch(i32 %arg1) {
   ; CHECK: llvm.switch
@@ -36,14 +52,37 @@ bbd:
 
 ; // -----
 
+; CHECK-LABEL: @simple_switch_expected(
+define i32 @simple_switch_expected(i32 %arg1) {
+  ; CHECK: llvm.switch
+  ; CHECK: {branch_weights = array<i32: 1, 1, 2000>}
+  switch i32 %arg1, label %bbd [
+    i32 0, label %bb1
+    i32 9, label %bb2
+  ], !prof !0
+bb1:
+  ret i32 %arg1
+bb2:
+  ret i32 %arg1
+bbd:
+  ret i32 %arg1
+}
+
+!0 = !{!"branch_weights", !"expected", i32 1, i32 1, i32 2000}
+
+; // -----
+
+; Verify that a single weight attached to a call is not translated.
+; The MLIR WeightedBranchOpInterface does not support this case.
+
 ; CHECK: llvm.func @fn()
-declare void @fn()
+declare i32 @fn()
 
 ; CHECK-LABEL: @call_branch_weights
-define void @call_branch_weights() {
-  ; CHECK:  llvm.call @fn() {branch_weights = array<i32: 42>}
-  call void @fn(), !prof !0
-  ret void
+define i32 @call_branch_weights() {
+  ; CHECK:  llvm.call @fn() : () -> i32
+  %1 = call i32 @fn(), !prof !0
+  ret i32 %1
 }
 
 !0 = !{!"branch_weights", i32 42}

@@ -36,7 +36,7 @@ Function overloading also applies to operators. Using ``&user_object`` may call 
       ...
     }
 
-This is mostly enforced by the clang-tidy checks ``libcpp-robust-against-adl`` and ``libcpp-qualify-declval``.
+This is mostly enforced by the clang-tidy check ``libcpp-robust-against-adl``.
 
 Avoid including public headers
 ==============================
@@ -79,9 +79,9 @@ and then check for ``#if _LIBCPP_SOMETHING_ENABLED`` instead of
 
 and then checking for ``#ifdef _LIBCPP_SOMETHING_ENABLED``.
 
-This makes it significantly easier to catch missing includes, since Clang and GCC will warn when using and undefined
-marco inside an ``#if`` statement when using ``-Wundef``. Some macros in libc++ don't use this style yet, so this only
-applies when introducing a new macro.
+This makes it significantly easier to catch missing includes: Clang and GCC with ``-Wundef`` enabled will warn
+when using an undefined macro inside an ``#if`` statement. Some macros in libc++ don't use this style yet,
+so this guideline only applies when introducing a new macro.
 
 This is partially enforced by the clang-tidy check ``libcpp-internal-ftms``.
 
@@ -104,12 +104,22 @@ provide alternative spellings for their attributes, so these should be avoided i
 
 This is enforced by the clang-tidy check ``libcpp-uglify-attributes``.
 
-Use C++11 extensions in C++03 code if they simplify the code
-============================================================
+Use extensions if they simplify the code
+========================================
 
-libc++ only supports Clang in C++98/03 mode. Clang provides many C++11 features in C++03, making it possible to write a
-lot of code in a simpler way than if we were restricted to C++03 features. Some use of extensions is even mandatory,
-since libc++ supports move semantics in C++03.
+libc++ only supports recent versions Clang and GCC, which allows us to make use of extensions in the code base if both
+compilers support them. Only  features backported from future language versions should be used liberally throughout the
+library. For example, some of the most useful extensions are lambdas and ``if constexpr``, since they almost always
+significantly improve readability when used as intended.
+
+libc++ supports the C++98/03 mode only with the Clang compiler. Clang provides many C++11 features in C++03, making it
+possible to write a lot of code in a simpler way than if we were restricted to C++03 features. Some use of extensions is
+even mandatory, since libc++ supports move semantics in C++03. Details on which features have been backported can be
+found
+`here <https://clang.llvm.org/docs/LanguageExtensions.html#language-extensions-back-ported-to-previous-standards>`__.
+
+GCC is only supported from C++11 onwards. Unfortunately, GCC doesn't document which features are backported to older
+language versions, so you just have to try whether GCC accepts the features you want to use.
 
 Use ``using`` aliases instead of ``typedef``
 ============================================
@@ -124,8 +134,8 @@ Write SFINAE with ``requires`` clauses in C++20-only code
 subsume other concepts. This means that overloads based on traits can be written without negating more general cases.
 They also show intent better.
 
-Write ``enable_if`` as ``enable_if_t<conditon, int> = 0``
-=========================================================
+Write ``enable_if`` as ``enable_if_t<condition, int> = 0``
+==========================================================
 
 The form ``enable_if_t<condition, int> = 0`` is the only one that works in every language mode and for overload sets
 using the same template arguments otherwise. If the code must work in C++11 or C++03, the libc++-internal alias
@@ -165,6 +175,11 @@ have a recommended practice where to put them, so libc++ applies it whenever it 
   This protects programmers from assuming too much about how the internals of a function work, making code more robust
   in the presence of future optimizations.
 
+``[[nodiscard]]`` should not be applied to functions if Clang already diagnoses unused results, for example:
+- conversion functions
+- equality operators
+- relational operators
+
 Applications of ``[[nodiscard]]`` are code like any other code, so we aim to test them on public interfaces. This can be
 done with a ``.verify.cpp`` test. Many examples are available. Just look for tests with the suffix
 ``.nodiscard.verify.cpp``.
@@ -191,6 +206,7 @@ Library-internal type aliases should be annotated with ``_LIBCPP_NODEBUG``
 Libc++ has lots of internal type aliases. Accumulated, these can result in significant amounts of debug information that
 users generally don't care about, since users don't try to debug standard library facilities in most cases. For that
 reason, all library-internal type aliases that aren't function-local should be annotated with ``_LIBCPP_NODEBUG`` to
-prevent compilers from generating said debug information.
+prevent compilers from generating said debug information. Aliases inside type traits (i.e. aliases named ``type``)
+should be annotated for the same reason.
 
 This is enforced by the clang-tidy check ``libcpp-nodebug-on-aliases``.

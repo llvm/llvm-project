@@ -17,7 +17,6 @@
 #include "X86ISelLowering.h"
 #include "X86InstrInfo.h"
 #include "X86SelectionDAGInfo.h"
-#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/TargetParser/Triple.h"
@@ -114,6 +113,7 @@ public:
                const X86TargetMachine &TM, MaybeAlign StackAlignOverride,
                unsigned PreferVectorWidthOverride,
                unsigned RequiredVectorWidth);
+  ~X86Subtarget() override;
 
   const X86TargetLowering *getTargetLowering() const override {
     return &TLInfo;
@@ -170,14 +170,10 @@ public:
 #include "X86GenSubtargetInfo.inc"
 
   /// Is this x86_64 with the ILP32 programming model (x32 ABI)?
-  bool isTarget64BitILP32() const {
-    return Is64Bit && (TargetTriple.isX32() || TargetTriple.isOSNaCl());
-  }
+  bool isTarget64BitILP32() const { return Is64Bit && IsX32; }
 
   /// Is this x86_64 with the LP64 programming model (standard AMD64, no x32)?
-  bool isTarget64BitLP64() const {
-    return Is64Bit && (!TargetTriple.isX32() && !TargetTriple.isOSNaCl());
-  }
+  bool isTarget64BitLP64() const { return Is64Bit && !IsX32; }
 
   PICStyles::Style getPICStyle() const { return PICStyle; }
   void setPICStyle(PICStyles::Style Style)  { PICStyle = Style; }
@@ -230,8 +226,7 @@ public:
   // TODO: Currently we're always allowing widening on CPUs without VLX,
   // because for many cases we don't have a better option.
   bool canExtendTo512DQ() const {
-    return hasAVX512() && hasEVEX512() &&
-           (!hasVLX() || getPreferVectorWidth() >= 512);
+    return hasAVX512() && (!hasVLX() || getPreferVectorWidth() >= 512);
   }
   bool canExtendTo512BW() const  {
     return hasBWI() && canExtendTo512DQ();
@@ -251,8 +246,7 @@ public:
   // If there are no 512-bit vectors and we prefer not to use 512-bit registers,
   // disable them in the legalizer.
   bool useAVX512Regs() const {
-    return hasAVX512() && hasEVEX512() &&
-           (canExtendTo512DQ() || RequiredVectorWidth > 256);
+    return hasAVX512() && (canExtendTo512DQ() || RequiredVectorWidth > 256);
   }
 
   bool useLight256BitInstructions() const {
@@ -280,6 +274,9 @@ public:
   /// supports it.
   bool hasMFence() const { return hasSSE2() || is64Bit(); }
 
+  /// Avoid use of `mfence` for`fence seq_cst`, and instead use `lock or`.
+  bool avoidMFence() const { return is64Bit(); }
+
   const Triple &getTargetTriple() const { return TargetTriple; }
 
   bool isTargetDarwin() const { return TargetTriple.isOSDarwin(); }
@@ -294,11 +291,10 @@ public:
 
   bool isTargetLinux() const { return TargetTriple.isOSLinux(); }
   bool isTargetKFreeBSD() const { return TargetTriple.isOSKFreeBSD(); }
+  bool isTargetHurd() const { return TargetTriple.isOSHurd(); }
   bool isTargetGlibc() const { return TargetTriple.isOSGlibc(); }
+  bool isTargetMusl() const { return TargetTriple.isMusl(); }
   bool isTargetAndroid() const { return TargetTriple.isAndroid(); }
-  bool isTargetNaCl() const { return TargetTriple.isOSNaCl(); }
-  bool isTargetNaCl32() const { return isTargetNaCl() && !is64Bit(); }
-  bool isTargetNaCl64() const { return isTargetNaCl() && is64Bit(); }
   bool isTargetMCU() const { return TargetTriple.isOSIAMCU(); }
   bool isTargetFuchsia() const { return TargetTriple.isOSFuchsia(); }
 
@@ -328,7 +324,7 @@ public:
 
   bool isOSWindows() const { return TargetTriple.isOSWindows(); }
 
-  bool isOSWindowsOrUEFI() const { return isOSWindows() || isUEFI(); }
+  bool isTargetUEFI64() const { return Is64Bit && isUEFI(); }
 
   bool isTargetWin64() const { return Is64Bit && isOSWindows(); }
 
@@ -349,6 +345,7 @@ public:
     case CallingConv::C:
     case CallingConv::Fast:
     case CallingConv::Tail:
+      return isTargetWin64() || isTargetUEFI64();
     case CallingConv::Swift:
     case CallingConv::SwiftTail:
     case CallingConv::X86_FastCall:

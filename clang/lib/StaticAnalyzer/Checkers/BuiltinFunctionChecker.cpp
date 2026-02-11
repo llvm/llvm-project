@@ -23,7 +23,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 
 using namespace clang;
@@ -37,9 +36,8 @@ QualType getSufficientTypeForOverflowOp(CheckerContext &C, const QualType &T) {
   assert(T->isIntegerType());
 
   ASTContext &ACtx = C.getASTContext();
-
   unsigned BitWidth = ACtx.getIntWidth(T);
-  return ACtx.getIntTypeForBitwidth(BitWidth * 2, T->isSignedIntegerType());
+  return ACtx.getBitIntType(T->isUnsignedIntegerType(), BitWidth * 2);
 }
 
 QualType getOverflowBuiltinResultType(const CallEvent &Call) {
@@ -97,10 +95,14 @@ public:
   void handleOverflowBuiltin(const CallEvent &Call, CheckerContext &C,
                              BinaryOperator::Opcode Op,
                              QualType ResultType) const;
-  const NoteTag *createBuiltinNoOverflowNoteTag(CheckerContext &C,
-                                                bool BothFeasible, SVal Arg1,
-                                                SVal Arg2, SVal Result) const;
-  const NoteTag *createBuiltinOverflowNoteTag(CheckerContext &C) const;
+  const NoteTag *createBuiltinOverflowNoteTag(CheckerContext &C,
+                                              bool BothFeasible, SVal Arg1,
+                                              SVal Arg2, SVal Result) const;
+  ProgramStateRef initStateAftetBuiltinOverflow(CheckerContext &C,
+                                                ProgramStateRef State,
+                                                const CallEvent &Call,
+                                                SVal RetCal,
+                                                bool IsOverflow) const;
   std::pair<bool, bool> checkOverflow(CheckerContext &C, SVal RetVal,
                                       QualType Res) const;
 
@@ -122,28 +124,22 @@ private:
 
 } // namespace
 
-const NoteTag *BuiltinFunctionChecker::createBuiltinNoOverflowNoteTag(
-    CheckerContext &C, bool BothFeasible, SVal Arg1, SVal Arg2,
-    SVal Result) const {
-  return C.getNoteTag([Result, Arg1, Arg2, BothFeasible](
-                          PathSensitiveBugReport &BR, llvm::raw_ostream &OS) {
+const NoteTag *BuiltinFunctionChecker::createBuiltinOverflowNoteTag(
+    CheckerContext &C, bool overflow, SVal Arg1, SVal Arg2, SVal Result) const {
+  return C.getNoteTag([Result, Arg1, Arg2, overflow](PathSensitiveBugReport &BR,
+                                                     llvm::raw_ostream &OS) {
     if (!BR.isInteresting(Result))
       return;
 
-    // Propagate interestingness to input argumets if result is interesting.
+    // Propagate interestingness to input arguments if result is interesting.
     BR.markInteresting(Arg1);
     BR.markInteresting(Arg2);
 
-    if (BothFeasible)
+    if (overflow)
+      OS << "Assuming overflow";
+    else
       OS << "Assuming no overflow";
   });
-}
-
-const NoteTag *
-BuiltinFunctionChecker::createBuiltinOverflowNoteTag(CheckerContext &C) const {
-  return C.getNoteTag([](PathSensitiveBugReport &BR,
-                         llvm::raw_ostream &OS) { OS << "Assuming overflow"; },
-                      /*isPrunable=*/true);
 }
 
 std::pair<bool, bool>
@@ -175,6 +171,29 @@ BuiltinFunctionChecker::checkOverflow(CheckerContext &C, SVal RetVal,
   return {MayOverflow || MayUnderflow, MayNotOverflow && MayNotUnderflow};
 }
 
+ProgramStateRef BuiltinFunctionChecker::initStateAftetBuiltinOverflow(
+    CheckerContext &C, ProgramStateRef State, const CallEvent &Call,
+    SVal RetVal, bool IsOverflow) const {
+  SValBuilder &SVB = C.getSValBuilder();
+  SVal Arg1 = Call.getArgSVal(0);
+  SVal Arg2 = Call.getArgSVal(1);
+  auto BoolTy = C.getASTContext().BoolTy;
+
+  ProgramStateRef NewState =
+      State->BindExpr(Call.getOriginExpr(), C.getLocationContext(),
+                      SVB.makeTruthVal(IsOverflow, BoolTy));
+
+  if (auto L = Call.getArgSVal(2).getAs<Loc>()) {
+    NewState = NewState->bindLoc(*L, RetVal, C.getLocationContext());
+
+    // Propagate taint if any of the arguments were tainted
+    if (isTainted(State, Arg1) || isTainted(State, Arg2))
+      NewState = addTaint(NewState, *L);
+  }
+
+  return NewState;
+}
+
 void BuiltinFunctionChecker::handleOverflowBuiltin(const CallEvent &Call,
                                                    CheckerContext &C,
                                                    BinaryOperator::Opcode Op,
@@ -184,40 +203,31 @@ void BuiltinFunctionChecker::handleOverflowBuiltin(const CallEvent &Call,
 
   ProgramStateRef State = C.getState();
   SValBuilder &SVB = C.getSValBuilder();
-  const Expr *CE = Call.getOriginExpr();
-  auto BoolTy = C.getASTContext().BoolTy;
 
   SVal Arg1 = Call.getArgSVal(0);
   SVal Arg2 = Call.getArgSVal(1);
 
-  SVal RetValMax = SVB.evalBinOp(State, Op, Arg1, Arg2,
-                                 getSufficientTypeForOverflowOp(C, ResultType));
+  QualType SufficientlyWideTy = getSufficientTypeForOverflowOp(C, ResultType);
+  assert(!SufficientlyWideTy.isNull());
+
+  SVal RetValMax = SVB.evalBinOp(State, Op, Arg1, Arg2, SufficientlyWideTy);
   SVal RetVal = SVB.evalBinOp(State, Op, Arg1, Arg2, ResultType);
 
   auto [Overflow, NotOverflow] = checkOverflow(C, RetValMax, ResultType);
+
   if (NotOverflow) {
-    ProgramStateRef StateNoOverflow = State->BindExpr(
-        CE, C.getLocationContext(), SVB.makeTruthVal(false, BoolTy));
+    auto NewState =
+        initStateAftetBuiltinOverflow(C, State, Call, RetVal, false);
 
-    if (auto L = Call.getArgSVal(2).getAs<Loc>()) {
-      StateNoOverflow =
-          StateNoOverflow->bindLoc(*L, RetVal, C.getLocationContext());
-
-      // Propagate taint if any of the argumets were tainted
-      if (isTainted(State, Arg1) || isTainted(State, Arg2))
-        StateNoOverflow = addTaint(StateNoOverflow, *L);
-    }
-
-    C.addTransition(
-        StateNoOverflow,
-        createBuiltinNoOverflowNoteTag(
-            C, /*BothFeasible=*/NotOverflow && Overflow, Arg1, Arg2, RetVal));
+    C.addTransition(NewState, createBuiltinOverflowNoteTag(
+                                  C, /*overflow=*/false, Arg1, Arg2, RetVal));
   }
 
   if (Overflow) {
-    C.addTransition(State->BindExpr(CE, C.getLocationContext(),
-                                    SVB.makeTruthVal(true, BoolTy)),
-                    createBuiltinOverflowNoteTag(C));
+    auto NewState = initStateAftetBuiltinOverflow(C, State, Call, RetVal, true);
+
+    C.addTransition(NewState, createBuiltinOverflowNoteTag(C, /*overflow=*/true,
+                                                           Arg1, Arg2, RetVal));
   }
 }
 
@@ -288,25 +298,6 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
     handleOverflowBuiltin(Call, C, BO_Add,
                           getOverflowBuiltinResultType(Call, C, BI));
     return true;
-  case Builtin::BI__builtin_assume:
-  case Builtin::BI__assume: {
-    assert (Call.getNumArgs() > 0);
-    SVal Arg = Call.getArgSVal(0);
-    if (Arg.isUndef())
-      return true; // Return true to model purity.
-
-    state = state->assume(Arg.castAs<DefinedOrUnknownSVal>(), true);
-    // FIXME: do we want to warn here? Not right now. The most reports might
-    // come from infeasible paths, thus being false positives.
-    if (!state) {
-      C.generateSink(C.getState(), C.getPredecessor());
-      return true;
-    }
-
-    C.addTransition(state);
-    return true;
-  }
-
   case Builtin::BI__builtin_unpredictable:
   case Builtin::BI__builtin_expect:
   case Builtin::BI__builtin_expect_with_probability:

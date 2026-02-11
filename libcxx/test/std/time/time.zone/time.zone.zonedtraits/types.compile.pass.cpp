@@ -24,10 +24,14 @@
 
 // This test test whether non-specialized versions exhibit the expected
 // behavior. (Note these specializations are not really useful.)
-static_assert(std::is_trivial_v<std::chrono::zoned_traits<int>>);
-static_assert(std::is_trivial_v<std::chrono::zoned_traits<float>>);
-static_assert(std::is_trivial_v<std::chrono::zoned_traits<void*>>);
+static_assert(std::is_trivially_copyable_v<std::chrono::zoned_traits<int>>);
+static_assert(std::is_trivially_copyable_v<std::chrono::zoned_traits<float>>);
+static_assert(std::is_trivially_copyable_v<std::chrono::zoned_traits<void*>>);
+static_assert(std::is_trivially_default_constructible_v<std::chrono::zoned_traits<int>>);
+static_assert(std::is_trivially_default_constructible_v<std::chrono::zoned_traits<float>>);
+static_assert(std::is_trivially_default_constructible_v<std::chrono::zoned_traits<void*>>);
 
 struct foo {};
 static_assert(std::is_empty_v<std::chrono::zoned_traits<foo>>);
-static_assert(std::is_trivial_v<std::chrono::zoned_traits<foo>>);
+static_assert(std::is_trivially_copyable_v<std::chrono::zoned_traits<foo>>);
+static_assert(std::is_trivially_default_constructible_v<std::chrono::zoned_traits<foo>>);

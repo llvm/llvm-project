@@ -432,8 +432,7 @@ define i1 @test_eq_for_signed_cmp(i32 noundef %v0, i32 noundef %v1, i32 noundef 
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sge i32 [[V0]], [[V1:%.*]]
 ; CHECK-NEXT:    [[AND0:%.*]] = and i1 [[CMP1]], [[CMP]]
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp sgt i32 [[V1]], [[V2]]
-; CHECK-NEXT:    [[AND1:%.*]] = and i1 false, [[AND0]]
-; CHECK-NEXT:    ret i1 [[AND1]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %cmp = icmp eq i32 %v2, %v0
@@ -457,8 +456,7 @@ define i1 @test_eq_for_signed_cmp_with_decompsition(i32 noundef %v0, i32 noundef
 ; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[AND0]], [[CMP2]]
 ; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[AND1]], [[CMP3]]
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp sgt i32 [[V1]], [[V2]]
-; CHECK-NEXT:    [[AND3:%.*]] = and i1 false, [[AND2]]
-; CHECK-NEXT:    ret i1 [[AND3]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %v0add = add nsw i32 %v0, %addend0

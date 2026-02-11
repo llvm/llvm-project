@@ -14,6 +14,8 @@
 #include <sys/utsname.h>
 #endif
 
+#include "Plugins/Process/Utility/LinuxSignals.h"
+#include "Plugins/Process/Utility/lldb-riscv-register-enums.h"
 #include "Utility/ARM64_DWARF_Registers.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
@@ -21,6 +23,7 @@
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -32,6 +35,20 @@
 // systems even when host has different values.
 #define MAP_PRIVATE 2
 #define MAP_ANON 0x20
+
+// For other platforms that use platform linux
+#ifndef SIGILL
+#define SIGILL 4
+#endif
+#ifndef SIGBUS
+#define SIGBUS 7
+#endif
+#ifndef SIGFPE
+#define SIGFPE 8
+#endif
+#ifndef SIGSEGV
+#define SIGSEGV 11
+#endif
 
 using namespace lldb;
 using namespace lldb_private;
@@ -123,7 +140,9 @@ PlatformLinux::PlatformLinux(bool is_host)
         {llvm::Triple::x86_64, llvm::Triple::x86, llvm::Triple::arm,
          llvm::Triple::aarch64, llvm::Triple::mips64, llvm::Triple::mips64,
          llvm::Triple::hexagon, llvm::Triple::mips, llvm::Triple::mips64el,
-         llvm::Triple::mipsel, llvm::Triple::msp430, llvm::Triple::systemz},
+         llvm::Triple::mipsel, llvm::Triple::msp430, llvm::Triple::systemz,
+         llvm::Triple::loongarch64, llvm::Triple::ppc64le,
+         llvm::Triple::riscv64},
         llvm::Triple::Linux);
   }
 }
@@ -203,6 +222,7 @@ void PlatformLinux::CalculateTrapHandlerSymbolNames() {
   m_trap_handlers.push_back(ConstString("_sigtramp"));
   m_trap_handlers.push_back(ConstString("__kernel_rt_sigreturn"));
   m_trap_handlers.push_back(ConstString("__restore_rt"));
+  m_trap_handlers.push_back(ConstString("__vdso_rt_sigreturn"));
 }
 
 static lldb::UnwindPlanSP GetAArch64TrapHandlerUnwindPlan(ConstString name) {
@@ -210,8 +230,7 @@ static lldb::UnwindPlanSP GetAArch64TrapHandlerUnwindPlan(ConstString name) {
   if (name != "__kernel_rt_sigreturn")
     return unwind_plan_sp;
 
-  UnwindPlan::RowSP row = std::make_shared<UnwindPlan::Row>();
-  row->SetOffset(0);
+  UnwindPlan::Row row;
 
   // In the signal trampoline frame, sp points to an rt_sigframe[1], which is:
   //  - 128-byte siginfo struct
@@ -235,48 +254,48 @@ static lldb::UnwindPlanSP GetAArch64TrapHandlerUnwindPlan(ConstString name) {
 
   // Skip fault address
   offset += 8;
-  row->GetCFAValue().SetIsRegisterPlusOffset(arm64_dwarf::sp, offset);
+  row.GetCFAValue().SetIsRegisterPlusOffset(arm64_dwarf::sp, offset);
 
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x0, 0 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x1, 1 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x2, 2 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x3, 3 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x4, 4 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x5, 5 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x6, 6 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x7, 7 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x8, 8 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x9, 9 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x10, 10 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x11, 11 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x12, 12 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x13, 13 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x14, 14 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x15, 15 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x16, 16 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x17, 17 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x18, 18 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x19, 19 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x20, 20 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x21, 21 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x22, 22 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x23, 23 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x24, 24 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x25, 25 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x26, 26 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x27, 27 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x28, 28 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::fp, 29 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x30, 30 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::sp, 31 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::pc, 32 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x0, 0 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x1, 1 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x2, 2 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x3, 3 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x4, 4 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x5, 5 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x6, 6 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x7, 7 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x8, 8 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x9, 9 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x10, 10 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x11, 11 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x12, 12 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x13, 13 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x14, 14 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x15, 15 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x16, 16 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x17, 17 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x18, 18 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x19, 19 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x20, 20 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x21, 21 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x22, 22 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x23, 23 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x24, 24 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x25, 25 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x26, 26 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x27, 27 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x28, 28 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::fp, 29 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x30, 30 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::sp, 31 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::pc, 32 * 8, false);
 
   // The sigcontext may also contain floating point and SVE registers.
   // However this would require a dynamic unwind plan so they are not included
   // here.
 
   unwind_plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  unwind_plan_sp->AppendRow(row);
+  unwind_plan_sp->AppendRow(std::move(row));
   unwind_plan_sp->SetSourceName("AArch64 Linux sigcontext");
   unwind_plan_sp->SetSourcedFromCompiler(eLazyBoolYes);
   // Because sp is the same throughout the function
@@ -286,12 +305,92 @@ static lldb::UnwindPlanSP GetAArch64TrapHandlerUnwindPlan(ConstString name) {
   return unwind_plan_sp;
 }
 
-lldb::UnwindPlanSP
-PlatformLinux::GetTrapHandlerUnwindPlan(const llvm::Triple &triple,
-                                        ConstString name) {
+static lldb::UnwindPlanSP GetRISCVTrapHandlerUnwindPlan(ConstString name,
+                                                        uint32_t fp_flags) {
+  if (name != "__vdso_rt_sigreturn")
+    return {};
+
+  UnwindPlan::Row row;
+
+  // In the signal trampoline frame, sp points to an rt_sigframe[1], which is:
+  //  - 128-byte siginfo struct
+  //  - ucontext struct:
+  //     - 8-byte long (uc_flags)
+  //     - 8-byte pointer (*uc_link)
+  //     - 24-byte struct (uc_stack)
+  //     - 8-byte struct (uc_sigmask)
+  //     - 120-byte of padding to allow sigset_t to be expanded in the future
+  //     - 8 bytes of padding because sigcontext has 16-byte alignment
+  //     - struct sigcontext uc_mcontext
+  // [1]
+  // https://github.com/torvalds/linux/blob/master/arch/riscv/kernel/signal.c
+
+  constexpr size_t siginfo_size = 128;
+  constexpr size_t uc_flags_size = 8;
+  constexpr size_t uc_link_ptr_size = 8;
+  constexpr size_t uc_stack_size = 24;
+  constexpr size_t uc_sigmask_size = 8;
+  constexpr size_t padding_size = 128;
+
+  constexpr size_t offset = siginfo_size + uc_flags_size + uc_link_ptr_size +
+                            uc_stack_size + uc_sigmask_size + padding_size;
+
+  // In user_regs_struct GPRs are always 64-bit length
+  size_t gpr_size = 8;
+  row.GetCFAValue().SetIsRegisterPlusOffset(gpr_sp_riscv, offset);
+  for (uint32_t reg_num = gpr_first_riscv; reg_num < gpr_first_riscv + 32;
+       ++reg_num)
+    row.SetRegisterLocationToAtCFAPlusOffset(reg_num, reg_num * gpr_size,
+                                             false);
+
+  size_t fpr_size = 0;
+  switch (fp_flags) {
+  case ArchSpec::eRISCV_float_abi_soft:
+    fpr_size = 0;
+    break;
+  case ArchSpec::eRISCV_float_abi_single:
+    fpr_size = 4;
+    break;
+  case ArchSpec::eRISCV_float_abi_double:
+    fpr_size = 8;
+    break;
+  case ArchSpec::eRISCV_float_abi_quad:
+    fpr_size = 16;
+    break;
+  }
+
+  if (fpr_size != 0) {
+    for (uint32_t reg_num = fpr_first_riscv; reg_num < fpr_first_riscv + 32;
+         ++reg_num) {
+      size_t fpr_offset =
+          gpr_size * 32 + (reg_num - fpr_first_riscv) * fpr_size;
+      row.SetRegisterLocationToAtCFAPlusOffset(reg_num, fpr_offset, false);
+    }
+
+    size_t fpr_fcsr_offset = gpr_size * 32 + fpr_size * 32;
+    row.SetRegisterLocationToAtCFAPlusOffset(fpr_fcsr_riscv, fpr_fcsr_offset,
+                                             false);
+  }
+
+  UnwindPlanSP unwind_plan_sp = std::make_shared<UnwindPlan>(eRegisterKindLLDB);
+  unwind_plan_sp->AppendRow(std::move(row));
+  unwind_plan_sp->SetSourceName("RISC-V Linux sigcontext");
+  unwind_plan_sp->SetSourcedFromCompiler(eLazyBoolYes);
+  unwind_plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  unwind_plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolYes);
+
+  return unwind_plan_sp;
+}
+
+lldb::UnwindPlanSP PlatformLinux::GetTrapHandlerUnwindPlan(const ArchSpec &arch,
+                                                           ConstString name) {
+  llvm::Triple triple = arch.GetTriple();
   if (triple.isAArch64())
     return GetAArch64TrapHandlerUnwindPlan(name);
-
+  if (triple.isRISCV()) {
+    uint32_t fp_flags = arch.GetFlags() & ArchSpec::eRISCV_float_abi_mask;
+    return GetRISCVTrapHandlerUnwindPlan(name, fp_flags);
+  }
   return {};
 }
 
@@ -480,4 +579,108 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
 
   ast->CompleteTagDeclarationDefinition(siginfo_type);
   return siginfo_type;
+}
+
+static std::string GetDescriptionFromSiginfo(lldb::ValueObjectSP siginfo_sp) {
+  if (!siginfo_sp)
+    return "";
+
+  lldb_private::LinuxSignals linux_signals;
+  int code = siginfo_sp->GetChildMemberWithName("si_code")->GetValueAsSigned(0);
+  int signo =
+      siginfo_sp->GetChildMemberWithName("si_signo")->GetValueAsSigned(-1);
+
+  auto sifields = siginfo_sp->GetChildMemberWithName("_sifields");
+  if (!sifields)
+    return linux_signals.GetSignalDescription(signo, code);
+
+  // declare everything that we can populate later.
+  std::optional<lldb::addr_t> addr;
+  std::optional<lldb::addr_t> upper;
+  std::optional<lldb::addr_t> lower;
+  std::optional<uint32_t> pid;
+  std::optional<uint32_t> uid;
+
+  // The negative si_codes are special and mean this signal was sent from user
+  // space not the kernel. These take precedence because they break some of the
+  // invariants around kernel sent signals. Such as SIGSEGV won't have an
+  // address.
+  if (code < 0) {
+    auto sikill = sifields->GetChildMemberWithName("_kill");
+    if (sikill) {
+      auto pid_sp = sikill->GetChildMemberWithName("si_pid");
+      if (pid_sp)
+        pid = pid_sp->GetValueAsUnsigned(-1);
+      auto uid_sp = sikill->GetChildMemberWithName("si_uid");
+      if (uid_sp)
+        uid = uid_sp->GetValueAsUnsigned(-1);
+    }
+  } else {
+
+    switch (signo) {
+    case SIGILL:
+    case SIGFPE:
+    case SIGBUS: {
+      auto sigfault = sifields->GetChildMemberWithName("_sigfault");
+      if (!sigfault)
+        break;
+
+      auto addr_sp = sigfault->GetChildMemberWithName("si_addr");
+      if (addr_sp)
+        addr = addr_sp->GetValueAsUnsigned(-1);
+      break;
+    }
+    case SIGSEGV: {
+      auto sigfault = sifields->GetChildMemberWithName("_sigfault");
+      if (!sigfault)
+        break;
+
+      auto addr_sp = sigfault->GetChildMemberWithName("si_addr");
+      if (addr_sp)
+        addr = addr_sp->GetValueAsUnsigned(-1);
+
+      auto bounds_sp = sigfault->GetChildMemberWithName("_bounds");
+      if (!bounds_sp)
+        break;
+
+      auto addr_bnds_sp = bounds_sp->GetChildMemberWithName("_addr_bnd");
+      if (!addr_bnds_sp)
+        break;
+
+      auto lower_sp = addr_bnds_sp->GetChildMemberWithName("_lower");
+      if (lower_sp)
+        lower = lower_sp->GetValueAsUnsigned(-1);
+
+      auto upper_sp = addr_bnds_sp->GetChildMemberWithName("_upper");
+      if (upper_sp)
+        upper = upper_sp->GetValueAsUnsigned(-1);
+
+      break;
+    }
+    default:
+      break;
+    }
+  }
+
+  return linux_signals.GetSignalDescription(signo, code, addr, lower, upper,
+                                            pid, uid);
+}
+
+lldb::StopInfoSP PlatformLinux::GetStopInfoFromSiginfo(Thread &thread) {
+  ValueObjectSP siginfo_sp = thread.GetSiginfoValue();
+  if (!siginfo_sp)
+    return {};
+  auto signo_sp = siginfo_sp->GetChildMemberWithName("si_signo");
+  auto sicode_sp = siginfo_sp->GetChildMemberWithName("si_code");
+  if (!signo_sp || !sicode_sp)
+    return {};
+
+  std::string siginfo_description = GetDescriptionFromSiginfo(siginfo_sp);
+  if (siginfo_description.empty())
+    return StopInfo::CreateStopReasonWithSignal(
+        thread, signo_sp->GetValueAsUnsigned(-1));
+
+  return StopInfo::CreateStopReasonWithSignal(
+      thread, signo_sp->GetValueAsUnsigned(-1), siginfo_description.c_str(),
+      sicode_sp->GetValueAsUnsigned(0));
 }

@@ -94,7 +94,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
-#include <memory>
 #include <utility>
 
 using namespace llvm;
@@ -197,7 +196,7 @@ public:
   CopyRewriter(MachineInstr &MI) : Rewriter(MI) {
     assert(MI.isCopy() && "Expected copy instruction");
   }
-  virtual ~CopyRewriter() = default;
+  ~CopyRewriter() override = default;
 
   bool getNextRewritableSource(RegSubRegPair &Src,
                                RegSubRegPair &Dst) override {
@@ -406,9 +405,7 @@ public:
 
     const MachineOperand &MOInsertedReg = CopyLike.getOperand(CurrentSrcIdx);
     Src.Reg = MOInsertedReg.getReg();
-    // If we have to compose sub-register indices, bail out.
-    if ((Src.SubReg = MOInsertedReg.getSubReg()))
-      return false;
+    Src.SubReg = MOInsertedReg.getSubReg();
 
     // We want to track something that is compatible with the related
     // partial definition.
@@ -421,12 +418,6 @@ public:
   }
 
   bool RewriteCurrentSource(Register NewReg, unsigned NewSubReg) override {
-    // Do not introduce new subregister uses in a reg_sequence. Until composing
-    // subregister indices is supported while folding, we're just blocking
-    // folding of subregister copies later in the function.
-    if (NewSubReg)
-      return false;
-
     MachineOperand &MO = CopyLike.getOperand(CurrentSrcIdx);
     MO.setReg(NewReg);
     MO.setSubReg(NewSubReg);
@@ -529,7 +520,7 @@ private:
   DenseMap<RegSubRegPair, MachineInstr *> CopySrcMIs;
 
   // MachineFunction::Delegate implementation. Used to maintain CopySrcMIs.
-  void MF_HandleInsertion(MachineInstr &MI) override { return; }
+  void MF_HandleInsertion(MachineInstr &MI) override {}
 
   bool getCopySrc(MachineInstr &MI, RegSubRegPair &SrcPair) {
     if (!MI.isCopy())
@@ -567,9 +558,7 @@ class PeepholeOptimizerLegacy : public MachineFunctionPass {
 public:
   static char ID; // Pass identification
 
-  PeepholeOptimizerLegacy() : MachineFunctionPass(ID) {
-    initializePeepholeOptimizerLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  PeepholeOptimizerLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -585,8 +574,7 @@ public:
   }
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 };
 
@@ -845,14 +833,14 @@ bool PeepholeOptimizer::optimizeExtInstr(
     //
     //    %reg1025 = <sext> %reg1024
     //     ...
-    //    %reg1026 = SUBREG_TO_REG 0, %reg1024, 4
+    //    %reg1026 = SUBREG_TO_REG %reg1024, 4
     //
     // into this:
     //
     //    %reg1025 = <sext> %reg1024
     //     ...
     //    %reg1027 = COPY %reg1025:4
-    //    %reg1026 = SUBREG_TO_REG 0, %reg1027, 4
+    //    %reg1026 = SUBREG_TO_REG %reg1027, 4
     //
     // The problem here is that SUBREG_TO_REG is there to assert that an
     // implicit zext occurs. It doesn't insert a zext instruction. If we allow
@@ -931,7 +919,7 @@ bool PeepholeOptimizer::optimizeExtInstr(
       Register NewVR = MRI->createVirtualRegister(RC);
       BuildMI(*UseMBB, UseMI, UseMI->getDebugLoc(),
               TII->get(TargetOpcode::COPY), NewVR)
-          .addReg(DstReg, 0, SubIdx);
+          .addReg(DstReg, {}, SubIdx);
       if (UseSrcSubIdx)
         UseMO->setSubReg(0);
 
@@ -971,14 +959,7 @@ bool PeepholeOptimizer::optimizeCmpInstr(MachineInstr &MI) {
 /// Optimize a select instruction.
 bool PeepholeOptimizer::optimizeSelect(
     MachineInstr &MI, SmallPtrSetImpl<MachineInstr *> &LocalMIs) {
-  unsigned TrueOp = 0;
-  unsigned FalseOp = 0;
-  bool Optimizable = false;
-  SmallVector<MachineOperand, 4> Cond;
-  if (TII->analyzeSelect(MI, Cond, TrueOp, FalseOp, Optimizable))
-    return false;
-  if (!Optimizable)
-    return false;
+  assert(MI.isSelect() && "Should only be called when MI->isSelect() is true");
   if (!TII->optimizeSelect(MI, LocalMIs))
     return false;
   LLVM_DEBUG(dbgs() << "Deleting select: " << MI);
@@ -1014,9 +995,8 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
   // Thus, instead of maintaining untested code, we will revisit that if
   // that changes at some point.
   Register Reg = RegSubReg.Reg;
-  SmallVector<RegSubRegPair, 4> SrcToLook;
   RegSubRegPair CurSrcPair = RegSubReg;
-  SrcToLook.push_back(CurSrcPair);
+  SmallVector<RegSubRegPair, 4> SrcToLook = {CurSrcPair};
 
   unsigned PHICount = 0;
   do {
@@ -1117,7 +1097,7 @@ static MachineInstr &insertPHI(MachineRegisterInfo &MRI,
 
   unsigned MBBOpIdx = 2;
   for (const RegSubRegPair &RegPair : SrcRegs) {
-    MIB.addReg(RegPair.Reg, 0, RegPair.SubReg);
+    MIB.addReg(RegPair.Reg, {}, RegPair.SubReg);
     MIB.addMBB(OrigPHI.getOperand(MBBOpIdx).getMBB());
     // Since we're extended the lifetime of RegPair.Reg, clear the
     // kill flags to account for that and make RegPair.Reg reaches
@@ -1214,6 +1194,18 @@ bool PeepholeOptimizer::optimizeCoalescableCopyImpl(Rewriter &&CpyRewriter) {
     if (!NewSrc.Reg)
       continue;
 
+    if (NewSrc.SubReg) {
+      // Verify the register class supports the subregister index. ARM's
+      // copy-like queries return register:subreg pairs where the register's
+      // current class does not directly support the subregister index.
+      const TargetRegisterClass *RC = MRI->getRegClass(NewSrc.Reg);
+      const TargetRegisterClass *WithSubRC =
+          TRI->getSubClassWithSubReg(RC, NewSrc.SubReg);
+      if (!MRI->constrainRegClass(NewSrc.Reg, WithSubRC))
+        continue;
+      Changed = true;
+    }
+
     // Rewrite source.
     if (CpyRewriter.RewriteCurrentSource(NewSrc.Reg, NewSrc.SubReg)) {
       // We may have extended the live-range of NewSrc, account for that.
@@ -1286,10 +1278,22 @@ MachineInstr &PeepholeOptimizer::rewriteSource(MachineInstr &CopyLike,
   const TargetRegisterClass *DefRC = MRI->getRegClass(Def.Reg);
   Register NewVReg = MRI->createVirtualRegister(DefRC);
 
+  if (NewSrc.SubReg) {
+    const TargetRegisterClass *NewSrcRC = MRI->getRegClass(NewSrc.Reg);
+    const TargetRegisterClass *WithSubRC =
+        TRI->getSubClassWithSubReg(NewSrcRC, NewSrc.SubReg);
+
+    // The new source may not directly support the subregister, but we should be
+    // able to assume it is constrainable to support the subregister (otherwise
+    // ValueTracker was lying and reported a useless value).
+    if (!MRI->constrainRegClass(NewSrc.Reg, WithSubRC))
+      llvm_unreachable("replacement register cannot support subregister");
+  }
+
   MachineInstr *NewCopy =
       BuildMI(*CopyLike.getParent(), &CopyLike, CopyLike.getDebugLoc(),
               TII->get(TargetOpcode::COPY), NewVReg)
-          .addReg(NewSrc.Reg, 0, NewSrc.SubReg);
+          .addReg(NewSrc.Reg, {}, NewSrc.SubReg);
 
   if (Def.SubReg) {
     NewCopy->getOperand(0).setSubReg(Def.SubReg);
@@ -1910,16 +1914,33 @@ ValueTrackerResult ValueTracker::getNextSourceFromCopy() {
   assert(Def->getNumOperands() - Def->getNumImplicitOperands() == 2 &&
          "Invalid number of operands");
   assert(!Def->hasImplicitDef() && "Only implicit uses are allowed");
+  assert(!Def->getOperand(DefIdx).getSubReg() && "no subregister defs in SSA");
 
-  if (Def->getOperand(DefIdx).getSubReg() != DefSubReg)
-    // If we look for a different subreg, it means we want a subreg of src.
-    // Bails as we do not support composing subregs yet.
-    return ValueTrackerResult();
   // Otherwise, we want the whole source.
   const MachineOperand &Src = Def->getOperand(1);
   if (Src.isUndef())
     return ValueTrackerResult();
-  return ValueTrackerResult(Src.getReg(), Src.getSubReg());
+
+  Register SrcReg = Src.getReg();
+  unsigned SubReg = Src.getSubReg();
+  if (DefSubReg) {
+    const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+    SubReg = TRI->composeSubRegIndices(SubReg, DefSubReg);
+
+    if (SrcReg.isVirtual()) {
+      // TODO: Try constraining on rewrite if we can
+      const TargetRegisterClass *RegRC = MRI.getRegClass(SrcReg);
+      const TargetRegisterClass *SrcWithSubRC =
+          TRI->getSubClassWithSubReg(RegRC, SubReg);
+      if (RegRC != SrcWithSubRC)
+        return ValueTrackerResult();
+    } else {
+      if (!TRI->getSubReg(SrcReg, SubReg))
+        return ValueTrackerResult();
+    }
+  }
+
+  return ValueTrackerResult(SrcReg, SubReg);
 }
 
 ValueTrackerResult ValueTracker::getNextSourceFromBitcast() {
@@ -1932,11 +1953,8 @@ ValueTrackerResult ValueTracker::getNextSourceFromBitcast() {
   // Bitcasts with more than one def are not supported.
   if (Def->getDesc().getNumDefs() != 1)
     return ValueTrackerResult();
-  const MachineOperand DefOp = Def->getOperand(DefIdx);
-  if (DefOp.getSubReg() != DefSubReg)
-    // If we look for a different subreg, it means we want a subreg of the src.
-    // Bails as we do not support composing subregs yet.
-    return ValueTrackerResult();
+
+  assert(!Def->getOperand(DefIdx).getSubReg() && "no subregister defs in SSA");
 
   unsigned SrcIdx = Def->getNumOperands();
   for (unsigned OpIdx = DefIdx + 1, EndOpIdx = SrcIdx; OpIdx != EndOpIdx;
@@ -1958,6 +1976,8 @@ ValueTrackerResult ValueTracker::getNextSourceFromBitcast() {
   // getOperand(SrcIdx) will fail below.
   if (SrcIdx >= Def->getNumOperands())
     return ValueTrackerResult();
+
+  const MachineOperand &DefOp = Def->getOperand(DefIdx);
 
   // Stop when any user of the bitcast is a SUBREG_TO_REG, replacing with a COPY
   // will break the assumed guarantees for the upper bits.
@@ -1997,10 +2017,6 @@ ValueTrackerResult ValueTracker::getNextSourceFromRegSequence() {
   // If we did not find an exact match, see if we can do a composition to
   // extract a sub-subregister.
   for (const RegSubRegPairAndIdx &RegSeqInput : RegSeqInputRegs) {
-    // We don't check if the resulting class supports the subregister index
-    // yet. This will occur before any rewrite when looking for an eligible
-    // source.
-
     LaneBitmask DefMask = TRI->getSubRegIndexLaneMask(DefSubReg);
     LaneBitmask ThisOpRegMask = TRI->getSubRegIndexLaneMask(RegSeqInput.SubIdx);
 
@@ -2018,6 +2034,17 @@ ValueTrackerResult ValueTracker::getNextSourceFromRegSequence() {
 
     unsigned ComposedDefInSrcReg1 =
         TRI->composeSubRegIndices(RegSeqInput.SubReg, ReverseDefCompose);
+
+    // TODO: We should be able to defer checking if the result register class
+    // supports the index to continue looking for a rewritable source.
+    //
+    // TODO: Should we modify the register class to support the index?
+    const TargetRegisterClass *SrcRC = MRI.getRegClass(RegSeqInput.Reg);
+    const TargetRegisterClass *SrcWithSubRC =
+        TRI->getSubClassWithSubReg(SrcRC, ComposedDefInSrcReg1);
+    if (SrcRC != SrcWithSubRC)
+      return ValueTrackerResult();
+
     return ValueTrackerResult(RegSeqInput.Reg, ComposedDefInSrcReg1);
   }
 
@@ -2030,12 +2057,7 @@ ValueTrackerResult ValueTracker::getNextSourceFromRegSequence() {
 ValueTrackerResult ValueTracker::getNextSourceFromInsertSubreg() {
   assert((Def->isInsertSubreg() || Def->isInsertSubregLike()) &&
          "Invalid definition");
-
-  if (Def->getOperand(DefIdx).getSubReg())
-    // If we are composing subreg, bail out.
-    // Same remark as getNextSourceFromRegSequence.
-    // I.e., this may be turned into an assert.
-    return ValueTrackerResult();
+  assert(!Def->getOperand(DefIdx).getSubReg() && "no subreg defs in SSA");
 
   RegSubRegPair BaseReg;
   RegSubRegPairAndIdx InsertedReg;
@@ -2102,32 +2124,27 @@ ValueTrackerResult ValueTracker::getNextSourceFromExtractSubreg() {
 ValueTrackerResult ValueTracker::getNextSourceFromSubregToReg() {
   assert(Def->isSubregToReg() && "Invalid definition");
   // We are looking at:
-  // Def = SUBREG_TO_REG Imm, v0, sub0
+  // Def = SUBREG_TO_REG v0, sub0
 
   // Bail if we have to compose sub registers.
   // If DefSubReg != sub0, we would have to check that all the bits
   // we track are included in sub0 and if yes, we would have to
   // determine the right subreg in v0.
-  if (DefSubReg != Def->getOperand(3).getImm())
+  if (DefSubReg != Def->getOperand(2).getImm())
     return ValueTrackerResult();
   // Bail if we have to compose sub registers.
   // Likewise, if v0.subreg != 0, we would have to compose it with sub0.
-  if (Def->getOperand(2).getSubReg())
+  if (Def->getOperand(1).getSubReg())
     return ValueTrackerResult();
 
-  return ValueTrackerResult(Def->getOperand(2).getReg(),
-                            Def->getOperand(3).getImm());
+  return ValueTrackerResult(Def->getOperand(1).getReg(),
+                            Def->getOperand(2).getImm());
 }
 
 /// Explore each PHI incoming operand and return its sources.
 ValueTrackerResult ValueTracker::getNextSourceFromPHI() {
   assert(Def->isPHI() && "Invalid definition");
   ValueTrackerResult Res;
-
-  // If we look for a different subreg, bail as we do not support composing
-  // subregs yet.
-  if (Def->getOperand(0).getSubReg() != DefSubReg)
-    return ValueTrackerResult();
 
   // Return all register sources for PHI instructions.
   for (unsigned i = 1, e = Def->getNumOperands(); i < e; i += 2) {

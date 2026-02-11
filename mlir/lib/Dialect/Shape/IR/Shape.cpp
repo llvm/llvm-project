@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <utility>
-
 #include "mlir/Dialect/Shape/IR/Shape.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -25,9 +23,10 @@
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/SetOperations.h"
-#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/raw_ostream.h"
+#include <utility>
 
 using namespace mlir;
 using namespace mlir::shape;
@@ -151,17 +150,17 @@ Operation *ShapeDialect::materializeConstant(OpBuilder &builder,
                                              Attribute value, Type type,
                                              Location loc) {
   if (auto poison = dyn_cast<ub::PoisonAttr>(value))
-    return builder.create<ub::PoisonOp>(loc, type, poison);
+    return ub::PoisonOp::create(builder, loc, type, poison);
 
   if (llvm::isa<ShapeType>(type) || isExtentTensorType(type))
-    return builder.create<ConstShapeOp>(
-        loc, type, llvm::cast<DenseIntElementsAttr>(value));
+    return ConstShapeOp::create(builder, loc, type,
+                                llvm::cast<DenseIntElementsAttr>(value));
   if (llvm::isa<SizeType>(type))
-    return builder.create<ConstSizeOp>(loc, type,
-                                       llvm::cast<IntegerAttr>(value));
+    return ConstSizeOp::create(builder, loc, type,
+                               llvm::cast<IntegerAttr>(value));
   if (llvm::isa<WitnessType>(type))
-    return builder.create<ConstWitnessOp>(loc, type,
-                                          llvm::cast<BoolAttr>(value));
+    return ConstWitnessOp::create(builder, loc, type,
+                                  llvm::cast<BoolAttr>(value));
 
   return arith::ConstantOp::materialize(builder, value, type, loc);
 }
@@ -316,8 +315,8 @@ struct AssumingOpRemoveUnusedResults : public OpRewritePattern<AssumingOp> {
     auto newYieldOp =
         rewriter.replaceOpWithNewOp<AssumingYieldOp>(yieldOp, newYieldOperands);
     rewriter.setInsertionPoint(op);
-    auto newOp = rewriter.create<AssumingOp>(
-        op.getLoc(), newYieldOp->getOperandTypes(), op.getWitness());
+    auto newOp = AssumingOp::create(
+        rewriter, op.getLoc(), newYieldOp->getOperandTypes(), op.getWitness());
     newOp.getDoRegion().takeBody(op.getDoRegion());
 
     // Use the new results to replace the previously used ones.
@@ -347,11 +346,15 @@ void AssumingOp::getSuccessorRegions(
   // parent, so return the correct RegionSuccessor purely based on the index
   // being None or 0.
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor(getResults()));
+    regions.push_back(RegionSuccessor::parent());
     return;
   }
 
   regions.push_back(RegionSuccessor(&getDoRegion()));
+}
+
+ValueRange AssumingOp::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(getResults()) : ValueRange();
 }
 
 void AssumingOp::inlineRegionIntoParent(AssumingOp &op,
@@ -385,7 +388,7 @@ void AssumingOp::build(
 
   // Build body.
   SmallVector<Value, 2> yieldValues = bodyBuilder(builder, result.location);
-  builder.create<AssumingYieldOp>(result.location, yieldValues);
+  AssumingYieldOp::create(builder, result.location, yieldValues);
 
   SmallVector<Type, 2> assumingTypes;
   for (Value v : yieldValues)
@@ -649,24 +652,29 @@ OpFoldResult BroadcastOp::fold(FoldAdaptor adaptor) {
     return getShapes().front();
   }
 
-  // TODO: Support folding with more than 2 input shapes
-  if (getShapes().size() > 2)
+  if (!adaptor.getShapes().front())
     return nullptr;
 
-  if (!adaptor.getShapes()[0] || !adaptor.getShapes()[1])
-    return nullptr;
-  auto lhsShape = llvm::to_vector<6>(
-      llvm::cast<DenseIntElementsAttr>(adaptor.getShapes()[0])
+  SmallVector<int64_t, 6> resultShape(
+      llvm::cast<DenseIntElementsAttr>(adaptor.getShapes().front())
           .getValues<int64_t>());
-  auto rhsShape = llvm::to_vector<6>(
-      llvm::cast<DenseIntElementsAttr>(adaptor.getShapes()[1])
-          .getValues<int64_t>());
-  SmallVector<int64_t, 6> resultShape;
 
-  // If the shapes are not compatible, we can't fold it.
-  // TODO: Fold to an "error".
-  if (!OpTrait::util::getBroadcastedShape(lhsShape, rhsShape, resultShape))
-    return nullptr;
+  for (auto next : adaptor.getShapes().drop_front()) {
+    if (!next)
+      return nullptr;
+    auto nextShape = llvm::to_vector<6>(
+        llvm::cast<DenseIntElementsAttr>(next).getValues<int64_t>());
+
+    SmallVector<int64_t, 6> tmpShape;
+    // If the shapes are not compatible, we can't fold it.
+    // TODO: Fold to an "error".
+    if (!OpTrait::util::getBroadcastedShape(resultShape, nextShape, tmpShape))
+      return nullptr;
+
+    resultShape.clear();
+    std::copy(tmpShape.begin(), tmpShape.end(),
+              std::back_inserter(resultShape));
+  }
 
   Builder builder(getContext());
   return builder.getIndexTensorAttr(resultShape);
@@ -731,13 +739,13 @@ struct BroadcastForwardSingleOperandPattern
     if (replacement.getType() != op.getType()) {
       auto loc = op.getLoc();
       if (llvm::isa<ShapeType>(op.getType())) {
-        replacement = rewriter.create<FromExtentTensorOp>(loc, replacement);
+        replacement = FromExtentTensorOp::create(rewriter, loc, replacement);
       } else {
         assert(!llvm::isa<ShapeType>(op.getType()) &&
                !llvm::isa<ShapeType>(replacement.getType()) &&
                "expect extent tensor cast");
         replacement =
-            rewriter.create<tensor::CastOp>(loc, op.getType(), replacement);
+            tensor::CastOp::create(rewriter, loc, op.getType(), replacement);
       }
     }
 
@@ -775,9 +783,9 @@ struct BroadcastFoldConstantOperandsPattern
     auto foldedConstantOperandsTy = RankedTensorType::get(
         {static_cast<int64_t>(foldedConstantShape.size())},
         rewriter.getIndexType());
-    newShapeOperands.push_back(rewriter.create<ConstShapeOp>(
-        op.getLoc(), foldedConstantOperandsTy,
-        rewriter.getIndexTensorAttr(foldedConstantShape)));
+    newShapeOperands.push_back(
+        ConstShapeOp::create(rewriter, op.getLoc(), foldedConstantOperandsTy,
+                             rewriter.getIndexTensorAttr(foldedConstantShape)));
     rewriter.replaceOpWithNewOp<BroadcastOp>(op, op.getType(),
                                              newShapeOperands);
     return success();
@@ -805,8 +813,8 @@ struct CanonicalizeCastExtentTensorOperandsPattern
       }
       return operand;
     };
-    auto newOperands = llvm::to_vector<8>(
-        llvm::map_range(op.getOperands(), canonicalizeOperand));
+    auto newOperands =
+        llvm::map_to_vector<8>(op.getOperands(), canonicalizeOperand);
 
     // Rewrite op if any change required.
     if (!anyChange)
@@ -840,9 +848,9 @@ struct BroadcastConcretizeResultTypePattern
       }
     }
 
-    auto newOp = rewriter.create<BroadcastOp>(
-        op.getLoc(), getExtentTensorType(getContext(), maxRank),
-        op.getShapes());
+    auto newOp = BroadcastOp::create(rewriter, op.getLoc(),
+                                     getExtentTensorType(getContext(), maxRank),
+                                     op.getShapes());
     rewriter.replaceOpWithNewOp<tensor::CastOp>(op, op.getType(), newOp);
     return success();
   }
@@ -1124,7 +1132,7 @@ OpFoldResult DivOp::fold(FoldAdaptor adaptor) {
   if (!lhs)
     return nullptr;
   auto rhs = llvm::dyn_cast_if_present<IntegerAttr>(adaptor.getRhs());
-  if (!rhs)
+  if (!rhs || rhs.getValue().isZero())
     return nullptr;
 
   // Division in APInt does not follow floor(lhs, rhs) when the result is
@@ -1195,11 +1203,13 @@ void IndexToSizeOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 //===----------------------------------------------------------------------===//
 
 OpFoldResult FromExtentsOp::fold(FoldAdaptor adaptor) {
-  if (llvm::any_of(adaptor.getExtents(), [](Attribute a) { return !a; }))
-    return nullptr;
   SmallVector<int64_t, 6> extents;
-  for (auto attr : adaptor.getExtents())
-    extents.push_back(llvm::cast<IntegerAttr>(attr).getInt());
+  for (Attribute attr : adaptor.getExtents()) {
+    auto intAttr = llvm::dyn_cast_if_present<IntegerAttr>(attr);
+    if (!intAttr)
+      return nullptr;
+    extents.push_back(intAttr.getInt());
+  }
   Builder builder(getContext());
   return builder.getIndexTensorAttr(extents);
 }
@@ -1298,7 +1308,7 @@ void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
     return;
   assert(type.getNumInputs() == argAttrs.size());
   call_interface_impl::addArgAndResultAttrs(
-      builder, state, argAttrs, /*resultAttrs=*/std::nullopt,
+      builder, state, argAttrs, /*resultAttrs=*/{},
       getArgAttrsAttrName(state.name), getResAttrsAttrName(state.name));
 }
 
@@ -1349,11 +1359,11 @@ void GetExtentOp::build(OpBuilder &builder, OperationState &result, Value shape,
   auto loc = result.location;
   auto dimAttr = builder.getIndexAttr(dim);
   if (llvm::isa<ShapeType>(shape.getType())) {
-    Value dim = builder.create<ConstSizeOp>(loc, dimAttr);
+    Value dim = ConstSizeOp::create(builder, loc, dimAttr);
     build(builder, result, builder.getType<SizeType>(), shape, dim);
   } else {
-    Value dim =
-        builder.create<arith::ConstantOp>(loc, builder.getIndexType(), dimAttr);
+    Value dim = arith::ConstantOp::create(builder, loc, builder.getIndexType(),
+                                          dimAttr);
     build(builder, result, builder.getIndexType(), shape, dim);
   }
 }
@@ -1696,15 +1706,20 @@ struct ShapeOfOpToConstShapeOp : public OpRewritePattern<shape::ShapeOfOp> {
     auto type = llvm::dyn_cast<ShapedType>(op.getArg().getType());
     if (!type || !type.hasStaticShape())
       return failure();
+
+    Type resultType = op.getResult().getType();
     Location loc = op.getLoc();
+    Type constResType =
+        isa<ShapeType>(resultType)
+            ? resultType
+            : RankedTensorType::get({type.getRank()}, rewriter.getIndexType());
     Value constShape =
-        rewriter
-            .create<ConstShapeOp>(loc,
-                                  rewriter.getIndexTensorAttr(type.getShape()))
+        ConstShapeOp::create(rewriter, loc, constResType,
+                             rewriter.getIndexTensorAttr(type.getShape()))
             .getResult();
-    if (constShape.getType() != op.getResult().getType())
-      constShape = rewriter.create<tensor::CastOp>(
-          loc, op.getResult().getType(), constShape);
+    if (constShape.getType() != resultType)
+      constShape =
+          tensor::CastOp::create(rewriter, loc, resultType, constShape);
     rewriter.replaceOp(op, constShape);
     return success();
   }
@@ -1734,10 +1749,24 @@ struct ShapeOfFromReshape : public OpRewritePattern<shape::ShapeOfOp> {
     // Operand 'shape' of 'tensor.reshape' may now be used as the result of
     // 'shape.shape_of'. While its type is guaranteed to be compatible in well-
     // formed IR, it may not be identical (dynamically vs statically shaped),
-    // in which case it needs to be cast first.
+    // in which case it needs to be cast first using 'tensor.cast'.
+    // Additionally, it may not have identical element type (i32 vs index)
+    // while it has identical shaped type (dynamic vs static), in which case it
+    // needs to be cast first using 'arith.index_cast'. Note: 'shape.shape_of'
+    // op result must be shape or extent tensor.
     Value shape = tensorReshapeOp.getShape();
-    if (op.getType() != shape.getType())
-      shape = rewriter.create<tensor::CastOp>(op.getLoc(), op.getType(), shape);
+
+    auto opTensorTy = cast<RankedTensorType>(op.getType());
+    auto shapeTensorTy = cast<RankedTensorType>(shape.getType());
+
+    if (opTensorTy != shapeTensorTy) {
+      if (opTensorTy.getElementType() == shapeTensorTy.getElementType())
+        shape =
+            tensor::CastOp::create(rewriter, op.getLoc(), opTensorTy, shape);
+      else if (!isExtentTensorType(shapeTensorTy))
+        shape = arith::IndexCastOp::create(rewriter, op.getLoc(), opTensorTy,
+                                           shape);
+    }
 
     rewriter.replaceOp(op, shape);
     return success();

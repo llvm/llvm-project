@@ -21,6 +21,55 @@
 
 include "mlir/Dialect/OpenMP/OpenMPOpBase.td"
 include "mlir/IR/SymbolInterfaces.td"
+include "mlir/IR/BuiltinAttributes.td"
+
+//===----------------------------------------------------------------------===//
+// V5.2: [12.5.1] `affinity` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_AffinityClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false>
+    : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins Variadic<OpenMP_PointerLikeType>:$affinity_vars);
+
+  let optAssemblyFormat = [{
+    `affinity` `(` custom<AffinityClause>($affinity_vars, type($affinity_vars)) `)`
+  }];
+
+  let description = [{
+    The `affinity` clause specifies a locator list used as a hint for task
+    placement / scheduling affinity.
+  }];
+}
+
+def OpenMP_AffinityClause : OpenMP_AffinityClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// V5.2: [6.3] `align` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_AlignClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+    ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$align
+  );
+
+  let optAssemblyFormat = [{
+    `align` `(` $align `)`
+  }];
+
+  let description = [{
+    The `align` clause is used to specify the byte alignment to use for
+    allocations associated with the construct on which the clause appears.
+  }];
+}
+
+def OpenMP_AlignClause : OpenMP_AlignClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // V5.2: [5.11] `aligned` clause
@@ -83,6 +132,32 @@ class OpenMP_AllocateClauseSkip<
 }
 
 def OpenMP_AllocateClause : OpenMP_AllocateClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// V5.2: [6.4] `allocator` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_AllocatorClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+
+  let arguments = (ins
+    Optional<I64>:$allocator
+  );
+
+  let optAssemblyFormat = [{
+    `allocator` `(` $allocator `)`
+  }];
+
+  let description = [{
+    `allocator` specifies the memory allocator to be used for allocations
+    associated with the construct on which the clause appears.
+  }];
+}
+
+def OpenMP_AllocatorClause : OpenMP_AllocatorClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // LLVM OpenMP extension `ompx_bare` clause
@@ -157,6 +232,23 @@ class OpenMP_BindClauseSkip<
 }
 
 def OpenMP_BindClause : OpenMP_BindClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// V5.2: [4.4.3] `collapse` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_CollapseClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+      ConfinedAttr<DefaultValuedOptionalAttr<I64Attr, "1">, [IntMinValue<1>]>
+      :$collapse_num_loops
+  );
+}
+
+def OpenMP_CollapseClause : OpenMP_CollapseClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // V5.2: [5.7.2] `copyprivate` clause
@@ -436,12 +528,11 @@ class OpenMP_GrainsizeClauseSkip<
     bit description = false, bit extraClassDeclaration = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
-  let arguments = (ins
-    Optional<IntLikeType>:$grainsize
-  );
+  let arguments = (ins OptionalAttr<GrainsizeTypeAttr>:$grainsize_mod,
+      Optional<IntLikeType>:$grainsize);
 
   let optAssemblyFormat = [{
-    `grainsize` `(` $grainsize `:` type($grainsize) `)`
+    `grainsize` `(` custom<GrainsizeClause>($grainsize_mod , $grainsize, type($grainsize)) `)`
   }];
 
   let description = [{
@@ -463,14 +554,13 @@ class OpenMP_HasDeviceAddrClauseSkip<
     bit description = false, bit extraClassDeclaration = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
+  let traits = [
+    BlockArgOpenMPOpInterface
+  ];
+
   let arguments = (ins
     Variadic<OpenMP_PointerLikeType>:$has_device_addr_vars
   );
-
-  let optAssemblyFormat = [{
-    `has_device_addr` `(` $has_device_addr_vars `:` type($has_device_addr_vars)
-                      `)`
-  }];
 
   let description = [{
     The optional `has_device_addr_vars` indicates that list items already have
@@ -561,12 +651,6 @@ class OpenMP_HostEvalClauseSkip<
     Variadic<AnyType>:$host_eval_vars
   );
 
-  let extraClassDeclaration = [{
-    unsigned numHostEvalBlockArgs() {
-      return getHostEvalVars().size();
-    }
-  }];
-
   let description = [{
     The optional `host_eval_vars` holds values defined outside of the region of
     the `IsolatedFromAbove` operation for which a corresponding entry block
@@ -605,6 +689,28 @@ class OpenMP_IfClauseSkip<
 def OpenMP_IfClause : OpenMP_IfClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
+// V5.2: [9.8.1.1]: `inbranch` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_InbranchClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false>
+    : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins UnitAttr:$inbranch);
+
+  let optAssemblyFormat = [{
+    `inbranch` $inbranch
+  }];
+
+  let description = [{
+    The `inbranch` clause indicates that the generated SIMD function variant
+    is intended for use in conditional branches.
+  }];
+}
+def OpenMP_InbranchClause : OpenMP_InbranchClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
 // V5.2: [5.5.10] `in_reduction` clause
 //===----------------------------------------------------------------------===//
 
@@ -614,7 +720,7 @@ class OpenMP_InReductionClauseSkip<
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let traits = [
-    BlockArgOpenMPOpInterface, ReductionClauseInterface
+    BlockArgOpenMPOpInterface
   ];
 
   let arguments = (ins
@@ -622,16 +728,6 @@ class OpenMP_InReductionClauseSkip<
     OptionalAttr<DenseBoolArrayAttr>:$in_reduction_byref,
     OptionalAttr<SymbolRefArrayAttr>:$in_reduction_syms
   );
-
-  let extraClassDeclaration = [{
-    /// Returns the reduction variables.
-    SmallVector<Value> getReductionVars() {
-      return SmallVector<Value>(getInReductionVars().begin(),
-                                getInReductionVars().end());
-    }
-
-    unsigned numInReductionBlockArgs() { return getInReductionVars().size(); }
-  }];
 
   // Description varies depending on the operation. Assembly format not defined
   // because this clause must be processed together with the first region of the
@@ -673,10 +769,9 @@ class OpenMP_LinearClauseSkip<
     bit description = false, bit extraClassDeclaration = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
-  let arguments = (ins
-    Variadic<AnyType>:$linear_vars,
-    Variadic<I32>:$linear_step_vars
-  );
+  let arguments = (ins Variadic<AnyType>:$linear_vars,
+      Variadic<I32>:$linear_step_vars,
+      OptionalAttr<ArrayAttr>:$linear_var_types);
 
   let optAssemblyFormat = [{
     `linear` `(`
@@ -745,6 +840,9 @@ class OpenMP_MapClauseSkip<
     Variadic<OpenMP_PointerLikeType>:$map_vars
   );
 
+  // This assembly format should only be used by operations where `map` does not
+  // define entry block arguments. Otherwise, it must be printed and parsed
+  // together with the corresponding region.
   let optAssemblyFormat = [{
     `map_entries` `(` $map_vars `:` type($map_vars) `)`
   }];
@@ -861,6 +959,28 @@ class OpenMP_NontemporalClauseSkip<
 def OpenMP_NontemporalClause : OpenMP_NontemporalClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
+// V5.2: [9.8.1.2]: `notinbranch` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_NotinbranchClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false>
+    : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins UnitAttr:$notinbranch);
+
+  let optAssemblyFormat = [{
+    `notinbranch` $notinbranch
+  }];
+
+  let description = [{
+    The `notinbranch` clause indicates that the generated SIMD function variant
+    is intended for use when not in conditional branches.
+  }];
+}
+def OpenMP_NotinbranchClause : OpenMP_NotinbranchClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
 // V5.2: [15.6] `nowait` clause
 //===----------------------------------------------------------------------===//
 
@@ -895,12 +1015,11 @@ class OpenMP_NumTasksClauseSkip<
     bit description = false, bit extraClassDeclaration = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
-  let arguments = (ins
-    Optional<IntLikeType>:$num_tasks
-  );
+  let arguments = (ins OptionalAttr<NumTasksTypeAttr>:$num_tasks_mod,
+      Optional<IntLikeType>:$num_tasks);
 
   let optAssemblyFormat = [{
-    `num_tasks` `(` $num_tasks `:` type($num_tasks) `)`
+    `num_tasks` `(` custom<NumTasksClause>($num_tasks_mod , $num_tasks, type($num_tasks)) `)`
   }];
 
   let description = [{
@@ -922,26 +1041,84 @@ class OpenMP_NumTeamsClauseSkip<
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let arguments = (ins
-    Optional<AnyInteger>:$num_teams_lower,
-    Optional<AnyInteger>:$num_teams_upper
+    Optional<IntLikeType>:$num_teams_lower,
+    Variadic<IntLikeType>:$num_teams_upper_vars
   );
 
   let optAssemblyFormat = [{
     `num_teams` `(` ( $num_teams_lower^ `:` type($num_teams_lower) )? `to`
-                      $num_teams_upper `:` type($num_teams_upper) `)`
+                  $num_teams_upper_vars `:` type($num_teams_upper_vars) `)`
   }];
 
   let description = [{
-    The optional `num_teams_upper` and `num_teams_lower` arguments specify the
-    limit on the number of teams to be created. If only the upper bound is
-    specified, it acts as if the lower bound was set to the same value. It is
-    not allowed to set `num_teams_lower` if `num_teams_upper` is not specified.
-    They define a closed range, where both the lower and upper bounds are
-    included.
+    The `num_teams` clause specifies the bounds on the league space formed by the
+    construct on which it appears.
+
+    Multi-dimensional (OpenMP 6.1 dims modifier):
+    - Uses `num_teams_upper_vars` with multiple values (one per dimension)
+    - Values may have different types; they will be cast at LLVM IR translation
+    - Format: `num_teams(to %v0, %v1, ... : type0, type1, ...)`
+    - Example: `num_teams(to %ub0, %ub1, %ub2 : i32, i64, i32)`
+    - The number of dimensions is implicitly `num_teams_upper_vars.size()`
+
+    Uni-dimensional (legacy format):
+    - Uses `num_teams_upper_vars` with one value and optional `num_teams_lower`
+    - If lower bound not specified, it defaults to upper bound value
+    - Format: `num_teams(%lb : type to %ub : type)` or `num_teams(to %ub : type)`
+    - Example: `num_teams(%lb : i32 to %ub : i32)` or `num_teams(to %ub : i32)`
+  }];
+
+  let extraClassDeclaration = [{
+    /// Returns true if using the multi-dimensional values format
+    bool hasNumTeamsMultiDim() {
+      return getNumTeamsUpperVars().size() > 1;
+    }
+
+    /// Returns the number of dimensions specified for num_teams
+    unsigned getNumTeamsDimsCount() {
+      return getNumTeamsUpperVars().size();
+    }
+
+    /// Returns the value for a specific dimension index
+    /// Index must be less than getNumTeamsUpperVars().size()
+    ::mlir::Value getNumTeams(unsigned dim = 0) {
+      assert(dim < getNumTeamsDimsCount() &&
+             "Num teams dims index out of bounds");
+      return getNumTeamsUpperVars()[dim];
+    }
   }];
 }
 
 def OpenMP_NumTeamsClause : OpenMP_NumTeamsClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+//  V5.1: [10.1.2] `sizes` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_SizesClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+    Variadic<IntLikeType>:$sizes
+  );
+
+  let optAssemblyFormat = [{
+    `sizes` `(` $sizes `:` type($sizes) `)`
+  }];
+
+  let description = [{
+    The `sizes` clauses defines the size of a grid over a multi-dimensional
+    logical iteration space. This grid is used for loop transformations such as
+    `tile` and `strip`. The size per dimension can be a variable, but only
+    values that are not at least 2 make sense. It is not specified what happens
+    when smaller values are used, but should still result in a loop nest that
+    executes each logical iteration once.
+  }];
+}
+
+def OpenMP_SizesClause : OpenMP_SizesClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // V5.2: [10.1.2] `num_threads` clause
@@ -953,16 +1130,47 @@ class OpenMP_NumThreadsClauseSkip<
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let arguments = (ins
-    Optional<IntLikeType>:$num_threads
+    Variadic<IntLikeType>:$num_threads_vars
   );
 
   let optAssemblyFormat = [{
-    `num_threads` `(` $num_threads `:` type($num_threads) `)`
+    `num_threads` `(` $num_threads_vars `:` type($num_threads_vars) `)`
   }];
 
   let description = [{
-    The optional `num_threads` parameter specifies the number of threads which
-    should be used to execute the parallel region.
+    The `num_threads` clause specifies the number of threads.
+
+    Multi-dimensional format (dims modifier):
+    - Multiple values can be specified for multi-dimensional thread counts.
+    - The number of dimensions is derived from the number of values.
+    - Values can have different integer types.
+    - Format: `num_threads(%v1, %v2, ... : type1, type2, ...)`
+    - Example: `num_threads(%n, %m : i32, i64)`
+
+    Single value format:
+    - A single value specifies the number of threads.
+    - Format: `num_threads(%value : type)`
+    - Example: `num_threads(%n : i32)`
+  }];
+
+  let extraClassDeclaration = [{
+    /// Returns true if using multi-dimensional values (more than one value)
+    bool hasNumThreadsMultiDim() {
+      return getNumThreadsVars().size() > 1;
+    }
+
+    /// Returns the number of dimensions specified for num_threads
+    unsigned getNumThreadsDimsCount() {
+      return getNumThreadsVars().size();
+    }
+
+    /// Returns the value for a specific dimension index
+    /// Index must be less than getNumThreadsVars().size()
+    ::mlir::Value getNumThreads(unsigned dim = 0) {
+      assert(dim < getNumThreadsDimsCount() &&
+             "Num threads index out of bounds");
+      return getNumThreadsVars()[dim];
+    }
   }];
 }
 
@@ -1057,8 +1265,6 @@ class OpenMP_DetachClauseSkip<
     : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
 
-  let traits = [BlockArgOpenMPOpInterface];
-
   let arguments = (ins Optional<OpenMP_PointerLikeType>:$event_handle);
 
   let optAssemblyFormat = [{
@@ -1120,12 +1326,11 @@ class OpenMP_PrivateClauseSkip<
 
   let arguments = (ins
     Variadic<AnyType>:$private_vars,
-    OptionalAttr<SymbolRefArrayAttr>:$private_syms
+    OptionalAttr<SymbolRefArrayAttr>:$private_syms,
+    // Set this attribute if a barrier is needed after initialization and
+    // copying of lastprivate variables.
+    UnitAttr:$private_needs_barrier
   );
-
-  let extraClassDeclaration = [{
-    unsigned numPrivateBlockArgs() { return getPrivateVars().size(); }
-  }];
 
   // TODO: Add description.
   // Assembly format not defined because this clause must be processed together
@@ -1170,7 +1375,7 @@ class OpenMP_ReductionClauseSkip<
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let traits = [
-    BlockArgOpenMPOpInterface, ReductionClauseInterface
+    BlockArgOpenMPOpInterface
   ];
 
   let arguments = (ins
@@ -1183,7 +1388,6 @@ class OpenMP_ReductionClauseSkip<
   let extraClassDeclaration = [{
     /// Returns the number of reduction variables.
     unsigned getNumReductionVars() { return getReductionVars().size(); }
-    unsigned numReductionBlockArgs() { return getReductionVars().size(); }
   }];
 
   // Description varies depending on the operation.
@@ -1302,7 +1506,7 @@ class OpenMP_TaskReductionClauseSkip<
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let traits = [
-    BlockArgOpenMPOpInterface, ReductionClauseInterface
+    BlockArgOpenMPOpInterface
   ];
 
   let arguments = (ins
@@ -1310,18 +1514,6 @@ class OpenMP_TaskReductionClauseSkip<
     OptionalAttr<DenseBoolArrayAttr>:$task_reduction_byref,
     OptionalAttr<SymbolRefArrayAttr>:$task_reduction_syms
   );
-
-  let extraClassDeclaration = [{
-    /// Returns the reduction variables.
-    SmallVector<Value> getReductionVars() {
-      return SmallVector<Value>(getTaskReductionVars().begin(),
-                                getTaskReductionVars().end());
-    }
-
-    unsigned numTaskReductionBlockArgs() {
-      return getTaskReductionVars().size();
-    }
-  }];
 
   let description = [{
     The `task_reduction` clause specifies a reduction among tasks. For each list
@@ -1352,19 +1544,67 @@ class OpenMP_ThreadLimitClauseSkip<
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let arguments = (ins
-    Optional<AnyInteger>:$thread_limit
+    Variadic<IntLikeType>:$thread_limit_vars
   );
 
   let optAssemblyFormat = [{
-    `thread_limit` `(` $thread_limit `:` type($thread_limit) `)`
+    `thread_limit` `(` $thread_limit_vars `:` type($thread_limit_vars) `)`
   }];
 
   let description = [{
-    The optional `thread_limit` specifies the limit on the number of threads.
+    The `thread_limit` clause specifies the limit on the number of threads.
+
+    Multi-dimensional format (dims modifier):
+    - Multiple values can be specified for multi-dimensional thread limits.
+    - The number of dimensions is derived from the number of values.
+    - Values can have different integer types.
+    - Format: `thread_limit(%v1, %v2, ... : type1, type2, ...)`
+    - Example: `thread_limit(%n, %m : i32, i64)`
+
+    Single value format:
+    - A single value specifies the thread limit.
+    - Format: `thread_limit(%value : type)`
+    - Example: `thread_limit(%n : i32)`
+  }];
+
+  let extraClassDeclaration = [{
+    /// Returns true if using multi-dimensional values (more than one value)
+    bool hasThreadLimitMultiDim() {
+      return getThreadLimitVars().size() > 1;
+    }
+
+    /// Returns the number of dimensions specified for thread_limit
+    unsigned getThreadLimitDimsCount() {
+      return getThreadLimitVars().size();
+    }
+
+    /// Returns the value for a specific dimension
+    /// dim must be less than getThreadLimitDimsCount()
+    ::mlir::Value getThreadLimit(unsigned dim = 0) {
+      assert(dim < getThreadLimitDimsCount() &&
+             "Thread limit index out of bounds");
+      return getThreadLimitVars()[dim];
+    }
   }];
 }
 
 def OpenMP_ThreadLimitClause : OpenMP_ThreadLimitClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// V5.2: [9.1.1] `sizes` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_TileSizesClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+      OptionalAttr<DenseI64ArrayAttr>:$tile_sizes
+  );
+}
+
+def OpenMP_TileSizesClause : OpenMP_TileSizesClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // V5.2: [12.1] `untied` clause
@@ -1410,12 +1650,6 @@ class OpenMP_UseDeviceAddrClauseSkip<
     Variadic<OpenMP_PointerLikeType>:$use_device_addr_vars
   );
 
-  let extraClassDeclaration = [{
-    unsigned numUseDeviceAddrBlockArgs() {
-      return getUseDeviceAddrVars().size();
-    }
-  }];
-
   let description = [{
     The optional `use_device_addr_vars` specifies the address of the objects in
     the device data environment.
@@ -1445,12 +1679,6 @@ class OpenMP_UseDevicePtrClauseSkip<
     Variadic<OpenMP_PointerLikeType>:$use_device_ptr_vars
   );
 
-  let extraClassDeclaration = [{
-    unsigned numUseDevicePtrBlockArgs() {
-      return getUseDevicePtrVars().size();
-    }
-  }];
-
   let description = [{
     The optional `use_device_ptr_vars` specifies the device pointers to the
     corresponding list items in the device data environment.
@@ -1462,5 +1690,29 @@ class OpenMP_UseDevicePtrClauseSkip<
 }
 
 def OpenMP_UseDevicePtrClause : OpenMP_UseDevicePtrClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// V5.2: [5.10] `uniform` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_UniformClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false>
+    : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins Variadic<OpenMP_PointerLikeType>:$uniform_vars);
+
+  let optAssemblyFormat = [{
+    `uniform` `(` custom<UniformClause>($uniform_vars, type($uniform_vars)) `)`
+  }];
+
+  let description = [{
+    The `uniform` clause declares one or more arguments to have an invariant
+    value for all concurrent invocations of the function in the execution of
+    a single SIMD loop.
+  }];
+}
+
+def OpenMP_UniformClause : OpenMP_UniformClauseSkip<>;
 
 #endif // OPENMP_CLAUSES

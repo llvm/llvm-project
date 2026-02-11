@@ -148,16 +148,22 @@
 # define TEST_IS_CONSTANT_EVALUATED false
 #endif
 
+#if TEST_STD_VER >= 20
+#  define TEST_STD_AT_LEAST_20_OR_RUNTIME_EVALUATED true
+#else
+#  define TEST_STD_AT_LEAST_20_OR_RUNTIME_EVALUATED (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+
 #if TEST_STD_VER >= 23
 #  define TEST_STD_AT_LEAST_23_OR_RUNTIME_EVALUATED true
 #else
 #  define TEST_STD_AT_LEAST_23_OR_RUNTIME_EVALUATED (!TEST_IS_CONSTANT_EVALUATED)
 #endif
 
-#if TEST_STD_VER >= 20
-#  define TEST_STD_AT_LEAST_20_OR_RUNTIME_EVALUATED true
+#if TEST_STD_VER >= 26
+#  define TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED true
 #else
-#  define TEST_STD_AT_LEAST_20_OR_RUNTIME_EVALUATED (!TEST_IS_CONSTANT_EVALUATED)
+#  define TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED (!TEST_IS_CONSTANT_EVALUATED)
 #endif
 
 #if TEST_STD_VER >= 14
@@ -256,6 +262,12 @@
 #define LIBCPP_ASSERT_NOEXCEPT(...) static_assert(true, "")
 #define LIBCPP_ASSERT_NOT_NOEXCEPT(...) static_assert(true, "")
 #define LIBCPP_ONLY(...) static_assert(true, "")
+#endif
+
+#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
+#  define LIBCPP_NON_FROZEN_ASSERT(...) static_assert(true, "")
+#else
+#  define LIBCPP_NON_FROZEN_ASSERT(...) LIBCPP_ASSERT(__VA_ARGS__)
 #endif
 
 #if __has_cpp_attribute(nodiscard)
@@ -519,13 +531,6 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #  define TEST_IF_AIX(arg_true, arg_false) arg_false
 #endif
 
-// Clang-18 has support for deducing this, but it does not set the FTM.
-#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
-// This is a C++20 featue, so we don't care whether the compiler could support it
-#elif defined(_LIBCPP_VERSION) && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
-#  define TEST_HAS_EXPLICIT_THIS_PARAMETER
-#endif
-
 // Placement `operator new`/`operator new[]` are not yet constexpr in C++26
 // when using MS ABI, because they are from <vcruntime_new.h>.
 #if defined(__cpp_lib_constexpr_new) && __cpp_lib_constexpr_new >= 202406L
@@ -536,6 +541,10 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 
 #if defined(_MSC_VER) || __SIZEOF_LONG_DOUBLE__ == __SIZEOF_DOUBLE__
 #  define TEST_LONG_DOUBLE_IS_DOUBLE
+#endif
+
+#if defined(__LDBL_MANT_DIG__) && __LDBL_MANT_DIG__ == 64
+#  define TEST_LONG_DOUBLE_IS_80_BIT
 #endif
 
 #endif // SUPPORT_TEST_MACROS_HPP

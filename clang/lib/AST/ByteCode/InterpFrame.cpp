@@ -8,7 +8,6 @@
 
 #include "InterpFrame.h"
 #include "Boolean.h"
-#include "Floating.h"
 #include "Function.h"
 #include "InterpStack.h"
 #include "InterpState.h"
@@ -25,13 +24,13 @@ using namespace clang::interp;
 
 InterpFrame::InterpFrame(InterpState &S)
     : Caller(nullptr), S(S), Depth(0), Func(nullptr), RetPC(CodePtr()),
-      ArgSize(0), Args(nullptr), FrameOffset(0), IsBottom(true) {}
+      ArgSize(0), Args(nullptr), FrameOffset(0) {}
 
 InterpFrame::InterpFrame(InterpState &S, const Function *Func,
                          InterpFrame *Caller, CodePtr RetPC, unsigned ArgSize)
     : Caller(Caller), S(S), Depth(Caller ? Caller->Depth + 1 : 0), Func(Func),
       RetPC(RetPC), ArgSize(ArgSize), Args(static_cast<char *>(S.Stk.top())),
-      FrameOffset(S.Stk.size()), IsBottom(!Caller) {
+      FrameOffset(S.Stk.size()) {
   if (!Func)
     return;
 
@@ -59,15 +58,12 @@ InterpFrame::InterpFrame(InterpState &S, const Function *Func, CodePtr RetPC,
   // If the fuction has a This pointer, that one is next.
   // Then follow the actual arguments (but those are handled
   // in getParamPointer()).
-  if (Func->hasRVO())
-    RVOPtr = stackRef<Pointer>(0);
-
-  if (Func->hasThisPointer()) {
-    if (Func->hasRVO())
-      This = stackRef<Pointer>(sizeof(Pointer));
-    else
-      This = stackRef<Pointer>(0);
+  if (Func->hasRVO()) {
+    // RVO pointer offset is always 0.
   }
+
+  if (Func->hasThisPointer())
+    ThisPointerOffset = Func->hasRVO() ? sizeof(Pointer) : 0;
 }
 
 InterpFrame::~InterpFrame() {
@@ -93,9 +89,21 @@ void InterpFrame::destroyScopes() {
 void InterpFrame::initScope(unsigned Idx) {
   if (!Func)
     return;
+
   for (auto &Local : Func->getScope(Idx).locals()) {
     localBlock(Local.Offset)->invokeCtor();
   }
+}
+
+void InterpFrame::enableLocal(unsigned Idx) {
+  assert(Func);
+
+  // FIXME: This is a little dirty, but to avoid adding a flag to
+  // InlineDescriptor that's only ever useful on the toplevel of local
+  // variables, we reuse the IsActive flag for the enabled state. We should
+  // probably use a different struct than InlineDescriptor for the block-level
+  // inline descriptor of local varaibles.
+  localInlineDesc(Idx)->IsActive = true;
 }
 
 void InterpFrame::destroy(unsigned Idx) {
@@ -107,12 +115,21 @@ void InterpFrame::destroy(unsigned Idx) {
 template <typename T>
 static void print(llvm::raw_ostream &OS, const T &V, ASTContext &ASTCtx,
                   QualType Ty) {
-  V.toAPValue(ASTCtx).printPretty(OS, ASTCtx, Ty);
+  if constexpr (std::is_same_v<Pointer, T>) {
+    if (Ty->isPointerOrReferenceType())
+      V.toAPValue(ASTCtx).printPretty(OS, ASTCtx, Ty);
+    else {
+      if (std::optional<APValue> RValue = V.toRValue(ASTCtx, Ty))
+        RValue->printPretty(OS, ASTCtx, Ty);
+      else
+        OS << "...";
+    }
+  } else {
+    V.toAPValue(ASTCtx).printPretty(OS, ASTCtx, Ty);
+  }
 }
 
 static bool shouldSkipInBacktrace(const Function *F) {
-  if (F->isBuiltin())
-    return true;
   if (F->isLambdaStaticInvoker())
     return true;
 
@@ -120,22 +137,35 @@ static bool shouldSkipInBacktrace(const Function *F) {
   if (FD->getDeclName().getCXXOverloadedOperator() == OO_New ||
       FD->getDeclName().getCXXOverloadedOperator() == OO_Array_New)
     return true;
+
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+      MD && MD->getParent()->isAnonymousStructOrUnion())
+    return true;
+
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(FD);
+      Ctor && Ctor->isDefaulted() && Ctor->isTrivial() &&
+      Ctor->isCopyOrMoveConstructor() && Ctor->inits().empty())
+    return true;
+
   return false;
 }
 
 void InterpFrame::describe(llvm::raw_ostream &OS) const {
-  // We create frames for builtin functions as well, but we can't reliably
-  // diagnose them. The 'in call to' diagnostics for them add no value to the
-  // user _and_ it doesn't generally work since the argument types don't always
-  // match the function prototype. Just ignore them.
-  // Similarly, for lambda static invokers, we would just print __invoke().
-  if (const auto *F = getFunction(); F && shouldSkipInBacktrace(F))
+  assert(Func);
+  // For lambda static invokers, we would just print __invoke().
+  if (shouldSkipInBacktrace(Func))
     return;
 
   const Expr *CallExpr = Caller->getExpr(getRetPC());
   const FunctionDecl *F = getCallee();
-  bool IsMemberCall = isa<CXXMethodDecl>(F) && !isa<CXXConstructorDecl>(F) &&
-                      cast<CXXMethodDecl>(F)->isImplicitObjectMemberFunction();
+
+  bool IsMemberCall = false;
+  bool ExplicitInstanceParam = false;
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(F)) {
+    IsMemberCall = !isa<CXXConstructorDecl>(MD) && !MD->isStatic();
+    ExplicitInstanceParam = MD->isExplicitObjectMemberFunction();
+  }
+
   if (Func->hasThisPointer() && IsMemberCall) {
     if (const auto *MCE = dyn_cast_if_present<CXXMemberCallExpr>(CallExpr)) {
       const Expr *Object = MCE->getImplicitObjectArgument();
@@ -153,9 +183,9 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
                                   /*Indentation=*/0);
       OS << ".";
     } else if (const auto *M = dyn_cast<CXXMethodDecl>(F)) {
-      print(OS, This, S.getASTContext(),
+      print(OS, getThis(), S.getASTContext(),
             S.getASTContext().getLValueReferenceType(
-                S.getASTContext().getRecordType(M->getParent())));
+                S.getASTContext().getCanonicalTagType(M->getParent())));
       OS << ".";
     }
   }
@@ -167,24 +197,17 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
 
   Off += Func->hasRVO() ? primSize(PT_Ptr) : 0;
   Off += Func->hasThisPointer() ? primSize(PT_Ptr) : 0;
-
-  for (unsigned I = 0, N = F->getNumParams(); I < N; ++I) {
-    QualType Ty = F->getParamDecl(I)->getType();
-
+  llvm::ListSeparator Comma;
+  for (const ParmVarDecl *Param :
+       F->parameters().slice(ExplicitInstanceParam)) {
+    OS << Comma;
+    QualType Ty = Param->getType();
     PrimType PrimTy = S.Ctx.classify(Ty).value_or(PT_Ptr);
 
     TYPE_SWITCH(PrimTy, print(OS, stackRef<T>(Off), S.getASTContext(), Ty));
     Off += align(primSize(PrimTy));
-    if (I + 1 != N)
-      OS << ", ";
   }
   OS << ")";
-}
-
-Frame *InterpFrame::getCaller() const {
-  if (Caller->Caller)
-    return Caller;
-  return S.getSplitFrame();
 }
 
 SourceRange InterpFrame::getCallRange() const {
@@ -193,7 +216,17 @@ SourceRange InterpFrame::getCallRange() const {
       return NullRange;
     return S.EvalLocation;
   }
-  return S.getRange(Caller->Func, RetPC - sizeof(uintptr_t));
+
+  // Move up to the frame that has a valid location for the caller.
+  for (const InterpFrame *C = this; C; C = C->Caller) {
+    if (!C->RetPC)
+      continue;
+    SourceRange CallRange =
+        S.getRange(C->Caller->Func, C->RetPC - sizeof(uintptr_t));
+    if (CallRange.isValid())
+      return CallRange;
+  }
+  return S.EvalLocation;
 }
 
 const FunctionDecl *InterpFrame::getCallee() const {
@@ -207,20 +240,26 @@ Pointer InterpFrame::getLocalPointer(unsigned Offset) const {
   return Pointer(localBlock(Offset));
 }
 
+Block *InterpFrame::getLocalBlock(unsigned Offset) const {
+  return localBlock(Offset);
+}
+
 Pointer InterpFrame::getParamPointer(unsigned Off) {
   // Return the block if it was created previously.
   if (auto Pt = Params.find(Off); Pt != Params.end())
     return Pointer(reinterpret_cast<Block *>(Pt->second.get()));
 
+  assert(!isBottomFrame());
+
   // Allocate memory to store the parameter and the block metadata.
-  const auto &Desc = Func->getParamDescriptor(Off);
-  size_t BlockSize = sizeof(Block) + Desc.second->getAllocSize();
+  const auto &PDesc = Func->getParamDescriptor(Off);
+  size_t BlockSize = sizeof(Block) + PDesc.Desc->getAllocSize();
   auto Memory = std::make_unique<char[]>(BlockSize);
-  auto *B = new (Memory.get()) Block(S.Ctx.getEvalID(), Desc.second);
+  auto *B = new (Memory.get()) Block(S.Ctx.getEvalID(), PDesc.Desc);
   B->invokeCtor();
 
   // Copy the initial value.
-  TYPE_SWITCH(Desc.first, new (B->data()) T(stackRef<T>(Off)));
+  TYPE_SWITCH(PDesc.T, new (B->data()) T(stackRef<T>(Off)));
 
   // Record the param.
   Params.insert({Off, std::move(Memory)});

@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -55,9 +56,7 @@ namespace {
   // copies into subregister copies with other restrictions.
   struct PPCVSXFMAMutate : public MachineFunctionPass {
     static char ID;
-    PPCVSXFMAMutate() : MachineFunctionPass(ID) {
-      initializePPCVSXFMAMutatePass(*PassRegistry::getPassRegistry());
-    }
+    PPCVSXFMAMutate() : MachineFunctionPass(ID) {}
 
     LiveIntervals *LIS;
     const PPCInstrInfo *TII;
@@ -356,6 +355,7 @@ public:
       AU.addPreserved<SlotIndexesWrapperPass>();
       AU.addRequired<MachineDominatorTreeWrapperPass>();
       AU.addPreserved<MachineDominatorTreeWrapperPass>();
+      AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
   };

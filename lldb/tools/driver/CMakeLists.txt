@@ -11,21 +11,30 @@ if(APPLE)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-sectcreate,__TEXT,__info_plist,${CMAKE_CURRENT_BINARY_DIR}/lldb-Info.plist")
 endif()
 
-if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")                               
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   remove_definitions("-D_XOPEN_SOURCE=700")                                    
   add_definitions("-D_ALL_SOURCE")                                             
+endif()
+
+set(LLDB_DRIVER_LINK_LIBS
+  liblldb
+  lldbHost
+  lldbUtility
+)
+
+if(WIN32)
+  list(APPEND LLDB_DRIVER_LINK_LIBS lldbHostPythonPathSetup)
 endif()
 
 add_lldb_tool(lldb
   Driver.cpp
   Platform.cpp
 
-  LINK_LIBS
-    liblldb
-
   LINK_COMPONENTS
     Option
     Support
+  LINK_LIBS
+    ${LLDB_DRIVER_LINK_LIBS}
   )
 
 add_dependencies(lldb

@@ -52,6 +52,25 @@ define void @f(ptr %x) {
   ; CHECK: atomicrmw volatile usub_sat ptr %x, i32 10 syncscope("agent") monotonic
   atomicrmw volatile usub_sat ptr %x, i32 10 syncscope("agent") monotonic
 
+  ; CHECK : load atomic <1 x i32>, ptr %x unordered, align 4
+  load atomic <1 x i32>, ptr %x unordered, align 4
+  ; CHECK : store atomic <1 x i32> splat (i32 3), ptr %x release, align 4
+  store atomic <1 x i32> <i32 3>, ptr %x release, align 4
+  ; CHECK : load atomic <2 x i32>, ptr %x unordered, align 4
+  load atomic <2 x i32>, ptr %x unordered, align 4
+  ; CHECK : store atomic <2 x i32> <i32 3, i32 4>, ptr %x release, align 4
+  store atomic <2 x i32> <i32 3, i32 4>, ptr %x release, align 4
+
+  ; CHECK : load atomic <2 x ptr>, ptr %x unordered, align 4
+  load atomic <2 x ptr>, ptr %x unordered, align 4
+  ; CHECK : store atomic <2 x ptr> zeroinitializer, ptr %x release, align 4
+  store atomic <2 x ptr> zeroinitializer, ptr %x release, align 4
+
+  ; CHECK : load atomic <2 x float>, ptr %x unordered, align 4
+  load atomic <2 x float>, ptr %x unordered, align 4
+  ; CHECK : store atomic <2 x float> <float 3.0, float 4.0>, ptr %x release, align 4
+  store atomic <2 x float> <float 3.0, float 4.0>, ptr %x release, align 4
+
   ; CHECK: fence syncscope("singlethread") release
   fence syncscope("singlethread") release
   ; CHECK: fence seq_cst
@@ -80,6 +99,18 @@ define void @fp_atomics(ptr %x) {
   ; CHECK: atomicrmw volatile fmin ptr %x, float 1.000000e+00 seq_cst
   atomicrmw volatile fmin ptr %x, float 1.0 seq_cst
 
+  ; CHECK: atomicrmw fmaximum ptr %x, float 1.000000e+00 seq_cst
+  atomicrmw fmaximum ptr %x, float 1.0 seq_cst
+
+  ; CHECK: atomicrmw volatile fmaximum ptr %x, float 1.000000e+00 seq_cst
+  atomicrmw volatile fmaximum ptr %x, float 1.0 seq_cst
+
+  ; CHECK: atomicrmw fminimum ptr %x, float 1.000000e+00 seq_cst
+  atomicrmw fminimum ptr %x, float 1.0 seq_cst
+
+  ; CHECK: atomicrmw volatile fminimum ptr %x, float 1.000000e+00 seq_cst
+  atomicrmw volatile fminimum ptr %x, float 1.0 seq_cst
+
   ret void
 }
 
@@ -95,6 +126,12 @@ define void @fp_vector_atomicrmw(ptr %x, <2 x half> %val) {
 
   ; CHECK: %atomic.fmin = atomicrmw fmin ptr %x, <2 x half> %val seq_cst
   %atomic.fmin = atomicrmw fmin ptr %x, <2 x half> %val seq_cst
+
+  ; CHECK: %atomic.fmaximum = atomicrmw fmaximum ptr %x, <2 x half> %val seq_cst
+  %atomic.fmaximum = atomicrmw fmaximum ptr %x, <2 x half> %val seq_cst
+
+  ; CHECK: %atomic.fminimum = atomicrmw fminimum ptr %x, <2 x half> %val seq_cst
+  %atomic.fminimum = atomicrmw fminimum ptr %x, <2 x half> %val seq_cst
 
   ret void
 }

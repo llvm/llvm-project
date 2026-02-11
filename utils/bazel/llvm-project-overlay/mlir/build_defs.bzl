@@ -4,6 +4,8 @@
 
 """Rules and macros for MLIR"""
 
+load("@rules_cc//cc:defs.bzl", "CcInfo", "cc_library")
+
 def if_cuda_available(if_true, if_false = []):
     return select({
         # CUDA auto-detection is not yet supported.
@@ -49,24 +51,45 @@ def mlir_c_api_cc_library(
     """
     capi_header_deps = ["%sHeaders" % d for d in capi_deps]
     capi_object_deps = ["%sObjects" % d for d in capi_deps]
-    native.cc_library(
+    cc_library(
         name = name,
         srcs = srcs,
         hdrs = hdrs,
         deps = deps + capi_deps + header_deps,
         **kwargs
     )
-    native.cc_library(
+    cc_library(
         name = name + "Headers",
         hdrs = hdrs,
         deps = header_deps + capi_header_deps,
         **kwargs
     )
-    native.cc_library(
+    cc_library(
         name = name + "Objects",
         srcs = srcs,
         hdrs = hdrs,
         deps = deps + capi_object_deps + capi_header_deps + header_deps,
         alwayslink = True,
+        **kwargs
+    )
+
+def nanobind_pyi_genrule(name, module_name, outs, deps, **kwargs):
+    """Generates .pyi stub file(s) for a nanobind extension module.
+
+    Args:
+        name: Name of the generated target.
+        module_name: Name of the module to generate stubs for (e.g., "_mlir").
+        outs: List of expected output .pyi files.
+        deps: All .so modules to load (including the target module).
+        visibility: Visibility for the generated .pyi file(s).
+    """
+    deps_arg = ",".join(["$(location " + d + ")" for d in deps])
+
+    native.genrule(
+        name = name,
+        srcs = deps,
+        outs = outs,
+        cmd = "$(location :stubgen_runner) --module " + module_name + " --deps " + deps_arg + " -o $(RULEDIR) > /dev/null",
+        tools = [":stubgen_runner"],
         **kwargs
     )

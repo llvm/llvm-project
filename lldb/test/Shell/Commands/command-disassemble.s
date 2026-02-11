@@ -94,8 +94,7 @@
 # CHECK-EMPTY:
 # CHECK-NEXT: command-disassemble.s.tmp`n2::case3:
 # CHECK-NEXT: command-disassemble.s.tmp[0x9046] <+0>: jmp 0x6046 ; <-12288>
-## FIXME: This should resolve to `middle_of_case3`
-# CHECK-NEXT: command-disassemble.s.tmp[0x904b] <+5>: jmp 0x7046 ; n2::case3 - 8192
+# CHECK-NEXT: command-disassemble.s.tmp[0x904b] <+5>: jmp 0x7046 ; middle_of_case3
 # CHECK-NEXT: command-disassemble.s.tmp[0x9050] <+10>: int    $0x2a
 # CHECK-EMPTY:
 # CHECK-NEXT: command-disassemble.s.tmp`n1::case3:

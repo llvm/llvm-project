@@ -29,7 +29,7 @@ namespace {
 /// A pass converting MLIR Tensor operations into the SPIR-V dialect.
 class ConvertTensorToSPIRVPass
     : public impl::ConvertTensorToSPIRVPassBase<ConvertTensorToSPIRVPass> {
-  using ConvertTensorToSPIRVPassBase::ConvertTensorToSPIRVPassBase;
+  using Base::Base;
 
   void runOnOperation() override {
     MLIRContext *context = &getContext();
@@ -41,6 +41,7 @@ class ConvertTensorToSPIRVPass
 
     SPIRVConversionOptions options;
     options.emulateLT32BitScalarTypes = this->emulateLT32BitScalarTypes;
+    options.emulateUnsupportedFloatTypes = this->emulateUnsupportedFloatTypes;
     SPIRVTypeConverter typeConverter(targetAttr, options);
 
     RewritePatternSet patterns(context);

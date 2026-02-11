@@ -617,7 +617,8 @@ void HexagonDAGToDAGISel::SelectSHL(SDNode *N) {
       if (ConstantSDNode *C2 = dyn_cast<ConstantSDNode>(Shl2_1)) {
         int32_t ValConst = 1 << (ShlConst + C2->getSExtValue());
         if (isInt<9>(-ValConst)) {
-          SDValue Val = CurDAG->getTargetConstant(-ValConst, dl, MVT::i32);
+          SDValue Val =
+              CurDAG->getSignedTargetConstant(-ValConst, dl, MVT::i32);
           SDNode *Result = CurDAG->getMachineNode(Hexagon::M2_mpysmi, dl,
                                                   MVT::i32, Shl2_0, Val);
           ReplaceNode(N, Result);
@@ -653,7 +654,9 @@ void HexagonDAGToDAGISel::SelectIntrinsicWChain(SDNode *N) {
       IntNo == Intrinsic::hexagon_V6_vgathermh ||
       IntNo == Intrinsic::hexagon_V6_vgathermh_128B ||
       IntNo == Intrinsic::hexagon_V6_vgathermhw ||
-      IntNo == Intrinsic::hexagon_V6_vgathermhw_128B) {
+      IntNo == Intrinsic::hexagon_V6_vgathermhw_128B ||
+      IntNo == Intrinsic::hexagon_V6_vgather_vscattermh ||
+      IntNo == Intrinsic::hexagon_V6_vgather_vscattermh_128B) {
     SelectV65Gather(N);
     return;
   }
@@ -1639,6 +1642,15 @@ bool HexagonDAGToDAGISel::DetectUseSxtw(SDValue &N, SDValue &R) {
       R = N;
       break;
     }
+    case ISD::AssertSext: {
+      EVT T = cast<VTSDNode>(N.getOperand(1))->getVT();
+      if (T.getSizeInBits() == 32)
+        R = N.getOperand(0);
+      else
+        return false;
+      break;
+    }
+
     default:
       return false;
   }
@@ -1773,7 +1785,8 @@ static bool isOpcodeHandled(const SDNode *N) {
     case ISD::SHL:
       // We only handle constant shifts because these can be easily flattened
       // into multiplications by 2^Op1.
-      return isa<ConstantSDNode>(N->getOperand(1).getNode());
+      return N->getNumOperands() >= 2 &&
+             isa<ConstantSDNode>(N->getOperand(1).getNode());
     default:
       return false;
   }
@@ -1803,7 +1816,7 @@ struct WeightedLeaf {
   int Weight;
   int InsertionOrder;
 
-  WeightedLeaf() {}
+  WeightedLeaf() = default;
 
   WeightedLeaf(SDValue Value, int Weight, int InsertionOrder) :
     Value(Value), Weight(Weight), InsertionOrder(InsertionOrder) {
@@ -1897,7 +1910,7 @@ WeightedLeaf LeafPrioQueue::findSHL(uint64_t MaxAmount) {
   for (int Pos = 0, End = Q.size(); Pos != End; ++Pos) {
     const WeightedLeaf &L = Q[Pos];
     const SDValue &Val = L.Value;
-    if (Val.getOpcode() != ISD::SHL ||
+    if (Val.getOpcode() != ISD::SHL || Val.getNumOperands() < 2 ||
         !isa<ConstantSDNode>(Val.getOperand(1)) ||
         Val.getConstantOperandVal(1) > MaxAmount)
       continue;
@@ -1924,7 +1937,7 @@ WeightedLeaf LeafPrioQueue::findMULbyConst() {
   for (int Pos = 0, End = Q.size(); Pos != End; ++Pos) {
     const WeightedLeaf &L = Q[Pos];
     const SDValue &Val = L.Value;
-    if (Val.getOpcode() != ISD::MUL ||
+    if (Val.getOpcode() != ISD::MUL || Val.getNumOperands() < 2 ||
         !isa<ConstantSDNode>(Val.getOperand(1)) ||
         Val.getConstantOperandVal(1) > 127)
       continue;
@@ -1945,6 +1958,8 @@ WeightedLeaf LeafPrioQueue::findMULbyConst() {
 }
 
 SDValue HexagonDAGToDAGISel::getMultiplierForSHL(SDNode *N) {
+  if (N->getNumOperands() < 2)
+    return SDValue();
   uint64_t MulFactor = 1ull << N->getConstantOperandVal(1);
   return CurDAG->getConstant(MulFactor, SDLoc(N),
                              N->getOperand(1).getValueType());
@@ -1953,6 +1968,8 @@ SDValue HexagonDAGToDAGISel::getMultiplierForSHL(SDNode *N) {
 /// @returns the value x for which 2^x is a factor of Val
 static unsigned getPowerOf2Factor(SDValue Val) {
   if (Val.getOpcode() == ISD::MUL) {
+    if (Val.getNumOperands() < 2)
+      return 0;
     unsigned MaxFactor = 0;
     for (int i = 0; i < 2; ++i) {
       ConstantSDNode *C = dyn_cast<ConstantSDNode>(Val.getOperand(i));
@@ -1965,7 +1982,8 @@ static unsigned getPowerOf2Factor(SDValue Val) {
     return MaxFactor;
   }
   if (Val.getOpcode() == ISD::SHL) {
-    if (!isa<ConstantSDNode>(Val.getOperand(1).getNode()))
+    if (Val.getNumOperands() < 2 ||
+        !isa<ConstantSDNode>(Val.getOperand(1).getNode()))
       return 0;
     return (unsigned) Val.getConstantOperandVal(1);
   }
@@ -1976,6 +1994,8 @@ static unsigned getPowerOf2Factor(SDValue Val) {
 /// @returns true if V>>Amount will eliminate V's operation on its child
 static bool willShiftRightEliminate(SDValue V, unsigned Amount) {
   if (V.getOpcode() == ISD::MUL) {
+    if (V.getNumOperands() < 2)
+      return false;
     SDValue Ops[] = { V.getOperand(0), V.getOperand(1) };
     for (int i = 0; i < 2; ++i)
       if (isa<ConstantSDNode>(Ops[i].getNode()) &&
@@ -1984,6 +2004,9 @@ static bool willShiftRightEliminate(SDValue V, unsigned Amount) {
         return (NewConst == 1);
       }
   } else if (V.getOpcode() == ISD::SHL) {
+    if (V.getNumOperands() < 2 ||
+        !isa<ConstantSDNode>(V.getOperand(1).getNode()))
+      return false;
     return (Amount == V.getConstantOperandVal(1));
   }
 
@@ -1991,6 +2014,10 @@ static bool willShiftRightEliminate(SDValue V, unsigned Amount) {
 }
 
 SDValue HexagonDAGToDAGISel::factorOutPowerOf2(SDValue V, unsigned Power) {
+  // Ensure the node has at least 2 operands before accessing them.
+  if (V.getNumOperands() < 2)
+    return V;
+
   SDValue Ops[] = { V.getOperand(0), V.getOperand(1) };
   if (V.getOpcode() == ISD::MUL) {
     for (int i=0; i < 2; ++i) {
@@ -2005,6 +2032,8 @@ SDValue HexagonDAGToDAGISel::factorOutPowerOf2(SDValue V, unsigned Power) {
       }
     }
   } else if (V.getOpcode() == ISD::SHL) {
+    if (!isa<ConstantSDNode>(V.getOperand(1).getNode()))
+      return V;
     uint64_t ShiftAmount = V.getConstantOperandVal(1);
     if (ShiftAmount == Power)
       return Ops[0];
@@ -2021,8 +2050,9 @@ static bool isTargetConstant(const SDValue &V) {
 }
 
 unsigned HexagonDAGToDAGISel::getUsesInFunction(const Value *V) {
-  if (GAUsesInFunction.count(V))
-    return GAUsesInFunction[V];
+  auto [It, Inserted] = GAUsesInFunction.try_emplace(V);
+  if (!Inserted)
+    return It->second;
 
   unsigned Result = 0;
   const Function &CurF = CurDAG->getMachineFunction().getFunction();
@@ -2032,7 +2062,7 @@ unsigned HexagonDAGToDAGISel::getUsesInFunction(const Value *V) {
       ++Result;
   }
 
-  GAUsesInFunction[V] = Result;
+  It->second = Result;
 
   return Result;
 }
@@ -2053,6 +2083,9 @@ SDValue HexagonDAGToDAGISel::balanceSubTree(SDNode *N, bool TopLevel) {
 
   assert(isOpcodeHandled(N));
 
+  if (N->getNumOperands() < 2)
+    return SDValue(N, 0);
+
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
 
@@ -2067,7 +2100,7 @@ SDValue HexagonDAGToDAGISel::balanceSubTree(SDNode *N, bool TopLevel) {
     } else
       Weight = getWeight(Op0N);
 
-    SDNode *Op1N = N->getOperand(1).getNode(); // Op1 may have been RAUWd
+    SDNode *Op1N = Op1.getNode();
     if (isOpcodeHandled(Op1N) && RootWeights[Op1N] == -1) {
       Weight += getWeight(balanceSubTree(Op1N).getNode());
       // Weight += calculateWeight(Op1N);
@@ -2075,8 +2108,18 @@ SDValue HexagonDAGToDAGISel::balanceSubTree(SDNode *N, bool TopLevel) {
       Weight += getWeight(Op1N);
 
     RootWeights[N] = Weight;
-    RootHeights[N] = std::max(getHeight(N->getOperand(0).getNode()),
-                              getHeight(N->getOperand(1).getNode())) + 1;
+
+    // After recursive calls, check if Op0/Op1 are still valid before getting
+    // height
+    int Height0 = 0, Height1 = 0;
+    if (isOpcodeHandled(Op0N) && RootWeights.count(Op0N) &&
+        RootWeights[Op0N] >= 0)
+      Height0 = getHeight(Op0N);
+    if (isOpcodeHandled(Op1N) && RootWeights.count(Op1N) &&
+        RootWeights[Op1N] >= 0)
+      Height1 = getHeight(Op1N);
+
+    RootHeights[N] = std::max(Height0, Height1) + 1;
 
     LLVM_DEBUG(dbgs() << "--> No need to balance root (Weight=" << Weight
                       << " Height=" << RootHeights[N] << "): ");
@@ -2108,9 +2151,9 @@ SDValue HexagonDAGToDAGISel::balanceSubTree(SDNode *N, bool TopLevel) {
   bool HaveTopLevelShift = false;
   if (TopLevel &&
       ((isOpcodeHandled(Op0.getNode()) && Op0.getOpcode() == ISD::SHL &&
-                        Op0.getConstantOperandVal(1) < 4) ||
+        Op0.getNumOperands() >= 2 && Op0.getConstantOperandVal(1) < 4) ||
        (isOpcodeHandled(Op1.getNode()) && Op1.getOpcode() == ISD::SHL &&
-                        Op1.getConstantOperandVal(1) < 4)))
+        Op1.getNumOperands() >= 2 && Op1.getConstantOperandVal(1) < 4)))
     HaveTopLevelShift = true;
 
   // Flatten the subtree into an ordered list of leaves; at the same time
@@ -2181,11 +2224,21 @@ SDValue HexagonDAGToDAGISel::balanceSubTree(SDNode *N, bool TopLevel) {
       assert(ChildOpcode == NOpcode ||
              (NOpcode == ISD::MUL && ChildOpcode == ISD::SHL));
 
+      if (Child->getNumOperands() < 2) {
+        // Treat as a leaf if not enough operands
+        int Weight = getWeight(Child.getNode());
+        NodeHeights[Child] = getHeight(Child.getNode());
+        CurrentWeight += Weight;
+        Leaves.push(WeightedLeaf(Child, Weight, InsertionOrder++));
+        continue;
+      }
+
       // Convert SHL to MUL
       SDValue Op1;
-      if (ChildOpcode == ISD::SHL)
+      if (ChildOpcode == ISD::SHL) {
         Op1 = getMultiplierForSHL(Child.getNode());
-      else
+        assert(Op1.getNode() && "getMultiplierForSHL returned null");
+      } else
         Op1 = Child->getOperand(1);
 
       if (!NodeHeights.count(Op1) || !NodeHeights.count(Child->getOperand(0))) {
@@ -2240,7 +2293,8 @@ SDValue HexagonDAGToDAGISel::balanceSubTree(SDNode *N, bool TopLevel) {
   // amount of additional constant extenders introduced by this optimization.
   bool CombinedGA = false;
   if (NOpcode == ISD::ADD && GA.Value.getNode() && Leaves.hasConst() &&
-      GA.Value.hasOneUse() && N->use_size() < 3) {
+      GA.Value.hasOneUse() && N->use_size() < 3 &&
+      GA.Value.getNumOperands() >= 1) {
     GlobalAddressSDNode *GANode =
       cast<GlobalAddressSDNode>(GA.Value.getOperand(0));
     ConstantSDNode *Offset = cast<ConstantSDNode>(Leaves.top().Value);
@@ -2366,7 +2420,7 @@ SDValue HexagonDAGToDAGISel::balanceSubTree(SDNode *N, bool TopLevel) {
   int Height = NodeHeights[NewRoot];
 
   // Restore SHL if we earlier converted it to a MUL
-  if (NewRoot.getOpcode() == ISD::MUL) {
+  if (NewRoot.getOpcode() == ISD::MUL && NewRoot->getNumOperands() >= 2) {
     ConstantSDNode *V1C = dyn_cast<ConstantSDNode>(NewRoot.getOperand(1));
     if (V1C && V1C->getAPIntValue().isPowerOf2()) {
       EVT VT = NewRoot.getValueType();
@@ -2417,6 +2471,9 @@ void HexagonDAGToDAGISel::rebalanceAddressTrees() {
     // FindRoots
     SmallVector<SDNode *, 4> Worklist;
 
+    if (BasePtr->getNumOperands() < 2)
+      continue;
+
     Worklist.push_back(BasePtr.getOperand(0).getNode());
     Worklist.push_back(BasePtr.getOperand(1).getNode());
 
@@ -2427,6 +2484,9 @@ void HexagonDAGToDAGISel::rebalanceAddressTrees() {
       if (!isOpcodeHandled(N))
         continue;
 
+      if (N->getNumOperands() < 2)
+        continue;
+
       Worklist.push_back(N->getOperand(0).getNode());
       Worklist.push_back(N->getOperand(1).getNode());
 
@@ -2435,22 +2495,22 @@ void HexagonDAGToDAGISel::rebalanceAddressTrees() {
         continue;
 
       // This root node has already been processed
-      if (RootWeights.count(N))
-        continue;
-
-      RootWeights[N] = -1;
+      RootWeights.try_emplace(N, -1);
     }
 
     // Balance node itself
     RootWeights[BasePtr.getNode()] = -1;
     SDValue NewBasePtr = balanceSubTree(BasePtr.getNode(), /*TopLevel=*/ true);
 
-    if (N->getOpcode() == ISD::LOAD)
-      N = CurDAG->UpdateNodeOperands(N, N->getOperand(0),
-            NewBasePtr, N->getOperand(2));
-    else
-      N = CurDAG->UpdateNodeOperands(N, N->getOperand(0), N->getOperand(1),
-            NewBasePtr, N->getOperand(3));
+    if (N->getOpcode() == ISD::LOAD) {
+      if (N->getNumOperands() >= 3)
+        N = CurDAG->UpdateNodeOperands(N, N->getOperand(0), NewBasePtr,
+                                       N->getOperand(2));
+    } else {
+      if (N->getNumOperands() >= 4)
+        N = CurDAG->UpdateNodeOperands(N, N->getOperand(0), N->getOperand(1),
+                                       NewBasePtr, N->getOperand(3));
+    }
 
     LLVM_DEBUG(dbgs() << "--> Final node: ");
     LLVM_DEBUG(N->dump(CurDAG));

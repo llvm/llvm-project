@@ -41,6 +41,7 @@
 #include "Common/CodeGenTarget.h"
 #include "Common/PredicateExpander.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -78,26 +79,21 @@ public:
 
 void MacroFusionPredicatorEmitter::emitMacroFusionDecl(
     ArrayRef<const Record *> Fusions, PredicateExpander &PE, raw_ostream &OS) {
-  OS << "#ifdef GET_" << Target.getName() << "_MACRO_FUSION_PRED_DECL\n";
-  OS << "#undef GET_" << Target.getName() << "_MACRO_FUSION_PRED_DECL\n\n";
-  OS << "namespace llvm {\n";
+  IfDefEmitter IfDef(
+      OS, ("GET_" + Target.getName() + "_MACRO_FUSION_PRED_DECL").str());
+  NamespaceEmitter LlvmNS(OS, "llvm");
 
-  for (const Record *Fusion : Fusions) {
+  for (const Record *Fusion : Fusions)
     OS << "bool is" << Fusion->getName() << "(const TargetInstrInfo &, "
-       << "const TargetSubtargetInfo &, "
-       << "const MachineInstr *, "
+       << "const TargetSubtargetInfo &, const MachineInstr *, "
        << "const MachineInstr &);\n";
-  }
-
-  OS << "} // end namespace llvm\n";
-  OS << "\n#endif\n";
 }
 
 void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
     ArrayRef<const Record *> Fusions, PredicateExpander &PE, raw_ostream &OS) {
-  OS << "#ifdef GET_" << Target.getName() << "_MACRO_FUSION_PRED_IMPL\n";
-  OS << "#undef GET_" << Target.getName() << "_MACRO_FUSION_PRED_IMPL\n\n";
-  OS << "namespace llvm {\n";
+  IfDefEmitter IfDef(
+      OS, ("GET_" + Target.getName() + "_MACRO_FUSION_PRED_IMPL").str());
+  NamespaceEmitter LlvmNS(OS, "llvm");
 
   for (const Record *Fusion : Fusions) {
     std::vector<const Record *> Predicates =
@@ -117,9 +113,6 @@ void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
     OS.indent(2) << "return true;\n";
     OS << "}\n";
   }
-
-  OS << "} // end namespace llvm\n";
-  OS << "\n#endif\n";
 }
 
 void MacroFusionPredicatorEmitter::emitPredicates(
@@ -155,6 +148,36 @@ void MacroFusionPredicatorEmitter::emitFirstPredicate(const Record *Predicate,
         << "if (FirstDest.isVirtual() && !MRI.hasOneNonDBGUse(FirstDest))\n";
     OS.indent(4) << "  return false;\n";
     OS.indent(2) << "}\n";
+  } else if (Predicate->isSubClassOf("FirstInstHasSameReg")) {
+    int FirstOpIdx = Predicate->getValueAsInt("FirstOpIdx");
+    int SecondOpIdx = Predicate->getValueAsInt("SecondOpIdx");
+
+    OS.indent(2) << "if (!FirstMI->getOperand(" << FirstOpIdx
+                 << ").getReg().isVirtual()) {\n";
+    OS.indent(4) << "if (FirstMI->getOperand(" << FirstOpIdx
+                 << ").getReg() != FirstMI->getOperand(" << SecondOpIdx
+                 << ").getReg())";
+
+    if (IsCommutable) {
+      OS << " {\n";
+      OS.indent(6) << "if (!FirstMI->getDesc().isCommutable())\n";
+      OS.indent(6) << "  return false;\n";
+
+      OS.indent(6)
+          << "unsigned SrcOpIdx1 = " << SecondOpIdx
+          << ", SrcOpIdx2 = TargetInstrInfo::CommuteAnyOperandIndex;\n";
+      OS.indent(6)
+          << "if (TII.findCommutedOpIndices(FirstMI, SrcOpIdx1, SrcOpIdx2))\n";
+      OS.indent(6)
+          << "  if (FirstMI->getOperand(" << FirstOpIdx
+          << ").getReg() != FirstMI->getOperand(SrcOpIdx2).getReg())\n";
+      OS.indent(6) << "    return false;\n";
+      OS.indent(4) << "}\n";
+    } else {
+      OS << "\n";
+      OS.indent(4) << "  return false;\n";
+    }
+    OS.indent(2) << "}\n";
   } else if (Predicate->isSubClassOf("FusionPredicateWithMCInstPredicate")) {
     OS.indent(2) << "{\n";
     OS.indent(4) << "const MachineInstr *MI = FirstMI;\n";
@@ -186,7 +209,7 @@ void MacroFusionPredicatorEmitter::emitSecondPredicate(const Record *Predicate,
     OS << ")\n";
     OS.indent(4) << "  return false;\n";
     OS.indent(2) << "}\n";
-  } else if (Predicate->isSubClassOf("SameReg")) {
+  } else if (Predicate->isSubClassOf("SecondInstHasSameReg")) {
     int FirstOpIdx = Predicate->getValueAsInt("FirstOpIdx");
     int SecondOpIdx = Predicate->getValueAsInt("SecondOpIdx");
 
@@ -263,10 +286,11 @@ void MacroFusionPredicatorEmitter::emitBothPredicate(const Record *Predicate,
       OS.indent(2) << "  return false;";
     }
     OS << "\n";
-  } else
+  } else {
     PrintFatalError(Predicate->getLoc(),
                     "Unsupported predicate for both instruction: " +
                         Predicate->getType()->getAsString());
+  }
 }
 
 void MacroFusionPredicatorEmitter::run(raw_ostream &OS) {

@@ -75,6 +75,32 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
   )
 
   add_libc_test(
+    bits${suffix}_test
+    SUITE
+      libc-stdfix-tests
+    HDRS
+      BitsFxTest.h
+    SRCS
+      bits${suffix}_test.cpp
+    DEPENDS
+      libc.include.llvm-libc-types.int_k_t
+      libc.include.llvm-libc-types.int_hr_t
+      libc.include.llvm-libc-types.int_lk_t
+      libc.include.llvm-libc-types.int_lr_t
+      libc.include.llvm-libc-types.int_r_t
+      libc.include.llvm-libc-types.uint_uhk_t
+      libc.include.llvm-libc-types.uint_uhr_t
+      libc.include.llvm-libc-types.uint_uk_t
+      libc.include.llvm-libc-types.uint_ulk_t
+      libc.include.llvm-libc-types.uint_ulr_t
+      libc.include.llvm-libc-types.uint_ur_t
+      libc.include.llvm-libc-types.int_hk_t
+      libc.src.stdfix.bits${suffix}
+      libc.src.__support.fixed_point.fx_rep
+      libc.src.__support.fixed_point.fx_bits
+  )
+
+  add_libc_test(
     countls${suffix}_test
     SUITE
       libc-stdfix-tests
@@ -86,6 +112,38 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
       libc.src.stdfix.countls${suffix}
       libc.src.__support.fixed_point.fx_rep
       libc.src.__support.fixed_point.fx_bits
+  )
+endforeach()
+
+foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
+  add_libc_test(
+    idiv${suffix}_test
+    SUITE
+      libc-stdfix-tests
+    HDRS
+      IdivTest.h
+    SRCS
+      idiv${suffix}_test.cpp
+    DEPENDS
+      libc.src.stdfix.idiv${suffix}
+      libc.src.__support.fixed_point.fx_bits
+      libc.hdr.signal_macros
+  )
+endforeach()
+
+foreach(suffix IN ITEMS r)
+  add_libc_test(
+    ${suffix}divi_test
+    SUITE
+      libc-stdfix-tests
+    HDRS
+      DivITest.h
+    SRCS
+      ${suffix}divi_test.cpp
+    DEPENDS
+      libc.src.stdfix.${suffix}divi
+      libc.src.__support.fixed_point.fx_bits
+      libc.hdr.signal_macros
   )
 endforeach()
 
@@ -162,3 +220,25 @@ add_libc_test(
     libc.src.__support.fixed_point.fx_rep
     libc.src.__support.FPUtil.basic_operations
 )
+
+set(macros_depends)
+
+foreach(s IN ITEMS r hr lr k hk lk)
+  list(APPEND macros_depends
+    libc.src.stdfix.abs${s}
+    libc.src.stdfix.countls${s}
+    libc.src.stdfix.countlsu${s}
+    libc.src.stdfix.round${s}
+    libc.src.stdfix.roundu${s}
+  )
+endforeach()
+
+add_libc_test(
+  macros_test
+  SUITE libc-stdfix-tests
+  SRCS macros_test.cpp
+  DEPENDS
+    libc.include.stdfix
+    ${macros_depends}
+)
+

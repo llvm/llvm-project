@@ -1,3 +1,11 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef __CLC_INTERNAL_CLC_H_
 #define __CLC_INTERNAL_CLC_H_
 
@@ -19,7 +27,6 @@
 #include <clc/clcfunc.h>
 
 /* 6.1 Supported Data Types */
-#include <clc/clctypes.h>
 
 /* 6.2.4.2 Reinterpreting Types Using __clc_as_type() and __clc_as_typen() */
 #include <clc/clc_as_type.h>

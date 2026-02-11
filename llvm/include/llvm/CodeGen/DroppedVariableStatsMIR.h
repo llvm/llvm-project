@@ -16,13 +16,14 @@
 
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/DroppedVariableStats.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 /// A class to collect and print dropped debug information due to MIR
 /// optimization passes. After every MIR pass is run, it will print how many
 /// #DBG_VALUEs were dropped due to that pass.
-class DroppedVariableStatsMIR : public DroppedVariableStats {
+class LLVM_ABI DroppedVariableStatsMIR : public DroppedVariableStats {
 public:
   DroppedVariableStatsMIR() : DroppedVariableStats(false) {}
 
@@ -43,12 +44,11 @@ private:
                                                  StringRef FuncOrModName);
   /// Override base class method to run on an llvm::MachineFunction
   /// specifically.
-  virtual void
-  visitEveryInstruction(unsigned &DroppedCount,
-                        DenseMap<VarID, DILocation *> &InlinedAtsMap,
-                        VarID Var) override;
+  void visitEveryInstruction(unsigned &DroppedCount,
+                             DenseMap<VarID, DILocation *> &InlinedAtsMap,
+                             VarID Var) override;
   /// Override base class method to run on DBG_VALUEs specifically.
-  virtual void visitEveryDebugRecord(
+  void visitEveryDebugRecord(
       DenseSet<VarID> &VarIDSet,
       DenseMap<StringRef, DenseMap<VarID, DILocation *>> &InlinedAtsMap,
       StringRef FuncName, bool Before) override;

@@ -13,12 +13,11 @@
 
 #include "mlir/Dialect/MemRef/IR/MemRefMemorySlot.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -63,15 +62,8 @@ static void walkIndicesAsAttr(MLIRContext *ctx, ArrayRef<int64_t> shape,
 //  Interfaces for AllocaOp
 //===----------------------------------------------------------------------===//
 
-static bool isSupportedElementType(Type type) {
-  return llvm::isa<MemRefType>(type) ||
-         OpBuilder(type.getContext()).getZeroAttr(type);
-}
-
 SmallVector<MemorySlot> memref::AllocaOp::getPromotableSlots() {
   MemRefType type = getType();
-  if (!isSupportedElementType(type.getElementType()))
-    return {};
   if (!type.hasStaticShape())
     return {};
   // Make sure the memref contains only a single element.
@@ -83,16 +75,7 @@ SmallVector<MemorySlot> memref::AllocaOp::getPromotableSlots() {
 
 Value memref::AllocaOp::getDefaultValue(const MemorySlot &slot,
                                         OpBuilder &builder) {
-  assert(isSupportedElementType(slot.elemType));
-  // TODO: support more types.
-  return TypeSwitch<Type, Value>(slot.elemType)
-      .Case([&](MemRefType t) {
-        return builder.create<memref::AllocaOp>(getLoc(), t);
-      })
-      .Default([&](Type t) {
-        return builder.create<arith::ConstantOp>(getLoc(), t,
-                                                 builder.getZeroAttr(t));
-      });
+  return ub::PoisonOp::create(builder, getLoc(), slot.elemType);
 }
 
 std::optional<PromotableAllocationOpInterface>
@@ -137,7 +120,7 @@ DenseMap<Attribute, MemorySlot> memref::AllocaOp::destructure(
   for (Attribute usedIndex : usedIndices) {
     Type elemType = memrefType.getTypeAtIndex(usedIndex);
     MemRefType elemPtr = MemRefType::get({}, elemType);
-    auto subAlloca = builder.create<memref::AllocaOp>(getLoc(), elemPtr);
+    auto subAlloca = memref::AllocaOp::create(builder, getLoc(), elemPtr);
     newAllocators.push_back(subAlloca);
     slotMap.try_emplace<MemorySlot>(usedIndex,
                                     {subAlloca.getResult(), elemType});

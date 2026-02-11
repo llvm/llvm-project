@@ -100,6 +100,9 @@ def lto_CGO: Joined<["--"], "lto-CGO">,
     HelpText<"Set codegen optimization level for LTO (default: 2)">,
     MetaVarName<"<cgopt-level>">,
     Group<grp_lld>;
+def disable_verify : Flag<["--"], "disable_verify">,
+                     HelpText<"Do not verify LLVM modules during LTO">,
+                     Group<grp_lld>;
 def thinlto_cache_policy_eq: Joined<["--"], "thinlto-cache-policy=">,
     HelpText<"Pruning policy for the ThinLTO cache">,
     Group<grp_lld>;
@@ -185,6 +188,8 @@ def lto_debug_pass_manager: Flag<["--"], "lto-debug-pass-manager">,
     HelpText<"Debug new pass manager">, Group<grp_lld>;
 def lto_newpm_passes: Joined<["--"], "lto-newpm-passes=">,
     HelpText<"Passes to run during LTO">, Group<grp_lld>;
+def lto_emit_llvm: Flag<["--"], "lto-emit-llvm">,
+    HelpText<"Emit LLVM-IR bitcode">, Group<grp_lld>;
 def load_pass_plugins : Separate<["--"], "load-pass-plugin">, Group<grp_lld>;
 def load_pass_plugins_eq : Joined<["--"], "load-pass-plugin=">,
     Alias<!cast<Separate>(load_pass_plugins)>,
@@ -390,6 +395,12 @@ def grp_opts : OptionGroup<"opts">, HelpText<"OPTIMIZATIONS">;
 def dead_strip : Flag<["-"], "dead_strip">,
     HelpText<"Remove unreachable functions and data">,
     Group<grp_opts>;
+def interposable : Flag<["-"], "interposable">,
+    HelpText<"Indirects access to all exported symbols in an image">,
+    Group<grp_opts>;
+def read_workers : Joined<["--"], "read-workers=">,
+    HelpText<"Approximate number of workers to use to eagerly preload input files content into memory. Use 0 to disable this feature. Default is disabled.">,
+    Group<grp_lld>;
 def order_file : Separate<["-"], "order_file">,
     MetaVarName<"<file>">,
     HelpText<"Layout functions and data according to specification in <file>">,
@@ -873,10 +884,6 @@ def setuid_safe : Flag<["-"], "setuid_safe">,
     HelpText<"Set the MH_SETUID_SAFE bit in the mach-o header">,
     Flags<[HelpHidden]>,
     Group<grp_rare>;
-def interposable : Flag<["-"], "interposable">,
-    HelpText<"Indirects access to all to exported symbols in a dylib">,
-    Flags<[HelpHidden]>,
-    Group<grp_rare>;
 def multi_module : Flag<["-"], "multi_module">,
     Alias<interposable>,
     HelpText<"Alias for -interposable">,
@@ -1079,6 +1086,25 @@ def dyld_env : Separate<["-"], "dyld_env">,
 def ignore_auto_link : Flag<["-"], "ignore_auto_link">,
     HelpText<"Ignore LC_LINKER_OPTIONs">,
     Group<grp_rare>;
+defm separate_cstring_literal_sections
+    : BB<"separate-cstring-literal-sections",
+         "Emit all cstring literals into their respective sections defined by "
+         "their section names.",
+         "Emit all cstring literals into the __cstring section. As a special "
+         "case, the __objc_methname section will still be emitted. (default)">,
+      Group<grp_rare>;
+defm tail_merge_strings
+    : BB<"tail-merge-strings", "Enable string tail merging",
+         "Disable string tail merging to improve link-time performance">,
+      Group<grp_rare>;
+def slop_scale_eq
+    : Joined<["--"], "slop_scale=">,
+      MetaVarName<"<unsigned_int>">,
+      HelpText<"Specify the slop scale. Default value is 256. If your binary "
+               "has too many consecutive branch instructions resulting in "
+               "thunk-range overrun, then you need to increase this value to a "
+               "higher value, such as 512 or 1024, etc">,
+      Group<grp_rare>;
 
 def grp_deprecated : OptionGroup<"deprecated">, HelpText<"DEPRECATED">;
 

@@ -3,6 +3,7 @@
 
 ! RUN: %libomptarget-compile-fortran-generic
 ! RUN: env LIBOMPTARGET_INFO=16 %libomptarget-run-generic 2>&1 | %fcheck-generic
+! XFAIL: intelgpu
 program main
    use omp_lib
    integer :: x(100)
@@ -24,5 +25,5 @@ program main
 
 end program main
 
-! CHECK:  "PluginInterface" device {{[0-9]+}} info: Launching kernel {{.*}}
+! CHECK:  PluginInterface device {{[0-9]+}} info: Launching kernel {{.*}}
 ! CHECK:  number of errors: 0

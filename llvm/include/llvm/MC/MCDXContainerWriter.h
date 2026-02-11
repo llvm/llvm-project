@@ -23,7 +23,7 @@ protected:
   MCDXContainerTargetWriter() {}
 
 public:
-  virtual ~MCDXContainerTargetWriter();
+  ~MCDXContainerTargetWriter() override;
 
   Triple::ObjectFormatType getFormat() const override {
     return Triple::DXContainer;
@@ -42,11 +42,7 @@ public:
                           raw_pwrite_stream &OS)
       : W(OS, llvm::endianness::little), TargetObjectWriter(std::move(MOTW)) {}
 
-  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
-                        const MCFixup &Fixup, MCValue Target,
-                        uint64_t &FixedValue) override {}
-
-  uint64_t writeObject(MCAssembler &Asm) override;
+  uint64_t writeObject() override;
 };
 } // end namespace llvm
 

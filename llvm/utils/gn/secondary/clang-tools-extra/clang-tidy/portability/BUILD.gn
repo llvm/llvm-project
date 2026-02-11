@@ -13,6 +13,7 @@ static_library("portability") {
     "//llvm/lib/TargetParser",
   ]
   sources = [
+    "AvoidPragmaOnceCheck.cpp",
     "PortabilityTidyModule.cpp",
     "RestrictSystemIncludesCheck.cpp",
     "SIMDIntrinsicsCheck.cpp",

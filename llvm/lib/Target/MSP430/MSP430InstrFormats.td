@@ -31,7 +31,6 @@ def DstMem      : DestMode<1>;   // m
 // Generic MSP430 Format
 class MSP430Inst<dag outs, dag ins, int size, string asmstr> : Instruction {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   let Namespace = "MSP430";
 

@@ -16,6 +16,8 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -36,7 +38,8 @@ ProcessSP ProcessTrace::CreateInstance(TargetSP target_sp,
                                        bool can_connect) {
   if (can_connect)
     return nullptr;
-  return std::make_shared<ProcessTrace>(target_sp, listener_sp, *crash_file);
+  return std::make_shared<ProcessTrace>(target_sp, listener_sp,
+                                        crash_file ? *crash_file : FileSpec());
 }
 
 bool ProcessTrace::CanDebug(TargetSP target_sp, bool plugin_specified_by_name) {
@@ -62,8 +65,12 @@ void ProcessTrace::DidAttach(ArchSpec &process_arch) {
   HijackProcessEvents(listener_sp);
 
   SetCanJIT(false);
-  StartPrivateStateThread();
-  SetPrivateState(eStateStopped);
+  StartPrivateStateThread(lldb::eStateStopped, false);
+  if (!m_current_private_state_thread) {
+    LLDB_LOG(GetLog(LLDBLog::Process), "ProcessTrace: failed to start private "
+                                       "state thread.");
+    return;
+  }
 
   EventSP event_sp;
   WaitForProcessToStop(std::nullopt, &event_sp, true, listener_sp);

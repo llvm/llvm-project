@@ -22,8 +22,8 @@
 #include "clang/AST/Type.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Basic/LLVM.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include <cassert>
 #include <iterator>
 #include <vector>
@@ -64,8 +64,7 @@ static void getFieldsFromClassHierarchy(QualType Type, FieldSet &Fields) {
       !Type->isRecordType())
     return;
 
-  for (const FieldDecl *Field : Type->getAsRecordDecl()->fields())
-    Fields.insert(Field);
+  Fields.insert_range(Type->getAsRecordDecl()->fields());
   if (auto *CXXRecord = Type->getAsCXXRecordDecl())
     for (const CXXBaseSpecifier &Base : CXXRecord->bases())
       getFieldsFromClassHierarchy(Base.getType(), Fields);
@@ -82,7 +81,7 @@ bool containsSameFields(const FieldSet &Fields,
                         const RecordStorageLocation::FieldToLoc &FieldLocs) {
   if (Fields.size() != FieldLocs.size())
     return false;
-  for ([[maybe_unused]] auto [Field, Loc] : FieldLocs)
+  for (const auto &Field : FieldLocs.keys())
     if (!Fields.contains(cast_or_null<FieldDecl>(Field)))
       return false;
   return true;
@@ -165,21 +164,21 @@ RecordInitListHelper::RecordInitListHelper(
 }
 
 static void insertIfGlobal(const Decl &D,
-                           llvm::DenseSet<const VarDecl *> &Globals) {
+                           llvm::SetVector<const VarDecl *> &Globals) {
   if (auto *V = dyn_cast<VarDecl>(&D))
     if (V->hasGlobalStorage())
       Globals.insert(V);
 }
 
 static void insertIfLocal(const Decl &D,
-                          llvm::DenseSet<const VarDecl *> &Locals) {
+                          llvm::SetVector<const VarDecl *> &Locals) {
   if (auto *V = dyn_cast<VarDecl>(&D))
     if (V->hasLocalStorage() && !isa<ParmVarDecl>(V))
       Locals.insert(V);
 }
 
 static void insertIfFunction(const Decl &D,
-                             llvm::DenseSet<const FunctionDecl *> &Funcs) {
+                             llvm::SetVector<const FunctionDecl *> &Funcs) {
   if (auto *FD = dyn_cast<FunctionDecl>(&D))
     Funcs.insert(FD);
 }
@@ -260,15 +259,13 @@ public:
 
   bool VisitInitListExpr(InitListExpr *InitList) override {
     if (InitList->getType()->isRecordType())
-      for (const auto *FD : getFieldsForInitListExpr(InitList))
-        Referenced.Fields.insert(FD);
+      Referenced.Fields.insert_range(getFieldsForInitListExpr(InitList));
     return true;
   }
 
   bool VisitCXXParenListInitExpr(CXXParenListInitExpr *ParenInitList) override {
     if (ParenInitList->getType()->isRecordType())
-      for (const auto *FD : getFieldsForInitListExpr(ParenInitList))
-        Referenced.Fields.insert(FD);
+      Referenced.Fields.insert_range(getFieldsForInitListExpr(ParenInitList));
     return true;
   }
 

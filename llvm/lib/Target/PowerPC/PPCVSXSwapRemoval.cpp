@@ -110,9 +110,7 @@ struct PPCVSXSwapRemoval : public MachineFunctionPass {
   // Swap entries are represented by their VSEId fields.
   EquivalenceClasses<int> *EC;
 
-  PPCVSXSwapRemoval() : MachineFunctionPass(ID) {
-    initializePPCVSXSwapRemovalPass(*PassRegistry::getPassRegistry());
-  }
+  PPCVSXSwapRemoval() : MachineFunctionPass(ID) {}
 
 private:
   // Initialize data structures.
@@ -211,6 +209,7 @@ public:
     return Changed;
   }
 };
+} // end anonymous namespace
 
 // Initialize data structures for this pass.  In particular, clear the
 // swap vector and allocate the equivalence class mapping before
@@ -395,10 +394,10 @@ bool PPCVSXSwapRemoval::gatherVectorInstructions() {
         // (FIXME) a cost model could be used.  However, introduced
         // swaps could potentially be CSEd, so this is not trivial.
         if (isVecReg(MI.getOperand(0).getReg()) &&
-            isVecReg(MI.getOperand(2).getReg()))
+            isVecReg(MI.getOperand(1).getReg()))
           SwapVector[VecIdx].IsSwappable = 1;
         else if (isVecReg(MI.getOperand(0).getReg()) &&
-                 isScalarVecReg(MI.getOperand(2).getReg())) {
+                 isScalarVecReg(MI.getOperand(1).getReg())) {
           SwapVector[VecIdx].IsSwappable = 1;
           SwapVector[VecIdx].SpecialHandling = SHValues::SH_COPYWIDEN;
         }
@@ -560,13 +559,9 @@ unsigned PPCVSXSwapRemoval::lookThruCopyLike(unsigned SrcReg,
   if (!MI->isCopyLike())
     return SrcReg;
 
-  unsigned CopySrcReg;
-  if (MI->isCopy())
-    CopySrcReg = MI->getOperand(1).getReg();
-  else {
-    assert(MI->isSubregToReg() && "bad opcode for lookThruCopyLike");
-    CopySrcReg = MI->getOperand(2).getReg();
-  }
+  assert((MI->isCopy() || MI->isSubregToReg()) &&
+         "bad opcode for lookThruCopyLike");
+  unsigned CopySrcReg = MI->getOperand(1).getReg();
 
   if (!Register::isVirtualRegister(CopySrcReg)) {
     if (!isScalarVecReg(CopySrcReg))
@@ -1060,8 +1055,6 @@ LLVM_DUMP_METHOD void PPCVSXSwapRemoval::dumpSwapVector() {
   dbgs() << "\n";
 }
 #endif
-
-} // end default namespace
 
 INITIALIZE_PASS_BEGIN(PPCVSXSwapRemoval, DEBUG_TYPE,
                       "PowerPC VSX Swap Removal", false, false)

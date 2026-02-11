@@ -24,12 +24,12 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) #0 {
 ; ENABLE-NEXT:    #NO_APP
 ; ENABLE-NEXT:    xorl %eax, %eax
 ; ENABLE-NEXT:    movl $10, %ecx
-; ENABLE-NEXT:    #APP
-; ENABLE-NEXT:    movl $1, %edx
-; ENABLE-NEXT:    #NO_APP
 ; ENABLE-NEXT:    .p2align 4
 ; ENABLE-NEXT:  .LBB0_2: # %for.body
 ; ENABLE-NEXT:    # =>This Inner Loop Header: Depth=1
+; ENABLE-NEXT:    #APP
+; ENABLE-NEXT:    movl $1, %edx
+; ENABLE-NEXT:    #NO_APP
 ; ENABLE-NEXT:    addl %edx, %eax
 ; ENABLE-NEXT:    decl %ecx
 ; ENABLE-NEXT:    jne .LBB0_2
@@ -64,12 +64,12 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) #0 {
 ; DISABLE-NEXT:    #NO_APP
 ; DISABLE-NEXT:    xorl %eax, %eax
 ; DISABLE-NEXT:    movl $10, %ecx
-; DISABLE-NEXT:    #APP
-; DISABLE-NEXT:    movl $1, %edx
-; DISABLE-NEXT:    #NO_APP
 ; DISABLE-NEXT:    .p2align 4
 ; DISABLE-NEXT:  .LBB0_2: # %for.body
 ; DISABLE-NEXT:    # =>This Inner Loop Header: Depth=1
+; DISABLE-NEXT:    #APP
+; DISABLE-NEXT:    movl $1, %edx
+; DISABLE-NEXT:    #NO_APP
 ; DISABLE-NEXT:    addl %edx, %eax
 ; DISABLE-NEXT:    decl %ecx
 ; DISABLE-NEXT:    jne .LBB0_2

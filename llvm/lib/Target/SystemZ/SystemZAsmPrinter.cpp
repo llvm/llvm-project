@@ -14,23 +14,27 @@
 #include "SystemZAsmPrinter.h"
 #include "MCTargetDesc/SystemZGNUInstPrinter.h"
 #include "MCTargetDesc/SystemZHLASMInstPrinter.h"
-#include "MCTargetDesc/SystemZMCExpr.h"
+#include "MCTargetDesc/SystemZMCAsmInfo.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "SystemZConstantPoolValue.h"
 #include "SystemZMCInstLower.h"
 #include "TargetInfo/SystemZTargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertEBCDIC.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -79,14 +83,12 @@ static MCInst lowerRIEfLow(const MachineInstr *MI, unsigned Opcode) {
 static const MCSymbolRefExpr *getTLSGetOffset(MCContext &Context) {
   StringRef Name = "__tls_get_offset";
   return MCSymbolRefExpr::create(Context.getOrCreateSymbol(Name),
-                                 MCSymbolRefExpr::VK_PLT,
-                                 Context);
+                                 SystemZ::S_PLT, Context);
 }
 
 static const MCSymbolRefExpr *getGlobalOffsetTable(MCContext &Context) {
   StringRef Name = "_GLOBAL_OFFSET_TABLE_";
   return MCSymbolRefExpr::create(Context.getOrCreateSymbol(Name),
-                                 MCSymbolRefExpr::VK_None,
                                  Context);
 }
 
@@ -136,6 +138,55 @@ static MCInst lowerSubvectorStore(const MachineInstr *MI, unsigned Opcode) {
     .addImm(MI->getOperand(2).getImm())
     .addReg(MI->getOperand(3).getReg())
     .addImm(0);
+}
+
+// MI extracts the first element of the source vector.
+static MCInst lowerVecEltExtraction(const MachineInstr *MI, unsigned Opcode) {
+  return MCInstBuilder(Opcode)
+      .addReg(SystemZMC::getRegAsGR64(MI->getOperand(0).getReg()))
+      .addReg(SystemZMC::getRegAsVR128(MI->getOperand(1).getReg()))
+      .addReg(0)
+      .addImm(0);
+}
+
+// MI inserts value into the first element of the destination vector.
+static MCInst lowerVecEltInsertion(const MachineInstr *MI, unsigned Opcode) {
+  return MCInstBuilder(Opcode)
+      .addReg(SystemZMC::getRegAsVR128(MI->getOperand(0).getReg()))
+      .addReg(SystemZMC::getRegAsVR128(MI->getOperand(0).getReg()))
+      .addReg(MI->getOperand(1).getReg())
+      .addReg(0)
+      .addImm(0);
+}
+
+bool SystemZAsmPrinter::doInitialization(Module &M) {
+  SM.reset();
+
+  // In HLASM, the only way to represent aliases is to use the
+  // extra-label-at-definition strategy. This is similar to the AIX
+  // implementation with the additional caveat that all symbol attributes must
+  // be emitted before the label is emitted.
+  if (TM.getTargetTriple().isOSzOS()) {
+    // Construct an aliasing list for each GlobalObject.
+    for (const auto &Alias : M.aliases()) {
+      const GlobalObject *Aliasee = Alias.getAliaseeObject();
+      if (!Aliasee)
+        OutContext.reportError(
+            {}, "Alias without a base object is not yet supported on z/OS.");
+
+      bool IsFunc = isa<Function>(Aliasee->stripPointerCasts());
+      if (IsFunc) {
+        if (Alias.hasWeakLinkage() || Alias.hasLinkOnceLinkage())
+          OutContext.reportError({},
+                                 "Weak alias/reference not supported on z/OS");
+
+        GOAliasMap[Aliasee].push_back(&Alias);
+      } else
+        OutContext.reportError(
+            {}, "Only aliases to functions is supported in GOFF.");
+    }
+  }
+  return AsmPrinter::doInitialization(M);
 }
 
 // The XPLINK ABI requires that a no-op encoding the call type is emitted after
@@ -302,11 +353,10 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     break;
 
   case SystemZ::CallBRASL_XPLINK64:
-    EmitToStreamer(*OutStreamer,
-                   MCInstBuilder(SystemZ::BRASL)
-                       .addReg(SystemZ::R7D)
-                       .addExpr(Lower.getExpr(MI->getOperand(0),
-                                              MCSymbolRefExpr::VK_PLT)));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BRASL)
+                                     .addReg(SystemZ::R7D)
+                                     .addExpr(Lower.getExpr(MI->getOperand(0),
+                                                            SystemZ::S_None)));
     emitCallInformation(CallType::BRASL7);
     return;
 
@@ -364,8 +414,8 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
   case SystemZ::CallBRASL:
     LoweredMI = MCInstBuilder(SystemZ::BRASL)
-      .addReg(SystemZ::R14D)
-      .addExpr(Lower.getExpr(MI->getOperand(0), MCSymbolRefExpr::VK_PLT));
+                    .addReg(SystemZ::R14D)
+                    .addExpr(Lower.getExpr(MI->getOperand(0), SystemZ::S_PLT));
     break;
 
   case SystemZ::CallBASR:
@@ -376,14 +426,14 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   case SystemZ::CallJG:
     LoweredMI = MCInstBuilder(SystemZ::JG)
-      .addExpr(Lower.getExpr(MI->getOperand(0), MCSymbolRefExpr::VK_PLT));
+                    .addExpr(Lower.getExpr(MI->getOperand(0), SystemZ::S_PLT));
     break;
 
   case SystemZ::CallBRCL:
     LoweredMI = MCInstBuilder(SystemZ::BRCL)
-      .addImm(MI->getOperand(0).getImm())
-      .addImm(MI->getOperand(1).getImm())
-      .addExpr(Lower.getExpr(MI->getOperand(2), MCSymbolRefExpr::VK_PLT));
+                    .addImm(MI->getOperand(0).getImm())
+                    .addImm(MI->getOperand(1).getImm())
+                    .addExpr(Lower.getExpr(MI->getOperand(2), SystemZ::S_PLT));
     break;
 
   case SystemZ::CallBR:
@@ -471,17 +521,19 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     break;
 
   case SystemZ::TLS_GDCALL:
-    LoweredMI = MCInstBuilder(SystemZ::BRASL)
-      .addReg(SystemZ::R14D)
-      .addExpr(getTLSGetOffset(MF->getContext()))
-      .addExpr(Lower.getExpr(MI->getOperand(0), MCSymbolRefExpr::VK_TLSGD));
+    LoweredMI =
+        MCInstBuilder(SystemZ::BRASL)
+            .addReg(SystemZ::R14D)
+            .addExpr(getTLSGetOffset(MF->getContext()))
+            .addExpr(Lower.getExpr(MI->getOperand(0), SystemZ::S_TLSGD));
     break;
 
   case SystemZ::TLS_LDCALL:
-    LoweredMI = MCInstBuilder(SystemZ::BRASL)
-      .addReg(SystemZ::R14D)
-      .addExpr(getTLSGetOffset(MF->getContext()))
-      .addExpr(Lower.getExpr(MI->getOperand(0), MCSymbolRefExpr::VK_TLSLDM));
+    LoweredMI =
+        MCInstBuilder(SystemZ::BRASL)
+            .addReg(SystemZ::R14D)
+            .addExpr(getTLSGetOffset(MF->getContext()))
+            .addExpr(Lower.getExpr(MI->getOperand(0), SystemZ::S_TLSLDM));
     break;
 
   case SystemZ::GOT:
@@ -519,6 +571,7 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
       .addReg(SystemZMC::getRegAsGR64(MI->getOperand(2).getReg()));
     break;
 
+  case SystemZ::VLR16:
   case SystemZ::VLR32:
   case SystemZ::VLR64:
     LoweredMI = MCInstBuilder(SystemZ::VLR)
@@ -546,12 +599,20 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     lowerAlignmentHint(MI, LoweredMI, SystemZ::VSTMAlign);
     break;
 
+  case SystemZ::VL16:
+    LoweredMI = lowerSubvectorLoad(MI, SystemZ::VLREPH);
+    break;
+
   case SystemZ::VL32:
     LoweredMI = lowerSubvectorLoad(MI, SystemZ::VLREPF);
     break;
 
   case SystemZ::VL64:
     LoweredMI = lowerSubvectorLoad(MI, SystemZ::VLREPG);
+    break;
+
+  case SystemZ::VST16:
+    LoweredMI = lowerSubvectorStore(MI, SystemZ::VSTEH);
     break;
 
   case SystemZ::VST32:
@@ -563,18 +624,19 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     break;
 
   case SystemZ::LFER:
-    LoweredMI = MCInstBuilder(SystemZ::VLGVF)
-      .addReg(SystemZMC::getRegAsGR64(MI->getOperand(0).getReg()))
-      .addReg(SystemZMC::getRegAsVR128(MI->getOperand(1).getReg()))
-      .addReg(0).addImm(0);
+    LoweredMI = lowerVecEltExtraction(MI, SystemZ::VLGVF);
+    break;
+
+  case SystemZ::LFER_16:
+    LoweredMI = lowerVecEltExtraction(MI, SystemZ::VLGVH);
     break;
 
   case SystemZ::LEFR:
-    LoweredMI = MCInstBuilder(SystemZ::VLVGF)
-      .addReg(SystemZMC::getRegAsVR128(MI->getOperand(0).getReg()))
-      .addReg(SystemZMC::getRegAsVR128(MI->getOperand(0).getReg()))
-      .addReg(MI->getOperand(1).getReg())
-      .addReg(0).addImm(0);
+    LoweredMI = lowerVecEltInsertion(MI, SystemZ::VLVGF);
+    break;
+
+  case SystemZ::LEFR_16:
+    LoweredMI = lowerVecEltInsertion(MI, SystemZ::VLVGH);
     break;
 
 #define LOWER_LOW(NAME)                                                 \
@@ -767,7 +829,7 @@ void SystemZAsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
 
   MCSymbol *fentry = Ctx.getOrCreateSymbol("__fentry__");
   const MCSymbolRefExpr *Op =
-      MCSymbolRefExpr::create(fentry, MCSymbolRefExpr::VK_PLT, Ctx);
+      MCSymbolRefExpr::create(fentry, SystemZ::S_PLT, Ctx);
   OutStreamer->emitInstruction(
       MCInstBuilder(SystemZ::BRASL).addReg(SystemZ::R0D).addExpr(Op),
       getSubtargetInfo());
@@ -849,7 +911,7 @@ void SystemZAsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
       EncodedBytes += 2;
     }
   } else if (CalleeMO.isGlobal()) {
-    const MCExpr *Expr = Lower.getExpr(CalleeMO, MCSymbolRefExpr::VK_PLT);
+    const MCExpr *Expr = Lower.getExpr(CalleeMO, SystemZ::S_PLT);
     EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BRASL)
                                    .addReg(SystemZ::R14D)
                                    .addExpr(Expr));
@@ -869,6 +931,27 @@ void SystemZAsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
 
 void SystemZAsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(
     const MachineInstr &MI, SystemZMCInstLower &Lower) {
+
+  const MachineFunction &MF = *(MI.getParent()->getParent());
+  const Function &F = MF.getFunction();
+
+  // If patchable-function-entry is set, emit in-function nops here.
+  if (F.hasFnAttribute("patchable-function-entry")) {
+    unsigned Num;
+    // get M-N from function attribute (CodeGenFunction subtracts N
+    // from M to yield the correct patchable-function-entry).
+    if (F.getFnAttribute("patchable-function-entry")
+            .getValueAsString()
+            .getAsInteger(10, Num))
+      return;
+    // Emit M-N 2-byte nops. Use getNop() here instead of emitNops()
+    // to keep it aligned with the common code implementation emitting
+    // the prefix nops.
+    for (unsigned I = 0; I < Num; ++I)
+      EmitToStreamer(*OutStreamer, MF.getSubtarget().getInstrInfo()->getNop());
+    return;
+  }
+  // Otherwise, emit xray sled.
   // .begin:
   //   j .end    # -> stmg    %r2, %r15, 16(%r15)
   //   nop
@@ -892,11 +975,10 @@ void SystemZAsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(
   EmitNop(OutContext, *OutStreamer, 2, getSubtargetInfo());
   EmitToStreamer(*OutStreamer,
                  MCInstBuilder(SystemZ::LLILF).addReg(SystemZ::R2D).addImm(0));
-  EmitToStreamer(*OutStreamer,
-                 MCInstBuilder(SystemZ::BRASL)
-                     .addReg(SystemZ::R14D)
-                     .addExpr(MCSymbolRefExpr::create(
-                         FuncEntry, MCSymbolRefExpr::VK_PLT, OutContext)));
+  EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BRASL)
+                                   .addReg(SystemZ::R14D)
+                                   .addExpr(MCSymbolRefExpr::create(
+                                       FuncEntry, SystemZ::S_PLT, OutContext)));
   OutStreamer->emitLabel(EndOfSled);
   recordSled(BeginOfSled, MI, SledKind::FUNCTION_ENTER, 2);
 }
@@ -936,10 +1018,9 @@ void SystemZAsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
   EmitNop(OutContext, *OutStreamer, 4, getSubtargetInfo());
   EmitToStreamer(*OutStreamer,
                  MCInstBuilder(SystemZ::LLILF).addReg(SystemZ::R2D).addImm(0));
-  EmitToStreamer(*OutStreamer,
-                 MCInstBuilder(SystemZ::J)
-                     .addExpr(MCSymbolRefExpr::create(
-                         FuncExit, MCSymbolRefExpr::VK_PLT, OutContext)));
+  EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::J)
+                                   .addExpr(MCSymbolRefExpr::create(
+                                       FuncExit, SystemZ::S_PLT, OutContext)));
   if (FallthroughLabel)
     OutStreamer->emitLabel(FallthroughLabel);
   recordSled(BeginOfSled, MI, SledKind::FUNCTION_EXIT, 2);
@@ -957,14 +1038,17 @@ void SystemZAsmPrinter::emitAttributes(Module &M) {
 }
 
 // Convert a SystemZ-specific constant pool modifier into the associated
-// MCSymbolRefExpr variant kind.
-static MCSymbolRefExpr::VariantKind
-getModifierVariantKind(SystemZCP::SystemZCPModifier Modifier) {
+// specifier.
+static uint8_t getSpecifierFromModifier(SystemZCP::SystemZCPModifier Modifier) {
   switch (Modifier) {
-  case SystemZCP::TLSGD: return MCSymbolRefExpr::VK_TLSGD;
-  case SystemZCP::TLSLDM: return MCSymbolRefExpr::VK_TLSLDM;
-  case SystemZCP::DTPOFF: return MCSymbolRefExpr::VK_DTPOFF;
-  case SystemZCP::NTPOFF: return MCSymbolRefExpr::VK_NTPOFF;
+  case SystemZCP::TLSGD:
+    return SystemZ::S_TLSGD;
+  case SystemZCP::TLSLDM:
+    return SystemZ::S_TLSLDM;
+  case SystemZCP::DTPOFF:
+    return SystemZ::S_DTPOFF;
+  case SystemZCP::NTPOFF:
+    return SystemZ::S_NTPOFF;
   }
   llvm_unreachable("Invalid SystemCPModifier!");
 }
@@ -973,13 +1057,74 @@ void SystemZAsmPrinter::emitMachineConstantPoolValue(
     MachineConstantPoolValue *MCPV) {
   auto *ZCPV = static_cast<SystemZConstantPoolValue*>(MCPV);
 
-  const MCExpr *Expr =
-    MCSymbolRefExpr::create(getSymbol(ZCPV->getGlobalValue()),
-                            getModifierVariantKind(ZCPV->getModifier()),
-                            OutContext);
+  const MCExpr *Expr = MCSymbolRefExpr::create(
+      getSymbol(ZCPV->getGlobalValue()),
+      getSpecifierFromModifier(ZCPV->getModifier()), OutContext);
   uint64_t Size = getDataLayout().getTypeAllocSize(ZCPV->getType());
 
   OutStreamer->emitValue(Expr, Size);
+}
+
+// Emit the ctor or dtor list taking into account the init priority.
+void SystemZAsmPrinter::emitXXStructorList(const DataLayout &DL,
+                                           const Constant *List, bool IsCtor) {
+  if (!TM.getTargetTriple().isOSBinFormatGOFF())
+    return AsmPrinter::emitXXStructorList(DL, List, IsCtor);
+
+  SmallVector<Structor, 8> Structors;
+  preprocessXXStructorList(DL, List, Structors);
+  if (Structors.empty())
+    return;
+
+  const Align Align = llvm::Align(4);
+  const TargetLoweringObjectFileGOFF &Obj =
+      static_cast<const TargetLoweringObjectFileGOFF &>(getObjFileLowering());
+  for (Structor &S : Structors) {
+    MCSectionGOFF *Section =
+        static_cast<MCSectionGOFF *>(Obj.getStaticXtorSection(S.Priority));
+    OutStreamer->switchSection(Section);
+    if (OutStreamer->getCurrentSection() != OutStreamer->getPreviousSection())
+      emitAlignment(Align);
+
+    // The priority is provided as an input to getStaticXtorSection(), and is
+    // recalculated within that function as `Prio` going to going into the
+    // PR section.
+    // This priority retrieved via the `SortKey` below is the recalculated
+    // Priority.
+    uint32_t XtorPriority = Section->getPRAttributes().SortKey;
+
+    const GlobalValue *GV = dyn_cast<GlobalValue>(S.Func->stripPointerCasts());
+    assert(GV && "C++ xxtor pointer was not a GlobalValue!");
+    MCSymbolGOFF *Symbol = static_cast<MCSymbolGOFF *>(getSymbol(GV));
+
+    // @@SQINIT entry: { unsigned prio; void (*ctor)();  void (*dtor)(); }
+
+    unsigned PointerSizeInBytes = DL.getPointerSize();
+
+    auto &Ctx = OutStreamer->getContext();
+    const MCExpr *ADAFuncRefExpr;
+    unsigned SlotKind = SystemZII::MO_ADA_DIRECT_FUNC_DESC;
+
+    MCSectionGOFF *ADASection =
+        static_cast<MCSectionGOFF *>(Obj.getADASection());
+    assert(ADASection && "ADA section must exist for GOFF targets!");
+    const MCSymbol *ADASym = ADASection->getBeginSymbol();
+    assert(ADASym && "ADA symbol should already be set!");
+
+    ADAFuncRefExpr = MCBinaryExpr::createAdd(
+        MCSpecifierExpr::create(MCSymbolRefExpr::create(ADASym, OutContext),
+                                SystemZ::S_QCon, OutContext),
+        MCConstantExpr::create(ADATable.insert(Symbol, SlotKind), Ctx), Ctx);
+
+    emitInt32(XtorPriority);
+    if (IsCtor) {
+      OutStreamer->emitValue(ADAFuncRefExpr, PointerSizeInBytes);
+      OutStreamer->emitIntValue(0, PointerSizeInBytes);
+    } else {
+      OutStreamer->emitIntValue(0, PointerSizeInBytes);
+      OutStreamer->emitValue(ADAFuncRefExpr, PointerSizeInBytes);
+    }
+  }
 }
 
 static void printFormattedRegName(const MCAsmInfo *MAI, unsigned RegNo,
@@ -1010,7 +1155,7 @@ static void printOperand(const MCOperand &MCOp, const MCAsmInfo *MAI,
   else if (MCOp.isImm())
     OS << MCOp.getImm();
   else if (MCOp.isExpr())
-    MCOp.getExpr()->print(OS, MAI);
+    MAI->printExpr(OS, *MCOp.getExpr());
   else
     llvm_unreachable("Invalid operand");
 }
@@ -1112,23 +1257,20 @@ void SystemZAsmPrinter::emitADASection() {
       // imported functions, that are placed in the ADA to be 8 byte aligned.
       EMIT_COMMENT("function descriptor of");
       OutStreamer->emitValue(
-          SystemZMCExpr::create(SystemZMCExpr::VK_SystemZ_RCon,
-                                MCSymbolRefExpr::create(Sym, OutContext),
-                                OutContext),
+          MCSpecifierExpr::create(MCSymbolRefExpr::create(Sym, OutContext),
+                                  SystemZ::S_RCon, OutContext),
           PointerSize);
       OutStreamer->emitValue(
-          SystemZMCExpr::create(SystemZMCExpr::VK_SystemZ_VCon,
-                                MCSymbolRefExpr::create(Sym, OutContext),
-                                OutContext),
+          MCSpecifierExpr::create(MCSymbolRefExpr::create(Sym, OutContext),
+                                  SystemZ::S_VCon, OutContext),
           PointerSize);
       EmittedBytes += PointerSize * 2;
       break;
     case SystemZII::MO_ADA_DATA_SYMBOL_ADDR:
       EMIT_COMMENT("pointer to data symbol");
       OutStreamer->emitValue(
-          SystemZMCExpr::create(SystemZMCExpr::VK_SystemZ_None,
-                                MCSymbolRefExpr::create(Sym, OutContext),
-                                OutContext),
+          MCSpecifierExpr::create(MCSymbolRefExpr::create(Sym, OutContext),
+                                  SystemZ::S_None, OutContext),
           PointerSize);
       EmittedBytes += PointerSize;
       break;
@@ -1141,9 +1283,8 @@ void SystemZAsmPrinter::emitADASection() {
 
       EMIT_COMMENT("pointer to function descriptor");
       OutStreamer->emitValue(
-          SystemZMCExpr::create(SystemZMCExpr::VK_SystemZ_VCon,
-                                MCSymbolRefExpr::create(Alias, OutContext),
-                                OutContext),
+          MCSpecifierExpr::create(MCSymbolRefExpr::create(Alias, OutContext),
+                                  SystemZ::S_VCon, OutContext),
           PointerSize);
       EmittedBytes += PointerSize;
       break;
@@ -1230,7 +1371,8 @@ void SystemZAsmPrinter::emitFunctionBodyEnd() {
     OutStreamer->emitLabel(FnEndSym);
 
     OutStreamer->pushSection();
-    OutStreamer->switchSection(getObjFileLowering().getPPA1Section());
+    OutStreamer->switchSection(getObjFileLowering().getTextSection(),
+                               GOFF::SK_PPA1);
     emitPPA1(FnEndSym);
     OutStreamer->popSection();
 
@@ -1241,7 +1383,7 @@ void SystemZAsmPrinter::emitFunctionBodyEnd() {
 
 static void emitPPA1Flags(std::unique_ptr<MCStreamer> &OutStreamer, bool VarArg,
                           bool StackProtector, bool FPRMask, bool VRMask,
-                          bool EHBlock, bool HasName) {
+                          bool EHBlock, bool HasArgAreaLength, bool HasName) {
   enum class PPA1Flag1 : uint8_t {
     DSA64Bit = (0x80 >> 0),
     VarArg = (0x80 >> 7),
@@ -1253,8 +1395,9 @@ static void emitPPA1Flags(std::unique_ptr<MCStreamer> &OutStreamer, bool VarArg,
     LLVM_MARK_AS_BITMASK_ENUM(ExternalProcedure)
   };
   enum class PPA1Flag3 : uint8_t {
+    HasArgAreaLength = (0x80 >> 1),
     FPRMask = (0x80 >> 2),
-    LLVM_MARK_AS_BITMASK_ENUM(FPRMask)
+    LLVM_MARK_AS_BITMASK_ENUM(HasArgAreaLength)
   };
   enum class PPA1Flag4 : uint8_t {
     EPMOffsetPresent = (0x80 >> 0),
@@ -1277,6 +1420,9 @@ static void emitPPA1Flags(std::unique_ptr<MCStreamer> &OutStreamer, bool VarArg,
 
   if (StackProtector)
     Flags2 |= PPA1Flag2::STACKPROTECTOR;
+
+  if (HasArgAreaLength)
+    Flags3 |= PPA1Flag3::HasArgAreaLength; // Add emit ArgAreaLength flag.
 
   // SavedGPRMask, SavedFPRMask, and SavedVRMask are precomputed in.
   if (FPRMask)
@@ -1310,6 +1456,9 @@ static void emitPPA1Flags(std::unique_ptr<MCStreamer> &OutStreamer, bool VarArg,
   OutStreamer->emitInt8(static_cast<uint8_t>(Flags2)); // Flags 2.
 
   OutStreamer->AddComment("PPA1 Flags 3");
+  if ((Flags3 & PPA1Flag3::HasArgAreaLength) == PPA1Flag3::HasArgAreaLength)
+    OutStreamer->AddComment(
+        "  Bit 1: 1 = Argument Area Length is in optional area");
   if ((Flags3 & PPA1Flag3::FPRMask) == PPA1Flag3::FPRMask)
     OutStreamer->AddComment("  Bit 2: 1 = FP Reg Mask is in optional area");
   OutStreamer->emitInt8(
@@ -1448,18 +1597,37 @@ void SystemZAsmPrinter::emitPPA1(MCSymbol *FnEndSym) {
 
   bool NeedEmitEHBlock = !MF->getLandingPads().empty();
 
+  // Optional Argument Area Length.
+  // Note: This represents the length of the argument area that we reserve
+  //       in our stack for setting up arguments for calls to other
+  //       routines. If this optional field is not set, LE will reserve
+  //       128 bytes for the argument area. This optional field is
+  //       created if greater than 128 bytes is required - to guarantee
+  //       the required space is reserved on stack extension in the new
+  //       extension.  This optional field is also created if the
+  //       routine has alloca(). This may reduce stack space
+  //       if alloca() call causes a stack extension.
+  bool HasArgAreaLength =
+      (AllocaReg != 0) || (MFFrame.getMaxCallFrameSize() > 128);
+
   bool HasName =
       MF->getFunction().hasName() && MF->getFunction().getName().size() > 0;
 
   emitPPA1Flags(OutStreamer, MF->getFunction().isVarArg(),
                 MFFrame.hasStackProtectorIndex(), SavedFPRMask != 0,
-                TargetHasVector && SavedVRMask != 0, NeedEmitEHBlock, HasName);
+                TargetHasVector && SavedVRMask != 0, NeedEmitEHBlock,
+                HasArgAreaLength, HasName);
 
   OutStreamer->AddComment("Length/4 of Parms");
   OutStreamer->emitInt16(
       static_cast<uint16_t>(ZFI->getSizeOfFnParams() / 4)); // Parms/4.
   OutStreamer->AddComment("Length of Code");
   OutStreamer->emitAbsoluteSymbolDiff(FnEndSym, CurrentFnEPMarkerSym, 4);
+
+  if (HasArgAreaLength) {
+    OutStreamer->AddComment("Argument Area Length");
+    OutStreamer->emitInt32(MFFrame.getMaxCallFrameSize());
+  }
 
   // Emit saved FPR mask and offset to FPR save area (0x20 of flags 3).
   if (SavedFPRMask) {
@@ -1535,36 +1703,33 @@ void SystemZAsmPrinter::emitStartOfAsmFile(Module &M) {
 
 void SystemZAsmPrinter::emitPPA2(Module &M) {
   OutStreamer->pushSection();
-  OutStreamer->switchSection(getObjFileLowering().getPPA2Section());
+  OutStreamer->switchSection(getObjFileLowering().getTextSection(),
+                             GOFF::SK_PPA2);
   MCContext &OutContext = OutStreamer->getContext();
   // Make CELQSTRT symbol.
   const char *StartSymbolName = "CELQSTRT";
   MCSymbol *CELQSTRT = OutContext.getOrCreateSymbol(StartSymbolName);
+  OutStreamer->emitSymbolAttribute(CELQSTRT, MCSA_OSLinkage);
+  OutStreamer->emitSymbolAttribute(CELQSTRT, MCSA_Global);
 
   // Create symbol and assign to class field for use in PPA1.
   PPA2Sym = OutContext.createTempSymbol("PPA2", false);
   MCSymbol *DateVersionSym = OutContext.createTempSymbol("DVS", false);
 
   std::time_t Time = getTranslationTime(M);
-  SmallString<15> CompilationTime; // 14 + null
-  raw_svector_ostream O(CompilationTime);
-  O << formatv("{0:%Y%m%d%H%M%S}", llvm::sys::toUtcTime(Time));
+  SmallString<14> CompilationTimeEBCDIC, CompilationTime;
+  CompilationTime = formatv("{0:%Y%m%d%H%M%S}", llvm::sys::toUtcTime(Time));
 
   uint32_t ProductVersion = getProductVersion(M),
            ProductRelease = getProductRelease(M),
            ProductPatch = getProductPatch(M);
 
-  SmallString<7> Version; // 6 + null
-  raw_svector_ostream ostr(Version);
-  ostr << formatv("{0,0-2:d}{1,0-2:d}{2,0-2:d}", ProductVersion, ProductRelease,
-                  ProductPatch);
+  SmallString<6> VersionEBCDIC, Version;
+  Version = formatv("{0,0-2:d}{1,0-2:d}{2,0-2:d}", ProductVersion,
+                    ProductRelease, ProductPatch);
 
-  // Drop 0 during conversion.
-  SmallString<sizeof(CompilationTime) - 1> CompilationTimeStr;
-  SmallString<sizeof(Version) - 1> VersionStr;
-
-  ConverterEBCDIC::convertToEBCDIC(CompilationTime, CompilationTimeStr);
-  ConverterEBCDIC::convertToEBCDIC(Version, VersionStr);
+  ConverterEBCDIC::convertToEBCDIC(CompilationTime, CompilationTimeEBCDIC);
+  ConverterEBCDIC::convertToEBCDIC(Version, VersionEBCDIC);
 
   enum class PPA2MemberId : uint8_t {
     // See z/OS Language Environment Vendor Interfaces v2r5, p.23, for
@@ -1612,17 +1777,18 @@ void SystemZAsmPrinter::emitPPA2(Module &M) {
   uint8_t Flgs = static_cast<uint8_t>(PPA2Flags::CompileForBinaryFloatingPoint);
   Flgs |= static_cast<uint8_t>(PPA2Flags::CompiledWithXPLink);
 
+  bool IsASCII = true;
   if (auto *MD = M.getModuleFlag("zos_le_char_mode")) {
     const StringRef &CharMode = cast<MDString>(MD)->getString();
-    if (CharMode == "ascii") {
-      Flgs |= static_cast<uint8_t>(
-          PPA2Flags::CompiledUnitASCII); // Setting bit for ASCII char. mode.
-    } else if (CharMode != "ebcdic") {
-      report_fatal_error(
-          "Only ascii or ebcdic are valid values for zos_le_char_mode "
-          "metadata");
-    }
+    if (CharMode == "ebcdic")
+      IsASCII = false;
+    else if (CharMode != "ascii")
+      OutContext.reportError(
+          {}, "Only ascii or ebcdic are allowed for zos_le_char_mode");
   }
+  if (IsASCII)
+    Flgs |= static_cast<uint8_t>(
+        PPA2Flags::CompiledUnitASCII); // Setting bit for ASCII char. mode.
 
   OutStreamer->emitInt8(Flgs);
   OutStreamer->emitInt8(0x00);    // Reserved.
@@ -1633,8 +1799,8 @@ void SystemZAsmPrinter::emitPPA2(Module &M) {
 
   // Emit date and version section.
   OutStreamer->emitLabel(DateVersionSym);
-  OutStreamer->emitBytes(CompilationTimeStr.str());
-  OutStreamer->emitBytes(VersionStr.str());
+  OutStreamer->emitBytes(CompilationTimeEBCDIC.str());
+  OutStreamer->emitBytes(VersionEBCDIC.str());
 
   OutStreamer->emitInt16(0x0000); // Service level string length.
 
@@ -1646,6 +1812,58 @@ void SystemZAsmPrinter::emitPPA2(Module &M) {
   OutStreamer->AddComment("A(PPA2-CELQSTRT)");
   OutStreamer->emitAbsoluteSymbolDiff(PPA2Sym, CELQSTRT, 8);
   OutStreamer->popSection();
+}
+
+void SystemZAsmPrinter::emitGlobalAlias(const Module &M,
+                                        const GlobalAlias &GA) {
+  if (!TM.getTargetTriple().isOSzOS())
+    return AsmPrinter::emitGlobalAlias(M, GA);
+
+  // Aliased function labels have already been emitted for z/OS
+}
+
+const MCExpr *SystemZAsmPrinter::lowerConstant(const Constant *CV,
+                                               const Constant *BaseCV,
+                                               uint64_t Offset) {
+  const Triple &TargetTriple = TM.getTargetTriple();
+
+  if (TargetTriple.isOSzOS()) {
+    const GlobalAlias *GA = dyn_cast<GlobalAlias>(CV);
+    const GlobalVariable *GV = dyn_cast<GlobalVariable>(CV);
+    const Function *FV = dyn_cast<Function>(CV);
+    bool IsFunc = !GV && (FV || (GA && isa<Function>(GA->getAliaseeObject())));
+
+    MCSymbol *Sym = NULL;
+
+    if (GA)
+      Sym = getSymbol(GA);
+    else if (IsFunc)
+      Sym = getSymbol(FV);
+    else if (GV)
+      Sym = getSymbol(GV);
+
+    if (IsFunc) {
+      OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
+      if (FV->hasExternalLinkage())
+        return MCSpecifierExpr::create(MCSymbolRefExpr::create(Sym, OutContext),
+                                       SystemZ::S_VCon, OutContext);
+      // Trigger creation of function descriptor in ADA for internal
+      // functions.
+      unsigned Disp = ADATable.insert(Sym, SystemZII::MO_ADA_DIRECT_FUNC_DESC);
+      return MCBinaryExpr::createAdd(
+          MCSpecifierExpr::create(
+              MCSymbolRefExpr::create(
+                  getObjFileLowering().getADASection()->getBeginSymbol(),
+                  OutContext),
+              SystemZ::S_None, OutContext),
+          MCConstantExpr::create(Disp, OutContext), OutContext);
+    }
+    if (Sym) {
+      OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeObject);
+      return MCSymbolRefExpr::create(Sym, OutContext);
+    }
+  }
+  return AsmPrinter::lowerConstant(CV);
 }
 
 void SystemZAsmPrinter::emitFunctionEntryLabel() {
@@ -1707,9 +1925,27 @@ void SystemZAsmPrinter::emitFunctionEntryLabel() {
   }
 
   AsmPrinter::emitFunctionEntryLabel();
+
+  if (Subtarget.getTargetTriple().isOSzOS()) {
+    const Function *F = &MF->getFunction();
+    // Emit aliasing label for function entry point label.
+    for (const GlobalAlias *Alias : GOAliasMap[F]) {
+      MCSymbol *Sym = getSymbol(Alias);
+      OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
+      emitVisibility(Sym, Alias->getVisibility());
+      emitLinkage(Alias, Sym);
+      OutStreamer->emitLabel(Sym);
+    }
+  }
 }
 
+char SystemZAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(SystemZAsmPrinter, "systemz-asm-printer",
+                "SystemZ Assembly Printer", false, false)
+
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeSystemZAsmPrinter() {
   RegisterAsmPrinter<SystemZAsmPrinter> X(getTheSystemZTarget());
 }

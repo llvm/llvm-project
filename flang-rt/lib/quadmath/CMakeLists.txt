@@ -78,8 +78,7 @@ target_include_directories(FortranFloat128MathILib INTERFACE
 
 if (FLANG_RUNTIME_F128_MATH_LIB)
   if (${FLANG_RUNTIME_F128_MATH_LIB} STREQUAL "libquadmath")
-    check_include_file(quadmath.h FOUND_QUADMATH_HEADER)
-    if(FOUND_QUADMATH_HEADER)
+    if(FLANG_INCLUDE_QUADMATH_H)
       add_compile_definitions(HAS_QUADMATHLIB)
     else()
       message(FATAL_ERROR

@@ -93,7 +93,8 @@ intrinsics), adding language extensions in Clang, and so on, require an RFC
 first. For changes that promise significant impact on users and/or downstream
 code bases, reviewers can request an RFC achieving consensus before proceeding
 with code review. That having been said, posting initial patches can help with
-discussions on an RFC.
+discussions on an RFC. See the :doc:`RFC process <RFCProcess>` documentation
+for more details.
 
 Code-Review Workflow
 ====================
@@ -272,3 +273,21 @@ Developers should participate in code reviews as both reviewers and
 authors. If someone is kind enough to review your code, you should return the
 favor for someone else. Note that anyone is welcome to review and give feedback
 on a patch, but approval of patches should be consistent with the policy above.
+
+Upstreaming Changes to LLVM
+===========================
+
+When upstreaming your own changes from a downstream project to LLVM, simply
+follow the process outlined above.
+
+When upstreaming changes originally written by someone else:  
+
+* Ensure that there are no obstacles to upstreaming the code. In some cases,
+  this simply means checking with the original author(s) to ensure they are
+  aware of and approve the upstreaming. In other cases, licensing
+  considerations may be more complex.
+* Properly attribute the original changes, e.g., by creating a commit with
+  multiple authors (`GitHub guide <https://docs.github.com/en/pull-requests/committing-changes-to-your-project/creating-and-editing-commits/creating-a-commit-with-multiple-authors>`_).
+* Invite the original author(s) to review the changes, and also include
+  additional reviewers. Specifically, an LGTM from a (co-)author should not be
+  taken as approval to land a change.

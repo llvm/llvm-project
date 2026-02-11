@@ -1,4 +1,4 @@
-; REQUIRES: x86_64-linux
+; REQUIRES: x86-registered-target
 ; RUN: llc -stop-after=twoaddressinstruction -mtriple=x86_64-- -o - %s | FileCheck %s
 
 

@@ -7,26 +7,26 @@
 //===----------------------------------------------------------------------===//
 
 // This file defines the Floating Point language options. Users of this file
-//  must define the OPTION macro to make use of this information.
-#ifndef OPTION
-#  error Define the OPTION macro to handle floating point language options
+//  must define the FP_OPTION macro to make use of this information.
+#ifndef FP_OPTION
+#  error Define the FP_OPTION macro to handle floating point language options
 #endif
 
-// OPTION(name, type, width, previousName)
-OPTION(FPContractMode, LangOptions::FPModeKind, 2, First)
-OPTION(RoundingMath, bool, 1, FPContractMode)
-OPTION(ConstRoundingMode, LangOptions::RoundingMode, 3, RoundingMath)
-OPTION(SpecifiedExceptionMode, LangOptions::FPExceptionModeKind, 2, ConstRoundingMode)
-OPTION(AllowFEnvAccess, bool, 1, SpecifiedExceptionMode)
-OPTION(AllowFPReassociate, bool, 1, AllowFEnvAccess)
-OPTION(NoHonorNaNs, bool, 1, AllowFPReassociate)
-OPTION(NoHonorInfs, bool, 1, NoHonorNaNs)
-OPTION(NoSignedZero, bool, 1, NoHonorInfs)
-OPTION(AllowReciprocal, bool, 1, NoSignedZero)
-OPTION(AllowApproxFunc, bool, 1, AllowReciprocal)
-OPTION(FPEvalMethod, LangOptions::FPEvalMethodKind, 2, AllowApproxFunc)
-OPTION(Float16ExcessPrecision, LangOptions::ExcessPrecisionKind, 2, FPEvalMethod)
-OPTION(BFloat16ExcessPrecision, LangOptions::ExcessPrecisionKind, 2, Float16ExcessPrecision)
-OPTION(MathErrno, bool, 1, BFloat16ExcessPrecision)
-OPTION(ComplexRange, LangOptions::ComplexRangeKind, 3, MathErrno)
-#undef OPTION
+// FP_OPTION(name, type, width, previousName)
+FP_OPTION(FPContractMode, LangOptions::FPModeKind, 2, First)
+FP_OPTION(RoundingMath, bool, 1, FPContractMode)
+FP_OPTION(ConstRoundingMode, LangOptions::RoundingMode, 3, RoundingMath)
+FP_OPTION(SpecifiedExceptionMode, LangOptions::FPExceptionModeKind, 2, ConstRoundingMode)
+FP_OPTION(AllowFEnvAccess, bool, 1, SpecifiedExceptionMode)
+FP_OPTION(AllowFPReassociate, bool, 1, AllowFEnvAccess)
+FP_OPTION(NoHonorNaNs, bool, 1, AllowFPReassociate)
+FP_OPTION(NoHonorInfs, bool, 1, NoHonorNaNs)
+FP_OPTION(NoSignedZero, bool, 1, NoHonorInfs)
+FP_OPTION(AllowReciprocal, bool, 1, NoSignedZero)
+FP_OPTION(AllowApproxFunc, bool, 1, AllowReciprocal)
+FP_OPTION(FPEvalMethod, LangOptions::FPEvalMethodKind, 2, AllowApproxFunc)
+FP_OPTION(Float16ExcessPrecision, LangOptions::ExcessPrecisionKind, 2, FPEvalMethod)
+FP_OPTION(BFloat16ExcessPrecision, LangOptions::ExcessPrecisionKind, 2, Float16ExcessPrecision)
+FP_OPTION(MathErrno, bool, 1, BFloat16ExcessPrecision)
+FP_OPTION(ComplexRange, LangOptions::ComplexRangeKind, 3, MathErrno)
+#undef FP_OPTION

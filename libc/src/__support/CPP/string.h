@@ -67,7 +67,8 @@ public:
       : string(cstr, ::LIBC_NAMESPACE::internal::string_length(cstr)) {}
   LIBC_INLINE string(size_t size_, char value) {
     resize(size_);
-    inline_memset((void *)buffer_, value, size_);
+    static_assert(sizeof(char) == sizeof(uint8_t));
+    inline_memset((void *)buffer_, static_cast<uint8_t>(value), size_);
   }
 
   LIBC_INLINE string &operator=(const string &other) {
@@ -131,13 +132,16 @@ public:
     // by 8 is cheap. We guard the extension so the operation doesn't overflow.
     if (new_capacity < SIZE_MAX / 11)
       new_capacity = new_capacity * 11 / 8;
+
     if (void *Ptr = ::realloc(buffer_ == get_empty_string() ? nullptr : buffer_,
                               new_capacity)) {
       buffer_ = static_cast<char *>(Ptr);
       capacity_ = new_capacity;
-    } else {
-      __builtin_unreachable(); // out of memory
+      return;
     }
+    // Out of memory: this is not handled in current implementation,
+    // We trap the program and exits.
+    __builtin_trap();
   }
 
   LIBC_INLINE void resize(size_t size) {

@@ -1,4 +1,4 @@
-//===--- OptionalValueConversionCheck.cpp - clang-tidy --------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,6 +12,7 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include <array>
 
 using namespace clang::ast_matchers;
@@ -27,27 +28,11 @@ AST_MATCHER_P(QualType, hasCleanType, Matcher<QualType>, InnerMatcher) {
       Finder, Builder);
 }
 
-constexpr std::array<StringRef, 2> NameList{
+constexpr std::array<StringRef, 2> MakeSmartPtrList{
     "::std::make_unique",
     "::std::make_shared",
 };
-
-Matcher<Expr> constructFrom(Matcher<QualType> TypeMatcher,
-                            Matcher<Expr> ArgumentMatcher) {
-  return expr(
-      anyOf(
-          // construct optional
-          cxxConstructExpr(argumentCountIs(1U), hasType(TypeMatcher),
-                           hasArgument(0U, ArgumentMatcher)),
-          // known template methods in std
-          callExpr(argumentCountIs(1),
-                   callee(functionDecl(
-                       matchers::matchesAnyListedName(NameList),
-                       hasTemplateArgument(0, refersToType(TypeMatcher)))),
-                   hasArgument(0, ArgumentMatcher))),
-      unless(anyOf(hasAncestor(typeLoc()),
-                   hasAncestor(expr(matchers::hasUnevaluatedContext())))));
-}
+constexpr StringRef MakeOptional = "::std::make_optional";
 
 } // namespace
 
@@ -66,33 +51,63 @@ OptionalValueConversionCheck::getCheckTraversalKind() const {
 }
 
 void OptionalValueConversionCheck::registerMatchers(MatchFinder *Finder) {
-  auto BindOptionalType = qualType(
-      hasCleanType(qualType(hasDeclaration(namedDecl(
-                                matchers::matchesAnyListedName(OptionalTypes))))
-                       .bind("optional-type")));
+  auto BindOptionalType = qualType(hasCleanType(
+      qualType(hasDeclaration(namedDecl(
+                   matchers::matchesAnyListedRegexName(OptionalTypes))))
+          .bind("optional-type")));
 
   auto EqualsBoundOptionalType =
       qualType(hasCleanType(equalsBoundNode("optional-type")));
 
-  auto OptionalDereferenceMatcher = callExpr(
+  auto OptionalDerefMatcherImpl = callExpr(
       anyOf(
           cxxOperatorCallExpr(hasOverloadedOperatorName("*"),
                               hasUnaryOperand(hasType(EqualsBoundOptionalType)))
               .bind("op-call"),
-          cxxMemberCallExpr(thisPointerType(EqualsBoundOptionalType),
-                            callee(cxxMethodDecl(anyOf(
-                                hasOverloadedOperatorName("*"),
-                                matchers::matchesAnyListedName(ValueMethods)))))
+          cxxMemberCallExpr(
+              thisPointerType(EqualsBoundOptionalType),
+              callee(cxxMethodDecl(
+                  anyOf(hasOverloadedOperatorName("*"),
+                        matchers::matchesAnyListedRegexName(ValueMethods)))))
               .bind("member-call")),
       hasType(qualType().bind("value-type")));
 
   auto StdMoveCallMatcher =
       callExpr(argumentCountIs(1), callee(functionDecl(hasName("::std::move"))),
-               hasArgument(0, ignoringImpCasts(OptionalDereferenceMatcher)));
+               hasArgument(0, ignoringImpCasts(OptionalDerefMatcherImpl)));
+  auto OptionalDerefMatcher =
+      ignoringImpCasts(anyOf(OptionalDerefMatcherImpl, StdMoveCallMatcher));
+
   Finder->addMatcher(
-      expr(constructFrom(BindOptionalType,
-                         ignoringImpCasts(anyOf(OptionalDereferenceMatcher,
-                                                StdMoveCallMatcher))))
+      expr(
+          anyOf(
+              // construct optional
+              cxxConstructExpr(argumentCountIs(1), hasType(BindOptionalType),
+                               hasArgument(0, OptionalDerefMatcher)),
+              // known template methods in std
+              callExpr(
+                  argumentCountIs(1),
+                  anyOf(
+                      // match std::make_unique std::make_shared
+                      callee(functionDecl(
+                          matchers::matchesAnyListedRegexName(MakeSmartPtrList),
+                          hasTemplateArgument(0,
+                                              refersToType(BindOptionalType)))),
+                      // match first std::make_optional by limit argument count
+                      // (1) and template count (1).
+                      // 1. template< class T > constexpr
+                      //    std::optional<decay_t<T>> make_optional(T&& value);
+                      // 2. template< class T, class... Args > constexpr
+                      //    std::optional<T> make_optional(Args&&... args);
+                      callee(functionDecl(templateArgumentCountIs(1),
+                                          hasName(MakeOptional),
+                                          returns(BindOptionalType)))),
+                  hasArgument(0, OptionalDerefMatcher)),
+              callExpr(argumentCountIs(1),
+
+                       hasArgument(0, OptionalDerefMatcher))),
+          unless(anyOf(hasAncestor(typeLoc()),
+                       hasAncestor(expr(matchers::hasUnevaluatedContext())))))
           .bind("expr"),
       this);
 }
@@ -126,10 +141,11 @@ void OptionalValueConversionCheck::check(
   }
   if (const auto *CallExpr =
           Result.Nodes.getNodeAs<CXXMemberCallExpr>("member-call")) {
-    const SourceLocation Begin =
-        utils::lexer::getPreviousToken(CallExpr->getExprLoc(),
-                                       *Result.SourceManager, getLangOpts())
-            .getLocation();
+    const std::optional<Token> Tok = utils::lexer::getPreviousToken(
+        CallExpr->getExprLoc(), *Result.SourceManager, getLangOpts());
+    if (!Tok)
+      return;
+    const SourceLocation Begin = Tok->getLocation();
     auto Diag =
         diag(CallExpr->getExprLoc(),
              "remove call to %0 to silence this warning", DiagnosticIDs::Note);

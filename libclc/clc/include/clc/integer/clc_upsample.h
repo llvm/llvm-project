@@ -1,8 +1,15 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef __CLC_INTEGER_CLC_UPSAMPLE_H__
 #define __CLC_INTEGER_CLC_UPSAMPLE_H__
 
 #include <clc/clcfunc.h>
-#include <clc/clctypes.h>
 
 #define __CLC_UPSAMPLE_DECL(BGENTYPE, GENTYPE, UGENTYPE)                       \
   _CLC_OVERLOAD _CLC_DECL BGENTYPE __clc_upsample(GENTYPE hi, UGENTYPE lo);

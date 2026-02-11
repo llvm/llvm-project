@@ -24,7 +24,9 @@ namespace clang {
 /// A source location that has been parsed on the command line.
 struct ParsedSourceLocation {
   std::string FileName;
+  // The 1-based line number
   unsigned Line;
+  // The 1-based column number
   unsigned Column;
 
 public:
@@ -38,7 +40,8 @@ public:
 
     // If both tail splits were valid integers, return success.
     if (!ColSplit.second.getAsInteger(10, PSL.Column) &&
-        !LineSplit.second.getAsInteger(10, PSL.Line)) {
+        !LineSplit.second.getAsInteger(10, PSL.Line) &&
+        !(PSL.Column == 0 || PSL.Line == 0)) {
       PSL.FileName = std::string(LineSplit.first);
 
       // On the command-line, stdin may be specified via "-". Inside the
@@ -89,8 +92,12 @@ struct ParsedSourceRange {
         // probably belongs to the filename which menas the whole
         // string should be parsed.
         RangeSplit.first = Str;
-      } else
+      } else {
+        // Column and line numbers are 1-based.
+        if (EndLine == 0 || EndColumn == 0)
+          return std::nullopt;
         HasEndLoc = true;
+      }
     }
     auto Begin = ParsedSourceLocation::FromString(RangeSplit.first);
     if (Begin.FileName.empty())

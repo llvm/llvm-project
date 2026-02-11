@@ -13,6 +13,7 @@
 
 #include "R600ISelLowering.h"
 #include "AMDGPU.h"
+#include "AMDGPUSelectionDAGInfo.h"
 #include "MCTargetDesc/R600MCTargetDesc.h"
 #include "R600Defines.h"
 #include "R600MachineFunctionInfo.h"
@@ -21,6 +22,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
+#include "llvm/Passes/CodeGenPassBuilder.h"
 
 using namespace llvm;
 
@@ -28,7 +30,8 @@ using namespace llvm;
 
 R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
                                        const R600Subtarget &STI)
-    : AMDGPUTargetLowering(TM, STI), Subtarget(&STI), Gen(STI.getGeneration()) {
+    : AMDGPUTargetLowering(TM, STI, STI), Subtarget(&STI),
+      Gen(STI.getGeneration()) {
   addRegisterClass(MVT::f32, &R600::R600_Reg32RegClass);
   addRegisterClass(MVT::i32, &R600::R600_Reg32RegClass);
   addRegisterClass(MVT::v2f32, &R600::R600_Reg64RegClass);
@@ -99,6 +102,11 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BRCOND, MVT::Other, Custom);
 
   setOperationAction(ISD::FSUB, MVT::f32, Expand);
+
+  setOperationAction(ISD::IS_FPCLASS,
+                     {MVT::f32, MVT::v2f32, MVT::v3f32, MVT::v4f32, MVT::v5f32,
+                      MVT::v6f32, MVT::v7f32, MVT::v8f32, MVT::v16f32},
+                     Expand);
 
   setOperationAction({ISD::FCEIL, ISD::FTRUNC, ISD::FROUNDEVEN, ISD::FFLOOR},
                      MVT::f64, Custom);
@@ -1123,12 +1131,9 @@ SDValue R600TargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
     if ((AS == AMDGPUAS::PRIVATE_ADDRESS) && TruncatingStore) {
       // Add an extra level of chain to isolate this vector
       SDValue NewChain = DAG.getNode(AMDGPUISD::DUMMY_CHAIN, DL, MVT::Other, Chain);
-      // TODO: can the chain be replaced without creating a new store?
-      SDValue NewStore = DAG.getTruncStore(
-          NewChain, DL, Value, Ptr, StoreNode->getPointerInfo(), MemVT,
-          StoreNode->getAlign(), StoreNode->getMemOperand()->getFlags(),
-          StoreNode->getAAInfo());
-      StoreNode = cast<StoreSDNode>(NewStore);
+      SmallVector<SDValue, 4> NewOps(StoreNode->ops());
+      NewOps[0] = NewChain;
+      StoreNode = cast<StoreSDNode>(DAG.UpdateNodeOperands(StoreNode, NewOps));
     }
 
     return scalarizeVectorStore(StoreNode, DAG);
@@ -1443,7 +1448,7 @@ CCAssignFn *R600TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::AMDGPU_LS:
     return CC_R600;
   default:
-    report_fatal_error("Unsupported calling convention.");
+    reportFatalUsageError("unsupported calling convention");
   }
 }
 
@@ -1458,7 +1463,6 @@ SDValue R600TargetLowering::LowerFormalArguments(
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs,
                  *DAG.getContext());
   MachineFunction &MF = DAG.getMachineFunction();
-  SmallVector<ISD::InputArg, 8> LocalIns;
 
   if (AMDGPU::isShader(CallConv)) {
     CCInfo.AnalyzeFormalArguments(Ins, CCAssignFnForCall(CallConv, isVarArg));
@@ -1476,6 +1480,9 @@ SDValue R600TargetLowering::LowerFormalArguments(
       MemVT = MemVT.getVectorElementType();
     }
 
+    if (VT.isInteger() && !MemVT.isInteger())
+      MemVT = MemVT.changeTypeToInteger();
+
     if (AMDGPU::isShader(CallConv)) {
       Register Reg = MF.addLiveIn(VA.getLocReg(), &R600::R600_Reg128RegClass);
       SDValue Register = DAG.getCopyFromReg(Chain, DL, Reg, VT);
@@ -1492,11 +1499,15 @@ SDValue R600TargetLowering::LowerFormalArguments(
     // thread group and global sizes.
     ISD::LoadExtType Ext = ISD::NON_EXTLOAD;
     if (MemVT.getScalarSizeInBits() != VT.getScalarSizeInBits()) {
-      // FIXME: This should really check the extload type, but the handling of
-      // extload vector parameters seems to be broken.
+      if (VT.isFloatingPoint()) {
+        Ext = ISD::EXTLOAD;
+      } else {
+        // FIXME: This should really check the extload type, but the handling of
+        // extload vector parameters seems to be broken.
 
-      // Ext = In.Flags.isSExt() ? ISD::SEXTLOAD : ISD::ZEXTLOAD;
-      Ext = ISD::SEXTLOAD;
+        // Ext = In.Flags.isSExt() ? ISD::SEXTLOAD : ISD::ZEXTLOAD;
+        Ext = ISD::SEXTLOAD;
+      }
     }
 
     // Compute the offset from the value.
@@ -2174,18 +2185,20 @@ SDNode *R600TargetLowering::PostISelFolding(MachineSDNode *Node,
 }
 
 TargetLowering::AtomicExpansionKind
-R600TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+R600TargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
   switch (RMW->getOperation()) {
   case AtomicRMWInst::Nand:
   case AtomicRMWInst::FAdd:
   case AtomicRMWInst::FSub:
   case AtomicRMWInst::FMax:
   case AtomicRMWInst::FMin:
+  case AtomicRMWInst::USubCond:
+  case AtomicRMWInst::USubSat:
     return AtomicExpansionKind::CmpXChg;
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
     // FIXME: Cayman at least appears to have instructions for this, but the
-    // instruction defintions appear to be missing.
+    // instruction definitions appear to be missing.
     return AtomicExpansionKind::CmpXChg;
   case AtomicRMWInst::Xchg: {
     const DataLayout &DL = RMW->getFunction()->getDataLayout();

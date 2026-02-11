@@ -7,6 +7,7 @@ set(LLVM_LINK_COMPONENTS
   CodeGen
   CodeGenTypes
   Core
+  Instrumentation
   MC
   MIRParser
   TargetParser

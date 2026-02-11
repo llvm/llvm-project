@@ -1,0 +1,61 @@
+## Does not work on windows (yet?) PDB debug-info likely does something wrong
+## with the header files.
+# XFAIL: target-windows
+
+## Test that `list header.h:<line>` works correctly when header is available.
+##
+# RUN: split-file %s %t
+
+# RUN: %clangxx_host -g %t/main_with_inlined.cc %t/foo.cc -o %t/main_with_inlined.out
+# RUN: %clangxx_host -g %t/main_no_inlined.cc %t/foo.cc -o %t/main_no_inlined.out
+
+# RUN: %lldb %t/main_with_inlined.out -o "list foo.h:2" -o "exit" 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CHECK-INLINED
+
+## Would be nice if this listed the header too - but probably not something
+## we want to support right now.
+# RUN: echo quit | %lldb %t/main_no_inlined.out -o "list foo.h:2" -o "exit" 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CHECK-NO-INLINED
+
+# CHECK-INLINED: 2      extern int* ptr;
+# CHECK-INLINED: 3   	void f(int x);
+# CHECK-INLINED: 4
+# CHECK-INLINED: 5   	inline void g(int x) {
+# CHECK-INLINED: 6   	  *ptr = x; // should crash here
+# CHECK-INLINED: 7   	}
+
+# CHECK-NO-INLINED: error: Could not find source file "foo.h".
+
+#--- foo.h
+// foo.h
+extern int* ptr;
+void f(int x);
+
+inline void g(int x) {
+  *ptr = x; // should crash here
+}
+
+#--- foo.cc
+#include "foo.h"
+
+int* ptr;
+
+void f(int x) {
+  *ptr = x;
+}
+
+#--- main_with_inlined.cc
+#include "foo.h"
+
+int main() {
+  g(123); // Call the inlined function
+  return 0;
+}
+
+#--- main_no_inlined.cc
+#include "foo.h"
+
+int main() {
+  f(234);
+  return 0;
+}

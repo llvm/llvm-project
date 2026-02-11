@@ -65,7 +65,7 @@ struct COFFParser {
       StringRef Name = Sec.Name;
 
       if (Name.size() <= COFF::NameSize) {
-        std::copy(Name.begin(), Name.end(), Sec.Header.Name);
+        llvm::copy(Name, Sec.Header.Name);
       } else {
         // Add string to the string table and format the index for output.
         unsigned Index = getStringIndex(Name);
@@ -75,7 +75,7 @@ struct COFFParser {
           return false;
         }
         Sec.Header.Name[0] = '/';
-        std::copy(str.begin(), str.end(), Sec.Header.Name + 1);
+        llvm::copy(str, Sec.Header.Name + 1);
       }
 
       if (Sec.Alignment) {
@@ -99,7 +99,7 @@ struct COFFParser {
       // store it in the string table.
       StringRef Name = Sym.Name;
       if (Name.size() <= COFF::NameSize) {
-        std::copy(Name.begin(), Name.end(), Sym.Header.Name);
+        llvm::copy(Name, Sym.Header.Name);
       } else {
         // Add string to the string table and format the index for output.
         unsigned Index = getStringIndex(Name);

@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
 
 
 namespace cwg2211 { // cwg2211: 8
@@ -108,7 +108,7 @@ namespace MultilevelSpecialization {
   template<> template<int a, int b>
     void B<int, int>::f(int i, int (&arr1)[a], int (&arr2)[b]) {}
     // since-cxx11-error@-1 {{out-of-line definition of 'f' does not match any declaration in 'cwg2233::MultilevelSpecialization::B<int, int>'}}
-    //   since-cxx11-note@#cwg2233-B {{defined here}}
+    //   since-cxx11-note@#cwg2233-B {{B defined here}}
   template<> template<>
     void B<int, int>::f<1, 1>(int i, int (&arr1a)[1], int (&arr2a)[1]) {}
 }
@@ -195,6 +195,17 @@ void g() {
 }
 #endif
 } // namespace cwg2277
+
+namespace cwg2285 { // cwg2285: 4
+// Note: Clang 4 implements this DR but it set a wrong value of `__cplusplus`
+#if __cplusplus >= 201703L
+  void test() {
+    using T = int[1];
+    auto [a] = T{a};
+    // since-cxx17-error@-1 {{binding 'a' cannot appear in the initializer of its own structured binding declaration}}
+  }
+#endif
+} // namespace cwg2285
 
 namespace cwg2292 { // cwg2292: 9
 #if __cplusplus >= 201103L

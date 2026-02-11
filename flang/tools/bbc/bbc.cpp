@@ -142,6 +142,12 @@ static llvm::cl::opt<bool>
                        llvm::cl::desc("enable openmp device compilation"),
                        llvm::cl::init(false));
 
+static llvm::cl::opt<std::string> enableDoConcurrentToOpenMPConversion(
+    "fdo-concurrent-to-openmp",
+    llvm::cl::desc(
+        "Try to map `do concurrent` loops to OpenMP [none|host|device]"),
+    llvm::cl::init("none"));
+
 static llvm::cl::opt<bool>
     enableOpenMPGPU("fopenmp-is-gpu",
                     llvm::cl::desc("enable openmp GPU target codegen"),
@@ -163,7 +169,7 @@ static llvm::cl::list<std::string> targetTriplesOpenMP(
 static llvm::cl::opt<uint32_t>
     setOpenMPVersion("fopenmp-version",
                      llvm::cl::desc("OpenMP standard version"),
-                     llvm::cl::init(11));
+                     llvm::cl::init(31));
 
 static llvm::cl::opt<uint32_t> setOpenMPTargetDebug(
     "fopenmp-target-debug",
@@ -217,9 +223,24 @@ static llvm::cl::opt<bool> enableCUDA("fcuda",
                                       llvm::cl::desc("enable CUDA Fortran"),
                                       llvm::cl::init(false));
 
+static llvm::cl::opt<bool>
+    enableDoConcurrentOffload("fdoconcurrent-offload",
+                              llvm::cl::desc("enable do concurrent offload"),
+                              llvm::cl::init(false));
+
+static llvm::cl::opt<bool>
+    disableCUDAWarpFunction("fcuda-disable-warp-function",
+                            llvm::cl::desc("Disable CUDA Warp Function"),
+                            llvm::cl::init(false));
+
 static llvm::cl::opt<std::string>
     enableGPUMode("gpu", llvm::cl::desc("Enable GPU Mode managed|unified"),
                   llvm::cl::init(""));
+
+static llvm::cl::opt<std::string>
+    compilerDirectiveSentinel("sentinel-test",
+                              llvm::cl::desc("Test additional sentinel"),
+                              llvm::cl::init("dir$"));
 
 static llvm::cl::opt<bool> fixedForm("ffixed-form",
                                      llvm::cl::desc("enable fixed form"),
@@ -244,6 +265,32 @@ static llvm::cl::opt<bool>
                   llvm::cl::desc("Follow Fortran 2003 rules for (re)allocating "
                                  "the LHS of the intrinsic assignment"),
                   llvm::cl::init(true));
+
+static llvm::cl::opt<bool> stackRepackArrays(
+    "fstack-repack-arrays",
+    llvm::cl::desc("Allocate temporary arrays for -frepack-arrays "
+                   "in stack memory"),
+    llvm::cl::init(false));
+
+static llvm::cl::opt<bool>
+    repackArrays("frepack-arrays",
+                 llvm::cl::desc("Pack non-contiguous assummed shape arrays "
+                                "into contiguous memory"),
+                 llvm::cl::init(false));
+
+static llvm::cl::opt<bool>
+    repackArraysWhole("frepack-arrays-continuity-whole",
+                      llvm::cl::desc("Repack arrays that are non-contiguous "
+                                     "in any dimension. If set to false, "
+                                     "only the arrays non-contiguous in the "
+                                     "leading dimension will be repacked"),
+                      llvm::cl::init(true));
+
+static llvm::cl::opt<std::string> complexRange(
+    "complex-range",
+    llvm::cl::desc("Controls the various implementations for complex "
+                   "multiplication and division [full|improved|basic]"),
+    llvm::cl::init(""));
 
 #define FLANG_EXCLUDE_CODEGEN
 #include "flang/Optimizer/Passes/CommandLineOpts.h"
@@ -274,13 +321,14 @@ createTargetMachine(llvm::StringRef targetTriple, std::string &error) {
   std::string triple{targetTriple};
   if (triple.empty())
     triple = llvm::sys::getDefaultTargetTriple();
+  llvm::Triple parsedTriple(triple);
 
   const llvm::Target *theTarget =
-      llvm::TargetRegistry::lookupTarget(triple, error);
+      llvm::TargetRegistry::lookupTarget(parsedTriple, error);
   if (!theTarget)
     return nullptr;
   return std::unique_ptr<llvm::TargetMachine>{
-      theTarget->createTargetMachine(triple, /*CPU=*/"",
+      theTarget->createTargetMachine(parsedTriple, /*CPU=*/"",
                                      /*Features=*/"", llvm::TargetOptions(),
                                      /*Reloc::Model=*/std::nullopt)};
 }
@@ -292,7 +340,19 @@ createTargetMachine(llvm::StringRef targetTriple, std::string &error) {
 static llvm::LogicalResult runOpenMPPasses(mlir::ModuleOp mlirModule) {
   mlir::PassManager pm(mlirModule->getName(),
                        mlir::OpPassManager::Nesting::Implicit);
-  fir::createOpenMPFIRPassPipeline(pm, enableOpenMPDevice);
+  using DoConcurrentMappingKind =
+      Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
+
+  fir::OpenMPFIRPassPipelineOpts opts;
+  opts.isTargetDevice = enableOpenMPDevice;
+  opts.doConcurrentMappingKind =
+      llvm::StringSwitch<DoConcurrentMappingKind>(
+          enableDoConcurrentToOpenMPConversion)
+          .Case("host", DoConcurrentMappingKind::DCMK_Host)
+          .Case("device", DoConcurrentMappingKind::DCMK_Device)
+          .Default(DoConcurrentMappingKind::DCMK_None);
+
+  fir::createOpenMPFIRPassPipeline(pm, opts);
   (void)mlir::applyPassManagerCLOptions(pm);
   if (mlir::failed(pm.run(mlirModule))) {
     llvm::errs() << "FATAL: failed to correctly apply OpenMP pass pipeline";
@@ -314,6 +374,9 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
 
   // prep for prescan and parse
   Fortran::parser::Parsing parsing{semanticsContext.allCookedSources()};
+  if (!compilerDirectiveSentinel.empty()) {
+    options.compilerDirectiveSentinels.push_back(compilerDirectiveSentinel);
+  }
   parsing.Prescan(path, options);
   if (!parsing.messages().empty() && (parsing.messages().AnyFatalError())) {
     llvm::errs() << programPrefix << "could not scan " << path << '\n';
@@ -363,7 +426,10 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   }
 
   if (pftDumpTest) {
-    if (auto ast = Fortran::lower::createPFT(parseTree, semanticsContext)) {
+    // Use default lowering options for PFT dump test
+    Fortran::lower::LoweringOptions loweringOptions{};
+    if (auto ast = Fortran::lower::createPFT(parseTree, semanticsContext,
+                                             loweringOptions)) {
       Fortran::lower::dumpPFT(llvm::outs(), *ast);
       return mlir::success();
     }
@@ -388,6 +454,14 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   loweringOptions.setIntegerWrapAround(integerWrapAround);
   loweringOptions.setInitGlobalZero(initGlobalZero);
   loweringOptions.setReallocateLHS(reallocateLHS);
+  loweringOptions.setStackRepackArrays(stackRepackArrays);
+  loweringOptions.setRepackArrays(repackArrays);
+  loweringOptions.setRepackArraysWhole(repackArraysWhole);
+  loweringOptions.setSkipExternalRttiDefinition(skipExternalRttiDefinition);
+  if (enableCUDA)
+    loweringOptions.setCUDARuntimeCheck(true);
+  if (complexRange == "improved" || complexRange == "basic")
+    loweringOptions.setComplexDivisionToRuntime(false);
   std::vector<Fortran::lower::EnvironmentDefault> envDefaults = {};
   Fortran::frontend::TargetOptions targetOpts;
   Fortran::frontend::CodeGenOptions cgOpts;
@@ -458,7 +532,9 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
 
     if (emitFIR && useHLFIR) {
       // lower HLFIR to FIR
-      fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP,
+      fir::EnableOpenMP enableOmp =
+          enableOpenMP ? fir::EnableOpenMP::Full : fir::EnableOpenMP::None;
+      fir::createHLFIRToFIRPassPipeline(pm, enableOmp,
                                         llvm::OptimizationLevel::O2);
       if (mlir::failed(pm.run(mlirModule))) {
         llvm::errs() << "FATAL: lowering from HLFIR to FIR failed";
@@ -474,6 +550,7 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
 
     // Add O2 optimizer pass pipeline.
     MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
+    config.SkipConvertComplexPow = targetMachine.getTargetTriple().isAMDGCN();
     if (enableOpenMP)
       config.EnableOpenMP = true;
     config.NSWOnLoopVarInc = !integerWrapAround;
@@ -559,11 +636,20 @@ int main(int argc, char **argv) {
     options.features.Enable(Fortran::common::LanguageFeature::CUDA);
   }
 
-  if (enableGPUMode == "managed") {
-    options.features.Enable(Fortran::common::LanguageFeature::CudaManaged);
-  } else if (enableGPUMode == "unified") {
-    options.features.Enable(Fortran::common::LanguageFeature::CudaUnified);
+  if (enableDoConcurrentOffload) {
+    options.features.Enable(
+        Fortran::common::LanguageFeature::DoConcurrentOffload);
   }
+
+  if (disableCUDAWarpFunction) {
+    options.features.Enable(
+        Fortran::common::LanguageFeature::CudaWarpMatchFunction, false);
+  }
+
+  if (enableGPUMode == "managed")
+    options.features.Enable(Fortran::common::LanguageFeature::CudaManaged);
+  else if (enableGPUMode == "unified")
+    options.features.Enable(Fortran::common::LanguageFeature::CudaUnified);
 
   if (fixedForm) {
     options.isFixedForm = fixedForm;

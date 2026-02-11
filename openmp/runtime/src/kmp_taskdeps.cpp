@@ -233,29 +233,32 @@ static inline void __kmp_track_dependence(kmp_int32 gtid, kmp_depnode_t *source,
   if (task_sink->is_taskgraph &&
       __kmp_tdg_is_recording(task_sink->tdg->tdg_status)) {
     kmp_node_info_t *source_info =
-        &task_sink->tdg->record_map[task_source->td_task_id];
+        &task_sink->tdg->record_map[task_source->td_tdg_task_id];
     bool exists = false;
     for (int i = 0; i < source_info->nsuccessors; i++) {
-      if (source_info->successors[i] == task_sink->td_task_id) {
+      if (source_info->successors[i] == task_sink->td_tdg_task_id) {
         exists = true;
         break;
       }
     }
     if (!exists) {
       if (source_info->nsuccessors >= source_info->successors_size) {
+        kmp_uint old_size = source_info->successors_size;
         source_info->successors_size = 2 * source_info->successors_size;
         kmp_int32 *old_succ_ids = source_info->successors;
         kmp_int32 *new_succ_ids = (kmp_int32 *)__kmp_allocate(
             source_info->successors_size * sizeof(kmp_int32));
+        KMP_MEMCPY(new_succ_ids, old_succ_ids, old_size * sizeof(kmp_int32));
         source_info->successors = new_succ_ids;
         __kmp_free(old_succ_ids);
       }
 
-      source_info->successors[source_info->nsuccessors] = task_sink->td_task_id;
+      source_info->successors[source_info->nsuccessors] =
+          task_sink->td_tdg_task_id;
       source_info->nsuccessors++;
 
       kmp_node_info_t *sink_info =
-          &(task_sink->tdg->record_map[task_sink->td_task_id]);
+          &(task_sink->tdg->record_map[task_sink->td_tdg_task_id]);
       sink_info->npredecessors++;
     }
   }
@@ -697,9 +700,9 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
       __kmp_tdg_is_recording(new_taskdata->tdg->tdg_status)) {
     kmp_tdg_info_t *tdg = new_taskdata->tdg;
     // extend record_map if needed
-    if (new_taskdata->td_task_id >= tdg->map_size) {
+    if (new_taskdata->td_tdg_task_id >= tdg->map_size) {
       __kmp_acquire_bootstrap_lock(&tdg->graph_lock);
-      if (new_taskdata->td_task_id >= tdg->map_size) {
+      if (new_taskdata->td_tdg_task_id >= tdg->map_size) {
         kmp_uint old_size = tdg->map_size;
         kmp_uint new_size = old_size * 2;
         kmp_node_info_t *old_record = tdg->record_map;
@@ -727,8 +730,8 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
       }
       __kmp_release_bootstrap_lock(&tdg->graph_lock);
     }
-    tdg->record_map[new_taskdata->td_task_id].task = new_task;
-    tdg->record_map[new_taskdata->td_task_id].parent_task =
+    tdg->record_map[new_taskdata->td_tdg_task_id].task = new_task;
+    tdg->record_map[new_taskdata->td_tdg_task_id].parent_task =
         new_taskdata->td_parent;
     KMP_ATOMIC_INC(&tdg->num_tasks);
   }
@@ -764,7 +767,7 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
 
     for (i = 0; i < ndeps; i++) {
       ompt_deps[i].variable.ptr = (void *)dep_list[i].base_addr;
-      if (dep_list[i].base_addr == KMP_SIZE_T_MAX)
+      if (dep_list[i].base_addr == (kmp_intptr_t)KMP_SIZE_T_MAX)
         ompt_deps[i].dependence_type = ompt_dependence_type_out_all_memory;
       else if (dep_list[i].flags.in && dep_list[i].flags.out)
         ompt_deps[i].dependence_type = ompt_dependence_type_inout;
@@ -781,7 +784,7 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
     }
     for (i = 0; i < ndeps_noalias; i++) {
       ompt_deps[ndeps + i].variable.ptr = (void *)noalias_dep_list[i].base_addr;
-      if (noalias_dep_list[i].base_addr == KMP_SIZE_T_MAX)
+      if (noalias_dep_list[i].base_addr == (kmp_intptr_t)KMP_SIZE_T_MAX)
         ompt_deps[ndeps + i].dependence_type =
             ompt_dependence_type_out_all_memory;
       else if (noalias_dep_list[i].flags.in && noalias_dep_list[i].flags.out)

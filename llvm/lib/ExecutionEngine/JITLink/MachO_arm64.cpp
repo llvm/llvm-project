@@ -261,7 +261,7 @@ private:
 
       // Skip relocations virtual sections.
       if (S.isVirtual()) {
-        if (S.relocation_begin() != S.relocation_end())
+        if (!S.relocations().empty())
           return make_error<JITLinkError>("Virtual section contains "
                                           "relocations");
         continue;
@@ -545,7 +545,7 @@ private:
     case MachONegDelta64:
       return "MachONegDelta64";
     default:
-      return getGenericEdgeKindName(static_cast<Edge::Kind>(R));
+      return getGenericEdgeKindName(R);
     }
   }
 
@@ -599,8 +599,7 @@ Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromMachOObject_arm64(
 }
 
 static Error applyPACSigningToModInitPointers(LinkGraph &G) {
-  assert(G.getTargetTriple().getSubArch() == Triple::AArch64SubArch_arm64e &&
-         "PAC signing only valid for arm64e");
+  assert(G.getTargetTriple().isArm64e() && "PAC signing only valid for arm64e");
 
   if (auto *ModInitSec = G.findSectionByName("__DATA,__mod_init_func")) {
     for (auto *B : ModInitSec->blocks()) {
@@ -639,14 +638,26 @@ struct CompactUnwindTraits_MachO_arm64
   constexpr static uint32_t EncodingModeMask = 0x0f000000;
   constexpr static uint32_t DWARFSectionOffsetMask = 0x00ffffff;
 
+  constexpr static uint32_t FramelessMode = 0x02000000;
+  constexpr static uint32_t DWARFMode = 0x03000000;
+  constexpr static uint32_t FrameMode = 0x04000000;
+
   using GOTManager = aarch64::GOTTableManager;
 
   static bool encodingSpecifiesDWARF(uint32_t Encoding) {
-    constexpr uint32_t DWARFMode = 0x03000000;
     return (Encoding & EncodingModeMask) == DWARFMode;
   }
 
-  static bool encodingCannotBeMerged(uint32_t Encoding) { return false; }
+  static bool encodingCanBeMerged(uint32_t Encoding) {
+    switch (Encoding & EncodingModeMask) {
+    case FramelessMode:
+    case FrameMode:
+      return true;
+    case DWARFMode:
+    default:
+      return false;
+    }
+  }
 };
 
 void link_MachO_arm64(std::unique_ptr<LinkGraph> G,

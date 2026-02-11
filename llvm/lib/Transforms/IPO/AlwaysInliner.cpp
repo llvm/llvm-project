@@ -122,11 +122,9 @@ struct AlwaysInlinerLegacyPass : public ModulePass {
       : AlwaysInlinerLegacyPass(/*InsertLifetime*/ true) {}
 
   AlwaysInlinerLegacyPass(bool InsertLifetime)
-      : ModulePass(ID), InsertLifetime(InsertLifetime) {
-    initializeAlwaysInlinerLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+      : ModulePass(ID), InsertLifetime(InsertLifetime) {}
 
-  /// Main run interface method.  We override here to avoid calling skipSCC().
+  /// Main run interface method.
   bool runOnModule(Module &M) override {
 
     auto &PSI = getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();

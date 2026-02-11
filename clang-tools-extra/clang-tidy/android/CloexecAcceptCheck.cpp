@@ -1,4 +1,4 @@
-//===--- CloexecAcceptCheck.cpp - clang-tidy-------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "CloexecAcceptCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -27,7 +26,7 @@ void CloexecAcceptCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void CloexecAcceptCheck::check(const MatchFinder::MatchResult &Result) {
-  std::string ReplacementText =
+  const std::string ReplacementText =
       (Twine("accept4(") + getSpellingArg(Result, 0) + ", " +
        getSpellingArg(Result, 1) + ", " + getSpellingArg(Result, 2) +
        ", SOCK_CLOEXEC)")

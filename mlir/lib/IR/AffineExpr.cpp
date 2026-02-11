@@ -8,7 +8,6 @@
 
 #include <cmath>
 #include <cstdint>
-#include <limits>
 #include <utility>
 
 #include "AffineExprDetail.h"
@@ -16,8 +15,8 @@
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/IntegerSet.h"
-#include "mlir/Support/TypeID.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/MathExtras.h"
 #include <numeric>
 #include <optional>
@@ -597,7 +596,11 @@ static AffineExpr simplifySemiAffine(AffineExpr expr, unsigned numDims,
       return getAffineBinaryOpExpr(expr.getKind(), sLHS, sRHS);
     if (expr.getKind() == AffineExprKind::Mod)
       return getAffineConstantExpr(0, expr.getContext());
-    return symbolicDivide(sLHS, symbolPos, expr.getKind());
+    AffineExpr simplifiedQuotient =
+        symbolicDivide(sLHS, symbolPos, expr.getKind());
+    return simplifiedQuotient
+               ? simplifiedQuotient
+               : getAffineBinaryOpExpr(expr.getKind(), sLHS, sRHS);
   }
   }
   llvm_unreachable("Unknown AffineExpr");
@@ -650,9 +653,9 @@ AffineExpr mlir::getAffineConstantExpr(int64_t constant, MLIRContext *context) {
 SmallVector<AffineExpr>
 mlir::getAffineConstantExprs(ArrayRef<int64_t> constants,
                              MLIRContext *context) {
-  return llvm::to_vector(llvm::map_range(constants, [&](int64_t constant) {
+  return llvm::map_to_vector(constants, [&](int64_t constant) {
     return getAffineConstantExpr(constant, context);
-  }));
+  });
 }
 
 /// Simplify add expression. Return nullptr if it can't be simplified.
@@ -777,7 +780,43 @@ static AffineExpr simplifyAdd(AffineExpr lhs, AffineExpr rhs) {
   if (isPositiveRhs && lhs == llrhs && rlrhs == -rrhs) {
     return lhs % rlrhs;
   }
+
+  // Try simplify lhs's last operand with rhs. e.g:
+  // (s0 * 64 + s1) + (s1 // c * -c) --->
+  // s0 * 64 + (s1 + s1 // c * -c) -->
+  // s0 * 64 + s1 % c
+  if (lBinOpExpr && lBinOpExpr.getKind() == AffineExprKind::Add) {
+    if (auto simplified = simplifyAdd(lBinOpExpr.getRHS(), rhs))
+      return lBinOpExpr.getLHS() + simplified;
+  }
   return nullptr;
+}
+
+/// Get the canonical order of two commutative exprs arguments.
+static std::pair<AffineExpr, AffineExpr>
+orderCommutativeArgs(AffineExpr expr1, AffineExpr expr2) {
+  auto sym1 = dyn_cast<AffineSymbolExpr>(expr1);
+  auto sym2 = dyn_cast<AffineSymbolExpr>(expr2);
+  // Try to order by symbol/dim position first.
+  if (sym1 && sym2)
+    return sym1.getPosition() < sym2.getPosition() ? std::pair{expr1, expr2}
+                                                   : std::pair{expr2, expr1};
+
+  auto dim1 = dyn_cast<AffineDimExpr>(expr1);
+  auto dim2 = dyn_cast<AffineDimExpr>(expr2);
+  if (dim1 && dim2)
+    return dim1.getPosition() < dim2.getPosition() ? std::pair{expr1, expr2}
+                                                   : std::pair{expr2, expr1};
+
+  // Put dims before symbols.
+  if (dim1 && sym2)
+    return {dim1, sym2};
+
+  if (sym1 && dim2)
+    return {dim2, sym1};
+
+  // Otherwise, keep original order.
+  return {expr1, expr2};
 }
 
 AffineExpr AffineExpr::operator+(int64_t v) const {
@@ -787,9 +826,11 @@ AffineExpr AffineExpr::operator+(AffineExpr other) const {
   if (auto simplified = simplifyAdd(*this, other))
     return simplified;
 
+  auto [lhs, rhs] = orderCommutativeArgs(*this, other);
+
   StorageUniquer &uniquer = getContext()->getAffineUniquer();
   return uniquer.get<AffineBinaryOpExprStorage>(
-      /*initFn=*/{}, static_cast<unsigned>(AffineExprKind::Add), *this, other);
+      /*initFn=*/{}, static_cast<unsigned>(AffineExprKind::Add), lhs, rhs);
 }
 
 /// Simplify a multiply expression. Return nullptr if it can't be simplified.
@@ -852,9 +893,11 @@ AffineExpr AffineExpr::operator*(AffineExpr other) const {
   if (auto simplified = simplifyMul(*this, other))
     return simplified;
 
+  auto [lhs, rhs] = orderCommutativeArgs(*this, other);
+
   StorageUniquer &uniquer = getContext()->getAffineUniquer();
   return uniquer.get<AffineBinaryOpExprStorage>(
-      /*initFn=*/{}, static_cast<unsigned>(AffineExprKind::Mul), *this, other);
+      /*initFn=*/{}, static_cast<unsigned>(AffineExprKind::Mul), lhs, rhs);
 }
 
 // Unary minus, delegate to operator*.
@@ -1170,11 +1213,15 @@ static AffineExpr getSemiAffineExprFromFlatForm(ArrayRef<int64_t> flatExprs,
   // the indices in `coefficients` map, and affine expression corresponding to
   // in indices in `indexToExprMap` map.
   for (const auto &it : llvm::enumerate(localExprs)) {
-    AffineExpr expr = it.value();
     if (flatExprs[numDims + numSymbols + it.index()] == 0)
       continue;
-    AffineExpr lhs = cast<AffineBinaryOpExpr>(expr).getLHS();
-    AffineExpr rhs = cast<AffineBinaryOpExpr>(expr).getRHS();
+    AffineExpr expr = it.value();
+    auto binaryExpr = dyn_cast<AffineBinaryOpExpr>(expr);
+    if (!binaryExpr)
+      continue;
+
+    AffineExpr lhs = binaryExpr.getLHS();
+    AffineExpr rhs = binaryExpr.getRHS();
     if (!((isa<AffineDimExpr>(lhs) || isa<AffineSymbolExpr>(lhs)) &&
           (isa<AffineDimExpr>(rhs) || isa<AffineSymbolExpr>(rhs) ||
            isa<AffineConstantExpr>(rhs)))) {
@@ -1354,7 +1401,7 @@ LogicalResult SimpleAffineExprFlattener::visitModExpr(AffineBinaryOpExpr expr) {
       break;
   // If yes, modulo expression here simplifies to zero.
   if (i == lhs.size()) {
-    std::fill(lhs.begin(), lhs.end(), 0);
+    llvm::fill(lhs, 0);
     return success();
   }
 
@@ -1434,7 +1481,7 @@ LogicalResult SimpleAffineExprFlattener::addLocalVariableSemiAffine(
     if (failed(addLocalIdSemiAffine(lhs, rhs, localExpr)))
       return failure();
   }
-  std::fill(result.begin(), result.end(), 0);
+  llvm::fill(result, 0);
   if (loc == -1)
     result[getLocalVarStartIndex() + numLocals - 1] = 1;
   else
@@ -1521,7 +1568,7 @@ LogicalResult SimpleAffineExprFlattener::visitDivExpr(AffineBinaryOpExpr expr,
   }
   // Set the expression on stack to the local var introduced to capture the
   // result of the division (floor or ceil).
-  std::fill(lhs.begin(), lhs.end(), 0);
+  llvm::fill(lhs, 0);
   if (loc == -1)
     lhs[getLocalVarStartIndex() + numLocals - 1] = 1;
   else

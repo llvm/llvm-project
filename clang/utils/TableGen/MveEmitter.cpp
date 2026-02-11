@@ -753,7 +753,27 @@ public:
     OS << "})";
   }
   void morePrerequisites(std::vector<Ptr> &output) const override {
-    output.insert(output.end(), Args.begin(), Args.end());
+    llvm::append_range(output, Args);
+  }
+};
+
+// Result subclass that generates
+// Builder.getIsFPConstrained() ? <Standard> : <StrictFp>
+class StrictFpAltResult : public Result {
+public:
+  Ptr Standard;
+  Ptr StrictFp;
+  StrictFpAltResult(Ptr Standard, Ptr StrictFp)
+      : Standard(Standard), StrictFp(StrictFp) {}
+  void genCode(raw_ostream &OS,
+               CodeGenParamAllocator &ParamAlloc) const override {
+    OS << "!Builder.getIsFPConstrained() ? ";
+    Standard->genCode(OS, ParamAlloc);
+    OS << " : ";
+    StrictFp->genCode(OS, ParamAlloc);
+  }
+  void morePrerequisites(std::vector<Ptr> &output) const override {
+    Standard->morePrerequisites(output);
   }
 };
 
@@ -1239,7 +1259,10 @@ Result::Ptr EmitterBase::getCodeForDag(const DagInit *D,
     std::vector<Result::Ptr> Args;
     for (unsigned i = 0, e = D->getNumArgs(); i < e; ++i)
       Args.push_back(getCodeForDagArg(D, i, Scope, Param));
-    if (Op->isSubClassOf("IRBuilderBase")) {
+
+    auto GenIRBuilderBase = [&](const Record *Op) -> Result::Ptr {
+      assert(Op->isSubClassOf("IRBuilderBase") &&
+             "Expected IRBuilderBase in GenIRBuilderBase\n");
       std::set<unsigned> AddressArgs;
       std::map<unsigned, std::string> IntegerArgs;
       for (const Record *sp : Op->getValueAsListOfDefs("special_params")) {
@@ -1252,7 +1275,10 @@ Result::Ptr EmitterBase::getCodeForDag(const DagInit *D,
       }
       return std::make_shared<IRBuilderResult>(Op->getValueAsString("prefix"),
                                                Args, AddressArgs, IntegerArgs);
-    } else if (Op->isSubClassOf("IRIntBase")) {
+    };
+    auto GenIRIntBase = [&](const Record *Op) -> Result::Ptr {
+      assert(Op->isSubClassOf("IRIntBase") &&
+             "Expected IRIntBase in GenIRIntBase\n");
       std::vector<const Type *> ParamTypes;
       for (const Record *RParam : Op->getValueAsListOfDefs("params"))
         ParamTypes.push_back(getType(RParam, Param));
@@ -1260,6 +1286,22 @@ Result::Ptr EmitterBase::getCodeForDag(const DagInit *D,
       if (Op->getValueAsBit("appendKind"))
         IntName += "_" + toLetter(cast<ScalarType>(Param)->kind());
       return std::make_shared<IRIntrinsicResult>(IntName, ParamTypes, Args);
+    };
+
+    if (Op->isSubClassOf("IRBuilderBase")) {
+      return GenIRBuilderBase(Op);
+    } else if (Op->isSubClassOf("IRIntBase")) {
+      return GenIRIntBase(Op);
+    } else if (Op->isSubClassOf("strictFPAlt")) {
+      auto StardardBuilder = Op->getValueAsDef("standard");
+      Result::Ptr Standard = StardardBuilder->isSubClassOf("IRBuilderBase")
+                                 ? GenIRBuilderBase(StardardBuilder)
+                                 : GenIRIntBase(StardardBuilder);
+      auto StrictBuilder = Op->getValueAsDef("strictfp");
+      Result::Ptr StrictFp = StrictBuilder->isSubClassOf("IRBuilderBase")
+                                 ? GenIRBuilderBase(StrictBuilder)
+                                 : GenIRIntBase(StrictBuilder);
+      return std::make_shared<StrictFpAltResult>(Standard, StrictFp);
     } else {
       PrintFatalError("Unsupported dag node " + Op->getName());
     }
@@ -1550,18 +1592,14 @@ struct OutputIntrinsic {
   std::string Name;
   ComparableStringVector ParamValues;
   bool operator<(const OutputIntrinsic &rhs) const {
-    if (Name != rhs.Name)
-      return Name < rhs.Name;
-    return ParamValues < rhs.ParamValues;
+    return std::tie(Name, ParamValues) < std::tie(rhs.Name, rhs.ParamValues);
   }
 };
 struct MergeableGroup {
   std::string Code;
   ComparableStringVector ParamTypes;
   bool operator<(const MergeableGroup &rhs) const {
-    if (Code != rhs.Code)
-      return Code < rhs.Code;
-    return ParamTypes < rhs.ParamTypes;
+    return std::tie(Code, ParamTypes) < std::tie(rhs.Code, rhs.ParamTypes);
   }
 };
 
@@ -1688,7 +1726,8 @@ void EmitterBase::EmitBuiltinCG(raw_ostream &OS) {
         OS << "  case ARM::BI__builtin_arm_" << OI.Int->builtinExtension()
            << "_" << OI.Name << ":\n";
         for (size_t i = 0, e = MG.ParamTypes.size(); i < e; ++i)
-          OS << "    Param" << utostr(i) << " = " << OI.ParamValues[i] << ";\n";
+          OS << "    Param" << utostr(i) << " = static_cast<"
+             << MG.ParamTypes[i] << ">(" << OI.ParamValues[i] << ");\n";
         OS << "    break;\n";
       }
       OS << "  }\n";

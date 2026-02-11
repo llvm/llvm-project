@@ -4,6 +4,8 @@ permissions:
   contents: read # Default everything to read-only
 
 on:
+  schedule:
+    - cron: "0 0 * * 6"
   workflow_dispatch:
     inputs:
       release-version:
@@ -57,7 +59,7 @@ jobs:
   setup-variables:
     if: >-
       (github.event_name != 'pull_request' || github.event.action != 'closed')
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       release-version: ${{ steps.vars.outputs.release-version }}
       upload: ${{ steps.vars.outputs.upload }}
@@ -67,7 +69,7 @@ jobs:
         run: |
           upload="${{ inputs.upload }}"
           release_version="${{ inputs.release-version }}"
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
+          if [ "${{ github.event_name }}" = "pull_request" ] || [ "${{ github.event_name }}" = "schedule" ]; then
             upload="false"
             release_version=""
           fi
@@ -85,11 +87,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # We use ubuntu-22.04 rather than the latest version to make the built
+        # binaries more portable (eg functional aginast older glibc).
         runs-on:
           - ubuntu-22.04
           - ubuntu-22.04-arm
-          - macos-13
           - macos-14
+          - windows-2022
+          - windows-11-arm
 
     uses: ./.github/workflows/release-binaries.yml
     with:

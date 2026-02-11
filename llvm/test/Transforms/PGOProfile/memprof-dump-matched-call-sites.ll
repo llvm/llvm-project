@@ -34,7 +34,7 @@
 ; REQUIRES: x86_64-linux
 ; RUN: split-file %s %t
 ; RUN: llvm-profdata merge %t/memprof-dump-matched-call-site.yaml -o %t/memprof-dump-matched-call-site.memprofdata
-; RUN: opt < %t/memprof-dump-matched-call-site.ll -passes='memprof-use<profile-filename=%t/memprof-dump-matched-call-site.memprofdata>' -memprof-print-match-info -S 2>&1 | FileCheck %s
+; RUN: opt < %t/memprof-dump-matched-call-site.ll -passes='memprof-use<profile-filename=%t/memprof-dump-matched-call-site.memprofdata>' -memprof-print-match-info -S -pass-remarks=memprof 2>&1 | FileCheck %s
 
 ;--- memprof-dump-matched-call-site.yaml
 ---
@@ -42,16 +42,19 @@ HeapProfileRecords:
   - GUID:            main
     AllocSites:      []
     CallSites:
-      - - { Function: main, LineOffset: 1, Column: 3, IsInlineFrame: false }
+      - Frames:
+        - { Function: main, LineOffset: 1, Column: 3, IsInlineFrame: false }
   - GUID:            _ZL2f1v
     AllocSites:      []
     CallSites:
-      - - { Function: _ZL2f2v, LineOffset: 0, Column: 28, IsInlineFrame: true }
+      - Frames:
+        - { Function: _ZL2f2v, LineOffset: 0, Column: 28, IsInlineFrame: true }
         - { Function: _ZL2f1v, LineOffset: 0, Column: 54, IsInlineFrame: false }
   - GUID:            _ZL2f2v
     AllocSites:      []
     CallSites:
-      - - { Function: _ZL2f2v, LineOffset: 0, Column: 28, IsInlineFrame: true }
+      - Frames:
+        - { Function: _ZL2f2v, LineOffset: 0, Column: 28, IsInlineFrame: true }
         - { Function: _ZL2f1v, LineOffset: 0, Column: 54, IsInlineFrame: false }
   - GUID:            _Z2f3v
     AllocSites:
@@ -68,7 +71,13 @@ HeapProfileRecords:
     CallSites:       []
 ...
 ;--- memprof-dump-matched-call-site.ll
-; CHECK: MemProf notcold context with id 3894143216621363392 has total profiled size 4 is matched
+
+;; From -pass-remarks=memprof
+; CHECK: remark: match.cc:18:3: call in function main matched callsite with frame count 1
+; CHECK: remark: match.cc:13:28: call in function _ZL2f1v matched callsite with frame count 2
+
+;; From -memprof-print-match-info
+; CHECK: MemProf notcold context with id 3894143216621363392 has total profiled size 4 is matched with 1 frames
 ; CHECK: MemProf callsite match for inline call stack 4745611964195289084 10616861955219347331
 ; CHECK: MemProf callsite match for inline call stack 5401059281181789382
 

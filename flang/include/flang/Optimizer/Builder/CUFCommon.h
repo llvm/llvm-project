@@ -14,9 +14,11 @@
 #include "mlir/IR/BuiltinOps.h"
 
 static constexpr llvm::StringRef cudaDeviceModuleName = "cuda_device_mod";
+static constexpr llvm::StringRef cudaSharedMemSuffix = "__shared_mem__";
 
 namespace fir {
 class FirOpBuilder;
+class KindMapping;
 } // namespace fir
 
 namespace cuf {
@@ -25,10 +27,21 @@ namespace cuf {
 mlir::gpu::GPUModuleOp getOrCreateGPUModule(mlir::ModuleOp mod,
                                             mlir::SymbolTable &symTab);
 
-bool isInCUDADeviceContext(mlir::Operation *op);
+bool isCUDADeviceContext(mlir::Operation *op);
+bool isCUDADeviceContext(mlir::Region &,
+                         bool isDoConcurrentOffloadEnabled = false);
 bool isRegisteredDeviceGlobal(fir::GlobalOp op);
+bool isRegisteredDeviceAttr(std::optional<cuf::DataAttribute> attr);
 
 void genPointerSync(const mlir::Value box, fir::FirOpBuilder &builder);
+
+int computeElementByteSize(mlir::Location loc, mlir::Type type,
+                           fir::KindMapping &kindMap,
+                           bool emitErrorOnFailure = true);
+
+mlir::Value computeElementCount(mlir::PatternRewriter &rewriter,
+                                mlir::Location loc, mlir::Value shapeOperand,
+                                mlir::Type seqType, mlir::Type targetType);
 
 } // namespace cuf
 

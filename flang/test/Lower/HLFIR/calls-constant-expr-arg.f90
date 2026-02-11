@@ -18,7 +18,7 @@ end subroutine sub
 ! CHECK-LABEL:   func.func @_QPsub(
 ! CHECK-SAME:                      %[[VAL_0:.*]]: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "i"},
 ! CHECK-SAME:                      %[[VAL_1:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFsubEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFsubEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<i32>
 ! CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (i32) -> i64
 ! CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (i64) -> index
@@ -26,7 +26,7 @@ end subroutine sub
 ! CHECK:           %[[VAL_7:.*]] = arith.cmpi sgt, %[[VAL_5]], %[[VAL_6]] : index
 ! CHECK:           %[[VAL_8:.*]] = arith.select %[[VAL_7]], %[[VAL_5]], %[[VAL_6]] : index
 ! CHECK:           %[[VAL_9:.*]] = fir.shape %[[VAL_8]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_9]]) dummy_scope %{{[0-9]+}} {uniq_name = "_QFsubEi"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>)
+! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_9]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFsubEi"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>)
 ! CHECK:           %[[VAL_11:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 2 : index
 ! CHECK:           %[[VAL_13:.*]] = arith.constant 0 : index
@@ -56,8 +56,8 @@ end subroutine test
 ! CHECK:           %[[VAL_5:.*]] = hlfir.as_expr %[[VAL_3]]#0 : (!fir.ref<!fir.array<5xi32>>) -> !hlfir.expr<5xi32>
 ! CHECK:           %[[VAL_6:.*]]:3 = hlfir.associate %[[VAL_5]](%[[VAL_2]]) {adapt.valuebyref} : (!hlfir.expr<5xi32>, !fir.shape<1>) -> (!fir.ref<!fir.array<5xi32>>, !fir.ref<!fir.array<5xi32>>, i1)
 ! CHECK:           %[[VAL_7:.*]]:3 = hlfir.associate %[[VAL_4]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
-! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_6]]#1 : (!fir.ref<!fir.array<5xi32>>) -> !fir.ref<!fir.array<?xi32>>
-! CHECK:           fir.call @_QPsub(%[[VAL_8]], %[[VAL_7]]#1) fastmath<contract> : (!fir.ref<!fir.array<?xi32>>, !fir.ref<i32>) -> ()
+! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_6]]#0 : (!fir.ref<!fir.array<5xi32>>) -> !fir.ref<!fir.array<?xi32>>
+! CHECK:           fir.call @_QPsub(%[[VAL_8]], %[[VAL_7]]#0) fastmath<contract> : (!fir.ref<!fir.array<?xi32>>, !fir.ref<i32>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_6]]#1, %[[VAL_6]]#2 : !fir.ref<!fir.array<5xi32>>, i1
 ! CHECK:           hlfir.end_associate %[[VAL_7]]#1, %[[VAL_7]]#2 : !fir.ref<i32>, i1
 ! CHECK:           return

@@ -24,6 +24,7 @@
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/Support/DJB.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/LockFileManager.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/OnDiskHashTable.h"
@@ -250,6 +251,9 @@ GlobalModuleIndex::~GlobalModuleIndex() {
 
 std::pair<GlobalModuleIndex *, llvm::Error>
 GlobalModuleIndex::readIndex(StringRef Path) {
+  // This is a compiler-internal input/output, let's bypass the sandbox.
+  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
   // Load the index file, if it's there.
   llvm::SmallString<128> IndexPath;
   IndexPath += Path;
@@ -843,27 +847,29 @@ llvm::Error
 GlobalModuleIndex::writeIndex(FileManager &FileMgr,
                               const PCHContainerReader &PCHContainerRdr,
                               StringRef Path) {
+  // This is a compiler-internal input/output, let's bypass the sandbox.
+  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
   llvm::SmallString<128> IndexPath;
   IndexPath += Path;
   llvm::sys::path::append(IndexPath, IndexFileName);
 
   // Coordinate building the global index file with other processes that might
   // try to do the same.
-  llvm::LockFileManager Locked(IndexPath);
-  switch (Locked) {
-  case llvm::LockFileManager::LFS_Error:
+  llvm::LockFileManager Lock(IndexPath);
+  bool Owned;
+  if (llvm::Error Err = Lock.tryLock().moveInto(Owned)) {
+    llvm::consumeError(std::move(Err));
     return llvm::createStringError(std::errc::io_error, "LFS error");
-
-  case llvm::LockFileManager::LFS_Owned:
-    // We're responsible for building the index ourselves. Do so below.
-    break;
-
-  case llvm::LockFileManager::LFS_Shared:
+  }
+  if (!Owned) {
     // Someone else is responsible for building the index. We don't care
     // when they finish, so we're done.
     return llvm::createStringError(std::errc::device_or_resource_busy,
                                    "someone else is building the index");
   }
+
+  // We're responsible for building the index ourselves.
 
   // The module index builder.
   GlobalModuleIndexBuilder Builder(FileMgr, PCHContainerRdr);

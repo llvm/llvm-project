@@ -48,7 +48,7 @@ Sections:
 # GNU-NEXT: FreeBSD              0x00000007	NT_FREEBSD_ARCH_TAG (architecture tag)
 # GNU-NEXT:   Arch tag: aarch64
 # GNU-NEXT: FreeBSD              0x00000004	NT_FREEBSD_FEATURE_CTL (FreeBSD feature control)
-# GNU-NEXT:   Feature flags: ASLR_DISABLE PROTMAX_DISABLE STKGAP_DISABLE WXNEEDED LA48 ASG_DISABLE (0xFFFFFFFF)
+# GNU-NEXT:   Feature flags: ASLR_DISABLE PROTMAX_DISABLE STKGAP_DISABLE WXNEEDED LA48 ASG_DISABLE (0xffffffff)
 # GNU-NEXT: FreeBSD              0x00000001	NT_FREEBSD_FEATURE_CTL (FreeBSD feature control)
 # GNU-NEXT:   description data: 00
 # GNU-NEXT: FreeBSD              0x00000004	NT_FREEBSD_NOINIT_TAG (no .init tag)
@@ -91,7 +91,7 @@ Sections:
 # LLVM-NEXT:            Owner: FreeBSD
 # LLVM-NEXT:            Data size: 0x4
 # LLVM-NEXT:            Type: NT_FREEBSD_FEATURE_CTL (FreeBSD feature control)
-# LLVM-NEXT:            Feature flags: ASLR_DISABLE PROTMAX_DISABLE STKGAP_DISABLE WXNEEDED LA48 ASG_DISABLE (0xFFFFFFFF)
+# LLVM-NEXT:            Feature flags: ASLR_DISABLE PROTMAX_DISABLE STKGAP_DISABLE WXNEEDED LA48 ASG_DISABLE (0xffffffff)
 # LLVM-NEXT:        }
 # LLVM-NEXT:        {
 # LLVM-NEXT:            Owner: FreeBSD

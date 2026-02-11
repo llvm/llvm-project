@@ -49,12 +49,12 @@ private:
 
 public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter() _NOEXCEPT : __i_() {}
-  template <
-      class _OtherIter,
-      __enable_if_t< _And< is_convertible<const _OtherIter&, _Iter>,
-                           _Or<is_same<reference, __iter_reference<_OtherIter> >,
-                               is_same<reference, __make_const_lvalue_ref<__iter_reference<_OtherIter> > > > >::value,
-                     int> = 0>
+  template <class _OtherIter,
+            __enable_if_t<
+                _And<is_convertible<const _OtherIter&, _Iter>,
+                     _Or<is_same<reference, __iterator_reference<_OtherIter> >,
+                         is_same<reference, __make_const_lvalue_ref<__iterator_reference<_OtherIter> > > > >::value,
+                int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter(const __wrap_iter<_OtherIter>& __u) _NOEXCEPT
       : __i_(__u.__i_) {}
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 reference operator*() const _NOEXCEPT { return *__i_; }
@@ -112,11 +112,13 @@ private:
   template <class _CharT, class _Traits>
   friend class basic_string_view;
   template <class _Tp, class _Alloc>
-  friend class _LIBCPP_TEMPLATE_VIS vector;
+  friend class vector;
   template <class _Tp, size_t>
-  friend class _LIBCPP_TEMPLATE_VIS span;
+  friend class span;
   template <class _Tp, size_t _Size>
   friend struct array;
+  template <class _Tp, class>
+  friend struct __optional_iterator;
 };
 
 template <class _Iter1>
@@ -145,8 +147,8 @@ operator<(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXC
 
 #if _LIBCPP_STD_VER <= 17
 template <class _Iter1>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
-operator!=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI
+_LIBCPP_CONSTEXPR bool operator!=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT {
   return !(__x == __y);
 }
 
@@ -212,9 +214,8 @@ operator<=>(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) noex
 template <class _Iter1, class _Iter2>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
 #ifndef _LIBCPP_CXX03_LANG
-    auto
-    operator-(const __wrap_iter<_Iter1>& __x,
-              const __wrap_iter<_Iter2>& __y) _NOEXCEPT->decltype(__x.base() - __y.base())
+auto operator-(const __wrap_iter<_Iter1>& __x,
+               const __wrap_iter<_Iter2>& __y) _NOEXCEPT->decltype(__x.base() - __y.base())
 #else
 typename __wrap_iter<_Iter1>::difference_type
 operator-(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
@@ -236,7 +237,7 @@ struct __libcpp_is_contiguous_iterator<__wrap_iter<_It> > : true_type {};
 #endif
 
 template <class _It>
-struct _LIBCPP_TEMPLATE_VIS pointer_traits<__wrap_iter<_It> > {
+struct pointer_traits<__wrap_iter<_It> > {
   typedef __wrap_iter<_It> pointer;
   typedef typename pointer_traits<_It>::element_type element_type;
   typedef typename pointer_traits<_It>::difference_type difference_type;

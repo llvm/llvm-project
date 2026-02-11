@@ -45,6 +45,21 @@ private:
 
   bool legalizeUITOFP(MachineInstr &MI, MachineRegisterInfo &MRI,
                       LegalizerHelper &Helper) const;
+
+  bool legalizeNarrowingStore(MachineInstr &MI, MachineRegisterInfo &MRI,
+                              LegalizerHelper &Helper) const;
+
+  bool legalizeSITOFP(MachineInstr &MI, MachineRegisterInfo &MRI,
+                      LegalizerHelper &Helper) const;
+
+  bool legalizeFPTOSI(MachineInstr &MI, MachineRegisterInfo &MRI,
+                      LegalizerHelper &Helper) const;
+
+  bool legalizeGETROUNDING(MachineInstr &MI, MachineRegisterInfo &MRI,
+                           LegalizerHelper &Helper) const;
+
+  bool legalizeSETROUNDING(MachineInstr &MI, MachineRegisterInfo &MRI,
+                           LegalizerHelper &Helper) const;
 };
 } // namespace llvm
 #endif

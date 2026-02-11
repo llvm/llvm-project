@@ -3,6 +3,8 @@
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64,+real-true16 -show-encoding %s | FileCheck --check-prefixes=GFX12,W64 %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,+real-true16 -filetype=null %s 2>&1 | FileCheck --check-prefix=W32-ERR --implicit-check-not=error: %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64,+real-true16 -filetype=null %s 2>&1 | FileCheck --check-prefix=W64-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -mattr=+wavefrontsize32,+real-true16 -show-encoding %s | FileCheck --check-prefixes=GFX12,W32 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -mattr=-wavefrontsize32,+wavefrontsize64,+real-true16 -show-encoding %s | FileCheck --check-prefixes=GFX12,W64 %s
 
 v_add_co_ci_u32_e64_dpp v5, s6, v1, v2, s3 dpp8:[7,6,5,4,3,2,1,0]
 // W32: v_add_co_ci_u32_e64_dpp v5, s6, v1, v2, s3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x06,0x20,0xd5,0xe9,0x04,0x0e,0x00,0x01,0x77,0x39,0x05]
@@ -25,20 +27,20 @@ v_add_co_ci_u32_e64_dpp v5, ttmp15, v1, v2, ttmp15 dpp8:[7,6,5,4,3,2,1,0] fi:1
 // W64-ERR: :[[@LINE-2]]:29: error: invalid operand for instruction
 
 v_add_co_ci_u32_e64_dpp v5, s[12:13], v1, v2, s[6:7] dpp8:[7,6,5,4,3,2,1,0]
+// W32-ERR: :[[@LINE-1]]:29: error: invalid operand for instruction
 // W64: v_add_co_ci_u32_e64_dpp v5, s[12:13], v1, v2, s[6:7] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x0c,0x20,0xd5,0xe9,0x04,0x1a,0x00,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:29: error: invalid operand for instruction
 
 v_add_co_ci_u32_e64_dpp v5, s[104:105], v1, v2, s[104:105] dpp8:[7,6,5,4,3,2,1,0]
+// W32-ERR: :[[@LINE-1]]:29: error: invalid operand for instruction
 // W64: v_add_co_ci_u32_e64_dpp v5, s[104:105], v1, v2, s[104:105] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x68,0x20,0xd5,0xe9,0x04,0xa2,0x01,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:29: error: invalid operand for instruction
 
 v_add_co_ci_u32_e64_dpp v5, vcc, v1, v2, vcc dpp8:[7,6,5,4,3,2,1,0]
+// W32-ERR: :[[@LINE-1]]:29: error: invalid operand for instruction
 // W64: v_add_co_ci_u32_e64_dpp v5, vcc, v1, v2, vcc dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x6a,0x20,0xd5,0xe9,0x04,0xaa,0x01,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:29: error: invalid operand for instruction
 
 v_add_co_ci_u32_e64_dpp v5, ttmp[14:15], v1, v2, ttmp[14:15] dpp8:[7,6,5,4,3,2,1,0] fi:1
+// W32-ERR: :[[@LINE-1]]:29: error: invalid operand for instruction
 // W64: v_add_co_ci_u32_e64_dpp v5, ttmp[14:15], v1, v2, ttmp[14:15] dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x7a,0x20,0xd5,0xea,0x04,0xea,0x01,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:29: error: invalid operand for instruction
 
 v_add_co_ci_u32_e64_dpp v255, null, v255, v255, null clamp dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX12: v_add_co_ci_u32_e64_dpp v255, null, v255, v255, null clamp dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0xfc,0x20,0xd5,0xe9,0xfe,0xf3,0x01,0xff,0x00,0x00,0x00]
@@ -173,32 +175,32 @@ v_cndmask_b32_e64_dpp v5, -v1, |v2|, ttmp15 dpp8:[7,6,5,4,3,2,1,0] fi:1
 // W64-ERR: :[[@LINE-2]]:38: error: invalid operand for instruction
 
 v_cndmask_b32_e64_dpp v5, v1, v2, s[6:7] dpp8:[7,6,5,4,3,2,1,0]
+// W32-ERR: :[[@LINE-1]]:35: error: invalid operand for instruction
 // W64: v_cndmask_b32_e64_dpp v5, v1, v2, s[6:7] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x01,0xd5,0xe9,0x04,0x1a,0x00,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
 
 v_cndmask_b32_e64_dpp v5, v1, s2, s[6:7] dpp8:[7,6,5,4,3,2,1,0]
+// W32-ERR: :[[@LINE-1]]:35: error: invalid operand for instruction
 // W64: v_cndmask_b32_e64_dpp v5, v1, s2, s[6:7] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x01,0xd5,0xe9,0x04,0x18,0x00,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
 
 v_cndmask_b32_e64_dpp v5, v1, v2, s[104:105] dpp8:[7,6,5,4,3,2,1,0]
+// W32-ERR: :[[@LINE-1]]:35: error: invalid operand for instruction
 // W64: v_cndmask_b32_e64_dpp v5, v1, v2, s[104:105] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x01,0xd5,0xe9,0x04,0xa2,0x01,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
 
 v_cndmask_b32_e64_dpp v5, v1, s2, s[104:105] dpp8:[7,6,5,4,3,2,1,0]
+// W32-ERR: :[[@LINE-1]]:35: error: invalid operand for instruction
 // W64: v_cndmask_b32_e64_dpp v5, v1, s2, s[104:105] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x01,0xd5,0xe9,0x04,0xa0,0x01,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
 
 v_cndmask_b32_e64_dpp v5, v1, 10, s[104:105] dpp8:[7,6,5,4,3,2,1,0]
+// W32-ERR: :[[@LINE-1]]:35: error: invalid operand for instruction
 // W64: v_cndmask_b32_e64_dpp v5, v1, 10, s[104:105] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x01,0xd5,0xe9,0x14,0xa1,0x01,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
 
 v_cndmask_b32_e64_dpp v5, |v1|, -v2, vcc dpp8:[7,6,5,4,3,2,1,0]
+// W32-ERR: :[[@LINE-1]]:38: error: invalid operand for instruction
 // W64: v_cndmask_b32_e64_dpp v5, |v1|, -v2, vcc dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x01,0x01,0xd5,0xe9,0x04,0xaa,0x41,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:38: error: invalid operand for instruction
 
 v_cndmask_b32_e64_dpp v5, -v1, |v2|, ttmp[14:15] dpp8:[7,6,5,4,3,2,1,0] fi:1
+// W32-ERR: :[[@LINE-1]]:38: error: invalid operand for instruction
 // W64: v_cndmask_b32_e64_dpp v5, -v1, |v2|, ttmp[14:15] dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x02,0x01,0xd5,0xea,0x04,0xea,0x21,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:38: error: invalid operand for instruction
 
 v_cndmask_b32_e64_dpp v255, -|v255|, -|v255|, null dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX12: v_cndmask_b32_e64_dpp v255, -|v255|, -|v255|, null dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x03,0x01,0xd5,0xe9,0xfe,0xf3,0x61,0xff,0x00,0x00,0x00]
@@ -238,6 +240,21 @@ v_cvt_pkrtz_f16_f32_e64_dpp v5, -v1, |v2| dpp8:[7,6,5,4,3,2,1,0] fi:1
 
 v_cvt_pkrtz_f16_f32_e64_dpp v255, -|v255|, -|v255| clamp dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX12: v_cvt_pk_rtz_f16_f32_e64_dpp v255, -|v255|, -|v255| clamp dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x83,0x2f,0xd5,0xe9,0xfe,0x03,0x60,0xff,0x00,0x00,0x00]
+
+v_fmac_f16_e64_dpp v5.l, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_fmac_f16_e64_dpp v5.l, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x36,0xd5,0xe9,0x04,0x02,0x00,0x01,0x77,0x39,0x05]
+
+v_fmac_f16_e64_dpp v5.h, v1.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_fmac_f16_e64_dpp v5.h, v1.h, v2.h op_sel:[1,1,1,1] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x58,0x36,0xd5,0xe9,0x04,0x02,0x00,0x01,0x77,0x39,0x05]
+
+v_fmac_f16_e64_dpp v5.l, |v1.h|, -v2.l mul:2 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_fmac_f16_e64_dpp v5.l, |v1.h|, -v2.l op_sel:[1,0,0,0] mul:2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x09,0x36,0xd5,0xe9,0x04,0x02,0x48,0x01,0x77,0x39,0x05]
+
+v_fmac_f16_e64_dpp v5.l, -v1.l, |v2.h| mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX12: v_fmac_f16_e64_dpp v5.l, -v1.l, |v2.h| op_sel:[0,1,0,0] mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x12,0x36,0xd5,0xea,0x04,0x02,0x30,0x01,0x77,0x39,0x05]
+
+v_fmac_f16_e64_dpp v255.h, -|v255.l|, -|v255.l| clamp div:2 dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX12: v_fmac_f16_e64_dpp v255.h, -|v255.l|, -|v255.l| op_sel:[0,0,1,1] clamp div:2 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0xc3,0x36,0xd5,0xe9,0xfe,0x03,0x78,0xff,0x00,0x00,0x00]
 
 v_ldexp_f16_e64_dpp v5.l, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: v_ldexp_f16_e64_dpp v5.l, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x3b,0xd5,0xe9,0x04,0x02,0x00,0x01,0x77,0x39,0x05]
@@ -302,23 +319,35 @@ v_lshrrev_b32_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
 v_lshrrev_b32_e64_dpp v255, v255, v255 dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX12: v_lshrrev_b32_e64_dpp v255, v255, v255 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x00,0x19,0xd5,0xe9,0xfe,0x03,0x00,0xff,0x00,0x00,0x00]
 
-v_max_num_f16_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_max_num_f16_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x31,0xd5,0xe9,0x04,0x02,0x00,0x01,0x77,0x39,0x05]
+v_max_num_f16_e64_dpp v5.l, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_max_num_f16_e64_dpp v5.l, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x31,0xd5,0xe9,0x04,0x02,0x00,0x01,0x77,0x39,0x05]
 
-v_max_num_f16_e64_dpp v5, v1, s2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_max_num_f16_e64_dpp v5, v1, s2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x31,0xd5,0xe9,0x04,0x00,0x00,0x01,0x77,0x39,0x05]
+v_max_num_f16_e64_dpp v5.l, v1.l, s2 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_max_num_f16_e64_dpp v5.l, v1.l, s2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x31,0xd5,0xe9,0x04,0x00,0x00,0x01,0x77,0x39,0x05]
 
-v_max_num_f16_e64_dpp v5, v1, 2.0 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_max_num_f16_e64_dpp v5, v1, 2.0 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x31,0xd5,0xe9,0xe8,0x01,0x00,0x01,0x77,0x39,0x05]
+v_max_num_f16_e64_dpp v5.l, v1.l, 2.0 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_max_num_f16_e64_dpp v5.l, v1.l, 2.0 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x31,0xd5,0xe9,0xe8,0x01,0x00,0x01,0x77,0x39,0x05]
 
-v_max_num_f16_e64_dpp v5, |v1|, -v2 mul:2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_max_num_f16_e64_dpp v5, |v1|, -v2 mul:2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x01,0x31,0xd5,0xe9,0x04,0x02,0x48,0x01,0x77,0x39,0x05]
+v_max_num_f16_e64_dpp v5.l, |v1.l|, -v2.l mul:2 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_max_num_f16_e64_dpp v5.l, |v1.l|, -v2.l mul:2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x01,0x31,0xd5,0xe9,0x04,0x02,0x48,0x01,0x77,0x39,0x05]
 
-v_max_num_f16_e64_dpp v5, -v1, |v2| mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1
-// GFX12: v_max_num_f16_e64_dpp v5, -v1, |v2| mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x02,0x31,0xd5,0xea,0x04,0x02,0x30,0x01,0x77,0x39,0x05]
+v_max_num_f16_e64_dpp v5.l, -v1.l, |v2.l| mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX12: v_max_num_f16_e64_dpp v5.l, -v1.l, |v2.l| mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x02,0x31,0xd5,0xea,0x04,0x02,0x30,0x01,0x77,0x39,0x05]
 
-v_max_num_f16_e64_dpp v255, -|v255|, -|v255| clamp div:2 dpp8:[0,0,0,0,0,0,0,0] fi:0
-// GFX12: v_max_num_f16_e64_dpp v255, -|v255|, -|v255| clamp div:2 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x83,0x31,0xd5,0xe9,0xfe,0x03,0x78,0xff,0x00,0x00,0x00]
+v_max_num_f16_e64_dpp v255.l, -|v255.l|, -|v255.l| clamp div:2 dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX12: v_max_num_f16_e64_dpp v255.l, -|v255.l|, -|v255.l| clamp div:2 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x83,0x31,0xd5,0xe9,0xfe,0x03,0x78,0xff,0x00,0x00,0x00]
+
+v_max_num_f16_e64_dpp v5.h, v1.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_max_num_f16_e64_dpp v5.h, v1.h, v2.h op_sel:[1,1,1] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x58,0x31,0xd5,0xe9,0x04,0x02,0x00,0x01,0x77,0x39,0x05]
+
+v_max_num_f16_e64_dpp v5.l, |v1.h|, -v2.l mul:2 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_max_num_f16_e64_dpp v5.l, |v1.h|, -v2.l op_sel:[1,0,0] mul:2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x09,0x31,0xd5,0xe9,0x04,0x02,0x48,0x01,0x77,0x39,0x05]
+
+v_max_num_f16_e64_dpp v5.l, -v1.l, |v2.h| mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX12: v_max_num_f16_e64_dpp v5.l, -v1.l, |v2.h| op_sel:[0,1,0] mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x12,0x31,0xd5,0xea,0x04,0x02,0x30,0x01,0x77,0x39,0x05]
+
+v_max_num_f16_e64_dpp v255.h, -|v255.l|, -|v255.l| clamp div:2 dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX12: v_max_num_f16_e64_dpp v255.h, -|v255.l|, -|v255.l| op_sel:[0,0,1] clamp div:2 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0xc3,0x31,0xd5,0xe9,0xfe,0x03,0x78,0xff,0x00,0x00,0x00]
 
 v_max_num_f32_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: v_max_num_f32_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x16,0xd5,0xe9,0x04,0x02,0x00,0x01,0x77,0x39,0x05]
@@ -368,23 +397,35 @@ v_max_u32_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
 v_max_u32_e64_dpp v255, v255, v255 dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX12: v_max_u32_e64_dpp v255, v255, v255 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x00,0x14,0xd5,0xe9,0xfe,0x03,0x00,0xff,0x00,0x00,0x00]
 
-v_min_num_f16_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_min_num_f16_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x30,0xd5,0xe9,0x04,0x02,0x00,0x01,0x77,0x39,0x05]
+v_min_num_f16_e64_dpp v5.l, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_min_num_f16_e64_dpp v5.l, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x30,0xd5,0xe9,0x04,0x02,0x00,0x01,0x77,0x39,0x05]
 
-v_min_num_f16_e64_dpp v5, v1, s2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_min_num_f16_e64_dpp v5, v1, s2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x30,0xd5,0xe9,0x04,0x00,0x00,0x01,0x77,0x39,0x05]
+v_min_num_f16_e64_dpp v5.l, v1.l, s2 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_min_num_f16_e64_dpp v5.l, v1.l, s2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x30,0xd5,0xe9,0x04,0x00,0x00,0x01,0x77,0x39,0x05]
 
-v_min_num_f16_e64_dpp v5, v1, 2.0 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_min_num_f16_e64_dpp v5, v1, 2.0 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x30,0xd5,0xe9,0xe8,0x01,0x00,0x01,0x77,0x39,0x05]
+v_min_num_f16_e64_dpp v5.l, v1.l, 2.0 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_min_num_f16_e64_dpp v5.l, v1.l, 2.0 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x30,0xd5,0xe9,0xe8,0x01,0x00,0x01,0x77,0x39,0x05]
 
-v_min_num_f16_e64_dpp v5, |v1|, -v2 mul:2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_min_num_f16_e64_dpp v5, |v1|, -v2 mul:2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x01,0x30,0xd5,0xe9,0x04,0x02,0x48,0x01,0x77,0x39,0x05]
+v_min_num_f16_e64_dpp v5.l, |v1.l|, -v2.l mul:2 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_min_num_f16_e64_dpp v5.l, |v1.l|, -v2.l mul:2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x01,0x30,0xd5,0xe9,0x04,0x02,0x48,0x01,0x77,0x39,0x05]
 
-v_min_num_f16_e64_dpp v5, -v1, |v2| mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1
-// GFX12: v_min_num_f16_e64_dpp v5, -v1, |v2| mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x02,0x30,0xd5,0xea,0x04,0x02,0x30,0x01,0x77,0x39,0x05]
+v_min_num_f16_e64_dpp v5.l, -v1.l, |v2.l| mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX12: v_min_num_f16_e64_dpp v5.l, -v1.l, |v2.l| mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x02,0x30,0xd5,0xea,0x04,0x02,0x30,0x01,0x77,0x39,0x05]
 
-v_min_num_f16_e64_dpp v255, -|v255|, -|v255| clamp div:2 dpp8:[0,0,0,0,0,0,0,0] fi:0
-// GFX12: v_min_num_f16_e64_dpp v255, -|v255|, -|v255| clamp div:2 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x83,0x30,0xd5,0xe9,0xfe,0x03,0x78,0xff,0x00,0x00,0x00]
+v_min_num_f16_e64_dpp v255.l, -|v255.l|, -|v255.l| clamp div:2 dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX12: v_min_num_f16_e64_dpp v255.l, -|v255.l|, -|v255.l| clamp div:2 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x83,0x30,0xd5,0xe9,0xfe,0x03,0x78,0xff,0x00,0x00,0x00]
+
+v_min_num_f16_e64_dpp v5.h, v1.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_min_num_f16_e64_dpp v5.h, v1.h, v2.h op_sel:[1,1,1] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x58,0x30,0xd5,0xe9,0x04,0x02,0x00,0x01,0x77,0x39,0x05]
+
+v_min_num_f16_e64_dpp v5.l, |v1.h|, -v2.l mul:2 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_min_num_f16_e64_dpp v5.l, |v1.h|, -v2.l op_sel:[1,0,0] mul:2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x09,0x30,0xd5,0xe9,0x04,0x02,0x48,0x01,0x77,0x39,0x05]
+
+v_min_num_f16_e64_dpp v5.l, -v1.l, |v2.h| mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX12: v_min_num_f16_e64_dpp v5.l, -v1.l, |v2.h| op_sel:[0,1,0] mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x12,0x30,0xd5,0xea,0x04,0x02,0x30,0x01,0x77,0x39,0x05]
+
+v_min_num_f16_e64_dpp v255.h, -|v255.l|, -|v255.l| clamp div:2 dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX12: v_min_num_f16_e64_dpp v255.h, -|v255.l|, -|v255.l| op_sel:[0,0,1] clamp div:2 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0xc3,0x30,0xd5,0xe9,0xfe,0x03,0x78,0xff,0x00,0x00,0x00]
 
 v_min_num_f32_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: v_min_num_f32_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x15,0xd5,0xe9,0x04,0x02,0x00,0x01,0x77,0x39,0x05]
@@ -614,20 +655,20 @@ v_sub_co_ci_u32_e64_dpp v5, ttmp15, v1, v2, ttmp15 dpp8:[7,6,5,4,3,2,1,0] fi:1
 // W64-ERR: :[[@LINE-2]]:29: error: invalid operand for instruction
 
 v_sub_co_ci_u32_e64_dpp v5, s[12:13], v1, v2, s[6:7] dpp8:[7,6,5,4,3,2,1,0]
+// W32-ERR: :[[@LINE-1]]:29: error: invalid operand for instruction
 // W64: v_sub_co_ci_u32_e64_dpp v5, s[12:13], v1, v2, s[6:7] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x0c,0x21,0xd5,0xe9,0x04,0x1a,0x00,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:29: error: invalid operand for instruction
 
 v_sub_co_ci_u32_e64_dpp v5, s[104:105], v1, v2, s[104:105] dpp8:[7,6,5,4,3,2,1,0]
+// W32-ERR: :[[@LINE-1]]:29: error: invalid operand for instruction
 // W64: v_sub_co_ci_u32_e64_dpp v5, s[104:105], v1, v2, s[104:105] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x68,0x21,0xd5,0xe9,0x04,0xa2,0x01,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:29: error: invalid operand for instruction
 
 v_sub_co_ci_u32_e64_dpp v5, vcc, v1, v2, vcc dpp8:[7,6,5,4,3,2,1,0]
+// W32-ERR: :[[@LINE-1]]:29: error: invalid operand for instruction
 // W64: v_sub_co_ci_u32_e64_dpp v5, vcc, v1, v2, vcc dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x6a,0x21,0xd5,0xe9,0x04,0xaa,0x01,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:29: error: invalid operand for instruction
 
 v_sub_co_ci_u32_e64_dpp v5, ttmp[14:15], v1, v2, ttmp[14:15] dpp8:[7,6,5,4,3,2,1,0] fi:1
+// W32-ERR: :[[@LINE-1]]:29: error: invalid operand for instruction
 // W64: v_sub_co_ci_u32_e64_dpp v5, ttmp[14:15], v1, v2, ttmp[14:15] dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x7a,0x21,0xd5,0xea,0x04,0xea,0x01,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:29: error: invalid operand for instruction
 
 v_sub_co_ci_u32_e64_dpp v255, null, v255, v255, null clamp dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX12: v_sub_co_ci_u32_e64_dpp v255, null, v255, v255, null clamp dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0xfc,0x21,0xd5,0xe9,0xfe,0xf3,0x01,0xff,0x00,0x00,0x00]
@@ -716,20 +757,20 @@ v_subrev_co_ci_u32_e64_dpp v5, ttmp15, v1, v2, ttmp15 dpp8:[7,6,5,4,3,2,1,0] fi:
 // W64-ERR: :[[@LINE-2]]:32: error: invalid operand for instruction
 
 v_subrev_co_ci_u32_e64_dpp v5, s[12:13], v1, v2, s[6:7] dpp8:[7,6,5,4,3,2,1,0]
+// W32-ERR: :[[@LINE-1]]:32: error: invalid operand for instruction
 // W64: v_subrev_co_ci_u32_e64_dpp v5, s[12:13], v1, v2, s[6:7] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x0c,0x22,0xd5,0xe9,0x04,0x1a,0x00,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:32: error: invalid operand for instruction
 
 v_subrev_co_ci_u32_e64_dpp v5, s[104:105], v1, v2, s[104:105] dpp8:[7,6,5,4,3,2,1,0]
+// W32-ERR: :[[@LINE-1]]:32: error: invalid operand for instruction
 // W64: v_subrev_co_ci_u32_e64_dpp v5, s[104:105], v1, v2, s[104:105] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x68,0x22,0xd5,0xe9,0x04,0xa2,0x01,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:32: error: invalid operand for instruction
 
 v_subrev_co_ci_u32_e64_dpp v5, vcc, v1, v2, vcc dpp8:[7,6,5,4,3,2,1,0]
+// W32-ERR: :[[@LINE-1]]:32: error: invalid operand for instruction
 // W64: v_subrev_co_ci_u32_e64_dpp v5, vcc, v1, v2, vcc dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x6a,0x22,0xd5,0xe9,0x04,0xaa,0x01,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:32: error: invalid operand for instruction
 
 v_subrev_co_ci_u32_e64_dpp v5, ttmp[14:15], v1, v2, ttmp[14:15] dpp8:[7,6,5,4,3,2,1,0] fi:1
+// W32-ERR: :[[@LINE-1]]:32: error: invalid operand for instruction
 // W64: v_subrev_co_ci_u32_e64_dpp v5, ttmp[14:15], v1, v2, ttmp[14:15] dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x7a,0x22,0xd5,0xea,0x04,0xea,0x01,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:32: error: invalid operand for instruction
 
 v_subrev_co_ci_u32_e64_dpp v255, null, v255, v255, null clamp dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX12: v_subrev_co_ci_u32_e64_dpp v255, null, v255, v255, null clamp dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0xfc,0x22,0xd5,0xe9,0xfe,0xf3,0x01,0xff,0x00,0x00,0x00]

@@ -1,3 +1,6 @@
+.. If you want to modify sections/contents permanently, you should modify both
+   ReleaseNotes.rst and ReleaseNotesTemplate.txt.
+
 ===========================================
 Clang |release| |ReleaseNotesTitle|
 ===========================================
@@ -34,33 +37,65 @@ latest release, please see the `Clang Web Site <https://clang.llvm.org>`_ or the
 Potentially Breaking Changes
 ============================
 
-- The Objective-C ARC migrator (ARCMigrate) has been removed.
-
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
-- The type trait builtin ``__is_referenceable`` has been removed, since it has
-  very few users and all the type traits that could benefit from it in the
-  standard library already have their own bespoke builtins.
+- Clang now more aggressively optimizes away stores to objects after they are
+  dead. This behavior can be disabled with ``-fno-lifetime-dse``.
 
 ABI Changes in This Version
 ---------------------------
 
-- Return larger CXX records in memory instead of using AVX registers. Code compiled with older clang will be incompatible with newer version of the clang unless -fclang-abi-compat=20 is provided. (#GH120670)
-
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
-- Added support for dumping template arguments of structural value kinds.
+- The JSON AST dump now includes all fields from ``AvailabilityAttr``: ``platform``,
+  ``introduced``, ``deprecated``, ``obsoleted``, ``unavailable``, ``message``,
+  ``strict``, ``replacement``, ``priority``, and ``environment``. Previously, these
+  fields were missing from the JSON output.
 
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 
+- HIPSPV toolchain: `--offload-targets=spirv{32,64}` option is
+  deprecated and will be removed when the new offload driver becomes
+  default. The replacement for the option is
+  `--offload-targets=spirv{32,64}-unknown-chipstar` when using the new
+  offload driver (`--offload-new-driver`).
+
+
 Clang Python Bindings Potentially Breaking Changes
 --------------------------------------------------
+- Remove ``CompletionString.Availability``. No libclang interfaces returned instances of it.
+- ``CompletionString.availability`` now returns instances of ``CompletionString.AvailabilityKindCompat``.
+
+  Instances of ``AvailabilityKindCompat`` have the same ``__str__`` representation
+  as the previous ``CompletionChunk.Kind`` and are equality-comparable with
+  the existing ``AvailabilityKind`` enum. It will be replaced by ``AvailabilityKind``
+  in a future release. When this happens, the return type of ``CompletionString.availability``
+  will change to ``AvailabilityKind``, so it is recommended to use ``AvailabilityKind``
+  to compare with the return values of ``CompletionString.availability``.
+- Remove ``availabilityKinds``. In this release, uses of ``availabilityKinds``
+  need to be replaced by ``CompletionString.AvailabilityKind``.
+- ``CompletionChunk.kind`` now returns instances of ``CompletionChunkKind``.
+
+  Instances of ``CompletionChunkKind`` have the same ``__str__`` representation
+  as the previous ``CompletionChunk.Kind`` for compatibility.
+  These representations will be changed in a future release to match other enums.
+- Remove ``completionChunkKindMap``. In this release, uses of ``completionChunkKindMap``
+  need to be replaced by ``CompletionChunkKind``.
+- Move ``SPELLING_CACHE`` into ``CompletionChunk`` and change it to use
+  ``CompletionChunkKind`` instances as keys, instead of the enum values.
+  An alias is kept in the form of a ``SPELLING_CACHE`` variable, but it only supports
+  ``__getitem__`` and ``__contains__``. It will be removed in a future release.
+  Please migrate to using ``CompletionChunk.SPELLING_CACHE`` instead.
+- ``SourceLocation`` and ``SourceRange`` now use ``NotImplemented`` to delegate
+  equality checks (``__eq__``) to the other object they are compared with when
+  they are of different classes. They previously returned ``False`` when compared
+  with objects of other classes.
 
 What's New in Clang |release|?
 ==============================
@@ -77,23 +112,16 @@ C++23 Feature Support
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Clang now supports `P1857R3 <https://wg21.link/p1857r3>`_ Modules Dependency Discovery. (#GH54047)
+
 C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- The flag `-frelaxed-template-template-args`
-  and its negation have been removed, having been deprecated since the previous
-  two releases. The improvements to template template parameter matching implemented
-  in the previous release, as described in P3310 and P3579, made this flag unnecessary.
-
 C Language Changes
 ------------------
-
-- Clang now allows an ``inline`` specifier on a typedef declaration of a
-  function type in Microsoft compatibility mode. #GH124869
-- Clang now allows ``restrict`` qualifier for array types with pointer elements (#GH92847).
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -104,44 +132,101 @@ C23 Feature Support
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
+- Added ``__builtin_stdc_rotate_left`` and ``__builtin_stdc_rotate_right``
+  for bit rotation of unsigned integers including ``_BitInt`` types. Rotation
+  counts are normalized modulo the bit-width and support negative values.
+  Usable in constant expressions. Implicit conversion is supported for
+  class/struct types with conversion operators.
+
 New Compiler Flags
 ------------------
-
-- New option ``-fprofile-continuous`` added to enable continuous profile syncing to file (#GH124353, `docs <https://clang.llvm.org/docs/UsersManual.html#cmdoption-fprofile-continuous>`_).
-  The feature has `existed <https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program>`_)
-  for a while and this is just a user facing option.
+- New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added
+  to enable or disable Microsoft's anonymous struct/union extension without
+  enabling other ``-fms-extensions`` features (#GH177607).
 
 Deprecated Compiler Flags
 -------------------------
 
 Modified Compiler Flags
 -----------------------
+- The `-mno-outline` and `-moutline` compiler flags are now allowed on RISC-V and X86, which both support the machine outliner.
 
 Removed Compiler Flags
--------------------------
+----------------------
 
 Attribute Changes in Clang
 --------------------------
 
-- The ``no_sanitize`` attribute now accepts both ``gnu`` and ``clang`` names.
-- Clang now diagnoses use of declaration attributes on void parameters. (#GH108819)
-- Clang now allows ``__attribute__((model("small")))`` and
-  ``__attribute__((model("large")))`` on non-TLS globals in x86-64 compilations.
-  This forces the global to be considered small or large in regards to the
-  x86-64 code model, regardless of the code model specified for the compilation.
+- Added new attribute ``stack_protector_ignore`` to opt specific local variables out of
+  the analysis which determines if a function should get a stack protector.  A function
+  will still generate a stack protector if other local variables or command line flags
+  require it.
 
 Improvements to Clang's diagnostics
 -----------------------------------
+- Added ``-Wlifetime-safety`` to enable lifetime safety analysis,
+  a CFG-based intra-procedural analysis that detects use-after-free and related
+  temporal safety bugs. See the
+  `RFC <https://discourse.llvm.org/t/rfc-intra-procedural-lifetime-analysis-in-clang/86291>`_
+  for more details. By design, this warning is enabled in ``-Weverything``. To disable
+  the analysis, use ``-Wno-lifetime-safety`` or ``-fno-lifetime-safety``.
 
-- Improve the diagnostics for deleted default constructor errors for C++ class
-  initializer lists that don't explicitly list a class member and thus attempt
-  to implicitly default construct that member.
-- The ``-Wunique-object-duplication`` warning has been added to warn about objects
-  which are supposed to only exist once per program, but may get duplicated when
-  built into a shared library.
-- Fixed a bug where Clang's Analysis did not correctly model the destructor behavior of ``union`` members (#GH119415).
-- A statement attribute applied to a ``case`` label no longer suppresses
-  'bypassing variable initialization' diagnostics (#84072).
+- Added ``-Wlifetime-safety-suggestions`` to enable lifetime annotation suggestions.
+  This provides suggestions for function parameters that
+  should be marked ``[[clang::lifetimebound]]`` based on lifetime analysis. For
+  example, for the following function:
+
+  .. code-block:: c++
+
+    int* p(int *in) { return in; }
+
+  Clang will suggest:
+
+  .. code-block:: c++
+
+    warning: parameter in intra-TU function should be marked [[clang::lifetimebound]]
+    int* p(int *in) { return in; }
+           ^~~~~~~
+                   [[clang::lifetimebound]]
+    note: param returned here
+    int* p(int *in) { return in; }
+                             ^~
+
+- Added ``-Wlifetime-safety-noescape`` to detect misuse of ``[[clang::noescape]]``
+  annotation where the parameter escapes through return. For example:
+
+  .. code-block:: c++
+
+    int* p(int *in [[clang::noescape]]) { return in; }
+
+  Clang will warn:
+
+  .. code-block:: c++
+
+    warning: parameter is marked [[clang::noescape]] but escapes
+    int* p(int *in [[clang::noescape]]) { return in; }
+           ^~~~~~~
+    note: returned here
+    int* p(int *in [[clang::noescape]]) { return in; }
+                                                 ^~
+
+- Added ``-Wlifetime-safety-dangling-field`` to detect dangling field references
+  when stack memory escapes to class fields. This is part of ``-Wlifetime-safety``
+  and detects cases where local variables or parameters are stored in fields but
+  outlive their scope. For example:
+
+  .. code-block:: c++
+
+    struct DanglingView {
+      std::string_view view;
+      DanglingView(std::string s) : view(s) {}  // warning: address of stack memory escapes to a field
+    };
+
+- Improved ``-Wassign-enum`` performance by caching enum enumerator values. (#GH176454)
+
+- Fixed a false negative in ``-Warray-bounds`` where the warning was suppressed
+  when accessing a member function on a past-the-end array element.
+  (#GH179128)
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -149,38 +234,51 @@ Improvements to Clang's time-trace
 Improvements to Coverage Mapping
 --------------------------------
 
+- [MC/DC] Nested expressions are handled as individual MC/DC expressions.
+- "Single byte coverage" now supports branch coverage and can be used
+  together with ``-fcoverage-mcdc``.
+
 Bug Fixes in This Version
 -------------------------
 
-- Clang now outputs correct values when #embed data contains bytes with negative
-  signed char values (#GH102798).
+- Fixed atomic boolean compound assignment; the conversion back to atomic bool would be miscompiled. (#GH33210)
+
+- Fixed a failed assertion in the preprocessor when ``__has_embed`` parameters are missing parentheses. (#GH175088)
+
+- Fix lifetime extension of temporaries in for-range-initializers in templates. (#GH165182)
+- Fixed a preprocessor crash in ``__has_cpp_attribute`` on incomplete scoped attributes. (#GH178098)
+- Fixes an assertion failure when evaluating ``__underlying_type`` on enum redeclarations. (#GH177943)
+
+- Clang now outputs relative paths of embeds for dependency output. (#GH161950)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- The behvaiour of ``__add_pointer`` and ``__remove_pointer`` for Objective-C++'s ``id`` and interfaces has been fixed.
-
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
- - Fixed crash when a parameter to the ``clang::annotate`` attribute evaluates to ``void``. See #GH119125
+- Fixed a behavioral discrepancy between deleted functions and private members when checking the ``enable_if`` attribute. (#GH175895)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
-
-- Clang is now better at keeping track of friend function template instance contexts. (#GH55509)
-- The initialization kind of elements of structured bindings
-  direct-list-initialized from an array is corrected to direct-initialization.
+- Fixed a crash when instantiating ``requires`` expressions involving substitution failures in C++ concepts. (#GH176402)
+- Fixed a crash when a default argument is passed to an explicit object parameter. (#GH176639)
+- Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed a bug where explicit nullability property attributes were not stored in AST nodes in Objective-C. (#GH179703)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
-
-- HTML tags in comments that span multiple lines are now parsed correctly by Clang's comment parser. (#GH120843)
+- Fixed the arguments of the format attribute on ``__builtin_os_log_format``.  Previously, they were off by 1.
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fixed a crash when attempting to jump over initialization of a variable with variably modified type. (#GH175540)
+- Fixed a crash when using loop hint with a value dependent argument inside a
+  generic lambda. (#GH172289)
+- Fixed a crash in C++ overload resolution with ``_Atomic``-qualified argument types. (#GH170433)
 
 OpenACC Specific Changes
 ------------------------
@@ -191,21 +289,14 @@ Target Specific Changes
 AMDGPU Support
 ^^^^^^^^^^^^^^
 
+- Initial support for gfx1310
+
 NVPTX Support
 ^^^^^^^^^^^^^^
 
-Hexagon Support
-^^^^^^^^^^^^^^^
-
--  The default compilation target has been changed from V60 to V68.
-
 X86 Support
 ^^^^^^^^^^^
-
-- Disable ``-m[no-]avx10.1`` and switch ``-m[no-]avx10.2`` to alias of 512 bit
-  options.
-- Change ``-mno-avx10.1-512`` to alias of ``-mno-avx10.1-256`` to disable both
-  256 and 512 bit instructions.
+- ``march=znver6`` is now supported.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -219,10 +310,13 @@ Windows Support
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 
+- DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
+  to be used together when building for the LoongArch platform.
+
 RISC-V Support
 ^^^^^^^^^^^^^^
 
-- Add support for `-mtune=generic-ooo` (a generic out-of-order model).
+- Tenstorrent Ascalon D8 was renamed to Ascalon X. Use `tt-ascalon-x` with `-mcpu` or `-mtune`.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -239,8 +333,18 @@ NetBSD Support
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
 
+- Fixed a crash when ``__funcref`` is applied to a non-function pointer type.
+  (#GH118233)
+
 AVR Support
 ^^^^^^^^^^^
+
+SystemZ Support
+^^^^^^^^^^^^^^^
+
+- Add support for `#pragma export` for z/OS.  This is a pragma used to export functions and variables
+  with external linkage from shared libraries.  It provides compatibility with the IBM XL C/C++
+  compiler.
 
 DWARF Support in Clang
 ----------------------
@@ -253,13 +357,12 @@ Fixed Point Support in Clang
 
 AST Matchers
 ------------
+- Add ``functionTypeLoc`` matcher for matching ``FunctionTypeLoc``.
 
 clang-format
 ------------
-
-- Adds ``BreakBeforeTemplateCloser`` option.
-- Adds ``BinPackLongBracedList`` option to override bin packing options in
-  long (20 item or more) braced list initializer lists.
+- Add ``ObjCSpaceAfterMethodDeclarationPrefix`` option to control space between the 
+  '-'/'+' and the return type in Objective-C method declarations
 
 libclang
 --------
@@ -270,31 +373,13 @@ Code Completion
 Static Analyzer
 ---------------
 
-- Clang currently support extending lifetime of object bound to 
-  reference members of aggregates in CFG and ExprEngine, that are
-  created from default member initializer.
-
-New features
-^^^^^^^^^^^^
-
-A new flag - `-static-libclosure` was introduced to support statically linking
-the runtime for the Blocks extension on Windows. This flag currently only
-changes the code generation, and even then, only on Windows. This does not
-impact the linker behaviour like the other `-static-*` flags.
-
-Crash and bug fixes
-^^^^^^^^^^^^^^^^^^^
-
-Improvements
-^^^^^^^^^^^^
-
-Moved checkers
-^^^^^^^^^^^^^^
-
-- After lots of improvements, the checker ``alpha.security.ArrayBoundV2`` is
-  renamed to ``security.ArrayBound``. As this checker is stable now, the old
-  checker ``alpha.security.ArrayBound`` (which was searching for the same kind
-  of bugs with an different, simpler and less accurate algorithm) is removed.
+.. comment:
+  This is for the Static Analyzer.
+  Using the caret `^^^` underlining for subsections:
+    - Crash and bug fixes
+    - New checkers and features
+    - Improvements
+    - Moved checkers
 
 .. _release-notes-sanitizers:
 
@@ -303,11 +388,25 @@ Sanitizers
 
 Python Binding Changes
 ----------------------
+- Add deprecation warnings to ``CompletionChunk.isKind...`` methods.
+  These will be removed in a future release. Existing uses should be adapted
+  to directly compare equality of the ``CompletionChunk`` kind with
+  the corresponding ``CompletionChunkKind`` variant.
+
+  Affected methods: ``isKindOptional``, ``isKindTypedText``, ``isKindPlaceHolder``,
+  ``isKindInformative`` and ``isKindResultType``.
+- Add a deprecation warning to ``CodeCompletionResults.results``.
+  This property will become an implementation detail with changed behavior in a 
+  future release and should not be used directly.. Existing uses of 
+  ``CodeCompletionResults.results`` should be changed to directly use
+  ``CodeCompletionResults``: it nows supports ``__len__`` and ``__getitem__``,
+  so it can be used the same as ``CodeCompletionResults.results``.
 
 OpenMP Support
 --------------
-- Added support 'no_openmp_constructs' assumption clause.
-- Added support for 'omp stripe' directive.
+- Added support for ``transparent`` clause in task and taskloop directives.
+- Added support for ``use_device_ptr`` clause to accept an optional
+  ``fallback`` modifier (``fb_nullify`` or ``fb_preserve``) with OpenMP >= 61.
 
 Improvements
 ^^^^^^^^^^^^

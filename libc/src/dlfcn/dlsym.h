@@ -13,7 +13,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-void *dlsym(void *, const char *);
+void *dlsym(void *__restrict, const char *__restrict);
 
 } // namespace LIBC_NAMESPACE_DECL
 

@@ -72,9 +72,9 @@ long int check_primitives(int first, ...) {
   count += args.next_var<unsigned long>();
   count += args.next_var<long long>();
   count += args.next_var<unsigned long long>();
-  count += args.next_var<double>();
-  count += args.next_var<double>();
-  count += args.next_var<long double>();
+  count += static_cast<long int>(args.next_var<double>());
+  count += static_cast<long int>(args.next_var<double>());
+  count += static_cast<long int>(args.next_var<long double>());
   count += *args.next_var<int *>();
   return count;
 }
@@ -112,7 +112,7 @@ long int check_struct_type(int first, ...) {
 
   S s = args.next_var<S>();
   int last = args.next_var<int>();
-  return s.c + s.s + s.i + s.l + s.f + s.d + last;
+  return s.c + s.s + s.i + s.l + static_cast<long>(s.f + s.d) + last;
 }
 
 TEST(LlvmLibcArgListTest, TestStructTypes) {

@@ -17,14 +17,8 @@ if(NOT LLVM_LIBC_FULL_BUILD)
 endif()
 
 # Set the required flags globally so standard CMake utilities can compile.
-if(LIBC_TARGET_TRIPLE)
-  set(CMAKE_REQUIRED_FLAGS "--target=${LIBC_TARGET_TRIPLE}")
-endif()
-if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nogpulib")
-elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
-  set(CMAKE_REQUIRED_FLAGS
-      "${CMAKE_REQUIRED_FLAGS} -flto -c -Wno-unused-command-line-argument")
+if(NOT CMAKE_CXX_COMPILER_TARGET)
+  set(CMAKE_REQUIRED_FLAGS "${LIBC_COMPILE_OPTIONS_DEFAULT}")
 endif()
 
 # Optionally set up a job pool to limit the number of GPU tests run in parallel.
@@ -100,12 +94,10 @@ if(NOT TARGET libc.utils.gpu.loader AND gpu_loader_executable)
   )
 endif()
 
-if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
-  # The AMDGPU environment uses different code objects to encode the ABI for
-  # kernel calls and intrinsic functions. We want to specify this manually to
-  # conform to whatever the test suite was built to handle.
-  set(LIBC_GPU_CODE_OBJECT_VERSION 5)
-endif()
+# The AMDGPU environment uses different code objects to encode the ABI for
+# kernel calls and intrinsic functions. We want to expose this to conform to
+# whatever the test suite was built to handle.
+set(LIBC_GPU_CODE_OBJECT_VERSION "6" CACHE STRING "AMDGPU Code object ABI to use")
 
 if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   # FIXME: This is a hack required to keep the CUDA package from trying to find

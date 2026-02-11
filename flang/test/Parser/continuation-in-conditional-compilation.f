@@ -1,8 +1,16 @@
-! RUN: %flang_fc1 -fopenmp -fopenacc -E %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -E %s 2>&1 | FileCheck %s
       program main
-! CHECK: k01=1+ 1
+! CHECK:       k01=1+
+! CHECK: !$   &1
       k01=1+
-!$   &  1
+!$   &1
+
+! CHECK: !$    k02=2
+! CHECK:       3
+! CHECK: !$   &4
+!$    k02=2
+     +3
+!$   +4
 
 ! CHECK: !$omp parallel private(k01)
 !$omp parallel
@@ -13,4 +21,10 @@
 !$omp parallel
 !$acc+comment
 !$omp end parallel
+
+! Conditional compilation statements beginning with a continuation line
+! are allowed with a warning.
+! CHECK: !$ &i=5
+c     comment
+c$   !i=5
       end

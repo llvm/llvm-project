@@ -148,6 +148,23 @@ func.func @valid_symbol_affine_scope(%n : index, %A : memref<?xf32>) {
 
 // -----
 
+// Test dimension constraints for linearize_index and delinearize_index
+
+// CHECK-LABEL: func @valid_dim_linearize_delinearize
+func.func @valid_dim_linearize_delinearize(%m : index, %n : index, %A : memref<?xf32>, %B: memref<?x32x?xf32>) {
+    affine.for %0 = 0 to %m {
+      affine.for %1 = 0 to %n {
+        %load_idx = affine.linearize_index disjoint [%0, %1] by (%m, %n) : index
+        %store_idx0, %store_idx1 = affine.delinearize_index %n into (32) : index, index
+        %v = affine.load %A[%load_idx] : memref<?xf32>
+        affine.store %v, %B[%0, %store_idx1, %store_idx0] : memref<?x32x?xf32>
+      }
+    }
+  return
+}
+
+// -----
+
 // Test the fact that module op always provides an affine scope.
 
 %idx = "test.foo"() : () -> (index)
@@ -309,7 +326,7 @@ func.func @linearize_mixed(%index0: index, %index1: index, %index2: index, %basi
 module {
   func.func @gpu_launch_affine() {
     %c1 = arith.constant 1 : index
-    gpu.launch blocks(%arg0, %arg1, %arg2) in (%arg6 = %c1, %arg7 = %c1, %arg8 = %c1) 
+    gpu.launch blocks(%arg0, %arg1, %arg2) in (%arg6 = %c1, %arg7 = %c1, %arg8 = %c1)
     threads(%arg3, %arg4, %arg5) in (%arg9 = %c1, %arg10 = %c1, %arg11 = %c1) {
       %thread_id_x = gpu.thread_id  x
       %c128 = arith.constant 128 : index

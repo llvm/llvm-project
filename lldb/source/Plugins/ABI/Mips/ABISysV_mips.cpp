@@ -708,8 +708,6 @@ Status ABISysV_mips::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   Thread *thread = frame_sp->GetThread().get();
 
   bool is_signed;
-  uint32_t count;
-  bool is_complex;
 
   RegisterContext *reg_ctx = thread->GetRegisterContext().get();
 
@@ -750,13 +748,6 @@ Status ABISysV_mips::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
           "We don't support returning longer than 64 bit "
           "integer values at present.");
     }
-  } else if (compiler_type.IsFloatingPointType(count, is_complex)) {
-    if (is_complex)
-      error = Status::FromErrorString(
-          "We don't support returning complex values at present");
-    else
-      error = Status::FromErrorString(
-          "We don't support returning float values at present");
   }
 
   if (!set_it_simple)
@@ -796,12 +787,11 @@ ValueObjectSP ABISysV_mips::GetReturnValueObjectImpl(
     return return_valobj_sp;
 
   bool is_signed = false;
-  bool is_complex = false;
-  uint32_t count = 0;
 
   // In MIPS register "r2" (v0) holds the integer function return values
   const RegisterInfo *r2_reg_info = reg_ctx->GetRegisterInfoByName("r2", 0);
-  std::optional<uint64_t> bit_width = return_compiler_type.GetBitSize(&thread);
+  std::optional<uint64_t> bit_width =
+      llvm::expectedToOptional(return_compiler_type.GetBitSize(&thread));
   if (!bit_width)
     return return_valobj_sp;
   if (return_compiler_type.IsIntegerOrEnumerationType(is_signed)) {
@@ -859,11 +849,9 @@ ValueObjectSP ABISysV_mips::GetReturnValueObjectImpl(
     return_valobj_sp = ValueObjectMemory::Create(
         &thread, "", Address(mem_address, nullptr), return_compiler_type);
     return return_valobj_sp;
-  } else if (return_compiler_type.IsFloatingPointType(count, is_complex)) {
+  } else if (return_compiler_type.IsRealFloatingPointType()) {
     if (IsSoftFloat(fp_flag)) {
       uint64_t raw_value = reg_ctx->ReadRegisterAsUnsigned(r2_reg_info, 0);
-      if (count != 1 && is_complex)
-        return return_valobj_sp;
       switch (*bit_width) {
       default:
         return return_valobj_sp;
@@ -895,51 +883,46 @@ ValueObjectSP ABISysV_mips::GetReturnValueObjectImpl(
       f0_value.GetData(f0_data);
       lldb::offset_t offset = 0;
 
-      if (count == 1 && !is_complex) {
-        switch (*bit_width) {
-        default:
-          return return_valobj_sp;
-        case 64: {
-          static_assert(sizeof(double) == sizeof(uint64_t));
-          const RegisterInfo *f1_info = reg_ctx->GetRegisterInfoByName("f1", 0);
-          RegisterValue f1_value;
-          DataExtractor f1_data;
-          reg_ctx->ReadRegister(f1_info, f1_value);
-          DataExtractor *copy_from_extractor = nullptr;
-          WritableDataBufferSP data_sp(new DataBufferHeap(8, 0));
-          DataExtractor return_ext(
-              data_sp, target_byte_order,
-              target->GetArchitecture().GetAddressByteSize());
-
-          if (target_byte_order == eByteOrderLittle) {
-            copy_from_extractor = &f0_data;
-            copy_from_extractor->CopyByteOrderedData(
-                offset, 4, data_sp->GetBytes(), 4, target_byte_order);
-            f1_value.GetData(f1_data);
-            copy_from_extractor = &f1_data;
-            copy_from_extractor->CopyByteOrderedData(
-                offset, 4, data_sp->GetBytes() + 4, 4, target_byte_order);
-          } else {
-            copy_from_extractor = &f0_data;
-            copy_from_extractor->CopyByteOrderedData(
-                offset, 4, data_sp->GetBytes() + 4, 4, target_byte_order);
-            f1_value.GetData(f1_data);
-            copy_from_extractor = &f1_data;
-            copy_from_extractor->CopyByteOrderedData(
-                offset, 4, data_sp->GetBytes(), 4, target_byte_order);
-          }
-          value.GetScalar() = (double)return_ext.GetDouble(&offset);
-          break;
-        }
-        case 32: {
-          static_assert(sizeof(float) == sizeof(uint32_t));
-          value.GetScalar() = (float)f0_data.GetFloat(&offset);
-          break;
-        }
-        }
-      } else {
-        // not handled yet
+      switch (*bit_width) {
+      default:
         return return_valobj_sp;
+      case 64: {
+        static_assert(sizeof(double) == sizeof(uint64_t));
+        const RegisterInfo *f1_info = reg_ctx->GetRegisterInfoByName("f1", 0);
+        RegisterValue f1_value;
+        DataExtractor f1_data;
+        reg_ctx->ReadRegister(f1_info, f1_value);
+        DataExtractor *copy_from_extractor = nullptr;
+        WritableDataBufferSP data_sp(new DataBufferHeap(8, 0));
+        DataExtractor return_ext(
+            data_sp, target_byte_order,
+            target->GetArchitecture().GetAddressByteSize());
+
+        if (target_byte_order == eByteOrderLittle) {
+          copy_from_extractor = &f0_data;
+          copy_from_extractor->CopyByteOrderedData(
+              offset, 4, data_sp->GetBytes(), 4, target_byte_order);
+          f1_value.GetData(f1_data);
+          copy_from_extractor = &f1_data;
+          copy_from_extractor->CopyByteOrderedData(
+              offset, 4, data_sp->GetBytes() + 4, 4, target_byte_order);
+        } else {
+          copy_from_extractor = &f0_data;
+          copy_from_extractor->CopyByteOrderedData(
+              offset, 4, data_sp->GetBytes() + 4, 4, target_byte_order);
+          f1_value.GetData(f1_data);
+          copy_from_extractor = &f1_data;
+          copy_from_extractor->CopyByteOrderedData(
+              offset, 4, data_sp->GetBytes(), 4, target_byte_order);
+        }
+        value.GetScalar() = (double)return_ext.GetDouble(&offset);
+        break;
+      }
+      case 32: {
+        static_assert(sizeof(float) == sizeof(uint32_t));
+        value.GetScalar() = (float)f0_data.GetFloat(&offset);
+        break;
+      }
       }
     }
   } else {
@@ -954,44 +937,38 @@ ValueObjectSP ABISysV_mips::GetReturnValueObjectImpl(
   return return_valobj_sp;
 }
 
-bool ABISysV_mips::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+UnwindPlanSP ABISysV_mips::CreateFunctionEntryUnwindPlan() {
+  UnwindPlan::Row row;
 
   // Our Call Frame Address is the stack pointer value
-  row->GetCFAValue().SetIsRegisterPlusOffset(dwarf_r29, 0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_r29, 0);
 
-  // The previous PC is in the RA
-  row->SetRegisterLocationToRegister(dwarf_pc, dwarf_r31, true);
-  unwind_plan.AppendRow(row);
+  // The previous PC is in the RA, all other registers are the same.
+  row.SetRegisterLocationToRegister(dwarf_pc, dwarf_r31, true);
 
-  // All other registers are the same.
-
-  unwind_plan.SetSourceName("mips at-func-entry default");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  unwind_plan.SetReturnAddressRegister(dwarf_r31);
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(std::move(row));
+  plan_sp->SetSourceName("mips at-func-entry default");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  plan_sp->SetReturnAddressRegister(dwarf_r31);
+  return plan_sp;
 }
 
-bool ABISysV_mips::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
+UnwindPlanSP ABISysV_mips::CreateDefaultUnwindPlan() {
+  UnwindPlan::Row row;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  row.SetUnspecifiedRegistersAreUndefined(true);
+  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_r29, 0);
 
-  row->SetUnspecifiedRegistersAreUndefined(true);
-  row->GetCFAValue().SetIsRegisterPlusOffset(dwarf_r29, 0);
+  row.SetRegisterLocationToRegister(dwarf_pc, dwarf_r31, true);
 
-  row->SetRegisterLocationToRegister(dwarf_pc, dwarf_r31, true);
-
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("mips default unwind plan");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(std::move(row));
+  plan_sp->SetSourceName("mips default unwind plan");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
+  return plan_sp;
 }
 
 bool ABISysV_mips::RegisterIsVolatile(const RegisterInfo *reg_info) {

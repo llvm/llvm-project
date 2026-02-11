@@ -56,7 +56,7 @@ void fn1_1(void *p1, const void *p2) { p1 != p2; }
 void fn2_1(uint32_t *p1, unsigned char *p2, uint32_t p3) {
   unsigned i = 0;
   for (0; i < p3; i++)
-    fn1_1(p1 + i, p2 + i * 0);
+    fn1_1(p1 + i, p2 + i * 0); // expected-warning {{Pointer arithmetic on non-array variables relies on memory layout, which is dangerous}}
 }
 
 struct A_1 {

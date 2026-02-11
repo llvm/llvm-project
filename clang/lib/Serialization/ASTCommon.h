@@ -22,26 +22,29 @@ namespace clang {
 
 namespace serialization {
 
-enum DeclUpdateKind {
-  UPD_CXX_ADDED_IMPLICIT_MEMBER,
-  UPD_CXX_ADDED_ANONYMOUS_NAMESPACE,
-  UPD_CXX_ADDED_FUNCTION_DEFINITION,
-  UPD_CXX_ADDED_VAR_DEFINITION,
-  UPD_CXX_POINT_OF_INSTANTIATION,
-  UPD_CXX_INSTANTIATED_CLASS_DEFINITION,
-  UPD_CXX_INSTANTIATED_DEFAULT_ARGUMENT,
-  UPD_CXX_INSTANTIATED_DEFAULT_MEMBER_INITIALIZER,
-  UPD_CXX_RESOLVED_DTOR_DELETE,
-  UPD_CXX_RESOLVED_EXCEPTION_SPEC,
-  UPD_CXX_DEDUCED_RETURN_TYPE,
-  UPD_DECL_MARKED_USED,
-  UPD_MANGLING_NUMBER,
-  UPD_STATIC_LOCAL_NUMBER,
-  UPD_DECL_MARKED_OPENMP_THREADPRIVATE,
-  UPD_DECL_MARKED_OPENMP_ALLOCATE,
-  UPD_DECL_MARKED_OPENMP_DECLARETARGET,
-  UPD_DECL_EXPORTED,
-  UPD_ADDED_ATTR_TO_RECORD
+enum class DeclUpdateKind {
+  CXXAddedImplicitMember,
+  CXXAddedAnonymousNamespace,
+  CXXAddedFunctionDefinition,
+  CXXAddedVarDefinition,
+  CXXPointOfInstantiation,
+  CXXInstantiatedClassDefinition,
+  CXXInstantiatedDefaultArgument,
+  CXXInstantiatedDefaultMemberInitializer,
+  CXXResolvedDtorDelete,
+  CXXResolvedExceptionSpec,
+  CXXDeducedReturnType,
+  DeclMarkedUsed,
+  ManglingNumber,
+  StaticLocalNumber,
+  DeclMarkedOpenMPThreadPrivate,
+  DeclMarkedOpenMPAllocate,
+  DeclMarkedOpenMPDeclareTarget,
+  DeclExported,
+  AddedAttrToRecord,
+  CXXResolvedDtorGlobDelete,
+  CXXResolvedDtorArrayDelete,
+  CXXResolvedDtorGlobArrayDelete
 };
 
 TypeIdx TypeIdxFromBuiltin(const BuiltinType *BT);
@@ -99,8 +102,6 @@ inline bool isPartOfPerModuleInitializer(const Decl *D) {
     return !isTemplateInstantiation(VD->getTemplateSpecializationKind());
   return false;
 }
-
-void updateModuleTimestamp(StringRef ModuleFilename);
 
 } // namespace serialization
 

@@ -1,8 +1,6 @@
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -vgpr-regalloc=greedy -verify-machineinstrs=0 -filetype=null %s 2>&1 | FileCheck -implicit-check-not=error %s
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -vgpr-regalloc=basic -verify-machineinstrs=0 -filetype=null %s 2>&1 | FileCheck -implicit-check-not=error %s
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -vgpr-regalloc=fast -verify-machineinstrs=0 -filetype=null %s 2>&1 | FileCheck -implicit-check-not=error %s
-
-; FIXME: Should pass verifier after failure.
+; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -vgpr-regalloc=greedy -filetype=null %s 2>&1 | FileCheck -implicit-check-not=error %s
+; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -vgpr-regalloc=basic -filetype=null %s 2>&1 | FileCheck -implicit-check-not=error %s
+; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -vgpr-regalloc=fast -filetype=null %s 2>&1 | FileCheck -implicit-check-not=error %s
 
 declare <32 x i32> @llvm.amdgcn.mfma.i32.32x32x4i8(i32, i32, <32 x i32>, i32 immarg, i32 immarg, i32 immarg)
 

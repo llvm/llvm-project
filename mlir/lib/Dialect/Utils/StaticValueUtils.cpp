@@ -7,22 +7,33 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorExtras.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/MathExtras.h"
 
 namespace mlir {
 
-bool isZeroIndex(OpFoldResult v) {
-  if (!v)
+bool isZeroInteger(OpFoldResult v) { return isConstantIntValue(v, 0); }
+
+bool isZeroFloat(OpFoldResult v) {
+  if (auto attr = dyn_cast<Attribute>(v)) {
+    if (auto floatAttr = dyn_cast<FloatAttr>(attr))
+      return floatAttr.getValue().isZero();
     return false;
-  std::optional<int64_t> constint = getConstantIntValue(v);
-  if (!constint)
-    return false;
-  return *constint == 0;
+  }
+  return matchPattern(cast<Value>(v), m_AnyZeroFloat());
 }
+
+bool isZeroIntegerOrFloat(OpFoldResult v) {
+  return isZeroInteger(v) || isZeroFloat(v);
+}
+
+bool isOneInteger(OpFoldResult v) { return isConstantIntValue(v, 1); }
 
 std::tuple<SmallVector<OpFoldResult>, SmallVector<OpFoldResult>,
            SmallVector<OpFoldResult>>
@@ -93,8 +104,8 @@ OpFoldResult getAsOpFoldResult(Value val) {
 /// Given an array of values, try to extract a constant Attribute from each
 /// value. If this fails, return the original value.
 SmallVector<OpFoldResult> getAsOpFoldResult(ValueRange values) {
-  return llvm::to_vector(
-      llvm::map_range(values, [](Value v) { return getAsOpFoldResult(v); }));
+  return llvm::map_to_vector(values,
+                             [](Value v) { return getAsOpFoldResult(v); });
 }
 
 /// Convert `arrayAttr` to a vector of OpFoldResult.
@@ -112,24 +123,33 @@ OpFoldResult getAsIndexOpFoldResult(MLIRContext *ctx, int64_t val) {
 
 SmallVector<OpFoldResult> getAsIndexOpFoldResult(MLIRContext *ctx,
                                                  ArrayRef<int64_t> values) {
-  return llvm::to_vector(llvm::map_range(
-      values, [ctx](int64_t v) { return getAsIndexOpFoldResult(ctx, v); }));
+  return llvm::map_to_vector(
+      values, [ctx](int64_t v) { return getAsIndexOpFoldResult(ctx, v); });
 }
 
 /// If ofr is a constant integer or an IntegerAttr, return the integer.
-std::optional<int64_t> getConstantIntValue(OpFoldResult ofr) {
+/// The boolean indicates whether the value is an index type.
+std::optional<std::pair<APInt, bool>> getConstantAPIntValue(OpFoldResult ofr) {
   // Case 1: Check for Constant integer.
   if (auto val = llvm::dyn_cast_if_present<Value>(ofr)) {
-    APSInt intVal;
+    APInt intVal;
     if (matchPattern(val, m_ConstantInt(&intVal)))
-      return intVal.getSExtValue();
+      return std::make_pair(intVal, val.getType().isIndex());
     return std::nullopt;
   }
   // Case 2: Check for IntegerAttr.
   Attribute attr = llvm::dyn_cast_if_present<Attribute>(ofr);
   if (auto intAttr = dyn_cast_or_null<IntegerAttr>(attr))
-    return intAttr.getValue().getSExtValue();
+    return std::make_pair(intAttr.getValue(), intAttr.getType().isIndex());
   return std::nullopt;
+}
+
+/// If ofr is a constant integer or an IntegerAttr, return the integer.
+std::optional<int64_t> getConstantIntValue(OpFoldResult ofr) {
+  std::optional<std::pair<APInt, bool>> apInt = getConstantAPIntValue(ofr);
+  if (!apInt)
+    return std::nullopt;
+  return apInt->first.getSExtValue();
 }
 
 std::optional<SmallVector<int64_t>>
@@ -147,8 +167,7 @@ getConstantIntValues(ArrayRef<OpFoldResult> ofrs) {
 }
 
 bool isConstantIntValue(OpFoldResult ofr, int64_t value) {
-  auto val = getConstantIntValue(ofr);
-  return val && *val == value;
+  return getConstantIntValue(ofr) == value;
 }
 
 bool areAllConstantIntValue(ArrayRef<OpFoldResult> ofrs, int64_t value) {
@@ -187,12 +206,16 @@ bool isEqualConstantIntOrValueArray(ArrayRef<OpFoldResult> ofrs1,
   return true;
 }
 
-/// Return a vector of OpFoldResults with the same size a staticValues, but all
+/// Return a vector of OpFoldResults with the same size as staticValues, but all
 /// elements for which ShapedType::isDynamic is true, will be replaced by
 /// dynamicValues.
 SmallVector<OpFoldResult> getMixedValues(ArrayRef<int64_t> staticValues,
                                          ValueRange dynamicValues,
                                          MLIRContext *context) {
+  assert(dynamicValues.size() == static_cast<size_t>(llvm::count_if(
+                                     staticValues, ShapedType::isDynamic)) &&
+         "expected the rank of dynamic values to match the number of "
+         "values known to be dynamic");
   SmallVector<OpFoldResult> res;
   res.reserve(staticValues.size());
   unsigned numDynamic = 0;
@@ -214,7 +237,7 @@ SmallVector<OpFoldResult> getMixedValues(ArrayRef<int64_t> staticValues,
 /// Decompose a vector of mixed static or dynamic values into the corresponding
 /// pair of arrays. This is the inverse function of `getMixedValues`.
 std::pair<SmallVector<int64_t>, SmallVector<Value>>
-decomposeMixedValues(const SmallVectorImpl<OpFoldResult> &mixedValues) {
+decomposeMixedValues(ArrayRef<OpFoldResult> mixedValues) {
   SmallVector<int64_t> staticValues;
   SmallVector<Value> dynamicValues;
   for (const auto &it : mixedValues) {
@@ -237,8 +260,8 @@ getValuesSortedByKeyImpl(ArrayRef<K> keys, ArrayRef<V> values,
     return SmallVector<V>{values};
   assert(keys.size() == values.size() && "unexpected mismatching sizes");
   auto indices = llvm::to_vector(llvm::seq<int64_t>(0, values.size()));
-  std::sort(indices.begin(), indices.end(),
-            [&](int64_t i, int64_t j) { return compare(keys[i], keys[j]); });
+  llvm::sort(indices,
+             [&](int64_t i, int64_t j) { return compare(keys[i], keys[j]); });
   SmallVector<V> res;
   res.reserve(values.size());
   for (int64_t i = 0, e = indices.size(); i < e; ++i)
@@ -266,33 +289,141 @@ getValuesSortedByKey(ArrayRef<Attribute> keys, ArrayRef<int64_t> values,
 
 /// Return the number of iterations for a loop with a lower bound `lb`, upper
 /// bound `ub` and step `step`.
-std::optional<int64_t> constantTripCount(OpFoldResult lb, OpFoldResult ub,
-                                         OpFoldResult step) {
-  if (lb == ub)
-    return 0;
+std::optional<APInt> constantTripCount(
+    OpFoldResult lb, OpFoldResult ub, OpFoldResult step, bool isSigned,
+    llvm::function_ref<std::optional<llvm::APSInt>(Value, Value, bool)>
+        computeUbMinusLb) {
+  // This is the bitwidth used to return 0 when loop does not execute.
+  // We infer it from the type of the bound if it isn't an index type.
+  auto getBitwidth = [&](OpFoldResult ofr) -> std::tuple<int, bool> {
+    if (auto intAttr =
+            dyn_cast_or_null<IntegerAttr>(dyn_cast<Attribute>(ofr))) {
+      if (auto intType = dyn_cast<IntegerType>(intAttr.getType()))
+        return std::make_tuple(intType.getWidth(), intType.isIndex());
+    } else {
+      auto val = cast<Value>(ofr);
+      if (auto intType = dyn_cast<IntegerType>(val.getType()))
+        return std::make_tuple(intType.getWidth(), intType.isIndex());
+    }
+    return std::make_tuple(IndexType::kInternalStorageBitWidth, true);
+  };
+  auto [bitwidth, isIndex] = getBitwidth(lb);
+  // This would better be an assert, but unfortunately it breaks scf.for_all
+  // which is missing attributes and SSA value optionally for its bounds, and
+  // uses Index type for the dynamic bounds but i64 for the static bounds. This
+  // is broken...
+  if (std::tie(bitwidth, isIndex) != getBitwidth(ub)) {
+    LDBG() << "mismatch between lb and ub bitwidth/type: " << ub << " vs "
+           << lb;
+    return std::nullopt;
+  }
+  if (lb == ub) {
+    // Fast path: LB == UB. The loop has zero iterations.
+    // Note: LB and UB could match at runtime, even though they are different
+    // SSA values. That case cannot be detected here.
+    return APInt(bitwidth, 0);
+  }
 
-  std::optional<int64_t> lbConstant = getConstantIntValue(lb);
-  if (!lbConstant)
-    return std::nullopt;
-  std::optional<int64_t> ubConstant = getConstantIntValue(ub);
-  if (!ubConstant)
-    return std::nullopt;
-  std::optional<int64_t> stepConstant = getConstantIntValue(step);
-  if (!stepConstant)
-    return std::nullopt;
+  std::optional<std::pair<APInt, bool>> maybeStepCst =
+      getConstantAPIntValue(step);
 
-  return llvm::divideCeilSigned(*ubConstant - *lbConstant, *stepConstant);
+  if (maybeStepCst) {
+    auto &stepCst = maybeStepCst->first;
+    assert(static_cast<int>(stepCst.getBitWidth()) == bitwidth &&
+           "step must have the same bitwidth as lb and ub");
+    if (stepCst.isZero()) {
+      // Step is zero. If LB and UB match, we have zero iterations. Otherwise,
+      // we have an infinite number of iterations. We cannot tell for sure which
+      // case applies, so the static trip count is unknown.
+      return std::nullopt;
+    }
+  }
+
+  if (isIndex) {
+    LDBG()
+        << "Computing loop trip count for index type may break with overflow";
+    // TODO: we can't compute the trip count for index type. We should fix this
+    // but too many tests are failing right now.
+    //   return {};
+  }
+
+  /// Compute the difference between the upper and lower bound: either from the
+  /// constant value or using the computeUbMinusLb callback.
+  llvm::APSInt diff;
+  std::optional<std::pair<APInt, bool>> maybeLbCst = getConstantAPIntValue(lb);
+  std::optional<std::pair<APInt, bool>> maybeUbCst = getConstantAPIntValue(ub);
+  if (maybeLbCst) {
+    // If one of the bounds is not a constant, we can't compute the trip count.
+    if (!maybeUbCst)
+      return std::nullopt;
+    APSInt lbCst(maybeLbCst->first, /*isUnsigned=*/!isSigned);
+    APSInt ubCst(maybeUbCst->first, /*isUnsigned=*/!isSigned);
+    if (ubCst <= lbCst) {
+      LDBG() << "constantTripCount is 0 because ub <= lb (" << lbCst << "("
+             << lbCst.getBitWidth() << ") <= " << ubCst << "("
+             << ubCst.getBitWidth() << "), "
+             << (isSigned ? "isSigned" : "isUnsigned") << ")";
+      return APInt(bitwidth, 0);
+    }
+    // Compute the difference. Since we've already checked that ub > lb, the
+    // result can be interpreted as an unsigned value without overflow concerns.
+    diff = ubCst - lbCst;
+    // Convert diff to unsigned. This handles cases like i8: ub=127, lb=-128
+    // where the subtraction yields 255, which wraps to -1 in signed i8 but is
+    // correctly represented as 255 when interpreted as unsigned.
+    diff.setIsUnsigned(true);
+  } else {
+    if (maybeUbCst)
+      return std::nullopt;
+
+    /// Non-constant bound, let's try to compute the difference between the
+    /// upper and lower bound
+    std::optional<llvm::APSInt> maybeDiff =
+        computeUbMinusLb(cast<Value>(lb), cast<Value>(ub), isSigned);
+    if (!maybeDiff)
+      return std::nullopt;
+    diff = *maybeDiff;
+  }
+  LDBG() << "constantTripCount: " << (isSigned ? "isSigned" : "isUnsigned")
+         << ", ub-lb: " << diff << "(" << diff.getBitWidth() << "b)";
+  if (diff.isNegative()) {
+    LDBG() << "constantTripCount is 0 because ub-lb diff is negative";
+    return APInt(bitwidth, 0);
+  }
+  if (!maybeStepCst) {
+    LDBG()
+        << "constantTripCount can't be computed because step is not a constant";
+    return std::nullopt;
+  }
+  auto &stepCst = maybeStepCst->first;
+  // For signed loops, a negative step size could indicate an infinite number of
+  // iterations.
+  if (isSigned && stepCst.isSignBitSet()) {
+    LDBG() << "constantTripCount is infinite because step is negative";
+    return std::nullopt;
+  }
+
+  // Both diff and step are non-negative at this point (negative steps are
+  // rejected earlier), so we use unsigned division regardless of the loop
+  // comparison signedness.
+  llvm::APInt tripCount = diff.udiv(stepCst);
+  llvm::APInt remainder = diff.urem(stepCst);
+  if (!remainder.isZero())
+    tripCount = tripCount + 1;
+
+  LDBG() << "constantTripCount found: " << tripCount;
+  return tripCount;
 }
 
 bool hasValidSizesOffsets(SmallVector<int64_t> sizesOrOffsets) {
   return llvm::none_of(sizesOrOffsets, [](int64_t value) {
-    return !ShapedType::isDynamic(value) && value < 0;
+    return ShapedType::isStatic(value) && value < 0;
   });
 }
 
 bool hasValidStrides(SmallVector<int64_t> strides) {
   return llvm::none_of(strides, [](int64_t value) {
-    return !ShapedType::isDynamic(value) && value == 0;
+    return ShapedType::isStatic(value) && value == 0;
   });
 }
 

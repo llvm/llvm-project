@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn--amdpal -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=VI %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX9 -enable-var-scope %s
+; RUN: llc -mtriple=amdgcn--amdpal < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tonga < %s | FileCheck -check-prefix=VI %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 < %s | FileCheck -check-prefix=GFX9 -enable-var-scope %s
 
 ; amdpal compute shader: check for 0x2e12 (COMPUTE_PGM_RSRC1) in pal metadata
 ; SI-DAG: '0x2e12 (COMPUTE_PGM_RSRC1)': 0x2c0000{{$}}
@@ -66,7 +66,7 @@ define amdgpu_vs half @vs_amdpal(half %arg0) #0 {
   ret half %add
 }
 
-attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #0 = { denormal_fpenv(float: preservesign) }
 
 ; amdgpu.pal.metadata.msgpack represents this:
 ;

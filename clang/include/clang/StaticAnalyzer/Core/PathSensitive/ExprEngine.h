@@ -86,7 +86,6 @@ class ExplodedNode;
 class IndirectGotoNodeBuilder;
 class MemRegion;
 class NodeBuilderContext;
-class NodeBuilderWithSinks;
 class ProgramState;
 class ProgramStateManager;
 class RegionAndSymbolInvalidationTraits;
@@ -196,6 +195,7 @@ public:
   ASTContext &getContext() const { return AMgr.getASTContext(); }
 
   AnalysisManager &getAnalysisManager() { return AMgr; }
+  const AnalysisManager &getAnalysisManager() const { return AMgr; }
 
   AnalysisDeclContextManager &getAnalysisDeclContextManager() {
     return AMgr.getAnalysisDeclContextManager();
@@ -206,8 +206,10 @@ public:
   }
 
   SValBuilder &getSValBuilder() { return svalBuilder; }
+  const SValBuilder &getSValBuilder() const { return svalBuilder; }
 
   BugReporter &getBugReporter() { return BR; }
+  const BugReporter &getBugReporter() const { return BR; }
 
   cross_tu::CrossTranslationUnitContext *
   getCrossTranslationUnitContext() {
@@ -222,11 +224,11 @@ public:
   const Stmt *getStmt() const;
 
   const LocationContext *getRootLocationContext() const {
-    assert(G.roots_begin() != G.roots_end());
-    return (*G.roots_begin())->getLocation().getLocationContext();
+    assert(G.getRoot());
+    return G.getRoot()->getLocation().getLocationContext();
   }
 
-  CFGBlock::ConstCFGElementRef getCFGElementRef() const {
+  ConstCFGElementRef getCFGElementRef() const {
     const CFGBlock *blockPtr = currBldrCtx ? currBldrCtx->getBlock() : nullptr;
     return {blockPtr, currStmtIdx};
   }
@@ -317,9 +319,12 @@ public:
                             ExplodedNode *Pred, ExplodedNodeSet &Dst);
 
   /// Called by CoreEngine when processing the entrance of a CFGBlock.
-  void processCFGBlockEntrance(const BlockEdge &L,
-                               NodeBuilderWithSinks &nodeBuilder,
-                               ExplodedNode *Pred);
+  void processCFGBlockEntrance(const BlockEdge &L, const BlockEntrance &BE,
+                               NodeBuilder &Builder, ExplodedNode *Pred);
+
+  void runCheckersForBlockEntrance(const NodeBuilderContext &BldCtx,
+                                   const BlockEntrance &Entrance,
+                                   ExplodedNode *Pred, ExplodedNodeSet &Dst);
 
   /// ProcessBranch - Called by CoreEngine. Used to generate successor nodes by
   /// processing the 'effects' of a branch condition. If the branch condition
@@ -354,7 +359,8 @@ public:
 
   /// ProcessSwitch - Called by CoreEngine.  Used to generate successor
   ///  nodes by processing the 'effects' of a switch statement.
-  void processSwitch(SwitchNodeBuilder& builder);
+  void processSwitch(const SwitchStmt *Switch, CoreEngine &CoreEng,
+                     const CFGBlock *B, ExplodedNode *Pred);
 
   /// Called by CoreEngine.  Used to notify checkers that processing a
   /// function has begun. Called for both inlined and top-level functions.
@@ -412,10 +418,17 @@ public:
                  unsigned int Space, bool IsDot) const;
 
   ProgramStateManager &getStateManager() { return StateMgr; }
+  const ProgramStateManager &getStateManager() const { return StateMgr; }
 
   StoreManager &getStoreManager() { return StateMgr.getStoreManager(); }
+  const StoreManager &getStoreManager() const {
+    return StateMgr.getStoreManager();
+  }
 
   ConstraintManager &getConstraintManager() {
+    return StateMgr.getConstraintManager();
+  }
+  const ConstraintManager &getConstraintManager() const {
     return StateMgr.getConstraintManager();
   }
 
@@ -425,11 +438,12 @@ public:
   }
 
   SymbolManager &getSymbolManager() { return SymMgr; }
+  const SymbolManager &getSymbolManager() const { return SymMgr; }
   MemRegionManager &getRegionManager() { return MRMgr; }
 
   DataTag::Factory &getDataTags() { return Engine.getDataTags(); }
 
-  // Functions for external checking of whether we have unfinished work
+  // Functions for external checking of whether we have unfinished work.
   bool wasBlocksExhausted() const { return Engine.wasBlocksExhausted(); }
   bool hasEmptyWorkList() const { return !Engine.getWorkList()->hasWork(); }
   bool hasWorkRemaining() const { return Engine.hasWorkRemaining(); }
@@ -495,10 +509,11 @@ public:
   void VisitGuardedExpr(const Expr *Ex, const Expr *L, const Expr *R,
                         ExplodedNode *Pred, ExplodedNodeSet &Dst);
 
-  void VisitInitListExpr(const InitListExpr *E, ExplodedNode *Pred,
-                         ExplodedNodeSet &Dst);
+  /// VisitAttributedStmt - Transfer function logic for AttributedStmt.
+  void VisitAttributedStmt(const AttributedStmt *A, ExplodedNode *Pred,
+                           ExplodedNodeSet &Dst);
 
-  /// VisitLogicalExpr - Transfer function logic for '&&', '||'
+  /// VisitLogicalExpr - Transfer function logic for '&&', '||'.
   void VisitLogicalExpr(const BinaryOperator* B, ExplodedNode *Pred,
                         ExplodedNodeSet &Dst);
 
@@ -506,7 +521,7 @@ public:
   void VisitMemberExpr(const MemberExpr *M, ExplodedNode *Pred,
                        ExplodedNodeSet &Dst);
 
-  /// VisitAtomicExpr - Transfer function for builtin atomic expressions
+  /// VisitAtomicExpr - Transfer function for builtin atomic expressions.
   void VisitAtomicExpr(const AtomicExpr *E, ExplodedNode *Pred,
                        ExplodedNodeSet &Dst);
 
@@ -583,6 +598,10 @@ public:
                                 ExplodedNode *Pred,
                                 ExplodedNodeSet &Dst);
 
+  void ConstructInitList(const Expr *Source, ArrayRef<Expr *> Args,
+                         bool IsTransparent, ExplodedNode *Pred,
+                         ExplodedNodeSet &Dst);
+
   /// evalEagerlyAssumeBifurcation - Given the nodes in 'Src', eagerly assume
   /// concrete boolean values for 'Ex', storing the resulting nodes in 'Dst'.
   void evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst, ExplodedNodeSet &Src,
@@ -651,7 +670,7 @@ private:
   /// evalBind - Handle the semantics of binding a value to a specific location.
   ///  This method is used by evalStore, VisitDeclStmt, and others.
   void evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE, ExplodedNode *Pred,
-                SVal location, SVal Val, bool atDeclInit = false,
+                SVal location, SVal Val, bool AtDeclInit = false,
                 const ProgramPoint *PP = nullptr);
 
   ProgramStateRef
@@ -659,13 +678,13 @@ private:
                               SVal Loc, SVal Val,
                               const LocationContext *LCtx);
 
+public:
   /// A simple wrapper when you only need to notify checkers of pointer-escape
   /// of some values.
   ProgramStateRef escapeValues(ProgramStateRef State, ArrayRef<SVal> Vs,
                                PointerEscapeKind K,
                                const CallEvent *Call = nullptr) const;
 
-public:
   // FIXME: 'tag' should be removed, and a LocationContext should be used
   // instead.
   // FIXME: Comment on the meaning of the arguments, when 'St' may not
@@ -721,7 +740,7 @@ public:
   /// For `int arr[4]` this index can be 0,1,2,3.
   /// For `int arr2[3][3]` this index can be 0,1,...,7,8.
   /// A multi-dimensional array is also a continuous memory location in a
-  /// row major order, so for arr[0][0] Idx is 0 and for arr[2][2] Idx is 8.
+  /// row major order, so for arr[0][0] Idx is 0 and for arr[3][3] Idx is 8.
   SVal computeObjectUnderConstruction(const Expr *E, ProgramStateRef State,
                                       const NodeBuilderContext *BldrCtx,
                                       const LocationContext *LCtx,
@@ -802,7 +821,7 @@ private:
   /// should inline, just by looking at the declaration of the function.
   bool mayInlineDecl(AnalysisDeclContext *ADC) const;
 
-  /// Checks our policies and decides weither the given call should be inlined.
+  /// Checks our policies and decides whether the given call should be inlined.
   bool shouldInlineCall(const CallEvent &Call, const Decl *D,
                         const ExplodedNode *Pred,
                         const EvalCallOptions &CallOpts = {});
@@ -898,8 +917,8 @@ private:
                          ExplodedNodeSet &Dst);
 
 public:
-  /// Note whether this loop has any more iteratios to model. These methods are
-  /// essentially an interface for a GDM trait. Further reading in
+  /// Note whether this loop has any more iterations to model. These methods
+  //  are essentially an interface for a GDM trait. Further reading in
   /// ExprEngine::VisitObjCForCollectionStmt().
   [[nodiscard]] static ProgramStateRef
   setWhetherHasMoreIteration(ProgramStateRef State,
@@ -963,7 +982,7 @@ private:
                              const ConstructionContextItem &Item,
                              const LocationContext *LC, SVal V);
 
-  /// Mark the object sa fully constructed, cleaning up the state trait
+  /// Mark the object as fully constructed, cleaning up the state trait
   /// that tracks objects under construction.
   static ProgramStateRef
   finishObjectConstruction(ProgramStateRef State,

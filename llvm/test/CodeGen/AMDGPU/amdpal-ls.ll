@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn--amdpal -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn--amdpal < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tonga < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}ls_amdpal:
 ; GCN:         .amdgpu_pal_metadata
@@ -7,7 +7,7 @@
 ; GCN-NEXT: amdpal.pipelines:
 ; GCN-NEXT:   - .hardware_stages:
 ; GCN-NEXT:       .ls:
-; GCN-NEXT:         .entry_point:    _amdgpu_ls
+; GCN-NEXT:         .entry_point:    _amdgpu_ls_main
 ; GCN-NEXT:         .entry_point_symbol:    ls_amdpal
 ; GCN-NEXT:         .scratch_memory_size: 0
 ; GCN:     .registers:

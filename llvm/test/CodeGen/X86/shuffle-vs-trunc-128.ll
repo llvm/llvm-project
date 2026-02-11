@@ -1113,8 +1113,8 @@ define <16 x i8> @evenelts_v32i16_trunc_v16i16_to_v16i8(<32 x i16> %n2) nounwind
 ;
 ; AVX512VBMI-FAST-LABEL: evenelts_v32i16_trunc_v16i16_to_v16i8:
 ; AVX512VBMI-FAST:       # %bb.0:
-; AVX512VBMI-FAST-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,4,8,12,16,20,24,28,32,36,40,44,48,52,56,79]
-; AVX512VBMI-FAST-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VBMI-FAST-NEXT:    vmovdqa {{.*#+}} xmm1 = [64,65,66,67,68,69,24,28,32,36,40,44,48,52,56,79]
+; AVX512VBMI-FAST-NEXT:    vpmovdb %ymm0, %xmm2
 ; AVX512VBMI-FAST-NEXT:    vpermi2b %zmm2, %zmm0, %zmm1
 ; AVX512VBMI-FAST-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
 ; AVX512VBMI-FAST-NEXT:    vpextrw $6, %xmm0, %eax
@@ -1124,14 +1124,14 @@ define <16 x i8> @evenelts_v32i16_trunc_v16i16_to_v16i8(<32 x i16> %n2) nounwind
 ;
 ; AVX512VBMI-SLOW-LABEL: evenelts_v32i16_trunc_v16i16_to_v16i8:
 ; AVX512VBMI-SLOW:       # %bb.0:
-; AVX512VBMI-SLOW-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,4,8,12,16,20,24,28,32,36,40,44,48,77,78,79]
-; AVX512VBMI-SLOW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512VBMI-SLOW-NEXT:    vpermi2b %zmm2, %zmm0, %zmm1
+; AVX512VBMI-SLOW-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,1,2,3,4,5,6,92,96,100,104,108,112,13,14,15]
+; AVX512VBMI-SLOW-NEXT:    vpmovdb %ymm0, %xmm2
+; AVX512VBMI-SLOW-NEXT:    vpermt2b %zmm0, %zmm1, %zmm2
 ; AVX512VBMI-SLOW-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
 ; AVX512VBMI-SLOW-NEXT:    vpextrw $6, %xmm0, %eax
 ; AVX512VBMI-SLOW-NEXT:    vpextrw $4, %xmm0, %ecx
 ; AVX512VBMI-SLOW-NEXT:    vpextrw $2, %xmm0, %edx
-; AVX512VBMI-SLOW-NEXT:    vpinsrb $13, %edx, %xmm1, %xmm0
+; AVX512VBMI-SLOW-NEXT:    vpinsrb $13, %edx, %xmm2, %xmm0
 ; AVX512VBMI-SLOW-NEXT:    vpinsrb $14, %ecx, %xmm0, %xmm0
 ; AVX512VBMI-SLOW-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
 ; AVX512VBMI-SLOW-NEXT:    vzeroupper

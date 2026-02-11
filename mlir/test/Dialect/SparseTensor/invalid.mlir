@@ -347,7 +347,7 @@ func.func @sparse_wrong_arity_compression(%arg0: memref<?xf64>,
 // -----
 
 func.func @sparse_convert_unranked(%arg0: tensor<*xf32>) -> tensor<10xf32> {
-  // expected-error@+1 {{invalid kind of type specified}}
+  // expected-error@+1 {{invalid kind of type specified: expected builtin.tensor, but found 'tensor<*xf32>'}}
   %0 = sparse_tensor.convert %arg0 : tensor<*xf32> to tensor<10xf32>
   return %0 : tensor<10xf32>
 }
@@ -626,6 +626,20 @@ func.func @invalid_reduce_wrong_yield(%arg0: f64, %arg1: f64) -> f64 {
         %cst = arith.constant 2 : i64
         tensor.yield %cst : i64
     }
+  return %r : f64
+}
+
+// -----
+
+func.func @invalid_reduce_wrong_terminator(%arg0: f64, %arg1: f64) -> f64 {
+  %cf1 = arith.constant 1.0 : f64
+  // expected-error@+1 {{reduce region must end with a terminator}}
+  %r = sparse_tensor.reduce %arg0, %arg1, %cf1 : f64 {
+  ^bb0(%arg2: f64, %arg3: f64):
+    %0 = arith.addf %arg2, %arg3 : f64
+    sparse_tensor.yield %0 : f64
+    %1 = arith.fptosi %0 : f64 to i32
+  }
   return %r : f64
 }
 

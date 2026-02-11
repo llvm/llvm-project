@@ -1,28 +1,30 @@
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info --print-after=spirv-nonsemantic-debug-info -O0 -mtriple=spirv64-unknown-unknown %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-MIR
+; RUN: llc --verify-machineinstrs --print-after=spirv-nonsemantic-debug-info -O0 -mtriple=spirv64-amd-amdhsa %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-MIR
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION
-; TODO(#109287): When type is void * the spirv-val raises an error when DebugInfoNone is set as <id> Base Type argument of DebugTypePointer.   
+; TODO(#109287): When type is void * the spirv-val raises an error when DebugInfoNone is set as <id> Base Type argument of DebugTypePointer.
 ; DISABLED: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-MIR-DAG:   [[i32type:%[0-9]+\:type]] = OpTypeInt 32, 0
 ; CHECK-MIR-DAG:   [[void_type:%[0-9]+\:type\(s64\)]] = OpTypeVoid
-; CHECK-MIR-DAG:   [[i32_8:%[0-9]+\:iid]] = OpConstantI [[i32type]], 8
-; CHECK-MIR-DAG:   [[i32_0:%[0-9]+\:iid]] = OpConstantI [[i32type]], 0
-; CHECK-MIR-DAG:   [[i32_5:%[0-9]+\:iid\(s32\)]] = OpConstantI [[i32type]], 5
-; CHECK-MIR-DAG:   [[enc_float:%[0-9]+\:iid\(s32\)]] = OpConstantI [[i32type]], 3
-; CHECK-MIR-DAG:   [[enc_boolean:%[0-9]+\:iid\(s32\)]] = OpConstantI [[i32type]], 2
+; CHECK-MIR-DAG:   [[i32_8:%[0-9]+\:iid]] = OpConstantI [[i32type]], 8{{$}}
+; CHECK-MIR-DAG:   [[i32_0:%[0-9]+\:iid(\(s32\))?]] = OpConstantNull [[i32type]]
+; CHECK-MIR-DAG:   [[i32_5:%[0-9]+\:iid\(s32\)]] = OpConstantI [[i32type]], 5{{$}}
+; CHECK-MIR-DAG:   [[enc_float:%[0-9]+\:iid\(s32\)]] = OpConstantI [[i32type]], 3{{$}}
+; CHECK-MIR-DAG:   [[enc_boolean:%[0-9]+\:iid\(s32\)]] = OpConstantI [[i32type]], 2{{$}}
 ; CHECK-MIR-DAG:   [[bool:%[0-9]+\:id\(s32\)]] = OpExtInst [[void_type]], 3, 2, {{%[0-9]+\:[a-z0-9\(\)]+}}, [[i32_8]], [[enc_boolean]], [[i32_0]]
-; CHECK-MIR-DAG:   [[i32_16:%[0-9]+\:iid\(s32\)]] = OpConstantI [[i32type]], 16
-; CHECK-MIR-DAG:   [[enc_signed:%[0-9]+\:iid\(s32\)]] = OpConstantI [[i32type]], 4
+; CHECK-MIR-DAG:   [[i32_16:%[0-9]+\:iid\(s32\)]] = OpConstantI [[i32type]], 16{{$}}
+; CHECK-MIR-DAG:   [[enc_signed:%[0-9]+\:iid\(s32\)]] = OpConstantI [[i32type]], 4{{$}}
 ; CHECK-MIR-DAG:   [[short:%[0-9]+\:id\(s32\)]] = OpExtInst [[void_type]], 3, 2, {{%[0-9]+\:[a-z0-9\(\)]+}}, [[i32_16]], [[enc_signed]], [[i32_0]]
 ; CHECK-MIR-DAG:   [[char:%[0-9]+\:id\(s32\)]] = OpExtInst [[void_type]], 3, 2, {{%[0-9]+\:[a-z0-9\(\)]+}}, [[i32_8]], [[i32_5]], [[i32_0]]
-; CHECK-MIR-DAG:   [[i32_64:%[0-9]+\:iid\(s32\)]] = OpConstantI [[i32type]], 64
+; CHECK-MIR-DAG:   [[i32_64:%[0-9]+\:iid\(s32\)]] = OpConstantI [[i32type]], 64{{$}}
 ; CHECK-MIR-DAG:   [[long:%[0-9]+\:id\(s32\)]] = OpExtInst [[void_type]], 3, 2, {{%[0-9]+\:[a-z0-9\(\)]+}}, [[i32_64]], [[enc_signed]], [[i32_0]]
-; CHECK-MIR-DAG:   [[i32_32:%[0-9]+\:iid\(s32\)]] = OpConstantI [[i32type]], 32
-; CHECK-MIR-DAG:   [[enc_unsigned:%[0-9]+\:iid\(s32\)]] = OpConstantI [[i32type]], 6
+; CHECK-MIR-DAG:   [[i32_32:%[0-9]+\:iid\(s32\)]] = OpConstantI [[i32type]], 32{{$}}
+; CHECK-MIR-DAG:   [[enc_unsigned:%[0-9]+\:iid\(s32\)]] = OpConstantI [[i32type]], 6{{$}}
 ; CHECK-MIR-DAG:   [[unsigned_int:%[0-9]+\:id\(s32\)]] = OpExtInst [[void_type]], 3, 2, {{%[0-9]+\:[a-z0-9\(\)]+}}, [[i32_32]], [[enc_unsigned]], [[i32_0]]
 ; CHECK-MIR-DAG:   [[unsigned_short:%[0-9]+\:id\(s32\)]] = OpExtInst [[void_type]], 3, 2, {{%[0-9]+\:[a-z0-9\(\)]+}}, [[i32_16]], [[enc_unsigned]], [[i32_0]]
-; CHECK-MIR-DAG:   [[enc_unsigned_char:%[0-9]+\:iid\(s32\)]] = OpConstantI [[i32type]], 7
+; CHECK-MIR-DAG:   [[enc_unsigned_char:%[0-9]+\:iid\(s32\)]] = OpConstantI [[i32type]], 7{{$}}
 ; CHECK-MIR-DAG:   [[unsigned_char:%[0-9]+\:id\(s32\)]] = OpExtInst [[void_type]], 3, 2, {{%[0-9]+\:[a-z0-9\(\)]+}}, [[i32_8]], [[enc_unsigned_char]], [[i32_0]]
 ; CHECK-MIR-DAG:   [[unsigned_long:%[0-9]+\:id\(s32\)]] = OpExtInst [[void_type]], 3, 2, {{%[0-9]+\:[a-z0-9\(\)]+}}, [[i32_64]], [[enc_unsigned]], [[i32_0]]
 ; CHECK-MIR-DAG:   [[float:%[0-9]+\:id\(s32\)]] = OpExtInst [[void_type]], 3, 2, {{%[0-9]+\:[a-z0-9\(\)]+}}, [[i32_32]], [[enc_float]], [[i32_0]]
@@ -43,17 +45,17 @@
 ; CHECK-MIR-DAG:   OpExtInst [[void_type]], 3, 3, [[debug_info_none]], [[i32_5]], [[i32_0]]
 
 ; CHECK-SPIRV:	[[i32type:%[0-9]+]] = OpTypeInt 32 0
-; CHECK-SPIRV-DAG:	[[i32_8:%[0-9]+]] = OpConstant [[i32type]] 8
-; CHECK-SPIRV-DAG:	[[i32_0:%[0-9]+]] = OpConstant [[i32type]] 0
-; CHECK-SPIRV-DAG:	[[i32_5:%[0-9]+]] = OpConstant [[i32type]] 5
-; CHECK-SPIRV-DAG:	[[enc_float:%[0-9]+]] = OpConstant [[i32type]] 3
-; CHECK-SPIRV-DAG:	[[enc_boolean:%[0-9]+]] = OpConstant [[i32type]] 2
-; CHECK-SPIRV-DAG:	[[i32_16:%[0-9]+]] = OpConstant [[i32type]] 16
-; CHECK-SPIRV-DAG:	[[enc_signed:%[0-9]+]] = OpConstant [[i32type]] 4
-; CHECK-SPIRV-DAG:	[[i32_64:%[0-9]+]] = OpConstant [[i32type]] 64
-; CHECK-SPIRV-DAG:	[[i32_32:%[0-9]+]] = OpConstant [[i32type]] 32
-; CHECK-SPIRV-DAG:	[[enc_unsigned:%[0-9]+]] = OpConstant [[i32type]] 6
-; CHECK-SPIRV-DAG:	[[enc_unsigned_char:%[0-9]+]] = OpConstant [[i32type]] 7
+; CHECK-SPIRV-DAG:	[[i32_8:%[0-9]+]] = OpConstant [[i32type]] 8{{$}}
+; CHECK-SPIRV-DAG:	[[i32_0:%[0-9]+]] = OpConstantNull [[i32type]]{{$}}
+; CHECK-SPIRV-DAG:	[[i32_5:%[0-9]+]] = OpConstant [[i32type]] 5{{$}}
+; CHECK-SPIRV-DAG:	[[enc_float:%[0-9]+]] = OpConstant [[i32type]] 3{{$}}
+; CHECK-SPIRV-DAG:	[[enc_boolean:%[0-9]+]] = OpConstant [[i32type]] 2{{$}}
+; CHECK-SPIRV-DAG:	[[i32_16:%[0-9]+]] = OpConstant [[i32type]] 16{{$}}
+; CHECK-SPIRV-DAG:	[[enc_signed:%[0-9]+]] = OpConstant [[i32type]] 4{{$}}
+; CHECK-SPIRV-DAG:	[[i32_64:%[0-9]+]] = OpConstant [[i32type]] 64{{$}}
+; CHECK-SPIRV-DAG:	[[i32_32:%[0-9]+]] = OpConstant [[i32type]] 32{{$}}
+; CHECK-SPIRV-DAG:	[[enc_unsigned:%[0-9]+]] = OpConstant [[i32type]] 6{{$}}
+; CHECK-SPIRV-DAG:	[[enc_unsigned_char:%[0-9]+]] = OpConstant [[i32type]] 7{{$}}
 ; CHECK-SPIRV-DAG:	[[bool:%[0-9]+]] = OpExtInst {{%[0-9]+ %[0-9]+}} DebugTypeBasic {{%[0-9]+}} [[i32_8]] [[enc_boolean]] [[i32_0]]
 ; CHECK-SPIRV-DAG:	[[short:%[0-9]+]] = OpExtInst {{%[0-9]+ %[0-9]+}} DebugTypeBasic {{%[0-9]+}} [[i32_16]] [[enc_signed]] [[i32_0]]
 ; CHECK-SPIRV-DAG:	[[char:%[0-9]+]] = OpExtInst {{%[0-9]+ %[0-9]+}} DebugTypeBasic {{%[0-9]+}} [[i32_8]] [[i32_5]] [[i32_0]]
@@ -124,6 +126,7 @@ define spir_func i32 @test0() !dbg !17 {
   %14 = load ptr addrspace(4), ptr %11, align 4, !dbg !65
   store ptr addrspace(4) %14, ptr %12, align 4, !dbg !64
     #dbg_declare(ptr %13, !66, !DIExpression(DW_OP_constu, 0, DW_OP_swap, DW_OP_xderef), !70)
+  store [8 x i32] zeroinitializer, ptr %13, align 4
   ret i32 0, !dbg !71
 }
 
@@ -167,6 +170,7 @@ define spir_func i32 @test1() !dbg !72 {
   %14 = load ptr addrspace(4), ptr %11, align 4, !dbg !97
   store ptr addrspace(4) %14, ptr %12, align 4, !dbg !96
     #dbg_declare(ptr %13, !98, !DIExpression(DW_OP_constu, 0, DW_OP_swap, DW_OP_xderef), !99)
+  store [8 x i32] zeroinitializer, ptr %13, align 4
   ret i32 0, !dbg !100
 }
 
@@ -278,3 +282,4 @@ define spir_func i32 @test1() !dbg !72 {
 !98 = !DILocalVariable(name: "arr1", scope: !72, file: !3, line: 35, type: !67)
 !99 = !DILocation(line: 35, column: 7, scope: !72)
 !100 = !DILocation(line: 36, column: 3, scope: !72)
+!101 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !67, size: 32, dwarfAddressSpace: 4)

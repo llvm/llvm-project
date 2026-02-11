@@ -147,13 +147,13 @@ private:
   std::vector<StringRef> ObjectFilenames;
   CoverageViewOptions ViewOpts;
   CoverageFiltersMatchAll Filters;
-  CoverageFilters IgnoreFilenameFilters;
+  CoverageFilters FilenameFilters;
 
   /// True if InputSourceFiles are provided.
   bool HadSourceFiles = false;
 
   /// The path to the indexed profile.
-  std::string PGOFilename;
+  std::optional<std::string> PGOFilename;
 
   /// A list of input source files.
   std::vector<std::string> SourceFiles;
@@ -222,7 +222,7 @@ void CodeCoverageTool::addCollectedPath(const std::string &Path) {
     return;
   }
   sys::path::remove_dots(EffectivePath, /*remove_dot_dot=*/true);
-  if (!IgnoreFilenameFilters.matchesFilename(EffectivePath))
+  if (!FilenameFilters.matchesFilename(EffectivePath))
     SourceFiles.emplace_back(EffectivePath.str());
   HadSourceFiles = !SourceFiles.empty();
 }
@@ -455,10 +455,12 @@ static bool modifiedTimeGT(StringRef LHS, StringRef RHS) {
 }
 
 std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
-  for (StringRef ObjectFilename : ObjectFilenames)
-    if (modifiedTimeGT(ObjectFilename, PGOFilename))
-      warning("profile data may be out of date - object is newer",
-              ObjectFilename);
+  if (PGOFilename) {
+    for (StringRef ObjectFilename : ObjectFilenames)
+      if (modifiedTimeGT(ObjectFilename, PGOFilename.value()))
+        warning("profile data may be out of date - object is newer",
+                ObjectFilename);
+  }
   auto FS = vfs::getRealFileSystem();
   auto CoverageOrErr = CoverageMapping::load(
       ObjectFilenames, PGOFilename, *FS, CoverageArches,
@@ -547,7 +549,7 @@ void CodeCoverageTool::removeUnmappedInputs(const CoverageMapping &Coverage) {
   // The user may have specified source files which aren't in the coverage
   // mapping. Filter these files away.
   llvm::erase_if(SourceFiles, [&](const std::string &SF) {
-    return !std::binary_search(CoveredFiles.begin(), CoveredFiles.end(), SF);
+    return !llvm::binary_search(CoveredFiles, SF);
   });
 }
 
@@ -588,8 +590,7 @@ void CodeCoverageTool::demangleSymbols(const CoverageMapping &Coverage) {
   // Invoke the demangler.
   std::vector<StringRef> ArgsV;
   ArgsV.reserve(ViewOpts.DemanglerOpts.size());
-  for (StringRef Arg : ViewOpts.DemanglerOpts)
-    ArgsV.push_back(Arg);
+  llvm::append_range(ArgsV, ViewOpts.DemanglerOpts);
   std::optional<StringRef> Redirects[] = {
       InputPath.str(), OutputPath.str(), {""}};
   std::string ErrMsg;
@@ -669,10 +670,15 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       "dump-collected-paths", cl::Optional, cl::Hidden,
       cl::desc("Show the collected paths to source files"));
 
-  cl::opt<std::string, true> PGOFilename(
-      "instr-profile", cl::Required, cl::location(this->PGOFilename),
+  cl::opt<std::string> PGOFilename(
+      "instr-profile", cl::Optional,
       cl::desc(
           "File with the profile data obtained after an instrumented run"));
+
+  cl::opt<bool> EmptyProfile(
+      "empty-profile", cl::Optional,
+      cl::desc("Use a synthetic profile with no data to generate "
+               "baseline coverage"));
 
   cl::list<std::string> Arches(
       "arch", cl::desc("architectures of the coverage mapping binaries"));
@@ -728,6 +734,12 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
                "regular expression"),
       cl::cat(FilteringCategory));
 
+  cl::list<std::string> IncludeFilenameRegexFilters(
+      "include-filename-regex", cl::Optional,
+      cl::desc("Only include source code files with file paths that match the "
+               "given regular expression"),
+      cl::cat(FilteringCategory));
+
   cl::opt<double> RegionCoverageLtFilter(
       "region-coverage-lt", cl::Optional,
       cl::desc("Show code coverage only for functions with region coverage "
@@ -763,6 +775,10 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       "show-region-summary", cl::Optional,
       cl::desc("Show region statistics in summary table"),
       cl::init(true));
+
+  cl::opt<bool> FunctionSummary(
+      "show-function-summary", cl::Optional,
+      cl::desc("Show function statistics in summary table"), cl::init(true));
 
   cl::opt<bool> BranchSummary(
       "show-branch-summary", cl::Optional,
@@ -805,6 +821,15 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       BIDFetcher = std::make_unique<object::BuildIDFetcher>(DebugFileDirectory);
     }
     this->CheckBinaryIDs = CheckBinaryIDs;
+
+    if (!PGOFilename.empty() == EmptyProfile) {
+      error(
+          "exactly one of -instr-profile and -empty-profile must be specified");
+      return 1;
+    }
+    if (!PGOFilename.empty()) {
+      this->PGOFilename = std::make_optional(PGOFilename.getValue());
+    }
 
     if (!CovFilename.empty())
       ObjectFilenames.emplace_back(CovFilename);
@@ -916,8 +941,11 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
 
     // Create the ignore filename filters.
     for (const auto &RE : IgnoreFilenameRegexFilters)
-      IgnoreFilenameFilters.push_back(
-          std::make_unique<NameRegexCoverageFilter>(RE));
+      FilenameFilters.push_back(std::make_unique<NameRegexCoverageFilter>(RE));
+
+    for (const auto &RE : IncludeFilenameRegexFilters)
+      FilenameFilters.push_back(std::make_unique<NameRegexCoverageFilter>(
+          RE, NameRegexCoverageFilter::FilterType::Include));
 
     if (!Arches.empty()) {
       for (const std::string &Arch : Arches) {
@@ -934,7 +962,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       }
     }
 
-    // IgnoreFilenameFilters are applied even when InputSourceFiles specified.
+    // FilenameFilters are applied even when InputSourceFiles specified.
     for (const std::string &File : InputSourceFiles)
       collectPaths(File);
 
@@ -947,6 +975,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     ViewOpts.ShowMCDCSummary = MCDCSummary;
     ViewOpts.ShowBranchSummary = BranchSummary;
     ViewOpts.ShowRegionSummary = RegionSummary;
+    ViewOpts.ShowFunctionSummary = FunctionSummary;
     ViewOpts.ShowInstantiationSummary = InstantiationSummary;
     ViewOpts.ExportSummaryOnly = SummaryOnly;
     ViewOpts.NumThreads = NumThreads;
@@ -1117,20 +1146,22 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
     }
   }
 
-  sys::fs::file_status Status;
-  if (std::error_code EC = sys::fs::status(PGOFilename, Status)) {
-    error("could not read profile data!" + EC.message(), PGOFilename);
-    return 1;
-  }
+  if (PGOFilename) {
+    sys::fs::file_status Status;
+    if (std::error_code EC = sys::fs::status(PGOFilename.value(), Status)) {
+      error("could not read profile data!" + EC.message(), PGOFilename.value());
+      return 1;
+    }
 
-  if (ShowCreatedTime) {
-    auto ModifiedTime = Status.getLastModificationTime();
-    std::string ModifiedTimeStr = to_string(ModifiedTime);
-    size_t found = ModifiedTimeStr.rfind(':');
-    ViewOpts.CreatedTimeStr =
-        (found != std::string::npos)
-            ? "Created: " + ModifiedTimeStr.substr(0, found)
-            : "Created: " + ModifiedTimeStr;
+    if (ShowCreatedTime) {
+      auto ModifiedTime = Status.getLastModificationTime();
+      std::string ModifiedTimeStr = to_string(ModifiedTime);
+      size_t found = ModifiedTimeStr.rfind(':');
+      ViewOpts.CreatedTimeStr =
+          (found != std::string::npos)
+              ? "Created: " + ModifiedTimeStr.substr(0, found)
+              : "Created: " + ModifiedTimeStr;
+    }
   }
 
   auto Coverage = load();
@@ -1142,7 +1173,7 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
   if (SourceFiles.empty() && !HadSourceFiles)
     // Get the source files from the function coverage mapping.
     for (StringRef Filename : Coverage->getUniqueSourceFiles()) {
-      if (!IgnoreFilenameFilters.matchesFilename(Filename))
+      if (!FilenameFilters.matchesFilename(Filename))
         SourceFiles.push_back(std::string(Filename));
     }
 
@@ -1239,10 +1270,12 @@ int CodeCoverageTool::doReport(int argc, const char **argv,
     return 1;
   }
 
-  sys::fs::file_status Status;
-  if (std::error_code EC = sys::fs::status(PGOFilename, Status)) {
-    error("could not read profile data!" + EC.message(), PGOFilename);
-    return 1;
+  if (PGOFilename) {
+    sys::fs::file_status Status;
+    if (std::error_code EC = sys::fs::status(PGOFilename.value(), Status)) {
+      error("could not read profile data!" + EC.message(), PGOFilename.value());
+      return 1;
+    }
   }
 
   auto Coverage = load();
@@ -1252,7 +1285,7 @@ int CodeCoverageTool::doReport(int argc, const char **argv,
   CoverageReport Report(ViewOpts, *Coverage);
   if (!ShowFunctionSummaries) {
     if (SourceFiles.empty())
-      Report.renderFileReports(llvm::outs(), IgnoreFilenameFilters);
+      Report.renderFileReports(llvm::outs(), FilenameFilters);
     else
       Report.renderFileReports(llvm::outs(), SourceFiles);
   } else {
@@ -1284,6 +1317,10 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
                               cl::desc("Don't export branch data (LCOV)"),
                               cl::cat(ExportCategory));
 
+  cl::opt<bool> UnifyInstantiations("unify-instantiations", cl::Optional,
+                                    cl::desc("Unify function instantiations"),
+                                    cl::init(true), cl::cat(ExportCategory));
+
   auto Err = commandLineParser(argc, argv);
   if (Err)
     return Err;
@@ -1291,6 +1328,7 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
   ViewOpts.SkipExpansions = SkipExpansions;
   ViewOpts.SkipFunctions = SkipFunctions;
   ViewOpts.SkipBranches = SkipBranches;
+  ViewOpts.UnifyFunctionInstantiations = UnifyInstantiations;
 
   if (ViewOpts.Format != CoverageViewOptions::OutputFormat::Text &&
       ViewOpts.Format != CoverageViewOptions::OutputFormat::Lcov) {
@@ -1299,10 +1337,12 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
     return 1;
   }
 
-  sys::fs::file_status Status;
-  if (std::error_code EC = sys::fs::status(PGOFilename, Status)) {
-    error("could not read profile data!" + EC.message(), PGOFilename);
-    return 1;
+  if (PGOFilename) {
+    sys::fs::file_status Status;
+    if (std::error_code EC = sys::fs::status(PGOFilename.value(), Status)) {
+      error("could not read profile data!" + EC.message(), PGOFilename.value());
+      return 1;
+    }
   }
 
   auto Coverage = load();
@@ -1329,7 +1369,7 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
   }
 
   if (SourceFiles.empty())
-    Exporter->renderRoot(IgnoreFilenameFilters);
+    Exporter->renderRoot(FilenameFilters);
   else
     Exporter->renderRoot(SourceFiles);
 

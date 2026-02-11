@@ -105,7 +105,7 @@ template <class T> class NegativeTemplateConstructor {
     int FIELD;                                   \
   };                                             \
 // Ensure FIELD is not initialized since fixes inside of macros are disabled.
-// CHECK-FIXES: int FIELD;
+// CHECK-FIXES: int FIELD; {{\\}}
 
 UNINITIALIZED_FIELD_IN_MACRO_BODY(F);
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: constructor does not initialize these fields: F
@@ -429,7 +429,7 @@ template struct PositiveTemplateVirtualDestructor<int>;
     virtual ~UninitializedFieldVirtual##FIELD() {}       \
   };                                                     \
 // Ensure FIELD is not initialized since fixes inside of macros are disabled.
-// CHECK-FIXES: int FIELD;
+// CHECK-FIXES: int FIELD; {{\\}}
 
 UNINITIALIZED_FIELD_IN_MACRO_BODY_VIRTUAL(F);
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: constructor does not initialize these fields: F

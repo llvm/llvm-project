@@ -7,16 +7,12 @@ target triple = "nvptx64-nvidia-cuda"
 define i16 @bswap16(i16 %a) {
 ; CHECK-LABEL: bswap16(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<5>;
-; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %rs1, [bswap16_param_0];
-; CHECK-NEXT:    shr.u16 %rs2, %rs1, 8;
-; CHECK-NEXT:    shl.b16 %rs3, %rs1, 8;
-; CHECK-NEXT:    or.b16 %rs4, %rs3, %rs2;
-; CHECK-NEXT:    cvt.u32.u16 %r1, %rs4;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    ld.param.b16 %r1, [bswap16_param_0];
+; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 0x7701U;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %b = tail call i16 @llvm.bswap.i16(i16 %a)
   ret i16 %b
@@ -29,8 +25,8 @@ define i32 @bswap32(i32 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [bswap32_param_0];
-; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 291;
+; CHECK-NEXT:    ld.param.b32 %r1, [bswap32_param_0];
+; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 0x123U;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %b = tail call i32 @llvm.bswap.i32(i32 %a)
@@ -44,8 +40,8 @@ define <2 x i16> @bswapv2i16(<2 x i16> %a) #0 {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [bswapv2i16_param_0];
-; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 8961;
+; CHECK-NEXT:    ld.param.b32 %r1, [bswapv2i16_param_0];
+; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 0x2301U;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %b = tail call <2 x i16> @llvm.bswap.v2i16(<2 x i16> %a)
@@ -59,19 +55,33 @@ define i64 @bswap64(i64 %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [bswap64_param_0];
-; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {%r1, tmp}, %rd1; }
-; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 291;
-; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r3}, %rd1; }
-; CHECK-NEXT:    prmt.b32 %r4, %r3, 0, 291;
-; CHECK-NEXT:    mov.b64 %rd2, {%r4, %r2};
+; CHECK-NEXT:    ld.param.b64 %rd1, [bswap64_param_0];
+; CHECK-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; CHECK-NEXT:    prmt.b32 %r3, %r1, 0, 0x123U;
+; CHECK-NEXT:    prmt.b32 %r4, %r2, 0, 0x123U;
+; CHECK-NEXT:    mov.b64 %rd2, {%r4, %r3};
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
   %b = tail call i64 @llvm.bswap.i64(i64 %a)
   ret i64 %b
 }
 
+define <2 x i32> @bswapv2i32(<2 x i32> %a) {
+; CHECK-LABEL: bswapv2i32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.v2.b32 {%r1, %r2}, [bswapv2i32_param_0];
+; CHECK-NEXT:    prmt.b32 %r3, %r2, 0, 0x123U;
+; CHECK-NEXT:    prmt.b32 %r4, %r1, 0, 0x123U;
+; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-NEXT:    ret;
+  %b = tail call <2 x i32> @llvm.bswap.v2i32(<2 x i32> %a)
+  ret <2 x i32> %b
+}
 declare i16 @llvm.bswap.i16(i16)
 declare i32 @llvm.bswap.i32(i32)
 declare <2 x i16> @llvm.bswap.v2i16(<2 x i16>)
 declare i64 @llvm.bswap.i64(i64)
+declare <2 x i32> @llvm.bswap.v2i32(<2 x i32>)

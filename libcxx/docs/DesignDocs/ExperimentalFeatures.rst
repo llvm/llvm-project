@@ -161,7 +161,9 @@ has been removed in LLVM 17.0.
 `Networking TS <https://wg21.link/N4656>`__
 -------------------------------------------
 The Networking TS is not yet part of a shipping standard, and there is discussion around removing it.
-Libc++ never shipped an implementation of the Networking TS and does not plan to do so in the future.
+Libc++ never shipped an implementation of the Networking TS and does not plan to do so in the future,
+unless the C++ Standards Committee expresses a desire to merge the Networking TS into the IS (which is
+unlikely at this point).
 
 `Ranges TS <https://wg21.link/N4685>`__
 ---------------------------------------

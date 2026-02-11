@@ -16,6 +16,7 @@
 #include "clang/AST/ASTFwd.h"
 #include "clang/AST/AttrIterator.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AttrKinds.h"
 #include "clang/Basic/AttributeCommonInfo.h"
@@ -38,6 +39,8 @@ class ASTContext;
 class AttributeCommonInfo;
 class FunctionDecl;
 class OMPTraitInfo;
+class OpenACCClause;
+struct StructuralEquivalenceContext;
 
 /// Attr - This represents one attribute.
 class Attr : public AttributeCommonInfo {
@@ -109,6 +112,9 @@ public:
   Attr *clone(ASTContext &C) const;
 
   bool isLateParsed() const { return IsLateParsed; }
+
+  bool isEquivalent(const Attr &Other,
+                    StructuralEquivalenceContext &Context) const;
 
   // Pretty print this attribute.
   void printPretty(raw_ostream &OS, const PrintingPolicy &Policy) const;
@@ -231,6 +237,22 @@ public:
   }
 };
 
+class HLSLSemanticBaseAttr : public HLSLAnnotationAttr {
+protected:
+  HLSLSemanticBaseAttr(ASTContext &Context,
+                       const AttributeCommonInfo &CommonInfo, attr::Kind AK,
+                       bool IsLateParsed, bool InheritEvenIfAlreadyPresent)
+      : HLSLAnnotationAttr(Context, CommonInfo, AK, IsLateParsed,
+                           InheritEvenIfAlreadyPresent) {}
+
+public:
+  // Implement isa/cast/dyncast/etc.
+  static bool classof(const Attr *A) {
+    return A->getKind() >= attr::FirstHLSLSemanticBaseAttr &&
+           A->getKind() <= attr::LastHLSLSemanticBaseAttr;
+  }
+};
+
 /// A parameter attribute which changes the argument-passing ABI rule
 /// for the parameter.
 class ParameterABIAttr : public InheritableParamAttr {
@@ -285,8 +307,8 @@ public:
   ParamIdx(unsigned Idx, const Decl *D)
       : Idx(Idx), HasThis(false), IsValid(true) {
     assert(Idx >= 1 && "Idx must be one-origin");
-    if (const auto *FD = dyn_cast<FunctionDecl>(D))
-      HasThis = FD->isCXXInstanceMember();
+    if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(D))
+      HasThis = MethodDecl->isImplicitObjectMemberFunction();
   }
 
   /// A type into which \c ParamIdx can be serialized.

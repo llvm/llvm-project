@@ -13,11 +13,14 @@
 
 #ifndef LLVM_CLANG_AST_OPENACCCLAUSE_H
 #define LLVM_CLANG_AST_OPENACCCLAUSE_H
+
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/StmtIterator.h"
 #include "clang/Basic/OpenACCKinds.h"
+#include "llvm/ADT/STLExtras.h"
 
 #include <utility>
+#include <variant>
 
 namespace clang {
 /// This is the base type for all OpenACC Clauses.
@@ -37,6 +40,7 @@ public:
   OpenACCClauseKind getClauseKind() const { return Kind; }
   SourceLocation getBeginLoc() const { return Location.getBegin(); }
   SourceLocation getEndLoc() const { return Location.getEnd(); }
+  SourceRange getSourceRange() const { return Location; }
 
   static bool classof(const OpenACCClause *) { return true; }
 
@@ -47,8 +51,7 @@ public:
 
   child_range children();
   const_child_range children() const {
-    auto Children = const_cast<OpenACCClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OpenACCClause *>(this)->children();
   }
 
   virtual ~OpenACCClause() = default;
@@ -162,6 +165,26 @@ public:
     return const_child_range(const_child_iterator(), const_child_iterator());
   }
 };
+// Represents the 'nohost' clause.
+class OpenACCNoHostClause : public OpenACCClause {
+protected:
+  OpenACCNoHostClause(SourceLocation BeginLoc, SourceLocation EndLoc)
+      : OpenACCClause(OpenACCClauseKind::NoHost, BeginLoc, EndLoc) {}
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::NoHost;
+  }
+  static OpenACCNoHostClause *
+  Create(const ASTContext &Ctx, SourceLocation BeginLoc, SourceLocation EndLoc);
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+};
 
 /// Represents a clause that has a list of parameters.
 class OpenACCClauseWithParams : public OpenACCClause {
@@ -186,7 +209,57 @@ public:
   }
 };
 
-using DeviceTypeArgument = std::pair<IdentifierInfo *, SourceLocation>;
+class OpenACCBindClause final : public OpenACCClauseWithParams {
+  std::variant<const StringLiteral *, const IdentifierInfo *> Argument;
+
+  OpenACCBindClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                    const clang::StringLiteral *SL, SourceLocation EndLoc)
+      : OpenACCClauseWithParams(OpenACCClauseKind::Bind, BeginLoc, LParenLoc,
+                                EndLoc),
+        Argument(SL) {}
+  OpenACCBindClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                    const IdentifierInfo *ID, SourceLocation EndLoc)
+      : OpenACCClauseWithParams(OpenACCClauseKind::Bind, BeginLoc, LParenLoc,
+                                EndLoc),
+        Argument(ID) {}
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Bind;
+  }
+  static OpenACCBindClause *Create(const ASTContext &C, SourceLocation BeginLoc,
+                                   SourceLocation LParenLoc,
+                                   const IdentifierInfo *ID,
+                                   SourceLocation EndLoc);
+  static OpenACCBindClause *Create(const ASTContext &C, SourceLocation BeginLoc,
+                                   SourceLocation LParenLoc,
+                                   const StringLiteral *SL,
+                                   SourceLocation EndLoc);
+
+  bool isStringArgument() const {
+    return std::holds_alternative<const StringLiteral *>(Argument);
+  }
+
+  const StringLiteral *getStringArgument() const {
+    return std::get<const StringLiteral *>(Argument);
+  }
+
+  bool isIdentifierArgument() const {
+    return std::holds_alternative<const IdentifierInfo *>(Argument);
+  }
+
+  const IdentifierInfo *getIdentifierArgument() const {
+    return std::get<const IdentifierInfo *>(Argument);
+  }
+};
+
+bool operator==(const OpenACCBindClause &LHS, const OpenACCBindClause &RHS);
+inline bool operator!=(const OpenACCBindClause &LHS,
+                       const OpenACCBindClause &RHS) {
+  return !(LHS == RHS);
+}
+
+using DeviceTypeArgument = IdentifierLoc;
 /// A 'device_type' or 'dtype' clause, takes a list of either an 'asterisk' or
 /// an identifier. The 'asterisk' means 'the rest'.
 class OpenACCDeviceTypeClause final
@@ -208,19 +281,18 @@ class OpenACCDeviceTypeClause final
         "Invalid clause kind for device-type");
 
     assert(!llvm::any_of(Archs, [](const DeviceTypeArgument &Arg) {
-      return Arg.second.isInvalid();
+      return Arg.getLoc().isInvalid();
     }) && "Invalid SourceLocation for an argument");
 
-    assert(
-        (Archs.size() == 1 || !llvm::any_of(Archs,
-                                            [](const DeviceTypeArgument &Arg) {
-                                              return Arg.first == nullptr;
-                                            })) &&
-        "Only a single asterisk version is permitted, and must be the "
-        "only one");
+    assert((Archs.size() == 1 ||
+            !llvm::any_of(Archs,
+                          [](const DeviceTypeArgument &Arg) {
+                            return Arg.getIdentifierInfo() == nullptr;
+                          })) &&
+           "Only a single asterisk version is permitted, and must be the "
+           "only one");
 
-    std::uninitialized_copy(Archs.begin(), Archs.end(),
-                            getTrailingObjects<DeviceTypeArgument>());
+    llvm::uninitialized_copy(Archs, getTrailingObjects());
   }
 
 public:
@@ -230,12 +302,11 @@ public:
   }
   bool hasAsterisk() const {
     return getArchitectures().size() > 0 &&
-           getArchitectures()[0].first == nullptr;
+           getArchitectures()[0].getIdentifierInfo() == nullptr;
   }
 
   ArrayRef<DeviceTypeArgument> getArchitectures() const {
-    return ArrayRef<DeviceTypeArgument>(
-        getTrailingObjects<DeviceTypeArgument>(), NumArchs);
+    return getTrailingObjects(NumArchs);
   }
 
   static OpenACCDeviceTypeClause *
@@ -348,9 +419,7 @@ class OpenACCSelfClause final
 
   // Intentionally internal, meant to be an implementation detail of everything
   // else. All non-internal uses should go through getConditionExpr/getVarList.
-  llvm::ArrayRef<Expr *> getExprs() const {
-    return {getTrailingObjects<Expr *>(), NumExprs};
-  }
+  ArrayRef<Expr *> getExprs() const { return getTrailingObjects(NumExprs); }
 
 public:
   static bool classof(const OpenACCClause *C) {
@@ -358,6 +427,11 @@ public:
   }
 
   bool isConditionExprClause() const { return HasConditionExpr.has_value(); }
+  bool isVarListClause() const { return !isConditionExprClause(); }
+  bool isEmptySelfClause() const {
+    return (isConditionExprClause() && !hasConditionExpr()) ||
+           (!isConditionExprClause() && getVarList().empty());
+  }
 
   bool hasConditionExpr() const {
     assert(HasConditionExpr.has_value() &&
@@ -394,13 +468,12 @@ public:
 
   child_range children() {
     return child_range(
-        reinterpret_cast<Stmt **>(getTrailingObjects<Expr *>()),
-        reinterpret_cast<Stmt **>(getTrailingObjects<Expr *>() + NumExprs));
+        reinterpret_cast<Stmt **>(getTrailingObjects()),
+        reinterpret_cast<Stmt **>(getTrailingObjects() + NumExprs));
   }
 
   const_child_range children() const {
-    child_range Children = const_cast<OpenACCSelfClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OpenACCSelfClause *>(this)->children();
   }
 
   static OpenACCSelfClause *Create(const ASTContext &C, SourceLocation BeginLoc,
@@ -428,9 +501,17 @@ protected:
     Exprs = NewExprs;
   }
 
+  /// Used only for initialization, the leaf class can initialize this to
+  /// trailing storage, and initialize the data in the trailing storage as well.
+  void setExprs(MutableArrayRef<Expr *> NewStorage, ArrayRef<Expr *> Exprs) {
+    assert(NewStorage.size() == Exprs.size());
+    llvm::uninitialized_copy(Exprs, NewStorage.begin());
+    setExprs(NewStorage);
+  }
+
   /// Gets the entire list of expressions, but leave it to the
   /// individual clauses to expose this how they'd like.
-  llvm::ArrayRef<Expr *> getExprs() const { return Exprs; }
+  ArrayRef<Expr *> getExprs() const { return Exprs; }
 
 public:
   static bool classof(const OpenACCClause *C);
@@ -440,9 +521,7 @@ public:
   }
 
   const_child_range children() const {
-    child_range Children =
-        const_cast<OpenACCClauseWithExprs *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OpenACCClauseWithExprs *>(this)->children();
   }
 };
 
@@ -460,12 +539,10 @@ class OpenACCWaitClause final
         QueuesLoc(QueuesLoc) {
     // The first element of the trailing storage is always the devnum expr,
     // whether it is used or not.
-    std::uninitialized_copy(&DevNumExpr, &DevNumExpr + 1,
-                            getTrailingObjects<Expr *>());
-    std::uninitialized_copy(QueueIdExprs.begin(), QueueIdExprs.end(),
-                            getTrailingObjects<Expr *>() + 1);
-    setExprs(
-        MutableArrayRef(getTrailingObjects<Expr *>(), QueueIdExprs.size() + 1));
+    auto *Exprs = getTrailingObjects();
+    llvm::uninitialized_copy(ArrayRef(DevNumExpr), Exprs);
+    llvm::uninitialized_copy(QueueIdExprs, Exprs + 1);
+    setExprs(getTrailingObjects(QueueIdExprs.size() + 1));
   }
 
 public:
@@ -482,12 +559,15 @@ public:
   SourceLocation getQueuesLoc() const { return QueuesLoc; }
   bool hasDevNumExpr() const { return getExprs()[0]; }
   Expr *getDevNumExpr() const { return getExprs()[0]; }
-  llvm::ArrayRef<Expr *> getQueueIdExprs() {
+  ArrayRef<Expr *> getQueueIdExprs() {
     return OpenACCClauseWithExprs::getExprs().drop_front();
   }
-  llvm::ArrayRef<Expr *> getQueueIdExprs() const {
+  ArrayRef<Expr *> getQueueIdExprs() const {
     return OpenACCClauseWithExprs::getExprs().drop_front();
   }
+  // If this is a plain `wait` (no parens) this returns 'false'. Else Sema/Parse
+  // ensures we have at least one QueueId expression.
+  bool hasExprs() const { return getLParenLoc().isValid(); }
 };
 
 class OpenACCNumGangsClause final
@@ -499,9 +579,7 @@ class OpenACCNumGangsClause final
                         ArrayRef<Expr *> IntExprs, SourceLocation EndLoc)
       : OpenACCClauseWithExprs(OpenACCClauseKind::NumGangs, BeginLoc, LParenLoc,
                                EndLoc) {
-    std::uninitialized_copy(IntExprs.begin(), IntExprs.end(),
-                            getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), IntExprs.size()));
+    setExprs(getTrailingObjects(IntExprs.size()), IntExprs);
   }
 
 public:
@@ -512,11 +590,9 @@ public:
   Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
          ArrayRef<Expr *> IntExprs, SourceLocation EndLoc);
 
-  llvm::ArrayRef<Expr *> getIntExprs() {
-    return OpenACCClauseWithExprs::getExprs();
-  }
+  ArrayRef<Expr *> getIntExprs() { return OpenACCClauseWithExprs::getExprs(); }
 
-  llvm::ArrayRef<Expr *> getIntExprs() const {
+  ArrayRef<Expr *> getIntExprs() const {
     return OpenACCClauseWithExprs::getExprs();
   }
 };
@@ -529,9 +605,7 @@ class OpenACCTileClause final
                     ArrayRef<Expr *> SizeExprs, SourceLocation EndLoc)
       : OpenACCClauseWithExprs(OpenACCClauseKind::Tile, BeginLoc, LParenLoc,
                                EndLoc) {
-    std::uninitialized_copy(SizeExprs.begin(), SizeExprs.end(),
-                            getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), SizeExprs.size()));
+    setExprs(getTrailingObjects(SizeExprs.size()), SizeExprs);
   }
 
 public:
@@ -542,11 +616,9 @@ public:
                                    SourceLocation LParenLoc,
                                    ArrayRef<Expr *> SizeExprs,
                                    SourceLocation EndLoc);
-  llvm::ArrayRef<Expr *> getSizeExprs() {
-    return OpenACCClauseWithExprs::getExprs();
-  }
+  ArrayRef<Expr *> getSizeExprs() { return OpenACCClauseWithExprs::getExprs(); }
 
-  llvm::ArrayRef<Expr *> getSizeExprs() const {
+  ArrayRef<Expr *> getSizeExprs() const {
     return OpenACCClauseWithExprs::getExprs();
   }
 };
@@ -759,50 +831,127 @@ public:
   ArrayRef<Expr *> getVarList() const { return getExprs(); }
 };
 
+// Represents all the data needed for recipe generation.  The declaration and
+// init are stored separately, because in the case of subscripts, we do the
+// alloca at the level of the base, and the init at the element level.
+struct OpenACCPrivateRecipe {
+  VarDecl *AllocaDecl;
+
+  OpenACCPrivateRecipe(VarDecl *A) : AllocaDecl(A) {}
+
+  bool isSet() const { return AllocaDecl; }
+
+  static OpenACCPrivateRecipe Empty() {
+    return OpenACCPrivateRecipe(/*AllocaDecl=*/nullptr);
+  }
+};
+
 class OpenACCPrivateClause final
     : public OpenACCClauseWithVarList,
-      private llvm::TrailingObjects<OpenACCPrivateClause, Expr *> {
+      private llvm::TrailingObjects<OpenACCPrivateClause, Expr *,
+                                    OpenACCPrivateRecipe> {
   friend TrailingObjects;
 
   OpenACCPrivateClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
-                       ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+                       ArrayRef<Expr *> VarList,
+                       ArrayRef<OpenACCPrivateRecipe> InitRecipes,
+                       SourceLocation EndLoc)
       : OpenACCClauseWithVarList(OpenACCClauseKind::Private, BeginLoc,
                                  LParenLoc, EndLoc) {
-    std::uninitialized_copy(VarList.begin(), VarList.end(),
-                            getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    assert(VarList.size() == InitRecipes.size());
+    setExprs(getTrailingObjects<Expr *>(VarList.size()), VarList);
+    llvm::uninitialized_copy(InitRecipes,
+                             getTrailingObjects<OpenACCPrivateRecipe>());
   }
 
 public:
   static bool classof(const OpenACCClause *C) {
     return C->getClauseKind() == OpenACCClauseKind::Private;
   }
+  // Gets a list of 'made up' `VarDecl` objects that can be used by codegen to
+  // ensure that we properly initialize each of these variables.
+  ArrayRef<OpenACCPrivateRecipe> getInitRecipes() {
+    return ArrayRef<OpenACCPrivateRecipe>{
+        getTrailingObjects<OpenACCPrivateRecipe>(), getExprs().size()};
+  }
+
+  ArrayRef<OpenACCPrivateRecipe> getInitRecipes() const {
+    return ArrayRef<OpenACCPrivateRecipe>{
+        getTrailingObjects<OpenACCPrivateRecipe>(), getExprs().size()};
+  }
+
   static OpenACCPrivateClause *
   Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
-         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+         ArrayRef<Expr *> VarList, ArrayRef<OpenACCPrivateRecipe> InitRecipes,
+         SourceLocation EndLoc);
+
+  size_t numTrailingObjects(OverloadToken<Expr *>) const {
+    return getExprs().size();
+  }
+};
+
+// A 'pair' to stand in for the recipe.  RecipeDecl is the main declaration, and
+// InitFromTemporary is the 'temp' declaration we put in to be 'copied from'.
+struct OpenACCFirstPrivateRecipe {
+  VarDecl *AllocaDecl;
+  VarDecl *InitFromTemporary;
+  OpenACCFirstPrivateRecipe(VarDecl *A, VarDecl *T)
+      : AllocaDecl(A), InitFromTemporary(T) {
+    assert(!InitFromTemporary || InitFromTemporary->getInit() == nullptr);
+  }
+
+  bool isSet() const { return AllocaDecl; }
+
+  static OpenACCFirstPrivateRecipe Empty() {
+    return OpenACCFirstPrivateRecipe(/*AllocaDecl=*/nullptr,
+                                     /*InitFromTemporary=*/nullptr);
+  }
 };
 
 class OpenACCFirstPrivateClause final
     : public OpenACCClauseWithVarList,
-      private llvm::TrailingObjects<OpenACCFirstPrivateClause, Expr *> {
+      private llvm::TrailingObjects<OpenACCFirstPrivateClause, Expr *,
+                                    OpenACCFirstPrivateRecipe> {
   friend TrailingObjects;
 
   OpenACCFirstPrivateClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
-                            ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+                            ArrayRef<Expr *> VarList,
+                            ArrayRef<OpenACCFirstPrivateRecipe> InitRecipes,
+                            SourceLocation EndLoc)
       : OpenACCClauseWithVarList(OpenACCClauseKind::FirstPrivate, BeginLoc,
                                  LParenLoc, EndLoc) {
-    std::uninitialized_copy(VarList.begin(), VarList.end(),
-                            getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    assert(VarList.size() == InitRecipes.size());
+    setExprs(getTrailingObjects<Expr *>(VarList.size()), VarList);
+    llvm::uninitialized_copy(InitRecipes,
+                             getTrailingObjects<OpenACCFirstPrivateRecipe>());
   }
 
 public:
   static bool classof(const OpenACCClause *C) {
     return C->getClauseKind() == OpenACCClauseKind::FirstPrivate;
   }
+
+  // Gets a list of 'made up' `VarDecl` objects that can be used by codegen to
+  // ensure that we properly initialize each of these variables.
+  ArrayRef<OpenACCFirstPrivateRecipe> getInitRecipes() {
+    return ArrayRef<OpenACCFirstPrivateRecipe>{
+        getTrailingObjects<OpenACCFirstPrivateRecipe>(), getExprs().size()};
+  }
+
+  ArrayRef<OpenACCFirstPrivateRecipe> getInitRecipes() const {
+    return ArrayRef<OpenACCFirstPrivateRecipe>{
+        getTrailingObjects<OpenACCFirstPrivateRecipe>(), getExprs().size()};
+  }
+
   static OpenACCFirstPrivateClause *
   Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
-         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+         ArrayRef<Expr *> VarList,
+         ArrayRef<OpenACCFirstPrivateRecipe> InitRecipes,
+         SourceLocation EndLoc);
+
+  size_t numTrailingObjects(OverloadToken<Expr *>) const {
+    return getExprs().size();
+  }
 };
 
 class OpenACCDevicePtrClause final
@@ -814,9 +963,7 @@ class OpenACCDevicePtrClause final
                          ArrayRef<Expr *> VarList, SourceLocation EndLoc)
       : OpenACCClauseWithVarList(OpenACCClauseKind::DevicePtr, BeginLoc,
                                  LParenLoc, EndLoc) {
-    std::uninitialized_copy(VarList.begin(), VarList.end(),
-                            getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects(VarList.size()), VarList);
   }
 
 public:
@@ -837,9 +984,7 @@ class OpenACCAttachClause final
                       ArrayRef<Expr *> VarList, SourceLocation EndLoc)
       : OpenACCClauseWithVarList(OpenACCClauseKind::Attach, BeginLoc, LParenLoc,
                                  EndLoc) {
-    std::uninitialized_copy(VarList.begin(), VarList.end(),
-                            getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects(VarList.size()), VarList);
   }
 
 public:
@@ -860,9 +1005,7 @@ class OpenACCDetachClause final
                       ArrayRef<Expr *> VarList, SourceLocation EndLoc)
       : OpenACCClauseWithVarList(OpenACCClauseKind::Detach, BeginLoc, LParenLoc,
                                  EndLoc) {
-    std::uninitialized_copy(VarList.begin(), VarList.end(),
-                            getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects(VarList.size()), VarList);
   }
 
 public:
@@ -883,9 +1026,7 @@ class OpenACCDeleteClause final
                       ArrayRef<Expr *> VarList, SourceLocation EndLoc)
       : OpenACCClauseWithVarList(OpenACCClauseKind::Delete, BeginLoc, LParenLoc,
                                  EndLoc) {
-    std::uninitialized_copy(VarList.begin(), VarList.end(),
-                            getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects(VarList.size()), VarList);
   }
 
 public:
@@ -906,9 +1047,7 @@ class OpenACCUseDeviceClause final
                          ArrayRef<Expr *> VarList, SourceLocation EndLoc)
       : OpenACCClauseWithVarList(OpenACCClauseKind::UseDevice, BeginLoc,
                                  LParenLoc, EndLoc) {
-    std::uninitialized_copy(VarList.begin(), VarList.end(),
-                            getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects(VarList.size()), VarList);
   }
 
 public:
@@ -929,9 +1068,7 @@ class OpenACCNoCreateClause final
                         ArrayRef<Expr *> VarList, SourceLocation EndLoc)
       : OpenACCClauseWithVarList(OpenACCClauseKind::NoCreate, BeginLoc,
                                  LParenLoc, EndLoc) {
-    std::uninitialized_copy(VarList.begin(), VarList.end(),
-                            getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects(VarList.size()), VarList);
   }
 
 public:
@@ -952,9 +1089,7 @@ class OpenACCPresentClause final
                        ArrayRef<Expr *> VarList, SourceLocation EndLoc)
       : OpenACCClauseWithVarList(OpenACCClauseKind::Present, BeginLoc,
                                  LParenLoc, EndLoc) {
-    std::uninitialized_copy(VarList.begin(), VarList.end(),
-                            getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects(VarList.size()), VarList);
   }
 
 public:
@@ -974,9 +1109,7 @@ class OpenACCHostClause final
                     ArrayRef<Expr *> VarList, SourceLocation EndLoc)
       : OpenACCClauseWithVarList(OpenACCClauseKind::Host, BeginLoc, LParenLoc,
                                  EndLoc) {
-    std::uninitialized_copy(VarList.begin(), VarList.end(),
-                            getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects(VarList.size()), VarList);
   }
 
 public:
@@ -998,9 +1131,7 @@ class OpenACCDeviceClause final
                       ArrayRef<Expr *> VarList, SourceLocation EndLoc)
       : OpenACCClauseWithVarList(OpenACCClauseKind::Device, BeginLoc, LParenLoc,
                                  EndLoc) {
-    std::uninitialized_copy(VarList.begin(), VarList.end(),
-                            getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects(VarList.size()), VarList);
   }
 
 public:
@@ -1016,18 +1147,18 @@ class OpenACCCopyClause final
     : public OpenACCClauseWithVarList,
       private llvm::TrailingObjects<OpenACCCopyClause, Expr *> {
   friend TrailingObjects;
+  OpenACCModifierKind Modifiers;
 
   OpenACCCopyClause(OpenACCClauseKind Spelling, SourceLocation BeginLoc,
-                    SourceLocation LParenLoc, ArrayRef<Expr *> VarList,
-                    SourceLocation EndLoc)
-      : OpenACCClauseWithVarList(Spelling, BeginLoc, LParenLoc, EndLoc) {
+                    SourceLocation LParenLoc, OpenACCModifierKind Mods,
+                    ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(Spelling, BeginLoc, LParenLoc, EndLoc),
+        Modifiers(Mods) {
     assert((Spelling == OpenACCClauseKind::Copy ||
             Spelling == OpenACCClauseKind::PCopy ||
             Spelling == OpenACCClauseKind::PresentOrCopy) &&
            "Invalid clause kind for copy-clause");
-    std::uninitialized_copy(VarList.begin(), VarList.end(),
-                            getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects(VarList.size()), VarList);
   }
 
 public:
@@ -1039,27 +1170,28 @@ public:
   static OpenACCCopyClause *
   Create(const ASTContext &C, OpenACCClauseKind Spelling,
          SourceLocation BeginLoc, SourceLocation LParenLoc,
-         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+         OpenACCModifierKind Mods, ArrayRef<Expr *> VarList,
+         SourceLocation EndLoc);
+
+  OpenACCModifierKind getModifierList() const { return Modifiers; }
 };
 
 class OpenACCCopyInClause final
     : public OpenACCClauseWithVarList,
       private llvm::TrailingObjects<OpenACCCopyInClause, Expr *> {
   friend TrailingObjects;
-  bool IsReadOnly;
+  OpenACCModifierKind Modifiers;
 
   OpenACCCopyInClause(OpenACCClauseKind Spelling, SourceLocation BeginLoc,
-                      SourceLocation LParenLoc, bool IsReadOnly,
+                      SourceLocation LParenLoc, OpenACCModifierKind Mods,
                       ArrayRef<Expr *> VarList, SourceLocation EndLoc)
       : OpenACCClauseWithVarList(Spelling, BeginLoc, LParenLoc, EndLoc),
-        IsReadOnly(IsReadOnly) {
+        Modifiers(Mods) {
     assert((Spelling == OpenACCClauseKind::CopyIn ||
             Spelling == OpenACCClauseKind::PCopyIn ||
             Spelling == OpenACCClauseKind::PresentOrCopyIn) &&
            "Invalid clause kind for copyin-clause");
-    std::uninitialized_copy(VarList.begin(), VarList.end(),
-                            getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects(VarList.size()), VarList);
   }
 
 public:
@@ -1068,31 +1200,30 @@ public:
            C->getClauseKind() == OpenACCClauseKind::PCopyIn ||
            C->getClauseKind() == OpenACCClauseKind::PresentOrCopyIn;
   }
-  bool isReadOnly() const { return IsReadOnly; }
+  OpenACCModifierKind getModifierList() const { return Modifiers; }
   static OpenACCCopyInClause *
   Create(const ASTContext &C, OpenACCClauseKind Spelling,
-         SourceLocation BeginLoc, SourceLocation LParenLoc, bool IsReadOnly,
-         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+         SourceLocation BeginLoc, SourceLocation LParenLoc,
+         OpenACCModifierKind Mods, ArrayRef<Expr *> VarList,
+         SourceLocation EndLoc);
 };
 
 class OpenACCCopyOutClause final
     : public OpenACCClauseWithVarList,
       private llvm::TrailingObjects<OpenACCCopyOutClause, Expr *> {
   friend TrailingObjects;
-  bool IsZero;
+  OpenACCModifierKind Modifiers;
 
   OpenACCCopyOutClause(OpenACCClauseKind Spelling, SourceLocation BeginLoc,
-                       SourceLocation LParenLoc, bool IsZero,
+                       SourceLocation LParenLoc, OpenACCModifierKind Mods,
                        ArrayRef<Expr *> VarList, SourceLocation EndLoc)
       : OpenACCClauseWithVarList(Spelling, BeginLoc, LParenLoc, EndLoc),
-        IsZero(IsZero) {
+        Modifiers(Mods) {
     assert((Spelling == OpenACCClauseKind::CopyOut ||
             Spelling == OpenACCClauseKind::PCopyOut ||
             Spelling == OpenACCClauseKind::PresentOrCopyOut) &&
            "Invalid clause kind for copyout-clause");
-    std::uninitialized_copy(VarList.begin(), VarList.end(),
-                            getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects(VarList.size()), VarList);
   }
 
 public:
@@ -1101,31 +1232,30 @@ public:
            C->getClauseKind() == OpenACCClauseKind::PCopyOut ||
            C->getClauseKind() == OpenACCClauseKind::PresentOrCopyOut;
   }
-  bool isZero() const { return IsZero; }
+  OpenACCModifierKind getModifierList() const { return Modifiers; }
   static OpenACCCopyOutClause *
   Create(const ASTContext &C, OpenACCClauseKind Spelling,
-         SourceLocation BeginLoc, SourceLocation LParenLoc, bool IsZero,
-         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+         SourceLocation BeginLoc, SourceLocation LParenLoc,
+         OpenACCModifierKind Mods, ArrayRef<Expr *> VarList,
+         SourceLocation EndLoc);
 };
 
 class OpenACCCreateClause final
     : public OpenACCClauseWithVarList,
       private llvm::TrailingObjects<OpenACCCreateClause, Expr *> {
   friend TrailingObjects;
-  bool IsZero;
+  OpenACCModifierKind Modifiers;
 
   OpenACCCreateClause(OpenACCClauseKind Spelling, SourceLocation BeginLoc,
-                      SourceLocation LParenLoc, bool IsZero,
+                      SourceLocation LParenLoc, OpenACCModifierKind Mods,
                       ArrayRef<Expr *> VarList, SourceLocation EndLoc)
       : OpenACCClauseWithVarList(Spelling, BeginLoc, LParenLoc, EndLoc),
-        IsZero(IsZero) {
+        Modifiers(Mods) {
     assert((Spelling == OpenACCClauseKind::Create ||
             Spelling == OpenACCClauseKind::PCreate ||
             Spelling == OpenACCClauseKind::PresentOrCreate) &&
            "Invalid clause kind for create-clause");
-    std::uninitialized_copy(VarList.begin(), VarList.end(),
-                            getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects(VarList.size()), VarList);
   }
 
 public:
@@ -1134,28 +1264,101 @@ public:
            C->getClauseKind() == OpenACCClauseKind::PCreate ||
            C->getClauseKind() == OpenACCClauseKind::PresentOrCreate;
   }
-  bool isZero() const { return IsZero; }
+  OpenACCModifierKind getModifierList() const { return Modifiers; }
   static OpenACCCreateClause *
   Create(const ASTContext &C, OpenACCClauseKind Spelling,
-         SourceLocation BeginLoc, SourceLocation LParenLoc, bool IsZero,
-         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+         SourceLocation BeginLoc, SourceLocation LParenLoc,
+         OpenACCModifierKind Mods, ArrayRef<Expr *> VarList,
+         SourceLocation EndLoc);
+};
+
+// A structure to stand in for the recipe on a reduction.  RecipeDecl is the
+// 'main' declaration used for initializaiton, which is fixed.
+struct OpenACCReductionRecipe {
+  VarDecl *AllocaDecl;
+
+  // A combiner recipe is represented by an operation expression.  However, in
+  // order to generate these properly, we have to make up a LHS and a RHS
+  // expression for the purposes of generation.
+  struct CombinerRecipe {
+    VarDecl *LHS;
+    VarDecl *RHS;
+    Expr *Op;
+  };
+
+  // Contains a collection of the recipe elements we need for the combiner:
+  // -For Scalars, there will be 1 element, just the combiner for that scalar.
+  // -For a struct with a valid operator, this will be 1 element, just that
+  //  call.
+  // -For a struct without the operator, this will be 1 element per field, which
+  //  should be the combiner for that element.
+  // -For an array of any of the above, it will be the above for the element.
+  // Note: These are necessarily stored in either Trailing Storage (when in the
+  // AST), or in a separate collection when being semantically analyzed.
+  llvm::ArrayRef<CombinerRecipe> CombinerRecipes;
+
+  bool isSet() const { return AllocaDecl; }
+
+private:
+  friend class OpenACCReductionClause;
+  OpenACCReductionRecipe(VarDecl *A, llvm::ArrayRef<CombinerRecipe> Combiners)
+      : AllocaDecl(A), CombinerRecipes(Combiners) {}
+};
+
+// A version of the above that is used for semantic analysis, at a time before
+// the OpenACCReductionClause node has been created.  This one has storage for
+// the CombinerRecipe, since Trailing storage for it doesn't exist yet.
+struct OpenACCReductionRecipeWithStorage {
+  VarDecl *AllocaDecl;
+  llvm::SmallVector<OpenACCReductionRecipe::CombinerRecipe, 1> CombinerRecipes;
+
+  OpenACCReductionRecipeWithStorage(
+      VarDecl *A,
+      llvm::ArrayRef<OpenACCReductionRecipe::CombinerRecipe> Combiners)
+      : AllocaDecl(A), CombinerRecipes(Combiners) {}
+
+  static OpenACCReductionRecipeWithStorage Empty() {
+    return OpenACCReductionRecipeWithStorage(/*AllocaDecl=*/nullptr, {});
+  }
 };
 
 class OpenACCReductionClause final
     : public OpenACCClauseWithVarList,
-      private llvm::TrailingObjects<OpenACCReductionClause, Expr *> {
+      private llvm::TrailingObjects<OpenACCReductionClause, Expr *,
+                                    OpenACCReductionRecipe,
+                                    OpenACCReductionRecipe::CombinerRecipe> {
   friend TrailingObjects;
   OpenACCReductionOperator Op;
 
   OpenACCReductionClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                          OpenACCReductionOperator Operator,
-                         ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+                         ArrayRef<Expr *> VarList,
+                         ArrayRef<OpenACCReductionRecipeWithStorage> Recipes,
+                         SourceLocation EndLoc)
       : OpenACCClauseWithVarList(OpenACCClauseKind::Reduction, BeginLoc,
                                  LParenLoc, EndLoc),
         Op(Operator) {
-    std::uninitialized_copy(VarList.begin(), VarList.end(),
-                            getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    assert(VarList.size() == Recipes.size());
+    setExprs(getTrailingObjects<Expr *>(VarList.size()), VarList);
+
+    // Since we're using trailing storage on this node to store the 'combiner'
+    // recipes of the Reduction Recipes (which have a 1:M relationship), we need
+    // to ensure we get the ArrayRef of each of our combiner 'correct'.
+    OpenACCReductionRecipe::CombinerRecipe *CurCombinerLoc =
+        getTrailingObjects<OpenACCReductionRecipe::CombinerRecipe>();
+    for (const auto &[Idx, R] : llvm::enumerate(Recipes)) {
+
+      // ArrayRef to the 'correct' data location in trailing storage.
+      llvm::MutableArrayRef<OpenACCReductionRecipe::CombinerRecipe>
+          NewCombiners{CurCombinerLoc, R.CombinerRecipes.size()};
+      CurCombinerLoc += R.CombinerRecipes.size();
+
+      llvm::uninitialized_copy(R.CombinerRecipes, NewCombiners.begin());
+
+      // Placement new into the correct location in trailng storage.
+      new (&getTrailingObjects<OpenACCReductionRecipe>()[Idx])
+          OpenACCReductionRecipe(R.AllocaDecl, NewCombiners);
+    }
   }
 
 public:
@@ -1163,12 +1366,75 @@ public:
     return C->getClauseKind() == OpenACCClauseKind::Reduction;
   }
 
+  ArrayRef<OpenACCReductionRecipe> getRecipes() {
+    return ArrayRef<OpenACCReductionRecipe>{
+        getTrailingObjects<OpenACCReductionRecipe>(), getExprs().size()};
+  }
+
+  ArrayRef<OpenACCReductionRecipe> getRecipes() const {
+    return ArrayRef<OpenACCReductionRecipe>{
+        getTrailingObjects<OpenACCReductionRecipe>(), getExprs().size()};
+  }
+
   static OpenACCReductionClause *
   Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
          OpenACCReductionOperator Operator, ArrayRef<Expr *> VarList,
+         ArrayRef<OpenACCReductionRecipeWithStorage> Recipes,
          SourceLocation EndLoc);
 
   OpenACCReductionOperator getReductionOp() const { return Op; }
+
+  size_t numTrailingObjects(OverloadToken<Expr *>) const {
+    return getExprs().size();
+  }
+  size_t numTrailingObjects(OverloadToken<OpenACCReductionRecipe>) const {
+    return getExprs().size();
+  }
+};
+
+class OpenACCLinkClause final
+    : public OpenACCClauseWithVarList,
+      private llvm::TrailingObjects<OpenACCLinkClause, Expr *> {
+  friend TrailingObjects;
+
+  OpenACCLinkClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                    ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(OpenACCClauseKind::Link, BeginLoc, LParenLoc,
+                                 EndLoc) {
+    setExprs(getTrailingObjects(VarList.size()), VarList);
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Link;
+  }
+
+  static OpenACCLinkClause *Create(const ASTContext &C, SourceLocation BeginLoc,
+                                   SourceLocation LParenLoc,
+                                   ArrayRef<Expr *> VarList,
+                                   SourceLocation EndLoc);
+};
+
+class OpenACCDeviceResidentClause final
+    : public OpenACCClauseWithVarList,
+      private llvm::TrailingObjects<OpenACCDeviceResidentClause, Expr *> {
+  friend TrailingObjects;
+
+  OpenACCDeviceResidentClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                              ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(OpenACCClauseKind::DeviceResident, BeginLoc,
+                                 LParenLoc, EndLoc) {
+    setExprs(getTrailingObjects(VarList.size()), VarList);
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::DeviceResident;
+  }
+
+  static OpenACCDeviceResidentClause *
+  Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
 };
 
 template <class Impl> class OpenACCClauseVisitor {
@@ -1187,11 +1453,13 @@ public:
     switch (C->getClauseKind()) {
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
   case OpenACCClauseKind::CLAUSE_NAME:                                         \
-    Visit##CLAUSE_NAME##Clause(*cast<OpenACC##CLAUSE_NAME##Clause>(C));        \
+    getDerived().Visit##CLAUSE_NAME##Clause(                                   \
+        *cast<OpenACC##CLAUSE_NAME##Clause>(C));                               \
     return;
 #define CLAUSE_ALIAS(ALIAS_NAME, CLAUSE_NAME, DEPRECATED)                      \
   case OpenACCClauseKind::ALIAS_NAME:                                          \
-    Visit##CLAUSE_NAME##Clause(*cast<OpenACC##CLAUSE_NAME##Clause>(C));        \
+    getDerived().Visit##CLAUSE_NAME##Clause(                                   \
+        *cast<OpenACC##CLAUSE_NAME##Clause>(C));                               \
     return;
 #include "clang/Basic/OpenACCClauses.def"
 
@@ -1204,7 +1472,7 @@ public:
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
   void Visit##CLAUSE_NAME##Clause(                                             \
       const OpenACC##CLAUSE_NAME##Clause &Clause) {                            \
-    return getDerived().Visit##CLAUSE_NAME##Clause(Clause);                    \
+    return getDerived().VisitClause(Clause);                                   \
   }
 
 #include "clang/Basic/OpenACCClauses.def"

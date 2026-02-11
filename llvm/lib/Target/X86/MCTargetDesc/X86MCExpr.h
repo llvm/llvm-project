@@ -31,21 +31,12 @@ private:
   explicit X86MCExpr(MCRegister R) : Reg(R) {}
 
 public:
-  /// @name Construction
-  /// @{
-
   static const X86MCExpr *create(MCRegister Reg, MCContext &Ctx) {
     return new (Ctx) X86MCExpr(Reg);
   }
 
-  /// @}
-  /// @name Accessors
-  /// @{
-
   /// getSubExpr - Get the child of this expression.
   MCRegister getReg() const { return Reg; }
-
-  /// @}
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override {
     if (!MAI || MAI->getAssemblerDialect() == 0)
@@ -53,8 +44,8 @@ public:
     OS << X86ATTInstPrinter::getRegisterName(Reg);
   }
 
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 const MCFixup *Fixup) const override {
+  bool evaluateAsRelocatableImpl(MCValue &Res,
+                                 const MCAssembler *Asm) const override {
     return false;
   }
   // Register values should be inlined as they are not valid .set expressions.
@@ -67,14 +58,10 @@ public:
   void visitUsedExpr(MCStreamer &Streamer) const override {}
   MCFragment *findAssociatedFragment() const override { return nullptr; }
 
-  // There are no TLS X86MCExprs at the moment.
-  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override {}
-
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
   }
 };
-
 } // end namespace llvm
 
 #endif
