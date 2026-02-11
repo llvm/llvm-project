@@ -550,7 +550,13 @@ int main(int argc, char *argv[]) {
           << llvm::toString(python_path_or_err.takeError()) << '\n';
       return EXIT_FAILURE;
     }
-    llvm::outs() << *python_path_or_err << '\n';
+    std::string python_path = *python_path_or_err;
+    if (python_path.empty()) {
+      llvm::WithColor::error()
+          << "unable to look for the Python shared library" << '\n';
+      return EXIT_FAILURE;
+    }
+    llvm::outs() << python_path << '\n';
     return EXIT_SUCCESS;
   }
 
