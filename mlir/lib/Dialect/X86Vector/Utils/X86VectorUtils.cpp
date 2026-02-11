@@ -300,8 +300,6 @@ void shuffleBeforeWriteLikeOp(mlir::PatternRewriter &rewriter,
   mlir::Value vecA = getWrittenVector(opA);
   mlir::Value vecB = getWrittenVector(opB);
 
-  assert(vecA && vecB && "expected vector write-like ops");
-
   // Decide insertion point and location
   mlir::Operation *insertBefore = opA->isBeforeInBlock(opB) ? opA : opB;
 
