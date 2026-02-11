@@ -1738,7 +1738,7 @@ float my_fmaxf(float x, float y) {
   // LLVM: call float @fmaxf(float %{{.*}}, float %{{.*}})
 
   // OGCG-LABEL: @my_fmaxf
-  // OGCG: call float @llvm.maxnum.f32(float %{{.*}}, float %{{.*}})
+  // OGCG: call nsz float @llvm.maxnum.f32(float %{{.*}}, float %{{.*}})
   }
 
 double my_fmax(double x, double y) {
