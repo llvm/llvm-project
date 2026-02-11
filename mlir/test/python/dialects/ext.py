@@ -347,7 +347,7 @@ def testExtDialect():
 def testExtDialectWithRegion():
     class ParentIsIfTrait(DynamicOpTrait):
         @staticmethod
-        def verify_trait(op) -> bool:
+        def verify_invariants(op) -> bool:
             if not isinstance(op.parent.opview, IfOp):
                 op.location.emit_error(
                     f"{op.name} should be put inside {IfOp.OPERATION_NAME}"
@@ -369,7 +369,7 @@ def testExtDialectWithRegion():
     ):
         value: Operand[Any]
 
-        def verify_trait(self) -> bool:
+        def verify_invariants(self) -> bool:
             if self.parent.results[0].type != self.value.type:
                 self.location.emit_error(
                     "result type mismatch between YieldOp and its parent IfOp"

@@ -231,7 +231,7 @@ class Operation(ir.OpView):
 
         for base in cls.__bases__:
             if hasattr(base, "_traits"):
-                traits.extend(base._traits)
+                traits = base._traits + traits
 
         cls._traits = traits
 
@@ -422,7 +422,9 @@ class Operation(ir.OpView):
         for trait in cls._traits:
             trait.attach(cls.OPERATION_NAME)
 
-        if hasattr(cls, "verify_trait") or hasattr(cls, "verify_region_trait"):
+        if hasattr(cls, "verify_invariants") or hasattr(
+            cls, "verify_region_invariants"
+        ):
             ir.DynamicOpTrait.attach(cls.OPERATION_NAME, cls)
 
     @classmethod

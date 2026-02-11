@@ -2543,11 +2543,11 @@ static bool attachOpTrait(const nb::object &opName, MlirDynamicOpTrait trait,
 bool PyDynamicOpTrait::attach(const nb::object &opName,
                               const nb::object &target,
                               PyMlirContext &context) {
-  if (!nb::hasattr(target, "verify_trait") &&
-      !nb::hasattr(target, "verify_region_trait"))
+  if (!nb::hasattr(target, "verify_invariants") &&
+      !nb::hasattr(target, "verify_region_invariants"))
     throw nb::type_error(
-        "the target object must have at least one of 'verify_trait' or "
-        "'verify_region_trait' methods");
+        "the target object must have at least one of 'verify_invariants' or "
+        "'verify_region_invariants' methods");
 
   MlirDynamicOpTraitCallbacks callbacks;
   callbacks.construct = [](void *userData) {
@@ -2559,11 +2559,11 @@ bool PyDynamicOpTrait::attach(const nb::object &opName,
 
   callbacks.verifyTrait = [](MlirOperation op,
                              void *userData) -> MlirLogicalResult {
-    return verifyTraitByMethod(op, userData, "verify_trait");
+    return verifyTraitByMethod(op, userData, "verify_invariants");
   };
   callbacks.verifyRegionTrait = [](MlirOperation op,
                                    void *userData) -> MlirLogicalResult {
-    return verifyTraitByMethod(op, userData, "verify_region_trait");
+    return verifyTraitByMethod(op, userData, "verify_region_invariants");
   };
 
   // To ensure that the same dynamic trait gets the same TypeID despite how many
