@@ -1975,22 +1975,6 @@ template <typename R> bool is_sorted(R &&Range) {
   return std::is_sorted(adl_begin(Range), adl_end(Range));
 }
 
-/// Check if elements in a range \p R are sorted with respect to a comparator \p
-/// C. constexpr allows use in static_assert
-/// TODO: Use std::is_sorted once upgraded to Cpp20
-template <typename It, typename Cmp = std::less<>>
-constexpr bool is_sorted_constexpr(It First, It Last, Cmp C = Cmp{}) {
-  if (First == Last)
-    return true;
-  It Prev = First;
-  for (It I = std::next(First); I != Last; ++I) {
-    if (C(*I, *Prev))
-      return false;
-    Prev = I;
-  }
-  return true;
-}
-
 /// Provide wrappers to std::includes which take ranges instead of having to
 /// pass begin/end explicitly.
 /// This function checks if the sorted range \p R2 is a subsequence of the

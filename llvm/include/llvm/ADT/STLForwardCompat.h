@@ -18,6 +18,7 @@
 #define LLVM_ADT_STLFORWARDCOMPAT_H
 
 #include "llvm/Support/Compiler.h"
+#include <functional>
 #include <optional>
 #include <tuple>
 #include <type_traits>
@@ -156,6 +157,22 @@ constexpr std::invoke_result_t<FnT, ArgsT...>
 invoke(FnT &&Fn, ArgsT &&...Args) { // NOLINT(readability-identifier-naming)
   return std::apply(std::forward<FnT>(Fn),
                     std::forward_as_tuple(std::forward<ArgsT>(Args)...));
+}
+
+/// Check if elements in a range \p R are sorted with respect to a comparator \p
+/// C. constexpr allows use in static_assert
+/// TODO: Use std::is_sorted once upgraded to C++20 since that becomes constexpr
+template <typename It, typename Cmp = std::less<>>
+constexpr bool is_sorted_constexpr(It First, It Last, Cmp C = Cmp{}) {
+  if (First == Last)
+    return true;
+  It Prev = First;
+  for (It I = std::next(First); I != Last; ++I) {
+    if (C(*I, *Prev))
+      return false;
+    Prev = I;
+  }
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
