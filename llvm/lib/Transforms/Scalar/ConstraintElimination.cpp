@@ -1568,6 +1568,16 @@ void State::addInfoFor(BasicBlock &BB) {
       break;
     }
 
+    // Add facts from unsigned division and remainder.
+    //   urem x, n: result < n  and  result <= x
+    //   udiv x, n: result <= x
+    if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
+      if ((BO->getOpcode() == Instruction::URem ||
+           BO->getOpcode() == Instruction::UDiv) &&
+          isGuaranteedNotToBePoison(BO))
+        WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), BO));
+    }
+
     // Try to derive known-safe non-overflowing bounds for pointers based on the
     // instructions in the block.
     if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
@@ -2495,6 +2505,21 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
           break;
         }
         continue;
+      }
+
+      if (auto *BO = dyn_cast<BinaryOperator>(CB.Inst)) {
+        if (BO->getOpcode() == Instruction::URem) {
+          // urem x, n: result < n (remainder is always less than divisor)
+          AddFact(CmpInst::ICMP_ULT, BO, BO->getOperand(1));
+          // urem x, n: result <= x (remainder is at most the dividend)
+          AddFact(CmpInst::ICMP_ULE, BO, BO->getOperand(0));
+          continue;
+        }
+        if (BO->getOpcode() == Instruction::UDiv) {
+          // udiv x, n: result <= x (quotient is at most the dividend)
+          AddFact(CmpInst::ICMP_ULE, BO, BO->getOperand(0));
+          continue;
+        }
       }
 
       auto &DL = F.getDataLayout();
