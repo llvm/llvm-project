@@ -1611,13 +1611,18 @@ static void reassociateHeaderMask(VPlan &Plan) {
   VPValue *HeaderMask = vputils::findHeaderMask(Plan);
   if (!HeaderMask)
     return;
-  for (VPUser *U : collectUsersRecursively(HeaderMask)) {
-    auto *R = cast<VPRecipeBase>(U);
+  SmallSetVector<VPUser *, 8> Worklist(HeaderMask->user_begin(),
+                                       HeaderMask->user_end());
+  while (!Worklist.empty()) {
+    auto *R = cast<VPRecipeBase>(Worklist.pop_back_val());
     VPValue *X, *Y;
-    if (match(R,
-              m_LogicalAnd(m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(X)),
-                           m_VPValue(Y)))) {
+    if (match(R, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue())))
+      Worklist.insert_range(R->getVPSingleValue()->users());
+    else if (match(R, m_LogicalAnd(
+                          m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(X)),
+                          m_VPValue(Y)))) {
       VPBuilder Builder(R);
+      Worklist.insert_range(R->getVPSingleValue()->users());
       R->getVPSingleValue()->replaceAllUsesWith(
           Builder.createLogicalAnd(HeaderMask, Builder.createLogicalAnd(X, Y)));
       R->eraseFromParent();
