@@ -1845,6 +1845,11 @@ static int64_t getPCBias(Ctx &ctx, const InputSection &isec,
   }
   if (ctx.arg.emachine == EM_HEXAGON)
     return -getHexagonPacketOffset(isec, rel);
+  // x86-64 R_X86_64_PLT32 encodes a -4 addend for the 4-byte displacement
+  // field. Report this as a PC bias so that after thunk redirection the
+  // call-to-thunk relocation carries the correct addend (-4).
+  if (ctx.arg.emachine == EM_X86_64)
+    return 4;
   return 0;
 }
 
@@ -2179,9 +2184,11 @@ bool ThunkCreator::createThunks(uint32_t pass,
             rel.sym = t->getThunkTargetSym();
             rel.expr = fromPlt(rel.expr);
 
-            // On AArch64 and PPC, a jump/call relocation may be encoded as
-            // STT_SECTION + non-zero addend, clear the addend after
-            // redirection.
+            // A jump/call relocation may be encoded as STT_SECTION +
+            // non-zero addend. After redirecting to a thunk, reset the addend
+            // to just the PC bias (negated) so the call-to-thunk relocation
+            // is correct. getPCBias() returns the architecture-specific bias:
+            //   ARM: 4 or 8, Hexagon: packet offset, x86-64: 4.
             if (ctx.arg.emachine != EM_MIPS)
               rel.addend = -getPCBias(ctx, *isec, rel);
           }

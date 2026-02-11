@@ -51,6 +51,11 @@ public:
                              InputSection *nextIS) const override;
   bool relaxOnce(int pass) const override;
   void applyBranchToBranchOpt() const override;
+  bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
+                  uint64_t branchAddr, const Symbol &s,
+                  int64_t a) const override;
+  bool inBranchRange(RelType type, uint64_t src, uint64_t dst) const override;
+  uint32_t getThunkSectionSpacing() const override;
 
 private:
   void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
@@ -92,6 +97,10 @@ X86_64::X86_64(Ctx &ctx) : TargetInfo(ctx) {
   ipltEntrySize = 16;
   trapInstr = {0xcc, 0xcc, 0xcc, 0xcc}; // 0xcc = INT3
   nopInstrs = nopInstructions;
+
+  // Enable thunks for x86-64 to support binaries where .text exceeds 2GiB.
+  // This is needed when RIP-relative branches (R_X86_64_PLT32) overflow.
+  needsThunks = true;
 
   // Align to the large page size (known as a superpage or huge page).
   // FreeBSD automatically promotes large, superpage-aligned allocations.
@@ -443,9 +452,9 @@ void X86_64::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
 
 void X86_64::writePltHeader(uint8_t *buf) const {
   const uint8_t pltData[] = {
-      0xff, 0x35, 0, 0, 0, 0, // pushq GOTPLT+8(%rip)
-      0xff, 0x25, 0, 0, 0, 0, // jmp *GOTPLT+16(%rip)
-      0x0f, 0x1f, 0x40, 0x00, // nop
+      0xff, 0x35, 0,    0,    0, 0, // pushq GOTPLT+8(%rip)
+      0xff, 0x25, 0,    0,    0, 0, // jmp *GOTPLT+16(%rip)
+      0x0f, 0x1f, 0x40, 0x00,       // nop
   };
   memcpy(buf, pltData, sizeof(pltData));
   uint64_t gotPlt = ctx.in.gotPlt->getVA();
@@ -458,8 +467,8 @@ void X86_64::writePlt(uint8_t *buf, const Symbol &sym,
                       uint64_t pltEntryAddr) const {
   const uint8_t inst[] = {
       0xff, 0x25, 0, 0, 0, 0, // jmpq *got(%rip)
-      0x68, 0, 0, 0, 0,       // pushq <relocation index>
-      0xe9, 0, 0, 0, 0,       // jmpq plt[0]
+      0x68, 0,    0, 0, 0,    // pushq <relocation index>
+      0xe9, 0,    0, 0, 0,    // jmpq plt[0]
   };
   memcpy(buf, inst, sizeof(inst));
 
@@ -1320,12 +1329,12 @@ void Retpoline::writeGotPlt(uint8_t *buf, const Symbol &s) const {
 
 void Retpoline::writePltHeader(uint8_t *buf) const {
   const uint8_t insn[] = {
-      0xff, 0x35, 0,    0,    0,    0,          // 0:    pushq GOTPLT+8(%rip)
-      0x4c, 0x8b, 0x1d, 0,    0,    0,    0,    // 6:    mov GOTPLT+16(%rip), %r11
-      0xe8, 0x0e, 0x00, 0x00, 0x00,             // d:    callq next
-      0xf3, 0x90,                               // 12: loop: pause
-      0x0f, 0xae, 0xe8,                         // 14:   lfence
-      0xeb, 0xf9,                               // 17:   jmp loop
+      0xff, 0x35, 0,    0,    0,    0,       // 0:    pushq GOTPLT+8(%rip)
+      0x4c, 0x8b, 0x1d, 0,    0,    0,    0, // 6:    mov GOTPLT+16(%rip), %r11
+      0xe8, 0x0e, 0x00, 0x00, 0x00,          // d:    callq next
+      0xf3, 0x90,                            // 12: loop: pause
+      0x0f, 0xae, 0xe8,                      // 14:   lfence
+      0xeb, 0xf9,                            // 17:   jmp loop
       0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, // 19:   int3; .align 16
       0x4c, 0x89, 0x1c, 0x24,                   // 20: next: mov %r11, (%rsp)
       0xc3,                                     // 24:   ret
@@ -1343,12 +1352,12 @@ void Retpoline::writePltHeader(uint8_t *buf) const {
 void Retpoline::writePlt(uint8_t *buf, const Symbol &sym,
                          uint64_t pltEntryAddr) const {
   const uint8_t insn[] = {
-      0x4c, 0x8b, 0x1d, 0, 0, 0, 0, // 0:  mov foo@GOTPLT(%rip), %r11
-      0xe8, 0,    0,    0,    0,    // 7:  callq plt+0x20
-      0xe9, 0,    0,    0,    0,    // c:  jmp plt+0x12
-      0x68, 0,    0,    0,    0,    // 11: pushq <relocation index>
-      0xe9, 0,    0,    0,    0,    // 16: jmp plt+0
-      0xcc, 0xcc, 0xcc, 0xcc, 0xcc, // 1b: int3; padding
+      0x4c, 0x8b, 0x1d, 0,    0,    0, 0, // 0:  mov foo@GOTPLT(%rip), %r11
+      0xe8, 0,    0,    0,    0,          // 7:  callq plt+0x20
+      0xe9, 0,    0,    0,    0,          // c:  jmp plt+0x12
+      0x68, 0,    0,    0,    0,          // 11: pushq <relocation index>
+      0xe9, 0,    0,    0,    0,          // 16: jmp plt+0
+      0xcc, 0xcc, 0xcc, 0xcc, 0xcc,       // 1b: int3; padding
   };
   memcpy(buf, insn, sizeof(insn));
 
@@ -1394,6 +1403,47 @@ void RetpolineZNow::writePlt(uint8_t *buf, const Symbol &sym,
 
   write32le(buf + 3, sym.getGotPltVA(ctx) - pltEntryAddr - 7);
   write32le(buf + 8, ctx.in.plt->getVA() - pltEntryAddr - 12);
+}
+
+// For x86-64, thunks are needed when the displacement between the branch
+// instruction and its target exceeds the 32-bit signed range (2GiB).
+// This can happen in very large binaries where .text exceeds 2GiB.
+bool X86_64::needsThunk(RelExpr expr, RelType type, const InputFile *file,
+                        uint64_t branchAddr, const Symbol &s, int64_t a) const {
+  // Only PLT32 branch relocations need thunks.
+  // R_X86_64_PLT32 is used for call/jmp by modern compilers.
+  if (type != R_X86_64_PLT32)
+    return false;
+
+  // If the target requires a PLT entry, check if we can reach the PLT
+  if (s.isInPlt(ctx)) {
+    uint64_t dst = s.getPltVA(ctx) + a;
+    return !inBranchRange(type, branchAddr, dst);
+  }
+
+  // For direct calls/jumps, check if we can reach the destination
+  uint64_t dst = s.getVA(ctx, a);
+  return !inBranchRange(type, branchAddr, dst);
+}
+
+// Check if a branch from src to dst is within the 32-bit signed range.
+bool X86_64::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
+  // x86-64 RIP-relative branches use a 32-bit signed displacement.
+  // The displacement is relative to the address after the instruction,
+  // which is typically 4-5 bytes after the relocation location.
+  // We use a conservative range check here.
+  int64_t offset = dst - src;
+  return llvm::isInt<32>(offset);
+}
+
+// Return the spacing for thunk sections. We want thunks to be placed
+// at intervals such that all branches can reach either the target or
+// a thunk. With a 2GiB range, we place thunks every ~1GiB to allow
+// branches to reach in either direction.
+uint32_t X86_64::getThunkSectionSpacing() const {
+  // 1GiB spacing - gives us 1GiB forward and 1GiB backward range
+  // from any point, which covers the 2GiB total range.
+  return 0x40000000;
 }
 
 void elf::setX86_64TargetInfo(Ctx &ctx) {
