@@ -153,8 +153,9 @@ extern "C++" template <typename T> struct FlexibleArray : T {
   CFI_rank_t rank; /* [0 .. CFI_MAX_RANK] */ \
   CFI_type_t type; \
   CFI_attribute_t attribute; \
-  /* This encodes both the presence of the f18Addendum and the index of the \
-   * allocator used to managed memory of the data hold by the descriptor. */ \
+  /* This encodes both the presence of the DescriptorAddendum and the index of \
+   * the allocator used to managed memory of the data hold by the descriptor. \
+   */ \
   unsigned char extra;
 
 typedef struct CFI_cdesc_t {

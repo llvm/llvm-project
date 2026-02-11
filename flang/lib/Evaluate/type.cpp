@@ -155,17 +155,25 @@ std::optional<Expr<SubscriptInteger>> DynamicType::GetCharLength() const {
 std::size_t DynamicType::GetAlignment(
     const TargetCharacteristics &targetCharacteristics) const {
   if (category_ == TypeCategory::Derived) {
+    // Polymorphic types (CLASS(*), CLASS(T)) store descriptors, not values
+    if (IsPolymorphic()) {
+      // Descriptor alignment (typically pointer-sized)
+      return targetCharacteristics.GetAlignment(TypeCategory::Integer, 8);
+    }
+    if (!derived_) {
+      return 1;
+    }
     switch (GetDerivedTypeSpec().category()) {
       SWITCH_COVERS_ALL_CASES
     case semantics::DerivedTypeSpec::Category::DerivedType:
-      if (derived_ && derived_->scope()) {
+      if (derived_->scope()) {
         return derived_->scope()->alignment().value_or(1);
       }
       break;
     case semantics::DerivedTypeSpec::Category::IntrinsicVector:
     case semantics::DerivedTypeSpec::Category::PairVector:
     case semantics::DerivedTypeSpec::Category::QuadVector:
-      if (derived_ && derived_->scope()) {
+      if (derived_->scope()) {
         return derived_->scope()->size();
       } else {
         common::die("Missing scope for Vector type.");

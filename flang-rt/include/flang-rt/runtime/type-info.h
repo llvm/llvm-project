@@ -68,17 +68,29 @@ public:
   RT_API_ATTRS const Descriptor &name() const { return name_.descriptor(); }
   RT_API_ATTRS Genre genre() const { return genre_; }
   RT_API_ATTRS MemorySpace memorySpace() const { return memorySpace_; }
+  RT_API_ATTRS std::size_t alignment() const {
+    return std::size_t{1} << alignment_; // alignment_ stores the log2,
+                                         // not the actual value.
+  }
   RT_API_ATTRS TypeCategory category() const {
     return static_cast<TypeCategory>(category_);
   }
   RT_API_ATTRS int kind() const { return kind_; }
   RT_API_ATTRS int rank() const { return rank_; }
   RT_API_ATTRS std::uint64_t offset() const { return offset_; }
+  RT_API_ATTRS Component &SetOffset(std::uint64_t offset) {
+    offset_ = offset;
+    return *this;
+  }
   RT_API_ATTRS const Value &characterLen() const { return characterLen_; }
   RT_API_ATTRS const DerivedType *derivedType() const {
     return category() == TypeCategory::Derived
         ? derivedType_.descriptor().OffsetElement<const DerivedType>()
         : nullptr;
+  }
+  RT_API_ATTRS Component &SetDerivedType(const DerivedType *dt) {
+    derivedType_.descriptor().set_base_addr(const_cast<DerivedType *>(dt));
+    return *this;
   }
   RT_API_ATTRS const Value *lenValue() const {
     return lenValue_.descriptor().OffsetElement<const Value>();
@@ -114,7 +126,9 @@ private:
   std::uint8_t kind_{0};
   std::uint8_t rank_{0};
   MemorySpace memorySpace_{MemorySpace::Host}; // memory space of the component
-  [[maybe_unused]] std::uint8_t padding_[3]; // 3 bytes padding
+  std::uint8_t alignment_{
+      0}; // log-2 value; alignment in bytes = (1 << alignment_)
+  [[maybe_unused]] std::uint8_t padding_[2]; // 2 bytes padding
   std::uint64_t offset_{0};
   Value characterLen_; // for TypeCategory::Character
   StaticDescriptor<0, true> derivedType_; // TYPE(DERIVEDTYPE), POINTER
@@ -227,8 +241,16 @@ public:
   }
   RT_API_ATTRS const Descriptor &name() const { return name_.descriptor(); }
   RT_API_ATTRS std::uint64_t sizeInBytes() const { return sizeInBytes_; }
+  RT_API_ATTRS DerivedType &SetSizeInBytes(std::uint64_t bytes) {
+    sizeInBytes_ = bytes;
+    return *this;
+  }
   RT_API_ATTRS const Descriptor &uninstantiated() const {
     return uninstantiated_.descriptor();
+  }
+  RT_API_ATTRS DerivedType &SetUninstantiatedType(const DerivedType *dt) {
+    uninstantiated_.descriptor().set_base_addr(const_cast<DerivedType *>(dt));
+    return *this;
   }
   RT_API_ATTRS const DerivedType *uninstantiatedType() const {
     return reinterpret_cast<const DerivedType *>(
@@ -242,6 +264,10 @@ public:
   }
   RT_API_ATTRS const Descriptor &component() const {
     return component_.descriptor();
+  }
+  RT_API_ATTRS DerivedType &SetComponentBaseAddr(void *p) {
+    component_.descriptor().set_base_addr(p);
+    return *this;
   }
   RT_API_ATTRS const Descriptor &procPtr() const {
     return procPtr_.descriptor();

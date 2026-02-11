@@ -64,9 +64,11 @@ static constexpr RT_API_ATTRS std::size_t MaxDescriptorSizeInBytes(
   // }
   std::size_t bytes{24u + rank * 24u};
   if (addendum || lengthTypeParameters > 0) {
-    if (lengthTypeParameters < 1)
-      lengthTypeParameters = 1;
-    bytes += 8u + static_cast<std::size_t>(lengthTypeParameters) * 8u;
+    // DescriptorAddendum has base size of 16 bytes (pointer + 1
+    // TypeParameterValue) Additional len parameters beyond the first add 8
+    // bytes each
+    bytes += 16u +
+        static_cast<std::size_t>(std::max(lengthTypeParameters - 1, 0)) * 8u;
   }
   return bytes;
 }

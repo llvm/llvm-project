@@ -13,6 +13,7 @@
 #include "flang-rt/runtime/stat.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
+#include "flang-rt/runtime/type-info-cache.h"
 #include "flang-rt/runtime/type-info.h"
 #include "flang-rt/runtime/work-queue.h"
 
@@ -111,6 +112,10 @@ static RT_API_ATTRS int AllocateAssignmentLHS(
   }
   to.raw().type = from.raw().type;
   if (derived) {
+    if (derived->LenParameters() > 0 && toAddendum) {
+      derived = typeInfo::GetConcreteType(*derived, to, terminator);
+      toAddendum->set_derivedType(derived);
+    }
     to.raw().elem_len = derived->sizeInBytes();
   } else if (!(flags & ExplicitLengthCharacterLHS)) {
     to.raw().elem_len = from.ElementBytes();

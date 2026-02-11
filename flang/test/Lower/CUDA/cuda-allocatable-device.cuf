@@ -11,21 +11,21 @@ module m
     real(kind=8), pointer, dimension(:), device :: pd
   end type
 
-! SYMBOLS: .c.device_array, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(component) shape: 0_8:1_8 init:[component::component(name=.n.ad,genre=3_1,category=2_1,kind=8_1,rank=1_1,memoryspace=1_1,offset=0_8
+! SYMBOLS: .c.device_array, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(component) shape: 0_8:1_8 init:[component::component(name=.n.ad,genre=3_1,category=2_1,kind=8_1,rank=1_1,memoryspace=1_1,alignment=3_1,offset=0_8
 
   type managed_array
     real(kind=8), allocatable, dimension(:), managed :: ad
     real(kind=8), pointer, dimension(:), managed :: pd
   end type
 
-! SYMBOLS: .c.managed_array, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(component) shape: 0_8:1_8 init:[component::component(name=.n.ad,genre=3_1,category=2_1,kind=8_1,rank=1_1,memoryspace=2_1,offset=0_8
+! SYMBOLS: .c.managed_array, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(component) shape: 0_8:1_8 init:[component::component(name=.n.ad,genre=3_1,category=2_1,kind=8_1,rank=1_1,memoryspace=2_1,alignment=3_1,offset=0_8
 
   type unified_array
     real(kind=8), allocatable, dimension(:), unified :: ad
     real(kind=8), pointer, dimension(:), unified :: pd
   end type
 
-!  SYMBOLS: .c.unified_array, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(component) shape: 0_8:1_8 init:[component::component(name=.n.ad,genre=3_1,category=2_1,kind=8_1,rank=1_1,memoryspace=3_1
+!  SYMBOLS: .c.unified_array, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(component) shape: 0_8:1_8 init:[component::component(name=.n.ad,genre=3_1,category=2_1,kind=8_1,rank=1_1,memoryspace=3_1,alignment=3_1
 
   type(device_array), allocatable :: da(:)
   type(managed_array), allocatable :: ma(:)

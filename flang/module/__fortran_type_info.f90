@@ -83,9 +83,13 @@ module __fortran_type_info
   end enum
 
   enum, bind(c) ! common::TypeCategory
-    enumerator :: CategoryInteger = 0, CategoryReal = 1, &
-      CategoryComplex = 2, CategoryCharacter = 3, &
-      CategoryLogical = 4, CategoryDerived = 5
+    enumerator :: CategoryInteger   = 0, &
+                  CategoryUnsigned  = 1, & ! Unused, for C++ enum compat only
+                  CategoryReal      = 2, &
+                  CategoryComplex   = 3, &
+                  CategoryCharacter = 4, &
+                  CategoryLogical   = 5, &
+                  CategoryDerived   = 6
   end enum
 
   type :: Component ! data components, incl. object pointers
@@ -95,7 +99,8 @@ module __fortran_type_info
     integer(1) :: kind
     integer(1) :: rank
     integer(1) :: memorySpace ! Component::MemorySpace
-    integer(1) :: __padding0(3)
+    integer(1) :: alignment ! log2 of target-specific alignment
+    integer(1) :: __padding0(2)
     integer(kind=int64) :: offset
     type(Value) :: characterLen ! for category == Character
     type(DerivedType), pointer :: derived ! for category == Derived
