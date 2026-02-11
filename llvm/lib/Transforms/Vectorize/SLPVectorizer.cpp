@@ -1080,7 +1080,6 @@ class BinOpSameOpcodeHelper {
       auto [CI, Pos] = isBinOpWithConstantInt(I);
       const APInt &FromCIValue = CI->getValue();
       unsigned FromCIValueBitWidth = FromCIValue.getBitWidth();
-      APInt ToCIValue;
       Type *RHSType = I->getOperand(Pos)->getType();
       Constant *RHS;
       switch (FromOpcode) {
