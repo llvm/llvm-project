@@ -26,6 +26,8 @@
 
 #if SANITIZER_LINUX || SANITIZER_APPLE || SANITIZER_HAIKU
 // Must go after undef _FILE_OFFSET_BITS.
+#  include "sanitizer_glibc_version.h"
+
 #  include <arpa/inet.h>
 #  include <dirent.h>
 #  include <grp.h>
@@ -51,7 +53,6 @@
 #  include <time.h>
 #  include <wchar.h>
 
-#  include "sanitizer_glibc_version.h"
 #  if !SANITIZER_APPLE && !SANITIZER_HAIKU
 #    include <utmp.h>
 #  endif
@@ -71,14 +72,6 @@
 #  if SANITIZER_LINUX
 #    include <linux/cdrom.h>
 #    include <linux/fd.h>
-#    include <malloc.h>
-#    include <mntent.h>
-#    include <netinet/ether.h>
-#    include <sys/sysinfo.h>
-#    include <sys/vt.h>
-#    if SANITIZER_ANDROID
-#      include <linux/fs.h>
-#    endif
 #    include <linux/hdreg.h>
 #    include <linux/input.h>
 #    include <linux/ioctl.h>
@@ -86,7 +79,15 @@
 #    include <linux/soundcard.h>
 #    include <linux/sysctl.h>
 #    include <linux/utsname.h>
+#    include <malloc.h>
+#    include <mntent.h>
 #    include <net/if_arp.h>
+#    include <netinet/ether.h>
+#    include <sys/sysinfo.h>
+#    include <sys/vt.h>
+#    if SANITIZER_ANDROID
+#      include <linux/fs.h>
+#    endif
 #  endif
 
 #  if SANITIZER_IOS
