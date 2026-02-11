@@ -2074,6 +2074,13 @@ LogicalResult ExpandShapeOp::verify() {
                                          getOutputShape())))
     return failure();
 
+  // Verify if provided output shapes are in agreement with output type.
+  DenseI64ArrayAttr staticOutputShapes = getStaticOutputShapeAttr();
+  ArrayRef<int64_t> resShape = getResult().getType().getShape();
+  for (auto [pos, shape] : llvm::enumerate(resShape))
+    if (ShapedType::isStatic(shape) && shape != staticOutputShapes[pos])
+      return emitOpError("invalid output shape provided at pos ") << pos;
+
   return verifyTensorReshapeOp(*this, resultType, srcType);
 }
 

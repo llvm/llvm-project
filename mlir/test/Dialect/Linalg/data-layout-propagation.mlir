@@ -1132,7 +1132,7 @@ func.func @bubble_up_pack_through_expand_dynamic(%arg0: tensor<?x64xf32>) -> ten
 func.func @bubble_up_pack_non_expanded_padding_through_expand(%arg0: tensor<32x60xf32>) -> tensor<4x2x8x4x8xf32> {
   %cst = arith.constant 3.000000e+00 : f32
   %empty = tensor.empty() : tensor<4x2x8x4x8xf32>
-  %expanded = tensor.expand_shape %arg0 [[0, 1], [2]] output_shape [4, 8, 64] : tensor<32x60xf32> into tensor<4x8x60xf32>
+  %expanded = tensor.expand_shape %arg0 [[0, 1], [2]] output_shape [4, 8, 60] : tensor<32x60xf32> into tensor<4x8x60xf32>
   %pack = linalg.pack %expanded padding_value(%cst : f32) inner_dims_pos = [1, 2] inner_tiles = [4, 8] into %empty : tensor<4x8x60xf32> -> tensor<4x2x8x4x8xf32>
   return %pack : tensor<4x2x8x4x8xf32>
 }
