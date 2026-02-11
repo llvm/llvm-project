@@ -1,6 +1,7 @@
 #include <stdio.h>
 int global = 0;
-int main() {
+int main()
+{
   global = 5; // Set a breakpoint here
   puts("");
   __builtin_debugtrap();

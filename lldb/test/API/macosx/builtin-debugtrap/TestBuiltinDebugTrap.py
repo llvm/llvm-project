@@ -11,15 +11,16 @@ from lldbsuite.test.lldbtest import *
 class BuiltinDebugTrapTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    # Currently this depends on behavior in debugserver to
+    # advance the pc past __builtin_trap instructions so that
+    # continue works.  Everyone is in agreement that this
+    # should be moved up into lldb instead of depending on the
+    # remote stub rewriting the pc values.
+    @skipUnlessDarwin
     def test(self):
-        platform_stop_reason = lldb.eStopReasonSignal
-        platform = self.getPlatform()
-        if platform == "darwin" or platform == "windows":
-            platform_stop_reason = lldb.eStopReasonException
-
         self.build()
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
-            self, "// Set a breakpoint here", lldb.SBFileSpec("main.c")
+            self, "// Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
         # Continue to __builtin_debugtrap()
@@ -30,7 +31,7 @@ class BuiltinDebugTrapTestCase(TestBase):
             self.runCmd("ta v global")
 
         self.assertEqual(
-            process.GetSelectedThread().GetStopReason(), platform_stop_reason
+            process.GetSelectedThread().GetStopReason(), lldb.eStopReasonException
         )
 
         list = target.FindGlobalVariables("global", 1, lldb.eMatchTypeNormal)
@@ -48,17 +49,11 @@ class BuiltinDebugTrapTestCase(TestBase):
             self.runCmd("ta v global")
 
         self.assertEqual(
-            process.GetSelectedThread().GetStopReason(), platform_stop_reason
+            process.GetSelectedThread().GetStopReason(), lldb.eStopReasonException
         )
 
         # "global" is now 10.
         self.assertEqual(global_value.GetValueAsUnsigned(), 10)
-
-        # Change the handling of SIGILL on x86-64 Linux - do not pass it
-        # to the inferior, but stop and notify lldb. If we don't do this,
-        # the inferior will receive the SIGILL and be terminated.
-        if self.getArchitecture() == "x86_64" and platform == "linux":
-            self.runCmd("process handle -p false SIGILL")
 
         # We should be at the same point as before -- cannot advance
         # past a __builtin_trap().
@@ -69,7 +64,7 @@ class BuiltinDebugTrapTestCase(TestBase):
             self.runCmd("ta v global")
 
         self.assertEqual(
-            process.GetSelectedThread().GetStopReason(), platform_stop_reason
+            process.GetSelectedThread().GetStopReason(), lldb.eStopReasonException
         )
 
         # "global" is still 10.

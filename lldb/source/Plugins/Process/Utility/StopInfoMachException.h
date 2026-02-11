@@ -86,10 +86,6 @@ public:
   };
 #endif
 
-  /// Allow this plugin to respond to stop events to enable skip-over-trap
-  /// behaviour on AArch64.
-  void PerformAction(Event *event_ptr) override;
-
   // Since some mach exceptions will be reported as breakpoints, signals,
   // or trace, we use this static accessor which will translate the mach
   // exception into the correct StopInfo.
