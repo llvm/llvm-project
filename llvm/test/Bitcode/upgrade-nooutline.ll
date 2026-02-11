@@ -1,11 +1,9 @@
-; RUN: llvm-as < %s | llvm-dis - | FileCheck %s
+; RUN: llvm-as < %s | llvm-dis - | FileCheck %s --implicit-check-not='"nooutline"'
 
 ; CHECK: define void @f() [[ATTR:#[0-9]+]]
-; CHECK-NOT: "nooutline"
 ; CHECK: attributes [[ATTR]] = {
-; CHECK-NOT: "nooutline"
 ; CHECK-SAME: nooutline
-; CHECK-NOT: "nooutline"
+; CHECK-SAME: }
 
 define void @f() "nooutline" {
   ret void

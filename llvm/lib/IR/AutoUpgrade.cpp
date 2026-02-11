@@ -6347,8 +6347,9 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
 
   if (Attribute A = F.getFnAttribute("nooutline");
       A.isValid() && A.isStringAttribute()) {
-    F.removeFnAttr("nooutline");
-    F.addFnAttr(Attribute::NoOutline);
+    AttrsToRemove.addAttribute("nooutline");
+    AttrsToAdd.addAttribute(Attribute::NoOutline);
+    AddingAttrs = RemovingAttrs = true;
   }
 
   if (!F.empty()) {
