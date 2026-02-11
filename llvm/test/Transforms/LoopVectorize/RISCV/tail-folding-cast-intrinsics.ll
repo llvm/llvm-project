@@ -596,8 +596,8 @@ define void @vp_sitofp(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-LABEL: define void @vp_sitofp(
 ; IF-EVL-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[ENTRY:.*:]]
-; IF-EVL-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
-; IF-EVL-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
+; IF-EVL-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i64
+; IF-EVL-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
@@ -642,8 +642,8 @@ define void @vp_sitofp(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-LABEL: define void @vp_sitofp(
 ; NO-VP-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; NO-VP-NEXT:  [[ENTRY:.*]]:
-; NO-VP-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
-; NO-VP-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
+; NO-VP-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i64
+; NO-VP-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; NO-VP-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP9]], 2
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 16)
@@ -713,8 +713,8 @@ define void @vp_uitofp(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-LABEL: define void @vp_uitofp(
 ; IF-EVL-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[ENTRY:.*:]]
-; IF-EVL-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
-; IF-EVL-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
+; IF-EVL-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i64
+; IF-EVL-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
@@ -759,8 +759,8 @@ define void @vp_uitofp(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-LABEL: define void @vp_uitofp(
 ; NO-VP-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; NO-VP-NEXT:  [[ENTRY:.*]]:
-; NO-VP-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
-; NO-VP-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
+; NO-VP-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i64
+; NO-VP-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; NO-VP-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP9]], 2
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 16)
@@ -830,8 +830,8 @@ define void @vp_fptosi(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-LABEL: define void @vp_fptosi(
 ; IF-EVL-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[ENTRY:.*:]]
-; IF-EVL-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
-; IF-EVL-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
+; IF-EVL-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i64
+; IF-EVL-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
@@ -876,8 +876,8 @@ define void @vp_fptosi(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-LABEL: define void @vp_fptosi(
 ; NO-VP-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; NO-VP-NEXT:  [[ENTRY:.*]]:
-; NO-VP-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
-; NO-VP-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
+; NO-VP-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i64
+; NO-VP-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; NO-VP-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP9]], 2
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 16)
@@ -947,8 +947,8 @@ define void @vp_fptoui(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-LABEL: define void @vp_fptoui(
 ; IF-EVL-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[ENTRY:.*:]]
-; IF-EVL-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
-; IF-EVL-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
+; IF-EVL-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i64
+; IF-EVL-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
@@ -993,8 +993,8 @@ define void @vp_fptoui(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-LABEL: define void @vp_fptoui(
 ; NO-VP-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; NO-VP-NEXT:  [[ENTRY:.*]]:
-; NO-VP-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
-; NO-VP-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
+; NO-VP-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i64
+; NO-VP-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; NO-VP-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP9]], 2
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 16)
@@ -1064,8 +1064,8 @@ define void @vp_inttoptr(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-LABEL: define void @vp_inttoptr(
 ; IF-EVL-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[ENTRY:.*:]]
-; IF-EVL-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
-; IF-EVL-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
+; IF-EVL-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i64
+; IF-EVL-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
@@ -1110,8 +1110,8 @@ define void @vp_inttoptr(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-LABEL: define void @vp_inttoptr(
 ; NO-VP-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; NO-VP-NEXT:  [[ENTRY:.*]]:
-; NO-VP-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
-; NO-VP-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
+; NO-VP-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i64
+; NO-VP-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; NO-VP-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP10]], 1
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP9]], i64 16)

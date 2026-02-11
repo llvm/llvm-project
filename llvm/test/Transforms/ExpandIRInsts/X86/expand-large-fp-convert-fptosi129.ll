@@ -15,7 +15,8 @@ define i129 @halftosi129(half %a) {
 define i129 @floattosi129(float %a) {
 ; CHECK-LABEL: @floattosi129(
 ; CHECK-NEXT:  fp-to-i-entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[A:%.*]] to i32
+; CHECK-NEXT:    [[A:%.*]] = freeze float [[A1:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[A]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[TMP0]], -1
 ; CHECK-NEXT:    [[SIGN:%.*]] = select i1 [[TMP2]], i129 1, i129 -1
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr i32 [[TMP0]], 23
@@ -24,13 +25,6 @@ define i129 @floattosi129(float %a) {
 ; CHECK-NEXT:    [[SIGNIFICAND1:%.*]] = or i32 [[TMP3]], 8388608
 ; CHECK-NEXT:    [[EXP_IS_NEGATIVE:%.*]] = icmp ult i32 [[BIASED_EXP]], 127
 ; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE]], label [[FP_TO_I_CLEANUP:%.*]], label [[FP_TO_I_IF_CHECK_SATURATE:%.*]]
-; CHECK:       fp-to-i-if-check.saturate:
-; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[BIASED_EXP]], -256
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i32 [[TMP4]], -129
-; CHECK-NEXT:    br i1 [[TMP6]], label [[FP_TO_I_IF_SATURATE:%.*]], label [[FP_TO_I_IF_CHECK_EXP_SIZE:%.*]]
-; CHECK:       fp-to-i-if-saturate:
-; CHECK-NEXT:    [[SATURATED:%.*]] = select i1 [[TMP2]], i129 340282366920938463463374607431768211455, i129 -340282366920938463463374607431768211456
-; CHECK-NEXT:    br label [[FP_TO_I_CLEANUP]]
 ; CHECK:       fp-to-i-if-check.exp.size:
 ; CHECK-NEXT:    [[EXP_SMALLER_MANTISSA_WIDTH:%.*]] = icmp ult i32 [[BIASED_EXP]], 150
 ; CHECK-NEXT:    br i1 [[EXP_SMALLER_MANTISSA_WIDTH]], label [[FP_TO_I_IF_EXP_SMALL:%.*]], label [[FP_TO_I_IF_EXP_LARGE:%.*]]
@@ -48,7 +42,7 @@ define i129 @floattosi129(float %a) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = mul i129 [[TMP11]], [[SIGN]]
 ; CHECK-NEXT:    br label [[FP_TO_I_CLEANUP]]
 ; CHECK:       fp-to-i-cleanup:
-; CHECK-NEXT:    [[TMP13:%.*]] = phi i129 [ [[SATURATED]], [[FP_TO_I_IF_SATURATE]] ], [ [[TMP9]], [[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP12]], [[FP_TO_I_IF_EXP_LARGE]] ], [ 0, [[FP_TO_I_ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = phi i129 [ [[TMP9]], [[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP12]], [[FP_TO_I_IF_EXP_LARGE]] ], [ 0, [[FP_TO_I_ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i129 [[TMP13]]
 ;
   %conv = fptosi float %a to i129
@@ -58,7 +52,8 @@ define i129 @floattosi129(float %a) {
 define i129 @doubletosi129(double %a) {
 ; CHECK-LABEL: @doubletosi129(
 ; CHECK-NEXT:  fp-to-i-entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double [[A:%.*]] to i64
+; CHECK-NEXT:    [[A:%.*]] = freeze double [[A1:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double [[A]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i64 [[TMP0]], -1
 ; CHECK-NEXT:    [[SIGN:%.*]] = select i1 [[TMP2]], i129 1, i129 -1
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP0]], 52
@@ -67,13 +62,6 @@ define i129 @doubletosi129(double %a) {
 ; CHECK-NEXT:    [[SIGNIFICAND1:%.*]] = or i64 [[TMP3]], 4503599627370496
 ; CHECK-NEXT:    [[EXP_IS_NEGATIVE:%.*]] = icmp ult i64 [[BIASED_EXP]], 1023
 ; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE]], label [[FP_TO_I_CLEANUP:%.*]], label [[FP_TO_I_IF_CHECK_SATURATE:%.*]]
-; CHECK:       fp-to-i-if-check.saturate:
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[BIASED_EXP]], -1152
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i64 [[TMP4]], -129
-; CHECK-NEXT:    br i1 [[TMP6]], label [[FP_TO_I_IF_SATURATE:%.*]], label [[FP_TO_I_IF_CHECK_EXP_SIZE:%.*]]
-; CHECK:       fp-to-i-if-saturate:
-; CHECK-NEXT:    [[SATURATED:%.*]] = select i1 [[TMP2]], i129 340282366920938463463374607431768211455, i129 -340282366920938463463374607431768211456
-; CHECK-NEXT:    br label [[FP_TO_I_CLEANUP]]
 ; CHECK:       fp-to-i-if-check.exp.size:
 ; CHECK-NEXT:    [[EXP_SMALLER_MANTISSA_WIDTH:%.*]] = icmp ult i64 [[BIASED_EXP]], 1075
 ; CHECK-NEXT:    br i1 [[EXP_SMALLER_MANTISSA_WIDTH]], label [[FP_TO_I_IF_EXP_SMALL:%.*]], label [[FP_TO_I_IF_EXP_LARGE:%.*]]
@@ -91,7 +79,7 @@ define i129 @doubletosi129(double %a) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = mul i129 [[TMP11]], [[SIGN]]
 ; CHECK-NEXT:    br label [[FP_TO_I_CLEANUP]]
 ; CHECK:       fp-to-i-cleanup:
-; CHECK-NEXT:    [[TMP13:%.*]] = phi i129 [ [[SATURATED]], [[FP_TO_I_IF_SATURATE]] ], [ [[TMP9]], [[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP12]], [[FP_TO_I_IF_EXP_LARGE]] ], [ 0, [[FP_TO_I_ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = phi i129 [ [[TMP9]], [[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP12]], [[FP_TO_I_IF_EXP_LARGE]] ], [ 0, [[FP_TO_I_ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i129 [[TMP13]]
 ;
   %conv = fptosi double %a to i129
@@ -101,7 +89,8 @@ define i129 @doubletosi129(double %a) {
 define i129 @x86_fp80tosi129(x86_fp80 %a) {
 ; CHECK-LABEL: @x86_fp80tosi129(
 ; CHECK-NEXT:  fp-to-i-entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = fpext x86_fp80 [[A:%.*]] to fp128
+; CHECK-NEXT:    [[A:%.*]] = freeze x86_fp80 [[A1:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = fpext x86_fp80 [[A]] to fp128
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast fp128 [[TMP0]] to i128
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i128 [[TMP1]], -1
 ; CHECK-NEXT:    [[SIGN:%.*]] = select i1 [[TMP3]], i129 1, i129 -1
@@ -111,13 +100,6 @@ define i129 @x86_fp80tosi129(x86_fp80 %a) {
 ; CHECK-NEXT:    [[SIGNIFICAND1:%.*]] = or i128 [[TMP4]], 5192296858534827628530496329220096
 ; CHECK-NEXT:    [[EXP_IS_NEGATIVE:%.*]] = icmp ult i128 [[BIASED_EXP]], 16383
 ; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE]], label [[FP_TO_I_CLEANUP:%.*]], label [[FP_TO_I_IF_CHECK_SATURATE:%.*]]
-; CHECK:       fp-to-i-if-check.saturate:
-; CHECK-NEXT:    [[TMP5:%.*]] = add i128 [[BIASED_EXP]], -16512
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i128 [[TMP5]], -129
-; CHECK-NEXT:    br i1 [[TMP7]], label [[FP_TO_I_IF_SATURATE:%.*]], label [[FP_TO_I_IF_CHECK_EXP_SIZE:%.*]]
-; CHECK:       fp-to-i-if-saturate:
-; CHECK-NEXT:    [[SATURATED:%.*]] = select i1 [[TMP3]], i129 340282366920938463463374607431768211455, i129 -340282366920938463463374607431768211456
-; CHECK-NEXT:    br label [[FP_TO_I_CLEANUP]]
 ; CHECK:       fp-to-i-if-check.exp.size:
 ; CHECK-NEXT:    [[EXP_SMALLER_MANTISSA_WIDTH:%.*]] = icmp ult i128 [[BIASED_EXP]], 16495
 ; CHECK-NEXT:    br i1 [[EXP_SMALLER_MANTISSA_WIDTH]], label [[FP_TO_I_IF_EXP_SMALL:%.*]], label [[FP_TO_I_IF_EXP_LARGE:%.*]]
@@ -135,7 +117,7 @@ define i129 @x86_fp80tosi129(x86_fp80 %a) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = mul i129 [[TMP12]], [[SIGN]]
 ; CHECK-NEXT:    br label [[FP_TO_I_CLEANUP]]
 ; CHECK:       fp-to-i-cleanup:
-; CHECK-NEXT:    [[TMP14:%.*]] = phi i129 [ [[SATURATED]], [[FP_TO_I_IF_SATURATE]] ], [ [[TMP10]], [[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP13]], [[FP_TO_I_IF_EXP_LARGE]] ], [ 0, [[FP_TO_I_ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = phi i129 [ [[TMP10]], [[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP13]], [[FP_TO_I_IF_EXP_LARGE]] ], [ 0, [[FP_TO_I_ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i129 [[TMP14]]
 ;
   %conv = fptosi x86_fp80 %a to i129
@@ -145,7 +127,8 @@ define i129 @x86_fp80tosi129(x86_fp80 %a) {
 define i129 @fp128tosi129(fp128 %a) {
 ; CHECK-LABEL: @fp128tosi129(
 ; CHECK-NEXT:  fp-to-i-entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast fp128 [[A:%.*]] to i128
+; CHECK-NEXT:    [[A:%.*]] = freeze fp128 [[A1:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast fp128 [[A]] to i128
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i128 [[TMP0]], -1
 ; CHECK-NEXT:    [[SIGN:%.*]] = select i1 [[TMP2]], i129 1, i129 -1
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr i128 [[TMP0]], 112
@@ -154,13 +137,6 @@ define i129 @fp128tosi129(fp128 %a) {
 ; CHECK-NEXT:    [[SIGNIFICAND1:%.*]] = or i128 [[TMP3]], 5192296858534827628530496329220096
 ; CHECK-NEXT:    [[EXP_IS_NEGATIVE:%.*]] = icmp ult i128 [[BIASED_EXP]], 16383
 ; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE]], label [[FP_TO_I_CLEANUP:%.*]], label [[FP_TO_I_IF_CHECK_SATURATE:%.*]]
-; CHECK:       fp-to-i-if-check.saturate:
-; CHECK-NEXT:    [[TMP4:%.*]] = add i128 [[BIASED_EXP]], -16512
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i128 [[TMP4]], -129
-; CHECK-NEXT:    br i1 [[TMP6]], label [[FP_TO_I_IF_SATURATE:%.*]], label [[FP_TO_I_IF_CHECK_EXP_SIZE:%.*]]
-; CHECK:       fp-to-i-if-saturate:
-; CHECK-NEXT:    [[SATURATED:%.*]] = select i1 [[TMP2]], i129 340282366920938463463374607431768211455, i129 -340282366920938463463374607431768211456
-; CHECK-NEXT:    br label [[FP_TO_I_CLEANUP]]
 ; CHECK:       fp-to-i-if-check.exp.size:
 ; CHECK-NEXT:    [[EXP_SMALLER_MANTISSA_WIDTH:%.*]] = icmp ult i128 [[BIASED_EXP]], 16495
 ; CHECK-NEXT:    br i1 [[EXP_SMALLER_MANTISSA_WIDTH]], label [[FP_TO_I_IF_EXP_SMALL:%.*]], label [[FP_TO_I_IF_EXP_LARGE:%.*]]
@@ -178,7 +154,7 @@ define i129 @fp128tosi129(fp128 %a) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = mul i129 [[TMP11]], [[SIGN]]
 ; CHECK-NEXT:    br label [[FP_TO_I_CLEANUP]]
 ; CHECK:       fp-to-i-cleanup:
-; CHECK-NEXT:    [[TMP13:%.*]] = phi i129 [ [[SATURATED]], [[FP_TO_I_IF_SATURATE]] ], [ [[TMP9]], [[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP12]], [[FP_TO_I_IF_EXP_LARGE]] ], [ 0, [[FP_TO_I_ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = phi i129 [ [[TMP9]], [[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP12]], [[FP_TO_I_IF_EXP_LARGE]] ], [ 0, [[FP_TO_I_ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i129 [[TMP13]]
 ;
   %conv = fptosi fp128 %a to i129
@@ -189,7 +165,8 @@ define <2 x i129> @floattosi129v2(<2 x float> %a) {
 ; CHECK-LABEL: @floattosi129v2(
 ; CHECK-NEXT:  fp-to-i-entryfp-to-i-entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x float> [[A:%.*]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float [[TMP0]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze float [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float [[TMP2]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP1]], -1
 ; CHECK-NEXT:    [[SIGN7:%.*]] = select i1 [[TMP3]], i129 1, i129 -1
 ; CHECK-NEXT:    [[TMP6:%.*]] = lshr i32 [[TMP1]], 23
@@ -198,23 +175,16 @@ define <2 x i129> @floattosi129v2(<2 x float> %a) {
 ; CHECK-NEXT:    [[SIGNIFICAND10:%.*]] = or i32 [[TMP4]], 8388608
 ; CHECK-NEXT:    [[EXP_IS_NEGATIVE10:%.*]] = icmp ult i32 [[BIASED_EXP8]], 127
 ; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE10]], label [[FP_TO_I_CLEANUP1:%.*]], label [[FP_TO_I_IF_CHECK_SATURATE2:%.*]]
-; CHECK:       fp-to-i-if-check.saturate2:
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[BIASED_EXP8]], -256
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[TMP5]], -129
-; CHECK-NEXT:    br i1 [[TMP7]], label [[FP_TO_I_IF_SATURATE3:%.*]], label [[FP_TO_I_IF_CHECK_EXP_SIZE4:%.*]]
-; CHECK:       fp-to-i-if-saturate3:
-; CHECK-NEXT:    [[SATURATED11:%.*]] = select i1 [[TMP3]], i129 340282366920938463463374607431768211455, i129 -340282366920938463463374607431768211456
-; CHECK-NEXT:    br label [[FP_TO_I_CLEANUP1]]
-; CHECK:       fp-to-i-if-check.exp.size4:
+; CHECK:       fp-to-i-if-check.exp.size2:
 ; CHECK-NEXT:    [[EXP_SMALLER_MANTISSA_WIDTH12:%.*]] = icmp ult i32 [[BIASED_EXP8]], 150
 ; CHECK-NEXT:    br i1 [[EXP_SMALLER_MANTISSA_WIDTH12]], label [[FP_TO_I_IF_EXP_SMALL5:%.*]], label [[FP_TO_I_IF_EXP_LARGE6:%.*]]
-; CHECK:       fp-to-i-if-exp.small5:
+; CHECK:       fp-to-i-if-exp.small3:
 ; CHECK-NEXT:    [[TMP18:%.*]] = sub i32 150, [[BIASED_EXP8]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = lshr i32 [[SIGNIFICAND10]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i129
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul i129 [[TMP9]], [[SIGN7]]
 ; CHECK-NEXT:    br label [[FP_TO_I_CLEANUP1]]
-; CHECK:       fp-to-i-if-exp.large6:
+; CHECK:       fp-to-i-if-exp.large4:
 ; CHECK-NEXT:    [[TMP20:%.*]] = add i32 [[BIASED_EXP8]], -150
 ; CHECK-NEXT:    [[SIGNIFICAND9:%.*]] = zext i32 [[SIGNIFICAND10]] to i129
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP20]] to i129
@@ -222,10 +192,11 @@ define <2 x i129> @floattosi129v2(<2 x float> %a) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = mul i129 [[TMP12]], [[SIGN7]]
 ; CHECK-NEXT:    br label [[FP_TO_I_CLEANUP1]]
 ; CHECK:       fp-to-i-cleanup1:
-; CHECK-NEXT:    [[TMP14:%.*]] = phi i129 [ [[SATURATED11]], [[FP_TO_I_IF_SATURATE3]] ], [ [[TMP10]], [[FP_TO_I_IF_EXP_SMALL5]] ], [ [[TMP13]], [[FP_TO_I_IF_EXP_LARGE6]] ], [ 0, [[FP_TO_I_ENTRYFP_TO_I_ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = phi i129 [ [[TMP10]], [[FP_TO_I_IF_EXP_SMALL5]] ], [ [[TMP13]], [[FP_TO_I_IF_EXP_LARGE6]] ], [ 0, [[FP_TO_I_ENTRYFP_TO_I_ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x i129> poison, i129 [[TMP14]], i64 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x float> [[A]], i64 1
-; CHECK-NEXT:    [[TMP17:%.*]] = bitcast float [[TMP16]] to i32
+; CHECK-NEXT:    [[TMP35:%.*]] = freeze float [[TMP16]]
+; CHECK-NEXT:    [[TMP17:%.*]] = bitcast float [[TMP35]] to i32
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp sgt i32 [[TMP17]], -1
 ; CHECK-NEXT:    [[SIGN:%.*]] = select i1 [[TMP19]], i129 1, i129 -1
 ; CHECK-NEXT:    [[TMP21:%.*]] = lshr i32 [[TMP17]], 23
@@ -234,13 +205,6 @@ define <2 x i129> @floattosi129v2(<2 x float> %a) {
 ; CHECK-NEXT:    [[SIGNIFICAND1:%.*]] = or i32 [[TMP22]], 8388608
 ; CHECK-NEXT:    [[EXP_IS_NEGATIVE:%.*]] = icmp ult i32 [[BIASED_EXP]], 127
 ; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE]], label [[FP_TO_I_CLEANUP:%.*]], label [[FP_TO_I_IF_CHECK_SATURATE:%.*]]
-; CHECK:       fp-to-i-if-check.saturate:
-; CHECK-NEXT:    [[TMP24:%.*]] = add i32 [[BIASED_EXP]], -256
-; CHECK-NEXT:    [[TMP23:%.*]] = icmp ult i32 [[TMP24]], -129
-; CHECK-NEXT:    br i1 [[TMP23]], label [[FP_TO_I_IF_SATURATE:%.*]], label [[FP_TO_I_IF_CHECK_EXP_SIZE:%.*]]
-; CHECK:       fp-to-i-if-saturate:
-; CHECK-NEXT:    [[SATURATED:%.*]] = select i1 [[TMP19]], i129 340282366920938463463374607431768211455, i129 -340282366920938463463374607431768211456
-; CHECK-NEXT:    br label [[FP_TO_I_CLEANUP]]
 ; CHECK:       fp-to-i-if-check.exp.size:
 ; CHECK-NEXT:    [[EXP_SMALLER_MANTISSA_WIDTH:%.*]] = icmp ult i32 [[BIASED_EXP]], 150
 ; CHECK-NEXT:    br i1 [[EXP_SMALLER_MANTISSA_WIDTH]], label [[FP_TO_I_IF_EXP_SMALL:%.*]], label [[FP_TO_I_IF_EXP_LARGE:%.*]]
@@ -258,7 +222,7 @@ define <2 x i129> @floattosi129v2(<2 x float> %a) {
 ; CHECK-NEXT:    [[TMP29:%.*]] = mul i129 [[TMP28]], [[SIGN]]
 ; CHECK-NEXT:    br label [[FP_TO_I_CLEANUP]]
 ; CHECK:       fp-to-i-cleanup:
-; CHECK-NEXT:    [[TMP30:%.*]] = phi i129 [ [[SATURATED]], [[FP_TO_I_IF_SATURATE]] ], [ [[TMP26]], [[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP29]], [[FP_TO_I_IF_EXP_LARGE]] ], [ 0, [[FP_TO_I_CLEANUP1]] ]
+; CHECK-NEXT:    [[TMP30:%.*]] = phi i129 [ [[TMP26]], [[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP29]], [[FP_TO_I_IF_EXP_LARGE]] ], [ 0, [[FP_TO_I_CLEANUP1]] ]
 ; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <2 x i129> [[TMP15]], i129 [[TMP30]], i64 1
 ; CHECK-NEXT:    ret <2 x i129> [[TMP31]]
 ;

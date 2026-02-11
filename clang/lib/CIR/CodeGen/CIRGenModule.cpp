@@ -17,6 +17,7 @@
 #include "CIRGenFunction.h"
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/GlobalDecl.h"
@@ -29,6 +30,7 @@
 #include "clang/CIR/MissingFeatures.h"
 
 #include "CIRGenFunctionInfo.h"
+#include "TargetInfo.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
@@ -252,6 +254,10 @@ const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
       return *theTargetCIRGenInfo;
     }
   }
+  case llvm::Triple::nvptx:
+  case llvm::Triple::nvptx64:
+    theTargetCIRGenInfo = createNVPTXTargetCIRGenInfo(genTypes);
+    return *theTargetCIRGenInfo;
   }
 }
 
@@ -368,6 +374,28 @@ void CIRGenModule::emitDeferred() {
   }
 }
 
+template <typename AttrT> static bool hasImplicitAttr(const ValueDecl *decl) {
+  if (!decl)
+    return false;
+  if (auto *attr = decl->getAttr<AttrT>())
+    return attr->isImplicit();
+  return decl->isImplicit();
+}
+
+// TODO(cir): This should be shared with OG Codegen.
+bool CIRGenModule::shouldEmitCUDAGlobalVar(const VarDecl *global) const {
+  assert(langOpts.CUDA && "Should not be called by non-CUDA languages");
+  // We need to emit host-side 'shadows' for all global
+  // device-side variables because the CUDA runtime needs their
+  // size and host-side address in order to provide access to
+  // their device-side incarnations.
+  return !langOpts.CUDAIsDevice || global->hasAttr<CUDADeviceAttr>() ||
+         global->hasAttr<CUDAConstantAttr>() ||
+         global->hasAttr<CUDASharedAttr>() ||
+         global->getType()->isCUDADeviceBuiltinSurfaceType() ||
+         global->getType()->isCUDADeviceBuiltinTextureType();
+}
+
 void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
   if (const auto *cd = dyn_cast<clang::OpenACCConstructDecl>(gd.getDecl())) {
     emitGlobalOpenACCDecl(cd);
@@ -381,6 +409,36 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
   // throughout this function.
 
   const auto *global = cast<ValueDecl>(gd.getDecl());
+
+  // If this is CUDA, be selective about which declarations we emit.
+  // Non-constexpr non-lambda implicit host device functions are not emitted
+  // unless they are used on device side.
+  if (langOpts.CUDA) {
+    assert((isa<FunctionDecl>(global) || isa<VarDecl>(global)) &&
+           "Expected Variable or Function");
+    if (const auto *varDecl = dyn_cast<VarDecl>(global)) {
+      if (!shouldEmitCUDAGlobalVar(varDecl))
+        return;
+      // TODO(cir): This should be shared with OG Codegen.
+    } else if (langOpts.CUDAIsDevice) {
+      const auto *functionDecl = dyn_cast<FunctionDecl>(global);
+      if ((!global->hasAttr<CUDADeviceAttr>() ||
+           (langOpts.OffloadImplicitHostDeviceTemplates &&
+            hasImplicitAttr<CUDAHostAttr>(functionDecl) &&
+            hasImplicitAttr<CUDADeviceAttr>(functionDecl) &&
+            !functionDecl->isConstexpr() &&
+            !isLambdaCallOperator(functionDecl) &&
+            !getASTContext().CUDAImplicitHostDeviceFunUsedByDevice.count(
+                functionDecl))) &&
+          !global->hasAttr<CUDAGlobalAttr>() &&
+          !(langOpts.HIPStdPar && isa<FunctionDecl>(global) &&
+            !global->hasAttr<CUDAHostAttr>()))
+        return;
+      // Device-only functions are the only things we skip.
+    } else if (!global->hasAttr<CUDAHostAttr>() &&
+               global->hasAttr<CUDADeviceAttr>())
+      return;
+  }
 
   if (const auto *fd = dyn_cast<FunctionDecl>(global)) {
     // Update deferred annotations with the latest declaration if the function
@@ -2260,9 +2318,8 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
   } else if (codeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining) {
     // If inlining is disabled, force everything that isn't always_inline
     // to carry an explicit noinline attribute.
-    if (!isAlwaysInline) {
+    if (!isAlwaysInline)
       f.setInlineKind(cir::InlineKind::NoInline);
-    }
   } else {
     // Otherwise, propagate the inline hint attribute and potentially use its
     // absence to mark things as noinline.

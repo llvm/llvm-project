@@ -1569,6 +1569,8 @@ void AccVisitor::Post(const parser::OpenACCCombinedConstruct &x) { PopScope(); }
 class OmpVisitor : public virtual DeclarationVisitor {
 public:
   void AddOmpSourceRange(const parser::CharBlock &);
+  void PushScopeWithSource(
+      Scope::Kind kind, parser::CharBlock source, Symbol *symbol = nullptr);
 
   static bool NeedsScope(const parser::OmpBlockConstruct &);
   static bool NeedsScope(const parser::OmpClause &);
@@ -1592,8 +1594,8 @@ public:
     Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
   }
 
-  bool Pre(const parser::OpenMPLoopConstruct &) {
-    PushScope(Scope::Kind::OtherConstruct, nullptr);
+  bool Pre(const parser::OpenMPLoopConstruct &x) {
+    PushScopeWithSource(Scope::Kind::OtherConstruct, x.source);
     return true;
   }
   void Post(const parser::OpenMPLoopConstruct &) { PopScope(); }
@@ -1616,6 +1618,20 @@ public:
   bool Pre(const parser::OmpStylizedInstance &);
   void Post(const parser::OmpStylizedInstance &);
 
+  void Post(const parser::OmpObjectList &x) {
+    // The objects from OMP clauses should have already been resolved,
+    // except common blocks (the ResolveNamesVisitor does not visit
+    // parser::Name, those are dealt with as members of other structures).
+    // Iterate over elements of x, and resolve any common blocks that
+    // are still unresolved.
+    for (const parser::OmpObject &obj : x.v) {
+      auto *name{std::get_if<parser::Name>(&obj.u)};
+      if (name && !name->symbol) {
+        Resolve(*name, currScope().MakeCommonBlock(name->source, name->source));
+      }
+    }
+  }
+
   bool Pre(const parser::OpenMPDeclareMapperConstruct &x) {
     AddOmpSourceRange(x.source);
     return true;
@@ -1637,8 +1653,8 @@ public:
   }
   bool Pre(const parser::OmpMapClause &);
 
-  bool Pre(const parser::OpenMPSectionsConstruct &) {
-    PushScope(Scope::Kind::OtherConstruct, nullptr);
+  bool Pre(const parser::OpenMPSectionsConstruct &x) {
+    PushScopeWithSource(Scope::Kind::OtherConstruct, x.source);
     return true;
   }
   void Post(const parser::OpenMPSectionsConstruct &) { PopScope(); }
@@ -1744,7 +1760,7 @@ public:
   }
   bool Pre(const parser::OmpClause &x) {
     if (NeedsScope(x)) {
-      PushScope(Scope::Kind::OtherClause, nullptr);
+      PushScopeWithSource(Scope::Kind::OtherClause, x.source);
     }
     return true;
   }
@@ -1813,9 +1829,15 @@ void OmpVisitor::AddOmpSourceRange(const parser::CharBlock &source) {
   currScope().AddSourceRange(source);
 }
 
+void OmpVisitor::PushScopeWithSource(
+    Scope::Kind kind, parser::CharBlock source, Symbol *symbol) {
+  PushScope(kind, symbol);
+  currScope().AddSourceRange(source);
+}
+
 bool OmpVisitor::Pre(const parser::OmpBlockConstruct &x) {
   if (NeedsScope(x)) {
-    PushScope(Scope::Kind::OtherConstruct, nullptr);
+    PushScopeWithSource(Scope::Kind::OtherConstruct, x.source);
   }
   return true;
 }

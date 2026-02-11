@@ -1221,9 +1221,9 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; DEFAULT-LABEL: define void @pred_udiv_select_cost(
 ; DEFAULT-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]], i8 [[Y:%.*]]) #[[ATTR2]] {
 ; DEFAULT-NEXT:  [[ENTRY:.*:]]
-; DEFAULT-NEXT:    [[B3:%.*]] = ptrtoint ptr [[B]] to i64
-; DEFAULT-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; DEFAULT-NEXT:    [[C1:%.*]] = ptrtoint ptr [[C]] to i64
+; DEFAULT-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
+; DEFAULT-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; DEFAULT-NEXT:    [[C1:%.*]] = ptrtoaddr ptr [[C]] to i64
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
@@ -1279,9 +1279,9 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; PRED-LABEL: define void @pred_udiv_select_cost(
 ; PRED-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]], i8 [[Y:%.*]]) #[[ATTR2]] {
 ; PRED-NEXT:  [[ENTRY:.*:]]
-; PRED-NEXT:    [[B3:%.*]] = ptrtoint ptr [[B]] to i64
-; PRED-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; PRED-NEXT:    [[C1:%.*]] = ptrtoint ptr [[C]] to i64
+; PRED-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
+; PRED-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; PRED-NEXT:    [[C1:%.*]] = ptrtoaddr ptr [[C]] to i64
 ; PRED-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; PRED-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; PRED:       [[VECTOR_MEMCHECK]]:

@@ -9,8 +9,8 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; DEFAULT-LABEL: define void @iv_casts(
 ; DEFAULT-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i32 [[X:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; DEFAULT-NEXT:  [[ITER_CHECK:.*]]:
-; DEFAULT-NEXT:    [[SRC2:%.*]] = ptrtoint ptr [[SRC]] to i64
-; DEFAULT-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
+; DEFAULT-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
+; DEFAULT-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
@@ -118,8 +118,8 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; PRED-LABEL: define void @iv_casts(
 ; PRED-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i32 [[X:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; PRED-NEXT:  [[ENTRY:.*:]]
-; PRED-NEXT:    [[SRC2:%.*]] = ptrtoint ptr [[SRC]] to i64
-; PRED-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
+; PRED-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
+; PRED-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; PRED-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; PRED-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; PRED:       [[VECTOR_MEMCHECK]]:

@@ -41,7 +41,7 @@ define void @partial_unroll_forced(i32 %N, ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    br i1 [[LCMP_MOD_NOT]], label [[EXIT]], label [[LOOP_LATCH_EPIL_PREHEADER]]
 ; CHECK:       loop.latch.epil.preheader:
 ; CHECK-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ 0, [[LOOP_LATCH_PREHEADER]] ], [ [[INDVARS_IV_NEXT_1]], [[EXIT_LOOPEXIT_UNR_LCSSA]] ]
-; CHECK-NEXT:    [[LCMP_MOD4:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    [[LCMP_MOD4:%.*]] = trunc i32 [[N]] to i1
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[LCMP_MOD4]])
 ; CHECK-NEXT:    [[SRC_IDX_EPIL:%.*]] = getelementptr <8 x half>, ptr [[SRC]], i64 [[INDVARS_IV_UNR]]
 ; CHECK-NEXT:    [[L_EPIL:%.*]] = load <8 x half>, ptr [[SRC_IDX_EPIL]], align 16
@@ -115,7 +115,7 @@ define void @cse_matching_load_from_previous_unrolled_iteration(i32 %N, ptr %src
 ; CHECK-NEXT:    br i1 [[LCMP_MOD_NOT]], label [[EXIT]], label [[LOOP_LATCH_EPIL_PREHEADER]]
 ; CHECK:       loop.latch.epil.preheader:
 ; CHECK-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ 0, [[LOOP_LATCH_PREHEADER]] ], [ [[INDVARS_IV_NEXT_1]], [[EXIT_LOOPEXIT_UNR_LCSSA]] ]
-; CHECK-NEXT:    [[LCMP_MOD4:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    [[LCMP_MOD4:%.*]] = trunc i32 [[N]] to i1
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[LCMP_MOD4]])
 ; CHECK-NEXT:    [[GEP_SRC_12_EPIL:%.*]] = getelementptr <2 x i32>, ptr [[SRC_12]], i64 [[INDVARS_IV_UNR]]
 ; CHECK-NEXT:    [[L_12_EPIL:%.*]] = load <2 x i32>, ptr [[GEP_SRC_12_EPIL]], align 8
