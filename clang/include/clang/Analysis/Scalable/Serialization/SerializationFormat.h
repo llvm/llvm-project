@@ -54,8 +54,7 @@ protected:
   static const decltype(TUSummary::Data) &getData(const TUSummary &S);
 
 public:
-  explicit SerializationFormat(
-      llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
+  explicit SerializationFormat() = default;
   virtual ~SerializationFormat() = default;
 
   virtual TUSummary readTUSummary(llvm::StringRef Path) = 0;
@@ -64,9 +63,6 @@ public:
                               llvm::StringRef OutputDir) = 0;
 
   static char ID; // For RTTIExtends.
-
-protected:
-  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
 };
 
 template <class SerializerFn, class DeserializerFn> struct FormatInfoEntry {

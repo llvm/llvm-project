@@ -14,10 +14,6 @@
 
 using namespace clang::ssaf;
 
-SerializationFormat::SerializationFormat(
-    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
-    : FS(FS) {}
-
 EntityIdTable &SerializationFormat::getIdTableForDeserialization(TUSummary &S) {
   return S.IdTable;
 }
