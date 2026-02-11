@@ -12,10 +12,7 @@
 using namespace clang;
 using namespace ssaf;
 
-// FIXME: LLVM_INSTANTIATE_REGISTRY can't be used here because it drops extra
-// type parameters.
-template class CLANG_EXPORT_TEMPLATE
-    llvm::Registry<clang::ssaf::SerializationFormat>;
+LLVM_INSTANTIATE_REGISTRY(SerializationFormatRegistry)
 
 bool ssaf::isFormatRegistered(llvm::StringRef FormatName) {
   for (const auto &Entry : SerializationFormatRegistry::entries())
