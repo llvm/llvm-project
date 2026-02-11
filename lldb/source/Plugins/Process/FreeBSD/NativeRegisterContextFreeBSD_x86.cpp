@@ -1,4 +1,4 @@
-//===-- NativeRegisterContextNetBSD_x86_64.cpp ----------------------------===//
+//===-- NativeRegisterContextFreeBSD_x86.cpp ------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,13 @@
 
 #if defined(__i386__) || defined(__x86_64__)
 
-#include "NativeRegisterContextNetBSD_x86_64.h"
+#include "NativeRegisterContextFreeBSD_x86.h"
+
+// clang-format off
+#include <x86/fpu.h>
+#include <x86/specialreg.h>
+#include <cpuid.h>
+// clang-format on
 
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -16,26 +22,13 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 
-#include "Plugins/Process/Utility/RegisterContextNetBSD_i386.h"
-#include "Plugins/Process/Utility/RegisterContextNetBSD_x86_64.h"
-
-// clang-format off
-#include <sys/types.h>
-#include <sys/ptrace.h>
-#include <sys/sysctl.h>
-#include <sys/uio.h>
-#include <x86/cpu.h>
-#include <x86/cpu_extended_state.h>
-#include <x86/specialreg.h>
-#include <elf.h>
-#include <err.h>
-#include <cstdint>
-#include <cstdlib>
+#include "NativeProcessFreeBSD.h"
+#include "Plugins/Process/Utility/RegisterContextFreeBSD_i386.h"
+#include "Plugins/Process/Utility/RegisterContextFreeBSD_x86_64.h"
 #include <optional>
-// clang-format on
 
 using namespace lldb_private;
-using namespace lldb_private::process_netbsd;
+using namespace lldb_private::process_freebsd;
 
 // x86 64-bit general purpose registers.
 static const uint32_t g_gpr_regnums_x86_64[] = {
@@ -242,35 +235,35 @@ static const RegisterSet g_reg_sets_x86_64[k_num_register_sets] = {
 
 #define REG_CONTEXT_SIZE (GetRegisterInfoInterface().GetGPRSize())
 
-NativeRegisterContextNetBSD *
-NativeRegisterContextNetBSD::CreateHostNativeRegisterContextNetBSD(
-    const ArchSpec &target_arch, NativeThreadProtocol &native_thread) {
-  return new NativeRegisterContextNetBSD_x86_64(target_arch, native_thread);
+NativeRegisterContextFreeBSD *
+NativeRegisterContextFreeBSD::CreateHostNativeRegisterContextFreeBSD(
+    const ArchSpec &target_arch, NativeThreadFreeBSD &native_thread) {
+  return new NativeRegisterContextFreeBSD_x86(target_arch, native_thread);
 }
 
-// NativeRegisterContextNetBSD_x86_64 members.
+// NativeRegisterContextFreeBSD_x86 members.
 
 static RegisterInfoInterface *
 CreateRegisterInfoInterface(const ArchSpec &target_arch) {
   if (HostInfo::GetArchitecture().GetAddressByteSize() == 4) {
-    // 32-bit hosts run with a RegisterContextNetBSD_i386 context.
-    return new RegisterContextNetBSD_i386(target_arch);
+    // 32-bit hosts run with a RegisterContextFreeBSD_i386 context.
+    return new RegisterContextFreeBSD_i386(target_arch);
   } else {
     assert((HostInfo::GetArchitecture().GetAddressByteSize() == 8) &&
            "Register setting path assumes this is a 64-bit host");
     // X86_64 hosts know how to work with 64-bit and 32-bit EXEs using the
     // x86_64 register context.
-    return new RegisterContextNetBSD_x86_64(target_arch);
+    return new RegisterContextFreeBSD_x86_64(target_arch);
   }
 }
 
-NativeRegisterContextNetBSD_x86_64::NativeRegisterContextNetBSD_x86_64(
-    const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
+NativeRegisterContextFreeBSD_x86::NativeRegisterContextFreeBSD_x86(
+    const ArchSpec &target_arch, NativeThreadFreeBSD &native_thread)
     : NativeRegisterContextRegisterInfo(
           native_thread, CreateRegisterInfoInterface(target_arch)),
       NativeRegisterContextDBReg_x86(native_thread), m_regset_offsets({0}) {
   assert(m_gpr.size() == GetRegisterInfoInterface().GetGPRSize());
-  std::array<uint32_t, MaxRegularRegSet + 1> first_regnos;
+  std::array<uint32_t, MaxRegSet + 1> first_regnos;
 
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86:
@@ -291,12 +284,12 @@ NativeRegisterContextNetBSD_x86_64::NativeRegisterContextNetBSD_x86_64(
                               .byte_offset;
 }
 
-uint32_t NativeRegisterContextNetBSD_x86_64::GetRegisterSetCount() const {
+uint32_t NativeRegisterContextFreeBSD_x86::GetRegisterSetCount() const {
   return k_num_register_sets;
 }
 
 const RegisterSet *
-NativeRegisterContextNetBSD_x86_64::GetRegisterSet(uint32_t set_index) const {
+NativeRegisterContextFreeBSD_x86::GetRegisterSet(uint32_t set_index) const {
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86:
     return &g_reg_sets_i386[set_index];
@@ -307,8 +300,8 @@ NativeRegisterContextNetBSD_x86_64::GetRegisterSet(uint32_t set_index) const {
   }
 }
 
-std::optional<NativeRegisterContextNetBSD_x86_64::RegSetKind>
-NativeRegisterContextNetBSD_x86_64::GetSetForNativeRegNum(
+std::optional<NativeRegisterContextFreeBSD_x86::RegSetKind>
+NativeRegisterContextFreeBSD_x86::GetSetForNativeRegNum(
     uint32_t reg_num) const {
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86:
@@ -346,43 +339,76 @@ NativeRegisterContextNetBSD_x86_64::GetSetForNativeRegNum(
   llvm_unreachable("Register does not belong to any register set");
 }
 
-Status NativeRegisterContextNetBSD_x86_64::ReadRegisterSet(RegSetKind set) {
+Status NativeRegisterContextFreeBSD_x86::ReadRegisterSet(RegSetKind set) {
   switch (set) {
   case GPRegSet:
-    return DoRegisterSet(PT_GETREGS, m_gpr.data());
-  case DBRegSet:
-    return DoRegisterSet(PT_GETDBREGS, m_dbr.data());
+    return NativeProcessFreeBSD::PtraceWrapper(PT_GETREGS, m_thread.GetID(),
+                                               m_gpr.data());
   case FPRegSet:
+#if defined(__x86_64__)
+    return NativeProcessFreeBSD::PtraceWrapper(PT_GETFPREGS, m_thread.GetID(),
+                                               m_fpr.data());
+#else
+    return NativeProcessFreeBSD::PtraceWrapper(PT_GETXMMREGS, m_thread.GetID(),
+                                               m_fpr.data());
+#endif
+  case DBRegSet:
+    return NativeProcessFreeBSD::PtraceWrapper(PT_GETDBREGS, m_thread.GetID(),
+                                               m_dbr.data());
   case YMMRegSet:
   case MPXRegSet: {
-    struct iovec iov = {m_xstate.data(), m_xstate.size()};
-    Status ret = DoRegisterSet(PT_GETXSTATE, &iov);
-    assert(reinterpret_cast<xstate *>(m_xstate.data())->xs_rfbm & XCR0_X87);
-    return ret;
+    struct ptrace_xstate_info info;
+    Status ret = NativeProcessFreeBSD::PtraceWrapper(
+        PT_GETXSTATE_INFO, GetProcessPid(), &info, sizeof(info));
+    if (!ret.Success())
+      return ret;
+
+    assert(info.xsave_mask & XFEATURE_ENABLED_X87);
+    assert(info.xsave_mask & XFEATURE_ENABLED_SSE);
+
+    m_xsave_offsets[YMMRegSet] = LLDB_INVALID_XSAVE_OFFSET;
+    if (info.xsave_mask & XFEATURE_ENABLED_YMM_HI128) {
+      uint32_t eax, ecx, edx;
+      __get_cpuid_count(0x0D, 2, &eax, &m_xsave_offsets[YMMRegSet], &ecx, &edx);
+    }
+
+    m_xsave.resize(info.xsave_len);
+    return NativeProcessFreeBSD::PtraceWrapper(PT_GETXSTATE, GetProcessPid(),
+                                               m_xsave.data(), m_xsave.size());
   }
   }
-  llvm_unreachable("NativeRegisterContextNetBSD_x86_64::ReadRegisterSet");
+  llvm_unreachable("NativeRegisterContextFreeBSD_x86::ReadRegisterSet");
 }
 
-Status NativeRegisterContextNetBSD_x86_64::WriteRegisterSet(RegSetKind set) {
+Status NativeRegisterContextFreeBSD_x86::WriteRegisterSet(RegSetKind set) {
   switch (set) {
   case GPRegSet:
-    return DoRegisterSet(PT_SETREGS, m_gpr.data());
-  case DBRegSet:
-    return DoRegisterSet(PT_SETDBREGS, m_dbr.data());
+    return NativeProcessFreeBSD::PtraceWrapper(PT_SETREGS, m_thread.GetID(),
+                                               m_gpr.data());
   case FPRegSet:
+#if defined(__x86_64__)
+    return NativeProcessFreeBSD::PtraceWrapper(PT_SETFPREGS, m_thread.GetID(),
+                                               m_fpr.data());
+#else
+    return NativeProcessFreeBSD::PtraceWrapper(PT_SETXMMREGS, m_thread.GetID(),
+                                               m_fpr.data());
+#endif
+  case DBRegSet:
+    return NativeProcessFreeBSD::PtraceWrapper(PT_SETDBREGS, m_thread.GetID(),
+                                               m_dbr.data());
   case YMMRegSet:
-  case MPXRegSet: {
-    struct iovec iov = {&m_xstate, sizeof(m_xstate)};
-    return DoRegisterSet(PT_SETXSTATE, &iov);
+  case MPXRegSet:
+    // ReadRegisterSet() must always be called before WriteRegisterSet().
+    assert(m_xsave.size() > 0);
+    return NativeProcessFreeBSD::PtraceWrapper(PT_SETXSTATE, GetProcessPid(),
+                                               m_xsave.data(), m_xsave.size());
   }
-  }
-  llvm_unreachable("NativeRegisterContextNetBSD_x86_64::WriteRegisterSet");
+  llvm_unreachable("NativeRegisterContextFreeBSD_x86::WriteRegisterSet");
 }
 
 Status
-NativeRegisterContextNetBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
-                                                 RegisterValue &reg_value) {
+NativeRegisterContextFreeBSD_x86::ReadRegister(const RegisterInfo *reg_info,
+                                                  RegisterValue &reg_value) {
   Status error;
 
   if (!reg_info) {
@@ -410,7 +436,7 @@ NativeRegisterContextNetBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
     return error;
   }
 
-  RegSetKind set = *opt_set;
+  RegSetKind set = opt_set.value();
   error = ReadRegisterSet(set);
   if (error.Fail())
     return error;
@@ -420,8 +446,7 @@ NativeRegisterContextNetBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
   case FPRegSet:
   case DBRegSet: {
     void *data = GetOffsetRegSetData(set, reg_info->byte_offset);
-    FXSAVE *fpr = reinterpret_cast<FXSAVE *>(m_xstate.data() +
-                                             offsetof(xstate, xs_fxsave));
+    FXSAVE *fpr = reinterpret_cast<FXSAVE *>(m_fpr.data());
     if (data == &fpr->ftag) // ftag
       reg_value.SetUInt16(
           AbridgedToFullTagWord(fpr->ftag, fpr->fstat, fpr->stmm));
@@ -448,7 +473,7 @@ NativeRegisterContextNetBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
   return error;
 }
 
-Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
+Status NativeRegisterContextFreeBSD_x86::WriteRegister(
     const RegisterInfo *reg_info, const RegisterValue &reg_value) {
 
   Status error;
@@ -478,33 +503,21 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
     return error;
   }
 
-  RegSetKind set = *opt_set;
-  uint64_t new_xstate_bv = 0;
-
+  RegSetKind set = opt_set.value();
   error = ReadRegisterSet(set);
   if (error.Fail())
     return error;
 
   switch (set) {
   case GPRegSet:
-  case DBRegSet:
-    ::memcpy(GetOffsetRegSetData(set, reg_info->byte_offset),
-             reg_value.GetBytes(), reg_value.GetByteSize());
-    break;
-  case FPRegSet: {
+  case FPRegSet:
+  case DBRegSet: {
     void *data = GetOffsetRegSetData(set, reg_info->byte_offset);
-    FXSAVE *fpr = reinterpret_cast<FXSAVE *>(m_xstate.data() +
-                                             offsetof(xstate, xs_fxsave));
+    FXSAVE *fpr = reinterpret_cast<FXSAVE *>(m_fpr.data());
     if (data == &fpr->ftag) // ftag
       fpr->ftag = FullToAbridgedTagWord(reg_value.GetAsUInt16());
     else
       ::memcpy(data, reg_value.GetBytes(), reg_value.GetByteSize());
-    if (data >= &fpr->xmm)
-      new_xstate_bv |= XCR0_SSE;
-    else if (data >= &fpr->mxcsr && data < &fpr->stmm)
-      new_xstate_bv |= XCR0_SSE;
-    else
-      new_xstate_bv |= XCR0_X87;
     break;
   }
   case YMMRegSet: {
@@ -516,7 +529,6 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
       YMMReg ymm;
       ::memcpy(ymm.bytes, reg_value.GetBytes(), reg_value.GetByteSize());
       YMMToXState(ymm, ymm_reg->xmm, ymm_reg->ymm_hi);
-      new_xstate_bv |= XCR0_SSE | XCR0_YMM_Hi128;
     }
     break;
   }
@@ -524,12 +536,10 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
     llvm_unreachable("MPX regset should have returned error");
   }
 
-  if (new_xstate_bv != 0)
-    reinterpret_cast<xstate *>(m_xstate.data())->xs_xstate_bv |= new_xstate_bv;
   return WriteRegisterSet(set);
 }
 
-Status NativeRegisterContextNetBSD_x86_64::ReadAllRegisterValues(
+Status NativeRegisterContextFreeBSD_x86::ReadAllRegisterValues(
     lldb::WritableDataBufferSP &data_sp) {
   Status error;
 
@@ -545,20 +555,20 @@ Status NativeRegisterContextNetBSD_x86_64::ReadAllRegisterValues(
   return error;
 }
 
-Status NativeRegisterContextNetBSD_x86_64::WriteAllRegisterValues(
+Status NativeRegisterContextFreeBSD_x86::WriteAllRegisterValues(
     const lldb::DataBufferSP &data_sp) {
   Status error;
 
   if (!data_sp) {
     error = Status::FromErrorStringWithFormat(
-        "NativeRegisterContextNetBSD_x86_64::%s invalid data_sp provided",
+        "NativeRegisterContextFreeBSD_x86::%s invalid data_sp provided",
         __FUNCTION__);
     return error;
   }
 
   if (data_sp->GetByteSize() != REG_CONTEXT_SIZE) {
     error = Status::FromErrorStringWithFormat(
-        "NativeRegisterContextNetBSD_x86_64::%s data_sp contained mismatched "
+        "NativeRegisterContextFreeBSD_x86::%s data_sp contained mismatched "
         "data size, expected %zu, actual %" PRIu64,
         __FUNCTION__, REG_CONTEXT_SIZE, data_sp->GetByteSize());
     return error;
@@ -567,7 +577,7 @@ Status NativeRegisterContextNetBSD_x86_64::WriteAllRegisterValues(
   const uint8_t *src = data_sp->GetBytes();
   if (src == nullptr) {
     error = Status::FromErrorStringWithFormat(
-        "NativeRegisterContextNetBSD_x86_64::%s "
+        "NativeRegisterContextFreeBSD_x86::%s "
         "DataBuffer::GetBytes() returned a null "
         "pointer",
         __FUNCTION__);
@@ -583,9 +593,9 @@ Status NativeRegisterContextNetBSD_x86_64::WriteAllRegisterValues(
   return error;
 }
 
-llvm::Error NativeRegisterContextNetBSD_x86_64::CopyHardwareWatchpointsFrom(
-    NativeRegisterContextNetBSD &source) {
-  auto &r_source = static_cast<NativeRegisterContextNetBSD_x86_64 &>(source);
+llvm::Error NativeRegisterContextFreeBSD_x86::CopyHardwareWatchpointsFrom(
+    NativeRegisterContextFreeBSD &source) {
+  auto &r_source = static_cast<NativeRegisterContextFreeBSD_x86 &>(source);
   // NB: This implicitly reads the whole dbreg set.
   RegisterValue dr7;
   Status res = r_source.ReadRegister(GetDR(7), dr7);
@@ -601,15 +611,15 @@ llvm::Error NativeRegisterContextNetBSD_x86_64::CopyHardwareWatchpointsFrom(
 }
 
 uint8_t *
-NativeRegisterContextNetBSD_x86_64::GetOffsetRegSetData(RegSetKind set,
-                                                        size_t reg_offset) {
+NativeRegisterContextFreeBSD_x86::GetOffsetRegSetData(RegSetKind set,
+                                                         size_t reg_offset) {
   uint8_t *base;
   switch (set) {
   case GPRegSet:
     base = m_gpr.data();
     break;
   case FPRegSet:
-    base = m_xstate.data() + offsetof(xstate, xs_fxsave);
+    base = m_fpr.data();
     break;
   case DBRegSet:
     base = m_dbr.data();
@@ -623,10 +633,10 @@ NativeRegisterContextNetBSD_x86_64::GetOffsetRegSetData(RegSetKind set,
   return base + (reg_offset - m_regset_offsets[set]);
 }
 
-std::optional<NativeRegisterContextNetBSD_x86_64::YMMSplitPtr>
-NativeRegisterContextNetBSD_x86_64::GetYMMSplitReg(uint32_t reg) {
-  auto xst = reinterpret_cast<xstate *>(m_xstate.data());
-  if (!(xst->xs_rfbm & XCR0_SSE) || !(xst->xs_rfbm & XCR0_YMM_Hi128))
+std::optional<NativeRegisterContextFreeBSD_x86::YMMSplitPtr>
+NativeRegisterContextFreeBSD_x86::GetYMMSplitReg(uint32_t reg) {
+  uint32_t offset = m_xsave_offsets[YMMRegSet];
+  if (offset == LLDB_INVALID_XSAVE_OFFSET)
     return std::nullopt;
 
   uint32_t reg_index;
@@ -641,8 +651,10 @@ NativeRegisterContextNetBSD_x86_64::GetYMMSplitReg(uint32_t reg) {
     llvm_unreachable("Unhandled target architecture.");
   }
 
-  return YMMSplitPtr{&xst->xs_fxsave.fx_xmm[reg_index],
-                     &xst->xs_ymm_hi128.xs_ymm[reg_index]};
+  auto *fpreg = reinterpret_cast<struct savexmm_ymm *>(m_xsave.data());
+  auto *ymmreg = reinterpret_cast<struct ymmacc *>(m_xsave.data() + offset);
+
+  return YMMSplitPtr{&fpreg->sv_xmm[reg_index], &ymmreg[reg_index]};
 }
 
-#endif // defined(__x86_64__)
+#endif // defined(__i386__) || defined(__x86_64__)

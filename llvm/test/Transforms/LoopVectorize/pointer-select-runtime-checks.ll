@@ -74,9 +74,9 @@ exit:
 define void @test_loop_dependent_select1(ptr %src.1, ptr %src.2, ptr %dst, i1 %c, i8 %n) {
 ; CHECK-LABEL: @test_loop_dependent_select1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SRC_23:%.*]] = ptrtoint ptr [[SRC_2:%.*]] to i64
-; CHECK-NEXT:    [[SRC_12:%.*]] = ptrtoint ptr [[SRC_1:%.*]] to i64
-; CHECK-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST:%.*]] to i64
+; CHECK-NEXT:    [[SRC_23:%.*]] = ptrtoaddr ptr [[SRC_2:%.*]] to i64
+; CHECK-NEXT:    [[SRC_12:%.*]] = ptrtoaddr ptr [[SRC_1:%.*]] to i64
+; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST:%.*]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[N:%.*]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[TMP0]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[TMP1]], 1

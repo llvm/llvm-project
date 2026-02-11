@@ -1,4 +1,4 @@
-//===-- RegisterContextLinuxCore_x86_64.cpp -------------------------------===//
+//===-- RegisterContextLinuxCore_x86.cpp ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RegisterContextLinuxCore_x86_64.h"
+#include "RegisterContextLinuxCore_x86.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/RegisterValue.h"
@@ -210,12 +210,12 @@ static const RegisterSet g_reg_sets_x86_64[] = {
     {"Advanced Vector Extensions", "avx", x86_64_with_base::k_num_avx_registers,
      g_avx_regnums_x86_64}};
 
-RegisterContextLinuxCore_x86_64::RegisterContextLinuxCore_x86_64(
+RegisterContextLinuxCore_x86::RegisterContextLinuxCore_x86(
     Thread &thread, RegisterInfoInterface *register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
-    : RegisterContextCorePOSIX_x86_64(thread, register_info, gpregset, notes) {}
+    : RegisterContextCorePOSIX_x86(thread, register_info, gpregset, notes) {}
 
-const RegisterSet *RegisterContextLinuxCore_x86_64::GetRegisterSet(size_t set) {
+const RegisterSet *RegisterContextLinuxCore_x86::GetRegisterSet(size_t set) {
   if (IsRegisterSetAvailable(set)) {
     switch (m_register_info_up->GetTargetArchitecture().GetMachine()) {
     case llvm::Triple::x86:
@@ -230,7 +230,7 @@ const RegisterSet *RegisterContextLinuxCore_x86_64::GetRegisterSet(size_t set) {
   return nullptr;
 }
 
-RegInfo &RegisterContextLinuxCore_x86_64::GetRegInfo() {
+RegInfo &RegisterContextLinuxCore_x86::GetRegInfo() {
   return GetRegInfoShared(
       m_register_info_up->GetTargetArchitecture().GetMachine(),
       /*with_base=*/true);

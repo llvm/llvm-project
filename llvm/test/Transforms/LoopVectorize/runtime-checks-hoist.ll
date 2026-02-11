@@ -404,8 +404,8 @@ define void @diff_checks_src_start_invariant(ptr nocapture noundef writeonly %ds
 ; CHECK-LABEL: define void @diff_checks_src_start_invariant
 ; CHECK-SAME: (ptr noundef writeonly captures(none) [[DST:%.*]], ptr noundef readonly captures(none) [[SRC:%.*]], i32 noundef [[M:%.*]], i32 noundef [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoint ptr [[SRC]] to i64
-; CHECK-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
+; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
+; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[WIDE_M:%.*]] = zext i32 [[M]] to i64
 ; CHECK-NEXT:    [[WIDE_N:%.*]] = zext i32 [[N]] to i64
@@ -1408,8 +1408,8 @@ define void @nested_loop_start_of_inner_ptr_addrec_is_same_outer_addrec(ptr noca
 ; CHECK-LABEL: define void @nested_loop_start_of_inner_ptr_addrec_is_same_outer_addrec
 ; CHECK-SAME: (ptr noundef captures(none) [[DST:%.*]], ptr noundef readonly captures(none) [[SRC:%.*]], i64 noundef [[M:%.*]], i64 noundef [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoint ptr [[SRC]] to i64
-; CHECK-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
+; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
+; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[SRC2]]
 ; CHECK-NEXT:    br label [[OUTER_LOOP:%.*]]
 ; CHECK:       outer.loop:

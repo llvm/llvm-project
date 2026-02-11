@@ -2938,7 +2938,7 @@ ExprResult Sema::BuildQualifiedDeclarationNameExpr(
     // members were likely supposed to be inherited.
     DeclContext *DC = computeDeclContext(SS);
     if (const auto *CD = dyn_cast<CXXRecordDecl>(DC))
-      if (CD->isInvalidDecl())
+      if (CD->isInvalidDecl() || CD->isBeingDefined())
         return ExprError();
     Diag(NameInfo.getLoc(), diag::err_no_member)
       << NameInfo.getName() << DC << SS.getRange();

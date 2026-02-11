@@ -70,8 +70,8 @@ define void @dont_hoist_variant_address(ptr %dst, ptr %src, i32 %n) {
 ; CHECK-LABEL: define void @dont_hoist_variant_address(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoint ptr [[SRC]] to i64
-; CHECK-NEXT:    [[A1:%.*]] = ptrtoint ptr [[DST]] to i64
+; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
+; CHECK-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:

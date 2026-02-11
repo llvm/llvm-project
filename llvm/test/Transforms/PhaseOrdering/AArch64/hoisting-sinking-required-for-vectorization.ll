@@ -41,8 +41,8 @@ return:                                           ; preds = %if.end3, %if.then2,
 define void @loop(ptr %X, ptr %Y) {
 ; CHECK-LABEL: @loop(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X6:%.*]] = ptrtoint ptr [[X:%.*]] to i64
-; CHECK-NEXT:    [[Y7:%.*]] = ptrtoint ptr [[Y:%.*]] to i64
+; CHECK-NEXT:    [[X6:%.*]] = ptrtoaddr ptr [[X:%.*]] to i64
+; CHECK-NEXT:    [[Y7:%.*]] = ptrtoaddr ptr [[Y:%.*]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[X6]], [[Y7]]
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY:%.*]]

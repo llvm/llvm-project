@@ -80,8 +80,8 @@ for.body:                                         ; preds = %entry, %for.body
 define void @vector_reverse_i64(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: @vector_reverse_i64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A:%.*]] to i64
-; CHECK-NEXT:    [[B1:%.*]] = ptrtoint ptr [[B:%.*]] to i64
+; CHECK-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A:%.*]] to i64
+; CHECK-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B:%.*]] to i64
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp sgt i64 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP8]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:

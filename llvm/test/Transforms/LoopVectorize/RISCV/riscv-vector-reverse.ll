@@ -180,8 +180,8 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-LABEL: define void @vector_reverse_i64(
 ; RV64-SAME: ptr noundef writeonly captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] {
 ; RV64-NEXT:  [[ENTRY:.*:]]
-; RV64-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; RV64-NEXT:    [[B1:%.*]] = ptrtoint ptr [[B]] to i64
+; RV64-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; RV64-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; RV64-NEXT:    [[CMP7:%.*]] = icmp sgt i32 [[N]], 0
 ; RV64-NEXT:    br i1 [[CMP7]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
 ; RV64:       [[FOR_BODY_PREHEADER]]:
@@ -252,8 +252,8 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV32-LABEL: define void @vector_reverse_i64(
 ; RV32-SAME: ptr noundef writeonly captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] {
 ; RV32-NEXT:  [[ENTRY:.*:]]
-; RV32-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i32
-; RV32-NEXT:    [[B1:%.*]] = ptrtoint ptr [[B]] to i32
+; RV32-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i32
+; RV32-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i32
 ; RV32-NEXT:    [[CMP7:%.*]] = icmp sgt i32 [[N]], 0
 ; RV32-NEXT:    br i1 [[CMP7]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
 ; RV32:       [[FOR_BODY_PREHEADER]]:
@@ -311,8 +311,8 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-LABEL: define void @vector_reverse_i64(
 ; RV64-UF2-SAME: ptr noundef writeonly captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] {
 ; RV64-UF2-NEXT:  [[ENTRY:.*:]]
-; RV64-UF2-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; RV64-UF2-NEXT:    [[B1:%.*]] = ptrtoint ptr [[B]] to i64
+; RV64-UF2-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; RV64-UF2-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; RV64-UF2-NEXT:    [[CMP7:%.*]] = icmp sgt i32 [[N]], 0
 ; RV64-UF2-NEXT:    br i1 [[CMP7]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
 ; RV64-UF2:       [[FOR_BODY_PREHEADER]]:
@@ -431,8 +431,8 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-LABEL: define void @vector_reverse_f32(
 ; RV64-SAME: ptr noundef writeonly captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] {
 ; RV64-NEXT:  [[ENTRY:.*:]]
-; RV64-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; RV64-NEXT:    [[B1:%.*]] = ptrtoint ptr [[B]] to i64
+; RV64-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; RV64-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; RV64-NEXT:    [[CMP7:%.*]] = icmp sgt i32 [[N]], 0
 ; RV64-NEXT:    br i1 [[CMP7]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
 ; RV64:       [[FOR_BODY_PREHEADER]]:
@@ -503,8 +503,8 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV32-LABEL: define void @vector_reverse_f32(
 ; RV32-SAME: ptr noundef writeonly captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] {
 ; RV32-NEXT:  [[ENTRY:.*:]]
-; RV32-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i32
-; RV32-NEXT:    [[B1:%.*]] = ptrtoint ptr [[B]] to i32
+; RV32-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i32
+; RV32-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i32
 ; RV32-NEXT:    [[CMP7:%.*]] = icmp sgt i32 [[N]], 0
 ; RV32-NEXT:    br i1 [[CMP7]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
 ; RV32:       [[FOR_BODY_PREHEADER]]:
@@ -562,8 +562,8 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-LABEL: define void @vector_reverse_f32(
 ; RV64-UF2-SAME: ptr noundef writeonly captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] {
 ; RV64-UF2-NEXT:  [[ENTRY:.*:]]
-; RV64-UF2-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; RV64-UF2-NEXT:    [[B1:%.*]] = ptrtoint ptr [[B]] to i64
+; RV64-UF2-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; RV64-UF2-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; RV64-UF2-NEXT:    [[CMP7:%.*]] = icmp sgt i32 [[N]], 0
 ; RV64-UF2-NEXT:    br i1 [[CMP7]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
 ; RV64-UF2:       [[FOR_BODY_PREHEADER]]:
