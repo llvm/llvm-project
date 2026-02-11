@@ -4071,8 +4071,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     if (auto *VecTy = Ty->getAs<VectorType>())
       Ty = VecTy->getElementType();
     Result = Builder.CreateBinaryIntrinsic(
-        Ty->isSignedIntegerType() ? Intrinsic::smax : Intrinsic::umax, Op0,
-        Op1, nullptr, "elt.max");
+        Ty->isSignedIntegerType() ? Intrinsic::smax : Intrinsic::umax, Op0, Op1,
+        nullptr, "elt.max");
     return RValue::get(Result);
   }
   case Builtin::BI__builtin_elementwise_min: {
@@ -4084,8 +4084,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     if (auto *VecTy = Ty->getAs<VectorType>())
       Ty = VecTy->getElementType();
     Result = Builder.CreateBinaryIntrinsic(
-        Ty->isSignedIntegerType() ? Intrinsic::smin : Intrinsic::umin, Op0,
-        Op1, nullptr, "elt.min");
+        Ty->isSignedIntegerType() ? Intrinsic::smin : Intrinsic::umin, Op0, Op1,
+        nullptr, "elt.min");
     return RValue::get(Result);
   }
 
