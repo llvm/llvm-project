@@ -16,6 +16,8 @@ extern pipe write_only int get_pipe(void); // expected-error {{'write_only' attr
 // expected-error-re@-5{{type '__private write_only pipe int ({{(void)?}})' can only be used as a function parameter in OpenCL}}
 #endif
 
+global pipe notype1, notype2; // expected-error {{missing actual type specifier for pipe}}
+
 kernel void test_invalid_reserved_id(reserve_id_t ID) { // expected-error {{'__private reserve_id_t' cannot be used as the type of a kernel parameter}}
 }
 

@@ -5,10 +5,21 @@
 shard.grid @grid0(shape = 3x4x5)
 func.func @process_multi_index() -> (index, index, index) {
   // CHECK: mpi.comm_rank
-  // CHECK: [[res:%.*]]:3 = affine.delinearize_index %1 into (3, 4, 5) : index, index, index 
+  // CHECK: [[v1:%.*]] = arith.index_cast
+  // CHECK: [[res:%.*]]:3 = affine.delinearize_index [[v1]] into (3, 4, 5) : index, index, index 
   %0:3 = shard.process_multi_index on @grid0 axes = [] : index, index, index
   // CHECK: return [[res]]#0, [[res]]#1, [[res]]#2 : index, index, index
   return %0#0, %0#1, %0#2 : index, index, index
+}
+
+// CHECK-LABEL: func @process_multi_index_reorder
+func.func @process_multi_index_reorder() -> (index, index) {
+  // CHECK: mpi.comm_rank
+  // CHECK: [[v1:%.*]] = arith.index_cast
+  // CHECK: [[v2:%.*]]:3 = affine.delinearize_index [[v1]] into (3, 4, 5) : index, index, index
+  %0:2 = shard.process_multi_index on @grid0 axes = [2, 0] : index, index
+  // CHECK: return [[v2]]#2, [[v2]]#0 : index, index
+  return %0#0, %0#1 : index, index
 }
 
 // CHECK-LABEL: func @process_linear_index

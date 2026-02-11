@@ -228,6 +228,9 @@ Improvements to Clang's diagnostics
   when accessing a member function on a past-the-end array element.
   (#GH179128)
 
+- Added a missing space to the FixIt for the ``implicit-int`` group of diagnostics and 
+  made sure that only one such diagnostic and FixIt is emitted per declaration group. (#GH179354)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
