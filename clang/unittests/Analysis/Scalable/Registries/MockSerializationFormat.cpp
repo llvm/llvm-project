@@ -26,9 +26,11 @@
 using namespace clang;
 using namespace ssaf;
 
+char MockSerializationFormat::ID = 0;
+
 MockSerializationFormat::MockSerializationFormat(
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
-    : SerializationFormat(FS) {
+    : llvm::RTTIExtends<MockSerializationFormat, SerializationFormat>(FS) {
   for (const auto &FormatInfoEntry : llvm::Registry<FormatInfo>::entries()) {
     std::unique_ptr<FormatInfo> Info = FormatInfoEntry.instantiate();
     bool Inserted = FormatInfos.try_emplace(Info->ForSummary, *Info).second;
@@ -65,7 +67,7 @@ TUSummary MockSerializationFormat::readTUSummary(llvm::StringRef Path) {
     assert(InfoEntry.ForSummary == Name);
 
     SpecialFileRepresentation Repr{(*InputFile)->getBuffer().str()};
-    auto &Table = getIdTableForDeserialization(Summary);
+    auto &Table = getIdTable(Summary);
 
     std::unique_ptr<EntitySummary> Result = InfoEntry.Deserialize(Repr, Table);
     if (!Result) // TODO: Handle error.

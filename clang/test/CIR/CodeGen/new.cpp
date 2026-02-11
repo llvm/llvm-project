@@ -5,6 +5,8 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
+typedef __typeof__(sizeof(int)) size_t;
+
 struct S {
   int a;
   int b;
@@ -450,3 +452,278 @@ void t_constant_size_partial_init() {
 // OGCG:   store i32 3, ptr %[[ELEM_2]]
 // OGCG:   %[[ELEM_3:.*]] = getelementptr inbounds i32, ptr %[[ELEM_2]], i64 1
 // OGCG:   call void @llvm.memset.p0.i64(ptr{{.*}} %[[ELEM_3]], i8 0, i64 52, i1 false)
+
+void t_new_var_size(size_t n) {
+  auto p = new char[n];
+}
+
+// CHECK:  cir.func {{.*}} @_Z14t_new_var_sizem
+// CHECK:    %[[N:.*]] = cir.load{{.*}} %[[ARG_ALLOCA:.*]]
+// CHECK:    %[[PTR:.*]] = cir.call @_Znam(%[[N]]) {allocsize = array<i32: 0>} : (!u64i)
+
+// LLVM: define{{.*}} void @_Z14t_new_var_sizem
+// LLVM:   %[[N:.*]] = load i64, ptr %{{.+}}
+// LLVM:   %[[PTR:.*]] = call ptr @_Znam(i64 %[[N]])
+
+// OGCG: define{{.*}} void @_Z14t_new_var_sizem
+// OGCG:   %[[N:.*]] = load i64, ptr %{{.+}}
+// OGCG:   %[[PTR:.*]] = call {{.*}} ptr @_Znam(i64 {{.*}} %[[N]])
+
+void t_new_var_size2(int n) {
+  auto p = new char[n];
+}
+
+// CHECK:  cir.func {{.*}} @_Z15t_new_var_size2i
+// CHECK:    %[[N:.*]] = cir.load{{.*}} %[[ARG_ALLOCA:.*]]
+// CHECK:    %[[N_SIZE_T:.*]] = cir.cast integral %[[N]] : !s32i -> !u64i
+// CHECK:    %[[PTR:.*]] = cir.call @_Znam(%[[N_SIZE_T]]) {allocsize = array<i32: 0>} : (!u64i)
+
+// LLVM: define{{.*}} void @_Z15t_new_var_size2i
+// LLVM:   %[[N:.*]] = load i32, ptr %{{.+}}
+// LLVM:   %[[N_SIZE_T:.*]] = sext i32 %[[N]] to i64
+// LLVM:   %[[PTR:.*]] = call ptr @_Znam(i64 %[[N_SIZE_T]])
+
+// OGCG: define{{.*}} void @_Z15t_new_var_size2i
+// OGCG:   %[[N:.*]] = load i32, ptr %{{.+}}
+// OGCG:   %[[N_SIZE_T:.*]] = sext i32 %[[N]] to i64
+// OGCG:   %[[PTR:.*]] = call {{.*}} ptr @_Znam(i64 {{.*}} %[[N_SIZE_T]])
+
+void t_new_var_size3(size_t n) {
+  auto p = new double[n];
+}
+
+// CHECK:  cir.func {{.*}} @_Z15t_new_var_size3m
+// CHECK:    %[[N:.*]] = cir.load{{.*}} %[[ARG_ALLOCA:.*]]
+// CHECK:    %[[ELEMENT_SIZE:.*]] = cir.const #cir.int<8> : !u64i
+// CHECK:    %[[RESULT:.*]], %[[OVERFLOW:.*]] = cir.binop.overflow(mul, %[[N]], %[[ELEMENT_SIZE]]) : !u64i, (!u64i, !cir.bool)
+// CHECK:    %[[ALL_ONES:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
+// CHECK:    %[[ALLOC_SIZE:.*]] = cir.select if %[[OVERFLOW]] then %[[ALL_ONES]] else %[[RESULT]] : (!cir.bool, !u64i, !u64i)
+// CHECK:    %[[PTR:.*]] = cir.call @_Znam(%[[ALLOC_SIZE]]) {allocsize = array<i32: 0>} : (!u64i)
+
+// LLVM: define{{.*}} void @_Z15t_new_var_size3m
+// LLVM:   %[[N:.*]] = load i64, ptr %{{.+}}
+// LLVM:   %[[MUL_OVERFLOW:.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %[[N]], i64 8)
+// LLVM:   %[[ELEMENT_SIZE:.*]] = extractvalue { i64, i1 } %[[MUL_OVERFLOW]], 0
+// LLVM:   %[[OVERFLOW:.*]] = extractvalue { i64, i1 } %[[MUL_OVERFLOW]], 1
+// LLVM:   %[[ALLOC_SIZE:.*]] = select i1 %[[OVERFLOW]], i64 -1, i64 %[[ELEMENT_SIZE]]
+// LLVM:   %[[RESULT:.*]] = call ptr @_Znam(i64 %[[ALLOC_SIZE]])
+
+// OGCG: define{{.*}} void @_Z15t_new_var_size3m
+// OGCG:   %[[N:.*]] = load i64, ptr %{{.+}}
+// OGCG:   %[[MUL_OVERFLOW:.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %[[N]], i64 8)
+// OGCG:   %[[OVERFLOW:.*]] = extractvalue { i64, i1 } %[[MUL_OVERFLOW]], 1
+// OGCG:   %[[ELEMENT_SIZE:.*]] = extractvalue { i64, i1 } %[[MUL_OVERFLOW]], 0
+// OGCG:   %[[ALLOC_SIZE:.*]] = select i1 %[[OVERFLOW]], i64 -1, i64 %[[ELEMENT_SIZE]]
+// OGCG:   %[[PTR:.*]] = call {{.*}} ptr @_Znam(i64 {{.*}} %[[ALLOC_SIZE]])
+
+void t_new_var_size4(int n) {
+  auto p = new double[n];
+}
+
+// CHECK:  cir.func {{.*}} @_Z15t_new_var_size4i
+// CHECK:    %[[N:.*]] = cir.load{{.*}} %[[ARG_ALLOCA:.*]]
+// CHECK:    %[[N_SIZE_T:.*]] = cir.cast integral %[[N]] : !s32i -> !u64i
+// CHECK:    %[[ELEMENT_SIZE:.*]] = cir.const #cir.int<8> : !u64i
+// CHECK:    %[[RESULT:.*]], %[[OVERFLOW:.*]] = cir.binop.overflow(mul, %[[N_SIZE_T]], %[[ELEMENT_SIZE]]) : !u64i, (!u64i, !cir.bool)
+// CHECK:    %[[ALL_ONES:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
+// CHECK:    %[[ALLOC_SIZE:.*]] = cir.select if %[[OVERFLOW]] then %[[ALL_ONES]] else %[[RESULT]] : (!cir.bool, !u64i, !u64i)
+// CHECK:    %[[PTR:.*]] = cir.call @_Znam(%[[ALLOC_SIZE]]) {allocsize = array<i32: 0>} : (!u64i)
+
+// LLVM: define{{.*}} void @_Z15t_new_var_size4i
+// LLVM:   %[[N:.*]] = load i32, ptr %{{.+}}
+// LLVM:   %[[N_SIZE_T:.*]] = sext i32 %[[N]] to i64
+// LLVM:   %[[MUL_OVERFLOW:.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %[[N_SIZE_T]], i64 8)
+// LLVM:   %[[ELEMENT_SIZE:.*]] = extractvalue { i64, i1 } %[[MUL_OVERFLOW]], 0
+// LLVM:   %[[OVERFLOW:.*]] = extractvalue { i64, i1 } %[[MUL_OVERFLOW]], 1
+// LLVM:   %[[ALLOC_SIZE:.*]] = select i1 %[[OVERFLOW]], i64 -1, i64 %[[ELEMENT_SIZE]]
+// LLVM:   %[[PTR:.*]] = call ptr @_Znam(i64 %[[ALLOC_SIZE]])
+
+// OGCG: define{{.*}} void @_Z15t_new_var_size4i
+// OGCG:   %[[N:.*]] = load i32, ptr %{{.+}}
+// OGCG:   %[[N_SIZE_T:.*]] = sext i32 %[[N]] to i64
+// OGCG:   %[[MUL_OVERFLOW:.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %[[N_SIZE_T]], i64 8)
+// OGCG:   %[[OVERFLOW:.*]] = extractvalue { i64, i1 } %[[MUL_OVERFLOW]], 1
+// OGCG:   %[[ELEMENT_SIZE:.*]] = extractvalue { i64, i1 } %[[MUL_OVERFLOW]], 0
+// OGCG:   %[[ALLOC_SIZE:.*]] = select i1 %[[OVERFLOW]], i64 -1, i64 %[[ELEMENT_SIZE]]
+// OGCG:   %[[PTR:.*]] = call {{.*}} ptr @_Znam(i64 {{.*}} %[[ALLOC_SIZE]])
+
+void t_new_var_size5(int n) {
+  auto p = new double[n][2][3];
+}
+
+// NUM_ELEMENTS isn't used in this case because there is no cookie. It isn't
+// used in the allocation size because the allocation size is calculated with
+// the element size and the fixed size dimensions already combined (6 * 8 = 48).
+// We don't DCE NUM_ELEMENTS because it's not a constant, but later
+// optimizations will eliminate it.
+
+// CHECK:  cir.func {{.*}} @_Z15t_new_var_size5i
+// CHECK:    %[[N:.*]] = cir.load{{.*}} %[[ARG_ALLOCA:.*]]
+// CHECK:    %[[N_SIZE_T:.*]] = cir.cast integral %[[N]] : !s32i -> !u64i
+// CHECK:    %[[ELEMENT_SIZE:.*]] = cir.const #cir.int<48> : !u64i
+// CHECK:    %[[RESULT:.*]], %[[OVERFLOW:.*]] = cir.binop.overflow(mul, %[[N_SIZE_T]], %[[ELEMENT_SIZE]]) : !u64i, (!u64i, !cir.bool)
+// CHECK:    %[[NUM_ELEMENTS_MULTIPLIER:.*]] = cir.const #cir.int<6>
+// CHECK:    %[[NUM_ELEMENTS:.*]] = cir.binop(mul, %[[N_SIZE_T]], %[[NUM_ELEMENTS_MULTIPLIER]]) : !u64i
+// CHECK:    %[[ALL_ONES:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
+// CHECK:    %[[ALLOC_SIZE:.*]] = cir.select if %[[OVERFLOW]] then %[[ALL_ONES]] else %[[RESULT]] : (!cir.bool, !u64i, !u64i)
+// CHECK:    %[[PTR:.*]] = cir.call @_Znam(%[[ALLOC_SIZE]]) {allocsize = array<i32: 0>} : (!u64i)
+
+// LLVM: define{{.*}} void @_Z15t_new_var_size5i
+// LLVM:   %[[N:.*]] = load i32, ptr %{{.+}}
+// LLVM:   %[[N_SIZE_T:.*]] = sext i32 %[[N]] to i64
+// LLVM:   %[[MUL_OVERFLOW:.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %[[N_SIZE_T]], i64 48)
+// LLVM:   %[[ELEMENT_SIZE:.*]] = extractvalue { i64, i1 } %[[MUL_OVERFLOW]], 0
+// LLVM:   %[[OVERFLOW:.*]] = extractvalue { i64, i1 } %[[MUL_OVERFLOW]], 1
+// LLVM:   %[[ALLOC_SIZE:.*]] = select i1 %[[OVERFLOW]], i64 -1, i64 %[[ELEMENT_SIZE]]
+// LLVM:   %[[PTR:.*]] = call ptr @_Znam(i64 %[[ALLOC_SIZE]])
+
+// OGCG: define{{.*}} void @_Z15t_new_var_size5i
+// OGCG:   %[[N:.*]] = load i32, ptr %{{.+}}
+// OGCG:   %[[N_SIZE_T:.*]] = sext i32 %[[N]] to i64
+// OGCG:   %[[MUL_OVERFLOW:.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %[[N_SIZE_T]], i64 48)
+// OGCG:   %[[OVERFLOW:.*]] = extractvalue { i64, i1 } %[[MUL_OVERFLOW]], 1
+// OGCG:   %[[ELEMENT_SIZE:.*]] = extractvalue { i64, i1 } %[[MUL_OVERFLOW]], 0
+// OGCG:   %[[ALLOC_SIZE:.*]] = select i1 %[[OVERFLOW]], i64 -1, i64 %[[ELEMENT_SIZE]]
+// OGCG:   %[[PTR:.*]] = call {{.*}} ptr @_Znam(i64 {{.*}} %[[ALLOC_SIZE]])
+
+void t_new_var_size6(int n) {
+  auto p = new double[n] { 1.0, 2.0, 3.0 };
+}
+
+// CHECK:  cir.func {{.*}} @_Z15t_new_var_size6i
+// CHECK:    %[[N:.*]] = cir.load{{.*}} %[[ARG_ALLOCA:.*]]
+// CHECK:    %[[N_SIZE_T:.*]] = cir.cast integral %[[N]] : !s32i -> !u64i
+// CHECK:    %[[MIN_SIZE:.*]] = cir.const #cir.int<3> : !u64i
+// CHECK:    %[[LT_MIN_SIZE:.*]] = cir.cmp(lt, %[[N_SIZE_T]], %[[MIN_SIZE]]) : !u64i, !cir.bool
+// CHECK:    %[[ELEMENT_SIZE:.*]] = cir.const #cir.int<8> : !u64i
+// CHECK:    %[[RESULT:.*]], %[[OVERFLOW:.*]] = cir.binop.overflow(mul, %[[N_SIZE_T]], %[[ELEMENT_SIZE]]) : !u64i, (!u64i, !cir.bool)
+// CHECK:    %[[ANY_OVERFLOW:.*]] = cir.binop(or, %[[LT_MIN_SIZE]], %[[OVERFLOW]]) : !cir.bool
+// CHECK:    %[[ALL_ONES:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
+// CHECK:    %[[ALLOC_SIZE:.*]] = cir.select if %[[ANY_OVERFLOW]] then %[[ALL_ONES]] else %[[RESULT]] : (!cir.bool, !u64i, !u64i)
+// CHECK:    %[[PTR:.*]] = cir.call @_Znam(%[[ALLOC_SIZE]]) {allocsize = array<i32: 0>} : (!u64i)
+// CHECK:    %[[PTR_DOUBLE:.*]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!void> -> !cir.ptr<!cir.double>
+// CHECK:    %[[ELEM_0:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.double
+// CHECK:    cir.store{{.*}} %[[ELEM_0]], %[[PTR_DOUBLE]]
+// CHECK:    %[[ONE:.*]] = cir.const #cir.int<1>
+// CHECK:    %[[PTR_DOUBLE_1:.*]] = cir.ptr_stride %[[PTR_DOUBLE]], %[[ONE]]
+// CHECK:    %[[ELEM_1:.*]] = cir.const #cir.fp<2.000000e+00> : !cir.double
+// CHECK:    cir.store{{.*}} %[[ELEM_1]], %[[PTR_DOUBLE_1]]
+// CHECK:    %[[ONE:.*]] = cir.const #cir.int<1>
+// CHECK:    %[[PTR_DOUBLE_2:.*]] = cir.ptr_stride %[[PTR_DOUBLE_1]], %[[ONE]]
+// CHECK:    %[[ELEM_2:.*]] = cir.const #cir.fp<3.000000e+00> : !cir.double
+// CHECK:    cir.store{{.*}} %[[ELEM_2]], %[[PTR_DOUBLE_2]]
+// CHECK:    %[[ONE:.*]] = cir.const #cir.int<1>
+// CHECK:    %[[PTR_DOUBLE_3:.*]] = cir.ptr_stride %[[PTR_DOUBLE_2]], %[[ONE]]
+// CHECK:    %[[INIT_SIZE:.*]] = cir.const #cir.int<24> : !u64i
+// CHECK:    %[[REMAINING_SIZE:.*]] = cir.binop(sub, %[[ALLOC_SIZE]], %[[INIT_SIZE]]) : !u64i
+// CHECK:    %[[PTR_DOUBLE_3_VOID:.*]] = cir.cast bitcast %[[PTR_DOUBLE_3]] : !cir.ptr<!cir.double> -> !cir.ptr<!void>
+// CHECK:    %[[ZERO:.*]] = cir.const #cir.int<0> : !u8i
+// CHECK:    cir.libc.memset{{.*}} bytes at %[[PTR_DOUBLE_3_VOID]] to %[[ZERO]]
+
+// LLVM: define{{.*}} void @_Z15t_new_var_size6i
+// LLVM:   %[[N:.*]] = load i32, ptr %{{.+}}
+// LLVM:   %[[N_SIZE_T:.*]] = sext i32 %[[N]] to i64
+// LLVM:   %[[LT_MIN_SIZE:.*]] = icmp ult i64 %[[N_SIZE_T]], 3
+// LLVM:   %[[MUL_OVERFLOW:.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %[[N_SIZE_T]], i64 8)
+// LLVM:   %[[ELEMENT_SIZE:.*]] = extractvalue { i64, i1 } %[[MUL_OVERFLOW]], 0
+// LLVM:   %[[OVERFLOW:.*]] = extractvalue { i64, i1 } %[[MUL_OVERFLOW]], 1
+// LLVM:   %[[ANY_OVERFLOW:.*]] = or i1 %[[LT_MIN_SIZE]], %[[OVERFLOW]]
+// LLVM:   %[[ALLOC_SIZE:.*]] = select i1 %[[ANY_OVERFLOW]], i64 -1, i64 %[[ELEMENT_SIZE]]
+// LLVM:   %[[PTR:.*]] = call ptr @_Znam(i64 %[[ALLOC_SIZE]])
+// LLVM:   store double 1.000000e+00, ptr %[[PTR]], align 8
+// LLVM:   %[[ELEM_1:.*]] = getelementptr double, ptr %[[PTR]], i64 1
+// LLVM:   store double 2.000000e+00, ptr %[[ELEM_1]], align 8
+// LLVM:   %[[ELEM_2:.*]] = getelementptr double, ptr %[[ELEM_1]], i64 1
+// LLVM:   store double 3.000000e+00, ptr %[[ELEM_2]], align 8
+// LLVM:   %[[ELEM_3:.*]] = getelementptr double, ptr %[[ELEM_2]], i64 1
+// LLVM:   %[[REMAINING_SIZE:.*]] = sub i64 %[[ALLOC_SIZE]], 24
+// LLVM:   call void @llvm.memset.p0.i64(ptr %[[ELEM_3]], i8 0, i64 %[[REMAINING_SIZE]], i1 false)
+
+// OGCG: define{{.*}} void @_Z15t_new_var_size6i
+// OGCG:   %[[N:.*]] = load i32, ptr %{{.+}}
+// OGCG:   %[[N_SIZE_T:.*]] = sext i32 %[[N]] to i64
+// OGCG:   %[[LT_MIN_SIZE:.*]] = icmp ult i64 %[[N_SIZE_T]], 3
+// OGCG:   %[[MUL_OVERFLOW:.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %[[N_SIZE_T]], i64 8)
+// OGCG:   %[[OVERFLOW:.*]] = extractvalue { i64, i1 } %[[MUL_OVERFLOW]], 1
+// OGCG:   %[[ANY_OVERFLOW:.*]] = or i1 %[[LT_MIN_SIZE]], %[[OVERFLOW]]
+// OGCG:   %[[ELEMENT_SIZE:.*]] = extractvalue { i64, i1 } %[[MUL_OVERFLOW]], 0
+// OGCG:   %[[ALLOC_SIZE:.*]] = select i1 %[[ANY_OVERFLOW]], i64 -1, i64 %[[ELEMENT_SIZE]]
+// OGCG:   %[[PTR:.*]] = call {{.*}} ptr @_Znam(i64 {{.*}} %[[ALLOC_SIZE]])
+// OGCG:   store double 1.000000e+00, ptr %[[PTR]], align 8
+// OGCG:   %[[ELEM_1:.*]] = getelementptr inbounds double, ptr %[[PTR]], i64 1
+// OGCG:   store double 2.000000e+00, ptr %[[ELEM_1]], align 8
+// OGCG:   %[[ELEM_2:.*]] = getelementptr inbounds double, ptr %[[ELEM_1]], i64 1
+// OGCG:   store double 3.000000e+00, ptr %[[ELEM_2]], align 8
+// OGCG:   %[[ELEM_3:.*]] = getelementptr inbounds double, ptr %[[ELEM_2]], i64 1
+// OGCG:   %[[REMAINING_SIZE:.*]] = sub i64 %[[ALLOC_SIZE]], 24
+// OGCG:   call void @llvm.memset.p0.i64(ptr{{.*}} %[[ELEM_3]], i8 0, i64 %[[REMAINING_SIZE]], i1 false)
+
+void t_new_var_size7(__int128 n) {
+  auto p = new double[n];
+}
+
+// CHECK:  cir.func {{.*}} @_Z15t_new_var_size7n
+// CHECK:    %[[N:.*]] = cir.load{{.*}} %[[ARG_ALLOCA:.*]]
+// CHECK:    %[[N_SIZE_T:.*]] = cir.cast integral %[[N]] : !s128i -> !u64i
+// CHECK:    %[[ELEMENT_SIZE:.*]] = cir.const #cir.int<8> : !u64i
+// CHECK:    %[[RESULT:.*]], %[[OVERFLOW:.*]] = cir.binop.overflow(mul, %[[N_SIZE_T]], %[[ELEMENT_SIZE]]) : !u64i, (!u64i, !cir.bool)
+// CHECK:    %[[ALL_ONES:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
+// CHECK:    %[[ALLOC_SIZE:.*]] = cir.select if %[[OVERFLOW]] then %[[ALL_ONES]] else %[[RESULT]] : (!cir.bool, !u64i, !u64i)
+// CHECK:    %[[PTR:.*]] = cir.call @_Znam(%[[ALLOC_SIZE]]) {allocsize = array<i32: 0>} : (!u64i)
+
+// LLVM: define{{.*}} void @_Z15t_new_var_size7n
+// LLVM:   %[[N:.*]] = load i128, ptr %{{.+}}
+// LLVM:   %[[N_SIZE_T:.*]] = trunc i128 %[[N]] to i64
+// LLVM:   %[[MUL_OVERFLOW:.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %[[N_SIZE_T]], i64 8)
+// LLVM:   %[[ELEMENT_SIZE:.*]] = extractvalue { i64, i1 } %[[MUL_OVERFLOW]], 0
+// LLVM:   %[[OVERFLOW:.*]] = extractvalue { i64, i1 } %[[MUL_OVERFLOW]], 1
+// LLVM:   %[[ALLOC_SIZE:.*]] = select i1 %[[OVERFLOW]], i64 -1, i64 %[[ELEMENT_SIZE]]
+// LLVM:   %[[PTR:.*]] = call ptr @_Znam(i64 %[[ALLOC_SIZE]])
+
+// OGCG: define{{.*}} void @_Z15t_new_var_size7n
+// OGCG:   %[[N:.*]] = load i128, ptr %{{.+}}
+// OGCG:   %[[N_SIZE_T:.*]] = trunc i128 %[[N]] to i64
+// OGCG:   %[[MUL_OVERFLOW:.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %[[N_SIZE_T]], i64 8)
+// OGCG:   %[[OVERFLOW:.*]] = extractvalue { i64, i1 } %[[MUL_OVERFLOW]], 1
+// OGCG:   %[[ELEMENT_SIZE:.*]] = extractvalue { i64, i1 } %[[MUL_OVERFLOW]], 0
+// OGCG:   %[[ALLOC_SIZE:.*]] = select i1 %[[OVERFLOW]], i64 -1, i64 %[[ELEMENT_SIZE]]
+// OGCG:   %[[PTR:.*]] = call {{.*}} ptr @_Znam(i64 {{.*}} %[[ALLOC_SIZE]])
+
+void t_new_var_size_nontrivial(size_t n) {
+  auto p = new D[n];
+}
+
+// CHECK:  cir.func {{.*}} @_Z25t_new_var_size_nontrivialm
+// CHECK:    %[[N:.*]] = cir.load{{.*}} %[[ARG_ALLOCA:.*]]
+// CHECK:    %[[ELEMENT_SIZE:.*]] = cir.const #cir.int<4> : !u64i
+// CHECK:    %[[SIZE_WITHOUT_COOKIE:.*]], %[[OVERFLOW:.*]] = cir.binop.overflow(mul, %[[N]], %[[ELEMENT_SIZE]]) : !u64i, (!u64i, !cir.bool)
+// CHECK:    %[[COOKIE_SIZE:.*]] = cir.const #cir.int<8> : !u64i
+// CHECK:    %[[SIZE:.*]], %[[OVERFLOW2:.*]] = cir.binop.overflow(add, %[[SIZE_WITHOUT_COOKIE]], %[[COOKIE_SIZE]]) : !u64i, (!u64i, !cir.bool)
+// CHECK:    %[[ANY_OVERFLOW:.*]] = cir.binop(or, %[[OVERFLOW]], %[[OVERFLOW2]]) : !cir.bool
+// CHECK:    %[[ALL_ONES:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
+// CHECK:    %[[ALLOC_SIZE:.*]] = cir.select if %[[ANY_OVERFLOW]] then %[[ALL_ONES]] else %[[SIZE]] : (!cir.bool, !u64i, !u64i)
+// CHECK:    %[[PTR:.*]] = cir.call @_Znam(%[[ALLOC_SIZE]]) {allocsize = array<i32: 0>} : (!u64i)
+
+// LLVM: define{{.*}} void @_Z25t_new_var_size_nontrivialm
+// LLVM:   %[[N:.*]] = load i64, ptr %{{.+}}
+// LLVM:   %[[MUL_OVERFLOW:.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %[[N]], i64 4)
+// LLVM:   %[[MUL_SIZE:.*]] = extractvalue { i64, i1 } %[[MUL_OVERFLOW]], 0
+// LLVM:   %[[OVERFLOW:.*]] = extractvalue { i64, i1 } %[[MUL_OVERFLOW]], 1
+// LLVM:   %[[ADD_OVERFLOW:.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %[[MUL_SIZE]], i64 8)
+// LLVM:   %[[ELEMENT_SIZE:.*]] = extractvalue { i64, i1 } %[[ADD_OVERFLOW]], 0
+// LLVM:   %[[OVERFLOW_ADD:.*]] = extractvalue { i64, i1 } %[[ADD_OVERFLOW]], 1
+// LLVM:   %[[ANY_OVERFLOW:.*]] = or i1 %[[OVERFLOW]], %[[OVERFLOW_ADD]]
+// LLVM:   %[[ALLOC_SIZE:.*]] = select i1 %[[ANY_OVERFLOW]], i64 -1, i64 %[[ELEMENT_SIZE]]
+// LLVM:   %[[PTR:.*]] = call ptr @_Znam(i64 %[[ALLOC_SIZE]])
+
+// OGCG: define{{.*}} void @_Z25t_new_var_size_nontrivialm
+// OGCG:   %[[N:.*]] = load i64, ptr %{{.+}}
+// OGCG:   %[[MUL_OVERFLOW:.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %[[N]], i64 4)
+// OGCG:   %[[OVERFLOW:.*]] = extractvalue { i64, i1 } %[[MUL_OVERFLOW]], 1
+// OGCG:   %[[MUL_SIZE:.*]] = extractvalue { i64, i1 } %[[MUL_OVERFLOW]], 0
+// OGCG:   %[[ADD_OVERFLOW:.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %[[MUL_SIZE]], i64 8)
+// OGCG:   %[[OVERFLOW_ADD:.*]] = extractvalue { i64, i1 } %[[ADD_OVERFLOW]], 1
+// OGCG:   %[[ANY_OVERFLOW:.*]] = or i1 %[[OVERFLOW]], %[[OVERFLOW_ADD]]
+// OGCG:   %[[ELEMENT_SIZE:.*]] = extractvalue { i64, i1 } %[[ADD_OVERFLOW]], 0
+// OGCG:   %[[ALLOC_SIZE:.*]] = select i1 %[[ANY_OVERFLOW]], i64 -1, i64 %[[ELEMENT_SIZE]]
+// OGCG:   %[[PTR:.*]] = call {{.*}} ptr @_Znam(i64 {{.*}} %[[ALLOC_SIZE]])
