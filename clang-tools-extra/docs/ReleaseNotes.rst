@@ -158,6 +158,10 @@ Changes in existing checks
   the invalidating function in the warning message when a custom invalidation
   function is used (via the `InvalidationFunctions` option).
 
+- Improved :doc:`cppcoreguidelines-init-variables
+  <clang-tidy/checks/cppcoreguidelines/init-variables>` check by ensuring that
+  member pointers are correctly flagged as uninitialized.
+
 - Improved :doc:`cppcoreguidelines-pro-type-vararg
   <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>` check by no longer
   warning on builtins with custom type checking (e.g., type-generic builtins
