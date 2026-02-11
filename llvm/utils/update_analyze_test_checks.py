@@ -160,7 +160,7 @@ def update_test(opt_basename: str, ti: common.TestInfo):
                     func_name,
                     ginfo,
                     is_filtered=builder.is_filtered(),
-                    check_label_prefix=check_label_prefix
+                    check_label_prefix=check_label_prefix,
                 )
             )
             is_in_function_start = False
