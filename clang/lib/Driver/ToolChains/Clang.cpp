@@ -9403,13 +9403,17 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
             "--device-linker=" + TC.getTripleString() + "=" + "-lm"));
       }
       auto HasCompilerRT = getToolChain().getVFS().exists(
-          TC.getCompilerRT(Args, "builtins", ToolChain::FT_Static));
+          TC.getCompilerRT(Args, "builtins", ToolChain::FT_Static,
+                           /*IsFortran=*/false));
       if (HasCompilerRT)
         CmdArgs.push_back(
             Args.MakeArgString("--device-linker=" + TC.getTripleString() + "=" +
                                "-lclang_rt.builtins"));
-      bool HasFlangRT = HasCompilerRT && C.getDriver().IsFlangMode();
-      if (HasFlangRT)
+
+      bool HasFlangRT = getToolChain().getVFS().exists(
+          TC.getCompilerRT(Args, "runtime", ToolChain::FT_Static,
+                           /*IsFortran=*/true));
+      if (HasFlangRT && C.getDriver().IsFlangMode())
         CmdArgs.push_back(
             Args.MakeArgString("--device-linker=" + TC.getTripleString() + "=" +
                                "-lflang_rt.runtime"));
