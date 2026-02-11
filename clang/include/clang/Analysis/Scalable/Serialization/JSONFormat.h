@@ -93,8 +93,8 @@ private:
   entitySummaryFromJSON(const SummaryName &SN,
                         const llvm::json::Object &EntitySummaryObject,
                         EntityIdTable &IdTable) const;
-  llvm::json::Object entitySummaryToJSON(const SummaryName &SN,
-                                         const EntitySummary &ES) const;
+  llvm::Expected<llvm::json::Object>
+  entitySummaryToJSON(const SummaryName &SN, const EntitySummary &ES) const;
 
   llvm::Expected<std::pair<EntityId, std::unique_ptr<EntitySummary>>>
   entityDataMapEntryFromJSON(const llvm::json::Object &EntityDataMapEntryObject,
@@ -104,7 +104,7 @@ private:
   entityDataMapFromJSON(const SummaryName &SN,
                         const llvm::json::Array &EntityDataArray,
                         EntityIdTable &IdTable) const;
-  llvm::json::Array
+  llvm::Expected<llvm::json::Array>
   entityDataMapToJSON(const SummaryName &SN,
                       const std::map<EntityId, std::unique_ptr<EntitySummary>>
                           &EntityDataMap) const;
@@ -113,7 +113,7 @@ private:
                            std::map<EntityId, std::unique_ptr<EntitySummary>>>>
   summaryDataMapEntryFromJSON(const llvm::json::Object &SummaryDataObject,
                               EntityIdTable &IdTable) const;
-  llvm::json::Object summaryDataMapEntryToJSON(
+  llvm::Expected<llvm::json::Object> summaryDataMapEntryToJSON(
       const SummaryName &SN,
       const std::map<EntityId, std::unique_ptr<EntitySummary>> &SD) const;
 
@@ -121,7 +121,7 @@ private:
       std::map<SummaryName, std::map<EntityId, std::unique_ptr<EntitySummary>>>>
   summaryDataMapFromJSON(const llvm::json::Array &SummaryDataArray,
                          EntityIdTable &IdTable) const;
-  llvm::json::Array summaryDataMapToJSON(
+  llvm::Expected<llvm::json::Array> summaryDataMapToJSON(
       const std::map<SummaryName,
                      std::map<EntityId, std::unique_ptr<EntitySummary>>>
           &SummaryDataMap) const;

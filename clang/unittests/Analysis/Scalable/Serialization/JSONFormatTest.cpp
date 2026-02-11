@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+
 #include "clang/Analysis/Scalable/Serialization/JSONFormat.h"
 #include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -21,6 +22,7 @@
 #include "llvm/Support/Registry.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <memory>
@@ -33,68 +35,6 @@ using ::testing::AllOf;
 using ::testing::HasSubstr;
 
 namespace {
-
-// ============================================================================
-// Custom Matchers
-// ============================================================================
-
-// Helper to check if an Error or Expected succeeded
-template <typename T> struct SuccessChecker {
-  static bool isSuccess(T &val) {
-    // For Expected<U>
-    return static_cast<bool>(val);
-  }
-  static std::string getError(T &val) { return toString(val.takeError()); }
-};
-
-// Specialization for Error type
-template <> struct SuccessChecker<Error> {
-  static bool isSuccess(Error &val) {
-    // For Error, success means no error (false/empty)
-    return !static_cast<bool>(val);
-  }
-  static std::string getError(Error &val) { return toString(std::move(val)); }
-};
-
-// Matcher for Expected<T> or Error success
-MATCHER(Succeeded, "") {
-  // Cast away constness to get mutable access
-  auto &mutable_arg =
-      const_cast<std::remove_const_t<std::remove_reference_t<decltype(arg)>> &>(
-          arg);
-
-  using ArgType = std::remove_const_t<std::remove_reference_t<decltype(arg)>>;
-
-  if (!SuccessChecker<ArgType>::isSuccess(mutable_arg)) {
-    *result_listener << "Operation failed with error: "
-                     << SuccessChecker<ArgType>::getError(mutable_arg);
-    return false;
-  }
-  return true;
-}
-
-// Matcher for Expected<T> or Error failure with specific error message
-MATCHER_P(FailedWith, SubstrMatcher, "") {
-  // Cast away constness to get mutable access
-  auto &mutable_arg =
-      const_cast<std::remove_const_t<std::remove_reference_t<decltype(arg)>> &>(
-          arg);
-
-  using ArgType = std::remove_const_t<std::remove_reference_t<decltype(arg)>>;
-
-  if (SuccessChecker<ArgType>::isSuccess(mutable_arg)) {
-    *result_listener << "Expected operation to fail, but it succeeded";
-    return false;
-  }
-
-  std::string ErrorMsg = SuccessChecker<ArgType>::getError(mutable_arg);
-
-  if (!::testing::Matches(SubstrMatcher)(ErrorMsg)) {
-    *result_listener << "Error message was: " << ErrorMsg;
-    return false;
-  }
-  return true;
-}
 
 // ============================================================================
 // Test Analysis - Simple analysis for testing JSON serialization
@@ -126,7 +66,7 @@ deserializeTestAnalysis(const json::Object &Obj, EntityIdTable &IdTable,
   const json::Array *PairsArray = Obj.getArray("pairs");
   if (!PairsArray)
     return createStringError(inconvertibleErrorCode(),
-                             "missing required field 'pairs'");
+                             "missing or invalid field 'pairs'");
   for (size_t I = 0; I < PairsArray->size(); ++I) {
     const json::Object *Pair = (*PairsArray)[I].getAsObject();
     if (!Pair)
@@ -136,12 +76,12 @@ deserializeTestAnalysis(const json::Object &Obj, EntityIdTable &IdTable,
     auto FirstOpt = Pair->getInteger("first");
     if (!FirstOpt)
       return createStringError(inconvertibleErrorCode(),
-                               "missing or invalid 'first' field at index %zu",
+                               "missing or invalid 'first' field at index '%zu'",
                                I);
     auto SecondOpt = Pair->getInteger("second");
     if (!SecondOpt)
       return createStringError(inconvertibleErrorCode(),
-                               "missing or invalid 'second' field at index %zu",
+                               "missing or invalid 'second' field at index '%zu'",
                                I);
     Result->Pairs.emplace_back(Converter.fromJSON(*FirstOpt),
                                Converter.fromJSON(*SecondOpt));
@@ -175,7 +115,8 @@ protected:
 
   void TearDown() override { sys::fs::remove_directories(TestDir); }
 
-  auto readJSON(StringRef JSON, StringRef Filename = "test.json") {
+  llvm::Expected<TUSummary> readJSON(StringRef JSON,
+                                     StringRef Filename = "test.json") {
     SmallString<128> FilePath = TestDir;
     sys::path::append(FilePath, Filename);
 
@@ -185,27 +126,53 @@ protected:
     OS << JSON;
     OS.close();
 
-    return JSONFormat(vfs::getRealFileSystem()).readTUSummary(FilePath);
+    auto Result = JSONFormat(vfs::getRealFileSystem()).readTUSummary(FilePath);
+    if (!Result) {
+      std::string Message = llvm::toString(Result.takeError());
+      llvm::outs() << Message << "\n\n";
+      return {llvm::createStringError(std::move(Message))};
+    }
+    return Result;
   }
 
-  void testRoundTrip(StringRef InputJSON) {
-    auto Summary = readJSON(InputJSON, "input.json");
-    ASSERT_THAT(Summary, Succeeded());
+  void readWriteJSON(StringRef InputJSON) {
+    // Read the input JSON
+    auto Summary1 = readJSON(InputJSON, "input.json");
+    ASSERT_THAT_EXPECTED(Summary1, Succeeded());
 
-    SmallString<128> OutputPath = TestDir;
-    sys::path::append(OutputPath, "output.json");
+    // Write to first output file
+    SmallString<128> Output1Path = TestDir;
+    sys::path::append(Output1Path, "output1.json");
 
-    JSONFormat OutputFormat(vfs::getRealFileSystem());
-    auto WriteErr = OutputFormat.writeTUSummary(*Summary, OutputPath);
-    ASSERT_THAT(WriteErr, Succeeded());
+    JSONFormat Format(vfs::getRealFileSystem());
+    auto WriteErr1 = Format.writeTUSummary(*Summary1, Output1Path);
+    ASSERT_THAT_ERROR(std::move(WriteErr1), Succeeded());
 
-    auto RoundTrip = OutputFormat.readTUSummary(OutputPath);
-    ASSERT_THAT(RoundTrip, Succeeded());
+    // Read back from first output
+    auto Summary2 = Format.readTUSummary(Output1Path);
+    ASSERT_THAT_EXPECTED(Summary2, Succeeded());
+
+    // Write to second output file
+    SmallString<128> Output2Path = TestDir;
+    sys::path::append(Output2Path, "output2.json");
+
+    auto WriteErr2 = Format.writeTUSummary(*Summary2, Output2Path);
+    ASSERT_THAT_ERROR(std::move(WriteErr2), Succeeded());
+
+    // Compare the two output files byte-by-byte
+    auto Buffer1 = MemoryBuffer::getFile(Output1Path);
+    ASSERT_TRUE(Buffer1) << "Failed to read output1.json";
+
+    auto Buffer2 = MemoryBuffer::getFile(Output2Path);
+    ASSERT_TRUE(Buffer2) << "Failed to read output2.json";
+
+    EXPECT_EQ(Buffer1.get()->getBuffer(), Buffer2.get()->getBuffer())
+        << "Serialization is not stable: first write differs from second write";
   }
 };
 
 // ============================================================================
-// File Access Error Tests
+// readJSON() Error Tests
 // ============================================================================
 
 TEST_F(JSONFormatTest, NonexistentFile) {
@@ -215,8 +182,9 @@ TEST_F(JSONFormatTest, NonexistentFile) {
   JSONFormat Format(vfs::getRealFileSystem());
   auto Result = Format.readTUSummary(NonexistentPath);
 
-  EXPECT_THAT(Result, FailedWith(AllOf(HasSubstr("reading TUSummary from"),
-                                       HasSubstr("file does not exist"))));
+  EXPECT_THAT_EXPECTED(
+      Result, FailedWithMessage(AllOf(HasSubstr("reading TUSummary from"),
+                                      HasSubstr("file does not exist"))));
 }
 
 TEST_F(JSONFormatTest, PathIsDirectory) {
@@ -229,53 +197,47 @@ TEST_F(JSONFormatTest, PathIsDirectory) {
   JSONFormat Format(vfs::getRealFileSystem());
   auto Result = Format.readTUSummary(DirPath);
 
-  EXPECT_THAT(Result,
-              FailedWith(AllOf(HasSubstr("reading TUSummary from"),
-                               HasSubstr("path is a directory, not a file"))));
+  EXPECT_THAT_EXPECTED(
+      Result,
+      FailedWithMessage(AllOf(HasSubstr("reading TUSummary from"),
+                              HasSubstr("path is a directory, not a file"))));
+}
+
+TEST_F(JSONFormatTest, NotJsonExtension) {
+  auto Result = readJSON("{}", "test.txt");
+
+  EXPECT_THAT_EXPECTED(
+      Result, FailedWithMessage(AllOf(
+                  HasSubstr("reading TUSummary from file"),
+                  HasSubstr("failed to read file"),
+                  HasSubstr("file does not end with '.json' extension"))));
 }
 
 TEST_F(JSONFormatTest, BrokenSymlink) {
-#ifdef _WIN32
-  GTEST_SKIP() << "Symlink test skipped on Windows";
-#else
+  SmallString<128> TargetPath = TestDir;
+  sys::path::append(TargetPath, "nonexistent_target.json");
+
   SmallString<128> SymlinkPath = TestDir;
-  sys::path::append(SymlinkPath, "symlink.json");
+  sys::path::append(SymlinkPath, "broken_symlink.json");
 
-  // Create a symlink to a non-existent file
-  SmallString<128> NonexistentTarget = TestDir;
-  sys::path::append(NonexistentTarget, "does_not_exist.json");
-
-  std::error_code EC = sys::fs::create_link(NonexistentTarget, SymlinkPath);
-  if (EC) {
-    GTEST_SKIP() << "Failed to create symlink (may need elevated privileges): "
-                 << EC.message();
-  }
-
-  // Verify the symlink points to a non-existent file by checking file status
-  sys::fs::file_status Status;
-  EC = sys::fs::status(SymlinkPath, Status);
-  if (!EC) {
-    // If status succeeds, the target exists - skip test
-    GTEST_SKIP() << "Symlink unexpectedly points to existing file";
-  }
+  // Create a symlink pointing to a non-existent file
+  std::error_code EC = sys::fs::create_link(TargetPath, SymlinkPath);
+  ASSERT_FALSE(EC) << "Failed to create symlink: " << EC.message();
 
   JSONFormat Format(vfs::getRealFileSystem());
   auto Result = Format.readTUSummary(SymlinkPath);
 
-  EXPECT_THAT(Result, FailedWith(AllOf(HasSubstr("reading TUSummary from"),
-                                       HasSubstr("file does not exist"))));
-#endif
+  EXPECT_THAT_EXPECTED(
+      Result, FailedWithMessage(AllOf(HasSubstr("reading TUSummary from file"),
+                                      HasSubstr("failed to read file"))));
 }
 
-TEST_F(JSONFormatTest, FileWithoutReadPermission) {
-#ifdef _WIN32
-  GTEST_SKIP() << "Permission test skipped on Windows (uses different ACL "
-                  "model)";
-#else
+TEST_F(JSONFormatTest, NoReadPermission) {
+#ifndef _WIN32 // Skip on Windows as permission model is different
   SmallString<128> FilePath = TestDir;
-  sys::path::append(FilePath, "no_read.json");
+  sys::path::append(FilePath, "no_read_permission.json");
 
-  // Create a file with valid JSON content
+  // Create file with valid JSON
   std::error_code EC;
   raw_fd_ostream OS(FilePath, EC);
   ASSERT_FALSE(EC) << "Failed to create file: " << EC.message();
@@ -289,103 +251,44 @@ TEST_F(JSONFormatTest, FileWithoutReadPermission) {
   })";
   OS.close();
 
-  // Remove read permissions (chmod 000)
-  auto Perms = sys::fs::perms::all_all;
+  // Remove read permissions
+  sys::fs::perms Perms =
+      sys::fs::perms::owner_write | sys::fs::perms::owner_exe;
   EC = sys::fs::setPermissions(FilePath, Perms);
   ASSERT_FALSE(EC) << "Failed to set permissions: " << EC.message();
-
-  // Now remove all permissions
-  EC = sys::fs::setPermissions(FilePath, static_cast<sys::fs::perms>(0));
-  if (EC) {
-    GTEST_SKIP() << "Failed to remove permissions (may be running as root): "
-                 << EC.message();
-  }
 
   JSONFormat Format(vfs::getRealFileSystem());
   auto Result = Format.readTUSummary(FilePath);
 
+  EXPECT_THAT_EXPECTED(
+      Result, FailedWithMessage(AllOf(HasSubstr("reading TUSummary from file"),
+                                      HasSubstr("failed to read file"))));
+
   // Restore permissions for cleanup
   sys::fs::setPermissions(FilePath, sys::fs::perms::all_all);
-
-  EXPECT_THAT(Result, FailedWith(AllOf(HasSubstr("reading TUSummary from"),
-                                       HasSubstr("failed to read file"))));
 #endif
 }
-
-TEST_F(JSONFormatTest, NotJsonExtension) {
-  auto Result = readJSON("{}", "test.txt");
-
-  EXPECT_THAT(Result, FailedWith(AllOf(HasSubstr("reading TUSummary from"),
-                                       HasSubstr("not a JSON file"))));
-}
-
-// ============================================================================
-// JSON Syntax Error Tests
-// ============================================================================
 
 TEST_F(JSONFormatTest, InvalidSyntax) {
   auto Result = readJSON("{ invalid json }");
 
-  EXPECT_THAT(Result, FailedWith(AllOf(
-                          HasSubstr("reading TUSummary from"),
-                          HasSubstr("failed to read JSON object from file"))));
+  EXPECT_THAT_EXPECTED(
+      Result, FailedWithMessage(AllOf(HasSubstr("reading TUSummary from file"),
+                                      HasSubstr("Expected object key"))));
 }
 
 TEST_F(JSONFormatTest, NotObject) {
   auto Result = readJSON("[]");
 
-  EXPECT_THAT(Result, FailedWith(AllOf(
-                          HasSubstr("reading TUSummary from"),
-                          HasSubstr("failed to read JSON object from file"))));
+  EXPECT_THAT_EXPECTED(
+      Result, FailedWithMessage(AllOf(HasSubstr("reading TUSummary from file"),
+                                      HasSubstr("failed to read TUSummary"),
+                                      HasSubstr("expected JSON object"))));
 }
 
 // ============================================================================
-// Root Structure Error Tests
+// JSONFormat::buildNamespaceKindFromJSON() Error Tests
 // ============================================================================
-
-TEST_F(JSONFormatTest, MissingTUNamespace) {
-  auto Result = readJSON(R"({
-    "id_table": [],
-    "data": []
-  })");
-
-  EXPECT_THAT(
-      Result,
-      FailedWith(AllOf(HasSubstr("reading TUSummary from"),
-                       HasSubstr("missing or invalid field 'tu_namespace'"))));
-}
-
-TEST_F(JSONFormatTest, MissingKind) {
-  auto Result = readJSON(R"({
-    "tu_namespace": {
-      "name": "test.cpp"
-    },
-    "id_table": [],
-    "data": []
-  })");
-
-  EXPECT_THAT(Result, FailedWith(AllOf(
-                          HasSubstr("reading TUSummary from"),
-                          HasSubstr("failed to deserialize BuildNamespace"),
-                          HasSubstr("missing or invalid field 'kind' "
-                                    "(expected BuildNamespaceKind)"))));
-}
-
-TEST_F(JSONFormatTest, MissingName) {
-  auto Result = readJSON(R"({
-    "tu_namespace": {
-      "kind": "compilation_unit"
-    },
-    "id_table": [],
-    "data": []
-  })");
-
-  EXPECT_THAT(Result, FailedWith(AllOf(
-                          HasSubstr("reading TUSummary from"),
-                          HasSubstr("failed to deserialize BuildNamespace"),
-                          HasSubstr("missing or invalid field 'name' "
-                                    "(expected string)"))));
-}
 
 TEST_F(JSONFormatTest, InvalidKind) {
   auto Result = readJSON(R"({
@@ -397,80 +300,184 @@ TEST_F(JSONFormatTest, InvalidKind) {
     "data": []
   })");
 
-  EXPECT_THAT(Result, FailedWith(AllOf(
-                          HasSubstr("reading TUSummary from"),
-                          HasSubstr("failed to deserialize BuildNamespace"),
-                          HasSubstr("while parsing field 'kind'"),
-                          HasSubstr("invalid 'kind' BuildNamespaceKind "
-                                    "value"))));
-}
-
-TEST_F(JSONFormatTest, MissingIDTable) {
-  auto Result = readJSON(R"({
-    "tu_namespace": {
-      "kind": "compilation_unit",
-      "name": "test.cpp"
-    },
-    "data": []
-  })");
-
-  EXPECT_THAT(Result, FailedWith(AllOf(
-                          HasSubstr("reading TUSummary from"),
-                          HasSubstr("missing or invalid field 'id_table'"))));
-}
-
-TEST_F(JSONFormatTest, MissingData) {
-  auto Result = readJSON(R"({
-    "tu_namespace": {
-      "kind": "compilation_unit",
-      "name": "test.cpp"
-    },
-    "id_table": []
-  })");
-
-  EXPECT_THAT(Result,
-              FailedWith(AllOf(HasSubstr("reading TUSummary from"),
-                               HasSubstr("missing or invalid field 'data'"))));
-}
-
-// ============================================================================
-// ID Table Error Tests
-// ============================================================================
-
-TEST_F(JSONFormatTest, IDTableNotArray) {
-  auto Result = readJSON(R"({
-    "tu_namespace": {
-      "kind": "compilation_unit",
-      "name": "test.cpp"
-    },
-    "id_table": {},
-    "data": []
-  })");
-
-  EXPECT_THAT(Result, FailedWith(AllOf(
-                          HasSubstr("reading TUSummary from"),
-                          HasSubstr("missing or invalid field 'id_table'"))));
-}
-
-TEST_F(JSONFormatTest, IDTableElementNotObject) {
-  auto Result = readJSON(R"({
-    "tu_namespace": {
-      "kind": "compilation_unit",
-      "name": "test.cpp"
-    },
-    "id_table": [123],
-    "data": []
-  })");
-
-  EXPECT_THAT(
+  EXPECT_THAT_EXPECTED(
       Result,
-      FailedWith(AllOf(
-          HasSubstr("reading TUSummary from"),
-          HasSubstr("failed to deserialize EntityIdTable"),
-          HasSubstr("element at index 0 is not a JSON object"),
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading BuildNamespace from field 'tu_namespace'"),
+          HasSubstr("reading BuildNamespaceKind from field 'kind'"),
           HasSubstr(
-              "(expected EntityIdTable entry with 'id' and 'name' fields)"))));
+              "invalid 'kind' BuildNamespaceKind value 'invalid_kind'"))));
 }
+
+// ============================================================================
+// JSONFormat::buildNamespaceFromJSON() Error Tests
+// ============================================================================
+
+TEST_F(JSONFormatTest, MissingKind) {
+  auto Result = readJSON(R"({
+    "tu_namespace": {
+      "name": "test.cpp"
+    },
+    "id_table": [],
+    "data": []
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result,
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading BuildNamespace from field 'tu_namespace'"),
+          HasSubstr("failed to read BuildNamespaceKind from field 'kind'"),
+          HasSubstr("expected JSON string"))));
+}
+
+TEST_F(JSONFormatTest, MissingName) {
+  auto Result = readJSON(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit"
+    },
+    "id_table": [],
+    "data": []
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result,
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading BuildNamespace from field 'tu_namespace'"),
+          HasSubstr("failed to read BuildNamespaceName from field 'name'"),
+          HasSubstr("expected JSON string"))));
+}
+
+// ============================================================================
+// JSONFormat::nestedBuildNamespaceFromJSON() Error Tests
+// ============================================================================
+
+TEST_F(JSONFormatTest, NamespaceElementNotObject) {
+  auto Result = readJSON(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "id_table": [
+      {
+        "id": 0,
+        "name": {
+          "usr": "c:@F@foo",
+          "suffix": "",
+          "namespace": ["invalid"]
+        }
+      }
+    ],
+    "data": []
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result,
+      FailedWithMessage(
+          AllOf(HasSubstr("reading TUSummary from file"),
+                HasSubstr("reading IdTable from field 'id_table'"),
+                HasSubstr("reading EntityIdTable entry from index '0'"),
+                HasSubstr("reading EntityName from field 'name'"),
+                HasSubstr("reading NesteBuildNamespace from field 'namespace'"),
+                HasSubstr("failed to read BuildNamespace from index '0'"),
+                HasSubstr("expected JSON object"))));
+}
+
+// ============================================================================
+// JSONFormat::entityNameFromJSON() Error Tests
+// ============================================================================
+
+TEST_F(JSONFormatTest, EntityNameMissingUSR) {
+  auto Result = readJSON(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "id_table": [
+      {
+        "id": 0,
+        "name": {
+          "suffix": "",
+          "namespace": []
+        }
+      }
+    ],
+    "data": []
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result, FailedWithMessage(
+                  AllOf(HasSubstr("reading TUSummary from file"),
+                        HasSubstr("reading IdTable from field 'id_table'"),
+                        HasSubstr("reading EntityIdTable entry from index '0'"),
+                        HasSubstr("reading EntityName from field 'name'"),
+                        HasSubstr("failed to read USR from field 'usr'"),
+                        HasSubstr("expected JSON string"))));
+}
+
+TEST_F(JSONFormatTest, EntityNameMissingSuffix) {
+  auto Result = readJSON(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "id_table": [
+      {
+        "id": 0,
+        "name": {
+          "usr": "c:@F@foo",
+          "namespace": []
+        }
+      }
+    ],
+    "data": []
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result, FailedWithMessage(
+                  AllOf(HasSubstr("reading TUSummary from file"),
+                        HasSubstr("reading IdTable from field 'id_table'"),
+                        HasSubstr("reading EntityIdTable entry from index '0'"),
+                        HasSubstr("reading EntityName from field 'name'"),
+                        HasSubstr("failed to read Suffix from field 'suffix'"),
+                        HasSubstr("expected JSON string"))));
+}
+
+TEST_F(JSONFormatTest, EntityNameMissingNamespace) {
+  auto Result = readJSON(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "id_table": [
+      {
+        "id": 0,
+        "name": {
+          "usr": "c:@F@foo",
+          "suffix": ""
+        }
+      }
+    ],
+    "data": []
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result,
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading IdTable from field 'id_table'"),
+          HasSubstr("reading EntityIdTable entry from index '0'"),
+          HasSubstr("reading EntityName from field 'name'"),
+          HasSubstr(
+              "failed to read NestedBuildNamespace from field 'namespace'"),
+          HasSubstr("expected JSON array"))));
+}
+
+// ============================================================================
+// JSONFormat::entityIdTableEntryFromJSON() Error Tests
+// ============================================================================
 
 TEST_F(JSONFormatTest, IDTableEntryMissingID) {
   auto Result = readJSON(R"({
@@ -490,14 +497,13 @@ TEST_F(JSONFormatTest, IDTableEntryMissingID) {
     "data": []
   })");
 
-  EXPECT_THAT(Result,
-              FailedWith(AllOf(
-                  HasSubstr("reading TUSummary from"),
-                  HasSubstr("failed to read JSON array from field 'id_table'"),
-                  HasSubstr("failed to deserialize EntityIdTable at index 0"),
-                  HasSubstr("failed to deserialize EntityIdTable entry"),
-                  HasSubstr("missing or invalid field 'id' "
-                            "(expected unsigned integer EntityId)"))));
+  EXPECT_THAT_EXPECTED(
+      Result, FailedWithMessage(
+                  AllOf(HasSubstr("reading TUSummary from file"),
+                        HasSubstr("reading IdTable from field 'id_table'"),
+                        HasSubstr("reading EntityIdTable entry from index '0'"),
+                        HasSubstr("failed to read EntityId from field 'id'"),
+                        HasSubstr("expected JSON (unsigned 64-bit)"))));
 }
 
 TEST_F(JSONFormatTest, IDTableEntryMissingName) {
@@ -514,16 +520,13 @@ TEST_F(JSONFormatTest, IDTableEntryMissingName) {
     "data": []
   })");
 
-  EXPECT_THAT(
-      Result,
-      FailedWith(AllOf(
-          HasSubstr("reading TUSummary from"),
-          HasSubstr("failed to read JSON array from field 'id_table'"),
-          HasSubstr("failed to deserialize EntityIdTable at index 0"),
-          HasSubstr("failed to deserialize EntityIdTable entry"),
-          HasSubstr("failed to read JSON object from field 'name'"),
-          HasSubstr("missing or invalid field 'name' (expected EntityName JSON "
-                    "object)"))));
+  EXPECT_THAT_EXPECTED(
+      Result, FailedWithMessage(AllOf(
+                  HasSubstr("reading TUSummary from file"),
+                  HasSubstr("reading IdTable from field 'id_table'"),
+                  HasSubstr("reading EntityIdTable entry from index '0'"),
+                  HasSubstr("failed to read EntityName from field 'name'"),
+                  HasSubstr("expected JSON object"))));
 }
 
 TEST_F(JSONFormatTest, IDTableEntryIDNotUInt64) {
@@ -545,15 +548,53 @@ TEST_F(JSONFormatTest, IDTableEntryIDNotUInt64) {
     "data": []
   })");
 
-  EXPECT_THAT(
+  EXPECT_THAT_EXPECTED(
+      Result, FailedWithMessage(
+                  AllOf(HasSubstr("reading TUSummary from file"),
+                        HasSubstr("reading IdTable from field 'id_table'"),
+                        HasSubstr("reading EntityIdTable entry from index '0'"),
+                        HasSubstr("failed to read EntityId from field 'id'"),
+                        HasSubstr("expected JSON integer (unsigned 64-bit)"))));
+}
+
+// ============================================================================
+// JSONFormat::entityIdTableFromJSON() Error Tests
+// ============================================================================
+
+TEST_F(JSONFormatTest, IDTableNotArray) {
+  auto Result = readJSON(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "id_table": {},
+    "data": []
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result, FailedWithMessage(AllOf(
+                  HasSubstr("reading TUSummary from file"),
+                  HasSubstr("failed to read IdTable from field 'id_table'"),
+                  HasSubstr("expected JSON array"))));
+}
+
+TEST_F(JSONFormatTest, IDTableElementNotObject) {
+  auto Result = readJSON(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "id_table": [123],
+    "data": []
+  })");
+
+  EXPECT_THAT_EXPECTED(
       Result,
-      FailedWith(
-          AllOf(HasSubstr("reading TUSummary from"),
-                HasSubstr("failed to read JSON array from field 'id_table'"),
-                HasSubstr("failed to deserialize EntityIdTable at index 0"),
-                HasSubstr("failed to deserialize EntityIdTable entry"),
-                HasSubstr("field 'id' is not a valid unsigned 64-bit integer"),
-                HasSubstr("(expected non-negative EntityId value)"))));
+      FailedWithMessage(
+          AllOf(HasSubstr("reading TUSummary from file"),
+                HasSubstr("reading IdTable from field 'id_table'"),
+                HasSubstr("failed to read EntityIdTable entry from index '0'"),
+                HasSubstr("expected JSON object"))));
 }
 
 TEST_F(JSONFormatTest, DuplicateEntity) {
@@ -593,393 +634,18 @@ TEST_F(JSONFormatTest, DuplicateEntity) {
     "data": []
   })");
 
-  EXPECT_THAT(Result, FailedWith(AllOf(
-                          HasSubstr("reading TUSummary from"),
-                          HasSubstr("failed to deserialize EntityIdTable"),
-                          HasSubstr("duplicate EntityName found at index"),
-                          HasSubstr("(EntityId=0 already exists in table)"))));
+  EXPECT_THAT_EXPECTED(
+      Result,
+      FailedWithMessage(
+          AllOf(HasSubstr("reading TUSummary from file"),
+                HasSubstr("reading IdTable from field 'id_table'"),
+                HasSubstr("failed to insert EntityIdTable entry at index '1'"),
+                HasSubstr("encountered duplicate EntityId '0'"))));
 }
 
 // ============================================================================
-// Entity Name Error Tests
+// JSONFormat::entitySummaryFromJSON() Error Tests
 // ============================================================================
-
-TEST_F(JSONFormatTest, EntityNameMissingUSR) {
-  auto Result = readJSON(R"({
-    "tu_namespace": {
-      "kind": "compilation_unit",
-      "name": "test.cpp"
-    },
-    "id_table": [
-      {
-        "id": 0,
-        "name": {
-          "suffix": "",
-          "namespace": []
-        }
-      }
-    ],
-    "data": []
-  })");
-
-  EXPECT_THAT(Result,
-              FailedWith(AllOf(
-                  HasSubstr("reading TUSummary from"),
-                  HasSubstr("failed to read JSON array from field 'id_table'"),
-                  HasSubstr("failed to deserialize EntityIdTable at index 0"),
-                  HasSubstr("failed to deserialize EntityIdTable entry"),
-                  HasSubstr("failed to read JSON object from field 'name'"),
-                  HasSubstr("failed to deserialize EntityName"),
-                  HasSubstr("missing or invalid field 'usr' "
-                            "(expected string (Unified Symbol Resolution))"))));
-}
-
-TEST_F(JSONFormatTest, EntityNameMissingSuffix) {
-  auto Result = readJSON(R"({
-    "tu_namespace": {
-      "kind": "compilation_unit",
-      "name": "test.cpp"
-    },
-    "id_table": [
-      {
-        "id": 0,
-        "name": {
-          "usr": "c:@F@foo",
-          "namespace": []
-        }
-      }
-    ],
-    "data": []
-  })");
-
-  EXPECT_THAT(Result,
-              FailedWith(AllOf(
-                  HasSubstr("reading TUSummary from"),
-                  HasSubstr("failed to read JSON array from field 'id_table'"),
-                  HasSubstr("failed to deserialize EntityIdTable at "
-                            "index 0"),
-                  HasSubstr("failed to deserialize EntityIdTable entry"),
-                  HasSubstr("failed to read JSON object from field 'name'"),
-                  HasSubstr("failed to deserialize EntityName"),
-                  HasSubstr("missing or invalid field 'suffix' "
-                            "(expected string)"))));
-}
-
-TEST_F(JSONFormatTest, EntityNameMissingNamespace) {
-  auto Result = readJSON(R"({
-    "tu_namespace": {
-      "kind": "compilation_unit",
-      "name": "test.cpp"
-    },
-    "id_table": [
-      {
-        "id": 0,
-        "name": {
-          "usr": "c:@F@foo",
-          "suffix": ""
-        }
-      }
-    ],
-    "data": []
-  })");
-
-  EXPECT_THAT(
-      Result,
-      FailedWith(
-          AllOf(HasSubstr("reading TUSummary from"),
-                HasSubstr("failed to read JSON array from field 'id_table'"),
-                HasSubstr("failed to deserialize EntityIdTable at index 0"),
-                HasSubstr("failed to deserialize EntityIdTable entry"),
-                HasSubstr("failed to read JSON object from field 'name'"),
-                HasSubstr("failed to deserialize EntityName"),
-                HasSubstr("failed to read JSON array from field 'namespace'"),
-                HasSubstr("missing or invalid field 'namespace'"),
-                HasSubstr("(expected JSON array of BuildNamespace objects)"))));
-}
-
-TEST_F(JSONFormatTest, NamespaceElementNotObject) {
-  auto Result = readJSON(R"({
-    "tu_namespace": {
-      "kind": "compilation_unit",
-      "name": "test.cpp"
-    },
-    "id_table": [
-      {
-        "id": 0,
-        "name": {
-          "usr": "c:@F@foo",
-          "suffix": "",
-          "namespace": ["invalid"]
-        }
-      }
-    ],
-    "data": []
-  })");
-
-  EXPECT_THAT(Result,
-              FailedWith(AllOf(
-                  HasSubstr("reading TUSummary from"),
-                  HasSubstr("failed to read JSON array from field 'id_table'"),
-                  HasSubstr("failed to deserialize EntityIdTable at index 0"),
-                  HasSubstr("failed to deserialize EntityIdTable entry"),
-                  HasSubstr("failed to read JSON object from field 'name'"),
-                  HasSubstr("failed to deserialize EntityName"),
-                  HasSubstr("failed to read JSON array from field 'namespace'"),
-                  HasSubstr("failed to deserialize NestedBuildNamespace"),
-                  HasSubstr("element at index 0 is not a JSON object"))));
-}
-
-// ============================================================================
-// Data Array Error Tests
-// ============================================================================
-
-TEST_F(JSONFormatTest, DataNotArray) {
-  auto Result = readJSON(R"({
-    "tu_namespace": {
-      "kind": "compilation_unit",
-      "name": "test.cpp"
-    },
-    "id_table": [],
-    "data": {}
-  })");
-
-  EXPECT_THAT(Result,
-              FailedWith(AllOf(HasSubstr("reading TUSummary from"),
-                               HasSubstr("missing or invalid field 'data'"))));
-}
-
-TEST_F(JSONFormatTest, DataElementNotObject) {
-  auto Result = readJSON(R"({
-    "tu_namespace": {
-      "kind": "compilation_unit",
-      "name": "test.cpp"
-    },
-    "id_table": [],
-    "data": ["invalid"]
-  })");
-
-  EXPECT_THAT(Result, FailedWith(AllOf(
-                          HasSubstr("reading TUSummary from"),
-                          HasSubstr("failed to deserialize SummaryDataMap"),
-                          HasSubstr("element at index 0 is not a JSON object"),
-                          HasSubstr("(expected SummaryDataMap entry with "
-                                    "'summary_name' and 'summary_data'"),
-                          HasSubstr("fields)"))));
-}
-
-TEST_F(JSONFormatTest, DataEntryMissingSummaryName) {
-  auto Result = readJSON(R"({
-    "tu_namespace": {
-      "kind": "compilation_unit",
-      "name": "test.cpp"
-    },
-    "id_table": [],
-    "data": [
-      {
-        "summary_data": []
-      }
-    ]
-  })");
-
-  EXPECT_THAT(
-      Result,
-      FailedWith(
-          AllOf(HasSubstr("reading TUSummary from"),
-                HasSubstr("failed to read JSON array from field 'data'"),
-                HasSubstr("failed to deserialize SummaryDataMap at "
-                          "index 0"),
-                HasSubstr("failed to deserialize SummaryDataMap entry"),
-                HasSubstr("missing or invalid field 'summary_name' "
-                          "(expected string (analysis summary identifier))"))));
-}
-
-TEST_F(JSONFormatTest, DataEntryMissingData) {
-  auto Result = readJSON(R"({
-    "tu_namespace": {
-      "kind": "compilation_unit",
-      "name": "test.cpp"
-    },
-    "id_table": [],
-    "data": [
-      {
-        "summary_name": "test_summary"
-      }
-    ]
-  })");
-
-  EXPECT_THAT(Result,
-              FailedWith(AllOf(
-                  HasSubstr("reading TUSummary from"),
-                  HasSubstr("failed to read JSON array from field 'data'"),
-                  HasSubstr("failed to deserialize SummaryDataMap at index 0"),
-                  HasSubstr("failed to deserialize SummaryDataMap entry"),
-                  HasSubstr("missing or invalid field 'summary_data'"))));
-}
-
-TEST_F(JSONFormatTest, DuplicateSummaryName) {
-  auto Result = readJSON(R"({
-    "tu_namespace": {
-      "kind": "compilation_unit",
-      "name": "test.cpp"
-    },
-    "id_table": [],
-    "data": [
-      {
-        "summary_name": "test_summary",
-        "summary_data": []
-      },
-      {
-        "summary_name": "test_summary",
-        "summary_data": []
-      }
-    ]
-  })");
-
-  EXPECT_THAT(Result, FailedWith(AllOf(
-                          HasSubstr("reading TUSummary from"),
-                          HasSubstr("failed to deserialize SummaryDataMap"),
-                          HasSubstr("duplicate SummaryName 'test_summary' "
-                                    "found at index"))));
-}
-
-// ============================================================================
-// Entity Data Error Tests
-// ============================================================================
-
-TEST_F(JSONFormatTest, EntityDataElementNotObject) {
-  auto Result = readJSON(R"({
-    "tu_namespace": {
-      "kind": "compilation_unit",
-      "name": "test.cpp"
-    },
-    "id_table": [],
-    "data": [
-      {
-        "summary_name": "test_summary",
-        "summary_data": ["invalid"]
-      }
-    ]
-  })");
-
-  EXPECT_THAT(
-      Result,
-      FailedWith(AllOf(
-          HasSubstr("reading TUSummary from"),
-          HasSubstr("failed to read JSON array from field 'data'"),
-          HasSubstr("failed to deserialize SummaryDataMap at index 0"),
-          HasSubstr("failed to deserialize SummaryDataMap entry"),
-          HasSubstr("for summary 'test_summary'"),
-          HasSubstr("failed to read JSON array from field 'summary_data'"),
-          HasSubstr("failed to deserialize EntityDataMap"),
-          HasSubstr("element at index 0 is not a JSON object"),
-          HasSubstr("(expected EntityDataMap entry with 'entity_id' and "
-                    "'entity_summary'"),
-          HasSubstr("fields)"))));
-}
-
-TEST_F(JSONFormatTest, EntityDataMissingEntityID) {
-  auto Result = readJSON(R"({
-    "tu_namespace": {
-      "kind": "compilation_unit",
-      "name": "test.cpp"
-    },
-    "id_table": [],
-    "data": [
-      {
-        "summary_name": "test_summary",
-        "summary_data": [
-          {
-            "entity_summary": {}
-          }
-        ]
-      }
-    ]
-  })");
-
-  EXPECT_THAT(
-      Result,
-      FailedWith(AllOf(
-          HasSubstr("reading TUSummary from"),
-          HasSubstr("failed to read JSON array from field 'data'"),
-          HasSubstr("failed to deserialize SummaryDataMap at index 0"),
-          HasSubstr("failed to deserialize SummaryDataMap entry"),
-          HasSubstr("for summary 'test_summary'"),
-          HasSubstr("failed to read JSON array from field 'summary_data'"),
-          HasSubstr("failed to deserialize EntityDataMap at index 0"),
-          HasSubstr("failed to deserialize EntityDataMap entry"),
-          HasSubstr("missing or invalid field 'entity_id' "
-                    "(expected unsigned integer EntityId)"))));
-}
-
-TEST_F(JSONFormatTest, EntityDataMissingEntitySummary) {
-  auto Result = readJSON(R"({
-    "tu_namespace": {
-      "kind": "compilation_unit",
-      "name": "test.cpp"
-    },
-    "id_table": [],
-    "data": [
-      {
-        "summary_name": "test_summary",
-        "summary_data": [
-          {
-            "entity_id": 0
-          }
-        ]
-      }
-    ]
-  })");
-
-  EXPECT_THAT(
-      Result,
-      FailedWith(AllOf(
-          HasSubstr("reading TUSummary from"),
-          HasSubstr("failed to read JSON array from field 'data'"),
-          HasSubstr("failed to deserialize SummaryDataMap at index 0"),
-          HasSubstr("failed to deserialize SummaryDataMap entry"),
-          HasSubstr("for summary 'test_summary'"),
-          HasSubstr("failed to read JSON array from field 'summary_data'"),
-          HasSubstr("failed to deserialize EntityDataMap at index 0"),
-          HasSubstr("failed to deserialize EntityDataMap entry"),
-          HasSubstr("failed to read JSON object from field 'entity_summary'"),
-          HasSubstr("missing or invalid field 'entity_summary'"),
-          HasSubstr("(expected EntitySummary JSON object)"))));
-}
-
-TEST_F(JSONFormatTest, EntityIDNotUInt64) {
-  auto Result = readJSON(R"({
-    "tu_namespace": {
-      "kind": "compilation_unit",
-      "name": "test.cpp"
-    },
-    "id_table": [],
-    "data": [
-      {
-        "summary_name": "test_summary",
-        "summary_data": [
-          {
-            "entity_id": "not_a_number",
-            "entity_summary": {}
-          }
-        ]
-      }
-    ]
-  })");
-
-  EXPECT_THAT(
-      Result,
-      FailedWith(AllOf(
-          HasSubstr("reading TUSummary from"),
-          HasSubstr("failed to read JSON array from field 'data'"),
-          HasSubstr("failed to deserialize SummaryDataMap at index 0"),
-          HasSubstr("failed to deserialize SummaryDataMap entry"),
-          HasSubstr("for summary 'test_summary'"),
-          HasSubstr("failed to read JSON array from field 'summary_data'"),
-          HasSubstr("failed to deserialize EntityDataMap at index 0"),
-          HasSubstr("failed to deserialize EntityDataMap entry"),
-          HasSubstr("field 'entity_id' is not a valid unsigned 64-bit integer"),
-          HasSubstr("(expected non-negative EntityId value)"))));
-}
 
 TEST_F(JSONFormatTest, EntitySummaryNoFormatInfo) {
   auto Result = readJSON(R"({
@@ -1001,26 +667,19 @@ TEST_F(JSONFormatTest, EntitySummaryNoFormatInfo) {
     ]
   })");
 
-  EXPECT_THAT(
+  EXPECT_THAT_EXPECTED(
       Result,
-      FailedWith(AllOf(
-          HasSubstr("reading TUSummary from"),
-          HasSubstr("failed to read JSON array from field 'data'"),
-          HasSubstr("failed to deserialize SummaryDataMap at index 0"),
-          HasSubstr("failed to deserialize SummaryDataMap entry"),
-          HasSubstr("for summary 'unknown_summary_type'"),
-          HasSubstr("failed to read JSON array from field 'summary_data'"),
-          HasSubstr("failed to deserialize EntityDataMap at index 0"),
-          HasSubstr("failed to deserialize EntityDataMap entry"),
-          HasSubstr("failed to read JSON object from field 'entity_summary'"),
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading SummaryData entries from field 'data'"),
+          HasSubstr("reading SummaryData entry from index '0'"),
+          HasSubstr("reading EntitySummary entries from field 'summary_data'"),
+          HasSubstr("reading EntitySummary entry from index '0'"),
+          HasSubstr("reading EntitySummary from field 'entity_summary'"),
           HasSubstr("failed to deserialize EntitySummary"),
-          HasSubstr("no FormatInfo was registered for summary name: "
-                    "unknown_summary_type"))));
+          HasSubstr(
+              "no FormatInfo registered for summary 'unknown_summary_type'"))));
 }
-
-// ============================================================================
-// Analysis-Specific Error Tests - TestAnalysis
-// ============================================================================
 
 TEST_F(JSONFormatTest, TestAnalysisMissingField) {
   auto Result = readJSON(R"({
@@ -1042,21 +701,16 @@ TEST_F(JSONFormatTest, TestAnalysisMissingField) {
     ]
   })");
 
-  EXPECT_THAT(
+  EXPECT_THAT_EXPECTED(
       Result,
-      FailedWith(AllOf(
-          HasSubstr("reading TUSummary from"),
-          HasSubstr("failed to read JSON array from field 'data'"),
-          HasSubstr("failed to deserialize SummaryDataMap at "
-                    "index 0"),
-          HasSubstr("failed to deserialize SummaryDataMap entry"),
-          HasSubstr("for summary 'test_summary'"),
-          HasSubstr("failed to read JSON array from field 'summary_data'"),
-          HasSubstr("failed to deserialize EntityDataMap at "
-                    "index 0"),
-          HasSubstr("failed to deserialize EntityDataMap entry"),
-          HasSubstr("failed to read JSON object from field 'entity_summary'"),
-          HasSubstr("missing required field 'pairs'"))));
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading SummaryData entries from field 'data'"),
+          HasSubstr("reading SummaryData entry from index '0'"),
+          HasSubstr("reading EntitySummary entries from field 'summary_data'"),
+          HasSubstr("reading EntitySummary entry from index '0'"),
+          HasSubstr("reading EntitySummary from field 'entity_summary'"),
+          HasSubstr("missing or invalid field 'pairs'"))));
 }
 
 TEST_F(JSONFormatTest, TestAnalysisInvalidPair) {
@@ -1086,30 +740,464 @@ TEST_F(JSONFormatTest, TestAnalysisInvalidPair) {
     ]
   })");
 
-  EXPECT_THAT(
+  EXPECT_THAT_EXPECTED(
       Result,
-      FailedWith(AllOf(
-          HasSubstr("reading TUSummary from"),
-          HasSubstr("failed to read JSON array from field 'data'"),
-          HasSubstr("failed to deserialize SummaryDataMap at "
-                    "index 0"),
-          HasSubstr("failed to deserialize SummaryDataMap entry"),
-          HasSubstr("for summary 'test_summary'"),
-          HasSubstr("failed to read JSON array from field 'summary_data'"),
-          HasSubstr("failed to deserialize EntityDataMap at "
-                    "index 0"),
-          HasSubstr("failed to deserialize EntityDataMap entry"),
-          HasSubstr("failed to read JSON object from field 'entity_summary'"),
-          HasSubstr("missing or invalid 'second' field at "
-                    "index 0"))));
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading SummaryData entries from field 'data'"),
+          HasSubstr("reading SummaryData entry from index '0'"),
+          HasSubstr("reading EntitySummary entries from field 'summary_data'"),
+          HasSubstr("reading EntitySummary entry from index '0'"),
+          HasSubstr("reading EntitySummary from field 'entity_summary'"),
+          HasSubstr("missing or invalid 'second' field at index '0'"))));
 }
 
 // ============================================================================
-// Valid Configuration Tests
+// JSONFormat::entityDataMapEntryFromJSON() Error Tests
+// ============================================================================
+
+TEST_F(JSONFormatTest, EntityDataMissingEntityID) {
+  auto Result = readJSON(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "id_table": [],
+    "data": [
+      {
+        "summary_name": "test_summary",
+        "summary_data": [
+          {
+            "entity_summary": {}
+          }
+        ]
+      }
+    ]
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result,
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading SummaryData entries from field 'data'"),
+          HasSubstr("reading SummaryData entry from index '0'"),
+          HasSubstr("reading EntitySummary entries from field 'summary_data'"),
+          HasSubstr("reading EntitySummary entry from index '0'"),
+          HasSubstr("failed to read EntityId from field 'entity_id'"),
+          HasSubstr("expected JSON integer"))));
+}
+
+TEST_F(JSONFormatTest, EntityDataMissingEntitySummary) {
+  auto Result = readJSON(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "id_table": [],
+    "data": [
+      {
+        "summary_name": "test_summary",
+        "summary_data": [
+          {
+            "entity_id": 0
+          }
+        ]
+      }
+    ]
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result,
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading SummaryData entries from field 'data'"),
+          HasSubstr("reading SummaryData entry from index '0'"),
+          HasSubstr("reading EntitySummary entries from field 'summary_data'"),
+          HasSubstr("reading EntitySummary entry from index '0'"),
+          HasSubstr("failed to read EntitySummary from field 'entity_summary'"),
+          HasSubstr("expected JSON object"))));
+}
+
+TEST_F(JSONFormatTest, EntityIDNotUInt64) {
+  auto Result = readJSON(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "id_table": [],
+    "data": [
+      {
+        "summary_name": "test_summary",
+        "summary_data": [
+          {
+            "entity_id": "not_a_number",
+            "entity_summary": {}
+          }
+        ]
+      }
+    ]
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result,
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading SummaryData entries from field 'data'"),
+          HasSubstr("reading SummaryData entry from index '0'"),
+          HasSubstr("reading EntitySummary entries from field 'summary_data'"),
+          HasSubstr("reading EntitySummary entry from index '0'"),
+          HasSubstr("failed to read EntityId from field 'entity_id'"),
+          HasSubstr("expected JSON integer"))));
+}
+
+// ============================================================================
+// JSONFormat::entityDataMapFromJSON() Error Tests
+// ============================================================================
+
+TEST_F(JSONFormatTest, EntityDataElementNotObject) {
+  auto Result = readJSON(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "id_table": [],
+    "data": [
+      {
+        "summary_name": "test_summary",
+        "summary_data": ["invalid"]
+      }
+    ]
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result,
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading SummaryData entries from field 'data'"),
+          HasSubstr("reading SummaryData entry from index '0'"),
+          HasSubstr("reading EntitySummary entries from field 'summary_data'"),
+          HasSubstr("failed to read EntitySummary entry from index '0'"),
+          HasSubstr("expected JSON object"))));
+}
+
+TEST_F(JSONFormatTest, DuplicateEntityIdInDataMap) {
+  auto Result = readJSON(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "id_table": [
+      {
+        "id": 0,
+        "name": {
+          "usr": "c:@F@foo",
+          "suffix": "",
+          "namespace": []
+        }
+      }
+    ],
+    "data": [
+      {
+        "summary_name": "test_summary",
+        "summary_data": [
+          {
+            "entity_id": 0,
+            "entity_summary": {
+              "pairs": []
+            }
+          },
+          {
+            "entity_id": 0,
+            "entity_summary": {
+              "pairs": []
+            }
+          }
+        ]
+      }
+    ]
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result,
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading SummaryData entries from field 'data'"),
+          HasSubstr("reading SummaryData entry from index '0'"),
+          HasSubstr("reading EntitySummary entries from field 'summary_data'"),
+          HasSubstr("failed to insert EntitySummary entry at index '1'"),
+          HasSubstr("encountered duplicate EntityId '0'"))));
+}
+
+// ============================================================================
+// JSONFormat::summaryDataMapEntryFromJSON() Error Tests
+// ============================================================================
+
+TEST_F(JSONFormatTest, DataEntryMissingSummaryName) {
+  auto Result = readJSON(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "id_table": [],
+    "data": [
+      {
+        "summary_data": []
+      }
+    ]
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result,
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading SummaryData entries from field 'data'"),
+          HasSubstr("reading SummaryData entry from index '0'"),
+          HasSubstr("failed to read SummaryName from field 'summary_name'"),
+          HasSubstr("expected JSON string"))));
+}
+
+TEST_F(JSONFormatTest, DataEntryMissingData) {
+  auto Result = readJSON(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "id_table": [],
+    "data": [
+      {
+        "summary_name": "test_summary"
+      }
+    ]
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result,
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading SummaryData entries from field 'data'"),
+          HasSubstr("reading SummaryData entry from index '0'"),
+          HasSubstr(
+              "failed to read EntitySummary entries from field 'summary_data'"),
+          HasSubstr("expected JSON array"))));
+}
+
+// ============================================================================
+// JSONFormat::summaryDataMapFromJSON() Error Tests
+// ============================================================================
+
+TEST_F(JSONFormatTest, DataNotArray) {
+  auto Result = readJSON(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "id_table": [],
+    "data": {}
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result,
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("failed to read SummaryData entries from field 'data'"),
+          HasSubstr("expected JSON array"))));
+}
+
+TEST_F(JSONFormatTest, DataElementNotObject) {
+  auto Result = readJSON(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "id_table": [],
+    "data": ["invalid"]
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result, FailedWithMessage(AllOf(
+                  HasSubstr("reading TUSummary from file"),
+                  HasSubstr("reading SummaryData entries from field 'data'"),
+                  HasSubstr("failed to read SummaryData entry from index '0'"),
+                  HasSubstr("expected JSON object"))));
+}
+
+TEST_F(JSONFormatTest, DuplicateSummaryName) {
+  auto Result = readJSON(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "id_table": [],
+    "data": [
+      {
+        "summary_name": "test_summary",
+        "summary_data": []
+      },
+      {
+        "summary_name": "test_summary",
+        "summary_data": []
+      }
+    ]
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result,
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading SummaryData entries from field 'data'"),
+          HasSubstr("failed to insert SummaryData entry at index '1'"),
+          HasSubstr("encountered duplicate SummaryName 'test_summary'"))));
+}
+
+// ============================================================================
+// JSONFormat::readTUSummary() Error Tests
+// ============================================================================
+
+TEST_F(JSONFormatTest, MissingTUNamespace) {
+  auto Result = readJSON(R"({
+    "id_table": [],
+    "data": []
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result,
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("failed to read BuildNamespace from field 'tu_namespace'"),
+          HasSubstr("expected JSON object"))));
+}
+
+TEST_F(JSONFormatTest, MissingIDTable) {
+  auto Result = readJSON(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "data": []
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result, FailedWithMessage(AllOf(
+                  HasSubstr("reading TUSummary from file"),
+                  HasSubstr("failed to read IdTable from field 'id_table'"),
+                  HasSubstr("expected JSON array"))));
+}
+
+TEST_F(JSONFormatTest, MissingData) {
+  auto Result = readJSON(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "id_table": []
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result,
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("failed to read SummaryData entries from field 'data'"),
+          HasSubstr("expected JSON array"))));
+}
+
+// ============================================================================
+// JSONFormat::writeJSON() Error Tests
+// ============================================================================
+
+TEST_F(JSONFormatTest, WriteFileAlreadyExists) {
+  SmallString<128> FilePath = TestDir;
+  sys::path::append(FilePath, "existing.json");
+
+  // Create an existing file
+  std::error_code EC;
+  raw_fd_ostream OS(FilePath, EC);
+  ASSERT_FALSE(EC) << "Failed to create file: " << EC.message();
+  OS << "{}";
+  OS.close();
+
+  // Try to write to the same path
+  TUSummary Summary(
+      BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
+  JSONFormat Format(vfs::getRealFileSystem());
+  auto Result = Format.writeTUSummary(Summary, FilePath);
+
+  EXPECT_THAT_ERROR(
+      std::move(Result),
+      FailedWithMessage(AllOf(HasSubstr("writing TUSummary to file"),
+                              HasSubstr("failed to write file"),
+                              HasSubstr("file already exists"))));
+}
+
+TEST_F(JSONFormatTest, WriteParentDirectoryNotFound) {
+  SmallString<128> FilePath = TestDir;
+  sys::path::append(FilePath, "nonexistent_dir", "test.json");
+
+  TUSummary Summary(
+      BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
+  JSONFormat Format(vfs::getRealFileSystem());
+  auto Result = Format.writeTUSummary(Summary, FilePath);
+
+  EXPECT_THAT_ERROR(
+      std::move(Result),
+      FailedWithMessage(AllOf(HasSubstr("writing TUSummary to file"),
+                              HasSubstr("failed to write file"),
+                              HasSubstr("parent directory does not exist"))));
+}
+
+TEST_F(JSONFormatTest, WriteNotJsonExtension) {
+  SmallString<128> FilePath = TestDir;
+  sys::path::append(FilePath, "test.txt");
+
+  TUSummary Summary(
+      BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
+  JSONFormat Format(vfs::getRealFileSystem());
+  auto Result = Format.writeTUSummary(Summary, FilePath);
+
+  EXPECT_THAT_ERROR(
+      std::move(Result),
+      FailedWithMessage(
+          AllOf(HasSubstr("writing TUSummary to file"),
+                HasSubstr("failed to write file"),
+                HasSubstr("file does not end with '.json' extension"))));
+}
+
+TEST_F(JSONFormatTest, WriteStreamOpenFailure) {
+#ifndef _WIN32 // Skip on Windows as permission model is different
+  SmallString<128> DirPath = TestDir;
+  sys::path::append(DirPath, "write_protected_dir");
+
+  // Create a directory without write permissions
+  std::error_code EC = sys::fs::create_directory(DirPath);
+  ASSERT_FALSE(EC) << "Failed to create directory: " << EC.message();
+
+  sys::fs::perms Perms = sys::fs::perms::owner_read | sys::fs::perms::owner_exe;
+  EC = sys::fs::setPermissions(DirPath, Perms);
+  ASSERT_FALSE(EC) << "Failed to set permissions: " << EC.message();
+
+  SmallString<128> FilePath = DirPath;
+  sys::path::append(FilePath, "test.json");
+
+  TUSummary Summary(
+      BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
+  JSONFormat Format(vfs::getRealFileSystem());
+  auto Result = Format.writeTUSummary(Summary, FilePath);
+
+  EXPECT_THAT_ERROR(
+      std::move(Result),
+      FailedWithMessage(AllOf(HasSubstr("writing TUSummary to file"),
+                              HasSubstr("failed to write file"))));
+
+  // Restore permissions for cleanup
+  sys::fs::setPermissions(DirPath, sys::fs::perms::all_all);
+#endif
+}
+
+// ============================================================================
+// Round-Trip Tests - Serialization Verification
 // ============================================================================
 
 TEST_F(JSONFormatTest, Empty) {
-  auto Result = readJSON(R"({
+  readWriteJSON(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -1117,12 +1205,10 @@ TEST_F(JSONFormatTest, Empty) {
     "id_table": [],
     "data": []
   })");
-
-  EXPECT_THAT(Result, Succeeded());
 }
 
 TEST_F(JSONFormatTest, LinkUnit) {
-  auto Result = readJSON(R"({
+  readWriteJSON(R"({
     "tu_namespace": {
       "kind": "link_unit",
       "name": "libtest.so"
@@ -1130,12 +1216,10 @@ TEST_F(JSONFormatTest, LinkUnit) {
     "id_table": [],
     "data": []
   })");
-
-  EXPECT_THAT(Result, Succeeded());
 }
 
 TEST_F(JSONFormatTest, WithIDTable) {
-  auto Result = readJSON(R"({
+  readWriteJSON(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -1174,12 +1258,10 @@ TEST_F(JSONFormatTest, WithIDTable) {
     ],
     "data": []
   })");
-
-  EXPECT_THAT(Result, Succeeded());
 }
 
 TEST_F(JSONFormatTest, WithEmptyDataEntry) {
-  auto Result = readJSON(R"({
+  readWriteJSON(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -1192,27 +1274,10 @@ TEST_F(JSONFormatTest, WithEmptyDataEntry) {
       }
     ]
   })");
-
-  EXPECT_THAT(Result, Succeeded());
-}
-
-// ============================================================================
-// Round-Trip Tests
-// ============================================================================
-
-TEST_F(JSONFormatTest, RoundTripEmpty) {
-  testRoundTrip(R"({
-    "tu_namespace": {
-      "kind": "compilation_unit",
-      "name": "test.cpp"
-    },
-    "id_table": [],
-    "data": []
-  })");
 }
 
 TEST_F(JSONFormatTest, RoundTripWithIDTable) {
-  testRoundTrip(R"({
+  readWriteJSON(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -1236,23 +1301,8 @@ TEST_F(JSONFormatTest, RoundTripWithIDTable) {
   })");
 }
 
-TEST_F(JSONFormatTest, RoundTripLinkUnit) {
-  testRoundTrip(R"({
-    "tu_namespace": {
-      "kind": "link_unit",
-      "name": "libtest.so"
-    },
-    "id_table": [],
-    "data": []
-  })");
-}
-
-// ============================================================================
-// Analysis-Specific Round-Trip Tests
-// ============================================================================
-
 TEST_F(JSONFormatTest, RoundTripTestAnalysis) {
-  testRoundTrip(R"({
+  readWriteJSON(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
