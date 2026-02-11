@@ -203,20 +203,24 @@ static void __platform_wait_on_address(void const* __ptr, void const* __val, May
       if constexpr (is_same_v<MaybeTimeout, NoTimeout>) {
         return INFINITE;
       } else {
-        auto ms = maybe_timeout_ns / 1'000'000;
+        uint64_t ms = maybe_timeout_ns / 1'000'000;
         if (ms == 0 && maybe_timeout_ns > 100'000)
           // Round up to 1ms if requested between 100us - 1ms
           return 1;
 
-        return ms > static_cast<uint64_t>(INFINITE) ? INFINITE : static_cast<DWORD>(ms);
+        return static_cast<DWORD>(std::min(static_cast<uint64_t>(INFINITE), ms));
       }
     }();
     wait_on_address(const_cast<void*>(__ptr), const_cast<void*>(__val), _Size, timeout_ms);
   } else {
+    std::chrono::nanoseconds timeout = std::chrono::nanoseconds(0);
+    if constexpr (!is_same_v<MaybeTimeout, NoTimeout>) {
+      timeout = std::chrono::nanoseconds(maybe_timeout_ns);
+    }
     __libcpp_thread_poll_with_backoff(
         [=]() -> bool { return std::memcmp(const_cast<const void*>(__ptr), __val, _Size) != 0; },
         __libcpp_timed_backoff_policy(),
-        std::chrono::nanoseconds(__timeout_ns.value_or(0)));
+        timeout);
   }
 }
 
