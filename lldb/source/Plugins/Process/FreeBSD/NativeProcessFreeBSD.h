@@ -90,8 +90,6 @@ public:
   static Status PtraceWrapper(int req, lldb::pid_t pid, void *addr = nullptr,
                               int data = 0, int *result = nullptr);
 
-  bool SupportHardwareSingleStepping() const;
-
   llvm::Expected<std::string> SaveCore(llvm::StringRef path_hint) override;
 
 protected:

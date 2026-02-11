@@ -599,8 +599,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     // statement if return_twice functions are called.
     bool StandardLifetime =
         !SInfo.CallsReturnTwice &&
-        memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, DT, LI,
-                                   ClMaxLifetimes);
+        memtag::isStandardLifetime(Info, DT, LI, ClMaxLifetimes);
     if (StandardLifetime) {
       uint64_t Size = *Info.AI->getAllocationSize(*DL);
       Size = alignTo(Size, kTagGranuleSize);

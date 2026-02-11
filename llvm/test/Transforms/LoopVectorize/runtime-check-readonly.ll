@@ -9,9 +9,9 @@ define void @add_ints(ptr nocapture %A, ptr nocapture %B, ptr nocapture %C) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
-; CHECK-NEXT:    [[C3:%.*]] = ptrtoint ptr [[C]] to i64
+; CHECK-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
+; CHECK-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i64
+; CHECK-NEXT:    [[C3:%.*]] = ptrtoaddr ptr [[C]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[A1]], [[B2]]
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[A1]], [[C3]]
