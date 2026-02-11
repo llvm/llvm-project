@@ -59,7 +59,6 @@ struct VPlanTransforms {
            any_of(VPlanPrintAfterPasses, [PassName](StringRef Entry) {
              return Regex(Entry).match(PassName);
            }))) {
-
         dbgs()
             << "VPlan for loop in '"
             << Plan.getScalarHeader()->getIRBasicBlock()->getParent()->getName()
