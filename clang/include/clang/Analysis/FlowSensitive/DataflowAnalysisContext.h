@@ -332,10 +332,14 @@ private:
 
   llvm::DenseMap<const FunctionDecl *, AdornedCFG> FunctionContexts;
 
-  // Fields modeled by environments covered by this context.
+  // Fields (from any record Type) modeled by environments using this context.
+  // The set may only contain fields that are referenced in the scope of
+  // the environments (but it is up to the environment what is relevant to
+  // model).
   FieldSet ModeledFields;
 
-  // Cache of modeled fields for each type, covered by this context.
+  // A lazily-computed and cached version of ModeledFields that is split by
+  // record Type.
   llvm::DenseMap<QualType, std::unique_ptr<FieldSet>> CachedModeledFields;
 
   std::unique_ptr<Logger> LogOwner; // If created via flags.
