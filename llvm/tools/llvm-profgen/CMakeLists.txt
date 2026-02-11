@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsDisassemblers
   AllTargetsInfos
   DebugInfoDWARF
+  DebugInfoPDB
   Core
   MC
   IPO

@@ -14,7 +14,7 @@
   qc.e.li a0, sym
 # CHECK-NEXT: qc.e.li a0, 0x0
 # CHECK-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
-# CHECK-NEXT: R_RISCV_CUSTOM194 sym{{$}}
+# CHECK-NEXT: R_RISCV_QC_E_32 sym{{$}}
 # CHECK-NEXT: R_RISCV_RELAX *ABS*{{$}}
 .L1:
 # CHECK: <.L1>:
@@ -29,7 +29,7 @@
   qc.li a0,  %qc.abs20(sym)
 # CHECK-NEXT: qc.li a0, 0x0
 # CHECK-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
-# CHECK-NEXT: R_RISCV_CUSTOM192 sym{{$}}
+# CHECK-NEXT: R_RISCV_QC_ABS20_U sym{{$}}
 # CHECK-NEXT: R_RISCV_RELAX *ABS*{{$}}
 .L2:
 # CHECK: <.L2>:

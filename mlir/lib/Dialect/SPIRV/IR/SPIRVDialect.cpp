@@ -141,7 +141,7 @@ void SPIRVDialect::initialize() {
 }
 
 std::string SPIRVDialect::getAttributeName(Decoration decoration) {
-  return llvm::convertToSnakeFromCamelCase(stringifyDecoration(decoration));
+  return getDecorationString(decoration);
 }
 
 //===----------------------------------------------------------------------===//
@@ -167,11 +167,11 @@ static Type parseAndVerifyType(SPIRVDialect const &dialect,
   if (parser.parseType(type))
     return Type();
 
-  // Allow SPIR-V dialect types
+  // Allow SPIR-V dialect types.
   if (&type.getDialect() == &dialect)
     return type;
 
-  // Check other allowed types
+  // Check other allowed types.
   if (auto t = dyn_cast<FloatType>(type)) {
     // TODO: All float types are allowed for now, but this should be fixed.
   } else if (auto t = dyn_cast<IntegerType>(type)) {
@@ -186,10 +186,21 @@ static Type parseAndVerifyType(SPIRVDialect const &dialect,
       parser.emitError(typeLoc, "only 1-D vector allowed but found ") << t;
       return Type();
     }
+    if (t.getNumElements() < 2) {
+      parser.emitError(typeLoc, "SPIR-V does not allow one-element vectors");
+      return Type();
+    }
     if (t.getNumElements() > 4) {
       parser.emitError(
           typeLoc, "vector length has to be less than or equal to 4 but found ")
           << t.getNumElements();
+      return Type();
+    }
+    if (!isa<ScalarType>(t.getElementType())) {
+      parser.emitError(
+          typeLoc,
+          "vector element type must be a SPIR-V scalar type but found ")
+          << t.getElementType();
       return Type();
     }
   } else if (auto t = dyn_cast<TensorArmType>(type)) {

@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -Wno-all -Wunsafe-buffer-usage -verify %s -std=c++20
-// RUN: %clang_cc1 -fsyntax-only -Wno-all -Wunsafe-buffer-usage -verify %s -x c
-// expected-no-diagnostics
+// RUN: %clang_cc1 -fsyntax-only -Wno-all -Wunsafe-buffer-usage -verify=cxx %s -std=c++20
+// RUN: %clang_cc1 -fsyntax-only -Wno-all -Wunsafe-buffer-usage -verify=c-only %s -x c
+// c-only-no-diagnostics
 
 typedef struct {} FILE;
 int fprintf( FILE* stream, const char* format, ... );
@@ -27,6 +27,21 @@ void f(int x, int y) {
   Require(x == y, L1);
  L1:
   return;
+}
+
+// Test nested conditional expressions:
+void testNested(char * message) {
+  fprintf(stderr, "AssertMacros: %s", (0!=0) ? message : ((0!=0) ? message : ""));
+}
+
+// If the conditional cannot be constant-folded, try analyze both branches:
+void testConditionalAnalysis(char * message, int x) {
+  fprintf(stderr, "AssertMacros: %s", (x!=0) ? "hello" : "world");
+  fprintf(stderr, "AssertMacros: %s", (0!=0) ? message : ((x!=0) ? "hello" : "world"));
+  fprintf(stderr, "AssertMacros: %s", (x!=0) ? (((x!=0) ? "hello" : "world")) : ((x!=0) ? "hello" : "world"));
+  fprintf(stderr, "AssertMacros: %s", (x!=0) ? (((x!=0) ? "hello" : "world")) : ((x!=0) ? "hello" : message));
+  // cxx-warning@-1 {{function 'fprintf' is unsafe}}
+  // cxx-note@-2 {{string argument is not guaranteed to be null-terminated}}											       
 }
 
 // Test that the analysis will not crash when a conditional expression

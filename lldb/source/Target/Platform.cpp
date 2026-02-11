@@ -39,6 +39,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -79,7 +80,7 @@ llvm::StringRef PlatformProperties::GetSettingName() {
 
 PlatformProperties::PlatformProperties() {
   m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-  m_collection_sp->Initialize(g_platform_properties);
+  m_collection_sp->Initialize(g_platform_properties_def);
 
   auto module_cache_dir = GetModuleCacheDirectory();
   if (module_cache_dir)
@@ -169,7 +170,7 @@ Status Platform::GetSharedModule(
     // by getting target from module_spec and calling
     // target->GetExecutableSearchPaths()
     return ModuleList::GetSharedModule(module_spec, module_sp, old_modules,
-                                       did_create_ptr, false);
+                                       did_create_ptr);
 
   // Module resolver lambda.
   auto resolver = [&](const ModuleSpec &spec) {
@@ -182,14 +183,14 @@ Status Platform::GetSharedModule(
       resolved_spec.GetFileSpec().PrependPathComponent(m_sdk_sysroot);
       // Try to get shared module with resolved spec.
       error = ModuleList::GetSharedModule(resolved_spec, module_sp, old_modules,
-                                          did_create_ptr, false);
+                                          did_create_ptr);
     }
     // If we don't have sysroot or it didn't work then
     // try original module spec.
     if (!error.Success()) {
       resolved_spec = spec;
       error = ModuleList::GetSharedModule(resolved_spec, module_sp, old_modules,
-                                          did_create_ptr, false);
+                                          did_create_ptr);
     }
     if (error.Success() && module_sp)
       module_sp->SetPlatformFileSpec(resolved_spec.GetFileSpec());
@@ -1673,7 +1674,7 @@ void Platform::CallLocateModuleCallbackIfSet(const ModuleSpec &module_spec,
   cached_module_spec.SetObjectOffset(0);
 
   error = ModuleList::GetSharedModule(cached_module_spec, module_sp, nullptr,
-                                      did_create_ptr, false, false);
+                                      did_create_ptr, false);
   if (error.Success() && module_sp) {
     // Succeeded to load the module file.
     LLDB_LOGF(log, "%s: locate module callback succeeded: module=%s symbol=%s",
@@ -1946,121 +1947,99 @@ size_t Platform::ConnectToWaitingProcesses(lldb_private::Debugger &debugger,
   return 0;
 }
 
-size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
-                                                 BreakpointSite *bp_site) {
-  ArchSpec arch = target.GetArchitecture();
-  assert(arch.IsValid());
-  const uint8_t *trap_opcode = nullptr;
-  size_t trap_opcode_size = 0;
+llvm::ArrayRef<uint8_t> Platform::SoftwareTrapOpcodeBytes(const ArchSpec &arch,
+                                                          size_t size_hint) {
+  llvm::ArrayRef<uint8_t> trap_opcode;
 
   switch (arch.GetMachine()) {
   case llvm::Triple::aarch64_32:
   case llvm::Triple::aarch64: {
     static const uint8_t g_aarch64_opcode[] = {0x00, 0x00, 0x20, 0xd4};
-    trap_opcode = g_aarch64_opcode;
-    trap_opcode_size = sizeof(g_aarch64_opcode);
+    trap_opcode =
+        llvm::ArrayRef<uint8_t>(g_aarch64_opcode, sizeof(g_aarch64_opcode));
   } break;
 
   case llvm::Triple::arc: {
-    static const uint8_t g_hex_opcode[] = { 0xff, 0x7f };
-    trap_opcode = g_hex_opcode;
-    trap_opcode_size = sizeof(g_hex_opcode);
+    static const uint8_t g_hex_opcode[] = {0xff, 0x7f};
+    trap_opcode = llvm::ArrayRef<uint8_t>(g_hex_opcode, sizeof(g_hex_opcode));
   } break;
 
-  // TODO: support big-endian arm and thumb trap codes.
   case llvm::Triple::arm: {
-    // The ARM reference recommends the use of 0xe7fddefe and 0xdefe but the
-    // linux kernel does otherwise.
+    // ARM CPUs have dedicated BKPT instructions: 0xe7fddefe and 0xdefe.
+    // However, the linux kernel recognizes two different sequences based on
+    // undefined instruction encodings (linux/arch/arm/kernel/ptrace.c)
     static const uint8_t g_arm_breakpoint_opcode[] = {0xf0, 0x01, 0xf0, 0xe7};
     static const uint8_t g_thumb_breakpoint_opcode[] = {0x01, 0xde};
 
-    lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetConstituentAtIndex(0));
-    AddressClass addr_class = AddressClass::eUnknown;
-
-    if (bp_loc_sp) {
-      addr_class = bp_loc_sp->GetAddress().GetAddressClass();
-      if (addr_class == AddressClass::eUnknown &&
-          (bp_loc_sp->GetAddress().GetFileAddress() & 1))
-        addr_class = AddressClass::eCodeAlternateISA;
-    }
-
-    if (addr_class == AddressClass::eCodeAlternateISA) {
-      trap_opcode = g_thumb_breakpoint_opcode;
-      trap_opcode_size = sizeof(g_thumb_breakpoint_opcode);
+    if (size_hint == 2) {
+      trap_opcode = llvm::ArrayRef<uint8_t>(g_thumb_breakpoint_opcode,
+                                            sizeof(g_thumb_breakpoint_opcode));
     } else {
-      trap_opcode = g_arm_breakpoint_opcode;
-      trap_opcode_size = sizeof(g_arm_breakpoint_opcode);
+      trap_opcode = llvm::ArrayRef<uint8_t>(g_arm_breakpoint_opcode,
+                                            sizeof(g_arm_breakpoint_opcode));
     }
   } break;
 
   case llvm::Triple::avr: {
     static const uint8_t g_hex_opcode[] = {0x98, 0x95};
-    trap_opcode = g_hex_opcode;
-    trap_opcode_size = sizeof(g_hex_opcode);
+    trap_opcode = llvm::ArrayRef<uint8_t>(g_hex_opcode, sizeof(g_hex_opcode));
   } break;
 
   case llvm::Triple::mips:
   case llvm::Triple::mips64: {
     static const uint8_t g_hex_opcode[] = {0x00, 0x00, 0x00, 0x0d};
-    trap_opcode = g_hex_opcode;
-    trap_opcode_size = sizeof(g_hex_opcode);
+    trap_opcode = llvm::ArrayRef<uint8_t>(g_hex_opcode, sizeof(g_hex_opcode));
   } break;
 
   case llvm::Triple::mipsel:
   case llvm::Triple::mips64el: {
     static const uint8_t g_hex_opcode[] = {0x0d, 0x00, 0x00, 0x00};
-    trap_opcode = g_hex_opcode;
-    trap_opcode_size = sizeof(g_hex_opcode);
+    trap_opcode = llvm::ArrayRef<uint8_t>(g_hex_opcode, sizeof(g_hex_opcode));
   } break;
 
   case llvm::Triple::msp430: {
     static const uint8_t g_msp430_opcode[] = {0x43, 0x43};
-    trap_opcode = g_msp430_opcode;
-    trap_opcode_size = sizeof(g_msp430_opcode);
+    trap_opcode =
+        llvm::ArrayRef<uint8_t>(g_msp430_opcode, sizeof(g_msp430_opcode));
   } break;
 
   case llvm::Triple::systemz: {
     static const uint8_t g_hex_opcode[] = {0x00, 0x01};
-    trap_opcode = g_hex_opcode;
-    trap_opcode_size = sizeof(g_hex_opcode);
+    trap_opcode = llvm::ArrayRef<uint8_t>(g_hex_opcode, sizeof(g_hex_opcode));
   } break;
 
   case llvm::Triple::hexagon: {
     static const uint8_t g_hex_opcode[] = {0x0c, 0xdb, 0x00, 0x54};
-    trap_opcode = g_hex_opcode;
-    trap_opcode_size = sizeof(g_hex_opcode);
+    trap_opcode = llvm::ArrayRef<uint8_t>(g_hex_opcode, sizeof(g_hex_opcode));
   } break;
 
   case llvm::Triple::ppc:
   case llvm::Triple::ppc64: {
     static const uint8_t g_ppc_opcode[] = {0x7f, 0xe0, 0x00, 0x08};
-    trap_opcode = g_ppc_opcode;
-    trap_opcode_size = sizeof(g_ppc_opcode);
+    trap_opcode = llvm::ArrayRef<uint8_t>(g_ppc_opcode, sizeof(g_ppc_opcode));
   } break;
 
   case llvm::Triple::ppc64le: {
     static const uint8_t g_ppc64le_opcode[] = {0x08, 0x00, 0xe0, 0x7f}; // trap
-    trap_opcode = g_ppc64le_opcode;
-    trap_opcode_size = sizeof(g_ppc64le_opcode);
+    trap_opcode =
+        llvm::ArrayRef<uint8_t>(g_ppc64le_opcode, sizeof(g_ppc64le_opcode));
   } break;
 
   case llvm::Triple::x86:
   case llvm::Triple::x86_64: {
     static const uint8_t g_i386_opcode[] = {0xCC};
-    trap_opcode = g_i386_opcode;
-    trap_opcode_size = sizeof(g_i386_opcode);
+    trap_opcode = llvm::ArrayRef<uint8_t>(g_i386_opcode, sizeof(g_i386_opcode));
   } break;
 
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64: {
     static const uint8_t g_riscv_opcode[] = {0x73, 0x00, 0x10, 0x00}; // ebreak
     static const uint8_t g_riscv_opcode_c[] = {0x02, 0x90}; // c.ebreak
-    if (arch.GetFlags() & ArchSpec::eRISCV_rvc) {
+    if (size_hint == 2) {
       trap_opcode = g_riscv_opcode_c;
-      trap_opcode_size = sizeof(g_riscv_opcode_c);
     } else {
-      trap_opcode = g_riscv_opcode;
-      trap_opcode_size = sizeof(g_riscv_opcode);
+      trap_opcode =
+          llvm::ArrayRef<uint8_t>(g_riscv_opcode, sizeof(g_riscv_opcode));
     }
   } break;
 
@@ -2068,24 +2047,71 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
   case llvm::Triple::loongarch64: {
     static const uint8_t g_loongarch_opcode[] = {0x05, 0x00, 0x2a,
                                                  0x00}; // break 0x5
-    trap_opcode = g_loongarch_opcode;
-    trap_opcode_size = sizeof(g_loongarch_opcode);
+    trap_opcode =
+        llvm::ArrayRef<uint8_t>(g_loongarch_opcode, sizeof(g_loongarch_opcode));
   } break;
 
+  // Unreachable (0x00) triggers an unconditional trap.
   case llvm::Triple::wasm32: {
-    // Unreachable (0x00) triggers an unconditional trap.
     static const uint8_t g_wasm_opcode[] = {0x00};
-    trap_opcode = g_wasm_opcode;
-    trap_opcode_size = sizeof(g_wasm_opcode);
+    trap_opcode = llvm::ArrayRef<uint8_t>(g_wasm_opcode, sizeof(g_wasm_opcode));
   } break;
+  // The default case should not match against anything, so return empty Array.
+  default: {
+    trap_opcode = llvm::ArrayRef<uint8_t>{};
+  };
+  }
+  return trap_opcode;
+}
 
-  default:
-    return 0;
+size_t Platform::GetTrapOpcodeSizeHint(Target &target, Address addr,
+                                       llvm::ArrayRef<uint8_t> bytes) {
+  ArchSpec arch = target.GetArchitecture();
+  assert(arch.IsValid());
+  const auto &triple = arch.GetTriple();
+
+  if (bytes.size() && triple.isRISCV()) {
+    // RISC-V instructions have the two LSB as 0b11 if they are four-byte.
+    return (bytes[0] & 0b11) == 0b11 ? 4 : 2;
   }
 
-  assert(bp_site);
-  if (bp_site->SetTrapOpcode(trap_opcode, trap_opcode_size))
-    return trap_opcode_size;
+  if (triple.isARM()) {
+    if (auto addr_class = addr.GetAddressClass();
+        addr_class == AddressClass::eCodeAlternateISA) {
+      return 2;
+    } else {
+      return 4;
+    }
+  }
+  return 0;
+}
+
+size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
+                                                 BreakpointSite *bp_site) {
+  ArchSpec arch = target.GetArchitecture();
+  assert(arch.IsValid());
+  AddressClass addr_class = AddressClass::eUnknown;
+  if (bp_site) {
+    // TODO: support big-endian arm and thumb trap codes.
+    lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetConstituentAtIndex(0));
+    if (bp_loc_sp) {
+      addr_class = bp_loc_sp->GetAddress().GetAddressClass();
+      if (addr_class == AddressClass::eUnknown &&
+          (bp_loc_sp->GetAddress().GetFileAddress() & 1))
+        addr_class = AddressClass::eCodeAlternateISA;
+    }
+  }
+
+  size_t size_hint = 0;
+  // Check for either ARM or RISC-V short instruction conditions.
+  if ((addr_class == AddressClass::eCodeAlternateISA) ||
+      (arch.GetFlags() & ArchSpec::eRISCV_rvc))
+    size_hint = 2;
+  auto trap_opcode = SoftwareTrapOpcodeBytes(arch, size_hint);
+
+  if (bp_site &&
+      bp_site->SetTrapOpcode(trap_opcode.begin(), trap_opcode.size()))
+    return trap_opcode.size();
 
   return 0;
 }

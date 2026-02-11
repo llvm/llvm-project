@@ -390,7 +390,6 @@ external set_diagnostic_handler
 (*===-- Contexts ----------------------------------------------------------===*)
 external create_context : unit -> llcontext = "llvm_create_context"
 external dispose_context : llcontext -> unit = "llvm_dispose_context"
-external global_context : unit -> llcontext = "llvm_global_context"
 external mdkind_id : llcontext -> string -> llmdkind = "llvm_mdkind_id"
 
 (*===-- Attributes --------------------------------------------------------===*)
@@ -455,8 +454,8 @@ external module_context : llmodule -> llcontext = "llvm_get_module_context"
 external get_module_identifier : llmodule -> string
                                = "llvm_get_module_identifier"
 
-external set_module_identifer : llmodule -> string -> unit
-                              = "llvm_set_module_identifier"
+external set_module_identifier : llmodule -> string -> unit
+                               = "llvm_set_module_identifier"
 
 external get_module_flag : llmodule -> string -> llmetadata option
                          = "llvm_get_module_flag"

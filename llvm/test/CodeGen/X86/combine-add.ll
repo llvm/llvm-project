@@ -561,3 +561,65 @@ define i64 @add_notx_x(i64 %v0) nounwind {
   %y = add i64 %x, %v0
   ret i64 %y
 }
+
+; Basic positive test
+define i32 @add_adc_to_adc(i32 %0, i32 %1, i32 %2) {
+; CHECK-LABEL: add_adc_to_adc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    adcl $0, %edx
+; CHECK-NEXT:    addl $42, %edx
+; CHECK-NEXT:    cmovsl %esi, %eax
+; CHECK-NEXT:    retq
+  %4 = icmp ult i32 %0, %1
+  %5 = zext i1 %4 to i32
+  %6 = add i32 %2, 42
+  %7 = add i32 %6, %5
+  %8 = icmp slt i32 %7, 0
+  %9 = select i1 %8, i32 %1, i32 %0
+  ret i32 %9
+}
+
+; Negative test: Carry or overflow flag is used
+define i32 @add_adc_wrong_flags(i32 %0, i32 %1, i32 %2) {
+; CHECK-LABEL: add_adc_wrong_flags:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    adcl $10, %edx
+; CHECK-NEXT:    addl $32, %edx
+; CHECK-NEXT:    cmovbl %edi, %eax
+; CHECK-NEXT:    retq
+  %4 = icmp ult i32 %0, %1
+  %5 = zext i1 %4 to i32
+  %6 = add i32 %2, 10
+  %7 = add i32 %6, %5
+  %8 = tail call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %7, i32 32)
+  %9 = extractvalue { i32, i1 } %8, 1
+  %10 = select i1 %9, i32 %0, i32 %1
+  ret i32 %10
+}
+
+; Negative test: Multi-use
+define i32 @add_adc_multi_use(i32 %0, i32 %1, i32 %2) {
+; CHECK-LABEL: add_adc_multi_use:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    adcl $0, %edx
+; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    addl $42, %eax
+; CHECK-NEXT:    cmovsl %edi, %esi
+; CHECK-NEXT:    leal (%rsi,%rdx), %eax
+; CHECK-NEXT:    retq
+  %4 = icmp ult i32 %0, %1
+  %5 = zext i1 %4 to i32
+  %6 = add i32 %2, %5
+  %7 = add i32 %6, 42
+  %8 = icmp slt i32 %7, 0
+  %9 = select i1 %8, i32 %0, i32 %1
+  %10 = add i32 %9, %6
+  ret i32 %10
+}

@@ -127,10 +127,6 @@ void RocmInstallationDetector::scanLibDevicePath(llvm::StringRef Path) {
       FiniteOnly.Off = FilePath;
     } else if (BaseName == "oclc_finite_only_on") {
       FiniteOnly.On = FilePath;
-    } else if (BaseName == "oclc_daz_opt_on") {
-      DenormalsAreZero.On = FilePath;
-    } else if (BaseName == "oclc_daz_opt_off") {
-      DenormalsAreZero.Off = FilePath;
     } else if (BaseName == "oclc_correctly_rounded_sqrt_on") {
       CorrectlyRoundedSqrt.On = FilePath;
     } else if (BaseName == "oclc_correctly_rounded_sqrt_off") {
@@ -327,7 +323,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
 
 RocmInstallationDetector::RocmInstallationDetector(
     const Driver &D, const llvm::Triple &HostTriple,
-    const llvm::opt::ArgList &Args, bool DetectHIPRuntime, bool DetectDeviceLib)
+    const llvm::opt::ArgList &Args, bool DetectHIPRuntime)
     : D(D) {
   Verbose = Args.hasArg(options::OPT_v);
   RocmPathArg = Args.getLastArgValue(options::OPT_rocm_path_EQ);
@@ -381,8 +377,6 @@ RocmInstallationDetector::RocmInstallationDetector(
 
   if (DetectHIPRuntime)
     detectHIPRuntime();
-  if (DetectDeviceLib)
-    detectDeviceLibrary();
 }
 
 void RocmInstallationDetector::detectDeviceLibrary() {
@@ -1050,7 +1044,6 @@ RocmInstallationDetector::getCommonBitcodeLibs(
     AddBCLib(getOCKLPath());
   else if (Pref.GPUSan && Pref.IsOpenMP)
     AddBCLib(getOCKLPath(), false);
-  AddBCLib(getDenormalsAreZeroPath(Pref.DAZ));
   AddBCLib(getUnsafeMathPath(Pref.UnsafeMathOpt || Pref.FastRelaxedMath));
   AddBCLib(getFiniteOnlyPath(Pref.FiniteOnly || Pref.FastRelaxedMath));
   AddBCLib(getCorrectlyRoundedSqrtPath(Pref.CorrectSqrt));

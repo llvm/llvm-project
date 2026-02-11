@@ -1055,6 +1055,28 @@ TEST(STLExtrasTest, to_address) {
   EXPECT_EQ(V1, llvm::to_address(V3));
 }
 
+TEST(STLExtras, EqualToNotEqualTo) {
+  std::vector<int> V;
+  EXPECT_TRUE(all_of(V, equal_to(1)));
+  EXPECT_TRUE(all_of(V, not_equal_to(1)));
+
+  V.push_back(1);
+  EXPECT_TRUE(all_of(V, equal_to(1)));
+  EXPECT_TRUE(all_of(V, not_equal_to(2)));
+
+  V.push_back(1);
+  V.push_back(1);
+  EXPECT_TRUE(all_of(V, equal_to(1)));
+  EXPECT_TRUE(all_of(V, not_equal_to(2)));
+  EXPECT_TRUE(none_of(V, equal_to(2)));
+
+  V.push_back(2);
+  EXPECT_FALSE(all_of(V, equal_to(1)));
+  EXPECT_FALSE(all_of(V, not_equal_to(1)));
+  EXPECT_TRUE(any_of(V, equal_to(2)));
+  EXPECT_TRUE(any_of(V, not_equal_to(2)));
+}
+
 TEST(STLExtrasTest, partition_point) {
   std::vector<int> V = {1, 3, 5, 7, 9};
 

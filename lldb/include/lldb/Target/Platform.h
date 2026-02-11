@@ -330,6 +330,35 @@ public:
   virtual std::vector<ArchSpec>
   GetSupportedArchitectures(const ArchSpec &process_host_arch) = 0;
 
+  /// Get the bytes of the platform's software interrupt instruction. If there
+  /// are multiple possible encodings, for example where there are immediate
+  /// values encoded in the instruction, this will return the instruction with
+  /// those bits set as 0.
+  ///
+  /// \param[in] arch
+  ///     The architecture of the inferior.
+  /// \param size_hint
+  ///     A hint to disambiguate which instruction is used on platforms where
+  ///     there are multiple interrupts with different sizes in the ISA (e.g
+  ///     ARM Thumb, RISC-V).
+  ///
+  /// \return
+  ///     The bytes of the interrupt instruction, with any immediate value
+  ///     bits set to 0.
+  llvm::ArrayRef<uint8_t> SoftwareTrapOpcodeBytes(const ArchSpec &arch,
+                                                  size_t size_hint = 0);
+
+  /// Get the suggested size hint for a trap instruction on the given target.
+  /// Some platforms have a compressed instruction set which can be used
+  /// instead of the "normal" encoding. This function attempts to determine
+  /// a size hint for the size of the instruction at address \a addr, and
+  /// return 0, 2 or 4, with 2 and 4 corresponding to the estimated size
+  /// and zero meaning no applicable hint. Returns the estimated size in bytes
+  /// of the instruction for this target at the given address, or 0 if no
+  /// estimate is available.
+  size_t GetTrapOpcodeSizeHint(Target &target, Address addr,
+                               llvm::ArrayRef<uint8_t> bytes);
+
   virtual size_t GetSoftwareBreakpointTrapOpcode(Target &target,
                                                  BreakpointSite *bp_site);
 
@@ -778,8 +807,8 @@ public:
   /// Try to get a specific unwind plan for a named trap handler.
   /// The default is not to have specific unwind plans for trap handlers.
   ///
-  /// \param[in] triple
-  ///     Triple of the current target.
+  /// \param[in] arch
+  ///     Architecture of the current target.
   ///
   /// \param[in] name
   ///     Name of the trap handler function.
@@ -788,8 +817,8 @@ public:
   ///     A specific unwind plan for that trap handler, or an empty
   ///     shared pointer. The latter means there is no specific plan,
   ///     unwind as normal.
-  virtual lldb::UnwindPlanSP
-  GetTrapHandlerUnwindPlan(const llvm::Triple &triple, ConstString name) {
+  virtual lldb::UnwindPlanSP GetTrapHandlerUnwindPlan(const ArchSpec &arch,
+                                                      ConstString name) {
     return {};
   }
 
@@ -925,7 +954,7 @@ public:
   ///     A structured data dictionary containing at each entry, the crash
   ///     information type as the entry key and the matching  an array as the
   ///     entry value. \b nullptr if not implemented or  if the process has no
-  ///     crash information entry. \b error if an error occured.
+  ///     crash information entry. \b error if an error occurred.
   virtual llvm::Expected<StructuredData::DictionarySP>
   FetchExtendedCrashInformation(lldb_private::Process &process) {
     return nullptr;

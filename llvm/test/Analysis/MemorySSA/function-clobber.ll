@@ -51,3 +51,16 @@ if.end:
   call void @readEverything()
   ret void
 }
+
+declare void @fn(ptr %p)
+
+define void @baz(ptr %p) {
+; CHECK:      1 = MemoryDef(liveOnEntry)
+; CHECK-NEXT: call void @fn(ptr %p)
+  call void @fn(ptr %p) memory(argmem: read, inaccessiblemem: readwrite)
+
+; CHECK:      MemoryUse(liveOnEntry)
+; CHECK-NEXT: call void @fn(ptr %p)
+  call void @fn(ptr %p) memory(argmem: read)
+  ret void
+}
