@@ -32,14 +32,13 @@
 ;; Test printer and parser with -emit-call-site-info only.
 
 ;; Test printer.
-;; Verify that fwdArgRegs is set, calleeTypeIds is not set.
+;; Verify that fwdArgRegs and calleeTypeIds are set.
 ; RUN: llc -mtriple=x86_64 -emit-call-site-info %s -stop-after=finalize-isel -o %t2.mir
 ; RUN: cat %t2.mir | FileCheck %s --check-prefix=PRINTER_CSI
 ; PRINTER_CSI: name: main
 ; PRINTER_CSI: callSites:
 ; PRINTER_CSI-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs:
-; PRINTER_CSI-NEXT: { arg: 0, reg: {{.*}} }
-; PRINTER_CSI-NOT: calleeTypeIds:
+; PRINTER_CSI-NEXT: { arg: 0, reg: {{.*}} }, calleeTypeIds:
 
 
 ;; Test parser.
@@ -49,8 +48,7 @@
 ; PARSER_CSI: name: main
 ; PARSER_CSI: callSites:
 ; PARSER_CSI-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs:
-; PARSER_CSI-NEXT: { arg: 0, reg: {{.*}} }
-; PARSER_CSI-NOT: calleeTypeIds:
+; PARSER_CSI-NEXT: { arg: 0, reg: {{.*}} }, calleeTypeIds:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Test printer and parser with both -emit-call-site-info and --call-graph-section.

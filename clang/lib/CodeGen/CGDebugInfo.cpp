@@ -4978,6 +4978,29 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
     Fn->setSubprogram(SP);
 }
 
+void CGDebugInfo::addCallTarget(const FunctionDecl *FD, llvm::CallBase *CI) {
+  if (!generateVirtualCallSite())
+    return;
+
+  if (!FD)
+    return;
+
+  // Ignore method types that never can be indirect calls.
+  if (isa<CXXConstructorDecl>(FD) || isa<CXXDestructorDecl>(FD) ||
+      FD->hasAttr<CUDAGlobalAttr>())
+    return;
+
+  // Record only indirect calls.
+  assert(CI && "Invalid Call Instruction.");
+  if (!CI->isIndirectCall())
+    return;
+
+  // Always get method definition.
+  if (llvm::DISubprogram *MD = getFunctionDeclaration(FD))
+    // Attach the target metadata
+    CI->setMetadata(llvm::LLVMContext::MD_call_target, MD);
+}
+
 void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
                                           QualType CalleeType,
                                           GlobalDecl CalleeGlobalDecl) {
