@@ -802,24 +802,16 @@ m_Select(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
 }
 
 template <typename Op0_t>
-using Not_match =
-    match_combine_or<VPInstruction_match<VPInstruction::Not, Op0_t>,
-                     AllRecipe_commutative_match<
-                         Instruction::Xor, int_pred_ty<is_all_ones>, Op0_t>>;
-
-template <typename Op0_t> inline Not_match<Op0_t> m_Not(const Op0_t &Op0) {
+inline match_combine_or<VPInstruction_match<VPInstruction::Not, Op0_t>,
+                        AllRecipe_commutative_match<
+                            Instruction::Xor, int_pred_ty<is_all_ones>, Op0_t>>
+m_Not(const Op0_t &Op0) {
   return m_CombineOr(m_VPInstruction<VPInstruction::Not>(Op0),
                      m_c_Binary<Instruction::Xor>(m_AllOnes(), Op0));
 }
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>
-using Select_commutative_match = match_combine_or<
-    AllRecipe_match<Instruction::Select, Op0_t, Op1_t, Op2_t>,
-    AllRecipe_match<Instruction::Select, Not_match<Op0_t>, Op2_t, Op1_t>>;
-
-template <typename Op0_t, typename Op1_t, typename Op2_t>
-inline Select_commutative_match<Op0_t, Op1_t, Op2_t>
-m_c_Select(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
+inline auto m_c_Select(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
   return m_CombineOr(m_Select(Op0, Op1, Op2), m_Select(m_Not(Op0), Op2, Op1));
 }
 
@@ -834,10 +826,7 @@ m_LogicalAnd(const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t, typename Op1_t>
-inline match_combine_or<
-    VPInstruction_commutative_match<VPInstruction::LogicalAnd, Op0_t, Op1_t>,
-    Select_commutative_match<Op0_t, Op1_t, specific_intval<1>>>
-m_c_LogicalAnd(const Op0_t &Op0, const Op1_t &Op1) {
+inline auto m_c_LogicalAnd(const Op0_t &Op0, const Op1_t &Op1) {
   return m_CombineOr(
       m_c_VPInstruction<VPInstruction::LogicalAnd, Op0_t, Op1_t>(Op0, Op1),
       m_c_Select(Op0, Op1, m_False()));
@@ -850,8 +839,7 @@ m_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t, typename Op1_t>
-inline Select_commutative_match<Op0_t, specific_intval<1>, Op1_t>
-m_c_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
+inline auto m_c_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
   return m_c_Select(Op0, m_True(), Op1);
 }
 
