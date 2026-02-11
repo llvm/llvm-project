@@ -252,20 +252,7 @@ static Error validateOutOfProcess(StringRef LLVMCasBinary, StringRef RootPath,
 }
 
 Error UnifiedOnDiskCache::validateActionCache() const {
-  auto ValidateRef = [this](FileOffset Offset, ArrayRef<char> Value) -> Error {
-    auto ID = ondisk::UnifiedOnDiskCache::getObjectIDFromValue(Value);
-    auto formatError = [&](Twine Msg) {
-      return createStringError(
-          llvm::errc::illegal_byte_sequence,
-          "bad record at 0x" +
-              utohexstr((unsigned)Offset.get(), /*LowerCase=*/true) + ": " +
-              Msg.str());
-    };
-    if (Error E = this->getGraphDB().validateObjectID(ID))
-      return formatError(llvm::toString(std::move(E)));
-    return Error::success();
-  };
-  return getKeyValueDB().validate(ValidateRef);
+  return getKeyValueDB().validate();
 }
 
 static Error validateInProcess(StringRef RootPath, StringRef HashName,

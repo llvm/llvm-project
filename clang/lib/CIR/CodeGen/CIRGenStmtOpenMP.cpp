@@ -14,7 +14,7 @@
 #include "CIRGenFunction.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "clang/AST/StmtOpenMP.h"
-
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
 using namespace clang;
 using namespace clang::CIRGen;
 
@@ -53,9 +53,13 @@ CIRGenFunction::emitOMPParallelDirective(const OMPParallelDirective &s) {
     if (s.getTaskReductionRefExpr())
       getCIRGenModule().errorNYI(s.getBeginLoc(),
                                  "OpenMP Parallel with Task Reduction");
-
-    res = emitStmt(s.getAssociatedStmt(), /*useCurrentScope=*/true);
-
+    // Don't lower the captured statement directly since this will be
+    // special-cased depending on the kind of OpenMP directive that is the
+    // parent, also the non-OpenMP context captured statements lowering does
+    // not apply directly.
+    const CapturedStmt *cs = s.getCapturedStmt(llvm::omp::OMPD_parallel);
+    const Stmt *bodyStmt = cs->getCapturedStmt();
+    res = emitStmt(bodyStmt, /*useCurrentScope=*/true);
     mlir::omp::TerminatorOp::create(builder, end);
   }
   return res;

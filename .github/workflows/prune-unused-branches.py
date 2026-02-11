@@ -98,6 +98,26 @@ def generate_patches_for_all_branches(branches_to_remove: list[str], patches_pat
             )
 
 
+def delete_branches(branches_to_remove: list[str]):
+    for branch in branches_to_remove:
+        # TODO(boomanaiden154): Only delete my branches for now to verify that
+        # everything is working in the production environment.
+        if "boomanaiden154" not in branch:
+            continue
+        command_vector = ["git", "push", "-d", "origin", branch]
+        try:
+            subprocess.run(
+                command_vector,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+            )
+        except subprocess.CalledProcessError as process_error:
+            print(process_error.stderr)
+            print(process_error.stdout)
+        print(f"Deleted branch {branch}")
+
+
 def main(github_token):
     if len(sys.argv) != 2:
         print(
@@ -114,6 +134,7 @@ def main(github_token):
     )
     print(f"Deleting {len(user_branches_to_remove)} user branches.")
     generate_patches_for_all_branches(user_branches_to_remove, sys.argv[1])
+    delete_branches(user_branches_to_remove)
 
 
 if __name__ == "__main__":

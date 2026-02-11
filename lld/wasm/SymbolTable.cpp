@@ -268,7 +268,9 @@ DefinedGlobal *SymbolTable::addSyntheticGlobal(StringRef name, uint32_t flags,
 DefinedGlobal *SymbolTable::addOptionalGlobalSymbol(StringRef name,
                                                     InputGlobal *global) {
   Symbol *s = find(name);
-  if (!s || s->isDefined())
+  if (!s && (ctx.arg.exportAll || ctx.arg.exportedSymbols.contains(name)))
+    s = insertName(name).first;
+  else if (!s || s->isDefined())
     return nullptr;
   LLVM_DEBUG(dbgs() << "addOptionalGlobalSymbol: " << name << " -> " << global
                     << "\n");
@@ -736,7 +738,7 @@ Symbol *SymbolTable::addUndefinedGlobal(StringRef name,
   else if (s->isDefined())
     checkGlobalType(s, file, type);
   else
-    updateExistingUndefined(s, flags, file);
+    updateExistingUndefined(s, flags, file, importName, importModule);
   return s;
 }
 
@@ -762,7 +764,7 @@ Symbol *SymbolTable::addUndefinedTable(StringRef name,
   else if (s->isDefined())
     checkTableType(s, file, type);
   else
-    updateExistingUndefined(s, flags, file);
+    updateExistingUndefined(s, flags, file, importName, importModule);
   return s;
 }
 
@@ -788,7 +790,7 @@ Symbol *SymbolTable::addUndefinedTag(StringRef name,
   else if (s->isDefined())
     checkTagType(s, file, sig);
   else
-    updateExistingUndefined(s, flags, file);
+    updateExistingUndefined(s, flags, file, importName, importModule);
   return s;
 }
 

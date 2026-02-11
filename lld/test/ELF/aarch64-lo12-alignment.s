@@ -1,6 +1,6 @@
 // REQUIRES: aarch64
 // RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t
-// RUN: not ld.lld %t -o /dev/null 2>&1 | FileCheck %s
+// RUN: not ld.lld %t -o /dev/null 2>&1 | FileCheck %s --implicit-check-not=error:
 
 // Test derived from a typical ODR violation where a global is declared
 // extern int but defined as a half or byte sized type.
@@ -39,7 +39,7 @@ foo4:
 foo8:
  .space 8
 
-// CHECK: improper alignment for relocation R_AARCH64_LDST16_ABS_LO12_NC: 0x220181 is not aligned to 2 bytes
-// CHECK-NEXT: improper alignment for relocation R_AARCH64_LDST32_ABS_LO12_NC: 0x220182 is not aligned to 4 bytes
-// CHECK-NEXT: improper alignment for relocation R_AARCH64_LDST64_ABS_LO12_NC: 0x220184 is not aligned to 8 bytes
-// CHECK-NEXT: improper alignment for relocation R_AARCH64_LDST128_ABS_LO12_NC: 0x220188 is not aligned to 16 bytes
+// CHECK: error: {{.*}}:(.text+0x4): improper alignment for relocation R_AARCH64_LDST16_ABS_LO12_NC: 0x220181 is not aligned to 2 bytes
+// CHECK: error: {{.*}}:(.text+0xc): improper alignment for relocation R_AARCH64_LDST32_ABS_LO12_NC: 0x220182 is not aligned to 4 bytes
+// CHECK: error: {{.*}}:(.text+0x14): improper alignment for relocation R_AARCH64_LDST64_ABS_LO12_NC: 0x220184 is not aligned to 8 bytes
+// CHECK: error: {{.*}}:(.text+0x1c): improper alignment for relocation R_AARCH64_LDST128_ABS_LO12_NC: 0x220188 is not aligned to 16 bytes
