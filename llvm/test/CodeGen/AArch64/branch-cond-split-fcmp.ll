@@ -216,20 +216,19 @@ bb4:
 define i64 @test_or_fast(float %a, float %b) {
 ; CHECK-SD-LABEL: test_or_fast:
 ; CHECK-SD:       // %bb.0: // %bb1
-; CHECK-SD-NEXT:    movi d2, #0000000000000000
-; CHECK-SD-NEXT:    fcmp s1, #0.0
-; CHECK-SD-NEXT:    fccmp s0, s2, #0, eq
-; CHECK-SD-NEXT:    cset w8, eq
-; CHECK-SD-NEXT:    tbnz w8, #0, .LBB4_2
-; CHECK-SD-NEXT:  // %bb.1:
+; CHECK-SD-NEXT:    fcmp s0, #0.0
 ; CHECK-SD-NEXT:    mov x0, xzr
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB4_2: // %bb4
+; CHECK-SD-NEXT:    b.ne .LBB4_3
+; CHECK-SD-NEXT:  // %bb.1: // %bb1
+; CHECK-SD-NEXT:    fcmp s1, #0.0
+; CHECK-SD-NEXT:    b.ne .LBB4_3
+; CHECK-SD-NEXT:  // %bb.2: // %bb4
 ; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    bl bar
 ; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-SD-NEXT:  .LBB4_3: // %common.ret
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_or_fast:
@@ -267,20 +266,18 @@ define i64 @test_or_select_fast (float %a, float %b) {
 ; CHECK-SD-LABEL: test_or_select_fast:
 ; CHECK-SD:       // %bb.0: // %bb1
 ; CHECK-SD-NEXT:    fcmp s0, #0.0
-; CHECK-SD-NEXT:    cset w8, ne
-; CHECK-SD-NEXT:    fcmp s1, #0.0
-; CHECK-SD-NEXT:    cset w9, ne
-; CHECK-SD-NEXT:    orr w8, w8, w9
-; CHECK-SD-NEXT:    tbz w8, #0, .LBB5_2
-; CHECK-SD-NEXT:  // %bb.1:
 ; CHECK-SD-NEXT:    mov x0, xzr
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB5_2: // %bb4
+; CHECK-SD-NEXT:    b.ne .LBB5_3
+; CHECK-SD-NEXT:  // %bb.1: // %bb1
+; CHECK-SD-NEXT:    fcmp s1, #0.0
+; CHECK-SD-NEXT:    b.ne .LBB5_3
+; CHECK-SD-NEXT:  // %bb.2: // %bb4
 ; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    bl bar
 ; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-SD-NEXT:  .LBB5_3: // %common.ret
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_or_select_fast:
@@ -317,20 +314,19 @@ bb4:
 define i64 @test_and_fast(float %a, float %b) {
 ; CHECK-SD-LABEL: test_and_fast:
 ; CHECK-SD:       // %bb.0: // %bb1
-; CHECK-SD-NEXT:    movi d2, #0000000000000000
+; CHECK-SD-NEXT:    fcmp s0, #0.0
+; CHECK-SD-NEXT:    mov x0, xzr
+; CHECK-SD-NEXT:    b.ne .LBB6_3
+; CHECK-SD-NEXT:  // %bb.1: // %bb1
 ; CHECK-SD-NEXT:    fcmp s1, #0.0
-; CHECK-SD-NEXT:    fccmp s0, s2, #0, eq
-; CHECK-SD-NEXT:    cset w8, eq
-; CHECK-SD-NEXT:    tbz w8, #0, .LBB6_2
-; CHECK-SD-NEXT:  // %bb.1: // %bb4
+; CHECK-SD-NEXT:    b.ne .LBB6_3
+; CHECK-SD-NEXT:  // %bb.2: // %bb4
 ; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    bl bar
 ; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB6_2:
-; CHECK-SD-NEXT:    mov x0, xzr
+; CHECK-SD-NEXT:  .LBB6_3: // %common.ret
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_and_fast:
@@ -371,20 +367,18 @@ define i64 @test_and_select_fast(float %a, float %b) {
 ; CHECK-SD-LABEL: test_and_select_fast:
 ; CHECK-SD:       // %bb.0: // %bb1
 ; CHECK-SD-NEXT:    fcmp s0, #0.0
-; CHECK-SD-NEXT:    cset w8, eq
+; CHECK-SD-NEXT:    mov x0, xzr
+; CHECK-SD-NEXT:    b.ne .LBB7_3
+; CHECK-SD-NEXT:  // %bb.1: // %bb1
 ; CHECK-SD-NEXT:    fcmp s1, #0.0
-; CHECK-SD-NEXT:    cset w9, eq
-; CHECK-SD-NEXT:    and w8, w8, w9
-; CHECK-SD-NEXT:    tbz w8, #0, .LBB7_2
-; CHECK-SD-NEXT:  // %bb.1: // %bb4
+; CHECK-SD-NEXT:    b.ne .LBB7_3
+; CHECK-SD-NEXT:  // %bb.2: // %bb4
 ; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    bl bar
 ; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB7_2:
-; CHECK-SD-NEXT:    mov x0, xzr
+; CHECK-SD-NEXT:  .LBB7_3: // %common.ret
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_and_select_fast:
