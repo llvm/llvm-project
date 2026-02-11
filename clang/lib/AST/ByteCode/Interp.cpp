@@ -1260,7 +1260,8 @@ static bool runRecordDestructor(InterpState &S, CodePtr OpPC,
   const Record *R = Desc->ElemRecord;
   assert(R);
 
-  if (S.Current->hasThisPointer() && S.Current->getFunction()->isDestructor() &&
+  if (!S.Current->isBottomFrame() && S.Current->hasThisPointer() &&
+      S.Current->getFunction()->isDestructor() &&
       Pointer::pointToSameBlock(BasePtr, S.Current->getThis())) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_double_destroy);

@@ -113,3 +113,28 @@ func.func @make_isolated_from_above_multiple_blocks(%arg0 : index, %arg1 : index
 //  CLONE2-NEXT:       cf.br ^bb1
 //       CLONE2:     ^bb1:
 //       CLONE2:       "foo.yield"(%[[C0]], %[[C1]], %[[D0]], %[[D1]], %[[B0]])
+
+
+// -----
+
+// CHECK-LABEL: func @make_isolated_from_above_nested_region
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: memref<8xindex>
+//       CHECK:   %[[C1:.+]] = arith.constant 1 : index
+//       CHECK:   %[[C8:.+]] = arith.constant 8 : index
+//       CHECK:   test.isolated_one_region_op %[[C1]], %[[ARG0]], %[[C8]]
+//       CHECK:   ^bb0(%[[B0:[a-zA-Z0-9]+]]: index, %[[B1:[a-zA-Z0-9]+]]: memref<8xindex>, %[[B2:[a-zA-Z0-9]+]]: index)
+//       CHECK:     scf.for %arg4 = %[[B0]] to %[[B2]] step %[[B0]]
+//       CHECK:       memref.store %[[B0]], %[[B1]][%arg4] : memref<8xindex>
+//       CHECK:     "foo.yield"() : () -> ()
+
+func.func @make_isolated_from_above_nested_region(%arg0 : memref<8xindex>) {
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  "test.one_region_with_operands_op"() ({
+    scf.for %arg1 = %c1 to %c8 step %c1 {
+      memref.store %c1, %arg0[%arg1] : memref<8xindex>
+    }
+    "foo.yield"() : () -> ()
+  }) : () -> ()
+  return
+}
