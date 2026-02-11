@@ -1334,8 +1334,17 @@ uptr SizeClassAllocator64<Config>::releaseToOS(ReleaseToOS ReleaseType) {
     if (I == SizeClassMap::BatchClassId)
       continue;
     RegionInfo *Region = getRegionInfo(I);
-    ScopedLock L(Region->MMLock);
-    TotalReleasedBytes += releaseToOSMaybe(Region, I, ReleaseType);
+    if (ReleaseType == ReleaseToOS::ForceFast) {
+      // Never wait for the lock, always move on if there is already
+      // a release operation in progress.
+      if (Region->MMLock.tryLock()) {
+        TotalReleasedBytes += releaseToOSMaybe(Region, I, ReleaseType);
+        Region->MMLock.unlock();
+      }
+    } else {
+      ScopedLock L(Region->MMLock);
+      TotalReleasedBytes += releaseToOSMaybe(Region, I, ReleaseType);
+    }
   }
   return TotalReleasedBytes;
 }
