@@ -28,23 +28,17 @@ filegroup(
 
 filegroup(
     name = "ExecutionEnginePyFiles",
-    srcs = [
-        "mlir/execution_engine.py",
-    ],
+    srcs = ["mlir/execution_engine.py"],
 )
 
 filegroup(
     name = "ExecutionEnginePyIFiles",
-    srcs = [
-        "mlir/_mlir_libs/_mlirExecutionEngine.pyi",
-    ],
+    srcs = ["mlir/_mlir_libs/_mlirExecutionEngine.pyi"],
 )
 
 filegroup(
     name = "IRPyFiles",
-    srcs = [
-        "mlir/ir.py",
-    ],
+    srcs = ["mlir/ir.py"],
 )
 
 filegroup(
@@ -63,16 +57,12 @@ filegroup(
 
 filegroup(
     name = "PassManagerPyFiles",
-    srcs = [
-        "mlir/passmanager.py",
-    ],
+    srcs = ["mlir/passmanager.py"],
 )
 
 filegroup(
     name = "RewritePyFiles",
-    srcs = [
-        "mlir/rewrite.py",
-    ],
+    srcs = ["mlir/rewrite.py"],
 )
 
 filegroup(
@@ -125,9 +115,7 @@ filegroup(
 
 td_library(
     name = "BuiltinOpsPyTdFiles",
-    srcs = [
-        "mlir/dialects/BuiltinOps.td",
-    ],
+    srcs = ["mlir/dialects/BuiltinOps.td"],
     deps = [
         "//mlir:BuiltinDialectTdFiles",
         "//mlir:FunctionInterfacesTdFiles",
@@ -184,9 +172,7 @@ gentbl_filegroup(
     },
     tblgen = "//mlir:mlir-tblgen",
     td_file = "mlir/dialects/AMDGPUOps.td",
-    deps = [
-        ":AMDGPUOpsPyTdFiles",
-    ],
+    deps = [":AMDGPUOpsPyTdFiles"],
 )
 
 filegroup(
@@ -203,9 +189,7 @@ filegroup(
 
 td_library(
     name = "LinalgOpsPyTdFiles",
-    srcs = [
-        "mlir/dialects/LinalgOps.td",
-    ],
+    srcs = ["mlir/dialects/LinalgOps.td"],
     deps = [
         "//mlir:LinalgOpsTdFiles",
         "//mlir:LinalgStructuredOpsTdFiles",
@@ -227,16 +211,12 @@ gentbl_filegroup(
     },
     tblgen = "//mlir:mlir-tblgen",
     td_file = "mlir/dialects/LinalgOps.td",
-    deps = [
-        ":LinalgOpsPyTdFiles",
-    ],
+    deps = [":LinalgOpsPyTdFiles"],
 )
 
 filegroup(
     name = "LinalgOpsPyFiles",
-    srcs = [
-        ":LinalgOpsPyGen",
-    ],
+    srcs = [":LinalgOpsPyGen"],
 )
 
 filegroup(
@@ -316,9 +296,7 @@ gentbl_filegroup(
 
 filegroup(
     name = "AsyncOpsPyFiles",
-    srcs = [
-        ":AsyncOpsPyGen",
-    ],
+    srcs = [":AsyncOpsPyGen"],
 )
 
 filegroup(
@@ -524,6 +502,34 @@ filegroup(
 )
 
 ##---------------------------------------------------------------------------##
+# X86Vector dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "X86VectorPyGen",
+    tbl_outs = {
+        "mlir/dialects/_x86vector_ops_gen.py": [
+            "-gen-python-op-bindings",
+            "-bind-dialect=x86vector",
+        ],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/X86Vector.td",
+    deps = [
+        "//mlir:OpBaseTdFiles",
+        "//mlir:X86VectorTdFiles",
+    ],
+)
+
+filegroup(
+    name = "X86VectorPyFiles",
+    srcs = [
+        "mlir/dialects/x86vector.py",
+        ":X86VectorPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
 # IRDL dialect.
 ##---------------------------------------------------------------------------##
 
@@ -707,9 +713,7 @@ gentbl_filegroup(
 
 filegroup(
     name = "PDLPyIFiles",
-    srcs = [
-        "mlir/_mlir_libs/_mlir/dialects/pdl.pyi",
-    ],
+    srcs = ["mlir/_mlir_libs/_mlir/dialects/pdl.pyi"],
 )
 
 filegroup(
@@ -804,16 +808,12 @@ filegroup(
 
 filegroup(
     name = "QuantPyIFiles",
-    srcs = [
-        "mlir/_mlir_libs/_mlir/dialects/quant.pyi",
-    ],
+    srcs = ["mlir/_mlir_libs/_mlir/dialects/quant.pyi"],
 )
 
 filegroup(
     name = "QuantPyFiles",
-    srcs = [
-        "mlir/dialects/quant.py",
-    ],
+    srcs = ["mlir/dialects/quant.py"],
 )
 
 ##---------------------------------------------------------------------------##
@@ -844,16 +844,12 @@ gentbl_filegroup(
     },
     tblgen = "//mlir:mlir-tblgen",
     td_file = "mlir/dialects/GPUOps.td",
-    deps = [
-        ":GPUOpsPyTdFiles",
-    ],
+    deps = [":GPUOpsPyTdFiles"],
 )
 
 filegroup(
     name = "GPUOpsPyFiles",
-    srcs = [
-        ":GPUOpsPyGen",
-    ],
+    srcs = [":GPUOpsPyGen"],
 )
 
 filegroup(
@@ -895,9 +891,7 @@ gentbl_filegroup(
     },
     tblgen = "//mlir:mlir-tblgen",
     td_file = "mlir/dialects/NVGPUOps.td",
-    deps = [
-        ":NVGPUOpsPyTdFiles",
-    ],
+    deps = [":NVGPUOpsPyTdFiles"],
 )
 
 filegroup(
@@ -936,9 +930,7 @@ gentbl_filegroup(
     },
     tblgen = "//mlir:mlir-tblgen",
     td_file = "mlir/dialects/NVVMOps.td",
-    deps = [
-        ":NVVMOpsPyTdFiles",
-    ],
+    deps = [":NVVMOpsPyTdFiles"],
 )
 
 filegroup(
@@ -1133,9 +1125,7 @@ gentbl_filegroup(
     },
     tblgen = "//mlir:mlir-tblgen",
     td_file = "mlir/dialects/SMTOps.td",
-    deps = [
-        ":SMTOpsPyTdFiles",
-    ],
+    deps = [":SMTOpsPyTdFiles"],
 )
 
 filegroup(
@@ -1329,6 +1319,20 @@ gentbl_filegroup(
     td_file = "mlir/dialects/BufferizationTransformOps.td",
     deps = [
         "//mlir:BufferizationTransformOpsTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "X86VectorTransformOpsPyGen",
+    tbl_outs = {"mlir/dialects/_x86vector_transform_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=transform",
+        "-dialect-extension=x86vector_transform",
+    ]},
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/X86VectorTransformOps.td",
+    deps = [
+        "//mlir:X86VectorTransformOpsTdFiles",
     ],
 )
 
@@ -1542,6 +1546,7 @@ filegroup(
         ":TransformSMTExtensionOpsPyGen",
         ":VectorTransformEnumPyGen",
         ":VectorTransformOpsPyGen",
+        ":X86VectorTransformOpsPyGen",
         ":XeGPUTransformOpsPyGen",
     ],
 )
