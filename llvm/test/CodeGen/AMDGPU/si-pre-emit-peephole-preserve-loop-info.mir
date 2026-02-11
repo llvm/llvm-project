@@ -25,3 +25,28 @@ body: |
   bb.2:
     S_ENDPGM 0
 ...
+
+# CHECK-LABEL: Running pass: SIPreEmitPeepholePass on vcc_branch_destroys_loop
+# CHECK-NOT: Running analysis: MachineLoopAnalysis on vcc_branch_destroys_loop
+# CHECK: Machine loop info for machine function 'vcc_branch_destroys_loop':
+# CHECK-NOT: Loop at depth
+
+---
+name: vcc_branch_destroys_loop
+body: |
+  bb.0:
+    S_BRANCH %bb.1
+
+  ; After opt, S_CBRANCH_VCCZ becomes S_BRANCH %bb.3, S_BRANCH %bb.1 removed.
+  bb.1:
+    $vcc = S_MOV_B64 0
+    $vcc = S_AND_B64 $exec, $vcc, implicit-def dead $scc
+    S_CBRANCH_VCCZ %bb.3, implicit $vcc
+    S_BRANCH %bb.1
+
+  bb.2:
+    S_ENDPGM 0
+
+  bb.3:
+    S_ENDPGM 0
+...
