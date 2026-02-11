@@ -9,7 +9,7 @@
 /// \file
 /// This file contains the definition of the
 /// RegisterContextFreeBSDKernel_ppc64le class, which is used for reading
-/// registers from PCB on ppc64le kernel dump.
+/// registers from PCB in ppc64le kernel dump.
 ///
 //===----------------------------------------------------------------------===//
 
