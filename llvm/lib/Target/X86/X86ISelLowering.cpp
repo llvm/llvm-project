@@ -18367,9 +18367,17 @@ static SDValue lower1BitShuffle(const SDLoc &DL, ArrayRef<int> Mask,
     return Zeroable[M.index()] || (M.value() == (int)M.index());
   });
   if (IsBlendWithZero) {
-    EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
-    SDValue BlendMask = DAG.getConstant(~Zeroable, DL, IntVT);
-    return DAG.getNode(ISD::AND, DL, VT, V1, DAG.getBitcast(VT, BlendMask));
+    const unsigned Width = std::max<unsigned>(NumElts, 8u);
+    MVT IntVT = MVT::getIntegerVT(Width);
+
+    APInt MaskValue = (~Zeroable).zextOrTrunc(Width);
+    SDValue MaskNode = DAG.getConstant(MaskValue, DL, IntVT);
+
+    MVT MaskVecVT = MVT::getVectorVT(MVT::i1, Width);
+    SDValue MaskVecNode = DAG.getBitcast(MaskVecVT, MaskNode);
+
+    SDValue MaskVec = DAG.getExtractSubvector(DL, VT, MaskVecNode, 0);
+    return DAG.getNode(ISD::AND, DL, VT, V1, MaskVec);
   }
 
   MVT ExtVT;
@@ -44980,6 +44988,9 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     case X86ISD::PCMPGT:
     case X86ISD::PMULUDQ:
     case X86ISD::PMULDQ:
+    case X86ISD::MULHRS:
+    case X86ISD::VPMADDUBSW:
+    case X86ISD::VPMADDWD:
     case X86ISD::VSHLV:
     case X86ISD::VSRLV:
     case X86ISD::VSRAV:
@@ -58562,7 +58573,11 @@ static bool needCarryOrOverflowFlag(SDValue Flags) {
 static bool onlyZeroFlagUsed(SDValue Flags) {
   assert(Flags.getValueType() == MVT::i32 && "Unexpected VT!");
 
-  for (const SDNode *User : Flags->users()) {
+  for (const SDUse &Use : Flags->uses()) {
+    // Only check things that use the flags.
+    if (Use.getResNo() != Flags.getResNo())
+      continue;
+    const SDNode *User = Use.getUser();
     unsigned CCOpNo;
     switch (User->getOpcode()) {
     default:

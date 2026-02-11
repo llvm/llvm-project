@@ -10808,7 +10808,7 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
                                        DAG.getConstant(ShiftAmt, DL, XLenVT));
       SDValue Mask = DAG.getConstant(PosMask, DL, XLenVT);
       SDValue Result =
-          DAG.getNode(RISCVISD::MVM, DL, XLenVT, Vec, ShiftedVal, Mask);
+          DAG.getNode(RISCVISD::MERGE, DL, XLenVT, Mask, Vec, ShiftedVal);
       return DAG.getBitcast(VecVT, Result);
     }
 
@@ -19274,9 +19274,8 @@ static SDValue performVP_REVERSECombine(SDNode *N, SelectionDAG &DAG,
   // If Mask is all ones, then load is unmasked and can be reversed.
   if (!isOneOrOneSplat(LoadMask)) {
     // If the mask is not all ones, we can reverse the load if the mask was also
-    // reversed by an unmasked vp.reverse with the same EVL.
+    // reversed by a vp.reverse with the same EVL.
     if (LoadMask.getOpcode() != ISD::EXPERIMENTAL_VP_REVERSE ||
-        !isOneOrOneSplat(LoadMask.getOperand(1)) ||
         LoadMask.getOperand(2) != VPLoad->getVectorLength())
       return SDValue();
     LoadMask = LoadMask.getOperand(0);
@@ -19334,9 +19333,8 @@ static SDValue performVP_STORECombine(SDNode *N, SelectionDAG &DAG,
   // If Mask is all ones, then load is unmasked and can be reversed.
   if (!isOneOrOneSplat(StoreMask)) {
     // If the mask is not all ones, we can reverse the store if the mask was
-    // also reversed by an unmasked vp.reverse with the same EVL.
+    // also reversed by a vp.reverse with the same EVL.
     if (StoreMask.getOpcode() != ISD::EXPERIMENTAL_VP_REVERSE ||
-        !isOneOrOneSplat(StoreMask.getOperand(1)) ||
         StoreMask.getOperand(2) != VPStore->getVectorLength())
       return SDValue();
     StoreMask = StoreMask.getOperand(0);

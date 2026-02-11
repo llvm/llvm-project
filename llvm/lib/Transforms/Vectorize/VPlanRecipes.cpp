@@ -2758,7 +2758,7 @@ void VPBlendRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
       if (I != 0)
         O << " ";
       getIncomingValue(I)->printAsOperand(O, SlotTracker);
-      if (I == 0)
+      if (I == 0 && isNormalized())
         continue;
       O << "/";
       getMask(I)->printAsOperand(O, SlotTracker);
