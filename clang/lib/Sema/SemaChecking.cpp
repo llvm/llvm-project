@@ -2200,7 +2200,7 @@ checkMathBuiltinElementType(Sema &S, SourceLocation Loc, QualType ArgTy,
     }
     break;
   case Sema::EltwiseBuiltinArgTyRestriction::SignedIntOrFloatTy:
-    if (EltTy->isUnsignedIntegerType()) {
+    if (!EltTy->isSignedIntegerType() && !EltTy->isRealFloatingType()) {
       return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
              << 1 << /* scalar or vector */ 5 << /* signed int */ 2
              << /* or fp */ 1 << ArgTy;

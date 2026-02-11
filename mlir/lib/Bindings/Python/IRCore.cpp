@@ -2517,9 +2517,8 @@ void PyOpAdaptor::bind(nb::module_ &m) {
 static MlirLogicalResult verifyTraitByMethod(MlirOperation op, void *userData,
                                              const char *methodName) {
   nb::handle targetObj(static_cast<PyObject *>(userData));
-  if (!nb::hasattr(targetObj, methodName)) {
+  if (!nb::hasattr(targetObj, methodName))
     return mlirLogicalResultSuccess();
-  }
   PyMlirContextRef ctx = PyMlirContext::forContext(mlirOperationGetContext(op));
   nb::object opView = PyOperation::forOperation(ctx, op)->createOpView();
   bool success = nb::cast<bool>(targetObj.attr(methodName)(opView));
@@ -2544,10 +2543,11 @@ static bool attachOpTrait(const nb::object &opName, MlirDynamicOpTrait trait,
 bool PyDynamicOpTrait::attach(const nb::object &opName,
                               const nb::object &target,
                               PyMlirContext &context) {
-  if (!nb::hasattr(target, "verify") && !nb::hasattr(target, "verify_region"))
+  if (!nb::hasattr(target, "verify_invariants") &&
+      !nb::hasattr(target, "verify_region_invariants"))
     throw nb::type_error(
-        "the target object must have at least one of 'verify' or "
-        "'verify_region' methods");
+        "the target object must have at least one of 'verify_invariants' or "
+        "'verify_region_invariants' methods");
 
   MlirDynamicOpTraitCallbacks callbacks;
   callbacks.construct = [](void *userData) {
@@ -2559,13 +2559,15 @@ bool PyDynamicOpTrait::attach(const nb::object &opName,
 
   callbacks.verifyTrait = [](MlirOperation op,
                              void *userData) -> MlirLogicalResult {
-    return verifyTraitByMethod(op, userData, "verify");
+    return verifyTraitByMethod(op, userData, "verify_invariants");
   };
   callbacks.verifyRegionTrait = [](MlirOperation op,
                                    void *userData) -> MlirLogicalResult {
-    return verifyTraitByMethod(op, userData, "verify_region");
+    return verifyTraitByMethod(op, userData, "verify_region_invariants");
   };
 
+  // To ensure that the same dynamic trait gets the same TypeID despite how many
+  // times `attach` is called, we store it as an attribute on the target class.
   constexpr const char *typeIDAttr = "_TYPE_ID";
   if (!nb::hasattr(target, typeIDAttr)) {
     nb::setattr(target, typeIDAttr,
@@ -2593,7 +2595,7 @@ void PyDynamicOpTrait::bind(nb::module_ &m) {
 
 bool PyDynamicOpTraits::IsTerminator::attach(const nb::object &opName,
                                              PyMlirContext &context) {
-  MlirDynamicOpTrait trait = mlirDynamicOpTraitGetIsTerminator();
+  MlirDynamicOpTrait trait = mlirDynamicOpTraitIsTerminatorCreate();
   return attachOpTrait(opName, trait, context);
 }
 
@@ -2611,7 +2613,7 @@ void PyDynamicOpTraits::IsTerminator::bind(nb::module_ &m) {
 
 bool PyDynamicOpTraits::NoTerminator::attach(const nb::object &opName,
                                              PyMlirContext &context) {
-  MlirDynamicOpTrait trait = mlirDynamicOpTraitGetNoTerminator();
+  MlirDynamicOpTrait trait = mlirDynamicOpTraitNoTerminatorCreate();
   return attachOpTrait(opName, trait, context);
 }
 
