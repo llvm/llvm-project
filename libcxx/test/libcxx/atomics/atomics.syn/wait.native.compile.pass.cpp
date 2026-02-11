@@ -9,6 +9,9 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-threads
 
+// when __has_native_atomic_wait is true, atomic object's address will be directly passed to platform's wait.
+// This test ensures that types that do not satisfy platform's wait requirement should not be __has_native_atomic_wait.
+
 #include <atomic>
 #include <cstddef>
 #include <type_traits>
@@ -30,6 +33,8 @@ static_assert(!std::__has_native_atomic_wait<Data<4, 8>>,
               "Object with !has_unique_object_representations_v should not have native wait");
 
 static_assert(!std::__has_native_atomic_wait<Data<1, 1>>, "Should only support native wait for 4 and 8 byte types");
+
+// `__ulock_wait` requires the address is aligned to the requested size (4 or 8)
 
 static_assert(!std::__has_native_atomic_wait<Data<4, 1>>,
               "Should only support native wait for types with properly aligned types");
