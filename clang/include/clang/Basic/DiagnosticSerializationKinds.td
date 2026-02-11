@@ -29,6 +29,10 @@ def note_ast_file_rebuild_required
     : Note<"please rebuild precompiled file '%0'">;
 def note_module_cache_path : Note<
     "after modifying system headers, please delete the module cache at '%0'">;
+def note_ast_file_input_files_validation_status : Note<"input file validation "
+    "%select{has not been started|is disabled for this kind of module|"
+    "has already been done in the current build session|"
+    "has covered only user files|has covered all files}0">;
 
 def err_ast_file_targetopt_mismatch : Error<
     "precompiled file '%0' was compiled for the %1 '%2' but the current translation "

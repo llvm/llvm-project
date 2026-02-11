@@ -9,3 +9,4 @@
 int foo = 0; // redefinition of 'foo'
 // CHECK: fatal error: file {{.*}} has been modified since the module file {{.*}} was built
 // CHECK: note: please rebuild precompiled file
+// CHECK: note: input file validation is disabled for this kind of module
