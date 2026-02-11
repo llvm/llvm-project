@@ -14,6 +14,7 @@
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
+#include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/IR/AffineMap.h"
@@ -1532,8 +1533,9 @@ struct VectorBroadcastDistribution : public gpu::WarpDistributionPattern {
       }
       // case 2: source and result have same rank
       if (rankDiff == 0) {
-        SetVector<int64_t> broadcastUnitDims =
-            broadcastOp.computeBroadcastedUnitDims();
+        auto broadcastUnitDimsSet = broadcastOp.computeBroadcastedUnitDims();
+        SmallVector<int64_t> broadcastUnitDims(broadcastUnitDimsSet.begin(),
+                                               broadcastUnitDimsSet.end());
         bool isEqualTo = sourceLayout.isEqualTo(resultLayout);
         if (!isEqualTo)
           return rewriter.notifyMatchFailure(
@@ -1755,8 +1757,11 @@ struct VectorInsertStridedSliceDistribution
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    OpOperand *operand =
-        getWarpResult(warpOp, llvm::IsaPred<vector::InsertStridedSliceOp>);
+    OpOperand *operand = getWarpResult(warpOp, [&](Operation *op) {
+      // Check if the InsertStridedSliceOp is the last op before yield op
+      return llvm::IsaPred<vector::InsertStridedSliceOp>(op) &&
+             warpOp.getTerminator()->getPrevNode() == op;
+    });
     if (!operand)
       return failure();
     unsigned int operandNumber = operand->getOperandNumber();

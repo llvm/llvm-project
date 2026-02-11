@@ -99,7 +99,6 @@ static constexpr CustomOperand MsgOperands[] = {
   {{"MSG_EARLY_PRIM_DEALLOC"},  ID_EARLY_PRIM_DEALLOC,      isGFX9_GFX10},
   {{"MSG_GS_ALLOC_REQ"},        ID_GS_ALLOC_REQ,            isGFX9Plus},
   {{"MSG_GET_DOORBELL"},        ID_GET_DOORBELL,            isGFX9_GFX10},
-  {{"MSG_SAVEWAVE_HAS_TDM"},    ID_SAVEWAVE_HAS_TDM,        isGFX1250Plus},
   {{"MSG_GET_DDID"},            ID_GET_DDID,                isGFX10},
   {{"MSG_SYSMSG"},              ID_SYSMSG},
   {{"MSG_RTN_GET_DOORBELL"},    ID_RTN_GET_DOORBELL,        isGFX11Plus},
@@ -112,6 +111,7 @@ static constexpr CustomOperand MsgOperands[] = {
   {{"MSG_RTN_GET_SE_AID_ID"},   ID_RTN_GET_SE_AID_ID,       isGFX12Plus},
   {{"MSG_RTN_GET_CLUSTER_BARRIER_STATE"}, ID_RTN_GET_CLUSTER_BARRIER_STATE,
                                                             isGFX1250Plus},
+  {{"MSG_RTN_SAVE_WAVE_HAS_TDM"}, ID_RTN_SAVE_WAVE_HAS_TDM, isGFX1250Plus}
 };
 
 static constexpr CustomOperand SysMsgOperands[] = {
@@ -155,6 +155,26 @@ StringRef getMsgOpName(int64_t MsgId, uint64_t Encoding,
 }
 
 } // namespace SendMsg
+
+namespace WaitEvent {
+
+// clang-format off
+static constexpr CustomOperand WaitEventOperands[] = {
+  {{"{ export_ready: 0 }"},           0,                      isGFX12Plus},
+  {{"{ dont_wait_export_ready: 0 }"}, 0,                      isGFX11},
+  {{"{ dont_wait_export_ready: 1 }"}, DONT_WAIT_EXPORT_READY, isGFX11},
+  {{"{ export_ready: 1 }"},           EXPORT_READY,           isGFX12Plus}
+};
+// clang-format on
+
+int64_t getWaitEventMask(StringRef Name, const MCSubtargetInfo &STI) {
+  return getEncodingFromOperandTable(WaitEventOperands, Name, STI);
+}
+
+StringRef getWaitEventMaskName(uint64_t Encoding, const MCSubtargetInfo &STI) {
+  return getNameFromOperandTable(WaitEventOperands, Encoding, STI);
+}
+} // namespace WaitEvent
 
 namespace Hwreg {
 

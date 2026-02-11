@@ -279,23 +279,25 @@ class SourceLocation(Structure):
     """
 
     _fields_ = [("ptr_data", c_void_p * 2), ("int_data", c_uint)]
-    _data = None
+    _data: tuple[File | None, int, int, int] | None = None
 
-    def _get_instantiation(self):
+    def _get_instantiation(self) -> tuple[File | None, int, int, int]:
         if self._data is None:
             f, l, c, o = c_object_p(), c_uint(), c_uint(), c_uint()
             conf.lib.clang_getInstantiationLocation(
                 self, byref(f), byref(l), byref(c), byref(o)
             )
             if f:
-                f = File(f)
+                file = File(f)
             else:
-                f = None
-            self._data = (f, int(l.value), int(c.value), int(o.value))
+                file = None
+            self._data = (file, int(l.value), int(c.value), int(o.value))
         return self._data
 
     @staticmethod
-    def from_position(tu, file, line, column):
+    def from_position(
+        tu: TranslationUnit, file: File, line: int, column: int
+    ) -> SourceLocation:
         """
         Retrieve the source location associated with a given file/line/column in
         a particular translation unit.
@@ -303,7 +305,7 @@ class SourceLocation(Structure):
         return conf.lib.clang_getLocation(tu, file, line, column)  # type: ignore [no-any-return]
 
     @staticmethod
-    def from_offset(tu, file, offset):
+    def from_offset(tu: TranslationUnit, file: File, offset: int) -> SourceLocation:
         """Retrieve a SourceLocation from a given character offset.
 
         tu -- TranslationUnit file belongs to
@@ -313,36 +315,36 @@ class SourceLocation(Structure):
         return conf.lib.clang_getLocationForOffset(tu, file, offset)  # type: ignore [no-any-return]
 
     @property
-    def file(self):
+    def file(self) -> File | None:
         """Get the file represented by this source location."""
         return self._get_instantiation()[0]
 
     @property
-    def line(self):
+    def line(self) -> int:
         """Get the line represented by this source location."""
         return self._get_instantiation()[1]
 
     @property
-    def column(self):
+    def column(self) -> int:
         """Get the column represented by this source location."""
         return self._get_instantiation()[2]
 
     @property
-    def offset(self):
+    def offset(self) -> int:
         """Get the file offset represented by this source location."""
         return self._get_instantiation()[3]
 
     @property
-    def is_in_system_header(self):
+    def is_in_system_header(self) -> bool:
         """Returns true if the given source location is in a system header."""
         return bool(conf.lib.clang_Location_isInSystemHeader(self))
 
-    def __eq__(self, other):
-        return isinstance(other, SourceLocation) and bool(
-            conf.lib.clang_equalLocations(self, other)
-        )
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, SourceLocation):
+            return NotImplemented
+        return bool(conf.lib.clang_equalLocations(self, other))
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
     def __lt__(self, other: SourceLocation) -> bool:
@@ -351,7 +353,7 @@ class SourceLocation(Structure):
     def __le__(self, other: SourceLocation) -> bool:
         return self < other or self == other
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.file:
             filename = self.file.name
         else:
@@ -374,11 +376,11 @@ class SourceRange(Structure):
     # FIXME: Eliminate this and make normal constructor? Requires hiding ctypes
     # object.
     @staticmethod
-    def from_locations(start, end):
+    def from_locations(start: SourceLocation, end: SourceLocation) -> SourceRange:
         return conf.lib.clang_getRange(start, end)  # type: ignore [no-any-return]
 
     @property
-    def start(self):
+    def start(self) -> SourceLocation:
         """
         Return a SourceLocation representing the first character within a
         source range.
@@ -386,29 +388,29 @@ class SourceRange(Structure):
         return conf.lib.clang_getRangeStart(self)  # type: ignore [no-any-return]
 
     @property
-    def end(self):
+    def end(self) -> SourceLocation:
         """
         Return a SourceLocation representing the last character within a
         source range.
         """
         return conf.lib.clang_getRangeEnd(self)  # type: ignore [no-any-return]
 
-    def __eq__(self, other):
-        return isinstance(other, SourceRange) and bool(
-            conf.lib.clang_equalRanges(self, other)
-        )
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, SourceRange):
+            return NotImplemented
+        return bool(conf.lib.clang_equalRanges(self, other))
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def __contains__(self, other):
+    def __contains__(self, other: object) -> bool:
         """Useful to detect the Token/Lexer bug"""
         if not isinstance(other, SourceLocation):
             return False
         return self.start <= other <= self.end
 
-    def __repr__(self):
-        return f"<SourceRange start {self.start!r}, end {self.end!r}>"
+    def __repr__(self) -> str:
+        return "<SourceRange start %r, end %r>" % (self.start, self.end)
 
 
 class Diagnostic:

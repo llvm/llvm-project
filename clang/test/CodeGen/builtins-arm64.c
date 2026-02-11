@@ -111,6 +111,11 @@ void range_prefetch_x(void) {
   // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 0, i32 0, i64 0)
 }
 
+void read_intent_prefetch() {
+  // CHECK: call {{.*}} @llvm.aarch64.prefetch.ir(ptr null)
+  __builtin_arm_prefetch_ir(0);
+}
+
 __attribute__((target("v8.5a")))
 int32_t jcvt(double v) {
   //CHECK-LABEL: @jcvt(

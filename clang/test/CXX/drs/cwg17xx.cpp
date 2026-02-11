@@ -98,24 +98,7 @@ static_assert(__is_trivially_copyable(A), "");
 #endif
 } // namespace cwg1734
 
-namespace cwg1736 { // cwg1736: 3.9
-#if __cplusplus >= 201103L
-struct S {
-  template <class T> S(T t) {
-    struct L : S {
-      using S::S;
-    };
-    typename T::type value;
-    // since-cxx11-error@-1 {{type 'int' cannot be used prior to '::' because it has no members}}
-    //   since-cxx11-note@#cwg1736-l {{in instantiation of function template specialization 'cwg1736::S::S<int>' requested here}}
-    //   since-cxx11-note@#cwg1736-s {{in instantiation of function template specialization 'cwg1736::S::S<cwg1736::Q>' requested here}}
-    L l(value); // #cwg1736-l
-  }
-};
-struct Q { typedef int type; } q;
-S s(q); // #cwg1736-s
-#endif
-} // namespace cwg1736
+// cwg1736 is in cwg1736.cpp
 
 namespace cwg1738 { // cwg1738: sup P0136R1
 #if __cplusplus >= 201103L

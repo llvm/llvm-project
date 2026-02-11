@@ -53,5 +53,5 @@ float test_contract_on_pragma(float a, float b, float c) {
 // CHECK: fmul fast float {{%.+}}, {{%.+}}
 // CHECK: fadd reassoc nnan ninf nsz arcp afn float {{%.+}}, {{%.+}}
 
-// CHECK: attributes [[FAST_ATTRS]] = { {{.*}}"no-infs-fp-math"="true" {{.*}}"no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true"{{.*}} }
-// CHECK: attributes [[PRECISE_ATTRS]] = { {{.*}}"no-infs-fp-math"="false" {{.*}}"no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false"{{.*}} }
+// CHECK: attributes [[FAST_ATTRS]] = { {{.*}}"no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true"{{.*}} }
+// CHECK: attributes [[PRECISE_ATTRS]] = { {{.*}}"no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false"{{.*}} }

@@ -6106,7 +6106,7 @@ declare <2 x half> @llvm.fma.v2f16(<2 x half>, <2 x half>, <2 x half>)
 declare half @llvm.fmuladd.f16(half, half, half) #1
 declare <4 x half> @llvm.fmuladd.v4f16(<4 x half>, <4 x half>, <4 x half>) #1
 
-attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #0 = { nounwind denormal_fpenv(float: preservesign) }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind }
-attributes #4 = { nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #4 = { nounwind "amdgpu-ieee"="false" denormal_fpenv(float: preservesign) }

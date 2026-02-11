@@ -113,4 +113,24 @@ cir.func @cleanup_in_scope() {
 // CHECK:   cir.return
 // CHECK: }
 
+
+// Test basic cleanup.scope with all cleanup kind (normal + eh)
+cir.func @return_within_cleanup() {
+  cir.cleanup.scope {
+    cir.return
+  } cleanup all {
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK: cir.func @return_within_cleanup() {
+// CHECK:   cir.cleanup.scope {
+// CHECK:     cir.return
+// CHECK:   } cleanup all {
+// CHECK:     cir.yield
+// CHECK:   }
+// CHECK:   cir.return
+// CHECK: }
+
 }
