@@ -46,7 +46,10 @@ public:
 
   virtual lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) = 0;
 
-  virtual llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) = 0;
+  virtual llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) {
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  }
 
   /// This function is assumed to always succeed and if it fails, the front-end
   /// should know to deal with it in the correct way (most probably, by refusing

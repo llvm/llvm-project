@@ -271,19 +271,6 @@ public:
     return lldb::ChildCacheState::eRefetch;
   }
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
-    auto optional_idx = ExtractIndexFromString(name.AsCString());
-    if (!optional_idx) {
-      return llvm::createStringError("Type has no child named '%s'",
-                                     name.AsCString());
-    }
-    uint32_t idx = *optional_idx;
-    if (idx >= CalculateNumChildrenIgnoringErrors())
-      return llvm::createStringError("Type has no child named '%s'",
-                                     name.AsCString());
-    return idx;
-  }
-
 private:
   lldb::Format m_parent_format = eFormatInvalid;
   lldb::Format m_item_format = eFormatInvalid;

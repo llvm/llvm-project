@@ -315,19 +315,6 @@ PyObject *lldb_private::python::SWIGBridge::LLDBSwigPython_GetChildAtIndex(PyObj
   return result.release();
 }
 
-static uint32_t ParseIndex(PyObject *implementor, llvm::StringRef name) {
-  unsigned long long retval;
-  if (name.consume_front("[") && !name.consumeInteger(10, retval) && name == "]") {
-    // Lazily calculate the number of children (capped to one past the given index).
-    uint32_t max = retval + 1;
-    size_t num_children =
-      lldb_private::python::SWIGBridge::LLDBSwigPython_CalculateNumChildren(implementor, max);
-    if (retval < num_children)
-      return (uint32_t)retval;
-  }
-  return UINT32_MAX;
-}
-
 uint32_t lldb_private::python::SWIGBridge::LLDBSwigPython_GetIndexOfChildWithName(
     PyObject * implementor, const char *child_name) {
   PyErr_Cleaner py_err_cleaner(true);
@@ -336,7 +323,7 @@ uint32_t lldb_private::python::SWIGBridge::LLDBSwigPython_GetIndexOfChildWithNam
   auto pfunc = self.ResolveName<PythonCallable>("get_child_index");
 
   if (!pfunc.IsAllocated())
-    return ParseIndex(implementor, child_name);
+    return UINT32_MAX;
 
   llvm::Expected<PythonObject> result = pfunc.Call(PythonString(child_name));
 
@@ -345,7 +332,7 @@ uint32_t lldb_private::python::SWIGBridge::LLDBSwigPython_GetIndexOfChildWithNam
 
   if (PyErr_Occurred()) {
     PyErr_Clear(); // FIXME print this? do something else
-    return ParseIndex(implementor, child_name);
+    return UINT32_MAX;
   }
 
   if (retval >= 0)

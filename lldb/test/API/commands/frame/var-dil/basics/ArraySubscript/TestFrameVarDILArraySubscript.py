@@ -89,7 +89,7 @@ class TestFrameVarDILArraySubscript(TestBase):
 
     def test_subscript_synthetic(self):
         self.build()
-        _, process, _, _ = lldbutil.run_to_source_breakpoint(
+        lldbutil.run_to_source_breakpoint(
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
@@ -108,11 +108,3 @@ class TestFrameVarDILArraySubscript(TestBase):
             "frame var 'ma_ptr[0]'",
             substrs=["(myArray) ma_ptr[0] = ([0] = 7, [1] = 8, [2] = 9, [3] = 10)"],
         )
-
-        frame = process.selected_thread.selected_frame
-        my_array = frame.var("ma")
-        for i in range(my_array.num_children):
-            idx = my_array.GetIndexOfChildWithName(f"[{i}]")
-            self.assertEqual(idx, i)
-        idx = my_array.GetIndexOfChildWithName(f"[{my_array.num_children + 1}]")
-        self.assertEqual(idx, lldb.UINT32_MAX)

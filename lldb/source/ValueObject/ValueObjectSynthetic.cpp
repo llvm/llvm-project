@@ -9,6 +9,7 @@
 #include "lldb/ValueObject/ValueObjectSynthetic.h"
 
 #include "lldb/Core/Value.h"
+#include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/ConstString.h"
@@ -18,6 +19,7 @@
 #include "lldb/ValueObject/ValueObject.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Error.h"
 #include <optional>
 
 namespace lldb_private {
@@ -329,6 +331,21 @@ ValueObjectSynthetic::GetChildMemberWithName(llvm::StringRef name,
   return GetChildAtIndex(*index_or_err, can_create);
 }
 
+static std::optional<uint32_t> ParseSubscriptIndex(ValueObjectSynthetic &valobj,
+                                                   llvm::StringRef name) {
+  auto maybe_index = formatters::ExtractIndexFromString(name.data());
+  if (!maybe_index)
+    return std::nullopt;
+
+  auto idx = *maybe_index;
+  // Prevent unnecessary work by limiting max to one past the index.
+  uint32_t max = idx + 1;
+  auto num_children = valobj.GetNumChildrenIgnoringErrors(max);
+  if (idx >= num_children)
+    return std::nullopt;
+  return idx;
+}
+
 llvm::Expected<size_t>
 ValueObjectSynthetic::GetIndexOfChildWithName(llvm::StringRef name_ref) {
   UpdateValueIfNeeded();
@@ -344,12 +361,20 @@ ValueObjectSynthetic::GetIndexOfChildWithName(llvm::StringRef name_ref) {
   }
 
   if (!found_index && m_synth_filter_up != nullptr) {
-    auto index_or_err = m_synth_filter_up->GetIndexOfChildWithName(name);
-    if (!index_or_err)
-      return index_or_err.takeError();
+    size_t index = SIZE_MAX;
+    if (auto index_or_err = m_synth_filter_up->GetIndexOfChildWithName(name)) {
+      index = *index_or_err;
+    } else {
+      // Provide automatic support for subscript child names ("[N]").
+      auto maybe_subscript = ParseSubscriptIndex(*this, name);
+      if (!maybe_subscript)
+        return index_or_err.takeError();
+      index = *maybe_subscript;
+      llvm::consumeError(index_or_err.takeError());
+    }
     std::lock_guard<std::mutex> guard(m_child_mutex);
-    m_name_toindex[name.GetCString()] = *index_or_err;
-    return *index_or_err;
+    m_name_toindex[name.GetCString()] = index;
+    return index;
   } else if (!found_index && m_synth_filter_up == nullptr) {
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
