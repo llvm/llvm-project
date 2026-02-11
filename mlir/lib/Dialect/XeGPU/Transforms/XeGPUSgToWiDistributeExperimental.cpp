@@ -93,7 +93,7 @@ static LogicalResult verifyLayouts(Operation *root) {
 /// result type can be distributed to lanes using the layout.
 static bool isValidSubgroupMultiReductionOp(vector::MultiDimReductionOp op) {
   auto resLayout = xegpu::getTemporaryLayout(op->getOpResult(0));
-  // If no layout, mark legal.
+  // If no layout, not valid.
   if (!resLayout || !resLayout.isForSubgroup())
     return false;
   VectorType resTy = dyn_cast<VectorType>(op.getType());
