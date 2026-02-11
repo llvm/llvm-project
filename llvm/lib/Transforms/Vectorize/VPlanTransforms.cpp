@@ -1332,15 +1332,6 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  // Reassociate (x && y) && z -> x && (y && z) if x has multiple users. With
-  // tail folding it is likely that x is a header mask and can be simplified
-  // further.
-  if (match(Def, m_LogicalAnd(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
-                              m_VPValue(Z))) &&
-      X->hasMoreThanOneUniqueUser())
-    return Def->replaceAllUsesWith(
-        Builder.createLogicalAnd(X, Builder.createLogicalAnd(Y, Z)));
-
   if (match(Def, m_c_Add(m_VPValue(A), m_ZeroInt())))
     return Def->replaceAllUsesWith(A);
 
@@ -1612,6 +1603,27 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan) {
       if (auto *Def = dyn_cast<VPSingleDefRecipe>(&R))
         simplifyRecipe(Def, TypeInfo);
   }
+}
+
+/// Reassociate (headermask && x) && y -> headermask && (x && y) to allow the
+/// header mask to be simplified further, e.g. in optimizeEVLMasks.
+static void reassociateHeaderMask(VPlan &Plan) {
+  VPValue *HeaderMask = vputils::findHeaderMask(Plan);
+  if (!HeaderMask)
+    return;
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
+      Plan.getEntry());
+  VPValue *X, *Y;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT))
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB))
+      if (match(&R,
+                m_LogicalAnd(m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(X)),
+                             m_VPValue(Y)))) {
+        VPBuilder Builder(&R);
+        R.getVPSingleValue()->replaceAllUsesWith(Builder.createLogicalAnd(
+            HeaderMask, Builder.createLogicalAnd(X, Y)));
+        R.eraseFromParent();
+      }
 }
 
 static void narrowToSingleScalarRecipes(VPlan &Plan) {
@@ -2758,12 +2770,14 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   RUN_VPLAN_PASS(removeRedundantCanonicalIVs, Plan);
   RUN_VPLAN_PASS(removeRedundantInductionCasts, Plan);
 
+  RUN_VPLAN_PASS(reassociateHeaderMask, Plan);
   RUN_VPLAN_PASS(simplifyRecipes, Plan);
   RUN_VPLAN_PASS(removeDeadRecipes, Plan);
   RUN_VPLAN_PASS(simplifyBlends, Plan);
   RUN_VPLAN_PASS(legalizeAndOptimizeInductions, Plan);
   RUN_VPLAN_PASS(narrowToSingleScalarRecipes, Plan);
   RUN_VPLAN_PASS(removeRedundantExpandSCEVRecipes, Plan);
+  RUN_VPLAN_PASS(reassociateHeaderMask, Plan);
   RUN_VPLAN_PASS(simplifyRecipes, Plan);
   RUN_VPLAN_PASS(removeBranchOnConst, Plan);
   RUN_VPLAN_PASS(removeDeadRecipes, Plan);
