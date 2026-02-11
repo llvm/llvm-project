@@ -7600,7 +7600,7 @@ CallInst *OpenMPIRBuilder::createOMPAllocShared(const LocationDescription &Loc,
   updateToLocation(Loc);
 
   const DataLayout &DL = M.getDataLayout();
-  Value *Args[] = {Builder.getInt64(DL.getTypeStoreSize(VarType))};
+  Value *Args[] = {Builder.getInt64(DL.getTypeAllocSize(VarType))};
   Function *Fn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_alloc_shared);
   CallInst *Call = Builder.CreateCall(Fn, Args, Name);
   Call->addRetAttr(
@@ -7615,7 +7615,7 @@ CallInst *OpenMPIRBuilder::createOMPFreeShared(const LocationDescription &Loc,
   updateToLocation(Loc);
 
   Value *Args[] = {
-      Addr, Builder.getInt64(M.getDataLayout().getTypeStoreSize(VarType))};
+      Addr, Builder.getInt64(M.getDataLayout().getTypeAllocSize(VarType))};
   Function *Fn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_free_shared);
   return Builder.CreateCall(Fn, Args, Name);
 }
