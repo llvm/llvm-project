@@ -1072,7 +1072,6 @@ HANDLE_DW_LNAME(0x001a, Swift, "Swift", 0) // VVMM
 HANDLE_DW_LNAME(0x001b, UPC, "Unified Parallel C (UPC)", 0)
 HANDLE_DW_LNAME(0x001c, Zig, "Zig", 0)
 HANDLE_DW_LNAME(0x001d, Assembly, "Assembly", 0)
-// Conflict: HANDLE_DW_LNAME(0x001d, HIP, "HIP", 0)
 HANDLE_DW_LNAME(0x001e, C_sharp, "C#", 0)
 HANDLE_DW_LNAME(0x001f, Mojo, "Mojo", 0)
 HANDLE_DW_LNAME(0x0020, GLSL, "OpenGL Shading Language", 0) // VVMMPP
@@ -1084,6 +1083,7 @@ HANDLE_DW_LNAME(0x0025, SYCL, "SYCL", 0) // YYYYRR
 HANDLE_DW_LNAME(0x0026, Ruby, "Ruby", 0) // VVMMPP
 HANDLE_DW_LNAME(0x0027, Move, "Move", 0) // YYYYMM
 HANDLE_DW_LNAME(0x0028, Hylo, "Hylo", 0)
+HANDLE_DW_LNAME(0x0029, HIP, "HIP", 0)
 HANDLE_DW_LNAME(0x002c, Metal, "Metal", 0) // VVMMPP
 
 // DWARF attribute type encodings.
