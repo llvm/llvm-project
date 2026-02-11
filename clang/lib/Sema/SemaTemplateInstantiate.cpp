@@ -900,7 +900,8 @@ static std::string convertCallArgsToString(Sema &S,
 }
 
 static std::string
-printCallArgsValueCategoryAndType(Sema &S, llvm::ArrayRef<const Expr *> Args) {
+convertCallArgsValueCategoryAndTypeToString(Sema &S,
+                                            llvm::ArrayRef<const Expr *> Args) {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
   llvm::ListSeparator Comma;
@@ -1300,7 +1301,7 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
       DiagFunc(SKEPAttr->getLocation(),
                PDiag(diag::note_sycl_kernel_launch_overload_resolution_here)
                    << SKEPAttr->getKernelName()
-                   << printCallArgsValueCategoryAndType(
+                   << convertCallArgsValueCategoryAndTypeToString(
                           *this, llvm::ArrayRef(Active->CallArgs,
                                                 Active->NumCallArgs)));
       break;
