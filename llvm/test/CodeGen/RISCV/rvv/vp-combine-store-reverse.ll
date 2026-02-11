@@ -81,17 +81,12 @@ define void @test_different_evl(<vscale x 2 x float> %val, <vscale x 2 x float>*
 define void @test_store_splice_reverse_combiner(<vscale x 2 x float> %val, ptr %ptr, i32 zeroext %evl) {
 ; CHECK-LABEL: test_store_splice_reverse_combiner:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    vsetvli a3, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    srli a2, a2, 2
-; CHECK-NEXT:    addi a3, a2, -1
-; CHECK-NEXT:    vrsub.vx v9, v9, a3
-; CHECK-NEXT:    vrgather.vv v10, v8, v9
-; CHECK-NEXT:    sub a2, a2, a1
+; CHECK-NEXT:    slli a2, a1, 2
+; CHECK-NEXT:    add a0, a2, a0
+; CHECK-NEXT:    addi a0, a0, -4
+; CHECK-NEXT:    li a2, -4
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v8, v10, a2
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vsse32.v v8, (a0), a2
 ; CHECK-NEXT:    ret
   %rev = call <vscale x 2 x float> @llvm.vector.reverse(<vscale x 2 x float> %val)
   %splice = call <vscale x 2 x float> @llvm.vector.splice.right(<vscale x 2 x float> %rev, <vscale x 2 x float> poison, i32 %evl)
@@ -102,37 +97,12 @@ define void @test_store_splice_reverse_combiner(<vscale x 2 x float> %val, ptr %
 define void @test_store_splice_mask_is_reverse(<vscale x 2 x float> %val, ptr %ptr, <vscale x 2 x i1> %mask, i32 zeroext %evl) {
 ; CHECK-LABEL: test_store_splice_mask_is_reverse:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vid.v v10
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vmerge.vim v11, v9, 1, v0
-; CHECK-NEXT:    srli a2, a2, 2
-; CHECK-NEXT:    addi a3, a2, -1
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vrsub.vx v10, v10, a3
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v12, v11, v10
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vid.v v10
-; CHECK-NEXT:    sub a2, a2, a1
-; CHECK-NEXT:    vrsub.vx v10, v10, a3
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vmsne.vi v0, v12, 0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vrgather.vv v11, v8, v10
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vmerge.vim v8, v9, 1, v0
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vx v8, v8, a2
-; CHECK-NEXT:    vslideup.vx v8, v9, a1
-; CHECK-NEXT:    vand.vi v8, v8, 1
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v8, v11, a2
-; CHECK-NEXT:    vse32.v v8, (a0), v0.t
+; CHECK-NEXT:    slli a2, a1, 2
+; CHECK-NEXT:    add a0, a2, a0
+; CHECK-NEXT:    addi a0, a0, -4
+; CHECK-NEXT:    li a2, -4
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vsse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
   %storemask.rev = call <vscale x 2 x i1> @llvm.vector.reverse(<vscale x 2 x i1> %mask)
   %storemask.splice = call <vscale x 2 x i1> @llvm.vector.splice.right(<vscale x 2 x i1> %storemask.rev, <vscale x 2 x i1> poison, i32 %evl)
