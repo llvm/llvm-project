@@ -14034,11 +14034,7 @@ class SequenceChecker : public ConstEvaluatedExprVisitor<SequenceChecker> {
     UK_Count = UK_ModAsSideEffect + 1
   };
 
-  enum WarningKind {
-    WK_UseAndMod,
-    WK_ModAndMod,
-    WK_Volatile_UseAndUse
-  };
+  enum WarningKind { WK_UseAndMod, WK_ModAndMod, WK_Volatile_UseAndUse };
 
   /// Bundle together a sequencing region and the expression corresponding
   /// to a specific usage. One Usage is stored for each usage kind in UsageInfo.
@@ -14203,7 +14199,7 @@ class SequenceChecker : public ConstEvaluatedExprVisitor<SequenceChecker> {
     case WK_UseAndMod:
       DiagID = diag::warn_unsequenced_mod_use;
       break;
-    case WK_ModAndMod: 
+    case WK_ModAndMod:
       DiagID = diag::warn_unsequenced_mod_mod;
       break;
     case WK_Volatile_UseAndUse:
@@ -14213,7 +14209,7 @@ class SequenceChecker : public ConstEvaluatedExprVisitor<SequenceChecker> {
 
     SemaRef.DiagRuntimeBehavior(
         Mod->getExprLoc(), {Mod, ModOrUse},
-        SemaRef.PDiag(DiagID)<< O << SourceRange(ModOrUse->getExprLoc()));
+        SemaRef.PDiag(DiagID) << O << SourceRange(ModOrUse->getExprLoc()));
     UI.Diagnosed = true;
   }
 
