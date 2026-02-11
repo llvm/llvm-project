@@ -3201,6 +3201,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
       if ((IID == Intrinsic::trunc || IsRoundNearestOrTrunc) &&
           KnownSrc.isKnownAlways(fcZero | fcSubnormal)) {
+        IRBuilderBase::InsertPointGuard Guard(Builder);
+        Builder.SetInsertPoint(CI);
+
         Value *Copysign = Builder.CreateCopySign(ConstantFP::getZero(VTy),
                                                  CI->getArgOperand(0));
         Copysign->takeName(CI);
