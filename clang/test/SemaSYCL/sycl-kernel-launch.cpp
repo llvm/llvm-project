@@ -237,7 +237,8 @@ struct BADKT {
 
 // Undeclared sycl_kernel_launch identifier from non-template function.
 namespace bad1 {
-  // expected-error@+3 {{use of undeclared identifier 'sycl_kernel_launch'}}
+  // expected-error@+4 {{use of undeclared identifier 'sycl_kernel_launch'}}
+  // expected-note@+2 {{this error is due to a defect in SYCL runtime header files; please report this problem to your SYCL runtime provider}}
   // expected-note-re@+1 {{in implicit call to 'sycl_kernel_launch' with template argument 'BADKN<1>' and function arguments (lvalue of type 'const char[{{[0-9]*}}]', xvalue of type 'BADKT<1>') required here}}
   [[clang::sycl_kernel_entry_point(BADKN<1>)]]
   void skep(BADKT<1> k) {
@@ -247,7 +248,8 @@ namespace bad1 {
 
 // Undeclared sycl_kernel_launch identifier from function template.
 namespace bad2 {
-  // expected-error@+4 {{use of undeclared identifier 'sycl_kernel_launch'}}
+  // expected-error@+5 {{use of undeclared identifier 'sycl_kernel_launch'}}
+  // expected-note@+3 {{this error is due to a defect in SYCL runtime header files; please report this problem to your SYCL runtime provider}}
   // expected-note-re@+2 {{in implicit call to 'sycl_kernel_launch' with template argument 'BADKN<2>' and function arguments (lvalue of type 'const char[{{[0-9]*}}]', xvalue of type 'BADKT<2>') required here}}
   template<typename KN, typename KT>
   [[clang::sycl_kernel_entry_point(KN)]]
@@ -262,7 +264,8 @@ namespace bad2 {
 namespace bad3 {
   // expected-note@+1 {{declared as a non-template here}}
   void sycl_kernel_launch(const char *, BADKT<3>);
-  // expected-error@+3 {{'sycl_kernel_launch' does not refer to a template}}
+  // expected-error@+4 {{'sycl_kernel_launch' does not refer to a template}}
+  // expected-note@+2 {{this error is due to a defect in SYCL runtime header files; please report this problem to your SYCL runtime provider}}
   // expected-note@+1 {{in implicit call to 'sycl_kernel_launch' with template argument 'BADKN<3>' required here}}
   [[clang::sycl_kernel_entry_point(BADKN<3>)]]
   void skep(BADKT<3> k) {
@@ -275,7 +278,8 @@ namespace bad4 {
   // expected-note@+2 {{candidate function template not viable: requires 2 arguments, but 1 was provided}}
   template<typename KN, typename KT>
   void sycl_kernel_launch(const char *, KT);
-  // expected-error@+4 {{no matching function for call to 'sycl_kernel_launch'}}
+  // expected-error@+5 {{no matching function for call to 'sycl_kernel_launch'}}
+  // expected-note@+3 {{this error is due to a defect in SYCL runtime header files; please report this problem to your SYCL runtime provider}}
   // expected-note-re@+2 {{in implicit call to 'sycl_kernel_launch' with template argument 'BADKN<4>' and function arguments (lvalue of type 'const char[{{[0-9]*}}]') required here}}
   template<typename KN>
   [[clang::sycl_kernel_entry_point(KN)]]
@@ -289,7 +293,8 @@ namespace bad5 {
   // expected-note@+2 {{candidate function template not viable: requires 2 arguments, but 3 were provided}}
   template<typename KN, typename KT>
   void sycl_kernel_launch(const char *, KT);
-  // expected-error@+4 {{no matching function for call to 'sycl_kernel_launch'}}
+  // expected-error@+5 {{no matching function for call to 'sycl_kernel_launch'}}
+  // expected-note@+3 {{this error is due to a defect in SYCL runtime header files; please report this problem to your SYCL runtime provider}}
   // expected-note-re@+2 {{in implicit call to 'sycl_kernel_launch' with template argument 'BADKN<5>' and function arguments (lvalue of type 'const char[{{[0-9]*}}]', xvalue of type 'BADKT<5>', xvalue of type 'int') required here}}
   template<typename KN, typename KT>
   [[clang::sycl_kernel_entry_point(KN)]]
@@ -305,7 +310,8 @@ namespace bad6 {
   // expected-note-re@+2 {{candidate function template not viable: no known conversion from 'const char[{{[0-9]*}}]' to 'int' for 1st argument}}
   template<typename KN, typename... Ts>
   void sycl_kernel_launch(int, Ts...);
-  // expected-error@+4 {{no matching function for call to 'sycl_kernel_launch'}}
+  // expected-error@+5 {{no matching function for call to 'sycl_kernel_launch'}}
+  // expected-note@+3 {{this error is due to a defect in SYCL runtime header files; please report this problem to your SYCL runtime provider}}
   // expected-note-re@+2 {{in implicit call to 'sycl_kernel_launch' with template argument 'BADKN<6>' and function arguments (lvalue of type 'const char[{{[0-9]*}}]', xvalue of type 'BADKT<6>') required here}}
   template<typename KN, typename KT>
   [[clang::sycl_kernel_entry_point(KN)]]
@@ -321,7 +327,8 @@ namespace bad7 {
   // expected-note@+2 {{candidate template ignored: invalid explicitly-specified argument for 1st template parameter}}
   template<int, typename... Ts>
   void sycl_kernel_launch(const char *, Ts...);
-  // expected-error@+3 {{no matching function for call to 'sycl_kernel_launch'}}
+  // expected-error@+4 {{no matching function for call to 'sycl_kernel_launch'}}
+  // expected-note@+2 {{this error is due to a defect in SYCL runtime header files; please report this problem to your SYCL runtime provider}}
   // expected-note-re@+1 {{in implicit call to 'sycl_kernel_launch' with template argument 'BADKN<7>' and function arguments (lvalue of type 'const char[{{[0-9]*}}]', xvalue of type 'BADKT<7>') required here}}
   [[clang::sycl_kernel_entry_point(BADKN<7>)]]
   void skep(BADKT<7> k) {
@@ -334,7 +341,8 @@ namespace bad8 {
   // expected-note@+2 {{candidate template ignored: substitution failure [with KN = BADKN<8>, KT = BADKT<8>]: no type named 'no_such_type' in 'BADKT<8>'}}
   template<typename KN, typename KT, typename T = typename KT::no_such_type>
   void sycl_kernel_launch(const char *, KT);
-  // expected-error@+3 {{no matching function for call to 'sycl_kernel_launch'}}
+  // expected-error@+4 {{no matching function for call to 'sycl_kernel_launch'}}
+  // expected-note@+2 {{this error is due to a defect in SYCL runtime header files; please report this problem to your SYCL runtime provider}}
   // expected-note-re@+1 {{in implicit call to 'sycl_kernel_launch' with template argument 'BADKN<8>' and function arguments (lvalue of type 'const char[{{[0-9]*}}]', xvalue of type 'BADKT<8>') required here}}
   [[clang::sycl_kernel_entry_point(BADKN<8>)]]
   void skep(BADKT<8> k) {
@@ -347,7 +355,8 @@ namespace bad9 {
   // expected-note@+2 {{candidate template ignored: couldn't infer template argument 'T'}}
   template<typename KN, typename KT, typename T>
   void sycl_kernel_launch(const char *, KT);
-  // expected-error@+3 {{no matching function for call to 'sycl_kernel_launch'}}
+  // expected-error@+4 {{no matching function for call to 'sycl_kernel_launch'}}
+  // expected-note@+2 {{this error is due to a defect in SYCL runtime header files; please report this problem to your SYCL runtime provider}}
   // expected-note-re@+1 {{in implicit call to 'sycl_kernel_launch' with template argument 'BADKN<9>' and function arguments (lvalue of type 'const char[{{[0-9]*}}]', xvalue of type 'BADKT<9>') required here}}
   [[clang::sycl_kernel_entry_point(BADKN<9>)]]
   void skep(BADKT<9> k) {
@@ -365,7 +374,8 @@ namespace bad10 {
   };
   template<typename KN>
   launcher<KN> sycl_kernel_launch;
-  // expected-error@+4 {{no matching function for call to object of type 'launcher<BADKN<10, 0>>'}}
+  // expected-error@+5 {{no matching function for call to object of type 'launcher<BADKN<10, 0>>'}}
+  // expected-note@+3 {{this error is due to a defect in SYCL runtime header files; please report this problem to your SYCL runtime provider}}
   // expected-note-re@+2 {{in implicit call to 'sycl_kernel_launch' with template argument 'BADKN<10>' and function arguments (lvalue of type 'const char[{{[0-9]*}}]', xvalue of type 'BADKT<10>') required here}}
   template<typename KN, typename KT>
   [[clang::sycl_kernel_entry_point(KN)]]
@@ -386,7 +396,8 @@ namespace bad11 {
   // expected-note@+1 {{template parameter is declared here}}
   template<int KN>
   launcher<KN> sycl_kernel_launch;
-  // expected-error@+4 {{template argument for non-type template parameter must be an expression}}
+  // expected-error@+5 {{template argument for non-type template parameter must be an expression}}
+  // expected-note@+3 {{this error is due to a defect in SYCL runtime header files; please report this problem to your SYCL runtime provider}}
   // expected-note@+2 {{in implicit call to 'sycl_kernel_launch' with template argument 'KN' required here}}
   template<typename KN, typename KT>
   [[clang::sycl_kernel_entry_point(KN)]]
@@ -407,7 +418,8 @@ namespace bad12 {
   };
   template<typename KN>
   launcher<KN> sycl_kernel_launch;
-  // expected-error@+3 {{'operator()' is a private member of 'bad12::launcher<BADKN<12>>'}}
+  // expected-error@+4 {{'operator()' is a private member of 'bad12::launcher<BADKN<12>>'}}
+  // expected-note@+2 {{this error is due to a defect in SYCL runtime header files; please report this problem to your SYCL runtime provider}}
   // expected-note-re@+1 {{in implicit call to 'sycl_kernel_launch' with template argument 'BADKN<12>' and function arguments (lvalue of type 'const char[{{[0-9]*}}]', xvalue of type 'BADKT<12>') required here}}
   [[clang::sycl_kernel_entry_point(BADKN<12>)]]
   void skep(BADKT<12> k) {
@@ -432,7 +444,8 @@ namespace bad13 {
     template<typename KN>
     launcher<KN> sycl_kernel_launch;
   }
-  // expected-error@+4 {{reference to 'sycl_kernel_launch' is ambiguous}}
+  // expected-error@+5 {{reference to 'sycl_kernel_launch' is ambiguous}}
+  // expected-note@+3 {{this error is due to a defect in SYCL runtime header files; please report this problem to your SYCL runtime provider}}
   // expected-note@+2 {{in implicit call to 'sycl_kernel_launch' with template argument 'KN' required here}}
   template<typename KN, typename KT>
   [[clang::sycl_kernel_entry_point(KN)]]
@@ -450,7 +463,8 @@ namespace bad14 {
   // expected-note@+2 {{candidate function [with KN = BADKN<14>, KT = BADKT<14>]}}
   template<typename KN, typename KT>
   void sycl_kernel_launch(const char *, KT, unsigned char);
-  // expected-error@+3 {{call to 'sycl_kernel_launch' is ambiguous}}
+  // expected-error@+4 {{call to 'sycl_kernel_launch' is ambiguous}}
+  // expected-note@+2 {{this error is due to a defect in SYCL runtime header files; please report this problem to your SYCL runtime provider}}
   // expected-note-re@+1 {{in implicit call to 'sycl_kernel_launch' with template argument 'BADKN<14>' and function arguments (lvalue of type 'const char[{{[0-9]*}}]', xvalue of type 'BADKT<14>', xvalue of type 'int') required here}}
   [[clang::sycl_kernel_entry_point(BADKN<14>)]]
   void skep(BADKT<14> k, int i) {
@@ -463,7 +477,8 @@ namespace bad15 {
   struct S {
     template<typename KN, typename... Ts>
     void sycl_kernel_launch(const char *, Ts...);
-    // expected-error@+3 {{call to non-static member function without an object argument}}
+    // expected-error@+4 {{call to non-static member function without an object argument}}
+    // expected-note@+2 {{this error is due to a defect in SYCL runtime header files; please report this problem to your SYCL runtime provider}}
     // expected-note@+1 {{in implicit call to 'sycl_kernel_launch' with template argument 'BADKN<15>' required here}}
     [[clang::sycl_kernel_entry_point(BADKN<15>)]]
     static void skep(BADKT<15> k) {
@@ -486,7 +501,8 @@ namespace bad16 {
   struct handler : protected base_handler<handler<N>> {
     // Lookup for sycl_kernel_launch fails because lookup in dependent base
     // classes requires explicit qualification.
-    // expected-error@+3 {{explicit qualification required to use member 'sycl_kernel_launch' from dependent base class}}
+    // expected-error@+4 {{explicit qualification required to use member 'sycl_kernel_launch' from dependent base class}}
+    // expected-note@+2 {{this error is due to a defect in SYCL runtime header files; please report this problem to your SYCL runtime provider}}
     // expected-note-re@+1 {{in implicit call to 'sycl_kernel_launch' with template argument 'BADKN<16>' and function arguments (lvalue of type 'const char[{{[0-9]*}}]', xvalue of type 'BADKT<16>') required here}}
     [[clang::sycl_kernel_entry_point(BADKN<16>)]]
     void skep(BADKT<16> k) {
@@ -506,7 +522,8 @@ namespace bad17 {
     // expected-note@+1 {{'non_copyable' has been explicitly marked deleted here}}
     non_copyable(const non_copyable&) = delete;
   };
-  // expected-error@+3 {{call to deleted constructor of 'bad17::non_copyable'}}
+  // expected-error@+4 {{call to deleted constructor of 'bad17::non_copyable'}}
+  // expected-note@+2 {{this error is due to a defect in SYCL runtime header files; please report this problem to your SYCL runtime provider}}
   // expected-note-re@+1 {{in implicit call to 'sycl_kernel_launch' with template argument 'BADKN<17, 0>' and function arguments (lvalue of type 'const char[{{[0-9]*}}]', xvalue of type 'BADKT<17, 0>', xvalue of type 'non_copyable') required here}}
   [[clang::sycl_kernel_entry_point(BADKN<17,0>)]]
   void skep(BADKT<17,0> k, non_copyable) {
@@ -516,7 +533,8 @@ namespace bad17 {
     // expected-note@+1 {{'non_moveable' has been explicitly marked deleted here}}
     non_moveable(non_moveable&&) = delete;
   };
-  // expected-error@+3 {{call to deleted constructor of 'bad17::non_moveable'}}
+  // expected-error@+4 {{call to deleted constructor of 'bad17::non_moveable'}}
+  // expected-note@+2 {{this error is due to a defect in SYCL runtime header files; please report this problem to your SYCL runtime provider}}
   // expected-note-re@+1 {{in implicit call to 'sycl_kernel_launch' with template argument 'BADKN<17, 1>' and function arguments (lvalue of type 'const char[{{[0-9]*}}]', xvalue of type 'BADKT<17, 1>', xvalue of type 'non_moveable') required here}}
   [[clang::sycl_kernel_entry_point(BADKN<17,1>)]]
   void skep(BADKT<17,1> k, non_moveable) {
@@ -526,7 +544,8 @@ namespace bad17 {
 
 // sycl_kernel_launch declared after use and not found by ADL.
 namespace bad18 {
-  // expected-error@+4 {{call to function 'sycl_kernel_launch' that is neither visible in the template definition nor found by argument-dependent lookup}}
+  // expected-error@+5 {{call to function 'sycl_kernel_launch' that is neither visible in the template definition nor found by argument-dependent lookup}}
+  // expected-note@+3 {{this error is due to a defect in SYCL runtime header files; please report this problem to your SYCL runtime provider}}
   // expected-note-re@+2 {{in implicit call to 'sycl_kernel_launch' with template argument 'BADKN<18>' and function arguments (lvalue of type 'const char[{{[0-9]*}}]', xvalue of type 'BADKT<18>') required here}}
   template<typename KN, typename KT>
   [[clang::sycl_kernel_entry_point(KN)]]

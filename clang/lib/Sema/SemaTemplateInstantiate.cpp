@@ -1287,6 +1287,7 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
       assert(SKEPAttr && "Missing sycl_kernel_entry_point attribute");
       assert(!SKEPAttr->isInvalidAttr() &&
              "sycl_kernel_entry_point attribute is invalid");
+      DiagFunc(SKEPAttr->getLocation(), PDiag(diag::note_sycl_runtime_defect));
       DiagFunc(SKEPAttr->getLocation(),
                PDiag(diag::note_sycl_kernel_launch_lookup_here)
                    << SKEPAttr->getKernelName());
@@ -1298,6 +1299,7 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
       assert(SKEPAttr && "Missing sycl_kernel_entry_point attribute");
       assert(!SKEPAttr->isInvalidAttr() &&
              "sycl_kernel_entry_point attribute is invalid");
+      DiagFunc(SKEPAttr->getLocation(), PDiag(diag::note_sycl_runtime_defect));
       DiagFunc(SKEPAttr->getLocation(),
                PDiag(diag::note_sycl_kernel_launch_overload_resolution_here)
                    << SKEPAttr->getKernelName()

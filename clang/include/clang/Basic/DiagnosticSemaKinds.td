@@ -13284,6 +13284,9 @@ def err_sycl_entry_point_return_type : Error<
 def err_sycl_entry_point_deduced_return_type : Error<
   "the %0 attribute only applies to functions with a non-deduced 'void' return"
   " type">;
+def note_sycl_runtime_defect : Note<
+  "this error is due to a defect in SYCL runtime header files; please report"
+  " this problem to your SYCL runtime provider">;
 def note_sycl_kernel_launch_lookup_here : Note<
   "in implicit call to 'sycl_kernel_launch' with template argument %0 required"
   " here">;

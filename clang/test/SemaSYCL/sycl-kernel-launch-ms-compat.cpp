@@ -32,7 +32,8 @@ namespace ok1 {
     // A warning is issued because, in standard C++, unqualified lookup for
     // sycl_kernel_launch would not consider dependent base classes. Such
     // lookups are allowed as a Microsoft compatible extension.
-    // expected-warning@+3 {{use of member 'sycl_kernel_launch' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
+    // expected-warning@+4 {{use of member 'sycl_kernel_launch' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
+    // expected-note@+2 {{this error is due to a defect in SYCL runtime header files; please report this problem to your SYCL runtime provider}}
     // expected-note-re@+1 {{in implicit call to 'sycl_kernel_launch' with template argument 'KN<1>' and function arguments (lvalue of type 'const char[{{[0-9]*}}]', xvalue of type 'KT<1>') required here}}
     [[clang::sycl_kernel_entry_point(KN<1>)]]
     void skep(KT<1> k) {
@@ -73,7 +74,8 @@ namespace bad1 {
     // consider dependent base classes. Such lookups are allowed as a Microsoft
     // compatible extension, but access checks are still performed which makes
     // this case an error.
-    // expected-warning@+4 {{use of member 'sycl_kernel_launch' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
+    // expected-warning@+5 {{use of member 'sycl_kernel_launch' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
+    // expected-note@+3 {{this error is due to a defect in SYCL runtime header files; please report this problem to your SYCL runtime provider}}
     // expected-note-re@+2 {{in implicit call to 'sycl_kernel_launch' with template argument 'BADKN<1>' and function arguments (lvalue of type 'const char[{{[0-9]*}}]', xvalue of type 'BADKT<1>') required here}}
     // expected-error@+2 {{'sycl_kernel_launch' is a private member of 'bad1::base_handler<bad1::handler<1>>'}}
     [[clang::sycl_kernel_entry_point(BADKN<1>)]]
