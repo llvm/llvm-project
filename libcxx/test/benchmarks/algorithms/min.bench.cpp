@@ -10,76 +10,51 @@
 
 #include <algorithm>
 #include <cassert>
+#include <deque>
+#include <list>
+#include <vector>
 
-#include <benchmark/benchmark.h>
 #include "test_macros.h"
+#include <benchmark/benchmark.h>
 
-void run_sizes(auto benchmark) {
-  benchmark->Arg(1)
-      ->Arg(2)
-      ->Arg(3)
-      ->Arg(4)
-      ->Arg(5)
-      ->Arg(6)
-      ->Arg(7)
-      ->Arg(8)
-      ->Arg(9)
-      ->Arg(10)
-      ->Arg(11)
-      ->Arg(12)
-      ->Arg(13)
-      ->Arg(14)
-      ->Arg(15)
-      ->Arg(16)
-      ->Arg(17)
-      ->Arg(18)
-      ->Arg(19)
-      ->Arg(20)
-      ->Arg(21)
-      ->Arg(22)
-      ->Arg(23)
-      ->Arg(24)
-      ->Arg(25)
-      ->Arg(26)
-      ->Arg(27)
-      ->Arg(28)
-      ->Arg(29)
-      ->Arg(30)
-      ->Arg(31)
-      ->Arg(32)
-      ->Arg(64)
-      ->Arg(512)
-      ->Arg(1024)
-      ->Arg(4000)
-      ->Arg(4096)
-      ->Arg(5500)
-      ->Arg(64000)
-      ->Arg(65536)
-      ->Arg(70000);
-}
+int main(int argc, char** argv) {
+  auto bm = []<class Container>(std::type_identity<Container>, std::string name) {
+    benchmark::RegisterBenchmark(
+        name,
+        [](benchmark::State& state) {
+          Container vec(state.range(), 3);
 
-template <class T>
-static void BM_std_min(benchmark::State& state) {
-  std::vector<T> vec(state.range(), 3);
+          for (auto _ : state) {
+            benchmark::DoNotOptimize(vec);
+            benchmark::DoNotOptimize(std::ranges::min(vec));
+          }
+        })
+        ->Arg(1)
+        ->Arg(8)
+        ->Arg(64)
+        ->Arg(70000);
+  };
 
-  for (auto _ : state) {
-    benchmark::DoNotOptimize(vec);
-    benchmark::DoNotOptimize(std::ranges::min(vec));
-  }
-}
-BENCHMARK(BM_std_min<char>)->Apply(run_sizes);
-BENCHMARK(BM_std_min<short>)->Apply(run_sizes);
-BENCHMARK(BM_std_min<int>)->Apply(run_sizes);
-BENCHMARK(BM_std_min<long long>)->Apply(run_sizes);
+  bm(std::type_identity<std::vector<char>>(), "ranges::min(std::vector<char>)");
+  bm(std::type_identity<std::vector<long long>>(), "ranges::min(std::vector<long long>)");
 #ifndef TEST_HAS_NO_INT128
-BENCHMARK(BM_std_min<__int128>)->Apply(run_sizes);
-#endif
-BENCHMARK(BM_std_min<unsigned char>)->Apply(run_sizes);
-BENCHMARK(BM_std_min<unsigned short>)->Apply(run_sizes);
-BENCHMARK(BM_std_min<unsigned int>)->Apply(run_sizes);
-BENCHMARK(BM_std_min<unsigned long long>)->Apply(run_sizes);
-#ifndef TEST_HAS_NO_INT128
-BENCHMARK(BM_std_min<unsigned __int128>)->Apply(run_sizes);
+  bm(std::type_identity<std::vector<__int128>>(), "ranges::min(std::vector<__int128>)");
 #endif
 
-BENCHMARK_MAIN();
+  bm(std::type_identity<std::deque<char>>(), "ranges::min(std::deque<char>)");
+  bm(std::type_identity<std::deque<long long>>(), "ranges::min(std::deque<long long>)");
+#ifndef TEST_HAS_NO_INT128
+  bm(std::type_identity<std::deque<__int128>>(), "ranges::min(std::deque<__int128>)");
+#endif
+
+  bm(std::type_identity<std::list<char>>(), "ranges::min(std::list<char>)");
+  bm(std::type_identity<std::list<long long>>(), "ranges::min(std::list<long long>)");
+#ifndef TEST_HAS_NO_INT128
+  bm(std::type_identity<std::list<__int128>>(), "ranges::min(std::list<__int128>)");
+#endif
+
+  benchmark::Initialize(&argc, argv);
+  benchmark::RunSpecifiedBenchmarks();
+  benchmark::Shutdown();
+  return 0;
+}

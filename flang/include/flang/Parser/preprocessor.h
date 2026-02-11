@@ -49,8 +49,8 @@ public:
 
   bool set_isDisabled(bool disable);
 
-  TokenSequence Apply(const std::vector<TokenSequence> &args,
-      const Prescanner &, bool inIfExpression = false) const;
+  TokenSequence Apply(const std::vector<TokenSequence> &args, Prescanner &,
+      bool inIfExpression = false);
 
   void Print(llvm::raw_ostream &out, const char *macroName = "") const;
 
@@ -95,7 +95,7 @@ public:
   // that result and try again.  All other Fortran preprocessors share this
   // behavior.
   std::optional<TokenSequence> MacroReplacement(const TokenSequence &,
-      const Prescanner &,
+      Prescanner &,
       std::optional<std::size_t> *partialFunctionLikeMacro = nullptr,
       bool inIfExpression = false);
 
@@ -109,7 +109,7 @@ private:
   enum class CanDeadElseAppear { No, Yes };
 
   CharBlock SaveTokenAsName(const CharBlock &);
-  TokenSequence ReplaceMacros(const TokenSequence &, const Prescanner &,
+  TokenSequence ReplaceMacros(const TokenSequence &, Prescanner &,
       std::optional<std::size_t> *partialFunctionLikeMacro = nullptr,
       bool inIfExpression = false);
   void SkipDisabledConditionalCode(

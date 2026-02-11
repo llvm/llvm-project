@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <__config>
-#if !defined(_LIBCPP_OBJECT_FORMAT_COFF) && !defined(_LIBCPP_OBJECT_FORMAT_XCOFF) &&                                   \
-    _LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION < 5
+#if !defined(_LIBCPP_OBJECT_FORMAT_COFF) && _LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION < 5
 #  define _LIBCPP_SHARED_PTR_DEFINE_LEGACY_INLINE_FUNCTIONS
 #endif
 
