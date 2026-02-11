@@ -208,10 +208,9 @@ define i64 @cls_i64_2(i64 %x) {
 ; CHECK-LABEL: cls_i64_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srai a2, a1, 31
-; CHECK-NEXT:    xor a0, a0, a2
 ; CHECK-NEXT:    xor a1, a1, a2
-; CHECK-NEXT:    li a2, 1
-; CHECK-NEXT:    slx a1, a0, a2
+; CHECK-NEXT:    xor a0, a0, a2
+; CHECK-NEXT:    nsrli a1, a0, 31
 ; CHECK-NEXT:    bnez a1, .LBB16_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    slli a0, a0, 1
@@ -317,21 +316,12 @@ define i32 @cls_i32_knownbits_no_overestimate(i32 signext %x) {
 define i64 @sll_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: sll_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a4, a2, -32
 ; CHECK-NEXT:    sll a3, a0, a2
-; CHECK-NEXT:    bltz a4, .LBB22_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a1, a3
-; CHECK-NEXT:    j .LBB22_3
-; CHECK-NEXT:  .LBB22_2:
-; CHECK-NEXT:    sll a1, a1, a2
-; CHECK-NEXT:    not a2, a2
-; CHECK-NEXT:    srli a0, a0, 1
-; CHECK-NEXT:    srl a0, a0, a2
-; CHECK-NEXT:    or a1, a1, a0
-; CHECK-NEXT:  .LBB22_3:
-; CHECK-NEXT:    srai a0, a4, 31
-; CHECK-NEXT:    and a0, a0, a3
+; CHECK-NEXT:    slx a1, a0, a2
+; CHECK-NEXT:    slli a2, a2, 26
+; CHECK-NEXT:    srai a2, a2, 31
+; CHECK-NEXT:    mvm a1, a3, a2
+; CHECK-NEXT:    andn a0, a3, a2
 ; CHECK-NEXT:    ret
   %b = shl i64 %x, %y
   ret i64 %b
@@ -363,8 +353,7 @@ define i64 @sll_large_i64(i64 %x, i64 %y) {
 define i64 @slli_i64(i64 %x) {
 ; CHECK-LABEL: slli_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 25
-; CHECK-NEXT:    slx a1, a0, a2
+; CHECK-NEXT:    nsrli a1, a0, 7
 ; CHECK-NEXT:    slli a0, a0, 25
 ; CHECK-NEXT:    ret
   %a = shl i64 %x, 25
