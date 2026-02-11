@@ -631,6 +631,20 @@ func.func @invalid_reduce_wrong_yield(%arg0: f64, %arg1: f64) -> f64 {
 
 // -----
 
+func.func @invalid_reduce_wrong_terminator(%arg0: f64, %arg1: f64) -> f64 {
+  %cf1 = arith.constant 1.0 : f64
+  // expected-error@+1 {{reduce region must end with a terminator}}
+  %r = sparse_tensor.reduce %arg0, %arg1, %cf1 : f64 {
+  ^bb0(%arg2: f64, %arg3: f64):
+    %0 = arith.addf %arg2, %arg3 : f64
+    sparse_tensor.yield %0 : f64
+    %1 = arith.fptosi %0 : f64 to i32
+  }
+  return %r : f64
+}
+
+// -----
+
 func.func @invalid_select_num_args_mismatch(%arg0: f64) -> f64 {
   // expected-error@+1 {{select region must have exactly 1 arguments}}
   %r = sparse_tensor.select %arg0 : f64 {

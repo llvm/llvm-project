@@ -126,7 +126,7 @@
   "math": {
     "LIBC_CONF_MATH_OPTIMIZATIONS": {
       "value": 0,
-      "doc": "Configure optimizations for math functions. Values accepted are LIBC_MATH_SKIP_ACCURATE_PASS, LIBC_MATH_SMALL_TABLES, LIBC_MATH_NO_ERRNO, LIBC_MATH_NO_EXCEPT, and LIBC_MATH_FAST."
+      "doc": "Configure optimizations for math functions. Values accepted are LIBC_MATH_SKIP_ACCURATE_PASS, LIBC_MATH_SMALL_TABLES, LIBC_MATH_NO_ERRNO, LIBC_MATH_NO_EXCEPT, LIBC_MATH_FAST, and LIBC_MATH_INTERMEDIATE_COMP_IN_FLOAT."
     },
     "LIBC_CONF_FREXP_INF_NAN_EXPONENT": {
       "value": "",
