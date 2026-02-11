@@ -84,7 +84,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __has_native_atomic_wait_impl() {
 
 template <class _Tp>
 concept __has_native_atomic_wait =
-    has_unique_object_representations_v<_Tp> && is_trivially_copyable_v<_Tp> && __has_native_atomic_wait_impl<_Tp>();
+    has_unique_object_representations_v<_Tp> && is_trivially_copyable_v<_Tp> &&
+    std::__has_native_atomic_wait_impl<_Tp>();
 
 #  else // _LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE
 
