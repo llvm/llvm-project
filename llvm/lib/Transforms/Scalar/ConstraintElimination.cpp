@@ -1147,19 +1147,6 @@ addConstantRangeFactsToWorkList(SmallVectorImpl<FactOrCheck> &WorkList,
       WorkList.push_back(FactOrCheck::getConditionFact(
           DTN, CmpInst::ICMP_ULE, V, ConstantInt::get(Ty, UMax)));
   }
-
-  ConstantRange SCR =
-      computeConstantRange(V, /*ForSigned=*/true, /*UseInstrInfo=*/true);
-  if (SCR != UCR && !SCR.isFullSet() && !SCR.isEmptySet()) {
-    APInt SMin = SCR.getSignedMin();
-    APInt SMax = SCR.getSignedMax();
-    if (!SMin.isMinSignedValue())
-      WorkList.push_back(FactOrCheck::getConditionFact(
-          DTN, CmpInst::ICMP_SGE, V, ConstantInt::get(Ty, SMin)));
-    if (!SMax.isMaxSignedValue())
-      WorkList.push_back(FactOrCheck::getConditionFact(
-          DTN, CmpInst::ICMP_SLE, V, ConstantInt::get(Ty, SMax)));
-  }
 }
 
 void State::addInfoFor(BasicBlock &BB) {
