@@ -13,6 +13,8 @@
 #include <__chrono/duration.h>
 #include <__chrono/high_resolution_clock.h>
 #include <__config>
+    #include <cstdio>
+      
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -59,7 +61,9 @@ _LIBCPP_HIDE_FROM_ABI __poll_with_backoff_results __libcpp_thread_poll_with_back
       __count += 1;
       continue;
     }
-    chrono::nanoseconds const __elapsed = chrono::high_resolution_clock::now() - __start;
+    auto __now = chrono::high_resolution_clock::now();
+    chrono::nanoseconds const __elapsed = __now - __start;
+    std::fprintf(stderr, "start: %lld ns\nnow: %lld ns\nelapsed: %lld ns\n", __start.time_since_epoch().count(), __now.time_since_epoch().count(), __elapsed.count());
     if (__max_elapsed != chrono::nanoseconds::zero() && __max_elapsed < __elapsed)
       return __poll_with_backoff_results::__timeout;
     if (auto __backoff_res = __backoff(__elapsed); __backoff_res == __backoff_results::__continue_poll)
