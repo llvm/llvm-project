@@ -369,10 +369,7 @@ struct LoopNestIterator : public ExecutionPartIterator {
   }
 
 private:
-  static bool isLoop(const parser::ExecutionPartConstruct &c) {
-    return parser::Unwrap<parser::OpenMPLoopConstruct>(c) != nullptr ||
-        parser::Unwrap<parser::DoConstruct>(c) != nullptr;
-  }
+  static bool isLoop(const parser::ExecutionPartConstruct &c);
 
   void adjust() {
     while (valid() && !isLoop(**this)) {

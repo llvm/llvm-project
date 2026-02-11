@@ -256,4 +256,9 @@ void ExecutionPartIterator::adjust() {
   }
 }
 
+bool LoopNestIterator::isLoop(const parser::ExecutionPartConstruct &c) {
+  return parser::Unwrap<parser::OpenMPLoopConstruct>(c) != nullptr ||
+      parser::Unwrap<parser::DoConstruct>(c) != nullptr;
+}
+
 } // namespace Fortran::parser::omp
