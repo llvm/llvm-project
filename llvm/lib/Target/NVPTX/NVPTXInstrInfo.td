@@ -2499,7 +2499,7 @@ def NVPTX_fma_oneuse_and_nnan : PatFrag<(ops node:$a, node:$b, node:$c),
 // PatFrag is for a fmaxnum node with nsz
 def NVPTX_fmaxnum_nsz : PatFrag<(ops node:$a, node:$b),
                                   (fmaxnum node:$a, node:$b), [{
-  return N->getFlags().hasNoSignedZeros() || TM.Options.NoSignedZerosFPMath;
+  return N->getFlags().hasNoSignedZeros();
 }]>;
 
 class FMARELUInst<RegTyInfo t, bit allow_ftz, PatFrag zero_pat>

@@ -5015,7 +5015,8 @@ the configuration (without a prefix: ``Auto``).
   Keep the form feed character if it's immediately preceded and followed by
   a newline. Multiple form feeds and newlines within a whitespace range are
   replaced with a single newline and form feed followed by the remaining
-  newlines.
+  newlines. (See
+  www.gnu.org/prep/standards/html_node/Formatting.html#:~:text=formfeed.)
 
 .. _LambdaBodyIndentation:
 

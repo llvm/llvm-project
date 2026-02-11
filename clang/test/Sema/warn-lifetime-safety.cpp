@@ -10,6 +10,8 @@ struct [[gsl::Owner]] MyObj {
   MyObj();
   MyObj(int);
   MyObj(const MyObj&);
+  MyObj(MyObj&&);
+  MyObj& operator=(MyObj&&);
   ~MyObj() {}  // Non-trivial destructor
   MyObj operator+(MyObj);
   
@@ -1404,39 +1406,69 @@ void add(int c, MyObj* node) {
 }
 } // namespace CppCoverage
 
-namespace do_not_warn_on_std_move {
-void silenced() {
+namespace strict_warn_on_move {
+void strict_warn_on_move() {
   MyObj b;
   View v;
   {
     MyObj a;
-    v = a;
-    b = std::move(a); // No warning for 'a' being moved.
-  }
-  (void)v;
+    v = a;            // expected-warning-re {{object whose reference {{.*}} may have been moved}}
+    b = std::move(a); // expected-note {{potentially moved here}}
+  }                   // expected-note {{destroyed here}}
+  (void)v;            // expected-note {{later used here}}
 }
 
-void silenced_flow_insensitive(bool c) {
-  MyObj a;
-  View v = a;
-  if (c) {
-    MyObj b = std::move(a);
-  }
-  (void)v;
+void flow_sensitive(bool c) {
+  View v;
+  {
+    MyObj a;
+    if (c) {
+      MyObj b = std::move(a);
+      return;
+    }
+    v = a;  // expected-warning {{object whose reference}}
+  }         // expected-note {{destroyed here}}
+  (void)v;  // expected-note {{later used here}}
 }
 
-// FIXME: Silence when move arg is not a declref.
 void take(MyObj&&);
-void not_silenced_via_conditional(bool cond) {
+void detect_conditional(bool cond) {
   View v;
   {
     MyObj a, b;
-    v = cond ? a : b; // expected-warning 2 {{object whose reference }}
-    take(std::move(cond ? a : b));
+    v = cond ? a : b; // expected-warning-re 2 {{object whose reference {{.*}} may have been moved}}
+    take(std::move(cond ? a : b)); // expected-note 2 {{potentially moved here}}
   }         // expected-note 2 {{destroyed here}}
   (void)v;  // expected-note 2 {{later used here}}
 }
-} // namespace do_not_warn_on_std_move
+
+void wrong_use_of_move_is_permissive() {
+  View v;
+  {
+    MyObj a;
+    v = std::move(a); // expected-warning {{object whose reference is captured does not live long enough}}
+  }         // expected-note {{destroyed here}}
+  (void)v;  // expected-note {{later used here}}
+  const int* p;
+  {
+    MyObj a;
+    p = std::move(a).getData(); // expected-warning {{object whose reference is captured does not live long enough}}
+  }         // expected-note {{destroyed here}}
+  (void)p;  // expected-note {{later used here}}
+}
+
+void take(int*);
+void test_release_no_uaf() {
+  int* r;
+  // Calling release() marks p as moved from, so its destruction doesn't invalidate r.
+  {
+    std::unique_ptr<int> p;
+    r = p.get();        // expected-warning-re {{object whose reference {{.*}} may have been moved}}
+    take(p.release());  // expected-note {{potentially moved here}}
+  }                     // expected-note {{destroyed here}}
+  (void)*r;             // expected-note {{later used here}}
+}
+} // namespace strict_warn_on_move
 
 // Implicit this annotations with redecls.
 namespace GH172013 {
@@ -1691,3 +1723,25 @@ void test() {
 }
 
 } // namespace attr_on_template_params
+
+namespace non_trivial_views {
+struct [[gsl::Pointer]] View {
+    View(const std::string&);
+    ~View(); // Forces a CXXBindTemporaryExpr.
+};
+
+View test1(std::string a) {
+  // Make sure we handle CXXBindTemporaryExpr of view types.
+  return View(a); // expected-warning {{address of stack memory is returned later}} expected-note {{returned here}}
+}
+
+View test2(std::string a) {
+  View b = View(a); // expected-warning {{address of stack memory is returned later}}
+  return b;         // expected-note {{returned here}}
+}
+
+View test3(std::string a) {
+  const View& b = View(a);  // expected-warning {{address of stack memory is returned later}}
+  return b;                 // expected-note {{returned here}}
+}
+} // namespace non_trivial_views
