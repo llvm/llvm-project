@@ -52,7 +52,7 @@ def git_rev_list(git_repo: str, paths: List[str] = []) -> List[str]:
     rev_list = subprocess.check_output(cli).decode().strip().splitlines()
     return list(reversed(rev_list))
 
-def git_sorted_revlist(git_repo: str, commits: List[str]) -> List[str]:
+def git_sort_revlist(git_repo: str, commits: List[str]) -> List[str]:
     """
     Return the list of commits sorted by their chronological order (from oldest to newest) in the
     provided Git repository. Items earlier in the list are older than items later in the list.
@@ -106,7 +106,7 @@ def main(argv):
         all_commits = get_all_libcxx_commits(args.git_repo)
 
         # Invoke the callback, processing most recent commits first
-        commits_to_benchmark = git_sorted_revlist(args.git_repo, list(all_commits - benchmarked_commits))
+        commits_to_benchmark = git_sort_revlist(args.git_repo, list(all_commits - benchmarked_commits))
         most_recent = commits_to_benchmark[-1]
         logging.info(f'Benchmarking libc++ at {most_recent}')
         subprocess.check_call(callback + [most_recent])
