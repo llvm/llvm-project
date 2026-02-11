@@ -352,8 +352,8 @@ static Value *emitCallMaybeConstrainedFPBuiltin(CodeGenFunction &CGF,
 
   if (CGF.Builder.getIsFPConstrained())
     return CGF.Builder.CreateConstrainedFPCall(F, Args);
-  else
-    return CGF.Builder.CreateCall(F, Args);
+
+  return CGF.Builder.CreateCall(F, Args);
 }
 
 static llvm::FixedVectorType *GetNeonType(CodeGenFunction *CGF,
@@ -373,13 +373,11 @@ static llvm::FixedVectorType *GetNeonType(CodeGenFunction *CGF,
   case NeonTypeFlags::BFloat16:
     if (AllowBFloatArgsAndRet)
       return llvm::FixedVectorType::get(CGF->BFloatTy, V1Ty ? 1 : (4 << IsQuad));
-    else
-      return llvm::FixedVectorType::get(CGF->Int16Ty, V1Ty ? 1 : (4 << IsQuad));
+    return llvm::FixedVectorType::get(CGF->Int16Ty, V1Ty ? 1 : (4 << IsQuad));
   case NeonTypeFlags::Float16:
     if (HasFastHalfType)
       return llvm::FixedVectorType::get(CGF->HalfTy, V1Ty ? 1 : (4 << IsQuad));
-    else
-      return llvm::FixedVectorType::get(CGF->Int16Ty, V1Ty ? 1 : (4 << IsQuad));
+    return llvm::FixedVectorType::get(CGF->Int16Ty, V1Ty ? 1 : (4 << IsQuad));
   case NeonTypeFlags::Int32:
     return llvm::FixedVectorType::get(CGF->Int32Ty, V1Ty ? 1 : (2 << IsQuad));
   case NeonTypeFlags::Int64:
@@ -441,8 +439,7 @@ Value *CodeGenFunction::EmitNeonCall(Function *F, SmallVectorImpl<Value*> &Ops,
 
   if (F->isConstrainedFPIntrinsic())
     return Builder.CreateConstrainedFPCall(F, Ops, name);
-  else
-    return Builder.CreateCall(F, Ops, name);
+  return Builder.CreateCall(F, Ops, name);
 }
 
 Value *CodeGenFunction::EmitFP8NeonCall(unsigned IID,
@@ -535,8 +532,7 @@ Value *CodeGenFunction::EmitNeonRShiftImm(Value *Vec, Value *Shift,
   Shift = EmitNeonShiftVector(Shift, Ty, false);
   if (usgn)
     return Builder.CreateLShr(Vec, Shift, name);
-  else
-    return Builder.CreateAShr(Vec, Shift, name);
+  return Builder.CreateAShr(Vec, Shift, name);
 }
 
 enum {
@@ -4656,27 +4652,30 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   if (TypeFlags.isLoad())
     return EmitSVEMaskedLoad(E, Ty, Ops, Builtin->LLVMIntrinsic,
                              TypeFlags.isZExtReturn());
-  else if (TypeFlags.isStore())
+  if (TypeFlags.isStore())
     return EmitSVEMaskedStore(E, Ops, Builtin->LLVMIntrinsic);
-  else if (TypeFlags.isGatherLoad())
+  if (TypeFlags.isGatherLoad())
     return EmitSVEGatherLoad(TypeFlags, Ops, Builtin->LLVMIntrinsic);
-  else if (TypeFlags.isScatterStore())
+  if (TypeFlags.isScatterStore())
     return EmitSVEScatterStore(TypeFlags, Ops, Builtin->LLVMIntrinsic);
-  else if (TypeFlags.isPrefetch())
+  if (TypeFlags.isPrefetch())
     return EmitSVEPrefetchLoad(TypeFlags, Ops, Builtin->LLVMIntrinsic);
-  else if (TypeFlags.isGatherPrefetch())
+  if (TypeFlags.isGatherPrefetch())
     return EmitSVEGatherPrefetch(TypeFlags, Ops, Builtin->LLVMIntrinsic);
-  else if (TypeFlags.isStructLoad())
+  if (TypeFlags.isStructLoad())
     return EmitSVEStructLoad(TypeFlags, Ops, Builtin->LLVMIntrinsic);
-  else if (TypeFlags.isStructStore())
+  if (TypeFlags.isStructStore())
     return EmitSVEStructStore(TypeFlags, Ops, Builtin->LLVMIntrinsic);
-  else if (TypeFlags.isTupleSet() || TypeFlags.isTupleGet())
+  if (TypeFlags.isTupleSet() || TypeFlags.isTupleGet())
     return EmitSVETupleSetOrGet(TypeFlags, Ops);
-  else if (TypeFlags.isTupleCreate())
+  if (TypeFlags.isTupleCreate())
     return EmitSVETupleCreate(TypeFlags, Ty, Ops);
-  else if (TypeFlags.isUndef())
+  if (TypeFlags.isUndef())
     return UndefValue::get(Ty);
-  else if (Builtin->LLVMIntrinsic != 0) {
+
+  // Handle built-ins for which there is a corresponding LLVM Intrinsic.
+  // -------------------------------------------------------------------
+  if (Builtin->LLVMIntrinsic != 0) {
     // Emit set FPMR for intrinsics that require it
     if (TypeFlags.setsFPMR())
       Builder.CreateCall(CGM.getIntrinsic(Intrinsic::aarch64_set_fpmr),
@@ -5035,15 +5034,15 @@ Value *CodeGenFunction::EmitAArch64SMEBuiltinExpr(unsigned BuiltinID,
 
   if (TypeFlags.isLoad() || TypeFlags.isStore())
     return EmitSMELd1St1(TypeFlags, Ops, Builtin->LLVMIntrinsic);
-  else if (TypeFlags.isReadZA() || TypeFlags.isWriteZA())
+  if (TypeFlags.isReadZA() || TypeFlags.isWriteZA())
     return EmitSMEReadWrite(TypeFlags, Ops, Builtin->LLVMIntrinsic);
-  else if (BuiltinID == SME::BI__builtin_sme_svzero_mask_za ||
-           BuiltinID == SME::BI__builtin_sme_svzero_za)
+  if (BuiltinID == SME::BI__builtin_sme_svzero_mask_za ||
+      BuiltinID == SME::BI__builtin_sme_svzero_za)
     return EmitSMEZero(TypeFlags, Ops, Builtin->LLVMIntrinsic);
-  else if (BuiltinID == SME::BI__builtin_sme_svldr_vnum_za ||
-           BuiltinID == SME::BI__builtin_sme_svstr_vnum_za ||
-           BuiltinID == SME::BI__builtin_sme_svldr_za ||
-           BuiltinID == SME::BI__builtin_sme_svstr_za)
+  if (BuiltinID == SME::BI__builtin_sme_svldr_vnum_za ||
+      BuiltinID == SME::BI__builtin_sme_svstr_vnum_za ||
+      BuiltinID == SME::BI__builtin_sme_svldr_za ||
+      BuiltinID == SME::BI__builtin_sme_svstr_za)
     return EmitSMELdrStr(TypeFlags, Ops, Builtin->LLVMIntrinsic);
 
   // Emit set FPMR for intrinsics that require it
@@ -5272,27 +5271,26 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
         ToRet = Builder.CreateStore(Builder.CreateExtractValue(Val, i), Addr);
       }
       return ToRet;
-    } else {
-      // Load 8 i64 words from ValPtr, and store them to the address
-      // via an LLVM intrinsic.
-      SmallVector<llvm::Value *, 9> Args;
-      Args.push_back(MemAddr);
-      for (size_t i = 0; i < 8; i++) {
-        llvm::Value *ValOffsetPtr =
-            Builder.CreateGEP(Int64Ty, ValPtr, Builder.getInt32(i));
-        Address Addr =
-            Address(ValOffsetPtr, Int64Ty, CharUnits::fromQuantity(8));
-        Args.push_back(Builder.CreateLoad(Addr));
-      }
-
-      auto Intr = (BuiltinID == clang::AArch64::BI__builtin_arm_st64b
-                       ? Intrinsic::aarch64_st64b
-                   : BuiltinID == clang::AArch64::BI__builtin_arm_st64bv
-                       ? Intrinsic::aarch64_st64bv
-                       : Intrinsic::aarch64_st64bv0);
-      Function *F = CGM.getIntrinsic(Intr);
-      return Builder.CreateCall(F, Args);
     }
+
+    // Load 8 i64 words from ValPtr, and store them to the address
+    // via an LLVM intrinsic.
+    SmallVector<llvm::Value *, 9> Args;
+    Args.push_back(MemAddr);
+    for (size_t i = 0; i < 8; i++) {
+      llvm::Value *ValOffsetPtr =
+          Builder.CreateGEP(Int64Ty, ValPtr, Builder.getInt32(i));
+      Address Addr = Address(ValOffsetPtr, Int64Ty, CharUnits::fromQuantity(8));
+      Args.push_back(Builder.CreateLoad(Addr));
+    }
+
+    auto Intr = (BuiltinID == clang::AArch64::BI__builtin_arm_st64b
+                     ? Intrinsic::aarch64_st64b
+                 : BuiltinID == clang::AArch64::BI__builtin_arm_st64bv
+                     ? Intrinsic::aarch64_st64bv
+                     : Intrinsic::aarch64_st64bv0);
+    Function *F = CGM.getIntrinsic(Intr);
+    return Builder.CreateCall(F, Args);
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_rndr ||
