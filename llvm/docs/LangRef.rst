@@ -2083,16 +2083,11 @@ For example:
     served from a virtual allocator instead. Notably, this is allowed even if
     the allocator calls have side-effects.
 
-    If multiple allocation functions operate on the same allocation (for
-    example, an "alloc" followed by "free"), allocation elision is only allowed
-    if all involved functions have the same ``"alloc-family"``. The following
-    transforms can be performed, or combinations thereof:
-
-    * An "alloc" that is leaked (no "free"/"realloc") can be elided.
-    * An "alloc" and "free" pair can be elided.
-    * A "realloc" and "free" pair can be converted into a "free" of the original
-      allocation.
-    * An "alloc" and "realloc" pair can be converted into an "alloc".
+    If multiple allocation functions operate on the same allocation,
+    allocation elision is only allowed for pairs of "alloc" and "free" with the
+    same ``"alloc-family"`` attribute. For this purpose, a "realloc" call may
+    be decomposed into "alloc" and "free" operations, as long as at least one
+    of them will be elided.
 ``"alloc-variant-zeroed"="FUNCTION"``
     This attribute indicates that another function is equivalent to an allocator function,
     but returns zeroed memory. The function must have "zeroed" allocation behavior,
