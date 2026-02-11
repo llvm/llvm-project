@@ -3751,10 +3751,10 @@ multiclass SelectCanonicalizeAsMax<
   def : GCNPat<
     (fcanonicalize (f64 (VOP3Mods f64:$src, i32:$src_mods))),
     (V_MAX_F64_e64  $src_mods, $src, $src_mods, $src)> {
-    let OtherPredicates = !listconcat(f64_preds, [isNotGFX12Plus]);
+    let OtherPredicates = !listconcat(f64_preds, [NotHasIEEEMinimumMaximumInsts]);
   }
 
-  let OtherPredicates = !listconcat(f64_preds, [isNotGFX12Plus, IEEEModeDisabled]) in {
+  let OtherPredicates = !listconcat(f64_preds, [NotHasIEEEMinimumMaximumInsts, IEEEModeDisabled]) in {
     def : GCNPat<
       (fcanonicalize_no_nnan (f64 (VOP3Mods f64:$src, i32:$src_mods))),
       (V_MUL_F64_e64 (i32 0), (i64 CONST.FP64_ONE), (i32 0),
@@ -3768,7 +3768,6 @@ multiclass SelectCanonicalizeAsMax<
     }
   }
 
-  // GFX12 does not have IEEE mode
   def : GCNPat<
     (fcanonicalize (f64 (VOP3Mods f64:$src, i32:$src_mods))),
     (V_MAX_NUM_F64_e64  $src_mods, $src, $src_mods, $src)> {
