@@ -363,6 +363,18 @@ static auto isStatusPtrReturningCall() {
           recordType(hasDeclaration(statusClass()))))))))));
 }
 
+static auto isNonConstStatusOrType() {
+  using namespace ::clang::ast_matchers;
+  return hasCanonicalType(
+      qualType(hasDeclaration(statusOrClass()), unless(isConstQualified())));
+}
+
+static auto isNonConstStatusOrPtrArgumentCall() {
+  using namespace ::clang::ast_matchers;
+  return callExpr(hasAnyArgument(
+      hasType(hasCanonicalType(pointsTo(isNonConstStatusOrType())))));
+}
+
 static auto
 buildDiagnoseMatchSwitch(const UncheckedStatusOrAccessModelOptions &Options) {
   return CFGMatchSwitchBuilder<const Environment,
@@ -1134,6 +1146,24 @@ static void transferStatusPtrReturningCall(const CallExpr *Expr,
     initializeStatus(*RecordLoc, State.Env);
 }
 
+static void transferStatusOrPtrArgumentCall(const CallExpr *Expr,
+                                            const MatchFinder::MatchResult &,
+                                            LatticeTransferState &State) {
+  for (size_t I = 0; I < Expr->getNumArgs(); ++I) {
+    auto *Arg = Expr->getArg(I);
+    auto Type = Arg->getType();
+    if (Type->isPointerType()) {
+      auto PointeeType = Type->getPointeeType();
+      if (!PointeeType.isConstQualified() && isStatusOrType(PointeeType)) {
+        if (auto *PointeeLoc = getPointeeLocation(*Arg, State.Env)) {
+          auto &StatusLoc = locForStatus(*PointeeLoc);
+          initializeStatus(StatusLoc, State.Env);
+        }
+      }
+    }
+  }
+}
+
 static RecordStorageLocation *
 getSmartPtrLikeStorageLocation(const Expr &E, const Environment &Env) {
   if (!E.isPRValue())
@@ -1309,6 +1339,8 @@ buildTransferMatchSwitch(ASTContext &Ctx,
                                        transferStatusOrConstructor)
       .CaseOfCFGStmt<CXXConstructExpr>(isStatusConstructor(),
                                        transferStatusConstructor)
+      .CaseOfCFGStmt<CallExpr>(isNonConstStatusOrPtrArgumentCall(),
+                               transferStatusOrPtrArgumentCall)
       .CaseOfCFGStmt<ImplicitCastExpr>(
           implicitCastExpr(hasCastKind(CK_PointerToBoolean)),
           transferPointerToBoolean)
