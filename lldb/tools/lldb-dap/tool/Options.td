@@ -18,8 +18,8 @@ def: Flag<["-"], "v">,
   HelpText<"Alias for --version">;
 
 def check_python : F<"check-python">,
-                   HelpText<"Prints the path to the resolved Python DLL. 0 if "
-                            "Python was not resolved (windows only).">;
+                   HelpText<"Prints the path to the resolved Python DLL. "
+                            "(Windows only).">;
 
 def wait_for_debugger: F<"wait-for-debugger">,
   HelpText<"Pause the program at startup.">;
