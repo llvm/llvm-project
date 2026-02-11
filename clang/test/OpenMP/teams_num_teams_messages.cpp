@@ -58,7 +58,7 @@ T tmain(T argc) {
 #pragma omp teams num_teams(3.14) // expected-error 2 {{expression must have integral or unscoped enumeration type, not 'double'}}
   foo();
 #pragma omp target
-#pragma omp teams num_teams (1, 2, 3) // expected-error {{only two expression allowed in 'num_teams' clause}}
+#pragma omp teams num_teams (1, 2, 3) // expected-error {{only two expressions allowed in 'num_teams' clause}}
   foo();
 #pragma omp target
 #pragma omp teams thread_limit(1, 2, 3) // expected-error {{only one expression allowed in 'thread_limit' clause}}
@@ -118,7 +118,7 @@ int main(int argc, char **argv) {
   foo();
 
 #pragma omp target
-#pragma omp teams num_teams (1, 2, 3) // expected-error {{only two expression allowed in 'num_teams' clause}}
+#pragma omp teams num_teams (1, 2, 3) // expected-error {{only two expressions allowed in 'num_teams' clause}}
   foo();
 
 #pragma omp target
@@ -132,28 +132,28 @@ int main(int argc, char **argv) {
 void test_invalid_syntax() {
   int a = 1, b = 2, c = 3;
 
-  // expected-error@+1 {{only two expression allowed in 'num_teams' clause}}
+  // expected-error@+1 {{only two expressions allowed in 'num_teams' clause}}
   #pragma omp teams num_teams(a, b, c)
   { }
   // expected-error@+1 {{lower bound is greater than upper bound in 'num_teams' clause}}
   #pragma omp teams num_teams(10:5)
   { }
 
-  // expected-error@+1 {{only two expression allowed in 'num_teams' clause}}
+  // expected-error@+1 {{only two expressions allowed in 'num_teams' clause}}
   #pragma omp target teams num_teams(a, b, c)
   { }
   // expected-error@+1 {{lower bound is greater than upper bound in 'num_teams' clause}}
   #pragma omp target teams num_teams(8:3)
   { }
 
-  // expected-error@+1 {{only two expression allowed in 'num_teams' clause}}
+  // expected-error@+1 {{only two expressions allowed in 'num_teams' clause}}
   #pragma omp target teams distribute num_teams(a, b, c)
   for (int i = 0; i < 100; ++i) { }
   // expected-error@+1 {{lower bound is greater than upper bound in 'num_teams' clause}}
   #pragma omp target teams distribute num_teams(15:7)
   for (int i = 0; i < 100; ++i) { }
 
-  // expected-error@+1 {{only two expression allowed in 'num_teams' clause}}
+  // expected-error@+1 {{only two expressions allowed in 'num_teams' clause}}
   #pragma omp target teams distribute parallel for num_teams(a, b, c)
   for (int i = 0; i < 100; ++i) { }
   // expected-error@+1 {{lower bound is greater than upper bound in 'num_teams' clause}}
@@ -161,14 +161,14 @@ void test_invalid_syntax() {
   for (int i = 0; i < 100; ++i) { }
 
   // Test target teams distribute parallel for simd directive
-  // expected-error@+1 {{only two expression allowed in 'num_teams' clause}}
+  // expected-error@+1 {{only two expressions allowed in 'num_teams' clause}}
   #pragma omp target teams distribute parallel for simd num_teams(a, b, c)
   for (int i = 0; i < 100; ++i) { }
   // expected-error@+1 {{lower bound is greater than upper bound in 'num_teams' clause}}
   #pragma omp target teams distribute parallel for simd num_teams(20:6)
   for (int i = 0; i < 100; ++i) { }
 
-  // expected-error@+1 {{only two expression allowed in 'num_teams' clause}}
+  // expected-error@+1 {{only two expressions allowed in 'num_teams' clause}}
   #pragma omp target teams distribute simd num_teams(a, b, c)
   for (int i = 0; i < 100; ++i) { }
   // expected-error@+1 {{lower bound is greater than upper bound in 'num_teams' clause}}
