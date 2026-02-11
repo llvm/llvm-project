@@ -109,8 +109,6 @@ public:
     return MI->implicit_operands().begin()->getReg() == TRI.getExec();
   }
 
-  const RegisterBank *getRegBankSgpr() const { return SgprRB; }
-
   const RegisterBank *getRegBankToAssign(Register Reg) {
     if (!isTemporalDivergenceCopy(Reg) &&
         (MUI.isUniform(Reg) || ILMA.isS32S64LaneMask(Reg)))
@@ -191,7 +189,7 @@ static Register getVReg(MachineOperand &Op) {
   if (!Op.isReg())
     return {};
 
-  // Operands of COPY can be physical registers.
+  // Operands of COPY and G_SI_CALL can be physical registers.
   Register Reg = Op.getReg();
   if (!Reg.isVirtual())
     return {};
@@ -262,11 +260,6 @@ bool AMDGPURegBankSelect::runOnMachineFunction(MachineFunction &MF) {
           continue;
 
         const RegisterBank *RB = RBSHelper.getRegBankToAssign(DefReg);
-
-        // The return address defined by G_SI_CALL is always uniform.
-        if (MI.getOpcode() == AMDGPU::G_SI_CALL)
-          RB = RBSHelper.getRegBankSgpr();
-
         if (MRI.getRegClassOrNull(DefReg))
           RBSHelper.reAssignRegBankOnDef(MI, DefOP, RB);
         else {

@@ -1571,8 +1571,7 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                Info.CallConv);
 
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
-  Register ReturnAddrVReg = MRI.createGenericVirtualRegister(LLT::scalar(64));
-  MIB.addDef(ReturnAddrVReg);
+  MIB.addDef(TRI->getReturnAddressReg(MF));
 
   if (!Info.IsConvergent)
     MIB.setMIFlag(MachineInstr::NoConvergent);
@@ -1634,9 +1633,6 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   // Now we can add the actual call instruction to the correct position.
   MIRBuilder.insertInstr(MIB);
-
-  // Copy the return address from the virtual register to the physical register.
-  MIRBuilder.buildCopy(Register(TRI->getReturnAddressReg(MF)), ReturnAddrVReg);
 
   // Finally we can copy the returned value back into its virtual-register. In
   // symmetry with the arguments, the physical register must be an

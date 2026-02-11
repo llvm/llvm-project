@@ -16,8 +16,7 @@ define i64 @load_deref_declaration_only() {
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @declared_with_ret_deref
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x s32>)
-  ; CHECK-NEXT:   [[SI_CALL:%[0-9]+]]:_(s64) = noconvergent G_SI_CALL [[GV]](p0), @declared_with_ret_deref, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = COPY [[SI_CALL]](s64)
+  ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @declared_with_ret_deref, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
@@ -41,8 +40,7 @@ define i64 @load_deref_unknown_decl() {
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @unknown_decl
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x s32>)
-  ; CHECK-NEXT:   [[SI_CALL:%[0-9]+]]:_(s64) = noconvergent G_SI_CALL [[GV]](p0), @unknown_decl, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = COPY [[SI_CALL]](s64)
+  ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @unknown_decl, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
@@ -66,8 +64,7 @@ define i64 @load_deref_callsite_only() {
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @unknown_decl
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x s32>)
-  ; CHECK-NEXT:   [[SI_CALL:%[0-9]+]]:_(s64) = noconvergent G_SI_CALL [[GV]](p0), @unknown_decl, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = COPY [[SI_CALL]](s64)
+  ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @unknown_decl, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
@@ -92,8 +89,7 @@ define i64 @load_deref_maxmimum_callsite_declaration_only() {
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @declared_with_ret_deref
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x s32>)
-  ; CHECK-NEXT:   [[SI_CALL:%[0-9]+]]:_(s64) = noconvergent G_SI_CALL [[GV]](p0), @declared_with_ret_deref, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = COPY [[SI_CALL]](s64)
+  ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @declared_with_ret_deref, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
@@ -104,8 +100,7 @@ define i64 @load_deref_maxmimum_callsite_declaration_only() {
   ; CHECK-NEXT:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @declared_with_ret_deref4
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY3]](<4 x s32>)
-  ; CHECK-NEXT:   [[SI_CALL1:%[0-9]+]]:_(s64) = noconvergent G_SI_CALL [[GV1]](p0), @declared_with_ret_deref4, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = COPY [[SI_CALL1]](s64)
+  ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV1]](p0), @declared_with_ret_deref4, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY4]](s32), [[COPY5]](s32)
@@ -133,8 +128,7 @@ define i64 @load_deref_or_null_declaration_only() {
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @declared_with_ret_deref_or_null
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x s32>)
-  ; CHECK-NEXT:   [[SI_CALL:%[0-9]+]]:_(s64) = noconvergent G_SI_CALL [[GV]](p0), @declared_with_ret_deref_or_null, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = COPY [[SI_CALL]](s64)
+  ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @declared_with_ret_deref_or_null, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
@@ -158,8 +152,7 @@ define i64 @load_deref_or_null_nonnull_decl() {
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @nonnull_decl
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x s32>)
-  ; CHECK-NEXT:   [[SI_CALL:%[0-9]+]]:_(s64) = noconvergent G_SI_CALL [[GV]](p0), @nonnull_decl, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = COPY [[SI_CALL]](s64)
+  ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @nonnull_decl, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
@@ -183,8 +176,7 @@ define i64 @load_deref_or_null_callsite_only() {
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @nonnull_decl
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x s32>)
-  ; CHECK-NEXT:   [[SI_CALL:%[0-9]+]]:_(s64) = noconvergent G_SI_CALL [[GV]](p0), @nonnull_decl, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = COPY [[SI_CALL]](s64)
+  ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @nonnull_decl, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
@@ -209,8 +201,7 @@ define i64 @load_deref_or_null_maxmimum_callsite_declaration_only() {
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @declared_with_ret_deref_or_null
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x s32>)
-  ; CHECK-NEXT:   [[SI_CALL:%[0-9]+]]:_(s64) = noconvergent G_SI_CALL [[GV]](p0), @declared_with_ret_deref_or_null, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = COPY [[SI_CALL]](s64)
+  ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @declared_with_ret_deref_or_null, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
@@ -221,8 +212,7 @@ define i64 @load_deref_or_null_maxmimum_callsite_declaration_only() {
   ; CHECK-NEXT:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @declared_with_ret_deref_or_null4
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY3]](<4 x s32>)
-  ; CHECK-NEXT:   [[SI_CALL1:%[0-9]+]]:_(s64) = noconvergent G_SI_CALL [[GV1]](p0), @declared_with_ret_deref_or_null4, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = COPY [[SI_CALL1]](s64)
+  ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV1]](p0), @declared_with_ret_deref_or_null4, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY4]](s32), [[COPY5]](s32)
