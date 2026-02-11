@@ -10722,6 +10722,12 @@ SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
     return InstructionUniformity::Default;
   }
 
+  // The return address defined by G_SI_CALL is always uniform. It is the PC
+  // value where execution resumes after the call, which is the same for all
+  // lanes in a wavefront regardless of whether the callee is divergent.
+  if (Opcode == AMDGPU::G_SI_CALL)
+    return InstructionUniformity::AlwaysUniform;
+
   if (SIInstrInfo::isGenericAtomicRMWOpcode(Opcode) ||
       Opcode == AMDGPU::G_ATOMIC_CMPXCHG ||
       Opcode == AMDGPU::G_ATOMIC_CMPXCHG_WITH_SUCCESS ||

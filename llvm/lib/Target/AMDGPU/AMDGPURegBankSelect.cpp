@@ -189,7 +189,7 @@ static Register getVReg(MachineOperand &Op) {
   if (!Op.isReg())
     return {};
 
-  // Operands of COPY and G_SI_CALL can be physical registers.
+  // Operands of COPY can be physical registers.
   Register Reg = Op.getReg();
   if (!Reg.isVirtual())
     return {};

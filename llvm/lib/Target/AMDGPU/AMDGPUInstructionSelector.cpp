@@ -4424,9 +4424,23 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   case AMDGPU::G_SBFX:
   case AMDGPU::G_UBFX:
     return selectG_SBFX_UBFX(I);
-  case AMDGPU::G_SI_CALL:
+  case AMDGPU::G_SI_CALL: {
     I.setDesc(TII.get(AMDGPU::SI_CALL));
+
+    // G_SI_CALL defines a virtual register that is copied to the return
+    // address physical register. Replace the virtual reg def with the
+    // physical register and remove the COPY.
+    Register DstReg = I.getOperand(0).getReg();
+    MCRegister RetAddrReg = TRI.getReturnAddressReg(*MF);
+    if (MRI->hasOneUse(DstReg)) {
+      MachineInstr &Copy = *MRI->use_instr_begin(DstReg);
+      if (Copy.isCopy() && Copy.getOperand(0).getReg() == RetAddrReg) {
+        Copy.eraseFromParent();
+      }
+    }
+    I.getOperand(0).setReg(RetAddrReg);
     return true;
+  }
   case AMDGPU::G_AMDGPU_WAVE_ADDRESS:
     return selectWaveAddress(I);
   case AMDGPU::G_AMDGPU_WHOLE_WAVE_FUNC_RETURN: {

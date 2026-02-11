@@ -15,7 +15,8 @@ define amdgpu_gfx void @test_gfx_call_external_void_func_void() #0 {
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_gfx_void_func_void
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x s32>)
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_gfx_void_func_void, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   [[SI_CALL:%[0-9]+]]:_(s64) = noconvergent G_SI_CALL [[GV]](p0), @external_gfx_void_func_void, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   $sgpr30_sgpr31 = COPY [[SI_CALL]](s64)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   SI_RETURN
   call amdgpu_gfx void @external_gfx_void_func_void()
@@ -34,7 +35,8 @@ define amdgpu_gfx void @test_gfx_call_external_void_func_i32_imm(i32) #0 {
   ; CHECK-NEXT:   $vgpr0 = COPY [[C]](s32)
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY1]](<4 x s32>)
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_gfx_void_func_i32, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   [[SI_CALL:%[0-9]+]]:_(s64) = noconvergent G_SI_CALL [[GV]](p0), @external_gfx_void_func_i32, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   $sgpr30_sgpr31 = COPY [[SI_CALL]](s64)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   SI_RETURN
   call amdgpu_gfx void @external_gfx_void_func_i32(i32 42)
@@ -54,7 +56,8 @@ define amdgpu_gfx void @test_gfx_call_external_void_func_i32_imm_inreg(i32 inreg
   ; CHECK-NEXT:   $sgpr4 = COPY [[INTRINSIC_CONVERGENT]](s32)
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY1]](<4 x s32>)
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_gfx_void_func_i32_inreg, csr_amdgpu_si_gfx, implicit $sgpr4, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   [[SI_CALL:%[0-9]+]]:_(s64) = noconvergent G_SI_CALL [[GV]](p0), @external_gfx_void_func_i32_inreg, csr_amdgpu_si_gfx, implicit $sgpr4, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   $sgpr30_sgpr31 = COPY [[SI_CALL]](s64)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   SI_RETURN
   call amdgpu_gfx void @external_gfx_void_func_i32_inreg(i32 inreg 42)
@@ -78,7 +81,8 @@ define amdgpu_gfx void @test_gfx_call_external_void_func_struct_i8_i32() #0 {
   ; CHECK-NEXT:   $vgpr1 = COPY [[LOAD2]](s32)
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x s32>)
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_gfx_void_func_struct_i8_i32, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   [[SI_CALL:%[0-9]+]]:_(s64) = noconvergent G_SI_CALL [[GV]](p0), @external_gfx_void_func_struct_i8_i32, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   $sgpr30_sgpr31 = COPY [[SI_CALL]](s64)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   SI_RETURN
   %ptr0 = load ptr addrspace(1), ptr addrspace(4) poison
@@ -106,7 +110,8 @@ define amdgpu_gfx void @test_gfx_call_external_void_func_struct_i8_i32_inreg() #
   ; CHECK-NEXT:   $sgpr5 = COPY [[INTRINSIC_CONVERGENT1]](s32)
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x s32>)
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_gfx_void_func_struct_i8_i32_inreg, csr_amdgpu_si_gfx, implicit $sgpr4, implicit $sgpr5, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   [[SI_CALL:%[0-9]+]]:_(s64) = noconvergent G_SI_CALL [[GV]](p0), @external_gfx_void_func_struct_i8_i32_inreg, csr_amdgpu_si_gfx, implicit $sgpr4, implicit $sgpr5, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   $sgpr30_sgpr31 = COPY [[SI_CALL]](s64)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   SI_RETURN
   %ptr0 = load ptr addrspace(1), ptr addrspace(4) poison
