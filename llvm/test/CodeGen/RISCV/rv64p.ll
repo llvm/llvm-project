@@ -378,3 +378,138 @@ define i128 @srxi_i128(i128 %x) {
   %a = lshr i128 %x, 49
   ret i128 %a
 }
+
+; Test bitwise merge: (mask & b) | (~mask & a)
+define i64 @merge_i64(i64 %mask, i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: merge_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    merge a0, a1, a2
+; CHECK-NEXT:    ret
+  %and1 = and i64 %mask, %b
+  %not = xor i64 %mask, -1
+  %and2 = and i64 %not, %a
+  %or = or i64 %and1, %and2
+  ret i64 %or
+}
+
+; Test MERGE with swapped a/b arguments
+define i64 @merge_i64_2(i64 %mask, i64 %b, i64 %a) nounwind {
+; CHECK-LABEL: merge_i64_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    merge a0, a2, a1
+; CHECK-NEXT:    ret
+  %and1 = and i64 %mask, %b
+  %not = xor i64 %mask, -1
+  %and2 = and i64 %not, %a
+  %or = or i64 %and1, %and2
+  ret i64 %or
+}
+
+; Test MVM: result overwrites rs1 (%a)
+define i64 @mvm_i64(i64 %a, i64 %mask, i64 %b) nounwind {
+; CHECK-LABEL: mvm_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mvm a0, a2, a1
+; CHECK-NEXT:    ret
+  %and1 = and i64 %mask, %b
+  %not = xor i64 %mask, -1
+  %and2 = and i64 %not, %a
+  %or = or i64 %and1, %and2
+  ret i64 %or
+}
+
+; Test MVM with mask as last argument
+define i64 @mvm_i64_2(i64 %a, i64 %b, i64 %mask) nounwind {
+; CHECK-LABEL: mvm_i64_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mvm a0, a1, a2
+; CHECK-NEXT:    ret
+  %and1 = and i64 %mask, %b
+  %not = xor i64 %mask, -1
+  %and2 = and i64 %not, %a
+  %or = or i64 %and1, %and2
+  ret i64 %or
+}
+
+; Test MVMN: result overwrites rs2 (%b)
+define i64 @mvmn_i64(i64 %b, i64 %mask, i64 %a) nounwind {
+; CHECK-LABEL: mvmn_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mvmn a0, a2, a1
+; CHECK-NEXT:    ret
+  %and1 = and i64 %mask, %b
+  %not = xor i64 %mask, -1
+  %and2 = and i64 %not, %a
+  %or = or i64 %and1, %and2
+  ret i64 %or
+}
+
+; Test MVMN with mask as last argument
+define i64 @mvmn_i64_2(i64 %b, i64 %a, i64 %mask) nounwind {
+; CHECK-LABEL: mvmn_i64_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mvmn a0, a1, a2
+; CHECK-NEXT:    ret
+  %and1 = and i64 %mask, %b
+  %not = xor i64 %mask, -1
+  %and2 = and i64 %not, %a
+  %or = or i64 %and1, %and2
+  ret i64 %or
+}
+
+; Test case where none of the source operands can be overwritten,
+; requiring a mv before merge
+define i64 @merge_i64_mv(i64 %mask, i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: merge_i64_mv:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mv a3, a0
+; CHECK-NEXT:    merge a3, a1, a2
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    add a0, a3, a0
+; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    ret
+  %and1 = and i64 %mask, %b
+  %not = xor i64 %mask, -1
+  %and2 = and i64 %not, %a
+  %or = or i64 %and1, %and2
+  %sum1 = add i64 %or, %mask
+  %sum2 = add i64 %sum1, %a
+  %sum3 = add i64 %sum2, %b
+  ret i64 %sum3
+}
+
+; Test alternate merge pattern: (a ^ b) & mask ^ a
+define i64 @merge_xor_i64(i64 %mask, i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: merge_xor_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    merge a0, a1, a2
+; CHECK-NEXT:    ret
+  %xor1 = xor i64 %a, %b
+  %and = and i64 %xor1, %mask
+  %xor2 = xor i64 %and, %a
+  ret i64 %xor2
+}
+
+; Test alternate merge pattern with different argument order for MVM
+define i64 @mvm_xor_i64(i64 %a, i64 %mask, i64 %b) nounwind {
+; CHECK-LABEL: mvm_xor_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mvm a0, a2, a1
+; CHECK-NEXT:    ret
+  %xor1 = xor i64 %a, %b
+  %and = and i64 %xor1, %mask
+  %xor2 = xor i64 %and, %a
+  ret i64 %xor2
+}
+
+; Test alternate merge pattern with different argument order for MVMN
+define i64 @mvmn_xor_i64(i64 %b, i64 %mask, i64 %a) nounwind {
+; CHECK-LABEL: mvmn_xor_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mvmn a0, a2, a1
+; CHECK-NEXT:    ret
+  %xor1 = xor i64 %a, %b
+  %and = and i64 %xor1, %mask
+  %xor2 = xor i64 %and, %a
+  ret i64 %xor2
+}
