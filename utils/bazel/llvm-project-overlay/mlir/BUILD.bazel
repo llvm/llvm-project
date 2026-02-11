@@ -10336,6 +10336,7 @@ cc_library(
         ":AtomicInterfacesIncGen",
         ":BytecodeOpInterface",
         ":ControlFlowInterfaces",
+        ":DataLayoutInterfaces",
         ":GPUDialect",
         ":IR",
         ":LLVMDialect",
@@ -10374,6 +10375,7 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/OpenACC/Analysis/*.h"]),
     includes = ["include"],
     deps = [
+        ":GPUDialect",
         ":IR",
         ":OpenACCDialect",
         ":OpenACCUtils",
@@ -10391,6 +10393,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ArithUtils",
+        ":DataLayoutInterfaces",
         ":DialectUtils",
         ":FunctionInterfaces",
         ":IR",
