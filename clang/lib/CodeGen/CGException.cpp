@@ -1836,8 +1836,20 @@ Address CodeGenFunction::recoverAddrOfEscapedLocal(CodeGenFunction &ParentCGF,
                                                    llvm::Value *ParentFP) {
   llvm::CallInst *RecoverCall = nullptr;
   CGBuilderTy Builder(*this, AllocaInsertPt);
-  if (auto *ParentAlloca =
-          dyn_cast_or_null<llvm::AllocaInst>(ParentVar.getBasePointer())) {
+  auto *ParentAlloca =
+      dyn_cast_or_null<llvm::AllocaInst>(ParentVar.getBasePointer());
+  if (!ParentAlloca) {
+    if (auto *ParentArg =
+            dyn_cast_or_null<llvm::Argument>(ParentVar.getBasePointer())) {
+      llvm::BasicBlock &EntryBB = ParentCGF.CurFn->getEntryBlock();
+      llvm::IRBuilder<> ParentEntryBuilder(&EntryBB, EntryBB.begin());
+      ParentAlloca = ParentEntryBuilder.CreateAlloca(
+          ParentArg->getType(), nullptr, ParentArg->getName() + ".addr");
+      ParentEntryBuilder.CreateStore(ParentArg, ParentAlloca);
+    }
+  }
+
+  if (ParentAlloca) {
     // Mark the variable escaped if nobody else referenced it and compute the
     // localescape index.
     auto InsertPair = ParentCGF.EscapedLocals.insert(
