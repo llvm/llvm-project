@@ -1385,18 +1385,23 @@ std::optional<LValue> CGHLSLRuntime::emitBufferArraySubscriptExpr(
 
   LValueBaseInfo EltBaseInfo;
   TBAAAccessInfo EltTBAAInfo;
-  Address Addr =
-      CGF.EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
-  llvm::Value *Idx = EmitIdxAfterBase(/*Promote*/ true);
 
   // Index into the object as-if we have an array of the padded element type,
   // and then dereference the element itself to avoid reading padding that may
   // be past the end of the in-memory object.
   SmallVector<llvm::Value *, 2> Indices;
+  llvm::Value *Idx = EmitIdxAfterBase(/*Promote*/ true);
   Indices.push_back(Idx);
   Indices.push_back(llvm::ConstantInt::get(CGF.Int32Ty, 0));
 
   if (CGF.getLangOpts().EmitStructuredGEP) {
+    // The fact that we emit an array-to-pointer decay might be an oversight,
+    // but for now, we simply ignore it (see #179951).
+    const CastExpr *CE = cast<CastExpr>(E->getBase());
+    assert(CE->getCastKind() == CastKind::CK_ArrayToPointerDecay);
+
+    LValue LV = CGF.EmitLValue(CE->getSubExpr());
+    Address Addr = LV.getAddress();
     LayoutTy = llvm::ArrayType::get(
         LayoutTy,
         cast<llvm::ArrayType>(Addr.getElementType())->getNumElements());
@@ -1404,12 +1409,14 @@ std::optional<LValue> CGHLSLRuntime::emitBufferArraySubscriptExpr(
         LayoutTy, Addr.emitRawPointer(CGF), Indices, "cbufferidx"));
     Addr =
         Address(GEP, GEP->getResultElementType(), RowAlignedSize, KnownNonNull);
-  } else {
-    llvm::Value *GEP = CGF.Builder.CreateGEP(LayoutTy, Addr.emitRawPointer(CGF),
-                                             Indices, "cbufferidx");
-    Addr = Address(GEP, Addr.getElementType(), RowAlignedSize, KnownNonNull);
+    return CGF.MakeAddrLValue(Addr, E->getType(), EltBaseInfo, EltTBAAInfo);
   }
 
+  Address Addr =
+      CGF.EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
+  llvm::Value *GEP = CGF.Builder.CreateGEP(LayoutTy, Addr.emitRawPointer(CGF),
+                                           Indices, "cbufferidx");
+  Addr = Address(GEP, Addr.getElementType(), RowAlignedSize, KnownNonNull);
   return CGF.MakeAddrLValue(Addr, E->getType(), EltBaseInfo, EltTBAAInfo);
 }
 

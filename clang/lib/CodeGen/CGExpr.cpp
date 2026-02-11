@@ -4499,9 +4499,13 @@ Address CodeGenFunction::EmitArrayToPointerDecay(const Expr *E,
     assert(isa<llvm::ArrayType>(Addr.getElementType()) &&
            "Expected pointer to array");
 
-    if (getLangOpts().EmitStructuredGEP)
-      return Addr;
-    Addr = Builder.CreateConstArrayGEP(Addr, 0, "arraydecay");
+    if (getLangOpts().EmitStructuredGEP) {
+      auto *SGEP =
+          Builder.CreateStructuredGEP(NewTy, Addr.emitRawPointer(*this), {});
+      Addr = Address(SGEP, NewTy, Addr.getAlignment(), Addr.isKnownNonNull());
+    } else {
+      Addr = Builder.CreateConstArrayGEP(Addr, 0, "arraydecay");
+    }
   }
 
   // The result of this decay conversion points to an array element within the
