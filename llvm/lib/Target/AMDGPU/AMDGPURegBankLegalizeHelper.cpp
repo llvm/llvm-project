@@ -59,6 +59,7 @@ bool RegBankLegalizeHelper::findRuleAndApplyMapping(MachineInstr &MI) {
   }
 
   SmallSet<Register, 4> WaterfallSgprs;
+  std::optional<iterator_range<MachineBasicBlock::iterator>> WaterfallRange;
   unsigned OpIdx = 0;
   if (Mapping->DstOpMapping.size() > 0) {
     B.setInsertPt(*MI.getParent(), std::next(MI.getIterator()));
@@ -67,11 +68,12 @@ bool RegBankLegalizeHelper::findRuleAndApplyMapping(MachineInstr &MI) {
   }
   if (Mapping->SrcOpMapping.size() > 0) {
     B.setInstr(MI);
-    if (!applyMappingSrc(MI, OpIdx, Mapping->SrcOpMapping, WaterfallSgprs))
+    if (!applyMappingSrc(MI, OpIdx, Mapping->SrcOpMapping, WaterfallSgprs,
+                         WaterfallRange))
       return false;
   }
 
-  if (!lower(MI, *Mapping, WaterfallSgprs))
+  if (!lower(MI, *Mapping, WaterfallSgprs, WaterfallRange))
     return false;
 
   return true;
@@ -80,22 +82,6 @@ bool RegBankLegalizeHelper::findRuleAndApplyMapping(MachineInstr &MI) {
 bool RegBankLegalizeHelper::executeInWaterfallLoop(
     MachineIRBuilder &B, iterator_range<MachineBasicBlock::iterator> Range,
     SmallSet<Register, 4> &SGPROperandRegs) {
-
-  // For calls, the waterfall must wrap the entire call sequence.
-  for (auto I = Range.begin(), E = Range.end(); I != E; ++I) {
-    if (I->getOpcode() == AMDGPU::G_SI_CALL) {
-      auto Start = Range.begin();
-      while (Start->getOpcode() != AMDGPU::ADJCALLSTACKUP)
-        --Start;
-      auto End = std::next(I);
-      while (End->getOpcode() != AMDGPU::ADJCALLSTACKDOWN)
-        ++End;
-      ++End;
-      B.setInsertPt(B.getMBB(), Start);
-      Range = make_range(Start, End);
-      break;
-    }
-  }
 
   // Track use registers which have already been expanded with a readfirstlane
   // sequence. This may have multiple uses if moving a sequence.
@@ -844,9 +830,10 @@ bool RegBankLegalizeHelper::lowerSplitTo32SExtInReg(MachineInstr &MI) {
   return true;
 }
 
-bool RegBankLegalizeHelper::lower(MachineInstr &MI,
-                                  const RegBankLLTMapping &Mapping,
-                                  SmallSet<Register, 4> &WaterfallSgprs) {
+bool RegBankLegalizeHelper::lower(
+    MachineInstr &MI, const RegBankLLTMapping &Mapping,
+    SmallSet<Register, 4> &WaterfallSgprs,
+    std::optional<iterator_range<MachineBasicBlock::iterator>> WaterfallRange) {
 
   switch (Mapping.LoweringMethod) {
   case DoNotLower:
@@ -1076,8 +1063,10 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
   }
 
   if (!WaterfallSgprs.empty()) {
-    MachineBasicBlock::iterator I = MI.getIterator();
-    if (!executeInWaterfallLoop(B, make_range(I, std::next(I)), WaterfallSgprs))
+    auto Range = WaterfallRange ? *WaterfallRange
+                                : make_range(MI.getIterator(),
+                                             std::next(MI.getIterator()));
+    if (!executeInWaterfallLoop(B, Range, WaterfallSgprs))
       return false;
   }
   return true;
@@ -1113,7 +1102,7 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case Vgpr128:
     return LLT::scalar(128);
   case SgprP0:
-  case SgprP0_WF:
+  case SgprP0Call_WF:
   case VgprP0:
     return LLT::pointer(0, 64);
   case SgprP1:
@@ -1126,7 +1115,7 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case VgprP3:
     return LLT::pointer(3, 32);
   case SgprP4:
-  case SgprP4_WF:
+  case SgprP4Call_WF:
   case VgprP4:
     return LLT::pointer(4, 64);
   case SgprP5:
@@ -1247,12 +1236,12 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case Sgpr64:
   case Sgpr128:
   case SgprP0:
-  case SgprP0_WF:
+  case SgprP0Call_WF:
   case SgprP1:
   case SgprP2:
   case SgprP3:
   case SgprP4:
-  case SgprP4_WF:
+  case SgprP4Call_WF:
   case SgprP5:
   case SgprP8:
   case SgprPtr32:
@@ -1480,7 +1469,9 @@ bool RegBankLegalizeHelper::applyMappingDst(
 bool RegBankLegalizeHelper::applyMappingSrc(
     MachineInstr &MI, unsigned &OpIdx,
     const SmallVectorImpl<RegBankLLTMappingApplyID> &MethodIDs,
-    SmallSet<Register, 4> &SgprWaterfallOperandRegs) {
+    SmallSet<Register, 4> &SgprWaterfallOperandRegs,
+    std::optional<iterator_range<MachineBasicBlock::iterator>>
+        &WaterfallRange) {
   for (unsigned i = 0; i < MethodIDs.size(); ++OpIdx, ++i) {
     if (MethodIDs[i] == None || MethodIDs[i] == IntrId || MethodIDs[i] == Imm)
       continue;
@@ -1577,14 +1568,34 @@ bool RegBankLegalizeHelper::applyMappingSrc(
       }
       break;
     }
-    // sgpr waterfall, scalars, vectors and pointers
+    // sgpr waterfall, scalars, and vectors
     case Sgpr32_WF:
-    case SgprV4S32_WF:
-    case SgprP0_WF:
-    case SgprP4_WF: {
+    case SgprV4S32_WF: {
       assert(Ty == getTyFromID(MethodIDs[i]));
       if (RB != SgprRB)
         SgprWaterfallOperandRegs.insert(Reg);
+      break;
+    }
+    case SgprP0Call_WF:
+    case SgprP4Call_WF: {
+      assert(Ty == getTyFromID(MethodIDs[i]));
+      if (RB != SgprRB) {
+        SgprWaterfallOperandRegs.insert(Reg);
+
+        // Find the ADJCALLSTACKUP before the call.
+        MachineBasicBlock::iterator Start = MI.getIterator();
+        while (Start->getOpcode() != AMDGPU::ADJCALLSTACKUP)
+          --Start;
+
+        // Find the ADJCALLSTACKDOWN after the call (include it in range).
+        MachineBasicBlock::iterator End = MI.getIterator();
+        while (End->getOpcode() != AMDGPU::ADJCALLSTACKDOWN)
+          ++End;
+        ++End;
+
+        B.setInsertPt(*MI.getParent(), Start);
+        WaterfallRange = make_range(Start, End);
+      }
       break;
     }
     // sgpr and vgpr scalars with extend

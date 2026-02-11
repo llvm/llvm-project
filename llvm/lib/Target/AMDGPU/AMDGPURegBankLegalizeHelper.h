@@ -14,6 +14,7 @@
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include <optional>
 
 namespace llvm {
 
@@ -107,7 +108,9 @@ private:
   bool
   applyMappingSrc(MachineInstr &MI, unsigned &OpIdx,
                   const SmallVectorImpl<RegBankLLTMappingApplyID> &MethodIDs,
-                  SmallSet<Register, 4> &SgprWaterfallOperandRegs);
+                  SmallSet<Register, 4> &SgprWaterfallOperandRegs,
+                  std::optional<iterator_range<MachineBasicBlock::iterator>>
+                      &WaterfallRange);
 
   bool splitLoad(MachineInstr &MI, ArrayRef<LLT> LLTBreakdown,
                  LLT MergeTy = LLT());
@@ -115,7 +118,9 @@ private:
   bool widenMMOToS32(GAnyLoad &MI) const;
 
   bool lower(MachineInstr &MI, const RegBankLLTMapping &Mapping,
-             SmallSet<Register, 4> &SgprWaterfallOperandRegs);
+             SmallSet<Register, 4> &SgprWaterfallOperandRegs,
+             std::optional<iterator_range<MachineBasicBlock::iterator>>
+                 WaterfallRange);
 
   bool lowerVccExtToSel(MachineInstr &MI);
   std::pair<Register, Register> unpackZExt(Register Reg);

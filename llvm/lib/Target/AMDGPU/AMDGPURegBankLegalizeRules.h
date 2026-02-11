@@ -220,8 +220,10 @@ enum RegBankLLTMappingApplyID {
   // Src only modifiers: execute in waterfall loop if divergent
   Sgpr32_WF,
   SgprV4S32_WF,
-  SgprP0_WF,
-  SgprP4_WF,
+
+  // Src only modifiers: execute in waterfall loop for calls
+  SgprP0Call_WF,
+  SgprP4Call_WF,
 
   // Src only modifiers: extends
   Sgpr32AExt,
