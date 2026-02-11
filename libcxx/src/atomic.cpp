@@ -144,10 +144,13 @@ static void __platform_wake_by_address(void const* __ptr, bool __notify_one) {
 template <std::size_t _Size, class MaybeTimeout>
 static void __platform_wait_on_address(void const* __ptr, void const* __val, MaybeTimeout maybe_timeout_ns) {
   static_assert(_Size == 8, "Can only wait on 8 bytes value");
-  alignas(__cxx_contention_t) char buffer[_Size];
-  std::memcpy(&buffer, const_cast<const void*>(__val), _Size);
+  // At the moment, FreeBSD is stuck on stable ABI, which only supports platform wait with __cxx_contention_t
+  // It is safe to reinterpret_cast the val as it is ever going to be passed a __cxx_contention_t under this ABI
+  // If in the future FreeBSD decides to experiment unstable ABI to support more types, this cast will no longer be
+  // safe.
+  __cxx_contention_t value = *reinterpret_cast<const __cxx_contention_t*>(__val);
   if constexpr (is_same_v<MaybeTimeout, NoTimeout>) {
-    _umtx_op(const_cast<void*>(__ptr), UMTX_OP_WAIT, *reinterpret_cast<__cxx_contention_t*>(&buffer), nullptr, nullptr);
+    _umtx_op(const_cast<void*>(__ptr), UMTX_OP_WAIT, value, nullptr, nullptr);
   } else {
     timespec timeout{};
     timeout.tv_sec  = __timeout_ns / 1'000'000'000;
@@ -155,7 +158,7 @@ static void __platform_wait_on_address(void const* __ptr, void const* __val, May
 
     _umtx_op(const_cast<void*>(__ptr),
              UMTX_OP_WAIT,
-             *reinterpret_cast<__cxx_contention_t*>(&buffer),
+             value,
              static_cast<void*>(static_cast<uintptr_t>(sizeof(timeout))),
              &timeout);
   }
