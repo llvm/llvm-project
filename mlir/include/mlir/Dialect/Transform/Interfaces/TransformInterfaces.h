@@ -115,12 +115,29 @@ public:
   /// Returns true if the expensive checks are requested.
   bool getExpensiveChecksEnabled() const { return expensiveChecksEnabled; }
 
-  // Returns true if enforcing a single top-level transform op is requested.
+  /// Returns true if enforcing a single top-level transform op is requested.
   bool getEnforceSingleToplevelTransformOp() const {
     return enforceSingleToplevelTransformOp;
   }
 
+  /// Sets the initializer and exporter methods for transfering data in and out
+  /// of a TransformState variable from a MLIR pass invoking applyTransforms.
+  void setStateInitializerExporter(
+      function_ref<void(TransformState &)> initializer = nullptr,
+      function_ref<LogicalResult(TransformState &)> exporter = nullptr) {
+    stateInitializer = initializer;
+    stateExporter = exporter;
+  }
+  function_ref<void(TransformState &)> getStateInitializer() const {
+    return stateInitializer;
+  }
+  function_ref<LogicalResult(TransformState &)> getStateExporter() const {
+    return stateExporter;
+  }
+
 private:
+  function_ref<void(TransformState &)> stateInitializer = nullptr;
+  function_ref<LogicalResult(TransformState &)> stateExporter = nullptr;
   bool expensiveChecksEnabled = true;
   bool enforceSingleToplevelTransformOp = true;
 };
@@ -131,13 +148,11 @@ private:
 /// will be executed following the internal logic of the operation. It must
 /// have the `PossibleTopLevelTransformOp` trait and not have any operands.
 /// This function internally keeps track of the transformation state.
-LogicalResult applyTransforms(
-    Operation *payloadRoot, TransformOpInterface transform,
-    const RaggedArray<MappedValue> &extraMapping = {},
-    const TransformOptions &options = TransformOptions(),
-    bool enforceToplevelTransformOp = true,
-    function_ref<void(TransformState &)> stateInitializer = nullptr,
-    function_ref<LogicalResult(TransformState &)> stateExporter = nullptr);
+LogicalResult
+applyTransforms(Operation *payloadRoot, TransformOpInterface transform,
+                const RaggedArray<MappedValue> &extraMapping = {},
+                const TransformOptions &options = TransformOptions(),
+                bool enforceToplevelTransformOp = true);
 
 /// The state maintained across applications of various ops implementing the
 /// TransformOpInterface. The operations implementing this interface and the
@@ -217,11 +232,9 @@ private:
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
   };
 
-  friend LogicalResult
-  applyTransforms(Operation *, TransformOpInterface,
-                  const RaggedArray<MappedValue> &, const TransformOptions &,
-                  bool, function_ref<void(TransformState &)>,
-                  function_ref<LogicalResult(TransformState &)>);
+  friend LogicalResult applyTransforms(Operation *, TransformOpInterface,
+                                       const RaggedArray<MappedValue> &,
+                                       const TransformOptions &, bool);
 
   friend TransformState
   detail::makeTransformStateForTesting(Region *region, Operation *payloadRoot);
