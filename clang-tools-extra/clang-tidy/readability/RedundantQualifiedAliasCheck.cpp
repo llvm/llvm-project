@@ -34,15 +34,6 @@ struct EqualTokenInfo {
 
 } // namespace
 
-static bool isInNamespaceOrTU(const Decl *D) {
-  const DeclContext *DC = D->getDeclContext();
-  return DC && (DC->isTranslationUnit() || isa<NamespaceDecl>(DC));
-}
-
-static bool isAliasTemplate(const TypeAliasDecl *Alias) {
-  return Alias->getDescribedAliasTemplate() != nullptr;
-}
-
 static bool hasMacroInRange(SourceRange Range, const SourceManager &SM,
                             const LangOptions &LangOpts) {
   if (Range.isInvalid())
@@ -86,6 +77,19 @@ static std::optional<NominalTypeLocInfo> peelToNominalTypeLoc(TypeLoc TL) {
   }
   return std::nullopt;
 }
+
+namespace {
+
+AST_MATCHER(TypeAliasDecl, isAliasTemplate) {
+  return Node.getDescribedAliasTemplate() != nullptr;
+}
+
+AST_MATCHER(TypeLoc, hasQualifiedNominalTypeLoc) {
+  std::optional<NominalTypeLocInfo> Result = peelToNominalTypeLoc(Node);
+  return Result && Result->HasQualifier;
+}
+
+} // namespace
 
 static const NamedDecl *getNamedDeclFromNominalTypeLoc(TypeLoc TL) {
   if (const auto TypedefTL = TL.getAs<TypedefTypeLoc>())
@@ -174,19 +178,29 @@ void RedundantQualifiedAliasCheck::storeOptions(
 }
 
 void RedundantQualifiedAliasCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(typeAliasDecl().bind("alias"), this);
+  if (OnlyNamespaceScope) {
+    Finder->addMatcher(
+        typeAliasDecl(
+            unless(isAliasTemplate()), unless(isImplicit()),
+            unless(isExpansionInSystemHeader()),
+            hasTypeLoc(hasQualifiedNominalTypeLoc()),
+            hasDeclContext(anyOf(translationUnitDecl(), namespaceDecl())))
+            .bind("alias"),
+        this);
+    return;
+  }
+  Finder->addMatcher(typeAliasDecl(unless(isAliasTemplate()),
+                                   unless(isImplicit()),
+                                   unless(isExpansionInSystemHeader()),
+                                   hasTypeLoc(hasQualifiedNominalTypeLoc()))
+                         .bind("alias"),
+                     this);
 }
 
 void RedundantQualifiedAliasCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Alias = Result.Nodes.getNodeAs<TypeAliasDecl>("alias");
   if (!Alias)
-    return;
-
-  if (OnlyNamespaceScope && !isInNamespaceOrTU(Alias))
-    return;
-
-  if (isAliasTemplate(Alias))
     return;
 
   if (Alias->getLocation().isInvalid() || Alias->getLocation().isMacroID())
