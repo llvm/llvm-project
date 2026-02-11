@@ -186,10 +186,10 @@ Changes to the PowerPC Backend
 * Prototyped VSX rotate left word instruction.
 * Prototyped paddis.
 * Prototyped eTCE instructions.
-* Prototyped Dense Math Facility and WACC COPY support.
+* Prototyped Dense Math Facility and DMR COPY support.
 * Implement the trampoline intrinsics and nest parameter for AIX.
 * Introduced a minimum threshold for the largest number of comparisons needed to trigger bit test generation during switch lowering.
-* Relax strictfp to constrain only ``libm`` calls, allowing non-FP optimizations.
+* Relax strictfp to constrain only ``libm`` libcalls, permitting non-FP optimizations elsewhere.
 * Use ``bne-`` for atomic operations after store conditional.
 * Consolidated predicate definitions into ``PPC.td``.
 * Cleanup asm parser code to use template functions for the various versions of

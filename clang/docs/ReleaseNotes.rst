@@ -790,7 +790,7 @@ PowerPC Support
 ^^^^^^^^^^^^^^^
 
 - Prototyped Dense Math Facility VSX Vector float GER 2x (rank-2 update) builtins.
-- Prototyped Dense Math Facility cryptography builtins.
+- Prototyped Dense Math Facility builtins.
 - Prototyped initial support for AMO load builtins.
 - Add support for ``-fpatchable-function-entry`` on PPC64LE.
 
