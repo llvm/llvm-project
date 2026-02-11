@@ -1145,7 +1145,8 @@ bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
       ScalableOffset = -ScalableOffset;
     if (all_of(N->users(), [&](SDNode *Node) {
           if (auto *LoadStore = dyn_cast<MemSDNode>(Node);
-              LoadStore && LoadStore->getBasePtr().getNode() == N) {
+              LoadStore && LoadStore->hasUniqueMemOperand() &&
+              LoadStore->getBasePtr().getNode() == N) {
             TargetLoweringBase::AddrMode AM;
             AM.HasBaseReg = true;
             AM.ScalableOffset = ScalableOffset;
@@ -1183,6 +1184,8 @@ bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
 
     for (SDNode *Node : N->users()) {
       if (auto *LoadStore = dyn_cast<MemSDNode>(Node)) {
+        if (!LoadStore->hasUniqueMemOperand())
+          continue;
         // Is x[offset2] already not a legal addressing mode? If so then
         // reassociating the constants breaks nothing (we test offset2 because
         // that's the one we hope to fold into the load or store).

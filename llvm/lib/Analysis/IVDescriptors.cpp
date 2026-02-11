@@ -330,7 +330,7 @@ bool RecurrenceDescriptor::AddReductionVar(
   // "find-last-like" phi (see isFindLastLikePhi). We currently only support
   // find-last reduction chains with a single "find-last-like" phi and do not
   // allow any other operations.
-  unsigned NumNonPHIUsers = 0;
+  [[maybe_unused]] unsigned NumNonPHIUsers = 0;
   bool FoundFindLastLikePhi = false;
 
   // Data used for determining if the recurrence has been type-promoted.

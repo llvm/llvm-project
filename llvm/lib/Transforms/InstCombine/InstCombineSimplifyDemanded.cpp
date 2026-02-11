@@ -2632,6 +2632,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     Value *Y = I->getOperand(1);
     if (X == Y && isGuaranteedNotToBeUndef(X, SQ.AC, CxtI, SQ.DT, Depth + 1)) {
       // If the source is 0, inf or nan, the result is a nan
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(I);
 
       Value *IsZeroOrNan = Builder.CreateFCmpFMF(
           FCmpInst::FCMP_UEQ, I->getOperand(0), ConstantFP::getZero(VTy), FMF);

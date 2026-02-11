@@ -13,6 +13,7 @@
 #include "mlir/IR/Remarks.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include <functional>
 
 namespace mlir {
 class DominanceInfo;
@@ -100,6 +101,20 @@ getDominatingDataClauses(mlir::Operation *computeConstructOp,
                          mlir::DominanceInfo &domInfo,
                          mlir::PostDominanceInfo &postDomInfo);
 
+/// Emit an OpenACC remark with lazy message generation.
+///
+/// The messageFn is only invoked if remarks are enabled, allowing callers
+/// to avoid constructing expensive messages when remarks are disabled.
+///
+/// \param op The operation to emit the remark for.
+/// \param messageFn A callable that returns the remark message.
+/// \param category Optional category for the remark. Defaults to "openacc".
+/// \return An in-flight remark object that can be used to append
+///         additional information to the remark.
+remark::detail::InFlightRemark
+emitRemark(mlir::Operation *op, const std::function<std::string()> &messageFn,
+           llvm::StringRef category = "openacc");
+
 /// Emit an OpenACC remark for the given operation with the given message.
 ///
 /// \param op The operation to emit the remark for.
@@ -107,9 +122,13 @@ getDominatingDataClauses(mlir::Operation *computeConstructOp,
 /// \param category Optional category for the remark. Defaults to "openacc".
 /// \return An in-flight remark object that can be used to append
 ///         additional information to the remark.
-remark::detail::InFlightRemark emitRemark(mlir::Operation *op,
-                                          const llvm::Twine &message,
-                                          llvm::StringRef category = "openacc");
+inline remark::detail::InFlightRemark
+emitRemark(mlir::Operation *op, const llvm::Twine &message,
+           llvm::StringRef category = "openacc") {
+  return emitRemark(
+      op, std::function<std::string()>([msg = message.str()]() { return msg; }),
+      category);
+}
 
 } // namespace acc
 } // namespace mlir

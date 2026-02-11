@@ -2058,6 +2058,10 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_pternlogd256_maskz:
   case X86::BI__builtin_ia32_pternlogq128_maskz:
   case X86::BI__builtin_ia32_pternlogq256_maskz:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case X86::BI__builtin_ia32_vpshldd128:
   case X86::BI__builtin_ia32_vpshldd256:
   case X86::BI__builtin_ia32_vpshldd512:
@@ -2067,6 +2071,8 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_vpshldw128:
   case X86::BI__builtin_ia32_vpshldw256:
   case X86::BI__builtin_ia32_vpshldw512:
+    return emitX86FunnelShift(builder, getLoc(expr->getExprLoc()), ops[0],
+                              ops[1], ops[2], false);
   case X86::BI__builtin_ia32_vpshrdd128:
   case X86::BI__builtin_ia32_vpshrdd256:
   case X86::BI__builtin_ia32_vpshrdd512:
@@ -2076,10 +2082,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_vpshrdw128:
   case X86::BI__builtin_ia32_vpshrdw256:
   case X86::BI__builtin_ia32_vpshrdw512:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented X86 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+    // Ops 0 and 1 are swapped.
+    return emitX86FunnelShift(builder, getLoc(expr->getExprLoc()), ops[1],
+                              ops[0], ops[2], true);
   case X86::BI__builtin_ia32_reduce_fadd_pd512:
   case X86::BI__builtin_ia32_reduce_fadd_ps512:
   case X86::BI__builtin_ia32_reduce_fadd_ph512:

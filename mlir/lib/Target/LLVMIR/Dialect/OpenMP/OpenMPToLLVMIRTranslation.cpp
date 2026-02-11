@@ -5800,7 +5800,7 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
       genMapInfoCB, varType, mapperFuncName, customMapperCB);
   if (!newFn)
     return newFn.takeError();
-  if (llvm::Function *mappedFunc =
+  if ([[maybe_unused]] llvm::Function *mappedFunc =
           moduleTranslation.lookupFunction(mapperFuncName)) {
     assert(mappedFunc == *newFn &&
            "mapper function mapping disagrees with emitted function");

@@ -2324,6 +2324,25 @@ define nofpclass(snan) half @qnan_result_demands_snan_src_rhs(i1 %cond, half %un
   ret half %div
 }
 
+; Make sure the replacement for fdiv is inserted at the fdiv, and not
+; the use fmul
+define float @fdiv_replacement_insert_point_regression(i1 %cmp, float %x, float noundef %y, float noundef %z) {
+; CHECK-LABEL: define float @fdiv_replacement_insert_point_regression(
+; CHECK-SAME: i1 [[CMP:%.*]], float [[X:%.*]], float noundef [[Y:%.*]], float noundef [[Z:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @llvm.is.fpclass.f32(float [[Y]], i32 615)
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], float 0x7FF8000000000000, float 1.000000e+00
+; CHECK-NEXT:    [[SCALE_0:%.*]] = select i1 [[CMP]], float [[TMP1]], float [[Y]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SCALE_0]], [[X]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+entry:
+  %div = fdiv float %y, %y
+  %scale.0 = select i1 %cmp, float %div, float %y
+  %mul = fmul float %scale.0, %x
+  ret float %mul
+}
+
 attributes #0 = { denormal_fpenv(preservesign) }
 attributes #1 = { denormal_fpenv(dynamic) }
 attributes #2 = { denormal_fpenv(ieee|preservesign) }

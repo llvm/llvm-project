@@ -4,6 +4,7 @@
 
 shard.grid @grid_1d(shape = 2)
 shard.grid @grid_1d_4(shape = 4)
+shard.grid @grid_2d_16(shape = 4x4)
 
 // CHECK-LABEL: func @return_sharding
 func.func @return_sharding(
@@ -318,9 +319,9 @@ func.func @test_reduce_1d(%arg0: tensor<6x6xi32>) -> (tensor<6xi32>) {
   return %sharded_ret : tensor<6xi32>
 }
 
-// CHECK-LABEL: func.func @mlp_1dgrid
+// CHECK-LABEL: func.func @mlp_1d_weight_stationary
 // CHECK-SAME: [[varg0:%.*]]: tensor<512x512xf32>, [[varg1:%.*]]: tensor<2048x256xf32>, [[varg2:%.*]]: tensor<256x2048xf32>) -> tensor<512x2048xf32>
-func.func @mlp_1dgrid(%arg0: tensor<512x2048xf32>, %arg1: tensor<2048x1024xf32>, %arg2: tensor<1024x2048xf32>) -> tensor<512x2048xf32> attributes {llvm.emit_c_interface} {
+func.func @mlp_1d_weight_stationary(%arg0: tensor<512x2048xf32>, %arg1: tensor<2048x1024xf32>, %arg2: tensor<1024x2048xf32>) -> tensor<512x2048xf32> attributes {llvm.emit_c_interface} {
   // CHECK: [[vcst:%.*]] = arith.constant 0.000000e+00 : f32
   %sharding = shard.sharding @grid_1d_4 split_axes = [[], [0]] : !shard.sharding
   %sharding_0 = shard.sharding @grid_1d_4 split_axes = [[0], []] : !shard.sharding

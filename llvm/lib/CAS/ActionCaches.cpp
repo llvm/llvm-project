@@ -197,11 +197,7 @@ Error OnDiskActionCache::putImpl(ArrayRef<uint8_t> Key, const CASID &Result,
       ArrayRef((const uint8_t *)Observed.data(), Observed.size()));
 }
 
-Error OnDiskActionCache::validate() const {
-  // FIXME: without the matching CAS there is nothing we can check about the
-  // cached values. The hash size is already validated by the DB validator.
-  return DB->validate(nullptr);
-}
+Error OnDiskActionCache::validate() const { return DB->validate(); }
 
 UnifiedOnDiskActionCache::UnifiedOnDiskActionCache(
     std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB)

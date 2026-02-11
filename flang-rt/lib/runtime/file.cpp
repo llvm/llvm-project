@@ -100,6 +100,9 @@ void OpenFile::Open(OpenStatus status, common::optional<Action> action,
     }
     if (status == OpenStatus::New) {
       flags |= O_EXCL;
+      if (!action) {
+        action = Action::ReadWrite;
+      }
     } else if (status == OpenStatus::Replace) {
       flags |= O_TRUNC;
     }
@@ -132,6 +135,12 @@ void OpenFile::Open(OpenStatus status, common::optional<Action> action,
       }
       fd_ = ::open(path_.get(), flags, 0600);
       if (fd_ < 0) {
+        if (errno == EEXIST && status == OpenStatus::New) {
+          handler.SignalError(IostatOpenNewExtant,
+              "OPEN(STATUS='NEW') on existing file '%s'", path_.get());
+          path_.reset(); // prevent unlink
+          return;
+        }
         handler.SignalErrno();
       }
     }

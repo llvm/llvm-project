@@ -938,8 +938,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
   };
 
   // Can't return functions as rvalues.
-  if (ResultType->isFunctionType() || ResultType->isFunctionPointerType() ||
-      ResultType->isFunctionReferenceType())
+  if (ResultType->isFunctionType())
     return std::nullopt;
 
   // Invalid to read from.

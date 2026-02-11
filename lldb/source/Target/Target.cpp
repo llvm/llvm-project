@@ -4460,7 +4460,7 @@ public:
 TargetExperimentalProperties::TargetExperimentalProperties()
     : Properties(OptionValuePropertiesSP(
           new TargetExperimentalOptionValueProperties())) {
-  m_collection_sp->Initialize(g_target_experimental_properties);
+  m_collection_sp->Initialize(g_target_experimental_properties_def);
 }
 
 // TargetProperties
@@ -4509,7 +4509,7 @@ TargetProperties::TargetProperties(Target *target)
         true, m_experimental_properties_up->GetValueProperties());
   } else {
     m_collection_sp = std::make_shared<TargetOptionValueProperties>("target");
-    m_collection_sp->Initialize(g_target_properties);
+    m_collection_sp->Initialize(g_target_properties_def);
     m_experimental_properties_up =
         std::make_unique<TargetExperimentalProperties>();
     m_collection_sp->AppendProperty(
