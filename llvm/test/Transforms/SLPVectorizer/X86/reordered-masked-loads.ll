@@ -9,17 +9,20 @@ define void @test() {
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[M1:%.*]] = alloca [[STRUCT_AE:%.*]], align 8
-; CHECK-NEXT:    [[ARRAYIDX_I5_I:%.*]] = getelementptr i8, ptr [[M1]], i64 48
+; CHECK-NEXT:    [[ARRAYIDX_I1:%.*]] = getelementptr i8, ptr [[M1]], i64 24
 ; CHECK-NEXT:    [[ARRAYIDX_I4:%.*]] = getelementptr i8, ptr null, i64 16
-; CHECK-NEXT:    [[TMP1:%.*]] = load <5 x double>, ptr [[M1]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <5 x double> [[TMP1]], <5 x double> poison, <4 x i32> <i32 0, i32 1, i32 3, i32 4>
-; CHECK-NEXT:    [[TMP4:%.*]] = load <6 x double>, ptr [[M1]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <6 x double> [[TMP4]], <6 x double> poison, <4 x i32> <i32 0, i32 3, i32 4, i32 5>
+; CHECK-NEXT:    [[ARRAYIDX_I5_I:%.*]] = getelementptr i8, ptr [[M1]], i64 32
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[ARRAYIDX_I5_I]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <5 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <5 x double> [[TMP7]], <5 x double> [[TMP1]], <4 x i32> <i32 0, i32 6, i32 9, i32 1>
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd <4 x double> [[TMP8]], [[TMP5]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[ARRAYIDX_I5_I]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> poison, <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP12:%.*]] = fadd <2 x double> [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, ptr [[M1]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x double>, ptr [[ARRAYIDX_I1]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x double> [[TMP5]], <4 x double> poison, <2 x i32> <i32 3, i32 0>
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP4]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x double> [[TMP7]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x double> [[TMP12]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x double> [[TMP8]], <4 x double> [[TMP13]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP10:%.*]] = fptosi <4 x double> [[TMP9]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP11:%.*]] = sitofp <4 x i32> [[TMP10]] to <4 x double>
 ; CHECK-NEXT:    store <4 x double> [[TMP11]], ptr [[ARRAYIDX_I4]], align 8

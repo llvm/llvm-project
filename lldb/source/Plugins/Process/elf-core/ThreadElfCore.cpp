@@ -30,7 +30,7 @@
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_ppc64le.h"
 #include "ProcessElfCore.h"
-#include "RegisterContextLinuxCore_x86_64.h"
+#include "RegisterContextLinuxCore_x86.h"
 #include "RegisterContextPOSIXCore_arm.h"
 #include "RegisterContextPOSIXCore_arm64.h"
 #include "RegisterContextPOSIXCore_loongarch64.h"
@@ -39,7 +39,7 @@
 #include "RegisterContextPOSIXCore_riscv32.h"
 #include "RegisterContextPOSIXCore_riscv64.h"
 #include "RegisterContextPOSIXCore_s390x.h"
-#include "RegisterContextPOSIXCore_x86_64.h"
+#include "RegisterContextPOSIXCore_x86.h"
 #include "ThreadElfCore.h"
 
 #include <memory>
@@ -216,10 +216,10 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
       if (is_linux) {
-        m_thread_reg_ctx_sp = std::make_shared<RegisterContextLinuxCore_x86_64>(
+        m_thread_reg_ctx_sp = std::make_shared<RegisterContextLinuxCore_x86>(
               *this, reg_interface, m_gpregset_data, m_notes);
       } else {
-        m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_x86_64>(
+        m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_x86>(
               *this, reg_interface, m_gpregset_data, m_notes);
       }
       break;

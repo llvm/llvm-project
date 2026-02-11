@@ -25,32 +25,8 @@ static bool isCPUDeterminedByTriple(const llvm::Triple &Triple) {
   return Triple.isOSDarwin();
 }
 
-/// getAArch64TargetCPU - Get the (LLVM) name of the AArch64 cpu we are
-/// targeting. Set \p A to the Arg corresponding to the -mcpu argument if it is
-/// provided, or to nullptr otherwise.
-std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
-                                         const llvm::Triple &Triple, Arg *&A) {
-  std::string CPU;
-  // If we have -mcpu, use that.
-  if ((A = Args.getLastArg(options::OPT_mcpu_EQ))) {
-    StringRef Mcpu = A->getValue();
-    CPU = Mcpu.split("+").first.lower();
-  } else if (const Arg *MArch = Args.getLastArg(options::OPT_march_EQ)) {
-    // Otherwise, use -march=native if specified.
-    StringRef MArchValue = MArch->getValue();
-    if (MArchValue.split("+").first.equals_insensitive("native"))
-      CPU = "native";
-  }
-
-  CPU = llvm::AArch64::resolveCPUAlias(CPU);
-
-  // Handle CPU name is 'native'.
-  if (CPU == "native")
-    return std::string(llvm::sys::getHostCPUName());
-
-  if (CPU.size())
-    return CPU;
-
+/// \return the target CPU LLVM name based on the target triple.
+static std::string getAArch64TargetCPUByTriple(const llvm::Triple &Triple) {
   if (Triple.isTargetMachineMac() &&
       Triple.getArch() == llvm::Triple::aarch64) {
     // Apple Silicon macs default to M1 CPUs.
@@ -91,6 +67,34 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
                                                         : "apple-a7";
 
   return "generic";
+}
+
+/// \return the (LLVM) name of the AArch64 CPU we are targeting. Set \p A to the
+/// Arg corresponding to the -mcpu argument if it is provided, or to nullptr
+/// otherwise.
+std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
+                                         const llvm::Triple &Triple, Arg *&A) {
+  std::string CPU;
+  // If we have -mcpu, use that.
+  if ((A = Args.getLastArg(options::OPT_mcpu_EQ))) {
+    StringRef Mcpu = A->getValue();
+    CPU = Mcpu.split("+").first.lower();
+  } else if (const Arg *MArch = Args.getLastArg(options::OPT_march_EQ)) {
+    // Otherwise, use -march=native if specified.
+    StringRef MArchValue = MArch->getValue();
+    if (MArchValue.split("+").first.equals_insensitive("native"))
+      CPU = "native";
+  }
+
+  CPU = llvm::AArch64::resolveCPUAlias(CPU);
+
+  if (CPU == "native")
+    return std::string(llvm::sys::getHostCPUName());
+
+  if (CPU.size())
+    return CPU;
+
+  return getAArch64TargetCPUByTriple(Triple);
 }
 
 // Decode AArch64 features from string like +[no]featureA+[no]featureB+...
@@ -231,7 +235,7 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
         getAArch64ArchFeaturesFromMcpu(D, A->getValue(), Args, Extensions);
   else if (isCPUDeterminedByTriple(Triple))
     success = getAArch64ArchFeaturesFromMcpu(
-        D, getAArch64TargetCPU(Args, Triple, A), Args, Extensions);
+        D, getAArch64TargetCPUByTriple(Triple), Args, Extensions);
   else
     // Default to 'A' profile if the architecture is not specified.
     success = getAArch64ArchFeaturesFromMarch(D, "armv8-a", Args, Extensions);
@@ -242,7 +246,7 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     success = getAArch64MicroArchFeaturesFromMcpu(D, A->getValue(), Args);
   else if (success && isCPUDeterminedByTriple(Triple))
     success = getAArch64MicroArchFeaturesFromMcpu(
-        D, getAArch64TargetCPU(Args, Triple, A), Args);
+        D, getAArch64TargetCPUByTriple(Triple), Args);
 
   if (!success) {
     auto Diag = D.Diag(diag::err_drv_unsupported_option_argument);

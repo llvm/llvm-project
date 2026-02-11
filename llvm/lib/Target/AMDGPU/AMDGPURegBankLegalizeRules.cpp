@@ -769,13 +769,16 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   // Atomic read-modify-write operations: result and value are always VGPR,
   // pointer varies by address space.
   addRulesForGOpcs({G_ATOMICRMW_ADD, G_ATOMICRMW_SUB, G_ATOMICRMW_XCHG,
-                    G_ATOMICRMW_AND, G_ATOMICRMW_OR, G_ATOMICRMW_XOR})
-      .Any({{S32, P0}, {{Vgpr32}, {VgprP0, Vgpr32}}})
-      .Any({{S64, P0}, {{Vgpr64}, {VgprP0, Vgpr64}}})
-      .Any({{S32, P1}, {{Vgpr32}, {VgprP1, Vgpr32}}})
-      .Any({{S64, P1}, {{Vgpr64}, {VgprP1, Vgpr64}}})
-      .Any({{S32, P3}, {{Vgpr32}, {VgprP3, Vgpr32}}})
-      .Any({{S64, P3}, {{Vgpr64}, {VgprP3, Vgpr64}}});
+                    G_ATOMICRMW_AND, G_ATOMICRMW_OR, G_ATOMICRMW_XOR,
+                    G_ATOMICRMW_MIN, G_ATOMICRMW_MAX, G_ATOMICRMW_UMIN,
+                    G_ATOMICRMW_UMAX, G_ATOMICRMW_UINC_WRAP,
+                    G_ATOMICRMW_UDEC_WRAP})
+      .Any({{DivS32, P0, S32}, {{Vgpr32}, {VgprP0, Vgpr32}}})
+      .Any({{DivS64, P0, S64}, {{Vgpr64}, {VgprP0, Vgpr64}}})
+      .Any({{DivS32, P1, S32}, {{Vgpr32}, {VgprP1, Vgpr32}}})
+      .Any({{DivS64, P1, S64}, {{Vgpr64}, {VgprP1, Vgpr64}}})
+      .Any({{DivS32, P3, S32}, {{Vgpr32}, {VgprP3, Vgpr32}}})
+      .Any({{DivS64, P3, S64}, {{Vgpr64}, {VgprP3, Vgpr64}}});
 
   bool HasAtomicFlatPkAdd16Insts = ST->hasAtomicFlatPkAdd16Insts();
   bool HasAtomicBufferGlobalPkAddF16Insts =
@@ -808,7 +811,16 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivS64, P0}, {{Vgpr64}, {VgprP0, VgprV2S64}}})
       .Any({{DivS64, P1}, {{Vgpr64}, {VgprP1, VgprV2S64}}});
 
-  addRulesForGOpcs({G_AMDGPU_BUFFER_ATOMIC_SWAP}, Standard)
+  addRulesForGOpcs({G_AMDGPU_BUFFER_ATOMIC_CMPSWAP}, Standard)
+      .Div(S32, {{Vgpr32},
+                 {Vgpr32, Vgpr32, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
+      .Div(S64, {{Vgpr64},
+                 {Vgpr64, Vgpr64, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}});
+
+  addRulesForGOpcs({G_AMDGPU_BUFFER_ATOMIC_SWAP, G_AMDGPU_BUFFER_ATOMIC_UMAX,
+                    G_AMDGPU_BUFFER_ATOMIC_UMIN, G_AMDGPU_BUFFER_ATOMIC_SMAX,
+                    G_AMDGPU_BUFFER_ATOMIC_SMIN},
+                   Standard)
       .Div(S32, {{Vgpr32}, {Vgpr32, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
       .Div(S64, {{Vgpr64}, {Vgpr64, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}});
 
@@ -1246,6 +1258,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniV2S32}, {{UniInVgprV2S32}, {VgprV2S32}}})
       .Any({{DivV2S32}, {{VgprV2S32}, {VgprV2S32}}});
 
+  bool hasPST = ST->hasPseudoScalarTrans();
+  addRulesForGOpcs({G_FSQRT}, Standard)
+      .Div(S16, {{Vgpr16}, {Vgpr16}})
+      .Uni(S16, {{Sgpr16}, {Sgpr16}}, hasPST)
+      .Uni(S16, {{UniInVgprS16}, {Vgpr16}}, !hasPST);
+
   addRulesForGOpcs({G_FPTOUI, G_FPTOSI})
       .Any({{UniS16, S16}, {{UniInVgprS16}, {Vgpr16}}})
       .Any({{DivS16, S16}, {{Vgpr16}, {Vgpr16}}})
@@ -1396,6 +1414,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_global_load_tr_b128})
       .Any({{DivB64}, {{VgprB64}, {IntrId, SgprP1}}})
       .Any({{DivB128}, {{VgprB128}, {IntrId, SgprP1}}});
+
+  addRulesForIOpcs({amdgcn_global_atomic_ordered_add_b64})
+      .Any({{DivS64}, {{Vgpr64}, {IntrId, VgprP1, Vgpr64}}});
 
   addRulesForIOpcs({amdgcn_wwm, amdgcn_strict_wwm}, StandardB)
       .Div(B32, {{VgprB32}, {IntrId, VgprB32}})
