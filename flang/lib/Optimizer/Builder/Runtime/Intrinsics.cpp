@@ -494,3 +494,10 @@ mlir::Value fir::runtime::genRand(fir::FirOpBuilder &builder,
       builder, loc, runtimeFuncTy, i, sourceFile, sourceLine);
   return fir::CallOp::create(builder, loc, runtimeFunc, args).getResult(0);
 }
+
+void fir::runtime::genShowDescriptor(fir::FirOpBuilder &builder,
+                                     mlir::Location loc, mlir::Value descAddr) {
+  mlir::func::FuncOp func{
+      fir::runtime::getRuntimeFunc<mkRTKey(ShowDescriptor)>(loc, builder)};
+  fir::CallOp::create(builder, loc, func, descAddr);
+}

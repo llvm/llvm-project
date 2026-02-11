@@ -212,6 +212,14 @@ void Prescanner::Statement() {
     }
     break;
   }
+  case LineClassification::Kind::CompilerDirectiveAfterMacroExpansion:
+    BeginStatementAndAdvance();
+    SkipSpaces();
+    if (*at_ == '!') {
+      tokens.Put(at_++, 1, GetCurrentProvenance());
+      ++column_;
+    }
+    break;
   case LineClassification::Kind::Source: {
     BeginStatementAndAdvance();
     bool checkLabelField{false};
@@ -238,30 +246,17 @@ void Prescanner::Statement() {
     // a comment marker or directive sentinel.  If so, disable line
     // continuation, so that NextToken() won't consume anything from
     // following lines.
-    if (IsLegalIdentifierStart(*at_)) {
-      // TODO: Only bother with these cases when any keyword macro has
-      // been defined with replacement text that could begin a comment
-      // or directive sentinel.
-      const char *p{at_};
-      while (IsLegalInIdentifier(*++p)) {
-      }
-      CharBlock id{at_, static_cast<std::size_t>(p - at_)};
-      if (preprocessor_.IsNameDefined(id) &&
-          !preprocessor_.IsFunctionLikeDefinition(id)) {
-        checkLabelField = false;
-        TokenSequence toks;
-        toks.Put(id, GetProvenance(at_));
-        if (auto replaced{preprocessor_.MacroReplacement(toks, *this)}) {
-          auto newLineClass{ClassifyLine(*replaced, GetCurrentProvenance())};
-          if (newLineClass.kind ==
-              LineClassification::Kind::CompilerDirective) {
-            directiveSentinel_ = newLineClass.sentinel;
-            disableSourceContinuation_ = false;
-          } else {
-            disableSourceContinuation_ = !replaced->empty() &&
-                newLineClass.kind != LineClassification::Kind::Source;
-          }
-        }
+    if (auto kwName{GetKeywordMacroName(at_)}) {
+      checkLabelField = false;
+      Provenance here{GetCurrentProvenance()};
+      TokenSequence replacement{ExpandKeywordMacro(*kwName, here)};
+      auto newLineClass{ClassifyLine(replacement, here)};
+      if (newLineClass.kind == LineClassification::Kind::CompilerDirective) {
+        directiveSentinel_ = newLineClass.sentinel;
+        disableSourceContinuation_ = false;
+      } else {
+        disableSourceContinuation_ = !replacement.empty() &&
+            newLineClass.kind != LineClassification::Kind::Source;
       }
     }
     if (checkLabelField) {
@@ -304,6 +299,7 @@ void Prescanner::Statement() {
       CheckAndEmitLine(preprocessed->ToLowerCase(), newlineProvenance);
       break;
     case LineClassification::Kind::CompilerDirective:
+    case LineClassification::Kind::CompilerDirectiveAfterMacroExpansion:
       if (preprocessed->HasRedundantBlanks()) {
         preprocessed->RemoveRedundantBlanks();
       }
@@ -335,40 +331,39 @@ void Prescanner::Statement() {
           preprocessed->ToLowerCase().ClipComment(*this), newlineProvenance);
       break;
     }
-  } else { // no macro replacement
-    if (line.kind == LineClassification::Kind::CompilerDirective) {
-      while (CompilerDirectiveContinuation(tokens, line.sentinel)) {
-        newlineProvenance = GetCurrentProvenance();
-      }
-      if (preprocessingOnly_ && inFixedForm_ && InConditionalLine() &&
-          nextLine_ < limit_) {
-        // In -E mode, when the line after !$ conditional compilation is a
-        // regular fixed form continuation line, append a '&' to the line.
-        const char *p{nextLine_};
-        int col{1};
-        while (int n{IsSpace(p)}) {
-          if (*p == '\t') {
-            break;
-          }
-          p += n;
-          ++col;
+  } else if (line.kind == LineClassification::Kind::CompilerDirective) {
+    while (CompilerDirectiveContinuation(tokens, line.sentinel)) {
+      newlineProvenance = GetCurrentProvenance();
+    }
+    if (preprocessingOnly_ && inFixedForm_ && InConditionalLine() &&
+        nextLine_ < limit_) {
+      // In -E mode, when the line after !$ conditional compilation is a
+      // regular fixed form continuation line, append a '&' to the line.
+      const char *p{nextLine_};
+      int col{1};
+      while (int n{IsSpace(p)}) {
+        if (*p == '\t') {
+          break;
         }
-        if (col == 6 && *p != '0' && *p != '\t' && *p != '\n') {
-          EmitChar(tokens, '&');
-          tokens.CloseToken();
-        }
+        p += n;
+        ++col;
       }
-      tokens.ToLowerCase();
-      if (!SourceFormChange(tokens.ToString())) {
-        CheckAndEmitLine(tokens, newlineProvenance);
+      if (col == 6 && *p != '0' && *p != '\t' && *p != '\n') {
+        EmitChar(tokens, '&');
+        tokens.CloseToken();
       }
-    } else { // Kind::Source
-      tokens.ToLowerCase();
-      if (inFixedForm_) {
-        EnforceStupidEndStatementRules(tokens);
-      }
+    }
+    tokens.ToLowerCase();
+    if (!SourceFormChange(tokens.ToString())) {
       CheckAndEmitLine(tokens, newlineProvenance);
     }
+  } else {
+    CHECK(line.kind == LineClassification::Kind::Source);
+    tokens.ToLowerCase();
+    if (inFixedForm_) {
+      EnforceStupidEndStatementRules(tokens);
+    }
+    CheckAndEmitLine(tokens, newlineProvenance);
   }
   directiveSentinel_ = nullptr;
 }
@@ -423,7 +418,8 @@ void Prescanner::NextLine() {
 }
 
 void Prescanner::LabelField(TokenSequence &token) {
-  int outCol{1};
+  int outChars{0};
+  int colOffset{column_ - 1};
   const char *start{at_};
   std::optional<int> badColumn;
   for (; *at_ != '\n' && column_ <= 6; ++at_) {
@@ -435,7 +431,7 @@ void Prescanner::LabelField(TokenSequence &token) {
     if (int n{IsSpace(at_)}; n == 0 &&
         !(*at_ == '0' && column_ == 6)) { // '0' in column 6 becomes space
       EmitChar(token, *at_);
-      ++outCol;
+      ++outChars;
       if (!badColumn && (column_ == 6 || !IsDecimalDigit(*at_))) {
         badColumn = column_;
       }
@@ -443,36 +439,45 @@ void Prescanner::LabelField(TokenSequence &token) {
     ++column_;
   }
   if (badColumn && !preprocessor_.IsNameDefined(token.CurrentOpenToken())) {
-    if ((prescannerNesting_ > 0 && *badColumn == 6 &&
-            cooked_.BufferedBytes() == firstCookedCharacterOffset_) ||
-        afterPreprocessingDirective_) {
-      // This is the first source line in #include'd text or conditional
-      // code under #if, or the first source line after such.
-      // If it turns out that the preprocessed text begins with a
-      // fixed form continuation line, the newline at the end
-      // of the latest source line beforehand will be deleted in
-      // CookedSource::Marshal().
-      cooked_.MarkPossibleFixedFormContinuation();
-    } else if (features_.ShouldWarn(common::UsageWarning::Scanning)) {
-      Say(common::UsageWarning::Scanning, GetProvenance(start + *badColumn - 1),
-          *badColumn == 6
-              ? "Statement should not begin with a continuation line"_warn_en_US
-              : "Character in fixed-form label field must be a digit"_warn_en_US);
+    int badOffset{*badColumn - colOffset - 1};
+    if (*badColumn == 6) {
+      if ((prescannerNesting_ > 0 &&
+              cooked_.BufferedBytes() == firstCookedCharacterOffset_) ||
+          afterPreprocessingDirective_) {
+        // This is the first source line in #include'd text or conditional
+        // code under #if, or the first source line after such.
+        // If it turns out that the preprocessed text begins with a
+        // fixed form continuation line, the newline at the end
+        // of the latest source line beforehand will be deleted in
+        // CookedSource::Marshal().
+        cooked_.MarkPossibleFixedFormContinuation();
+      } else if (features_.ShouldWarn(common::UsageWarning::Scanning)) {
+        Say(common::UsageWarning::Scanning, GetProvenance(start + badOffset),
+            "Statement should not begin with a continuation line"_warn_en_US);
+      }
+    } else if (preprocessingOnly_) {
+      if (features_.ShouldWarn(common::UsageWarning::Scanning)) {
+        Say(common::UsageWarning::Scanning, GetProvenance(start + badOffset),
+            "Character in fixed-form label field should be a digit"_warn_en_US);
+      }
+    } else {
+      Say(GetProvenance(start + badOffset),
+          "Character in fixed-form label field must be a digit"_err_en_US);
     }
     token.clear();
     if (*badColumn < 6) {
       at_ = start;
-      column_ = 1;
+      column_ = 1 + colOffset;
       return;
     }
-    outCol = 1;
+    outChars = 0;
   }
-  if (outCol == 1) { // empty label field
+  if (outChars == 0) { // empty or ignored label field
     // Emit a space so that, if the line is rescanned after preprocessing,
     // a leading 'C' or 'D' won't be left-justified and then accidentally
     // misinterpreted as a comment card.
     EmitChar(token, ' ');
-    ++outCol;
+    ++outChars;
   }
   token.CloseToken();
   SkipToNextSignificantCharacter();
@@ -557,7 +562,8 @@ bool Prescanner::MustSkipToEndOfLine() const {
     return true; // skip over ignored columns in right margin (73:80)
   } else if (*at_ == '!' && !inCharLiteral_ &&
       (!inFixedForm_ || tabInCurrentLine_ || column_ != 6)) {
-    return InCompilerDirective() || !IsCompilerDirectiveSentinel(at_ + 1);
+    return InCompilerDirective() ||
+        !IsCompilerDirectiveSentinelAfterKeywordMacro(at_ + 1);
   } else {
     return false;
   }
@@ -1606,6 +1612,9 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
   if (!IsFixedFormCommentChar(col1)) {
     return std::nullopt;
   }
+  // TODO: Handle keyword macros that expand to directives in fixed form.
+  // The comment character can't be 'c' or 'C'.  Need to figure out whether
+  // fixed form continuation should apply to the expansions.
   char sentinel[5], *sp{sentinel};
   int column{2};
   for (; column < 6; ++column) {
@@ -1623,12 +1632,9 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
   // - Columns 3 through 5 must have only white space or numbers.
   // - Column 6 must be space or zero.
   bool isOpenMPConditional{sp == &sentinel[1] && sentinel[0] == '$'};
-  bool hadDigit{false};
   if (isOpenMPConditional) {
     for (; column < 6; ++column, ++p) {
-      if (IsDecimalDigit(*p)) {
-        hadDigit = true;
-      } else if (!IsSpaceOrTab(p)) {
+      if (!IsDecimalDigit(*p) && !IsSpaceOrTab(p)) {
         return std::nullopt;
       }
     }
@@ -1638,14 +1644,17 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
       ++p;
     } else if (int n{IsSpaceOrTab(p)}) {
       p += n;
-    } else if (isOpenMPConditional && preprocessingOnly_ && !hadDigit &&
-        *p != '\n') {
-      // In -E mode, "!$   &" is treated as a directive
     } else {
-      // This is a Continuation line, not an initial directive line.
-      return std::nullopt;
+      // This is a continuation line.
+      // Directives are not allowed to begin with a continuation line, but
+      // this is allowed for OpenMP conditional compilation, which will result
+      // in a warning.
+      ++p;
+      if (!isOpenMPConditional) {
+        return std::nullopt;
+      }
     }
-    ++column, ++p;
+    ++column;
   }
   if (isOpenMPConditional) {
     for (; column <= fixedFormColumnLimit_; ++column, ++p) {
@@ -1668,20 +1677,28 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
 std::optional<Prescanner::LineClassification>
 Prescanner::IsFreeFormCompilerDirectiveLine(const char *start) const {
   if (const char *p{SkipWhiteSpaceIncludingEmptyMacros(start)};
-      p && *p++ == '!') {
-    if (auto maybePair{IsCompilerDirectiveSentinel(p)}) {
-      auto offset{static_cast<std::size_t>(p - start - 1)};
-      const char *sentinel{maybePair->first};
-      if ((sentinel[0] == '$' && sentinel[1] == '\0') || sentinel[1] == '@') {
-        if (const char *comment{IsFreeFormComment(maybePair->second)}) {
-          if (*comment == '!') {
-            // Conditional line comment - treat as comment
-            return std::nullopt;
+      p && *p == '!') {
+    if (auto lnClass{IsCompilerDirectiveSentinelAfterKeywordMacro(p + 1)}) {
+      if (lnClass->kind == LineClassification::Kind::CompilerDirective) {
+        const char *sentinel{lnClass->sentinel};
+        CHECK(sentinel != nullptr);
+        const char *payload{nullptr};
+        if (sentinel[0] == '$' && sentinel[1] == '\0') {
+          payload = p + 2; // !$
+        } else if (sentinel[1] == '@') {
+          payload = p + 5; // !@acc or !@cuf
+        }
+        if (payload) {
+          if (const char *comment{IsFreeFormComment(payload)}) {
+            if (*comment == '!') { // !$ !blah or !@acc !blah
+              // Conditional line comment - treat as comment
+              return std::nullopt;
+            }
           }
         }
+        lnClass->payloadOffset = static_cast<std::size_t>(p - start);
       }
-      return {LineClassification{
-          LineClassification::Kind::CompilerDirective, offset, sentinel}};
+      return lnClass;
     }
   }
   return std::nullopt;
@@ -1696,6 +1713,31 @@ Prescanner &Prescanner::AddCompilerDirectiveSentinel(const std::string &dir) {
   compilerDirectiveBloomFilter_.set(packed % prime2);
   compilerDirectiveSentinels_.insert(dir);
   return *this;
+}
+
+std::optional<CharBlock> Prescanner::GetKeywordMacroName(
+    const char *start) const {
+  if (IsLegalIdentifierStart(*start)) {
+    // TODO: Only bother with these cases when any keyword macro has
+    // been defined with replacement text that could begin a comment
+    // or directive sentinel.
+    const char *p{start};
+    while (IsLegalInIdentifier(*++p)) {
+    }
+    CharBlock name{start, static_cast<std::size_t>(p - start)};
+    if (preprocessor_.IsNameDefined(name) &&
+        !preprocessor_.IsFunctionLikeDefinition(name)) {
+      return name;
+    }
+  }
+  return std::nullopt;
+}
+
+TokenSequence Prescanner::ExpandKeywordMacro(
+    CharBlock name, Provenance provenance) const {
+  TokenSequence toks;
+  toks.Put(name, provenance);
+  return preprocessor_.MacroReplacement(toks, *this).value();
 }
 
 const char *Prescanner::IsCompilerDirectiveSentinel(
@@ -1755,8 +1797,26 @@ Prescanner::IsCompilerDirectiveSentinel(const char *p) const {
   return std::nullopt;
 }
 
-Prescanner::LineClassification Prescanner::ClassifyLine(
-    const char *start) const {
+auto Prescanner::IsCompilerDirectiveSentinelAfterKeywordMacro(
+    const char *p) const -> std::optional<LineClassification> {
+  if (auto name{GetKeywordMacroName(p)}) {
+    Provenance provenance{GetProvenance(p)};
+    TokenSequence expansion{ExpandKeywordMacro(*name, provenance)};
+    expansion.Put("\n", 1, provenance); // termination
+    CharBlock block{expansion.ToLowerCase().ToCharBlock()};
+    if (auto maybePair{IsCompilerDirectiveSentinel(block.begin())}) {
+      return LineClassification{
+          LineClassification::Kind::CompilerDirectiveAfterMacroExpansion,
+          name->size(), maybePair->first};
+    }
+  } else if (auto maybePair{IsCompilerDirectiveSentinel(p)}) {
+    return LineClassification{LineClassification::Kind::CompilerDirective,
+        static_cast<std::size_t>(maybePair->second - p), maybePair->first};
+  }
+  return std::nullopt;
+}
+
+auto Prescanner::ClassifyLine(const char *start) const -> LineClassification {
   if (inFixedForm_) {
     if (std::optional<LineClassification> lc{
             IsFixedFormCompilerDirectiveLine(start)}) {

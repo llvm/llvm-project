@@ -44,6 +44,7 @@ func.func @main() {
   gpu.host_register %2 : memref<*xf64>
   gpu.host_register %20 : memref<*xf64>
   gpu.host_register %33 : memref<*xf64>
+  gpu.host_register %34 : memref<*xf64>
 
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %c1, %grid_y = %c1, %grid_z = %c1)
              threads(%tx, %ty, %tz) in (%block_x = %c32, %block_y = %c1, %block_z = %c1) {

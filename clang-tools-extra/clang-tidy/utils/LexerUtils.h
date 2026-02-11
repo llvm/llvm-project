@@ -21,10 +21,13 @@ class Stmt;
 
 namespace tidy::utils::lexer {
 
-/// Returns previous token or ``tok::unknown`` if not found.
-Token getPreviousToken(SourceLocation Location, const SourceManager &SM,
-                       const LangOptions &LangOpts, bool SkipComments = true);
-std::pair<Token, SourceLocation>
+/// Returns previous token or ``std::nullopt`` if not found.
+std::optional<Token> getPreviousToken(SourceLocation Location,
+                                      const SourceManager &SM,
+                                      const LangOptions &LangOpts,
+                                      bool SkipComments = true);
+
+std::pair<std::optional<Token>, SourceLocation>
 getPreviousTokenAndStart(SourceLocation Location, const SourceManager &SM,
                          const LangOptions &LangOpts, bool SkipComments = true);
 
@@ -89,6 +92,7 @@ SourceLocation findNextAnyTokenKind(SourceLocation Start,
   }
 }
 
+// Finds next token, possibly a comment.
 inline std::optional<Token>
 findNextTokenIncludingComments(SourceLocation Start, const SourceManager &SM,
                                const LangOptions &LangOpts) {
@@ -96,9 +100,11 @@ findNextTokenIncludingComments(SourceLocation Start, const SourceManager &SM,
 }
 
 // Finds next token that's not a comment.
-std::optional<Token> findNextTokenSkippingComments(SourceLocation Start,
-                                                   const SourceManager &SM,
-                                                   const LangOptions &LangOpts);
+inline std::optional<Token>
+findNextTokenSkippingComments(SourceLocation Start, const SourceManager &SM,
+                              const LangOptions &LangOpts) {
+  return Lexer::findNextToken(Start, SM, LangOpts, false);
+}
 
 /// Re-lex the provide \p Range and return \c false if either a macro spans
 /// multiple tokens, a pre-processor directive or failure to retrieve the

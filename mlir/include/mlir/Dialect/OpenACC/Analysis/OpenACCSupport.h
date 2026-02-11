@@ -50,18 +50,17 @@
 #ifndef MLIR_DIALECT_OPENACC_ANALYSIS_OPENACCSUPPORT_H
 #define MLIR_DIALECT_OPENACC_ANALYSIS_OPENACCSUPPORT_H
 
+#include "mlir/Dialect/OpenACC/OpenACCUtils.h"
+#include "mlir/IR/Remarks.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Pass/AnalysisManager.h"
+#include "llvm/ADT/StringRef.h"
+#include <functional>
 #include <memory>
 #include <string>
 
 namespace mlir {
 namespace acc {
-
-// Forward declarations
-enum class RecipeKind : uint32_t;
-bool isValidSymbolUse(Operation *user, SymbolRefAttr symbol,
-                      Operation **definingOpPtr);
 
 namespace detail {
 /// This class contains internal trait classes used by OpenACCSupport.
@@ -82,9 +81,20 @@ struct OpenACCSupportTraits {
     // Used to report a case that is not supported by the implementation.
     virtual InFlightDiagnostic emitNYI(Location loc, const Twine &message) = 0;
 
+    // Used to emit an OpenACC remark. The category is optional and is used to
+    // either capture the pass name or pipeline phase when the remark is
+    // emitted. When not provided, in the default implementation, the category
+    // is "openacc".
+    virtual remark::detail::InFlightRemark
+    emitRemark(Operation *op, std::function<std::string()> messageFn,
+               llvm::StringRef category) = 0;
+
     /// Check if a symbol use is valid for use in an OpenACC region.
     virtual bool isValidSymbolUse(Operation *user, SymbolRefAttr symbol,
                                   Operation **definingOpPtr) = 0;
+
+    /// Check if a value use is legal in an OpenACC region.
+    virtual bool isValidValueUse(Value v, mlir::Region &region) = 0;
   };
 
   /// SFINAE helpers to detect if implementation has optional methods
@@ -96,6 +106,24 @@ struct OpenACCSupportTraits {
   using has_isValidSymbolUse =
       llvm::is_detected<isValidSymbolUse_t, ImplT, Operation *, SymbolRefAttr,
                         Operation **>;
+
+  template <typename ImplT, typename... Args>
+
+  using isValidValueUse_t =
+      decltype(std::declval<ImplT>().isValidValueUse(std::declval<Args>()...));
+
+  template <typename ImplT>
+  using has_isValidValueUse =
+      llvm::is_detected<isValidValueUse_t, ImplT, Value, Region &>;
+
+  template <typename ImplT, typename... Args>
+  using emitRemark_t =
+      decltype(std::declval<ImplT>().emitRemark(std::declval<Args>()...));
+
+  template <typename ImplT>
+  using has_emitRemark =
+      llvm::is_detected<emitRemark_t, ImplT, Operation *,
+                        std::function<std::string()>, llvm::StringRef>;
 
   /// This class wraps a concrete OpenACCSupport implementation and forwards
   /// interface calls to it. This provides type erasure, allowing different
@@ -120,12 +148,28 @@ struct OpenACCSupportTraits {
       return impl.emitNYI(loc, message);
     }
 
+    remark::detail::InFlightRemark
+    emitRemark(Operation *op, std::function<std::string()> messageFn,
+               llvm::StringRef category) final {
+      if constexpr (has_emitRemark<ImplT>::value)
+        return impl.emitRemark(op, std::move(messageFn), category);
+      else
+        return acc::emitRemark(op, messageFn(), category);
+    }
+
     bool isValidSymbolUse(Operation *user, SymbolRefAttr symbol,
                           Operation **definingOpPtr) final {
       if constexpr (has_isValidSymbolUse<ImplT>::value)
         return impl.isValidSymbolUse(user, symbol, definingOpPtr);
       else
         return acc::isValidSymbolUse(user, symbol, definingOpPtr);
+    }
+
+    bool isValidValueUse(Value v, Region &region) final {
+      if constexpr (has_isValidValueUse<ImplT>::value)
+        return impl.isValidValueUse(v, region);
+      else
+        return acc::isValidValueUse(v, region);
     }
 
   private:
@@ -180,6 +224,37 @@ public:
   ///         unsupported case.
   InFlightDiagnostic emitNYI(Location loc, const Twine &message);
 
+  /// Emit an OpenACC remark with lazy message generation.
+  ///
+  /// The messageFn is only invoked if remarks are enabled for the given
+  /// operation, allowing callers to avoid constructing expensive messages
+  /// when remarks are disabled.
+  ///
+  /// \param op The operation to emit the remark for.
+  /// \param messageFn A callable that returns the remark message.
+  /// \param category Optional category for the remark. Defaults to "openacc".
+  /// \return An in-flight remark object that can be used to append
+  ///         additional information to the remark.
+  remark::detail::InFlightRemark
+  emitRemark(Operation *op, std::function<std::string()> messageFn,
+             llvm::StringRef category = "openacc");
+
+  /// Emit an OpenACC remark.
+  ///
+  /// \param op The operation to emit the remark for.
+  /// \param message The remark message.
+  /// \param category Optional category for the remark. Defaults to "openacc".
+  /// \return An in-flight remark object that can be used to append
+  ///         additional information to the remark.
+  remark::detail::InFlightRemark
+  emitRemark(Operation *op, const Twine &message,
+             llvm::StringRef category = "openacc") {
+    return emitRemark(op, std::function<std::string()>([msg = message.str()]() {
+                        return msg;
+                      }),
+                      category);
+  }
+
   /// Check if a symbol use is valid for use in an OpenACC region.
   ///
   /// \param user The operation using the symbol.
@@ -188,6 +263,12 @@ public:
   /// \return true if the symbol use is valid, false otherwise.
   bool isValidSymbolUse(Operation *user, SymbolRefAttr symbol,
                         Operation **definingOpPtr = nullptr);
+
+  /// Check if a value use is legal in an OpenACC region.
+  ///
+  /// \param v The MLIR value to check for legality.
+  /// \param region The MLIR region in which the legality is checked.
+  bool isValidValueUse(Value v, Region &region);
 
   /// Signal that this analysis should always be preserved so that
   /// underlying implementation registration is not lost.

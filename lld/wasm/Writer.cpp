@@ -401,7 +401,15 @@ void Writer::layoutMemory() {
       }
     }
 
+    if (ctx.sym.rodataStart && seg->name.starts_with(".rodata") &&
+        !ctx.sym.rodataStart->getVA())
+      ctx.sym.rodataStart->setVA(memoryPtr);
+
     memoryPtr += seg->size;
+
+    // Might get set more than once if segment merging is not enabled.
+    if (ctx.sym.rodataEnd && seg->name.starts_with(".rodata"))
+      ctx.sym.rodataEnd->setVA(memoryPtr);
   }
 
   // Make space for the memory initialization flag
@@ -628,20 +636,20 @@ void Writer::populateTargetFeatures() {
     goto done;
 
   if (ctx.arg.sharedMemory) {
-    if (disallowed.count("shared-mem"))
+    if (disallowed.contains("shared-mem"))
       error("--shared-memory is disallowed by " + disallowed["shared-mem"] +
             " because it was not compiled with 'atomics' or 'bulk-memory' "
             "features.");
 
     for (auto feature : {"atomics", "bulk-memory"})
-      if (!allowed.count(feature))
+      if (!allowed.contains(feature))
         error(StringRef("'") + feature +
               "' feature must be used in order to use shared memory");
   }
 
   if (tlsUsed) {
     for (auto feature : {"atomics", "bulk-memory"})
-      if (!allowed.count(feature))
+      if (!allowed.contains(feature))
         error(StringRef("'") + feature +
               "' feature must be used in order to use thread-local storage");
   }
@@ -649,7 +657,7 @@ void Writer::populateTargetFeatures() {
   // Validate that used features are allowed in output
   if (!inferFeatures) {
     for (const auto &feature : used.keys()) {
-      if (!allowed.count(std::string(feature)))
+      if (!allowed.contains(std::string(feature)))
         error(Twine("Target feature '") + feature + "' used by " +
               used[feature] + " is not allowed.");
     }
@@ -663,7 +671,7 @@ void Writer::populateTargetFeatures() {
       if (feature.Prefix == WASM_FEATURE_PREFIX_DISALLOWED)
         continue;
       objectFeatures.insert(feature.Name);
-      if (disallowed.count(feature.Name))
+      if (disallowed.contains(feature.Name))
         error(Twine("Target feature '") + feature.Name + "' used in " +
               fileName + " is disallowed by " + disallowed[feature.Name] +
               ". Use --no-check-features to suppress.");
@@ -678,10 +686,10 @@ done:
   // Finally, if we are emitting relocations, they may refer to locations within
   // the bss segments, so these segments need to exist in the binary.
   if (ctx.arg.emitRelocs ||
-      (ctx.arg.memoryImport.has_value() && !allowed.count("bulk-memory")))
+      (ctx.arg.memoryImport.has_value() && !allowed.contains("bulk-memory")))
     ctx.emitBssSegments = true;
 
-  if (allowed.count("extended-const"))
+  if (allowed.contains("extended-const"))
     ctx.arg.extendedConst = true;
 
   for (auto &feature : allowed)
@@ -692,7 +700,7 @@ void Writer::checkImportExportTargetFeatures() {
   if (ctx.arg.relocatable || !ctx.arg.checkFeatures)
     return;
 
-  if (out.targetFeaturesSec->features.count("mutable-globals") == 0) {
+  if (!out.targetFeaturesSec->features.contains("mutable-globals")) {
     for (const Symbol *sym : out.importSec->importedSymbols) {
       if (auto *global = dyn_cast<GlobalSymbol>(sym)) {
         if (global->getGlobalType()->Mutable) {
@@ -748,7 +756,7 @@ static bool shouldImport(Symbol *sym) {
   if (ctx.isPic || ctx.arg.relocatable || ctx.arg.importUndefined ||
       ctx.arg.unresolvedSymbols == UnresolvedPolicy::ImportDynamic)
     return true;
-  if (ctx.arg.allowUndefinedSymbols.count(sym->getName()) != 0)
+  if (ctx.arg.allowUndefinedSymbols.contains(sym->getName()))
     return true;
 
   return sym->isImported();
@@ -785,7 +793,7 @@ void Writer::calculateExports() {
       out.importSec->getNumImportedGlobals() + out.globalSec->numGlobals();
 
   bool hasMutableGlobals =
-      out.targetFeaturesSec->features.count("mutable-globals") > 0;
+      out.targetFeaturesSec->features.contains("mutable-globals");
 
   for (Symbol *sym : symtab->symbols()) {
     if (!sym->isExported())
@@ -1042,7 +1050,7 @@ void Writer::createOutputSegments() {
       if (ctx.arg.relocatable && !segment->getComdatName().empty()) {
         s = createOutputSegment(name);
       } else {
-        if (segmentMap.count(name) == 0)
+        if (!segmentMap.contains(name))
           segmentMap[name] = createOutputSegment(name);
         s = segmentMap[name];
       }
@@ -1109,7 +1117,7 @@ void Writer::combineOutputSegments() {
     }
   }
 
-  segments = newSegments;
+  segments = std::move(newSegments);
 }
 
 static void createFunction(DefinedFunction *func, StringRef bodyContent) {
@@ -1713,8 +1721,8 @@ void Writer::createSyntheticSectionsPostLayout() {
 void Writer::run() {
   // For PIC code the table base is assigned dynamically by the loader.
   // For non-PIC, we start at 1 so that accessing table index 0 always traps.
-  if (!ctx.isPic && ctx.sym.definedTableBase)
-    ctx.sym.definedTableBase->setVA(ctx.arg.tableBase);
+  if (!ctx.isPic && ctx.sym.tableBase)
+    setGlobalPtr(cast<DefinedGlobal>(ctx.sym.tableBase), ctx.arg.tableBase);
 
   log("-- createOutputSegments");
   createOutputSegments();

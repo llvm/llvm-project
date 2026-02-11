@@ -135,6 +135,7 @@ int main(void) {
   P(object_size, (s0, 3));
 
   // Whatever
+  P(bswapg, ((_Bool)N));
   P(bswapg, ((char)N));
   P(bswapg, ((short)N));
   P(bswapg, ((int)N));
@@ -371,22 +372,22 @@ void test_float_builtin_ops(float F, double D, long double LD, int I) {
   // CHECK: call [[LDTYPE]] @llvm.canonicalize.[[LDLLVMTY]]([[LDTYPE]]
 
   resf = __builtin_fminf(F, F);
-  // CHECK: call float @llvm.minnum.f32
+  // CHECK: call nsz float @llvm.minnum.f32
 
   resd = __builtin_fmin(D, D);
-  // CHECK: call double @llvm.minnum.f64
+  // CHECK: call nsz double @llvm.minnum.f64
 
   resld = __builtin_fminl(LD, LD);
-  // CHECK: call [[LDTYPE]] @llvm.minnum.[[LDLLVMTY]]
+  // CHECK: call nsz [[LDTYPE]] @llvm.minnum.[[LDLLVMTY]]
 
   resf = __builtin_fmaxf(F, F);
-  // CHECK: call float @llvm.maxnum.f32
+  // CHECK: call nsz float @llvm.maxnum.f32
 
   resd = __builtin_fmax(D, D);
-  // CHECK: call double @llvm.maxnum.f64
+  // CHECK: call nsz double @llvm.maxnum.f64
 
   resld = __builtin_fmaxl(LD, LD);
-  // CHECK: call [[LDTYPE]] @llvm.maxnum.[[LDLLVMTY]]
+  // CHECK: call nsz [[LDTYPE]] @llvm.maxnum.[[LDLLVMTY]]
 
   resf = __builtin_fminimum_numf(F, F);
   // CHECK: call float @llvm.minimumnum.f32
@@ -916,9 +917,10 @@ void test_builtin_ctzg(unsigned char uc, unsigned short us, unsigned int ui,
 
 #endif
 
+#include <stdbool.h>
 // CHECK-LABEL: define{{.*}} void @test_builtin_bswapg
 void test_builtin_bswapg(unsigned char uc, unsigned short us, unsigned int ui,
-                       unsigned long ul, unsigned long long ull,
+                       unsigned long ul, unsigned long long ull, bool b,
 #ifdef __SIZEOF_INT128__
                        unsigned __int128 ui128,
 #endif
@@ -929,9 +931,14 @@ void test_builtin_bswapg(unsigned char uc, unsigned short us, unsigned int ui,
   int x = 0;
   x = x * 2;
 #endif
+  b = __builtin_bswapg(b);
+  // CHECK: %{{.*}} = load i8, ptr %b.addr
+  // CHECK: %{{.*}} = trunc i8 %{{.*}} to i1
+  // CHECK: %{{.*}} = zext i1 %{{.*}} to i8
+  // CHECK: store i8 %{{.*}}, ptr %b.addr
   uc = __builtin_bswapg(uc);
-  // CHECK: %1 = load i8, ptr %uc.addr
-  // CHECK: store i8 %1, ptr %uc.addr
+  // CHECK: %{{.*}} = load i8, ptr %uc.addr
+  // CHECK: store i8 %{{.*}}, ptr %uc.addr
   us = __builtin_bswapg(us);
   // CHECK: call i16 @llvm.bswap.i16
   ui = __builtin_bswapg(ui);

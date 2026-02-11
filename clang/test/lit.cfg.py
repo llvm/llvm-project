@@ -126,6 +126,8 @@ tools = [
 
 if config.clang_examples:
     config.available_features.add("examples")
+if config.llvm_examples:
+    config.available_features.add("llvm-examples")
 
 
 def have_host_out_of_process_jit_feature_support():
@@ -404,6 +406,8 @@ if config.clang_vendor_uti:
 if config.have_llvm_driver:
     config.available_features.add("llvm-driver")
 
+if config.clang_enable_cir:
+    config.available_features.add("cir-enabled")
 
 # Some tests perform deep recursion, which requires a larger pthread stack size
 # than the relatively low default of 192 KiB for 64-bit processes on AIX. The

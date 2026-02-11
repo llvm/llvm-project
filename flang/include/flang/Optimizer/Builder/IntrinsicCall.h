@@ -9,7 +9,6 @@
 #ifndef FORTRAN_LOWER_INTRINSICCALL_H
 #define FORTRAN_LOWER_INTRINSICCALL_H
 
-#include "flang/Lower/AbstractConverter.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
@@ -21,6 +20,15 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include <optional>
+
+namespace Fortran {
+namespace lower {
+// TODO: remove the usage of AbstractConverter to avoid making IntrinsicCall.cpp
+// depend upon Lower/Evaluate and use a data structure to pass options to
+// IntrinsicLibrary.
+class AbstractConverter;
+} // namespace lower
+} // namespace Fortran
 
 namespace fir {
 
@@ -253,6 +261,8 @@ struct IntrinsicLibrary {
                                       llvm::ArrayRef<fir::ExtendedValue>);
   template <Extremum, ExtremumBehavior>
   mlir::Value genExtremum(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genFCString(mlir::Type,
+                                 llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genFloor(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genFlush(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genFraction(mlir::Type resultType,
@@ -413,6 +423,7 @@ struct IntrinsicLibrary {
   template <typename Shift>
   mlir::Value genShift(mlir::Type resultType, llvm::ArrayRef<mlir::Value>);
   mlir::Value genShiftA(mlir::Type resultType, llvm::ArrayRef<mlir::Value>);
+  void genShowDescriptor(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSign(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSind(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSinpi(mlir::Type, llvm::ArrayRef<mlir::Value>);

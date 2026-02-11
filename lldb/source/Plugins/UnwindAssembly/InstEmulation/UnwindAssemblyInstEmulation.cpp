@@ -166,7 +166,7 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
     DumpInstToLog(log, inst, inst_list);
 
     m_curr_row_modified = false;
-    m_forward_branch_offset = 0;
+    m_branch_offset = 0;
 
     lldb::addr_t current_offset =
         inst.GetAddress().GetFileAddress() - base_addr;
@@ -211,13 +211,13 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
     // If the current instruction is a branch forward then save the current
     // CFI information for the offset where we are branching.
     Address branch_address = inst.GetAddress();
-    branch_address.Slide(m_forward_branch_offset);
-    if (m_forward_branch_offset != 0 &&
+    branch_address.Slide(m_branch_offset);
+    if (m_branch_offset != 0 &&
         range.ContainsFileAddress(branch_address.GetFileAddress())) {
       if (auto [it, inserted] = saved_unwind_states.emplace(
-              current_offset + m_forward_branch_offset, m_state);
+              current_offset + m_branch_offset, m_state);
           inserted) {
-        it->second.row.SetOffset(current_offset + m_forward_branch_offset);
+        it->second.row.SetOffset(current_offset + m_branch_offset);
         if (std::size_t dest_instr_index =
                 inst_list.GetIndexOfInstructionAtAddress(branch_address);
             dest_instr_index < inst_list.GetSize()) {
@@ -226,6 +226,10 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
         }
       }
     }
+
+    // If inst is a barrier, do not propagate state to the next instruction.
+    if (inst.IsBarrier())
+      continue;
 
     // Were there any changes to the CFI while evaluating this instruction?
     if (m_curr_row_modified) {
@@ -530,21 +534,20 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
   case EmulateInstruction::eContextAbsoluteBranchRegister:
   case EmulateInstruction::eContextRelativeBranchImmediate: {
     if (context.GetInfoType() == EmulateInstruction::eInfoTypeISAAndImmediate &&
-        context.info.ISAAndImmediate.unsigned_data32 > 0) {
-      m_forward_branch_offset = context.info.ISAAndImmediate.unsigned_data32;
+        context.info.ISAAndImmediate.unsigned_data32 != 0) {
+      m_branch_offset = context.info.ISAAndImmediate.unsigned_data32;
     } else if (context.GetInfoType() ==
                    EmulateInstruction::eInfoTypeISAAndImmediateSigned &&
-               context.info.ISAAndImmediateSigned.signed_data32 > 0) {
-      m_forward_branch_offset =
-          context.info.ISAAndImmediateSigned.signed_data32;
+               context.info.ISAAndImmediateSigned.signed_data32 != 0) {
+      m_branch_offset = context.info.ISAAndImmediateSigned.signed_data32;
     } else if (context.GetInfoType() ==
                    EmulateInstruction::eInfoTypeImmediate &&
-               context.info.unsigned_immediate > 0) {
-      m_forward_branch_offset = context.info.unsigned_immediate;
+               context.info.unsigned_immediate != 0) {
+      m_branch_offset = context.info.unsigned_immediate;
     } else if (context.GetInfoType() ==
                    EmulateInstruction::eInfoTypeImmediateSigned &&
-               context.info.signed_immediate > 0) {
-      m_forward_branch_offset = context.info.signed_immediate;
+               context.info.signed_immediate != 0) {
+      m_branch_offset = context.info.signed_immediate;
     }
   } break;
 

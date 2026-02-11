@@ -106,3 +106,9 @@
 
 // WIDE-ARITH: "-target-feature" "+wide-arithmetic"
 // NO-WIDE-ARITH: "-target-feature" "-wide-arithmetic"
+
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mcompact-imports 2>&1 | FileCheck %s -check-prefix=COMPACT-IMPORTS
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-compact-imports 2>&1 | FileCheck %s -check-prefix=NO-COMPACT-IMPORTS
+
+// COMPACT-IMPORTS: "-target-feature" "+compact-imports"
+// NO-COMPACT-IMPORTS: "-target-feature" "-compact-imports"

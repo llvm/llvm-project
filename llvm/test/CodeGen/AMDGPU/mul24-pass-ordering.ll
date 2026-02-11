@@ -120,7 +120,7 @@ bb19:                                             ; preds = %bb
 bb23:                                             ; preds = %bb19, %bb23
   %tmp24 = phi i32 [ %arg, %bb19 ], [ %tmp47, %bb23 ]
   %tmp25 = uitofp i32 %tmp24 to float
-  %tmp26 = tail call float @llvm.fmuladd.f32(float %tmp25, float %tmp21, float 0x3EE4F8B580000000) #2
+  %tmp26 = tail call float @llvm.fmuladd.f32(float %tmp25, float %tmp21, float 0x3EE4F8B580000000)
   %tmp27 = fptoui float %tmp26 to i32
   %tmp28 = and i32 %tmp27, 16777215
   %tmp29 = mul i32 %tmp28, %tmp22
@@ -263,8 +263,8 @@ define void @slsr1_1(i32 %b.arg, i32 %s.arg) #0 {
 declare void @foo(i32) #2
 declare float @llvm.fmuladd.f32(float, float, float) #1
 
-attributes #0 = { nounwind willreturn "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #0 = { nounwind willreturn denormal_fpenv(float: preservesign) }
 attributes #1 = { nounwind readnone speculatable }
-attributes #2 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-cluster-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #2 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-cluster-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" denormal_fpenv(float: preservesign) }
 
 !0 = !{float 2.500000e+00}

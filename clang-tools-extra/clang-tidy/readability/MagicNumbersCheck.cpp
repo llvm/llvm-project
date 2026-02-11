@@ -187,9 +187,8 @@ bool MagicNumbersCheck::isConstant(const MatchFinder::MatchResult &Result,
 }
 
 bool MagicNumbersCheck::isIgnoredValue(const IntegerLiteral *Literal) const {
-  if (Literal->getType()->isBitIntType()) {
+  if (Literal->getType()->isBitIntType())
     return true;
-  }
   const llvm::APInt IntValue = Literal->getValue();
   const int64_t Value = IntValue.getZExtValue();
   if (Value == 0)

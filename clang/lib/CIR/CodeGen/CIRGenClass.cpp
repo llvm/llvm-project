@@ -149,7 +149,7 @@ struct CallBaseDtor final : EHScopeStack::Cleanup {
   CallBaseDtor(const CXXRecordDecl *base, bool baseIsVirtual)
       : baseClass(base), baseIsVirtual(baseIsVirtual) {}
 
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
     const CXXRecordDecl *derivedClass =
         cast<CXXMethodDecl>(cgf.curFuncDecl)->getParent();
 
@@ -440,8 +440,8 @@ void CIRGenFunction::initializeVTablePointer(mlir::Location loc,
   // vtable field is derived from `this` pointer, therefore they should be in
   // the same addr space.
   assert(!cir::MissingFeatures::addressSpace());
-  auto vtablePtr = cir::VTableGetVPtrOp::create(
-      builder, loc, builder.getPtrToVPtrType(), classAddr.getPointer());
+  auto vtablePtr =
+      cir::VTableGetVPtrOp::create(builder, loc, classAddr.getPointer());
   Address vtableField = Address(vtablePtr, classAddr.getAlignment());
   builder.createStore(loc, vtableAddressPoint, vtableField);
   assert(!cir::MissingFeatures::opTBAA());
@@ -582,6 +582,25 @@ void CIRGenFunction::emitInitializerForField(FieldDecl *field, LValue lhs,
   QualType::DestructionKind dtorKind = fieldType.isDestructedType();
   (void)dtorKind;
   assert(!cir::MissingFeatures::requiresCleanups());
+}
+
+Address CIRGenFunction::emitCXXMemberDataPointerAddress(
+    const Expr *e, Address base, mlir::Value memberPtr,
+    const MemberPointerType *memberPtrType, LValueBaseInfo *baseInfo) {
+  assert(!cir::MissingFeatures::cxxABI());
+
+  cir::GetRuntimeMemberOp op = builder.createGetIndirectMember(
+      getLoc(e->getSourceRange()), base.getPointer(), memberPtr);
+
+  QualType memberType = memberPtrType->getPointeeType();
+  assert(!cir::MissingFeatures::opTBAA());
+  CharUnits memberAlign = cgm.getNaturalTypeAlignment(memberType, baseInfo);
+  memberAlign = cgm.getDynamicOffsetAlignment(
+      base.getAlignment(), memberPtrType->getMostRecentCXXRecordDecl(),
+      memberAlign);
+
+  return Address(op, convertTypeForMem(memberPtrType->getPointeeType()),
+                 memberAlign);
 }
 
 CharUnits
@@ -924,7 +943,7 @@ mlir::Value loadThisForDtorDelete(CIRGenFunction &cgf,
 struct CallDtorDelete final : EHScopeStack::Cleanup {
   CallDtorDelete() {}
 
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
     const CXXDestructorDecl *dtor = cast<CXXDestructorDecl>(cgf.curFuncDecl);
     const CXXRecordDecl *classDecl = dtor->getParent();
     cgf.emitDeleteCall(dtor->getOperatorDelete(),
@@ -941,7 +960,7 @@ public:
   DestroyField(const FieldDecl *field, CIRGenFunction::Destroyer *destroyer)
       : field(field), destroyer(destroyer) {}
 
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
     // Find the address of the field.
     Address thisValue = cgf.loadCXXThisAddress();
     CanQualType recordTy =
@@ -950,7 +969,7 @@ public:
     LValue lv = cgf.emitLValueForField(thisLV, field);
     assert(lv.isSimple());
 
-    assert(!cir::MissingFeatures::ehCleanupFlags());
+    assert(!cir::MissingFeatures::useEHCleanupForArray());
     cgf.emitDestroy(lv.getAddress(), field->getType(), destroyer);
   }
 };
@@ -1047,7 +1066,7 @@ void CIRGenFunction::enterDtorCleanups(const CXXDestructorDecl *dd,
       continue;
 
     CleanupKind cleanupKind = getCleanupKind(dtorKind);
-    assert(!cir::MissingFeatures::ehCleanupFlags());
+    assert(!cir::MissingFeatures::useEHCleanupForArray());
     ehStack.pushCleanup<DestroyField>(cleanupKind, field,
                                       getDestroyer(dtorKind));
   }
@@ -1225,8 +1244,8 @@ bool CIRGenFunction::shouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *rd) {
 
 mlir::Value CIRGenFunction::getVTablePtr(mlir::Location loc, Address thisAddr,
                                          const CXXRecordDecl *rd) {
-  auto vtablePtr = cir::VTableGetVPtrOp::create(
-      builder, loc, builder.getPtrToVPtrType(), thisAddr.getPointer());
+  auto vtablePtr =
+      cir::VTableGetVPtrOp::create(builder, loc, thisAddr.getPointer());
   Address vtablePtrAddr = Address(vtablePtr, thisAddr.getAlignment());
 
   auto vtable = builder.createLoad(loc, vtablePtrAddr);

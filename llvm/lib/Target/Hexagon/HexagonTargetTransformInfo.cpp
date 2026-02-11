@@ -224,24 +224,12 @@ InstructionCost HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 }
 
 InstructionCost
-HexagonTTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
-                                      TTI::TargetCostKind CostKind) const {
-  return BaseT::getMaskedMemoryOpCost(MICA, CostKind);
-}
-
-InstructionCost
 HexagonTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
                                VectorType *SrcTy, ArrayRef<int> Mask,
                                TTI::TargetCostKind CostKind, int Index,
                                VectorType *SubTp, ArrayRef<const Value *> Args,
                                const Instruction *CxtI) const {
   return 1;
-}
-
-InstructionCost
-HexagonTTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
-                                       TTI::TargetCostKind CostKind) const {
-  return BaseT::getGatherScatterOpCost(MICA, CostKind);
 }
 
 InstructionCost HexagonTTIImpl::getInterleavedMemoryOpCost(
@@ -318,11 +306,9 @@ InstructionCost HexagonTTIImpl::getCastInstrCost(unsigned Opcode, Type *DstTy,
   return 1;
 }
 
-InstructionCost HexagonTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
-                                                   TTI::TargetCostKind CostKind,
-                                                   unsigned Index,
-                                                   const Value *Op0,
-                                                   const Value *Op1) const {
+InstructionCost HexagonTTIImpl::getVectorInstrCost(
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    const Value *Op0, const Value *Op1, TTI::VectorInstrContext VIC) const {
   Type *ElemTy = Val->isVectorTy() ? cast<VectorType>(Val)->getElementType()
                                    : Val;
   if (Opcode == Instruction::InsertElement) {
@@ -332,7 +318,7 @@ InstructionCost HexagonTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       return Cost;
     // If it's not a 32-bit value, there will need to be an extract.
     return Cost + getVectorInstrCost(Instruction::ExtractElement, Val, CostKind,
-                                     Index, Op0, Op1);
+                                     Index, Op0, Op1, VIC);
   }
 
   if (Opcode == Instruction::ExtractElement)

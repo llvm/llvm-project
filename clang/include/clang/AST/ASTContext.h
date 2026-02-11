@@ -370,6 +370,21 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::DenseSet<const FunctionDecl *> DestroyingOperatorDeletes;
   mutable llvm::DenseSet<const FunctionDecl *> TypeAwareOperatorNewAndDeletes;
 
+  /// Global and array operators delete are only required for MSVC deleting
+  /// destructors support. Store them here to avoid keeping 4 pointers that are
+  /// not always used in each redeclaration of the destructor.
+  mutable llvm::DenseMap<const CXXDestructorDecl *, FunctionDecl *>
+      OperatorDeletesForVirtualDtor;
+  mutable llvm::DenseMap<const CXXDestructorDecl *, FunctionDecl *>
+      GlobalOperatorDeletesForVirtualDtor;
+  mutable llvm::DenseMap<const CXXDestructorDecl *, FunctionDecl *>
+      ArrayOperatorDeletesForVirtualDtor;
+  mutable llvm::DenseMap<const CXXDestructorDecl *, FunctionDecl *>
+      GlobalArrayOperatorDeletesForVirtualDtor;
+
+  /// To remember which types did require a vector deleting dtor.
+  llvm::DenseSet<const CXXRecordDecl *> RequireVectorDeletingDtor;
+
   /// The next string literal "version" to allocate during constant evaluation.
   /// This is used to distinguish between repeated evaluations of the same
   /// string literal.
@@ -666,7 +681,6 @@ private:
 public:
   struct CXXRecordDeclRelocationInfo {
     unsigned IsRelocatable;
-    unsigned IsReplaceable;
   };
   std::optional<CXXRecordDeclRelocationInfo>
   getRelocationInfoForCXXRecord(const CXXRecordDecl *) const;
@@ -2684,7 +2698,8 @@ public:
   CharUnits getTypeSizeInChars(const Type *T) const;
 
   std::optional<CharUnits> getTypeSizeInCharsIfKnown(QualType Ty) const {
-    if (Ty->isIncompleteType() || Ty->isDependentType())
+    if (Ty->isIncompleteType() || Ty->isDependentType() ||
+        Ty->isUndeducedType() || Ty->isSizelessType())
       return std::nullopt;
     return getTypeSizeInChars(Ty);
   }
@@ -2795,6 +2810,10 @@ public:
   /// runtime, such as those using the Itanium C++ ABI.
   CharUnits getExnObjectAlignment() const;
 
+  /// Return whether unannotated records are treated as if they have
+  /// [[gnu::ms_struct]].
+  bool defaultsToMsStruct() const;
+
   /// Get or compute information about the layout of the specified
   /// record (struct/union/class) \p D, which indicates its size and field
   /// position information.
@@ -2864,6 +2883,8 @@ public:
   /// DeviceLambdaManglingNumber. Currently this asserts that the TargetInfo
   /// (from the AuxTargetInfo) is a an itanium target.
   MangleContext *createDeviceMangleContext(const TargetInfo &T);
+
+  MangleContext *cudaNVInitDeviceMC();
 
   void DeepCollectObjCIvars(const ObjCInterfaceDecl *OI, bool leafClass,
                             SmallVectorImpl<const ObjCIvarDecl*> &Ivars) const;
@@ -3488,6 +3509,18 @@ public:
   void setIsTypeAwareOperatorNewOrDelete(const FunctionDecl *FD,
                                          bool IsTypeAware);
   bool isTypeAwareOperatorNewOrDelete(const FunctionDecl *FD) const;
+
+  enum OperatorDeleteKind { Regular, GlobalRegular, Array, ArrayGlobal };
+
+  void addOperatorDeleteForVDtor(const CXXDestructorDecl *Dtor,
+                                 FunctionDecl *OperatorDelete,
+                                 OperatorDeleteKind K) const;
+  FunctionDecl *getOperatorDeleteForVDtor(const CXXDestructorDecl *Dtor,
+                                          OperatorDeleteKind K) const;
+  bool dtorHasOperatorDelete(const CXXDestructorDecl *Dtor,
+                             OperatorDeleteKind K) const;
+  void setClassNeedsVectorDeletingDestructor(const CXXRecordDecl *RD);
+  bool classNeedsVectorDeletingDestructor(const CXXRecordDecl *RD);
 
   /// Retrieve the context for computing mangling numbers in the given
   /// DeclContext.

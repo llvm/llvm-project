@@ -80,7 +80,7 @@ def _write_comment_and_exit_with_error(comment):
 def main():
     token = sys.argv[1]
 
-    gh = github.Github(login_or_token=token)
+    gh = github.Github(auth=github.Auth.Token(token))
     repo = gh.get_repo("llvm/llvm-project")
 
     for release in repo.get_releases():

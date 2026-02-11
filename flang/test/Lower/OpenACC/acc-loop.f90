@@ -360,15 +360,6 @@ program acc_loop
 ! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
   !$acc loop
-  DO i = 1, n
-    !$acc cache(b)
-    a(i) = b(i)
-  END DO
-
-! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "b"}
-! CHECK: acc.loop {{.*}} cache(%[[CACHE]] : !fir.ref<!fir.array<10xf32>>)
-
-  !$acc loop
   do 100 i=0, n
   100 continue
 ! CHECK: acc.loop

@@ -289,6 +289,10 @@ OPTIONS
 
  Skip source code files with file paths that match the given regular expression.
 
+.. option:: -include-filename-regex=<PATTERN>
+
+ Only include source code files with file paths that match the given regular expression.
+
 .. option:: -format=<FORMAT>
 
  Use the specified output format. The supported formats are: "text", "html".

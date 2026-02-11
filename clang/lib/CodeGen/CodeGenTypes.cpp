@@ -62,7 +62,7 @@ void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
   // FullyQualifiedNames.
   PrintingPolicy Policy = RD->getASTContext().getPrintingPolicy();
   Policy.SuppressInlineNamespace =
-      PrintingPolicy::SuppressInlineNamespaceMode::None;
+      llvm::to_underlying(PrintingPolicy::SuppressInlineNamespaceMode::None);
 
   // Name the codegen type after the typedef name
   // if there is no tag type name available
@@ -104,8 +104,15 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T) {
   if (T->isConstantMatrixType()) {
     const Type *Ty = Context.getCanonicalType(T).getTypePtr();
     const ConstantMatrixType *MT = cast<ConstantMatrixType>(Ty);
-    return llvm::ArrayType::get(ConvertType(MT->getElementType()),
-                                MT->getNumRows() * MT->getNumColumns());
+    llvm::Type *IRElemTy = ConvertType(MT->getElementType());
+    if (Context.getLangOpts().HLSL) {
+      if (T->isConstantMatrixBoolType())
+        IRElemTy = ConvertTypeForMem(Context.BoolTy);
+      llvm::Type *VecTy =
+          llvm::FixedVectorType::get(IRElemTy, MT->getNumColumns());
+      return llvm::ArrayType::get(VecTy, MT->getNumRows());
+    }
+    return llvm::ArrayType::get(IRElemTy, MT->getNumElementsFlattened());
   }
 
   llvm::Type *R = ConvertType(T);
@@ -176,6 +183,16 @@ llvm::Type *CodeGenTypes::convertTypeForLoadStore(QualType T,
   if (LLVMTy->isIntegerTy(1))
     return llvm::IntegerType::get(getLLVMContext(),
                                   (unsigned)Context.getTypeSize(T));
+
+  if (T->isConstantMatrixBoolType()) {
+    // Matrices are loaded and stored atomically as vectors. Therefore we
+    // construct a FixedVectorType here instead of returning
+    // ConvertTypeForMem(T) which would return an ArrayType instead.
+    const Type *Ty = Context.getCanonicalType(T).getTypePtr();
+    const ConstantMatrixType *MT = cast<ConstantMatrixType>(Ty);
+    llvm::Type *IRElemTy = ConvertTypeForMem(MT->getElementType());
+    return llvm::FixedVectorType::get(IRElemTy, MT->getNumElementsFlattened());
+  }
 
   if (T->isExtVectorBoolType())
     return ConvertTypeForMem(T);
