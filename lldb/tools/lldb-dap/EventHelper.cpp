@@ -278,25 +278,28 @@ llvm::Error SendThreadStoppedEvent(DAP &dap, bool on_entry) {
     if (!ThreadHasStopReason(thread))
       continue;
 
-    // Focus on the first stopped thread if the selected thread is not stopped.
+    // Focus on the first stopped thread
     if (!focused_thread.IsValid())
       focused_thread = thread;
     else
       stopped_threads.push_back(thread);
   }
 
+  // If no stopped threads were detected, fallback to the selected thread.
   if (!focused_thread)
     focused_thread = process.GetSelectedThread();
 
   if (!focused_thread)
     return make_error<DAPError>("no stopped threads");
 
-  // Notify the focused thread first and tell the client all threads have
-  // stopped.
-  SendStoppedEvent(dap, focused_thread, on_entry, true, false);
-  // Send stopped events for remaining stopped threads.
+  // Send stopped events for each thread thats stopped.
   for (auto thread : stopped_threads)
-    SendStoppedEvent(dap, thread, on_entry, false, true);
+    SendStoppedEvent(dap, thread, on_entry, /*all_threads_stopped=*/false,
+                     /*preserve_focus=*/true);
+
+  // Notify the focused thread last to ensure the UI is focused correctly.
+  SendStoppedEvent(dap, focused_thread, on_entry, /*all_threads_stopped=*/true,
+                   /*preserve_focus=*/false);
 
   // Update focused thread.
   dap.focus_tid = focused_thread.GetThreadID();

@@ -537,6 +537,7 @@ class DAPTestCaseBase(TestBase):
     def attach(
         self,
         *,
+        client_features: Optional[dict[str, bool]] = None,
         disconnectAutomatically=True,
         sourceInitFile=False,
         **kwargs,
@@ -553,7 +554,9 @@ class DAPTestCaseBase(TestBase):
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
         # Initialize and launch the program
-        self.dap_server.request_initialize(sourceInitFile)
+        self.dap_server.request_initialize(
+            client_features=client_features, sourceInitFile=sourceInitFile
+        )
         return self.dap_server.request_attach(**kwargs)
 
     def attach_and_configurationDone(
@@ -570,6 +573,7 @@ class DAPTestCaseBase(TestBase):
         self,
         program: str,
         *,
+        client_features: Optional[dict[str, bool]] = None,
         sourceInitFile=False,
         disconnectAutomatically=True,
         **kwargs,
@@ -587,7 +591,9 @@ class DAPTestCaseBase(TestBase):
         self.addTearDownHook(cleanup)
 
         # Initialize and launch the program
-        self.dap_server.request_initialize(sourceInitFile)
+        self.dap_server.request_initialize(
+            client_features=client_features, sourceInitFile=sourceInitFile
+        )
         return self.dap_server.request_launch(program, **kwargs)
 
     def launch_and_configurationDone(

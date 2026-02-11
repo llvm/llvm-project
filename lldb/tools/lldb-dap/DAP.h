@@ -272,6 +272,8 @@ struct DAP final : public DAPTransport::MessageHandler {
 
   void PopulateExceptionBreakpoints();
 
+  bool ProcessIsNotStopped();
+
   /// Attempt to determine if an expression is a variable expression or
   /// lldb command using a heuristic based on the first term of the
   /// expression.

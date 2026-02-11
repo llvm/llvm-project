@@ -205,10 +205,6 @@ def gi_vop3_mad_mix_mods_ext :
     GIComplexOperandMatcher<s64, "selectVOP3PMadMixModsExt">,
     GIComplexPatternEquiv<VOP3PMadMixModsExt>;
 
-def gi_vop3_mad_mix_mods_neg :
-    GIComplexOperandMatcher<s64, "selectVOP3PMadMixModsNeg">,
-    GIComplexPatternEquiv<VOP3PMadMixModsNeg>;
-
 // Separate load nodes are defined to glue m0 initialization in
 // SelectionDAG. The GISel selector can just insert m0 initialization
 // directly before selecting a glue-less load, so hide this
@@ -334,6 +330,10 @@ def : GINodeEquiv<G_AMDGPU_WHOLE_WAVE_FUNC_SETUP, AMDGPUwhole_wave_setup>;
 // so we don't mark it as equivalent.
 
 def : GINodeEquiv<G_AMDGPU_SPONENTRY, sponentry>;
+
+def : GINodeEquiv<G_AMDGPU_FLAT_LOAD_MONITOR, AMDGPUflat_load_monitor>;
+def : GINodeEquiv<G_AMDGPU_GLOBAL_LOAD_MONITOR, AMDGPUglobal_load_monitor>;
+
 
 class GISelSop2Pat <
   SDPatternOperator node,
