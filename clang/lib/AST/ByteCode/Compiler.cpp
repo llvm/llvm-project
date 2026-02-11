@@ -2256,9 +2256,6 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
     const UnaryExprOrTypeTraitExpr *E) {
 
-  if (E->containsErrors())
-    return false;
-
   UnaryExprOrTypeTrait Kind = E->getKind();
   const ASTContext &ASTCtx = Ctx.getASTContext();
 
@@ -2333,6 +2330,9 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
       // Argument is an expression, not a type.
       const Expr *Arg = E->getArgumentExpr()->IgnoreParens();
 
+      if (Arg->getType()->isDependentType())
+        return false;
+
       // The kinds of expressions that we have special-case logic here for
       // should be kept up to date with the special checks for those
       // expressions in Sema.
@@ -2356,6 +2356,9 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
   }
 
   if (Kind == UETT_VectorElements) {
+    if (E->containsErrors())
+      return false;
+
     if (const auto *VT = E->getTypeOfArgument()->getAs<VectorType>())
       return this->emitConst(VT->getNumElements(), E);
     assert(E->getTypeOfArgument()->isSizelessVectorType());
