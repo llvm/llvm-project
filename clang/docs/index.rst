@@ -27,6 +27,7 @@ Using Clang as a Compiler
    ClangStaticAnalyzer
    ThreadSafetyAnalysis
    SafeBuffers
+   ScalableStaticAnalysisFramework/Framework
    DataFlowAnalysisIntro
    FunctionEffectAnalysis
    AddressSanitizer
@@ -121,8 +122,10 @@ Design Documents
    ControlFlowIntegrityDesign
    HardwareAssistedAddressSanitizerDesign.rst
    ConstantInterpreter
+   LLVMExceptionHandlingCodeGen
    ClangIRCodeDuplication
    ClangIRABILowering
+   ClangIRCleanupAndEHDesign
 
 Indices and tables
 ==================

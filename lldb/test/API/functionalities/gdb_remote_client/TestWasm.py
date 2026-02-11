@@ -99,9 +99,6 @@ class MyResponder(MockGDBServerResponder):
     def QEnableErrorStrings(self):
         return ""
 
-    def qfThreadInfo(self):
-        return "m1,"
-
     def qRegisterInfo(self, index):
         if index == 0:
             return "name:pc;alt-name:pc;bitsize:64;offset:0;encoding:uint;format:hex;set:General Purpose Registers;gcc:16;dwarf:16;generic:pc;"

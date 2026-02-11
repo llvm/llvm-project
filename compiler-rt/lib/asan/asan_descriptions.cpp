@@ -36,37 +36,43 @@ AsanThreadIdAndName::AsanThreadIdAndName(u32 tid)
   asanThreadRegistry().CheckLocked();
 }
 
+// Prints this thread and, if flags()->print_full_thread_history, its ancestors
 void DescribeThread(AsanThreadContext *context) {
-  CHECK(context);
-  asanThreadRegistry().CheckLocked();
-  // No need to announce the main thread.
-  if (context->tid == kMainTid || context->announced) {
-    return;
-  }
-  context->announced = true;
+  while (true) {
+    CHECK(context);
+    asanThreadRegistry().CheckLocked();
+    // No need to announce the main thread.
+    if (context->tid == kMainTid || context->announced) {
+      return;
+    }
+    context->announced = true;
 
-  InternalScopedString str;
-  str.AppendF("Thread %s", AsanThreadIdAndName(context).c_str());
+    InternalScopedString str;
+    str.AppendF("Thread %s", AsanThreadIdAndName(context).c_str());
 
-  AsanThreadContext *parent_context =
-      context->parent_tid == kInvalidTid
-          ? nullptr
-          : GetThreadContextByTidLocked(context->parent_tid);
+    AsanThreadContext* parent_context =
+        context->parent_tid == kInvalidTid
+            ? nullptr
+            : GetThreadContextByTidLocked(context->parent_tid);
 
-  // `context->parent_tid` may point to reused slot. Check `unique_id` which
-  // is always smaller for the parent, always greater for a new user.
-  if (!parent_context || context->unique_id <= parent_context->unique_id) {
-    str.Append(" created by unknown thread\n");
+    // `context->parent_tid` may point to reused slot. Check `unique_id` which
+    // is always smaller for the parent, always greater for a new user.
+    if (!parent_context || context->unique_id <= parent_context->unique_id) {
+      str.Append(" created by unknown thread\n");
+      Printf("%s", str.data());
+      return;
+    }
+    str.AppendF(" created by %s here:\n",
+                AsanThreadIdAndName(context->parent_tid).c_str());
     Printf("%s", str.data());
-    return;
+    StackDepotGet(context->stack_id).Print();
+
+    // Describe parent thread if requested
+    if (flags()->print_full_thread_history)
+      context = parent_context;
+    else
+      return;
   }
-  str.AppendF(" created by %s here:\n",
-              AsanThreadIdAndName(context->parent_tid).c_str());
-  Printf("%s", str.data());
-  StackDepotGet(context->stack_id).Print();
-  // Recursively described parent thread if needed.
-  if (flags()->print_full_thread_history)
-    DescribeThread(parent_context);
 }
 
 // Shadow descriptions

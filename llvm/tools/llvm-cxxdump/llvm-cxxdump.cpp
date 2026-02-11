@@ -507,7 +507,6 @@ static void dumpArchive(const Archive *Arc) {
         std::string Buf;
         raw_string_ostream OS(Buf);
         logAllUnhandledErrors(std::move(E), OS);
-        OS.flush();
         reportError(Arc->getFileName(), Buf);
       }
       consumeError(ChildOrErr.takeError());

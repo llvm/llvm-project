@@ -33,12 +33,12 @@
 
 WARNING_GADGET(Increment)
 WARNING_GADGET(Decrement)
-WARNING_GADGET(ArraySubscript)
 WARNING_GADGET(PointerArithmetic)
 WARNING_GADGET(UnsafeBufferUsageAttr)
 WARNING_GADGET(UnsafeBufferUsageCtorAttr)
 WARNING_GADGET(DataInvocation)
 WARNING_GADGET(UniquePtrArrayAccess)
+WARNING_OPTIONAL_GADGET(ArraySubscript)
 WARNING_OPTIONAL_GADGET(UnsafeLibcFunctionCall)
 WARNING_OPTIONAL_GADGET(UnsafeFormatAttributedFunctionCall)
 WARNING_OPTIONAL_GADGET(SpanTwoParamConstructor) // Uses of `std::span(arg0, arg1)`

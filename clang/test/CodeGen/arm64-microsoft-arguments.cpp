@@ -29,7 +29,7 @@ S2 f2() {
 
 // Pass and return for type size > 16 bytes.
 // CHECK: define {{.*}} void @{{.*}}f3{{.*}}(ptr dead_on_unwind noalias writable sret(%struct.S3) align 4 %agg.result)
-// CHECK: call void {{.*}}func3{{.*}}(ptr dead_on_unwind writable sret(%struct.S3) align 4 %agg.result, ptr dead_on_return noundef %agg.tmp)
+// CHECK: call void {{.*}}func3{{.*}}(ptr dead_on_unwind writable sret(%struct.S3) align 4 %agg.result, ptr noundef dead_on_return %agg.tmp)
 struct S3 {
   int a[5];
 };

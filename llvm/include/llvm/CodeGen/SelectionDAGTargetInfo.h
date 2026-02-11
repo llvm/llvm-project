@@ -112,6 +112,16 @@ public:
     return SDValue();
   }
 
+  /// Emit target-specific code that performs a strstr, in cases where that is
+  /// faster than a libcall. The first returned SDValue is the result of the
+  /// strstr and the second is the chain. Both SDValues can be null if a normal
+  /// libcall should be used.
+  virtual std::pair<SDValue, SDValue>
+  EmitTargetCodeForStrstr(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
+                          SDValue Op1, SDValue Op2, const CallInst *CI) const {
+    return std::make_pair(SDValue(), SDValue());
+  }
+
   /// Emit target-specific code that performs a memcmp/bcmp, in cases where that is
   /// faster than a libcall. The first returned SDValue is the result of the
   /// memcmp and the second is the chain. Both SDValues can be null if a normal
@@ -151,11 +161,10 @@ public:
   /// faster than a libcall.
   /// The first returned SDValue is the result of the strcmp and the second is
   /// the chain. Both SDValues can be null if a normal libcall should be used.
-  virtual std::pair<SDValue, SDValue>
-  EmitTargetCodeForStrcmp(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
-                          SDValue Op1, SDValue Op2,
-                          MachinePointerInfo Op1PtrInfo,
-                          MachinePointerInfo Op2PtrInfo) const {
+  virtual std::pair<SDValue, SDValue> EmitTargetCodeForStrcmp(
+      SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Op1,
+      SDValue Op2, MachinePointerInfo Op1PtrInfo, MachinePointerInfo Op2PtrInfo,
+      const CallInst *CI) const {
     return std::make_pair(SDValue(), SDValue());
   }
 

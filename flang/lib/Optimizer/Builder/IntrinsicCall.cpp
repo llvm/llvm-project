@@ -15,6 +15,7 @@
 
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Common/static-multimap-view.h"
+#include "flang/Lower/AbstractConverter.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/CUDAIntrinsicCall.h"
 #include "flang/Optimizer/Builder/CUFCommon.h"
@@ -297,6 +298,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"extends_type_of",
      &I::genExtendsTypeOf,
      {{{"a", asBox}, {"mold", asBox}}},
+     /*isElemental=*/false},
+    {"f_c_string",
+     &I::genFCString,
+     {{{"string", asAddr}, {"asis", asValue, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"findloc",
      &I::genFindloc,
@@ -3852,9 +3857,6 @@ void IntrinsicLibrary::genExit(llvm::ArrayRef<fir::ExtendedValue> args) {
                                           EXIT_SUCCESS)
           : fir::getBase(args[0]);
 
-  assert(status.getType() == builder.getDefaultIntegerType() &&
-         "STATUS parameter must be an INTEGER of default kind");
-
   fir::runtime::genExit(builder, loc, status);
 }
 
@@ -3879,6 +3881,32 @@ IntrinsicLibrary::genExtendsTypeOf(mlir::Type resultType,
       loc, resultType,
       fir::runtime::genExtendsTypeOf(builder, loc, fir::getBase(args[0]),
                                      fir::getBase(args[1])));
+}
+
+// F_C_STRING
+fir::ExtendedValue
+IntrinsicLibrary::genFCString(mlir::Type resultType,
+                              llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() >= 1 && args.size() <= 2);
+
+  mlir::Value string = builder.createBox(loc, args[0]);
+
+  // Handle optional ASIS argument
+  mlir::Value asis = isStaticallyAbsent(args, 1)
+                         ? builder.createBool(loc, false)
+                         : fir::getBase(args[1]);
+
+  // Create mutable fir.box to be passed to the runtime for the result.
+  fir::MutableBoxValue resultMutableBox =
+      fir::factory::createTempMutableBox(builder, loc, resultType);
+  mlir::Value resultIrBox =
+      fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+
+  fir::runtime::genFCString(builder, loc, resultIrBox, string, asis);
+
+  // Read result from mutable fir.box and add it to the list of temps to be
+  // finalized by the StatementContext.
+  return readAndAddCleanUp(resultMutableBox, resultType, "F_C_STRING");
 }
 
 // FINDLOC
@@ -8087,12 +8115,14 @@ mlir::Value IntrinsicLibrary::genTanpi(mlir::Type resultType,
 
 // TEAM_NUMBER
 fir::ExtendedValue
-IntrinsicLibrary::genTeamNumber(mlir::Type,
+IntrinsicLibrary::genTeamNumber(mlir::Type resultType,
                                 llvm::ArrayRef<fir::ExtendedValue> args) {
   converter->checkCoarrayEnabled();
   assert(args.size() == 1);
-  return mif::TeamNumberOp::create(builder, loc,
-                                   /*team*/ fir::getBase(args[0]));
+
+  mlir::Value res = mif::TeamNumberOp::create(builder, loc,
+                                              /*team*/ fir::getBase(args[0]));
+  return builder.createConvert(loc, resultType, res);
 }
 
 // THIS_IMAGE
