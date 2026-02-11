@@ -1,4 +1,4 @@
-//===-- NativeRegisterContextNetBSD_x86_64.h --------------------*- C++ -*-===//
+//===-- NativeRegisterContextFreeBSD_x86_64.h -------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,35 +8,37 @@
 
 #if defined(__i386__) || defined(__x86_64__)
 
-#ifndef lldb_NativeRegisterContextNetBSD_x86_64_h
-#define lldb_NativeRegisterContextNetBSD_x86_64_h
+#ifndef lldb_NativeRegisterContextFreeBSD_x86_64_h
+#define lldb_NativeRegisterContextFreeBSD_x86_64_h
 
 // clang-format off
 #include <sys/param.h>
-#include <sys/types.h>
 #include <sys/ptrace.h>
+#include <sys/types.h>
 #include <machine/reg.h>
 // clang-format on
 
 #include <array>
 #include <optional>
 
-#include "Plugins/Process/NetBSD/NativeRegisterContextNetBSD.h"
-#include "Plugins/Process/Utility/RegisterContext_x86.h"
+#include "Plugins/Process/FreeBSD/NativeRegisterContextFreeBSD.h"
 #include "Plugins/Process/Utility/NativeRegisterContextDBReg_x86.h"
+#include "Plugins/Process/Utility/RegisterContext_x86.h"
 #include "Plugins/Process/Utility/lldb-x86-register-enums.h"
 
+#define LLDB_INVALID_XSAVE_OFFSET UINT32_MAX
+
 namespace lldb_private {
-namespace process_netbsd {
+namespace process_freebsd {
 
-class NativeProcessNetBSD;
+class NativeProcessFreeBSD;
 
-class NativeRegisterContextNetBSD_x86_64
-    : public NativeRegisterContextNetBSD,
+class NativeRegisterContextFreeBSD_x86_64
+    : public NativeRegisterContextFreeBSD,
       public NativeRegisterContextDBReg_x86 {
 public:
-  NativeRegisterContextNetBSD_x86_64(const ArchSpec &target_arch,
-                                     NativeThreadProtocol &native_thread);
+  NativeRegisterContextFreeBSD_x86_64(const ArchSpec &target_arch,
+                                      NativeThreadFreeBSD &native_thread);
   uint32_t GetRegisterSetCount() const override;
 
   const RegisterSet *GetRegisterSet(uint32_t set_index) const override;
@@ -52,7 +54,7 @@ public:
   Status WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 
   llvm::Error
-  CopyHardwareWatchpointsFrom(NativeRegisterContextNetBSD &source) override;
+  CopyHardwareWatchpointsFrom(NativeRegisterContextFreeBSD &source) override;
 
 private:
   // Private member types.
@@ -60,7 +62,6 @@ private:
     GPRegSet,
     FPRegSet,
     DBRegSet,
-    MaxRegularRegSet = DBRegSet,
     YMMRegSet,
     MPXRegSet,
     MaxRegSet = MPXRegSet,
@@ -68,9 +69,11 @@ private:
 
   // Private member variables.
   std::array<uint8_t, sizeof(struct reg)> m_gpr;
-  std::array<uint8_t, sizeof(struct xstate)> m_xstate;
+  std::array<uint8_t, 512> m_fpr; // FXSAVE
   std::array<uint8_t, sizeof(struct dbreg)> m_dbr;
-  std::array<size_t, MaxRegularRegSet + 1> m_regset_offsets;
+  std::vector<uint8_t> m_xsave;
+  std::array<uint32_t, MaxRegSet + 1> m_xsave_offsets;
+  std::array<size_t, MaxRegSet + 1> m_regset_offsets;
 
   std::optional<RegSetKind> GetSetForNativeRegNum(uint32_t reg_num) const;
 
@@ -86,9 +89,9 @@ private:
   std::optional<YMMSplitPtr> GetYMMSplitReg(uint32_t reg);
 };
 
-} // namespace process_netbsd
+} // namespace process_freebsd
 } // namespace lldb_private
 
-#endif // #ifndef lldb_NativeRegisterContextNetBSD_x86_64_h
+#endif // #ifndef lldb_NativeRegisterContextFreeBSD_x86_64_h
 
-#endif // defined(__x86_64__)
+#endif // defined(__i386__) || defined(__x86_64__)
