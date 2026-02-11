@@ -421,6 +421,37 @@ public:
         ultSym.flags().test(Symbol::Flag::InCommonBlock);
   }
 
+  static const Symbol &GetStorageOwner(const Symbol &symbol) {
+    static auto getParent = [](const Symbol *s) -> const Symbol * {
+      if (auto *details{s->detailsIf<UseDetails>()}) {
+        return &details->symbol();
+      } else if (auto *details{s->detailsIf<HostAssocDetails>()}) {
+        return &details->symbol();
+      } else {
+        return nullptr;
+      }
+    };
+    static auto isPrivate = [](const Symbol &symbol) {
+      static const Symbol::Flags privatizing{Symbol::Flag::OmpPrivate,
+          Symbol::Flag::OmpFirstPrivate, Symbol::Flag::OmpLastPrivate,
+          Symbol::Flag::OmpLinear};
+      return (symbol.flags() & privatizing).any();
+    };
+
+    const Symbol *sym = &symbol;
+    while (true) {
+      if (isPrivate(*sym)) {
+        return *sym;
+      }
+      if (const Symbol *parent{getParent(sym)}) {
+        sym = parent;
+      } else {
+        return *sym;
+      }
+    }
+    llvm_unreachable("Error while looking for storage owning symbol");
+  }
+
   // Recognize symbols that are not created as a part of the OpenMP data-
   // sharing processing, and that are declared inside of the construct.
   // These symbols are predetermined private, but they shouldn't be marked
@@ -428,8 +459,13 @@ public:
   // They are not symbols for which private copies need to be created,
   // they are already themselves private.
   static bool IsLocalInsideScope(const Symbol &symbol, const Scope &scope) {
-    return symbol.owner() != scope && scope.Contains(symbol.owner()) &&
-        !HasStaticStorageDuration(symbol);
+    // A symbol that is marked with a DSA will be cloned in the construct
+    // scope and marked as host-associated. This applies to privatized symbols
+    // as well even though they will have their own storage. They should be
+    // considered local regardless of the status of the original symbol.
+    const Symbol &actual{GetStorageOwner(symbol)};
+    return actual.owner() != scope && scope.Contains(actual.owner()) &&
+        !HasStaticStorageDuration(actual);
   }
 
   template <typename A> void Walk(const A &x) { parser::Walk(x, *this); }
