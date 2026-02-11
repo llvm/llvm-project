@@ -296,13 +296,13 @@ template <class _ValueType,
 class __deque_iterator {
   using __map_iterator _LIBCPP_NODEBUG = __get_deque_map_iterator<_ValueType, _MapPointer>;
 
-// TODO(LLVM 24): Remove this check
+// TODO(LLVM 25): Remove this check
 #  ifndef _LIBCPP_ABI_DEQUE_CONST_ITERATOR
   static_assert(
       sizeof(__map_iterator) == sizeof(_MapPointer) && _LIBCPP_ALIGNOF(__map_iterator) == _LIBCPP_ALIGNOF(_MapPointer),
       "It looks like you are using fancy pointers such that <const FancyPtr<const value_type>> is not "
       "layout-compatible with FancyPtr<const FancyPtr<value_type>>. "
-      "This means that your ABI is being broken between LLVM 21 and LLVM 22 if deque::const_iterator is "
+      "This means that your ABI is being broken between LLVM 22 and LLVM 23 if deque::const_iterator is "
       "used. If you don't care about your ABI being broken, define the _LIBCPP_ABI_DEQUE_CONST_ITERATOR macro to "
       "silence this diagnostic.");
 #  endif

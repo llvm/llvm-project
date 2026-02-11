@@ -128,13 +128,6 @@ ABI Affecting Changes
 - The ABI flag ``_LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER`` has been split off from
   ``_LIBCPP_ABI_NO_ITERATOR_BASES``. If you are using this flag and care about ABI stability, you should set
   ``_LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER`` as well.
-- The ``const_iterator`` member type of ``std::deque`` is now corrected to hold a (possibly fancy) pointer to the
-  (possibly fancy) pointer allocated in the internal map. E.g. when the allocators use fancy pointers, the internal map
-  stores ``fancy_ptr<T>`` objects, and the previous strategy accessed these objects via ``const fancy_ptr<const T>``
-  lvalues, causing undefined behavior. Now ``const_iterator`` stores
-  ``fancy_ptr<const fancy_ptr<T>>`` instead of ``fancy_ptr<const fancy_ptr<const T>>``, which is technically an ABI
-  break when these two types have incompatible layouts. This is necessary for reducing undefined behavior and for adding
-  ``constexpr`` support for ``deque`` in C++26, so we do not provide any way to opt-out of that behavior.
 
 - The internal types ``__map_value_compare``, ``__unordered_map_hasher``, ``__unordered_map_equal``,
   ``__hash_map_hasher`` and ``__hash_map_equal`` have been refactored to use ``_LIBCPP_COMPRESSED_ELEMENT`` instead of

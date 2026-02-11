@@ -70,5 +70,13 @@ ABI Affecting Changes
   defining ``_LIBCPP_DEPRECATED_ABI_BITSET_CONST_SUBSCRIPT_RETURN_REF``. Please inform the libc++ team if you need this
   flag, since it will be removed in LLVM 24 if there is no evidence that it's required.
 
+- The ``const_iterator`` member type of ``std::deque`` is now corrected to hold a (possibly fancy) pointer to the
+  (possibly fancy) pointer allocated in the internal map. E.g. when the allocators use fancy pointers, the internal map
+  stores ``fancy_ptr<T>`` objects, and the previous strategy accessed these objects via ``const fancy_ptr<const T>``
+  lvalues, causing undefined behavior. Now ``const_iterator`` stores ``fancy_ptr<const fancy_ptr<T>>`` instead of
+  ``fancy_ptr<const fancy_ptr<const T>>``, which is technically an ABI break when these two types have incompatible
+  layouts. This is necessary for reducing undefined behavior and for adding ``constexpr`` support for ``deque`` in
+  C++26, so we do not provide any way to opt-out of that behavior.
+
 Build System Changes
 --------------------
