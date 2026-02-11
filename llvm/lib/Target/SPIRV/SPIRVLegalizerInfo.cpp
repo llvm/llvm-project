@@ -468,11 +468,12 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                G_FNEARBYINT,
                                G_INTRINSIC_ROUND,
                                G_INTRINSIC_TRUNC,
-                               G_FMINIMUM,
-                               G_FMAXIMUM,
                                G_INTRINSIC_ROUNDEVEN})
       .legalFor(allFloatScalarsAndVectors);
   // clang-format on
+
+  getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM})
+      .customFor(allFloatScalarsAndVectors);
 
   getActionDefinitionsBuilder(G_FCOPYSIGN)
       .legalForCartesianProduct(allFloatScalarsAndVectors,
@@ -650,6 +651,14 @@ static bool legalizeStore(LegalizerHelper &Helper, MachineInstr &MI,
   return true;
 }
 
+// NaN progagation semantics for FMinimum and FMaximum provided by generic
+// lowering.
+static bool legalizeFMinimumMaximum(LegalizerHelper &Helper, MachineInstr &MI) {
+  // Generic lowering ignores SPIR-V types. They are assigned at PostLegalizer
+  // to intermediate registers by looking at their LLT.
+  return Helper.lowerFMinimumMaximum(MI) == LegalizerHelper::Legalized;
+}
+
 bool SPIRVLegalizerInfo::legalizeCustom(
     LegalizerHelper &Helper, MachineInstr &MI,
     LostDebugLocObserver &LocObserver) const {
@@ -662,6 +671,9 @@ bool SPIRVLegalizerInfo::legalizeCustom(
     return legalizeBitcast(Helper, MI);
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
     return legalizeExtractVectorElt(Helper, MI, GR);
+  case TargetOpcode::G_FMINIMUM:
+  case TargetOpcode::G_FMAXIMUM:
+    return legalizeFMinimumMaximum(Helper, MI);
   case TargetOpcode::G_INSERT_VECTOR_ELT:
     return legalizeInsertVectorElt(Helper, MI, GR);
   case TargetOpcode::G_INTRINSIC:

@@ -52,6 +52,46 @@ static SPIRVType *deduceIntTypeFromResult(Register ResVReg,
   return GR->getOrCreateSPIRVIntegerType(Ty.getScalarSizeInBits(), MIB);
 }
 
+static SPIRVType *deduceFloatTypeFromResult(Register ResVReg,
+                                            MachineIRBuilder &MIB,
+                                            SPIRVGlobalRegistry *GR) {
+  const LLT &ResLLT = MIB.getMRI()->getType(ResVReg);
+  unsigned ScalarBits = ResLLT.getScalarSizeInBits();
+  LLVMContext &Ctx = MIB.getMF().getFunction().getContext();
+  Type *ScalarTy = nullptr;
+  switch (ScalarBits) {
+  case 16:
+    ScalarTy = Type::getHalfTy(Ctx);
+    break;
+  case 32:
+    ScalarTy = Type::getFloatTy(Ctx);
+    break;
+  case 64:
+    ScalarTy = Type::getDoubleTy(Ctx);
+    break;
+  default:
+    return nullptr;
+  }
+
+  SPIRVType *SpvScalarType = GR->getOrCreateSPIRVType(
+      ScalarTy, MIB, SPIRV::AccessQualifier::ReadWrite, true);
+  if (ResLLT.isVector())
+    return GR->getOrCreateSPIRVVectorType(SpvScalarType,
+                                          ResLLT.getNumElements(), MIB, false);
+  return SpvScalarType;
+}
+
+static SPIRVType *deduceBoolTypeFromResult(Register ResVReg,
+                                           MachineIRBuilder &MIB,
+                                           SPIRVGlobalRegistry *GR) {
+  const LLT &ResLLT = MIB.getMRI()->getType(ResVReg);
+  SPIRVType *SpvBoolType = GR->getOrCreateSPIRVBoolType(MIB, true);
+  if (ResLLT.isVector())
+    return GR->getOrCreateSPIRVVectorType(SpvBoolType, ResLLT.getNumElements(),
+                                          MIB, false);
+  return SpvBoolType;
+}
+
 static SPIRVType *deduceTypeFromSingleOperand(MachineInstr *I,
                                               MachineIRBuilder &MIB,
                                               SPIRVGlobalRegistry *GR,
@@ -272,6 +312,11 @@ static SPIRVType *deduceResultTypeFromOperands(MachineInstr *I,
                                                MachineIRBuilder &MIB) {
   Register ResVReg = I->getOperand(0).getReg();
   switch (I->getOpcode()) {
+  case TargetOpcode::G_FCMP:
+  case TargetOpcode::G_ICMP:
+    return deduceBoolTypeFromResult(ResVReg, MIB, GR);
+  case TargetOpcode::G_FCONSTANT:
+    return deduceFloatTypeFromResult(ResVReg, MIB, GR);
   case TargetOpcode::G_CONSTANT:
   case TargetOpcode::G_ANYEXT:
   case TargetOpcode::G_SEXT:
@@ -281,6 +326,8 @@ static SPIRVType *deduceResultTypeFromOperands(MachineInstr *I,
     return deduceTypeFromOperandRange(I, MIB, GR, 1, I->getNumOperands());
   case TargetOpcode::G_SHUFFLE_VECTOR:
     return deduceTypeFromOperandRange(I, MIB, GR, 1, 3);
+  case TargetOpcode::G_SELECT:
+    return deduceTypeFromOperandRange(I, MIB, GR, 2, 4);
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
   case TargetOpcode::G_INTRINSIC: {
     auto IntrinsicID = cast<GIntrinsic>(I)->getIntrinsicID();
@@ -381,6 +428,11 @@ static bool requiresSpirvType(MachineInstr &I, SPIRVGlobalRegistry *GR,
                               MachineRegisterInfo &MRI) {
   LLVM_DEBUG(dbgs() << "Checking if instruction requires a SPIR-V type: "
                     << I;);
+  // COPY does not have a property of PreIselOpCode. However, it needs an SPIR-V
+  // type for consumer instructions required by the SPIRVInstructionSelector.
+  if (I.getOpcode() == TargetOpcode::COPY)
+    return true;
+
   if (I.getNumDefs() == 0) {
     LLVM_DEBUG(dbgs() << "Instruction does not have a definition.\n");
     return false;
