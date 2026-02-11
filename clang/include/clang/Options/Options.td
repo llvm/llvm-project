@@ -1965,8 +1965,7 @@ defm lifetime_safety : BoolFOption<
   LangOpts<"EnableLifetimeSafety">, DefaultTrue,
   PosFlag<SetTrue, [], [CC1Option], "Enable">,
   NegFlag<SetFalse, [], [CC1Option], "Disable">,
-  BothFlags<[], [CC1Option],
-          " experimental lifetime safety for C++">>;
+  BothFlags<[], [CC1Option], " lifetime safety for C++">>;
 
 defm lifetime_safety_inference
     : BoolFOption<"lifetime-safety-inference",
@@ -1974,7 +1973,7 @@ defm lifetime_safety_inference
                   PosFlag<SetTrue, [], [CC1Option], "Enable">,
                   NegFlag<SetFalse, [], [CC1Option], "Disable">,
                   BothFlags<[], [CC1Option],
-                            " experimental lifetime safety inference for C++">>;
+                            " lifetime safety inference for C++">>;
 
 defm lifetime_safety_tu_analysis
     : BoolFOption<"experimental-lifetime-safety-tu-analysis",
@@ -5297,14 +5296,18 @@ def mmacos_version_min_EQ : Joined<["-"], "mmacos-version-min=">,
 def : Joined<["-"], "mmacosx-version-min=">,
   Visibility<[ClangOption, CC1Option, FC1Option, FlangOption]>,
   Group<m_Group>, Alias<mmacos_version_min_EQ>;
+def moutline
+    : Flag<["-"], "moutline">,
+      Group<f_clang_Group>,
+      Visibility<[ClangOption, CC1Option]>,
+      HelpText<"Enable function outlining (AArch64,Arm,RISC-V,X86 only)">;
+def mno_outline
+    : Flag<["-"], "mno-outline">,
+      Group<f_clang_Group>,
+      Visibility<[ClangOption, CC1Option]>,
+      HelpText<"Disable function outlining (AArch64,Arm,RISC-V,X86 only)">;
 def mms_bitfields : Flag<["-"], "mms-bitfields">, Group<m_Group>,
   HelpText<"Set the default structure layout to be compatible with the Microsoft compiler standard">;
-def moutline : Flag<["-"], "moutline">, Group<f_clang_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-    HelpText<"Enable function outlining (AArch64 only)">;
-def mno_outline : Flag<["-"], "mno-outline">, Group<f_clang_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-    HelpText<"Disable function outlining (AArch64 only)">;
 def mno_ms_bitfields : Flag<["-"], "mno-ms-bitfields">, Group<m_Group>,
   HelpText<"Do not set the default structure layout to be compatible with the Microsoft compiler standard">;
 def fms_layout_compatibility_EQ : Joined<["-"], "fms-layout-compatibility=">,
@@ -5603,6 +5606,8 @@ def mbulk_memory_opt : Flag<["-"], "mbulk-memory-opt">, Group<m_wasm_Features_Gr
 def mno_bulk_memory_opt : Flag<["-"], "mno-bulk-memory-opt">, Group<m_wasm_Features_Group>;
 def mcall_indirect_overlong : Flag<["-"], "mcall-indirect-overlong">, Group<m_wasm_Features_Group>;
 def mno_call_indirect_overlong : Flag<["-"], "mno-call-indirect-overlong">, Group<m_wasm_Features_Group>;
+def mcompact_imports : Flag<["-"], "mcompact-imports">, Group<m_wasm_Features_Group>;
+def mno_compact_imports : Flag<["-"], "mno-compact-imports">, Group<m_wasm_Features_Group>;
 def mexception_handing : Flag<["-"], "mexception-handling">, Group<m_wasm_Features_Group>;
 def mno_exception_handing : Flag<["-"], "mno-exception-handling">, Group<m_wasm_Features_Group>;
 def mextended_const : Flag<["-"], "mextended-const">, Group<m_wasm_Features_Group>;

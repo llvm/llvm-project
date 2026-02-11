@@ -1451,9 +1451,13 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
         }
         break;
       case Intrinsic::amdgcn_raw_buffer_load_lds:
+      case Intrinsic::amdgcn_raw_buffer_load_async_lds:
       case Intrinsic::amdgcn_raw_ptr_buffer_load_lds:
+      case Intrinsic::amdgcn_raw_ptr_buffer_load_async_lds:
       case Intrinsic::amdgcn_struct_buffer_load_lds:
-      case Intrinsic::amdgcn_struct_ptr_buffer_load_lds: {
+      case Intrinsic::amdgcn_struct_buffer_load_async_lds:
+      case Intrinsic::amdgcn_struct_ptr_buffer_load_lds:
+      case Intrinsic::amdgcn_struct_ptr_buffer_load_async_lds: {
         unsigned Width = cast<ConstantInt>(CI.getArgOperand(2))->getZExtValue();
 
         // Entry 0: Load from buffer.
@@ -1715,7 +1719,9 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     return;
   }
   case Intrinsic::amdgcn_load_to_lds:
-  case Intrinsic::amdgcn_global_load_lds: {
+  case Intrinsic::amdgcn_load_async_to_lds:
+  case Intrinsic::amdgcn_global_load_lds:
+  case Intrinsic::amdgcn_global_load_async_lds: {
     unsigned Width = cast<ConstantInt>(CI.getArgOperand(2))->getZExtValue();
     auto *Aux = cast<ConstantInt>(CI.getArgOperand(CI.arg_size() - 1));
     bool IsVolatile = Aux->getZExtValue() & AMDGPU::CPol::VOLATILE;
@@ -1832,7 +1838,9 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
     Ptr = II->getArgOperand(0);
     break;
   case Intrinsic::amdgcn_load_to_lds:
+  case Intrinsic::amdgcn_load_async_to_lds:
   case Intrinsic::amdgcn_global_load_lds:
+  case Intrinsic::amdgcn_global_load_async_lds:
   case Intrinsic::amdgcn_global_load_async_to_lds_b8:
   case Intrinsic::amdgcn_global_load_async_to_lds_b32:
   case Intrinsic::amdgcn_global_load_async_to_lds_b64:
@@ -11234,6 +11242,19 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     return DAG.getAtomic(Opcode, SDLoc(Op), M->getMemoryVT(), M->getVTList(),
                          Ops, M->getMemOperand());
   }
+  case Intrinsic::amdgcn_s_alloc_vgpr: {
+    SDValue NumVGPRs = Op.getOperand(2);
+    if (!NumVGPRs->isDivergent())
+      return Op;
+
+    SDValue ReadFirstLaneID =
+        DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, DL, MVT::i32);
+    NumVGPRs = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+                           ReadFirstLaneID, NumVGPRs);
+
+    return DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL, Op->getVTList(),
+                       Op.getOperand(0), Op.getOperand(1), NumVGPRs);
+  }
   case Intrinsic::amdgcn_s_get_barrier_state:
   case Intrinsic::amdgcn_s_get_named_barrier_state: {
     SDValue Chain = Op->getOperand(0);
@@ -11434,6 +11455,19 @@ SDValue SITargetLowering::handleD16VData(SDValue VData, SelectionDAG &DAG,
   return VData;
 }
 
+static bool isAsyncLDSDMA(Intrinsic::ID Intr) {
+  switch (Intr) {
+  case Intrinsic::amdgcn_raw_buffer_load_async_lds:
+  case Intrinsic::amdgcn_raw_ptr_buffer_load_async_lds:
+  case Intrinsic::amdgcn_struct_buffer_load_async_lds:
+  case Intrinsic::amdgcn_struct_ptr_buffer_load_async_lds:
+  case Intrinsic::amdgcn_load_async_to_lds:
+  case Intrinsic::amdgcn_global_load_async_lds:
+    return true;
+  }
+  return false;
+}
+
 SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                                               SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -11629,15 +11663,21 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                                    M->getMemoryVT(), M->getMemOperand());
   }
   case Intrinsic::amdgcn_raw_buffer_load_lds:
+  case Intrinsic::amdgcn_raw_buffer_load_async_lds:
   case Intrinsic::amdgcn_raw_ptr_buffer_load_lds:
+  case Intrinsic::amdgcn_raw_ptr_buffer_load_async_lds:
   case Intrinsic::amdgcn_struct_buffer_load_lds:
-  case Intrinsic::amdgcn_struct_ptr_buffer_load_lds: {
+  case Intrinsic::amdgcn_struct_buffer_load_async_lds:
+  case Intrinsic::amdgcn_struct_ptr_buffer_load_lds:
+  case Intrinsic::amdgcn_struct_ptr_buffer_load_async_lds: {
     if (!Subtarget->hasVMemToLDSLoad())
       return SDValue();
     unsigned Opc;
     bool HasVIndex =
         IntrinsicID == Intrinsic::amdgcn_struct_buffer_load_lds ||
-        IntrinsicID == Intrinsic::amdgcn_struct_ptr_buffer_load_lds;
+        IntrinsicID == Intrinsic::amdgcn_struct_buffer_load_async_lds ||
+        IntrinsicID == Intrinsic::amdgcn_struct_ptr_buffer_load_lds ||
+        IntrinsicID == Intrinsic::amdgcn_struct_ptr_buffer_load_async_lds;
     unsigned OpOffset = HasVIndex ? 1 : 0;
     SDValue VOffset = Op.getOperand(5 + OpOffset);
     bool HasVOffset = !isNullConstant(VOffset);
@@ -11709,6 +11749,8 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
             ? 1
             : 0,
         DL, MVT::i8));                                           // swz
+    Ops.push_back(
+        DAG.getTargetConstant(isAsyncLDSDMA(IntrinsicID), DL, MVT::i8));
     Ops.push_back(M0Val.getValue(0));                            // Chain
     Ops.push_back(M0Val.getValue(1));                            // Glue
 
@@ -11722,7 +11764,9 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   // for "trust me" that the remaining cases are global pointers until
   // such time as we can put two mem operands on an intrinsic.
   case Intrinsic::amdgcn_load_to_lds:
-  case Intrinsic::amdgcn_global_load_lds: {
+  case Intrinsic::amdgcn_load_async_to_lds:
+  case Intrinsic::amdgcn_global_load_lds:
+  case Intrinsic::amdgcn_global_load_async_lds: {
     if (!Subtarget->hasVMemToLDSLoad())
       return SDValue();
 
@@ -11791,6 +11835,8 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     unsigned Aux = Op.getConstantOperandVal(6);
     Ops.push_back(DAG.getTargetConstant(Aux & ~AMDGPU::CPol::VIRTUAL_BITS, DL,
                                         MVT::i32)); // CPol
+    Ops.push_back(
+        DAG.getTargetConstant(isAsyncLDSDMA(IntrinsicID), DL, MVT::i8));
 
     Ops.push_back(M0Val.getValue(0)); // Chain
     Ops.push_back(M0Val.getValue(1)); // Glue
@@ -18615,6 +18661,11 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
     break;
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT:
     Known.Zero.setHighBits(16);
+    break;
+  case AMDGPU::G_AMDGPU_COPY_SCC_VCC:
+    // G_AMDGPU_COPY_SCC_VCC converts a uniform boolean in VCC to SGPR s32,
+    // producing exactly 0 or 1.
+    Known.Zero.setHighBits(Known.getBitWidth() - 1);
     break;
   case AMDGPU::G_AMDGPU_SMED3:
   case AMDGPU::G_AMDGPU_UMED3: {
