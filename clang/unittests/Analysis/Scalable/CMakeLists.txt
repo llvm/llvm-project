@@ -11,6 +11,7 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   Registries/SerializationFormatRegistryTest.cpp
   Registries/SummaryExtractorRegistryTest.cpp
   SummaryNameTest.cpp
+  UnsafeBufferUsageTest.cpp
 
   CLANG_LIBS
   clangAnalysisScalable
