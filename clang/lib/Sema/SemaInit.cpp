@@ -5652,13 +5652,7 @@ static void TryReferenceInitializationCore(Sema &S,
       T2QualsIgnoreAS.removeAddressSpace();
     }
     // Strip the existing ObjC lifetime qualifier from cv2T2 before combining
-    // with T1's qualifiers. getQualifiedType adds qualifiers on top of
-    // existing ones, so if cv2T2 already carries e.g. __strong and T1Quals
-    // has __autoreleasing, we'd hit an assertion in addConsistentQualifiers.
-    // Stripping first and then applying T1's qualifiers ensures the correct
-    // lifetime is set *before* reference binding, which is critical for
-    // CodeGen to emit the right ARC semantics (e.g. retain+autorelease for
-    // __autoreleasing, not retain+release as for __strong).
+    // with T1's qualifiers.
     QualType T2ForQualConv = cv2T2;
     if (T1Quals.getObjCLifetime() != T2Quals.getObjCLifetime()) {
       Qualifiers T2BaseQuals = T2ForQualConv.getQualifiers();
