@@ -771,6 +771,9 @@ private:
   /// disassembled state was later invalidated.
   void clearDisasmState();
 
+  /// Reset the function state into Empty state, i.e. pre-disassembly form.
+  void resetState();
+
   /// Release memory allocated for CFG and instructions.
   /// We still keep basic blocks for address translation/mapping purposes.
   void releaseCFG() {

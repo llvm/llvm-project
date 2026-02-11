@@ -95,3 +95,51 @@ entry:
 
   ret void
 }
+
+; Same as promote_async_load_offset_negative above, but for async stores. The
+; LDS address is in vdata instead of vdst, so this tests that
+; updateAsyncLDSAddress corrects the right operand.
+define amdgpu_kernel void @promote_async_store_offset_negative(ptr addrspace(1) %dst) {
+; GFX1250-LABEL: promote_async_store_offset_negative:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1250-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, 0x100, v0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    global_store_async_from_lds_b128 v0, v1, s[0:1]
+; GFX1250-NEXT:    v_add_nc_u64_e32 v[2:3], s[0:1], v[0:1]
+; GFX1250-NEXT:    s_mov_b64 s[0:1], 0xffffffffffffff00
+; GFX1250-NEXT:    v_add_nc_u32_e64 v0, 0xfffffe00, 0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX1250-NEXT:    v_add_nc_u64_e32 v[2:3], s[0:1], v[2:3]
+; GFX1250-NEXT:    s_clause 0x1
+; GFX1250-NEXT:    global_store_async_from_lds_b128 v[2:3], v0, off offset:512
+; GFX1250-NEXT:    global_store_async_from_lds_b128 v[2:3], v1, off
+; GFX1250-NEXT:    s_endpgm
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep.offset = shl i32 %tid, 0
+  %lds.gep = getelementptr i8, ptr addrspace(3) @lds, i32 0
+
+  ; First store at base + 256
+  %offset0 = add i32 256, %gep.offset
+  %zext0 = zext i32 %offset0 to i64
+  %gep0 = getelementptr i8, ptr addrspace(1) %dst, i64 %zext0
+  call void @llvm.amdgcn.global.store.async.from.lds.b128(ptr addrspace(1) %gep0, ptr addrspace(3) %lds.gep, i32 0, i32 0)
+
+  ; Second store at base + 512 (+512 from 0)
+  %offset1 = add i32 512, %gep.offset
+  %zext1 = zext i32 %offset1 to i64
+  %gep1 = getelementptr i8, ptr addrspace(1) %dst, i64 %zext1
+  call void @llvm.amdgcn.global.store.async.from.lds.b128(ptr addrspace(1) %gep1, ptr addrspace(3) %lds.gep, i32 0, i32 0)
+
+  ; Final store at base + 0
+  %offset2 = add i32 0, %gep.offset
+  %zext2 = zext i32 %offset2 to i64
+  %gep2 = getelementptr i8, ptr addrspace(1) %dst, i64 %zext2
+  call void @llvm.amdgcn.global.store.async.from.lds.b128(ptr addrspace(1) %gep2, ptr addrspace(3) %lds.gep, i32 0, i32 0)
+
+  ret void
+}

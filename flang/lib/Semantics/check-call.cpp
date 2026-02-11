@@ -1890,6 +1890,24 @@ static void CheckCoReduce(
   }
 }
 
+// DATE_AND_TIME (F'2023 16.9.69)
+static void CheckDate_And_Time(evaluate::ActualArguments &arguments,
+    evaluate::FoldingContext &foldingContext) {
+  if (arguments.size() >= 4 && arguments[3]) {
+    if (const auto valuesShape{
+            evaluate::GetShape(arguments[3]->UnwrapExpr())}) {
+      if (auto extents{
+              evaluate::AsConstantExtents(foldingContext, *valuesShape)}) {
+        if (!extents->empty() && extents->at(0) < 8) {
+          auto &messages{foldingContext.messages()};
+          messages.Say(arguments[3]->sourceLocation().value_or(messages.at()),
+              "VALUES= argument to DATE_AND_TIME must have at least 8 elements"_err_en_US);
+        }
+      }
+    }
+  }
+}
+
 // EVENT_QUERY (F'2023 16.9.82)
 static void CheckEvent_Query(evaluate::ActualArguments &arguments,
     evaluate::FoldingContext &foldingContext) {
@@ -2264,6 +2282,8 @@ static void CheckSpecificIntrinsic(const characteristics::Procedure &proc,
     CheckAssociated(arguments, context, scope);
   } else if (intrinsic.name == "co_reduce") {
     CheckCoReduce(arguments, context.foldingContext());
+  } else if (intrinsic.name == "date_and_time") {
+    CheckDate_And_Time(arguments, context.foldingContext());
   } else if (intrinsic.name == "event_query") {
     CheckEvent_Query(arguments, context.foldingContext());
   } else if (intrinsic.name == "image_index") {

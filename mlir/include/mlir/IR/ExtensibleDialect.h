@@ -395,7 +395,7 @@ public:
   }
 
 private:
-  DenseMap<TypeID, std::unique_ptr<DynamicOpTrait>> traits;
+  llvm::MapVector<TypeID, std::unique_ptr<DynamicOpTrait>> traits;
 };
 
 template <template <typename T> class Trait>

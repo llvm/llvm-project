@@ -1894,6 +1894,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "nofpexcept ";
   if (getFlag(MachineInstr::NoMerge))
     OS << "nomerge ";
+  if (getFlag(MachineInstr::NoConvergent))
+    OS << "noconvergent ";
   if (getFlag(MachineInstr::NonNeg))
     OS << "nneg ";
   if (getFlag(MachineInstr::Disjoint))
