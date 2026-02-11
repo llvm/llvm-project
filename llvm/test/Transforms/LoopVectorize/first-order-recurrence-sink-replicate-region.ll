@@ -8,7 +8,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ; first-order recurrence.
 
 define void @sink_replicate_region_1(i32 %x, ptr %ptr, ptr noalias %dst) optsize {
-; CHECK-LABEL: 'sink_replicate_region_1'
+; CHECK-LABEL: VPlan for loop in 'sink_replicate_region_1'
 ; CHECK:  VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -124,7 +124,7 @@ exit:
 }
 
 define void @sink_replicate_region_2(i32 %x, i8 %y, ptr %ptr, i32 %z) optsize {
-; CHECK-LABEL: 'sink_replicate_region_2'
+; CHECK-LABEL: VPlan for loop in 'sink_replicate_region_2'
 ; CHECK:  VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -221,7 +221,7 @@ exit:
 }
 
 define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, ptr %ptr) optsize {
-; CHECK-LABEL: 'sink_replicate_region_3_reduction'
+; CHECK-LABEL: VPlan for loop in 'sink_replicate_region_3_reduction'
 ; CHECK:  VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = vector-trip-count
@@ -321,7 +321,7 @@ exit:
 ; To sink the replicate region containing %rem, we need to split the block
 ; containing %conv at the end, because %conv is the last recipe in the block.
 define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, ptr %ptr, ptr noalias %dst) optsize {
-; CHECK-LABEL: 'sink_replicate_region_4_requires_split_at_end_of_block'
+; CHECK-LABEL: VPlan for loop in 'sink_replicate_region_4_requires_split_at_end_of_block'
 ; CHECK:  VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -465,7 +465,7 @@ exit:
 
 ; Test case that requires sinking a recipe in a replicate region after another replicate region.
 define void @sink_replicate_region_after_replicate_region(ptr %ptr, ptr noalias %dst.2, i32 %x, i8 %y) optsize {
-; CHECK-LABEL: 'sink_replicate_region_after_replicate_region'
+; CHECK-LABEL: VPlan for loop in 'sink_replicate_region_after_replicate_region'
 ; CHECK:  VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -565,7 +565,7 @@ exit:                                             ; preds = %loop
 }
 
 define void @need_new_block_after_sinking_pr56146(i32 %x, ptr %src, ptr noalias %dst) {
-; CHECK-LABEL: 'need_new_block_after_sinking_pr56146'
+; CHECK-LABEL: VPlan for loop in 'need_new_block_after_sinking_pr56146'
 ; CHECK:  VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF

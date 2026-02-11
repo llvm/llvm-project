@@ -4,7 +4,7 @@
 ; RUN: opt -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -vplan-print-after="optimize$" -disable-output -S %s 2>&1 | FileCheck %s
 
 define void @test_chained_first_order_recurrences_1(ptr %ptr) {
-; CHECK-LABEL: 'test_chained_first_order_recurrences_1'
+; CHECK-LABEL: VPlan for loop in 'test_chained_first_order_recurrences_1'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -88,7 +88,7 @@ exit:
 }
 
 define void @test_chained_first_order_recurrences_3(ptr %ptr) {
-; CHECK-LABEL: 'test_chained_first_order_recurrences_3'
+; CHECK-LABEL: VPlan for loop in 'test_chained_first_order_recurrences_3'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -186,7 +186,7 @@ exit:
 ; Sinking would require moving a recipe with side effects (store). Instead,
 ; for.x.next can be hoisted.
 define i32 @test_chained_first_order_recurrences_4(ptr %base, i64 %x) {
-; CHECK-LABEL: 'test_chained_first_order_recurrences_4'
+; CHECK-LABEL: VPlan for loop in 'test_chained_first_order_recurrences_4'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -272,7 +272,7 @@ ret:
 }
 
 define i32 @test_chained_first_order_recurrences_5_hoist_to_load(ptr %base) {
-; CHECK-LABEL: 'test_chained_first_order_recurrences_5_hoist_to_load'
+; CHECK-LABEL: VPlan for loop in 'test_chained_first_order_recurrences_5_hoist_to_load'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF

@@ -7,7 +7,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 ; Make sure recipes with side-effects are not sunk.
 define void @sink_with_sideeffects(i1 %c, ptr %ptr) {
-; CHECK-LABEL: 'sink_with_sideeffects'
+; CHECK-LABEL: VPlan for loop in 'sink_with_sideeffects'
 ; CHECK:  VPlan 'Initial VPlan for VF={1},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF

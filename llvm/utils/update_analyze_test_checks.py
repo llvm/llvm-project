@@ -128,6 +128,8 @@ def update_test(opt_basename: str, ti: common.TestInfo):
 
         builder.processed_prefixes(prefixes)
 
+    check_label_prefix = "VPlan for loop in " if regex == common.VPLAN_RE else ""
+
     func_dict = builder.finish_and_get_func_dict()
     is_in_function = False
     is_in_function_start = False
@@ -158,6 +160,7 @@ def update_test(opt_basename: str, ti: common.TestInfo):
                     func_name,
                     ginfo,
                     is_filtered=builder.is_filtered(),
+                    check_label_prefix=check_label_prefix
                 )
             )
             is_in_function_start = False

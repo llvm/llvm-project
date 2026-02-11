@@ -6,7 +6,7 @@
 ; Tests for printing VPlans with reductions.
 
 define float @print_reduction(i64 %n, ptr noalias %y) {
-; CHECK-LABEL: 'print_reduction'
+; CHECK-LABEL: VPlan for loop in 'print_reduction'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -79,7 +79,7 @@ exit:                                          ; preds = %loop, %entry
 }
 
 define void @print_reduction_with_invariant_store(i64 %n, ptr noalias %y, ptr noalias %dst) {
-; CHECK-LABEL: 'print_reduction_with_invariant_store'
+; CHECK-LABEL: VPlan for loop in 'print_reduction_with_invariant_store'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -154,7 +154,7 @@ exit:                                          ; preds = %loop, %entry
 }
 
 define float @print_fmuladd_strict(ptr %a, ptr %b, i64 %n) {
-; CHECK-LABEL: 'print_fmuladd_strict'
+; CHECK-LABEL: VPlan for loop in 'print_fmuladd_strict'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -236,7 +236,7 @@ exit:
 }
 
 define i64 @find_last_iv(ptr %a, i64 %n, i64 %start) {
-; CHECK-LABEL: 'find_last_iv'
+; CHECK-LABEL: VPlan for loop in 'find_last_iv'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -314,7 +314,7 @@ exit:
 }
 
 define i64 @print_extended_reduction(ptr nocapture readonly %x, ptr nocapture readonly %y, i32 %n) {
-; CHECK-LABEL: 'print_extended_reduction'
+; CHECK-LABEL: VPlan for loop in 'print_extended_reduction'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -390,7 +390,7 @@ exit:
 }
 
 define i64 @print_mulacc(ptr nocapture readonly %x, ptr nocapture readonly %y, i32 %n) {
-; CHECK-LABEL: 'print_mulacc'
+; CHECK-LABEL: VPlan for loop in 'print_mulacc'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -473,7 +473,7 @@ exit:
 }
 
 define i64 @print_mulacc_extended(ptr nocapture readonly %x, ptr nocapture readonly %y, i32 %n) {
-; CHECK-LABEL: 'print_mulacc_extended'
+; CHECK-LABEL: VPlan for loop in 'print_mulacc_extended'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -562,7 +562,7 @@ exit:
 }
 
 define i64 @print_extended_sub_reduction(ptr nocapture readonly %x, ptr nocapture readonly %y, i32 %n) {
-; CHECK-LABEL: 'print_extended_sub_reduction'
+; CHECK-LABEL: VPlan for loop in 'print_extended_sub_reduction'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -638,7 +638,7 @@ exit:
 }
 
 define i32 @print_mulacc_sub(ptr %a, ptr %b) {
-; CHECK-LABEL: 'print_mulacc_sub'
+; CHECK-LABEL: VPlan for loop in 'print_mulacc_sub'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -724,7 +724,7 @@ exit:
 }
 
 define i32 @print_mulacc_negated(ptr %a, ptr %b) {
-; CHECK-LABEL: 'print_mulacc_negated'
+; CHECK-LABEL: VPlan for loop in 'print_mulacc_negated'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -812,7 +812,7 @@ exit:
 }
 
 define i64 @print_mulacc_sub_extended(ptr nocapture readonly %x, ptr nocapture readonly %y, i32 %n) {
-; CHECK-LABEL: 'print_mulacc_sub_extended'
+; CHECK-LABEL: VPlan for loop in 'print_mulacc_sub_extended'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -901,7 +901,7 @@ exit:
 }
 
 define i64 @print_mulacc_duplicate_extends(ptr nocapture readonly %x, ptr nocapture readonly %y, i32 %n) {
-; CHECK-LABEL: 'print_mulacc_duplicate_extends'
+; CHECK-LABEL: VPlan for loop in 'print_mulacc_duplicate_extends'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -981,7 +981,7 @@ exit:
 }
 
 define i32 @print_mulacc_extended_const(ptr %start, ptr %end) {
-; CHECK-LABEL: 'print_mulacc_extended_const'
+; CHECK-LABEL: VPlan for loop in 'print_mulacc_extended_const'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -1058,7 +1058,7 @@ exit:
 }
 
 define i32 @print_mulacc_extended_const_lhs(ptr %start, ptr %end) {
-; CHECK-LABEL: 'print_mulacc_extended_const_lhs'
+; CHECK-LABEL: VPlan for loop in 'print_mulacc_extended_const_lhs'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -1137,7 +1137,7 @@ exit:
 
 ; Constants >= 128 cannot be treated as sign-extended, so the expression shouldn't extend 128
 define i32 @print_mulacc_not_extended_const(ptr %start, ptr %end) {
-; CHECK-LABEL: 'print_mulacc_not_extended_const'
+; CHECK-LABEL: VPlan for loop in 'print_mulacc_not_extended_const'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -1216,7 +1216,7 @@ exit:
 }
 
 define i64 @print_ext_mulacc_extended_const(ptr %start, ptr %end) {
-; CHECK-LABEL: 'print_ext_mulacc_extended_const'
+; CHECK-LABEL: VPlan for loop in 'print_ext_mulacc_extended_const'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -1296,7 +1296,7 @@ exit:
 
 ; Constants >= 128 cannot be treated as sign-extended, so the expression shouldn't extend 128
 define i64 @print_ext_mulacc_not_extended_const(ptr %start, ptr %end) {
-; CHECK-LABEL: 'print_ext_mulacc_not_extended_const'
+; CHECK-LABEL: VPlan for loop in 'print_ext_mulacc_not_extended_const'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -1382,7 +1382,7 @@ exit:
 ; It can however be turned into an ExtendedReduction since that one doesn't
 ; modify the mul's operands.
 define i64 @print_ext_mul_two_uses(i64 %n, ptr %a, i16 %b, i32 %c) {
-; CHECK-LABEL: 'print_ext_mul_two_uses'
+; CHECK-LABEL: VPlan for loop in 'print_ext_mul_two_uses'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = vector-trip-count
@@ -1471,7 +1471,7 @@ exit:
 }
 
 define i32 @print_umax_reduction(ptr %y) {
-; CHECK-LABEL: 'print_umax_reduction'
+; CHECK-LABEL: VPlan for loop in 'print_umax_reduction'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF

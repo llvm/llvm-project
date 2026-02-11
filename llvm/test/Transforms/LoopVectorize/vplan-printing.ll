@@ -8,7 +8,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; Tests for printing VPlans.
 
 define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
-; CHECK-LABEL: 'print_call_and_memory'
+; CHECK-LABEL: VPlan for loop in 'print_call_and_memory'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -82,7 +82,7 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 define void @print_widen_gep_and_select(i64 %n, ptr noalias %y, ptr noalias %x, ptr %z) nounwind uwtable {
-; CHECK-LABEL: 'print_widen_gep_and_select'
+; CHECK-LABEL: VPlan for loop in 'print_widen_gep_and_select'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -163,7 +163,7 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 define void @print_replicate_predicated_phi(i64 %n, ptr %x) {
-; CHECK-LABEL: 'print_replicate_predicated_phi'
+; CHECK-LABEL: VPlan for loop in 'print_replicate_predicated_phi'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -258,7 +258,7 @@ for.end:                                          ; preds = %for.inc
 @CD = common global [1024 x i32] zeroinitializer, align 4
 
 define void @print_interleave_groups(i32 %C, i32 %D) {
-; CHECK-LABEL: 'print_interleave_groups'
+; CHECK-LABEL: VPlan for loop in 'print_interleave_groups'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -364,7 +364,7 @@ for.end:
 }
 
 define void @recipe_debug_loc_location(ptr nocapture %src) !dbg !5 {
-; CHECK-LABEL: 'recipe_debug_loc_location'
+; CHECK-LABEL: VPlan for loop in 'recipe_debug_loc_location'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -472,7 +472,7 @@ declare float @llvm.sqrt.f32(float) nounwind readnone
 declare float @llvm.fmuladd.f32(float, float, float)
 
 define void @print_expand_scev(i64 %y, ptr %ptr) {
-; CHECK-LABEL: 'print_expand_scev'
+; CHECK-LABEL: VPlan for loop in 'print_expand_scev'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -549,7 +549,7 @@ loop.exit:
 }
 
 define i32 @print_exit_value(ptr %ptr, i32 %off) {
-; CHECK-LABEL: 'print_exit_value'
+; CHECK-LABEL: VPlan for loop in 'print_exit_value'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -620,7 +620,7 @@ exit:
 }
 
 define void @print_fast_math_flags(i64 %n, ptr noalias %y, ptr noalias %x, ptr %z) {
-; CHECK-LABEL: 'print_fast_math_flags'
+; CHECK-LABEL: VPlan for loop in 'print_fast_math_flags'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -699,7 +699,7 @@ exit:
 }
 
 define void @print_exact_flags(i64 %n, ptr noalias %x) {
-; CHECK-LABEL: 'print_exact_flags'
+; CHECK-LABEL: VPlan for loop in 'print_exact_flags'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -775,7 +775,7 @@ exit:
 }
 
 define void @print_call_flags(ptr readonly %src, ptr noalias %dest, i64 %n) {
-; CHECK-LABEL: 'print_call_flags'
+; CHECK-LABEL: VPlan for loop in 'print_call_flags'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -877,7 +877,7 @@ end:
 
 ; FIXME: Preserve disjoint flag on OR recipe.
 define void @print_disjoint_flags(i64 %n, ptr noalias %x) {
-; CHECK-LABEL: 'print_disjoint_flags'
+; CHECK-LABEL: VPlan for loop in 'print_disjoint_flags'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -953,7 +953,7 @@ exit:
 }
 
 define void @zext_nneg(ptr noalias %p, ptr noalias %p1) {
-; CHECK-LABEL: 'zext_nneg'
+; CHECK-LABEL: VPlan for loop in 'zext_nneg'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -1024,7 +1024,7 @@ exit:
 }
 
 define i16 @print_first_order_recurrence_and_result(ptr %ptr) {
-; CHECK-LABEL: 'print_first_order_recurrence_and_result'
+; CHECK-LABEL: VPlan for loop in 'print_first_order_recurrence_and_result'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -1103,7 +1103,7 @@ exit:
 }
 
 define void @print_select_with_fastmath_flags(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
-; CHECK-LABEL: 'print_select_with_fastmath_flags'
+; CHECK-LABEL: VPlan for loop in 'print_select_with_fastmath_flags'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF

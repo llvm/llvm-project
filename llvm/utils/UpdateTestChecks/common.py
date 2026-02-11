@@ -2431,9 +2431,10 @@ def add_analyze_checks(
     func_name,
     ginfo: GeneralizerInfo,
     is_filtered,
+    check_label_prefix=""
 ):
     assert ginfo.is_analyze()
-    check_label_format = "{} %s-LABEL: '%s%s%s%s'".format(comment_marker)
+    check_label_format = "{} %s-LABEL: {}'%s%s%s%s'".format(comment_marker, check_label_prefix)
     global_vars_seen_dict = {}
     return add_checks(
         output_lines,
