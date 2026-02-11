@@ -610,11 +610,11 @@ public:
     // An operation that exits the cleanup scope (yield, break, continue,
     // return, etc.)
     mlir::Operation *exitOp;
-  
+
     // A unique identifier for this exit's destination (used for switch dispatch
     // when there are multiple exits).
     int destinationId;
-  
+
     CleanupExit(mlir::Operation *op, int id) : exitOp(op), destinationId(id) {}
   };
 
@@ -645,7 +645,7 @@ public:
       if (isa<cir::YieldOp>(terminator))
         exits.emplace_back(terminator, nextId++);
     }
-  
+
     // Lambda to walk a loop and collect only returns and gotos.
     // Break and continue inside loops are handled by the loop itself.
     // Loops don't require special handling for nested switch or cleanup scopes
@@ -657,11 +657,11 @@ public:
         return mlir::WalkResult::advance();
       });
     };
-  
+
     // Forward declaration for mutual recursion.
     std::function<void(mlir::Region &, bool)> collectExitsInCleanup;
     std::function<void(mlir::Operation *)> collectExitsInSwitch;
-  
+
     // Lambda to collect exits from a switch. Collects return/goto/continue but
     // not break (handled by switch). For nested loops/cleanups, recurses.
     collectExitsInSwitch = [&](mlir::Operation *switchOp) {
@@ -682,7 +682,7 @@ public:
         return mlir::WalkResult::advance();
       });
     };
-  
+
     // Lambda to collect exits from a cleanup scope body region. This collects
     // break (optionally), continue, return, and goto, handling nested loops,
     // switches, and cleanups appropriately.
@@ -719,7 +719,7 @@ public:
         return mlir::WalkResult::advance();
       });
     };
-  
+
     // Collect exits from the body region.
     collectExitsInCleanup(cleanupBodyRegion, /*ignoreBreak=*/false);
   }
