@@ -7,12 +7,26 @@
 //=============================================================================
 // NOTES
 //
-// Minor differences between RUNs (e.g. presence of `noundef` attached to
-// argumens, `align` attribute attached to pointers), are matched using
-// catch-alls like {{.*}}.
+// Tests for unconstrained intrinsics that require the fullfp16 extension.
 //
-// Different labels for CIR stem from an additional function call that is
-// present at the AST and CIR levels, but is inlined at the LLVM IR level.
+// These intrinsics expand to code containing multiple compound and declaration
+// statements rather than just plain function calls, which leads to:
+//  * "scopes" at the CIR level, and then
+//  * redundant branches at the LLVM IR level.  
+// The default lowering path never generates those redundant LLVM IR branches,
+// hence for CIR we use `opt -passes=simplifycfg` to reduce the control flow
+// and to make LLVM IR match for all paths.
+//
+// Minor differences between RUN lines (e.g., the presence of `noundef` on
+// arguments or the `align` attribute on pointers) are matched using
+// catch-alls such as `{{.*}}`.
+//
+// TODO: Remove `-simplifycfg` once CIR lowering includes the relevant
+//       optimizations to reduce the CFG.
+//
+// TODO: Merge this file with
+//        * clang/test/CodeGen/AArch64/v8.2a-fp16-intrinsics.c
+//       (the source of these tests).
 //=============================================================================
 
 #include <arm_fp16.h>
