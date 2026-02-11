@@ -204,16 +204,7 @@ public:
                                             ArrayRef<char> rawBuffer);
 
   /// Returns true if the given buffer is a valid raw buffer for the given type.
-  /// `detectedSplat` is set if the buffer is valid and represents a splat
-  /// buffer. The definition may be expanded over time, but currently, a
-  /// splat buffer is detected if:
-  ///   - For >1bit: The buffer consists of a single element.
-  ///   - For 1bit: The buffer consists of a single byte with value 0 or 255.
-  ///
-  /// User code should be prepared for additional, conformant patterns to be
-  /// identified as splats in the future.
-  static bool isValidRawBuffer(ShapedType type, ArrayRef<char> rawBuffer,
-                               bool &detectedSplat);
+  static bool isValidRawBuffer(ShapedType type, ArrayRef<char> rawBuffer);
 
   //===--------------------------------------------------------------------===//
   // Iterators
