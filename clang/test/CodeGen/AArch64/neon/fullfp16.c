@@ -33,10 +33,10 @@
 
 // ALL-LABEL: @test_vabsh_f16
 float16_t test_vabsh_f16(float16_t a) {
-// CIR: {{%.*}}  = cir.fabs {{%.*}} : !cir.f16
+// CIR: {{%.*}} = cir.fabs {{%.*}} : !cir.f16
 
 // LLVM-SAME: (half{{.*}} [[A:%.*]])
-// LLVM:  [[ABS:%.*]] =  call half @llvm.fabs.f16(half [[A]])
+// LLVM:  [[ABS:%.*]] = call half @llvm.fabs.f16(half [[A]])
 // LLVM:  ret half [[ABS]]
   return vabsh_f16(a);
 }
