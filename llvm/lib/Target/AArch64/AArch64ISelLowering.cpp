@@ -2015,7 +2015,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
   }
 
-  if (Subtarget->hasSVE2AES())
+  if (Subtarget->hasSVEAES() &&
+      (!Subtarget->isStreaming() || Subtarget->hasSSVE_AES()))
     setOperationAction(ISD::CLMUL, MVT::nxv2i64, Legal);
 
   // Handle non-aliasing elements mask
