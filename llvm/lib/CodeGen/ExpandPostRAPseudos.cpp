@@ -41,9 +41,7 @@ private:
 
 struct ExpandPostRALegacy : public MachineFunctionPass {
   static char ID;
-  ExpandPostRALegacy() : MachineFunctionPass(ID) {
-    initializeExpandPostRALegacyPass(*PassRegistry::getPassRegistry());
-  }
+  ExpandPostRALegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -77,15 +75,14 @@ INITIALIZE_PASS(ExpandPostRALegacy, DEBUG_TYPE,
 
 bool ExpandPostRA::LowerSubregToReg(MachineInstr *MI) {
   MachineBasicBlock *MBB = MI->getParent();
-  assert((MI->getOperand(0).isReg() && MI->getOperand(0).isDef()) &&
-         MI->getOperand(1).isImm() &&
-         (MI->getOperand(2).isReg() && MI->getOperand(2).isUse()) &&
-          MI->getOperand(3).isImm() && "Invalid subreg_to_reg");
+  assert(MI->getOperand(0).isReg() && MI->getOperand(0).isDef() &&
+         MI->getOperand(1).isReg() && MI->getOperand(1).isUse() &&
+         MI->getOperand(2).isImm() && "Invalid subreg_to_reg");
 
   Register DstReg = MI->getOperand(0).getReg();
-  Register InsReg = MI->getOperand(2).getReg();
-  assert(!MI->getOperand(2).getSubReg() && "SubIdx on physreg?");
-  unsigned SubIdx  = MI->getOperand(3).getImm();
+  Register InsReg = MI->getOperand(1).getReg();
+  assert(!MI->getOperand(1).getSubReg() && "SubIdx on physreg?");
+  unsigned SubIdx = MI->getOperand(2).getImm();
 
   assert(SubIdx != 0 && "Invalid index for insert_subreg");
   Register DstSubReg = TRI->getSubReg(DstReg, SubIdx);
@@ -97,39 +94,26 @@ bool ExpandPostRA::LowerSubregToReg(MachineInstr *MI) {
 
   LLVM_DEBUG(dbgs() << "subreg: CONVERTING: " << *MI);
 
-  if (MI->allDefsAreDead()) {
+  if (MI->allDefsAreDead() || DstSubReg == InsReg) {
+    // No need to insert an identity copy instruction.
+    // Watch out for case like this:
+    // %rax = SUBREG_TO_REG killed %eax, 3
+    // We must leave %rax live.
     MI->setDesc(TII->get(TargetOpcode::KILL));
-    MI->removeOperand(3); // SubIdx
-    MI->removeOperand(1); // Imm
+    MI->removeOperand(2); // SubIdx
     LLVM_DEBUG(dbgs() << "subreg: replaced by: " << *MI);
     return true;
   }
 
-  if (DstSubReg == InsReg) {
-    // No need to insert an identity copy instruction.
-    // Watch out for case like this:
-    // %rax = SUBREG_TO_REG 0, killed %eax, 3
-    // We must leave %rax live.
-    if (DstReg != InsReg) {
-      MI->setDesc(TII->get(TargetOpcode::KILL));
-      MI->removeOperand(3);     // SubIdx
-      MI->removeOperand(1);     // Imm
-      LLVM_DEBUG(dbgs() << "subreg: replace by: " << *MI);
-      return true;
-    }
-    LLVM_DEBUG(dbgs() << "subreg: eliminated!");
-  } else {
-    TII->copyPhysReg(*MBB, MI, MI->getDebugLoc(), DstSubReg, InsReg,
-                     MI->getOperand(2).isKill());
+  TII->copyPhysReg(*MBB, MI, MI->getDebugLoc(), DstSubReg, InsReg,
+                   MI->getOperand(1).isKill());
 
-    // Implicitly define DstReg for subsequent uses.
-    MachineBasicBlock::iterator CopyMI = MI;
-    --CopyMI;
-    CopyMI->addRegisterDefined(DstReg);
-    LLVM_DEBUG(dbgs() << "subreg: " << *CopyMI);
-  }
+  // Implicitly define DstReg for subsequent uses.
+  MachineBasicBlock::iterator CopyMI = MI;
+  --CopyMI;
+  CopyMI->addRegisterDefined(DstReg);
+  LLVM_DEBUG(dbgs() << "subreg: " << *CopyMI);
 
-  LLVM_DEBUG(dbgs() << '\n');
   MBB->erase(MI);
   return true;
 }
