@@ -41,6 +41,8 @@ private:
   MachineLoopInfo *MLI = nullptr;
 
   bool optimizeVccBranch(MachineInstr &MI) const;
+  void updateMLIBeforeRemovingEdge(MachineBasicBlock *From,
+                                   MachineBasicBlock *To) const;
   bool optimizeSetGPR(MachineInstr &First, MachineInstr &MI) const;
   bool getBlockDestinations(MachineBasicBlock &SrcMBB,
                             MachineBasicBlock *&TrueMBB,
@@ -110,6 +112,50 @@ INITIALIZE_PASS(SIPreEmitPeepholeLegacy, DEBUG_TYPE,
 char SIPreEmitPeepholeLegacy::ID = 0;
 
 char &llvm::SIPreEmitPeepholeID = SIPreEmitPeepholeLegacy::ID;
+
+void SIPreEmitPeephole::updateMLIBeforeRemovingEdge(
+    MachineBasicBlock *From, MachineBasicBlock *To) const {
+  if (!MLI)
+    return;
+
+  // Only handle back-edges: To must be a loop header with From inside the loop.
+  MachineLoop *Loop = MLI->getLoopFor(To);
+  if (!Loop || Loop->getHeader() != To || !Loop->contains(From))
+    return;
+
+  // Count back-edges
+  unsigned BackEdgeCount = 0;
+  for (MachineBasicBlock *Pred : To->predecessors()) {
+    if (Loop->contains(Pred))
+      BackEdgeCount++;
+  }
+
+  if (BackEdgeCount <= 1) {
+    MachineLoop *ParentLoop = Loop->getParentLoop();
+
+    // Re-map blocks directly owned by this loop to the parent.
+    for (MachineBasicBlock *BB : Loop->blocks()) {
+      if (MLI->getLoopFor(BB) == Loop)
+        MLI->changeLoopFor(BB, ParentLoop);
+    }
+
+    // Reparent all child loops.
+    while (!Loop->isInnermost()) {
+      MachineLoop *Child = Loop->removeChildLoop(std::prev(Loop->end()));
+      if (ParentLoop)
+        ParentLoop->addChildLoop(Child);
+      else
+        MLI->addTopLevelLoop(Child);
+    }
+
+    if (ParentLoop)
+      ParentLoop->removeChildLoop(Loop);
+    else
+      MLI->removeLoop(llvm::find(*MLI, Loop));
+
+    MLI->destroy(Loop);
+  }
+}
 
 bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
   // Match:
@@ -236,12 +282,6 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
 
   bool IsVCCZ = MI.getOpcode() == AMDGPU::S_CBRANCH_VCCZ;
 
-  // Skip CFG-modifying VCC branch optimizations in loop bodies to preserve
-  // MachineLoopInfo.
-  if (MLI && MLI->getLoopFor(MI.getParent()) &&
-      (SReg == ExecReg || MaskValue == 0))
-    return Changed;
-
   if (SReg == ExecReg) {
     // EXEC is updated directly
     if (IsVCCZ) {
@@ -267,11 +307,13 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
     for (auto *BranchMI : ToRemove) {
       MachineOperand &Dst = BranchMI->getOperand(0);
       assert(Dst.isMBB() && "destination is not basic block");
+      updateMLIBeforeRemovingEdge(Parent, Dst.getMBB());
       Parent->removeSuccessor(Dst.getMBB());
       BranchMI->eraseFromParent();
     }
 
     if (MachineBasicBlock *Succ = Parent->getFallThrough()) {
+      updateMLIBeforeRemovingEdge(Parent, Succ);
       Parent->removeSuccessor(Succ);
     }
 
@@ -281,7 +323,9 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
     // Will never branch
     MachineOperand &Dst = MI.getOperand(0);
     assert(Dst.isMBB() && "destination is not basic block");
-    MI.getParent()->removeSuccessor(Dst.getMBB());
+    MachineBasicBlock *Parent = MI.getParent();
+    updateMLIBeforeRemovingEdge(Parent, Dst.getMBB());
+    Parent->removeSuccessor(Dst.getMBB());
     MI.eraseFromParent();
     return true;
   } else if (MaskValue == -1) {
