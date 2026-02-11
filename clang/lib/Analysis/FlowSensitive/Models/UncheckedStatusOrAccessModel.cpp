@@ -375,6 +375,12 @@ static auto isNonConstStatusOrPtrArgumentCall() {
       hasType(hasCanonicalType(pointsTo(isNonConstStatusOrType())))));
 }
 
+static auto isNonConstStatusOrReferenceArgumentCall() {
+  using namespace ::clang::ast_matchers;
+  return callExpr(callee(functionDecl(hasAnyParameter(
+      parmVarDecl(hasType(references(isNonConstStatusOrType())))))));
+}
+
 static auto
 buildDiagnoseMatchSwitch(const UncheckedStatusOrAccessModelOptions &Options) {
   return CFGMatchSwitchBuilder<const Environment,
@@ -1160,6 +1166,17 @@ static void transferStatusOrPtrArgumentCall(const CallExpr *Expr,
           initializeStatus(StatusLoc, State.Env);
         }
       }
+    } else {
+      const FunctionDecl *FD = Expr->getDirectCallee();
+      QualType ParamType = FD->getParamDecl(I)->getType();
+      if (ParamType->isReferenceType() &&
+          !ParamType->getPointeeType().isConstQualified() &&
+          isStatusOrType(ParamType->getPointeeType())) {
+        if (auto *Loc = State.Env.get<RecordStorageLocation>(*Arg)) {
+          auto &StatusLoc = locForStatus(*Loc);
+          initializeStatus(StatusLoc, State.Env);
+        }
+      }
     }
   }
 }
@@ -1340,6 +1357,8 @@ buildTransferMatchSwitch(ASTContext &Ctx,
       .CaseOfCFGStmt<CXXConstructExpr>(isStatusConstructor(),
                                        transferStatusConstructor)
       .CaseOfCFGStmt<CallExpr>(isNonConstStatusOrPtrArgumentCall(),
+                               transferStatusOrPtrArgumentCall)
+      .CaseOfCFGStmt<CallExpr>(isNonConstStatusOrReferenceArgumentCall(),
                                transferStatusOrPtrArgumentCall)
       .CaseOfCFGStmt<ImplicitCastExpr>(
           implicitCastExpr(hasCastKind(CK_PointerToBoolean)),

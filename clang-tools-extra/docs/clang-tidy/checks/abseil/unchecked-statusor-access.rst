@@ -248,6 +248,25 @@ assumes the function call might change the object's state.  For example:
     }
   }
 
+.. _referencecalls:
+
+Assuming objects passed by reference aren't changed
+---------------------------------------------------
+
+If you pass a ``absl::StatusOr`` object as a non-``const`` reference, the
+check assumes the function call might change the object's state.
+For example:
+
+.. code:: cpp
+
+   void mutate(absl::StatusOr<int>& x);
+   void f(absl::StatusOr<int> x) {
+     if (x.ok()) {
+       mutate(&x);
+       use(*x);  // unsafe: `mutate()` might have changed the state of `x`
+    }
+  }
+
 .. _uncommonapi:
 
 Relying on invariants of uncommon APIs
