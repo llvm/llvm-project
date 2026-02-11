@@ -95,6 +95,11 @@ public:
   BuiltinTypeDeclBuilder &addByteAddressBufferLoadMethods();
   BuiltinTypeDeclBuilder &addByteAddressBufferStoreMethods();
   BuiltinTypeDeclBuilder &addSampleMethods(ResourceDimension Dim);
+  BuiltinTypeDeclBuilder &addSampleBiasMethods(ResourceDimension Dim);
+  BuiltinTypeDeclBuilder &addSampleGradMethods(ResourceDimension Dim);
+  BuiltinTypeDeclBuilder &addSampleLevelMethods(ResourceDimension Dim);
+  BuiltinTypeDeclBuilder &addSampleCmpMethods(ResourceDimension Dim);
+  BuiltinTypeDeclBuilder &addSampleCmpLevelZeroMethods(ResourceDimension Dim);
   BuiltinTypeDeclBuilder &addIncrementCounterMethod();
   BuiltinTypeDeclBuilder &addDecrementCounterMethod();
   BuiltinTypeDeclBuilder &addHandleAccessFunction(DeclarationName &Name,
