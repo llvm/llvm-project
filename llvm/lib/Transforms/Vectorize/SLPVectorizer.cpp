@@ -1309,6 +1309,9 @@ public:
     assert(MainOp && "MainOp cannot be nullptr.");
     if (I->getOpcode() == MainOp->getOpcode())
       return MainOp;
+    if (MainOp->getOpcode() == Instruction::Select &&
+        I->getOpcode() == Instruction::ZExt && !isAltShuffle())
+      return MainOp;
     // Prefer AltOp instead of interchangeable instruction of MainOp.
     assert(AltOp && "AltOp cannot be nullptr.");
     if (I->getOpcode() == AltOp->getOpcode())
@@ -21115,6 +21118,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       Value *V = Builder.CreateCall(CF, OpVecs, OpBundles);
 
       propagateIRFlags(V, E->Scalars, VL0);
+      cast<CallInst>(V)->setCallingConv(CF->getCallingConv());
       V = FinalShuffle(V, E);
 
       E->VectorizedValue = V;

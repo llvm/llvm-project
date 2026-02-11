@@ -66,6 +66,9 @@ Changes to the LLVM IR
 * "denormal-fp-math" and "denormal-fp-math-f32" string attributes were
   migrated to first-class denormal_fpenv attribute.
 
+* The `"nooutline"` attribute is now writen as `nooutline`. Existing IR and
+  bitcode will be automatically updated.
+
 Changes to LLVM infrastructure
 ------------------------------
 
