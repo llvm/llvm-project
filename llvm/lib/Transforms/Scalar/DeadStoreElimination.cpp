@@ -965,6 +965,7 @@ struct DSEState {
   // Keep track of all of the objects that are invisible to the caller after
   // the function returns.
   DenseMap<const Value *, bool> InvisibleToCallerAfterRet;
+  DenseMap<const Value *, uint64_t> InvisibleToCallerAfterRetBounded;
   // Keep track of blocks with throwing instructions not modeled in MemorySSA.
   SmallPtrSet<BasicBlock *, 16> ThrowingBlocks;
   // Post-order numbers for each basic block. Used to figure out if memory
@@ -1016,9 +1017,21 @@ struct DSEState {
 
     // Treat byval, inalloca or dead on return arguments the same as Allocas,
     // stores to them are dead at the end of the function.
-    for (Argument &AI : F.args())
-      if (AI.hasPassPointeeByValueCopyAttr() || AI.hasDeadOnReturnAttr())
+    for (Argument &AI : F.args()) {
+      if (AI.hasPassPointeeByValueCopyAttr()) {
         InvisibleToCallerAfterRet.insert({&AI, true});
+        continue;
+      }
+
+      if (!AI.getType()->isPointerTy())
+        continue;
+
+      const DeadOnReturnInfo &Info = AI.getDeadOnReturnInfo();
+      if (Info.coversAllReachableMemory())
+        InvisibleToCallerAfterRet.insert({&AI, true});
+      else if (uint64_t DeadBytes = Info.getNumberOfDeadBytes())
+        InvisibleToCallerAfterRetBounded.insert({&AI, DeadBytes});
+    }
 
     // Collect whether there is any irreducible control flow in the function.
     ContainsIrreducibleLoops = mayContainIrreducibleControl(F, &LI);
@@ -1204,10 +1217,28 @@ struct DSEState {
     return OW_None;
   }
 
-  bool isInvisibleToCallerAfterRet(const Value *V) {
+  bool isInvisibleToCallerAfterRet(const Value *V, const Value *Ptr,
+                                   const LocationSize StoreSize) {
     if (isa<AllocaInst>(V))
       return true;
 
+    auto IBounded = InvisibleToCallerAfterRetBounded.find(V);
+    if (IBounded != InvisibleToCallerAfterRetBounded.end()) {
+      int64_t ValueOffset;
+      [[maybe_unused]] const Value *BaseValue =
+          GetPointerBaseWithConstantOffset(Ptr, ValueOffset, DL);
+      // If we are not able to find a constant offset from the UO, we have to
+      // pessimistically assume that the store writes to memory out of the
+      // dead_on_return bounds.
+      if (BaseValue != V)
+        return false;
+      // This store is only invisible after return if we are in bounds of the
+      // range marked dead.
+      if (StoreSize.hasValue() &&
+          ValueOffset + StoreSize.getValue() <= IBounded->second &&
+          ValueOffset >= 0)
+        return true;
+    }
     auto I = InvisibleToCallerAfterRet.insert({V, false});
     if (I.second && isInvisibleToCallerOnUnwind(V) && isNoAliasCall(V))
       I.first->second = capturesNothing(PointerMayBeCaptured(
@@ -1755,7 +1786,8 @@ struct DSEState {
           BasicBlock *MaybeKillingBlock = UseInst->getParent();
           if (PostOrderNumbers.find(MaybeKillingBlock)->second <
               PostOrderNumbers.find(MaybeDeadAccess->getBlock())->second) {
-            if (!isInvisibleToCallerAfterRet(KillingUndObj)) {
+            if (!isInvisibleToCallerAfterRet(KillingUndObj, KillingLoc.Ptr,
+                                             KillingLoc.Size)) {
               LLVM_DEBUG(dbgs()
                          << "    ... found killing def " << *UseInst << "\n");
               KillingDefs.insert(UseInst);
@@ -1773,7 +1805,8 @@ struct DSEState {
     // For accesses to locations visible after the function returns, make sure
     // that the location is dead (=overwritten) along all paths from
     // MaybeDeadAccess to the exit.
-    if (!isInvisibleToCallerAfterRet(KillingUndObj)) {
+    if (!isInvisibleToCallerAfterRet(KillingUndObj, KillingLoc.Ptr,
+                                     KillingLoc.Size)) {
       SmallPtrSet<BasicBlock *, 16> KillingBlocks;
       for (Instruction *KD : KillingDefs)
         KillingBlocks.insert(KD->getParent());
@@ -1877,6 +1910,7 @@ struct DSEState {
               if (CapturedBeforeReturn.erase(UO))
                 ShouldIterateEndOfFunctionDSE = true;
               InvisibleToCallerAfterRet.erase(UO);
+              InvisibleToCallerAfterRetBounded.erase(UO);
             }
           }
         }
@@ -1980,7 +2014,7 @@ struct DSEState {
         // underlying objects is very uncommon. If it turns out to be important,
         // we can use getUnderlyingObjects here instead.
         const Value *UO = getUnderlyingObject(DefLoc->Ptr);
-        if (!isInvisibleToCallerAfterRet(UO))
+        if (!isInvisibleToCallerAfterRet(UO, DefLoc->Ptr, DefLoc->Size))
           continue;
 
         if (isWriteAtEndOfFunction(Def, *DefLoc)) {

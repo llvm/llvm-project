@@ -6,11 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <algorithm>
+#include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
@@ -19,15 +23,11 @@
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "mlir/Bindings/Python/NanobindUtils.h"
-#include "llvm/ADT/ScopeExit.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace nb = nanobind;
 using namespace nanobind::literals;
 using namespace mlir;
 using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
-
-using llvm::SmallVector;
 
 //------------------------------------------------------------------------------
 // Docstrings (trivial, non-duplicated docstrings are included inline).
@@ -122,13 +122,52 @@ Raises:
     type or if the buffer does not meet expectations.
 )";
 
+/// Local helper checking if the current machine is little endian.
+static bool isLittleEndian() {
+  const uint16_t value = 1;
+  unsigned char first_byte = 0;
+  std::memcpy(&first_byte, &value, 1);
+  return first_byte == 1;
+}
+
+namespace {
+/// Local helper adapted from llvm::scope_exit.
+template <typename Callable>
+class [[nodiscard]] scope_exit {
+  Callable ExitFunction;
+  bool Engaged = true; // False once moved-from or release()d.
+
+public:
+  template <typename Fp>
+  explicit scope_exit(Fp &&F) : ExitFunction(std::forward<Fp>(F)) {}
+
+  scope_exit(scope_exit &&Rhs)
+      : ExitFunction(std::move(Rhs.ExitFunction)), Engaged(Rhs.Engaged) {
+    Rhs.release();
+  }
+  scope_exit(const scope_exit &) = delete;
+  scope_exit &operator=(scope_exit &&) = delete;
+  scope_exit &operator=(const scope_exit &) = delete;
+
+  void release() { Engaged = false; }
+
+  ~scope_exit() {
+    if (Engaged)
+      ExitFunction();
+  }
+};
+
+template <typename Callable>
+scope_exit(Callable) -> scope_exit<Callable>;
+} // namespace
+
 namespace mlir {
 namespace python {
 namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
 nb_buffer_info::nb_buffer_info(
     void *ptr, ssize_t itemsize, const char *format, ssize_t ndim,
-    SmallVector<ssize_t, 4> shape_in, SmallVector<ssize_t, 4> strides_in,
+    std::vector<ssize_t> shape_in, std::vector<ssize_t> strides_in,
     bool readonly,
     std::unique_ptr<Py_buffer, void (*)(Py_buffer *)> owned_view_in)
     : ptr(ptr), itemsize(itemsize), format(format), ndim(ndim),
@@ -254,7 +293,7 @@ void PyArrayAttribute::bindDerived(ClassTy &c) {
   c.def_static(
       "get",
       [](const nb::list &attributes, DefaultingPyMlirContext context) {
-        SmallVector<MlirAttribute> mlirAttributes;
+        std::vector<MlirAttribute> mlirAttributes;
         mlirAttributes.reserve(nb::len(attributes));
         for (auto attribute : attributes) {
           mlirAttributes.push_back(pyTryCast<PyAttribute>(attribute));
@@ -343,8 +382,50 @@ void PyFloatAttribute::bindDerived(ClassTy &c) {
 void PyIntegerAttribute::bindDerived(ClassTy &c) {
   c.def_static(
       "get",
-      [](PyType &type, int64_t value) {
-        MlirAttribute attr = mlirIntegerAttrGet(type, value);
+      [](PyType &type, nb::object value) {
+        // Handle IndexType - it doesn't have a bit width or signedness.
+        if (mlirTypeIsAIndex(type)) {
+          int64_t intValue = nb::cast<int64_t>(value);
+          MlirAttribute attr = mlirIntegerAttrGet(type, intValue);
+          return PyIntegerAttribute(type.getContext(), attr);
+        }
+
+        // Get the bit width of the integer type.
+        unsigned bitWidth = mlirIntegerTypeGetWidth(type);
+
+        // Try to use the fast path for small integers.
+        if (bitWidth <= 64) {
+          int64_t intValue = nb::cast<int64_t>(value);
+          MlirAttribute attr = mlirIntegerAttrGet(type, intValue);
+          return PyIntegerAttribute(type.getContext(), attr);
+        }
+
+        // For larger integers, convert Python int to array of 64-bit words.
+        unsigned numWords = std::ceil(static_cast<double>(bitWidth) / 64);
+        std::vector<uint64_t> words(numWords, 0);
+
+        // Extract words from Python integer (little-endian order).
+        nb::object mask = nb::int_(0xFFFFFFFFFFFFFFFFULL);
+        nb::object shift = nb::int_(64);
+        nb::object current = value;
+
+        // Handle negative numbers for signed types by converting to two's
+        // complement representation.
+        if (mlirIntegerTypeIsSigned(type)) {
+          nb::object zero = nb::int_(0);
+          if (nb::cast<bool>(current < zero)) {
+            nb::object twoToTheBitWidth = nb::int_(1) << nb::int_(bitWidth);
+            current = current + twoToTheBitWidth;
+          }
+        }
+
+        for (unsigned i = 0; i < numWords; ++i) {
+          words[i] = nb::cast<uint64_t>(current & mask);
+          current = current >> shift;
+        }
+
+        MlirAttribute attr =
+            mlirIntegerAttrGetFromWords(type, numWords, words.data());
         return PyIntegerAttribute(type.getContext(), attr);
       },
       nb::arg("type"), nb::arg("value"),
@@ -360,13 +441,44 @@ void PyIntegerAttribute::bindDerived(ClassTy &c) {
       nb::sig("def static_typeid(/) -> TypeID"));
 }
 
-int64_t PyIntegerAttribute::toPyInt(PyIntegerAttribute &self) {
+nb::object PyIntegerAttribute::toPyInt(PyIntegerAttribute &self) {
   MlirType type = mlirAttributeGetType(self);
-  if (mlirTypeIsAIndex(type) || mlirIntegerTypeIsSignless(type))
-    return mlirIntegerAttrGetValueInt(self);
-  if (mlirIntegerTypeIsSigned(type))
-    return mlirIntegerAttrGetValueSInt(self);
-  return mlirIntegerAttrGetValueUInt(self);
+  unsigned bitWidth = mlirIntegerAttrGetValueBitWidth(self);
+
+  // For integers that fit in 64 bits, use the fast path.
+  if (bitWidth <= 64) {
+    if (mlirTypeIsAIndex(type) || mlirIntegerTypeIsSignless(type))
+      return nb::int_(mlirIntegerAttrGetValueInt(self));
+    if (mlirIntegerTypeIsSigned(type))
+      return nb::int_(mlirIntegerAttrGetValueSInt(self));
+    return nb::int_(mlirIntegerAttrGetValueUInt(self));
+  }
+
+  // For larger integers, reconstruct the value from raw words.
+  unsigned numWords = mlirIntegerAttrGetValueNumWords(self);
+  std::vector<uint64_t> words(numWords);
+  mlirIntegerAttrGetValueWords(self, words.data());
+
+  // Build the Python integer by shifting and ORing the words together.
+  // Words are in little-endian order (least significant first).
+  nb::object result = nb::int_(0);
+  nb::object shift = nb::int_(64);
+  for (unsigned i = numWords; i > 0; --i) {
+    result = result << shift;
+    result = result | nb::int_(words[i - 1]);
+  }
+
+  // Handle signed integers: if the sign bit is set, subtract 2^bitWidth.
+  if (mlirIntegerTypeIsSigned(type)) {
+    // Check if sign bit is set (most significant bit of the value).
+    bool signBitSet = (words[numWords - 1] >> ((bitWidth - 1) % 64)) & 1;
+    if (signBitSet) {
+      nb::object twoToTheBitWidth = nb::int_(1) << nb::int_(bitWidth);
+      result = result - twoToTheBitWidth;
+    }
+  }
+
+  return result;
 }
 
 void PyBoolAttribute::bindDerived(ClassTy &c) {
@@ -391,7 +503,7 @@ PySymbolRefAttribute::fromList(const std::vector<std::string> &symbols,
     throw std::runtime_error("SymbolRefAttr must be composed of at least "
                              "one symbol.");
   MlirStringRef rootSymbol = toMlirStringRef(symbols[0]);
-  SmallVector<MlirAttribute, 3> referenceAttrs;
+  std::vector<MlirAttribute> referenceAttrs;
   for (size_t i = 1; i < symbols.size(); ++i) {
     referenceAttrs.push_back(
         mlirFlatSymbolRefAttrGet(context.get(), toMlirStringRef(symbols[i])));
@@ -492,22 +604,21 @@ PyDenseElementsAttribute::getFromList(const nb::list &attributes,
     if ((!mlirTypeIsAShaped(*explicitType) ||
          !mlirShapedTypeHasStaticShape(*explicitType))) {
 
-      std::string message;
-      llvm::raw_string_ostream os(message);
-      os << "Expected a static ShapedType for the shaped_type parameter: "
-         << nb::cast<std::string>(nb::repr(nb::cast(*explicitType)));
+      std::string message = nanobind::detail::join(
+          "Expected a static ShapedType for the shaped_type parameter: ",
+          nb::cast<std::string>(nb::repr(nb::cast(*explicitType))));
       throw nb::value_error(message.c_str());
     }
     shapedType = *explicitType;
   } else {
-    SmallVector<int64_t> shape = {static_cast<int64_t>(numAttributes)};
+    std::vector<int64_t> shape = {static_cast<int64_t>(numAttributes)};
     shapedType = mlirRankedTensorTypeGet(
         shape.size(), shape.data(),
         mlirAttributeGetType(pyTryCast<PyAttribute>(attributes[0])),
         mlirAttributeGetNull());
   }
 
-  SmallVector<MlirAttribute> mlirAttributes;
+  std::vector<MlirAttribute> mlirAttributes;
   mlirAttributes.reserve(numAttributes);
   for (const nb::handle &attribute : attributes) {
     MlirAttribute mlirAttribute = pyTryCast<PyAttribute>(attribute);
@@ -515,12 +626,11 @@ PyDenseElementsAttribute::getFromList(const nb::list &attributes,
     mlirAttributes.push_back(mlirAttribute);
 
     if (!mlirTypeEqual(mlirShapedTypeGetElementType(shapedType), attrType)) {
-      std::string message;
-      llvm::raw_string_ostream os(message);
-      os << "All attributes must be of the same type and match "
-         << "the type parameter: expected="
-         << nb::cast<std::string>(nb::repr(nb::cast(shapedType)))
-         << ", but got=" << nb::cast<std::string>(nb::repr(nb::cast(attrType)));
+      std::string message = nanobind::detail::join(
+          "All attributes must be of the same type and match the type "
+          "parameter: expected=",
+          nb::cast<std::string>(nb::repr(nb::cast(shapedType))),
+          ", but got=", nb::cast<std::string>(nb::repr(nb::cast(attrType))));
       throw nb::value_error(message.c_str());
     }
   }
@@ -545,7 +655,7 @@ PyDenseElementsAttribute PyDenseElementsAttribute::getFromBuffer(
   if (PyObject_GetBuffer(array.ptr(), &view, flags) != 0) {
     throw nb::python_error();
   }
-  llvm::scope_exit freeBuffer([&]() { PyBuffer_Release(&view); });
+  scope_exit freeBuffer([&]() { PyBuffer_Release(&view); });
 
   MlirContext context = contextWrapper->get();
   MlirAttribute attr = getAttributeFromBuffer(
@@ -736,11 +846,11 @@ bool PyDenseElementsAttribute::isSignedIntegerFormat(std::string_view format) {
 MlirType PyDenseElementsAttribute::getShapedType(
     std::optional<MlirType> bulkLoadElementType,
     std::optional<std::vector<int64_t>> explicitShape, Py_buffer &view) {
-  SmallVector<int64_t> shape;
+  std::vector<int64_t> shape;
   if (explicitShape) {
-    shape.append(explicitShape->begin(), explicitShape->end());
+    shape.insert(shape.end(), explicitShape->begin(), explicitShape->end());
   } else {
-    shape.append(view.shape, view.shape + view.ndim);
+    shape.insert(shape.end(), view.shape, view.shape + view.ndim);
   }
 
   if (mlirTypeIsAShaped(*bulkLoadElementType)) {
@@ -839,7 +949,7 @@ MlirAttribute PyDenseElementsAttribute::getAttributeFromBuffer(
 MlirAttribute PyDenseElementsAttribute::getBitpackedAttributeFromBooleanBuffer(
     Py_buffer &view, std::optional<std::vector<int64_t>> explicitShape,
     MlirContext &context) {
-  if (llvm::endianness::native != llvm::endianness::little) {
+  if (!isLittleEndian()) {
     // Given we have no good way of testing the behavior on big-endian
     // systems we will throw
     throw nb::type_error("Constructing a bit-packed MLIR attribute is "
@@ -867,7 +977,7 @@ MlirAttribute PyDenseElementsAttribute::getBitpackedAttributeFromBooleanBuffer(
 
 std::unique_ptr<nb_buffer_info>
 PyDenseElementsAttribute::getBooleanBufferFromBitpackedAttribute() const {
-  if (llvm::endianness::native != llvm::endianness::little) {
+  if (!isLittleEndian()) {
     // Given we have no good way of testing the behavior on big-endian
     // systems we will throw
     throw nb::type_error("Constructing a numpy array from a MLIR attribute "
@@ -875,7 +985,7 @@ PyDenseElementsAttribute::getBooleanBufferFromBitpackedAttribute() const {
   }
 
   int64_t numBooleans = mlirElementsAttrGetNumElements(*this);
-  int64_t numBitpackedBytes = llvm::divideCeil(numBooleans, 8);
+  int64_t numBitpackedBytes = (numBooleans + 7) / 8;
   uint8_t *bitpackedData = static_cast<uint8_t *>(
       const_cast<void *>(mlirDenseElementsAttrGetRawData(*this)));
   nb::ndarray<uint8_t, nb::numpy, nb::ndim<1>, nb::c_contig> packedArray(
@@ -1055,7 +1165,7 @@ PyDenseResourceElementsAttribute::getFromBuffer(
 
   // This scope releaser will only release if we haven't yet transferred
   // ownership.
-  llvm::scope_exit freeBuffer([&]() {
+  scope_exit freeBuffer([&]() {
     if (view)
       PyBuffer_Release(view.get());
   });
@@ -1125,7 +1235,7 @@ void PyDictAttribute::bindDerived(ClassTy &c) {
   c.def_static(
       "get",
       [](const nb::dict &attributes, DefaultingPyMlirContext context) {
-        SmallVector<MlirNamedAttribute> mlirNamedAttributes;
+        std::vector<MlirNamedAttribute> mlirNamedAttributes;
         mlirNamedAttributes.reserve(attributes.size());
         for (std::pair<nb::handle, nb::handle> it : attributes) {
           auto &mlirAttr = nb::cast<PyAttribute &>(it.second);
@@ -1229,7 +1339,7 @@ void PyStridedLayoutAttribute::bindDerived(ClassTy &c) {
       [](int64_t rank, DefaultingPyMlirContext ctx) {
         auto dynamic = mlirShapedTypeGetDynamicStrideOrOffset();
         std::vector<int64_t> strides(rank);
-        llvm::fill(strides, dynamic);
+        std::fill(strides.begin(), strides.end(), dynamic);
         MlirAttribute attr = mlirStridedLayoutAttrGet(
             ctx->get(), dynamic, strides.size(), strides.data());
         return PyStridedLayoutAttribute(ctx->getRef(), attr);

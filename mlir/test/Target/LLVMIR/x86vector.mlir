@@ -109,6 +109,14 @@ func.func @LLVM_x86_avx512bf16_cvtneps2bf16_512(
   return %0 : vector<16xbf16>
 }
 
+// CHECK-LABEL: define <16 x i32> @LLVM_x86_avx10_vpdpbssd_512
+func.func @LLVM_x86_avx10_vpdpbssd_512(%w: vector<16xi32>, %a: vector<64xi8>,
+    %b: vector<64xi8>) -> vector<16xi32> {
+  // CHECK: call <16 x i32> @llvm.x86.avx10.vpdpbssd.512(
+  %0 = x86vector.avx10.dot.i8 %w, %a, %b : vector<64xi8> -> vector<16xi32>
+  return %0 : vector<16xi32>
+}
+
 // CHECK-LABEL: define <4 x float> @LLVM_x86_avxbf16_vcvtneebf162ps128
 func.func @LLVM_x86_avxbf16_vcvtneebf162ps128(
   %a: memref<8xbf16>) -> vector<4xf32>

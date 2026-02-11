@@ -1343,7 +1343,6 @@ struct AAAMDGPUMinAGPRAlloc
         Maximum.takeAssumedMaximum(NumRegs);
         return true;
       }
-
       switch (CB.getIntrinsicID()) {
       case Intrinsic::not_intrinsic:
         break;
@@ -1361,10 +1360,21 @@ struct AAAMDGPUMinAGPRAlloc
 
         return true;
       }
+      // Trap-like intrinsics such as llvm.trap and llvm.debugtrap do not have
+      // the nocallback attribute, so the AMDGPU attributor can conservatively
+      // drop all implicitly-known inputs and AGPR allocation information. Make
+      // sure we still infer that no implicit inputs are required and that the
+      // AGPR allocation stays at zero. Trap-like intrinsics may invoke a
+      // function which requires AGPRs, so we need to check if the called
+      // function has the "trap-func-name" attribute.
+      case Intrinsic::trap:
+      case Intrinsic::debugtrap:
+      case Intrinsic::ubsantrap:
+        return CB.hasFnAttr(Attribute::NoCallback) ||
+               !CB.hasFnAttr("trap-func-name");
       default:
         // Some intrinsics may use AGPRs, but if we have a choice, we are not
         // required to use AGPRs.
-
         // Assume !nocallback intrinsics may call a function which requires
         // AGPRs.
         return CB.hasFnAttr(Attribute::NoCallback);

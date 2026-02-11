@@ -172,10 +172,12 @@ constexpr GPUInfo AMDGCNGPUs[] = {
     {{"gfx1151"},   {"gfx1151"}, GK_GFX1151, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1152"},   {"gfx1152"}, GK_GFX1152, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1153"},   {"gfx1153"}, GK_GFX1153, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
+    {{"gfx1170"},   {"gfx1170"}, GK_GFX1170, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1200"},   {"gfx1200"}, GK_GFX1200, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1201"},   {"gfx1201"}, GK_GFX1201, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1250"},   {"gfx1250"}, GK_GFX1250, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK_ALWAYS},
     {{"gfx1251"},   {"gfx1251"}, GK_GFX1251, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK_ALWAYS},
+    {{"gfx1310"},   {"gfx1310"}, GK_GFX1310, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
 
     {{"gfx9-generic"},      {"gfx9-generic"},    GK_GFX9_GENERIC,    FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK},
     {{"gfx10-1-generic"},   {"gfx10-1-generic"}, GK_GFX10_1_GENERIC, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK|FEATURE_WGP},
@@ -328,10 +330,12 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX1151: return {11, 5, 1};
   case GK_GFX1152: return {11, 5, 2};
   case GK_GFX1153: return {11, 5, 3};
+  case GK_GFX1170: return {11, 7, 0};
   case GK_GFX1200: return {12, 0, 0};
   case GK_GFX1201: return {12, 0, 1};
   case GK_GFX1250: return {12, 5, 0};
   case GK_GFX1251: return {12, 5, 1};
+  case GK_GFX1310: return {13, 1, 0};
 
   // Generic targets return the lowest common denominator
   // within their family. That is, the ISA that is the most
@@ -429,6 +433,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
                                  StringMap<bool> &Features) {
   AMDGPU::GPUKind Kind = parseArchAMDGCN(GPU);
   switch (Kind) {
+  case GK_GFX1310:
   case GK_GFX1251:
   case GK_GFX1250:
     Features["ci-insts"] = true;
@@ -512,6 +517,11 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["fp8-conversion-insts"] = true;
     Features["atomic-fmin-fmax-global-f32"] = true;
     break;
+  case GK_GFX1170:
+    // TODO-GFX1170: Update features map for gfx1170
+    Features["dot11-insts"] = true;
+    Features["fp8-conversion-insts"] = true;
+    [[fallthrough]];
   case GK_GFX1153:
   case GK_GFX1152:
   case GK_GFX1151:
