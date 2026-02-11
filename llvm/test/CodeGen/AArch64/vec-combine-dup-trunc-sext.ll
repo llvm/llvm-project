@@ -91,3 +91,19 @@ define <8 x i16> @dup_trunc_sext_v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %x,
   %sel = select <8 x i1> %splat, <8 x i16> %x, <8 x i16> %y
   ret <8 x i16> %sel
 }
+
+define <4 x i32> @negative_arbitrary_input(<4 x i32> %mask, <4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: negative_arbitrary_input:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    dup v0.4h, v0.h[2]
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    shl v0.4s, v0.4s, #31
+; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
+; CHECK-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    ret
+  %trunc = trunc <4 x i32> %mask to <4 x i1>
+  %splat = shufflevector <4 x i1> %trunc, <4 x i1> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
+  %sel = select <4 x i1> %splat, <4 x i32> %x, <4 x i32> %y
+  ret <4 x i32> %sel
+}

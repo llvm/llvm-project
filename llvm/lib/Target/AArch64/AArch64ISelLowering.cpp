@@ -24050,6 +24050,13 @@ static SDValue performSExtDuplaneTruncCombine(SDNode *N, SelectionDAG &DAG) {
   if (SrcVT != DstVT || !SrcVT.isFixedLengthVector())
     return SDValue();
 
+  // Verify that Src is already sign-extended from the truncated bit width.
+  EVT TruncVT = Trunc.getValueType();
+  unsigned SrcBits = SrcVT.getScalarSizeInBits();
+  unsigned TruncBits = TruncVT.getScalarSizeInBits();
+  if (DAG.ComputeNumSignBits(Src) <= SrcBits - TruncBits)
+    return SDValue();
+
   unsigned NewDupOpc;
   switch (SrcVT.getScalarSizeInBits()) {
   case 16:
