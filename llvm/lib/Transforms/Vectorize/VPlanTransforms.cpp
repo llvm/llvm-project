@@ -1220,9 +1220,12 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
 
   VPBuilder Builder(Def);
 
-  // Avoid replacing VPInstructions with underlying value with new
+  // Avoid replacing VPInstructions with underlying values with new
   // VPInstructions. VPInstructions with underlying values should get
   // widened/replicated later.
+  // TODO: We should also not replace non-VPInstructions like VPWidenRecipe with
+  // VPInstructions without underlying values, as those will get skipped during
+  // cost computation.
   bool CanCreateNewRecipe =
       !isa<VPInstruction>(Def) || !Def->getUnderlyingValue();
 
@@ -3400,11 +3403,8 @@ void VPlanTransforms::replaceSymbolicStrides(
     auto *R = cast<VPRecipeBase>(&U);
     if (R->getRegion())
       return true;
-    // For VPlan0 (no VectorLoopRegion yet), allow replacement in the loop body.
-    auto *VectorLoopRegion = Plan.getVectorLoopRegion();
-    if (!VectorLoopRegion)
-      return !isa<VPIRBasicBlock>(R->getParent());
-    return R->getParent() == VectorLoopRegion->getSinglePredecessor();
+    return R->getRegion() ||
+           R->getParent() == Plan.getVectorLoopRegion()->getSinglePredecessor();
   };
   ValueToSCEVMapTy RewriteMap;
   for (const SCEV *Stride : StridesMap.values()) {
