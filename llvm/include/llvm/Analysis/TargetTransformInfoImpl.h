@@ -1065,6 +1065,13 @@ public:
     return DefaultCallPenalty;
   }
 
+  virtual bool
+  shouldCopyAttributeWhenOutliningFrom(const Function *Caller,
+                                       const Attribute &Attr) const {
+    // Copy attributes by default
+    return true;
+  }
+
   virtual bool areTypesABICompatible(const Function *Caller,
                                      const Function *Callee,
                                      ArrayRef<Type *> Types) const {
