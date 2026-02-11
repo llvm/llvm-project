@@ -8449,8 +8449,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
 
   // TODO: IVEndValues are not used yet in the native path, to optimize exit
   // values.
-  // TODO: We can't call runPass on the transform yet, due to verifier
-  // failures.
   DenseMap<VPValue *, VPValue *> IVEndValues;
   RUN_VPLAN_PASS(VPlanTransforms::updateScalarResumePhis, *Plan, IVEndValues);
 
