@@ -197,13 +197,11 @@ Operation *traceToVectorWriteLikeUserOperation(Value v) {
     Operation *user = use.getOwner();
 
     // --- TERMINAL OPS ---
-    if (isa<vector::TransferWriteOp>(user) || isa<vector::StoreOp>(user)) {
+    if (isa<vector::TransferWriteOp>(user) || isa<vector::StoreOp>(user))
       return user;
-    }
 
-    if (isa<vector::ShapeCastOp, vector::ShuffleOp>(user)) {
+    if (isa<vector::ShapeCastOp, vector::ShuffleOp>(user))
       return nullptr;
-    }
 
     // --- SCF YIELD ---
     if (auto yield = dyn_cast<scf::YieldOp>(user)) {
@@ -233,27 +231,23 @@ Operation *traceToVectorWriteLikeUserOperation(Value v) {
   return nullptr;
 }
 
-// TODO: replace all use with the packed value along with contration
-// and for op.
-static void rewriteUses(mlir::Value oldVal, mlir::Value newVal) {
-  for (mlir::OpOperand &use : llvm::make_early_inc_range(oldVal.getUses())) {
-    mlir::Operation *user = use.getOwner();
-
-    if (mlir::isa<mlir::vector::ContractionOp>(user) ||
-        mlir::isa<mlir::scf::ForOp>(user)) {
-      use.set(newVal);
-    }
-  }
-}
-
 // This function packs the accumulator of two flat BF16 vector.contract
 // operations into VNNI packed and are then replaced in their respective
 // contraction ops, enabling post-read layout or packing transformations.
-void shuffleAfterReadLikeOp(mlir::PatternRewriter &rewriter,
-                            mlir::Operation *opA, mlir::Operation *opB,
-                            mlir::vector::ContractionOp contractA,
-                            mlir::vector::ContractionOp contractB,
-                            int64_t nonUnitDimAcc, mlir::VectorType accTy) {
+// TODO: replace all use with the packed value along with contration
+// and for op.
+LogicalResult shuffleAfterReadLikeOp(mlir::PatternRewriter &rewriter,
+                                     mlir::Operation *opA, mlir::Operation *opB,
+                                     mlir::vector::ContractionOp contractA,
+                                     mlir::vector::ContractionOp contractB,
+                                     int64_t nonUnitDimAcc,
+                                     mlir::VectorType accTy) {
+
+  if (!mlir::isa<mlir::vector::TransferReadOp, mlir::vector::LoadOp>(opA) ||
+      !mlir::isa<mlir::vector::TransferReadOp, mlir::vector::LoadOp>(opB)) {
+    return mlir::failure();
+  }
+
   mlir::Operation *insertAfter = opA->isBeforeInBlock(opB) ? opB : opA;
 
   rewriter.setInsertionPointAfter(insertAfter);
@@ -279,8 +273,17 @@ void shuffleAfterReadLikeOp(mlir::PatternRewriter &rewriter,
   auto newAccB =
       mlir::vector::ShapeCastOp::create(rewriter, loc, accTy, shuffleHi);
 
-  rewriteUses(opA->getResult(0), newAccA.getResult());
-  rewriteUses(opB->getResult(0), newAccB.getResult());
+  rewriter.replaceUsesWithIf(
+      opA->getResult(0), newAccA.getResult(), [&](OpOperand &use) {
+        return isa<vector::ContractionOp, scf::ForOp>(use.getOwner());
+      });
+
+  rewriter.replaceUsesWithIf(
+      opB->getResult(0), newAccB.getResult(), [&](OpOperand &use) {
+        return isa<vector::ContractionOp, scf::ForOp>(use.getOwner());
+      });
+
+  return success();
 }
 
 // This function shuffles the vectors written by vector.contract operation
@@ -303,7 +306,7 @@ LogicalResult shuffleBeforeWriteLikeOp(mlir::PatternRewriter &rewriter,
   mlir::Value vecB = getWrittenVector(opB);
 
   if (!vecA || !vecB)
-    return mlir::failure();
+    return failure();
 
   // Decide insertion point and location
   mlir::Operation *insertBefore = opA->isBeforeInBlock(opB) ? opA : opB;
@@ -344,7 +347,7 @@ LogicalResult shuffleBeforeWriteLikeOp(mlir::PatternRewriter &rewriter,
 //  (2) - the defining source memref should be same for nonUnitDim
 //  operation,
 //  (3) - the nonUnit dim offset difference between the
-//  vector.contracts should be 8.
+//  vector.contracts should be 8 or 16.
 bool validatePairVectorContract(vector::ContractionOp contractOp,
                                 vector::ContractionOp pairContOp,
                                 bool rhsHasMultipleNonUnitDims,
@@ -398,7 +401,7 @@ bool validatePairVectorContract(vector::ContractionOp contractOp,
     return shuffleLw.getV1() == shuffleHw.getV1() &&
            shuffleLw.getV2() == shuffleHw.getV2();
 
-  if (!(srcBuff == srcBuffPairContOp))
+  if (srcBuff != srcBuffPairContOp)
     return false;
 
   for (size_t i = 0; i < indexVals.size(); i++) {

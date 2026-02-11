@@ -412,8 +412,13 @@ struct VectorContractBF16ToFMA
       }
 
       // Shuffle the accumulators of the contract operations.
-      shuffleAfterReadLikeOp(rewriter, accReadOp0, accReadOp1, contractOp,
-                             pairContractOp, nonUnitDim, accTy);
+      LogicalResult readShuffle =
+          shuffleAfterReadLikeOp(rewriter, accReadOp0, accReadOp1, contractOp,
+                                 pairContractOp, nonUnitDim, accTy);
+
+      if (failed(readShuffle))
+        return rewriter.notifyMatchFailure(
+            contractOp, "Accumulator read is not by transfer_read or load");
 
       rewriter.setInsertionPoint(contractOp);
 

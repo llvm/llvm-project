@@ -32,15 +32,13 @@ namespace {
 // VNNI layout, already.
 static bool isNonUnitDimOperandShuffled(Value nonUnitDimOperand) {
   if (Operation *defOp = nonUnitDimOperand.getDefiningOp()) {
-    if (isa<vector::ShuffleOp>(defOp)) {
+    if (isa<vector::ShuffleOp>(defOp))
       return true;
-    }
 
     if (isa<vector::ShapeCastOp>(defOp)) {
       Operation *defOpShpCst = defOp->getOperand(0).getDefiningOp();
-      if (isa<vector::ShuffleOp>(defOpShpCst)) {
+      if (isa<vector::ShuffleOp>(defOpShpCst))
         return true;
-      }
     }
   }
 
@@ -331,8 +329,13 @@ struct VectorContractToPackedTypeDotProduct
               contractOp, "The store/write operation of contract operation is "
                           "before the pair contract operation");
         // Shuffle the accumulators of the contract operations.
-        shuffleAfterReadLikeOp(rewriter, accReadOp0, accReadOp1, contractOp,
-                               pairContractOp, nonUnitDimValue, accTy);
+        LogicalResult readShuffle =
+            shuffleAfterReadLikeOp(rewriter, accReadOp0, accReadOp1, contractOp,
+                                   pairContractOp, nonUnitDimValue, accTy);
+
+        if (failed(readShuffle))
+          return rewriter.notifyMatchFailure(
+              contractOp, "Accumulator read is not by transfer_read or load");
 
         // Shuffle the output of contract operations before it's use.
         LogicalResult writeShuffle = shuffleBeforeWriteLikeOp(

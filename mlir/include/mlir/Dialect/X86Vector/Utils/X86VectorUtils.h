@@ -40,26 +40,27 @@ bool validatePairVectorContract(vector::ContractionOp contractOp,
 // Walks backward from a value to find its originating vector read-like op
 // (vector.transfer_read or vector.load), following scf.for iter-args but
 // stopping at layout-transforming ops; returns the read op or nullptr.
-Operation *traceToVectorReadLikeParentOperation(mlir::Value v);
+Operation *traceToVectorReadLikeParentOperation(Value v);
 
 // Recursively traces a value to find a downstream vector write-like op
 // (vector.transfer_write or vector.store), crossing scf.for/yield but
 // stopping at layout-altering ops; returns the first match or nullptr.
-Operation *traceToVectorWriteLikeUserOperation(mlir::Value v);
+Operation *traceToVectorWriteLikeUserOperation(Value v);
 
 // Packs the accumulators of two flat BF16 vector.contraction ops into a
 // VNNI-packed layout and replaces the original accumulators to enable post-read
 // packing transformations.
-void shuffleAfterReadLikeOp(PatternRewriter &rewriter, Operation *op,
-                            Operation *op1, vector::ContractionOp contractOp,
-                            vector::ContractionOp pairContractOp,
-                            int64_t nonUnitDimAcc, VectorType accTy);
+LogicalResult shuffleAfterReadLikeOp(PatternRewriter &rewriter, Operation *opA,
+                                     Operation *opB,
+                                     vector::ContractionOp contractA,
+                                     vector::ContractionOp contractB,
+                                     int64_t nonUnitDimAcc, VectorType accTy);
 
 // Shuffles vectors produced by vector.contraction ops into a flat layout
 // before they are written to memory.
-LogicalResult shuffleBeforeWriteLikeOp(PatternRewriter &rewriter, Operation *op,
-                                       Operation *op1, int64_t nonUnitDimAcc,
-                                       VectorType accTy);
+LogicalResult shuffleBeforeWriteLikeOp(PatternRewriter &rewriter,
+                                       Operation *opA, Operation *opB,
+                                       int64_t nonUnitDimAcc, VectorType accTy);
 
 } // namespace x86vector
 } // namespace mlir
