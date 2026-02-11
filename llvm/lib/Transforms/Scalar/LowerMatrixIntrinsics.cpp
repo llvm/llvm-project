@@ -68,9 +68,10 @@ static cl::opt<unsigned> TileSize(
     "fuse-matrix-tile-size", cl::init(4), cl::Hidden,
     cl::desc(
         "Tile size for matrix instruction fusion using square-shaped tiles."));
-static cl::opt<bool> TileUseLoops("fuse-matrix-use-loops", cl::init(false),
-                                  cl::Hidden,
-                                  cl::desc("Generate loop nest for tiling."));
+static cl::opt<unsigned>
+    TileLoopsThreshold("fuse-matrix-loops-threshold", cl::init(200), cl::Hidden,
+                       cl::desc("Generate loop nests for tiling when expected "
+                                "number of operations exceeds threshold."));
 static cl::opt<bool> ForceFusion(
     "force-fuse-matrix", cl::init(false), cl::Hidden,
     cl::desc("Force matrix instruction fusion even if not profitable."));
@@ -610,6 +611,24 @@ public:
                      double(TTI.getRegisterBitWidth(
                                    TargetTransformInfo::RGK_FixedWidthVector)
                                 .getFixedValue()));
+  }
+
+  /// Estimate the number of native vector operations for a multiply of matrices
+  /// with dimensions \p R x \p M and \p M x \p C. Native ops are computed as
+  /// ceil(ElementCount * ElementBits / RegisterBits).
+  ///
+  /// Native vector ops per operation type (VF = native vector elements):
+  ///   FMAs:    C * ceil(R/VF) * M (one FMA per VF output elements)
+  ///   A loads: ceil(R/VF) * M (A has M columns, ceil(R/VF) native loads each)
+  ///   B loads: ceil(M/VF) * C (B has C columns, ceil(M/VF) native loads each)
+  ///   Stores:  C * ceil(R/VF) (one store per VF output elements)
+  unsigned getNumNativeVectorOps(Type *EltType, unsigned R, unsigned M,
+                                 unsigned C) {
+    unsigned NumFMAs = C * getNumOps(EltType, R) * M;
+    unsigned NumALoads = getNumOps(EltType, R) * M;
+    unsigned NumBLoads = getNumOps(EltType, M) * C;
+    unsigned NumStores = getNumOps(EltType, R) * C;
+    return NumFMAs + NumALoads + NumBLoads + NumStores;
   }
 
   /// Return the set of vectors that a matrix value is lowered to.
@@ -2057,7 +2076,12 @@ public:
     Value *BPtr = getNonAliasingPointer(LoadOp1, Store, MatMul);
     Value *CPtr = Store->getPointerOperand();
 
-    if (TileUseLoops && (R % TileSize == 0 && C % TileSize == 0))
+    // Use loop-based tiling when the number of expected operations exceeds
+    // threshold.
+    unsigned NumOps = getNumNativeVectorOps(EltType, R, M, C);
+    bool UseLoops =
+        (NumOps > TileLoopsThreshold) && R % TileSize == 0 && C % TileSize == 0;
+    if (UseLoops)
       createTiledLoops(MatMul, APtr, LShape, BPtr, RShape, Store);
     else {
       IRBuilder<> Builder(Store);
@@ -2211,7 +2235,7 @@ public:
                                    LoadOp1->getParent() == StoreParent;
       for (unsigned Idx = 0; Idx != LifetimeEnds.size();) {
         IntrinsicInst *End = LifetimeEnds[Idx];
-        auto Inc = make_scope_exit([&Idx]() { Idx++; });
+        llvm::scope_exit Inc([&Idx]() { Idx++; });
         // If the lifetime.end is guaranteed to be before the loads or after the
         // store, it won't interfere with fusion.
         if (DT->dominates(End, LoadOp0) && DT->dominates(End, LoadOp1))

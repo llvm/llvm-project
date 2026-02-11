@@ -352,8 +352,8 @@ static Value *emitCallMaybeConstrainedFPBuiltin(CodeGenFunction &CGF,
 
   if (CGF.Builder.getIsFPConstrained())
     return CGF.Builder.CreateConstrainedFPCall(F, Args);
-  else
-    return CGF.Builder.CreateCall(F, Args);
+
+  return CGF.Builder.CreateCall(F, Args);
 }
 
 static llvm::FixedVectorType *GetNeonType(CodeGenFunction *CGF,
@@ -373,13 +373,11 @@ static llvm::FixedVectorType *GetNeonType(CodeGenFunction *CGF,
   case NeonTypeFlags::BFloat16:
     if (AllowBFloatArgsAndRet)
       return llvm::FixedVectorType::get(CGF->BFloatTy, V1Ty ? 1 : (4 << IsQuad));
-    else
-      return llvm::FixedVectorType::get(CGF->Int16Ty, V1Ty ? 1 : (4 << IsQuad));
+    return llvm::FixedVectorType::get(CGF->Int16Ty, V1Ty ? 1 : (4 << IsQuad));
   case NeonTypeFlags::Float16:
     if (HasFastHalfType)
       return llvm::FixedVectorType::get(CGF->HalfTy, V1Ty ? 1 : (4 << IsQuad));
-    else
-      return llvm::FixedVectorType::get(CGF->Int16Ty, V1Ty ? 1 : (4 << IsQuad));
+    return llvm::FixedVectorType::get(CGF->Int16Ty, V1Ty ? 1 : (4 << IsQuad));
   case NeonTypeFlags::Int32:
     return llvm::FixedVectorType::get(CGF->Int32Ty, V1Ty ? 1 : (2 << IsQuad));
   case NeonTypeFlags::Int64:
@@ -441,8 +439,7 @@ Value *CodeGenFunction::EmitNeonCall(Function *F, SmallVectorImpl<Value*> &Ops,
 
   if (F->isConstrainedFPIntrinsic())
     return Builder.CreateConstrainedFPCall(F, Ops, name);
-  else
-    return Builder.CreateCall(F, Ops, name);
+  return Builder.CreateCall(F, Ops, name);
 }
 
 Value *CodeGenFunction::EmitFP8NeonCall(unsigned IID,
@@ -489,7 +486,7 @@ llvm::Value *CodeGenFunction::EmitFP8NeonFMLACall(
 Value *CodeGenFunction::EmitNeonShiftVector(Value *V, llvm::Type *Ty,
                                             bool neg) {
   int SV = cast<ConstantInt>(V)->getSExtValue();
-  return ConstantInt::get(Ty, neg ? -SV : SV);
+  return ConstantInt::getSigned(Ty, neg ? -SV : SV);
 }
 
 Value *CodeGenFunction::EmitFP8NeonCvtCall(unsigned IID, llvm::Type *Ty0,
@@ -535,8 +532,7 @@ Value *CodeGenFunction::EmitNeonRShiftImm(Value *Vec, Value *Shift,
   Shift = EmitNeonShiftVector(Shift, Ty, false);
   if (usgn)
     return Builder.CreateLShr(Vec, Shift, name);
-  else
-    return Builder.CreateAShr(Vec, Shift, name);
+  return Builder.CreateAShr(Vec, Shift, name);
 }
 
 enum {
@@ -1721,6 +1717,9 @@ Function *CodeGenFunction::LookupNeonLLVMIntrinsic(unsigned IntrinsicID,
   return CGM.getIntrinsic(IntrinsicID, Tys);
 }
 
+//===----------------------------------------------------------------------===//
+//  Emit-helpers
+//===----------------------------------------------------------------------===//
 static Value *EmitCommonNeonSISDBuiltinExpr(
     CodeGenFunction &CGF, const ARMVectorIntrinsicInfo &SISDInfo,
     SmallVectorImpl<Value *> &Ops, const CallExpr *E) {
@@ -2494,13 +2493,15 @@ CodeGenFunction::EmitAArch64CompareBuiltinExpr(Value *Op, llvm::Type *Ty,
     Op = Builder.CreateBitCast(Op, Ty);
   }
 
+  Constant *zero = Constant::getNullValue(Op->getType());
+
   if (CmpInst::isFPPredicate(Pred)) {
     if (Pred == CmpInst::FCMP_OEQ)
-      Op = Builder.CreateFCmp(Pred, Op, Constant::getNullValue(Op->getType()));
+      Op = Builder.CreateFCmp(Pred, Op, zero);
     else
-      Op = Builder.CreateFCmpS(Pred, Op, Constant::getNullValue(Op->getType()));
+      Op = Builder.CreateFCmpS(Pred, Op, zero);
   } else {
-    Op = Builder.CreateICmp(Pred, Op, Constant::getNullValue(Op->getType()));
+    Op = Builder.CreateICmp(Pred, Op, zero);
   }
 
   llvm::Type *ResTy = Ty;
@@ -2658,6 +2659,56 @@ static Value *EmitSpecialRegisterBuiltin(CodeGenFunction &CGF,
   }
 
   return Builder.CreateCall(F, { Metadata, ArgValue });
+}
+
+static Value *EmitRangePrefetchBuiltin(CodeGenFunction &CGF, unsigned BuiltinID,
+                                       const CallExpr *E) {
+  CodeGen::CGBuilderTy &Builder = CGF.Builder;
+  CodeGen::CodeGenModule &CGM = CGF.CGM;
+  SmallVector<llvm::Value *, 4> Ops;
+
+  auto getIntArg = [&](unsigned ArgNo) {
+    Expr::EvalResult Result;
+    if (!E->getArg(ArgNo)->EvaluateAsInt(Result, CGM.getContext()))
+      llvm_unreachable("Expected constant argument to range prefetch.");
+    return Result.Val.getInt().getExtValue();
+  };
+
+  Ops.push_back(CGF.EmitScalarExpr(E->getArg(0))); /*Addr*/
+  Ops.push_back(CGF.EmitScalarExpr(E->getArg(1))); /*Access Kind*/
+  Ops.push_back(CGF.EmitScalarExpr(E->getArg(2))); /*Policy*/
+
+  if (BuiltinID == clang::AArch64::BI__builtin_arm_range_prefetch_x) {
+    auto Length = getIntArg(3);
+    auto Count = getIntArg(4) - 1;
+    auto Stride = getIntArg(5);
+    auto Distance = getIntArg(6);
+
+    // Map ReuseDistance given in bytes to four bits representing decreasing
+    // powers of two in the range 512MiB (0b0001) to 32KiB (0b1111). Values
+    // are rounded up to the nearest power of 2, starting at 32KiB. Any value
+    // over the maximum is represented by 0 (distance not known).
+    if (Distance > 0) {
+      Distance = llvm::Log2_32_Ceil(Distance);
+      if (Distance < 15)
+        Distance = 15;
+      else if (Distance > 29)
+        Distance = 0;
+      else
+        Distance = 30 - Distance;
+    }
+
+    uint64_t Mask22 = (1ULL << 22) - 1;
+    uint64_t Mask16 = (1ULL << 16) - 1;
+    uint64_t Metadata = (Distance << 60) | ((Stride & Mask22) << 38) |
+                        ((Count & Mask16) << 22) | (Length & Mask22);
+
+    Ops.push_back(llvm::ConstantInt::get(Builder.getInt64Ty(), Metadata));
+  } else
+    Ops.push_back(CGF.EmitScalarExpr(E->getArg(3)));
+
+  return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::aarch64_range_prefetch),
+                            Ops);
 }
 
 /// Return true if BuiltinID is an overloaded Neon intrinsic with an extra
@@ -3510,6 +3561,38 @@ static llvm::Value *ARMMVEVectorElementReverse(CGBuilderTy &Builder,
   for (unsigned i = 0; i < Elements; i++)
     Indices.push_back(i ^ Mask);
   return Builder.CreateShuffleVector(V, Indices);
+}
+
+static llvm::Value *ARMMVECreateSIToFP(CGBuilderTy &Builder,
+                                       CodeGenFunction *CGF, llvm::Value *V,
+                                       llvm::Type *Ty) {
+  return Builder.CreateCall(
+      CGF->CGM.getIntrinsic(Intrinsic::arm_mve_vcvt_fp_int, {Ty, V->getType()}),
+      {V, llvm::ConstantInt::get(Builder.getInt32Ty(), 0)});
+}
+
+static llvm::Value *ARMMVECreateUIToFP(CGBuilderTy &Builder,
+                                       CodeGenFunction *CGF, llvm::Value *V,
+                                       llvm::Type *Ty) {
+  return Builder.CreateCall(
+      CGF->CGM.getIntrinsic(Intrinsic::arm_mve_vcvt_fp_int, {Ty, V->getType()}),
+      {V, llvm::ConstantInt::get(Builder.getInt32Ty(), 1)});
+}
+
+static llvm::Value *ARMMVECreateFPToSI(CGBuilderTy &Builder,
+                                       CodeGenFunction *CGF, llvm::Value *V,
+                                       llvm::Type *Ty) {
+  return Builder.CreateCall(
+      CGF->CGM.getIntrinsic(Intrinsic::arm_mve_vcvt_int_fp, {Ty, V->getType()}),
+      {V, llvm::ConstantInt::get(Builder.getInt32Ty(), 0)});
+}
+
+static llvm::Value *ARMMVECreateFPToUI(CGBuilderTy &Builder,
+                                       CodeGenFunction *CGF, llvm::Value *V,
+                                       llvm::Type *Ty) {
+  return Builder.CreateCall(
+      CGF->CGM.getIntrinsic(Intrinsic::arm_mve_vcvt_int_fp, {Ty, V->getType()}),
+      {V, llvm::ConstantInt::get(Builder.getInt32Ty(), 1)});
 }
 
 Value *CodeGenFunction::EmitARMMVEBuiltinExpr(unsigned BuiltinID,
@@ -4569,27 +4652,30 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   if (TypeFlags.isLoad())
     return EmitSVEMaskedLoad(E, Ty, Ops, Builtin->LLVMIntrinsic,
                              TypeFlags.isZExtReturn());
-  else if (TypeFlags.isStore())
+  if (TypeFlags.isStore())
     return EmitSVEMaskedStore(E, Ops, Builtin->LLVMIntrinsic);
-  else if (TypeFlags.isGatherLoad())
+  if (TypeFlags.isGatherLoad())
     return EmitSVEGatherLoad(TypeFlags, Ops, Builtin->LLVMIntrinsic);
-  else if (TypeFlags.isScatterStore())
+  if (TypeFlags.isScatterStore())
     return EmitSVEScatterStore(TypeFlags, Ops, Builtin->LLVMIntrinsic);
-  else if (TypeFlags.isPrefetch())
+  if (TypeFlags.isPrefetch())
     return EmitSVEPrefetchLoad(TypeFlags, Ops, Builtin->LLVMIntrinsic);
-  else if (TypeFlags.isGatherPrefetch())
+  if (TypeFlags.isGatherPrefetch())
     return EmitSVEGatherPrefetch(TypeFlags, Ops, Builtin->LLVMIntrinsic);
-  else if (TypeFlags.isStructLoad())
+  if (TypeFlags.isStructLoad())
     return EmitSVEStructLoad(TypeFlags, Ops, Builtin->LLVMIntrinsic);
-  else if (TypeFlags.isStructStore())
+  if (TypeFlags.isStructStore())
     return EmitSVEStructStore(TypeFlags, Ops, Builtin->LLVMIntrinsic);
-  else if (TypeFlags.isTupleSet() || TypeFlags.isTupleGet())
+  if (TypeFlags.isTupleSet() || TypeFlags.isTupleGet())
     return EmitSVETupleSetOrGet(TypeFlags, Ops);
-  else if (TypeFlags.isTupleCreate())
+  if (TypeFlags.isTupleCreate())
     return EmitSVETupleCreate(TypeFlags, Ty, Ops);
-  else if (TypeFlags.isUndef())
+  if (TypeFlags.isUndef())
     return UndefValue::get(Ty);
-  else if (Builtin->LLVMIntrinsic != 0) {
+
+  // Handle built-ins for which there is a corresponding LLVM Intrinsic.
+  // -------------------------------------------------------------------
+  if (Builtin->LLVMIntrinsic != 0) {
     // Emit set FPMR for intrinsics that require it
     if (TypeFlags.setsFPMR())
       Builder.CreateCall(CGM.getIntrinsic(Intrinsic::aarch64_set_fpmr),
@@ -4948,15 +5034,15 @@ Value *CodeGenFunction::EmitAArch64SMEBuiltinExpr(unsigned BuiltinID,
 
   if (TypeFlags.isLoad() || TypeFlags.isStore())
     return EmitSMELd1St1(TypeFlags, Ops, Builtin->LLVMIntrinsic);
-  else if (TypeFlags.isReadZA() || TypeFlags.isWriteZA())
+  if (TypeFlags.isReadZA() || TypeFlags.isWriteZA())
     return EmitSMEReadWrite(TypeFlags, Ops, Builtin->LLVMIntrinsic);
-  else if (BuiltinID == SME::BI__builtin_sme_svzero_mask_za ||
-           BuiltinID == SME::BI__builtin_sme_svzero_za)
+  if (BuiltinID == SME::BI__builtin_sme_svzero_mask_za ||
+      BuiltinID == SME::BI__builtin_sme_svzero_za)
     return EmitSMEZero(TypeFlags, Ops, Builtin->LLVMIntrinsic);
-  else if (BuiltinID == SME::BI__builtin_sme_svldr_vnum_za ||
-           BuiltinID == SME::BI__builtin_sme_svstr_vnum_za ||
-           BuiltinID == SME::BI__builtin_sme_svldr_za ||
-           BuiltinID == SME::BI__builtin_sme_svstr_za)
+  if (BuiltinID == SME::BI__builtin_sme_svldr_vnum_za ||
+      BuiltinID == SME::BI__builtin_sme_svstr_vnum_za ||
+      BuiltinID == SME::BI__builtin_sme_svldr_za ||
+      BuiltinID == SME::BI__builtin_sme_svstr_za)
     return EmitSMELdrStr(TypeFlags, Ops, Builtin->LLVMIntrinsic);
 
   // Emit set FPMR for intrinsics that require it
@@ -5185,27 +5271,26 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
         ToRet = Builder.CreateStore(Builder.CreateExtractValue(Val, i), Addr);
       }
       return ToRet;
-    } else {
-      // Load 8 i64 words from ValPtr, and store them to the address
-      // via an LLVM intrinsic.
-      SmallVector<llvm::Value *, 9> Args;
-      Args.push_back(MemAddr);
-      for (size_t i = 0; i < 8; i++) {
-        llvm::Value *ValOffsetPtr =
-            Builder.CreateGEP(Int64Ty, ValPtr, Builder.getInt32(i));
-        Address Addr =
-            Address(ValOffsetPtr, Int64Ty, CharUnits::fromQuantity(8));
-        Args.push_back(Builder.CreateLoad(Addr));
-      }
-
-      auto Intr = (BuiltinID == clang::AArch64::BI__builtin_arm_st64b
-                       ? Intrinsic::aarch64_st64b
-                   : BuiltinID == clang::AArch64::BI__builtin_arm_st64bv
-                       ? Intrinsic::aarch64_st64bv
-                       : Intrinsic::aarch64_st64bv0);
-      Function *F = CGM.getIntrinsic(Intr);
-      return Builder.CreateCall(F, Args);
     }
+
+    // Load 8 i64 words from ValPtr, and store them to the address
+    // via an LLVM intrinsic.
+    SmallVector<llvm::Value *, 9> Args;
+    Args.push_back(MemAddr);
+    for (size_t i = 0; i < 8; i++) {
+      llvm::Value *ValOffsetPtr =
+          Builder.CreateGEP(Int64Ty, ValPtr, Builder.getInt32(i));
+      Address Addr = Address(ValOffsetPtr, Int64Ty, CharUnits::fromQuantity(8));
+      Args.push_back(Builder.CreateLoad(Addr));
+    }
+
+    auto Intr = (BuiltinID == clang::AArch64::BI__builtin_arm_st64b
+                     ? Intrinsic::aarch64_st64b
+                 : BuiltinID == clang::AArch64::BI__builtin_arm_st64bv
+                     ? Intrinsic::aarch64_st64bv
+                     : Intrinsic::aarch64_st64bv0);
+    Function *F = CGM.getIntrinsic(Intr);
+    return Builder.CreateCall(F, Args);
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_rndr ||
@@ -5414,6 +5499,10 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(
         CGM.getIntrinsic(Intrinsic::aarch64_mops_memset_tag), {Dst, Val, Size});
   }
+
+  if (BuiltinID == AArch64::BI__builtin_arm_range_prefetch ||
+      BuiltinID == AArch64::BI__builtin_arm_range_prefetch_x)
+    return EmitRangePrefetchBuiltin(*this, BuiltinID, E);
 
   // Memory Tagging Extensions (MTE) Intrinsics
   Intrinsic::ID MTEIntrinsicID = Intrinsic::not_intrinsic;
@@ -6208,6 +6297,10 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Ops[0] = Builder.CreateICmp(P, Ops[0], Ops[1]);
     return Builder.CreateSExt(Ops[0], Int64Ty, "vceqd");
   }
+  case NEON::BI__builtin_neon_vnegd_s64:
+    return Builder.CreateNeg(EmitScalarExpr(E->getArg(0)), "vnegd");
+  case NEON::BI__builtin_neon_vnegh_f16:
+    return Builder.CreateFNeg(EmitScalarExpr(E->getArg(0)), "vnegh");
   case NEON::BI__builtin_neon_vtstd_s64:
   case NEON::BI__builtin_neon_vtstd_u64: {
     Ops.push_back(EmitScalarExpr(E->getArg(1)));
@@ -7079,10 +7172,6 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Value *Result = Builder.CreateFMul(Ops[0], Ops[1]);
     return Builder.CreateBitCast(Result, Ty);
   }
-  case NEON::BI__builtin_neon_vnegd_s64:
-    return Builder.CreateNeg(EmitScalarExpr(E->getArg(0)), "vnegd");
-  case NEON::BI__builtin_neon_vnegh_f16:
-    return Builder.CreateFNeg(EmitScalarExpr(E->getArg(0)), "vnegh");
   case NEON::BI__builtin_neon_vpmaxnm_v:
   case NEON::BI__builtin_neon_vpmaxnmq_v: {
     Int = Intrinsic::aarch64_neon_fmaxnmp;

@@ -531,20 +531,40 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
 }
 
 MCSymbol *BinaryContext::handleExternalBranchTarget(uint64_t Address,
-                                                    BinaryFunction &BF) {
-  if (BF.isInConstantIsland(Address)) {
-    BF.setIgnored();
-    this->outs() << "BOLT-WARNING: ignoring entry point at address 0x"
-                 << Twine::utohexstr(Address)
-                 << " in constant island of function " << BF << '\n';
+                                                    BinaryFunction &Source,
+                                                    BinaryFunction &Target) {
+  const uint64_t Offset = Address - Target.getAddress();
+  assert(Offset < Target.getSize() &&
+         "Address should be inside the referenced function");
+
+  bool IsValid = true;
+  if (Source.NeedBranchValidation) {
+    if (Target.CurrentState == BinaryFunction::State::Disassembled &&
+        !Target.getInstructionAtOffset(Offset)) {
+      this->errs()
+          << "BOLT-WARNING: corrupted control flow detected in function "
+          << Source
+          << ": an external branch/call targets an invalid instruction "
+          << "in function " << Target << " at address 0x"
+          << Twine::utohexstr(Address) << "; ignoring both functions\n";
+      IsValid = false;
+    }
+    if (Target.isInConstantIsland(Address)) {
+      this->errs() << "BOLT-WARNING: ignoring entry point at address 0x"
+                   << Twine::utohexstr(Address)
+                   << " in constant island of function " << Target << '\n';
+      IsValid = false;
+    }
+  }
+
+  if (!IsValid) {
+    Source.NeedBranchValidation = false;
+    Source.setIgnored();
+    Target.setIgnored();
     return nullptr;
   }
 
-  const uint64_t Offset = Address - BF.getAddress();
-  assert(Offset < BF.getSize() &&
-         "Address should be inside the referenced function");
-
-  return Offset ? BF.addEntryPointAtOffset(Offset) : BF.getSymbol();
+  return Offset ? Target.addEntryPointAtOffset(Offset) : Target.getSymbol();
 }
 
 MemoryContentsType BinaryContext::analyzeMemoryAt(uint64_t Address,
@@ -806,7 +826,7 @@ void BinaryContext::populateJumpTables() {
 }
 
 void BinaryContext::skipMarkedFragments() {
-  std::vector<BinaryFunction *> FragmentQueue;
+  BinaryFunctionListType FragmentQueue;
   // Copy the functions to FragmentQueue.
   FragmentQueue.assign(FragmentsToSkip.begin(), FragmentsToSkip.end());
   auto addToWorklist = [&](BinaryFunction *Function) -> void {
@@ -1433,7 +1453,7 @@ void BinaryContext::processInterproceduralReferences() {
 
       // Create an extra entry point if needed. Can also render the target
       // function ignored if the reference is invalid.
-      handleExternalBranchTarget(Address, *TargetFunction);
+      handleExternalBranchTarget(Address, Function, *TargetFunction);
 
       continue;
     }
@@ -1536,38 +1556,25 @@ void BinaryContext::foldFunction(BinaryFunction &ChildBF,
   ChildBF.Aliases.clear();
 
   if (HasRelocations) {
-    // Merge execution counts of ChildBF into those of ParentBF.
-    // Without relocations, we cannot reliably merge profiles as both functions
-    // continue to exist and either one can be executed.
+    // Merge execution counts of ChildBF into those of ParentBF. We require
+    // relocations as without relocations we cannot reliably merge profiles as
+    // both functions continue to exist and either one can be executed.
     ChildBF.mergeProfileDataInto(ParentBF);
 
-    std::shared_lock<llvm::sys::RWMutex> ReadBfsLock(BinaryFunctionsMutex,
-                                                     std::defer_lock);
-    std::unique_lock<llvm::sys::RWMutex> WriteBfsLock(BinaryFunctionsMutex,
-                                                      std::defer_lock);
-    // Remove ChildBF from the global set of functions in relocs mode.
-    ReadBfsLock.lock();
-    auto FI = BinaryFunctions.find(ChildBF.getAddress());
-    ReadBfsLock.unlock();
-
-    assert(FI != BinaryFunctions.end() && "function not found");
-    assert(&ChildBF == &FI->second && "function mismatch");
-
-    WriteBfsLock.lock();
-    ChildBF.clearDisasmState();
-    FI = BinaryFunctions.erase(FI);
-    WriteBfsLock.unlock();
-
-  } else {
-    // In non-relocation mode we keep the function, but rename it.
-    std::string NewName = "__ICF_" + ChildName.str();
-
-    WriteCtxLock.lock();
-    ChildBF.getSymbols().push_back(Ctx->getOrCreateSymbol(NewName));
-    WriteCtxLock.unlock();
-
-    ChildBF.setFolded(&ParentBF);
+    // Clear CFG state to free memory, but keep function in map.
+    // The function is marked as folded and will not be emitted.
+    ChildBF.resetState();
   }
+
+  // Add a new symbol to the function. In relocation mode, this is a
+  // placeholder so that getSymbol() doesn't crash. In non-relocation mode,
+  // this effectively renames the function.
+  WriteCtxLock.lock();
+  ChildBF.getSymbols().push_back(
+      Ctx->getOrCreateSymbol("__ICF_" + ChildName.str()));
+  WriteCtxLock.unlock();
+
+  ChildBF.setFolded(&ParentBF);
 
   ParentBF.setHasFunctionsFoldedInto();
 }
@@ -1695,18 +1702,8 @@ unsigned BinaryContext::addDebugFilenameToUnit(const uint32_t DestCUID,
                                DestCUID, DstUnit->getVersion()));
 }
 
-std::vector<BinaryFunction *> BinaryContext::getSortedFunctions() {
-  std::vector<BinaryFunction *> SortedFunctions(BinaryFunctions.size());
-  llvm::transform(llvm::make_second_range(BinaryFunctions),
-                  SortedFunctions.begin(),
-                  [](BinaryFunction &BF) { return &BF; });
-
-  llvm::stable_sort(SortedFunctions, compareBinaryFunctionByIndex);
-  return SortedFunctions;
-}
-
-std::vector<BinaryFunction *> BinaryContext::getAllBinaryFunctions() {
-  std::vector<BinaryFunction *> AllFunctions;
+BinaryFunctionListType BinaryContext::getAllBinaryFunctions() {
+  BinaryFunctionListType AllFunctions;
   AllFunctions.reserve(BinaryFunctions.size() + InjectedBinaryFunctions.size());
   llvm::transform(llvm::make_second_range(BinaryFunctions),
                   std::back_inserter(AllFunctions),
@@ -1868,6 +1865,9 @@ void BinaryContext::preprocessDebugInfo() {
 
   preprocessDWODebugInfo();
 
+  // Check if required DWO files are missing.
+  uint64_t NumMissingDWOs = 0;
+
   // Populate MCContext with DWARF files from all units.
   StringRef GlobalPrefix = AsmInfo->getPrivateGlobalPrefix();
   for (const std::unique_ptr<DWARFUnit> &CU : DwCtx->compile_units()) {
@@ -1889,19 +1889,23 @@ void BinaryContext::preprocessDebugInfo() {
       std::optional<MD5::MD5Result> Checksum;
       if (LineTable->Prologue.ContentTypes.HasMD5)
         Checksum = LineTable->Prologue.FileNames[0].Checksum;
-      std::optional<const char *> Name =
+      const char *Name =
           dwarf::toString(CU->getUnitDIE().find(dwarf::DW_AT_name), nullptr);
       if (std::optional<uint64_t> DWOID = CU->getDWOId()) {
         auto Iter = DWOCUs.find(*DWOID);
         if (Iter == DWOCUs.end()) {
-          this->errs() << "BOLT-ERROR: DWO CU was not found for " << Name
-                       << '\n';
-          exit(1);
+          const char *DWOName =
+              dwarf::toString(CU->getUnitDIE().find(dwarf::DW_AT_dwo_name),
+                              "<missing DW_AT_dwo_name>");
+          this->errs() << "BOLT-ERROR: unable to load " << DWOName
+                       << " for DWO_id 0x" << Twine::utohexstr(*DWOID) << '\n';
+          NumMissingDWOs++;
+          continue;
         }
         Name = dwarf::toString(
             Iter->second->getUnitDIE().find(dwarf::DW_AT_name), nullptr);
       }
-      BinaryLineTable.setRootFile(CU->getCompilationDir(), *Name, Checksum,
+      BinaryLineTable.setRootFile(CU->getCompilationDir(), Name, Checksum,
                                   std::nullopt);
     }
 
@@ -1936,10 +1940,24 @@ void BinaryContext::preprocessDebugInfo() {
                             DwarfVersion));
     }
   }
+
+  if (NumMissingDWOs) {
+    this->errs() << "BOLT-ERROR: " << NumMissingDWOs
+                 << " required DWO file(s) not found. Unable to update debug"
+                    " info. Use --comp-dir-override to locate the file(s) or"
+                    " --update-debug-sections=0 to remove debug info\n";
+    exit(1);
+  }
 }
 
 bool BinaryContext::shouldEmit(const BinaryFunction &Function) const {
   if (Function.isPseudo())
+    return false;
+
+  // In relocation mode, folded functions should not be emitted - their code
+  // is part of the parent. In non-relocation mode, folded functions are still
+  // emitted at their original location.
+  if (HasRelocations && Function.isFolded())
     return false;
 
   if (opts::processAllFunctions())
@@ -2534,6 +2552,10 @@ BinaryContext::createInjectedBinaryFunction(const std::string &Name,
   BinaryFunction *BF = InjectedBinaryFunctions.back();
   setSymbolToFunctionMap(BF->getSymbol(), BF);
   BF->CurrentState = BinaryFunction::State::CFG;
+
+  if (!getOutputBinaryFunctions().empty())
+    getOutputBinaryFunctions().push_back(BF);
+
   return BF;
 }
 
@@ -2562,6 +2584,10 @@ BinaryContext::createInstructionPatch(uint64_t Address,
   PBF->setOriginSection(&Section.get());
   PBF->addBasicBlock()->addInstructions(Instructions);
   PBF->setIsPatch(true);
+
+  // Patch functions have to be emitted each into their unique section.
+  PBF->setCodeSectionName(
+      BinaryFunction::buildCodeSectionName(PBF->getOneName(), *this));
 
   // Don't create symbol table entry if the name wasn't specified.
   if (Name.str().empty())

@@ -457,6 +457,7 @@ const Loop *SCEVExpander::getRelevantLoop(const SCEV *S) {
   case scTruncate:
   case scZeroExtend:
   case scSignExtend:
+  case scPtrToAddr:
   case scPtrToInt:
   case scAddExpr:
   case scMulExpr:
@@ -1253,6 +1254,22 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
       !SE.DT.dominates(EB, Builder.GetInsertBlock()))
     return nullptr;
 
+  // Helper to check if the diff between S and ExitSCEV is simple enough to
+  // allow reusing the LCSSA phi.
+  auto CanReuse = [&](const SCEV *ExitSCEV) -> const SCEV * {
+    if (isa<SCEVCouldNotCompute>(ExitSCEV))
+      return nullptr;
+    const SCEV *Diff = SE.getMinusSCEV(S, ExitSCEV);
+    const SCEV *Op = Diff;
+    match(Op, m_scev_Add(m_SCEVConstant(), m_SCEV(Op)));
+    match(Op, m_scev_Mul(m_scev_AllOnes(), m_SCEV(Op)));
+    match(Op, m_scev_PtrToAddr(m_SCEV(Op))) ||
+        match(Op, m_scev_PtrToInt(m_SCEV(Op)));
+    if (!isa<SCEVConstant, SCEVUnknown>(Op))
+      return nullptr;
+    return Diff;
+  };
+
   for (auto &PN : EB->phis()) {
     if (!SE.isSCEVable(PN.getType()))
       continue;
@@ -1260,22 +1277,20 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
     if (!isa<SCEVAddRecExpr>(ExitSCEV))
       continue;
     Type *PhiTy = PN.getType();
-    if (STy->isIntegerTy() && PhiTy->isPointerTy()) {
-      ExitSCEV = SE.getPtrToIntExpr(ExitSCEV, STy);
-      if (isa<SCEVCouldNotCompute>(ExitSCEV))
-        continue;
-    } else if (S->getType() != PN.getType()) {
-      continue;
+    const SCEV *Diff = nullptr;
+    if (STy->isIntegerTy() && PhiTy->isPointerTy() &&
+        DL.getAddressType(PhiTy) == STy) {
+      // Prefer ptrtoaddr over ptrtoint.
+      const SCEV *AddrSCEV = SE.getPtrToAddrExpr(ExitSCEV);
+      Diff = CanReuse(AddrSCEV);
+      if (!Diff) {
+        const SCEV *IntSCEV = SE.getPtrToIntExpr(ExitSCEV, STy);
+        Diff = CanReuse(IntSCEV);
+      }
+    } else if (STy == PhiTy) {
+      Diff = CanReuse(ExitSCEV);
     }
-
-    // Check if we can re-use the existing PN, by adjusting it with an expanded
-    // offset, if the offset is simpler.
-    const SCEV *Diff = SE.getMinusSCEV(S, ExitSCEV);
-    const SCEV *Op = Diff;
-    match(Op, m_scev_Add(m_SCEVConstant(), m_SCEV(Op)));
-    match(Op, m_scev_Mul(m_scev_AllOnes(), m_SCEV(Op)));
-    match(Op, m_scev_PtrToInt(m_SCEV(Op)));
-    if (!isa<SCEVConstant, SCEVUnknown>(Op))
+    if (!Diff)
       continue;
 
     assert(Diff->getType()->isIntegerTy() &&
@@ -1285,7 +1300,7 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
     if (PhiTy->isPointerTy()) {
       if (STy->isPointerTy())
         return Builder.CreatePtrAdd(BaseV, DiffV);
-      BaseV = Builder.CreatePtrToInt(BaseV, DiffV->getType());
+      BaseV = Builder.CreatePtrToAddr(BaseV);
     }
     return Builder.CreateAdd(BaseV, DiffV);
   }
@@ -1431,6 +1446,26 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
   // Truncate the result down to the original type, if needed.
   const SCEV *T = SE.getTruncateOrNoop(V, Ty);
   return expand(T);
+}
+
+Value *SCEVExpander::visitPtrToAddrExpr(const SCEVPtrToAddrExpr *S) {
+  Value *V = expand(S->getOperand());
+  Type *Ty = S->getType();
+
+  // ptrtoaddr and ptrtoint produce the same value, so try to reuse either.
+  if (!isa<Constant>(V)) {
+    BasicBlock::iterator BIP = Builder.GetInsertPoint();
+    for (User *U : V->users()) {
+      auto *CI = dyn_cast<CastInst>(U);
+      if (CI && CI->getType() == Ty &&
+          (CI->getOpcode() == CastInst::PtrToAddr ||
+           CI->getOpcode() == CastInst::PtrToInt) &&
+          &*BIP != CI && SE.DT.dominates(CI, &*BIP))
+        return CI;
+    }
+  }
+  return ReuseOrCreateCast(V, Ty, CastInst::PtrToAddr,
+                           GetOptimalInsertionPointForCastOf(V));
 }
 
 Value *SCEVExpander::visitPtrToIntExpr(const SCEVPtrToIntExpr *S) {
@@ -1957,6 +1992,9 @@ template<typename T> static InstructionCost costAndCollectOperands(
   case scConstant:
   case scVScale:
     return 0;
+  case scPtrToAddr:
+    Cost = CastCost(Instruction::PtrToAddr);
+    break;
   case scPtrToInt:
     Cost = CastCost(Instruction::PtrToInt);
     break;
@@ -2080,6 +2118,7 @@ bool SCEVExpander::isHighCostExpansionHelper(
     return Cost > Budget;
   }
   case scTruncate:
+  case scPtrToAddr:
   case scPtrToInt:
   case scZeroExtend:
   case scSignExtend: {
@@ -2332,8 +2371,7 @@ Value *SCEVExpander::fixupLCSSAFormFor(Value *V) {
     ToTy = Type::getInt32Ty(DefI->getContext());
   Instruction *User =
       CastInst::CreateBitOrPointerCast(DefI, ToTy, "tmp.lcssa.user", InsertPt);
-  auto RemoveUserOnExit =
-      make_scope_exit([User]() { User->eraseFromParent(); });
+  llvm::scope_exit RemoveUserOnExit([User]() { User->eraseFromParent(); });
 
   SmallVector<Instruction *, 1> ToUpdate;
   ToUpdate.push_back(DefI);

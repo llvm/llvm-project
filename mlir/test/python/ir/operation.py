@@ -190,8 +190,8 @@ def testBlockArgumentList():
     """,
             ctx,
         )
-        func = module.body.operations[0]
-        entry_block = func.regions[0].blocks[0]
+        func_op = module.body.operations[0]
+        entry_block = func_op.regions[0].blocks[0]
         assert len(entry_block.arguments) == 3
         # CHECK: Argument 0, type i32
         # CHECK: Argument 1, type f64
@@ -206,6 +206,21 @@ def testBlockArgumentList():
         # CHECK: Argument 2, type i24
         for arg in entry_block.arguments:
             print(f"Argument {arg.arg_number}, type {arg.type}")
+
+        # CHECK: Matched Arg 0, type i8
+        # CHECK: Matched Arg 1, type i16
+        # CHECK: Matched Arg 2, type i24
+        match func_op:
+            case func.FuncOp(body=Region(blocks=[Block(arguments=[a0, a1])])):
+                assert False
+            case func.FuncOp(body=Region(blocks=[Block(arguments=[a0, a1, a2, a3])])):
+                assert False
+            case func.FuncOp(body=Region(blocks=[Block(arguments=[a0, a1, a2])])):
+                print(f"Matched Arg 0, type {a0.type}")
+                print(f"Matched Arg 1, type {a1.type}")
+                print(f"Matched Arg 2, type {a2.type}")
+            case _:
+                assert False
 
         # Check that slicing works for block argument lists.
         # CHECK: Argument 1, type i16
@@ -250,14 +265,33 @@ def testOperationOperands():
         return
       }"""
         )
-        func = module.body.operations[0]
-        entry_block = func.regions[0].blocks[0]
+        func_op = module.body.operations[0]
+        entry_block = func_op.regions[0].blocks[0]
         consumer = entry_block.operations[1]
         assert len(consumer.operands) == 2
         # CHECK: Operand 0, type i32
         # CHECK: Operand 1, type i64
         for i, operand in enumerate(consumer.operands):
             print(f"Operand {i}, type {operand.type}")
+
+        match module.body.operations:
+            case [
+                func.FuncOp(
+                    body=Region(
+                        blocks=[
+                            Block(
+                                operations=[
+                                    _,
+                                    OpView(operands=[o1, o2]) as matched_consumer,
+                                    *_,
+                                ],
+                            ),
+                        ],
+                    ),
+                ),
+            ]:
+                print(f"Matched Operand 0, type {o1.type}")
+                print(f"Matched Operand 1, type {o2.type}")
 
 
 # CHECK-LABEL: TEST: testOperationOperandsSlice
@@ -480,6 +514,26 @@ def testOperationResultList():
     for res in call.results:
         print(f"Result {res.result_number}, type {res.type}")
 
+    # CHECK: Matched Result r0, type i32
+    # CHECK: Matched Result r1, type f64
+    # CHECK: Matched Result r2, type index
+    match caller:
+        case func.FuncOp(
+            body=Region(
+                blocks=[
+                    Block(
+                        operations=[OpView(results=[r0, r1, r2]) as matched_call, *_],
+                    ),
+                ],
+            ),
+        ):
+            assert matched_call == call
+            print(f"Matched Result r0, type {r0.type}")
+            print(f"Matched Result r1, type {r1.type}")
+            print(f"Matched Result r2, type {r2.type}")
+        case _:
+            assert False
+
     # CHECK: Result type i32
     # CHECK: Result type f64
     # CHECK: Result type index
@@ -598,6 +652,34 @@ def testOperationAttributes():
     # CHECK: Dict mapping {'dependent': 'text', 'other.attribute': 3.0, 'some.attribute': 1}
     print("Dict mapping", d)
 
+    # Structural pattern matching test using Mapping
+
+    # CHECK: Matched Mapping Attribute 'some.attribute': 1
+    # CHECK: Matched Mapping Attribute 'other.attribute': 3.0
+    # CHECK: Matched Mapping Attribute 'dependent': text
+    match op:
+        case OpView(attributes={"does_not_exist": a0}):
+            assert False
+        case OpView(
+            attributes={
+                "some.attribute": IntegerAttr(value=some_attr_val) as some_attr,
+                "other.attribute": FloatAttr() as other_attr,
+                "dependent": StringAttr() as dep_attr,
+                **other_attributes,
+            }
+        ):
+            print(f"Matched Mapping Attribute 'some.attribute': {some_attr_val}")
+            print(f"Matched Mapping Attribute 'other.attribute': {other_attr.value}")
+            print(f"Matched Mapping Attribute 'dependent': {dep_attr.value}")
+            assert type(other_attributes) == dict
+            assert len(other_attributes) == 0
+            assert some_attr == op.attributes.get("some.attribute")
+            assert other_attr == op.attributes.get("other.attribute", None)
+            assert dep_attr == op.attributes.get("dependent", "Default value")
+        case _:
+            print("Did not match!")
+            assert False
+
     # Check that exceptions are raised as expected.
     try:
         op.attributes["does_not_exist"]
@@ -612,6 +694,41 @@ def testOperationAttributes():
         pass
     else:
         assert False, "expected IndexError on accessing an out-of-bounds attribute"
+
+    # Check that exceptions are raised when `get` is used with non-str arg.
+    try:
+        op.attributes.get(0)
+    except TypeError:
+        pass
+    else:
+        assert False, "expected TypeError using int as key for get()"
+
+    try:
+        op.attributes.get(0, None)
+    except TypeError:
+        pass
+    else:
+        assert False, "expected TypeError using int as key for get()"
+
+    try:
+        op.attributes.get([], None)
+    except TypeError:
+        pass
+    else:
+        assert False, "expected TypeError using list as key for get()"
+
+    try:
+        match op:
+            case OpView(attributes={0: a}):
+                assert False
+    except TypeError:
+        pass
+    else:
+        assert False, "expected TypeError matching OpAttributeMap with int-key "
+
+    # get() does not throw for non existent attributes.
+    assert op.attributes.get("does_not_exist") is None
+    assert op.attributes.get("does_not_exist", "default_value") == "default_value"
 
 
 # CHECK-LABEL: TEST: testOperationPrint
@@ -1206,6 +1323,40 @@ def testOpWalk():
         module.operation.walk(callback)
     except RuntimeError:
         print("Exception raised")
+
+
+# CHECK-LABEL: TEST: testOpReplaceUsesWith
+@run
+def testOpReplaceUsesWith():
+    ctx = Context()
+    ctx.allow_unregistered_dialects = True
+    with Location.unknown(ctx):
+        m = Module.create()
+        i32 = IntegerType.get_signless(32)
+        with InsertionPoint(m.body):
+            value = Operation.create("custom.op1", results=[i32]).results[0]
+            value2 = Operation.create("custom.op2", results=[i32]).results[0]
+            op = Operation.create("custom.op3", operands=[value])
+            op2 = Operation.create("custom.op4", operands=[value])
+            op.replace_uses_of_with(value, value2)
+
+    assert len(list(value.uses)) == 1
+
+    # CHECK: Use owner: "custom.op4"
+    # CHECK: Use operand_number: 0
+    for use in value.uses:
+        assert use.owner in [op2]
+        print(f"Use owner: {use.owner}")
+        print(f"Use operand_number: {use.operand_number}")
+
+    assert len(list(value2.uses)) == 1
+
+    # CHECK: Use owner: "custom.op3"
+    # CHECK: Use operand_number: 0
+    for use in value2.uses:
+        assert use.owner in [op]
+        print(f"Use owner: {use.owner}")
+        print(f"Use operand_number: {use.operand_number}")
 
 
 # CHECK-LABEL: TEST: testGetOwnerConcreteOpview

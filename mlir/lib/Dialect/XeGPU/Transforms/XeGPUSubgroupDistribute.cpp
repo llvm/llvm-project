@@ -14,6 +14,7 @@
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
+#include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/IR/AffineMap.h"
@@ -35,6 +36,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 namespace mlir {
 namespace xegpu {
@@ -62,51 +64,7 @@ namespace {
 /// In certain cases, we may need to favor XeGPU specific distribution patterns
 /// over generic vector distribution patterns. In such cases, we can assign
 /// priorities to patterns.
-static constexpr unsigned regularPatternBenefit = 1;
-static constexpr unsigned highPatternBenefit = 2;
-
-/// Helper function to get  distributed vector type for a source vector type
-/// according to the lane_layout. We simply divide each dimension of tensor
-/// descriptor shape by corresponding lane_layout dimension. If
-/// array_length > 1, that is appended to the front of the ditributed shape.
-/// NOTE: This is the vector type that will be returned by the
-/// gpu.warp_execute_on_lane0 op.
-///
-/// Examples:
-/// | original vector shape | lane_layout | distributed vector shape |
-/// |-----------------------|-------------|--------------------------|
-/// | 32x16                 | [1, 16]     | 32x1                     |
-/// | 32x16                 | [2, 8]      | 16x2                     |
-/// | 2x32x16               | [1, 16]     | 2x32x1                   |
-static FailureOr<VectorType>
-getDistVecTypeBasedOnLaneLayout(xegpu::DistributeLayoutAttr layout,
-                                VectorType originalType) {
-  if (!layout)
-    return failure();
-  assert((isa<xegpu::LayoutAttr>(layout) || isa<xegpu::SliceAttr>(layout)) &&
-         "Expecting a valid layout.");
-  SmallVector<int64_t> effectiveLaneLayout =
-      layout.getEffectiveLaneLayoutAsInt();
-  assert(static_cast<size_t>(originalType.getRank()) >=
-             effectiveLaneLayout.size() &&
-         "Rank of the original vector type should be greater or equal to the "
-         "size of the lane layout to distribute the vector type.");
-  SmallVector<int64_t> distributedShape(originalType.getShape());
-  // Only distribute the last `laneLayout.size()` dimensions. The remaining
-  // dimensions are not distributed.
-  unsigned distributionStart =
-      originalType.getRank() - effectiveLaneLayout.size();
-  for (auto [i, dim] : llvm::enumerate(originalType.getShape())) {
-    if (i < distributionStart)
-      continue;
-
-    // Check if the dimension can be distributed evenly.
-    if (dim % effectiveLaneLayout[i - distributionStart] != 0)
-      return failure();
-    distributedShape[i] = dim / effectiveLaneLayout[i - distributionStart];
-  }
-  return VectorType::get(distributedShape, originalType.getElementType());
-}
+enum PatternHierarchy : unsigned { Regular = 1, AboveRegular = 2 };
 
 /// Helper function to resolve types if the distributed type out of
 /// gpu.warp_execute_on_lane0 is different from the expected xegpu SIMT type.
@@ -144,34 +102,6 @@ static Value resolveDistributedTy(Value orig, T expected,
   }
   llvm_unreachable("Unsupported type for reconciliation");
   return orig;
-}
-
-/// Helper function to check if the layout is packed. Layout is packed if it is
-/// 2D and lane_data[0] != 1 (data packed from col dimension).
-/// TODO: Move to target info.
-static bool requirePacked(const xegpu::LayoutAttr layout) {
-  if (!layout)
-    return false;
-  auto laneData = layout.getEffectiveLaneDataAsInt();
-  if (laneData.size() != 2)
-    return false;
-  return laneData[0] != 1;
-}
-
-/// Helper function to check if the layout requires a transpose effect.
-static bool requireTranspose(const xegpu::LayoutAttr layout,
-                             const xegpu::uArch::uArch *uArch) {
-  // Return false for unsupported targets.
-  // TODO: Add more support or move to target info.
-  if (uArch->getName().equals_insensitive("pvc") &&
-      uArch->getName().equals_insensitive("bmg"))
-    return false;
-  if (!layout)
-    return false;
-  auto laneLayout = layout.getEffectiveLaneLayoutAsInt();
-  if (laneLayout.size() != 2)
-    return false;
-  return laneLayout[0] == uArch->getSubgroupSize() && laneLayout[1] == 1;
 }
 
 /// Given a vector type and its distributed vector type, return the list of
@@ -401,8 +331,8 @@ struct StoreNdDistribution final : public gpu::WarpDistributionPattern {
                                          "the store op must have offsets");
     SmallVector<Value> offsetsAsValues =
         vector::getAsValues(rewriter, storeOp.getLoc(), offsets);
-    SmallVector<Type> offsetTypes = llvm::to_vector(
-        llvm::map_range(offsetsAsValues, [](Value v) { return v.getType(); }));
+    SmallVector<Type> offsetTypes = llvm::map_to_vector(
+        offsetsAsValues, [](Value v) { return v.getType(); });
     xegpu::TensorDescType tensorDescTy = storeOp.getTensorDescType();
     xegpu::LayoutAttr layout = tensorDescTy.getLayoutAttr();
     if (!layout)
@@ -410,7 +340,7 @@ struct StoreNdDistribution final : public gpu::WarpDistributionPattern {
           storeOp, "the source tensor descriptor lacks layout attribute");
 
     FailureOr<VectorType> distributedTypeByWarpOpOrFailure =
-        getDistVecTypeBasedOnLaneLayout(layout, storeOp.getValueType());
+        xegpu::getDistVecTypeBasedOnLaneLayout(layout, storeOp.getValueType());
     if (failed(distributedTypeByWarpOpOrFailure))
       return rewriter.notifyMatchFailure(storeOp,
                                          "Failed to distribute the type");
@@ -532,8 +462,8 @@ struct LoadNdDistribution final : public gpu::WarpDistributionPattern {
                                          "the load op must have offsets");
     SmallVector<Value> offsetsAsValues =
         vector::getAsValues(rewriter, loadOp.getLoc(), offsets);
-    SmallVector<Type> offsetTypes = llvm::to_vector(
-        llvm::map_range(offsetsAsValues, [](Value v) { return v.getType(); }));
+    SmallVector<Type> offsetTypes = llvm::map_to_vector(
+        offsetsAsValues, [](Value v) { return v.getType(); });
 
     xegpu::TensorDescType tensorDescTy = loadOp.getTensorDescType();
     xegpu::LayoutAttr layout = tensorDescTy.getLayoutAttr();
@@ -576,9 +506,9 @@ struct LoadNdDistribution final : public gpu::WarpDistributionPattern {
         newLoadOperands, loadOp->getAttrs());
     xegpu::removeLayoutAttrs(newLoadOp);
     // Set the packed attribute if the layout requires it.
-    newLoadOp.setPacked(requirePacked(layout));
+    newLoadOp.setPacked(xegpu::requirePacked(layout));
     // Set the transpose attribute if the layout requires it.
-    if (requireTranspose(layout, uArch))
+    if (xegpu::requireTranspose(layout, uArch))
       newLoadOp.setTranspose(
           DenseI64ArrayAttr::get(rewriter.getContext(), {1, 0}));
     Value distributedVal = newWarpOp.getResult(operandIdx);
@@ -637,16 +567,14 @@ struct DpasDistribution final : public gpu::WarpDistributionPattern {
 
     auto dpasOp = operand->get().getDefiningOp<xegpu::DpasOp>();
     unsigned operandIdx = operand->getOperandNumber();
-    std::string layoutAName = xegpu::getLayoutName(dpasOp->getOpOperand(0));
-    std::string layoutBName = xegpu::getLayoutName(dpasOp->getOpOperand(1));
-    std::string layoutCName = xegpu::getLayoutName(dpasOp->getOpResult(0));
 
     xegpu::LayoutAttr layoutA =
-        dpasOp->getAttrOfType<xegpu::LayoutAttr>(layoutAName);
+        dyn_cast<xegpu::LayoutAttr>(dpasOp.getLayoutAAttr());
     xegpu::LayoutAttr layoutB =
-        dpasOp->getAttrOfType<xegpu::LayoutAttr>(layoutBName);
+        dyn_cast<xegpu::LayoutAttr>(dpasOp.getLayoutBAttr());
     xegpu::LayoutAttr layoutOut =
-        dpasOp->getAttrOfType<xegpu::LayoutAttr>(layoutCName);
+        dyn_cast<xegpu::LayoutAttr>(dpasOp.getLayoutCdAttr());
+
     if (!layoutA || !layoutB || !layoutOut)
       return rewriter.notifyMatchFailure(
           dpasOp,
@@ -658,6 +586,7 @@ struct DpasDistribution final : public gpu::WarpDistributionPattern {
         getDistVecTypeBasedOnLaneLayout(layoutB, dpasOp.getRhsType());
     FailureOr<VectorType> distResultTypeByWarpOpOrFailure =
         getDistVecTypeBasedOnLaneLayout(layoutOut, dpasOp.getResultType());
+
     if (failed(distLhsTypeByWarpOpOrFailure) ||
         failed(distRhsTypeByWarpOpOrFailure) ||
         failed(distResultTypeByWarpOpOrFailure))
@@ -686,6 +615,7 @@ struct DpasDistribution final : public gpu::WarpDistributionPattern {
         xegpu::getDistributedVectorType(dpasOp.getRhsType(), layoutB);
     FailureOr<VectorType> expectedDistResultTyOrFailure =
         xegpu::getDistributedVectorType(dpasOp.getResultType(), layoutOut);
+
     if (failed(expectedDistLhsTyOrFailure) ||
         failed(expectedDistRhsTyOrFailure) ||
         failed(expectedDistResultTyOrFailure))
@@ -768,8 +698,8 @@ struct PrefetchNdDistribution final : public gpu::WarpDistributionPattern {
                                          "the prefetch op must have offsets");
     SmallVector<Value> offsetsAsValues =
         vector::getAsValues(rewriter, prefetchOp.getLoc(), offsets);
-    SmallVector<Type> offsetTypes = llvm::to_vector(
-        llvm::map_range(offsetsAsValues, [](Value v) { return v.getType(); }));
+    SmallVector<Type> offsetTypes = llvm::map_to_vector(
+        offsetsAsValues, [](Value v) { return v.getType(); });
 
     xegpu::LayoutAttr layout = prefetchOp.getTensorDescType().getLayoutAttr();
     if (!layout)
@@ -793,9 +723,10 @@ struct PrefetchNdDistribution final : public gpu::WarpDistributionPattern {
     // Collect offsets.
     for (size_t i = 1; i < newRetIndices.size(); ++i)
       newPrefetchOperands.push_back(newWarpOp.getResult(newRetIndices[i]));
-    xegpu::PrefetchNdOp::create(rewriter, newWarpOp.getLoc(), TypeRange{},
-                                newPrefetchOperands, prefetchOp->getAttrs());
-    xegpu::removeLayoutAttrs(prefetchOp);
+    Operation *newPrefetchOp = xegpu::PrefetchNdOp::create(
+        rewriter, newWarpOp.getLoc(), TypeRange{}, newPrefetchOperands,
+        prefetchOp->getAttrs());
+    xegpu::removeLayoutAttrs(newPrefetchOp);
     rewriter.eraseOp(prefetchOp);
     return success();
   }
@@ -870,18 +801,21 @@ struct StoreDistribution final : public gpu::WarpDistributionPattern {
           storeScatterOp, "Expected at most 2D result at SG level");
 
     std::string layoutPayloadName =
-        xegpu::getLayoutName(storeScatterOp->getOpOperand(0));
+        xegpu::getTemporaryLayoutName(storeScatterOp->getOpOperand(0));
     std::string layoutOffsetsName =
-        xegpu::getLayoutName(storeScatterOp->getOpOperand(2));
+        xegpu::getTemporaryLayoutName(storeScatterOp->getOpOperand(2));
     std::string layoutMaskName =
-        xegpu::getLayoutName(storeScatterOp->getOpOperand(3));
+        xegpu::getTemporaryLayoutName(storeScatterOp->getOpOperand(3));
 
-    xegpu::LayoutAttr layoutPayload =
-        storeScatterOp->getAttrOfType<xegpu::LayoutAttr>(layoutPayloadName);
-    xegpu::LayoutAttr layoutOffsets =
-        storeScatterOp->getAttrOfType<xegpu::LayoutAttr>(layoutOffsetsName);
-    xegpu::LayoutAttr layoutMask =
-        storeScatterOp->getAttrOfType<xegpu::LayoutAttr>(layoutMaskName);
+    xegpu::DistributeLayoutAttr layoutPayload =
+        storeScatterOp->getAttrOfType<xegpu::DistributeLayoutAttr>(
+            layoutPayloadName);
+    xegpu::DistributeLayoutAttr layoutOffsets =
+        storeScatterOp->getAttrOfType<xegpu::DistributeLayoutAttr>(
+            layoutOffsetsName);
+    xegpu::DistributeLayoutAttr layoutMask =
+        storeScatterOp->getAttrOfType<xegpu::DistributeLayoutAttr>(
+            layoutMaskName);
 
     FailureOr<VectorType> distStoreVecByWarpOpOrFailure =
         getDistVecTypeBasedOnLaneLayout(layoutPayload, storeVecTy);
@@ -995,8 +929,8 @@ struct LoadMatrixDistribution final : public gpu::WarpDistributionPattern {
     const unsigned offsetsStartIdx = operands.size();
     operands.append(offsetsAsValues);
 
-    SmallVector<Type> operandTypes = llvm::to_vector(
-        llvm::map_range(operands, [](Value v) { return v.getType(); }));
+    SmallVector<Type> operandTypes =
+        llvm::map_to_vector(operands, [](Value v) { return v.getType(); });
 
     SmallVector<size_t> newRetIndices;
     gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
@@ -1070,8 +1004,8 @@ struct StoreMatrixDistribution final : public gpu::WarpDistributionPattern {
     const unsigned offsetsStartIdx = operands.size();
     operands.append(offsetsAsValues);
 
-    SmallVector<Type> operandTypes = llvm::to_vector(
-        llvm::map_range(operands, [](Value v) { return v.getType(); }));
+    SmallVector<Type> operandTypes =
+        llvm::map_to_vector(operands, [](Value v) { return v.getType(); });
     operandTypes[0] = *distPayloadByWarpOpOrFailure;
 
     SmallVector<size_t> newRetIndices;
@@ -1153,9 +1087,9 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
                                          "Expected 1D offsets and mask vector");
     // Assume offset and mask producers will be distributed as well.
     std::string layoutOffsetsName =
-        xegpu::getLayoutName(loadGatherOp->getOpOperand(1));
+        xegpu::getTemporaryLayoutName(loadGatherOp->getOpOperand(1));
     std::string layoutMaskName =
-        xegpu::getLayoutName(loadGatherOp->getOpOperand(2));
+        xegpu::getTemporaryLayoutName(loadGatherOp->getOpOperand(2));
 
     xegpu::LayoutAttr layoutOffsets =
         loadGatherOp->getAttrOfType<xegpu::LayoutAttr>(layoutOffsetsName);
@@ -1206,6 +1140,72 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
   }
 };
 
+// Sink SG-uniform ops. An op is uniform if none
+// of its operands/results has a distribution layout attribute.
+// Non-uniform vectors are handled by dedicated patterns.
+// This pattern must have a higher priority than vector dialect distribution
+// patterns, because a distributable shape may be logically intended as
+// uniform (i.e., no layout), so we want to omit its distribution.
+struct SinkUniformOps final : public gpu::WarpDistributionPattern {
+  using gpu::WarpDistributionPattern::WarpDistributionPattern;
+  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
+                                PatternRewriter &rewriter) const override {
+    // Take the last op
+    Operation *warpRegionPreYieldOp = warpOp.getTerminator()->getPrevNode();
+    // Any ops with nested regions must be handled carefully in dedicated
+    // patterns.
+    if (!warpRegionPreYieldOp || warpRegionPreYieldOp->getNumRegions())
+      return failure();
+    int operandIdx = -1;
+    if (warpRegionPreYieldOp->getNumResults()) {
+      OpOperand *operand = getWarpResult(
+          warpOp, [&](Operation *op) { return warpRegionPreYieldOp == op; });
+      if (!operand)
+        return failure();
+      operandIdx = operand->getOperandNumber();
+      if (warpRegionPreYieldOp->getResult(0).getType() !=
+          warpOp.getResult(operandIdx).getType())
+        return rewriter.notifyMatchFailure(warpOp,
+                                           "The op result is not uniform.");
+    }
+
+    // The op must have no layout-based operands or results.
+    bool uniformValuesOnly =
+        llvm::all_of(warpRegionPreYieldOp->getResults(), [](Value v) {
+          return !xegpu::getDistributeLayoutAttr(v);
+        });
+    uniformValuesOnly &=
+        llvm::all_of(warpRegionPreYieldOp->getOpOperands(), [](OpOperand &opr) {
+          return !xegpu::getDistributeLayoutAttr(opr);
+        });
+    if (!uniformValuesOnly)
+      return rewriter.notifyMatchFailure(warpOp,
+                                         "Some values are not uniform.");
+    SmallVector<size_t> newRetIndices;
+    SmallVector<Value> operands =
+        llvm::to_vector_of<Value>(warpRegionPreYieldOp->getOperands());
+    SmallVector<Type> operandTypes =
+        llvm::to_vector_of<Type>(warpRegionPreYieldOp->getOperandTypes());
+    gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+        rewriter, warpOp, operands, operandTypes, newRetIndices);
+
+    rewriter.setInsertionPointAfter(newWarpOp);
+    IRMapping operandMapper;
+    for (auto [oldOperandIdx, newOperandIdx] : llvm::enumerate(newRetIndices))
+      operandMapper.map(warpRegionPreYieldOp->getOperand(oldOperandIdx),
+                        newWarpOp->getResult(newOperandIdx));
+    Operation *clonedOp = rewriter.clone(*warpRegionPreYieldOp, operandMapper);
+    if (!clonedOp->getNumResults())
+      rewriter.eraseOp(warpRegionPreYieldOp);
+    else {
+      assert(operandIdx != -1 && "Expected a warp result for the operation");
+      rewriter.replaceAllUsesWith(newWarpOp.getResult(operandIdx),
+                                  clonedOp->getResult(0));
+    }
+    return success();
+  }
+};
+
 /// Helper to rewrite a 2D VectorMultiReductionOp into a sequence of 1D
 /// VectorReductionOps. We also insert layouts for the newly created ops.
 static Value lowerToVectorReductions(TypedValue<VectorType> src,
@@ -1225,8 +1225,8 @@ static Value lowerToVectorReductions(TypedValue<VectorType> src,
       rewriter, loc, acc.getType(),
       DenseElementsAttr::get(acc.getType(), zeroAttr));
   // Reduction result should have the same layout as the accumulator.
-  xegpu::setDistributeLayoutAttr(cast<OpResult>(reductionResult),
-                                 xegpu::getDistributeLayoutAttr(acc));
+  xegpu::setTemporaryLayout(cast<OpResult>(reductionResult),
+                            xegpu::getTemporaryLayout(dyn_cast<OpResult>(acc)));
   // For each slice of the source, extract the slice vector, do a reduction
   // and, insert the reduced value back to the result vector.
   for (int i = 0; i < nSlices; ++i) {
@@ -1241,20 +1241,24 @@ static Value lowerToVectorReductions(TypedValue<VectorType> src,
     vector::ExtractStridedSliceOp extractOp =
         vector::ExtractStridedSliceOp::create(rewriter, loc, src, sliceOffsets,
                                               sliceSizes, {1, 1});
+
     int64_t nSliceElements = extractOp.getResult().getType().getNumElements();
+
     vector::ShapeCastOp slice = vector::ShapeCastOp::create(
         rewriter, loc,
         VectorType::get({nSliceElements}, sourceType.getElementType()),
         extractOp.getResult());
+
     // Shape cast is currently handled in xegpu side. So layouts must be
     // retained during lowering. Shape cast output has the same layout as the
     // accumulator. Shape cast source has the same layout as the original
     // reduction source.
     // TODO: other ops generated here may also need layout attributes.
-    xegpu::setDistributeLayoutAttr(slice->getOpOperand(0),
-                                   xegpu::getDistributeLayoutAttr(src));
-    xegpu::setDistributeLayoutAttr(slice->getOpResult(0),
-                                   xegpu::getDistributeLayoutAttr(acc));
+    auto srcLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(src));
+    auto accLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(acc));
+
+    xegpu::setTemporaryLayout(slice->getOpOperand(0), srcLayout);
+    xegpu::setTemporaryLayout(slice->getOpResult(0), accLayout);
     // Extract and reduction results in scalars, so no result layout is needed.
     Value accExtract = vector::ExtractOp::create(rewriter, loc, acc, i);
     Value reduction = vector::ReductionOp::create(
@@ -1347,7 +1351,7 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
         cast<VectorType>(warpOp.getResult(operandIdx).getType());
     VectorType resultType = cast<VectorType>(reductionOp.getType());
     xegpu::DistributeLayoutAttr sourceLayout =
-        xegpu::getDistributeLayoutAttr(reductionOp.getSource());
+        xegpu::getTemporaryLayout(reductionOp->getOpOperand(0));
 
     FailureOr<VectorType> sourceDistTypeOrFailure =
         getDistVecTypeBasedOnLaneLayout(sourceLayout, sourceType);
@@ -1424,6 +1428,167 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
   }
 };
 
+/// This pattern distributes the `vector.broadcast` operation across lanes in a
+/// warp. The pattern supports three use cases:
+///
+/// 1) Broadcast a low-rank vector to high-rank vector: The low-rank input
+/// vector
+///    must have a slice layout of the result. If the distributed source and
+///    target vector types are identical, this lowers to a no-op; otherwise, it
+///    remains a broadcast but operates on distributed vectors.
+///
+/// 2) Broadcast a same-rank vector with identical layouts for source and
+/// target:
+///    The source vector must have unit dimensions, and lane_data must be unit
+///    size for those unit dims. This always lowers to a no-op.
+///
+/// 3) Broadcast a scalar with no layout: This always lowers to a broadcast from
+///    scalar to distributed result type.
+///
+/// Example 1 (lowering to a broadcast with distributed types):
+/// ```
+/// %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<8x1xf32>) {
+///   %0 = "some_def"() {layout_result_0 =
+///     #xegpu.slice<#xegpu.layout<lane_layout = [1, 32], lane_data = [1, 1]>,
+///     dims = [0]> } : () -> (vector<32xf32>)
+///   %2 = vector.broadcast %0 {layout_result_0 =
+///     #xegpu.layout<lane_layout = [1, 32], lane_data = [1, 1]>}
+///     : vector<32xf32> to vector<8x32xf32>
+///     gpu.yield %1 : vector<8x32xf32>
+/// }
+/// ```
+/// is lowered to:
+/// ```
+/// %r:1 = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<1xf32>) {
+///   %0 = "some_def"() {layout_result_0 =
+///     #xegpu.slice<#xegpu.layout<lane_layout = [1, 32], lane_data = [1, 1]>,
+///     dims = [0]> } : () -> (vector<32xf32>)
+///   gpu.yield %0 : vector<32xf32>
+/// }
+/// %2 = vector.broadcast %r#0 : vector<1xf32> to vector<8x1xf32>
+///
+/// Example 2 (no-op):
+/// ```
+/// %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<8x32xf32>) {
+///   %0 = "some_def"() {layout_result_0 =
+///     #xegpu.slice<#xegpu.layout<lane_layout = [1, 32], lane_data = [1, 1]>,
+///     dims = [1]> } : () -> (vector<8xf32>)
+///   %1 = vector.shape_cast %0
+///     {layout_result_0 = #xegpu.layout<lane_layout = [1, 32], lane_data = [1,
+///      1]>}: vector<8xf32> to vector<8x1xf32>
+///   %2 = vector.broadcast %1
+///     {layout_result_0 = #xegpu.layout<lane_layout = [1, 32], lane_data = [1,
+///     1]>}: vector<8x1xf32> to vector<8x32xf32>
+///   gpu.yield %1 : vector<8x32xf32>
+/// }
+/// ```
+/// is lowered to:
+/// ```
+/// %r:1 = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<8x1xf32>) {
+///   %0 = "some_def"() {layout_result_0 =
+///     #xegpu.slice<#xegpu.layout<lane_layout = [1, 32], lane_data = [1, 1]>,
+///     dims = [1]> } : () -> (vector<8xf32>)
+///   %1 = vector.shape_cast %0
+///     {layout_result_0 = #xegpu.layout<lane_layout = [1, 32], lane_data = [1,
+///     1]>}: vector<8xf32> to vector<8x1xf32>
+///   gpu.yield %1 : vector<8x1xf32>
+/// }
+/// // The broadcast is implicit through layout transformation (no-op)
+///  "some_use"(%r#0)
+/// ```
+struct VectorBroadcastDistribution : public gpu::WarpDistributionPattern {
+  using gpu::WarpDistributionPattern::WarpDistributionPattern;
+  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
+                                PatternRewriter &rewriter) const override {
+    OpOperand *yieldOperand =
+        getWarpResult(warpOp, llvm::IsaPred<vector::BroadcastOp>);
+    if (!yieldOperand)
+      return failure();
+    auto broadcastOp =
+        cast<vector::BroadcastOp>(yieldOperand->get().getDefiningOp());
+    unsigned operandIdx = yieldOperand->getOperandNumber();
+
+    VectorType sourceType = dyn_cast<VectorType>(broadcastOp.getSourceType());
+    VectorType destType =
+        dyn_cast<VectorType>(broadcastOp.getResult().getType());
+
+    xegpu::DistributeLayoutAttr sourceLayout =
+        xegpu::getTemporaryLayout(broadcastOp->getOpOperand(0));
+    xegpu::DistributeLayoutAttr resultLayout =
+        xegpu::getTemporaryLayout(dyn_cast<OpResult>(broadcastOp.getResult()));
+
+    FailureOr<VectorType> sourceDistType;
+    Type sourceElemOrDistType;
+    if (sourceType) {
+
+      // Case 1 and 2: source is a vector type.
+      int64_t rankDiff = destType.getRank() - sourceType.getRank();
+      if (rankDiff > 0) {
+        // Case 1: source is lower-rank than result.
+        bool isSliceOf = sourceLayout.isSliceOf(resultLayout);
+        if (!isSliceOf)
+          return rewriter.notifyMatchFailure(
+              warpOp,
+              "Broadcast input layout must be a slice of result layout.");
+      }
+      // case 2: source and result have same rank
+      if (rankDiff == 0) {
+        auto broadcastUnitDimsSet = broadcastOp.computeBroadcastedUnitDims();
+        SmallVector<int64_t> broadcastUnitDims(broadcastUnitDimsSet.begin(),
+                                               broadcastUnitDimsSet.end());
+        bool isEqualTo = sourceLayout.isEqualTo(resultLayout);
+        if (!isEqualTo)
+          return rewriter.notifyMatchFailure(
+              warpOp, "For same-rank broadcast, source must be identical to "
+                      "adjusted result layouts with unit dims.");
+        resultLayout = resultLayout.setUnitDimData(broadcastUnitDims);
+        sourceLayout = sourceLayout.setUnitDimLayout(broadcastUnitDims);
+      }
+
+      sourceDistType =
+          getDistVecTypeBasedOnLaneLayout(sourceLayout, sourceType);
+      if (failed(sourceDistType)) {
+        return rewriter.notifyMatchFailure(
+            warpOp, "Failed to distribute the source vector type.");
+      }
+      sourceElemOrDistType = sourceDistType.value();
+
+    } else {
+      // Case 3: source is a scalar type.
+      if (sourceLayout) {
+        return rewriter.notifyMatchFailure(
+            warpOp, "Broadcast from scalar must not have a layout attribute.");
+      }
+      sourceElemOrDistType = broadcastOp.getSourceType();
+    }
+    FailureOr<VectorType> destDistType =
+        getDistVecTypeBasedOnLaneLayout(resultLayout, destType);
+    if (failed(destDistType)) {
+      return rewriter.notifyMatchFailure(
+          warpOp, "Failed to distribute the dest vector type.");
+    }
+
+    SmallVector<size_t> newRetIndices;
+    auto newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+        rewriter, warpOp, {broadcastOp.getSource()}, sourceElemOrDistType,
+        newRetIndices);
+
+    Value distributedSource = newWarpOp.getResult(newRetIndices[0]);
+
+    Value newBroadcast = distributedSource;
+
+    if (sourceElemOrDistType != destDistType.value()) {
+      rewriter.setInsertionPointAfter(newWarpOp);
+      newBroadcast =
+          vector::BroadcastOp::create(rewriter, newWarpOp.getLoc(),
+                                      destDistType.value(), distributedSource);
+    }
+
+    rewriter.replaceAllUsesWith(newWarpOp.getResult(operandIdx), newBroadcast);
+    return success();
+  }
+};
+
 /// Distribute a `vector.shape_cast` op feeding into yield op of an enclosing
 /// `gpu.warp_execute_on_lane_0` region.
 struct VectorShapeCastDistribution : public gpu::WarpDistributionPattern {
@@ -1440,26 +1605,13 @@ struct VectorShapeCastDistribution : public gpu::WarpDistributionPattern {
     auto resultDistTy =
         cast<VectorType>(warpOp.getResult(operandNumber).getType());
     xegpu::DistributeLayoutAttr sourceLayout =
-        xegpu::getDistributeLayoutAttr(shapeCastOp->getOpOperand(0));
+        xegpu::getTemporaryLayout(shapeCastOp->getOpOperand(0));
     xegpu::DistributeLayoutAttr resultLayout =
-        xegpu::getDistributeLayoutAttr(shapeCastOp.getResult());
+        xegpu::getTemporaryLayout(dyn_cast<OpResult>(shapeCastOp.getResult()));
     if (!sourceLayout || !resultLayout)
       return rewriter.notifyMatchFailure(
           warpOp,
           "the source or result of shape_cast op lacks distribution layout");
-
-    // For rank reducing or increasing shape_cast ops, the lower rank layout
-    // must be a slice of higher rank layout.
-    int64_t sourceRank = shapeCastOp.getSourceVectorType().getRank();
-    int64_t resultRank = shapeCastOp.getResultVectorType().getRank();
-    if (sourceRank < resultRank && !sourceLayout.isSliceOf(resultLayout))
-      return rewriter.notifyMatchFailure(
-          warpOp, "shape_cast is rank reducing but source layout is not a "
-                  "slice of result layout");
-    if (sourceRank > resultRank && !resultLayout.isSliceOf(sourceLayout))
-      return rewriter.notifyMatchFailure(
-          warpOp, "shape_cast is rank increasing but result layout is not a "
-                  "slice of source layout");
 
     FailureOr<VectorType> sourceDistTypeOrFailure =
         getDistVecTypeBasedOnLaneLayout(sourceLayout,
@@ -1514,6 +1666,19 @@ struct VectorExtractStridedSliceDistribution
         extractOp.getSizes(), [](Attribute attr) { return attr; });
     SmallVector<Attribute> updatedOffsets = llvm::map_to_vector(
         extractOp.getOffsets(), [](Attribute attr) { return attr; });
+    SmallVector<Attribute> updatedStrides = llvm::map_to_vector(
+        extractOp.getStrides(), [](Attribute attr) { return attr; });
+    // If the provided sizes, offsets, strides are less than the rank, pad them
+    // with full sizes, zero offsets, and unit strides. This makes it easier to
+    // adjust them later.
+    int64_t sourceRank = extractOp.getSourceVectorType().getRank();
+    for (int64_t i = extractOp.getSizes().size(); i < sourceRank; ++i) {
+      updatedSizes.push_back(rewriter.getI64IntegerAttr(
+          extractOp.getSourceVectorType().getDimSize(i)));
+      updatedOffsets.push_back(rewriter.getI64IntegerAttr(0));
+      updatedStrides.push_back(
+          rewriter.getI64IntegerAttr(1)); // stride is always 1.
+    }
     // If the result is distributed, it must be distributed in exactly one
     // dimension. In this case, we adjust the sourceDistType, distributedSizes
     // and distributedOffsets accordingly.
@@ -1524,8 +1689,7 @@ struct VectorExtractStridedSliceDistribution
       int64_t distributedDim = distributedDims[0];
       int sourceDistrDimSize =
           extractOp.getSourceVectorType().getShape()[distributedDim];
-      auto sourceLayout =
-          xegpu::getDistributeLayoutAttr(extractOp->getOpOperand(0));
+      auto sourceLayout = xegpu::getTemporaryLayout(extractOp->getOpOperand(0));
       if (!sourceLayout || sourceLayout.getEffectiveLaneLayoutAsInt().empty())
         return rewriter.notifyMatchFailure(
             warpOp, "the source of extract_strided_slice op lacks distribution "
@@ -1549,7 +1713,7 @@ struct VectorExtractStridedSliceDistribution
       // The offsets in the distributed dimention must be a multiple of subgroup
       // size.
       int64_t distrDimOffset =
-          cast<IntegerAttr>(extractOp.getOffsets()[distributedDim]).getInt();
+          cast<IntegerAttr>(updatedOffsets[distributedDim]).getInt();
       if (distrDimOffset % subgroupSize != 0)
         return rewriter.notifyMatchFailure(
             warpOp, "Offset along distributed dimension "
@@ -1578,7 +1742,7 @@ struct VectorExtractStridedSliceDistribution
         rewriter, extractOp.getLoc(), distributedType, source,
         ArrayAttr::get(rewriter.getContext(), updatedOffsets),
         ArrayAttr::get(rewriter.getContext(), updatedSizes),
-        extractOp.getStrides());
+        ArrayAttr::get(rewriter.getContext(), updatedStrides));
     rewriter.replaceAllUsesWith(newWarpOp.getResult(operandIdx), newExtractOp);
     return success();
   }
@@ -1593,8 +1757,11 @@ struct VectorInsertStridedSliceDistribution
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    OpOperand *operand =
-        getWarpResult(warpOp, llvm::IsaPred<vector::InsertStridedSliceOp>);
+    OpOperand *operand = getWarpResult(warpOp, [&](Operation *op) {
+      // Check if the InsertStridedSliceOp is the last op before yield op
+      return llvm::IsaPred<vector::InsertStridedSliceOp>(op) &&
+             warpOp.getTerminator()->getPrevNode() == op;
+    });
     if (!operand)
       return failure();
     unsigned int operandNumber = operand->getOperandNumber();
@@ -1635,10 +1802,8 @@ struct VectorInsertStridedSliceDistribution
             "rank) dims of dest vector");
       int64_t srcDistrDimSize = srcType.getDimSize(sourceDistributedDim);
       // Obtain the source and dest layouts.
-      auto destLayout =
-          xegpu::getDistributeLayoutAttr(insertOp->getOpOperand(1));
-      auto sourceLayout =
-          xegpu::getDistributeLayoutAttr(insertOp->getOpOperand(0));
+      auto destLayout = xegpu::getTemporaryLayout(insertOp->getOpOperand(1));
+      auto sourceLayout = xegpu::getTemporaryLayout(insertOp->getOpOperand(0));
       if (!destLayout || !sourceLayout ||
           destLayout.getEffectiveLaneLayoutAsInt().empty() ||
           sourceLayout.getEffectiveLaneLayoutAsInt().empty())
@@ -1729,8 +1894,8 @@ struct MemrefExtractAlignedPointerAsIndexDistribution final
     auto newExtractOp = memref::ExtractAlignedPointerAsIndexOp::create(
         rewriter, newWarpOp.getLoc(), extractOp.getType(),
         newWarpOp.getResult(newRetIndices[0]));
-    Value distributedVal = newWarpOp.getResult(operandIdx);
-    rewriter.replaceAllUsesWith(distributedVal, newExtractOp.getResult());
+    Value resultVal = newWarpOp.getResult(operandIdx);
+    rewriter.replaceAllUsesWith(resultVal, newExtractOp.getResult());
     return success();
   }
 };
@@ -1753,7 +1918,7 @@ struct VectorBitcastDistribution final : public gpu::WarpDistributionPattern {
     unsigned operandIdx = operand->getOperandNumber();
     VectorType distributedSourceType =
         getDistVecTypeBasedOnLaneLayout(
-            xegpu::getDistributeLayoutAttr(bitcastOp.getSource()),
+            xegpu::getTemporaryLayout(bitcastOp->getOpOperand(0)),
             bitcastOp.getSourceVectorType())
             .value_or(VectorType());
     if (!distributedSourceType)
@@ -1796,9 +1961,9 @@ struct VectorTransposeDistribution final : public gpu::WarpDistributionPattern {
     auto transposeOp = operand->get().getDefiningOp<vector::TransposeOp>();
     unsigned operandIdx = operand->getOperandNumber();
     xegpu::DistributeLayoutAttr sourceLayout =
-        xegpu::getDistributeLayoutAttr(transposeOp.getVector());
+        xegpu::getTemporaryLayout(transposeOp->getOpOperand(0));
     xegpu::DistributeLayoutAttr resultLayout =
-        xegpu::getDistributeLayoutAttr(transposeOp.getResult());
+        xegpu::getTemporaryLayout(transposeOp->getOpResult(0));
     if (!sourceLayout || !resultLayout)
       return rewriter.notifyMatchFailure(
           transposeOp,
@@ -1860,14 +2025,14 @@ void xegpu::populateXeGPUSubgroupDistributePatterns(
                StoreMatrixDistribution,
                MemrefExtractAlignedPointerAsIndexDistribution>(
       patterns.getContext(),
-      /*pattern benefit=*/regularPatternBenefit);
+      /*pattern benefit=*/PatternHierarchy::Regular);
   // For following patterns, we need to override the regular vector distribution
   // patterns. Therefore, assign higher benefit.
   patterns
       .add<VectorShapeCastDistribution, VectorExtractStridedSliceDistribution,
-           VectorInsertStridedSliceDistribution>(
-          patterns.getContext(),
-          /*pattern benefit=*/highPatternBenefit);
+           VectorInsertStridedSliceDistribution, VectorBroadcastDistribution,
+           SinkUniformOps>(patterns.getContext(),
+                           /*pattern benefit=*/PatternHierarchy::AboveRegular);
 }
 
 void xegpu::populateXeGPUMoveFuncBodyToWarpOpPatterns(
@@ -1881,24 +2046,11 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
   // 1) It is assumed that there are no layout conflicts.
   // 2) Any existing layout attributes attached to the operands are ignored.
   Operation *op = getOperation();
-  op->walk([&](Operation *op) {
-    for (OpOperand &operand : op->getOpOperands()) {
-      // Layouts are needed for vector type only.
-      if (!isa<VectorType>(operand.get().getType()))
-        continue;
-      if (isa<xegpu::LoadMatrixOp, xegpu::StoreMatrixOp>(op))
-        continue;
+  if (!xegpu::recoverTemporaryLayouts(op)) {
+    signalPassFailure();
+    return;
+  }
 
-      auto layout = xegpu::getDistributeLayoutAttr(operand.get());
-      if (!layout) {
-        op->emitError("Could not find layout attribute for operand ")
-            << operand.getOperandNumber() << " of operation " << op->getName();
-        signalPassFailure();
-        return;
-      }
-      xegpu::setDistributeLayoutAttr(operand, layout);
-    }
-  });
   // Step 2: Move all operations of a GPU function inside
   // gpu.warp_execute_on_lane_0 operation.
   {
@@ -1931,10 +2083,9 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
       return AffineMap::get(val.getContext());
     // Get the layout of the vector type.
     xegpu::DistributeLayoutAttr layout = xegpu::getDistributeLayoutAttr(val);
-    // If no layout is specified, that means no distribution.
+    // If no layout is specified, assume uniform case (no distribution).
     if (!layout)
-      return AffineMap::getMultiDimMapWithTargets(vecRank, {},
-                                                  val.getContext());
+      return AffineMap::get(val.getContext());
     // Expecting vector and layout rank to match.
     assert(layout.getRank() == vecRank &&
            "Expecting vector and layout rank to match");
@@ -1970,11 +2121,11 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
 
   vector::populateDistributeReduction(
       patterns, warpReduction,
-      /*pattern benefit=*/regularPatternBenefit);
+      /*pattern benefit=*/PatternHierarchy::Regular);
 
   vector::populatePropagateWarpVectorDistributionPatterns(
       patterns, distributionFn, shuffleFn,
-      /*pattern benefit=*/regularPatternBenefit);
+      /*pattern benefit=*/PatternHierarchy::Regular);
   if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
     signalPassFailure();
     return;

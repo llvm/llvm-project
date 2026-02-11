@@ -2,6 +2,154 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve2 < %s | FileCheck %s
 
 ;
+; SHSUB
+;
+
+define <vscale x 16 x i8> @shsub_i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: shsub_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shsub z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    ret
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.shsub.u.nxv16i8(<vscale x 16 x i1> %pg,
+                                                                   <vscale x 16 x i8> %a,
+                                                                   <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %out
+}
+
+define <vscale x 8 x i16> @shsub_i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: shsub_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shsub z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.shsub.u.nxv8i16(<vscale x 8 x i1> %pg,
+                                                                   <vscale x 8 x i16> %a,
+                                                                   <vscale x 8 x i16> %b)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @shsub_i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: shsub_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shsub z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.shsub.u.nxv4i32(<vscale x 4 x i1> %pg,
+                                                                   <vscale x 4 x i32> %a,
+                                                                   <vscale x 4 x i32> %b)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @shsub_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: shsub_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shsub z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.shsub.u.nxv2i64(<vscale x 2 x i1> %pg,
+                                                                   <vscale x 2 x i64> %a,
+                                                                   <vscale x 2 x i64> %b)
+  ret <vscale x 2 x i64> %out
+}
+
+;
+; SHSUB (swapped operands)
+;
+
+define <vscale x 16 x i8> @shsub_i8_swapped_operands(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: shsub_i8_swapped_operands:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shsubr z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    ret
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.shsub.u.nxv16i8(<vscale x 16 x i1> %pg,
+                                                                   <vscale x 16 x i8> %b,
+                                                                   <vscale x 16 x i8> %a)
+  ret <vscale x 16 x i8> %out
+}
+
+define <vscale x 8 x i16> @shsub_i16_swapped_operands(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: shsub_i16_swapped_operands:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shsubr z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.shsub.u.nxv8i16(<vscale x 8 x i1> %pg,
+                                                                   <vscale x 8 x i16> %b,
+                                                                   <vscale x 8 x i16> %a)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @shsub_i32_swapped_operands(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: shsub_i32_swapped_operands:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shsubr z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.shsub.u.nxv4i32(<vscale x 4 x i1> %pg,
+                                                                   <vscale x 4 x i32> %b,
+                                                                   <vscale x 4 x i32> %a)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @shsub_i64_swapped_operands(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: shsub_i64_swapped_operands:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shsubr z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.shsub.u.nxv2i64(<vscale x 2 x i1> %pg,
+                                                                   <vscale x 2 x i64> %b,
+                                                                   <vscale x 2 x i64> %a)
+  ret <vscale x 2 x i64> %out
+}
+
+;
+; SHSUB (movprfx)
+;
+
+define <vscale x 16 x i8> @shsub_i8_movprfx(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: shsub_i8_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    shsub z0.b, p0/m, z0.b, z2.b
+; CHECK-NEXT:    ret
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.shsub.u.nxv16i8(<vscale x 16 x i1> %pg,
+                                                                   <vscale x 16 x i8> %a,
+                                                                   <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %out
+}
+
+define <vscale x 8 x i16> @shsub_i16_movprfx(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %unused, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: shsub_i16_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    shsub z0.h, p0/m, z0.h, z2.h
+; CHECK-NEXT:    ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.shsub.u.nxv8i16(<vscale x 8 x i1> %pg,
+                                                                   <vscale x 8 x i16> %a,
+                                                                   <vscale x 8 x i16> %b)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @shsub_i32_movprfx(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %unused, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: shsub_i32_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    shsub z0.s, p0/m, z0.s, z2.s
+; CHECK-NEXT:    ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.shsub.u.nxv4i32(<vscale x 4 x i1> %pg,
+                                                                   <vscale x 4 x i32> %a,
+                                                                   <vscale x 4 x i32> %b)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @shsub_i64_movprfx(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %unused, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: shsub_i64_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    shsub z0.d, p0/m, z0.d, z2.d
+; CHECK-NEXT:    ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.shsub.u.nxv2i64(<vscale x 2 x i1> %pg,
+                                                                   <vscale x 2 x i64> %a,
+                                                                   <vscale x 2 x i64> %b)
+  ret <vscale x 2 x i64> %out
+}
+
+;
 ; SQRSHL
 ;
 
@@ -636,6 +784,154 @@ define <vscale x 2 x i64> @srshl_i64_movprfx(<vscale x 2 x i1> %pg, <vscale x 2 
 ; CHECK-NEXT:    srshl z0.d, p0/m, z0.d, z2.d
 ; CHECK-NEXT:    ret
   %out = call <vscale x 2 x i64> @llvm.aarch64.sve.srshl.u.nxv2i64(<vscale x 2 x i1> %pg,
+                                                                   <vscale x 2 x i64> %a,
+                                                                   <vscale x 2 x i64> %b)
+  ret <vscale x 2 x i64> %out
+}
+
+;
+; UHSUB
+;
+
+define <vscale x 16 x i8> @uhsub_i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: uhsub_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uhsub z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    ret
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.uhsub.u.nxv16i8(<vscale x 16 x i1> %pg,
+                                                                   <vscale x 16 x i8> %a,
+                                                                   <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %out
+}
+
+define <vscale x 8 x i16> @uhsub_i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: uhsub_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uhsub z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.uhsub.u.nxv8i16(<vscale x 8 x i1> %pg,
+                                                                   <vscale x 8 x i16> %a,
+                                                                   <vscale x 8 x i16> %b)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @uhsub_i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: uhsub_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uhsub z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.uhsub.u.nxv4i32(<vscale x 4 x i1> %pg,
+                                                                   <vscale x 4 x i32> %a,
+                                                                   <vscale x 4 x i32> %b)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @uhsub_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: uhsub_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uhsub z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.uhsub.u.nxv2i64(<vscale x 2 x i1> %pg,
+                                                                   <vscale x 2 x i64> %a,
+                                                                   <vscale x 2 x i64> %b)
+  ret <vscale x 2 x i64> %out
+}
+
+;
+; UHSUB (swapped operands)
+;
+
+define <vscale x 16 x i8> @uhsub_i8_swapped_operands(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: uhsub_i8_swapped_operands:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uhsubr z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    ret
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.uhsub.u.nxv16i8(<vscale x 16 x i1> %pg,
+                                                                   <vscale x 16 x i8> %b,
+                                                                   <vscale x 16 x i8> %a)
+  ret <vscale x 16 x i8> %out
+}
+
+define <vscale x 8 x i16> @uhsub_i16_swapped_operands(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: uhsub_i16_swapped_operands:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uhsubr z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.uhsub.u.nxv8i16(<vscale x 8 x i1> %pg,
+                                                                   <vscale x 8 x i16> %b,
+                                                                   <vscale x 8 x i16> %a)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @uhsub_i32_swapped_operands(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: uhsub_i32_swapped_operands:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uhsubr z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.uhsub.u.nxv4i32(<vscale x 4 x i1> %pg,
+                                                                   <vscale x 4 x i32> %b,
+                                                                   <vscale x 4 x i32> %a)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @uhsub_i64_swapped_operands(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: uhsub_i64_swapped_operands:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uhsubr z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.uhsub.u.nxv2i64(<vscale x 2 x i1> %pg,
+                                                                   <vscale x 2 x i64> %b,
+                                                                   <vscale x 2 x i64> %a)
+  ret <vscale x 2 x i64> %out
+}
+
+;
+; UHSUB (movprfx)
+;
+
+define <vscale x 16 x i8> @uhsub_i8_movprfx(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: uhsub_i8_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    uhsub z0.b, p0/m, z0.b, z2.b
+; CHECK-NEXT:    ret
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.uhsub.u.nxv16i8(<vscale x 16 x i1> %pg,
+                                                                   <vscale x 16 x i8> %a,
+                                                                   <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %out
+}
+
+define <vscale x 8 x i16> @uhsub_i16_movprfx(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %unused, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: uhsub_i16_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    uhsub z0.h, p0/m, z0.h, z2.h
+; CHECK-NEXT:    ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.uhsub.u.nxv8i16(<vscale x 8 x i1> %pg,
+                                                                   <vscale x 8 x i16> %a,
+                                                                   <vscale x 8 x i16> %b)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @uhsub_i32_movprfx(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %unused, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: uhsub_i32_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    uhsub z0.s, p0/m, z0.s, z2.s
+; CHECK-NEXT:    ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.uhsub.u.nxv4i32(<vscale x 4 x i1> %pg,
+                                                                   <vscale x 4 x i32> %a,
+                                                                   <vscale x 4 x i32> %b)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @uhsub_i64_movprfx(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %unused, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: uhsub_i64_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    uhsub z0.d, p0/m, z0.d, z2.d
+; CHECK-NEXT:    ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.uhsub.u.nxv2i64(<vscale x 2 x i1> %pg,
                                                                    <vscale x 2 x i64> %a,
                                                                    <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %out

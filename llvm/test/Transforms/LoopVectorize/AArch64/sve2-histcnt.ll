@@ -394,8 +394,7 @@ define void @simple_histogram_user_interleave(ptr noalias %buckets, ptr readonly
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[INDICES]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[DOTIDX:%.*]] = shl nuw nsw i64 [[TMP15]], 4
+; CHECK-NEXT:    [[DOTIDX:%.*]] = shl nuw nsw i64 [[TMP4]], 4
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP8]], i64 [[DOTIDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x i32>, ptr [[TMP17]], align 4
@@ -603,8 +602,8 @@ define void @simple_histogram_rtdepcheck(ptr noalias %buckets, ptr %array, ptr %
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[ARRAY1:%.*]] = ptrtoint ptr [[ARRAY]] to i64
-; CHECK-NEXT:    [[INDICES2:%.*]] = ptrtoint ptr [[INDICES]] to i64
+; CHECK-NEXT:    [[ARRAY1:%.*]] = ptrtoaddr ptr [[ARRAY]] to i64
+; CHECK-NEXT:    [[INDICES2:%.*]] = ptrtoaddr ptr [[INDICES]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP3]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[ARRAY1]], [[INDICES2]]

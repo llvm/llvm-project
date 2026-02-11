@@ -39,6 +39,9 @@
 // in all versions of the library are available.
 #if !_LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS
 
+#  define _LIBCPP_INTRODUCED_IN_LLVM_22 1
+#  define _LIBCPP_INTRODUCED_IN_LLVM_22_ATTRIBUTE /* nothing */
+
 #  define _LIBCPP_INTRODUCED_IN_LLVM_21 1
 #  define _LIBCPP_INTRODUCED_IN_LLVM_21_ATTRIBUTE /* nothing */
 
@@ -66,6 +69,11 @@
 #elif defined(__APPLE__)
 
 // clang-format off
+
+// LLVM 22
+// TODO: Fill this in
+#  define _LIBCPP_INTRODUCED_IN_LLVM_22 0
+#  define _LIBCPP_INTRODUCED_IN_LLVM_22_ATTRIBUTE __attribute__((unavailable))
 
 // LLVM 21
 // TODO: Fill this in
@@ -188,6 +196,14 @@
     __attribute__((availability(bridgeos, strict, introduced = 6.0)))                                             \
     __attribute__((availability(driverkit, strict, introduced = 21.3)))
 
+#  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)  && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__  < 101300) || \
+      (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 150000) || \
+      (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__)     && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__     < 150000) || \
+      (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__)  && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__  < 70000)  || \
+      (defined(__ENVIRONMENT_DRIVERKIT_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_DRIVERKIT_VERSION_MIN_REQUIRED__ < 190000)
+#  warning "The selected platform is no longer supported by libc++."
+#  endif
+
 #else
 
 // ...New vendors can add availability markup here...
@@ -196,6 +212,13 @@
       "It looks like you're trying to enable vendor availability markup, but you haven't defined the corresponding macros yet!"
 
 #endif
+
+// This controls the availability of new implementation of std::atomic's
+// wait, notify_one and notify_all. The new implementation uses
+// the native atomic wait/notify operations on platforms that support them
+// based on the size of the atomic type, instead of the type itself.
+#define _LIBCPP_AVAILABILITY_HAS_NEW_SYNC _LIBCPP_INTRODUCED_IN_LLVM_22
+#define _LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_INTRODUCED_IN_LLVM_22_ATTRIBUTE
 
 // Enable additional explicit instantiations of iostreams components. This
 // reduces the number of weak definitions generated in programs that use
@@ -272,13 +295,11 @@
 #define _LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE _LIBCPP_INTRODUCED_IN_LLVM_21
 // No attribute, since we've had bad_function_call::what() in the headers before
 
-// Define availability attributes that depend on both
-// _LIBCPP_HAS_EXCEPTIONS and _LIBCPP_HAS_RTTI.
-#if !_LIBCPP_HAS_EXCEPTIONS || !_LIBCPP_HAS_RTTI
-#  undef _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
-#  undef _LIBCPP_AVAILABILITY_INIT_PRIMARY_EXCEPTION
-#  define _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION 0
-#  define _LIBCPP_AVAILABILITY_INIT_PRIMARY_EXCEPTION
-#endif
+// Only define a bunch of symbols in the dylib if we need to be compatible with LLVM 7 headers or older
+#  if defined(_LIBCPP_BUILDING_LIBRARY) && _LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION < 8
+#    define _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8
+#  else
+#    define _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 _LIBCPP_HIDE_FROM_ABI
+#  endif
 
 #endif // _LIBCPP___CONFIGURATION_AVAILABILITY_H

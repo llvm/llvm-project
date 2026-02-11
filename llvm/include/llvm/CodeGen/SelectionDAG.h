@@ -231,6 +231,9 @@ class SelectionDAG {
   const SelectionDAGTargetInfo *TSI = nullptr;
   const TargetLowering *TLI = nullptr;
   const TargetLibraryInfo *LibInfo = nullptr;
+  const RTLIB::RuntimeLibcallsInfo *RuntimeLibcallInfo = nullptr;
+  const LibcallLoweringInfo *Libcalls = nullptr;
+
   const FunctionVarLocs *FnVarLocs = nullptr;
   MachineFunction *MF;
   MachineFunctionAnalysisManager *MFAM = nullptr;
@@ -435,10 +438,18 @@ private:
 
   template <typename SDNodeTy>
   static uint16_t getSyntheticNodeSubclassData(unsigned Opc, unsigned Order,
-                                                SDVTList VTs, EVT MemoryVT,
-                                                MachineMemOperand *MMO) {
+                                               SDVTList VTs, EVT MemoryVT,
+                                               MachineMemOperand *MMO) {
     return SDNodeTy(Opc, Order, DebugLoc(), VTs, MemoryVT, MMO)
-         .getRawSubclassData();
+        .getRawSubclassData();
+  }
+
+  template <typename SDNodeTy>
+  static uint16_t getSyntheticNodeSubclassData(
+      unsigned Opc, unsigned Order, SDVTList VTs, EVT MemoryVT,
+      PointerUnion<MachineMemOperand *, MachineMemOperand **> MemRefs) {
+    return SDNodeTy(Opc, Order, DebugLoc(), VTs, MemoryVT, MemRefs)
+        .getRawSubclassData();
   }
 
   void createOperands(SDNode *Node, ArrayRef<SDValue> Vals);
@@ -469,16 +480,19 @@ public:
   /// Prepare this SelectionDAG to process code in the given MachineFunction.
   LLVM_ABI void init(MachineFunction &NewMF, OptimizationRemarkEmitter &NewORE,
                      Pass *PassPtr, const TargetLibraryInfo *LibraryInfo,
+                     const LibcallLoweringInfo *LibcallsInfo,
                      UniformityInfo *UA, ProfileSummaryInfo *PSIin,
                      BlockFrequencyInfo *BFIin, MachineModuleInfo &MMI,
                      FunctionVarLocs const *FnVarLocs);
 
   void init(MachineFunction &NewMF, OptimizationRemarkEmitter &NewORE,
             MachineFunctionAnalysisManager &AM,
-            const TargetLibraryInfo *LibraryInfo, UniformityInfo *UA,
+            const TargetLibraryInfo *LibraryInfo,
+            const LibcallLoweringInfo *LibcallsInfo, UniformityInfo *UA,
             ProfileSummaryInfo *PSIin, BlockFrequencyInfo *BFIin,
             MachineModuleInfo &MMI, FunctionVarLocs const *FnVarLocs) {
-    init(NewMF, NewORE, nullptr, LibraryInfo, UA, PSIin, BFIin, MMI, FnVarLocs);
+    init(NewMF, NewORE, nullptr, LibraryInfo, LibcallsInfo, UA, PSIin, BFIin,
+         MMI, FnVarLocs);
     MFAM = &AM;
   }
 
@@ -503,6 +517,13 @@ public:
   }
   const TargetLowering &getTargetLoweringInfo() const { return *TLI; }
   const TargetLibraryInfo &getLibInfo() const { return *LibInfo; }
+
+  const LibcallLoweringInfo &getLibcalls() const { return *Libcalls; }
+
+  const RTLIB::RuntimeLibcallsInfo &getRuntimeLibcallInfo() const {
+    return *RuntimeLibcallInfo;
+  }
+
   const SelectionDAGTargetInfo &getSelectionDAGInfo() const { return *TSI; }
   const UniformityInfo *getUniformityInfo() const { return UA; }
   /// Returns the result of the AssignmentTrackingAnalysis pass if it's
@@ -796,6 +817,9 @@ public:
   LLVM_ABI SDValue getExternalSymbol(RTLIB::LibcallImpl LCImpl, EVT VT);
   LLVM_ABI SDValue getTargetExternalSymbol(const char *Sym, EVT VT,
                                            unsigned TargetFlags = 0);
+  LLVM_ABI SDValue getTargetExternalSymbol(RTLIB::LibcallImpl LCImpl, EVT VT,
+                                           unsigned TargetFlags = 0);
+
   LLVM_ABI SDValue getMCSymbol(MCSymbol *Sym, EVT VT);
 
   LLVM_ABI SDValue getValueType(EVT);
@@ -1275,10 +1299,28 @@ public:
                                                  SDValue Size,
                                                  const CallInst *CI);
 
+  /// Lower a strcmp operation into a target library call and return the
+  /// resulting chain and call result as SelectionDAG SDValues.
+  LLVM_ABI std::pair<SDValue, SDValue> getStrcmp(SDValue Chain, const SDLoc &dl,
+                                                 SDValue S0, SDValue S1,
+                                                 const CallInst *CI);
+
+  /// Lower a strcpy operation into a target library call and return the
+  /// resulting chain and call result as SelectionDAG SDValues.
+  LLVM_ABI std::pair<SDValue, SDValue> getStrcpy(SDValue Chain, const SDLoc &dl,
+                                                 SDValue Dst, SDValue Src,
+                                                 const CallInst *CI);
+
   /// Lower a strlen operation into a target library call and return the
   /// resulting chain and call result as SelectionDAG SDValues.
   LLVM_ABI std::pair<SDValue, SDValue>
   getStrlen(SDValue Chain, const SDLoc &dl, SDValue Src, const CallInst *CI);
+
+  /// Lower a strstr operation into a target library call and return the
+  /// resulting chain and call result as SelectionDAG SDValues.
+  LLVM_ABI std::pair<SDValue, SDValue> getStrstr(SDValue Chain, const SDLoc &dl,
+                                                 SDValue S0, SDValue S1,
+                                                 const CallInst *CI);
 
   /* \p CI if not null is the memset call being lowered.
    * \p OverrideTailCall is an optional parameter that can be used to override
@@ -1331,7 +1373,7 @@ public:
   /// ISD::CondCode instead of an SDValue.
   SDValue getSetCC(const SDLoc &DL, EVT VT, SDValue LHS, SDValue RHS,
                    ISD::CondCode Cond, SDValue Chain = SDValue(),
-                   bool IsSignaling = false) {
+                   bool IsSignaling = false, SDNodeFlags Flags = {}) {
     assert(LHS.getValueType().isVector() == RHS.getValueType().isVector() &&
            "Vector/scalar operand type mismatch for setcc");
     assert(LHS.getValueType().isVector() == VT.isVector() &&
@@ -1340,8 +1382,9 @@ public:
            "Cannot create a setCC of an invalid node.");
     if (Chain)
       return getNode(IsSignaling ? ISD::STRICT_FSETCCS : ISD::STRICT_FSETCC, DL,
-                     {VT, MVT::Other}, {Chain, LHS, RHS, getCondCode(Cond)});
-    return getNode(ISD::SETCC, DL, VT, LHS, RHS, getCondCode(Cond));
+                     {VT, MVT::Other}, {Chain, LHS, RHS, getCondCode(Cond)},
+                     Flags);
+    return getNode(ISD::SETCC, DL, VT, LHS, RHS, getCondCode(Cond), Flags);
   }
 
   /// Helper function to make it easier to build VP_SETCCs if you just have an
@@ -1453,6 +1496,12 @@ public:
   LLVM_ABI SDValue getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl,
                                        SDVTList VTList, ArrayRef<SDValue> Ops,
                                        EVT MemVT, MachineMemOperand *MMO);
+
+  /// getMemIntrinsicNode - Creates a MemIntrinsicNode with multiple MMOs.
+  LLVM_ABI SDValue getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl,
+                                       SDVTList VTList, ArrayRef<SDValue> Ops,
+                                       EVT MemVT,
+                                       ArrayRef<MachineMemOperand *> MMOs);
 
   /// Creates a LifetimeSDNode that starts (`IsStart==true`) or ends
   /// (`IsStart==false`) the lifetime of the `FrameIndex`.
@@ -2071,7 +2120,7 @@ public:
 
   /// Constant fold a setcc to true or false.
   LLVM_ABI SDValue FoldSetCC(EVT VT, SDValue N1, SDValue N2, ISD::CondCode Cond,
-                             const SDLoc &dl);
+                             const SDLoc &dl, SDNodeFlags Flags = {});
 
   /// Return true if the sign bit of Op is known to be zero.
   /// We use this predicate to simplify operations downstream.
@@ -2340,6 +2389,13 @@ public:
   /// Test whether the given float value is known to be positive. +0.0, +inf and
   /// +nan are considered positive, -0.0, -inf and -nan are not.
   LLVM_ABI bool cannotBeOrderedNegativeFP(SDValue Op) const;
+
+  /// Check if a use of a float value is insensitive to signed zeros.
+  LLVM_ABI bool canIgnoreSignBitOfZero(const SDUse &Use) const;
+
+  /// Check if \p Op has no-signed-zeros, or all users (limited to checking two
+  /// for compile-time performance) are insensitive to signed zeros.
+  LLVM_ABI bool canIgnoreSignBitOfZero(SDValue Op) const;
 
   /// Test whether two SDValues are known to compare equal. This
   /// is true if they are the same value, or if one is negative zero and the

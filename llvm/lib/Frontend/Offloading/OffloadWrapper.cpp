@@ -161,7 +161,7 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
               Binary.bytes_begin());
       const auto *Entry =
           reinterpret_cast<const object::OffloadBinary::Entry *>(
-              Binary.bytes_begin() + Header->EntryOffset);
+              Binary.bytes_begin() + Header->EntriesOffset);
       BeginOffset = Entry->ImageOffset;
       EndOffset = Entry->ImageOffset + Entry->ImageSize;
     }
@@ -494,13 +494,13 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP,
 
   // Create kernel registration code.
   Builder.SetInsertPoint(IfThenBB);
-  Builder.CreateCall(RegFunc, {RegGlobalsFn->arg_begin(), Addr, Name, Name,
-                               ConstantInt::get(Type::getInt32Ty(C), -1),
-                               ConstantPointerNull::get(Int8PtrTy),
-                               ConstantPointerNull::get(Int8PtrTy),
-                               ConstantPointerNull::get(Int8PtrTy),
-                               ConstantPointerNull::get(Int8PtrTy),
-                               ConstantPointerNull::get(Int32PtrTy)});
+  Builder.CreateCall(
+      RegFunc,
+      {RegGlobalsFn->arg_begin(), Addr, Name, Name,
+       ConstantInt::getAllOnesValue(Type::getInt32Ty(C)),
+       ConstantPointerNull::get(Int8PtrTy), ConstantPointerNull::get(Int8PtrTy),
+       ConstantPointerNull::get(Int8PtrTy), ConstantPointerNull::get(Int8PtrTy),
+       ConstantPointerNull::get(Int32PtrTy)});
   Builder.CreateBr(IfEndBB);
   Builder.SetInsertPoint(IfElseBB);
 
@@ -916,14 +916,19 @@ private:
   std::pair<Constant *, Constant *>
   initOffloadEntriesPerImage(StringRef Entries, const Twine &OffloadKindTag) {
     SmallVector<Constant *> EntriesInits;
-    std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(
-        Entries, /*BufferName*/ "", /*RequiresNullTerminator*/ false);
-    for (line_iterator LI(*MB); !LI.is_at_eof(); ++LI) {
-      GlobalVariable *GV =
-          emitOffloadingEntry(M, /*Kind*/ OffloadKind::OFK_SYCL,
-                              Constant::getNullValue(PointerType::getUnqual(C)),
-                              /*Name*/ *LI, /*Size*/ 0,
-                              /*Flags*/ 0, /*Data*/ 0);
+    const char *Current = Entries.data();
+    const char *End = Current + Entries.size();
+    while (Current < End) {
+      StringRef Name(Current);
+      Current += Name.size() + 1;
+
+      if (Name.empty())
+        continue;
+
+      GlobalVariable *GV = emitOffloadingEntry(
+          M, /*Kind*/ OffloadKind::OFK_SYCL,
+          Constant::getNullValue(PointerType::getUnqual(C)), Name, /*Size*/ 0,
+          /*Flags*/ 0, /*Data*/ 0);
       EntriesInits.push_back(GV->getInitializer());
     }
 

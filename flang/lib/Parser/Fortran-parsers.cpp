@@ -700,7 +700,8 @@ TYPE_PARSER(
 //        CODIMENSION lbracket coarray-spec rbracket | CONTIGUOUS |
 //        DIMENSION ( array-spec ) | EXTERNAL | INTENT ( intent-spec ) |
 //        INTRINSIC | language-binding-spec | OPTIONAL | PARAMETER | POINTER |
-//        PROTECTED | SAVE | TARGET | VALUE | VOLATILE |
+//        PROTECTED | RANK ( scalar-int-constant-expr ) | SAVE | TARGET |
+//        VALUE | VOLATILE |
 //        CUDA-data-attr
 TYPE_PARSER(construct<AttrSpec>(accessSpec) ||
     construct<AttrSpec>(allocatable) ||
@@ -714,6 +715,8 @@ TYPE_PARSER(construct<AttrSpec>(accessSpec) ||
     construct<AttrSpec>(languageBindingSpec) || construct<AttrSpec>(optional) ||
     construct<AttrSpec>(construct<Parameter>("PARAMETER"_tok)) ||
     construct<AttrSpec>(pointer) || construct<AttrSpec>(protectedAttr) ||
+    construct<AttrSpec>("RANK" >>
+        construct<RankClause>(parenthesized(scalarIntConstantExpr))) ||
     construct<AttrSpec>(save) ||
     construct<AttrSpec>(construct<Target>("TARGET"_tok)) ||
     construct<AttrSpec>(construct<Value>("VALUE"_tok)) ||
@@ -1337,7 +1340,7 @@ constexpr auto noinlineDir{
     "NOINLINE" >> construct<CompilerDirective::NoInline>()};
 constexpr auto inlineDir{"INLINE" >> construct<CompilerDirective::Inline>()};
 constexpr auto ivdep{"IVDEP" >> construct<CompilerDirective::IVDep>()};
-TYPE_PARSER(beginDirective >> "DIR$ "_tok >>
+TYPE_PARSER(beginDirective >> some(letter) >> "$ "_tok >>
     sourced((construct<CompilerDirective>(ignore_tkr) ||
                 construct<CompilerDirective>(loopCount) ||
                 construct<CompilerDirective>(assumeAligned) ||

@@ -152,7 +152,7 @@ Register llvm::constrainOperandRegClass(
                                   RegMO);
 }
 
-bool llvm::constrainSelectedInstRegOperands(MachineInstr &I,
+void llvm::constrainSelectedInstRegOperands(MachineInstr &I,
                                             const TargetInstrInfo &TII,
                                             const TargetRegisterInfo &TRI,
                                             const RegisterBankInfo &RBI) {
@@ -195,7 +195,6 @@ bool llvm::constrainSelectedInstRegOperands(MachineInstr &I,
         I.tieOperands(DefIdx, OpI);
     }
   }
-  return true;
 }
 
 bool llvm::canReplaceReg(Register DstReg, Register SrcReg,
@@ -452,8 +451,10 @@ std::optional<FPValueAndVReg> llvm::getFConstantVRegValWithLookThrough(
           VReg, MRI, LookThroughInstrs);
   if (!Reg)
     return std::nullopt;
-  return FPValueAndVReg{getConstantFPVRegVal(Reg->VReg, MRI)->getValueAPF(),
-                        Reg->VReg};
+
+  APFloat FloatVal(getFltSemanticForLLT(LLT::scalar(Reg->Value.getBitWidth())),
+                   Reg->Value);
+  return FPValueAndVReg{FloatVal, Reg->VReg};
 }
 
 const ConstantFP *
@@ -1875,6 +1876,7 @@ static bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
     return true;
   case TargetOpcode::G_CTLZ:
   case TargetOpcode::G_CTTZ:
+  case TargetOpcode::G_CTLS:
   case TargetOpcode::G_ABS:
   case TargetOpcode::G_CTPOP:
   case TargetOpcode::G_BSWAP:
