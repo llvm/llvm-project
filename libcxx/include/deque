@@ -273,11 +273,21 @@ struct __deque_block_size {
 // When using fancy pointers, _MapPointer can be FancyPtr<const FancyPtr<const _ValueType>>, which causes strict
 // aliasing violation in direct dereferencing because the internal map stores FancyPtr<_ValueType> objects.
 // We need to transform the type to something like FancyPtr<const FancyPtr<_ValueType>>.
+template <class _MapPointer>
+inline const bool __is_deque_map_pointer_to_const =
+    is_const<__libcpp_remove_reference_t<decltype(**_MapPointer())> >::value;
+
+template <class _ValueType, class _MapPointer, bool _IsConst = __is_deque_map_pointer_to_const<_MapPointer> >
+struct __get_deque_map_iterator_impl {
+  using type _LIBCPP_NODEBUG = __rebind_pointer_t<_MapPointer, const __rebind_pointer_t<_MapPointer, _ValueType> >;
+};
 template <class _ValueType, class _MapPointer>
-using __get_deque_map_iterator _LIBCPP_NODEBUG =
-    __conditional_t<is_const<__libcpp_remove_reference_t<decltype(**_MapPointer())> >::value,
-                    __rebind_pointer_t<_MapPointer, const __rebind_pointer_t<_MapPointer, _ValueType> >,
-                    _MapPointer>;
+struct __get_deque_map_iterator_impl<_ValueType, _MapPointer, false> {
+  using type _LIBCPP_NODEBUG = _MapPointer;
+};
+
+template <class _ValueType, class _MapPointer>
+using __get_deque_map_iterator _LIBCPP_NODEBUG = typename __get_deque_map_iterator_impl<_ValueType, _MapPointer>::type;
 
 template <class _ValueType,
           class _Pointer,
