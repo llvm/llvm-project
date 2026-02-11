@@ -442,18 +442,6 @@ private:
       const std::optional<std::vector<int64_t>> &explicitShape,
       MlirContext &context);
 
-  // There is a complication for boolean numpy arrays, as numpy represents
-  // them as 8 bits (1 byte) per boolean, whereas MLIR bitpacks them into 8
-  // booleans per byte.
-  static MlirAttribute getBitpackedAttributeFromBooleanBuffer(
-      Py_buffer &view, std::optional<std::vector<int64_t>> explicitShape,
-      MlirContext &context);
-
-  // This does the opposite transformation of
-  // `getBitpackedAttributeFromBooleanBuffer`
-  std::unique_ptr<nb_buffer_info>
-  getBooleanBufferFromBitpackedAttribute() const;
-
   template <typename Type>
   std::unique_ptr<nb_buffer_info>
   bufferInfo(MlirType shapedType, const char *explicitFormat = nullptr) {
