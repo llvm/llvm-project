@@ -4,17 +4,6 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftObjcProtocol(TestBase):
-    def skip_debug_info_libraries(self):
-        if platform.system() == "Darwin":
-            lib_name = "libswiftCore.dylib"
-        else:
-            lib_name = "libswiftCore.so"
-
-        self.dbg.HandleCommand(
-            "settings set "
-            "target.process.thread.step-avoid-libraries {}".format(lib_name)
-        )
-
     @skipUnlessDarwin
     @swiftTest
     def test(self):
@@ -23,7 +12,7 @@ class TestSwiftObjcProtocol(TestBase):
             self, "break here", lldb.SBFileSpec("main.swift")
         )
 
-        self.skip_debug_info_libraries()
+        lldbutil.ignore_swift_stdlib_when_stepping(platform, self)
         # Go to the first constructor, assert we can step into it.
         thread.StepInto()
         self.assertEqual(thread.stop_reason, lldb.eStopReasonPlanComplete)
