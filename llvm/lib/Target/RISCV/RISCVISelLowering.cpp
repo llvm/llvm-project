@@ -18914,6 +18914,48 @@ static SDValue combineVWADDSUBWSelect(SDNode *N, SelectionDAG &DAG) {
                      N->getFlags());
 }
 
+// vwaddu C (vabd A B) -> vwabda(A B C)
+// vwaddu C (vabdu A B) -> vwabdau(A B C)
+static SDValue performVWABDACombine(SDNode *N, SelectionDAG &DAG,
+                                    const RISCVSubtarget &Subtarget) {
+  if (!Subtarget.hasStdExtZvabd())
+    return SDValue();
+
+  MVT VT = N->getSimpleValueType(0);
+  if (VT.getVectorElementType() != MVT::i8 &&
+      VT.getVectorElementType() != MVT::i16)
+    return SDValue();
+
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  SDValue Passthru = N->getOperand(2);
+  if (!Passthru->isUndef())
+    return SDValue();
+
+  SDValue Mask = N->getOperand(3);
+  SDValue VL = N->getOperand(4);
+  auto IsABD = [](SDValue Op) {
+    if (Op->getOpcode() != RISCVISD::ABDS_VL &&
+        Op->getOpcode() != RISCVISD::ABDU_VL)
+      return SDValue();
+    return Op;
+  };
+
+  SDValue Diff = IsABD(Op0);
+  Diff = Diff ? Diff : IsABD(Op1);
+  if (!Diff)
+    return SDValue();
+  SDValue Acc = Diff == Op0 ? Op1 : Op0;
+
+  SDLoc DL(N);
+  Acc = DAG.getNode(RISCVISD::VZEXT_VL, DL, VT, Acc, Mask, VL);
+  SDValue Result = DAG.getNode(
+      Diff.getOpcode() == RISCVISD::ABDS_VL ? RISCVISD::VWABDA_VL
+                                            : RISCVISD::VWABDAU_VL,
+      DL, VT, Diff.getOperand(0), Diff.getOperand(1), Acc, Mask, VL);
+  return Result;
+}
+
 static SDValue performVWADDSUBW_VLCombine(SDNode *N,
                                           TargetLowering::DAGCombinerInfo &DCI,
                                           const RISCVSubtarget &Subtarget) {
@@ -19270,17 +19312,12 @@ static SDValue performVP_REVERSECombine(SDNode *N, SelectionDAG &DAG,
       !N->getOperand(0).hasOneUse())
     return SDValue();
 
-  // Check if the mask of outer vp.reverse are all 1's.
-  if (!isOneOrOneSplat(N->getOperand(1)))
-    return SDValue();
-
   SDValue LoadMask = VPLoad->getMask();
   // If Mask is all ones, then load is unmasked and can be reversed.
   if (!isOneOrOneSplat(LoadMask)) {
     // If the mask is not all ones, we can reverse the load if the mask was also
-    // reversed by an unmasked vp.reverse with the same EVL.
+    // reversed by a vp.reverse with the same EVL.
     if (LoadMask.getOpcode() != ISD::EXPERIMENTAL_VP_REVERSE ||
-        !isOneOrOneSplat(LoadMask.getOperand(1)) ||
         LoadMask.getOperand(2) != VPLoad->getVectorLength())
       return SDValue();
     LoadMask = LoadMask.getOperand(0);
@@ -19338,9 +19375,8 @@ static SDValue performVP_STORECombine(SDNode *N, SelectionDAG &DAG,
   // If Mask is all ones, then load is unmasked and can be reversed.
   if (!isOneOrOneSplat(StoreMask)) {
     // If the mask is not all ones, we can reverse the store if the mask was
-    // also reversed by an unmasked vp.reverse with the same EVL.
+    // also reversed by a vp.reverse with the same EVL.
     if (StoreMask.getOpcode() != ISD::EXPERIMENTAL_VP_REVERSE ||
-        !isOneOrOneSplat(StoreMask.getOperand(1)) ||
         StoreMask.getOperand(2) != VPStore->getVectorLength())
       return SDValue();
     StoreMask = StoreMask.getOperand(0);
@@ -21931,6 +21967,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (SDValue V = combineVqdotAccum(N, DAG, Subtarget))
       return V;
     return combineToVWMACC(N, DAG, Subtarget);
+  case RISCVISD::VWADDU_VL:
+    return performVWABDACombine(N, DAG, Subtarget);
   case RISCVISD::VWADD_W_VL:
   case RISCVISD::VWADDU_W_VL:
   case RISCVISD::VWSUB_W_VL:
