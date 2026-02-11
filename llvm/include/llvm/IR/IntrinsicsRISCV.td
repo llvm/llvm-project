@@ -1908,6 +1908,18 @@ let TargetPrefix = "riscv" in {
 } // TargetPrefix = "riscv"
 
 //===----------------------------------------------------------------------===//
+// Zvabd - Vector Absolute Difference
+//===----------------------------------------------------------------------===//
+let TargetPrefix = "riscv" in {
+
+  defm vabs      : RISCVUnaryAA;
+  defm vabd      : RISCVBinaryAAX;
+  defm vabdu     : RISCVBinaryAAX;
+  defm vwabdacc  : RISCVTernaryWide;
+  defm vwabdaccu : RISCVTernaryWide;
+} // TargetPrefix = "riscv"
+
+//===----------------------------------------------------------------------===//
 // Zvqdotq - Vector quad widening 4D Dot Product
 //
 // 8-bit Integer dot-product instructions performing the dot product between two
