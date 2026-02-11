@@ -378,8 +378,17 @@ Register SPIRVGlobalRegistry::getOrCreateConstInt(uint64_t Val, MachineInstr &I,
                                                   SPIRVType *SpvType,
                                                   const SPIRVInstrInfo &TII,
                                                   bool ZeroAsNull) {
-  const IntegerType *Ty = cast<IntegerType>(getTypeForSPIRVType(SpvType));
-  auto *const CI = ConstantInt::get(const_cast<IntegerType *>(Ty), Val);
+  return getOrCreateConstInt(APInt(getScalarOrVectorBitWidth(SpvType), Val), I,
+                             SpvType, TII, ZeroAsNull);
+}
+
+Register SPIRVGlobalRegistry::getOrCreateConstInt(const APInt &Val,
+                                                  MachineInstr &I,
+                                                  const SPIRVType *SpvType,
+                                                  const SPIRVInstrInfo &TII,
+                                                  bool ZeroAsNull) {
+  auto *const CI = ConstantInt::get(
+      cast<IntegerType>(getTypeForSPIRVType(SpvType))->getContext(), Val);
   const MachineInstr *MI = findMI(CI, CurMF);
   if (MI && (MI->getOpcode() == SPIRV::OpConstantNull ||
              MI->getOpcode() == SPIRV::OpConstantI))
@@ -436,7 +445,10 @@ Register SPIRVGlobalRegistry::buildConstantInt(uint64_t Val,
   assert(SpvType);
   auto &MF = MIRBuilder.getMF();
   const IntegerType *Ty = cast<IntegerType>(getTypeForSPIRVType(SpvType));
-  auto *const CI = ConstantInt::get(const_cast<IntegerType *>(Ty), Val);
+  // TODO: Avoid implicit trunc?
+  // See https://github.com/llvm/llvm-project/issues/112510.
+  auto *const CI = ConstantInt::get(const_cast<IntegerType *>(Ty), Val,
+                                    /*IsSigned=*/false, /*ImplicitTrunc=*/true);
   Register Res = find(CI, &MF);
   if (Res.isValid())
     return Res;
@@ -522,8 +534,8 @@ Register SPIRVGlobalRegistry::getOrCreateBaseRegister(
   }
   assert(Type->getOpcode() == SPIRV::OpTypeInt);
   SPIRVType *SpvBaseType = getOrCreateSPIRVIntegerType(BitWidth, I, TII);
-  return getOrCreateConstInt(Val->getUniqueInteger().getZExtValue(), I,
-                             SpvBaseType, TII, ZeroAsNull);
+  return getOrCreateConstInt(Val->getUniqueInteger(), I, SpvBaseType, TII,
+                             ZeroAsNull);
 }
 
 Register SPIRVGlobalRegistry::getOrCreateCompositeOrNull(
@@ -575,12 +587,23 @@ Register SPIRVGlobalRegistry::getOrCreateConstVector(uint64_t Val,
                                                      SPIRVType *SpvType,
                                                      const SPIRVInstrInfo &TII,
                                                      bool ZeroAsNull) {
+  return getOrCreateConstVector(APInt(getScalarOrVectorBitWidth(SpvType), Val),
+                                I, SpvType, TII, ZeroAsNull);
+}
+
+Register SPIRVGlobalRegistry::getOrCreateConstVector(const APInt &Val,
+                                                     MachineInstr &I,
+                                                     const SPIRVType *SpvType,
+                                                     const SPIRVInstrInfo &TII,
+                                                     bool ZeroAsNull) {
   const Type *LLVMTy = getTypeForSPIRVType(SpvType);
-  assert(LLVMTy->isVectorTy());
+  assert(LLVMTy->isVectorTy() &&
+         "Expected vector type for constant vector creation");
   const FixedVectorType *LLVMVecTy = cast<FixedVectorType>(LLVMTy);
   Type *LLVMBaseTy = LLVMVecTy->getElementType();
-  assert(LLVMBaseTy->isIntegerTy());
-  auto *ConstVal = ConstantInt::get(LLVMBaseTy, Val);
+  assert(LLVMBaseTy->isIntegerTy() &&
+         "Expected integer element type for APInt constant vector");
+  auto *ConstVal = cast<ConstantInt>(ConstantInt::get(LLVMBaseTy, Val));
   auto *ConstVec =
       ConstantVector::getSplat(LLVMVecTy->getElementCount(), ConstVal);
   unsigned BW = getScalarOrVectorBitWidth(SpvType);
@@ -626,9 +649,10 @@ Register SPIRVGlobalRegistry::getOrCreateConstIntArray(
   // that would be a truly unique but dangerous key, because it could lead to
   // the creation of constants of arbitrary length (that is, the parameter of
   // memset) which were missing in the original module.
+  Type *I64Ty = Type::getInt64Ty(LLVMBaseTy->getContext());
   Constant *UniqueKey = ConstantStruct::getAnon(
       {PoisonValue::get(const_cast<ArrayType *>(LLVMArrTy)),
-       ConstantInt::get(LLVMBaseTy, Val), ConstantInt::get(LLVMBaseTy, Num)});
+       ConstantInt::get(LLVMBaseTy, Val), ConstantInt::get(I64Ty, Num)});
   return getOrCreateCompositeOrNull(CI, I, SpvType, TII, UniqueKey, BW,
                                     LLVMArrTy->getNumElements());
 }
@@ -882,6 +906,18 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeArray(uint32_t NumElems,
           .addUse(getSPIRVTypeID(ElemType))
           .addUse(NumElementsVReg);
     });
+  } else if (ST.getTargetTriple().getVendor() == Triple::VendorType::AMD) {
+    // We set the array size to the token UINT64_MAX value, which is generally
+    // illegal (the maximum legal size is 61-bits) for the foreseeable future.
+    SPIRVType *SpvTypeInt64 = getOrCreateSPIRVIntegerType(64, MIRBuilder);
+    Register NumElementsVReg =
+        buildConstantInt(UINT64_MAX, MIRBuilder, SpvTypeInt64, EmitIR);
+    ArrayType = createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+      return MIRBuilder.buildInstr(SPIRV::OpTypeArray)
+          .addDef(createTypeVReg(MIRBuilder))
+          .addUse(getSPIRVTypeID(ElemType))
+          .addUse(NumElementsVReg);
+    });
   } else {
     if (!ST.isShader()) {
       llvm::reportFatalUsageError(
@@ -1017,10 +1053,12 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeFunction(
     const FunctionType *Ty, SPIRVType *RetType,
     const SmallVectorImpl<SPIRVType *> &ArgTypes,
     MachineIRBuilder &MIRBuilder) {
-  if (Ty->isVarArg()) {
+  const SPIRVSubtarget *ST =
+      static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
+  if (Ty->isVarArg() && ST->isShader()) {
     Function &Fn = MIRBuilder.getMF().getFunction();
     Ty->getContext().diagnose(DiagnosticInfoUnsupported(
-        Fn, "SPIR-V does not support variadic functions",
+        Fn, "SPIR-V shaders do not support variadic functions",
         MIRBuilder.getDebugLoc()));
   }
   return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
@@ -1465,6 +1503,27 @@ SPIRVGlobalRegistry::getOrCreatePaddingType(MachineIRBuilder &MIRBuilder) {
   auto *T = Type::getInt8Ty(MIRBuilder.getContext());
   SPIRVType *R = getOrCreateSPIRVIntegerType(8, MIRBuilder);
   finishCreatingSPIRVType(T, R);
+  add(Key, R);
+  return R;
+}
+
+SPIRVType *SPIRVGlobalRegistry::getOrCreateVulkanPushConstantType(
+    MachineIRBuilder &MIRBuilder, Type *T) {
+  const auto SC = SPIRV::StorageClass::PushConstant;
+
+  auto Key = SPIRV::irhandle_vkbuffer(T, SC, /* IsWritable= */ false);
+  if (const MachineInstr *MI = findMI(Key, &MIRBuilder.getMF()))
+    return MI;
+
+  // We need to get the SPIR-V type for the element here, so we can add the
+  // decoration to it.
+  auto *BlockType = getOrCreateSPIRVType(
+      T, MIRBuilder, SPIRV::AccessQualifier::None,
+      /* ExplicitLayoutRequired= */ true, /* EmitIr= */ false);
+
+  buildOpDecorate(BlockType->defs().begin()->getReg(), MIRBuilder,
+                  SPIRV::Decoration::Block, {});
+  SPIRVType *R = BlockType;
   add(Key, R);
   return R;
 }

@@ -3,6 +3,16 @@
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/coff-profile.perfscript --binary=%S/Inputs/coff-profile.exe --output=%t
 ; RUN: FileCheck %s --input-file %t --check-prefix=PROBE
 
+; RUN: mkdir %t.dir
+; RUN: llvm-objcopy --strip-debug --remove-section=.pseudo_probe --remove-section=.pseudo_probe_desc %S/Inputs/coff-profile.exe %t.dir/coff-profile.exe
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/coff-profile.perfscript --binary=%t.dir/coff-profile.exe --debug-binary=%S/Inputs/coff-profile.exe --output=%t
+; RUN: FileCheck %s --input-file %t --check-prefix=PROBE
+
+; RUN: llvm-objcopy --strip-debug %S/Inputs/coff-profile.exe %t.dir/coff-profile.exe
+; RUN: cp %S/Inputs/coff-profile.pdb %t.dir
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/coff-profile.perfscript --binary=%t.dir/coff-profile.exe --output=%t
+; RUN: FileCheck %s --input-file %t --check-prefix=PROBE
+
 DWARF:      main:31341:0
 DWARF-NEXT:  0: 0
 DWARF-NEXT:  3: 0
@@ -22,12 +32,14 @@ DWARF-NEXT:    1.1: 31
 DWARF-NEXT:    1.2: 31
 DWARF-NEXT:    2: 31
 DWARF-NEXT:    3: 31
+DWARF-NEXT:    65530: 0
 DWARF-NEXT:  5: ?work2@?$MyClass@GH@MyNameSpace1@@QEAAXQEAGH@Z:28303
 DWARF-NEXT:   0: ?work@?$MyClass@GH@MyNameSpace1@@AEAAXQEAGHH@Z:28303
 DWARF-NEXT:    1.1: 341
 DWARF-NEXT:    1.2: 341
 DWARF-NEXT:    2: 341
 DWARF-NEXT:    3: 341
+DWARF-NEXT:    65530: 0
 DWARF-NEXT:  7: ?print@MyNameSpace2@@YAXPEAGH@Z:0
 DWARF-NEXT:   1: 0
 

@@ -37,6 +37,7 @@ public:
   void VisitDeclRefExpr(const DeclRefExpr *DRE);
   void VisitCXXConstructExpr(const CXXConstructExpr *CCE);
   void VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE);
+  void VisitMemberExpr(const MemberExpr *ME);
   void VisitCallExpr(const CallExpr *CE);
   void VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *N);
   void VisitImplicitCastExpr(const ImplicitCastExpr *ICE);
@@ -47,12 +48,32 @@ public:
   void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE);
   void VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *FCE);
   void VisitInitListExpr(const InitListExpr *ILE);
+  void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE);
   void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *MTE);
 
 private:
+  OriginList *getOriginsList(const ValueDecl &D);
+  OriginList *getOriginsList(const Expr &E);
+
+  void flow(OriginList *Dst, OriginList *Src, bool Kill);
+
+  void handleAssignment(const Expr *LHSExpr, const Expr *RHSExpr);
+
+  void handleCXXCtorInitializer(const CXXCtorInitializer *CII);
   void handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds);
+  void handleTemporaryDtor(const CFGTemporaryDtor &TemporaryDtor);
+
+  void handleExitBlock();
 
   void handleGSLPointerConstruction(const CXXConstructExpr *CCE);
+
+  /// Detects arguments passed to rvalue reference parameters and creates
+  /// MovedOriginFact for them. The MovedLoansAnalysis then uses these facts
+  /// to track in a flow-sensitive manner which loans have been moved at each
+  /// program point, allowing warnings to distinguish potentially moved storage
+  /// from other use-after-free errors.
+  void handleMovedArgsInCall(const FunctionDecl *FD,
+                             ArrayRef<const Expr *> Args);
 
   /// Checks if a call-like expression creates a borrow by passing a value to a
   /// reference parameter, creating an IssueFact if it does.
@@ -62,27 +83,24 @@ private:
                           ArrayRef<const Expr *> Args,
                           bool IsGslConstruction = false);
 
+  // Detect container methods that invalidate iterators/references.
+  // For instance methods, Args[0] is the implicit 'this' pointer.
+  void handleInvalidatingCall(const Expr *Call, const FunctionDecl *FD,
+                              ArrayRef<const Expr *> Args);
+
   template <typename Destination, typename Source>
   void flowOrigin(const Destination &D, const Source &S) {
-    OriginID DestOID = FactMgr.getOriginMgr().getOrCreate(D);
-    OriginID SrcOID = FactMgr.getOriginMgr().get(S);
-    CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
-        DestOID, SrcOID, /*KillDest=*/false));
+    flow(getOriginsList(D), getOriginsList(S), /*Kill=*/false);
   }
 
   template <typename Destination, typename Source>
   void killAndFlowOrigin(const Destination &D, const Source &S) {
-    OriginID DestOID = FactMgr.getOriginMgr().getOrCreate(D);
-    OriginID SrcOID = FactMgr.getOriginMgr().get(S);
-    CurrentBlockFacts.push_back(
-        FactMgr.createFact<OriginFlowFact>(DestOID, SrcOID, /*KillDest=*/true));
+    flow(getOriginsList(D), getOriginsList(S), /*Kill=*/true);
   }
 
   /// Checks if the expression is a `void("__lifetime_test_point_...")` cast.
   /// If so, creates a `TestPointFact` and returns true.
   bool handleTestPoint(const CXXFunctionalCastExpr *FCE);
-
-  void handleAssignment(const Expr *LHSExpr, const Expr *RHSExpr);
 
   // A DeclRefExpr will be treated as a use of the referenced decl. It will be
   // checked for use-after-free unless it is later marked as being written to

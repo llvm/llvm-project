@@ -449,10 +449,8 @@ float RTNAME(Rand)(int *i, const char *sourceFile, int line) {
   unsigned mask = 0;
   constexpr int radix = std::numeric_limits<float>::radix;
   constexpr int digits = std::numeric_limits<float>::digits;
-  if (radix == 2) {
+  if constexpr (radix == 2) {
     mask = ~(unsigned)0u << (32 - digits + 1);
-  } else if (radix == 16) {
-    mask = ~(unsigned)0u << ((8 - digits) * 4 + 1);
   } else {
     Terminator terminator{sourceFile, line};
     terminator.Crash("Radix unknown value.");
@@ -480,8 +478,9 @@ void RTNAME(ShowDescriptor)(const Fortran::runtime::Descriptor *descr) {
 namespace io {
 std::int32_t RTNAME(Fseek)(int unitNumber, std::int64_t zeroBasedPos,
     int whence, const char *sourceFileName, int lineNumber) {
-  if (ExternalFileUnit * unit{ExternalFileUnit::LookUp(unitNumber)}) {
-    Terminator terminator{sourceFileName, lineNumber};
+  Terminator terminator{sourceFileName, lineNumber};
+  if (ExternalFileUnit *
+      unit{ExternalFileUnit::LookUp(unitNumber, terminator)}) {
     IoErrorHandler handler{terminator};
     if (unit->Fseek(
             zeroBasedPos, static_cast<enum FseekWhence>(whence), handler)) {
@@ -495,7 +494,9 @@ std::int32_t RTNAME(Fseek)(int unitNumber, std::int64_t zeroBasedPos,
 }
 
 std::int64_t RTNAME(Ftell)(int unitNumber) {
-  if (ExternalFileUnit * unit{ExternalFileUnit::LookUp(unitNumber)}) {
+  Terminator terminator{__FILE__, __LINE__};
+  if (ExternalFileUnit *
+      unit{ExternalFileUnit::LookUp(unitNumber, terminator)}) {
     return unit->InquirePos() - 1; // zero-based result
   } else {
     return -1;
@@ -503,7 +504,9 @@ std::int64_t RTNAME(Ftell)(int unitNumber) {
 }
 
 std::int32_t FORTRAN_PROCEDURE_NAME(fnum)(const int &unitNumber) {
-  if (ExternalFileUnit * unit{ExternalFileUnit::LookUp(unitNumber)}) {
+  Terminator terminator{__FILE__, __LINE__};
+  if (ExternalFileUnit *
+      unit{ExternalFileUnit::LookUp(unitNumber, terminator)}) {
     return unit->fd();
   } else {
     return -1;
@@ -511,7 +514,5 @@ std::int32_t FORTRAN_PROCEDURE_NAME(fnum)(const int &unitNumber) {
 }
 
 } // namespace io
-
 } // extern "C"
-
 } // namespace Fortran::runtime

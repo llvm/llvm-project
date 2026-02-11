@@ -128,6 +128,7 @@ def hasPTXASUnreachableBug : Predicate<"Subtarget->hasPTXASUnreachableBug()">;
 def noPTXASUnreachableBug : Predicate<"!Subtarget->hasPTXASUnreachableBug()">;
 def hasOptEnabled : Predicate<"TM.getOptLevel() != CodeGenOptLevel::None">;
 def hasArchAccelFeatures : Predicate<"Subtarget->hasArchAccelFeatures()">;
+def hasFamilySpecificFeatures : Predicate<"Subtarget->hasFamilySpecificFeatures()">;
 
 def doF32FTZ : Predicate<"useF32FTZ()">;
 def doNoF32FTZ : Predicate<"!useF32FTZ()">;
@@ -137,8 +138,6 @@ def doMADWideOpt : Predicate<"doMADWideOpt()">;
 def hasHWROT32 : Predicate<"Subtarget->hasHWROT32()">;
 def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
 def hasDotInstructions : Predicate<"Subtarget->hasDotInstructions()">;
-def hasTcgen05Instructions : Predicate<"Subtarget->hasTcgen05Instructions()">;
-def hasTcgen05MMAScaleInputDImm : Predicate<"Subtarget->hasTcgen05MMAScaleInputDImm()">;
 def hasF32x2Instructions : Predicate<"Subtarget->hasF32x2Instructions()">;
 
 class hasPTX<int version>: Predicate<"Subtarget->getPTXVersion() >= " # version>;
@@ -1323,6 +1322,15 @@ defm SHL : SHIFT<"shl.b", shl>;
 defm SRA : SHIFT<"shr.s", sra>;
 defm SRL : SHIFT<"shr.u", srl>;
 
+// Shift with clamping semantics - these have defined behavior for shift amounts
+// >= BitWidth (returning 0 for logical shifts). Used to optimize guarded shift
+// patterns like `shift >= 32 ? 0 : x >> shift`.
+def shl_clamp : SDNode<"NVPTXISD::SHL_CLAMP", SDTIntShiftOp, []>;
+def srl_clamp : SDNode<"NVPTXISD::SRL_CLAMP", SDTIntShiftOp, []>;
+
+defm SHL_CLAMP : SHIFT<"shl.b", shl_clamp>;
+defm SRL_CLAMP : SHIFT<"shr.u", srl_clamp>;
+
 // Bit-reverse
 foreach t = [I64RT, I32RT] in
   def BREV_ # t.PtxType :
@@ -2491,7 +2499,7 @@ def NVPTX_fma_oneuse_and_nnan : PatFrag<(ops node:$a, node:$b, node:$c),
 // PatFrag is for a fmaxnum node with nsz
 def NVPTX_fmaxnum_nsz : PatFrag<(ops node:$a, node:$b),
                                   (fmaxnum node:$a, node:$b), [{
-  return N->getFlags().hasNoSignedZeros() || TM.Options.NoSignedZerosFPMath;
+  return N->getFlags().hasNoSignedZeros();
 }]>;
 
 class FMARELUInst<RegTyInfo t, bit allow_ftz, PatFrag zero_pat>

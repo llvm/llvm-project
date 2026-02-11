@@ -644,10 +644,9 @@ void DwarfCompileUnit::constructScopeDIE(LexicalScope *Scope,
     return;
 
   // Emit lexical blocks.
-  DIE *ScopeDIE = constructLexicalScopeDIE(Scope);
+  DIE *ScopeDIE = getOrCreateLexicalBlockDIE(Scope, ParentScopeDIE);
   assert(ScopeDIE && "Scope DIE should not be null.");
 
-  ParentScopeDIE.addChild(ScopeDIE);
   createAndAddScopeChildren(Scope, *ScopeDIE);
 }
 
@@ -768,14 +767,15 @@ DIE *DwarfCompileUnit::constructInlinedScopeDIE(LexicalScope *Scope,
   return ScopeDIE;
 }
 
-// Construct new DW_TAG_lexical_block for this scope and attach
-// DW_AT_low_pc/DW_AT_high_pc labels.
-DIE *DwarfCompileUnit::constructLexicalScopeDIE(LexicalScope *Scope) {
+DIE *DwarfCompileUnit::getOrCreateLexicalBlockDIE(LexicalScope *Scope,
+                                                  DIE &ParentScopeDIE) {
   if (DD->isLexicalScopeDIENull(Scope))
     return nullptr;
   const auto *DS = Scope->getScopeNode();
 
   auto ScopeDIE = DIE::get(DIEValueAllocator, dwarf::DW_TAG_lexical_block);
+  ParentScopeDIE.addChild(ScopeDIE);
+
   if (Scope->isAbstractScope()) {
     assert(!getAbstractScopeDIEs().count(DS) &&
            "Abstract DIE for this scope exists!");
@@ -1141,7 +1141,7 @@ DIE &DwarfCompileUnit::constructSubprogramScopeDIE(const DISubprogram *Sub,
   }
 
   // If this is a variadic function, add an unspecified parameter.
-  DITypeRefArray FnArgs = Sub->getType()->getTypeArray();
+  DITypeArray FnArgs = Sub->getType()->getTypeArray();
 
   // If we have a single element of null, it is a function that returns void.
   // If we have more than one elements and the last one is null, it is a
@@ -1293,6 +1293,8 @@ DwarfCompileUnit::getDwarf5OrGNUAttr(dwarf::Attribute Attr) const {
     return dwarf::DW_AT_GNU_all_call_sites;
   case dwarf::DW_AT_call_target:
     return dwarf::DW_AT_GNU_call_site_target;
+  case dwarf::DW_AT_call_target_clobbered:
+    return dwarf::DW_AT_GNU_call_site_target_clobbered;
   case dwarf::DW_AT_call_origin:
     return dwarf::DW_AT_abstract_origin;
   case dwarf::DW_AT_call_return_pc:
@@ -1328,15 +1330,22 @@ DIE &DwarfCompileUnit::constructCallSiteEntryDIE(
 
   // A valid register in CallTarget indicates an indirect call.
   if (CallTarget.getReg()) {
+    // Add a DW_AT_call_target location expression describing the location of
+    // the address of the target function. If any register in the expression
+    // (i.e., the single register we currently handle) is volatile we must use
+    // DW_AT_call_target_clobbered instead.
+    const TargetRegisterInfo &TRI = *Asm->MF->getSubtarget().getRegisterInfo();
+    dwarf::Attribute Attribute = getDwarf5OrGNUAttr(
+        TRI.isCalleeSavedPhysReg(CallTarget.getReg(), *Asm->MF)
+            ? dwarf::DW_AT_call_target
+            : dwarf::DW_AT_call_target_clobbered);
+
     // CallTarget is the location of the address of an indirect call. The
     // location may be indirect, modified by Offset.
     if (CallTarget.isIndirect())
-      addMemoryLocation(CallSiteDIE,
-                        getDwarf5OrGNUAttr(dwarf::DW_AT_call_target),
-                        CallTarget, Offset);
+      addMemoryLocation(CallSiteDIE, Attribute, CallTarget, Offset);
     else
-      addAddress(CallSiteDIE, getDwarf5OrGNUAttr(dwarf::DW_AT_call_target),
-                 CallTarget);
+      addAddress(CallSiteDIE, Attribute, CallTarget);
   } else if (CalleeSP) {
     DIE *CalleeDIE = getOrCreateSubprogramDIE(CalleeSP, CalleeF);
     assert(CalleeDIE && "Could not create DIE for call site entry origin");
@@ -1830,7 +1839,7 @@ void DwarfCompileUnit::createBaseTypeDIEs() {
   }
 }
 
-DIE *DwarfCompileUnit::getLexicalBlockDIE(const DILexicalBlock *LB) {
+DIE *DwarfCompileUnit::getLocalContextDIE(const DILexicalBlock *LB) {
   // Assume if there is an abstract tree all the DIEs are already emitted.
   bool isAbstract = getAbstractScopeDIEs().count(LB->getSubprogram());
   if (isAbstract) {
@@ -1840,8 +1849,14 @@ DIE *DwarfCompileUnit::getLexicalBlockDIE(const DILexicalBlock *LB) {
   }
   assert(!isAbstract && "Missed lexical block DIE in abstract tree!");
 
-  // Return a concrete DIE if it exists or nullptr otherwise.
-  return LexicalBlockDIEs.lookup(LB);
+  // Check if we have a concrete DIE.
+  if (auto It = LexicalBlockDIEs.find(LB); It != LexicalBlockDIEs.end())
+    return It->second;
+
+  // If nothing available found, we cannot just create a new lexical block,
+  // because it isn't known where to put it into the DIE tree.
+  // So, we may only try to find the most close avaiable parent DIE.
+  return getOrCreateContextDIE(LB->getScope()->getNonLexicalBlockFileScope());
 }
 
 DIE *DwarfCompileUnit::getOrCreateContextDIE(const DIScope *Context) {
@@ -1849,7 +1864,7 @@ DIE *DwarfCompileUnit::getOrCreateContextDIE(const DIScope *Context) {
     if (auto *LFScope = dyn_cast<DILexicalBlockFile>(Context))
       Context = LFScope->getNonLexicalBlockFileScope();
     if (auto *LScope = dyn_cast<DILexicalBlock>(Context))
-      return getLexicalBlockDIE(LScope);
+      return getLocalContextDIE(LScope);
 
     // Otherwise the context must be a DISubprogram.
     auto *SPScope = cast<DISubprogram>(Context);

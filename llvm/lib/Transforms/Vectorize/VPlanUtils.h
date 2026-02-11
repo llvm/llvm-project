@@ -10,12 +10,14 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANUTILS_H
 
 #include "VPlan.h"
+#include "VPlanPatternMatch.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class MemoryLocation;
 class ScalarEvolution;
 class SCEV;
+class PredicatedScalarEvolution;
 } // namespace llvm
 
 namespace llvm {
@@ -39,8 +41,15 @@ VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr);
 
 /// Return the SCEV expression for \p V. Returns SCEVCouldNotCompute if no
 /// SCEV expression could be constructed.
-const SCEV *getSCEVExprForVPValue(const VPValue *V, ScalarEvolution &SE,
+const SCEV *getSCEVExprForVPValue(const VPValue *V,
+                                  PredicatedScalarEvolution &PSE,
                                   const Loop *L = nullptr);
+
+/// Returns true if \p Addr is an address SCEV that can be passed to
+/// TTI::getAddressComputationCost, i.e. the address SCEV is loop invariant, an
+/// affine AddRec (i.e. induction ), or an add expression of such operands or a
+/// sign-extended AddRec.
+bool isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE, const Loop *L);
 
 /// Returns true if \p VPV is a single scalar, either because it produces the
 /// same value for all lanes or only has its first lane used.
@@ -95,6 +104,53 @@ inline VPIRFlags getFlagsFromIndDesc(const InductionDescriptor &ID) {
          "Expected int induction");
   return VPIRFlags::WrapFlagsTy(false, false);
 }
+
+/// Search \p Start's users for a recipe satisfying \p Pred, looking through
+/// recipes with definitions.
+template <typename PredT>
+inline VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
+  SetVector<VPValue *> Worklist;
+  Worklist.insert(Start);
+  for (unsigned I = 0; I != Worklist.size(); ++I) {
+    VPValue *Cur = Worklist[I];
+    auto *R = Cur->getDefiningRecipe();
+    if (!R)
+      continue;
+    if (Pred(R))
+      return R;
+    for (VPUser *U : Cur->users()) {
+      for (VPValue *V : cast<VPRecipeBase>(U)->definedValues())
+        Worklist.insert(V);
+    }
+  }
+  return nullptr;
+}
+
+/// If \p V is used by a recipe matching pattern \p P, return it. Otherwise
+/// return nullptr;
+template <typename MatchT>
+static VPRecipeBase *findUserOf(VPValue *V, const MatchT &P) {
+  auto It = find_if(V->users(), match_fn(P));
+  return It == V->user_end() ? nullptr : cast<VPRecipeBase>(*It);
+}
+
+/// If \p V is used by a VPInstruction with \p Opcode, return it. Otherwise
+/// return nullptr.
+template <unsigned Opcode> static VPInstruction *findUserOf(VPValue *V) {
+  using namespace llvm::VPlanPatternMatch;
+  return cast_or_null<VPInstruction>(findUserOf(V, m_VPInstruction<Opcode>()));
+}
+
+/// Find the ComputeReductionResult recipe for \p PhiR, looking through selects
+/// inserted for predicated reductions or tail folding.
+VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
+
+/// Collect the header mask with the pattern:
+/// (ICMP_ULE, WideCanonicalIV, backedge-taken-count)
+/// TODO: Introduce explicit recipe for header-mask instead of searching
+/// the header-mask pattern manually.
+VPSingleDefRecipe *findHeaderMask(VPlan &Plan);
+
 } // namespace vputils
 
 //===----------------------------------------------------------------------===//
@@ -116,12 +172,7 @@ public:
            NewBlock->getPredecessors().empty() &&
            "Can't insert new block with predecessors or successors.");
     NewBlock->setParent(BlockPtr->getParent());
-    SmallVector<VPBlockBase *> Succs(BlockPtr->successors());
-    for (VPBlockBase *Succ : Succs) {
-      Succ->replacePredecessor(BlockPtr, NewBlock);
-      NewBlock->appendSuccessor(Succ);
-    }
-    BlockPtr->clearSuccessors();
+    transferSuccessors(BlockPtr, NewBlock);
     connectBlocks(BlockPtr, NewBlock);
   }
 
@@ -171,8 +222,7 @@ public:
                             unsigned PredIdx = -1u, unsigned SuccIdx = -1u) {
     assert((From->getParent() == To->getParent()) &&
            "Can't connect two block with different parents");
-    assert((SuccIdx != -1u || From->getNumSuccessors() < 2) &&
-           "Blocks can't have more than two successors.");
+
     if (SuccIdx == -1u)
       From->appendSuccessor(To);
     else
@@ -202,6 +252,14 @@ public:
     New->setPredecessors(Old->getPredecessors());
     New->setSuccessors(Old->getSuccessors());
     Old->clearPredecessors();
+    Old->clearSuccessors();
+  }
+
+  /// Transfer successors from \p Old to \p New. \p New must have no successors.
+  static void transferSuccessors(VPBlockBase *Old, VPBlockBase *New) {
+    for (auto *Succ : Old->getSuccessors())
+      Succ->replacePredecessor(Old, New);
+    New->setSuccessors(Old->getSuccessors());
     Old->clearSuccessors();
   }
 

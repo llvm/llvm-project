@@ -33,7 +33,7 @@ MaxClause("amdgpu-max-memory-clause", cl::Hidden, cl::init(15),
 namespace {
 
 class SIFormMemoryClausesImpl {
-  using RegUse = DenseMap<unsigned, std::pair<unsigned, LaneBitmask>>;
+  using RegUse = DenseMap<unsigned, std::pair<RegState, LaneBitmask>>;
 
   bool canBundle(const MachineInstr &MI, const RegUse &Defs,
                  const RegUse &Uses) const;
@@ -61,9 +61,7 @@ class SIFormMemoryClausesLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  SIFormMemoryClausesLegacy() : MachineFunctionPass(ID) {
-    initializeSIFormMemoryClausesLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  SIFormMemoryClausesLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -132,8 +130,8 @@ static bool isValidClauseInst(const MachineInstr &MI, bool IsVMEMClause) {
   return true;
 }
 
-static unsigned getMopState(const MachineOperand &MO) {
-  unsigned S = 0;
+static RegState getMopState(const MachineOperand &MO) {
+  RegState S = {};
   if (MO.isImplicit())
     S |= RegState::Implicit;
   if (MO.isDead())
@@ -234,7 +232,7 @@ void SIFormMemoryClausesImpl::collectRegUses(const MachineInstr &MI,
                            : LaneBitmask::getAll();
     RegUse &Map = MO.isDef() ? Defs : Uses;
 
-    unsigned State = getMopState(MO);
+    RegState State = getMopState(MO);
     auto [Loc, Inserted] = Map.try_emplace(Reg, State, Mask);
     if (!Inserted) {
       Loc->second.first |= State;
@@ -349,7 +347,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
           continue;
 
         // Collect the register operands we should extend the live ranges of.
-        SmallVector<std::tuple<unsigned, unsigned>> KillOps;
+        SmallVector<std::tuple<RegState, unsigned>> KillOps;
         const LiveInterval &LI = LIS->getInterval(R.first);
 
         if (!LI.hasSubRanges()) {

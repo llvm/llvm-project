@@ -4712,7 +4712,7 @@ QualType ASTContext::getConstantMatrixType(QualType ElementTy, unsigned NumRows,
   ConstantMatrixType::Profile(ID, ElementTy, NumRows, NumColumns,
                               Type::ConstantMatrix);
 
-  assert(MatrixType::isValidElementType(ElementTy) &&
+  assert(MatrixType::isValidElementType(ElementTy, getLangOpts()) &&
          "need a valid element type");
   assert(NumRows > 0 && NumRows <= LangOpts.MaxMatrixDimension &&
          NumColumns > 0 && NumColumns <= LangOpts.MaxMatrixDimension &&
@@ -13222,6 +13222,18 @@ MangleContext *ASTContext::createDeviceMangleContext(const TargetInfo &T) {
                                           /*IsAux=*/true);
   }
   llvm_unreachable("Unsupported ABI");
+}
+
+MangleContext *ASTContext::cudaNVInitDeviceMC() {
+  // If the host and device have different C++ ABIs, mark it as the device
+  // mangle context so that the mangling needs to retrieve the additional
+  // device lambda mangling number instead of the regular host one.
+  if (getAuxTargetInfo() && getTargetInfo().getCXXABI().isMicrosoft() &&
+      getAuxTargetInfo()->getCXXABI().isItaniumFamily()) {
+    return createDeviceMangleContext(*getAuxTargetInfo());
+  }
+
+  return createMangleContext(getAuxTargetInfo());
 }
 
 CXXABI::~CXXABI() = default;

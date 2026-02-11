@@ -32,7 +32,7 @@ findGeneratorByName(llvm::StringRef Format) {
 
 // Enum conversion
 
-std::string getTagType(TagTypeKind AS) {
+llvm::StringRef getTagType(TagTypeKind AS) {
   switch (AS) {
   case TagTypeKind::Class:
     return "class";
@@ -164,6 +164,10 @@ Error MustacheGenerator::generateDocumentation(
 
 Expected<std::string> MustacheGenerator::getInfoTypeStr(Object *Info,
                                                         StringRef Filename) {
+  // Checking for a USR ensures that only the special top-level index file is
+  // caught here, since it is not an Info.
+  if (Filename == "index" && !Info->get("USR"))
+    return "index";
   auto StrValue = (*Info)["InfoType"];
   if (StrValue.kind() != json::Value::Kind::String)
     return createStringError("JSON file '%s' does not contain key: 'InfoType'.",

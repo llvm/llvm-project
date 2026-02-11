@@ -243,7 +243,7 @@ static LogicalResult deserializeCacheControlDecoration(
   auto value = opBuilder.getAttr<AttrTy>(cacheLevel, cacheControlAttr);
   SmallVector<Attribute> attrs;
   if (auto attrList =
-          llvm::dyn_cast_or_null<ArrayAttr>(decorations[words[0]].get(symbol)))
+          dyn_cast_or_null<ArrayAttr>(decorations[words[0]].get(symbol)))
     llvm::append_range(attrs, attrList);
   attrs.push_back(value);
   decorations[words[0]].set(symbol, opBuilder.getArrayAttr(attrs));
@@ -326,7 +326,7 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
         static_cast<::mlir::spirv::LinkageType>(words[wordIndex++]));
     auto linkageAttr = opBuilder.getAttr<::mlir::spirv::LinkageAttributesAttr>(
         StringAttr::get(context, linkageName), linkageTypeAttr);
-    decorations[words[0]].set(symbol, llvm::dyn_cast<Attribute>(linkageAttr));
+    decorations[words[0]].set(symbol, dyn_cast<Attribute>(linkageAttr));
     break;
   }
   case spirv::Decoration::Aliased:
@@ -355,6 +355,7 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
     break;
   case spirv::Decoration::Location:
   case spirv::Decoration::SpecId:
+  case spirv::Decoration::Index:
     if (words.size() != 3) {
       return emitError(unknownLoc, "OpDecoration with ")
              << decorationName << "needs a single integer literal";
@@ -1093,30 +1094,38 @@ LogicalResult spirv::Deserializer::processType(spirv::Opcode opcode,
     uint32_t bitWidth = operands[1];
 
     Type floatTy;
-    switch (bitWidth) {
-    case 16:
-      floatTy = opBuilder.getF16Type();
-      break;
-    case 32:
-      floatTy = opBuilder.getF32Type();
-      break;
-    case 64:
-      floatTy = opBuilder.getF64Type();
-      break;
-    default:
-      return emitError(unknownLoc, "unsupported OpTypeFloat bitwidth: ")
-             << bitWidth;
+    if (operands.size() == 2) {
+      switch (bitWidth) {
+      case 16:
+        floatTy = opBuilder.getF16Type();
+        break;
+      case 32:
+        floatTy = opBuilder.getF32Type();
+        break;
+      case 64:
+        floatTy = opBuilder.getF64Type();
+        break;
+      default:
+        return emitError(unknownLoc, "unsupported OpTypeFloat bitwidth: ")
+               << bitWidth;
+      }
     }
 
     if (operands.size() == 3) {
-      if (spirv::FPEncoding(operands[2]) != spirv::FPEncoding::BFloat16KHR)
+      if (spirv::FPEncoding(operands[2]) == spirv::FPEncoding::BFloat16KHR &&
+          bitWidth == 16)
+        floatTy = opBuilder.getBF16Type();
+      else if (spirv::FPEncoding(operands[2]) ==
+                   spirv::FPEncoding::Float8E4M3EXT &&
+               bitWidth == 8)
+        floatTy = opBuilder.getF8E4M3FNType();
+      else if (spirv::FPEncoding(operands[2]) ==
+                   spirv::FPEncoding::Float8E5M2EXT &&
+               bitWidth == 8)
+        floatTy = opBuilder.getF8E5M2Type();
+      else
         return emitError(unknownLoc, "unsupported OpTypeFloat FP encoding: ")
-               << operands[2];
-      if (bitWidth != 16)
-        return emitError(unknownLoc,
-                         "invalid OpTypeFloat bitwidth for bfloat16 encoding: ")
-               << bitWidth << " (expected 16)";
-      floatTy = opBuilder.getBF16Type();
+               << operands[2] << " and bitWidth " << bitWidth;
     }
 
     typeMap[operands[0]] = floatTy;
@@ -1511,10 +1520,10 @@ spirv::Deserializer::processTensorARMType(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc, "OpTypeTensorARM shape must come from a "
                                  "constant instruction of type OpTypeArray");
 
-  ArrayAttr shapeArrayAttr = llvm::dyn_cast<ArrayAttr>(shapeInfo->first);
+  ArrayAttr shapeArrayAttr = dyn_cast<ArrayAttr>(shapeInfo->first);
   SmallVector<int64_t, 1> shape;
   for (auto dimAttr : shapeArrayAttr.getValue()) {
-    auto dimIntAttr = llvm::dyn_cast<IntegerAttr>(dimAttr);
+    auto dimIntAttr = dyn_cast<IntegerAttr>(dimAttr);
     if (!dimIntAttr)
       return emitError(unknownLoc, "OpTypeTensorARM shape has an invalid "
                                    "dimension size");
@@ -1733,6 +1742,12 @@ LogicalResult spirv::Deserializer::processConstant(ArrayRef<uint32_t> operands,
     } else if (floatType.isBF16()) {
       APInt data(16, operands[2]);
       value = APFloat(APFloat::BFloat(), data);
+    } else if (floatType.isF8E4M3FN()) {
+      APInt data(8, operands[2]);
+      value = APFloat(APFloat::Float8E4M3FN(), data);
+    } else if (floatType.isF8E5M2()) {
+      APInt data(8, operands[2]);
+      value = APFloat(APFloat::Float8E5M2(), data);
     }
 
     auto attr = opBuilder.getFloatAttr(floatType, value);

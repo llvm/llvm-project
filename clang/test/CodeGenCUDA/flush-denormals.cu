@@ -24,7 +24,7 @@
 
 #include "Inputs/cuda.h"
 
-// Checks that device function calls get emitted with the "denormal-fp-math-f32"
+// Checks that device function calls get emitted with the denormal_fpenv
 // attribute set when we compile CUDA device code with
 // -fdenormal-fp-math-f32. Further, check that we reflect the presence or
 // absence of -fgpu-flush-denormals-to-zero in a module flag.
@@ -41,8 +41,8 @@
 // CHECK-LABEL: define void @foo() #0
 extern "C" __device__ void foo() {}
 
-// FTZ: attributes #0 = {{.*}} "denormal-fp-math-f32"="preserve-sign,preserve-sign"
-// NOFTZ-NOT: "denormal-fp-math-f32"
+// FTZ: attributes #0 = {{.*}} denormal_fpenv(float: preservesign)
+// NOFTZ-NOT: denormal_fpenv
 
 // PTXFTZ:!llvm.module.flags = !{{{.*}}[[MODFLAG:![0-9]+]]}
 // PTXFTZ:[[MODFLAG]] = !{i32 4, !"nvvm-reflect-ftz", i32 1}

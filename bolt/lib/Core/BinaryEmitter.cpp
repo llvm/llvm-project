@@ -282,11 +282,7 @@ void BinaryEmitter::emitFunctions() {
   }
 
   // Emit functions in sorted order.
-  BinaryFunctionListType SortedFunctions = BC.getSortedFunctions();
-  emit(SortedFunctions);
-
-  // Emit functions added by BOLT.
-  emit(BC.getInjectedBinaryFunctions());
+  emit(BC.getOutputBinaryFunctions());
 
   // Mark the end of hot text.
   if (opts::HotText) {

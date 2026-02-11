@@ -598,7 +598,7 @@ foreach half = [ "b", "t" ] in {
   } // params = [f16], pnt = PNT_None
 } // loop over half = "b", "t"
 
-multiclass float_int_conversions<Type FScalar, Type IScalar, IRBuilderBase ftoi, IRBuilderBase itof> {
+multiclass float_int_conversions<Type FScalar, Type IScalar, Builder ftoi, Builder itof> {
   defvar FVector = VecOf<FScalar>;
   defvar IVector = VecOf<IScalar>;
 

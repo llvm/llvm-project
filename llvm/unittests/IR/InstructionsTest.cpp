@@ -53,7 +53,7 @@ TEST(InstructionsTest, ReturnInst) {
   EXPECT_EQ(r0->op_begin(), r0->op_end());
 
   IntegerType* Int1 = IntegerType::get(C, 1);
-  Constant* One = ConstantInt::get(Int1, 1, true);
+  Constant* One = ConstantInt::getTrue(Int1);
   const ReturnInst* r1 = ReturnInst::Create(C, One);
   EXPECT_EQ(1U, r1->getNumOperands());
   User::const_op_iterator b(r1->op_begin());
@@ -152,7 +152,7 @@ TEST(InstructionsTest, BranchInst) {
   EXPECT_EQ(b0->op_end(), std::next(b0->op_begin()));
 
   IntegerType* Int1 = IntegerType::get(C, 1);
-  Constant* One = ConstantInt::get(Int1, 1, true);
+  Constant* One = ConstantInt::getTrue(Int1);
 
   // Conditional BranchInst
   BranchInst* b1 = BranchInst::Create(bb0, bb1, One);

@@ -1556,38 +1556,25 @@ void BinaryContext::foldFunction(BinaryFunction &ChildBF,
   ChildBF.Aliases.clear();
 
   if (HasRelocations) {
-    // Merge execution counts of ChildBF into those of ParentBF.
-    // Without relocations, we cannot reliably merge profiles as both functions
-    // continue to exist and either one can be executed.
+    // Merge execution counts of ChildBF into those of ParentBF. We require
+    // relocations as without relocations we cannot reliably merge profiles as
+    // both functions continue to exist and either one can be executed.
     ChildBF.mergeProfileDataInto(ParentBF);
 
-    std::shared_lock<llvm::sys::RWMutex> ReadBfsLock(BinaryFunctionsMutex,
-                                                     std::defer_lock);
-    std::unique_lock<llvm::sys::RWMutex> WriteBfsLock(BinaryFunctionsMutex,
-                                                      std::defer_lock);
-    // Remove ChildBF from the global set of functions in relocs mode.
-    ReadBfsLock.lock();
-    auto FI = BinaryFunctions.find(ChildBF.getAddress());
-    ReadBfsLock.unlock();
-
-    assert(FI != BinaryFunctions.end() && "function not found");
-    assert(&ChildBF == &FI->second && "function mismatch");
-
-    WriteBfsLock.lock();
-    ChildBF.clearDisasmState();
-    FI = BinaryFunctions.erase(FI);
-    WriteBfsLock.unlock();
-
-  } else {
-    // In non-relocation mode we keep the function, but rename it.
-    std::string NewName = "__ICF_" + ChildName.str();
-
-    WriteCtxLock.lock();
-    ChildBF.getSymbols().push_back(Ctx->getOrCreateSymbol(NewName));
-    WriteCtxLock.unlock();
-
-    ChildBF.setFolded(&ParentBF);
+    // Clear CFG state to free memory, but keep function in map.
+    // The function is marked as folded and will not be emitted.
+    ChildBF.resetState();
   }
+
+  // Add a new symbol to the function. In relocation mode, this is a
+  // placeholder so that getSymbol() doesn't crash. In non-relocation mode,
+  // this effectively renames the function.
+  WriteCtxLock.lock();
+  ChildBF.getSymbols().push_back(
+      Ctx->getOrCreateSymbol("__ICF_" + ChildName.str()));
+  WriteCtxLock.unlock();
+
+  ChildBF.setFolded(&ParentBF);
 
   ParentBF.setHasFunctionsFoldedInto();
 }
@@ -1713,16 +1700,6 @@ unsigned BinaryContext::addDebugFilenameToUnit(const uint32_t DestCUID,
   DWARFCompileUnit *DstUnit = DwCtx->getCompileUnitForOffset(DestCUID);
   return cantFail(getDwarfFile(Dir, FileName, 0, std::nullopt, std::nullopt,
                                DestCUID, DstUnit->getVersion()));
-}
-
-BinaryFunctionListType BinaryContext::getSortedFunctions() {
-  BinaryFunctionListType SortedFunctions(BinaryFunctions.size());
-  llvm::transform(llvm::make_second_range(BinaryFunctions),
-                  SortedFunctions.begin(),
-                  [](BinaryFunction &BF) { return &BF; });
-
-  llvm::stable_sort(SortedFunctions, compareBinaryFunctionByIndex);
-  return SortedFunctions;
 }
 
 BinaryFunctionListType BinaryContext::getAllBinaryFunctions() {
@@ -1975,6 +1952,12 @@ void BinaryContext::preprocessDebugInfo() {
 
 bool BinaryContext::shouldEmit(const BinaryFunction &Function) const {
   if (Function.isPseudo())
+    return false;
+
+  // In relocation mode, folded functions should not be emitted - their code
+  // is part of the parent. In non-relocation mode, folded functions are still
+  // emitted at their original location.
+  if (HasRelocations && Function.isFolded())
     return false;
 
   if (opts::processAllFunctions())
@@ -2569,6 +2552,10 @@ BinaryContext::createInjectedBinaryFunction(const std::string &Name,
   BinaryFunction *BF = InjectedBinaryFunctions.back();
   setSymbolToFunctionMap(BF->getSymbol(), BF);
   BF->CurrentState = BinaryFunction::State::CFG;
+
+  if (!getOutputBinaryFunctions().empty())
+    getOutputBinaryFunctions().push_back(BF);
+
   return BF;
 }
 

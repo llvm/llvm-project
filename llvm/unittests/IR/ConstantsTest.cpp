@@ -62,7 +62,7 @@ TEST(ConstantsTest, UseCounts) {
 TEST(ConstantsTest, Integer_i1) {
   LLVMContext Context;
   IntegerType *Int1 = IntegerType::get(Context, 1);
-  Constant *One = ConstantInt::get(Int1, 1, true);
+  Constant *One = ConstantInt::get(Int1, 1);
   Constant *Zero = ConstantInt::get(Int1, 0);
   Constant *NegOne = ConstantInt::get(Int1, static_cast<uint64_t>(-1), true);
   EXPECT_EQ(NegOne, ConstantInt::getSigned(Int1, -1));
@@ -142,7 +142,9 @@ TEST(ConstantsTest, IntSigns) {
   EXPECT_EQ(206U, ConstantInt::getSigned(Int8Ty, -50)->getZExtValue());
 
   // Overflow is handled by truncation.
-  EXPECT_EQ(0x3b, ConstantInt::get(Int8Ty, 0x13b)->getSExtValue());
+  EXPECT_EQ(0x3b, ConstantInt::get(Int8Ty, 0x13b, /*IsSigned=*/false,
+                                   /*ImplicitTrunc=*/true)
+                      ->getSExtValue());
 }
 
 TEST(ConstantsTest, PointerCast) {
@@ -258,7 +260,7 @@ TEST(ConstantsTest, AsInstructionsTest) {
   // FIXME: getGetElementPtr() actually creates an inbounds ConstantGEP,
   //        not a normal one!
   // CHECK(ConstantExpr::getGetElementPtr(Global, V, false),
-  //      "getelementptr i32*, i32** @dummy, i32 1");
+  //      "getelementptr ptr, ptr @dummy, i32 1");
   CHECK(ConstantExpr::getInBoundsGetElementPtr(PointerType::getUnqual(Context),
                                                Global, V),
         "getelementptr inbounds ptr, ptr @dummy, i32 1");

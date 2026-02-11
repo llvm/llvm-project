@@ -44,11 +44,15 @@ set(ORC_RT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 # Configure RTTI and exceptions compile flags
 set(ORC_RT_COMPILE_FLAGS)
-if(NOT ORC_RT_ENABLE_RTTI)
+if(ORC_RT_ENABLE_RTTI)
+  list(APPEND ORC_RT_COMPILE_FLAGS -frtti)
+else()
   list(APPEND ORC_RT_COMPILE_FLAGS -fno-rtti)
 endif()
 
-if(NOT ORC_RT_ENABLE_EXCEPTIONS)
+if(ORC_RT_ENABLE_EXCEPTIONS)
+  list(APPEND ORC_RT_COMPILE_FLAGS -fexceptions)
+else()
   list(APPEND ORC_RT_COMPILE_FLAGS -fno-exceptions)
 endif()
 

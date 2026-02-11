@@ -238,11 +238,6 @@ value llvm_dispose_context(value C) {
   return Val_unit;
 }
 
-/* unit -> llcontext */
-value llvm_global_context(value Unit) {
-  return to_val(LLVMGetGlobalContext());
-}
-
 /* llcontext -> string -> int */
 value llvm_mdkind_id(value C, value Name) {
   unsigned MDKindID = LLVMGetMDKindIDInContext(Context_val(C), String_val(Name),
@@ -1165,12 +1160,6 @@ value llvm_const_nsw_neg(value Value) {
 }
 
 /* llvalue -> llvalue */
-value llvm_const_nuw_neg(value Value) {
-  LLVMValueRef NegValue = LLVMConstNUWNeg(Value_val(Value));
-  return to_val(NegValue);
-}
-
-/* llvalue -> llvalue */
 value llvm_const_not(value Value) {
   LLVMValueRef NotValue = LLVMConstNot(Value_val(Value));
   return to_val(NotValue);
@@ -1601,9 +1590,61 @@ value llvm_delete_function(value Fn) {
   return Val_unit;
 }
 
-/* llvalue -> bool */
-value llvm_is_intrinsic(value Fn) {
-  return Val_bool(LLVMGetIntrinsicID(Value_val(Fn)));
+/* string -> int */
+value llvm_lookup_intrinsic_id(value Name) {
+  const char *NameCStr = String_val(Name);
+  size_t Len = caml_string_length(Name);
+  return Val_int(LLVMLookupIntrinsicID(NameCStr, Len));
+}
+
+/* llvalue -> int */
+value llvm_intrinsic_id(value Fn) {
+  return Val_int(LLVMGetIntrinsicID(Value_val(Fn)));
+}
+
+/* llmodule -> int -> lltype array -> llvalue */
+value llvm_intrinsic_declaration(value M, value ID, value OverloadTypes) {
+  mlsize_t Length = Wosize_val(OverloadTypes);
+  LLVMTypeRef *Temp = from_val_array(OverloadTypes);
+  LLVMValueRef Intrinsic =
+      LLVMGetIntrinsicDeclaration(Module_val(M), Int_val(ID), Temp, Length);
+  free(Temp);
+  return to_val(Intrinsic);
+}
+
+/* llcontext -> int -> lltype array -> lltype */
+value llvm_intrinsic_type(value C, value ID, value OverloadTypes) {
+  mlsize_t Length = Wosize_val(OverloadTypes);
+  LLVMTypeRef *Temp = from_val_array(OverloadTypes);
+  LLVMTypeRef Type =
+      LLVMIntrinsicGetType(Context_val(C), Int_val(ID), Temp, Length);
+  free(Temp);
+  return to_val(Type);
+}
+
+/* int -> string */
+value llvm_intrinsic_name(value ID) {
+  size_t Length = -1;
+  const char *NameCStr = LLVMIntrinsicGetName(Int_val(ID), &Length);
+  return caml_copy_string(NameCStr);
+}
+
+/* llmodule -> int -> lltype array -> string */
+value llvm_intrinsic_overloaded_name(value M, value ID, value OverloadTypes) {
+  mlsize_t TypeCount = Wosize_val(OverloadTypes);
+  LLVMTypeRef *Temp = from_val_array(OverloadTypes);
+  size_t NameLength = -1;
+  char *OverloadedNameCStrOwned = LLVMIntrinsicCopyOverloadedName2(
+      Module_val(M), Int_val(ID), Temp, TypeCount, &NameLength);
+  value OverloadedName = caml_copy_string(OverloadedNameCStrOwned);
+  free(OverloadedNameCStrOwned);
+  free(Temp);
+  return OverloadedName;
+}
+
+/* int -> bool */
+value llvm_intrinsic_is_overloaded(int ID) {
+  return Val_bool(LLVMIntrinsicIsOverloaded(Int_val(ID)));
 }
 
 /* llvalue -> int */
@@ -2358,12 +2399,6 @@ value llvm_build_neg(value X, value Name, value B) {
 value llvm_build_nsw_neg(value X, value Name, value B) {
   return to_val(
       LLVMBuildNSWNeg(Builder_val(B), Value_val(X), String_val(Name)));
-}
-
-/* llvalue -> string -> llbuilder -> llvalue */
-value llvm_build_nuw_neg(value X, value Name, value B) {
-  return to_val(
-      LLVMBuildNUWNeg(Builder_val(B), Value_val(X), String_val(Name)));
 }
 
 /* llvalue -> string -> llbuilder -> llvalue */
