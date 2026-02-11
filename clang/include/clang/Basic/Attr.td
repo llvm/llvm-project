@@ -2372,10 +2372,10 @@ def NoInline : DeclOrStmtAttr {
 }
 
 def NoOutline : DeclOrStmtAttr {
-  let Spellings = [Clang<"nooutline">];
-  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Spellings = [Clang<"no_outline">];
+  let Subjects = SubjectList<[Function, ObjCMethod, Block], ErrorDiag>;
   let Documentation = [NoOutlineDocs];
-  let SimpleHandler = 1;
+  let SimpleHandler = true;
 }
 
 def NoMips16 : InheritableAttr, TargetSpecificAttr<TargetMips32> {

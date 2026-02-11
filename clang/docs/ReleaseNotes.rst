@@ -162,7 +162,7 @@ Attribute Changes in Clang
   will still generate a stack protector if other local variables or command line flags
   require it.
 
-- Added a new attribute, ``[[clang::nooutline]]`` to suppress outlining from
+- Added a new attribute, ``[[clang::no_outline]]`` to suppress outlining from
   annotated functions. This uses the LLVM `nooutline` attribute.
 
 Improvements to Clang's diagnostics
