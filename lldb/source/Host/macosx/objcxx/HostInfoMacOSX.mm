@@ -12,6 +12,7 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -19,6 +20,7 @@
 #include "lldb/Utility/Timer.h"
 #include "lldb/Utility/VirtualDataExtractor.h"
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
@@ -684,14 +686,29 @@ const char *dyld_image_get_file_path(dyld_image_t image);
 namespace {
 class SharedCacheInfo {
 public:
-  llvm::StringMap<SharedCacheImageInfo> &GetImages() {
-    return m_caches[m_host_uuid];
+  llvm::StringMap<SharedCacheImageInfo *> &GetFilenameToImageInfoMap() {
+    return m_filename_map[m_host_uuid];
+  }
+  llvm::DenseMap<UUID, SharedCacheImageInfo *> &GetUUIDToImageInfoMap() {
+    return m_uuid_map[m_host_uuid];
   }
 
-  bool GetImages(llvm::StringMap<SharedCacheImageInfo> **images,
-                 const UUID &uuid) {
-    if (m_caches.find(uuid) != m_caches.end()) {
-      *images = &m_caches[uuid];
+  bool
+  GetFilenameToImageInfoMap(llvm::StringMap<SharedCacheImageInfo *> **images,
+                            const UUID &sc_uuid) {
+    if (m_filename_map.contains(sc_uuid)) {
+      *images = &m_filename_map[sc_uuid];
+      return true;
+    }
+    *images = nullptr;
+    return false;
+  }
+
+  bool
+  GetUUIDToImageInfoMap(llvm::DenseMap<UUID, SharedCacheImageInfo *> **images,
+                        const UUID &sc_uuid) {
+    if (m_uuid_map.contains(sc_uuid)) {
+      *images = &m_uuid_map[sc_uuid];
       return true;
     }
     *images = nullptr;
@@ -709,7 +726,12 @@ private:
   void CreateSharedCacheInfoLLDBsVirtualMemory();
   bool CreateHostSharedCacheImageList();
 
-  std::map<UUID, llvm::StringMap<SharedCacheImageInfo>> m_caches;
+  std::vector<SharedCacheImageInfo> m_file_infos;
+  llvm::SmallDenseMap<UUID, llvm::StringMap<SharedCacheImageInfo *>>
+      m_filename_map;
+  llvm::SmallDenseMap<UUID, llvm::DenseMap<UUID, SharedCacheImageInfo *>>
+      m_uuid_map;
+
   UUID m_host_uuid;
 
   // macOS 26.4 and newer
@@ -734,6 +756,9 @@ SharedCacheInfo::SharedCacheInfo() {
   uuid_t dsc_uuid;
   _dyld_get_shared_cache_uuid(dsc_uuid);
   m_host_uuid = UUID(dsc_uuid);
+
+  // In macOS 26, a shared cache has around 3500 files.
+  m_file_infos.reserve(4000);
 
   if (ModuleList::GetGlobalModuleListProperties()
           .GetSharedCacheBinaryLoading() &&
@@ -866,19 +891,30 @@ bool SharedCacheInfo::CreateSharedCacheImageList(UUID uuid,
         return;
       UUID image_uuid(uuid_tmp, sizeof(uuid_t));
 
+      // Copy the filename into the const string pool to
+      // ensure lifetime.
+      ConstString installname(dyld_image_get_installname(image));
       Log *log = GetLog(LLDBLog::Modules);
       if (log && log->GetVerbose())
-        LLDB_LOGF(log, "sc file %s image %p", dyld_image_get_installname(image),
+        LLDB_LOGF(log, "sc file %s image %p", installname.GetCString(),
                   (void *)image);
 
       m_dyld_image_retain_4HWTrace(image);
-      m_caches[m_host_uuid][dyld_image_get_installname(image)] =
-          SharedCacheImageInfo(image_uuid, map_shared_cache_binary_segments,
-                               image);
+      m_file_infos.push_back(SharedCacheImageInfo(
+          installname, image_uuid, map_shared_cache_binary_segments, image));
     });
   });
   if (return_failed)
     return false;
+
+  // vector of SharedCacheImageInfos has been fully populated, we can
+  // take pointers to the objects now.
+  size_t file_info_size = m_file_infos.size();
+  for (size_t i = 0; i < file_info_size; i++) {
+    SharedCacheImageInfo *entry = &m_file_infos[i];
+    m_filename_map[m_host_uuid][entry->GetFilename()] = entry;
+    m_uuid_map[m_host_uuid][entry->GetUUID()] = entry;
+  }
 
   return true;
 }
@@ -944,7 +980,10 @@ bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
     lldb::DataBufferSP data_sp = std::make_shared<DataBufferUnowned>(
         (uint8_t *)minVmAddr, maxVmAddr - minVmAddr);
     lldb::DataExtractorSP extractor_sp = std::make_shared<DataExtractor>(data_sp);
-    m_caches[m_host_uuid][dyld_image_get_installname(image)] =
+    // Copy the filename into the const string pool to
+    // ensure lifetime.
+    ConstString installname(dyld_image_get_installname(image));
+    m_caches[m_host_uuid][installname.GetStringRef()] =
         SharedCacheImageInfo{UUID(uuid, 16), extractor_sp};
   });
   return true;
@@ -968,9 +1007,19 @@ void SharedCacheInfo::CreateSharedCacheInfoLLDBsVirtualMemory() {
             shared_cache_size - info->textSegmentOffset);
         lldb::DataExtractorSP extractor_sp =
             std::make_shared<DataExtractor>(buffer_sp);
-        m_caches[m_host_uuid][info->path] =
-            SharedCacheImageInfo{UUID(info->dylibUuid, 16), extractor_sp};
+        ConstString filepath(info->path);
+        m_file_infos.push_back(SharedCacheImageInfo(
+            filepath, UUID(info->dylibUuid, 16), extractor_sp));
       });
+
+  // vector of SharedCacheImageInfos has been fully populated, we can
+  // take pointers to the objects now.
+  size_t file_info_size = m_file_infos.size();
+  for (size_t i = 0; i < file_info_size; i++) {
+    SharedCacheImageInfo *entry = &m_file_infos[i];
+    m_filename_map[m_host_uuid][entry->GetFilename()] = entry;
+    m_uuid_map[m_host_uuid][entry->GetUUID()] = entry;
+  }
 }
 
 SharedCacheInfo &GetSharedCacheSingleton() {
@@ -980,15 +1029,36 @@ SharedCacheInfo &GetSharedCacheSingleton() {
 
 SharedCacheImageInfo
 HostInfoMacOSX::GetSharedCacheImageInfo(llvm::StringRef image_name) {
-  return GetSharedCacheSingleton().GetImages().lookup(image_name);
+  SharedCacheImageInfo *entry =
+      GetSharedCacheSingleton().GetFilenameToImageInfoMap().lookup(image_name);
+  if (entry)
+    return *entry;
+  return {};
 }
 
 SharedCacheImageInfo
 HostInfoMacOSX::GetSharedCacheImageInfo(llvm::StringRef image_name,
                                         const UUID &uuid) {
-  llvm::StringMap<SharedCacheImageInfo> *shared_cache_info;
-  if (GetSharedCacheSingleton().GetImages(&shared_cache_info, uuid))
-    return shared_cache_info->lookup(image_name);
+  llvm::StringMap<SharedCacheImageInfo *> *shared_cache_info;
+  if (GetSharedCacheSingleton().GetFilenameToImageInfoMap(&shared_cache_info,
+                                                          uuid)) {
+    SharedCacheImageInfo *entry = shared_cache_info->lookup(image_name);
+    if (entry)
+      return *entry;
+  }
+  return {};
+}
+
+SharedCacheImageInfo
+HostInfoMacOSX::GetSharedCacheImageInfo(const UUID &file_uuid,
+                                        const UUID &sc_uuid) {
+  llvm::DenseMap<UUID, SharedCacheImageInfo *> *shared_cache_info;
+  if (GetSharedCacheSingleton().GetUUIDToImageInfoMap(&shared_cache_info,
+                                                      sc_uuid)) {
+    SharedCacheImageInfo *entry = shared_cache_info->lookup(file_uuid);
+    if (entry)
+      return *entry;
+  }
   return {};
 }
 
