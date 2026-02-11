@@ -1414,7 +1414,8 @@ public:
 
   /// Diagnostics that are emitted only if we discover that the given function
   /// must be codegen'ed.  Because handling these correctly adds overhead to
-  /// compilation, this is currently only enabled for CUDA compilations.
+  /// compilation, this is currently only used for offload languages like CUDA,
+  /// OpenMP, and SYCL.
   SemaDiagnosticBuilder::DeferredDiagnosticsType DeviceDeferredDiags;
 
   /// CurContext - This is the current declaration context of parsing.

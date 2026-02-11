@@ -13289,7 +13289,10 @@ def note_sycl_kernel_launch_lookup_here : Note<
   " here">;
 def note_sycl_kernel_launch_overload_resolution_here : Note<
   "in implicit call to 'sycl_kernel_launch' with template argument %0 and"
- " function arguments %1 required here">;
+  " function arguments %1 required here">;
+def err_sycl_entry_point_device_use : Error<
+  "function %0 cannot be used in device code because it is declared with the"
+  " %1 attribute">;
 
 def warn_cuda_maxclusterrank_sm_90 : Warning<
   "maxclusterrank requires sm_90 or higher, CUDA arch provided: %0, ignoring "

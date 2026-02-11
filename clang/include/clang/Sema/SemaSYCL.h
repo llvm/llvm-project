@@ -64,6 +64,10 @@ public:
   void handleKernelAttr(Decl *D, const ParsedAttr &AL);
   void handleKernelEntryPointAttr(Decl *D, const ParsedAttr &AL);
 
+  /// Issues a deferred diagnostic if use of the declaration designated
+  /// by 'D' is invalid in a device context.
+  void CheckDeviceUseOfDecl(NamedDecl *D, SourceLocation Loc);
+
   void CheckSYCLExternalFunctionDecl(FunctionDecl *FD);
   void CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD);
 

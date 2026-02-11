@@ -21080,7 +21080,9 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
 
   // SYCL functions can be template, so we check if they have appropriate
   // attribute prior to checking if it is a template.
-  if (LangOpts.SYCLIsDevice && FD->hasAttr<SYCLKernelAttr>())
+  if (LangOpts.SYCLIsDevice && (FD->hasAttr<SYCLKernelAttr>() ||
+                                FD->hasAttr<SYCLKernelEntryPointAttr>() ||
+                                FD->hasAttr<SYCLExternalAttr>()))
     return FunctionEmissionStatus::Emitted;
 
   // Templates are emitted when they're instantiated.

@@ -19,17 +19,18 @@ using namespace CodeGen;
 
 void CodeGenFunction::EmitSYCLKernelCallStmt(const SYCLKernelCallStmt &S) {
   if (getLangOpts().SYCLIsDevice) {
-    // A sycl_kernel_entry_point attributed function is unlikely to be emitted
-    // during device compilation, but might be if it is ODR-used from device
-    // code that is emitted. In these cases, the function is emitted with an
-    // empty body; the original body is emitted in the offload kernel entry
-    // point and the synthesized kernel launch code is only relevant for host
-    // compilation.
-    return;
+    // A definition for a sycl_kernel_entry_point attributed function should
+    // never be emitted during device compilation; a diagnostic should be
+    // issued for any such ODR-use.
+    assert(false && "Attempt to emit a sycl_kernel_entry_point function during "
+                    "device compilation");
+    // However, if a definition is somehow emitted, emit an unreachable
+    // instruction to thwart any attempted execution.
+    EmitUnreachable(S.getBeginLoc());
+  } else {
+    assert(getLangOpts().SYCLIsHost);
+    EmitStmt(S.getKernelLaunchStmt());
   }
-
-  assert(getLangOpts().SYCLIsHost);
-  EmitStmt(S.getKernelLaunchStmt());
 }
 
 static void SetSYCLKernelAttributes(llvm::Function *Fn, CodeGenFunction &CGF) {

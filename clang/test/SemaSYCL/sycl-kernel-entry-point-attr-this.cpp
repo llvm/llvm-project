@@ -22,7 +22,7 @@ struct type_info {
 };
 } // namespace std
 
-// A generic kernell launch function.
+// A generic kernel launch function.
 template<typename KernelName, typename... Ts>
 void sycl_kernel_launch(const char *, Ts...) {}
 

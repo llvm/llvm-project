@@ -31,14 +31,24 @@ Sema::SemaDiagnosticBuilder SemaSYCL::DiagIfDeviceCode(SourceLocation Loc,
                                                        unsigned DiagID) {
   assert(getLangOpts().SYCLIsDevice &&
          "Should only be called during SYCL compilation");
-  FunctionDecl *FD = dyn_cast<FunctionDecl>(SemaRef.getCurLexicalContext());
-  SemaDiagnosticBuilder::Kind DiagKind = [this, FD] {
-    if (!FD)
-      return SemaDiagnosticBuilder::K_Nop;
-    if (SemaRef.getEmissionStatus(FD) == Sema::FunctionEmissionStatus::Emitted)
-      return SemaDiagnosticBuilder::K_ImmediateWithCallStack;
-    return SemaDiagnosticBuilder::K_Deferred;
-  }();
+  SemaDiagnosticBuilder::Kind DiagKind = SemaDiagnosticBuilder::K_Nop;
+  FunctionDecl *FD = SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);
+  if (FD) {
+    Sema::FunctionEmissionStatus FES = SemaRef.getEmissionStatus(FD);
+    switch (FES) {
+    case Sema::FunctionEmissionStatus::Emitted:
+      DiagKind = SemaDiagnosticBuilder::K_ImmediateWithCallStack;
+      break;
+    case Sema::FunctionEmissionStatus::Unknown:
+    case Sema::FunctionEmissionStatus::TemplateDiscarded:
+      DiagKind = SemaDiagnosticBuilder::K_Deferred;
+      break;
+    case Sema::FunctionEmissionStatus::OMPDiscarded:
+      llvm_unreachable("OMPDiscarded unexpected in SYCL device compilation");
+    case Sema::FunctionEmissionStatus::CUDADiscarded:
+      llvm_unreachable("CUDADiscarded unexpected in SYCL device compilation");
+    }
+  }
   return SemaDiagnosticBuilder(DiagKind, Loc, DiagID, FD, SemaRef);
 }
 
@@ -209,6 +219,23 @@ void SemaSYCL::handleKernelEntryPointAttr(Decl *D, const ParsedAttr &AL) {
   assert(TSI && "no type source info for attribute argument");
   D->addAttr(::new (SemaRef.Context)
                  SYCLKernelEntryPointAttr(SemaRef.Context, AL, TSI));
+}
+
+void SemaSYCL::CheckDeviceUseOfDecl(NamedDecl *D, SourceLocation Loc) {
+  assert(getLangOpts().SYCLIsDevice &&
+         "Should only be called during SYCL compilation");
+
+  // Function declarations with the sycl_kernel_entry_point attribute cannot
+  // be ODR-used in a potentially evaluated context.
+  if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
+    if (const auto *SKEPAttr = FD->getAttr<SYCLKernelEntryPointAttr>()) {
+      if (SemaRef.currentEvaluationContext().isPotentiallyEvaluated()) {
+        DiagIfDeviceCode(Loc, diag::err_sycl_entry_point_device_use)
+            << FD << SKEPAttr;
+        DiagIfDeviceCode(SKEPAttr->getLocation(), diag::note_attribute) << FD;
+      }
+    }
+  }
 }
 
 // Given a potentially qualified type, SourceLocationForUserDeclaredType()
