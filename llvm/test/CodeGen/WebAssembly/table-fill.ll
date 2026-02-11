@@ -1,5 +1,5 @@
-; RUN: sed 's/iX/i32/g' < %s | llc --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+reference-types | FileCheck %s --check-prefixes=CHECK,WASM32
-; RUN: sed 's/iX/i64/g' < %s | llc --mtriple=wasm64-unknown-unknown -asm-verbose=false -mattr=+reference-types | FileCheck %s --check-prefixes=CHECK,WASM64
+; RUN: sed 's/iX/i32/g' < %s | llc --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+reference-types | FileCheck %s -DiPTR=i32
+; RUN: sed 's/iX/i64/g' < %s | llc --mtriple=wasm64-unknown-unknown -asm-verbose=false -mattr=+reference-types | FileCheck %s -DiPTR=i64
 
 %externref = type ptr addrspace(10) ;; addrspace 10 is nonintegral
 
@@ -9,8 +9,7 @@ declare void @llvm.wasm.table.fill.externref(ptr addrspace(1), iX, %externref, i
 
 define void @table_fill(iX %start, iX %len, %externref %val) {
 ; CHECK-LABEL: table_fill:
-; WASM32-NEXT: .functype	table_fill (i32, i32, externref) -> ()
-; WASM64-NEXT: .functype	table_fill (i64, i64, externref) -> ()
+; CHECK-NEXT:  .functype	table_fill ([[iPTR]], [[iPTR]], externref) -> ()
 ; CHECK-NEXT:  local.get    0
 ; CHECK-NEXT:  local.get    2
 ; CHECK-NEXT:  local.get    1

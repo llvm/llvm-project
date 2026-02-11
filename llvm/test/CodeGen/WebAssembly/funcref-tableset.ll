@@ -1,5 +1,5 @@
-; RUN: sed 's/iX/i32/g' < %s | llc --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+reference-types | FileCheck %s --check-prefixes=CHECK,WASM32
-; RUN: sed 's/iX/i64/g' < %s | llc --mtriple=wasm64-unknown-unknown -asm-verbose=false -mattr=+reference-types | FileCheck %s --check-prefixes=CHECK,WASM64
+; RUN: sed 's/iX/i32/g' < %s | llc --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+reference-types | FileCheck %s -DiPTR=i32
+; RUN: sed 's/iX/i64/g' < %s | llc --mtriple=wasm64-unknown-unknown -asm-verbose=false -mattr=+reference-types | FileCheck %s -DiPTR=i64
 
 %funcref = type ptr addrspace(20) ;; addrspace 20 is nonintegral
 
@@ -9,8 +9,7 @@ declare void @llvm.wasm.table.set.funcref(ptr addrspace(1), iX, %funcref) nounwi
 
 define void @set_funcref_table(%funcref %g, iX %i) {
 ; CHECK-LABEL: set_funcref_table:
-; WASM32-NEXT: .functype       set_funcref_table (funcref, i32) -> ()
-; WASM64-NEXT: .functype       set_funcref_table (funcref, i64) -> ()
+; CHECK-NEXT:  .functype       set_funcref_table (funcref, [[iPTR]]) -> ()
 ; CHECK-NEXT:  local.get      1
 ; CHECK-NEXT:  local.get      0
 ; CHECK-NEXT:  table.set     funcref_table
@@ -24,8 +23,7 @@ define void @set_funcref_table(%funcref %g, iX %i) {
 define void @set_funcref_table_const(%funcref %g) {
 ; CHECK-LABEL: set_funcref_table_const:
 ; CHECK-NEXT:  .functype      set_funcref_table_const (funcref) -> ()
-; WASM32-NEXT: i32.const      0
-; WASM64-NEXT: i64.const      0
+; CHECK-NEXT:  [[iPTR]].const 0
 ; CHECK-NEXT:  local.get      0
 ; CHECK-NEXT:  table.set      funcref_table
 ; CHECK-NEXT:  end_function
@@ -35,13 +33,10 @@ define void @set_funcref_table_const(%funcref %g) {
 
 define void @set_funcref_table_with_offset(%funcref %g, iX %i) {
 ; CHECK-LABEL: set_funcref_table_with_offset:
-; WASM32-NEXT: .functype       set_funcref_table_with_offset (funcref, i32) -> ()
-; WASM64-NEXT: .functype       set_funcref_table_with_offset (funcref, i64) -> ()
+; CHECK-NEXT:  .functype       set_funcref_table_with_offset (funcref, [[iPTR]]) -> ()
 ; CHECK-NEXT:  local.get       1
-; WASM32-NEXT: i32.const       2
-; WASM32-NEXT: i32.add
-; WASM64-NEXT: i64.const       2
-; WASM64-NEXT: i64.add
+; CHECK-NEXT:  [[iPTR]].const  2
+; CHECK-NEXT:  [[iPTR]].add
 ; CHECK-NEXT:  local.get       0
 ; CHECK-NEXT:  table.set       funcref_table
 ; CHECK-NEXT:  end_function
@@ -52,12 +47,10 @@ define void @set_funcref_table_with_offset(%funcref %g, iX %i) {
 
 define void @set_funcref_table_with_var_offset(%funcref %g, iX %i, iX %j) {
 ; CHECK-LABEL: set_funcref_table_with_var_offset:
-; WASM32-NEXT: .functype       set_funcref_table_with_var_offset (funcref, i32, i32) -> ()
-; WASM64-NEXT: .functype       set_funcref_table_with_var_offset (funcref, i64, i64) -> ()
+; CHECK-NEXT:  .functype       set_funcref_table_with_var_offset (funcref, [[iPTR]], [[iPTR]]) -> ()
 ; CHECK-NEXT:  local.get       1
 ; CHECK-NEXT:  local.get       2
-; WASM32-NEXT: i32.add
-; WASM64-NEXT: i64.add
+; CHECK-NEXT:  [[iPTR]].add
 ; CHECK-NEXT:  local.get       0
 ; CHECK-NEXT:  table.set       funcref_table
 ; CHECK-NEXT:  end_function
@@ -70,12 +63,10 @@ declare iX @set_offset()
 
 define void @set_funcref_table_with_var_offset2(%funcref %g, iX %i) {
 ; CHECK-LABEL: set_funcref_table_with_var_offset2:
-; WASM32-NEXT: .functype       set_funcref_table_with_var_offset2 (funcref, i32) -> ()
-; WASM64-NEXT: .functype       set_funcref_table_with_var_offset2 (funcref, i64) -> ()
+; CHECK-NEXT:  .functype       set_funcref_table_with_var_offset2 (funcref, [[iPTR]]) -> ()
 ; CHECK-NEXT:  local.get       1
 ; CHECK-NEXT:  call    set_offset
-; WASM32-NEXT: i32.add
-; WASM64-NEXT: i64.add
+; CHECK-NEXT:  [[iPTR]].add
 ; CHECK-NEXT:  local.get       0
 ; CHECK-NEXT:  table.set       funcref_table
 ; CHECK-NEXT:  end_function

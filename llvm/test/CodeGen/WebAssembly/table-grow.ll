@@ -1,5 +1,5 @@
-; RUN: sed 's/iX/i32/g' < %s | llc --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+reference-types | FileCheck %s --check-prefixes=CHECK,WASM32
-; RUN: sed 's/iX/i64/g' < %s | llc --mtriple=wasm64-unknown-unknown -asm-verbose=false -mattr=+reference-types | FileCheck %s --check-prefixes=CHECK,WASM64
+; RUN: sed 's/iX/i32/g' < %s | llc --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+reference-types | FileCheck %s -DiPTR=i32
+; RUN: sed 's/iX/i64/g' < %s | llc --mtriple=wasm64-unknown-unknown -asm-verbose=false -mattr=+reference-types | FileCheck %s -DiPTR=i64
 
 %externref = type ptr addrspace(10) ;; addrspace 10 is nonintegral
 
@@ -10,8 +10,7 @@ declare %externref @llvm.wasm.ref.null.extern() nounwind readonly
 
 define i32 @table_grow(iX %sz) {
 ; CHECK-LABEL: table_grow:
-; WASM32-NEXT: .functype	table_grow (i32) -> (i32)
-; WASM64-NEXT: .functype	table_grow (i64) -> (i32)
+; CHECK-NEXT:  .functype	table_grow ([[iPTR]]) -> (i32)
 ; CHECK-NEXT:  ref.null_extern
 ; CHECK-NEXT:  local.get	0
 ; CHECK-NEXT:  table.grow	externref_table
