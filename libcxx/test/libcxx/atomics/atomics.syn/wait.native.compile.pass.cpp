@@ -9,8 +9,8 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-threads
 
-// when __has_native_atomic_wait is true, atomic object's address will be directly passed to platform's wait.
-// This test ensures that types that do not satisfy platform's wait requirement should not be __has_native_atomic_wait.
+// When __has_native_atomic_wait<T> is true, the atomic object's address will be directly passed to the platform's wait.
+// This test ensures that types that do not satisfy the platform's wait requirement should have __has_native_atomic_wait<T> be false.
 
 #include <atomic>
 #include <cstddef>
