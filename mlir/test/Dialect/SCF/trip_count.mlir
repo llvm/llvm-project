@@ -770,6 +770,24 @@ func.func @trip_count_i8_signed_crossing_zero(%a : i32, %b : i32) -> i32 {
 
 // -----
 
+// CHECK-LABEL:func.func @trip_count_i8_signed_overflow_fix(
+func.func @trip_count_i8_signed_overflow_fix(%a : i32, %b : i32) -> i32 {
+  %c-128 = arith.constant -128 : i8
+  %c127 = arith.constant 127 : i8
+  %c1 = arith.constant 1 : i8
+
+  // Signed i8 from -128 to 127: tests overflow fix
+  // Without the fix, computing (127 - (-128)) would overflow in i8.
+  // The trip count should be 255, but will be printed as -1 in i8 signed format.
+  // CHECK: "test.trip-count" = -1 : i8
+  %r = scf.for %i = %c-128 to %c127 step %c1 iter_args(%0 = %a) -> i32 : i8 {
+    scf.yield %b : i32
+  }
+  return %r : i32
+}
+
+// -----
+
 // CHECK-LABEL:func.func @trip_count_i16_unsigned_full_range(
 func.func @trip_count_i16_unsigned_full_range(%a : i32, %b : i32) -> i32 {
   %c0 = arith.constant 0 : i16
