@@ -151,3 +151,16 @@ namespace NullRecord {
   };
   S2 s = S2();
 }
+
+namespace NamedLoops {
+  constexpr int foo() {
+  bar: // both-note {{previous definition is here}} \
+       // both-warning {{use of this statement in a constexpr function is a C++23 extension}}
+    return 0;
+
+  bar: // both-error {{redefinition of label 'bar'}}
+    do {
+      break bar; // both-error {{named 'break' is only supported in C2y}}
+    } while (0);
+  }
+}
