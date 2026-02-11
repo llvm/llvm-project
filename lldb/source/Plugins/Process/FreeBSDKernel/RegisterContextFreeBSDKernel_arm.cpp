@@ -8,7 +8,7 @@
 ///
 /// \file
 /// This file contains the definition of the RegisterContextFreeBSDKernel_arm
-/// class, which is used for reading registers from PCB on arm kernel dump.
+/// class, which is used for reading registers from PCB in arm kernel dump.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -59,11 +59,11 @@ bool RegisterContextFreeBSDKernel_arm::ReadRegister(
     llvm::support::ulittle32_t r8;
     llvm::support::ulittle32_t r9;
     llvm::support::ulittle32_t r10;
-    llvm::support::ulittle64_t r11;
-    llvm::support::ulittle64_t r12;
-    llvm::support::ulittle64_t sp;
-    llvm::support::ulittle64_t lr;
-    llvm::support::ulittle64_t pc;
+    llvm::support::ulittle32_t r11;
+    llvm::support::ulittle32_t r12;
+    llvm::support::ulittle32_t sp;
+    llvm::support::ulittle32_t lr;
+    llvm::support::ulittle32_t pc;
   } pcb;
 
   Status error;

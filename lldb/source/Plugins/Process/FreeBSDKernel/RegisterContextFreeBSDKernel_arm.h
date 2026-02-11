@@ -8,7 +8,7 @@
 ///
 /// \file
 /// This file contains the declaration of the RegisterContextFreeBSDKernel_arm
-/// class, which is used for reading registers from PCB on arm kernel dump.
+/// class, which is used for reading registers from PCB in arm kernel dump.
 ///
 //===----------------------------------------------------------------------===//
 
