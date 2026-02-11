@@ -245,6 +245,9 @@ bool Context::evaluateString(State &Parent, const Expr *E,
   Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
 
   auto PtrRes = C.interpretAsPointer(E, [&](const Pointer &Ptr) {
+    if (!Ptr.isBlockPointer())
+      return false;
+
     const Descriptor *FieldDesc = Ptr.getFieldDesc();
     if (!FieldDesc->isPrimitiveArray())
       return false;
@@ -285,11 +288,15 @@ bool Context::evaluateString(State &Parent, const Expr *E,
   return true;
 }
 
-bool Context::evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result) {
+std::optional<uint64_t> Context::evaluateStrlen(State &Parent, const Expr *E) {
   assert(Stk.empty());
   Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
 
+  std::optional<uint64_t> Result;
   auto PtrRes = C.interpretAsPointer(E, [&](const Pointer &Ptr) {
+    if (!Ptr.isBlockPointer())
+      return false;
+
     const Descriptor *FieldDesc = Ptr.getFieldDesc();
     if (!FieldDesc->isPrimitiveArray())
       return false;
@@ -312,7 +319,7 @@ bool Context::evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result) {
         auto Elem = Ptr.elem<T>(I);
         if (Elem.isZero())
           return true;
-        ++Result;
+        ++(*Result);
       });
     }
     // We didn't find a 0 byte.
@@ -322,9 +329,42 @@ bool Context::evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result) {
   if (PtrRes.isInvalid()) {
     C.cleanup();
     Stk.clear();
-    return false;
+    return std::nullopt;
   }
-  return true;
+  return Result;
+}
+
+std::optional<uint64_t>
+Context::tryEvaluateObjectSize(State &Parent, const Expr *E, unsigned Kind) {
+  assert(Stk.empty());
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+
+  std::optional<uint64_t> Result;
+
+  auto PtrRes = C.interpretAsPointer(E, [&](const Pointer &Ptr) {
+    const Descriptor *DeclDesc = Ptr.getDeclDesc();
+    if (!DeclDesc)
+      return false;
+
+    QualType T = DeclDesc->getType().getNonReferenceType();
+    if (T->isIncompleteType() || T->isFunctionType() ||
+        !T->isConstantSizeType())
+      return false;
+
+    Pointer P = Ptr;
+    if (auto ObjectSize = evaluateBuiltinObjectSize(getASTContext(), Kind, P)) {
+      Result = *ObjectSize;
+      return true;
+    }
+    return false;
+  });
+
+  if (PtrRes.isInvalid()) {
+    C.cleanup();
+    Stk.clear();
+    return std::nullopt;
+  }
+  return Result;
 }
 
 const LangOptions &Context::getLangOpts() const { return Ctx.getLangOpts(); }

@@ -23,6 +23,7 @@
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/Debug.h"
 #include "mlir-c/Diagnostics.h"
+#include "mlir-c/ExtensibleDialect.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/IntegerSet.h"
 #include "mlir-c/Support.h"
@@ -1844,6 +1845,30 @@ private:
   nanobind::list operands;
   PyOpAttributeMap attributes;
 };
+
+class MLIR_PYTHON_API_EXPORTED PyDynamicOpTrait {
+public:
+  static bool attach(const nanobind::object &opName,
+                     const nanobind::object &target, PyMlirContext &context);
+
+  static void bind(nanobind::module_ &m);
+};
+
+namespace PyDynamicOpTraits {
+
+class MLIR_PYTHON_API_EXPORTED IsTerminator : public PyDynamicOpTrait {
+public:
+  static bool attach(const nanobind::object &opName, PyMlirContext &context);
+  static void bind(nanobind::module_ &m);
+};
+
+class MLIR_PYTHON_API_EXPORTED NoTerminator : public PyDynamicOpTrait {
+public:
+  static bool attach(const nanobind::object &opName, PyMlirContext &context);
+  static void bind(nanobind::module_ &m);
+};
+
+} // namespace PyDynamicOpTraits
 
 MLIR_PYTHON_API_EXPORTED MlirValue getUniqueResult(MlirOperation operation);
 MLIR_PYTHON_API_EXPORTED void populateIRCore(nanobind::module_ &m);
