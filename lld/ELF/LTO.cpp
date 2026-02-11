@@ -46,8 +46,26 @@ static std::string getThinLTOOutputFile(Ctx &ctx, StringRef modulePath) {
 static lto::Config createConfig(Ctx &ctx) {
   lto::Config c;
 
+  std::shared_ptr<MemoryBuffer> MBPtr;
+  if (!ctx.arg.ltoBasicBlockSections.empty()) {
+    if (ctx.arg.ltoBasicBlockSections == "all") {
+    } else if (ctx.arg.ltoBasicBlockSections == "labels") {
+    } else if (ctx.arg.ltoBasicBlockSections == "none") {
+    } else {
+      ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
+          MemoryBuffer::getFile(ctx.arg.ltoBasicBlockSections.str());
+      if (!MBOrErr) {
+        ErrAlways(ctx) << "cannot open " << ctx.arg.ltoBasicBlockSections << ":"
+                       << MBOrErr.getError().message();
+      } else {
+        MBPtr = std::move(*MBOrErr);
+      }
+    }
+  }
+
   // Set up the callback to modify TargetOptions.
-  c.ModifyTargetOptions = [&](TargetOptions &Options) -> void {
+  c.ModifyTargetOptions =
+      [&ctx, MB = std::move(MBPtr)](TargetOptions &Options) -> void {
     // LLD supports the new relocations and address-significance tables.
     Options.EmitAddrsig = true;
     // Always emit a section per function/datum with LTO.
@@ -69,14 +87,7 @@ static lto::Config createConfig(Ctx &ctx) {
       } else if (ctx.arg.ltoBasicBlockSections == "none") {
         Options.BBSections = BasicBlockSection::None;
       } else {
-        ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
-            MemoryBuffer::getFile(ctx.arg.ltoBasicBlockSections.str());
-        if (!MBOrErr) {
-          ErrAlways(ctx) << "cannot open " << ctx.arg.ltoBasicBlockSections
-                         << ":" << MBOrErr.getError().message();
-        } else {
-          Options.BBSectionsFuncListBuf = std::move(*MBOrErr);
-        }
+        Options.BBSectionsFuncListBuf = std::move(MB);
         Options.BBSections = BasicBlockSection::List;
       }
     }
