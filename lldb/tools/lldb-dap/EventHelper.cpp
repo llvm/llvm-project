@@ -293,10 +293,12 @@ llvm::Error SendThreadStoppedEvent(DAP &dap, bool on_entry) {
 
   // Send stopped events for each thread thats stopped.
   for (auto thread : stopped_threads)
-    SendStoppedEvent(dap, thread, on_entry, false, true);
+    SendStoppedEvent(dap, thread, on_entry, /*all_threads_stopped=*/false,
+                     /*preserve_focus=*/true);
 
   // Notify the focused thread last to ensure the UI is focused correctly.
-  SendStoppedEvent(dap, focused_thread, on_entry, true, false);
+  SendStoppedEvent(dap, focused_thread, on_entry, /*all_threads_stopped=*/true,
+                   /*preserve_focus=*/false);
 
   // Update focused thread.
   dap.focus_tid = focused_thread.GetThreadID();
