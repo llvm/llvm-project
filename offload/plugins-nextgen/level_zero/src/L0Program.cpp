@@ -423,7 +423,7 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
       ODBG_OS(OLDT_BinaryDump, [&](llvm::raw_ostream &Os) {
         std::string Filename = llvm::formatv(
             "{0}_image{1}_module_{2}_{3}.{4}", utils::os::getExecName(),
-            ImageId++, Idx, I, (IsBinary ? "bin" : "spv"));
+            ImageId, Idx, I, (IsBinary ? "bin" : "spv"));
         std::error_code EC;
         raw_fd_ostream FS(Filename, EC, llvm::sys::fs::OF_None);
         if (EC) {
