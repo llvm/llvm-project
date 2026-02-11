@@ -266,14 +266,13 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
   unsigned DstBitSize = DL.getTypeSizeInBits(DstEltTy);
   APInt Rest(SrcBitSize, 0);
   unsigned RestSize = 0;
-  for (unsigned i = 0; i != NumSrcElt || Result.size() != NumDstElt;) {
+  for (unsigned i = 0; Result.size() != NumDstElt;) {
     unsigned UnusedBits = SrcBitSize - RestSize;
     if (RestSize >= DstBitSize) {
       APInt Elt = isLittleEndian ? Rest.lshr(UnusedBits)
                                  : Rest << (RestSize - DstBitSize);
       Result.push_back(ConstantInt::get(DstEltTy, Elt.trunc(DstBitSize)));
       RestSize -= DstBitSize;
-      Rest.clearBits(UnusedBits - 1, UnusedBits - 1 + DstBitSize);
       continue;
     }
     auto *Element = C->getAggregateElement(i++);
