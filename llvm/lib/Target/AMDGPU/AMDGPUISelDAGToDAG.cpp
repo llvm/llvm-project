@@ -1981,6 +1981,7 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
                                            bool NeedIOffset) const {
   int64_t ImmOffset = 0;
   ScaleOffset = false;
+  const SIInstrInfo *TII = Subtarget->getInstrInfo();
 
   // Match the immediate offset first, which canonically is moved as low as
   // possible.
@@ -1988,7 +1989,6 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
   SDValue LHS, RHS;
   if (isBaseWithConstantOffset64(Addr, LHS, RHS)) {
     int64_t COffsetVal = cast<ConstantSDNode>(RHS)->getSExtValue();
-    const SIInstrInfo *TII = Subtarget->getInstrInfo();
 
     if (NeedIOffset &&
         TII->isLegalFLATOffset(COffsetVal, AMDGPUAS::GLOBAL_ADDRESS,
@@ -2037,13 +2037,44 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
     LHS = Addr.getOperand(0);
 
     if (!LHS->isDivergent()) {
-      // add (i64 sgpr), (*_extend (i32 vgpr))
       RHS = Addr.getOperand(1);
-      ScaleOffset = SelectScaleOffset(N, RHS, Subtarget->hasSignedGVSOffset());
+
       if (SDValue ExtRHS = matchExtFromI32orI32(
               RHS, Subtarget->hasSignedGVSOffset(), CurDAG)) {
+        // add (i64 sgpr), (*_extend (scale (i32 vgpr)))
         SAddr = LHS;
         VOffset = ExtRHS;
+        if (NeedIOffset && !ImmOffset &&
+            CurDAG->isBaseWithConstantOffset(ExtRHS)) {
+          // add (i64 sgpr), (zero_extend (add (scale (i32 vgpr)), (i32 imm)))
+          int64_t COffset =
+              cast<ConstantSDNode>(ExtRHS.getOperand(1))->getSExtValue();
+
+          if (TII->isLegalFLATOffset(COffset, AMDGPUAS::GLOBAL_ADDRESS,
+                                     SIInstrFlags::FlatGlobal)) {
+            // If the MSB of the first operand of the addition is known to be
+            // zero, which is followed by zext, this makes sure:
+            // a.) for unsigned VOffset, no overflow would happen.
+            // b.) for signed VOffset, the value can be properly encoded.
+            if (RHS.getOpcode() == ISD::ZERO_EXTEND &&
+                CurDAG->SignBitIsZero(ExtRHS.getOperand(0))) {
+              VOffset = ExtRHS.getOperand(0);
+              ImmOffset = COffset;
+            }
+          }
+        }
+
+        ScaleOffset =
+            SelectScaleOffset(N, VOffset, Subtarget->hasSignedGVSOffset());
+      } else {
+        // add (i64 sgpr), (scale (*_extend (i32 vgpr)))
+        ScaleOffset =
+            SelectScaleOffset(N, RHS, Subtarget->hasSignedGVSOffset());
+        if (SDValue ExtRHS = matchExtFromI32orI32(
+                RHS, Subtarget->hasSignedGVSOffset(), CurDAG)) {
+          SAddr = LHS;
+          VOffset = ExtRHS;
+        }
       }
     }
 

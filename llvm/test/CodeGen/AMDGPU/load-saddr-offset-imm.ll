@@ -10,8 +10,8 @@ define amdgpu_ps <2 x float> @global_load_scale_add_foldable_knownbits(ptr addrs
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_lshl_add_u32 v0, v0, 3, 0x80
-; GFX12-NEXT:    global_load_b64 v[0:1], v0, s[2:3]
+; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
+; GFX12-NEXT:    global_load_b64 v[0:1], v0, s[2:3] offset:128
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
@@ -19,9 +19,7 @@ define amdgpu_ps <2 x float> @global_load_scale_add_foldable_knownbits(ptr addrs
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_lshl_add_u32 v0, v0, 3, 0x80
-; GFX1250-NEXT:    global_load_b64 v[0:1], v0, s[2:3]
+; GFX1250-NEXT:    global_load_b64 v[0:1], v0, s[2:3] offset:128 scale_offset
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %v = tail call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
