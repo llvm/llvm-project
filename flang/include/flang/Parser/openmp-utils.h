@@ -273,6 +273,7 @@ struct ExecutionPartIterator {
     template <typename C>
     Construct(C &&r, const ExecutionPartConstruct *c = nullptr)
         : range(r), owner(c) {}
+    Construct(const Construct &c) = default;
     IteratorRange range;
     const ExecutionPartConstruct *owner = nullptr;
   };
