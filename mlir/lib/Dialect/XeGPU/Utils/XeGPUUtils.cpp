@@ -390,7 +390,6 @@ xegpu::extractVectorsWithShapeFromValue(OpBuilder &builder, Location loc,
   for (SmallVector<int64_t> offsets :
        StaticTileOffsetRange(srcShape, adjustedTargetShape)) {
     SmallVector<int64_t> staticStrides(offsets.size(), 1);
-
     Value slice = vector::ExtractStridedSliceOp::create(
         builder, loc, value, offsets, adjustedTargetShape, staticStrides);
 
