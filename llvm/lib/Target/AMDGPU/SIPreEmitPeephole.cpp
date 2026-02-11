@@ -38,9 +38,9 @@ class SIPreEmitPeephole {
 private:
   const SIInstrInfo *TII = nullptr;
   const SIRegisterInfo *TRI = nullptr;
-  bool CFGModified = false;
+  MachineLoopInfo *MLI = nullptr;
 
-  bool optimizeVccBranch(MachineInstr &MI);
+  bool optimizeVccBranch(MachineInstr &MI) const;
   bool optimizeSetGPR(MachineInstr &First, MachineInstr &MI) const;
   bool getBlockDestinations(MachineBasicBlock &SrcMBB,
                             MachineBasicBlock *&TrueMBB,
@@ -80,8 +80,7 @@ private:
                          bool IsHiBits, const MachineOperand &SrcMO);
 
 public:
-  bool run(MachineFunction &MF);
-  bool isCFGModified() const { return CFGModified; }
+  bool run(MachineFunction &MF, MachineLoopInfo *MLI);
 };
 
 class SIPreEmitPeepholeLegacy : public MachineFunctionPass {
@@ -90,8 +89,16 @@ public:
 
   SIPreEmitPeepholeLegacy() : MachineFunctionPass(ID) {}
 
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addUsedIfAvailable<MachineLoopInfoWrapperPass>();
+    AU.addPreserved<MachineLoopInfoWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
   bool runOnMachineFunction(MachineFunction &MF) override {
-    return SIPreEmitPeephole().run(MF);
+    auto *MLIWrapper = getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
+    MachineLoopInfo *MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
+    return SIPreEmitPeephole().run(MF, MLI);
   }
 };
 
@@ -104,7 +111,7 @@ char SIPreEmitPeepholeLegacy::ID = 0;
 
 char &llvm::SIPreEmitPeepholeID = SIPreEmitPeepholeLegacy::ID;
 
-bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) {
+bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
   // Match:
   // sreg = -1 or 0
   // vcc = S_AND_B64 exec, sreg or S_ANDN2_B64 exec, sreg
@@ -228,8 +235,14 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) {
   }
 
   bool IsVCCZ = MI.getOpcode() == AMDGPU::S_CBRANCH_VCCZ;
+
+  // Skip CFG-modifying VCC branch optimizations in loop bodies to preserve
+  // MachineLoopInfo.
+  if (MLI && MLI->getLoopFor(MI.getParent()) &&
+      (SReg == ExecReg || MaskValue == 0))
+    return Changed;
+
   if (SReg == ExecReg) {
-    CFGModified = true;
     // EXEC is updated directly
     if (IsVCCZ) {
       MI.eraseFromParent();
@@ -237,7 +250,6 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) {
     }
     MI.setDesc(TII->get(AMDGPU::S_BRANCH));
   } else if (IsVCCZ && MaskValue == 0) {
-    CFGModified = true;
     // Will always branch
     // Remove all successors shadowed by new unconditional branch
     MachineBasicBlock *Parent = MI.getParent();
@@ -267,7 +279,6 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) {
     MI.setDesc(TII->get(AMDGPU::S_BRANCH));
   } else if (!IsVCCZ && MaskValue == 0) {
     // Will never branch
-    CFGModified = true;
     MachineOperand &Dst = MI.getOperand(0);
     assert(Dst.isMBB() && "destination is not basic block");
     MI.getParent()->removeSuccessor(Dst.getMBB());
@@ -453,7 +464,6 @@ bool SIPreEmitPeephole::removeExeczBranch(MachineInstr &MI,
   LLVM_DEBUG(dbgs() << "Removing the execz branch: " << MI);
   MI.eraseFromParent();
   SrcMBB.removeSuccessor(TrueMBB);
-  CFGModified = true;
 
   return true;
 }
@@ -714,12 +724,12 @@ llvm::SIPreEmitPeepholePass::run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM) {
   auto *MDT = MFAM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
   auto *MPDT = MFAM.getCachedResult<MachinePostDominatorTreeAnalysis>(MF);
+  auto *MLI = MFAM.getCachedResult<MachineLoopAnalysis>(MF);
   SIPreEmitPeephole Impl;
 
-  if (Impl.run(MF)) {
+  if (Impl.run(MF, MLI)) {
     auto PA = getMachineFunctionPassPreservedAnalyses();
-    if (!Impl.isCFGModified())
-      PA.preserve<MachineLoopAnalysis>();
+    PA.preserve<MachineLoopAnalysis>();
     return PA;
   }
 
@@ -730,11 +740,11 @@ llvm::SIPreEmitPeepholePass::run(MachineFunction &MF,
   return PreservedAnalyses::all();
 }
 
-bool SIPreEmitPeephole::run(MachineFunction &MF) {
+bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
-  CFGModified = false;
+  MLI = LoopInfo;
   bool Changed = false;
 
   MF.RenumberBlocks();
