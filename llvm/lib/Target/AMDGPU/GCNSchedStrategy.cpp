@@ -2184,7 +2184,6 @@ bool RewriteMFMAFormStage::initHeuristics(
 
       int ReplacementOp = AMDGPU::getMFMASrcCVDstAGPROp(MI.getOpcode());
       assert(ReplacementOp != -1);
-
       RewriteCands.push_back({&MI, MI.getOpcode()});
       MI.setDesc(TII->get(ReplacementOp));
 
@@ -2304,8 +2303,11 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
       SpillCost *= (int64_t)RelativeFreq;
 
     // If we have increased spilling in any block, just bail.
-    if (SpillCost > 0)
+    if (SpillCost > 0) {
+      LLVM_DEBUG(dbgs() << "RewriteMFMAFormStage: Rewrite rejected.\n");
       return SpillCost;
+    }
+    LLVM_DEBUG(dbgs() << "RewriteMFMAFormStage: Rewrite successful.\n");
 
     if (SpillCost < BestSpillCost)
       BestSpillCost = SpillCost;
