@@ -19,10 +19,11 @@ using namespace lldb_private;
 
 static const char *vtable_demangled_prefix = "vtable for ";
 
+ItaniumABIRuntime::ItaniumABIRuntime(Process *process) : m_process(process) {}
+
 TypeAndOrName
 ItaniumABIRuntime::GetTypeInfo(ValueObject &in_value,
-                               const LanguageRuntime::VTableInfo &vtable_info,
-                               Process &process) {
+                               const LanguageRuntime::VTableInfo &vtable_info) {
   if (vtable_info.addr.IsSectionOffset()) {
     // See if we have cached info for this type already
     TypeAndOrName type_info = GetDynamicTypeInfo(vtable_info.addr);
@@ -69,7 +70,7 @@ ItaniumABIRuntime::GetTypeInfo(ValueObject &in_value,
       // list in the target and get as many unique matches as possible
       if (class_types.Empty()) {
         query.SetFindOne(false);
-        process.GetTarget().GetImages().FindTypes(nullptr, query, results);
+        m_process->GetTarget().GetImages().FindTypes(nullptr, query, results);
         for (const auto &type_sp : results.GetTypeMap().Types())
           class_types.Insert(type_sp);
       }
@@ -158,8 +159,7 @@ llvm::Error ItaniumABIRuntime::TypeHasVTable(CompilerType type) {
   // Make sure this is a class or a struct first by checking the type class
   // bitfield that gets returned.
   if ((type.GetTypeClass() & (eTypeClassStruct | eTypeClassClass)) == 0) {
-    return llvm::createStringError(
-        std::errc::invalid_argument,
+    return llvm::createStringError(std::errc::invalid_argument,
         "type \"%s\" is not a class or struct or a pointer to one",
         original_type.GetTypeName().AsCString("<invalid>"));
   }
@@ -167,8 +167,8 @@ llvm::Error ItaniumABIRuntime::TypeHasVTable(CompilerType type) {
   // Check if the type has virtual functions by asking it if it is polymorphic.
   if (!type.IsPolymorphicClass()) {
     return llvm::createStringError(std::errc::invalid_argument,
-                                   "type \"%s\" doesn't have a vtable",
-                                   type.GetTypeName().AsCString("<invalid>"));
+        "type \"%s\" doesn't have a vtable",
+        type.GetTypeName().AsCString("<invalid>"));
   }
   return llvm::Error::success();
 }
@@ -207,8 +207,7 @@ ItaniumABIRuntime::GetVTableInfo(ValueObject &in_value, bool check_type) {
       process->ReadPointerFromMemory(original_ptr, error);
 
   if (!error.Success() || vtable_load_addr == LLDB_INVALID_ADDRESS)
-    return llvm::createStringError(
-        std::errc::invalid_argument,
+    return llvm::createStringError(std::errc::invalid_argument,
         "failed to read vtable pointer from memory at 0x%" PRIx64,
         original_ptr);
 
@@ -220,9 +219,8 @@ ItaniumABIRuntime::GetVTableInfo(ValueObject &in_value, bool check_type) {
   Address vtable_addr;
   if (!process->GetTarget().ResolveLoadAddress(vtable_load_addr, vtable_addr))
     return llvm::createStringError(std::errc::invalid_argument,
-                                   "failed to resolve vtable pointer 0x%" PRIx64
-                                   "to a section",
-                                   vtable_load_addr);
+                                   "failed to resolve vtable pointer 0x%"
+                                   PRIx64 "to a section", vtable_load_addr);
 
   // Check our cache first to see if we already have this info
   {
@@ -245,15 +243,14 @@ ItaniumABIRuntime::GetVTableInfo(ValueObject &in_value, bool check_type) {
     return info;
   }
   return llvm::createStringError(std::errc::invalid_argument,
-                                 "symbol found that contains 0x%" PRIx64
-                                 " is not a vtable symbol",
-                                 vtable_load_addr);
+      "symbol found that contains 0x%" PRIx64 " is not a vtable symbol",
+      vtable_load_addr);
 }
 
 bool ItaniumABIRuntime::GetDynamicTypeAndAddress(
     ValueObject &in_value, lldb::DynamicValueType use_dynamic,
     TypeAndOrName &class_type_or_name, Address &dynamic_address,
-    Value::ValueType &value_type, Process &process) {
+    Value::ValueType &value_type) {
   // For Itanium, if the type has a vtable pointer in the object, it will be at
   // offset 0 in the object.  That will point to the "address point" within the
   // vtable (not the beginning of the vtable.)  We can then look up the symbol
@@ -275,7 +272,7 @@ bool ItaniumABIRuntime::GetDynamicTypeAndAddress(
   }
 
   const LanguageRuntime::VTableInfo &vtable_info = vtable_info_or_err.get();
-  class_type_or_name = GetTypeInfo(in_value, vtable_info, process);
+  class_type_or_name = GetTypeInfo(in_value, vtable_info);
 
   if (!class_type_or_name)
     return false;
@@ -295,11 +292,11 @@ bool ItaniumABIRuntime::GetDynamicTypeAndAddress(
   }
 
   // The offset_to_top is two pointers above the vtable pointer.
-  Target &target = process.GetTarget();
+  Target &target = m_process->GetTarget();
   const addr_t vtable_load_addr = vtable_info.addr.GetLoadAddress(&target);
   if (vtable_load_addr == LLDB_INVALID_ADDRESS)
     return false;
-  const uint32_t addr_byte_size = process.GetAddressByteSize();
+  const uint32_t addr_byte_size = m_process->GetAddressByteSize();
   const lldb::addr_t offset_to_top_location =
       vtable_load_addr - 2 * addr_byte_size;
   // Watch for underflow, offset_to_top_location should be less than
@@ -316,7 +313,8 @@ bool ItaniumABIRuntime::GetDynamicTypeAndAddress(
   // the original address.
   lldb::addr_t dynamic_addr =
       in_value.GetPointerValue().address + offset_to_top;
-  if (!process.GetTarget().ResolveLoadAddress(dynamic_addr, dynamic_address)) {
+  if (!m_process->GetTarget().ResolveLoadAddress(
+          dynamic_addr, dynamic_address)) {
     dynamic_address.SetRawAddress(dynamic_addr);
   }
   return true;
@@ -361,13 +359,12 @@ void ItaniumABIRuntime::AppendExceptionBreakpointFilterModules(
   }
 }
 
-ValueObjectSP ItaniumABIRuntime::GetExceptionObjectForThread(ThreadSP thread_sp,
-                                                             Process &process) {
+ValueObjectSP ItaniumABIRuntime::GetExceptionObjectForThread(ThreadSP thread_sp) {
   if (!thread_sp->SafeToCallFunctions())
     return {};
 
   TypeSystemClangSP scratch_ts_sp =
-      ScratchTypeSystemClang::GetForTarget(process.GetTarget());
+      ScratchTypeSystemClang::GetForTarget(m_process->GetTarget());
   if (!scratch_ts_sp)
     return {};
 
@@ -381,11 +378,11 @@ ValueObjectSP ItaniumABIRuntime::GetExceptionObjectForThread(ThreadSP thread_sp,
   options.SetUnwindOnError(true);
   options.SetIgnoreBreakpoints(true);
   options.SetStopOthers(true);
-  options.SetTimeout(process.GetUtilityExpressionTimeout());
+  options.SetTimeout(m_process->GetUtilityExpressionTimeout());
   options.SetTryAllThreads(false);
   thread_sp->CalculateExecutionContext(exe_ctx);
 
-  const ModuleList &modules = process.GetTarget().GetImages();
+  const ModuleList &modules = m_process->GetTarget().GetImages();
   SymbolContextList contexts;
   SymbolContext context;
 
@@ -399,7 +396,7 @@ ValueObjectSP ItaniumABIRuntime::GetExceptionObjectForThread(ThreadSP thread_sp,
 
   Status error;
   FunctionCaller *function_caller =
-      process.GetTarget().GetFunctionCallerForLanguage(
+      m_process->GetTarget().GetFunctionCallerForLanguage(
           eLanguageTypeC, voidstar, addr, ValueList(), "caller", error);
 
   ExpressionResults func_call_ret;
@@ -410,25 +407,25 @@ ValueObjectSP ItaniumABIRuntime::GetExceptionObjectForThread(ThreadSP thread_sp,
     return ValueObjectSP();
   }
 
-  size_t ptr_size = process.GetAddressByteSize();
+  size_t ptr_size = m_process->GetAddressByteSize();
   addr_t result_ptr = results.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
   addr_t exception_addr =
-      process.ReadPointerFromMemory(result_ptr - ptr_size, error);
+      m_process->ReadPointerFromMemory(result_ptr - ptr_size, error);
 
   if (!error.Success()) {
     return ValueObjectSP();
   }
 
   lldb_private::formatters::InferiorSizedWord exception_isw(exception_addr,
-                                                            process);
+                                                            *m_process);
   ValueObjectSP exception = ValueObject::CreateValueObjectFromData(
-      "exception", exception_isw.GetAsData(process.GetByteOrder()), exe_ctx,
+      "exception", exception_isw.GetAsData(m_process->GetByteOrder()), exe_ctx,
       voidstar);
-  ValueObjectSP dyn_exception =
-      exception->GetDynamicValue(eDynamicDontRunTarget);
+  ValueObjectSP dyn_exception
+      = exception->GetDynamicValue(eDynamicDontRunTarget);
   // If we succeed in making a dynamic value, return that:
   if (dyn_exception)
-    return dyn_exception;
+     return dyn_exception;
 
   return exception;
 }

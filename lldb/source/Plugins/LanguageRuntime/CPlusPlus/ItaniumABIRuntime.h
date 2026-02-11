@@ -18,7 +18,7 @@ namespace lldb_private {
 
 class ItaniumABIRuntime {
 public:
-  ItaniumABIRuntime() = default;
+  ItaniumABIRuntime(Process *process);
 
   llvm::Expected<LanguageRuntime::VTableInfo>
   GetVTableInfo(ValueObject &in_value, bool check_type);
@@ -27,7 +27,7 @@ public:
                                 lldb::DynamicValueType use_dynamic,
                                 TypeAndOrName &class_type_or_name,
                                 Address &dynamic_address,
-                                Value::ValueType &value_type, Process &process);
+                                Value::ValueType &value_type);
 
   void AppendExceptionBreakpointFunctions(std::vector<const char *> &names,
                                           bool catch_bp, bool throw_bp,
@@ -36,13 +36,11 @@ public:
   void AppendExceptionBreakpointFilterModules(FileSpecList &list,
                                               const Target &target);
 
-  lldb::ValueObjectSP GetExceptionObjectForThread(lldb::ThreadSP thread_sp,
-                                                  Process &process);
+  lldb::ValueObjectSP GetExceptionObjectForThread(lldb::ThreadSP thread_sp);
 
 private:
   TypeAndOrName GetTypeInfo(ValueObject &in_value,
-                            const LanguageRuntime::VTableInfo &vtable_info,
-                            Process &process);
+                            const LanguageRuntime::VTableInfo &vtable_info);
 
   llvm::Error TypeHasVTable(CompilerType type);
 
@@ -57,6 +55,8 @@ private:
   DynamicTypeCache m_dynamic_type_map;
   VTableInfoCache m_vtable_info_map;
   std::mutex m_mutex;
+
+  Process *m_process;
 };
 
 } // namespace lldb_private

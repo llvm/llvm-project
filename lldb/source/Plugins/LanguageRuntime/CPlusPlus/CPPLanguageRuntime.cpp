@@ -110,7 +110,7 @@ public:
 };
 
 CPPLanguageRuntime::CPPLanguageRuntime(Process *process)
-    : LanguageRuntime(process) {
+    : LanguageRuntime(process), m_itanium_runtime(process) {
   if (process) {
     process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
         StackFrameRecognizerSP(new LibCXXFrameRecognizer()), {},
@@ -513,8 +513,7 @@ bool CPPLanguageRuntime::GetDynamicTypeAndAddress(
     return false;
 
   return m_itanium_runtime.GetDynamicTypeAndAddress(
-      in_value, use_dynamic, class_type_or_name, dynamic_address, value_type,
-      *m_process);
+      in_value, use_dynamic, class_type_or_name, dynamic_address, value_type);
 }
 
 TypeAndOrName
@@ -673,6 +672,5 @@ bool CPPLanguageRuntime::ExceptionBreakpointsExplainStop(
 
 lldb::ValueObjectSP
 CPPLanguageRuntime::GetExceptionObjectForThread(lldb::ThreadSP thread_sp) {
-  return m_itanium_runtime.GetExceptionObjectForThread(std::move(thread_sp),
-                                                       *m_process);
+  return m_itanium_runtime.GetExceptionObjectForThread(std::move(thread_sp));
 }
