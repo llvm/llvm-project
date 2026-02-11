@@ -568,8 +568,7 @@ define i32 @add_adc_to_adc(i32 %0, i32 %1, i32 %2) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    cmpl %esi, %edi
-; CHECK-NEXT:    adcl $0, %edx
-; CHECK-NEXT:    addl $42, %edx
+; CHECK-NEXT:    adcl $42, %edx
 ; CHECK-NEXT:    cmovsl %esi, %eax
 ; CHECK-NEXT:    retq
   %4 = icmp ult i32 %0, %1
