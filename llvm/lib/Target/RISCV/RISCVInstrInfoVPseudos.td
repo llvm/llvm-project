@@ -1838,7 +1838,7 @@ multiclass VPseudoFFLoad {
   }
 }
 
-multiclass VPseudoLoadMask {
+multiclass VPseudoMaskLoad {
   foreach mti = AllMasks in {
     defvar mx = mti.LMul.MX;
     defvar WriteVLDM_MX = !cast<SchedWrite>("WriteVLDM_" # mx);
@@ -1914,7 +1914,7 @@ multiclass VPseudoUSStore {
   }
 }
 
-multiclass VPseudoStoreMask {
+multiclass VPseudoMaskStore {
   foreach mti = AllMasks in {
     defvar mx = mti.LMul.MX;
     defvar WriteVSTM_MX = !cast<SchedWrite>("WriteVSTM_" # mx);
@@ -2817,14 +2817,19 @@ multiclass VPseudoVFRDIV_VF_RM {
   }
 }
 
-multiclass VPseudoVALU_VV_VX {
- foreach m = MxList in {
-    defm "" : VPseudoBinaryV_VV<m>,
-            SchedBinary<"WriteVIALUV", "ReadVIALUV", "ReadVIALUV", m.MX,
-                        forcePassthruRead=true>;
+multiclass VPseudoVALU_VV<bit Commutable = 0> {
+  foreach m = MxList in {
+    defm "" : VPseudoBinaryV_VV<m, Commutable=Commutable>,
+              SchedBinary<"WriteVIALUV", "ReadVIALUV", "ReadVIALUV", m.MX,
+                          forcePassthruRead=true>;
+  }
+}
+
+multiclass VPseudoVALU_VV_VX<bit Commutable = 0> : VPseudoVALU_VV<Commutable> {
+  foreach m = MxList in {
     defm "" : VPseudoBinaryV_VX<m>,
-            SchedBinary<"WriteVIALUX", "ReadVIALUV", "ReadVIALUX", m.MX,
-                        forcePassthruRead=true>;
+              SchedBinary<"WriteVIALUX", "ReadVIALUV", "ReadVIALUX", m.MX,
+                          forcePassthruRead=true>;
   }
 }
 
@@ -6074,8 +6079,8 @@ def PseudoVSETIVLI : Pseudo<(outs GPR:$rd), (ins uimm5:$rs1, VTypeIOp10:$vtypei)
 defm PseudoVL : VPseudoUSLoad;
 defm PseudoVS : VPseudoUSStore;
 
-defm PseudoVLM : VPseudoLoadMask;
-defm PseudoVSM : VPseudoStoreMask;
+defm PseudoVLM : VPseudoMaskLoad;
+defm PseudoVSM : VPseudoMaskStore;
 
 //===----------------------------------------------------------------------===//
 // 7.5 Vector Strided Instructions

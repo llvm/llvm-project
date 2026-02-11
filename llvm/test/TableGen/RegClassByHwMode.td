@@ -212,6 +212,7 @@ include "Common/RegClassByHwModeCommon.td"
 // ISEL-SDAG-NEXT: OPC_CheckPredicate1,  // Predicate_store
 // ISEL-SDAG-NEXT: OPC_EmitMergeInputChains1_0,
 // ISEL-SDAG-NEXT: OPC_MorphNodeTo0, TARGET_VAL(MyTarget::MY_STORE), 0|OPFL_Chain|OPFL_MemRefs,
+// ISEL-SDAG-NEXT:     2/*#Ops*/, /*OperandList*/1, // Ops = #1 #2
 
 // ISEL-SDAG: /*SwitchOpcode*/ {{[0-9]+}}, TARGET_VAL(ISD::LOAD),
 // ISEL-SDAG-NEXT: OPC_RecordMemRef,
@@ -223,6 +224,12 @@ include "Common/RegClassByHwModeCommon.td"
 // ISEL-SDAG-NEXT: OPC_CheckTypeI64,
 // ISEL-SDAG-NEXT: OPC_EmitMergeInputChains1_0,
 // ISEL-SDAG-NEXT: OPC_MorphNodeToByHwMode, TARGET_VAL(MyTarget::MY_LOAD), 0|OPFL_Chain|OPFL_MemRefs,
+// ISEL-SDAG-NEXT:     1/*#VTs*/, /*{(*:i64),(m1:i64),(m2:i64)}*/0, 1/*#Ops*/, /*OperandList*/0, // Ops = #1
+
+// ISEL-SDAG:      static const uint8_t OperandLists[] = {
+// ISEL-SDAG-NEXT:   /* 0 */ 1,
+// ISEL-SDAG-NEXT:   /* 1 */ 1, 2,
+// ISEL-SDAG-NEXT: }
 
 
 

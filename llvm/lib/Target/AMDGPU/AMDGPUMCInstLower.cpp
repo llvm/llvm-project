@@ -347,7 +347,7 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
     }
   } else {
     // We don't want these pseudo instructions encoded. They are
-    // placeholder terminator instructions and should only be printed as
+    // placeholder instructions and should only be printed as
     // comments.
     if (MI->getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG) {
       if (isVerbose())
@@ -358,6 +358,20 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
     if (MI->getOpcode() == AMDGPU::WAVE_BARRIER) {
       if (isVerbose())
         OutStreamer->emitRawComment(" wave barrier");
+      return;
+    }
+
+    if (MI->getOpcode() == AMDGPU::ASYNCMARK) {
+      if (isVerbose())
+        OutStreamer->emitRawComment(" asyncmark");
+      return;
+    }
+
+    if (MI->getOpcode() == AMDGPU::WAIT_ASYNCMARK) {
+      if (isVerbose()) {
+        OutStreamer->emitRawComment(" wait_asyncmark(" +
+                                    Twine(MI->getOperand(0).getImm()) + ")");
+      }
       return;
     }
 

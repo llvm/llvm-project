@@ -197,6 +197,12 @@ public:
                              mlir::Value src, mlir::Value len) {
     return cir::MemCpyOp::create(*this, loc, dst, src, len);
   }
+
+  cir::MemSetOp createMemSet(mlir::Location loc, mlir::Value dst,
+                             mlir::Value val, mlir::Value len) {
+    assert(val.getType() == getUInt8Ty());
+    return cir::MemSetOp::create(*this, loc, dst, val, len);
+  }
   // ---------------------------
 
   cir::DataMemberAttr getDataMemberAttr(cir::DataMemberType ty,
@@ -356,6 +362,10 @@ public:
     return getConstantInt(loc, getUInt64Ty(), c);
   }
 
+  //
+  // UnaryOp creation helpers
+  // -------------------------
+  //
   mlir::Value createNeg(mlir::Value value) {
 
     if (auto intTy = mlir::dyn_cast<cir::IntType>(value.getType())) {
@@ -367,6 +377,18 @@ public:
     }
 
     llvm_unreachable("negation for the given type is NYI");
+  }
+
+  mlir::Value createFNeg(mlir::Value value) {
+    assert(mlir::isa<cir::FPTypeInterface>(value.getType()) &&
+           "Non-fp input type!");
+
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+
+    return cir::UnaryOp::create(*this, value.getLoc(), value.getType(),
+                                cir::UnaryOpKind::Minus, value);
   }
 
   cir::IsFPClassOp createIsFPClass(mlir::Location loc, mlir::Value src,
@@ -408,6 +430,7 @@ public:
 
     return cir::BinOp::create(*this, loc, cir::BinOpKind::Add, lhs, rhs);
   }
+
   mlir::Value createFMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
     assert(!cir::MissingFeatures::fpConstraints());

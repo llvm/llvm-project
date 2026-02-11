@@ -208,8 +208,8 @@ public:
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *MBB) const override;
 
-  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
-                          MachineFunction &MF,
+  void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
+                          const CallBase &I, MachineFunction &MF,
                           unsigned Intrinsic) const override;
 
   bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy, EVT NewVT,
@@ -824,7 +824,8 @@ private:
   SDValue getRecipEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
                            int &ExtraSteps) const override;
   SDValue getSqrtInputTest(SDValue Operand, SelectionDAG &DAG,
-                           const DenormalMode &Mode) const override;
+                           const DenormalMode &Mode,
+                           SDNodeFlags Flags = {}) const override;
   SDValue getSqrtResultForDenormInput(SDValue Operand,
                                       SelectionDAG &DAG) const override;
   unsigned combineRepeatedFPDivisors() const override;
