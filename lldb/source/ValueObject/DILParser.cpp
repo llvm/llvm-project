@@ -69,23 +69,18 @@ ResolveTypeByName(const std::string &name,
   lldb::TargetSP target_sp = ctx_scope.CalculateTarget();
   if (!name_ref.empty() && target_sp) {
     ModuleList &images = target_sp->GetImages();
-    TypeQuery query{ConstString(name_ref)};
+    TypeQuery query{ConstString(name_ref), TypeQueryOptions::e_exact_match |
+                                               TypeQueryOptions::e_find_one};
     TypeResults results;
     images.FindTypes(nullptr, query, results);
-    for (const lldb::TypeSP &type_sp : results.GetTypeMap().Types())
-      if (type_sp)
-        result_type_list.push_back(type_sp->GetFullCompilerType());
+    const lldb::TypeSP &type_sp = results.GetFirstType();
+    if (type_sp)
+      result_type_list.push_back(type_sp->GetFullCompilerType());
   }
 
-  // We've found multiple types, try finding the "correct" one.
-  CompilerType full_match;
-  std::vector<CompilerType> partial_matches;
-
-  for (uint32_t i = 0; i < result_type_list.size(); ++i) {
-    CompilerType type = result_type_list[i];
-    llvm::StringRef type_name_ref = type.GetTypeName().GetStringRef();
-
-    if (type_name_ref == name_ref && type.IsValid())
+  if (!result_type_list.empty()) {
+    CompilerType type = result_type_list[0];
+    if (type.IsValid() && type.GetTypeName().GetStringRef() == name_ref)
       return type;
   }
 
