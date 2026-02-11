@@ -474,7 +474,6 @@ function(add_mlir_python_modules name)
         MLIR_BINDINGS_PYTHON_NB_DOMAIN ${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
         _PRIVATE_SUPPORT_LIB
         LINK_LIBS PRIVATE
-          LLVMSupport
           ${sources_target}
           ${ARG_COMMON_CAPI_LINK_LIBS}
       )
