@@ -19,6 +19,7 @@ add_llvm_component_library(LLVMDWARFLinkerParallel
 
   LINK_LIBS
   ${LLVM_PTHREAD_LIB}
+  ${LLVM_ATOMIC_LIB}
 
   LINK_COMPONENTS
   AsmPrinter
