@@ -702,15 +702,17 @@ public:
   Error unregisterHostBuffer(void *HstPtr);
 
   /// Lock the host buffer at \p HstPtr or register a new user if it intersects
-  /// with an already existing one. A partial overlapping with extension is not
+  /// with an already existing one, locked outside of this API or passed 
+  /// LockMemory parameter as false. A partial overlapping with extension is not
   /// allowed. The function returns the device accessible pointer of the pinned
   /// buffer. The buffer must be unlocked using the unlockHostBuffer function.
   Expected<void *> registerMemory(void *HstPtr, size_t Size,
                                   bool LockMemory = true);
 
   /// Unlock the host buffer at \p HstPtr or unregister a user if other users
-  /// are still using the pinned allocation. If this was the last user, the
-  /// pinned allocation is removed from the map and the memory is unlocked.
+  /// are still using the pinned allocation or passed UnlockMemory parameter as
+  ///  false. If this was the last user, the pinned allocation is removed from 
+  /// the map and the memory is unlocked.
   Error unregisterMemory(void *HstPtr, bool UnlockMemory = true);
 
   /// Return the device accessible pointer associated to the host pinned
@@ -839,15 +841,15 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Deallocate data from the device or involving the device.
   Error dataDelete(void *TgtPtr, TargetAllocTy Kind);
 
-  /// Pin host memory to optimize transfers and return the device accessible
-  /// pointer that devices should use for memory transfers involving the host
-  /// pinned allocation.
+  /// Pin or register host memory to optimize transfers and return the device 
+  /// accessible pointer that devices should use for memory transfers involving 
+  /// the host pinned allocation.
   Expected<void *> registerMemory(void *HstPtr, int64_t Size,
                                   bool LockMemory = true) {
     return PinnedAllocs.registerMemory(HstPtr, Size, LockMemory);
   }
 
-  /// Unpin a host memory buffer that was previously pinned.
+  /// Unpin or unregister a host memory buffer that was previously pinned.
   Error unregisterMemory(void *HstPtr, bool UnlockMemory = true) {
     return PinnedAllocs.unregisterMemory(HstPtr, UnlockMemory);
   }

@@ -152,7 +152,8 @@ def olMemRegister : Function {
         "Pins host memory to optimize transfers and returns the device accessible",
         "stable pointer that devices should use for memory transfers involving the host",
         "pinned allocation. If the buffer intersects with other existing buffer,",
-        "a new user will be registered. A partial overlapping is not allowed.",
+        "if the buffer is locked outside of this API, or Flags doesn't contain LOCK_MEMORY 
+        "flag a new user will be registered. A partial overlapping is not allowed.",
         "The pinned pointer can be accessed both on host and device and",
         "no guarantees are made about consistency.",
         "The pinned pointer should be used to execute memory transfers",
@@ -176,8 +177,8 @@ def olMemUnregister : Function {
   let desc = "Unregister and page-unlock host memory.";
   let details = [
         "Unpins host memory that was previously pinned or unregister the buffer",
-        "if other users are still using the buffer. If no users are using the buffer",
-        "the memory is unlocked."
+        "if other users are still using the buffer or Flags doesn't contain UNLOCK_MEMORY flag"
+        "Otherwise the memory is unlocked."
   ];
   let params = [
     Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
