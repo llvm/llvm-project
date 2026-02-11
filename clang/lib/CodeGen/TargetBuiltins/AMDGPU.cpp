@@ -219,7 +219,8 @@ static llvm::Value *loadTextureDescPtorAsVec8I32(CodeGenFunction &CGF,
 llvm::CallInst *
 emitAMDGCNImageOverloadedReturnType(clang::CodeGen::CodeGenFunction &CGF,
                                     const clang::CallExpr *E,
-                                    unsigned IntrinsicID, bool IsImageStore) {
+                                    unsigned IntrinsicID, bool IsImageStore,
+                                    bool InsertDMaskImplicitArg = true) {
   auto findTextureDescIndex = [&CGF](const CallExpr *E) -> unsigned {
     QualType TexQT = CGF.getContext().AMDGPUTextureTy;
     for (unsigned I = 0, N = E->getNumArgs(); I < N; ++I) {
@@ -243,12 +244,36 @@ emitAMDGCNImageOverloadedReturnType(clang::CodeGen::CodeGenFunction &CGF,
     llvm::report_fatal_error("Invalid argument count for image builtin");
   }
 
-  for (unsigned I = 0; I < E->getNumArgs(); ++I) {
-    llvm::Value *V = CGF.EmitScalarExpr(E->getArg(I));
-    if (I == RsrcIndex)
+  auto handleArgument = [&](unsigned Index) -> void {
+    llvm::Value *V = CGF.EmitScalarExpr(E->getArg(Index));
+    if (Index == RsrcIndex)
       V = loadTextureDescPtorAsVec8I32(CGF, V);
     Args.push_back(V);
+  };
+
+  if (InsertDMaskImplicitArg) {
+    llvm::Type *TyForDMask = IsImageStore
+                                 ? CGF.ConvertType(E->getArg(0)->getType())
+                                 : CGF.ConvertType(E->getType());
+    // Implicit DMask is an all-ones mask of N bits where N is the number of
+    // elements in return type.
+    int DMask = 1;
+    if (auto *VTy = dyn_cast<llvm::FixedVectorType>(TyForDMask))
+      DMask = static_cast<int>(VTy->getNumElements());
+    DMask = (1 << DMask) - 1;
+
+    // Store intrinsics have output argument first and then DMask, all other
+    // intrinsics have DMask as fist argument.
+    if (IsImageStore)
+      handleArgument(0);
+    Args.push_back(llvm::ConstantInt::get(
+        llvm::Type::getInt32Ty(CGF.getLLVMContext()), DMask));
   }
+
+  unsigned StartIndex =
+      static_cast<int>(InsertDMaskImplicitArg && IsImageStore);
+  for (unsigned I = StartIndex; I < E->getNumArgs(); ++I)
+    handleArgument(I);
 
   llvm::Type *RetTy = IsImageStore ? CGF.VoidTy : CGF.ConvertType(E->getType());
   llvm::CallInst *Call = CGF.Builder.CreateIntrinsic(RetTy, IntrinsicID, Args);
@@ -1239,7 +1264,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
         *this, E, Intrinsic::amdgcn_image_sample_d_2darray, false);
   case clang::AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32:
     return emitAMDGCNImageOverloadedReturnType(
-        *this, E, Intrinsic::amdgcn_image_gather4_lz_2d, false);
+        *this, E, Intrinsic::amdgcn_image_gather4_lz_2d, false,
+        /*InsertDMaskImplicitArg = */ false);
   case AMDGPU::BI__builtin_amdgcn_mfma_scale_f32_16x16x128_f8f6f4:
   case AMDGPU::BI__builtin_amdgcn_mfma_scale_f32_32x32x64_f8f6f4: {
     llvm::FixedVectorType *VT = FixedVectorType::get(Builder.getInt32Ty(), 8);

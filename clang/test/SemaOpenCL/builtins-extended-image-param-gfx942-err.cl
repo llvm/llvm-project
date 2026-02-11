@@ -29,199 +29,199 @@ float4 test_amdgcn_image_gather4_lz_2d_v4f32_f32_a(float4 v4f32, float f32, int 
 
 float4 test_amdgcn_image_sample_lz_1d_v4f32_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_lz_1d_v4f32_f32(105, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_1d_v4f32_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_lz_1d_v4f32_f32(f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_1d_v4f32_f32' needs target feature extended-image-insts}}
 }
 
 float4 test_amdgcn_image_sample_l_1d_v4f32_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_l_1d_v4f32_f32(100, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_l_1d_v4f32_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_l_1d_v4f32_f32(f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_l_1d_v4f32_f32' needs target feature extended-image-insts}}
 }
 
 float4 test_amdgcn_image_sample_d_1d_v4f32_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_d_1d_v4f32_f32(100, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_d_1d_v4f32_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_d_1d_v4f32_f32(f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_d_1d_v4f32_f32' needs target feature extended-image-insts}}
 }
 
 float4 test_amdgcn_image_sample_lz_2d_v4f32_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_lz_2d_v4f32_f32(100, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_2d_v4f32_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_lz_2d_v4f32_f32(f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_2d_v4f32_f32' needs target feature extended-image-insts}}
 }
 
 float4 test_amdgcn_image_sample_l_2d_v4f32_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_l_2d_v4f32_f32(10, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_l_2d_v4f32_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_l_2d_v4f32_f32(f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_l_2d_v4f32_f32' needs target feature extended-image-insts}}
 }
 
 float4 test_amdgcn_image_sample_d_2d_v4f32_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_d_2d_v4f32_f32(105, f32, f32, f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_d_2d_v4f32_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_d_2d_v4f32_f32(f32, f32, f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_d_2d_v4f32_f32' needs target feature extended-image-insts}}
 }
 float4 test_amdgcn_image_sample_lz_3d_v4f32_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_lz_3d_v4f32_f32(105, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_3d_v4f32_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_lz_3d_v4f32_f32(f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_3d_v4f32_f32' needs target feature extended-image-insts}}
 }
 
 float4 test_amdgcn_image_sample_l_3d_v4f32_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_l_3d_v4f32_f32(1, f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_l_3d_v4f32_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_l_3d_v4f32_f32(f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_l_3d_v4f32_f32' needs target feature extended-image-insts}}
 }
 
 float4 test_amdgcn_image_sample_d_3d_v4f32_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_d_3d_v4f32_f32(1, f32, f32, f32, f32, f32, f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_d_3d_v4f32_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_d_3d_v4f32_f32(f32, f32, f32, f32, f32, f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_d_3d_v4f32_f32' needs target feature extended-image-insts}}
 }
 
 float4 test_amdgcn_image_sample_lz_cube_v4f32_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_lz_cube_v4f32_f32(1, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_cube_v4f32_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_lz_cube_v4f32_f32(f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_cube_v4f32_f32' needs target feature extended-image-insts}}
 }
 
 float4 test_amdgcn_image_sample_l_cube_v4f32_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_l_cube_v4f32_f32(1, f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_l_cube_v4f32_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_l_cube_v4f32_f32(f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_l_cube_v4f32_f32' needs target feature extended-image-insts}}
 }
 
 float4 test_amdgcn_image_sample_lz_1darray_v4f32_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_lz_1darray_v4f32_f32(1, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_1darray_v4f32_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_lz_1darray_v4f32_f32(f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_1darray_v4f32_f32' needs target feature extended-image-insts}}
 }
 
 float4 test_amdgcn_image_sample_l_1darray_v4f32_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_l_1darray_v4f32_f32(1, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_l_1darray_v4f32_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_l_1darray_v4f32_f32(f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_l_1darray_v4f32_f32' needs target feature extended-image-insts}}
 }
 
 float4 test_amdgcn_image_sample_d_1darray_v4f32_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_d_1darray_v4f32_f32(1, f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_d_1darray_v4f32_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_d_1darray_v4f32_f32(f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_d_1darray_v4f32_f32' needs target feature extended-image-insts}}
 }
 
 float4 test_amdgcn_image_sample_lz_2darray_v4f32_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_lz_2darray_v4f32_f32(1, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_2darray_v4f32_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_lz_2darray_v4f32_f32(f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_2darray_v4f32_f32' needs target feature extended-image-insts}}
 }
 
 float4 test_amdgcn_image_sample_l_2darray_v4f32_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_l_2darray_v4f32_f32(1, f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_l_2darray_v4f32_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_l_2darray_v4f32_f32(f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_l_2darray_v4f32_f32' needs target feature extended-image-insts}}
 }
 
 float4 test_amdgcn_image_sample_d_2darray_v4f32_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_d_2darray_v4f32_f32(1, f32, f32, f32, f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_d_2darray_v4f32_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_d_2darray_v4f32_f32(f32, f32, f32, f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_d_2darray_v4f32_f32' needs target feature extended-image-insts}}
 }
 
 half4 test_amdgcn_image_sample_lz_1d_v4f16_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_lz_1d_v4f16_f32(105, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_1d_v4f16_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_lz_1d_v4f16_f32(f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_1d_v4f16_f32' needs target feature extended-image-insts}}
 }
 
 half4 test_amdgcn_image_sample_l_1d_v4f16_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_l_1d_v4f16_f32(105, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_l_1d_v4f16_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_l_1d_v4f16_f32(f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_l_1d_v4f16_f32' needs target feature extended-image-insts}}
 }
 
 half4 test_amdgcn_image_sample_d_1d_v4f16_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_d_1d_v4f16_f32(105, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_d_1d_v4f16_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_d_1d_v4f16_f32(f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_d_1d_v4f16_f32' needs target feature extended-image-insts}}
 }
 
 half4 test_amdgcn_image_sample_lz_2d_v4f16_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_lz_2d_v4f16_f32(100, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_2d_v4f16_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_lz_2d_v4f16_f32(f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_2d_v4f16_f32' needs target feature extended-image-insts}}
 }
 
 half4 test_amdgcn_image_sample_l_2d_v4f16_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_l_2d_v4f16_f32(100, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_l_2d_v4f16_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_l_2d_v4f16_f32(f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_l_2d_v4f16_f32' needs target feature extended-image-insts}}
 }
 
 half4 test_amdgcn_image_sample_d_2d_v4f16_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_d_2d_v4f16_f32(100, f32, f32, f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_d_2d_v4f16_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_d_2d_v4f16_f32(f32, f32, f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_d_2d_v4f16_f32' needs target feature extended-image-insts}}
 }
 
 half4 test_amdgcn_image_sample_lz_3d_v4f16_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_lz_3d_v4f16_f32(100, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_3d_v4f16_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_lz_3d_v4f16_f32(f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_3d_v4f16_f32' needs target feature extended-image-insts}}
 }
 
 half4 test_amdgcn_image_sample_l_3d_v4f16_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_l_3d_v4f16_f32(100, f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_l_3d_v4f16_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_l_3d_v4f16_f32(f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_l_3d_v4f16_f32' needs target feature extended-image-insts}}
 }
 
 half4 test_amdgcn_image_sample_d_3d_v4f16_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_d_3d_v4f16_f32(100, f32, f32, f32, f32, f32, f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_d_3d_v4f16_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_d_3d_v4f16_f32(f32, f32, f32, f32, f32, f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_d_3d_v4f16_f32' needs target feature extended-image-insts}}
 }
 
 half4 test_amdgcn_image_sample_lz_cube_v4f16_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_lz_cube_v4f16_f32(100, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_cube_v4f16_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_lz_cube_v4f16_f32(f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_cube_v4f16_f32' needs target feature extended-image-insts}}
 }
 
 half4 test_amdgcn_image_sample_l_cube_v4f16_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_l_cube_v4f16_f32(105, f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_l_cube_v4f16_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_l_cube_v4f16_f32(f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_l_cube_v4f16_f32' needs target feature extended-image-insts}}
 }
 
 half4 test_amdgcn_image_sample_lz_1darray_v4f16_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_lz_1darray_v4f16_f32(105, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_1darray_v4f16_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_lz_1darray_v4f16_f32(f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_1darray_v4f16_f32' needs target feature extended-image-insts}}
 }
 
 half4 test_amdgcn_image_sample_l_1darray_v4f16_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_l_1darray_v4f16_f32(105, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_l_1darray_v4f16_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_l_1darray_v4f16_f32(f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_l_1darray_v4f16_f32' needs target feature extended-image-insts}}
 }
 
 half4 test_amdgcn_image_sample_d_1darray_v4f16_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_d_1darray_v4f16_f32(100, f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_d_1darray_v4f16_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_d_1darray_v4f16_f32(f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_d_1darray_v4f16_f32' needs target feature extended-image-insts}}
 }
 
 half4 test_amdgcn_image_sample_lz_2darray_v4f16_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_lz_2darray_v4f16_f32(100, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_2darray_v4f16_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_lz_2darray_v4f16_f32(f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_2darray_v4f16_f32' needs target feature extended-image-insts}}
 }
 
 half4 test_amdgcn_image_sample_l_2darray_v4f16_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_l_2darray_v4f16_f32(100, f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_l_2darray_v4f16_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_l_2darray_v4f16_f32(f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_l_2darray_v4f16_f32' needs target feature extended-image-insts}}
 }
 
 half4 test_amdgcn_image_sample_d_2darray_v4f16_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_d_2darray_v4f16_f32(100, f32, f32, f32, f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_d_2darray_v4f16_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_d_2darray_v4f16_f32(f32, f32, f32, f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_d_2darray_v4f16_f32' needs target feature extended-image-insts}}
 }
 
 float test_amdgcn_image_sample_lz_2d_f32_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_lz_2d_f32_f32(1, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_2d_f32_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_lz_2d_f32_f32(f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_2d_f32_f32' needs target feature extended-image-insts}}
 }
 
 float test_amdgcn_image_sample_l_2d_f32_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_l_2d_f32_f32(1, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_l_2d_f32_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_l_2d_f32_f32(f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_l_2d_f32_f32' needs target feature extended-image-insts}}
 }
 
 float test_amdgcn_image_sample_d_2d_f32_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_d_2d_f32_f32(1, f32, f32, f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_d_2d_f32_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_d_2d_f32_f32(f32, f32, f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_d_2d_f32_f32' needs target feature extended-image-insts}}
 }
 
 float test_amdgcn_image_sample_lz_2darray_f32_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_lz_2darray_f32_f32(1, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_2darray_f32_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_lz_2darray_f32_f32(f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_2darray_f32_f32' needs target feature extended-image-insts}}
 }
 
 float test_amdgcn_image_sample_l_2darray_f32_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_l_2darray_f32_f32(1, f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_l_2darray_f32_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_l_2darray_f32_f32(f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_l_2darray_f32_f32' needs target feature extended-image-insts}}
 }
 
 float test_amdgcn_image_sample_d_2darray_f32_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
-  return __builtin_amdgcn_image_sample_d_2darray_f32_f32(1, f32, f32, f32, f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_d_2darray_f32_f32' needs target feature extended-image-insts}}
+  return __builtin_amdgcn_image_sample_d_2darray_f32_f32(f32, f32, f32, f32, f32, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_d_2darray_f32_f32' needs target feature extended-image-insts}}
 }

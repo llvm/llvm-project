@@ -51,11 +51,11 @@ float16_4 test_explicit_cast_float16_4_to_half4(float16_4 f16_4) {
 }
 
 half4 test_builtin_image_load_2d_2(half4 v4f16, int i32, __amdgpu_texture_t tex) {
-  return __builtin_amdgcn_image_load_2d_v4f16_i32(100, i32, i32, tex, 120, 110); // expected-no-error
+  return __builtin_amdgcn_image_load_2d_v4f16_i32(i32, i32, tex, 120, 110); // expected-no-error
 }
 
 half4 test_builtin_amdgcn_image_sample_2d_v4f16_f32(half4 v4f16, int i32, float f32, __amdgpu_texture_t tex, int4 vec4i32) {
-  return __builtin_amdgcn_image_sample_2d_v4f16_f32(100, f32, f32, tex, vec4i32, 0, 120, 110); // expected-no-error
+  return __builtin_amdgcn_image_sample_2d_v4f16_f32(f32, f32, tex, vec4i32, 0, 120, 110); // expected-no-error
 }
 
 void test_half_mismatch_vector_size_error(float16_2 f16_2, float16_3 f16_3, float16_4 f16_4, float16_8 f16_8, float16_16 f16_16) {

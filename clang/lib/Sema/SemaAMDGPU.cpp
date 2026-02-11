@@ -249,7 +249,22 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     unsigned ArgCount = TheCall->getNumArgs() - 1;
     llvm::APSInt Result;
 
-    return (SemaRef.BuiltinConstantArg(TheCall, 0, Result)) ||
+    bool ExtraGatherChecks = false;
+    if (BuiltinID == AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32) {
+      // Gather has the DMask argument.
+      const Type *RetTy = TheCall->getType().getTypePtr();
+      constexpr int Low = 1;
+      int High = 1;
+      if (auto *VTy = dyn_cast<VectorType>(RetTy))
+        High = VTy->getNumElements();
+      // Which cannot accept values that have more bits set that there are
+      // elements in the return type.
+      High = (1 << High) - 1;
+      ExtraGatherChecks |= SemaRef.BuiltinConstantArgRange(
+          TheCall, 0, Low, High, /* RangeIsError = */ true);
+    }
+
+    return ExtraGatherChecks ||
            (SemaRef.BuiltinConstantArg(TheCall, ArgCount, Result)) ||
            (SemaRef.BuiltinConstantArg(TheCall, (ArgCount - 1), Result));
   }
@@ -293,8 +308,7 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     unsigned ArgCount = TheCall->getNumArgs() - 1;
     llvm::APSInt Result;
 
-    return (SemaRef.BuiltinConstantArg(TheCall, 1, Result)) ||
-           (SemaRef.BuiltinConstantArg(TheCall, ArgCount, Result)) ||
+    return (SemaRef.BuiltinConstantArg(TheCall, ArgCount, Result)) ||
            (SemaRef.BuiltinConstantArg(TheCall, (ArgCount - 1), Result));
   }
   case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x64_iu8:
