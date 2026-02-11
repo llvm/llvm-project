@@ -330,8 +330,8 @@ define i64 @cls_i64_not_32(i64 %x) {
   ret i64 %f
 }
 
-define i128 @slx_i128(i128 %x, i128 %y) {
-; CHECK-LABEL: slx_i128:
+define i128 @sll_i128(i128 %x, i128 %y) {
+; CHECK-LABEL: sll_i128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sll a3, a0, a2
 ; CHECK-NEXT:    slx a1, a0, a2
@@ -342,8 +342,8 @@ define i128 @slx_i128(i128 %x, i128 %y) {
   ret i128 %b
 }
 
-define i128 @slxi_i128(i128 %x) {
-; CHECK-LABEL: slxi_i128:
+define i128 @slli_i128(i128 %x) {
+; CHECK-LABEL: slli_i128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 49
 ; CHECK-NEXT:    slx a1, a0, a2
@@ -353,8 +353,8 @@ define i128 @slxi_i128(i128 %x) {
   ret i128 %a
 }
 
-define i128 @srx_i128(i128 %x, i128 %y) {
-; CHECK-LABEL: srx_i128:
+define i128 @srl_i128(i128 %x, i128 %y) {
+; CHECK-LABEL: srl_i128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srl a3, a1, a2
 ; CHECK-NEXT:    srx a0, a1, a2
@@ -366,8 +366,8 @@ define i128 @srx_i128(i128 %x, i128 %y) {
 }
 
 ; FIXME: Using srx instead of slx would avoid the mv.
-define i128 @srxi_i128(i128 %x) {
-; CHECK-LABEL: srxi_i128:
+define i128 @srli_i128(i128 %x) {
+; CHECK-LABEL: srli_i128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:    li a3, 15
@@ -377,6 +377,72 @@ define i128 @srxi_i128(i128 %x) {
 ; CHECK-NEXT:    ret
   %a = lshr i128 %x, 49
   ret i128 %a
+}
+
+define i128 @sra_i128(i128 %x, i128 %y) {
+; CHECK-LABEL: sra_i128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a2, a2, 31
+; CHECK-NEXT:    srx a0, a1, a2
+; CHECK-NEXT:    sra a1, a1, a2
+; CHECK-NEXT:    ret
+  %a = and i128 %y, 31
+  %b = ashr i128 %x, %a
+  ret i128 %b
+}
+
+; FIXME: Using srx instead of slx would avoid the mv.
+define i128 @srai_i128(i128 %x) {
+; CHECK-LABEL: srai_i128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mv a2, a1
+; CHECK-NEXT:    li a3, 15
+; CHECK-NEXT:    srai a1, a1, 49
+; CHECK-NEXT:    slx a2, a0, a3
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    ret
+  %a = ashr i128 %x, 49
+  ret i128 %a
+}
+
+define i64 @slx_i64(i64 %a, i64 %b, i64 %shamt) {
+; CHECK-LABEL: slx_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slx a0, a1, a2
+; CHECK-NEXT:    ret
+  %1 = tail call i64 @llvm.fshl.i64(i64 %a, i64 %b, i64 %shamt)
+  ret i64 %1
+}
+
+define i64 @slxi_i64(i64 %a, i64 %b) {
+; CHECK-LABEL: slxi_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 25
+; CHECK-NEXT:    slx a0, a1, a2
+; CHECK-NEXT:    ret
+  %1 = tail call i64 @llvm.fshl.i64(i64 %a, i64 %b, i64 25)
+  ret i64 %1
+}
+
+define i64 @srx_i64(i64 %a, i64 %b, i64 %shamt) {
+; CHECK-LABEL: srx_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srx a1, a0, a2
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    ret
+  %1 = tail call i64 @llvm.fshr.i64(i64 %a, i64 %b, i64 %shamt)
+  ret i64 %1
+}
+
+define i64 @srxi_i64(i64 %a, i64 %b) {
+; CHECK-LABEL: srxi_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 25
+; CHECK-NEXT:    srx a1, a0, a2
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    ret
+  %1 = tail call i64 @llvm.fshr.i64(i64 %a, i64 %b, i64 25)
+  ret i64 %1
 }
 
 ; Test bitwise merge: (mask & b) | (~mask & a)
