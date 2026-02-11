@@ -375,8 +375,8 @@ cl::list<std::string> llvm::VPlanPrintAfterPasses(
     "vplan-print-after", cl::Hidden,
     cl::desc("Print VPlans after specified VPlan transformations (regexp)."));
 
-cl::opt<bool> llvm::VPlanPrintLimitToVectorRegion(
-    "vplan-print-limit-to-vector-region", cl::init(false), cl::Hidden,
+cl::opt<bool> llvm::VPlanPrintVectorRegionScope(
+    "vplan-print-vector-region-scope", cl::init(false), cl::Hidden,
     cl::desc("Limit VPlan printing to vector loop region in "
              "`-vplan-print-after*` if the plan has one."));
 #endif
