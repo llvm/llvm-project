@@ -423,17 +423,7 @@ class PrefetchToOCLPattern : public OpConversionPattern<PrefetchOp> {
     const std::string fnName{"_Z8prefetchPU3AS1Kcm"};
     Value one =
         LLVM::ConstantOp::create(rewriter, loc, rewriter.getI64Type(), 1);
-    Value ptrOp = op.getPtr();
-    // Create getelementptr op to attach cache control metadata
-    // element type doesn't matter for address computation since we use
-    // but non i8 types lose metadata in SPIRV backend, so use i8 here
-    LLVM::GEPOp gep = LLVM::GEPOp::create(rewriter, loc, ptrOp.getType(),
-                                          rewriter.getI8Type(), ptrOp,
-                                          ArrayRef<LLVM::GEPArg>{0});
-    if (std::optional<ArrayAttr> optCacheControls =
-            getCacheControlMetadata(rewriter, op))
-      gep->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
-    SmallVector<Value> args{gep, one};
+    SmallVector<Value> args{op.getPtr(), one};
     SmallVector<Type> argTypes;
     for (auto arg : args)
       argTypes.push_back(arg.getType());
@@ -447,9 +437,12 @@ class PrefetchToOCLPattern : public OpConversionPattern<PrefetchOp> {
         /*targetMem1=*/LLVM::ModRefInfo::NoModRef);
     funcAttr.memEffectsAttr = memAttr;
 
-    createDeviceFunctionCall(rewriter, fnName,
-                             LLVM::LLVMVoidType::get(rewriter.getContext()),
-                             argTypes, args, {}, funcAttr, op.getOperation());
+    LLVM::CallOp call = createDeviceFunctionCall(
+        rewriter, fnName, LLVM::LLVMVoidType::get(rewriter.getContext()),
+        argTypes, args, {}, funcAttr, op.getOperation());
+    if (std::optional<ArrayAttr> optCacheControls =
+            getCacheControlMetadata(rewriter, op))
+      call->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
     rewriter.eraseOp(op);
     return success();
   }
@@ -533,17 +526,7 @@ class LoadStorePrefetchToOCLPattern : public OpConversionPattern<OpType> {
         rewriter, loc, VectorType::get(2, i32Type), byteCoord, op.getX(), zero);
     byteCoord = LLVM::InsertElementOp::create(
         rewriter, loc, VectorType::get(2, i32Type), byteCoord, op.getY(), one);
-    Value ptrOp = op.getPtr();
-    // Create getelementptr op to attach cache control metadata
-    // element type doesn't matter for address computation since we use
-    // but non i8 types lose metadata in SPIRV backend, so use i8 here
-    LLVM::GEPOp gep = LLVM::GEPOp::create(rewriter, loc, ptrOp.getType(),
-                                          rewriter.getI8Type(), ptrOp,
-                                          ArrayRef<LLVM::GEPArg>{0});
-    if (std::optional<ArrayAttr> optCacheControls =
-            getCacheControlMetadata(rewriter, op))
-      gep->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
-    SmallVector<Value> args{gep, op.getBaseWidth(), op.getBaseHeight(),
+    SmallVector<Value> args{op.getPtr(), op.getBaseWidth(), op.getBaseHeight(),
                             op.getBasePitch(), byteCoord};
     SmallVector<Type> retTypes;
     Value spvLoadDstPtr;
@@ -619,6 +602,10 @@ class LoadStorePrefetchToOCLPattern : public OpConversionPattern<OpType> {
     LLVM::CallOp call = createDeviceFunctionCall(
         rewriter, funcName, LLVM::LLVMVoidType::get(rewriter.getContext()),
         argTypes, args, paramAttrs, funcAttr, op.getOperation());
+    if (std::optional<ArrayAttr> optCacheControls =
+            getCacheControlMetadata(rewriter, op)) {
+      call->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
+    }
     if constexpr (isLoad)
       rewriter.replaceOp(
           op, LLVM::LoadOp::create(rewriter, loc, vecType, spvLoadDstPtr));
@@ -663,18 +650,8 @@ class BlockLoadStore1DToOCLPattern : public OpConversionPattern<OpType> {
     // arg1 - only if store : vector to store
     // Prepare arguments
     SmallVector<Value, 2> args{};
-    Value ptrOp = op.getPtr();
-    // Create getelementptr op to attach cache control metadata
-    // element type doesn't matter for address computation since we use
-    // but non i8 types lose metadata in SPIRV backend, so use i8 here
-    LLVM::GEPOp gep = LLVM::GEPOp::create(rewriter, op.getLoc(),
-                                          ptrOp.getType(), rewriter.getI8Type(),
-                                          ptrOp, ArrayRef<LLVM::GEPArg>{0});
-    if (std::optional<ArrayAttr> optCacheControls =
-            getCacheControlMetadata(rewriter, op))
-      gep->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
-    args.push_back(gep);
-    argTypes.push_back(gep.getType());
+    args.push_back(op.getPtr());
+    argTypes.push_back(op.getPtr().getType());
     isUnsigned.push_back(true);
     Type retType;
     if constexpr (isStore) {
@@ -696,6 +673,10 @@ class BlockLoadStore1DToOCLPattern : public OpConversionPattern<OpType> {
     LLVM::CallOp call =
         createDeviceFunctionCall(rewriter, funcName, retType, argTypes, args,
                                  {}, funcAttr, op.getOperation());
+    if (std::optional<ArrayAttr> optCacheControls =
+            getCacheControlMetadata(rewriter, op)) {
+      call->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
+    }
     if constexpr (isStore)
       rewriter.eraseOp(op);
     else
@@ -712,21 +693,10 @@ class LLVMLoadStoreToOCLPattern : public OpConversionPattern<OpType> {
                   ConversionPatternRewriter &rewriter) const override {
     if (!op->hasAttr("cache_control"))
       return failure();
-    constexpr bool isStore = std::is_same_v<OpType, LLVM::StoreOp>;
-    Value ptrOp = op.getAddr();
-    // Create getelementptr op to attach cache control metadata
-    // element type doesn't matter for address computation since we use
-    // but non i8 types lose metadata in SPIRV backend, so use i8 here
-    LLVM::GEPOp gep = LLVM::GEPOp::create(rewriter, op.getLoc(),
-                                          ptrOp.getType(), rewriter.getI8Type(),
-                                          ptrOp, ArrayRef<LLVM::GEPArg>{0});
-    if (std::optional<ArrayAttr> optCacheControls =
-            getCacheControlMetadata(rewriter, op))
-      gep->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
-    if constexpr (isStore)
-      rewriter.replaceOpWithNewOp<LLVM::StoreOp>(op, op.getValue(), gep);
-    else
-      rewriter.replaceOpWithNewOp<LLVM::LoadOp>(op, op.getType(), gep);
+    std::optional<ArrayAttr> optCacheControls =
+        getCacheControlMetadata(rewriter, op);
+    op->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
+    op->removeAttr("cache_control");
     return success();
   }
 };
