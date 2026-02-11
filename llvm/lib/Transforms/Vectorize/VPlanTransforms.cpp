@@ -1221,8 +1221,10 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   VPBuilder Builder(Def);
 
   // Avoid replacing VPInstructions with underlying values with new
-  // VPInstructions. VPInstructions with underlying values should get
-  // widened/replicated later.
+  // VPInstructions, as we would fail to create widen/replicate recpes from the
+  // new VPInstructions without an underlying value, and miss out on some
+  // transformations that only apply to widened/replicated recipes later, by
+  // doing so.
   // TODO: We should also not replace non-VPInstructions like VPWidenRecipe with
   // VPInstructions without underlying values, as those will get skipped during
   // cost computation.
@@ -3401,8 +3403,6 @@ void VPlanTransforms::replaceSymbolicStrides(
   // evolution.
   auto CanUseVersionedStride = [&Plan](VPUser &U, unsigned) {
     auto *R = cast<VPRecipeBase>(&U);
-    if (R->getRegion())
-      return true;
     return R->getRegion() ||
            R->getParent() == Plan.getVectorLoopRegion()->getSinglePredecessor();
   };
