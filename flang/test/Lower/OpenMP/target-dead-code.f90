@@ -73,3 +73,16 @@ subroutine test_parameter()
   end if
   ! FIR-NOT: omp.target
 end subroutine
+
+! FIR-LABEL: func.func @_QPtest_outer
+subroutine test_outer
+  implicit none
+contains
+  subroutine unused_sub()
+    real :: v
+    !$omp target map(tofrom: v)
+      v = 5.0
+    !$omp end target
+  end subroutine
+  ! FIR-NOT: omp.target
+end subroutine
