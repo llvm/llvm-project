@@ -83,7 +83,7 @@ def main(argv):
         help='The name of the test suite that we are producing results for on the LNT instance.')
     parser.add_argument('--machine', type=str, required=True,
         help='The name of the machine that we are producing results for on the LNT instance.')
-    parser.add_argument('-d', '--delay', type=int, required=False, default=10,
+    parser.add_argument('-d', '--delay', type=int, required=False, default=60,
         help='The delay (in seconds) to wait before successive polls.')
     parser.add_argument('--git-repo', type=directory_path, default=os.getcwd(),
         help='Optional path to the Git repository to use. By default, the current working directory is used.')
