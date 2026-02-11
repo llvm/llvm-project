@@ -161,25 +161,30 @@ int g() {
 
 namespace GH128409 {
   int &ff();
-  int &x = ff(); // expected-note {{declared here}}
+  int &x = ff(); // nointerpreter-note {{declared here}}
   constinit int &z = x; // expected-error {{variable does not have a constant initializer}} \
                         // expected-note {{required by 'constinit' specifier here}} \
-                        // expected-note {{initializer of 'x' is not a constant expression}}
+                        // nointerpreter-note {{initializer of 'x' is not a constant expression}} \
+                        // interpreter-note {{use of reference outside its lifetime is not allowed in a constant expression}}
 }
 
 namespace GH129845 {
   int &ff();
-  int &x = ff(); // expected-note {{declared here}}
+  int &x = ff(); // nointerpreter-note {{declared here}}
   struct A { int& x; };
   constexpr A g = {x}; // expected-error {{constexpr variable 'g' must be initialized by a constant expression}} \
-                       // expected-note {{initializer of 'x' is not a constant expression}}
+                       // nointerpreter-note {{initializer of 'x' is not a constant expression}} \
+                       // interpreter-note {{use of reference outside its lifetime is not allowed in a constant expression}}
   const A* gg = &g;
 }
 
 namespace extern_reference_used_as_unknown {
-  extern int &x;
+  extern int &x; // interpreter-note {{declared here}}
   int y;
-  constinit int& g = (x,y); // expected-warning {{left operand of comma operator has no effect}}
+  constinit int& g = (x,y); // expected-warning {{left operand of comma operator has no effect}} \
+                            // interpreter-error {{variable does not have a constant initializer}} \
+                            // interpreter-note {{required by 'constinit' specifier here}} \
+                            // interpreter-note {{initializer of 'x' is unknown}}
 }
 
 namespace GH139452 {
@@ -206,21 +211,19 @@ int f() {
 namespace uninit_reference_used {
   int y;
   constexpr int &r = r; // expected-error {{must be initialized by a constant expression}} \
-  // expected-note {{initializer of 'r' is not a constant expression}} \
-  // expected-note {{declared here}}
-  constexpr int &rr = (rr, y);
+  // expected-note {{use of reference outside its lifetime is not allowed in a constant expression}}
+  constexpr int &rr = (rr, y); // expected-error {{constexpr variable 'rr' must be initialized by a constant expression}} \
+  // expected-note {{use of reference outside its lifetime is not allowed in a constant expression}}
   constexpr int &g() {
     int &x = x; // expected-warning {{reference 'x' is not yet bound to a value when used within its own initialization}} \
-    // nointerpreter-note {{use of reference outside its lifetime is not allowed in a constant expression}} \
-    // interpreter-note {{read of uninitialized object is not allowed in a constant expression}}
+    // expected-note {{use of reference outside its lifetime is not allowed in a constant expression}} \
     return x;
   }
   constexpr int &gg = g(); // expected-error {{must be initialized by a constant expression}} \
   // expected-note {{in call to 'g()'}}
   constexpr int g2() {
     int &x = x; // expected-warning {{reference 'x' is not yet bound to a value when used within its own initialization}} \
-    // nointerpreter-note {{use of reference outside its lifetime is not allowed in a constant expression}} \
-    // interpreter-note {{read of uninitialized object is not allowed in a constant expression}}
+    // expected-note {{use of reference outside its lifetime is not allowed in a constant expression}} \
     return x;
   }
   constexpr int gg2 = g2(); // expected-error {{must be initialized by a constant expression}} \
@@ -228,16 +231,15 @@ namespace uninit_reference_used {
   constexpr int &g3() {
     int &x = (x,y); // expected-warning{{left operand of comma operator has no effect}} \
     // expected-warning {{reference 'x' is not yet bound to a value when used within its own initialization}} \
-    // nointerpreter-note {{use of reference outside its lifetime is not allowed in a constant expression}}
+    // expected-note {{use of reference outside its lifetime is not allowed in a constant expression}}
     return x;
   }
-  constexpr int &gg3 = g3(); // nointerpreter-error {{must be initialized by a constant expression}} \
-  // nointerpreter-note {{in call to 'g3()'}}
+  constexpr int &gg3 = g3(); // expected-error {{must be initialized by a constant expression}} \
+  // expected-note {{in call to 'g3()'}}
   typedef decltype(sizeof(1)) uintptr_t;
   constexpr uintptr_t g4() {
     uintptr_t * &x = x; // expected-warning {{reference 'x' is not yet bound to a value when used within its own initialization}} \
-    // nointerpreter-note {{use of reference outside its lifetime is not allowed in a constant expression}} \
-    // interpreter-note {{read of uninitialized object is not allowed in a constant expression}}
+    // expected-note {{use of reference outside its lifetime is not allowed in a constant expression}}
     *(uintptr_t*)x = 10;
     return 3;
   }
@@ -245,8 +247,7 @@ namespace uninit_reference_used {
   // expected-note {{in call to 'g4()'}}
   constexpr int g5() {
     int &x = x; // expected-warning {{reference 'x' is not yet bound to a value when used within its own initialization}} \
-    // nointerpreter-note {{use of reference outside its lifetime is not allowed in a constant expression}} \
-    // interpreter-note {{read of uninitialized object is not allowed in a constant expression}}
+    // expected-note {{use of reference outside its lifetime is not allowed in a constant expression}} \
     return 3;
   }
   constexpr uintptr_t gg5 = g5(); // expected-error {{must be initialized by a constant expression}} \

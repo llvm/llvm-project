@@ -3335,7 +3335,10 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
 
   APValue::LValueBase Base(VD, Frame ? Frame->Index : 0, Version);
 
-  auto CheckUninitReference = [&](bool IsLocalVariable) {
+  // C++26 [dcl.ref]p6
+  // ... The behavior of an evaluation of a reference that does not happen after
+  // the initialization of the reference is undefined.
+  auto CheckUnknownReference = [&](bool UnknownRefIsUninit) {
     if (!Result || (!Result->hasValue() && VD->getType()->isReferenceType())) {
       // C++23 [expr.const]p8
       // ... For such an object that is not usable in constant expressions, the
@@ -3347,7 +3350,7 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
       //
       // Variables that are part of the current evaluation are not
       // constexpr-unknown.
-      if (!AllowConstexprUnknown || IsLocalVariable) {
+      if (!AllowConstexprUnknown || UnknownRefIsUninit) {
         if (!Info.checkingPotentialConstantExpression())
           Info.FFDiag(E, diag::note_constexpr_use_uninit_reference);
         return false;
@@ -3361,7 +3364,7 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   if (Frame) {
     Result = Frame->getTemporary(VD, Version);
     if (Result)
-      return CheckUninitReference(/*IsLocalVariable=*/true);
+      return CheckUnknownReference(/*UnknownRefIsUninit=*/true);
 
     if (!isa<ParmVarDecl>(VD)) {
       // Assume variables referenced within a lambda's call operator that were
@@ -3386,7 +3389,7 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   // in-flight value.
   if (Info.EvaluatingDecl == Base) {
     Result = Info.EvaluatingDeclValue;
-    return CheckUninitReference(/*IsLocalVariable=*/false);
+    return CheckUnknownReference(/*UnknownRefIsUninit=*/true);
   }
 
   // P2280R4 struck the restriction that variable of reference type lifetime
@@ -3505,7 +3508,7 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   if (!Result && !AllowConstexprUnknown)
     return false;
 
-  return CheckUninitReference(/*IsLocalVariable=*/false);
+  return CheckUnknownReference(/*UnknownRefIsUninit=*/false);
 }
 
 /// Get the base index of the given base class within an APValue representing

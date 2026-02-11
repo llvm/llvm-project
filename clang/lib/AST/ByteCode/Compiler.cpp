@@ -7150,8 +7150,20 @@ bool Compiler<Emitter>::VisitVectorUnaryOperator(const UnaryOperator *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
-  if (DiscardResult)
-    return true;
+  if (DiscardResult) {
+    if (!(isa<VarDecl>(D) && D->getType()->isReferenceType()))
+      return true;
+
+    // C++26 [dcl.ref]p6
+    // ... The behavior of an evaluation of a reference that does not happen
+    // after the initialization of the reference is undefined.
+    //
+    // Visit the variable to check if it is initialized.
+    llvm::SaveAndRestore _(DiscardResult, /*NewValue=*/false);
+    if (!this->visitDeclRef(D, E))
+      return false;
+    return this->emitPopPtr(E);
+  }
 
   if (const auto *ECD = dyn_cast<EnumConstantDecl>(D))
     return this->emitConst(ECD->getInitVal(), E);

@@ -90,11 +90,8 @@ namespace ThreadLocalStore {
   void store() { a = 42; }
 }
 
-#if __cplusplus >= 202302L
 constexpr int &b = b; // all-error {{must be initialized by a constant expression}} \
-                      // all-note {{initializer of 'b' is not a constant expression}} \
-                      // all-note {{declared here}}
-#endif
+                      // all-note {{use of reference outside its lifetime is not allowed in a constant expression}}
 
 namespace StaticLambdas {
   constexpr auto static_capture_constexpr() {
