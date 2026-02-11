@@ -4,7 +4,7 @@ This file is a list of the
 [maintainers](https://llvm.org/docs/DeveloperPolicy.html#maintainers) for
 the SYCL Runtime library.
 
-# Current Maintainers
+# Lead Maintainers
 
 Alexey Bader \
 | alexey.bader@intel.com (email), bader (GitHub, Discord, Discourse)

@@ -184,4 +184,44 @@ void IndirectGlobalAccessModel<fir::TypeDescOp>::getReferencedSymbols(
                                   symbolTable);
 }
 
+template <>
+bool OperationMoveModel<mlir::acc::LoopOp>::canMoveFromDescendant(
+    mlir::Operation *op, mlir::Operation *descendant,
+    mlir::Operation *candidate) const {
+  // It should be always allowed to move operations from descendants
+  // of acc.loop into the acc.loop.
+  return true;
+}
+
+template <>
+bool OperationMoveModel<mlir::acc::LoopOp>::canMoveOutOf(
+    mlir::Operation *op, mlir::Operation *candidate) const {
+  // Disallow moving operations, which have operands that are referenced
+  // in the data operands (e.g. in [first]private() etc.) of the acc.loop.
+  // For example:
+  //   %17 = acc.private var(%16 : !fir.box<!fir.array<?xf32>>)
+  //   acc.loop private(%17 : !fir.box<!fir.array<?xf32>>) ... {
+  //     %19 = fir.box_addr %17
+  //   }
+  // We cannot hoist %19 without violating assumptions that OpenACC
+  // transformations rely on.
+
+  // In general, some movement out of acc.loop is allowed,
+  // so return true if candidate is nullptr.
+  if (!candidate)
+    return true;
+
+  auto loopOp = mlir::cast<mlir::acc::LoopOp>(op);
+  unsigned numDataOperands = loopOp.getNumDataOperands();
+  for (unsigned i = 0; i < numDataOperands; ++i) {
+    mlir::Value dataOperand = loopOp.getDataOperand(i);
+    if (llvm::any_of(candidate->getOperands(),
+                     [&](mlir::Value candidateOperand) {
+                       return dataOperand == candidateOperand;
+                     }))
+      return false;
+  }
+  return true;
+}
+
 } // namespace fir::acc

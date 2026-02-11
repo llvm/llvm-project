@@ -397,6 +397,19 @@ def int_amdgcn_s_wait_loadcnt        : AMDGPUWaitIntrinsic;
 def int_amdgcn_s_wait_samplecnt      : AMDGPUWaitIntrinsic;
 def int_amdgcn_s_wait_storecnt       : AMDGPUWaitIntrinsic;
 
+// Request the hardware to allocate the given number of VGPRs. The actual number
+// of allocated VGPRs may be rounded up to match hardware block boundaries.
+// It is the responsibility of the calling code to ensure it does not allocate
+// below the VGPR requirements of the current shader. This intrinsic is only
+// available on targets that support dynamic VGPR mode.
+def int_amdgcn_s_alloc_vgpr : DefaultAttrsIntrinsic<
+    [llvm_i1_ty], // Returns true if the allocation succeeded, false otherwise.
+    [llvm_i32_ty], // The number of VGPRs to allocate.
+    [NoUndef<RetIndex>, NoUndef<ArgIndex<0>>,
+     IntrNoMem, IntrHasSideEffects, IntrConvergent
+    ]
+>;
+
 def int_amdgcn_div_scale : PureIntrinsic<
   // 1st parameter: Numerator
   // 2nd parameter: Denominator
@@ -2904,9 +2917,23 @@ class IntDSBVHStackRtn<LLVMType vdst, LLVMType data1> :
 def int_amdgcn_ds_bvh_stack_rtn : IntDSBVHStackRtn<vdst  = llvm_i32_ty,
                                                    data1 = llvm_v4i32_ty>;
 
+// Emit s_wait_event instruction. Note that between gfx11 and gfx12,
+// the bit for the export_ready event changed. gfx11 expects bit 0 to
+// be 0, and gfx12 expects bit 1 to be 0. Thus, an immediate value of
+// 2 can be used as the universal value for export_ready.
+def int_amdgcn_s_wait_event :
+  ClangBuiltin<"__builtin_amdgcn_s_wait_event">,
+  Intrinsic<[], [llvm_i16_ty],
+  [ImmArg<ArgIndex<0>>, IntrNoMem, IntrNoCallback, IntrNoFree,
+   IntrHasSideEffects, IntrWillReturn]
+>;
+
+// Emits same instruction as s_wait_event, with a hardcoded immediate
+// value. FIXME: This should be removed
 def int_amdgcn_s_wait_event_export_ready :
   ClangBuiltin<"__builtin_amdgcn_s_wait_event_export_ready">,
-  Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects, IntrWillReturn]
+  Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects, IntrWillReturn,
+                     IntrNoCallback, IntrNoFree]
 >;
 
 // WMMA (Wave Matrix Multiply-Accumulate) intrinsics
@@ -4208,13 +4235,12 @@ class AMDGPULoadMonitor<LLVMType ptr_ty>:
   Intrinsic<
     [llvm_any_ty],
     [ptr_ty,
-     llvm_i32_ty],  // gfx12+ cachepolicy:
-                    //   bits [0-2] = th
-                    //   bits [3-4] = scope
+     llvm_i32_ty,            // C ABI Atomic Ordering ID
+     llvm_metadata_ty],      // syncscope
     [IntrArgMemOnly, IntrReadMem, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
      IntrWillReturn, IntrConvergent, IntrNoCallback, IntrNoFree],
     "",
-    [SDNPMemOperand]
+    [SDNPMemOperand, SDNPMayLoad]
   >;
 
 def int_amdgcn_flat_load_monitor_b32    : AMDGPULoadMonitor<flat_ptr_ty>;

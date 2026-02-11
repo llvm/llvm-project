@@ -220,7 +220,7 @@ std::optional<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
       Rule.Provides = Provided;
       if (Rule.Provides)
         Rule.Provides->SourcePath = Filename.str();
-      Rule.Requires = Requires;
+      Rule.Requires = std::move(Requires);
     }
 
     StringRef getMakeFormatDependencyOutputPath() {
@@ -370,6 +370,9 @@ DependencyScanningTool::computeDependenciesByNameWithContextOrError(
     LookupModuleOutputCallback LookupModuleOutput) {
   FullDependencyConsumer Consumer(AlreadySeen);
   CallbackActionController Controller(LookupModuleOutput);
+  // We need to clear the DiagnosticOutput so that each by-name lookup
+  // has a clean diagnostics buffer.
+  DiagPrinterWithOS->DiagnosticOutput.clear();
   if (Worker.computeDependenciesByNameWithContext(ModuleName, Consumer,
                                                   Controller))
     return Consumer.takeTranslationUnitDeps();
