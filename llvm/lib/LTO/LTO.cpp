@@ -162,10 +162,12 @@ std::string llvm::computeLTOCacheKey(
   TargetOptions Opts = codegen::InitTargetOptionsFromCodeGenFlags(TT);
   Conf.ModifyTargetOptions(Opts);
 
-  // FIXME: Hash more of Options. For now all clients initialize Options from
-  // command-line flags (which is unsupported in production), but may set
-  // X86RelaxRelocations. The clang driver can also pass FunctionSections,
-  // DataSections and DebuggerTuning via command line flags.
+  // FIXME: Hash more of TargetOptions. For now all clients initialize
+  // TargetOptions from command-line flags (which is unsupported in production),
+  // but may set X86RelaxRelocations. The clang driver can also pass
+  // FunctionSections, DataSections and DebuggerTuning via command line flags.
+  // Alternatively, we could store these options in the IR, instead, which has
+  // other trade-offs.
   AddUnsigned(Opts.MCOptions.X86RelaxRelocations);
   AddUnsigned(Opts.FunctionSections);
   AddUnsigned(Opts.DataSections);
@@ -2119,7 +2121,8 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
       ThinLTO.ModulesToCompile ? *ThinLTO.ModulesToCompile : ThinLTO.ModuleMap;
 
   auto RunBackends = [&](ThinBackendProc *BackendProcess) -> Error {
-    Triple TheTriple = RegularLTO.CombinedModule->getTargetTriple();
+    const Triple &TheTriple = RegularLTO.CombinedModule->getTargetTriple();
+    assert(!TheTriple.getTriple().empty() && "Empty TargetTriple for ThinLTO!");
     auto ProcessOneModule = [&](int I) -> Error {
       auto &Mod = *(ModuleMap.begin() + I);
       // Tasks 0 through ParallelCodeGenParallelismLevel-1 are reserved for
@@ -2132,7 +2135,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
 
     BackendProcess->setup(ModuleMap.size(),
                           RegularLTO.ParallelCodeGenParallelismLevel,
-                          RegularLTO.CombinedModule->getTargetTriple());
+                          TheTriple);
 
     if (BackendProcess->getThreadCount() == 1 ||
         BackendProcess->isSensitiveToInputOrder()) {
