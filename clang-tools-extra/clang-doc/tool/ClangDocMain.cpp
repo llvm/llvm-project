@@ -128,7 +128,7 @@ static llvm::cl::opt<OutputFormatTy>
 
 static llvm::ExitOnError ExitOnErr;
 
-static std::string getFormatString() {
+static llvm::StringRef getFormatString() {
   switch (FormatEnum) {
   case OutputFormatTy::yaml:
     return "yaml";
@@ -263,7 +263,7 @@ Example usage for a project using a compile commands database:
     llvm::TimeTraceScope("main");
 
     // Fail early if an invalid format was provided.
-    std::string Format = getFormatString();
+    llvm::StringRef Format = getFormatString();
     llvm::outs() << "Emiting docs in " << Format << " format.\n";
     auto G = ExitOnErr(doc::findGeneratorByName(Format));
 
