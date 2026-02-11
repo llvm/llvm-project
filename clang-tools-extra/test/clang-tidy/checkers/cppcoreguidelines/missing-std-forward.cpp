@@ -223,11 +223,6 @@ void triple_nested_forward(T &&arg) {
 	}();
 }
 
-template <class T>
-void lambda_renamed_capture(T&& t) {
-  [&a = t]() { consumes_all(std::forward<T>(a)); };
-}
-
 } // namespace negative_cases
 
 namespace deleted_functions {
