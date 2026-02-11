@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -ast-dump -o - %s | FileCheck %s 
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -ast-dump -o - %s | FileCheck %s
 
 typedef float float4x2 __attribute__((matrix_type(4,2)));
 typedef float float2x2 __attribute__((matrix_type(2,2)));
@@ -84,33 +84,33 @@ float4x2 m = {1.xxx, 2.xx, 3.x, 4.xx};
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <LValueToRValue>
 // CHECK-NEXT: MatrixSubscriptExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' lvalue matrixcomponent
 // CHECK-NEXT: DeclRefExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float4x2':'matrix<float, 4, 2>' lvalue Var 0x{{[0-9a-fA-F]+}} 'm' 'float4x2':'matrix<float, 4, 2>'
-// CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 2
+// CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 1
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 0
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <LValueToRValue>
 // CHECK-NEXT: MatrixSubscriptExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' lvalue matrixcomponent
 // CHECK-NEXT: DeclRefExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float4x2':'matrix<float, 4, 2>' lvalue Var 0x{{[0-9a-fA-F]+}} 'm' 'float4x2':'matrix<float, 4, 2>'
+// CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 0
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 1
+// CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <LValueToRValue>
+// CHECK-NEXT: MatrixSubscriptExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' lvalue matrixcomponent
+// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float4x2':'matrix<float, 4, 2>' lvalue Var 0x{{[0-9a-fA-F]+}} 'm' 'float4x2':'matrix<float, 4, 2>'
+// CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 1
+// CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 1
+// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float2x2':'matrix<float, 2, 2>'
+// CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <LValueToRValue>
+// CHECK-NEXT: MatrixSubscriptExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' lvalue matrixcomponent
+// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float4x2':'matrix<float, 4, 2>' lvalue Var 0x{{[0-9a-fA-F]+}} 'm' 'float4x2':'matrix<float, 4, 2>'
+// CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 2
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 0
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <LValueToRValue>
 // CHECK-NEXT: MatrixSubscriptExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' lvalue matrixcomponent
 // CHECK-NEXT: DeclRefExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float4x2':'matrix<float, 4, 2>' lvalue Var 0x{{[0-9a-fA-F]+}} 'm' 'float4x2':'matrix<float, 4, 2>'
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 3
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 0
-// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float2x2':'matrix<float, 2, 2>'
-// CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <LValueToRValue>
-// CHECK-NEXT: MatrixSubscriptExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' lvalue matrixcomponent
-// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float4x2':'matrix<float, 4, 2>' lvalue Var 0x{{[0-9a-fA-F]+}} 'm' 'float4x2':'matrix<float, 4, 2>'
-// CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 0
-// CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 1
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <LValueToRValue>
 // CHECK-NEXT: MatrixSubscriptExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' lvalue matrixcomponent
 // CHECK-NEXT: DeclRefExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float4x2':'matrix<float, 4, 2>' lvalue Var 0x{{[0-9a-fA-F]+}} 'm' 'float4x2':'matrix<float, 4, 2>'
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 2
-// CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 1
-// CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <LValueToRValue>
-// CHECK-NEXT: MatrixSubscriptExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' lvalue matrixcomponent
-// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float4x2':'matrix<float, 4, 2>' lvalue Var 0x{{[0-9a-fA-F]+}} 'm' 'float4x2':'matrix<float, 4, 2>'
-// CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 1
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 1
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <LValueToRValue>
 // CHECK-NEXT: MatrixSubscriptExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' lvalue matrixcomponent
@@ -187,8 +187,26 @@ float2x2 m2 = {0.xxxx};
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <LValueToRValue>
 // CHECK-NEXT: MatrixSubscriptExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' lvalue matrixcomponent
 // CHECK-NEXT: DeclRefExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float2x2':'matrix<float, 2, 2>' lvalue Var 0x{{[0-9a-fA-F]+}} 'm2' 'float2x2':'matrix<float, 2, 2>'
-// CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 1
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 0
+// CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 1
+// CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' <FloatingToIntegral>
+// CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <LValueToRValue>
+// CHECK-NEXT: MatrixSubscriptExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' lvalue matrixcomponent
+// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float2x2':'matrix<float, 2, 2>' lvalue Var 0x{{[0-9a-fA-F]+}} 'm2' 'float2x2':'matrix<float, 2, 2>'
+// CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 0
+// CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 1
+// CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' <FloatingToIntegral>
+// CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <LValueToRValue>
+// CHECK-NEXT: MatrixSubscriptExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' lvalue matrixcomponent
+// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float2x2':'matrix<float, 2, 2>' lvalue Var 0x{{[0-9a-fA-F]+}} 'm2' 'float2x2':'matrix<float, 2, 2>'
+// CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 0
+// CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 1
+// CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' <FloatingToIntegral>
+// CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <LValueToRValue>
+// CHECK-NEXT: MatrixSubscriptExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' lvalue matrixcomponent
+// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float2x2':'matrix<float, 2, 2>' lvalue Var 0x{{[0-9a-fA-F]+}} 'm2' 'float2x2':'matrix<float, 2, 2>'
+// CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 0
+// CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 1
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' <FloatingToIntegral>
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <LValueToRValue>
 // CHECK-NEXT: MatrixSubscriptExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' lvalue matrixcomponent
@@ -211,26 +229,8 @@ float2x2 m2 = {0.xxxx};
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <LValueToRValue>
 // CHECK-NEXT: MatrixSubscriptExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' lvalue matrixcomponent
 // CHECK-NEXT: DeclRefExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float2x2':'matrix<float, 2, 2>' lvalue Var 0x{{[0-9a-fA-F]+}} 'm2' 'float2x2':'matrix<float, 2, 2>'
-// CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 0
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 1
-// CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' <FloatingToIntegral>
-// CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <LValueToRValue>
-// CHECK-NEXT: MatrixSubscriptExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' lvalue matrixcomponent
-// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float2x2':'matrix<float, 2, 2>' lvalue Var 0x{{[0-9a-fA-F]+}} 'm2' 'float2x2':'matrix<float, 2, 2>'
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 0
-// CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 1
-// CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' <FloatingToIntegral>
-// CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <LValueToRValue>
-// CHECK-NEXT: MatrixSubscriptExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' lvalue matrixcomponent
-// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float2x2':'matrix<float, 2, 2>' lvalue Var 0x{{[0-9a-fA-F]+}} 'm2' 'float2x2':'matrix<float, 2, 2>'
-// CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 0
-// CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 1
-// CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' <FloatingToIntegral>
-// CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <LValueToRValue>
-// CHECK-NEXT: MatrixSubscriptExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' lvalue matrixcomponent
-// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float2x2':'matrix<float, 2, 2>' lvalue Var 0x{{[0-9a-fA-F]+}} 'm2' 'float2x2':'matrix<float, 2, 2>'
-// CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 0
-// CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 1
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' <FloatingToIntegral>
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <LValueToRValue>
 // CHECK-NEXT: MatrixSubscriptExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' lvalue matrixcomponent

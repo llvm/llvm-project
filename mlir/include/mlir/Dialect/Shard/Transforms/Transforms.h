@@ -39,14 +39,14 @@ createCollectiveProcessGroupSize(GridOp grid, ArrayRef<GridAxis> axes,
                                  ImplicitLocOpBuilder &builder);
 
 // Get process linear index along the given grid axes.
-TypedValue<IndexType> createProcessLinearIndex(StringRef grid,
-                                               ArrayRef<GridAxis> gridAxes,
-                                               ImplicitLocOpBuilder &builder);
+TypedValue<IndexType>
+createProcessLinearIndex(ImplicitLocOpBuilder &builder, StringRef grid,
+                         ArrayRef<GridAxis> gridAxes = {});
 // Get process linear index from a multi-index along the given grid axes .
 TypedValue<IndexType>
-createProcessLinearIndex(StringRef grid, ValueRange processInGroupMultiIndex,
-                         ArrayRef<GridAxis> gridAxes,
-                         ImplicitLocOpBuilder &builder);
+createProcessLinearIndex(ImplicitLocOpBuilder &builder, StringRef grid,
+                         ValueRange processInGroupMultiIndex,
+                         ArrayRef<GridAxis> gridAxes = {});
 
 } // namespace shard
 } // namespace mlir

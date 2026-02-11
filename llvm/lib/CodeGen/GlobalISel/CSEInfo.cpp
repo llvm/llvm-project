@@ -18,13 +18,9 @@
 using namespace llvm;
 char llvm::GISelCSEAnalysisWrapperPass::ID = 0;
 GISelCSEAnalysisWrapperPass::GISelCSEAnalysisWrapperPass()
-    : MachineFunctionPass(ID) {
-  initializeGISelCSEAnalysisWrapperPassPass(*PassRegistry::getPassRegistry());
-}
-INITIALIZE_PASS_BEGIN(GISelCSEAnalysisWrapperPass, DEBUG_TYPE,
-                      "Analysis containing CSE Info", false, true)
-INITIALIZE_PASS_END(GISelCSEAnalysisWrapperPass, DEBUG_TYPE,
-                    "Analysis containing CSE Info", false, true)
+    : MachineFunctionPass(ID) {}
+INITIALIZE_PASS(GISelCSEAnalysisWrapperPass, DEBUG_TYPE,
+                "Analysis containing CSE Info", false, true)
 
 /// -------- UniqueMachineInstr -------------//
 
@@ -439,9 +435,8 @@ const GISelInstProfileBuilder &GISelInstProfileBuilder::addNodeIDMachineOperand(
 }
 
 GISelCSEInfo &
-GISelCSEAnalysisWrapper::get(std::unique_ptr<CSEConfigBase> CSEOpt,
-                             bool Recompute) {
-  if (!AlreadyComputed || Recompute) {
+GISelCSEAnalysisWrapper::get(std::unique_ptr<CSEConfigBase> CSEOpt) {
+  if (!AlreadyComputed) {
     Info.releaseMemory();
     Info.setCSEConfig(std::move(CSEOpt));
     Info.analyze(*MF);

@@ -791,9 +791,9 @@ unsigned HexagonEarlyIfConversion::buildMux(MachineBasicBlock *B,
   DebugLoc DL = B->findBranchDebugLoc();
   Register MuxR = MRI->createVirtualRegister(DRC);
   BuildMI(*B, At, DL, D, MuxR)
-    .addReg(PredR)
-    .addReg(TR, 0, TSR)
-    .addReg(FR, 0, FSR);
+      .addReg(PredR)
+      .addReg(TR, {}, TSR)
+      .addReg(FR, {}, FSR);
   return MuxR;
 }
 
@@ -990,7 +990,7 @@ void HexagonEarlyIfConversion::eliminatePhis(MachineBasicBlock *B) {
       const TargetRegisterClass *RC = MRI->getRegClass(DefR);
       NewR = MRI->createVirtualRegister(RC);
       NonPHI = BuildMI(*B, NonPHI, DL, HII->get(TargetOpcode::COPY), NewR)
-        .addReg(UseR, 0, UseSR);
+                   .addReg(UseR, {}, UseSR);
     }
     MRI->replaceRegWith(DefR, NewR);
     B->erase(I);

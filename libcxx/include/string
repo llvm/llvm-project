@@ -678,14 +678,20 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
-#  if __has_feature(address_sanitizer) && _LIBCPP_INSTRUMENTED_WITH_ASAN
+// Since std::string is partially instantiated in the built library, we require that the library
+// has been built with ASAN support in order to enable the container checks in std::string.
+// Within the <string> implementation, use `_LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS_FOR_STRING`
+// to determine whether ASAN container checks should be provided.
+//
+// The _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS macro disables ASAN instrumentation for a specific
+// function, allowing memory accesses that would normally trigger ASan errors to proceed without
+// crashing. This is useful for accessing parts of objects memory, which should not be accessed,
+// such as unused bytes in short strings, that should never be accessed by other parts of the program.
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS && _LIBCPP_INSTRUMENTED_WITH_ASAN
+#    define _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS_FOR_STRING 1
 #    define _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS __attribute__((__no_sanitize__("address")))
-// This macro disables AddressSanitizer (ASan) instrumentation for a specific function,
-// allowing memory accesses that would normally trigger ASan errors to proceed without crashing.
-// This is useful for accessing parts of objects memory, which should not be accessed,
-// such as unused bytes in short strings, that should never be accessed
-// by other parts of the program.
 #  else
+#    define _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS_FOR_STRING 0
 #    define _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS
 #  endif
 
@@ -749,7 +755,7 @@ public:
   //
   // This string implementation doesn't contain any references into itself. It only contains a bit that says whether
   // it is in small or large string mode, so the entire structure is trivially relocatable if its members are.
-#  if __has_feature(address_sanitizer) && _LIBCPP_INSTRUMENTED_WITH_ASAN
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS_FOR_STRING
   // When compiling with AddressSanitizer (ASan), basic_string cannot be trivially
   // relocatable. Because the object's memory might be poisoned when its content
   // is kept inside objects memory (short string optimization), instead of in allocated
@@ -764,7 +770,7 @@ public:
       void>;
 #  endif
 
-#  if __has_feature(address_sanitizer) && _LIBCPP_INSTRUMENTED_WITH_ASAN
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS_FOR_STRING
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pointer __asan_volatile_wrapper(pointer const& __ptr) const {
     if (__libcpp_is_constant_evaluated())
       return __ptr;
@@ -1815,14 +1821,14 @@ public:
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
   find(const basic_string& __str, size_type __pos = 0) const _NOEXCEPT {
-    return std::__str_find<value_type, size_type, traits_type, npos>(data(), size(), __str.data(), __pos, __str.size());
+    return find(__str.data(), __pos, __str.size());
   }
 
   template <class _Tp, __enable_if_t<__can_be_converted_to_string_view_v<_CharT, _Traits, _Tp>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
   find(const _Tp& __t, size_type __pos = 0) const _NOEXCEPT {
     __self_view __sv = __t;
-    return std::__str_find<value_type, size_type, traits_type, npos>(data(), size(), __sv.data(), __pos, __sv.size());
+    return find(__sv.data(), __pos, __sv.size());
   }
 
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
@@ -1835,8 +1841,7 @@ public:
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
   find(const value_type* _LIBCPP_DIAGNOSE_NULLPTR __s, size_type __pos = 0) const _NOEXCEPT {
     _LIBCPP_ASSERT_NON_NULL(__s != nullptr, "string::find(): received nullptr");
-    return std::__str_find<value_type, size_type, traits_type, npos>(
-        data(), size(), __s, __pos, traits_type::length(__s));
+    return find(__s, __pos, traits_type::length(__s));
   }
 
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type find(value_type __c, size_type __pos = 0) const _NOEXCEPT {
@@ -1847,15 +1852,14 @@ public:
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
   rfind(const basic_string& __str, size_type __pos = npos) const _NOEXCEPT {
-    return std::__str_rfind<value_type, size_type, traits_type, npos>(
-        data(), size(), __str.data(), __pos, __str.size());
+    return rfind(__str.data(), __pos, __str.size());
   }
 
   template <class _Tp, __enable_if_t<__can_be_converted_to_string_view_v<_CharT, _Traits, _Tp>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
   rfind(const _Tp& __t, size_type __pos = npos) const _NOEXCEPT {
     __self_view __sv = __t;
-    return std::__str_rfind<value_type, size_type, traits_type, npos>(data(), size(), __sv.data(), __pos, __sv.size());
+    return rfind(__sv.data(), __pos, __sv.size());
   }
 
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
@@ -1868,8 +1872,7 @@ public:
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
   rfind(const value_type* _LIBCPP_DIAGNOSE_NULLPTR __s, size_type __pos = npos) const _NOEXCEPT {
     _LIBCPP_ASSERT_NON_NULL(__s != nullptr, "string::rfind(): received nullptr");
-    return std::__str_rfind<value_type, size_type, traits_type, npos>(
-        data(), size(), __s, __pos, traits_type::length(__s));
+    return rfind(__s, __pos, traits_type::length(__s));
   }
 
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
@@ -1881,16 +1884,14 @@ public:
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
   find_first_of(const basic_string& __str, size_type __pos = 0) const _NOEXCEPT {
-    return std::__str_find_first_of<value_type, size_type, traits_type, npos>(
-        data(), size(), __str.data(), __pos, __str.size());
+    return find_first_of(__str.data(), __pos, __str.size());
   }
 
   template <class _Tp, __enable_if_t<__can_be_converted_to_string_view_v<_CharT, _Traits, _Tp>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
   find_first_of(const _Tp& __t, size_type __pos = 0) const _NOEXCEPT {
     __self_view __sv = __t;
-    return std::__str_find_first_of<value_type, size_type, traits_type, npos>(
-        data(), size(), __sv.data(), __pos, __sv.size());
+    return find_first_of(__sv.data(), __pos, __sv.size());
   }
 
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
@@ -1903,8 +1904,7 @@ public:
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
   find_first_of(const value_type* _LIBCPP_DIAGNOSE_NULLPTR __s, size_type __pos = 0) const _NOEXCEPT {
     _LIBCPP_ASSERT_NON_NULL(__s != nullptr, "string::find_first_of(): received nullptr");
-    return std::__str_find_first_of<value_type, size_type, traits_type, npos>(
-        data(), size(), __s, __pos, traits_type::length(__s));
+    return find_first_of(__s, __pos, traits_type::length(__s));
   }
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
@@ -1916,16 +1916,14 @@ public:
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
   find_last_of(const basic_string& __str, size_type __pos = npos) const _NOEXCEPT {
-    return std::__str_find_last_of<value_type, size_type, traits_type, npos>(
-        data(), size(), __str.data(), __pos, __str.size());
+    return find_last_of(__str.data(), __pos, __str.size());
   }
 
   template <class _Tp, __enable_if_t<__can_be_converted_to_string_view_v<_CharT, _Traits, _Tp>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
   find_last_of(const _Tp& __t, size_type __pos = npos) const _NOEXCEPT {
     __self_view __sv = __t;
-    return std::__str_find_last_of<value_type, size_type, traits_type, npos>(
-        data(), size(), __sv.data(), __pos, __sv.size());
+    return find_last_of(__sv.data(), __pos, __sv.size());
   }
 
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
@@ -1938,8 +1936,7 @@ public:
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
   find_last_of(const value_type* _LIBCPP_DIAGNOSE_NULLPTR __s, size_type __pos = npos) const _NOEXCEPT {
     _LIBCPP_ASSERT_NON_NULL(__s != nullptr, "string::find_last_of(): received nullptr");
-    return std::__str_find_last_of<value_type, size_type, traits_type, npos>(
-        data(), size(), __s, __pos, traits_type::length(__s));
+    return find_last_of(__s, __pos, traits_type::length(__s));
   }
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
@@ -1951,16 +1948,14 @@ public:
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
   find_first_not_of(const basic_string& __str, size_type __pos = 0) const _NOEXCEPT {
-    return std::__str_find_first_not_of<value_type, size_type, traits_type, npos>(
-        data(), size(), __str.data(), __pos, __str.size());
+    return find_first_not_of(__str.data(), __pos, __str.size());
   }
 
   template <class _Tp, __enable_if_t<__can_be_converted_to_string_view_v<_CharT, _Traits, _Tp>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
   find_first_not_of(const _Tp& __t, size_type __pos = 0) const _NOEXCEPT {
     __self_view __sv = __t;
-    return std::__str_find_first_not_of<value_type, size_type, traits_type, npos>(
-        data(), size(), __sv.data(), __pos, __sv.size());
+    return find_first_not_of(__sv.data(), __pos, __sv.size());
   }
 
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
@@ -1973,8 +1968,7 @@ public:
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
   find_first_not_of(const value_type* _LIBCPP_DIAGNOSE_NULLPTR __s, size_type __pos = 0) const _NOEXCEPT {
     _LIBCPP_ASSERT_NON_NULL(__s != nullptr, "string::find_first_not_of(): received nullptr");
-    return std::__str_find_first_not_of<value_type, size_type, traits_type, npos>(
-        data(), size(), __s, __pos, traits_type::length(__s));
+    return find_first_not_of(__s, __pos, traits_type::length(__s));
   }
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
@@ -1986,16 +1980,14 @@ public:
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
   find_last_not_of(const basic_string& __str, size_type __pos = npos) const _NOEXCEPT {
-    return std::__str_find_last_not_of<value_type, size_type, traits_type, npos>(
-        data(), size(), __str.data(), __pos, __str.size());
+    return find_last_not_of(__str.data(), __pos, __str.size());
   }
 
   template <class _Tp, __enable_if_t<__can_be_converted_to_string_view_v<_CharT, _Traits, _Tp>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
   find_last_not_of(const _Tp& __t, size_type __pos = npos) const _NOEXCEPT {
     __self_view __sv = __t;
-    return std::__str_find_last_not_of<value_type, size_type, traits_type, npos>(
-        data(), size(), __sv.data(), __pos, __sv.size());
+    return find_last_not_of(__sv.data(), __pos, __sv.size());
   }
 
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
@@ -2008,8 +2000,7 @@ public:
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
   find_last_not_of(const value_type* _LIBCPP_DIAGNOSE_NULLPTR __s, size_type __pos = npos) const _NOEXCEPT {
     _LIBCPP_ASSERT_NON_NULL(__s != nullptr, "string::find_last_not_of(): received nullptr");
-    return std::__str_find_last_not_of<value_type, size_type, traits_type, npos>(
-        data(), size(), __s, __pos, traits_type::length(__s));
+    return find_last_not_of(__s, __pos, traits_type::length(__s));
   }
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
@@ -2272,17 +2263,24 @@ private:
 
   // Allocate a buffer of __capacity size with __alloc and return it
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX20 __long
-  __allocate_long_buffer(_Allocator& __alloc, size_type __capacity) {
-    _LIBCPP_ASSERT_INTERNAL(!__fits_in_sso(__capacity),
+  __allocate_long_buffer(_Allocator& __alloc, size_type __size, size_type __min_capacity) {
+    _LIBCPP_ASSERT_INTERNAL(
+        __size <= __min_capacity, "Trying to allocate a long buffer with a smaller capacity than size");
+    _LIBCPP_ASSERT_INTERNAL(!__fits_in_sso(__min_capacity),
                             "Trying to allocate long buffer for a capacity what would fit into the small buffer");
-    auto __buffer = std::__allocate_at_least(__alloc, __align_allocation_size(__capacity));
+    auto __buffer = std::__allocate_at_least(__alloc, __align_allocation_size(__min_capacity));
 
     if (__libcpp_is_constant_evaluated()) {
       for (size_type __i = 0; __i != __buffer.count; ++__i)
         std::__construct_at(std::addressof(__buffer.ptr[__i]));
     }
 
-    return __long(__buffer, __capacity);
+    return __long(__buffer, __size);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX20 __long
+  __allocate_long_buffer(_Allocator& __alloc, size_type __size) {
+    return __allocate_long_buffer(__alloc, __size, __size);
   }
 
   // Replace the current buffer with __new_rep. Deallocate the old long buffer if it exists.
@@ -2321,7 +2319,7 @@ private:
   __annotate_contiguous_container(const void* __old_mid, const void* __new_mid) const {
     (void)__old_mid;
     (void)__new_mid;
-#  if _LIBCPP_INSTRUMENTED_WITH_ASAN
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS_FOR_STRING
 #    if defined(__APPLE__)
     // TODO: remove after addressing issue #96099 (https://llvm.org/PR96099)
     if (!__is_long())
@@ -2728,7 +2726,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__
     size_type __n_del,
     size_type __n_add,
     const value_type* __p_new_stuff) {
-  __long __buffer = __allocate_long_buffer(__alloc_, __get_amortized_growth_capacity(__old_cap + __delta_cap));
+  __long __buffer = __allocate_long_buffer(__alloc_, 0, __get_amortized_growth_capacity(__old_cap + __delta_cap));
   pointer __old_p = __get_pointer();
   __annotate_delete();
   auto __guard = std::__make_scope_guard(__annotate_new_size(*this));
@@ -2761,7 +2759,7 @@ _LIBCPP_DEPRECATED_("use __grow_by_without_replace") basic_string<_CharT, _Trait
     size_type __n_copy,
     size_type __n_del,
     size_type __n_add) {
-  __long __buffer = __allocate_long_buffer(__alloc_, __get_amortized_growth_capacity(__old_cap + __delta_cap));
+  __long __buffer = __allocate_long_buffer(__alloc_, 0, __get_amortized_growth_capacity(__old_cap + __delta_cap));
   pointer __old_p = __get_pointer();
   if (__n_copy != 0)
     traits_type::copy(std::__to_address(__buffer.__data_), std::__to_address(__old_p), __n_copy);
@@ -2770,7 +2768,6 @@ _LIBCPP_DEPRECATED_("use __grow_by_without_replace") basic_string<_CharT, _Trait
     traits_type::copy(std::__to_address(__buffer.__data_) + __n_copy + __n_add,
                       std::__to_address(__old_p) + __n_copy + __n_del,
                       __sec_cp_sz);
-
   // This is -1 to make sure the caller sets the size properly, since old versions of this function didn't set the size
   // at all.
   __buffer.__size_ = -1;
@@ -3419,8 +3416,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::re
     return;
 
   __annotation_guard __g(*this);
-  __long __buffer  = __allocate_long_buffer(__alloc_, __requested_capacity);
-  __buffer.__size_ = size();
+  __long __buffer = __allocate_long_buffer(__alloc_, size(), __requested_capacity);
   traits_type::copy(std::__to_address(__buffer.__data_), data(), __buffer.__size_ + 1);
   __reset_internal_buffer(__buffer);
 }
