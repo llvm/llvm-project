@@ -11790,7 +11790,7 @@ BoUpSLP::ScalarsVectorizationLegality BoUpSLP::getScalarsVectorizationLegality(
       (isa<InsertElementInst, ExtractValueInst, ExtractElementInst>(
            S.getMainOp()) &&
        !all_of(VL, isVectorLikeInstWithConstOps))) {
-    LLVM_DEBUG(dbgs() << "SLP: Gathering due to C,S,B,O, small shuffle. \n";
+    LLVM_DEBUG(dbgs() << "SLP: Gathering due to C,S,B,O conditions. \n";
                dbgs() << "[";
                interleaveComma(VL, dbgs(), [&](Value *V) { dbgs() << *V; });
                dbgs() << "]\n");
