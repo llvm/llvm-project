@@ -4410,54 +4410,60 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::AllocateShapeSpecArrayList &
     return std::nullopt;
   }
 
-  bool foundArray{false};
-  
-  // Get upper bound - BoundExpr is Scalar<Integer<Indirection<Expr>>>
-  const auto &upperBound{std::get<1>(shapeSpecList.front().t)};
-  const auto &upperBoundExpr{upperBound.thing};
-  
-  if(MaybeExpr analyzedExpr = Analyze(upperBoundExpr)) {
-    foundArray = analyzedExpr->Rank() > 0;
-  }
-  
-  // Check lower bound if it exists
-  const auto &lowerBoundOpt = std::get<0>(shapeSpecList.front().t);
-  if(lowerBoundOpt) {
-    const auto &lowerBoundExpr{lowerBoundOpt->thing};
-    if(MaybeExpr analyzedExpr = Analyze(lowerBoundExpr)) {
-      foundArray |= analyzedExpr->Rank() > 0;
-    }  
-  }
-
-  if(foundArray) {
-    // Get the IntExpr from the upper bound (BoundExpr.thing is the IntExpr)
-    auto &mutableUpperBound{const_cast<parser::BoundExpr&>(upperBound)};
-    parser::IntExpr upperIntExpr{std::move(mutableUpperBound.thing)};
-    
-    // Handle optional lower bound
-    std::optional<parser::IntExpr> lowerIntExpr;
+  if(shapeSpecList.size() == 1) {
+    // Get upper bound - BoundExpr is Scalar<Integer<Indirection<Expr>>>
+    const auto &upperBound{std::get<1>(shapeSpecList.front().t)};
+    const auto &lowerBoundOpt = std::get<0>(shapeSpecList.front().t);
+    bool foundArray{false};
+    // We want to rewrite as an AllocateShapeSpecArray even if 
+    // the element type is wrong (say a real instead of integer), so 
+    // analyze as an unwrapped Expr for its rank, then analyze as 
+    // an Integer<Indirection<Expr>>.
+    if(MaybeExpr analyzedExpr = Analyze(upperBound.thing.thing.value())) {
+      if(analyzedExpr->Rank() > 0) {
+        foundArray = true;
+        Analyze(upperBound.thing);  
+      }
+    } 
     if(lowerBoundOpt) {
-      auto &mutableLowerBound{const_cast<parser::BoundExpr&>(*lowerBoundOpt)};
-      lowerIntExpr = std::move(mutableLowerBound.thing);
+      const auto &lowerBound{*lowerBoundOpt};
+      if(MaybeExpr analyzedExpr = Analyze(lowerBound.thing.thing.value())) {
+        if(analyzedExpr->Rank() > 0) {
+          foundArray = true;
+          Analyze(lowerBound.thing);
+        }
+      }
     }
     
-    // Create the AllocateShapeSpecArray and replace the variant
-    parser::AllocateShapeSpecArray boundsExpr{
-        std::make_tuple(std::move(lowerIntExpr), std::move(upperIntExpr))};
-    auto &mutableArrayList{const_cast<parser::AllocateShapeSpecArrayList&>(x)};
-    mutableArrayList.u = std::move(boundsExpr);
-  } else {
-    // start from second entry and analyze each AllocateShapeSpec, since at this point
-    // we know we're not an AllocateShapeSpecArray
-    for(auto it = std::next(shapeSpecList.begin()); it != shapeSpecList.end(); ++it) {
-      // Analyze upper bound (required)
-      const auto &upperBound{std::get<1>(it->t)};
-      Analyze(upperBound.thing);
-      // Analyze lower bound if present
-      const auto &lowerBoundOpt{std::get<0>(it->t)};
+    if(foundArray) {
+      // Get the IntExpr from the upper bound (BoundExpr.thing is the IntExpr)
+      auto &mutableUpperBound{const_cast<parser::BoundExpr&>(upperBound)};
+      parser::IntExpr upperIntExpr{std::move(mutableUpperBound.thing)};
+      
+      // Handle optional lower bound
+      std::optional<parser::IntExpr> lowerIntExpr;
       if(lowerBoundOpt) {
-        Analyze(lowerBoundOpt->thing);
+        auto &mutableLowerBound{const_cast<parser::BoundExpr&>(*lowerBoundOpt)};
+        lowerIntExpr = std::move(mutableLowerBound.thing);
       }
+      
+      // Create the AllocateShapeSpecArray and replace the variant
+      parser::AllocateShapeSpecArray boundsExpr{
+          std::make_tuple(std::move(lowerIntExpr), std::move(upperIntExpr))};
+      auto &mutableArrayList{const_cast<parser::AllocateShapeSpecArrayList&>(x)};
+      mutableArrayList.u = std::move(boundsExpr);
+
+      return std::nullopt;
+    }
+  }
+
+// Analyze each AllocateShapeSpec, as a Scalar<Int<Expr>>
+  for(auto it = shapeSpecList.begin(); it != shapeSpecList.end(); ++it) {
+    const auto &upperBound{std::get<1>(it->t)};
+    Analyze(upperBound);
+    const auto &lowerBoundOpt{std::get<0>(it->t)};
+    if(lowerBoundOpt) {
+      Analyze(*lowerBoundOpt);
     }
   }
 
