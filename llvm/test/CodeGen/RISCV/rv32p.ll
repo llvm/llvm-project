@@ -312,10 +312,33 @@ define i32 @cls_i32_knownbits_no_overestimate(i32 signext %x) {
   %d = sub i32 %c, 1
   %e = or i32 %d, 16
   ret i32 %e
- }
+}
 
-define i64 @slx_i64(i64 %x, i64 %y) {
-; CHECK-LABEL: slx_i64:
+define i64 @sll_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: sll_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a4, a2, -32
+; CHECK-NEXT:    sll a3, a0, a2
+; CHECK-NEXT:    bltz a4, .LBB22_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:    j .LBB22_3
+; CHECK-NEXT:  .LBB22_2:
+; CHECK-NEXT:    sll a1, a1, a2
+; CHECK-NEXT:    not a2, a2
+; CHECK-NEXT:    srli a0, a0, 1
+; CHECK-NEXT:    srl a0, a0, a2
+; CHECK-NEXT:    or a1, a1, a0
+; CHECK-NEXT:  .LBB22_3:
+; CHECK-NEXT:    srai a0, a4, 31
+; CHECK-NEXT:    and a0, a0, a3
+; CHECK-NEXT:    ret
+  %b = shl i64 %x, %y
+  ret i64 %b
+}
+
+define i64 @sll_small_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: sll_small_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sll a3, a0, a2
 ; CHECK-NEXT:    slx a1, a0, a2
@@ -326,8 +349,19 @@ define i64 @slx_i64(i64 %x, i64 %y) {
   ret i64 %b
 }
 
-define i64 @slxi_i64(i64 %x) {
-; CHECK-LABEL: slxi_i64:
+define i64 @sll_large_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: sll_large_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sll a1, a0, a2
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %a = or i64 %y, 32
+  %b = shl i64 %x, %a
+  ret i64 %b
+}
+
+define i64 @slli_i64(i64 %x) {
+; CHECK-LABEL: slli_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 25
 ; CHECK-NEXT:    slx a1, a0, a2
@@ -337,8 +371,41 @@ define i64 @slxi_i64(i64 %x) {
   ret i64 %a
 }
 
-define i64 @srx_i64(i64 %x, i64 %y) {
-; CHECK-LABEL: srx_i64:
+define i64 @slli_i64_large(i64 %x) {
+; CHECK-LABEL: slli_i64_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a1, a0, 7
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %a = shl i64 %x, 39
+  ret i64 %a
+}
+
+define i64 @srl_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: srl_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a4, a2, -32
+; CHECK-NEXT:    srl a3, a1, a2
+; CHECK-NEXT:    bltz a4, .LBB27_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a0, a3
+; CHECK-NEXT:    j .LBB27_3
+; CHECK-NEXT:  .LBB27_2:
+; CHECK-NEXT:    srl a0, a0, a2
+; CHECK-NEXT:    not a2, a2
+; CHECK-NEXT:    slli a1, a1, 1
+; CHECK-NEXT:    sll a1, a1, a2
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:  .LBB27_3:
+; CHECK-NEXT:    srai a1, a4, 31
+; CHECK-NEXT:    and a1, a1, a3
+; CHECK-NEXT:    ret
+  %b = lshr i64 %x, %y
+  ret i64 %b
+}
+
+define i64 @srl_small_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: srl_small_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srl a3, a1, a2
 ; CHECK-NEXT:    srx a0, a1, a2
@@ -349,9 +416,20 @@ define i64 @srx_i64(i64 %x, i64 %y) {
   ret i64 %b
 }
 
-; FIXME: Using srx instead of slx would avoid the mv.
-define i64 @srxi_i64(i64 %x) {
-; CHECK-LABEL: srxi_i64:
+define i64 @srl_large_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: srl_large_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srl a0, a1, a2
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    ret
+  %a = or i64 %y, 32
+  %b = lshr i64 %x, %a
+  ret i64 %b
+}
+
+; FIXME: Use nsrli
+define i64 @srli_i64(i64 %x) {
+; CHECK-LABEL: srli_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:    li a3, 7
@@ -361,6 +439,126 @@ define i64 @srxi_i64(i64 %x) {
 ; CHECK-NEXT:    ret
   %a = lshr i64 %x, 25
   ret i64 %a
+}
+
+define i64 @srli_i64_large(i64 %x) {
+; CHECK-LABEL: srli_i64_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srli a0, a1, 7
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    ret
+  %a = lshr i64 %x, 39
+  ret i64 %a
+}
+
+define i64 @sra_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: sra_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mv a3, a1
+; CHECK-NEXT:    addi a4, a2, -32
+; CHECK-NEXT:    sra a1, a1, a2
+; CHECK-NEXT:    bltz a4, .LBB32_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    srai a3, a3, 31
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB32_2:
+; CHECK-NEXT:    srl a0, a0, a2
+; CHECK-NEXT:    not a2, a2
+; CHECK-NEXT:    slli a3, a3, 1
+; CHECK-NEXT:    sll a2, a3, a2
+; CHECK-NEXT:    or a0, a0, a2
+; CHECK-NEXT:    ret
+  %b = ashr i64 %x, %y
+  ret i64 %b
+}
+
+define i64 @sra_small_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: sra_small_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sra a3, a1, a2
+; CHECK-NEXT:    srx a0, a1, a2
+; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:    ret
+  %a = and i64 %y, 31
+  %b = ashr i64 %x, %a
+  ret i64 %b
+}
+
+define i64 @sra_large_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: sra_large_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sra a0, a1, a2
+; CHECK-NEXT:    srai a1, a1, 31
+; CHECK-NEXT:    ret
+  %a = or i64 %y, 32
+  %b = ashr i64 %x, %a
+  ret i64 %b
+}
+
+; FIXME: Use nsrai
+define i64 @srai_i64(i64 %x) {
+; CHECK-LABEL: srai_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mv a2, a1
+; CHECK-NEXT:    li a3, 7
+; CHECK-NEXT:    srai a1, a1, 25
+; CHECK-NEXT:    slx a2, a0, a3
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    ret
+  %a = ashr i64 %x, 25
+  ret i64 %a
+}
+
+define i64 @srai_i64_large(i64 %x) {
+; CHECK-LABEL: srai_i64_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srai a0, a1, 7
+; CHECK-NEXT:    srai a1, a1, 31
+; CHECK-NEXT:    ret
+  %a = ashr i64 %x, 39
+  ret i64 %a
+}
+
+define i32 @slx_i32(i32 %a, i32 %b, i32 %shamt) {
+; CHECK-LABEL: slx_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slx a0, a1, a2
+; CHECK-NEXT:    ret
+  %1 = tail call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 %shamt)
+  ret i32 %1
+}
+
+define i32 @slxi_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: slxi_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 25
+; CHECK-NEXT:    slx a0, a1, a2
+; CHECK-NEXT:    ret
+  %1 = tail call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 25)
+  ret i32 %1
+}
+
+define i32 @srx_i32(i32 %a, i32 %b, i32 %shamt) {
+; CHECK-LABEL: srx_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srx a1, a0, a2
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    ret
+  %1 = tail call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 %shamt)
+  ret i32 %1
+}
+
+define i32 @srxi_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: srxi_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 25
+; CHECK-NEXT:    srx a1, a0, a2
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    ret
+  %1 = tail call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 25)
+  ret i32 %1
 }
 
 define i8 @shlsat_i8(i8 %a, i8 %b) {
