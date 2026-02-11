@@ -876,7 +876,7 @@ class PseudoInstExpansion<dag Result> {
 class Predicate<code cond> {
 
   /// This is a C++ expression which can be evaluated to return a bool,
-  /// representing whether the predicate is satisifed.
+  /// representing whether the predicate is satisfied.
   ///
   /// The following variables are in scope:
   /// - `const GET_DAGISEL_BODY *this` representing the target's DAGToDAGISel
