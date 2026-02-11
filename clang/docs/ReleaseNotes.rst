@@ -149,6 +149,7 @@ Deprecated Compiler Flags
 
 Modified Compiler Flags
 -----------------------
+- The `-mno-outline` and `-moutline` compiler flags are now allowed on RISC-V and X86, which both support the machine outliner.
 
 Removed Compiler Flags
 ----------------------
@@ -278,8 +279,6 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash when using loop hint with a value dependent argument inside a
   generic lambda. (#GH172289)
 - Fixed a crash in C++ overload resolution with ``_Atomic``-qualified argument types. (#GH170433)
-- Fixed an assertion failure in ObjC++ ARC when binding a ``__strong`` rvalue reference to a ``const __autoreleasing`` reference. (#GH178524)
-
 
 OpenACC Specific Changes
 ------------------------
@@ -362,7 +361,7 @@ AST Matchers
 
 clang-format
 ------------
-- Add ``ObjCSpaceAfterMethodDeclarationPrefix`` option to control space between the
+- Add ``ObjCSpaceAfterMethodDeclarationPrefix`` option to control space between the 
   '-'/'+' and the return type in Objective-C method declarations
 
 libclang

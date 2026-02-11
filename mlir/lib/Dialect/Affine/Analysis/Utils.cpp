@@ -1056,12 +1056,6 @@ std::optional<bool> ComputationSliceState::isSliceValid() const {
     LDBG() << "Unable to compute source's domain";
     return std::nullopt;
   }
-  // As the set difference utility currently cannot handle symbols in its
-  // operands, validity of the slice cannot be determined.
-  if (srcConstraints.getNumSymbolVars() > 0) {
-    LDBG() << "Cannot handle symbols in source domain";
-    return std::nullopt;
-  }
   // TODO: Handle local vars in the source domains while using the 'projectOut'
   // utility below. Currently, aligning is not done assuming that there will be
   // no local vars in the source domain.
@@ -1082,6 +1076,8 @@ std::optional<bool> ComputationSliceState::isSliceValid() const {
   // domain completely in terms of source's IVs.
   sliceConstraints.projectOut(ivs.size(),
                               sliceConstraints.getNumVars() - ivs.size());
+  srcConstraints.projectOut(ivs.size(),
+                            srcConstraints.getNumVars() - ivs.size());
 
   LDBG() << "Domain of the source of the slice:\n"
          << "Source constraints:" << srcConstraints

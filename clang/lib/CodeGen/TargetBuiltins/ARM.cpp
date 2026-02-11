@@ -6297,6 +6297,10 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Ops[0] = Builder.CreateICmp(P, Ops[0], Ops[1]);
     return Builder.CreateSExt(Ops[0], Int64Ty, "vceqd");
   }
+  case NEON::BI__builtin_neon_vnegd_s64:
+    return Builder.CreateNeg(EmitScalarExpr(E->getArg(0)), "vnegd");
+  case NEON::BI__builtin_neon_vnegh_f16:
+    return Builder.CreateFNeg(EmitScalarExpr(E->getArg(0)), "vnegh");
   case NEON::BI__builtin_neon_vtstd_s64:
   case NEON::BI__builtin_neon_vtstd_u64: {
     Ops.push_back(EmitScalarExpr(E->getArg(1)));
@@ -7168,10 +7172,6 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Value *Result = Builder.CreateFMul(Ops[0], Ops[1]);
     return Builder.CreateBitCast(Result, Ty);
   }
-  case NEON::BI__builtin_neon_vnegd_s64:
-    return Builder.CreateNeg(EmitScalarExpr(E->getArg(0)), "vnegd");
-  case NEON::BI__builtin_neon_vnegh_f16:
-    return Builder.CreateFNeg(EmitScalarExpr(E->getArg(0)), "vnegh");
   case NEON::BI__builtin_neon_vpmaxnm_v:
   case NEON::BI__builtin_neon_vpmaxnmq_v: {
     Int = Intrinsic::aarch64_neon_fmaxnmp;

@@ -6345,6 +6345,13 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
     RemovingAttrs = true;
   }
 
+  if (Attribute A = F.getFnAttribute("nooutline");
+      A.isValid() && A.isStringAttribute()) {
+    AttrsToRemove.addAttribute("nooutline");
+    AttrsToAdd.addAttribute(Attribute::NoOutline);
+    AddingAttrs = RemovingAttrs = true;
+  }
+
   if (!F.empty()) {
     // For some reason this is called twice, and the first time is before any
     // instructions are loaded into the body.
