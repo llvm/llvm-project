@@ -849,7 +849,7 @@ def O_flag : Flag<["-"], "O">, Visibility<[ClangOption, CC1Option, FC1Option]>,
 def Ofast : Joined<["-"], "Ofast">, Group<O_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpTextForVariants<[FlangOption, FC1Option],
-    "Deprecated; use '-O3 -ffast-math -fstack-arrays' for the same behavior,"
+    "Deprecated; use '-O3 -ffast-math -fstack-arrays -fno-protect-parens' for the same behavior,"
     " or '-O3 -fstack-arrays' to enable only conforming optimizations">,
   HelpText<"Deprecated; use '-O3 -ffast-math' for the same behavior,"
            " or '-O3' to enable only conforming optimizations">;
