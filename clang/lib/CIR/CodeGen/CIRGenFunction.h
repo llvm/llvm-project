@@ -1742,8 +1742,6 @@ public:
   void emitLambdaDelegatingInvokeBody(const CXXMethodDecl *md);
   void emitLambdaStaticInvokeBody(const CXXMethodDecl *md);
 
-  // void populateCatchHandlers(cir::TryOp tryOp);
-
   mlir::LogicalResult emitIfStmt(const clang::IfStmt &s);
 
   /// Emit code to compute the specified expression,

@@ -244,8 +244,7 @@ void CIRGenFunction::emitAnyExprToExn(const Expr *e, Address addr) {
 }
 
 void CIRGenFunction::addCatchHandlerAttr(
-    mlir::Region *catchRegion, const CXXCatchStmt *catchStmt,
-    SmallVector<mlir::Attribute> &handlerAttrs) {
+    const CXXCatchStmt *catchStmt, SmallVector<mlir::Attribute> &handlerAttrs) {
   mlir::Location catchLoc = getLoc(catchStmt->getBeginLoc());
 
   if (catchStmt->getExceptionDecl()) {
@@ -310,6 +309,11 @@ mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
   CIRGenFunction::LexicalScope tryBodyScope{*this, tryLoc,
                                             builder.getInsertionBlock()};
 
+  if (getLangOpts().EHAsynch) {
+    cgm.errorNYI("enterCXXTryStmt: EHAsynch");
+    return mlir::failure();
+  }
+
   // Create the try operation.
   mlir::LogicalResult tryRes = mlir::success();
   auto tryOp = cir::TryOp::create(
@@ -332,7 +336,7 @@ mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
             hasCatchAll = true;
           mlir::Region *region = result.addRegion();
           builder.createBlock(region);
-          addCatchHandlerAttr(region, catchStmt, handlerAttrs);
+          addCatchHandlerAttr(catchStmt, handlerAttrs);
         }
         if (!hasCatchAll) {
           // Create unwind region.
