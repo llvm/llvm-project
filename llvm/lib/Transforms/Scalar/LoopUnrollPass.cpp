@@ -330,13 +330,14 @@ struct EstimatedUnrollCost {
 };
 
 struct PragmaInfo {
-  PragmaInfo(bool UUC, bool PFU, unsigned PC, bool PEU)
+  PragmaInfo(bool UUC, bool PFU, unsigned PC, bool PEU, bool FPU)
       : UserUnrollCount(UUC), PragmaFullUnroll(PFU), PragmaCount(PC),
-        PragmaEnableUnroll(PEU) {}
+        PragmaEnableUnroll(PEU), ForcePragmaUnroll(FPU) {}
   const bool UserUnrollCount;
   const bool PragmaFullUnroll;
   const unsigned PragmaCount;
   const bool PragmaEnableUnroll;
+  const bool ForcePragmaUnroll;
 };
 
 } // end anonymous namespace
@@ -762,6 +763,12 @@ static bool hasRuntimeUnrollDisablePragma(const Loop *L) {
   return getUnrollMetadataForLoop(L, "llvm.loop.unroll.runtime.disable");
 }
 
+// Returns true if the loop has a metadata flag to allow expensive trip counts
+// when unrolling with a pragma.
+static bool hasRuntimeForceUnroll(const Loop *L) {
+  return getUnrollMetadataForLoop(L, "llvm.loop.unroll.runtime.force");
+}
+
 // If loop has an unroll_count pragma return the (necessarily
 // positive) value from the pragma.  Otherwise return 0.
 static unsigned unrollCountPragmaValue(const Loop *L) {
@@ -937,12 +944,13 @@ bool llvm::computeUnrollCount(
   const bool PragmaFullUnroll = hasUnrollFullPragma(L);
   const unsigned PragmaCount = unrollCountPragmaValue(L);
   const bool PragmaEnableUnroll = hasUnrollEnablePragma(L);
+  const bool ForcePragmaUnroll = hasRuntimeForceUnroll(L);
 
   const bool ExplicitUnroll = PragmaCount > 0 || PragmaFullUnroll ||
                               PragmaEnableUnroll || UserUnrollCount;
 
   PragmaInfo PInfo(UserUnrollCount, PragmaFullUnroll, PragmaCount,
-                   PragmaEnableUnroll);
+                   PragmaEnableUnroll, ForcePragmaUnroll);
   // Use an explicit peel count that has been specified for testing. In this
   // case it's not permitted to also specify an explicit unroll count.
   if (PP.PeelCount) {
@@ -1102,7 +1110,8 @@ bool llvm::computeUnrollCount(
   }
   if (UP.Count == 0)
     UP.Count = UP.DefaultUnrollRuntimeCount;
-
+  if (PragmaEnableUnroll && ForcePragmaUnroll)
+    UP.AllowExpensiveTripCount = true;
   // Reduce unroll count to be the largest power-of-two factor of
   // the original count which satisfies the threshold limit.
   while (UP.Count != 0 &&

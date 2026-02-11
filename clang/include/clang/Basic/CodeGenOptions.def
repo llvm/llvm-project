@@ -339,6 +339,7 @@ VALUE_CODEGENOPT(TimeTraceGranularity, 32, 500, Benign) ///< Minimum time granul
 CODEGENOPT(InterchangeLoops  , 1, 0, Benign) ///< Run loop-interchange.
 CODEGENOPT(FuseLoops         , 1, 0, Benign) ///< Run loop-fusion.
 CODEGENOPT(UnrollLoops       , 1, 0, Benign) ///< Control whether loops are unrolled.
+CODEGENOPT(ForceUnrollPragma , 1, 0, Benign) ///< Force unroll runtime loops when pragma provided.
 CODEGENOPT(RerollLoops       , 1, 0, Benign) ///< Control whether loops are rerolled.
 CODEGENOPT(NoUseJumpTables   , 1, 0, Benign) ///< Set when -fno-jump-tables is enabled.
 VALUE_CODEGENOPT(UnwindTables, 2, 0, Benign) ///< Unwind tables (1, Benign) or asynchronous unwind tables (2, Benign)

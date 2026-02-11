@@ -1603,7 +1603,8 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
     GenerateArg(Consumer, OPT_funroll_loops);
   else if (!Opts.UnrollLoops && Opts.OptimizationLevel > 1)
     GenerateArg(Consumer, OPT_fno_unroll_loops);
-
+  if (Opts.ForceUnrollPragma)
+    GenerateArg(Consumer, OPT_force_unroll_pragma);
   if (Opts.InterchangeLoops)
     GenerateArg(Consumer, OPT_floop_interchange);
   else
@@ -1921,6 +1922,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   Opts.UnrollLoops =
       Args.hasFlag(OPT_funroll_loops, OPT_fno_unroll_loops,
                    (Opts.OptimizationLevel > 1));
+  Opts.ForceUnrollPragma = Args.hasFlag(
+      OPT_force_unroll_pragma, /*OPT_fno_force_unroll_pragma*/ {}, false);
   Opts.InterchangeLoops =
       Args.hasFlag(OPT_floop_interchange, OPT_fno_loop_interchange, false);
   Opts.FuseLoops = Args.hasFlag(OPT_fexperimental_loop_fusion,

@@ -84,6 +84,9 @@ struct LoopAttributes {
 
   /// Value for whether the loop is required to make progress.
   bool MustProgress;
+
+  /// Value for whether to force unroll pragma even with expensive trip count.
+  bool ForceUnrollPragma = false;
 };
 
 /// Information used when generating a structured loop.

@@ -122,6 +122,13 @@ LoopInfo::createPartialUnrollMetadata(const LoopAttributes &Attrs,
     Args.push_back(MDNode::get(Ctx, Vals));
   }
 
+  // Emit metadata to allow expensive trip count if ForceUnrollPragma is set
+  // This applies when unroll pragma is specified without an explicit count
+  if (Attrs.ForceUnrollPragma) {
+    Metadata *Vals[] = {MDString::get(Ctx, "llvm.loop.unroll.runtime.force")};
+    Args.push_back(MDNode::get(Ctx, Vals));
+  }
+
   if (FollowupHasTransforms)
     Args.push_back(
         createFollowupMetadata("llvm.loop.unroll.followup_all", Followup));
@@ -820,6 +827,13 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
         (StagedAttrs.UnrollEnable == LoopAttributes::Unspecified &&
          StagedAttrs.UnrollCount == 0))
       setUnrollState(LoopAttributes::Disable);
+
+  // Set ForceUnrollPragma flag if the flag is enabled and there's an unroll
+  // pragma without an explicit count (pragmas with explicit counts already
+  // enable expensive trip count)
+  if (CGOpts.ForceUnrollPragma) {
+    StagedAttrs.ForceUnrollPragma = true;
+  }
 
   /// Stage the attributes.
   push(Header, StartLoc, EndLoc);
