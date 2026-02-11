@@ -285,9 +285,11 @@ void shuffleAfterReadLikeOp(mlir::PatternRewriter &rewriter,
 
 // This function shuffles the vectors written by vector.contract operation
 // as a flat layout structure before they are stored.
-void shuffleBeforeWriteLikeOp(mlir::PatternRewriter &rewriter,
-                              mlir::Operation *opA, mlir::Operation *opB,
-                              int64_t nonUnitDimAcc, mlir::VectorType accTy) {
+LogicalResult shuffleBeforeWriteLikeOp(mlir::PatternRewriter &rewriter,
+                                       mlir::Operation *opA,
+                                       mlir::Operation *opB,
+                                       int64_t nonUnitDimAcc,
+                                       mlir::VectorType accTy) {
   // Helper to extract vector operand from write-like ops
   auto getWrittenVector = [](mlir::Operation *op) -> mlir::Value {
     if (auto write = mlir::dyn_cast<mlir::vector::TransferWriteOp>(op))
@@ -299,6 +301,9 @@ void shuffleBeforeWriteLikeOp(mlir::PatternRewriter &rewriter,
 
   mlir::Value vecA = getWrittenVector(opA);
   mlir::Value vecB = getWrittenVector(opB);
+
+  if (!vecA || !vecB)
+    return mlir::failure();
 
   // Decide insertion point and location
   mlir::Operation *insertBefore = opA->isBeforeInBlock(opB) ? opA : opB;
@@ -330,6 +335,8 @@ void shuffleBeforeWriteLikeOp(mlir::PatternRewriter &rewriter,
   // Update write operands in place
   opA->setOperand(0, newVecA.getResult());
   opB->setOperand(0, newVecB.getResult());
+
+  return success();
 }
 
 // Return true if vector.contract operations matches on below conditions:

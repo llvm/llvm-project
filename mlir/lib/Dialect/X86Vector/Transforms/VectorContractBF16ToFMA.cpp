@@ -454,8 +454,13 @@ struct VectorContractBF16ToFMA
       rewriter.replaceOp(pairContractOp, castOddFma);
 
       // Shuffle the output of contract operations before it's use.
-      shuffleBeforeWriteLikeOp(rewriter, resultWriteOp0, resultWriteOp1,
-                               nonUnitDim, accTy);
+      LogicalResult writeShuffle = shuffleBeforeWriteLikeOp(
+          rewriter, resultWriteOp0, resultWriteOp1, nonUnitDim, accTy);
+
+      if (failed(writeShuffle))
+        return rewriter.notifyMatchFailure(
+            contractOp,
+            "Write to accumulator is not by transfer_write or store");
 
       return success();
     }
