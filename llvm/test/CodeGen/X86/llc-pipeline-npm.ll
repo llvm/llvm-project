@@ -175,6 +175,7 @@
 ; O2-NEXT: x86-fixup-leas
 ; O2-NEXT: x86-fixup-inst-tuning
 ; O2-NEXT: x86-fixup-inst-tuning
+; O2-NEXT: x86-issue-vzero-upper
 ; O2-NEXT: x86-compress-evex
 ; O2-NEXT: x86-insert-x87-wait
 ; O2-NEXT: FuncletLayoutPass
@@ -359,6 +360,7 @@
 ; O3-WINDOWS-NEXT: x86-fixup-leas
 ; O3-WINDOWS-NEXT: x86-fixup-inst-tuning
 ; O3-WINDOWS-NEXT: x86-fixup-inst-tuning
+; O3-WINDOWS-NEXT: x86-issue-vzero-upper
 ; O3-WINDOWS-NEXT: x86-compress-evex
 ; O3-WINDOWS-NEXT: x86-insert-x87-wait
 ; O3-WINDOWS-NEXT: FuncletLayoutPass

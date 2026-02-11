@@ -24,11 +24,9 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/IR/Analysis.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
@@ -55,16 +53,16 @@ public:
 
   X86InsertVZeroUpperLegacy() : MachineFunctionPass(ID) {}
 
-  StringRef getPassName() const override { return "X86 vzeroupper inserter"; }
+    StringRef getPassName() const override { return "X86 vzeroupper inserter"; }
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
+    bool runOnMachineFunction(MachineFunction &MF) override;
 
-  MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().setNoVRegs();
-  }
-};
+    MachineFunctionProperties getRequiredProperties() const override {
+      return MachineFunctionProperties().setNoVRegs();
+    }
+  };
 
-enum BlockExitState { PASS_THROUGH, EXITS_CLEAN, EXITS_DIRTY };
+  enum BlockExitState { PASS_THROUGH, EXITS_CLEAN, EXITS_DIRTY };
 
 // Core algorithm state:
 // BlockState - Each block is either:
@@ -283,7 +281,6 @@ static bool insertVZeroUpper(MachineFunction &MF) {
     return false;
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
-
   bool FnHasLiveInYmmOrZmm = checkFnHasLiveInYmmOrZmm(MRI);
 
   // Fast check: if the function doesn't use any ymm/zmm registers, we don't
