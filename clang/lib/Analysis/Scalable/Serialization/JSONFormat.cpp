@@ -11,7 +11,6 @@
 
 using namespace clang::ssaf;
 
-// Bring common JSON types into scope for better readability
 using Array = llvm::json::Array;
 using Object = llvm::json::Object;
 using Value = llvm::json::Value;

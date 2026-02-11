@@ -24,7 +24,6 @@ class EntitySummary;
 class SummaryName;
 
 class JSONFormat final : public SerializationFormat {
-  // Bring common JSON types into this class scope for better readability
   using Array = llvm::json::Array;
   using Object = llvm::json::Object;
 
