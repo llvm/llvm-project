@@ -384,6 +384,7 @@ cc_library(
 cc_library(
     name = "DataFormattersHeaders",
     hdrs = glob(["include/lldb/DataFormatters/**/*.h"]),
+    textual_hdrs = glob(["include/lldb/DataFormatters/**/*.def"]),
     includes = ["include"],
 )
 
