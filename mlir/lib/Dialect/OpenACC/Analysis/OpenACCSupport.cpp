@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtilsGPU.h"
 
 namespace mlir {
 namespace acc {
@@ -61,6 +62,14 @@ bool OpenACCSupport::isValidValueUse(Value v, Region &region) {
   if (impl)
     return impl->isValidValueUse(v, region);
   return acc::isValidValueUse(v, region);
+}
+
+std::optional<gpu::GPUModuleOp>
+OpenACCSupport::getOrCreateGPUModule(ModuleOp mod, bool create,
+                                     llvm::StringRef name) {
+  if (impl)
+    return impl->getOrCreateGPUModule(mod, create, name);
+  return acc::getOrCreateGPUModule(mod, create, name);
 }
 
 } // namespace acc

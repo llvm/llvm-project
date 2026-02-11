@@ -11,6 +11,3 @@
 using namespace clang::ssaf;
 
 char SerializationFormat::ID = 0;
-SerializationFormat::SerializationFormat(
-    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
-    : FS(FS) {}
