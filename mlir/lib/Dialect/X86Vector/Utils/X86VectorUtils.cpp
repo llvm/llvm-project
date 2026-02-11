@@ -236,16 +236,15 @@ Operation *traceToVectorWriteLikeUserOperation(Value v) {
 // contraction ops, enabling post-read layout or packing transformations.
 // TODO: replace all use with the packed value along with contration
 // and for op.
-LogicalResult shuffleAfterReadLikeOp(mlir::PatternRewriter &rewriter,
-                                     mlir::Operation *opA, mlir::Operation *opB,
-                                     mlir::vector::ContractionOp contractA,
-                                     mlir::vector::ContractionOp contractB,
-                                     int64_t nonUnitDimAcc,
-                                     mlir::VectorType accTy) {
+LogicalResult shuffleAfterReadLikeOp(PatternRewriter &rewriter, Operation *opA,
+                                     mlir::Operation *opB,
+                                     vector::ContractionOp contractA,
+                                     vector::ContractionOp contractB,
+                                     int64_t nonUnitDimAcc, VectorType accTy) {
 
-  if (!mlir::isa<mlir::vector::TransferReadOp, mlir::vector::LoadOp>(opA) ||
-      !mlir::isa<mlir::vector::TransferReadOp, mlir::vector::LoadOp>(opB)) {
-    return mlir::failure();
+  if (!isa<mlir::vector::TransferReadOp, vector::LoadOp>(opA) ||
+      !isa<mlir::vector::TransferReadOp, vector::LoadOp>(opB)) {
+    return failure();
   }
 
   mlir::Operation *insertAfter = opA->isBeforeInBlock(opB) ? opB : opA;
@@ -254,24 +253,22 @@ LogicalResult shuffleAfterReadLikeOp(mlir::PatternRewriter &rewriter,
   mlir::Location loc = insertAfter->getLoc();
 
   auto elemTy = accTy.getElementType();
-  auto flatTy = mlir::VectorType::get(nonUnitDimAcc, elemTy);
+  auto flatTy = VectorType::get(nonUnitDimAcc, elemTy);
 
-  auto castA = mlir::vector::ShapeCastOp::create(rewriter, loc, flatTy,
-                                                 opA->getResult(0));
-  auto castB = mlir::vector::ShapeCastOp::create(rewriter, loc, flatTy,
-                                                 opB->getResult(0));
+  auto castA =
+      vector::ShapeCastOp::create(rewriter, loc, flatTy, opA->getResult(0));
+  auto castB =
+      vector::ShapeCastOp::create(rewriter, loc, flatTy, opB->getResult(0));
 
   auto masks = getShuffleMasks(nonUnitDimAcc);
 
-  auto shuffleLo = mlir::vector::ShuffleOp::create(rewriter, loc, flatTy, castA,
-                                                   castB, masks.maskLo);
-  auto shuffleHi = mlir::vector::ShuffleOp::create(rewriter, loc, flatTy, castA,
-                                                   castB, masks.maskHi);
+  auto shuffleLo = vector::ShuffleOp::create(rewriter, loc, flatTy, castA,
+                                             castB, masks.maskLo);
+  auto shuffleHi = vector::ShuffleOp::create(rewriter, loc, flatTy, castA,
+                                             castB, masks.maskHi);
 
-  auto newAccA =
-      mlir::vector::ShapeCastOp::create(rewriter, loc, accTy, shuffleLo);
-  auto newAccB =
-      mlir::vector::ShapeCastOp::create(rewriter, loc, accTy, shuffleHi);
+  auto newAccA = vector::ShapeCastOp::create(rewriter, loc, accTy, shuffleLo);
+  auto newAccB = vector::ShapeCastOp::create(rewriter, loc, accTy, shuffleHi);
 
   rewriter.replaceUsesWithIf(
       opA->getResult(0), newAccA.getResult(), [&](OpOperand &use) {
@@ -288,52 +285,49 @@ LogicalResult shuffleAfterReadLikeOp(mlir::PatternRewriter &rewriter,
 
 // This function shuffles the vectors written by vector.contract operation
 // as a flat layout structure before they are stored.
-LogicalResult shuffleBeforeWriteLikeOp(mlir::PatternRewriter &rewriter,
-                                       mlir::Operation *opA,
-                                       mlir::Operation *opB,
+LogicalResult shuffleBeforeWriteLikeOp(PatternRewriter &rewriter,
+                                       Operation *opA, Operation *opB,
                                        int64_t nonUnitDimAcc,
-                                       mlir::VectorType accTy) {
+                                       VectorType accTy) {
   // Helper to extract vector operand from write-like ops
-  auto getWrittenVector = [](mlir::Operation *op) -> mlir::Value {
-    if (auto write = mlir::dyn_cast<mlir::vector::TransferWriteOp>(op))
+  auto getWrittenVector = [](Operation *op) -> mlir::Value {
+    if (auto write = mlir::dyn_cast<vector::TransferWriteOp>(op))
       return write.getVector();
-    if (auto store = mlir::dyn_cast<mlir::vector::StoreOp>(op))
+    if (auto store = mlir::dyn_cast<vector::StoreOp>(op))
       return store.getValueToStore();
     return nullptr;
   };
 
-  mlir::Value vecA = getWrittenVector(opA);
-  mlir::Value vecB = getWrittenVector(opB);
+  Value vecA = getWrittenVector(opA);
+  Value vecB = getWrittenVector(opB);
 
   if (!vecA || !vecB)
     return failure();
 
   // Decide insertion point and location
-  mlir::Operation *insertBefore = opA->isBeforeInBlock(opB) ? opA : opB;
+  Operation *insertBefore = opA->isBeforeInBlock(opB) ? opA : opB;
 
   rewriter.setInsertionPoint(insertBefore);
-  mlir::Location loc = insertBefore->getLoc();
+  Location loc = insertBefore->getLoc();
 
   auto elemTy = accTy.getElementType();
   auto flatTy = mlir::VectorType::get(nonUnitDimAcc, elemTy);
 
   // Flatten vectors
-  auto castA = mlir::vector::ShapeCastOp::create(rewriter, loc, flatTy, vecA);
-  auto castB = mlir::vector::ShapeCastOp::create(rewriter, loc, flatTy, vecB);
+  auto castA = vector::ShapeCastOp::create(rewriter, loc, flatTy, vecA);
+  auto castB = vector::ShapeCastOp::create(rewriter, loc, flatTy, vecB);
 
   // TODO: derive shuffle masks instead of hard-coding
   auto masks = getShuffleMasks(nonUnitDimAcc);
 
-  auto shuffledLo = mlir::vector::ShuffleOp::create(rewriter, loc, flatTy,
-                                                    castA, castB, masks.maskLo);
-  auto shuffledHi = mlir::vector::ShuffleOp::create(rewriter, loc, flatTy,
-                                                    castA, castB, masks.maskHi);
+  auto shuffledLo = vector::ShuffleOp::create(rewriter, loc, flatTy, castA,
+                                              castB, masks.maskLo);
+  auto shuffledHi = vector::ShuffleOp::create(rewriter, loc, flatTy, castA,
+                                              castB, masks.maskHi);
 
   // Cast back to accumulator type
-  auto newVecA =
-      mlir::vector::ShapeCastOp::create(rewriter, loc, accTy, shuffledLo);
-  auto newVecB =
-      mlir::vector::ShapeCastOp::create(rewriter, loc, accTy, shuffledHi);
+  auto newVecA = vector::ShapeCastOp::create(rewriter, loc, accTy, shuffledLo);
+  auto newVecB = vector::ShapeCastOp::create(rewriter, loc, accTy, shuffledHi);
 
   // Update write operands in place
   opA->setOperand(0, newVecA.getResult());
@@ -367,7 +361,7 @@ bool validatePairVectorContract(vector::ContractionOp contractOp,
 
   Value srcBuff;
   SmallVector<OpFoldResult> indexVals;
-  llvm::TypeSwitch<mlir::Operation *>(nonUnitOperand.getDefiningOp())
+  llvm::TypeSwitch<Operation *>(nonUnitOperand.getDefiningOp())
       .Case<vector::TransferReadOp, vector::LoadOp>([&](auto readOp) {
         srcBuff = readOp.getOperand(0);
         indexVals = SmallVector<OpFoldResult>(readOp.getIndices().begin(),
@@ -380,7 +374,7 @@ bool validatePairVectorContract(vector::ContractionOp contractOp,
 
   Value srcBuffPairContOp;
   SmallVector<OpFoldResult> indexValsPairContOp;
-  llvm::TypeSwitch<mlir::Operation *>(nonUnitOperandPairContOp.getDefiningOp())
+  llvm::TypeSwitch<Operation *>(nonUnitOperandPairContOp.getDefiningOp())
       .Case<vector::TransferReadOp, vector::LoadOp>([&](auto readOp) {
         srcBuffPairContOp = readOp.getOperand(0);
         indexValsPairContOp = SmallVector<OpFoldResult>(
