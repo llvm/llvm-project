@@ -702,7 +702,7 @@ public:
   Error unregisterHostBuffer(void *HstPtr);
 
   /// Lock the host buffer at \p HstPtr or register a new user if it intersects
-  /// with an already existing one, locked outside of this API or passed 
+  /// with an already existing one, locked outside of this API or passed
   /// LockMemory parameter as false. A partial overlapping with extension is not
   /// allowed. The function returns the device accessible pointer of the pinned
   /// buffer. The buffer must be unlocked using the unlockHostBuffer function.
@@ -711,7 +711,7 @@ public:
 
   /// Unlock the host buffer at \p HstPtr or unregister a user if other users
   /// are still using the pinned allocation or passed UnlockMemory parameter as
-  ///  false. If this was the last user, the pinned allocation is removed from 
+  ///  false. If this was the last user, the pinned allocation is removed from
   /// the map and the memory is unlocked.
   Error unregisterMemory(void *HstPtr, bool UnlockMemory = true);
 
@@ -841,8 +841,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Deallocate data from the device or involving the device.
   Error dataDelete(void *TgtPtr, TargetAllocTy Kind);
 
-  /// Pin or register host memory to optimize transfers and return the device 
-  /// accessible pointer that devices should use for memory transfers involving 
+  /// Pin or register host memory to optimize transfers and return the device
+  /// accessible pointer that devices should use for memory transfers involving
   /// the host pinned allocation.
   Expected<void *> registerMemory(void *HstPtr, int64_t Size,
                                   bool LockMemory = true) {
