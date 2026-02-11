@@ -19,11 +19,15 @@
 
 namespace clang::ssaf {
 
-class EntitySummary;
 class EntityIdTable;
+class EntitySummary;
 class SummaryName;
 
-class JSONFormat : public SerializationFormat {
+class JSONFormat final : public SerializationFormat {
+  // Bring common JSON types into this class scope for better readability
+  using Array = llvm::json::Array;
+  using Object = llvm::json::Object;
+
 public:
   // Helper class to provide limited access to EntityId conversion methods
   // Only exposes EntityId serialization/deserialization to format handlers
@@ -50,12 +54,11 @@ public:
   llvm::Error writeTUSummary(const TUSummary &Summary,
                              llvm::StringRef Path) override;
 
-  using SerializerFn = llvm::function_ref<llvm::json::Object(
-      const EntitySummary &, const EntityIdConverter &)>;
+  using SerializerFn = llvm::function_ref<Object(const EntitySummary &,
+                                                 const EntityIdConverter &)>;
   using DeserializerFn =
       llvm::function_ref<llvm::Expected<std::unique_ptr<EntitySummary>>(
-          const llvm::json::Object &, EntityIdTable &,
-          const EntityIdConverter &)>;
+          const Object &, EntityIdTable &, const EntityIdConverter &)>;
 
   using FormatInfo = FormatInfoEntry<SerializerFn, DeserializerFn>;
 
@@ -69,59 +72,56 @@ private:
   buildNamespaceKindFromJSON(llvm::StringRef BuildNamespaceKindStr) const;
 
   llvm::Expected<BuildNamespace>
-  buildNamespaceFromJSON(const llvm::json::Object &BuildNamespaceObject) const;
-  llvm::json::Object buildNamespaceToJSON(const BuildNamespace &BN) const;
+  buildNamespaceFromJSON(const Object &BuildNamespaceObject) const;
+  Object buildNamespaceToJSON(const BuildNamespace &BN) const;
 
-  llvm::Expected<NestedBuildNamespace> nestedBuildNamespaceFromJSON(
-      const llvm::json::Array &NestedBuildNamespaceArray) const;
-  llvm::json::Array
-  nestedBuildNamespaceToJSON(const NestedBuildNamespace &NBN) const;
+  llvm::Expected<NestedBuildNamespace>
+  nestedBuildNamespaceFromJSON(const Array &NestedBuildNamespaceArray) const;
+  Array nestedBuildNamespaceToJSON(const NestedBuildNamespace &NBN) const;
 
   llvm::Expected<EntityName>
-  entityNameFromJSON(const llvm::json::Object &EntityNameObject) const;
-  llvm::json::Object entityNameToJSON(const EntityName &EN) const;
+  entityNameFromJSON(const Object &EntityNameObject) const;
+  Object entityNameToJSON(const EntityName &EN) const;
 
-  llvm::Expected<std::pair<EntityName, EntityId>> entityIdTableEntryFromJSON(
-      const llvm::json::Object &EntityIdTableEntryObject) const;
+  llvm::Expected<std::pair<EntityName, EntityId>>
+  entityIdTableEntryFromJSON(const Object &EntityIdTableEntryObject) const;
   llvm::Expected<EntityIdTable>
-  entityIdTableFromJSON(const llvm::json::Array &EntityIdTableArray) const;
-  llvm::json::Object entityIdTableEntryToJSON(const EntityName &EN,
-                                              EntityId EI) const;
-  llvm::json::Array entityIdTableToJSON(const EntityIdTable &IdTable) const;
+  entityIdTableFromJSON(const Array &EntityIdTableArray) const;
+  Object entityIdTableEntryToJSON(const EntityName &EN, EntityId EI) const;
+  Array entityIdTableToJSON(const EntityIdTable &IdTable) const;
 
   llvm::Expected<std::unique_ptr<EntitySummary>>
   entitySummaryFromJSON(const SummaryName &SN,
-                        const llvm::json::Object &EntitySummaryObject,
+                        const Object &EntitySummaryObject,
                         EntityIdTable &IdTable) const;
-  llvm::Expected<llvm::json::Object>
-  entitySummaryToJSON(const SummaryName &SN, const EntitySummary &ES) const;
+  llvm::Expected<Object> entitySummaryToJSON(const SummaryName &SN,
+                                             const EntitySummary &ES) const;
 
   llvm::Expected<std::pair<EntityId, std::unique_ptr<EntitySummary>>>
-  entityDataMapEntryFromJSON(const llvm::json::Object &EntityDataMapEntryObject,
+  entityDataMapEntryFromJSON(const Object &EntityDataMapEntryObject,
                              const SummaryName &SN,
                              EntityIdTable &IdTable) const;
   llvm::Expected<std::map<EntityId, std::unique_ptr<EntitySummary>>>
-  entityDataMapFromJSON(const SummaryName &SN,
-                        const llvm::json::Array &EntityDataArray,
+  entityDataMapFromJSON(const SummaryName &SN, const Array &EntityDataArray,
                         EntityIdTable &IdTable) const;
-  llvm::Expected<llvm::json::Array>
+  llvm::Expected<Array>
   entityDataMapToJSON(const SummaryName &SN,
                       const std::map<EntityId, std::unique_ptr<EntitySummary>>
                           &EntityDataMap) const;
 
   llvm::Expected<std::pair<SummaryName,
                            std::map<EntityId, std::unique_ptr<EntitySummary>>>>
-  summaryDataMapEntryFromJSON(const llvm::json::Object &SummaryDataObject,
+  summaryDataMapEntryFromJSON(const Object &SummaryDataObject,
                               EntityIdTable &IdTable) const;
-  llvm::Expected<llvm::json::Object> summaryDataMapEntryToJSON(
+  llvm::Expected<Object> summaryDataMapEntryToJSON(
       const SummaryName &SN,
       const std::map<EntityId, std::unique_ptr<EntitySummary>> &SD) const;
 
   llvm::Expected<
       std::map<SummaryName, std::map<EntityId, std::unique_ptr<EntitySummary>>>>
-  summaryDataMapFromJSON(const llvm::json::Array &SummaryDataArray,
+  summaryDataMapFromJSON(const Array &SummaryDataArray,
                          EntityIdTable &IdTable) const;
-  llvm::Expected<llvm::json::Array> summaryDataMapToJSON(
+  llvm::Expected<Array> summaryDataMapToJSON(
       const std::map<SummaryName,
                      std::map<EntityId, std::unique_ptr<EntitySummary>>>
           &SummaryDataMap) const;

@@ -11,6 +11,11 @@
 
 using namespace clang::ssaf;
 
+// Bring common JSON types into scope for better readability
+using Array = llvm::json::Array;
+using Object = llvm::json::Object;
+using Value = llvm::json::Value;
+
 //----------------------------------------------------------------------------
 // ErrorBuilder - Fluent API for constructing contextual errors
 //----------------------------------------------------------------------------
@@ -157,7 +162,7 @@ constexpr const char *InvalidBuildNamespaceKind =
 
 namespace {
 
-llvm::Expected<llvm::json::Value> readJSON(llvm::StringRef Path) {
+llvm::Expected<Value> readJSON(llvm::StringRef Path) {
   if (!llvm::sys::fs::exists(Path)) {
     return ErrorBuilder::create(std::errc::no_such_file_or_directory,
                                 ErrorMessages::FailedToReadFile, Path,
@@ -190,7 +195,7 @@ llvm::Expected<llvm::json::Value> readJSON(llvm::StringRef Path) {
   return llvm::json::parse(BufferOrError.get()->getBuffer());
 }
 
-llvm::Error writeJSON(llvm::json::Value &&Value, llvm::StringRef Path) {
+llvm::Error writeJSON(Value &&Value, llvm::StringRef Path) {
   if (llvm::sys::fs::exists(Path)) {
     return ErrorBuilder::create(std::errc::file_exists,
                                 ErrorMessages::FailedToWriteFile, Path,
@@ -309,8 +314,8 @@ llvm::StringRef buildNamespaceKindToJSON(BuildNamespaceKind BNK) {
 // BuildNamespace
 //----------------------------------------------------------------------------
 
-llvm::Expected<BuildNamespace> JSONFormat::buildNamespaceFromJSON(
-    const llvm::json::Object &BuildNamespaceObject) const {
+llvm::Expected<BuildNamespace>
+JSONFormat::buildNamespaceFromJSON(const Object &BuildNamespaceObject) const {
   auto OptBuildNamespaceKindStr = BuildNamespaceObject.getString("kind");
   if (!OptBuildNamespaceKindStr) {
     return ErrorBuilder::create(std::errc::invalid_argument,
@@ -336,9 +341,8 @@ llvm::Expected<BuildNamespace> JSONFormat::buildNamespaceFromJSON(
   return {BuildNamespace(*ExpectedKind, *OptNameStr)};
 }
 
-llvm::json::Object
-JSONFormat::buildNamespaceToJSON(const BuildNamespace &BN) const {
-  llvm::json::Object Result;
+Object JSONFormat::buildNamespaceToJSON(const BuildNamespace &BN) const {
+  Object Result;
   Result["kind"] = buildNamespaceKindToJSON(getBuildNamespaceKind(BN));
   Result["name"] = getBuildNamespaceName(BN);
   return Result;
@@ -349,18 +353,16 @@ JSONFormat::buildNamespaceToJSON(const BuildNamespace &BN) const {
 //----------------------------------------------------------------------------
 
 llvm::Expected<NestedBuildNamespace> JSONFormat::nestedBuildNamespaceFromJSON(
-    const llvm::json::Array &NestedBuildNamespaceArray) const {
+    const Array &NestedBuildNamespaceArray) const {
   std::vector<BuildNamespace> Namespaces;
 
   size_t NamespaceCount = NestedBuildNamespaceArray.size();
   Namespaces.reserve(NamespaceCount);
 
-  for (size_t Index = 0; Index < NamespaceCount; ++Index) {
-    const llvm::json::Value &BuildNamespaceValue =
-        NestedBuildNamespaceArray[Index];
+  for (const auto &[Index, BuildNamespaceValue] :
+       llvm::enumerate(NestedBuildNamespaceArray)) {
 
-    const llvm::json::Object *BuildNamespaceObject =
-        BuildNamespaceValue.getAsObject();
+    const Object *BuildNamespaceObject = BuildNamespaceValue.getAsObject();
     if (!BuildNamespaceObject) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedToReadObjectAtIndex,
@@ -381,9 +383,9 @@ llvm::Expected<NestedBuildNamespace> JSONFormat::nestedBuildNamespaceFromJSON(
   return NestedBuildNamespace(std::move(Namespaces));
 }
 
-llvm::json::Array
-JSONFormat::nestedBuildNamespaceToJSON(const NestedBuildNamespace &NBN) const {
-  llvm::json::Array Result;
+Array JSONFormat::nestedBuildNamespaceToJSON(
+    const NestedBuildNamespace &NBN) const {
+  Array Result;
   const auto &Namespaces = getNestedBuildNamespaces(NBN);
   Result.reserve(Namespaces.size());
 
@@ -398,8 +400,8 @@ JSONFormat::nestedBuildNamespaceToJSON(const NestedBuildNamespace &NBN) const {
 // EntityName
 //----------------------------------------------------------------------------
 
-llvm::Expected<EntityName> JSONFormat::entityNameFromJSON(
-    const llvm::json::Object &EntityNameObject) const {
+llvm::Expected<EntityName>
+JSONFormat::entityNameFromJSON(const Object &EntityNameObject) const {
   const auto OptUSR = EntityNameObject.getString("usr");
   if (!OptUSR) {
     return ErrorBuilder::create(std::errc::invalid_argument,
@@ -416,8 +418,7 @@ llvm::Expected<EntityName> JSONFormat::entityNameFromJSON(
         .build();
   }
 
-  const llvm::json::Array *OptNamespaceArray =
-      EntityNameObject.getArray("namespace");
+  const Array *OptNamespaceArray = EntityNameObject.getArray("namespace");
   if (!OptNamespaceArray) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToReadObjectAtField,
@@ -436,8 +437,8 @@ llvm::Expected<EntityName> JSONFormat::entityNameFromJSON(
   return EntityName{*OptUSR, *OptSuffix, std::move(*ExpectedNamespace)};
 }
 
-llvm::json::Object JSONFormat::entityNameToJSON(const EntityName &EN) const {
-  llvm::json::Object Result;
+Object JSONFormat::entityNameToJSON(const EntityName &EN) const {
+  Object Result;
   Result["usr"] = getEntityNameUSR(EN);
   Result["suffix"] = getEntityNameSuffix(EN);
   Result["namespace"] = nestedBuildNamespaceToJSON(getEntityNameNamespace(EN));
@@ -450,9 +451,9 @@ llvm::json::Object JSONFormat::entityNameToJSON(const EntityName &EN) const {
 
 llvm::Expected<std::pair<EntityName, EntityId>>
 JSONFormat::entityIdTableEntryFromJSON(
-    const llvm::json::Object &EntityIdTableEntryObject) const {
+    const Object &EntityIdTableEntryObject) const {
 
-  const llvm::json::Object *OptEntityNameObject =
+  const Object *OptEntityNameObject =
       EntityIdTableEntryObject.getObject("name");
   if (!OptEntityNameObject) {
     return ErrorBuilder::create(std::errc::invalid_argument,
@@ -468,8 +469,7 @@ JSONFormat::entityIdTableEntryFromJSON(
         .build();
   }
 
-  const llvm::json::Value *EntityIdIntValue =
-      EntityIdTableEntryObject.get("id");
+  const Value *EntityIdIntValue = EntityIdTableEntryObject.get("id");
   if (!EntityIdIntValue) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToReadObjectAtField,
@@ -491,9 +491,9 @@ JSONFormat::entityIdTableEntryFromJSON(
   return std::make_pair(std::move(*ExpectedEntityName), std::move(EI));
 }
 
-llvm::json::Object JSONFormat::entityIdTableEntryToJSON(const EntityName &EN,
-                                                        EntityId EI) const {
-  llvm::json::Object Entry;
+Object JSONFormat::entityIdTableEntryToJSON(const EntityName &EN,
+                                            EntityId EI) const {
+  Object Entry;
   Entry["id"] = entityIdToJSON(EI);
   Entry["name"] = entityNameToJSON(EN);
   return Entry;
@@ -503,16 +503,15 @@ llvm::json::Object JSONFormat::entityIdTableEntryToJSON(const EntityName &EN,
 // EntityIdTable
 //----------------------------------------------------------------------------
 
-llvm::Expected<EntityIdTable> JSONFormat::entityIdTableFromJSON(
-    const llvm::json::Array &EntityIdTableArray) const {
+llvm::Expected<EntityIdTable>
+JSONFormat::entityIdTableFromJSON(const Array &EntityIdTableArray) const {
   EntityIdTable IdTable;
   std::map<EntityName, EntityId> &Entities = getEntities(IdTable);
 
-  for (size_t Index = 0; Index < EntityIdTableArray.size(); ++Index) {
-    const llvm::json::Value &EntityIdTableEntryValue =
-        EntityIdTableArray[Index];
+  for (const auto &[Index, EntityIdTableEntryValue] :
+       llvm::enumerate(EntityIdTableArray)) {
 
-    const llvm::json::Object *OptEntityIdTableEntryObject =
+    const Object *OptEntityIdTableEntryObject =
         EntityIdTableEntryValue.getAsObject();
     if (!OptEntityIdTableEntryObject) {
       return ErrorBuilder::create(std::errc::invalid_argument,
@@ -543,9 +542,8 @@ llvm::Expected<EntityIdTable> JSONFormat::entityIdTableFromJSON(
   return IdTable;
 }
 
-llvm::json::Array
-JSONFormat::entityIdTableToJSON(const EntityIdTable &IdTable) const {
-  llvm::json::Array EntityIdTableArray;
+Array JSONFormat::entityIdTableToJSON(const EntityIdTable &IdTable) const {
+  Array EntityIdTableArray;
   const auto &Entities = getEntities(IdTable);
   EntityIdTableArray.reserve(Entities.size());
 
@@ -563,7 +561,7 @@ JSONFormat::entityIdTableToJSON(const EntityIdTable &IdTable) const {
 
 llvm::Expected<std::unique_ptr<EntitySummary>>
 JSONFormat::entitySummaryFromJSON(const SummaryName &SN,
-                                  const llvm::json::Object &EntitySummaryObject,
+                                  const Object &EntitySummaryObject,
                                   EntityIdTable &IdTable) const {
   auto InfoIt = FormatInfos.find(SN);
   if (InfoIt == FormatInfos.end()) {
@@ -580,7 +578,7 @@ JSONFormat::entitySummaryFromJSON(const SummaryName &SN,
   return InfoEntry.Deserialize(EntitySummaryObject, IdTable, Converter);
 }
 
-llvm::Expected<llvm::json::Object>
+llvm::Expected<Object>
 JSONFormat::entitySummaryToJSON(const SummaryName &SN,
                                 const EntitySummary &ES) const {
   auto InfoIt = FormatInfos.find(SN);
@@ -603,12 +601,11 @@ JSONFormat::entitySummaryToJSON(const SummaryName &SN,
 //----------------------------------------------------------------------------
 
 llvm::Expected<std::pair<EntityId, std::unique_ptr<EntitySummary>>>
-JSONFormat::entityDataMapEntryFromJSON(
-    const llvm::json::Object &EntityDataMapEntryObject, const SummaryName &SN,
-    EntityIdTable &IdTable) const {
+JSONFormat::entityDataMapEntryFromJSON(const Object &EntityDataMapEntryObject,
+                                       const SummaryName &SN,
+                                       EntityIdTable &IdTable) const {
 
-  const llvm::json::Value *EntityIdIntValue =
-      EntityDataMapEntryObject.get("entity_id");
+  const Value *EntityIdIntValue = EntityDataMapEntryObject.get("entity_id");
   if (!EntityIdIntValue) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToReadObjectAtField,
@@ -627,7 +624,7 @@ JSONFormat::entityDataMapEntryFromJSON(
 
   EntityId EI = entityIdFromJSON(*OptEntityIdInt);
 
-  const llvm::json::Object *OptEntitySummaryObject =
+  const Object *OptEntitySummaryObject =
       EntityDataMapEntryObject.getObject("entity_summary");
   if (!OptEntitySummaryObject) {
     return ErrorBuilder::create(std::errc::invalid_argument,
@@ -654,14 +651,14 @@ JSONFormat::entityDataMapEntryFromJSON(
 
 llvm::Expected<std::map<EntityId, std::unique_ptr<EntitySummary>>>
 JSONFormat::entityDataMapFromJSON(const SummaryName &SN,
-                                  const llvm::json::Array &EntityDataArray,
+                                  const Array &EntityDataArray,
                                   EntityIdTable &IdTable) const {
   std::map<EntityId, std::unique_ptr<EntitySummary>> EntityDataMap;
 
-  for (size_t Index = 0; Index < EntityDataArray.size(); ++Index) {
-    const llvm::json::Value &EntityDataMapEntryValue = EntityDataArray[Index];
+  for (const auto &[Index, EntityDataMapEntryValue] :
+       llvm::enumerate(EntityDataArray)) {
 
-    const llvm::json::Object *OptEntityDataMapEntryObject =
+    const Object *OptEntityDataMapEntryObject =
         EntityDataMapEntryValue.getAsObject();
     if (!OptEntityDataMapEntryObject) {
       return ErrorBuilder::create(std::errc::invalid_argument,
@@ -692,16 +689,18 @@ JSONFormat::entityDataMapFromJSON(const SummaryName &SN,
   return EntityDataMap;
 }
 
-llvm::Expected<llvm::json::Array> JSONFormat::entityDataMapToJSON(
+llvm::Expected<Array> JSONFormat::entityDataMapToJSON(
     const SummaryName &SN,
     const std::map<EntityId, std::unique_ptr<EntitySummary>> &EntityDataMap)
     const {
-  llvm::json::Array Result;
+  Array Result;
   Result.reserve(EntityDataMap.size());
 
-  size_t Index = 0;
-  for (const auto &[EntityId, EntitySummary] : EntityDataMap) {
-    llvm::json::Object Entry;
+  for (const auto &[Index, EntityDataMapEntry] :
+       llvm::enumerate(EntityDataMap)) {
+    const auto &[EntityId, EntitySummary] = EntityDataMapEntry;
+
+    Object Entry;
 
     Entry["entity_id"] = entityIdToJSON(EntityId);
 
@@ -715,9 +714,8 @@ llvm::Expected<llvm::json::Array> JSONFormat::entityDataMapToJSON(
     Entry["entity_summary"] = std::move(*ExpectedEntitySummaryObject);
 
     Result.push_back(std::move(Entry));
-
-    ++Index;
   }
+
   return Result;
 }
 
@@ -727,9 +725,8 @@ llvm::Expected<llvm::json::Array> JSONFormat::entityDataMapToJSON(
 
 llvm::Expected<
     std::pair<SummaryName, std::map<EntityId, std::unique_ptr<EntitySummary>>>>
-JSONFormat::summaryDataMapEntryFromJSON(
-    const llvm::json::Object &SummaryDataMapEntryObject,
-    EntityIdTable &IdTable) const {
+JSONFormat::summaryDataMapEntryFromJSON(const Object &SummaryDataMapEntryObject,
+                                        EntityIdTable &IdTable) const {
 
   std::optional<llvm::StringRef> OptSummaryNameStr =
       SummaryDataMapEntryObject.getString("summary_name");
@@ -742,7 +739,7 @@ JSONFormat::summaryDataMapEntryFromJSON(
 
   SummaryName SN = summaryNameFromJSON(*OptSummaryNameStr);
 
-  const llvm::json::Array *OptEntityDataArray =
+  const Array *OptEntityDataArray =
       SummaryDataMapEntryObject.getArray("summary_data");
   if (!OptEntityDataArray) {
     return ErrorBuilder::create(std::errc::invalid_argument,
@@ -763,10 +760,10 @@ JSONFormat::summaryDataMapEntryFromJSON(
   return std::make_pair(std::move(SN), std::move(*ExpectedEntityDataMap));
 }
 
-llvm::Expected<llvm::json::Object> JSONFormat::summaryDataMapEntryToJSON(
+llvm::Expected<Object> JSONFormat::summaryDataMapEntryToJSON(
     const SummaryName &SN,
     const std::map<EntityId, std::unique_ptr<EntitySummary>> &SD) const {
-  llvm::json::Object Result;
+  Object Result;
 
   Result["summary_name"] = summaryNameToJSON(SN);
 
@@ -789,15 +786,15 @@ llvm::Expected<llvm::json::Object> JSONFormat::summaryDataMapEntryToJSON(
 
 llvm::Expected<
     std::map<SummaryName, std::map<EntityId, std::unique_ptr<EntitySummary>>>>
-JSONFormat::summaryDataMapFromJSON(const llvm::json::Array &SummaryDataArray,
+JSONFormat::summaryDataMapFromJSON(const Array &SummaryDataArray,
                                    EntityIdTable &IdTable) const {
   std::map<SummaryName, std::map<EntityId, std::unique_ptr<EntitySummary>>>
       SummaryDataMap;
 
-  for (size_t Index = 0; Index < SummaryDataArray.size(); ++Index) {
-    const llvm::json::Value &SummaryDataMapEntryValue = SummaryDataArray[Index];
+  for (const auto &[Index, SummaryDataMapEntryValue] :
+       llvm::enumerate(SummaryDataArray)) {
 
-    const llvm::json::Object *OptSummaryDataMapEntryObject =
+    const Object *OptSummaryDataMapEntryObject =
         SummaryDataMapEntryValue.getAsObject();
     if (!OptSummaryDataMapEntryObject) {
       return ErrorBuilder::create(std::errc::invalid_argument,
@@ -828,15 +825,16 @@ JSONFormat::summaryDataMapFromJSON(const llvm::json::Array &SummaryDataArray,
   return SummaryDataMap;
 }
 
-llvm::Expected<llvm::json::Array> JSONFormat::summaryDataMapToJSON(
+llvm::Expected<Array> JSONFormat::summaryDataMapToJSON(
     const std::map<SummaryName,
                    std::map<EntityId, std::unique_ptr<EntitySummary>>>
         &SummaryDataMap) const {
-  llvm::json::Array Result;
+  Array Result;
   Result.reserve(SummaryDataMap.size());
 
-  size_t Index = 0;
-  for (const auto &[SummaryName, DataMap] : SummaryDataMap) {
+  for (const auto &[Index, SummaryDataMapEntry] :
+       llvm::enumerate(SummaryDataMap)) {
+    const auto &[SummaryName, DataMap] = SummaryDataMapEntry;
 
     auto ExpectedSummaryDataMapObject =
         summaryDataMapEntryToJSON(SummaryName, DataMap);
@@ -847,8 +845,6 @@ llvm::Expected<llvm::json::Array> JSONFormat::summaryDataMapToJSON(
     }
 
     Result.push_back(std::move(*ExpectedSummaryDataMapObject));
-
-    ++Index;
   }
 
   return Result;
@@ -859,7 +855,6 @@ llvm::Expected<llvm::json::Array> JSONFormat::summaryDataMapToJSON(
 //----------------------------------------------------------------------------
 
 llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
-
   auto ExpectedJSON = readJSON(Path);
   if (!ExpectedJSON) {
     return ErrorBuilder::wrap(ExpectedJSON.takeError())
@@ -867,7 +862,7 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
         .build();
   }
 
-  llvm::json::Object *RootObjectPtr = ExpectedJSON->getAsObject();
+  Object *RootObjectPtr = ExpectedJSON->getAsObject();
   if (!RootObjectPtr) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToReadObject, "TUSummary",
@@ -876,10 +871,9 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
         .build();
   }
 
-  const llvm::json::Object &RootObject = *RootObjectPtr;
+  const Object &RootObject = *RootObjectPtr;
 
-  const llvm::json::Object *TUNamespaceObject =
-      RootObject.getObject("tu_namespace");
+  const Object *TUNamespaceObject = RootObject.getObject("tu_namespace");
   if (!TUNamespaceObject) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToReadObjectAtField,
@@ -900,7 +894,7 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
   TUSummary Summary(std::move(*ExpectedTUNamespace));
 
   {
-    const llvm::json::Array *IdTableArray = RootObject.getArray("id_table");
+    const Array *IdTableArray = RootObject.getArray("id_table");
     if (!IdTableArray) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedToReadObjectAtField,
@@ -921,7 +915,7 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
   }
 
   {
-    const llvm::json::Array *SummaryDataArray = RootObject.getArray("data");
+    const Array *SummaryDataArray = RootObject.getArray("data");
     if (!SummaryDataArray) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedToReadObjectAtField,
@@ -948,7 +942,7 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
 
 llvm::Error JSONFormat::writeTUSummary(const TUSummary &S,
                                        llvm::StringRef Path) {
-  llvm::json::Object RootObject;
+  Object RootObject;
 
   RootObject["tu_namespace"] = buildNamespaceToJSON(getTUNamespace(S));
 

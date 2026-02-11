@@ -67,22 +67,22 @@ deserializeTestAnalysis(const json::Object &Obj, EntityIdTable &IdTable,
   if (!PairsArray)
     return createStringError(inconvertibleErrorCode(),
                              "missing or invalid field 'pairs'");
-  for (size_t I = 0; I < PairsArray->size(); ++I) {
-    const json::Object *Pair = (*PairsArray)[I].getAsObject();
+  for (const auto &[Index, Value] : llvm::enumerate(*PairsArray)) {
+    const json::Object *Pair = Value.getAsObject();
     if (!Pair)
       return createStringError(
           inconvertibleErrorCode(),
-          "pairs element at index %zu is not a JSON object", I);
+          "pairs element at index %zu is not a JSON object", Index);
     auto FirstOpt = Pair->getInteger("first");
     if (!FirstOpt)
-      return createStringError(inconvertibleErrorCode(),
-                               "missing or invalid 'first' field at index '%zu'",
-                               I);
+      return createStringError(
+          inconvertibleErrorCode(),
+          "missing or invalid 'first' field at index '%zu'", Index);
     auto SecondOpt = Pair->getInteger("second");
     if (!SecondOpt)
-      return createStringError(inconvertibleErrorCode(),
-                               "missing or invalid 'second' field at index '%zu'",
-                               I);
+      return createStringError(
+          inconvertibleErrorCode(),
+          "missing or invalid 'second' field at index '%zu'", Index);
     Result->Pairs.emplace_back(Converter.fromJSON(*FirstOpt),
                                Converter.fromJSON(*SecondOpt));
   }
@@ -127,11 +127,6 @@ protected:
     OS.close();
 
     auto Result = JSONFormat(vfs::getRealFileSystem()).readTUSummary(FilePath);
-    if (!Result) {
-      std::string Message = llvm::toString(Result.takeError());
-      llvm::outs() << Message << "\n\n";
-      return {llvm::createStringError(std::move(Message))};
-    }
     return Result;
   }
 
@@ -233,7 +228,10 @@ TEST_F(JSONFormatTest, BrokenSymlink) {
 }
 
 TEST_F(JSONFormatTest, NoReadPermission) {
-#ifndef _WIN32 // Skip on Windows as permission model is different
+#ifdef _WIN32
+  GTEST_SKIP() << "Permission model differs on Windows";
+#endif
+
   SmallString<128> FilePath = TestDir;
   sys::path::append(FilePath, "no_read_permission.json");
 
@@ -266,7 +264,6 @@ TEST_F(JSONFormatTest, NoReadPermission) {
 
   // Restore permissions for cleanup
   sys::fs::setPermissions(FilePath, sys::fs::perms::all_all);
-#endif
 }
 
 TEST_F(JSONFormatTest, InvalidSyntax) {
@@ -1162,7 +1159,10 @@ TEST_F(JSONFormatTest, WriteNotJsonExtension) {
 }
 
 TEST_F(JSONFormatTest, WriteStreamOpenFailure) {
-#ifndef _WIN32 // Skip on Windows as permission model is different
+#ifdef _WIN32
+  GTEST_SKIP() << "Permission model differs on Windows";
+#endif
+
   SmallString<128> DirPath = TestDir;
   sys::path::append(DirPath, "write_protected_dir");
 
@@ -1189,7 +1189,6 @@ TEST_F(JSONFormatTest, WriteStreamOpenFailure) {
 
   // Restore permissions for cleanup
   sys::fs::setPermissions(DirPath, sys::fs::perms::all_all);
-#endif
 }
 
 // ============================================================================
