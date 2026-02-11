@@ -401,6 +401,374 @@ cir.func @test_return_in_nested_cleanup() {
 // CHECK:       ^[[FINAL_RET]]:
 // CHECK:         cir.return
 
+// Test return inside nested cleanup scopes.
+cir.func @test_return_constant_in_nested_cleanup() -> !s32i {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}
+  %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.cleanup.scope {
+      %cond = cir.call @shouldReturn() : () -> !cir.bool
+      cir.brcond %cond ^bb_return, ^bb_normal
+    ^bb_return:
+      %2 = cir.const #cir.int<-1> : !s32i
+      cir.return %2 : !s32i  // Return exits through BOTH cleanup scopes
+    ^bb_normal:
+      cir.yield
+    } cleanup normal {
+      cir.call @dtor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
+    }
+    cir.yield
+  } cleanup normal {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  %3 = cir.const #cir.int<0> : !s32i
+  cir.return %3 : !s32i
+}
+
+// CHECK-LABEL: cir.func @test_return_constant_in_nested_cleanup()
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot"]
+// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init]
+// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init]
+// CHECK:         cir.call @ctor(%[[ALLOCA_C1]])
+// CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
+// CHECK:       ^[[OUTER_BODY]]:
+// CHECK:         cir.call @ctor(%[[ALLOCA_C2]])
+// CHECK:         cir.br ^[[INNER_BODY:bb[0-9]+]]
+// CHECK:       ^[[INNER_BODY]]:
+// CHECK:         %[[COND:.*]] = cir.call @shouldReturn()
+// CHECK:         cir.brcond %[[COND]] ^[[RET_PATH:bb[0-9]+]], ^[[YIELD_PATH:bb[0-9]+]]
+// CHECK:       ^[[RET_PATH]]:
+// CHECK:         %[[RET_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[RET_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[INNER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[YIELD_PATH]]:
+// CHECK:         %[[YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[INNER_CLEANUP]]
+// CHECK:       ^[[INNER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA_C2]])
+// CHECK:         cir.br ^[[INNER_DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[INNER_DISPATCH]]:
+// CHECK:         %[[INNER_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[INNER_VAL]] : !s32i, ^[[INNER_DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[INNER_YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[INNER_RET_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[INNER_YIELD_DEST]]:
+// CHECK:         cir.br ^[[OUTER_YIELD_STORE:bb[0-9]+]]
+// CHECK:       ^[[INNER_RET_DEST]]:
+// CHECK:         %[[OUTER_RET_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[OUTER_RET_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[OUTER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[INNER_DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[OUTER_YIELD_STORE]]:
+// CHECK:         %[[OUTER_YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[OUTER_YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[OUTER_CLEANUP]]
+// CHECK:       ^[[OUTER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA_C1]])
+// CHECK:         cir.br ^[[OUTER_DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[OUTER_DISPATCH]]:
+// CHECK:         %[[OUTER_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[OUTER_VAL]] : !s32i, ^[[OUTER_DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[OUTER_YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[OUTER_RET_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[OUTER_YIELD_DEST]]:
+// CHECK:         cir.br ^[[FINAL_RET:bb[0-9]+]]
+// CHECK:       ^[[OUTER_RET_DEST]]:
+// CHECK:         %[[MINUS_ONE:.*]] = cir.const #cir.int<-1> : !s32i
+// CHECK:         cir.return %[[MINUS_ONE]] : !s32i
+// CHECK:       ^[[OUTER_DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[FINAL_RET]]:
+// CHECK:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.return %[[ZERO]]
+
+// Test return with computed value.
+cir.func @test_return_computed_value(%arg0: !s32i) -> !s32i {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}
+  %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.cleanup.scope {
+      %cond = cir.call @shouldReturn() : () -> !cir.bool
+      cir.brcond %cond ^bb_return, ^bb_normal
+    ^bb_return:
+      %retval = cir.unary(not, %arg0) : !s32i, !s32i
+      cir.return %retval : !s32i
+    ^bb_normal:
+      cir.yield
+    } cleanup normal {
+      cir.call @dtor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
+    }
+    cir.yield
+  } cleanup normal {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  %zero = cir.const #cir.int<0> : !s32i
+  cir.return %zero : !s32i
+}
+
+// CHECK-LABEL: cir.func @test_return_computed_value
+// CHECK-SAME: (%[[ARG0:.*]]: !s32i)
+// CHECK:         %[[RET_TMP:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__ret_operand_tmp"]
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot"]
+// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init]
+// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init]
+// CHECK:         cir.call @ctor(%[[ALLOCA_C1]])
+// CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
+// CHECK:       ^[[OUTER_BODY]]:
+// CHECK:         cir.call @ctor(%[[ALLOCA_C2]])
+// CHECK:         cir.br ^[[INNER_BODY:bb[0-9]+]]
+// CHECK:       ^[[INNER_BODY]]:
+// CHECK:         %[[COND:.*]] = cir.call @shouldReturn()
+// CHECK:         cir.brcond %[[COND]] ^[[RET_PATH:bb[0-9]+]], ^[[YIELD_PATH:bb[0-9]+]]
+// CHECK:       ^[[RET_PATH]]:
+// CHECK:         %[[COMPUTED:.*]] = cir.unary(not, %[[ARG0]]) : !s32i, !s32i
+// CHECK:         cir.store %[[COMPUTED]], %[[RET_TMP]]
+// CHECK:         %[[RET_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[RET_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[INNER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[YIELD_PATH]]:
+// CHECK:         %[[YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[INNER_CLEANUP]]
+// CHECK:       ^[[INNER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA_C2]])
+// CHECK:         cir.br ^[[INNER_DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[INNER_DISPATCH]]:
+// CHECK:         %[[INNER_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[INNER_VAL]] : !s32i, ^[[INNER_DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[INNER_YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[INNER_RET_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[INNER_YIELD_DEST]]:
+// CHECK:         cir.br ^[[OUTER_YIELD_STORE:bb[0-9]+]]
+// CHECK:       ^[[INNER_RET_DEST]]:
+// CHECK:         %[[OUTER_RET_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[OUTER_RET_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[OUTER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[INNER_DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[OUTER_YIELD_STORE]]:
+// CHECK:         %[[OUTER_YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[OUTER_YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[OUTER_CLEANUP]]
+// CHECK:       ^[[OUTER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA_C1]])
+// CHECK:         cir.br ^[[OUTER_DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[OUTER_DISPATCH]]:
+// CHECK:         %[[OUTER_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[OUTER_VAL]] : !s32i, ^[[OUTER_DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[OUTER_YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[OUTER_RET_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[OUTER_YIELD_DEST]]:
+// CHECK:         cir.br ^[[FINAL_RET:bb[0-9]+]]
+// CHECK:       ^[[OUTER_RET_DEST]]:
+// CHECK:         %[[LOADED_RET:.*]] = cir.load %[[RET_TMP]]
+// CHECK:         cir.return %[[LOADED_RET]] : !s32i
+// CHECK:       ^[[OUTER_DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[FINAL_RET]]:
+// CHECK:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.return %[[ZERO]]
+
+// Test return with of a function parameter value.
+cir.func @test_return_param_value(%arg0: !s32i) -> !s32i {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}
+  %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.cleanup.scope {
+      %cond = cir.call @shouldReturn() : () -> !cir.bool
+      cir.brcond %cond ^bb_return, ^bb_normal
+    ^bb_return:
+      cir.return %arg0 : !s32i
+    ^bb_normal:
+      cir.yield
+    } cleanup normal {
+      cir.call @dtor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
+    }
+    cir.yield
+  } cleanup normal {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  %zero = cir.const #cir.int<0> : !s32i
+  cir.return %zero : !s32i
+}
+
+// CHECK-LABEL: cir.func @test_return_param_value
+// CHECK-SAME: (%[[ARG0:.*]]: !s32i)
+// CHECK:         %[[RET_TMP:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__ret_operand_tmp"]
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot"]
+// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init]
+// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init]
+// CHECK:         cir.call @ctor(%[[ALLOCA_C1]])
+// CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
+// CHECK:       ^[[OUTER_BODY]]:
+// CHECK:         cir.call @ctor(%[[ALLOCA_C2]])
+// CHECK:         cir.br ^[[INNER_BODY:bb[0-9]+]]
+// CHECK:       ^[[INNER_BODY]]:
+// CHECK:         %[[COND:.*]] = cir.call @shouldReturn()
+// CHECK:         cir.brcond %[[COND]] ^[[RET_PATH:bb[0-9]+]], ^[[YIELD_PATH:bb[0-9]+]]
+// CHECK:       ^[[RET_PATH]]:
+// CHECK:         cir.store %[[ARG0]], %[[RET_TMP]]
+// CHECK:         %[[RET_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[RET_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[INNER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[YIELD_PATH]]:
+// CHECK:         %[[YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[INNER_CLEANUP]]
+// CHECK:       ^[[INNER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA_C2]])
+// CHECK:         cir.br ^[[INNER_DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[INNER_DISPATCH]]:
+// CHECK:         %[[INNER_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[INNER_VAL]] : !s32i, ^[[INNER_DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[INNER_YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[INNER_RET_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[INNER_YIELD_DEST]]:
+// CHECK:         cir.br ^[[OUTER_YIELD_STORE:bb[0-9]+]]
+// CHECK:       ^[[INNER_RET_DEST]]:
+// CHECK:         %[[OUTER_RET_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[OUTER_RET_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[OUTER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[INNER_DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[OUTER_YIELD_STORE]]:
+// CHECK:         %[[OUTER_YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[OUTER_YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[OUTER_CLEANUP]]
+// CHECK:       ^[[OUTER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA_C1]])
+// CHECK:         cir.br ^[[OUTER_DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[OUTER_DISPATCH]]:
+// CHECK:         %[[OUTER_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[OUTER_VAL]] : !s32i, ^[[OUTER_DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[OUTER_YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[OUTER_RET_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[OUTER_YIELD_DEST]]:
+// CHECK:         cir.br ^[[FINAL_RET:bb[0-9]+]]
+// CHECK:       ^[[OUTER_RET_DEST]]:
+// CHECK:         %[[LOADED_RET:.*]] = cir.load %[[RET_TMP]]
+// CHECK:         cir.return %[[LOADED_RET]] : !s32i
+// CHECK:       ^[[OUTER_DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[FINAL_RET]]:
+// CHECK:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.return %[[ZERO]]
+
+// Test return of a block argument value.
+cir.func @test_return_blockarg_value(%arg0: !s32i) -> !s32i {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}
+  %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.cleanup.scope {
+      %cond = cir.call @shouldReturn() : () -> !cir.bool
+      cir.brcond %cond ^bb_return, ^bb_normal
+    ^bb_return:
+      cir.br ^bb_return_arg(%arg0 : !s32i)
+    ^bb_return_arg(%block_arg: !s32i):
+      cir.return %block_arg : !s32i
+    ^bb_normal:
+      cir.yield
+    } cleanup normal {
+      cir.call @dtor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
+    }
+    cir.yield
+  } cleanup normal {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  %zero = cir.const #cir.int<0> : !s32i
+  cir.return %zero : !s32i
+}
+
+// CHECK-LABEL: cir.func @test_return_blockarg_value
+// CHECK-SAME: (%[[ARG0:.*]]: !s32i)
+// CHECK:         %[[RET_TMP:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__ret_operand_tmp"]
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot"]
+// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init]
+// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init]
+// CHECK:         cir.call @ctor(%[[ALLOCA_C1]])
+// CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
+// CHECK:       ^[[OUTER_BODY]]:
+// CHECK:         cir.call @ctor(%[[ALLOCA_C2]])
+// CHECK:         cir.br ^[[INNER_BODY:bb[0-9]+]]
+// CHECK:       ^[[INNER_BODY]]:
+// CHECK:         %[[COND:.*]] = cir.call @shouldReturn()
+// CHECK:         cir.brcond %[[COND]] ^[[RET_PATH:bb[0-9]+]], ^[[YIELD_PATH:bb[0-9]+]]
+// CHECK:       ^[[RET_PATH]]:
+// CHECK:         cir.br ^[[RET_ARG_PATH:.*]](%[[ARG0]] : !s32i)
+// CHECK:       ^[[RET_ARG_PATH]](%[[BLOCK_ARG:.*]]: !s32i):
+// CHECK:         cir.store %[[BLOCK_ARG]], %[[RET_TMP]]
+// CHECK:         %[[RET_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[RET_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[INNER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[YIELD_PATH]]:
+// CHECK:         %[[YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[INNER_CLEANUP]]
+// CHECK:       ^[[INNER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA_C2]])
+// CHECK:         cir.br ^[[INNER_DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[INNER_DISPATCH]]:
+// CHECK:         %[[INNER_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[INNER_VAL]] : !s32i, ^[[INNER_DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[INNER_YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[INNER_RET_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[INNER_YIELD_DEST]]:
+// CHECK:         cir.br ^[[OUTER_YIELD_STORE:bb[0-9]+]]
+// CHECK:       ^[[INNER_RET_DEST]]:
+// CHECK:         %[[OUTER_RET_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[OUTER_RET_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[OUTER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[INNER_DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[OUTER_YIELD_STORE]]:
+// CHECK:         %[[OUTER_YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[OUTER_YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[OUTER_CLEANUP]]
+// CHECK:       ^[[OUTER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA_C1]])
+// CHECK:         cir.br ^[[OUTER_DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[OUTER_DISPATCH]]:
+// CHECK:         %[[OUTER_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[OUTER_VAL]] : !s32i, ^[[OUTER_DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[OUTER_YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[OUTER_RET_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[OUTER_YIELD_DEST]]:
+// CHECK:         cir.br ^[[FINAL_RET:bb[0-9]+]]
+// CHECK:       ^[[OUTER_RET_DEST]]:
+// CHECK:         %[[LOADED_RET:.*]] = cir.load %[[RET_TMP]]
+// CHECK:         cir.return %[[LOADED_RET]] : !s32i
+// CHECK:       ^[[OUTER_DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[FINAL_RET]]:
+// CHECK:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.return %[[ZERO]]
+
 // Test break inside nested cleanup scopes within a loop.
 cir.func @test_break_in_nested_cleanup() {
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}

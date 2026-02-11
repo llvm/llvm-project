@@ -724,6 +724,105 @@ public:
     collectExitsInCleanup(cleanupBodyRegion, /*ignoreBreak=*/false);
   }
 
+  // Check if an operand's defining op should be moved to the destination block.
+  // We only sink constants and simple loads. Anything else should be saved
+  // to a temporary alloca and reloaded at the destination block.
+  static bool shouldSinkReturnOperand(mlir::Value operand,
+                                      cir::ReturnOp returnOp) {
+    // Block arguments can't be moved
+    mlir::Operation *defOp = operand.getDefiningOp();
+    if (!defOp)
+      return false;
+
+    // Only move constants and loads to the dispatch block. For anything else,
+    // we'll store to a temporary and reload in the dispatch block.
+    if (!mlir::isa<cir::ConstantOp, cir::LoadOp>(defOp))
+      return false;
+
+    // Check if the return is the only user
+    if (!operand.hasOneUse())
+      return false;
+
+    // Only move ops that are in the same block as the return.
+    if (defOp->getBlock() != returnOp->getBlock())
+      return false;
+
+    if (auto loadOp = mlir::dyn_cast<cir::LoadOp>(defOp)) {
+      // Only attempt to move loads of allocas in the entry block.
+      mlir::Value ptr = loadOp.getAddr();
+      auto funcOp = returnOp->getParentOfType<cir::FuncOp>();
+      assert(funcOp && "Return op has no function parent?");
+      mlir::Block &funcEntryBlock = funcOp.getBody().front();
+
+      // Check if it's an alloca in the function entry block
+      if (auto allocaOp =
+              mlir::dyn_cast_if_present<cir::AllocaOp>(ptr.getDefiningOp()))
+        return allocaOp->getBlock() == &funcEntryBlock;
+
+      return false;
+    }
+
+    // Make sure we only fall through to here with constants.
+    assert(mlir::isa<cir::ConstantOp>(defOp) && "Expected constant op");
+    return true;
+  }
+
+  // For returns with operands in cleanup dispatch blocks, the operands may not
+  // dominate the dispatch block. This function handles that by either sinking
+  // the operand's defining op to the dispatch block (for constants and simple
+  // loads) or by storing to a temporary alloca and reloading it.
+  void
+  getReturnOpOperands(cir::ReturnOp returnOp, mlir::Operation *exitOp,
+                      mlir::Location loc, mlir::PatternRewriter &rewriter,
+                      llvm::SmallVectorImpl<mlir::Value> &returnValues) const {
+    mlir::Block *destBlock = rewriter.getInsertionBlock();
+    auto funcOp = exitOp->getParentOfType<cir::FuncOp>();
+    assert(funcOp && "Return op has no function parent?");
+    mlir::Block &funcEntryBlock = funcOp.getBody().front();
+
+    for (mlir::Value operand : returnOp.getOperands()) {
+      if (shouldSinkReturnOperand(operand, returnOp)) {
+        // Sink the defining op to the dispatch block.
+        mlir::Operation *defOp = operand.getDefiningOp();
+        defOp->moveBefore(destBlock, destBlock->end());
+        returnValues.push_back(operand);
+      } else {
+        // Create an alloca in the function entry block.
+        cir::AllocaOp alloca;
+        {
+          mlir::OpBuilder::InsertionGuard guard(rewriter);
+          rewriter.setInsertionPointToStart(&funcEntryBlock);
+          cir::PointerType ptrType = cir::PointerType::get(operand.getType());
+          alloca = cir::AllocaOp::create(rewriter, loc, ptrType,
+                                         operand.getType(), "__ret_operand_tmp",
+                                         rewriter.getI64IntegerAttr(4));
+        }
+
+        // Store the operand value at the original return location.
+        {
+          mlir::OpBuilder::InsertionGuard guard(rewriter);
+          rewriter.setInsertionPoint(exitOp);
+          cir::StoreOp::create(rewriter, loc, operand, alloca,
+                               /*isVolatile=*/false,
+                               /*alignment=*/mlir::IntegerAttr(),
+                               cir::SyncScopeKindAttr(), cir::MemOrderAttr());
+        }
+
+        // Reload the value from the temporary alloca in the destination block.
+        rewriter.setInsertionPointToEnd(destBlock);
+        auto loaded = cir::LoadOp::create(
+            rewriter, loc, alloca, /*isDeref=*/false,
+            /*isVolatile=*/false, /*alignment=*/mlir::IntegerAttr(),
+            cir::SyncScopeKindAttr(), cir::MemOrderAttr());
+        returnValues.push_back(loaded);
+      }
+    }
+  }
+
+  // Create the appropriate terminator for an exit operation in the dispatch
+  // block. For return ops with operands, this handles the dominance issue by
+  // either moving the operand's defining op to the dispatch block (if it's a
+  // trivial use) or by storing to a temporary alloca and loading it.
   mlir::LogicalResult
   createExitTerminator(mlir::Operation *exitOp, mlir::Location loc,
                        mlir::Block *continueBlock,
@@ -748,10 +847,13 @@ public:
           // Return from the cleanup exit. Note, if this is a return inside a
           // nested cleanup scope, the flattening of the outer scope will handle
           // branching through the outer cleanup.
-          if (returnOp.hasOperand())
-            cir::ReturnOp::create(rewriter, loc, returnOp.getOperands());
-          else
+          if (returnOp.hasOperand()) {
+            llvm::SmallVector<mlir::Value, 2> returnValues;
+            getReturnOpOperands(returnOp, exitOp, loc, rewriter, returnValues);
+            cir::ReturnOp::create(rewriter, loc, returnValues);
+          } else {
             cir::ReturnOp::create(rewriter, loc);
+          }
           return mlir::success();
         })
         .Case<cir::GotoOp>([&](auto gotoOp) {
