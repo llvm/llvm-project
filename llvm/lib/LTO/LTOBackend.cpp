@@ -300,6 +300,10 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   if (Conf.Freestanding)
     TLII->disableAllFunctions();
 
+  // Determine whether or not its safe to emit calls to each libfunc. Libfuncs
+  // that might have been present in the current LTO unit, but are not, have
+  // lost their only opportunity to be defined, and calls must not be emitted to
+  // them.
   TargetLibraryInfo TLI(*TLII);
   for (unsigned I = 0, E = static_cast<unsigned>(LibFunc::NumLibFuncs); I != E;
        ++I) {
@@ -311,7 +315,9 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
     if (Val && !Val->isDeclaration())
       continue;
 
-    // LibFuncs not implemented in bitcode can always be referenced.
+    // LibFuncs not implemented in bitcode can always be referenced, since they
+    // can safely be extracted from whatever library they reside in after LTO
+    // without changing the linker symbol table that LTO depends on.
     if (!BitcodeLibFuncs.contains(Name))
       continue;
 
