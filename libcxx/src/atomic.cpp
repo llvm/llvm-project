@@ -193,10 +193,18 @@ static void __platform_wait_on_address(void const* __ptr, void const* __val, opt
   static auto wait_on_address =
       reinterpret_cast<BOOL(WINAPI*)(void*, PVOID, SIZE_T, DWORD)>(win32_get_synch_api_function("WaitOnAddress"));
   if (wait_on_address != nullptr) {
-    wait_on_address(const_cast<void*>(__ptr),
-                    const_cast<void*>(__val),
-                    _Size,
-                    !__timeout_ns.has_value() ? INFINITE : static_cast<DWORD>(*__timeout_ns / 1'000'000));
+    auto timeout_ms = [&]() -> DWORD {
+      if (!__timeout_ns.has_value()) {
+        return INFINITE;
+      }
+      auto ms = *__timeout_ns / 1'000'000;
+      if (ms == 0 && *__timeout_ns > 100'000)
+        // Round up to 1ms if requested between 100us - 1ms
+        return 1;
+
+      return ms > static_cast<uint64_t>(INFINITE) ? INFINITE : static_cast<DWORD>(ms);
+    }();
+    wait_on_address(const_cast<void*>(__ptr), const_cast<void*>(__val), _Size, timeout_ms);
   } else {
     __libcpp_thread_poll_with_backoff(
         [=]() -> bool { return std::memcmp(const_cast<const void*>(__ptr), __val, _Size) != 0; },
