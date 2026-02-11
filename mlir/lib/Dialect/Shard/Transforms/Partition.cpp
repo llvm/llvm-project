@@ -56,9 +56,9 @@ public:
   /// resulting sharding on success, or std::nullopt if the pattern doesn't
   /// match.
   virtual std::optional<std::tuple<TypedValue<ShapedType>, Sharding>>
-  tryApply(ImplicitLocOpBuilder &builder, GridOp grid,
+  tryApply(ImplicitLocOpBuilder &builder, GridOp grid, int64_t tensorDim,
            const Sharding &srcSharding, const Sharding &tgtSharding,
-           ShapedType srcUnshardedShape, TypedValue<ShapedType> srcShard) = 0;
+           ShapedType srcUnshardedType, TypedValue<ShapedType> srcShard) = 0;
 
 protected:
   /// Returns true if either sharding has non-empty static sharded dims offsets.
@@ -114,42 +114,40 @@ class SplitLastAxisPattern : public ReshardingPattern {
 
   // Detect if the resharding is of type e.g.
   // [[0, 1]] -> [[0, 1, 2]].
-  // If detected, returns the corresponding tensor axis grid axis pair.
+  // If detected, returns the corresponding grid axis.
   // Does not detect insertions like
   // [[0, 1]] -> [[0, 2, 1]].
-  static std::optional<std::tuple<int64_t, GridAxis>>
-  detect(const Sharding &srcSharding, const Sharding &tgtSharding) {
-    for (size_t tensorDim = 0; tensorDim < tgtSharding.getSplitAxes().size();
-         ++tensorDim) {
-      auto tgtAxes = tgtSharding.getSplitAxes()[tensorDim].asArrayRef();
-      if (srcSharding.getSplitAxes().size() > tensorDim) {
-        auto srcAxes = srcSharding.getSplitAxes()[tensorDim].asArrayRef();
-        if (srcAxes.size() + 1 != tgtAxes.size())
-          continue;
-        if (!llvm::equal(srcAxes,
-                         llvm::make_range(tgtAxes.begin(), tgtAxes.end() - 1)))
-          continue;
-      } else {
-        if (tgtAxes.size() != 1)
-          continue;
-      }
-      return std::make_tuple(tensorDim, tgtAxes.back());
+  static std::optional<GridAxis> detect(const Sharding &srcSharding,
+                                        const Sharding &tgtSharding,
+                                        int64_t tensorDim) {
+    if (static_cast<size_t>(tensorDim) >= tgtSharding.getSplitAxes().size())
+      return std::nullopt;
+    auto tgtAxes = tgtSharding.getSplitAxes()[tensorDim].asArrayRef();
+    if (srcSharding.getSplitAxes().size() > static_cast<size_t>(tensorDim)) {
+      auto srcAxes = srcSharding.getSplitAxes()[tensorDim].asArrayRef();
+      if (srcAxes.size() + 1 != tgtAxes.size())
+        return std::nullopt;
+      if (!llvm::equal(srcAxes,
+                       llvm::make_range(tgtAxes.begin(), tgtAxes.end() - 1)))
+        return std::nullopt;
+    } else {
+      if (tgtAxes.size() != 1)
+        return std::nullopt;
     }
-    return std::nullopt;
+    return tgtAxes.back();
   }
 
 public:
   std::optional<std::tuple<TypedValue<ShapedType>, Sharding>>
-  tryApply(ImplicitLocOpBuilder &builder, GridOp grid,
+  tryApply(ImplicitLocOpBuilder &builder, GridOp grid, int64_t tensorDim,
            const Sharding &srcSharding, const Sharding &tgtSharding,
-           ShapedType srcUnshardedShape,
+           ShapedType srcUnshardedType,
            TypedValue<ShapedType> srcShard) override {
     if (hasStaticOffsetsOrHalos(srcSharding, tgtSharding))
       return std::nullopt;
-    if (auto detectRes = detect(srcSharding, tgtSharding)) {
-      auto [tensorDim, gridAxis] = detectRes.value();
-      return apply(builder, srcSharding, srcShard, grid, tensorDim, gridAxis);
-    }
+    if (auto gridAxis = detect(srcSharding, tgtSharding, tensorDim))
+      return apply(builder, srcSharding, srcShard, grid, tensorDim,
+                   gridAxis.value());
     return std::nullopt;
   }
 };
@@ -159,41 +157,38 @@ class UnsplitLastAxesPattern : public ReshardingPattern {
   // Detect if the resharding removes trailing split axes along a tensor
   // dimension, e.g.
   // [[0, 1, 2]] -> [[0, 1]], [[0, 1, 2]] -> [0] or [[0, 1, 2]] -> [].
-  // If detected, returns the corresponding (tensor dim, grid axes) pair, where
-  // the "grid axes" are the removed trailing split axes.
-  static std::optional<std::tuple<int64_t, SmallVector<GridAxis>>>
-  detect(const Sharding &srcSharding, const Sharding &tgtSharding) {
+  // If detected, returns the removed trailing split axes (grid axes).
+  static std::optional<SmallVector<GridAxis>>
+  detect(const Sharding &srcSharding, const Sharding &tgtSharding,
+         int64_t tensorDim) {
+    if (static_cast<size_t>(tensorDim) >= srcSharding.getSplitAxes().size())
+      return std::nullopt;
     size_t dimOff = 0;
-    size_t srcSize = srcSharding.getSplitAxes().size();
-    for (size_t tensorDim = 0; tensorDim < srcSize; ++tensorDim) {
-      auto srcSplitAxes = srcSharding.getSplitAxes()[tensorDim].asArrayRef();
-      if (tgtSharding.getSplitAxes().size() > tensorDim) {
-        auto tgtSplitAxes = tgtSharding.getSplitAxes()[tensorDim].asArrayRef();
-        // No match if the target sharding does not have less split axes than
-        // the source sharding along the current tensor dimension.
-        if (srcSplitAxes.size() <= tgtSplitAxes.size())
-          continue;
-        // No match if the split axes of the target sharding are different from
-        // the first split axes of the source sharding.
-        if (!std::equal(tgtSplitAxes.begin(), tgtSplitAxes.end(),
-                        srcSplitAxes.begin()))
-          continue;
-        dimOff = tgtSplitAxes.size();
-      } else {
-        // Here the target dimension is replicated; there is nothing to do if
-        // the source dimension is also replicated.
-        if (srcSplitAxes.size() == 0)
-          continue;
-        dimOff = 0;
-      }
-      // This is a match. Return the current tensor dimension and the trailing
-      // grid axis of the source sharding along this dimension.
-      ArrayRef<GridAxis> trailingAxes = srcSplitAxes.drop_front(dimOff);
-      SmallVector<GridAxis> unsplitAxes(trailingAxes.begin(),
-                                        trailingAxes.end());
-      return std::make_tuple(tensorDim, unsplitAxes);
+    auto srcSplitAxes = srcSharding.getSplitAxes()[tensorDim].asArrayRef();
+    if (tgtSharding.getSplitAxes().size() > static_cast<size_t>(tensorDim)) {
+      auto tgtSplitAxes = tgtSharding.getSplitAxes()[tensorDim].asArrayRef();
+      // No match if the target sharding does not have less split axes than
+      // the source sharding along the current tensor dimension.
+      if (srcSplitAxes.size() <= tgtSplitAxes.size())
+        return std::nullopt;
+      // No match if the split axes of the target sharding are different from
+      // the first split axes of the source sharding.
+      if (!std::equal(tgtSplitAxes.begin(), tgtSplitAxes.end(),
+                      srcSplitAxes.begin()))
+        return std::nullopt;
+      dimOff = tgtSplitAxes.size();
+    } else {
+      // Here the target dimension is replicated; there is nothing to do if
+      // the source dimension is also replicated.
+      if (srcSplitAxes.size() == 0)
+        return std::nullopt;
+      dimOff = 0;
     }
-    return std::nullopt;
+    // This is a match. Return the trailing grid axes of the source sharding
+    // along this dimension.
+    ArrayRef<GridAxis> trailingAxes = srcSplitAxes.drop_front(dimOff);
+    SmallVector<GridAxis> unsplitAxes(trailingAxes.begin(), trailingAxes.end());
+    return unsplitAxes;
   }
 
   // Return the resulting Sharding if the unsplit last axes resharding is
@@ -229,7 +224,7 @@ class UnsplitLastAxesPattern : public ReshardingPattern {
   // This basically performs an all-gather along the unsplit grid axes.
   static std::tuple<TypedValue<ShapedType>, Sharding>
   apply(ImplicitLocOpBuilder &builder, Sharding srcSharding,
-        ShapedType srcUnshardedShape, TypedValue<ShapedType> srcShard,
+        ShapedType srcUnshardedType, TypedValue<ShapedType> srcShard,
         GridOp grid, int64_t splitTensorDim, ArrayRef<GridAxis> unsplitAxes) {
     MLIRContext *ctx = builder.getContext();
     builder.setInsertionPointAfterValue(srcShard);
@@ -244,7 +239,7 @@ class UnsplitLastAxesPattern : public ReshardingPattern {
                               agResultType.getElementType()),
         grid.getSymName(), unsplitAxes, srcShard, APInt(64, splitTensorDim));
     ShapedType tgtType =
-        shardShapedType(srcUnshardedShape, grid, resultSharding);
+        shardShapedType(srcUnshardedType, grid, resultSharding);
     TypedValue<ShapedType> tgtShard =
         tensor::CastOp::create(builder, tgtType, allGatherResult).getResult();
     return {tgtShard, resultSharding};
@@ -252,47 +247,42 @@ class UnsplitLastAxesPattern : public ReshardingPattern {
 
 public:
   std::optional<std::tuple<TypedValue<ShapedType>, Sharding>>
-  tryApply(ImplicitLocOpBuilder &builder, GridOp grid,
+  tryApply(ImplicitLocOpBuilder &builder, GridOp grid, int64_t tensorDim,
            const Sharding &srcSharding, const Sharding &tgtSharding,
-           ShapedType srcUnshardedShape,
+           ShapedType srcUnshardedType,
            TypedValue<ShapedType> srcShard) override {
     if (hasStaticOffsetsOrHalos(srcSharding, tgtSharding))
       return std::nullopt;
-    if (auto detectRes = detect(srcSharding, tgtSharding)) {
-      auto [tensorDim, gridAxes] = detectRes.value();
-      return apply(builder, srcSharding, srcUnshardedShape, srcShard, grid,
-                   tensorDim, gridAxes);
-    }
+    if (auto gridAxes = detect(srcSharding, tgtSharding, tensorDim))
+      return apply(builder, srcSharding, srcUnshardedType, srcShard, grid,
+                   tensorDim, gridAxes.value());
     return std::nullopt;
   }
 };
 
-/// Move the last split axis between tensor dimensions:
-/// e.g. [[0, 1], [2]] -> [[0], [1, 2]].
+/// Move a split axis between tensor dimensions:
+/// e.g. [[0], []] -> [[], [0]].
 class MoveLastSplitAxisPattern : public ReshardingPattern {
-  // Detect if the resharding is of type e.g.
-  // [[0, 1], [2]] -> [[0], [1, 2]].
-  // Only moving the last axis counts.
-  // If detected, returns the corresponding (src_tensor_dim,
-  // tgt_tensor_dim, grid_axis) tuple.
-  static std::optional<std::tuple<int64_t, int64_t, GridAxis>>
-  detect(const Sharding &srcSharding, const Sharding &tgtSharding) {
-    for (size_t srcTensorDim = 0;
-         srcTensorDim < srcSharding.getSplitAxes().size(); ++srcTensorDim) {
-      auto srcAxes = srcSharding.getSplitAxes()[srcTensorDim].asArrayRef();
-      for (size_t tgtTensorDim = 0;
-           tgtTensorDim < tgtSharding.getSplitAxes().size(); ++tgtTensorDim) {
-        if (srcTensorDim == tgtTensorDim)
-          continue;
-        auto tgtAxes = tgtSharding.getSplitAxes()[tgtTensorDim].asArrayRef();
-        if (srcAxes.empty() || tgtAxes.empty() ||
-            srcAxes.back() != tgtAxes.back())
-          continue;
-        if (!llvm::equal(llvm::make_range(srcAxes.begin(), srcAxes.end() - 1),
-                         llvm::make_range(tgtAxes.begin(), tgtAxes.end() - 1)))
-          continue;
-        return std::make_tuple(srcTensorDim, tgtTensorDim, srcAxes.back());
-      }
+  // Detect if the resharding moves a single split axis from one tensor
+  // dimension to another tensor dimension. If detected, returns the
+  // corresponding (tgt_tensor_dim, grid_axis) pair.
+  static std::optional<std::tuple<int64_t, GridAxis>>
+  detect(const Sharding &srcSharding, const Sharding &tgtSharding,
+         int64_t srcTensorDim) {
+    if (static_cast<size_t>(srcTensorDim) >= srcSharding.getSplitAxes().size())
+      return std::nullopt;
+    auto srcAxes = srcSharding.getSplitAxes()[srcTensorDim].asArrayRef();
+    if (srcAxes.size() != 1)
+      return std::nullopt;
+    for (size_t tgtTensorDim = 0;
+         tgtTensorDim < tgtSharding.getSplitAxes().size(); ++tgtTensorDim) {
+      if (static_cast<int64_t>(tgtTensorDim) == srcTensorDim)
+        continue;
+      auto tgtAxes = tgtSharding.getSplitAxes()[tgtTensorDim].asArrayRef();
+      if (tgtAxes.size() != 1 || srcAxes.front() != tgtAxes.front())
+        continue;
+      return std::make_tuple(static_cast<int64_t>(tgtTensorDim),
+                             srcAxes.front());
     }
     return std::nullopt;
   }
@@ -307,7 +297,7 @@ class MoveLastSplitAxisPattern : public ReshardingPattern {
 
     auto srcSplitAxes =
         llvm::to_vector(tgtShardingSplitAxes[srcTensorDim].asArrayRef());
-    assert(!srcSplitAxes.empty());
+    assert(srcSplitAxes.size() == 1);
     auto gridAxis = srcSplitAxes.back();
     srcSplitAxes.pop_back();
     tgtShardingSplitAxes[srcTensorDim] = GridAxesAttr::get(ctx, srcSplitAxes);
@@ -332,7 +322,7 @@ class MoveLastSplitAxisPattern : public ReshardingPattern {
 
   static std::tuple<TypedValue<ShapedType>, Sharding>
   apply(ImplicitLocOpBuilder &builder, GridOp grid, Sharding srcSharding,
-        ShapedType srcUnshardedShape, TypedValue<ShapedType> srcShard,
+        ShapedType srcUnshardedType, TypedValue<ShapedType> srcShard,
         int64_t srcTensorDim, int64_t tgtTensorDim, GridAxis gridAxis) {
     MLIRContext *ctx = builder.getContext();
     builder.setInsertionPointAfterValue(srcShard);
@@ -349,7 +339,7 @@ class MoveLastSplitAxisPattern : public ReshardingPattern {
         grid.getSymName(), SmallVector<GridAxis>({gridAxis}), srcShard,
         APInt(64, tgtTensorDim), APInt(64, srcTensorDim));
     ShapedType tgtShape =
-        shardShapedType(srcUnshardedShape, grid, resultSharding);
+        shardShapedType(srcUnshardedType, grid, resultSharding);
     TypedValue<ShapedType> tgtShard =
         tensor::CastOp::create(builder, tgtShape, allToAllResult).getResult();
     return {tgtShard, resultSharding};
@@ -357,16 +347,16 @@ class MoveLastSplitAxisPattern : public ReshardingPattern {
 
 public:
   std::optional<std::tuple<TypedValue<ShapedType>, Sharding>>
-  tryApply(ImplicitLocOpBuilder &builder, GridOp grid,
+  tryApply(ImplicitLocOpBuilder &builder, GridOp grid, int64_t tensorDim,
            const Sharding &srcSharding, const Sharding &tgtSharding,
-           ShapedType srcUnshardedShape,
+           ShapedType srcUnshardedType,
            TypedValue<ShapedType> srcShard) override {
     if (hasStaticOffsetsOrHalos(srcSharding, tgtSharding))
       return std::nullopt;
-    if (auto detectRes = detect(srcSharding, tgtSharding)) {
-      auto [srcTensorDim, tgtTensorDim, gridAxis] = detectRes.value();
-      return apply(builder, grid, srcSharding, srcUnshardedShape, srcShard,
-                   srcTensorDim, tgtTensorDim, gridAxis);
+    if (auto detectRes = detect(srcSharding, tgtSharding, tensorDim)) {
+      auto [tgtTensorDim, gridAxis] = detectRes.value();
+      return apply(builder, grid, srcSharding, srcUnshardedType, srcShard,
+                   tensorDim, tgtTensorDim, gridAxis);
     }
     return std::nullopt;
   }
@@ -378,10 +368,13 @@ public:
 class UpdateHaloPattern : public ReshardingPattern {
 public:
   std::optional<std::tuple<TypedValue<ShapedType>, Sharding>>
-  tryApply(ImplicitLocOpBuilder &builder, GridOp grid,
+  tryApply(ImplicitLocOpBuilder &builder, GridOp grid, int64_t tensorDim,
            const Sharding &srcSharding, const Sharding &tgtSharding,
-           ShapedType srcUnshardedShape,
+           ShapedType srcUnshardedType,
            TypedValue<ShapedType> srcShard) override {
+    // UpdateHaloPattern handles all dimensions at once; only trigger on dim 0.
+    if (tensorDim != 0)
+      return std::nullopt;
     // Currently handles only cases where halo sizes differ but everything else
     // stays the same (from source to destination sharding).
     if (!srcSharding.equalSplitAxes(tgtSharding) ||
@@ -450,19 +443,20 @@ public:
 static TypedValue<ShapedType> reshard(ImplicitLocOpBuilder &builder,
                                       GridOp grid, const Sharding &srcSharding,
                                       const Sharding &tgtSharding,
-                                      TypedValue<ShapedType> srcUnshardedValue,
-                                      TypedValue<ShapedType> srcShard) {
+                                      TypedValue<ShapedType> unshardedSrc,
+                                      TypedValue<ShapedType> shardedSrc) {
   // If source and destination sharding are the same, no need to do anything.
   if (srcSharding == tgtSharding ||
       (isFullReplication(srcSharding) && isFullReplication(tgtSharding))) {
-    return srcShard;
+    return shardedSrc;
   }
 
-  assert(srcShard.getType() ==
-         shardShapedType(srcUnshardedValue.getType(), grid, srcSharding));
+  assert(shardedSrc.getType() ==
+         shardShapedType(unshardedSrc.getType(), grid, srcSharding));
   [[maybe_unused]] ShapedType tgtShardType =
-      shardShapedType(srcUnshardedValue.getType(), grid, tgtSharding);
-  assert(srcShard.getType().getRank() == tgtShardType.getRank());
+      shardShapedType(unshardedSrc.getType(), grid, tgtSharding);
+  assert(shardedSrc.getType().getRank() == tgtShardType.getRank());
+  assert(unshardedSrc.getType().getRank() == tgtShardType.getRank());
 
   // Each pattern's tryApply checks its own applicability preconditions.
   std::array<std::unique_ptr<ReshardingPattern>, 4> patterns = {
@@ -470,41 +464,50 @@ static TypedValue<ShapedType> reshard(ImplicitLocOpBuilder &builder,
       std::make_unique<MoveLastSplitAxisPattern>(),
       std::make_unique<SplitLastAxisPattern>(),
       std::make_unique<UnsplitLastAxesPattern>()};
-  TypedValue<ShapedType> tgtShard;
-  Sharding actualTgtSharding;
-  for (auto &pattern : patterns) {
-    if (auto tryRes =
-            pattern->tryApply(builder, grid, srcSharding, tgtSharding,
-                              srcUnshardedValue.getType(), srcShard)) {
-      std::tie(tgtShard, actualTgtSharding) = tryRes.value();
-      break;
+  TypedValue<ShapedType> currentShard = shardedSrc;
+  Sharding currentSharding = srcSharding;
+  for (int64_t dim = 0;
+       dim < tgtShardType.getRank() && currentSharding != tgtSharding; ++dim) {
+    for (auto &pattern : patterns) {
+      if (auto tryRes = pattern->tryApply(builder, grid, dim, currentSharding,
+                                          tgtSharding, unshardedSrc.getType(),
+                                          currentShard)) {
+        std::tie(currentShard, currentSharding) = tryRes.value();
+        break;
+      }
     }
   }
 
-  assert(tgtShard && "Did not find any pattern to apply.");
-  assert(actualTgtSharding == tgtSharding);
-  assert(tgtShard.getType() == tgtShardType);
-  return tgtShard;
+  if (currentSharding != tgtSharding ||
+      currentShard.getType() != tgtShardType) {
+    builder.emitError()
+        << "Failed to reshard; probably hitting an unknown resharding pattern:"
+        << " got " << currentSharding << " expected " << tgtSharding
+        << " got type " << currentShard.getType() << " expected "
+        << tgtShardType;
+    return TypedValue<ShapedType>();
+  }
+  return currentShard;
 }
 
 TypedValue<ShapedType> reshard(OpBuilder &builder, GridOp grid,
                                ShardOp srcShardOp, ShardOp tgtShardOp,
-                               TypedValue<ShapedType> srcShardValue) {
+                               TypedValue<ShapedType> shardedSrc) {
   assert(srcShardOp.getResult() == tgtShardOp.getSrc());
   auto srcSharding = srcShardOp.getSharding();
   auto tgtSharding = tgtShardOp.getSharding();
   ImplicitLocOpBuilder implicitLocOpBuilder(tgtShardOp->getLoc(), builder);
   return reshard(implicitLocOpBuilder, grid, srcSharding, tgtSharding,
-                 srcShardOp.getSrc(), srcShardValue);
+                 srcShardOp.getSrc(), shardedSrc);
 }
 
 TypedValue<ShapedType> reshard(OpBuilder &builder, ShardOp srcShardOp,
                                ShardOp tgtShardOp,
-                               TypedValue<ShapedType> srcShardValue,
+                               TypedValue<ShapedType> shardedSrc,
                                SymbolTableCollection &symbolTableCollection) {
   GridOp srcGrid = getGrid(srcShardOp, symbolTableCollection);
   assert(srcGrid && srcGrid == getGrid(tgtShardOp, symbolTableCollection));
-  return reshard(builder, srcGrid, srcShardOp, tgtShardOp, srcShardValue);
+  return reshard(builder, srcGrid, srcShardOp, tgtShardOp, shardedSrc);
 }
 
 void reshardingRegisterDependentDialects(DialectRegistry &registry) {
@@ -638,10 +641,15 @@ partitionOperation(ShardOp shardOp, IRMapping &partitionMap,
     tgtPartitionValue = partitionMap.lookup(shardOp.getSrc());
   } else {
     // Insert resharding.
-    TypedValue<ShapedType> srcPartitionValue =
+    TypedValue<ShapedType> shardedSrc =
         cast<TypedValue<ShapedType>>(partitionMap.lookup(srcShardOp));
-    tgtPartitionValue = reshard(builder, srcShardOp, shardOp, srcPartitionValue,
+    tgtPartitionValue = reshard(builder, srcShardOp, shardOp, shardedSrc,
                                 symbolTableCollection);
+    if (!tgtPartitionValue) {
+      return shardOp.emitError()
+             << "Failed to reshard from " << srcShardOp.getSharding() << " to "
+             << shardOp.getSharding();
+    }
   }
 
   assert(!partitionMap.contains(shardOp.getResult()));
