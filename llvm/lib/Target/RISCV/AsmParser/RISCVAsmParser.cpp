@@ -2411,6 +2411,7 @@ ParseStatus RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
 
 bool RISCVAsmParser::generateVTypeError(SMLoc ErrorLoc) {
   if (STI->hasFeature(RISCV::FeatureStdExtZvfbfa) ||
+      STI->hasFeature(RISCV::FeatureStdExtZvfofp8min) ||
       STI->hasFeature(RISCV::FeatureVendorXSfvfbfexp16e))
     return Error(
         ErrorLoc,
