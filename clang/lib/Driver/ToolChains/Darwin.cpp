@@ -1239,6 +1239,11 @@ void DarwinClang::addClangWarningOptions(ArgStringList &CC1Args) const {
   CC1Args.push_back("-Werror=undef-prefix");
 
   // For modern targets, promote certain warnings to errors.
+  // Guard against uninitialized target (e.g. when Darwin is used as host
+  // toolchain for HIP/CUDA offloading where the target platform may not
+  // have been fully set up).
+  if (!isTargetInitialized())
+    return;
   if (isTargetWatchOSBased() || getTriple().isArch64Bit()) {
     // Always enable -Wdeprecated-objc-isa-usage and promote it
     // to an error.
@@ -3874,6 +3879,10 @@ void Darwin::addStartObjectFileArgs(const ArgList &Args,
 }
 
 void Darwin::CheckObjCARC() const {
+  // Guard against uninitialized target (e.g. when Darwin is used as host
+  // toolchain for HIP/CUDA offloading).
+  if (!isTargetInitialized())
+    return;
   if (isTargetIOSBased() || isTargetWatchOSBased() || isTargetXROS() ||
       (isTargetMacOSBased() && !isMacosxVersionLT(10, 6)))
     return;
@@ -3893,6 +3902,10 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
   Res |= SanitizerKind::FuzzerNoLink;
   Res |= SanitizerKind::ObjCCast;
 
+  // Guard against uninitialized target (e.g. when Darwin is used as host
+  // toolchain for HIP/CUDA offloading). Return base sanitizers only.
+  if (!isTargetInitialized())
+    return Res;
   // Prior to 10.9, macOS shipped a version of the C++ standard library without
   // C++11 support. The same is true of iOS prior to version 5. These OS'es are
   // incompatible with -fsanitize=vptr.

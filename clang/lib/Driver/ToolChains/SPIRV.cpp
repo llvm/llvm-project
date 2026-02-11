@@ -6,16 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 #include "SPIRV.h"
+#include "HIPUtility.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Options/Options.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
 using namespace clang::driver::tools;
 using namespace llvm::opt;
+using namespace clang;
 
 void SPIRV::constructTranslateCommand(Compilation &C, const Tool &T,
                                       const JobAction &JA,
@@ -32,15 +36,20 @@ void SPIRV::constructTranslateCommand(Compilation &C, const Tool &T,
 
   CmdArgs.append({"-o", Output.getFilename()});
 
-  // Try to find "llvm-spirv-<LLVM_VERSION_MAJOR>". Otherwise, fall back to
-  // plain "llvm-spirv".
-  using namespace std::string_literals;
-  auto VersionedTool = "llvm-spirv-"s + std::to_string(LLVM_VERSION_MAJOR);
-  std::string ExeCand = T.getToolChain().GetProgramPath(VersionedTool.c_str());
-  if (!llvm::sys::fs::can_execute(ExeCand))
-    ExeCand = T.getToolChain().GetProgramPath("llvm-spirv");
+  // Derive llvm-spirv path from clang path to ensure we use the same LLVM version.
+  // Try versioned tool first, then fall back to unversioned.
+  std::string TranslateCmdClangPath = C.getDriver().getClangProgramPath();
+  SmallString<128> TranslateCmdPath(TranslateCmdClangPath);
+  llvm::sys::path::remove_filename(TranslateCmdPath);
+  SmallString<128> TranslateCmdVersionedPath(TranslateCmdPath);
+  llvm::sys::path::append(TranslateCmdVersionedPath, "llvm-spirv-" + std::to_string(LLVM_VERSION_MAJOR));
+  if (llvm::sys::fs::can_execute(TranslateCmdVersionedPath)) {
+    llvm::sys::path::append(TranslateCmdPath, "llvm-spirv-" + std::to_string(LLVM_VERSION_MAJOR));
+  } else {
+    llvm::sys::path::append(TranslateCmdPath, "llvm-spirv");
+  }
 
-  const char *Exec = C.getArgs().MakeArgString(ExeCand);
+  const char *Exec = C.getArgs().MakeArgString(TranslateCmdPath);
   C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(),
                                          Exec, CmdArgs, Input, Output));
 }
@@ -144,7 +153,25 @@ void SPIRV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     constructLLVMLinkCommand(C, *this, JA, Output, Inputs, Args);
     return;
   }
+
   const ToolChain &ToolChain = getToolChain();
+  auto Triple = ToolChain.getTriple();
+
+  // For chipStar targets using the in-tree SPIR-V backend, the backend
+  // compile step already produced a valid SPIR-V binary. When there is a
+  // single input, just copy it to the output (no spirv-link needed).
+  if (Triple.getOS() == llvm::Triple::ChipStar && Inputs.size() == 1) {
+    ArgStringList CpArgs;
+    CpArgs.push_back(Inputs[0].getFilename());
+    CpArgs.push_back(Output.getFilename());
+    const char *CpPath = Args.MakeArgString("/usr/bin/cp");
+    C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
+                                           CpPath, CpArgs, Inputs, Output));
+    return;
+  }
+
+  // Default flow for non-chipstar targets
+  // spirv-link is from SPIRV-Tools (Khronos), not LLVM, so use PATH lookup
   std::string Linker = ToolChain.GetProgramPath(getShortName());
   ArgStringList CmdArgs;
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
@@ -171,7 +198,8 @@ SPIRVToolChain::SPIRVToolChain(const Driver &D, const llvm::Triple &Triple,
     : ToolChain(D, Triple, Args) {
   // TODO: Revisit need/use of --sycl-link option once SYCL toolchain is
   // available and SYCL linking support is moved there.
-  NativeLLVMSupport = Args.hasArg(options::OPT_sycl_link);
+  NativeLLVMSupport = Args.hasArg(options::OPT_sycl_link) ||
+                      Triple.getOS() == llvm::Triple::ChipStar;
 
   // Lookup binaries into the driver directory.
   getProgramPaths().push_back(getDriver().Dir);

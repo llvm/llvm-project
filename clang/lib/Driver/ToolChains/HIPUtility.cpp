@@ -430,9 +430,12 @@ void HIP::constructGenerateObjFileFromHIPFatBinary(
   }
   if (FoundPrimaryHipFatbinSymbol) {
     // Define the first fatbin symbol
-    if (HostTriple.isWindowsMSVCEnvironment())
+    if (HostTriple.isWindowsMSVCEnvironment()) {
       ObjStream << "  .section .hip_fatbin,\"dw\"\n";
-    else {
+    } else if (HostTriple.isMacOSX()) {
+      // Mach-O requires "segment,section" format
+      ObjStream << "  .section __HIP,__hip_fatbin\n";
+    } else {
       ObjStream << "  .protected " << PrimaryHipFatbinSymbol << "\n";
       ObjStream << "  .type " << PrimaryHipFatbinSymbol << ",@object\n";
       ObjStream << "  .section .hip_fatbin,\"a\",@progbits\n";

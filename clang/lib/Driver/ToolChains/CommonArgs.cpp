@@ -3550,7 +3550,12 @@ void tools::constructLLVMLinkCommand(Compilation &C, const Tool &T,
   LlvmLinkArgs.append(LinkerInputs);
 
   const ToolChain &TC = T.getToolChain();
-  const char *LlvmLink = Args.MakeArgString(TC.GetProgramPath("llvm-link"));
+  // Derive llvm-link path from clang path to ensure we use the same LLVM version
+  std::string ClangPath = C.getDriver().getClangProgramPath();
+  SmallString<128> LlvmLinkPath(ClangPath);
+  llvm::sys::path::remove_filename(LlvmLinkPath);
+  llvm::sys::path::append(LlvmLinkPath, "llvm-link");
+  const char *LlvmLink = Args.MakeArgString(LlvmLinkPath);
   C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(),
                                          LlvmLink, LlvmLinkArgs, JobInputs,
                                          Output));

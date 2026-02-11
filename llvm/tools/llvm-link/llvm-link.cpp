@@ -166,6 +166,7 @@ static std::unique_ptr<Module> loadArFile(const char *Argv0,
 
   std::unique_ptr<object::Archive> Archive = std::move(ArchiveOrError.get());
 
+  bool FirstModule = true;
   Linker L(*Result);
   Error Err = Error::success();
   for (const object::Archive::Child &C : Archive->children(Err)) {
@@ -216,6 +217,17 @@ static std::unique_ptr<Module> loadArFile(const char *Argv0,
                          << "'\n";
       return nullptr;
     }
+
+    // Inherit data layout and target triple from the first module in the
+    // archive to avoid warnings about linking modules with different layouts.
+    if (FirstModule) {
+      FirstModule = false;
+      if (!M->getDataLayoutStr().empty())
+        Result->setDataLayout(M->getDataLayout());
+      if (!M->getTargetTriple().empty())
+        Result->setTargetTriple(M->getTargetTriple());
+    }
+
     if (Verbose)
       errs() << "Linking member '" << ChildName << "' of archive library.\n";
     if (L.linkInModule(std::move(M)))

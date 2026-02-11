@@ -16,6 +16,9 @@ def linker_path_EQ : Joined<["--"], "linker-path=">,
 def cuda_path_EQ : Joined<["--"], "cuda-path=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<dir>">,
   HelpText<"Set the system CUDA path">;
+def hip_path_EQ : Joined<["--"], "hip-path=">,
+  Flags<[WrapperOnlyOption]>, MetaVarName<"<dir>">,
+  HelpText<"Set the HIP installation path">;
 def host_triple_EQ : Joined<["--"], "host-triple=">,
                      Flags<[WrapperOnlyOption]>,
                      MetaVarName<"<triple>">,

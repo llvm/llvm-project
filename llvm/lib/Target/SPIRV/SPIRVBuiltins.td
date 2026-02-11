@@ -628,6 +628,16 @@ defm : DemangledNativeBuiltin<"atomic_fetch_sub_explicit", OpenCL_std, Atomic, 3
 defm : DemangledNativeBuiltin<"atomic_fetch_or_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicOr>;
 defm : DemangledNativeBuiltin<"atomic_fetch_xor_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicXor>;
 defm : DemangledNativeBuiltin<"atomic_fetch_and_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicAnd>;
+// atomic_fetch_min/max: signed vs unsigned determined by argument type prefix.
+// The lookup adds "s_" for signed (int, long) and "u_" for unsigned (uint, ulong).
+defm : DemangledNativeBuiltin<"s_atomic_fetch_min", OpenCL_std, Atomic, 2, 4, OpAtomicSMin>;
+defm : DemangledNativeBuiltin<"u_atomic_fetch_min", OpenCL_std, Atomic, 2, 4, OpAtomicUMin>;
+defm : DemangledNativeBuiltin<"s_atomic_fetch_max", OpenCL_std, Atomic, 2, 4, OpAtomicSMax>;
+defm : DemangledNativeBuiltin<"u_atomic_fetch_max", OpenCL_std, Atomic, 2, 4, OpAtomicUMax>;
+defm : DemangledNativeBuiltin<"s_atomic_fetch_min_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicSMin>;
+defm : DemangledNativeBuiltin<"u_atomic_fetch_min_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicUMin>;
+defm : DemangledNativeBuiltin<"s_atomic_fetch_max_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicSMax>;
+defm : DemangledNativeBuiltin<"u_atomic_fetch_max_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicUMax>;
 defm : DemangledNativeBuiltin<"atomic_flag_test_and_set", OpenCL_std, Atomic, 1, 1, OpAtomicFlagTestAndSet>;
 defm : DemangledNativeBuiltin<"__spirv_AtomicFlagTestAndSet", OpenCL_std, Atomic, 3, 3, OpAtomicFlagTestAndSet>;
 defm : DemangledNativeBuiltin<"atomic_flag_test_and_set_explicit", OpenCL_std, Atomic, 2, 3, OpAtomicFlagTestAndSet>;

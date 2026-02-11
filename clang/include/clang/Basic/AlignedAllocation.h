@@ -24,7 +24,9 @@ namespace clang {
 inline llvm::VersionTuple alignedAllocMinVersion(llvm::Triple::OSType OS) {
   switch (OS) {
   default:
-    break;
+    // For unknown/unsupported OS types (e.g. SPIRV, CUDA device targets),
+    // return empty version tuple indicating aligned alloc is always available.
+    return llvm::VersionTuple();
   case llvm::Triple::Darwin:
   case llvm::Triple::MacOSX: // Earliest supporting version is 10.13.
     return llvm::VersionTuple(10U, 13U);
@@ -36,8 +38,6 @@ inline llvm::VersionTuple alignedAllocMinVersion(llvm::Triple::OSType OS) {
   case llvm::Triple::ZOS:
     return llvm::VersionTuple(); // All z/OS versions have no support.
   }
-
-  llvm_unreachable("Unexpected OS");
 }
 
 } // end namespace clang
