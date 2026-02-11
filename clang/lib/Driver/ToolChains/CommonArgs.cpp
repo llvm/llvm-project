@@ -3081,14 +3081,9 @@ void tools::addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
     if (!TT.isAMDGPU() || TT.getEnvironment() != llvm::Triple::LLVM)
       return;
 
-    if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
-                            true))
-      return;
-
-    if (!DriverArgs.hasFlag(options::OPT_stdlib, options::OPT_nostdlib, true))
-      return;
-
-    if (DriverArgs.hasArg(options::OPT_nodefaultlibs))
+    // TODO: Should this accept following -stdlib to override?
+    if (DriverArgs.hasArg(options::OPT_no_offloadlib,
+                          options::OPT_nodefaultlibs, options::OPT_nostdlib))
       return;
   }
 

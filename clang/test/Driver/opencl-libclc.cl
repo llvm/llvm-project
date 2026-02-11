@@ -42,13 +42,3 @@
 // RUN:   -resource-dir %S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:   %s 2>&1 | FileCheck %s --check-prefix=AMDGPU-LLVM-ENV-NO-OFFLOAD-LIB
 // AMDGPU-LLVM-ENV-NO-OFFLOAD-LIB-NOT: libclc.bc
-
-// Check trailing -stdlib overrides -nostdlib
-// RUN: %clang -### -target amdgcn-amd-amdhsa-llvm -nostdlib -stdlib \
-// RUN:   -resource-dir %S/Inputs/resource_dir_with_per_target_subdir \
-// RUN:   %s 2>&1 | FileCheck %s --check-prefix=AMDGPU-LLVM-ENV
-
-// -nodefaultlibs wins over -stdlib?
-// RUN: %clang -### -target amdgcn-amd-amdhsa-llvm -nodefaultlibs -stdlib \
-// RUN:   -resource-dir %S/Inputs/resource_dir_with_per_target_subdir \
-// RUN:   %s 2>&1 | FileCheck %s --check-prefix=AMDGPU-LLVM-ENV-NO-OFFLOAD-LIB
