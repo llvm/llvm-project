@@ -382,6 +382,10 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .unsupportedIf(LegalityPredicates::any(
           all(typeIs(0, p9), typeInSet(1, allPtrs), typeIsNot(1, p9)),
           all(typeInSet(0, allPtrs), typeIsNot(0, p9), typeIs(1, p9))))
+      .legalIf([IsExtendedInts](const LegalityQuery &Query) {
+        const LLT Ty = Query.Types[1];
+        return IsExtendedInts && Ty.isValid() && !Ty.isPointerOrPointerVector();
+      })
       .customIf(all(typeInSet(0, allBoolScalarsAndVectors),
                     typeInSet(1, allPtrsScalarsAndVectors)));
 
@@ -434,10 +438,12 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   // tighten these requirements. Many of these math functions are only legal on
   // specific bitwidths, so they are not selectable for
   // allFloatScalarsAndVectors.
+  // clang-format off
   getActionDefinitionsBuilder({G_STRICT_FSQRT,
                                G_FPOW,
                                G_FEXP,
                                G_FMODF,
+                               G_FSINCOS,
                                G_FEXP2,
                                G_FLOG,
                                G_FLOG2,
@@ -466,6 +472,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                G_FMAXIMUM,
                                G_INTRINSIC_ROUNDEVEN})
       .legalFor(allFloatScalarsAndVectors);
+  // clang-format on
 
   getActionDefinitionsBuilder(G_FCOPYSIGN)
       .legalForCartesianProduct(allFloatScalarsAndVectors,

@@ -459,7 +459,7 @@ define <vscale x 2 x i8> @splice_nxv2i8_idx(<vscale x 2 x i8> %a, <vscale x 2 x 
 }
 
 ; Verify splitvec type legalisation works as expected.
-define <vscale x 8 x i32> @splice_nxv8i32_idx(<vscale x 8 x i32> %a, <vscale x 8 x i32> %b) #0 {
+define <vscale x 8 x i32> @splice_nxv8i32_idx(<vscale x 8 x i32> %a, <vscale x 8 x i32> %b) vscale_range(1, 16) #0 {
 ; CHECK-LABEL: splice_nxv8i32_idx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
@@ -485,26 +485,22 @@ define <vscale x 16 x float> @splice_nxv16f32_16(<vscale x 16 x float> %a, <vsca
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-8
-; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    mov w9, #16 // =0x10
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    sub x8, x8, #1
 ; CHECK-NEXT:    str z3, [sp, #3, mul vl]
-; CHECK-NEXT:    cmp x8, #16
+; CHECK-NEXT:    mov x8, #16 // =0x10
 ; CHECK-NEXT:    str z2, [sp, #2, mul vl]
-; CHECK-NEXT:    csel x8, x8, x9, lo
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    str z1, [sp, #1, mul vl]
-; CHECK-NEXT:    add x10, x9, x8, lsl #2
 ; CHECK-NEXT:    str z0, [sp]
 ; CHECK-NEXT:    str z7, [sp, #7, mul vl]
 ; CHECK-NEXT:    str z4, [sp, #4, mul vl]
 ; CHECK-NEXT:    str z5, [sp, #5, mul vl]
 ; CHECK-NEXT:    str z6, [sp, #6, mul vl]
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x9, x8, lsl #2]
-; CHECK-NEXT:    ldr z1, [x10, #1, mul vl]
-; CHECK-NEXT:    ldr z2, [x10, #2, mul vl]
-; CHECK-NEXT:    ldr z3, [x10, #3, mul vl]
+; CHECK-NEXT:    add x8, x9, #64
+; CHECK-NEXT:    ldr z1, [x8, #1, mul vl]
+; CHECK-NEXT:    ldr z2, [x8, #2, mul vl]
+; CHECK-NEXT:    ldr z3, [x8, #3, mul vl]
 ; CHECK-NEXT:    addvl sp, sp, #8
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -1057,7 +1053,7 @@ define <vscale x 2 x i8> @splice_nxv2i8(<vscale x 2 x i8> %a, <vscale x 2 x i8> 
 }
 
 ; Verify splitvec type legalisation works as expected.
-define <vscale x 8 x i32> @splice_nxv8i32(<vscale x 8 x i32> %a, <vscale x 8 x i32> %b) #0 {
+define <vscale x 8 x i32> @splice_nxv8i32(<vscale x 8 x i32> %a, <vscale x 8 x i32> %b) vscale_range(1, 16) #0 {
 ; CHECK-LABEL: splice_nxv8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
@@ -1088,21 +1084,20 @@ define <vscale x 16 x float> @splice_nxv16f32_neg17(<vscale x 16 x float> %a, <v
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-8
 ; CHECK-NEXT:    rdvl x8, #4
-; CHECK-NEXT:    mov w9, #68 // =0x44
-; CHECK-NEXT:    mov x10, sp
-; CHECK-NEXT:    cmp x8, #68
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    str z3, [sp, #3, mul vl]
-; CHECK-NEXT:    csel x9, x8, x9, lo
-; CHECK-NEXT:    add x8, x10, x8
+; CHECK-NEXT:    add x8, x9, x8
+; CHECK-NEXT:    mov x9, #-17 // =0xffffffffffffffef
 ; CHECK-NEXT:    str z2, [sp, #2, mul vl]
 ; CHECK-NEXT:    str z1, [sp, #1, mul vl]
-; CHECK-NEXT:    sub x8, x8, x9
 ; CHECK-NEXT:    str z0, [sp]
 ; CHECK-NEXT:    str z7, [sp, #7, mul vl]
 ; CHECK-NEXT:    str z4, [sp, #4, mul vl]
 ; CHECK-NEXT:    str z5, [sp, #5, mul vl]
 ; CHECK-NEXT:    str z6, [sp, #6, mul vl]
-; CHECK-NEXT:    ldr z0, [x8]
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8, x9, lsl #2]
+; CHECK-NEXT:    sub x8, x8, #68
 ; CHECK-NEXT:    ldr z1, [x8, #1, mul vl]
 ; CHECK-NEXT:    ldr z2, [x8, #2, mul vl]
 ; CHECK-NEXT:    ldr z3, [x8, #3, mul vl]
@@ -1111,6 +1106,51 @@ define <vscale x 16 x float> @splice_nxv16f32_neg17(<vscale x 16 x float> %a, <v
 ; CHECK-NEXT:    ret
   %res = call <vscale x 16 x float> @llvm.vector.splice.nxv16f32(<vscale x 16 x float> %a, <vscale x 16 x float> %b, i32 -17)
   ret <vscale x 16 x float> %res
+}
+
+define <vscale x 4 x i32> @splice_left_nxv4i32_variable_offset(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, i32 zeroext %offset) #0 {
+; CHECK-LABEL: splice_left_nxv4i32_variable_offset:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    ubfiz x8, x0, #2, #32
+; CHECK-NEXT:    rdvl x9, #1
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    str z0, [sp]
+; CHECK-NEXT:    cmp x8, x9
+; CHECK-NEXT:    str z1, [sp, #1, mul vl]
+; CHECK-NEXT:    csel x8, x8, x9, lo
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x9, x8]
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x i32> @llvm.vector.splice.left(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, i32 %offset)
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 4 x i32> @splice_right_nxv4i32_variable_offset(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, i32 zeroext %offset) #0 {
+; CHECK-LABEL: splice_right_nxv4i32_variable_offset:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    ubfiz x8, x0, #2, #32
+; CHECK-NEXT:    rdvl x9, #1
+; CHECK-NEXT:    mov x10, sp
+; CHECK-NEXT:    str z0, [sp]
+; CHECK-NEXT:    cmp x8, x9
+; CHECK-NEXT:    str z1, [sp, #1, mul vl]
+; CHECK-NEXT:    csel x8, x8, x9, lo
+; CHECK-NEXT:    add x9, x10, x9
+; CHECK-NEXT:    sub x8, x9, x8
+; CHECK-NEXT:    ldr z0, [x8]
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x i32> @llvm.vector.splice.right(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, i32 %offset)
+  ret <vscale x 4 x i32> %res
 }
 
 declare <vscale x 2 x i1> @llvm.vector.splice.nxv2i1(<vscale x 2 x i1>, <vscale x 2 x i1>, i32)

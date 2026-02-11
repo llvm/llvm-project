@@ -12,6 +12,8 @@
 #include <optional>
 #include <regex>
 #include <string>
+#include <string_view>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -20,10 +22,7 @@
 #include "mlir/Bindings/Python/NanobindUtils.h"
 #include "mlir/CAPI/Support.h"
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Regex.h"
 
 namespace mlir {
@@ -60,7 +59,7 @@ public:
   /// Note that this returns void because it is expected that the module
   /// contains calls to decorators and helpers that register the salient
   /// entities. Returns true if dialect is successfully loaded.
-  bool loadDialectModule(llvm::StringRef dialectNamespace);
+  bool loadDialectModule(std::string_view dialectNamespace);
 
   /// Adds a user-friendly Attribute builder.
   /// Raises an exception if the mapping already exists and replace == false.
@@ -94,6 +93,12 @@ public:
   void registerOperationImpl(const std::string &operationName,
                              nanobind::object pyClass, bool replace = false);
 
+  /// Adds an operation adaptor class.
+  /// Raises an exception if the mapping already exists and replace == false.
+  /// This is intended to be called by implementation code.
+  void registerOpAdaptorImpl(const std::string &operationName,
+                             nanobind::object pyClass, bool replace = false);
+
   /// Returns the custom Attribute builder for Attribute kind.
   std::optional<nanobind::callable>
   lookupAttributeBuilder(const std::string &attributeKind);
@@ -115,7 +120,13 @@ public:
   /// name. Note that this may trigger a load of the dialect, which can
   /// arbitrarily re-enter.
   std::optional<nanobind::object>
-  lookupOperationClass(llvm::StringRef operationName);
+  lookupOperationClass(std::string_view operationName);
+
+  /// Looks up a registered operation adaptor class by operation
+  /// name. Note that this may trigger a load of the dialect, which can
+  /// arbitrarily re-enter.
+  std::optional<nanobind::object>
+  lookupOpAdaptorClass(std::string_view operationName);
 
   class MLIR_PYTHON_API_EXPORTED TracebackLoc {
   public:
@@ -131,7 +142,7 @@ public:
 
     void registerTracebackFileExclusion(const std::string &file);
 
-    bool isUserTracebackFilename(llvm::StringRef file);
+    bool isUserTracebackFilename(std::string_view file);
 
     static constexpr size_t kMaxFrames = 512;
 
@@ -145,7 +156,7 @@ public:
     bool rebuildUserTracebackIncludeRegex = false;
     std::regex userTracebackExcludeRegex;
     bool rebuildUserTracebackExcludeRegex = false;
-    llvm::StringMap<bool> isUserTracebackFilenameCache;
+    std::unordered_map<std::string, bool> isUserTracebackFilenameCache;
   };
 
   TracebackLoc &getTracebackLoc() { return tracebackLoc; }
@@ -181,18 +192,24 @@ private:
   /// Module name prefixes to search under for dialect implementation modules.
   std::vector<std::string> dialectSearchPrefixes;
   /// Map of dialect namespace to external dialect class object.
-  llvm::StringMap<nanobind::object> dialectClassMap;
+  std::unordered_map<std::string, nanobind::object> dialectClassMap;
   /// Map of full operation name to external operation class object.
-  llvm::StringMap<nanobind::object> operationClassMap;
+  std::unordered_map<std::string, nanobind::object> operationClassMap;
+  /// Map of full operation name to external operation adaptor class object.
+  std::unordered_map<std::string, nanobind::object> opAdaptorClassMap;
   /// Map of attribute ODS name to custom builder.
-  llvm::StringMap<nanobind::callable> attributeBuilderMap;
+  std::unordered_map<std::string, nanobind::callable> attributeBuilderMap;
   /// Map of MlirTypeID to custom type caster.
-  llvm::DenseMap<MlirTypeID, nanobind::callable> typeCasterMap;
+  std::unordered_map<MlirTypeID, nanobind::callable, MlirTypeIDHash,
+                     MlirTypeIDEqual>
+      typeCasterMap;
   /// Map of MlirTypeID to custom value caster.
-  llvm::DenseMap<MlirTypeID, nanobind::callable> valueCasterMap;
+  std::unordered_map<MlirTypeID, nanobind::callable, MlirTypeIDHash,
+                     MlirTypeIDEqual>
+      valueCasterMap;
   /// Set of dialect namespaces that we have attempted to import implementation
   /// modules for.
-  llvm::StringSet<> loadedDialectModules;
+  std::unordered_set<std::string> loadedDialectModules;
 
   TracebackLoc tracebackLoc;
   TypeIDAllocator typeIDAllocator;

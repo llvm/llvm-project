@@ -143,6 +143,30 @@ def SDT_PPCBinaryArithWithFlagsInOut : SDTypeProfile<2, 3, [
   SDTCisVT<1, i32>,
 ]>;
 
+def SDT_PPCBcdShift : SDTypeProfile<1, 3, [ SDTCisVT<0, v16i8>,
+  SDTCisVT<1, v4i32>, SDTCisVT<2, v16i8>, SDTCisInt<3>
+]>;
+
+def SDT_PPCBcdShiftRound : SDTypeProfile<1, 3, [ SDTCisVT<0, v16i8>,
+  SDTCisVT<1, v4i32>, SDTCisVT<2, v16i8>, SDTCisInt<3>
+]>;
+
+def SDT_PPCBcdTrunc : SDTypeProfile<1, 3, [ SDTCisVT<0, v16i8>,
+  SDTCisVT<1, v4i32>, SDTCisVT<2, v16i8>, SDTCisInt<3>
+]>;
+
+def SDT_PPCBcdUTrunc : SDTypeProfile<1, 2, [ SDTCisVT<0, v16i8>,
+  SDTCisVT<1, v4i32>, SDTCisVT<2, v16i8>
+]>;
+
+def SDT_PPCBcdUShift : SDTypeProfile<1, 2, [ SDTCisVT<0, v16i8>,
+  SDTCisVT<1, v4i32>, SDTCisVT<2, v16i8>
+]>;
+
+def SDT_PPCstat : SDTypeProfile<0, 3, [
+  SDTCisInt<0>, SDTCisPtrTy<1>, SDTCisVT<2, i32>
+]>;
+
 //===----------------------------------------------------------------------===//
 // PowerPC specific DAG Nodes.
 //
@@ -678,6 +702,14 @@ def PPCsubc : SDNode<"PPCISD::SUBC", SDT_PPCBinaryArithWithFlagsOut,
                      []>;
 def PPCsube : SDNode<"PPCISD::SUBE", SDT_PPCBinaryArithWithFlagsInOut,
                      []>;
+def PPCbcds      : SDNode<"PPCISD::BCDSHIFT", SDT_PPCBcdShift, []>;
+def PPCbcdsr     : SDNode<"PPCISD::BCDSHIFTROUND", SDT_PPCBcdShiftRound, []>;
+def PPCbcdtrunc  : SDNode<"PPCISD::BCDTRUNC", SDT_PPCBcdTrunc, []>;
+def PPCbcdutrunc : SDNode<"PPCISD::BCDUTRUNC", SDT_PPCBcdUTrunc, []>;
+def PPCbcdus     : SDNode<"PPCISD::BCDUSHIFT", SDT_PPCBcdUShift, []>;
+
+def PPCstat : SDNode<"PPCISD::STAT", SDT_PPCstat,
+                     [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 //===----------------------------------------------------------------------===//
 // PowerPC specific transformation functions and pattern fragments.
@@ -2137,6 +2169,12 @@ def LWAT_PSEUDO : PPCCustomInserterPseudo<
     "#LWAT_PSEUDO",
     [(set i32:$dst, (int_ppc_amo_lwat ptr_rc_nor0:$ptr, gprc:$val, timm:$fc))]>;
 
+def LWAT_COND_PSEUDO : PPCCustomInserterPseudo <
+    (outs gprc:$dst),
+    (ins ptr_rc_nor0:$ptr, u5imm:$fc),
+    "#LWAT_COND_PSEUDO",
+    [(set i32:$dst, (int_ppc_amo_lwat_cond ptr_rc_nor0:$ptr, timm:$fc))]>;
+
 let Defs = [CR0], mayStore = 1, mayLoad = 0, hasSideEffects = 0 in {
 def STBCX : XForm_1_memOp<31, 694, (outs), (ins gprc:$RST, (memrr $RA, $RB):$addr),
                     "stbcx. $RST, $addr", IIC_LdStSTWCX, []>,
@@ -2151,8 +2189,9 @@ def STWCX : XForm_1_memOp<31, 150, (outs), (ins gprc:$RST, (memrr $RA, $RB):$add
 }
 
 let mayStore = 1, mayLoad = 0, hasSideEffects = 0 in
-def STWAT : X_RD5_RS5_IM5<31, 710, (outs), (ins gprc:$RST, gprc:$RA, u5imm:$RB),
-                          "stwat $RST, $RA, $RB", IIC_LdStStore>,
+def STWAT : XForm_base_r3xo_memOp<31, 710, (outs), (ins gprc:$RST, ptr_rc_nor0:$RA, u5imm:$RB),
+                                  "stwat $RST, $RA, $RB", IIC_LdStStore,
+                                  [(PPCstat i32:$RST, ptr_rc_nor0:$RA, timm:$RB)]>,
             Requires<[IsISA3_0]>;
 
 let isTrap = 1, hasCtrlDep = 1 in
@@ -2489,7 +2528,9 @@ def EnforceIEIO : XForm_24_eieio<31, 854, (outs), (ins),
                                  "eieio", IIC_LdStLoad, []>;
 
 def PseudoEIEIO : PPCEmitTimePseudo<(outs), (ins), "#PPCEIEIO",
-                  [(int_ppc_eieio)]>;
+                  [(int_ppc_eieio)]> {
+  let Size = 12;
+}
 
 def : Pat<(int_ppc_sync),   (SYNC 0)>, Requires<[HasSYNC]>;
 def : Pat<(int_ppc_iospace_sync),   (SYNC 0)>, Requires<[HasSYNC]>;
@@ -3448,14 +3489,18 @@ def : Pat<(add i32:$in, (PPChi tblockaddress:$g, 0)),
 
 // Support for thread-local storage.
 def PPC32GOT: PPCEmitTimePseudo<(outs gprc:$rD), (ins), "#PPC32GOT",
-                [(set i32:$rD, (PPCppc32GOT))]>;
+                [(set i32:$rD, (PPCppc32GOT))]> {
+  let Size = 8;
+}
 
 // Get the _GLOBAL_OFFSET_TABLE_ in PIC mode.
 // This uses two output registers, the first as the real output, the second as a
 // temporary register, used internally in code generation. A "bl" also clobbers LR.
 let Defs = [LR] in
 def PPC32PICGOT: PPCEmitTimePseudo<(outs gprc:$rD, gprc:$rT), (ins), "#PPC32PICGOT",
-                []>;
+                []> {
+  let Size = 20;
+}
 
 def LDgotTprelL32: PPCEmitTimePseudo<(outs gprc_nor0:$rD), (ins s16imm:$disp, gprc_nor0:$reg),
                            "#LDgotTprelL32",
@@ -3581,7 +3626,9 @@ def ADDItocL : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc_nor0:$reg, tocentry3
 
 // Get Global (GOT) Base Register offset, from the word immediately preceding
 // the function label.
-def UpdateGBR : PPCEmitTimePseudo<(outs gprc:$rD, gprc:$rT), (ins gprc:$rI), "#UpdateGBR", []>;
+def UpdateGBR : PPCEmitTimePseudo<(outs gprc:$rD, gprc:$rT), (ins gprc:$rI), "#UpdateGBR", []> {
+  let Size = 8;
+}
 
 // Pseudo-instruction marked for deletion. When deleting the instruction would
 // cause iterator invalidation in MIR transformation passes, this pseudo can be
@@ -5598,3 +5645,4 @@ def : Pat<(int_ppc_dcbtt ForceXForm:$dst),
 
 def : Pat<(int_ppc_stfiw ForceXForm:$dst, f64:$XT),
           (STFIWX f64:$XT, ForceXForm:$dst)>;
+

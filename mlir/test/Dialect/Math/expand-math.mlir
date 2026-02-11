@@ -827,8 +827,8 @@ func.func @unranked_rsqrt_op(%arg: tensor<*xf32>) -> tensor<*xf32>{
 
 // CHECK-LABEL:    func.func @clampf_scalar_op
 // CHECK-SAME:     (%[[ARG:.*]]: f16, %[[MIN:.*]]: f16, %[[MAX:.*]]: f16)
-// CHECK:          %[[V0:.*]] = arith.minimumf %[[ARG]], %[[MIN]] : f16
-// CHECK:          %[[V1:.*]] = arith.maximumf %[[V0]], %[[MAX]] : f16
+// CHECK:          %[[V0:.*]] = arith.minimumf %[[ARG]], %[[MAX]] : f16
+// CHECK:          %[[V1:.*]] = arith.maximumf %[[V0]], %[[MIN]] : f16
 // CHECK:          return %[[V1]] : f16
 
 func.func @clampf_scalar_op(%arg: f16, %min: f16, %max: f16) -> f16 {
@@ -838,8 +838,8 @@ func.func @clampf_scalar_op(%arg: f16, %min: f16, %max: f16) -> f16 {
 
 // CHECK-LABEL:    func.func @clampf_vector_op
 // CHECK-SAME:     (%[[ARG:.*]]: vector<3x4xf32>, %[[MIN:.*]]: vector<3x4xf32>, %[[MAX:.*]]: vector<3x4xf32>)
-// CHECK:          %[[V0:.*]] = arith.minimumf %[[ARG]], %[[MIN]] fastmath<fast> : vector<3x4xf32>
-// CHECK:          %[[V1:.*]] = arith.maximumf %[[V0]], %[[MAX]] fastmath<fast> : vector<3x4xf32>
+// CHECK:          %[[V0:.*]] = arith.minimumf %[[ARG]], %[[MAX]] fastmath<fast> : vector<3x4xf32>
+// CHECK:          %[[V1:.*]] = arith.maximumf %[[V0]], %[[MIN]] fastmath<fast> : vector<3x4xf32>
 // CHECK:          return %[[V1]] : vector<3x4xf32>
 
 func.func @clampf_vector_op(%arg: vector<3x4xf32>, %min: vector<3x4xf32>, %max: vector<3x4xf32>) -> vector<3x4xf32>{
