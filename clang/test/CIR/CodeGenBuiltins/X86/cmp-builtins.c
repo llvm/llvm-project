@@ -40,6 +40,22 @@ __mmask16 test_mm_cmp_epi8_mask_imm3(__m128i __a, __m128i __b) {
   return (__mmask16)_mm_cmp_epi8_mask(__a, __b, 3);
 }
 
+__mmask16 test_mm_cmp_epi8_mask_imm7(__m128i __a, __m128i __b) {
+  // CIR-LABEL: test_mm_cmp_epi8_mask_imm7
+  // CIR: cir.const #cir.zero : !cir.vector<16 x !cir.int<s, 1>>
+  // CIR: cir.cast bitcast {{%.*}} : !cir.vector<16 x !cir.int<s, 1>> -> !u16i
+  // CIR: cir.const #cir.int<-1> : !cir.int<s, 1>
+  // CIR: cir.vec.splat {{%.*}} : !cir.int<s, 1>, !cir.vector<16 x !cir.int<s, 1>>
+  // CIR: cir.cast bitcast {{%.*}} : !cir.vector<16 x !cir.int<s, 1>> -> !u16i
+  // LLVM-LABEL: test_mm_cmp_epi8_mask_imm7
+  // LLVM: store i16 -1, ptr %{{.*}}
+  // LLVM: load i16, ptr %{{.*}}
+  // LLVM: ret i16 %{{.*}}
+  // OGCG-LABEL: test_mm_cmp_epi8_mask_imm7
+  // OGCG: ret i16 -1
+  return (__mmask16)_mm_cmp_epi8_mask(__a, __b, 7);
+}
+
 __mmask16 test_mm_mask_cmp_epi8_mask(__mmask16 __m, __m128i __a, __m128i __b) {
   // CIR-LABEL: test_mm_mask_cmp_epi8_mask
   // CIR: cir.vec.cmp(eq, {{%.*}}, {{%.*}}) : !cir.vector<16 x !s8i>, !cir.vector<16 x !cir.int<s, 1>>

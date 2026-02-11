@@ -380,10 +380,7 @@ emitX86MaskedCompare(CIRGenBuilderTy &builder, unsigned cc, bool isSigned,
     cmp = builder.getNullValue(
         cir::VectorType::get(builder.getSIntNTy(1), numElts), loc);
   } else if (cc == 7) {
-    // llvm::APInt allOnes = llvm::APInt::getAllOnes(elementTy.getWidth());
-    // cmp = cir::VecSplatOp::create(
-        builder, loc, ty, builder.getConstAPInt(loc, elementTy, allOnes));
-     cir::VectorType resultTy = cir::VectorType::get(builder.getSIntNTy(1), numElts);
+    cir::VectorType resultTy = cir::VectorType::get(builder.getSIntNTy(1), numElts);
     llvm::APInt allOnes = llvm::APInt::getAllOnes(1);
     cmp = cir::VecSplatOp::create(
        builder, loc, resultTy,
