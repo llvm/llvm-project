@@ -874,7 +874,7 @@ func.func @ds_barrier_init(%barrier: memref<!amdgpu.ds_barrier_state, #gpu.addre
   // CHECK: [[PTR:%.*]] = llvm.extractvalue [[CAST]][1]
   // CHECK: [[C1:%.*]] = llvm.mlir.constant(1 : i32)
   // CHECK: [[SUB:%.*]] = llvm.sub %arg1, [[C1]]
-  // CHECK: [[MASK:%.*]] = llvm.mlir.constant(268435455 : i32)
+  // CHECK: [[MASK:%.*]] = llvm.mlir.constant(536870911 : i32)
   // CHECK: [[MASKED:%.*]] = llvm.and [[SUB]], [[MASK]]
   // CHECK: [[ZEXT:%.*]] = llvm.zext [[MASKED]] : i32 to i64
   // CHECK: [[C32:%.*]] = llvm.mlir.constant(32 : i64)
@@ -918,8 +918,8 @@ func.func @ds_barrier_arrive(%barrier: memref<!amdgpu.ds_barrier_state, #gpu.add
 func.func @ds_barrier_state_phase(%state: !amdgpu.ds_barrier_state) -> i32 {
   // CHECK: [[CAST:%.*]] = builtin.unrealized_conversion_cast %arg0
   // CHECK: [[TRUNC:%.*]] = llvm.trunc [[CAST]] : i64 to i32
-  // CHECK: [[C28:%.*]] = llvm.mlir.constant(28 : i32)
-  // CHECK: [[PHASE:%.*]] = llvm.lshr [[TRUNC]], [[C28]]
+  // CHECK: [[C29:%.*]] = llvm.mlir.constant(29 : i32)
+  // CHECK: [[PHASE:%.*]] = llvm.lshr [[TRUNC]], [[C29]]
   // CHECK: return [[PHASE]]
   %phase = amdgpu.ds_barrier_state_phase %state : !amdgpu.ds_barrier_state -> i32
   func.return %phase : i32
@@ -929,7 +929,7 @@ func.func @ds_barrier_state_phase(%state: !amdgpu.ds_barrier_state) -> i32 {
 func.func @ds_barrier_state_pending_count(%state: !amdgpu.ds_barrier_state) -> i32 {
   // CHECK: [[CAST:%.*]] = builtin.unrealized_conversion_cast %arg0
   // CHECK: [[TRUNC:%.*]] = llvm.trunc [[CAST]] : i64 to i32
-  // CHECK: [[MASK:%.*]] = llvm.mlir.constant(268435455 : i32)
+  // CHECK: [[MASK:%.*]] = llvm.mlir.constant(536870911 : i32)
   // CHECK: [[COUNT:%.*]] = llvm.and [[TRUNC]], [[MASK]]
   // CHECK: return [[COUNT]]
   %pending = amdgpu.ds_barrier_state_pending_count %state : !amdgpu.ds_barrier_state -> i32
@@ -951,8 +951,8 @@ func.func @ds_barrier_state_init_count(%state: !amdgpu.ds_barrier_state) -> i32 
 func.func @ds_barrier_state_phase_parity(%state: !amdgpu.ds_barrier_state) -> i1 {
   // CHECK: [[CAST:%.*]] = builtin.unrealized_conversion_cast %arg0
   // CHECK: [[TRUNC:%.*]] = llvm.trunc [[CAST]] : i64 to i32
-  // CHECK: [[C28:%.*]] = llvm.mlir.constant(28 : i32)
-  // CHECK: [[SHIFTED:%.*]] = llvm.lshr [[TRUNC]], [[C28]]
+  // CHECK: [[C29:%.*]] = llvm.mlir.constant(29 : i32)
+  // CHECK: [[SHIFTED:%.*]] = llvm.lshr [[TRUNC]], [[C29]]
   // CHECK: [[PARITY:%.*]] = llvm.trunc [[SHIFTED]] : i32 to i1
   // CHECK: return [[PARITY]]
   %parity = amdgpu.ds_barrier_state_phase_parity %state : !amdgpu.ds_barrier_state -> i1
