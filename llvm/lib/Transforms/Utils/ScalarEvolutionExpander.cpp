@@ -1446,7 +1446,8 @@ Value *SCEVExpander::visitPtrToAddrExpr(const SCEVPtrToAddrExpr *S) {
   Value *V = expand(S->getOperand());
   Type *Ty = S->getType();
 
-  // ptrtoaddr and ptrtoint produce the same value, so try to reuse either.
+  // ptrtoaddr and ptrtoint produce the same value if the result type matches,
+  // so try to reuse either.
   if (!isa<Constant>(V)) {
     BasicBlock::iterator BIP = Builder.GetInsertPoint();
     for (User *U : V->users()) {

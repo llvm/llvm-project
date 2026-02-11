@@ -4889,9 +4889,6 @@ const SCEV *ScalarEvolution::getPointerBase(const SCEV *V) {
       }
       assert(PtrOp && "Must have pointer op");
       V = PtrOp;
-    } else if (auto *PtrToAddr = dyn_cast<SCEVPtrToAddrExpr>(V)) {
-      // Strip ptrtoaddr to continue extracting the base pointer.
-      V = PtrToAddr->getOperand();
     } else // Not something we can look further into.
       return V;
   }
