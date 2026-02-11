@@ -12,7 +12,6 @@
 
 // <semaphore>
 
-
 #include <semaphore>
 #include <thread>
 #include <chrono>
@@ -20,12 +19,11 @@
 #include <iostream>
 #include <iomanip>
 
-
 #include "make_test_thread.h"
 #include "test_macros.h"
 
-void test(auto log_start){
-  auto log = [log_start] ()-> auto& {
+void test(auto log_start) {
+  auto log = [log_start]() -> auto& {
     using namespace std::chrono;
 
     auto elapsed = steady_clock::now() - log_start;
@@ -41,12 +39,9 @@ void test(auto log_start){
 
     auto nanoseconds = duration_cast<std::chrono::nanoseconds>(elapsed);
 
-    std::cerr << "["
-              << std::setw(2) << std::setfill('0') << hours.count() << ":"
-              << std::setw(2) << std::setfill('0') << minutes.count() << ":"
-              << std::setw(2) << std::setfill('0') << seconds.count() << "."
-              << std::setw(9) << std::setfill('0') << nanoseconds.count()
-              << "] ";
+    std::cerr << "[" << std::setw(2) << std::setfill('0') << hours.count() << ":" << std::setw(2) << std::setfill('0')
+              << minutes.count() << ":" << std::setw(2) << std::setfill('0') << seconds.count() << "." << std::setw(9)
+              << std::setfill('0') << nanoseconds.count() << "] ";
 
     return std::cerr;
   };
@@ -66,19 +61,20 @@ void test(auto log_start){
   assert(!s.try_acquire_for(std::chrono::milliseconds(1)));
   log() << "done:  try_acquire_for: " << std::chrono::milliseconds(1) << "\n";
 
-
   auto const end = std::chrono::steady_clock::now();
   assert(end - start < std::chrono::seconds(10));
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   auto const log_start = std::chrono::steady_clock::now();
   for (auto i = 0; i < 100; ++i) {
     std::cerr << "=== Iteration " << i << " ===\n";
     test(log_start);
   }
 
+#if defined(_WIN32)
+  return 1;
+#else
   return 0;
-
+#endif
 }
