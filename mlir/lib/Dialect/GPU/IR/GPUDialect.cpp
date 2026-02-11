@@ -368,7 +368,7 @@ void GPUDialect::printType(Type type, DialectAsmPrinter &os) const {
       .Case<SparseSpGEMMOpHandleType>([&](Type) {
         os << getSparseHandleKeyword(SparseHandleKind::SpGEMMOp);
       })
-      .Case<MMAMatrixType>([&](MMAMatrixType fragTy) {
+      .Case([&](MMAMatrixType fragTy) {
         os << "mma_matrix<";
         auto shape = fragTy.getShape();
         for (auto dim = shape.begin(), e = shape.end() - 1; dim != e; ++dim)
@@ -1000,13 +1000,19 @@ static ParseResult
 parseSizeAssignment(OpAsmParser &parser,
                     MutableArrayRef<OpAsmParser::UnresolvedOperand> sizes,
                     MutableArrayRef<OpAsmParser::UnresolvedOperand> regionSizes,
-                    MutableArrayRef<OpAsmParser::UnresolvedOperand> indices) {
+                    MutableArrayRef<OpAsmParser::UnresolvedOperand> indices,
+                    StringRef keyword) {
   assert(indices.size() == 3 && "space for three indices expected");
   SmallVector<OpAsmParser::UnresolvedOperand, 3> args;
   if (parser.parseOperandList(args, OpAsmParser::Delimiter::Paren,
                               /*allowResultNumber=*/false) ||
       parser.parseKeyword("in") || parser.parseLParen())
     return failure();
+
+  if (args.size() != 3) {
+    return parser.emitError(parser.getNameLoc())
+           << keyword << " expects 3 arguments, but got " << args.size();
+  }
   std::move(args.begin(), args.end(), indices.begin());
 
   for (int i = 0; i < 3; ++i) {
@@ -1057,8 +1063,7 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
   }
 
   bool hasCluster = false;
-  if (succeeded(
-          parser.parseOptionalKeyword(LaunchOp::getClustersKeyword().data()))) {
+  if (succeeded(parser.parseOptionalKeyword(LaunchOp::getClustersKeyword()))) {
     hasCluster = true;
     sizes.resize(9);
     regionArgs.resize(18);
@@ -1069,9 +1074,9 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
   // Last three segment assigns the cluster size. In the region argument
   // list, this is last 6 arguments.
   if (hasCluster) {
-    if (parseSizeAssignment(parser, sizesRef.drop_front(6),
-                            regionArgsRef.slice(15, 3),
-                            regionArgsRef.slice(12, 3)))
+    if (parseSizeAssignment(
+            parser, sizesRef.drop_front(6), regionArgsRef.slice(15, 3),
+            regionArgsRef.slice(12, 3), LaunchOp::getClustersKeyword()))
       return failure();
   }
   // Parse the size assignment segments: the first segment assigns grid sizes
@@ -1079,14 +1084,14 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
   // sizes and defines values for thread identifiers.  In the region argument
   // list, identifiers precede sizes, and block-related values precede
   // thread-related values.
-  if (parser.parseKeyword(LaunchOp::getBlocksKeyword().data()) ||
+  if (parser.parseKeyword(LaunchOp::getBlocksKeyword()) ||
       parseSizeAssignment(parser, sizesRef.take_front(3),
-                          regionArgsRef.slice(6, 3),
-                          regionArgsRef.slice(0, 3)) ||
-      parser.parseKeyword(LaunchOp::getThreadsKeyword().data()) ||
+                          regionArgsRef.slice(6, 3), regionArgsRef.slice(0, 3),
+                          LaunchOp::getBlocksKeyword()) ||
+      parser.parseKeyword(LaunchOp::getThreadsKeyword()) ||
       parseSizeAssignment(parser, sizesRef.drop_front(3),
-                          regionArgsRef.slice(9, 3),
-                          regionArgsRef.slice(3, 3)) ||
+                          regionArgsRef.slice(9, 3), regionArgsRef.slice(3, 3),
+                          LaunchOp::getThreadsKeyword()) ||
       parser.resolveOperands(sizes, parser.getBuilder().getIndexType(),
                              result.operands))
     return failure();
@@ -1514,7 +1519,28 @@ void BarrierOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 void BarrierOp::build(mlir::OpBuilder &odsBuilder,
-                      mlir::OperationState &odsState) {}
+                      mlir::OperationState &odsState,
+                      std::optional<AddressSpace> addressSpace) {
+  ArrayAttr addressSpacesAttr;
+  if (addressSpace)
+    addressSpacesAttr = odsBuilder.getArrayAttr(
+        AddressSpaceAttr::get(odsBuilder.getContext(), addressSpace.value()));
+  build(odsBuilder, odsState, addressSpacesAttr);
+}
+
+/// Builds a barrier that causes memory operations affecting `memrefToFence` to
+/// be completed after the barrier is concluded. Currently, this means setting
+/// the fenced address spaces to those of the given memref if it is a gpu
+/// address space.
+void BarrierOp::build(OpBuilder &builder, OperationState &odsState,
+                      Value memrefToFence) {
+  std::optional<AddressSpace> addrSpaceToFence;
+  if (auto memrefType = dyn_cast<BaseMemRefType>(memrefToFence.getType()))
+    if (auto addrSpaceAttr = dyn_cast_if_present<gpu::AddressSpaceAttr>(
+            memrefType.getMemorySpace()))
+      addrSpaceToFence = addrSpaceAttr.getValue();
+  return build(builder, odsState, addrSpaceToFence);
+}
 
 //===----------------------------------------------------------------------===//
 // GPUFuncOp

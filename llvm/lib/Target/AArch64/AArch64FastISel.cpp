@@ -484,7 +484,6 @@ Register AArch64FastISel::materializeGV(const GlobalValue *GV) {
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(TargetOpcode::SUBREG_TO_REG))
         .addDef(Result64)
-        .addImm(0)
         .addReg(ResultReg, RegState::Kill)
         .addImm(AArch64::sub_32);
     return Result64;
@@ -1873,7 +1872,6 @@ Register AArch64FastISel::emitLoad(MVT VT, MVT RetVT, Address Addr,
     Register Reg64 = createResultReg(&AArch64::GPR64RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(AArch64::SUBREG_TO_REG), Reg64)
-        .addImm(0)
         .addReg(ResultReg, getKillRegState(true))
         .addImm(AArch64::sub_32);
     ResultReg = Reg64;
@@ -4031,7 +4029,6 @@ Register AArch64FastISel::emiti1Ext(Register SrcReg, MVT DestVT, bool IsZExt) {
       Register Reg64 = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
               TII.get(AArch64::SUBREG_TO_REG), Reg64)
-          .addImm(0)
           .addReg(ResultReg)
           .addImm(AArch64::sub_32);
       ResultReg = Reg64;
@@ -4178,7 +4175,6 @@ Register AArch64FastISel::emitLSL_ri(MVT RetVT, MVT SrcVT, Register Op0,
     Register TmpReg = MRI.createVirtualRegister(RC);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(AArch64::SUBREG_TO_REG), TmpReg)
-        .addImm(0)
         .addReg(Op0)
         .addImm(AArch64::sub_32);
     Op0 = TmpReg;
@@ -4295,7 +4291,6 @@ Register AArch64FastISel::emitLSR_ri(MVT RetVT, MVT SrcVT, Register Op0,
     Register TmpReg = MRI.createVirtualRegister(RC);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(AArch64::SUBREG_TO_REG), TmpReg)
-        .addImm(0)
         .addReg(Op0)
         .addImm(AArch64::sub_32);
     Op0 = TmpReg;
@@ -4401,7 +4396,6 @@ Register AArch64FastISel::emitASR_ri(MVT RetVT, MVT SrcVT, Register Op0,
     Register TmpReg = MRI.createVirtualRegister(RC);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(AArch64::SUBREG_TO_REG), TmpReg)
-        .addImm(0)
         .addReg(Op0)
         .addImm(AArch64::sub_32);
     Op0 = TmpReg;
@@ -4459,7 +4453,6 @@ Register AArch64FastISel::emitIntExt(MVT SrcVT, Register SrcReg, MVT DestVT,
     Register Src64 = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(AArch64::SUBREG_TO_REG), Src64)
-        .addImm(0)
         .addReg(SrcReg)
         .addImm(AArch64::sub_32);
     SrcReg = Src64;
@@ -4556,7 +4549,6 @@ bool AArch64FastISel::optimizeIntExtLoad(const Instruction *I, MVT RetVT,
     Register Reg64 = createResultReg(&AArch64::GPR64RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(AArch64::SUBREG_TO_REG), Reg64)
-        .addImm(0)
         .addReg(Reg, getKillRegState(true))
         .addImm(AArch64::sub_32);
     Reg = Reg64;
@@ -4599,7 +4591,6 @@ bool AArch64FastISel::selectIntExt(const Instruction *I) {
         Register ResultReg = createResultReg(&AArch64::GPR64RegClass);
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
                 TII.get(AArch64::SUBREG_TO_REG), ResultReg)
-            .addImm(0)
             .addReg(SrcReg)
             .addImm(AArch64::sub_32);
         SrcReg = ResultReg;
