@@ -459,4 +459,11 @@ namespace Discard {
     return k;
   }
   static_assert(test_side_effect() == 1);
+
+  constexpr int discardedMulDiv() {
+    (void)(3 * 2i);
+    (void)(3 / 2i);
+    return 0;
+  }
+  static_assert(discardedMulDiv() == 0, "");
 }
