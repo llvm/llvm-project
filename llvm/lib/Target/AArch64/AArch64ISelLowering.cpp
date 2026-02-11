@@ -20696,6 +20696,15 @@ tryToReplaceScalarFPConversionWithSVE(SDNode *N, SelectionDAG &DAG,
   if (!isSupportedType(SrcTy) || !isSupportedType(DestTy))
     return SDValue();
 
+  if (N->getOpcode() == ISD::FP_TO_SINT_SAT ||
+      N->getOpcode() == ISD::FP_TO_UINT_SAT) {
+    // Keep scalar/custom lowering when the target already
+    // handles saturating conversion for this type.
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    if (TLI.isOperationLegalOrCustom(N->getOpcode(), DestTy))
+      return SDValue();
+  }
+
   EVT SrcVecTy;
   EVT DestVecTy;
   if (DestTy.bitsGT(SrcTy)) {
