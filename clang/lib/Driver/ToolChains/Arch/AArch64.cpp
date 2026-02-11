@@ -13,7 +13,6 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/Host.h"
-#include <optional>
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
