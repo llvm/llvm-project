@@ -132,6 +132,7 @@ static constexpr TypePattern DefaultChar{CharType, KindCode::defaultCharKind};
 static constexpr TypePattern DefaultLogical{
     LogicalType, KindCode::defaultLogicalKind};
 static constexpr TypePattern BOZ{IntType, KindCode::typeless};
+static constexpr TypePattern CChar{CharType, KindCode::defaultCharKind};
 static constexpr TypePattern EventType{DerivedType, KindCode::eventType};
 static constexpr TypePattern IeeeFlagType{DerivedType, KindCode::ieeeFlagType};
 static constexpr TypePattern IeeeRoundType{
@@ -517,6 +518,10 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
                 Optionality::required, common::Intent::In,
                 {ArgFlag::canBeMoldNull}}},
         DefaultLogical, Rank::scalar, IntrinsicClass::inquiryFunction},
+    {"__builtin_f_c_string",
+        {{"string", CChar, Rank::scalar},
+            {"asis", AnyLogical, Rank::scalar, Optionality::optional}},
+        CChar, Rank::scalar, IntrinsicClass::transformationalFunction},
     {"failed_images", {OptionalTEAM, SizeDefaultKIND}, KINDInt, Rank::vector,
         IntrinsicClass::transformationalFunction},
     {"findloc",
