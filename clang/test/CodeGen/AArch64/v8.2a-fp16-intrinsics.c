@@ -306,13 +306,6 @@ uint64_t test_vcvtph_u64_f16 (float16_t a) {
   return vcvtph_u64_f16(a);
 }
 
-// CHECK-LABEL: test_vnegh_f16
-// CHECK: [[NEG:%.*]] = fneg half %a
-// CHECK: ret half [[NEG]]
-float16_t test_vnegh_f16(float16_t a) {
-  return vnegh_f16(a);
-}
-
 // CHECK-LABEL: test_vrecpeh_f16
 // CHECK: [[VREC:%.*]] = call half @llvm.aarch64.neon.frecpe.f16(half %a)
 // CHECK: ret half [[VREC]]

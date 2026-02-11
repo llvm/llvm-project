@@ -31,3 +31,14 @@ uint64_t test_vceqzd_s64(int64_t a) {
 // LLVM-NEXT:    ret i64 [[VCEQZ_I]]
   return (uint64_t)vceqzd_s64(a);
 }
+
+// LLVM-LABEL: @test_vnegd_s64
+// CIR-LABEL: @vnegd_s64
+int64_t test_vnegd_s64(int64_t a) {
+// CIR: cir.unary(minus, {{.*}}) : !s64
+
+// LLVM-SAME: i64{{.*}} [[A:%.*]])
+// LLVM:          [[VNEGD_I:%.*]] = sub i64 0, [[A]]
+// LLVM-NEXT:     ret i64 [[VNEGD_I]]
+  return (int64_t)vnegd_s64(a);
+}
