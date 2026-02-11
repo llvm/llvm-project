@@ -56,6 +56,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::scalar(64);
   case S128:
     return MRI.getType(Reg) == LLT::scalar(128);
+  case S1024:
+    return MRI.getType(Reg) == LLT::scalar(1024);
   case P0:
     return MRI.getType(Reg) == LLT::pointer(0, 64);
   case P1:
@@ -68,6 +70,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::pointer(4, 64);
   case P5:
     return MRI.getType(Reg) == LLT::pointer(5, 32);
+  case P6:
+    return MRI.getType(Reg) == LLT::pointer(6, 32);
   case P8:
     return MRI.getType(Reg) == LLT::pointer(8, 128);
   case Ptr32:
@@ -108,6 +112,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::scalar(64) && MUI.isUniform(Reg);
   case UniS128:
     return MRI.getType(Reg) == LLT::scalar(128) && MUI.isUniform(Reg);
+  case UniS1024:
+    return MRI.getType(Reg) == LLT::scalar(1024) && MUI.isUniform(Reg);
   case UniP0:
     return MRI.getType(Reg) == LLT::pointer(0, 64) && MUI.isUniform(Reg);
   case UniP1:
@@ -120,6 +126,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::pointer(4, 64) && MUI.isUniform(Reg);
   case UniP5:
     return MRI.getType(Reg) == LLT::pointer(5, 32) && MUI.isUniform(Reg);
+  case UniP6:
+    return MRI.getType(Reg) == LLT::pointer(6, 32) && MUI.isUniform(Reg);
   case UniP8:
     return MRI.getType(Reg) == LLT::pointer(8, 128) && MUI.isUniform(Reg);
   case UniPtr32:
@@ -167,6 +175,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::scalar(64) && MUI.isDivergent(Reg);
   case DivS128:
     return MRI.getType(Reg) == LLT::scalar(128) && MUI.isDivergent(Reg);
+  case DivS1024:
+    return MRI.getType(Reg) == LLT::scalar(1024) && MUI.isDivergent(Reg);
   case DivP0:
     return MRI.getType(Reg) == LLT::pointer(0, 64) && MUI.isDivergent(Reg);
   case DivP1:
@@ -643,6 +653,15 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniS16}, {{}, {}, UnmergeToShiftTrunc}})
       .Any({{UniBRC}, {{}, {}, VerifyAllSgpr}})
       .Any({{DivBRC}, {{}, {}, ApplyAllVgpr}});
+
+  addRulesForGOpcs({G_EXTRACT})
+      .Any({{UniS32, S64}, {{Sgpr32}, {Sgpr64}}})
+      .Any({{DivS32, S64}, {{Vgpr32}, {Vgpr64}}})
+      .Any({{UniS32, S1024}, {{Sgpr32}, {Sgpr1024}}})
+      .Any({{DivS32, S1024}, {{Vgpr32}, {Vgpr1024}}})
+      .Any({{DivP3}, {{VgprP3}, {VgprP0, Imm}}})
+      .Any({{DivP5, P0}, {{VgprP5}, {VgprP0, Imm}}})
+      .Any({{UniP6, P0}, {{SgprP6}, {SgprP0, Imm}}});
 
   Predicate isSignedICmp([](const MachineInstr &MI) -> bool {
     auto Pred =
