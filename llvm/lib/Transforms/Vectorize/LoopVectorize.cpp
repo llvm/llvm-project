@@ -1258,9 +1258,7 @@ public:
   getDivRemSpeculationCost(Instruction *I, ElementCount VF);
 
   /// Returns true if \p I is a memory instruction with consecutive memory
-  /// access that can be widened. If AllowStridedPointerIVs is true, we
-  // check that strided pointers of the form {base * stride} can be widened.
-  // Will return true if stride is a loop invariant runtime constant.
+  /// access that can be widened.
   bool memoryInstructionCanBeWidened(Instruction *I, ElementCount VF);
 
   /// Returns true if \p I is a memory instruction in an interleaved-group

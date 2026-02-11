@@ -990,7 +990,7 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
   // Check the step is constant.
   const SCEV *Step = AR->getStepRecurrence(*PSE.getSE());
 
-  // Calculate the pointer stride and check if is constant
+  // Calculate the pointer stride and check if it is constant.
   const APInt *APStepVal;
   if (!match(Step, m_scev_APInt(APStepVal))) {
     LLVM_DEBUG({
