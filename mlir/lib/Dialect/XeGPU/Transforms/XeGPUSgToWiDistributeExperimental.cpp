@@ -463,11 +463,6 @@ struct SgToWiMultiDimReduction
   LogicalResult
   matchAndRewrite(vector::MultiDimReductionOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // Check if the reduction op is valid for distribution.
-    if (!isValidSubgroupMultiReductionOp(op))
-      return rewriter.notifyMatchFailure(
-          op,
-          "Not a valid subgroup multi reduction op that can be distributed.");
     // Only lane-local reduction is handled here.
     if (!isReductionLaneLocal(op))
       return rewriter.notifyMatchFailure(
@@ -492,7 +487,7 @@ struct SgToWiMultiDimReduction
 /// of vector.extract_strided_slice, vector.reduction and
 /// vector.insert_strided_slice ops. This is used when the reduction dimension
 /// is distributed to lanes and a naive (lane-local) distribution is not
-/// possible. Then later on, these partilly lowered subgroup-level ops are
+/// possible. Then later on, these partially lowered subgroup-level ops are
 /// further lowered to workitem-level by respective patterns.
 struct LowerVectorMultiReductionPattern
     : public OpConversionPattern<vector::MultiDimReductionOp> {
@@ -501,10 +496,6 @@ struct LowerVectorMultiReductionPattern
   LogicalResult
   matchAndRewrite(vector::MultiDimReductionOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // Check validity for lowering at subgroup level.
-    if (!isValidSubgroupMultiReductionOp(op))
-      return rewriter.notifyMatchFailure(
-          op, "Not a valid subgroup multi reduction op that can be lowered.");
     // Only non-lane-local reduction is handled here.
     if (isReductionLaneLocal(op))
       return rewriter.notifyMatchFailure(
@@ -513,13 +504,12 @@ struct LowerVectorMultiReductionPattern
     assert(
         reductionDims.size() == 1 &&
         "Expecting single reduction dimension for subgroup multi reduction op");
-    int64_t reductionDim = reductionDims[0];
 
     // Rewrite MultiDimReductionOp into a sequence of ReductionOps.
     Value result = xegpu::lowerToVectorReductions(
         cast<TypedValue<VectorType>>(op.getSource()),
-        cast<TypedValue<VectorType>>(op.getAcc()), op.getKind(), reductionDim,
-        op.getLoc(), rewriter);
+        cast<TypedValue<VectorType>>(op.getAcc()), op.getKind(),
+        reductionDims[0], op.getLoc(), rewriter);
 
     rewriter.replaceOp(op, result);
     return success();

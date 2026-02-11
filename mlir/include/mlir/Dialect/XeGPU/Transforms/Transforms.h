@@ -84,7 +84,10 @@ void populateXeGPUSgToWiDistributeTypeConversionAndLegality(
     ConversionTarget &target);
 /// Appends patterns to rewrite vector::MultiDimReductionOp in terms of
 /// vector::ReductionOps if the multi-reduction involves cross-lane data
-/// movement.
+/// movement. This pattern is used as pre-processing step before applying
+/// subgroup to workitem distribution patterns. This pattern will rewrite a
+/// multi reduction in terms of a series of simpler extract, reduction and
+/// insert ops if the reduction require cross-lane data movement.
 void populateXeGPUSgToWiLowerVectorMultiReductionAndLegality(
     RewritePatternSet &patterns, ConversionTarget &target);
 
