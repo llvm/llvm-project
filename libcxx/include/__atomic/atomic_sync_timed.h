@@ -21,6 +21,10 @@
 #include <cstdint>
 #include <cstring>
 
+    #if defined (TEST_DEBUG)
+    #include <cstdio>
+    #endif
+
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
@@ -64,6 +68,10 @@ struct __atomic_wait_timed_backoff_impl {
         auto __atomic_value = __waitable_traits::__atomic_load(__a_, __order_);
         if (__poll_(__atomic_value))
           return __backoff_results::__poll_success;
+
+        #if defined (TEST_DEBUG)
+        std::fprintf(stderr, "elapsed: %lld ns\nwait: %lld ns\n", __elapsed.count(), __timeout_ns);
+        #endif
         std::__atomic_wait_native_with_timeout<sizeof(__value_type)>(
             __contention_address, std::addressof(__atomic_value), __timeout_ns);
       } else {
@@ -71,6 +79,9 @@ struct __atomic_wait_timed_backoff_impl {
         auto __atomic_value              = __waitable_traits::__atomic_load(__a_, __order_);
         if (__poll_(__atomic_value))
           return __backoff_results::__poll_success;
+        #if defined (TEST_DEBUG)
+        std::fprintf(stderr, "elapsed: %lld ns\nwait: %lld ns\n", __elapsed.count(), __timeout_ns);
+        #endif
         std::__atomic_wait_global_table_with_timeout(__contention_address, __monitor_val, __timeout_ns);
       }
     } else {
