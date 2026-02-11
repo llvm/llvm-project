@@ -164,8 +164,8 @@ invoke(FnT &&Fn, ArgsT &&...Args) { // NOLINT(readability-identifier-naming)
 /// TODO: Use std::is_sorted once upgraded to C++20 since that becomes constexpr
 template <typename R, typename Cmp = std::less<>>
 constexpr bool is_sorted_constexpr(R &&Range, Cmp C = Cmp{}) {
-  auto First = adl_begin(Range);
-  auto Last = adl_end(Range);
+  auto First = std::begin(Range);
+  auto Last = std::end(Range);
   if (First == Last)
     return true;
   auto Prev = First;
