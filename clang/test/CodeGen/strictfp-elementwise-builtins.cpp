@@ -27,24 +27,24 @@ float4 strict_elementwise_abs(float4 a) {
   return __builtin_elementwise_abs(a);
 }
 
-// CHECK-LABEL: define dso_local noundef <4 x float> @_Z22strict_elementwise_maxDv4_fS_
-// CHECK-SAME: (<4 x float> noundef [[A:%.*]], <4 x float> noundef [[B:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-LABEL: define dso_local noundef <4 x float> @_Z25strict_elementwise_maxnumDv4_fS_
+// CHECK-SAME: (<4 x float> noundef [[A:%.*]], <4 x float> noundef [[B:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ELT_MAX:%.*]] = tail call <4 x float> @llvm.experimental.constrained.maxnum.v4f32(<4 x float> [[A]], <4 x float> [[B]], metadata !"fpexcept.strict") #[[ATTR4]]
-// CHECK-NEXT:    ret <4 x float> [[ELT_MAX]]
+// CHECK-NEXT:    [[ELT_MAXNUM:%.*]] = tail call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[A]], <4 x float> [[B]]) #[[ATTR4]]
+// CHECK-NEXT:    ret <4 x float> [[ELT_MAXNUM]]
 //
-float4 strict_elementwise_max(float4 a, float4 b) {
-  return __builtin_elementwise_max(a, b);
+float4 strict_elementwise_maxnum(float4 a, float4 b) {
+  return __builtin_elementwise_maxnum(a, b);
 }
 
-// CHECK-LABEL: define dso_local noundef <4 x float> @_Z22strict_elementwise_minDv4_fS_
-// CHECK-SAME: (<4 x float> noundef [[A:%.*]], <4 x float> noundef [[B:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-LABEL: define dso_local noundef <4 x float> @_Z25strict_elementwise_minnumDv4_fS_
+// CHECK-SAME: (<4 x float> noundef [[A:%.*]], <4 x float> noundef [[B:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ELT_MIN:%.*]] = tail call <4 x float> @llvm.experimental.constrained.minnum.v4f32(<4 x float> [[A]], <4 x float> [[B]], metadata !"fpexcept.strict") #[[ATTR4]]
-// CHECK-NEXT:    ret <4 x float> [[ELT_MIN]]
+// CHECK-NEXT:    [[ELT_MINNUM:%.*]] = tail call <4 x float> @llvm.minnum.v4f32(<4 x float> [[A]], <4 x float> [[B]]) #[[ATTR4]]
+// CHECK-NEXT:    ret <4 x float> [[ELT_MINNUM]]
 //
-float4 strict_elementwise_min(float4 a, float4 b) {
-  return __builtin_elementwise_min(a, b);
+float4 strict_elementwise_minnum(float4 a, float4 b) {
+  return __builtin_elementwise_minnum(a, b);
 }
 
 // CHECK-LABEL: define dso_local noundef <4 x float> @_Z26strict_elementwise_maximumDv4_fS_

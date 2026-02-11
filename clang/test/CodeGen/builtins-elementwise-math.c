@@ -339,32 +339,10 @@ void test_builtin_elementwise_minimum(float f1, float f2, double d1, double d2,
   vf1 = __builtin_elementwise_minimum(vf2, cvf1);
 }
 
-void test_builtin_elementwise_max(float f1, float f2, double d1, double d2,
-                                  float4 vf1, float4 vf2, long long int i1,
-                                  long long int i2, si8 vi1, si8 vi2,
+void test_builtin_elementwise_max(long long int i2, si8 vi1, si8 vi2, long long int i1,
                                   unsigned u1, unsigned u2, u4 vu1, u4 vu2,
                                   _BitInt(31) bi1, _BitInt(31) bi2,
                                   unsigned _BitInt(55) bu1, unsigned _BitInt(55) bu2) {
-  // CHECK-LABEL: define void @test_builtin_elementwise_max(
-  // CHECK:      [[F1:%.+]] = load float, ptr %f1.addr, align 4
-  // CHECK-NEXT: [[F2:%.+]] = load float, ptr %f2.addr, align 4
-  // CHECK-NEXT:  call float @llvm.maxnum.f32(float [[F1]], float [[F2]])
-  f1 = __builtin_elementwise_max(f1, f2);
-
-  // CHECK:      [[D1:%.+]] = load double, ptr %d1.addr, align 8
-  // CHECK-NEXT: [[D2:%.+]] = load double, ptr %d2.addr, align 8
-  // CHECK-NEXT: call double @llvm.maxnum.f64(double [[D1]], double [[D2]])
-  d1 = __builtin_elementwise_max(d1, d2);
-
-  // CHECK:      [[D2:%.+]] = load double, ptr %d2.addr, align 8
-  // CHECK-NEXT: call double @llvm.maxnum.f64(double 2.000000e+01, double [[D2]])
-  d1 = __builtin_elementwise_max(20.0, d2);
-
-  // CHECK:      [[VF1:%.+]] = load <4 x float>, ptr %vf1.addr, align 16
-  // CHECK-NEXT: [[VF2:%.+]] = load <4 x float>, ptr %vf2.addr, align 16
-  // CHECK-NEXT: call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[VF1]], <4 x float> [[VF2]])
-  vf1 = __builtin_elementwise_max(vf1, vf2);
-
   // CHECK:      [[I1:%.+]] = load i64, ptr %i1.addr, align 8
   // CHECK-NEXT: [[I2:%.+]] = load i64, ptr %i2.addr, align 8
   // CHECK-NEXT: call i64 @llvm.smax.i64(i64 [[I1]], i64 [[I2]])
@@ -403,17 +381,6 @@ void test_builtin_elementwise_max(float f1, float f2, double d1, double d2,
   // CHECK-NEXT: call i55 @llvm.umax.i55(i55 [[LOADEDV2]], i55 [[LOADEDV3]])
   bu1 = __builtin_elementwise_max(bu1, bu2);
 
-  // CHECK:      [[CVF1:%.+]] = load <4 x float>, ptr %cvf1, align 16
-  // CHECK-NEXT: [[VF2:%.+]] = load <4 x float>, ptr %vf2.addr, align 16
-  // CHECK-NEXT: call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[CVF1]], <4 x float> [[VF2]])
-  const float4 cvf1 = vf1;
-  vf1 = __builtin_elementwise_max(cvf1, vf2);
-
-  // CHECK:      [[VF2:%.+]] = load <4 x float>, ptr %vf2.addr, align 16
-  // CHECK-NEXT: [[CVF1:%.+]] = load <4 x float>, ptr %cvf1, align 16
-  // CHECK-NEXT: call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[VF2]], <4 x float> [[CVF1]])
-  vf1 = __builtin_elementwise_max(vf2, cvf1);
-
   // CHECK:      [[IAS1:%.+]] = load i32, ptr addrspace(1) @int_as_one, align 4
   // CHECK-NEXT: [[B:%.+]] = load i32, ptr @b, align 4
   // CHECK-NEXT: call i32 @llvm.smax.i32(i32 [[IAS1]], i32 [[B]])
@@ -423,32 +390,10 @@ void test_builtin_elementwise_max(float f1, float f2, double d1, double d2,
   i1 = __builtin_elementwise_max(1, 'a');
 }
 
-void test_builtin_elementwise_min(float f1, float f2, double d1, double d2,
-                                  float4 vf1, float4 vf2, long long int i1,
-                                  long long int i2, si8 vi1, si8 vi2,
+void test_builtin_elementwise_min(long long int i2, si8 vi1, si8 vi2, long long int i1,
                                   unsigned u1, unsigned u2, u4 vu1, u4 vu2,
                                   _BitInt(31) bi1, _BitInt(31) bi2,
                                   unsigned _BitInt(55) bu1, unsigned _BitInt(55) bu2) {
-  // CHECK-LABEL: define void @test_builtin_elementwise_min(
-  // CHECK:      [[F1:%.+]] = load float, ptr %f1.addr, align 4
-  // CHECK-NEXT: [[F2:%.+]] = load float, ptr %f2.addr, align 4
-  // CHECK-NEXT:  call float @llvm.minnum.f32(float [[F1]], float [[F2]])
-  f1 = __builtin_elementwise_min(f1, f2);
-
-  // CHECK:      [[D1:%.+]] = load double, ptr %d1.addr, align 8
-  // CHECK-NEXT: [[D2:%.+]] = load double, ptr %d2.addr, align 8
-  // CHECK-NEXT: call double @llvm.minnum.f64(double [[D1]], double [[D2]])
-  d1 = __builtin_elementwise_min(d1, d2);
-
-  // CHECK:      [[D1:%.+]] = load double, ptr %d1.addr, align 8
-  // CHECK-NEXT: call double @llvm.minnum.f64(double [[D1]], double 2.000000e+00)
-  d1 = __builtin_elementwise_min(d1, 2.0);
-
-  // CHECK:      [[VF1:%.+]] = load <4 x float>, ptr %vf1.addr, align 16
-  // CHECK-NEXT: [[VF2:%.+]] = load <4 x float>, ptr %vf2.addr, align 16
-  // CHECK-NEXT: call <4 x float> @llvm.minnum.v4f32(<4 x float> [[VF1]], <4 x float> [[VF2]])
-  vf1 = __builtin_elementwise_min(vf1, vf2);
-
   // CHECK:      [[I1:%.+]] = load i64, ptr %i1.addr, align 8
   // CHECK-NEXT: [[I2:%.+]] = load i64, ptr %i2.addr, align 8
   // CHECK-NEXT: call i64 @llvm.smin.i64(i64 [[I1]], i64 [[I2]])
@@ -493,17 +438,6 @@ void test_builtin_elementwise_min(float f1, float f2, double d1, double d2,
   // CHECK-NEXT: [[LOADEDV3:%.+]] = trunc i64 [[BU2]] to i55
   // CHECK-NEXT: call i55 @llvm.umin.i55(i55 [[LOADEDV2]], i55 [[LOADEDV3]])
   bu1 = __builtin_elementwise_min(bu1, bu2);
-
-  // CHECK:      [[CVF1:%.+]] = load <4 x float>, ptr %cvf1, align 16
-  // CHECK-NEXT: [[VF2:%.+]] = load <4 x float>, ptr %vf2.addr, align 16
-  // CHECK-NEXT: call <4 x float> @llvm.minnum.v4f32(<4 x float> [[CVF1]], <4 x float> [[VF2]])
-  const float4 cvf1 = vf1;
-  vf1 = __builtin_elementwise_min(cvf1, vf2);
-
-  // CHECK:      [[VF2:%.+]] = load <4 x float>, ptr %vf2.addr, align 16
-  // CHECK-NEXT: [[CVF1:%.+]] = load <4 x float>, ptr %cvf1, align 16
-  // CHECK-NEXT: call <4 x float> @llvm.minnum.v4f32(<4 x float> [[VF2]], <4 x float> [[CVF1]])
-  vf1 = __builtin_elementwise_min(vf2, cvf1);
 
   // CHECK:      [[IAS1:%.+]] = load i32, ptr addrspace(1) @int_as_one, align 4
   // CHECK-NEXT: [[B:%.+]] = load i32, ptr @b, align 4

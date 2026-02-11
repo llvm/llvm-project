@@ -138,6 +138,9 @@ Non-comprehensive list of changes in this release
   Usable in constant expressions. Implicit conversion is supported for
   class/struct types with conversion operators.
 
+- Removed float types support from ``__builtin_elementwise_max`` and
+  ``__builtin_elementwise_min``.
+
 New Compiler Flags
 ------------------
 - New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added
