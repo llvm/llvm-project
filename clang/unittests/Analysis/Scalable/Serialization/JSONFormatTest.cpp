@@ -126,8 +126,7 @@ protected:
     OS << JSON;
     OS.close();
 
-    auto Result = JSONFormat(vfs::getRealFileSystem()).readTUSummary(FilePath);
-    return Result;
+    return JSONFormat(vfs::getRealFileSystem()).readTUSummary(FilePath);
   }
 
   void readWriteJSON(StringRef InputJSON) {
