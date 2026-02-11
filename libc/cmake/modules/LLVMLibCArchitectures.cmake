@@ -71,10 +71,15 @@ function(get_arch_and_system_from_triple triple arch_var sys_var)
 
   # Setting OS name for GPU architectures.
   list(GET triple_comps -1 gpu_target_sys)
-  if(gpu_target_sys MATCHES "^amdhsa" OR gpu_target_sys MATCHES "^cuda")
+  if(gpu_target_sys MATCHES "^amdhsa" OR gpu_target_sys MATCHES "^cuda" OR target_arch MATCHES "^spirv64")
     set(target_sys "gpu")
   endif()
 
+  if (target_arch MATCHES "^spirv64")
+    list(APPEND
+         LIBC_COMPILE_OPTIONS_DEFAULT "-emit-llvm")
+  endif()
+  
   set(${sys_var} ${target_sys} PARENT_SCOPE)
 endfunction(get_arch_and_system_from_triple)
 

@@ -9,13 +9,13 @@
 #ifndef __CLANG_LLVM_LIBC_WRAPPERS_STDIO_H__
 #define __CLANG_LLVM_LIBC_WRAPPERS_STDIO_H__
 
-#if !defined(_OPENMP) && !defined(__HIP__) && !defined(__CUDA__)
+#if !defined(_OPENMP) && !defined(__HIP__) && !defined(__CUDA__) &&!defined(__SPIRV__)
 #error "This file is for GPU offloading compilation only"
 #endif
 
 #include_next <stdio.h>
 
-#if defined(__HIP__) || defined(__CUDA__)
+#if defined(__HIP__) || defined(__CUDA__) || defined(__SPIRV__)
 #define __LIBC_ATTRS __attribute__((device))
 #else
 #define __LIBC_ATTRS
@@ -41,7 +41,7 @@ __LIBC_ATTRS extern FILE *stdout;
 #pragma omp end declare target
 
 // Restore the original macros when compiling on the host.
-#if !defined(__NVPTX__) && !defined(__AMDGPU__)
+#if !defined(__NVPTX__) && !defined(__AMDGPU__) && !defined(__SPIRV__)
 #pragma pop_macro("stderr")
 #pragma pop_macro("stdin")
 #pragma pop_macro("stdout")
