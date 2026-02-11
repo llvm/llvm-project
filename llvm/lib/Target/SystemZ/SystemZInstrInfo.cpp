@@ -1612,7 +1612,8 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
   return MIB;
 }
 
-bool SystemZInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
+bool SystemZInstrInfo::expandPostRAPseudo(MachineInstr &MI,
+                                          RegScavenger &RS) const {
   switch (MI.getOpcode()) {
   case SystemZ::L128:
     splitMove(MI, SystemZ::LG);
@@ -1783,11 +1784,11 @@ bool SystemZInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     return true;
 
   case SystemZ::MOVE_SG:
-    expandStackGuardPseudo(MI, SystemZ::MVC);
+    expandStackGuardPseudo(MI, RS, SystemZ::MVC);
     return true;
 
   case SystemZ::COMPARE_SG:
-    expandStackGuardPseudo(MI, SystemZ::CLC);
+    expandStackGuardPseudo(MI, RS, SystemZ::CLC);
     return true;
 
   default:
@@ -1798,13 +1799,7 @@ bool SystemZInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 namespace {
 // This is a workaround for https://github.com/llvm/llvm-project/issues/172511
 // and should be removed once that issue is resolved.
-Register scavengeAddrReg(MachineInstr &MI, MachineBasicBlock *MBB) {
-  // create fresh RegScavanger instance.
-  RegScavenger RS;
-  // initialize RegScavenger to correct location
-  RS.enterBasicBlockEnd(*MBB);
-  RS.backward(MI);
-
+Register scavengeAddrReg(MachineInstr &MI, RegScavenger &RS) {
   // Attempt to find a free register.
   Register Scratch = RS.FindUnusedReg(&SystemZ::ADDR64BitRegClass);
   // If not found, scavenge one, i.e. evict something to a stack spill slot.
@@ -1822,6 +1817,7 @@ Register scavengeAddrReg(MachineInstr &MI, MachineBasicBlock *MBB) {
 } // namespace
 
 void SystemZInstrInfo::expandStackGuardPseudo(MachineInstr &MI,
+                                              RegScavenger &RS,
                                               unsigned Opcode) const {
   MachineBasicBlock &MBB = *(MI.getParent());
   const MachineFunction &MF = *(MBB.getParent());
@@ -1840,7 +1836,7 @@ void SystemZInstrInfo::expandStackGuardPseudo(MachineInstr &MI,
   Register OpReg = MI.getOperand(1).getReg();
   // if we can't use AddrReg, scavenge a new one.
   if (AddrReg == OpReg)
-    AddrReg = scavengeAddrReg(MI, &MBB);
+    AddrReg = scavengeAddrReg(MI, RS);
 
   // emit an appropriate pseudo for the guard type, which loads the address of said
   // guard into the scratch register AddrReg.

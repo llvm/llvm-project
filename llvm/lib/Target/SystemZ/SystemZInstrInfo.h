@@ -193,7 +193,8 @@ class SystemZInstrInfo : public SystemZGenInstrInfo {
                        unsigned HighOpcode) const;
   void expandZExtPseudo(MachineInstr &MI, unsigned LowOpcode,
                         unsigned Size) const;
-  void expandStackGuardPseudo(MachineInstr &MI, unsigned Opcode) const;
+  void expandStackGuardPseudo(MachineInstr &MI, RegScavenger &RS,
+                              unsigned Opcode) const;
   MachineInstrBuilder
   emitGRX32Move(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                 const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
@@ -306,7 +307,7 @@ public:
       MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
       MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
       LiveIntervals *LIS = nullptr) const override;
-  bool expandPostRAPseudo(MachineInstr &MBBI) const override;
+  bool expandPostRAPseudo(MachineInstr &MBBI, RegScavenger &RS) const override;
   bool reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const
     override;
 
