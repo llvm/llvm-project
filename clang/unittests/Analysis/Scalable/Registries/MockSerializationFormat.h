@@ -12,11 +12,13 @@
 #include "clang/Analysis/Scalable/Model/SummaryName.h"
 #include "clang/Analysis/Scalable/Serialization/SerializationFormat.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/Support/ExtensibleRTTI.h"
 #include <string>
 
 namespace clang::ssaf {
 
-class MockSerializationFormat final : public SerializationFormat {
+class MockSerializationFormat final
+    : public llvm::RTTIExtends<MockSerializationFormat, SerializationFormat> {
 public:
   explicit MockSerializationFormat(
       llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
@@ -37,6 +39,8 @@ public:
 
   using FormatInfo = FormatInfoEntry<SerializerFn, DeserializerFn>;
   std::map<SummaryName, FormatInfo> FormatInfos;
+
+  static char ID;
 };
 
 } // namespace clang::ssaf
