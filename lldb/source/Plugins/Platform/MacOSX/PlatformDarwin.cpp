@@ -135,7 +135,7 @@ public:
 
   PlatformDarwinProperties() : Properties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_platformdarwin_properties);
+    m_collection_sp->Initialize(g_platformdarwin_properties_def);
   }
 
   ~PlatformDarwinProperties() override = default;
