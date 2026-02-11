@@ -181,6 +181,10 @@ namespace llvm {
     /// Keeps track of source locations for Values, BasicBlocks, and Functions.
     AsmParserContext *ParserContext;
 
+    /// retainedNodes of these subprograms should be cleaned up from incorrectly
+    /// scoped local types.
+    SmallVector<DISubprogram *> NewDistinctSPs;
+
     /// Only the llvm-as tool may set this to false to bypass
     /// UpgradeDebuginfo so it can generate broken bitcode.
     bool UpgradeDebugInfo;
@@ -325,6 +329,8 @@ namespace llvm {
     bool parseOptionalUWTableKind(UWTableKind &Kind);
     bool parseAllocKind(AllocFnKind &Kind);
     std::optional<MemoryEffects> parseMemoryAttr();
+    std::optional<DenormalMode> parseDenormalFPEnvEntry();
+    std::optional<DenormalFPEnv> parseDenormalFPEnvAttr();
     unsigned parseNoFPClassAttr();
     bool parseScopeAndOrdering(bool IsAtomic, SyncScope::ID &SSID,
                                AtomicOrdering &Ordering);

@@ -37,9 +37,10 @@ end subroutine test2
 ! CHECK:           %[[VAL_10:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
 ! CHECK:           %[[VAL_11:.*]] = fir.box_elesize %[[VAL_10]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> index
 ! CHECK:           %[[VAL_12:.*]] = fir.emboxchar %[[VAL_9]], %[[VAL_11]] : (!fir.heap<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK:           %[[VAL_13:.*]] = arith.constant false
+! CHECK:           %[[VAL_13:.*]] = arith.constant true
 ! CHECK:           %[[VAL_14:.*]] = hlfir.as_expr %[[VAL_12]] move %[[VAL_13]] : (!fir.boxchar<1>, i1) -> !hlfir.expr<!fir.char<1,?>>
 ! CHECK:           hlfir.assign %[[VAL_14]] to %{{.*}}#0 realloc : !hlfir.expr<!fir.char<1,?>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
+! CHECK:           hlfir.destroy %[[VAL_14]]
 
 subroutine test3
   character(len=:), allocatable :: c
@@ -53,9 +54,10 @@ end subroutine test3
 ! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,3>>>>, index) -> (!fir.ref<!fir.box<!fir.heap<!fir.char<1,3>>>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,3>>>>)
 ! CHECK:           %[[VAL_14:.*]] = fir.load %[[VAL_13]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.char<1,3>>>>
 ! CHECK:           %[[VAL_15:.*]] = fir.box_addr %[[VAL_14]] : (!fir.box<!fir.heap<!fir.char<1,3>>>) -> !fir.heap<!fir.char<1,3>>
-! CHECK:           %[[VAL_16:.*]] = arith.constant false
+! CHECK:           %[[VAL_16:.*]] = arith.constant true
 ! CHECK:           %[[VAL_17:.*]] = hlfir.as_expr %[[VAL_15]] move %[[VAL_16]] : (!fir.heap<!fir.char<1,3>>, i1) -> !hlfir.expr<!fir.char<1,3>>
 ! CHECK:           hlfir.assign %[[VAL_17]] to %{{.*}}#0 realloc : !hlfir.expr<!fir.char<1,3>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
+! CHECK:           hlfir.destroy %[[VAL_17]]
 
 subroutine test4
   class(*), allocatable :: p
@@ -69,7 +71,8 @@ end subroutine test4
 ! CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_0:.*]] : !fir.ref<!fir.class<!fir.heap<none>>>
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = ".tmp.func_result"} : (!fir.class<!fir.heap<none>>) -> (!fir.class<none>, !fir.class<none>)
 ! CHECK:           hlfir.assign %[[VAL_7]]#0 to %{{.*}}#0 realloc : !fir.class<none>, !fir.ref<!fir.class<!fir.heap<none>>>
-! CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.box<none>
+! CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.class<!fir.heap<none>>>
+! CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_8]] : (!fir.class<!fir.heap<none>>) -> !fir.box<none>
 ! CHECK:           fir.call @_FortranADestroy(%[[VAL_10]]) fastmath<contract> : (!fir.box<none>) -> ()
 
 subroutine test4b
@@ -84,7 +87,8 @@ end subroutine test4b
 ! CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_0:.*]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = ".tmp.func_result"} : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>) -> (!fir.class<!fir.array<?x?xnone>>, !fir.class<!fir.array<?x?xnone>>)
 ! CHECK:           hlfir.assign %[[VAL_7]]#0 to %{{.*}}#0 realloc : !fir.class<!fir.array<?x?xnone>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>
-! CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>) -> !fir.box<none>
+! CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>
+! CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_8]] : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>) -> !fir.box<none>
 ! CHECK:           fir.call @_FortranADestroy(%[[VAL_10]]) fastmath<contract> : (!fir.box<none>) -> ()
 
 subroutine test5

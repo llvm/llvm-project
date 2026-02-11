@@ -59,16 +59,16 @@ define amdgpu_vs <5 x float> @test_5xf16_5xf32_add_ext_mul(<5 x half> inreg %x, 
 ; GFX9-FAST-DENORM-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX9-FAST-DENORM-NEXT:    s_lshr_b32 s3, s0, 16
 ; GFX9-FAST-DENORM-NEXT:    s_lshr_b32 s4, s1, 16
-; GFX9-FAST-DENORM-NEXT:    v_cvt_f32_f16_e32 v0, s0
-; GFX9-FAST-DENORM-NEXT:    v_cvt_f32_f16_e32 v1, s3
-; GFX9-FAST-DENORM-NEXT:    v_cvt_f32_f16_e32 v2, s1
-; GFX9-FAST-DENORM-NEXT:    v_cvt_f32_f16_e32 v3, s4
-; GFX9-FAST-DENORM-NEXT:    v_cvt_f32_f16_e32 v4, s2
-; GFX9-FAST-DENORM-NEXT:    v_add_f32_e32 v0, s6, v0
-; GFX9-FAST-DENORM-NEXT:    v_add_f32_e32 v1, s7, v1
-; GFX9-FAST-DENORM-NEXT:    v_add_f32_e32 v2, s8, v2
-; GFX9-FAST-DENORM-NEXT:    v_add_f32_e32 v3, s9, v3
-; GFX9-FAST-DENORM-NEXT:    v_add_f32_e32 v4, s10, v4
+; GFX9-FAST-DENORM-NEXT:    v_mov_b32_e32 v0, s6
+; GFX9-FAST-DENORM-NEXT:    v_mov_b32_e32 v1, s7
+; GFX9-FAST-DENORM-NEXT:    v_mov_b32_e32 v2, s8
+; GFX9-FAST-DENORM-NEXT:    v_mov_b32_e32 v3, s9
+; GFX9-FAST-DENORM-NEXT:    v_mov_b32_e32 v4, s10
+; GFX9-FAST-DENORM-NEXT:    v_mad_mix_f32 v0, s0, 1.0, v0 op_sel_hi:[1,1,0]
+; GFX9-FAST-DENORM-NEXT:    v_mad_mix_f32 v1, s3, 1.0, v1 op_sel_hi:[1,1,0]
+; GFX9-FAST-DENORM-NEXT:    v_mad_mix_f32 v2, s1, 1.0, v2 op_sel_hi:[1,1,0]
+; GFX9-FAST-DENORM-NEXT:    v_mad_mix_f32 v3, s4, 1.0, v3 op_sel_hi:[1,1,0]
+; GFX9-FAST-DENORM-NEXT:    v_mad_mix_f32 v4, s2, 1.0, v4 op_sel_hi:[1,1,0]
 ; GFX9-FAST-DENORM-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-FAST-DENORM-LABEL: test_5xf16_5xf32_add_ext_mul:
@@ -110,18 +110,18 @@ define amdgpu_vs <6 x float> @test_6xf16_6xf32_add_ext_mul_rhs(<6 x half> inreg 
 ; GFX9-FAST-DENORM-NEXT:    s_lshr_b32 s3, s0, 16
 ; GFX9-FAST-DENORM-NEXT:    s_lshr_b32 s4, s1, 16
 ; GFX9-FAST-DENORM-NEXT:    s_lshr_b32 s5, s2, 16
-; GFX9-FAST-DENORM-NEXT:    v_cvt_f32_f16_e32 v0, s0
-; GFX9-FAST-DENORM-NEXT:    v_cvt_f32_f16_e32 v1, s3
-; GFX9-FAST-DENORM-NEXT:    v_cvt_f32_f16_e32 v2, s1
-; GFX9-FAST-DENORM-NEXT:    v_cvt_f32_f16_e32 v3, s4
-; GFX9-FAST-DENORM-NEXT:    v_cvt_f32_f16_e32 v4, s2
-; GFX9-FAST-DENORM-NEXT:    v_cvt_f32_f16_e32 v5, s5
-; GFX9-FAST-DENORM-NEXT:    v_add_f32_e32 v0, s6, v0
-; GFX9-FAST-DENORM-NEXT:    v_add_f32_e32 v1, s7, v1
-; GFX9-FAST-DENORM-NEXT:    v_add_f32_e32 v2, s8, v2
-; GFX9-FAST-DENORM-NEXT:    v_add_f32_e32 v3, s9, v3
-; GFX9-FAST-DENORM-NEXT:    v_add_f32_e32 v4, s10, v4
-; GFX9-FAST-DENORM-NEXT:    v_add_f32_e32 v5, s11, v5
+; GFX9-FAST-DENORM-NEXT:    v_mov_b32_e32 v0, s6
+; GFX9-FAST-DENORM-NEXT:    v_mov_b32_e32 v1, s7
+; GFX9-FAST-DENORM-NEXT:    v_mov_b32_e32 v2, s8
+; GFX9-FAST-DENORM-NEXT:    v_mov_b32_e32 v3, s9
+; GFX9-FAST-DENORM-NEXT:    v_mov_b32_e32 v4, s10
+; GFX9-FAST-DENORM-NEXT:    v_mov_b32_e32 v5, s11
+; GFX9-FAST-DENORM-NEXT:    v_mad_mix_f32 v0, s0, 1.0, v0 op_sel_hi:[1,1,0]
+; GFX9-FAST-DENORM-NEXT:    v_mad_mix_f32 v1, s3, 1.0, v1 op_sel_hi:[1,1,0]
+; GFX9-FAST-DENORM-NEXT:    v_mad_mix_f32 v2, s1, 1.0, v2 op_sel_hi:[1,1,0]
+; GFX9-FAST-DENORM-NEXT:    v_mad_mix_f32 v3, s4, 1.0, v3 op_sel_hi:[1,1,0]
+; GFX9-FAST-DENORM-NEXT:    v_mad_mix_f32 v4, s2, 1.0, v4 op_sel_hi:[1,1,0]
+; GFX9-FAST-DENORM-NEXT:    v_mad_mix_f32 v5, s5, 1.0, v5 op_sel_hi:[1,1,0]
 ; GFX9-FAST-DENORM-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-FAST-DENORM-LABEL: test_6xf16_6xf32_add_ext_mul_rhs:
