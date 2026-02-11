@@ -185,7 +185,7 @@ void X86CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
     addMachineFunctionPass(X86FixupVectorConstantsPass(), PMW);
   }
   addMachineFunctionPass(X86CompressEVEXPass(), PMW);
-  // TODO(boomanaiden154): Add InsertX86WaitPass here once it has been ported.
+  addMachineFunctionPass(X86InsertX87WaitPass(), PMW);
 }
 
 void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {

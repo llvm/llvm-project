@@ -1,4 +1,4 @@
-//===-- NativeRegisterContextLinux_x86_64.h ---------------------*- C++ -*-===//
+//===-- NativeRegisterContextLinux_x86.h ------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,8 +8,8 @@
 
 #if defined(__i386__) || defined(__x86_64__)
 
-#ifndef lldb_NativeRegisterContextLinux_x86_64_h
-#define lldb_NativeRegisterContextLinux_x86_64_h
+#ifndef lldb_NativeRegisterContextLinux_x86_h
+#define lldb_NativeRegisterContextLinux_x86_h
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
 #include "Plugins/Process/Utility/NativeRegisterContextDBReg_x86.h"
@@ -24,11 +24,11 @@ namespace process_linux {
 
 class NativeProcessLinux;
 
-class NativeRegisterContextLinux_x86_64
+class NativeRegisterContextLinux_x86
     : public NativeRegisterContextLinux,
       public NativeRegisterContextDBReg_x86 {
 public:
-  NativeRegisterContextLinux_x86_64(const ArchSpec &target_arch,
+  NativeRegisterContextLinux_x86(const ArchSpec &target_arch,
                                     NativeThreadProtocol &native_thread);
 
   uint32_t GetRegisterSetCount() const override;
@@ -143,6 +143,6 @@ private:
 } // namespace process_linux
 } // namespace lldb_private
 
-#endif // #ifndef lldb_NativeRegisterContextLinux_x86_64_h
+#endif // #ifndef lldb_NativeRegisterContextLinux_x86_h
 
 #endif // defined(__i386__) || defined(__x86_64__)

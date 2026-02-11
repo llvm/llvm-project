@@ -323,7 +323,12 @@ FunctionPass *createX86ReturnThunksLegacyPass();
 
 /// This pass insert wait instruction after X87 instructions which could raise
 /// fp exceptions when strict-fp enabled.
-FunctionPass *createX86InsertX87waitPass();
+class X86InsertX87WaitPass : public PassInfoMixin<X86InsertX87WaitPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF, MachineFunctionAnalysisManager &);
+};
+
+FunctionPass *createX86InsertX87WaitLegacyPass();
 
 /// This pass optimizes arithmetic based on knowledge that is only used by
 /// a reduction sequence and is therefore safe to reassociate in interesting
