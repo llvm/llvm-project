@@ -540,8 +540,6 @@ class DebugCommunication(object):
             # reasons since the 'threads' command doesn't return
             # that information.
             self._process_stopped()
-            if "allThreadsStopped" in body and body["allThreadsStopped"]:
-                self.thread_stop_reasons = {}
             if "threadId" in body:
                 tid = body["threadId"]
                 self.thread_stop_reasons[tid] = body
