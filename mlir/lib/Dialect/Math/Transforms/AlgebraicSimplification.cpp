@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -42,6 +43,7 @@ PowFStrengthReduction::matchAndRewrite(math::PowFOp op,
                                        PatternRewriter &rewriter) const {
   Location loc = op.getLoc();
   Value x = op.getLhs();
+  arith::FastMathFlags fmf = op.getFastmathAttr().getValue();
 
   FloatAttr scalarExponent;
   DenseFPElementsAttr vectorExponent;
@@ -65,7 +67,7 @@ PowFStrengthReduction::matchAndRewrite(math::PowFOp op,
   // Maybe broadcasts scalar value into vector type compatible with `op`.
   auto bcast = [&](Value value) -> Value {
     if (auto vec = dyn_cast<VectorType>(op.getType()))
-      return vector::BroadcastOp::create(rewriter, op.getLoc(), vec, value);
+      return vector::BroadcastOp::create(rewriter, loc, vec, value);
     return value;
   };
 
@@ -77,15 +79,14 @@ PowFStrengthReduction::matchAndRewrite(math::PowFOp op,
 
   // Replace `pow(x, 2.0)` with `x * x`.
   if (isExponentValue(2.0)) {
-    rewriter.replaceOpWithNewOp<arith::MulFOp>(op, ValueRange({x, x}));
+    rewriter.replaceOpWithNewOp<arith::MulFOp>(op, x, x, fmf);
     return success();
   }
 
   // Replace `pow(x, 3.0)` with `x * x * x`.
   if (isExponentValue(3.0)) {
-    Value square =
-        arith::MulFOp::create(rewriter, op.getLoc(), ValueRange({x, x}));
-    rewriter.replaceOpWithNewOp<arith::MulFOp>(op, ValueRange({x, square}));
+    Value square = arith::MulFOp::create(rewriter, loc, x, x, fmf);
+    rewriter.replaceOpWithNewOp<arith::MulFOp>(op, x, square, fmf);
     return success();
   }
 
@@ -94,28 +95,27 @@ PowFStrengthReduction::matchAndRewrite(math::PowFOp op,
     Value one = arith::ConstantOp::create(
         rewriter, loc,
         rewriter.getFloatAttr(getElementTypeOrSelf(op.getType()), 1.0));
-    rewriter.replaceOpWithNewOp<arith::DivFOp>(op, ValueRange({bcast(one), x}));
+    rewriter.replaceOpWithNewOp<arith::DivFOp>(op, bcast(one), x, fmf);
     return success();
   }
 
   // Replace `pow(x, 0.5)` with `sqrt(x)`.
   if (isExponentValue(0.5)) {
-    rewriter.replaceOpWithNewOp<math::SqrtOp>(op, x);
+    rewriter.replaceOpWithNewOp<math::SqrtOp>(op, x, fmf);
     return success();
   }
 
   // Replace `pow(x, -0.5)` with `rsqrt(x)`.
   if (isExponentValue(-0.5)) {
-    rewriter.replaceOpWithNewOp<math::RsqrtOp>(op, x);
+    rewriter.replaceOpWithNewOp<math::RsqrtOp>(op, x, fmf);
     return success();
   }
 
   // Replace `pow(x, 0.75)` with `sqrt(sqrt(x)) * sqrt(x)`.
   if (isExponentValue(0.75)) {
-    Value powHalf = math::SqrtOp::create(rewriter, op.getLoc(), x);
-    Value powQuarter = math::SqrtOp::create(rewriter, op.getLoc(), powHalf);
-    rewriter.replaceOpWithNewOp<arith::MulFOp>(op,
-                                               ValueRange{powHalf, powQuarter});
+    Value powHalf = math::SqrtOp::create(rewriter, loc, x, fmf);
+    Value powQuarter = math::SqrtOp::create(rewriter, loc, powHalf, fmf);
+    rewriter.replaceOpWithNewOp<arith::MulFOp>(op, powHalf, powQuarter, fmf);
     return success();
   }
 
@@ -175,12 +175,20 @@ PowIStrengthReduction<PowIOpTy, DivOpTy, MulOpTy>::matchAndRewrite(
 
   Value one;
   Type opType = getElementTypeOrSelf(op.getType());
-  if constexpr (std::is_same_v<PowIOpTy, math::FPowIOp>)
+  if constexpr (std::is_same_v<PowIOpTy, math::FPowIOp>) {
     one = arith::ConstantOp::create(rewriter, loc,
                                     rewriter.getFloatAttr(opType, 1.0));
-  else
+  } else if constexpr (std::is_same_v<PowIOpTy, complex::PowiOp>) {
+    auto complexTy = cast<ComplexType>(opType);
+    Type elementType = complexTy.getElementType();
+    auto realPart = rewriter.getFloatAttr(elementType, 1.0);
+    auto imagPart = rewriter.getFloatAttr(elementType, 0.0);
+    one = complex::ConstantOp::create(
+        rewriter, loc, complexTy, rewriter.getArrayAttr({realPart, imagPart}));
+  } else {
     one = arith::ConstantOp::create(rewriter, loc,
                                     rewriter.getIntegerAttr(opType, 1));
+  }
 
   // Replace `[fi]powi(x, 0)` with `1`.
   if (exponentValue == 0) {
@@ -208,13 +216,25 @@ PowIStrengthReduction<PowIOpTy, DivOpTy, MulOpTy>::matchAndRewrite(
   //       `[fi]powi(x, negative_exponent)`
   //     with:
   //       (1 / x) * (1 / x) * (1 / x) * ...
+  auto buildMul = [&](Value lhs, Value rhs) {
+    if constexpr (std::is_same_v<PowIOpTy, complex::PowiOp>)
+      return MulOpTy::create(rewriter, loc, op.getType(), lhs, rhs,
+                             op.getFastmathAttr());
+    else
+      return MulOpTy::create(rewriter, loc, lhs, rhs);
+  };
   for (unsigned i = 1; i < exponentValue; ++i)
-    result = MulOpTy::create(rewriter, loc, result, base);
+    result = buildMul(result, base);
 
   // Inverse the base for negative exponent, i.e. for
   // `[fi]powi(x, negative_exponent)` set `x` to `1 / x`.
-  if (exponentIsNegative)
-    result = DivOpTy::create(rewriter, loc, bcast(one), result);
+  if (exponentIsNegative) {
+    if constexpr (std::is_same_v<PowIOpTy, complex::PowiOp>)
+      result = DivOpTy::create(rewriter, loc, op.getType(), bcast(one), result,
+                               op.getFastmathAttr());
+    else
+      result = DivOpTy::create(rewriter, loc, bcast(one), result);
+  }
 
   rewriter.replaceOp(op, result);
   return success();
@@ -224,9 +244,10 @@ PowIStrengthReduction<PowIOpTy, DivOpTy, MulOpTy>::matchAndRewrite(
 
 void mlir::populateMathAlgebraicSimplificationPatterns(
     RewritePatternSet &patterns) {
-  patterns
-      .add<PowFStrengthReduction,
-           PowIStrengthReduction<math::IPowIOp, arith::DivSIOp, arith::MulIOp>,
-           PowIStrengthReduction<math::FPowIOp, arith::DivFOp, arith::MulFOp>>(
-          patterns.getContext());
+  patterns.add<
+      PowFStrengthReduction,
+      PowIStrengthReduction<math::IPowIOp, arith::DivSIOp, arith::MulIOp>,
+      PowIStrengthReduction<math::FPowIOp, arith::DivFOp, arith::MulFOp>,
+      PowIStrengthReduction<complex::PowiOp, complex::DivOp, complex::MulOp>>(
+      patterns.getContext(), /*exponentThreshold=*/8);
 }

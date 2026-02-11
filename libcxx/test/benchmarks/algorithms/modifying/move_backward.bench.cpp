@@ -47,9 +47,6 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::move_backward(vector<int>)", std_move_backward);
     bm.operator()<std::deque<int>>("std::move_backward(deque<int>)", std_move_backward);
     bm.operator()<std::list<int>>("std::move_backward(list<int>)", std_move_backward);
-    bm.operator()<std::vector<int>>("rng::move_backward(vector<int>)", std::ranges::move_backward);
-    bm.operator()<std::deque<int>>("rng::move_backward(deque<int>)", std::ranges::move_backward);
-    bm.operator()<std::list<int>>("rng::move_backward(list<int>)", std::ranges::move_backward);
   }
 
   // {std,ranges}::move_backward(vector<bool>)
@@ -74,10 +71,6 @@ int main(int argc, char** argv) {
     };
     bm.operator()<true>("std::move_backward(vector<bool>) (aligned)", std_move_backward);
     bm.operator()<false>("std::move_backward(vector<bool>) (unaligned)", std_move_backward);
-#if TEST_STD_VER >= 23 // vector<bool>::iterator is not an output_iterator before C++23
-    bm.operator()<true>("rng::move_backward(vector<bool>) (aligned)", std::ranges::move_backward);
-    bm.operator()<false>("rng::move_backward(vector<bool>) (unaligned)", std::ranges::move_backward);
-#endif
   }
 
   benchmark::Initialize(&argc, argv);

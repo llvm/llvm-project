@@ -114,9 +114,12 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1151: AK = GK_GFX1151; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1152: AK = GK_GFX1152; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1153: AK = GK_GFX1153; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1170: AK = GK_GFX1170; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200: AK = GK_GFX1200; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201: AK = GK_GFX1201; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1250: AK = GK_GFX1250; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1251: AK = GK_GFX1251; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1310: AK = GK_GFX1310; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC:     AK = GK_GFX9_GENERIC; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC:   AK = GK_GFX9_4_GENERIC; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC:  AK = GK_GFX10_1_GENERIC; break;
@@ -200,9 +203,12 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX1151: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1151;
   case GK_GFX1152: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1152;
   case GK_GFX1153: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1153;
+  case GK_GFX1170: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1170;
   case GK_GFX1200: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200;
   case GK_GFX1201: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201;
   case GK_GFX1250: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1250;
+  case GK_GFX1251: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1251;
+  case GK_GFX1310: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1310;
   case GK_GFX9_GENERIC:     return ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC;
   case GK_GFX9_4_GENERIC:   return ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC;
   case GK_GFX10_1_GENERIC:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC;
@@ -300,9 +306,9 @@ void AMDGPUTargetAsmStreamer::EmitMCResourceInfo(
 #undef PRINT_RES_INFO
 }
 
-void AMDGPUTargetAsmStreamer::EmitMCResourceMaximums(const MCSymbol *MaxVGPR,
-                                                     const MCSymbol *MaxAGPR,
-                                                     const MCSymbol *MaxSGPR) {
+void AMDGPUTargetAsmStreamer::EmitMCResourceMaximums(
+    const MCSymbol *MaxVGPR, const MCSymbol *MaxAGPR, const MCSymbol *MaxSGPR,
+    const MCSymbol *MaxNamedBarrier) {
 #define PRINT_RES_INFO(ARG)                                                    \
   OS << "\t.set ";                                                             \
   ARG->print(OS, getContext().getAsmInfo());                                   \
@@ -313,6 +319,7 @@ void AMDGPUTargetAsmStreamer::EmitMCResourceMaximums(const MCSymbol *MaxVGPR,
   PRINT_RES_INFO(MaxVGPR);
   PRINT_RES_INFO(MaxAGPR);
   PRINT_RES_INFO(MaxSGPR);
+  PRINT_RES_INFO(MaxNamedBarrier);
 #undef PRINT_RES_INFO
 }
 
@@ -396,7 +403,7 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
   EmitMCExpr(KD.kernarg_size);
   OS << '\n';
 
-  if (isGFX1250(STI)) {
+  if (isGFX1250Plus(STI)) {
     PrintField(KD.compute_pgm_rsrc2,
                amdhsa::COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT_SHIFT,
                amdhsa::COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT,
@@ -448,11 +455,6 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
       amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE_SHIFT,
       amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE,
       ".amdhsa_user_sgpr_private_segment_size");
-  if (isGFX1250(STI))
-    PrintField(KD.kernel_code_properties,
-               amdhsa::KERNEL_CODE_PROPERTY_USES_CU_STORES_SHIFT,
-               amdhsa::KERNEL_CODE_PROPERTY_USES_CU_STORES,
-               ".amdhsa_uses_cu_stores");
   if (IVersion.Major >= 10)
     PrintField(KD.kernel_code_properties,
                amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32_SHIFT,
@@ -515,7 +517,7 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     OS << '\n';
   }
 
-  if (AMDGPU::isGFX1250(STI))
+  if (isGFX1250Plus(STI))
     PrintField(KD.compute_pgm_rsrc3,
                amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT_SHIFT,
                amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT,

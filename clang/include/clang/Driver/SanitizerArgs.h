@@ -28,6 +28,7 @@ class SanitizerArgs {
   SanitizerSet MergeHandlers;
   SanitizerMaskCutoffs SkipHotCutoffs;
   SanitizerSet AnnotateDebugInfo;
+  SanitizerSet SuppressUBSanFeature;
 
   std::vector<std::string> UserIgnorelistFiles;
   std::vector<std::string> SystemIgnorelistFiles;
@@ -67,6 +68,9 @@ class SanitizerArgs {
   bool TsanFuncEntryExit = true;
   bool TsanAtomics = true;
   bool MinimalRuntime = false;
+  bool TrapLoop = false;
+  bool TysanOutlineInstrumentation = true;
+  bool HandlerPreserveAllRegs = false;
   // True if cross-dso CFI support if provided by the system (i.e. Android).
   bool ImplicitCfiRuntime = false;
   bool NeedsMemProfRt = false;
@@ -75,6 +79,8 @@ class SanitizerArgs {
       llvm::AsanDetectStackUseAfterReturnMode::Invalid;
 
   std::string MemtagMode;
+  bool AllocTokenFastABI = false;
+  bool AllocTokenExtended = false;
 
 public:
   /// Parses the sanitizer arguments from an argument list.
@@ -105,6 +111,7 @@ public:
   bool needsUbsanRt() const;
   bool needsUbsanCXXRt() const;
   bool requiresMinimalRuntime() const { return MinimalRuntime; }
+  bool needsUbsanLoopDetectRt() const { return TrapLoop; }
   bool needsDfsanRt() const { return Sanitizers.has(SanitizerKind::DataFlow); }
   bool needsSafeStackRt() const { return SafeStackRuntime; }
   bool needsCfiCrossDsoRt() const;

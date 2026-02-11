@@ -409,5 +409,6 @@ class TestMetrics(unittest.TestCase):
         out_name4 = metrics.clean_up_libcxx_job_name(bad_name)
         self.assertEqual(out_name4, bad_name)
 
+
 if __name__ == "__main__":
     unittest.main()

@@ -547,6 +547,7 @@ struct Allocator {
         ComputeUserRequestedAlignmentLog(alignment);
     if (alignment < min_alignment)
       alignment = min_alignment;
+    bool upgraded_from_zero = false;
     if (size == 0) {
       // We'd be happy to avoid allocating memory for zero-size requests, but
       // some programs/tests depend on this behavior and assume that malloc
@@ -555,6 +556,7 @@ struct Allocator {
       // consecutive "new" calls must be different even if the allocated size
       // is zero.
       size = 1;
+      upgraded_from_zero = true;
     }
     CHECK(IsPowerOfTwo(alignment));
     uptr rz_log = ComputeRZLog(size);
@@ -636,6 +638,10 @@ struct Allocator {
           (u8 *)MemToShadow(user_beg + size_rounded_down_to_granularity);
       *shadow = fl.poison_partial ? (size & (ASAN_SHADOW_GRANULARITY - 1)) : 0;
     }
+
+    if (upgraded_from_zero)
+      PoisonShadow(user_beg, ASAN_SHADOW_GRANULARITY,
+                   kAsanHeapLeftRedzoneMagic);
 
     AsanStats &thread_stats = GetCurrentThreadStats();
     thread_stats.mallocs++;
@@ -785,13 +791,14 @@ struct Allocator {
     return new_ptr;
   }
 
-  void *Calloc(uptr nmemb, uptr size, BufferedStackTrace *stack) {
+  void* Calloc(uptr nmemb, uptr size, BufferedStackTrace* stack,
+               uptr align = 8) {
     if (UNLIKELY(CheckForCallocOverflow(size, nmemb))) {
       if (AllocatorMayReturnNull())
         return nullptr;
       ReportCallocOverflow(nmemb, size, stack);
     }
-    void *ptr = Allocate(nmemb * size, 8, stack, FROM_MALLOC, false);
+    void* ptr = Allocate(nmemb * size, align, stack, FROM_MALLOC, false);
     // If the memory comes from the secondary allocator no need to clear it
     // as it comes directly from mmap.
     if (ptr && allocator.FromPrimary(ptr))
@@ -1018,6 +1025,16 @@ void *asan_malloc(uptr size, BufferedStackTrace *stack) {
 void *asan_calloc(uptr nmemb, uptr size, BufferedStackTrace *stack) {
   return SetErrnoOnNull(instance.Calloc(nmemb, size, stack));
 }
+
+#if SANITIZER_AIX
+void* asan_vec_malloc(uptr size, BufferedStackTrace* stack) {
+  return SetErrnoOnNull(instance.Allocate(size, 16, stack, FROM_MALLOC, true));
+}
+
+void* asan_vec_calloc(uptr nmemb, uptr size, BufferedStackTrace* stack) {
+  return SetErrnoOnNull(instance.Calloc(nmemb, size, stack, 16));
+}
+#endif
 
 void *asan_reallocarray(void *p, uptr nmemb, uptr size,
                         BufferedStackTrace *stack) {

@@ -25,7 +25,7 @@ static const char Letters[] = {
 static const std::size_t LettersSize = sizeof(Letters);
 
 inline std::default_random_engine& getRandomEngine() {
-  static std::default_random_engine RandEngine(std::random_device{}());
+  static std::default_random_engine RandEngine(123456);
   return RandEngine;
 }
 
@@ -38,6 +38,12 @@ template <class IntT>
 inline IntT getRandomInteger(IntT Min, IntT Max) {
   std::uniform_int_distribution<unsigned long long> dist(Min, Max);
   return static_cast<IntT>(dist(getRandomEngine()));
+}
+
+template <class FloatT>
+inline FloatT getRandomFloat(FloatT Min, FloatT Max) {
+  std::uniform_real_distribution<FloatT> dist(Min, Max);
+  return static_cast<FloatT>(dist(getRandomEngine()));
 }
 
 inline std::string getRandomString(std::size_t Len) {
@@ -192,6 +198,15 @@ struct Generate<T> {
   static T cheap() { return 42; }
   static T expensive() { return 42; }
   static T random() { return getRandomInteger<T>(std::numeric_limits<T>::min(), std::numeric_limits<T>::max()); }
+};
+
+template <class T>
+  requires std::floating_point<T>
+struct Generate<T> {
+  static T arbitrary() { return 42; }
+  static T cheap() { return 42; }
+  static T expensive() { return 42; }
+  static T random() { return getRandomFloat<T>(std::numeric_limits<T>::min(), std::numeric_limits<T>::max()); }
 };
 
 template <>

@@ -18,6 +18,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
+#include "llvm/Support/LogicalResult.h"
 
 namespace mlir {
 namespace NVVM {
@@ -82,7 +83,8 @@ public:
         needsManualRegisterMapping(needsManualRegisterMapping) {}
 
   /// Add an operand with the read/write input type.
-  void insertValue(Value v, PTXRegisterMod itype = PTXRegisterMod::Read);
+  LogicalResult insertValue(Value v,
+                            PTXRegisterMod itype = PTXRegisterMod::Read);
 
   /// Builds the inline assembly Op and returns it. The `insertValue` needs to
   /// be called to pass operands before building the PTX.

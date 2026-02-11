@@ -82,7 +82,8 @@ Updating Pull Requests
 ----------------------
 In order to update your pull request, the only thing you need to do is to push
 your new commits to the branch in your fork. That will automatically update
-the pull request.
+the pull request. You can also use the Update Branch button in GitHub's Pull
+Request UI, but be aware that it will create a merge commit on your branch.
 
 When updating a pull request, you should push additional "fix up" commits to
 your branch instead of force pushing. This makes it easier for GitHub to
@@ -90,10 +91,11 @@ track the context of previous review comments. Consider using the
 `built-in support for fixups <https://git-scm.com/docs/git-commit#Documentation/git-commit.txt---fixupamendrewordltcommitgt>`_
 in git.
 
-If you do this, you must squash and merge before landing the PR and
-you must use the pull request title and description as the commit message.
-You can do this manually with an interactive git rebase or with GitHub's
-built-in tool. See the section about landing your fix below.
+If you create fix up or merge commits, you must squash and merge before
+landing the PR and you must use the pull request title and description as
+the commit message. You can do this manually with an interactive git
+rebase or with GitHub's built-in tool. See the section about landing your
+fix below.
 
 When pushing to your branch, make sure you push to the correct fork. Check your
 remotes with:
@@ -108,7 +110,9 @@ Rebasing Pull Requests and Force Pushes
 ---------------------------------------
 In general, you should avoid rebasing a Pull Request and force pushing to the
 branch that's the root of the Pull Request during the review. This action will
-make the context of the old changes and comments harder to find and read.
+make the context of the old changes and comments harder to find and read. If
+you want to make your pull request up-to-date with main, you might consider
+updating your branch, as described in the previous section.
 
 Sometimes, a rebase might be needed to update your branch with a fix for a test
 or in some dependent code.
@@ -449,9 +453,9 @@ interface.
 
 Here is an example of making a PR using git and the GitHub web interface:
 
-First follow the instructions to [fork the repository](https://docs.github.com/en/get-started/quickstart/fork-a-repo?tool=webui#forking-a-repository).
+First follow the instructions to `fork the repository <https://docs.github.com/en/get-started/quickstart/fork-a-repo?tool=webui#forking-a-repository>`_.
 
-Next follow the instructions to [clone your forked repository](https://docs.github.com/en/get-started/quickstart/fork-a-repo?tool=webui#cloning-your-forked-repository).
+Next follow the instructions to `clone your forked repository <https://docs.github.com/en/get-started/quickstart/fork-a-repo?tool=webui#cloning-your-forked-repository>`_.
 
 Once you've cloned your forked repository,
 
@@ -567,8 +571,11 @@ branch.  Just make sure to add the release milestone to the pull request.
 Getting admin access to CI infrastructure
 =========================================
 
-Any individual who is responsible for setting up and/or maintaining CI infrastructure for a LLVM project can
-request to be granted the CI/CD role to the LLVM organization admins. The request can be made by creating
-`a Github issue <https://github.com/llvm/llvm-project/issues/new>`_ and using the ``infrastructure`` label.
-Applicants must include a justification for why the role is being requested. Applications are reviewed on a
-case-by-case basis by the LLVM admins and the role can be revoked at any point as the LLVM admins see fit.
+Any individual who is responsible for setting up and/or maintaining CI
+infrastructure for a LLVM project can request to be granted the CI/CD role by
+the LLVM infrastructure area team. The request can be made by creating `a
+Github issue <https://github.com/llvm/llvm-project/issues/new>`_ and using the
+``infrastructure`` label.  Applicants must include a justification for why the
+role is being requested. Applications are reviewed on a case-by-case basis by
+the LLVM infrastructure area team and the role can be revoked at any point as
+the area team sees fit.

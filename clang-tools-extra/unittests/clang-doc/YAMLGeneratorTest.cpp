@@ -22,7 +22,9 @@ static std::unique_ptr<Generator> getYAMLGenerator() {
   return std::move(G.get());
 }
 
-TEST(YAMLGeneratorTest, emitNamespaceYAML) {
+class YAMLGeneratorTest : public ClangDocContextTest {};
+
+TEST_F(YAMLGeneratorTest, emitNamespaceYAML) {
   NamespaceInfo I;
   I.Name = "Namespace";
   I.Path = "path/to/A";
@@ -44,7 +46,7 @@ TEST(YAMLGeneratorTest, emitNamespaceYAML) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
+  auto Err = G->generateDocForInfo(&I, Actual, getClangDocContext());
   assert(!Err);
   std::string Expected =
       R"raw(---
@@ -77,7 +79,7 @@ ChildEnums:
   EXPECT_EQ(Expected, Actual.str());
 }
 
-TEST(YAMLGeneratorTest, emitRecordYAML) {
+TEST_F(YAMLGeneratorTest, emitRecordYAML) {
   RecordInfo I;
   I.Name = "r";
   I.Path = "path/to/A";
@@ -124,7 +126,7 @@ TEST(YAMLGeneratorTest, emitRecordYAML) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
+  auto Err = G->generateDocForInfo(&I, Actual, getClangDocContext());
   assert(!Err);
   std::string Expected =
       R"raw(---
@@ -202,7 +204,7 @@ ChildEnums:
   EXPECT_EQ(Expected, Actual.str());
 }
 
-TEST(YAMLGeneratorTest, emitFunctionYAML) {
+TEST_F(YAMLGeneratorTest, emitFunctionYAML) {
   FunctionInfo I;
   I.Name = "f";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
@@ -223,7 +225,7 @@ TEST(YAMLGeneratorTest, emitFunctionYAML) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
+  auto Err = G->generateDocForInfo(&I, Actual, getClangDocContext());
   assert(!Err);
   std::string Expected =
       R"raw(---
@@ -267,7 +269,7 @@ ReturnType:
 // namespace A {
 // enum e { X };
 // }
-TEST(YAMLGeneratorTest, emitSimpleEnumYAML) {
+TEST_F(YAMLGeneratorTest, emitSimpleEnumYAML) {
   EnumInfo I;
   I.Name = "e";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
@@ -282,7 +284,7 @@ TEST(YAMLGeneratorTest, emitSimpleEnumYAML) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
+  auto Err = G->generateDocForInfo(&I, Actual, getClangDocContext());
   assert(!Err);
   std::string Expected =
       R"raw(---
@@ -308,7 +310,7 @@ Members:
 
 // Tests the equivalent of:
 // enum class e : short { X = FOO_BAR + 2 };
-TEST(YAMLGeneratorTest, enumTypedScopedEnumYAML) {
+TEST_F(YAMLGeneratorTest, enumTypedScopedEnumYAML) {
   EnumInfo I;
   I.Name = "e";
 
@@ -320,7 +322,7 @@ TEST(YAMLGeneratorTest, enumTypedScopedEnumYAML) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
+  auto Err = G->generateDocForInfo(&I, Actual, getClangDocContext());
   assert(!Err);
   std::string Expected =
       R"raw(---
@@ -340,7 +342,7 @@ Members:
   EXPECT_EQ(Expected, Actual.str());
 }
 
-TEST(YAMLGeneratorTest, enumTypedefYAML) {
+TEST_F(YAMLGeneratorTest, enumTypedefYAML) {
   TypedefInfo I;
   I.Name = "MyUsing";
   I.Underlying = TypeInfo("int");
@@ -350,7 +352,7 @@ TEST(YAMLGeneratorTest, enumTypedefYAML) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
+  auto Err = G->generateDocForInfo(&I, Actual, getClangDocContext());
   assert(!Err);
   std::string Expected =
       R"raw(---
@@ -365,7 +367,7 @@ IsUsing:         true
   EXPECT_EQ(Expected, Actual.str());
 }
 
-TEST(YAMLGeneratorTest, emitCommentYAML) {
+TEST_F(YAMLGeneratorTest, emitCommentYAML) {
   FunctionInfo I;
   I.Name = "f";
   I.DefLoc = Location(10, 10, "test.cpp");
@@ -482,7 +484,7 @@ TEST(YAMLGeneratorTest, emitCommentYAML) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
+  auto Err = G->generateDocForInfo(&I, Actual, getClangDocContext());
   assert(!Err);
   std::string Expected =
       R"raw(---

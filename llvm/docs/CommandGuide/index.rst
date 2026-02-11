@@ -17,6 +17,7 @@ Basic Commands
    dsymutil
    llc
    lli
+   llubi
    llvm-as
    llvm-cgdata
    llvm-config
@@ -92,6 +93,7 @@ Developer Tools
    llvm-pdbutil
    llvm-profgen
    llvm-tli-checker
+   llvm-offload-binary
 
 Remarks Tools
 ~~~~~~~~~~~~~~

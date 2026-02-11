@@ -95,11 +95,10 @@ define double @v_rsq_clamp_f64(double %src) #0 {
 ; GFX12-NEXT:    v_rsq_f64_e32 v[0:1], v[0:1]
 ; GFX12-NEXT:    v_mov_b32_e32 v2, -1
 ; GFX12-NEXT:    v_mov_b32_e32 v3, 0x7fefffff
-; GFX12-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_min_num_f64_e32 v[0:1], v[0:1], v[2:3]
 ; GFX12-NEXT:    v_mov_b32_e32 v2, -1
 ; GFX12-NEXT:    v_mov_b32_e32 v3, 0xffefffff
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[2:3]
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %rsq_clamp = call double @llvm.amdgcn.rsq.clamp.f64(double %src)
@@ -135,11 +134,10 @@ define double @v_rsq_clamp_fabs_f64(double %src) #0 {
 ; GFX12-NEXT:    v_rsq_f64_e64 v[0:1], |v[0:1]|
 ; GFX12-NEXT:    v_mov_b32_e32 v2, -1
 ; GFX12-NEXT:    v_mov_b32_e32 v3, 0x7fefffff
-; GFX12-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_min_num_f64_e32 v[0:1], v[0:1], v[2:3]
 ; GFX12-NEXT:    v_mov_b32_e32 v2, -1
 ; GFX12-NEXT:    v_mov_b32_e32 v3, 0xffefffff
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[2:3]
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fabs.src = call double @llvm.fabs.f64(double %src)
@@ -171,7 +169,7 @@ define float @v_rsq_clamp_undef_f32() #0 {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_s_rsq_f32 s0, s0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0xff7fffff
-; GFX12-NEXT:    s_wait_alu 0xf1ff
+; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_minmax_num_f32 v0, s0, 0x7f7fffff, v0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -208,11 +206,10 @@ define double @v_rsq_clamp_undef_f64() #0 {
 ; GFX12-NEXT:    v_rsq_f64_e32 v[0:1], s[0:1]
 ; GFX12-NEXT:    v_mov_b32_e32 v2, -1
 ; GFX12-NEXT:    v_mov_b32_e32 v3, 0x7fefffff
-; GFX12-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_min_num_f64_e32 v[0:1], v[0:1], v[2:3]
 ; GFX12-NEXT:    v_mov_b32_e32 v2, -1
 ; GFX12-NEXT:    v_mov_b32_e32 v3, 0xffefffff
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[2:3]
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %rsq_clamp = call double @llvm.amdgcn.rsq.clamp.f64(double poison)
@@ -279,11 +276,10 @@ define double @v_rsq_clamp_f64_non_ieee(double %src) #2 {
 ; GFX12-NEXT:    v_rsq_f64_e32 v[0:1], v[0:1]
 ; GFX12-NEXT:    v_mov_b32_e32 v2, -1
 ; GFX12-NEXT:    v_mov_b32_e32 v3, 0x7fefffff
-; GFX12-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_min_num_f64_e32 v[0:1], v[0:1], v[2:3]
 ; GFX12-NEXT:    v_mov_b32_e32 v2, -1
 ; GFX12-NEXT:    v_mov_b32_e32 v3, 0xffefffff
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[2:3]
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %rsq_clamp = call double @llvm.amdgcn.rsq.clamp.f64(double %src)

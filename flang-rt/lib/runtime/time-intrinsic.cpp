@@ -44,6 +44,9 @@
 // should be preferred. Any other parameters required for SFINAE should have
 // default values provided.
 namespace {
+
+using namespace Fortran;
+
 // Types for the dummy parameter indicating the priority of a given overload.
 // We will invoke our helper with an integer literal argument, so the overload
 // with the highest priority should have the type int.
@@ -127,7 +130,6 @@ using unsigned_count_t = std::uint64_t;
 //  - nanoseconds for kinds 8, 16
 constexpr unsigned_count_t DS_PER_SEC{10u};
 constexpr unsigned_count_t MS_PER_SEC{1'000u};
-[[maybe_unused]] constexpr unsigned_count_t US_PER_SEC{1'000'000u};
 constexpr unsigned_count_t NS_PER_SEC{1'000'000'000u};
 
 // Computes HUGE(INT(0,kind)) as an unsigned integer value.
@@ -156,14 +158,14 @@ count_t ConvertSecondsNanosecondsToCount(
 // Function converts a struct timeval into the desired count to
 // be returned by the timing functions in accordance with the requested
 // kind at the call site.
-count_t ConvertTimevalToCount(int kind, const struct timeval &tval) {
+static count_t ConvertTimevalToCount(int kind, const struct timeval &tval) {
   unsigned_count_t sec{static_cast<unsigned_count_t>(tval.tv_sec)};
   unsigned_count_t nsec{static_cast<unsigned_count_t>(tval.tv_usec) * 1000};
   return ConvertSecondsNanosecondsToCount(kind, sec, nsec);
 }
 
 template <typename Unused = void>
-count_t GetSystemClockCount(int kind, fallback_implementation) {
+static count_t GetSystemClockCount(int kind, fallback_implementation) {
   struct timeval tval;
 
   if (gettimeofday(&tval, /*timezone=*/nullptr) != 0) {
@@ -190,7 +192,7 @@ count_t ConvertTimeSpecToCount(int kind, const struct timespec &tspec) {
 #ifndef _AIX
 // More accurate version with nanosecond accuracy
 template <typename Unused = void>
-count_t GetSystemClockCount(int kind, fallback_implementation) {
+static count_t GetSystemClockCount(int kind, fallback_implementation) {
   struct timespec tspec;
 
   if (timespec_get(&tspec, TIME_UTC) < 0) {
@@ -206,16 +208,12 @@ count_t GetSystemClockCount(int kind, fallback_implementation) {
 #endif // !NO_TIMESPEC
 
 template <typename Unused = void>
-count_t GetSystemClockCountRate(int kind, fallback_implementation) {
-#ifdef NO_TIMESPEC
-  return kind >= 8 ? US_PER_SEC : kind >= 2 ? MS_PER_SEC : DS_PER_SEC;
-#else
+static count_t GetSystemClockCountRate(int kind, fallback_implementation) {
   return kind >= 8 ? NS_PER_SEC : kind >= 2 ? MS_PER_SEC : DS_PER_SEC;
-#endif
 }
 
 template <typename Unused = void>
-count_t GetSystemClockCountMax(int kind, fallback_implementation) {
+static count_t GetSystemClockCountMax(int kind, fallback_implementation) {
   unsigned_count_t maxCount{GetHUGE(kind)};
   return maxCount;
 }
@@ -223,7 +221,7 @@ count_t GetSystemClockCountMax(int kind, fallback_implementation) {
 #ifndef NO_TIMESPEC
 #ifdef CLOCKID_ELAPSED_TIME
 template <typename T = int, typename U = struct timespec>
-count_t GetSystemClockCount(int kind, preferred_implementation,
+static count_t GetSystemClockCount(int kind, preferred_implementation,
     // We need some dummy parameters to pass to decltype(clock_gettime).
     T ClockId = 0, U *Timespec = nullptr,
     decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
@@ -240,7 +238,7 @@ count_t GetSystemClockCount(int kind, preferred_implementation,
 #endif // CLOCKID_ELAPSED_TIME
 
 template <typename T = int, typename U = struct timespec>
-count_t GetSystemClockCountRate(int kind, preferred_implementation,
+static count_t GetSystemClockCountRate(int kind, preferred_implementation,
     // We need some dummy parameters to pass to decltype(clock_gettime).
     T ClockId = 0, U *Timespec = nullptr,
     decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
@@ -248,7 +246,7 @@ count_t GetSystemClockCountRate(int kind, preferred_implementation,
 }
 
 template <typename T = int, typename U = struct timespec>
-count_t GetSystemClockCountMax(int kind, preferred_implementation,
+static count_t GetSystemClockCountMax(int kind, preferred_implementation,
     // We need some dummy parameters to pass to decltype(clock_gettime).
     T ClockId = 0, U *Timespec = nullptr,
     decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
@@ -276,25 +274,28 @@ static void DateAndTimeUnavailable(Fortran::runtime::Terminator &terminator,
     char *zone, std::size_t zoneChars,
     const Fortran::runtime::Descriptor *values) {
   if (date) {
-    std::memset(date, static_cast<int>(' '), dateChars);
+    runtime::memset(date, static_cast<int>(' '), dateChars);
   }
   if (time) {
-    std::memset(time, static_cast<int>(' '), timeChars);
+    runtime::memset(time, static_cast<int>(' '), timeChars);
   }
   if (zone) {
-    std::memset(zone, static_cast<int>(' '), zoneChars);
+    runtime::memset(zone, static_cast<int>(' '), zoneChars);
   }
   if (values) {
     auto typeCode{values->type().GetCategoryAndKind()};
     RUNTIME_CHECK(terminator,
-        values->rank() == 1 && values->GetDimension(0).Extent() >= 8 &&
-            typeCode &&
+        values->rank() == 1 && typeCode &&
             typeCode->first == Fortran::common::TypeCategory::Integer);
     // DATE_AND_TIME values argument must have decimal range > 4. Do not accept
     // KIND 1 here.
     int kind{typeCode->second};
     RUNTIME_CHECK(terminator, kind != 1);
-    for (std::size_t i = 0; i < 8; ++i) {
+    auto extent{static_cast<std::size_t>(values->GetDimension(0).Extent())};
+    if (extent > 8u) {
+      extent = 8;
+    }
+    for (std::size_t i{0}; i < extent; ++i) {
       Fortran::runtime::ApplyIntegerKind<StoreNegativeHugeAt, void>(
           kind, terminator, *values, i);
     }
@@ -420,7 +421,7 @@ static void GetDateAndTime(Fortran::runtime::Terminator &terminator, char *date,
   auto copyBufferAndPad{
       [&](char *dest, std::size_t destChars, std::size_t len) {
         auto copyLen{std::min(len, destChars)};
-        std::memcpy(dest, buffer, copyLen);
+        runtime::memcpy(dest, buffer, copyLen);
         for (auto i{copyLen}; i < destChars; ++i) {
           dest[i] = ' ';
         }
@@ -444,17 +445,19 @@ static void GetDateAndTime(Fortran::runtime::Terminator &terminator, char *date,
   if (values) {
     auto typeCode{values->type().GetCategoryAndKind()};
     RUNTIME_CHECK(terminator,
-        values->rank() == 1 && values->GetDimension(0).Extent() >= 8 &&
-            typeCode &&
+        values->rank() == 1 && typeCode &&
             typeCode->first == Fortran::common::TypeCategory::Integer);
     // DATE_AND_TIME values argument must have decimal range > 4. Do not accept
     // KIND 1 here.
     int kind{typeCode->second};
     RUNTIME_CHECK(terminator, kind != 1);
-    auto storeIntegerAt = [&](std::size_t atIndex, std::int64_t value) {
-      Fortran::runtime::ApplyIntegerKind<Fortran::runtime::StoreIntegerAt,
-          void>(kind, terminator, *values, atIndex, value);
-    };
+    auto extent{static_cast<std::size_t>(values->GetDimension(0).Extent())};
+    auto storeIntegerAt{[&](std::size_t atIndex, std::int64_t value) {
+      if (atIndex < extent) {
+        Fortran::runtime::ApplyIntegerKind<Fortran::runtime::StoreIntegerAt,
+            void>(kind, terminator, *values, atIndex, value);
+      }
+    }};
     storeIntegerAt(0, localTime.tm_year + 1900);
     storeIntegerAt(1, localTime.tm_mon + 1);
     storeIntegerAt(2, localTime.tm_mday);
@@ -525,8 +528,8 @@ void RTNAME(Etime)(const Descriptor *values, const Descriptor *time,
     ULARGE_INTEGER userSystemTime;
     ULARGE_INTEGER kernelSystemTime;
 
-    memcpy(&userSystemTime, &userTime, sizeof(FILETIME));
-    memcpy(&kernelSystemTime, &kernelTime, sizeof(FILETIME));
+    runtime::memcpy(&userSystemTime, &userTime, sizeof(FILETIME));
+    runtime::memcpy(&kernelSystemTime, &kernelTime, sizeof(FILETIME));
 
     usrTime = ((double)(userSystemTime.QuadPart)) / 10000000.0;
     sysTime = ((double)(kernelSystemTime.QuadPart)) / 10000000.0;

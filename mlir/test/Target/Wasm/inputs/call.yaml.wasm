@@ -1,0 +1,26 @@
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:      []
+        ReturnTypes:
+          - I32
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0, 0 ]
+  - Type:            EXPORT
+    Exports:
+      - Name:            forty_two
+        Kind:            FUNCTION
+        Index:           1
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:          []
+        Body:            412A0B
+      - Index:           1
+        Locals:          []
+        Body:            10000B
+...

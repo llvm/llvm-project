@@ -131,8 +131,6 @@ public:
 
   void printBefore(QualType T, raw_ostream &OS);
   void printAfter(QualType T, raw_ostream &OS);
-  void AppendScope(DeclContext *DC, raw_ostream &OS,
-                   DeclarationName NameInScope);
   void printTagType(const TagType *T, raw_ostream &OS);
   void printFunctionAfter(const FunctionType::ExtInfo &Info, raw_ostream &OS);
 #define ABSTRACT_TYPE(CLASS, PARENT)
@@ -237,7 +235,6 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::TemplateSpecialization:
     case Type::InjectedClassName:
     case Type::DependentName:
-    case Type::DependentTemplateSpecialization:
     case Type::ObjCObject:
     case Type::ObjCTypeParam:
     case Type::ObjCInterface:
@@ -847,16 +844,45 @@ void TypePrinter::printExtVectorAfter(const ExtVectorType *T, raw_ostream &OS) {
   }
 }
 
+static void printDims(const ConstantMatrixType *T, raw_ostream &OS) {
+  OS << T->getNumRows() << ", " << T->getNumColumns();
+}
+
+static void printHLSLMatrixBefore(TypePrinter &TP, const ConstantMatrixType *T,
+                                  raw_ostream &OS) {
+  OS << "matrix<";
+  TP.printBefore(T->getElementType(), OS);
+}
+
+static void printHLSLMatrixAfter(const ConstantMatrixType *T, raw_ostream &OS) {
+  OS << ", ";
+  printDims(T, OS);
+  OS << ">";
+}
+
+static void printClangMatrixBefore(TypePrinter &TP, const ConstantMatrixType *T,
+                                   raw_ostream &OS) {
+  TP.printBefore(T->getElementType(), OS);
+  OS << " __attribute__((matrix_type(";
+  printDims(T, OS);
+  OS << ")))";
+}
+
 void TypePrinter::printConstantMatrixBefore(const ConstantMatrixType *T,
                                             raw_ostream &OS) {
-  printBefore(T->getElementType(), OS);
-  OS << " __attribute__((matrix_type(";
-  OS << T->getNumRows() << ", " << T->getNumColumns();
-  OS << ")))";
+  if (Policy.UseHLSLTypes) {
+    printHLSLMatrixBefore(*this, T, OS);
+    return;
+  }
+  printClangMatrixBefore(*this, T, OS);
 }
 
 void TypePrinter::printConstantMatrixAfter(const ConstantMatrixType *T,
                                            raw_ostream &OS) {
+  if (Policy.UseHLSLTypes) {
+    printHLSLMatrixAfter(T, OS);
+    return;
+  }
   printAfter(T->getElementType(), OS);
 }
 
@@ -1198,7 +1224,7 @@ void TypePrinter::printTypeSpec(NamedDecl *D, raw_ostream &OS) {
   // In C, this will always be empty except when the type
   // being printed is anonymous within other Record.
   if (!Policy.SuppressScope)
-    AppendScope(D->getDeclContext(), OS, D->getDeclName());
+    D->printNestedNameSpecifier(OS, Policy);
 
   IdentifierInfo *II = D->getIdentifier();
   OS << II->getName();
@@ -1212,7 +1238,7 @@ void TypePrinter::printUnresolvedUsingBefore(const UnresolvedUsingType *T,
     OS << ' ';
   auto *D = T->getDecl();
   if (Policy.FullyQualifiedName || T->isCanonicalUnqualified()) {
-    AppendScope(D->getDeclContext(), OS, D->getDeclName());
+    D->printNestedNameSpecifier(OS, Policy);
   } else {
     T->getQualifier().print(OS, Policy);
   }
@@ -1229,7 +1255,7 @@ void TypePrinter::printUsingBefore(const UsingType *T, raw_ostream &OS) {
     OS << ' ';
   auto *D = T->getDecl();
   if (Policy.FullyQualifiedName) {
-    AppendScope(D->getDeclContext(), OS, D->getDeclName());
+    D->printNestedNameSpecifier(OS, Policy);
   } else {
     T->getQualifier().print(OS, Policy);
   }
@@ -1245,7 +1271,7 @@ void TypePrinter::printTypedefBefore(const TypedefType *T, raw_ostream &OS) {
     OS << ' ';
   auto *D = T->getDecl();
   if (Policy.FullyQualifiedName) {
-    AppendScope(D->getDeclContext(), OS, D->getDeclName());
+    D->printNestedNameSpecifier(OS, Policy);
   } else {
     T->getQualifier().print(OS, Policy);
   }
@@ -1393,7 +1419,7 @@ void TypePrinter::printDeducedTemplateSpecializationBefore(
     } else {
       // Should only get here for canonical types.
       const auto *CD = cast<ClassTemplateSpecializationDecl>(
-          cast<RecordType>(T->getDeducedType())->getOriginalDecl());
+          cast<RecordType>(T->getDeducedType())->getDecl());
       DeducedTD = CD->getSpecializedTemplate();
       Args = CD->getTemplateArgs().asArray();
     }
@@ -1483,61 +1509,8 @@ void TypePrinter::printPredefinedSugarBefore(const PredefinedSugarType *T,
 void TypePrinter::printPredefinedSugarAfter(const PredefinedSugarType *T,
                                             raw_ostream &OS) {}
 
-/// Appends the given scope to the end of a string.
-void TypePrinter::AppendScope(DeclContext *DC, raw_ostream &OS,
-                              DeclarationName NameInScope) {
-  if (DC->isTranslationUnit())
-    return;
-
-  // FIXME: Consider replacing this with NamedDecl::printNestedNameSpecifier,
-  // which can also print names for function and method scopes.
-  if (DC->isFunctionOrMethod())
-    return;
-
-  if (Policy.Callbacks && Policy.Callbacks->isScopeVisible(DC))
-    return;
-
-  if (const auto *NS = dyn_cast<NamespaceDecl>(DC)) {
-    if (Policy.SuppressUnwrittenScope && NS->isAnonymousNamespace())
-      return AppendScope(DC->getParent(), OS, NameInScope);
-
-    // Only suppress an inline namespace if the name has the same lookup
-    // results in the enclosing namespace.
-    if (Policy.SuppressInlineNamespace !=
-            PrintingPolicy::SuppressInlineNamespaceMode::None &&
-        NS->isInline() && NameInScope &&
-        NS->isRedundantInlineQualifierFor(NameInScope))
-      return AppendScope(DC->getParent(), OS, NameInScope);
-
-    AppendScope(DC->getParent(), OS, NS->getDeclName());
-    if (NS->getIdentifier())
-      OS << NS->getName() << "::";
-    else
-      OS << "(anonymous namespace)::";
-  } else if (const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(DC)) {
-    AppendScope(DC->getParent(), OS, Spec->getDeclName());
-    IncludeStrongLifetimeRAII Strong(Policy);
-    OS << Spec->getIdentifier()->getName();
-    const TemplateArgumentList &TemplateArgs = Spec->getTemplateArgs();
-    printTemplateArgumentList(
-        OS, TemplateArgs.asArray(), Policy,
-        Spec->getSpecializedTemplate()->getTemplateParameters());
-    OS << "::";
-  } else if (const auto *Tag = dyn_cast<TagDecl>(DC)) {
-    AppendScope(DC->getParent(), OS, Tag->getDeclName());
-    if (TypedefNameDecl *Typedef = Tag->getTypedefNameForAnonDecl())
-      OS << Typedef->getIdentifier()->getName() << "::";
-    else if (Tag->getIdentifier())
-      OS << Tag->getIdentifier()->getName() << "::";
-    else
-      return;
-  } else {
-    AppendScope(DC->getParent(), OS, NameInScope);
-  }
-}
-
 void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
-  TagDecl *D = T->getOriginalDecl();
+  TagDecl *D = T->getDecl();
 
   if (Policy.IncludeTagDefinition && T->isTagOwned()) {
     D->print(OS, Policy, Indentation);
@@ -1545,18 +1518,19 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
     return;
   }
 
-  bool HasKindDecoration = false;
-
+  bool PrintedKindDecoration = false;
   if (T->isCanonicalUnqualified()) {
     if (!Policy.SuppressTagKeyword && !D->getTypedefNameForAnonDecl()) {
-      HasKindDecoration = true;
+      PrintedKindDecoration = true;
       OS << D->getKindName();
       OS << ' ';
     }
   } else {
     OS << TypeWithKeyword::getKeywordName(T->getKeyword());
-    if (T->getKeyword() != ElaboratedTypeKeyword::None)
+    if (T->getKeyword() != ElaboratedTypeKeyword::None) {
+      PrintedKindDecoration = true;
       OS << ' ';
+    }
   }
 
   if (!Policy.FullyQualifiedName && !T->isCanonicalUnqualified()) {
@@ -1565,58 +1539,21 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
     // Compute the full nested-name-specifier for this type.
     // In C, this will always be empty except when the type
     // being printed is anonymous within other Record.
-    AppendScope(D->getDeclContext(), OS, D->getDeclName());
+    D->printNestedNameSpecifier(OS, Policy);
   }
 
   if (const IdentifierInfo *II = D->getIdentifier())
     OS << II->getName();
-  else if (TypedefNameDecl *Typedef = D->getTypedefNameForAnonDecl()) {
-    assert(Typedef->getIdentifier() && "Typedef without identifier?");
-    OS << Typedef->getIdentifier()->getName();
-  } else {
-    // Make an unambiguous representation for anonymous types, e.g.
-    //   (anonymous enum at /usr/include/string.h:120:9)
-    OS << (Policy.MSVCFormatting ? '`' : '(');
+  else {
+    clang::PrintingPolicy Copy(Policy);
 
-    if (isa<CXXRecordDecl>(D) && cast<CXXRecordDecl>(D)->isLambda()) {
-      OS << "lambda";
-      HasKindDecoration = true;
-    } else if ((isa<RecordDecl>(D) && cast<RecordDecl>(D)->isAnonymousStructOrUnion())) {
-      OS << "anonymous";
-    } else {
-      OS << "unnamed";
+    // Suppress the redundant tag keyword if we just printed one.
+    if (PrintedKindDecoration) {
+      Copy.SuppressTagKeywordInAnonNames = true;
+      Copy.SuppressTagKeyword = true;
     }
 
-    if (Policy.AnonymousTagLocations) {
-      // Suppress the redundant tag keyword if we just printed one.
-      // We don't have to worry about ElaboratedTypes here because you can't
-      // refer to an anonymous type with one.
-      if (!HasKindDecoration)
-        OS << " " << D->getKindName();
-
-      PresumedLoc PLoc = D->getASTContext().getSourceManager().getPresumedLoc(
-          D->getLocation());
-      if (PLoc.isValid()) {
-        OS << " at ";
-        StringRef File = PLoc.getFilename();
-        llvm::SmallString<1024> WrittenFile(File);
-        if (auto *Callbacks = Policy.Callbacks)
-          WrittenFile = Callbacks->remapPath(File);
-        // Fix inconsistent path separator created by
-        // clang::DirectoryLookup::LookupFile when the file path is relative
-        // path.
-        llvm::sys::path::Style Style =
-            llvm::sys::path::is_absolute(WrittenFile)
-                ? llvm::sys::path::Style::native
-                : (Policy.MSVCFormatting
-                       ? llvm::sys::path::Style::windows_backslash
-                       : llvm::sys::path::Style::posix);
-        llvm::sys::path::native(WrittenFile, Style);
-        OS << WrittenFile << ':' << PLoc.getLine() << ':' << PLoc.getColumn();
-      }
-    }
-
-    OS << (Policy.MSVCFormatting ? '\'' : ')');
+    D->printName(OS, Copy);
   }
 
   // If this is a class template specialization, print the template
@@ -1641,11 +1578,11 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
 void TypePrinter::printRecordBefore(const RecordType *T, raw_ostream &OS) {
   // Print the preferred name if we have one for this type.
   if (Policy.UsePreferredNames) {
-    for (const auto *PNA : T->getOriginalDecl()
+    for (const auto *PNA : T->getDecl()
                                ->getMostRecentDecl()
                                ->specific_attrs<PreferredNameAttr>()) {
       if (!declaresSameEntity(PNA->getTypedefType()->getAsCXXRecordDecl(),
-                              T->getOriginalDecl()))
+                              T->getDecl()))
         continue;
       // Find the outermost typedef or alias template.
       QualType T = PNA->getTypedefType();
@@ -1672,11 +1609,11 @@ void TypePrinter::printEnumAfter(const EnumType *T, raw_ostream &OS) {}
 
 void TypePrinter::printInjectedClassNameBefore(const InjectedClassNameType *T,
                                                raw_ostream &OS) {
-  const ASTContext &Ctx = T->getOriginalDecl()->getASTContext();
+  const ASTContext &Ctx = T->getDecl()->getASTContext();
   IncludeStrongLifetimeRAII Strong(Policy);
   T->getTemplateName(Ctx).print(OS, Policy);
   if (Policy.PrintInjectedClassNameWithArguments) {
-    auto *Decl = T->getOriginalDecl();
+    auto *Decl = T->getDecl();
     // FIXME: Use T->getTemplateArgs(Ctx) when that supports as-written
     // arguments.
     if (auto *RD = dyn_cast<ClassTemplateSpecializationDecl>(Decl)) {
@@ -1781,7 +1718,7 @@ void TypePrinter::printTemplateId(const TemplateSpecializationType *T,
   // FIXME: Null TD never exercised in test suite.
   if (FullyQualify && TD) {
     if (!Policy.SuppressScope)
-      AppendScope(TD->getDeclContext(), OS, TD->getDeclName());
+      TD->printNestedNameSpecifier(OS, Policy);
 
     OS << TD->getName();
   } else {
@@ -1835,22 +1772,6 @@ void TypePrinter::printDependentNameBefore(const DependentNameType *T,
 
 void TypePrinter::printDependentNameAfter(const DependentNameType *T,
                                           raw_ostream &OS) {}
-
-void TypePrinter::printDependentTemplateSpecializationBefore(
-        const DependentTemplateSpecializationType *T, raw_ostream &OS) {
-  IncludeStrongLifetimeRAII Strong(Policy);
-
-  OS << TypeWithKeyword::getKeywordName(T->getKeyword());
-  if (T->getKeyword() != ElaboratedTypeKeyword::None)
-    OS << " ";
-
-  T->getDependentTemplateName().print(OS, Policy);
-  printTemplateArgumentList(OS, T->template_arguments(), Policy);
-  spaceBeforePlaceHolder(OS);
-}
-
-void TypePrinter::printDependentTemplateSpecializationAfter(
-        const DependentTemplateSpecializationType *T, raw_ostream &OS) {}
 
 void TypePrinter::printPackExpansionBefore(const PackExpansionType *T,
                                            raw_ostream &OS) {
@@ -2050,6 +1971,8 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::HLSLROV:
   case attr::HLSLRawBuffer:
   case attr::HLSLContainedType:
+  case attr::HLSLIsCounter:
+  case attr::HLSLResourceDimension:
     llvm_unreachable("HLSL resource type attributes handled separately");
 
   case attr::OpenCLPrivateAddressSpace:
@@ -2134,9 +2057,6 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   }
   case attr::AArch64VectorPcs: OS << "aarch64_vector_pcs"; break;
   case attr::AArch64SVEPcs: OS << "aarch64_sve_pcs"; break;
-  case attr::DeviceKernel:
-    OS << T->getAttr()->getSpelling();
-    break;
   case attr::IntelOclBicc:
     OS << "inteloclbicc";
     break;
@@ -2198,6 +2118,8 @@ void TypePrinter::printHLSLAttributedResourceAfter(
     OS << " [[hlsl::is_rov]]";
   if (Attrs.RawBuffer)
     OS << " [[hlsl::raw_buffer]]";
+  if (Attrs.IsCounter)
+    OS << " [[hlsl::is_counter]]";
 
   QualType ContainedTy = T->getContainedType();
   if (!ContainedTy.isNull()) {
@@ -2206,6 +2128,12 @@ void TypePrinter::printHLSLAttributedResourceAfter(
     printAfter(ContainedTy, OS);
     OS << ")]]";
   }
+
+  if (Attrs.ResourceDimension != llvm::dxil::ResourceDimension::Unknown)
+    OS << " [[hlsl::resource_dimension("
+       << HLSLResourceDimensionAttr::ConvertResourceDimensionToStr(
+              Attrs.ResourceDimension)
+       << ")]]";
 }
 
 void TypePrinter::printHLSLInlineSpirvBefore(const HLSLInlineSpirvType *T,
@@ -2382,7 +2310,7 @@ static bool isSubstitutedType(ASTContext &Ctx, QualType T, QualType Pattern,
     return true;
 
   // A type parameter matches its argument.
-  if (auto *TTPT = Pattern->getAs<TemplateTypeParmType>()) {
+  if (auto *TTPT = Pattern->getAsCanonical<TemplateTypeParmType>()) {
     if (TTPT->getDepth() == Depth && TTPT->getIndex() < Args.size() &&
         Args[TTPT->getIndex()].getKind() == TemplateArgument::Type) {
       QualType SubstArg = Ctx.getQualifiedType(
@@ -2737,6 +2665,8 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
     return "hlsl_device";
   case LangAS::hlsl_input:
     return "hlsl_input";
+  case LangAS::hlsl_push_constant:
+    return "hlsl_push_constant";
   case LangAS::wasm_funcref:
     return "__funcref";
   default:

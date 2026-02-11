@@ -10,8 +10,9 @@ Guide:
 
 https://google.github.io/styleguide/cppguide.html#Function_Declarations_and_Definitions
 
-All parameters should have the same name in both the function declaration and definition.
-If a parameter is not utilized, its name can be commented out in a function definition.
+All parameters should have the same name in both the function declaration and
+definition. If a parameter is not utilized, its name can be commented out in a
+function definition.
 
 .. code-block:: c++
 

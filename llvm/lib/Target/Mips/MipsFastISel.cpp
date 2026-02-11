@@ -82,7 +82,7 @@ class MipsFastISel final : public FastISel {
   // All possible address modes.
   class Address {
   public:
-    using BaseKind = enum { RegBase, FrameIndexBase };
+    enum BaseKind { RegBase, FrameIndexBase };
 
   private:
     BaseKind Kind = RegBase;
@@ -246,8 +246,10 @@ private:
 public:
   // Backend specific FastISel code.
   explicit MipsFastISel(FunctionLoweringInfo &funcInfo,
-                        const TargetLibraryInfo *libInfo)
-      : FastISel(funcInfo, libInfo), TM(funcInfo.MF->getTarget()),
+                        const TargetLibraryInfo *libInfo,
+                        const LibcallLoweringInfo *libcallLowering)
+      : FastISel(funcInfo, libInfo, libcallLowering),
+        TM(funcInfo.MF->getTarget()),
         Subtarget(&funcInfo.MF->getSubtarget<MipsSubtarget>()),
         TII(*Subtarget->getInstrInfo()), TLI(*Subtarget->getTargetLowering()) {
     MFI = funcInfo.MF->getInfo<MipsFunctionInfo>();
@@ -264,9 +266,10 @@ public:
 
 } // end anonymous namespace
 
-static bool CC_Mips(unsigned ValNo, MVT ValVT, MVT LocVT,
-                    CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                    Type *OrigTy, CCState &State) LLVM_ATTRIBUTE_UNUSED;
+[[maybe_unused]] static bool CC_Mips(unsigned ValNo, MVT ValVT, MVT LocVT,
+                                     CCValAssign::LocInfo LocInfo,
+                                     ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                                     CCState &State);
 
 static bool CC_MipsO32_FP32(unsigned ValNo, MVT ValVT, MVT LocVT,
                             CCValAssign::LocInfo LocInfo,
@@ -1490,7 +1493,7 @@ bool MipsFastISel::fastLowerArguments() {
   // Account for the reserved argument area on ABI's that have one (O32).
   // It seems strange to do this on the caller side but it's necessary in
   // SelectionDAG's implementation.
-  IncomingArgSizeInBytes = std::min(getABI().GetCalleeAllocdArgSizeInBytes(CC),
+  IncomingArgSizeInBytes = std::max(getABI().GetCalleeAllocdArgSizeInBytes(CC),
                                     IncomingArgSizeInBytes);
 
   MF->getInfo<MipsFunctionInfo>()->setFormalArgInfo(IncomingArgSizeInBytes,
@@ -2160,8 +2163,9 @@ unsigned MipsFastISel::fastEmitInst_rr(unsigned MachineInstOpcode,
 namespace llvm {
 
 FastISel *Mips::createFastISel(FunctionLoweringInfo &funcInfo,
-                               const TargetLibraryInfo *libInfo) {
-  return new MipsFastISel(funcInfo, libInfo);
+                               const TargetLibraryInfo *libInfo,
+                               const LibcallLoweringInfo *libcallLowering) {
+  return new MipsFastISel(funcInfo, libInfo, libcallLowering);
 }
 
 } // end namespace llvm

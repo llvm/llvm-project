@@ -1300,6 +1300,61 @@ PluginManager::GetScriptInterpreterForLanguage(lldb::ScriptLanguage script_lang,
   return none_instance(debugger);
 }
 
+#pragma mark SyntheticFrameProvider
+
+typedef PluginInstance<SyntheticFrameProviderCreateInstance>
+    SyntheticFrameProviderInstance;
+typedef PluginInstance<ScriptedFrameProviderCreateInstance>
+    ScriptedFrameProviderInstance;
+typedef PluginInstances<SyntheticFrameProviderInstance>
+    SyntheticFrameProviderInstances;
+typedef PluginInstances<ScriptedFrameProviderInstance>
+    ScriptedFrameProviderInstances;
+
+static SyntheticFrameProviderInstances &GetSyntheticFrameProviderInstances() {
+  static SyntheticFrameProviderInstances g_instances;
+  return g_instances;
+}
+
+static ScriptedFrameProviderInstances &GetScriptedFrameProviderInstances() {
+  static ScriptedFrameProviderInstances g_instances;
+  return g_instances;
+}
+
+bool PluginManager::RegisterPlugin(
+    llvm::StringRef name, llvm::StringRef description,
+    SyntheticFrameProviderCreateInstance create_native_callback,
+    ScriptedFrameProviderCreateInstance create_scripted_callback) {
+  if (create_native_callback)
+    return GetSyntheticFrameProviderInstances().RegisterPlugin(
+        name, description, create_native_callback);
+  else if (create_scripted_callback)
+    return GetScriptedFrameProviderInstances().RegisterPlugin(
+        name, description, create_scripted_callback);
+  return false;
+}
+
+bool PluginManager::UnregisterPlugin(
+    SyntheticFrameProviderCreateInstance create_callback) {
+  return GetSyntheticFrameProviderInstances().UnregisterPlugin(create_callback);
+}
+
+bool PluginManager::UnregisterPlugin(
+    ScriptedFrameProviderCreateInstance create_callback) {
+  return GetScriptedFrameProviderInstances().UnregisterPlugin(create_callback);
+}
+
+SyntheticFrameProviderCreateInstance
+PluginManager::GetSyntheticFrameProviderCreateCallbackForPluginName(
+    llvm::StringRef name) {
+  return GetSyntheticFrameProviderInstances().GetCallbackForName(name);
+}
+
+ScriptedFrameProviderCreateInstance
+PluginManager::GetScriptedFrameProviderCreateCallbackAtIndex(uint32_t idx) {
+  return GetScriptedFrameProviderInstances().GetCallbackAtIndex(idx);
+}
+
 #pragma mark StructuredDataPlugin
 
 struct StructuredDataPluginInstance
@@ -1964,6 +2019,7 @@ GetDebuggerPropertyForPlugins(Debugger &debugger, llvm::StringRef plugin_type_na
     if (!plugin_properties_sp && can_create) {
       plugin_properties_sp =
           std::make_shared<OptionValueProperties>(g_property_name);
+      plugin_properties_sp->SetExpectedPath("plugin");
       parent_properties_sp->AppendProperty(g_property_name,
                                            "Settings specify to plugins.", true,
                                            plugin_properties_sp);
@@ -1975,6 +2031,8 @@ GetDebuggerPropertyForPlugins(Debugger &debugger, llvm::StringRef plugin_type_na
       if (!plugin_type_properties_sp && can_create) {
         plugin_type_properties_sp =
             std::make_shared<OptionValueProperties>(plugin_type_name);
+        plugin_type_properties_sp->SetExpectedPath(
+            ("plugin." + plugin_type_name).str());
         plugin_properties_sp->AppendProperty(plugin_type_name, plugin_type_desc,
                                              true, plugin_type_properties_sp);
       }
@@ -1999,6 +2057,7 @@ static lldb::OptionValuePropertiesSP GetDebuggerPropertyForPluginsOldStyle(
     if (!plugin_properties_sp && can_create) {
       plugin_properties_sp =
           std::make_shared<OptionValueProperties>(plugin_type_name);
+      plugin_properties_sp->SetExpectedPath(plugin_type_name.str());
       parent_properties_sp->AppendProperty(plugin_type_name, plugin_type_desc,
                                            true, plugin_properties_sp);
     }
@@ -2009,6 +2068,8 @@ static lldb::OptionValuePropertiesSP GetDebuggerPropertyForPluginsOldStyle(
       if (!plugin_type_properties_sp && can_create) {
         plugin_type_properties_sp =
             std::make_shared<OptionValueProperties>(g_property_name);
+        plugin_type_properties_sp->SetExpectedPath(
+            (plugin_type_name + ".plugin").str());
         plugin_properties_sp->AppendProperty(g_property_name,
                                              "Settings specific to plugins",
                                              true, plugin_type_properties_sp);

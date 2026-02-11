@@ -20,6 +20,7 @@
 #include "NVPTXRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include <string>
 
@@ -28,6 +29,10 @@
 
 namespace llvm {
 
+// FullSmVersion encoding: SM * 10 + ArchSuffixOffset
+// ArchSuffixOffset: 0 (base), 2 ('f'), 3 ('a')
+// e.g. sm_100 -> 1000, sm_100f -> 1002, sm_100a -> 1003
+
 class NVPTXSubtarget : public NVPTXGenSubtargetInfo {
   virtual void anchor();
   std::string TargetName;
@@ -35,8 +40,9 @@ class NVPTXSubtarget : public NVPTXGenSubtargetInfo {
   // PTX version x.y is represented as 10*x+y, e.g. 3.1 == 31
   unsigned PTXVersion;
 
-  // Full SM version x.y is represented as 100*x+10*y+feature, e.g. 3.1 == 310
-  // sm_90a == 901
+  // FullSmVersion encoding: SM * 10 + ArchSuffixOffset
+  // ArchSuffixOffset: 0 (base), 2 ('f'), 3 ('a')
+  // e.g. sm_30 -> 300, sm_90a -> 903, sm_100f -> 1002
   unsigned int FullSmVersion;
 
   // SM version x.y is represented as 10*x+y, e.g. 3.1 == 31. Derived from
@@ -73,18 +79,35 @@ public:
 
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
 
+  // Checks PTX version and family-specific and architecture-specific SM
+  // versions. For example, sm_100{f/a} and any future variants in the same
+  // family will match for any PTX version greater than or equal to
+  // `PTXVersion`.
+  bool hasPTXWithFamilySMs(unsigned PTXVersion,
+                           ArrayRef<unsigned> SMVersions) const;
+  // Checks PTX version and architecture-specific SM versions.
+  // For example, sm_100{a} will match for any PTX version greater than or equal
+  // to `PTXVersion`.
+  bool hasPTXWithAccelSMs(unsigned PTXVersion,
+                          ArrayRef<unsigned> SMVersions) const;
+
   bool has256BitVectorLoadStore(unsigned AS) const {
     return SmVersion >= 100 && PTXVersion >= 88 &&
            AS == NVPTXAS::ADDRESS_SPACE_GLOBAL;
+  }
+  bool hasUsedBytesMaskPragma() const {
+    return SmVersion >= 50 && PTXVersion >= 83;
   }
   bool hasAtomAddF64() const { return SmVersion >= 60; }
   bool hasAtomScope() const { return SmVersion >= 60; }
   bool hasAtomBitwise64() const { return SmVersion >= 32; }
   bool hasAtomMinMax64() const { return SmVersion >= 32; }
   bool hasAtomCas16() const { return SmVersion >= 70 && PTXVersion >= 63; }
+  bool hasAtomSwap128() const { return SmVersion >= 90 && PTXVersion >= 83; }
   bool hasClusters() const { return SmVersion >= 90 && PTXVersion >= 78; }
   bool hasLDG() const { return SmVersion >= 32; }
   bool hasHWROT32() const { return SmVersion >= 32; }
+  bool hasBrx() const { return SmVersion >= 30 && PTXVersion >= 60; }
   bool hasFP16Math() const { return SmVersion >= 53; }
   bool hasBF16Math() const { return SmVersion >= 80; }
   bool allowFP16Math() const;
@@ -102,35 +125,145 @@ public:
   bool hasDotInstructions() const {
     return SmVersion >= 61 && PTXVersion >= 50;
   }
-  // Tcgen05 instructions in Blackwell family
-  bool hasTcgen05Instructions() const {
-    bool HasTcgen05 = false;
-    switch (FullSmVersion) {
-    default:
-      break;
-    case 1003: // sm_100a
-    case 1013: // sm_101a
-      HasTcgen05 = true;
-      break;
-    }
 
-    return HasTcgen05 && PTXVersion >= 86;
+  // Checks following instructions support:
+  // - tcgen05.ld/st
+  // - tcgen05.alloc/dealloc/relinquish
+  // - tcgen05.cp
+  // - tcgen05.fence/wait
+  // - tcgen05.commit
+  // - tcgen05.mma
+  bool hasTcgen05InstSupport() const {
+    // sm_101 renamed to sm_110 in PTX 9.0
+    return hasPTXWithFamilySMs(90, {100, 110}) ||
+           hasPTXWithFamilySMs(88, {100, 101}) ||
+           hasPTXWithAccelSMs(86, {100, 101});
   }
+
+  // Checks tcgen05.shift instruction support.
+  bool hasTcgen05ShiftSupport() const {
+    // sm_101 renamed to sm_110 in PTX 9.0
+    return hasPTXWithAccelSMs(90, {100, 110, 103}) ||
+           hasPTXWithAccelSMs(88, {100, 101, 103}) ||
+           hasPTXWithAccelSMs(86, {100, 101});
+  }
+
+  bool hasTcgen05MMAScaleInputDImm() const {
+    return hasPTXWithFamilySMs(88, {100}) || hasPTXWithAccelSMs(86, {100});
+  }
+
+  bool hasTcgen05MMAI8Kind() const {
+    return hasPTXWithAccelSMs(90, {100, 110}) ||
+           hasPTXWithAccelSMs(86, {100, 101});
+  }
+
+  bool hasTcgen05MMASparseMxf4nvf4() const {
+    return hasPTXWithAccelSMs(90, {100, 110, 103}) ||
+           hasPTXWithAccelSMs(87, {100, 101, 103});
+  }
+
+  bool hasTcgen05MMASparseMxf4() const {
+    return hasPTXWithAccelSMs(90, {100, 110, 103}) ||
+           hasPTXWithAccelSMs(86, {100, 101, 103});
+  }
+
+  bool hasTcgen05LdRedSupport() const {
+    return hasPTXWithFamilySMs(90, {110, 103}) ||
+           hasPTXWithFamilySMs(88, {101, 103});
+  }
+
+  bool hasReduxSyncF32() const {
+    return hasPTXWithFamilySMs(88, {100}) || hasPTXWithAccelSMs(86, {100});
+  }
+
+  bool hasMMABlockScale() const {
+    return hasPTXWithFamilySMs(88, {120}) || hasPTXWithAccelSMs(87, {120});
+  }
+
+  bool hasMMASparseBlockScaleF4() const {
+    return hasPTXWithAccelSMs(87, {120, 121});
+  }
+
   // f32x2 instructions in Blackwell family
   bool hasF32x2Instructions() const;
 
-  // TMA G2S copy with cta_group::1/2 support
-  bool hasCpAsyncBulkTensorCTAGroupSupport() const {
-    // TODO: Update/tidy-up after the family-conditional support arrives
-    switch (FullSmVersion) {
-    case 1003:
-    case 1013:
-      return PTXVersion >= 86;
-    case 1033:
-      return PTXVersion >= 88;
-    default:
-      return false;
-    }
+  // Checks support for following in TMA:
+  //  - cta_group::1/2 support
+  //  - im2col_w/w_128 mode support
+  //  - tile_gather4 mode support
+  //  - tile_scatter4 mode support
+  bool hasTMABlackwellSupport() const {
+    return hasPTXWithFamilySMs(90, {100, 110}) ||
+           hasPTXWithFamilySMs(88, {100, 101}) ||
+           hasPTXWithAccelSMs(86, {100, 101});
+  }
+
+  // Checks support for conversions involving e4m3x2 and e5m2x2.
+  bool hasFP8ConversionSupport() const {
+    if (PTXVersion >= 81)
+      return SmVersion >= 89;
+
+    if (PTXVersion >= 78)
+      return SmVersion >= 90;
+
+    return false;
+  }
+
+  // Checks support for conversions involving the following types:
+  // - e2m3x2/e3m2x2
+  // - e2m1x2
+  // - ue8m0x2
+  bool hasNarrowFPConversionSupport() const {
+    return hasPTXWithFamilySMs(90, {100, 110, 120}) ||
+           hasPTXWithFamilySMs(88, {100, 101, 120}) ||
+           hasPTXWithAccelSMs(86, {100, 101, 120});
+  }
+
+  bool hasTensormapReplaceSupport() const {
+    return hasPTXWithFamilySMs(90, {90, 100, 110, 120}) ||
+           hasPTXWithFamilySMs(88, {90, 100, 101, 120}) ||
+           hasPTXWithAccelSMs(83, {90, 100, 101, 120});
+  }
+
+  bool hasTensormapReplaceElemtypeSupport(unsigned value) const {
+    if (value >= static_cast<unsigned>(nvvm::TensormapElemType::B4x16))
+      return hasPTXWithFamilySMs(90, {100, 110, 120}) ||
+             hasPTXWithFamilySMs(88, {100, 101, 120}) ||
+             hasPTXWithAccelSMs(87, {100, 101, 120});
+
+    return hasTensormapReplaceSupport();
+  }
+
+  bool hasTensormapReplaceSwizzleAtomicitySupport() const {
+    return hasPTXWithFamilySMs(90, {100, 110, 120}) ||
+           hasPTXWithFamilySMs(88, {100, 101, 120}) ||
+           hasPTXWithAccelSMs(87, {100, 101, 120});
+  }
+
+  bool hasTensormapReplaceSwizzleModeSupport(unsigned value) const {
+    if (value == static_cast<unsigned>(nvvm::TensormapSwizzleMode::SWIZZLE_96B))
+      return hasPTXWithAccelSMs(88, {103});
+
+    return hasTensormapReplaceSupport();
+  }
+
+  bool hasClusterLaunchControlTryCancelMulticastSupport() const {
+    return hasPTXWithFamilySMs(90, {100, 110, 120}) ||
+           hasPTXWithFamilySMs(88, {100, 101, 120}) ||
+           hasPTXWithAccelSMs(86, {100, 101, 120});
+  }
+
+  bool hasSetMaxNRegSupport() const {
+    return hasPTXWithFamilySMs(90, {100, 110, 120}) ||
+           hasPTXWithFamilySMs(88, {100, 101, 120}) ||
+           hasPTXWithAccelSMs(86, {100, 101, 120}) ||
+           hasPTXWithAccelSMs(80, {90});
+  }
+
+  bool hasLdStmatrixBlackwellSupport() const {
+    return hasPTXWithFamilySMs(90, {100, 110, 120}) ||
+           hasPTXWithFamilySMs(88, {100, 101, 120}) ||
+           hasPTXWithAccelSMs(86, {100, 101, 120});
   }
 
   // Prior to CUDA 12.3 ptxas did not recognize that the trap instruction
@@ -142,8 +275,12 @@ public:
   // present.
   bool hasPTXASUnreachableBug() const { return PTXVersion < 83; }
   bool hasCvtaParam() const { return SmVersion >= 70 && PTXVersion >= 77; }
+  bool hasConvertWithStochasticRounding() const {
+    return hasPTXWithAccelSMs(87, {100, 103});
+  }
   unsigned int getFullSmVersion() const { return FullSmVersion; }
   unsigned int getSmVersion() const { return getFullSmVersion() / 10; }
+  unsigned int getSmFamilyVersion() const { return getFullSmVersion() / 100; }
   // GPUs with "a" suffix have architecture-accelerated features that are
   // supported on the specified architecture only, hence such targets do not
   // follow the onion layer model. hasArchAccelFeatures() allows distinguishing
@@ -162,9 +299,9 @@ public:
     return getFullSmVersion() % 10 == 2 ? PTXVersion >= 88
                                         : hasArchAccelFeatures();
   }
-  // If the user did not provide a target we default to the `sm_30` target.
+  // If the user did not provide a target we default to the `sm_75` target.
   std::string getTargetName() const {
-    return TargetName.empty() ? "sm_30" : TargetName;
+    return TargetName.empty() ? "sm_75" : TargetName;
   }
   bool hasTargetName() const { return !TargetName.empty(); }
 

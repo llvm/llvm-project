@@ -184,6 +184,18 @@ func.func private @private0(%0 : i32) -> i32 {
 // CHECK-NEXT:  result #0: live
 // CHECK-LABEL: test_tag: y:
 // CHECK-NEXT:  result #0: not live
+// CHECK-LABEL: test_tag: for:
+// CHECK-NEXT:  operand #0: live
+// CHECK-NEXT:  operand #1: live
+// CHECK-NEXT:  operand #2: live
+// CHECK-NEXT:  operand #3: live
+// CHECK-NEXT:  operand #4: not live
+// CHECK-NEXT:  result #0: live
+// CHECK-NEXT:  result #1: not live
+// CHECK-NEXT:  region: #0:
+// CHECK-NEXT:  argument: #0: live
+// CHECK-NEXT:  argument: #1: not live
+// CHECK-NEXT:  argument: #2: not live
 func.func @test_7_type_3(%arg0: memref<i32>) {
   %c0 = arith.constant {tag = "zero"} 0 : index
   %c10 = arith.constant {tag = "ten"} 10 : index
@@ -194,7 +206,7 @@ func.func @test_7_type_3(%arg0: memref<i32>) {
     %1 = arith.addi %x, %x : i32
     %2 = func.call @private0(%1) : (i32) -> i32
     scf.yield %2, %arg3 : i32, i32
-  }
+  } {tag = "for"}
   memref.store %0#0, %arg0[] : memref<i32>
   return
 }
@@ -302,4 +314,66 @@ func.func @dead_block() {
     cf.br ^bb1
   ^bb4:
     return
+}
+
+// -----
+
+// CHECK-LABEL: test_tag: for:
+// CHECK-NEXT: region: #0:
+// CHECK-NEXT:   argument: #0: live
+func.func @affine_loop_no_use_iv_has_side_effect_op() {
+  %c1 = arith.constant 1 : index
+  %alloc = memref.alloc() : memref<10xindex>
+  affine.for %arg0 = 0 to 79 {
+    memref.store %c1, %alloc[%c1] : memref<10xindex>
+  } {tag = "for"}
+  return
+}
+
+// -----
+
+// CHECK-LABEL: test_tag: for:
+// CHECK-NEXT: region: #0:
+// CHECK-NEXT:   argument: #0: not live
+func.func @affine_loop_no_use_iv() {
+  affine.for %arg0 = 0 to 79 {
+  } {tag = "for"}
+  return
+}
+
+// -----
+
+// CHECK-LABEL: test_tag: forall:
+// CHECK-NEXT: operand #0: live
+// CHECK-NEXT: region: #0:
+// CHECK-NEXT:   argument: #0: live
+
+func.func @forall_no_use_iv_has_side_effect_op(%idx1: index, %idx2: index) {
+  scf.parallel (%i) = (%idx1) to (%idx2) step (%idx2) {
+    %r = memref.alloca() : memref<10xf32>
+    %cst = arith.constant 0.0 : f32
+    scf.forall (%e2) in (%idx2) {
+      memref.store %cst, %r[%idx2] : memref<10xf32>
+    } {tag = "forall"}
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: test_tag: for:
+// CHECK-NEXT:   operand #0: not live
+// CHECK-NEXT:   operand #1: not live
+// CHECK-NEXT:   operand #2: not live
+// CHECK-NEXT:   operand #3: not live
+
+func.func @test_for_loop_read_only(%arg0: memref<10xindex>) {
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  %0 = scf.for %iv = %c0 to %c10 step %c1 iter_args(%idx = %c0) -> (index) {
+    %loaded = memref.load %arg0[%idx] : memref<10xindex>
+    scf.yield %loaded : index
+  } {tag = "for"}
+  return
 }

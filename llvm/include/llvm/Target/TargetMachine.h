@@ -29,9 +29,9 @@
 #include <string>
 #include <utility>
 
-LLVM_ABI extern llvm::cl::opt<bool> NoKernelInfoEndLTO;
-
 namespace llvm {
+
+LLVM_ABI extern llvm::cl::opt<bool> NoKernelInfoEndLTO;
 
 class AAManager;
 using ModulePassManager = PassManager<Module>;
@@ -538,6 +538,11 @@ public:
       const SmallPtrSetImpl<MachineInstr *> &MIs) const {
     return 0;
   }
+
+  /// Returns whether the backend can lower the llvm.cond.loop intrinsic. If
+  /// this function returns false, the intrinsic will be supported generically
+  /// but without loop detection support.
+  virtual bool canLowerCondLoop() const { return false; }
 };
 
 } // end namespace llvm

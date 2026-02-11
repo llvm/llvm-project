@@ -14,8 +14,6 @@
 
 // unordered_multimap& operator=(const unordered_multimap& u);
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <algorithm>
 #include <cassert>
 #include <cfloat>
@@ -289,7 +287,7 @@ void test_alloc(const Alloc& lhs_alloc                   = Alloc(),
       V rhs_arr[] = {V(10, 4), V(13, 5), V(12, 324), V(0, 54), V(50, 5), V(2, 5)};
       Map copy(begin(rhs_arr), end(rhs_arr), 0, std::hash<int>(), std::equal_to<int>(), rhs_alloc);
       copy = orig;
-      LIBCPP_ASSERT(copy.bucket_count() == 5);
+      LIBCPP_NON_FROZEN_ASSERT(copy.bucket_count() == 5);
       assert(copy.size() == 4);
       assert(copy.find(1)->second == 1);
       assert(copy.find(2)->second == 3);

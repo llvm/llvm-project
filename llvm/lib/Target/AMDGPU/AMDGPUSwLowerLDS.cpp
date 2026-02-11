@@ -47,8 +47,8 @@
 //        corresponds to offset, second member corresponds to size of LDS global
 //        being replaced and third represents the total aligned size. It will
 //        have name "llvm.amdgcn.sw.lds.<kernel-name>.md". This global will have
-//        an intializer with static LDS related offsets and sizes initialized.
-//        But for dynamic LDS related entries, offsets will be intialized to
+//        an initializer with static LDS related offsets and sizes initialized.
+//        But for dynamic LDS related entries, offsets will be initialized to
 //        previous static LDS allocation end offset. Sizes for them will be zero
 //        initially. These dynamic LDS offset and size values will be updated
 //        within the kernel, since kernel can read the dynamic LDS size
@@ -271,7 +271,7 @@ void AMDGPUSwLowerLDS::getNonKernelsWithLDSArguments(const CallGraph &CG) {
       Function *CalledFunc = CallerCGN->getFunction();
       if (!CalledFunc || CalledFunc->isDeclaration())
         continue;
-      if (AMDGPU::isKernelLDS(CalledFunc))
+      if (AMDGPU::isKernel(*CalledFunc))
         continue;
       for (auto AI = CalledFunc->arg_begin(), E = CalledFunc->arg_end();
            AI != E; ++AI) {
@@ -297,7 +297,7 @@ void AMDGPUSwLowerLDS::getUsesOfLDSByNonKernels() {
     for (User *V : GV->users()) {
       if (auto *I = dyn_cast<Instruction>(V)) {
         Function *F = I->getFunction();
-        if (!isKernelLDS(F) && !F->isDeclaration())
+        if (!isKernel(*F) && !F->isDeclaration())
           FuncLDSAccessInfo.NonKernelToLDSAccessMap[F].insert(GV);
       }
     }
@@ -523,7 +523,7 @@ static void replacesUsesOfGlobalInFunction(Function *Func, GlobalVariable *GV,
   auto ReplaceUsesLambda = [Func](const Use &U) -> bool {
     auto *V = U.getUser();
     if (auto *Inst = dyn_cast<Instruction>(V)) {
-      auto *Func1 = Inst->getParent()->getParent();
+      auto *Func1 = Inst->getFunction();
       if (Func == Func1)
         return true;
     }
@@ -1169,7 +1169,7 @@ bool AMDGPUSwLowerLDS::run() {
       if (!F || K.second.empty())
         continue;
 
-      assert(isKernelLDS(F));
+      assert(isKernel(*F));
 
       // Only inserts if key isn't already in the map.
       FuncLDSAccessInfo.KernelToLDSParametersMap.insert(

@@ -231,6 +231,27 @@ function (add_flangrt_library name)
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -funwind-tables -fno-asynchronous-unwind-tables>
         )
+
+      # We define our own _GLIBCXX_THROW_OR_ABORT here because, as of
+      # GCC 15.1, the libstdc++ header file <bits/c++config> uses
+      # (void)_EXC in its definition of _GLIBCXX_THROW_OR_ABORT to
+      # silence a warning.
+      #
+      # This is a problem for us because some compilers, specifically
+      # clang, do not always optimize away that (void)_EXC even though
+      # it is unreachable since it occurs after a call to
+      # _builtin_abort().  Because _EXC is typically an object derived
+      # from std::exception, (void)_EXC, when not optimized away,
+      # calls std::exception methods defined in the libstdc++ shared
+      # library.  We shouldn't link against that library since our
+      # build version may conflict with the version used by a hybrid
+      # Fortran/C++ application.
+      #
+      # Redefining _GLIBCXX_THROW_OR_ABORT in this manner is not
+      # supported by the maintainers of libstdc++, so future changes
+      # to libstdc++ may require future changes to this build script
+      # and/or future changes to the Fortran runtime source code.
+      target_compile_options(${tgtname} PUBLIC "-D_GLIBCXX_THROW_OR_ABORT(_EXC)=(__builtin_abort())")
     elseif (MSVC)
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:/EHs-c- /GR->
@@ -251,8 +272,15 @@ function (add_flangrt_library name)
           $<$<COMPILE_LANGUAGE:CXX>:-nogpulib -flto -fvisibility=hidden -Wno-unknown-cuda-version --cuda-feature=+ptx63>
         )
     elseif (APPLE)
+      # Clang on Darwin enables non-POSIX extensions by default.
+      # This causes some macros to leak, such as HUGE from <math.h>, which
+      # causes some conflicts with Flang symbols (but not with Flang-RT, for
+      # now).
+      # It also causes some Flang-RT extensions to be disabled, such as fdate,
+      # that checks for _POSIX_C_SOURCE.
+      # Setting _POSIX_C_SOURCE avoids these issues.
       target_compile_options(${tgtname} PRIVATE
-          $<$<COMPILE_LANGUAGE:CXX>:${DARWIN_osx_BUILTIN_MIN_VER_FLAG}>
+          $<$<COMPILE_LANGUAGE:CXX>:${DARWIN_osx_BUILTIN_MIN_VER_FLAG} -D_POSIX_C_SOURCE=200809>
         )
     endif ()
 
@@ -281,9 +309,12 @@ function (add_flangrt_library name)
 
     # Disable libstdc++/libc++ assertions, even in an LLVM_ENABLE_ASSERTIONS
     # build, to avoid an unwanted dependency on libstdc++/libc++.so.
+    target_compile_definitions(${tgtname} PUBLIC _GLIBCXX_NO_ASSERTIONS)
     if (FLANG_RT_SUPPORTS_UNDEFINE_FLAG)
-      target_compile_options(${tgtname} PUBLIC -U_GLIBCXX_ASSERTIONS)
-      target_compile_options(${tgtname} PUBLIC -U_LIBCPP_ENABLE_ASSERTIONS)
+      target_compile_options(${tgtname} PUBLIC
+          "$<$<COMPILE_LANGUAGE:CXX>:-Wp,-U_GLIBCXX_ASSERTIONS>")
+      target_compile_options(${tgtname} PUBLIC
+          "$<$<COMPILE_LANGUAGE:CXX>:-Wp,-U_LIBCPP_ENABLE_ASSERTIONS>")
     endif ()
 
     # Non-GTest unittests depend on LLVMSupport

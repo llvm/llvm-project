@@ -21,7 +21,7 @@
 //
 // The const overloads of
 //   valarray::operator[](...) const
-// return propxy objects. These proxies are implicitly convertible to
+// return proxy objects. These proxies are implicitly convertible to
 // std::valarray.
 //
 // Validate the function works for valarray, the proxies, and __val_expr.

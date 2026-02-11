@@ -569,9 +569,9 @@ public:
     return true;
   }
 
-  bool finishLayout(const MCAssembler &Asm) const override {
+  bool finishLayout() const override {
     SmallVector<MCFragment *> Frags;
-    for (MCSection &Sec : Asm) {
+    for (MCSection &Sec : *Asm) {
       Frags.clear();
       for (MCFragment &F : Sec)
         Frags.push_back(&F);
@@ -580,7 +580,7 @@ public:
         default:
           break;
         case MCFragment::FT_Align: {
-          auto Size = Asm.computeFragmentSize(*Frags[J]);
+          auto Size = Asm->computeFragmentSize(*Frags[J]);
           for (auto K = J; K != 0 && Size >= HEXAGON_PACKET_SIZE;) {
             --K;
             switch (Frags[K]->getKind()) {
@@ -596,15 +596,22 @@ public:
               auto &RF = *Frags[K];
               MCInst Inst = RF.getInst();
 
+              // Don't add nops to packets that have fixups, as reshuffling can
+              // invalidate fixup offsets.
+              if (!RF.getVarFixups().empty()) {
+                Size = 0;
+                break;
+              }
+
               const bool WouldTraverseLabel = llvm::any_of(
-                  Asm.symbols(), [&Asm, &RF, &Inst](MCSymbol const &sym) {
+                  Asm->symbols(), [&RF, &Inst, Asm = Asm](MCSymbol const &sym) {
                     uint64_t Offset = 0;
-                    const bool HasOffset = Asm.getSymbolOffset(sym, Offset);
+                    const bool HasOffset = Asm->getSymbolOffset(sym, Offset);
                     const unsigned PacketSizeBytes =
                         HexagonMCInstrInfo::bundleSize(Inst) *
                         HEXAGON_INSTR_SIZE;
                     const bool OffsetPastSym =
-                        Offset <= (Asm.getFragmentOffset(RF) + PacketSizeBytes);
+                        Offset <= Asm->getFragmentOffset(RF) + PacketSizeBytes;
                     return !sym.isVariable() && Offset != 0 && HasOffset &&
                            OffsetPastSym;
                   });
@@ -631,7 +638,7 @@ public:
                                             *RF.getSubtargetInfo(), Inst);
               //assert(!Error);
               (void)Error;
-              ReplaceInstruction(Asm.getEmitter(), RF, Inst);
+              ReplaceInstruction(Asm->getEmitter(), RF, Inst);
               Size = 0; // Only look back one instruction
               break;
             }

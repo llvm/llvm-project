@@ -229,8 +229,8 @@ public:
   /// doing something wrong if you call pruneValue directly on a
   /// LiveInterval. Indeed, you are supposed to call pruneValue on the main
   /// LiveRange and all the LiveRanges of the subranges if any.
-  LLVM_ATTRIBUTE_UNUSED void pruneValue(LiveInterval &, SlotIndex,
-                                        SmallVectorImpl<SlotIndex> *) {
+  [[maybe_unused]] void pruneValue(LiveInterval &, SlotIndex,
+                                   SmallVectorImpl<SlotIndex> *) {
     llvm_unreachable(
         "Use pruneValue on the main LiveRange and on each subrange");
   }
@@ -412,12 +412,13 @@ public:
 
   /// Return the live range for register unit \p Unit. It will be computed if
   /// it doesn't exist.
-  LiveRange &getRegUnit(unsigned Unit) {
-    LiveRange *LR = RegUnitRanges[Unit];
+  LiveRange &getRegUnit(MCRegUnit Unit) {
+    LiveRange *LR = RegUnitRanges[static_cast<unsigned>(Unit)];
     if (!LR) {
       // Compute missing ranges on demand.
       // Use segment set to speed-up initial computation of the live range.
-      RegUnitRanges[Unit] = LR = new LiveRange(UseSegmentSetForPhysRegs);
+      RegUnitRanges[static_cast<unsigned>(Unit)] = LR =
+          new LiveRange(UseSegmentSetForPhysRegs);
       computeRegUnitRange(*LR, Unit);
     }
     return *LR;
@@ -425,17 +426,19 @@ public:
 
   /// Return the live range for register unit \p Unit if it has already been
   /// computed, or nullptr if it hasn't been computed yet.
-  LiveRange *getCachedRegUnit(unsigned Unit) { return RegUnitRanges[Unit]; }
+  LiveRange *getCachedRegUnit(MCRegUnit Unit) {
+    return RegUnitRanges[static_cast<unsigned>(Unit)];
+  }
 
-  const LiveRange *getCachedRegUnit(unsigned Unit) const {
-    return RegUnitRanges[Unit];
+  const LiveRange *getCachedRegUnit(MCRegUnit Unit) const {
+    return RegUnitRanges[static_cast<unsigned>(Unit)];
   }
 
   /// Remove computed live range for register unit \p Unit. Subsequent uses
   /// should rely on on-demand recomputation.
-  void removeRegUnit(unsigned Unit) {
-    delete RegUnitRanges[Unit];
-    RegUnitRanges[Unit] = nullptr;
+  void removeRegUnit(MCRegUnit Unit) {
+    delete RegUnitRanges[static_cast<unsigned>(Unit)];
+    RegUnitRanges[static_cast<unsigned>(Unit)] = nullptr;
   }
 
   /// Remove associated live ranges for the register units associated with \p
@@ -489,7 +492,7 @@ private:
   void dumpInstrs() const;
 
   void computeLiveInRegUnits();
-  LLVM_ABI void computeRegUnitRange(LiveRange &, unsigned Unit);
+  LLVM_ABI void computeRegUnitRange(LiveRange &, MCRegUnit Unit);
   LLVM_ABI bool computeVirtRegInterval(LiveInterval &);
 
   using ShrinkToUsesWorkList = SmallVector<std::pair<SlotIndex, VNInfo *>, 16>;

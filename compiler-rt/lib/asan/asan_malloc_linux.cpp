@@ -15,7 +15,7 @@
 
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_FREEBSD || SANITIZER_FUCHSIA || SANITIZER_LINUX || \
-    SANITIZER_NETBSD || SANITIZER_SOLARIS || SANITIZER_HAIKU
+    SANITIZER_NETBSD || SANITIZER_SOLARIS || SANITIZER_HAIKU || SANITIZER_AIX
 
 #  include "asan_allocator.h"
 #  include "asan_interceptors.h"
@@ -61,6 +61,26 @@ INTERCEPTOR(void, cfree, void *ptr) {
 }
 #endif // SANITIZER_INTERCEPT_CFREE
 
+#  if SANITIZER_AIX
+// Unlike malloc, vec_malloc must return memory aligned to 16 bytes.
+INTERCEPTOR(void*, vec_malloc, uptr size) {
+  if (DlsymAlloc::Use())
+    return DlsymAlloc::Allocate(size, 16);
+  GET_STACK_TRACE_MALLOC;
+  return asan_vec_malloc(size, &stack);
+}
+
+// Unlike calloc, vec_calloc must return memory aligned to 16 bytes.
+INTERCEPTOR(void*, vec_calloc, uptr nmemb, uptr size) {
+  if (DlsymAlloc::Use())
+    return DlsymAlloc::Callocate(nmemb, size, 16);
+  GET_STACK_TRACE_MALLOC;
+  return asan_vec_calloc(nmemb, size, &stack);
+}
+#  endif
+
+// TODO: Fix malloc/calloc interceptors to return 16-byte alignment with AIX on
+// PASE.
 INTERCEPTOR(void*, malloc, uptr size) {
   if (DlsymAlloc::Use())
     return DlsymAlloc::Allocate(size);
@@ -75,6 +95,9 @@ INTERCEPTOR(void*, calloc, uptr nmemb, uptr size) {
   return asan_calloc(nmemb, size, &stack);
 }
 
+// TODO: AIX needs a method to ensure 16-byte alignment if the incoming
+// pointer was allocated with a 16-byte alignment requirement (or perhaps
+// merely if it happens to have 16-byte alignment).
 INTERCEPTOR(void*, realloc, void *ptr, uptr size) {
   if (DlsymAlloc::Use() || DlsymAlloc::PointerIsMine(ptr))
     return DlsymAlloc::Realloc(ptr, size);

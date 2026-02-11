@@ -14,10 +14,24 @@ namespace std {
     static constexpr bool value = true;
   };
 
+  template <typename T, typename U>
+  static constexpr bool is_same_v = is_same<T, U>::value;  // NOLINT
+
   template<bool, typename T = void>
   struct enable_if {
     using type = T;
   };
+
+  template <bool B, typename T = void>
+  using enable_if_t = typename enable_if<B, T>::type;  // NOLINT
+
+  template <typename T>
+  struct remove_reference {
+    using type = T;
+  };
+
+  template <typename T>
+  using remove_reference_t = typename remove_reference<T>::type;  // NOLINT
 
   template <typename...>
   struct common_type {
@@ -126,3 +140,13 @@ namespace my_std = std;
 using Alias = my_std::add_const<bool>::type;
 // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: use c++14 style type templates
 // CHECK-FIXES: using Alias = my_std::add_const_t<bool>;
+
+template <typename T>
+struct ImplicitlyInstantiatedConstructor {
+  template <typename U, typename = std::enable_if_t<std::is_same_v<U, T>>>
+  ImplicitlyInstantiatedConstructor(U) {}
+};
+
+const ImplicitlyInstantiatedConstructor<int> ImplicitInstantiation(std::remove_reference<int>::type(123));
+// CHECK-MESSAGES: :[[@LINE-1]]:68: warning: use c++14 style type templates
+// CHECK-FIXES: const ImplicitlyInstantiatedConstructor<int> ImplicitInstantiation(std::remove_reference_t<int>(123));

@@ -215,8 +215,20 @@ note: candidate function not viable: requires single argument 'x', but 2 argumen
 
             details = diags.GetValueForKey("details")
 
-            # Detail 1/2: undeclared 'a'
+            # Detail 1/3: note: requested expression language
             diag = details.GetItemAtIndex(0)
+            self.assertEqual(str(diag.GetValueForKey("severity")), "note")
+            self.assertIn("Ran expression as 'C++", str(diag.GetValueForKey("message")))
+            self.assertIn(
+                "Ran expression as 'C++", str(diag.GetValueForKey("rendered"))
+            )
+            self.assertEqual(str(diag.GetValueForKey("source_location")), "")
+            self.assertEqual(str(diag.GetValueForKey("file")), "")
+            self.assertFalse(diag.GetValueForKey("hidden").GetBooleanValue())
+            self.assertFalse(diag.GetValueForKey("in_user_input").GetBooleanValue())
+
+            # Detail 2/3: undeclared 'a'
+            diag = details.GetItemAtIndex(1)
 
             severity = diag.GetValueForKey("severity")
             message = diag.GetValueForKey("message")
@@ -234,8 +246,8 @@ note: candidate function not viable: requires single argument 'x', but 2 argumen
             self.assertFalse(hidden.GetBooleanValue())
             self.assertTrue(in_user_input.GetBooleanValue())
 
-            # Detail 1/2: undeclared 'b'
-            diag = details.GetItemAtIndex(1)
+            # Detail 3/3: undeclared 'b'
+            diag = details.GetItemAtIndex(2)
             message = diag.GetValueForKey("message")
             self.assertIn("undeclared identifier 'b'", str(message))
 
@@ -260,3 +272,21 @@ note: candidate function not viable: requires single argument 'x', but 2 argumen
         self.assertEqual(err_ty.GetIntegerValue(), lldb.eErrorTypeExpression)
         diags = data.GetValueForKey("errors").GetItemAtIndex(0)
         check_error(diags)
+
+    def test_no_location(self):
+        """Test the error reporting for missing locations"""
+        self.build()
+
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "// Break here", self.main_source_spec
+        )
+        self.ci.HandleCommand(
+            "settings set testing.inject-variable-location-error true", self.res
+        )
+        if not self.res.Succeeded():
+            # This test needs assertions.
+            return
+        frame = thread.GetFrameAtIndex(0)
+        value = frame.EvaluateExpression("f")
+        error = value.GetError()
+        self.assertIn("variable not available", str(error))

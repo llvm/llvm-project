@@ -11,6 +11,7 @@ tablegen(LLVM PPCGenFastISel.inc -gen-fast-isel)
 tablegen(LLVM PPCGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM PPCGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM PPCGenRegisterInfo.inc -gen-register-info)
+tablegen(LLVM PPCGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM PPCGenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM PPCGenExegesis.inc -gen-exegesis)
 tablegen(LLVM PPCGenRegisterBank.inc -gen-register-bank)
@@ -41,6 +42,7 @@ add_llvm_target(PowerPCCodeGen
   PPCMachineScheduler.cpp
   PPCMacroFusion.cpp
   PPCMIPeephole.cpp
+  PPCPrepareIFuncsOnAIX.cpp
   PPCRegisterInfo.cpp
   PPCSelectionDAGInfo.cpp
   PPCSubtarget.cpp
@@ -49,7 +51,7 @@ add_llvm_target(PowerPCCodeGen
   PPCTargetTransformInfo.cpp
   PPCTOCRegDeps.cpp
   PPCTLSDynamicCall.cpp
-  PPCVSXCopy.cpp
+  PPCVSXWACCCopy.cpp
   PPCReduceCRLogicals.cpp
   PPCVSXFMAMutate.cpp
   PPCVSXSwapRemoval.cpp

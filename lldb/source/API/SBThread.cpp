@@ -14,6 +14,7 @@
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBFormat.h"
 #include "lldb/API/SBFrame.h"
+#include "lldb/API/SBFrameList.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStructuredData.h"
@@ -157,52 +158,8 @@ size_t SBThread::GetStopReasonDataCount() {
   if (exe_ctx) {
     if (exe_ctx->HasThreadScope()) {
       StopInfoSP stop_info_sp = exe_ctx->GetThreadPtr()->GetStopInfo();
-      if (stop_info_sp) {
-        StopReason reason = stop_info_sp->GetStopReason();
-        switch (reason) {
-        case eStopReasonInvalid:
-        case eStopReasonNone:
-        case eStopReasonTrace:
-        case eStopReasonExec:
-        case eStopReasonPlanComplete:
-        case eStopReasonThreadExiting:
-        case eStopReasonInstrumentation:
-        case eStopReasonProcessorTrace:
-        case eStopReasonVForkDone:
-        case eStopReasonHistoryBoundary:
-          // There is no data for these stop reasons.
-          return 0;
-
-        case eStopReasonBreakpoint: {
-          break_id_t site_id = stop_info_sp->GetValue();
-          lldb::BreakpointSiteSP bp_site_sp(
-              exe_ctx->GetProcessPtr()->GetBreakpointSiteList().FindByID(
-                  site_id));
-          if (bp_site_sp)
-            return bp_site_sp->GetNumberOfConstituents() * 2;
-          else
-            return 0; // Breakpoint must have cleared itself...
-        } break;
-
-        case eStopReasonWatchpoint:
-          return 1;
-
-        case eStopReasonSignal:
-          return 1;
-
-        case eStopReasonInterrupt:
-          return 1;
-
-        case eStopReasonException:
-          return 1;
-
-        case eStopReasonFork:
-          return 1;
-
-        case eStopReasonVFork:
-          return 1;
-        }
-      }
+      if (stop_info_sp)
+        return stop_info_sp->GetStopReasonDataCount();
     }
   } else {
     LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
@@ -220,63 +177,8 @@ uint64_t SBThread::GetStopReasonDataAtIndex(uint32_t idx) {
     if (exe_ctx->HasThreadScope()) {
       Thread *thread = exe_ctx->GetThreadPtr();
       StopInfoSP stop_info_sp = thread->GetStopInfo();
-      if (stop_info_sp) {
-        StopReason reason = stop_info_sp->GetStopReason();
-        switch (reason) {
-        case eStopReasonInvalid:
-        case eStopReasonNone:
-        case eStopReasonTrace:
-        case eStopReasonExec:
-        case eStopReasonPlanComplete:
-        case eStopReasonThreadExiting:
-        case eStopReasonInstrumentation:
-        case eStopReasonProcessorTrace:
-        case eStopReasonVForkDone:
-        case eStopReasonHistoryBoundary:
-          // There is no data for these stop reasons.
-          return 0;
-
-        case eStopReasonBreakpoint: {
-          break_id_t site_id = stop_info_sp->GetValue();
-          lldb::BreakpointSiteSP bp_site_sp(
-              exe_ctx->GetProcessPtr()->GetBreakpointSiteList().FindByID(
-                  site_id));
-          if (bp_site_sp) {
-            uint32_t bp_index = idx / 2;
-            BreakpointLocationSP bp_loc_sp(
-                bp_site_sp->GetConstituentAtIndex(bp_index));
-            if (bp_loc_sp) {
-              if (idx & 1) {
-                // Odd idx, return the breakpoint location ID
-                return bp_loc_sp->GetID();
-              } else {
-                // Even idx, return the breakpoint ID
-                return bp_loc_sp->GetBreakpoint().GetID();
-              }
-            }
-          }
-          return LLDB_INVALID_BREAK_ID;
-        } break;
-
-        case eStopReasonWatchpoint:
-          return stop_info_sp->GetValue();
-
-        case eStopReasonSignal:
-          return stop_info_sp->GetValue();
-
-        case eStopReasonInterrupt:
-          return stop_info_sp->GetValue();
-
-        case eStopReasonException:
-          return stop_info_sp->GetValue();
-
-        case eStopReasonFork:
-          return stop_info_sp->GetValue();
-
-        case eStopReasonVFork:
-          return stop_info_sp->GetValue();
-        }
-      }
+      if (stop_info_sp)
+        return stop_info_sp->GetStopReasonDataAtIndex(idx);
     }
   } else {
     LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
@@ -338,11 +240,34 @@ SBThread::GetStopReasonExtendedBacktraces(InstrumentationRuntimeType type) {
   return threads;
 }
 
-size_t SBThread::GetStopDescription(char *dst, size_t dst_len) {
-  LLDB_INSTRUMENT_VA(this, dst, dst_len);
+bool SBThread::GetStopDescription(lldb::SBStream &stream) const {
+  LLDB_INSTRUMENT_VA(this, stream);
 
-  if (dst)
-    *dst = 0;
+  if (!m_opaque_sp)
+    return false;
+
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
+    return false;
+  }
+
+  if (!exe_ctx->HasThreadScope())
+    return false;
+
+  Stream &strm = stream.ref();
+  const std::string stop_desc = exe_ctx->GetThreadPtr()->GetStopDescription();
+  strm.PutCString(stop_desc);
+
+  return true;
+}
+
+size_t SBThread::GetStopDescription(char *dst_or_null, size_t dst_len) {
+  LLDB_INSTRUMENT_VA(this, dst_or_null, dst_len);
+
+  if (dst_or_null)
+    *dst_or_null = 0;
 
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
@@ -358,8 +283,8 @@ size_t SBThread::GetStopDescription(char *dst, size_t dst_len) {
   if (thread_stop_desc.empty())
     return 0;
 
-  if (dst)
-    return ::snprintf(dst, dst_len, "%s", thread_stop_desc.c_str()) + 1;
+  if (dst_or_null)
+    return ::snprintf(dst_or_null, dst_len, "%s", thread_stop_desc.c_str()) + 1;
 
   // NULL dst passed in, return the length needed to contain the
   // description.
@@ -394,6 +319,13 @@ void SBThread::SetThread(const ThreadSP &lldb_object_sp) {
 lldb::tid_t SBThread::GetThreadID() const {
   LLDB_INSTRUMENT_VA(this);
 
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
+    return LLDB_INVALID_THREAD_ID;
+  }
+
   ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
   if (thread_sp)
     return thread_sp->GetID();
@@ -402,6 +334,13 @@ lldb::tid_t SBThread::GetThreadID() const {
 
 uint32_t SBThread::GetIndexID() const {
   LLDB_INSTRUMENT_VA(this);
+
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
+    return LLDB_INVALID_INDEX32;
+  }
 
   ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
   if (thread_sp)
@@ -1178,6 +1117,26 @@ SBFrame SBThread::GetFrameAtIndex(uint32_t idx) {
   return sb_frame;
 }
 
+lldb::SBFrameList SBThread::GetFrames() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  SBFrameList sb_frame_list;
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
+    return SBFrameList();
+  }
+
+  if (exe_ctx->HasThreadScope()) {
+    StackFrameListSP frame_list_sp =
+        exe_ctx->GetThreadPtr()->GetStackFrameList();
+    sb_frame_list.SetFrameList(frame_list_sp);
+  }
+
+  return sb_frame_list;
+}
+
 lldb::SBFrame SBThread::GetSelectedFrame() {
   LLDB_INSTRUMENT_VA(this);
 
@@ -1370,6 +1329,13 @@ SBThread SBThread::GetExtendedBacktraceThread(const char *type) {
 uint32_t SBThread::GetExtendedBacktraceOriginatingIndexID() {
   LLDB_INSTRUMENT_VA(this);
 
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
+    return LLDB_INVALID_INDEX32;
+  }
+
   ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
   if (thread_sp)
     return thread_sp->GetExtendedBacktraceOriginatingIndexID();
@@ -1378,6 +1344,13 @@ uint32_t SBThread::GetExtendedBacktraceOriginatingIndexID() {
 
 SBValue SBThread::GetCurrentException() {
   LLDB_INSTRUMENT_VA(this);
+
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
+    return SBValue();
+  }
 
   ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
   if (!thread_sp)
@@ -1389,6 +1362,13 @@ SBValue SBThread::GetCurrentException() {
 SBThread SBThread::GetCurrentExceptionBacktrace() {
   LLDB_INSTRUMENT_VA(this);
 
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
+    return SBThread();
+  }
+
   ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
   if (!thread_sp)
     return SBThread();
@@ -1398,6 +1378,13 @@ SBThread SBThread::GetCurrentExceptionBacktrace() {
 
 bool SBThread::SafeToCallFunctions() {
   LLDB_INSTRUMENT_VA(this);
+
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
+    return false;
+  }
 
   ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
   if (thread_sp)
@@ -1417,6 +1404,13 @@ lldb_private::Thread *SBThread::get() {
 
 SBValue SBThread::GetSiginfo() {
   LLDB_INSTRUMENT_VA(this);
+
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
+    return SBValue();
+  }
 
   ThreadSP thread_sp = m_opaque_sp->GetThreadSP();
   if (!thread_sp)

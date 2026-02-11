@@ -8,11 +8,14 @@
 
 #include "mlir/Dialect/GPU/TransformOps/GPUTransformOps.h"
 
+#include "mlir/Conversion/AMDGPUToROCDL/AMDGPUToROCDL.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/NVGPUToNVVM/NVGPUToNVVM.h"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
+#include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/TransformOps/Utils.h"
@@ -43,6 +46,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/LogicalResult.h"
+#include <optional>
 #include <type_traits>
 
 using namespace mlir;
@@ -59,27 +63,7 @@ using namespace mlir::transform::gpu;
 void transform::ApplyGPUToNVVMConversionPatternsOp::populatePatterns(
     TypeConverter &typeConverter, RewritePatternSet &patterns) {
   auto &llvmTypeConverter = static_cast<LLVMTypeConverter &>(typeConverter);
-  // NVVM uses alloca in the default address space to represent private
-  // memory allocations, so drop private annotations. NVVM uses address
-  // space 3 for shared memory. NVVM uses the default address space to
-  // represent global memory.
-  // Used in populateGpuToNVVMConversionPatternsso attaching here for now.
-  // TODO: We should have a single to_nvvm_type_converter.
-  populateGpuMemorySpaceAttributeConversions(
-      llvmTypeConverter, [](AddressSpace space) -> unsigned {
-        switch (space) {
-        case AddressSpace::Global:
-          return static_cast<unsigned>(
-              NVVM::NVVMMemorySpace::kGlobalMemorySpace);
-        case AddressSpace::Workgroup:
-          return static_cast<unsigned>(
-              NVVM::NVVMMemorySpace::kSharedMemorySpace);
-        case AddressSpace::Private:
-          return 0;
-        }
-        llvm_unreachable("unknown address space enum value");
-        return 0;
-      });
+  nvgpu::populateCommonGPUTypeAndAttributeConversions(llvmTypeConverter);
   // Used in GPUToNVVM/WmmaOpsToNvvm.cpp so attaching here for now.
   // TODO: We should have a single to_nvvm_type_converter.
   llvmTypeConverter.addConversion(
@@ -128,18 +112,7 @@ LogicalResult transform::ApplyGPUSubgroupReduceToNVVMConversionPatternsOp::
 void transform::ApplyGPUToROCDLConversionPatternsOp::populatePatterns(
     TypeConverter &typeConverter, RewritePatternSet &patterns) {
   auto &llvmTypeConverter = static_cast<LLVMTypeConverter &>(typeConverter);
-  populateGpuMemorySpaceAttributeConversions(
-      llvmTypeConverter, [](AddressSpace space) {
-        switch (space) {
-        case AddressSpace::Global:
-          return ROCDL::ROCDLDialect::kGlobalMemoryAddressSpace;
-        case AddressSpace::Workgroup:
-          return ROCDL::ROCDLDialect::kSharedMemoryAddressSpace;
-        case AddressSpace::Private:
-          return ROCDL::ROCDLDialect::kPrivateMemoryAddressSpace;
-        }
-        llvm_unreachable("unknown address space enum value");
-      });
+  amdgpu::populateCommonGPUTypeAndAttributeConversions(llvmTypeConverter);
   FailureOr<amdgpu::Chipset> maybeChipset =
       amdgpu::Chipset::parse(getChipset());
   assert(llvm::succeeded(maybeChipset) && "expected valid chipset");
@@ -170,7 +143,16 @@ void ApplyGPURewritePatternsOp::populatePatterns(RewritePatternSet &patterns) {
 
 void transform::ApplyGPUPromoteShuffleToAMDGPUPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  populateGpuPromoteShuffleToAMDGPUPatterns(patterns);
+  std::optional<StringRef> chipsetName = getChipset();
+  std::optional<amdgpu::Chipset> maybeChipset;
+  if (chipsetName) {
+    FailureOr<amdgpu::Chipset> parsedChipset =
+        amdgpu::Chipset::parse(*chipsetName);
+    assert(llvm::succeeded(parsedChipset) && "expected valid chipset");
+    maybeChipset = parsedChipset;
+  }
+
+  populateGpuPromoteShuffleToAMDGPUPatterns(patterns, maybeChipset);
 }
 
 //===----------------------------------------------------------------------===//
@@ -838,9 +820,7 @@ getThreadIdBuilder(std::optional<TransformOpInterface> transformOp,
             return GpuLaneIdBuilder(ctx, warpSize, useLinearMapping,
                                     *maybeMaskingAttr);
           })
-          .Default([&](DeviceMappingAttrInterface) -> GpuIdBuilder {
-            llvm_unreachable("unknown mapping attribute");
-          });
+          .DefaultUnreachable("unknown mapping attribute");
   return DiagnosedSilenceableFailure::success();
 }
 

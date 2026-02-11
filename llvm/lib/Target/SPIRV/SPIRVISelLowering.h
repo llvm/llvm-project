@@ -29,8 +29,7 @@ class SPIRVTargetLowering : public TargetLowering {
 
 public:
   explicit SPIRVTargetLowering(const TargetMachine &TM,
-                               const SPIRVSubtarget &ST)
-      : TargetLowering(TM), STI(ST) {}
+                               const SPIRVSubtarget &ST);
 
   // Stop IRTranslator breaking up FMA instrs to preserve types information.
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
@@ -49,8 +48,8 @@ public:
                                          EVT VT) const override;
   MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
                                     EVT VT) const override;
-  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallInst &I,
-                          MachineFunction &MF,
+  void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
+                          const CallBase &I, MachineFunction &MF,
                           unsigned Intrinsic) const override;
 
   std::pair<unsigned, const TargetRegisterClass *>
@@ -75,7 +74,12 @@ public:
   bool enforcePtrTypeCompatibility(MachineInstr &I, unsigned PtrOpIdx,
                                    unsigned OpIdx) const;
   bool insertLogicalCopyOnResult(MachineInstr &I,
-                                 SPIRVType *NewResultType) const;
+                                 SPIRVTypeInst NewResultType) const;
+
+  AtomicExpansionKind
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const override;
+  AtomicExpansionKind
+  shouldCastAtomicRMWIInIR(AtomicRMWInst *RMWI) const override;
 };
 } // namespace llvm
 

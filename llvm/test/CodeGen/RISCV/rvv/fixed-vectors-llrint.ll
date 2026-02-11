@@ -14,7 +14,6 @@ define <1 x i64> @llrint_v1i64_v1f32(<1 x float> %x) {
   %a = call <1 x i64> @llvm.llrint.v1i64.v1f32(<1 x float> %x)
   ret <1 x i64> %a
 }
-declare <1 x i64> @llvm.llrint.v1i64.v1f32(<1 x float>)
 
 define <2 x i64> @llrint_v2i64_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: llrint_v2i64_v2f32:
@@ -26,7 +25,6 @@ define <2 x i64> @llrint_v2i64_v2f32(<2 x float> %x) {
   %a = call <2 x i64> @llvm.llrint.v2i64.v2f32(<2 x float> %x)
   ret <2 x i64> %a
 }
-declare <2 x i64> @llvm.llrint.v2i64.v2f32(<2 x float>)
 
 define <3 x i64> @llrint_v3i64_v3f32(<3 x float> %x) {
 ; CHECK-LABEL: llrint_v3i64_v3f32:
@@ -38,7 +36,6 @@ define <3 x i64> @llrint_v3i64_v3f32(<3 x float> %x) {
   %a = call <3 x i64> @llvm.llrint.v3i64.v3f32(<3 x float> %x)
   ret <3 x i64> %a
 }
-declare <3 x i64> @llvm.llrint.v3i64.v3f32(<3 x float>)
 
 define <4 x i64> @llrint_v4i64_v4f32(<4 x float> %x) {
 ; CHECK-LABEL: llrint_v4i64_v4f32:
@@ -50,7 +47,6 @@ define <4 x i64> @llrint_v4i64_v4f32(<4 x float> %x) {
   %a = call <4 x i64> @llvm.llrint.v4i64.v4f32(<4 x float> %x)
   ret <4 x i64> %a
 }
-declare <4 x i64> @llvm.llrint.v4i64.v4f32(<4 x float>)
 
 define <8 x i64> @llrint_v8i64_v8f32(<8 x float> %x) {
 ; CHECK-LABEL: llrint_v8i64_v8f32:
@@ -62,7 +58,6 @@ define <8 x i64> @llrint_v8i64_v8f32(<8 x float> %x) {
   %a = call <8 x i64> @llvm.llrint.v8i64.v8f32(<8 x float> %x)
   ret <8 x i64> %a
 }
-declare <8 x i64> @llvm.llrint.v8i64.v8f32(<8 x float>)
 
 define <16 x i64> @llrint_v16i64_v16f32(<16 x float> %x) {
 ; CHECK-LABEL: llrint_v16i64_v16f32:
@@ -74,7 +69,6 @@ define <16 x i64> @llrint_v16i64_v16f32(<16 x float> %x) {
   %a = call <16 x i64> @llvm.llrint.v16i64.v16f32(<16 x float> %x)
   ret <16 x i64> %a
 }
-declare <16 x i64> @llvm.llrint.v16i64.v16f32(<16 x float>)
 
 define <1 x i64> @llrint_v1i64_v1f64(<1 x double> %x) {
 ; CHECK-LABEL: llrint_v1i64_v1f64:
@@ -85,7 +79,6 @@ define <1 x i64> @llrint_v1i64_v1f64(<1 x double> %x) {
   %a = call <1 x i64> @llvm.llrint.v1i64.v1f64(<1 x double> %x)
   ret <1 x i64> %a
 }
-declare <1 x i64> @llvm.llrint.v1i64.v1f64(<1 x double>)
 
 define <2 x i64> @llrint_v2i64_v2f64(<2 x double> %x) {
 ; CHECK-LABEL: llrint_v2i64_v2f64:
@@ -96,7 +89,6 @@ define <2 x i64> @llrint_v2i64_v2f64(<2 x double> %x) {
   %a = call <2 x i64> @llvm.llrint.v2i64.v2f64(<2 x double> %x)
   ret <2 x i64> %a
 }
-declare <2 x i64> @llvm.llrint.v2i64.v2f64(<2 x double>)
 
 define <4 x i64> @llrint_v4i64_v4f64(<4 x double> %x) {
 ; CHECK-LABEL: llrint_v4i64_v4f64:
@@ -107,7 +99,6 @@ define <4 x i64> @llrint_v4i64_v4f64(<4 x double> %x) {
   %a = call <4 x i64> @llvm.llrint.v4i64.v4f64(<4 x double> %x)
   ret <4 x i64> %a
 }
-declare <4 x i64> @llvm.llrint.v4i64.v4f64(<4 x double>)
 
 define <8 x i64> @llrint_v8i64_v8f64(<8 x double> %x) {
 ; CHECK-LABEL: llrint_v8i64_v8f64:
@@ -118,7 +109,6 @@ define <8 x i64> @llrint_v8i64_v8f64(<8 x double> %x) {
   %a = call <8 x i64> @llvm.llrint.v8i64.v8f64(<8 x double> %x)
   ret <8 x i64> %a
 }
-declare <8 x i64> @llvm.llrint.v8i64.v8f64(<8 x double>)
 
 define <1 x i64> @llrint_v1i64_v1f16(<1 x half> %x) {
 ; CHECK-LABEL: llrint_v1i64_v1f16:
@@ -131,7 +121,6 @@ define <1 x i64> @llrint_v1i64_v1f16(<1 x half> %x) {
   %a = call <1 x i64> @llvm.llrint.v1i64.v1f16(<1 x half> %x)
   ret <1 x i64> %a
 }
-declare <1 x i64> @llvm.llrint.v1i64.v1f16(<1 x half>)
 
 define <2 x i64> @llrint_v2i64_v2f16(<2 x half> %x) {
 ; CHECK-LABEL: llrint_v2i64_v2f16:
@@ -144,7 +133,6 @@ define <2 x i64> @llrint_v2i64_v2f16(<2 x half> %x) {
   %a = call <2 x i64> @llvm.llrint.v2i64.v2f16(<2 x half> %x)
   ret <2 x i64> %a
 }
-declare <2 x i64> @llvm.llrint.v2i64.v2f16(<2 x half>)
 
 define <3 x i64> @llrint_v3i64_v3f16(<3 x half> %x) {
 ; CHECK-LABEL: llrint_v3i64_v3f16:
@@ -157,7 +145,6 @@ define <3 x i64> @llrint_v3i64_v3f16(<3 x half> %x) {
   %a = call <3 x i64> @llvm.llrint.v3i64.v3f16(<3 x half> %x)
   ret <3 x i64> %a
 }
-declare <3 x i64> @llvm.llrint.v3i64.v3f16(<3 x half>)
 
 define <4 x i64> @llrint_v4i64_v4f16(<4 x half> %x) {
 ; CHECK-LABEL: llrint_v4i64_v4f16:
@@ -170,7 +157,6 @@ define <4 x i64> @llrint_v4i64_v4f16(<4 x half> %x) {
   %a = call <4 x i64> @llvm.llrint.v4i64.v4f16(<4 x half> %x)
   ret <4 x i64> %a
 }
-declare <4 x i64> @llvm.llrint.v4i64.v4f16(<4 x half>)
 
 define <8 x i64> @llrint_v8i64_v8f16(<8 x half> %x) {
 ; CHECK-LABEL: llrint_v8i64_v8f16:
@@ -183,7 +169,6 @@ define <8 x i64> @llrint_v8i64_v8f16(<8 x half> %x) {
   %a = call <8 x i64> @llvm.llrint.v8i64.v8f16(<8 x half> %x)
   ret <8 x i64> %a
 }
-declare <8 x i64> @llvm.llrint.v8i64.v8f16(<8 x half>)
 
 define <16 x i64> @llrint_v16i64_v16f16(<16 x half> %x) {
 ; CHECK-LABEL: llrint_v16i64_v16f16:
@@ -196,7 +181,6 @@ define <16 x i64> @llrint_v16i64_v16f16(<16 x half> %x) {
   %a = call <16 x i64> @llvm.llrint.v16i64.v16f16(<16 x half> %x)
   ret <16 x i64> %a
 }
-declare <16 x i64> @llvm.llrint.v16i64.v16f16(<16 x half>)
 
 define <1 x i64> @llrint_v1i64_v1bf16(<1 x bfloat> %x) {
 ; CHECK-LABEL: llrint_v1i64_v1bf16:
@@ -209,7 +193,6 @@ define <1 x i64> @llrint_v1i64_v1bf16(<1 x bfloat> %x) {
   %a = call <1 x i64> @llvm.llrint.v1i64.v1bf16(<1 x bfloat> %x)
   ret <1 x i64> %a
 }
-declare <1 x i64> @llvm.llrint.v1i64.v1bf16(<1 x bfloat>)
 
 define <2 x i64> @llrint_v2i64_v2bf16(<2 x bfloat> %x) {
 ; CHECK-LABEL: llrint_v2i64_v2bf16:
@@ -222,7 +205,6 @@ define <2 x i64> @llrint_v2i64_v2bf16(<2 x bfloat> %x) {
   %a = call <2 x i64> @llvm.llrint.v2i64.v2bf16(<2 x bfloat> %x)
   ret <2 x i64> %a
 }
-declare <2 x i64> @llvm.llrint.v2i64.v2bf16(<2 x bfloat>)
 
 define <3 x i64> @llrint_v3i64_v3bf16(<3 x bfloat> %x) {
 ; CHECK-LABEL: llrint_v3i64_v3bf16:
@@ -235,7 +217,6 @@ define <3 x i64> @llrint_v3i64_v3bf16(<3 x bfloat> %x) {
   %a = call <3 x i64> @llvm.llrint.v3i64.v3bf16(<3 x bfloat> %x)
   ret <3 x i64> %a
 }
-declare <3 x i64> @llvm.llrint.v3i64.v3bf16(<3 x bfloat>)
 
 define <4 x i64> @llrint_v4i64_v4bf16(<4 x bfloat> %x) {
 ; CHECK-LABEL: llrint_v4i64_v4bf16:
@@ -248,7 +229,6 @@ define <4 x i64> @llrint_v4i64_v4bf16(<4 x bfloat> %x) {
   %a = call <4 x i64> @llvm.llrint.v4i64.v4bf16(<4 x bfloat> %x)
   ret <4 x i64> %a
 }
-declare <4 x i64> @llvm.llrint.v4i64.v4bf16(<4 x bfloat>)
 
 define <8 x i64> @llrint_v8i64_v8bf16(<8 x bfloat> %x) {
 ; CHECK-LABEL: llrint_v8i64_v8bf16:
@@ -261,7 +241,6 @@ define <8 x i64> @llrint_v8i64_v8bf16(<8 x bfloat> %x) {
   %a = call <8 x i64> @llvm.llrint.v8i64.v8bf16(<8 x bfloat> %x)
   ret <8 x i64> %a
 }
-declare <8 x i64> @llvm.llrint.v8i64.v8bf16(<8 x bfloat>)
 
 define <16 x i64> @llrint_v16i64_v16bf16(<16 x bfloat> %x) {
 ; CHECK-LABEL: llrint_v16i64_v16bf16:
@@ -274,4 +253,3 @@ define <16 x i64> @llrint_v16i64_v16bf16(<16 x bfloat> %x) {
   %a = call <16 x i64> @llvm.llrint.v16i64.v16bf16(<16 x bfloat> %x)
   ret <16 x i64> %a
 }
-declare <16 x i64> @llvm.llrint.v16i64.v16bf16(<16 x bfloat>)

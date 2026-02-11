@@ -51,8 +51,8 @@ TEST(LlvmLibcFreeStore, RemoveBestFit) {
   ASSERT_TRUE(maybeBlock.has_value());
 
   Block *largest_small = *maybeBlock;
-  maybeBlock = largest_small->split(
-      sizeof(FreeTrie::Node) + Block::PREV_FIELD_SIZE - alignof(max_align_t));
+  maybeBlock = largest_small->split(sizeof(FreeTrie::Node) +
+                                    Block::PREV_FIELD_SIZE - Block::MIN_ALIGN);
   ASSERT_TRUE(maybeBlock.has_value());
   if (largest_small->inner_size() == smallest->inner_size())
     largest_small = smallest;

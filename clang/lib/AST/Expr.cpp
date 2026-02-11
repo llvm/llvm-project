@@ -25,6 +25,7 @@
 #include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/SourceManager.h"
@@ -71,11 +72,13 @@ const CXXRecordDecl *Expr::getBestDynamicClassType() const {
   if (const PointerType *PTy = DerivedType->getAs<PointerType>())
     DerivedType = PTy->getPointeeType();
 
+  while (const ArrayType *ATy = DerivedType->getAsArrayTypeUnsafe())
+    DerivedType = ATy->getElementType();
+
   if (DerivedType->isDependentType())
     return nullptr;
 
-  const RecordType *Ty = DerivedType->castAs<RecordType>();
-  return cast<CXXRecordDecl>(Ty->getOriginalDecl())->getDefinitionOrSelf();
+  return DerivedType->castAsCXXRecordDecl();
 }
 
 const Expr *Expr::skipRValueSubobjectAdjustments(
@@ -90,10 +93,7 @@ const Expr *Expr::skipRValueSubobjectAdjustments(
            CE->getCastKind() == CK_UncheckedDerivedToBase) &&
           E->getType()->isRecordType()) {
         E = CE->getSubExpr();
-        const auto *Derived =
-            cast<CXXRecordDecl>(
-                E->getType()->castAs<RecordType>()->getOriginalDecl())
-                ->getDefinitionOrSelf();
+        const auto *Derived = E->getType()->castAsCXXRecordDecl();
         Adjustments.push_back(SubobjectAdjustment(CE, Derived));
         continue;
       }
@@ -1938,6 +1938,7 @@ bool CastExpr::CastConsistency() const {
   case CK_FixedPointToBoolean:
   case CK_HLSLArrayRValue:
   case CK_HLSLVectorTruncation:
+  case CK_HLSLMatrixTruncation:
   case CK_HLSLElementwiseCast:
   case CK_HLSLAggregateSplatCast:
   CheckNoBasePath:
@@ -2032,9 +2033,7 @@ CXXBaseSpecifier **CastExpr::path_buffer() {
 
 const FieldDecl *CastExpr::getTargetFieldForToUnionCast(QualType unionType,
                                                         QualType opType) {
-  auto RD =
-      unionType->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
-  return getTargetFieldForToUnionCast(RD, opType);
+  return getTargetFieldForToUnionCast(unionType->castAsRecordDecl(), opType);
 }
 
 const FieldDecl *CastExpr::getTargetFieldForToUnionCast(const RecordDecl *RD,
@@ -2401,6 +2400,7 @@ EmbedExpr::EmbedExpr(const ASTContext &Ctx, SourceLocation Loc,
   setDependence(ExprDependence::None);
   FakeChildNode = IntegerLiteral::Create(
       Ctx, llvm::APInt::getZero(Ctx.getTypeSize(getType())), getType(), Loc);
+  assert(getType()->isSignedIntegerType() && "IntTy should be signed");
 }
 
 InitListExpr::InitListExpr(const ASTContext &C, SourceLocation lbraceloc,
@@ -2549,6 +2549,18 @@ Stmt *BlockExpr::getBody() {
 //===----------------------------------------------------------------------===//
 // Generic Expression Routines
 //===----------------------------------------------------------------------===//
+
+/// Helper to determine wether \c E is a CXXConstructExpr constructing
+/// a DecompositionDecl. Used to skip Clang-generated calls to std::get
+/// for structured bindings.
+static bool IsDecompositionDeclRefExpr(const Expr *E) {
+  const auto *Unwrapped = E->IgnoreUnlessSpelledInSource();
+  const auto *Ref = dyn_cast<DeclRefExpr>(Unwrapped);
+  if (!Ref)
+    return false;
+
+  return isa_and_nonnull<DecompositionDecl>(Ref->getDecl());
+}
 
 bool Expr::isReadIfDiscardedInCPlusPlus11() const {
   // In C++11, discarded-value expressions of a certain form are special,
@@ -3164,10 +3176,39 @@ Expr *Expr::IgnoreUnlessSpelledInSource() {
     }
     return E;
   };
+
+  // Used when Clang generates calls to std::get for decomposing
+  // structured bindings.
+  auto IgnoreImplicitCallSingleStep = [](Expr *E) {
+    auto *C = dyn_cast<CallExpr>(E);
+    if (!C)
+      return E;
+
+    // Looking for calls to a std::get, which usually just takes
+    // 1 argument (i.e., the structure being decomposed). If it has
+    // more than 1 argument, the others need to be defaulted.
+    unsigned NumArgs = C->getNumArgs();
+    if (NumArgs == 0 || (NumArgs > 1 && !isa<CXXDefaultArgExpr>(C->getArg(1))))
+      return E;
+
+    Expr *A = C->getArg(0);
+
+    // This was spelled out in source. Don't ignore.
+    if (A->getSourceRange() != E->getSourceRange())
+      return E;
+
+    // If the argument refers to a DecompositionDecl construction,
+    // ignore it.
+    if (IsDecompositionDeclRefExpr(A))
+      return A;
+
+    return E;
+  };
+
   return IgnoreExprNodes(
       this, IgnoreImplicitSingleStep, IgnoreImplicitCastsExtraSingleStep,
       IgnoreParensOnlySingleStep, IgnoreImplicitConstructorSingleStep,
-      IgnoreImplicitMemberCallSingleStep);
+      IgnoreImplicitMemberCallSingleStep, IgnoreImplicitCallSingleStep);
 }
 
 bool Expr::isDefaultArgument() const {
@@ -3396,10 +3437,7 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
 
     if (ILE->getType()->isRecordType()) {
       unsigned ElementNo = 0;
-      RecordDecl *RD = ILE->getType()
-                           ->castAs<RecordType>()
-                           ->getOriginalDecl()
-                           ->getDefinitionOrSelf();
+      auto *RD = ILE->getType()->castAsRecordDecl();
 
       // In C++17, bases were added to the list of members used by aggregate
       // initialization.
@@ -3533,6 +3571,56 @@ bool CallExpr::isBuiltinAssumeFalse(const ASTContext &Ctx) const {
          Arg->EvaluateAsBooleanCondition(ArgVal, Ctx) && !ArgVal;
 }
 
+const AllocSizeAttr *CallExpr::getCalleeAllocSizeAttr() const {
+  if (const FunctionDecl *DirectCallee = getDirectCallee())
+    return DirectCallee->getAttr<AllocSizeAttr>();
+  if (const Decl *IndirectCallee = getCalleeDecl())
+    return IndirectCallee->getAttr<AllocSizeAttr>();
+  return nullptr;
+}
+
+std::optional<llvm::APInt>
+CallExpr::evaluateBytesReturnedByAllocSizeCall(const ASTContext &Ctx) const {
+  const AllocSizeAttr *AllocSize = getCalleeAllocSizeAttr();
+
+  assert(AllocSize && AllocSize->getElemSizeParam().isValid());
+  unsigned SizeArgNo = AllocSize->getElemSizeParam().getASTIndex();
+  unsigned BitsInSizeT = Ctx.getTypeSize(Ctx.getSizeType());
+  if (getNumArgs() <= SizeArgNo)
+    return std::nullopt;
+
+  auto EvaluateAsSizeT = [&](const Expr *E, llvm::APSInt &Into) {
+    Expr::EvalResult ExprResult;
+    if (E->isValueDependent() ||
+        !E->EvaluateAsInt(ExprResult, Ctx, Expr::SE_AllowSideEffects))
+      return false;
+    Into = ExprResult.Val.getInt();
+    if (Into.isNegative() || !Into.isIntN(BitsInSizeT))
+      return false;
+    Into = Into.zext(BitsInSizeT);
+    return true;
+  };
+
+  llvm::APSInt SizeOfElem;
+  if (!EvaluateAsSizeT(getArg(SizeArgNo), SizeOfElem))
+    return std::nullopt;
+
+  if (!AllocSize->getNumElemsParam().isValid())
+    return SizeOfElem;
+
+  llvm::APSInt NumberOfElems;
+  unsigned NumArgNo = AllocSize->getNumElemsParam().getASTIndex();
+  if (!EvaluateAsSizeT(getArg(NumArgNo), NumberOfElems))
+    return std::nullopt;
+
+  bool Overflow;
+  llvm::APInt BytesAvailable = SizeOfElem.umul_ov(NumberOfElems, Overflow);
+  if (Overflow)
+    return std::nullopt;
+
+  return BytesAvailable;
+}
+
 bool CallExpr::isCallToStdMove() const {
   return getBuiltinCallee() == Builtin::BImove;
 }
@@ -3589,10 +3677,10 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
 
   switch (getStmtClass()) {
   case NoStmtClass:
-  #define ABSTRACT_STMT(Type)
-  #define STMT(Type, Base) case Type##Class:
-  #define EXPR(Type, Base)
-  #include "clang/AST/StmtNodes.inc"
+#define ABSTRACT_STMT(Type)
+#define STMT(Type, Base) case Type##Class:
+#define EXPR(Type, Base)
+#include "clang/AST/StmtNodes.inc"
     llvm_unreachable("unexpected Expr kind");
 
   case DependentScopeDeclRefExprClass:
@@ -3647,6 +3735,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case PackIndexingExprClass:
   case HLSLOutArgExprClass:
   case OpenACCAsteriskSizeExprClass:
+  case CXXReflectExprClass:
     // These never have a side-effect.
     return false;
 
@@ -3705,6 +3794,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
 
   case ParenExprClass:
   case ArraySubscriptExprClass:
+  case MatrixSingleSubscriptExprClass:
   case MatrixSubscriptExprClass:
   case ArraySectionExprClass:
   case OMPArrayShapingExprClass:
@@ -3714,6 +3804,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case BinaryConditionalOperatorClass:
   case CompoundLiteralExprClass:
   case ExtVectorElementExprClass:
+  case MatrixElementExprClass:
   case DesignatedInitExprClass:
   case DesignatedInitUpdateExprClass:
   case ArrayInitLoopExprClass:
@@ -3748,8 +3839,8 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
     break;
 
   case GenericSelectionExprClass:
-    return cast<GenericSelectionExpr>(this)->getResultExpr()->
-        HasSideEffects(Ctx, IncludePossibleEffects);
+    return cast<GenericSelectionExpr>(this)->getResultExpr()->HasSideEffects(
+        Ctx, IncludePossibleEffects);
 
   case ChooseExprClass:
     return cast<ChooseExpr>(this)->getChosenSubExpr()->HasSideEffects(
@@ -3773,7 +3864,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
     if (DCE->getTypeAsWritten()->isReferenceType() &&
         DCE->getCastKind() == CK_Dynamic)
       return true;
-    }
+  }
     [[fallthrough]];
   case ImplicitCastExprClass:
   case CStyleCastExprClass:
@@ -3862,7 +3953,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case ObjCBridgedCastExprClass:
   case ObjCMessageExprClass:
   case ObjCPropertyRefExprClass:
-  // FIXME: Classify these cases better.
+    // FIXME: Classify these cases better.
     if (IncludePossibleEffects)
       return true;
     break;
@@ -4043,9 +4134,7 @@ Expr::isNullPointerConstant(ASTContext &Ctx,
 
   if (const RecordType *UT = getType()->getAsUnionType())
     if (!Ctx.getLangOpts().CPlusPlus11 && UT &&
-        UT->getOriginalDecl()
-            ->getMostRecentDecl()
-            ->hasAttr<TransparentUnionAttr>())
+        UT->getDecl()->getMostRecentDecl()->hasAttr<TransparentUnionAttr>())
       if (const CompoundLiteralExpr *CLE = dyn_cast<CompoundLiteralExpr>(this)){
         const Expr *InitExpr = CLE->getInitializer();
         if (const InitListExpr *ILE = dyn_cast<InitListExpr>(InitExpr))
@@ -4336,7 +4425,14 @@ unsigned ExtVectorElementExpr::getNumElements() const {
   return 1;
 }
 
-/// containsDuplicateElements - Return true if any element access is repeated.
+unsigned MatrixElementExpr::getNumElements() const {
+  if (const auto *MT = getType()->getAs<ConstantMatrixType>())
+    return MT->getNumElementsFlattened();
+  return 1;
+}
+
+/// containsDuplicateElements - Return true if any Vector element access is
+/// repeated.
 bool ExtVectorElementExpr::containsDuplicateElements() const {
   // FIXME: Refactor this code to an accessor on the AST node which returns the
   // "type" of component access, and share with code below and in Sema.
@@ -4355,6 +4451,78 @@ bool ExtVectorElementExpr::containsDuplicateElements() const {
         return true;
 
   return false;
+}
+
+namespace {
+struct MatrixAccessorFormat {
+  bool IsZeroIndexed = false;
+  unsigned ChunkLen = 0;
+};
+
+static MatrixAccessorFormat GetHLSLMatrixAccessorFormat(StringRef Comp) {
+  assert(!Comp.empty() && Comp[0] == '_' && "invalid matrix accessor");
+
+  MatrixAccessorFormat F;
+  if (Comp.size() >= 2 && Comp[0] == '_' && Comp[1] == 'm') {
+    F.IsZeroIndexed = true;
+    F.ChunkLen = 4; // _mRC
+  } else {
+    F.IsZeroIndexed = false;
+    F.ChunkLen = 3; // _RC
+  }
+
+  assert(F.ChunkLen != 0 && "unrecognized matrix swizzle format");
+  assert(Comp.size() % F.ChunkLen == 0 &&
+         "matrix swizzle accessor has invalid length");
+  return F;
+}
+
+template <typename Fn>
+static bool ForEachMatrixAccessorIndex(StringRef Comp, unsigned Rows,
+                                       unsigned Cols, Fn &&F) {
+  auto Format = GetHLSLMatrixAccessorFormat(Comp);
+
+  for (unsigned I = 0, E = Comp.size(); I < E; I += Format.ChunkLen) {
+    unsigned Row = 0, Col = 0;
+    unsigned ZeroIndexOffset = static_cast<unsigned>(Format.IsZeroIndexed);
+    unsigned OneIndexOffset = static_cast<unsigned>(!Format.IsZeroIndexed);
+    Row = static_cast<unsigned>(Comp[I + ZeroIndexOffset + 1] - '0') -
+          OneIndexOffset;
+    Col = static_cast<unsigned>(Comp[I + ZeroIndexOffset + 2] - '0') -
+          OneIndexOffset;
+
+    assert(Row < Rows && Col < Cols && "matrix swizzle index out of bounds");
+    const unsigned Index = Row * Cols + Col;
+    // Callback returns true to continue, false to stop early.
+    if (!F(Index))
+      return false;
+  }
+  return true;
+}
+
+} // namespace
+
+/// containsDuplicateElements - Return true if any Matrix element access is
+/// repeated.
+bool MatrixElementExpr::containsDuplicateElements() const {
+  StringRef Comp = Accessor->getName();
+  const auto *MT = getBase()->getType()->castAs<ConstantMatrixType>();
+  const unsigned Rows = MT->getNumRows();
+  const unsigned Cols = MT->getNumColumns();
+  const unsigned Max = Rows * Cols;
+
+  llvm::BitVector Seen(Max, /*t=*/false);
+  bool HasDup = false;
+  ForEachMatrixAccessorIndex(Comp, Rows, Cols, [&](unsigned Index) -> bool {
+    if (Seen[Index]) {
+      HasDup = true;
+      return false; // exit early
+    }
+    Seen.set(Index);
+    return true;
+  });
+
+  return HasDup;
 }
 
 /// getEncodedElementAccess - We encode the fields as a llvm ConstantArray.
@@ -4388,6 +4556,18 @@ void ExtVectorElementExpr::getEncodedElementAccess(
 
     Elts.push_back(Index);
   }
+}
+
+void MatrixElementExpr::getEncodedElementAccess(
+    SmallVectorImpl<uint32_t> &Elts) const {
+  StringRef Comp = Accessor->getName();
+  const auto *MT = getBase()->getType()->castAs<ConstantMatrixType>();
+  const unsigned Rows = MT->getNumRows();
+  const unsigned Cols = MT->getNumColumns();
+  ForEachMatrixAccessorIndex(Comp, Rows, Cols, [&](unsigned Index) -> bool {
+    Elts.push_back(Index);
+    return true;
+  });
 }
 
 ShuffleVectorExpr::ShuffleVectorExpr(const ASTContext &C, ArrayRef<Expr *> args,
@@ -5110,6 +5290,8 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__atomic_max_fetch:
   case AO__atomic_fetch_min:
   case AO__atomic_fetch_max:
+  case AO__atomic_fetch_uinc:
+  case AO__atomic_fetch_udec:
     return 3;
 
   case AO__scoped_atomic_load:
@@ -5132,6 +5314,8 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__scoped_atomic_fetch_min:
   case AO__scoped_atomic_fetch_max:
   case AO__scoped_atomic_exchange_n:
+  case AO__scoped_atomic_fetch_uinc:
+  case AO__scoped_atomic_fetch_udec:
   case AO__hip_atomic_exchange:
   case AO__hip_atomic_fetch_add:
   case AO__hip_atomic_fetch_sub:
@@ -5205,6 +5389,33 @@ QualType ArraySectionExpr::getBaseOriginalType(const Expr *Base) {
       return {};
   }
   return OriginalTy;
+}
+
+QualType ArraySectionExpr::getElementType() const {
+  QualType BaseTy = getBase()->IgnoreParenImpCasts()->getType();
+  // We only have to look into the array section exprs, else we will get the
+  // type of the base, which should already be valid.
+  if (auto *ASE = dyn_cast<ArraySectionExpr>(getBase()->IgnoreParenImpCasts()))
+    BaseTy = ASE->getElementType();
+
+  if (BaseTy->isAnyPointerType())
+    return BaseTy->getPointeeType();
+  if (BaseTy->isArrayType())
+    return BaseTy->castAsArrayTypeUnsafe()->getElementType();
+
+  // If this isn't a pointer or array, the base is a dependent expression, so
+  // just return the BaseTy anyway.
+  assert(BaseTy->isInstantiationDependentType());
+  return BaseTy;
+}
+
+QualType ArraySectionExpr::getBaseType() const {
+  // We only have to look into the array section exprs, else we will get the
+  // type of the base, which should already be valid.
+  if (auto *ASE = dyn_cast<ArraySectionExpr>(getBase()->IgnoreParenImpCasts()))
+    return ASE->getElementType();
+
+  return getBase()->IgnoreParenImpCasts()->getType();
 }
 
 RecoveryExpr::RecoveryExpr(ASTContext &Ctx, QualType T, SourceLocation BeginLoc,

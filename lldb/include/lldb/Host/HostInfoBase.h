@@ -10,6 +10,7 @@
 #define LLDB_HOST_HOSTINFOBASE_H
 
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/Utility/UserIDResolver.h"
@@ -28,8 +29,38 @@ namespace lldb_private {
 class FileSpec;
 
 struct SharedCacheImageInfo {
-  UUID uuid;
-  lldb::DataBufferSP data_sp;
+  SharedCacheImageInfo()
+      : m_uuid(), m_extractor_sp(), m_create_data_extractor(nullptr),
+        m_image_baton(nullptr) {}
+  SharedCacheImageInfo(UUID uuid, lldb::DataExtractorSP extractor_sp)
+      : m_uuid(uuid), m_extractor_sp(extractor_sp),
+        m_create_data_extractor(nullptr), m_image_baton(nullptr) {}
+  SharedCacheImageInfo(
+      UUID uuid, lldb::DataExtractorSP (*create_data_extractor)(void *image),
+      void *image_baton)
+      : m_uuid(uuid), m_extractor_sp(),
+        m_create_data_extractor(create_data_extractor),
+        m_image_baton(image_baton) {}
+
+  lldb::DataExtractorSP GetExtractor() {
+    if (!m_extractor_sp && m_image_baton)
+      m_extractor_sp = m_create_data_extractor(m_image_baton);
+    return m_extractor_sp;
+  }
+  const UUID &GetUUID() const { return m_uuid; }
+  void *GetImageBaton();
+  void SetExtractor(lldb::DataExtractorSP extractor_sp) {
+    m_extractor_sp = extractor_sp;
+  }
+  void SetImageBaton(void *image_baton) { m_image_baton = image_baton; }
+  void SetDataExtractorCreateFunction(
+      lldb::DataExtractorSP (*create_data_extractor)(void *image));
+
+private:
+  UUID m_uuid;
+  lldb::DataExtractorSP m_extractor_sp;
+  lldb::DataExtractorSP (*m_create_data_extractor)(void *image);
+  void *m_image_baton;
 };
 
 namespace {
@@ -102,11 +133,19 @@ public:
   /// member of the FileSpec is filled in.
   static FileSpec GetSystemPluginDir();
 
+  /// Returns the directory containing the users home (e.g. `~/`). Only the
+  /// directory member of the FileSpec is filled in.
+  static FileSpec GetUserHomeDir();
+
+  /// Returns the directory containing the users lldb home (e.g. `~/.lldb/`).
+  /// Only the directory member of the FileSpec is filled in.
+  static FileSpec GetUserLLDBDir();
+
   /// Returns the directory containing the user plugins. Only the directory
   /// member of the FileSpec is filled in.
   static FileSpec GetUserPluginDir();
 
-  /// Returns the proces temporary directory. This directory will be cleaned up
+  /// Returns the process temporary directory. This directory will be cleaned up
   /// when this process exits. Only the directory member of the FileSpec is
   /// filled in.
   static FileSpec GetProcessTempDir();
@@ -151,6 +190,22 @@ public:
     return {};
   }
 
+  /// Return information about module \p image_name if it is loaded in
+  /// the current process's address space using shared cache \p uuid.
+  /// The shared cache UUID must have been previously indexed.
+  static SharedCacheImageInfo
+  GetSharedCacheImageInfo(llvm::StringRef image_name, const UUID &uuid) {
+    return {};
+  }
+
+  /// Scan the files in a shared cache, if the filepath and uuid match
+  /// on the debug host.
+  /// Returns false if the shared cache filepath did not exist, or uuid
+  /// did not match.
+  static bool SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid) {
+    return false;
+  }
+
   /// Returns the distribution id of the host
   ///
   /// This will be something like "ubuntu", "fedora", etc. on Linux.
@@ -167,11 +222,13 @@ protected:
   static bool ComputeTempFileBaseDirectory(FileSpec &file_spec);
   static bool ComputeHeaderDirectory(FileSpec &file_spec);
   static bool ComputeSystemPluginsDirectory(FileSpec &file_spec);
+  static bool ComputeUserHomeDirectory(FileSpec &file_spec);
+  static bool ComputeUserLLDBHomeDirectory(FileSpec &file_spec);
   static bool ComputeUserPluginsDirectory(FileSpec &file_spec);
 
   static void ComputeHostArchitectureSupport(ArchSpec &arch_32,
                                              ArchSpec &arch_64);
 };
-}
+} // namespace lldb_private
 
 #endif

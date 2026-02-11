@@ -1,4 +1,5 @@
 add_clang_unittest(ClangAnalysisTests
+  CFGBackEdgesTest.cpp
   CFGDominatorTree.cpp
   CFGTest.cpp
   CloneDetectionTest.cpp
@@ -11,6 +12,7 @@ add_clang_unittest(ClangAnalysisTests
   clangAST
   clangASTMatchers
   clangAnalysis
+  clangAnalysisLifetimeSafety
   clangBasic
   clangFrontend
   clangLex
@@ -25,3 +27,4 @@ add_clang_unittest(ClangAnalysisTests
   )
 
 add_subdirectory(FlowSensitive)
+add_subdirectory(Scalable)

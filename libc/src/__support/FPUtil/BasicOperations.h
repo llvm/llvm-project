@@ -244,7 +244,7 @@ LIBC_INLINE T fdim(T x, T y) {
     return y;
   }
 
-  return (x > y ? x - y : 0);
+  return (x > y ? x - y : T(0));
 }
 
 // Avoid reusing `issignaling` macro.
@@ -354,10 +354,7 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> getpayload(T x) {
 
     return static_cast<T>(payload_dfloat);
   } else {
-    if constexpr (cpp::is_same_v<T, bfloat16>)
-      return T(static_cast<int>(payload));
-    else
-      return static_cast<T>(payload);
+    return static_cast<T>(payload);
   }
 }
 

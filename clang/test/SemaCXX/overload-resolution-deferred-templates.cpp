@@ -102,7 +102,7 @@ static_assert(__is_constructible(Movable, int));
 // expected-error@-1 {{no matching constructor for initialization of 'Movable'}} \
 // expected-note@-1 2{{}}
 // expected-error@#err-self-constraint-1{{satisfaction of constraint '__is_constructible(Movable, T)' depends on itself}}
-// expected-note@#err-self-constraint-1 4{{}}
+// expected-note@#err-self-constraint-1 3{{}}
 // expected-note@#Movable  {{'Movable' defined here}}
 
 // Test trivially default constructible type traits
@@ -245,7 +245,6 @@ void h(short n) { f(n); }
 // expected-note@-1{{while checking constraint satisfaction for template}}
 // expected-note@#GH62096-note1{{in instantiation}}
 // expected-note@#GH62096-note1{{while substituting template arguments into constraint expression here}}
-// expected-note@#GH62096-note2{{while substituting template arguments into constraint expression here}}
 // expected-note@#GH62096-note2{{while checking the satisfaction of concept}}
 // expected-note@#GH62096-err {{expression evaluates}}
 }
@@ -354,5 +353,86 @@ void test() {
     z + b;
     //expected-error@-1 {{use of overloaded operator '+' is ambiguous (with operand types 'Baz' and 'String')}}
 }
+
+}
+
+namespace GH179118 {
+
+namespace std {
+
+template <bool __v> struct integral_constant {
+  static constexpr bool value = __v;
+};
+
+template <typename _Tp, typename... _Args>
+using __is_constructible_impl =
+    integral_constant<__is_constructible(_Tp, _Args...)>;
+
+template <typename _Tp, typename... _Args>
+struct is_constructible : public std::__is_constructible_impl<_Tp, _Args...> {};
+
+template <bool> struct _cond {
+  template <typename Then, typename> using invoke = Then;
+};
+template <> struct _cond<false> {
+  template <typename, typename Else> using invoke = Else;
+};
+
+template <bool If, typename Then, typename Else>
+using conditional_t = typename _cond<If>::template invoke<Then, Else>;
+
+template <bool, class _Tp = void> struct enable_if;
+template <class _Tp> struct enable_if<true, _Tp> {
+  typedef _Tp type;
+};
+template <bool _Bp, class _Tp = void>
+using enable_if_t = typename enable_if<_Bp, _Tp>::type;
+
+} // namespace std
+
+namespace base {
+
+template <typename...> struct disjunction {};
+template <typename B1, typename... Bn>
+struct disjunction<B1, Bn...>
+    : std::conditional_t<B1::value, B1, disjunction<>> {};
+template <typename> class Optional;
+
+namespace internal {
+template <typename T, typename U>
+using IsConvertibleFromOptional =
+    disjunction<std::is_constructible<T, Optional<U> &>>;
+template <typename T, typename U>
+using IsAssignableFromOptional = IsConvertibleFromOptional<T, U>;
+} // namespace internal
+
+template <typename T> class Optional {
+public:
+  Optional(Optional &&);
+
+  template <typename U,
+            std::enable_if_t<internal::IsConvertibleFromOptional<T, U>::value> =
+                false>
+  Optional(Optional<U>);
+
+  Optional(const Optional &);
+  void operator=(Optional &&);
+
+  template <typename U>
+  std::enable_if_t<std::is_constructible<T, U>::value> operator=(U &&);
+
+  template <typename U>
+  std::enable_if_t<internal::IsAssignableFromOptional<T, U>::Optional>
+  operator=(Optional<U>);
+};
+
+} // namespace base
+
+struct LayoutUnit {
+  template <typename IntegerType> LayoutUnit(IntegerType);
+};
+
+static_assert(
+    std::is_constructible<LayoutUnit, base::Optional<LayoutUnit> &>::value, "");
 
 }

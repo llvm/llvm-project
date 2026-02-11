@@ -110,7 +110,7 @@ int f8(int a, A<P0> *x, A *y) {
 void f9(int a, A<P0> *x, A<P1> *y) {
   id l0 = (a ? x : y );     // Ok. y is of A<P1> object type and A is qualified by P0.
   A<P0> *l1 = (a ? x : y ); // Ok. y is of A<P1> object type and A is qualified by P0.
-  A<P1> *l2 = (a ? x : y ); // expected-warning {{incompatible pointer types initializing 'A<P1> *' with an expression of type 'A<P0> *'}}
+  A<P1> *l2 = (a ? x : y ); // expected-error {{incompatible pointer types initializing 'A<P1> *' with an expression of type 'A<P0> *'}}
   (void)[ (a ? x : y ) intProp ]; // Ok. Common type is A<P0> * and P0's property intProp is accessed.
 }
 
@@ -123,9 +123,9 @@ void f11(int a, id<P0> x, id<P1> y) {
 }
 
 void f12(int a, A<P0> *x, A<P1> *y) {
-  A<P1>* l0 = (a ? x : y ); // expected-warning {{incompatible pointer types initializing 'A<P1> *' with an expression of type 'A<P0> *'}}
+  A<P1>* l0 = (a ? x : y ); // expected-error {{incompatible pointer types initializing 'A<P1> *' with an expression of type 'A<P0> *'}}
 }
 
 void f13(int a, B<P3, P0> *x, E<P0, P4> *y) {
-  int *ip = a ? x : y; // expected-warning{{expression of type 'A<P1> *'}}
+  int *ip = a ? x : y; // expected-error{{incompatible pointer types initializing 'int *' with an expression of type 'A<P1> *'}}
 }

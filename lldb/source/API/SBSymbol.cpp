@@ -79,6 +79,15 @@ const char *SBSymbol::GetMangledName() const {
   return name;
 }
 
+const char *SBSymbol::GetBaseName() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (!m_opaque_ptr)
+    return nullptr;
+
+  return m_opaque_ptr->GetMangled().GetBaseName().AsCString();
+}
+
 bool SBSymbol::operator==(const SBSymbol &rhs) const {
   LLDB_INSTRUMENT_VA(this, rhs);
 
@@ -193,12 +202,12 @@ SymbolType SBSymbol::GetType() {
   return eSymbolTypeInvalid;
 }
 
-uint32_t SBSymbol::GetID() {
+uint32_t SBSymbol::GetID() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_ptr)
     return m_opaque_ptr->GetID();
-  return 0;
+  return LLDB_INVALID_SYMBOL_ID;
 }
 
 bool SBSymbol::IsExternal() {
@@ -217,7 +226,7 @@ bool SBSymbol::IsSynthetic() {
   return false;
 }
 
-bool SBSymbol::IsDebug() {
+bool SBSymbol::IsDebug() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_ptr)

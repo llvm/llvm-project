@@ -70,9 +70,19 @@ __gpu_kernel void acosfKernel(const float *X, float *Out,
   runKernelBody<__ocml_acos_f32>(NumElements, Out, X);
 }
 
+__gpu_kernel void acosf16Kernel(const float16 *X, float16 *Out,
+                                size_t NumElements) noexcept {
+  runKernelBody<__ocml_acos_f16>(NumElements, Out, X);
+}
+
 __gpu_kernel void acoshfKernel(const float *X, float *Out,
                                size_t NumElements) noexcept {
   runKernelBody<__ocml_acosh_f32>(NumElements, Out, X);
+}
+
+__gpu_kernel void acoshf16Kernel(const float16 *X, float16 *Out,
+                                 size_t NumElements) noexcept {
+  runKernelBody<__ocml_acosh_f16>(NumElements, Out, X);
 }
 
 __gpu_kernel void asinKernel(const double *X, double *Out,
@@ -85,14 +95,29 @@ __gpu_kernel void asinfKernel(const float *X, float *Out,
   runKernelBody<__ocml_asin_f32>(NumElements, Out, X);
 }
 
+__gpu_kernel void asinf16Kernel(const float16 *X, float16 *Out,
+                                size_t NumElements) noexcept {
+  runKernelBody<__ocml_asin_f16>(NumElements, Out, X);
+}
+
 __gpu_kernel void asinhfKernel(const float *X, float *Out,
                                size_t NumElements) noexcept {
   runKernelBody<__ocml_asinh_f32>(NumElements, Out, X);
 }
 
+__gpu_kernel void asinhf16Kernel(const float16 *X, float16 *Out,
+                                 size_t NumElements) noexcept {
+  runKernelBody<__ocml_asinh_f16>(NumElements, Out, X);
+}
+
 __gpu_kernel void atanfKernel(const float *X, float *Out,
                               size_t NumElements) noexcept {
   runKernelBody<__ocml_atan_f32>(NumElements, Out, X);
+}
+
+__gpu_kernel void atanf16Kernel(const float16 *X, float16 *Out,
+                                size_t NumElements) noexcept {
+  runKernelBody<__ocml_atan_f16>(NumElements, Out, X);
 }
 
 __gpu_kernel void atan2fKernel(const float *X, const float *Y, float *Out,
@@ -103,6 +128,11 @@ __gpu_kernel void atan2fKernel(const float *X, const float *Y, float *Out,
 __gpu_kernel void atanhfKernel(const float *X, float *Out,
                                size_t NumElements) noexcept {
   runKernelBody<__ocml_atanh_f32>(NumElements, Out, X);
+}
+
+__gpu_kernel void atanhf16Kernel(const float16 *X, float16 *Out,
+                                 size_t NumElements) noexcept {
+  runKernelBody<__ocml_atanh_f16>(NumElements, Out, X);
 }
 
 __gpu_kernel void cbrtKernel(const double *X, double *Out,
@@ -125,9 +155,19 @@ __gpu_kernel void cosfKernel(const float *X, float *Out,
   runKernelBody<__ocml_cos_f32>(NumElements, Out, X);
 }
 
+__gpu_kernel void cosf16Kernel(const float16 *X, float16 *Out,
+                               size_t NumElements) noexcept {
+  runKernelBody<__ocml_cos_f16>(NumElements, Out, X);
+}
+
 __gpu_kernel void coshfKernel(const float *X, float *Out,
                               size_t NumElements) noexcept {
   runKernelBody<__ocml_cosh_f32>(NumElements, Out, X);
+}
+
+__gpu_kernel void coshf16Kernel(const float16 *X, float16 *Out,
+                                size_t NumElements) noexcept {
+  runKernelBody<__ocml_cosh_f16>(NumElements, Out, X);
 }
 
 __gpu_kernel void cospifKernel(const float *X, float *Out,
@@ -150,6 +190,11 @@ __gpu_kernel void expfKernel(const float *X, float *Out,
   runKernelBody<__ocml_exp_f32>(NumElements, Out, X);
 }
 
+__gpu_kernel void expf16Kernel(const float16 *X, float16 *Out,
+                               size_t NumElements) noexcept {
+  runKernelBody<__ocml_exp_f16>(NumElements, Out, X);
+}
+
 __gpu_kernel void exp10Kernel(const double *X, double *Out,
                               size_t NumElements) noexcept {
   runKernelBody<__ocml_exp10_f64>(NumElements, Out, X);
@@ -158,6 +203,11 @@ __gpu_kernel void exp10Kernel(const double *X, double *Out,
 __gpu_kernel void exp10fKernel(const float *X, float *Out,
                                size_t NumElements) noexcept {
   runKernelBody<__ocml_exp10_f32>(NumElements, Out, X);
+}
+
+__gpu_kernel void exp10f16Kernel(const float16 *X, float16 *Out,
+                                 size_t NumElements) noexcept {
+  runKernelBody<__ocml_exp10_f16>(NumElements, Out, X);
 }
 
 __gpu_kernel void exp2Kernel(const double *X, double *Out,
@@ -170,6 +220,11 @@ __gpu_kernel void exp2fKernel(const float *X, float *Out,
   runKernelBody<__ocml_exp2_f32>(NumElements, Out, X);
 }
 
+__gpu_kernel void exp2f16Kernel(const float16 *X, float16 *Out,
+                                size_t NumElements) noexcept {
+  runKernelBody<__ocml_exp2_f16>(NumElements, Out, X);
+}
+
 __gpu_kernel void expm1Kernel(const double *X, double *Out,
                               size_t NumElements) noexcept {
   runKernelBody<__ocml_expm1_f64>(NumElements, Out, X);
@@ -178,6 +233,11 @@ __gpu_kernel void expm1Kernel(const double *X, double *Out,
 __gpu_kernel void expm1fKernel(const float *X, float *Out,
                                size_t NumElements) noexcept {
   runKernelBody<__ocml_expm1_f32>(NumElements, Out, X);
+}
+
+__gpu_kernel void expm1f16Kernel(const float16 *X, float16 *Out,
+                                 size_t NumElements) noexcept {
+  runKernelBody<__ocml_expm1_f16>(NumElements, Out, X);
 }
 
 __gpu_kernel void hypotKernel(const double *X, const double *Y, double *Out,
@@ -200,6 +260,11 @@ __gpu_kernel void logfKernel(const float *X, float *Out,
   runKernelBody<__ocml_log_f32>(NumElements, Out, X);
 }
 
+__gpu_kernel void logf16Kernel(const float16 *X, float16 *Out,
+                               size_t NumElements) noexcept {
+  runKernelBody<__ocml_log_f16>(NumElements, Out, X);
+}
+
 __gpu_kernel void log10Kernel(const double *X, double *Out,
                               size_t NumElements) noexcept {
   runKernelBody<__ocml_log10_f64>(NumElements, Out, X);
@@ -208,6 +273,11 @@ __gpu_kernel void log10Kernel(const double *X, double *Out,
 __gpu_kernel void log10fKernel(const float *X, float *Out,
                                size_t NumElements) noexcept {
   runKernelBody<__ocml_log10_f32>(NumElements, Out, X);
+}
+
+__gpu_kernel void log10f16Kernel(const float16 *X, float16 *Out,
+                                 size_t NumElements) noexcept {
+  runKernelBody<__ocml_log10_f16>(NumElements, Out, X);
 }
 
 __gpu_kernel void log1pKernel(const double *X, double *Out,
@@ -230,6 +300,11 @@ __gpu_kernel void log2fKernel(const float *X, float *Out,
   runKernelBody<__ocml_log2_f32>(NumElements, Out, X);
 }
 
+__gpu_kernel void log2f16Kernel(const float16 *X, float16 *Out,
+                                size_t NumElements) noexcept {
+  runKernelBody<__ocml_log2_f16>(NumElements, Out, X);
+}
+
 __gpu_kernel void powfKernel(const float *X, float *Y, float *Out,
                              size_t NumElements) noexcept {
   runKernelBody<__ocml_pow_f32>(NumElements, Out, X, Y);
@@ -249,6 +324,11 @@ __gpu_kernel void sinKernel(const double *X, double *Out,
 __gpu_kernel void sinfKernel(const float *X, float *Out,
                              size_t NumElements) noexcept {
   runKernelBody<__ocml_sin_f32>(NumElements, Out, X);
+}
+
+__gpu_kernel void sinf16Kernel(const float16 *X, float16 *Out,
+                               size_t NumElements) noexcept {
+  runKernelBody<__ocml_sin_f16>(NumElements, Out, X);
 }
 
 __gpu_kernel void sincosSinKernel(const double *X, double *Out,
@@ -276,6 +356,11 @@ __gpu_kernel void sinhfKernel(const float *X, float *Out,
   runKernelBody<__ocml_sinh_f32>(NumElements, Out, X);
 }
 
+__gpu_kernel void sinhf16Kernel(const float16 *X, float16 *Out,
+                                size_t NumElements) noexcept {
+  runKernelBody<__ocml_sinh_f16>(NumElements, Out, X);
+}
+
 __gpu_kernel void sinpifKernel(const float *X, float *Out,
                                size_t NumElements) noexcept {
   runKernelBody<__ocml_sinpi_f32>(NumElements, Out, X);
@@ -291,9 +376,19 @@ __gpu_kernel void tanfKernel(const float *X, float *Out,
   runKernelBody<__ocml_tan_f32>(NumElements, Out, X);
 }
 
+__gpu_kernel void tanf16Kernel(const float16 *X, float16 *Out,
+                               size_t NumElements) noexcept {
+  runKernelBody<__ocml_tan_f16>(NumElements, Out, X);
+}
+
 __gpu_kernel void tanhfKernel(const float *X, float *Out,
                               size_t NumElements) noexcept {
   runKernelBody<__ocml_tanh_f32>(NumElements, Out, X);
+}
+
+__gpu_kernel void tanhf16Kernel(const float16 *X, float16 *Out,
+                                size_t NumElements) noexcept {
+  runKernelBody<__ocml_tanh_f16>(NumElements, Out, X);
 }
 } // extern "C"
 

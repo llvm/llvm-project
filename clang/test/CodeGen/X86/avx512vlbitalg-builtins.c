@@ -3,6 +3,12 @@
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512bitalg -target-feature +avx512vl -emit-llvm -o - -Wall -Werror | FileCheck %s
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx512bitalg -target-feature +avx512vl -emit-llvm -o - -Wall -Werror | FileCheck %s
 
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512bitalg -target-feature +avx512vl -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx512bitalg -target-feature +avx512vl -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512bitalg -target-feature +avx512vl -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx512bitalg -target-feature +avx512vl -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+
+
 #include <immintrin.h>
 #include "builtin_test_helpers.h"
 
@@ -110,6 +116,13 @@ __mmask32 test_mm256_bitshuffle_epi64_mask(__m256i __A, __m256i __B) {
   // CHECK: @llvm.x86.avx512.vpshufbitqmb.256
   return _mm256_bitshuffle_epi64_mask(__A, __B);
 }
+TEST_CONSTEXPR(_mm256_bitshuffle_epi64_mask(
+  (__m256i)(__v32qi){1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,-128, -1,0,0,0,0,0,0,0, 85,85,85,85,85,85,85,85},
+  (__m256i)(__v32qi){0,1,2,3,4,5,6,7, 63,62,61,60,59,58,57,56, 0,1,2,3,4,5,6,7, 0,1,2,3,4,5,6,7}) == 0x55ff0101);
+
+TEST_CONSTEXPR(_mm256_mask_bitshuffle_epi64_mask(0xFFFF0000,
+  (__m256i)(__v32qi){1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,-128, -1,0,0,0,0,0,0,0, 85,85,85,85,85,85,85,85},
+  (__m256i)(__v32qi){0,1,2,3,4,5,6,7, 63,62,61,60,59,58,57,56, 0,1,2,3,4,5,6,7, 0,1,2,3,4,5,6,7}) == 0x55ff0000);
 
 __mmask16 test_mm_mask_bitshuffle_epi64_mask(__mmask16 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: test_mm_mask_bitshuffle_epi64_mask
@@ -123,4 +136,11 @@ __mmask16 test_mm_bitshuffle_epi64_mask(__m128i __A, __m128i __B) {
   // CHECK: @llvm.x86.avx512.vpshufbitqmb.128
   return _mm_bitshuffle_epi64_mask(__A, __B);
 }
+TEST_CONSTEXPR(_mm_bitshuffle_epi64_mask(
+  (__m128i)(__v16qi){1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,-128},
+  (__m128i)(__v16qi){0,1,2,3,4,5,6,7, 63,62,61,60,59,58,57,56}) == 0x0101);
+
+TEST_CONSTEXPR(_mm_mask_bitshuffle_epi64_mask(0xFF00,
+  (__m128i)(__v16qi){1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,-128},
+  (__m128i)(__v16qi){0,1,2,3,4,5,6,7, 63,62,61,60,59,58,57,56}) == 0x0100);
 

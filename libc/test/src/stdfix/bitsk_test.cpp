@@ -8,7 +8,7 @@
 
 #include "BitsFxTest.h"
 
-#include "llvm-libc-types/stdfix-types.h" // int_k_t
+#include "llvm-libc-types/int_k_t.h" // int_k_t
 #include "src/stdfix/bitsk.h"
 
 LIST_BITSFX_TESTS(k, accum, int_k_t, LIBC_NAMESPACE::bitsk);

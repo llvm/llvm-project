@@ -1,7 +1,9 @@
-// RUN: mlir-opt %s --split-input-file -test-expand-math | FileCheck %s
+// RUN: mlir-opt %s --split-input-file -math-expand-ops | FileCheck %s
+// RUN: mlir-opt %s --split-input-file -math-expand-ops=ops=tanh,tan | FileCheck %s --check-prefix=CHECK-FILTER
 
 // CHECK-LABEL: func @tanh
 func.func @tanh(%arg: f32) -> f32 {
+  // CHECK-FILTER-NOT: math.tanh
   %res = math.tanh %arg : f32
   return %res : f32
 }
@@ -27,6 +29,7 @@ func.func @tanh(%arg: f32) -> f32 {
 // CHECK-LABEL: func @vector_tanh
 func.func @vector_tanh(%arg: vector<4xf32>) -> vector<4xf32> {
   // CHECK-NOT: math.tanh
+  // CHECK-FILTER-NOT: math.tanh
   %res = math.tanh %arg : vector<4xf32>
   return %res : vector<4xf32>
 }
@@ -35,6 +38,7 @@ func.func @vector_tanh(%arg: vector<4xf32>) -> vector<4xf32> {
 
 // CHECK-LABEL: func @tan
 func.func @tan(%arg: f32) -> f32 {
+  // CHECK-FILTER-NOT: math.tan
   %res = math.tan %arg : f32
   return %res : f32
 }
@@ -49,6 +53,7 @@ func.func @tan(%arg: f32) -> f32 {
 
 // CHECK-LABEL: func @vector_tan
 func.func @vector_tan(%arg: vector<4xf32>) -> vector<4xf32> {
+  // CHECK-FILTER-NOT: math.tan
   %res = math.tan %arg : vector<4xf32>
   return %res : vector<4xf32>
 }
@@ -58,6 +63,7 @@ func.func @vector_tan(%arg: vector<4xf32>) -> vector<4xf32> {
 // -----
 
 func.func @ctlz(%arg: i32) -> i32 {
+  // CHECK-FILTER: math.ctlz
   %res = math.ctlz %arg : i32
   return %res : i32
 }
@@ -112,6 +118,7 @@ func.func @ctlz(%arg: i32) -> i32 {
 // -----
 
 func.func @ctlz_vector(%arg: vector<4xi32>) -> vector<4xi32> {
+  // CHECK-FILTER: math.ctlz
   %res = math.ctlz %arg : vector<4xi32>
   return %res : vector<4xi32>
 }
@@ -136,17 +143,52 @@ func.func @fmaf_func(%a: f64, %b: f64, %c: f64) -> f64 {
 // CHECK-LABEL:     func @ceilf_func
 // CHECK-SAME:      ([[ARG0:%.+]]: f64) -> f64
 func.func @ceilf_func(%a: f64) -> f64 {
-  // CHECK-DAG:   [[CST:%.+]] = arith.constant 0.000
-  // CHECK-DAG:   [[CST_0:%.+]] = arith.constant 1.000
+  // CHECK-DAG:   [[C_0:%.+]] = arith.constant 0.000
+  // CHECK-DAG:   [[C_1:%.+]] = arith.constant 1.000
+  // CHECK-DAG:   [[C_4841369599423283200:%.*]] = arith.constant 4841369599423283200
+  // CHECK-DAG:   [[C_9223372036854775807:%.*]] = arith.constant 9223372036854775807
+  // CHECK-NEXT:   [[ARG_BITCAST:%.*]] = arith.bitcast [[ARG0]] : f64 to i64
+  // CHECK-NEXT:   [[ANDI:%.*]] = arith.andi [[ARG_BITCAST]], [[C_9223372036854775807]]
+  // CHECK-NEXT:   [[IS_SPECIAL_VAL:%.*]] = arith.cmpi uge, [[ANDI]], [[C_4841369599423283200]]
   // CHECK-NEXT:   [[CVTI:%.+]] = arith.fptosi [[ARG0]]
   // CHECK-NEXT:   [[CVTF:%.+]] = arith.sitofp [[CVTI]]
   // CHECK-NEXT:   [[COPYSIGN:%.+]] = math.copysign [[CVTF]], [[ARG0]]
   // CHECK-NEXT:   [[COMP:%.+]] = arith.cmpf ogt, [[ARG0]], [[COPYSIGN]]
-  // CHECK-NEXT:   [[INCR:%.+]] = arith.select [[COMP]], [[CST_0]], [[CST]]
+  // CHECK-NEXT:   [[INCR:%.+]] = arith.select [[COMP]], [[C_1]], [[C_0]]
   // CHECK-NEXT:   [[ADDF:%.+]] = arith.addf [[COPYSIGN]], [[INCR]]
-  // CHECK-NEXT:   return [[ADDF]]
+  // CHECK-NEXT:   [[RESULT:%.*]] = arith.select [[IS_SPECIAL_VAL]], [[ARG0]], [[ADDF]]
+  // CHECK-NEXT:   return [[RESULT]]
+  // CHECK-FILTER: math.ceil
   %ret = math.ceil %a : f64
   return %ret : f64
+}
+
+// -----
+
+// CHECK-LABEL:     func @ceilf_fnuz_func
+// CHECK-SAME:      ([[ARG0:%.+]]: f8E5M2FNUZ) -> f8E5M2FNUZ
+func.func @ceilf_fnuz_func(%a: f8E5M2FNUZ) -> f8E5M2FNUZ {
+  // CHECK-DAG:   [[C_0:%.+]] = arith.constant 0.000
+  // CHECK-DAG:   [[C_1:%.+]] = arith.constant 1.000
+  // CHECK-DAG:   [[C_NEG_128:%.*]] = arith.constant -128
+  // CHECK-DAG:   [[C_72:%.*]] = arith.constant 72
+  // CHECK-DAG:   [[C_127:%.*]] = arith.constant 127
+  // CHECK-NEXT:   [[ARG_BITCAST:%.*]] = arith.bitcast [[ARG0]] : f8E5M2FNUZ to i8
+  // CHECK-NEXT:   [[ANDI:%.*]] = arith.andi [[ARG_BITCAST]], [[C_127]]
+  // CHECK-NEXT:   [[IS_LARGE:%.+]] = arith.cmpi uge, [[ANDI]], [[C_72]]
+  // CHECK-NEXT:   [[IS_NAN:%.+]] = arith.cmpi eq, [[ARG_BITCAST]], [[C_NEG_128]]
+  // CHECK-NEXT:   [[IS_SPECIAL_VAL:%.+]] = arith.ori [[IS_LARGE]], [[IS_NAN]]
+  // CHECK-NEXT:   [[CVTI:%.+]] = arith.fptosi [[ARG0]]
+  // CHECK-NEXT:   [[CVTF:%.+]] = arith.sitofp [[CVTI]]
+  // CHECK-NEXT:   [[COPYSIGN:%.+]] = math.copysign [[CVTF]], [[ARG0]]
+  // CHECK-NEXT:   [[COMP:%.+]] = arith.cmpf ogt, [[ARG0]], [[COPYSIGN]]
+  // CHECK-NEXT:   [[INCR:%.+]] = arith.select [[COMP]], [[C_1]], [[C_0]]
+  // CHECK-NEXT:   [[ADDF:%.+]] = arith.addf [[COPYSIGN]], [[INCR]]
+  // CHECK-NEXT:   [[RESULT:%.*]] = arith.select [[IS_SPECIAL_VAL]], [[ARG0]], [[ADDF]]
+  // CHECK-NEXT:   return [[RESULT]]
+  // CHECK-FILTER: math.ceil
+  %ret = math.ceil %a : f8E5M2FNUZ
+  return %ret : f8E5M2FNUZ
 }
 
 // -----
@@ -158,6 +200,7 @@ func.func @exp2f_func(%a: f64) -> f64 {
   // CHECK:         [[MULF:%.+]] = arith.mulf [[ARG0]], [[CST]]
   // CHECK:         [[EXP:%.+]]  = math.exp [[MULF]]
   // CHECK:         return [[EXP]]
+  // CHECK-FILTER: math.exp2
   %ret = math.exp2 %a : f64
   return %ret : f64
 }
@@ -812,4 +855,28 @@ func.func @non_static_shape_rsqrt_op(%arg: tensor<?xf32>) -> tensor<?xf32>{
 func.func @unranked_rsqrt_op(%arg: tensor<*xf32>) -> tensor<*xf32>{
   %a = math.rsqrt %arg : tensor<*xf32>
   return %a: tensor<*xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @clampf_scalar_op
+// CHECK-SAME:     (%[[ARG:.*]]: f16, %[[MIN:.*]]: f16, %[[MAX:.*]]: f16)
+// CHECK:          %[[V0:.*]] = arith.minimumf %[[ARG]], %[[MAX]] : f16
+// CHECK:          %[[V1:.*]] = arith.maximumf %[[V0]], %[[MIN]] : f16
+// CHECK:          return %[[V1]] : f16
+
+func.func @clampf_scalar_op(%arg: f16, %min: f16, %max: f16) -> f16 {
+  %a = math.clampf %arg to [%min, %max] : f16
+  return %a: f16
+}
+
+// CHECK-LABEL:    func.func @clampf_vector_op
+// CHECK-SAME:     (%[[ARG:.*]]: vector<3x4xf32>, %[[MIN:.*]]: vector<3x4xf32>, %[[MAX:.*]]: vector<3x4xf32>)
+// CHECK:          %[[V0:.*]] = arith.minimumf %[[ARG]], %[[MAX]] fastmath<fast> : vector<3x4xf32>
+// CHECK:          %[[V1:.*]] = arith.maximumf %[[V0]], %[[MIN]] fastmath<fast> : vector<3x4xf32>
+// CHECK:          return %[[V1]] : vector<3x4xf32>
+
+func.func @clampf_vector_op(%arg: vector<3x4xf32>, %min: vector<3x4xf32>, %max: vector<3x4xf32>) -> vector<3x4xf32>{
+  %a = math.clampf %arg to [%min, %max] fastmath<fast> : vector<3x4xf32>
+  return %a: vector<3x4xf32>
 }

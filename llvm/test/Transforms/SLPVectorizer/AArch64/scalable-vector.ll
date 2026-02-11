@@ -8,10 +8,10 @@ target triple = "aarch64-unknown-linux-gnu"
 
 define void @test() {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:    [[LOAD0:%.*]] = tail call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr undef, i32 1, <vscale x 16 x i1> undef, <vscale x 16 x i8> undef)
-; CHECK-NEXT:    [[LOAD1:%.*]] = tail call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr undef, i32 1, <vscale x 16 x i1> undef, <vscale x 16 x i8> undef)
+; CHECK-NEXT:    [[LOAD0:%.*]] = tail call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 undef, <vscale x 16 x i1> undef, <vscale x 16 x i8> undef)
+; CHECK-NEXT:    [[LOAD1:%.*]] = tail call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 undef, <vscale x 16 x i1> undef, <vscale x 16 x i8> undef)
 ; CHECK-NEXT:    [[ADD:%.*]] = add <vscale x 16 x i8> [[LOAD1]], [[LOAD0]]
-; CHECK-NEXT:    tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[ADD]], ptr undef, i32 1, <vscale x 16 x i1> undef)
+; CHECK-NEXT:    tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[ADD]], ptr align 1 undef, <vscale x 16 x i1> undef)
 ; CHECK-NEXT:    ret void
 ;
   %load0 = tail call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr undef, i32 1, <vscale x 16 x i1> undef, <vscale x 16 x i8> undef)

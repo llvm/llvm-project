@@ -1,5 +1,10 @@
 // RUN: mlir-translate -no-implicit-module -split-input-file -test-spirv-roundtrip %s | FileCheck %s
 
+// RUN: %if spirv-tools %{ rm -rf %t %}
+// RUN: %if spirv-tools %{ mkdir %t %}
+// RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
+// RUN: %if spirv-tools %{ spirv-val %t %}
+
 // Test branch with one block argument
 
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
@@ -295,15 +300,26 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %true = spirv.Constant true
     %zero = spirv.Constant 0 : i32
     %one = spirv.Constant 1 : i32
+    spirv.mlir.selection {
 // CHECK:   spirv.BranchConditional %{{.*}}, ^[[true1:.*]](%{{.*}}, %{{.*}} : i32, i32), ^[[false1:.*]]
-    spirv.BranchConditional %true, ^true1(%zero, %zero: i32, i32), ^false1
+      spirv.BranchConditional %true, ^true1(%zero, %zero: i32, i32), ^false1
 // CHECK: [[true1]](%{{.*}}: i32, %{{.*}}: i32)
-  ^true1(%arg0: i32, %arg1: i32):
-    spirv.Return
+    ^true1(%arg0: i32, %arg1: i32):
+      spirv.Return
 // CHECK: [[false1]]:
-  ^false1:
+    ^false1:
+      spirv.Return
+    ^merge:
+      spirv.mlir.merge
+    }
+
     spirv.Return
   }
+
+  spirv.func @main() -> () "None" {
+    spirv.Return
+  }
+  spirv.EntryPoint "GLCompute" @main
 }
 
 // -----
@@ -314,15 +330,26 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %true = spirv.Constant true
     %zero = spirv.Constant 0 : i32
     %one = spirv.Constant 1 : i32
+    spirv.mlir.selection {
 // CHECK:   spirv.BranchConditional %{{.*}}, ^[[true1:.*]], ^[[false1:.*]](%{{.*}}, %{{.*}} : i32, i32)
-    spirv.BranchConditional %true, ^true1, ^false1(%zero, %zero: i32, i32)
+      spirv.BranchConditional %true, ^true1, ^false1(%zero, %zero: i32, i32)
 // CHECK: [[true1]]:
-  ^true1:
-    spirv.Return
+    ^true1:
+      spirv.Return
 // CHECK: [[false1]](%{{.*}}: i32, %{{.*}}: i32):
-  ^false1(%arg0: i32, %arg1: i32):
+    ^false1(%arg0: i32, %arg1: i32):
+      spirv.Return
+    ^merge:
+      spirv.mlir.merge
+    }
+
     spirv.Return
   }
+
+  spirv.func @main() -> () "None" {
+    spirv.Return
+  }
+  spirv.EntryPoint "GLCompute" @main
 }
 
 // -----
@@ -333,13 +360,24 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %true = spirv.Constant true
     %zero = spirv.Constant 0 : i32
     %one = spirv.Constant 1 : i32
+    spirv.mlir.selection {
 // CHECK:   spirv.BranchConditional %{{.*}}, ^[[true1:.*]](%{{.*}} : i32), ^[[false1:.*]](%{{.*}}, %{{.*}} : i32, i32)
-    spirv.BranchConditional %true, ^true1(%one: i32), ^false1(%zero, %zero: i32, i32)
+      spirv.BranchConditional %true, ^true1(%one: i32), ^false1(%zero, %zero: i32, i32)
 // CHECK: [[true1]](%{{.*}}: i32):
-  ^true1(%arg0: i32):
-    spirv.Return
+    ^true1(%arg0: i32):
+      spirv.Return
 // CHECK: [[false1]](%{{.*}}: i32, %{{.*}}: i32):
-  ^false1(%arg1: i32, %arg2: i32):
+    ^false1(%arg1: i32, %arg2: i32):
+      spirv.Return
+    ^merge:
+      spirv.mlir.merge
+    }
+
     spirv.Return
   }
+
+  spirv.func @main() -> () "None" {
+    spirv.Return
+  }
+  spirv.EntryPoint "GLCompute" @main
 }

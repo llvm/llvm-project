@@ -120,6 +120,8 @@ on support follow.
      ``H``             Assembly Support
      ``M``             Supported
      ``Q``             Assembly Support
+     ``Sdext``         Assembly Support (`See note <#riscv-debug-specification-note>`__)
+     ``Sdtrig``        Assembly Support (`See note <#riscv-debug-specification-note>`__)
      ``Sha``           Supported
      ``Shcounterenw``  Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Shgatpa``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
@@ -132,6 +134,7 @@ on support follow.
      ``Smcdeleg``      Supported
      ``Smcntrpmf``     Supported
      ``Smcsrind``      Supported
+     ``Smctr``         Assembly Support
      ``Smdbltrp``      Supported
      ``Smepmp``        Supported
      ``Smmpm``         Supported
@@ -144,6 +147,7 @@ on support follow.
      ``Sscofpmf``      Assembly Support
      ``Sscounterenw``  Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Sscsrind``      Supported
+     ``Ssctr``         Assembly Support
      ``Ssdbltrp``      Supported
      ``Ssnpm``         Supported
      ``Sspm``          Supported
@@ -161,6 +165,7 @@ on support follow.
      ``Svinval``       Assembly Support
      ``Svnapot``       Assembly Support
      ``Svpbmt``        Supported
+     ``Svrsw60t59b``   Supported
      ``Svvptc``        Supported
      ``V``             Supported
      ``Za128rs``       Supported (`See note <#riscv-profiles-extensions-note>`__)
@@ -168,6 +173,7 @@ on support follow.
      ``Zaamo``         Assembly Support
      ``Zabha``         Supported
      ``Zacas``         Supported (`See note <#riscv-zacas-note>`__)
+     ``Zalasr``        Supported
      ``Zalrsc``        Assembly Support
      ``Zama16b``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zawrs``         Assembly Support
@@ -231,10 +237,12 @@ on support follow.
      ``Zve64x``        Supported
      ``Zve64f``        Supported
      ``Zve64d``        Supported
+     ``Zvfbfa``        Assembly Support
      ``Zvfbfmin``      Supported
      ``Zvfbfwma``      Supported
      ``Zvfh``          Supported
      ``Zvfhmin``       Supported
+     ``Zvfofp8min``    Assembly Support
      ``Zvkb``          Supported
      ``Zvkg``          Supported (`See note <#riscv-vector-crypto-note>`__)
      ``Zvkn``          Supported (`See note <#riscv-vector-crypto-note>`__)
@@ -304,6 +312,10 @@ Supported
 ``Za128rs``, ``Za64rs``, ``Zama16b``, ``Zic64b``, ``Ziccamoa``, ``Ziccamoc``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``, ``Shcounterenvw``, ``Shgatpa``, ``Shtvala``, ``Shvsatpa``, ``Shvstvala``, ``Shvstvecd``, ``Ssccptr``, ``Sscounterenw``, ``Ssstateen``, ``Ssstrict``, ``Sstvala``, ``Sstvecd``, ``Ssu64xl``, ``Svade``, ``Svbare``
   These extensions are defined as part of the `RISC-V Profiles specification <https://github.com/riscv/riscv-profiles/releases/tag/v1.0>`__.  They do not introduce any new features themselves, but instead describe existing hardware features.
 
+.. _riscv-debug-specification-note:
+
+``Sdext``, ``Sdtrig`` `The RISC-V Debug Specification <https://github.com/riscv/riscv-debug-spec/releases/download/1.0/riscv-debug-specification.pdf>`__.
+
 .. _riscv-zacas-note:
 
 ``Zacas``
@@ -323,8 +335,11 @@ LLVM supports (to various degrees) a number of experimental extensions.  All exp
 
 The primary goal of experimental support is to assist in the process of ratification by providing an existence proof of an implementation, and simplifying efforts to validate the value of a proposed extension against large code bases.  Experimental extensions are expected to either transition to ratified status, or be eventually removed.  The decision on whether to accept an experimental extension is currently done on an entirely case by case basis; if you want to propose one, attending the bi-weekly RISC-V sync-up call is strongly advised.
 
-``experimental-zalasr``
-  LLVM implements the `0.0.5 draft specification <https://github.com/mehnadnerd/riscv-zalasr>`__.
+``experimental-p``
+  LLVM implements the `019 draft specification <https://www.jhauser.us/RISCV/ext-P/>`__.
+
+``experimental-zibi``
+  LLVM implements the `0.1 release specification <https://github.com/riscv/zibi/releases/tag/v0.1.0>`__.
 
 ``experimental-zicfilp``, ``experimental-zicfiss``
   LLVM implements the `1.0 release specification <https://github.com/riscv/riscv-cfi/releases/tag/v1.0>`__.
@@ -332,17 +347,17 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-zvbc32e``, ``experimental-zvkgs``
   LLVM implements the `0.7 release specification <https://github.com/user-attachments/files/16450464/riscv-crypto-spec-vector-extra_v0.0.7.pdf>`__.
 
-``experimental-sdext``, ``experimental-sdtrig``
-  LLVM implements the `1.0-rc4 specification <https://github.com/riscv/riscv-debug-spec/releases/download/1.0.0-rc4/riscv-debug-specification.pdf>`__.
-
-``experimental-smctr``, ``experimental-ssctr``
-  LLVM implements the `1.0-rc3 specification <https://github.com/riscv/riscv-control-transfer-records/releases/tag/v1.0_rc3>`__.
-
 ``experimental-svukte``
   LLVM implements the `0.3 draft specification <https://github.com/riscv/riscv-isa-manual/pull/1564>`__.
 
 ``experimental-zvqdotq``
   LLVM implements the `0.0.1 draft specification <https://github.com/riscv/riscv-dot-product/releases/tag/v0.0.1>`__.
+
+``experimental-smpmpmt``
+  LLVM implements the `0.6 draft specification <https://github.com/riscv/riscv-isa-manual/blob/smpmpmt/src/smpmpmt.adoc>`__.
+
+``experimental-zvabd``
+  LLVM implements the `0.7 draft specification <https://github.com/riscv/integer-vector-absolute-difference/releases/tag/v0.7>`__.
 
 To use an experimental extension from `clang`, you must add `-menable-experimental-extensions` to the command line, and specify the exact version of the experimental extension you are using.  To use an experimental extension with LLVM's internal developer tools (e.g. `llc`, `llvm-objdump`, `llvm-mc`), you must prefix the extension name with `experimental-`.  Note that you don't need to specify the version with internal tools, and shouldn't include the `experimental-` prefix with `clang`.
 
@@ -356,6 +371,9 @@ Inclusion of a vendor extension will be considered on a case by case basis.  All
 It is our intention to follow the naming conventions described in `riscv-non-isa/riscv-toolchain-conventions <https://github.com/riscv-non-isa/riscv-toolchain-conventions#conventions-for-vendor-extensions>`__.  Exceptions to this naming will need to be strongly motivated.
 
 The current vendor extensions supported are:
+
+``XAIFET``
+  LLVM implements `the AIFET (AI Foundry's ET) vendor-defined instructions specified in <https://github.com/aifoundry-org/et-man/blob/main/ET%20Programmer's%20Reference%20Manual.pdf>`__ originally defined by Esperanto Technologies (and now under the AI Foundry non-profit).  Instructions are prefixed with `aif.` as described in the specification.
 
 ``XTHeadBa``
   LLVM implements `the THeadBa (address-generation) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`__ by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
@@ -399,6 +417,12 @@ The current vendor extensions supported are:
 ``XSfvcp``
   LLVM implements `version 1.1.0 of the SiFive Vector Coprocessor Interface (VCIX) Software Specification <https://sifive.cdn.prismic.io/sifive/Zn3m1R5LeNNTwnLS_vcix-spec-software-v1p1.pdf>`__ by SiFive.  All instructions are prefixed with `sf.vc.` as described in the specification, and the riscv-toolchain-convention document linked above.
 
+``Xsfvfexp16e``, ``Xsfvfbfexp16e``, and ``Xsfvfexp32e``
+  LLVM implements `version 0.5 of the Vector Exponential Extension Specification <https://www.sifive.com/document-file/exponential-function-instruction-xsfvfexp32e-xsfvf>`__ by SiFive. All instructions are prefixed with `sf.` as described in the specification linked above.
+
+``Xsfvfexpa`` and ``Xsfvfexpa64e``
+  LLVM implements `version 0.2 of the Vector Exponential Approximation Extension Specification <https://www.sifive.com/document-file/exponential-approximation-instruction-xsfvfexpa-ex>`__ by SiFive. All instructions are prefixed with `sf.` as described in the specification linked above.
+
 ``XSfvqmaccdod``, ``XSfvqmaccqoq``
   LLVM implements `version 1.1.0 of the SiFive Int8 Matrix Multiplication Extensions Specification <https://sifive.cdn.prismic.io/sifive/1a2ad85b-d818-49f7-ba83-f51f1731edbe_int8-matmul-spec.pdf>`__ by SiFive.  All instructions are prefixed with `sf.` as described in the specification linked above.
 
@@ -441,61 +465,64 @@ The current vendor extensions supported are:
 ``Xwchc``
   LLVM implements `the custom compressed opcodes present in some QingKe cores` by WCH / Nanjing Qinheng Microelectronics. The vendor refers to these opcodes by the name "XW".
 
-``experimental-Xqccmp``
+``Xqccmp``
   LLVM implements `version 0.3 of the 16-bit Push/Pop instructions and double-moves extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqccmp_extension-0.3.0>`__ by Qualcomm. All instructions are prefixed with `qc.` as described in the specification.
 
-``experimental-Xqcia``
+``Xqci``
+  LLVM implements `version 0.13 of the Qualcomm uC extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
+
+``Xqcia``
   LLVM implements `version 0.7 of the Qualcomm uC Arithmetic extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
 
-``experimental-Xqciac``
+``Xqciac``
   LLVM implements `version 0.3 of the Qualcomm uC Load-Store Address Calculation extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
 
-``experimental-Xqcibi``
+``Xqcibi``
   LLVM implements `version 0.2 of the Qualcomm uC Branch Immediate extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
 
-``experimental-Xqcibm``
+``Xqcibm``
   LLVM implements `version 0.8 of the Qualcomm uC Bit Manipulation extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
 
-``experimental-Xqcicli``
+``Xqcicli``
   LLVM implements `version 0.3 of the Qualcomm uC Conditional Load Immediate extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
 
-``experimental-Xqcicm``
+``Xqcicm``
   LLVM implements `version 0.2 of the Qualcomm uC Conditional Move extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
 
-``experimental-Xqcics``
+``Xqcics``
   LLVM implements `version 0.2 of the Qualcomm uC Conditional Select extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
 
-``experimental-Xqcicsr``
+``Xqcicsr``
   LLVM implements `version 0.4 of the Qualcomm uC CSR extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
 
-``experimental-Xqciint``
+``Xqciint``
   LLVM implements `version 0.10 of the Qualcomm uC Interrupts extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
 
-``experimental-Xqciio``
+``Xqciio``
   LLVM implements `version 0.1 of the Qualcomm uC External Input Output extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
 
-``experimental-Xqcilb``
+``Xqcilb``
   LLVM implements `version 0.2 of the Qualcomm uC Long Branch extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
 
-``experimental-Xqcili``
+``Xqcili``
   LLVM implements `version 0.2 of the Qualcomm uC Load Large Immediate extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
 
-``experimental-Xqcilia``
+``Xqcilia``
   LLVM implements `version 0.2 of the Qualcomm uC Large Immediate Arithmetic extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
 
-``experimental-Xqcilo``
+``Xqcilo``
   LLVM implements `version 0.3 of the Qualcomm uC Large Offset Load Store extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
 
-``experimental-Xqcilsm``
+``Xqcilsm``
   LLVM implements `version 0.6 of the Qualcomm uC Load Store Multiple extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
 
-``experimental-Xqcisim``
+``Xqcisim``
   LLVM implements `version 0.2 of the Qualcomm uC Simulation Hint extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
 
-``experimental-Xqcisls``
+``Xqcisls``
   LLVM implements `version 0.2 of the Qualcomm uC Scaled Load Store extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
 
-``experimental-Xqcisync``
+``Xqcisync``
   LLVM implements `version 0.3 of the Qualcomm uC Sync Delay extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
 
 ``Xmipscbop``
@@ -522,6 +549,9 @@ The current vendor extensions supported are:
 ``XAndesVBFHCvt``
   LLVM implements `version 5.0.0 of the Andes Vector BFLOAT16 Conversion Extension specification <https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf>`__ by Andes Technology. All instructions are prefixed with `nds.` as described in the specification.
 
+``XAndesVSINTH``
+  LLVM implements `version 5.0.0 of the Andes Vector Small Int Handling Extension specification <https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf>`__ by Andes Technology. All instructions are prefixed with `nds.` as described in the specification.
+
 ``XAndesVSINTLoad``
   LLVM implements `version 5.0.0 of the Andes Vector INT4 Load Extension specification <https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf>`__ by Andes Technology. All instructions are prefixed with `nds.` as described in the specification.
 
@@ -532,7 +562,7 @@ The current vendor extensions supported are:
   LLVM implements `version 5.0.0 of the Andes Vector Dot Product Extension specification <https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf>`__ by Andes Technology. All instructions are prefixed with `nds.` as described in the specification.
 
 ``XSMTVDot``
-  SpacemiT defines `Intrinsic Matrix Extension (IME) specification <https://github.com/space-mit/riscv-ime-extension-spec/releases/tag/v0429>`__.
+  SpacemiT defines `Integrated Matrix Extension (IME) specification <https://github.com/spacemit-com/riscv-ime-extension-spec/releases/tag/v1.0>`__.
   LLVM implement the hardware-adapted subset for SpacemiT X60, defined in the `feature document <https://developer.spacemit.com/documentation?token=BWbGwbx7liGW21kq9lucSA6Vnpb#2.1>`__ by SpacemiT. All instructions are prefixed with `smt.` as described in the implementation guide. Note that this implemented subset is `version 1.0.0 of the SpacemiT Vector Dot Product Extension specification`, which is strictly a subset of the full IME specification to reflect the capabilities of SpacemiT X60 hardware correctly.
 
 Experimental C Intrinsics
@@ -585,3 +615,63 @@ Clang's ``-msmall-data-limit=`` option controls what the threshold size is (in b
 The small data limit threshold is also used to separate small constants into sections with names starting with ``.srodata``. LLD does not place these with the ``.sdata`` and ``.sbss`` sections as ``.srodata`` sections are read only and the other two are writable. Instead the ``.srodata`` sections are placed adjacent to ``.rodata``.
 
 Data suggests that these options can produce significant improvements across a range of benchmarks.
+
+Sanitizers
+==========
+
+.. note::
+   This is a summary of the current state of sanitizers, and not an official support statement.
+
+* UBSan is not platform-specific, and should work out of the box.
+
+* ASan and TSan already have shadow mappings defined for Linux on RISC-V, and are likely to work.
+
+* HWASan is also likely to work, though RISC-V Pointer Masking (very new) is needed as well to make it run efficiently.
+
+* Memtag: N/A - there is currently no ratified RISC-V memory tagging spec.
+
+* MSan is unlikely to work: there are currently no RISC-V-specific shadow mappings (this is probably easy to fix; perhaps the default Linux 64-bit mapping will work) and MSan does not explicitly handle any of the `@llvm.riscv.*` intrinsics (this is significantly more work to fix).
+
+  Some intrinsics will be handled correctly anyway, if the RISC-V intrinsic is auto-upgraded into cross-platform LLVM intrinsics. Some others will be "heuristically" handled (possibly incorrectly). The rest will default to the "strict" handler, which checks that all the parameters are fully initialized.
+
+  MSan intrinsics support is only required if code (including dependencies) manually calls the intrinsic.
+
+Processor-Specific Tuning Feature String
+========================================
+Due to RISC-V's highly configurable nature, it is often desirable to share a single scheduling model across multiple similar RISC-V processors that only differ in a small number of (uArch) tuning features. An example of such tuning feature could be whether the latency of vector operations depend on VL or not. This could be extended to tuning features that are not directly connected to scheduling model but other parts of the RISC-V backend, like the cost of ``vrgather.vv`` instruction.
+
+To that end, RISC-V LLVM supports a tuning feature string format that helps users to build a performance model by "configuring" an existing tune CPU, along with its scheduling model. For example, this string
+
+::
+    "sifive-x280:single-element-vec-fp64"
+
+takes ``sifive-x280`` as the "base" tune CPU and configured it with ``single-element-vec-fp64``. This gives us a performance model that looks exactly like that of ``sifive-x280``, except some of the 64-bit vector floating point instructions now produce only a single element per cycle due to ``single-element-vec-fp64``. This string could eventually be used in places like ``-mtune`` at the frontend.
+
+More formally speaking, each tuning feature string has the following format:
+
+::
+    <tune-cpu>[":"<tune-features>]?
+
+where
+
+::
+    tune-cpu      ::= 'tuning CPU name in lower case'
+    directive     ::= "[a-zA-Z0-9\_-]+"
+    tune-features ::= directive ["," directive]*
+
+A *directive* can and can only _enable_ or _disable_ a certain tuning feature from the tuning CPU. A **positive directive**, like the ``single-element-vec-fp64`` we just saw, enables an additional tuning feature in the associated tuning model. A **negative directive**, on the other hand, removes a certain tuning feature. For example, ``sifive-x390`` already has the ``single-element-vec-fp64`` feature, and we can use
+
+::
+    "sifive-x390:full-vec-fp64"
+
+to create a new performance model that looks nearly the same as ``sifive-x390`` except ``single-element-vec-fp64`` being cut out. In this case, ``full-vec-fp64`` is a negative directive.
+
+There are some rules for the list of directives, though:
+
+1. The same directive cannot appear more than once.
+
+2. The positive and negative directives that belong to the same feature cannot appear at the same time.
+
+3. If a feature implies other features -- for example, ``short-forward-branch-imul`` implies ``short-forward-branch-ialu`` -- then the _implied_ features are subject to the previous two rules, too. For example, we cannot write _"short-forward-branch-imul,no-short-forward-branch-ialu"_, because the feature implied by ``short-forward-branch-imul`` violates rule 2.
+
+In addition to the rules listed above, right now, this string only accepts directives that are explicitly supported by the tune CPU. For example, _"sifive-x280:prefer-w-inst"_ is not a valid string as ``prefer-w-inst`` is not supported by ``sifive-x280`` at this moment. Vendors of these processors are expected to maintain the compatibility of their supported directives across different versions. There have been lots of discussions on having "generic" features that are universally supported by all RISC-V CPUs, yet many concerns -- including the difficulty to maintain compatibility across _all_ CPU targets and versions -- make us decide to table this issue until we find a reliable process to select such features.

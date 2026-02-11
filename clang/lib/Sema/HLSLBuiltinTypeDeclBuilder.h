@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringMap.h"
 
 using llvm::hlsl::ResourceClass;
+using llvm::hlsl::ResourceDimension;
 
 namespace clang {
 
@@ -72,26 +73,67 @@ public:
                     AccessSpecifier Access = AccessSpecifier::AS_private);
 
   BuiltinTypeDeclBuilder &
-  addHandleMember(ResourceClass RC, bool IsROV, bool RawBuffer,
-                  AccessSpecifier Access = AccessSpecifier::AS_private);
+  addBufferHandles(ResourceClass RC, bool IsROV, bool RawBuffer,
+                   bool HasCounter,
+                   AccessSpecifier Access = AccessSpecifier::AS_private);
+  BuiltinTypeDeclBuilder &
+  addTextureHandle(ResourceClass RC, bool IsROV, ResourceDimension RD,
+                   AccessSpecifier Access = AccessSpecifier::AS_private);
+  BuiltinTypeDeclBuilder &addSamplerHandle();
   BuiltinTypeDeclBuilder &addArraySubscriptOperators();
 
   // Builtin types constructors
   BuiltinTypeDeclBuilder &addDefaultHandleConstructor();
-  BuiltinTypeDeclBuilder &addHandleConstructorFromBinding();
-  BuiltinTypeDeclBuilder &addHandleConstructorFromImplicitBinding();
+  BuiltinTypeDeclBuilder &addCopyConstructor();
+  BuiltinTypeDeclBuilder &addCopyAssignmentOperator();
+
+  // Static create methods
+  BuiltinTypeDeclBuilder &addStaticInitializationFunctions(bool HasCounter);
 
   // Builtin types methods
   BuiltinTypeDeclBuilder &addLoadMethods();
+  BuiltinTypeDeclBuilder &addByteAddressBufferLoadMethods();
+  BuiltinTypeDeclBuilder &addByteAddressBufferStoreMethods();
+  BuiltinTypeDeclBuilder &addSampleMethods(ResourceDimension Dim);
+  BuiltinTypeDeclBuilder &addSampleBiasMethods(ResourceDimension Dim);
+  BuiltinTypeDeclBuilder &addSampleGradMethods(ResourceDimension Dim);
+  BuiltinTypeDeclBuilder &addSampleLevelMethods(ResourceDimension Dim);
+  BuiltinTypeDeclBuilder &addSampleCmpMethods(ResourceDimension Dim);
+  BuiltinTypeDeclBuilder &addSampleCmpLevelZeroMethods(ResourceDimension Dim);
   BuiltinTypeDeclBuilder &addIncrementCounterMethod();
   BuiltinTypeDeclBuilder &addDecrementCounterMethod();
   BuiltinTypeDeclBuilder &addHandleAccessFunction(DeclarationName &Name,
-                                                  bool IsConst, bool IsRef);
+                                                  bool IsConst, bool IsRef,
+                                                  QualType ElemTy = QualType());
+  BuiltinTypeDeclBuilder &
+  addLoadWithStatusFunction(DeclarationName &Name, bool IsConst,
+                            QualType ReturnTy = QualType());
+  BuiltinTypeDeclBuilder &addStoreFunction(DeclarationName &Name, bool IsConst,
+                                           QualType ValueType);
   BuiltinTypeDeclBuilder &addAppendMethod();
   BuiltinTypeDeclBuilder &addConsumeMethod();
 
+  BuiltinTypeDeclBuilder &addGetDimensionsMethodForBuffer();
+
 private:
+  BuiltinTypeDeclBuilder &addCreateFromBinding();
+  BuiltinTypeDeclBuilder &addCreateFromImplicitBinding();
+  BuiltinTypeDeclBuilder &addCreateFromBindingWithImplicitCounter();
+  BuiltinTypeDeclBuilder &addCreateFromImplicitBindingWithImplicitCounter();
+  BuiltinTypeDeclBuilder &addResourceMember(StringRef MemberName,
+                                            ResourceClass RC,
+                                            ResourceDimension RD, bool IsROV,
+                                            bool RawBuffer, bool IsCounter,
+                                            AccessSpecifier Access);
+  BuiltinTypeDeclBuilder &
+  addHandleMember(ResourceClass RC, ResourceDimension RD, bool IsROV,
+                  bool RawBuffer,
+                  AccessSpecifier Access = AccessSpecifier::AS_private);
+  BuiltinTypeDeclBuilder &
+  addCounterHandleMember(ResourceClass RC, bool IsROV, bool RawBuffer,
+                         AccessSpecifier Access = AccessSpecifier::AS_private);
   FieldDecl *getResourceHandleField() const;
+  FieldDecl *getResourceCounterHandleField() const;
   QualType getFirstTemplateTypeParam();
   QualType getHandleElementType();
   Expr *getConstantIntExpr(int value);

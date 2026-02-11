@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
-#include "Utils/AArch64SMEAttributes.h"
+#include "AArch64SMEAttributes.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -50,8 +50,7 @@ private:
 
 char SMEABI::ID = 0;
 static const char *name = "SME ABI Pass";
-INITIALIZE_PASS_BEGIN(SMEABI, DEBUG_TYPE, name, false, false)
-INITIALIZE_PASS_END(SMEABI, DEBUG_TYPE, name, false, false)
+INITIALIZE_PASS(SMEABI, DEBUG_TYPE, name, false, false)
 
 FunctionPass *llvm::createSMEABIPass() { return new SMEABI(); }
 
@@ -120,7 +119,7 @@ bool SMEABI::updateNewStateFunctions(Module *M, Function *F,
   // to commit the lazy save.
   if (FnAttrs.hasPrivateZAInterface()) {
     // Create the new blocks for reading TPIDR2_EL0 & enabling ZA state.
-    auto *SaveBB = OrigBB->splitBasicBlock(OrigBB->begin(), "save.za", true);
+    auto *SaveBB = OrigBB->splitBasicBlockBefore(OrigBB->begin(), "save.za");
     auto *PreludeBB = BasicBlock::Create(Context, "prelude", F, SaveBB);
 
     // Read TPIDR2_EL0 in PreludeBB & branch to SaveBB if not 0.

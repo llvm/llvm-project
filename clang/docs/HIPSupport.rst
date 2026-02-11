@@ -164,6 +164,8 @@ Predefined Macros
      - Represents wavefront memory scope in HIP (value is 2).
    * - ``__HIP_MEMORY_SCOPE_WORKGROUP``
      - Represents workgroup memory scope in HIP (value is 3).
+   * - ``__HIP_MEMORY_SCOPE_CLUSTER``
+     - Represents cluster memory scope in HIP (value is 6).
    * - ``__HIP_MEMORY_SCOPE_AGENT``
      - Represents agent memory scope in HIP (value is 4).
    * - ``__HIP_MEMORY_SCOPE_SYSTEM``
@@ -178,8 +180,7 @@ Predefined Macros
      - Alias to ``__HIP_API_PER_THREAD_DEFAULT_STREAM__``. Deprecated.
 
 Note that some architecture specific AMDGPU macros will have default values when
-used from the HIP host compilation. Other :doc:`AMDGPU macros <AMDGPUSupport>`
-like ``__AMDGCN_WAVEFRONT_SIZE__`` (deprecated) will default to 64 for example.
+used from the HIP host compilation.
 
 Compilation Modes
 =================
@@ -208,6 +209,95 @@ Host Code Compilation
 - Compiles to a relocatable object for each TU.
 - These relocatable objects are then linked together.
 - Host code within a TU can call host functions and launch kernels from another TU.
+
+HIP Fat Binary Registration and Unregistration
+==============================================
+
+When compiling HIP for AMD GPUs, Clang embeds device code into HIP "fat
+binaries" and generates host-side helper functions that register these
+fat binaries with the HIP runtime at program start and unregister them at
+program exit. In non-RDC mode (``-fno-gpu-rdc``), each compilation unit
+typically produces its own HIP fat binary: a container that holds, for every
+enabled GPU architecture, a fully linked offloading device image (for example,
+a GPU code object) that can be loaded directly by the HIP runtime. In RDC mode
+(``-fgpu-rdc``), each compilation unit contributes device code in a relocatable
+form (for example, GPU object files or LLVM IR). A later device-link step links
+those relocatable inputs into fully linked device images per GPU architecture
+and then packages those images into a HIP fat binary container.
+
+Registering a HIP fat binary allows the runtime to discover the kernels and
+device variables defined in that container and to associate host-side addresses
+and symbols with the corresponding GPU-side entities. For example, when a
+host-side kernel launch stub is called, the HIP runtime uses information
+established during registration (and the fat binary handle it returned) to
+identify which GPU kernel symbol to launch from which device image.
+
+At the LLVM IR level, Clang/LLVM typically create an internal module
+constructor (for example ``__hip_module_ctor`` or a ``.hip.fatbin_reg``
+function) and add it to ``@llvm.global_ctors``. This constructor is called by
+the C runtime before ``main`` and it:
+
+* calls ``__hipRegisterFatBinary`` with a pointer to an internal wrapper
+  object that describes the HIP fat binary;
+* stores the returned handle in an internal global variable;
+* calls an internal helper such as ``__hip_register_globals`` to register
+  kernels, device variables and other metadata associated with the fat binary;
+* registers a corresponding module destructor with ``atexit`` so it will run
+  during program termination and use the stored handle to unregister the fat
+  binary from the HIP runtime.
+
+The module destructor (for example ``__hip_module_dtor`` or a
+``.hip.fatbin_unreg`` function) loads the stored handle, checks that it is
+non-null, calls ``__hipUnregisterFatBinary`` to unregister the fat binary from
+the HIP runtime, and then clears the handle. This ensures that the HIP runtime
+sees each fat binary registered exactly once and that it is unregistered once
+at exit, even when multiple translation units contribute HIP kernels to the
+same host program.
+
+These registration/unregistration helpers are implementation details of Clang's
+HIP code generation; user code should not call ``__hipRegisterFatBinary`` or
+``__hipUnregisterFatBinary`` directly.
+
+Implications for HIP Application Developers
+-------------------------------------------
+
+From the point of view of HIP application code, Clang and the HIP runtime
+provide the following guarantees:
+
+* Kernels and device variables defined in HIP code will be registered with the
+  HIP runtime before ``main`` begins execution.
+* Fat binaries will be unregistered via an ``atexit``-registered module
+  destructor after ``main`` returns (or after ``exit`` is called).
+
+Beyond these points, the detailed ordering of fat binary registration and
+unregistration relative to user-defined global constructors, destructors and
+other ``atexit`` handlers is not specified and should not be relied upon.
+Applications should avoid depending on HIP kernels or device variables being
+usable from global constructors or destructors, and instead perform HIP
+initialization and teardown that touches device state in ``main`` (or in
+functions called from ``main``).
+
+Implications for HIP Runtime Developers
+---------------------------------------
+
+HIP runtime implementations that are linked with Clang-generated host code
+must handle registration and unregistration in the presence of uncertain
+global ctor/dtor ordering:
+
+* ``__hipRegisterFatBinary`` must accept a pointer to the compiler-generated
+  wrapper object and return an opaque handle that remains valid for as long as
+  the fat binary may be used.
+* ``__hipUnregisterFatBinary`` must accept the handle previously returned by
+  ``__hipRegisterFatBinary`` and perform any necessary cleanup. It may be
+  called late in process teardown, after other parts of the runtime have
+  started shutting down, so it should be robust in the presence of partially
+  torn-down state.
+* Runtimes should use appropriate synchronization and guards so that fat
+  binary registration does not observe uninitialized resources and
+  unregistration does not release resources that are still required by other
+  runtime components. In particular, registration and unregistration routines
+  should be written to be safe under repeated calls and in the presence of
+  concurrent or overlapping initialization/teardown logic.
 
 Syntax Difference with CUDA
 ===========================
@@ -285,6 +375,94 @@ Example Usage
       Base* basePtr = &obj;
       basePtr->virtualFunction(); // Allowed since obj is constructed in device code
    }
+
+Alias Attribute Support
+=======================
+
+Clang supports alias attributes in HIP code, allowing creation of alternative names for functions and variables. 
+ - Aliases work with ``__host__``, ``__device__``, and ``__host__ __device__`` functions and variables.
+ - The alias attribute uses the syntax ``__attribute__((alias("target_name")))``. Both weak and strong aliases are supported.
+ - Outside of ``extern "C"``, the alias target must use the mangled name of the aliasee
+ - The alias is only emitted if the aliasee is emitted on the same side (ie __host__ or __device__), otherwise it is ignored.
+
+Example Usage
+-------------
+
+.. code-block:: c++
+
+   extern "C" {
+     // Host function alias
+     int __HostFunc(void) { return 0; }
+     int HostFunc(void) __attribute__((weak, alias("__HostFunc")));
+
+     // Device function alias
+     __device__ int __DeviceFunc(void) { return 1; }
+     __device__ int DeviceFunc(void) __attribute__((weak, alias("__DeviceFunc")));
+
+     // Host-device function alias
+     __host__ __device__ int __BothFunc(void) { return 2; }
+     __host__ __device__ int BothFunc(void) __attribute__((alias("__BothFunc")));
+
+     // Variable alias
+     int __host_var = 3;
+     extern int __attribute__((weak, alias("__host_var"))) host_var;
+   }
+   // Mangled / overload alias
+   __host__ __device__ float __Four(float f) { return 2.0f * f; }
+   __host__ __device__ int Four(void) __attribute__((weak, alias("_Z6__Fourv")));
+   __host__ __device__ float Four(float f) __attribute__((weak, alias("_Z6__Fourf")));
+
+C++17 Class Template Argument Deduction (CTAD) Support
+======================================================
+
+Clang supports C++17 Class Template Argument Deduction (CTAD) in both host and
+device code for HIP. This allows you to omit template arguments when creating
+class template instances, letting the compiler deduce them from constructor
+arguments.
+
+.. code-block:: c++
+
+   #include <tuple>
+
+   __host__ __device__ void func() {
+     std::tuple<int, int> t = std::tuple(1, 1);
+   }
+
+In the above example, ``std::tuple(1, 1)`` automatically deduces the type to be
+``std::tuple<int, int>``.
+
+Deduction Guides
+----------------
+
+User-defined deduction guides are also supported. Since deduction guides are not
+executable code and only participate in type deduction, they semantically behave
+as ``__host__ __device__``. This ensures they are available for deduction in both
+host and device contexts, and CTAD continues to respect any constraints on the
+corresponding constructors in the usual C++ way.
+
+.. code-block:: c++
+
+   template <typename T>
+   struct MyType {
+     T value;
+     __device__ MyType(T v) : value(v) {}
+   };
+
+   MyType(float) -> MyType<double>;
+
+   __device__ void deviceFunc() {
+     MyType m(1.0f); // Deduces MyType<double>
+   }
+
+.. note::
+
+   Explicit HIP target attributes such as ``__host__`` or ``__device__``
+   are currently only permitted on deduction guides when both are present
+   (``__host__ __device__``). This usage is deprecated and will be rejected
+   in a future version of Clang; prefer omitting HIP target attributes on
+   deduction guides entirely. Clang treats all deduction guides as if they
+   were ``__host__ __device__``, so ``__host__``-only, ``__device__``-only,
+   or ``__global__`` deduction guides are rejected as ill-formed.
 
 Host and Device Attributes of Default Destructors
 ===================================================

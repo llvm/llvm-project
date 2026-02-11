@@ -40,7 +40,9 @@ int main(int argc, const char **argv) {
 
   using namespace mathtest;
 
-  IndexedRange<float> Range;
+  IndexedRange<float> Range(/*Begin=*/-1.0f,
+                            /*End=*/1.0f,
+                            /*Inclusive=*/true);
   ExhaustiveGenerator<float> Generator(Range);
 
   const auto Configs = cl::getTestConfigs();

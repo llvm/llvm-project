@@ -13,8 +13,8 @@ class MyTargetGenericInstruction : GenericInstruction {
 //def Has32 : Predicate<"Subtarget->has32()">;
 def Has64 : Predicate<"Subtarget->has64()">;
 
-//def Mode32 : HwMode<"+a", [Has32]>;
-def Mode64 : HwMode<"+b", [Has64]>;
+//def Mode32 : HwMode<[Has32]>;
+def Mode64 : HwMode<[Has64]>;
 
 def ModeVT : ValueTypeByHwMode<[DefaultMode, Mode64],
                                [i32,  i64]>;
@@ -43,6 +43,7 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 // CHECK: using PredicateBitset = llvm::Bitset<MAX_SUBTARGET_PREDICATES>;
 
 // CHECK-LABEL: #ifdef GET_GLOBALISEL_TEMPORARIES_DECL
+// CHECK-EMPTY:
 // CHECK-NEXT:    mutable MatcherState State;
 // CHECK-NEXT:    typedef ComplexRendererFns(MyTargetInstructionSelector::*ComplexMatcherMemFn)(MachineOperand &) const;
 // CHECK-NEXT:    typedef void(MyTargetInstructionSelector::*CustomRendererFn)(MachineInstrBuilder &, const MachineInstr &, int) const;
@@ -57,12 +58,15 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 // CHECK-NEXT:    bool testMOPredicate_MO(unsigned PredicateID, const MachineOperand &MO, const MatcherState &State) const override;
 // CHECK-NEXT:    bool testSimplePredicate(unsigned PredicateID) const override;
 // CHECK-NEXT:    bool runCustomAction(unsigned FnID, const MatcherState &State, NewMIVector &OutMIs) const override;
-// CHECK-NEXT:  #endif // ifdef GET_GLOBALISEL_TEMPORARIES_DECL
+// CHECK-EMPTY:
+// CHECK-NEXT:  #endif // GET_GLOBALISEL_TEMPORARIES_DECL
 
 // CHECK-LABEL: #ifdef GET_GLOBALISEL_TEMPORARIES_INIT
+// CHECK-EMPTY:
 // CHECK-NEXT:    , State(0),
 // CHECK-NEXT:    ExecInfo(TypeObjects, NumTypeObjects, FeatureBitsets, ComplexPredicateFns, CustomRenderers)
-// CHECK-NEXT:  #endif // ifdef GET_GLOBALISEL_TEMPORARIES_INIT
+// CHECK-EMPTY:
+// CHECK-NEXT:  #endif // GET_GLOBALISEL_TEMPORARIES_INIT
 
 // CHECK-LABEL: // LLT Objects.
 // CHECK-NEXT:  enum {

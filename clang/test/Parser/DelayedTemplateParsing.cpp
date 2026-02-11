@@ -43,10 +43,10 @@ void undeclared()
 
 }
 
-template <class T> void foo5() {} //expected-note {{previous definition is here}} 
+template <class T> void foo5() {} //expected-note {{previous definition is here}}
 template <class T> void foo5() {} // expected-error {{redefinition of 'foo5'}}
 
-              
+
 
 
 namespace PR11931 {
@@ -195,3 +195,12 @@ template <typename> struct PR38460_2 {
   }
 };
 template struct PR38460_2<int>;
+
+namespace LateParsedAttrs {
+  template <class>
+  void f(int a) __attribute__((__diagnose_if__(a > 0, "foo", "error"))) {}
+  // expected-note@-1 {{from 'diagnose_if' attribute on 'f<int>'}}
+  void g() {
+    f<int>(1); // expected-error {{foo}}
+  }
+} // namespace LateParsedAttrs

@@ -14,167 +14,16 @@
 #ifndef LLVM_LIBC_SRC_STRING_STRING_UTILS_H
 #define LLVM_LIBC_SRC_STRING_STRING_UTILS_H
 
-#include "hdr/limits_macros.h"
-#include "hdr/stdint_proxy.h" // uintptr_t
 #include "hdr/types/size_t.h"
 #include "src/__support/CPP/bitset.h"
-#include "src/__support/CPP/type_traits.h" // cpp::is_same_v
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
-
-#if defined(LIBC_COPT_STRING_UNSAFE_WIDE_READ)
-#if defined(LIBC_TARGET_ARCH_IS_X86)
-#include "src/string/memory_utils/x86_64/inline_strlen.h"
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) && defined(__ARM_NEON)
-#include "src/string/memory_utils/aarch64/inline_strlen.h"
-#else
-namespace string_length_impl = LIBC_NAMESPACE::wide_read;
-#endif
-#endif
+#include "src/string/memory_utils/inline_memcpy.h"
+#include "src/string/string_length.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
-
-template <typename Word> LIBC_INLINE constexpr Word repeat_byte(Word byte) {
-  static_assert(CHAR_BIT == 8, "repeat_byte assumes a byte is 8 bits.");
-  constexpr size_t BITS_IN_BYTE = CHAR_BIT;
-  constexpr size_t BYTE_MASK = 0xff;
-  Word result = 0;
-  byte = byte & BYTE_MASK;
-  for (size_t i = 0; i < sizeof(Word); ++i)
-    result = (result << BITS_IN_BYTE) | byte;
-  return result;
-}
-
-// The goal of this function is to take in a block of arbitrary size and return
-// if it has any bytes equal to zero without branching. This is done by
-// transforming the block such that zero bytes become non-zero and non-zero
-// bytes become zero.
-// The first transformation relies on the properties of carrying in arithmetic
-// subtraction. Specifically, if 0x01 is subtracted from a byte that is 0x00,
-// then the result for that byte must be equal to 0xff (or 0xfe if the next byte
-// needs a carry as well).
-// The next transformation is a simple mask. All zero bytes will have the high
-// bit set after the subtraction, so each byte is masked with 0x80. This narrows
-// the set of bytes that result in a non-zero value to only zero bytes and bytes
-// with the high bit and any other bit set.
-// The final transformation masks the result of the previous transformations
-// with the inverse of the original byte. This means that any byte that had the
-// high bit set will no longer have it set, narrowing the list of bytes which
-// result in non-zero values to just the zero byte.
-template <typename Word> LIBC_INLINE constexpr bool has_zeroes(Word block) {
-  constexpr unsigned int LOW_BITS = repeat_byte<Word>(0x01);
-  constexpr Word HIGH_BITS = repeat_byte<Word>(0x80);
-  Word subtracted = block - LOW_BITS;
-  Word inverted = ~block;
-  return (subtracted & inverted & HIGH_BITS) != 0;
-}
-
-template <typename Word>
-LIBC_INLINE size_t string_length_wide_read(const char *src) {
-  const char *char_ptr = src;
-  // Step 1: read 1 byte at a time to align to block size
-  for (; reinterpret_cast<uintptr_t>(char_ptr) % sizeof(Word) != 0;
-       ++char_ptr) {
-    if (*char_ptr == '\0')
-      return static_cast<size_t>(char_ptr - src);
-  }
-  // Step 2: read blocks
-  for (const Word *block_ptr = reinterpret_cast<const Word *>(char_ptr);
-       !has_zeroes<Word>(*block_ptr); ++block_ptr) {
-    char_ptr = reinterpret_cast<const char *>(block_ptr);
-  }
-  // Step 3: find the zero in the block
-  for (; *char_ptr != '\0'; ++char_ptr) {
-    ;
-  }
-  return static_cast<size_t>(char_ptr - src);
-}
-
-namespace wide_read {
-LIBC_INLINE size_t string_length(const char *src) {
-  // Unsigned int is the default size for most processors, and on x86-64 it
-  // performs better than larger sizes when the src pointer can't be assumed to
-  // be aligned to a word boundary, so it's the size we use for reading the
-  // string a block at a time.
-  return string_length_wide_read<unsigned int>(src);
-}
-
-} // namespace wide_read
-
-// Returns the length of a string, denoted by the first occurrence
-// of a null terminator.
-template <typename T> LIBC_INLINE size_t string_length(const T *src) {
-#ifdef LIBC_COPT_STRING_UNSAFE_WIDE_READ
-  if constexpr (cpp::is_same_v<T, char>)
-    return string_length_impl::string_length(src);
-#endif
-  size_t length;
-  for (length = 0; *src; ++src, ++length)
-    ;
-  return length;
-}
-
-template <typename Word>
-[[gnu::no_sanitize_address]] LIBC_INLINE void *
-find_first_character_wide_read(const unsigned char *src, unsigned char ch,
-                               size_t n) {
-  const unsigned char *char_ptr = src;
-  size_t cur = 0;
-
-  // Step 1: read 1 byte at a time to align to block size
-  for (; reinterpret_cast<uintptr_t>(char_ptr) % sizeof(Word) != 0 && cur < n;
-       ++char_ptr, ++cur) {
-    if (*char_ptr == ch)
-      return const_cast<unsigned char *>(char_ptr);
-  }
-
-  const Word ch_mask = repeat_byte<Word>(ch);
-
-  // Step 2: read blocks
-  for (const Word *block_ptr = reinterpret_cast<const Word *>(char_ptr);
-       !has_zeroes<Word>((*block_ptr) ^ ch_mask) && cur < n;
-       ++block_ptr, cur += sizeof(Word)) {
-    char_ptr = reinterpret_cast<const unsigned char *>(block_ptr);
-  }
-
-  // Step 3: find the match in the block
-  for (; *char_ptr != ch && cur < n; ++char_ptr, ++cur) {
-    ;
-  }
-
-  if (*char_ptr != ch || cur >= n)
-    return static_cast<void *>(nullptr);
-
-  return const_cast<unsigned char *>(char_ptr);
-}
-
-LIBC_INLINE void *find_first_character_byte_read(const unsigned char *src,
-                                                 unsigned char ch, size_t n) {
-  for (; n && *src != ch; --n, ++src)
-    ;
-  return n ? const_cast<unsigned char *>(src) : nullptr;
-}
-
-// Returns the first occurrence of 'ch' within the first 'n' characters of
-// 'src'. If 'ch' is not found, returns nullptr.
-LIBC_INLINE void *find_first_character(const unsigned char *src,
-                                       unsigned char ch, size_t max_strlen) {
-#ifdef LIBC_COPT_STRING_UNSAFE_WIDE_READ
-  // If the maximum size of the string is small, the overhead of aligning to a
-  // word boundary and generating a bitmask of the appropriate size may be
-  // greater than the gains from reading larger chunks. Based on some testing,
-  // the crossover point between when it's faster to just read bytewise and read
-  // blocks is somewhere between 16 and 32, so 4 times the size of the block
-  // should be in that range.
-  // Unsigned int is used for the same reason as in strlen.
-  using BlockType = unsigned int;
-  if (max_strlen > (sizeof(BlockType) * 4)) {
-    return find_first_character_wide_read<BlockType>(src, ch, max_strlen);
-  }
-#endif
-  return find_first_character_byte_read(src, ch, max_strlen);
-}
 
 // Returns the maximum length span that contains only characters not found in
 // 'segment'. If no characters are found, returns the length of 'src'.
@@ -210,28 +59,28 @@ LIBC_INLINE char *string_token(char *__restrict src,
   static_assert(CHAR_BIT == 8, "bitset of 256 assumes char is 8 bits");
   cpp::bitset<256> delims;
   for (; *delimiter_string != '\0'; ++delimiter_string)
-    delims.set(static_cast<size_t>(*delimiter_string));
+    delims.set(*reinterpret_cast<const unsigned char *>(delimiter_string));
 
-  char *tok_start = src;
+  unsigned char *tok_start = reinterpret_cast<unsigned char *>(src);
   if constexpr (SkipDelim)
-    while (*tok_start != '\0' && delims.test(static_cast<size_t>(*tok_start)))
+    while (*tok_start != '\0' && delims.test(*tok_start))
       ++tok_start;
   if (*tok_start == '\0' && SkipDelim) {
     *context = nullptr;
     return nullptr;
   }
 
-  char *tok_end = tok_start;
-  while (*tok_end != '\0' && !delims.test(static_cast<size_t>(*tok_end)))
+  unsigned char *tok_end = tok_start;
+  while (*tok_end != '\0' && !delims.test(*tok_end))
     ++tok_end;
 
   if (*tok_end == '\0') {
     *context = nullptr;
   } else {
     *tok_end = '\0';
-    *context = tok_end + 1;
+    *context = reinterpret_cast<char *>(tok_end + 1);
   }
-  return tok_start;
+  return reinterpret_cast<char *>(tok_start);
 }
 
 LIBC_INLINE size_t strlcpy(char *__restrict dst, const char *__restrict src,
@@ -240,7 +89,7 @@ LIBC_INLINE size_t strlcpy(char *__restrict dst, const char *__restrict src,
   if (!size)
     return len;
   size_t n = len < size - 1 ? len : size - 1;
-  __builtin_memcpy(dst, src, n);
+  inline_memcpy(dst, src, n);
   dst[n] = '\0';
   return len;
 }
@@ -266,6 +115,13 @@ LIBC_INLINE constexpr static char *strrchr_implementation(const char *src,
       return last_occurrence;
     ++src;
   }
+}
+
+// Returns the first occurrence of 'ch' within the first 'n' characters of
+// 'src'. If 'ch' is not found, returns nullptr.
+LIBC_INLINE void *find_first_character(const unsigned char *src,
+                                       unsigned char ch, size_t max_strlen) {
+  return find_first_character_impl(src, ch, max_strlen);
 }
 
 } // namespace internal

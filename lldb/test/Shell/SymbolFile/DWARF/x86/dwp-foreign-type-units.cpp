@@ -16,9 +16,9 @@
 // type unit comes from by looking at the DW_AT_dwo_name attribute in the
 // DW_TAG_type_unit.
 
-// RUN: %clang -target x86_64-pc-linux -gdwarf-5 -gsplit-dwarf \
+// RUN: %clangxx -target x86_64-pc-linux -gdwarf-5 -gsplit-dwarf \
 // RUN:   -fdebug-types-section -gpubnames -c %s -o %t.main.o
-// RUN: %clang -target x86_64-pc-linux -gdwarf-5 -gsplit-dwarf -DVARIANT \
+// RUN: %clangxx -target x86_64-pc-linux -gdwarf-5 -gsplit-dwarf -DVARIANT \
 // RUN:   -fdebug-types-section -gpubnames -c %s -o %t.foo.o
 // RUN: ld.lld %t.main.o %t.foo.o -o %t
 

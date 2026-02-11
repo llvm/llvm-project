@@ -36,7 +36,6 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -171,6 +170,134 @@ struct GPUSubgroupSizeOpToROCDL : ConvertOpToLLVMPattern<gpu::SubgroupSizeOp> {
   const amdgpu::Chipset chipset;
 };
 
+struct GPUSubgroupIdOpToROCDL : ConvertOpToLLVMPattern<gpu::SubgroupIdOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  GPUSubgroupIdOpToROCDL(const LLVMTypeConverter &converter,
+                         amdgpu::Chipset chipset)
+      : ConvertOpToLLVMPattern<gpu::SubgroupIdOp>(converter), chipset(chipset) {
+  }
+
+  LogicalResult
+  matchAndRewrite(gpu::SubgroupIdOp op, gpu::SubgroupIdOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    auto int32Type = rewriter.getI32Type();
+
+    Value subgroupId;
+    if (chipset.majorVersion >= 12) {
+      // For gfx12+, use the hardware wave.id register directly.
+      LLVM::ConstantRangeAttr bounds;
+      if (auto upperBoundAttr = op.getUpperBoundAttr())
+        bounds = rewriter.getAttr<LLVM::ConstantRangeAttr>(
+            /*bitWidth=*/32, /*lower=*/0,
+            /*upper=*/upperBoundAttr.getInt());
+      subgroupId = ROCDL::WaveId::create(rewriter, loc, int32Type, bounds);
+    } else {
+      // For older architectures, compute:
+      // subgroup_id = linearized_thread_id / subgroup_size
+      // where linearized_thread_id = tid.x + dim.x * (tid.y + dim.y * tid.z)
+      Value tidX = ROCDL::ThreadIdXOp::create(rewriter, loc, int32Type);
+      Value tidY = ROCDL::ThreadIdYOp::create(rewriter, loc, int32Type);
+      Value tidZ = ROCDL::ThreadIdZOp::create(rewriter, loc, int32Type);
+      Value dimX = ROCDL::BlockDimXOp::create(rewriter, loc, int32Type);
+      Value dimY = ROCDL::BlockDimYOp::create(rewriter, loc, int32Type);
+
+      // linearized = tid.x + dim.x * (tid.y + dim.y * tid.z)
+      // Thread IDs and dimensions are non-negative and small, so use nuw+nsw.
+      auto flags =
+          LLVM::IntegerOverflowFlags::nsw | LLVM::IntegerOverflowFlags::nuw;
+      Value dimYxTidZ =
+          LLVM::MulOp::create(rewriter, loc, int32Type, dimY, tidZ, flags);
+      Value tidYPlusDimYxTidZ =
+          LLVM::AddOp::create(rewriter, loc, int32Type, tidY, dimYxTidZ, flags);
+      Value dimXxInner = LLVM::MulOp::create(rewriter, loc, int32Type, dimX,
+                                             tidYPlusDimYxTidZ, flags);
+      Value linearized = LLVM::AddOp::create(rewriter, loc, int32Type, tidX,
+                                             dimXxInner, flags);
+
+      Value subgroupSize =
+          ROCDL::WavefrontSizeOp::create(rewriter, loc, int32Type);
+      subgroupId = LLVM::UDivOp::create(rewriter, loc, int32Type, linearized,
+                                        subgroupSize);
+    }
+
+    subgroupId =
+        truncOrExtToLLVMType(rewriter, loc, subgroupId, *getTypeConverter());
+    rewriter.replaceOp(op, subgroupId);
+    return success();
+  }
+
+  const amdgpu::Chipset chipset;
+};
+
+static bool isSupportedReadLaneType(Type type) {
+  // https://llvm.org/docs/AMDGPUUsage.html#llvm-ir-intrinsics
+  if (isa<Float16Type, BFloat16Type, Float32Type, Float64Type,
+          LLVM::LLVMPointerType>(type))
+    return true;
+
+  if (auto intType = dyn_cast<IntegerType>(type))
+    return llvm::is_contained({16, 32, 64},
+                              static_cast<int>(intType.getWidth()));
+
+  if (auto vecType = dyn_cast<VectorType>(type)) {
+    Type elementType = vecType.getElementType();
+    if (elementType.isInteger(32))
+      return true;
+
+    if (vecType.getNumElements() == 2 &&
+        (isa<Float16Type, BFloat16Type>(elementType) ||
+         elementType.isInteger(16)))
+      return true;
+  }
+
+  return false;
+}
+
+struct GPUSubgroupBroadcastOpToROCDL
+    : public ConvertOpToLLVMPattern<gpu::SubgroupBroadcastOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::SubgroupBroadcastOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Value src = adaptor.getSrc();
+    if (isSupportedReadLaneType(src.getType())) {
+      Value result = createReadlaneOp(op, adaptor, rewriter, src);
+      rewriter.replaceOp(op, result);
+      return success();
+    }
+
+    Type i32 = rewriter.getI32Type();
+    Location loc = op.getLoc();
+    SmallVector<Value> decomposed =
+        LLVM::decomposeValue(rewriter, loc, src, i32);
+
+    SmallVector<Value> results;
+    results.reserve(decomposed.size());
+    for (Value v : decomposed)
+      results.emplace_back(createReadlaneOp(op, adaptor, rewriter, v));
+
+    Value result = LLVM::composeValue(rewriter, loc, results, src.getType());
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+
+private:
+  static Value createReadlaneOp(gpu::SubgroupBroadcastOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter &rewriter,
+                                Value src) {
+    if (adaptor.getBroadcastType() == gpu::BroadcastType::specific_lane) {
+      return ROCDL::ReadlaneOp::create(rewriter, op.getLoc(), src.getType(),
+                                       src, adaptor.getLane());
+    } else { // first_active_lane
+      return ROCDL::ReadfirstlaneOp::create(rewriter, op.getLoc(),
+                                            src.getType(), src);
+    }
+  }
+};
+
 struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   using ConvertOpToLLVMPattern<gpu::ShuffleOp>::ConvertOpToLLVMPattern;
 
@@ -247,6 +374,84 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   }
 };
 
+struct GPUBarrierOpLowering final : ConvertOpToLLVMPattern<gpu::BarrierOp> {
+  GPUBarrierOpLowering(const LLVMTypeConverter &converter,
+                       amdgpu::Chipset chipset)
+      : ConvertOpToLLVMPattern<gpu::BarrierOp>(converter), chipset(chipset) {}
+
+  amdgpu::Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(gpu::BarrierOp op, gpu::BarrierOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+
+    // Analyze the address_spaces attribute to determine fence behavior.
+    bool fenceGlobal = false;
+    bool fenceLDS = false;
+    std::optional<ArrayAttr> addrSpacesToFence = op.getAddressSpaces();
+
+    if (addrSpacesToFence) {
+      for (auto spaceAttr :
+           addrSpacesToFence->getAsRange<gpu::AddressSpaceAttr>()) {
+        switch (spaceAttr.getValue()) {
+        case gpu::AddressSpace::Global:
+          fenceGlobal = true;
+          break;
+        case gpu::AddressSpace::Workgroup:
+          fenceLDS = true;
+          break;
+        case gpu::AddressSpace::Private:
+          break;
+        }
+      }
+    } else {
+      // Default semantics match __syncthreads() and fence both global and LDS.
+      fenceGlobal = true;
+      fenceLDS = true;
+    }
+
+    Attribute mmra;
+    if (fenceLDS && !fenceGlobal) {
+      mmra =
+          rewriter.getAttr<LLVM::MMRATagAttr>("amdgpu-synchronize-as", "local");
+    } else if (fenceGlobal && !fenceLDS) {
+      mmra = rewriter.getAttr<LLVM::MMRATagAttr>("amdgpu-synchronize-as",
+                                                 "global");
+    }
+
+    constexpr llvm::StringLiteral scope = "workgroup";
+
+    bool emitFences = fenceGlobal || fenceLDS;
+    // Emit release fence if needed.
+    if (emitFences) {
+      auto relFence = LLVM::FenceOp::create(
+          rewriter, loc, LLVM::AtomicOrdering::release, scope);
+      if (mmra)
+        relFence->setDiscardableAttr(LLVM::LLVMDialect::getMmraAttrName(),
+                                     mmra);
+    }
+
+    if (chipset.majorVersion < 12) {
+      ROCDL::SBarrierOp::create(rewriter, loc);
+    } else {
+      ROCDL::BarrierSignalOp::create(rewriter, loc, -1);
+      ROCDL::BarrierWaitOp::create(rewriter, loc, -1);
+    }
+
+    if (emitFences) {
+      auto acqFence = LLVM::FenceOp::create(
+          rewriter, loc, LLVM::AtomicOrdering::acquire, scope);
+      if (mmra)
+        acqFence->setDiscardableAttr(LLVM::LLVMDialect::getMmraAttrName(),
+                                     mmra);
+    }
+
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 /// Import the GPU Ops to ROCDL Patterns.
 #include "GPUToROCDL.cpp.inc"
 
@@ -257,19 +462,7 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
 // code.
 struct LowerGpuOpsToROCDLOpsPass final
     : public impl::ConvertGpuOpsToROCDLOpsBase<LowerGpuOpsToROCDLOpsPass> {
-  LowerGpuOpsToROCDLOpsPass() = default;
-  LowerGpuOpsToROCDLOpsPass(const std::string &chipset, unsigned indexBitwidth,
-                            bool useBarePtrCallConv,
-                            gpu::amd::Runtime runtime) {
-    if (this->chipset.getNumOccurrences() == 0)
-      this->chipset = chipset;
-    if (this->indexBitwidth.getNumOccurrences() == 0)
-      this->indexBitwidth = indexBitwidth;
-    if (this->useBarePtrCallConv.getNumOccurrences() == 0)
-      this->useBarePtrCallConv = useBarePtrCallConv;
-    if (this->runtime.getNumOccurrences() == 0)
-      this->runtime = runtime;
-  }
+  using Base::Base;
 
   void getDependentDialects(DialectRegistry &registry) const override {
     Base::getDependentDialects(registry);
@@ -327,24 +520,12 @@ struct LowerGpuOpsToROCDLOpsPass final
     {
       RewritePatternSet patterns(ctx);
       populateGpuRewritePatterns(patterns);
-      populateGpuPromoteShuffleToAMDGPUPatterns(patterns);
+      populateGpuPromoteShuffleToAMDGPUPatterns(patterns, maybeChipset);
       (void)applyPatternsGreedily(m, std::move(patterns));
     }
 
     LLVMTypeConverter converter(ctx, options);
-    populateGpuMemorySpaceAttributeConversions(
-        converter, [](gpu::AddressSpace space) {
-          switch (space) {
-          case gpu::AddressSpace::Global:
-            return 1;
-          case gpu::AddressSpace::Workgroup:
-            return 3;
-          case gpu::AddressSpace::Private:
-            return 5;
-          }
-          llvm_unreachable("unknown address space enum value");
-          return 0;
-        });
+    amdgpu::populateCommonGPUTypeAndAttributeConversions(converter);
 
     RewritePatternSet llvmPatterns(ctx);
     LLVMConversionTarget target(getContext());
@@ -357,7 +538,7 @@ struct LowerGpuOpsToROCDLOpsPass final
       if (!allowedDialectsSet.empty() && !allowed)
         continue;
 
-      auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+      auto *iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
       if (!iface) {
         // Error out if dialect was explicily specified but doesn't implement
         // conversion interface.
@@ -453,7 +634,8 @@ void mlir::populateGpuToROCDLConversionPatterns(
           /*allocaAddrSpace=*/ROCDL::ROCDLDialect::kPrivateMemoryAddressSpace,
           /*workgroupAddrSpace=*/ROCDL::ROCDLDialect::kSharedMemoryAddressSpace,
           rocdlDialect->getKernelAttrHelper().getName(),
-          rocdlDialect->getReqdWorkGroupSizeAttrHelper().getName()});
+          rocdlDialect->getReqdWorkGroupSizeAttrHelper().getName(),
+          /*kernelClusterSizeAttributeName=*/{}});
   if (Runtime::HIP == runtime) {
     patterns.add<GPUPrintfOpToHIPLowering>(converter);
   } else if (Runtime::OpenCL == runtime) {
@@ -463,17 +645,10 @@ void mlir::populateGpuToROCDLConversionPatterns(
   // TODO: Add alignment for workgroup memory
   patterns.add<GPUDynamicSharedMemoryOpLowering>(converter);
 
-  patterns.add<GPUShuffleOpLowering, GPULaneIdOpToROCDL>(converter);
-  patterns.add<GPUSubgroupSizeOpToROCDL>(converter, chipset);
+  patterns.add<GPUShuffleOpLowering, GPULaneIdOpToROCDL,
+               GPUSubgroupBroadcastOpToROCDL>(converter);
+  patterns.add<GPUSubgroupIdOpToROCDL, GPUSubgroupSizeOpToROCDL,
+               GPUBarrierOpLowering>(converter, chipset);
 
-  populateMathToROCDLConversionPatterns(converter, patterns);
-}
-
-std::unique_ptr<OperationPass<gpu::GPUModuleOp>>
-mlir::createLowerGpuOpsToROCDLOpsPass(const std::string &chipset,
-                                      unsigned indexBitwidth,
-                                      bool useBarePtrCallConv,
-                                      gpu::amd::Runtime runtime) {
-  return std::make_unique<LowerGpuOpsToROCDLOpsPass>(
-      chipset, indexBitwidth, useBarePtrCallConv, runtime);
+  populateMathToROCDLConversionPatterns(converter, patterns, chipset);
 }

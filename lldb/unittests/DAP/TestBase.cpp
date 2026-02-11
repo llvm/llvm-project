@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestBase.h"
+#include "DAP.h"
 #include "DAPLog.h"
+#include "Handler/RequestHandler.h"
+#include "Handler/ResponseHandler.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBStructuredData.h"
@@ -19,7 +22,6 @@
 #include "gtest/gtest.h"
 #include <cstdio>
 #include <memory>
-#include <system_error>
 
 using namespace llvm;
 using namespace lldb;
@@ -32,40 +34,36 @@ using lldb_private::FileSystem;
 using lldb_private::MainLoop;
 using lldb_private::Pipe;
 
-Expected<MainLoop::ReadHandleUP>
-TestTransport::RegisterMessageHandler(MainLoop &loop, MessageHandler &handler) {
-  Expected<lldb::FileUP> dummy_file = FileSystem::Instance().Open(
-      FileSpec(FileSystem::DEV_NULL), File::eOpenOptionReadWrite);
-  if (!dummy_file)
-    return dummy_file.takeError();
-  m_dummy_file = std::move(*dummy_file);
-  lldb_private::Status status;
-  auto handle = loop.RegisterReadObject(
-      m_dummy_file, [](lldb_private::MainLoopBase &) {}, status);
-  if (status.Fail())
-    return status.takeError();
-  return handle;
-}
+void TransportBase::SetUp() {
+  std::tie(to_client, to_server) = TestDAPTransport::createPair(loop);
 
-void DAPTestBase::SetUp() {
-  TransportBase::SetUp();
-  std::error_code EC;
-  log = std::make_unique<Log>("-", EC);
+  log = std::make_unique<Log>(llvm::outs(), log_mutex);
   dap = std::make_unique<DAP>(
-      /*log=*/log.get(),
+      /*log=*/*log,
       /*default_repl_mode=*/ReplMode::Auto,
       /*pre_init_commands=*/std::vector<std::string>(),
+      /*no_lldbinit=*/false,
       /*client_name=*/"test_client",
-      /*transport=*/*transport, /*loop=*/loop);
+      /*transport=*/*to_client, /*loop=*/loop);
+
+  EXPECT_THAT_ERROR(to_server->RegisterMessageHandler(*dap), Succeeded());
+  EXPECT_THAT_ERROR(to_client->RegisterMessageHandler(client), Succeeded());
 }
 
+void TransportBase::Run() {
+  bool addition_succeeded = loop.AddPendingCallback(
+      [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); });
+  EXPECT_TRUE(addition_succeeded);
+  EXPECT_THAT_ERROR(loop.Run().takeError(), llvm::Succeeded());
+}
+
+void DAPTestBase::SetUp() { TransportBase::SetUp(); }
+
 void DAPTestBase::TearDown() {
-  if (core) {
+  if (core)
     ASSERT_THAT_ERROR(core->discard(), Succeeded());
-  }
-  if (binary) {
+  if (binary)
     ASSERT_THAT_ERROR(binary->discard(), Succeeded());
-  }
 }
 
 void DAPTestBase::SetUpTestSuite() {

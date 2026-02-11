@@ -221,6 +221,13 @@ test.format_optional_default_attrs "foo" @foo case10
 // CHECK-NOT: case5
 test.format_optional_default_attrs "default" @default case5
 
+// CHECK: test.format_optional_default_enum_attr case10
+test.format_optional_default_enum_attr case10
+
+// CHECK: test.format_optional_default_enum_attr
+// CHECK-NOT: case5
+test.format_optional_default_enum_attr case5
+
 //===----------------------------------------------------------------------===//
 // Format optional operands and results
 //===----------------------------------------------------------------------===//
@@ -480,6 +487,12 @@ test.format_infer_variadic_type_from_non_variadic %i64, %i64 : i64
 
 // CHECK: test.format_types_match_context %[[I64]] : i64
 %ignored_res6 = test.format_types_match_context %i64 : i64
+
+// CHECK: test.format_types_match_optional(%[[I64]] : i64)
+%ignored_res7 = test.format_types_match_optional(%i64 : i64)
+
+// CHECK: test.format_types_match_optional
+test.format_types_match_optional
 
 //===----------------------------------------------------------------------===//
 // InferTypeOpInterface type inference

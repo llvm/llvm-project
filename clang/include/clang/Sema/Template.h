@@ -188,7 +188,9 @@ enum class TemplateSubstitutionKind : char {
     bool isAnyArgInstantiationDependent() const {
       for (ArgumentListLevel ListLevel : TemplateArgumentLists)
         for (const TemplateArgument &TA : ListLevel.Args)
-          if (TA.isInstantiationDependent())
+          // There might be null template arguments representing unused template
+          // parameter mappings in an MLTAL during concept checking.
+          if (!TA.isNull() && TA.isInstantiationDependent())
             return true;
       return false;
     }
@@ -205,8 +207,8 @@ enum class TemplateSubstitutionKind : char {
 
     /// Add a new outmost level to the multi-level template argument
     /// list.
-    /// A 'Final' substitution means that Subst* nodes won't be built
-    /// for the replacements.
+    /// A 'Final' substitution means that these Args don't need to be
+    /// resugared later.
     void addOuterTemplateArguments(Decl *AssociatedDecl, ArgList Args,
                                    bool Final) {
       assert(!NumRetainedOuterLevels &&
@@ -234,21 +236,25 @@ enum class TemplateSubstitutionKind : char {
     /// Replaces the current 'innermost' level with the provided argument list.
     /// This is useful for type deduction cases where we need to get the entire
     /// list from the AST, but then add the deduced innermost list.
-    void replaceInnermostTemplateArguments(Decl *AssociatedDecl, ArgList Args) {
+    void replaceInnermostTemplateArguments(Decl *AssociatedDecl, ArgList Args,
+                                           bool Final = false) {
       assert((!TemplateArgumentLists.empty() || NumRetainedOuterLevels) &&
              "Replacing in an empty list?");
 
       if (!TemplateArgumentLists.empty()) {
-        assert((TemplateArgumentLists[0].AssociatedDeclAndFinal.getPointer() ||
-                TemplateArgumentLists[0].AssociatedDeclAndFinal.getPointer() ==
-                    AssociatedDecl) &&
-               "Trying to change incorrect declaration?");
         TemplateArgumentLists[0].Args = Args;
-      } else {
-        --NumRetainedOuterLevels;
-        TemplateArgumentLists.push_back(
-            {{AssociatedDecl, /*Final=*/false}, Args});
+        return;
       }
+      --NumRetainedOuterLevels;
+      TemplateArgumentLists.push_back(
+          {{AssociatedDecl, /*Final=*/Final}, Args});
+    }
+
+    void replaceOutermostTemplateArguments(Decl *AssociatedDecl, ArgList Args) {
+      assert((!TemplateArgumentLists.empty()) && "Replacing in an empty list?");
+      TemplateArgumentLists.back().AssociatedDeclAndFinal.setPointer(
+          AssociatedDecl);
+      TemplateArgumentLists.back().Args = Args;
     }
 
     /// Add an outermost level that we are not substituting. We have no
@@ -723,9 +729,8 @@ enum class TemplateSubstitutionKind : char {
     bool SubstQualifier(const TagDecl *OldDecl,
                         TagDecl *NewDecl);
 
-    Decl *VisitVarTemplateSpecializationDecl(
+    VarTemplateSpecializationDecl *VisitVarTemplateSpecializationDecl(
         VarTemplateDecl *VarTemplate, VarDecl *FromVar,
-        const TemplateArgumentListInfo &TemplateArgsInfo,
         ArrayRef<TemplateArgument> Converted,
         VarTemplateSpecializationDecl *PrevDecl = nullptr);
 

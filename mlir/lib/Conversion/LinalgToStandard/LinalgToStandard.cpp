@@ -144,7 +144,7 @@ void ConvertLinalgToStandardPass::runOnOperation() {
   target.addLegalDialect<affine::AffineDialect, arith::ArithDialect,
                          func::FuncDialect, memref::MemRefDialect,
                          scf::SCFDialect>();
-  target.addLegalOp<ModuleOp, func::FuncOp, func::ReturnOp>();
+  target.addLegalOp<ModuleOp>();
   RewritePatternSet patterns(&getContext());
   populateLinalgToStandardConversionPatterns(patterns);
   if (failed(applyFullConversion(module, target, std::move(patterns))))

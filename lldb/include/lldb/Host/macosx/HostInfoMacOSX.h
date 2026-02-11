@@ -45,6 +45,11 @@ public:
   static SharedCacheImageInfo
   GetSharedCacheImageInfo(llvm::StringRef image_name);
 
+  static SharedCacheImageInfo
+  GetSharedCacheImageInfo(llvm::StringRef image_name, const UUID &uuid);
+
+  static bool SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid);
+
 protected:
   static bool ComputeSupportExeDirectory(FileSpec &file_spec);
   static void ComputeHostArchitectureSupport(ArchSpec &arch_32,
@@ -56,6 +61,7 @@ protected:
   static std::string FindComponentInPath(llvm::StringRef path,
                                          llvm::StringRef component);
 };
-}
+
+} // namespace lldb_private
 
 #endif

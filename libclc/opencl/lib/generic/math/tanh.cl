@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_tanh.h>
-#include <clc/opencl/math/tanh.h>
 
 #define __CLC_FUNCTION tanh
 #define __CLC_BODY <clc/shared/unary_def.inc>

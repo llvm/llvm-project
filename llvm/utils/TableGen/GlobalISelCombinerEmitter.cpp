@@ -48,6 +48,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringMatcher.h"
@@ -60,23 +61,22 @@ using namespace llvm::gi;
 
 #define DEBUG_TYPE "gicombiner-emitter"
 
-namespace {
-cl::OptionCategory
+static cl::OptionCategory
     GICombinerEmitterCat("Options for -gen-global-isel-combiner");
-cl::opt<bool> StopAfterParse(
+static cl::opt<bool> StopAfterParse(
     "gicombiner-stop-after-parse",
     cl::desc("Stop processing after parsing rules and dump state"),
     cl::cat(GICombinerEmitterCat));
-cl::list<std::string>
+static cl::list<std::string>
     SelectedCombiners("combiners", cl::desc("Emit the specified combiners"),
                       cl::cat(GICombinerEmitterCat), cl::CommaSeparated);
-cl::opt<bool> DebugCXXPreds(
+static cl::opt<bool> DebugCXXPreds(
     "gicombiner-debug-cxxpreds",
     cl::desc("Add Contextual/Debug comments to all C++ predicates"),
     cl::cat(GICombinerEmitterCat));
-cl::opt<bool> DebugTypeInfer("gicombiner-debug-typeinfer",
-                             cl::desc("Print type inference debug logs"),
-                             cl::cat(GICombinerEmitterCat));
+static cl::opt<bool> DebugTypeInfer("gicombiner-debug-typeinfer",
+                                    cl::desc("Print type inference debug logs"),
+                                    cl::cat(GICombinerEmitterCat));
 
 constexpr StringLiteral CXXCustomActionPrefix = "GICXXCustomAction_";
 constexpr StringLiteral CXXPredPrefix = "GICXXPred_MI_Predicate_";
@@ -84,20 +84,20 @@ constexpr StringLiteral MatchDataClassName = "GIDefMatchData";
 
 //===- CodeExpansions Helpers  --------------------------------------------===//
 
-void declareInstExpansion(CodeExpansions &CE, const InstructionMatcher &IM,
-                          StringRef Name) {
+static void declareInstExpansion(CodeExpansions &CE,
+                                 const InstructionMatcher &IM, StringRef Name) {
   CE.declare(Name, "State.MIs[" + to_string(IM.getInsnVarID()) + "]");
 }
 
-void declareInstExpansion(CodeExpansions &CE, const BuildMIAction &A,
-                          StringRef Name) {
+static void declareInstExpansion(CodeExpansions &CE, const BuildMIAction &A,
+                                 StringRef Name) {
   // Note: we use redeclare here because this may overwrite a matcher inst
   // expansion.
   CE.redeclare(Name, "OutMIs[" + to_string(A.getInsnID()) + "]");
 }
 
-void declareOperandExpansion(CodeExpansions &CE, const OperandMatcher &OM,
-                             StringRef Name) {
+static void declareOperandExpansion(CodeExpansions &CE,
+                                    const OperandMatcher &OM, StringRef Name) {
   if (OM.isVariadic()) {
     CE.declare(Name, "getRemainingOperands(*State.MIs[" +
                          to_string(OM.getInsnVarID()) + "], " +
@@ -108,33 +108,34 @@ void declareOperandExpansion(CodeExpansions &CE, const OperandMatcher &OM,
   }
 }
 
-void declareTempRegExpansion(CodeExpansions &CE, unsigned TempRegID,
-                             StringRef Name) {
+static void declareTempRegExpansion(CodeExpansions &CE, unsigned TempRegID,
+                                    StringRef Name) {
   CE.declare(Name, "State.TempRegisters[" + to_string(TempRegID) + "]");
 }
 
 //===- Misc. Helpers  -----------------------------------------------------===//
 
-template <typename Container> auto keys(Container &&C) {
+template <typename Container> static auto keys(Container &&C) {
   return map_range(C, [](auto &Entry) -> auto & { return Entry.first; });
 }
 
-template <typename Container> auto values(Container &&C) {
+template <typename Container> static auto values(Container &&C) {
   return map_range(C, [](auto &Entry) -> auto & { return Entry.second; });
 }
 
-std::string getIsEnabledPredicateEnumName(unsigned CombinerRuleID) {
+static std::string getIsEnabledPredicateEnumName(unsigned CombinerRuleID) {
   return "GICXXPred_Simple_IsRule" + to_string(CombinerRuleID) + "Enabled";
 }
 
 //===- MatchTable Helpers  ------------------------------------------------===//
 
-LLTCodeGen getLLTCodeGen(const PatternType &PT) {
+static LLTCodeGen getLLTCodeGen(const PatternType &PT) {
   return *MVTToLLT(getValueType(PT.getLLTRecord()));
 }
 
 //===- PrettyStackTrace Helpers  ------------------------------------------===//
 
+namespace {
 class PrettyStackTraceParse : public PrettyStackTraceEntry {
   const Record &Def;
 
@@ -277,6 +278,7 @@ private:
 
   const OperandTable &MatchOpTable;
 };
+} // namespace
 
 bool CombineRuleOperandTypeChecker::processMatchPattern(InstructionPattern &P) {
   MatchPats.push_back(&P);
@@ -1662,8 +1664,7 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
 
   const bool IsUsingCustomCXXAction = hasOnlyCXXApplyPatterns();
   for (const CodeGenInstruction *CGI : AOP.insts()) {
-    auto &M = addRuleMatcher(Alts, "wip_match_opcode '" +
-                                       CGI->TheDef->getName() + "'");
+    auto &M = addRuleMatcher(Alts, "wip_match_opcode '" + CGI->getName() + "'");
 
     InstructionMatcher &IM = M.addInstructionMatcher(AOP.getName());
     declareInstExpansion(CE, IM, AOP.getName());
@@ -2201,7 +2202,7 @@ bool CombineRuleBuilder::emitBuiltinApplyPattern(
 
 bool isLiteralImm(const InstructionPattern &P, unsigned OpIdx) {
   if (const auto *CGP = dyn_cast<CodeGenInstructionPattern>(&P)) {
-    StringRef InstName = CGP->getInst().TheDef->getName();
+    StringRef InstName = CGP->getInst().getName();
     return (InstName == "G_CONSTANT" || InstName == "G_FCONSTANT") &&
            OpIdx == 1;
   }
@@ -2441,12 +2442,13 @@ public:
   explicit GICombinerEmitter(const RecordKeeper &RK,
                              const CodeGenTarget &Target, StringRef Name,
                              const Record *Combiner);
-  ~GICombinerEmitter() {}
+  ~GICombinerEmitter() override = default;
 
   void run(raw_ostream &OS);
 };
 
 void GICombinerEmitter::emitRuleConfigImpl(raw_ostream &OS) {
+  IfDefGuardEmitter If(OS, "GET_GICOMBINER_TYPES");
   OS << "struct " << getRuleConfigClassName() << " {\n"
      << "  SparseBitVector<> DisabledRules;\n\n"
      << "  bool isRuleEnabled(unsigned RuleID) const;\n"
@@ -2795,18 +2797,16 @@ void GICombinerEmitter::run(raw_ostream &OS) {
     TypeObjects.push_back(LLT::scalar(1));
 
   // GET_GICOMBINER_DEPS, which pulls in extra dependencies.
-  OS << "#ifdef GET_GICOMBINER_DEPS\n"
-     << "#include \"llvm/ADT/SparseBitVector.h\"\n"
-     << "namespace llvm {\n"
-     << "extern cl::OptionCategory GICombinerOptionCategory;\n"
-     << "} // end namespace llvm\n"
-     << "#endif // ifdef GET_GICOMBINER_DEPS\n\n";
+  {
+    IfDefGuardEmitter If(OS, "GET_GICOMBINER_DEPS");
+    OS << "#include \"llvm/ADT/SparseBitVector.h\"\n";
+    NamespaceEmitter LlvmNS(OS, "llvm");
+    OS << "extern cl::OptionCategory GICombinerOptionCategory;\n";
+  }
 
   // GET_GICOMBINER_TYPES, which needs to be included before the declaration of
   // the class.
-  OS << "#ifdef GET_GICOMBINER_TYPES\n";
   emitRuleConfigImpl(OS);
-  OS << "#endif // ifdef GET_GICOMBINER_TYPES\n\n";
   emitPredicateBitset(OS, "GET_GICOMBINER_TYPES");
 
   // GET_GICOMBINER_CLASS_MEMBERS, which need to be included inside the class.
@@ -2822,8 +2822,6 @@ void GICombinerEmitter::run(raw_ostream &OS) {
   emitPredicatesInit(OS, "GET_GICOMBINER_CONSTRUCTOR_INITS");
   emitTemporariesInit(OS, MaxTemporaries, "GET_GICOMBINER_CONSTRUCTOR_INITS");
 }
-
-} // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
 
