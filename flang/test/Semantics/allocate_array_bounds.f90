@@ -31,13 +31,15 @@ program int_array_alloc_03
     !ERROR: Integer array used as upper bounds in ALLOCATE must be rank-1 but is rank-3
     allocate( test_array(7 : rank_3_array))
 
-    ! Test that any comma list is parsed as AllocateShapeSpecList and not rewritten, giving error messages expecting scalar integers
-    ! and same number of aruments as rank of test_array
+    ! Test that any comma list is parsed as AllocateShapeSpecList and not rewritten, 
+    ! giving error messages expecting same number of 
+    ! aruments as rank of test_array and scalar integers
     !ERROR: The number of shape specifications, when they appear, must match the rank of allocatable object
     !ERROR: Must be a scalar value, but is a rank-1 array
     !ERROR: Must be a scalar value, but is a rank-1 array
     !ERROR: Must be a scalar value, but is a rank-1 array
-    allocate( test_array([1,2] : [2,3], 3, [1,2,3], 5))
+    !ERROR: Must have INTEGER type, but is REAL(4)
+    allocate( test_array([1,2,3] : [2,3,4], 3, [1,2,3], 5.2))
     
   contains
     subroutine tmp02(unknown_size, test_ptr_01)
