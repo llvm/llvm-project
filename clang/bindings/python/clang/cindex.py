@@ -3839,8 +3839,6 @@ class TranslationUnit(ClangObject):
         2-tuple of SourceLocation or as a SourceRange. If both are defined,
         behavior is undefined.
         """
-        if locations is None and extent is None:
-            raise TypeError("get_tokens() requires at least one argument")
         if locations is not None:
             extent = SourceRange(start=locations[0], end=locations[1])
         if extent is None:
