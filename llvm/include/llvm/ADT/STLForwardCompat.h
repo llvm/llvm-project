@@ -159,13 +159,11 @@ invoke(FnT &&Fn, ArgsT &&...Args) { // NOLINT(readability-identifier-naming)
                     std::forward_as_tuple(std::forward<ArgsT>(Args)...));
 }
 
-/// Check if elements in a range \p R are sorted with respect to a comparator \p
-/// C. constexpr allows use in static_assert
+/// Check if elements in range \p First to \p Last are sorted with respect to a
+/// comparator \p C. constexpr allows use in static_assert
 /// TODO: Use std::is_sorted once upgraded to C++20 since that becomes constexpr
-template <typename R, typename Cmp = std::less<>>
-constexpr bool is_sorted_constexpr(R &&Range, Cmp C = Cmp{}) {
-  auto First = std::begin(Range);
-  auto Last = std::end(Range);
+template <typename It, typename Cmp = std::less<>>
+constexpr bool is_sorted_constexpr(It First, It Last, Cmp C = Cmp{}) {
   if (First == Last)
     return true;
   auto Prev = First;
