@@ -374,8 +374,6 @@ emitX86MaskedCompare(CIRGenBuilderTy &builder, unsigned cc, bool isSigned,
          "Unexpected number of arguments");
   unsigned numElts = cast<cir::VectorType>(ops[0].getType()).getSize();
   mlir::Value cmp;
-  cir::VectorType ty = cast<cir::VectorType>(ops[0].getType());
-  cir::IntType elementTy = cast<cir::IntType>(ty.getElementType());
   if (cc == 3) {
     cmp = builder.getNullValue(
         cir::VectorType::get(builder.getSIntNTy(1), numElts), loc);
