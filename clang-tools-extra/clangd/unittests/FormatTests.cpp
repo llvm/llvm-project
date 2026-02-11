@@ -315,6 +315,25 @@ vector<int> x = {1, 2, 3}^
 )cpp");
 }
 
+TEST(FormatIncremental, InsertBraces) {
+  format::FormatStyle Style =
+      format::getGoogleStyle(format::FormatStyle::LK_Cpp);
+  Style.InsertBraces = true;
+  expectAfterNewline(R"cpp(
+int main() {
+  while (true)
+^
+}
+)cpp",
+                     R"cpp(
+int main() {
+  while (true) {
+    
+  }^
+}
+)cpp",
+                     Style);
+}
 } // namespace
 } // namespace clangd
 } // namespace clang
