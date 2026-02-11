@@ -19,7 +19,7 @@ define <4 x float> @int_sin_4x(ptr %a) {
 ; CHECK-ARMPL-LABEL: @int_sin_4x(
 ; CHECK-ARMPL-NEXT:  entry:
 ; CHECK-ARMPL-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
-; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @armpl_vsinq_f32(<4 x float> [[TMP0]])
+; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @armpl_vsinq_f32(<4 x float> [[TMP0]])
 ; CHECK-ARMPL-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; NOACCELERATE-LABEL: @int_sin_4x(
@@ -250,7 +250,7 @@ define <4 x float> @exp_4x(ptr %a) {
 ; CHECK-ARMPL-LABEL: @exp_4x(
 ; CHECK-ARMPL-NEXT:  entry:
 ; CHECK-ARMPL-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
-; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @armpl_vexpq_f32(<4 x float> [[TMP0]])
+; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @armpl_vexpq_f32(<4 x float> [[TMP0]])
 ; CHECK-ARMPL-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; NOACCELERATE-LABEL: @exp_4x(
@@ -297,7 +297,7 @@ define <4 x float> @expm1_4x(ptr %a) {
 ; CHECK-ARMPL-LABEL: @expm1_4x(
 ; CHECK-ARMPL-NEXT:  entry:
 ; CHECK-ARMPL-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
-; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @armpl_vexpm1q_f32(<4 x float> [[TMP0]])
+; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @armpl_vexpm1q_f32(<4 x float> [[TMP0]])
 ; CHECK-ARMPL-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; NOACCELERATE-LABEL: @expm1_4x(
@@ -344,7 +344,7 @@ define <4 x float> @log_4x(ptr %a) {
 ; CHECK-ARMPL-LABEL: @log_4x(
 ; CHECK-ARMPL-NEXT:  entry:
 ; CHECK-ARMPL-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
-; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @armpl_vlogq_f32(<4 x float> [[TMP0]])
+; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @armpl_vlogq_f32(<4 x float> [[TMP0]])
 ; CHECK-ARMPL-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; NOACCELERATE-LABEL: @log_4x(
@@ -391,7 +391,7 @@ define <4 x float> @log1p_4x(ptr %a) {
 ; CHECK-ARMPL-LABEL: @log1p_4x(
 ; CHECK-ARMPL-NEXT:  entry:
 ; CHECK-ARMPL-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
-; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @armpl_vlog1pq_f32(<4 x float> [[TMP0]])
+; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @armpl_vlog1pq_f32(<4 x float> [[TMP0]])
 ; CHECK-ARMPL-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; NOACCELERATE-LABEL: @log1p_4x(
@@ -565,7 +565,7 @@ define <4 x float> @sin_4x(ptr %a) {
 ; CHECK-ARMPL-LABEL: @sin_4x(
 ; CHECK-ARMPL-NEXT:  entry:
 ; CHECK-ARMPL-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
-; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @armpl_vsinq_f32(<4 x float> [[TMP0]])
+; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @armpl_vsinq_f32(<4 x float> [[TMP0]])
 ; CHECK-ARMPL-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; NOACCELERATE-LABEL: @sin_4x(
@@ -612,7 +612,7 @@ define <4 x float> @cos_4x(ptr %a) {
 ; CHECK-ARMPL-LABEL: @cos_4x(
 ; CHECK-ARMPL-NEXT:  entry:
 ; CHECK-ARMPL-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
-; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @armpl_vcosq_f32(<4 x float> [[TMP0]])
+; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @armpl_vcosq_f32(<4 x float> [[TMP0]])
 ; CHECK-ARMPL-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; NOACCELERATE-LABEL: @cos_4x(
@@ -659,7 +659,7 @@ define <4 x float> @tan_4x(ptr %a) {
 ; CHECK-ARMPL-LABEL: @tan_4x(
 ; CHECK-ARMPL-NEXT:  entry:
 ; CHECK-ARMPL-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
-; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @armpl_vtanq_f32(<4 x float> [[TMP0]])
+; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @armpl_vtanq_f32(<4 x float> [[TMP0]])
 ; CHECK-ARMPL-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; NOACCELERATE-LABEL: @tan_4x(
@@ -706,7 +706,7 @@ define <4 x float> @asin_4x(ptr %a) {
 ; CHECK-ARMPL-LABEL: @asin_4x(
 ; CHECK-ARMPL-NEXT:  entry:
 ; CHECK-ARMPL-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
-; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @armpl_vasinq_f32(<4 x float> [[TMP0]])
+; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @armpl_vasinq_f32(<4 x float> [[TMP0]])
 ; CHECK-ARMPL-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; NOACCELERATE-LABEL: @asin_4x(
@@ -752,7 +752,7 @@ define <4 x float> @int_asin_4x(ptr %a) {
 ; CHECK-ARMPL-LABEL: @int_asin_4x(
 ; CHECK-ARMPL-NEXT:  entry:
 ; CHECK-ARMPL-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
-; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @armpl_vasinq_f32(<4 x float> [[TMP0]])
+; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @armpl_vasinq_f32(<4 x float> [[TMP0]])
 ; CHECK-ARMPL-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; NOACCELERATE-LABEL: @int_asin_4x(
@@ -799,7 +799,7 @@ define <4 x float> @acos_4x(ptr %a) {
 ; CHECK-ARMPL-LABEL: @acos_4x(
 ; CHECK-ARMPL-NEXT:  entry:
 ; CHECK-ARMPL-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
-; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @armpl_vacosq_f32(<4 x float> [[TMP0]])
+; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @armpl_vacosq_f32(<4 x float> [[TMP0]])
 ; CHECK-ARMPL-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; NOACCELERATE-LABEL: @acos_4x(
@@ -845,7 +845,7 @@ define <4 x float> @int_acos_4x(ptr %a) {
 ; CHECK-ARMPL-LABEL: @int_acos_4x(
 ; CHECK-ARMPL-NEXT:  entry:
 ; CHECK-ARMPL-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
-; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @armpl_vacosq_f32(<4 x float> [[TMP0]])
+; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @armpl_vacosq_f32(<4 x float> [[TMP0]])
 ; CHECK-ARMPL-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; NOACCELERATE-LABEL: @int_acos_4x(
@@ -892,7 +892,7 @@ define <4 x float> @atan_4x(ptr %a) {
 ; CHECK-ARMPL-LABEL: @atan_4x(
 ; CHECK-ARMPL-NEXT:  entry:
 ; CHECK-ARMPL-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
-; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @armpl_vatanq_f32(<4 x float> [[TMP0]])
+; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @armpl_vatanq_f32(<4 x float> [[TMP0]])
 ; CHECK-ARMPL-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; NOACCELERATE-LABEL: @atan_4x(
@@ -938,7 +938,7 @@ define <4 x float> @int_atan_4x(ptr %a) {
 ; CHECK-ARMPL-LABEL: @int_atan_4x(
 ; CHECK-ARMPL-NEXT:  entry:
 ; CHECK-ARMPL-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
-; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @armpl_vatanq_f32(<4 x float> [[TMP0]])
+; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @armpl_vatanq_f32(<4 x float> [[TMP0]])
 ; CHECK-ARMPL-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; NOACCELERATE-LABEL: @int_atan_4x(
@@ -987,7 +987,7 @@ define <4 x float> @atan2_4x(ptr %a, ptr %b) {
 ; CHECK-ARMPL-NEXT:  entry:
 ; CHECK-ARMPL-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
 ; CHECK-ARMPL-NEXT:    [[BB:%.*]] = load <4 x float>, ptr [[B:%.*]], align 16
-; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @armpl_vatan2q_f32(<4 x float> [[TMP0]], <4 x float> [[BB]])
+; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @armpl_vatan2q_f32(<4 x float> [[TMP0]], <4 x float> [[BB]])
 ; CHECK-ARMPL-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; NOACCELERATE-LABEL: @atan2_4x(
@@ -1045,7 +1045,7 @@ define <4 x float> @int_atan2_4x(ptr %a, ptr %b) {
 ; CHECK-ARMPL-NEXT:  entry:
 ; CHECK-ARMPL-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
 ; CHECK-ARMPL-NEXT:    [[BB:%.*]] = load <4 x float>, ptr [[B:%.*]], align 16
-; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @armpl_vatan2q_f32(<4 x float> [[TMP0]], <4 x float> [[BB]])
+; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @armpl_vatan2q_f32(<4 x float> [[TMP0]], <4 x float> [[BB]])
 ; CHECK-ARMPL-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; NOACCELERATE-LABEL: @int_atan2_4x(
@@ -1102,7 +1102,7 @@ define <4 x float> @sinh_4x(ptr %a) {
 ; CHECK-ARMPL-LABEL: @sinh_4x(
 ; CHECK-ARMPL-NEXT:  entry:
 ; CHECK-ARMPL-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
-; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @armpl_vsinhq_f32(<4 x float> [[TMP0]])
+; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @armpl_vsinhq_f32(<4 x float> [[TMP0]])
 ; CHECK-ARMPL-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; NOACCELERATE-LABEL: @sinh_4x(
@@ -1148,7 +1148,7 @@ define <4 x float> @int_sinh_4x(ptr %a) {
 ; CHECK-ARMPL-LABEL: @int_sinh_4x(
 ; CHECK-ARMPL-NEXT:  entry:
 ; CHECK-ARMPL-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
-; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @armpl_vsinhq_f32(<4 x float> [[TMP0]])
+; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @armpl_vsinhq_f32(<4 x float> [[TMP0]])
 ; CHECK-ARMPL-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; NOACCELERATE-LABEL: @int_sinh_4x(
@@ -1195,7 +1195,7 @@ define <4 x float> @cosh_4x(ptr %a) {
 ; CHECK-ARMPL-LABEL: @cosh_4x(
 ; CHECK-ARMPL-NEXT:  entry:
 ; CHECK-ARMPL-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
-; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @armpl_vcoshq_f32(<4 x float> [[TMP0]])
+; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @armpl_vcoshq_f32(<4 x float> [[TMP0]])
 ; CHECK-ARMPL-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; NOACCELERATE-LABEL: @cosh_4x(
@@ -1241,7 +1241,7 @@ define <4 x float> @int_cosh_4x(ptr %a) {
 ; CHECK-ARMPL-LABEL: @int_cosh_4x(
 ; CHECK-ARMPL-NEXT:  entry:
 ; CHECK-ARMPL-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
-; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @armpl_vcoshq_f32(<4 x float> [[TMP0]])
+; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @armpl_vcoshq_f32(<4 x float> [[TMP0]])
 ; CHECK-ARMPL-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; NOACCELERATE-LABEL: @int_cosh_4x(
@@ -1288,7 +1288,7 @@ define <4 x float> @tanh_4x(ptr %a) {
 ; CHECK-ARMPL-LABEL: @tanh_4x(
 ; CHECK-ARMPL-NEXT:  entry:
 ; CHECK-ARMPL-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
-; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @armpl_vtanhq_f32(<4 x float> [[TMP0]])
+; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @armpl_vtanhq_f32(<4 x float> [[TMP0]])
 ; CHECK-ARMPL-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; NOACCELERATE-LABEL: @tanh_4x(
@@ -1334,7 +1334,7 @@ define <4 x float> @int_tanh_4x(ptr %a) {
 ; CHECK-ARMPL-LABEL: @int_tanh_4x(
 ; CHECK-ARMPL-NEXT:  entry:
 ; CHECK-ARMPL-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
-; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @armpl_vtanhq_f32(<4 x float> [[TMP0]])
+; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @armpl_vtanhq_f32(<4 x float> [[TMP0]])
 ; CHECK-ARMPL-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; NOACCELERATE-LABEL: @int_tanh_4x(
@@ -1381,7 +1381,7 @@ define <4 x float> @asinh_4x(ptr %a) {
 ; CHECK-ARMPL-LABEL: @asinh_4x(
 ; CHECK-ARMPL-NEXT:  entry:
 ; CHECK-ARMPL-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
-; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @armpl_vasinhq_f32(<4 x float> [[TMP0]])
+; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @armpl_vasinhq_f32(<4 x float> [[TMP0]])
 ; CHECK-ARMPL-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; NOACCELERATE-LABEL: @asinh_4x(
@@ -1428,7 +1428,7 @@ define <4 x float> @acosh_4x(ptr %a) {
 ; CHECK-ARMPL-LABEL: @acosh_4x(
 ; CHECK-ARMPL-NEXT:  entry:
 ; CHECK-ARMPL-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
-; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @armpl_vacoshq_f32(<4 x float> [[TMP0]])
+; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @armpl_vacoshq_f32(<4 x float> [[TMP0]])
 ; CHECK-ARMPL-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; NOACCELERATE-LABEL: @acosh_4x(
@@ -1475,7 +1475,7 @@ define <4 x float> @atanh_4x(ptr %a) {
 ; CHECK-ARMPL-LABEL: @atanh_4x(
 ; CHECK-ARMPL-NEXT:  entry:
 ; CHECK-ARMPL-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
-; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @armpl_vatanhq_f32(<4 x float> [[TMP0]])
+; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @armpl_vatanhq_f32(<4 x float> [[TMP0]])
 ; CHECK-ARMPL-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; NOACCELERATE-LABEL: @atanh_4x(
@@ -1572,7 +1572,7 @@ define <4 x float> @int_cos_4x(ptr %a) {
 ; CHECK-ARMPL-LABEL: @int_cos_4x(
 ; CHECK-ARMPL-NEXT:  entry:
 ; CHECK-ARMPL-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
-; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @armpl_vcosq_f32(<4 x float> [[TMP0]])
+; CHECK-ARMPL-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @armpl_vcosq_f32(<4 x float> [[TMP0]])
 ; CHECK-ARMPL-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; NOACCELERATE-LABEL: @int_cos_4x(
