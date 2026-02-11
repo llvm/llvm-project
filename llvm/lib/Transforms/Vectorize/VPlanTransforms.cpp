@@ -1611,19 +1611,18 @@ static void reassociateHeaderMask(VPlan &Plan) {
   VPValue *HeaderMask = vputils::findHeaderMask(Plan);
   if (!HeaderMask)
     return;
-  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
-      Plan.getVectorLoopRegion());
-  VPValue *X, *Y;
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT))
-    for (VPRecipeBase &R : make_early_inc_range(*VPBB))
-      if (match(&R,
-                m_LogicalAnd(m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(X)),
-                             m_VPValue(Y)))) {
-        VPBuilder Builder(&R);
-        R.getVPSingleValue()->replaceAllUsesWith(Builder.createLogicalAnd(
-            HeaderMask, Builder.createLogicalAnd(X, Y)));
-        R.eraseFromParent();
-      }
+  for (VPUser *U : collectUsersRecursively(HeaderMask)) {
+    auto *R = cast<VPRecipeBase>(U);
+    VPValue *X, *Y;
+    if (match(R,
+              m_LogicalAnd(m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(X)),
+                           m_VPValue(Y)))) {
+      VPBuilder Builder(R);
+      R->getVPSingleValue()->replaceAllUsesWith(
+          Builder.createLogicalAnd(HeaderMask, Builder.createLogicalAnd(X, Y)));
+      R->eraseFromParent();
+    }
+  }
 }
 
 static void narrowToSingleScalarRecipes(VPlan &Plan) {
