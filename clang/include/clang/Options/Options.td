@@ -3645,10 +3645,6 @@ defm implicit_modules : BoolFOption<"implicit-modules",
   NegFlag<SetFalse, [], [ClangOption, CC1Option]>,
   PosFlag<SetTrue>, BothFlags<
           [NoXarchOption], [ClangOption, CLOption]>>;
-def fno_modules_check_relocated : Joined<["-"], "fno-modules-check-relocated">,
-  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Skip checks for relocated modules when loading PCM files">,
-  MarshallingInfoNegativeFlag<PreprocessorOpts<"ModulesCheckRelocated">>;
 def fretain_comments_from_system_headers : Flag<["-"], "fretain-comments-from-system-headers">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoFlag<LangOpts<"RetainCommentsFromSystemHeaders">>;
@@ -8988,6 +8984,11 @@ def disable_pragma_debug_crash : Flag<["-"], "disable-pragma-debug-crash">,
 def source_date_epoch : Separate<["-"], "source-date-epoch">,
   MetaVarName<"<time since Epoch in seconds>">,
   HelpText<"Time to be used in __DATE__, __TIME__, and __TIMESTAMP__ macros">;
+def fno_modules_check_relocated
+    : Joined<["-"], "fno-modules-check-relocated">,
+      Group<f_Group>,
+      HelpText<"Skip checks for relocated modules when loading PCM files">,
+      MarshallingInfoNegativeFlag<PreprocessorOpts<"ModulesCheckRelocated">>;
 
 } // let Visibility = [CC1Option]
 
