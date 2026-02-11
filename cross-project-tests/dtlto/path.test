@@ -2,6 +2,8 @@
 
 # Check that any short 8.3 form paths (containing '~' characters) in ThinLTO
 # Module IDs are expanded prior to being passed to the distributor.
+#
+# This test is Windows-specific, as enforced by `tempshortpaths`.
 
 RUN: rm -rf %t && split-file %s %t && cd %t
 
