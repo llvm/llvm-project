@@ -208,15 +208,11 @@ public:
     return __boundary_ == __capacity_;
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
-  __set_valid_range(pointer __new_begin, size_type __new_size) _NOEXCEPT {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_layout(pointer __new_begin, size_type __new_size, size_type __new_capacity) _NOEXCEPT
+  {
     __begin_ = __new_begin;
     __set_boundary(__new_size);
-  }
-
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_valid_range(pointer __new_begin, pointer __new_end) _NOEXCEPT {
-    __begin_ = __new_begin;
-    __set_boundary(__new_end);
+    __set_capacity(__new_capacity);
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __reset_without_allocator() _NOEXCEPT
@@ -273,7 +269,6 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_boundary(pointer __ptr) _NOEXCEPT;
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_capacity(size_type __n) _NOEXCEPT;
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_capacity(pointer __ptr) _NOEXCEPT;
-
 
   /// Returns `__begin_` if `__boundary_type` is `pointer`, and `0` if it is `size_type`.
   ///

@@ -600,16 +600,7 @@ private:
     if (__n > max_size())
       this->__throw_length_error();
     auto __allocation = std::__allocate_at_least(this->__layout_.__alloc(), __n);
-    // Since the pointer-based `__layout_.__zero_relative_to_begin()` returns a pointer to the
-    // memory that it currently holds, we can't use it when changing `__layout_.__begin_`. As such,
-    // we need to tell the layout that we want our layout to point to `__allocation.ptr`, and for it
-    // to be empty.
-    //
-    // We explicitly convert `0` to `size_type` to prevent ambiguity between `__vector_layout's`
-    // pointer-based and size-based `__set_valid_range` overloads, as `0` is implicitly convertible
-    // to `size_type`.
-    __layout_.__set_valid_range(__allocation.ptr, static_cast<size_type>(0));
-    __layout_.__set_capacity(__allocation.count);
+    __layout_.__set_layout(__allocation.ptr, 0, __allocation.count);
     __annotate_new(0);
   }
 
@@ -927,11 +918,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI vector<_Tp, _Allocato
 #else
     _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
 #endif
-    : __layout_(std::move(__x.__layout_.__alloc())) {
-  __layout_.__set_valid_range(__x.__layout_.__begin_ptr(), __x.__layout_.__boundary_representation());
-  __layout_.__set_capacity(__x.__layout_.__capacity_representation());
-  __x.__layout_.__reset_without_allocator();
-}
+    : __layout_(std::move(__x.__layout_)) {}
 
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI
