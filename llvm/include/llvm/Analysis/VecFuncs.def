@@ -1888,12 +1888,39 @@ TLI_DEFINE_VECFUNC("llvm.tanh.f32", "amd_vrs16_tanhf", FIXED(16), NOMASK, "_ZGV_
 TLI_DEFINE_VECFUNC("cbrt", "amd_vrd2_cbrt", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
 TLI_DEFINE_VECFUNC("cbrtf", "amd_vrs4_cbrtf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
 
+TLI_DEFINE_VECFUNC("sincos", "amd_vrd2_sincos", FIXED(2), NOMASK, "_ZGV_LLVM_N2vl8l8")
 TLI_DEFINE_VECFUNC("sincos", "amd_vrd4_sincos", FIXED(4), NOMASK, "_ZGV_LLVM_N4vl8l8")
 TLI_DEFINE_VECFUNC("sincos", "amd_vrd8_sincos", FIXED(8), NOMASK, "_ZGV_LLVM_N8vl8l8")
 
 TLI_DEFINE_VECFUNC("sincosf", "amd_vrs4_sincosf", FIXED(4), NOMASK, "_ZGV_LLVM_N4vl4l4")
 TLI_DEFINE_VECFUNC("sincosf", "amd_vrs8_sincosf", FIXED(8), NOMASK, "_ZGV_LLVM_N8vl4l4")
 TLI_DEFINE_VECFUNC("sincosf", "amd_vrs16_sincosf", FIXED(16), NOMASK, "_ZGV_LLVM_N16vl4l4")
+
+TLI_DEFINE_VECFUNC("asin", "amd_vrd2_asin", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("asin", "amd_vrd4_asin", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("llvm.asin.f64", "amd_vrd2_asin", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("llvm.asin.f64", "amd_vrd4_asin", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("__asin_finite", "amd_vrd2_asin", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("__asin_finite", "amd_vrd4_asin", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("acos", "amd_vrd2_acos", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("acos", "amd_vrd4_acos", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("llvm.acos.f64", "amd_vrd2_acos", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("llvm.acos.f64", "amd_vrd4_acos", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("__acos_finite", "amd_vrd2_acos", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("__acos_finite", "amd_vrd4_acos", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("erfc", "amd_vrd2_erfc", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("erfc", "amd_vrd4_erfc", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("erfc", "amd_vrd8_erfc", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("erfcf", "amd_vrs4_erfcf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("erfcf", "amd_vrs8_erfcf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("erfcf", "amd_vrs16_erfcf", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
 #else
 #error "Must choose which vector library functions are to be defined."
 #endif

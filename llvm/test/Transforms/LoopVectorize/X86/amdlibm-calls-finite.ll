@@ -390,6 +390,98 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
+; =============================== __asin_finite (VF2, VF4) ========================
+
+define void @asin_vf2_f64_finite(ptr nocapture %varray) {
+; CHECK-LABEL: @asin_vf2_f64_finite(
+; CHECK:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_asin(<2 x double> [[TMP4:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @__asin_finite(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !1
+
+for.end:
+  ret void
+}
+
+define void @asin_vf4_f64_finite(ptr nocapture %varray) {
+; CHECK-LABEL: @asin_vf4_f64_finite(
+; CHECK:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_asin(<4 x double> [[TMP4:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @__asin_finite(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !4
+
+for.end:
+  ret void
+}
+
+; =============================== __acos_finite (VF2, VF4) ========================
+
+define void @acos_vf2_f64_finite(ptr nocapture %varray) {
+; CHECK-LABEL: @acos_vf2_f64_finite(
+; CHECK:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_acos(<2 x double> [[TMP4:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @__acos_finite(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !1
+
+for.end:
+  ret void
+}
+
+define void @acos_vf4_f64_finite(ptr nocapture %varray) {
+; CHECK-LABEL: @acos_vf4_f64_finite(
+; CHECK:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_acos(<4 x double> [[TMP4:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @__acos_finite(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !4
+
+for.end:
+  ret void
+}
+
 !1 = distinct !{!1, !2, !3}
 !2 = !{!"llvm.loop.vectorize.width", i32 2}
 !3 = !{!"llvm.loop.vectorize.enable", i1 true}
@@ -419,3 +511,4 @@ declare float @__exp10f_finite(float) #0
 declare double @__asin_finite(double) #0
 declare float @__asinf_finite(float) #0
 declare float @__acosf_finite(float) #0
+declare double @__acos_finite(double) #0
