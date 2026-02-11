@@ -124,29 +124,46 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
   if (module_sp || !can_create)
     return module_sp;
 
-  if (HostInfo::GetArchitecture().IsCompatibleMatch(target.GetArchitecture())) {
+  // See if we have this binary in the Target or the global Module
+  // cache already.
+  module_sp = target.GetOrCreateModule(module_spec, /*notify=*/false);
+
+  if (!module_sp &&
+      HostInfo::GetArchitecture().IsCompatibleMatch(target.GetArchitecture())) {
     // When debugging on the host, we are most likely using the same shared
     // cache as our inferior. The dylibs from the shared cache might not
     // exist on the filesystem, so let's use the images in our own memory
     // to create the modules.
     // Check if the requested image is in our shared cache.
-    SharedCacheImageInfo image_info =
-        HostInfo::GetSharedCacheImageInfo(module_spec.GetFileSpec().GetPath());
+    SharedCacheImageInfo image_info;
+    addr_t sc_base_addr;
+    UUID sc_uuid;
+    LazyBool using_sc;
+    LazyBool private_sc;
+    FileSpec sc_path;
+    if (GetSharedCacheInformation(sc_base_addr, sc_uuid, using_sc, private_sc,
+                                  sc_path) &&
+        sc_uuid)
+      image_info = HostInfo::GetSharedCacheImageInfo(
+          module_spec.GetFileSpec().GetPath(), sc_uuid);
+    else
+      image_info = HostInfo::GetSharedCacheImageInfo(
+          module_spec.GetFileSpec().GetPath());
 
     // If we found it and it has the correct UUID, let's proceed with
     // creating a module from the memory contents.
-    if (image_info.uuid &&
-        (!module_spec.GetUUID() || module_spec.GetUUID() == image_info.uuid)) {
-      ModuleSpec shared_cache_spec(module_spec.GetFileSpec(), image_info.uuid,
-                                   image_info.extractor_sp);
+    if (image_info.GetUUID() &&
+        (!module_spec.GetUUID() ||
+         module_spec.GetUUID() == image_info.GetUUID())) {
+      ModuleSpec shared_cache_spec(module_spec.GetFileSpec(),
+                                   image_info.GetUUID(),
+                                   image_info.GetExtractor());
       module_sp =
           target.GetOrCreateModule(shared_cache_spec, false /* notify */);
     }
   }
   // We'll call Target::ModulesDidLoad after all the modules have been
   // added to the target, don't let it be called for every one.
-  if (!module_sp)
-    module_sp = target.GetOrCreateModule(module_spec, false /* notify */);
   if (!module_sp || module_sp->GetObjectFile() == nullptr) {
     llvm::Expected<ModuleSP> module_sp_or_err = m_process->ReadModuleFromMemory(
         image_info.file_spec, image_info.address);

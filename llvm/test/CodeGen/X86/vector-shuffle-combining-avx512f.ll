@@ -1035,6 +1035,33 @@ define <8 x double> @concat_vpermilvar_v8f64_v4f64(<4 x double> %a0, <4 x double
   ret <8 x double> %res
 }
 
+define <16 x float> @combine_vexpandps_of_broadcast(float %x, <16 x float> %y, i16 %m) {
+; X86-LABEL: combine_vexpandps_of_broadcast:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %zmm0 {%k1}
+; X86-NEXT:    retl
+;
+; X64-AVX512F-LABEL: combine_vexpandps_of_broadcast:
+; X64-AVX512F:       # %bb.0:
+; X64-AVX512F-NEXT:    kmovw %edi, %k1
+; X64-AVX512F-NEXT:    vbroadcastss %xmm0, %zmm1 {%k1}
+; X64-AVX512F-NEXT:    vmovaps %zmm1, %zmm0
+; X64-AVX512F-NEXT:    retq
+;
+; X64-AVX512BW-LABEL: combine_vexpandps_of_broadcast:
+; X64-AVX512BW:       # %bb.0:
+; X64-AVX512BW-NEXT:    kmovd %edi, %k1
+; X64-AVX512BW-NEXT:    vbroadcastss %xmm0, %zmm1 {%k1}
+; X64-AVX512BW-NEXT:    vmovaps %zmm1, %zmm0
+; X64-AVX512BW-NEXT:    retq
+  %xx = insertelement <16 x float> poison, float %x, i32 0
+  %vx = shufflevector <16 x float> %xx, <16 x float> poison, <16 x i32> zeroinitializer
+  %vm = bitcast i16 %m to <16 x i1>
+  %res = call <16 x float> @llvm.x86.avx512.mask.expand.v16f32(<16 x float> %vx, <16 x float> %y, <16 x i1> %vm)
+  ret <16 x float> %res
+}
+
 ; shift elements up by one
 define <16 x i32> @combine_vexpandd_as_valignd(<16 x i32>  %x) {
 ; CHECK-LABEL: combine_vexpandd_as_valignd:

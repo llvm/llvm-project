@@ -400,7 +400,8 @@ private:
   FragmentsSetTy ParentFragments;
 
   /// Indicate if the function body was folded into another function.
-  /// Used by ICF optimization.
+  /// Used by ICF optimization. Always points to the root parent function
+  /// (i.e., a function that is not itself folded).
   BinaryFunction *FoldedIntoFunction{nullptr};
 
   /// All fragments for a parent function.
@@ -770,6 +771,9 @@ private:
   /// Clear state of the function that could not be disassembled or if its
   /// disassembled state was later invalidated.
   void clearDisasmState();
+
+  /// Reset the function state into Empty state, i.e. pre-disassembly form.
+  void resetState();
 
   /// Release memory allocated for CFG and instructions.
   /// We still keep basic blocks for address translation/mapping purposes.
