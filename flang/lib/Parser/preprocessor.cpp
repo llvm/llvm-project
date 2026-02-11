@@ -214,7 +214,7 @@ constexpr bool IsDefinedKeyword(CharBlock token) {
 }
 
 TokenSequence Definition::Apply(const std::vector<TokenSequence> &args,
-    const Prescanner &prescanner, bool inIfExpression) const {
+    Prescanner &prescanner, bool inIfExpression) {
   TokenSequence result;
   bool skipping{false};
   int parenthesesNesting{0};
@@ -254,9 +254,7 @@ TokenSequence Definition::Apply(const std::vector<TokenSequence> &args,
         CHECK(resultSize > 0 &&
             result.TokenAt(resultSize - 1) == replacement_.TokenAt(prev - 1));
         result.pop_back();
-        AllSources &allSources{
-            *const_cast<AllSources *>(&prescanner.allSources())};
-        result.CopyAll(Stringify(args[index], allSources));
+        result.CopyAll(Stringify(args[index], prescanner.allSources()));
       } else {
         const TokenSequence *arg{&args[index]};
         std::optional<TokenSequence> replaced;
@@ -269,9 +267,7 @@ TokenSequence Definition::Apply(const std::vector<TokenSequence> &args,
           auto next{replacement_.SkipBlanks(j + 1)};
           if (next >= tokens || !IsTokenPasting(replacement_.TokenAt(next))) {
             // Apply macro replacement to the actual argument
-            Preprocessor &preprocessor{
-                *const_cast<Preprocessor *>(&prescanner.preprocessor())};
-            replaced = preprocessor.MacroReplacement(
+            replaced = prescanner.preprocessor().MacroReplacement(
                 *arg, prescanner, nullptr, inIfExpression);
             if (replaced) {
               arg = &*replaced;
@@ -282,9 +278,9 @@ TokenSequence Definition::Apply(const std::vector<TokenSequence> &args,
       }
     } else if (bytes == 11 && isVariadic_ &&
         token.ToString() == "__VA_ARGS__") {
-      AllSources &allSources{
-          *const_cast<AllSources *>(&prescanner.allSources())};
-      Provenance commaProvenance{allSources.CompilerInsertionProvenance(',')};
+      Provenance commaProvenance{
+          prescanner.preprocessor().allSources().CompilerInsertionProvenance(
+              ',')};
       for (std::size_t k{argumentCount()}; k < args.size(); ++k) {
         if (k > argumentCount()) {
           result.Put(","s, commaProvenance);
@@ -444,7 +440,7 @@ void Preprocessor::Define(const std::string &macro, const std::string &value) {
 void Preprocessor::Undefine(std::string macro) { definitions_.erase(macro); }
 
 std::optional<TokenSequence> Preprocessor::MacroReplacement(
-    const TokenSequence &input, const Prescanner &prescanner,
+    const TokenSequence &input, Prescanner &prescanner,
     std::optional<std::size_t> *partialFunctionLikeMacro, bool inIfExpression) {
   // Do quick scan for any use of a defined name.
   if (!inIfExpression && definitions_.empty()) {
@@ -667,7 +663,7 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
 }
 
 TokenSequence Preprocessor::ReplaceMacros(const TokenSequence &tokens,
-    const Prescanner &prescanner,
+    Prescanner &prescanner,
     std::optional<std::size_t> *partialFunctionLikeMacro, bool inIfExpression) {
   if (std::optional<TokenSequence> repl{MacroReplacement(
           tokens, prescanner, partialFunctionLikeMacro, inIfExpression)}) {
