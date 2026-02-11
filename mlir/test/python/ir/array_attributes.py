@@ -258,11 +258,10 @@ def testGetDenseElementsInteger4():
 @run
 def testGetDenseElementsBool():
     with Context():
-        bool_array = np.array([[1, 0, 1], [0, 1, 0]], dtype=np.bool_)
-        array = np.packbits(bool_array, axis=None, bitorder="little")
-        attr = DenseElementsAttr.get(
-            array, type=IntegerType.get_signless(1), shape=bool_array.shape
+        bool_array = np.array(
+            [[True, False, True], [False, True, False]], dtype=np.bool_
         )
+        attr = DenseElementsAttr.get(bool_array)
         # CHECK: dense<{{\[}}[true, false, true], [false, true, false]]> : tensor<2x3xi1>
         print(attr)
 

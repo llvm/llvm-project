@@ -453,29 +453,13 @@ LogicalResult OpaqueAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 // DenseElementsAttr Utilities
 //===----------------------------------------------------------------------===//
 
-const char DenseIntOrFPElementsAttrStorage::kSplatTrue = ~0;
-const char DenseIntOrFPElementsAttrStorage::kSplatFalse = 0;
-
 /// Get the bitwidth of a dense element type within the buffer.
-/// DenseElementsAttr requires bitwidths greater than 1 to be aligned by 8.
+/// DenseElementsAttr requires bitwidths to be aligned by 8.
 static size_t getDenseElementStorageWidth(size_t origWidth) {
-  return origWidth == 1 ? origWidth : llvm::alignTo<8>(origWidth);
+  return llvm::alignTo<8>(origWidth);
 }
 static size_t getDenseElementStorageWidth(Type elementType) {
   return getDenseElementStorageWidth(getDenseElementBitWidth(elementType));
-}
-
-/// Set a bit to a specific value.
-static void setBit(char *rawData, size_t bitPos, bool value) {
-  if (value)
-    rawData[bitPos / CHAR_BIT] |= (1 << (bitPos % CHAR_BIT));
-  else
-    rawData[bitPos / CHAR_BIT] &= ~(1 << (bitPos % CHAR_BIT));
-}
-
-/// Return the value of the specified bit.
-static bool getBit(const char *rawData, size_t bitPos) {
-  return (rawData[bitPos / CHAR_BIT] & (1 << (bitPos % CHAR_BIT))) != 0;
 }
 
 /// Copy actual `numBytes` data from `value` (APInt) to char array(`result`) for
@@ -546,11 +530,7 @@ static void copyArrayToAPIntForBEmachine(const char *inArray, size_t numBytes,
 static void writeBits(char *rawData, size_t bitPos, APInt value) {
   size_t bitWidth = value.getBitWidth();
 
-  // If the bitwidth is 1 we just toggle the specific bit.
-  if (bitWidth == 1)
-    return setBit(rawData, bitPos, value.isOne());
-
-  // Otherwise, the bit position is guaranteed to be byte aligned.
+  // The bit position is guaranteed to be byte aligned.
   assert((bitPos % CHAR_BIT) == 0 && "expected bitPos to be 8-bit aligned");
   if (llvm::endianness::native == llvm::endianness::big) {
     // Copy from `value` to `rawData + (bitPos / CHAR_BIT)`.
@@ -570,11 +550,7 @@ static void writeBits(char *rawData, size_t bitPos, APInt value) {
 /// Reads the next `bitWidth` bits from the bit position `bitPos` in array
 /// `rawData`.
 static APInt readBits(const char *rawData, size_t bitPos, size_t bitWidth) {
-  // Handle a boolean bit position.
-  if (bitWidth == 1)
-    return APInt(1, getBit(rawData, bitPos) ? 1 : 0);
-
-  // Otherwise, the bit position must be 8-bit aligned.
+  // The bit position is guaranteed to be byte aligned.
   assert((bitPos % CHAR_BIT) == 0 && "expected bitPos to be 8-bit aligned");
   APInt result(bitWidth, 0);
   if (llvm::endianness::native == llvm::endianness::big) {
@@ -664,7 +640,7 @@ DenseElementsAttr::BoolElementIterator::BoolElementIterator(
           attr.getRawData().data(), attr.isSplat(), dataIndex) {}
 
 bool DenseElementsAttr::BoolElementIterator::operator*() const {
-  return getBit(getData(), getDataIndex());
+  return static_cast<bool>(getData()[getDataIndex()]);
 }
 
 //===----------------------------------------------------------------------===//
@@ -910,7 +886,6 @@ bool DenseElementsAttr::classof(Attribute attr) {
 DenseElementsAttr DenseElementsAttr::get(ShapedType type,
                                          ArrayRef<Attribute> values) {
   assert(hasSameNumElementsOrSplat(type, values));
-
   Type eltType = type.getElementType();
 
   // Take care complex type case first.
@@ -984,10 +959,6 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
     writeBits(data.data(), i * storageBitWidth, intVal);
   }
 
-  // Handle the special encoding of splat of bool.
-  if (values.size() == 1 && eltType.isInteger(1))
-    data[0] = data[0] ? -1 : 0;
-
   return DenseIntOrFPElementsAttr::getRaw(type, data);
 }
 
@@ -995,25 +966,9 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
                                          ArrayRef<bool> values) {
   assert(hasSameNumElementsOrSplat(type, values));
   assert(type.getElementType().isInteger(1));
-
-  SmallVector<char> buff(llvm::divideCeil(values.size(), CHAR_BIT));
-
-  if (!values.empty()) {
-    bool isSplat = true;
-    bool firstValue = values[0];
-    for (int i = 0, e = values.size(); i != e; ++i) {
-      isSplat &= values[i] == firstValue;
-      setBit(buff.data(), i, values[i]);
-    }
-
-    // Splat of bool is encoded as a byte with all-ones in it.
-    if (isSplat) {
-      buff.resize(1);
-      buff[0] = values[0] ? -1 : 0;
-    }
-  }
-
-  return DenseIntOrFPElementsAttr::getRaw(type, buff);
+  return DenseIntOrFPElementsAttr::getRaw(
+      type, ArrayRef<char>(reinterpret_cast<const char *>(values.data()),
+                           values.size()));
 }
 
 DenseElementsAttr DenseElementsAttr::get(ShapedType type,
@@ -1084,23 +1039,7 @@ bool DenseElementsAttr::isValidRawBuffer(ShapedType type,
   // The initializer is always a splat if the result type has a single element.
   detectedSplat = numElements == 1;
 
-  // Storage width of 1 is special as it is packed by the bit.
-  if (storageWidth == 1) {
-    // Check for a splat, or a buffer equal to the number of elements which
-    // consists of either all 0's or all 1's.
-    if (rawBuffer.size() == 1) {
-      auto rawByte = static_cast<uint8_t>(rawBuffer[0]);
-      if (rawByte == 0 || rawByte == 0xff) {
-        detectedSplat = true;
-        return true;
-      }
-    }
-
-    // This is a valid non-splat buffer if it has the right size.
-    return rawBufferWidth == llvm::alignTo<8>(numElements);
-  }
-
-  // All other types are 8-bit aligned, so we can just check the buffer width
+  // All types are 8-bit aligned, so we can just check the buffer width
   // to know if only a single initializer element was passed in.
   if (rawBufferWidth == storageWidth) {
     detectedSplat = true;
@@ -1319,10 +1258,6 @@ static void writeAPIntsToBuffer(size_t storageWidth,
     assert((*it).getBitWidth() <= storageWidth);
     writeBits(data.data(), offset, *it);
   }
-
-  // Handle the special encoding of splat of a boolean.
-  if (numValues == 1 && (*values.begin()).getBitWidth() == 1)
-    data[0] = data[0] ? -1 : 0;
 }
 
 /// Constructs a dense elements attribute from an array of raw APFloat values.
@@ -1480,12 +1415,7 @@ static ShapedType mappingHelper(Fn mapping, Attr &attr, ShapedType inType,
 
   // Check for the splat case.
   if (attr.isSplat()) {
-    if (bitWidth == 1) {
-      // Handle the special encoding of splat of bool.
-      data[0] = mapping(*attr.begin()).isZero() ? 0 : -1;
-    } else {
-      processElt(*attr.begin(), /*index=*/0);
-    }
+    processElt(*attr.begin(), /*index=*/0);
     return newArrayType;
   }
 
