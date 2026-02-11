@@ -40,6 +40,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/TargetParser/TargetParser.h"
+#include <iterator>
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
@@ -314,11 +315,48 @@ public:
   operator bool() const { return !empty(); }
   void print(raw_ostream &OS) const {
     ListSeparator LS(", ");
-    for (WaitEventType Event : wait_events()) {
+    for (WaitEventType Event : *this) {
       OS << LS << getWaitEventTypeName(Event);
     }
   }
   LLVM_DUMP_METHOD void dump() const;
+
+  /// Iterates over all events in the set.
+  class const_iterator {
+    const WaitEventSet &Set;
+    WaitEventType E;
+
+  public:
+    using difference_type = std::ptrdiff_t;
+    using value_type = WaitEventType;
+    using pointer = void;
+    using reference = const WaitEventType &;
+    using iterator_category = std::input_iterator_tag;
+    const_iterator(const WaitEventSet &Set, WaitEventType E) : Set(Set), E(E) {}
+    WaitEventType operator*() const { return E; }
+    const_iterator &operator++() {
+      assert(E != NUM_WAIT_EVENTS && "Already at end!");
+      // Skip elements that are not contained in Set.
+      auto EventsRange = enum_seq(WaitEventType(E + 1), NUM_WAIT_EVENTS);
+      auto It = find_if(EventsRange,
+                        [this](WaitEventType E) { return Set.contains(E); });
+      E = It != EventsRange.end() ? *It : NUM_WAIT_EVENTS;
+      return *this;
+    }
+    bool operator==(const const_iterator &Other) const { return E == Other.E; }
+    bool operator!=(const const_iterator &Other) const {
+      return !(*this == Other);
+    }
+  };
+
+  const_iterator begin() const {
+    // Create an iterator to the first element that contains E.
+    auto It =
+        find_if(wait_events(), [this](WaitEventType E) { return contains(E); });
+    return const_iterator(*this,
+                          It != wait_events().end() ? *It : NUM_WAIT_EVENTS);
+  }
+  const_iterator end() const { return const_iterator(*this, NUM_WAIT_EVENTS); }
 };
 
 void WaitEventSet::dump() const {
@@ -2903,10 +2941,8 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
                                                WaitcntBrackets *ScoreBrackets) {
 
   WaitEventSet InstEvents = getEventsFor(Inst);
-  for (WaitEventType E : wait_events()) {
-    if (InstEvents.contains(E))
-      ScoreBrackets->updateByEvent(E, Inst);
-  }
+  for (WaitEventType E : InstEvents)
+    ScoreBrackets->updateByEvent(E, Inst);
 
   if (TII->isDS(Inst) && TII->usesLGKM_CNT(Inst)) {
     if (TII->isAlwaysGDS(Inst.getOpcode()) ||
