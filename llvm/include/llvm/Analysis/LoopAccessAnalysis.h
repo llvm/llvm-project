@@ -775,6 +775,12 @@ public:
     return StoresToInvariantAddresses;
   }
 
+  /// Returns conflicts between loads and stores to invariant addresses.
+  ArrayRef<std::pair<LoadInst *, StoreInst *>>
+  getInvariantAddressConflicts() const {
+    return InvariantAddressConflicts;
+  }
+
   /// Used to add runtime SCEV checks. Simplifies SCEV expressions and converts
   /// them to a more usable form.  All SCEV expressions during the analysis
   /// should be re-written (and therefore simplified) according to PSE.
@@ -852,6 +858,9 @@ private:
 
   /// List of stores to invariant addresses.
   SmallVector<StoreInst *> StoresToInvariantAddresses;
+
+  /// List of conflict pair due to accessing the same loop-invariant address.
+  SmallVector<std::pair<LoadInst *, StoreInst *>> InvariantAddressConflicts;
 
   /// The diagnostics report generated for the analysis.  E.g. why we
   /// couldn't analyze the loop.
