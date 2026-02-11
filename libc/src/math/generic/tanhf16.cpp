@@ -1,4 +1,4 @@
-//===-- Half-precision tanh(x) function -----------------------------------===//
+//===-- Half-precision tanhf(x) function ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,6 +11,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(float16, tanhf16, (float16 x)) { return math::tanhf16(x);}
+LLVM_LIBC_FUNCTION(float16, tanhf16, (float16 x)) { return math::tanhf16(x); }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -9,6 +9,11 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_TANHF16_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_TANHF16_H
 
+#include "include/llvm-libc-macros/float16-macros.h"
+
+#ifdef LIBC_TYPES_HAS_FLOAT16
+
+#include "expxf16_utils.h"
 #include "hdr/fenv_macros.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
@@ -22,28 +27,24 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
-#include "src/__support/math/expxf16_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-namespace tanhf16_internal {
-#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-LIBC_INLINE_VAR constexpr fputil::ExceptValues<float16, 2> TANHF16_EXCEPTS = {{
-    // x = 0x1.f54p+0, tanhf16(x) = 0x1.ecp-1 (RZ)
-    {0x3fd5U, 0x3bb0U, 1U, 0U, 0U},
-    // x = -0x1.f54p+0, tanhf16(x) = -0x1.ecp-1 (RZ)
-    {0xbfd5U, 0xbbb0U, 0U, 1U, 0U},
-}};
-#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-} // namespace tanhf16_internal
-
-LIBC_INLINE constexpr float16 tanhf16(float16 x) {
-  using namespace tanhf16_internal;
+LIBC_INLINE float16 tanhf16(float16 x) {
   using namespace math::expxf16_internal;
   using FPBits = fputil::FPBits<float16>;
   FPBits x_bits(x);
+
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+  constexpr fputil::ExceptValues<float16, 2> TANHF16_EXCEPTS = {{
+      // x = 0x1.f54p+0, tanhf16(x) = 0x1.ecp-1 (RZ)
+      {0x3fd5U, 0x3bb0U, 1U, 0U, 0U},
+      // x = -0x1.f54p+0, tanhf16(x) = -0x1.ecp-1 (RZ)
+      {0xbfd5U, 0xbbb0U, 0U, 1U, 0U},
+  }};
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   uint16_t x_u = x_bits.uintval();
   uint16_t x_abs = x_u & 0x7fffU;
@@ -159,5 +160,7 @@ LIBC_INLINE constexpr float16 tanhf16(float16 x) {
 } // namespace math
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TYPES_HAS_FLOAT16
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_TANHF16_H

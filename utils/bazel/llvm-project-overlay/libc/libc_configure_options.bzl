@@ -53,4 +53,8 @@ LIBC_CONFIGURE_OPTIONS = [
 
     # Documentation in libc/src/__support/libc_errno.h
     "LIBC_ERRNO_MODE=LIBC_ERRNO_MODE_SYSTEM_INLINE",
+
+    # Enable float16 for tanhf16, sinhf16, etc. Bazel's compiler often does not
+    # predefine __FLT16_MANT_DIG__; this forces the type when _Float16 is supported.
+    "LIBC_TYPES_HAS_FLOAT16",
 ]

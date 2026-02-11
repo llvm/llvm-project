@@ -4125,7 +4125,6 @@ add_entrypoint_object(
   HDRS
     ../tanhf16.h
   DEPENDS
-    libc.hdr.fenv_macros
     libc.src.__support.math.tanhf16
 )
 
