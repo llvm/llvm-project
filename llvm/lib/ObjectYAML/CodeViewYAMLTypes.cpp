@@ -738,7 +738,6 @@ Expected<LeafRecord> LeafRecord::fromCodeViewRecord(CVType Type) {
   default:
     return fromCodeViewRecordImpl<UnknownLeafRecord>(Type);
   }
-  return make_error<CodeViewError>(cv_error_code::corrupt_record);
 }
 
 CVType
