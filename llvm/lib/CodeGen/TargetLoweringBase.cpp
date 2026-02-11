@@ -2067,8 +2067,7 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
 
     if (Ty->isPointerTy()) {
       Flags.setPointer();
-      Flags.setPointerAddrSpace(
-          cast<PointerType>(Ty)->getAddressSpace());
+      Flags.setPointerAddrSpace(cast<PointerType>(Ty)->getAddressSpace());
     }
 
     // Propagate extension type if any
