@@ -508,8 +508,7 @@ void X86AsmBackend::emitInstructionEndBundle(MCObjectStreamer &OS) {
 
   PendingBA = nullptr;
 
-  CF->getParent()->ensureMinAlignment(
-      Align(Asm->getBundleAlignSize()));
+  CF->getParent()->ensureMinAlignment(Align(Asm->getBundleAlignSize()));
 }
 
 /// Insert BoundaryAlignFragment before instructions to align branches.

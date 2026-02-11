@@ -360,7 +360,8 @@ void MCELFStreamer::emitBundleLock(bool AlignToEnd,
   }
 
   if (Sec.isBundleLocked()) {
-    getContext().reportError(getStartTokLoc(), "nested .bundle_lock is not allowed");
+    getContext().reportError(getStartTokLoc(),
+                             "nested .bundle_lock is not allowed");
     return;
   }
   Sec.setIsBundleLocked(true);
