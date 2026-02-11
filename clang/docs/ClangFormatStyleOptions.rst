@@ -4535,13 +4535,13 @@ the configuration (without a prefix: ``Auto``).
 
 .. _IndentGotoLabels:
 
-**IndentGotoLabels** (``IndentGotoLabelStyle``) :versionbadge:`clang-format 23` :ref:`¶ <IndentGotoLabels>`
+**IndentGotoLabels** (``IndentGotoLabelStyle``) :versionbadge:`clang-format 10` :ref:`¶ <IndentGotoLabels>`
   The goto label indenting style to use.
 
   Possible values:
 
-  * ``IGLS_LeftAlign`` (in configuration: ``LeftAlign``)
-    Left align goto labels.
+  * ``IGLS_NoIndent`` (in configuration: ``NoIndent``)
+    Do not indent goto labels.
 
     .. code-block:: c++
 
@@ -4554,8 +4554,8 @@ the configuration (without a prefix: ``Auto``).
          return 1;
        }
 
-  * ``IGLS_NoIndent`` (in configuration: ``NoIndent``)
-    Do not indent goto labels.
+  * ``IGLS_OuterIndent`` (in configuration: ``OuterIndent``)
+    Indent goto labels to the enclosing block (previous indenting level).
 
     .. code-block:: c++
 
@@ -4568,8 +4568,9 @@ the configuration (without a prefix: ``Auto``).
          return 1;
        }
 
-  * ``IGLS_Indent`` (in configuration: ``Indent``)
-    Indent goto labels.
+  * ``IGLS_InnerIndent`` (in configuration: ``InnerIndent``)
+    Indent goto labels to the surrounding statements (current indenting
+    level).
 
     .. code-block:: c++
 
@@ -4584,7 +4585,7 @@ the configuration (without a prefix: ``Auto``).
 
   * ``IGLS_HalfIndent`` (in configuration: ``HalfIndent``)
     Indent goto labels to half the indentation of the surrounding code.
-    If the indentation width is not an even number, it will round up.
+    If the indentation width is an odd number, it will round up.
 
     .. code-block:: c++
 

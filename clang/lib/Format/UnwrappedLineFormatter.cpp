@@ -124,7 +124,7 @@ private:
     const auto &RootToken = *Line.First;
 
     if (Style.IndentGotoLabels == FormatStyle::IGLS_HalfIndent &&
-        RootToken.Next != NULL && RootToken.Next->is(TT_GotoLabelColon)) {
+        RootToken.Next && RootToken.Next->is(TT_GotoLabelColon)) {
       return -static_cast<int>(Style.IndentWidth / 2);
     }
 

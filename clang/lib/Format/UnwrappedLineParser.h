@@ -160,7 +160,7 @@ private:
   void parseForOrWhileLoop(bool HasParens = true);
   void parseDoWhile();
   void parseLabel(FormatStyle::IndentGotoLabelStyle IndentGotoLabels =
-                      FormatStyle::IGLS_NoIndent);
+                      FormatStyle::IGLS_OuterIndent);
   void parseCaseLabel();
   void parseSwitch(bool IsExpr);
   void parseNamespace();

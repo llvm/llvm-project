@@ -891,19 +891,19 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("IndentExternBlock: false", IndentExternBlock,
               FormatStyle::IEBS_NoIndent);
 
-  Style.IndentGotoLabels = FormatStyle::IGLS_NoIndent;
-  CHECK_PARSE("IndentGotoLabels: LeftAlign", IndentGotoLabels,
-              FormatStyle::IGLS_LeftAlign);
+  Style.IndentGotoLabels = FormatStyle::IGLS_OuterIndent;
   CHECK_PARSE("IndentGotoLabels: NoIndent", IndentGotoLabels,
               FormatStyle::IGLS_NoIndent);
-  CHECK_PARSE("IndentGotoLabels: Indent", IndentGotoLabels,
-              FormatStyle::IGLS_Indent);
+  CHECK_PARSE("IndentGotoLabels: OuterIndent", IndentGotoLabels,
+              FormatStyle::IGLS_OuterIndent);
+  CHECK_PARSE("IndentGotoLabels: InnerIndent", IndentGotoLabels,
+              FormatStyle::IGLS_InnerIndent);
   CHECK_PARSE("IndentGotoLabels: HalfIndent", IndentGotoLabels,
               FormatStyle::IGLS_HalfIndent);
   CHECK_PARSE("IndentGotoLabels: false", IndentGotoLabels,
-              FormatStyle::IGLS_LeftAlign);
-  CHECK_PARSE("IndentGotoLabels: true", IndentGotoLabels,
               FormatStyle::IGLS_NoIndent);
+  CHECK_PARSE("IndentGotoLabels: true", IndentGotoLabels,
+              FormatStyle::IGLS_OuterIndent);
 
   Style.BitFieldColonSpacing = FormatStyle::BFCS_None;
   CHECK_PARSE("BitFieldColonSpacing: Both", BitFieldColonSpacing,

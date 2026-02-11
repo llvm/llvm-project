@@ -1468,12 +1468,14 @@ template <> struct DocumentListTraits<std::vector<FormatStyle>> {
 
 template <> struct ScalarEnumerationTraits<FormatStyle::IndentGotoLabelStyle> {
   static void enumeration(IO &IO, FormatStyle::IndentGotoLabelStyle &Value) {
-    IO.enumCase(Value, "LeftAlign", FormatStyle::IGLS_LeftAlign);
     IO.enumCase(Value, "NoIndent", FormatStyle::IGLS_NoIndent);
-    IO.enumCase(Value, "Indent", FormatStyle::IGLS_Indent);
+    IO.enumCase(Value, "OuterIndent", FormatStyle::IGLS_OuterIndent);
+    IO.enumCase(Value, "InnerIndent", FormatStyle::IGLS_InnerIndent);
     IO.enumCase(Value, "HalfIndent", FormatStyle::IGLS_HalfIndent);
-    IO.enumCase(Value, "false", FormatStyle::IGLS_LeftAlign);
-    IO.enumCase(Value, "true", FormatStyle::IGLS_NoIndent);
+
+    // For backward compatibility.
+    IO.enumCase(Value, "false", FormatStyle::IGLS_NoIndent);
+    IO.enumCase(Value, "true", FormatStyle::IGLS_OuterIndent);
   }
 };
 
@@ -1771,7 +1773,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.IndentCaseLabels = false;
   LLVMStyle.IndentExportBlock = true;
   LLVMStyle.IndentExternBlock = FormatStyle::IEBS_AfterExternBlock;
-  LLVMStyle.IndentGotoLabels = FormatStyle::IGLS_NoIndent;
+  LLVMStyle.IndentGotoLabels = FormatStyle::IGLS_OuterIndent;
   LLVMStyle.IndentPPDirectives = FormatStyle::PPDIS_None;
   LLVMStyle.IndentRequiresClause = true;
   LLVMStyle.IndentWidth = 2;

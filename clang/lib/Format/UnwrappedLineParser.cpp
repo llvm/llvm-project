@@ -3360,16 +3360,15 @@ void UnwrappedLineParser::parseLabel(
   unsigned OldLineLevel = Line->Level;
 
   switch (IndentGotoLabels) {
-  case FormatStyle::IGLS_LeftAlign:
+  case FormatStyle::IGLS_NoIndent:
     Line->Level = 0;
     break;
-  case FormatStyle::IGLS_NoIndent:
+  case FormatStyle::IGLS_OuterIndent:
     if (Line->Level > 1 || (!Line->InPPDirective && Line->Level > 0))
       --Line->Level;
     break;
   case FormatStyle::IGLS_HalfIndent:
-  case FormatStyle::IGLS_Indent:
-  default:
+  case FormatStyle::IGLS_InnerIndent:
     break;
   }
 

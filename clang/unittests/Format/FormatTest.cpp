@@ -3158,7 +3158,7 @@ TEST_F(FormatTest, FormatsLabels) {
                "}");
 
   FormatStyle Style = getLLVMStyle();
-  Style.IndentGotoLabels = FormatStyle::IGLS_LeftAlign;
+  Style.IndentGotoLabels = FormatStyle::IGLS_NoIndent;
   verifyFormat("void f() {\n"
                "  some_code();\n"
                "test_label:\n"
@@ -3196,7 +3196,23 @@ TEST_F(FormatTest, FormatsLabels) {
                "  }\n"
                "}",
                Style);
-  Style.IndentGotoLabels = FormatStyle::IGLS_NoIndent;
+  verifyFormat("void f() {\n"
+               "L1:\n"
+               "  a();\n"
+               "  {\n"
+               "L2:\n"
+               "    b();\n"
+               "    {\n"
+               "L3:\n"
+               "      c();\n"
+               "      {\n"
+               "L4:\n"
+               "      }\n"
+               "    }\n"
+               "  }\n"
+               "}",
+               Style);
+  Style.IndentGotoLabels = FormatStyle::IGLS_OuterIndent;
   verifyFormat("void f() {\n"
                "  some_code();\n"
                "test_label:\n"
@@ -3208,7 +3224,23 @@ TEST_F(FormatTest, FormatsLabels) {
                "  }\n"
                "}",
                Style);
-  Style.IndentGotoLabels = FormatStyle::IGLS_Indent;
+  verifyFormat("void f() {\n"
+               "L1:\n"
+               "  a();\n"
+               "  {\n"
+               "  L2:\n"
+               "    b();\n"
+               "    {\n"
+               "    L3:\n"
+               "      c();\n"
+               "      {\n"
+               "      L4:\n"
+               "      }\n"
+               "    }\n"
+               "  }\n"
+               "}",
+               Style);
+  Style.IndentGotoLabels = FormatStyle::IGLS_InnerIndent;
   verifyFormat("void f() {\n"
                "  some_code();\n"
                "  test_label:\n"
@@ -3217,6 +3249,22 @@ TEST_F(FormatTest, FormatsLabels) {
                "    some_more_code();\n"
                "    another_label:\n"
                "    some_more_code();\n"
+               "  }\n"
+               "}",
+               Style);
+  verifyFormat("void f() {\n"
+               "  L1:\n"
+               "  a();\n"
+               "  {\n"
+               "    L2:\n"
+               "    b();\n"
+               "    {\n"
+               "      L3:\n"
+               "      c();\n"
+               "      {\n"
+               "        L4:\n"
+               "      }\n"
+               "    }\n"
                "  }\n"
                "}",
                Style);
@@ -3232,6 +3280,22 @@ TEST_F(FormatTest, FormatsLabels) {
                "  }\n"
                "}",
                Style);
+  verifyFormat("void f() {\n"
+               " L1:\n"
+               "  a();\n"
+               "  {\n"
+               "   L2:\n"
+               "    b();\n"
+               "    {\n"
+               "     L3:\n"
+               "      c();\n"
+               "      {\n"
+               "       L4:\n"
+               "      }\n"
+               "    }\n"
+               "  }\n"
+               "}",
+               Style);
   Style.IndentWidth = 3;
   verifyFormat("void f() {\n"
                "   some_code();\n"
@@ -3240,7 +3304,7 @@ TEST_F(FormatTest, FormatsLabels) {
                "}",
                Style);
   Style.IndentWidth = 2;
-  Style.IndentGotoLabels = FormatStyle::IGLS_LeftAlign;
+  Style.IndentGotoLabels = FormatStyle::IGLS_NoIndent;
 
   Style.ColumnLimit = 15;
   verifyFormat("#define FOO   \\\n"

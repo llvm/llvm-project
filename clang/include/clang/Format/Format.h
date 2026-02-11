@@ -3080,7 +3080,7 @@ struct FormatStyle {
 
   /// Options for indenting goto labels.
   enum IndentGotoLabelStyle : int8_t {
-    /// Left align goto labels.
+    /// Do not indent goto labels.
     /// \code
     ///    int f() {
     ///      if (foo()) {
@@ -3091,8 +3091,8 @@ struct FormatStyle {
     ///      return 1;
     ///    }
     /// \endcode
-    IGLS_LeftAlign,
-    /// Do not indent goto labels.
+    IGLS_NoIndent,
+    /// Indent goto labels to the enclosing block (previous indenting level).
     /// \code
     ///    int f() {
     ///      if (foo()) {
@@ -3103,8 +3103,9 @@ struct FormatStyle {
     ///      return 1;
     ///    }
     /// \endcode
-    IGLS_NoIndent,
-    /// Indent goto labels.
+    IGLS_OuterIndent,
+    /// Indent goto labels to the surrounding statements (current indenting
+    /// level).
     /// \code
     ///    int f() {
     ///      if (foo()) {
@@ -3115,9 +3116,9 @@ struct FormatStyle {
     ///      return 1;
     ///    }
     /// \endcode
-    IGLS_Indent,
+    IGLS_InnerIndent,
     /// Indent goto labels to half the indentation of the surrounding code.
-    /// If the indentation width is not an even number, it will round up.
+    /// If the indentation width is an odd number, it will round up.
     /// \code
     ///    int f() {
     ///      if (foo()) {
@@ -3132,7 +3133,7 @@ struct FormatStyle {
   };
 
   /// The goto label indenting style to use.
-  /// \version 23
+  /// \version 10
   IndentGotoLabelStyle IndentGotoLabels;
 
   /// Options for indenting preprocessor directives.
