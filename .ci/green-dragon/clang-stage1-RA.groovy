@@ -26,7 +26,7 @@ clangPipeline(
         junit_patterns: [
             "clang-build/**/testresults.xunit.xml"
         ]
-    ]
+    ],
     triggeredJobs: [
         'llvm.org/clang-stage2-cmake-RgSan_relay',
         'llvm.org/clang-stage2-Rthinlto_relay',
