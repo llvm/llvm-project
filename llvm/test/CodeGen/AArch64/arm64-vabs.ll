@@ -2168,15 +2168,21 @@ define <16 x i16> @uabd16b_i16_ext(<16 x i16> %aext, <16 x i8> %b) {
 
 
 define <4 x i32> @uabd_i32_select_const_lhs_add(<4 x i32> %a) {
-; CHECK-LABEL: uabd_i32_select_const_lhs_add:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi.4s v1, #103
-; CHECK-NEXT:    mvni.4s v2, #102
-; CHECK-NEXT:    add.4s v1, v0, v1
-; CHECK-NEXT:    sub.4s v0, v2, v0
-; CHECK-NEXT:    cmlt.4s v3, v1, #0
-; CHECK-NEXT:    bif.16b v0, v1, v3
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uabd_i32_select_const_lhs_add:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mvni.4s v1, #102
+; CHECK-SD-NEXT:    sabd.4s v0, v0, v1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uabd_i32_select_const_lhs_add:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi.4s v1, #103
+; CHECK-GI-NEXT:    mvni.4s v2, #102
+; CHECK-GI-NEXT:    add.4s v1, v0, v1
+; CHECK-GI-NEXT:    sub.4s v0, v2, v0
+; CHECK-GI-NEXT:    cmlt.4s v3, v1, #0
+; CHECK-GI-NEXT:    bif.16b v0, v1, v3
+; CHECK-GI-NEXT:    ret
   %add = add nsw <4 x i32> %a, splat(i32 103)
   %cmp.i = icmp slt <4 x i32> %add, zeroinitializer
   %sub.i = sub <4 x i32> splat(i32 -103), %a
@@ -2185,15 +2191,22 @@ define <4 x i32> @uabd_i32_select_const_lhs_add(<4 x i32> %a) {
 }
 
 define <4 x i32> @uabd_i32_select_const_rhs_add(<4 x i32> %b) {
-; CHECK-LABEL: uabd_i32_select_const_rhs_add:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi.4s v1, #103
-; CHECK-NEXT:    mvni.4s v2, #102
-; CHECK-NEXT:    add.4s v1, v0, v1
-; CHECK-NEXT:    sub.4s v0, v2, v0
-; CHECK-NEXT:    cmgt.4s v3, v1, #0
-; CHECK-NEXT:    bif.16b v0, v1, v3
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uabd_i32_select_const_rhs_add:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mvni.4s v1, #102
+; CHECK-SD-NEXT:    sabd.4s v0, v0, v1
+; CHECK-SD-NEXT:    neg.4s v0, v0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uabd_i32_select_const_rhs_add:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi.4s v1, #103
+; CHECK-GI-NEXT:    mvni.4s v2, #102
+; CHECK-GI-NEXT:    add.4s v1, v0, v1
+; CHECK-GI-NEXT:    sub.4s v0, v2, v0
+; CHECK-GI-NEXT:    cmgt.4s v3, v1, #0
+; CHECK-GI-NEXT:    bif.16b v0, v1, v3
+; CHECK-GI-NEXT:    ret
   %add = add nsw <4 x i32> %b, splat(i32 103)
   %cmp.i = icmp slt <4 x i32> zeroinitializer, %add
   %sub.i = sub <4 x i32> splat(i32 -103), %b
