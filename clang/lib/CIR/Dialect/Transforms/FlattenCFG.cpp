@@ -434,8 +434,9 @@ public:
     // Cleanup scopes must be lowered before the enclosing loop so that
     // break/continue inside them are properly routed through cleanup.
     // Fail the match so the pattern rewriter will process cleanup scopes first.
-    bool hasNestedCleanup = false;
-    op->walk([&](cir::CleanupScopeOp) { hasNestedCleanup = true; });
+    bool hasNestedCleanup = op->walk([&](cir::CleanupScopeOp) {
+                                return mlir::WalkResult::interrupt();
+                              }).wasInterrupted();
     if (hasNestedCleanup)
       return mlir::failure();
 
@@ -920,9 +921,11 @@ public:
 
     // Nested cleanup scopes must be lowered before the enclosing cleanup scope.
     // Fail the match so the pattern rewriter will process inner cleanups first.
-    bool hasNestedCleanup = false;
-    cleanupOp.getBodyRegion().walk(
-        [&](cir::CleanupScopeOp) { hasNestedCleanup = true; });
+    bool hasNestedCleanup = cleanupOp.getBodyRegion()
+                                .walk([&](cir::CleanupScopeOp) {
+                                  return mlir::WalkResult::interrupt();
+                                })
+                                .wasInterrupted();
     if (hasNestedCleanup)
       return mlir::failure();
 
