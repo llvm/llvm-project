@@ -8,8 +8,10 @@
 //
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+// ADDITIONAL_COMPILE_FLAGS: -DTEST_DEBUG
 
 // <semaphore>
+
 
 #include <semaphore>
 #include <thread>
@@ -77,6 +79,6 @@ int main(int, char**)
     test(log_start);
   }
 
-  return 0;
+  return 1;
 
 }
