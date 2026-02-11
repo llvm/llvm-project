@@ -9,10 +9,8 @@ define i1 @va_func(i32 %a, i8 %b, i8 %c, ...) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #80
 ; CHECK-NEXT:    .seh_stackalloc 80
-; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Spill
-; CHECK-NEXT:    .seh_save_reg x19, 16
-; CHECK-NEXT:    str x30, [sp, #24] // 8-byte Spill
-; CHECK-NEXT:    .seh_save_reg x30, 24
+; CHECK-NEXT:    stp x19, x30, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    .seh_save_lrpair x19, 16
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    add x8, sp, #40
 ; CHECK-NEXT:    mov w19, w0
@@ -27,10 +25,8 @@ define i1 @va_func(i32 %a, i8 %b, i8 %c, ...) {
 ; CHECK-NEXT:    cmp w19, w0
 ; CHECK-NEXT:    cset w0, ls
 ; CHECK-NEXT:    .seh_startepilogue
-; CHECK-NEXT:    ldr x30, [sp, #24] // 8-byte Reload
-; CHECK-NEXT:    .seh_save_reg x30, 24
-; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
-; CHECK-NEXT:    .seh_save_reg x19, 16
+; CHECK-NEXT:    ldp x19, x30, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    .seh_save_lrpair x19, 16
 ; CHECK-NEXT:    add sp, sp, #80
 ; CHECK-NEXT:    .seh_stackalloc 80
 ; CHECK-NEXT:    .seh_endepilogue
@@ -43,10 +39,8 @@ define i1 @va_func(i32 %a, i8 %b, i8 %c, ...) {
 ; GISEL-NEXT:  // %bb.0:
 ; GISEL-NEXT:    sub sp, sp, #80
 ; GISEL-NEXT:    .seh_stackalloc 80
-; GISEL-NEXT:    str x19, [sp, #16] // 8-byte Spill
-; GISEL-NEXT:    .seh_save_reg x19, 16
-; GISEL-NEXT:    str x30, [sp, #24] // 8-byte Spill
-; GISEL-NEXT:    .seh_save_reg x30, 24
+; GISEL-NEXT:    stp x19, x30, [sp, #16] // 16-byte Folded Spill
+; GISEL-NEXT:    .seh_save_lrpair x19, 16
 ; GISEL-NEXT:    .seh_endprologue
 ; GISEL-NEXT:    add x8, sp, #40
 ; GISEL-NEXT:    mov w19, w0
@@ -61,10 +55,8 @@ define i1 @va_func(i32 %a, i8 %b, i8 %c, ...) {
 ; GISEL-NEXT:    cmp w19, w0
 ; GISEL-NEXT:    cset w0, ls
 ; GISEL-NEXT:    .seh_startepilogue
-; GISEL-NEXT:    ldr x30, [sp, #24] // 8-byte Reload
-; GISEL-NEXT:    .seh_save_reg x30, 24
-; GISEL-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
-; GISEL-NEXT:    .seh_save_reg x19, 16
+; GISEL-NEXT:    ldp x19, x30, [sp, #16] // 16-byte Folded Reload
+; GISEL-NEXT:    .seh_save_lrpair x19, 16
 ; GISEL-NEXT:    add sp, sp, #80
 ; GISEL-NEXT:    .seh_stackalloc 80
 ; GISEL-NEXT:    .seh_endepilogue

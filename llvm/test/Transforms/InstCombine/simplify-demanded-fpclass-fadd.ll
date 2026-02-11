@@ -20,6 +20,7 @@ declare nofpclass(nan ninf nzero nsub nnorm) half @returns_positive()
 declare nofpclass(nan pinf pzero psub pnorm) half @returns_negative()
 
 declare nofpclass(inf zero sub norm) half @returns_nan()
+declare nofpclass(qnan inf zero sub norm) half @returns_snan()
 
 declare nofpclass(nan inf zero sub) half @returns_norm()
 declare nofpclass(nan inf zero sub pnorm) half @returns_nnorm()
@@ -43,8 +44,7 @@ define nofpclass(inf zero sub norm) half @ret_only_nan(half %x, half %y) {
 define nofpclass(snan inf zero sub norm) half @ret_only_qnan(half %x, half %y) {
 ; CHECK-LABEL: define nofpclass(snan inf zero sub norm) half @ret_only_qnan(
 ; CHECK-SAME: half [[X:%.*]], half [[Y:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[X]], [[Y]]
-; CHECK-NEXT:    ret half [[ADD]]
+; CHECK-NEXT:    ret half 0xH7E00
 ;
   %add = fadd half %x, %y
   ret half %add
@@ -63,7 +63,7 @@ define nofpclass(qnan inf zero sub norm) half @ret_only_snan(half %x, half %y) {
 define nofpclass(nan inf sub norm) half @ret_only_zero(half %x, half %y) {
 ; CHECK-LABEL: define nofpclass(nan inf sub norm) half @ret_only_zero(
 ; CHECK-SAME: half [[X:%.*]], half [[Y:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan half [[X]], [[Y]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan ninf half [[X]], [[Y]]
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
   %add = fadd half %x, %y
@@ -215,7 +215,7 @@ define nofpclass(nan inf) half @ret_nofpclass_inf_nan__fadd_select_unknown_or_in
 ; CHECK-SAME: i1 [[COND:%.*]], half [[X:%.*]], half [[Y:%.*]]) {
 ; CHECK-NEXT:    [[INF0:%.*]] = call half @returns_inf()
 ; CHECK-NEXT:    [[INF1:%.*]] = call half @returns_inf()
-; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan half [[X]], [[Y]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan ninf half [[X]], [[Y]]
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
   %inf0 = call half @returns_inf()
@@ -2044,9 +2044,51 @@ define nofpclass(snan) half @inf_or_nan__fadd__not_nan(half nofpclass(nan) %not.
   ret half %result
 }
 
-attributes #0 = { "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #1 = { "denormal-fp-math"="dynamic,dynamic" }
-attributes #2 = { "denormal-fp-math"="ieee,preserve-sign" }
-attributes #3 = { "denormal-fp-math"="preserve-sign,ieee" }
-attributes #4 = { "denormal-fp-math"="ieee,positive-zero" }
-attributes #5 = { "denormal-fp-math"="positive-zero,ieee" }
+define nofpclass(snan) half @qnan_result_self_demands_snan(i1 noundef %cond, half noundef %unknown) {
+; CHECK-LABEL: define nofpclass(snan) half @qnan_result_self_demands_snan(
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call noundef half @returns_snan()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[SNAN]], half [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[SELECT]], [[SELECT]]
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %snan = call noundef half @returns_snan()
+  %select = select i1 %cond, half %snan, half %unknown
+  %result = fadd half %select, %select
+  ret half %result
+}
+
+define nofpclass(snan) half @qnan_result_demands_snan_lhs(i1 %cond, half %unknown0, half %unknown1) {
+; CHECK-LABEL: define nofpclass(snan) half @qnan_result_demands_snan_lhs(
+; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call half @returns_snan()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[SNAN]], half [[UNKNOWN0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[SELECT]], [[UNKNOWN1]]
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %snan = call half @returns_snan()
+  %select = select i1 %cond, half %snan, half %unknown0
+  %result = fadd half %select, %unknown1
+  ret half %result
+}
+
+define nofpclass(snan) half @qnan_result_demands_snan_rhs(i1 %cond, half %unknown0, half %unknown1) {
+; CHECK-LABEL: define nofpclass(snan) half @qnan_result_demands_snan_rhs(
+; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call half @returns_snan()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[SNAN]], half [[UNKNOWN0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[UNKNOWN1]], [[SELECT]]
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %snan = call half @returns_snan()
+  %select = select i1 %cond, half %snan, half %unknown0
+  %result = fadd half %unknown1, %select
+  ret half %result
+}
+
+attributes #0 = { denormal_fpenv(preservesign) }
+attributes #1 = { denormal_fpenv(dynamic) }
+attributes #2 = { denormal_fpenv(ieee|preservesign) }
+attributes #3 = { denormal_fpenv(preservesign|ieee) }
+attributes #4 = { denormal_fpenv(ieee|positivezero) }
+attributes #5 = { denormal_fpenv(positivezero|ieee) }

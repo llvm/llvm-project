@@ -46,7 +46,8 @@ class SelectionDAGISel {
 public:
   TargetMachine &TM;
   const TargetLibraryInfo *LibInfo;
-  const RTLIB::RuntimeLibcallsInfo *RuntimeLibCallInfo;
+  const LibcallLoweringInfo *LibcallLowering;
+
   std::unique_ptr<FunctionLoweringInfo> FuncInfo;
   std::unique_ptr<SwiftErrorValueTracking> SwiftError;
   MachineFunction *MF;
@@ -469,7 +470,7 @@ public:
   }
 
   void SelectCodeCommon(SDNode *NodeToMatch, const uint8_t *MatcherTable,
-                        unsigned TableSize);
+                        unsigned TableSize, const uint8_t *OperandLists);
 
   /// Return true if complex patterns for this target can mutate the
   /// DAG.

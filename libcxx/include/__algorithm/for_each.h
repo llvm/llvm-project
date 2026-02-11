@@ -26,7 +26,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator, class _Sent, class _Func, class _Proj>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
-__for_each(_InputIterator __first, _Sent __last, _Func& __func, _Proj& __proj) {
+__for_each(_InputIterator __first, _Sent __last, _Func&& __func, _Proj& __proj) {
 #ifndef _LIBCPP_CXX03_LANG
   if constexpr (using _SpecialAlg =
                     __specialized_algorithm<_Algorithm::__for_each, __iterator_pair<_InputIterator, _Sent>>;

@@ -10,9 +10,9 @@ auto fun() {}
 
 // GNU-LABEL:  define{{.*}} void @_Z6callerv()
 // MSVC-LABEL: define{{.*}} void @"?caller@@YAXXZ"()
-// ARM:   ptrtoint ptr {{.*}} to i32, !nosanitize !4
-// ARM:   and i32 {{.*}}, -2, !nosanitize !4
-// ARM:   inttoptr i32 {{.*}} to ptr, !nosanitize !4
+// ARM:   ptrtoint ptr {{.*}} to i32, !nosanitize !6
+// ARM:   and i32 {{.*}}, -2, !nosanitize !6
+// ARM:   inttoptr i32 {{.*}} to ptr, !nosanitize !6
 // CHECK: getelementptr <{ i32, i32 }>, ptr {{.*}}, i32 -1, i32 0, !nosanitize
 // CHECK: load i32, ptr {{.*}}, align {{.*}}, !nosanitize
 // CHECK: icmp eq i32 {{.*}}, -1056584962, !nosanitize
