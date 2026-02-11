@@ -168,19 +168,21 @@ define void @t5ptr(i64 %t, ptr %ptr) nounwind {
 define i64 @t6(i64 %key, ptr nocapture %val) nounwind {
 ; X86-LABEL: t6:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    shrdl $3, %esi, %ecx
-; X86-NEXT:    shrl $3, %esi
-; X86-NEXT:    movl (%edx), %eax
-; X86-NEXT:    movl 4(%edx), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    shrdl $3, %edi, %esi
+; X86-NEXT:    shrl $3, %edi
+; X86-NEXT:    movl (%ecx), %eax
+; X86-NEXT:    movl 4(%ecx), %edx
 ; X86-NEXT:    addl $-1, %eax
 ; X86-NEXT:    adcl $-1, %edx
-; X86-NEXT:    andl %ecx, %eax
-; X86-NEXT:    andl %esi, %edx
+; X86-NEXT:    andl %esi, %eax
+; X86-NEXT:    andl %edi, %edx
 ; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t6:

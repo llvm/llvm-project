@@ -45,8 +45,8 @@ define void @f() nounwind {
 ; X86-NEXT:    sbbl %eax, %edi
 ; X86-NEXT:    movl %edi, %ecx
 ; X86-NEXT:    shldl $30, %ebx, %ecx
-; X86-NEXT:    movl %ebx, %edx
-; X86-NEXT:    shldl $30, %esi, %edx
+; X86-NEXT:    movl %esi, %edx
+; X86-NEXT:    shrdl $2, %ebx, %edx
 ; X86-NEXT:    testl %ecx, %ecx
 ; X86-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    jne .LBB0_1
@@ -206,12 +206,12 @@ define void @f() nounwind {
 ; X86-NEXT:    cmpl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
 ; X86-NEXT:    sbbl %edx, %esi
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
-; X86-NEXT:    sbbl %ecx, %edi
-; X86-NEXT:    shll $30, %edi
-; X86-NEXT:    movl %edi, %esi
-; X86-NEXT:    sarl $30, %esi
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
+; X86-NEXT:    sbbl %ecx, %esi
+; X86-NEXT:    shll $30, %esi
+; X86-NEXT:    movl %esi, %edi
 ; X86-NEXT:    sarl $31, %edi
+; X86-NEXT:    sarl $30, %esi
 ; X86-NEXT:    shrdl $1, %edi, %esi
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    andl $1, %eax

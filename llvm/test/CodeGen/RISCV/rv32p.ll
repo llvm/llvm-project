@@ -349,15 +349,12 @@ define i64 @srx_i64(i64 %x, i64 %y) {
   ret i64 %b
 }
 
-; FIXME: Using srx instead of slx would avoid the mv.
 define i64 @srxi_i64(i64 %x) {
 ; CHECK-LABEL: srxi_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mv a2, a1
-; CHECK-NEXT:    li a3, 7
+; CHECK-NEXT:    li a2, 25
+; CHECK-NEXT:    srx a0, a1, a2
 ; CHECK-NEXT:    srli a1, a1, 25
-; CHECK-NEXT:    slx a2, a0, a3
-; CHECK-NEXT:    mv a0, a2
 ; CHECK-NEXT:    ret
   %a = lshr i64 %x, 25
   ret i64 %a
