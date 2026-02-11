@@ -3080,10 +3080,22 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_llogbl",
+    hdrs = ["src/__support/math/llogbl.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_llogbf",
     hdrs = ["src/__support/math/llogbf.h"],
     deps = [
+        ":__support_common",
         ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
     ],
 )
 
@@ -4792,7 +4804,12 @@ libc_math_function(
     additional_deps = [":__support_math_llogbf"],
 )
 
-libc_math_function(name = "llogbl")
+libc_math_function(
+    name = "llogbl",
+    additional_deps = [
+        ":__support_math_llogbl",
+    ],
+)
 
 libc_math_function(
     name = "llogbf128",

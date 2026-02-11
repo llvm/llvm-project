@@ -91,6 +91,7 @@ add_fp_unittest(
     libc.src.__support.math.llogbf128
     libc.src.__support.math.llogbf16
     libc.src.__support.math.logf16    
+    libc.src.__support.math.llogbl
     libc.src.__support.math.rsqrtf
     libc.src.__support.math.rsqrtf16
     libc.src.__support.math.sqrtf16
