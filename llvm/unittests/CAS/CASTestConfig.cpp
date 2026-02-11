@@ -107,5 +107,5 @@ INSTANTIATE_TEST_SUITE_P(SHA1, CustomHasherOnDiskCASTest,
                              sha1Digest, "SHA1", sizeof(SHA1HashType)}));
 
 #else
-void setMaxOnDiskCASMappingSize() {}
+void unittest::cas::setMaxOnDiskCASMappingSize() {}
 #endif /* LLVM_ENABLE_ONDISK_CAS */

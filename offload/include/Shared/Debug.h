@@ -271,7 +271,12 @@ struct DebugFilter {
 struct DebugSettings {
   bool Enabled = false;
   uint32_t DefaultLevel = 1;
-  llvm::SmallVector<DebugFilter> Filters;
+  // Types/Components in this list are not printed when debug is enabled
+  // unless they are explicitly requested by the user in IncludeFilters.
+  llvm::SmallVector<StringRef> ExcludeFilters;
+  // Types/Components in this list are printed when debug is enabled if
+  // the debug level is equal or higher than the specified level.
+  llvm::SmallVector<DebugFilter> IncludeFilters;
 };
 
 [[maybe_unused]] static DebugFilter parseDebugFilter(StringRef Filter) {
@@ -308,8 +313,13 @@ struct DebugSettings {
       return;
 
     Settings.Enabled = true;
-    if (EnvRef.equals_insensitive("all"))
-      return;
+
+    // Messages with Type/Components added to the exclude list are not
+    // not printed when debug is enabled unless they are explicitly
+    // requested by the user.
+    // Eventually, this should be configured from the upper layers but
+    // for now we can hardcode some excluded types here like:
+    // Settings.ExcludeFilters.push_back(Type);
 
     if (!EnvRef.getAsInteger(10, Settings.DefaultLevel))
       return;
@@ -319,7 +329,18 @@ struct DebugSettings {
     for (auto &FilterSpec : llvm::split(EnvRef, ',')) {
       if (FilterSpec.empty())
         continue;
-      Settings.Filters.push_back(parseDebugFilter(FilterSpec));
+      DebugFilter Filter = parseDebugFilter(FilterSpec);
+
+      // Remove from ExcludeFilters if present
+      Settings.ExcludeFilters.erase(
+          std::remove_if(Settings.ExcludeFilters.begin(),
+                         Settings.ExcludeFilters.end(),
+                         [&](StringRef OutType) {
+                           return OutType.equals_insensitive(Filter.Type);
+                         }),
+          Settings.ExcludeFilters.end());
+
+      Settings.IncludeFilters.push_back(Filter);
     }
   });
 
@@ -334,7 +355,12 @@ shouldPrintDebug(const char *Component, const char *Type, uint32_t &Level) {
   if (!Settings.Enabled)
     return false;
 
-  if (Settings.Filters.empty()) {
+  for (const auto &Filter : Settings.ExcludeFilters) {
+    if (Filter.equals_insensitive(Type) || Filter.equals_insensitive(Component))
+      return false;
+  }
+
+  if (Settings.IncludeFilters.empty()) {
     if (Level <= Settings.DefaultLevel) {
       Level = Settings.DefaultLevel;
       return true;
@@ -342,10 +368,10 @@ shouldPrintDebug(const char *Component, const char *Type, uint32_t &Level) {
     return false;
   }
 
-  for (const auto &DT : Settings.Filters) {
+  for (const auto &DT : Settings.IncludeFilters) {
     if (DT.Level < Level)
       continue;
-    if (DT.Type.equals_insensitive(Type) ||
+    if (DT.Type.equals_insensitive("all") || DT.Type.equals_insensitive(Type) ||
         DT.Type.equals_insensitive(Component)) {
       Level = DT.Level;
       return true;

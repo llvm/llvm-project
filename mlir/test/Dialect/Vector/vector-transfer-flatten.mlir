@@ -1,5 +1,8 @@
 // RUN: mlir-opt %s -test-vector-transfer-flatten-patterns -split-input-file | FileCheck %s
 // RUN: mlir-opt %s -test-vector-transfer-flatten-patterns=target-vector-bitwidth=128 -split-input-file | FileCheck %s --check-prefix=CHECK-128B
+// RUN: mlir-opt -split-input-file \
+// RUN: -transform-preload-library='transform-library-paths=%p/td/flatten.mlir' \
+// RUN: -transform-interpreter=entry-point=flatten %s | FileCheck %s
 
 // TODO: Align naming and format with e.g. vector-transfer-permutation-lowering.mlir
 

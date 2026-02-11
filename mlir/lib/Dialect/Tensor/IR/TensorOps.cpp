@@ -34,6 +34,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/MathExtras.h"
@@ -2040,6 +2041,16 @@ static LogicalResult verifyTensorReshapeOp(TensorReshapeOp op,
           verifyReshapeLikeTypes(op, expandedType, collapsedType, isExpansion)))
     return failure();
 
+  // Reshape must preserve the number of elements when statically known.
+  if (expandedType.hasStaticShape() && collapsedType.hasStaticShape()) {
+    int64_t expandedNumElements = expandedType.getNumElements();
+    int64_t collapsedNumElements = collapsedType.getNumElements();
+    if (expandedNumElements != collapsedNumElements) {
+      return op.emitOpError("number of elements must be preserved: ")
+             << expandedNumElements << " != " << collapsedNumElements;
+    }
+  }
+
   auto maps = op.getReassociationMaps();
   RankedTensorType expectedType =
       CollapseShapeOp::inferCollapsedType(expandedType, maps);
@@ -2050,8 +2061,8 @@ static LogicalResult verifyTensorReshapeOp(TensorReshapeOp op,
 }
 
 LogicalResult ExpandShapeOp::verify() {
-  auto srcType = getSrcType();
-  auto resultType = getResultType();
+  RankedTensorType srcType = getSrc().getType();
+  RankedTensorType resultType = getResult().getType();
 
   if ((int64_t)getStaticOutputShape().size() != resultType.getRank())
     return emitOpError("expected number of static shape dims to be equal to "
@@ -2076,7 +2087,10 @@ LogicalResult CollapseShapeOp::verify() {
                    [](ReassociationIndices group) { return group.empty(); })) {
     return op.emitOpError("reassociation indices must not be empty");
   }
-  return verifyTensorReshapeOp(*this, getSrcType(), getResultType());
+  RankedTensorType srcType = op.getSrc().getType();
+  RankedTensorType resultType = op.getResult().getType();
+
+  return verifyTensorReshapeOp(op, srcType, resultType);
 }
 
 namespace {
@@ -2413,12 +2427,12 @@ void ExtractSliceOp::build(OpBuilder &b, OperationState &result,
                            RankedTensorType resultType, Value source,
                            ValueRange offsets, ValueRange sizes,
                            ValueRange strides, ArrayRef<NamedAttribute> attrs) {
-  SmallVector<OpFoldResult> offsetValues = llvm::to_vector<4>(
-      llvm::map_range(offsets, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> sizeValues = llvm::to_vector<4>(
-      llvm::map_range(sizes, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> strideValues = llvm::to_vector<4>(
-      llvm::map_range(strides, [](Value v) -> OpFoldResult { return v; }));
+  SmallVector<OpFoldResult> offsetValues = llvm::map_to_vector<4>(
+      offsets, [](Value v) -> OpFoldResult { return v; });
+  SmallVector<OpFoldResult> sizeValues =
+      llvm::map_to_vector<4>(sizes, [](Value v) -> OpFoldResult { return v; });
+  SmallVector<OpFoldResult> strideValues = llvm::map_to_vector<4>(
+      strides, [](Value v) -> OpFoldResult { return v; });
   build(b, result, resultType, source, offsetValues, sizeValues, strideValues);
 }
 
@@ -2707,8 +2721,24 @@ struct SliceReturnTypeCanonicalizer {
                               ArrayRef<OpFoldResult> mixedOffsets,
                               ArrayRef<OpFoldResult> mixedSizes,
                               ArrayRef<OpFoldResult> mixedStrides) {
-    return ExtractSliceOp::inferCanonicalRankReducedResultType(
-        op.getType().getRank(), op.getSourceType(), mixedSizes);
+    // Infer a tensor type without taking into account any rank reductions.
+    RankedTensorType nonReducedType =
+        ExtractSliceOp::inferResultType(op.getSourceType(), mixedSizes);
+
+    // Directly return the non-rank reduced type if there are no dropped
+    // dims.
+    llvm::SmallBitVector droppedDims = op.getDroppedDims();
+    if (droppedDims.none())
+      return nonReducedType;
+
+    // Build the reduced shape, preserving the original rank reduction pattern.
+    SmallVector<int64_t> targetShape;
+    for (auto i : llvm::seq<int64_t>(mixedSizes.size()))
+      if (!droppedDims.test(i))
+        targetShape.push_back(nonReducedType.getDimSize(i));
+
+    return RankedTensorType::get(targetShape, nonReducedType.getElementType(),
+                                 nonReducedType.getEncoding());
   }
 };
 
@@ -2832,12 +2862,12 @@ void InsertSliceOp::build(OpBuilder &b, OperationState &result, Value source,
 void InsertSliceOp::build(OpBuilder &b, OperationState &result, Value source,
                           Value dest, ValueRange offsets, ValueRange sizes,
                           ValueRange strides, ArrayRef<NamedAttribute> attrs) {
-  SmallVector<OpFoldResult> offsetValues = llvm::to_vector<4>(
-      llvm::map_range(offsets, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> sizeValues = llvm::to_vector<4>(
-      llvm::map_range(sizes, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> strideValues = llvm::to_vector<4>(
-      llvm::map_range(strides, [](Value v) -> OpFoldResult { return v; }));
+  SmallVector<OpFoldResult> offsetValues = llvm::map_to_vector<4>(
+      offsets, [](Value v) -> OpFoldResult { return v; });
+  SmallVector<OpFoldResult> sizeValues =
+      llvm::map_to_vector<4>(sizes, [](Value v) -> OpFoldResult { return v; });
+  SmallVector<OpFoldResult> strideValues = llvm::map_to_vector<4>(
+      strides, [](Value v) -> OpFoldResult { return v; });
   build(b, result, source, dest, offsetValues, sizeValues, strideValues);
 }
 
@@ -3897,12 +3927,12 @@ void ParallelInsertSliceOp::build(OpBuilder &b, OperationState &result,
                                   Value source, Value dest, ValueRange offsets,
                                   ValueRange sizes, ValueRange strides,
                                   ArrayRef<NamedAttribute> attrs) {
-  SmallVector<OpFoldResult> offsetValues = llvm::to_vector<4>(
-      llvm::map_range(offsets, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> sizeValues = llvm::to_vector<4>(
-      llvm::map_range(sizes, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> strideValues = llvm::to_vector<4>(
-      llvm::map_range(strides, [](Value v) -> OpFoldResult { return v; }));
+  SmallVector<OpFoldResult> offsetValues = llvm::map_to_vector<4>(
+      offsets, [](Value v) -> OpFoldResult { return v; });
+  SmallVector<OpFoldResult> sizeValues =
+      llvm::map_to_vector<4>(sizes, [](Value v) -> OpFoldResult { return v; });
+  SmallVector<OpFoldResult> strideValues = llvm::map_to_vector<4>(
+      strides, [](Value v) -> OpFoldResult { return v; });
   build(b, result, source, dest, offsetValues, sizeValues, strideValues);
 }
 
