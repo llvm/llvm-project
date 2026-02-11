@@ -19,7 +19,6 @@
 
 using namespace llvm;
 
-#ifdef LLDB_PYTHON_DLL_RELATIVE_PATH
 static std::string GetModulePath(HMODULE module) {
   std::vector<WCHAR> buffer(MAX_PATH);
   while (buffer.size() <= PATHCCH_MAX_CCH) {
@@ -41,6 +40,7 @@ static std::string GetModulePath(HMODULE module) {
 /// Returns the full path to the lldb.exe executable.
 static std::string GetPathToExecutable() { return GetModulePath(NULL); }
 
+#ifdef LLDB_PYTHON_DLL_RELATIVE_PATH
 bool AddPythonDLLToSearchPath() {
   std::string path_str = GetPathToExecutable();
   if (path_str.empty())
