@@ -1,4 +1,4 @@
-//===- OpenACCUtilsCG.h - OpenACC Code Generation Utilities ------*- C++ -*-===//
+//===- OpenACCUtilsCG.h - OpenACC Code Generation Utilities -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -31,7 +31,8 @@ namespace acc {
 /// \param op The operation to get the data layout for.
 /// \param allowDefault If true, allow returning a default data layout.
 /// \return The data layout if available, std::nullopt otherwise.
-std::optional<DataLayout> getDataLayout(Operation *op, bool allowDefault = true);
+std::optional<DataLayout> getDataLayout(Operation *op,
+                                        bool allowDefault = true);
 
 } // namespace acc
 } // namespace mlir

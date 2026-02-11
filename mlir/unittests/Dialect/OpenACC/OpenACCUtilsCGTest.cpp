@@ -62,8 +62,8 @@ TEST_F(OpenACCUtilsCGTest, getDataLayoutWithSpec) {
   OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
 
   // Add a data layout spec to the module
-  auto indexEntry = DataLayoutEntryAttr::get(
-      IndexType::get(&context), b.getI32IntegerAttr(32));
+  auto indexEntry = DataLayoutEntryAttr::get(IndexType::get(&context),
+                                             b.getI32IntegerAttr(32));
   auto spec = DataLayoutSpecAttr::get(&context, {indexEntry});
   (*module)->setAttr(DLTIDialect::kDataLayoutAttrName, spec);
 

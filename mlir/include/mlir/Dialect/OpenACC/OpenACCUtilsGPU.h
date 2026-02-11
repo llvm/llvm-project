@@ -1,4 +1,4 @@
-//===- OpenACCUtilsGPU.h - OpenACC GPU Utilities -----------------*- C++ -*-===//
+//===- OpenACCUtilsGPU.h - OpenACC GPU Utilities -----------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -32,7 +32,8 @@ constexpr llvm::StringLiteral kDefaultGPUModuleName = "acc_gpu_module";
 ///
 /// \param mod The module to search or create the GPU module in.
 /// \param create If true (default), create the GPU module if it doesn't exist.
-/// \param name The name for the GPU module. If empty, uses kDefaultGPUModuleName.
+/// \param name The name for the GPU module. If empty, uses
+/// kDefaultGPUModuleName.
 /// \return The GPU module if found or created, std::nullopt otherwise.
 std::optional<gpu::GPUModuleOp>
 getOrCreateGPUModule(ModuleOp mod, bool create = true,
