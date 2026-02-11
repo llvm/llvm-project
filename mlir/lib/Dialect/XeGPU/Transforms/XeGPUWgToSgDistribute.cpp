@@ -1850,8 +1850,15 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
 
   // Remove layout attributes from SCF ops
   getOperation()->walk([](Operation *op) {
-    if (isa<RegionBranchOpInterface, RegionBranchTerminatorOpInterface>(op)) {
-      xegpu::removeLayoutAttrs(op);
+    if (!isa<RegionBranchOpInterface, RegionBranchTerminatorOpInterface>(op))
+      return;
+
+    SmallVector<StringAttr> attrsToRemove;
+    for (auto namedAttr : op->getDiscardableAttrs()) {
+      if (isa<xegpu::DistributeLayoutAttr>(namedAttr.getValue()))
+        attrsToRemove.push_back(namedAttr.getName());
     }
+    for (auto attrName : attrsToRemove)
+      op->removeDiscardableAttr(attrName);
   });
 }
