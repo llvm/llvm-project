@@ -205,7 +205,7 @@ class Operation(ir.OpView):
 
     @classmethod
     def __init_subclass__(
-        cls, *, name: str | None = None, traits: list | None = None, **kwargs
+        cls, *, name: str | None = None, traits: list[type] | None = None, **kwargs
     ):
         """
         This method is to perform all magic to make a `Operation` subclass works like a dataclass, like:
