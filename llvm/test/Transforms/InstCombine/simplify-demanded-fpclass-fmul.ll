@@ -657,7 +657,7 @@ define nofpclass(nan) float @ret_no_nan_result__known_pzero__fmul__not_inf(float
 define nofpclass(nan) float @ret_no_nan_result__not_inf_or_nan__fmul__known_pzero_or_nan(float nofpclass(inf) %not.inf.or.nan, float nofpclass(inf sub norm nzero) %pzero.or.nan) {
 ; CHECK-LABEL: define nofpclass(nan) float @ret_no_nan_result__not_inf_or_nan__fmul__known_pzero_or_nan(
 ; CHECK-SAME: float nofpclass(inf) [[NOT_INF_OR_NAN:%.*]], float nofpclass(inf nzero sub norm) [[PZERO_OR_NAN:%.*]]) {
-; CHECK-NEXT:    [[MUL:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[NOT_INF_OR_NAN]])
+; CHECK-NEXT:    [[MUL:%.*]] = call ninf float @llvm.copysign.f32(float 0.000000e+00, float [[NOT_INF_OR_NAN]])
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %mul = fmul float %not.inf.or.nan, %pzero.or.nan
