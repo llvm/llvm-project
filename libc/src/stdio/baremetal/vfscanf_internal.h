@@ -39,7 +39,7 @@ public:
       return '\0';
     return c;
   }
-  LIBC_INLINE void ungetc(int c) { (void)internal::ungetc_internal(c, stream); }
+  LIBC_INLINE void ungetc(int c) { (void)ungetc_internal(c, stream); }
 };
 
 } // namespace internal

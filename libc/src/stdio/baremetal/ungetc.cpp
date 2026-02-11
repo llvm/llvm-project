@@ -14,7 +14,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, ungetc, (int c, ::FILE *stream)) {
-  return internal::ungetc_internal(c, stream);
+  return ungetc_internal(c, stream);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

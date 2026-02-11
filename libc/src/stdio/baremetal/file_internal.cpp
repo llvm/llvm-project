@@ -9,7 +9,7 @@
 #include "src/stdio/baremetal/file_internal.h"
 #include "src/__support/CPP/optional.h"
 
-#include "hdr/stdio_macros.h" // for EOF
+#include "hdr/stdio_macros.h" // for EOF, FILE
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -19,7 +19,6 @@ namespace LIBC_NAMESPACE_DECL {
 // This minimal implementation only handles stdin and returns error on all
 // other streams.
 // TODO: Shall we have an embedding API for ungetc?
-extern "C" ::FILE *stdin;
 
 static cpp::optional<unsigned char> ungetc_state_stdin;
 
@@ -49,13 +48,5 @@ int push_ungetc_value(::FILE *stream, int c) {
       cpp::optional<unsigned char>{static_cast<unsigned char>(c)};
   return c;
 }
-
-namespace internal {
-
-int ungetc_internal(int c, ::FILE *stream) {
-  return push_ungetc_value(stream, c);
-}
-
-} // namespace internal
 
 } // namespace LIBC_NAMESPACE_DECL

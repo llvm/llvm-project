@@ -35,9 +35,9 @@ struct FileIOResult {
 // ungetc handling.
 int push_ungetc_value(::FILE *stream, int c);
 bool pop_ungetc_value(::FILE *stream, unsigned char &out);
-namespace internal {
-int ungetc_internal(int c, ::FILE *stream);
-} // namespace internal
+LIBC_INLINE int ungetc_internal(int c, ::FILE *stream) {
+  return push_ungetc_value(stream, c);
+}
 
 LIBC_INLINE FileIOResult read_internal(char *buf, size_t size, ::FILE *stream) {
   if (size == 0)
