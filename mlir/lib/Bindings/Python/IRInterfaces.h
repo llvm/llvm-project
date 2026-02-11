@@ -14,6 +14,8 @@
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/IRCore.h"
 
+#include <nanobind/nanobind.h>
+
 namespace nb = nanobind;
 
 namespace mlir {
@@ -60,16 +62,11 @@ public:
   /// methods of the interface are accessible to the caller.
   PyConcreteOpInterface(nb::object object, DefaultingPyMlirContext context)
       : obj(std::move(object)) {
-    try {
-      operation = &nb::cast<PyOperation &>(obj);
-    } catch (nb::cast_error &) {
-      // Do nothing.
-    }
-
-    try {
-      operation = &nb::cast<PyOpView &>(obj).getOperation();
-    } catch (nb::cast_error &) {
-      // Do nothing.
+    if (!nb::try_cast<PyOperation *>(obj, operation)) {
+      PyOpView *opview;
+      if (nb::try_cast<PyOpView *>(obj, opview)) {
+        operation = &opview->getOperation();
+      };
     }
 
     if (operation != nullptr) {
@@ -83,12 +80,9 @@ public:
       MlirStringRef stringRef = mlirIdentifierStr(identifier);
       opName = std::string(stringRef.data, stringRef.length);
     } else {
-      try {
-        opName = nb::cast<std::string>(obj.attr("OPERATION_NAME"));
-      } catch (nb::cast_error &) {
+      if (!nb::try_cast<std::string>(obj.attr("OPERATION_NAME"), opName))
         throw nb::type_error(
             "Op interface does not refer to an operation or OpView class");
-      }
 
       if (!mlirOperationImplementsInterfaceStatic(
               mlirStringRefCreate(opName.data(), opName.length()),
