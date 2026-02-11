@@ -1826,6 +1826,10 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
   uint32_t *buffer_begin = &codepoint_buffer.front();
   uint32_t *buffer_end = buffer_begin + codepoint_buffer.size();
 
+  llvm::TextEncodingConverter *Converter = nullptr;
+  if (isOrdinary())
+    Converter = TEC.getConverter(CA_ToExecEncoding);
+
   // Unicode escapes representing characters that cannot be correctly
   // represented in a single code unit are disallowed in character literals
   // by this implementation.
@@ -1840,12 +1844,8 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
   } else if (tok::utf32_char_constant == Kind) {
     largest_character_for_kind = 0x10FFFF;
   } else {
-    largest_character_for_kind = 0x7Fu;
+    largest_character_for_kind = (Converter == nullptr) ? 0x7Fu : 0xFFu;
   }
-
-  llvm::TextEncodingConverter *Converter = nullptr;
-  if (isOrdinary())
-    Converter = TEC.getConverter(CA_ToExecEncoding);
 
   while (begin != end) {
     // Is this a span of non-escape characters?
@@ -1887,10 +1887,11 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
           if (!HadError && Converter) {
             assert(Kind != tok::wide_char_constant &&
                    "Wide character translation not supported");
-            char ByteChar = *tmp_out_start;
+            std::string UTF8String;
+            convertUTF32ToUTF8String(
+                ArrayRef<char>((const char *)tmp_out_start, 4), UTF8String);
             SmallString<1> ConvertedChar;
-            std::error_code EC =
-                Converter->convert(StringRef(&ByteChar, 1), ConvertedChar);
+            std::error_code EC = Converter->convert(UTF8String, ConvertedChar);
             if (EC) {
               PP.Diag(Loc, diag::err_exec_charset_conversion_failed)
                   << EC.message();
@@ -1898,7 +1899,7 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
             } else {
               if (ConvertedChar.size() > 1)
                 PP.Diag(Loc, diag::err_char_size_increased_after_conversion)
-                    << ByteChar;
+                    << UTF8String;
               *tmp_out_start = ConvertedChar[0];
             }
           }
