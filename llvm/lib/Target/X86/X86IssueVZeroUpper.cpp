@@ -91,6 +91,9 @@ namespace {
 
     BlockState() = default;
   };
+
+  using BlockStateMap = SmallVector<BlockState, 8>;
+  using DirtySuccessorsWorkList = SmallVector<MachineBasicBlock *, 8>;
 } // end anonymous namespace
 
 char X86IssueVZeroUpperLegacy::ID = 0;
@@ -172,8 +175,8 @@ static void insertVZeroUpper(MachineBasicBlock::iterator I,
 
 /// Add MBB to the DirtySuccessors list if it hasn't already been added.
 static void addDirtySuccessor(MachineBasicBlock &MBB,
-                              SmallVectorImpl<BlockState> &BlockStates,
-                              SmallVectorImpl<MachineBasicBlock *> &DirtySuccessors) {
+                              BlockStateMap &BlockStates,
+                              DirtySuccessorsWorkList &DirtySuccessors) {
   if (!BlockStates[MBB.getNumber()].AddedToDirtySuccessors) {
     DirtySuccessors.push_back(&MBB);
     BlockStates[MBB.getNumber()].AddedToDirtySuccessors = true;
@@ -183,8 +186,8 @@ static void addDirtySuccessor(MachineBasicBlock &MBB,
 /// Loop over all of the instructions in the basic block, inserting vzeroupper
 /// instructions before function calls.
 static void processBasicBlock(MachineBasicBlock &MBB,
-                              SmallVectorImpl<BlockState> &BlockStates,
-                              SmallVectorImpl<MachineBasicBlock *> &DirtySuccessors,
+                              BlockStateMap &BlockStates,
+                              DirtySuccessorsWorkList &DirtySuccessors,
                               bool IsX86INTR, const TargetInstrInfo *TII,
                               bool &EverMadeChange) {
   // Start by assuming that the block is PASS_THROUGH which implies no unguarded
@@ -300,8 +303,8 @@ static bool issueVZeroUpper(MachineFunction &MF) {
   const TargetInstrInfo *TII = ST.getInstrInfo();
   bool IsX86INTR = MF.getFunction().getCallingConv() == CallingConv::X86_INTR;
   bool EverMadeChange = false;
-  SmallVector<BlockState, 8> BlockStates(MF.getNumBlockIDs());
-  SmallVector<MachineBasicBlock *, 8> DirtySuccessors;
+  BlockStateMap BlockStates(MF.getNumBlockIDs());
+  DirtySuccessorsWorkList DirtySuccessors;
 
   assert(BlockStates.size() == MF.getNumBlockIDs() && DirtySuccessors.empty() &&
          "X86VZeroUpper state should be clear");
