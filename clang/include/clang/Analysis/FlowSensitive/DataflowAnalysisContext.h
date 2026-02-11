@@ -17,6 +17,7 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/Type.h"
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Analysis/FlowSensitive/ASTOps.h"
 #include "clang/Analysis/FlowSensitive/AdornedCFG.h"
@@ -207,8 +208,9 @@ public:
   Solver::Result querySolver(llvm::SetVector<const Formula *> Constraints);
 
   /// Returns the fields of `Type`, limited to the set of fields modeled by this
-  /// context.
-  FieldSet getModeledFields(QualType Type);
+  /// context. The returned reference is valid for the lifetime of the context,
+  /// or until `addModeledFields()` is called.
+  const FieldSet &getModeledFields(QualType Type);
 
   /// Returns the names and types of the synthetic fields for the given record
   /// type.
@@ -262,7 +264,11 @@ private:
   /// `Tokens` in the dependency graph.
   llvm::DenseSet<Atom> collectDependencies(llvm::DenseSet<Atom> Tokens) const;
 
-  // Extends the set of modeled field declarations.
+  /// Computes and returns the fields of `Type`, limited to the set of fields
+  /// modeled by this context.
+  FieldSet computeModeledFields(QualType Type);
+
+  /// Extends the set of modeled field declarations.
   void addModeledFields(const FieldSet &Fields);
 
   /// Adds all constraints of the flow condition identified by `Token` and all
@@ -328,6 +334,9 @@ private:
 
   // Fields modeled by environments covered by this context.
   FieldSet ModeledFields;
+
+  // Cache of modeled fields for each type, covered by this context.
+  llvm::DenseMap<QualType, std::unique_ptr<FieldSet>> CachedModeledFields;
 
   std::unique_ptr<Logger> LogOwner; // If created via flags.
 
