@@ -910,6 +910,14 @@ def GetDimensions : DXILOp<72, getDimensions> {
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
+def AtomicBinOp : DXILOp<78, atomicBinOp> {
+  let Doc = "performs an atomic operation on a value in memory";
+  let arguments = [HandleTy, Int32Ty, Int32Ty, Int32Ty, Int32Ty, OverloadTy];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [Int32Ty, Int64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def Barrier : DXILOp<80, barrier> {
   let Doc = "inserts a memory barrier in the shader";
   let intrinsics = [

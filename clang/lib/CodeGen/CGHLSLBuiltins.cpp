@@ -300,6 +300,122 @@ static Value *handleElementwiseF32ToF16(CodeGenFunction &CGF,
   llvm_unreachable("Intrinsic F32ToF16 not supported by target architecture");
 }
 
+// Not sure where would be best for this to live
+// AtomicBinOp uses an i32 to determine the operation mode as follows
+enum AtomicOperationCode : uint {
+  Add = 0,
+  And = 1,
+  Or = 2,
+  Xor = 3,
+  IMin = 4,
+  IMax = 5,
+  UMin = 6,
+  UMax = 7,
+  Exchange = 8
+};
+
+static Value *handleAtomicBinOp(CodeGenFunction &CGF, const CallExpr *E,
+                                const AtomicOperationCode OpCode,
+                                const bool HasReturn, const bool Is32Bit) {
+  Value *HandleOp = CGF.EmitScalarExpr(E->getArg(0));
+  Value *IndexOp = CGF.EmitScalarExpr(E->getArg(1));
+  Value *StructuredBufIndexOp;
+  Value *NewValueOp;
+  Value *OldValueOp;
+  unsigned OldValueArgIdx;
+  if (E->getNumArgs() == 3) {
+    // (handle, index, newValue)
+    NewValueOp = CGF.EmitScalarExpr(E->getArg(2));
+  } else if (E->getNumArgs() == 4) {
+    if (HasReturn) {
+      // (handle, index, newValue, oldValue)
+      NewValueOp = CGF.EmitScalarExpr(E->getArg(2));
+      OldValueArgIdx = 3;
+    } else {
+      // (handle, index, index, newValue)
+      StructuredBufIndexOp = CGF.EmitScalarExpr(E->getArg(2));
+      NewValueOp = CGF.EmitScalarExpr(E->getArg(3));
+    }
+  } else {
+    // (handle, index, index, newValue, oldValue)
+    StructuredBufIndexOp = CGF.EmitScalarExpr(E->getArg(2));
+    NewValueOp = CGF.EmitScalarExpr(E->getArg(3));
+    OldValueArgIdx = 4;
+  }
+
+  switch (CGF.CGM.getTarget().getTriple().getArch()) {
+  case llvm::Triple::dxil: {
+    QualType HandleTy = E->getArg(0)->getType();
+    const HLSLAttributedResourceType *ResourceTy =
+        HandleTy->getAs<HLSLAttributedResourceType>();
+
+    // AtomicBinOp uses an i32 to determine the operation mode as follows
+    // Add: 0, And: 1, Or: 2, Xor: 3, IMin: 4, IMax: 5, UMin: 6, UMax: 7,
+    // Exchange: 8
+    Value *ModeConstant = ConstantInt::get(CGF.Int32Ty, OpCode);
+
+    // AtomicBinOp has 3 coordinate params which must be handled differently
+    // depending on the resource type being accessed.
+    // Initially undef all the coordinates then fill as required
+    Value *Undef = UndefValue::get(CGF.Int32Ty);
+    Value *C0 = Undef;
+    Value *C1 = Undef;
+    Value *C2 = Undef;
+    if (!ResourceTy->getAttrs().RawBuffer) {
+      assert(
+          (ResourceTy->getContainedType() == CGF.getContext().IntTy ||
+           ResourceTy->getContainedType() == CGF.getContext().UnsignedIntTy) &&
+          "AtomicBinOp RWBuffer must contain int or uint");
+      // RWBuffer: c0
+      C0 = IndexOp;
+
+      // RWByteAddressBuffers are output as char8_t, but as that isn't
+      // recognised by HLSL we can't use it as an attribute to define them in
+      // tests, so must also check for char ([[hlsl::contained_type(char)]])
+    } else if (ResourceTy->getContainedType() == CGF.getContext().Char8Ty ||
+               ResourceTy->getContainedType() == CGF.getContext().CharTy) {
+      // RWByteAddressBuffer: c0
+      C0 = IndexOp;
+    } else {
+      // RWStructuredBuffer: c0 and c1
+      C0 = IndexOp;
+      C1 = StructuredBufIndexOp;
+    }
+    assert(C0 != Undef && "Failed to identify coordinates for Interlocked");
+    // TODO: Add coordinate logic for texture and groupshared
+
+    // atomicBinOp
+    // opcode, handle, binary operation code, coordinates c0, c1, c2, new val
+    if (Is32Bit) {
+      Intrinsic::ID ID = Intrinsic::dx_resource_atomicbinop;
+      OldValueOp = CGF.Builder.CreateIntrinsic(
+          /*ReturnType=*/CGF.Int32Ty, ID,
+          ArrayRef<Value *>{HandleOp, ModeConstant, C0, C1, C2, NewValueOp},
+          nullptr, "hlsl.interlocked.or");
+    } else {
+      Intrinsic::ID ID = Intrinsic::dx_resource_atomicbinop64;
+      OldValueOp = CGF.Builder.CreateIntrinsic(
+          /*ReturnType=*/CGF.Int64Ty, ID,
+          ArrayRef<Value *>{HandleOp, ModeConstant, C0, C1, C2, NewValueOp},
+          nullptr, "hlsl.interlocked.or");
+    }
+    break;
+  }
+  default:
+    llvm_unreachable(
+        "Interlocked intrinsic not supported by target architecture");
+  }
+
+  // Destination may or may not be provided
+  // If it is provided create a store to it
+  if (HasReturn) {
+    LValue DestOp = CGF.EmitLValue(E->getArg(OldValueArgIdx));
+    return CGF.Builder.CreateStore(OldValueOp, DestOp.getAddress());
+  } else {
+    return OldValueOp;
+  }
+}
+
 static Value *emitBufferStride(CodeGenFunction *CGF, const Expr *HandleExpr,
                                LValue &Stride) {
   // Figure out the stride of the buffer elements from the handle type.
@@ -1180,6 +1296,18 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     llvm::Value *DefaultVal = EmitScalarExpr(E->getArg(1));
     llvm::Value *Args[] = {SpecId, DefaultVal};
     return Builder.CreateCall(SpecConstantFn, Args);
+  }
+  case Builtin::BI__builtin_hlsl_interlocked_or: {
+    return handleAtomicBinOp(*this, E, AtomicOperationCode::Or, false, true);
+  }
+  case Builtin::BI__builtin_hlsl_interlocked_or64: {
+    return handleAtomicBinOp(*this, E, AtomicOperationCode::Or, false, false);
+  }
+  case Builtin::BI__builtin_hlsl_interlocked_or_ret: {
+    return handleAtomicBinOp(*this, E, AtomicOperationCode::Or, true, true);
+  }
+  case Builtin::BI__builtin_hlsl_interlocked_or_ret64: {
+    return handleAtomicBinOp(*this, E, AtomicOperationCode::Or, true, false);
   }
   }
   return nullptr;
