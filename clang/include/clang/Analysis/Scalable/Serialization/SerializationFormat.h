@@ -31,7 +31,6 @@ class EntitySummary;
 class SerializationFormat
     : public llvm::RTTIExtends<SerializationFormat, llvm::RTTIRoot> {
 public:
-  explicit SerializationFormat() = default;
   virtual ~SerializationFormat() = default;
 
   virtual TUSummary readTUSummary(llvm::StringRef Path) = 0;
