@@ -1541,10 +1541,8 @@ void SIRegisterInfo::buildSpillLoadStore(
   // TODO: Optimize misaligned spills by using larger aligned chunks instead of
   // 32-bit splits.
   bool IsRegMisaligned = false;
-  if (ST.needsAlignedVGPRs() && IsFlat && !IsBlock && RegWidth > 4) {
-    unsigned HWReg = getHWRegIndex(ValueReg);
-    IsRegMisaligned = (HWReg & 1) != 0;
-  }
+  if (ST.needsAlignedVGPRs() && IsFlat && !IsBlock && RegWidth > 4)
+    IsRegMisaligned = !isProperlyAlignedRC(*RC);
   // Always use 4 byte operations for AGPRs because we need to scavenge
   // a temporary VGPR.
   // If we're using a block operation, the element should be the whole block.
