@@ -52,6 +52,11 @@ static const MachineMemOperand::Flags MOLastUse =
 static const MachineMemOperand::Flags MOCooperative =
     MachineMemOperand::MOTargetFlag3;
 
+/// Mark the MMO of accesses to memory locations that are
+/// never written to by other threads.
+static const MachineMemOperand::Flags MOThreadPrivate =
+    MachineMemOperand::MOTargetFlag4;
+
 /// Utility to store machine instructions worklist.
 struct SIInstrWorklist {
   SIInstrWorklist() = default;
@@ -303,6 +308,8 @@ public:
   bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
                                int64_t &ImmVal) const override;
 
+  std::optional<int64_t> getImmOrMaterializedImm(MachineOperand &Op) const;
+
   unsigned getVectorRegSpillSaveOpcode(Register Reg,
                                        const TargetRegisterClass *RC,
                                        unsigned Size,
@@ -461,12 +468,6 @@ public:
 
   bool isSALU(uint16_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::SALU;
-  }
-
-  static bool isProgramStateSALU(const MachineInstr &MI) {
-    return MI.getOpcode() == AMDGPU::S_DELAY_ALU ||
-           MI.getOpcode() == AMDGPU::S_SET_VGPR_MSB ||
-           MI.getOpcode() == AMDGPU::ATOMIC_FENCE;
   }
 
   static bool isVALU(const MachineInstr &MI) {
@@ -734,7 +735,7 @@ public:
     }
   }
 
-  static bool setsSCCifResultIsNonZero(const MachineInstr &MI) {
+  static bool setsSCCIfResultIsNonZero(const MachineInstr &MI) {
     switch (MI.getOpcode()) {
     case AMDGPU::S_ABSDIFF_I32:
     case AMDGPU::S_ABS_I32:
@@ -1023,6 +1024,14 @@ public:
 
   static bool usesLGKM_CNT(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::LGKM_CNT;
+  }
+
+  static bool usesASYNC_CNT(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::ASYNC_CNT;
+  }
+
+  bool usesASYNC_CNT(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::ASYNC_CNT;
   }
 
   // Most sopk treat the immediate as a signed 16-bit, however some
@@ -1669,11 +1678,7 @@ public:
   InstructionUniformity
   getGenericInstructionUniformity(const MachineInstr &MI) const;
 
-  const MIRFormatter *getMIRFormatter() const override {
-    if (!Formatter)
-      Formatter = std::make_unique<AMDGPUMIRFormatter>();
-    return Formatter.get();
-  }
+  const MIRFormatter *getMIRFormatter() const override;
 
   static unsigned getDSShaderTypeValue(const MachineFunction &MF);
 

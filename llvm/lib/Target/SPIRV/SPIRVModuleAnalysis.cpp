@@ -939,7 +939,7 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
                     Capability::SampledImageArrayDynamicIndexing,
                     Capability::StorageBufferArrayDynamicIndexing,
                     Capability::StorageImageArrayDynamicIndexing,
-                    Capability::DerivativeControl});
+                    Capability::DerivativeControl, Capability::MinLod});
 
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
@@ -1398,6 +1398,18 @@ void addPrintfRequirements(const MachineInstr &MI,
   }
 }
 
+static void addImageOperandReqs(const MachineInstr &MI,
+                                SPIRV::RequirementHandler &Reqs,
+                                const SPIRVSubtarget &ST, unsigned OpIdx) {
+  if (MI.getNumOperands() <= OpIdx)
+    return;
+  uint32_t Mask = MI.getOperand(OpIdx).getImm();
+  for (uint32_t I = 0; I < 32; ++I)
+    if (Mask & (1U << I))
+      Reqs.getAndAddRequirements(SPIRV::OperandCategory::ImageOperandOperand,
+                                 1U << I, ST);
+}
+
 void addInstrRequirements(const MachineInstr &MI,
                           SPIRV::ModuleAnalysisInfo &MAI,
                           const SPIRVSubtarget &ST) {
@@ -1768,6 +1780,12 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::ExpectAssumeKHR);
     }
     break;
+  case SPIRV::OpFmaKHR:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_fma)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_KHR_fma);
+      Reqs.addCapability(SPIRV::Capability::FmaKHR);
+    }
+    break;
   case SPIRV::OpPtrCastToCrossWorkgroupINTEL:
   case SPIRV::OpCrossWorkgroupCastToPtrINTEL:
     if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_usm_storage_classes)) {
@@ -2128,6 +2146,21 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpSUDotAccSat:
     AddDotProductRequirements(MI, Reqs, ST);
     break;
+  case SPIRV::OpImageSampleImplicitLod:
+    Reqs.addCapability(SPIRV::Capability::Shader);
+    addImageOperandReqs(MI, Reqs, ST, 4);
+    break;
+  case SPIRV::OpImageSampleExplicitLod:
+    addImageOperandReqs(MI, Reqs, ST, 4);
+    break;
+  case SPIRV::OpImageSampleDrefImplicitLod:
+    Reqs.addCapability(SPIRV::Capability::Shader);
+    addImageOperandReqs(MI, Reqs, ST, 5);
+    break;
+  case SPIRV::OpImageSampleDrefExplicitLod:
+    Reqs.addCapability(SPIRV::Capability::Shader);
+    addImageOperandReqs(MI, Reqs, ST, 5);
+    break;
   case SPIRV::OpImageRead: {
     Register ImageReg = MI.getOperand(2).getReg();
     SPIRVType *TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(
@@ -2326,6 +2359,11 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpDPdxFine:
   case SPIRV::OpDPdyFine: {
     Reqs.addCapability(SPIRV::Capability::DerivativeControl);
+    break;
+  }
+  case SPIRV::OpLoopControlINTEL: {
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_unstructured_loop_controls);
+    Reqs.addCapability(SPIRV::Capability::UnstructuredLoopControlsINTEL);
     break;
   }
 
