@@ -1732,10 +1732,10 @@ long double call_copysignl(long double x, long double y) {
 float my_fmaxf(float x, float y) {
   return __builtin_fmaxf(x, y);
   // CIR-LABEL: my_fmaxf
-  // CIR: cir.call @fmaxf(%{{.*}}, %{{.*}}) nothrow side_effect(const) {{.*}} : (!cir.float, !cir.float) -> !cir.float
+  // CIR: cir.fmaxnum %{{.*}}, %{{.*}} : !cir.float
 
   // LLVM-LABEL: @my_fmaxf
-  // LLVM: call float @fmaxf(float %{{.*}}, float %{{.*}})
+  // LLVM: call float @llvm.maxnum.f32(float %{{.*}}, float %{{.*}})
 
   // OGCG-LABEL: @my_fmaxf
   // OGCG: call nsz float @llvm.maxnum.f32(float %{{.*}}, float %{{.*}})
