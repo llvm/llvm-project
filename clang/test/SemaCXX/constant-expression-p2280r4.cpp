@@ -216,14 +216,14 @@ namespace uninit_reference_used {
   // expected-note {{use of reference outside its lifetime is not allowed in a constant expression}}
   constexpr int &g() {
     int &x = x; // expected-warning {{reference 'x' is not yet bound to a value when used within its own initialization}} \
-    // expected-note {{use of reference outside its lifetime is not allowed in a constant expression}} \
+    // expected-note {{use of reference outside its lifetime is not allowed in a constant expression}}
     return x;
   }
   constexpr int &gg = g(); // expected-error {{must be initialized by a constant expression}} \
   // expected-note {{in call to 'g()'}}
   constexpr int g2() {
     int &x = x; // expected-warning {{reference 'x' is not yet bound to a value when used within its own initialization}} \
-    // expected-note {{use of reference outside its lifetime is not allowed in a constant expression}} \
+    // expected-note {{use of reference outside its lifetime is not allowed in a constant expression}}
     return x;
   }
   constexpr int gg2 = g2(); // expected-error {{must be initialized by a constant expression}} \
@@ -247,7 +247,7 @@ namespace uninit_reference_used {
   // expected-note {{in call to 'g4()'}}
   constexpr int g5() {
     int &x = x; // expected-warning {{reference 'x' is not yet bound to a value when used within its own initialization}} \
-    // expected-note {{use of reference outside its lifetime is not allowed in a constant expression}} \
+    // expected-note {{use of reference outside its lifetime is not allowed in a constant expression}}
     return 3;
   }
   constexpr uintptr_t gg5 = g5(); // expected-error {{must be initialized by a constant expression}} \
