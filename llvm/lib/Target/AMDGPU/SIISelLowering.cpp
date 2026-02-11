@@ -19757,3 +19757,13 @@ SITargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
   AI->eraseFromParent();
   return LI;
 }
+
+bool SITargetLowering::hasAndNot(SDValue Op) const {
+  // AND-NOT is only valid on uniform (SGPR) values; divergent values live in
+  // VGPRs.
+  if (Op->isDivergent())
+    return false;
+
+  EVT VT = Op.getValueType();
+  return VT == MVT::i32 || VT == MVT::i64;
+}
