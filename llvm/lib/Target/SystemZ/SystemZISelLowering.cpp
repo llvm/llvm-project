@@ -11127,34 +11127,15 @@ getBackchainAddress(SDValue SP, SelectionDAG &DAG) const {
                      DAG.getIntPtrConstant(TFL->getBackchainOffset(MF), DL));
 }
 
-// Turn MOVE_SG_DAG into MOVE_SG, adding
-// a dead def-reg that will be used as a scratch register
-// when this pseudo is expanded.
-MachineBasicBlock *
-SystemZTargetLowering::emitMSGPseudo(MachineInstr &MI,
-                                     MachineBasicBlock *MBB) const {
+// Replace a _SG_DAG pseudo with a _SG pseudo, adding
+// a dead early-clobber def reg that will be used as a
+// scratch register when the pseudo is expanded.
+MachineBasicBlock* SystemZTargetLowering::emitStackGuardPseudo(MachineInstr &MI, MachineBasicBlock* MBB, unsigned PseudoOp) const {
   MachineRegisterInfo *MRI = &MBB->getParent()->getRegInfo();
   const SystemZInstrInfo *TII = Subtarget.getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
   Register AddrReg = MRI->createVirtualRegister(&SystemZ::ADDR64BitRegClass);
-  BuildMI(*MBB, MI, DL, TII->get(SystemZ::MOVE_SG), AddrReg)
-      .addFrameIndex(MI.getOperand(0).getIndex())
-      .addImm(MI.getOperand(1).getImm());
-  MI.eraseFromParent();
-  return MBB;
-}
-
-// Turn COMPARE_SG_BRIDGE into COMPARE_SG, adding
-// a dead def-reg that will be used as a scratch register
-// when this pseudo is expanded.
-MachineBasicBlock *
-SystemZTargetLowering::emitCSGPseudo(MachineInstr &MI,
-                                     MachineBasicBlock *MBB) const {
-  MachineRegisterInfo *MRI = &MBB->getParent()->getRegInfo();
-  const SystemZInstrInfo *TII = Subtarget.getInstrInfo();
-  DebugLoc DL = MI.getDebugLoc();
-  Register AddrReg = MRI->createVirtualRegister(&SystemZ::ADDR64BitRegClass);
-  BuildMI(*MBB, MI, DL, TII->get(SystemZ::COMPARE_SG), AddrReg)
+  BuildMI(*MBB, MI, DL, TII->get(PseudoOp), AddrReg)
       .addFrameIndex(MI.getOperand(0).getIndex())
       .addImm(MI.getOperand(1).getImm());
   MI.eraseFromParent();
@@ -11319,10 +11300,10 @@ MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
     return emitPatchPoint(MI, MBB);
 
   case SystemZ::MOVE_SG_DAG:
-    return emitMSGPseudo(MI, MBB);
+    return emitStackGuardPseudo(MI, MBB, SystemZ::MOVE_SG);
 
   case SystemZ::COMPARE_SG_BRIDGE:
-    return emitCSGPseudo(MI, MBB);
+    return emitStackGuardPseudo(MI, MBB, SystemZ::COMPARE_SG);
 
   default:
     llvm_unreachable("Unexpected instr type to insert");
