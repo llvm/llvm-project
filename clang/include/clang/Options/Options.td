@@ -5296,14 +5296,18 @@ def mmacos_version_min_EQ : Joined<["-"], "mmacos-version-min=">,
 def : Joined<["-"], "mmacosx-version-min=">,
   Visibility<[ClangOption, CC1Option, FC1Option, FlangOption]>,
   Group<m_Group>, Alias<mmacos_version_min_EQ>;
+def moutline
+    : Flag<["-"], "moutline">,
+      Group<f_clang_Group>,
+      Visibility<[ClangOption, CC1Option]>,
+      HelpText<"Enable function outlining (AArch64,Arm,RISC-V,X86 only)">;
+def mno_outline
+    : Flag<["-"], "mno-outline">,
+      Group<f_clang_Group>,
+      Visibility<[ClangOption, CC1Option]>,
+      HelpText<"Disable function outlining (AArch64,Arm,RISC-V,X86 only)">;
 def mms_bitfields : Flag<["-"], "mms-bitfields">, Group<m_Group>,
   HelpText<"Set the default structure layout to be compatible with the Microsoft compiler standard">;
-def moutline : Flag<["-"], "moutline">, Group<f_clang_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-    HelpText<"Enable function outlining (AArch64 only)">;
-def mno_outline : Flag<["-"], "mno-outline">, Group<f_clang_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-    HelpText<"Disable function outlining (AArch64 only)">;
 def mno_ms_bitfields : Flag<["-"], "mno-ms-bitfields">, Group<m_Group>,
   HelpText<"Do not set the default structure layout to be compatible with the Microsoft compiler standard">;
 def fms_layout_compatibility_EQ : Joined<["-"], "fms-layout-compatibility=">,

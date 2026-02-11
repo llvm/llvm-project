@@ -417,13 +417,15 @@ class getBUFVDataRegisterOperandForOp<RegisterOperand Op, bit isTFE> {
 }
 
 class getMUBUFInsDA<list<RegisterOperand> vdataList,
-                    list<RegisterOperand> vaddrList, bit isTFE, bit hasRestrictedSOffset, bit isTrue16 = false> {
+                    list<RegisterOperand> vaddrList, bit isTFE, bit hasRestrictedSOffset,
+                    bit isTrue16, bit isLds> {
   RegisterOperand vdataClass = !if(!empty(vdataList), ?, !head(vdataList));
   RegisterOperand vaddr_op = !if(!empty(vaddrList), ?, !head(vaddrList));
   RegisterOperand vdata_op = getBUFVDataRegisterOperand<!cast<SIRegisterClassLike>(vdataClass.RegClass).Size, isTFE, isTrue16>.ret;
 
   dag SOffset = !if(hasRestrictedSOffset, (ins SReg_32:$soffset), (ins SCSrc_b32:$soffset));
-  dag NonVaddrInputs = !con((ins SReg_128_XNULL:$srsrc), SOffset, (ins Offset:$offset, CPol_0:$cpol, i1imm_0:$swz));
+  dag IsAsyncOpnd = !if(isLds, (ins i1imm_0:$IsAsync), (ins));
+  dag NonVaddrInputs = !con((ins SReg_128_XNULL:$srsrc), SOffset, (ins Offset:$offset, CPol_0:$cpol, i1imm_0:$swz), IsAsyncOpnd);
 
   dag Inputs = !if(!empty(vaddrList), NonVaddrInputs, !con((ins vaddr_op:$vaddr), NonVaddrInputs));
   dag ret = !if(!empty(vdataList), Inputs, !con((ins vdata_op:$vdata), Inputs));
@@ -448,13 +450,14 @@ class getMUBUFElements<ValueType vt> {
     );
 }
 
-class getMUBUFIns<int addrKind, list<RegisterOperand> vdataList, bit isTFE, bit hasRestrictedSOffset, bit isTrue16 = false> {
+class getMUBUFIns<int addrKind, list<RegisterOperand> vdataList, bit isTFE,
+                  bit hasRestrictedSOffset, bit isTrue16, bit isLds> {
   dag ret =
-    !if(!eq(addrKind, BUFAddrKind.Offset), getMUBUFInsDA<vdataList, [], isTFE, hasRestrictedSOffset, isTrue16>.ret,
-    !if(!eq(addrKind, BUFAddrKind.OffEn),  getMUBUFInsDA<vdataList, [VGPROp_32], isTFE, hasRestrictedSOffset, isTrue16>.ret,
-    !if(!eq(addrKind, BUFAddrKind.IdxEn),  getMUBUFInsDA<vdataList, [VGPROp_32], isTFE, hasRestrictedSOffset, isTrue16>.ret,
-    !if(!eq(addrKind, BUFAddrKind.BothEn), getMUBUFInsDA<vdataList, [VGPROp_64], isTFE, hasRestrictedSOffset, isTrue16>.ret,
-    !if(!eq(addrKind, BUFAddrKind.Addr64), getMUBUFInsDA<vdataList, [VGPROp_64], isTFE, hasRestrictedSOffset, isTrue16>.ret,
+    !if(!eq(addrKind, BUFAddrKind.Offset), getMUBUFInsDA<vdataList, [], isTFE, hasRestrictedSOffset, isTrue16, isLds>.ret,
+    !if(!eq(addrKind, BUFAddrKind.OffEn),  getMUBUFInsDA<vdataList, [VGPROp_32], isTFE, hasRestrictedSOffset, isTrue16, isLds>.ret,
+    !if(!eq(addrKind, BUFAddrKind.IdxEn),  getMUBUFInsDA<vdataList, [VGPROp_32], isTFE, hasRestrictedSOffset, isTrue16, isLds>.ret,
+    !if(!eq(addrKind, BUFAddrKind.BothEn), getMUBUFInsDA<vdataList, [VGPROp_64], isTFE, hasRestrictedSOffset, isTrue16, isLds>.ret,
+    !if(!eq(addrKind, BUFAddrKind.Addr64), getMUBUFInsDA<vdataList, [VGPROp_64], isTFE, hasRestrictedSOffset, isTrue16, isLds>.ret,
     (ins))))));
 }
 
@@ -499,7 +502,7 @@ class MUBUF_Load_Pseudo <string opName,
                          RegisterOperand vdata_op = getBUFVDataRegisterOperand<vdata_vt.Size, isTFE>.ret>
   : MUBUF_Pseudo<opName,
                  !if(!or(isLds, isLdsOpc), (outs), (outs vdata_op:$vdata)),
-                 !con(getMUBUFIns<addrKind, [], isTFE, hasRestrictedSOffset>.ret,
+                 !con(getMUBUFIns<addrKind, [], isTFE, hasRestrictedSOffset, 0, isLds>.ret,
                       !if(HasTiedDest, (ins vdata_op:$vdata_in), (ins))),
                  getMUBUFAsmOps<addrKind, !or(isLds, isLdsOpc), isLds, isTFE>.ret,
                  pattern>,
@@ -643,7 +646,7 @@ class MUBUF_Store_Pseudo <string opName,
                           bit isTrue16 = false>
   : MUBUF_Pseudo<opName,
                  (outs),
-                 getMUBUFIns<addrKind, [getVregSrcForVT<store_vt, isTrue16, 0>.ret], isTFE, hasRestrictedSOffset, isTrue16>.ret,
+                 getMUBUFIns<addrKind, [getVregSrcForVT<store_vt, isTrue16, 0>.ret], isTFE, hasRestrictedSOffset, isTrue16, 0>.ret,
                  getMUBUFAsmOps<addrKind, 0, 0, isTFE>.ret,
                  pattern>,
     MUBUF_SetupAddr<addrKind> {
