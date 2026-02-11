@@ -2972,7 +2972,6 @@ void PreRARematStage::rematerialize(const RematReg &Remat,
         MO.setReg(Register());
       }
     }
-    DAG.LIS->RemoveMachineInstrFromMaps(DefMI);
   } else {
     // Just delete the original instruction if it cannot be rolled back.
     DAG.deleteMI(Remat.DefRegion, &DefMI);
@@ -3101,7 +3100,6 @@ void PreRARematStage::finalizeGCNSchedStage() {
       Remat->DefMI->setDesc(DAG.TII->get(RematMI->getOpcode()));
       for (const auto &[MOIdx, Reg] : RegMap)
         Remat->DefMI->getOperand(MOIdx).setReg(Reg);
-      DAG.LIS->InsertMachineInstrInMaps(*Remat->DefMI);
     }
   }
 
