@@ -147,6 +147,19 @@ mlir::Value fir::runtime::genCharCompare(fir::FirOpBuilder &builder,
                         rhsBuffer, fir::getLen(rhs));
 }
 
+void fir::runtime::genFCString(fir::FirOpBuilder &builder, mlir::Location loc,
+                               mlir::Value resultBox, mlir::Value stringBox,
+                               mlir::Value asis) {
+  auto func = fir::runtime::getRuntimeFunc<mkRTKey(FCString)>(loc, builder);
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
+  auto args = fir::runtime::createArguments(
+      builder, loc, fTy, resultBox, stringBox, asis, sourceFile, sourceLine);
+  fir::CallOp::create(builder, loc, func, args);
+}
+
 mlir::Value fir::runtime::genIndex(fir::FirOpBuilder &builder,
                                    mlir::Location loc, int kind,
                                    mlir::Value stringBase,

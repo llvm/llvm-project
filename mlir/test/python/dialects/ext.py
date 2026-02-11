@@ -345,6 +345,16 @@ def testExtDialect():
 # CHECK: TEST: testExtDialectWithRegion
 @run
 def testExtDialectWithRegion():
+    class ParentIsIfTrait(DynamicOpTrait):
+        @staticmethod
+        def verify_invariants(op) -> bool:
+            if not isinstance(op.parent.opview, IfOp):
+                op.location.emit_error(
+                    f"{op.name} should be put inside {IfOp.OPERATION_NAME}"
+                )
+                return False
+            return True
+
     class TestRegion(Dialect, name="ext_region"):
         pass
 
@@ -354,10 +364,20 @@ def testExtDialectWithRegion():
         then: Region
         else_: Region
 
-    class YieldOp(TestRegion.Operation, name="yield"):
+    class YieldOp(
+        TestRegion.Operation, name="yield", traits=[IsTerminatorTrait, ParentIsIfTrait]
+    ):
         value: Operand[Any]
 
-    class NoTermOp(TestRegion.Operation, name="no_term"):
+        def verify_invariants(self) -> bool:
+            if self.parent.results[0].type != self.value.type:
+                self.location.emit_error(
+                    "result type mismatch between YieldOp and its parent IfOp"
+                )
+                return False
+            return True
+
+    class NoTermOp(TestRegion.Operation, name="no_term", traits=[NoTerminatorTrait]):
         body: Region
 
     with Context(), Location.unknown():
@@ -382,21 +402,6 @@ def testExtDialectWithRegion():
         # CHECK:   }
         # CHECK: }
         print(TestRegion._mlir_module)
-
-        IsTerminatorTrait.attach(YieldOp)
-        NoTerminatorTrait.attach(NoTermOp)
-
-        class ParentIsIfTrait(DynamicOpTrait):
-            @staticmethod
-            def verify(op) -> bool:
-                if not isinstance(op.parent.opview, IfOp):
-                    op.location.emit_error(
-                        f"{op.name} should be put inside {IfOp.OPERATION_NAME}"
-                    )
-                    return False
-                return True
-
-        ParentIsIfTrait.attach(YieldOp)
 
         # CHECK: (self, /, result, cond, *, loc=None, ip=None)
         print(IfOp.__init__.__signature__)
@@ -488,4 +493,29 @@ def testExtDialectWithRegion():
         except Exception as e:
             # CHECK: Verification failed:
             # CHECK: ext_region.yield should be put inside ext_region.if
+            print(e)
+
+        module = Module.create()
+        with InsertionPoint(module.body):
+            i1 = IntegerType.get_signless(1)
+            i32 = IntegerType.get_signless(32)
+            cond = arith.constant(i1, 1)
+
+            if_ = IfOp(i1, cond)
+            if_.then.blocks.append()
+            if_.else_.blocks.append()
+
+            with InsertionPoint(if_.then.blocks[0]):
+                v = arith.constant(i32, 2)
+                YieldOp(v)
+
+            with InsertionPoint(if_.else_.blocks[0]):
+                v = arith.constant(i32, 3)
+                YieldOp(v)
+
+        try:
+            module.operation.verify()
+        except Exception as e:
+            # CHECK: Verification failed:
+            # CHECK: result type mismatch
             print(e)
