@@ -526,10 +526,7 @@ define i64 @ivopt_widen_ptr_indvar_2(ptr noalias %a, i64 %stride, i64 %n) {
 ; STRIDED-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], 1
 ; STRIDED-NEXT:    [[TMP1:%.*]] = shl i64 [[STRIDE:%.*]], 3
 ; STRIDED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
-; STRIDED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; STRIDED:       vector.scevcheck:
-; STRIDED-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
-; STRIDED-NEXT:    br i1 [[IDENT_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH1:%.*]]
+; STRIDED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH1:%.*]]
 ; STRIDED:       vector.ph:
 ; STRIDED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
 ; STRIDED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
@@ -539,10 +536,28 @@ define i64 @ivopt_widen_ptr_indvar_2(ptr noalias %a, i64 %stride, i64 %n) {
 ; STRIDED:       vector.body:
 ; STRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH1]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; STRIDED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], [[TMP1]]
-; STRIDED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr null, i64 [[OFFSET_IDX]]
+; STRIDED-NEXT:    [[TMP4:%.*]] = mul i64 0, [[TMP1]]
+; STRIDED-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], [[TMP4]]
+; STRIDED-NEXT:    [[TMP6:%.*]] = mul i64 1, [[TMP1]]
+; STRIDED-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], [[TMP6]]
+; STRIDED-NEXT:    [[TMP8:%.*]] = mul i64 2, [[TMP1]]
+; STRIDED-NEXT:    [[TMP9:%.*]] = add i64 [[OFFSET_IDX]], [[TMP8]]
+; STRIDED-NEXT:    [[TMP10:%.*]] = mul i64 3, [[TMP1]]
+; STRIDED-NEXT:    [[TMP11:%.*]] = add i64 [[OFFSET_IDX]], [[TMP10]]
+; STRIDED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr null, i64 [[TMP5]]
+; STRIDED-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr null, i64 [[TMP7]]
+; STRIDED-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr null, i64 [[TMP9]]
+; STRIDED-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr null, i64 [[TMP11]]
 ; STRIDED-NEXT:    [[TMP21:%.*]] = getelementptr i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; STRIDED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP21]], align 8
-; STRIDED-NEXT:    store <4 x i64> [[WIDE_LOAD]], ptr [[NEXT_GEP]], align 8
+; STRIDED-NEXT:    [[TMP13:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i32 0
+; STRIDED-NEXT:    [[TMP14:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i32 1
+; STRIDED-NEXT:    [[TMP15:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i32 2
+; STRIDED-NEXT:    [[TMP16:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i32 3
+; STRIDED-NEXT:    store i64 [[TMP13]], ptr [[NEXT_GEP]], align 8
+; STRIDED-NEXT:    store i64 [[TMP14]], ptr [[NEXT_GEP1]], align 8
+; STRIDED-NEXT:    store i64 [[TMP15]], ptr [[NEXT_GEP2]], align 8
+; STRIDED-NEXT:    store i64 [[TMP16]], ptr [[NEXT_GEP3]], align 8
 ; STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; STRIDED-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; STRIDED-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
@@ -553,8 +568,8 @@ define i64 @ivopt_widen_ptr_indvar_2(ptr noalias %a, i64 %stride, i64 %n) {
 ; STRIDED-NEXT:    [[IND_ESCAPE:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP19]]
 ; STRIDED-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; STRIDED:       scalar.ph:
-; STRIDED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_PH]] ]
-; STRIDED-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi ptr [ [[TMP3]], [[MIDDLE_BLOCK]] ], [ null, [[ENTRY]] ], [ null, [[VECTOR_PH]] ]
+; STRIDED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; STRIDED-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi ptr [ [[TMP3]], [[MIDDLE_BLOCK]] ], [ null, [[ENTRY]] ]
 ; STRIDED-NEXT:    br label [[FOR_BODY:%.*]]
 ; STRIDED:       for.body:
 ; STRIDED-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -707,6 +722,8 @@ define void @strided_ptr_iv_runtime_stride(ptr %pIn, ptr %pOut, i32 %nCols, i32 
 ;
 ; STRIDED-LABEL: @strided_ptr_iv_runtime_stride(
 ; STRIDED-NEXT:  entry:
+; STRIDED-NEXT:    [[PIN2:%.*]] = ptrtoint ptr [[PIN:%.*]] to i64
+; STRIDED-NEXT:    [[POUT1:%.*]] = ptrtoint ptr [[POUT:%.*]] to i64
 ; STRIDED-NEXT:    [[TMP0:%.*]] = zext i32 [[NCOLS:%.*]] to i64
 ; STRIDED-NEXT:    [[UMAX4:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP0]], i64 1)
 ; STRIDED-NEXT:    [[TMP1:%.*]] = sext i32 [[STRIDE:%.*]] to i64
@@ -714,28 +731,11 @@ define void @strided_ptr_iv_runtime_stride(ptr %pIn, ptr %pOut, i32 %nCols, i32 
 ; STRIDED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[UMAX4]], 4
 ; STRIDED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; STRIDED:       vector.scevcheck:
-; STRIDED-NEXT:    [[TMP18:%.*]] = sext i32 [[STRIDE]] to i64
-; STRIDED-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[TMP18]], 1
+; STRIDED-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[STRIDE]], 1
 ; STRIDED-NEXT:    br i1 [[IDENT_CHECK]], label [[SCALAR_PH]], label [[VECTOR_MEMCHECK1:%.*]]
 ; STRIDED:       vector.memcheck:
-; STRIDED-NEXT:    [[TMP3:%.*]] = sext i32 [[STRIDE]] to i64
-; STRIDED-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[NCOLS]], i32 1)
-; STRIDED-NEXT:    [[TMP4:%.*]] = add i32 [[UMAX]], -1
-; STRIDED-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
-; STRIDED-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP3]], [[TMP5]]
-; STRIDED-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP6]], 2
-; STRIDED-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[POUT:%.*]], i64 [[TMP7]]
-; STRIDED-NEXT:    [[TMP8:%.*]] = icmp ult ptr [[POUT]], [[SCEVGEP]]
-; STRIDED-NEXT:    [[UMIN:%.*]] = select i1 [[TMP8]], ptr [[POUT]], ptr [[SCEVGEP]]
-; STRIDED-NEXT:    [[TMP9:%.*]] = icmp ugt ptr [[POUT]], [[SCEVGEP]]
-; STRIDED-NEXT:    [[UMAX1:%.*]] = select i1 [[TMP9]], ptr [[POUT]], ptr [[SCEVGEP]]
-; STRIDED-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[UMAX1]], i64 4
-; STRIDED-NEXT:    [[TMP10:%.*]] = shl nuw nsw i64 [[TMP5]], 2
-; STRIDED-NEXT:    [[TMP11:%.*]] = add nuw nsw i64 [[TMP10]], 4
-; STRIDED-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[PIN:%.*]], i64 [[TMP11]]
-; STRIDED-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[UMIN]], [[SCEVGEP3]]
-; STRIDED-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[PIN]], [[SCEVGEP2]]
-; STRIDED-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; STRIDED-NEXT:    [[TMP3:%.*]] = sub i64 [[POUT1]], [[PIN2]]
+; STRIDED-NEXT:    [[FOUND_CONFLICT:%.*]] = icmp ult i64 [[TMP3]], 16
 ; STRIDED-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; STRIDED:       vector.ph:
 ; STRIDED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[UMAX4]], 4
@@ -743,20 +743,20 @@ define void @strided_ptr_iv_runtime_stride(ptr %pIn, ptr %pOut, i32 %nCols, i32 
 ; STRIDED-NEXT:    [[TMP12:%.*]] = trunc i64 [[N_VEC]] to i32
 ; STRIDED-NEXT:    [[TMP13:%.*]] = mul i64 [[N_VEC]], 4
 ; STRIDED-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[PIN]], i64 [[TMP13]]
-; STRIDED-NEXT:    [[TMP15:%.*]] = mul i64 [[N_VEC]], [[TMP2]]
+; STRIDED-NEXT:    [[TMP15:%.*]] = mul i64 [[N_VEC]], 4
 ; STRIDED-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[POUT]], i64 [[TMP15]]
 ; STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; STRIDED:       vector.body:
 ; STRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; STRIDED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 4
 ; STRIDED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PIN]], i64 [[OFFSET_IDX]]
-; STRIDED-NEXT:    [[OFFSET_IDX5:%.*]] = mul i64 [[INDEX]], [[TMP2]]
+; STRIDED-NEXT:    [[OFFSET_IDX5:%.*]] = mul i64 [[INDEX]], 4
 ; STRIDED-NEXT:    [[NEXT_GEP6:%.*]] = getelementptr i8, ptr [[POUT]], i64 [[OFFSET_IDX5]]
-; STRIDED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[NEXT_GEP]], align 4, !alias.scope [[META16:![0-9]+]]
-; STRIDED-NEXT:    store <4 x float> [[WIDE_LOAD]], ptr [[NEXT_GEP6]], align 4, !alias.scope [[META19:![0-9]+]], !noalias [[META16]]
+; STRIDED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[NEXT_GEP]], align 4
+; STRIDED-NEXT:    store <4 x float> [[WIDE_LOAD]], ptr [[NEXT_GEP6]], align 4
 ; STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; STRIDED-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; STRIDED-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
+; STRIDED-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; STRIDED:       middle.block:
 ; STRIDED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[UMAX4]], [[N_VEC]]
 ; STRIDED-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -775,7 +775,7 @@ define void @strided_ptr_iv_runtime_stride(ptr %pIn, ptr %pOut, i32 %nCols, i32 
 ; STRIDED-NEXT:    [[OUT_NEXT]] = getelementptr inbounds float, ptr [[OUT_PTR]], i32 [[STRIDE]]
 ; STRIDED-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
 ; STRIDED-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IV_NEXT]], [[NCOLS]]
-; STRIDED-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP22:![0-9]+]]
+; STRIDED-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP17:![0-9]+]]
 ; STRIDED:       exit:
 ; STRIDED-NEXT:    ret void
 ;

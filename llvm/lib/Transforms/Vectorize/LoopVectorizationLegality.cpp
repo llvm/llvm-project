@@ -484,26 +484,9 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
   int Stride = getPtrStride(PSE, AccessTy, Ptr, TheLoop, *DT, Strides,
                             AllowRuntimeSCEVChecks, false)
                    .value_or(0);
-
   if (Stride == 1 || Stride == -1)
     return Stride;
   return 0;
-}
-
-int LoopVectorizationLegality::isConstRuntimeStridedPtr(Type *AccessTy,
-                                                        Value *Ptr) const {
-  if (!AllowStridedPointerIVs)
-    return 0;
-
-  const auto &Strides =
-      LAI ? LAI->getSymbolicStrides() : DenseMap<Value *, const SCEV *>();
-
-  int Stride =
-      getPtrStride(PSE, AccessTy, Ptr, TheLoop, *DT, Strides,
-                   AllowRuntimeSCEVChecks, false, AllowStridedPointerIVs)
-          .value_or(0);
-
-  return Stride;
 }
 
 bool LoopVectorizationLegality::isInvariant(Value *V) const {
@@ -1728,6 +1711,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
         "RecurrencesInEarlyExitLoop", ORE, TheLoop);
     return false;
   }
+
   SmallVector<BasicBlock *, 8> ExitingBlocks;
   TheLoop->getExitingBlocks(ExitingBlocks);
 

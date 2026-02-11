@@ -1261,8 +1261,7 @@ public:
   /// access that can be widened. If AllowStridedPointerIVs is true, we
   // check that strided pointers of the form {base * stride} can be widened.
   // Will return true if stride is a loop invariant runtime constant.
-  bool memoryInstructionCanBeWidened(Instruction *I, ElementCount VF,
-                                     bool AllowStridedPointerIVs = false);
+  bool memoryInstructionCanBeWidened(Instruction *I, ElementCount VF);
 
   /// Returns true if \p I is a memory instruction in an interleaved-group
   /// of memory accesses that can be vectorized with wide vector loads/stores
@@ -3075,7 +3074,7 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
 }
 
 bool LoopVectorizationCostModel::memoryInstructionCanBeWidened(
-    Instruction *I, ElementCount VF, bool AllowStridedPointerIVs) {
+    Instruction *I, ElementCount VF) {
   // Get and ensure we have a valid memory instruction.
   assert((isa<LoadInst, StoreInst>(I)) && "Invalid memory instruction");
 
@@ -3083,10 +3082,7 @@ bool LoopVectorizationCostModel::memoryInstructionCanBeWidened(
   auto *ScalarTy = getLoadStoreType(I);
 
   // In order to be widened, the pointer should be consecutive, first of all.
-  if (!AllowStridedPointerIVs) {
-    if (!Legal->isConsecutivePtr(ScalarTy, Ptr))
-      return false;
-  } else if (!Legal->isConstRuntimeStridedPtr(ScalarTy, Ptr))
+  if (!Legal->isConsecutivePtr(ScalarTy, Ptr))
     return false;
 
   // If the instruction is a store located in a predicated block, it will be
@@ -5773,19 +5769,6 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
             ConsecutiveStride == 1 ? CM_Widen : CM_Widen_Reverse;
         setWideningDecision(&I, VF, Decision, Cost);
         continue;
-      } else if (memoryInstructionCanBeWidened(
-                     &I, VF, /* AllowStridedPointerIVs =*/true)) {
-        int BaseStride = Legal->isConstRuntimeStridedPtr(
-            getLoadStoreType(&I), getLoadStorePointerOperand(&I));
-        assert((BaseStride >= 1) && "Expected base stride to be >= 1");
-
-        // For base strides greater than 1 we should default to
-        // gather/scatters
-        if (BaseStride == 1) {
-          InstructionCost Cost = getGatherScatterCost(&I, VF);
-          setWideningDecision(&I, VF, CM_Widen, Cost);
-          continue;
-        }
       }
 
       // Choose between Interleaving, Gather/Scatter or Scalarization.

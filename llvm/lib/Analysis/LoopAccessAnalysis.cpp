@@ -964,12 +964,11 @@ private:
 
 } // end anonymous namespace
 
-/// Try to compute a constant stride for \p AR. Used by getPtrStride,
-/// getPtrConstRuntimeStride and isNoWrap.
+/// Try to compute a constant stride for \p AR. Used by getPtrStride and
+/// isNoWrap.
 static std::optional<int64_t>
 getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
-                    Value *Ptr, PredicatedScalarEvolution &PSE,
-                    bool AllowRuntimeStridedIVs = false) {
+                    Value *Ptr, PredicatedScalarEvolution &PSE) {
   if (isa<ScalableVectorType>(AccessTy)) {
     LLVM_DEBUG(dbgs() << "LAA: Bad stride - Scalable object: " << *AccessTy
                       << "\n");
@@ -988,44 +987,12 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
     return std::nullopt;
   }
 
-  // Calculate the pointer stride and check if it is constant. If we allow
-  // strided pointers we also check the add recurrence expression is making use
-  // of loop-invariant runtime constant for example
-  //
-  // Step = { stride * runtime_constant }
-  //
-  // we should treat this as a constant add recurrence. To achieve this we check
-  // the arguments of the step are loop invariant and compute the step as
-  // equivalent to just stride.
-  //
-  // We only check this for mul expressions as these are most common and
-  // expected for strided pointer recurrence expressions.
+  // Check the step is constant.
   const SCEV *Step = AR->getStepRecurrence(*PSE.getSE());
+
+  // Calculate the pointer stride and check if is constant
   const APInt *APStepVal;
-  auto IsInvariantConstAddRecStep = [&](const SCEV *Step) -> bool {
-    const SCEV *Multiplier;
-
-    // Check the step is constant.
-    if (match(Step, m_scev_APInt(APStepVal)))
-      return true;
-
-    if (AllowRuntimeStridedIVs) {
-      if (PSE.getSE()->isKnownNegative(Step))
-        return false;
-
-      for (const auto *Op : Step->operands()) {
-        if (!PSE.getSE()->isLoopInvariant(Op, Lp))
-          return false;
-      }
-
-      return match(Step,
-                   m_scev_c_Mul(m_scev_APInt(APStepVal), m_SCEV(Multiplier)));
-    }
-
-    return false;
-  };
-
-  if (!IsInvariantConstAddRecStep(Step)) {
+  if (!match(Step, m_scev_APInt(APStepVal))) {
     LLVM_DEBUG({
       dbgs() << "LAA: Bad stride - Not a constant strided ";
       if (Ptr)
@@ -1654,22 +1621,16 @@ void AccessAnalysis::processMemAccesses() {
 }
 
 /// Check whether the access through \p Ptr has a constant stride.
-std::optional<int64_t> llvm::getPtrStride(
-    PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr, const Loop *Lp,
-    const DominatorTree &DT, const DenseMap<Value *, const SCEV *> &StridesMap,
-    bool Assume, bool ShouldCheckWrap, bool AllowStridedPointerIVs) {
+std::optional<int64_t>
+llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
+                   const Loop *Lp, const DominatorTree &DT,
+                   const DenseMap<Value *, const SCEV *> &StridesMap,
+                   bool Assume, bool ShouldCheckWrap) {
   const SCEV *PtrScev = replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr);
   if (PSE.getSE()->isLoopInvariant(PtrScev, Lp))
     return 0;
 
   assert(Ptr->getType()->isPointerTy() && "Unexpected non-ptr");
-
-  // Require runtime checks to ensure correctness of runtime stride
-  if (AllowStridedPointerIVs && !Assume) {
-    LLVM_DEBUG(dbgs() << "Cannot check for runtime strided constants without \
-          allowing runtime SCEV checks");
-    return std::nullopt;
-  }
 
   const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(PtrScev);
   if (Assume && !AR)
@@ -1682,33 +1643,17 @@ std::optional<int64_t> llvm::getPtrStride(
   }
 
   std::optional<int64_t> Stride =
-      getStrideFromAddRec(AR, Lp, AccessTy, Ptr, PSE, AllowStridedPointerIVs);
-
-  if (AllowStridedPointerIVs && Stride) {
-    // Add runtime SCEV check for multiplier
-    const SCEV *Step = AR->getStepRecurrence(*PSE.getSE());
-    const APInt *APStepVal;
-    const SCEV *Multiplier;
-    if (match(Step,
-              m_scev_c_Mul(m_scev_APInt(APStepVal), m_SCEV(Multiplier)))) {
-      const SCEV *One = PSE.getSE()->getOne(Multiplier->getType());
-      PSE.addPredicate(
-          *PSE.getSE()->getComparePredicate(CmpInst::ICMP_EQ, Multiplier, One));
-    }
-
+      getStrideFromAddRec(AR, Lp, AccessTy, Ptr, PSE);
+  if (!ShouldCheckWrap || !Stride)
     return Stride;
-  } else {
-    if (!ShouldCheckWrap || !Stride)
-      return Stride;
 
-    if (isNoWrap(PSE, AR, Ptr, AccessTy, Lp, Assume, DT, Stride))
-      return Stride;
+  if (isNoWrap(PSE, AR, Ptr, AccessTy, Lp, Assume, DT, Stride))
+    return Stride;
 
-    LLVM_DEBUG(
-        dbgs() << "LAA: Bad stride - Pointer may wrap in the address space "
-               << *Ptr << " SCEV: " << *AR << "\n");
-    return std::nullopt;
-  }
+  LLVM_DEBUG(
+      dbgs() << "LAA: Bad stride - Pointer may wrap in the address space "
+             << *Ptr << " SCEV: " << *AR << "\n");
+  return std::nullopt;
 }
 
 std::optional<int64_t> llvm::getPointersDiff(Type *ElemTyA, Value *PtrA,
@@ -3034,6 +2979,7 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *L
   if (isa<SCEVUnknown>(V))
     return V;
 
+  match(V, m_scev_Mul(m_SCEVConstant(), m_SCEV(V)));
   if (auto *C = dyn_cast<SCEVIntegralCastExpr>(V))
     if (isa<SCEVUnknown>(C->getOperand()))
       return V;

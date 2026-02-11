@@ -374,20 +374,9 @@ public:
   /// 0 - Stride is unknown or non-consecutive.
   /// 1 - Address is consecutive.
   /// -1 - Address is consecutive, and decreasing.
-  ///
   /// NOTE: This method must only be used before modifying the original scalar
   /// loop. Do not use after invoking 'createVectorizedLoopSkeleton' (PR34965).
   int isConsecutivePtr(Type *AccessTy, Value *Ptr) const;
-
-  // Check is this pointer is const runtime strided when vectorizing.
-  // This occurs for pointers that have an access pattern such as
-  //
-  // A[offset + stride * runtime_constant]
-  //
-  // This check allows us to vectorize these into a wide load/store when
-  // `lv-strided-pointer-ivs=true` is true. Returns the base
-  // stride value
-  int isConstRuntimeStridedPtr(Type *AccessTy, Value *Ptr) const;
 
   /// Returns true if \p V is invariant across all loop iterations according to
   /// SCEV.
