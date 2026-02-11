@@ -452,6 +452,8 @@ public:
                                          StringRef Features) const {
     if (!MCSubtargetInfoCtorFn)
       return nullptr;
+    if (!isValidFeatureListFormat(Features))
+      return nullptr;
     return MCSubtargetInfoCtorFn(TheTriple, CPU, Features);
   }
 
@@ -629,6 +631,10 @@ public:
       return InstrumentManagerCtorFn(STI, MCII);
     return nullptr;
   }
+
+  /// isValidFeatureListFormat - check that FeatureString
+  /// has valid format.
+  static bool isValidFeatureListFormat(StringRef FeaturesString);
 
   /// @}
 };
