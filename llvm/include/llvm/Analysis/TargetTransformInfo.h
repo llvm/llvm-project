@@ -1842,6 +1842,12 @@ public:
                                          const CallBase &Call,
                                          unsigned DefaultCallPenalty) const;
 
+  /// \returns true if `Caller`'s `Attr` should be added to the new function
+  /// created by outlining part of `Caller`.
+  LLVM_ABI bool
+  shouldCopyAttributeWhenOutliningFrom(const Function *Caller,
+                                       const Attribute &Attr) const;
+
   /// \returns True if the caller and callee agree on how \p Types will be
   /// passed to or returned from the callee.
   /// to the callee.

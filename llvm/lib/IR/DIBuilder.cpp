@@ -53,10 +53,23 @@ void DIBuilder::trackIfUnresolved(MDNode *N) {
 
 void DIBuilder::finalizeSubprogram(DISubprogram *SP) {
   auto PN = SubprogramTrackedNodes.find(SP);
-  if (PN != SubprogramTrackedNodes.end())
-    SP->replaceRetainedNodes(
-        MDTuple::get(VMContext, SmallVector<Metadata *, 16>(PN->second.begin(),
-                                                            PN->second.end())));
+  if (PN == SubprogramTrackedNodes.end())
+    return;
+
+  SmallVector<Metadata *, 16> RetainedNodes;
+  for (MDNode *N : PN->second) {
+    // If the tracked node N was temporary, and the DIBuilder user replaced it
+    // with a node that does not belong to SP or is non-local, do not add N to
+    // SP's retainedNodes list.
+    DILocalScope *Scope = dyn_cast_or_null<DILocalScope>(
+        DISubprogram::getRawRetainedNodeScope(N));
+    if (!Scope || Scope->getSubprogram() != SP)
+      continue;
+
+    RetainedNodes.push_back(N);
+  }
+
+  SP->replaceRetainedNodes(MDTuple::get(VMContext, RetainedNodes));
 }
 
 void DIBuilder::finalize() {
