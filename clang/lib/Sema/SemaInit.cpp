@@ -5645,22 +5645,29 @@ static void TryReferenceInitializationCore(Sema &S,
     //   applied.
     // Postpone address space conversions to after the temporary materialization
     // conversion to allow creating temporaries in the alloca address space.
-    auto T1QualsIgnoreConversions = T1Quals;
-    auto T2QualsIgnoreConversions = T2Quals;
+    auto T1QualsIgnoreAS = T1Quals;
+    auto T2QualsIgnoreAS = T2Quals;
     if (T1Quals.getAddressSpace() != T2Quals.getAddressSpace()) {
-      T1QualsIgnoreConversions.removeAddressSpace();
-      T2QualsIgnoreConversions.removeAddressSpace();
+      T1QualsIgnoreAS.removeAddressSpace();
+      T2QualsIgnoreAS.removeAddressSpace();
     }
-    // Postpone ObjC lifetime conversions to after the temporary materialization
-    // conversion, similar to address space conversions. This handles cases like
-    // binding a __strong rvalue to a const __autoreleasing reference.
+    // Strip the existing ObjC lifetime qualifier from cv2T2 before combining
+    // with T1's qualifiers. getQualifiedType adds qualifiers on top of
+    // existing ones, so if cv2T2 already carries e.g. __strong and T1Quals
+    // has __autoreleasing, we'd hit an assertion in addConsistentQualifiers.
+    // Stripping first and then applying T1's qualifiers ensures the correct
+    // lifetime is set *before* reference binding, which is critical for
+    // CodeGen to emit the right ARC semantics (e.g. retain+autorelease for
+    // __autoreleasing, not retain+release as for __strong).
+    QualType T2ForQualConv = cv2T2;
     if (T1Quals.getObjCLifetime() != T2Quals.getObjCLifetime()) {
-      T1QualsIgnoreConversions.removeObjCLifetime();
-      T2QualsIgnoreConversions.removeObjCLifetime();
+      Qualifiers T2BaseQuals = T2ForQualConv.getQualifiers();
+      T2BaseQuals.removeObjCLifetime();
+      T2ForQualConv = S.Context.getQualifiedType(
+          T2ForQualConv.getUnqualifiedType(), T2BaseQuals);
     }
-    QualType cv1T4 =
-        S.Context.getQualifiedType(cv2T2, T1QualsIgnoreConversions);
-    if (T1QualsIgnoreConversions != T2QualsIgnoreConversions)
+    QualType cv1T4 = S.Context.getQualifiedType(T2ForQualConv, T1QualsIgnoreAS);
+    if (T1QualsIgnoreAS != T2QualsIgnoreAS)
       Sequence.AddQualificationConversionStep(cv1T4, ValueKind);
     Sequence.AddReferenceBindingStep(cv1T4, ValueKind == VK_PRValue);
     ValueKind = isLValueRef ? VK_LValue : VK_XValue;
@@ -5671,17 +5678,6 @@ static void TryReferenceInitializationCore(Sema &S,
       QualType cv1T4WithAS = S.Context.getQualifiedType(T2, T4Quals);
       Sequence.AddQualificationConversionStep(cv1T4WithAS, ValueKind);
       cv1T4 = cv1T4WithAS;
-    }
-    // Add ObjC lifetime conversion if required.
-    if (T1Quals.getObjCLifetime() != T2Quals.getObjCLifetime()) {
-      auto T4Quals = cv1T4.getQualifiers();
-      T4Quals.setObjCLifetime(T1Quals.getObjCLifetime());
-      // Apply T4Quals to the unqualified base type to avoid conflicting
-      // ObjC lifetime qualifiers in getQualifiedType.
-      QualType CV1T4WithLifetime =
-          S.Context.getQualifiedType(cv1T4.getUnqualifiedType(), T4Quals);
-      Sequence.AddQualificationConversionStep(CV1T4WithLifetime, ValueKind);
-      cv1T4 = CV1T4WithLifetime;
     }
 
     //   In any case, the reference is bound to the resulting glvalue (or to
