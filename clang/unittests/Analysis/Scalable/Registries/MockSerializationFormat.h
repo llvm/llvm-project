@@ -20,7 +20,7 @@ namespace clang::ssaf {
 class MockSerializationFormat final
     : public llvm::RTTIExtends<MockSerializationFormat, SerializationFormat> {
 public:
-  explicit MockSerializationFormat();
+  MockSerializationFormat();
 
   TUSummary readTUSummary(llvm::StringRef Path) override;
 
