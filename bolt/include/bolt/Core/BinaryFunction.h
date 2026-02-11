@@ -64,6 +64,8 @@ class DWARFUnit;
 
 namespace bolt {
 
+class MCInstReference;
+
 using InputOffsetToAddressMapTy = std::unordered_multimap<uint64_t, uint64_t>;
 
 /// Types of macro-fusion alignment corrections.
@@ -833,6 +835,11 @@ public:
   BasicBlockListType::iterator pbegin()  { return BasicBlocks.begin(); }
   BasicBlockListType::iterator pend()    { return BasicBlocks.end(); }
 
+  // Do not use BasicBlockListType::const_iterator here as it would expose
+  // BasicBlocks as non-const.
+  const BinaryBasicBlock *const *pbegin() const { return BasicBlocks.begin(); }
+  const BinaryBasicBlock *const *pend()   const { return BasicBlocks.end(); }
+
   cfi_iterator        cie_begin()       { return CIEFrameInstructions.begin(); }
   const_cfi_iterator  cie_begin() const { return CIEFrameInstructions.begin(); }
   cfi_iterator        cie_end()         { return CIEFrameInstructions.end(); }
@@ -846,14 +853,171 @@ public:
     return iterator_range<const_cfi_iterator>(cie_begin(), cie_end());
   }
 
-  /// Iterate over instructions (only if CFG is unavailable or not built yet).
-  iterator_range<InstrMapType::iterator> instrs() {
-    assert(!hasCFG() && "Iterate over basic blocks instead");
-    return make_range(Instructions.begin(), Instructions.end());
+private:
+  template <typename BinaryFunction> struct instr_iterator_impl {
+    using InstrMapIterator =
+        decltype(std::declval<BinaryFunction>().Instructions.begin());
+    using BasicBlockIterator =
+        decltype(std::declval<BinaryFunction>().pbegin());
+    using BinaryBasicBlock =
+        std::remove_reference_t<decltype(**std::declval<BasicBlockIterator>())>;
+    using InstructionIterator =
+        decltype(std::declval<BinaryBasicBlock>().begin());
+    using MCInst =
+        std::remove_reference_t<decltype(*std::declval<InstructionIterator>())>;
+
+  public:
+    instr_iterator_impl() : BF{nullptr} {}
+    instr_iterator_impl(BinaryFunction &BF, InstrMapIterator I)
+        : BF{&BF}, BFI{I} {}
+    instr_iterator_impl(BinaryFunction &BF, BasicBlockIterator BB) : BF{&BF} {
+      setBB(BB);
+    }
+    instr_iterator_impl(BinaryFunction &BF, BasicBlockIterator BB,
+                        InstructionIterator I)
+        : BF{&BF}, BBI{BB, I} {}
+    instr_iterator_impl(BinaryFunction &BF, BinaryBasicBlock &BB, MCInst &I)
+        : instr_iterator_impl(BF, BF.pbegin() + BB.getIndex(),
+                              BB.begin() + (&I - &BB.front())) {}
+    instr_iterator_impl(BinaryBasicBlock &BB, MCInst &I)
+        : instr_iterator_impl(*BB.getFunction(), BB, I) {}
+
+    using value_type = std::remove_cv_t<MCInst>;
+    using pointer = MCInst *;
+    using reference = MCInst &;
+    using difference_type = std::ptrdiff_t;
+    using iterator_category = std::bidirectional_iterator_tag;
+
+    MCInst &operator*() const { return BF->hasCFG() ? *BBI.I : BFI->second; }
+
+    instr_iterator_impl &operator++() {
+      if (BF->hasCFG()) {
+        if (++BBI.I == (*BBI.BB)->end())
+          setBB(std::next(BBI.BB));
+      } else {
+        ++BFI;
+      }
+      return *this;
+    }
+
+    instr_iterator_impl operator++(int) {
+      instr_iterator_impl result = *this;
+      ++*this;
+      return result;
+    }
+
+    instr_iterator_impl &operator--() {
+      if (BF->hasCFG()) {
+        if (BBI.I == InstructionListType::iterator{} ||
+            BBI.I == (*BBI.BB)->begin()) {
+          do {
+            --BBI.BB;
+          } while ((*BBI.BB)->empty());
+          BBI.I = (*BBI.BB)->end();
+        }
+        --BBI.I;
+      } else {
+        --BFI;
+      }
+      return *this;
+    }
+
+    instr_iterator_impl operator--(int) {
+      instr_iterator result = *this;
+      --*this;
+      return result;
+    }
+
+    friend bool operator==(instr_iterator_impl a, instr_iterator_impl b) {
+      return a.BF == b.BF &&
+             (a.BF == nullptr ||
+              (a.BF->hasCFG() ? a.BBI.BB == b.BBI.BB && a.BBI.I == b.BBI.I
+                              : a.BFI == b.BFI));
+    }
+
+    friend bool operator!=(instr_iterator_impl a, instr_iterator_impl b) {
+      return !(a == b);
+    }
+
+    BinaryFunction *getFunction() const { return BF; }
+
+    BinaryBasicBlock *getBasicBlock() const {
+      return BF && BF->hasCFG() ? *BBI.BB : nullptr;
+    }
+
+    uint32_t getOffset() const {
+      assert(!BF->hasCFG());
+      return BFI->first;
+    }
+
+    operator instr_iterator_impl<const BinaryFunction>() const {
+      using T = instr_iterator_impl<const BinaryFunction>;
+      return getFunction()
+                 ? getBasicBlock() ? T(*BF, BBI.BB, BBI.I) : T(*BF, BFI)
+                 : T();
+    }
+
+    // Defined as a template function to avoid requiring MCInstReference to be
+    // complete here.
+    template <typename T = MCInstReference>
+    operator std::enable_if_t<std::is_same_v<T, MCInstReference>, T>() const {
+      return getFunction() ? getBasicBlock() ? T(**BBI.BB, *BBI.I) : T(*BF, BFI)
+                           : T();
+    }
+
+  private:
+    void setBB(BasicBlockIterator BB) {
+      for (;;) {
+        if (BB == BF->pend()) {
+          BBI = {BB, {}};
+          return;
+        }
+        if (!(*BB)->empty()) {
+          BBI = {BB, (*BB)->begin()};
+          return;
+        }
+        ++BB;
+      }
+    }
+
+    struct BasicBlockInstructionIterators {
+      BasicBlockIterator BB;
+      InstructionIterator I;
+    };
+
+    BinaryFunction *BF;
+    union {
+      InstrMapIterator BFI;
+      BasicBlockInstructionIterators BBI;
+    };
+  };
+
+public:
+  using instr_iterator = instr_iterator_impl<BinaryFunction>;
+  using instr_const_iterator = instr_iterator_impl<const BinaryFunction>;
+
+  /// Iterate over instructions.
+  iterator_range<instr_iterator> instrs() {
+    return make_range(instr_begin(), instr_end());
   }
-  iterator_range<InstrMapType::const_iterator> instrs() const {
-    assert(!hasCFG() && "Iterate over basic blocks instead");
-    return make_range(Instructions.begin(), Instructions.end());
+  iterator_range<instr_const_iterator> instrs() const {
+    return make_range(instr_begin(), instr_end());
+  }
+  instr_iterator instr_begin() {
+    if (hasCFG())
+      return instr_iterator(*this, pbegin());
+    return instr_iterator(*this, Instructions.begin());
+  }
+  instr_iterator instr_end() {
+    if (hasCFG())
+      return instr_iterator(*this, pend());
+    return instr_iterator(*this, Instructions.end());
+  }
+  instr_const_iterator instr_begin() const {
+    return const_cast<BinaryFunction *>(this)->instr_begin();
+  }
+  instr_const_iterator instr_end() const {
+    return const_cast<BinaryFunction *>(this)->instr_end();
   }
 
   /// Returns whether there are any labels at Offset.
