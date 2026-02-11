@@ -2506,35 +2506,79 @@ public:
 
   /// For the given retained node of DISubprogram, applies one of the
   /// given functions depending on the type of the node.
-  template <typename T, typename FuncLVT, typename FuncLabelT,
-            typename FuncImportedEntityT, typename FuncUnknownT>
-  static T
-  visitRetainedNode(const Metadata *N, FuncLVT &&FuncLV, FuncLabelT &&FuncLabel,
-                    FuncImportedEntityT &&FuncIE, FuncUnknownT &&FuncUnknown) {
-    if (const auto *LV = dyn_cast<DILocalVariable>(N))
+  template <typename T, typename MetadataT, typename FuncLVT,
+            typename FuncLabelT, typename FuncImportedEntityT,
+            typename FuncTypeT, typename FuncUnknownT>
+  static T visitRetainedNode(MetadataT *N, FuncLVT &&FuncLV,
+                             FuncLabelT &&FuncLabel,
+                             FuncImportedEntityT &&FuncIE, FuncTypeT &&FuncType,
+                             FuncUnknownT &&FuncUnknown) {
+    static_assert(std::is_base_of_v<Metadata, MetadataT>,
+                  "N must point to Metadata or const Metadata");
+
+    if (auto *LV = dyn_cast<DILocalVariable>(N))
       return FuncLV(LV);
-    if (const auto *L = dyn_cast<DILabel>(N))
+    if (auto *L = dyn_cast<DILabel>(N))
       return FuncLabel(L);
-    if (const auto *IE = dyn_cast<DIImportedEntity>(N))
+    if (auto *IE = dyn_cast<DIImportedEntity>(N))
       return FuncIE(IE);
+    if (auto *Ty = dyn_cast<DIType>(N))
+      return FuncType(Ty);
     return FuncUnknown(N);
   }
 
   /// Returns the scope of subprogram's retainedNodes.
   static const DILocalScope *getRetainedNodeScope(const MDNode *N);
+  static DILocalScope *getRetainedNodeScope(MDNode *N);
   // For use in Verifier.
   static const DIScope *getRawRetainedNodeScope(const MDNode *N);
+  static DIScope *getRawRetainedNodeScope(MDNode *N);
 
   /// For each retained node, applies one of the given functions depending
   /// on the type of a node.
-  template <typename FuncLVT, typename FuncLabelT, typename FuncImportedEntityT>
+  template <typename FuncLVT, typename FuncLabelT, typename FuncImportedEntityT,
+            typename FuncTypeT>
   void forEachRetainedNode(FuncLVT &&FuncLV, FuncLabelT &&FuncLabel,
-                           FuncImportedEntityT &&FuncIE) const {
+                           FuncImportedEntityT &&FuncIE, FuncTypeT &&FuncType) {
     for (MDNode *N : getRetainedNodes())
-      visitRetainedNode<void>(N, FuncLV, FuncLabel, FuncIE,
-                              [](const Metadata *N) {
-                                llvm_unreachable("Unexpected retained node!");
-                              });
+      visitRetainedNode<void>(
+          N, FuncLV, FuncLabel, FuncIE, FuncType,
+          [](auto *N) { llvm_unreachable("Unexpected retained node!"); });
+  }
+
+  /// When IR modules are merged, typically during LTO, the merged module
+  /// may contain several types having the same linkageName. They are
+  /// supposed to represent the same type included by multiple source code
+  /// files from a single header file.
+  ///
+  /// DebugTypeODRUniquing feature uniques (deduplicates) such types
+  /// based on their linkageName during metadata loading, to speed up
+  /// compilation and reduce debug info size.
+  ///
+  /// However, since function-local types are tracked in DISubprogram's
+  /// retainedNodes field, a single local type may be referenced by multiple
+  /// DISubprograms via retainedNodes as the result of DebugTypeODRUniquing.
+  /// But retainedNodes field of a DISubprogram is meant to hold only
+  /// subprogram's own local entities, therefore such references may
+  /// cause crashes.
+  ///
+  /// To address this problem, this method is called for each new subprogram
+  /// after module loading. It removes references to types belonging
+  /// to other DISubprograms from a subprogram's retainedNodes list.
+  /// If a corresponding IR function refers to local scopes from another
+  /// subprogram, emitted debug info (e.g. DWARF) should rely
+  /// on cross-subprogram references (and cross-CU references, as subprograms
+  /// may belong to different compile units). This is also a drawback:
+  /// when a subprogram refers to types that are local to another subprogram,
+  /// it is more complicated for debugger to properly discover local types
+  /// of a current scope for expression evaluation.
+  void cleanupRetainedNodes();
+
+  /// Calls SP->cleanupRetainedNodes() for a range of DISubprograms.
+  template <typename RangeT>
+  static void cleanupRetainedNodes(const RangeT &NewDistinctSPs) {
+    for (DISubprogram *SP : NewDistinctSPs)
+      SP->cleanupRetainedNodes();
   }
 
   /// Check if this subprogram describes the given function.

@@ -72,3 +72,24 @@ def mlir_c_api_cc_library(
         alwayslink = True,
         **kwargs
     )
+
+def nanobind_pyi_genrule(name, module_name, outs, deps, **kwargs):
+    """Generates .pyi stub file(s) for a nanobind extension module.
+
+    Args:
+        name: Name of the generated target.
+        module_name: Name of the module to generate stubs for (e.g., "_mlir").
+        outs: List of expected output .pyi files.
+        deps: All .so modules to load (including the target module).
+        visibility: Visibility for the generated .pyi file(s).
+    """
+    deps_arg = ",".join(["$(location " + d + ")" for d in deps])
+
+    native.genrule(
+        name = name,
+        srcs = deps,
+        outs = outs,
+        cmd = "$(location :stubgen_runner) --module " + module_name + " --deps " + deps_arg + " -o $(RULEDIR) > /dev/null",
+        tools = [":stubgen_runner"],
+        **kwargs
+    )

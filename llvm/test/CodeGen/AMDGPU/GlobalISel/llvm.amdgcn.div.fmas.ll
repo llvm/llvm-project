@@ -820,8 +820,8 @@ define amdgpu_kernel void @test_div_fmas_f64(ptr addrspace(1) %out, double %a, d
 ; GFX11_W64-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11_W64-NEXT:    s_and_b32 s8, 1, s8
 ; GFX11_W64-NEXT:    v_mov_b32_e32 v0, s4
-; GFX11_W64-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX11_W64-NEXT:    v_cmp_ne_u32_e64 vcc, 0, s8
+; GFX11_W64-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX11_W64-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX11_W64-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX11_W64-NEXT:    v_div_fmas_f64 v[0:1], s[2:3], v[0:1], v[2:3]

@@ -378,8 +378,17 @@ Register SPIRVGlobalRegistry::getOrCreateConstInt(uint64_t Val, MachineInstr &I,
                                                   SPIRVType *SpvType,
                                                   const SPIRVInstrInfo &TII,
                                                   bool ZeroAsNull) {
-  const IntegerType *Ty = cast<IntegerType>(getTypeForSPIRVType(SpvType));
-  auto *const CI = ConstantInt::get(const_cast<IntegerType *>(Ty), Val);
+  return getOrCreateConstInt(APInt(getScalarOrVectorBitWidth(SpvType), Val), I,
+                             SpvType, TII, ZeroAsNull);
+}
+
+Register SPIRVGlobalRegistry::getOrCreateConstInt(const APInt &Val,
+                                                  MachineInstr &I,
+                                                  const SPIRVType *SpvType,
+                                                  const SPIRVInstrInfo &TII,
+                                                  bool ZeroAsNull) {
+  auto *const CI = ConstantInt::get(
+      cast<IntegerType>(getTypeForSPIRVType(SpvType))->getContext(), Val);
   const MachineInstr *MI = findMI(CI, CurMF);
   if (MI && (MI->getOpcode() == SPIRV::OpConstantNull ||
              MI->getOpcode() == SPIRV::OpConstantI))
@@ -525,8 +534,8 @@ Register SPIRVGlobalRegistry::getOrCreateBaseRegister(
   }
   assert(Type->getOpcode() == SPIRV::OpTypeInt);
   SPIRVType *SpvBaseType = getOrCreateSPIRVIntegerType(BitWidth, I, TII);
-  return getOrCreateConstInt(Val->getUniqueInteger().getZExtValue(), I,
-                             SpvBaseType, TII, ZeroAsNull);
+  return getOrCreateConstInt(Val->getUniqueInteger(), I, SpvBaseType, TII,
+                             ZeroAsNull);
 }
 
 Register SPIRVGlobalRegistry::getOrCreateCompositeOrNull(
@@ -578,12 +587,23 @@ Register SPIRVGlobalRegistry::getOrCreateConstVector(uint64_t Val,
                                                      SPIRVType *SpvType,
                                                      const SPIRVInstrInfo &TII,
                                                      bool ZeroAsNull) {
+  return getOrCreateConstVector(APInt(getScalarOrVectorBitWidth(SpvType), Val),
+                                I, SpvType, TII, ZeroAsNull);
+}
+
+Register SPIRVGlobalRegistry::getOrCreateConstVector(const APInt &Val,
+                                                     MachineInstr &I,
+                                                     const SPIRVType *SpvType,
+                                                     const SPIRVInstrInfo &TII,
+                                                     bool ZeroAsNull) {
   const Type *LLVMTy = getTypeForSPIRVType(SpvType);
-  assert(LLVMTy->isVectorTy());
+  assert(LLVMTy->isVectorTy() &&
+         "Expected vector type for constant vector creation");
   const FixedVectorType *LLVMVecTy = cast<FixedVectorType>(LLVMTy);
   Type *LLVMBaseTy = LLVMVecTy->getElementType();
-  assert(LLVMBaseTy->isIntegerTy());
-  auto *ConstVal = ConstantInt::get(LLVMBaseTy, Val);
+  assert(LLVMBaseTy->isIntegerTy() &&
+         "Expected integer element type for APInt constant vector");
+  auto *ConstVal = cast<ConstantInt>(ConstantInt::get(LLVMBaseTy, Val));
   auto *ConstVec =
       ConstantVector::getSplat(LLVMVecTy->getElementCount(), ConstVal);
   unsigned BW = getScalarOrVectorBitWidth(SpvType);
@@ -629,9 +649,10 @@ Register SPIRVGlobalRegistry::getOrCreateConstIntArray(
   // that would be a truly unique but dangerous key, because it could lead to
   // the creation of constants of arbitrary length (that is, the parameter of
   // memset) which were missing in the original module.
+  Type *I64Ty = Type::getInt64Ty(LLVMBaseTy->getContext());
   Constant *UniqueKey = ConstantStruct::getAnon(
       {PoisonValue::get(const_cast<ArrayType *>(LLVMArrTy)),
-       ConstantInt::get(LLVMBaseTy, Val), ConstantInt::get(LLVMBaseTy, Num)});
+       ConstantInt::get(LLVMBaseTy, Val), ConstantInt::get(I64Ty, Num)});
   return getOrCreateCompositeOrNull(CI, I, SpvType, TII, UniqueKey, BW,
                                     LLVMArrTy->getNumElements());
 }
