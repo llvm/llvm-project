@@ -8453,6 +8453,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   // failures.
   DenseMap<VPValue *, VPValue *> IVEndValues;
   RUN_VPLAN_PASS(VPlanTransforms::updateScalarResumePhis, *Plan, IVEndValues);
+
+  assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
 }
 
