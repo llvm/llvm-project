@@ -16641,9 +16641,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
 
     // trunc(build_vector(ext(x), ext(x)) -> build_vector(x,x)
     if (SDValue SplatVal = DAG.getSplatValue(N0)) {
-      unsigned Opcode = SplatVal.getOpcode();
-      if ((Opcode == ISD::SIGN_EXTEND || Opcode == ISD::ZERO_EXTEND ||
-           Opcode == ISD::ANY_EXTEND) &&
+      if (ISD::isExtOpcode(SplatVal.getOpcode()) &&
           SrcVT.getScalarType() == SplatVal.getValueType())
         return DAG.UnrollVectorOp(N);
     }
