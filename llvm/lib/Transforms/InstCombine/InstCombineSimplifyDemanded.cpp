@@ -147,6 +147,19 @@ bool InstCombinerImpl::SimplifyDemandedInstructionBits(Instruction &Inst) {
   return SimplifyDemandedInstructionBits(Inst, Known);
 }
 
+bool InstCombinerImpl::SimplifyDemandedInstructionFPClass(Instruction &Inst) {
+  KnownFPClass Known;
+
+  Value *V =
+      SimplifyDemandedUseFPClass(&Inst, fcAllFlags, Known, /*CtxI=*/&Inst);
+  if (!V)
+    return false;
+  if (V == &Inst)
+    return true;
+  replaceInstUsesWith(Inst, V);
+  return true;
+}
+
 /// This form of SimplifyDemandedBits simplifies the specified instruction
 /// operand if possible, updating it in place. It returns true if it made any
 /// change and false otherwise.
@@ -2309,7 +2322,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                                     unsigned Depth) {
   assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
   assert(Known == KnownFPClass() && "expected uninitialized state");
-  assert(I->hasOneUse() && "wrong version called");
 
   Type *VTy = I->getType();
 
@@ -2620,6 +2632,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     Value *Y = I->getOperand(1);
     if (X == Y && isGuaranteedNotToBeUndef(X, SQ.AC, CxtI, SQ.DT, Depth + 1)) {
       // If the source is 0, inf or nan, the result is a nan
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(I);
 
       Value *IsZeroOrNan = Builder.CreateFCmpFMF(
           FCmpInst::FCMP_UEQ, I->getOperand(0), ConstantFP::getZero(VTy), FMF);
