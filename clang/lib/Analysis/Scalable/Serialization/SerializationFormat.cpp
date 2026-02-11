@@ -11,8 +11,6 @@
 using namespace clang::ssaf;
 
 char SerializationFormat::ID = 0;
-void SerializationFormat::anchor() {}
-
 SerializationFormat::SerializationFormat(
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
     : FS(FS) {}

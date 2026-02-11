@@ -52,9 +52,6 @@ protected:
 #include "clang/Analysis/Scalable/Model/PrivateFieldNames.def"
 
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
-
-private:
-  void anchor() override;
 };
 
 template <class SerializerFn, class DeserializerFn> struct FormatInfoEntry {
