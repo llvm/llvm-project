@@ -788,6 +788,7 @@ private:
   SDValue SoftPromoteHalfRes_LOAD(SDNode *N);
   SDValue SoftPromoteHalfRes_ATOMIC_LOAD(SDNode *N);
   SDValue SoftPromoteHalfRes_SELECT(SDNode *N);
+  SDValue SoftPromoteHalfRes_CTSELECT(SDNode *N);
   SDValue SoftPromoteHalfRes_SELECT_CC(SDNode *N);
   SDValue SoftPromoteHalfRes_UnaryOp(SDNode *N);
   SDValue SoftPromoteHalfRes_FABS(SDNode *N);
