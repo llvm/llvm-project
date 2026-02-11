@@ -582,12 +582,12 @@ static cir::AllocaOp getOrCreateCleanupDestSlot(cir::FuncOp funcOp,
   mlir::Block &entryBlock = funcOp.getBody().front();
 
   // Look for an existing cleanup dest slot in the entry block.
-  for (auto &op : entryBlock) {
-    if (auto existingAlloca = dyn_cast<cir::AllocaOp>(&op)) {
-      if (existingAlloca.getName() == "__cleanup_dest_slot")
-        return existingAlloca;
-    }
-  }
+  auto it = llvm::find_if(entryBlock, [](auto &op) {
+    return mlir::isa<AllocaOp>(&op) &&
+           mlir::cast<AllocaOp>(&op).getName() == "__cleanup_dest_slot";
+  });
+  if (it != entryBlock.end())
+    return mlir::cast<cir::AllocaOp>(*it);
 
   // Create a new cleanup dest slot at the start of the entry block.
   mlir::OpBuilder::InsertionGuard guard(rewriter);
