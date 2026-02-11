@@ -34,6 +34,7 @@
 ; O0-NEXT: stack-protector
 ; O0-NEXT: verify)
 ; O0-NEXT: function(machine-function(x86-isel
+; O0-NEXT: x86-global-base-reg
 ; O0-NEXT: x86-argument-stack-slot
 ; O0-NEXT: finalize-isel
 ; O0-NEXT: localstackalloc
@@ -106,6 +107,7 @@
 ; O2-NEXT: verify)
 ; O2-NEXT: function(machine-function(x86-isel
 ; O2-NEXT: x86-cleanup-local-dynamic-tls
+; O2-NEXT: x86-global-base-reg
 ; O2-NEXT: x86-argument-stack-slot
 ; O2-NEXT: finalize-isel
 ; O2-NEXT: early-tailduplication
@@ -211,6 +213,7 @@
 ; O0-WINDOWS-NEXT: stack-protector
 ; O0-WINDOWS-NEXT: verify)
 ; O0-WINDOWS-NEXT: function(machine-function(x86-isel
+; O0-WINDOWS-NEXT: x86-global-base-reg
 ; O0-WINDOWS-NEXT: x86-argument-stack-slot
 ; O0-WINDOWS-NEXT: finalize-isel
 ; O0-WINDOWS-NEXT: localstackalloc
@@ -286,6 +289,7 @@
 ; O3-WINDOWS-NEXT: stack-protector
 ; O3-WINDOWS-NEXT: verify)
 ; O3-WINDOWS-NEXT: function(machine-function(x86-isel
+; O3-WINDOWS-NEXT: x86-global-base-reg
 ; O3-WINDOWS-NEXT: x86-argument-stack-slot
 ; O3-WINDOWS-NEXT: finalize-isel
 ; O3-WINDOWS-NEXT: early-tailduplication
