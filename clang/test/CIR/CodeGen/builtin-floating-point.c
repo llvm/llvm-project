@@ -1731,16 +1731,15 @@ long double call_copysignl(long double x, long double y) {
 
 float my_fmaxf(float x, float y) {
   return __builtin_fmaxf(x, y);
-  // CHECK: cir.func no_inline dso_local @my_fmaxf
-  // CHECK:   %{{.+}} = cir.fmaxnum %{{.+}}, %{{.+}} : !cir.float
+  // CIR-LABEL: my_fmaxf
+  // CIR: cir.call @fmaxf(%{{.*}}, %{{.*}}) nothrow side_effect(const) {{.*}} : (!cir.float, !cir.float) -> !cir.float
 
-  // LLVM: define dso_local float @my_fmaxf
-  // LLVM:   %{{.+}} = call float @llvm.maxnum.f32(float %{{.+}}, float %{{.+}})
-  // LLVM: }
+  // LLVM-LABEL: @my_fmaxf
+  // LLVM: call float @fmaxf(float %{{.*}}, float %{{.*}})
 
-  // OGCG: define{{.*}}@my_fmaxf(
-  // OGCG: call float @llvm.maxnum.f32(
-}
+  // OGCG-LABEL: @my_fmaxf
+  // OGCG: call float @llvm.maxnum.f32(float %{{.*}}, float %{{.*}})
+  }
 
 double my_fmax(double x, double y) {
   return __builtin_fmax(x, y);
