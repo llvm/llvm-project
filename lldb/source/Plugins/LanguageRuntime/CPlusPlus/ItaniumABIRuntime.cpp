@@ -159,7 +159,8 @@ llvm::Error ItaniumABIRuntime::TypeHasVTable(CompilerType type) {
   // Make sure this is a class or a struct first by checking the type class
   // bitfield that gets returned.
   if ((type.GetTypeClass() & (eTypeClassStruct | eTypeClassClass)) == 0) {
-    return llvm::createStringError(std::errc::invalid_argument,
+    return llvm::createStringError(
+        std::errc::invalid_argument,
         "type \"%s\" is not a class or struct or a pointer to one",
         original_type.GetTypeName().AsCString("<invalid>"));
   }
@@ -167,8 +168,8 @@ llvm::Error ItaniumABIRuntime::TypeHasVTable(CompilerType type) {
   // Check if the type has virtual functions by asking it if it is polymorphic.
   if (!type.IsPolymorphicClass()) {
     return llvm::createStringError(std::errc::invalid_argument,
-        "type \"%s\" doesn't have a vtable",
-        type.GetTypeName().AsCString("<invalid>"));
+                                   "type \"%s\" doesn't have a vtable",
+                                   type.GetTypeName().AsCString("<invalid>"));
   }
   return llvm::Error::success();
 }
@@ -207,7 +208,8 @@ ItaniumABIRuntime::GetVTableInfo(ValueObject &in_value, bool check_type) {
       process->ReadPointerFromMemory(original_ptr, error);
 
   if (!error.Success() || vtable_load_addr == LLDB_INVALID_ADDRESS)
-    return llvm::createStringError(std::errc::invalid_argument,
+    return llvm::createStringError(
+        std::errc::invalid_argument,
         "failed to read vtable pointer from memory at 0x%" PRIx64,
         original_ptr);
 
@@ -219,8 +221,9 @@ ItaniumABIRuntime::GetVTableInfo(ValueObject &in_value, bool check_type) {
   Address vtable_addr;
   if (!process->GetTarget().ResolveLoadAddress(vtable_load_addr, vtable_addr))
     return llvm::createStringError(std::errc::invalid_argument,
-                                   "failed to resolve vtable pointer 0x%"
-                                   PRIx64 "to a section", vtable_load_addr);
+                                   "failed to resolve vtable pointer 0x%" PRIx64
+                                   "to a section",
+                                   vtable_load_addr);
 
   // Check our cache first to see if we already have this info
   {
@@ -243,8 +246,9 @@ ItaniumABIRuntime::GetVTableInfo(ValueObject &in_value, bool check_type) {
     return info;
   }
   return llvm::createStringError(std::errc::invalid_argument,
-      "symbol found that contains 0x%" PRIx64 " is not a vtable symbol",
-      vtable_load_addr);
+                                 "symbol found that contains 0x%" PRIx64
+                                 " is not a vtable symbol",
+                                 vtable_load_addr);
 }
 
 bool ItaniumABIRuntime::GetDynamicTypeAndAddress(
@@ -313,8 +317,8 @@ bool ItaniumABIRuntime::GetDynamicTypeAndAddress(
   // the original address.
   lldb::addr_t dynamic_addr =
       in_value.GetPointerValue().address + offset_to_top;
-  if (!m_process->GetTarget().ResolveLoadAddress(
-          dynamic_addr, dynamic_address)) {
+  if (!m_process->GetTarget().ResolveLoadAddress(dynamic_addr,
+                                                 dynamic_address)) {
     dynamic_address.SetRawAddress(dynamic_addr);
   }
   return true;
@@ -359,7 +363,8 @@ void ItaniumABIRuntime::AppendExceptionBreakpointFilterModules(
   }
 }
 
-ValueObjectSP ItaniumABIRuntime::GetExceptionObjectForThread(ThreadSP thread_sp) {
+ValueObjectSP
+ItaniumABIRuntime::GetExceptionObjectForThread(ThreadSP thread_sp) {
   if (!thread_sp->SafeToCallFunctions())
     return {};
 
@@ -421,11 +426,11 @@ ValueObjectSP ItaniumABIRuntime::GetExceptionObjectForThread(ThreadSP thread_sp)
   ValueObjectSP exception = ValueObject::CreateValueObjectFromData(
       "exception", exception_isw.GetAsData(m_process->GetByteOrder()), exe_ctx,
       voidstar);
-  ValueObjectSP dyn_exception
-      = exception->GetDynamicValue(eDynamicDontRunTarget);
+  ValueObjectSP dyn_exception =
+      exception->GetDynamicValue(eDynamicDontRunTarget);
   // If we succeed in making a dynamic value, return that:
   if (dyn_exception)
-     return dyn_exception;
+    return dyn_exception;
 
   return exception;
 }
