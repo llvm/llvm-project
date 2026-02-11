@@ -133,6 +133,7 @@ syn keyword llvmKeyword
       \ noimplicitfloat
       \ noinline
       \ nomerge
+      \ nooutline
       \ nonlazybind
       \ nonnull
       \ noprofile
