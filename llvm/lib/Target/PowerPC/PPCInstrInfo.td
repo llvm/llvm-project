@@ -4662,6 +4662,10 @@ let Predicates = [IsISA3_0] in {
 let Predicates = [IsISA2_07], hasSideEffects = 1 in {
   def MSGSNDP : XForm_16b<31, 142, (outs), (ins gprc:$RB),
                               "msgsndp $RB", IIC_SprMSGSNDP, []>;
+  let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
+    def MSGSNDP8 : XForm_16b<31, 142, (outs), (ins g8rc:$RB),
+                             "msgsndp $RB", IIC_SprMSGSNDP, []>;
+  }
 }
 
 def TLBSX : XForm_tlb<914, (outs), (ins gprc:$RA, gprc:$RB), "tlbsx $RA, $RB",

@@ -1992,7 +1992,7 @@ def : InstRW<[P10W_SX_3C, P10W_DISP_EVEN, P10W_DISP_ANY],
 // 3 Cycles Simple Fixed-point (SFX) operations, 1 input operands
 def : InstRW<[P10W_SX_3C, P10W_DISP_EVEN, P10W_DISP_ANY, P10SX_Read],
       (instrs
-    MSGSNDP,
+    MSGSNDP, MSGSNDP8,
     MTMSR,
     MTMSRD
 )>;
