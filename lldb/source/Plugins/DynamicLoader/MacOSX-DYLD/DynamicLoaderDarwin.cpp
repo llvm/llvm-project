@@ -155,7 +155,7 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
       // Fall back to looking lldb's own shared cache by filename
       image_info = HostInfo::GetSharedCacheImageInfo(
           module_spec.GetFileSpec().GetPath());
-    };
+    }
 
     // If we found it and it has the correct UUID, let's proceed with
     // creating a module from the memory contents.
