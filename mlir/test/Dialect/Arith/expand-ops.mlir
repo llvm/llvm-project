@@ -381,7 +381,7 @@ func.func @extf_f8E8M0FNU_to_f32(%arg0 : f8E8M0FNU) -> f32 {
     return %0 : f32
 }
 
-// CHECK-LABLE: @extf_f8E8M0FNU_to_f32
+// CHECK-LABEL: @extf_f8E8M0FNU_to_f32
 // CHECK: %[[BITCAST:.+]] = arith.bitcast %arg0 : f8E8M0FNU to i8
 // CHECK-DAG: %[[CF8NAN:.+]] = arith.constant -1 : i8
 // CHECK-DAG: %[[CF32NAN:.+]] = arith.constant -1 : i32

@@ -1972,6 +1972,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::HLSLRawBuffer:
   case attr::HLSLContainedType:
   case attr::HLSLIsCounter:
+  case attr::HLSLResourceDimension:
     llvm_unreachable("HLSL resource type attributes handled separately");
 
   case attr::OpenCLPrivateAddressSpace:
@@ -2133,6 +2134,12 @@ void TypePrinter::printHLSLAttributedResourceAfter(
     printAfter(ContainedTy, OS);
     OS << ")]]";
   }
+
+  if (Attrs.ResourceDimension != llvm::dxil::ResourceDimension::Unknown)
+    OS << " [[hlsl::resource_dimension("
+       << HLSLResourceDimensionAttr::ConvertResourceDimensionToStr(
+              Attrs.ResourceDimension)
+       << ")]]";
 }
 
 void TypePrinter::printHLSLInlineSpirvBefore(const HLSLInlineSpirvType *T,

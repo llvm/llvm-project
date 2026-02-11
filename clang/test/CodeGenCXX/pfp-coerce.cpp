@@ -133,7 +133,7 @@ void pass_trivial_abi_pointer(TrivialAbiPointer p, TrivialAbiPointer *pp) {
   // CHECK: %9 = call ptr @llvm.protected.field.ptr.p0(ptr %7, i64 %8, i1 true) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS17TrivialAbiPointer.ptr) ]
   // CHECK: %10 = load ptr, ptr %9, align 8
   // CHECK: store ptr %10, ptr %6, align 8
-  // CHECK: call void @_ZN17TrivialAbiPointerD1Ev(ptr noundef nonnull align 8 dereferenceable(8) %p)
+  // CHECK: call void @_ZN17TrivialAbiPointerD1Ev(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %p)
 
   *pp = p;
 }

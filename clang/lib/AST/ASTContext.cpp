@@ -13224,6 +13224,18 @@ MangleContext *ASTContext::createDeviceMangleContext(const TargetInfo &T) {
   llvm_unreachable("Unsupported ABI");
 }
 
+MangleContext *ASTContext::cudaNVInitDeviceMC() {
+  // If the host and device have different C++ ABIs, mark it as the device
+  // mangle context so that the mangling needs to retrieve the additional
+  // device lambda mangling number instead of the regular host one.
+  if (getAuxTargetInfo() && getTargetInfo().getCXXABI().isMicrosoft() &&
+      getAuxTargetInfo()->getCXXABI().isItaniumFamily()) {
+    return createDeviceMangleContext(*getAuxTargetInfo());
+  }
+
+  return createMangleContext(getAuxTargetInfo());
+}
+
 CXXABI::~CXXABI() = default;
 
 size_t ASTContext::getSideTableAllocatedMemory() const {
@@ -15260,10 +15272,12 @@ static void findPFPFields(const ASTContext &Ctx, QualType Ty, CharUnits Offset,
   const ASTRecordLayout &RL = Ctx.getASTRecordLayout(Decl);
   for (FieldDecl *Field : Decl->fields()) {
     CharUnits FieldOffset =
-        Offset + Ctx.toCharUnitsFromBits(RL.getFieldOffset(Field->getFieldIndex()));
+        Offset +
+        Ctx.toCharUnitsFromBits(RL.getFieldOffset(Field->getFieldIndex()));
     if (Ctx.isPFPField(Field))
       Fields.push_back({FieldOffset, Field});
-    findPFPFields(Ctx, Field->getType(), FieldOffset, Fields, /*IncludeVBases=*/true);
+    findPFPFields(Ctx, Field->getType(), FieldOffset, Fields,
+                  /*IncludeVBases=*/true);
   }
   // Pass false for IncludeVBases below because vbases are only included in
   // layout for top-level types, i.e. not bases or vbases.
