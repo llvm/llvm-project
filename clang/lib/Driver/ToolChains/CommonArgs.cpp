@@ -3068,15 +3068,30 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
   }
 }
 
-void tools::addOpenCLBuiltinsLib(const Driver &D,
+void tools::addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
                                  const llvm::opt::ArgList &DriverArgs,
                                  llvm::opt::ArgStringList &CC1Args) {
-  const Arg *A = DriverArgs.getLastArg(options::OPT_libclc_lib_EQ);
-  if (!A)
-    return;
 
-  // If the namespec is of the form :filename we use it exactly.
-  StringRef LibclcNamespec(A->getValue());
+  StringRef LibclcNamespec;
+  const Arg *A = DriverArgs.getLastArg(options::OPT_libclc_lib_EQ);
+  if (A) {
+    // If the namespec is of the form :filename we use it exactly.
+    LibclcNamespec = A->getValue();
+  } else {
+    if (!TT.isAMDGPU() || TT.getEnvironment() != llvm::Triple::LLVM)
+      return;
+
+    if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
+                            true))
+      return;
+
+    if (!DriverArgs.hasFlag(options::OPT_stdlib, options::OPT_nostdlib, true))
+      return;
+
+    if (DriverArgs.hasArg(options::OPT_nodefaultlibs))
+      return;
+  }
+
   bool FilenameSearch = LibclcNamespec.consume_front(":");
   if (FilenameSearch) {
     SmallString<128> LibclcFile(LibclcNamespec);
