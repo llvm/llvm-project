@@ -23,8 +23,8 @@ class ScriptedFrameProvider(metaclass=ABCMeta):
 
     - ``input_frames`` (lldb.SBFrameList or None): The frame list to use as input
     - ``thread`` (lldb.SBThread or None): The thread this provider is attached to.
-    - ``target`` (lldb.SBTarget or None): The target from the thread's process.
     - ``process`` (lldb.SBProcess or None): The process that owns the thread.
+    - ``target`` (lldb.SBTarget or None): The target from the thread's process.
     - ``args`` (lldb.SBStructuredData or None): Dictionary-like structured data passed when the provider was registered.
 
     Example usage:
