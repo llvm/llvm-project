@@ -2497,6 +2497,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     Value *ShadowCases = nullptr;
     for (auto Case : SI.cases()) {
+      if (casesToConsider <= 0)
+        break;
+
       Value *Comparator = Case.getCaseValue();
       // TODO: some simplification is possible when comparing multiple cases
       // simultaneously.
@@ -2509,8 +2512,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         ShadowCases = ComparisonShadow;
 
       casesToConsider--;
-      if (casesToConsider <= 0)
-        break;
     }
 
     if (ShadowCases)
