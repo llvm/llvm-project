@@ -627,21 +627,6 @@ struct WgToSgConvertLayoutOp
         targetLayout.getEffectiveSgLayoutAsInt();
     SmallVector<int64_t> targetSgData = targetLayout.getEffectiveSgDataAsInt();
 
-    auto hasUnitLeadingDims = [](ArrayRef<int64_t> shape) {
-      if (shape.size() <= 2)
-        return true;
-      for (size_t i = 0; i + 2 < shape.size(); ++i)
-        if (shape[i] != 1)
-          return false;
-      return true;
-    };
-
-    if (wgShape.size() > 2) {
-      if (!hasUnitLeadingDims(inputSgData) || !hasUnitLeadingDims(targetSgData))
-        return rewriter.notifyMatchFailure(
-            op, "rank > 2 requires unit leading dims for sg_data");
-    }
-
     // Fast path: if sg_layout and sg_data are identical, no SLM needed
     if (inputSgLayout == targetSgLayout && inputSgData == targetSgData) {
       inputLayout = inputLayout.dropSgLayoutAndData();
