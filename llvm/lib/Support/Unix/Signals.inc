@@ -430,6 +430,15 @@ static void SignalHandler(int Sig, siginfo_t *Info, void *Context) {
   // Otherwise if it is a fault (like SEGV) run any handler.
   llvm::sys::RunSignalHandlers();
 
+#ifdef __s390__
+  // On S/390, certain signals are delivered with PSW Address pointing to
+  // *after* the faulting instruction.  Simply returning from the signal
+  // handler would continue execution after that point, instead of
+  // re-raising the signal.  Raise the signal manually in those cases.
+  if (Sig == SIGILL || Sig == SIGFPE || Sig == SIGTRAP)
+    raise(Sig);
+#endif
+
 #if defined(__linux__)
   // Re-raising a signal via `raise` loses the original siginfo. Recent
   // versions of linux (>= 3.9) support processes sending a signal to itself
