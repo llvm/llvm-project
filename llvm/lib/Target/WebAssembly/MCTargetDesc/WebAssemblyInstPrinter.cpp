@@ -48,7 +48,6 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                        StringRef Annot,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &OS) {
-
   unsigned TypeOperand = 0;
   unsigned TableOperand = 1;
   switch (MI->getOpcode()) {
