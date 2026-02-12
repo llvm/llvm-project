@@ -5,7 +5,7 @@ define i16 @test(i16 %v1, i16 %v2) {
 ; CHECK-LABEL: define i16 @test(
 ; CHECK-SAME: i16 [[V1:%.*]], i16 [[V2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> <i16 0, i16 0, i16 0, i16 poison>, i16 [[V2]], i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> <i16 -1, i16 -1, i16 -1, i16 poison>, i16 [[V2]], i32 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> <i16 0, i16 0, i16 0, i16 poison>, i16 [[V1]], i32 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i16> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> poison, <2 x i32> <i32 poison, i32 3>
