@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_BF16ADDF_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_BF16ADDF_H
 
-#include "src/__support/macros/properties/types.h"
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/__support/FPUtil/generic/add_sub.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
