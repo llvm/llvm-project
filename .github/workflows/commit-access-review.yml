@@ -13,6 +13,7 @@ permissions:
 jobs:
   commit-access-review:
     if: github.repository_owner == 'llvm'
+    environment: main-branch-only
     runs-on: ubuntu-24.04
     steps:
       - name: Fetch LLVM sources
