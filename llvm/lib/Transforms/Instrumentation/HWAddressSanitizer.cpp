@@ -1899,7 +1899,7 @@ void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple,
   if (TargetTriple.isOSFuchsia()) {
     // Fuchsia is always PIE, which means that the beginning of the address
     // space is always available.
-    SetFixed(0);
+    Kind = OffsetKind::kGlobal;
   } else if (CompileKernel || InstrumentWithCalls) {
     SetFixed(0);
     WithFrameRecord = false;
