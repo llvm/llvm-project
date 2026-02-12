@@ -4795,7 +4795,7 @@ def ftrap_unreachable
     : Joined<["-"], "ftrap-unreachable=">,
       Group<f_Group>,
       Visibility<[ClangOption, CC1Option]>,
-      HelpText<"Replace ``llvm.unreachable`` instructions with traps, when it is supported and profitable.">,
+      HelpText<"Replace ``llvm.unreachable`` instructions with traps, when it is supported and profitable">,
       Values<"all,except-noreturn,none">,
       NormalizedValues<["All", "ExceptNoreturn", "None"]>,
       NormalizedValuesScope<"CodeGenOptions::TrapUnreachableKind">,
