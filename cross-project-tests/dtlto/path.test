@@ -9,8 +9,8 @@ RUN: rm -rf %t && split-file %s %t && cd %t
 
 # Create an archive and a thin archive to confirm member paths are expanded.
 RUN: %clang --target=x86_64-linux-gnu -c foo.c moo.c start.c -flto=thin -O2
-RUN: prospero-llvm-ar rcs foo.a foo.o
-RUN: prospero-llvm-ar --thin rcs moo.a moo.o
+RUN: llvm-ar rcs foo.a foo.o
+RUN: llvm-ar --thin rcs moo.a moo.o
 
 # Build with DTLTO.
 RUN: %python in-83-dir.py \
