@@ -91,7 +91,7 @@ define amdgpu_gfx_whole_wave i32 @inlined_callee(i1 %exec, i32 %x) {
 ; NOINLINE-ASM-NEXT:    scratch_store_b32 off, v0, s32 ; 4-byte Folded Spill
 ; NOINLINE-ASM-NEXT:    s_mov_b32 exec_lo, -1
 ; NOINLINE-ASM-NEXT:    v_mov_b32_e32 v0, 3
-; NOINLINE-ASM-NEXT:    s_wait_alu 0xfffe
+; NOINLINE-ASM-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; NOINLINE-ASM-NEXT:    s_xor_b32 exec_lo, s0, -1
 ; NOINLINE-ASM-NEXT:    scratch_load_b32 v0, off, s32 ; 4-byte Folded Reload
 ; NOINLINE-ASM-NEXT:    s_mov_b32 exec_lo, s0
@@ -107,12 +107,12 @@ define amdgpu_gfx_whole_wave i32 @inlined_callee(i1 %exec, i32 %x) {
 ; NOINLINE-MIR-NEXT:   S_WAIT_BVHCNT 0
 ; NOINLINE-MIR-NEXT:   S_WAIT_KMCNT 0
 ; NOINLINE-MIR-NEXT:   $sgpr0 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-; NOINLINE-MIR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
+; NOINLINE-MIR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
 ; NOINLINE-MIR-NEXT:   $exec_lo = S_MOV_B32 -1
 ; NOINLINE-MIR-NEXT:   $vgpr0 = V_MOV_B32_e32 3, implicit $exec
-; NOINLINE-MIR-NEXT:   S_WAITCNT_DEPCTR 65534
+; NOINLINE-MIR-NEXT:   S_WAITCNT_DEPCTR .SaSdst_0
 ; NOINLINE-MIR-NEXT:   $exec_lo = S_XOR_B32 $sgpr0, -1, implicit-def $scc
-; NOINLINE-MIR-NEXT:   $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit killed $vgpr0(tied-def 0) :: (load (s32) from %stack.0, addrspace 5)
+; NOINLINE-MIR-NEXT:   $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit killed $vgpr0(tied-def 0) :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
 ; NOINLINE-MIR-NEXT:   $exec_lo = S_MOV_B32 killed $sgpr0
 ; NOINLINE-MIR-NEXT:   S_WAIT_LOADCNT 0
 ; NOINLINE-MIR-NEXT:   S_SETPC_B64_return undef $sgpr30_sgpr31, implicit killed $vgpr0

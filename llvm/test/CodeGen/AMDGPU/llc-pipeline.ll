@@ -1441,9 +1441,11 @@
 ; GCN-O3-NEXT:        Free MachineFunction
 
 ; INLINER:Target Library Information
+; INLINER-NEXT:Runtime Library Function Analysis
 ; INLINER-NEXT:Target Pass Configuration
 ; INLINER-NEXT:Machine Module Information
 ; INLINER-NEXT:Target Transform Information
+; INLINER-NEXT:Library Function Lowering Analysis
 ; INLINER-NEXT:Assumption Cache Tracker
 ; INLINER-NEXT:Profile summary info
 ; INLINER-NEXT:AMDGPU Address space based Alias Analysis
@@ -1459,8 +1461,7 @@
 ; INLINER-NEXT:  ModulePass Manager
 ; INLINER-NEXT:    Pre-ISel Intrinsic Lowering
 ; INLINER-NEXT:    FunctionPass Manager
-; INLINER-NEXT:      Expand large div/rem
-; INLINER-NEXT:      Expand fp
+; INLINER-NEXT:      Expand IR instructions
 ; INLINER-NEXT:    AMDGPU Remove Incompatible Functions
 ; INLINER-NEXT:    AMDGPU Printf lowering
 ; INLINER-NEXT:    Lower ctors and dtors for AMDGPU
@@ -1552,8 +1553,8 @@
 ; INLINER-NEXT:      Global Value Numbering
 ; INLINER-NEXT:    AMDGPU Preload Kernel Arguments
 ; INLINER-NEXT:    FunctionPass Manager
-; INLINER-NEXT:      AMDGPU Lower Kernel Arguments
 ; INLINER-NEXT:      Dominator Tree Construction
+; INLINER-NEXT:      AMDGPU Lower Kernel Arguments
 ; INLINER-NEXT:      Natural Loop Information
 ; INLINER-NEXT:      CodeGen Prepare
 ; INLINER-NEXT:      Dominator Tree Construction
@@ -1564,52 +1565,51 @@
 ; INLINER-NEXT:      GPU Load and Store Vectorizer
 ; INLINER-NEXT:    Lower buffer fat pointer operations to buffer resources
 ; INLINER-NEXT:    AMDGPU lower intrinsics
+; INLINER-NEXT:    FunctionPass Manager
+; INLINER-NEXT:      Lazy Value Information Analysis
+; INLINER-NEXT:      Lower SwitchInst's to branches
+; INLINER-NEXT:      Lower invoke and unwind, for unwindless code generators
+; INLINER-NEXT:      Remove unreachable blocks from the CFG
+; INLINER-NEXT:      Dominator Tree Construction
+; INLINER-NEXT:      Basic Alias Analysis (stateless AA impl)
+; INLINER-NEXT:      Function Alias Analysis Results
+; INLINER-NEXT:      Flatten the CFG
+; INLINER-NEXT:      Dominator Tree Construction
+; INLINER-NEXT:      Basic Alias Analysis (stateless AA impl)
+; INLINER-NEXT:      Function Alias Analysis Results
+; INLINER-NEXT:      Natural Loop Information
+; INLINER-NEXT:      Code sinking
+; INLINER-NEXT:      Cycle Info Analysis
+; INLINER-NEXT:      Uniformity Analysis
+; INLINER-NEXT:      AMDGPU IR late optimizations
+; INLINER-NEXT:      Post-Dominator Tree Construction
+; INLINER-NEXT:      Uniformity Analysis
+; INLINER-NEXT:      Unify divergent function exit nodes
+; INLINER-NEXT:      Dominator Tree Construction
+; INLINER-NEXT:      Cycle Info Analysis
+; INLINER-NEXT:      Convert irreducible control-flow into natural loops
+; INLINER-NEXT:      Natural Loop Information
+; INLINER-NEXT:      Fixup each natural loop to have a single exit block
+; INLINER-NEXT:      Post-Dominator Tree Construction
+; INLINER-NEXT:      Dominance Frontier Construction
+; INLINER-NEXT:      Detect single entry single exit regions
+; INLINER-NEXT:      Region Pass Manager
+; INLINER-NEXT:        Structurize control flow
+; INLINER-NEXT:      Cycle Info Analysis
+; INLINER-NEXT:      Uniformity Analysis
+; INLINER-NEXT:      Basic Alias Analysis (stateless AA impl)
+; INLINER-NEXT:      Function Alias Analysis Results
+; INLINER-NEXT:      Memory SSA
+; INLINER-NEXT:      AMDGPU Annotate Uniform Values
+; INLINER-NEXT:      Natural Loop Information
+; INLINER-NEXT:      SI annotate control flow
+; INLINER-NEXT:      Cycle Info Analysis
+; INLINER-NEXT:      Uniformity Analysis
+; INLINER-NEXT:      AMDGPU Rewrite Undef for PHI
+; INLINER-NEXT:      LCSSA Verifier
+; INLINER-NEXT:      Loop-Closed SSA Form Pass
 ; INLINER-NEXT:    CallGraph Construction
 ; INLINER-NEXT:    Call Graph SCC Pass Manager
-; INLINER-NEXT:      DummyCGSCCPass
-; INLINER-NEXT:      FunctionPass Manager
-; INLINER-NEXT:        Lazy Value Information Analysis
-; INLINER-NEXT:        Lower SwitchInst's to branches
-; INLINER-NEXT:        Lower invoke and unwind, for unwindless code generators
-; INLINER-NEXT:        Remove unreachable blocks from the CFG
-; INLINER-NEXT:        Dominator Tree Construction
-; INLINER-NEXT:        Basic Alias Analysis (stateless AA impl)
-; INLINER-NEXT:        Function Alias Analysis Results
-; INLINER-NEXT:        Flatten the CFG
-; INLINER-NEXT:        Dominator Tree Construction
-; INLINER-NEXT:        Basic Alias Analysis (stateless AA impl)
-; INLINER-NEXT:        Function Alias Analysis Results
-; INLINER-NEXT:        Natural Loop Information
-; INLINER-NEXT:        Code sinking
-; INLINER-NEXT:        Cycle Info Analysis
-; INLINER-NEXT:        Uniformity Analysis
-; INLINER-NEXT:        AMDGPU IR late optimizations
-; INLINER-NEXT:        Post-Dominator Tree Construction
-; INLINER-NEXT:        Uniformity Analysis
-; INLINER-NEXT:        Unify divergent function exit nodes
-; INLINER-NEXT:        Dominator Tree Construction
-; INLINER-NEXT:        Cycle Info Analysis
-; INLINER-NEXT:        Convert irreducible control-flow into natural loops
-; INLINER-NEXT:        Natural Loop Information
-; INLINER-NEXT:        Fixup each natural loop to have a single exit block
-; INLINER-NEXT:        Post-Dominator Tree Construction
-; INLINER-NEXT:        Dominance Frontier Construction
-; INLINER-NEXT:        Detect single entry single exit regions
-; INLINER-NEXT:        Region Pass Manager
-; INLINER-NEXT:          Structurize control flow
-; INLINER-NEXT:        Cycle Info Analysis
-; INLINER-NEXT:        Uniformity Analysis
-; INLINER-NEXT:        Basic Alias Analysis (stateless AA impl)
-; INLINER-NEXT:        Function Alias Analysis Results
-; INLINER-NEXT:        Memory SSA
-; INLINER-NEXT:        AMDGPU Annotate Uniform Values
-; INLINER-NEXT:        Natural Loop Information
-; INLINER-NEXT:        SI annotate control flow
-; INLINER-NEXT:        Cycle Info Analysis
-; INLINER-NEXT:        Uniformity Analysis
-; INLINER-NEXT:        AMDGPU Rewrite Undef for PHI
-; INLINER-NEXT:        LCSSA Verifier
-; INLINER-NEXT:        Loop-Closed SSA Form Pass
 ; INLINER-NEXT:      Analysis if a function is memory bound
 ; INLINER-NEXT:      DummyCGSCCPass
 ; INLINER-NEXT:      FunctionPass Manager
@@ -1659,7 +1659,6 @@
 ; INLINER-NEXT:        GCN DPP Combine
 ; INLINER-NEXT:        SI Load Store Optimizer
 ; INLINER-NEXT:        SI Peephole SDWA
-; INLINER-NEXT:        Machine Block Frequency Analysis
 ; INLINER-NEXT:        MachineDominator Tree Construction
 ; INLINER-NEXT:        Early Machine Loop Invariant Code Motion
 ; INLINER-NEXT:        MachineDominator Tree Construction
