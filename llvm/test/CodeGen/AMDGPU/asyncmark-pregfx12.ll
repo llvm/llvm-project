@@ -2,7 +2,46 @@
 ; RUN: sed 's/.ASYNC/.async/' %s | llc -march=amdgcn -mcpu=gfx900 -o - | FileCheck %s -check-prefixes=WITHASYNC
 ; RUN: sed 's/.ASYNC//' %s       | llc -march=amdgcn -mcpu=gfx900 -o - | FileCheck %s -check-prefixes=WITHOUT
 
-; Test async operations with global_load_lds and global loads
+; Demonstrate that wait.asyncmark is a code motion barrier for loads from LDS.
+; This is the simplest demo possible. We don't actually use async ops, but just
+; a pair of adjacent LDS loads. In the absence of the async mark, these get
+; coalesced into a wider LDS load.
+
+define void @code_barrier(ptr addrspace(1) %foo, ptr addrspace(3) %lds, ptr addrspace(3) %out) {
+; WITHASYNC-LABEL: code_barrier:
+; WITHASYNC:       ; %bb.0:
+; WITHASYNC-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WITHASYNC-NEXT:    ds_read_b32 v0, v2
+; WITHASYNC-NEXT:    ; wait_asyncmark(0)
+; WITHASYNC-NEXT:    ds_read_b32 v1, v2 offset:4
+; WITHASYNC-NEXT:    s_waitcnt lgkmcnt(0)
+; WITHASYNC-NEXT:    v_add_u32_e32 v0, v0, v1
+; WITHASYNC-NEXT:    ds_write_b32 v3, v0
+; WITHASYNC-NEXT:    s_waitcnt lgkmcnt(0)
+; WITHASYNC-NEXT:    s_setpc_b64 s[30:31]
+;
+; WITHOUT-LABEL: code_barrier:
+; WITHOUT:       ; %bb.0:
+; WITHOUT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WITHOUT-NEXT:    ds_read_b32 v0, v2
+; WITHOUT-NEXT:    ; wait_asyncmark(0)
+; WITHOUT-NEXT:    ds_read_b32 v1, v2 offset:4
+; WITHOUT-NEXT:    s_waitcnt lgkmcnt(0)
+; WITHOUT-NEXT:    v_add_u32_e32 v0, v0, v1
+; WITHOUT-NEXT:    ds_write_b32 v3, v0
+; WITHOUT-NEXT:    s_waitcnt lgkmcnt(0)
+; WITHOUT-NEXT:    s_setpc_b64 s[30:31]
+  %lds_gep1 = getelementptr i32, ptr addrspace(3) %lds, i32 1
+  %val1 = load i32, ptr addrspace(3) %lds
+  call void @llvm.amdgcn.wait.asyncmark(i16 0)
+  %val2 = load i32, ptr addrspace(3) %lds_gep1
+  %sum = add i32 %val1, %val2
+  store i32 %sum, ptr addrspace(3) %out
+  ret void
+}
+
+; Test async mark/wait with global_load_lds and global loads
+
 ; This version uses wave barriers to enforce program order so that unrelated vmem
 ; instructions do not get reordered before reaching this point.
 
@@ -10,24 +49,31 @@ define void @interleaved_global_and_dma(ptr addrspace(1) %foo, ptr addrspace(3) 
 ; WITHASYNC-LABEL: interleaved_global_and_dma:
 ; WITHASYNC:       ; %bb.0: ; %entry
 ; WITHASYNC-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WITHASYNC-NEXT:    v_readfirstlane_b32 s4, v2
 ; WITHASYNC-NEXT:    global_load_dword v7, v[3:4], off
 ; WITHASYNC-NEXT:    global_load_dword v8, v[0:1], off
-; WITHASYNC-NEXT:    v_readfirstlane_b32 s4, v2
-; WITHASYNC-NEXT:    ; wave barrier
 ; WITHASYNC-NEXT:    s_mov_b32 m0, s4
+; WITHASYNC-NEXT:    ; wave barrier
+; WITHASYNC-NEXT:    s_nop 0
+; WITHASYNC-NEXT:    global_load_dword v[3:4], off lds
+; WITHASYNC-NEXT:    ; asyncmark
 ; WITHASYNC-NEXT:    global_load_dword v0, v[0:1], off
+; WITHASYNC-NEXT:    ; wave barrier
 ; WITHASYNC-NEXT:    s_nop 0
 ; WITHASYNC-NEXT:    global_load_dword v[3:4], off lds
 ; WITHASYNC-NEXT:    ; wave barrier
-; WITHASYNC-NEXT:    global_load_dword v[3:4], off lds
-; WITHASYNC-NEXT:    ; wave barrier
 ; WITHASYNC-NEXT:    global_load_dword v1, v[3:4], off
+; WITHASYNC-NEXT:    ; asyncmark
+; WITHASYNC-NEXT:    ; wait_asyncmark(1)
+; WITHASYNC-NEXT:    s_waitcnt vmcnt(3)
+; WITHASYNC-NEXT:    ds_read_b32 v3, v2
+; WITHASYNC-NEXT:    ; wait_asyncmark(0)
 ; WITHASYNC-NEXT:    s_waitcnt vmcnt(1)
 ; WITHASYNC-NEXT:    ds_read_b32 v2, v2
-; WITHASYNC-NEXT:    v_add_u32_e32 v3, v8, v7
-; WITHASYNC-NEXT:    s_waitcnt lgkmcnt(0)
-; WITHASYNC-NEXT:    v_add3_u32 v0, v3, v2, v0
-; WITHASYNC-NEXT:    s_waitcnt vmcnt(0)
+; WITHASYNC-NEXT:    v_add_u32_e32 v4, v8, v7
+; WITHASYNC-NEXT:    s_waitcnt lgkmcnt(1)
+; WITHASYNC-NEXT:    v_add3_u32 v0, v4, v3, v0
+; WITHASYNC-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; WITHASYNC-NEXT:    v_add3_u32 v0, v0, v1, v2
 ; WITHASYNC-NEXT:    global_store_dword v[5:6], v0, off
 ; WITHASYNC-NEXT:    s_waitcnt vmcnt(0)
@@ -36,24 +82,30 @@ define void @interleaved_global_and_dma(ptr addrspace(1) %foo, ptr addrspace(3) 
 ; WITHOUT-LABEL: interleaved_global_and_dma:
 ; WITHOUT:       ; %bb.0: ; %entry
 ; WITHOUT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WITHOUT-NEXT:    v_readfirstlane_b32 s4, v2
 ; WITHOUT-NEXT:    global_load_dword v7, v[3:4], off
 ; WITHOUT-NEXT:    global_load_dword v8, v[0:1], off
-; WITHOUT-NEXT:    v_readfirstlane_b32 s4, v2
-; WITHOUT-NEXT:    ; wave barrier
 ; WITHOUT-NEXT:    s_mov_b32 m0, s4
+; WITHOUT-NEXT:    ; wave barrier
+; WITHOUT-NEXT:    s_nop 0
+; WITHOUT-NEXT:    global_load_dword v[3:4], off lds
+; WITHOUT-NEXT:    ; asyncmark
 ; WITHOUT-NEXT:    global_load_dword v0, v[0:1], off
+; WITHOUT-NEXT:    ; wave barrier
 ; WITHOUT-NEXT:    s_nop 0
 ; WITHOUT-NEXT:    global_load_dword v[3:4], off lds
 ; WITHOUT-NEXT:    ; wave barrier
-; WITHOUT-NEXT:    global_load_dword v[3:4], off lds
-; WITHOUT-NEXT:    ; wave barrier
 ; WITHOUT-NEXT:    global_load_dword v1, v[3:4], off
+; WITHOUT-NEXT:    ; asyncmark
+; WITHOUT-NEXT:    ; wait_asyncmark(1)
 ; WITHOUT-NEXT:    s_waitcnt vmcnt(1)
+; WITHOUT-NEXT:    ds_read_b32 v3, v2
+; WITHOUT-NEXT:    ; wait_asyncmark(0)
 ; WITHOUT-NEXT:    ds_read_b32 v2, v2
-; WITHOUT-NEXT:    v_add_u32_e32 v3, v8, v7
-; WITHOUT-NEXT:    s_waitcnt lgkmcnt(0)
-; WITHOUT-NEXT:    v_add3_u32 v0, v3, v2, v0
-; WITHOUT-NEXT:    s_waitcnt vmcnt(0)
+; WITHOUT-NEXT:    v_add_u32_e32 v4, v8, v7
+; WITHOUT-NEXT:    s_waitcnt lgkmcnt(1)
+; WITHOUT-NEXT:    v_add3_u32 v0, v4, v3, v0
+; WITHOUT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; WITHOUT-NEXT:    v_add3_u32 v0, v0, v1, v2
 ; WITHOUT-NEXT:    global_store_dword v[5:6], v0, off
 ; WITHOUT-NEXT:    s_waitcnt vmcnt(0)
@@ -64,6 +116,7 @@ entry:
   %foo_v1 = load i32, ptr addrspace(1) %foo
   call void @llvm.amdgcn.wave.barrier()
   call void @llvm.amdgcn.global.load.ASYNC.lds(ptr addrspace(1) %bar, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
+  call void @llvm.amdgcn.asyncmark()
 
   ; Second batch: global load, async global-to-LDS, global load
   %foo_v2 = load i32, ptr addrspace(1) %foo
@@ -71,13 +124,16 @@ entry:
   call void @llvm.amdgcn.global.load.ASYNC.lds(ptr addrspace(1) %bar, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
   call void @llvm.amdgcn.wave.barrier()
   %bar_v12 = load i32, ptr addrspace(1) %bar
+  call void @llvm.amdgcn.asyncmark()
 
   ; Wait for first async mark and read from LDS
   ; This results in vmcnt(3) corresponding to the second batch.
+  call void @llvm.amdgcn.wait.asyncmark(i16 1)
   %lds_val21 = load i32, ptr addrspace(3) %lds
 
   ; Wait for the next lds dma
   ; This results in vmcnt(1), corresponding to %bar_v12. Could have been combined with the lgkmcnt(1) for %lds_val21.
+  call void @llvm.amdgcn.wait.asyncmark(i16 0)
   %lds_val22 = load i32, ptr addrspace(3) %lds
   %sum1 = add i32 %foo_v1, %bar_v11
   %sum2 = add i32 %sum1, %lds_val21
@@ -94,25 +150,31 @@ define void @interleaved_buffer_and_dma(ptr addrspace(8) inreg %buf, ptr addrspa
 ; WITHASYNC-LABEL: interleaved_buffer_and_dma:
 ; WITHASYNC:       ; %bb.0: ; %entry
 ; WITHASYNC-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WITHASYNC-NEXT:    s_mov_b32 m0, s20
 ; WITHASYNC-NEXT:    global_load_dword v6, v[2:3], off
 ; WITHASYNC-NEXT:    global_load_dword v7, v[0:1], off
-; WITHASYNC-NEXT:    s_mov_b32 m0, s20
-; WITHASYNC-NEXT:    ; wave barrier
 ; WITHASYNC-NEXT:    v_mov_b32_e32 v8, 0x54
+; WITHASYNC-NEXT:    ; wave barrier
+; WITHASYNC-NEXT:    buffer_load_dword v8, s[16:19], 0 offen lds
+; WITHASYNC-NEXT:    ; asyncmark
 ; WITHASYNC-NEXT:    global_load_dword v0, v[0:1], off
 ; WITHASYNC-NEXT:    v_mov_b32_e32 v1, 0x58
-; WITHASYNC-NEXT:    buffer_load_dword v8, s[16:19], 0 offen lds
 ; WITHASYNC-NEXT:    ; wave barrier
 ; WITHASYNC-NEXT:    buffer_load_dword v1, s[16:19], 0 offen lds
 ; WITHASYNC-NEXT:    ; wave barrier
 ; WITHASYNC-NEXT:    global_load_dword v1, v[2:3], off
 ; WITHASYNC-NEXT:    v_mov_b32_e32 v2, s20
+; WITHASYNC-NEXT:    ; asyncmark
+; WITHASYNC-NEXT:    ; wait_asyncmark(1)
+; WITHASYNC-NEXT:    s_waitcnt vmcnt(3)
+; WITHASYNC-NEXT:    ds_read_b32 v3, v2
+; WITHASYNC-NEXT:    ; wait_asyncmark(0)
 ; WITHASYNC-NEXT:    s_waitcnt vmcnt(1)
 ; WITHASYNC-NEXT:    ds_read_b32 v2, v2
-; WITHASYNC-NEXT:    v_add_u32_e32 v3, v7, v6
-; WITHASYNC-NEXT:    s_waitcnt lgkmcnt(0)
-; WITHASYNC-NEXT:    v_add3_u32 v0, v3, v2, v0
-; WITHASYNC-NEXT:    s_waitcnt vmcnt(0)
+; WITHASYNC-NEXT:    v_add_u32_e32 v6, v7, v6
+; WITHASYNC-NEXT:    s_waitcnt lgkmcnt(1)
+; WITHASYNC-NEXT:    v_add3_u32 v0, v6, v3, v0
+; WITHASYNC-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; WITHASYNC-NEXT:    v_add3_u32 v0, v0, v1, v2
 ; WITHASYNC-NEXT:    global_store_dword v[4:5], v0, off
 ; WITHASYNC-NEXT:    s_waitcnt vmcnt(0)
@@ -121,25 +183,30 @@ define void @interleaved_buffer_and_dma(ptr addrspace(8) inreg %buf, ptr addrspa
 ; WITHOUT-LABEL: interleaved_buffer_and_dma:
 ; WITHOUT:       ; %bb.0: ; %entry
 ; WITHOUT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WITHOUT-NEXT:    s_mov_b32 m0, s20
 ; WITHOUT-NEXT:    global_load_dword v6, v[2:3], off
 ; WITHOUT-NEXT:    global_load_dword v7, v[0:1], off
-; WITHOUT-NEXT:    s_mov_b32 m0, s20
-; WITHOUT-NEXT:    ; wave barrier
 ; WITHOUT-NEXT:    v_mov_b32_e32 v8, 0x54
+; WITHOUT-NEXT:    ; wave barrier
+; WITHOUT-NEXT:    buffer_load_dword v8, s[16:19], 0 offen lds
+; WITHOUT-NEXT:    ; asyncmark
 ; WITHOUT-NEXT:    global_load_dword v0, v[0:1], off
 ; WITHOUT-NEXT:    v_mov_b32_e32 v1, 0x58
-; WITHOUT-NEXT:    buffer_load_dword v8, s[16:19], 0 offen lds
 ; WITHOUT-NEXT:    ; wave barrier
 ; WITHOUT-NEXT:    buffer_load_dword v1, s[16:19], 0 offen lds
 ; WITHOUT-NEXT:    ; wave barrier
 ; WITHOUT-NEXT:    global_load_dword v1, v[2:3], off
 ; WITHOUT-NEXT:    v_mov_b32_e32 v2, s20
+; WITHOUT-NEXT:    ; asyncmark
+; WITHOUT-NEXT:    ; wait_asyncmark(1)
 ; WITHOUT-NEXT:    s_waitcnt vmcnt(1)
+; WITHOUT-NEXT:    ds_read_b32 v3, v2
+; WITHOUT-NEXT:    ; wait_asyncmark(0)
 ; WITHOUT-NEXT:    ds_read_b32 v2, v2
-; WITHOUT-NEXT:    v_add_u32_e32 v3, v7, v6
-; WITHOUT-NEXT:    s_waitcnt lgkmcnt(0)
-; WITHOUT-NEXT:    v_add3_u32 v0, v3, v2, v0
-; WITHOUT-NEXT:    s_waitcnt vmcnt(0)
+; WITHOUT-NEXT:    v_add_u32_e32 v6, v7, v6
+; WITHOUT-NEXT:    s_waitcnt lgkmcnt(1)
+; WITHOUT-NEXT:    v_add3_u32 v0, v6, v3, v0
+; WITHOUT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; WITHOUT-NEXT:    v_add3_u32 v0, v0, v1, v2
 ; WITHOUT-NEXT:    global_store_dword v[4:5], v0, off
 ; WITHOUT-NEXT:    s_waitcnt vmcnt(0)
@@ -150,6 +217,7 @@ entry:
   %foo_v1 = load i32, ptr addrspace(1) %foo
   call void @llvm.amdgcn.wave.barrier()
   call void @llvm.amdgcn.raw.ptr.buffer.load.ASYNC.lds(ptr addrspace(8) %buf, ptr addrspace(3) %lds, i32 4, i32 84, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.asyncmark()
 
   ; Second batch: global load, async global-to-LDS, global load.
   %foo_v2 = load i32, ptr addrspace(1) %foo
@@ -157,13 +225,16 @@ entry:
   call void @llvm.amdgcn.raw.ptr.buffer.load.ASYNC.lds(ptr addrspace(8) %buf, ptr addrspace(3) %lds, i32 4, i32 88, i32 0, i32 0, i32 0)
   call void @llvm.amdgcn.wave.barrier()
   %bar_v12 = load i32, ptr addrspace(1) %bar
+  call void @llvm.amdgcn.asyncmark()
 
   ; Wait for first async mark and read from LDS.
   ; This results in vmcnt(3) corresponding to the second batch.
+  call void @llvm.amdgcn.wait.asyncmark(i16 1)
   %lds_val21 = load i32, ptr addrspace(3) %lds
 
   ; Wait for the next lds dma.
   ; This results in vmcnt(1) because the last global load is not async.
+  call void @llvm.amdgcn.wait.asyncmark(i16 0)
   %lds_val22 = load i32, ptr addrspace(3) %lds
   %sum1 = add i32 %foo_v1, %bar_v11
   %sum2 = add i32 %sum1, %lds_val21
@@ -185,29 +256,37 @@ define void @test_pipelined_loop(ptr addrspace(1) %foo, ptr addrspace(3) %lds, p
 ; WITHASYNC-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; WITHASYNC-NEXT:    v_readfirstlane_b32 s4, v2
 ; WITHASYNC-NEXT:    s_mov_b32 m0, s4
-; WITHASYNC-NEXT:    s_nop 0
-; WITHASYNC-NEXT:    global_load_dword v[0:1], off lds
-; WITHASYNC-NEXT:    global_load_dword v[0:1], off lds
 ; WITHASYNC-NEXT:    v_mov_b32_e32 v5, 0
+; WITHASYNC-NEXT:    global_load_dword v[0:1], off lds
+; WITHASYNC-NEXT:    ; asyncmark
+; WITHASYNC-NEXT:    global_load_dword v[0:1], off lds
 ; WITHASYNC-NEXT:    s_mov_b32 s6, 2
 ; WITHASYNC-NEXT:    s_mov_b64 s[4:5], 0
-; WITHASYNC-NEXT:  .LBB2_1: ; %loop_body
+; WITHASYNC-NEXT:    ; asyncmark
+; WITHASYNC-NEXT:  .LBB3_1: ; %loop_body
 ; WITHASYNC-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; WITHASYNC-NEXT:    v_readfirstlane_b32 s7, v2
 ; WITHASYNC-NEXT:    s_mov_b32 m0, s7
 ; WITHASYNC-NEXT:    s_add_i32 s6, s6, 1
 ; WITHASYNC-NEXT:    global_load_dword v[0:1], off lds
-; WITHASYNC-NEXT:    s_waitcnt vmcnt(0)
+; WITHASYNC-NEXT:    ; asyncmark
+; WITHASYNC-NEXT:    ; wait_asyncmark(2)
+; WITHASYNC-NEXT:    s_waitcnt vmcnt(2)
 ; WITHASYNC-NEXT:    ds_read_b32 v6, v2
 ; WITHASYNC-NEXT:    v_cmp_ge_i32_e32 vcc, s6, v7
 ; WITHASYNC-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
 ; WITHASYNC-NEXT:    s_waitcnt lgkmcnt(0)
 ; WITHASYNC-NEXT:    v_add_u32_e32 v5, v5, v6
 ; WITHASYNC-NEXT:    s_andn2_b64 exec, exec, s[4:5]
-; WITHASYNC-NEXT:    s_cbranch_execnz .LBB2_1
+; WITHASYNC-NEXT:    s_cbranch_execnz .LBB3_1
 ; WITHASYNC-NEXT:  ; %bb.2: ; %epilog
 ; WITHASYNC-NEXT:    s_or_b64 exec, exec, s[4:5]
-; WITHASYNC-NEXT:    v_add_u32_e32 v0, v5, v6
+; WITHASYNC-NEXT:    ; wait_asyncmark(1)
+; WITHASYNC-NEXT:    s_waitcnt vmcnt(1)
+; WITHASYNC-NEXT:    ds_read_b32 v0, v2
+; WITHASYNC-NEXT:    ; wait_asyncmark(0)
+; WITHASYNC-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; WITHASYNC-NEXT:    v_add_u32_e32 v0, v5, v0
 ; WITHASYNC-NEXT:    global_store_dword v[3:4], v0, off
 ; WITHASYNC-NEXT:    s_waitcnt vmcnt(0)
 ; WITHASYNC-NEXT:    s_setpc_b64 s[30:31]
@@ -217,18 +296,21 @@ define void @test_pipelined_loop(ptr addrspace(1) %foo, ptr addrspace(3) %lds, p
 ; WITHOUT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; WITHOUT-NEXT:    v_readfirstlane_b32 s4, v2
 ; WITHOUT-NEXT:    s_mov_b32 m0, s4
-; WITHOUT-NEXT:    s_nop 0
-; WITHOUT-NEXT:    global_load_dword v[0:1], off lds
-; WITHOUT-NEXT:    global_load_dword v[0:1], off lds
 ; WITHOUT-NEXT:    v_mov_b32_e32 v5, 0
+; WITHOUT-NEXT:    global_load_dword v[0:1], off lds
+; WITHOUT-NEXT:    ; asyncmark
+; WITHOUT-NEXT:    global_load_dword v[0:1], off lds
 ; WITHOUT-NEXT:    s_mov_b32 s6, 2
 ; WITHOUT-NEXT:    s_mov_b64 s[4:5], 0
-; WITHOUT-NEXT:  .LBB2_1: ; %loop_body
+; WITHOUT-NEXT:    ; asyncmark
+; WITHOUT-NEXT:  .LBB3_1: ; %loop_body
 ; WITHOUT-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; WITHOUT-NEXT:    v_readfirstlane_b32 s7, v2
 ; WITHOUT-NEXT:    s_mov_b32 m0, s7
 ; WITHOUT-NEXT:    s_add_i32 s6, s6, 1
 ; WITHOUT-NEXT:    global_load_dword v[0:1], off lds
+; WITHOUT-NEXT:    ; asyncmark
+; WITHOUT-NEXT:    ; wait_asyncmark(2)
 ; WITHOUT-NEXT:    s_waitcnt vmcnt(0)
 ; WITHOUT-NEXT:    ds_read_b32 v6, v2
 ; WITHOUT-NEXT:    v_cmp_ge_i32_e32 vcc, s6, v7
@@ -236,19 +318,25 @@ define void @test_pipelined_loop(ptr addrspace(1) %foo, ptr addrspace(3) %lds, p
 ; WITHOUT-NEXT:    s_waitcnt lgkmcnt(0)
 ; WITHOUT-NEXT:    v_add_u32_e32 v5, v5, v6
 ; WITHOUT-NEXT:    s_andn2_b64 exec, exec, s[4:5]
-; WITHOUT-NEXT:    s_cbranch_execnz .LBB2_1
+; WITHOUT-NEXT:    s_cbranch_execnz .LBB3_1
 ; WITHOUT-NEXT:  ; %bb.2: ; %epilog
 ; WITHOUT-NEXT:    s_or_b64 exec, exec, s[4:5]
-; WITHOUT-NEXT:    v_add_u32_e32 v0, v5, v6
+; WITHOUT-NEXT:    ; wait_asyncmark(1)
+; WITHOUT-NEXT:    ds_read_b32 v0, v2
+; WITHOUT-NEXT:    ; wait_asyncmark(0)
+; WITHOUT-NEXT:    s_waitcnt lgkmcnt(0)
+; WITHOUT-NEXT:    v_add_u32_e32 v0, v5, v0
 ; WITHOUT-NEXT:    global_store_dword v[3:4], v0, off
 ; WITHOUT-NEXT:    s_waitcnt vmcnt(0)
 ; WITHOUT-NEXT:    s_setpc_b64 s[30:31]
 prolog:
   ; Load first iteration
   call void @llvm.amdgcn.global.load.ASYNC.lds(ptr addrspace(1) %foo, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
+  call void @llvm.amdgcn.asyncmark()
 
   ; Load second iteration
   call void @llvm.amdgcn.global.load.ASYNC.lds(ptr addrspace(1) %foo, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
+  call void @llvm.amdgcn.asyncmark()
 
   br label %loop_body
 
@@ -258,8 +346,10 @@ loop_body:
 
   ; Load next iteration
   call void @llvm.amdgcn.global.load.ASYNC.lds(ptr addrspace(1) %foo, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
+  call void @llvm.amdgcn.asyncmark()
 
   ; Wait for iteration i-2 and process
+  call void @llvm.amdgcn.wait.asyncmark(i16 2)
   %lds_idx = sub i32 %i, 2
   %lds_val = load i32, ptr addrspace(3) %lds
 
@@ -271,9 +361,11 @@ loop_body:
 
 epilog:
   ; Process remaining iterations
+  call void @llvm.amdgcn.wait.asyncmark(i16 1)
   %lds_val_n_2 = load i32, ptr addrspace(3) %lds
   %sum_e2 = add i32 %sum_i, %lds_val_n_2
 
+  call void @llvm.amdgcn.wait.asyncmark(i16 0)
   %lds_val_n_1 = load i32, ptr addrspace(3) %lds
   %sum_e1 = add i32 %sum_e2, %lds_val_n_1
   store i32 %sum_e2, ptr addrspace(1) %bar
@@ -288,20 +380,22 @@ define void @test_pipelined_loop_with_global(ptr addrspace(1) %foo, ptr addrspac
 ; WITHASYNC:       ; %bb.0: ; %prolog
 ; WITHASYNC-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; WITHASYNC-NEXT:    v_readfirstlane_b32 s4, v2
-; WITHASYNC-NEXT:    global_load_dword v10, v[0:1], off
-; WITHASYNC-NEXT:    global_load_dword v8, v[0:1], off
-; WITHASYNC-NEXT:    global_load_dword v14, v[3:4], off
-; WITHASYNC-NEXT:    global_load_dword v9, v[3:4], off
 ; WITHASYNC-NEXT:    s_mov_b32 m0, s4
+; WITHASYNC-NEXT:    global_load_dword v10, v[0:1], off
+; WITHASYNC-NEXT:    global_load_dword v14, v[3:4], off
 ; WITHASYNC-NEXT:    s_mov_b32 s6, 2
 ; WITHASYNC-NEXT:    global_load_dword v[0:1], off lds
-; WITHASYNC-NEXT:    global_load_dword v[0:1], off lds
+; WITHASYNC-NEXT:    ; asyncmark
+; WITHASYNC-NEXT:    global_load_dword v8, v[0:1], off
+; WITHASYNC-NEXT:    global_load_dword v9, v[3:4], off
 ; WITHASYNC-NEXT:    s_mov_b64 s[4:5], 0
-; WITHASYNC-NEXT:    s_waitcnt vmcnt(4)
-; WITHASYNC-NEXT:    v_mov_b32_e32 v13, v8
+; WITHASYNC-NEXT:    global_load_dword v[0:1], off lds
+; WITHASYNC-NEXT:    ; asyncmark
 ; WITHASYNC-NEXT:    s_waitcnt vmcnt(2)
+; WITHASYNC-NEXT:    v_mov_b32_e32 v13, v8
+; WITHASYNC-NEXT:    s_waitcnt vmcnt(1)
 ; WITHASYNC-NEXT:    v_mov_b32_e32 v15, v9
-; WITHASYNC-NEXT:  .LBB3_1: ; %loop_body
+; WITHASYNC-NEXT:  .LBB4_1: ; %loop_body
 ; WITHASYNC-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; WITHASYNC-NEXT:    v_readfirstlane_b32 s7, v2
 ; WITHASYNC-NEXT:    s_waitcnt vmcnt(1)
@@ -316,20 +410,29 @@ define void @test_pipelined_loop_with_global(ptr addrspace(1) %foo, ptr addrspac
 ; WITHASYNC-NEXT:    v_mov_b32_e32 v16, v14
 ; WITHASYNC-NEXT:    v_mov_b32_e32 v17, v10
 ; WITHASYNC-NEXT:    v_mov_b32_e32 v10, v8
-; WITHASYNC-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
 ; WITHASYNC-NEXT:    v_mov_b32_e32 v14, v9
+; WITHASYNC-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; WITHASYNC-NEXT:    ; asyncmark
+; WITHASYNC-NEXT:    ; wait_asyncmark(2)
 ; WITHASYNC-NEXT:    s_andn2_b64 exec, exec, s[4:5]
-; WITHASYNC-NEXT:    s_cbranch_execnz .LBB3_1
+; WITHASYNC-NEXT:    s_cbranch_execnz .LBB4_1
 ; WITHASYNC-NEXT:  ; %bb.2: ; %epilog
 ; WITHASYNC-NEXT:    s_or_b64 exec, exec, s[4:5]
-; WITHASYNC-NEXT:    s_waitcnt vmcnt(0)
 ; WITHASYNC-NEXT:    ds_read_b32 v0, v2
-; WITHASYNC-NEXT:    v_add_u32_e32 v1, v17, v16
-; WITHASYNC-NEXT:    v_add_u32_e32 v2, v13, v15
+; WITHASYNC-NEXT:    ; wait_asyncmark(1)
+; WITHASYNC-NEXT:    s_waitcnt vmcnt(3)
+; WITHASYNC-NEXT:    ds_read_b32 v1, v2
+; WITHASYNC-NEXT:    ; wait_asyncmark(0)
+; WITHASYNC-NEXT:    s_waitcnt vmcnt(0)
+; WITHASYNC-NEXT:    ds_read_b32 v2, v2
+; WITHASYNC-NEXT:    v_add_u32_e32 v3, v17, v16
+; WITHASYNC-NEXT:    s_waitcnt lgkmcnt(2)
+; WITHASYNC-NEXT:    v_add3_u32 v0, v3, v0, v12
+; WITHASYNC-NEXT:    s_waitcnt lgkmcnt(1)
+; WITHASYNC-NEXT:    v_add3_u32 v0, v11, v0, v1
+; WITHASYNC-NEXT:    v_add_u32_e32 v1, v13, v15
 ; WITHASYNC-NEXT:    s_waitcnt lgkmcnt(0)
-; WITHASYNC-NEXT:    v_add3_u32 v1, v1, v0, v12
-; WITHASYNC-NEXT:    v_add3_u32 v1, v11, v1, v0
-; WITHASYNC-NEXT:    v_add3_u32 v0, v2, v0, v1
+; WITHASYNC-NEXT:    v_add3_u32 v0, v1, v2, v0
 ; WITHASYNC-NEXT:    global_store_dword v[5:6], v0, off
 ; WITHASYNC-NEXT:    s_waitcnt vmcnt(0)
 ; WITHASYNC-NEXT:    s_setpc_b64 s[30:31]
@@ -338,20 +441,22 @@ define void @test_pipelined_loop_with_global(ptr addrspace(1) %foo, ptr addrspac
 ; WITHOUT:       ; %bb.0: ; %prolog
 ; WITHOUT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; WITHOUT-NEXT:    v_readfirstlane_b32 s4, v2
-; WITHOUT-NEXT:    global_load_dword v10, v[0:1], off
-; WITHOUT-NEXT:    global_load_dword v8, v[0:1], off
-; WITHOUT-NEXT:    global_load_dword v14, v[3:4], off
-; WITHOUT-NEXT:    global_load_dword v9, v[3:4], off
 ; WITHOUT-NEXT:    s_mov_b32 m0, s4
+; WITHOUT-NEXT:    global_load_dword v10, v[0:1], off
+; WITHOUT-NEXT:    global_load_dword v14, v[3:4], off
 ; WITHOUT-NEXT:    s_mov_b32 s6, 2
 ; WITHOUT-NEXT:    global_load_dword v[0:1], off lds
-; WITHOUT-NEXT:    global_load_dword v[0:1], off lds
+; WITHOUT-NEXT:    ; asyncmark
+; WITHOUT-NEXT:    global_load_dword v8, v[0:1], off
+; WITHOUT-NEXT:    global_load_dword v9, v[3:4], off
 ; WITHOUT-NEXT:    s_mov_b64 s[4:5], 0
-; WITHOUT-NEXT:    s_waitcnt vmcnt(4)
-; WITHOUT-NEXT:    v_mov_b32_e32 v13, v8
+; WITHOUT-NEXT:    global_load_dword v[0:1], off lds
+; WITHOUT-NEXT:    ; asyncmark
 ; WITHOUT-NEXT:    s_waitcnt vmcnt(2)
+; WITHOUT-NEXT:    v_mov_b32_e32 v13, v8
+; WITHOUT-NEXT:    s_waitcnt vmcnt(1)
 ; WITHOUT-NEXT:    v_mov_b32_e32 v15, v9
-; WITHOUT-NEXT:  .LBB3_1: ; %loop_body
+; WITHOUT-NEXT:  .LBB4_1: ; %loop_body
 ; WITHOUT-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; WITHOUT-NEXT:    v_readfirstlane_b32 s7, v2
 ; WITHOUT-NEXT:    s_waitcnt vmcnt(1)
@@ -366,20 +471,28 @@ define void @test_pipelined_loop_with_global(ptr addrspace(1) %foo, ptr addrspac
 ; WITHOUT-NEXT:    v_mov_b32_e32 v16, v14
 ; WITHOUT-NEXT:    v_mov_b32_e32 v17, v10
 ; WITHOUT-NEXT:    v_mov_b32_e32 v10, v8
-; WITHOUT-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
 ; WITHOUT-NEXT:    v_mov_b32_e32 v14, v9
+; WITHOUT-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; WITHOUT-NEXT:    ; asyncmark
+; WITHOUT-NEXT:    ; wait_asyncmark(2)
 ; WITHOUT-NEXT:    s_andn2_b64 exec, exec, s[4:5]
-; WITHOUT-NEXT:    s_cbranch_execnz .LBB3_1
+; WITHOUT-NEXT:    s_cbranch_execnz .LBB4_1
 ; WITHOUT-NEXT:  ; %bb.2: ; %epilog
 ; WITHOUT-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; WITHOUT-NEXT:    s_waitcnt vmcnt(0)
 ; WITHOUT-NEXT:    ds_read_b32 v0, v2
-; WITHOUT-NEXT:    v_add_u32_e32 v1, v17, v16
-; WITHOUT-NEXT:    v_add_u32_e32 v2, v13, v15
+; WITHOUT-NEXT:    ; wait_asyncmark(1)
+; WITHOUT-NEXT:    ds_read_b32 v1, v2
+; WITHOUT-NEXT:    ; wait_asyncmark(0)
+; WITHOUT-NEXT:    ds_read_b32 v2, v2
+; WITHOUT-NEXT:    v_add_u32_e32 v3, v17, v16
+; WITHOUT-NEXT:    s_waitcnt lgkmcnt(2)
+; WITHOUT-NEXT:    v_add3_u32 v0, v3, v0, v12
+; WITHOUT-NEXT:    s_waitcnt lgkmcnt(1)
+; WITHOUT-NEXT:    v_add3_u32 v0, v11, v0, v1
+; WITHOUT-NEXT:    v_add_u32_e32 v1, v13, v15
 ; WITHOUT-NEXT:    s_waitcnt lgkmcnt(0)
-; WITHOUT-NEXT:    v_add3_u32 v1, v1, v0, v12
-; WITHOUT-NEXT:    v_add3_u32 v1, v11, v1, v0
-; WITHOUT-NEXT:    v_add3_u32 v0, v2, v0, v1
+; WITHOUT-NEXT:    v_add3_u32 v0, v1, v2, v0
 ; WITHOUT-NEXT:    global_store_dword v[5:6], v0, off
 ; WITHOUT-NEXT:    s_waitcnt vmcnt(0)
 ; WITHOUT-NEXT:    s_setpc_b64 s[30:31]
@@ -388,11 +501,13 @@ prolog:
   %v0 = load i32, ptr addrspace(1) %foo
   %g0 = load i32, ptr addrspace(1) %bar
   call void @llvm.amdgcn.global.load.ASYNC.lds(ptr addrspace(1) %foo, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
+  call void @llvm.amdgcn.asyncmark()
 
   ; Load second iteration
   %v1 = load i32, ptr addrspace(1) %foo
   %g1 = load i32, ptr addrspace(1) %bar
   call void @llvm.amdgcn.global.load.ASYNC.lds(ptr addrspace(1) %foo, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
+  call void @llvm.amdgcn.asyncmark()
 
   br label %loop_body
 
@@ -415,8 +530,10 @@ loop_body:
   %cur_v = load i32, ptr addrspace(1) %foo
   %cur_g = load i32, ptr addrspace(1) %bar
   call void @llvm.amdgcn.global.load.ASYNC.lds(ptr addrspace(1) %foo, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
+  call void @llvm.amdgcn.asyncmark()
 
   ; Wait for iteration i-2 and process
+  call void @llvm.amdgcn.wait.asyncmark(i16 2)
   %lds_idx = sub i32 %i, 2
   %lds_val = load i32, ptr addrspace(3) %lds
 
@@ -429,11 +546,13 @@ loop_body:
 
 epilog:
   ; Process remaining iterations
+  call void @llvm.amdgcn.wait.asyncmark(i16 1)
   %lds_val_n_2 = load i32, ptr addrspace(3) %lds
   %sum_e0 = add i32 %sum, %g1_phi
   %sum_e1 = add i32 %v1_phi, %sum_e0
   %sum_e2 = add i32 %sum_e1, %lds_val_n_2
 
+  call void @llvm.amdgcn.wait.asyncmark(i16 0)
   %lds_val_n_1 = load i32, ptr addrspace(3) %lds
   %sum_e3 = add i32 %cur_v, %cur_g
   %sum_e4 = add i32 %sum_e3, %lds_val_n_1

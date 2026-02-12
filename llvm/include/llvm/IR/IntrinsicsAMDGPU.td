@@ -2839,6 +2839,15 @@ def int_amdgcn_global_load_async_lds : AMDGPUGlobalLoadLDS, ClangBuiltin<"__buil
 def int_amdgcn_pops_exiting_wave_id :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrHasSideEffects]>;
 
+// Sets a marker in the stream of async requests. Modelled as InaccessibleMem.
+def int_amdgcn_asyncmark : ClangBuiltin<"__builtin_amdgcn_asyncmark">,
+  Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
+
+// Waits until the Nth previous marker is completed, if it exists.
+def int_amdgcn_wait_asyncmark :
+    ClangBuiltin<"__builtin_amdgcn_wait_asyncmark">,
+    Intrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects]>;
+
 //===----------------------------------------------------------------------===//
 // GFX10 Intrinsics
 //===----------------------------------------------------------------------===//
