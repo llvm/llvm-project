@@ -286,11 +286,11 @@ void WhitespaceManager::calculateLineBreakInformation() {
 
 // Sets the spaces in front of a Change, and updates the start/end columns of
 // subsequent tokens so that trailing comments and escaped newlines can be
-// aligned properly
+// aligned properly.
 static void
 SetChangeSpaces(unsigned Start, unsigned Spaces,
-                SmallVector<WhitespaceManager::Change, 16> &Changes) {
-  WhitespaceManager::Change &FirstChange = Changes[Start];
+                MutableArrayRef<WhitespaceManager::Change> Changes) {
+  auto &FirstChange = Changes[Start];
   const int ColumnChange = Spaces - FirstChange.Spaces;
 
   if (ColumnChange == 0)
@@ -299,16 +299,26 @@ SetChangeSpaces(unsigned Start, unsigned Spaces,
   FirstChange.Spaces += ColumnChange;
   FirstChange.StartOfTokenColumn += ColumnChange;
 
-  for (unsigned i = Start + 1; i < Changes.size(); i++) {
-    WhitespaceManager::Change &C = Changes[i];
+  for (auto I = Start + 1; I < Changes.size(); I++) {
+    auto &Change = Changes[I];
 
-    C.PreviousEndOfTokenColumn += ColumnChange;
+    Change.PreviousEndOfTokenColumn += ColumnChange;
 
-    if (C.NewlinesBefore > 0)
+    if (Change.NewlinesBefore > 0)
       break;
 
-    C.StartOfTokenColumn += ColumnChange;
+    Change.StartOfTokenColumn += ColumnChange;
   }
+}
+
+// Changes the spaces in front of a change by Delta, and updates the start/end
+// columns of subsequent tokens so that trailing comments and escaped newlines
+// can be aligned properly.
+static void
+IncrementChangeSpaces(unsigned Start, int Delta,
+                      MutableArrayRef<WhitespaceManager::Change> Changes) {
+  assert(Delta > 0 || (abs(Delta) <= Changes[Start].Spaces));
+  SetChangeSpaces(Start, Changes[Start].Spaces + Delta, Changes);
 }
 
 // Align a single sequence of tokens, see AlignTokens below.
@@ -371,10 +381,8 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
          (CurrentChange.indentAndNestingLevel() == ScopeStack[0] &&
           CurrentChange.IndentedFromColumn >= OriginalMatchColumn));
 
-    if (CurrentChange.NewlinesBefore > 0) {
-      if (!InsideNestedScope)
-        Shift = 0;
-    }
+    if (CurrentChange.NewlinesBefore > 0 && !InsideNestedScope)
+      Shift = 0;
 
     // If this is the first matching token to be aligned, remember by how many
     // spaces it has to be shifted, so the rest of the changes on the line are
@@ -396,7 +404,7 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
         (ScopeStack.size() == 1u && CurrentChange.NewlinesBefore > 0 &&
          InsideNestedScope)) {
       CurrentChange.IndentedFromColumn += Shift;
-      SetChangeSpaces(i, CurrentChange.Spaces + Shift, Changes);
+      IncrementChangeSpaces(i, Shift, Changes);
     }
 
     // We should not remove required spaces unless we break the line before.
@@ -426,9 +434,8 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
           continue;
         }
 
-        int Next = Previous + 1;
-        SetChangeSpaces(Next, Changes[Next].Spaces - Shift, Changes);
-        SetChangeSpaces(Previous, Changes[Previous].Spaces + Shift, Changes);
+        IncrementChangeSpaces(Previous + 1, -Shift, Changes);
+        IncrementChangeSpaces(Previous, Shift, Changes);
       }
     }
   }
@@ -720,7 +727,7 @@ static void AlignMatchingTokenSequence(
       if (!FoundMatchOnLine && Matches(Changes[I])) {
         FoundMatchOnLine = true;
         int Shift = MinColumn - Changes[I].StartOfTokenColumn;
-        SetChangeSpaces(I, Changes[I].Spaces + Shift, Changes);
+        IncrementChangeSpaces(I, Shift, Changes);
       }
     }
   }
