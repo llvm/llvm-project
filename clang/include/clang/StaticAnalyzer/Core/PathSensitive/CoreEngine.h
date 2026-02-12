@@ -322,13 +322,11 @@ class StmtNodeBuilder : public NodeBuilder {
 public:
   StmtNodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
                   const NodeBuilderContext &Ctx)
-      : NodeBuilder(SrcNode, DstSet, Ctx) {
-  }
+      : NodeBuilder(SrcNode, DstSet, Ctx) {}
 
   StmtNodeBuilder(ExplodedNodeSet &SrcSet, ExplodedNodeSet &DstSet,
                   const NodeBuilderContext &Ctx)
-      : NodeBuilder(SrcSet, DstSet, Ctx) {
-  }
+      : NodeBuilder(SrcSet, DstSet, Ctx) {}
 
   using NodeBuilder::generateNode;
   using NodeBuilder::generateSink;
