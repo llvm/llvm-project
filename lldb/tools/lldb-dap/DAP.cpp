@@ -849,15 +849,11 @@ bool DAP::HandleObject(const Message &M) {
     auto handler_pos = request_handlers.find(req->command);
     dispatcher.Set("client_data",
                    llvm::Twine("request_command:", req->command).str());
-    if (handler_pos != request_handlers.end()) {
+    if (handler_pos != request_handlers.end())
       handler_pos->second->Run(*req);
-      return true; // Success
-    }
-
-    dispatcher.Set("error",
-                   llvm::Twine("unhandled-command:" + req->command).str());
-    DAP_LOG(log, "error: unhandled command '{0}'", req->command);
-    return false; // Fail
+    else
+      unknown_request_handler->Run(*req);
+    return true; // Success
   }
 
   if (const auto *resp = std::get_if<Response>(&M)) {
@@ -1576,6 +1572,8 @@ void DAP::RegisterRequests() {
   RegisterRequest<ThreadsRequestHandler>();
   RegisterRequest<VariablesRequestHandler>();
   RegisterRequest<WriteMemoryRequestHandler>();
+
+  unknown_request_handler = std::make_unique<UnknownRequestHandler>(*this);
 
   // Custom requests
   RegisterRequest<CompileUnitsRequestHandler>();

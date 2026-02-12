@@ -658,6 +658,15 @@ public:
   Run(const protocol::WriteMemoryArguments &args) const override;
 };
 
+class UnknownRequestHandler final
+    : public RequestHandler<protocol::UnknownArguments,
+                            protocol::UnknownResponseBody> {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral GetCommand() { return "unknown"; }
+  llvm::Error Run(const protocol::UnknownArguments &args) const override;
+};
+
 } // namespace lldb_dap
 
 #endif

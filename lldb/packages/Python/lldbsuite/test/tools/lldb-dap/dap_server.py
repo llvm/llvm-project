@@ -1677,6 +1677,14 @@ class DebugCommunication(object):
         }
         return self._send_recv(command_dict)
 
+    def request_unknown(self):
+        command_dict = {
+            "command": "unknown",
+            "type": "request",
+            "arguments": {},
+        }
+        return self._send_recv(command_dict)
+
     def terminate(self):
         self.send.close()
         if self._recv_thread.is_alive():
