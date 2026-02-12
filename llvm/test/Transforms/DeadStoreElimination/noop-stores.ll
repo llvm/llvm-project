@@ -1309,3 +1309,150 @@ inner:
 end:
   ret void
 }
+
+; Multiple predecessors w/ dom conditions implying the stored value.
+define void @remove_tautological_store_multi_preds(ptr %p) {
+; CHECK-LABEL: @remove_tautological_store_multi_preds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[L1]], 0
+; CHECK-NEXT:    br i1 [[CMP1]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    call void @unkown_write(ptr null)
+; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[L2]], 0
+; CHECK-NEXT:    br i1 [[CMP2]], label [[THEN]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %l1 = load i32, ptr %p, align 4
+  %cmp1 = icmp eq i32 %l1, 0
+  br i1 %cmp1, label %then, label %else
+
+else:
+  call void @unkown_write(ptr null)
+  %l2 = load i32, ptr %p, align 4
+  %cmp2 = icmp eq i32 %l2, 0
+  br i1 %cmp2, label %then, label %exit
+
+then:
+  store i32 0, ptr %p, align 4
+  br label %exit
+
+exit:
+  ret void
+}
+
+; Negative tests.
+
+; Store in between, %p being clobbered.
+define void @remove_tautological_store_multi_preds_clobbering_between(ptr %p) {
+; CHECK-LABEL: @remove_tautological_store_multi_preds_clobbering_between(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 1, ptr [[P]], align 4
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[L1]], 0
+; CHECK-NEXT:    br i1 [[CMP1]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[L2]], 0
+; CHECK-NEXT:    br i1 [[CMP2]], label [[THEN]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %l1 = load i32, ptr %p, align 4
+  store i32 1, ptr %p, align 4
+  %cmp1 = icmp eq i32 %l1, 0
+  br i1 %cmp1, label %then, label %else
+
+else:
+  %l2 = load i32, ptr %p, align 4
+  %cmp2 = icmp eq i32 %l2, 0
+  br i1 %cmp2, label %then, label %exit
+
+then:
+  store i32 0, ptr %p, align 4
+  br label %exit
+
+exit:
+  ret void
+}
+
+; Not a MemoryPhi as defining access for the store, %p being clobbered.
+define void @remove_tautological_store_multi_preds_clobbering_between_2(ptr %p) {
+; CHECK-LABEL: @remove_tautological_store_multi_preds_clobbering_between_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[L1]], 0
+; CHECK-NEXT:    br i1 [[CMP1]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[L2]], 0
+; CHECK-NEXT:    br i1 [[CMP2]], label [[THEN]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    call void @unkown_write(ptr [[P]])
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %l1 = load i32, ptr %p, align 4
+  %cmp1 = icmp eq i32 %l1, 0
+  br i1 %cmp1, label %then, label %else
+
+else:
+  %l2 = load i32, ptr %p, align 4
+  %cmp2 = icmp eq i32 %l2, 0
+  br i1 %cmp2, label %then, label %exit
+
+then:
+  call void @unkown_write(ptr %p)
+  store i32 0, ptr %p, align 4
+  br label %exit
+
+exit:
+  ret void
+}
+
+; Different implying successor via icmp ne.
+define void @remove_tautological_store_multi_preds_cond_mixed(ptr %p) {
+; CHECK-LABEL: @remove_tautological_store_multi_preds_cond_mixed(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[L1]], 0
+; CHECK-NEXT:    br i1 [[CMP1]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[L2]], 0
+; CHECK-NEXT:    br i1 [[CMP2]], label [[THEN]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %l1 = load i32, ptr %p, align 4
+  %cmp1 = icmp eq i32 %l1, 0
+  br i1 %cmp1, label %then, label %else
+
+else:
+  %l2 = load i32, ptr %p, align 4
+  %cmp2 = icmp ne i32 %l2, 0
+  br i1 %cmp2, label %then, label %exit
+
+then:
+  store i32 0, ptr %p, align 4
+  br label %exit
+
+exit:
+  ret void
+}

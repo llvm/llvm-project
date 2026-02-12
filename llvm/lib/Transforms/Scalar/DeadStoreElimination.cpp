@@ -1113,7 +1113,7 @@ struct DSEState {
   // pointer, and such a condition appears either in its idom or in a node that
   // strictly dominates the store, then the store may be redundant as long as
   // no write occurs in between.
-  bool dominatingConditionImpliesValue(StoreInst *SI, MemoryDef *Def);
+  bool dominatingConditionOrPredsImplyValue(StoreInst *SI, MemoryDef *Def);
 
   /// \returns true if \p Def is a no-op store, either because it
   /// directly stores back a loaded value or stores zero to a calloced object.
@@ -2247,10 +2247,37 @@ bool DSEState::tryFoldIntoCalloc(MemoryDef *Def, const Value *DefUO) {
   return true;
 }
 
-bool DSEState::dominatingConditionImpliesValue(StoreInst *SI, MemoryDef *Def) {
+bool DSEState::dominatingConditionOrPredsImplyValue(StoreInst *SI,
+                                                    MemoryDef *Def) {
   BasicBlock *StoreBB = SI->getParent();
   Value *StorePtr = SI->getPointerOperand();
   Value *StoreVal = SI->getValueOperand();
+
+  auto MatchCondition = [&](BasicBlock *BB)
+      -> std::optional<std::pair<BasicBlock *, Instruction *>> {
+    auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
+    if (!BI || !BI->isConditional())
+      return std::nullopt;
+
+    // In case both blocks are the same, it is not possible to determine
+    // if optimization is possible. (We would not want to optimize a store
+    // in the FalseBB if condition is true and vice versa.)
+    if (BI->getSuccessor(0) == BI->getSuccessor(1))
+      return std::nullopt;
+
+    Instruction *ICmpL;
+    CmpPredicate Pred;
+    if (!match(BI->getCondition(),
+               m_c_ICmp(Pred,
+                        m_CombineAnd(m_Load(m_Specific(StorePtr)),
+                                     m_Instruction(ICmpL)),
+                        m_Specific(StoreVal))) ||
+        !ICmpInst::isEquality(Pred))
+      return std::nullopt;
+
+    unsigned ImpliedIdx = (Pred == ICmpInst::ICMP_EQ) ? 0 : 1;
+    return {{BI->getSuccessor(ImpliedIdx), ICmpL}};
+  };
 
   // Walk up the dominator tree looking for dominating conditions, up to limit.
   static constexpr unsigned Limit = 4;
@@ -2261,34 +2288,17 @@ bool DSEState::dominatingConditionImpliesValue(StoreInst *SI, MemoryDef *Def) {
       break;
     Node = IDomNode->getBlock();
 
-    auto *BI = dyn_cast<BranchInst>(Node->getTerminator());
-    if (!BI || !BI->isConditional())
+    auto Match = MatchCondition(Node);
+    if (!Match)
       continue;
 
-    // In case both blocks are the same, it is not possible to determine
-    // if optimization is possible. (We would not want to optimize a store
-    // in the FalseBB if condition is true and vice versa.)
-    if (BI->getSuccessor(0) == BI->getSuccessor(1))
-      continue;
-
-    Instruction *ICmpL;
-    CmpPredicate Pred;
-    if (!match(BI->getCondition(),
-               m_c_ICmp(Pred,
-                        m_CombineAnd(m_Load(m_Specific(StorePtr)),
-                                     m_Instruction(ICmpL)),
-                        m_Specific(StoreVal))) ||
-        !ICmpInst::isEquality(Pred))
-      continue;
-
-    unsigned ImpliedSucc = (Pred == ICmpInst::ICMP_EQ) ? 0 : 1;
-    if (!DT.dominates(BasicBlockEdge(Node, BI->getSuccessor(ImpliedSucc)),
-                      StoreBB))
+    const auto &[ImpliedSucc, LI] = *Match;
+    if (!DT.dominates(BasicBlockEdge(Node, ImpliedSucc), StoreBB))
       continue;
 
     // Found a dominating condition. Make sure there does not exist any
     // clobbering access between the load and the potential redundant store.
-    MemoryAccess *LoadAcc = MSSA.getMemoryAccess(ICmpL);
+    MemoryAccess *LoadAcc = MSSA.getMemoryAccess(LI);
     MemoryAccess *ClobAcc =
         MSSA.getSkipSelfWalker()->getClobberingMemoryAccess(Def, BatchAA);
 
@@ -2297,7 +2307,44 @@ bool DSEState::dominatingConditionImpliesValue(StoreInst *SI, MemoryDef *Def) {
     break;
   }
 
-  return false;
+  // If we haven't found any dominating condition, try evaluating whether all
+  // the predecessors establish a condition implying the value being stored.
+  unsigned NumPreds = pred_size(StoreBB);
+  if (NumPreds < 2 || NumPreds > 4)
+    return false;
+
+  SmallDenseMap<BasicBlock *, Instruction *, 4> PredToLoad;
+  for (BasicBlock *PredBB : predecessors(StoreBB)) {
+    auto Match = MatchCondition(PredBB);
+    if (!Match)
+      return false;
+
+    const auto &[ImpliedSucc, LI] = *Match;
+    if (ImpliedSucc != StoreBB)
+      return false;
+
+    PredToLoad[PredBB] = LI;
+  }
+  assert(PredToLoad.size() == NumPreds);
+
+  // If we are not merging the memory reads from the predecessors, the memory
+  // location may be clobbered.
+  auto *MPhi = dyn_cast<MemoryPhi>(Def->getDefiningAccess());
+  if (!MPhi || MPhi->getBlock() != StoreBB)
+    return false;
+
+  MemoryLocation StoreLoc = MemoryLocation::get(SI);
+  for (unsigned I = 0; I < MPhi->getNumIncomingValues(); ++I) {
+    MemoryAccess *LoadAccess =
+        MSSA.getMemoryAccess(PredToLoad[MPhi->getIncomingBlock(I)]);
+    MemoryAccess *ClobberingAccess =
+        MSSA.getWalker()->getClobberingMemoryAccess(MPhi->getIncomingValue(I),
+                                                    StoreLoc, BatchAA);
+    if (!MSSA.dominates(ClobberingAccess, LoadAccess))
+      return false;
+  }
+
+  return true;
 }
 
 bool DSEState::storeIsNoop(MemoryDef *Def, const Value *DefUO) {
@@ -2328,7 +2375,7 @@ bool DSEState::storeIsNoop(MemoryDef *Def, const Value *DefUO) {
   if (!Store)
     return false;
 
-  if (dominatingConditionImpliesValue(Store, Def))
+  if (dominatingConditionOrPredsImplyValue(Store, Def))
     return true;
 
   if (auto *LoadI = dyn_cast<LoadInst>(Store->getOperand(0))) {
