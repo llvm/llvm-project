@@ -1411,8 +1411,8 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     case clang::CodeGenOptions::TrapUnreachableKind::None:
       break;
     case clang::CodeGenOptions::TrapUnreachableKind::ExceptNoreturn:
-      CmdArgs.push_back(
-          Args.MakeArgString(Twine(PluginOptPrefix) + "--no-trap-after-noreturn"));
+      CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
+                                           "--no-trap-after-noreturn"));
       LLVM_FALLTHROUGH;
     case clang::CodeGenOptions::TrapUnreachableKind::All:
       CmdArgs.push_back(
