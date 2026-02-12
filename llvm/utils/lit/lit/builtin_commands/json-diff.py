@@ -119,7 +119,9 @@ class TemplatePattern(Pattern):
                 message = f"Match failure: value '{actual_value}' does not match template '{self.template}' expanded to '{interpolated}'."
                 return MatchResult.failure(message)
         except KeyError as e:
-            message = f"Error: template '{self.template}' references undefined variable: {e}."
+            message = (
+                f"Error: template '{self.template}' references undefined variable: {e}."
+            )
             fail(2, message)
         except Exception as e:
             fail(2, f"Error: template '{self.template}' expansion failed: {e}.")
@@ -229,7 +231,9 @@ def patternMatchJson(expected, actual, match_context):
         return patternMatchLists(expected, actual, match_context)
 
     elif expected != actual:
-        message = f"Match failure: value mismatch: expected '{expected}', got '{actual}'."
+        message = (
+            f"Match failure: value mismatch: expected '{expected}', got '{actual}'."
+        )
         return MatchResult.failure(message)
 
     return MatchResult.success()
@@ -376,7 +380,9 @@ def parseCommandLine():
                 fail(2, f"Error: invalid context value: '{arg}'.")
         elif opt == "--define":
             if "=" not in arg:
-                message = f"Error: invalid --define format: '{arg}'. Expected name=value."
+                message = (
+                    f"Error: invalid --define format: '{arg}'. Expected name=value."
+                )
                 fail(2, message)
             name, value = arg.split("=", 1)
             if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", name):
