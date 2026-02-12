@@ -40,6 +40,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/TypeSize.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 using namespace llvm;
@@ -5505,16 +5506,17 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
       UseSigned = false;
     }
 
-    // Fall back to boolean tracking if IV doesn't wrap.
+    // If no sentinel was found, fall back to a boolean AnyOf reduction to track
+    // if the condition was ever true. Requires the IV to not wrap, otherwise we
+    // cannot use min/max.
     if (!SentinelVal) {
       auto *AR = cast<SCEVAddRecExpr>(IVSCEV);
-      if (AR->hasNoSignedWrap()) {
+      if (AR->hasNoSignedWrap())
         UseSigned = true;
-      } else if (AR->hasNoUnsignedWrap()) {
+      else if (AR->hasNoUnsignedWrap())
         UseSigned = false;
-      } else {
+      else
         continue;
-      }
     }
 
     VPInstruction *RdxResult = cast<VPInstruction>(vputils::findRecipe(
@@ -5548,12 +5550,11 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
       // true in the loop. Use it to select the initial start value, if it was
       // never true.
       auto *AnyOfPhi = new VPReductionPHIRecipe(
-          nullptr, RecurKind::Or, *Plan.getFalse(), *Plan.getFalse(),
+          /*Phi=*/nullptr, RecurKind::Or, *Plan.getFalse(), *Plan.getFalse(),
           RdxUnordered{1}, /*HasUsesOutsideReductionChain=*/false);
       AnyOfPhi->insertAfter(PhiR);
 
-      VPBuilder LoopBuilder(
-          cast<VPRecipeBase>(BackedgeVal->getDefiningRecipe()));
+      VPBuilder LoopBuilder(BackedgeVal->getDefiningRecipe());
       VPValue *AnyOfCond = Cond;
       if (TrueVal == PhiR)
         AnyOfCond = LoopBuilder.createNot(Cond);
@@ -5566,13 +5567,8 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
 
       // Initialize the IV reduction phi with the neutral element, not the
       // original start value, to ensure correct min/max reduction results.
-      unsigned BitWidth = IVSCEV->getType()->getScalarSizeInBits();
-      APInt NeutralVal = UseMax
-                             ? (UseSigned ? APInt::getSignedMinValue(BitWidth)
-                                          : APInt::getZero(BitWidth))
-                             : (UseSigned ? APInt::getSignedMaxValue(BitWidth)
-                                          : APInt::getAllOnes(BitWidth));
-      StartVPV = Plan.getConstantInt(NeutralVal);
+      StartVPV = Plan.getOrAddLiveIn(
+          getRecurrenceIdentity(MinMaxKind, IVSCEV->getType(), {}));
     }
     RdxResult->replaceAllUsesWith(NewRdxResult);
     RdxResult->eraseFromParent();
