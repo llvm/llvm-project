@@ -915,8 +915,9 @@ mlir::LogicalResult CIRToLLVMAtomicCmpXchgOpLowering::matchAndRewrite(
   auto cmpxchg = mlir::LLVM::AtomicCmpXchgOp::create(
       rewriter, op.getLoc(), adaptor.getPtr(), expected, desired,
       getLLVMMemOrder(adaptor.getSuccOrder()),
-      getLLVMMemOrder(adaptor.getFailOrder()));
-  assert(!cir::MissingFeatures::atomicScope());
+      getLLVMMemOrder(adaptor.getFailOrder()),
+      getLLVMSyncScope(op.getSyncScope()));
+
   cmpxchg.setAlignment(adaptor.getAlignment());
   cmpxchg.setWeak(adaptor.getWeak());
   cmpxchg.setVolatile_(adaptor.getIsVolatile());
