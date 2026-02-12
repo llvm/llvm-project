@@ -348,7 +348,7 @@ public:
   const FuncTy &getFunction() const { return F; }
 
   ReferenceTy operator*() const {
-    return llvm::invoke(getFunction(), *this->I);
+    return std::invoke(getFunction(), *this->I);
   }
 
 private:
