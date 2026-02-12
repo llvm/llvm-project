@@ -20,6 +20,7 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
 
+#include <array>
 #include <functional>
 #include <optional>
 #include <string>
@@ -440,13 +441,20 @@ void PyOpOperandIterator::bind(nb::module_ &m) {
 // PyThreadPool
 //------------------------------------------------------------------------------
 
-PyThreadPool::PyThreadPool() {
-  ownedThreadPool = std::make_unique<llvm::DefaultThreadPool>();
+PyThreadPool::PyThreadPool() { threadPool = mlirLlvmThreadPoolCreate(); }
+
+PyThreadPool::~PyThreadPool() {
+  if (threadPool.ptr)
+    mlirLlvmThreadPoolDestroy(threadPool);
+}
+
+int PyThreadPool::getMaxConcurrency() const {
+  return mlirLlvmThreadPoolGetMaxConcurrency(threadPool);
 }
 
 std::string PyThreadPool::_mlir_thread_pool_ptr() const {
   std::stringstream ss;
-  ss << ownedThreadPool.get();
+  ss << threadPool.ptr;
   return ss.str();
 }
 
@@ -2543,10 +2551,11 @@ static bool attachOpTrait(const nb::object &opName, MlirDynamicOpTrait trait,
 bool PyDynamicOpTrait::attach(const nb::object &opName,
                               const nb::object &target,
                               PyMlirContext &context) {
-  if (!nb::hasattr(target, "verify") && !nb::hasattr(target, "verify_region"))
+  if (!nb::hasattr(target, "verify_invariants") &&
+      !nb::hasattr(target, "verify_region_invariants"))
     throw nb::type_error(
-        "the target object must have at least one of 'verify' or "
-        "'verify_region' methods");
+        "the target object must have at least one of 'verify_invariants' or "
+        "'verify_region_invariants' methods");
 
   MlirDynamicOpTraitCallbacks callbacks;
   callbacks.construct = [](void *userData) {
@@ -2558,11 +2567,11 @@ bool PyDynamicOpTrait::attach(const nb::object &opName,
 
   callbacks.verifyTrait = [](MlirOperation op,
                              void *userData) -> MlirLogicalResult {
-    return verifyTraitByMethod(op, userData, "verify");
+    return verifyTraitByMethod(op, userData, "verify_invariants");
   };
   callbacks.verifyRegionTrait = [](MlirOperation op,
                                    void *userData) -> MlirLogicalResult {
-    return verifyTraitByMethod(op, userData, "verify_region");
+    return verifyTraitByMethod(op, userData, "verify_region_invariants");
   };
 
   // To ensure that the same dynamic trait gets the same TypeID despite how many
