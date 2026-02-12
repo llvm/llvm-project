@@ -23,6 +23,7 @@
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_pointer.h>
+#include <__type_traits/void_t.h>
 #include <__utility/move.h>
 #include <string>
 #include <string_view>
@@ -93,15 +94,12 @@ typedef string __u8_string;
 
 struct _NullSentinel {};
 
-template <class _Tp>
-using _Void _LIBCPP_NODEBUG = void;
-
 template <class _Tp, class = void>
 struct __is_pathable_string : public false_type {};
 
 template <class _ECharT, class _Traits, class _Alloc>
 struct __is_pathable_string< basic_string<_ECharT, _Traits, _Alloc>,
-                             _Void<typename __can_convert_char<_ECharT>::__char_type> >
+                             void_t<typename __can_convert_char<_ECharT>::__char_type> >
     : public __can_convert_char<_ECharT> {
   using _Str _LIBCPP_NODEBUG = basic_string<_ECharT, _Traits, _Alloc>;
 
@@ -114,7 +112,7 @@ struct __is_pathable_string< basic_string<_ECharT, _Traits, _Alloc>,
 
 template <class _ECharT, class _Traits>
 struct __is_pathable_string< basic_string_view<_ECharT, _Traits>,
-                             _Void<typename __can_convert_char<_ECharT>::__char_type> >
+                             void_t<typename __can_convert_char<_ECharT>::__char_type> >
     : public __can_convert_char<_ECharT> {
   using _Str _LIBCPP_NODEBUG = basic_string_view<_ECharT, _Traits>;
 
@@ -154,7 +152,7 @@ template <class _Iter>
 struct __is_pathable_iter<
     _Iter,
     true,
-    _Void<typename __can_convert_char< typename iterator_traits<_Iter>::value_type>::__char_type> >
+    void_t<typename __can_convert_char< typename iterator_traits<_Iter>::value_type>::__char_type> >
     : __can_convert_char<typename iterator_traits<_Iter>::value_type> {
   using _ECharT _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::value_type;
 
