@@ -51,6 +51,7 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.intersphinx",
     "lldb_setting",
+    "build_include",
 ]
 
 # When building man pages, we do not use the markdown pages,
