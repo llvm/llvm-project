@@ -8,8 +8,6 @@
 
 #include "src/math/bf16addf128.h"
 #include "src/__support/math/bf16addf128.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

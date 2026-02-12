@@ -5208,9 +5208,7 @@ add_entrypoint_object(
   HDRS
     ../bf16addf128.h
   DEPENDS
-    libc.src.__support.common
     libc.src.__support.math.bf16addf128
-    libc.src.__support.macros.config
 )
 
 add_entrypoint_object(
