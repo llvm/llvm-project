@@ -1153,9 +1153,6 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
     gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
         rewriter, warpOp, operands, operandTypesToYield, newRetIndices);
 
-    // SmallVector<Value> newLoadGatherOperands = llvm::map_to_vector(
-    //     newRetIndices, [&](size_t idx) { return newWarpOp.getResult(idx); });
-
     rewriter.setInsertionPointAfter(newWarpOp);
 
     // Distributed load op will always be 1D.
