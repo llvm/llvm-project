@@ -1566,7 +1566,6 @@ multiclass SiFive7SchedResources<int vlen, bit dualVALU,
   defvar SiFive7VA1OrVA2 = !if (dualVALU,
                             !cast<ProcResGroup>(NAME # SiFive7VA1OrVA2),
                             !cast<ProcResource>(NAME # SiFive7VA));
-  defvar SiFive7VA = !cast<ProcResource>(NAME # SiFive7VA);
   defvar SiFive7VL = !cast<ProcResource>(NAME # SiFive7VL);
   defvar SiFive7VS = !cast<ProcResource>(NAME # SiFive7VS);
   defvar SiFive7VCQ = !cast<ProcResource>(NAME # SiFive7VCQ);
