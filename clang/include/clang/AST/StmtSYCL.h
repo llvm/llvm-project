@@ -51,27 +51,21 @@ public:
   /// Construct an empty SYCL kernel call statement.
   SYCLKernelCallStmt(EmptyShell Empty) : Stmt(SYCLKernelCallStmtClass, Empty) {}
 
-  /// Retrieve the original statement.
   CompoundStmt *getOriginalStmt() { return cast<CompoundStmt>(OriginalStmt); }
   const CompoundStmt *getOriginalStmt() const {
     return cast<CompoundStmt>(OriginalStmt);
   }
 
-  /// Set the original statement.
   void setOriginalStmt(CompoundStmt *CS) { OriginalStmt = CS; }
 
-  /// Retrieve the kernel launch statement.
   Stmt *getKernelLaunchStmt() { return KernelLaunchStmt; }
   const Stmt *getKernelLaunchStmt() const { return KernelLaunchStmt; }
 
-  /// Set the kernel launch statement.
   void setKernelLaunchStmt(Stmt *S) { KernelLaunchStmt = S; }
 
-  /// Retrieve the outlined function declaration.
   OutlinedFunctionDecl *getOutlinedFunctionDecl() { return OFDecl; }
   const OutlinedFunctionDecl *getOutlinedFunctionDecl() const { return OFDecl; }
 
-  /// Set the outlined function declaration.
   void setOutlinedFunctionDecl(OutlinedFunctionDecl *OFD) { OFDecl = OFD; }
 
   SourceLocation getBeginLoc() const LLVM_READONLY {

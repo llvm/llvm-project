@@ -708,7 +708,7 @@ There are a few items worthy of note:
 
 #. The ``sycl_kernel_launch`` template is expected to be provided by the SYCL
    library implementation. It is responsible for copying the kernel arguments
-   to device memory  and for scheduling execution of the generated offload
+   to device memory and for scheduling execution of the generated offload
    kernel entry point identified by the symbol name passed as the first
    function argument. ``sycl-kernel-caller-for-KN`` is substituted above for
    the actual symbol name that would be generated for the offload kernel entry

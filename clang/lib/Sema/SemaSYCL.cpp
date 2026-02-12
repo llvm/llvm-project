@@ -472,14 +472,15 @@ ExprResult SemaSYCL::BuildSYCLKernelLaunchIdExpr(FunctionDecl *FD,
 
   ExprResult IdExpr;
   if (SemaRef.isPotentialImplicitMemberAccess(EmptySS, Result,
-                                              /*IsAddressOfOperand*/ false))
+                                              /*IsAddressOfOperand*/ false)) {
     // The lookup result allows for a possible implicit member access that
     // would require an implicit or explicit 'this' argument.
     IdExpr = SemaRef.BuildPossibleImplicitMemberExpr(
         EmptySS, SourceLocation(), Result, &TALI, SemaRef.getCurScope());
-  else
+  } else {
     IdExpr = SemaRef.BuildTemplateIdExpr(EmptySS, SourceLocation(), Result,
                                          /*RequiresADL*/ true, &TALI);
+  }
 
   // The resulting expression may be invalid if, for example, 'FD' is a
   // non-static member function and sycl_kernel_launch lookup selects a
