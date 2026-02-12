@@ -241,11 +241,11 @@ public:
 
   /// Enum that describes what type of support for selects the target has.
   enum SelectSupportKind {
-    ScalarValSelect,     // The target supports scalar selects (ex: cmov).
-    ScalarCondVectorVal, // The target supports selects with a scalar condition
-                         // and vector values (ex: cmov).
-    VectorMaskSelect     // The target supports vector selects with a vector
-                         // mask (ex: x86 blends).
+    ScalarValSelect,      // The target supports scalar selects (ex: cmov).
+    ScalarCondVectorVal,  // The target supports selects with a scalar condition
+                          // and vector values (ex: cmov).
+    VectorMaskSelect      // The target supports vector selects with a vector
+                          // mask (ex: x86 blends).
   };
 
   /// Enum that specifies what an atomic load/AtomicRMWInst is expanded
