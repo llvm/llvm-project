@@ -220,6 +220,35 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
     return 0;
   }
 
+  StringRef DiscardPrefix = Args.getLastArgValue(OPT_prioritizeDiscardPath, "");
+  if (OverflowOptValue == OnCuIndexOverflow::SoftStop &&
+      !DiscardPrefix.empty()) {
+    SmallString<256> CanonicalDiscardPrefix(DiscardPrefix);
+    if (std::error_code EC =
+            sys::fs::real_path(DiscardPrefix, CanonicalDiscardPrefix)) {
+      WithColor::warning() << "invalid --prioritize-discard-path '"
+                           << DiscardPrefix << "': " << EC.message()
+                           << "; ignoring option.\n";
+    } else {
+      StringRef PrefixRef(CanonicalDiscardPrefix);
+      auto IsNonDiscarded = [&](const std::string &Name) {
+        SmallString<256> CanonicalDWO;
+        if (sys::fs::real_path(Name, CanonicalDWO))
+          return true;
+        StringRef DWORef(CanonicalDWO);
+        if (!DWORef.starts_with(PrefixRef))
+          return true;
+        if (DWORef.size() == PrefixRef.size())
+          return false;
+        if (sys::path::is_separator(DWORef[PrefixRef.size()]))
+          return false;
+        return true;
+      };
+      std::stable_partition(DWOFilenames.begin(), DWOFilenames.end(),
+                            IsNonDiscarded);
+    }
+  }
+
   std::string ErrorStr;
   StringRef Context = "dwarf streamer init";
 
