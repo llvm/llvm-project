@@ -539,6 +539,8 @@ Process::~Process() {
   // explicitly clear the thread list here to ensure that the mutex is not
   // destroyed before the thread list.
   m_thread_list.Clear();
+  delete m_current_private_state_thread;
+  m_current_private_state_thread = nullptr;
 }
 
 ProcessProperties &Process::GetGlobalProperties() {
@@ -4193,8 +4195,6 @@ void Process::StopPrivateStateThread() {
         log,
         "Went to stop the private state thread, but it was already invalid.");
   }
-  delete m_current_private_state_thread;
-  m_current_private_state_thread = nullptr;
 }
 
 void Process::ControlPrivateStateThread(uint32_t signal) {
