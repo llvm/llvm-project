@@ -517,12 +517,12 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
   VPTypeAnalysis TypeInfo(Plan);
 
   const auto &TTICapture = TTI;
-  auto GetRegUsage = [&TTICapture](Type *Ty, ElementCount VF) -> unsigned {
+  auto GetVectorTy = [&TTICapture](Type *Ty, ElementCount VF) -> VectorType * {
     if (Ty->isTokenTy() || !VectorType::isValidElementType(Ty) ||
         (VF.isScalable() &&
          !TTICapture.isElementTypeLegalForScalableVector(Ty)))
-      return 0;
-    return TTICapture.getRegUsageForType(VectorType::get(Ty, VF));
+      return nullptr;
+    return VectorType::get(Ty, VF);
   };
 
   // We scan the instructions linearly and record each time that a new interval
@@ -596,11 +596,10 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
             LLVM_DEBUG(dbgs() << "LV(REG): Scaled down VF from " << VFs[J]
                               << " to " << VF << " for " << *R << "\n";);
           }
-          unsigned ClassID = TTI.getRegisterClassForType(true, ScalarTy);
-          RegUsage[ClassID] += GetRegUsage(ScalarTy, VF);
-          if (VectorType::isValidElementType(ScalarTy)) {
-            Type *T = VectorType::get(ScalarTy, VF);
-            LargestTypes[J][ClassID] = MaxType(LargestTypes[J][ClassID], T);
+          if (VectorType *VecTy = GetVectorTy(ScalarTy, VF)) {
+            unsigned ClassID = TTI.getRegisterClassForType(true, ScalarTy);
+            RegUsage[ClassID] += TTI.getRegUsageForType(VecTy);
+            LargestTypes[J][ClassID] = MaxType(LargestTypes[J][ClassID], VecTy);
           }
         }
       }
@@ -640,8 +639,8 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
       ElementCount VF = IsScalar ? ElementCount::getFixed(1) : VFs[Idx];
       Type *ScalarTy = TypeInfo.inferScalarType(In);
       unsigned ClassID = TTI.getRegisterClassForType(VF.isVector(), ScalarTy);
-      Invariant[ClassID] += GetRegUsage(ScalarTy, VF);
       Type *SpillTy = IsScalar ? ScalarTy : VectorType::get(ScalarTy, VF);
+      Invariant[ClassID] += TTI.getRegUsageForType(SpillTy);
       LargestTypes[Idx][ClassID] = MaxType(LargestTypes[Idx][ClassID], SpillTy);
     }
 
