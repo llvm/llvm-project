@@ -1,4 +1,4 @@
-//-  X86Insertwait.cpp - Strict-Fp:Insert wait instruction X87 instructions --//
+// X86InsertX87Wait.cpp - Strict-Fp:Insert wait instruction X87 instructions //
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -32,15 +32,15 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "x86-insert-wait"
+#define DEBUG_TYPE "x86-insert-x87-wait"
 
 namespace {
 
-class WaitInsert : public MachineFunctionPass {
+class X86InsertX87WaitLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  WaitInsert() : MachineFunctionPass(ID) {}
+  X86InsertX87WaitLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -48,12 +48,13 @@ public:
     return "X86 insert wait instruction";
   }
 };
+} // end anonymous namespace
 
-} // namespace
+char X86InsertX87WaitLegacy::ID = 0;
 
-char WaitInsert::ID = 0;
-
-FunctionPass *llvm::createX86InsertX87waitPass() { return new WaitInsert(); }
+FunctionPass *llvm::createX86InsertX87WaitLegacyPass() {
+  return new X86InsertX87WaitLegacy();
+}
 
 static bool isX87ControlInstruction(MachineInstr &MI) {
   switch (MI.getOpcode()) {
@@ -93,7 +94,7 @@ static bool isX87NonWaitingControlInstruction(MachineInstr &MI) {
   }
 }
 
-bool WaitInsert::runOnMachineFunction(MachineFunction &MF) {
+static bool insertWaitInstruction(MachineFunction &MF) {
   if (!MF.getFunction().hasFnAttribute(Attribute::StrictFP))
     return false;
 
@@ -127,4 +128,15 @@ bool WaitInsert::runOnMachineFunction(MachineFunction &MF) {
     }
   }
   return Changed;
+}
+
+bool X86InsertX87WaitLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return insertWaitInstruction(MF);
+}
+
+PreservedAnalyses X86InsertX87WaitPass::run(MachineFunction &MF,
+                                            MachineFunctionAnalysisManager &) {
+  return insertWaitInstruction(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                         .preserveSet<CFGAnalyses>()
+                                   : PreservedAnalyses::all();
 }
