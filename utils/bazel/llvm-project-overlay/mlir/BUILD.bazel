@@ -1423,13 +1423,12 @@ td_library(
     srcs = ["include/mlir/Interfaces/DialectFoldInterface.td"],
     includes = ["include"],
     deps = [":OptBaseTdFiles"],
-    )
+)
 
 gentbl_cc_library(
     name = "DialectFoldInterfaceIncGen",
     tbl_outs = {
-        "include/mlir/Interfaces/DialectFoldInterface.h.inc":
-        ["-gen-dialect-interface-decls"],
+        "include/mlir/Interfaces/DialectFoldInterface.h.inc": ["-gen-dialect-interface-decls"],
     },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Interfaces/DialectFoldInterface.td",
