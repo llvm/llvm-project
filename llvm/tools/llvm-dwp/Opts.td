@@ -31,3 +31,8 @@ def dwarf64StringOffsets_EQ
                "forces all .debug_str_offsets tables to be emitted as DWARF64. "
                "This is used for testing.">,
       Values<"disabled,enabled,always">;
+
+def prioritizeDiscardPath : Joined<["-", "--"], "prioritize-discard-path=">,
+  HelpText<"In soft-stop mode, prefer discarding DWO files whose real paths start "
+           "with the given prefix when CU index overflow occurs.">,
+  MetaVarName<"<path>">;
