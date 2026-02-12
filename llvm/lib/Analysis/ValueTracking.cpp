@@ -718,6 +718,8 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
 
   // Make sure the current function cannot arrange for another thread to free on
   // its behalf.
+  llvm::outs() << "CtxI is:";
+  CtxI->dump();
   if (!CtxI->getFunction()->hasNoSync())
     return false;
 
@@ -5927,11 +5929,15 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     // Look for the case of a for loop which has a positive
     // initial value and is incremented by a squared value.
     // This will propagate sign information out of such loops.
-    if (P->getNumIncomingValues() == 2) {
+    if (P->getNumIncomingValues() != 2)
+      break;
+    else {
       for (int i = 0; i < 2; i++) {
         Value *RecurValue = P->getIncomingValue(1 - i);
         IntrinsicInst *I = dyn_cast<IntrinsicInst>(RecurValue);
-        if (I) {
+        if (!I)
+          continue;
+        else {
           Value *R, *L;
           Value *Init;
           PHINode *PN;
