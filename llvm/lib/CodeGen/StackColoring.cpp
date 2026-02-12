@@ -441,6 +441,8 @@ class StackColoring {
   /// Number of iterations taken during data flow analysis.
   unsigned NumIterations;
 
+  SmallMapVector<StringRef, int, 16> NameToSlot;
+
 public:
   StackColoring(SlotIndexes *Indexes) : Indexes(Indexes) {}
   bool run(MachineFunction &Func, bool OnlyRemoveMarkers = false);
@@ -475,7 +477,7 @@ private:
   bool applyFirstUse(int Slot) {
     if (!LifetimeStartOnFirstUse || ProtectFromEscapedAllocas)
       return false;
-    if (ConservativeSlots.test(Slot))
+    if (ConservativeSlots.test(Slot) || VolatileSlots.test(Slot))
       return false;
     return true;
   }
@@ -643,6 +645,7 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
   // number of start and end lifetime ops for each slot
   SmallVector<int, 8> NumStartLifetimes(NumSlot, 0);
   SmallVector<int, 8> NumEndLifetimes(NumSlot, 0);
+    SmallPtrSet<const MachineBasicBlock *, 4> SetjmpBlocks;
 
   // Step 1: collect markers and populate the "InterestingSlots"
   // and "ConservativeSlots" sets.
@@ -678,6 +681,7 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
         }
         const AllocaInst *Allocation = MFI->getObjectAllocation(Slot);
         if (Allocation) {
+	  NameToSlot.insert({Allocation->getName(), Slot});
           LLVM_DEBUG(dbgs() << "Found a lifetime ");
           LLVM_DEBUG(dbgs() << (MI.getOpcode() == TargetOpcode::LIFETIME_START
                                     ? "start"
@@ -690,6 +694,11 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
         MarkersFound += 1;
       } else {
         for (const MachineOperand &MO : MI.operands()) {
+	  if (MO.isGlobal()) {
+		auto *F = dyn_cast<Function>(MO.getGlobal());
+		if (F && F->hasFnAttribute(Attribute::ReturnsTwice))
+			SetjmpBlocks.insert(MBB);
+	  }
           if (!MO.isFI())
             continue;
           int Slot = MO.getIndex();
@@ -723,65 +732,33 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
   if (MF->exposesReturnsTwice()) {
     // First, find all blocks containing setjmp (returns_twice) calls by checking
     // for calls to functions with the returns_twice attribute
-    SmallPtrSet<const MachineBasicBlock *, 4> SetjmpBlocks;
-    for (const MachineBasicBlock &MBB : *MF) {
-      for (const MachineInstr &MI : MBB) {
-        if (MI.isCall()) {
-          // Check if this call has the returns_twice attribute
-          bool IsReturnsTwice = false;
-          for (const MachineOperand &MO : MI.operands()) {
-            if (MO.isGlobal()) {
-              if (const Function *Callee = dyn_cast<Function>(MO.getGlobal())) {
-                if (Callee->hasFnAttribute(Attribute::ReturnsTwice)) {
-                  IsReturnsTwice = true;
-                  break;
-                }
-              }
-            }
-          }
-          if (IsReturnsTwice) {
-            SetjmpBlocks.insert(&MBB);
-          }
-        }
-      }
-    }
 
     // Now, for each setjmp block, mark volatile slots used in successor blocks
     // as conservative (non-mergeable)
-    SmallPtrSet<const MachineBasicBlock *, 16> Visited;
-    SmallPtrSet<const MachineBasicBlock *, 16> Worklist;
-    Worklist.insert(SetjmpBlocks.begin(), SetjmpBlocks.end());
-
+  df_iterator_default_set<const MachineBasicBlock *> Visited;
 
       // Process all blocks reachable from setjmp successors
-      while (!Worklist.empty()) {
-        auto *MBB = *Worklist.begin();
-	Worklist.erase(MBB);
-	if (Visited.contains(MBB))
-		continue;
-	Visited.insert(MBB);
-	Worklist.insert(MBB->pred_begin(), MBB->pred_end());
+      for (auto *SetJmpBlok : SetjmpBlocks) {
 
-        // Check for volatile accesses in this block
-        for (const MachineInstr &MI : *MBB) {
-          if (MI.isDebugInstr())
-            continue;
+	      for (auto *MBB : depth_first_ext(SetJmpBlok, Visited)) {
+			Visited.insert(MBB);
 
-	  MI.dump();
-          // Check all memory operands for volatile accesses
-          for (auto MMI : MI.operands()) {
-	    auto *MMO = dyn_cast<MachineMemOperand*>(MMI);
-            if (MMO && MMO->isVolatile()) {
-	          int Slot = MMI.getIndex();
-	          if (Slot < 0)
-	            continue;
-            }
-          }
-        }
+        		for (const MachineInstr &MI : *MBB) {
+        		  if (MI.isDebugInstr())
+        		    continue;
 
+        		  for (auto *MO : MI.memoperands()) {
+				  if (!MO->isVolatile())
+					  continue;
+				  	VolatileSlots.set(NameToSlot.at(MO->getValue()->getName()));
+				     
+				  
+        		  }
+        		}
+	      }
       }
 
-    LLVM_DEBUG(dumpBV("Volatile slots (after setjmp)", VolatileSlots));
+   LLVM_DEBUG(dumpBV("Volatile slots (after setjmp)", VolatileSlots));
   }
 
   // The write to the catch object by the personality function is not propely
