@@ -39,13 +39,13 @@
 
 # CHECK-LABEL: FAIL: diff-test-update-retry :: multiple-split-file-unrelated-failure.test (3 of 4, 5 of 5 attempts)
 # CHECK-NEXT: [Attempt 1]
-# CHECK-NEXT: update-diff-test: copied {{.*}}multiple-split-file-unrelated-failure.test.tmp/out.txt to slice test2.expected in {{.*}}multiple-split-file-unrelated-failure.test
+# CHECK-NEXT: update-diff-test: copied {{.*}}out.txt to slice test2.expected in {{.*}}multiple-split-file-unrelated-failure.test
 # CHECK-NEXT: [Attempt 2]
-# CHECK-NEXT: update-diff-test: copied {{.*}}multiple-split-file-unrelated-failure.test.tmp/out.txt to slice test3.expected in {{.*}}multiple-split-file-unrelated-failure.test
+# CHECK-NEXT: update-diff-test: copied {{.*}}out.txt to slice test3.expected in {{.*}}multiple-split-file-unrelated-failure.test
 # CHECK-NEXT: [Attempt 3]
-# CHECK-NEXT: update-diff-test: copied {{.*}}multiple-split-file-unrelated-failure.test.tmp/out.txt to slice test4.expected in {{.*}}multiple-split-file-unrelated-failure.test
+# CHECK-NEXT: update-diff-test: copied {{.*}}out.txt to slice test4.expected in {{.*}}multiple-split-file-unrelated-failure.test
 # CHECK-NEXT: [Attempt 4]
-# CHECK-NEXT: update-diff-test: copied {{.*}}multiple-split-file-unrelated-failure.test.tmp/out.txt to slice test5.expected in {{.*}}multiple-split-file-unrelated-failure.test
+# CHECK-NEXT: update-diff-test: copied {{.*}}out.txt to slice test5.expected in {{.*}}multiple-split-file-unrelated-failure.test
 # CHECK-NEXT: ********************
 
 # CHECK-LABEL: FIXED: diff-test-update-retry :: single-split-file.test (4 of 4, 2 of 2 attempts)
