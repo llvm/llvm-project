@@ -22,8 +22,8 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::performance {
 
 namespace {
-AST_MATCHER(CXXRecordDecl, hasTrivialMoveAssignment) {
-  return Node.hasTrivialMoveAssignment();
+AST_MATCHER(CXXRecordDecl, hasNonTrivialMoveAssignment) {
+  return Node.hasNonTrivialMoveAssignment();
 }
 
 AST_MATCHER(QualType, isScalarType) { return Node->isScalarType(); }
@@ -45,9 +45,7 @@ void UseStdMoveCheck::registerMatchers(MatchFinder *Finder) {
   auto AssignOperatorExpr =
       cxxOperatorCallExpr(
           hasOperatorName("="),
-          hasArgument(
-              0, hasType(cxxRecordDecl(hasMethod(isMoveAssignmentOperator()),
-                                       unless(hasTrivialMoveAssignment())))),
+          hasArgument(0, hasType(cxxRecordDecl(hasNonTrivialMoveAssignment()))),
           hasArgument(
               1, declRefExpr(
                      to(varDecl(hasLocalStorage(),
@@ -85,9 +83,9 @@ void UseStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   const CXXRecordDecl *AssignValueRD =
-      AssignValue->getDecl()->getType().getTypePtr()->getAsCXXRecordDecl();
+      AssignValue->getDecl()->getType()->getAsCXXRecordDecl();
   const CXXRecordDecl *AssignExprRD =
-      AssignExpr->getType().getTypePtr()->getAsCXXRecordDecl();
+      AssignExpr->getType()->getAsCXXRecordDecl();
   if (AssignValueRD && AssignValueRD != AssignExprRD)
     return;
 
