@@ -44980,6 +44980,9 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     case X86ISD::PCMPGT:
     case X86ISD::PMULUDQ:
     case X86ISD::PMULDQ:
+    case X86ISD::MULHRS:
+    case X86ISD::VPMADDUBSW:
+    case X86ISD::VPMADDWD:
     case X86ISD::VSHLV:
     case X86ISD::VSRLV:
     case X86ISD::VSRAV:
