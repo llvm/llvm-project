@@ -1336,8 +1336,6 @@ def warn_pragma_init_seg_unsupported_target : Warning<
 def err_pragma_file_or_compound_scope : Error<
   "'#pragma %0' can only appear at file scope or at the start of a "
   "compound statement">;
-def err_pragma_file_scope : Error<
-  "'#pragma %0' can only appear at file scope">;
 // - #pragma stdc unknown
 def ext_stdc_pragma_ignored : ExtWarn<"unknown pragma in STDC namespace">,
    InGroup<UnknownPragmas>;
@@ -1847,6 +1845,11 @@ def err_concept_legacy_bool_keyword : Error<
   "ISO C++ does not permit the 'bool' keyword after 'concept'">;
 def err_placeholder_expected_auto_or_decltype_auto : Error<
   "expected 'auto' or 'decltype(auto)' after concept name">;
+}
+
+let CategoryName = "Reflection Diagnostics" in {
+def err_cannot_reflect_operand : Error<
+  "unknown or unimplemented reflectable entity">;
 }
 
 def warn_max_tokens : Warning<

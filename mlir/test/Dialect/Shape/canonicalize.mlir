@@ -272,6 +272,18 @@ func.func @no_fold(%arg0: index) -> !shape.shape {
 
 // -----
 
+// GH#178820: Verify from_extents doesn't crash on poison operands.
+// CHECK-LABEL: func @from_extents_poison
+func.func @from_extents_poison() -> !shape.shape {
+  // CHECK: %[[POISON:.*]] = ub.poison : index
+  // CHECK: shape.from_extents %[[POISON]]
+  %0 = ub.poison : index
+  %ret = shape.from_extents %0 : index
+  return %ret : !shape.shape
+}
+
+// -----
+
 // Cast constant size to index and fold it away.
 // CHECK-LABEL: func @const_size_to_index
 func.func @const_size_to_index() -> index {
@@ -1613,4 +1625,14 @@ func.func @add_poison() -> !shape.size {
 func.func @shape_of_0d(%arg0: tensor<f32>) -> tensor<?xindex> {
   %0 = shape.shape_of %arg0 : tensor<f32> -> tensor<?xindex>
   return %0 : tensor<?xindex>
+}
+
+// -----
+
+// CHECK-LABEL: func @shape_of_static_with_shape_result(
+func.func @shape_of_static_with_shape_result(%arg0: tensor<3xf32>) -> !shape.shape {
+  // CHECK: %[[const:.*]] = shape.const_shape [3] : !shape.shape
+  // CHECK: return %[[const]] : !shape.shape
+  %0 = shape.shape_of %arg0 : tensor<3xf32> -> !shape.shape
+  return %0 : !shape.shape
 }

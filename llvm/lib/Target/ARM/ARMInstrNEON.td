@@ -7403,28 +7403,28 @@ def SHA256SU1 : N3SHA3Op<"256su1", 0b00110, 0b10, int_arm_neon_sha256su1>;
 let Predicates = [HasNEON] in {
 def : Pat<(i32 (int_arm_neon_sha1h i32:$Rn)),
           (COPY_TO_REGCLASS (f32 (EXTRACT_SUBREG
-              (SHA1H (SUBREG_TO_REG (i64 0),
+              (SHA1H (INSERT_SUBREG (IMPLICIT_DEF),
                                     (f32 (COPY_TO_REGCLASS i32:$Rn, SPR)),
                                     ssub_0)),
               ssub_0)), GPR)>;
 
 def : Pat<(v4i32 (int_arm_neon_sha1c v4i32:$hash_abcd, i32:$hash_e, v4i32:$wk)),
           (SHA1C v4i32:$hash_abcd,
-                 (SUBREG_TO_REG (i64 0),
+                 (INSERT_SUBREG (IMPLICIT_DEF),
                                 (f32 (COPY_TO_REGCLASS i32:$hash_e, SPR)),
                                 ssub_0),
                  v4i32:$wk)>;
 
 def : Pat<(v4i32 (int_arm_neon_sha1m v4i32:$hash_abcd, i32:$hash_e, v4i32:$wk)),
           (SHA1M v4i32:$hash_abcd,
-                 (SUBREG_TO_REG (i64 0),
+                 (INSERT_SUBREG (IMPLICIT_DEF),
                                 (f32 (COPY_TO_REGCLASS i32:$hash_e, SPR)),
                                 ssub_0),
                  v4i32:$wk)>;
 
 def : Pat<(v4i32 (int_arm_neon_sha1p v4i32:$hash_abcd, i32:$hash_e, v4i32:$wk)),
           (SHA1P v4i32:$hash_abcd,
-                 (SUBREG_TO_REG (i64 0),
+                 (INSERT_SUBREG (IMPLICIT_DEF),
                                 (f32 (COPY_TO_REGCLASS i32:$hash_e, SPR)),
                                 ssub_0),
                  v4i32:$wk)>;
