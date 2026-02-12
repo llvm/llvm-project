@@ -3605,6 +3605,8 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
     // Split the predecessors we are threading into a new edge block. We'll
     // clone the instructions into this block, and then redirect it to RealDest.
     BasicBlock *EdgeBB = SplitBlockPredecessors(BB, PredBBs, ".critedge", DTU);
+    if (!EdgeBB)
+      continue;
 
     // TODO: These just exist to reduce test diff, we can drop them if we like.
     EdgeBB->setName(RealDest->getName() + ".critedge");

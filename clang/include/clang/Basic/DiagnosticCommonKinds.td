@@ -286,6 +286,8 @@ def err_seh___except_filter : Error<
   "%0 only allowed in __except filter expression">;
 def err_seh___finally_block : Error<
   "%0 only allowed in __finally block">;
+def err_seh_object_unwinding : Error<
+  "'__try' is not permitted in functions that require object unwinding">;
 
 // Sema && AST
 def note_invalid_subexpr_in_const_expr : Note<
@@ -375,6 +377,11 @@ def err_ppc_impossible_musttail: Error<
   "long calls cannot be tail called on PPC|"
   "indirect calls cannot be tail called on PPC|"
   "external calls cannot be tail called on PPC}0"
+  >;
+def err_mips_impossible_musttail: Error<
+  "'musttail' attribute for this call is impossible because %select{"
+  "the MIPS16 ABI does not support tail calls|"
+  "calls outside the current linkage unit cannot be tail called on MIPS}0"
   >;
 def err_aix_musttail_unsupported: Error<
   "'musttail' attribute is not supported on AIX">;

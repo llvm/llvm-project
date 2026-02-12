@@ -154,7 +154,7 @@ endif()
 # List of all targets. Note that some are added dynamically below.
 set( LIBCLC_TARGETS_ALL
   amdgcn--
-  amdgcn-amd-amdhsa
+  amdgcn-amd-amdhsa-llvm
   clspv--
   clspv64--
   r600--
@@ -207,7 +207,7 @@ include_directories( ${LLVM_INCLUDE_DIRS} )
 set( r600--_devices cedar cypress barts cayman )
 set( amdgcn--_devices tahiti )
 set( amdgcn-mesa-mesa3d_devices ${amdgcn--_devices} )
-set( amdgcn-amd-amdhsa_devices none )
+set( amdgcn-amd-amdhsa-llvm_devices none )
 set( clspv--_devices none )
 set( clspv64--_devices none )
 set( nvptx64--_devices none )
@@ -229,6 +229,7 @@ set( tahiti_aliases pitcairn verde oland hainan bonaire kabini kaveri hawaii
   gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036
   gfx1100 gfx1101 gfx1102 gfx1103
   gfx1150 gfx1151 gfx1152 gfx1153
+  gfx1170
   gfx1200 gfx1201 gfx1250 gfx1251
   gfx1310
 )
@@ -407,6 +408,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       -D${CLC_TARGET_DEFINE}
       # All libclc builtin libraries see CLC headers
       -I${CMAKE_CURRENT_SOURCE_DIR}/clc/include
+      -include opencl-c-base.h
       # Error on undefined macros
       -Werror=undef
       -fdiscard-value-names
@@ -453,7 +455,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     )
 
     list( APPEND build_flags
-      -Xclang -fdeclare-opencl-builtins -Xclang -finclude-default-header
+      -Xclang -fdeclare-opencl-builtins
       -I${CMAKE_CURRENT_SOURCE_DIR}/opencl/include
     )
 
@@ -466,6 +468,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       OPT_FLAGS ${opt_flags}
       LIB_FILES ${opencl_lib_files}
       ALIASES ${${d}_aliases}
+      OUTPUT_FILENAME libclc
       PARENT_TARGET libclc-opencl-builtins
       # Link in the CLC builtins and internalize their symbols
       INTERNAL_LINK_DEPENDENCIES builtins.link.clc-${arch_suffix}

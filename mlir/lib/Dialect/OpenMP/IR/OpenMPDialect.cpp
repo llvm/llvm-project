@@ -2210,7 +2210,7 @@ void TargetOp::build(OpBuilder &builder, OperationState &state,
                   /*in_reduction_syms=*/nullptr, clauses.isDevicePtrVars,
                   clauses.mapVars, clauses.nowait, clauses.privateVars,
                   makeArrayAttr(ctx, clauses.privateSyms),
-                  clauses.privateNeedsBarrier, clauses.threadLimit,
+                  clauses.privateNeedsBarrier, clauses.threadLimitVars,
                   /*private_maps=*/nullptr);
 }
 
@@ -2243,7 +2243,7 @@ LogicalResult TargetOp::verifyRegions() {
         // Check if used in num_teams_lower or any of num_teams_upper_vars
         if (hostEvalArg == teamsOp.getNumTeamsLower() ||
             llvm::is_contained(teamsOp.getNumTeamsUpperVars(), hostEvalArg) ||
-            hostEvalArg == teamsOp.getThreadLimit())
+            llvm::is_contained(teamsOp.getThreadLimitVars(), hostEvalArg))
           continue;
 
         return emitOpError() << "host_eval argument only legal as 'num_teams' "
@@ -2632,7 +2632,7 @@ void TeamsOp::build(OpBuilder &builder, OperationState &state,
       /*private_needs_barrier=*/nullptr, clauses.reductionMod,
       clauses.reductionVars,
       makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
-      makeArrayAttr(ctx, clauses.reductionSyms), clauses.threadLimit);
+      makeArrayAttr(ctx, clauses.reductionSyms), clauses.threadLimitVars);
 }
 
 // Verify num_teams clause
@@ -3137,9 +3137,10 @@ LogicalResult DeclareReductionOp::verifyRegions() {
 void TaskOp::build(OpBuilder &builder, OperationState &state,
                    const TaskOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  TaskOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
-                makeArrayAttr(ctx, clauses.dependKinds), clauses.dependVars,
-                clauses.final, clauses.ifExpr, clauses.inReductionVars,
+  TaskOp::build(builder, state, clauses.affinityVars, clauses.allocateVars,
+                clauses.allocatorVars, makeArrayAttr(ctx, clauses.dependKinds),
+                clauses.dependVars, clauses.final, clauses.ifExpr,
+                clauses.inReductionVars,
                 makeDenseBoolArrayAttr(ctx, clauses.inReductionByref),
                 makeArrayAttr(ctx, clauses.inReductionSyms), clauses.mergeable,
                 clauses.priority, /*private_vars=*/clauses.privateVars,
@@ -4531,6 +4532,32 @@ static void printUniformClause(OpAsmPrinter &p, Operation *op,
     if (i != 0)
       p << ", ";
     p << uniformVars[i] << " : " << uniformTypes[i];
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// Parser and printer for Affinity Clause
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseAffinityClause(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &affinityVars,
+    SmallVectorImpl<Type> &affinityTypes) {
+  return parser.parseCommaSeparatedList([&]() -> ParseResult {
+    if (parser.parseOperand(affinityVars.emplace_back()) ||
+        parser.parseColonType(affinityTypes.emplace_back()))
+      return failure();
+    return success();
+  });
+}
+
+static void printAffinityClause(OpAsmPrinter &p, Operation *op,
+                                ValueRange affinityVars,
+                                TypeRange affinityTypes) {
+  for (unsigned i = 0; i < affinityVars.size(); ++i) {
+    if (i)
+      p << ", ";
+    p << affinityVars[i] << " : " << affinityTypes[i];
   }
 }
 
