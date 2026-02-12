@@ -2700,8 +2700,9 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
   bool DoStore = false;
   bool IsScalar = hasScalarEvaluationKind(Ty);
   bool UseIndirectDebugAddress = false;
-  LangAS DestLangAS =
-      getLangOpts().OpenMP ? LangAS::Default : Ty.getAddressSpace();
+  LangAS DestLangAS = getLangOpts().OpenCL   ? LangAS::opencl_private
+                      : getLangOpts().OpenMP ? LangAS::Default
+                                             : Ty.getAddressSpace();
 
   // If we already have a pointer to the argument, reuse the input pointer.
   if (Arg.isIndirect()) {
