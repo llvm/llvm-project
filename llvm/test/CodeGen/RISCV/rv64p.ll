@@ -333,21 +333,12 @@ define i64 @cls_i64_not_32(i64 %x) {
 define i128 @sll_i128(i128 %x, i128 %y) {
 ; CHECK-LABEL: sll_i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a4, a2, -64
 ; CHECK-NEXT:    sll a3, a0, a2
-; CHECK-NEXT:    bltz a4, .LBB27_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a1, a3
-; CHECK-NEXT:    j .LBB27_3
-; CHECK-NEXT:  .LBB27_2:
-; CHECK-NEXT:    sll a1, a1, a2
-; CHECK-NEXT:    not a2, a2
-; CHECK-NEXT:    srli a0, a0, 1
-; CHECK-NEXT:    srl a0, a0, a2
-; CHECK-NEXT:    or a1, a1, a0
-; CHECK-NEXT:  .LBB27_3:
-; CHECK-NEXT:    srai a0, a4, 63
-; CHECK-NEXT:    and a0, a0, a3
+; CHECK-NEXT:    slx a1, a0, a2
+; CHECK-NEXT:    slli a2, a2, 57
+; CHECK-NEXT:    srai a2, a2, 63
+; CHECK-NEXT:    mvm a1, a3, a2
+; CHECK-NEXT:    andn a0, a3, a2
 ; CHECK-NEXT:    ret
   %b = shl i128 %x, %y
   ret i128 %b

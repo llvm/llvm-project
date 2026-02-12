@@ -1507,8 +1507,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       }
     }
 
-    setOperationAction(ISD::CLMUL, MVT::v8i8, Legal);
-    setOperationAction(ISD::CLMUL, MVT::v16i8, Legal);
+    setOperationAction(ISD::CLMUL, {MVT::v8i8, MVT::v16i8}, Legal);
+    if (Subtarget->hasAES())
+      setOperationAction(ISD::CLMUL, {MVT::v1i64, MVT::v2i64}, Legal);
 
   } else /* !isNeonAvailable */ {
     for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
@@ -2002,7 +2003,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setPartialReduceMLAAction(MLAOps, MVT::nxv4i32, MVT::nxv8i16, Legal);
       setPartialReduceMLAAction(MLAOps, MVT::nxv8i16, MVT::nxv16i8, Legal);
 
-      setOperationAction(ISD::CLMUL, MVT::nxv16i8, Legal);
+      setOperationAction(ISD::CLMUL, {MVT::nxv16i8, MVT::nxv4i32}, Legal);
     }
 
     // Handle floating-point partial reduction
@@ -2014,6 +2015,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                                 MVT::v8f16, Custom);
     }
   }
+
+  if (Subtarget->hasSVEAES() &&
+      (Subtarget->isSVEAvailable() || Subtarget->hasSSVE_AES()))
+    setOperationAction(ISD::CLMUL, MVT::nxv2i64, Legal);
 
   // Handle non-aliasing elements mask
   if (Subtarget->hasSVE2() ||
@@ -24181,6 +24186,68 @@ static SDValue performZExtUZPCombine(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::AND, DL, VT, BC, DAG.getConstant(Mask, DL, VT));
 }
 
+// Combine:
+//   ext(duplane(insert_subvector(undef, trunc(X), 0), idx))
+// Into:
+//   duplane(X, idx)
+// This eliminates XTN/SSHLL sequences when splatting from boolean vectors.
+static SDValue performExtendDuplaneTruncCombine(SDNode *N, SelectionDAG &DAG) {
+  SDValue Dup = N->getOperand(0);
+  unsigned DupOpc = Dup.getOpcode();
+  if (!Dup->hasOneUse() ||
+      (DupOpc != AArch64ISD::DUPLANE8 && DupOpc != AArch64ISD::DUPLANE16 &&
+       DupOpc != AArch64ISD::DUPLANE32))
+    return SDValue();
+
+  SDValue Insert = Dup.getOperand(0);
+  if (!Insert.hasOneUse() || Insert.getOpcode() != ISD::INSERT_SUBVECTOR ||
+      !Insert.getOperand(0).isUndef() || !isNullConstant(Insert.getOperand(2)))
+    return SDValue();
+
+  SDValue Trunc = Insert.getOperand(1);
+  if (!Trunc.hasOneUse() || Trunc.getOpcode() != ISD::TRUNCATE)
+    return SDValue();
+
+  SDValue Src = Trunc.getOperand(0);
+  EVT SrcVT = Src.getValueType();
+  EVT DstVT = N->getValueType(0);
+  // Without VLS 256+, DUPLANE requires 128-bit inputs.
+  if (SrcVT != DstVT || !SrcVT.is128BitVector())
+    return SDValue();
+
+  // Verify that Src is already sign/zero-extended from the truncated bit width.
+  EVT TruncVT = Trunc.getValueType();
+  unsigned SrcBits = SrcVT.getScalarSizeInBits();
+  unsigned TruncBits = TruncVT.getScalarSizeInBits();
+  if (N->getOpcode() == ISD::SIGN_EXTEND) {
+    if (DAG.ComputeNumSignBits(Src) <= SrcBits - TruncBits)
+      return SDValue();
+  } else if (N->getOpcode() == ISD::ZERO_EXTEND) {
+    APInt Mask = APInt::getHighBitsSet(SrcBits, SrcBits - TruncBits);
+    if (!DAG.MaskedValueIsZero(Src, Mask))
+      return SDValue();
+  } else {
+    assert(N->getOpcode() == ISD::ANY_EXTEND);
+  }
+
+  unsigned NewDupOpc;
+  switch (SrcVT.getScalarSizeInBits()) {
+  case 16:
+    NewDupOpc = AArch64ISD::DUPLANE16;
+    break;
+  case 32:
+    NewDupOpc = AArch64ISD::DUPLANE32;
+    break;
+  case 64:
+    NewDupOpc = AArch64ISD::DUPLANE64;
+    break;
+  default:
+    return SDValue();
+  }
+
+  return DAG.getNode(NewDupOpc, SDLoc(N), DstVT, Src, Dup.getOperand(1));
+}
+
 static SDValue performExtendCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     SelectionDAG &DAG) {
@@ -24229,6 +24296,9 @@ static SDValue performExtendCombine(SDNode *N,
     return DAG.getNode(AArch64ISD::REV16, SDLoc(N), N->getValueType(0),
                        NewAnyExtend);
   }
+
+  if (SDValue R = performExtendDuplaneTruncCombine(N, DAG))
+    return R;
 
   return SDValue();
 }
