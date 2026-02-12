@@ -9,6 +9,10 @@
 ; CHECK-NEXT: VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK:      VPlan after simplifyRecipes
 ; CHECK-NEXT: VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK:      VPlan after VPlanTransforms::simplifyRecipes
+; CHECK-NEXT: VPlan 'Initial VPlan for VF={4},UF={1}' {
+; CHECK:      VPlan after VPlanTransforms::simplifyRecipes
+; CHECK-NEXT: VPlan 'Initial VPlan for VF={4},UF={1}' {
 ; CHECK:      VPlan after printFinalVPlan
 ; CHECK-NEXT: VPlan 'Final VPlan for VF={4},UF={1}' {
 

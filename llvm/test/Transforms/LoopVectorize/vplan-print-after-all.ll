@@ -5,6 +5,14 @@
 ; Verify that `-vplan-print-after-all` option works.
 
 ; CHECK: VPlan after printAfterInitialConstruction
+; CHECK: VPlan after VPlanTransforms::createHeaderPhiRecipes
+; CHECK: VPlan after VPlanTransforms::handleEarlyExits
+; CHECK: VPlan after VPlanTransforms::addMiddleCheck
+; CHECK: VPlan after VPlanTransforms::createLoopRegions
+; CHECK: VPlan after VPlanTransforms::introduceMasksAndLinearize
+; CHECK: VPlan after VPlanTransforms::createInLoopReductionRecipes
+; CHECK: VPlan after VPlanTransforms::addExitUsersForFirstOrderRecurrences
+; CHECK: VPlan after VPlanTransforms::updateScalarResumePhis
 ; CHECK: VPlan after VPlanTransforms::clearReductionWrapFlags
 ; CHECK: VPlan after VPlanTransforms::optimizeFindIVReductions
 ; CHECK: VPlan after VPlanTransforms::handleMultiUseReductions
@@ -16,6 +24,9 @@
 ; CHECK: VPlan after VPlanTransforms::replaceSymbolicStrides
 ; CHECK: VPlan after VPlanTransforms::dropPoisonGeneratingRecipes
 ; CHECK: VPlan after VPlanTransforms::adjustFixedOrderRecurrences
+; CHECK: VPlan after VPlanTransforms::optimizeInductionExitUsers
+; CHECK: VPlan after VPlanTransforms::hoistPredicatedLoads
+; CHECK: VPlan after VPlanTransforms::sinkPredicatedStores
 ; CHECK: VPlan after VPlanTransforms::truncateToMinimalBitwidths
 ; CHECK: VPlan after removeRedundantCanonicalIVs
 ; CHECK: VPlan after removeRedundantInductionCasts
@@ -38,6 +49,23 @@
 ; CHECK: VPlan after VPlanTransforms::materializePacksAndUnpacks
 ; CHECK: VPlan after VPlanTransforms::materializeBroadcasts
 ; CHECK: VPlan after VPlanTransforms::replicateByVF
+; CHECK: VPlan after VPlanTransforms::optimizeForVFAndUF
+; CHECK: VPlan after VPlanTransforms::simplifyRecipes
+; CHECK: VPlan after VPlanTransforms::removeBranchOnConst
+; CHECK: VPlan after VPlanTransforms::narrowInterleaveGroups
+; CHECK: VPlan after VPlanTransforms::removeDeadRecipes
+; CHECK: VPlan after VPlanTransforms::convertToConcreteRecipes
+; CHECK: VPlan after VPlanTransforms::convertEVLExitCond
+; CHECK: VPlan after VPlanTransforms::dissolveLoopRegions
+; CHECK: VPlan after VPlanTransforms::expandBranchOnTwoConds
+; CHECK: VPlan after VPlanTransforms::canonicalizeEVLLoops
+; CHECK: VPlan after VPlanTransforms::materializeBackedgeTakenCount
+; CHECK: VPlan after VPlanTransforms::materializeVectorTripCount
+; CHECK: VPlan after VPlanTransforms::materializeVFAndVFxUF
+; CHECK: VPlan after VPlanTransforms::cse
+; CHECK: VPlan after VPlanTransforms::simplifyRecipes
+; CHECK: VPlan after VPlanTransforms::expandSCEVs
+; CHECK: VPlan after VPlanTransforms::removeDeadRecipes
 ; CHECK: VPlan after printFinalVPlan
 
 ; Also verify that VPlans are actually printed (we aren't interested in the
