@@ -43,7 +43,7 @@ static std::string getThinLTOOutputFile(Ctx &ctx, StringRef modulePath) {
                                    ctx.arg.thinLTOPrefixReplaceNew);
 }
 
-static std::shared_ptr<MemoryBuffer> getMemoryBuffer(Ctx &ctx) {
+static std::shared_ptr<MemoryBuffer> getBBSectionsMemoryBuffer(Ctx &ctx) {
   if (ctx.arg.ltoBasicBlockSections.empty() ||
       ctx.arg.ltoBasicBlockSections == "all" ||
       ctx.arg.ltoBasicBlockSections == "labels" ||
@@ -62,7 +62,7 @@ static std::shared_ptr<MemoryBuffer> getMemoryBuffer(Ctx &ctx) {
 static lto::Config createConfig(Ctx &ctx) {
   lto::Config c;
 
-  std::shared_ptr<MemoryBuffer> mbPtr = getMemoryBuffer(ctx);
+  std::shared_ptr<MemoryBuffer> mbPtr = getBBSectionsMemoryBuffer(ctx);
 
   // Set up the callback to modify TargetOptions.
   c.ModifyTargetOptions =
