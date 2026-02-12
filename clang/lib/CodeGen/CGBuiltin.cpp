@@ -4072,30 +4072,26 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     Value *Op1 = EmitScalarExpr(E->getArg(1));
     Value *Result;
-    if (Op0->getType()->isIntOrIntVectorTy()) {
-      QualType Ty = E->getArg(0)->getType();
-      if (auto *VecTy = Ty->getAs<VectorType>())
-        Ty = VecTy->getElementType();
-      Result = Builder.CreateBinaryIntrinsic(
-          Ty->isSignedIntegerType() ? Intrinsic::smax : Intrinsic::umax, Op0,
-          Op1, nullptr, "elt.max");
-    } else
-      Result = Builder.CreateMaxNum(Op0, Op1, /*FMFSource=*/nullptr, "elt.max");
+    assert(Op0->getType()->isIntOrIntVectorTy());
+    QualType Ty = E->getArg(0)->getType();
+    if (auto *VecTy = Ty->getAs<VectorType>())
+      Ty = VecTy->getElementType();
+    Result = Builder.CreateBinaryIntrinsic(
+        Ty->isSignedIntegerType() ? Intrinsic::smax : Intrinsic::umax, Op0, Op1,
+        nullptr, "elt.max");
     return RValue::get(Result);
   }
   case Builtin::BI__builtin_elementwise_min: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     Value *Op1 = EmitScalarExpr(E->getArg(1));
     Value *Result;
-    if (Op0->getType()->isIntOrIntVectorTy()) {
-      QualType Ty = E->getArg(0)->getType();
-      if (auto *VecTy = Ty->getAs<VectorType>())
-        Ty = VecTy->getElementType();
-      Result = Builder.CreateBinaryIntrinsic(
-          Ty->isSignedIntegerType() ? Intrinsic::smin : Intrinsic::umin, Op0,
-          Op1, nullptr, "elt.min");
-    } else
-      Result = Builder.CreateMinNum(Op0, Op1, /*FMFSource=*/nullptr, "elt.min");
+    assert(Op0->getType()->isIntOrIntVectorTy());
+    QualType Ty = E->getArg(0)->getType();
+    if (auto *VecTy = Ty->getAs<VectorType>())
+      Ty = VecTy->getElementType();
+    Result = Builder.CreateBinaryIntrinsic(
+        Ty->isSignedIntegerType() ? Intrinsic::smin : Intrinsic::umin, Op0, Op1,
+        nullptr, "elt.min");
     return RValue::get(Result);
   }
 
