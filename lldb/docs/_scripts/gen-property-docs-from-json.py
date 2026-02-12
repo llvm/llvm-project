@@ -77,8 +77,7 @@ def append_property(tree: PropertyTree, prop: Property):
 
 
 def print_property(f: TextIO, path: str, property: Property):
-    # Invoke lldbsetting directive. See MyST reference:
-    # https://myst-parser.readthedocs.io/en/latest/syntax/roles-and-directives.html
+    # Invoke lldbsetting directive (lldb/docs/_ext/lldb_setting.py)
     f.write(f"```{{lldbsetting}} {path}\n")
     f.write(f':type: "{property.type}"\n\n')
     f.write(property.description)
