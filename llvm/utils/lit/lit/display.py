@@ -149,6 +149,7 @@ class Display(object):
             )
         )
 
+        has_printed_info = False
         print_result = shouldPrintInfo(self.opts.test_output, test)
         # Show the test failure output, if requested.
         if print_result:
@@ -170,31 +171,38 @@ class Display(object):
                 # in this case.
                 out = out.decode(encoding=sys.stdout.encoding, errors="ignore")
             print(out)
-            print("*" * 20)
+            has_printed_info = True
 
         # Report any automatic fixes of the test case
-        if test.result.test_updater_outputs:
-            had_any_updates = False
+        if any(test.result.test_updater_outputs):
+            if has_printed_info:
+                print("*" * 10)
+            else:
+                has_printed_info = True
             for i, updater_result in enumerate(test.result.test_updater_outputs):
                 if not updater_result:
                     continue
                 if test.result.attempts > 1:
                     print(f"[Attempt {i + 1}]")
                 print(updater_result)
-                had_any_updates = True
-            if had_any_updates:
-                print("*" * 10)
 
         # Report test metrics, if present.
         if test.result.metrics:
+            if has_printed_info:
+                print("*" * 10)
+            else:
+                has_printed_info = True
             print("%s TEST '%s' RESULTS %s" % ("*" * 10, test_name, "*" * 10))
             items = sorted(test.result.metrics.items())
             for metric_name, value in items:
                 print("%s: %s " % (metric_name, value.format()))
-            print("*" * 10)
 
         # Report micro-tests, if present
         if test.result.microResults:
+            if has_printed_info:
+                print("*" * 10)
+            else:
+                has_printed_info = True
             items = sorted(test.result.microResults.items())
             for micro_test_name, micro_test in items:
                 print("%s MICRO-TEST: %s" % ("*" * 3, micro_test_name))
@@ -204,5 +212,7 @@ class Display(object):
                     for metric_name, value in sorted_metrics:
                         print("    %s:  %s " % (metric_name, value.format()))
 
+        if has_printed_info:
+            print("*" * 20)
         # Ensure the output is flushed.
         sys.stdout.flush()
