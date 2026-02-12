@@ -83,12 +83,12 @@ cir.func @test_return_from_cleanup_with_operand() -> !s32i {
 // CHECK:         cir.br ^[[BODY:bb[0-9]+]]
 // CHECK:       ^[[BODY]]:
 // CHECK:         cir.call @doSomething(%[[ALLOCA]])
-// CHECK:         %[[MINUS_ONE:.*]] = cir.const #cir.int<-1> : !s32i
 // CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]]
 // CHECK:       ^[[CLEANUP]]:
 // CHECK:         cir.call @dtor(%[[ALLOCA]])
 // CHECK:         cir.br ^[[CLEANUP_EXIT:bb[0-9]+]]
 // CHECK:       ^[[CLEANUP_EXIT]]:
+// CHECK:         %[[MINUS_ONE:.*]] = cir.const #cir.int<-1> : !s32i
 // CHECK:         cir.return %[[MINUS_ONE]] : !s32i
 // CHECK:       ^[[UNREACHABLE_NORMAL_RETURN:bb[0-9]+]]
 // CHECK:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i

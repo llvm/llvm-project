@@ -928,11 +928,12 @@ define i32 @PR27246() {
 ; UNROLL-NO-VF-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; UNROLL-NO-VF-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; UNROLL-NO-VF:       middle.block:
-; UNROLL-NO-VF-NEXT:    [[TMP1:%.*]] = sub i32 [[I_016]], [[INDEX]]
+; UNROLL-NO-VF-NEXT:    [[TMP4:%.*]] = sub i32 [[I_016]], [[INDEX]]
+; UNROLL-NO-VF-NEXT:    [[TMP3:%.*]] = add i32 [[TMP4]], -1
 ; UNROLL-NO-VF-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[I_016]], [[N_VEC]]
 ; UNROLL-NO-VF-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP3]], label [[SCALAR_PH]]
 ; UNROLL-NO-VF:       scalar.ph:
-; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP1]], [[MIDDLE_BLOCK]] ], [ [[E_015]], [[FOR_COND1_PREHEADER]] ]
+; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP3]], [[MIDDLE_BLOCK]] ], [ [[E_015]], [[FOR_COND1_PREHEADER]] ]
 ; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[I_016]], [[FOR_COND1_PREHEADER]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[FOR_COND1:%.*]]
 ; UNROLL-NO-VF:       for.cond.cleanup:
@@ -945,7 +946,7 @@ define i32 @PR27246() {
 ; UNROLL-NO-VF-NEXT:    [[DEC]] = add nsw i32 [[K_0]], -1
 ; UNROLL-NO-VF-NEXT:    br i1 [[CMP2]], label [[FOR_COND1]], label [[FOR_COND_CLEANUP3]], !llvm.loop [[LOOP9:![0-9]+]]
 ; UNROLL-NO-VF:       for.cond.cleanup3:
-; UNROLL-NO-VF-NEXT:    [[E_1_LCSSA]] = phi i32 [ [[E_1]], [[FOR_COND1]] ], [ [[TMP1]], [[MIDDLE_BLOCK]] ]
+; UNROLL-NO-VF-NEXT:    [[E_1_LCSSA]] = phi i32 [ [[E_1]], [[FOR_COND1]] ], [ [[TMP4]], [[MIDDLE_BLOCK]] ]
 ; UNROLL-NO-VF-NEXT:    [[INC]] = add nuw nsw i32 [[I_016]], 1
 ; UNROLL-NO-VF-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 49
 ; UNROLL-NO-VF-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_COND1_PREHEADER]]
