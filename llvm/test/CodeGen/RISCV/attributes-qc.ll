@@ -22,7 +22,7 @@
 
 ; RUN: llc -mtriple=riscv32 %s -o - \
 ; RUN:   -mattr=+xqcia,+xqciac,+xqcibi,+xqcibm,+xqcicli,+xqcicm,+xqcics,+xqcicsr,+xqciint \
-; RUN:   -mattr=,+xqciio,+xqcilb,+xqcili,+xqcilia,+xqcilo,+xqcilsm,+xqcisim,+xqcisls,+xqcisync \
+; RUN:   -mattr=+xqciio,+xqcilb,+xqcili,+xqcilia,+xqcilo,+xqcilsm,+xqcisim,+xqcisls,+xqcisync \
 ; RUN:   | FileCheck --check-prefix=RV32COMBINETOXQCI %s
 ; RUN: llc -mtriple=riscv32 %s -o - -mattr=+xqci | FileCheck --check-prefix=RV32COMBINETOXQCI %s
 
