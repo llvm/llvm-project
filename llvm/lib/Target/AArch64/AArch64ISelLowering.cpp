@@ -2002,7 +2002,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setPartialReduceMLAAction(MLAOps, MVT::nxv4i32, MVT::nxv8i16, Legal);
       setPartialReduceMLAAction(MLAOps, MVT::nxv8i16, MVT::nxv16i8, Legal);
 
-      setOperationAction(ISD::CLMUL, MVT::nxv16i8, Legal);
+      setOperationAction(ISD::CLMUL, {MVT::nxv16i8, MVT::nxv4i32}, Legal);
     }
 
     // Handle floating-point partial reduction
@@ -2014,6 +2014,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                                 MVT::v8f16, Custom);
     }
   }
+
+  if (Subtarget->hasSVEAES() &&
+      (Subtarget->isSVEAvailable() || Subtarget->hasSSVE_AES()))
+    setOperationAction(ISD::CLMUL, MVT::nxv2i64, Legal);
 
   // Handle non-aliasing elements mask
   if (Subtarget->hasSVE2() ||

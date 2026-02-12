@@ -1265,7 +1265,7 @@ But when your user switches to your ABI-breaking style module:
 
 The corresponding ABI may look like:
 
-.. code-block:: c++
+.. code-block:: text
 
   $ llvm-nm -ACD libuser.so
   libuser.so: 0000000000001100 T user::user_def(example::C@example&)
