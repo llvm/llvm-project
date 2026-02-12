@@ -635,6 +635,8 @@ static constexpr std::array<int, 5> CDesc{{9, 7, 7, 3, 0}};
 static_assert(llvm::is_sorted_constexpr(CDesc.begin(), CDesc.end(),
                                         std::greater<>()),
               "Non-ascending order with std::greater should be sorted");
+static_assert(llvm::is_sorted_constexpr(CDesc.rbegin(), CDesc.rend()),
+              "Reverse iterators should be supported.");
 
 } // namespace
 } // namespace llvm
