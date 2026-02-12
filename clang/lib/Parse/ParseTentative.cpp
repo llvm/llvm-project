@@ -590,6 +590,9 @@ bool Parser::isCXXTypeId(TentativeCXXTypeIdContext Context, bool &isAmbiguous) {
     } else if (Context == TentativeCXXTypeIdContext::InTrailingReturnType) {
       TPR = TPResult::True;
       isAmbiguous = true;
+    } else if (Context == TentativeCXXTypeIdContext::AsReflectionOperand) {
+      TPR = TPResult::True;
+      isAmbiguous = true;
     } else
       TPR = TPResult::False;
   }

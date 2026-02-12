@@ -6,16 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
+#include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
+#include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::xegpu;
@@ -247,6 +255,57 @@ struct TestXeGPUSGDistribute
   }
 };
 
+/// This test pass is intended to test the subgroup to workitem distribution of
+/// xegpu/vector/arith operations in isolation, it does not handle any
+/// structural ops like scf.for etc.
+struct TestXeGPUSgToWiDistributeExperimental
+    : public PassWrapper<TestXeGPUSgToWiDistributeExperimental,
+                         OperationPass<gpu::GPUModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestXeGPUSgToWiDistributeExperimental)
+
+  StringRef getArgument() const final {
+    return "test-xegpu-sg-to-wi-distribute-experimental";
+  }
+
+  StringRef getDescription() const final {
+    return "Test the experimental implementation of XeGPU Subgroup to "
+           "Work-item Distribution";
+  }
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<arith::ArithDialect>();
+    registry.insert<memref::MemRefDialect>();
+    registry.insert<xegpu::XeGPUDialect>();
+    registry.insert<vector::VectorDialect>();
+    registry.insert<index::IndexDialect>();
+    registry.insert<gpu::GPUDialect>();
+  }
+
+  TestXeGPUSgToWiDistributeExperimental() = default;
+  TestXeGPUSgToWiDistributeExperimental(
+      const TestXeGPUSgToWiDistributeExperimental &pass) = default;
+
+  void runOnOperation() override {
+    MLIRContext *ctx = &getContext();
+    TypeConverter typeConverter;
+    // Define type materializations using UnrealizedConversionCastOp.
+    auto materializeCast = [&](mlir::OpBuilder &builder, mlir::Type type,
+                               mlir::ValueRange inputs,
+                               mlir::Location loc) -> mlir::Value {
+      return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
+          .getResult(0);
+    };
+    typeConverter.addSourceMaterialization(materializeCast);
+    typeConverter.addTargetMaterialization(materializeCast);
+    ConversionTarget target(*ctx);
+    RewritePatternSet patterns(ctx);
+    xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
+        typeConverter, patterns, target);
+    (void)applyPartialConversion(getOperation(), target, std::move(patterns));
+  }
+};
+
 struct TestXeGPUMoveFuncBodyToWarpOp
     : public PassWrapper<TestXeGPUMoveFuncBodyToWarpOp,
                          OperationPass<gpu::GPUModuleOp>> {
@@ -415,6 +474,7 @@ void registerTestXeGPULowerings() {
   PassRegistration<TestXeGPUUnrollingPatterns>();
   PassRegistration<TestXeGPULayoutInterface>();
   PassRegistration<TestXeGPUSGDistribute>();
+  PassRegistration<TestXeGPUSgToWiDistributeExperimental>();
   PassRegistration<TestXeGPUMoveFuncBodyToWarpOp>();
   PassRegistration<TestXeGPUPropagateLayouts>();
   PassRegistration<TestXeGPUResolveLayoutConflicts>();

@@ -337,8 +337,6 @@ std::optional<APInt> constantTripCount(
       // case applies, so the static trip count is unknown.
       return std::nullopt;
     }
-    if (stepCst.isNegative())
-      return APInt(bitwidth, 0);
   }
 
   if (isIndex) {
@@ -367,7 +365,13 @@ std::optional<APInt> constantTripCount(
              << (isSigned ? "isSigned" : "isUnsigned") << ")";
       return APInt(bitwidth, 0);
     }
+    // Compute the difference. Since we've already checked that ub > lb, the
+    // result can be interpreted as an unsigned value without overflow concerns.
     diff = ubCst - lbCst;
+    // Convert diff to unsigned. This handles cases like i8: ub=127, lb=-128
+    // where the subtraction yields 255, which wraps to -1 in signed i8 but is
+    // correctly represented as 255 when interpreted as unsigned.
+    diff.setIsUnsigned(true);
   } else {
     if (maybeUbCst)
       return std::nullopt;
@@ -392,10 +396,21 @@ std::optional<APInt> constantTripCount(
     return std::nullopt;
   }
   auto &stepCst = maybeStepCst->first;
-  llvm::APInt tripCount = isSigned ? diff.sdiv(stepCst) : diff.udiv(stepCst);
-  llvm::APInt remainder = isSigned ? diff.srem(stepCst) : diff.urem(stepCst);
+  // For signed loops, a negative step size could indicate an infinite number of
+  // iterations.
+  if (isSigned && stepCst.isSignBitSet()) {
+    LDBG() << "constantTripCount is infinite because step is negative";
+    return std::nullopt;
+  }
+
+  // Both diff and step are non-negative at this point (negative steps are
+  // rejected earlier), so we use unsigned division regardless of the loop
+  // comparison signedness.
+  llvm::APInt tripCount = diff.udiv(stepCst);
+  llvm::APInt remainder = diff.urem(stepCst);
   if (!remainder.isZero())
     tripCount = tripCount + 1;
+
   LDBG() << "constantTripCount found: " << tripCount;
   return tripCount;
 }

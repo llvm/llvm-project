@@ -312,7 +312,6 @@ Status ABIWindows_x86_64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   Thread *thread = frame_sp->GetThread().get();
 
   bool is_signed;
-  bool is_complex;
 
   RegisterContext *reg_ctx = thread->GetRegisterContext().get();
 
@@ -341,43 +340,37 @@ Status ABIWindows_x86_64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
           "We don't support returning longer than 64 bit "
           "integer values at present.");
     }
-  } else if (compiler_type.IsFloatingPointType(is_complex)) {
-    if (is_complex)
-      error = Status::FromErrorString(
-          "We don't support returning complex values at present");
-    else {
-      std::optional<uint64_t> bit_width =
-          llvm::expectedToOptional(compiler_type.GetBitSize(frame_sp.get()));
-      if (!bit_width) {
-        error = Status::FromErrorString("can't get type size");
+  } else if (compiler_type.IsRealFloatingPointType()) {
+    std::optional<uint64_t> bit_width =
+        llvm::expectedToOptional(compiler_type.GetBitSize(frame_sp.get()));
+    if (!bit_width) {
+      error = Status::FromErrorString("can't get type size");
+      return error;
+    }
+    if (*bit_width <= 64) {
+      const RegisterInfo *xmm0_info = reg_ctx->GetRegisterInfoByName("xmm0", 0);
+      RegisterValue xmm0_value;
+      DataExtractor data;
+      Status data_error;
+      size_t num_bytes = new_value_sp->GetData(data, data_error);
+      if (data_error.Fail()) {
+        error = Status::FromErrorStringWithFormat(
+            "Couldn't convert return value to raw data: %s",
+            data_error.AsCString());
         return error;
       }
-      if (*bit_width <= 64) {
-        const RegisterInfo *xmm0_info =
-            reg_ctx->GetRegisterInfoByName("xmm0", 0);
-        RegisterValue xmm0_value;
-        DataExtractor data;
-        Status data_error;
-        size_t num_bytes = new_value_sp->GetData(data, data_error);
-        if (data_error.Fail()) {
-          error = Status::FromErrorStringWithFormat(
-              "Couldn't convert return value to raw data: %s",
-              data_error.AsCString());
-          return error;
-        }
 
-        unsigned char buffer[16];
-        ByteOrder byte_order = data.GetByteOrder();
+      unsigned char buffer[16];
+      ByteOrder byte_order = data.GetByteOrder();
 
-        data.CopyByteOrderedData(0, num_bytes, buffer, 16, byte_order);
-        xmm0_value.SetBytes(buffer, 16, byte_order);
-        reg_ctx->WriteRegister(xmm0_info, xmm0_value);
-        set_it_simple = true;
-      } else {
-        // Windows doesn't support 80 bit FP
-        error = Status::FromErrorString(
-            "Windows-x86_64 doesn't allow FP larger than 64 bits.");
-      }
+      data.CopyByteOrderedData(0, num_bytes, buffer, 16, byte_order);
+      xmm0_value.SetBytes(buffer, 16, byte_order);
+      reg_ctx->WriteRegister(xmm0_info, xmm0_value);
+      set_it_simple = true;
+    } else {
+      // Windows doesn't support 80 bit FP
+      error = Status::FromErrorString(
+          "Windows-x86_64 doesn't allow FP larger than 64 bits.");
     }
   }
 
@@ -557,7 +550,6 @@ static bool FlattenAggregateType(
   for (uint32_t idx = 0; idx < num_children; ++idx) {
     std::string name;
     bool is_signed;
-    bool is_complex;
 
     uint64_t field_bit_offset = 0;
     CompilerType field_compiler_type = return_compiler_type.GetFieldAtIndex(
@@ -580,7 +572,8 @@ static bool FlattenAggregateType(
     const uint32_t field_type_flags = field_compiler_type.GetTypeInfo();
     if (field_compiler_type.IsIntegerOrEnumerationType(is_signed) ||
         field_compiler_type.IsPointerType() ||
-        field_compiler_type.IsFloatingPointType(is_complex)) {
+        // FIXME: is this correct for complex floats or float vector types?
+        field_type_flags & eTypeIsFloat) {
       aggregate_field_offsets.push_back(field_byte_offset);
       aggregate_compiler_types.push_back(field_compiler_type);
     } else if (field_type_flags & eTypeHasChildren) {
@@ -669,7 +662,6 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectImpl(
     const uint32_t num_children = aggregate_compiler_types.size();
     for (uint32_t idx = 0; idx < num_children; idx++) {
       bool is_signed;
-      bool is_complex;
 
       CompilerType field_compiler_type = aggregate_compiler_types[idx];
       uint32_t field_byte_width =
@@ -688,7 +680,8 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectImpl(
       uint32_t copy_from_offset = 0;
       if (field_compiler_type.IsIntegerOrEnumerationType(is_signed) ||
           field_compiler_type.IsPointerType() ||
-          field_compiler_type.IsFloatingPointType(is_complex)) {
+          // FIXME: is this correct for complex floats or float vector types?
+          field_compiler_type.GetTypeInfo() & eTypeIsFloat) {
         copy_from_extractor = &rax_data;
         copy_from_offset = used_bytes;
         used_bytes += field_byte_width;

@@ -17,36 +17,58 @@ using namespace llvm;
 
 namespace llvm {
 template class DominanceFrontierBase<MachineBasicBlock, false>;
-template class DominanceFrontierBase<MachineBasicBlock, true>;
-template class ForwardDominanceFrontierBase<MachineBasicBlock>;
 }
 
+char MachineDominanceFrontierWrapperPass::ID = 0;
 
-char MachineDominanceFrontier::ID = 0;
-
-INITIALIZE_PASS_BEGIN(MachineDominanceFrontier, "machine-domfrontier",
-                "Machine Dominance Frontier Construction", true, true)
+INITIALIZE_PASS_BEGIN(MachineDominanceFrontierWrapperPass,
+                      "machine-domfrontier",
+                      "Machine Dominance Frontier Construction", true, true)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(MachineDominanceFrontier, "machine-domfrontier",
-                "Machine Dominance Frontier Construction", true, true)
+INITIALIZE_PASS_END(MachineDominanceFrontierWrapperPass, "machine-domfrontier",
+                    "Machine Dominance Frontier Construction", true, true)
 
-MachineDominanceFrontier::MachineDominanceFrontier()
+MachineDominanceFrontierWrapperPass::MachineDominanceFrontierWrapperPass()
     : MachineFunctionPass(ID) {}
 
-char &llvm::MachineDominanceFrontierID = MachineDominanceFrontier::ID;
+char &llvm::MachineDominanceFrontierID =
+    MachineDominanceFrontierWrapperPass::ID;
 
-bool MachineDominanceFrontier::runOnMachineFunction(MachineFunction &) {
-  releaseMemory();
-  Base.analyze(getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree());
+bool MachineDominanceFrontier::invalidate(
+    MachineFunction &F, const PreservedAnalyses &PA,
+    MachineFunctionAnalysisManager::Invalidator &) {
+  auto PAC = PA.getChecker<MachineDominanceFrontierAnalysis>();
+  return !PAC.preserved() &&
+         !PAC.preservedSet<AllAnalysesOn<MachineFunction>>() &&
+         !PAC.preservedSet<CFGAnalyses>();
+}
+
+bool MachineDominanceFrontierWrapperPass::runOnMachineFunction(
+    MachineFunction &) {
+  MDF.releaseMemory();
+  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MDF.analyze(MDT);
   return false;
 }
 
-void MachineDominanceFrontier::releaseMemory() {
-  Base.releaseMemory();
+void MachineDominanceFrontierWrapperPass::releaseMemory() {
+  MDF.releaseMemory();
 }
 
-void MachineDominanceFrontier::getAnalysisUsage(AnalysisUsage &AU) const {
+void MachineDominanceFrontierWrapperPass::getAnalysisUsage(
+    AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
+}
+
+AnalysisKey MachineDominanceFrontierAnalysis::Key;
+
+MachineDominanceFrontierAnalysis::Result
+MachineDominanceFrontierAnalysis::run(MachineFunction &MF,
+                                      MachineFunctionAnalysisManager &MFAM) {
+  MachineDominanceFrontier MDF;
+  auto &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  MDF.analyze(MDT);
+  return MDF;
 }
