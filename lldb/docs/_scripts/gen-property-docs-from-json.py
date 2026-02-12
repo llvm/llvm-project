@@ -115,11 +115,14 @@ def print_tree(f: TextIO, level: int, prefix: str, name: str, tree: PropertyTree
 HEADER = """
 # Settings
 
-This page lists all available settings in LLDB.
+This page lists all possible settings in LLDB.
 Settings can be set using `settings set <name> <value>`.
 Values can be added to arrays and dictionaries with `settings append -- <name> <value>`.
 
-## Root
+```{note}
+Some settings only exist for particular LLDB build configurations and so will
+not be present in all copies of LLDB.
+```
 """
 
 
