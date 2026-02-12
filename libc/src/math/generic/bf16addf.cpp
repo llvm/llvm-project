@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/bf16addf.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/math/bf16addf.h"
 
 namespace LIBC_NAMESPACE_DECL {

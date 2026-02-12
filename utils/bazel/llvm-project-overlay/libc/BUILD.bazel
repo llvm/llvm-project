@@ -2642,7 +2642,6 @@ libc_support_library(
         ":__support_fputil_basic_operations",
         ":__support_fputil_bfloat16",
         ":__support_macros_config",
-        ":__support_macros_properties_types",
     ],
 )
 
