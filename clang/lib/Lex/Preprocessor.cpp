@@ -1269,8 +1269,7 @@ bool Preprocessor::LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
 ///     - <, ", or : (but not ::) pp tokens for 'import', or
 ///     - ; for 'module'
 /// Otherwise the token is treated as an identifier.
-bool Preprocessor::HandleModuleContextualKeyword(
-    Token &Result) {
+bool Preprocessor::HandleModuleContextualKeyword(Token &Result) {
   if (!getLangOpts().CPlusPlusModules || !Result.isModuleContextualKeyword())
     return false;
 

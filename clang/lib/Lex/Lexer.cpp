@@ -3075,7 +3075,7 @@ bool Lexer::SkipBlockComment(Token &Result, const char *CurPtr) {
   // efficiently now.  This is safe even in KeepWhitespaceMode because we would
   // have already returned above with the comment as a token.
   if (isHorizontalWhitespace(*CurPtr)) {
-    SkipWhitespace(Result, CurPtr+1);
+    SkipWhitespace(Result, CurPtr + 1);
     return false;
   }
 
@@ -3869,11 +3869,11 @@ LexStart:
     // too (without going through the big switch stmt).
     if (CurPtr[0] == '/' && CurPtr[1] == '/' && !inKeepCommentMode() &&
         LineComment && (LangOpts.CPlusPlus || !LangOpts.TraditionalCPP)) {
-      if (SkipLineComment(Result, CurPtr+2))
+      if (SkipLineComment(Result, CurPtr + 2))
         return true; // There is a token to return.
       goto SkipIgnoredUnits;
     } else if (CurPtr[0] == '/' && CurPtr[1] == '*' && !inKeepCommentMode()) {
-      if (SkipBlockComment(Result, CurPtr+2))
+      if (SkipBlockComment(Result, CurPtr + 2))
         return true; // There is a token to return.
       goto SkipIgnoredUnits;
     } else if (isHorizontalWhitespace(*CurPtr)) {
@@ -4235,7 +4235,8 @@ LexStart:
         // it's actually the start of a preprocessing directive.  Callback to
         // the preprocessor to handle it.
         // TODO: -fpreprocessed mode??
-        if (Result.isAtPhysicalStartOfLine() && !LexingRawMode && !Is_PragmaLexer)
+        if (Result.isAtPhysicalStartOfLine() && !LexingRawMode &&
+            !Is_PragmaLexer)
           goto HandleDirective;
 
         Kind = tok::hash;

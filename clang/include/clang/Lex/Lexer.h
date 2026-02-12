@@ -762,9 +762,9 @@ private:
   bool LexCharConstant       (Token &Result, const char *CurPtr,
                               tok::TokenKind Kind);
   bool LexEndOfFile          (Token &Result, const char *CurPtr);
-  bool SkipWhitespace        (Token &Result, const char *CurPtr);
-  bool SkipLineComment       (Token &Result, const char *CurPtr);
-  bool SkipBlockComment      (Token &Result, const char *CurPtr);
+  bool SkipWhitespace(Token &Result, const char *CurPtr);
+  bool SkipLineComment(Token &Result, const char *CurPtr);
+  bool SkipBlockComment(Token &Result, const char *CurPtr);
   bool SaveLineComment       (Token &Result, const char *CurPtr);
 
   bool IsStartOfConflictMarker(const char *CurPtr);

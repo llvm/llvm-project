@@ -641,8 +641,7 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
             Tok.is(tok::raw_identifier) &&
             (Tok.getRawIdentifier() == "export" ||
              Tok.getRawIdentifier() == "module")) {
-          llvm::SaveAndRestore ModuleDirectiveSkipping(
-              LastExportKeyword);
+          llvm::SaveAndRestore ModuleDirectiveSkipping(LastExportKeyword);
           LastExportKeyword.startToken();
           LookUpIdentifierInfo(Tok);
           IdentifierInfo *II = Tok.getIdentifierInfo();
