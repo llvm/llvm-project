@@ -12,6 +12,11 @@ and intrinsics. They are defined in ``clang/include/clang/Basic/BuiltinsAMDGPU.t
 and typically lower to LLVM intrinsics defined in
 ``llvm/include/llvm/IR/IntrinsicsAMDGPU.td``.
 
+.. warning::
+
+   These builtins, including their names, arguments, and target requirements,
+   are all subject to change without warning across LLVM releases.
+
 All AMDGPU builtins use the ``__builtin_amdgcn_`` prefix (or ``__builtin_r600_``
 for R600 targets). Arguments marked ``_Constant`` must be compile-time
 constant expressions.
