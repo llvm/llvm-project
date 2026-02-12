@@ -5,7 +5,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-
     @skipUnlessDarwin
     def test_synthetic(self):
         self.build()
