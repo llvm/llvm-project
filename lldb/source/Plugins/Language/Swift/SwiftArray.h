@@ -87,15 +87,16 @@ protected:
   friend class SwiftArrayBufferHandler;
 
 private:
-  lldb::addr_t m_metadata_ptr;
-  uint64_t m_reserved_word;
-  lldb::addr_t m_size;
-  lldb::addr_t m_capacity;
-  lldb::addr_t m_first_elem_ptr;
+  lldb::addr_t m_metadata_ptr = LLDB_INVALID_ADDRESS;
+  uint64_t m_reserved_word = LLDB_INVALID_ADDRESS;
+  lldb::addr_t m_size = 0;
+  lldb::addr_t m_capacity = 0;
+  lldb::addr_t m_first_elem_ptr = LLDB_INVALID_ADDRESS;
   lldb_private::CompilerType m_elem_type;
-  size_t m_element_size;
-  size_t m_element_stride;
+  size_t m_element_size = 0;
+  size_t m_element_stride = 0;
   lldb_private::ExecutionContextRef m_exe_ctx_ref;
+  bool m_is_embedded_swift = false;
 };
 
 class SwiftArrayBridgedBufferHandler : public SwiftArrayBufferHandler {
