@@ -508,7 +508,7 @@ bool BuildSYCLKernelLaunchCallArgs(Sema &SemaRef, FunctionDecl *FD,
 
   // Prepare a string literal that contains the kernel name.
   ASTContext &Ctx = SemaRef.getASTContext();
-  const std::string KernelName = SKI->GetKernelName();
+  const std::string &KernelName = SKI->GetKernelName();
   QualType KernelNameCharTy = Ctx.CharTy.withConst();
   llvm::APInt KernelNameSize(Ctx.getTypeSize(Ctx.getSizeType()),
                              KernelName.size() + 1);
