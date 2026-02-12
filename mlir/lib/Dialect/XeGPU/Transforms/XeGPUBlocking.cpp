@@ -138,13 +138,10 @@ template <typename T, typename>
 std::optional<SmallVector<int64_t>>
 XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
   Value value;
-  Operation *ownerOp;
   if constexpr (std::is_same_v<T, OpOperand>) {
     value = operandOrResult.get();
-    ownerOp = operandOrResult.getOwner();
   } else {
     value = (Value)operandOrResult;
-    ownerOp = value.getDefiningOp();
   }
 
   xegpu::DistributeLayoutAttr layout =
