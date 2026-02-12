@@ -240,14 +240,6 @@ private:
     return Status;
   }
 
-  /// Returns the minimum amount of LDS space used by a workgroup running
-  /// function \p F.
-  static unsigned getLDSSize(const Function &F) {
-    return AMDGPU::getIntegerPairAttribute(F, "amdgpu-lds-size",
-                                           {0, UINT32_MAX}, true)
-        .first;
-  }
-
   /// Get the constant access bitmap for \p C.
   uint8_t getConstantAccess(const Constant *C,
                             SmallPtrSetImpl<const Constant *> &Visited) {
