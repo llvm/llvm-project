@@ -85,34 +85,34 @@ sf.vc.v.fvw 0x1, v0, v2, fa1
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]                                        [9]                        Instructions:
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	a0, zero, e32, m4, ta, ma
-# CHECK-NEXT:  1      8     4.00                  U      8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_X       sf.vc.x	3, 15, 31, a1
-# CHECK-NEXT:  1      8     4.00                  U      8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_I       sf.vc.i	3, 15, 31, 15
-# CHECK-NEXT:  1      8     4.00                  U      8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_VV      sf.vc.vv	3, 31, v2, v1
-# CHECK-NEXT:  1      8     4.00                  U      8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_XV      sf.vc.xv	3, 31, v2, a1
-# CHECK-NEXT:  1      8     4.00                  U      8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_IV      sf.vc.iv	3, 31, v2, 15
-# CHECK-NEXT:  1      8     4.00                  U      8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_FV      sf.vc.fv	1, 31, v2, fa1
-# CHECK-NEXT:  1      8     4.00                  U      8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_VVV     sf.vc.vvv	3, v0, v2, v1
-# CHECK-NEXT:  1      8     4.00                  U      8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_XVV     sf.vc.xvv	3, v0, v2, a1
-# CHECK-NEXT:  1      8     4.00                  U      8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_IVV     sf.vc.ivv	3, v0, v2, 15
-# CHECK-NEXT:  1      8     4.00                  U      8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_FVV     sf.vc.fvv	1, v0, v2, fa1
-# CHECK-NEXT:  1      8     4.00                  U      8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_VVW     sf.vc.vvw	3, v0, v2, v1
-# CHECK-NEXT:  1      8     4.00                  U      8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_XVW     sf.vc.xvw	3, v0, v2, a1
-# CHECK-NEXT:  1      8     4.00                  U      8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_IVW     sf.vc.ivw	3, v0, v2, 15
-# CHECK-NEXT:  1      8     4.00                  U      8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_FVW     sf.vc.fvw	1, v0, v2, fa1
-# CHECK-NEXT:  1      8     4.00                  U      8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_V_X     sf.vc.v.x	3, 15, v0, a1
-# CHECK-NEXT:  1      8     4.00                  U      8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_V_I     sf.vc.v.i	3, 15, v0, 15
-# CHECK-NEXT:  1      8     4.00                  U      8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_V_VV    sf.vc.v.vv	3, v0, v2, v1
-# CHECK-NEXT:  1      8     4.00                  U      8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_V_XV    sf.vc.v.xv	3, v0, v2, a1
-# CHECK-NEXT:  1      8     4.00                  U      8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_V_IV    sf.vc.v.iv	3, v0, v2, 15
-# CHECK-NEXT:  1      8     4.00                  U      8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_V_FV    sf.vc.v.fv	1, v0, v2, fa1
-# CHECK-NEXT:  1      8     4.00                  U      8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_V_VVV   sf.vc.v.vvv	3, v0, v2, v1
-# CHECK-NEXT:  1      8     4.00                  U      8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_V_XVV   sf.vc.v.xvv	3, v0, v2, a1
-# CHECK-NEXT:  1      8     4.00                  U      8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_V_IVV   sf.vc.v.ivv	3, v0, v2, 15
-# CHECK-NEXT:  1      8     4.00                  U      8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_V_FVV   sf.vc.v.fvv	1, v0, v2, fa1
-# CHECK-NEXT:  1      8     4.00                  U      8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_V_VVW   sf.vc.v.vvw	3, v0, v2, v1
-# CHECK-NEXT:  1      8     4.00                  U      8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_V_XVW   sf.vc.v.xvw	3, v0, v2, a1
-# CHECK-NEXT:  1      8     4.00                  U      8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_V_IVW   sf.vc.v.ivw	3, v0, v2, 15
-# CHECK-NEXT:  1      8     4.00                  U      8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_V_FVW   sf.vc.v.fvw	1, v0, v2, fa1
+# CHECK-NEXT:  1      8     8.00                  U      8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_X sf.vc.x	3, 15, 31, a1
+# CHECK-NEXT:  1      8     8.00                  U      8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_I sf.vc.i	3, 15, 31, 15
+# CHECK-NEXT:  1      8     8.00                  U      8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_VV sf.vc.vv	3, 31, v2, v1
+# CHECK-NEXT:  1      8     8.00                  U      8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_XV sf.vc.xv	3, 31, v2, a1
+# CHECK-NEXT:  1      8     8.00                  U      8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_IV sf.vc.iv	3, 31, v2, 15
+# CHECK-NEXT:  1      8     8.00                  U      8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_FV sf.vc.fv	1, 31, v2, fa1
+# CHECK-NEXT:  1      8     8.00                  U      8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_VVV sf.vc.vvv	3, v0, v2, v1
+# CHECK-NEXT:  1      8     8.00                  U      8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_XVV sf.vc.xvv	3, v0, v2, a1
+# CHECK-NEXT:  1      8     8.00                  U      8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_IVV sf.vc.ivv	3, v0, v2, 15
+# CHECK-NEXT:  1      8     8.00                  U      8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_FVV sf.vc.fvv	1, v0, v2, fa1
+# CHECK-NEXT:  1      8     8.00                  U      8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_VVW sf.vc.vvw	3, v0, v2, v1
+# CHECK-NEXT:  1      8     8.00                  U      8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_XVW sf.vc.xvw	3, v0, v2, a1
+# CHECK-NEXT:  1      8     8.00                  U      8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_IVW sf.vc.ivw	3, v0, v2, 15
+# CHECK-NEXT:  1      8     8.00                  U      8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_FVW sf.vc.fvw	1, v0, v2, fa1
+# CHECK-NEXT:  1      8     8.00                  U      8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_V_X sf.vc.v.x	3, 15, v0, a1
+# CHECK-NEXT:  1      8     8.00                  U      8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_V_I sf.vc.v.i	3, 15, v0, 15
+# CHECK-NEXT:  1      8     8.00                  U      8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_V_VV sf.vc.v.vv	3, v0, v2, v1
+# CHECK-NEXT:  1      8     8.00                  U      8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_V_XV sf.vc.v.xv	3, v0, v2, a1
+# CHECK-NEXT:  1      8     8.00                  U      8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_V_IV sf.vc.v.iv	3, v0, v2, 15
+# CHECK-NEXT:  1      8     8.00                  U      8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_V_FV sf.vc.v.fv	1, v0, v2, fa1
+# CHECK-NEXT:  1      8     8.00                  U      8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_V_VVV sf.vc.v.vvv	3, v0, v2, v1
+# CHECK-NEXT:  1      8     8.00                  U      8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_V_XVV sf.vc.v.xvv	3, v0, v2, a1
+# CHECK-NEXT:  1      8     8.00                  U      8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_V_IVV sf.vc.v.ivv	3, v0, v2, 15
+# CHECK-NEXT:  1      8     8.00                  U      8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_V_FVV sf.vc.v.fvv	1, v0, v2, fa1
+# CHECK-NEXT:  1      8     8.00                  U      8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_V_VVW sf.vc.v.vvw	3, v0, v2, v1
+# CHECK-NEXT:  1      8     8.00                  U      8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_V_XVW sf.vc.v.xvw	3, v0, v2, a1
+# CHECK-NEXT:  1      8     8.00                  U      8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_V_IVW sf.vc.v.ivw	3, v0, v2, 15
+# CHECK-NEXT:  1      8     8.00                  U      8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ SF_VC_V_FVW sf.vc.v.fvw	1, v0, v2, fa1
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - VLEN1024X300SiFive7FDiv
@@ -127,36 +127,36 @@ sf.vc.v.fvw 0x1, v0, v2, fa1
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]
-# CHECK-NEXT:  -      -     1.00    -     126.00 126.00 28.00   -      -
+# CHECK-NEXT:  -      -     1.00    -     252.00  -     28.00   -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    Instructions:
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -     vsetvli	a0, zero, e32, m4, ta, ma
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     sf.vc.x	3, 15, 31, a1
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     sf.vc.i	3, 15, 31, 15
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     sf.vc.vv	3, 31, v2, v1
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     sf.vc.xv	3, 31, v2, a1
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     sf.vc.iv	3, 31, v2, 15
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     sf.vc.fv	1, 31, v2, fa1
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     sf.vc.vvv	3, v0, v2, v1
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     sf.vc.xvv	3, v0, v2, a1
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     sf.vc.ivv	3, v0, v2, 15
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     sf.vc.fvv	1, v0, v2, fa1
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     sf.vc.vvw	3, v0, v2, v1
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     sf.vc.xvw	3, v0, v2, a1
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     sf.vc.ivw	3, v0, v2, 15
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     sf.vc.fvw	1, v0, v2, fa1
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     sf.vc.v.x	3, 15, v0, a1
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     sf.vc.v.i	3, 15, v0, 15
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     sf.vc.v.vv	3, v0, v2, v1
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     sf.vc.v.xv	3, v0, v2, a1
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     sf.vc.v.iv	3, v0, v2, 15
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     sf.vc.v.fv	1, v0, v2, fa1
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     sf.vc.v.vvv	3, v0, v2, v1
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     sf.vc.v.xvv	3, v0, v2, a1
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     sf.vc.v.ivv	3, v0, v2, 15
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     sf.vc.v.fvv	1, v0, v2, fa1
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     sf.vc.v.vvw	3, v0, v2, v1
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     sf.vc.v.xvw	3, v0, v2, a1
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     sf.vc.v.ivw	3, v0, v2, 15
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     sf.vc.v.fvw	1, v0, v2, fa1
+# CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     sf.vc.x	3, 15, 31, a1
+# CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     sf.vc.i	3, 15, 31, 15
+# CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     sf.vc.vv	3, 31, v2, v1
+# CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     sf.vc.xv	3, 31, v2, a1
+# CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     sf.vc.iv	3, 31, v2, 15
+# CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     sf.vc.fv	1, 31, v2, fa1
+# CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     sf.vc.vvv	3, v0, v2, v1
+# CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     sf.vc.xvv	3, v0, v2, a1
+# CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     sf.vc.ivv	3, v0, v2, 15
+# CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     sf.vc.fvv	1, v0, v2, fa1
+# CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     sf.vc.vvw	3, v0, v2, v1
+# CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     sf.vc.xvw	3, v0, v2, a1
+# CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     sf.vc.ivw	3, v0, v2, 15
+# CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     sf.vc.fvw	1, v0, v2, fa1
+# CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     sf.vc.v.x	3, 15, v0, a1
+# CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     sf.vc.v.i	3, 15, v0, 15
+# CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     sf.vc.v.vv	3, v0, v2, v1
+# CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     sf.vc.v.xv	3, v0, v2, a1
+# CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     sf.vc.v.iv	3, v0, v2, 15
+# CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     sf.vc.v.fv	1, v0, v2, fa1
+# CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     sf.vc.v.vvv	3, v0, v2, v1
+# CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     sf.vc.v.xvv	3, v0, v2, a1
+# CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     sf.vc.v.ivv	3, v0, v2, 15
+# CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     sf.vc.v.fvv	1, v0, v2, fa1
+# CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     sf.vc.v.vvw	3, v0, v2, v1
+# CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     sf.vc.v.xvw	3, v0, v2, a1
+# CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     sf.vc.v.ivw	3, v0, v2, 15
+# CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     sf.vc.v.fvw	1, v0, v2, fa1
