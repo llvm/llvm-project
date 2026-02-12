@@ -286,7 +286,9 @@ struct ExecutionPartIterator {
     stack_.emplace_back(b, e, c);
     adjust();
   }
-  template <typename R>
+  template <typename R, //
+      typename = decltype(std::declval<R>().begin()),
+      typename = decltype(std::declval<R>().end())>
   ExecutionPartIterator(const R &range, Step stepping = Step::Default,
       const ExecutionPartConstruct *construct = nullptr)
       : ExecutionPartIterator(range.begin(), range.end(), stepping, construct) {
@@ -356,7 +358,9 @@ template <typename Iterator = ExecutionPartIterator> struct ExecutionPartRange {
       Step stepping = Step::Default,
       const ExecutionPartConstruct *owner = nullptr)
       : begin_(begin, end, stepping, owner), end_() {}
-  template <typename R>
+  template <typename R,
+      typename = decltype(std::declval<R>().begin()),
+      typename = decltype(std::declval<R>().end())>
   ExecutionPartRange(const R &range, Step stepping = Step::Default,
       const ExecutionPartConstruct *owner = nullptr)
       : ExecutionPartRange(range.begin(), range.end(), stepping, owner) {}
@@ -370,11 +374,18 @@ private:
 
 struct LoopNestIterator : public ExecutionPartIterator {
   LoopNestIterator() = default;
+
   LoopNestIterator(IteratorType b, IteratorType e, Step s = Step::Default,
       const ExecutionPartConstruct *c = nullptr)
       : ExecutionPartIterator(b, e, s, c) {
     adjust();
   }
+  template <typename R, //
+      typename = decltype(std::declval<R>().begin()),
+      typename = decltype(std::declval<R>().end())>
+  LoopNestIterator(const R &range, Step stepping = Step::Default,
+      const ExecutionPartConstruct *construct = nullptr)
+      : LoopNestIterator(range.begin(), range.end(), stepping, construct) {}
 
   LoopNestIterator &operator++() {
     ExecutionPartIterator::operator++();
