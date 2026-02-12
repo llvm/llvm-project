@@ -5191,7 +5191,7 @@ static Instruction *foldMaskedAddXorPattern(BinaryOperator &I,
                                      m_Add(m_Value(X), m_ImmConstant(AddC)))),
                                  m_Value(Mask))),
                   m_Deferred(Mask)))) {
-    Constant *NotC = ConstantExpr::getNot(AddC);
+    Value *NotC = Builder.CreateNot(AddC);
     Value *NewSub = Builder.CreateSub(NotC, X, "", AddInst->hasNoUnsignedWrap(),
                                       AddInst->hasNoSignedWrap());
     return BinaryOperator::CreateAnd(NewSub, Mask);
