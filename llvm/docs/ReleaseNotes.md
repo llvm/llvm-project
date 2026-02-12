@@ -66,6 +66,9 @@ Changes to the LLVM IR
 * "denormal-fp-math" and "denormal-fp-math-f32" string attributes were
   migrated to first-class denormal_fpenv attribute.
 
+* The `"nooutline"` attribute is now writen as `nooutline`. Existing IR and
+  bitcode will be automatically updated.
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -179,10 +182,19 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------
 
-* Support for FreeBSD on MIPS64 has been removed.
-* The minimum assumed version of FreeBSD is now 14. The effect of which is that watchpoints are
+### FreeBSD
+
+#### Userspace Debugging
+
+* Support for MIPS64 has been removed.
+* The minimum assumed FreeBSD version is now 14. The effect of which is that watchpoints are
   assumed to be supported.
 * Kernel debugging support for FreeBSD on ARM has been added.
+
+#### Kernel Debugging
+
+* The crashed thread is now automatically selected on start.
+* Threads are listed in incrmental order by pid then by tid.
 
 Changes to BOLT
 ---------------

@@ -29,6 +29,8 @@ __all__ = [
     "Dialect",
     "Operand",
     "Result",
+    "register_dialect",
+    "register_operation",
     "Region",
     "Operation",
 ]
@@ -36,6 +38,8 @@ __all__ = [
 Operand = ir.Value
 Result = ir.OpResult
 Region = ir.Region
+register_dialect = _cext.register_dialect
+register_operation = _cext.register_operation
 
 
 class ConstraintLoweringContext:
@@ -203,8 +207,16 @@ class Operation(ir.OpView):
     Use `Dialect` and `.Operation` of `Dialect` subclasses instead.
     """
 
+    def __init__(*args, **kwargs):
+        raise TypeError(
+            "This class is a template and cannot be instantiated directly. "
+            "Please use a subclass that defines the operation."
+        )
+
     @classmethod
-    def __init_subclass__(cls, *, name: str = None, **kwargs):
+    def __init_subclass__(
+        cls, *, name: str | None = None, traits: list[type] | None = None, **kwargs
+    ):
         """
         This method is to perform all magic to make a `Operation` subclass works like a dataclass, like:
         - generate the method to emit IRDL operations,
@@ -224,6 +236,14 @@ class Operation(ir.OpView):
             fields.append(field)
 
         cls._fields = fields
+
+        traits = traits or []
+
+        for base in cls.__bases__:
+            if hasattr(base, "_traits"):
+                traits = base._traits + traits
+
+        cls._traits = traits
 
         # for subclasses without "name" parameter,
         # just treat them as normal classes
@@ -408,6 +428,16 @@ class Operation(ir.OpView):
                 setattr(cls, result.name, property(lambda self, i=i: self.results[i]))
 
     @classmethod
+    def _attach_traits(cls) -> None:
+        for trait in cls._traits:
+            trait.attach(cls.OPERATION_NAME)
+
+        if hasattr(cls, "verify_invariants") or hasattr(
+            cls, "verify_region_invariants"
+        ):
+            ir.DynamicOpTrait.attach(cls.OPERATION_NAME, cls)
+
+    @classmethod
     def _emit_operation(cls) -> None:
         ctx = ConstraintLoweringContext()
         operands, attrs, results, regions = partition_fields(cls._fields)
@@ -487,21 +517,21 @@ class Dialect(ir.Dialect):
         return m
 
     @classmethod
-    def load(cls) -> None:
-        if hasattr(cls, "_mlir_module"):
-            raise RuntimeError(f"Dialect {cls.name} is already loaded.")
+    def load(cls, register=True, reload=False) -> None:
+        if hasattr(cls, "_mlir_module") and not reload:
+            return
 
-        mlir_module = cls._emit_module()
-
+        cls._mlir_module = cls._emit_module()
         pm = PassManager()
         pm.add("canonicalize, cse")
-        pm.run(mlir_module.operation)
+        pm.run(cls._mlir_module.operation)
 
-        irdl.load_dialects(mlir_module)
+        irdl.load_dialects(cls._mlir_module)
 
-        _cext.register_dialect(cls)
+        if register:
+            register_dialect(cls)
 
-        for op in cls.operations:
-            _cext.register_operation(cls)(op)
-
-        cls._mlir_module = mlir_module
+            register_dialect_operation = register_operation(cls)
+            for op in cls.operations:
+                op._attach_traits()
+                register_dialect_operation(op)
