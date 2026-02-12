@@ -482,8 +482,6 @@ private:
   llvm::StringMap<std::unique_ptr<BaseRequestHandler>> request_handlers;
   /// @}
 
-  std::unique_ptr<BaseRequestHandler> unknown_request_handler;
-
   /// Event threads.
   /// @{
   void ProgressEventThread();

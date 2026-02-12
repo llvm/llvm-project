@@ -1677,11 +1677,11 @@ class DebugCommunication(object):
         }
         return self._send_recv(command_dict)
 
-    def request_unknown(self):
+    def request_custom(self, command: str, arguments: Optional[dict[str, Any]] = None):
         command_dict = {
-            "command": "unknown",
+            "command": command,
             "type": "request",
-            "arguments": {},
+            "arguments": {} if arguments is None else arguments,
         }
         return self._send_recv(command_dict)
 

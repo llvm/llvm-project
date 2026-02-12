@@ -849,10 +849,12 @@ bool DAP::HandleObject(const Message &M) {
     auto handler_pos = request_handlers.find(req->command);
     dispatcher.Set("client_data",
                    llvm::Twine("request_command:", req->command).str());
-    if (handler_pos != request_handlers.end())
+    if (handler_pos != request_handlers.end()) {
       handler_pos->second->Run(*req);
-    else
-      unknown_request_handler->Run(*req);
+    } else {
+      UnknownRequestHandler handler(*this);
+      handler.BaseRequestHandler::Run(*req);
+    }
     return true; // Success
   }
 
@@ -1572,8 +1574,6 @@ void DAP::RegisterRequests() {
   RegisterRequest<ThreadsRequestHandler>();
   RegisterRequest<VariablesRequestHandler>();
   RegisterRequest<WriteMemoryRequestHandler>();
-
-  unknown_request_handler = std::make_unique<UnknownRequestHandler>(*this);
 
   // Custom requests
   RegisterRequest<CompileUnitsRequestHandler>();
