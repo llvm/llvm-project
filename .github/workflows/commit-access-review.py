@@ -264,6 +264,10 @@ def count_prs(gh: github.Github, triage_list: dict, start_date: datetime.datetim
                 variables["after"] = data["search"]["pageInfo"]["endCursor"]
         date_begin = date_end
 
+# 4 because that's how many cores the default github runners have.  Also, if we
+# make this too high, we risk hitting some of GitHub's secondary rate limits.
+THREAD_POOL_MAX_WORKERS = 4
+
 
 def main():
     token = sys.argv[1]
@@ -293,8 +297,7 @@ def main():
 
     # Step 2 check for reviews
 
-    # 4 because that's how many cores the default github runners have.
-    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=THREAD_POOL_MAX_WORKERS) as executor:
         executor.map(
             lambda user: triage_list[user].add_reviewed(
                 get_review_count(gh, user, one_year_ago)
@@ -308,7 +311,7 @@ def main():
         sys.exit(0)
 
     # Step 3 check for number of commits
-    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=THREAD_POOL_MAX_WORKERS) as executor:
         # Override the total number of commits to not double count commits and
         # authored PRs.
         executor.map(
