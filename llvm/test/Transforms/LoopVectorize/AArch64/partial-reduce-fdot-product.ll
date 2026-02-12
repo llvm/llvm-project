@@ -891,7 +891,61 @@ for.exit:                        ; preds = %for.body
   ret float %add
 }
 
+
+define double @chained_fp_reduction_no_partial_reduce(ptr %p) #1 {
+; CHECK-LABEL: define double @chained_fp_reduction_no_partial_reduce(
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:  [[LOOP:.*]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[LOOP]] ], [ [[IV_NEXT:%.*]], %[[EXIT]] ]
+; CHECK-NEXT:    [[ACCUM:%.*]] = phi double [ 0.000000e+00, %[[LOOP]] ], [ [[ADD3:%.*]], %[[EXIT]] ]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr [11 x float], ptr [[P]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[GEP1]], i64 12
+; CHECK-NEXT:    [[LD1:%.*]] = load float, ptr [[GEP1]], align 4
+; CHECK-NEXT:    [[EXT1:%.*]] = fpext float [[LD1]] to double
+; CHECK-NEXT:    [[ADD1:%.*]] = fadd reassoc contract double [[ACCUM]], [[EXT1]]
+; CHECK-NEXT:    [[LD2:%.*]] = load float, ptr [[GEP2]], align 4
+; CHECK-NEXT:    [[EXT2:%.*]] = fpext float [[LD2]] to double
+; CHECK-NEXT:    [[ADD2:%.*]] = fadd reassoc contract double [[ADD1]], [[EXT2]]
+; CHECK-NEXT:    [[LD3:%.*]] = load float, ptr [[GEP1]], align 4
+; CHECK-NEXT:    [[EXT3:%.*]] = fpext float [[LD3]] to double
+; CHECK-NEXT:    [[ADD3]] = fadd reassoc contract double [[ADD2]], [[EXT3]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV]], 11
+; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT1:.*]], label %[[EXIT]]
+; CHECK:       [[EXIT1]]:
+; CHECK-NEXT:    [[ADD3_LCSSA:%.*]] = phi double [ [[ADD3]], %[[EXIT]] ]
+; CHECK-NEXT:    ret double [[ADD3_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %accum = phi double [ 0.000000e+00, %entry ], [ %add3, %loop ]
+  %gep1 = getelementptr [11 x float], ptr %p, i64 %iv
+  %gep2 = getelementptr i8, ptr %gep1, i64 12
+  %ld1 = load float, ptr %gep1, align 4
+  %ext1 = fpext float %ld1 to double
+  %add1 = fadd reassoc contract double %accum, %ext1
+  %ld2 = load float, ptr %gep2, align 4
+  %ext2 = fpext float %ld2 to double
+  %add2 = fadd reassoc contract double %add1, %ext2
+  %ld3 = load float, ptr %gep1, align 4
+  %ext3 = fpext float %ld3 to double
+  %add3 = fadd reassoc contract double %add2, %ext3
+  %iv.next = add i64 %iv, 1
+  %cmp = icmp eq i64 %iv, 11
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret double %add3
+}
+
 attributes #0 = { "target-features"="+sve2p1,+dotprod" }
+attributes #1 = { "target-features"="+sve" }
+
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.interleave.count", i32 1}
 !2 = distinct !{!2, !3}

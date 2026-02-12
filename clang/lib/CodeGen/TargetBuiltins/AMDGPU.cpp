@@ -12,6 +12,7 @@
 
 #include "CGBuiltin.h"
 #include "CodeGenFunction.h"
+#include "TargetInfo.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/SyncScope.h"
 #include "clang/Basic/TargetBuiltins.h"
@@ -21,6 +22,7 @@
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
+#include "llvm/Support/AtomicOrdering.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -272,6 +274,25 @@ static inline StringRef mapScopeToSPIRV(StringRef AMDGCNScope) {
   return AMDGCNScope;
 }
 
+static llvm::AtomicOrdering mapCABIAtomicOrdering(unsigned AO) {
+  // Map C11/C++11 memory ordering to LLVM memory ordering
+  assert(llvm::isValidAtomicOrderingCABI(AO));
+  switch (static_cast<llvm::AtomicOrderingCABI>(AO)) {
+  case llvm::AtomicOrderingCABI::acquire:
+  case llvm::AtomicOrderingCABI::consume:
+    return llvm::AtomicOrdering::Acquire;
+  case llvm::AtomicOrderingCABI::release:
+    return llvm::AtomicOrdering::Release;
+  case llvm::AtomicOrderingCABI::acq_rel:
+    return llvm::AtomicOrdering::AcquireRelease;
+  case llvm::AtomicOrderingCABI::seq_cst:
+    return llvm::AtomicOrdering::SequentiallyConsistent;
+  case llvm::AtomicOrderingCABI::relaxed:
+    return llvm::AtomicOrdering::Monotonic;
+  }
+  llvm_unreachable("Unknown AtomicOrderingCABI enum");
+}
+
 // For processing memory ordering and memory scope arguments of various
 // amdgcn builtins.
 // \p Order takes a C++11 compatible memory-ordering specifier and converts
@@ -284,25 +305,7 @@ void CodeGenFunction::ProcessOrderScopeAMDGCN(Value *Order, Value *Scope,
   int ord = cast<llvm::ConstantInt>(Order)->getZExtValue();
 
   // Map C11/C++11 memory ordering to LLVM memory ordering
-  assert(llvm::isValidAtomicOrderingCABI(ord));
-  switch (static_cast<llvm::AtomicOrderingCABI>(ord)) {
-  case llvm::AtomicOrderingCABI::acquire:
-  case llvm::AtomicOrderingCABI::consume:
-    AO = llvm::AtomicOrdering::Acquire;
-    break;
-  case llvm::AtomicOrderingCABI::release:
-    AO = llvm::AtomicOrdering::Release;
-    break;
-  case llvm::AtomicOrderingCABI::acq_rel:
-    AO = llvm::AtomicOrdering::AcquireRelease;
-    break;
-  case llvm::AtomicOrderingCABI::seq_cst:
-    AO = llvm::AtomicOrdering::SequentiallyConsistent;
-    break;
-  case llvm::AtomicOrderingCABI::relaxed:
-    AO = llvm::AtomicOrdering::Monotonic;
-    break;
-  }
+  AO = mapCABIAtomicOrdering(ord);
 
   // Some of the atomic builtins take the scope as a string name.
   StringRef scp;
@@ -818,11 +821,24 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       break;
     }
 
+    LLVMContext &Ctx = CGM.getLLVMContext();
     llvm::Type *LoadTy = ConvertType(E->getType());
     llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
-    llvm::Value *Val = EmitScalarExpr(E->getArg(1));
+
+    auto *AOExpr = cast<llvm::ConstantInt>(EmitScalarExpr(E->getArg(1)));
+    auto *ScopeExpr = cast<llvm::ConstantInt>(EmitScalarExpr(E->getArg(2)));
+
+    auto Scope = static_cast<SyncScope>(ScopeExpr->getZExtValue());
+    llvm::AtomicOrdering AO = mapCABIAtomicOrdering(AOExpr->getZExtValue());
+
+    StringRef ScopeStr = CGM.getTargetCodeGenInfo().getLLVMSyncScopeStr(
+        CGM.getLangOpts(), Scope, AO);
+
+    llvm::MDNode *MD =
+        llvm::MDNode::get(Ctx, {llvm::MDString::get(Ctx, ScopeStr)});
+    llvm::Value *ScopeMD = llvm::MetadataAsValue::get(Ctx, MD);
     llvm::Function *F = CGM.getIntrinsic(IID, {LoadTy});
-    return Builder.CreateCall(F, {Addr, Val});
+    return Builder.CreateCall(F, {Addr, AOExpr, ScopeMD});
   }
   case AMDGPU::BI__builtin_amdgcn_cluster_load_b32:
   case AMDGPU::BI__builtin_amdgcn_cluster_load_b64:
@@ -849,6 +865,11 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     // Should this have asan instrumentation?
     return emitBuiltinWithOneOverloadedType<5>(*this, E,
                                                Intrinsic::amdgcn_load_to_lds);
+  }
+  case AMDGPU::BI__builtin_amdgcn_load_async_to_lds: {
+    // Should this have asan instrumentation?
+    return emitBuiltinWithOneOverloadedType<5>(
+        *this, E, Intrinsic::amdgcn_load_async_to_lds);
   }
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_32x4B:
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_32x4B:
