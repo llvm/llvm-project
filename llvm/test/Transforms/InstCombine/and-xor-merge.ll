@@ -81,56 +81,52 @@ define i32 @PR75692_3(i32 %x, i32 %y) {
 }
 
 ; ((X + C) & M) ^ M --> (~C − X) & M
-define i32 @add_and_xor_fomula_basic(i32 %x, i32 %AddC, i32 %M) {
+define i32 @add_and_xor_fomula_basic(i32 %x, i32 %M) {
 ; CHECK-LABEL: @add_and_xor_fomula_basic(
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], [[ADDC:%.*]]
-; CHECK-NEXT:    [[AND1:%.*]] = xor i32 [[ADD]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = sub i32 0, [[X:%.*]]
 ; CHECK-NEXT:    [[XOR:%.*]] = and i32 [[M:%.*]], [[AND1]]
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
-  %add = add i32 %x, %AddC
+  %add = add i32 %x, -1
   %and = and i32 %add, %M
   %xor = xor i32 %and, %M
   ret i32 %xor
 }
 
-define i32 @add_and_xor_fomula_nsw(i32 %x, i32 %AddC, i32 %M) {
+define i64 @add_and_xor_fomula_nsw(i64 %x, i64 %M) {
 ; CHECK-LABEL: @add_and_xor_fomula_nsw(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X:%.*]], [[ADDC:%.*]]
-; CHECK-NEXT:    [[AND1:%.*]] = xor i32 [[ADD]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = and i32 [[M:%.*]], [[AND1]]
-; CHECK-NEXT:    ret i32 [[XOR]]
+; CHECK-NEXT:    [[AND1:%.*]] = sub i64 0, [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = and i64 [[M:%.*]], [[AND1]]
+; CHECK-NEXT:    ret i64 [[XOR]]
 ;
-  %add = add nsw i32 %x, %AddC
-  %and = and i32 %add, %M
-  %xor = xor i32 %and, %M
-  ret i32 %xor
+  %add = add nsw i64 %x, -1
+  %and = and i64 %add, %M
+  %xor = xor i64 %and, %M
+  ret i64 %xor
 }
 
-define i32 @add_and_xor_fomula_nuw(i32 %x, i32 %AddC, i32 %M) {
+define i32 @add_and_xor_fomula_nuw(i32 %x, i32 %M) {
 ; CHECK-LABEL: @add_and_xor_fomula_nuw(
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[X:%.*]], [[ADDC:%.*]]
-; CHECK-NEXT:    [[AND1:%.*]] = xor i32 [[ADD]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = and i32 [[M:%.*]], [[AND1]]
+; CHECK-NEXT:    [[M:%.*]] = sub i32 -2147483648, [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = and i32 [[M]], [[AND1:%.*]]
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
-  %add = add nuw i32 %x, %AddC
+  %add = add nuw i32 %x, 2147483647
   %and = and i32 %add, %M
   %xor = xor i32 %and, %M
   ret i32 %xor
 }
 
-define i32 @add_and_xor_fomula_nsw_nuw(i32 %x, i32 %AddC, i32 %M) {
+define i64 @add_and_xor_fomula_nsw_nuw(i64 %x, i64 %M) {
 ; CHECK-LABEL: @add_and_xor_fomula_nsw_nuw(
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[X:%.*]], [[ADDC:%.*]]
-; CHECK-NEXT:    [[AND1:%.*]] = xor i32 [[ADD]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = and i32 [[M:%.*]], [[AND1]]
-; CHECK-NEXT:    ret i32 [[XOR]]
+; CHECK-NEXT:    [[AND1:%.*]] = sub i64 -4191968325751275520, [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = and i64 [[AND1]], [[M:%.*]]
+; CHECK-NEXT:    ret i64 [[XOR]]
 ;
-  %add = add nuw nsw i32 %x, %AddC
-  %and = and i32 %add, %M
-  %xor = xor i32 %and, %M
-  ret i32 %xor
+  %add = add nuw nsw i64 %x, 21474836479223372036854775807
+  %and = and i64 %add, %M
+  %xor = xor i64 %and, %M
+  ret i64 %xor
 }
 
 define i8 @add_and_xor_basic(i8 %x) {

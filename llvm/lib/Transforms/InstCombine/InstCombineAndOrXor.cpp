@@ -5182,15 +5182,16 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
 // ((X + C) & M) ^ M --> (~C − X) & M
 static Instruction *foldMaskedAddXorPattern(BinaryOperator &I,
                                             InstCombiner::BuilderTy &Builder) {
-  Value *X, *Mask, *AddC;
+  Value *X, *Mask;
+  Constant *AddC;
   BinaryOperator *AddInst;
-
-  if (match(&I, m_Xor(m_OneUse(m_And(m_OneUse(m_CombineAnd(
-                                         m_BinOp(AddInst),
-                                         m_Add(m_Value(X), m_Value(AddC)))),
-                                     m_Value(Mask))),
-                      m_Deferred(Mask)))) {
-    Value *NotC = Builder.CreateNot(AddC);
+  if (match(&I,
+            m_Xor(m_OneUse(m_And(m_OneUse(m_CombineAnd(
+                                     m_BinOp(AddInst),
+                                     m_Add(m_Value(X), m_ImmConstant(AddC)))),
+                                 m_Value(Mask))),
+                  m_Deferred(Mask)))) {
+    Constant *NotC = ConstantExpr::getNot(AddC);
     Value *NewSub = Builder.CreateSub(NotC, X, "", AddInst->hasNoUnsignedWrap(),
                                       AddInst->hasNoSignedWrap());
     return BinaryOperator::CreateAnd(NewSub, Mask);
