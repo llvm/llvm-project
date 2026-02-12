@@ -119,6 +119,63 @@ TEST_P(MCPlusBuilderTester, AliasSmallerX0) {
                  /*OnlySmaller=*/true);
 }
 
+TEST_P(MCPlusBuilderTester, AArch64_ReverseCompAndBranch) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+  std::unique_ptr<BinaryBasicBlock> TargetBB = BF->createBasicBlock();
+  BB->addSuccessor(TargetBB.get());
+
+  // cbgt x0, #0, target
+  MCInst NeedsImmInc = MCInstBuilder(AArch64::CBGTXri)
+      .addReg(AArch64::X0)
+      .addImm(0)
+      .addExpr(MCSymbolRefExpr::create(TargetBB->getLabel(), *BC->Ctx.get()));
+  BB->addInstruction(NeedsImmInc);
+  // cblo x0, #1, target
+  MCInst NeedsImmDec = MCInstBuilder(AArch64::CBLOXri)
+      .addReg(AArch64::X0)
+      .addImm(1)
+      .addExpr(MCSymbolRefExpr::create(TargetBB->getLabel(), *BC->Ctx.get()));
+  BB->addInstruction(NeedsImmDec);
+  // cbge x0, x1, target
+  MCInst NeedsRegSwap = MCInstBuilder(AArch64::CBGEXrr)
+      .addReg(AArch64::X0)
+      .addReg(AArch64::X1)
+      .addExpr(MCSymbolRefExpr::create(TargetBB->getLabel(), *BC->Ctx.get()));
+  BB->addInstruction(NeedsRegSwap);
+  // cbgt x0, #63, target
+  MCInst Irreversible = MCInstBuilder(AArch64::CBGTXri)
+      .addReg(AArch64::X0)
+      .addImm(63)
+      .addExpr(MCSymbolRefExpr::create(TargetBB->getLabel(), *BC->Ctx.get()));
+  BB->addInstruction(Irreversible);
+
+  auto II = BB->begin();
+  ASSERT_TRUE(BC->MIB->isReversibleBranch(*II));
+  BC->MIB->reverseBranchCondition(*II, TargetBB->getLabel(), BC->Ctx.get());
+  // cblt x0, #1, target
+  ASSERT_EQ(II->getOpcode(), AArch64::CBLTXri);
+  ASSERT_EQ(II->getOperand(1).getImm(), 1);
+  II++;
+  ASSERT_TRUE(BC->MIB->isReversibleBranch(*II));
+  BC->MIB->reverseBranchCondition(*II, TargetBB->getLabel(), BC->Ctx.get());
+  // cbhi x0, #0, target
+  ASSERT_EQ(II->getOpcode(), AArch64::CBHIXri);
+  ASSERT_EQ(II->getOperand(1).getImm(), 0);
+  II++;
+  ASSERT_TRUE(BC->MIB->isReversibleBranch(*II));
+  BC->MIB->reverseBranchCondition(*II, TargetBB->getLabel(), BC->Ctx.get());
+  // cbgt x1, x0, target
+  ASSERT_EQ(II->getOpcode(), AArch64::CBGTXrr);
+  ASSERT_EQ(II->getOperand(0).getReg(), AArch64::X1);
+  ASSERT_EQ(II->getOperand(1).getReg(), AArch64::X0);
+  II++;
+  ASSERT_FALSE(BC->MIB->isReversibleBranch(*II));
+}
+
 TEST_P(MCPlusBuilderTester, AArch64_CmpJE) {
   if (GetParam() != Triple::aarch64)
     GTEST_SKIP();
