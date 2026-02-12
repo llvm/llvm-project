@@ -658,6 +658,15 @@ bool CodeGenPrepare::_run(Function &F) {
     LI->analyze(DTU->getDomTree());
   }
 
+#ifndef NDEBUG
+  if (VerifyDT)
+    assert(getDT().verify(DominatorTree::VerificationLevel::Fast) &&
+           "Incorrect DominatorTree updates in CGP");
+
+  if (VerifyLoopInfo)
+    LI->verify(getDT());
+#endif
+
   // If we are optimzing huge function, we need to consider the build time.
   // Because the basic algorithm's complex is near O(N!).
   IsHugeFunc = F.size() > HugeFuncThresholdInCGPP;
