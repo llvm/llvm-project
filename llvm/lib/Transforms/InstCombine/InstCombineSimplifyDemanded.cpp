@@ -2711,6 +2711,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       return ConstantFP::getZero(VTy);
 
     if (KnownLHS.isKnownAlways(fcPosZero) && KnownRHS.isKnownNeverNaN()) {
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(I);
+
       // nnan +0 / x -> copysign(0, rhs)
       // TODO: -0 / x => copysign(0, fneg(rhs))
       Value *Copysign = Builder.CreateCopySign(X, Y, FMF);
@@ -2726,6 +2729,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                            KnownLHS.isKnownNeverLogicalZero(Mode))) &&
          (KnownRHS.isKnownAlways(fcPosZero) ||
           (FMF.noSignedZeros() && KnownRHS.isKnownAlways(fcZero))))) {
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(I);
+
       // nnan x / 0 => copysign(inf, x);
       // nnan nsz x / -0 => copysign(inf, x);
       Value *Copysign =
