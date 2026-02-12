@@ -368,20 +368,22 @@ static mlir::Value emitX86MaskedCompareResult(CIRGenBuilderTy &builder,
 // TODO: The cgf parameter should be removed when all the NYI cases are
 // implemented.
 static std::optional<mlir::Value>
-emitX86MaskedCompare(CIRGenFunction &cgf, CIRGenBuilderTy &builder, unsigned cc,
-                     bool isSigned, ArrayRef<mlir::Value> ops,
-                     mlir::Location loc) {
+emitX86MaskedCompare(CIRGenBuilderTy &builder, unsigned cc, bool isSigned,
+                     ArrayRef<mlir::Value> ops, mlir::Location loc) {
   assert((ops.size() == 2 || ops.size() == 4) &&
          "Unexpected number of arguments");
   unsigned numElts = cast<cir::VectorType>(ops[0].getType()).getSize();
   mlir::Value cmp;
-
   if (cc == 3) {
-    cgf.cgm.errorNYI(loc, "emitX86MaskedCompare: cc == 3");
-    return {};
+    cmp = builder.getNullValue(
+        cir::VectorType::get(builder.getSIntNTy(1), numElts), loc);
   } else if (cc == 7) {
-    cgf.cgm.errorNYI(loc, "emitX86MaskedCompare cc == 7");
-    return {};
+    cir::VectorType resultTy =
+        cir::VectorType::get(builder.getSIntNTy(1), numElts);
+    llvm::APInt allOnes = llvm::APInt::getAllOnes(1);
+    cmp = cir::VecSplatOp::create(
+        builder, loc, resultTy,
+        builder.getConstAPInt(loc, builder.getSIntNTy(1), allOnes));
   } else {
     cir::CmpOpKind pred;
     switch (cc) {
@@ -425,7 +427,7 @@ static std::optional<mlir::Value> emitX86ConvertToMask(CIRGenFunction &cgf,
                                                        mlir::Value in,
                                                        mlir::Location loc) {
   cir::ConstantOp zero = builder.getNullValue(in.getType(), loc);
-  return emitX86MaskedCompare(cgf, builder, 1, true, {in, zero}, loc);
+  return emitX86MaskedCompare(builder, 1, true, {in, zero}, loc);
 }
 
 static std::optional<mlir::Value> emitX86SExtMask(CIRGenBuilderTy &builder,
@@ -1912,11 +1914,11 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_ucmpd512_mask:
   case X86::BI__builtin_ia32_ucmpq128_mask:
   case X86::BI__builtin_ia32_ucmpq256_mask:
-  case X86::BI__builtin_ia32_ucmpq512_mask:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented X86 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+  case X86::BI__builtin_ia32_ucmpq512_mask: {
+    int64_t cc = CIRGenFunction::getZExtIntValueFromConstOp(ops[2]) & 0x7;
+    return emitX86MaskedCompare(builder, cc, 1, ops,
+                                getLoc(expr->getExprLoc()));
+  }
   case X86::BI__builtin_ia32_vpcomb:
   case X86::BI__builtin_ia32_vpcomw:
   case X86::BI__builtin_ia32_vpcomd:
