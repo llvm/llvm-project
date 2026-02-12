@@ -1,4 +1,4 @@
-// RUN: cir-opt %s -verify-diagnostics
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
 
 module {
   cir.func @l0() {
@@ -6,6 +6,29 @@ module {
   }
 
   cir.func @l1() alias(@l0) { // expected-error {{function alias shall not have a body}}
+    cir.return
+  }
+}
+
+// -----
+
+module {
+  cir.func @subroutine() cc(spir_function) {
+    cir.return
+  }
+
+  cir.func @call_conv_mismatch() {
+    // expected-error @+1 {{'cir.call' op calling convention mismatch: expected spir_function, but provided spir_kernel}}
+    cir.call @subroutine() : () -> () cc(spir_kernel)
+    cir.return
+  }
+}
+
+// -----
+
+module {
+  // expected-error @+1 {{unknown calling convention}}
+  cir.func @foo() cc(foobar) {
     cir.return
   }
 }
