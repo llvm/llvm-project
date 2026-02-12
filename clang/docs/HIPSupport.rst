@@ -53,20 +53,20 @@ To compile a HIP program, use the following command:
 
 .. code-block:: shell
 
-   clang++ -c --offload-arch=gfx906 -xhip sample.cpp -o sample.o
+   clang++ -c --offload-arch=gfx1200 -xhip sample.cpp -o sample.o
 
 The ``-xhip`` option indicates that the source is a HIP program. If the file has a ``.hip`` extension,
 Clang will automatically recognize it as a HIP program:
 
 .. code-block:: shell
 
-   clang++ -c --offload-arch=gfx906 sample.hip -o sample.o
+   clang++ -c --offload-arch=gfx1200 sample.hip -o sample.o
 
 To link a HIP program, use this command:
 
 .. code-block:: shell
 
-   clang++ --hip-link --offload-arch=gfx906 sample.o -o sample
+   clang++ --hip-link --offload-arch=gfx1200 sample.o -o sample
 
 In the above command, the ``--hip-link`` flag instructs Clang to link the HIP runtime library. However,
 the use of this flag is unnecessary if a HIP input file is already present in your program.
@@ -75,9 +75,9 @@ For convenience, Clang also supports compiling and linking in a single step:
 
 .. code-block:: shell
 
-   clang++ --offload-arch=gfx906 -xhip sample.cpp -o sample
+   clang++ --offload-arch=gfx1200 -xhip sample.cpp -o sample
 
-In the above commands, ``gfx906`` is the GPU architecture that the code is being compiled for. The supported GPU
+In the above commands, ``gfx1200`` is the GPU architecture that the code is being compiled for. The supported GPU
 architectures can be found in the `AMDGPU Processor Table <https://llvm.org/docs/AMDGPUUsage.html#processors>`_.
 Alternatively, you can use the ``amdgpu-arch`` tool that comes with Clang to list the GPU architecture on your system:
 
@@ -411,6 +411,74 @@ Example Usage
    __host__ __device__ float __Four(float f) { return 2.0f * f; }
    __host__ __device__ int Four(void) __attribute__((weak, alias("_Z6__Fourv")));
    __host__ __device__ float Four(float f) __attribute__((weak, alias("_Z6__Fourf")));
+
+Profile Guided Optimization (PGO)
+=================================
+
+Clang supports Profile Guided Optimization (PGO) for HIP, enabling optimization
+of both host and device code based on runtime execution profiles.
+
+Workflow
+--------
+
+The PGO workflow consists of three phases:
+
+1. **Instrumented Build**: Compile with ``-fprofile-generate`` to create an
+   instrumented binary that collects execution profiles:
+
+   .. code-block:: shell
+
+      clang++ -O2 -fprofile-generate --offload-arch=gfx1200 -xhip app.hip -o app_instrumented
+
+2. **Profile Collection**: Run the instrumented binary with representative
+   workloads. This generates separate profile files for host and device:
+
+   .. code-block:: shell
+
+      ./app_instrumented
+      # Creates: default_<id>.profraw (host)
+      #          default_<id>.amdgcn-amd-amdhsa.<tu>.profraw (device)
+
+3. **Merge Profiles**: Use ``llvm-profdata`` to merge the raw profiles:
+
+   .. code-block:: shell
+
+      # Merge host profiles
+      llvm-profdata merge -o app.profdata default_*_0.profraw
+
+      # Merge device profiles
+      llvm-profdata merge -o app.amdgcn-amd-amdhsa.profdata \
+          default_*.amdgcn-amd-amdhsa.*.profraw
+
+4. **Optimized Build**: Rebuild with ``-fprofile-use``, specifying separate
+   profile files for host and device using ``-Xarch_host`` and ``-Xarch_device``:
+
+   .. code-block:: shell
+
+      clang++ -O2 --offload-arch=gfx1200 -xhip app.hip -o app_optimized \
+          -Xarch_host -fprofile-use=app.profdata \
+          -Xarch_device -fprofile-use=app.amdgcn-amd-amdhsa.profdata
+
+Debug Output
+------------
+
+Set ``LLVM_PROFILE_VERBOSE=1`` to see diagnostic messages during profile
+collection:
+
+.. code-block:: shell
+
+   LLVM_PROFILE_VERBOSE=1 ./app_instrumented
+
+This shows information about profile data registration, device memory
+operations, and profile file creation.
+
+Limitations
+-----------
+
+- Device PGO is supported only on AMD GPUs with HIP.
+- Value profiling is not supported for device code.
+- The ``--wave-size`` option to ``llvm-profdata merge`` can be used to specify
+  the wave size for uniformity analysis (default: 32).
 
 C++17 Class Template Argument Deduction (CTAD) Support
 ======================================================

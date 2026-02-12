@@ -23,6 +23,7 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -33,12 +34,15 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
@@ -50,6 +54,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -160,6 +165,28 @@ cl::opt<bool> SpeculativeCounterPromotionToLoop(
              " update can be further/iteratively promoted into an acyclic "
              " region."));
 
+static cl::opt<unsigned> OffloadProfilingThreadBitWidth(
+    "offload-profiling-thread-bitwidth",
+    cl::desc("Bit width that encodes the number of profiling threads on the "
+             "offload device.  The actual thread count used is "
+             "(1 << bitwidth) - 1.  Supported for AMDGPU only."),
+    cl::init(8));
+
+enum class OffloadPGOSamplingMode {
+  PatternOverflow, // sampling by pattern, overflow slot, non-atomic store
+  AtomicWarpLeader // no sampling; warp leader uses atomicrmw add 1
+};
+
+static llvm::cl::opt<OffloadPGOSamplingMode> OffloadPGOSampling(
+    "offload-pgo-sampling-mode", llvm::cl::desc("Offload PGO sampling mode"),
+    llvm::cl::values(
+        clEnumValN(OffloadPGOSamplingMode::PatternOverflow, "pattern-overflow",
+                   "Use sampling pattern and overflow slot (default)"),
+        clEnumValN(
+            OffloadPGOSamplingMode::AtomicWarpLeader, "atomic-warp-leader",
+            "Leader lane only; atomic increment per slot; no overflow slot")),
+    llvm::cl::init(OffloadPGOSamplingMode::AtomicWarpLeader));
+
 cl::opt<bool> IterativeCounterPromotion(
     "iterative-counter-promotion", cl::init(true),
     cl::desc("Allow counter promotion across the whole loop nest."));
@@ -242,6 +269,20 @@ static bool profDataReferencedByCode(const Module &M) {
   return enablesValueProfiling(M);
 }
 
+// Extract CUID (Compilation Unit ID) from the module.
+// HIP/CUDA modules have a global variable __hip_cuid_<hash> that uniquely
+// identifies each translation unit. Returns empty string if not found.
+static std::string getCUIDFromModule(const Module &M) {
+  for (const GlobalVariable &GV : M.globals()) {
+    StringRef Name = GV.getName();
+    if (Name.starts_with("__hip_cuid_")) {
+      // Extract the hash suffix after "__hip_cuid_"
+      return Name.drop_front(strlen("__hip_cuid_")).str();
+    }
+  }
+  return "";
+}
+
 class InstrLowerer final {
 public:
   InstrLowerer(Module &M, const InstrProfOptions &Options,
@@ -266,7 +307,8 @@ private:
   struct PerFunctionProfileData {
     uint32_t NumValueSites[IPVK_Last + 1] = {};
     GlobalVariable *RegionCounters = nullptr;
-    GlobalVariable *DataVar = nullptr;
+    GlobalVariable *UniformCounters = nullptr; // For AMDGPU divergence tracking
+    GlobalValue *DataVar = nullptr;
     GlobalVariable *RegionBitmaps = nullptr;
     uint32_t NumBitmapBytes = 0;
 
@@ -287,6 +329,24 @@ private:
   std::vector<GlobalVariable *> ReferencedVTables;
   GlobalVariable *NamesVar = nullptr;
   size_t NamesSize = 0;
+
+  // For GPU targets: per-TU contiguous allocation of profile data.
+  // Instead of separate per-function counters (which linker can reorder),
+  // we allocate one contiguous array for all counters in the TU.
+  GlobalVariable *ContiguousCnts = nullptr; // All counters in one array
+  GlobalVariable *ContiguousData =
+      nullptr; // All __llvm_profile_data in one array
+  GlobalVariable *ContiguousUCnts =
+      nullptr; // All uniform counters in one array
+  StructType *ProfileDataTy = nullptr;
+  SmallVector<Constant *, 16> ContiguousDataInits;
+  std::string CachedCUID; // CUID cached for consistent section naming
+
+  // Map from function name GlobalVariable to offset in contiguous arrays
+  DenseMap<GlobalVariable *, uint64_t> FunctionCounterOffsets;
+  DenseMap<GlobalVariable *, uint64_t> FunctionDataOffsets;
+  uint64_t TotalCounterSlots = 0; // Total slots across all functions
+  uint64_t TotalDataEntries = 0;  // Total __llvm_profile_data entries
 
   // vector of counter load/store pairs to be register promoted.
   std::vector<LoadStorePair> PromotionCandidates;
@@ -325,6 +385,9 @@ private:
   /// Replace instrprof.increment with an increment of the appropriate value.
   void lowerIncrement(InstrProfIncrementInst *Inc);
 
+  /// AMDGPU specific implementation of lowerIncrement.
+  void lowerIncrementAMDGPU(InstrProfIncrementInst *Inc);
+
   /// Force emitting of name vars for unused functions.
   void lowerCoverageData(GlobalVariable *CoverageNamesVar);
 
@@ -348,6 +411,10 @@ private:
   /// If the counter array doesn't yet exist, the profile data variables
   /// referring to them will also be created.
   GlobalVariable *getOrCreateRegionCounters(InstrProfCntrInstBase *Inc);
+
+  /// Get the uniform entry counters for AMDGPU divergence tracking.
+  /// These counters track how often blocks are entered with all lanes active.
+  GlobalVariable *getOrCreateUniformCounters(InstrProfCntrInstBase *Inc);
 
   /// Create the region counters.
   GlobalVariable *createRegionCounters(InstrProfCntrInstBase *Inc,
@@ -408,6 +475,30 @@ private:
   /// Create a static initializer for our data, on platforms that need it,
   /// and for any profile output file that was specified.
   void emitInitialization();
+
+  /// For GPU targets: Collect all profiling intrinsics and allocate
+  /// contiguous arrays for counters, data, and uniform counters.
+  /// This avoids linker reordering issues with section boundaries.
+  void allocateContiguousProfileArrays();
+
+  /// Return the __llvm_profile_data struct type.
+  StructType *getProfileDataTy();
+
+  /// Finalize initializer for contiguous __llvm_profile_data array.
+  void finalizeContiguousProfileData();
+
+  /// Create __llvm_offload_prf structure for GPU targets.
+  /// Must be called AFTER contiguous arrays are allocated.
+  void createProfileSectionSymbols();
+
+  /// Create HIP device variable registration for profile symbols
+  void createHIPDeviceVariableRegistration();
+
+  /// Create HIP dynamic module registration call
+  void createHIPDynamicModuleRegistration();
+
+  /// Create HIP dynamic module unregistration call
+  void createHIPDynamicModuleUnregistration();
 };
 
 ///
@@ -939,6 +1030,10 @@ bool InstrLowerer::lower() {
   if (!ContainsProfiling && !CoverageNamesVar)
     return MadeChange;
 
+  // For GPU targets: allocate contiguous arrays for all profile data.
+  // This avoids linker reordering issues with per-function arrays.
+  allocateContiguousProfileArrays();
+
   // We did not know how many value sites there would be inside
   // the instrumented function. This is counting the number of instrumented
   // target value sites to enter it as field in the profile data variable.
@@ -983,9 +1078,21 @@ bool InstrLowerer::lower() {
   if (!MadeChange)
     return false;
 
+  finalizeContiguousProfileData();
+
   emitVNodes();
   emitNameData();
   emitVTableNames();
+
+  // Create start/stop symbols for device code profile sections
+  createProfileSectionSymbols();
+
+  // Create host shadow variables and registration calls for HIP device profile
+  // symbols
+  createHIPDeviceVariableRegistration();
+
+  createHIPDynamicModuleRegistration();
+  createHIPDynamicModuleUnregistration();
 
   // Emit runtime hook for the cases where the target does not unconditionally
   // require pulling in profile runtime, and coverage is enabled on code that is
@@ -1046,7 +1153,7 @@ void InstrLowerer::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   assert(It != ProfileDataMap.end() && It->second.DataVar &&
          "value profiling detected in function with no counter increment");
 
-  GlobalVariable *DataVar = It->second.DataVar;
+  GlobalValue *DataVar = It->second.DataVar;
   uint64_t ValueKind = Ind->getValueKind()->getZExtValue();
   uint64_t Index = Ind->getIndex()->getZExtValue();
   for (uint32_t Kind = IPVK_First; Kind < ValueKind; ++Kind)
@@ -1058,7 +1165,7 @@ void InstrLowerer::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   CallInst *Call = nullptr;
   auto *TLI = &GetTLI(*Ind->getFunction());
   auto *NormalizedDataVarPtr = ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-      DataVar, PointerType::get(M.getContext(), 0));
+      cast<Constant>(DataVar), PointerType::get(M.getContext(), 0));
 
   // To support value profiling calls within Windows exception handlers, funclet
   // information contained within operand bundles needs to be copied over to
@@ -1108,6 +1215,9 @@ GlobalVariable *InstrLowerer::getOrCreateBiasVar(StringRef VarName) {
 }
 
 Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
+  // Note: For AMDGPU targets, lowerIncrementAMDGPU handles counter addressing
+  // directly using ContiguousCnts. This function is called for non-AMDGPU
+  // targets.
   auto *Counters = getOrCreateRegionCounters(I);
   IRBuilder<> Builder(I);
 
@@ -1190,6 +1300,10 @@ void InstrLowerer::lowerTimestamp(
 }
 
 void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
+  if (TT.isAMDGPU()) {
+    lowerIncrementAMDGPU(Inc);
+    return;
+  }
   auto *Addr = getCounterAddress(Inc);
 
   IRBuilder<> Builder(Inc);
@@ -1205,6 +1319,436 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
     if (isCounterPromotionEnabled())
       PromotionCandidates.emplace_back(cast<Instruction>(Load), Store);
   }
+  Inc->eraseFromParent();
+}
+
+// Determine the wavefront size for an AMDGPU function.
+// Checks target-features attribute first (+wavefrontsize32/+wavefrontsize64),
+// then falls back to the default wavefront size for the target-cpu.
+// Returns 32 or 64. Defaults to 32 if undetermined.
+static unsigned getAMDGPUWavefrontSize(const Function &F) {
+  // Check target-features attribute for explicit wavefront size
+  StringRef Features = F.getFnAttribute("target-features").getValueAsString();
+  if (Features.contains("+wavefrontsize64"))
+    return 64;
+  if (Features.contains("+wavefrontsize32"))
+    return 32;
+
+  // Fall back to default wavefront size based on target-cpu
+  StringRef CPU = F.getFnAttribute("target-cpu").getValueAsString();
+  if (!CPU.empty()) {
+    AMDGPU::GPUKind Kind = AMDGPU::parseArchAMDGCN(CPU);
+    unsigned Features = AMDGPU::getArchAttrAMDGCN(Kind);
+    if (Features & AMDGPU::FEATURE_WAVE32)
+      return 32;
+    return 64; // gfx9 and older default to Wave64
+  }
+
+  return 32; // conservative default
+}
+
+// Lowers an InstrProfIncrementInst for AMDGPU to per-wave aggregated counter
+// updates. It computes a "slot" index based on block and warp-local indices,
+// elects a leader lane, and increments a counter by (Inc->getStep() *
+// number_of_active_lanes) to reflect that only one lane performs the update on
+// behalf of the whole wave.
+//
+// Supports both Wave32 and Wave64:
+// - Wave32: uses ballot.i32, mbcnt.lo, lane = mbcnt & 31, kWaveBits = 5
+// - Wave64: uses ballot.i64, mbcnt.lo + mbcnt.hi, lane = mbcnt & 63,
+//   kWaveBits = 6
+// - OffloadProfilingThreadBitWidth (KSlotBits) >= kWaveBits.
+// - Two modes:
+//   - PatternOverflow: performs a non-atomic RMW, routes to an overflow slot
+//   based on sampling.
+//   - AtomicWarpLeader: only the elected leader performs an atomic add.
+// - Inc->getStep() is an LLVM integer-typed Value (often a constant 1), and may
+// not equal 1.
+// - The increment amount in both modes is Inc->getStep() *
+// popcount(activeMask).
+void InstrLowerer::lowerIncrementAMDGPU(InstrProfIncrementInst *Inc) {
+  IRBuilder<> Builder(Inc);
+  LLVMContext &Context = M.getContext();
+  auto *Int1Ty = Type::getInt1Ty(Context);
+  auto *Int8Ty = Type::getInt8Ty(Context);
+  auto *Int16Ty = Type::getInt16Ty(Context);
+  auto *Int32Ty = Type::getInt32Ty(Context);
+  auto *Int64Ty = Type::getInt64Ty(Context);
+
+  // Determine wavefront size from the function being instrumented
+  const unsigned WavefrontSize = getAMDGPUWavefrontSize(*Inc->getFunction());
+  const bool IsWave64 = (WavefrontSize == 64);
+  const unsigned kWaveBits = IsWave64 ? 6u : 5u; // log2(wavefront size)
+
+  // Constants/configuration
+  const unsigned KSlotBits = OffloadProfilingThreadBitWidth;
+  const unsigned KSlots = 1u << KSlotBits;
+  const unsigned KOverflow = KSlots - 1u; // only used in PatternOverflow mode
+  const unsigned KPattern14 = 0x2A3Fu;    // only used in PatternOverflow mode
+
+  if (KSlotBits < kWaveBits)
+    report_fatal_error("OffloadProfilingThreadBitWidth must be >= " +
+                       Twine(kWaveBits) + " for wave" + Twine(WavefrontSize));
+
+  // --- Get thread and block identifiers ---
+  FunctionCallee BlockIdxXFn =
+      M.getOrInsertFunction("llvm.amdgcn.workgroup.id.x", Int32Ty);
+  Value *BlockIdxX = Builder.CreateCall(BlockIdxXFn, {}, "BlockIdxX");
+
+  FunctionCallee BlockIdxYFn =
+      M.getOrInsertFunction("llvm.amdgcn.workgroup.id.y", Int32Ty);
+  Value *BlockIdxY = Builder.CreateCall(BlockIdxYFn, {}, "BlockIdxY");
+
+  FunctionCallee BlockIdxZFn =
+      M.getOrInsertFunction("llvm.amdgcn.workgroup.id.z", Int32Ty);
+  Value *BlockIdxZ = Builder.CreateCall(BlockIdxZFn, {}, "BlockIdxZ");
+
+  FunctionCallee ThreadIdxFn =
+      M.getOrInsertFunction("llvm.amdgcn.workitem.id.x", Int32Ty);
+  Value *ThreadIdx = Builder.CreateCall(ThreadIdxFn, {}, "ThreadIdxX");
+
+  // --- Get launch-time data from implicit arguments ---
+  FunctionCallee ImplicitArgFn = M.getOrInsertFunction(
+      "llvm.amdgcn.implicitarg.ptr", PointerType::get(Context, 4));
+  Value *ImplicitArgPtr = Builder.CreateCall(ImplicitArgFn, {});
+
+  // hidden_block_count_x (i32) at offset 0
+  Value *GridDimX = Builder.CreateLoad(Int32Ty, ImplicitArgPtr, "GridDimX");
+
+  // hidden_block_count_y (i32) at offset 4
+  Value *GridDimYAddr = Builder.CreateInBoundsGEP(
+      Int8Ty, ImplicitArgPtr, ConstantInt::get(Int64Ty, 4), "GridDimYAddr");
+  Value *GridDimY = Builder.CreateLoad(Int32Ty, GridDimYAddr, "GridDimY");
+
+  // hidden_block_count_z (i32) at offset 8
+  Value *GridDimZAddr = Builder.CreateInBoundsGEP(
+      Int8Ty, ImplicitArgPtr, ConstantInt::get(Int64Ty, 8), "GridDimZAddr");
+  Value *GridDimZ = Builder.CreateLoad(Int32Ty, GridDimZAddr, "GridDimZ");
+
+  // blockDim.x (i16) at offset 12
+  Value *BlockDimXAddr = Builder.CreateInBoundsGEP(
+      Int8Ty, ImplicitArgPtr, ConstantInt::get(Int64Ty, 12), "BlockDimXAddr");
+  Value *BlockDimX = Builder.CreateLoad(Int16Ty, BlockDimXAddr, "BlockDimX");
+
+  // --- Linearize 3D block index ---
+  // LinearBlockId = blockIdx.x + blockIdx.y * gridDim.x
+  //               + blockIdx.z * gridDim.x * gridDim.y
+  Value *GridDimXY = Builder.CreateMul(GridDimX, GridDimY, "GridDimXY");
+  Value *BlockIdx = Builder.CreateAdd(
+      BlockIdxX,
+      Builder.CreateAdd(Builder.CreateMul(BlockIdxY, GridDimX, "yTimesGx"),
+                        Builder.CreateMul(BlockIdxZ, GridDimXY, "zTimesGxy"),
+                        "yzContrib"),
+      "LinearBlockId");
+
+  // Total number of blocks across all dimensions
+  Value *TotalGridSize =
+      Builder.CreateMul(GridDimXY, GridDimZ, "TotalGridSize");
+
+  // --- Optional: 64-bit gid (not used by slot calc, but useful to keep) ---
+  Value *BlockIdx64 =
+      Builder.CreateZExt(BlockIdx, Int64Ty, "LinearBlockId.zext");
+  Value *ThreadIdx64 =
+      Builder.CreateZExt(ThreadIdx, Int64Ty, "ThreadIdxX.zext");
+  Value *BlockDimX64 = Builder.CreateZExt(BlockDimX, Int64Ty, "BlockDimX.zext");
+  Value *Gid = Builder.CreateAdd(Builder.CreateMul(BlockIdx64, BlockDimX64),
+                                 ThreadIdx64, "Gid");
+  (void)Gid;
+
+  // ----------------------------
+  // Common slot computation
+  // ----------------------------
+
+  // Compute lane ID within the wave.
+  // Wave32: lane = mbcnt.lo(0xFFFFFFFF, 0) & 31
+  // Wave64: lane = mbcnt.hi(0xFFFFFFFF, mbcnt.lo(0xFFFFFFFF, 0)) & 63
+  auto *MbcntLoTy = FunctionType::get(Int32Ty, {Int32Ty, Int32Ty}, false);
+  FunctionCallee MbcntLoFnByName =
+      M.getOrInsertFunction("llvm.amdgcn.mbcnt.lo", MbcntLoTy);
+  Value *FullMask32 = ConstantInt::getSigned(Int32Ty, -1);
+  Value *MbcntLo = Builder.CreateCall(
+      MbcntLoFnByName, {FullMask32, ConstantInt::get(Int32Ty, 0)}, "mbcnt.lo");
+  Value *LaneId;
+  if (IsWave64) {
+    FunctionCallee MbcntHiFnByName =
+        M.getOrInsertFunction("llvm.amdgcn.mbcnt.hi", MbcntLoTy);
+    Value *MbcntHi =
+        Builder.CreateCall(MbcntHiFnByName, {FullMask32, MbcntLo}, "mbcnt.hi");
+    LaneId = Builder.CreateAnd(MbcntHi, WavefrontSize - 1, "lane");
+  } else {
+    LaneId = Builder.CreateAnd(MbcntLo, WavefrontSize - 1, "lane");
+  }
+
+  // waveLocal = threadIdx.x >> kWaveBits
+  Value *WarpLocal = Builder.CreateLShr(ThreadIdx, kWaveBits, "warpLocal");
+
+  // blockBits = (totalGridSize > 1) ? (32 - ctlz(totalGridSize - 1)) : 1
+  Value *GridGt1 = Builder.CreateICmpUGT(
+      TotalGridSize, ConstantInt::get(Int32Ty, 1), "grid_gt_1");
+  Value *TotalGridMinus1 = Builder.CreateSub(
+      TotalGridSize, ConstantInt::get(Int32Ty, 1), "totalGrid_minus_1");
+  FunctionCallee CtlzI32Fn =
+      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::ctlz, {Int32Ty});
+  Value *CtlzVal =
+      Builder.CreateCall(CtlzI32Fn, {TotalGridMinus1, Builder.getFalse()},
+                         "ctlz_totalGrid_minus_1");
+  Value *BlockBitsCandidate = Builder.CreateSub(ConstantInt::get(Int32Ty, 32),
+                                                CtlzVal, "blockBits_cand");
+  Value *BlockBits = Builder.CreateSelect(
+      GridGt1, BlockBitsCandidate, ConstantInt::get(Int32Ty, 1), "blockBits");
+
+  // usedForHi = min(blockBits, KSlotBits - kWaveBits)
+  Value *SlotHiBits = ConstantInt::get(Int32Ty, (int)(KSlotBits - kWaveBits));
+  Value *BlockLtSlotHi = Builder.CreateICmpULT(BlockBits, SlotHiBits);
+  Value *UsedForHi =
+      Builder.CreateSelect(BlockLtSlotHi, BlockBits, SlotHiBits, "usedForHi");
+
+  // sampBits = blockBits - usedForHi
+  Value *SampBits = Builder.CreateSub(BlockBits, UsedForHi, "sampBits");
+  Value *SampBitsIsZero = Builder.CreateIsNull(SampBits, "sampBits_is_zero");
+
+  // blockHi = (sampBits == 0) ? linearBlockId : (linearBlockId >> sampBits)
+  Value *BlockHiShifted =
+      Builder.CreateLShr(BlockIdx, SampBits, "blockHi_shifted");
+  Value *BlockHi =
+      Builder.CreateSelect(SampBitsIsZero, BlockIdx, BlockHiShifted, "blockHi");
+
+  // slotRaw = (blockHi << kWaveBits) | waveLocal
+  Value *SlotRawUpper = Builder.CreateShl(BlockHi, kWaveBits, "slotRaw_upper");
+  Value *SlotRaw = Builder.CreateOr(SlotRawUpper, WarpLocal, "slotRaw");
+
+  // Find wave leader using ballot + cttz.
+  // Wave32: ballot.i32, cttz.i32, ctpop.i32
+  // Wave64: ballot.i64, cttz.i64, ctpop.i64
+  Type *BallotIntTy = IsWave64 ? Int64Ty : Int32Ty;
+  auto *BallotFnTy = FunctionType::get(BallotIntTy, {Int1Ty}, false);
+  FunctionCallee BallotFn = M.getOrInsertFunction(
+      IsWave64 ? "llvm.amdgcn.ballot.i64" : "llvm.amdgcn.ballot.i32",
+      BallotFnTy);
+  Value *ActiveMask = Builder.CreateCall(
+      BallotFn, {ConstantInt::getTrue(Context)}, "activeMask");
+
+  FunctionCallee CttzFn =
+      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::cttz, {BallotIntTy});
+  Value *ActiveMaskNonZero = Builder.CreateICmpNE(
+      ActiveMask, ConstantInt::get(BallotIntTy, 0), "mask_nz");
+  Value *LeaderLane64 = Builder.CreateCall(
+      CttzFn, {ActiveMask, ConstantInt::getTrue(Context)}, "leaderLane");
+  // Truncate to i32 for comparison with lane ID
+  Value *LeaderLane =
+      IsWave64 ? Builder.CreateTrunc(LeaderLane64, Int32Ty, "leaderLane.trunc")
+               : LeaderLane64;
+  Value *IsLeader = Builder.CreateICmpEQ(LaneId, LeaderLane, "isLeader");
+  Value *IsLeaderGuarded =
+      Builder.CreateSelect(ActiveMaskNonZero, IsLeader,
+                           ConstantInt::getFalse(Context), "isLeader_guarded");
+
+  // Compute number of active lanes and step * active lanes
+  FunctionCallee CtpopFn =
+      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::ctpop, {BallotIntTy});
+  Value *NumActive = Builder.CreateCall(CtpopFn, {ActiveMask}, "numActive");
+  // ctpop returns the same type as its argument; truncate to i32 if needed
+  if (IsWave64)
+    NumActive = Builder.CreateTrunc(NumActive, Int32Ty, "numActive.trunc");
+
+  Value *IncStep = Inc->getStep(); // integer-typed Value (often i64)
+  Value *NumActiveCast = Builder.CreateZExtOrTrunc(
+      NumActive, IncStep->getType(), "numActive.cast");
+  Value *StepTimesActive =
+      Builder.CreateMul(IncStep, NumActiveCast, "step_times_active");
+
+  // Check if all lanes are active (uniform execution).
+  // Wave32: full mask = 0xFFFFFFFF
+  // Wave64: full mask = 0xFFFFFFFFFFFFFFFF
+  // Partial waves (last wave of workgroup) will be conservatively marked
+  // as divergent.
+  Value *FullWaveMask = ConstantInt::getSigned(BallotIntTy, -1);
+  Value *IsUniform =
+      Builder.CreateICmpEQ(ActiveMask, FullWaveMask, "isUniform");
+
+  // ----------------------------
+  // Mode-dependent writer logic
+  // ----------------------------
+
+  Value *Slot = nullptr;
+  Value *IsWriter = nullptr;
+
+  if (OffloadPGOSampling == OffloadPGOSamplingMode::PatternOverflow) {
+    // Sampling mask/pattern over low sampBits of linearBlockId
+    Value *One32 = ConstantInt::get(Int32Ty, 1);
+    Value *SampMaskShift =
+        Builder.CreateShl(One32, SampBits, "sampMask_shift"); // 1<<sampBits
+    Value *SampMaskMinus1 =
+        Builder.CreateSub(SampMaskShift, One32, "sampMask_minus1");
+    Value *SampMask =
+        Builder.CreateSelect(SampBitsIsZero, ConstantInt::get(Int32Ty, 0),
+                             SampMaskMinus1, "sampMask");
+
+    // sampPat = KPattern14 & sampMask
+    Value *SampPat = Builder.CreateAnd(ConstantInt::get(Int32Ty, KPattern14),
+                                       SampMask, "sampPat");
+
+    // matched = (sampBits == 0) ? true : ((linearBlockId & sampMask) ==
+    // sampPat)
+    Value *BlockMasked = Builder.CreateAnd(BlockIdx, SampMask, "blockMasked");
+    Value *CmpMaskPat =
+        Builder.CreateICmpEQ(BlockMasked, SampPat, "cmp_mask_pat");
+    Value *Matched = Builder.CreateSelect(
+        SampBitsIsZero, ConstantInt::getTrue(Context), CmpMaskPat, "matched");
+
+    // Only leader writes when matched
+    IsWriter = Builder.CreateAnd(IsLeaderGuarded, Matched, "isWriter");
+
+    // Route to overflow if not writer or slotRaw == KOverflow
+    Value *SlotRawIsOverflow = Builder.CreateICmpEQ(
+        SlotRaw, ConstantInt::get(Int32Ty, KOverflow), "slot_is_overflow");
+    Value *GoodWriter = Builder.CreateAnd(
+        IsWriter, Builder.CreateNot(SlotRawIsOverflow), "goodWriter");
+    Slot = Builder.CreateSelect(GoodWriter, SlotRaw,
+                                ConstantInt::get(Int32Ty, KOverflow), "Slot");
+  } else {
+    // AtomicWarpLeader: no sampling, no overflow. Only the leader writes
+    // atomically.
+    IsWriter = IsLeaderGuarded;
+    Slot = SlotRaw;
+  }
+
+  // --- Calculate final counter index ---
+  auto *OldCounterIdx = Inc->getIndex();
+  auto *NumSlots = Builder.getInt32(KSlots);
+  auto *CounterIdxBase = Builder.CreateMul(OldCounterIdx, NumSlots);
+  auto *CounterIdx = Builder.CreateAdd(CounterIdxBase, Slot, "CounterIdx");
+
+  // --- Counter address ---
+  // For contiguous allocation, use the contiguous array with function offset
+  GlobalVariable *Counters = nullptr;
+  GlobalVariable *UniformCounters = nullptr;
+  Value *Addr = nullptr;
+  Value *UniformAddr = nullptr;
+
+  if (ContiguousCnts) {
+    // Contiguous allocation mode: use offset into shared array
+    GlobalVariable *NamePtr = Inc->getName();
+    uint64_t FuncOffset = FunctionCounterOffsets.lookup(NamePtr);
+
+    // Add function offset to counter index
+    Value *OffsetCounterIdx = Builder.CreateAdd(
+        CounterIdx, Builder.getInt32(FuncOffset), "OffsetCounterIdx");
+
+    Counters = ContiguousCnts;
+    Value *Indices[] = {Builder.getInt32(0), OffsetCounterIdx};
+    Addr = Builder.CreateInBoundsGEP(Counters->getValueType(), Counters,
+                                     Indices, "ctr.addr");
+
+    // Uniform counters also use contiguous array
+    if (ContiguousUCnts) {
+      UniformCounters = ContiguousUCnts;
+      Value *UniformIndices[] = {Builder.getInt32(0), OffsetCounterIdx};
+      UniformAddr = Builder.CreateInBoundsGEP(UniformCounters->getValueType(),
+                                              UniformCounters, UniformIndices,
+                                              "unifctr.addr");
+    }
+  } else {
+    // Per-function allocation mode (non-GPU or fallback)
+    Counters = getOrCreateRegionCounters(Inc);
+    Value *Indices[] = {Builder.getInt32(0), CounterIdx};
+    Addr = Builder.CreateInBoundsGEP(Counters->getValueType(), Counters,
+                                     Indices, "ctr.addr");
+
+    // Uniform counter address (for divergence tracking)
+    UniformCounters = getOrCreateUniformCounters(Inc);
+    if (UniformCounters) {
+      Value *UniformIndices[] = {Builder.getInt32(0), CounterIdx};
+      UniformAddr = Builder.CreateInBoundsGEP(UniformCounters->getValueType(),
+                                              UniformCounters, UniformIndices,
+                                              "unifctr.addr");
+    }
+  }
+
+  // --- Increment ---
+  if (OffloadPGOSampling == OffloadPGOSamplingMode::PatternOverflow) {
+    // Non-atomic increment by (Inc->getStep() * numActive) (legacy mode)
+    Type *CounterTy =
+        cast<ArrayType>(Counters->getValueType())->getElementType();
+    Value *Load = Builder.CreateLoad(CounterTy, Addr, "pgocount");
+    Value *ProdToCounterTy = Builder.CreateZExtOrTrunc(
+        StepTimesActive, CounterTy, "step_times_active.cast");
+    auto *Count = Builder.CreateAdd(Load, ProdToCounterTy, "pgocount.next");
+    Builder.CreateStore(Count, Addr);
+
+    // Also update uniform counter if uniform
+    if (UniformAddr) {
+      Value *UniformLoad =
+          Builder.CreateLoad(CounterTy, UniformAddr, "unifcount");
+      // Only add to uniform counter if IsUniform is true
+      Value *UniformIncr =
+          Builder.CreateSelect(IsUniform, ProdToCounterTy,
+                               ConstantInt::get(CounterTy, 0), "unifincr");
+      auto *UniformCount =
+          Builder.CreateAdd(UniformLoad, UniformIncr, "unifcount.next");
+      Builder.CreateStore(UniformCount, UniformAddr);
+    }
+  } else {
+    // AtomicWarpLeader: only the leader performs atomicrmw add (step *
+    // numActive) Correct control-flow: split block at Inc, create ThenBB, and
+    // conditional branch.
+
+    // 1) Split the current block before Inc. The split inserts an unconditional
+    //    branch from CurBB to ContBB; we'll replace it with a conditional
+    //    branch.
+    BasicBlock *CurBB = Builder.GetInsertBlock();
+    Function *F = CurBB->getParent();
+    BasicBlock *ContBB =
+        CurBB->splitBasicBlock(BasicBlock::iterator(Inc), "atomic_cont");
+
+    // After split, CurBB ends with "br label %atomic_cont".
+    // 2) Create the ThenBB (atomic path).
+    BasicBlock *ThenBB = BasicBlock::Create(Context, "atomic_then", F);
+
+    // 3) Replace the terminator in CurBB with a conditional branch to ThenBB or
+    // ContBB.
+    Instruction *OldTerm =
+        CurBB->getTerminator(); // unconditional branch inserted by split
+    OldTerm->eraseFromParent();
+    IRBuilder<> HeadBuilder(CurBB);
+    HeadBuilder.CreateCondBr(IsWriter, ThenBB, ContBB);
+
+    // 4) Emit the atomicrmw in ThenBB, then branch to ContBB.
+    IRBuilder<> ThenBuilder(ThenBB);
+    Type *CounterTy =
+        cast<ArrayType>(Counters->getValueType())->getElementType();
+    Value *ProdToCounterTy = ThenBuilder.CreateZExtOrTrunc(
+        StepTimesActive, CounterTy, "step_times_active.cast");
+    ThenBuilder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, ProdToCounterTy,
+                                MaybeAlign(Align(8)),
+                                AtomicOrdering::Monotonic);
+
+    // Also update uniform counter if uniform (inside the ThenBB, so leader does
+    // it)
+    if (UniformAddr) {
+      // Create a nested conditional: only update uniform counter if IsUniform
+      BasicBlock *UniformBB = BasicBlock::Create(Context, "uniform_then", F);
+      BasicBlock *AfterUniformBB =
+          BasicBlock::Create(Context, "uniform_cont", F);
+
+      ThenBuilder.CreateCondBr(IsUniform, UniformBB, AfterUniformBB);
+
+      IRBuilder<> UniformBuilder(UniformBB);
+      UniformBuilder.CreateAtomicRMW(AtomicRMWInst::Add, UniformAddr,
+                                     ProdToCounterTy, MaybeAlign(Align(8)),
+                                     AtomicOrdering::Monotonic);
+      UniformBuilder.CreateBr(AfterUniformBB);
+
+      IRBuilder<> AfterUniformBuilder(AfterUniformBB);
+      AfterUniformBuilder.CreateBr(ContBB);
+    } else {
+      ThenBuilder.CreateBr(ContBB);
+    }
+
+    // 5) Continue in the continuation block and erase the original Inc.
+    Builder.SetInsertPoint(ContBB, ContBB->begin());
+  }
+
   Inc->eraseFromParent();
 }
 
@@ -1388,6 +1932,12 @@ static inline Constant *getFuncAddrForProfData(Function *Fn) {
   // If we can't use an alias, we must use the public symbol, even though this
   // may require a symbolic relocation.
   if (shouldUsePublicSymbol(Fn))
+    return Fn;
+
+  // For GPU targets, weak functions cannot use private aliases because
+  // LTO may pick a different TU's copy, leaving the alias undefined
+  if (isGPUProfTarget(*Fn->getParent()) &&
+      GlobalValue::isWeakForLinker(Fn->getLinkage()))
     return Fn;
 
   // When possible use a private alias to avoid symbolic relocations.
@@ -1611,7 +2161,15 @@ GlobalVariable *InstrLowerer::setupProfileSection(InstrProfInstBase *Inc,
   Ptr->setVisibility(Visibility);
   // Put the counters and bitmaps in their own sections so linkers can
   // remove unneeded sections.
-  Ptr->setSection(getInstrProfSectionName(IPSK, TT.getObjectFormat()));
+  // For GPU targets, use per-TU sections with CUID suffix for proper
+  // memory tracking via anchor variable registration.
+  std::string SectionName = getInstrProfSectionName(IPSK, TT.getObjectFormat());
+  if (isGPUProfTarget(M)) {
+    std::string CUID = getCUIDFromModule(M);
+    if (!CUID.empty())
+      SectionName = SectionName + "_" + CUID;
+  }
+  Ptr->setSection(SectionName);
   Ptr->setLinkage(Linkage);
   maybeSetComdat(Ptr, Fn, VarName);
   return Ptr;
@@ -1647,7 +2205,12 @@ InstrLowerer::getOrCreateRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc) {
 GlobalVariable *
 InstrLowerer::createRegionCounters(InstrProfCntrInstBase *Inc, StringRef Name,
                                    GlobalValue::LinkageTypes Linkage) {
+  const unsigned OffloadNumProfilingThreads =
+      (1u << OffloadProfilingThreadBitWidth) - 1;
+
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
+  if (TT.isAMDGPU())
+    NumCounters *= (OffloadNumProfilingThreads + 1);
   auto &Ctx = M.getContext();
   GlobalVariable *GV;
   if (isa<InstrProfCoverInst>(Inc)) {
@@ -1675,6 +2238,18 @@ InstrLowerer::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
   auto &PD = ProfileDataMap[NamePtr];
   if (PD.RegionCounters)
     return PD.RegionCounters;
+
+  // For GPU targets with contiguous allocation, use the contiguous array
+  // instead of creating a per-function array
+  if (ContiguousCnts) {
+    // Store the contiguous array as RegionCounters for this function
+    // The actual offset is handled in lowerIncrementAMDGPU
+    PD.RegionCounters = ContiguousCnts;
+
+    // Still create the data variable (it will point to the right offset)
+    createDataVariable(Inc);
+    return PD.RegionCounters;
+  }
 
   // If RegionCounters doesn't already exist, create it by first setting up
   // the corresponding profile section.
@@ -1721,6 +2296,59 @@ InstrLowerer::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
   createDataVariable(Inc);
 
   return PD.RegionCounters;
+}
+
+GlobalVariable *
+InstrLowerer::getOrCreateUniformCounters(InstrProfCntrInstBase *Inc) {
+  // Only create uniform counters for AMDGPU targets
+  if (!TT.isAMDGPU())
+    return nullptr;
+
+  GlobalVariable *NamePtr = Inc->getName();
+  auto &PD = ProfileDataMap[NamePtr];
+  if (PD.UniformCounters)
+    return PD.UniformCounters;
+
+  // For contiguous allocation, use the contiguous uniform counter array
+  if (ContiguousUCnts) {
+    PD.UniformCounters = ContiguousUCnts;
+    return PD.UniformCounters;
+  }
+
+  // Ensure RegionCounters exists first (we need the same size)
+  getOrCreateRegionCounters(Inc);
+
+  // Create uniform counters with the same size as region counters
+  const unsigned OffloadNumProfilingThreads =
+      (1u << OffloadProfilingThreadBitWidth) - 1;
+
+  uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
+  NumCounters *= (OffloadNumProfilingThreads + 1);
+
+  auto &Ctx = M.getContext();
+  auto *CounterTy = ArrayType::get(Type::getInt64Ty(Ctx), NumCounters);
+
+  // Use a different prefix for uniform counters
+  bool Renamed;
+  std::string VarName = getVarName(Inc, "__llvm_prf_unifcnt_", Renamed);
+
+  auto *GV = new GlobalVariable(M, CounterTy, false, NamePtr->getLinkage(),
+                                Constant::getNullValue(CounterTy), VarName);
+  GV->setAlignment(Align(8));
+  GV->setVisibility(NamePtr->getVisibility());
+
+  // For GPU targets, use per-TU sections with CUID suffix
+  std::string SectionName =
+      getInstrProfSectionName(IPSK_ucnts, TT.getObjectFormat());
+  std::string CUID = getCUIDFromModule(M);
+  if (!CUID.empty())
+    SectionName = SectionName + "_" + CUID;
+  GV->setSection(SectionName);
+
+  PD.UniformCounters = GV;
+  CompilerUsedVars.push_back(GV);
+
+  return PD.UniformCounters;
 }
 
 void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
@@ -1784,8 +2412,25 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
         ValuesVar, PointerType::get(Fn->getContext(), 0));
   }
 
+  // NumCounters in __llvm_profile_data is the ORIGINAL counter count,
+  // not the expanded count with slots. The expansion factor is stored
+  // separately in NumOffloadProfilingThreads.
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
-  auto *CounterPtr = PD.RegionCounters;
+
+  // For contiguous allocation, CounterPtr should point to this function's
+  // offset within the contiguous array
+  Constant *CounterPtr;
+  if (ContiguousCnts && PD.RegionCounters == ContiguousCnts) {
+    uint64_t FuncOffset = FunctionCounterOffsets.lookup(NamePtr);
+    // Create a GEP to the function's counter offset
+    CounterPtr = ConstantExpr::getInBoundsGetElementPtr(
+        ContiguousCnts->getValueType(), ContiguousCnts,
+        ArrayRef<Constant *>{
+            ConstantInt::get(Type::getInt64Ty(Ctx), 0),
+            ConstantInt::get(Type::getInt64Ty(Ctx), FuncOffset)});
+  } else {
+    CounterPtr = PD.RegionCounters;
+  }
 
   uint64_t NumBitmapBytes = PD.NumBitmapBytes;
 
@@ -1793,11 +2438,7 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   auto *IntPtrTy = M.getDataLayout().getIntPtrType(M.getContext());
   auto *Int16Ty = Type::getInt16Ty(Ctx);
   auto *Int16ArrayTy = ArrayType::get(Int16Ty, IPVK_Last + 1);
-  Type *DataTypes[] = {
-#define INSTR_PROF_DATA(Type, LLVMType, Name, Init) LLVMType,
-#include "llvm/ProfileData/InstrProfData.inc"
-  };
-  auto *DataTy = StructType::get(Ctx, ArrayRef(DataTypes));
+  auto *DataTy = getProfileDataTy();
 
   Constant *FunctionAddr = getFuncAddrForProfData(Fn);
 
@@ -1805,8 +2446,17 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
     Int16ArrayVals[Kind] = ConstantInt::get(Int16Ty, PD.NumValueSites[Kind]);
 
+  uint16_t NumOffloadProfilingThreadsVal = 0;
+  if (TT.isAMDGPU())
+    NumOffloadProfilingThreadsVal = (1u << OffloadProfilingThreadBitWidth) - 1;
+
   if (isGPUProfTarget(M)) {
-    Linkage = GlobalValue::ExternalLinkage;
+    // For GPU targets, weak functions need weak linkage for their profile data
+    // aliases to allow linker deduplication across TUs
+    if (GlobalValue::isWeakForLinker(Fn->getLinkage()))
+      Linkage = Fn->getLinkage();
+    else
+      Linkage = GlobalValue::ExternalLinkage;
     Visibility = GlobalValue::ProtectedVisibility;
   }
   // If the data variable is not referenced by code (if we don't emit
@@ -1826,8 +2476,25 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
     Linkage = GlobalValue::PrivateLinkage;
     Visibility = GlobalValue::DefaultVisibility;
   }
-  auto *Data =
-      new GlobalVariable(M, DataTy, false, Linkage, nullptr, DataVarName);
+  GlobalValue *DataVar = nullptr;
+  Constant *DataAddr = nullptr;
+  uint64_t DataIndex = 0;
+  if (ContiguousData) {
+    DataIndex = FunctionDataOffsets.lookup(NamePtr);
+    assert(DataIndex < ContiguousDataInits.size() &&
+           "missing contiguous data slot");
+    DataAddr = ConstantExpr::getInBoundsGetElementPtr(
+        ContiguousData->getValueType(), ContiguousData,
+        ArrayRef<Constant *>{
+            ConstantInt::get(Type::getInt64Ty(Ctx), 0),
+            ConstantInt::get(Type::getInt64Ty(Ctx), DataIndex)});
+  } else {
+    auto *Data =
+        new GlobalVariable(M, DataTy, false, Linkage, nullptr, DataVarName);
+    DataVar = Data;
+    DataAddr = Data;
+  }
+
   Constant *RelativeCounterPtr;
   GlobalVariable *BitmapPtr = PD.RegionBitmaps;
   Constant *RelativeBitmapPtr = ConstantInt::get(IntPtrTy, 0);
@@ -1845,29 +2512,48 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
     DataSectionKind = IPSK_data;
     RelativeCounterPtr =
         ConstantExpr::getSub(ConstantExpr::getPtrToInt(CounterPtr, IntPtrTy),
-                             ConstantExpr::getPtrToInt(Data, IntPtrTy));
+                             ConstantExpr::getPtrToInt(DataAddr, IntPtrTy));
     if (BitmapPtr != nullptr)
       RelativeBitmapPtr =
           ConstantExpr::getSub(ConstantExpr::getPtrToInt(BitmapPtr, IntPtrTy),
-                               ConstantExpr::getPtrToInt(Data, IntPtrTy));
+                               ConstantExpr::getPtrToInt(DataAddr, IntPtrTy));
   }
 
   Constant *DataVals[] = {
 #define INSTR_PROF_DATA(Type, LLVMType, Name, Init) Init,
 #include "llvm/ProfileData/InstrProfData.inc"
   };
-  Data->setInitializer(ConstantStruct::get(DataTy, DataVals));
+  auto *DataInit = ConstantStruct::get(DataTy, DataVals);
 
-  Data->setVisibility(Visibility);
-  Data->setSection(
-      getInstrProfSectionName(DataSectionKind, TT.getObjectFormat()));
-  Data->setAlignment(Align(INSTR_PROF_DATA_ALIGNMENT));
-  maybeSetComdat(Data, Fn, CntsVarName);
+  if (ContiguousData) {
+    ContiguousDataInits[DataIndex] = DataInit;
+    auto *Alias = GlobalAlias::create(
+        DataTy, DataAddr->getType()->getPointerAddressSpace(), Linkage,
+        DataVarName, DataAddr, &M);
+    Alias->setVisibility(Visibility);
+    DataVar = Alias;
+  } else {
+    auto *DataGV = cast<GlobalVariable>(DataVar);
+    DataGV->setInitializer(DataInit);
 
-  PD.DataVar = Data;
+    DataGV->setVisibility(Visibility);
+    // For GPU targets, use per-TU sections with CUID suffix
+    std::string DataSectionName =
+        getInstrProfSectionName(DataSectionKind, TT.getObjectFormat());
+    if (isGPUProfTarget(M)) {
+      std::string CUID = getCUIDFromModule(M);
+      if (!CUID.empty())
+        DataSectionName = DataSectionName + "_" + CUID;
+    }
+    DataGV->setSection(DataSectionName);
+    DataGV->setAlignment(Align(INSTR_PROF_DATA_ALIGNMENT));
+    maybeSetComdat(DataGV, Fn, CntsVarName);
+  }
+
+  PD.DataVar = DataVar;
 
   // Mark the data variable as used so that it isn't stripped out.
-  CompilerUsedVars.push_back(Data);
+  CompilerUsedVars.push_back(DataVar);
   // Now that the linkage set by the FE has been passed to the data and counter
   // variables, reset Name variable's linkage and visibility to private so that
   // it can be removed later by the compiler.
@@ -1927,6 +2613,110 @@ void InstrLowerer::emitVNodes() {
   UsedVars.push_back(VNodesVar);
 }
 
+void InstrLowerer::createHIPDynamicModuleRegistration() {
+  if (isGPUProfTarget(M))
+    return;
+  LLVM_DEBUG(llvm::dbgs() << "Entering createHIPDynamicModuleRegistration\n");
+  StringRef FuncNames[] = {"hipModuleLoad", "hipModuleLoadData",
+                           "hipModuleLoadDataEx"};
+  for (StringRef FuncName : FuncNames) {
+    Function *F = M.getFunction(FuncName);
+    if (!F)
+      continue;
+
+    for (User *U : F->users()) {
+      if (auto *CB = dyn_cast<CallBase>(U)) {
+        Instruction *InsertPt = nullptr;
+        // If the call is an invoke instruction, we should insert the
+        // registration call in the normal destination block.
+        if (auto *Invoke = dyn_cast<InvokeInst>(CB)) {
+          InsertPt = &*Invoke->getNormalDest()->getFirstInsertionPt();
+        } else if (CB->isTerminator()) {
+          // If it's another kind of terminator (e.g., callbr), we don't
+          // know the semantics of the successors, so we conservatively
+          // skip it. The hipModuleLoad* functions are not expected to be
+          // used in other terminator instructions.
+          continue;
+        } else {
+          // This is a normal call instruction, so we can insert after it.
+          InsertPt = CB->getNextNode();
+        }
+
+        // If there's no valid insertion point (e.g., a malformed block),
+        // skip.
+        if (!InsertPt)
+          continue;
+
+        IRBuilder<> Builder(InsertPt);
+        auto *VoidTy = Type::getVoidTy(M.getContext());
+        auto *VoidPtrTy = PointerType::getUnqual(M.getContext());
+        auto *Int32Ty = Type::getInt32Ty(M.getContext());
+        // register(int rc, void **modulePtr, const void *image)
+        auto *RegisterDynamicModuleTy =
+            FunctionType::get(VoidTy, {Int32Ty, VoidPtrTy, VoidPtrTy}, false);
+        FunctionCallee RegisterFunc = M.getOrInsertFunction(
+            "__llvm_profile_offload_register_dynamic_module",
+            RegisterDynamicModuleTy);
+
+        // Arg 0: return value of the hipModuleLoad* call (hipError_t / i32).
+        Value *ReturnValue = CB;
+        // Arg 1: module handle (out-parameter, hipModule_t*).
+        Value *ModuleHandle = CB->getArgOperand(0);
+        // Arg 2: code object image pointer.
+        // For hipModuleLoadData(module, image) and
+        // hipModuleLoadDataEx(module, image, ...), image is arg 1.
+        // For hipModuleLoad(module, fname), arg 1 is a filename — pass NULL.
+        Value *ImagePtr;
+        if (FuncName == "hipModuleLoad")
+          ImagePtr =
+              ConstantPointerNull::get(PointerType::getUnqual(M.getContext()));
+        else
+          ImagePtr = CB->getArgOperand(1);
+
+        auto *Call = Builder.CreateCall(RegisterFunc,
+                                        {ReturnValue, ModuleHandle, ImagePtr});
+        LLVM_DEBUG(llvm::dbgs() << "Register HIP module loaded by "; CB->dump();
+                   llvm::dbgs() << "BB:\n"; Call->getParent()->dump(););
+      }
+    }
+  }
+}
+
+void InstrLowerer::createHIPDynamicModuleUnregistration() {
+  LLVM_DEBUG(llvm::dbgs() << "Entering createHIPDynamicModuleUnregistration\n");
+  Function *F = M.getFunction("hipModuleUnload");
+  if (!F)
+    return;
+
+  for (User *U : F->users()) {
+    if (auto *CB = dyn_cast_or_null<CallBase>(U)) {
+      // The insertion point is right before the call to hipModuleUnload.
+      Instruction *InsertPt = CB;
+
+      IRBuilder<> Builder(InsertPt);
+      auto *VoidTy = Type::getVoidTy(M.getContext());
+      auto *VoidPtrTy = PointerType::getUnqual(M.getContext());
+
+      auto *UnregisterDynamicModuleTy =
+          FunctionType::get(VoidTy, {VoidPtrTy}, false);
+      FunctionCallee UnregisterFunc = M.getOrInsertFunction(
+          "__llvm_profile_offload_unregister_dynamic_module",
+          UnregisterDynamicModuleTy);
+
+      // The argument is the module handle, which is the first
+      // argument to the hipModuleUnload call.
+      Value *ModuleHandle = CB->getArgOperand(0);
+      Value *CastedModuleHandle =
+          Builder.CreatePointerCast(ModuleHandle, VoidPtrTy);
+
+      auto *Call = Builder.CreateCall(UnregisterFunc, {CastedModuleHandle});
+      LLVM_DEBUG(llvm::dbgs() << "Unregister HIP module unloaded by ";
+                 CB->dump(); llvm::dbgs() << "BB:\n";
+                 Call->getParent()->dump(););
+    }
+  }
+}
+
 void InstrLowerer::emitNameData() {
   if (ReferencedNames.empty())
     return;
@@ -1940,9 +2730,15 @@ void InstrLowerer::emitNameData() {
   auto &Ctx = M.getContext();
   auto *NamesVal =
       ConstantDataArray::getString(Ctx, StringRef(CompressedNameStr), false);
-  NamesVar = new GlobalVariable(M, NamesVal->getType(), true,
-                                GlobalValue::PrivateLinkage, NamesVal,
-                                getInstrProfNamesVarName());
+  std::string NamesVarName = std::string(getInstrProfNamesVarName());
+  if (isGPUProfTarget(M)) {
+    std::string CUID = CachedCUID.empty() ? getCUIDFromModule(M) : CachedCUID;
+    if (!CUID.empty())
+      NamesVarName = NamesVarName + "_" + CUID;
+  }
+  NamesVar =
+      new GlobalVariable(M, NamesVal->getType(), true,
+                         GlobalValue::PrivateLinkage, NamesVal, NamesVarName);
   if (isGPUProfTarget(M)) {
     NamesVar->setLinkage(GlobalValue::ExternalLinkage);
     NamesVar->setVisibility(GlobalValue::ProtectedVisibility);
@@ -1950,10 +2746,17 @@ void InstrLowerer::emitNameData() {
 
   NamesSize = CompressedNameStr.size();
   setGlobalVariableLargeSection(TT, *NamesVar);
-  NamesVar->setSection(
+  // For GPU targets, use per-TU sections with CUID suffix
+  std::string NamesSectionName =
       ProfileCorrelate == InstrProfCorrelator::BINARY
           ? getInstrProfSectionName(IPSK_covname, TT.getObjectFormat())
-          : getInstrProfSectionName(IPSK_name, TT.getObjectFormat()));
+          : getInstrProfSectionName(IPSK_name, TT.getObjectFormat());
+  if (isGPUProfTarget(M)) {
+    std::string CUID = getCUIDFromModule(M);
+    if (!CUID.empty())
+      NamesSectionName = NamesSectionName + "_" + CUID;
+  }
+  NamesVar->setSection(NamesSectionName);
   // On COFF, it's important to reduce the alignment down to 1 to prevent the
   // linker from inserting padding before the start of the names section or
   // between names entries.
@@ -2160,3 +2963,469 @@ void createProfileSamplingVar(Module &M) {
   appendToCompilerUsed(M, SamplingVar);
 }
 } // namespace llvm
+
+namespace {
+
+// For GPU targets: Allocate contiguous arrays for all profile data.
+// This solves the linker reordering problem by using ONE symbol per section
+// type, so there's nothing for the linker to reorder.
+StructType *InstrLowerer::getProfileDataTy() {
+  if (ProfileDataTy)
+    return ProfileDataTy;
+
+  auto &Ctx = M.getContext();
+  auto *IntPtrTy = M.getDataLayout().getIntPtrType(M.getContext());
+  auto *Int16Ty = Type::getInt16Ty(Ctx);
+  auto *Int16ArrayTy = ArrayType::get(Int16Ty, IPVK_Last + 1);
+  Type *DataTypes[] = {
+#define INSTR_PROF_DATA(Type, LLVMType, Name, Init) LLVMType,
+#include "llvm/ProfileData/InstrProfData.inc"
+  };
+  ProfileDataTy = StructType::get(Ctx, ArrayRef(DataTypes));
+  return ProfileDataTy;
+}
+
+void InstrLowerer::finalizeContiguousProfileData() {
+  if (!ContiguousData || ContiguousDataInits.empty())
+    return;
+
+  auto *DataTy = getProfileDataTy();
+  for (auto &Entry : ContiguousDataInits)
+    if (!Entry)
+      Entry = Constant::getNullValue(DataTy);
+
+  auto *DataArrayTy = cast<ArrayType>(ContiguousData->getValueType());
+  ContiguousData->setInitializer(
+      ConstantArray::get(DataArrayTy, ContiguousDataInits));
+}
+
+void InstrLowerer::allocateContiguousProfileArrays() {
+  LLVM_DEBUG(llvm::dbgs() << "allocateContiguousProfileArrays() called\n");
+
+  // Only for GPU device targets
+  if (!isGPUProfTarget(M)) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "Not a GPU target, skipping contiguous allocation\n");
+    return;
+  }
+
+  // Get and cache the CUID for consistent section naming.
+  // CUID is only present for HIP compilations (__hip_cuid_* variable).
+  // For OpenMP offload, use the standard per-function allocation.
+  CachedCUID = getCUIDFromModule(M);
+  if (CachedCUID.empty()) {
+    LLVM_DEBUG(llvm::dbgs() << "No CUID found (not HIP), using standard "
+                               "per-function allocation\n");
+    return;
+  }
+
+  LLVM_DEBUG(llvm::dbgs() << "Allocating contiguous arrays for CUID="
+                          << CachedCUID << "\n");
+
+  // First pass: collect all instrprof intrinsics and count total counters
+  const unsigned KSlots = 1u << OffloadProfilingThreadBitWidth;
+  TotalCounterSlots = 0;
+  TotalDataEntries = 0;
+
+  // We need to iterate through all functions and collect the first profiling
+  // intrinsic from each, which determines the counter size for that function.
+  SmallVector<std::pair<GlobalVariable *, uint64_t>, 16> FunctionCounters;
+
+  for (Function &F : M) {
+    for (BasicBlock &BB : F) {
+      for (Instruction &I : BB) {
+        if (auto *Inc = dyn_cast<InstrProfIncrementInst>(&I)) {
+          GlobalVariable *NamePtr = Inc->getName();
+          // Only count each function once
+          if (FunctionCounterOffsets.count(NamePtr) == 0) {
+            uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
+            uint64_t NumSlots = NumCounters * KSlots;
+
+            FunctionCounterOffsets[NamePtr] = TotalCounterSlots;
+            FunctionDataOffsets[NamePtr] = TotalDataEntries;
+            FunctionCounters.push_back({NamePtr, NumSlots});
+
+            TotalCounterSlots += NumSlots;
+            TotalDataEntries++;
+
+            LLVM_DEBUG(llvm::dbgs()
+                       << "  Function " << getPGOFuncNameVarInitializer(NamePtr)
+                       << ": " << NumCounters << " counters, " << NumSlots
+                       << " slots, offset=" << (TotalCounterSlots - NumSlots)
+                       << "\n");
+          }
+          break; // Only need first intrinsic per function
+        }
+        if (auto *Cover = dyn_cast<InstrProfCoverInst>(&I)) {
+          GlobalVariable *NamePtr = Cover->getName();
+          if (FunctionCounterOffsets.count(NamePtr) == 0) {
+            uint64_t NumCounters = Cover->getNumCounters()->getZExtValue();
+            // Coverage uses i8 counters, but for simplicity we still allocate
+            // as if slots
+            FunctionCounterOffsets[NamePtr] = TotalCounterSlots;
+            FunctionDataOffsets[NamePtr] = TotalDataEntries;
+            FunctionCounters.push_back({NamePtr, NumCounters});
+
+            TotalCounterSlots += NumCounters;
+            TotalDataEntries++;
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  LLVM_DEBUG(llvm::dbgs() << "Total: " << TotalCounterSlots
+                          << " counter slots, " << TotalDataEntries
+                          << " data entries\n");
+
+  if (TotalCounterSlots == 0) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "No counters found, skipping contiguous array creation\n");
+    return;
+  }
+
+  auto &Ctx = M.getContext();
+  auto *Int64Ty = Type::getInt64Ty(Ctx);
+
+  // Create contiguous counter array
+  auto *CntsArrayTy = ArrayType::get(Int64Ty, TotalCounterSlots);
+  std::string CntsSectionName = "__llvm_prf_cnts_" + CachedCUID;
+  ContiguousCnts = new GlobalVariable(
+      M, CntsArrayTy, /*isConstant=*/false, GlobalValue::ExternalLinkage,
+      Constant::getNullValue(CntsArrayTy), "__llvm_prf_c_" + CachedCUID);
+  ContiguousCnts->setSection(CntsSectionName);
+  ContiguousCnts->setAlignment(Align(8));
+  ContiguousCnts->setVisibility(GlobalValue::ProtectedVisibility);
+  CompilerUsedVars.push_back(ContiguousCnts);
+
+  // Create contiguous uniform counter array (for AMDGPU divergence tracking)
+  std::string UCntsSectionName = "__llvm_prf_ucnts_" + CachedCUID;
+  ContiguousUCnts = new GlobalVariable(
+      M, CntsArrayTy, /*isConstant=*/false, GlobalValue::ExternalLinkage,
+      Constant::getNullValue(CntsArrayTy), "__profu_all_" + CachedCUID);
+  ContiguousUCnts->setSection(UCntsSectionName);
+  ContiguousUCnts->setAlignment(Align(8));
+  ContiguousUCnts->setVisibility(GlobalValue::ProtectedVisibility);
+  CompilerUsedVars.push_back(ContiguousUCnts);
+
+  LLVM_DEBUG(llvm::dbgs() << "Created contiguous arrays: "
+                          << ContiguousCnts->getName() << " ("
+                          << TotalCounterSlots << " slots), "
+                          << ContiguousUCnts->getName() << "\n");
+
+  if (TotalDataEntries > 0) {
+    auto *DataTy = getProfileDataTy();
+    auto *DataArrayTy = ArrayType::get(DataTy, TotalDataEntries);
+    std::string DataSectionName = getInstrProfSectionName(
+        ProfileCorrelate == InstrProfCorrelator::BINARY ? IPSK_covdata
+                                                        : IPSK_data,
+        TT.getObjectFormat());
+    DataSectionName = DataSectionName + "_" + CachedCUID;
+
+    ContiguousData = new GlobalVariable(M, DataArrayTy, /*isConstant=*/false,
+                                        GlobalValue::ExternalLinkage, nullptr,
+                                        "__llvm_prf_d_" + CachedCUID);
+    ContiguousData->setSection(DataSectionName);
+    ContiguousData->setAlignment(Align(INSTR_PROF_DATA_ALIGNMENT));
+    ContiguousData->setVisibility(GlobalValue::ProtectedVisibility);
+    CompilerUsedVars.push_back(ContiguousData);
+
+    ContiguousDataInits.assign(TotalDataEntries,
+                               Constant::getNullValue(DataTy));
+  }
+}
+
+// Create __llvm_offload_prf structure for GPU targets.
+// Uses the contiguous arrays allocated by allocateContiguousProfileArrays().
+void InstrLowerer::createProfileSectionSymbols() {
+  LLVM_DEBUG(llvm::dbgs() << "createProfileSectionSymbols() called\n");
+
+  // Only create symbols for device targets (GPU)
+  if (!isGPUProfTarget(M)) {
+    LLVM_DEBUG(llvm::dbgs() << "Not a GPU target, skipping symbol creation\n");
+    return;
+  }
+
+  // No contiguous arrays = no profiling in this TU
+  if (!ContiguousCnts) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "No contiguous counters, skipping symbol creation\n");
+    return;
+  }
+
+  LLVM_DEBUG(llvm::dbgs() << "Creating profile symbols for CUID=" << CachedCUID
+                          << "\n");
+
+  auto &Ctx = M.getContext();
+  auto *Int8Ty = Type::getInt8Ty(Ctx);
+  auto *Int64Ty = Type::getInt64Ty(Ctx);
+
+  // Get address space from the contiguous counters
+  unsigned AS = ContiguousCnts->getType()->getPointerAddressSpace();
+  auto *Int8PtrTy = PointerType::get(Ctx, AS);
+
+  // Calculate sizes
+  uint64_t CntsSize =
+      M.getDataLayout().getTypeAllocSize(ContiguousCnts->getValueType());
+  uint64_t UCntsSize =
+      M.getDataLayout().getTypeAllocSize(ContiguousUCnts->getValueType());
+
+  // Data section boundaries.
+  GlobalValue *DataStart = nullptr;
+  GlobalValue *DataEndBase = nullptr;
+  uint64_t DataSize = 0;
+  if (ContiguousData) {
+    DataStart = ContiguousData;
+    DataEndBase = ContiguousData;
+    DataSize =
+        M.getDataLayout().getTypeAllocSize(ContiguousData->getValueType());
+  } else {
+    // Legacy per-function data variables: best-effort by scanning.
+    GlobalVariable *FirstData = nullptr;
+    GlobalVariable *LastData = nullptr;
+    for (auto &PD : ProfileDataMap) {
+      if (auto *GV = dyn_cast_or_null<GlobalVariable>(PD.second.DataVar)) {
+        if (!FirstData)
+          FirstData = GV;
+        LastData = GV;
+      }
+    }
+    DataStart = FirstData;
+    DataEndBase = LastData;
+    if (LastData)
+      DataSize = M.getDataLayout().getTypeAllocSize(LastData->getValueType());
+  }
+
+  LLVM_DEBUG({
+    llvm::dbgs() << "Section sizes: Cnts=" << CntsSize << " UCnts=" << UCntsSize
+                 << " Data=" << DataSize << " Names=" << NamesSize << "\n";
+  });
+
+  // Helper to get start pointer
+  auto getStartPtr = [&](GlobalValue *GV) -> Constant * {
+    if (!GV)
+      return Constant::getNullValue(Int8PtrTy);
+    return ConstantExpr::getPointerBitCastOrAddrSpaceCast(GV, Int8PtrTy);
+  };
+
+  // Helper to get end pointer (base + size)
+  auto getEndPtr = [&](GlobalValue *GV, uint64_t Size) -> Constant * {
+    if (!GV)
+      return Constant::getNullValue(Int8PtrTy);
+    auto *BasePtr =
+        ConstantExpr::getPointerBitCastOrAddrSpaceCast(GV, Int8PtrTy);
+    return ConstantExpr::getGetElementPtr(Int8Ty, BasePtr,
+                                          ConstantInt::get(Int64Ty, Size));
+  };
+
+  // Build the __llvm_offload_prf structure
+  // Order: cnts_start, data_start, names_start, ucnts_start, cnts_end,
+  // data_end, names_end, ucnts_end
+  std::vector<Type *> StructFields(8, Int8PtrTy);
+  std::vector<Constant *> StructValues = {
+      getStartPtr(ContiguousCnts),          // cnts_start
+      getStartPtr(DataStart),               // data_start
+      getStartPtr(NamesVar),                // names_start
+      getStartPtr(ContiguousUCnts),         // ucnts_start
+      getEndPtr(ContiguousCnts, CntsSize),  // cnts_end
+      getEndPtr(DataEndBase, DataSize),     // data_end
+      getEndPtr(NamesVar, NamesSize),       // names_end
+      getEndPtr(ContiguousUCnts, UCntsSize) // ucnts_end
+  };
+
+  auto *UnifiedStructTy = StructType::get(Ctx, StructFields);
+  auto *UnifiedStructInit = ConstantStruct::get(UnifiedStructTy, StructValues);
+
+  // Use CUID-suffixed name to avoid symbol collision in multi-TU programs.
+  // For static modules, the host side registers each TU's shadow variable.
+  // For dynamic modules (hipModuleLoad), the runtime enumerates symbols
+  // matching __llvm_offload_prf_* by parsing the code object ELF.
+  std::string OffloadPrfName = "__llvm_offload_prf_" + CachedCUID;
+  auto *UnifiedStruct = new GlobalVariable(
+      M, UnifiedStructTy, /*isConstant=*/true, GlobalValue::ExternalLinkage,
+      UnifiedStructInit, OffloadPrfName);
+  UnifiedStruct->setVisibility(GlobalValue::DefaultVisibility);
+  CompilerUsedVars.push_back(UnifiedStruct);
+
+  LLVM_DEBUG(llvm::dbgs() << "Created " << OffloadPrfName
+                          << " with contiguous arrays\n");
+}
+
+// Create HIP device variable registration for profile symbols
+void InstrLowerer::createHIPDeviceVariableRegistration() {
+  LLVM_DEBUG(llvm::dbgs() << "createHIPDeviceVariableRegistration called\n");
+  if (isGPUProfTarget(M)) {
+    LLVM_DEBUG(llvm::dbgs() << "GPU target, skipping registration\n");
+    return;
+  }
+
+  // Get the CUID from the module (same as device side)
+  std::string CUID = getCUIDFromModule(M);
+  if (CUID.empty()) {
+    LLVM_DEBUG(llvm::dbgs() << "No CUID found, skipping registration\n");
+    return;
+  }
+
+  // Find the existing __hip_module_ctor function
+  Function *Ctor = M.getFunction("__hip_module_ctor");
+  if (!Ctor) {
+    LLVM_DEBUG(llvm::dbgs() << "No __hip_module_ctor function found\n");
+    // M.dump();
+    //  No HIP compilation context, skip registration
+    return;
+  }
+
+  // Locate the HIP fat-binary registration call and capture its return value
+  Value *Handle = nullptr;
+  for (BasicBlock &BB : *Ctor)
+    for (Instruction &I : BB)
+      if (auto *CB = dyn_cast<CallBase>(&I))
+        if (Function *Callee = CB->getCalledFunction())
+          if (Callee->getName() == "__hipRegisterFatBinary") {
+            Handle = &I; // call result
+            break;
+          }
+  if (!Handle) {
+    LLVM_DEBUG(llvm::dbgs() << "__hipRegisterFatBinary call not found\n");
+    return;
+  }
+  GlobalVariable *FatbinHandleGV = nullptr;
+  if (auto *HandleInst = dyn_cast<Instruction>(Handle))
+    for (Instruction *Cur = HandleInst->getNextNode(); Cur;
+         Cur = Cur->getNextNode()) {
+      auto *SI = dyn_cast<StoreInst>(Cur);
+      if (!SI || SI->getValueOperand() != Handle)
+        continue;
+      if (auto *GV = dyn_cast<GlobalVariable>(
+              SI->getPointerOperand()->stripPointerCasts())) {
+        FatbinHandleGV = GV;
+        break;
+      }
+    }
+
+  if (!FatbinHandleGV) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "store of __hipRegisterFatBinary call not found\n");
+  }
+
+  // Insert the new registration just before the ctor’s return
+  ReturnInst *RetInst = nullptr;
+  for (auto &BB : llvm::reverse(*Ctor))
+    if ((RetInst = dyn_cast<ReturnInst>(BB.getTerminator())))
+      break;
+  if (!RetInst) {
+    LLVM_DEBUG(llvm::dbgs() << "No return instruction found in ctor\n");
+    return;
+  }
+  IRBuilder<> Builder(RetInst);
+
+  LLVM_DEBUG(
+      llvm::dbgs() << "Found __hip_module_ctor, registering anchors for CUID="
+                   << CUID << "\n");
+
+  // Get or create the __hipRegisterVar declaration
+  auto *VoidTy = Type::getVoidTy(M.getContext());
+  auto *VoidPtrTy = PointerType::getUnqual(M.getContext());
+  auto *Int32Ty = Type::getInt32Ty(M.getContext());
+  auto *Int64Ty = Type::getInt64Ty(M.getContext());
+
+  auto *RegisterVarTy =
+      FunctionType::get(VoidTy,
+                        {VoidPtrTy, VoidPtrTy, VoidPtrTy, VoidPtrTy, Int32Ty,
+                         Int64Ty, Int32Ty, Int32Ty},
+                        false);
+  FunctionCallee RegisterVarFunc =
+      M.getOrInsertFunction("__hipRegisterVar", RegisterVarTy);
+
+  Value *HipHandle =
+      FatbinHandleGV ? Builder.CreateLoad(VoidPtrTy, FatbinHandleGV) : Handle;
+
+  // Create __llvm_offload_prf_<CUID> shadow structure on host
+  // This will be populated with section boundary addresses from the device
+  // Use CUID-suffixed name to match device symbol and avoid multi-TU collision
+  std::string OffloadPrfName = "__llvm_offload_prf_" + CUID;
+  auto *Int8PtrTy = PointerType::get(M.getContext(), 0);
+  std::vector<Type *> StructFields(8, Int8PtrTy);
+  auto *StructTy = StructType::get(M.getContext(), StructFields);
+
+  auto *OffloadPrfShadow = new GlobalVariable(
+      M, StructTy, /*isConstant=*/false, GlobalValue::ExternalLinkage,
+      ConstantAggregateZero::get(StructTy), OffloadPrfName);
+  CompilerUsedVars.push_back(OffloadPrfShadow);
+
+  // Register the unified structure with HIP runtime
+  auto *UnifiedNameStr =
+      ConstantDataArray::getString(M.getContext(), OffloadPrfName, true);
+  auto *UnifiedNameGlobal = new GlobalVariable(
+      M, UnifiedNameStr->getType(), /*isConstant=*/true,
+      GlobalValue::PrivateLinkage, UnifiedNameStr, OffloadPrfName + ".name");
+
+  Builder.CreateCall(RegisterVarFunc,
+                     {HipHandle,
+                      Builder.CreatePointerCast(OffloadPrfShadow, VoidPtrTy),
+                      Builder.CreatePointerCast(UnifiedNameGlobal, VoidPtrTy),
+                      Builder.CreatePointerCast(UnifiedNameGlobal, VoidPtrTy),
+                      Builder.getInt32(0),   // extern = 0
+                      Builder.getInt64(64),  // size = 64 (8 pointers * 8 bytes)
+                      Builder.getInt32(0),   // constant = 0
+                      Builder.getInt32(0)}); // global = 0
+
+  // Register with the profile runtime so it knows to collect data from this TU
+  auto *RegisterShadowVarTy = FunctionType::get(VoidTy, {VoidPtrTy}, false);
+  FunctionCallee RegisterShadowVarFunc = M.getOrInsertFunction(
+      "__llvm_profile_offload_register_shadow_variable", RegisterShadowVarTy);
+  Builder.CreateCall(RegisterShadowVarFunc,
+                     {Builder.CreatePointerCast(OffloadPrfShadow, VoidPtrTy)});
+
+  // Register per-section device symbols so compiler-rt can pre-register them
+  // with CLR before doing hipMemcpy (avoids HSA dependency).
+  FunctionCallee RegisterSectionShadowVarFunc = M.getOrInsertFunction(
+      "__llvm_profile_offload_register_section_shadow_variable",
+      RegisterShadowVarTy);
+
+  auto registerSectionSymbol = [&](StringRef SymName) {
+    // Create a 1-byte shadow global. The type/size are only used as a handle.
+    auto *I8Ty = Type::getInt8Ty(M.getContext());
+    GlobalVariable *Shadow = M.getGlobalVariable(SymName);
+    if (!Shadow) {
+      Shadow = new GlobalVariable(M, I8Ty, /*isConstant=*/false,
+                                  GlobalValue::ExternalLinkage,
+                                  ConstantInt::get(I8Ty, 0), SymName);
+      CompilerUsedVars.push_back(Shadow);
+    }
+
+    auto *NameStr = ConstantDataArray::getString(M.getContext(), SymName, true);
+    auto *NameGlobal = new GlobalVariable(
+        M, NameStr->getType(), /*isConstant=*/true, GlobalValue::PrivateLinkage,
+        NameStr, (SymName + ".name").str());
+
+    Builder.CreateCall(RegisterVarFunc,
+                       {HipHandle, Builder.CreatePointerCast(Shadow, VoidPtrTy),
+                        Builder.CreatePointerCast(NameGlobal, VoidPtrTy),
+                        Builder.CreatePointerCast(NameGlobal, VoidPtrTy),
+                        Builder.getInt32(0), // extern = 0
+                        Builder.getInt64(1), // size = 1 byte (handle only)
+                        Builder.getInt32(0), // constant = 0
+                        Builder.getInt32(0)} // global = 0
+    );
+
+    Builder.CreateCall(RegisterSectionShadowVarFunc,
+                       {Builder.CreatePointerCast(Shadow, VoidPtrTy)});
+  };
+
+  // Per-TU contiguous symbols (device side).
+  std::string CntsSym = std::string("__llvm_prf_c_") + CUID;
+  std::string DataSym = std::string("__llvm_prf_d_") + CUID;
+  std::string UCntsSym = std::string("__profu_all_") + CUID;
+  std::string NamesSym = std::string(getInstrProfNamesVarName()) + "_" + CUID;
+  registerSectionSymbol(CntsSym);
+  registerSectionSymbol(DataSym);
+  registerSectionSymbol(UCntsSym);
+  registerSectionSymbol(NamesSym);
+
+  LLVM_DEBUG(llvm::dbgs() << "Registered " << OffloadPrfName
+                          << " for CUID=" << CUID << "\n");
+}
+
+} // namespace
