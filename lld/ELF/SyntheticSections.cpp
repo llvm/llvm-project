@@ -617,6 +617,8 @@ bool EhFrameHeader::updateAllocSize(Ctx &ctx) {
   // .relr.dyn, this function will not change the size and assignAddresses
   // will not need another iteration.
   EhFrameSection *ehFrame = getPartition(ctx).ehFrame.get();
+  if (!ehFrame->getParent())
+    return false;
   uint64_t hdrVA = getVA();
   int64_t ehFramePtr = ehFrame->getParent()->addr - hdrVA - 4;
   // Determine if 64-bit encodings are needed.
