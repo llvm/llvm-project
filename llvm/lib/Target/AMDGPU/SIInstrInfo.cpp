@@ -10715,9 +10715,13 @@ const MIRFormatter *SIInstrInfo::getMIRFormatter() const {
   return Formatter.get();
 }
 
+bool SIInstrInfo::isTerminatorDivergent(const MachineInstr &MI) const {
+  assert(MI.isTerminator() && "Expected terminator instruction");
+  return isNeverUniform(MI);
+}
+
 ValueUniformity SIInstrInfo::getValueUniformity(const MachineInstr &MI,
                                                 unsigned DefIdx) const {
-
   if (isNeverUniform(MI))
     return ValueUniformity::NeverUniform;
 

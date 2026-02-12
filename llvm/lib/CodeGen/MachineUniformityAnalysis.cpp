@@ -80,12 +80,9 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
       // per-def loop below would skip them entirely.
       // 2. Divergent terminators mark the BLOCK as
       // divergent(DivergentTermBlocks), not individual values, which is
-      // different from regular instructions. For terminators like
-      // SI_IF/SI_ELSE, getValueUniformity() checks the isNeverUniform() flag,
-      // so DefIdx is not relevant here.
+      // different from regular instructions.
       if (Instr.isTerminator()) {
-        ValueUniformity Uniformity = InstrInfo.getValueUniformity(Instr);
-        if (Uniformity == ValueUniformity::NeverUniform) {
+        if (InstrInfo.isTerminatorDivergent(Instr)) {
           if (DivergentTermBlocks.insert(Instr.getParent()).second) {
             Worklist.push_back(&Instr);
           }
