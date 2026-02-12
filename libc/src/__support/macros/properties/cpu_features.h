@@ -97,7 +97,8 @@
 #endif
 
 #if defined(__ARM_FEATURE_FMA) || (defined(__AVX2__) && defined(__FMA__)) ||   \
-    defined(__NVPTX__) || defined(__AMDGPU__) || defined(__riscv_flen) || defined(__SPIRV__)
+    defined(__NVPTX__) || defined(__AMDGPU__) || defined(__riscv_flen) ||      \
+    defined(__SPIRV__)
 #define LIBC_TARGET_CPU_HAS_FMA
 // Provide a more fine-grained control of FMA instruction for ARM targets.
 #if defined(LIBC_TARGET_CPU_HAS_FPU_HALF)

@@ -9,7 +9,8 @@
 #ifndef __CLANG_LLVM_LIBC_WRAPPERS_TIME_H__
 #define __CLANG_LLVM_LIBC_WRAPPERS_TIME_H__
 
-#if !defined(_OPENMP) && !defined(__HIP__) && !defined(__CUDA__) && !defined(__SPIRV__)
+#if !defined(_OPENMP) && !defined(__HIP__) && !defined(__CUDA__) &&            \
+    !defined(__SPIRV__)
 #error "This file is for GPU offloading compilation only"
 #endif
 

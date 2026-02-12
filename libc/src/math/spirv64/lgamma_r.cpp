@@ -13,7 +13,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-extern "C" double __attribute__((overloadable)) __spirv_ocl_lgamma_r(double, int*);
+extern "C" double __attribute__((overloadable)) __spirv_ocl_lgamma_r(double,
+                                                                     int *);
 LLVM_LIBC_FUNCTION(double, lgamma_r, (double x, int *signp)) {
   return __spirv_ocl_lgamma_r(x, signp);
 }

@@ -64,8 +64,7 @@ _start(int argc, char **argv, char **envp, int *ret) {
   __atomic_fetch_or(ret, main(argc, argv, envp), __ATOMIC_RELAXED);
 }
 
-extern "C" [[gnu::visibility("protected"), clang::device_kernel]] void
-_end() {
+extern "C" [[gnu::visibility("protected"), clang::device_kernel]] void _end() {
   // Only a single thread should call the destructors registred with 'atexit'.
   // The loader utility will handle the actual exit and return code cleanly.
   __cxa_finalize(nullptr);

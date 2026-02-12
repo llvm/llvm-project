@@ -14,8 +14,6 @@
 namespace LIBC_NAMESPACE_DECL {
 
 extern "C" float __attribute__((overloadable)) __spirv_ocl_tgamma(float);
-LLVM_LIBC_FUNCTION(float, tgammaf, (float x)) {
-  return __spirv_ocl_tgamma(x);
-}
+LLVM_LIBC_FUNCTION(float, tgammaf, (float x)) { return __spirv_ocl_tgamma(x); }
 
 } // namespace LIBC_NAMESPACE_DECL
