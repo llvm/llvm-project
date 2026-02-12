@@ -138,6 +138,10 @@ Non-comprehensive list of changes in this release
   Usable in constant expressions. Implicit conversion is supported for
   class/struct types with conversion operators.
 
+- A new generic bit-reverse builtin function ``__builtin_bitreverseg`` that
+  extends bit-reversal support to all standard integers type, including
+  ``_BitInt``
+
 New Compiler Flags
 ------------------
 - New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added

@@ -511,6 +511,18 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
         data.Push(type.GetTypeTemplateArgument(index, true));
         break;
       }
+      case sel_get_synthetic_value: {
+        TYPE_CHECK(Object);
+        POP_VALOBJ(valobj);
+        data.Push(valobj->GetSyntheticValue());
+        break;
+      }
+      case sel_get_non_synthetic_value: {
+        TYPE_CHECK(Object);
+        POP_VALOBJ(valobj);
+        data.Push(valobj->GetNonSyntheticValue());
+        break;
+      }
       case sel_get_value: {
         TYPE_CHECK(Object);
         POP_VALOBJ(valobj);
