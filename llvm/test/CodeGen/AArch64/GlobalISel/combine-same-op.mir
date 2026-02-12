@@ -8,6 +8,7 @@ body: |
   bb.0:
     liveins: $x0
 
+
     ; CHECK-LABEL: name: sub_same_op
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
@@ -16,5 +17,6 @@ body: |
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %x:_(s64) = COPY $x0
     %sub:_(s64) = G_SUB %x, %x
-    $x0 = COPY %sub
+    %add:_(s64) = G_ADD %x, %sub
+    $x0 = COPY %add
     RET_ReallyLR implicit $x0
