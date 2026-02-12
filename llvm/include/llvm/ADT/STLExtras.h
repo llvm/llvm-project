@@ -219,13 +219,13 @@ public:
   template <typename... Pn,
             std::enable_if_t<std::is_invocable_v<T, Pn...>, int> = 0>
   decltype(auto) operator()(Pn &&...Params) {
-    return (*Obj)(std::forward<Pn>(Params)...);
+    return std::invoke(*Obj, std::forward<Pn>(Params)...);
   }
 
   template <typename... Pn,
             std::enable_if_t<std::is_invocable_v<T const, Pn...>, int> = 0>
   decltype(auto) operator()(Pn &&...Params) const {
-    return (*Obj)(std::forward<Pn>(Params)...);
+    return std::invoke(*Obj, std::forward<Pn>(Params)...);
   }
 
   bool valid() const { return Obj != std::nullopt; }
@@ -347,7 +347,7 @@ public:
 
   const FuncTy &getFunction() const { return F; }
 
-  ReferenceTy operator*() const { return std::invoke(F, *this->I); }
+  ReferenceTy operator*() const { F(*this->I); }
 
 private:
   callable_detail::Callable<FuncTy> F{};

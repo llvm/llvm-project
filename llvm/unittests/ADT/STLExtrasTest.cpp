@@ -835,6 +835,22 @@ TEST(STLExtrasTest, DropEndDefaultTest) {
   EXPECT_THAT(drop_end(vec), ElementsAre(0, 1, 2, 3));
 }
 
+TEST(STLExtrasTest, CallableMemberPointer) {
+  struct S {
+    int X;
+    int getX() const { return X; }
+  };
+  S Obj{42};
+
+  // Data member pointer.
+  callable_detail::Callable<int S::*> DataMember(&S::X);
+  EXPECT_EQ(DataMember(Obj), 42);
+
+  // Member function pointer.
+  callable_detail::Callable<int (S::*)() const> MemFn(&S::getX);
+  EXPECT_EQ(MemFn(Obj), 42);
+}
+
 TEST(STLExtrasTest, MapRangeTest) {
   SmallVector<int, 5> Vec{0, 1, 2};
   EXPECT_THAT(map_range(Vec, [](int V) { return V + 1; }),

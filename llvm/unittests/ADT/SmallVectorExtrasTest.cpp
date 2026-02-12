@@ -27,7 +27,7 @@ TEST(SmallVectorExtrasTest, MapToVector) {
   auto Doubled = map_to_vector(Numbers, [](int X) { return X * 2; });
   EXPECT_THAT(Doubled, ElementsAre(2, 4, 6));
 
-  // Pointer to data member.
+  // Member pointer.
   struct MapToVectorStruct {
     int X;
     int getX() const { return X; }
@@ -36,7 +36,7 @@ TEST(SmallVectorExtrasTest, MapToVector) {
   EXPECT_THAT(map_to_vector(Structs, &MapToVectorStruct::X),
               ElementsAre(1, 2, 3));
 
-  // Pointer to member function.
+  // Member function pointer.
   EXPECT_THAT(map_to_vector(Structs, &MapToVectorStruct::getX),
               ElementsAre(1, 2, 3));
 }
