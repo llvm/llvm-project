@@ -61,7 +61,7 @@ SmallVector<std::unique_ptr<Region>> unwrapRegions(intptr_t nRegions,
   unwrappedRegions.reserve(nRegions);
   for (intptr_t i = 0; i < nRegions; ++i)
     unwrappedRegions.emplace_back(unwrap(*(regions + i)));
-  auto cleaner = llvm::make_scope_exit([&]() {
+  llvm::scope_exit cleaner([&]() {
     for (auto &region : unwrappedRegions)
       region.release();
   });
@@ -166,4 +166,74 @@ MlirLogicalResult mlirInferShapedTypeOpInterfaceInferReturnTypes(
              wrap(t.getAttribute()), userData);
   }
   return mlirLogicalResultSuccess();
+}
+
+//===---------------------------------------------------------------------===//
+// MemoryEffectOpInterface
+//===---------------------------------------------------------------------===//
+
+MlirTypeID mlirMemoryEffectsOpInterfaceTypeID() {
+  return wrap(MemoryEffectOpInterface::getInterfaceID());
+}
+
+/// Fallback model for the MemoryEffectsOpInterface that uses C API callbacks.
+class MemoryEffectOpInterfaceFallbackModel
+    : public mlir::MemoryEffectOpInterface::FallbackModel<
+          MemoryEffectOpInterfaceFallbackModel> {
+public:
+  /// Sets the callbacks that this FallbackModel will use.
+  /// NB: the callbacks can only be set through this method as the
+  /// RegisteredOperationName::attachInterface mechanism default-constructs
+  /// the FallbackModel without being able to provide arguments.
+  void setCallbacks(MlirMemoryEffectsOpInterfaceCallbacks callbacks) {
+    this->callbacks = callbacks;
+  }
+
+  ~MemoryEffectOpInterfaceFallbackModel() {
+    if (callbacks.destruct)
+      callbacks.destruct(callbacks.userData);
+  }
+
+  static TypeID getInterfaceID() {
+    return MemoryEffectOpInterface::getInterfaceID();
+  }
+
+  static bool classof(const mlir::MemoryEffectOpInterface::Concept *op) {
+    // Enable casting back to the FallbackModel from the Interface. This is
+    // necessary as attachInterface(...) default-constructs the FallbackModel
+    // without being able to pass in the callbacks and returns just the Concept.
+    return true;
+  }
+
+  void
+  getEffects(Operation *op,
+             SmallVectorImpl<MemoryEffects::EffectInstance> &effects) const {
+    assert(callbacks.getEffects && "getEffects callback not set");
+    MlirMemoryEffectInstancesList cEffects = wrap(&effects);
+    callbacks.getEffects(wrap(op), cEffects, callbacks.userData);
+  }
+
+private:
+  MlirMemoryEffectsOpInterfaceCallbacks callbacks;
+};
+
+/// Attach a MemoryEffectsOpInterface FallbackModel to the given named op.
+/// The FallbackModel uses the provided callbacks to implement the interface.
+void mlirMemoryEffectsOpInterfaceAttachFallbackModel(
+    MlirContext ctx, MlirStringRef opName,
+    MlirMemoryEffectsOpInterfaceCallbacks callbacks) {
+  // Look up the operation definition in the context
+  std::optional<RegisteredOperationName> opInfo =
+      RegisteredOperationName::lookup(unwrap(opName), unwrap(ctx));
+
+  assert(opInfo.has_value() && "operation not found in context");
+
+  // NB: the following default-constructs the FallbackModel _without_ being able
+  // to provide arguments.
+  opInfo->attachInterface<MemoryEffectOpInterfaceFallbackModel>();
+  // Cast to get the underlying FallbackModel and set the callbacks.
+  auto *model = cast<MemoryEffectOpInterfaceFallbackModel>(
+      opInfo->getInterface<MemoryEffectOpInterfaceFallbackModel>());
+  assert(model && "Failed to get MemoryEffectOpInterfaceFallbackModel");
+  model->setCallbacks(callbacks);
 }

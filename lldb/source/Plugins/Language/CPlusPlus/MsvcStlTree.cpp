@@ -348,7 +348,7 @@ lldb_private::formatters::MsvcStlTreeSyntheticFrontEnd::GetIndexOfChildWithName(
 
 lldb::ChildCacheState MsvcStlTreeIterSyntheticFrontEnd::Update() {
   m_inner_sp = nullptr;
-  auto node_sp = m_backend.GetChildMemberWithName("_Ptr");
+  ValueObjectSP node_sp = m_backend.GetChildMemberWithName("_Ptr");
   if (!node_sp)
     return lldb::eRefetch;
 

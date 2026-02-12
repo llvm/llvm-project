@@ -186,7 +186,7 @@ i@maskray.me (email), [MaskRay](https://github.com/MaskRay) (GitHub)
 #### Windows ABI and codegen
 
 Reid Kleckner \
-rnk@google.com (email), [rnk](https://github.com/rnk) (GitHub)
+rnk@llvm.org (email), [rnk](https://github.com/rnk) (GitHub)
 
 ### Backends / Targets
 
@@ -245,8 +245,12 @@ mail@justinbogner.com (email), [bogner](https://github.com/bogner) (GitHub)
 
 #### Hexagon backend
 
-Sundeep Kushwaha \
-sundeepk@qti.qualcomm.com (email), [SundeepKushwaha](https://github.com/SundeepKushwaha) (GitHub)
+Brian Cain \
+brian.cain@oss.qualcomm.com (email), [androm3da](https://github.com/androm3da) (GitHub) \
+Ikhlas Ajbar \
+iajbar@qti.qualcomm.com (email), [iajbar](https://github.com/iajbar) \
+Ankit Aggarwal \
+aankit@qti.qualcomm.com (email), [aankit-ca](https://github.com/aankit-ca)
 
 #### Lanai backend
 
@@ -275,7 +279,7 @@ jholewinski@nvidia.com (email), [jholewinski](https://github.com/jholewinski) (G
 Artem Belevich \
 tra@google.com (email), [Artem-B](https://github.com/Artem-B) (GitHub) \
 Alex MacLean \
-amaclean@nvidia.com (email), [AlexMaclean](https://github.com/AlexMaclean) (GitHub) \
+amaclean@nvidia.com (email), [AlexMaclean](https://github.com/AlexMaclean) (GitHub)
 
 #### PowerPC backend
 
@@ -484,7 +488,7 @@ echristo@gmail.com (email), [echristo](https://github.com/echristo) (GitHub)
 #### Exception handling
 
 Reid Kleckner \
-rnk@google.com (email), [rnk](https://github.com/rnk) (GitHub)
+rnk@llvm.org (email), [rnk](https://github.com/rnk) (GitHub)
 
 #### LLVM Buildbot
 
@@ -495,11 +499,11 @@ gkistanova@gmail.com (email), [gkistanova](https://github.com/gkistanova) (GitHu
 
 Some subprojects maintain their own list of per-component maintainers.
 
-[Bolt maintainers](https://github.com/llvm/llvm-project/blob/main/bolt/Maintainers.txt)
+[BOLT maintainers](https://github.com/llvm/llvm-project/blob/main/bolt/Maintainers.md)
 
 [Clang maintainers](https://github.com/llvm/llvm-project/blob/main/clang/Maintainers.rst)
 
-[Clang-tools-extra maintainers](https://github.com/llvm/llvm-project/blob/main/clang-tools-extra/Maintainers.txt)
+[Clang-tools-extra maintainers](https://github.com/llvm/llvm-project/blob/main/clang-tools-extra/Maintainers.rst)
 
 [Compiler-rt maintainers](https://github.com/llvm/llvm-project/blob/main/compiler-rt/Maintainers.md)
 
@@ -557,7 +561,8 @@ Michael Spencer (bigcheesegs@gmail.com), [Bigcheese](https://github.com/Bigchees
 Alexei Starovoitov (alexei.starovoitov@gmail.com, [4ast](https://github.com/4ast)) -- BPF backend \
 Evgeniy Stepanov ([eugenis](https://github.com/eugenis)) -- Sanitizers \
 Zheng Chen (czhengsz@cn.ibm.com, [chenzheng1030](https://github.com/chenzheng1030)) -- PowerPC backend \
-Dan Gohman (llvm@sunfishcode.online, [sunfishcode](https://github.com/sunfishcode)) -- WebAssembly backend
+Dan Gohman (llvm@sunfishcode.online, [sunfishcode](https://github.com/sunfishcode)) -- WebAssembly backend \
+Sundeep Kushwaha (sundeepk@qti.qualcomm.com, [SundeepKushwaha](https://github.com/SundeepKushwaha)) -- Hexagon backend
 
 ### Former maintainers of removed components
 

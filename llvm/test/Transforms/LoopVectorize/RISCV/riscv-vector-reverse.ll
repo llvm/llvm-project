@@ -105,8 +105,8 @@ define void @vector_reverse_i32(ptr noalias %A, ptr noalias %B) {
 ; RV64-UF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; RV64-UF2:       [[VECTOR_PH]]:
 ; RV64-UF2-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-UF2-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
-; RV64-UF2-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 2
+; RV64-UF2-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP4]], 2
+; RV64-UF2-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 1
 ; RV64-UF2-NEXT:    [[N_VEC:%.*]] = urem i64 1023, [[TMP6]]
 ; RV64-UF2-NEXT:    [[TMP7:%.*]] = sub i64 1023, [[N_VEC]]
 ; RV64-UF2-NEXT:    [[TMP33:%.*]] = sub i64 1023, [[TMP7]]
@@ -180,8 +180,8 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-LABEL: define void @vector_reverse_i64(
 ; RV64-SAME: ptr noundef writeonly captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] {
 ; RV64-NEXT:  [[ENTRY:.*:]]
-; RV64-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; RV64-NEXT:    [[B1:%.*]] = ptrtoint ptr [[B]] to i64
+; RV64-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; RV64-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; RV64-NEXT:    [[CMP7:%.*]] = icmp sgt i32 [[N]], 0
 ; RV64-NEXT:    br i1 [[CMP7]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
 ; RV64:       [[FOR_BODY_PREHEADER]]:
@@ -252,8 +252,8 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV32-LABEL: define void @vector_reverse_i64(
 ; RV32-SAME: ptr noundef writeonly captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] {
 ; RV32-NEXT:  [[ENTRY:.*:]]
-; RV32-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i32
-; RV32-NEXT:    [[B1:%.*]] = ptrtoint ptr [[B]] to i32
+; RV32-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i32
+; RV32-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i32
 ; RV32-NEXT:    [[CMP7:%.*]] = icmp sgt i32 [[N]], 0
 ; RV32-NEXT:    br i1 [[CMP7]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
 ; RV32:       [[FOR_BODY_PREHEADER]]:
@@ -311,8 +311,8 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-LABEL: define void @vector_reverse_i64(
 ; RV64-UF2-SAME: ptr noundef writeonly captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] {
 ; RV64-UF2-NEXT:  [[ENTRY:.*:]]
-; RV64-UF2-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; RV64-UF2-NEXT:    [[B1:%.*]] = ptrtoint ptr [[B]] to i64
+; RV64-UF2-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; RV64-UF2-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; RV64-UF2-NEXT:    [[CMP7:%.*]] = icmp sgt i32 [[N]], 0
 ; RV64-UF2-NEXT:    br i1 [[CMP7]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
 ; RV64-UF2:       [[FOR_BODY_PREHEADER]]:
@@ -339,8 +339,8 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; RV64-UF2:       [[VECTOR_PH]]:
 ; RV64-UF2-NEXT:    [[TMP17:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-UF2-NEXT:    [[TMP18:%.*]] = mul nuw i64 [[TMP17]], 4
-; RV64-UF2-NEXT:    [[TMP19:%.*]] = mul nuw i64 [[TMP18]], 2
+; RV64-UF2-NEXT:    [[TMP18:%.*]] = shl nuw i64 [[TMP17]], 2
+; RV64-UF2-NEXT:    [[TMP19:%.*]] = shl nuw i64 [[TMP18]], 1
 ; RV64-UF2-NEXT:    [[N_VEC:%.*]] = urem i64 [[TMP0]], [[TMP19]]
 ; RV64-UF2-NEXT:    [[TMP20:%.*]] = sub i64 [[TMP0]], [[N_VEC]]
 ; RV64-UF2-NEXT:    [[TMP48:%.*]] = sub i64 [[TMP0]], [[TMP20]]
@@ -431,8 +431,8 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-LABEL: define void @vector_reverse_f32(
 ; RV64-SAME: ptr noundef writeonly captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] {
 ; RV64-NEXT:  [[ENTRY:.*:]]
-; RV64-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; RV64-NEXT:    [[B1:%.*]] = ptrtoint ptr [[B]] to i64
+; RV64-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; RV64-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; RV64-NEXT:    [[CMP7:%.*]] = icmp sgt i32 [[N]], 0
 ; RV64-NEXT:    br i1 [[CMP7]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
 ; RV64:       [[FOR_BODY_PREHEADER]]:
@@ -503,8 +503,8 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV32-LABEL: define void @vector_reverse_f32(
 ; RV32-SAME: ptr noundef writeonly captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] {
 ; RV32-NEXT:  [[ENTRY:.*:]]
-; RV32-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i32
-; RV32-NEXT:    [[B1:%.*]] = ptrtoint ptr [[B]] to i32
+; RV32-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i32
+; RV32-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i32
 ; RV32-NEXT:    [[CMP7:%.*]] = icmp sgt i32 [[N]], 0
 ; RV32-NEXT:    br i1 [[CMP7]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
 ; RV32:       [[FOR_BODY_PREHEADER]]:
@@ -562,8 +562,8 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-LABEL: define void @vector_reverse_f32(
 ; RV64-UF2-SAME: ptr noundef writeonly captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] {
 ; RV64-UF2-NEXT:  [[ENTRY:.*:]]
-; RV64-UF2-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; RV64-UF2-NEXT:    [[B1:%.*]] = ptrtoint ptr [[B]] to i64
+; RV64-UF2-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; RV64-UF2-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; RV64-UF2-NEXT:    [[CMP7:%.*]] = icmp sgt i32 [[N]], 0
 ; RV64-UF2-NEXT:    br i1 [[CMP7]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
 ; RV64-UF2:       [[FOR_BODY_PREHEADER]]:
@@ -590,8 +590,8 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; RV64-UF2:       [[VECTOR_PH]]:
 ; RV64-UF2-NEXT:    [[TMP17:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-UF2-NEXT:    [[TMP18:%.*]] = mul nuw i64 [[TMP17]], 4
-; RV64-UF2-NEXT:    [[TMP19:%.*]] = mul nuw i64 [[TMP18]], 2
+; RV64-UF2-NEXT:    [[TMP18:%.*]] = shl nuw i64 [[TMP17]], 2
+; RV64-UF2-NEXT:    [[TMP19:%.*]] = shl nuw i64 [[TMP18]], 1
 ; RV64-UF2-NEXT:    [[N_VEC:%.*]] = urem i64 [[TMP0]], [[TMP19]]
 ; RV64-UF2-NEXT:    [[TMP20:%.*]] = sub i64 [[TMP0]], [[N_VEC]]
 ; RV64-UF2-NEXT:    [[TMP48:%.*]] = sub i64 [[TMP0]], [[TMP20]]
@@ -768,8 +768,8 @@ define void @vector_reverse_f32_simplify(ptr noalias %A, ptr noalias %B) {
 ; RV64-UF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; RV64-UF2:       [[VECTOR_PH]]:
 ; RV64-UF2-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-UF2-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
-; RV64-UF2-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 2
+; RV64-UF2-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP4]], 2
+; RV64-UF2-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 1
 ; RV64-UF2-NEXT:    [[N_VEC:%.*]] = urem i64 1023, [[TMP6]]
 ; RV64-UF2-NEXT:    [[TMP7:%.*]] = sub i64 1023, [[N_VEC]]
 ; RV64-UF2-NEXT:    [[TMP33:%.*]] = sub i64 1023, [[TMP7]]

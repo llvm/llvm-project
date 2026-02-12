@@ -179,8 +179,10 @@ static ScopePair GetDiagForGotoScopeDecl(Sema &S, const Decl *D) {
       }
     }
 
+    // An earlier diag::note_protected_by_vla is more severe, so don't overwrite
+    // it here.
     if (const Expr *Init = VD->getInit();
-        VD->hasLocalStorage() && Init && !Init->containsErrors()) {
+        !InDiag && VD->hasLocalStorage() && Init && !Init->containsErrors()) {
       // C++11 [stmt.dcl]p3:
       //   A program that jumps from a point where a variable with automatic
       //   storage duration is not in scope to a point where it is in scope

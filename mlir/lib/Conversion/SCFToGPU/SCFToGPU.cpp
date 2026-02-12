@@ -1,4 +1,4 @@
-//===- SCFToGPU.cpp - Convert an affine loop nest to a GPU kernel -------===//
+//===- SCFToGPU.cpp - Convert an affine loop nest to a GPU kernel ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -333,12 +333,10 @@ static Value deriveStaticUpperBound(Value upperBound,
   }
 
   if (auto multiplyOp = upperBound.getDefiningOp<arith::MulIOp>()) {
-    if (auto lhs = dyn_cast_or_null<arith::ConstantIndexOp>(
-            deriveStaticUpperBound(multiplyOp.getOperand(0), rewriter)
-                .getDefiningOp()))
-      if (auto rhs = dyn_cast_or_null<arith::ConstantIndexOp>(
-              deriveStaticUpperBound(multiplyOp.getOperand(1), rewriter)
-                  .getDefiningOp())) {
+    if (auto lhs = deriveStaticUpperBound(multiplyOp.getOperand(0), rewriter)
+                       .getDefiningOp<arith::ConstantIndexOp>())
+      if (auto rhs = deriveStaticUpperBound(multiplyOp.getOperand(1), rewriter)
+                         .getDefiningOp<arith::ConstantIndexOp>()) {
         // Assumptions about the upper bound of minimum computations no longer
         // work if multiplied by mixed signs, so abort in this case.
         if ((lhs.value() < 0) != (rhs.value() < 0))
@@ -707,7 +705,7 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
       // Ensure reduction region is isolated from above.
       llvm::SetVector<Value> externalValues;
       getUsedValuesDefinedAbove(reduceOp.getRegion(0), externalValues);
-      if (externalValues.size())
+      if (!externalValues.empty())
         return failure();
       // Replace by gpu.all_reduce.
       auto gpuRedOp = gpu::AllReduceOp::create(rewriter, loc, newValue);

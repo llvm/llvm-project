@@ -47,9 +47,6 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::move(vector<int>)", std_move);
     bm.operator()<std::deque<int>>("std::move(deque<int>)", std_move);
     bm.operator()<std::list<int>>("std::move(list<int>)", std_move);
-    bm.operator()<std::vector<int>>("rng::move(vector<int>)", std::ranges::move);
-    bm.operator()<std::deque<int>>("rng::move(deque<int>)", std::ranges::move);
-    bm.operator()<std::list<int>>("rng::move(list<int>)", std::ranges::move);
   }
 
   // {std,ranges}::move(vector<bool>)
@@ -74,10 +71,6 @@ int main(int argc, char** argv) {
     };
     bm.operator()<true>("std::move(vector<bool>) (aligned)", std_move);
     bm.operator()<false>("std::move(vector<bool>) (unaligned)", std_move);
-#if TEST_STD_VER >= 23 // vector<bool>::iterator is not an output_iterator before C++23
-    bm.operator()<true>("rng::move(vector<bool>) (aligned)", std::ranges::move);
-    bm.operator()<false>("rng::move(vector<bool>) (unaligned)", std::ranges::move);
-#endif
   }
 
   benchmark::Initialize(&argc, argv);

@@ -14,6 +14,20 @@ constexpr int *Global = new int(12); // both-error {{must be initialized by a co
 static_assert(*(new int(12)) == 12); // both-error {{not an integral constant expression}} \
                                      // both-note {{allocation performed here was not deallocated}}
 
+static_assert((delete[] (new int[3] + 1), true)); // both-error {{not an integral constant expression}} \
+                                                  // both-note {{delete of pointer to subobject '&{*new int[3]#0}[1]'}}
+
+struct S {
+  int a;
+  int b;
+
+  static constexpr S *create(int a, int b) {
+    return new S(a, b);
+  }
+};
+
+static_assert(((delete[] (new int[true])), true));
+static_assert(((delete[] (new S[true])), true));
 
 constexpr int a() {
   new int(12); // both-note {{allocation performed here was not deallocated}}
@@ -28,16 +42,6 @@ constexpr int b() {
   return m;
 }
 static_assert(b() == 12, "");
-
-
-struct S {
-  int a;
-  int b;
-
-  static constexpr S *create(int a, int b) {
-    return new S(a, b);
-  }
-};
 
 constexpr int c() {
   S *s = new S(12, 13);
@@ -113,6 +117,12 @@ constexpr int AutoArray() {
 }
 
 static_assert(AutoArray() == 3);
+
+namespace ThisPtrInRunRecordDestructor {
+  struct S {
+    constexpr ~S() { delete new S; };
+  };
+}
 
 #if 0
 consteval int largeArray1(bool b) {
@@ -763,7 +773,7 @@ namespace Limits {
     return n;
   }
   static_assert(dynarray<char>(5, 0) == 'f');
-
+  static_assert(dynarray<char>(5, 4) == 0);
 
 #if __LP64__
   template <typename T>

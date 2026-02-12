@@ -81,10 +81,10 @@ define void @different_addresses(ptr %dst, ptr %src1, ptr %src2, ptr %cond) {
 ; CHECK-LABEL: define void @different_addresses(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC1:%.*]], ptr [[SRC2:%.*]], ptr [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[SRC15:%.*]] = ptrtoint ptr [[SRC1]] to i64
-; CHECK-NEXT:    [[SRC23:%.*]] = ptrtoint ptr [[SRC2]] to i64
-; CHECK-NEXT:    [[COND2:%.*]] = ptrtoint ptr [[COND]] to i64
-; CHECK-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
+; CHECK-NEXT:    [[SRC15:%.*]] = ptrtoaddr ptr [[SRC1]] to i64
+; CHECK-NEXT:    [[SRC23:%.*]] = ptrtoaddr ptr [[SRC2]] to i64
+; CHECK-NEXT:    [[COND2:%.*]] = ptrtoaddr ptr [[COND]] to i64
+; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[COND2]]
@@ -829,8 +829,8 @@ define void @hoist_multiple_complementary_loads(ptr noalias %dst, ptr noalias %s
 ; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <2 x i32> [[TMP23]], i32 [[TMP26]], i32 1
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE6]]
 ; CHECK:       [[PRED_LOAD_CONTINUE6]]:
-; CHECK-NEXT:    [[TMP18:%.*]] = phi <2 x i32> [ [[TMP23]], %[[PRED_LOAD_CONTINUE4]] ], [ [[TMP27]], %[[PRED_LOAD_IF5]] ]
-; CHECK-NEXT:    [[TMP22:%.*]] = mul <2 x i32> [[TMP18]], splat (i32 2)
+; CHECK-NEXT:    [[TMP41:%.*]] = phi <2 x i32> [ [[TMP23]], %[[PRED_LOAD_CONTINUE4]] ], [ [[TMP27]], %[[PRED_LOAD_IF5]] ]
+; CHECK-NEXT:    [[TMP22:%.*]] = shl <2 x i32> [[TMP41]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP30:%.*]] = select <2 x i1> [[TMP7]], <2 x i1> [[TMP16]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <2 x i1> [[TMP30]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP31]], label %[[PRED_LOAD_IF7:.*]], label %[[PRED_LOAD_CONTINUE8:.*]]
@@ -1089,7 +1089,7 @@ define void @hoist_all_three_loads_at_same_address(ptr %dst, ptr %src, ptr noali
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE7]]
 ; CHECK:       [[PRED_LOAD_CONTINUE7]]:
 ; CHECK-NEXT:    [[TMP33:%.*]] = phi <2 x i32> [ [[TMP29]], %[[PRED_LOAD_CONTINUE5]] ], [ [[TMP32]], %[[PRED_LOAD_IF6]] ]
-; CHECK-NEXT:    [[TMP34:%.*]] = mul <2 x i32> [[TMP33]], splat (i32 2)
+; CHECK-NEXT:    [[TMP34:%.*]] = shl <2 x i32> [[TMP33]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <2 x i1> [[TMP11]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP35]], label %[[PRED_LOAD_IF8:.*]], label %[[PRED_LOAD_CONTINUE9:.*]]
 ; CHECK:       [[PRED_LOAD_IF8]]:

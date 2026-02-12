@@ -718,8 +718,7 @@ DenseElementsAttr TensorLiteralParser::getHexAttr(SMLoc loc, ShapedType type) {
     return nullptr;
 
   ArrayRef<char> rawData(data);
-  bool detectedSplat = false;
-  if (!DenseElementsAttr::isValidRawBuffer(type, rawData, detectedSplat)) {
+  if (!DenseElementsAttr::isValidRawBuffer(type, rawData)) {
     p.emitError(loc) << "elements hex data size is invalid for provided type: "
                      << type;
     return nullptr;
@@ -883,6 +882,8 @@ ParseResult DenseArrayElementParser::parseIntegerElement(Parser &p) {
                   !type.isUnsignedInteger());
     p.consumeToken();
   } else if (p.consumeIf(Token::integer)) {
+    if (type.isInteger(1))
+      return p.emitError("expected 'true' or 'false' values for i1 type");
     value = buildAttributeAPInt(type, isNegative, spelling);
     if (!value)
       return p.emitError("integer constant out of range");
@@ -921,7 +922,7 @@ Attribute Parser::parseDenseArrayAttr(Type attrType) {
 
   // Only bool or integer and floating point elements divisible by bytes are
   // supported.
-  if (!eltType.isIntOrIndexOrFloat()) {
+  if (!eltType.isIntOrFloat()) {
     emitError(typeLoc, "expected integer or float type, got: ") << eltType;
     return {};
   }
@@ -938,7 +939,7 @@ Attribute Parser::parseDenseArrayAttr(Type attrType) {
     return {};
 
   DenseArrayElementParser eltParser(eltType);
-  if (eltType.isIntOrIndex()) {
+  if (isa<IntegerType>(eltType)) {
     if (parseCommaSeparatedList(
             [&] { return eltParser.parseIntegerElement(*this); }))
       return {};

@@ -38,6 +38,7 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
   MsvcStlAtomic.cpp
   MsvcStlDeque.cpp
   MsvcStlSmartPointer.cpp
+  MsvcStlSpan.cpp
   MsvcStlTree.cpp
   MsvcStlTuple.cpp
   MsvcStlUnordered.cpp
@@ -55,7 +56,6 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
     lldbTarget
     lldbUtility
     lldbValueObject
-    lldbPluginClangCommon
     lldbPluginCPPRuntime
     lldbPluginTypeSystemClang
 )
