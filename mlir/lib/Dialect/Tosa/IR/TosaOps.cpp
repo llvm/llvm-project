@@ -3458,9 +3458,14 @@ public:
     const ShapeAdaptor inputShape(adaptor.getInput().getType());
     if (!inputShape.hasRank())
       return;
-    outputShape[0] = inputShape.getDimSize(0);
-    inputSpatial[0] = inputShape.getDimSize(1);
-    inputSpatial[1] = inputShape.getDimSize(2);
+
+    const int64_t outputBatch = inputShape.getDimSize(0);
+    const int64_t inputHeight = inputShape.getDimSize(1);
+    const int64_t inputWidth = inputShape.getDimSize(2);
+
+    outputShape[0] = outputBatch;
+    inputSpatial[0] = inputHeight;
+    inputSpatial[1] = inputWidth;
   }
 
   void inferWeightShape(SmallVectorImpl<int64_t> &outputShape,
@@ -3468,9 +3473,14 @@ public:
     const ShapeAdaptor weightShape(adaptor.getWeight().getType());
     if (!weightShape.hasRank())
       return;
-    outputShape[3] = weightShape.getDimSize(0);
-    weightSpatial[0] = weightShape.getDimSize(1);
-    weightSpatial[1] = weightShape.getDimSize(2);
+
+    const int64_t outputChannels = weightShape.getDimSize(0);
+    const int64_t kernelHeight = weightShape.getDimSize(1);
+    const int64_t kernelWidth = weightShape.getDimSize(2);
+
+    outputShape[3] = outputChannels;
+    weightSpatial[0] = kernelHeight;
+    weightSpatial[1] = kernelWidth;
   }
 
   int64_t getNumSpatialDims() const { return 2; }
@@ -3501,34 +3511,52 @@ public:
                        SmallVectorImpl<int64_t> &inputSpatial) {
     const ShapeAdaptor inputDataShape(adaptor.getInputData().getType());
     if (inputDataShape.hasRank()) {
-      outputShape[0] = inputDataShape.getDimSize(0);
-      inputSpatial[0] = inputDataShape.getDimSize(1);
-      inputSpatial[1] = inputDataShape.getDimSize(2);
+      const int64_t outputBatch = inputDataShape.getDimSize(0);
+      const int64_t inputHeight = inputDataShape.getDimSize(1);
+      const int64_t inputWidth = inputDataShape.getDimSize(2);
+
+      outputShape[0] = outputBatch;
+      inputSpatial[0] = inputHeight;
+      inputSpatial[1] = inputWidth;
     }
 
     const ShapeAdaptor inputScaleShape(adaptor.getInputScale().getType());
     if (!inputScaleShape.hasRank())
       return;
-    updateIfDynamic(outputShape[0], inputScaleShape.getDimSize(0));
-    updateIfDynamic(inputSpatial[0], inputScaleShape.getDimSize(1));
-    updateIfDynamic(inputSpatial[1], inputScaleShape.getDimSize(2));
+
+    const int64_t scaleBatch = inputScaleShape.getDimSize(0);
+    const int64_t scaleHeight = inputScaleShape.getDimSize(1);
+    const int64_t scaleWidth = inputScaleShape.getDimSize(2);
+
+    updateIfDynamic(outputShape[0], scaleBatch);
+    updateIfDynamic(inputSpatial[0], scaleHeight);
+    updateIfDynamic(inputSpatial[1], scaleWidth);
   }
 
   void inferWeightShape(SmallVectorImpl<int64_t> &outputShape,
                         SmallVectorImpl<int64_t> &weightSpatial) {
     const ShapeAdaptor weightDataShape(adaptor.getWeightData().getType());
     if (weightDataShape.hasRank()) {
-      outputShape[3] = weightDataShape.getDimSize(0);
-      weightSpatial[0] = weightDataShape.getDimSize(1);
-      weightSpatial[1] = weightDataShape.getDimSize(2);
+      const int64_t outputChannels = weightDataShape.getDimSize(0);
+      const int64_t kernelHeight = weightDataShape.getDimSize(1);
+      const int64_t kernelWidth = weightDataShape.getDimSize(2);
+
+      outputShape[3] = outputChannels;
+      weightSpatial[0] = kernelHeight;
+      weightSpatial[1] = kernelWidth;
     }
 
     const ShapeAdaptor weightScaleShape(adaptor.getWeightScale().getType());
     if (!weightScaleShape.hasRank())
       return;
-    updateIfDynamic(outputShape[3], weightScaleShape.getDimSize(0));
-    updateIfDynamic(weightSpatial[0], weightScaleShape.getDimSize(1));
-    updateIfDynamic(weightSpatial[1], weightScaleShape.getDimSize(2));
+
+    const int64_t scaleOutputChannels = weightScaleShape.getDimSize(0);
+    const int64_t scaleKernelHeight = weightScaleShape.getDimSize(1);
+    const int64_t scaleKernelWidth = weightScaleShape.getDimSize(2);
+
+    updateIfDynamic(outputShape[3], scaleOutputChannels);
+    updateIfDynamic(weightSpatial[0], scaleKernelHeight);
+    updateIfDynamic(weightSpatial[1], scaleKernelWidth);
   }
 
   int64_t getNumSpatialDims() const { return 2; }
@@ -3563,10 +3591,16 @@ public:
     const ShapeAdaptor inputShape(adaptor.getInput().getType());
     if (!inputShape.hasRank())
       return;
-    outputShape[0] = inputShape.getDimSize(0);
-    inputSpatial[0] = inputShape.getDimSize(1);
-    inputSpatial[1] = inputShape.getDimSize(2);
-    inputSpatial[2] = inputShape.getDimSize(3);
+
+    const int64_t outputBatch = inputShape.getDimSize(0);
+    const int64_t inputDepth = inputShape.getDimSize(1);
+    const int64_t inputHeight = inputShape.getDimSize(2);
+    const int64_t inputWidth = inputShape.getDimSize(3);
+
+    outputShape[0] = outputBatch;
+    inputSpatial[0] = inputDepth;
+    inputSpatial[1] = inputHeight;
+    inputSpatial[2] = inputWidth;
   }
 
   void inferWeightShape(SmallVectorImpl<int64_t> &outputShape,
@@ -3574,10 +3608,16 @@ public:
     const ShapeAdaptor weightShape(adaptor.getWeight().getType());
     if (!weightShape.hasRank())
       return;
-    outputShape[4] = weightShape.getDimSize(0);
-    weightSpatial[0] = weightShape.getDimSize(1);
-    weightSpatial[1] = weightShape.getDimSize(2);
-    weightSpatial[2] = weightShape.getDimSize(3);
+
+    const int64_t outputChannels = weightShape.getDimSize(0);
+    const int64_t kernelDepth = weightShape.getDimSize(1);
+    const int64_t kernelHeight = weightShape.getDimSize(2);
+    const int64_t kernelWidth = weightShape.getDimSize(3);
+
+    outputShape[4] = outputChannels;
+    weightSpatial[0] = kernelDepth;
+    weightSpatial[1] = kernelHeight;
+    weightSpatial[2] = kernelWidth;
   }
 
   int64_t getNumSpatialDims() const { return 3; }
