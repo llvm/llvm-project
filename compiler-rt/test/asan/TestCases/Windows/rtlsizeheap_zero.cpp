@@ -1,7 +1,7 @@
 // RUN: %clang_cl_asan %s %Fe%t
-// RUN: %run %t 2>&1 | FileCheck %s
+// RUN: %env_asan_opts=windows_hook_rtl_allocators=true %run %t 2>&1 | FileCheck %s
 // RUN: %clang_cl_asan %s %Fe%t /DFAIL_CHECK
-// RUN: not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-FAIL
+// RUN: %env_asan_opts=windows_hook_rtl_allocators=true not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-FAIL
 //
 // Verify that zero-size heap allocations report size 0 through Windows heap
 // size APIs, preventing false positives when the result is used with memset.
