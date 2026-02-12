@@ -134,7 +134,26 @@ private:
 };
 } // namespace
 
-/// Hoist the pure ops to the location of the Nearest Common Dominator.
+static bool isBlockCrossIsIsolatedFromAbove(DominanceInfo *dominate, Block *a,
+                                            Block *b) {
+  if (a == b)
+    return false;
+  if (a->getParent() == b->getParent())
+    return false;
+  if (dominate->dominates(b, a))
+    std::swap(b, a);
+  while (b && b->getParentOp()) {
+    Operation *parnetOp = b->getParentOp();
+    if (parnetOp->mightHaveTrait<OpTrait::IsIsolatedFromAbove>())
+      return true;
+    b = parnetOp->getBlock();
+    if (b == a)
+      return false;
+  }
+  return false;
+}
+
+/// Hoist the pure ops to the location of the Nearest Common Dominator
 LogicalResult CSEDriver::hoistPureOp(Operation *existing, Operation *op) {
   Block *ancestorBlock =
       domInfo->findNearestCommonDominator(existing->getBlock(), op->getBlock());
@@ -144,6 +163,9 @@ LogicalResult CSEDriver::hoistPureOp(Operation *existing, Operation *op) {
            << "failed";
     return failure();
   }
+  if (isBlockCrossIsIsolatedFromAbove(domInfo, ancestorBlock,
+                                      existing->getBlock()))
+    return failure();
 
   Operation *insertPoint = nullptr;
   for (Value operand : op->getOperands()) {
