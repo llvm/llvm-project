@@ -153,6 +153,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnLanguage_.set(LanguageFeature::SavedLocalInSpecExpr);
   warnLanguage_.set(LanguageFeature::NullActualForAllocatable);
   warnUsage_.set(UsageWarning::BadValueInDeadCode);
+  warnUsage_.set(UsageWarning::MisplacedIgnoreTKR);
 }
 
 std::optional<LanguageControlFlag> LanguageFeatureControl::FindWarning(

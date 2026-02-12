@@ -187,6 +187,7 @@ Transforms/LowerMatrixIntrinsics/data-layout-multiply-fused.ll
 Transforms/LowerMatrixIntrinsics/multiply-fused-dominance.ll
 Transforms/LowerMatrixIntrinsics/multiply-fused.ll
 Transforms/LowerMatrixIntrinsics/multiply-fused-loops.ll
+Transforms/LowerMatrixIntrinsics/multiply-fused-loops-large-matrixes.ll
 Transforms/LowerMatrixIntrinsics/multiply-fused-multiple-blocks.ll
 Transforms/LowerMatrixIntrinsics/multiply-fused-volatile.ll
 Transforms/LowerMatrixIntrinsics/select.ll
