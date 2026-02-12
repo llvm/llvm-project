@@ -116,7 +116,7 @@ gpu.module @test_round_robin_assignment {
     %load =  xegpu.load_nd %tdesc {layout =  #xegpu.layout<sg_layout = [4, 1], sg_data = [16, 1], lane_layout = [8, 1], lane_data = [1, 1]>}
       : !xegpu.tensor_desc<128x1xf32, #xegpu.layout<sg_layout = [4, 1], sg_data = [16, 1], lane_layout = [8, 1], lane_data = [1, 1]>>
       -> vector<128x1xf32>
-    // CHECK-COUNT-2: vector.broadcast {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 1]>} : vector<16x1xf32> to vector<16x32xf32>
+    // CHECK-COUNT-2: vector.broadcast {{.*}} : vector<16x1xf32> to vector<16x32xf32>
     // CHECK-NOT: vector.broadcast
     %broadcast = vector.broadcast %load
       {layout_result_0 = #xegpu.layout<sg_layout = [4, 1], sg_data = [16, 32], lane_layout = [8, 1], lane_data = [1, 1]>}

@@ -80,3 +80,41 @@ void scoped_atomic_store_n(int *ptr, int value) {
   // LLVM: store atomic i32 %{{.+}}, ptr %{{.+}} monotonic, align 4
   // OGCG: store atomic i32 %{{.+}}, ptr %{{.+}} monotonic, align 4
 }
+
+void scoped_atomic_exchange(int *ptr, int *value, int *old) {
+  // CIR-BEFORE-TL-LABEL: @scoped_atomic_exchange
+  // CIR-LABEL: @scoped_atomic_exchange
+  // LLVM-LABEL: @scoped_atomic_exchange
+  // OGCG-LABEL: @scoped_atomic_exchange
+
+  __scoped_atomic_exchange(ptr, value, old, __ATOMIC_RELAXED, __MEMORY_SCOPE_SINGLE);
+  // CIR-BEFORE-TL: cir.atomic.xchg relaxed syncscope(single_thread) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg relaxed syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
+  // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
+
+  __scoped_atomic_exchange(ptr, value, old, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
+  // CIR-BEFORE-TL: cir.atomic.xchg relaxed syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg relaxed syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
+  // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
+}
+
+void scoped_atomic_exchange_n(int *ptr, int value) {
+  // CIR-BEFORE-TL-LABEL: @scoped_atomic_exchange_n
+  // CIR-LABEL: @scoped_atomic_exchange_n
+  // LLVM-LABEL: @scoped_atomic_exchange_n
+  // OGCG-LABEL: @scoped_atomic_exchange_n
+
+  __scoped_atomic_exchange_n(ptr, value, __ATOMIC_RELAXED, __MEMORY_SCOPE_SINGLE);
+  // CIR-BEFORE-TL: cir.atomic.xchg relaxed syncscope(single_thread) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg relaxed syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
+  // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
+
+  __scoped_atomic_exchange_n(ptr, value, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
+  // CIR-BEFORE-TL: cir.atomic.xchg relaxed syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg relaxed syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
+  // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
+}
