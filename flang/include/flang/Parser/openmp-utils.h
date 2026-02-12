@@ -20,6 +20,7 @@
 #include "llvm/Frontend/OpenMP/OMP.h"
 
 #include <cassert>
+#include <iterator>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -326,6 +327,18 @@ struct ExecutionPartIterator {
     return *this;
   }
 
+  ExecutionPartIterator operator++(int) {
+    ExecutionPartIterator copy{*this};
+    operator++();
+    return copy;
+  }
+
+  using difference_type = IteratorType::difference_type;
+  using value_type = IteratorType::value_type;
+  using reference = IteratorType::reference;
+  using pointer = IteratorType::pointer;
+  using iterator_category = std::forward_iterator_tag;
+
 private:
   IteratorType at() const { return stack_.back().range.begin(); };
 
@@ -368,6 +381,12 @@ struct LoopNestIterator : public ExecutionPartIterator {
     ExecutionPartIterator::operator++();
     adjust();
     return *this;
+  }
+
+  LoopNestIterator operator++(int) {
+    LoopNestIterator copy{*this};
+    operator++();
+    return copy;
   }
 
 private:
