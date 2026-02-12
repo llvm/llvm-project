@@ -193,6 +193,12 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genCFProcPointer,
      {{{"cptr", asValue}, {"fptr", asInquired}}},
      /*isElemental=*/false},
+    {"c_f_strpointer",
+     &I::genCFStrPointer,
+     {{{"cstrptr_or_cstrarray", asValue},
+       {"fstrptr", asInquired},
+       {"nchars", asValue, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"c_funloc", &I::genCFunLoc, {{{"x", asBox}}}, /*isElemental=*/false},
     {"c_loc", &I::genCLoc, {{{"x", asBox}}}, /*isElemental=*/false},
     {"c_ptr_eq", &I::genCPtrCompare<mlir::arith::CmpIPredicate::eq>},
@@ -3248,6 +3254,99 @@ void IntrinsicLibrary::genCFProcPointer(
   mlir::Value cptrBox =
       fir::EmboxProcOp::create(builder, loc, boxProcType, cptrCast);
   fir::StoreOp::create(builder, loc, cptrBox, fptr);
+}
+
+// C_F_STRPOINTER
+void IntrinsicLibrary::genCFStrPointer(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+
+  mlir::Value cStrAddr;
+  mlir::Value strLen;
+
+  const mlir::Value firstArg = fir::getBase(args[0]);
+  const mlir::Type firstArgType = fir::unwrapRefType(firstArg.getType());
+  const bool isCstrptr = mlir::isa<fir::RecordType>(firstArgType);
+
+  if (isCstrptr) {
+    // CSTRPTR form: Extract address from C_PTR
+    cStrAddr = fir::factory::genCPtrOrCFunptrValue(builder, loc, firstArg);
+
+    assert(isStaticallyPresent(args[2]));
+    mlir::Value nchars = fir::getBase(args[2]);
+    if (fir::isa_ref_type(nchars.getType())) {
+      strLen = fir::LoadOp::create(builder, loc, nchars);
+    } else {
+      strLen = nchars;
+    }
+  } else {
+    // CSTRARRAY form: Get address from CHARACTER array
+    if (const auto boxCharTy =
+            mlir::dyn_cast<fir::BoxCharType>(firstArg.getType())) {
+      const auto charTy = mlir::cast<fir::CharacterType>(boxCharTy.getEleTy());
+      const auto addrTy = builder.getRefType(charTy);
+      auto unboxed = fir::UnboxCharOp::create(
+          builder, loc, mlir::TypeRange{addrTy, builder.getIndexType()},
+          firstArg);
+      cStrAddr = unboxed.getResult(0);
+    } else if (mlir::isa<fir::BoxType>(firstArg.getType())) {
+      cStrAddr = fir::BoxAddrOp::create(builder, loc, firstArg);
+    } else {
+      cStrAddr = firstArg;
+    }
+
+    // Handle optional NCHARS argument
+    if (isStaticallyPresent(args[2])) {
+      mlir::Value nchars = fir::getBase(args[2]);
+      if (fir::isa_ref_type(nchars.getType())) {
+        strLen = fir::LoadOp::create(builder, loc, nchars);
+      } else {
+        strLen = nchars;
+      }
+    } else {
+      const mlir::Type i8PtrTy = builder.getRefType(builder.getIntegerType(8));
+      const mlir::Value strPtr = builder.createConvert(loc, i8PtrTy, cStrAddr);
+
+      const mlir::Type i64Ty = builder.getIntegerType(64);
+      const mlir::FunctionType strlenType =
+          mlir::FunctionType::get(builder.getContext(), {i8PtrTy}, {i64Ty});
+
+      mlir::func::FuncOp strlenFunc = builder.getNamedFunction("strlen");
+      if (!strlenFunc) {
+        strlenFunc = builder.createFunction(loc, "strlen", strlenType);
+        strlenFunc->setAttr(
+            fir::getSymbolAttrName(),
+            mlir::StringAttr::get(builder.getContext(), "strlen"));
+      }
+      auto call = fir::CallOp::create(builder, loc, strlenFunc, {strPtr});
+      strLen = call.getResult(0);
+    }
+  }
+
+  // Handle FSTRPTR (second argument)
+  const auto *fStrPtr = args[1].getBoxOf<fir::MutableBoxValue>();
+  assert(fStrPtr && "FSTRPTR must be a pointer");
+
+  const mlir::Value lenIdx =
+      builder.createConvert(loc, builder.getIndexType(), strLen);
+
+  const mlir::Type charPtrType = fir::PointerType::get(fir::CharacterType::get(
+      builder.getContext(), 1, fir::CharacterType::unknownLen()));
+  const mlir::Value charPtr = builder.createConvert(loc, charPtrType, cStrAddr);
+
+  const fir::CharBoxValue charBox{charPtr, lenIdx};
+  fir::factory::associateMutableBox(builder, loc, *fStrPtr, charBox,
+                                    /*lbounds=*/mlir::ValueRange{});
+
+  // CUDA synchronization if needed
+  if (auto declare = mlir::dyn_cast_or_null<hlfir::DeclareOp>(
+          fStrPtr->getAddr().getDefiningOp()))
+    if (declare.getMemref().getDefiningOp() &&
+        mlir::isa<fir::AddrOfOp>(declare.getMemref().getDefiningOp()))
+      if (cuf::isRegisteredDeviceAttr(declare.getDataAttr()) &&
+          !cuf::isCUDADeviceContext(builder.getRegion()))
+        fir::runtime::cuda::genSyncGlobalDescriptor(builder, loc,
+                                                    declare.getMemref());
 }
 
 // C_FUNLOC

@@ -98,19 +98,19 @@ static QualType getStatusOrValueType(ClassTemplateSpecializationDecl *TRD) {
 }
 
 static auto ofClassStatus() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return ofClass(hasName("::absl::Status"));
 }
 
 static auto isStatusMemberCallWithName(llvm::StringRef member_name) {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return cxxMemberCallExpr(
       on(expr(unless(cxxThisExpr()))),
       callee(cxxMethodDecl(hasName(member_name), ofClassStatus())));
 }
 
 static auto isStatusOrMemberCallWithName(llvm::StringRef member_name) {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return cxxMemberCallExpr(
       on(expr(unless(cxxThisExpr()))),
       callee(cxxMethodDecl(
@@ -119,7 +119,7 @@ static auto isStatusOrMemberCallWithName(llvm::StringRef member_name) {
 }
 
 static auto isStatusOrOperatorCallWithName(llvm::StringRef operator_name) {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return cxxOperatorCallExpr(
       hasOverloadedOperatorName(operator_name),
       callee(cxxMethodDecl(
@@ -127,19 +127,19 @@ static auto isStatusOrOperatorCallWithName(llvm::StringRef operator_name) {
 }
 
 static auto valueCall() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return anyOf(isStatusOrMemberCallWithName("value"),
                isStatusOrMemberCallWithName("ValueOrDie"));
 }
 
 static auto valueOperatorCall() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return expr(anyOf(isStatusOrOperatorCallWithName("*"),
                     isStatusOrOperatorCallWithName("->")));
 }
 
 static auto isComparisonOperatorCall(llvm::StringRef operator_name) {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return cxxOperatorCallExpr(
       hasOverloadedOperatorName(operator_name), argumentCountIs(2),
       hasArgument(0, anyOf(hasType(statusType()), hasType(statusOrType()))),
@@ -147,12 +147,12 @@ static auto isComparisonOperatorCall(llvm::StringRef operator_name) {
 }
 
 static auto isOkStatusCall() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return callExpr(callee(functionDecl(hasName("::absl::OkStatus"))));
 }
 
 static auto isNotOkStatusCall() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return callExpr(callee(functionDecl(hasAnyName(
       "::absl::AbortedError", "::absl::AlreadyExistsError",
       "::absl::CancelledError", "::absl::DataLossError",
@@ -165,7 +165,7 @@ static auto isNotOkStatusCall() {
 }
 
 static auto isPointerComparisonOperatorCall(std::string operator_name) {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return binaryOperator(hasOperatorName(operator_name),
                         hasLHS(hasType(hasCanonicalType(pointerType(
                             pointee(anyOf(statusOrType(), statusType())))))),
@@ -178,7 +178,7 @@ static auto isPointerComparisonOperatorCall(std::string operator_name) {
 // nullptr does not match the bound type.
 // TODO: be less restrictive around convertible types in general.
 static auto isStatusOrValueAssignmentCall() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return cxxOperatorCallExpr(
       hasOverloadedOperatorName("="),
       callee(cxxMethodDecl(ofClass(statusOrClass()))),
@@ -188,7 +188,7 @@ static auto isStatusOrValueAssignmentCall() {
 }
 
 static auto isStatusOrValueConstructor() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return cxxConstructExpr(
       hasType(statusOrType()),
       hasArgument(0,
@@ -199,83 +199,83 @@ static auto isStatusOrValueConstructor() {
 }
 
 static auto isStatusOrConstructor() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return cxxConstructExpr(hasType(statusOrType()));
 }
 
 static auto isStatusConstructor() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return cxxConstructExpr(hasType(statusType()));
 }
 static auto isLoggingGetReferenceableValueCall() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return callExpr(callee(
       functionDecl(hasName("::absl::log_internal::GetReferenceableValue"))));
 }
 
 static auto isLoggingCheckEqImpl() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return callExpr(
       callee(functionDecl(hasName("::absl::log_internal::Check_EQImpl"))));
 }
 
 static auto isAsStatusCallWithStatus() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return callExpr(
       callee(functionDecl(hasName("::absl::log_internal::AsStatus"))),
       hasArgument(0, hasType(statusClass())));
 }
 
 static auto isAsStatusCallWithStatusOr() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return callExpr(
       callee(functionDecl(hasName("::absl::log_internal::AsStatus"))),
       hasArgument(0, hasType(statusOrType())));
 }
 
 static auto possiblyReferencedStatusOrType() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return anyOf(statusOrType(), referenceType(pointee(statusOrType())));
 }
 
 static auto isConstAccessorMemberCall() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return cxxMemberCallExpr(callee(cxxMethodDecl(
       parameterCountIs(0), isConst(),
       returns(hasCanonicalType(anyOf(referenceType(), recordType()))))));
 }
 
 static auto isConstAccessorMemberOperatorCall() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return cxxOperatorCallExpr(callee(cxxMethodDecl(
       parameterCountIs(0), isConst(),
       returns(hasCanonicalType(anyOf(referenceType(), recordType()))))));
 }
 
 static auto isConstPointerAccessorMemberCall() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return cxxMemberCallExpr(callee(
       cxxMethodDecl(parameterCountIs(0), isConst(), returns(pointerType()))));
 }
 
 static auto isConstPointerAccessorMemberOperatorCall() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return cxxOperatorCallExpr(callee(
       cxxMethodDecl(parameterCountIs(0), isConst(), returns(pointerType()))));
 }
 
 static auto isNonConstMemberCall() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return cxxMemberCallExpr(callee(cxxMethodDecl(unless(isConst()))));
 }
 
 static auto isNonConstMemberOperatorCall() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return cxxOperatorCallExpr(callee(cxxMethodDecl(unless(isConst()))));
 }
 
 static auto isMakePredicateFormatterFromIsOkMatcherCall() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return callExpr(
       callee(functionDecl(
           hasName("::testing::internal::MakePredicateFormatterFromMatcher"))),
@@ -288,7 +288,7 @@ static auto isMakePredicateFormatterFromIsOkMatcherCall() {
 }
 
 static auto isStatusIsOkMatcherCall() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return callExpr(callee(functionDecl(hasAnyName(
                       "::testing::status::StatusIs", "absl_testing::StatusIs",
                       "::testing::status::CanonicalStatusIs",
@@ -298,7 +298,7 @@ static auto isStatusIsOkMatcherCall() {
 }
 
 static auto isMakePredicateFormatterFromStatusIsMatcherCall() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return callExpr(
       callee(functionDecl(
           hasName("::testing::internal::MakePredicateFormatterFromMatcher"))),
@@ -312,7 +312,7 @@ static auto isMakePredicateFormatterFromStatusIsMatcherCall() {
 }
 
 static auto isPredicateFormatterFromStatusMatcherCall() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return cxxOperatorCallExpr(
       hasOverloadedOperatorName("()"),
       callee(cxxMethodDecl(ofClass(
@@ -321,7 +321,7 @@ static auto isPredicateFormatterFromStatusMatcherCall() {
 }
 
 static auto isPredicateFormatterFromStatusOrMatcherCall() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return cxxOperatorCallExpr(
       hasOverloadedOperatorName("()"),
       callee(cxxMethodDecl(ofClass(
@@ -330,7 +330,7 @@ static auto isPredicateFormatterFromStatusOrMatcherCall() {
 }
 
 static auto isAssertionResultOperatorBoolCall() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return cxxMemberCallExpr(
       on(expr(unless(cxxThisExpr()))),
       callee(cxxMethodDecl(hasName("operator bool"),
@@ -338,26 +338,26 @@ static auto isAssertionResultOperatorBoolCall() {
 }
 
 static auto isAssertionResultConstructFromBoolCall() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return cxxConstructExpr(
       hasType(recordDecl(hasName("testing::AssertionResult"))),
       hasArgument(0, hasType(booleanType())));
 }
 
 static auto isStatusOrReturningCall() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return callExpr(
       callee(functionDecl(returns(possiblyReferencedStatusOrType()))));
 }
 
 static auto isStatusOrPtrReturningCall() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return callExpr(callee(functionDecl(returns(hasUnqualifiedDesugaredType(
       pointerType(pointee(possiblyReferencedStatusOrType())))))));
 }
 
 static auto isStatusPtrReturningCall() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return callExpr(callee(functionDecl(returns(hasUnqualifiedDesugaredType(
       pointerType(pointee(hasUnqualifiedDesugaredType(
           recordType(hasDeclaration(statusClass()))))))))));
@@ -417,30 +417,30 @@ BoolValue &initializeStatusOr(RecordStorageLocation &StatusOrLoc,
 }
 
 clang::ast_matchers::DeclarationMatcher statusOrClass() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return classTemplateSpecializationDecl(
       hasName("absl::StatusOr"),
       hasTemplateArgument(0, refersToType(type().bind("T"))));
 }
 
 clang::ast_matchers::DeclarationMatcher statusClass() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return cxxRecordDecl(hasName("absl::Status"));
 }
 
 clang::ast_matchers::DeclarationMatcher statusOrOperatorBaseClass() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return classTemplateSpecializationDecl(
       hasName("absl::internal_statusor::OperatorBase"));
 }
 
 clang::ast_matchers::TypeMatcher statusOrType() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return hasCanonicalType(qualType(hasDeclaration(statusOrClass())));
 }
 
 clang::ast_matchers::TypeMatcher statusType() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return hasCanonicalType(qualType(hasDeclaration(statusClass())));
 }
 
@@ -1147,7 +1147,7 @@ getSmartPtrLikeStorageLocation(const Expr &E, const Environment &Env) {
 CFGMatchSwitch<LatticeTransferState>
 buildTransferMatchSwitch(ASTContext &Ctx,
                          CFGMatchSwitchBuilder<LatticeTransferState> Builder) {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  using namespace ::clang::ast_matchers;
   return std::move(Builder)
       .CaseOfCFGStmt<CallExpr>(
           isMakePredicateFormatterFromIsOkMatcherCall(),
