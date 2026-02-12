@@ -687,8 +687,10 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.Transform.Nanobind
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
     DialectTransform.cpp
+    Rewrite.h
   PRIVATE_LINK_LIBS
     LLVMSupport
+    MLIRPythonExtension.Core
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPITransformDialect
