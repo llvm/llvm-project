@@ -1504,7 +1504,7 @@ linalg::downscaleSizeOneWindowedConvolution(RewriterBase &rewriter,
   if (failed(maybeDims))
     return failure();
 
-  // Requires exactly 2 spatial dimensions to downscale to 1D.
+  // Currently supports only 2D convolutions.
   if (maybeDims->outputImage.size() != 2 || maybeDims->filterLoop.size() != 2)
     return failure();
 

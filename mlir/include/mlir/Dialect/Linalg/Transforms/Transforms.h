@@ -1640,10 +1640,11 @@ FailureOr<linalg::GenericOp> deduplicateOperandsAndRemoveDeadResults(
 // functional-stye API call.
 //===----------------------------------------------------------------------===//
 
-/// Rewrite 2-D convolution/pooling/depthwise ops with size-1 window dimensions
+/// Rewrite convolution/pooling/depthwise ops with size-1 window dimensions
 /// into lower-dimensional ops. Uses `inferConvolutionDims` to work with any
 /// layout and handles both named ops and equivalent linalg.generic ops
 /// uniformly. The result is specialized back to a named op when possible.
+/// TODO: Support n-D to (n-1)-D downscaling.
 FailureOr<LinalgOp> downscaleSizeOneWindowedConvolution(RewriterBase &rewriter,
                                                         LinalgOp op);
 
