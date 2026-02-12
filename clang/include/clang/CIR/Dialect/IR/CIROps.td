@@ -666,6 +666,51 @@ def CIR_LoadOp : CIR_Op<"load", [
 }
 
 //===----------------------------------------------------------------------===//
+// MaskLoadOp
+//===----------------------------------------------------------------------===//
+
+def CIR_VecMaskedLoadOp : CIR_Op<"vec.masked_load", [
+  TypesMatchWith<"type of 'result' must match pointee type of 'addr'",
+    "addr", "result", "mlir::cast<cir::PointerType>($_self).getPointee()">
+]> {
+  let summary = "Masked vector load from memory";
+  let description = [{
+    `cir.masked_load` conditionally loads elements from memory based on a mask.
+    Elements for which the mask is false are taken from `pass_thru`.
+
+    This operation corresponds to LLVM's masked load op (`llvm.intr.maskedload`)
+    and lower directly to it.
+
+    `alignment` can be provided to override the default alignment derived from
+    the pointee/element type data layout.
+
+    Example:
+
+    ```mlir
+    %v = cir.masked_load align(16) %ptr, %mask, %passthru
+         : !cir.ptr<i32>, <4xi1>, <4xi32> -> <4xi32>
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PointerType, "base address (points to element type)", [MemRead]>:$addr,
+    CIR_VectorType:$mask,
+    CIR_VectorType:$pass_thru,
+    OptionalAttr<IntValidAlignment<I64Attr>>:$alignment
+  );
+
+  let results = (outs CIR_AnyType:$result);
+
+  let assemblyFormat = [{
+    (`align` `(` $alignment^ `)`)? 
+    $addr `,` $mask `,` $pass_thru
+    `:` qualified(type($addr)) `,` type($mask) `,` type($pass_thru)
+    `->` type($result)
+    attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // StoreOp
 //===----------------------------------------------------------------------===//
 
@@ -722,7 +767,7 @@ def CIR_StoreOp : CIR_Op<"store", [
 //===----------------------------------------------------------------------===//
 
 defvar CIR_ReturnableScopes = [
-  "FuncOp", "ScopeOp", "IfOp", "SwitchOp", "CaseOp",
+  "FuncOp", "ScopeOp", "IfOp", "SwitchOp", "CaseOp", "CleanupScopeOp",
   "DoWhileOp", "WhileOp", "ForOp", "TryOp"
 ];
 
@@ -5626,6 +5671,108 @@ def CIR_Exp2Op : CIR_UnaryFPToFPBuiltinOp<"exp2", "Exp2Op"> {
   }];
 }
 
+def CIR_LogOp : CIR_UnaryFPToFPBuiltinOp<"log", "LogOp"> {
+  let summary = "Computes the floating-point natural logarithm";
+  let description = [{
+    `cir.log` computes the natural logarithm of a floating-point operand and
+    returns a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
+def CIR_Log10Op : CIR_UnaryFPToFPBuiltinOp<"log10", "Log10Op"> {
+  let summary = "Computes the floating-point base-10 logarithm";
+  let description = [{
+    `cir.log10` computes the base-10 logarithm of a floating-point operand and
+    returns a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
+def CIR_Log2Op : CIR_UnaryFPToFPBuiltinOp<"log2", "Log2Op"> {
+  let summary = "Computes the floating-point base-2 logarithm";
+  let description = [{
+    `cir.log2` computes the base-2 logarithm of a floating-point operand and
+    returns a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
+def CIR_NearbyintOp : CIR_UnaryFPToFPBuiltinOp<"nearbyint", "NearbyintOp"> {
+  let summary = "Rounds floating-point value to nearest integer";
+  let description = [{
+    `cir.nearbyint` rounds a floating-point operand to the nearest integer value
+    and returns a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
+def CIR_RintOp : CIR_UnaryFPToFPBuiltinOp<"rint", "RintOp"> {
+  let summary = "Rounds floating-point value to nearest integer";
+  let description = [{
+    `cir.rint` rounds a floating-point operand to the nearest integer value
+    and returns a result of the same type.
+
+    This operation does not set `errno`. Unlike `cir.nearbyint`, this operation
+    may raise the `FE_INEXACT` exception if the input value is not an exact
+    integer, but this is not guaranteed to happen.
+  }];
+}
+
+def CIR_RoundOp : CIR_UnaryFPToFPBuiltinOp<"round", "RoundOp"> {
+  let summary = "Rounds floating-point value to nearest integer";
+  let description = [{
+    `cir.round` rounds a floating-point operand to the nearest integer value
+    and returns a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
+def CIR_RoundEvenOp : CIR_UnaryFPToFPBuiltinOp<"roundeven", "RoundEvenOp"> {
+  let summary = "Rounds floating-point value to nearest integer, ties to even";
+  let description = [{
+    `cir.roundeven` rounds a floating-point operand to the nearest integer
+    value, with ties rounding to even (banker's rounding).
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
+def CIR_SinOp : CIR_UnaryFPToFPBuiltinOp<"sin", "SinOp"> {
+  let summary = "Computes the floating-point sine";
+  let description = [{
+    `cir.sin` computes the sine of a floating-point operand and returns
+    a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
+def CIR_TanOp : CIR_UnaryFPToFPBuiltinOp<"tan", "TanOp"> {
+  let summary = "Computes the floating-point tangent";
+  let description = [{
+    `cir.tan` computes the tangent of a floating-point operand and returns
+    a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
+def CIR_TruncOp : CIR_UnaryFPToFPBuiltinOp<"trunc", "TruncOp"> {
+  let summary = "Truncates floating-point value to integer";
+  let description = [{
+    `cir.trunc` truncates a floating-point operand to an integer value
+    and returns a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
 def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp"> {
   let summary = "Computes the floating-point absolute value";
   let description = [{
@@ -5650,6 +5797,141 @@ def CIR_FloorOp : CIR_UnaryFPToFPBuiltinOp<"floor", "FloorOp"> {
     // $x : !cir.double
     %y = cir.floor %x : !cir.double
     ```
+  }];
+}
+
+class CIR_UnaryFPToIntBuiltinOp<string mnemonic, string llvmOpName>
+    : CIR_Op<mnemonic, [Pure]>
+{
+  let arguments = (ins CIR_AnyFloatType:$src);
+  let results = (outs CIR_IntType:$result);
+
+  let summary = [{
+    Builtin function that takes a floating-point value as input and produces an
+    integral value as output.
+  }];
+
+  let assemblyFormat = [{
+    $src `:` type($src) `->` type($result) attr-dict
+  }];
+
+  let llvmOp = llvmOpName;
+}
+
+def CIR_LroundOp : CIR_UnaryFPToIntBuiltinOp<"lround", "LroundOp"> {
+  let summary = "Rounds floating-point to long integer";
+  let description = [{
+    `cir.lround` rounds a floating-point value to the nearest integer value,
+    rounding halfway cases away from zero, and returns the result as a `long`.
+  }];
+}
+
+def CIR_LlroundOp : CIR_UnaryFPToIntBuiltinOp<"llround", "LlroundOp"> {
+  let summary = "Rounds floating-point to long long integer";
+  let description = [{
+    `cir.llround` rounds a floating-point value to the nearest integer value,
+    rounding halfway cases away from zero, and returns the result as a
+    `long long`.
+  }];
+}
+
+def CIR_LrintOp : CIR_UnaryFPToIntBuiltinOp<"lrint", "LrintOp"> {
+  let summary = "Rounds floating-point to long integer using current rounding mode";
+  let description = [{
+    `cir.lrint` rounds a floating-point value to the nearest integer value
+    using the current rounding mode and returns the result as a `long`.
+  }];
+}
+
+def CIR_LlrintOp : CIR_UnaryFPToIntBuiltinOp<"llrint", "LlrintOp"> {
+  let summary = "Rounds floating-point to long long integer using current rounding mode";
+  let description = [{
+    `cir.llrint` rounds a floating-point value to the nearest integer value
+    using the current rounding mode and returns the result as a `long long`.
+  }];
+}
+
+class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
+    : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
+  let summary = [{
+    libc builtin equivalent ignoring floating-point exceptions and errno.
+  }];
+
+  let arguments = (ins
+    CIR_AnyFloatOrVecOfFloatType:$lhs,
+    CIR_AnyFloatOrVecOfFloatType:$rhs
+  );
+
+  let results = (outs  CIR_AnyFloatOrVecOfFloatType:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs `:` qualified(type($lhs)) attr-dict
+  }];
+
+  let llvmOp = llvmOpName;
+}
+
+def CIR_CopysignOp : CIR_BinaryFPToFPBuiltinOp<"copysign", "CopySignOp"> {
+  let summary = "Copies the sign of a floating-point value";
+  let description = [{
+    `cir.copysign` returns a value with the magnitude of the first operand
+    and the sign of the second operand.
+  }];
+}
+
+def CIR_FMaxNumOp : CIR_BinaryFPToFPBuiltinOp<"fmaxnum", "MaxNumOp"> {
+  let summary = "Returns the larger of two floating-point values";
+  let description = [{
+    `cir.fmaxnum` returns the larger of its two operands. If one operand is
+    NaN, the other operand is returned.
+  }];
+}
+
+def CIR_FMaximumOp : CIR_BinaryFPToFPBuiltinOp<"fmaximum", "MaximumOp"> {
+  let summary = "Returns the larger of two floating-point values (IEEE 754-2019)";
+  let description = [{
+    `cir.fmaximum` returns the larger of its two operands according to
+    IEEE 754-2019 semantics. If either operand is NaN, NaN is returned.
+  }];
+}
+
+def CIR_FMinNumOp : CIR_BinaryFPToFPBuiltinOp<"fminnum", "MinNumOp"> {
+  let summary = "Returns the smaller of two floating-point values";
+  let description = [{
+    `cir.fminnum` returns the smaller of its two operands. If one operand is
+    NaN, the other operand is returned.
+  }];
+}
+
+def CIR_FMinimumOp : CIR_BinaryFPToFPBuiltinOp<"fminimum", "MinimumOp"> {
+  let summary = "Returns the smaller of two floating-point values (IEEE 754-2019)";
+  let description = [{
+    `cir.fminimum` returns the smaller of its two operands according to
+    IEEE 754-2019 semantics. If either operand is NaN, NaN is returned.
+  }];
+}
+
+def CIR_FModOp : CIR_BinaryFPToFPBuiltinOp<"fmod", "FRemOp"> {
+  let summary = "Computes the floating-point remainder";
+  let description = [{
+    `cir.fmod` computes the floating-point remainder of dividing the first
+    operand by the second operand.
+  }];
+}
+
+def CIR_PowOp : CIR_BinaryFPToFPBuiltinOp<"pow", "PowOp"> {
+  let summary = "Computes the power of a floating-point value";
+  let description = [{
+    `cir.pow` computes the first operand raised to the power of the second
+    operand.
+  }];
+}
+
+def CIR_ATan2Op : CIR_BinaryFPToFPBuiltinOp<"atan2", "ATan2Op"> {
+  let summary = "Computes the arc tangent of y/x";
+  let description = [{
+    `cir.atan2` computes the arc tangent of the first operand divided by the
+    second operand, using the signs of both to determine the quadrant.
   }];
 }
 
@@ -6074,6 +6356,262 @@ def CIR_EhTypeIdOp : CIR_Op<"eh.typeid",
 }
 
 //===----------------------------------------------------------------------===//
+// Flattened EH Operations: EhInitiateOp
+//===----------------------------------------------------------------------===//
+
+def CIR_EhInitiateOp : CIR_Op<"eh.initiate"> {
+  let summary = "Initiate exception handling in flattened CIR";
+  let description = [{
+    `cir.eh.initiate` is the first operation in the unwind destination of a
+    `cir.try_call` operation after CFG flattening. It returns an opaque
+    `!cir.eh_token` that represents the in-flight exception.
+
+    The `cleanup` attribute indicates that cleanup code must be executed before
+    the exception is dispatched to any handlers. When present, the operation
+    will be followed by cleanup code before branching to a `cir.eh.dispatch`
+    operation.
+
+    The returned token is passed to `cir.begin_cleanup`, `cir.begin_catch`,
+    or `cir.eh.dispatch` operations.
+
+    Example:
+
+    ```mlir
+    ^unwind:
+      %eh_token = cir.eh.initiate : !cir.eh_token
+      cir.br ^dispatch(%eh_token : !cir.eh_token)
+
+    ^unwind_with_cleanup:
+      %eh_token = cir.eh.initiate cleanup : !cir.eh_token
+      cir.br ^cleanup(%eh_token : !cir.eh_token)
+    ```
+  }];
+
+  let arguments = (ins UnitAttr:$cleanup);
+  let results = (outs CIR_EhTokenType:$eh_token);
+  let assemblyFormat = [{
+    (`cleanup` $cleanup^)? `:` type($eh_token) attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// Flattened EH Operations: EhDispatchOp
+//===----------------------------------------------------------------------===//
+
+def CIR_EhDispatchOp : CIR_Op<"eh.dispatch", [
+  Terminator
+]> {
+  let summary = "Dispatch to exception handlers based on exception type";
+
+  let description = [{
+    `cir.eh.dispatch` is a terminator operation that dispatches control flow
+    based on the type of the in-flight exception. It takes an `!cir.eh_token`
+    as input and branches to an eh handler block based on the exception type.
+
+    The operation contains a list of handlers specified as type-block pairs,
+    plus either a `catch_all` handler or an `unwind` handler, which continues
+    unwinding if no catch handler matches. Exactly one of `catch_all` or
+    `unwind` must be present.
+
+    When the type of the in-flight exception matches a type handler, control
+    is transfered to the corresponding block with the eh_token as an argument.
+    The `catch_all` handler, if present, catches any exception not matched by
+    another type handler. The `unwind` handler is used when no handler is
+    matched.
+
+    Example:
+
+    ```mlir
+    cir.eh.dispatch %eh_token : !cir.eh_token [
+      catch (#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^catch_int,
+      catch (#cir.global_view<@_ZTIPKc> : !cir.ptr<!u8i>) : ^catch_str,
+      catch_all : ^catch_all
+    ]
+
+    cir.eh.dispatch %eh_token : !cir.eh_token [
+      catch (#cir.global_view<type @_ZTIi> : !cir.ptr<!u8i>) : ^catch_int,
+      unwind : ^continue_unwind
+    ]
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_EhTokenType:$eh_token,
+    OptionalAttr<ArrayAttr>:$catch_types,
+    UnitAttr:$default_is_catch_all
+  );
+
+  let successors = (successor
+     AnySuccessor:$default_destination,
+     VariadicSuccessor<AnySuccessor>:$catch_destinations
+  );
+
+  let assemblyFormat = [{
+    $eh_token `:` type($eh_token)
+    custom<EhDispatchDestinations>($catch_types, $catch_destinations,
+                                   $default_destination, $default_is_catch_all)
+    attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// Flattened EH Operations: BeginCleanupOp
+//===----------------------------------------------------------------------===//
+
+def CIR_BeginCleanupOp : CIR_Op<"begin_cleanup"> {
+  let summary = "Begin a cleanup block during exception unwinding";
+  let description = [{
+    `cir.begin_cleanup` marks the beginning of a cleanup handler during
+    exception unwinding. It takes a `!cir.eh_token` and returns a
+    `!cir.cleanup_token` that must be passed to the corresponding
+    `cir.end_cleanup` operation.
+
+    The cleanup code between `cir.begin_cleanup` and `cir.end_cleanup` will be
+    executed during exception unwinding before control is transferred to
+    the exception dispatcher.
+
+    Example:
+
+    ```mlir
+    ^cleanup(%eh_token : !cir.eh_token):
+      %cleanup_token = cir.begin_cleanup %eh_token : !cir.eh_token
+                                                   -> !cir.cleanup_token
+      cir.call @destructor() : () -> ()
+      cir.end_cleanup %cleanup_token : !cir.cleanup_token
+      cir.br ^dispatch(%eh_token : !cir.eh_token)
+    ```
+  }];
+
+  let arguments = (ins CIR_EhTokenType:$eh_token);
+  let results = (outs CIR_CleanupTokenType:$cleanup_token);
+  let assemblyFormat = [{
+    $eh_token `:` type($eh_token) `->` type($cleanup_token) attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// Flattened EH Operations: EndCleanupOp
+//===----------------------------------------------------------------------===//
+
+def CIR_EndCleanupOp : CIR_Op<"end_cleanup"> {
+  let summary = "End a cleanup block during exception unwinding";
+  let description = [{
+    `cir.end_cleanup` marks the end of a cleanup block during exception
+    unwinding. It takes the `!cir.cleanup_token` returned by the corresponding
+    `cir.begin_cleanup` operation.
+
+    After the cleanup is complete, control typically transfers to either a
+    catch dispatch block or continues unwinding via `cir.resume`.
+
+    Example:
+
+    ```mlir
+    ^cleanup(%eh_token : !cir.eh_token):
+      %cleanup_token = cir.begin_cleanup %eh_token : !cir.eh_token
+                                                   -> !cir.cleanup_token
+      cir.call @destructor() : () -> ()
+      cir.end_cleanup %cleanup_token : !cir.cleanup_token
+      cir.br ^dispatch(%eh_token : !cir.eh_token)
+    ```
+  }];
+
+  let arguments = (ins CIR_CleanupTokenType:$cleanup_token);
+  let assemblyFormat = [{
+    $cleanup_token `:` type($cleanup_token) attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// Flattened EH Operations: BeginCatchOp
+//===----------------------------------------------------------------------===//
+
+def CIR_BeginCatchOp : CIR_Op<"begin_catch"> {
+  let summary = "Begin a catch handler block";
+  let description = [{
+    `cir.begin_catch` marks the beginning of a catch handler. It takes a
+    `!cir.eh_token` and an optional exception type, and returns a
+    `!cir.catch_token` along with a pointer to the exception object.
+
+    The catch token must be passed to the corresponding `cir.end_catch`
+    operation. The exception pointer points to the caught exception object
+    and can be used to access the exception value.
+
+    For `catch(...)` (catch all), the exception type is omitted.
+
+    Example:
+
+    ```mlir
+    ^catch_int(%eh_token : !cir.eh_token):
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
+      // Handle exception...
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.br ^continue
+
+    ^catch_all(%eh_token : !cir.eh_token):
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      // Handle exception...
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.br ^continue
+    ```
+  }];
+
+  let arguments = (ins CIR_EhTokenType:$eh_token);
+  let results = (outs CIR_CatchTokenType:$catch_token,
+                      CIR_PointerType:$exn_ptr);
+
+  let assemblyFormat = [{
+    $eh_token `:` type($eh_token) `->` `(` type($catch_token) `,`
+       qualified(type($exn_ptr)) `)` attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// Flattened EH Operations: EndCatchOp
+//===----------------------------------------------------------------------===//
+
+def CIR_EndCatchOp : CIR_Op<"end_catch"> {
+  let summary = "End a catch handler block";
+  let description = [{
+    `cir.end_catch` marks the end of a catch handler block. It takes the
+    `!cir.catch_token` returned by the corresponding `cir.begin_catch`
+    operation.
+
+    All control flow paths through a catch handler must pass through a single
+    `cir.end_catch` operation before leaving the catch block.
+
+    Example:
+
+    ```mlir
+    ^catch_int(%eh_token : !cir.eh_token):
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
+      // Handle exception...
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.br ^continue
+    ```
+  }];
+
+  let arguments = (ins CIR_CatchTokenType:$catch_token);
+  let assemblyFormat = [{
+    $catch_token `:` type($catch_token) attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
 // Atomic operations
 //===----------------------------------------------------------------------===//
 
@@ -6123,12 +6661,14 @@ def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
     CIR_AnyIntOrFloatType:$val,
     CIR_AtomicFetchKind:$binop,
     Arg<CIR_MemOrder, "memory order">:$mem_order,
+    Arg<CIR_SyncScopeKind, "synchronization scope">:$sync_scope,
     UnitAttr:$is_volatile,
     UnitAttr:$fetch_first
   );
 
   let assemblyFormat = [{
     $binop $mem_order
+    `syncscope` `(` $sync_scope `)`
     (`fetch_first` $fetch_first^)?
     $ptr `,` $val
     (`volatile` $is_volatile^)?
@@ -6177,11 +6717,14 @@ def CIR_AtomicXchgOp : CIR_Op<"atomic.xchg", [
     Arg<CIR_PointerType, "", [MemRead, MemWrite]>:$ptr,
     CIR_AnyType:$val,
     Arg<CIR_MemOrder, "memory order">:$mem_order,
+    CIR_SyncScopeKind:$sync_scope,
     UnitAttr:$is_volatile
   );
 
   let assemblyFormat = [{
-    $mem_order (`volatile` $is_volatile^)?
+    $mem_order
+    `syncscope` `(` $sync_scope `)`
+    (`volatile` $is_volatile^)?
     $ptr `,` $val
     `:` functional-type(operands, results) attr-dict
   }];
@@ -6208,6 +6751,9 @@ def CIR_AtomicCmpXchgOp : CIR_Op<"atomic.cmpxchg", [
     when the exchange takes place. The `fail_order` attribute gives the memory
     order of this atomic operation when the exchange does not take place.
 
+    The `sync_scope` attribute specifies the synchronization scope for this
+    atomic operation.
+
     The `weak` attribute is a boolean flag that indicates whether this is a
     "weak" compare-and-exchange operation. A weak compare-and-exchange operation
     allows "spurious failures", meaning that be treated as if the comparison
@@ -6226,7 +6772,7 @@ def CIR_AtomicCmpXchgOp : CIR_Op<"atomic.cmpxchg", [
 
     ```mlir
     %old, %success = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire)
-        %ptr, %expected, %desired
+        syncscope(system) %ptr, %expected, %desired
         : (!cir.ptr<!u64i>, !u64i, !u64i) -> (!u64i, !cir.bool)
     ```
   }];
@@ -6236,6 +6782,7 @@ def CIR_AtomicCmpXchgOp : CIR_Op<"atomic.cmpxchg", [
                        CIR_AnyType:$desired,
                        Arg<CIR_MemOrder, "success memory order">:$succ_order,
                        Arg<CIR_MemOrder, "failure memory order">:$fail_order,
+                       CIR_SyncScopeKind:$sync_scope,
                        OptionalAttr<I64Attr>:$alignment,
                        UnitAttr:$weak,
                        UnitAttr:$is_volatile);
@@ -6243,6 +6790,7 @@ def CIR_AtomicCmpXchgOp : CIR_Op<"atomic.cmpxchg", [
   let assemblyFormat = [{
     (`weak` $weak^)?
     `success` `(` $succ_order `)` `failure` `(` $fail_order `)`
+    `syncscope` `(` $sync_scope `)`
     $ptr `,` $expected `,` $desired
     (`align` `(` $alignment^ `)`)?
     (`volatile` $is_volatile^)?

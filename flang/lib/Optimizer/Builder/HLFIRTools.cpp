@@ -1697,25 +1697,38 @@ hlfir::genExtentsVector(mlir::Location loc, fir::FirOpBuilder &builder,
 hlfir::Entity hlfir::gen1DSection(mlir::Location loc,
                                   fir::FirOpBuilder &builder,
                                   hlfir::Entity array, int64_t dim,
-                                  mlir::ArrayRef<mlir::Value> lbounds,
                                   mlir::ArrayRef<mlir::Value> extents,
                                   mlir::ValueRange oneBasedIndices,
                                   mlir::ArrayRef<mlir::Value> typeParams) {
   assert(array.isVariable() && "array must be a variable");
   assert(dim > 0 && dim <= array.getRank() && "invalid dim number");
+  llvm::SmallVector<mlir::Value> lbounds =
+      getNonDefaultLowerBounds(loc, builder, array);
   mlir::Value one =
       builder.createIntegerConstant(loc, builder.getIndexType(), 1);
   hlfir::DesignateOp::Subscripts subscripts;
   unsigned indexId = 0;
   for (int i = 0; i < array.getRank(); ++i) {
     if (i == dim - 1) {
-      mlir::Value ubound = genUBound(loc, builder, lbounds[i], extents[i], one);
-      subscripts.emplace_back(
-          hlfir::DesignateOp::Triplet{lbounds[i], ubound, one});
+      // (...,:, ..)
+      if (lbounds.empty()) {
+        subscripts.emplace_back(
+            hlfir::DesignateOp::Triplet{one, extents[i], one});
+      } else {
+        mlir::Value ubound =
+            genUBound(loc, builder, lbounds[i], extents[i], one);
+        subscripts.emplace_back(
+            hlfir::DesignateOp::Triplet{lbounds[i], ubound, one});
+      }
     } else {
-      mlir::Value index =
-          genUBound(loc, builder, lbounds[i], oneBasedIndices[indexId++], one);
-      subscripts.emplace_back(index);
+      // (...,lb + one_based_index - 1, ..)
+      if (lbounds.empty()) {
+        subscripts.emplace_back(oneBasedIndices[indexId++]);
+      } else {
+        mlir::Value index = genUBound(loc, builder, lbounds[i],
+                                      oneBasedIndices[indexId++], one);
+        subscripts.emplace_back(index);
+      }
     }
   }
   mlir::Value sectionShape =
