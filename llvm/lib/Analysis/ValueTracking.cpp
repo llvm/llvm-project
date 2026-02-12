@@ -718,8 +718,6 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
 
   // Make sure the current function cannot arrange for another thread to free on
   // its behalf.
-  llvm::outs() << "CtxI is:";
-  CtxI->dump();
   if (!CtxI->getFunction()->hasNoSync())
     return false;
 
