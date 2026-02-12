@@ -5018,7 +5018,7 @@ AffineDelinearizeIndexOp::fold(FoldAdaptor adaptor,
     return success();
   }
 
-  if (adaptor.getLinearIndex() == nullptr)
+  if (!dyn_cast_or_null<IntegerAttr>(adaptor.getLinearIndex()))
     return failure();
 
   if (!adaptor.getDynamicBasis().empty())
@@ -5339,7 +5339,9 @@ OpFoldResult AffineLinearizeIndexOp::fold(FoldAdaptor adaptor) {
   if (getMultiIndex().size() == 1)
     return getMultiIndex().front();
 
-  if (llvm::is_contained(adaptor.getMultiIndex(), nullptr))
+  if (llvm::any_of(adaptor.getMultiIndex(), [](Attribute attr) {
+        return !dyn_cast_or_null<IntegerAttr>(attr);
+      }))
     return nullptr;
 
   if (!adaptor.getDynamicBasis().empty())
