@@ -23407,7 +23407,7 @@ Examples:
 .. _int_vp_minimumnum:
 
 '``llvm.vp.minimumnum.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -23457,7 +23457,7 @@ Examples:
 .. _int_vp_maximumnum:
 
 '``llvm.vp.maximumnum.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
