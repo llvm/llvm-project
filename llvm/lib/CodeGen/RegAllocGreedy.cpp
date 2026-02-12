@@ -138,6 +138,12 @@ static cl::opt<bool> GreedyReverseLocalAssignment(
              "shorter local live ranges will tend to be allocated first"),
     cl::Hidden);
 
+static cl::opt<bool> GreedyForceLocalAssignment(
+    "greedy-force-local-assignment",
+    cl::desc("Override possibility of falling back to global allocation "
+             "heuristics, and always use local allocation heuristics."),
+    cl::init(false), cl::Hidden);
+
 static cl::opt<unsigned> SplitThresholdForRegWithHint(
     "split-threshold-for-reg-with-hint",
     cl::desc("The threshold for splitting a virtual register with a hint, in "
@@ -453,10 +459,12 @@ unsigned DefaultPriorityAdvisor::getPriority(const LiveInterval &LI) const {
     // Giant live ranges fall back to the global assignment heuristic, which
     // prevents excessive spilling in pathological cases.
     const TargetRegisterClass &RC = *MRI->getRegClass(Reg);
-    bool ForceGlobal = RC.GlobalPriority ||
-                       (!ReverseLocalAssignment &&
-                        (Size / SlotIndex::InstrDist) >
-                            (2 * RegClassInfo.getNumAllocatableRegs(&RC)));
+
+    bool ForceGlobal =
+        RC.GlobalPriority ||
+        (!GreedyForceLocalAssignment && !ReverseLocalAssignment &&
+         (Size / SlotIndex::InstrDist) >
+             (2 * RegClassInfo.getNumAllocatableRegs(&RC)));
     unsigned GlobalBit = 0;
 
     if (Stage == RS_Assign && !ForceGlobal && !LI.empty() &&
