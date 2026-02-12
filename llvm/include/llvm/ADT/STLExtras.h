@@ -219,13 +219,13 @@ public:
   template <typename... Pn,
             std::enable_if_t<std::is_invocable_v<T, Pn...>, int> = 0>
   decltype(auto) operator()(Pn &&...Params) {
-    return (*Obj)(std::forward<Pn>(Params)...);
+    return std::invoke(*Obj, std::forward<Pn>(Params)...);
   }
 
   template <typename... Pn,
             std::enable_if_t<std::is_invocable_v<T const, Pn...>, int> = 0>
   decltype(auto) operator()(Pn &&...Params) const {
-    return (*Obj)(std::forward<Pn>(Params)...);
+    return std::invoke(*Obj, std::forward<Pn>(Params)...);
   }
 
   bool valid() const { return Obj != std::nullopt; }
@@ -330,7 +330,7 @@ template <typename T> auto drop_end(T &&RangeOrContainer, size_t N = 1) {
 
 template <typename ItTy, typename FuncTy,
           typename ReferenceTy =
-              decltype(std::declval<FuncTy>()(*std::declval<ItTy>()))>
+              std::invoke_result_t<FuncTy, decltype(*std::declval<ItTy>())>>
 class mapped_iterator
     : public iterator_adaptor_base<
           mapped_iterator<ItTy, FuncTy>, ItTy,
@@ -360,6 +360,8 @@ inline mapped_iterator<ItTy, FuncTy> map_iterator(ItTy I, FuncTy F) {
   return mapped_iterator<ItTy, FuncTy>(std::move(I), std::move(F));
 }
 
+/// Return a range that applies \p F to the elements of \p C. \p F can be a
+/// function, lambda, or member pointer.
 template <class ContainerTy, class FuncTy>
 auto map_range(ContainerTy &&C, FuncTy F) {
   return make_range(map_iterator(adl_begin(C), F), map_iterator(adl_end(C), F));
