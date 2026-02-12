@@ -46,10 +46,12 @@ DependencyScanningService::DependencyScanningService(
     std::shared_ptr<llvm::cas::ObjectStore> CAS,
     std::shared_ptr<llvm::cas::ActionCache> Cache,
     ScanningOptimizations OptimizeArgs, bool EagerLoadModules, bool TraceVFS,
-    std::time_t BuildSessionTimestamp, bool CacheNegativeStats)
+    bool AsyncScanModules, std::time_t BuildSessionTimestamp,
+    bool CacheNegativeStats)
     : Mode(Mode), Format(Format), CASOpts(std::move(CASOpts)),
       CAS(std::move(CAS)), Cache(std::move(Cache)), OptimizeArgs(OptimizeArgs),
       EagerLoadModules(EagerLoadModules), TraceVFS(TraceVFS),
+      AsyncScanModules(AsyncScanModules),
       CacheNegativeStats(CacheNegativeStats),
       BuildSessionTimestamp(BuildSessionTimestamp) {
   // The FullIncludeTree output format completely subsumes header search and

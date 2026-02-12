@@ -25,7 +25,7 @@ TEST(DependencyScanningFilesystem, OpenFileAndGetBufferRepeatedly) {
       ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
       clang::CASOptions(), nullptr, nullptr, ScanningOptimizations::Default,
       /*EagerLoadModules=*/false,
-      /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
+      /*TraceVFS=*/false, /*AsyncScanModules=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
       /*CacheNegativeStats=*/true);
   DependencyScanningWorkerFilesystem DepFS(Service, InMemoryFS);
 
@@ -64,7 +64,8 @@ TEST(DependencyScanningWorkerFilesystem, CacheStatusFailures) {
       ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
       clang::CASOptions(), nullptr, nullptr, ScanningOptimizations::Default,
       /*EagerLoadModules=*/false,
-      /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
+      /*TraceVFS=*/false, /*AsyncScanModules=*/false,
+      llvm::sys::toTimeT(std::chrono::system_clock::now()),
       /*CacheNegativeStats=*/true);
   DependencyScanningWorkerFilesystem DepFS(Service, InstrumentingFS);
   DependencyScanningWorkerFilesystem DepFS2(Service, InstrumentingFS);
@@ -95,7 +96,7 @@ TEST(DependencyScanningFilesystem, CacheGetRealPath) {
       ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
       clang::CASOptions(), nullptr, nullptr, ScanningOptimizations::Default,
       /*EagerLoadModules=*/false,
-      /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
+      /*TraceVFS=*/false, /*AsyncScanModules=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
       /*CacheNegativeStats=*/true);
   DependencyScanningWorkerFilesystem DepFS(Service, InstrumentingFS);
   DependencyScanningWorkerFilesystem DepFS2(Service, InstrumentingFS);
@@ -190,7 +191,7 @@ TEST(DependencyScanningFilesystem, CacheStatOnExists) {
       ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
       clang::CASOptions(), nullptr, nullptr, ScanningOptimizations::Default,
       /*EagerLoadModules=*/false,
-      /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
+      /*TraceVFS=*/false, /*AsyncScanModuels=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
       /*CacheNegativeStats=*/true);
   DependencyScanningWorkerFilesystem DepFS(Service, InstrumentingFS);
 
@@ -218,7 +219,7 @@ TEST(DependencyScanningFilesystem, CacheStatFailures) {
       ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
       clang::CASOptions(), nullptr, nullptr, ScanningOptimizations::Default,
       /*EagerLoadModules=*/false,
-      /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
+      /*TraceVFS=*/false, /*AsyncScanModules=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
       /*CacheNegativeStats=*/true);
   DependencyScanningWorkerFilesystem DepFS(Service, InstrumentingFS);
 
@@ -250,7 +251,7 @@ TEST(DependencyScanningFilesystem, DiagnoseStaleStatFailures) {
       ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
       clang::CASOptions(), nullptr, nullptr, ScanningOptimizations::Default,
       /*EagerLoadModules=*/false,
-      /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
+      /*TraceVFS=*/false, /*AsyncScanModules=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
       /*CacheNegativeStats=*/true);
   DependencyScanningWorkerFilesystem DepFS(Service, InMemoryFS);
 
@@ -281,7 +282,7 @@ TEST(DependencyScanningFilesystem, DiagnoseCachedFileSizeChange) {
       ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
       clang::CASOptions(), nullptr, nullptr, ScanningOptimizations::Default,
       /*EagerLoadModules=*/false,
-      /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
+      /*TraceVFS=*/false, /*AsyncScanModules=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
       /*CacheNegativeStats=*/true);
   DependencyScanningWorkerFilesystem DepFS(Service, InMemoryFS1);
 

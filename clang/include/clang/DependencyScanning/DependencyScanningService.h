@@ -103,6 +103,7 @@ public:
       std::shared_ptr<llvm::cas::ActionCache> Cache,
       ScanningOptimizations OptimizeArgs = ScanningOptimizations::Default,
       bool EagerLoadModules = false, bool TraceVFS = false,
+      bool AsyncScanModules = false,
       std::time_t BuildSessionTimestamp =
           llvm::sys::toTimeT(std::chrono::system_clock::now()),
       bool CacheNegativeStats = shouldCacheNegativeStatsDefault());
@@ -116,6 +117,8 @@ public:
   bool shouldEagerLoadModules() const { return EagerLoadModules; }
 
   bool shouldTraceVFS() const { return TraceVFS; }
+
+  bool shouldScanModulesAsynchronously() const { return AsyncScanModules; }
 
   bool shouldCacheNegativeStats() const { return CacheNegativeStats; }
 
@@ -144,6 +147,8 @@ private:
   const bool EagerLoadModules;
   /// Whether to trace VFS accesses.
   const bool TraceVFS;
+  /// Whether to scan modules asynchronously.
+  const bool AsyncScanModules;
   const bool CacheNegativeStats;
   /// The global file system cache.
   DependencyScanningFilesystemSharedCache SharedCache;

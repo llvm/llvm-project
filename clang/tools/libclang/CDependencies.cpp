@@ -190,7 +190,7 @@ clang_experimental_DependencyScannerService_create_v1(
   return wrap(new DependencyScanningService(
       ScanningMode::DependencyDirectivesScan, unwrap(Opts)->getFormat(), unwrap(Opts)->CASOpts,
       std::move(CAS), std::move(Cache), unwrap(Opts)->OptimizeArgs, /*EagerLoadModules=*/false,
-      /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
+      /*TraceVFS=*/false, /*AsyncScanModules=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
       unwrap(Opts)->CacheNegativeStats ? *unwrap(Opts)->CacheNegativeStats
                                        : shouldCacheNegativeStatsDefault()));
 }

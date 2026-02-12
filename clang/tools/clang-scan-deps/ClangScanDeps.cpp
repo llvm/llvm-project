@@ -100,6 +100,7 @@ static std::string TranslationUnitFile;
 static bool DeprecatedDriverCommand;
 static ResourceDirRecipeKind ResourceDirRecipe;
 static bool Verbose;
+static bool AsyncScanModules;
 static bool PrintTiming;
 static bool EmitVisibleModules;
 static llvm::BumpPtrAllocator Alloc;
@@ -275,6 +276,8 @@ static void ParseArgs(int argc, char **argv) {
     PrefixMaps.emplace_back(A->getValue());
 
   Verbose = Args.hasArg(OPT_verbose);
+
+  AsyncScanModules = Args.hasArg(OPT_async_scan_modules);
 
   RoundTripArgs = Args.hasArg(OPT_round_trip_args);
 
@@ -1297,7 +1300,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
   DependencyScanningService Service(
       ScanMode, Format, CASOpts, CAS, Cache, OptimizeArgs, EagerLoadModules,
-      /*TraceVFS=*/Verbose,
+      /*TraceVFS=*/Verbose, AsyncScanModules,
       llvm::sys::toTimeT(std::chrono::system_clock::now()), CacheNegativeStats);
 
   llvm::Timer T;
