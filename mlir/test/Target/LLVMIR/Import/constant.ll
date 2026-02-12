@@ -1,4 +1,5 @@
 ; RUN: mlir-translate -import-llvm -split-input-file %s | FileCheck %s
+; RUN: mlir-translate -import-llvm -split-input-file --use-constant-int-for-fixed-length-splat --use-constant-fp-for-fixed-length-splat %s | FileCheck %s
 
 ; CHECK-LABEL: @int_constants
 define void @int_constants(i16 %arg0, i32 %arg1, i1 %arg2) {
@@ -308,3 +309,11 @@ define [0 x ptr] @load_zero_array() {
 @global_array_with_elements = global [3 x i32] zeroinitializer
 
 ; CHECK: llvm.mlir.global external @global_array_with_elements({{.*}}) {addr_space = 0 : i32} : !llvm.array<3 x i32>
+
+; Test that vector splats work correctly.
+
+@vector_splat_int = global <2 x i64> splat (i64 7)
+@vector_splat_float = global <2 x float> splat (float 7.0)
+
+; CHECK: llvm.mlir.global external @vector_splat_int(dense<7> : vector<2xi64>) {addr_space = 0 : i32} : vector<2xi64>
+; CHECK: llvm.mlir.global external @vector_splat_float(dense<7.000000e+00> : vector<2xf32>) {addr_space = 0 : i32} : vector<2xf32>
