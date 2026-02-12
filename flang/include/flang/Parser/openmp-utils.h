@@ -368,7 +368,7 @@ template <typename Iterator = ExecutionPartIterator> struct ExecutionPartRange {
       Step stepping = Step::Default,
       const ExecutionPartConstruct *owner = nullptr)
       : begin_(begin, end, stepping, owner), end_() {}
-  template <typename R,
+  template <typename R, //
       typename = decltype(std::declval<R>().begin()),
       typename = decltype(std::declval<R>().end())>
   ExecutionPartRange(const R &range, Step stepping = Step::Default,
