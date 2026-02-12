@@ -73,6 +73,91 @@ if.end4:                                          ; preds = %for.body
   br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit
 }
 
+; FIXME: This doesn't currently optimize, but we should be able to hoist
+; the two cmp out of the loop.
+define void @should_optimize_two_trap(i32 %block_size) {
+; CHECK-LABEL: define void @should_optimize_two_trap(
+; CHECK-SAME: i32 [[BLOCK_SIZE:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[FOO_ARR:%.*]] = alloca [2 x i8], align 16
+; CHECK-NEXT:    [[BAR_ARR:%.*]] = alloca [2 x i8], align 16
+; CHECK-NEXT:    call void @x(ptr nonnull [[FOO_ARR]])
+; CHECK-NEXT:    [[CMP14_NOT:%.*]] = icmp eq i32 [[BLOCK_SIZE]], 0
+; CHECK-NEXT:    br i1 [[CMP14_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
+; CHECK:       [[FOR_BODY_PREHEADER]]:
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_COND_CLEANUP_LOOPEXIT:.*]]:
+; CHECK-NEXT:    br label %[[FOR_COND_CLEANUP]]
+; CHECK:       [[FOR_COND_CLEANUP]]:
+; CHECK-NEXT:    call void @x(ptr nonnull [[BAR_ARR]])
+; CHECK-NEXT:    ret void
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[I_015:%.*]] = phi i32 [ [[INC:%.*]], %[[IF_END5:.*]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    br i1 false, label %[[IF_THEN:.*]], label %[[IF_END4:.*]]
+; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    call void @llvm.trap()
+; CHECK-NEXT:    unreachable
+; CHECK:       [[IF_THEN2:.*]]:
+; CHECK-NEXT:    call void @llvm.trap()
+; CHECK-NEXT:    unreachable
+; CHECK:       [[IF_END4]]:
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ugt i32 [[I_015]], 1
+; CHECK-NEXT:    br i1 [[CMP2]], label %[[IF_THEN2]], label %[[IF_END5]]
+; CHECK:       [[IF_END5]]:
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [1024 x i8], ptr [[FOO_ARR]], i64 0, i32 [[I_015]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[TMP0]], 54
+; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw [1025 x i8], ptr [[BAR_ARR]], i64 0, i32 [[I_015]]
+; CHECK-NEXT:    store i8 [[TMP1]], ptr [[ARRAYIDX7]], align 1
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_015]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[INC]], [[BLOCK_SIZE]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP_LOOPEXIT]]
+;
+entry:
+  %foo_arr = alloca [2 x i8], align 16
+  %bar_arr = alloca [2 x i8], align 16
+  call void @x(ptr nonnull %foo_arr)
+  %cmp14.not = icmp eq i32 %block_size, 0
+  br i1 %cmp14.not, label %for.cond.cleanup, label %for.body.preheader
+
+for.body.preheader:                               ; preds = %entry
+  br label %for.body
+
+for.cond.cleanup.loopexit:                        ; preds = %if.end4
+  br label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+  call void @x(ptr nonnull %bar_arr)
+  ret void
+
+for.body:                                         ; preds = %for.body.preheader, %if.end4
+  %i.015 = phi i32 [ %inc, %if.end5 ], [ 0, %for.body.preheader ]
+  %cmp1 = icmp samesign ugt i32 %i.015, 2
+  br i1 %cmp1, label %if.then, label %if.end4
+
+if.then:                                          ; preds = %for.body
+  call void @llvm.trap()
+  unreachable
+
+if.then2:                                          ; preds = %if.end4
+  call void @llvm.trap()
+  unreachable
+
+if.end4:
+  %cmp2 = icmp samesign ugt i32 %i.015, 1
+  br i1 %cmp2, label %if.then2, label %if.end5
+
+if.end5:                                          ; preds = %if.end4
+  %arrayidx = getelementptr inbounds nuw [1024 x i8], ptr %foo_arr, i64 0, i32 %i.015
+  %0 = load i8, ptr %arrayidx, align 1
+  %1 = xor i8 %0, 54
+  %arrayidx7 = getelementptr inbounds nuw [1025 x i8], ptr %bar_arr, i64 0, i32 %i.015
+  store i8 %1, ptr %arrayidx7, align 1
+  %inc = add nuw nsw i32 %i.015, 1
+  %cmp = icmp ult i32 %inc, %block_size
+  br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit
+}
+
 define void @no_optimize_atomic(i32 %block_size) {
 ; CHECK-LABEL: define void @no_optimize_atomic(
 ; CHECK-SAME: i32 [[BLOCK_SIZE:%.*]]) {
@@ -581,8 +666,8 @@ if.end4:                                          ; preds = %for.body
   br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit
 }
 
-define void @no_optimize_depdendent_ubsan_trap(i32 %block_size) {
-; CHECK-LABEL: define void @no_optimize_depdendent_ubsan_trap(
+define void @no_optimize_dependent_ubsan_trap(i32 %block_size) {
+; CHECK-LABEL: define void @no_optimize_dependent_ubsan_trap(
 ; CHECK-SAME: i32 [[BLOCK_SIZE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[FOO_ARR:%.*]] = alloca [2 x i8], align 16
@@ -652,8 +737,8 @@ if.end4:                                          ; preds = %for.body
   br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit
 }
 
-define void @no_optimize_depdendent_load_trap(i32 %block_size) {
-; CHECK-LABEL: define void @no_optimize_depdendent_load_trap(
+define void @no_optimize_dependent_load_trap(i32 %block_size) {
+; CHECK-LABEL: define void @no_optimize_dependent_load_trap(
 ; CHECK-SAME: i32 [[BLOCK_SIZE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[FOO_ARR:%.*]] = alloca [2 x i8], align 16
