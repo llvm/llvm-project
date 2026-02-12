@@ -1036,8 +1036,9 @@ def IndependentClassAttribute : DiagGroup<"IndependentClass-attribute">;
 def UnknownAttributes : DiagGroup<"unknown-attributes">;
 def IgnoredAttributes : DiagGroup<"ignored-attributes",
                                   [DllexportExplicitInstantiation]>;
-def Attributes : DiagGroup<"attributes", [UnknownAttributes,
-                                          IgnoredAttributes]>;
+def UsedButMarkedUnused : DiagGroup<"used-but-marked-unused">;
+def Attributes : DiagGroup<"attributes", [UnknownAttributes, IgnoredAttributes,
+                                          UsedButMarkedUnused]>;
 def UnknownSanitizers : DiagGroup<"unknown-sanitizers">;
 def UnnamedTypeTemplateArgs : DiagGroup<"unnamed-type-template-args",
                                         [CXX98CompatUnnamedTypeTemplateArgs]>;
@@ -1073,7 +1074,6 @@ def UnusedButSetVariable : DiagGroup<"unused-but-set-variable">;
 def UnusedLocalTypedef : DiagGroup<"unused-local-typedef">;
 def UnusedPropertyIvar :  DiagGroup<"unused-property-ivar">;
 def UnusedGetterReturnValue : DiagGroup<"unused-getter-return-value">;
-def UsedButMarkedUnused : DiagGroup<"used-but-marked-unused">;
 def UsedSearchPath : DiagGroup<"search-path-usage">;
 def UserDefinedLiterals : DiagGroup<"user-defined-literals">;
 def UserDefinedWarnings : DiagGroup<"user-defined-warnings">;

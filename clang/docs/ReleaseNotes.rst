@@ -170,6 +170,8 @@ Attribute Changes in Clang
   will still generate a stack protector if other local variables or command line flags
   require it.
 
+- Added ``-Wused-but-marked-unused`` to ``-Wattributes``.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Added ``-Wlifetime-safety`` to enable lifetime safety analysis,

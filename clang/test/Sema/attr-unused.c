@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -verify -Wunused -Wused-but-marked-unused -Wunused-parameter -Wunused -Wno-strict-prototypes -fsyntax-only %s
+// RUN: %clang_cc1 -verify -Wunused -Wused-but-marked-unused -Wunused-parameter -Wno-strict-prototypes -fsyntax-only %s
+// RUN: %clang_cc1 -verify -Wunused -Wattributes -Wunused-parameter -Wno-strict-prototypes -fsyntax-only %s
 
 static void (*fp0)(void) __attribute__((unused));
 
