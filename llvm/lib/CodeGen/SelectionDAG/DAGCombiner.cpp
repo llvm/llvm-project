@@ -14174,9 +14174,8 @@ SDValue DAGCombiner::visitSETCC(SDNode *N) {
         LHS.getScalarValueSizeInBits() > RHS.getScalarValueSizeInBits()
             ? LHS.getValueType()
             : RHS.getValueType();
-    if (!LegalOperations ||
-        (SmallVT.isSimple() &&
-         TLI.isCondCodeLegal(Cond, SmallVT.getSimpleVT()))) {
+    if (SmallVT.isSimple() &&
+        TLI.isCondCodeLegal(Cond, SmallVT.getSimpleVT())) {
       LHS = DAG.getExtOrTrunc(ISD::isSignedIntSetCC(Cond), LHS, SDLoc(LHS),
                               SmallVT);
       RHS = DAG.getExtOrTrunc(ISD::isSignedIntSetCC(Cond), RHS, SDLoc(RHS),
