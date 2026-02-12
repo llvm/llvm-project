@@ -7457,7 +7457,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::removeDeadRecipes(BestVPlan);
 
   VPlanTransforms::convertToConcreteRecipes(BestVPlan);
-  VPlanTransforms::simplifyRecipes(BestVPlan);
   // Convert the exit condition to AVLNext == 0 for EVL tail folded loops.
   VPlanTransforms::convertEVLExitCond(BestVPlan);
   // Regions are dissolved after optimizing for VF and UF, which completely
@@ -7473,6 +7472,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       BestVPlan, VectorPH, CM.foldTailByMasking(),
       CM.requiresScalarEpilogue(BestVF.isVector()));
   VPlanTransforms::materializeVFAndVFxUF(BestVPlan, VectorPH, BestVF);
+  VPlanTransforms::simplifyRecipes(BestVPlan);
   VPlanTransforms::cse(BestVPlan);
   VPlanTransforms::simplifyRecipes(BestVPlan);
 
