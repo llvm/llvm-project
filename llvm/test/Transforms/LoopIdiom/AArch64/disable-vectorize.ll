@@ -4,98 +4,24 @@
 define i32 @compare_bytes_simple_hint(ptr %a, ptr %b, i32 %len, i32 %extra, i32 %n) {
 ; CHECK-LABEL: define i32 @compare_bytes_simple_hint(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i32 [[LEN:%.*]], i32 [[EXTRA:%.*]], i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[LEN]], 1
-; CHECK-NEXT:    br label %[[MISMATCH_MIN_IT_CHECK:.*]]
-; CHECK:       [[MISMATCH_MIN_IT_CHECK]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[N]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule i32 [[TMP0]], [[N]]
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[MISMATCH_MEM_CHECK:.*]], label %[[MISMATCH_LOOP_PRE:.*]], !prof [[PROF0:![0-9]+]]
-; CHECK:       [[MISMATCH_MEM_CHECK]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP5]] to i64
-; CHECK-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[TMP4]] to i64
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP8]] to i64
-; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[TMP9]] to i64
-; CHECK-NEXT:    [[TMP12:%.*]] = lshr i64 [[TMP7]], 12
-; CHECK-NEXT:    [[TMP13:%.*]] = lshr i64 [[TMP10]], 12
-; CHECK-NEXT:    [[TMP14:%.*]] = lshr i64 [[TMP6]], 12
-; CHECK-NEXT:    [[TMP15:%.*]] = lshr i64 [[TMP11]], 12
-; CHECK-NEXT:    [[TMP16:%.*]] = icmp ne i64 [[TMP12]], [[TMP13]]
-; CHECK-NEXT:    [[TMP17:%.*]] = icmp ne i64 [[TMP14]], [[TMP15]]
-; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP16]], [[TMP17]]
-; CHECK-NEXT:    br i1 [[TMP18]], label %[[MISMATCH_LOOP_PRE]], label %[[MISMATCH_VEC_LOOP_PREHEADER:.*]], !prof [[PROF1:![0-9]+]]
-; CHECK:       [[MISMATCH_VEC_LOOP_PREHEADER]]:
-; CHECK-NEXT:    [[TMP19:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[TMP1]], i64 [[TMP2]])
-; CHECK-NEXT:    [[TMP20:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP21:%.*]] = mul nuw nsw i64 [[TMP20]], 16
-; CHECK-NEXT:    br label %[[MISMATCH_VEC_LOOP:.*]]
-; CHECK:       [[MISMATCH_VEC_LOOP]]:
-; CHECK-NEXT:    [[MISMATCH_VEC_LOOP_PRED:%.*]] = phi <vscale x 16 x i1> [ [[TMP19]], %[[MISMATCH_VEC_LOOP_PREHEADER]] ], [ [[TMP30:%.*]], %[[MISMATCH_VEC_LOOP_INC:.*]] ]
-; CHECK-NEXT:    [[MISMATCH_VEC_INDEX:%.*]] = phi i64 [ [[TMP1]], %[[MISMATCH_VEC_LOOP_PREHEADER]] ], [ [[TMP29:%.*]], %[[MISMATCH_VEC_LOOP_INC]] ]
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[MISMATCH_VEC_INDEX]]
-; CHECK-NEXT:    [[TMP23:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP22]], <vscale x 16 x i1> [[MISMATCH_VEC_LOOP_PRED]], <vscale x 16 x i8> zeroinitializer)
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[MISMATCH_VEC_INDEX]]
-; CHECK-NEXT:    [[TMP25:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP24]], <vscale x 16 x i1> [[MISMATCH_VEC_LOOP_PRED]], <vscale x 16 x i8> zeroinitializer)
-; CHECK-NEXT:    [[TMP26:%.*]] = icmp ne <vscale x 16 x i8> [[TMP23]], [[TMP25]]
-; CHECK-NEXT:    [[TMP27:%.*]] = select <vscale x 16 x i1> [[MISMATCH_VEC_LOOP_PRED]], <vscale x 16 x i1> [[TMP26]], <vscale x 16 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP28:%.*]] = call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> [[TMP27]])
-; CHECK-NEXT:    br i1 [[TMP28]], label %[[MISMATCH_VEC_LOOP_FOUND:.*]], label %[[MISMATCH_VEC_LOOP_INC]]
-; CHECK:       [[MISMATCH_VEC_LOOP_INC]]:
-; CHECK-NEXT:    [[TMP29]] = add nuw nsw i64 [[MISMATCH_VEC_INDEX]], [[TMP21]]
-; CHECK-NEXT:    [[TMP30]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[TMP29]], i64 [[TMP2]])
-; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <vscale x 16 x i1> [[TMP30]], i64 0
-; CHECK-NEXT:    br i1 [[TMP31]], label %[[MISMATCH_VEC_LOOP]], label %[[MISMATCH_END:.*]]
-; CHECK:       [[MISMATCH_VEC_LOOP_FOUND]]:
-; CHECK-NEXT:    [[MISMATCH_VEC_FOUND_PRED:%.*]] = phi <vscale x 16 x i1> [ [[TMP27]], %[[MISMATCH_VEC_LOOP]] ]
-; CHECK-NEXT:    [[MISMATCH_VEC_LAST_LOOP_PRED:%.*]] = phi <vscale x 16 x i1> [ [[MISMATCH_VEC_LOOP_PRED]], %[[MISMATCH_VEC_LOOP]] ]
-; CHECK-NEXT:    [[MISMATCH_VEC_FOUND_INDEX:%.*]] = phi i64 [ [[MISMATCH_VEC_INDEX]], %[[MISMATCH_VEC_LOOP]] ]
-; CHECK-NEXT:    [[TMP32:%.*]] = and <vscale x 16 x i1> [[MISMATCH_VEC_LAST_LOOP_PRED]], [[MISMATCH_VEC_FOUND_PRED]]
-; CHECK-NEXT:    [[TMP33:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.nxv16i1(<vscale x 16 x i1> [[TMP32]], i1 true)
-; CHECK-NEXT:    [[TMP34:%.*]] = zext i32 [[TMP33]] to i64
-; CHECK-NEXT:    [[TMP35:%.*]] = add nuw nsw i64 [[MISMATCH_VEC_FOUND_INDEX]], [[TMP34]]
-; CHECK-NEXT:    [[TMP36:%.*]] = trunc i64 [[TMP35]] to i32
-; CHECK-NEXT:    br label %[[MISMATCH_END]]
-; CHECK:       [[MISMATCH_LOOP_PRE]]:
+; CHECK-NEXT:  [[MISMATCH_LOOP_PRE:.*]]:
 ; CHECK-NEXT:    br label %[[MISMATCH_LOOP:.*]]
 ; CHECK:       [[MISMATCH_LOOP]]:
-; CHECK-NEXT:    [[MISMATCH_INDEX:%.*]] = phi i32 [ [[TMP0]], %[[MISMATCH_LOOP_PRE]] ], [ [[TMP43:%.*]], %[[MISMATCH_LOOP_INC:.*]] ]
-; CHECK-NEXT:    [[TMP37:%.*]] = zext i32 [[MISMATCH_INDEX]] to i64
-; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP37]]
-; CHECK-NEXT:    [[TMP39:%.*]] = load i8, ptr [[TMP38]], align 1
-; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP37]]
-; CHECK-NEXT:    [[TMP41:%.*]] = load i8, ptr [[TMP40]], align 1
-; CHECK-NEXT:    [[TMP42:%.*]] = icmp eq i8 [[TMP39]], [[TMP41]]
-; CHECK-NEXT:    br i1 [[TMP42]], label %[[MISMATCH_LOOP_INC]], label %[[MISMATCH_END]]
-; CHECK:       [[MISMATCH_LOOP_INC]]:
-; CHECK-NEXT:    [[TMP43]] = add i32 [[MISMATCH_INDEX]], 1
-; CHECK-NEXT:    [[TMP44:%.*]] = icmp eq i32 [[TMP43]], [[N]]
-; CHECK-NEXT:    br i1 [[TMP44]], label %[[MISMATCH_END]], label %[[MISMATCH_LOOP]]
-; CHECK:       [[MISMATCH_END]]:
-; CHECK-NEXT:    [[MISMATCH_RESULT:%.*]] = phi i32 [ [[N]], %[[MISMATCH_LOOP_INC]] ], [ [[MISMATCH_INDEX]], %[[MISMATCH_LOOP]] ], [ [[N]], %[[MISMATCH_VEC_LOOP_INC]] ], [ [[TMP36]], %[[MISMATCH_VEC_LOOP_FOUND]] ]
-; CHECK-NEXT:    br i1 true, label %[[BYTE_COMPARE:.*]], label %[[WHILE_COND:.*]]
-; CHECK:       [[WHILE_COND]]:
-; CHECK-NEXT:    [[LEN_ADDR:%.*]] = phi i32 [ [[LEN]], %[[MISMATCH_END]] ], [ [[MISMATCH_RESULT]], %[[WHILE_BODY:.*]] ]
-; CHECK-NEXT:    [[INC:%.*]] = add i32 [[LEN_ADDR]], 1
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[MISMATCH_RESULT]], [[N]]
+; CHECK-NEXT:    [[LEN_ADDR:%.*]] = phi i32 [ [[LEN]], %[[MISMATCH_LOOP_PRE]] ], [ [[INC:%.*]], %[[WHILE_BODY:.*]] ]
+; CHECK-NEXT:    [[INC]] = add i32 [[LEN_ADDR]], 1
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[WHILE_END:.*]], label %[[WHILE_BODY]]
 ; CHECK:       [[WHILE_BODY]]:
-; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[MISMATCH_RESULT]] to i64
+; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[INC]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[TMP45:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[TMP46:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
 ; CHECK-NEXT:    [[CMP_NOT2:%.*]] = icmp eq i8 [[TMP45]], [[TMP46]]
-; CHECK-NEXT:    br i1 [[CMP_NOT2]], label %[[WHILE_COND]], label %[[WHILE_END]], !llvm.loop [[LOOP2:![0-9]+]]
-; CHECK:       [[BYTE_COMPARE]]:
-; CHECK-NEXT:    br label %[[WHILE_END]]
+; CHECK-NEXT:    br i1 [[CMP_NOT2]], label %[[MISMATCH_LOOP]], label %[[WHILE_END]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[WHILE_END]]:
-; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[MISMATCH_RESULT]], %[[WHILE_BODY]] ], [ [[MISMATCH_RESULT]], %[[WHILE_COND]] ], [ [[MISMATCH_RESULT]], %[[BYTE_COMPARE]] ]
-; CHECK-NEXT:    [[EXTRA_PHI:%.*]] = phi i32 [ [[EXTRA]], %[[WHILE_BODY]] ], [ [[EXTRA]], %[[WHILE_COND]] ], [ [[EXTRA]], %[[BYTE_COMPARE]] ]
+; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[INC]], %[[WHILE_BODY]] ], [ [[INC]], %[[MISMATCH_LOOP]] ]
+; CHECK-NEXT:    [[EXTRA_PHI:%.*]] = phi i32 [ [[EXTRA]], %[[WHILE_BODY]] ], [ [[EXTRA]], %[[MISMATCH_LOOP]] ]
 ; CHECK-NEXT:    [[RES:%.*]] = add i32 [[INC_LCSSA]], [[EXTRA_PHI]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -130,63 +56,12 @@ define ptr @find_first_of_i8_outer_loop_hint(ptr %search_start, ptr %search_end,
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[SEARCH_TEST:%.*]] = icmp eq ptr [[SEARCH_START]], [[SEARCH_END]]
 ; CHECK-NEXT:    [[NEEDLE_TEST:%.*]] = icmp eq ptr [[NEEDLE_START]], [[NEEDLE_END]]
-; CHECK-NEXT:    [[COMBINED_TEST:%.*]] = or i1 [[SEARCH_TEST]], [[NEEDLE_TEST]]
-; CHECK-NEXT:    br i1 [[COMBINED_TEST]], label %[[EXIT:.*]], label %[[HEADER_PREHEADER:.*]]
-; CHECK:       [[HEADER_PREHEADER]]:
-; CHECK-NEXT:    br label %[[MEM_CHECK:.*]]
-; CHECK:       [[MEM_CHECK]]:
-; CHECK-NEXT:    [[SEARCH_START_INT:%.*]] = ptrtoint ptr [[SEARCH_START]] to i64
-; CHECK-NEXT:    [[SEARCH_END_INT:%.*]] = ptrtoint ptr [[SEARCH_END]] to i64
-; CHECK-NEXT:    [[NEEDLE_START_INT:%.*]] = ptrtoint ptr [[NEEDLE_START]] to i64
-; CHECK-NEXT:    [[NEEDLE_END_INT:%.*]] = ptrtoint ptr [[NEEDLE_END]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 16)
-; CHECK-NEXT:    [[SEARCH_START_PAGE:%.*]] = lshr i64 [[SEARCH_START_INT]], 12
-; CHECK-NEXT:    [[SEARCH_END_PAGE:%.*]] = lshr i64 [[SEARCH_END_INT]], 12
-; CHECK-NEXT:    [[NEEDLE_START_PAGE:%.*]] = lshr i64 [[NEEDLE_START_INT]], 12
-; CHECK-NEXT:    [[NEEDLE_END_PAGE:%.*]] = lshr i64 [[NEEDLE_END_INT]], 12
-; CHECK-NEXT:    [[SEARCH_PAGE_CMP:%.*]] = icmp ne i64 [[SEARCH_START_PAGE]], [[SEARCH_END_PAGE]]
-; CHECK-NEXT:    [[NEEDLE_PAGE_CMP:%.*]] = icmp ne i64 [[NEEDLE_START_PAGE]], [[NEEDLE_END_PAGE]]
-; CHECK-NEXT:    [[COMBINED_PAGE_CMP:%.*]] = or i1 [[SEARCH_PAGE_CMP]], [[NEEDLE_PAGE_CMP]]
-; CHECK-NEXT:    br i1 [[COMBINED_PAGE_CMP]], label %[[SCALAR_PREHEADER:.*]], label %[[FIND_FIRST_VEC_HEADER:.*]], !prof [[PROF1]]
-; CHECK:       [[FIND_FIRST_VEC_HEADER]]:
-; CHECK-NEXT:    [[PSEARCH:%.*]] = phi ptr [ [[SEARCH_START]], %[[MEM_CHECK]] ], [ [[SEARCH_NEXT_VEC:%.*]], %[[SEARCH_CHECK_VEC:.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PSEARCH]] to i64
-; CHECK-NEXT:    [[SEARCH_PRED:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[TMP1]], i64 [[SEARCH_END_INT]])
-; CHECK-NEXT:    [[SEARCH_MASKED:%.*]] = and <vscale x 16 x i1> [[TMP0]], [[SEARCH_PRED]]
-; CHECK-NEXT:    [[SEARCH_LOAD_VEC:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[PSEARCH]], <vscale x 16 x i1> [[SEARCH_MASKED]], <vscale x 16 x i8> zeroinitializer)
-; CHECK-NEXT:    br label %[[MATCH_CHECK_VEC:.*]]
-; CHECK:       [[MATCH_CHECK_VEC]]:
-; CHECK-NEXT:    [[PNEEDLE:%.*]] = phi ptr [ [[NEEDLE_START]], %[[FIND_FIRST_VEC_HEADER]] ], [ [[NEEDLE_NEXT_VEC:%.*]], %[[NEEDLE_CHECK_VEC:.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[PNEEDLE]] to i64
-; CHECK-NEXT:    [[NEEDLE_PRED:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[TMP2]], i64 [[NEEDLE_END_INT]])
-; CHECK-NEXT:    [[NEEDLE_MASKED:%.*]] = and <vscale x 16 x i1> [[TMP0]], [[NEEDLE_PRED]]
-; CHECK-NEXT:    [[NEEDLE_LOAD_VEC:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[PNEEDLE]], <vscale x 16 x i1> [[NEEDLE_MASKED]], <vscale x 16 x i8> zeroinitializer)
-; CHECK-NEXT:    [[NEEDLE0:%.*]] = extractelement <vscale x 16 x i8> [[NEEDLE_LOAD_VEC]], i64 0
-; CHECK-NEXT:    [[NEEDLE0_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[NEEDLE0]], i64 0
-; CHECK-NEXT:    [[NEEDLE0_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[NEEDLE0_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-; CHECK-NEXT:    [[NEEDLE_SPLAT:%.*]] = select <vscale x 16 x i1> [[NEEDLE_MASKED]], <vscale x 16 x i8> [[NEEDLE_LOAD_VEC]], <vscale x 16 x i8> [[NEEDLE0_SPLAT]]
-; CHECK-NEXT:    [[NEEDLE_VEC:%.*]] = call <16 x i8> @llvm.vector.extract.v16i8.nxv16i8(<vscale x 16 x i8> [[NEEDLE_SPLAT]], i64 0)
-; CHECK-NEXT:    [[MATCH_PRED:%.*]] = call <vscale x 16 x i1> @llvm.experimental.vector.match.nxv16i8.v16i8(<vscale x 16 x i8> [[SEARCH_LOAD_VEC]], <16 x i8> [[NEEDLE_VEC]], <vscale x 16 x i1> [[SEARCH_MASKED]])
-; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> [[MATCH_PRED]])
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[CALCULATE_MATCH:.*]], label %[[NEEDLE_CHECK_VEC]]
-; CHECK:       [[CALCULATE_MATCH]]:
-; CHECK-NEXT:    [[MATCH_START:%.*]] = phi ptr [ [[PSEARCH]], %[[MATCH_CHECK_VEC]] ]
-; CHECK-NEXT:    [[MATCH_VEC:%.*]] = phi <vscale x 16 x i1> [ [[MATCH_PRED]], %[[MATCH_CHECK_VEC]] ]
-; CHECK-NEXT:    [[MATCH_IDX:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv16i1(<vscale x 16 x i1> [[MATCH_VEC]], i1 true)
-; CHECK-NEXT:    [[MATCH_RES:%.*]] = getelementptr i8, ptr [[MATCH_START]], i64 [[MATCH_IDX]]
-; CHECK-NEXT:    br label %[[EXIT_LOOPEXIT:.*]]
-; CHECK:       [[NEEDLE_CHECK_VEC]]:
-; CHECK-NEXT:    [[NEEDLE_NEXT_VEC]] = getelementptr i8, ptr [[PNEEDLE]], i64 16
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult ptr [[NEEDLE_NEXT_VEC]], [[NEEDLE_END]]
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[MATCH_CHECK_VEC]], label %[[SEARCH_CHECK_VEC]]
-; CHECK:       [[SEARCH_CHECK_VEC]]:
-; CHECK-NEXT:    [[SEARCH_NEXT_VEC]] = getelementptr i8, ptr [[PSEARCH]], i64 16
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult ptr [[SEARCH_NEXT_VEC]], [[SEARCH_END]]
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[FIND_FIRST_VEC_HEADER]], label %[[EXIT_LOOPEXIT1:.*]]
-; CHECK:       [[SCALAR_PREHEADER]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = or i1 [[SEARCH_TEST]], [[NEEDLE_TEST]]
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[FIND_FIRST_VEC_HEADER:.*]], label %[[EXIT_LOOPEXIT1:.*]]
+; CHECK:       [[EXIT_LOOPEXIT1]]:
 ; CHECK-NEXT:    br label %[[HEADER:.*]]
 ; CHECK:       [[HEADER]]:
-; CHECK-NEXT:    [[SEARCH_PTR:%.*]] = phi ptr [ [[SEARCH_NEXT:%.*]], %[[SEARCH_CHECK:.*]] ], [ [[SEARCH_START]], %[[SCALAR_PREHEADER]] ]
+; CHECK-NEXT:    [[SEARCH_PTR:%.*]] = phi ptr [ [[SEARCH_NEXT:%.*]], %[[SEARCH_CHECK:.*]] ], [ [[SEARCH_START]], %[[EXIT_LOOPEXIT1]] ]
 ; CHECK-NEXT:    [[SEARCH_LOAD:%.*]] = load i8, ptr [[SEARCH_PTR]], align 1
 ; CHECK-NEXT:    br label %[[MATCH_CHECK:.*]]
 ; CHECK:       [[NEEDLE_CHECK:.*]]:
@@ -197,18 +72,18 @@ define ptr @find_first_of_i8_outer_loop_hint(ptr %search_start, ptr %search_end,
 ; CHECK-NEXT:    [[NEEDLE_PTR]] = phi ptr [ [[NEEDLE_START]], %[[HEADER]] ], [ [[NEEDLE_NEXT]], %[[NEEDLE_CHECK]] ]
 ; CHECK-NEXT:    [[NEEDLE_LOAD:%.*]] = load i8, ptr [[NEEDLE_PTR]], align 1
 ; CHECK-NEXT:    [[MATCH_CMP:%.*]] = icmp eq i8 [[SEARCH_LOAD]], [[NEEDLE_LOAD]]
-; CHECK-NEXT:    br i1 [[MATCH_CMP]], label %[[EXIT_LOOPEXIT]], label %[[NEEDLE_CHECK]]
+; CHECK-NEXT:    br i1 [[MATCH_CMP]], label %[[EXIT_LOOPEXIT:.*]], label %[[NEEDLE_CHECK]]
 ; CHECK:       [[SEARCH_CHECK]]:
 ; CHECK-NEXT:    [[SEARCH_NEXT]] = getelementptr inbounds i8, ptr [[SEARCH_PTR]], i64 1
 ; CHECK-NEXT:    [[SEARCH_CMP:%.*]] = icmp eq ptr [[SEARCH_NEXT]], [[SEARCH_END]]
-; CHECK-NEXT:    br i1 [[SEARCH_CMP]], label %[[EXIT_LOOPEXIT1]], label %[[HEADER]], !llvm.loop [[LOOP2]]
+; CHECK-NEXT:    br i1 [[SEARCH_CMP]], label %[[EXIT:.*]], label %[[HEADER]], !llvm.loop [[LOOP0]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
-; CHECK-NEXT:    [[SEARCH_PTR_LCSSA:%.*]] = phi ptr [ [[SEARCH_PTR]], %[[MATCH_CHECK]] ], [ [[MATCH_RES]], %[[CALCULATE_MATCH]] ]
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[EXIT_LOOPEXIT1]]:
-; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK-NEXT:    [[SEARCH_PTR_LCSSA:%.*]] = phi ptr [ [[SEARCH_PTR]], %[[MATCH_CHECK]] ]
+; CHECK-NEXT:    br label %[[FIND_FIRST_VEC_HEADER]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi ptr [ [[SEARCH_END]], %[[ENTRY]] ], [ [[SEARCH_PTR_LCSSA]], %[[EXIT_LOOPEXIT]] ], [ [[SEARCH_END]], %[[EXIT_LOOPEXIT1]] ]
+; CHECK-NEXT:    br label %[[FIND_FIRST_VEC_HEADER]]
+; CHECK:       [[FIND_FIRST_VEC_HEADER]]:
+; CHECK-NEXT:    [[RES:%.*]] = phi ptr [ [[SEARCH_END]], %[[ENTRY]] ], [ [[SEARCH_PTR_LCSSA]], %[[EXIT_LOOPEXIT]] ], [ [[SEARCH_END]], %[[EXIT]] ]
 ; CHECK-NEXT:    ret ptr [[RES]]
 ;
 entry:
@@ -249,85 +124,34 @@ define ptr @find_first_of_i8_inner_loop_hint(ptr %search_start, ptr %search_end,
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[SEARCH_TEST:%.*]] = icmp eq ptr [[SEARCH_START]], [[SEARCH_END]]
 ; CHECK-NEXT:    [[NEEDLE_TEST:%.*]] = icmp eq ptr [[NEEDLE_START]], [[NEEDLE_END]]
-; CHECK-NEXT:    [[COMBINED_TEST:%.*]] = or i1 [[SEARCH_TEST]], [[NEEDLE_TEST]]
-; CHECK-NEXT:    br i1 [[COMBINED_TEST]], label %[[EXIT:.*]], label %[[HEADER_PREHEADER:.*]]
-; CHECK:       [[HEADER_PREHEADER]]:
-; CHECK-NEXT:    br label %[[MEM_CHECK:.*]]
-; CHECK:       [[MEM_CHECK]]:
-; CHECK-NEXT:    [[SEARCH_START_INT:%.*]] = ptrtoint ptr [[SEARCH_START]] to i64
-; CHECK-NEXT:    [[SEARCH_END_INT:%.*]] = ptrtoint ptr [[SEARCH_END]] to i64
-; CHECK-NEXT:    [[NEEDLE_START_INT:%.*]] = ptrtoint ptr [[NEEDLE_START]] to i64
-; CHECK-NEXT:    [[NEEDLE_END_INT:%.*]] = ptrtoint ptr [[NEEDLE_END]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 16)
-; CHECK-NEXT:    [[SEARCH_START_PAGE:%.*]] = lshr i64 [[SEARCH_START_INT]], 12
-; CHECK-NEXT:    [[SEARCH_END_PAGE:%.*]] = lshr i64 [[SEARCH_END_INT]], 12
-; CHECK-NEXT:    [[NEEDLE_START_PAGE:%.*]] = lshr i64 [[NEEDLE_START_INT]], 12
-; CHECK-NEXT:    [[NEEDLE_END_PAGE:%.*]] = lshr i64 [[NEEDLE_END_INT]], 12
-; CHECK-NEXT:    [[SEARCH_PAGE_CMP:%.*]] = icmp ne i64 [[SEARCH_START_PAGE]], [[SEARCH_END_PAGE]]
-; CHECK-NEXT:    [[NEEDLE_PAGE_CMP:%.*]] = icmp ne i64 [[NEEDLE_START_PAGE]], [[NEEDLE_END_PAGE]]
-; CHECK-NEXT:    [[COMBINED_PAGE_CMP:%.*]] = or i1 [[SEARCH_PAGE_CMP]], [[NEEDLE_PAGE_CMP]]
-; CHECK-NEXT:    br i1 [[COMBINED_PAGE_CMP]], label %[[SCALAR_PREHEADER:.*]], label %[[FIND_FIRST_VEC_HEADER:.*]], !prof [[PROF1]]
-; CHECK:       [[FIND_FIRST_VEC_HEADER]]:
-; CHECK-NEXT:    [[PSEARCH:%.*]] = phi ptr [ [[SEARCH_START]], %[[MEM_CHECK]] ], [ [[SEARCH_NEXT_VEC:%.*]], %[[SEARCH_CHECK_VEC:.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PSEARCH]] to i64
-; CHECK-NEXT:    [[SEARCH_PRED:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[TMP1]], i64 [[SEARCH_END_INT]])
-; CHECK-NEXT:    [[SEARCH_MASKED:%.*]] = and <vscale x 16 x i1> [[TMP0]], [[SEARCH_PRED]]
-; CHECK-NEXT:    [[SEARCH_LOAD_VEC:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[PSEARCH]], <vscale x 16 x i1> [[SEARCH_MASKED]], <vscale x 16 x i8> zeroinitializer)
-; CHECK-NEXT:    br label %[[MATCH_CHECK_VEC:.*]]
-; CHECK:       [[MATCH_CHECK_VEC]]:
-; CHECK-NEXT:    [[PNEEDLE:%.*]] = phi ptr [ [[NEEDLE_START]], %[[FIND_FIRST_VEC_HEADER]] ], [ [[NEEDLE_NEXT_VEC:%.*]], %[[NEEDLE_CHECK_VEC:.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[PNEEDLE]] to i64
-; CHECK-NEXT:    [[NEEDLE_PRED:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[TMP2]], i64 [[NEEDLE_END_INT]])
-; CHECK-NEXT:    [[NEEDLE_MASKED:%.*]] = and <vscale x 16 x i1> [[TMP0]], [[NEEDLE_PRED]]
-; CHECK-NEXT:    [[NEEDLE_LOAD_VEC:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[PNEEDLE]], <vscale x 16 x i1> [[NEEDLE_MASKED]], <vscale x 16 x i8> zeroinitializer)
-; CHECK-NEXT:    [[NEEDLE0:%.*]] = extractelement <vscale x 16 x i8> [[NEEDLE_LOAD_VEC]], i64 0
-; CHECK-NEXT:    [[NEEDLE0_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[NEEDLE0]], i64 0
-; CHECK-NEXT:    [[NEEDLE0_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[NEEDLE0_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-; CHECK-NEXT:    [[NEEDLE_SPLAT:%.*]] = select <vscale x 16 x i1> [[NEEDLE_MASKED]], <vscale x 16 x i8> [[NEEDLE_LOAD_VEC]], <vscale x 16 x i8> [[NEEDLE0_SPLAT]]
-; CHECK-NEXT:    [[NEEDLE_VEC:%.*]] = call <16 x i8> @llvm.vector.extract.v16i8.nxv16i8(<vscale x 16 x i8> [[NEEDLE_SPLAT]], i64 0)
-; CHECK-NEXT:    [[MATCH_PRED:%.*]] = call <vscale x 16 x i1> @llvm.experimental.vector.match.nxv16i8.v16i8(<vscale x 16 x i8> [[SEARCH_LOAD_VEC]], <16 x i8> [[NEEDLE_VEC]], <vscale x 16 x i1> [[SEARCH_MASKED]])
-; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> [[MATCH_PRED]])
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[CALCULATE_MATCH:.*]], label %[[NEEDLE_CHECK_VEC]]
-; CHECK:       [[CALCULATE_MATCH]]:
-; CHECK-NEXT:    [[MATCH_START:%.*]] = phi ptr [ [[PSEARCH]], %[[MATCH_CHECK_VEC]] ]
-; CHECK-NEXT:    [[MATCH_VEC:%.*]] = phi <vscale x 16 x i1> [ [[MATCH_PRED]], %[[MATCH_CHECK_VEC]] ]
-; CHECK-NEXT:    [[MATCH_IDX:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv16i1(<vscale x 16 x i1> [[MATCH_VEC]], i1 true)
-; CHECK-NEXT:    [[MATCH_RES:%.*]] = getelementptr i8, ptr [[MATCH_START]], i64 [[MATCH_IDX]]
-; CHECK-NEXT:    br label %[[EXIT_LOOPEXIT:.*]]
-; CHECK:       [[NEEDLE_CHECK_VEC]]:
-; CHECK-NEXT:    [[NEEDLE_NEXT_VEC]] = getelementptr i8, ptr [[PNEEDLE]], i64 16
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult ptr [[NEEDLE_NEXT_VEC]], [[NEEDLE_END]]
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[MATCH_CHECK_VEC]], label %[[SEARCH_CHECK_VEC]]
-; CHECK:       [[SEARCH_CHECK_VEC]]:
-; CHECK-NEXT:    [[SEARCH_NEXT_VEC]] = getelementptr i8, ptr [[PSEARCH]], i64 16
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult ptr [[SEARCH_NEXT_VEC]], [[SEARCH_END]]
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[FIND_FIRST_VEC_HEADER]], label %[[EXIT_LOOPEXIT1:.*]]
-; CHECK:       [[SCALAR_PREHEADER]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = or i1 [[SEARCH_TEST]], [[NEEDLE_TEST]]
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[FIND_FIRST_VEC_HEADER:.*]], label %[[EXIT_LOOPEXIT1:.*]]
+; CHECK:       [[EXIT_LOOPEXIT1]]:
 ; CHECK-NEXT:    br label %[[HEADER:.*]]
 ; CHECK:       [[HEADER]]:
-; CHECK-NEXT:    [[SEARCH_PTR:%.*]] = phi ptr [ [[SEARCH_NEXT:%.*]], %[[SEARCH_CHECK:.*]] ], [ [[SEARCH_START]], %[[SCALAR_PREHEADER]] ]
+; CHECK-NEXT:    [[SEARCH_PTR:%.*]] = phi ptr [ [[SEARCH_NEXT:%.*]], %[[SEARCH_CHECK:.*]] ], [ [[SEARCH_START]], %[[EXIT_LOOPEXIT1]] ]
 ; CHECK-NEXT:    [[SEARCH_LOAD:%.*]] = load i8, ptr [[SEARCH_PTR]], align 1
 ; CHECK-NEXT:    br label %[[MATCH_CHECK:.*]]
 ; CHECK:       [[NEEDLE_CHECK:.*]]:
 ; CHECK-NEXT:    [[NEEDLE_NEXT:%.*]] = getelementptr inbounds i8, ptr [[NEEDLE_PTR:%.*]], i64 1
 ; CHECK-NEXT:    [[NEEDLE_CMP:%.*]] = icmp eq ptr [[NEEDLE_NEXT]], [[NEEDLE_END]]
-; CHECK-NEXT:    br i1 [[NEEDLE_CMP]], label %[[SEARCH_CHECK]], label %[[MATCH_CHECK]], !llvm.loop [[LOOP2]]
+; CHECK-NEXT:    br i1 [[NEEDLE_CMP]], label %[[SEARCH_CHECK]], label %[[MATCH_CHECK]], !llvm.loop [[LOOP0]]
 ; CHECK:       [[MATCH_CHECK]]:
 ; CHECK-NEXT:    [[NEEDLE_PTR]] = phi ptr [ [[NEEDLE_START]], %[[HEADER]] ], [ [[NEEDLE_NEXT]], %[[NEEDLE_CHECK]] ]
 ; CHECK-NEXT:    [[NEEDLE_LOAD:%.*]] = load i8, ptr [[NEEDLE_PTR]], align 1
 ; CHECK-NEXT:    [[MATCH_CMP:%.*]] = icmp eq i8 [[SEARCH_LOAD]], [[NEEDLE_LOAD]]
-; CHECK-NEXT:    br i1 [[MATCH_CMP]], label %[[EXIT_LOOPEXIT]], label %[[NEEDLE_CHECK]]
+; CHECK-NEXT:    br i1 [[MATCH_CMP]], label %[[EXIT_LOOPEXIT:.*]], label %[[NEEDLE_CHECK]]
 ; CHECK:       [[SEARCH_CHECK]]:
 ; CHECK-NEXT:    [[SEARCH_NEXT]] = getelementptr inbounds i8, ptr [[SEARCH_PTR]], i64 1
 ; CHECK-NEXT:    [[SEARCH_CMP:%.*]] = icmp eq ptr [[SEARCH_NEXT]], [[SEARCH_END]]
-; CHECK-NEXT:    br i1 [[SEARCH_CMP]], label %[[EXIT_LOOPEXIT1]], label %[[HEADER]]
+; CHECK-NEXT:    br i1 [[SEARCH_CMP]], label %[[EXIT:.*]], label %[[HEADER]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
-; CHECK-NEXT:    [[SEARCH_PTR_LCSSA:%.*]] = phi ptr [ [[SEARCH_PTR]], %[[MATCH_CHECK]] ], [ [[MATCH_RES]], %[[CALCULATE_MATCH]] ]
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[EXIT_LOOPEXIT1]]:
-; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK-NEXT:    [[SEARCH_PTR_LCSSA:%.*]] = phi ptr [ [[SEARCH_PTR]], %[[MATCH_CHECK]] ]
+; CHECK-NEXT:    br label %[[FIND_FIRST_VEC_HEADER]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi ptr [ [[SEARCH_END]], %[[ENTRY]] ], [ [[SEARCH_PTR_LCSSA]], %[[EXIT_LOOPEXIT]] ], [ [[SEARCH_END]], %[[EXIT_LOOPEXIT1]] ]
+; CHECK-NEXT:    br label %[[FIND_FIRST_VEC_HEADER]]
+; CHECK:       [[FIND_FIRST_VEC_HEADER]]:
+; CHECK-NEXT:    [[RES:%.*]] = phi ptr [ [[SEARCH_END]], %[[ENTRY]] ], [ [[SEARCH_PTR_LCSSA]], %[[EXIT_LOOPEXIT]] ], [ [[SEARCH_END]], %[[EXIT]] ]
 ; CHECK-NEXT:    ret ptr [[RES]]
 ;
 entry:
@@ -367,8 +191,6 @@ exit:
 
 attributes #0 = { "target-features"="+sve2" }
 ;.
-; CHECK: [[PROF0]] = !{!"branch_weights", i32 99, i32 1}
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 10, i32 90}
-; CHECK: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]]}
-; CHECK: [[META3]] = !{!"llvm.loop.vectorize.width", i32 1}
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
+; CHECK: [[META1]] = !{!"llvm.loop.vectorize.width", i32 1}
 ;.
