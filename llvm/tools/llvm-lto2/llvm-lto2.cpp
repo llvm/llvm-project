@@ -334,7 +334,6 @@ static int run(int argc, char **argv) {
     Conf.TimeTraceGranularity = TimeTraceGranularity;
   }
   Conf.CPU = codegen::getMCPU();
-  Conf.ModifyTargetOptions = [](llvm::TargetOptions &TO) {};
   Conf.MAttrs = codegen::getMAttrs();
   if (auto RM = codegen::getExplicitRelocModel())
     Conf.RelocModel = *RM;
