@@ -57,26 +57,19 @@ using namespace clang;
 #define ABSTRACT_STMT(STMT)
 #include "clang/AST/StmtNodes.inc"
 
-static struct StmtClassNameTable {
+struct StmtClassNameTable {
   const char *Name;
   unsigned Counter;
   unsigned Size;
-} StmtClassInfo[Stmt::lastStmtConstant+1];
+};
 
 static StmtClassNameTable &getStmtInfoTableEntry(Stmt::StmtClass E) {
-  static bool Initialized = false;
-  if (Initialized)
-    return StmtClassInfo[E];
-
-  // Initialize the table on the first use.
-  Initialized = true;
+  static StmtClassNameTable stmtClassInfo[Stmt::lastStmtConstant + 1] = {
 #define ABSTRACT_STMT(STMT)
-#define STMT(CLASS, PARENT) \
-  StmtClassInfo[(unsigned)Stmt::CLASS##Class].Name = #CLASS;    \
-  StmtClassInfo[(unsigned)Stmt::CLASS##Class].Size = sizeof(CLASS);
+#define STMT(CLASS, PARENT) {#CLASS, 0, sizeof(CLASS)},
 #include "clang/AST/StmtNodes.inc"
-
-  return StmtClassInfo[E];
+  };
+  return stmtClassInfo[E];
 }
 
 void *Stmt::operator new(size_t bytes, const ASTContext& C,
@@ -85,7 +78,7 @@ void *Stmt::operator new(size_t bytes, const ASTContext& C,
 }
 
 const char *Stmt::getStmtClassName() const {
-  return getStmtInfoTableEntry((StmtClass) StmtBits.sClass).Name;
+  return getStmtInfoTableEntry(static_cast<StmtClass>(StmtBits.sClass)).Name;
 }
 
 // Check that no statement / expression class is polymorphic. LLVM style RTTI
@@ -113,19 +106,25 @@ void Stmt::PrintStats() {
   unsigned sum = 0;
   llvm::errs() << "\n*** Stmt/Expr Stats:\n";
   for (int i = 0; i != Stmt::lastStmtConstant+1; i++) {
-    if (StmtClassInfo[i].Name == nullptr) continue;
-    sum += StmtClassInfo[i].Counter;
+    StmtClassNameTable &entry =
+        getStmtInfoTableEntry(static_cast<Stmt::StmtClass>(i));
+    if (entry.Name == nullptr)
+      continue;
+    sum += entry.Counter;
   }
   llvm::errs() << "  " << sum << " stmts/exprs total.\n";
   sum = 0;
   for (int i = 0; i != Stmt::lastStmtConstant+1; i++) {
-    if (StmtClassInfo[i].Name == nullptr) continue;
-    if (StmtClassInfo[i].Counter == 0) continue;
-    llvm::errs() << "    " << StmtClassInfo[i].Counter << " "
-                 << StmtClassInfo[i].Name << ", " << StmtClassInfo[i].Size
-                 << " each (" << StmtClassInfo[i].Counter*StmtClassInfo[i].Size
+    StmtClassNameTable &entry =
+        getStmtInfoTableEntry(static_cast<Stmt::StmtClass>(i));
+    if (entry.Name == nullptr)
+      continue;
+    if (entry.Counter == 0)
+      continue;
+    llvm::errs() << "    " << entry.Counter << " " << entry.Name << ", "
+                 << entry.Size << " each (" << entry.Counter * entry.Size
                  << " bytes)\n";
-    sum += StmtClassInfo[i].Counter*StmtClassInfo[i].Size;
+    sum += entry.Counter * entry.Size;
   }
 
   llvm::errs() << "Total bytes = " << sum << "\n";
