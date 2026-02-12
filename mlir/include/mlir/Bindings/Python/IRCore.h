@@ -31,8 +31,6 @@
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 
-#include "llvm/Support/ThreadPool.h"
-
 namespace mlir {
 namespace python {
 namespace MLIR_BINDINGS_PYTHON_DOMAIN {
@@ -183,16 +181,17 @@ private:
 class MLIR_PYTHON_API_EXPORTED PyThreadPool {
 public:
   PyThreadPool();
+  ~PyThreadPool();
   PyThreadPool(const PyThreadPool &) = delete;
   PyThreadPool(PyThreadPool &&) = delete;
 
-  int getMaxConcurrency() const { return ownedThreadPool->getMaxConcurrency(); }
-  MlirLlvmThreadPool get() { return wrap(ownedThreadPool.get()); }
+  int getMaxConcurrency() const;
+  MlirLlvmThreadPool get() { return threadPool; }
 
   std::string _mlir_thread_pool_ptr() const;
 
 private:
-  std::unique_ptr<llvm::ThreadPoolInterface> ownedThreadPool;
+  MlirLlvmThreadPool threadPool;
 };
 
 /// Wrapper around MlirContext.
