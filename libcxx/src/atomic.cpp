@@ -19,9 +19,6 @@
 
 #include "include/apple_availability.h"
 
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
-
 #ifdef __linux__
 
 #  include <linux/futex.h>
@@ -61,6 +58,9 @@ _LIBCPP_PUSH_MACROS
 #  define _LIBCPP_FUTEX(...) syscall(SYS_futex, __VA_ARGS__)
 
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
