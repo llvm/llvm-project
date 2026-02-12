@@ -8,6 +8,7 @@
 
 #include "MockTUSummaryBuilder.h"
 #include "clang/Analysis/Scalable/TUSummary/ExtractorRegistry.h"
+#include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/StringRef.h"
@@ -16,6 +17,11 @@
 
 using namespace clang;
 using namespace ssaf;
+
+[[nodiscard]]
+static TUSummary makeFakeSummary() {
+  return BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp");
+}
 
 namespace {
 
@@ -39,7 +45,8 @@ TEST(SummaryExtractorRegistryTest, EnumeratingRegistryEntries) {
 }
 
 TEST(SummaryExtractorRegistryTest, InstantiatingExtractor1) {
-  MockTUSummaryBuilder FakeBuilder;
+  TUSummary Summary = makeFakeSummary();
+  MockTUSummaryBuilder FakeBuilder(Summary);
   {
     auto Consumer =
         makeTUSummaryExtractor("MockSummaryExtractor1", FakeBuilder);
@@ -52,7 +59,8 @@ TEST(SummaryExtractorRegistryTest, InstantiatingExtractor1) {
 }
 
 TEST(SummaryExtractorRegistryTest, InstantiatingExtractor2) {
-  MockTUSummaryBuilder FakeBuilder;
+  TUSummary Summary = makeFakeSummary();
+  MockTUSummaryBuilder FakeBuilder(Summary);
   {
     auto Consumer =
         makeTUSummaryExtractor("MockSummaryExtractor2", FakeBuilder);
@@ -65,7 +73,8 @@ TEST(SummaryExtractorRegistryTest, InstantiatingExtractor2) {
 }
 
 TEST(SummaryExtractorRegistryTest, InvokingExtractors) {
-  MockTUSummaryBuilder FakeBuilder;
+  TUSummary Summary = makeFakeSummary();
+  MockTUSummaryBuilder FakeBuilder(Summary);
   std::vector<std::unique_ptr<ASTConsumer>> Consumers;
   for (std::string Name : {"MockSummaryExtractor1", "MockSummaryExtractor2"}) {
     auto Consumer = makeTUSummaryExtractor(Name, FakeBuilder);
