@@ -227,7 +227,7 @@ static bool should_show_stop_line_with_ansi(DebuggerSP debugger_sp) {
 size_t SourceManager::DisplaySourceLinesWithLineNumbersUsingLastFile(
     uint32_t start_line, uint32_t count, uint32_t curr_line, uint32_t column,
     const char *current_line_cstr, Stream *s, const SymbolContextList *bp_locs,
-    std::optional<lldb::LanguageType> language_type) {
+    lldb::LanguageType language_type) {
   if (count == 0)
     return 0;
 
@@ -327,7 +327,7 @@ size_t SourceManager::DisplaySourceLinesWithLineNumbers(
     SupportFileNSP support_file_nsp, uint32_t line, uint32_t column,
     uint32_t context_before, uint32_t context_after,
     const char *current_line_cstr, Stream *s, const SymbolContextList *bp_locs,
-    std::optional<lldb::LanguageType> language_type) {
+    lldb::LanguageType language_type) {
   assert(support_file_nsp && "SupportFile must be valid");
   FileSP file_sp(GetFile(support_file_nsp));
 
@@ -352,7 +352,7 @@ size_t SourceManager::DisplaySourceLinesWithLineNumbers(
 
 size_t SourceManager::DisplayMoreWithLineNumbers(
     Stream *s, uint32_t count, bool reverse, const SymbolContextList *bp_locs,
-    std::optional<lldb::LanguageType> language_type) {
+    lldb::LanguageType language_type) {
   // If we get called before anybody has set a default file and line, then try
   // to figure it out here.
   FileSP last_file_sp(GetLastFile());
@@ -678,8 +678,7 @@ bool SourceManager::File::PathRemappingIsStale() const {
 
 size_t SourceManager::File::DisplaySourceLines(
     uint32_t line, std::optional<size_t> column, uint32_t context_before,
-    uint32_t context_after, Stream *s,
-    std::optional<lldb::LanguageType> language_type) {
+    uint32_t context_after, Stream *s, lldb::LanguageType language_type) {
   // Nothing to write if there's no stream.
   if (!s)
     return 0;
@@ -708,8 +707,7 @@ size_t SourceManager::File::DisplaySourceLines(
       GetSupportFile()->GetSpecOnly().GetPath(/*denormalize*/ false);
   // FIXME: Find a way to get the definitive language this file was written in
   // and pass it to the highlighter.
-  const auto &h = mgr.getHighlighterFor(
-      language_type.value_or(lldb::eLanguageTypeUnknown), path);
+  const auto &h = mgr.getHighlighterFor(language_type, path);
 
   const uint32_t start_line =
       line <= context_before ? 1 : line - context_before;
