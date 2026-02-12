@@ -2195,18 +2195,34 @@ void CXXNameMangler::manglePrefix(const DeclContext *DC, bool NoFunction) {
   if (mangleSubstitution(ND))
     return;
 
+  auto getPrefixGlobalDecl = [this](const NamedDecl *ND) -> GlobalDecl {
+    if (const auto *CD = dyn_cast<CXXConstructorDecl>(ND)) {
+      if (ND == Structor)
+        return GlobalDecl(CD, static_cast<CXXCtorType>(StructorType));
+      return GlobalDecl(CD, Ctor_Complete);
+    }
+    if (const auto *DD = dyn_cast<CXXDestructorDecl>(ND)) {
+      if (ND == Structor)
+        return GlobalDecl(DD, static_cast<CXXDtorType>(StructorType));
+      return GlobalDecl(DD, Dtor_Complete);
+    }
+    if (const auto *FD = dyn_cast<FunctionDecl>(ND))
+      return GlobalDecl(FD);
+    return GlobalDecl(ND);
+  };
+
   // Check if we have a template-prefix or a closure-prefix.
   const TemplateArgumentList *TemplateArgs = nullptr;
-  if (GlobalDecl TD = isTemplate(ND, TemplateArgs)) {
+  if (GlobalDecl TD = isTemplate(getPrefixGlobalDecl(ND), TemplateArgs)) {
     mangleTemplatePrefix(TD);
     mangleTemplateArgs(asTemplateName(TD), *TemplateArgs);
   } else if (const NamedDecl *PrefixND = getClosurePrefix(ND)) {
     mangleClosurePrefix(PrefixND, NoFunction);
-    mangleUnqualifiedName(ND, nullptr, nullptr);
+    mangleUnqualifiedName(getPrefixGlobalDecl(ND), nullptr, nullptr);
   } else {
     const DeclContext *DC = Context.getEffectiveDeclContext(ND);
     manglePrefix(DC, NoFunction);
-    mangleUnqualifiedName(ND, DC, nullptr);
+    mangleUnqualifiedName(getPrefixGlobalDecl(ND), DC, nullptr);
   }
 
   addSubstitution(ND);
