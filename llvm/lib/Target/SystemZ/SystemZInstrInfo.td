@@ -525,31 +525,31 @@ let SimpleBDXStore = 1, mayStore = 1 in {
 
 let hasNoSchedulingInfo = 1, hasSideEffects = 1, mayLoad = 1 in {
   // load the stack guard's address
-  def LOAD_TSGA : Pseudo<(outs ADDR64:$grdaddr),
+  def LOAD_TLS_BLOCK_ADDR : Pseudo<(outs ADDR64:$grdaddr),
                                             (ins), []>;
-  def LOAD_GSGA : Pseudo<(outs ADDR64:$grdaddr),
+  def LOAD_GLOBAL_STACKGUARD_ADDR : Pseudo<(outs ADDR64:$grdaddr),
                                                (ins), []>;
 
   let mayStore = 1 in {
     // load the stack guard's address
-    // (via LOAD_[TLS|GLOBAL]STACK_GUARD_ADDRESS),
+    // (via LOAD_[TLS|GLOBAL]_STACKGUARD_ADDR),
     // and move the stack guard to the stack.
     let usesCustomInserter = 1 in
-      def MOVE_SG_DAG : Pseudo<(outs),
+      def MOVE_STACKGUARD_DAG : Pseudo<(outs),
                                         (ins bdaddr12only:$grdloc), []>;
     let Constraints = "@earlyclobber $grdaddr" in
-      def MOVE_SG : Pseudo<(outs ADDR64:$grdaddr),
+      def MOVE_STACKGUARD : Pseudo<(outs ADDR64:$grdaddr),
                                     (ins bdaddr12only:$grdloc), []>;
   }
   let Defs = [CC] in {
     // load the stack guard's address
-    // (via LOAD_[TLS|GLOBAL]_STACK_GUARD_ADDRESS),
+    // (via LOAD_[TLS|GLOBAL]_STACKGUARD_ADDR),
     // and compare the stack guard against the one on the stack.
     let usesCustomInserter = 1 in
-      def COMPARE_SG_BRIDGE : Pseudo<(outs),
+      def COMPARE_STACKGUARD_DAG : Pseudo<(outs),
                                            (ins bdaddr12only:$grdloc), []>;
     let Constraints = "@earlyclobber $grdaddr" in
-      def COMPARE_SG : Pseudo<(outs ADDR64:$grdaddr),
+      def COMPARE_STACKGUARD : Pseudo<(outs ADDR64:$grdaddr),
                                        (ins bdaddr12only:$grdloc), []>;
   }
 }

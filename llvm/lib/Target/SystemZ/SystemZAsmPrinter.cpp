@@ -776,11 +776,11 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case SystemZ::EH_SjLj_Setup:
     return;
 
-  case SystemZ::LOAD_TSGA:
-    lowerLOAD_TSGA(*MI, Lower);
+  case SystemZ::LOAD_TLS_BLOCK_ADDR:
+    lowerLOAD_TLS_BLOCK_ADDR(*MI, Lower);
     return;
-  case SystemZ::LOAD_GSGA:
-    lowerLOAD_GSGA(*MI, Lower);
+  case SystemZ::LOAD_GLOBAL_STACKGUARD_ADDR:
+    lowerLOAD_GLOBAL_STACKGUARD_ADDR(*MI, Lower);
     return;
 
   default:
@@ -1036,7 +1036,7 @@ void SystemZAsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
   recordSled(BeginOfSled, MI, SledKind::FUNCTION_EXIT, 2);
 }
 
-void SystemZAsmPrinter::lowerLOAD_TSGA(const MachineInstr &MI,
+void SystemZAsmPrinter::lowerLOAD_TLS_BLOCK_ADDR(const MachineInstr &MI,
                                       SystemZMCInstLower &Lower) {
   Register AddrReg = MI.getOperand(0).getReg();
   const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
@@ -1065,7 +1065,7 @@ void SystemZAsmPrinter::lowerLOAD_TSGA(const MachineInstr &MI,
   return;
 }
 
-void SystemZAsmPrinter::lowerLOAD_GSGA(const MachineInstr &MI,
+void SystemZAsmPrinter::lowerLOAD_GLOBAL_STACKGUARD_ADDR(const MachineInstr &MI,
                                       SystemZMCInstLower &Lower) {
   Register AddrReg = MI.getOperand(0).getReg();
   const MachineFunction &MF = *(MI.getParent()->getParent());

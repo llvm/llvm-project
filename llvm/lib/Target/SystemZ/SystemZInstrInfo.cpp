@@ -1780,11 +1780,11 @@ bool SystemZInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     splitAdjDynAlloc(MI);
     return true;
 
-  case SystemZ::MOVE_SG:
+  case SystemZ::MOVE_STACKGUARD:
     expandStackGuardPseudo(MI, SystemZ::MVC);
     return true;
 
-  case SystemZ::COMPARE_SG:
+  case SystemZ::COMPARE_STACKGUARD:
     expandStackGuardPseudo(MI, SystemZ::CLC);
     return true;
 
@@ -1828,7 +1828,7 @@ void SystemZInstrInfo::expandStackGuardPseudo(MachineInstr &MI,
   StringRef GuardType = M->getStackProtectorGuard();
   unsigned int Offset = 0;
 
-  // Check MI (which should be either MOVE_SG or COMPARE_SG)
+  // Check MI (which should be either MOVE_STACKGUARD or COMPARE_STACKGUARD)
   // to see if the early-clobber flag on the def reg was honored. If so,
   // return that register. If not, scavenge a new register and return that.
   // This is a workaround for https://github.com/llvm/llvm-project/issues/172511
@@ -1844,13 +1844,13 @@ void SystemZInstrInfo::expandStackGuardPseudo(MachineInstr &MI,
   // guard into the scratch register AddrReg.
   if (GuardType.empty() || (GuardType == "tls")) {
     // emit a load of the TLS stack guard's address
-    BuildMI(MBB, MI, DL, get(SystemZ::LOAD_TSGA), AddrReg);
+    BuildMI(MBB, MI, DL, get(SystemZ::LOAD_TLS_BLOCK_ADDR), AddrReg);
     // record the appropriate stack guard offset (40 in the tls case).
     Offset = 40;
   }
   else if (GuardType == "global") {
     // emit a load of the global stack guard's address
-    BuildMI(MBB, MI, DL, get(SystemZ::LOAD_GSGA), AddrReg);
+    BuildMI(MBB, MI, DL, get(SystemZ::LOAD_GLOBAL_STACKGUARD_ADDR), AddrReg);
   } else {
     llvm_unreachable((Twine("Unknown stack protector type \"") + GuardType + "\"")
                       .str()
@@ -1885,10 +1885,10 @@ unsigned SystemZInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return 18;
   if (MI.getOpcode() == TargetOpcode::PATCHABLE_RET)
     return 18 + (MI.getOperand(0).getImm() == SystemZ::CondReturn ? 4 : 0);
-  if (MI.getOpcode() == SystemZ::LOAD_TSGA)
+  if (MI.getOpcode() == SystemZ::LOAD_TLS_BLOCK_ADDR)
     // ear (4), sllg (6), ear (4) = 14 bytes
     return 14;
-  if (MI.getOpcode() == SystemZ::LOAD_GSGA) {
+  if (MI.getOpcode() == SystemZ::LOAD_GLOBAL_STACKGUARD_ADDR) {
     // both larl and lgrl are 6 bytes long.
     return 6;
   }

@@ -3617,8 +3617,8 @@ static Comparison getCmp(SelectionDAG &DAG, SDValue CmpOp0, SDValue CmpOp1,
       C.Opcode = SystemZISD::STRICT_FCMPS;
     adjustForFNeg(C);
   } else if (isStackGuardCompare(CmpOp0, CmpOp1, MustSwap)) {
-    // emit COMPARE_SG_DAG instead
-    C.Opcode = SystemZISD::COMPARE_SG_DAG;
+    // emit COMPARE_STACKGUARD_DAG instead
+    C.Opcode = SystemZISD::COMPARE_STACKGUARD;
     C.CCValid = SystemZ::CCMASK_ICMP;
     C.ICmpType = SystemZICMP::Any;
   } else {
@@ -3675,8 +3675,8 @@ static SDValue emitCmp(SelectionDAG &DAG, const SDLoc &DL, Comparison &C) {
   if (C.Opcode == SystemZISD::ICMP)
     return DAG.getNode(SystemZISD::ICMP, DL, MVT::i32, C.Op0, C.Op1,
                        DAG.getTargetConstant(C.ICmpType, DL, MVT::i32));
-  if (C.Opcode == SystemZISD::COMPARE_SG_DAG)
-    return DAG.getNode(SystemZISD::COMPARE_SG_DAG, DL, MVT::i32, C.Op0,
+  if (C.Opcode == SystemZISD::COMPARE_STACKGUARD)
+    return DAG.getNode(SystemZISD::COMPARE_STACKGUARD, DL, MVT::i32, C.Op0,
                        DAG.getTargetConstant(C.ICmpType, DL, MVT::i32));
   if (C.Opcode == SystemZISD::TM) {
     bool RegisterOnly = (bool(C.CCMask & SystemZ::CCMASK_TM_MIXED_MSB_0) !=
@@ -8179,7 +8179,7 @@ SDValue SystemZTargetLowering::combineSTORE(
     }
   }
 
-  // combine STORE (LOAD_STACK_GUARD) into MOVE_SG_DAG
+  // combine STORE (LOAD_STACK_GUARD) into MOVE_STACKGUARD_DAG
   if (Op1->isMachineOpcode() &&
       (Op1->getMachineOpcode() == SystemZ::LOAD_STACK_GUARD)) {
     // Obtain the frame index the store was targeting.
@@ -8189,7 +8189,7 @@ SDValue SystemZTargetLowering::combineSTORE(
                      DAG.getTargetConstant(0, SDLoc(SN), MVT::i64),
                      SN->getChain()};
     MachineSDNode *Move =
-        DAG.getMachineNode(SystemZ::MOVE_SG_DAG, SDLoc(SN), MVT::Other, Ops);
+        DAG.getMachineNode(SystemZ::MOVE_STACKGUARD_DAG, SDLoc(SN), MVT::Other, Ops);
 
     return SDValue(Move, 0);
   }
@@ -11127,7 +11127,7 @@ getBackchainAddress(SDValue SP, SelectionDAG &DAG) const {
                      DAG.getIntPtrConstant(TFL->getBackchainOffset(MF), DL));
 }
 
-// Replace a _SG_DAG pseudo with a _SG pseudo, adding
+// Replace a _STACKGUARD_DAG pseudo with a _SG pseudo, adding
 // a dead early-clobber def reg that will be used as a
 // scratch register when the pseudo is expanded.
 MachineBasicBlock* SystemZTargetLowering::emitStackGuardPseudo(MachineInstr &MI, MachineBasicBlock* MBB, unsigned PseudoOp) const {
@@ -11299,11 +11299,11 @@ MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
   case TargetOpcode::PATCHPOINT:
     return emitPatchPoint(MI, MBB);
 
-  case SystemZ::MOVE_SG_DAG:
-    return emitStackGuardPseudo(MI, MBB, SystemZ::MOVE_SG);
+  case SystemZ::MOVE_STACKGUARD_DAG:
+    return emitStackGuardPseudo(MI, MBB, SystemZ::MOVE_STACKGUARD);
 
-  case SystemZ::COMPARE_SG_BRIDGE:
-    return emitStackGuardPseudo(MI, MBB, SystemZ::COMPARE_SG);
+  case SystemZ::COMPARE_STACKGUARD_DAG:
+    return emitStackGuardPseudo(MI, MBB, SystemZ::COMPARE_STACKGUARD);
 
   default:
     llvm_unreachable("Unexpected instr type to insert");

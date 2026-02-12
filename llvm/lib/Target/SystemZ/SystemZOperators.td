@@ -309,7 +309,7 @@ def z_icmp              : SDNode<"SystemZISD::ICMP", SDT_ZICmp>;
 
 // A special form of icmp dedicated to comparing a stack protector value
 // to a stack slot. Kept separate to enable custom lowering.
-def z_csg              : SDNode<"SystemZISD::COMPARE_SG_DAG", SDT_ZCSG>;
+def z_csg              : SDNode<"SystemZISD::COMPARE_STACKGUARD", SDT_ZCSG>;
 
 // Floating-point comparisons.  The two operands are the values to compare.
 def z_fcmp              : SDNode<"SystemZISD::FCMP", SDT_ZCmp>;
