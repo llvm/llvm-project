@@ -347,9 +347,7 @@ public:
 
   const FuncTy &getFunction() const { return F; }
 
-  ReferenceTy operator*() const {
-    return std::invoke(getFunction(), *this->I);
-  }
+  ReferenceTy operator*() const { return std::invoke(F, *this->I); }
 
 private:
   callable_detail::Callable<FuncTy> F{};
