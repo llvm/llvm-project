@@ -1030,24 +1030,15 @@ DenseElementsAttr::getFromRawBuffer(ShapedType type, ArrayRef<char> rawBuffer) {
 
 /// Returns true if the given buffer is a valid raw buffer for the given type.
 bool DenseElementsAttr::isValidRawBuffer(ShapedType type,
-                                         ArrayRef<char> rawBuffer,
-                                         bool &detectedSplat) {
+                                         ArrayRef<char> rawBuffer) {
   size_t storageWidth = getDenseElementStorageWidth(type.getElementType());
   size_t rawBufferWidth = rawBuffer.size() * CHAR_BIT;
   int64_t numElements = type.getNumElements();
 
-  // The initializer is always a splat if the result type has a single element.
-  detectedSplat = numElements == 1;
-
-  // All types are 8-bit aligned, so we can just check the buffer width
-  // to know if only a single initializer element was passed in.
-  if (rawBufferWidth == storageWidth) {
-    detectedSplat = true;
-    return true;
-  }
-
-  // The raw buffer is valid if it has the right size.
-  return rawBufferWidth == storageWidth * numElements;
+  // The raw buffer is valid if it has a single element (splat) or the right
+  // number of elements.
+  return rawBufferWidth == storageWidth ||
+         rawBufferWidth == storageWidth * numElements;
 }
 
 /// Check the information for a C++ data type, check if this type is valid for
@@ -1121,7 +1112,13 @@ bool DenseElementsAttr::isValidComplex(int64_t dataEltSize, bool isInt,
 /// Returns true if this attribute corresponds to a splat, i.e. if all element
 /// values are the same.
 bool DenseElementsAttr::isSplat() const {
-  return static_cast<DenseElementsAttributeStorage *>(impl)->isSplat;
+  // Splat iff the data array has exactly one element.
+  if (isa<DenseStringElementsAttr>(*this))
+    return getRawStringData().size() == 1;
+  // FP/Int case.
+  size_t storageSize = llvm::divideCeil(
+      getDenseElementBitWidth(getType().getElementType()), CHAR_BIT);
+  return getRawData().size() == storageSize;
 }
 
 /// Return if the given complex type has an integer element type.
@@ -1286,11 +1283,8 @@ DenseElementsAttr DenseIntOrFPElementsAttr::getRaw(ShapedType type,
 DenseElementsAttr DenseIntOrFPElementsAttr::getRaw(ShapedType type,
                                                    ArrayRef<char> data) {
   assert(type.hasStaticShape() && "type must have static shape");
-  bool isSplat = false;
-  bool isValid = isValidRawBuffer(type, data, isSplat);
-  assert(isValid);
-  (void)isValid;
-  return Base::get(type.getContext(), type, data, isSplat);
+  assert(isValidRawBuffer(type, data));
+  return Base::get(type.getContext(), type, data);
 }
 
 /// Overload of the raw 'get' method that asserts that the given type is of
