@@ -13,10 +13,10 @@
 // such as MIPS PIC and non-PIC or ARM non-Thumb and Thumb functions.
 //
 // If a jump target is too far and its address doesn't fit to a
-// short jump instruction, we need to create a thunk too, but we
-// haven't supported it yet.
+// short jump instruction, we need to create a thunk too.
 //
-// i386 and x86-64 don't need thunks.
+// For x86-64, thunks are needed when the .text section exceeds 2GiB
+// and RIP-relative branches (R_X86_64_PLT32) overflow.
 //
 //===---------------------------------------------------------------------===//
 
@@ -41,6 +41,8 @@ using namespace llvm::object;
 using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
+using llvm::support::endian::write32le;
+using llvm::support::endian::write64le;
 
 namespace {
 
@@ -474,7 +476,8 @@ public:
   uint32_t size() override { return 16; }
   void writeTo(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
-  bool isCompatibleWith(const InputSection &isec, const Relocation &rel) const override;
+  bool isCompatibleWith(const InputSection &isec,
+                        const Relocation &rel) const override;
 
 private:
   // Records the call site of the call stub.
@@ -613,6 +616,51 @@ public:
   }
 };
 
+// Base class for x86-64 thunks.
+//
+// An x86-64 thunk may be either short or long. A short thunk is simply a
+// jmp rel32 instruction (5 bytes), and it may be used when the distance from
+// the thunk to the target is less than 2GiB. Long thunks can branch to any
+// 64-bit virtual address and are implemented in derived classes. This class
+// tries to create a short thunk if the target is in range, otherwise it
+// creates a long thunk.
+class X86_64Thunk : public Thunk {
+public:
+  X86_64Thunk(Ctx &ctx, Symbol &dest, int64_t addend)
+      : Thunk(ctx, dest, addend) {}
+  bool getMayUseShortThunk();
+  void writeTo(uint8_t *buf) override;
+
+private:
+  bool mayUseShortThunk = true;
+  virtual void writeLong(uint8_t *buf) = 0;
+};
+
+// x86-64 long range thunk using PC-relative offset.
+//
+// The long thunk uses a position-independent sequence:
+//   movabsq $offset, %r11  # 49 BB xx xx xx xx xx xx xx xx (10 bytes)
+//   leaq (%rip), %r10      # 4C 8D 15 00 00 00 00         (7 bytes)
+//   addq %r10, %r11        # 4D 01 D3                     (3 bytes)
+//   jmp *%r11              # 41 FF E3                     (3 bytes)
+//
+// Total size: 23 bytes. The offset is computed as:
+//   target - (thunk_address + 17)
+// where 17 = sizeof(movabsq) + sizeof(leaq) = 10 + 7, which is the
+// RIP value captured by leaq (the address of the addq instruction).
+// Using r11 and r10 as they are caller-saved registers that are not
+// used for parameter passing in the SysV ABI.
+class X86_64LongThunk final : public X86_64Thunk {
+public:
+  X86_64LongThunk(Ctx &ctx, Symbol &dest, int64_t addend)
+      : X86_64Thunk(ctx, dest, addend) {}
+  uint32_t size() override { return getMayUseShortThunk() ? 5 : 23; }
+  void addSymbols(ThunkSection &isec) override;
+
+private:
+  void writeLong(uint8_t *buf) override;
+};
+
 } // end anonymous namespace
 
 Defined *Thunk::addSymbol(StringRef name, uint8_t type, uint64_t value,
@@ -666,10 +714,10 @@ bool AArch64Thunk::needsSyntheticLandingPad() {
 // AArch64 long range Thunks.
 void AArch64ABSLongThunk::writeLong(uint8_t *buf) {
   const uint8_t data[] = {
-    0x50, 0x00, 0x00, 0x58, //     ldr x16, L0
-    0x00, 0x02, 0x1f, 0xd6, //     br  x16
-    0x00, 0x00, 0x00, 0x00, // L0: .xword S
-    0x00, 0x00, 0x00, 0x00,
+      0x50, 0x00, 0x00, 0x58, //     ldr x16, L0
+      0x00, 0x02, 0x1f, 0xd6, //     br  x16
+      0x00, 0x00, 0x00, 0x00, // L0: .xword S
+      0x00, 0x00, 0x00, 0x00,
   };
   // If mayNeedLandingPad is true then destination is an
   // AArch64BTILandingPadThunk that defines landingPad.
@@ -893,7 +941,8 @@ bool ThumbThunk::isCompatibleWith(const InputSection &isec,
     return false;
 
   // ARM branch relocations can't use BLX
-  return rel.type != R_ARM_JUMP24 && rel.type != R_ARM_PC24 && rel.type != R_ARM_PLT32;
+  return rel.type != R_ARM_JUMP24 && rel.type != R_ARM_PC24 &&
+         rel.type != R_ARM_PLT32;
 }
 
 void ARMV7ABSLongThunk::writeLong(uint8_t *buf) {
@@ -1232,6 +1281,97 @@ void ThumbV4PILongThunk::addSymbols(ThunkSection &isec) {
 void ThumbV4PILongThunk::addLongMapSyms() {
   addSymbol("$a", STT_NOTYPE, 4, *tsec);
   addSymbol("$d", STT_NOTYPE, 16, *tsec);
+}
+
+// x86-64 Thunk base class.
+// For x86-64, the thunk's addend comes from the original R_X86_64_PLT32
+// relocation. That addend includes a -4 PC-relative compensation (since the
+// CPU adds 4 for the displacement field size during PC-relative addressing).
+// When computing the thunk's jump target, we must add back this +4 to get
+// the actual destination address. For example, a call to a local symbol at
+// section+0x100 produces addend = 0x100 - 4 = 0xFC, so the thunk target
+// should be section.getVA(0xFC + 4) = section + 0x100.
+static uint64_t getX86_64ThunkDestVA(Ctx &ctx, const Symbol &s, int64_t a) {
+  if (s.isInPlt(ctx))
+    return s.getPltVA(ctx);
+  // Add 4 to undo the -4 PC-relative compensation in the addend.
+  return s.getVA(ctx, a + 4);
+}
+
+bool X86_64Thunk::getMayUseShortThunk() {
+  if (!mayUseShortThunk)
+    return false;
+  uint64_t s = getX86_64ThunkDestVA(ctx, destination, addend);
+  uint64_t p = getThunkTargetSym()->getVA(ctx);
+  // The jmp rel32 instruction is 5 bytes, so we check (target - (thunk + 5)).
+  mayUseShortThunk = llvm::isInt<32>(s - p - 5);
+  return mayUseShortThunk;
+}
+
+void X86_64Thunk::writeTo(uint8_t *buf) {
+  if (!getMayUseShortThunk()) {
+    writeLong(buf);
+    return;
+  }
+  // Short thunk: jmp rel32 (5 bytes)
+  uint64_t s = getX86_64ThunkDestVA(ctx, destination, addend);
+  uint64_t p = getThunkTargetSym()->getVA(ctx);
+  buf[0] = 0xe9; // jmp rel32
+  write32le(buf + 1, static_cast<uint32_t>(s - p - 5));
+}
+
+// x86-64 long range thunk implementation.
+// Uses a position-independent RIP-relative offset sequence:
+//   movabsq $offset, %r11  ; 49 BB xx xx xx xx xx xx xx xx  (10 bytes)
+//   leaq (%rip), %r10      ; 4C 8D 15 00 00 00 00          (7 bytes)
+//   addq %r10, %r11        ; 4D 01 D3                      (3 bytes)
+//   jmp *%r11              ; 41 FF E3                      (3 bytes)
+//
+// The leaq captures the RIP (address of the next instruction, i.e. addq),
+// so offset = target - (thunk_address + 10 + 7) = target - (thunk_address +
+// 17).
+void X86_64LongThunk::writeLong(uint8_t *buf) {
+  // movabsq $offset, %r11
+  buf[0] = 0x49;
+  buf[1] = 0xbb;
+
+  uint64_t target = getX86_64ThunkDestVA(ctx, destination, addend);
+  uint64_t thunkAddr = getThunkTargetSym()->getVA(ctx);
+  // RIP after leaq points to the addq instruction at thunkAddr + 17.
+  uint64_t offset = target - (thunkAddr + 17);
+  write64le(buf + 2, offset);
+
+  // leaq (%rip), %r10  ; RIP-relative with 0 displacement
+  buf[10] = 0x4c;         // REX.WR prefix (W=1, R=1 for r10)
+  buf[11] = 0x8d;         // lea
+  buf[12] = 0x15;         // ModRM: mod=00, reg=2 (r10), rm=5 (RIP-relative)
+  write32le(buf + 13, 0); // disp32 = 0
+
+  // addq %r10, %r11
+  buf[17] = 0x4d; // REX.WRB prefix (W=1, R=1 for r10, B=1 for r11)
+  buf[18] = 0x01; // add r/m64, r64
+  buf[19] = 0xd3; // ModRM: mod=11, reg=2 (r10), rm=3 (r11)
+
+  // jmp *%r11
+  buf[20] = 0x41; // REX.B prefix
+  buf[21] = 0xff; // jmp r/m64
+  buf[22] = 0xe3; // ModRM: mod=11, reg=4 (jmp), rm=3 (r11)
+}
+
+void X86_64LongThunk::addSymbols(ThunkSection &isec) {
+  StringRef name = destination.getName();
+  // When the destination is a STT_SECTION symbol (e.g. from a relocation
+  // against a local symbol), the name may be empty. Include the addend in
+  // the thunk name to disambiguate thunks targeting different offsets within
+  // the same section. We add 4 to display the actual offset (undoing the -4
+  // PC-relative compensation baked into x86-64 R_X86_64_PLT32 addends).
+  if (name.empty() || destination.isSection()) {
+    addSymbol(ctx.saver.save("__X86_64LongThunk_" + name + "_" +
+                             llvm::utohexstr(addend + 4)),
+              STT_FUNC, 0, isec);
+  } else {
+    addSymbol(ctx.saver.save("__X86_64LongThunk_" + name), STT_FUNC, 0, isec);
+  }
 }
 
 // Use the long jump which covers a range up to 8MiB.
@@ -1810,6 +1950,16 @@ static std::unique_ptr<Thunk> addThunkPPC64(Ctx &ctx, RelType type, Symbol &s,
   return std::make_unique<PPC64PDLongBranchThunk>(ctx, s, a);
 }
 
+static std::unique_ptr<Thunk> addThunkX86_64(Ctx &ctx, const InputSection &isec,
+                                             RelType type, Symbol &s,
+                                             int64_t a) {
+  // For x86-64, thunks are needed when calls/jumps exceed the 2GiB range
+  // of RIP-relative addressing.
+  assert(type == R_X86_64_PLT32 &&
+         "unexpected relocation type for x86-64 thunk");
+  return std::make_unique<X86_64LongThunk>(ctx, s, a);
+}
+
 std::unique_ptr<Thunk> elf::addThunk(Ctx &ctx, const InputSection &isec,
                                      Relocation &rel) {
   Symbol &s = *rel.sym;
@@ -1830,9 +1980,11 @@ std::unique_ptr<Thunk> elf::addThunk(Ctx &ctx, const InputSection &isec,
     return addThunkPPC64(ctx, rel.type, s, a);
   case EM_HEXAGON:
     return addThunkHexagon(ctx, isec, rel, s);
+  case EM_X86_64:
+    return addThunkX86_64(ctx, isec, rel.type, s, a);
   default:
-    llvm_unreachable(
-        "add Thunk only supported for ARM, AVR, Hexagon, Mips and PowerPC");
+    llvm_unreachable("add Thunk only supported for ARM, AVR, Hexagon, Mips, "
+                     "PowerPC, and x86-64");
   }
 }
 
