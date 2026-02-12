@@ -2570,14 +2570,12 @@ func.func @fold_expand_of_cast_mixed_shape(%arg0: tensor<4x8xf32>) -> (index, in
   %dim0 = tensor.dim %1, %idx0 : tensor<1x?x?xf32>
   %dim1 = tensor.dim %1, %idx1 : tensor<1x?x?xf32>
   %dim2 = tensor.dim %1, %idx2 : tensor<1x?x?xf32>
-
-  // CHECK: %[[C1:.*]] = arith.constant 1 : index
-  // CHECK: %[[C4:.*]] = arith.constant 4 : index
-  // CHECK: %[[C8:.*]] = arith.constant 8 : index
-  // CHECK: return %[[C1]], %[[C4]], %[[C8]]
   return %dim0, %dim1, %dim2 : index, index, index
 }
-
+// CHECK: %[[C1:.*]] = arith.constant 1 : index
+// CHECK: %[[C4:.*]] = arith.constant 4 : index
+// CHECK: %[[C8:.*]] = arith.constant 8 : index
+// CHECK: return %[[C1]], %[[C4]], %[[C8]]
 // -----
 
 func.func @sink_expand_of_cast(%arg0 : tensor<?x10xf32>)
