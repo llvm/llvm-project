@@ -382,6 +382,10 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .unsupportedIf(LegalityPredicates::any(
           all(typeIs(0, p9), typeInSet(1, allPtrs), typeIsNot(1, p9)),
           all(typeInSet(0, allPtrs), typeIsNot(0, p9), typeIs(1, p9))))
+      .legalIf([IsExtendedInts](const LegalityQuery &Query) {
+        const LLT Ty = Query.Types[1];
+        return IsExtendedInts && Ty.isValid() && !Ty.isPointerOrPointerVector();
+      })
       .customIf(all(typeInSet(0, allBoolScalarsAndVectors),
                     typeInSet(1, allPtrsScalarsAndVectors)));
 
