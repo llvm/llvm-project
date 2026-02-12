@@ -1,6 +1,6 @@
 ; Test lowering of constants on z/OS
 ;
-; RUN: llc < %s -mtriple=s390x-ibm-zos -emit-gnuas-syntax-on-zos=0 | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-ibm-zos | FileCheck %s
 
 ; CHECK: func_s CSECT
 ; CHECK: DC AD(AD({{.*}}#S)+XL8'0')

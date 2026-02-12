@@ -3,7 +3,7 @@
 
 ; The current function's return address is in the link register.
 define ptr @rt0() norecurse nounwind readnone {
-; CHECK-LABEL: rt0:
+; CHECK-LABEL: rt0 DS 0H
 ; CHECK:         lgr 3,7
 ; CHECK-NEXT:    b 2(7)
 entry:
@@ -13,7 +13,7 @@ entry:
 
 ; Check the caller's return address.
 define ptr @rtcaller() nounwind "backchain" {
-; CHECK-LABEL: rtcaller:
+; CHECK-LABEL: rtcaller DS 0H
 ; CHECK:         stmg 4,7,2048(4)
 ; CHECK-NEXT:    lg 1,2048(4)
 ; CHECK-NEXT:    lg 3,24(1)
@@ -26,7 +26,7 @@ entry:
 
 ; Check the caller's caller's return address.
 define ptr @rtcallercaller() nounwind "backchain" {
-; CHECK-LABEL: rtcallercaller:
+; CHECK-LABEL: rtcallercaller DS 0H
 ; CHECK:         stmg 4,7,2048(4)
 ; CHECK-NEXT:    lg 1,2048(4)
 ; CHECK-NEXT:    lg 1,0(1)

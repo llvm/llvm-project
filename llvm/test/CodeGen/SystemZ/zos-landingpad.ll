@@ -19,7 +19,7 @@ done:
 lpad:
   %0 = landingpad { ptr, i32 } cleanup
 ; The Exception Pointer is %r1; the Exception Selector, %r2.
-; CHECK: L#BB{{[^%]*}} %lpad
+; CHECK: L#BB{{[^%]*}} DS 0H
 ; CHECK-DAG: stg 1,{{.*}}
 ; CHECK-DAG: st 2,{{.*}}
   %1 = extractvalue { ptr, i32 } %0, 0
@@ -31,13 +31,17 @@ lpad:
 }
 
 ; Check that offsets to the FD of the personality routine and LSDA are emitted in PPA1
-; CHECK: .byte 145 {{.*PPA1 Flags}}
-; CHECK: Bit 3: 1 = C++ EH block
-; TODO: Emit the value instead of a dummy value.
-; CHECK: Personality routine
-; CHECK: LSDA location
+; CHECK: * PPA1 Flags 4
+; CHECK: *   Bit 3: 1 = C++ EH block
+; CHECK: *   Bit 7: 1 = Name Length and Name
+; CHECK:  DC XL1'91'
+; CHECK: * Personality routine
+; CHECK:  DC XL8'0000000000000020'
+; CHECK: * LSDA location
+; CHECK:  DC XL8'0000000000000028'
 ; Check that the exception table is emitted into .lsda section.
 ; CHECK:  stdin#C CSECT
-; CHECK:  C_WSA64 CATTR ALIGN(2),FILL(0),NOTEXECUTABLE,RMODE(64),PART(.gcc_exception_table.test1)
-; CHECK:  .gcc_exception_table.test1 XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(SECTION)
-; CHECK: GCC_except_table0:
+; CHECK: C_WSA64 CATTR ALIGN(2),FILL(0),NOTEXECUTABLE,RMODE(64),PART(.gcc_excepti
+; CHECK:                ion_table.test1)
+; CHECK: .gcc_exception_table.test1 XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(S
+; CHECK:                SECTION)

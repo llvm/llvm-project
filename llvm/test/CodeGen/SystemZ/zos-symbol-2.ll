@@ -1,4 +1,4 @@
-; RUN: llc <%s --mtriple s390x-ibm-zos -emit-gnuas-syntax-on-zos=false | FileCheck %s
+; RUN: llc <%s --mtriple s390x-ibm-zos | FileCheck %s
 ; RUN: llc <%s --mtriple s390x-ibm-zos --filetype=obj | \
 ; RUN:   od -Ax -tx1 -v | FileCheck --check-prefix=CHECKREL --ignore-case %s
 

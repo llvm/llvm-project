@@ -1,7 +1,7 @@
 ; Test passing variable argument lists in 64-bit calls on z/OS.
 ; RUN: llc < %s -mtriple=s390x-ibm-zos -mcpu=z10 | FileCheck %s
 ; RUN: llc < %s -mtriple=s390x-ibm-zos -mcpu=z14 | FileCheck %s -check-prefix=ARCH12
-; CHECK-LABEL: call_vararg_double0:
+; CHECK-LABEL: call_vararg_double0 DS 0H
 ; CHECK:         stmg 6,7,1872(4)
 ; CHECK-NEXT:    aghi 4,-192
 ; CHECK-NEXT:    lg 6,8(5)
@@ -21,7 +21,7 @@ entry:
   ret i64 %retval
 }
 
-; CHECK-LABEL: call_vararg_double1:
+; CHECK-LABEL: call_vararg_double1  DS 0H
 ; CHECK:         stmg 6,7,1872(4)
 ; CHECK-NEXT:    aghi 4,-192
 ; CHECK-NEXT:    llihf 0,1074118262
@@ -44,7 +44,7 @@ entry:
   ret i64 %retval
 }
 
-; CHECK-LABEL: call_vararg_double2:
+; CHECK-LABEL: call_vararg_double2  DS 0H
 ; CHECK:         stmg 6,7,1872(4)
 ; CHECK-NEXT:    aghi 4,-192
 ; CHECK-NEXT:    lg 6,24(5)
@@ -63,7 +63,7 @@ entry:
   ret i64 %retval
 }
 
-; CHECK-LABEL: call_vararg_double3:
+; CHECK-LABEL: call_vararg_double3 DS 0H
 ; CHECK:         stmg 6,7,1872(4)
 ; CHECK-NEXT:    aghi 4,-192
 ; CHECK-NEXT:    llihf 0,1072703839
@@ -89,7 +89,7 @@ entry:
 }
 
 ;; TODO: The extra COPY after LGDR is unnecessary (machine-scheduler introduces the overlap).
-; CHECK-LABEL: call_vararg_both0:
+; CHECK-LABEL: call_vararg_both0 DS 0H
 ; CHECK:         stmg 6,7,1872(4)
 ; CHECK-NEXT:    aghi 4,-192
 ; CHECK-NEXT:    lg 6,40(5)
@@ -107,7 +107,7 @@ define i64 @call_vararg_both0(i64 %arg0, double %arg1) {
   ret i64 %retval
 }
 
-; CHECK-LABEL: call_vararg_long_double0:
+; CHECK-LABEL: call_vararg_long_double0 DS 0H
 ; CHECK:         stmg 6,7,1872(4)
 ; CHECK-NEXT:    aghi 4,-192
 ; CHECK-NEXT:    larl 1,L#CPI5_0
@@ -131,7 +131,7 @@ entry:
   ret i64 %retval
 }
 
-; CHECK-LABEL: call_vararg_long_double1:
+; CHECK-LABEL: call_vararg_long_double1 DS 0H
 ; CHECK:         stmg 6,7,1872(4)
 ; CHECK-NEXT:    aghi 4,-192
 ; CHECK-NEXT:    lg 6,8(5)
@@ -152,8 +152,7 @@ entry:
   ret i64 %retval
 }
 
-; CHECK-LABEL: call_vararg_long_double2
-; CHECK-LABEL: call_vararg_long_double2:
+; CHECK-LABEL: call_vararg_long_double2 DS 0H
 ; CHECK:         stmg 6,7,1872(4)
 ; CHECK-NEXT:    aghi 4,-192
 ; CHECK-NEXT:    std 4,2208(4)
@@ -176,7 +175,7 @@ entry:
   ret i64 %retval
 }
 
-; CHECK-LABEL: call_vararg_long_double3:
+; CHECK-LABEL: call_vararg_long_double3 DS 0H
 ; CHECK:         stmg 6,7,1872(4)
 ; CHECK-NEXT:    aghi 4,-192
 ; CHECK-NEXT:    lg 6,40(5)
@@ -194,7 +193,7 @@ entry:
   ret i64 %retval
 }
 
-; ARCH12-LABEL: call_vec_vararg_test0
+; ARCH12-LABEL: call_vec_vararg_test0 DS 0H
 ; ARCH12: vlgvg 3,24,1
 ; ARCH12: vlgvg 2,24,0
 ; ARCH12: lghi  1,1
@@ -203,7 +202,7 @@ define void @call_vec_vararg_test0(<2 x double> %v) {
   ret void
 }
 
-; ARCH12-LABEL: call_vec_vararg_test1
+; ARCH12-LABEL: call_vec_vararg_test1 DS 0H
 ; ARCH12: larl  1,L#CPI10_0
 ; ARCH12: vl    0,0(1),3
 ; ARCH12: vlgvg 3,24,0
@@ -215,7 +214,7 @@ define void @call_vec_vararg_test1(<4 x i32> %v, <2 x i64> %w) {
   ret void
 }
 
-; ARCH12-LABEL: call_vec_char_vararg_straddle
+; ARCH12-LABEL: call_vec_char_vararg_straddle DS 0H
 ; ARCH12: vlgvg 3,24,0
 ; ARCH12: lghi  1,1
 ; ARCH12: lghi  2,2
@@ -225,7 +224,7 @@ define void @call_vec_char_vararg_straddle(<16 x i8> %v) {
   ret void
 }
 
-; ARCH12-LABEL: call_vec_short_vararg_straddle
+; ARCH12-LABEL: call_vec_short_vararg_straddle DS 0H
 ; ARCH12: vlgvg 3,24,0
 ; ARCH12: lghi  1,1
 ; ARCH12: lghi  2,2
@@ -235,7 +234,7 @@ define void @call_vec_short_vararg_straddle(<8 x i16> %v) {
   ret void
 }
 
-; ARCH12-LABEL: call_vec_int_vararg_straddle
+; ARCH12-LABEL: call_vec_int_vararg_straddle DS 0H
 ; ARCH12: vlgvg 3,24,0
 ; ARCH12: lghi  1,1
 ; ARCH12: lghi  2,2
@@ -245,7 +244,7 @@ define void @call_vec_int_vararg_straddle(<4 x i32> %v) {
   ret void
 }
 
-; ARCH12-LABEL: call_vec_double_vararg_straddle
+; ARCH12-LABEL: call_vec_double_vararg_straddle DS 0H
 ; ARCH12: vlgvg 3,24,0
 ; ARCH12: lghi  1,1
 ; ARCH12: lghi  2,2
@@ -255,7 +254,7 @@ define void @call_vec_double_vararg_straddle(<2 x double> %v) {
   ret void
 }
 
-; CHECK-LABEL: call_vararg_integral0:
+; CHECK-LABEL: call_vararg_integral0 DS 0H
 ; CHECK:         stmg 6,7,1872(4)
 ; CHECK-NEXT:    aghi 4,-192
 ; CHECK-NEXT:    lg 0,2392(4)
@@ -273,7 +272,7 @@ entry:
   ret i64 %retval
 }
 
-; CHECK-LABEL: call_vararg_float0:
+; CHECK-LABEL: call_vararg_float0 DS 0H
 ; CHECK:         stmg 6,7,1872(4)
 ; CHECK-NEXT:    aghi 4,-192
 ; CHECK-NEXT:    lg 6,24(5)
@@ -291,7 +290,7 @@ entry:
   ret i64 %retval
 }
 
-; CHECK-LABEL: call_vararg_float1:
+; CHECK-LABEL: call_vararg_float1 DS 0H
 ; CHECK:         stmg 6,7,1872(4)
 ; CHECK-NEXT:    aghi 4,-192
 ; CHECK-NEXT:    lg 6,72(5)
@@ -325,7 +324,7 @@ entry:
 ;   return ret;
 ; }
 ;
-; CHECK-LABEL: pass_vararg:
+; CHECK-LABEL: pass_vararg DS 0H
 ; CHECK:         stmg 6,7,1904(4)
 ; CHECK-NEXT:    aghi 4,-160
 ; CHECK-NEXT:    stg 2,2344(4)
