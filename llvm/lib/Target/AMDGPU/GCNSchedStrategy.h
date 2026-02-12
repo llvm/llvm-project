@@ -738,11 +738,6 @@ private:
   void rematerialize(const RematReg &Remat, BitVector &RecomputeRP,
                      RollbackInfo *Rollback);
 
-  /// Rollbacks the rematerialization decision represented by \p Rollback. This
-  /// update live-in/out lists in the DAG but does not update cached register
-  /// pressures.
-  void rollback(const RollbackInfo &Rollback) const;
-
   /// Deletes all rematerialized MIs from the MIR when they were kept around for
   /// potential rollback.
   void commitRematerializations() const;
