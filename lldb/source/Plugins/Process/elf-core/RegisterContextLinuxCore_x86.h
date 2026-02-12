@@ -1,4 +1,4 @@
-//===-- RegisterContextLinuxCore_x86_64.h -----------------------*- C++ -*-===//
+//===-- RegisterContextLinuxCore_x86.h --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTLINUXCORE_X86_64_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTLINUXCORE_X86_64_H
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTLINUXCORE_X86_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTLINUXCORE_X86_H
 
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
-#include "RegisterContextPOSIXCore_x86_64.h"
+#include "RegisterContextPOSIXCore_x86.h"
 
-class RegisterContextLinuxCore_x86_64 : public RegisterContextCorePOSIX_x86_64 {
+class RegisterContextLinuxCore_x86 : public RegisterContextCorePOSIX_x86 {
 public:
-  RegisterContextLinuxCore_x86_64(
+  RegisterContextLinuxCore_x86(
       lldb_private::Thread &thread,
       lldb_private::RegisterInfoInterface *register_info,
       const lldb_private::DataExtractor &gpregset,
@@ -25,4 +25,4 @@ public:
   lldb_private::RegInfo &GetRegInfo() override;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTLINUXCORE_X86_64_H
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTLINUXCORE_X86_H

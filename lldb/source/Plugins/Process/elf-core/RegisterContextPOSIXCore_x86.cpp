@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIXCore_x86_64.cpp -------------------------------===//
+//===-- RegisterContextPOSIXCore_x86.cpp ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RegisterContextPOSIXCore_x86_64.h"
+#include "RegisterContextPOSIXCore_x86.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/RegisterValue.h"
 
 using namespace lldb_private;
 
-RegisterContextCorePOSIX_x86_64::RegisterContextCorePOSIX_x86_64(
+RegisterContextCorePOSIX_x86::RegisterContextCorePOSIX_x86(
     Thread &thread, RegisterInfoInterface *register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
     : RegisterContextPOSIX_x86(thread, 0, register_info) {
@@ -36,25 +36,25 @@ RegisterContextCorePOSIX_x86_64::RegisterContextCorePOSIX_x86_64(
     m_fpregset.reset();
 }
 
-bool RegisterContextCorePOSIX_x86_64::ReadGPR() {
+bool RegisterContextCorePOSIX_x86::ReadGPR() {
   return m_gpregset != nullptr;
 }
 
-bool RegisterContextCorePOSIX_x86_64::ReadFPR() {
+bool RegisterContextCorePOSIX_x86::ReadFPR() {
   return m_fpregset != nullptr;
 }
 
-bool RegisterContextCorePOSIX_x86_64::WriteGPR() {
+bool RegisterContextCorePOSIX_x86::WriteGPR() {
   assert(0);
   return false;
 }
 
-bool RegisterContextCorePOSIX_x86_64::WriteFPR() {
+bool RegisterContextCorePOSIX_x86::WriteFPR() {
   assert(0);
   return false;
 }
 
-bool RegisterContextCorePOSIX_x86_64::ReadRegister(const RegisterInfo *reg_info,
+bool RegisterContextCorePOSIX_x86::ReadRegister(const RegisterInfo *reg_info,
                                                    RegisterValue &value) {
   const uint8_t *src;
   size_t offset;
@@ -79,21 +79,21 @@ bool RegisterContextCorePOSIX_x86_64::ReadRegister(const RegisterInfo *reg_info,
   return error.Success();
 }
 
-bool RegisterContextCorePOSIX_x86_64::ReadAllRegisterValues(
+bool RegisterContextCorePOSIX_x86::ReadAllRegisterValues(
     lldb::WritableDataBufferSP &data_sp) {
   return false;
 }
 
-bool RegisterContextCorePOSIX_x86_64::WriteRegister(
+bool RegisterContextCorePOSIX_x86::WriteRegister(
     const RegisterInfo *reg_info, const RegisterValue &value) {
   return false;
 }
 
-bool RegisterContextCorePOSIX_x86_64::WriteAllRegisterValues(
+bool RegisterContextCorePOSIX_x86::WriteAllRegisterValues(
     const lldb::DataBufferSP &data_sp) {
   return false;
 }
 
-bool RegisterContextCorePOSIX_x86_64::HardwareSingleStep(bool enable) {
+bool RegisterContextCorePOSIX_x86::HardwareSingleStep(bool enable) {
   return false;
 }
