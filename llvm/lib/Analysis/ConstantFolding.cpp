@@ -827,7 +827,7 @@ Constant *SymbolicallyEvaluateBinop(unsigned Opc, Constant *Op0, Constant *Op1,
 
     if (IsConstantOffsetFromGlobal(Op0, GV1, Offs1, DL))
       if (IsConstantOffsetFromGlobal(Op1, GV2, Offs2, DL) && GV1 == GV2) {
-        unsigned OpSize = DL.getTypeSizeInBits(Op0->getType());
+        unsigned OpSize = DL.getTypeSizeInBits(Op0->getType()->getScalarType());
 
         // (&GV+C1) - (&GV+C2) -> C1-C2, pointer arithmetic cannot overflow.
         // PtrToInt may change the bitwidth so we have convert to the right size
