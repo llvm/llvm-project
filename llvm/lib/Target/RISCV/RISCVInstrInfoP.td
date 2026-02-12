@@ -1515,19 +1515,6 @@ def BuildGPRPair : OutPatFrag<(ops node:$lo, node:$hi),
 def riscv_asub : RVSDNode<"ASUB", SDTIntBinOp>;
 def riscv_asubu : RVSDNode<"ASUBU", SDTIntBinOp>;
 
-// Widening multiply add (lo, hi) = wmacc(m1, m2, addlo, addhi)
-def SDT_RISCVWideningMAccW : SDTypeProfile<2, 4, [SDTCisVT<0, i32>,
-                                                  SDTCisVT<1, i32>,
-                                                  SDTCisVT<2, i32>,
-                                                  SDTCisVT<3, i32>,
-                                                  SDTCisSameAs<0, 4>,
-                                                  SDTCisSameAs<0, 5>]>;
-def riscv_wmacc  : RVSDNode<"WMACC", SDT_RISCVWideningMAccW,
-                            [SDNPCommutative]>;
-def riscv_wmaccu : RVSDNode<"WMACCU", SDT_RISCVWideningMAccW,
-                            [SDNPCommutative]>;
-def riscv_wmaccsu : RVSDNode<"WMACCSU", SDT_RISCVWideningMAccW>;
-
 // MULH/MULHU/MULHSU with rounding.
 def riscv_mulhr : RVSDNode<"MULHR", SDTIntBinOp>;
 def riscv_mulhru : RVSDNode<"MULHRU", SDTIntBinOp>;
