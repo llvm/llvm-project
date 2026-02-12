@@ -186,10 +186,10 @@ Changes to LLDB
 
 #### Userspace Debugging
 
+* Support for ARM has been added.
 * Support for MIPS64 has been removed.
 * The minimum assumed FreeBSD version is now 14. The effect of which is that watchpoints are
   assumed to be supported.
-* Kernel debugging support for FreeBSD on ARM has been added.
 
 #### Kernel Debugging
 

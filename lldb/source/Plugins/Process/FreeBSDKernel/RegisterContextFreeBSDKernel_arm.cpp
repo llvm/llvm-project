@@ -52,6 +52,7 @@ bool RegisterContextFreeBSDKernel_arm::ReadRegister(
   // struct pcb's first field is struct switchframe which is the only field used
   // by debugger and should be aligned by 8 bytes.
   struct {
+    // Aka switchframe.sf_r4 to switchframe.sf_pc.
     llvm::support::ulittle32_t r4;
     llvm::support::ulittle32_t r5;
     llvm::support::ulittle32_t r6;
