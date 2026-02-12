@@ -85,7 +85,7 @@ body:             |
     ; GFX1250-LABEL: name: promote_async_load_u64
     ; GFX1250: liveins: $vgpr0, $sgpr4_sgpr5
     ; GFX1250-NEXT: {{  $}}
-    ; GFX1250-NEXT: early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
+    ; GFX1250-NEXT: early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 32 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
     ; GFX1250-NEXT: renamable $vgpr1 = V_MOV_B32_e32 0, implicit $exec
     ; GFX1250-NEXT: renamable $vgpr0 = V_AND_B32_e32 1023, killed $vgpr0, implicit $exec
     ; GFX1250-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B128_SADDR $vgpr1, $sgpr0_sgpr1, $vgpr0, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
@@ -108,4 +108,40 @@ body:             |
     %15:vreg_64_align2 = V_ADD_U64_e64 %10, 512, 0, implicit $exec
     GLOBAL_LOAD_ASYNC_TO_LDS_B128 %6, killed %15, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
     S_ENDPGM 0
+...
+
+# Same as promote_async_load_offset above, but for async stores. The LDS address
+# is in vdata instead of vdst, so this tests that updateAsyncLDSAddress corrects
+# the right operand.
+---
+name: promote_async_store_offset
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
+  frameOffsetReg: '$sgpr33'
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $vgpr0, $sgpr0_sgpr1, $ttmp7
+    ; GFX1250-LABEL: name: promote_async_store_offset
+    ; GFX1250: liveins: $ttmp7, $vgpr0, $sgpr0_sgpr1
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: renamable $vgpr1 = V_LSHLREV_B32_e32 8, $vgpr0, implicit $exec
+    ; GFX1250-NEXT: renamable $vgpr2, renamable $vcc_lo = V_ADD_CO_U32_e64 $vgpr0, 512, 0, implicit $exec
+    ; GFX1250-NEXT: renamable $vgpr3, dead $sgpr_null = V_ADDC_U32_e64 0, killed $vgpr0, killed $vcc_lo, 0, implicit $exec
+    ; GFX1250-NEXT: renamable $vgpr1 = disjoint V_OR_B32_e32 0, killed $vgpr1, implicit $exec
+    ; GFX1250-NEXT: renamable $vgpr0 = V_ADD_U32_e32 256, $vgpr1, implicit $exec
+    ; GFX1250-NEXT: GLOBAL_STORE_ASYNC_FROM_LDS_B128 $vgpr2_vgpr3, killed $vgpr0, -256, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
+    ; GFX1250-NEXT: GLOBAL_STORE_ASYNC_FROM_LDS_B128 killed $vgpr2_vgpr3, killed $vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = V_LSHLREV_B32_e64 8, %0, implicit $exec
+    %2:vgpr_32 = disjoint V_OR_B32_e64 %1, 0, implicit $exec
+    %3:vgpr_32 = disjoint V_OR_B32_e64 %1, 0, implicit $exec
+    %4:vgpr_32, %5:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %0, 256, 0, implicit $exec
+    %6:vgpr_32, %7:sreg_32_xm0_xexec = V_ADDC_U32_e64 %0, 0, killed %5, 0, implicit $exec
+    %8:vreg_64_align2 = REG_SEQUENCE %4, %subreg.sub0, %6, %subreg.sub1
+    GLOBAL_STORE_ASYNC_FROM_LDS_B128 killed %8, killed %2, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
+    %9:vgpr_32, %10:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %0, 512, 0, implicit $exec
+    %11:vgpr_32, %12:sreg_32_xm0_xexec = V_ADDC_U32_e64 %0, 0, killed %10, 0, implicit $exec
+    %13:vreg_64_align2 = REG_SEQUENCE %9, %subreg.sub0, %11, %subreg.sub1
+    GLOBAL_STORE_ASYNC_FROM_LDS_B128 killed %13, killed %3, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
 ...
