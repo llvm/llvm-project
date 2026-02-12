@@ -4,7 +4,7 @@
 define <8 x half> @cvt_and_clamp2(<8 x float>) nounwind {
 ; CHECK-LABEL: cvt_and_clamp2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $104, %rsp
+; CHECK-NEXT:    subq $168, %rsp
 ; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps %xmm1, %xmm0
@@ -12,153 +12,252 @@ define <8 x half> @cvt_and_clamp2(<8 x float>) nounwind {
 ; CHECK-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; CHECK-NEXT:    callq __truncsfhf2@PLT
-; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    callq __truncsfhf2@PLT
-; CHECK-NEXT:    movss %xmm0, (%rsp) # 4-byte Spill
+; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    callq __truncsfhf2@PLT
+; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; CHECK-NEXT:    callq __truncsfhf2@PLT
+; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; CHECK-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; CHECK-NEXT:    callq __truncsfhf2@PLT
-; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    callq __truncsfhf2@PLT
-; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    callq fmaxf@PLT
-; CHECK-NEXT:    callq __truncsfhf2@PLT
+; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    callq __extendhfsf2@PLT
+; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    callq __extendhfsf2@PLT
+; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    callq __extendhfsf2@PLT
+; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    callq __extendhfsf2@PLT
+; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    callq fmaxf@PLT
+; CHECK-NEXT:    maxss %xmm1, %xmm0
+; CHECK-NEXT:    callq __truncsfhf2@PLT
+; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
+; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    maxss %xmm0, %xmm1
+; CHECK-NEXT:    movaps %xmm1, %xmm0
+; CHECK-NEXT:    callq __truncsfhf2@PLT
+; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
+; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    maxss %xmm0, %xmm1
+; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    callq fmaxf@PLT
+; CHECK-NEXT:    maxss %xmm1, %xmm0
 ; CHECK-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    callq fmaxf@PLT
-; CHECK-NEXT:    callq __truncsfhf2@PLT
-; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movss (%rsp), %xmm0 # 4-byte Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    callq fmaxf@PLT
-; CHECK-NEXT:    callq __truncsfhf2@PLT
-; CHECK-NEXT:    movss %xmm0, (%rsp) # 4-byte Spill
-; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    callq fmaxf@PLT
+; CHECK-NEXT:    maxss %xmm1, %xmm0
 ; CHECK-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    callq fmaxf@PLT
+; CHECK-NEXT:    maxss %xmm1, %xmm0
 ; CHECK-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    callq fmaxf@PLT
+; CHECK-NEXT:    maxss %xmm1, %xmm0
 ; CHECK-NEXT:    callq __truncsfhf2@PLT
+; CHECK-NEXT:    callq __extendhfsf2@PLT
+; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    callq __extendhfsf2@PLT
+; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    callq __extendhfsf2@PLT
+; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    callq __extendhfsf2@PLT
+; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    callq __extendhfsf2@PLT
+; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-NEXT:    callq fminf@PLT
+; CHECK-NEXT:    ucomiss %xmm1, %xmm1
+; CHECK-NEXT:    jp .LBB0_1
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
+; CHECK-NEXT:    movaps %xmm3, %xmm2
+; CHECK-NEXT:    movaps {{.*#+}} xmm4 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    andps %xmm4, %xmm2
+; CHECK-NEXT:    minss %xmm1, %xmm3
+; CHECK-NEXT:    orps %xmm2, %xmm3
+; CHECK-NEXT:    movaps %xmm4, %xmm2
+; CHECK-NEXT:    jnp .LBB0_4
+; CHECK-NEXT:    jmp .LBB0_5
+; CHECK-NEXT:  .LBB0_1:
+; CHECK-NEXT:    movaps {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
+; CHECK-NEXT:    jp .LBB0_5
+; CHECK-NEXT:  .LBB0_4:
+; CHECK-NEXT:    movaps %xmm0, %xmm4
+; CHECK-NEXT:    andps %xmm2, %xmm4
+; CHECK-NEXT:    minss %xmm1, %xmm0
+; CHECK-NEXT:    orps %xmm4, %xmm0
+; CHECK-NEXT:  .LBB0_5:
+; CHECK-NEXT:    jnp .LBB0_6
+; CHECK-NEXT:  # %bb.7:
+; CHECK-NEXT:    jnp .LBB0_8
+; CHECK-NEXT:  .LBB0_9:
+; CHECK-NEXT:    jp .LBB0_11
+; CHECK-NEXT:  .LBB0_10:
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm5 # 16-byte Reload
+; CHECK-NEXT:    movaps %xmm5, %xmm4
+; CHECK-NEXT:    andps %xmm2, %xmm4
+; CHECK-NEXT:    minss %xmm1, %xmm5
+; CHECK-NEXT:    orps %xmm4, %xmm5
+; CHECK-NEXT:    movaps %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:  .LBB0_11:
+; CHECK-NEXT:    movaps %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    jp .LBB0_13
+; CHECK-NEXT:  # %bb.12:
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
+; CHECK-NEXT:    movaps %xmm3, %xmm0
+; CHECK-NEXT:    andps %xmm2, %xmm0
+; CHECK-NEXT:    minss %xmm1, %xmm3
+; CHECK-NEXT:    orps %xmm0, %xmm3
+; CHECK-NEXT:    movaps %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:  .LBB0_13:
+; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    callq __extendhfsf2@PLT
+; CHECK-NEXT:    movaps %xmm0, %xmm4
+; CHECK-NEXT:    movss {{.*#+}} xmm2 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    ucomiss %xmm2, %xmm2
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; CHECK-NEXT:    jp .LBB0_15
+; CHECK-NEXT:  # %bb.14:
+; CHECK-NEXT:    movaps %xmm4, %xmm1
+; CHECK-NEXT:    movaps {{.*#+}} xmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    andps %xmm3, %xmm1
+; CHECK-NEXT:    minss %xmm2, %xmm4
+; CHECK-NEXT:    orps %xmm1, %xmm4
+; CHECK-NEXT:  .LBB0_15:
+; CHECK-NEXT:    movaps %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    callq __truncsfhf2@PLT
+; CHECK-NEXT:    callq __extendhfsf2@PLT
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    maxss %xmm1, %xmm0
+; CHECK-NEXT:    callq __truncsfhf2@PLT
+; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-NEXT:    callq fminf@PLT
+; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-NEXT:    punpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-NEXT:    callq fminf@PLT
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    movd (%rsp), %xmm0 # 4-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-NEXT:    callq fminf@PLT
+; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; CHECK-NEXT:    punpckldq {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
 ; CHECK-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-NEXT:    callq fminf@PLT
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-NEXT:    callq fminf@PLT
-; CHECK-NEXT:    callq __truncsfhf2@PLT
-; CHECK-NEXT:    punpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-NEXT:    callq fminf@PLT
-; CHECK-NEXT:    callq __truncsfhf2@PLT
-; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-NEXT:    callq fminf@PLT
+; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; CHECK-NEXT:    punpckldq {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
-; CHECK-NEXT:    punpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm1 = xmm1[0],mem[0]
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
-; CHECK-NEXT:    addq $104, %rsp
+; CHECK-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    callq __truncsfhf2@PLT
+; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    callq __extendhfsf2@PLT
+; CHECK-NEXT:    movaps {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    andps %xmm0, %xmm2
+; CHECK-NEXT:    movaps %xmm0, %xmm1
+; CHECK-NEXT:    movss {{.*#+}} xmm3 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    minss %xmm3, %xmm1
+; CHECK-NEXT:    orps %xmm2, %xmm1
+; CHECK-NEXT:    cmpunordss %xmm3, %xmm3
+; CHECK-NEXT:    movaps %xmm3, %xmm2
+; CHECK-NEXT:    andnps %xmm1, %xmm2
+; CHECK-NEXT:    andps %xmm3, %xmm0
+; CHECK-NEXT:    orps %xmm2, %xmm0
+; CHECK-NEXT:    callq __truncsfhf2@PLT
+; CHECK-NEXT:    punpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    addq $168, %rsp
 ; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB0_6:
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm5 # 16-byte Reload
+; CHECK-NEXT:    movaps %xmm5, %xmm4
+; CHECK-NEXT:    andps %xmm2, %xmm4
+; CHECK-NEXT:    minss %xmm1, %xmm5
+; CHECK-NEXT:    orps %xmm4, %xmm5
+; CHECK-NEXT:    movaps %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    jp .LBB0_9
+; CHECK-NEXT:  .LBB0_8:
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm5 # 16-byte Reload
+; CHECK-NEXT:    movaps %xmm5, %xmm4
+; CHECK-NEXT:    andps %xmm2, %xmm4
+; CHECK-NEXT:    minss %xmm1, %xmm5
+; CHECK-NEXT:    orps %xmm4, %xmm5
+; CHECK-NEXT:    movaps %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    jnp .LBB0_10
+; CHECK-NEXT:    jmp .LBB0_11
     %2 = fptrunc <8 x float> %0 to <8 x half>
     %3 = call <8 x half> @llvm.maxnum.v8f16(<8 x half> zeroinitializer, <8 x half> %2)
     %4 = call <8 x half> @llvm.minnum.v8f16(<8 x half> %3, <8 x half> <half 1.0, half 1.0, half 1.0, half 1.0, half 1.0, half 1.0, half 1.0, half 1.0>)

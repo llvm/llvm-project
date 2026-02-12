@@ -875,10 +875,7 @@ define amdgpu_kernel void @or_i1(ptr addrspace(1) %out, ptr addrspace(1) %in0, p
 ; GFX6-NEXT:    buffer_load_dword v1, off, s[12:15], 0
 ; GFX6-NEXT:    s_mov_b32 s4, s0
 ; GFX6-NEXT:    s_mov_b32 s5, s1
-; GFX6-NEXT:    s_waitcnt vmcnt(1)
-; GFX6-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
-; GFX6-NEXT:    v_mul_f32_e32 v1, 1.0, v1
 ; GFX6-NEXT:    v_max_f32_e32 v0, v1, v0
 ; GFX6-NEXT:    v_cmp_le_f32_e32 vcc, 0, v0
 ; GFX6-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -902,10 +899,7 @@ define amdgpu_kernel void @or_i1(ptr addrspace(1) %out, ptr addrspace(1) %in0, p
 ; GFX8-NEXT:    buffer_load_dword v1, off, s[12:15], 0
 ; GFX8-NEXT:    s_mov_b32 s4, s0
 ; GFX8-NEXT:    s_mov_b32 s5, s1
-; GFX8-NEXT:    s_waitcnt vmcnt(1)
-; GFX8-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-NEXT:    v_mul_f32_e32 v1, 1.0, v1
 ; GFX8-NEXT:    v_max_f32_e32 v0, v1, v0
 ; GFX8-NEXT:    v_cmp_le_f32_e32 vcc, 0, v0
 ; GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
