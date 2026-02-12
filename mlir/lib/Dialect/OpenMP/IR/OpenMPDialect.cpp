@@ -4624,6 +4624,114 @@ static void printAffinityClause(OpAsmPrinter &p, Operation *op,
   }
 }
 
+//===----------------------------------------------------------------------===//
+// Parser, printer, and verifier for Iterator modifier
+//===----------------------------------------------------------------------===//
+
+static ParseResult
+parseIteratorsHeader(OpAsmParser &parser, Region &region,
+                     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &lbs,
+                     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &ubs,
+                     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &steps,
+                     SmallVectorImpl<Type> &lbTypes,
+                     SmallVectorImpl<Type> &ubTypes,
+                     SmallVectorImpl<Type> &stepTypes) {
+
+  llvm::SMLoc ivLoc = parser.getCurrentLocation();
+  SmallVector<OpAsmParser::Argument> ivArgs;
+
+  // Parse induction variables: %i : i32, %j : i32
+  if (parser.parseCommaSeparatedList([&]() -> ParseResult {
+        OpAsmParser::Argument &arg = ivArgs.emplace_back();
+        if (parser.parseArgument(arg))
+          return failure();
+
+        // Optional type, default to Index if not provided
+        if (succeeded(parser.parseOptionalColon())) {
+          if (parser.parseType(arg.type))
+            return failure();
+        } else {
+          arg.type = parser.getBuilder().getIndexType();
+        }
+        return success();
+      }))
+    return failure();
+
+  // ) = (
+  if (parser.parseRParen() || parser.parseEqual() || parser.parseLParen())
+    return failure();
+
+  // Parse Ranges: (%lb to %ub step %st, ...)
+  if (parser.parseCommaSeparatedList([&]() -> ParseResult {
+        OpAsmParser::UnresolvedOperand lb, ub, st;
+        if (parser.parseOperand(lb) || parser.parseKeyword("to") ||
+            parser.parseOperand(ub) || parser.parseKeyword("step") ||
+            parser.parseOperand(st))
+          return failure();
+
+        lbs.push_back(lb);
+        ubs.push_back(ub);
+        steps.push_back(st);
+        return success();
+      }))
+    return failure();
+
+  if (parser.parseRParen())
+    return failure();
+
+  if (ivArgs.size() != lbs.size())
+    return parser.emitError(ivLoc)
+           << "mismatch: " << ivArgs.size() << " variables but " << lbs.size()
+           << " ranges";
+
+  for (auto &arg : ivArgs) {
+    lbTypes.push_back(arg.type);
+    ubTypes.push_back(arg.type);
+    stepTypes.push_back(arg.type);
+  }
+
+  return parser.parseRegion(region, ivArgs);
+}
+
+static void printIteratorsHeader(OpAsmPrinter &p, Operation *op, Region &region,
+                                 ValueRange lbs, ValueRange ubs,
+                                 ValueRange steps, TypeRange, TypeRange,
+                                 TypeRange) {
+  Block &entry = region.front();
+
+  for (unsigned i = 0, e = entry.getNumArguments(); i < e; ++i) {
+    if (i != 0)
+      p << ", ";
+    p.printRegionArgument(entry.getArgument(i));
+  }
+  p << ") = (";
+
+  // (%lb0 to %ub0 step %step0, %lb1 to %ub1 step %step1, ...)
+  for (unsigned i = 0, e = lbs.size(); i < e; ++i) {
+    if (i)
+      p << ", ";
+    p << lbs[i] << " to " << ubs[i] << " step " << steps[i];
+  }
+  p << ") ";
+
+  p.printRegion(region, /*printEntryBlockArgs=*/false,
+                /*printBlockTerminators=*/true);
+}
+
+LogicalResult IteratorsOp::verify() {
+  auto iteratedTy = llvm::dyn_cast<omp::IteratedType>(getIterated().getType());
+  if (!iteratedTy)
+    return emitOpError() << "result must be omp.iterated<entry_ty>";
+
+  Block &b = getRegion().front();
+  auto yield = llvm::dyn_cast<omp::YieldOp>(b.getTerminator());
+
+  if (!yield)
+    return emitOpError() << "region must be terminated by omp.yield";
+
+  return success();
+}
+
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOpsAttributes.cpp.inc"
 
