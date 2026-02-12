@@ -2076,7 +2076,8 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
           size_t num_lines =
               target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
                   source_file_sp, start_line, m_sc.line_entry.column,
-                  source_lines_before, source_lines_after, "->", &strm);
+                  source_lines_before, source_lines_after, "->", &strm,
+                  /*bp_locs=*/nullptr, GetLanguage().AsLanguageType());
           if (num_lines != 0)
             have_source = true;
           // TODO: Give here a one time warning if source file is missing.
