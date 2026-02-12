@@ -21,6 +21,7 @@
 #define LLDB_TOOLS_LLDB_DAP_PROTOCOL_PROTOCOL_TYPES_H
 
 #include "Protocol/DAPTypes.h"
+#include "Protocol/ProtocolBase.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseSet.h"
@@ -942,7 +943,7 @@ struct Variable {
   /// its children are not yet visible.
   ///
   /// An empty string can be used if no value should be shown in the UI.
-  std::string value;
+  SanitizedString value;
 
   /// The type of the variable's value. Typically shown in the UI when hovering
   /// over the value.

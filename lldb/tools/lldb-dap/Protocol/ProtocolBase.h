@@ -20,6 +20,7 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_PROTOCOL_PROTOCOL_BASE_H
 #define LLDB_TOOLS_LLDB_DAP_PROTOCOL_PROTOCOL_BASE_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include <cstdint>
 #include <optional>
@@ -36,6 +37,24 @@ using Id = uint64_t;
 /// A unique identifier that indicates the `seq` field should be calculated by
 /// the current session.
 static constexpr Id kCalculateSeq = UINT64_MAX;
+
+/// A wrapper around a string to ensure the contents are sanitized as utf8
+/// during serialization. This value should be used for any strings that may
+/// contain raw data like variable values.
+class SanitizedString {
+public:
+  SanitizedString(std::string str) : m_str(str) {}
+  SanitizedString(llvm::StringRef str) : m_str(str.str()) {}
+  SanitizedString(const char *str) : m_str(str) {}
+  SanitizedString() = default;
+
+  operator std::string() const { return m_str; }
+
+private:
+  std::string m_str;
+};
+llvm::json::Value toJSON(const SanitizedString &s);
+bool fromJSON(const llvm::json::Value &, SanitizedString &, llvm::json::Path);
 
 /// A client or debug adapter initiated request.
 struct Request {

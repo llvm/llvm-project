@@ -57,6 +57,23 @@ bool fromJSON(const json::Value &Params, MessageType &M, json::Path P) {
   return true;
 }
 
+json::Value toJSON(const SanitizedString &S) {
+  if (LLVM_LIKELY(llvm::json::isUTF8(std::string(S))))
+    return std::string(S);
+  llvm::errs() << "Here!\n";
+  return llvm::json::fixUTF8(std::string(S));
+}
+
+bool fromJSON(const llvm::json::Value &Param, SanitizedString &Str,
+              llvm::json::Path Path) {
+  if (auto s = Param.getAsString()) {
+    Str = *s;
+    return true;
+  }
+  Path.report("expected string");
+  return false;
+}
+
 json::Value toJSON(const Request &R) {
   assert(R.seq != kCalculateSeq && "invalid seq");
 

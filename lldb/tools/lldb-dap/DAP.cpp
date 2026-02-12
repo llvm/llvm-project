@@ -411,9 +411,10 @@ void DAP::SendOutput(OutputType o, const llvm::StringRef output) {
     if (end == llvm::StringRef::npos)
       end = output.size() - 1;
     llvm::json::Object event(CreateEventObject("output"));
-    llvm::json::Object body;
-    body.try_emplace("category", category);
-    EmplaceSafeString(body, "output", output.slice(idx, end + 1).str());
+    llvm::json::Object body{
+        {"category", category},
+        {"output", protocol::SanitizedString(output.slice(idx, end + 1).str())},
+    };
     event.try_emplace("body", std::move(body));
     SendJSON(llvm::json::Value(std::move(event)));
     idx = end + 1;

@@ -452,7 +452,7 @@ bool fromJSON(const llvm::json::Value &, SetVariableArguments &,
 /// Response to `setVariable` request.
 struct SetVariableResponseBody {
   /// The new value of the variable.
-  std::string value;
+  SanitizedString value;
 
   /// The type of the new value. Typically shown in the UI when hovering over
   /// the value.
