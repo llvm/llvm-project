@@ -10,8 +10,6 @@
 #include "src/__support/math/tanhf.h"
 
 namespace LIBC_NAMESPACE_DECL {
-  LLVM_LIBC_FUNCTION(float, tanhf, (float x)) {
-    return math::tanhf(x);
-  }
+LLVM_LIBC_FUNCTION(float, tanhf, (float x)) { return math::tanhf(x); }
 
 } // namespace LIBC_NAMESPACE_DECL

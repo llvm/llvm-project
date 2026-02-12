@@ -1,4 +1,4 @@
-//===-- Single-precision tanh function -------------------------------------===//
+//===-- Single-precision tanhf function -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,6 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h"
-
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -40,13 +39,13 @@ LIBC_INLINE float tanhf(float x) {
       if (LIBC_UNLIKELY(x_abs <= 0x3280'0000U)) {
         // |x| <= 2^-26
         return (x_abs != 0)
-                    ? static_cast<float>(x - 0x1.5555555555555p-2 * x * x * x)
-                    : x;
+                   ? static_cast<float>(x - 0x1.5555555555555p-2 * x * x * x)
+                   : x;
       }
 
       const double TAYLOR[] = {-0x1.5555555555555p-2, 0x1.1111111111111p-3,
-                                -0x1.ba1ba1ba1ba1cp-5, 0x1.664f4882c10fap-6,
-                                -0x1.226e355e6c23dp-7};
+                               -0x1.ba1ba1ba1ba1cp-5, 0x1.664f4882c10fap-6,
+                               -0x1.226e355e6c23dp-7};
       double xdbl = x;
       double x2 = xdbl * xdbl;
       // Taylor polynomial.
@@ -105,7 +104,7 @@ LIBC_INLINE float tanhf(float x) {
 
   // > P = fpminimax(expm1(2*x)/x, 4, [|D...|], [-log(2)/128, log(2)/128]);
   constexpr double COEFFS[] = {0x1.ffffffffe5bc8p0, 0x1.555555555cd67p0,
-                                0x1.5555c2a9b48b4p-1, 0x1.11112a0e34bdbp-2};
+                               0x1.5555c2a9b48b4p-1, 0x1.11112a0e34bdbp-2};
 
   double dx2 = dx * dx;
   double c0 = fputil::multiply_add(dx, 2.0, 1.0);
@@ -126,4 +125,3 @@ LIBC_INLINE float tanhf(float x) {
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_TANHF_H
-
