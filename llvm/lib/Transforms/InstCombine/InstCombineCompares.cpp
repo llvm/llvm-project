@@ -3086,14 +3086,37 @@ static Value *createLogicFromTable(const std::bitset<4> &Table, Value *Op0,
   return nullptr;
 }
 
+/// Try to match V as a boolean-controlled value: either
+///   select i1 Cond, C_true, C_false
+///   zext i1 Cond  (equivalent to select i1 Cond, 1, 0)
+///   sext i1 Cond  (equivalent to select i1 Cond, -1, 0)
+static bool matchBooleanMap(Value *V, Value *&Cond, Constant *&TrueC,
+                            Constant *&FalseC) {
+  if (match(V, m_Select(m_Value(Cond), m_Constant(TrueC), m_Constant(FalseC))))
+    return true;
+
+  Type *Ty = V->getType();
+  if (match(V, m_ZExt(m_Value(Cond))) &&
+      Cond->getType()->isIntOrIntVectorTy(1)) {
+    TrueC = ConstantInt::get(Ty, 1);
+    FalseC = ConstantInt::get(Ty, 0);
+    return true;
+  }
+  if (match(V, m_SExt(m_Value(Cond))) &&
+      Cond->getType()->isIntOrIntVectorTy(1)) {
+    FalseC = ConstantInt::get(Ty, 0);
+    TrueC = Constant::getAllOnesValue(Ty);
+    return true;
+  }
+  return false;
+}
+
 Instruction *InstCombinerImpl::foldICmpBinOpWithConstantViaTruthTable(
     ICmpInst &Cmp, BinaryOperator *BO, const APInt &C) {
   Value *A, *B;
   Constant *C1, *C2, *C3, *C4;
-  if (!(match(BO->getOperand(0),
-              m_Select(m_Value(A), m_Constant(C1), m_Constant(C2)))) ||
-      !match(BO->getOperand(1),
-             m_Select(m_Value(B), m_Constant(C3), m_Constant(C4))) ||
+  if (!matchBooleanMap(BO->getOperand(0), A, C1, C2) ||
+      !matchBooleanMap(BO->getOperand(1), B, C3, C4) ||
       Cmp.getType() != A->getType() || Cmp.getType() != B->getType())
     return nullptr;
 
@@ -3130,35 +3153,7 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
                                                    const APInt &C) {
   Value *Y = Add->getOperand(1);
   Value *X = Add->getOperand(0);
-
-  Value *Op0, *Op1;
-  Instruction *Ext0, *Ext1;
   const CmpPredicate Pred = Cmp.getCmpPredicate();
-  if (match(Add,
-            m_Add(m_CombineAnd(m_Instruction(Ext0), m_ZExtOrSExt(m_Value(Op0))),
-                  m_CombineAnd(m_Instruction(Ext1),
-                               m_ZExtOrSExt(m_Value(Op1))))) &&
-      Op0->getType()->isIntOrIntVectorTy(1) &&
-      Op1->getType()->isIntOrIntVectorTy(1)) {
-    unsigned BW = C.getBitWidth();
-    std::bitset<4> Table;
-    auto ComputeTable = [&](bool Op0Val, bool Op1Val) {
-      APInt Res(BW, 0);
-      if (Op0Val)
-        Res += APInt(BW, isa<ZExtInst>(Ext0) ? 1 : -1, /*isSigned=*/true);
-      if (Op1Val)
-        Res += APInt(BW, isa<ZExtInst>(Ext1) ? 1 : -1, /*isSigned=*/true);
-      return ICmpInst::compare(Res, C, Pred);
-    };
-
-    Table[0] = ComputeTable(false, false);
-    Table[1] = ComputeTable(false, true);
-    Table[2] = ComputeTable(true, false);
-    Table[3] = ComputeTable(true, true);
-    if (auto *Cond =
-            createLogicFromTable(Table, Op0, Op1, Builder, Add->hasOneUse()))
-      return replaceInstUsesWith(Cmp, Cond);
-  }
 
   // icmp ult (add nuw A, (lshr A, ShAmtC)), C --> icmp ult A, C
   // when C <= (1 << ShAmtC).
@@ -7891,32 +7886,6 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
         return new ICmpInst(CmpPredicate::getSwapped(CmpPred), B,
                             ConstantInt::get(Op0->getType(), 0));
       }
-    }
-  }
-
-  // icmp eq (shl (zext i1 x), (zext i1 y)), 1 --> and i1 x, (not i1 y)
-  // icmp ne (shl (zext i1 x), (zext i1 y)), 1 --> or i1 (not i1 x), y
-  {
-    Value *A, *B;
-    CmpPredicate CmpPred;
-
-    // If shl is one-use, we eliminate shl and icmp at least,
-    // and introduce a xor and an and, so we expect neutral
-    // to positive benefit.
-    if (match(&I,
-              m_ICmp(CmpPred,
-                     m_OneUse(m_Shl(m_ZExt(m_Value(A)), m_ZExt(m_Value(B)))),
-                     m_One())) &&
-        A->getType()->isIntOrIntVectorTy(1) &&
-        B->getType()->isIntOrIntVectorTy(1)) {
-
-      if (CmpPred == ICmpInst::ICMP_EQ)
-        return replaceInstUsesWith(I,
-                                   Builder.CreateAnd(A, Builder.CreateNot(B)));
-
-      if (CmpPred == ICmpInst::ICMP_NE)
-        return replaceInstUsesWith(I,
-                                   Builder.CreateOr(Builder.CreateNot(A), B));
     }
   }
 
