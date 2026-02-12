@@ -34,6 +34,7 @@ class BuildInclude(Directive):
         # clean up doctree and complete parsing
         document.transformer.populate_from_components((parser,))
         document.transformer.apply_transforms()
+        self.state.document.settings.record_dependencies.add(path)
         return document.children
 
 

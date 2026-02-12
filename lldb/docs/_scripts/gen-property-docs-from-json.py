@@ -90,7 +90,7 @@ def print_property(f: TextIO, path: str, property: Property):
 
 def print_tree(f: TextIO, level: int, prefix: str, name: str, tree: PropertyTree):
     if level > 0:
-        f.write(f"{'#' * (level + 2)} {name}\n\n")
+        f.write(f"{'#' * (level + 1)} {name}\n\n")
 
     leafs = sorted(
         filter(lambda it: isinstance(it[1], Property), tree.items.items()),
@@ -107,8 +107,8 @@ def print_tree(f: TextIO, level: int, prefix: str, name: str, tree: PropertyTree
     )
     for key, subtree in groups:
         assert isinstance(subtree, PropertyTree)  # only needed for typing
-        prefix = f"{name}.{key}" if name else key
-        print_tree(f, level + 1, prefix, key, subtree)
+        sub_prefix = f"{prefix}.{key}" if prefix else key
+        print_tree(f, level + 1, sub_prefix, key, subtree)
 
 
 HEADER = """
