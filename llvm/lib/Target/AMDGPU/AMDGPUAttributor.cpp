@@ -201,16 +201,6 @@ public:
   /// Get code object version.
   unsigned getCodeObjectVersion() const { return CodeObjectVersion; }
 
-  /// Get the effective value of "amdgpu-waves-per-eu" for the function,
-  /// accounting for the interaction with the passed value to use for
-  /// "amdgpu-flat-work-group-size".
-  std::pair<unsigned, unsigned>
-  getWavesPerEU(const Function &F,
-                std::pair<unsigned, unsigned> FlatWorkGroupSize) {
-    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    return ST.getWavesPerEU(FlatWorkGroupSize, getLDSSize(F), F);
-  }
-
   std::optional<std::pair<unsigned, unsigned>>
   getWavesPerEUAttr(const Function &F) {
     auto Val = AMDGPU::getIntegerPairAttribute(F, "amdgpu-waves-per-eu",
