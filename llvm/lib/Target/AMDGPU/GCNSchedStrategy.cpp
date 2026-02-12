@@ -2184,6 +2184,7 @@ bool RewriteMFMAFormStage::initHeuristics(
 
       int ReplacementOp = AMDGPU::getMFMASrcCVDstAGPROp(MI.getOpcode());
       assert(ReplacementOp != -1);
+
       RewriteCands.push_back({&MI, MI.getOpcode()});
       MI.setDesc(TII->get(ReplacementOp));
 
