@@ -130,27 +130,31 @@ TEST_P(MCPlusBuilderTester, AArch64_ReverseCompAndBranch) {
 
   // cbgt x0, #0, target
   MCInst NeedsImmInc = MCInstBuilder(AArch64::CBGTXri)
-      .addReg(AArch64::X0)
-      .addImm(0)
-      .addExpr(MCSymbolRefExpr::create(TargetBB->getLabel(), *BC->Ctx.get()));
+                           .addReg(AArch64::X0)
+                           .addImm(0)
+                           .addExpr(MCSymbolRefExpr::create(
+                               TargetBB->getLabel(), *BC->Ctx.get()));
   BB->addInstruction(NeedsImmInc);
   // cblo x0, #1, target
   MCInst NeedsImmDec = MCInstBuilder(AArch64::CBLOXri)
-      .addReg(AArch64::X0)
-      .addImm(1)
-      .addExpr(MCSymbolRefExpr::create(TargetBB->getLabel(), *BC->Ctx.get()));
+                           .addReg(AArch64::X0)
+                           .addImm(1)
+                           .addExpr(MCSymbolRefExpr::create(
+                               TargetBB->getLabel(), *BC->Ctx.get()));
   BB->addInstruction(NeedsImmDec);
   // cbge x0, x1, target
   MCInst NeedsRegSwap = MCInstBuilder(AArch64::CBGEXrr)
-      .addReg(AArch64::X0)
-      .addReg(AArch64::X1)
-      .addExpr(MCSymbolRefExpr::create(TargetBB->getLabel(), *BC->Ctx.get()));
+                            .addReg(AArch64::X0)
+                            .addReg(AArch64::X1)
+                            .addExpr(MCSymbolRefExpr::create(
+                                TargetBB->getLabel(), *BC->Ctx.get()));
   BB->addInstruction(NeedsRegSwap);
   // cbgt x0, #63, target
   MCInst Irreversible = MCInstBuilder(AArch64::CBGTXri)
-      .addReg(AArch64::X0)
-      .addImm(63)
-      .addExpr(MCSymbolRefExpr::create(TargetBB->getLabel(), *BC->Ctx.get()));
+                            .addReg(AArch64::X0)
+                            .addImm(63)
+                            .addExpr(MCSymbolRefExpr::create(
+                                TargetBB->getLabel(), *BC->Ctx.get()));
   BB->addInstruction(Irreversible);
 
   auto II = BB->begin();
