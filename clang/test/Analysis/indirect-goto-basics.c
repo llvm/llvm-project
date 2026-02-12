@@ -47,7 +47,8 @@ third:
 int goto_nullpointer(int x, int y) {
   // In this example the target of the indirect goto is a loc::ConcreteInt (a
   // null pointer), so the analyzer doesn't dispatch anywhere.
-  // FIXME: We should emit a warning in this situation.
+  // FIXME: The analyzer should report that nullptr (or some other concrete
+  // value) was passed to an indirect goto.
   void *target = (void *)0;
   (void)&&first;
   (void)&&second;
@@ -66,7 +67,8 @@ third:
 int goto_undefined(int x, int y) {
   // In this example the target of the indirect goto is an uninitialized
   // pointer, so the analyzer doesn't dispatch anywhere.
-  // FIXME: We should emit a warning in this situation.
+  // FIXME: The analyzer should report that an uninitialized value was passed
+  // to an indirect goto.
   void *target;
   (void)&&first;
   (void)&&second;
