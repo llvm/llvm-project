@@ -5655,8 +5655,8 @@ static void TryReferenceInitializationCore(Sema &S,
     // with T1's qualifiers.
     QualType T2ForQualConv = cv2T2;
     if (T1Quals.getObjCLifetime() != T2Quals.getObjCLifetime()) {
-      Qualifiers T2BaseQuals = T2ForQualConv.getQualifiers();
-      T2BaseQuals.removeObjCLifetime();
+      Qualifiers T2BaseQuals =
+          T2ForQualConv.getQualifiers().withoutObjCLifetime();
       T2ForQualConv = S.Context.getQualifiedType(
           T2ForQualConv.getUnqualifiedType(), T2BaseQuals);
     }
