@@ -1669,6 +1669,134 @@ public:
     return Base + Offset;
   }
 
+  /// This function is used to patch PLT entries to include a BTI instruction.
+  /// This currently only works for binaries linked using LLD.
+  ///
+  /// PLT entry before patching:
+  ///
+  ///    adrp x16, Page(&(.got.plt[n]))
+  ///    ldr  x17, [x16, Offset(&(.got.plt[n]))]
+  ///    add  x16, x16, Offset(&(.got.plt[n]))
+  ///    br   x17
+  ///    nop
+  ///    nop
+  ///
+  /// PLT entry after patching:
+  ///
+  ///    bti c
+  ///    adrp x16, Page(&(.got.plt[n]))
+  ///    ldr  x17, [x16, Offset(&(.got.plt[n]))]
+  ///    add  x16, x16, Offset(&(.got.plt[n]))
+  ///    br   x17
+  ///    nop
+  ///
+  /// Safety considerations:
+  ///
+  /// The PLT entry will become incorrect if shifting the ADRP by one
+  /// instruction (4 bytes) moves it across a page boundary.
+  ///
+  /// The PLT entry is 24 bytes, and page size is 4096 (or 16384) bytes.
+  /// Their GCD is 8 bytes, meaning that shifting the ADRP is safe, as long as
+  /// it is shifted by less than 8 bytes.
+  ///
+  /// If the PLT entry does not contain extra nops, this function will create an
+  /// error. This can happen in binaries linked using BFD.
+  void patchPLTEntryForBTI(BinaryFunction &PLTFunction, MCInst &Call) override {
+    BinaryContext &BC = PLTFunction.getBinaryContext();
+    assert(PLTFunction.isPLTFunction() &&
+           "patchPLTEntryForBTI called on a non-PLT function");
+    // Checking if the PLT entry already starts with the BTI needed for Call.
+    auto FirstBBI = PLTFunction.begin();
+    auto FirstII = FirstBBI->begin();
+    assert(FirstII != FirstBBI->end() && "Cannot patch empty PLT entry");
+    if (isCallCoveredByBTI(Call, *FirstII))
+      return;
+    // Checking if there are extra nops at the end. If not, BOLT cannot patch
+    // the PLT entry.
+    auto LastBBI = std::prev(PLTFunction.end());
+    auto LastII = std::prev(LastBBI->end());
+    if (!isNoop(*LastII)) {
+      errs() << "BOLT-ERROR: Cannot patch PLT entry "
+             << PLTFunction.getPrintName()
+             << " to have a BTI landing pad. Relink the binary using LLD.\n";
+      exit(1);
+    }
+    // If the PLT does not have a BTI, and it has nops, create a new instruction
+    // sequence to patch the entry with.
+    InstructionListType NewPLTSeq;
+    MCInst BTIInst;
+    createBTI(BTIInst, BTIKind::C);
+    NewPLTSeq.push_back(BTIInst);
+    // Only adding the instructions from the first BB (adrp, ldr, add, br) to
+    // NewPLTSeq.
+    NewPLTSeq.insert(NewPLTSeq.end(), FirstBBI->begin(), FirstBBI->end());
+    BC.createInstructionPatch(PLTFunction.getAddress(), NewPLTSeq);
+  }
+
+  void applyBTIFixupToSymbol(BinaryContext &BC, const MCSymbol *TargetSymbol,
+                             MCInst &Call) override {
+    BinaryFunction *TargetFunction = BC.getFunctionForSymbol(TargetSymbol);
+    applyBTIFixupCommon(TargetSymbol, TargetFunction, nullptr, Call);
+  }
+
+  void applyBTIFixupToTarget(BinaryBasicBlock &StubBB) override {
+    BinaryFunction &Func = *StubBB.getFunction();
+    BinaryContext &BC = Func.getBinaryContext();
+    const MCSymbol *RealTargetSym = BC.MIB->getTargetSymbol(*StubBB.begin());
+    BinaryFunction *TargetFunction = BC.getFunctionForSymbol(RealTargetSym);
+    BinaryBasicBlock *TgtBB = Func.getBasicBlockForLabel(RealTargetSym);
+    applyBTIFixupCommon(RealTargetSym, TargetFunction, TgtBB,
+                        *StubBB.getLastNonPseudoInstr());
+  }
+
+  void applyBTIFixupCommon(const MCSymbol *RealTargetSym,
+                           BinaryFunction *TargetFunction,
+                           BinaryBasicBlock *TargetBB, MCInst &Call) override {
+    // TODO: add support for editing each type, and remove errors.
+    if (!TargetFunction && !TargetBB) {
+      errs() << "BOLT-ERROR: Cannot add BTI to function with symbol "
+             << RealTargetSym->getName() << "\n";
+      exit(1);
+    }
+    if (TargetFunction && TargetFunction->isPLTFunction()) {
+      patchPLTEntryForBTI(*TargetFunction, Call);
+      return;
+    }
+    if (TargetFunction && TargetFunction->isIgnored()) {
+      errs() << "BOLT-ERROR: Cannot add BTI landing pad to ignored function "
+             << TargetFunction->getPrintName() << "\n";
+      exit(1);
+    }
+    if (TargetFunction && !TargetFunction->hasCFG()) {
+      if (TargetFunction->hasInstructions()) {
+        auto FirstII = TargetFunction->instrs().begin();
+        MCInst FirstInst = FirstII->second;
+        if (isCallCoveredByBTI(Call, FirstInst))
+          return;
+      }
+      errs()
+          << "BOLT-ERROR: Cannot add BTI landing pad to function without CFG: "
+          << TargetFunction->getPrintName() << "\n";
+      exit(1);
+    }
+    if (!TargetBB)
+      // No need to check TargetFunction for nullptr, because
+      // !TargetBB &&!TargetFunction has already been checked.
+      TargetBB = &*TargetFunction->begin();
+    if (TargetBB) {
+      if (!TargetBB->hasParent()) {
+        errs() << "BOLT-ERROR: Cannot add BTI to block with no parent "
+                  "function. Targeted symbol: "
+               << RealTargetSym->getName() << "\n";
+        exit(1);
+      }
+      insertBTI(*TargetBB, Call);
+      return;
+    }
+    errs() << "BOLT-ERROR: unhandled case when applying BTI fixup\n";
+    exit(1);
+  }
+
   unsigned getInvertedBranchOpcode(unsigned Opcode) const {
     switch (Opcode) {
     default:

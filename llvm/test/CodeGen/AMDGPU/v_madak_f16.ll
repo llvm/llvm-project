@@ -11,22 +11,25 @@ define amdgpu_kernel void @madak_f16(
 ; SI-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0xd
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    s_mov_b32 s14, s6
+; SI-NEXT:    s_mov_b32 s10, s6
+; SI-NEXT:    s_mov_b32 s11, s7
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s12, s2
 ; SI-NEXT:    s_mov_b32 s13, s3
+; SI-NEXT:    s_mov_b32 s14, s6
 ; SI-NEXT:    s_mov_b32 s15, s7
-; SI-NEXT:    s_mov_b32 s10, s6
-; SI-NEXT:    s_mov_b32 s11, s7
-; SI-NEXT:    buffer_load_ushort v0, off, s[12:15], 0
-; SI-NEXT:    buffer_load_ushort v1, off, s[8:11], 0
+; SI-NEXT:    buffer_load_ushort v0, off, s[8:11], 0
+; SI-NEXT:    buffer_load_ushort v1, off, s[12:15], 0
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_waitcnt vmcnt(1)
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SI-NEXT:    v_madak_f32 v0, v0, v1, 0x41200000
+; SI-NEXT:    v_mul_f32_e32 v0, v1, v0
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-NEXT:    v_add_f32_e32 v0, 0x41200000, v0
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    buffer_store_short v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
@@ -67,12 +70,12 @@ define amdgpu_kernel void @madak_f16(
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s13, s3
-; GFX11-TRUE16-NEXT:    buffer_load_u16 v0, off, s[12:15], 0
-; GFX11-TRUE16-NEXT:    buffer_load_u16 v1, off, s[4:7], 0
+; GFX11-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[12:15], 0
+; GFX11-TRUE16-NEXT:    buffer_load_d16_hi_b16 v0, off, s[4:7], 0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s9, s1
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v1.l
+; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v0.h
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_add_f16_e32 v0.l, 0x4900, v0.l
 ; GFX11-TRUE16-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
@@ -140,7 +143,6 @@ define amdgpu_kernel void @madak_f16_use_2(
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_load_ushort v2, off, s[4:7], 0 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v3, 0x41200000
 ; SI-NEXT:    s_mov_b32 s0, s8
 ; SI-NEXT:    s_mov_b32 s1, s9
 ; SI-NEXT:    s_mov_b32 s4, s10
@@ -148,12 +150,18 @@ define amdgpu_kernel void @madak_f16_use_2(
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SI-NEXT:    v_madak_f32 v1, v0, v1, 0x41200000
-; SI-NEXT:    v_mac_f32_e32 v3, v0, v2
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v1
-; SI-NEXT:    v_cvt_f16_f32_e32 v1, v3
-; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
-; SI-NEXT:    buffer_store_short v1, off, s[4:7], 0
+; SI-NEXT:    v_mul_f32_e32 v1, v0, v1
+; SI-NEXT:    v_mul_f32_e32 v0, v0, v2
+; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-NEXT:    v_add_f32_e32 v1, 0x41200000, v1
+; SI-NEXT:    v_add_f32_e32 v0, 0x41200000, v0
+; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    buffer_store_short v1, off, s[0:3], 0
+; SI-NEXT:    buffer_store_short v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: madak_f16_use_2:
@@ -208,22 +216,22 @@ define amdgpu_kernel void @madak_f16_use_2(
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s17, s13
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s20, s14
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s21, s15
-; GFX11-TRUE16-NEXT:    buffer_load_u16 v0, off, s[16:19], 0 glc dlc
+; GFX11-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[16:19], 0 glc dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    buffer_load_u16 v1, off, s[20:23], 0 glc dlc
+; GFX11-TRUE16-NEXT:    buffer_load_d16_hi_b16 v0, off, s[20:23], 0 glc dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    buffer_load_u16 v2, off, s[0:3], 0 glc dlc
+; GFX11-TRUE16-NEXT:    buffer_load_d16_b16 v1, off, s[0:3], 0 glc dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s4, s8
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s5, s9
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, s10
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s1, s11
-; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v0.h, v0.l, v1.l
-; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v2.l
+; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v0.h, v0.l, v0.h
+; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v1.l
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_add_f16_e32 v1.l, 0x4900, v0.h
+; GFX11-TRUE16-NEXT:    v_add_f16_e32 v0.h, 0x4900, v0.h
 ; GFX11-TRUE16-NEXT:    v_add_f16_e32 v0.l, 0x4900, v0.l
-; GFX11-TRUE16-NEXT:    buffer_store_b16 v1, off, s[4:7], 0
+; GFX11-TRUE16-NEXT:    buffer_store_d16_hi_b16 v0, off, s[4:7], 0
 ; GFX11-TRUE16-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
@@ -283,6 +291,6 @@ entry:
   ret void
 }
 
-attributes #0 = { "denormal-fp-math"="preserve-sign,preserve-sign" }
+attributes #0 = { denormal_fpenv(preservesign) }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GFX11: {{.*}}

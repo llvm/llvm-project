@@ -57,9 +57,7 @@ define i64 @same_exit_block_pre_inc_use1_nosve() {
 ; CHECK-NEXT: Cost of 48 for VF 16: EMIT vp<{{.*}}> = first-active-lane ir<%cmp3>
 ; CHECK-NEXT: Cost of 0 for VF 16: EMIT vp<{{.*}}> = add
 ; CHECK-NEXT: Cost of 0 for VF 16: vp<{{.*}}> = DERIVED-IV
-; CHECK: LV: Minimum required TC for runtime checks to be profitable:128
-; CHECK-NEXT: LV: Vectorization is not beneficial: expected trip count < minimum profitable VF (64 < 128)
-; CHECK-NEXT: LV: Too many memory checks needed.
+; CHECK: LV: Minimum required TC for runtime checks to be profitable:16
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -93,7 +91,6 @@ loop.end:
 define i64 @vectorization_not_profitable_due_to_trunc(ptr dereferenceable(800) %src) {
 ; CHECK-LABEL: LV: Checking a loop in 'vectorization_not_profitable_due_to_trunc'
 ; CHECK: LV: Selecting VF: 1.
-; CHECK-NEXT: Calculating cost of work in exit block vector.early.exit:
 ; CHECK: LV: Vectorization is possible but not beneficial.
 entry:
   br label %loop.header

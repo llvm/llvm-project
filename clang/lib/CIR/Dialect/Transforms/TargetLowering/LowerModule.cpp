@@ -14,12 +14,12 @@
 #include "LowerModule.h"
 #include "CIRCXXABI.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/PatternMatch.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
 
 namespace cir {
 
@@ -43,17 +43,32 @@ static std::unique_ptr<CIRCXXABI> createCXXABI(LowerModule &lm) {
   llvm_unreachable("invalid C++ ABI kind");
 }
 
+static std::unique_ptr<TargetLoweringInfo>
+createTargetLoweringInfo(LowerModule &lm) {
+  assert(!cir::MissingFeatures::targetLoweringInfo());
+  return std::make_unique<TargetLoweringInfo>();
+}
+
 LowerModule::LowerModule(clang::LangOptions langOpts,
                          clang::CodeGenOptions codeGenOpts,
                          mlir::ModuleOp &module,
-                         std::unique_ptr<clang::TargetInfo> target,
-                         mlir::PatternRewriter &rewriter)
-    : module(module), target(std::move(target)), abi(createCXXABI(*this)),
-      rewriter(rewriter) {}
+                         std::unique_ptr<clang::TargetInfo> target)
+    : module(module), target(std::move(target)), abi(createCXXABI(*this)) {}
+
+const TargetLoweringInfo &LowerModule::getTargetLoweringInfo() {
+  if (!targetLoweringInfo)
+    targetLoweringInfo = createTargetLoweringInfo(*this);
+  return *targetLoweringInfo;
+}
 
 // TODO: not to create it every time
-std::unique_ptr<LowerModule>
-createLowerModule(mlir::ModuleOp module, mlir::PatternRewriter &rewriter) {
+std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
+  // If the triple is not present, e.g. CIR modules parsed from text, we
+  // cannot init LowerModule properly.
+  assert(!cir::MissingFeatures::makeTripleAlwaysPresent());
+  if (!module->hasAttr(cir::CIRDialect::getTripleAttrName()))
+    return nullptr;
+
   // Fetch target information.
   llvm::Triple triple(mlir::cast<mlir::StringAttr>(
                           module->getAttr(cir::CIRDialect::getTripleAttrName()))
@@ -81,7 +96,7 @@ createLowerModule(mlir::ModuleOp module, mlir::PatternRewriter &rewriter) {
 
   return std::make_unique<LowerModule>(std::move(langOpts),
                                        std::move(codeGenOpts), module,
-                                       std::move(targetInfo), rewriter);
+                                       std::move(targetInfo));
 }
 
 } // namespace cir

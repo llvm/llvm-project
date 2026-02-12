@@ -13,6 +13,7 @@
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 using namespace mlir;
 using namespace test;
@@ -34,6 +35,7 @@ static StringLiteral getVisibilityString(SymbolTable::Visibility visibility) {
   case SymbolTable::Visibility::Public:
     return "public";
   }
+  llvm_unreachable("Unknown SymbolTable::Visibility");
 }
 
 void OverriddenSymbolVisibilityOp::setVisibility(
@@ -308,10 +310,10 @@ LogicalResult OpWithResultShapeInterfaceOp::reifyReturnTypeShapes(
   shapes.reserve(operands.size());
   for (Value operand : llvm::reverse(operands)) {
     auto rank = cast<RankedTensorType>(operand.getType()).getRank();
-    auto currShape = llvm::to_vector<4>(
-        llvm::map_range(llvm::seq<int64_t>(0, rank), [&](int64_t dim) -> Value {
+    auto currShape = llvm::map_to_vector<4>(
+        llvm::seq<int64_t>(0, rank), [&](int64_t dim) -> Value {
           return builder.createOrFold<tensor::DimOp>(loc, operand, dim);
-        }));
+        });
     shapes.push_back(tensor::FromElementsOp::create(
         builder, getLoc(),
         RankedTensorType::get({rank}, builder.getIndexType()), currShape));
@@ -329,7 +331,7 @@ LogicalResult ReifyShapedTypeUsingReifyResultShapesOp::reifyResultShapes(
   shapes.reserve(getNumOperands());
   for (Value operand : llvm::reverse(getOperands())) {
     auto tensorType = cast<RankedTensorType>(operand.getType());
-    auto currShape = llvm::to_vector<4>(llvm::map_range(
+    auto currShape = llvm::map_to_vector<4>(
         llvm::seq<int64_t>(0, tensorType.getRank()),
         [&](int64_t dim) -> OpFoldResult {
           return tensorType.isDynamicDim(dim)
@@ -338,7 +340,7 @@ LogicalResult ReifyShapedTypeUsingReifyResultShapesOp::reifyResultShapes(
                                                                dim))
                      : static_cast<OpFoldResult>(
                            builder.getIndexAttr(tensorType.getDimSize(dim)));
-        }));
+        });
     shapes.emplace_back(std::move(currShape));
   }
   return success();
@@ -743,15 +745,27 @@ void RegionIfOp::getSuccessorRegions(
   if (!point.isParent()) {
     if (point.getTerminatorPredecessorOrNull()->getParentRegion() !=
         &getJoinRegion())
-      regions.push_back(RegionSuccessor(&getJoinRegion(), getJoinArgs()));
+      regions.push_back(RegionSuccessor(&getJoinRegion()));
     else
-      regions.push_back(RegionSuccessor(getOperation(), getResults()));
+      regions.push_back(RegionSuccessor::parent());
     return;
   }
 
   // The then and else regions are the entry regions of this op.
-  regions.push_back(RegionSuccessor(&getThenRegion(), getThenArgs()));
-  regions.push_back(RegionSuccessor(&getElseRegion(), getElseArgs()));
+  regions.push_back(RegionSuccessor(&getThenRegion()));
+  regions.push_back(RegionSuccessor(&getElseRegion()));
+}
+
+ValueRange RegionIfOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isParent())
+    return getResults();
+  if (successor == &getThenRegion())
+    return getThenArgs();
+  if (successor == &getElseRegion())
+    return getElseArgs();
+  if (successor == &getJoinRegion())
+    return getJoinArgs();
+  llvm_unreachable("invalid region successor");
 }
 
 void RegionIfOp::getRegionInvocationBounds(
@@ -772,7 +786,11 @@ void AnyCondOp::getSuccessorRegions(RegionBranchPoint point,
   if (point.isParent())
     regions.emplace_back(&getRegion());
   else
-    regions.emplace_back(getOperation(), getResults());
+    regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange AnyCondOp::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(getResults()) : ValueRange();
 }
 
 void AnyCondOp::getRegionInvocationBounds(
@@ -861,6 +879,16 @@ LogicalResult TestVerifiersOp::verifyRegions() {
 void TestWithBoundsOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                          SetIntRangeFn setResultRanges) {
   setResultRanges(getResult(), {getUmin(), getUmax(), getSmin(), getSmax()});
+}
+
+//===----------------------------------------------------------------------===//
+// TestWithoutBoundsOp
+//===----------------------------------------------------------------------===//
+
+void TestWithoutBoundsOp::inferResultRangesFromOptional(
+    ArrayRef<IntegerValueRange> argRanges, SetIntLatticeFn setResultRanges) {
+  // Mimic ops with uninitialized range.
+  setResultRanges(getResult(), IntegerValueRange{});
 }
 
 //===----------------------------------------------------------------------===//
@@ -1228,11 +1256,16 @@ LogicalResult TestOpWithPropertiesAndInferredType::inferReturnTypes(
 
 void LoopBlockOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  regions.emplace_back(&getBody(), getBody().getArguments());
+  regions.emplace_back(&getBody());
   if (point.isParent())
     return;
 
-  regions.emplace_back(getOperation(), getOperation()->getResults());
+  regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange LoopBlockOp::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(getOperation()->getResults())
+                              : ValueRange(getBody().getArguments());
 }
 
 OperandRange LoopBlockOp::getEntrySuccessorOperands(RegionSuccessor successor) {
@@ -1336,9 +1369,14 @@ MutableOperandRange TestCallOnDeviceOp::getArgOperandsMutable() {
 void TestStoreWithARegion::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (point.isParent())
-    regions.emplace_back(&getBody(), getBody().front().getArguments());
+    regions.emplace_back(&getBody());
   else
-    regions.emplace_back(getOperation(), getOperation()->getResults());
+    regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange TestStoreWithARegion::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(getOperation()->getResults())
+                              : ValueRange(getBody().front().getArguments());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1350,9 +1388,14 @@ void TestStoreWithALoopRegion::getSuccessorRegions(
   // Both the operation itself and the region may be branching into the body or
   // back into the operation itself. It is possible for the operation not to
   // enter the body.
-  regions.emplace_back(
-      RegionSuccessor(&getBody(), getBody().front().getArguments()));
-  regions.emplace_back(getOperation(), getOperation()->getResults());
+  regions.emplace_back(&getBody());
+  regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange
+TestStoreWithALoopRegion::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(getOperation()->getResults())
+                              : ValueRange(getBody().front().getArguments());
 }
 
 //===----------------------------------------------------------------------===//

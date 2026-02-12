@@ -54,9 +54,6 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::sample(vector<int>)", std_sample);
     bm.operator()<std::deque<int>>("std::sample(deque<int>)", std_sample);
     bm.operator()<std::list<int>>("std::sample(list<int>)", std_sample);
-    bm.operator()<std::vector<int>>("rng::sample(vector<int>)", std::ranges::sample);
-    bm.operator()<std::deque<int>>("rng::sample(deque<int>)", std::ranges::sample);
-    bm.operator()<std::list<int>>("rng::sample(list<int>)", std::ranges::sample);
   }
 
   benchmark::Initialize(&argc, argv);

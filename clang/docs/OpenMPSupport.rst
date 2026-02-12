@@ -492,7 +492,7 @@ implementation.
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | memscope clause for atomic and flush                        | :none:`unclaimed`         | :none:`unclaimed`         |                                                                          |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| transparent clause (hull tasks)                             | :none:`unclaimed`         | :none:`unclaimed`         |                                                                          |
+| transparent clause (hull tasks)                             | :part:`partial`           | :none:`unclaimed`         |  Clang parsing/sema  https://github.com/llvm/llvm-project/pull/166810    |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | rule-based compound directives                              | :part:`In Progress`       | :part:`In Progress`       | kparzysz                                                                 |
 |                                                             |                           |                           | Testing for Fortran missing                                              |
@@ -637,6 +637,13 @@ implementation.
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | need_device_ptr modifier for adjust_args clause             | :part:`partial`           | :none:`unclaimed`         | Clang Parsing/Sema: https://github.com/llvm/llvm-project/pull/168905     |
 |                                                             |                           |                           | https://github.com/llvm/llvm-project/pull/169558                         |
++-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
+| fallback modifier for use_device_ptr clause                 | :good:`done`              | :none:`unclaimed`         | Clang: @abhinavgaba (https://github.com/llvm/llvm-project/pull/170578,   |
+|                                                             |                           |                           | https://github.com/llvm/llvm-project/pull/173931)                        |
+|                                                             |                           |                           | RT: @abhinavgaba (https://github.com/llvm/llvm-project/pull/169603)      |
++-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
+| dims clause with strict behavior (multidimensional teams    | :part:`In Progress`       | :part:`In Progress`       | C/C++: kevinsala                                                         |
+| and leagues)                                                |                           |                           | Fortran: skc7, kparzysz, mjklemm                                         |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 
 OpenMP Extensions

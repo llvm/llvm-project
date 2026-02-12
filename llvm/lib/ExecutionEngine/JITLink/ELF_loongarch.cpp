@@ -37,9 +37,41 @@ public:
   ELFJITLinker_loongarch(std::unique_ptr<JITLinkContext> Ctx,
                          std::unique_ptr<LinkGraph> G,
                          PassConfiguration PassConfig)
-      : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {}
+      : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {
+    JITLinkerBase::getPassConfig().PostAllocationPasses.push_back(
+        [this](LinkGraph &G) { return gatherLoongArchPCAddHi20(G); });
+  }
 
 private:
+  DenseMap<std::pair<const Block *, orc::ExecutorAddrDiff>, const Edge *>
+      RelPCAddHi20Map;
+
+  Error gatherLoongArchPCAddHi20(LinkGraph &G) {
+    for (Block *B : G.blocks())
+      for (Edge &E : B->edges())
+        if (E.getKind() == PCAddHi20)
+          RelPCAddHi20Map[{B, E.getOffset()}] = &E;
+
+    return Error::success();
+  }
+
+  Expected<const Edge &> getLoongArchPCAddHi20(const Edge &E) const {
+    using namespace loongarch;
+    assert((E.getKind() == PCAddLo12) &&
+           "Can only have high relocation for PCAddLo12");
+
+    const Symbol &Sym = E.getTarget();
+    const Block &B = Sym.getBlock();
+    orc::ExecutorAddrDiff Offset = Sym.getOffset() + E.getAddend();
+
+    auto It = RelPCAddHi20Map.find({&B, Offset});
+    if (It != RelPCAddHi20Map.end())
+      return *It->second;
+
+    return make_error<JITLinkError>("No PCAddHi20 relocation type be found "
+                                    "for PCAddLo12 relocation type");
+  }
+
   /// Apply fixup expression for edge to block content.
   Error applyFixup(LinkGraph &G, Block &B, const Edge &E) const {
     using namespace support;
@@ -147,6 +179,48 @@ private:
       uint32_t RawInstr = *(ulittle32_t *)FixupPtr;
       uint32_t Imm11_0 = TargetOffset << 10;
       *(ulittle32_t *)FixupPtr = RawInstr | Imm11_0;
+      break;
+    }
+    case PCAddHi20: {
+      uint64_t Target = TargetAddress + Addend;
+      int64_t Delta = Target - FixupAddress + 0x800;
+
+      if (!isInt<32>(Delta))
+        return makeTargetOutOfRangeError(G, B, E);
+
+      uint32_t RawInstr = *(little32_t *)FixupPtr;
+      uint32_t Imm31_12 = extractBits(Delta, /*Hi=*/31, /*Lo=*/12) << 5;
+      *(little32_t *)FixupPtr = RawInstr | Imm31_12;
+      break;
+    }
+    case PCAddLo12: {
+      auto RelPCAddHi20 = getLoongArchPCAddHi20(E);
+      if (!RelPCAddHi20)
+        return RelPCAddHi20.takeError();
+      int64_t Delta =
+          (RelPCAddHi20->getTarget().getAddress() + RelPCAddHi20->getAddend()) -
+          (E.getTarget().getAddress() + E.getAddend());
+
+      uint32_t RawInstr = *(ulittle32_t *)FixupPtr;
+      uint32_t Imm11_0 = extractBits(Delta, /*Hi=*/11, /*Lo=*/0) << 10;
+      *(ulittle32_t *)FixupPtr = RawInstr | Imm11_0;
+      break;
+    }
+    case Call30PCRel: {
+      int64_t Value = TargetAddress - FixupAddress + Addend;
+
+      if (Value != llvm::SignExtend64(Value, 32))
+        return makeTargetOutOfRangeError(G, B, E);
+
+      if (!isShiftedInt<30, 2>(Value))
+        return makeAlignmentError(orc::ExecutorAddr(FixupAddress), Value, 4, E);
+
+      uint32_t Pcaddu12i = *(little32_t *)FixupPtr;
+      uint32_t Hi20 = extractBits(Value, /*Hi=*/31, /*Lo=*/12) << 5;
+      *(little32_t *)FixupPtr = Pcaddu12i | Hi20;
+      uint32_t Jirl = *(little32_t *)(FixupPtr + 4);
+      uint32_t Lo10 = extractBits(Value, /*Hi=*/11, /*Lo=*/2) << 10;
+      *(little32_t *)(FixupPtr + 4) = Jirl | Lo10;
       break;
     }
     case Call36PCRel: {
@@ -534,6 +608,8 @@ private:
       return RequestGOTAndTransformToPage20;
     case ELF::R_LARCH_GOT_PC_LO12:
       return RequestGOTAndTransformToPageOffset12;
+    case ELF::R_LARCH_CALL30:
+      return Call30PCRel;
     case ELF::R_LARCH_CALL36:
       return Call36PCRel;
     case ELF::R_LARCH_ADD6:
@@ -562,6 +638,13 @@ private:
       return SubUleb128;
     case ELF::R_LARCH_ALIGN:
       return AlignRelaxable;
+    case ELF::R_LARCH_PCADD_HI20:
+      return PCAddHi20;
+    case ELF::R_LARCH_PCADD_LO12:
+    case ELF::R_LARCH_GOT_PCADD_LO12:
+      return PCAddLo12;
+    case ELF::R_LARCH_GOT_PCADD_HI20:
+      return RequestGOTAndTransformToPCAddHi20;
     }
 
     return make_error<JITLinkError>(

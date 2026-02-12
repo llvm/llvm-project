@@ -1,7 +1,8 @@
 @LIT_SITE_CFG_IN_HEADER@
 
-import sys
+import shutil, sys, os, uuid
 import lit.util
+from pathlib import Path
 
 config.targets_to_build = "@TARGETS_TO_BUILD@".split()
 config.llvm_src_root = "@LLVM_SOURCE_DIR@"
@@ -22,7 +23,19 @@ config.mlir_src_root = "@MLIR_SOURCE_DIR@"
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
 
 import lit.llvm
+
 lit.llvm.initialize(lit_config, config)
 
 # Let the main config do the real work.
 lit_config.load_config(config, "@CROSS_PROJECT_TESTS_SOURCE_DIR@/lit.cfg.py")
+
+def are_short_names_enabled(path):
+    d = Path(path) / str(uuid.uuid4()) / "verylongdir"
+    d.mkdir(parents=True)
+    try:
+        return (d.parent / "verylo~1").exists()
+    finally:
+        shutil.rmtree(d.parent)
+
+if os.name == "nt" and are_short_names_enabled(config.environment.get("TEMP")):
+    config.available_features.add("tempshortpaths")
