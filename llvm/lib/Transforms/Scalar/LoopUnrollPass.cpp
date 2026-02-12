@@ -329,16 +329,6 @@ struct EstimatedUnrollCost {
   unsigned RolledDynamicCost;
 };
 
-struct PragmaInfo {
-  PragmaInfo(bool UUC, bool PFU, unsigned PC, bool PEU)
-      : UserUnrollCount(UUC), PragmaFullUnroll(PFU), PragmaCount(PC),
-        PragmaEnableUnroll(PEU) {}
-  const bool UserUnrollCount;
-  const bool PragmaFullUnroll;
-  const unsigned PragmaCount;
-  const bool PragmaEnableUnroll;
-};
-
 } // end anonymous namespace
 
 /// Figure out if the loop is worth full unrolling.
@@ -787,6 +777,28 @@ static unsigned unrollCountPragmaValue(const Loop *L) {
   return 0;
 }
 
+namespace {
+
+struct PragmaInfo {
+  PragmaInfo(const Loop *L)
+      : PragmaFullUnroll(hasUnrollFullPragma(L)),
+        // CLI -unroll-count unconditionally overrides the pragma count.
+        // This intentionally bypasses the threshold guard that previously
+        // applied to CLI-specified counts, because this option is for testing.
+        PragmaCount(UnrollCount.getNumOccurrences() > 0
+                        ? (unsigned)UnrollCount
+                        : unrollCountPragmaValue(L)),
+        PragmaEnableUnroll(hasUnrollEnablePragma(L)),
+        ExplicitUnroll(PragmaCount > 0 || PragmaFullUnroll ||
+                       PragmaEnableUnroll) {}
+  const bool PragmaFullUnroll;
+  const unsigned PragmaCount;
+  const bool PragmaEnableUnroll;
+  const bool ExplicitUnroll;
+};
+
+} // end anonymous namespace
+
 // Computes the boosting factor for complete unrolling.
 // If fully unrolling the loop would save a lot of RolledDynamicCost, it would
 // be beneficial to fully unroll the loop even if unrolledcost is large. We
@@ -810,15 +822,8 @@ shouldPragmaUnroll(Loop *L, const PragmaInfo &PInfo,
                    unsigned MaxTripCount, const UnrollCostEstimator UCE,
                    const TargetTransformInfo::UnrollingPreferences &UP) {
 
-  // Using unroll pragma
-  // 1st priority is unroll count set by "unroll-count" option.
-
-  if (PInfo.UserUnrollCount) {
-    if (UP.AllowRemainder &&
-        UCE.getUnrolledLoopSize(UP, (unsigned)UnrollCount) < UP.Threshold)
-      return (unsigned)UnrollCount;
-  }
-
+  // 1st priority is unroll count set by "unroll-count" option, which is
+  // handled in the PragmaInfo constructor by overriding PragmaCount.
   // 2nd priority is unroll count set by pragma.
   if (PInfo.PragmaCount > 0) {
     if ((UP.AllowRemainder || (TripMultiple % PInfo.PragmaCount == 0)))
@@ -944,16 +949,10 @@ bool llvm::computeUnrollCount(
 
   unsigned LoopSize = UCE.getRolledLoopSize();
 
-  const bool UserUnrollCount = UnrollCount.getNumOccurrences() > 0;
-  const bool PragmaFullUnroll = hasUnrollFullPragma(L);
-  const unsigned PragmaCount = unrollCountPragmaValue(L);
-  const bool PragmaEnableUnroll = hasUnrollEnablePragma(L);
+  // 1st priority is unroll count set by "unroll-count" option, which overrides
+  // any pragma unroll count in PInfo.PragmaCount.
+  PragmaInfo PInfo(L);
 
-  const bool ExplicitUnroll = PragmaCount > 0 || PragmaFullUnroll ||
-                              PragmaEnableUnroll || UserUnrollCount;
-
-  PragmaInfo PInfo(UserUnrollCount, PragmaFullUnroll, PragmaCount,
-                   PragmaEnableUnroll);
   // Use an explicit peel count that has been specified for testing. In this
   // case it's not permitted to also specify an explicit unroll count.
   if (PP.PeelCount) {
@@ -972,14 +971,14 @@ bool llvm::computeUnrollCount(
                                              MaxTripCount, UCE, UP)) {
     UP.Count = *UnrollFactor;
 
-    if (UserUnrollCount || (PragmaCount > 0)) {
+    if (PInfo.PragmaCount > 0) {
       UP.AllowExpensiveTripCount = true;
       UP.Force = true;
     }
-    UP.Runtime |= (PragmaCount > 0);
-    return ExplicitUnroll;
+    UP.Runtime |= (PInfo.PragmaCount > 0);
+    return PInfo.ExplicitUnroll;
   } else {
-    if (ExplicitUnroll && TripCount != 0) {
+    if (PInfo.ExplicitUnroll && TripCount != 0) {
       // If the loop has an unrolling pragma, we want to be more aggressive with
       // unrolling limits. Set thresholds to at least the PragmaUnrollThreshold
       // value which is larger than the default limits.
@@ -998,7 +997,7 @@ bool llvm::computeUnrollCount(
                                              TripCount, UCE, UP)) {
       UP.Count = *UnrollFactor;
       UseUpperBound = false;
-      return ExplicitUnroll;
+      return PInfo.ExplicitUnroll;
     }
   }
 
@@ -1021,7 +1020,7 @@ bool llvm::computeUnrollCount(
                                              MaxTripCount, UCE, UP)) {
       UP.Count = *UnrollFactor;
       UseUpperBound = true;
-      return ExplicitUnroll;
+      return PInfo.ExplicitUnroll;
     }
   }
 
@@ -1030,20 +1029,20 @@ bool llvm::computeUnrollCount(
   if (PP.PeelCount) {
     UP.Runtime = false;
     UP.Count = 1;
-    return ExplicitUnroll;
+    return PInfo.ExplicitUnroll;
   }
 
   // Before starting partial unrolling, set up.partial to true,
   // if user explicitly asked  for unrolling
   if (TripCount)
-    UP.Partial |= ExplicitUnroll;
+    UP.Partial |= PInfo.ExplicitUnroll;
 
   // 6th priority is partial unrolling.
   // Try partial unroll only when TripCount could be statically calculated.
   if (auto UnrollFactor = shouldPartialUnroll(LoopSize, TripCount, UCE, UP)) {
     UP.Count = *UnrollFactor;
 
-    if ((PragmaFullUnroll || PragmaEnableUnroll) && TripCount &&
+    if ((PInfo.PragmaFullUnroll || PInfo.PragmaEnableUnroll) && TripCount &&
         UP.Count != TripCount)
       ORE->emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE,
@@ -1056,7 +1055,7 @@ bool llvm::computeUnrollCount(
 
     if (UP.PartialThreshold != NoThreshold) {
       if (UP.Count == 0) {
-        if (PragmaEnableUnroll)
+        if (PInfo.PragmaEnableUnroll)
           ORE->emit([&]() {
             return OptimizationRemarkMissed(DEBUG_TYPE,
                                             "UnrollAsDirectedTooLarge",
@@ -1067,11 +1066,11 @@ bool llvm::computeUnrollCount(
           });
       }
     }
-    return ExplicitUnroll;
+    return PInfo.ExplicitUnroll;
   }
   assert(TripCount == 0 &&
          "All cases when TripCount is constant should be covered here.");
-  if (PragmaFullUnroll)
+  if (PInfo.PragmaFullUnroll)
     ORE->emit([&]() {
       return OptimizationRemarkMissed(
                  DEBUG_TYPE, "CantFullUnrollAsDirectedRuntimeTripCount",
@@ -1103,7 +1102,7 @@ bool llvm::computeUnrollCount(
         UP.AllowExpensiveTripCount = true;
     }
   }
-  UP.Runtime |= PragmaEnableUnroll || PragmaCount > 0 || UserUnrollCount;
+  UP.Runtime |= PInfo.PragmaEnableUnroll || PInfo.PragmaCount > 0;
   if (!UP.Runtime) {
     LLVM_DEBUG(dbgs().indent(2)
                << "will not try to unroll loop with runtime trip count "
@@ -1163,7 +1162,7 @@ bool llvm::computeUnrollCount(
              << "runtime unrolling with count: " << UP.Count << "\n");
   if (UP.Count < 2)
     UP.Count = 0;
-  return ExplicitUnroll;
+  return PInfo.ExplicitUnroll;
 }
 
 static LoopUnrollResult
