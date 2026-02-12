@@ -321,7 +321,7 @@ public:
 /// This builder class is useful for generating nodes that resulted from
 /// visiting a statement. The main difference from its parent NodeBuilder is
 /// that it creates a statement specific ProgramPoint.
-class StmtNodeBuilder: public NodeBuilder {
+class StmtNodeBuilder final : public NodeBuilder {
   NodeBuilder *EnclosingBldr;
 
 public:
@@ -372,7 +372,7 @@ public:
 
 /// BranchNodeBuilder is responsible for constructing the nodes
 /// corresponding to the two branches of the if statement - true and false.
-class BranchNodeBuilder: public NodeBuilder {
+class BranchNodeBuilder final : public NodeBuilder {
   const CFGBlock *DstT;
   const CFGBlock *DstF;
 
@@ -399,7 +399,7 @@ public:
                              ExplodedNode *Pred);
 };
 
-class IndirectGotoNodeBuilder : public NodeBuilder {
+class IndirectGotoNodeBuilder final : public NodeBuilder {
   const CFGBlock &DispatchBlock;
   const Expr *Target;
 
@@ -430,7 +430,7 @@ public:
   }
 };
 
-class SwitchNodeBuilder : public NodeBuilder {
+class SwitchNodeBuilder final : public NodeBuilder {
 public:
   SwitchNodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
                     const NodeBuilderContext &Ctx)
