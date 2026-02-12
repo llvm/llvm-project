@@ -751,10 +751,10 @@ class DenseMap : public DenseMapBase<DenseMap<KeyT, ValueT, KeyInfoT, BucketT>,
   // simplicity of referring to them.
   using BaseT = DenseMapBase<DenseMap, KeyT, ValueT, KeyInfoT, BucketT>;
 
-  BucketT *Buckets;
-  unsigned NumEntries;
-  unsigned NumTombstones;
-  unsigned NumBuckets;
+  BucketT *Buckets = nullptr;
+  unsigned NumEntries = 0;
+  unsigned NumTombstones = 0;
+  unsigned NumBuckets = 0;
 
   explicit DenseMap(unsigned NumBuckets, typename BaseT::ExactBucketCount) {
     this->initWithExactBucketCount(NumBuckets);
