@@ -26,19 +26,9 @@ class BuildInclude(Directive):
         include_lines = statemachine.string2lines(
             rawtext, self.state.document.settings.tab_width, convert_whitespace=True
         )
-        clip_options = (None, None, None, None)
-        include_log = self.state.document.include_log
-        if not include_log:
-            include_log.append(
-                (
-                    utils.relative_path(None, self.state.document.current_source),
-                    (None, None, None, None),
-                )
-            )
 
         # parse into a dummy document and return created nodes
         document = utils.new_document(path, self.state.document.settings)
-        document.include_log = include_log + [(path, clip_options)]
         parser = self.options["parser"]()
         parser.parse("\n".join(include_lines), document)
         # clean up doctree and complete parsing
