@@ -1295,11 +1295,11 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return Def->replaceAllUsesWith(X);
 
   // x && false -> false
-  if (match(Def, m_LogicalAnd(m_VPValue(X), m_False())))
-    return Def->replaceAllUsesWith(Def->getOperand(1));
+  if (match(Def, m_c_LogicalAnd(m_VPValue(X), m_False())))
+    return Def->replaceAllUsesWith(Plan->getFalse());
 
-  // true && x -> x
-  if (match(Def, m_LogicalAnd(m_True(), m_VPValue(X))))
+  // x && true -> x
+  if (match(Def, m_c_LogicalAnd(m_VPValue(X), m_True())))
     return Def->replaceAllUsesWith(X);
 
   // (x && y) | (x && z) -> x && (y | z)
@@ -1331,15 +1331,6 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     Def->setOperand(2, X);
     return;
   }
-
-  // Reassociate (x && y) && z -> x && (y && z) if x has multiple users. With
-  // tail folding it is likely that x is a header mask and can be simplified
-  // further.
-  if (match(Def, m_LogicalAnd(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
-                              m_VPValue(Z))) &&
-      X->hasMoreThanOneUniqueUser())
-    return Def->replaceAllUsesWith(
-        Builder.createLogicalAnd(X, Builder.createLogicalAnd(Y, Z)));
 
   if (match(Def, m_c_Add(m_VPValue(A), m_ZeroInt())))
     return Def->replaceAllUsesWith(A);
@@ -1611,6 +1602,31 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB))
       if (auto *Def = dyn_cast<VPSingleDefRecipe>(&R))
         simplifyRecipe(Def, TypeInfo);
+  }
+}
+
+/// Reassociate (headermask && x) && y -> headermask && (x && y) to allow the
+/// header mask to be simplified further, e.g. in optimizeEVLMasks.
+static void reassociateHeaderMask(VPlan &Plan) {
+  VPValue *HeaderMask = vputils::findHeaderMask(Plan);
+  if (!HeaderMask)
+    return;
+  SmallVector<VPUser *> Worklist(HeaderMask->users());
+  while (!Worklist.empty()) {
+    auto *R = dyn_cast<VPSingleDefRecipe>(Worklist.pop_back_val());
+    if (!R)
+      continue;
+    VPValue *X, *Y;
+    if (match(R, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue())))
+      Worklist.append(R->user_begin(), R->user_end());
+    else if (match(R, m_LogicalAnd(
+                          m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(X)),
+                          m_VPValue(Y)))) {
+      VPBuilder Builder(R);
+      Worklist.append(R->user_begin(), R->user_end());
+      R->replaceAllUsesWith(
+          Builder.createLogicalAnd(HeaderMask, Builder.createLogicalAnd(X, Y)));
+    }
   }
 }
 
@@ -2758,12 +2774,14 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   RUN_VPLAN_PASS(removeRedundantCanonicalIVs, Plan);
   RUN_VPLAN_PASS(removeRedundantInductionCasts, Plan);
 
+  RUN_VPLAN_PASS(reassociateHeaderMask, Plan);
   RUN_VPLAN_PASS(simplifyRecipes, Plan);
   RUN_VPLAN_PASS(removeDeadRecipes, Plan);
   RUN_VPLAN_PASS(simplifyBlends, Plan);
   RUN_VPLAN_PASS(legalizeAndOptimizeInductions, Plan);
   RUN_VPLAN_PASS(narrowToSingleScalarRecipes, Plan);
   RUN_VPLAN_PASS(removeRedundantExpandSCEVRecipes, Plan);
+  RUN_VPLAN_PASS(reassociateHeaderMask, Plan);
   RUN_VPLAN_PASS(simplifyRecipes, Plan);
   RUN_VPLAN_PASS(removeBranchOnConst, Plan);
   RUN_VPLAN_PASS(removeDeadRecipes, Plan);
