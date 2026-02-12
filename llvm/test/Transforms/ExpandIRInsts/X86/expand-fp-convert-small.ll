@@ -7,7 +7,8 @@ define i16 @fptosi_f16_i16(half %x) {
 ; CHECK-LABEL: define i16 @fptosi_f16_i16(
 ; CHECK-SAME: half [[X:%.*]]) {
 ; CHECK-NEXT:  [[FP_TO_I_ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast half [[X]] to i16
+; CHECK-NEXT:    [[TMP13:%.*]] = freeze half [[X]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast half [[TMP13]] to i16
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i16 [[TMP0]], -1
 ; CHECK-NEXT:    [[SIGN:%.*]] = select i1 [[TMP1]], i16 1, i16 -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i16 [[TMP0]], 10
@@ -15,14 +16,7 @@ define i16 @fptosi_f16_i16(half %x) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i16 [[TMP0]], 1023
 ; CHECK-NEXT:    [[SIGNIFICAND:%.*]] = or i16 [[TMP3]], 1024
 ; CHECK-NEXT:    [[EXP_IS_NEGATIVE:%.*]] = icmp ult i16 [[BIASED_EXP]], 15
-; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE]], label %[[FP_TO_I_CLEANUP:.*]], label %[[FP_TO_I_IF_CHECK_SATURATE:.*]]
-; CHECK:       [[FP_TO_I_IF_CHECK_SATURATE]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = add i16 [[BIASED_EXP]], -31
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i16 [[TMP4]], -16
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[FP_TO_I_IF_SATURATE:.*]], label %[[FP_TO_I_IF_CHECK_EXP_SIZE:.*]]
-; CHECK:       [[FP_TO_I_IF_SATURATE]]:
-; CHECK-NEXT:    [[SATURATED:%.*]] = select i1 [[TMP1]], i16 32767, i16 -32768
-; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
+; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE]], label %[[FP_TO_I_CLEANUP:.*]], label %[[FP_TO_I_IF_CHECK_EXP_SIZE:.*]]
 ; CHECK:       [[FP_TO_I_IF_CHECK_EXP_SIZE]]:
 ; CHECK-NEXT:    [[EXP_SMALLER_MANTISSA_WIDTH:%.*]] = icmp ult i16 [[BIASED_EXP]], 25
 ; CHECK-NEXT:    br i1 [[EXP_SMALLER_MANTISSA_WIDTH]], label %[[FP_TO_I_IF_EXP_SMALL:.*]], label %[[FP_TO_I_IF_EXP_LARGE:.*]]
@@ -37,7 +31,41 @@ define i16 @fptosi_f16_i16(half %x) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = mul i16 [[TMP10]], [[SIGN]]
 ; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
 ; CHECK:       [[FP_TO_I_CLEANUP]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = phi i16 [ [[SATURATED]], %[[FP_TO_I_IF_SATURATE]] ], [ [[TMP8]], %[[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP11]], %[[FP_TO_I_IF_EXP_LARGE]] ], [ 0, %[[FP_TO_I_ENTRY]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi i16 [ [[TMP8]], %[[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP11]], %[[FP_TO_I_IF_EXP_LARGE]] ], [ 0, %[[FP_TO_I_ENTRY]] ]
+; CHECK-NEXT:    ret i16 [[TMP12]]
+;
+  %res = fptosi half %x to i16
+  ret i16 %res
+}
+
+define i16 @fptosi_f16_i16_noundef(half noundef %x) {
+; CHECK-LABEL: define i16 @fptosi_f16_i16_noundef(
+; CHECK-SAME: half noundef [[X:%.*]]) {
+; CHECK-NEXT:  [[FP_TO_I_ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast half [[X]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i16 [[TMP0]], -1
+; CHECK-NEXT:    [[SIGN:%.*]] = select i1 [[TMP1]], i16 1, i16 -1
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i16 [[TMP0]], 10
+; CHECK-NEXT:    [[BIASED_EXP:%.*]] = and i16 [[TMP2]], 31
+; CHECK-NEXT:    [[TMP3:%.*]] = and i16 [[TMP0]], 1023
+; CHECK-NEXT:    [[SIGNIFICAND:%.*]] = or i16 [[TMP3]], 1024
+; CHECK-NEXT:    [[EXP_IS_NEGATIVE:%.*]] = icmp ult i16 [[BIASED_EXP]], 15
+; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE]], label %[[FP_TO_I_CLEANUP:.*]], label %[[FP_TO_I_IF_CHECK_EXP_SIZE:.*]]
+; CHECK:       [[FP_TO_I_IF_CHECK_EXP_SIZE]]:
+; CHECK-NEXT:    [[EXP_SMALLER_MANTISSA_WIDTH:%.*]] = icmp ult i16 [[BIASED_EXP]], 25
+; CHECK-NEXT:    br i1 [[EXP_SMALLER_MANTISSA_WIDTH]], label %[[FP_TO_I_IF_EXP_SMALL:.*]], label %[[FP_TO_I_IF_EXP_LARGE:.*]]
+; CHECK:       [[FP_TO_I_IF_EXP_SMALL]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = sub i16 25, [[BIASED_EXP]]
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr i16 [[SIGNIFICAND]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = mul i16 [[TMP7]], [[SIGN]]
+; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
+; CHECK:       [[FP_TO_I_IF_EXP_LARGE]]:
+; CHECK-NEXT:    [[TMP9:%.*]] = add i16 [[BIASED_EXP]], -25
+; CHECK-NEXT:    [[TMP10:%.*]] = shl i16 [[SIGNIFICAND]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = mul i16 [[TMP10]], [[SIGN]]
+; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
+; CHECK:       [[FP_TO_I_CLEANUP]]:
+; CHECK-NEXT:    [[TMP12:%.*]] = phi i16 [ [[TMP8]], %[[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP11]], %[[FP_TO_I_IF_EXP_LARGE]] ], [ 0, %[[FP_TO_I_ENTRY]] ]
 ; CHECK-NEXT:    ret i16 [[TMP12]]
 ;
   %res = fptosi half %x to i16
@@ -48,7 +76,8 @@ define i24 @fptosi_f16_i24(half %x) {
 ; CHECK-LABEL: define i24 @fptosi_f16_i24(
 ; CHECK-SAME: half [[X:%.*]]) {
 ; CHECK-NEXT:  [[FP_TO_I_ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast half [[X]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze half [[X]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast half [[TMP1]] to i16
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i16 [[TMP0]], -1
 ; CHECK-NEXT:    [[SIGN:%.*]] = select i1 [[TMP2]], i24 1, i24 -1
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr i16 [[TMP0]], 10
@@ -56,14 +85,7 @@ define i24 @fptosi_f16_i24(half %x) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i16 [[TMP0]], 1023
 ; CHECK-NEXT:    [[SIGNIFICAND1:%.*]] = or i16 [[TMP3]], 1024
 ; CHECK-NEXT:    [[EXP_IS_NEGATIVE:%.*]] = icmp ult i16 [[BIASED_EXP]], 15
-; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE]], label %[[FP_TO_I_CLEANUP:.*]], label %[[FP_TO_I_IF_CHECK_SATURATE:.*]]
-; CHECK:       [[FP_TO_I_IF_CHECK_SATURATE]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = add i16 [[BIASED_EXP]], -39
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i16 [[TMP4]], -24
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[FP_TO_I_IF_SATURATE:.*]], label %[[FP_TO_I_IF_CHECK_EXP_SIZE:.*]]
-; CHECK:       [[FP_TO_I_IF_SATURATE]]:
-; CHECK-NEXT:    [[SATURATED:%.*]] = select i1 [[TMP2]], i24 8388607, i24 -8388608
-; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
+; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE]], label %[[FP_TO_I_CLEANUP:.*]], label %[[FP_TO_I_IF_CHECK_EXP_SIZE:.*]]
 ; CHECK:       [[FP_TO_I_IF_CHECK_EXP_SIZE]]:
 ; CHECK-NEXT:    [[EXP_SMALLER_MANTISSA_WIDTH:%.*]] = icmp ult i16 [[BIASED_EXP]], 25
 ; CHECK-NEXT:    br i1 [[EXP_SMALLER_MANTISSA_WIDTH]], label %[[FP_TO_I_IF_EXP_SMALL:.*]], label %[[FP_TO_I_IF_EXP_LARGE:.*]]
@@ -81,7 +103,7 @@ define i24 @fptosi_f16_i24(half %x) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = mul i24 [[TMP11]], [[SIGN]]
 ; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
 ; CHECK:       [[FP_TO_I_CLEANUP]]:
-; CHECK-NEXT:    [[TMP13:%.*]] = phi i24 [ [[SATURATED]], %[[FP_TO_I_IF_SATURATE]] ], [ [[TMP9]], %[[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP12]], %[[FP_TO_I_IF_EXP_LARGE]] ], [ 0, %[[FP_TO_I_ENTRY]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = phi i24 [ [[TMP9]], %[[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP12]], %[[FP_TO_I_IF_EXP_LARGE]] ], [ 0, %[[FP_TO_I_ENTRY]] ]
 ; CHECK-NEXT:    ret i24 [[TMP13]]
 ;
   %res = fptosi half %x to i24
@@ -92,7 +114,8 @@ define i8 @fptosi_f16_i8(half %x) {
 ; CHECK-LABEL: define i8 @fptosi_f16_i8(
 ; CHECK-SAME: half [[X:%.*]]) {
 ; CHECK-NEXT:  [[FP_TO_I_ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast half [[X]] to i16
+; CHECK-NEXT:    [[TMP16:%.*]] = freeze half [[X]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast half [[TMP16]] to i16
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i16 [[TMP0]], -1
 ; CHECK-NEXT:    [[SIGN:%.*]] = select i1 [[TMP1]], i8 1, i8 -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i16 [[TMP0]], 10
@@ -100,14 +123,7 @@ define i8 @fptosi_f16_i8(half %x) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i16 [[TMP0]], 1023
 ; CHECK-NEXT:    [[SIGNIFICAND:%.*]] = or i16 [[TMP3]], 1024
 ; CHECK-NEXT:    [[EXP_IS_NEGATIVE:%.*]] = icmp ult i16 [[BIASED_EXP]], 15
-; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE]], label %[[FP_TO_I_CLEANUP:.*]], label %[[FP_TO_I_IF_CHECK_SATURATE:.*]]
-; CHECK:       [[FP_TO_I_IF_CHECK_SATURATE]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = add i16 [[BIASED_EXP]], -23
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i16 [[TMP4]], -8
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[FP_TO_I_IF_SATURATE:.*]], label %[[FP_TO_I_IF_CHECK_EXP_SIZE:.*]]
-; CHECK:       [[FP_TO_I_IF_SATURATE]]:
-; CHECK-NEXT:    [[SATURATED:%.*]] = select i1 [[TMP1]], i8 127, i8 -128
-; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
+; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE]], label %[[FP_TO_I_CLEANUP:.*]], label %[[FP_TO_I_IF_CHECK_EXP_SIZE:.*]]
 ; CHECK:       [[FP_TO_I_IF_CHECK_EXP_SIZE]]:
 ; CHECK-NEXT:    [[EXP_SMALLER_MANTISSA_WIDTH:%.*]] = icmp ult i16 [[BIASED_EXP]], 25
 ; CHECK-NEXT:    br i1 [[EXP_SMALLER_MANTISSA_WIDTH]], label %[[FP_TO_I_IF_EXP_SMALL:.*]], label %[[FP_TO_I_IF_EXP_LARGE:.*]]
@@ -125,7 +141,7 @@ define i8 @fptosi_f16_i8(half %x) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = mul i8 [[TMP13]], [[SIGN]]
 ; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
 ; CHECK:       [[FP_TO_I_CLEANUP]]:
-; CHECK-NEXT:    [[TMP15:%.*]] = phi i8 [ [[SATURATED]], %[[FP_TO_I_IF_SATURATE]] ], [ [[TMP9]], %[[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP14]], %[[FP_TO_I_IF_EXP_LARGE]] ], [ 0, %[[FP_TO_I_ENTRY]] ]
+; CHECK-NEXT:    [[TMP15:%.*]] = phi i8 [ [[TMP9]], %[[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP14]], %[[FP_TO_I_IF_EXP_LARGE]] ], [ 0, %[[FP_TO_I_ENTRY]] ]
 ; CHECK-NEXT:    ret i8 [[TMP15]]
 ;
   %res = fptosi half %x to i8
@@ -136,37 +152,27 @@ define i16 @fptoui_f16_i16(half %x) {
 ; CHECK-LABEL: define i16 @fptoui_f16_i16(
 ; CHECK-SAME: half [[X:%.*]]) {
 ; CHECK-NEXT:  [[FP_TO_I_ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast half [[X]] to i16
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i16 [[TMP0]], -1
-; CHECK-NEXT:    [[SIGN:%.*]] = select i1 [[TMP1]], i16 1, i16 -1
+; CHECK-NEXT:    [[TMP13:%.*]] = freeze half [[X]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast half [[TMP13]] to i16
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i16 [[TMP0]], 10
 ; CHECK-NEXT:    [[BIASED_EXP:%.*]] = and i16 [[TMP2]], 31
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i16 [[TMP0]], 1023
 ; CHECK-NEXT:    [[SIGNIFICAND:%.*]] = or i16 [[TMP3]], 1024
 ; CHECK-NEXT:    [[EXP_IS_NEGATIVE:%.*]] = icmp ult i16 [[BIASED_EXP]], 15
-; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE]], label %[[FP_TO_I_CLEANUP:.*]], label %[[FP_TO_I_IF_CHECK_SATURATE:.*]]
-; CHECK:       [[FP_TO_I_IF_CHECK_SATURATE]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = add i16 [[BIASED_EXP]], -31
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i16 [[TMP4]], -16
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[FP_TO_I_IF_SATURATE:.*]], label %[[FP_TO_I_IF_CHECK_EXP_SIZE:.*]]
-; CHECK:       [[FP_TO_I_IF_SATURATE]]:
-; CHECK-NEXT:    [[SATURATED:%.*]] = select i1 [[TMP1]], i16 32767, i16 -32768
-; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
+; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE]], label %[[FP_TO_I_CLEANUP:.*]], label %[[FP_TO_I_IF_CHECK_EXP_SIZE:.*]]
 ; CHECK:       [[FP_TO_I_IF_CHECK_EXP_SIZE]]:
 ; CHECK-NEXT:    [[EXP_SMALLER_MANTISSA_WIDTH:%.*]] = icmp ult i16 [[BIASED_EXP]], 25
 ; CHECK-NEXT:    br i1 [[EXP_SMALLER_MANTISSA_WIDTH]], label %[[FP_TO_I_IF_EXP_SMALL:.*]], label %[[FP_TO_I_IF_EXP_LARGE:.*]]
 ; CHECK:       [[FP_TO_I_IF_EXP_SMALL]]:
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i16 25, [[BIASED_EXP]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = lshr i16 [[SIGNIFICAND]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = mul i16 [[TMP7]], [[SIGN]]
 ; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
 ; CHECK:       [[FP_TO_I_IF_EXP_LARGE]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i16 [[BIASED_EXP]], -25
 ; CHECK-NEXT:    [[TMP10:%.*]] = shl i16 [[SIGNIFICAND]], [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = mul i16 [[TMP10]], [[SIGN]]
 ; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
 ; CHECK:       [[FP_TO_I_CLEANUP]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = phi i16 [ [[SATURATED]], %[[FP_TO_I_IF_SATURATE]] ], [ [[TMP8]], %[[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP11]], %[[FP_TO_I_IF_EXP_LARGE]] ], [ 0, %[[FP_TO_I_ENTRY]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi i16 [ [[TMP7]], %[[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP10]], %[[FP_TO_I_IF_EXP_LARGE]] ], [ 0, %[[FP_TO_I_ENTRY]] ]
 ; CHECK-NEXT:    ret i16 [[TMP12]]
 ;
   %res = fptoui half %x to i16
@@ -177,22 +183,14 @@ define i24 @fptoui_f16_i24(half %x) {
 ; CHECK-LABEL: define i24 @fptoui_f16_i24(
 ; CHECK-SAME: half [[X:%.*]]) {
 ; CHECK-NEXT:  [[FP_TO_I_ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast half [[X]] to i16
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i16 [[TMP0]], -1
-; CHECK-NEXT:    [[SIGN:%.*]] = select i1 [[TMP2]], i24 1, i24 -1
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze half [[X]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast half [[TMP1]] to i16
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr i16 [[TMP0]], 10
 ; CHECK-NEXT:    [[BIASED_EXP:%.*]] = and i16 [[TMP5]], 31
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i16 [[TMP0]], 1023
 ; CHECK-NEXT:    [[SIGNIFICAND1:%.*]] = or i16 [[TMP3]], 1024
 ; CHECK-NEXT:    [[EXP_IS_NEGATIVE:%.*]] = icmp ult i16 [[BIASED_EXP]], 15
-; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE]], label %[[FP_TO_I_CLEANUP:.*]], label %[[FP_TO_I_IF_CHECK_SATURATE:.*]]
-; CHECK:       [[FP_TO_I_IF_CHECK_SATURATE]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = add i16 [[BIASED_EXP]], -39
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i16 [[TMP4]], -24
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[FP_TO_I_IF_SATURATE:.*]], label %[[FP_TO_I_IF_CHECK_EXP_SIZE:.*]]
-; CHECK:       [[FP_TO_I_IF_SATURATE]]:
-; CHECK-NEXT:    [[SATURATED:%.*]] = select i1 [[TMP2]], i24 8388607, i24 -8388608
-; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
+; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE]], label %[[FP_TO_I_CLEANUP:.*]], label %[[FP_TO_I_IF_CHECK_EXP_SIZE:.*]]
 ; CHECK:       [[FP_TO_I_IF_CHECK_EXP_SIZE]]:
 ; CHECK-NEXT:    [[EXP_SMALLER_MANTISSA_WIDTH:%.*]] = icmp ult i16 [[BIASED_EXP]], 25
 ; CHECK-NEXT:    br i1 [[EXP_SMALLER_MANTISSA_WIDTH]], label %[[FP_TO_I_IF_EXP_SMALL:.*]], label %[[FP_TO_I_IF_EXP_LARGE:.*]]
@@ -200,17 +198,15 @@ define i24 @fptoui_f16_i24(half %x) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = sub i16 25, [[BIASED_EXP]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = lshr i16 [[SIGNIFICAND1]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext i16 [[TMP7]] to i24
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i24 [[TMP8]], [[SIGN]]
 ; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
 ; CHECK:       [[FP_TO_I_IF_EXP_LARGE]]:
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i16 [[BIASED_EXP]], -25
 ; CHECK-NEXT:    [[SIGNIFICAND:%.*]] = zext i16 [[SIGNIFICAND1]] to i24
 ; CHECK-NEXT:    [[TMP10:%.*]] = zext i16 [[TMP15]] to i24
 ; CHECK-NEXT:    [[TMP11:%.*]] = shl i24 [[SIGNIFICAND]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = mul i24 [[TMP11]], [[SIGN]]
 ; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
 ; CHECK:       [[FP_TO_I_CLEANUP]]:
-; CHECK-NEXT:    [[TMP13:%.*]] = phi i24 [ [[SATURATED]], %[[FP_TO_I_IF_SATURATE]] ], [ [[TMP9]], %[[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP12]], %[[FP_TO_I_IF_EXP_LARGE]] ], [ 0, %[[FP_TO_I_ENTRY]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = phi i24 [ [[TMP8]], %[[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP11]], %[[FP_TO_I_IF_EXP_LARGE]] ], [ 0, %[[FP_TO_I_ENTRY]] ]
 ; CHECK-NEXT:    ret i24 [[TMP13]]
 ;
   %res = fptoui half %x to i24
@@ -221,22 +217,14 @@ define i8 @fptoui_f16_i8(half %x) {
 ; CHECK-LABEL: define i8 @fptoui_f16_i8(
 ; CHECK-SAME: half [[X:%.*]]) {
 ; CHECK-NEXT:  [[FP_TO_I_ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast half [[X]] to i16
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i16 [[TMP0]], -1
-; CHECK-NEXT:    [[SIGN:%.*]] = select i1 [[TMP1]], i8 1, i8 -1
+; CHECK-NEXT:    [[TMP16:%.*]] = freeze half [[X]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast half [[TMP16]] to i16
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i16 [[TMP0]], 10
 ; CHECK-NEXT:    [[BIASED_EXP:%.*]] = and i16 [[TMP2]], 31
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i16 [[TMP0]], 1023
 ; CHECK-NEXT:    [[SIGNIFICAND:%.*]] = or i16 [[TMP3]], 1024
 ; CHECK-NEXT:    [[EXP_IS_NEGATIVE:%.*]] = icmp ult i16 [[BIASED_EXP]], 15
-; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE]], label %[[FP_TO_I_CLEANUP:.*]], label %[[FP_TO_I_IF_CHECK_SATURATE:.*]]
-; CHECK:       [[FP_TO_I_IF_CHECK_SATURATE]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = add i16 [[BIASED_EXP]], -23
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i16 [[TMP4]], -8
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[FP_TO_I_IF_SATURATE:.*]], label %[[FP_TO_I_IF_CHECK_EXP_SIZE:.*]]
-; CHECK:       [[FP_TO_I_IF_SATURATE]]:
-; CHECK-NEXT:    [[SATURATED:%.*]] = select i1 [[TMP1]], i8 127, i8 -128
-; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
+; CHECK-NEXT:    br i1 [[EXP_IS_NEGATIVE]], label %[[FP_TO_I_CLEANUP:.*]], label %[[FP_TO_I_IF_CHECK_EXP_SIZE:.*]]
 ; CHECK:       [[FP_TO_I_IF_CHECK_EXP_SIZE]]:
 ; CHECK-NEXT:    [[EXP_SMALLER_MANTISSA_WIDTH:%.*]] = icmp ult i16 [[BIASED_EXP]], 25
 ; CHECK-NEXT:    br i1 [[EXP_SMALLER_MANTISSA_WIDTH]], label %[[FP_TO_I_IF_EXP_SMALL:.*]], label %[[FP_TO_I_IF_EXP_LARGE:.*]]
@@ -244,19 +232,106 @@ define i8 @fptoui_f16_i8(half %x) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i16 25, [[BIASED_EXP]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = lshr i16 [[SIGNIFICAND]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc i16 [[TMP7]] to i8
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i8 [[TMP8]], [[SIGN]]
 ; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
 ; CHECK:       [[FP_TO_I_IF_EXP_LARGE]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i16 [[BIASED_EXP]], -25
 ; CHECK-NEXT:    [[TMP11:%.*]] = trunc i16 [[SIGNIFICAND]] to i8
 ; CHECK-NEXT:    [[TMP12:%.*]] = trunc i16 [[TMP10]] to i8
 ; CHECK-NEXT:    [[TMP13:%.*]] = shl i8 [[TMP11]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = mul i8 [[TMP13]], [[SIGN]]
 ; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
 ; CHECK:       [[FP_TO_I_CLEANUP]]:
-; CHECK-NEXT:    [[TMP15:%.*]] = phi i8 [ [[SATURATED]], %[[FP_TO_I_IF_SATURATE]] ], [ [[TMP9]], %[[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP14]], %[[FP_TO_I_IF_EXP_LARGE]] ], [ 0, %[[FP_TO_I_ENTRY]] ]
+; CHECK-NEXT:    [[TMP15:%.*]] = phi i8 [ [[TMP8]], %[[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP13]], %[[FP_TO_I_IF_EXP_LARGE]] ], [ 0, %[[FP_TO_I_ENTRY]] ]
 ; CHECK-NEXT:    ret i8 [[TMP15]]
 ;
   %res = fptoui half %x to i8
+  ret i8 %res
+}
+
+define i8 @fptosi_sat_f16_i8(half %x) {
+; CHECK-LABEL: define i8 @fptosi_sat_f16_i8(
+; CHECK-SAME: half [[X:%.*]]) {
+; CHECK-NEXT:  [[FP_TO_I_ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze half [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast half [[TMP0]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i16 [[TMP1]], -1
+; CHECK-NEXT:    [[SIGN:%.*]] = select i1 [[TMP2]], i8 1, i8 -1
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i16 [[TMP1]], 10
+; CHECK-NEXT:    [[BIASED_EXP:%.*]] = and i16 [[TMP3]], 31
+; CHECK-NEXT:    [[TMP4:%.*]] = and i16 [[TMP1]], 1023
+; CHECK-NEXT:    [[SIGNIFICAND:%.*]] = or i16 [[TMP4]], 1024
+; CHECK-NEXT:    [[EXP_IS_NEGATIVE:%.*]] = icmp ult i16 [[BIASED_EXP]], 15
+; CHECK-NEXT:    [[IS_NAN:%.*]] = fcmp uno half [[TMP0]], [[TMP0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or i1 [[EXP_IS_NEGATIVE]], [[IS_NAN]]
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[FP_TO_I_CLEANUP:.*]], label %[[FP_TO_I_IF_CHECK_SATURATE:.*]]
+; CHECK:       [[FP_TO_I_IF_CHECK_SATURATE]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp uge i16 [[BIASED_EXP]], 22
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[FP_TO_I_IF_SATURATE:.*]], label %[[FP_TO_I_IF_CHECK_EXP_SIZE:.*]]
+; CHECK:       [[FP_TO_I_IF_SATURATE]]:
+; CHECK-NEXT:    [[SATURATED:%.*]] = select i1 [[TMP2]], i8 127, i8 -128
+; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
+; CHECK:       [[FP_TO_I_IF_CHECK_EXP_SIZE]]:
+; CHECK-NEXT:    [[EXP_SMALLER_MANTISSA_WIDTH:%.*]] = icmp ult i16 [[BIASED_EXP]], 25
+; CHECK-NEXT:    br i1 [[EXP_SMALLER_MANTISSA_WIDTH]], label %[[FP_TO_I_IF_EXP_SMALL:.*]], label %[[FP_TO_I_IF_EXP_LARGE:.*]]
+; CHECK:       [[FP_TO_I_IF_EXP_SMALL]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i16 25, [[BIASED_EXP]]
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i16 [[SIGNIFICAND]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc i16 [[TMP9]] to i8
+; CHECK-NEXT:    [[TMP11:%.*]] = mul i8 [[TMP10]], [[SIGN]]
+; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
+; CHECK:       [[FP_TO_I_IF_EXP_LARGE]]:
+; CHECK-NEXT:    [[TMP12:%.*]] = add i16 [[BIASED_EXP]], -25
+; CHECK-NEXT:    [[TMP13:%.*]] = trunc i16 [[SIGNIFICAND]] to i8
+; CHECK-NEXT:    [[TMP14:%.*]] = trunc i16 [[TMP12]] to i8
+; CHECK-NEXT:    [[TMP15:%.*]] = shl i8 [[TMP13]], [[TMP14]]
+; CHECK-NEXT:    [[TMP16:%.*]] = mul i8 [[TMP15]], [[SIGN]]
+; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
+; CHECK:       [[FP_TO_I_CLEANUP]]:
+; CHECK-NEXT:    [[TMP17:%.*]] = phi i8 [ [[SATURATED]], %[[FP_TO_I_IF_SATURATE]] ], [ [[TMP11]], %[[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP16]], %[[FP_TO_I_IF_EXP_LARGE]] ], [ 0, %[[FP_TO_I_ENTRY]] ]
+; CHECK-NEXT:    ret i8 [[TMP17]]
+;
+  %res = call i8 @llvm.fptosi.sat(half %x)
+  ret i8 %res
+}
+
+define i8 @fptoui_sat_f16_i8(half %x) {
+; CHECK-LABEL: define i8 @fptoui_sat_f16_i8(
+; CHECK-SAME: half [[X:%.*]]) {
+; CHECK-NEXT:  [[FP_TO_I_ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze half [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast half [[TMP0]] to i16
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i16 [[TMP1]], 10
+; CHECK-NEXT:    [[BIASED_EXP:%.*]] = and i16 [[TMP3]], 31
+; CHECK-NEXT:    [[TMP4:%.*]] = and i16 [[TMP1]], 1023
+; CHECK-NEXT:    [[SIGNIFICAND:%.*]] = or i16 [[TMP4]], 1024
+; CHECK-NEXT:    [[EXP_IS_NEGATIVE:%.*]] = icmp ult i16 [[BIASED_EXP]], 15
+; CHECK-NEXT:    [[IS_NAN:%.*]] = fcmp uno half [[TMP0]], [[TMP0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or i1 [[EXP_IS_NEGATIVE]], [[IS_NAN]]
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp slt i16 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP16:%.*]] = or i1 [[TMP5]], [[TMP15]]
+; CHECK-NEXT:    br i1 [[TMP16]], label %[[FP_TO_I_CLEANUP:.*]], label %[[FP_TO_I_IF_CHECK_SATURATE:.*]]
+; CHECK:       [[FP_TO_I_IF_CHECK_SATURATE]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp uge i16 [[BIASED_EXP]], 23
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[FP_TO_I_IF_SATURATE:.*]], label %[[FP_TO_I_IF_CHECK_EXP_SIZE:.*]]
+; CHECK:       [[FP_TO_I_IF_SATURATE]]:
+; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
+; CHECK:       [[FP_TO_I_IF_CHECK_EXP_SIZE]]:
+; CHECK-NEXT:    [[EXP_SMALLER_MANTISSA_WIDTH:%.*]] = icmp ult i16 [[BIASED_EXP]], 25
+; CHECK-NEXT:    br i1 [[EXP_SMALLER_MANTISSA_WIDTH]], label %[[FP_TO_I_IF_EXP_SMALL:.*]], label %[[FP_TO_I_IF_EXP_LARGE:.*]]
+; CHECK:       [[FP_TO_I_IF_EXP_SMALL]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i16 25, [[BIASED_EXP]]
+; CHECK-NEXT:    [[TMP8:%.*]] = lshr i16 [[SIGNIFICAND]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i16 [[TMP8]] to i8
+; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
+; CHECK:       [[FP_TO_I_IF_EXP_LARGE]]:
+; CHECK-NEXT:    [[TMP10:%.*]] = add i16 [[BIASED_EXP]], -25
+; CHECK-NEXT:    [[TMP11:%.*]] = trunc i16 [[SIGNIFICAND]] to i8
+; CHECK-NEXT:    [[TMP12:%.*]] = trunc i16 [[TMP10]] to i8
+; CHECK-NEXT:    [[TMP13:%.*]] = shl i8 [[TMP11]], [[TMP12]]
+; CHECK-NEXT:    br label %[[FP_TO_I_CLEANUP]]
+; CHECK:       [[FP_TO_I_CLEANUP]]:
+; CHECK-NEXT:    [[TMP14:%.*]] = phi i8 [ -1, %[[FP_TO_I_IF_SATURATE]] ], [ [[TMP9]], %[[FP_TO_I_IF_EXP_SMALL]] ], [ [[TMP13]], %[[FP_TO_I_IF_EXP_LARGE]] ], [ 0, %[[FP_TO_I_ENTRY]] ]
+; CHECK-NEXT:    ret i8 [[TMP14]]
+;
+  %res = call i8 @llvm.fptoui.sat(half %x)
   ret i8 %res
 }

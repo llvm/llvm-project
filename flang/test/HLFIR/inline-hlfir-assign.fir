@@ -407,3 +407,40 @@ func.func @_QMtest_global_shaped_targetPtest() {
 }
 fir.global @_QMtest_global_shaped_targetEa1 target : !fir.array<100xf32>
 fir.global @_QMtest_global_shaped_targetEb1 target : !fir.array<100xf32>
+
+// Test disjoint array sections: a(n+1, :) = a(n, :) for a 2D array
+// The first index differs by 1 (n vs n+1), so ArraySectionAnalyzer detects them as disjoint.
+func.func @_QPtest_disjoint(%arg0: !fir.ref<!fir.array<10x10xf32>>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %0 = fir.shape %c10, %c10 : (index, index) -> !fir.shape<2>
+  %1:2 = hlfir.declare %arg0(%0) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtestEa"} : (!fir.ref<!fir.array<10x10xf32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>)
+  %2 = fir.alloca index
+  %n = fir.load %2 : !fir.ref<index>
+  %n_plus_1 = arith.addi %n, %c1 : index
+  %3 = fir.shape %c10 : (index) -> !fir.shape<1>
+  %4 = hlfir.designate %1#0 (%n, %c1:%c10:%c1) shape %3 : (!fir.ref<!fir.array<10x10xf32>>, index, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+  %5 = hlfir.designate %1#0 (%n_plus_1, %c1:%c10:%c1) shape %3 : (!fir.ref<!fir.array<10x10xf32>>, index, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+  hlfir.assign %4 to %5 : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>
+  return
+}
+// CHECK-LABEL:   func.func @_QPtest_disjoint(
+// CHECK-SAME:                                %[[VAL_0:.*]]: !fir.ref<!fir.array<10x10xf32>>) {
+// CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_2:.*]] = arith.constant 10 : index
+// CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]], %[[VAL_2]] : (index, index) -> !fir.shape<2>
+// CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtestEa"} : (!fir.ref<!fir.array<10x10xf32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>)
+// CHECK:           %[[VAL_5:.*]] = fir.alloca index
+// CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_5]] : !fir.ref<index>
+// CHECK:           %[[VAL_7:.*]] = arith.addi %[[VAL_6]], %[[VAL_1]] : index
+// CHECK:           %[[VAL_8:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
+// CHECK:           %[[VAL_9:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_6]], %[[VAL_1]]:%[[VAL_2]]:%[[VAL_1]]) shape %[[VAL_8]] : (!fir.ref<!fir.array<10x10xf32>>, index, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+// CHECK:           %[[VAL_10:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_7]], %[[VAL_1]]:%[[VAL_2]]:%[[VAL_1]]) shape %[[VAL_8]] : (!fir.ref<!fir.array<10x10xf32>>, index, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+// CHECK:           fir.do_loop %[[VAL_11:.*]] = %[[VAL_1]] to %[[VAL_2]] step %[[VAL_1]] unordered {
+// CHECK:             %[[VAL_12:.*]] = hlfir.designate %[[VAL_9]] (%[[VAL_11]])  : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+// CHECK:             %[[VAL_13:.*]] = fir.load %[[VAL_12]] : !fir.ref<f32>
+// CHECK:             %[[VAL_14:.*]] = hlfir.designate %[[VAL_10]] (%[[VAL_11]])  : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+// CHECK:             hlfir.assign %[[VAL_13]] to %[[VAL_14]] : f32, !fir.ref<f32>
+// CHECK:           }
+// CHECK:           return
+// CHECK:         }

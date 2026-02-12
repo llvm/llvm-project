@@ -394,16 +394,42 @@ bool ClauseProcessor::processInitializer(
 
       for (const Object &object :
            std::get<StylizedInstance::Variables>(inst.t)) {
-        mlir::Value addr = builder.createTemporary(loc, ompOrig.getType());
-        fir::StoreOp::create(builder, loc, ompOrig, addr);
+        mlir::Value addr;
+        mlir::Type ompOrigType = ompOrig.getType();
+        // Check for unsupported dynamic-length character reductions
+        mlir::Type unwrappedType = fir::unwrapRefType(ompOrigType);
+        if (mlir::isa<fir::BoxCharType>(unwrappedType)) {
+          TODO(loc, "OpenMP reduction allocation for dynamic length character");
+        }
+        if (auto charTy = mlir::dyn_cast<fir::CharacterType>(unwrappedType)) {
+          if (!charTy.hasConstantLen()) {
+            TODO(loc,
+                 "OpenMP reduction allocation for dynamic length character");
+          }
+        }
+        // If ompOrig is already a reference, we can use it directly
+        if (fir::isa_ref_type(ompOrigType)) {
+          addr = ompOrig;
+        } else {
+          addr = builder.createTemporary(loc, ompOrigType);
+          fir::StoreOp::create(builder, loc, ompOrig, addr);
+        }
         fir::FortranVariableFlagsEnum extraFlags = {};
         fir::FortranVariableFlagsAttr attributes =
             Fortran::lower::translateSymbolAttributes(
                 builder.getContext(), *object.sym(), extraFlags);
         std::string name = object.sym()->name().ToString();
-        auto declareOp =
-            hlfir::DeclareOp::create(builder, loc, addr, name, nullptr, {},
-                                     nullptr, nullptr, 0, attributes);
+        // Get length parameters for types that need them (e.g., characters).
+        // Note: DeclareOp requires exactly one type parameter for non-boxed
+        // characters, unlike EmboxOp which doesn't allow them for constant-len.
+        llvm::SmallVector<mlir::Value> typeParams;
+        if (hlfir::isFortranEntity(addr)) {
+          hlfir::genLengthParameters(loc, builder, hlfir::Entity{addr},
+                                     typeParams);
+        }
+        auto declareOp = hlfir::DeclareOp::create(builder, loc, addr, name,
+                                                  nullptr, typeParams, nullptr,
+                                                  nullptr, 0, attributes);
         if (name == "omp_priv")
           ompPrivVar = declareOp.getResult(0);
         symMap.addVariableDefinition(*object.sym(), declareOp);
@@ -708,6 +734,23 @@ static llvm::StringMap<bool> getTargetFeatures(mlir::ModuleOp module) {
     }
   }
   return featuresMap;
+}
+
+bool ClauseProcessor::processAffinity(
+    mlir::omp::AffinityClauseOps &result) const {
+  return findRepeatableClause<omp::clause::Affinity>(
+      [&](const omp::clause::Affinity &clause, const parser::CharBlock &) {
+        if (std::get<std::optional<omp::clause::Iterator>>(clause.t)) {
+          TODO(converter.getCurrentLocation(),
+               "Support for iterator modifiers is not implemented yet");
+        }
+
+        const auto &objects = std::get<omp::ObjectList>(clause.t);
+        if (!objects.empty())
+          genObjectList(objects, converter, result.affinityVars);
+
+        return true;
+      });
 }
 
 static void
