@@ -182,26 +182,24 @@ std::optional<int> RegisterContextFreeBSDKernel_arm64::GetOsreldate() {
   SymbolContextList sc_list;
   target.GetImages().FindSymbolsWithNameAndType(ConstString("osreldate"),
                                                 lldb::eSymbolTypeData, sc_list);
-
   if (sc_list.GetSize() == 0)
     return std::nullopt;
 
   SymbolContext sc;
   sc_list.GetContextAtIndex(0, sc);
-
   if (!sc.symbol)
     return std::nullopt;
 
   lldb::addr_t addr = sc.symbol->GetLoadAddress(&target);
   if (addr == LLDB_INVALID_ADDRESS)
     return std::nullopt;
+
   Status error;
   int64_t osreldate = 0;
   size_t bytes_read =
       process_sp->ReadMemory(addr, &osreldate, sizeof(osreldate), error);
-  if (bytes_read == sizeof(osreldate) && error.Success()) {
+  if (bytes_read == sizeof(osreldate) && error.Success())
     return osreldate;
-  }
 
   return std::nullopt;
 }
