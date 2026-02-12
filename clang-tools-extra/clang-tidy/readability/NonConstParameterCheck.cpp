@@ -108,7 +108,6 @@ void NonConstParameterCheck::check(const MatchFinder::MatchResult &Result) {
     else if ((T->isPointerType() && !T->getPointeeType().isConstQualified()) ||
              T->isArrayType() || T->isRecordType())
       markCanNotBeConst(VD->getInit(), true);
-
     else if (T->isLValueReferenceType() &&
              !T->getPointeeType().isConstQualified())
       markCanNotBeConst(VD->getInit(), false);
@@ -220,12 +219,11 @@ void NonConstParameterCheck::markCanNotBeConst(const Expr *E,
   } else if (const auto *CLE = dyn_cast<CompoundLiteralExpr>(E)) {
     markCanNotBeConst(CLE->getInitializer(), true);
   } else if (const auto *Constr = dyn_cast<CXXConstructExpr>(E)) {
-    for (const auto *Arg : Constr->arguments()) {
+    for (const auto *Arg : Constr->arguments())
       if (const auto *M = dyn_cast<MaterializeTemporaryExpr>(Arg))
         markCanNotBeConst(cast<Expr>(M->getSubExpr()), CanNotBeConst);
       else
         markCanNotBeConst(Arg, CanNotBeConst);
-    }
   } else if (const auto *CE = dyn_cast<CXXUnresolvedConstructExpr>(E)) {
     for (const auto *Arg : CE->arguments())
       markCanNotBeConst(Arg, CanNotBeConst);

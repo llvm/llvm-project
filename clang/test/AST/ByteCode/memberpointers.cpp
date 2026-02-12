@@ -267,3 +267,12 @@ namespace CastMemberPtrPtrFailed{
   static_assert(S().g(), ""); // both-error {{constant expression}} \
                               // both-note {{in call to 'S().g()'}}
 }
+
+namespace DiscardedAddrOfOperator {
+  class Foo {
+  public:
+    void bar();
+  };
+
+  void baz() { &Foo::bar, Foo(); } // both-warning {{left operand of comma operator has no effect}}
+}

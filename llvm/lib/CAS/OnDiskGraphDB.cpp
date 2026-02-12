@@ -1438,6 +1438,7 @@ StandaloneDataInMemory::getInternalFileBackedObjectData(
         getContent().getData(), OnDiskGraphDB::FileBackedData::FileInfoTy{
                                     std::string(Path), IsFileNulTerminated}};
   }
+  llvm_unreachable("Unknown StorageKind enum");
 }
 
 static Expected<MappedTempFile>

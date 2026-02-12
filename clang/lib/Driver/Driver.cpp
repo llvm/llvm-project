@@ -342,6 +342,8 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
     // Options that cause the output of C++20 compiled module interfaces or
     // header units have the same effect.
   } else if ((PhaseArg = DAL.getLastArg(options::OPT__precompile)) ||
+             (PhaseArg =
+                  DAL.getLastArg(options::OPT__precompile_reduced_bmi)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_extract_api)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_fmodule_header,
                                         options::OPT_fmodule_header_EQ))) {
@@ -2882,8 +2884,8 @@ void Driver::BuildUniversalActions(Compilation &C, const ToolChain &TC,
   }
 }
 
-bool Driver::DiagnoseInputExistence(const DerivedArgList &Args, StringRef Value,
-                                    types::ID Ty, bool TypoCorrect) const {
+bool Driver::DiagnoseInputExistence(StringRef Value, types::ID Ty,
+                                    bool TypoCorrect) const {
   if (!getCheckInputsExist())
     return true;
 
@@ -3122,12 +3124,12 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
           Args.hasArgNoClaim(options::OPT_hipstdpar))
         Ty = types::TY_HIP;
 
-      if (DiagnoseInputExistence(Args, Value, Ty, /*TypoCorrect=*/true))
+      if (DiagnoseInputExistence(Value, Ty, /*TypoCorrect=*/true))
         Inputs.push_back(std::make_pair(Ty, A));
 
     } else if (A->getOption().matches(options::OPT__SLASH_Tc)) {
       StringRef Value = A->getValue();
-      if (DiagnoseInputExistence(Args, Value, types::TY_C,
+      if (DiagnoseInputExistence(Value, types::TY_C,
                                  /*TypoCorrect=*/false)) {
         Arg *InputArg = MakeInputArg(Args, Opts, A->getValue());
         Inputs.push_back(std::make_pair(types::TY_C, InputArg));
@@ -3135,7 +3137,7 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
       A->claim();
     } else if (A->getOption().matches(options::OPT__SLASH_Tp)) {
       StringRef Value = A->getValue();
-      if (DiagnoseInputExistence(Args, Value, types::TY_CXX,
+      if (DiagnoseInputExistence(Value, types::TY_CXX,
                                  /*TypoCorrect=*/false)) {
         Arg *InputArg = MakeInputArg(Args, Opts, A->getValue());
         Inputs.push_back(std::make_pair(types::TY_CXX, InputArg));
@@ -5125,13 +5127,16 @@ Action *Driver::ConstructPhaseAction(
       return C.MakeAction<ExtractAPIJobAction>(Input, types::TY_API_INFO);
 
     // With 'fmodules-reduced-bmi', we don't want to run the
-    // precompile phase unless the user specified '--precompile'. In the case
-    // the '--precompile' flag is enabled, we will try to emit the reduced BMI
-    // as a by product in GenerateModuleInterfaceAction.
+    // precompile phase unless the user specified '--precompile' or
+    // '--precompile-reduced-bmi'. If '--precompile' is specified, we will try
+    // to emit the reduced BMI as a by product in
+    // GenerateModuleInterfaceAction. If '--precompile-reduced-bmi' is
+    // specified, we will generate the reduced BMI directly.
     if (!Args.hasArg(options::OPT_fno_modules_reduced_bmi) &&
         (Input->getType() == driver::types::TY_CXXModule ||
          Input->getType() == driver::types::TY_PP_CXXModule) &&
-        !Args.getLastArg(options::OPT__precompile))
+        !Args.getLastArg(options::OPT__precompile) &&
+        !Args.getLastArg(options::OPT__precompile_reduced_bmi))
       return Input;
 
     types::ID OutputTy = getPrecompiledType(Input->getType());

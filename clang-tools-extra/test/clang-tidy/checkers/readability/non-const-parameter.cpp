@@ -369,6 +369,6 @@ void gh176623() {
 void testGenericLambdaIssue177354() {
   // CHECK-MESSAGES-NOT: warning: pointer parameter 'p' can be pointer to const
   auto genericLambda = []<typename T>(int *p) {
-    T x(*p);  // Template-dependent constructor - CXXUnresolvedConstructExpr
+    T x(*p);
   };
 }

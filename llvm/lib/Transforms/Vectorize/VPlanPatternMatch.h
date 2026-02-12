@@ -294,15 +294,25 @@ struct Recipe_match {
     if ((!matchRecipeAndOpcode<RecipeTys>(R) && ...))
       return false;
 
-    if (R->getNumOperands() != std::tuple_size_v<Ops_t>) {
+    if (R->getNumOperands() < std::tuple_size<Ops_t>::value) {
       [[maybe_unused]] auto *RepR = dyn_cast<VPReplicateRecipe>(R);
       assert(((isa<VPInstruction>(R) &&
-               VPInstruction::getNumOperandsForOpcode(Opcode) == -1u) ||
+               cast<VPInstruction>(R)->getNumOperandsForOpcode() == -1u) ||
               (RepR && std::tuple_size_v<Ops_t> ==
                            RepR->getNumOperands() - RepR->isPredicated())) &&
              "non-variadic recipe with matched opcode does not have the "
              "expected number of operands");
       return false;
+    }
+
+    // If the recipe has more operands than expected, we only support matching
+    // masked VPInstructions where the number of operands of the matcher is the
+    // same as the number of operands excluding mask.
+    if (R->getNumOperands() > std::tuple_size<Ops_t>::value) {
+      auto *VPI = dyn_cast<VPInstruction>(R);
+      if (!VPI || !VPI->isMasked() ||
+          VPI->getNumOperandsWithoutMask() != std::tuple_size<Ops_t>::value)
+        return false;
     }
 
     auto IdxSeq = std::make_index_sequence<std::tuple_size<Ops_t>::value>();
@@ -355,9 +365,20 @@ using VPInstruction_match = Recipe_match<std::tuple<OpTys...>, Opcode,
                                          /*Commutative*/ false, VPInstruction>;
 
 template <unsigned Opcode, typename... OpTys>
+using VPInstruction_commutative_match =
+    Recipe_match<std::tuple<OpTys...>, Opcode,
+                 /*Commutative*/ true, VPInstruction>;
+
+template <unsigned Opcode, typename... OpTys>
 inline VPInstruction_match<Opcode, OpTys...>
 m_VPInstruction(const OpTys &...Ops) {
   return VPInstruction_match<Opcode, OpTys...>(Ops...);
+}
+
+template <unsigned Opcode, typename Op0_t, typename Op1_t>
+inline VPInstruction_commutative_match<Opcode, Op0_t, Op1_t>
+m_c_VPInstruction(const Op0_t &Op0, const Op1_t &Op1) {
+  return VPInstruction_commutative_match<Opcode, Op0_t, Op1_t>(Op0, Op1);
 }
 
 /// BuildVector is matches only its opcode, w/o matching its operands as the
@@ -789,6 +810,11 @@ m_Not(const Op0_t &Op0) {
                      m_c_Binary<Instruction::Xor>(m_AllOnes(), Op0));
 }
 
+template <typename Op0_t, typename Op1_t, typename Op2_t>
+inline auto m_c_Select(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
+  return m_CombineOr(m_Select(Op0, Op1, Op2), m_Select(m_Not(Op0), Op2, Op1));
+}
+
 template <typename Op0_t, typename Op1_t>
 inline match_combine_or<
     VPInstruction_match<VPInstruction::LogicalAnd, Op0_t, Op1_t>,
@@ -800,9 +826,21 @@ m_LogicalAnd(const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t, typename Op1_t>
+inline auto m_c_LogicalAnd(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_CombineOr(
+      m_c_VPInstruction<VPInstruction::LogicalAnd, Op0_t, Op1_t>(Op0, Op1),
+      m_c_Select(Op0, Op1, m_False()));
+}
+
+template <typename Op0_t, typename Op1_t>
 inline AllRecipe_match<Instruction::Select, Op0_t, specific_intval<1>, Op1_t>
 m_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
   return m_Select(Op0, m_True(), Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline auto m_c_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_c_Select(Op0, m_True(), Op1);
 }
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>

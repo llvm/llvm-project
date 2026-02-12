@@ -2019,6 +2019,7 @@ GetDebuggerPropertyForPlugins(Debugger &debugger, llvm::StringRef plugin_type_na
     if (!plugin_properties_sp && can_create) {
       plugin_properties_sp =
           std::make_shared<OptionValueProperties>(g_property_name);
+      plugin_properties_sp->SetExpectedPath("plugin");
       parent_properties_sp->AppendProperty(g_property_name,
                                            "Settings specify to plugins.", true,
                                            plugin_properties_sp);
@@ -2030,6 +2031,8 @@ GetDebuggerPropertyForPlugins(Debugger &debugger, llvm::StringRef plugin_type_na
       if (!plugin_type_properties_sp && can_create) {
         plugin_type_properties_sp =
             std::make_shared<OptionValueProperties>(plugin_type_name);
+        plugin_type_properties_sp->SetExpectedPath(
+            ("plugin." + plugin_type_name).str());
         plugin_properties_sp->AppendProperty(plugin_type_name, plugin_type_desc,
                                              true, plugin_type_properties_sp);
       }
@@ -2054,6 +2057,7 @@ static lldb::OptionValuePropertiesSP GetDebuggerPropertyForPluginsOldStyle(
     if (!plugin_properties_sp && can_create) {
       plugin_properties_sp =
           std::make_shared<OptionValueProperties>(plugin_type_name);
+      plugin_properties_sp->SetExpectedPath(plugin_type_name.str());
       parent_properties_sp->AppendProperty(plugin_type_name, plugin_type_desc,
                                            true, plugin_properties_sp);
     }
@@ -2064,6 +2068,8 @@ static lldb::OptionValuePropertiesSP GetDebuggerPropertyForPluginsOldStyle(
       if (!plugin_type_properties_sp && can_create) {
         plugin_type_properties_sp =
             std::make_shared<OptionValueProperties>(g_property_name);
+        plugin_type_properties_sp->SetExpectedPath(
+            (plugin_type_name + ".plugin").str());
         plugin_properties_sp->AppendProperty(g_property_name,
                                              "Settings specific to plugins",
                                              true, plugin_type_properties_sp);

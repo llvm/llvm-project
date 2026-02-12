@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <functional>
@@ -26,9 +27,10 @@
 using namespace clang;
 using namespace ssaf;
 
-MockSerializationFormat::MockSerializationFormat(
-    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
-    : SerializationFormat(FS) {
+char MockSerializationFormat::ID = 0;
+
+MockSerializationFormat::MockSerializationFormat()
+    : llvm::RTTIExtends<MockSerializationFormat, SerializationFormat>() {
   for (const auto &FormatInfoEntry : llvm::Registry<FormatInfo>::entries()) {
     std::unique_ptr<FormatInfo> Info = FormatInfoEntry.instantiate();
     bool Inserted = FormatInfos.try_emplace(Info->ForSummary, *Info).second;
@@ -44,7 +46,7 @@ TUSummary MockSerializationFormat::readTUSummary(llvm::StringRef Path) {
   BuildNamespace NS(BuildNamespaceKind::CompilationUnit, "Mock.cpp");
   TUSummary Summary(NS);
 
-  auto ManifestFile = FS->getBufferForFile(Path + "/analyses.txt");
+  auto ManifestFile = llvm::MemoryBuffer::getFile(Path + "/analyses.txt");
   assert(ManifestFile); // TODO Handle error.
   llvm::StringRef ManifestFileContent = (*ManifestFile)->getBuffer();
 
@@ -54,7 +56,8 @@ TUSummary MockSerializationFormat::readTUSummary(llvm::StringRef Path) {
 
   for (llvm::StringRef Analysis : Analyses) {
     SummaryName Name(Analysis.str());
-    auto InputFile = FS->getBufferForFile(Path + "/" + Name.str() + ".special");
+    auto InputFile =
+        llvm::MemoryBuffer::getFile(Path + "/" + Name.str() + ".special");
     assert(InputFile);
     auto InfoIt = FormatInfos.find(Name);
     if (InfoIt == FormatInfos.end()) {
@@ -65,7 +68,7 @@ TUSummary MockSerializationFormat::readTUSummary(llvm::StringRef Path) {
     assert(InfoEntry.ForSummary == Name);
 
     SpecialFileRepresentation Repr{(*InputFile)->getBuffer().str()};
-    auto &Table = getIdTableForDeserialization(Summary);
+    auto &Table = getIdTable(Summary);
 
     std::unique_ptr<EntitySummary> Result = InfoEntry.Deserialize(Repr, Table);
     if (!Result) // TODO: Handle error.

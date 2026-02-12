@@ -57,9 +57,9 @@ define amdgpu_kernel void @test_fmax_legacy_uge_f32_fast(ptr addrspace(1) %out, 
 ; GCN-DAG: v_add_f32_e32 [[ADD_A:v[0-9]+]], 1.0, [[A]]
 ; GCN-DAG: v_add_f32_e32 [[ADD_B:v[0-9]+]], 2.0, [[B]]
 
-; SI: v_max_legacy_f32_e32 {{v[0-9]+}}, [[ADD_B]], [[ADD_A]]
+; SI: v_max_legacy_f32_e32 {{v[0-9]+}}, [[ADD_A]], [[ADD_B]]
 
-; VI: v_cmp_nlt_f32_e32 vcc, [[ADD_A]], [[ADD_B]]
+; VI: v_cmp_ge_f32_e32 vcc, [[ADD_A]], [[ADD_B]]
 ; VI: v_cndmask_b32_e32 v{{[0-9]+}}, [[ADD_B]], [[ADD_A]]
 
 

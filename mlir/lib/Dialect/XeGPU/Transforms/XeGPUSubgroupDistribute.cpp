@@ -1757,8 +1757,11 @@ struct VectorInsertStridedSliceDistribution
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    OpOperand *operand =
-        getWarpResult(warpOp, llvm::IsaPred<vector::InsertStridedSliceOp>);
+    OpOperand *operand = getWarpResult(warpOp, [&](Operation *op) {
+      // Check if the InsertStridedSliceOp is the last op before yield op
+      return llvm::IsaPred<vector::InsertStridedSliceOp>(op) &&
+             warpOp.getTerminator()->getPrevNode() == op;
+    });
     if (!operand)
       return failure();
     unsigned int operandNumber = operand->getOperandNumber();
