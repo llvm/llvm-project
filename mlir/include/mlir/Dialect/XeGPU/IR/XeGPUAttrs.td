@@ -311,10 +311,27 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                     /*methodName=*/"isSliceOf",
                     /*args=*/(ins "const xegpu::DistributeLayoutAttr&": $other)>,
 
-    InterfaceMethod</*desc=*/[{Check if this layout is identical to another layout.}],
+    InterfaceMethod</*desc=*/[{Check if this layout is identical to another layout
+                     at a specific level of the layout hierarchy.}],
                     /*retTy=*/"bool",
                     /*methodName=*/"isEqualTo",
-                    /*args=*/(ins "const xegpu::DistributeLayoutAttr&": $other)>
+                    /*args=*/(ins "const xegpu::DistributeLayoutAttr&": $other,
+                                  "xegpu::LayoutKind": $level),
+                    /*methodBody=*/[{
+                      if (!other)
+                        return false;
+                      switch (level) {
+                        case xegpu::LayoutKind::Subgroup:
+                          return $_self.getEffectiveSgLayoutAsInt() == other.getEffectiveSgLayoutAsInt() &&
+                                 $_self.getEffectiveSgDataAsInt() == other.getEffectiveSgDataAsInt();
+                        case xegpu::LayoutKind::InstData:
+                          return $_self.getEffectiveInstDataAsInt() == other.getEffectiveInstDataAsInt();
+                        case xegpu::LayoutKind::Lane:
+                          return $_self.getEffectiveLaneLayoutAsInt() == other.getEffectiveLaneLayoutAsInt() &&
+                                 $_self.getEffectiveLaneDataAsInt() == other.getEffectiveLaneDataAsInt();
+                      }
+                      return false;
+                    }]>
   ];
 }
 
@@ -545,10 +562,6 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
 
     /// Check if this is slice of some other layout.
     bool isSliceOf(const xegpu::DistributeLayoutAttr &other) { return false; }
-
-    /// Check if this is identical to some other layout.
-    bool isEqualTo(const xegpu::DistributeLayoutAttr &other);
-
   }];
 
   let assemblyFormat = "`<` struct(params) `>`";
@@ -736,9 +749,6 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
 
     /// Drop the slice dims to get the original layout.
     SliceAttr dropSliceDims(ArrayRef<int64_t> sliceDimsToDrop);
-
-    /// Check if this is identical to some other layout.
-    bool isEqualTo(const xegpu::DistributeLayoutAttr &other);
   }];
 
   let assemblyFormat = "`<` qualified($parent) `,` `dims` `=` $dims `>`";
