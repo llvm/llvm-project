@@ -15,38 +15,21 @@
 #define CLANG_ANALYSIS_SCALABLE_SERIALIZATION_SERIALIZATION_FORMAT_H
 
 #include "clang/Analysis/Scalable/Model/BuildNamespace.h"
-#include "llvm/ADT/SmallString.h"
+#include "clang/Analysis/Scalable/Model/SummaryName.h"
+#include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
 #include "llvm/ADT/StringRef.h"
-#include <vector>
+#include "llvm/Support/ExtensibleRTTI.h"
 
 namespace clang::ssaf {
 
 class EntityId;
 class EntityIdTable;
 class EntityName;
-class TUSummary;
-class TUSummaryData;
+class EntitySummary;
 
 /// Abstract base class for serialization formats.
-class SerializationFormat {
-protected:
-  // Helpers providing access to implementation details of basic data structures
-  // for efficient serialization/deserialization.
-  static EntityIdTable &getIdTableForDeserialization(TUSummary &S);
-  static BuildNamespace &getTUNamespaceForDeserialization(TUSummary &S);
-  static const EntityIdTable &getIdTable(const TUSummary &S);
-  static const BuildNamespace &getTUNamespace(const TUSummary &S);
-
-  static BuildNamespaceKind getBuildNamespaceKind(const BuildNamespace &BN);
-  static llvm::StringRef getBuildNamespaceName(const BuildNamespace &BN);
-  static const std::vector<BuildNamespace> &
-  getNestedBuildNamespaces(const NestedBuildNamespace &NBN);
-
-  static llvm::StringRef getEntityNameUSR(const EntityName &EN);
-  static const llvm::SmallString<16> &getEntityNameSuffix(const EntityName &EN);
-  static const NestedBuildNamespace &
-  getEntityNameNamespace(const EntityName &EN);
-
+class SerializationFormat
+    : public llvm::RTTIExtends<SerializationFormat, llvm::RTTIRoot> {
 public:
   virtual ~SerializationFormat() = default;
 
@@ -54,6 +37,27 @@ public:
 
   virtual void writeTUSummary(const TUSummary &Summary,
                               llvm::StringRef OutputDir) = 0;
+
+  static char ID; // For RTTIExtends.
+
+protected:
+  // Helpers providing access to implementation details of basic data structures
+  // for efficient serialization/deserialization.
+#define FIELD(CLASS, FIELD_NAME)                                               \
+  static const auto &get##FIELD_NAME(const CLASS &X) { return X.FIELD_NAME; }  \
+  static auto &get##FIELD_NAME(CLASS &X) { return X.FIELD_NAME; }
+#include "clang/Analysis/Scalable/Model/PrivateFieldNames.def"
+};
+
+template <class SerializerFn, class DeserializerFn> struct FormatInfoEntry {
+  FormatInfoEntry(SummaryName ForSummary, SerializerFn Serialize,
+                  DeserializerFn Deserialize)
+      : ForSummary(ForSummary), Serialize(Serialize), Deserialize(Deserialize) {
+  }
+
+  SummaryName ForSummary;
+  SerializerFn Serialize;
+  DeserializerFn Deserialize;
 };
 
 } // namespace clang::ssaf

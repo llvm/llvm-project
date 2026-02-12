@@ -315,7 +315,8 @@ static void emitAtomicCmpXchg(CIRGenFunction &cgf, AtomicExpr *e, bool isWeak,
                               Address dest, Address ptr, Address val1,
                               Address val2, uint64_t size,
                               cir::MemOrder successOrder,
-                              cir::MemOrder failureOrder) {
+                              cir::MemOrder failureOrder,
+                              cir::SyncScopeKind scope) {
   mlir::Location loc = cgf.getLoc(e->getSourceRange());
 
   CIRGenBuilderTy &builder = cgf.getBuilder();
@@ -327,6 +328,7 @@ static void emitAtomicCmpXchg(CIRGenFunction &cgf, AtomicExpr *e, bool isWeak,
       expected, desired,
       cir::MemOrderAttr::get(&cgf.getMLIRContext(), successOrder),
       cir::MemOrderAttr::get(&cgf.getMLIRContext(), failureOrder),
+      cir::SyncScopeKindAttr::get(&cgf.getMLIRContext(), scope),
       builder.getI64IntegerAttr(ptr.getAlignment().getAsAlign().value()));
 
   cmpxchg.setIsVolatile(e->isVolatile());
@@ -355,7 +357,8 @@ static void emitAtomicCmpXchgFailureSet(CIRGenFunction &cgf, AtomicExpr *e,
                                         bool isWeak, Address dest, Address ptr,
                                         Address val1, Address val2,
                                         Expr *failureOrderExpr, uint64_t size,
-                                        cir::MemOrder successOrder) {
+                                        cir::MemOrder successOrder,
+                                        cir::SyncScopeKind scope) {
   Expr::EvalResult failureOrderEval;
   if (failureOrderExpr->EvaluateAsInt(failureOrderEval, cgf.getContext())) {
     uint64_t failureOrderInt = failureOrderEval.Val.getInt().getZExtValue();
@@ -387,7 +390,7 @@ static void emitAtomicCmpXchgFailureSet(CIRGenFunction &cgf, AtomicExpr *e,
     // precondition is 31.7.2.18. Effectively treat this as a DR and skip
     // language version checks.
     emitAtomicCmpXchg(cgf, e, isWeak, dest, ptr, val1, val2, size, successOrder,
-                      failureOrder);
+                      failureOrder, scope);
     return;
   }
 
@@ -416,20 +419,22 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
 
   case AtomicExpr::AO__c11_atomic_compare_exchange_strong:
     emitAtomicCmpXchgFailureSet(cgf, expr, /*isWeak=*/false, dest, ptr, val1,
-                                val2, failureOrderExpr, size, order);
+                                val2, failureOrderExpr, size, order, scope);
     return;
 
   case AtomicExpr::AO__c11_atomic_compare_exchange_weak:
     emitAtomicCmpXchgFailureSet(cgf, expr, /*isWeak=*/true, dest, ptr, val1,
-                                val2, failureOrderExpr, size, order);
+                                val2, failureOrderExpr, size, order, scope);
     return;
 
   case AtomicExpr::AO__atomic_compare_exchange:
-  case AtomicExpr::AO__atomic_compare_exchange_n: {
+  case AtomicExpr::AO__atomic_compare_exchange_n:
+  case AtomicExpr::AO__scoped_atomic_compare_exchange:
+  case AtomicExpr::AO__scoped_atomic_compare_exchange_n: {
     bool isWeak = false;
     if (isWeakExpr->EvaluateAsBooleanCondition(isWeak, cgf.getContext())) {
       emitAtomicCmpXchgFailureSet(cgf, expr, isWeak, dest, ptr, val1, val2,
-                                  failureOrderExpr, size, order);
+                                  failureOrderExpr, size, order, scope);
     } else {
       assert(!cir::MissingFeatures::atomicExpr());
       cgf.cgm.errorNYI(expr->getSourceRange(),
@@ -470,6 +475,8 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_exchange:
   case AtomicExpr::AO__atomic_exchange_n:
   case AtomicExpr::AO__atomic_exchange:
+  case AtomicExpr::AO__scoped_atomic_exchange_n:
+  case AtomicExpr::AO__scoped_atomic_exchange:
     opName = cir::AtomicXchgOp::getOperationName();
     break;
 
@@ -578,9 +585,6 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__opencl_atomic_compare_exchange_weak:
   case AtomicExpr::AO__hip_atomic_compare_exchange_weak:
 
-  case AtomicExpr::AO__scoped_atomic_compare_exchange:
-  case AtomicExpr::AO__scoped_atomic_compare_exchange_n:
-
   case AtomicExpr::AO__opencl_atomic_load:
   case AtomicExpr::AO__hip_atomic_load:
 
@@ -589,8 +593,6 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
 
   case AtomicExpr::AO__hip_atomic_exchange:
   case AtomicExpr::AO__opencl_atomic_exchange:
-  case AtomicExpr::AO__scoped_atomic_exchange_n:
-  case AtomicExpr::AO__scoped_atomic_exchange:
 
   case AtomicExpr::AO__scoped_atomic_add_fetch:
 
@@ -657,6 +659,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   if (fetchAttr)
     rmwOp->setAttr("binop", fetchAttr);
   rmwOp->setAttr("mem_order", orderAttr);
+  rmwOp->setAttr("sync_scope", scopeAttr);
   if (expr->isVolatile())
     rmwOp->setAttr("is_volatile", builder.getUnitAttr());
   if (fetchFirst && opName == cir::AtomicFetchOp::getOperationName())
@@ -885,6 +888,7 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
     break;
 
   case AtomicExpr::AO__atomic_exchange:
+  case AtomicExpr::AO__scoped_atomic_exchange:
     val1 = emitPointerWithAlignment(e->getVal1());
     dest = emitPointerWithAlignment(e->getVal2());
     break;
@@ -893,6 +897,8 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
   case AtomicExpr::AO__atomic_compare_exchange_n:
   case AtomicExpr::AO__c11_atomic_compare_exchange_weak:
   case AtomicExpr::AO__c11_atomic_compare_exchange_strong:
+  case AtomicExpr::AO__scoped_atomic_compare_exchange:
+  case AtomicExpr::AO__scoped_atomic_compare_exchange_n:
     val1 = emitPointerWithAlignment(e->getVal1());
     if (e->getOp() == AtomicExpr::AO__atomic_compare_exchange ||
         e->getOp() == AtomicExpr::AO__scoped_atomic_compare_exchange)
@@ -945,6 +951,7 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
   case AtomicExpr::AO__c11_atomic_exchange:
   case AtomicExpr::AO__c11_atomic_store:
   case AtomicExpr::AO__scoped_atomic_store_n:
+  case AtomicExpr::AO__scoped_atomic_exchange_n:
     val1 = emitValToTemp(*this, e->getVal1());
     break;
   }

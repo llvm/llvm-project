@@ -12,6 +12,39 @@ tablegen("WebAssemblyGenFastISel") {
   td_file = "WebAssembly.td"
 }
 
+tablegen("WebAssemblyGenGlobalISel") {
+  visibility = [ ":LLVMWebAssemblyCodeGen" ]
+  args = [ "-gen-global-isel" ]
+  td_file = "WebAssemblyGISel.td"
+}
+
+tablegen("WebAssemblyGenPostLegalizeGICombiner") {
+  visibility = [ ":LLVMWebAssemblyCodeGen" ]
+  args = [
+    "-gen-global-isel-combiner",
+    "-combiners=WebAssemblyPostLegalizerCombiner",
+  ]
+  td_file = "WebAssemblyGISel.td"
+}
+
+tablegen("WebAssemblyGenPreLegalizeGICombiner") {
+  visibility = [ ":LLVMWebAssemblyCodeGen" ]
+  args = [
+    "-gen-global-isel-combiner",
+    "-combiners=WebAssemblyPreLegalizerCombiner",
+  ]
+  td_file = "WebAssemblyGISel.td"
+}
+
+tablegen("WebAssemblyGenRegisterBank") {
+  visibility = [
+    ":LLVMWebAssemblyCodeGen",
+    "//llvm/unittests/Target/WebAssembly:WebAssemblyTests",
+  ]
+  args = [ "-gen-register-bank" ]
+  td_file = "WebAssembly.td"
+}
+
 tablegen("WebAssemblyGenSDNodeInfo") {
   visibility = [ ":LLVMWebAssemblyCodeGen" ]
   args = [ "-gen-sd-node-info" ]
@@ -22,6 +55,10 @@ static_library("LLVMWebAssemblyCodeGen") {
   deps = [
     ":WebAssemblyGenDAGISel",
     ":WebAssemblyGenFastISel",
+    ":WebAssemblyGenGlobalISel",
+    ":WebAssemblyGenPostLegalizeGICombiner",
+    ":WebAssemblyGenPreLegalizeGICombiner",
+    ":WebAssemblyGenRegisterBank",
     ":WebAssemblyGenSDNodeInfo",
     "MCTargetDesc",
     "TargetInfo",
@@ -39,6 +76,12 @@ static_library("LLVMWebAssemblyCodeGen") {
   ]
   include_dirs = [ "." ]
   sources = [
+    "GISel/WebAssemblyCallLowering.cpp",
+    "GISel/WebAssemblyInstructionSelector.cpp",
+    "GISel/WebAssemblyLegalizerInfo.cpp",
+    "GISel/WebAssemblyPostLegalizerCombiner.cpp",
+    "GISel/WebAssemblyPreLegalizerCombiner.cpp",
+    "GISel/WebAssemblyRegisterBankInfo.cpp",
     "WebAssemblyAddMissingPrototypes.cpp",
     "WebAssemblyArgumentMove.cpp",
     "WebAssemblyAsmPrinter.cpp",

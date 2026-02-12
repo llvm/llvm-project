@@ -563,6 +563,48 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
   return UncountableCondition;
 }
 
+VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  SmallVector<VPValue *> WideCanonicalIVs;
+  auto *FoundWidenCanonicalIVUser = find_if(
+      LoopRegion->getCanonicalIV()->users(), IsaPred<VPWidenCanonicalIVRecipe>);
+  assert(count_if(LoopRegion->getCanonicalIV()->users(),
+                  IsaPred<VPWidenCanonicalIVRecipe>) <= 1 &&
+         "Must have at most one VPWideCanonicalIVRecipe");
+  if (FoundWidenCanonicalIVUser !=
+      LoopRegion->getCanonicalIV()->users().end()) {
+    auto *WideCanonicalIV =
+        cast<VPWidenCanonicalIVRecipe>(*FoundWidenCanonicalIVUser);
+    WideCanonicalIVs.push_back(WideCanonicalIV);
+  }
+
+  // Also include VPWidenIntOrFpInductionRecipes that represent a widened
+  // version of the canonical induction.
+  VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
+  for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
+    auto *WidenOriginalIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
+    if (WidenOriginalIV && WidenOriginalIV->isCanonical())
+      WideCanonicalIVs.push_back(WidenOriginalIV);
+  }
+
+  // Walk users of wide canonical IVs and find the single compare of the form
+  // (ICMP_ULE, WideCanonicalIV, backedge-taken-count).
+  VPSingleDefRecipe *HeaderMask = nullptr;
+  for (auto *Wide : WideCanonicalIVs) {
+    for (VPUser *U : Wide->users()) {
+      auto *VPI = dyn_cast<VPInstruction>(U);
+      if (!VPI || !vputils::isHeaderMask(VPI, Plan))
+        continue;
+
+      assert(VPI->getOperand(0) == Wide &&
+             "WidenCanonicalIV must be the first operand of the compare");
+      assert(!HeaderMask && "Multiple header masks found?");
+      HeaderMask = VPI;
+    }
+  }
+  return HeaderMask;
+}
+
 bool VPBlockUtils::isHeader(const VPBlockBase *VPB,
                             const VPDominatorTree &VPDT) {
   auto *VPBB = dyn_cast<VPBasicBlock>(VPB);

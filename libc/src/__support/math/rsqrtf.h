@@ -20,7 +20,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE static constexpr float rsqrtf(float x) {
+LIBC_INLINE constexpr float rsqrtf(float x) {
   using FPBits = fputil::FPBits<float>;
   FPBits xbits(x);
 
