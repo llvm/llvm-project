@@ -842,7 +842,8 @@ bool AMDGPUToolChain::isWave64(const llvm::opt::ArgList &DriverArgs,
 ROCMToolChain::ROCMToolChain(const Driver &D, const llvm::Triple &Triple,
                              const ArgList &Args)
     : AMDGPUToolChain(D, Triple, Args) {
-  RocmInstallation->detectDeviceLibrary();
+  if (Triple.getEnvironment() != llvm::Triple::LLVM)
+    RocmInstallation->detectDeviceLibrary();
 }
 
 void AMDGPUToolChain::addClangTargetOptions(
@@ -872,7 +873,7 @@ void AMDGPUToolChain::addClangTargetOptions(
     CC1Args.push_back("-disable-llvm-optzns");
 
   if (DeviceOffloadingKind == Action::OFK_None)
-    addOpenCLBuiltinsLib(getDriver(), DriverArgs, CC1Args);
+    addOpenCLBuiltinsLib(getDriver(), getTriple(), DriverArgs, CC1Args);
 }
 
 void AMDGPUToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
@@ -963,8 +964,15 @@ void ROCMToolChain::addClangTargetOptions(
 
   // For SPIR-V (SPIRVAMDToolChain) we must not link any device libraries so we
   // skip it.
-  if (this->getEffectiveTriple().isSPIRV())
+  const llvm::Triple &TT = this->getEffectiveTriple();
+  if (TT.isSPIRV())
     return;
+
+  // With an LLVM environment, only use libraries provided by the resource
+  // directory.
+  if (TT.getEnvironment() == llvm::Triple::LLVM)
+    return;
+
   // Get the device name and canonicalize it
   const StringRef GpuArch = getGPUArch(DriverArgs);
   auto Kind = llvm::AMDGPU::parseArchAMDGCN(GpuArch);
