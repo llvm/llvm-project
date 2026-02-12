@@ -2468,7 +2468,8 @@ public:
     }
 
     for (auto [CV, AV, BV] : llvm::zip_equal(CondV, A.vectors(), B.vectors()))
-      Result.addVector(Builder.CreateSelect(CV, AV, BV));
+      Result.addVector(
+          Builder.CreateSelectWithUnknownProfile(CV, AV, BV, DEBUG_TYPE));
 
     return Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
                                    Result.getNumVectors());
