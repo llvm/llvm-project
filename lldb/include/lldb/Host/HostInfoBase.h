@@ -60,7 +60,7 @@ struct SharedCacheImageInfo {
       lldb::DataExtractorSP (*create_data_extractor)(void *image));
 
 private:
-  lldb_private::ConstString m_filename;
+  ConstString m_filename;
   UUID m_uuid;
   lldb::DataExtractorSP m_extractor_sp;
   lldb::DataExtractorSP (*m_create_data_extractor)(void *image);
