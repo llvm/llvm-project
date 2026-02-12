@@ -224,15 +224,11 @@ bool PredicateMapping::match(const MachineInstr &MI,
   // Check LLT signature.
   for (unsigned i = 0; i < OpUniformityAndTypes.size(); ++i) {
     if (OpUniformityAndTypes[i] == _) {
-      // Skip non-register operands and physical registers, which don't
-      // need register bank consideration.
-      if (MI.getOperand(i).isReg() && MI.getOperand(i).getReg().isVirtual())
-        return false;
       continue;
     }
 
     // Remaining IDs check virtual registers.
-    if (!MI.getOperand(i).isReg())
+    if (!MI.getOperand(i).isReg() || !MI.getOperand(i).getReg().isVirtual())
       return false;
 
     if (!matchUniformityAndLLT(MI.getOperand(i).getReg(),

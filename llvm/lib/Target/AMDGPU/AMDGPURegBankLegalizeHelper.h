@@ -14,13 +14,21 @@
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include <optional>
 
 namespace llvm {
 
 class MachineIRBuilder;
 
 namespace AMDGPU {
+
+/// Holds waterfall loop information: the set of SGPR operand registers that
+/// need waterfalling, and an instruction range [Start, End) to wrap in the
+/// loop.
+struct WaterfallInfo {
+  SmallSet<Register, 4> SgprWaterfallOperandRegs;
+  const MachineInstr *Start = nullptr;
+  const MachineInstr *End = nullptr;
+};
 
 // Receives list of RegBankLLTMappingApplyID and applies register banks on all
 // operands. It is user's responsibility to provide RegBankLLTMappingApplyIDs
@@ -92,9 +100,7 @@ public:
   void applyMappingTrivial(MachineInstr &MI);
 
 private:
-  bool executeInWaterfallLoop(MachineIRBuilder &B,
-                              iterator_range<MachineBasicBlock::iterator> Range,
-                              SmallSet<Register, 4> &SgprOperandRegs);
+  bool executeInWaterfallLoop(MachineIRBuilder &B, const WaterfallInfo &WFI);
 
   LLT getTyFromID(RegBankLLTMappingApplyID ID);
   LLT getBTyFromID(RegBankLLTMappingApplyID ID, LLT Ty);
@@ -108,9 +114,7 @@ private:
   bool
   applyMappingSrc(MachineInstr &MI, unsigned &OpIdx,
                   const SmallVectorImpl<RegBankLLTMappingApplyID> &MethodIDs,
-                  SmallSet<Register, 4> &SgprWaterfallOperandRegs,
-                  std::optional<iterator_range<MachineBasicBlock::iterator>>
-                      &WaterfallRange);
+                  WaterfallInfo &WFI);
 
   bool splitLoad(MachineInstr &MI, ArrayRef<LLT> LLTBreakdown,
                  LLT MergeTy = LLT());
@@ -118,9 +122,7 @@ private:
   bool widenMMOToS32(GAnyLoad &MI) const;
 
   bool lower(MachineInstr &MI, const RegBankLLTMapping &Mapping,
-             SmallSet<Register, 4> &SgprWaterfallOperandRegs,
-             std::optional<iterator_range<MachineBasicBlock::iterator>>
-                 WaterfallRange);
+             WaterfallInfo &WFI);
 
   bool lowerVccExtToSel(MachineInstr &MI);
   std::pair<Register, Register> unpackZExt(Register Reg);

@@ -58,8 +58,7 @@ bool RegBankLegalizeHelper::findRuleAndApplyMapping(MachineInstr &MI) {
     return false;
   }
 
-  SmallSet<Register, 4> WaterfallSgprs;
-  std::optional<iterator_range<MachineBasicBlock::iterator>> WaterfallRange;
+  WaterfallInfo WFI;
   unsigned OpIdx = 0;
   if (Mapping->DstOpMapping.size() > 0) {
     B.setInsertPt(*MI.getParent(), std::next(MI.getIterator()));
@@ -68,20 +67,19 @@ bool RegBankLegalizeHelper::findRuleAndApplyMapping(MachineInstr &MI) {
   }
   if (Mapping->SrcOpMapping.size() > 0) {
     B.setInstr(MI);
-    if (!applyMappingSrc(MI, OpIdx, Mapping->SrcOpMapping, WaterfallSgprs,
-                         WaterfallRange))
+    if (!applyMappingSrc(MI, OpIdx, Mapping->SrcOpMapping, WFI))
       return false;
   }
 
-  if (!lower(MI, *Mapping, WaterfallSgprs, WaterfallRange))
+  if (!lower(MI, *Mapping, WFI))
     return false;
 
   return true;
 }
 
-bool RegBankLegalizeHelper::executeInWaterfallLoop(
-    MachineIRBuilder &B, iterator_range<MachineBasicBlock::iterator> Range,
-    SmallSet<Register, 4> &SGPROperandRegs) {
+bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
+                                                   const WaterfallInfo &WFI) {
+  assert(WFI.Start && WFI.End && "Waterfall range not initialized");
 
   // Track use registers which have already been expanded with a readfirstlane
   // sequence. This may have multiple uses if moving a sequence.
@@ -89,6 +87,10 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(
 
   MachineBasicBlock &MBB = B.getMBB();
   MachineFunction &MF = B.getMF();
+
+  // Obtain non-const iterators for splice operations.
+  MachineBasicBlock::iterator BeginIt(const_cast<MachineInstr &>(*WFI.Start));
+  MachineBasicBlock::iterator EndIt(const_cast<MachineInstr &>(*WFI.End));
 
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   const TargetRegisterClass *WaveRC = TRI->getWaveMaskRegClass();
@@ -108,7 +110,7 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(
   }
 
 #ifndef NDEBUG
-  const int OrigRangeSize = std::distance(Range.begin(), Range.end());
+  const int OrigRangeSize = std::distance(BeginIt, EndIt);
 #endif
 
   MachineRegisterInfo &MRI = *B.getMRI();
@@ -140,7 +142,7 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(
 
   // Move the rest of the block into a new block.
   RemainderBB->transferSuccessorsAndUpdatePHIs(&MBB);
-  RemainderBB->splice(RemainderBB->begin(), &MBB, Range.end(), MBB.end());
+  RemainderBB->splice(RemainderBB->begin(), &MBB, EndIt, MBB.end());
 
   MBB.addSuccessor(LoopBB);
   RestoreExecBB->addSuccessor(RemainderBB);
@@ -192,10 +194,10 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(
 
   // Move the instruction into the loop body. Note we moved everything after
   // Range.end() already into a new block, so Range.end() is no longer valid.
-  BodyBB->splice(BodyBB->end(), &MBB, Range.begin(), MBB.end());
+  BodyBB->splice(BodyBB->end(), &MBB, BeginIt, MBB.end());
 
   // Figure out the iterator range after splicing the instructions.
-  MachineBasicBlock::iterator NewBegin = Range.begin()->getIterator();
+  MachineBasicBlock::iterator NewBegin = BeginIt;
   auto NewEnd = BodyBB->end();
   assert(std::distance(NewBegin, NewEnd) == OrigRangeSize);
 
@@ -205,7 +207,7 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(
   for (MachineInstr &MI : make_range(NewBegin, NewEnd)) {
     for (MachineOperand &Op : MI.all_uses()) {
       Register OldReg = Op.getReg();
-      if (!SGPROperandRegs.count(OldReg))
+      if (!WFI.SgprWaterfallOperandRegs.count(OldReg))
         continue;
 
       // See if we already processed this register in another instruction in
@@ -830,10 +832,9 @@ bool RegBankLegalizeHelper::lowerSplitTo32SExtInReg(MachineInstr &MI) {
   return true;
 }
 
-bool RegBankLegalizeHelper::lower(
-    MachineInstr &MI, const RegBankLLTMapping &Mapping,
-    SmallSet<Register, 4> &WaterfallSgprs,
-    std::optional<iterator_range<MachineBasicBlock::iterator>> WaterfallRange) {
+bool RegBankLegalizeHelper::lower(MachineInstr &MI,
+                                  const RegBankLLTMapping &Mapping,
+                                  WaterfallInfo &WFI) {
 
   switch (Mapping.LoweringMethod) {
   case DoNotLower:
@@ -1062,11 +1063,8 @@ bool RegBankLegalizeHelper::lower(
   }
   }
 
-  if (!WaterfallSgprs.empty()) {
-    auto Range = WaterfallRange ? *WaterfallRange
-                                : make_range(MI.getIterator(),
-                                             std::next(MI.getIterator()));
-    if (!executeInWaterfallLoop(B, Range, WaterfallSgprs))
+  if (!WFI.SgprWaterfallOperandRegs.empty()) {
+    if (!executeInWaterfallLoop(B, WFI))
       return false;
   }
   return true;
@@ -1469,9 +1467,7 @@ bool RegBankLegalizeHelper::applyMappingDst(
 bool RegBankLegalizeHelper::applyMappingSrc(
     MachineInstr &MI, unsigned &OpIdx,
     const SmallVectorImpl<RegBankLLTMappingApplyID> &MethodIDs,
-    SmallSet<Register, 4> &SgprWaterfallOperandRegs,
-    std::optional<iterator_range<MachineBasicBlock::iterator>>
-        &WaterfallRange) {
+    WaterfallInfo &WFI) {
   for (unsigned i = 0; i < MethodIDs.size(); ++OpIdx, ++i) {
     if (MethodIDs[i] == None || MethodIDs[i] == IntrId || MethodIDs[i] == Imm)
       continue;
@@ -1572,15 +1568,20 @@ bool RegBankLegalizeHelper::applyMappingSrc(
     case Sgpr32_WF:
     case SgprV4S32_WF: {
       assert(Ty == getTyFromID(MethodIDs[i]));
-      if (RB != SgprRB)
-        SgprWaterfallOperandRegs.insert(Reg);
+      if (RB != SgprRB) {
+        WFI.SgprWaterfallOperandRegs.insert(Reg);
+        if (!WFI.Start) {
+          WFI.Start = &MI;
+          WFI.End = &*std::next(MI.getIterator());
+        }
+      }
       break;
     }
     case SgprP0Call_WF:
     case SgprP4Call_WF: {
       assert(Ty == getTyFromID(MethodIDs[i]));
       if (RB != SgprRB) {
-        SgprWaterfallOperandRegs.insert(Reg);
+        WFI.SgprWaterfallOperandRegs.insert(Reg);
 
         // Find the ADJCALLSTACKUP before the call.
         MachineBasicBlock::iterator Start = MI.getIterator();
@@ -1594,7 +1595,8 @@ bool RegBankLegalizeHelper::applyMappingSrc(
         ++End;
 
         B.setInsertPt(*MI.getParent(), Start);
-        WaterfallRange = make_range(Start, End);
+        WFI.Start = &*Start;
+        WFI.End = &*End;
       }
       break;
     }
