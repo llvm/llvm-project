@@ -228,7 +228,8 @@ void AMDGPUMachineLevelInliner::inlineMachineFunction(MachineFunction *CallerMF,
         continue;
 
       if (OrigMI.isReturn()) {
-        assert(!OrigMI.isCall() && "Tail calls not supported yet"); // FIXME
+        if (OrigMI.isCall())
+          reportFatalInternalError("Tail calls not supported yet"); // FIXME
         TII->insertBranch(*ClonedMBB, ContinuationMBB, nullptr,
                           SmallVector<MachineOperand, 0>(), DebugLoc());
         ClonedMBB->addSuccessor(ContinuationMBB);
