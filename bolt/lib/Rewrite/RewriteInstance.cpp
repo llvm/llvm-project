@@ -2284,12 +2284,6 @@ Error RewriteInstance::readSpecialSections() {
 }
 
 void RewriteInstance::adjustCommandLineOptions() {
-  if (opts::CloneAtOrigin && opts::ForcePatch) {
-    BC->errs() << "BOLT-ERROR: --clone-at-origin is incompatible with "
-                  "--force-patch\n";
-    exit(1);
-  }
-
   if (BC->isAArch64() && !BC->HasRelocations)
     BC->errs() << "BOLT-WARNING: non-relocation mode for AArch64 is not fully "
                   "supported\n";
