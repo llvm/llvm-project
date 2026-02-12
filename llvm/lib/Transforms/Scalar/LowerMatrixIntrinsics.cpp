@@ -2459,17 +2459,19 @@ public:
     MatrixTy B = getMatrix(OpB, Shape, Builder);
 
     SmallVector<Value*> CondV;
+    Instruction* MDFrom = nullptr;
     if (isa<FixedVectorType>(Cond->getType())) {
       MatrixTy C = getMatrix(Cond, Shape, Builder);
       llvm::copy(C.vectors(), std::back_inserter(CondV));
     } else {
       CondV.resize(A.getNumVectors());
       llvm::fill(CondV, Cond);
+      MDFrom = Inst;
     }
 
     for (auto [CV, AV, BV] : llvm::zip_equal(CondV, A.vectors(), B.vectors()))
       Result.addVector(
-          Builder.CreateSelectWithUnknownProfile(CV, AV, BV, DEBUG_TYPE));
+          Builder.CreateSelect(CV, AV, BV, "", MDFrom));
 
     return Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
                                    Result.getNumVectors());
