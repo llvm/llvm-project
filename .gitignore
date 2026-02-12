@@ -9,6 +9,7 @@
 #==============================================================================#
 # File extensions to be ignored anywhere in the tree.
 #==============================================================================#
+llvm/build-*
 # Temp files created by most text editors.
 *~
 # Merge files created by git.
@@ -78,3 +79,5 @@ pythonenv*
 /clang/utils/analyzer/projects/*/RefScanBuildResults
 # automodapi puts generated documentation files here.
 /lldb/docs/python_api/
+
+/llvm/study*

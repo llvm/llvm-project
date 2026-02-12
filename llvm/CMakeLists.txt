@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.20.0)
 
 include(CMakeDependentOption)
 
+set(CMAKE_BUILD_TYPE Debug)
+
 set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
@@ -109,7 +111,7 @@ endif()
 # This allows an easy way of setting up a build directory for llvm and another
 # one for llvm+clang+... using the same sources.
 # These projects will be included when "all" is included in LLVM_ENABLE_PROJECTS.
-set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libclc;lld;lldb;mlir;openmp;polly")
+set(LLVM_ALL_PROJECTS "clang;clang-tools-extra;")
 if ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   # Disallow 'openmp' as a LLVM PROJECT on AIX as the supported way is to use
   # LLVM_ENABLE_RUNTIMES.
@@ -528,26 +530,8 @@ set(LLVM_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
 
 # List of all targets to be built by default:
 set(LLVM_ALL_TARGETS
-  AArch64
-  AMDGPU
-  ARM
-  AVR
-  BPF
-  Hexagon
-  Lanai
-  LoongArch
-  Mips
-  MSP430
-  NVPTX
-  PowerPC
   RISCV
-  Sparc
-  SPIRV
-  SystemZ
-  VE
-  WebAssembly
   X86
-  XCore
   )
 
 set(LLVM_ALL_EXPERIMENTAL_TARGETS
@@ -559,7 +543,7 @@ set(LLVM_ALL_EXPERIMENTAL_TARGETS
 )
 
 # List of targets with JIT support:
-set(LLVM_TARGETS_WITH_JIT X86 PowerPC AArch64 ARM Mips SystemZ)
+set(LLVM_TARGETS_WITH_JIT X86)
 
 set(LLVM_TARGETS_TO_BUILD "all"
     CACHE STRING "Semicolon-separated list of targets to build, or \"all\".")
