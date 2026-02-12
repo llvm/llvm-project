@@ -18,10 +18,10 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "llvm/Support/Endian.h"
 
+#include <optional>
+
 using namespace lldb;
 using namespace lldb_private;
-
-#define FBSD14 1400084
 
 RegisterContextFreeBSDKernel_arm64::RegisterContextFreeBSDKernel_arm64(
     Thread &thread, std::unique_ptr<RegisterInfoPOSIX_arm64> register_info_up,
@@ -48,13 +48,13 @@ bool RegisterContextFreeBSDKernel_arm64::ReadRegister(
   if (m_pcb_addr == LLDB_INVALID_ADDRESS)
     return false;
 
+  // https://cgit.freebsd.org/src/tree/sys/arm64/include/pcb.h
   struct {
-#define PCB_FP 10
-#define PCB_LR 11
     llvm::support::ulittle64_t x[12];
     llvm::support::ulittle64_t sp;
   } pcb;
 
+  // https://cgit.freebsd.org/src/tree/sys/arm64/include/pcb.h?h=stable%2F13
   struct {
     llvm::support::ulittle64_t x[30];
     llvm::support::ulittle64_t lr;
@@ -63,9 +63,19 @@ bool RegisterContextFreeBSDKernel_arm64::ReadRegister(
   } pcb13;
 
   Status error;
+  constexpr int FBSD14 = 1400084;
+  static const int osreldate = 1400084;
+  auto osreldate_or_null = GetOsreldate();
+  if (osreldate_or_null)
+    osreldate = *osreldate_or_null;
+  else
+    LLDB_LOGF(GetLog(LLDBLog::Object),
+              "Cannot find osreldate. Defaulting to %d.", FBSD14);
 
   // TODO: LLVM 24: Remove FreeBSD 13 support
-  if (GetOsreldate() >= FBSD14) {
+  if (osreldate >= FBSD14) {
+    constexpr uint32_t PCB_FP = 10;
+    constexpr uint32_t PCB_LR = 11;
     size_t rd =
         m_thread.GetProcess()->ReadMemory(m_pcb_addr, &pcb, sizeof(pcb), error);
     if (rd != sizeof(pcb))
@@ -162,10 +172,10 @@ bool RegisterContextFreeBSDKernel_arm64::WriteRegister(
   return false;
 }
 
-int RegisterContextFreeBSDKernel_arm64::GetOsreldate() {
+std::optional<int> RegisterContextFreeBSDKernel_arm64::GetOsreldate() {
   ProcessSP process_sp = m_thread.GetProcess();
   if (!process_sp)
-    return 0;
+    return std::nullopt;
 
   Target &target = process_sp->GetTarget();
 
@@ -173,27 +183,25 @@ int RegisterContextFreeBSDKernel_arm64::GetOsreldate() {
   target.GetImages().FindSymbolsWithNameAndType(ConstString("osreldate"),
                                                 lldb::eSymbolTypeData, sc_list);
 
-  if (sc_list.GetSize() == 0) {
-    LLDB_LOGF(GetLog(LLDBLog::Object),
-              "Cannot find osreldate. Defaulting to %d.", FBSD14);
-    return FBSD14;
-  }
+  if (sc_list.GetSize() == 0)
+    return std::nullopt;
 
   SymbolContext sc;
   sc_list.GetContextAtIndex(0, sc);
 
-  if (sc.symbol) {
-    lldb::addr_t addr = sc.symbol->GetLoadAddress(&target);
-    if (addr != LLDB_INVALID_ADDRESS) {
-      Status error;
-      int64_t osreldate = 0;
-      size_t bytes_read =
-          process_sp->ReadMemory(addr, &osreldate, sizeof(osreldate), error);
-      if (bytes_read == sizeof(osreldate) && error.Success()) {
-        return osreldate;
-      }
-    }
+  if (!sc.symbol)
+    return std::nullopt;
+
+  lldb::addr_t addr = sc.symbol->GetLoadAddress(&target);
+  if (addr == LLDB_INVALID_ADDRESS)
+    return std::nullopt;
+  Status error;
+  int64_t osreldate = 0;
+  size_t bytes_read =
+      process_sp->ReadMemory(addr, &osreldate, sizeof(osreldate), error);
+  if (bytes_read == sizeof(osreldate) && error.Success()) {
+    return osreldate;
   }
 
-  return 0;
+  return std::nullopt;
 }
