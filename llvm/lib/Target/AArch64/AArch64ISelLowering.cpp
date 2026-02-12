@@ -24023,11 +24023,11 @@ static SDValue performZExtUZPCombine(SDNode *N, SelectionDAG &DAG) {
 }
 
 // Combine:
-//   sext(duplane(insert_subvector(undef, trunc(X), 0), idx))
+//   ext(duplane(insert_subvector(undef, trunc(X), 0), idx))
 // Into:
 //   duplane(X, idx)
 // This eliminates XTN/SSHLL sequences when splatting from boolean vectors.
-static SDValue performSExtDuplaneTruncCombine(SDNode *N, SelectionDAG &DAG) {
+static SDValue performExtendDuplaneTruncCombine(SDNode *N, SelectionDAG &DAG) {
   SDValue Dup = N->getOperand(0);
   unsigned DupOpc = Dup.getOpcode();
   if (!Dup->hasOneUse() ||
@@ -24050,12 +24050,20 @@ static SDValue performSExtDuplaneTruncCombine(SDNode *N, SelectionDAG &DAG) {
   if (SrcVT != DstVT || !SrcVT.isFixedLengthVector())
     return SDValue();
 
-  // Verify that Src is already sign-extended from the truncated bit width.
+  // Verify that Src is already sign/zero-extended from the truncated bit width.
   EVT TruncVT = Trunc.getValueType();
   unsigned SrcBits = SrcVT.getScalarSizeInBits();
   unsigned TruncBits = TruncVT.getScalarSizeInBits();
-  if (DAG.ComputeNumSignBits(Src) <= SrcBits - TruncBits)
-    return SDValue();
+  if (N->getOpcode() == ISD::SIGN_EXTEND) {
+    if (DAG.ComputeNumSignBits(Src) <= SrcBits - TruncBits)
+      return SDValue();
+  } else if (N->getOpcode() == ISD::ZERO_EXTEND) {
+    APInt Mask = APInt::getHighBitsSet(SrcBits, SrcBits - TruncBits);
+    if (!DAG.MaskedValueIsZero(Src, Mask))
+      return SDValue();
+  } else {
+    assert(N->getOpcode() == ISD::ANY_EXTEND);
+  }
 
   unsigned NewDupOpc;
   switch (SrcVT.getScalarSizeInBits()) {
@@ -24131,7 +24139,7 @@ static SDValue performExtendCombine(SDNode *N,
                        NewAnyExtend);
   }
 
-  if (SDValue R = performSExtDuplaneTruncCombine(N, DAG))
+  if (SDValue R = performExtendDuplaneTruncCombine(N, DAG))
     return R;
 
   return SDValue();

@@ -66,19 +66,6 @@ define <4 x i32> @dup_trunc_sext_v4i32_idx0(<4 x i32> %a, <4 x i32> %b, <4 x i32
   ret <4 x i32> %sel
 }
 
-define <2 x i32> @dup_trunc_sext_v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: dup_trunc_sext_v2i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmgt v0.2s, v1.2s, v0.2s
-; CHECK-NEXT:    dup v0.2s, v0.s[1]
-; CHECK-NEXT:    bsl v0.8b, v2.8b, v3.8b
-; CHECK-NEXT:    ret
-  %cmp = icmp slt <2 x i32> %a, %b
-  %splat = shufflevector <2 x i1> %cmp, <2 x i1> poison, <2 x i32> <i32 1, i32 1>
-  %sel = select <2 x i1> %splat, <2 x i32> %x, <2 x i32> %y
-  ret <2 x i32> %sel
-}
-
 define <8 x i16> @dup_trunc_sext_v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %x, <8 x i16> %y) {
 ; CHECK-LABEL: dup_trunc_sext_v8i16:
 ; CHECK:       // %bb.0:
@@ -92,18 +79,41 @@ define <8 x i16> @dup_trunc_sext_v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %x,
   ret <8 x i16> %sel
 }
 
-define <4 x i32> @negative_arbitrary_input(<4 x i32> %mask, <4 x i32> %x, <4 x i32> %y) {
-; CHECK-LABEL: negative_arbitrary_input:
+define <2 x i64> @negative_sext_i32(<2 x i64> %mask) {
+; CHECK-LABEL: negative_sext_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    dup v0.4h, v0.h[2]
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    shl v0.4s, v0.4s, #31
-; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
-; CHECK-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    dup v0.2s, v0.s[1]
+; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    ret
-  %trunc = trunc <4 x i32> %mask to <4 x i1>
-  %splat = shufflevector <4 x i1> %trunc, <4 x i1> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
-  %sel = select <4 x i1> %splat, <4 x i32> %x, <4 x i32> %y
-  ret <4 x i32> %sel
+  %trunc = trunc <2 x i64> %mask to <2 x i32>
+  %splat = shufflevector <2 x i32> %trunc, <2 x i32> poison, <2 x i32> <i32 1, i32 1>
+  %ext = sext <2 x i32> %splat to <2 x i64>
+  ret <2 x i64> %ext
+}
+
+define <2 x i64> @dup_trunc_zext_i32(<2 x i64> %a) {
+; CHECK-LABEL: dup_trunc_zext_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushr v0.2d, v0.2d, #32
+; CHECK-NEXT:    dup v0.2d, v0.d[1]
+; CHECK-NEXT:    ret
+  %shifted = lshr <2 x i64> %a, <i64 32, i64 32>
+  %trunc = trunc <2 x i64> %shifted to <2 x i32>
+  %splat = shufflevector <2 x i32> %trunc, <2 x i32> poison, <2 x i32> <i32 1, i32 1>
+  %ext = zext <2 x i32> %splat to <2 x i64>
+  ret <2 x i64> %ext
+}
+
+define <2 x i64> @negative_zext_i32(<2 x i64> %mask) {
+; CHECK-LABEL: negative_zext_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    dup v0.2s, v0.s[1]
+; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    ret
+  %trunc = trunc <2 x i64> %mask to <2 x i32>
+  %splat = shufflevector <2 x i32> %trunc, <2 x i32> poison, <2 x i32> <i32 1, i32 1>
+  %ext = zext <2 x i32> %splat to <2 x i64>
+  ret <2 x i64> %ext
 }
