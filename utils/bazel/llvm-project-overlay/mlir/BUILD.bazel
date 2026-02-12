@@ -440,7 +440,7 @@ cc_library(
         ":BytecodeOpInterfaceIncGen",
         ":CallOpInterfacesIncGen",
         ":DataLayoutInterfacesIncGen",
-        ":DialectFoldInterfaceTdFiles",
+        ":DialectFoldInterfaceIncGen",
         ":InferIntRangeInterfaceIncGen",
         ":OpAsmInterfaceIncGen",
         ":QuantStorageTypeInterfaceIncGen",
