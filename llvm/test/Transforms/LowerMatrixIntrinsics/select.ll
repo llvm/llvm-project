@@ -67,7 +67,7 @@ define void @select_2x2_rhs(i1 %cond, ptr %lhs, ptr %rhs, ptr %out) {
   ret void
 }
 
-define void @select_2x2_vcond_shape1(ptr %cond, ptr %lhs, ptr %rhs, ptr %out) !prof !0 {
+define void @select_2x2_vcond_shape1(ptr %cond, ptr %lhs, ptr %rhs, ptr %out) {
 ; CHECK-LABEL: @select_2x2_vcond_shape1(
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x float>, ptr [[LHS:%.*]], align 16
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr [[LHS]], i64 2
@@ -88,7 +88,7 @@ define void @select_2x2_vcond_shape1(ptr %cond, ptr %lhs, ptr %rhs, ptr %out) !p
   %lhsv = load <4 x float>, ptr %lhs
   %condv = load <4 x i1>, ptr %cond
   %rhsv = call <4 x float> @llvm.matrix.column.major.load(ptr %rhs, i64 2, i1 false, i32 2, i32 2)
-  %op = select <4 x i1> %condv, <4 x float> %lhsv, <4 x float> %rhsv, !prof !1
+  %op = select <4 x i1> %condv, <4 x float> %lhsv, <4 x float> %rhsv
   store <4 x float> %op, ptr %out
   ret void
 }
