@@ -59,7 +59,13 @@ private:
 #endif
 };
 
-static const size_t HEAP_SIZE = 512;
+// Size of the emergency fallback heap. This can be configured at build time
+// via the LIBCXXABI_FALLBACK_MALLOC_HEAP_SIZE CMake option.
+#ifndef _LIBCXXABI_FALLBACK_MALLOC_HEAP_SIZE
+#  define _LIBCXXABI_FALLBACK_MALLOC_HEAP_SIZE 512
+#endif
+
+static const size_t HEAP_SIZE = _LIBCXXABI_FALLBACK_MALLOC_HEAP_SIZE;
 char heap[HEAP_SIZE] __attribute__((aligned));
 
 typedef unsigned short heap_offset;
@@ -72,6 +78,11 @@ struct heap_node {
   heap_offset next_node; // offset into heap
   heap_size len;         // size in units of "sizeof(heap_node)"
 };
+
+static_assert(HEAP_SIZE / sizeof(heap_node) <= (size_t)__UINT16_MAX__,
+              "Fallback malloc heap is too large. heap_offset and heap_size are "
+              "unsigned short, so the heap can be at most 65535 * sizeof(heap_node) "
+              "bytes (~256 KiB).");
 
 // All pointers returned by fallback_malloc must be at least aligned
 // as RequiredAligned. Note that RequiredAlignment can be greater than

@@ -128,6 +128,12 @@ cmake_dependent_option(LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY
   "Statically link the LLVM unwinder to shared library" ON
   "LIBCXXABI_ENABLE_STATIC_UNWINDER" OFF)
 
+set(LIBCXXABI_FALLBACK_MALLOC_HEAP_SIZE "512" CACHE STRING
+  "Size in bytes of the emergency fallback malloc heap used when allocation \
+fails during exception handling (e.g. under OOM). The default of 512 bytes \
+is enough for only a few in-flight exceptions. Increase this for programs \
+that need to survive OOM conditions reliably.")
+
 option(LIBCXXABI_BAREMETAL "Build libc++abi for baremetal targets." OFF)
 # The default terminate handler attempts to demangle uncaught exceptions, which
 # causes extra I/O and demangling code to be pulled in.
@@ -449,6 +455,19 @@ endif()
 if (LIBCXXABI_BAREMETAL)
     add_definitions(-DLIBCXXABI_BAREMETAL)
 endif()
+
+# Validate the fallback malloc heap size. The heap uses unsigned short for
+# offsets in units of 4-byte heap_nodes, so the maximum is 65535 * 4 = 262140.
+if (LIBCXXABI_FALLBACK_MALLOC_HEAP_SIZE LESS 1)
+  message(FATAL_ERROR "LIBCXXABI_FALLBACK_MALLOC_HEAP_SIZE must be a positive integer, "
+                      "got '${LIBCXXABI_FALLBACK_MALLOC_HEAP_SIZE}'.")
+endif()
+if (LIBCXXABI_FALLBACK_MALLOC_HEAP_SIZE GREATER 262140)
+  message(FATAL_ERROR "LIBCXXABI_FALLBACK_MALLOC_HEAP_SIZE is set to ${LIBCXXABI_FALLBACK_MALLOC_HEAP_SIZE}, "
+                      "which exceeds the maximum of 262140 bytes (~256 KiB). The fallback "
+                      "malloc heap uses unsigned short for offsets and cannot be larger.")
+endif()
+add_definitions(-D_LIBCXXABI_FALLBACK_MALLOC_HEAP_SIZE=${LIBCXXABI_FALLBACK_MALLOC_HEAP_SIZE})
 
 if (C_SUPPORTS_COMMENT_LIB_PRAGMA)
   if (LIBCXXABI_HAS_PTHREAD_LIB)
