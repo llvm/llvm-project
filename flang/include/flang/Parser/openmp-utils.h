@@ -243,17 +243,27 @@ OmpAllocateInfo SplitOmpAllocate(const OmpAllocateDirective &x);
 // of the range is reached, the iterator becomes invalid.
 // Treat BLOCK constructs as if they were transparent, i.e. as if the
 // BLOCK/ENDBLOCK statements, and the specification part contained within
-// were removed. For example, given the range:
-//   stmt1
-//   block
-//     integer :: x
-//     stmt2
-//     block
-//     end block
-//   end block
-//   stmt3
-// the iterator will return stmt1, stmt2, stmt3 in that order, then will
-// become invalid.
+// were removed. The stepping determines whether the iterator steps "into"
+// DO loops and OpenMP loop constructs, or steps "over" them.
+//
+// Example: consecutive locations of the iterator:
+//
+//    Step::Into                  Step::Over
+//          block                       block
+//    1 =>    stmt1               1 =>    stmt1
+//            block                       block
+//              integer :: x                integer :: x
+//    2 =>      stmt2             2 =>      stmt2
+//              block                       block
+//              end block                   end block
+//            end block                   end block
+//    3 =>    do i = 1, n         3 =>    do i = 1, n
+//    4 =>      continue                    continue
+//            end do                      end do
+//    5 =>    stmt3               4 =>    stmt3
+//          end block                   end block
+//
+//    6 =>  <invalid>             5 =>  <invalid>
 //
 // The iterator is in a legal state (position) if it's at an
 // ExecutionPartConstruct that is not a BlockConstruct, or is invalid.
