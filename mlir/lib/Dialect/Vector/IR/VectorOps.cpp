@@ -7612,10 +7612,8 @@ static LogicalResult foldEmptyMaskOp(MaskOp maskOp, MaskOp::FoldAdaptor adaptor,
 
   Block *block = maskOp.getMaskBlock();
   auto terminator = cast<vector::YieldOp>(block->front());
-  if (terminator.getNumOperands() == 0) {
-    // `vector.mask` has no results, just remove the `vector.mask`.
+  if (terminator.getNumOperands() == 0)
     return failure();
-  }
 
   // `vector.mask` has results, propagate the results.
   llvm::append_range(results, terminator.getOperands());
