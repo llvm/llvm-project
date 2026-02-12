@@ -11496,6 +11496,11 @@ ScalarEvolution::getLoopInvariantExitCondDuringFirstIterationsImpl(
   if (!AR || AR->getLoop() != L)
     return std::nullopt;
 
+  // Even if both are valid, we need to consistently chose the unsigned or the
+  // signed predicate below, not mixtures of both. For now, prefer the unsigned
+  // predicate.
+  Pred = Pred.dropSameSign();
+
   // The predicate must be relational (i.e. <, <=, >=, >).
   if (!ICmpInst::isRelational(Pred))
     return std::nullopt;

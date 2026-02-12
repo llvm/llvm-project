@@ -1064,11 +1064,11 @@ failed:
 define i32 @not_invariant_samesign(i32 %unknown_limit, ptr %length_ptr) {
 ; CHECK-LABEL: @not_invariant_samesign(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RANGE_CHECK1_FIRST_ITER:%.*]] = icmp ult i32 2, [[UNKNOWN_LIMIT:%.*]]
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
+; CHECK-NEXT:    [[RANGE_CHECK1_FIRST_ITER:%.*]] = icmp samesign ult i32 [[IV_NEXT]], [[UNKNOWN_LIMIT:%.*]]
 ; CHECK-NEXT:    [[IS_POSITIVE:%.*]] = icmp sgt i32 [[UNKNOWN_LIMIT]], 0
 ; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[RANGE_CHECK1_FIRST_ITER]], [[IS_POSITIVE]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[LATCH]], label [[RET:%.*]]
