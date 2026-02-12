@@ -175,7 +175,7 @@ TEST(WalkAST, ClassTemplates) {
     template<typename T> struct Foo { Foo(T); };
     template<> struct $explicit^Foo<int> { Foo(int); };)cpp",
                        "^Foo x(3);"),
-              ElementsAre(Decl::ClassTemplate));
+              ElementsAre(Decl::ClassTemplateSpecialization));
 }
 TEST(WalkAST, VarTemplates) {
   // Explicit instantiation and (partial) specialization references primary
