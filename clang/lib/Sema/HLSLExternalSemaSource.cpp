@@ -260,7 +260,12 @@ static BuiltinTypeDeclBuilder setupTextureType(CXXRecordDecl *Decl, Sema &S,
       .addCopyConstructor()
       .addCopyAssignmentOperator()
       .addStaticInitializationFunctions(false)
-      .addSampleMethods(Dim);
+      .addSampleMethods(Dim)
+      .addSampleBiasMethods(Dim)
+      .addSampleGradMethods(Dim)
+      .addSampleLevelMethods(Dim)
+      .addSampleCmpMethods(Dim)
+      .addSampleCmpLevelZeroMethods(Dim);
 }
 
 // This function is responsible for constructing the constraint expression for
