@@ -149,6 +149,7 @@ void SPIRV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   ArgStringList CmdArgs;
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
+  CmdArgs.push_back("--allow-partial-linkage");
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 
