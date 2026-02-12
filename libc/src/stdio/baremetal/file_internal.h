@@ -35,6 +35,7 @@ struct FileIOResult {
 // ungetc handling.
 int push_ungetc_value(::FILE *stream, int c);
 bool pop_ungetc_value(::FILE *stream, unsigned char &out);
+
 LIBC_INLINE int ungetc_internal(int c, ::FILE *stream) {
   return push_ungetc_value(stream, c);
 }
