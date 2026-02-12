@@ -3486,6 +3486,21 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
     EXPECT_EQ(CR.getSignedMin().getSExtValue(), -3);
     EXPECT_EQ(CR.getSignedMax().getSExtValue(), 0);
   }
+  {
+    auto M = parseModule(R"(
+  define i32 @test(i8 %x, i8 %y) {
+    %ext.x = zext i8 %x to i32
+    %ext.y = zext i8 %y to i32
+    %or = or disjoint i32 %ext.x, %ext.y
+    ret i32 %or
+  })");
+    Function *F = M->getFunction("test");
+    AssumptionCache AC(*F);
+    Instruction *Or = &findInstructionByName(F, "or");
+    ConstantRange CR = computeConstantRange(Or, false, true, &AC, Or);
+    EXPECT_EQ(CR.getUnsignedMin().getZExtValue(), 0u);
+    EXPECT_EQ(CR.getUnsignedMax().getZExtValue(), 510u);
+  }
 }
 
 struct FindAllocaForValueTestParams {

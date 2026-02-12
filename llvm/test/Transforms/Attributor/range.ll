@@ -888,29 +888,13 @@ define dso_local i64 @select_int2ptr_bitcast_ptr2int(i32 %a) local_unnamed_addr 
 ; TUNIT-LABEL: define {{[^@]+}}@select_int2ptr_bitcast_ptr2int
 ; TUNIT-SAME: (i32 [[A:%.*]]) local_unnamed_addr #[[ATTR1]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A]], 5
-; TUNIT-NEXT:    [[DOT:%.*]] = select i1 [[CMP]], i32 1, i32 2
-; TUNIT-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A]], 10
-; TUNIT-NEXT:    [[Y_0_V:%.*]] = select i1 [[CMP1]], i32 1, i32 2
-; TUNIT-NEXT:    [[Y_0:%.*]] = add nuw nsw i32 [[DOT]], [[Y_0_V]]
-; TUNIT-NEXT:    [[CMP6:%.*]] = icmp eq i32 [[Y_0]], 5
-; TUNIT-NEXT:    [[I2P:%.*]] = inttoptr i1 [[CMP6]] to ptr
-; TUNIT-NEXT:    [[P2I:%.*]] = ptrtoint ptr [[I2P]] to i64
-; TUNIT-NEXT:    ret i64 [[P2I]]
+; TUNIT-NEXT:    ret i64 0
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@select_int2ptr_bitcast_ptr2int
 ; CGSCC-SAME: (i32 [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A]], 5
-; CGSCC-NEXT:    [[DOT:%.*]] = select i1 [[CMP]], i32 1, i32 2
-; CGSCC-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A]], 10
-; CGSCC-NEXT:    [[Y_0_V:%.*]] = select i1 [[CMP1]], i32 1, i32 2
-; CGSCC-NEXT:    [[Y_0:%.*]] = add nuw nsw i32 [[DOT]], [[Y_0_V]]
-; CGSCC-NEXT:    [[CMP6:%.*]] = icmp eq i32 [[Y_0]], 5
-; CGSCC-NEXT:    [[I2P:%.*]] = inttoptr i1 [[CMP6]] to ptr
-; CGSCC-NEXT:    [[P2I:%.*]] = ptrtoint ptr [[I2P]] to i64
-; CGSCC-NEXT:    ret i64 [[P2I]]
+; CGSCC-NEXT:    ret i64 0
 ;
 entry:
   %cmp = icmp sgt i32 %a, 5
