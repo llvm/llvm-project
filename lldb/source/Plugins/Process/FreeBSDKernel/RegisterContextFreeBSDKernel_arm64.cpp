@@ -64,7 +64,7 @@ bool RegisterContextFreeBSDKernel_arm64::ReadRegister(
 
   Status error;
   constexpr int FBSD14 = 1400084;
-  static const int osreldate = 1400084;
+  int osreldate = FBSD14;
   auto osreldate_or_null = GetOsreldate();
   if (osreldate_or_null)
     osreldate = *osreldate_or_null;
@@ -195,7 +195,7 @@ std::optional<int> RegisterContextFreeBSDKernel_arm64::GetOsreldate() {
     return std::nullopt;
 
   Status error;
-  int64_t osreldate = 0;
+  int osreldate = 0;
   size_t bytes_read =
       process_sp->ReadMemory(addr, &osreldate, sizeof(osreldate), error);
   if (bytes_read == sizeof(osreldate) && error.Success())
