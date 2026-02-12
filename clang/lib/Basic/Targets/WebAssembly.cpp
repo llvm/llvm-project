@@ -56,6 +56,7 @@ bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
       .Case("bulk-memory", HasBulkMemory)
       .Case("bulk-memory-opt", HasBulkMemoryOpt)
       .Case("call-indirect-overlong", HasCallIndirectOverlong)
+      .Case("compact-imports", HasCompactImports)
       .Case("exception-handling", HasExceptionHandling)
       .Case("extended-const", HasExtendedConst)
       .Case("fp16", HasFP16)
@@ -119,6 +120,8 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_tail_call__");
   if (HasWideArithmetic)
     Builder.defineMacro("__wasm_wide_arithmetic__");
+  // Note that not all wasm features appear here.   For example,
+  // HasCompatctImports
 
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
@@ -191,6 +194,7 @@ bool WebAssemblyTargetInfo::initFeatureMap(
   auto addBleedingEdgeFeatures = [&]() {
     addGenericFeatures();
     Features["atomics"] = true;
+    Features["compact-imports"] = true;
     Features["exception-handling"] = true;
     Features["extended-const"] = true;
     Features["fp16"] = true;
@@ -245,6 +249,14 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     }
     if (Feature == "-call-indirect-overlong") {
       HasCallIndirectOverlong = false;
+      continue;
+    }
+    if (Feature == "+compact-imports") {
+      HasCompactImports = true;
+      continue;
+    }
+    if (Feature == "-compact-imports") {
+      HasCompactImports = false;
       continue;
     }
     if (Feature == "+exception-handling") {

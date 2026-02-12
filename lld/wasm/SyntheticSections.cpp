@@ -241,9 +241,12 @@ void ImportSection::addImport(Symbol *sym) {
 void ImportSection::writeBody() {
   raw_ostream &os = bodyOutputStream;
 
-  writeUleb128(os, getNumImports(), "import count");
+  uint32_t numImports = getNumImports();
+  writeUleb128(os, numImports, "import count");
 
   bool is64 = ctx.arg.is64.value_or(false);
+  std::vector<WasmImport> imports;
+  imports.reserve(numImports);
 
   if (ctx.arg.memoryImport) {
     WasmImport import;
@@ -264,7 +267,7 @@ void ImportSection::writeBody() {
       import.Memory.Flags |= WASM_LIMITS_FLAG_HAS_PAGE_SIZE;
       import.Memory.PageSize = ctx.arg.pageSize;
     }
-    writeImport(os, import);
+    imports.push_back(import);
   }
 
   for (const Symbol *sym : importedSymbols) {
@@ -286,7 +289,7 @@ void ImportSection::writeBody() {
       import.Kind = WASM_EXTERNAL_TABLE;
       import.Table = *tableSym->getTableType();
     }
-    writeImport(os, import);
+    imports.push_back(import);
   }
 
   for (const Symbol *sym : gotSymbols) {
@@ -299,7 +302,34 @@ void ImportSection::writeBody() {
     else
       import.Module = "GOT.func";
     import.Field = sym->getName();
-    writeImport(os, import);
+    imports.push_back(import);
+  }
+
+  bool hasCompactImports =
+      out.targetFeaturesSec->features.contains("compact-imports");
+  uint32_t i = 0;
+  while (i < numImports) {
+    const WasmImport &import = imports[i];
+    if (hasCompactImports) {
+      uint32_t groupSize = 1;
+      for (uint32_t j = i + 1; j < numImports; j++) {
+        if (imports[j].Module == import.Module)
+          groupSize++;
+        else
+          break;
+      }
+      if (groupSize > 1) {
+        writeStr(os, import.Module, "module name");
+        writeStr(os, "", "empty field name");
+        writeU8(os, 0x7F, "compact imports encoding 1");
+        writeUleb128(os, groupSize, "num compact imports");
+        while (groupSize--) {
+          writeCompactImport(os, imports[i++]);
+        }
+        continue;
+      }
+    }
+    writeImport(os, imports[i++]);
   }
 }
 
