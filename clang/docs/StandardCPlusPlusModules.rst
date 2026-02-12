@@ -208,11 +208,15 @@ is ``-std=c++20`` or newer.
 How to produce a BMI
 ~~~~~~~~~~~~~~~~~~~~
 
-To generate a BMI for an importable module unit, use either the ``--precompile``
-or ``-fmodule-output`` command line options.
+To generate a BMI for an importable module unit, use either the ``--precompile``,
+``--precompile-reduced-bmi``, or ``-fmodule-output`` command line options.
 
 The ``--precompile`` option generates the BMI as the output of the compilation
 with the output path specified using the ``-o`` option.
+
+The ``--precompile-reduced-bmi`` option generates a Reduced BMI (See the
+following section for the definition of Reduced BMI) as the output of
+the compilation with the output path specified using the ``-o`` option.
 
 The ``-fmodule-output`` option generates the BMI as a by-product of the
 compilation. If ``-fmodule-output=`` is specified, the BMI will be emitted to
@@ -604,8 +608,14 @@ unnecessary dependencies for the BMI. To mitigate the problem, Clang has a
 compiler option to reduce the information contained in the BMI. These two
 formats are known as Full BMI and Reduced BMI, respectively.
 
-Users can use the ``-fmodules-reduced-bmi`` option to produce a
-Reduced BMI.
+Users can use the ``-fmodules-reduced-bmi`` or ``--precompile-reduced-bmi``
+option to produce a Reduced BMI.
+
+The ``--precompile-reduced-bmi`` option will produce the reduced BMI
+to the location specified by ``-o``.
+
+Note that ``--precompile`` will always generate the full BMI. So that build
+system which may generate the BMI only should take care of this.
 
 For the one-phase compilation model (CMake implements this model), with
 ``-fmodules-reduced-bmi``, the generated BMI will be a Reduced
