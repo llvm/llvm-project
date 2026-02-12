@@ -1205,6 +1205,12 @@ def TestLocationAttrOp : TEST_Op<"op_with_loc_attr"> {
   let assemblyFormat = "$loc_attr attr-dict";
 }
 
+def TestOptionalLocGroupOp : TEST_Op<"optional_loc_group"> {
+  let summary = "op with optional attr group for loc() disambiguation testing";
+  let arguments = (ins OptionalAttr<AnyAttr>:$opt_attr);
+  let assemblyFormat = "($opt_attr^)? attr-dict";
+}
+
 //===----------------------------------------------------------------------===//
 // Test Patterns
 //===----------------------------------------------------------------------===//
