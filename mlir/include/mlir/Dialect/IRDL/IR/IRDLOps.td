@@ -169,7 +169,7 @@ def IRDL_ParametersOp : IRDL_Op<"parameters",
 def IRDL_OperationOp : IRDL_Op<"operation",
     [HasParent<"DialectOp">, NoTerminator, NoRegionArguments,
     AtMostOneChildOf<"OperandsOp, ResultsOp, AttributesOp, RegionsOp">,
-    Symbol]> {
+    Symbol, IsolatedFromAbove]> {
   let summary = "Define a new operation";
   let description = [{
     `irdl.operation` defines a new operation belonging to the `irdl.dialect`
