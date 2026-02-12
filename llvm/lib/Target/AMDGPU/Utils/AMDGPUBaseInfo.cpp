@@ -2264,7 +2264,7 @@ bool isSupportedTgtId(unsigned Id, const MCSubtargetInfo &STI) {
     return isGFX11Plus(STI);
   default:
     if (Id >= ET_PARAM0 && Id <= ET_PARAM31)
-      return !isGFX11Plus(STI);
+      return !isGFX11Plus(STI) || isGFX13Plus(STI);
     return true;
   }
 }
