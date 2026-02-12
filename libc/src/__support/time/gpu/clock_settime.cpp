@@ -11,15 +11,16 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/time/clock_settime.h"
+#include "src/__support/time/gpu/time_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace internal {
 
-LLVM_LIBC_FUNCTION(int, clock_settime,
-                   (clockid_t clockid, const timespec *ts)) {
-  ErrorOr<int> result = internal::clock_settime(clockid, ts);
-  if (result)
-    return result.value();
-  return result.error();
+ErrorOr<int> clock_settime(clockid_t clockid, const timespec *ts) {
+  // GPU hardware clocks are read-only; setting is not supported.
+  (void)clockid;
+  (void)ts;
+  return -1;
 }
-
+} // namespace internal
 } // namespace LIBC_NAMESPACE_DECL
