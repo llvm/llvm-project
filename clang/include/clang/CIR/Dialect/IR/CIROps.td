@@ -6749,6 +6749,9 @@ def CIR_AtomicCmpXchgOp : CIR_Op<"atomic.cmpxchg", [
     when the exchange takes place. The `fail_order` attribute gives the memory
     order of this atomic operation when the exchange does not take place.
 
+    The `sync_scope` attribute specifies the synchronization scope for this
+    atomic operation.
+
     The `weak` attribute is a boolean flag that indicates whether this is a
     "weak" compare-and-exchange operation. A weak compare-and-exchange operation
     allows "spurious failures", meaning that be treated as if the comparison
@@ -6767,7 +6770,7 @@ def CIR_AtomicCmpXchgOp : CIR_Op<"atomic.cmpxchg", [
 
     ```mlir
     %old, %success = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire)
-        %ptr, %expected, %desired
+        syncscope(system) %ptr, %expected, %desired
         : (!cir.ptr<!u64i>, !u64i, !u64i) -> (!u64i, !cir.bool)
     ```
   }];
@@ -6777,6 +6780,7 @@ def CIR_AtomicCmpXchgOp : CIR_Op<"atomic.cmpxchg", [
                        CIR_AnyType:$desired,
                        Arg<CIR_MemOrder, "success memory order">:$succ_order,
                        Arg<CIR_MemOrder, "failure memory order">:$fail_order,
+                       CIR_SyncScopeKind:$sync_scope,
                        OptionalAttr<I64Attr>:$alignment,
                        UnitAttr:$weak,
                        UnitAttr:$is_volatile);
@@ -6784,6 +6788,7 @@ def CIR_AtomicCmpXchgOp : CIR_Op<"atomic.cmpxchg", [
   let assemblyFormat = [{
     (`weak` $weak^)?
     `success` `(` $succ_order `)` `failure` `(` $fail_order `)`
+    `syncscope` `(` $sync_scope `)`
     $ptr `,` $expected `,` $desired
     (`align` `(` $alignment^ `)`)?
     (`volatile` $is_volatile^)?
