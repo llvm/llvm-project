@@ -22,6 +22,16 @@
 extern "C" {
 #endif
 
+#define DEFINE_C_API_STRUCT(name, storage)                                     \
+  struct name {                                                                \
+    storage *ptr;                                                              \
+  };                                                                           \
+  typedef struct name name
+
+DEFINE_C_API_STRUCT(MlirMemoryEffectInstancesList, void);
+
+#undef DEFINE_C_API_STRUCT
+
 /// Returns `true` if the given operation implements an interface identified by
 /// its TypeID.
 MLIR_CAPI_EXPORTED bool
@@ -42,7 +52,7 @@ mlirOperationImplementsInterfaceStatic(MlirStringRef operationName,
 //===----------------------------------------------------------------------===//
 
 /// Returns the interface TypeID of the InferTypeOpInterface.
-MLIR_CAPI_EXPORTED MlirTypeID mlirInferTypeOpInterfaceTypeID();
+MLIR_CAPI_EXPORTED MlirTypeID mlirInferTypeOpInterfaceTypeID(void);
 
 /// These callbacks are used to return multiple types from functions while
 /// transferring ownership to the caller. The first argument is the number of
@@ -65,7 +75,7 @@ MLIR_CAPI_EXPORTED MlirLogicalResult mlirInferTypeOpInterfaceInferReturnTypes(
 //===----------------------------------------------------------------------===//
 
 /// Returns the interface TypeID of the InferShapedTypeOpInterface.
-MLIR_CAPI_EXPORTED MlirTypeID mlirInferShapedTypeOpInterfaceTypeID();
+MLIR_CAPI_EXPORTED MlirTypeID mlirInferShapedTypeOpInterfaceTypeID(void);
 
 /// These callbacks are used to return multiple shaped type components from
 /// functions while transferring ownership to the caller. The first argument is
@@ -86,6 +96,31 @@ mlirInferShapedTypeOpInterfaceInferReturnTypes(
     intptr_t nOperands, MlirValue *operands, MlirAttribute attributes,
     void *properties, intptr_t nRegions, MlirRegion *regions,
     MlirShapedTypeComponentsCallback callback, void *userData);
+
+//===---------------------------------------------------------------------===//
+// MemoryEffectsOpInterface
+//===---------------------------------------------------------------------===//
+
+/// Returns the interface TypeID of the MemoryEffectsOpInterface.
+MLIR_CAPI_EXPORTED MlirTypeID mlirMemoryEffectsOpInterfaceTypeID(void);
+
+/// Callbacks for implementing MemoryEffectsOpInterface from external code.
+typedef struct {
+  /// Optional constructor for user data. Set to nullptr to disable it.
+  void (*construct)(void *userData);
+  /// Optional destructor for user data. Set to nullptr to disable it.
+  void (*destruct)(void *userData);
+  /// Get memory effects callback.
+  void (*getEffects)(MlirOperation op, MlirMemoryEffectInstancesList effects,
+                     void *userData);
+  void *userData;
+} MlirMemoryEffectsOpInterfaceCallbacks;
+
+/// Attach a new FallbackModel for the MemoryEffectsOpInterface to the named
+/// operation. The FallbackModel will call the provided callbacks.
+MLIR_CAPI_EXPORTED void mlirMemoryEffectsOpInterfaceAttachFallbackModel(
+    MlirContext ctx, MlirStringRef opName,
+    MlirMemoryEffectsOpInterfaceCallbacks callbacks);
 
 #ifdef __cplusplus
 }
