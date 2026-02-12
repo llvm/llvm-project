@@ -652,11 +652,15 @@
 // CHECK-STRICT-ALIASING-NOT: -relaxed-aliasing
 // CHECK-NO-STRICT-ALIASING: -relaxed-aliasing
 
-// RUN: %clang -### -ftrap-unreachable=all %s 2>&1 | FileCheck %s -check-prefix=UNREACHABLE-TRAP-ALL
-// RUN: %clang -### -ftrap-unreachable=none %s 2>&1 | FileCheck %s -check-prefix=UNREACHABLE-TRAP-NONE
-// RUN: %clang -### -ftrap-unreachable=except-noreturn %s 2>&1 | FileCheck %s -check-prefix=UNREACHABLE-TRAP-EXCEPT-NORETURN
-// RUN: %clang -###  %s 2>&1 | FileCheck %s -check-prefix=UNREACHABLE-TRAP-EMPTY
+// RUN: %clang -### -flto -ftrap-unreachable=all %s 2>&1 | FileCheck %s -check-prefix=UNREACHABLE-TRAP-ALL
+// RUN: %clang -### -flto -ftrap-unreachable=none %s 2>&1 | FileCheck %s -check-prefix=UNREACHABLE-TRAP-NONE
+// RUN: %clang -### -flto -ftrap-unreachable=except-noreturn %s 2>&1 | FileCheck %s -check-prefix=UNREACHABLE-TRAP-EXCEPT-NORETURN
+// RUN: %clang -### -flto %s 2>&1 | FileCheck %s -check-prefix=UNREACHABLE-TRAP-EMPTY
 // UNREACHABLE-TRAP-ALL: "-ftrap-unreachable=all"
+// UNREACHABLE-TRAP-ALL: "-plugin-opt=--trap-unreachable"
 // UNREACHABLE-TRAP-EXCEPT-NORETURN: "-ftrap-unreachable=except-noreturn"
+// UNREACHABLE-TRAP-EXCEPT-NORETURN: "-plugin-opt=--no-trap-after-noreturn"
+// UNREACHABLE-TRAP-EXCEPT-NORETURN-SAME: "-plugin-opt=--trap-unreachable"
 // UNREACHABLE-TRAP-NONE: "-ftrap-unreachable=none"
 // UNREACHABLE-TRAP-EMPTY-NOT: -ftrap-unreachable
+// UNREACHABLE-TRAP-EMPTY-NOT: "-plugin-opt=--trap-unreachable"
