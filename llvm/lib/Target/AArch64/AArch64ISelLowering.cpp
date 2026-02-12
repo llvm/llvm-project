@@ -24047,7 +24047,8 @@ static SDValue performExtendDuplaneTruncCombine(SDNode *N, SelectionDAG &DAG) {
   SDValue Src = Trunc.getOperand(0);
   EVT SrcVT = Src.getValueType();
   EVT DstVT = N->getValueType(0);
-  if (SrcVT != DstVT || !SrcVT.isFixedLengthVector())
+  // Without VLS 256+, DUPLANE requires 128-bit inputs.
+  if (SrcVT != DstVT || !SrcVT.is128BitVector())
     return SDValue();
 
   // Verify that Src is already sign/zero-extended from the truncated bit width.
@@ -24080,14 +24081,7 @@ static SDValue performExtendDuplaneTruncCombine(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
   }
 
-  SDLoc DL(N);
-  EVT WideVT = SrcVT.is64BitVector()
-                   ? SrcVT.getDoubleNumVectorElementsVT(*DAG.getContext())
-                   : SrcVT;
-  SDValue WideSrc =
-      DAG.getNode(ISD::INSERT_SUBVECTOR, DL, WideVT, DAG.getUNDEF(WideVT), Src,
-                  DAG.getConstant(0, DL, MVT::i64));
-  return DAG.getNode(NewDupOpc, DL, DstVT, WideSrc, Dup.getOperand(1));
+  return DAG.getNode(NewDupOpc, SDLoc(N), DstVT, Src, Dup.getOperand(1));
 }
 
 static SDValue performExtendCombine(SDNode *N,
