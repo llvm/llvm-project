@@ -11,7 +11,7 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT: .functype return_call_indirect (i32) -> (i32)
 ; CHECK-NEXT: local.get 0
 ; REF:       return_call_indirect     __indirect_function_table, () -> (i32)
-; NOREF:     return_call_indirect     __indirect_function_table, () -> (i32)
+; NOREF:     return_call_indirect     () -> (i32)
 ; CHECK-NEXT: end_function
 define i32 @return_call_indirect(ptr %callee) {
   %r = tail call i32 %callee()

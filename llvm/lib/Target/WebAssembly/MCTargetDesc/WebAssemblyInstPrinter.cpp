@@ -68,7 +68,8 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     OS << "\t";
     OS << getMnemonic(*MI).first;
     OS << " ";
-    if (MI->getOperand(TableOperand).isExpr()) {
+    if (MI->getOperand(TableOperand).isExpr() &&
+        STI.checkFeatures("+reference-types")) {
       printOperand(MI, TableOperand, OS);
       OS << ", ";
     }
