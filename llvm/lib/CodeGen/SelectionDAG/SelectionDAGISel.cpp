@@ -4229,8 +4229,6 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     case OPC_MorphNodeTo2GlueOutput: {
       uint32_t TargetOpc = MatcherTable[MatcherIndex++];
       TargetOpc |= (MatcherTable[MatcherIndex++] << 8);
-      TargetOpc |= (MatcherTable[MatcherIndex++] << 16);
-      TargetOpc |= (MatcherTable[MatcherIndex++] << 24);
       unsigned EmitNodeInfo;
       if (Opcode >= OPC_EmitNode1None && Opcode <= OPC_EmitNode2Chain) {
         if (Opcode >= OPC_EmitNode0Chain && Opcode <= OPC_EmitNode2Chain)

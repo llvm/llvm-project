@@ -44,7 +44,7 @@ def : Pat<(loadpost (p0 GPR32:$addr), (i32 GPR32:$off)),
 // CHECK-NEXT: GIM_RootCheckType, /*Op*/3, /*Type*/GILLT_s32,
 // CHECK-NEXT: GIM_RootCheckRegBankForClass, /*Op*/3, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // CHECK-NEXT: // (loadpost:{ *:[i32] }:{ *:[i32] } GPR32:{ *:[i32] }:$addr, GPR32:{ *:[i32] }:$off)  =>  (LDPost:{ *:[i32] }:{ *:[i32] } GPR32:{ *:[i32] }:$addr, GPR32:{ *:[i32] }:$off)
-// CHECK-NEXT: GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode4(MyTarget::LDPost),
+// CHECK-NEXT: GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::LDPost),
 // CHECK-NEXT: GIR_RootConstrainSelectedInstOperands,
 
 //-----------------------------------------------------------------------------
@@ -79,7 +79,7 @@ def : Pat<(two_in GPR32:$i1, GPR32:$i2), (TWO_INS GPR32:$i2, GPR32:$i1)>;
 // CHECK-NEXT: GIM_RootCheckType, /*Op*/3, /*Type*/GILLT_s32,
 // CHECK-NEXT: GIM_RootCheckRegBankForClass, /*Op*/3, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // CHECK-NEXT: // (two_in:{ *:[i32] }:{ *:[i32] } GPR32:{ *:[i32] }:$i1, GPR32:{ *:[i32] }:$i2)  =>  (TWO_INS:{ *:[i32] }:{ *:[i32] } GPR32:{ *:[i32] }:$i2, GPR32:{ *:[i32] }:$i1)
-// CHECK-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode4(MyTarget::TWO_INS),
+// CHECK-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::TWO_INS),
 // CHECK-NEXT: GIR_RootToRootCopy, /*OpIdx*/0, // DstI[out1]
 // CHECK-NEXT: GIR_RootToRootCopy, /*OpIdx*/1, // DstI[out2]
 // CHECK-NEXT: GIR_RootToRootCopy, /*OpIdx*/3, // i2
@@ -108,12 +108,12 @@ def : Pat<(i32 (add i32:$src, i32:$src)),
 // CHECK-NEXT: GIM_CheckIsSameOperand, /*MI*/0, /*OpIdx*/2, /*OtherMI*/0, /*OtherOpIdx*/1,
 // CHECK-NEXT: // (add:{ *:[i32] } i32:{ *:[i32] }:$src, i32:{ *:[i32] }:$src)  =>  (OtherInstr:{ *:[i32] } (ImplicitDefInstr:{ *:[i32] }:{ *:[i32] } GPR32:{ *:[i32] }:$src))
 // CHECK-NEXT: GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
-// CHECK-NEXT: GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode4(MyTarget::ImplicitDefInstr),
+// CHECK-NEXT: GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(MyTarget::ImplicitDefInstr),
 // CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define)),
 // CHECK-NEXT: GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/1, // src
 // CHECK-NEXT: GIR_SetImplicitDefDead, /*InsnID*/1, /*OpIdx for MyTarget::R0*/0,
 // CHECK-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/1,
-// CHECK-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode4(MyTarget::OtherInstr),
+// CHECK-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::OtherInstr),
 // CHECK-NEXT: GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
 // CHECK-NEXT: GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
 // CHECK-NEXT: GIR_RootConstrainSelectedInstOperands,
@@ -134,12 +134,12 @@ def : Pat<(i32 (add i32:$src, i32:$src)),
 // CHECK-NEXT: // (add:{ *:[i32] } i32:{ *:[i32] }:$src, i32:{ *:[i32] }:$src)  =>  (OtherInstr:{ *:[i32] } (TwoOutsInstr:{ *:[i32] }:{ *:[i32] } GPR32:{ *:[i32] }:$src))
 // CHECK-NEXT: GIR_MakeTempReg, /*TempRegID*/1, /*TypeID*/GILLT_s32,
 // CHECK-NEXT: GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
-// CHECK-NEXT: GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode4(MyTarget::TwoOutsInstr),
+// CHECK-NEXT: GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(MyTarget::TwoOutsInstr),
 // CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define)),
 // CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/1, /*TempRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define|RegState::Dead)),
 // CHECK-NEXT: GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/1, // src
 // CHECK-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/1,
-// CHECK-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode4(MyTarget::OtherInstr),
+// CHECK-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::OtherInstr),
 // CHECK-NEXT: GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
 // CHECK-NEXT: GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
 // CHECK-NEXT: GIR_RootConstrainSelectedInstOperands,

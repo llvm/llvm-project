@@ -416,9 +416,6 @@ define amdgpu_ps float @s_test_fmin_legacy_f32(float inreg %a, float inreg %b) {
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX8-NEXT:    v_cmp_le_f32_e32 vcc, s2, v0
 ; GFX8-NEXT:    s_cmp_lg_u64 vcc, 0
-; GFX8-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX8-NEXT:    s_and_b32 s0, s0, 1
-; GFX8-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX8-NEXT:    s_cselect_b32 s0, s2, s3
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    ; return to shader part epilog

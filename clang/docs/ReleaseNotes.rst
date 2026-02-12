@@ -43,11 +43,19 @@ C/C++ Language Potentially Breaking Changes
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
+- Clang now more aggressively optimizes away stores to objects after they are
+  dead. This behavior can be disabled with ``-fno-lifetime-dse``.
+
 ABI Changes in This Version
 ---------------------------
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
+
+- The JSON AST dump now includes all fields from ``AvailabilityAttr``: ``platform``,
+  ``introduced``, ``deprecated``, ``obsoleted``, ``unavailable``, ``message``,
+  ``strict``, ``replacement``, ``priority``, and ``environment``. Previously, these
+  fields were missing from the JSON output.
 
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
@@ -84,6 +92,10 @@ Clang Python Bindings Potentially Breaking Changes
   An alias is kept in the form of a ``SPELLING_CACHE`` variable, but it only supports
   ``__getitem__`` and ``__contains__``. It will be removed in a future release.
   Please migrate to using ``CompletionChunk.SPELLING_CACHE`` instead.
+- ``SourceLocation`` and ``SourceRange`` now use ``NotImplemented`` to delegate
+  equality checks (``__eq__``) to the other object they are compared with when
+  they are of different classes. They previously returned ``False`` when compared
+  with objects of other classes.
 
 What's New in Clang |release|?
 ==============================
@@ -126,17 +138,26 @@ Non-comprehensive list of changes in this release
   Usable in constant expressions. Implicit conversion is supported for
   class/struct types with conversion operators.
 
+- A new generic bit-reverse builtin function ``__builtin_bitreverseg`` that
+  extends bit-reversal support to all standard integers type, including
+  ``_BitInt``
+
 New Compiler Flags
 ------------------
 - New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added
   to enable or disable Microsoft's anonymous struct/union extension without
   enabling other ``-fms-extensions`` features (#GH177607).
+- New option ``--precompile-reduced-bmi`` allows build system to generate a
+  reduced BMI only for a C++20 importable module unit. Previously the users
+  can only generate the reduced BMI as a by-product, e.g, an object files or
+  a full BMI.
 
 Deprecated Compiler Flags
 -------------------------
 
 Modified Compiler Flags
 -----------------------
+- The `-mno-outline` and `-moutline` compiler flags are now allowed on RISC-V and X86, which both support the machine outliner.
 
 Removed Compiler Flags
 ----------------------
@@ -211,6 +232,13 @@ Improvements to Clang's diagnostics
 
 - Improved ``-Wassign-enum`` performance by caching enum enumerator values. (#GH176454)
 
+- Fixed a false negative in ``-Warray-bounds`` where the warning was suppressed
+  when accessing a member function on a past-the-end array element.
+  (#GH179128)
+
+- Added a missing space to the FixIt for the ``implicit-int`` group of diagnostics and 
+  made sure that only one such diagnostic and FixIt is emitted per declaration group. (#GH179354)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -279,6 +307,7 @@ NVPTX Support
 
 X86 Support
 ^^^^^^^^^^^
+- ``march=znver6`` is now supported.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^

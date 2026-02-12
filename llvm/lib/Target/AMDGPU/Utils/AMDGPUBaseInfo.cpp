@@ -194,6 +194,10 @@ namespace llvm {
 
 namespace AMDGPU {
 
+iota_range<InstCounterType> inst_counter_types(InstCounterType MaxCounter) {
+  return enum_seq(LOAD_CNT, MaxCounter);
+}
+
 /// \returns true if the target supports signed immediate offset for SMRD
 /// instructions.
 bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST) {

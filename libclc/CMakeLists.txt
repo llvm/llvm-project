@@ -154,7 +154,7 @@ endif()
 # List of all targets. Note that some are added dynamically below.
 set( LIBCLC_TARGETS_ALL
   amdgcn--
-  amdgcn-amd-amdhsa
+  amdgcn-amd-amdhsa-llvm
   clspv--
   clspv64--
   r600--
@@ -205,9 +205,9 @@ include_directories( ${LLVM_INCLUDE_DIRS} )
 
 # Setup arch devices
 set( r600--_devices cedar cypress barts cayman )
-set( amdgcn--_devices tahiti )
-set( amdgcn-mesa-mesa3d_devices ${amdgcn--_devices} )
-set( amdgcn-amd-amdhsa_devices none )
+set( amdgcn--_devices none )
+set( amdgcn-mesa-mesa3d_devices none )
+set( amdgcn-amd-amdhsa-llvm_devices none )
 set( clspv--_devices none )
 set( clspv64--_devices none )
 set( nvptx64--_devices none )
@@ -221,18 +221,6 @@ set( cedar_aliases palm sumo sumo2 redwood juniper )
 set( cypress_aliases hemlock )
 set( barts_aliases turks caicos )
 set( cayman_aliases aruba )
-set( tahiti_aliases pitcairn verde oland hainan bonaire kabini kaveri hawaii
-  mullins tonga tongapro iceland carrizo fiji stoney polaris10 polaris11
-  gfx602 gfx705 gfx805
-  gfx900 gfx902 gfx904 gfx906 gfx908 gfx909 gfx90a gfx90c gfx942 gfx950
-  gfx1010 gfx1011 gfx1012 gfx1013
-  gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036
-  gfx1100 gfx1101 gfx1102 gfx1103
-  gfx1150 gfx1151 gfx1152 gfx1153
-  gfx1170
-  gfx1200 gfx1201 gfx1250 gfx1251
-  gfx1310
-)
 
 # pkg-config file
 configure_file( libclc.pc.in libclc.pc @ONLY )

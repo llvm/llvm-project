@@ -43,6 +43,7 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 // CHECK: using PredicateBitset = llvm::Bitset<MAX_SUBTARGET_PREDICATES>;
 
 // CHECK-LABEL: #ifdef GET_GLOBALISEL_TEMPORARIES_DECL
+// CHECK-EMPTY:
 // CHECK-NEXT:    mutable MatcherState State;
 // CHECK-NEXT:    typedef ComplexRendererFns(MyTargetInstructionSelector::*ComplexMatcherMemFn)(MachineOperand &) const;
 // CHECK-NEXT:    typedef void(MyTargetInstructionSelector::*CustomRendererFn)(MachineInstrBuilder &, const MachineInstr &, int) const;
@@ -57,12 +58,15 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 // CHECK-NEXT:    bool testMOPredicate_MO(unsigned PredicateID, const MachineOperand &MO, const MatcherState &State) const override;
 // CHECK-NEXT:    bool testSimplePredicate(unsigned PredicateID) const override;
 // CHECK-NEXT:    bool runCustomAction(unsigned FnID, const MatcherState &State, NewMIVector &OutMIs) const override;
-// CHECK-NEXT:  #endif // ifdef GET_GLOBALISEL_TEMPORARIES_DECL
+// CHECK-EMPTY:
+// CHECK-NEXT:  #endif // GET_GLOBALISEL_TEMPORARIES_DECL
 
 // CHECK-LABEL: #ifdef GET_GLOBALISEL_TEMPORARIES_INIT
+// CHECK-EMPTY:
 // CHECK-NEXT:    , State(0),
 // CHECK-NEXT:    ExecInfo(TypeObjects, NumTypeObjects, FeatureBitsets, ComplexPredicateFns, CustomRenderers)
-// CHECK-NEXT:  #endif // ifdef GET_GLOBALISEL_TEMPORARIES_INIT
+// CHECK-EMPTY:
+// CHECK-NEXT:  #endif // GET_GLOBALISEL_TEMPORARIES_INIT
 
 // CHECK-LABEL: // LLT Objects.
 // CHECK-NEXT:  enum {
@@ -141,7 +145,7 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 // CHECK-NEXT:    GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/64,
 // CHECK-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
 // CHECK-NEXT:    // (ld:{ *:[i64] } GPR:{ *:[i64] }:$src1)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (LOAD:{ *:[i64] } GPR:{ *:[i64] }:$src1)
-// CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode4(MyTarget::LOAD),
+// CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::LOAD),
 // CHECK-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // CHECK-NEXT:    // GIR_Coverage, 0,
 // CHECK-NEXT:    GIR_Done,
@@ -159,7 +163,7 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 // CHECK-NEXT:    GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
 // CHECK-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
 // CHECK-NEXT:    // (ld:{ *:[i32] } GPR:{ *:[i32] }:$src1)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (LOAD:{ *:[i32] } GPR:{ *:[i32] }:$src1)
-// CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode4(MyTarget::LOAD),
+// CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::LOAD),
 // CHECK-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // CHECK-NEXT:    // GIR_Coverage, 1,
 // CHECK-NEXT:    GIR_Done,
@@ -183,7 +187,7 @@ def LOAD : I<(outs GPR:$dst), (ins GPR:$src1),
 // CHECK-NEXT:    GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/64,
 // CHECK-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
 // CHECK-NEXT:    // (ld:{ *:[i64] } GPR:{ *:[i64] }:$src)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (LOAD:{ *:[i64] } GPR:{ *:[i64] }:$src)
-// CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode4(MyTarget::LOAD),
+// CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::LOAD),
 // CHECK-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // CHECK-NEXT:    // GIR_Coverage, 2,
 // CHECK-NEXT:    GIR_Done,
@@ -201,7 +205,7 @@ def LOAD : I<(outs GPR:$dst), (ins GPR:$src1),
 // CHECK-NEXT:    GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
 // CHECK-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
 // CHECK-NEXT:    // (ld:{ *:[i32] } GPR:{ *:[i32] }:$src)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (LOAD:{ *:[i32] } GPR:{ *:[i32] }:$src)
-// CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode4(MyTarget::LOAD),
+// CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::LOAD),
 // CHECK-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // CHECK-NEXT:    // GIR_Coverage, 3,
 // CHECK-NEXT:    GIR_Done,
