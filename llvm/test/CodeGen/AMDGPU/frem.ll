@@ -4224,7 +4224,7 @@ define amdgpu_kernel void @frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1150-NEXT:    v_div_scale_f64 v[8:9], null, v[4:5], v[4:5], 1.0
 ; GFX1150-NEXT:    v_rcp_f64_e32 v[10:11], v[8:9]
-; GFX1150-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1150-NEXT:    v_fma_f64 v[14:15], -v[8:9], v[10:11], 1.0
 ; GFX1150-NEXT:    v_fma_f64 v[10:11], v[10:11], v[14:15], v[10:11]
 ; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -4330,7 +4330,7 @@ define amdgpu_kernel void @frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-NEXT:    v_div_scale_f64 v[8:9], null, v[4:5], v[4:5], 1.0
 ; GFX1200-NEXT:    v_rcp_f64_e32 v[10:11], v[8:9]
-; GFX1200-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-NEXT:    v_fma_f64 v[14:15], -v[8:9], v[10:11], 1.0
 ; GFX1200-NEXT:    v_fma_f64 v[10:11], v[10:11], v[14:15], v[10:11]
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -4622,7 +4622,7 @@ define amdgpu_kernel void @fast_frem_f64(ptr addrspace(1) %out, ptr addrspace(1)
 ; GFX1150-NEXT:    global_load_b64 v[2:3], v12, s[4:5]
 ; GFX1150-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1150-NEXT:    v_div_scale_f64 v[4:5], null, v[2:3], v[2:3], v[0:1]
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1150-NEXT:    v_rcp_f64_e32 v[6:7], v[4:5]
 ; GFX1150-NEXT:    v_fma_f64 v[8:9], -v[4:5], v[6:7], 1.0
 ; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -4655,7 +4655,7 @@ define amdgpu_kernel void @fast_frem_f64(ptr addrspace(1) %out, ptr addrspace(1)
 ; GFX1200-NEXT:    global_load_b64 v[2:3], v12, s[4:5]
 ; GFX1200-NEXT:    s_wait_loadcnt 0x0
 ; GFX1200-NEXT:    v_div_scale_f64 v[4:5], null, v[2:3], v[2:3], v[0:1]
-; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
+; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-NEXT:    v_rcp_f64_e32 v[6:7], v[4:5]
 ; GFX1200-NEXT:    v_fma_f64 v[8:9], -v[4:5], v[6:7], 1.0
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -4900,7 +4900,7 @@ define amdgpu_kernel void @unsafe_frem_f64(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1150-NEXT:    global_load_b64 v[2:3], v12, s[4:5]
 ; GFX1150-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1150-NEXT:    v_div_scale_f64 v[4:5], null, v[2:3], v[2:3], v[0:1]
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1150-NEXT:    v_rcp_f64_e32 v[6:7], v[4:5]
 ; GFX1150-NEXT:    v_fma_f64 v[8:9], -v[4:5], v[6:7], 1.0
 ; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -4933,7 +4933,7 @@ define amdgpu_kernel void @unsafe_frem_f64(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1200-NEXT:    global_load_b64 v[2:3], v12, s[4:5]
 ; GFX1200-NEXT:    s_wait_loadcnt 0x0
 ; GFX1200-NEXT:    v_div_scale_f64 v[4:5], null, v[2:3], v[2:3], v[0:1]
-; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
+; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-NEXT:    v_rcp_f64_e32 v[6:7], v[4:5]
 ; GFX1200-NEXT:    v_fma_f64 v[8:9], -v[4:5], v[6:7], 1.0
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -17172,7 +17172,7 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1150-NEXT:    v_div_scale_f64 v[12:13], null, v[8:9], v[8:9], 1.0
 ; GFX1150-NEXT:    v_rcp_f64_e32 v[14:15], v[12:13]
-; GFX1150-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1150-NEXT:    v_fma_f64 v[18:19], -v[12:13], v[14:15], 1.0
 ; GFX1150-NEXT:    v_fma_f64 v[14:15], v[14:15], v[18:19], v[14:15]
 ; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -17259,7 +17259,7 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1150-NEXT:    v_div_scale_f64 v[14:15], null, v[10:11], v[10:11], 1.0
 ; GFX1150-NEXT:    v_rcp_f64_e32 v[16:17], v[14:15]
-; GFX1150-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1150-NEXT:    v_fma_f64 v[20:21], -v[14:15], v[16:17], 1.0
 ; GFX1150-NEXT:    v_fma_f64 v[16:17], v[16:17], v[20:21], v[16:17]
 ; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -17371,7 +17371,7 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-NEXT:    v_div_scale_f64 v[12:13], null, v[8:9], v[8:9], 1.0
 ; GFX1200-NEXT:    v_rcp_f64_e32 v[14:15], v[12:13]
-; GFX1200-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-NEXT:    v_fma_f64 v[18:19], -v[12:13], v[14:15], 1.0
 ; GFX1200-NEXT:    v_fma_f64 v[14:15], v[14:15], v[18:19], v[14:15]
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -17462,7 +17462,7 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-NEXT:    v_div_scale_f64 v[14:15], null, v[10:11], v[10:11], 1.0
 ; GFX1200-NEXT:    v_rcp_f64_e32 v[16:17], v[14:15]
-; GFX1200-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-NEXT:    v_fma_f64 v[20:21], -v[14:15], v[16:17], 1.0
 ; GFX1200-NEXT:    v_fma_f64 v[16:17], v[16:17], v[20:21], v[16:17]
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
