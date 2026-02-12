@@ -84,6 +84,10 @@ def CSEPass : Pass<"cse"> {
     operations. See [Common subexpression elimination](https://en.wikipedia.org/wiki/Common_subexpression_elimination)
     for more general details on this optimization.
   }];
+  let options = [
+    Option<"hoistPureOps", "hoist-pure-ops", "bool", /*default=*/"true",
+           "Allow hoisting of pure operations out of regions">,
+  ];
   let statistics = [
     Statistic<"numCSE", "num-cse'd", "Number of operations CSE'd">,
     Statistic<"numDCE", "num-dce'd", "Number of operations DCE'd">

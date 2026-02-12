@@ -62,8 +62,9 @@ namespace {
 /// Simple common sub-expression elimination.
 class CSEDriver {
 public:
-  CSEDriver(RewriterBase &rewriter, DominanceInfo *domInfo)
-      : rewriter(rewriter), domInfo(domInfo) {}
+  CSEDriver(RewriterBase &rewriter, DominanceInfo *domInfo,
+            bool hoistPureOps = true)
+      : rewriter(rewriter), domInfo(domInfo), hoistPureOps(hoistPureOps) {}
 
   /// Simplify all operations within the given op.
   void simplify(Operation *op, bool *changed = nullptr);
@@ -126,6 +127,7 @@ private:
   /// Operations marked as dead and to be erased.
   SmallVector<Operation *> opsToErase;
   DominanceInfo *domInfo = nullptr;
+  bool hoistPureOps = true;
   MemEffectsCache memEffectsCache;
 
   // Various statistics.
@@ -133,6 +135,27 @@ private:
   int64_t numDCE = 0;
 };
 } // namespace
+
+/// Returns true if the path between block 'a' and block 'b' in the region
+/// hierarchy crosses an operation with the 'IsIsolatedFromAbove' trait.
+static bool isBlockCrossIsIsolatedFromAbove(DominanceInfo *dominate, Block *a,
+                                            Block *b) {
+  if (a == b)
+    return false;
+  if (a->getParent() == b->getParent())
+    return false;
+  if (dominate->dominates(b, a))
+    std::swap(b, a);
+  while (b && b->getParentOp()) {
+    Operation *parnetOp = b->getParentOp();
+    if (parnetOp->mightHaveTrait<OpTrait::IsIsolatedFromAbove>())
+      return true;
+    b = parnetOp->getBlock();
+    if (b == a)
+      return false;
+  }
+  return false;
+}
 
 /// Hoist the pure ops to the location of the Nearest Common Dominator.
 LogicalResult CSEDriver::hoistPureOp(Operation *existing, Operation *op) {
@@ -145,6 +168,11 @@ LogicalResult CSEDriver::hoistPureOp(Operation *existing, Operation *op) {
     return failure();
   }
 
+  if (isBlockCrossIsIsolatedFromAbove(domInfo, ancestorBlock,
+                                      existing->getBlock()))
+    return failure();
+
+  // Find the insertion point based on dominance relationships.
   Operation *insertPoint = nullptr;
   for (Value operand : op->getOperands()) {
     if (domInfo->properlyDominates(operand, &ancestorBlock->front()))
@@ -185,7 +213,7 @@ void CSEDriver::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
     // Replace all uses, but do not remove the operation yet. This does not
     // notify the listener because the original op is not erased.
     if (!domInfo->properlyDominates(existing, op)) {
-      if (failed(hoistPureOp(existing, op)))
+      if (!hoistPureOps || failed(hoistPureOp(existing, op)))
         return;
     }
     LDBG() << "replace " << OpWithFlags(op, OpPrintingFlags().skipRegions())
@@ -208,7 +236,7 @@ void CSEDriver::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
           rewriteListener->notifyOperationReplaced(op, existing);
 
     if (!domInfo->properlyDominates(existing, op)) {
-      if (failed(hoistPureOp(existing, op)))
+      if (!hoistPureOps || failed(hoistPureOp(existing, op)))
         return;
     }
     // Replace all uses, but do not remove the operation yet. This does not
@@ -449,11 +477,6 @@ void CSEDriver::simplifyRegion(ScopedMapTy &knownValues,
   LDBG() << "visit region #" << region.getRegionNumber() << " of "
          << OpWithFlags(region.getParentOp(), OpPrintingFlags().skipRegions());
 
-  // Prevent CSE of pure operations across function boundaries.
-  std::unique_ptr<ScopedMapTy::ScopeTy> funcPureScope;
-  if (isa<FunctionOpInterface>(region.getParentOp())) {
-    funcPureScope = std::make_unique<ScopedMapTy::ScopeTy>(knownPureOps);
-  }
   bool hasSSADominance = domInfo->hasSSADominance(&region);
   // If the region only contains one block, then simplify it directly.
   if (region.hasOneBlock()) {
@@ -504,7 +527,8 @@ void CSEDriver::simplifyRegion(ScopedMapTy &knownValues,
 }
 
 void CSEDriver::simplify(Operation *op, bool *changed) {
-  /// Simplify all regions.
+  /// Simplify all regions. Added a new scope using curly braces to release the
+  /// knownPureOps scope before deleting the operation.
   {
     ScopedMapTy knownValues;
     ScopedMapTy knownPureOps;
@@ -538,6 +562,7 @@ void mlir::eliminateCommonSubExpressions(RewriterBase &rewriter,
 namespace {
 /// CSE pass.
 struct CSE : public impl::CSEPassBase<CSE> {
+  using impl::CSEPassBase<CSE>::CSEPassBase;
   void runOnOperation() override;
 };
 } // namespace
@@ -545,7 +570,7 @@ struct CSE : public impl::CSEPassBase<CSE> {
 void CSE::runOnOperation() {
   // Simplify the IR.
   IRRewriter rewriter(&getContext());
-  CSEDriver driver(rewriter, &getAnalysis<DominanceInfo>());
+  CSEDriver driver(rewriter, &getAnalysis<DominanceInfo>(), hoistPureOps);
   bool changed = false;
   driver.simplify(getOperation(), &changed);
 

@@ -16,11 +16,11 @@ func.func @bar() {
       verify_each: true,
       // CHECK:       builtin.module(
       // CHECK-NEXT:    func.func(
-      // CHECK-NEXT:      cse,
+      // CHECK-NEXT:      cse{hoist-pure-ops=true},
       // CHECK-NEXT:      canonicalize{ max-iterations=1 max-num-rewrites=-1 region-simplify=normal test-convergence=false top-down=false}
       // CHECK-NEXT:    )
       // CHECK-NEXT:  )
-      pipeline: "builtin.module(func.func(cse,canonicalize{max-iterations=1 max-num-rewrites=-1 region-simplify=normal top-down=false}))",
+      pipeline: "builtin.module(func.func(cse{hoist-pure-ops=1},canonicalize{max-iterations=1 max-num-rewrites=-1 region-simplify=normal top-down=false}))",
       disable_threading: true
     }
   }

@@ -4,7 +4,7 @@
 // Ensure the composite pass correctly prints its options.
 // PIPELINE:      builtin.module(
 // PIPELINE-NEXT:    composite-fixed-point-pass{max-iterations=10 name=TestCompositePass
-// PIPELINE-SAME: pipeline=canonicalize{ max-iterations=10 max-num-rewrites=-1 region-simplify=normal test-convergence=false top-down=true},cse}
+// PIPELINE-SAME: pipeline=canonicalize{ max-iterations=10 max-num-rewrites=-1 region-simplify=normal test-convergence=false top-down=true},cse{hoist-pure-ops=true}}
 
 // CHECK-LABEL: running `TestCompositePass`
 //       CHECK: running `CanonicalizerPass`
