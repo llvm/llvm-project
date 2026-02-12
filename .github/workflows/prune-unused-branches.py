@@ -22,11 +22,11 @@ def get_branches() -> list[str]:
     return [branch.replace("remotes/origin/", "") for branch in filtered_branches]
 
 
-def get_branches_from_open_prs(github_token) -> list[str]:
+def query_prs(github_token, extra_query_criteria):
     gh = github.Github(auth=github.Auth.Token(github_token))
-    query = """
+    query_template = """
   query ($after: String) {
-    search(query: "is:pr repo:llvm/llvm-project is:open head:users/", type: ISSUE, first: 100, after: $after) {
+    search(query: "is:pr repo:llvm/llvm-project is:open {extra_query_criteria}", type: ISSUE, first: 100, after: $after) {
       nodes {
         ... on PullRequest {
           baseRefName
@@ -41,6 +41,7 @@ def get_branches_from_open_prs(github_token) -> list[str]:
       }
     }
   }"""
+    query = query_template.format(extra_query_criteria=extra_query_criteria)
     pr_data = []
     has_next_page = True
     variables = {"after": None}
@@ -54,13 +55,27 @@ def get_branches_from_open_prs(github_token) -> list[str]:
         pr_data.extend(prs)
         print(f"Processed {len(prs)} PRs")
 
+    return pr_data
+
+
+def get_branches_from_open_prs(github_token) -> list[str]:
+    pr_data = []
+    pr_data.extend(query_prs(github_token, "head:users/"))
+    # We need to explicitly check cases where the base is a user branch to
+    # ensure we capture branches that are used as a diff base for cross-repo
+    # PRs.
+    pr_data.extend(query_prs(github_token, "base:users/"))
+
     user_branches = []
     for pr in pr_data:
         if not pr["isCrossRepository"]:
             if pr["baseRefName"] != "main":
                 user_branches.append(pr["baseRefName"])
             user_branches.append(pr["headRefName"])
-    return user_branches
+        else:
+            assert pr["baseRefName"].startswith("users/")
+            user_branches.append(pr["baseRefName"])
+    return list(set(user_branches))
 
 
 def get_user_branches_to_remove(
