@@ -61,20 +61,17 @@ void f(T t) {
   // cxx11-14-error@-1 {{constexpr if is a C++17 extension}}
     static_assert(false, "must be int-sized");
     // since-cxx11-error@-1 {{static assertion failed: must be int-sized}}
-    //   since-cxx11-note@#cwg2518-f-c {{in instantiation of function template specialization 'cwg2518::f<char>' requested here}}
+    //   since-cxx11-note@#cwg2518-f-char {{in instantiation of function template specialization 'cwg2518::f<char>' requested here}}
   }
 }
 
-void g(char c) {
-  f(0);
-  f(c); // #cwg2518-f-c
-}
+template void f(int);
+template void f(char);  // #cwg2518-f-char
 
 template <typename Ty>
 struct S {
-  static_assert(false);
-  // cxx11-14-error@-1 {{'static_assert' with no message is a C++17 extension}}
-  // since-cxx11-error@-2 {{static assertion failed}}
+  static_assert(false, "");
+  // since-cxx11-error@-1 {{static assertion failed:}}
   //   since-cxx11-note@#cwg2518-S-double {{in instantiation of template class 'cwg2518::S<double>' requested here}}
 };
 
@@ -117,14 +114,14 @@ long double operator"" _RESERVED(long double);
 
 namespace cwg2547 { // cwg2547: 20
 #if __cplusplus >= 202302L
-struct S;
-// since-cxx23-note@-1 {{forward declaration of 'cwg2547::S'}}
-// since-cxx23-note@-2 {{forward declaration of 'cwg2547::S'}}
-// since-cxx23-note@-3 {{forward declaration of 'cwg2547::S'}}
+struct S; // #cwg2547-S
 bool operator==(S, S) = default;  // error: S is not complete
 // since-cxx23-error@-1 {{variable has incomplete type 'S'}}
-// since-cxx23-error@-2 {{variable has incomplete type 'S'}}
-// since-cxx23-error@-3 {{equality comparison operator is not a friend of incomplete class 'cwg2547::S'}}
+//   since-cxx23-note@#cwg2547-S {{forward declaration of 'cwg2547::S'}}
+// since-cxx23-error@-3 {{variable has incomplete type 'S'}}
+//   since-cxx23-note@#cwg2547-S {{forward declaration of 'cwg2547::S'}}
+// since-cxx23-error@-5 {{equality comparison operator is not a friend of incomplete class 'cwg2547::S'}}
+//   since-cxx23-note@#cwg2547-S {{forward declaration of 'cwg2547::S'}}
 struct S {
   friend bool operator==(S, const S&) = default; // error: parameters of different types
   // since-cxx23-error@-1 {{parameters for defaulted equality comparison operator must have the same type (found 'S' vs 'const S &')}}

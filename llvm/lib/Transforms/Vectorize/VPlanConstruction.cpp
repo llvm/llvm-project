@@ -221,7 +221,8 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       // Phi node's operands may not have been visited at this point. We create
       // an empty VPInstruction that we will fix once the whole plain CFG has
       // been built.
-      NewR = VPIRBuilder.createScalarPhi({}, Phi->getDebugLoc(), "vec.phi");
+      NewR =
+          VPIRBuilder.createScalarPhi({}, Phi->getDebugLoc(), "vec.phi", *Phi);
       NewR->setUnderlyingValue(Phi);
       if (isHeaderBB(Phi->getParent(), LI->getLoopFor(Phi->getParent()))) {
         // Header phis need to be fixed after the VPBB for the latch has been
@@ -735,8 +736,7 @@ void VPlanTransforms::createHeaderPhiRecipes(
 }
 
 void VPlanTransforms::createInLoopReductionRecipes(
-    VPlan &Plan, const DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache,
-    const DenseSet<BasicBlock *> &BlocksNeedingPredication,
+    VPlan &Plan, const DenseSet<BasicBlock *> &BlocksNeedingPredication,
     ElementCount MinVF) {
   VPTypeAnalysis TypeInfo(Plan);
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
@@ -858,17 +858,18 @@ void VPlanTransforms::createInLoopReductionRecipes(
                 ? IndexOfFirstOperand + 1
                 : IndexOfFirstOperand;
         VecOp = CurrentLink->getOperand(VecOpId);
-        assert(VecOp != PreviousLink &&
-               CurrentLink->getOperand(CurrentLink->getNumOperands() - 1 -
-                                       (VecOpId - IndexOfFirstOperand)) ==
-                   PreviousLink &&
-               "PreviousLink must be the operand other than VecOp");
+        assert(
+            VecOp != PreviousLink &&
+            CurrentLink->getOperand(
+                cast<VPInstruction>(CurrentLink)->getNumOperandsWithoutMask() -
+                1 - (VecOpId - IndexOfFirstOperand)) == PreviousLink &&
+            "PreviousLink must be the operand other than VecOp");
       }
 
-      // Get block mask from BlockMaskCache if the block needs predication.
+      // Get block mask from CurrentLink, if it needs predication.
       VPValue *CondOp = nullptr;
       if (BlocksNeedingPredication.contains(CurrentLinkI->getParent()))
-        CondOp = BlockMaskCache.lookup(LinkVPBB);
+        CondOp = cast<VPInstruction>(CurrentLink)->getMask();
 
       assert(PhiR->getVFScaleFactor() == 1 &&
              "inloop reductions must be unscaled");
