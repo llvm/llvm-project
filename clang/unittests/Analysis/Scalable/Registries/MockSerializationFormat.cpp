@@ -27,10 +27,7 @@
 using namespace clang;
 using namespace ssaf;
 
-char MockSerializationFormat::ID = 0;
-
-MockSerializationFormat::MockSerializationFormat()
-    : llvm::RTTIExtends<MockSerializationFormat, SerializationFormat>() {
+MockSerializationFormat::MockSerializationFormat() {
   for (const auto &FormatInfoEntry : llvm::Registry<FormatInfo>::entries()) {
     std::unique_ptr<FormatInfo> Info = FormatInfoEntry.instantiate();
     bool Inserted = FormatInfos.try_emplace(Info->ForSummary, *Info).second;

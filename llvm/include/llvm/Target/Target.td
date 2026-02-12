@@ -254,7 +254,24 @@ class RegisterWithSubRegs<string n, list<Register> subregs> : Register<n> {
 // RegisterClass's and other Operand's.
 class DAGOperand {
   string OperandNamespace = "MCOI";
+
+  // Per-operand equivalent of InstructionEncoding's `DecoderMethod`.
+  //
+  // This will be called with one of the following signatures:
+  // ```
+  //   // If the operand is decoded from a field in the instruction. `TmpType`
+  //   // will either be the same as `InsnType` (if it's integral), or it will
+  //   // be `uint64_t`. `InsnType` is templated type the generated
+  //   // `decodeToMCInst` is used with.
+  //   DecodeStatus DecoderMethod(MCInst &Inst, TmpType Field, int64_t Address,
+  //                              const MCDisassembler *Decoder)
+  //   // If the operand does not appear in the instruction encoding
+  //   DecodeStatus DecoderMethod(MCInst &Inst, const MCDisassembler *Decoder)
+  // ```
   string DecoderMethod = "";
+
+  // Operand equivalent of InstructionEncoding's `hasCompleteDecoder`; if this
+  // is true, then other instructions will be tried before decoding fails.
   bit hasCompleteDecoder = true;
 }
 
@@ -560,6 +577,18 @@ class InstructionEncoding {
   // List of predicates which will be turned into isel matching code.
   list<Predicate> Predicates = [];
 
+  // The name of a custom C++ decoder method to use to decode this instruction.
+  //
+  // If the instruction has a `DecoderMethod`, then the fields for its operands
+  // are not automatically decoded, and the decoder method is responsible for
+  // constructing all the MCInst's operands.
+  //
+  // Will be called with the following signature (where `InsnType` is the
+  // template type that `decodeToMCInst` is called with):
+  // ```
+  //   DecodeStatus DecoderMethod(MCInst &Inst, InsnType insn, int64_t Address,
+  //                              const MCDisassembler *Decoder)
+  // ```
   string DecoderMethod = "";
 
   // Is the instruction decoder method able to completely determine if the
@@ -747,6 +776,14 @@ class Instruction : InstructionEncoding {
   ///   discussion of inline assembly constraint strings.
   string Constraints = "";
 
+  /// This is used by `getBinaryCodeForInstr` to fixup the instruction encoding
+  /// for the instruction.
+  /// It is called with the following signature, expecting to return the new
+  /// value of `Value`, after the operand has been encoded into `Value`:
+  /// ```
+  ///   InstType = PostEncoderMethod(const MCInst &MI, InstType Value,
+  ///                                const MCSubtargetInfo &STI);
+  /// ```
   string PostEncoderMethod = "";
 
   /// Target-specific flags. This becomes the TSFlags field in TargetInstrDesc.
@@ -755,6 +792,14 @@ class Instruction : InstructionEncoding {
   ///@name Assembler Parser Support
   ///@{
 
+  /// Custom Assembly Converter. If non-zero, this is used for converting the
+  /// matched mnemonic's operand tokens into MCOperands and adding them to the
+  /// MCInst.
+  ///
+  /// Will be called as:
+  /// `void AsmMatchConverter(MCInst &Inst, const OperandVector &Operands);`
+  ///
+  /// See also: InstAlias.UseInstAsmMatchConverter.
   string AsmMatchConverter = "";
 
   /// TwoOperandAliasConstraint - Enable TableGen to auto-generate a
@@ -828,8 +873,15 @@ class PseudoInstExpansion<dag Result> {
 
 /// Predicates - These are extra conditionals which are turned into instruction
 /// selector matching code. Currently each predicate is just a string.
-class Predicate<string cond> {
-  string CondString = cond;
+class Predicate<code cond> {
+
+  /// This is a C++ expression which can be evaluated to return a bool,
+  /// representing whether the predicate is satisfied.
+  ///
+  /// The following variables are in scope:
+  /// - `const GET_DAGISEL_BODY *this` representing the target's DAGToDAGISel
+  ///   instance.
+  code CondString = cond;
 
   /// AssemblerMatcherPredicate - If this feature can be used by the assembler
   /// matcher, this is true. Targets should set this by inheriting their
@@ -989,7 +1041,9 @@ class AsmOperandClass {
   /// The name of the method on the target specific operand to call to custom
   /// handle the operand parsing. This is useful when the operands do not relate
   /// to immediates or registers and are very instruction specific (as flags to
-  /// set in a processor register, coprocessor number, ...).
+  /// set in a processor register, coprocessor number, ...). The method
+  /// signature should be:
+  ///   ParseStatus ParserMethod(OperandVector &Operands);
   string ParserMethod = ?;
 
   // The diagnostic type to present when referencing this operand in a
@@ -1025,14 +1079,41 @@ def ImmAsmOperand : AsmOperandClass {
 /// needed, though this should not be needed for RISC targets.
 class Operand<ValueType ty> : DAGOperand {
   ValueType Type = ty;
+
+  // Custom method for printing the current operand.
+  //
+  // This will be invoked with the following signature, on the class denoted
+  // by `TargetName # AsmWriter.AsmWriterClassName`
+  // ```
+  //   void Class::PrintMethod(const MCInst *MI, unsigned OpNo,
+  //                           const MCSubtargetInfo &STI, raw_ostream &O);
+  // ```
   string PrintMethod = "printOperand";
+
+  /// This method will be used to encode the operand into bits, which will be
+  /// placed into the final instruction according to the Encoding information.
+  ///
+  /// This will be called with the following signature:
+  /// ```
+  ///   uint64_t MCCodeEmitter::EncoderMethod(const MCInst &MI, unsigned OpNo,
+  ///                                         SmallVectorImpl<MCFixup> &Fixups,
+  ///                                         const MCSubtargetInfo &STI) const;
+  /// ```
   string EncoderMethod = "";
+
   string OperandType = "OPERAND_UNKNOWN";
+
+  /// This operand may have sub-operands. Their use is complex, but this is
+  /// where they would be described.
   dag MIOperandInfo = (ops);
 
-  // MCOperandPredicate - Optionally, a code fragment operating on
-  // const MCOperand &MCOp, and returning a bool, to indicate if
-  // the value of MCOp is valid for the specific subclass of Operand
+  // MCOperandPredicate - Optionally, a C++ fragment returning a bool to
+  // indicate if the value of the operand is valid for this specific subclass of
+  // Operand.
+  //
+  // The following variables are in scope:
+  // - `const MCOperand &MCOp` representing the current Operand
+  // - `const MCSubtargetInfo &STI` representing the current subtarget.
   code MCOperandPredicate;
 
   // ParserMatchClass - The "match class" that operands of this type fit
@@ -1050,13 +1131,14 @@ class RegisterOperand<RegisterClassLike regclass, string pm = "printOperand">
   : DAGOperand {
   // RegClass - The register class of the operand.
   RegisterClassLike RegClass = regclass;
+
   // PrintMethod - The target method to call to print register operands of
   // this type. The method normally will just use an alt-name index to look
   // up the name to print. Default to the generic printOperand().
   string PrintMethod = pm;
 
   // EncoderMethod - The target method name to call to encode this register
-  // operand.
+  // operand. See `Operand.EncoderMethod`.
   string EncoderMethod = "";
 
   // ParserMatchClass - The "match class" that operands of this type fit
@@ -1699,6 +1781,11 @@ class AsmParser {
   // AsmParserInstCleanup - If non-empty, this is the name of a custom member
   // function of the AsmParser class to call on every matched instruction.
   // This can be used to perform target specific instruction post-processing.
+  //
+  // This will be invoked with the following signature:
+  // ```
+  //   void AsmParserInstCleanup(MCInst &Inst);
+  // ```
   string AsmParserInstCleanup  = "";
 
   // ShouldEmitMatchRegisterName - Set to false if the target needs a hand
@@ -1734,8 +1821,16 @@ class AsmParser {
   bit ReportMultipleNearMisses = false;
 
   // OperandParserMethod - If non-empty, this is the name of a custom
-  // member function of the AsmParser class to call for every instruction
-  // operand to be parsed.
+  // member function of the AsmParser class to call for every custom instruction
+  // operand to be parsed. If unset, this defaults to calling the generated
+  // `tryCustomParseOperand` implementation.
+  //
+  // This will be invoked with the following signature, on the target's
+  // `AsmParser` subclass. The `MCK` operand represents the generated
+  // Match Class Kind.
+  // ```
+  //   ParseStatus OperandParserMethod(OperandVector &Operands, unsigned MCK);
+  // ```
   string OperandParserMethod = "";
 
   // CallCustomParserForAllOperands - Set to true if the custom parser
@@ -1745,15 +1840,15 @@ class AsmParser {
 
   // PreferSmallerInstructions - Should the assembly matcher prefer the smaller
   // instructions.
-  // 
+  //
   // This is useful for the ARM instructions set where smaller encodings must
   // be preferentially selected.
   //
-  // The preference order is: 
+  // The preference order is:
   //    Instrution size (if this option is enabled, smallest first)
-  //    Number of Operands (least first), 
-  //    Operand Classes (lexicographically by operand), 
-  //    (Optional) Instruction id (see AsmMatcherEmitter.cpp for details), 
+  //    Number of Operands (least first),
+  //    Operand Classes (lexicographically by operand),
+  //    (Optional) Instruction id (see AsmMatcherEmitter.cpp for details),
   //    Number of required features (least first)
   bit PreferSmallerInstructions = false;
 }
@@ -1802,8 +1897,11 @@ def all_of;
 /// AssemblerPredicate - This is a Predicate that can be used when the assembler
 /// matches instructions and aliases.
 class AssemblerPredicate<dag cond, string name = ""> {
+  // See `Predicate.AssemblerMatcherPredicate`
   bit AssemblerMatcherPredicate = true;
+  // See: Predicate.AssemblerCondDag`
   dag AssemblerCondDag = cond;
+  // See: Predicate.PredicateName
   string PredicateName = name;
 }
 

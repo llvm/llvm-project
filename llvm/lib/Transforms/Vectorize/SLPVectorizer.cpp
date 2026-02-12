@@ -5851,8 +5851,8 @@ private:
         SmallVector<std::unique_ptr<ScheduleBundle>> PseudoBundles;
         SmallVector<ScheduleBundle *> Bundles;
         Instruction *In = SD->getInst();
-        if (R.isVectorized(In)) {
-          ArrayRef<TreeEntry *> Entries = R.getTreeEntries(In);
+        ArrayRef<TreeEntry *> Entries = R.getTreeEntries(In);
+        if (!Entries.empty()) {
           for (TreeEntry *TE : Entries) {
             if (!isa<ExtractValueInst, ExtractElementInst, CallBase>(In) &&
                 In->getNumOperands() != TE->getNumOperands())
@@ -22351,12 +22351,17 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
   // analysis, leading to a crash.
   // Non-scheduled nodes may not have related ScheduleData model, which may lead
   // to a skipped dep analysis.
-  if (S.areInstructionsWithCopyableElements() && EI && EI.UserTE->hasState() &&
-      EI.UserTE->doesNotNeedToSchedule() &&
+  bool HasCopyables = S.areInstructionsWithCopyableElements();
+  bool DoesNotRequireScheduling =
+      (!HasCopyables && doesNotNeedToSchedule(VL)) ||
+      all_of(VL, [&](Value *V) { return S.isNonSchedulable(V); });
+  if (!DoesNotRequireScheduling && S.areInstructionsWithCopyableElements() &&
+      EI && EI.UserTE->hasState() && EI.UserTE->doesNotNeedToSchedule() &&
       EI.UserTE->getOpcode() != Instruction::PHI &&
+      EI.UserTE->getOpcode() != Instruction::InsertElement &&
       any_of(EI.UserTE->Scalars, [](Value *V) {
         auto *I = dyn_cast<Instruction>(V);
-        if (!I || I->hasOneUser())
+        if (!I)
           return false;
         for (User *U : I->users()) {
           auto *UI = cast<Instruction>(U);
@@ -22428,13 +22433,10 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         return std::nullopt;
     }
   }
-  bool HasCopyables = S.areInstructionsWithCopyableElements();
-  if (((!HasCopyables && doesNotNeedToSchedule(VL)) ||
-       all_of(VL, [&](Value *V) { return S.isNonSchedulable(V); }))) {
+  if (DoesNotRequireScheduling) {
     // If all operands were replaced by copyables, the operands of this node
     // might be not, so need to recalculate dependencies for schedule data,
     // replaced by copyable schedule data.
-    SmallVector<ScheduleData *> ControlDependentMembers;
     for (Value *V : VL) {
       auto *I = dyn_cast<Instruction>(V);
       if (!I || (HasCopyables && S.isCopyableElement(V)))

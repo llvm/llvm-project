@@ -469,6 +469,44 @@ gpu.func @scatter_ops(%src: memref<256xf16>, %laneid: index) {
   gpu.return
 }
 
+// CHECK-LABEL: gpu.func @scatter_ops_with_leading_dims({{.*}}) {
+// CHECK:       %[[OFFSETS:.*]] = arith.constant {{.*}} dense<12> : vector<1x1x16xindex>
+// CHECK:       %[[MASKS:.*]] = arith.constant {{.*}} dense<true> : vector<1x1x16xi1>
+// CHECK:       %[[W:.*]]:4 = gpu.warp_execute_on_lane_0(%{{.*}})[16]
+// CHECK-SAME:    -> (vector<1x1x1xf16>, memref<256xf16>, vector<1x1x1xindex>, vector<1x1x1xi1>) {
+// CHECK:         gpu.yield %{{.*}}, %{{.*}}, %[[OFFSETS]], %[[MASKS]]
+// CHECK-SAME:    : vector<1x1x16xf16>, memref<256xf16>, vector<1x1x16xindex>, vector<1x1x16xi1>
+// CHECK-NEXT:  }
+// CHECK-NEXT:  %[[V1:.*]] = vector.shape_cast %[[W]]#2 : vector<1x1x1xindex> to vector<1xindex>
+// CHECK-NEXT:  %[[V2:.*]] = vector.shape_cast %[[W]]#3 : vector<1x1x1xi1> to vector<1xi1>
+// CHECK-NEXT:  %[[T1:.*]] = xegpu.load %[[W]]#1[%[[V1]]], %[[V2]]
+// CHECK-SAME:    : memref<256xf16>, vector<1xindex>, vector<1xi1> -> vector<1xf16>
+// CHECK-NEXT:  xegpu.store %[[T1]], %[[W]]#1[%[[V1]]], %[[V2]]
+// CHECK-SAME:    : vector<1xf16>, memref<256xf16>, vector<1xindex>, vector<1xi1>
+gpu.func @scatter_ops_with_leading_dims(%src: memref<256xf16>, %laneid: index) {
+  gpu.warp_execute_on_lane_0(%laneid)[16] {
+    %1 = arith.constant
+      {layout_result_0 = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>}
+      dense<1> : vector<1x1x16xi1>
+    %offset = arith.constant
+      {layout_result_0 = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>}
+      dense<12> : vector<1x1x16xindex>
+    %3 = xegpu.load %src[%offset], %1
+    {
+      layout_operand_1 = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>,
+      layout_operand_2 = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>,
+      layout_result_0 = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>
+    } : memref<256xf16>, vector<1x1x16xindex>, vector<1x1x16xi1> -> vector<1x1x16xf16>
+    xegpu.store %3, %src[%offset], %1
+    {
+      layout_operand_0 = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>,
+      layout_operand_2 = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>,
+      layout_operand_3 = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>
+    }
+    : vector<1x1x16xf16>, memref<256xf16>, vector<1x1x16xindex>, vector<1x1x16xi1>
+  }
+  gpu.return
+}
 
 // CHECK-LABEL: gpu.func @memref_extract_aligned_pointer_as_index(
 // CHECK:       %[[W:.*]]:2 = gpu.warp_execute_on_lane_0(%{{.*}})[16] -> (index, memref<256x256xf16>) {

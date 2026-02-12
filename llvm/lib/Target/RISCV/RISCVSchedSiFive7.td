@@ -1174,37 +1174,37 @@ multiclass SiFive7WriteResBase<int VLEN,
     let Latency = Cycles,
         AcquireAtCycles = [0, 1],
         ReleaseAtCycles = [1, !add(1, Cycles)] in {
-      defm : LMULWriteResMX<"WriteVC_V_I",   [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_V_X",   [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_V_IV",  [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_V_VV",  [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_V_XV",  [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_V_IVV", [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_V_IVW", [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_V_VVV", [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_V_VVW", [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_V_XVV", [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_V_XVW", [VCQ, VA1OrVA2], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_V_I",   [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_V_X",   [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_V_IV",  [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_V_VV",  [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_V_XV",  [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_V_IVV", [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_V_IVW", [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_V_VVV", [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_V_VVW", [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_V_XVV", [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_V_XVW", [VCQ, VA1], mx, IsWorstCase>;
       foreach f = ["FPR16", "FPR32", "FPR64"] in {
-        defm : LMULWriteResMX<"WriteVC_V_" # f # "V",  [VCQ, VA1OrVA2], mx, IsWorstCase>;
-        defm : LMULWriteResMX<"WriteVC_V_" # f # "VV", [VCQ, VA1OrVA2], mx, IsWorstCase>;
-        defm : LMULWriteResMX<"WriteVC_V_" # f # "VW", [VCQ, VA1OrVA2], mx, IsWorstCase>;
+        defm : LMULWriteResMX<"WriteVC_V_" # f # "V",  [VCQ, VA1], mx, IsWorstCase>;
+        defm : LMULWriteResMX<"WriteVC_V_" # f # "VV", [VCQ, VA1], mx, IsWorstCase>;
+        defm : LMULWriteResMX<"WriteVC_V_" # f # "VW", [VCQ, VA1], mx, IsWorstCase>;
       }
-      defm : LMULWriteResMX<"WriteVC_I",   [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_X",   [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_IV",  [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_VV",  [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_XV",  [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_IVV", [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_IVW", [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_VVV", [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_VVW", [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_XVV", [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_XVW", [VCQ, VA1OrVA2], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_I",   [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_X",   [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_IV",  [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_VV",  [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_XV",  [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_IVV", [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_IVW", [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_VVV", [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_VVW", [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_XVV", [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_XVW", [VCQ, VA1], mx, IsWorstCase>;
       foreach f = ["FPR16", "FPR32", "FPR64"] in {
-        defm : LMULWriteResMX<"WriteVC_" # f # "V",  [VCQ, VA1OrVA2], mx, IsWorstCase>;
-        defm : LMULWriteResMX<"WriteVC_" # f # "VV", [VCQ, VA1OrVA2], mx, IsWorstCase>;
-        defm : LMULWriteResMX<"WriteVC_" # f # "VW", [VCQ, VA1OrVA2], mx, IsWorstCase>;
+        defm : LMULWriteResMX<"WriteVC_" # f # "V",  [VCQ, VA1], mx, IsWorstCase>;
+        defm : LMULWriteResMX<"WriteVC_" # f # "VV", [VCQ, VA1], mx, IsWorstCase>;
+        defm : LMULWriteResMX<"WriteVC_" # f # "VW", [VCQ, VA1], mx, IsWorstCase>;
       }
     }
   }
