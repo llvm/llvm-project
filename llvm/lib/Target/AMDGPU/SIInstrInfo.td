@@ -1701,6 +1701,8 @@ def VOP3OMods : ComplexPattern<untyped, 3, "SelectVOP3OMods">;
 def VOP3PMods  : ComplexPattern<untyped, 2, "SelectVOP3PMods">;
 
 def VOP3PModsDOT  : ComplexPattern<untyped, 2, "SelectVOP3PModsDOT">;
+def VOP3PModsF32  : ComplexPattern<untyped, 2, "SelectVOP3PModsF32">;
+
 def WMMAOpSelVOP3PMods  : ComplexPattern<untyped, 1, "SelectWMMAOpSelVOP3PMods">;
 
 def WMMAModsF32NegAbs  : ComplexPattern<untyped, 2, "SelectWMMAModsF32NegAbs">;

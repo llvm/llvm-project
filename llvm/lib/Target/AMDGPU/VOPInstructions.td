@@ -1379,10 +1379,12 @@ class getVOP3ModPat<VOPProfile P, SDPatternOperator node> {
 
 class getVOP3PModPat<VOPProfile P, SDPatternOperator node, bit HasExplicitClamp,
                      bit IsDOT = 0,
-                     ComplexPattern SrcPat = !if(IsDOT, VOP3PModsDOT, VOP3PMods)> {
+                     ComplexPattern SrcPat = !if(IsDOT, VOP3PModsDOT,
+                                                        VOP3PMods),
+                     ComplexPattern Src2Pat = SrcPat> {
   dag src0_dag = (P.Src0VT (SrcPat P.Src0VT:$src0, i32:$src0_modifiers));
   dag src1_dag = (P.Src1VT (SrcPat P.Src1VT:$src1, i32:$src1_modifiers));
-  dag src2_dag = (P.Src2VT (SrcPat P.Src2VT:$src2, i32:$src2_modifiers));
+  dag src2_dag = (P.Src2VT (Src2Pat P.Src2VT:$src2, i32:$src2_modifiers));
   dag clamp_dag = (i1 timm:$clamp);
 
   list<dag> ret3 = [(set P.DstVT:$vdst,
