@@ -403,6 +403,8 @@ class IndirectGotoNodeBuilder final : public NodeBuilder {
   const CFGBlock &DispatchBlock;
   const Expr *Target;
 
+  void anchor() override;
+
 public:
   IndirectGotoNodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
                           NodeBuilderContext &Ctx, const Expr *Tgt,
@@ -431,6 +433,8 @@ public:
 };
 
 class SwitchNodeBuilder final : public NodeBuilder {
+  void anchor() override;
+
 public:
   SwitchNodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
                     const NodeBuilderContext &Ctx)
