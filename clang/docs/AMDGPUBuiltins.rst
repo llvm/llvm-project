@@ -1246,7 +1246,7 @@ Scheduling Barriers
 -------------------
 
 ``__builtin_amdgcn_sched_barrier``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: c
 
@@ -1267,7 +1267,7 @@ Controls which instruction types may be reordered across this point:
 - ``0x0200``: DS writes.
 
 ``__builtin_amdgcn_sched_group_barrier``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: c
 
@@ -1278,7 +1278,7 @@ Controls which instruction types may be reordered across this point:
 - ``group_id``: Identifier for synchronizing with other sched_group_barriers.
 
 ``__builtin_amdgcn_iglp_opt``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: c
 
