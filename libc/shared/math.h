@@ -101,6 +101,7 @@
 #include "math/logf.h"
 #include "math/logf16.h"
 #include "math/pow.h"
+#include "math/powf.h"
 #include "math/rsqrtf.h"
 #include "math/rsqrtf16.h"
 #include "math/sin.h"
