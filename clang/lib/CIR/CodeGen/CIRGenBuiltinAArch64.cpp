@@ -1531,6 +1531,11 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
                                            convertType(expr->getType()), ops);
     break;
   case NEON::BI__builtin_neon_vfmsh_f16:
+    ops.push_back(builder.createFNeg(emitScalarExpr(expr->getArg(1))));
+    ops.push_back(emitScalarExpr(expr->getArg(2)));
+    ops.push_back(emitScalarExpr(expr->getArg(0)));
+    return emitCallMaybeConstrainedBuiltin(builder, loc, "fma",
+                                           convertType(expr->getType()), ops);
   case NEON::BI__builtin_neon_vaddd_s64:
   case NEON::BI__builtin_neon_vaddd_u64:
   case NEON::BI__builtin_neon_vsubd_s64:
