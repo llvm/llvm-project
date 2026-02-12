@@ -128,7 +128,7 @@ def main(github_token):
     user_branches = get_branches()
     output_dir = sys.argv[1]
     with open(os.path.join(output_dir, "branches.txt"), "w") as branches_file:
-        branches_file.writelines(user_branches)
+        branches_file.writelines([user_branch + "\n" for user_branch in user_branches])
     user_branches_from_prs = get_branches_from_open_prs(github_token)
     print(f"Found {len(user_branches)} user branches in the repository")
     print(f"Found {len(user_branches_from_prs)} user branches associated with PRs")
