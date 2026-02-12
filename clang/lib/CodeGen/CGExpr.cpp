@@ -4500,6 +4500,8 @@ Address CodeGenFunction::EmitArrayToPointerDecay(const Expr *E,
            "Expected pointer to array");
 
     if (getLangOpts().EmitStructuredGEP) {
+      // Array-to-pointer decay for an SGEP is a no-op as we don't do any
+      // logical indexing. See #179951 for some additional context.
       auto *SGEP =
           Builder.CreateStructuredGEP(NewTy, Addr.emitRawPointer(*this), {});
       Addr = Address(SGEP, NewTy, Addr.getAlignment(), Addr.isKnownNonNull());
