@@ -311,9 +311,11 @@ Error GPUProfGlobals::write() const {
   memcpy(NamesBegin, NamesData.data(), NamesData.size());
 
   // Invoke compiler-rt entrypoint
+  // Pass NULL for TUSuffix and UniformCounters (not used by OpenMP)
   int result = __llvm_write_custom_profile(
-      TargetTriple.str().c_str(), DataBegin, DataEnd, CountersBegin,
-      CountersEnd, NamesBegin, NamesEnd, &Version);
+      TargetTriple.str().c_str(), /*TUSuffix=*/nullptr, DataBegin, DataEnd,
+      CountersBegin, CountersEnd, /*UniformCountersBegin=*/nullptr,
+      /*UniformCountersEnd=*/nullptr, NamesBegin, NamesEnd, &Version);
   if (result != 0)
     return Plugin::error(ErrorCode::HOST_IO,
                          "error writing GPU PGO data to file");

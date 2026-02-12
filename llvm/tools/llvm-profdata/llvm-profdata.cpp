@@ -31,6 +31,7 @@
 #include "llvm/Support/BalancedPartitioning.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Discriminator.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
@@ -354,6 +355,11 @@ static cl::opt<unsigned> MemprofGenerateRandomHotnessSeed(
     cl::sub(MergeSubcommand),
     cl::desc("Random hotness seed to use (0 to generate new seed)"));
 
+static cl::opt<unsigned> OffloadDeviceWaveSize(
+    "wave-size", cl::init(32), cl::sub(MergeSubcommand),
+    cl::desc("Wave size for AMDGPU offload profiling uniformity detection "
+             "(32 for gfx10/gfx11, 64 for gfx9). Default: 32"));
+
 // Options specific to overlap subcommand.
 static cl::opt<std::string> BaseFilename(cl::Positional, cl::Required,
                                          cl::desc("<base profile file>"),
@@ -655,11 +661,15 @@ struct WriterContext {
 
   WriterContext(bool IsSparse, std::mutex &ErrLock,
                 SmallSet<instrprof_error, 4> &WriterErrorCodes,
-                uint64_t ReservoirSize = 0, uint64_t MaxTraceLength = 0)
+                uint64_t ReservoirSize = 0, uint64_t MaxTraceLength = 0,
+                unsigned WaveSize = 0)
       : Writer(IsSparse, ReservoirSize, MaxTraceLength, DoWritePrevVersion,
                MemProfVersionRequested, MemProfFullSchema,
                MemprofGenerateRandomHotness, MemprofGenerateRandomHotnessSeed),
-        ErrLock(ErrLock), WriterErrorCodes(WriterErrorCodes) {}
+        ErrLock(ErrLock), WriterErrorCodes(WriterErrorCodes) {
+    if (WaveSize > 0)
+      Writer.setOffloadWaveSize(WaveSize);
+  }
 };
 
 /// Computer the overlap b/w profile BaseFilename and TestFileName,
@@ -688,6 +698,62 @@ static void overlapInput(const std::string &BaseFilename,
     WC->Writer.overlapRecord(std::move(I), Overlap, FuncOverlap, FuncFilter);
     FuncOverlap.dump(OS);
   }
+}
+
+/// Read uniform counters from a .unifcnts file.
+/// Returns true if the file was successfully read, false otherwise.
+/// The uniform counters are stored in UniformCounters vector.
+static bool readUniformCountersFile(StringRef ProfileFilename,
+                                    std::vector<uint64_t> &UniformCounters) {
+  // Construct the .unifcnts filename by replacing the extension
+  SmallString<256> UniformFilename(ProfileFilename);
+  sys::path::replace_extension(UniformFilename, "unifcnts");
+
+  // Try to open the file
+  auto BufferOrErr = MemoryBuffer::getFile(UniformFilename);
+  if (!BufferOrErr) {
+    // File doesn't exist or can't be read - this is not an error,
+    // just means no uniform counters are available
+    return false;
+  }
+
+  auto &Buffer = *BufferOrErr.get();
+  const char *Data = Buffer.getBufferStart();
+  size_t Size = Buffer.getBufferSize();
+
+  // Minimum size: 4 uint64_t header fields
+  if (Size < 4 * sizeof(uint64_t))
+    return false;
+
+  // Read header
+  uint64_t Magic = support::endian::read64le(Data);
+  uint64_t Version = support::endian::read64le(Data + 8);
+  uint64_t NumCounters = support::endian::read64le(Data + 16);
+  uint64_t CountersSize = support::endian::read64le(Data + 24);
+
+  // Verify magic number
+  const uint64_t ExpectedMagic = 0x55434E5450524F46ULL; // "UCNTPROF"
+  if (Magic != ExpectedMagic)
+    return false;
+
+  // Verify version
+  if (Version != 1)
+    return false;
+
+  // Verify size
+  size_t ExpectedSize = 4 * sizeof(uint64_t) + CountersSize;
+  if (Size < ExpectedSize)
+    return false;
+
+  // Read counters
+  UniformCounters.resize(NumCounters);
+  const char *CounterData = Data + 4 * sizeof(uint64_t);
+  for (uint64_t i = 0; i < NumCounters; ++i) {
+    UniformCounters[i] =
+        support::endian::read64le(CounterData + i * sizeof(uint64_t));
+  }
+
+  return true;
 }
 
 /// Load an input into a writer context.
@@ -820,11 +886,50 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
     return;
   }
 
+  // Try to read uniform counters file for AMDGPU divergence tracking
+  std::vector<uint64_t> UniformCounters;
+  bool HasUniformCounters =
+      readUniformCountersFile(Input.Filename, UniformCounters);
+  size_t UniformCounterOffset = 0;
+
   for (auto &I : *Reader) {
     if (Remapper)
       I.Name = (*Remapper)(I.Name);
     const StringRef FuncName = I.Name;
     bool Reported = false;
+
+    // If we have uniform counters and this is an offload profile, compute
+    // uniformity from the uniform/total counter ratio
+    if (HasUniformCounters && I.NumOffloadProfilingThreads > 0) {
+      size_t NumCounters = I.Counts.size();
+      if (UniformCounterOffset + NumCounters <= UniformCounters.size()) {
+        // Compute uniformity bits from uniform counter ratio
+        size_t NumBlocks = NumCounters / (I.NumOffloadProfilingThreads + 1);
+        I.UniformityBits.resize((NumBlocks + 7) / 8, 0xFF); // Default: uniform
+
+        for (size_t BlockIdx = 0; BlockIdx < NumBlocks; ++BlockIdx) {
+          uint64_t TotalCount = 0;
+          uint64_t UniformCount = 0;
+
+          // Sum across all slots for this block
+          for (size_t Slot = 0; Slot < I.NumOffloadProfilingThreads; ++Slot) {
+            size_t Idx = BlockIdx * (I.NumOffloadProfilingThreads + 1) + Slot;
+            TotalCount += I.Counts[Idx];
+            UniformCount += UniformCounters[UniformCounterOffset + Idx];
+          }
+
+          // Compute uniformity ratio (90% threshold)
+          bool IsUniform =
+              (TotalCount == 0) || ((double)UniformCount / TotalCount >= 0.9);
+          if (!IsUniform) {
+            I.UniformityBits[BlockIdx / 8] &= ~(1 << (BlockIdx % 8));
+          }
+        }
+
+        UniformCounterOffset += NumCounters;
+      }
+    }
+
     WC->Writer.addRecord(std::move(I), Input.Weight, [&](Error E) {
       if (Reported) {
         consumeError(std::move(E));
@@ -1043,7 +1148,7 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
   for (unsigned I = 0; I < NumThreads; ++I)
     Contexts.emplace_back(std::make_unique<WriterContext>(
         OutputSparse, ErrorLock, WriterErrorCodes, TraceReservoirSize,
-        MaxTraceLength));
+        MaxTraceLength, OffloadDeviceWaveSize));
 
   if (NumThreads == 1) {
     for (const auto &Input : Inputs)
@@ -1477,8 +1582,8 @@ static void supplementInstrProfile(const WeightedFileVector &Inputs,
   // Read instr profile.
   std::mutex ErrorLock;
   SmallSet<instrprof_error, 4> WriterErrorCodes;
-  auto WC = std::make_unique<WriterContext>(OutputSparse, ErrorLock,
-                                            WriterErrorCodes);
+  auto WC = std::make_unique<WriterContext>(
+      OutputSparse, ErrorLock, WriterErrorCodes, 0, 0, OffloadDeviceWaveSize);
   loadInput(Inputs[0], nullptr, nullptr, /*ProfiledBinary=*/"", WC.get());
   if (WC->Errors.size() > 0)
     exitWithError(std::move(WC->Errors[0].first), InstrFilename);
@@ -2979,6 +3084,16 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
           OS << (I == Start ? "" : ", ") << Func.Counts[I];
         }
         OS << "]\n";
+
+        // Show uniformity bits if present
+        if (!Func.UniformityBits.empty()) {
+          OS << "    Block uniformity: [";
+          for (size_t I = Start, E = Func.Counts.size(); I < E; ++I) {
+            bool IsUniform = Func.isBlockUniform(I);
+            OS << (I == Start ? "" : ", ") << (IsUniform ? "U" : "D");
+          }
+          OS << "]\n";
+        }
       }
 
       if (ShowIndirectCallTargets) {

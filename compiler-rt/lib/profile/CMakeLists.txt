@@ -73,6 +73,7 @@ set(PROFILE_SOURCES
   InstrProfilingPlatformFuchsia.c
   InstrProfilingPlatformLinux.c
   InstrProfilingPlatformOther.c
+  InstrProfilingPlatformROCm.c
   InstrProfilingPlatformWindows.c
   )
 

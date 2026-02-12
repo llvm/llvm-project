@@ -66,11 +66,15 @@ struct __llvm_profile_data {
 };
 
 extern "C" {
-extern int __attribute__((weak)) __llvm_write_custom_profile(
-    const char *Target, const __llvm_profile_data *DataBegin,
-    const __llvm_profile_data *DataEnd, const char *CountersBegin,
-    const char *CountersEnd, const char *NamesBegin, const char *NamesEnd,
-    const uint64_t *VersionOverride);
+extern int __attribute__((weak))
+__llvm_write_custom_profile(const char *Target, const char *TUSuffix,
+                            const __llvm_profile_data *DataBegin,
+                            const __llvm_profile_data *DataEnd,
+                            const char *CountersBegin, const char *CountersEnd,
+                            const char *UniformCountersBegin,
+                            const char *UniformCountersEnd,
+                            const char *NamesBegin, const char *NamesEnd,
+                            const uint64_t *VersionOverride);
 }
 /// PGO profiling data extracted from a GPU device
 struct GPUProfGlobals {

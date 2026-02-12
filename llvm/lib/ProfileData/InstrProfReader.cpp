@@ -723,6 +723,14 @@ Error RawInstrProfReader<IntPtrT>::readRawCounts(
   if (NumCounters == 0)
     return error(instrprof_error::malformed, "number of counters is zero");
 
+  // For GPU profiles with per-slot counters, the actual number of counter
+  // entries in the file is NumCounters * (NumOffloadProfilingThreads + 1).
+  // NumCounters in the data structure stores the base count (number of blocks),
+  // while the file contains expanded slots for wave-level profiling.
+  uint16_t NumOffloadThreads = swap(Data->NumOffloadProfilingThreads);
+  if (NumOffloadThreads > 0)
+    NumCounters *= (NumOffloadThreads + 1);
+
   ptrdiff_t CounterBaseOffset = swap(Data->CounterPtr) - CountersDelta;
   if (CounterBaseOffset < 0)
     return error(
@@ -873,6 +881,8 @@ Error RawInstrProfReader<IntPtrT>::readNextRecord(NamedInstrProfRecord &Record) 
   if (Error E = readFuncHash(Record))
     return error(std::move(E));
 
+  Record.NumOffloadProfilingThreads = swap(Data->NumOffloadProfilingThreads);
+
   // Read raw counts and set Record.
   if (Error E = readRawCounts(Record))
     return error(std::move(E));
@@ -945,11 +955,12 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
   DataBuffer.clear();
   std::vector<uint64_t> CounterBuffer;
   std::vector<uint8_t> BitmapByteBuffer;
+  std::vector<uint8_t> UniformityBitsBuffer;
 
   const unsigned char *End = D + N;
   while (D < End) {
     // Read hash.
-    if (D + sizeof(uint64_t) >= End)
+    if (D + sizeof(uint64_t) > End)
       return data_type();
     uint64_t Hash = endian::readNext<uint64_t, llvm::endianness::little>(D);
 
@@ -977,18 +988,51 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
       if (D + sizeof(uint64_t) > End)
         return data_type();
       BitmapBytes = endian::readNext<uint64_t, llvm::endianness::little>(D);
-      // Read bitmap byte values.
-      if (D + BitmapBytes * sizeof(uint8_t) > End)
-        return data_type();
       BitmapByteBuffer.clear();
       BitmapByteBuffer.reserve(BitmapBytes);
-      for (uint64_t J = 0; J < BitmapBytes; ++J)
-        BitmapByteBuffer.push_back(static_cast<uint8_t>(
-            endian::readNext<uint64_t, llvm::endianness::little>(D)));
+
+      if (GET_VERSION(FormatVersion) >=
+          IndexedInstrProf::ProfVersion::Version14) {
+        // Version 14+: bitmap bytes stored as uint8_t with padding.
+        uint64_t PaddedSize = alignTo(BitmapBytes, sizeof(uint64_t));
+        if (D + PaddedSize > End)
+          return data_type();
+        for (uint64_t J = 0; J < BitmapBytes; ++J)
+          BitmapByteBuffer.push_back(
+              endian::readNext<uint8_t, llvm::endianness::little>(D));
+        for (uint64_t J = BitmapBytes; J < PaddedSize; ++J)
+          (void)endian::readNext<uint8_t, llvm::endianness::little>(D);
+
+        // Read uniformity bits (AMDGPU offload profiling).
+        uint64_t UniformityBitsSize = 0;
+        if (D + sizeof(uint64_t) > End)
+          return data_type();
+        UniformityBitsSize =
+            endian::readNext<uint64_t, llvm::endianness::little>(D);
+        uint64_t PaddedUniformitySize =
+            alignTo(UniformityBitsSize, sizeof(uint64_t));
+        if (D + PaddedUniformitySize > End)
+          return data_type();
+        UniformityBitsBuffer.clear();
+        UniformityBitsBuffer.reserve(UniformityBitsSize);
+        for (uint64_t J = 0; J < UniformityBitsSize; ++J)
+          UniformityBitsBuffer.push_back(
+              endian::readNext<uint8_t, llvm::endianness::little>(D));
+        for (uint64_t J = UniformityBitsSize; J < PaddedUniformitySize; ++J)
+          (void)endian::readNext<uint8_t, llvm::endianness::little>(D);
+      } else {
+        // Version 11-13: each bitmap byte stored as a uint64_t.
+        if (D + BitmapBytes * sizeof(uint64_t) > End)
+          return data_type();
+        for (uint64_t J = 0; J < BitmapBytes; ++J)
+          BitmapByteBuffer.push_back(static_cast<uint8_t>(
+              endian::readNext<uint64_t, llvm::endianness::little>(D)));
+      }
     }
 
     DataBuffer.emplace_back(K, Hash, std::move(CounterBuffer),
-                            std::move(BitmapByteBuffer));
+                            std::move(BitmapByteBuffer),
+                            std::move(UniformityBitsBuffer));
 
     // Read value profiling data.
     if (GET_VERSION(FormatVersion) > IndexedInstrProf::ProfVersion::Version2 &&

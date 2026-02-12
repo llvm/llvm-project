@@ -51,6 +51,7 @@ public:
   llvm::endianness ValueProfDataEndianness = llvm::endianness::little;
   InstrProfSummaryBuilder *SummaryBuilder;
   InstrProfSummaryBuilder *CSSummaryBuilder;
+  bool WritePrevVersion = false;
 
   InstrProfRecordWriterTrait() = default;
 
@@ -58,7 +59,7 @@ public:
     return IndexedInstrProf::ComputeHash(K);
   }
 
-  static std::pair<offset_type, offset_type>
+  std::pair<offset_type, offset_type>
   EmitKeyDataLength(raw_ostream &Out, key_type_ref K, data_type_ref V) {
     using namespace support;
 
@@ -72,9 +73,22 @@ public:
       const InstrProfRecord &ProfRecord = ProfileData.second;
       M += sizeof(uint64_t); // The function hash
       M += sizeof(uint64_t); // The size of the Counts vector
-      M += ProfRecord.Counts.size() * sizeof(uint64_t);
+      size_t NumCounters = ProfRecord.Counts.size();
+      if (ProfRecord.NumOffloadProfilingThreads > 0) {
+        NumCounters /= (ProfRecord.NumOffloadProfilingThreads + 1);
+      }
+      M += NumCounters * sizeof(uint64_t);
       M += sizeof(uint64_t); // The size of the Bitmap vector
-      M += ProfRecord.BitmapBytes.size() * sizeof(uint64_t);
+      if (WritePrevVersion) {
+        // Version 13: each bitmap byte stored as a uint64_t.
+        M += ProfRecord.BitmapBytes.size() * sizeof(uint64_t);
+      } else {
+        // Version 14+: bitmap bytes as uint8_t with padding, plus
+        // uniformity bits.
+        M += alignTo(ProfRecord.BitmapBytes.size(), sizeof(uint64_t));
+        M += sizeof(uint64_t); // The size of the UniformityBits vector
+        M += alignTo(ProfRecord.UniformityBits.size(), sizeof(uint64_t));
+      }
 
       // Value data
       M += ValueProfData::getSize(ProfileData.second);
@@ -88,7 +102,8 @@ public:
     Out.write(K.data(), N);
   }
 
-  void EmitData(raw_ostream &Out, key_type_ref, data_type_ref V, offset_type) {
+  void EmitData(raw_ostream &Out, key_type_ref K, data_type_ref V,
+                offset_type) {
     using namespace support;
 
     endian::Writer LE(Out, llvm::endianness::little);
@@ -100,13 +115,44 @@ public:
         SummaryBuilder->addRecord(ProfRecord);
 
       LE.write<uint64_t>(ProfileData.first); // Function hash
-      LE.write<uint64_t>(ProfRecord.Counts.size());
-      for (uint64_t I : ProfRecord.Counts)
-        LE.write<uint64_t>(I);
+      if (ProfRecord.NumOffloadProfilingThreads > 0) {
+        uint64_t NumThreads = ProfRecord.NumOffloadProfilingThreads;
+        uint64_t NumCounters = ProfRecord.Counts.size() / (NumThreads + 1);
+        LE.write<uint64_t>(NumCounters);
+        for (size_t I = 0; I < NumCounters; ++I) {
+          uint64_t Sum = 0;
+          for (size_t J = 0; J < NumThreads; ++J)
+            Sum += ProfRecord.Counts[I * (NumThreads + 1) + J];
+          LE.write<uint64_t>(Sum);
+        }
+      } else {
+        LE.write<uint64_t>(ProfRecord.Counts.size());
+        for (uint64_t I : ProfRecord.Counts)
+          LE.write<uint64_t>(I);
+      }
 
       LE.write<uint64_t>(ProfRecord.BitmapBytes.size());
-      for (uint64_t I : ProfRecord.BitmapBytes)
-        LE.write<uint64_t>(I);
+      if (WritePrevVersion) {
+        // Version 13: each bitmap byte stored as a uint64_t.
+        for (uint8_t I : ProfRecord.BitmapBytes)
+          LE.write<uint64_t>(I);
+      } else {
+        // Version 14+: bitmap bytes as uint8_t with padding.
+        for (uint8_t I : ProfRecord.BitmapBytes)
+          LE.write<uint8_t>(I);
+        for (size_t I = ProfRecord.BitmapBytes.size();
+             I < alignTo(ProfRecord.BitmapBytes.size(), sizeof(uint64_t)); ++I)
+          LE.write<uint8_t>(0);
+
+        // Write uniformity bits (AMDGPU offload profiling).
+        LE.write<uint64_t>(ProfRecord.UniformityBits.size());
+        for (uint8_t I : ProfRecord.UniformityBits)
+          LE.write<uint8_t>(I);
+        for (size_t I = ProfRecord.UniformityBits.size();
+             I < alignTo(ProfRecord.UniformityBits.size(), sizeof(uint64_t));
+             ++I)
+          LE.write<uint8_t>(0);
+      }
 
       // Write value data
       std::unique_ptr<ValueProfData> VDataPtr =
@@ -207,9 +253,19 @@ void InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
     Dest = std::move(I);
     if (Weight > 1)
       Dest.scale(Weight, 1, MapWarn);
+    // For new records with offload profiling slots, compute uniformity bits
+    // if WaveSize is specified.
+    if (OffloadWaveSize > 0 && Dest.NumOffloadProfilingThreads > 0) {
+      // Create a temporary record to merge into an empty one to trigger
+      // uniformity computation.
+      InstrProfRecord Temp;
+      Temp.Counts.resize(Dest.Counts.size());
+      Temp.merge(Dest, 1, MapWarn, OffloadWaveSize);
+      Dest = std::move(Temp);
+    }
   } else {
     // We're updating a function we've seen before.
-    Dest.merge(I, Weight, MapWarn);
+    Dest.merge(I, Weight, MapWarn, OffloadWaveSize);
   }
 
   Dest.sortValueData();
@@ -524,6 +580,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   InfoObj->SummaryBuilder = &ISB;
   InstrProfSummaryBuilder CSISB(ProfileSummaryBuilder::DefaultCutoffs);
   InfoObj->CSSummaryBuilder = &CSISB;
+  InfoObj->WritePrevVersion = WritePrevVersion;
 
   // Populate the hash table generator.
   SmallVector<std::pair<StringRef, const ProfilingData *>> OrderedData;
@@ -542,7 +599,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   // The WritePrevVersion handling will either need to be removed or updated
   // if the version is advanced beyond 12.
   static_assert(IndexedInstrProf::ProfVersion::CurrentVersion ==
-                IndexedInstrProf::ProfVersion::Version13);
+                IndexedInstrProf::ProfVersion::Version14);
   if (static_cast<bool>(ProfileKind & InstrProfKind::IRInstrumentation))
     Header.Version |= VARIANT_MASK_IR_PROF;
   if (static_cast<bool>(ProfileKind & InstrProfKind::ContextSensitive))

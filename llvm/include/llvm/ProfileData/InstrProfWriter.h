@@ -90,6 +90,12 @@ private:
   // to the writer.
   memprof::MemProfSummaryBuilder MemProfSumBuilder;
 
+  // For AMDGPU offload profiling: the wave size used to detect uniform
+  // branches. If non-zero, uniformity bits will be computed during merge when
+  // per-slot counters are reduced. A block is considered uniform if all its
+  // counter values are multiples of WaveSize.
+  unsigned OffloadWaveSize = 0;
+
 public:
   // For memprof testing, random hotness can be assigned to the contexts if
   // MemprofGenerateRandomHotness is enabled. The random seed can be either
@@ -215,6 +221,10 @@ public:
     MemProfVersionRequested = Version;
   }
   void setMemProfFullSchema(bool Full) { MemProfFullSchema = Full; }
+
+  /// Set the wave size for AMDGPU offload profiling uniformity detection.
+  /// If non-zero, uniformity bits will be computed during merge.
+  void setOffloadWaveSize(unsigned WaveSize) { OffloadWaveSize = WaveSize; }
   // Compute the overlap b/w this object and Other. Program level result is
   // stored in Overlap and function level result is stored in FuncLevelOverlap.
   LLVM_ABI void overlapRecord(NamedInstrProfRecord &&Other,
