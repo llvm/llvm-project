@@ -1088,7 +1088,7 @@ private:
     SmallDenseMap<BasicBlock *, SmallPtrSet<Instruction *, 4>> BB2PRMap;
 
     BasicBlock *StartBB = nullptr, *EndBB = nullptr;
-    auto BodyGenCB = [&](InsertPointTy AllocIP, InsertPointTy CodeGenIP,
+    auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
                          ArrayRef<InsertPointTy> DeallocIPs) {
       BasicBlock *CGStartBB = CodeGenIP.getBlock();
       BasicBlock *CGEndBB =
@@ -1129,7 +1129,7 @@ private:
       const DebugLoc DL = ParentBB->getTerminator()->getDebugLoc();
       ParentBB->getTerminator()->eraseFromParent();
 
-      auto BodyGenCB = [&](InsertPointTy AllocIP, InsertPointTy CodeGenIP,
+      auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
                            ArrayRef<InsertPointTy> DeallocIPs) {
         BasicBlock *CGStartBB = CodeGenIP.getBlock();
         BasicBlock *CGEndBB =

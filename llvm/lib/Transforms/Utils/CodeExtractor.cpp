@@ -444,12 +444,12 @@ CodeExtractor::findOrCreateBlockForHoisting(BasicBlock *CommonExitBlock) {
 }
 
 Instruction *CodeExtractor::allocateVar(BasicBlock *BB,
-                                        BasicBlock::iterator AllocIP,
+                                        BasicBlock::iterator AllocaIP,
                                         Type *VarType, const Twine &Name,
                                         AddrSpaceCastInst **CastedAlloc) {
   const DataLayout &DL = BB->getModule()->getDataLayout();
   Instruction *Alloca =
-      new AllocaInst(VarType, DL.getAllocaAddrSpace(), nullptr, Name, AllocIP);
+      new AllocaInst(VarType, DL.getAllocaAddrSpace(), nullptr, Name, AllocaIP);
 
   if (CastedAlloc && ArgsInZeroAddressSpace && DL.getAllocaAddrSpace() != 0) {
     *CastedAlloc = new AddrSpaceCastInst(

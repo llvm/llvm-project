@@ -250,8 +250,9 @@ public:
 
 protected:
   /// Allocate an intermediate variable at the specified point.
-  virtual Instruction *allocateVar(BasicBlock *BB, BasicBlock::iterator AllocIP,
-                                   Type *VarType, const Twine &Name = Twine(""),
+  virtual Instruction *allocateVar(BasicBlock *BB,
+                                   BasicBlock::iterator AllocaIP, Type *VarType,
+                                   const Twine &Name = Twine(""),
                                    AddrSpaceCastInst **CastedAlloc = nullptr);
 
   /// Deallocate a previously-allocated intermediate variable at the specified
