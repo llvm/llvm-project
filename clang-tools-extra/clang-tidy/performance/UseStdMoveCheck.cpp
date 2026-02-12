@@ -56,7 +56,7 @@ void UseStdMoveCheck::registerMatchers(MatchFinder *Finder) {
                                     isConstQualified() // Not valid.
                                     )))))))
                      .bind("assign-value")),
-          hasAncestor(functionDecl().bind("within-func")), unless(isInMacro()))
+          forCallable(functionDecl().bind("within-func")), unless(isInMacro()))
           .bind("assign");
   Finder->addMatcher(AssignOperatorExpr, this);
 }
