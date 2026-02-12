@@ -472,6 +472,13 @@ bool COFFMasmParser::parseDirectiveProc(StringRef Directive, SMLoc Loc) {
     Framed = true;
     getStreamer().emitWinCFIStartProc(Sym, Loc);
   }
+  if (Framed && getLexer().is(AsmToken::Colon)) {
+    Lex();
+    MCSymbol *HandlerSym;
+    if (getParser().parseSymbol(HandlerSym))
+      return Error(Loc, "expected identifier for unwind handler");
+    getStreamer().emitWinEHHandler(HandlerSym, true, true, Loc);
+  }
   getStreamer().emitLabel(Sym, Loc);
 
   CurrentProcedures.push_back(Sym->getName());
