@@ -845,6 +845,17 @@ TEST(STLExtrasTest, MapRangeTest) {
   some_namespace::some_struct S;
   S.data = {3, 4, 5};
   EXPECT_THAT(map_range(S, [](int V) { return V * 2; }), ElementsAre(6, 8, 10));
+
+  // Pointer to data member.
+  struct MapRangeStruct {
+    int X;
+    int getX() const { return X; }
+  };
+  std::vector<MapRangeStruct> Structs = {{1}, {2}, {3}};
+  EXPECT_THAT(map_range(Structs, &MapRangeStruct::X), ElementsAre(1, 2, 3));
+
+  // Pointer to member function.
+  EXPECT_THAT(map_range(Structs, &MapRangeStruct::getX), ElementsAre(1, 2, 3));
 }
 
 TEST(STLExtrasTest, EarlyIncrementTest) {

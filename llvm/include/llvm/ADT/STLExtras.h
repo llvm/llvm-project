@@ -330,7 +330,7 @@ template <typename T> auto drop_end(T &&RangeOrContainer, size_t N = 1) {
 
 template <typename ItTy, typename FuncTy,
           typename ReferenceTy =
-              decltype(std::declval<FuncTy>()(*std::declval<ItTy>()))>
+              std::invoke_result_t<FuncTy, decltype(*std::declval<ItTy>())>>
 class mapped_iterator
     : public iterator_adaptor_base<
           mapped_iterator<ItTy, FuncTy>, ItTy,
@@ -347,7 +347,9 @@ public:
 
   const FuncTy &getFunction() const { return F; }
 
-  ReferenceTy operator*() const { return F(*this->I); }
+  ReferenceTy operator*() const {
+    return llvm::invoke(getFunction(), *this->I);
+  }
 
 private:
   callable_detail::Callable<FuncTy> F{};
@@ -360,6 +362,8 @@ inline mapped_iterator<ItTy, FuncTy> map_iterator(ItTy I, FuncTy F) {
   return mapped_iterator<ItTy, FuncTy>(std::move(I), std::move(F));
 }
 
+/// Return a range that applies \p F to the elements of \p C. \p F can be a
+/// function, lambda, or member pointer.
 template <class ContainerTy, class FuncTy>
 auto map_range(ContainerTy &&C, FuncTy F) {
   return make_range(map_iterator(adl_begin(C), F), map_iterator(adl_end(C), F));
