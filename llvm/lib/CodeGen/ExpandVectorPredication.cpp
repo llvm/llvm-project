@@ -613,6 +613,8 @@ bool CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
   case Intrinsic::vp_minnum:
   case Intrinsic::vp_maximum:
   case Intrinsic::vp_minimum:
+  case Intrinsic::vp_maximumnum:
+  case Intrinsic::vp_minimumnum:
   case Intrinsic::vp_fma:
   case Intrinsic::vp_fmuladd:
     return expandPredicationToFPCall(Builder, VPI,

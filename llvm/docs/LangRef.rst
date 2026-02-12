@@ -23404,6 +23404,106 @@ Examples:
       %t = call <4 x float> @llvm.maximum.v4f32(<4 x float> %a, <4 x float> %b, <4 x i1> %mask, i32 %evl)
       %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
 
+.. _int_vp_minimumnum:
+
+'``llvm.vp.minimumnum.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <16 x float>  @llvm.vp.minimumnum.v16f32 (<16 x float> <left_op>, <16 x float> <right_op>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x float>  @llvm.vp.minimumnum.nxv4f32 (<vscale x 4 x float> <left_op>, <vscale x 4 x float> <right_op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x double>  @llvm.vp.minimumnum.v256f64 (<256 x double> <left_op>, <256 x double> <right_op>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated floating-point minimumNumber of two vectors of floating-point values,
+not propagating NaNs (even sNaN) and treating -0.0 as less than +0.0.
+
+Arguments:
+""""""""""
+
+The first two arguments and the result have the same vector of floating-point type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.minimumnum``' intrinsic performs floating-point minimumNumber (:ref:`minimumnum <i_minimumnum>`)
+of the first and second vector arguments on each enabled lane, the result being
+NaN only if both arguments are NaNs. -0.0 is considered to be less than +0.0 for this
+intrinsic. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
+The operation is performed in the default floating-point environment.
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x float> @llvm.vp.minimumnum.v4f32(<4 x float> %a, <4 x float> %b, <4 x i1> %mask, i32 %evl)
+      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+      %t = call <4 x float> @llvm.minimumnum.v4f32(<4 x float> %a, <4 x float> %b)
+      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
+
+
+.. _int_vp_maximumnum:
+
+'``llvm.vp.maximumnum.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <16 x float>  @llvm.vp.maximumnum.v16f32 (<16 x float> <left_op>, <16 x float> <right_op>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x float>  @llvm.vp.maximumnum.nxv4f32 (<vscale x 4 x float> <left_op>, <vscale x 4 x float> <right_op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x double>  @llvm.vp.maximumnum.v256f64 (<256 x double> <left_op>, <256 x double> <right_op>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated floating-point maximumNumber of two vectors of floating-point values,
+not propagating NaNs (evne sNaN) and treating -0.0 as less than +0.0.
+
+Arguments:
+""""""""""
+
+The first two arguments and the result have the same vector of floating-point type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.maximumnum``' intrinsic performs floating-point maximumNumber (:ref:`maximumnum <i_maximumnum>`)
+of the first and second vector arguments on each enabled lane, the result being
+NaN only if both arguments are NaNs. -0.0 is considered to be less than +0.0 for this
+intrinsic. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
+The operation is performed in the default floating-point environment.
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x float> @llvm.vp.maximumnum.v4f32(<4 x float> %a, <4 x float> %b, <4 x i1> %mask, i32 %evl)
+      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+      %t = call <4 x float> @llvm.maximumnum.v4f32(<4 x float> %a, <4 x float> %b, <4 x i1> %mask, i32 %evl)
+      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
+
+
 
 .. _int_vp_fadd:
 
