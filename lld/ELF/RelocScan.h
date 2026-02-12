@@ -157,11 +157,12 @@ public:
     return true;
   }
 
-  // Handle TLSDESC relocation. NEEDS_TLSDESC_NONAUTH is a no-op for
-  // non-AArch64 targets and detects incompatibility with NEEDS_TLSDESC_AUTH.
+  // Handle TLSDESC relocation.
   void handleTlsDesc(RelExpr sharedExpr, RelExpr ieExpr, RelType type,
                      uint64_t offset, int64_t addend, Symbol &sym) {
     if (ctx.arg.shared) {
+      // NEEDS_TLSDESC_NONAUTH is a no-op for non-AArch64 targets and detects
+      // incompatibility with NEEDS_TLSDESC_AUTH.
       sym.setFlags(NEEDS_TLSDESC | NEEDS_TLSDESC_NONAUTH);
       sec->addReloc({sharedExpr, type, offset, addend, &sym});
     } else if (sym.isPreemptible) {

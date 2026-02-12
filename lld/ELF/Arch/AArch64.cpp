@@ -196,6 +196,9 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       continue;
     int64_t addend = rs.getAddend<ELFT>(rel, type);
     RelExpr expr;
+    // Relocation types that only need a RelExpr set `expr` and break out of
+    // the switch to reach rs.process(). Types that need special handling
+    // (fast-path helpers, TLS) call a handler and use `continue`.
     switch (type) {
     case R_AARCH64_NONE:
       continue;

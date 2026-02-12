@@ -541,15 +541,17 @@ static void implementPatch(Ctx &ctx, uint64_t adrpAddr, uint64_t patcheeOffset,
   // have nothing more to do.
   // Case 2: A TLS IE to LE optimization. In this case the ADRP that we read
   // will be transformed into a MOVZ later so we actually don't match the
-  // sequence and have nothing more to do. Case 3: A load/store register
-  // (unsigned immediate) class relocation. There are two of these
-  // R_AARCH_LD64_ABS_LO12_NC and R_AARCH_LD64_GOT_LO12_NC and they are both
-  // absolute. We need to add the same relocation to the patch, and replace the
-  // relocation with a R_AARCH_JUMP26 branch relocation. Case 4: No relocation.
-  // We must create a new R_AARCH64_JUMP26 branch relocation at the offset.
+  // sequence and have nothing more to do.
+  // Case 3: A load/store register (unsigned immediate) class relocation. There
+  // are two of these R_AARCH_LD64_ABS_LO12_NC and R_AARCH_LD64_GOT_LO12_NC and
+  // they are both absolute. We need to add the same relocation to the patch,
+  // and replace the relocation with a R_AARCH_JUMP26 branch relocation.
+  // Case 4: No relocation. We must create a new R_AARCH64_JUMP26 branch
+  // relocation at the offset.
   auto relIt = llvm::find_if(isec->relocs(), [=](const Relocation &r) {
     return r.offset == patcheeOffset;
   });
+  // Detect and skip Case 1 and Case 2 above.
   if (relIt != isec->relocs().end() &&
       (relIt->type == R_AARCH64_JUMP26 ||
        ((relIt->type == R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21 ||
