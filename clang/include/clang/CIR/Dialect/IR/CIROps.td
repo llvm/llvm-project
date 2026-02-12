@@ -666,6 +666,51 @@ def CIR_LoadOp : CIR_Op<"load", [
 }
 
 //===----------------------------------------------------------------------===//
+// MaskLoadOp
+//===----------------------------------------------------------------------===//
+
+def CIR_VecMaskedLoadOp : CIR_Op<"vec.masked_load", [
+  TypesMatchWith<"type of 'result' must match pointee type of 'addr'",
+    "addr", "result", "mlir::cast<cir::PointerType>($_self).getPointee()">
+]> {
+  let summary = "Masked vector load from memory";
+  let description = [{
+    `cir.masked_load` conditionally loads elements from memory based on a mask.
+    Elements for which the mask is false are taken from `pass_thru`.
+
+    This operation corresponds to LLVM's masked load op (`llvm.intr.maskedload`)
+    and lower directly to it.
+
+    `alignment` can be provided to override the default alignment derived from
+    the pointee/element type data layout.
+
+    Example:
+
+    ```mlir
+    %v = cir.masked_load align(16) %ptr, %mask, %passthru
+         : !cir.ptr<i32>, <4xi1>, <4xi32> -> <4xi32>
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PointerType, "base address (points to element type)", [MemRead]>:$addr,
+    CIR_VectorType:$mask,
+    CIR_VectorType:$pass_thru,
+    OptionalAttr<IntValidAlignment<I64Attr>>:$alignment
+  );
+
+  let results = (outs CIR_AnyType:$result);
+
+  let assemblyFormat = [{
+    (`align` `(` $alignment^ `)`)? 
+    $addr `,` $mask `,` $pass_thru
+    `:` qualified(type($addr)) `,` type($mask) `,` type($pass_thru)
+    `->` type($result)
+    attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // StoreOp
 //===----------------------------------------------------------------------===//
 
@@ -6616,12 +6661,14 @@ def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
     CIR_AnyIntOrFloatType:$val,
     CIR_AtomicFetchKind:$binop,
     Arg<CIR_MemOrder, "memory order">:$mem_order,
+    Arg<CIR_SyncScopeKind, "synchronization scope">:$sync_scope,
     UnitAttr:$is_volatile,
     UnitAttr:$fetch_first
   );
 
   let assemblyFormat = [{
     $binop $mem_order
+    `syncscope` `(` $sync_scope `)`
     (`fetch_first` $fetch_first^)?
     $ptr `,` $val
     (`volatile` $is_volatile^)?
@@ -6704,6 +6751,9 @@ def CIR_AtomicCmpXchgOp : CIR_Op<"atomic.cmpxchg", [
     when the exchange takes place. The `fail_order` attribute gives the memory
     order of this atomic operation when the exchange does not take place.
 
+    The `sync_scope` attribute specifies the synchronization scope for this
+    atomic operation.
+
     The `weak` attribute is a boolean flag that indicates whether this is a
     "weak" compare-and-exchange operation. A weak compare-and-exchange operation
     allows "spurious failures", meaning that be treated as if the comparison
@@ -6722,7 +6772,7 @@ def CIR_AtomicCmpXchgOp : CIR_Op<"atomic.cmpxchg", [
 
     ```mlir
     %old, %success = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire)
-        %ptr, %expected, %desired
+        syncscope(system) %ptr, %expected, %desired
         : (!cir.ptr<!u64i>, !u64i, !u64i) -> (!u64i, !cir.bool)
     ```
   }];
@@ -6732,6 +6782,7 @@ def CIR_AtomicCmpXchgOp : CIR_Op<"atomic.cmpxchg", [
                        CIR_AnyType:$desired,
                        Arg<CIR_MemOrder, "success memory order">:$succ_order,
                        Arg<CIR_MemOrder, "failure memory order">:$fail_order,
+                       CIR_SyncScopeKind:$sync_scope,
                        OptionalAttr<I64Attr>:$alignment,
                        UnitAttr:$weak,
                        UnitAttr:$is_volatile);
@@ -6739,6 +6790,7 @@ def CIR_AtomicCmpXchgOp : CIR_Op<"atomic.cmpxchg", [
   let assemblyFormat = [{
     (`weak` $weak^)?
     `success` `(` $succ_order `)` `failure` `(` $fail_order `)`
+    `syncscope` `(` $sync_scope `)`
     $ptr `,` $expected `,` $desired
     (`align` `(` $alignment^ `)`)?
     (`volatile` $is_volatile^)?

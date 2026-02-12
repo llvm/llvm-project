@@ -2154,8 +2154,6 @@ static bool IsMatrixConversion(Sema &S, QualType FromType, QualType ToType,
     ElConv = ICK_HLSL_Matrix_Splat;
     QualType ToElTy = ToMatrixType->getElementType();
     return IsVectorOrMatrixElementConversion(S, FromType, ToElTy, ICK, From);
-    ICK = ICK_HLSL_Matrix_Splat;
-    return true;
   }
   if (FromMatrixType && !ToMatrixType) {
     ElConv = ICK_HLSL_Matrix_Truncation;
