@@ -827,11 +827,13 @@ define void @func_22(ptr %length.ptr) {
 ; CHECK-NEXT:    [[ENTRY_COND:%.*]] = icmp sgt i32 [[LENGTH]], 1
 ; CHECK-NEXT:    br i1 [[ENTRY_COND]], label [[LOOP_PREHEADER:%.*]], label [[LEAVE:%.*]]
 ; CHECK:       loop.preheader:
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i32 [[LENGTH]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_INC:%.*]], [[BE:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[IV_INC]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    br i1 true, label [[BE]], label [[LEAVE_LOOPEXIT:%.*]]
+; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV]], [[TMP0]]
+; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[BE]], label [[LEAVE_LOOPEXIT:%.*]]
 ; CHECK:       be:
 ; CHECK-NEXT:    call void @side_effect()
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV_INC]], [[LENGTH]]
@@ -917,7 +919,7 @@ define void @func_24(ptr %init.ptr) {
 ; CHECK-NEXT:    br i1 true, label [[BE]], label [[LEAVE_LOOPEXIT:%.*]]
 ; CHECK:       be:
 ; CHECK-NEXT:    call void @side_effect()
-; CHECK-NEXT:    [[BE_COND:%.*]] = icmp sgt i32 [[IV_DEC]], 4
+; CHECK-NEXT:    [[BE_COND:%.*]] = icmp samesign ugt i32 [[IV_DEC]], 4
 ; CHECK-NEXT:    br i1 [[BE_COND]], label [[LOOP]], label [[LEAVE_LOOPEXIT]]
 ; CHECK:       leave.loopexit:
 ; CHECK-NEXT:    br label [[LEAVE]]

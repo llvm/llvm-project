@@ -99,7 +99,7 @@ bad:
   ret i32 -1
 }
 
-; TODO: i is known non-negative from dominating condition. Turn comparison to unsigned.
+; i is known non-negative from dominating condition. Turn comparison to unsigned.
 define i32 @test_03(i32 %start, i32 %end, ptr %p) {
 ; CHECK-LABEL: define i32 @test_03(
 ; CHECK-SAME: i32 [[START:%.*]], i32 [[END:%.*]], ptr [[P:%.*]]) {
@@ -111,7 +111,7 @@ define i32 @test_03(i32 %start, i32 %end, ptr %p) {
 ; CHECK-NEXT:    br i1 [[COND_I]], label %[[CHECKED:.*]], label %[[BAD:.*]]
 ; CHECK:       [[CHECKED]]:
 ; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[P]], align 4, !range [[RNG0]], !invariant.load [[META1]], !noundef [[META1]]
-; CHECK-NEXT:    [[CMP_S:%.*]] = icmp slt i32 [[I]], [[LEN]]
+; CHECK-NEXT:    [[CMP_S:%.*]] = icmp samesign ult i32 [[I]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[CMP_S]], label %[[BACKEDGE]], label %[[BAD]]
 ; CHECK:       [[BACKEDGE]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[I]], 1
@@ -147,7 +147,7 @@ bad:
   ret i32 -1
 }
 
-; TODO: i is known non-negative from dominating condition. Turn comparison to unsigned even if it's a part of AND.
+; i is known non-negative from dominating condition. Turn comparison to unsigned even if it's a part of AND.
 define i32 @test_04(i32 %start, i32 %end, ptr %p) {
 ; CHECK-LABEL: define i32 @test_04(
 ; CHECK-SAME: i32 [[START:%.*]], i32 [[END:%.*]], ptr [[P:%.*]]) {
@@ -159,8 +159,8 @@ define i32 @test_04(i32 %start, i32 %end, ptr %p) {
 ; CHECK-NEXT:    br i1 [[COND_I]], label %[[CHECKED:.*]], label %[[BAD:.*]]
 ; CHECK:       [[CHECKED]]:
 ; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[P]], align 4, !range [[RNG0]], !invariant.load [[META1]], !noundef [[META1]]
-; CHECK-NEXT:    [[CMP_U:%.*]] = icmp slt i32 [[I]], [[LEN]]
-; CHECK-NEXT:    [[CMP_U1:%.*]] = icmp ult i32 [[I]], [[LEN]]
+; CHECK-NEXT:    [[CMP_U:%.*]] = icmp samesign ult i32 [[I]], [[LEN]]
+; CHECK-NEXT:    [[CMP_U1:%.*]] = icmp samesign ult i32 [[I]], [[LEN]]
 ; CHECK-NEXT:    [[CMP_BOTH:%.*]] = and i1 [[CMP_U]], [[CMP_U1]]
 ; CHECK-NEXT:    br i1 [[CMP_BOTH]], label %[[BACKEDGE]], label %[[BAD]]
 ; CHECK:       [[BACKEDGE]]:

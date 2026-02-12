@@ -1083,7 +1083,7 @@ define void @saxpy_5(i64 %n, float %a, ptr readonly %x, ptr noalias %y) {
 ; CHECK-NEXT:    [[AXPY5:%.*]] = fadd fast float [[Y5]], [[AX5]]
 ; CHECK-NEXT:    store float [[AXPY5]], ptr [[YGEP5]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I1]], 5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[N]], [[I_NEXT]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i64 [[N]], [[I_NEXT]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
