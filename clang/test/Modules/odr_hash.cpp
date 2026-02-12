@@ -3883,7 +3883,8 @@ void valid() {
 }
 #else
 auto function1 = invalid1;
-// FIXME: We should reject the merge of `invalid1` due to the inconsistent definition.
+// expected-error@second.h:* {{'Types::DeducedTemplateSpecialization::invalid1' has different definitions in different modules; definition in module 'SecondModule' first difference is function body}}
+// expected-note@first.h:* {{but in 'FirstModule' found a different body}}
 auto function2 = invalid2;
 // expected-error@second.h:* {{'Types::DeducedTemplateSpecialization::invalid2' has different definitions in different modules; definition in module 'SecondModule' first difference is function body}}
 // expected-note@first.h:* {{but in 'FirstModule' found a different body}}

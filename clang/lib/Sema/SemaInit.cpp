@@ -10062,7 +10062,7 @@ static bool isOrIsDerivedFromSpecializationOf(CXXRecordDecl *RD,
   return !(NotSpecialization(RD) && RD->forallBases(NotSpecialization));
 }
 
-QualType Sema::DeduceTemplateSpecializationFromInitializer(
+TypeSourceInfo *Sema::DeduceTemplateSpecializationFromInitializer(
     TypeSourceInfo *TSInfo, const InitializedEntity &Entity,
     const InitializationKind &Kind, MultiExprArg Inits) {
   auto *DeducedTST = dyn_cast<DeducedTemplateSpecializationType>(
@@ -10071,7 +10071,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
 
   auto TemplateName = DeducedTST->getTemplateName();
   if (TemplateName.isDependent())
-    return SubstAutoTypeSourceInfoDependent(TSInfo)->getType();
+    return SubstAutoTypeSourceInfoDependent(TSInfo);
 
   // We can only perform deduction for class templates or alias templates.
   auto *Template =
@@ -10108,7 +10108,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
         << (int)getTemplateNameKindForDiagnostics(TemplateName) << TemplateName;
     if (auto *TD = TemplateName.getAsTemplateDecl())
       NoteTemplateLocation(*TD);
-    return QualType();
+    return nullptr;
   }
 
   // Can't deduce from dependent arguments.
@@ -10116,7 +10116,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     Diag(TSInfo->getTypeLoc().getBeginLoc(),
          diag::warn_cxx14_compat_class_template_argument_deduction)
         << TSInfo->getTypeLoc().getSourceRange() << 0;
-    return SubstAutoTypeSourceInfoDependent(TSInfo)->getType();
+    return SubstAutoTypeSourceInfoDependent(TSInfo);
   }
 
   // FIXME: Perform "exact type" matching first, per CWG discussion?
@@ -10381,7 +10381,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
             PDiag(diag::err_deduced_class_template_ctor_ambiguous)
                 << TemplateName),
         *this, OCD_AmbiguousCandidates, Inits);
-    return QualType();
+    return nullptr;
 
   case OR_No_Viable_Function: {
     CXXRecordDecl *Primary =
@@ -10395,7 +10395,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
                            : diag::err_deduced_class_template_incomplete)
                 << TemplateName << !Guides.empty()),
         *this, OCD_AllCandidates, Inits);
-    return QualType();
+    return nullptr;
   }
 
   case OR_Deleted: {
@@ -10405,7 +10405,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     Diag(Kind.getLocation(), diag::err_deduced_class_template_deleted)
       << TemplateName;
     NoteDeletedFunction(Best->Function);
-    return QualType();
+    return nullptr;
   }
 
   case OR_Success:
@@ -10420,7 +10420,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
       Diag(Best->Function->getLocation(),
            diag::note_explicit_ctor_deduction_guide_here)
           << IsDeductionGuide;
-      return QualType();
+      return nullptr;
     }
 
     // Make sure we didn't select an unusable deduction guide, and mark it
@@ -10433,9 +10433,9 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
   // C++ [dcl.type.class.deduct]p1:
   //  The placeholder is replaced by the return type of the function selected
   //  by overload resolution for class template deduction.
-  QualType DeducedType =
-      SubstAutoTypeSourceInfo(TSInfo, Best->Function->getReturnType())
-          ->getType();
+  TypeSourceInfo *DeducedTSI =
+      SubstAutoTypeSourceInfo(TSInfo, Best->Function->getReturnType());
+  QualType DeducedType = DeducedTSI ? DeducedTSI->getType() : QualType();
   Diag(TSInfo->getTypeLoc().getBeginLoc(),
        diag::warn_cxx14_compat_class_template_argument_deduction)
       << TSInfo->getTypeLoc().getSourceRange() << 1 << DeducedType;
@@ -10449,5 +10449,5 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     Diag(Template->getLocation(), diag::note_suppress_ctad_maybe_unsupported);
   }
 
-  return DeducedType;
+  return DeducedTSI;
 }
