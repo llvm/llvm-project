@@ -619,6 +619,7 @@ void CIRGenModule::constructFunctionReturnAttributes(
 }
 
 void CIRGenModule::constructFunctionArgumentAttributes() {
+  assert(!cir::MissingFeatures::functionArgumentAttrs());
   // TODO(cir): This needs implementation.
 }
 

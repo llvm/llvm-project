@@ -405,6 +405,7 @@ public:
     auto op = cir::CallOp::create(*this, loc, callee, returnType, operands);
     op->setAttrs(attrs);
 
+    assert(!cir::MissingFeatures::functionArgumentAttrs());
     // TODO(cir): At one point we'll have to do a similar thing to this for the
     // argument attributes, except for those, there are 1 Dictionary per
     // argument. Since we only have 1 result however, we can just use a single

@@ -2231,6 +2231,8 @@ void CIRGenModule::setCIRFunctionAttributes(GlobalDecl globalDecl,
   for (mlir::NamedAttribute attr : pal)
     func->setAttr(attr.getName(), attr.getValue());
 
+  assert(!cir::MissingFeatures::functionArgumentAttrs());
+
   for (mlir::NamedAttribute attr : retAttrs)
     func.setResultAttr(/*index=*/0, attr.getName(), attr.getValue());
 
