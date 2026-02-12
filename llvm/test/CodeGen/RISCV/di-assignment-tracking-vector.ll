@@ -1,5 +1,4 @@
-; RUN: llc -mtriple=riscv64 < %s | FileCheck %s --implicit-check-not=DEBUG_VALUE
-; XFAIL: *
+; RUN: llc -mtriple=riscv64 -enable-misched=false < %s | FileCheck %s --implicit-check-not=DEBUG_VALUE
 
 ;; Verify that tagged and untagged non-contiguous stores are handled correctly
 ;; by assignment tracking.
@@ -11,9 +10,9 @@
 ; CHECK-LABEL: foo:
 ; CHECK-NEXT:  .Lfunc_begin0:
 ; CHECK:       # %bb.0
-; CHECK:         addi    a1, sp, 48
-; CHECK-NEXT:    #DEBUG_VALUE: foo:i <- [DW_OP_deref] $x12
-; CHECK-NEXT:    #DEBUG_VALUE: foo:j <- [DW_OP_deref] $x12
+; CHECK:         addi    a2, sp, 48
+; CHECK-NEXT:    #DEBUG_VALUE: foo:i <- [DW_OP_deref] $x11
+; CHECK-NEXT:    #DEBUG_VALUE: foo:j <- [DW_OP_deref] $x11
 ; CHECK:         vsse32.v
 ; CHECK-NEXT:    #DEBUG_VALUE: foo:i <- 1010
 ; CHECK-NEXT:    vsse32.v
