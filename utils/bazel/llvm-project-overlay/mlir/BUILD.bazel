@@ -133,6 +133,17 @@ gentbl_cc_library(
     deps = [":TensorOpsTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "QuantStorageTypeInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/IR/QuantStorageTypeInterface.h.inc": ["-gen-type-interface-decls"],
+        "include/mlir/IR/QuantStorageTypeInterface.cpp.inc": ["-gen-type-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/IR/QuantStorageTypeInterface.td",
+    deps = [":QuantStorageTypeInterfaceTdFiles"],
+)
+
 td_library(
     name = "BuiltinDialectTdFiles",
     srcs = [
@@ -151,6 +162,7 @@ td_library(
         ":CastInterfacesTdFiles",
         ":DataLayoutInterfacesTdFiles",
         ":OpBaseTdFiles",
+        ":QuantStorageTypeInterfaceTdFiles",
         ":SideEffectInterfacesTdFiles",
     ],
 )
@@ -430,6 +442,7 @@ cc_library(
         ":DataLayoutInterfacesIncGen",
         ":InferIntRangeInterfaceIncGen",
         ":OpAsmInterfaceIncGen",
+        ":QuantStorageTypeInterfaceIncGen",
         ":RegionKindInterfaceIncGen",
         ":SideEffectInterfacesIncGen",
         ":Support",
@@ -1304,7 +1317,7 @@ cc_binary(
 
 py_binary(
     name = "stubgen_runner",
-    srcs = ["stubgen_runner.py"],
+    srcs = ["lib/Bindings/Python/stubgen_runner.py"],
     data = ["@nanobind//:src/stubgen.py"],
     deps = ["@rules_python//python/runfiles"],
 )
@@ -1449,6 +1462,13 @@ td_library(
 td_library(
     name = "ParallelCombiningOpInterfaceTdFiles",
     srcs = ["include/mlir/Interfaces/ParallelCombiningOpInterface.td"],
+    includes = ["include"],
+    deps = [":OpBaseTdFiles"],
+)
+
+td_library(
+    name = "QuantStorageTypeInterfaceTdFiles",
+    srcs = ["include/mlir/IR/QuantStorageTypeInterface.td"],
     includes = ["include"],
     deps = [":OpBaseTdFiles"],
 )
@@ -10316,6 +10336,7 @@ cc_library(
         ":AtomicInterfacesIncGen",
         ":BytecodeOpInterface",
         ":ControlFlowInterfaces",
+        ":DataLayoutInterfaces",
         ":GPUDialect",
         ":IR",
         ":LLVMDialect",
@@ -10354,6 +10375,7 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/OpenACC/Analysis/*.h"]),
     includes = ["include"],
     deps = [
+        ":GPUDialect",
         ":IR",
         ":OpenACCDialect",
         ":OpenACCUtils",
@@ -10371,6 +10393,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ArithUtils",
+        ":DataLayoutInterfaces",
         ":DialectUtils",
         ":FunctionInterfaces",
         ":IR",

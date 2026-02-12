@@ -13,6 +13,7 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/ValueObject/DILAST.h"
+#include "lldb/ValueObject/DILParser.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectRegister.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
@@ -41,22 +42,6 @@ GetDynamicOrSyntheticValue(lldb::ValueObjectSP value_sp,
   }
 
   return value_sp;
-}
-
-static llvm::Expected<lldb::TypeSystemSP>
-GetTypeSystemFromCU(std::shared_ptr<ExecutionContextScope> ctx) {
-  auto stack_frame = ctx->CalculateStackFrame();
-  if (!stack_frame)
-    return llvm::createStringError("no stack frame in this context");
-  SymbolContext symbol_context =
-      stack_frame->GetSymbolContext(lldb::eSymbolContextCompUnit);
-
-  if (!symbol_context.comp_unit)
-    return llvm::createStringError("no compile unit in this context");
-  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
-
-  symbol_context = stack_frame->GetSymbolContext(lldb::eSymbolContextModule);
-  return symbol_context.module_sp->GetTypeSystemForLanguage(language);
 }
 
 static CompilerType GetBasicType(lldb::TypeSystemSP type_system,
