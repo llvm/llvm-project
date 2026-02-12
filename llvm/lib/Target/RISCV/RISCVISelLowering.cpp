@@ -359,9 +359,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::UADDO, ISD::USUBO}, MVT::i32, Custom);
     setOperationAction({ISD::SADDO, ISD::SSUBO}, MVT::i32, Custom);
   } else if (Subtarget.hasStdExtP()) {
-    // Custom legalize i64 ADD/SUB/SRL/SRA for RV32+P.
+    // Custom legalize i64 ADD/SUB/SHL/SRL/SRA for RV32+P.
     setOperationAction({ISD::ADD, ISD::SUB}, MVT::i64, Custom);
-    setOperationAction({ISD::SRL, ISD::SRA}, MVT::i64, Custom);
+    setOperationAction({ISD::SHL, ISD::SRL, ISD::SRA}, MVT::i64, Custom);
   }
   if (!Subtarget.hasStdExtZmmul()) {
     setOperationAction({ISD::MUL, ISD::MULHS, ISD::MULHU}, XLenVT, Expand);
@@ -10254,6 +10254,40 @@ SDValue RISCVTargetLowering::lowerShiftLeftParts(SDValue Op,
   SDValue Hi = Op.getOperand(1);
   SDValue Shamt = Op.getOperand(2);
   EVT VT = Lo.getValueType();
+  unsigned XLen = Subtarget.getXLen();
+
+  // With P extension, use SLX (FSHL) for the high part.
+  if (Subtarget.hasStdExtP()) {
+    // HiRes = fshl(Hi, Lo, Shamt) - correct when Shamt < XLen
+    SDValue HiRes = DAG.getNode(ISD::FSHL, DL, VT, Hi, Lo, Shamt);
+    // LoRes = Lo << Shamt - correct Lo when Shamt < XLen,
+    // Mask shift amount to avoid UB when Shamt >= XLen.
+    SDValue ShamtMasked =
+        DAG.getNode(ISD::AND, DL, VT, Shamt, DAG.getConstant(XLen - 1, DL, VT));
+    SDValue LoRes = DAG.getNode(ISD::SHL, DL, VT, Lo, ShamtMasked);
+
+    // Create a mask that is -1 when Shamt >= XLen, 0 otherwise.
+    // FIXME: We should use a select and let LowerSelect make the
+    // optimizations.
+    SDValue ShAmtExt =
+        DAG.getNode(ISD::SHL, DL, VT, Shamt,
+                    DAG.getConstant(XLen - Log2_32(XLen) - 1, DL, VT));
+    SDValue Mask = DAG.getNode(ISD::SRA, DL, VT, ShAmtExt,
+                               DAG.getConstant(XLen - 1, DL, VT));
+
+    // When Shamt >= XLen: HiRes = LoRes, LoRes = 0
+    // HiRes = (HiRes & ~Mask) | (LoRes & Mask)
+    SDValue HiMasked =
+        DAG.getNode(ISD::AND, DL, VT, HiRes, DAG.getNOT(DL, Mask, VT));
+    SDValue LoMasked = DAG.getNode(ISD::AND, DL, VT, LoRes, Mask);
+    HiRes =
+        DAG.getNode(ISD::OR, DL, VT, HiMasked, LoMasked, SDNodeFlags::Disjoint);
+
+    // LoRes = LoRes & ~Mask (clear when Shamt >= XLen)
+    LoRes = DAG.getNode(ISD::AND, DL, VT, LoRes, DAG.getNOT(DL, Mask, VT));
+
+    return DAG.getMergeValues({LoRes, HiRes}, DL);
+  }
 
   // if Shamt-XLEN < 0: // Shamt < XLEN
   //   Lo = Lo << Shamt
@@ -10264,8 +10298,8 @@ SDValue RISCVTargetLowering::lowerShiftLeftParts(SDValue Op,
 
   SDValue Zero = DAG.getConstant(0, DL, VT);
   SDValue One = DAG.getConstant(1, DL, VT);
-  SDValue MinusXLen = DAG.getSignedConstant(-(int)Subtarget.getXLen(), DL, VT);
-  SDValue XLenMinus1 = DAG.getConstant(Subtarget.getXLen() - 1, DL, VT);
+  SDValue MinusXLen = DAG.getSignedConstant(-(int)XLen, DL, VT);
+  SDValue XLenMinus1 = DAG.getConstant(XLen - 1, DL, VT);
   SDValue ShamtMinusXLen = DAG.getNode(ISD::ADD, DL, VT, Shamt, MinusXLen);
   SDValue XLenMinus1Shamt = DAG.getNode(ISD::SUB, DL, VT, XLenMinus1, Shamt);
 
@@ -15309,22 +15343,31 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     if (VT == MVT::i64) {
       assert(!Subtarget.is64Bit() && Subtarget.hasStdExtP() &&
              "Unexpected custom legalisation");
-      assert((N->getOpcode() == ISD::SRL || N->getOpcode() == ISD::SRA) &&
-             "Unexpected custom legalisation");
 
       // Only handle constant shifts < 32. Non-constant shifts are handled by
-      // lowerShiftRightParts, and shifts >= 32 use default legalization.
+      // lowerShiftLeftParts/lowerShiftRightParts, and shifts >= 32 use default
+      // legalization.
       auto *ShAmtC = dyn_cast<ConstantSDNode>(N->getOperand(1));
       if (!ShAmtC || ShAmtC->getZExtValue() >= 32)
         break;
 
       auto [Lo, Hi] = DAG.SplitScalar(N->getOperand(0), DL, MVT::i32, MVT::i32);
 
-      bool IsSRA = N->getOpcode() == ISD::SRA;
-      SDValue LoRes = DAG.getNode(IsSRA ? RISCVISD::NSRA : RISCVISD::NSRL, DL,
-                                  MVT::i32, Lo, Hi, N->getOperand(1));
-      SDValue HiRes = DAG.getNode(IsSRA ? ISD::SRA : ISD::SRL, DL, MVT::i32, Hi,
-                                  N->getOperand(1));
+      SDValue LoRes, HiRes;
+      if (N->getOpcode() == ISD::SHL) {
+        // Lo = slli Lo, shamt
+        // Hi = nsrli {Hi, Lo}, (32 - shamt)
+        uint64_t ShAmtVal = ShAmtC->getZExtValue();
+        LoRes = DAG.getNode(ISD::SHL, DL, MVT::i32, Lo, N->getOperand(1));
+        HiRes = DAG.getNode(RISCVISD::NSRL, DL, MVT::i32, Lo, Hi,
+                            DAG.getConstant(32 - ShAmtVal, DL, MVT::i32));
+      } else {
+        bool IsSRA = N->getOpcode() == ISD::SRA;
+        LoRes = DAG.getNode(IsSRA ? RISCVISD::NSRA : RISCVISD::NSRL, DL,
+                            MVT::i32, Lo, Hi, N->getOperand(1));
+        HiRes = DAG.getNode(IsSRA ? ISD::SRA : ISD::SRL, DL, MVT::i32, Hi,
+                            N->getOperand(1));
+      }
       SDValue Res = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, LoRes, HiRes);
       Results.push_back(Res);
       return;
