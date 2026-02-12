@@ -120,14 +120,30 @@ public:
       return spec.GetPath();
     }();
     if (!g_python_home.empty()) {
-      PyConfig_SetBytesString(&config, &config.home, g_python_home.c_str());
+      PyStatus py_status =
+          PyConfig_SetBytesString(&config, &config.home, g_python_home.c_str());
+      if (py_status._type == PyStatus::_PyStatus_TYPE_ERROR) {
+        PyConfig_Clear(&config);
+        llvm::WithColor::error() << "Failed to set the Python config: '"
+                                 << py_status.err_msg << "'.\n";
+        return;
+      }
     }
 
     config.install_signal_handlers = 0;
-    Py_InitializeFromConfig(&config);
+    PyStatus py_status = Py_InitializeFromConfig(&config);
     PyConfig_Clear(&config);
+    if (py_status._type == PyStatus::_PyStatus_TYPE_ERROR) {
+      llvm::WithColor::error()
+          << "Python failed to initialize: '" << py_status.err_msg << "'.\n";
+      return;
+    }
 #else
     Py_InitializeEx(/*install_sigs=*/0);
+    if (!Py_IsInitialized()) {
+      llvm::WithColor::error() << "Python failed to initialize.\n";
+      return;
+    }
 #endif
 
     // The only case we should go further and acquire the GIL: it is unlocked.
