@@ -394,15 +394,15 @@ InstructionCost VPRegisterUsage::spillCost(VPCostContext &Ctx,
                                            unsigned OverrideMaxNumRegs) const {
   InstructionCost Cost;
   DataLayout DL = Ctx.PSE.getSE()->getDataLayout();
-  for (const auto &Pair : MaxLocalUsers) {
+  for (const auto &[RegClass, MaxUsers] : MaxLocalUsers) {
     unsigned AvailableRegs = OverrideMaxNumRegs > 0
                                  ? OverrideMaxNumRegs
-                                 : Ctx.TTI.getNumberOfRegisters(Pair.first);
-    if (Pair.second > AvailableRegs) {
+                                 : Ctx.TTI.getNumberOfRegisters(RegClass);
+    if (MaxUsers > AvailableRegs) {
       // Assume that for each register used past what's available we get one
       // spill and reload of the largest type seen for that register class.
-      unsigned Spills = Pair.second - AvailableRegs;
-      Type *SpillType = LargestType.at(Pair.first);
+      unsigned Spills = MaxUsers - AvailableRegs;
+      Type *SpillType = LargestType.at(RegClass);
       Align Alignment = DL.getPrefTypeAlign(SpillType);
       InstructionCost SpillCost =
           Ctx.TTI.getMemoryOpCost(Instruction::Load, SpillType, Alignment, 0,
@@ -412,7 +412,7 @@ InstructionCost VPRegisterUsage::spillCost(VPCostContext &Ctx,
       InstructionCost TotalCost = SpillCost * Spills;
       LLVM_DEBUG(dbgs() << "LV(REG): Cost of " << TotalCost << " from "
                         << Spills << " spills of "
-                        << Ctx.TTI.getRegisterClassName(Pair.first) << "\n");
+                        << Ctx.TTI.getRegisterClassName(RegClass) << "\n");
       Cost += TotalCost;
     }
   }
