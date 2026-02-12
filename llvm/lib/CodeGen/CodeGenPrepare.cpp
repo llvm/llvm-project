@@ -19,7 +19,6 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -9426,19 +9425,15 @@ bool CodeGenPrepare::splitBranchCondition(Function &F) {
       PN.addIncoming(Val, TmpBB);
     }
 
-    if (LI) {
-      if (Loop *L = LI->getLoopFor(&BB))
-        L->addBasicBlockToLoop(TmpBB, *LI);
-    }
+    if (Loop *L = LI->getLoopFor(&BB))
+      L->addBasicBlockToLoop(TmpBB, *LI);
 
-    if (DTU) {
-      // The edge we need to delete starts at BB and ends at whatever TBB ends
-      // up pointing to.
-      DTU->applyUpdates({{DominatorTree::Insert, &BB, TmpBB},
-                         {DominatorTree::Insert, TmpBB, TBB},
-                         {DominatorTree::Insert, TmpBB, FBB},
-                         {DominatorTree::Delete, &BB, TBB}});
-    }
+    // The edge we need to delete starts at BB and ends at whatever TBB ends
+    // up pointing to.
+    DTU->applyUpdates({{DominatorTree::Insert, &BB, TmpBB},
+                       {DominatorTree::Insert, TmpBB, TBB},
+                       {DominatorTree::Insert, TmpBB, FBB},
+                       {DominatorTree::Delete, &BB, TBB}});
 
     // Update the branch weights (from SelectionDAGBuilder::
     // FindMergedConditions).
