@@ -60,7 +60,6 @@ bool fromJSON(const json::Value &Params, MessageType &M, json::Path P) {
 json::Value toJSON(const SanitizedString &S) {
   if (LLVM_LIKELY(llvm::json::isUTF8(std::string(S))))
     return std::string(S);
-  llvm::errs() << "Here!\n";
   return llvm::json::fixUTF8(std::string(S));
 }
 
