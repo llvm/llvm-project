@@ -495,13 +495,13 @@ In ``AArch64RegisterInfo.td``:
 
   def sub_32 : SubRegIndex<32>;
 
-If the third operand is an immediate with the value ``15`` (a target-dependent
+If the second operand is an immediate with the value ``15`` (a target-dependent
 value), based on the instruction's opcode and the operand's index the operand
 will be printed as ``%subreg.sub_32``:
 
 .. code-block:: text
 
-    %1:gpr64 = SUBREG_TO_REG 0, %0, %subreg.sub_32
+    %1:gpr64 = SUBREG_TO_REG %0, %subreg.sub_32
 
 For integers larger than 64 bits, we use a special machine operand, ``MO_CImmediate``,
 which stores the immediate in a ``ConstantInt`` using an ``APInt`` (LLVM's

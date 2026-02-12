@@ -6,6 +6,7 @@ add_llvm_component_library(LLVMCAS
   ActionCache.cpp
   ActionCaches.cpp
   BuiltinCAS.cpp
+  BuiltinObjectHasher.cpp
   BuiltinUnifiedCASDatabases.cpp
   CASNodeSchema.cpp
   DatabaseFile.cpp

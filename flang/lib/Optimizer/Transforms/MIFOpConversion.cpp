@@ -16,6 +16,7 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Runtime/stop.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -74,6 +75,111 @@ static mlir::Value genStatPRIF(fir::FirOpBuilder &builder, mlir::Location loc,
   return stat;
 }
 
+static fir::CallOp genPRIFStopErrorStop(fir::FirOpBuilder &builder,
+                                        mlir::Location loc,
+                                        mlir::Value stopCode,
+                                        bool isError = false) {
+  mlir::Type stopCharTy = fir::BoxCharType::get(builder.getContext(), 1);
+  mlir::Type i1Ty = builder.getI1Type();
+  mlir::Type i32Ty = builder.getI32Type();
+
+  mlir::FunctionType ftype = mlir::FunctionType::get(
+      builder.getContext(),
+      /*inputs*/
+      {builder.getRefType(i1Ty), builder.getRefType(i32Ty), stopCharTy},
+      /*results*/ {});
+  mlir::func::FuncOp funcOp =
+      isError
+          ? builder.createFunction(loc, getPRIFProcName("error_stop"), ftype)
+          : builder.createFunction(loc, getPRIFProcName("stop"), ftype);
+
+  // QUIET is managed in flang-rt, so its value is set to TRUE here.
+  mlir::Value q = builder.createBool(loc, true);
+  mlir::Value quiet = builder.createTemporary(loc, i1Ty);
+  fir::StoreOp::create(builder, loc, q, quiet);
+
+  mlir::Value stopCodeInt, stopCodeChar;
+  if (!stopCode) {
+    stopCodeChar = fir::AbsentOp::create(builder, loc, stopCharTy);
+    stopCodeInt =
+        fir::AbsentOp::create(builder, loc, builder.getRefType(i32Ty));
+  } else if (fir::isa_integer(stopCode.getType())) {
+    stopCodeChar = fir::AbsentOp::create(builder, loc, stopCharTy);
+    stopCodeInt = builder.createTemporary(loc, i32Ty);
+    if (stopCode.getType() != i32Ty)
+      stopCode = fir::ConvertOp::create(builder, loc, i32Ty, stopCode);
+    fir::StoreOp::create(builder, loc, stopCode, stopCodeInt);
+  } else {
+    stopCodeChar = stopCode;
+    if (!mlir::isa<fir::BoxCharType>(stopCodeChar.getType())) {
+      auto len =
+          fir::UndefOp::create(builder, loc, builder.getCharacterLengthType());
+      stopCodeChar =
+          fir::EmboxCharOp::create(builder, loc, stopCharTy, stopCodeChar, len);
+    }
+    stopCodeInt =
+        fir::AbsentOp::create(builder, loc, builder.getRefType(i32Ty));
+  }
+
+  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+      builder, loc, ftype, quiet, stopCodeInt, stopCodeChar);
+  return fir::CallOp::create(builder, loc, funcOp, args);
+}
+
+enum class TerminationKind { Normal = 0, Error = 1, FailImage = 2 };
+// Generates a wrapper function for the different kind of termination in PRIF.
+// This function will be used to register wrappers on PRIF runtime termination
+// functions into the Fortran runtime.
+mlir::Value genTerminationOperationWrapper(fir::FirOpBuilder &builder,
+                                           mlir::Location loc,
+                                           mlir::ModuleOp module,
+                                           TerminationKind termKind) {
+  std::string funcName;
+  mlir::FunctionType funcType =
+      mlir::FunctionType::get(builder.getContext(), {}, {});
+  mlir::Type i32Ty = builder.getI32Type();
+  if (termKind == TerminationKind::Normal) {
+    funcName = getPRIFProcName("stop");
+    funcType = mlir::FunctionType::get(builder.getContext(), {i32Ty}, {});
+  } else if (termKind == TerminationKind::Error) {
+    funcName = getPRIFProcName("error_stop");
+    funcType = mlir::FunctionType::get(builder.getContext(), {i32Ty}, {});
+  } else {
+    funcName = getPRIFProcName("fail_image");
+  }
+  funcName += "_termination_wrapper";
+  mlir::func::FuncOp funcWrapperOp =
+      module.lookupSymbol<mlir::func::FuncOp>(funcName);
+
+  if (!funcWrapperOp) {
+    funcWrapperOp = builder.createFunction(loc, funcName, funcType);
+
+    // generating the body of the function.
+    mlir::OpBuilder::InsertPoint saveInsertPoint = builder.saveInsertionPoint();
+    builder.setInsertionPointToStart(funcWrapperOp.addEntryBlock());
+
+    if (termKind == TerminationKind::Normal) {
+      genPRIFStopErrorStop(builder, loc, funcWrapperOp.getArgument(0),
+                           /*isError*/ false);
+    } else if (termKind == TerminationKind::Error) {
+      genPRIFStopErrorStop(builder, loc, funcWrapperOp.getArgument(0),
+                           /*isError*/ true);
+    } else {
+      mlir::func::FuncOp fOp = builder.createFunction(
+          loc, getPRIFProcName("fail_image"),
+          mlir::FunctionType::get(builder.getContext(), {}, {}));
+      fir::CallOp::create(builder, loc, fOp);
+    }
+
+    mlir::func::ReturnOp::create(builder, loc);
+    builder.restoreInsertionPoint(saveInsertPoint);
+  }
+
+  mlir::SymbolRefAttr symbolRef = mlir::SymbolRefAttr::get(
+      builder.getContext(), funcWrapperOp.getSymNameAttr());
+  return fir::AddrOfOp::create(builder, loc, funcType, symbolRef);
+}
+
 /// Convert mif.init operation to runtime call of 'prif_init'
 struct MIFInitOpConversion : public mlir::OpRewritePattern<mif::InitOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -87,6 +193,39 @@ struct MIFInitOpConversion : public mlir::OpRewritePattern<mif::InitOp> {
 
     mlir::Type i32Ty = builder.getI32Type();
     mlir::Value result = builder.createTemporary(loc, i32Ty);
+
+    // Registering PRIF runtime termination to the Fortran runtime
+    // STOP
+    mlir::Value funcStopOp = genTerminationOperationWrapper(
+        builder, loc, mod, TerminationKind::Normal);
+    mlir::func::FuncOp normalEndFunc =
+        fir::runtime::getRuntimeFunc<mkRTKey(RegisterImagesNormalEndCallback)>(
+            loc, builder);
+    llvm::SmallVector<mlir::Value> args1 = fir::runtime::createArguments(
+        builder, loc, normalEndFunc.getFunctionType(), funcStopOp);
+    fir::CallOp::create(builder, loc, normalEndFunc, args1);
+
+    // ERROR STOP
+    mlir::Value funcErrorStopOp = genTerminationOperationWrapper(
+        builder, loc, mod, TerminationKind::Error);
+    mlir::func::FuncOp errorFunc =
+        fir::runtime::getRuntimeFunc<mkRTKey(RegisterImagesErrorCallback)>(
+            loc, builder);
+    llvm::SmallVector<mlir::Value> args2 = fir::runtime::createArguments(
+        builder, loc, errorFunc.getFunctionType(), funcErrorStopOp);
+    fir::CallOp::create(builder, loc, errorFunc, args2);
+
+    // FAIL IMAGE
+    mlir::Value failImageOp = genTerminationOperationWrapper(
+        builder, loc, mod, TerminationKind::FailImage);
+    mlir::func::FuncOp failImageFunc =
+        fir::runtime::getRuntimeFunc<mkRTKey(RegisterFailImageCallback)>(
+            loc, builder);
+    llvm::SmallVector<mlir::Value> args3 = fir::runtime::createArguments(
+        builder, loc, errorFunc.getFunctionType(), failImageOp);
+    fir::CallOp::create(builder, loc, failImageFunc, args3);
+
+    // Intialize the multi-image parallel environment
     mlir::FunctionType ftype = mlir::FunctionType::get(
         builder.getContext(),
         /*inputs*/ {builder.getRefType(i32Ty)}, /*results*/ {});

@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "BuiltinCAS.h"
+#include "OnDiskCommon.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/CAS/BuiltinCASContext.h"
 #include "llvm/CAS/BuiltinObjectHasher.h"
 #include "llvm/CAS/OnDiskCASLogger.h"
@@ -14,6 +16,8 @@
 #include "llvm/CAS/UnifiedOnDiskCache.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/IOSandbox.h"
+#include "llvm/Support/Path.h"
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -36,6 +40,10 @@ public:
   Expected<bool> isMaterialized(ObjectRef Ref) const final;
 
   ArrayRef<char> getDataConst(ObjectHandle Node) const final;
+
+  Expected<ObjectRef> storeFromFile(StringRef Path) final;
+
+  Error exportDataToFile(ObjectHandle Node, StringRef Path) const final;
 
   void print(raw_ostream &OS) const final;
   Error validate(bool CheckHash) const final;
@@ -91,14 +99,7 @@ private:
 
 void OnDiskCAS::print(raw_ostream &OS) const { DB->print(OS); }
 Error OnDiskCAS::validate(bool CheckHash) const {
-  auto Hasher = [](ArrayRef<ArrayRef<uint8_t>> Refs, ArrayRef<char> Data,
-                   SmallVectorImpl<uint8_t> &Result) {
-    auto Hash = BuiltinObjectHasher<llvm::cas::builtin::HasherT>::hashObject(
-        Refs, Data);
-    Result.assign(Hash.begin(), Hash.end());
-  };
-
-  if (auto E = DB->validate(CheckHash, Hasher))
+  if (auto E = DB->validate(CheckHash, builtin::hashingFunc))
     return E;
 
   return Error::success();
@@ -151,6 +152,55 @@ Expected<ObjectRef> OnDiskCAS::storeImpl(ArrayRef<uint8_t> ComputedHash,
   if (Error E = DB->store(*StoredID, IDs, Data))
     return std::move(E);
   return convertRef(*StoredID);
+}
+
+Expected<ObjectRef> OnDiskCAS::storeFromFile(StringRef Path) {
+  auto Hash = BuiltinObjectHasher<HasherT>::hashFile(Path);
+  if (LLVM_UNLIKELY(!Hash))
+    return Hash.takeError();
+  auto StoredID = DB->getReference(*Hash);
+  if (LLVM_UNLIKELY(!StoredID))
+    return StoredID.takeError();
+  if (Error E = DB->storeFile(*StoredID, Path))
+    return E;
+  return convertRef(*StoredID);
+}
+
+Error OnDiskCAS::exportDataToFile(ObjectHandle Node, StringRef Path) const {
+  auto FBData = DB->getInternalFileBackedObjectData(convertHandle(Node));
+  if (!FBData.FileInfo.has_value())
+    return BuiltinCAS::exportDataToFile(Node, Path);
+
+  // Optimized version using the underlying database file.
+  assert(FBData.FileInfo.has_value());
+
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
+  ondisk::UniqueTempFile UniqueTmp;
+  auto ExpectedPath = UniqueTmp.createAndCopyFrom(sys::path::parent_path(Path),
+                                                  FBData.FileInfo->FilePath);
+  if (!ExpectedPath)
+    return ExpectedPath.takeError();
+  StringRef TmpPath = *ExpectedPath;
+
+  if (FBData.FileInfo->IsFileNulTerminated) {
+    // Remove the nul terminator.
+    int FD;
+    if (std::error_code EC =
+            sys::fs::openFileForWrite(TmpPath, FD, sys::fs::CD_OpenExisting))
+      return createFileError(TmpPath, EC);
+    auto CloseFile = scope_exit([&FD] {
+      sys::fs::file_t File = sys::fs::convertFDToNativeFile(FD);
+      sys::fs::closeFile(File);
+    });
+    if (std::error_code EC = sys::fs::resize_file(FD, FBData.Data.size()))
+      return createFileError(TmpPath, EC);
+  }
+
+  if (Error E = UniqueTmp.renameTo(Path))
+    return E;
+
+  return Error::success();
 }
 
 Error OnDiskCAS::forEachRef(ObjectHandle Node,

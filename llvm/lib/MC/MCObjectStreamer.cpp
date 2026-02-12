@@ -111,7 +111,8 @@ void MCObjectStreamer::appendContents(ArrayRef<char> Contents) {
   assert(FragSpace >= Contents.size());
   // As this is performance-sensitive code, explicitly use std::memcpy.
   // Optimization of std::copy to memmove is unreliable.
-  std::memcpy(getCurFragEnd(), Contents.begin(), Contents.size());
+  if (!Contents.empty())
+    std::memcpy(getCurFragEnd(), Contents.begin(), Contents.size());
   CurFrag->FixedSize += Contents.size();
   FragSpace -= Contents.size();
 }
@@ -180,16 +181,21 @@ void MCObjectStreamer::reset() {
   MCStreamer::reset();
 }
 
+void MCObjectStreamer::generateCompactUnwindEncodings() {
+  auto &Backend = getAssembler().getBackend();
+  for (auto &FI : DwarfFrameInfos)
+    FI.CompactUnwindEncoding =
+        Backend.generateCompactUnwindEncoding(&FI, &getContext());
+}
+
 void MCObjectStreamer::emitFrames() {
   if (!getNumFrameInfos())
     return;
 
-  auto *MAB = &getAssembler().getBackend();
   if (EmitEHFrame)
-    MCDwarfFrameEmitter::Emit(*this, MAB, true);
-
+    MCDwarfFrameEmitter::emit(*this, true);
   if (EmitDebugFrame)
-    MCDwarfFrameEmitter::Emit(*this, MAB, false);
+    MCDwarfFrameEmitter::emit(*this, false);
 
   if (EmitSFrame || (getContext().getTargetOptions() &&
                      getContext().getTargetOptions()->EmitSFrameUnwind))

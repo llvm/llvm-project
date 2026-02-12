@@ -492,8 +492,8 @@ namespace llvm {
 
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
-    bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
-                            MachineFunction &MF,
+    void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
+                            const CallBase &I, MachineFunction &MF,
                             unsigned Intrinsic) const override;
 
     /// It returns EVT::Other if the type should be determined using generic
@@ -890,7 +890,8 @@ namespace llvm {
     SDValue getRecipEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
                              int &RefinementSteps) const override;
     SDValue getSqrtInputTest(SDValue Operand, SelectionDAG &DAG,
-                             const DenormalMode &Mode) const override;
+                             const DenormalMode &Mode,
+                             SDNodeFlags Flags = {}) const override;
     SDValue getSqrtResultForDenormInput(SDValue Operand,
                                         SelectionDAG &DAG) const override;
     unsigned combineRepeatedFPDivisors() const override;
