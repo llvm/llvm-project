@@ -45,7 +45,9 @@ def gather_run_information(args):
     Gather the run information to upload to LNT as part of the submission.
     """
     info = {}
-    info['commit_info'] = subprocess.check_output(['git', '-C', args.git_repo, 'show', args.benchmark_commit, '--no-patch']).decode()
+    # TODO: For now, we don't include commit information. This happens to be a long string and
+    #       production instances of LNT dont't accept those as part of submissions for the time being.
+    # info['commit_info'] = subprocess.check_output(['git', '-C', args.git_repo, 'show', args.benchmark_commit, '--no-patch']).decode()
     info['git_sha'] = subprocess.check_output(['git', '-C', args.git_repo, 'rev-parse', args.benchmark_commit]).decode().strip()
     return info
 
