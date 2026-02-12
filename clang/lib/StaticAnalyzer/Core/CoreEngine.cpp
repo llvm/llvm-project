@@ -433,15 +433,7 @@ void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
 
         ExprEng.processIndirectGoto(Builder, Pred);
         // Enqueue the new frontier onto the worklist.
-        llvm::errs() << "Pred location is ";
-        Pred->getLocation().dump();
-        llvm::errs() << "\n";
-        for (auto *N : Dst) {
-          llvm::errs() << "Enqueueing node at ";
-          N->getLocation().dump();
-          llvm::errs() << "\n";
-          WList->enqueue(N);
-        }
+        enqueue(Dst);
         return;
       }
 
@@ -464,8 +456,7 @@ void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
         ExplodedNodeSet Dst;
         ExprEng.processSwitch(Ctx, cast<SwitchStmt>(Term), Pred, Dst);
         // Enqueue the new frontier onto the worklist.
-        for (auto *N : Dst)
-          WList->enqueue(N);
+        enqueue(Dst);
         return;
       }
 
