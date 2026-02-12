@@ -102,15 +102,22 @@ def update_test(opt_basename: str, ti: common.TestInfo):
         regex_map = {
             r"Printing analysis ": common.ANALYZE_FUNCTION_RE,
             r"(LV|LDist|HashRecognize): Checking a loop in ": common.LOOP_PASS_DEBUG_RE,
+            r"VPlan for loop in ": common.VPLAN_RE,
         }
 
         for split_by, regex in regex_map.items():
             if re.search(split_by, raw_tool_outputs) is None:
                 continue
             for raw_tool_output in re.split(split_by, raw_tool_outputs):
+                # For VPlan mode, don't scrub whitespace - preserve exact alignment
+                scrubber = (
+                    (lambda body: body)
+                    if regex == common.VPLAN_RE
+                    else common.scrub_body
+                )
                 builder.process_run_line(
                     regex,
-                    common.scrub_body,
+                    scrubber,
                     raw_tool_output,
                     prefixes,
                 )
@@ -120,6 +127,8 @@ def update_test(opt_basename: str, ti: common.TestInfo):
             continue
 
         builder.processed_prefixes(prefixes)
+
+    check_label_prefix = "VPlan for loop in " if regex == common.VPLAN_RE else ""
 
     func_dict = builder.finish_and_get_func_dict()
     is_in_function = False
@@ -151,6 +160,7 @@ def update_test(opt_basename: str, ti: common.TestInfo):
                     func_name,
                     ginfo,
                     is_filtered=builder.is_filtered(),
+                    check_label_prefix=check_label_prefix,
                 )
             )
             is_in_function_start = False

@@ -105,17 +105,42 @@ DLWRAP_FINALIZE()
 #endif
 
 static bool loadLevelZero() {
-  const char *L0Library = LEVEL_ZERO_LIBRARY;
+  std::string L0Library{LEVEL_ZERO_LIBRARY};
   std::string ErrMsg;
 
   ODBG(OLDT_Init) << "Trying to load " << L0Library;
   auto DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
-      llvm::sys::DynamicLibrary::getPermanentLibrary(L0Library, &ErrMsg));
+      llvm::sys::DynamicLibrary::getPermanentLibrary(L0Library.c_str(),
+                                                     &ErrMsg));
+
+  // Update the following comment and the MinVersion when the plugin starts to
+  // use a new Level Zero API routine.
+  // zeCommandListHostSynchronize was introduced in loader 1.10.0 (API 1.6.0).
+  constexpr uint32_t MinVersion{ZE_MAKE_VERSION(1, 10)};
+  auto emitCheckVersion = [&]() {
+    ODBG(OLDT_Init) << "Level Zero Loader compatible with version "
+                    << ZE_MAJOR_VERSION(MinVersion) << "."
+                    << ZE_MINOR_VERSION(MinVersion) << " is required";
+  };
+
+#ifndef _WIN32
+  if (!DynlibHandle->isValid()) {
+    // Try to open loader with major version number on Linux.
+    L0Library +=
+        std::string{"."} + std::to_string(ZE_MAJOR_VERSION(MinVersion));
+    ErrMsg.clear();
+    ODBG(OLDT_Init) << "Trying to load " << L0Library;
+    DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
+        llvm::sys::DynamicLibrary::getPermanentLibrary(L0Library.c_str(),
+                                                       &ErrMsg));
+  }
+#endif
   if (!DynlibHandle->isValid()) {
     if (ErrMsg.empty())
       ErrMsg = "unknown error";
     ODBG(OLDT_Init) << "Unable to load library '" << L0Library
                     << "': " << ErrMsg << "!";
+    emitCheckVersion();
     return false;
   }
 
@@ -126,6 +151,7 @@ static bool loadLevelZero() {
     if (P == nullptr) {
       ODBG(OLDT_Init) << "Unable to find '" << Sym << "' in '" << L0Library
                       << "'!";
+      emitCheckVersion();
       return false;
     }
     ODBG(OLDT_Init) << "Implementing " << Sym << " with dlsym(" << Sym

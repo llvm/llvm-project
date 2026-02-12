@@ -297,6 +297,8 @@ protected:
                                               // registers and memory for all
                                               // threads if "jThreadsInfo"
                                               // packet is supported
+  StructuredData::ObjectSP m_shared_cache_info_sp;
+  std::mutex m_shared_cache_info_mutex;
   tid_collection m_continue_c_tids;           // 'c' for continue
   tid_sig_collection m_continue_C_tids;       // 'C' for continue with signal
   tid_collection m_continue_s_tids;           // 's' for step

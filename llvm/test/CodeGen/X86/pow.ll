@@ -222,4 +222,4 @@ define double @pow_f64_not_enough_fmf(double %x) nounwind {
   ret double %r
 }
 
-attributes #0 = { nounwind "denormal-fp-math"="ieee,preserve-sign" }
+attributes #0 = { nounwind denormal_fpenv(ieee|preservesign) }

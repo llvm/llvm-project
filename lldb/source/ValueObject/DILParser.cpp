@@ -16,6 +16,7 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/LanguageRuntime.h"
+#include "lldb/Target/StackFrame.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILEval.h"
 #include "llvm/ADT/StringRef.h"
@@ -42,6 +43,47 @@ DILDiagnosticError::DILDiagnosticError(llvm::StringRef expr,
   m_detail.severity = lldb::eSeverityError;
   m_detail.message = message;
   m_detail.rendered = std::move(rendered_msg);
+}
+
+llvm::Expected<lldb::TypeSystemSP>
+GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
+  SymbolContext symbol_context =
+      ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
+  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
+
+  symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
+  return symbol_context.module_sp->GetTypeSystemForLanguage(language);
+}
+
+CompilerType ResolveTypeByName(const std::string &name,
+                               ExecutionContextScope &ctx_scope) {
+  // Internally types don't have global scope qualifier in their names and
+  // LLDB doesn't support queries with it too.
+  llvm::StringRef name_ref(name);
+
+  if (name_ref.starts_with("::"))
+    name_ref = name_ref.drop_front(2);
+
+  std::vector<CompilerType> result_type_list;
+  lldb::TargetSP target_sp = ctx_scope.CalculateTarget();
+  if (!name_ref.empty() && target_sp) {
+    ModuleList &images = target_sp->GetImages();
+    TypeQuery query{ConstString(name_ref), TypeQueryOptions::e_exact_match |
+                                               TypeQueryOptions::e_find_one};
+    TypeResults results;
+    images.FindTypes(nullptr, query, results);
+    const lldb::TypeSP &type_sp = results.GetFirstType();
+    if (type_sp)
+      result_type_list.push_back(type_sp->GetFullCompilerType());
+  }
+
+  if (!result_type_list.empty()) {
+    CompilerType type = result_type_list[0];
+    if (type.IsValid() && type.GetTypeName().GetStringRef() == name_ref)
+      return type;
+  }
+
+  return {};
 }
 
 llvm::Expected<ASTNodeUP>
@@ -343,12 +385,32 @@ std::string DILParser::ParseNestedNameSpecifier() {
 //
 std::optional<CompilerType> DILParser::ParseTypeId() {
   CompilerType type;
-  // For now only allow builtin types -- will expand add to this later.
   auto maybe_builtin_type = ParseBuiltinType();
   if (maybe_builtin_type) {
     type = *maybe_builtin_type;
-  } else
-    return {};
+  } else {
+    // Check to see if we have a user-defined type here.
+    // First build  up the user-defined type name.
+    std::string type_name;
+    ParseTypeSpecifierSeq(type_name);
+
+    if (type_name.empty())
+      return {};
+    type = ResolveTypeByName(type_name, *m_ctx_scope);
+    if (!type.IsValid())
+      return {};
+
+    // Same-name identifiers should be preferred over typenames.
+    if (LookupIdentifier(type_name, m_ctx_scope, m_use_dynamic))
+      // TODO: Make type accessible with 'class', 'struct' and 'union' keywords.
+      return {};
+
+    // Same-name identifiers should be preferred over typenames.
+    if (LookupGlobalIdentifier(type_name, m_ctx_scope,
+                               m_ctx_scope->CalculateTarget(), m_use_dynamic))
+      // TODO: Make type accessible with 'class', 'struct' and 'union' keywords
+      return {};
+  }
 
   //
   //  abstract_declarator:
@@ -402,6 +464,88 @@ std::optional<CompilerType> DILParser::ParseBuiltinType() {
 
   TentativeParsingRollback(save_token_idx);
   return {};
+}
+
+// Parse a type_specifier_seq.
+//
+//  type_specifier_seq:
+//    type_specifier [type_specifier_seq]
+//
+void DILParser::ParseTypeSpecifierSeq(std::string &type_name) {
+  while (true) {
+    std::optional<std::string> err_or_string = ParseTypeSpecifier();
+    if (!err_or_string)
+      break;
+    type_name = *err_or_string;
+  }
+}
+
+// Parse a type_specifier.
+//
+//  type_specifier:
+//    ["::"] [nested_name_specifier] type_name
+//
+// Returns TRUE if a type_specifier was successfully parsed at this location.
+//
+std::optional<std::string> DILParser::ParseTypeSpecifier() {
+  // The type_specifier must be a user-defined type. Try parsing a
+  // simple_type_specifier.
+
+  // Try parsing optional global scope operator.
+  bool global_scope = false;
+  if (CurToken().Is(Token::coloncolon)) {
+    global_scope = true;
+    m_dil_lexer.Advance();
+  }
+
+  // Try parsing optional nested_name_specifier.
+  auto nested_name_specifier = ParseNestedNameSpecifier();
+
+  // Try parsing required type_name.
+  auto type_name_or_err = ParseTypeName();
+  if (!type_name_or_err)
+    return type_name_or_err;
+  std::string type_name = *type_name_or_err;
+
+  // If there is a type_name, then this is indeed a simple_type_specifier.
+  // Global and qualified (namespace/class) scopes can be empty, since they're
+  // optional. In this case type_name is type we're looking for.
+  if (!type_name.empty())
+    // User-defined typenames can't be combined with builtin keywords.
+    return llvm::formatv("{0}{1}{2}", global_scope ? "::" : "",
+                         nested_name_specifier, type_name);
+
+  // No type_specifier was found here.
+  return {};
+}
+
+// Parse a type_name.
+//
+//  type_name:
+//    class_name
+//    enum_name
+//    typedef_name
+//
+//  class_name
+//    identifier
+//
+//  enum_name
+//    identifier
+//
+//  typedef_name
+//    identifier
+//
+std::optional<std::string> DILParser::ParseTypeName() {
+  // Typename always starts with an identifier.
+  if (CurToken().IsNot(Token::identifier)) {
+    return std::nullopt;
+  }
+
+  // Otherwise look for a class_name, enum_name or a typedef_name.
+  std::string identifier = CurToken().GetSpelling();
+  m_dil_lexer.Advance();
+
+  return identifier;
 }
 
 // Parse an id_expression.

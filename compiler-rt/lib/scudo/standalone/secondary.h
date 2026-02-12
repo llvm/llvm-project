@@ -523,10 +523,19 @@ public:
   void releaseToOS([[maybe_unused]] ReleaseToOS ReleaseType) EXCLUDES(Mutex) {
     SCUDO_SCOPED_TRACE(GetSecondaryReleaseToOSTraceName(ReleaseType));
 
-    // Since this is a request to release everything, always wait for the
-    // lock so that we guarantee all entries are released after this call.
-    ScopedLock L(Mutex);
-    releaseOlderThan(UINT64_MAX);
+    if (ReleaseType == ReleaseToOS::ForceFast) {
+      // Never wait for the lock, always move on if there is already
+      // a release operation in progress.
+      if (Mutex.tryLock()) {
+        releaseOlderThan(UINT64_MAX);
+        Mutex.unlock();
+      }
+    } else {
+      // Since this is a request to release everything, always wait for the
+      // lock so that we guarantee all entries are released after this call.
+      ScopedLock L(Mutex);
+      releaseOlderThan(UINT64_MAX);
+    }
   }
 
   void disableMemoryTagging() EXCLUDES(Mutex) {

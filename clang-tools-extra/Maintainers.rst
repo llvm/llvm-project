@@ -54,12 +54,6 @@ clangd
 | Nathan Ridge
 | zeratul976@hotmail.com (email), HighCommander4 (GitHub), HighCommander4 (Discourse), nridge (Discord)
 
-| Chris Bieneman
-| chris.bieneman@gmail.com (email), llvm-beanz (GitHub), beanz (Discord), beanz (Discourse)
-
-| Kadir Çetinkaya
-| kadircet@google.com (email), kadircet (GitHub) kadircet (Discourse), kadircet (Discord)
-
 
 Inactive Maintainers
 ====================
@@ -79,3 +73,5 @@ Inactive component maintainers
 | Sam McCall (sammccall@google.com (email), sam-mccall (GitHub, Discourse, Discord)) -- clangd
 | Peter Chou (peterchou411@gmail.com (email), PeterChou1 (GitHub, Discourse), .peterchou (Discord)) -- clang-doc
 | Piotr Zegar (me@piotrzegar.pl (email), PiotrZSL (GitHub), PiotrZSL (Discourse), PiotrZSL (Discord)) -- clang-tidy
+| Kadir Çetinkaya (kadircet@google.com (email), kadircet (GitHub) kadircet (Discourse), kadircet (Discord)) -- clangd
+| Chris Bieneman (chris.bieneman@gmail.com (email), llvm-beanz (GitHub), beanz (Discord), beanz (Discourse)) -- clangd

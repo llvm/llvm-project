@@ -622,6 +622,11 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
     LangOpts.RawStringLiterals = true;
   }
 
+  if (Args.hasArg(OPT_freflection) && !LangOpts.CPlusPlus26) {
+    Diags.Report(diag::err_drv_reflection_requires_cxx26)
+        << Args.getLastArg(options::OPT_freflection)->getAsString(Args);
+  }
+
   LangOpts.NamedLoops =
       Args.hasFlag(OPT_fnamed_loops, OPT_fno_named_loops, LangOpts.C2y);
 
@@ -2244,7 +2249,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   if (UsingSampleProfile)
     NeedLocTracking = true;
 
-  if (!Opts.StackUsageOutput.empty())
+  if (!Opts.StackUsageFile.empty())
     NeedLocTracking = true;
 
   // If the user requested a flag that requires source locations available in
