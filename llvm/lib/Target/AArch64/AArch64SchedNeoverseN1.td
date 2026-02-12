@@ -264,44 +264,44 @@ def N1Write_9c_6L_6V : SchedWriteRes<[N1UnitL, N1UnitL, N1UnitL,
 //===----------------------------------------------------------------------===//
 // Define forwarded types
 
-def N1Wr_IM32 : WriteSequence<[N1Write_2c_1M]>;
-def N1Wr_IM64 : WriteSequence<[N1Write_4c3_1M]>;
+def N1Wr_IM32 : SchedWriteRes<[N1UnitM]> { let Latency = 2; }
+def N1Wr_IM64 : SchedWriteRes<[N1UnitM]> { let Latency = 4; }
 def N1Rd_IMA  : SchedReadAdvance<1, [N1Wr_IM32, N1Wr_IM64]>;
 
-def N1Wr_FMA : WriteSequence<[N1Write_4c_1V]>;
+def N1Wr_FMA : SchedWriteRes<[N1UnitV]> { let Latency = 4; }
 def N1Rd_FMA : SchedReadAdvance<2, [WriteFMul, N1Wr_FMA]>;
 
-def N1Wr_VA : WriteSequence<[N1Write_4c_1V1]>;
+def N1Wr_VA : SchedWriteRes<[N1UnitV1]> { let Latency = 4; }
 def N1Rd_VA : SchedReadAdvance<3, [N1Wr_VA]>;
 
-def N1Wr_VMA  : WriteSequence<[N1Write_4c_1V0]>;
-def N1Wr_VMAQ : WriteSequence<[N1Write_5c_2V0]>;
+def N1Wr_VMA  : SchedWriteRes<[N1UnitV0]> { let Latency = 5; }
+def N1Wr_VMAQ : SchedWriteRes<[N1UnitV0, N1UnitV0]> { let Latency = 5; }
 def N1Rd_VMA  : SchedReadAdvance<3, [N1Wr_VMA, N1Wr_VMAQ]>;
 
-def N1Wr_VMAH  : WriteSequence<[N1Write_4c_1V0]>;
-def N1Wr_VMAHQ : WriteSequence<[N1Write_5c_2V0]>;
+def N1Wr_VMAH  : SchedWriteRes<[N1UnitV0]> { let Latency = 4; }
+def N1Wr_VMAHQ : SchedWriteRes<[N1UnitV0, N1UnitV0]> { let Latency = 5; }
 def N1Rd_VMAH  : SchedReadAdvance<2, [N1Wr_VMAH, N1Wr_VMAHQ]>;
 
-def N1Wr_VMAL  : WriteSequence<[N1Write_4c_1V0]>;
+def N1Wr_VMAL  : SchedWriteRes<[N1UnitV0]> { let Latency = 4; }
 def N1Rd_VMAL  : SchedReadAdvance<3, [N1Wr_VMAL]>;
 
-def N1Wr_VPA : WriteSequence<[N1Write_4c_1V1]>;
+def N1Wr_VPA : SchedWriteRes<[N1UnitV1]> { let Latency = 4; }
 def N1Rd_VPA : SchedReadAdvance<3, [N1Wr_VPA]>;
 
-def N1Wr_VSA : WriteSequence<[N1Write_4c_1V1]>;
+def N1Wr_VSA : SchedWriteRes<[N1UnitV1]> { let Latency = 4; }
 def N1Rd_VSA : SchedReadAdvance<3, [N1Wr_VSA]>;
 
-def N1Wr_VFM  : WriteSequence<[N1Write_3c_1V]>;
-def N1Wr_VFMA : WriteSequence<[N1Write_4c_1V]>;
+def N1Wr_VFM  : SchedWriteRes<[N1UnitV]> { let Latency = 3; }
+def N1Wr_VFMA : SchedWriteRes<[N1UnitV]> { let Latency = 4; }
 def N1Rd_VFMA : SchedReadAdvance<2, [N1Wr_VFM, N1Wr_VFMA]>;
 
-def N1Wr_VFMAL : WriteSequence<[N1Write_5c_1V]>;
+def N1Wr_VFMAL : SchedWriteRes<[N1UnitV]> { let Latency = 5; }
 def N1Rd_VFMAL : SchedReadAdvance<2, [N1Wr_VFMAL]>;
 
-def N1Wr_CRC : WriteSequence<[N1Write_2c_1M]>;
+def N1Wr_CRC : SchedWriteRes<[N1UnitM]> { let Latency = 2; }
 def N1Rd_CRC : SchedReadAdvance<1, [N1Wr_CRC]>;
 
-def N1Wr_MH : WriteSequence<[N1Write_5c3_1M]>;
+def N1Wr_MH : SchedWriteRes<[N1UnitM]> { let Latency = 5; }
 def N1Rd_MH : SchedReadAdvance<2, [N1Wr_MH]>;
 
 
@@ -329,6 +329,9 @@ def : SchedAlias<WriteBrReg, N1Write_1c_1B>;
 // Branch and link, register
 def : InstRW<[N1Write_1c_1B_1I], (instrs BL, BLR)>;
 
+// Compare and branch
+def : InstRW<[N1Write_1c_1B], (instregex "^[CT]BN?Z[XW]$")>;
+
 
 // Arithmetic and Logical Instructions
 // -----------------------------------------------------------------------------
@@ -348,7 +351,7 @@ def : SchedAlias<WriteI, N1Write_1c_1I>;
 def : SchedAlias<WriteIEReg, N1Write_2c_1M>;
 
 // Arithmetic, LSL shift, shift <= 4
-// Arithmetic, flagset, LSL shift, shift <= 4
+// Arithmetic, flagset, LSL shift, shift <= 4ah
 // Arithmetic, LSR/ASR/ROR shift or LSL shift > 4
 def N1WriteISReg : SchedWriteVariant<[
                      SchedVar<IsCheapLSL,  [N1Write_1c_1I]>,
