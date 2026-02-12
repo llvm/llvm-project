@@ -17,7 +17,7 @@
 
 # RUN: FileCheck %s < %t/out.txt
 
-# CHECK-LABEL: FLAKYPASS: diff-test-update-retry :: multiple-split-file-enough-retries.test
+# CHECK-LABEL: FIXED: diff-test-update-retry :: multiple-split-file-enough-retries.test
 # CHECK-SAME: (1 of 4, 5 of 6 attempts)
 # CHECK-NEXT: [Attempt 1]
 # CHECK-NEXT: update-diff-test: copied {{.*}}out.txt to slice in {{.*}}multiple-split-file-enough-retries.test
@@ -55,7 +55,7 @@
 # CHECK-NEXT: update-diff-test: copied {{.*}}multiple-split-file-unrelated-failure.test.tmp/out.txt to slice in {{.*}}multiple-split-file-unrelated-failure.test
 # CHECK-NEXT: **********
 
-# CHECK-LABEL: FLAKYPASS: diff-test-update-retry :: single-split-file.test
+# CHECK-LABEL: FIXED: diff-test-update-retry :: single-split-file.test
 # CHECK-SAME: (4 of 4, 2 of 2 attempts)
 # CHECK-NEXT: [Attempt 1]
 # CHECK-NEXT: update-diff-test: copied {{.*}}out.txt to slice in {{.*}}single-split-file.test

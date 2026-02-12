@@ -47,6 +47,7 @@ SKIPPED = ResultCode("SKIPPED", "Skipped", False)
 UNSUPPORTED = ResultCode("UNSUPPORTED", "Unsupported", False)
 PASS = ResultCode("PASS", "Passed", False)
 FLAKYPASS = ResultCode("FLAKYPASS", "Passed With Retry", False)
+FIXED = ResultCode("FIXED", "Passed After Update", False)
 XFAIL = ResultCode("XFAIL", "Expectedly Failed", False)
 # Failures
 UNRESOLVED = ResultCode("UNRESOLVED", "Unresolved", True)

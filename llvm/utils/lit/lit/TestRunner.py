@@ -2404,7 +2404,10 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
     # If we had to run the test more than once, count it as a flaky pass. These
     # will be printed separately in the test summary.
     if i > 0 and status == Test.PASS:
-        status = Test.FLAKYPASS
+        if any(test_updates):
+            status = Test.FIXED
+        else:
+            status = Test.FLAKYPASS
 
     # Form the output log.
     output = f"Exit Code: {exitCode}\n"
