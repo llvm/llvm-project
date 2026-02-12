@@ -161,6 +161,14 @@ DistributeLayoutAttr setupStoreMatrixAnchorLayout(LayoutKind layoutKind,
                                                   VectorType vectorTy,
                                                   const uArch::uArch *uArch);
 
+/// Sets up the anchor layouts for a dpas operands (A, B, and C/D).
+/// The numSg and consumerLayout (optional) are only used by sg layout creation.
+std::optional<std::tuple<DistributeLayoutAttr, DistributeLayoutAttr,
+                         DistributeLayoutAttr>>
+setupDpasLayout(LayoutKind layoutKind, VectorType aTy, VectorType bTy,
+                VectorType cdTy, DistributeLayoutAttr consumerLayout,
+                const uArch::uArch *uArch, int numSg);
+
 } // namespace xegpu
 
 } // namespace mlir

@@ -13509,6 +13509,9 @@ def err_hlsl_assign_to_global_resource: Error<
 
 def err_hlsl_push_constant_unique
     : Error<"cannot have more than one push constant block">;
+def err_hlsl_samplecmp_requires_float
+    : Error<"'SampleCmp' and 'SampleCmpLevelZero' require resource to contain "
+            "a floating point type">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<

@@ -24,7 +24,9 @@ namespace lto {
 // standalone file. Similarly, for FatLTO objects, the bitcode is stored in a
 // section of the containing ELF object file. To address this, the class ensures
 // that an individual bitcode file exists for each input (by writing it out if
-// necessary) and that the ModuleID is updated to point to it.
+// necessary) and that the ModuleID is updated to point to it. Module IDs are
+// also normalized on Windows to remove short 8.3 form paths that cannot be
+// loaded on remote machines.
 //
 // The class ensures that lto::InputFile objects are preserved until enough of
 // the LTO pipeline has executed to determine the required per-module
@@ -61,6 +63,9 @@ private:
 
   /// The output file to which this LTO invocation will contribute.
   StringRef LinkerOutputFile;
+
+  /// The normalized output directory, derived from LinkerOutputFile.
+  StringRef LinkerOutputDir;
 
   /// Controls preservation of any created temporary files.
   bool SaveTemps;

@@ -27,6 +27,9 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
+#ifdef _WIN32
+#include "llvm/Support/Windows/WindowsSupport.h"
+#endif
 
 #include <string>
 
@@ -53,6 +56,25 @@ Error save(StringRef Buffer, StringRef Path) {
 Error save(lto::InputFile *Input, StringRef Path) {
   MemoryBufferRef MB = Input->getFileBuffer();
   return save(MB.getBuffer(), Path);
+}
+
+// Normalize and save a path. Aside from expanding Windows 8.3 short paths,
+// no other normalization is currently required here. These paths are
+// machine-local and break distribution systems; other normalization is
+// handled by the DTLTO distributors.
+Expected<StringRef> normalizePath(StringRef Path, StringSaver &Saver) {
+#if defined(_WIN32)
+  if (Path.empty())
+    return Path;
+  SmallString<256> Expanded;
+  if (std::error_code EC = llvm::sys::windows::makeLongFormPath(Path, Expanded))
+    return createStringError(inconvertibleErrorCode(),
+                             "Normalization failed for path %s: %s",
+                             Path.str().c_str(), EC.message().c_str());
+  return Saver.save(Expanded.str());
+#else
+  return Saver.save(Path);
+#endif
 }
 
 // Compute the file path for a thin archive member.
@@ -122,11 +144,14 @@ Expected<bool> lto::DTLTO::isThinArchive(const StringRef ArchivePath) {
 //
 // This function performs the following tasks:
 // 1. Add the input file to the LTO object's list of input files.
-// 2. For thin archive members, overwrite the module ID with the path to the
-//    member file on disk.
-// 3. For archive members and FatLTO objects, overwrite the module ID with a
-//    unique path naming a file that will contain the member content. The file
-//    is created and populated later (see serializeInputs()).
+// 2. For individual bitcode file inputs on Windows only, overwrite the module
+//    ID with a normalized path to remove short 8.3 form components.
+// 3. For thin archive members, overwrite the module ID with the path
+//    (normalized on Windows) to the member file on disk.
+// 4. For archive members and FatLTO objects, overwrite the module ID with a
+//    unique path (normalized on Windows) naming a file that will contain the
+//    member content. The file is created and populated later (see
+//    serializeInputs()).
 Expected<std::shared_ptr<lto::InputFile>>
 lto::DTLTO::addInput(std::unique_ptr<InputFile> InputPtr) {
   TimeTraceScope TimeScope("Add input for DTLTO");
@@ -136,12 +161,28 @@ lto::DTLTO::addInput(std::unique_ptr<InputFile> InputPtr) {
   auto &Input = InputFiles.back();
   BitcodeModule &BM = Input->getPrimaryBitcodeModule();
 
+  auto setIdFromPath = [&](StringRef Path) -> Error {
+    auto N = normalizePath(Path, Saver);
+    if (!N)
+      return N.takeError();
+    BM.setModuleIdentifier(*N);
+    return Error::success();
+  };
+
   StringRef ArchivePath = Input->getArchivePath();
 
   // In most cases, the module ID already points to an individual bitcode file
-  // on disk, so no further preparation for distribution is required.
-  if (ArchivePath.empty() && !Input->isFatLTOObject())
+  // on disk, so no further preparation for distribution is required. However,
+  // on Windows we overwite the module ID to expand Windows 8.3 short form
+  // paths. These paths are machine-local and break distribution systems; other
+  // normalization is handled by the DTLTO distributors.
+  if (ArchivePath.empty() && !Input->isFatLTOObject()) {
+#if defined(_WIN32)
+    if (Error E = setIdFromPath(Input->getName()))
+      return std::move(E);
+#endif
     return Input;
+  }
 
   // For a member of a thin archive that is not a FatLTO object, there is an
   // existing file on disk that can be used, so we can avoid having to
@@ -154,16 +195,25 @@ lto::DTLTO::addInput(std::unique_ptr<InputFile> InputPtr) {
     // For thin archives, use the path to the actual member file on disk.
     auto MemberPath =
         computeThinArchiveMemberPath(ArchivePath, Input->getMemberName());
-    BM.setModuleIdentifier(Saver.save(MemberPath.str()));
+    if (Error E = setIdFromPath(MemberPath))
+      return std::move(E);
     return Input;
   }
 
   // A new file on disk will be needed for archive members and FatLTO objects.
   Input->setSerializeForDistribution(true);
 
+  // Get the normalized output directory, if we haven't already.
+  if (LinkerOutputDir.empty()) {
+    auto N = normalizePath(sys::path::parent_path(LinkerOutputFile), Saver);
+    if (!N)
+      return N.takeError();
+    LinkerOutputDir = *N;
+  }
+
   // Create a unique path by including the process ID and sequence number in the
   // filename.
-  SmallString<256> Id(sys::path::parent_path(LinkerOutputFile));
+  SmallString<256> Id(LinkerOutputDir);
   sys::path::append(Id,
                     Twine(sys::path::filename(Input->getName())) + "." +
                         std::to_string(InputFiles.size()) /*Sequence number*/ +
