@@ -398,7 +398,7 @@ func.func @extract_from_elements_complex_f() -> tensor<3xcomplex<f32>> {
 
 // -----
 
-// Ensure tensor.from_elements with poison values doesn't crash (issue #178209).
+// Ensure tensor.from_elements with poison values doesn't crash.
 // CHECK-LABEL: func @from_elements_with_poison
 func.func @from_elements_with_poison() -> tensor<1xindex> {
   // CHECK: %[[POISON:.*]] = ub.poison : index
