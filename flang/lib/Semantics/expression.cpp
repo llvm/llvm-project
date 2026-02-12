@@ -25,7 +25,6 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Support/Fortran.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <functional>
@@ -2801,7 +2800,7 @@ static bool CheckCompatibleArguments(
 static constexpr int cudaInfMatchingValue{std::numeric_limits<int>::max()};
 
 struct CudaMatchingDistance {
-  llvm::SmallVector<int> perArg;
+  std::vector<int> perArg;
   bool isInfinite{false};
 };
 
