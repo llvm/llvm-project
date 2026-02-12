@@ -10,7 +10,7 @@
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vabdu_vv_u8mf8
 // CHECK-RV64-SAME: (<vscale x 1 x i8> [[VS2:%.*]], <vscale x 1 x i8> [[VS1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vabdu.nxv1i8.nxv1i8.i64(<vscale x 1 x i8> poison, <vscale x 1 x i8> [[VS2]], <vscale x 1 x i8> [[VS1]], i64 [[VL]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vabdu.nxv1i8.i64(<vscale x 1 x i8> poison, <vscale x 1 x i8> [[VS2]], <vscale x 1 x i8> [[VS1]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vuint8mf8_t test_vabdu_vv_u8mf8(vuint8mf8_t vs2, vuint8mf8_t vs1, size_t vl) {
@@ -20,7 +20,7 @@ vuint8mf8_t test_vabdu_vv_u8mf8(vuint8mf8_t vs2, vuint8mf8_t vs1, size_t vl) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vabdu_vv_u8mf4
 // CHECK-RV64-SAME: (<vscale x 2 x i8> [[VS2:%.*]], <vscale x 2 x i8> [[VS1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.vabdu.nxv2i8.nxv2i8.i64(<vscale x 2 x i8> poison, <vscale x 2 x i8> [[VS2]], <vscale x 2 x i8> [[VS1]], i64 [[VL]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.vabdu.nxv2i8.i64(<vscale x 2 x i8> poison, <vscale x 2 x i8> [[VS2]], <vscale x 2 x i8> [[VS1]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vuint8mf4_t test_vabdu_vv_u8mf4(vuint8mf4_t vs2, vuint8mf4_t vs1, size_t vl) {
@@ -30,7 +30,7 @@ vuint8mf4_t test_vabdu_vv_u8mf4(vuint8mf4_t vs2, vuint8mf4_t vs1, size_t vl) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vabdu_vv_u8mf2
 // CHECK-RV64-SAME: (<vscale x 4 x i8> [[VS2:%.*]], <vscale x 4 x i8> [[VS1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.vabdu.nxv4i8.nxv4i8.i64(<vscale x 4 x i8> poison, <vscale x 4 x i8> [[VS2]], <vscale x 4 x i8> [[VS1]], i64 [[VL]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.vabdu.nxv4i8.i64(<vscale x 4 x i8> poison, <vscale x 4 x i8> [[VS2]], <vscale x 4 x i8> [[VS1]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vuint8mf2_t test_vabdu_vv_u8mf2(vuint8mf2_t vs2, vuint8mf2_t vs1, size_t vl) {
@@ -40,7 +40,7 @@ vuint8mf2_t test_vabdu_vv_u8mf2(vuint8mf2_t vs2, vuint8mf2_t vs1, size_t vl) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vabdu_vv_u8m1
 // CHECK-RV64-SAME: (<vscale x 8 x i8> [[VS2:%.*]], <vscale x 8 x i8> [[VS1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vabdu.nxv8i8.nxv8i8.i64(<vscale x 8 x i8> poison, <vscale x 8 x i8> [[VS2]], <vscale x 8 x i8> [[VS1]], i64 [[VL]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vabdu.nxv8i8.i64(<vscale x 8 x i8> poison, <vscale x 8 x i8> [[VS2]], <vscale x 8 x i8> [[VS1]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vuint8m1_t test_vabdu_vv_u8m1(vuint8m1_t vs2, vuint8m1_t vs1, size_t vl) {
@@ -50,7 +50,7 @@ vuint8m1_t test_vabdu_vv_u8m1(vuint8m1_t vs2, vuint8m1_t vs1, size_t vl) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vabdu_vv_u8m2
 // CHECK-RV64-SAME: (<vscale x 16 x i8> [[VS2:%.*]], <vscale x 16 x i8> [[VS1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.vabdu.nxv16i8.nxv16i8.i64(<vscale x 16 x i8> poison, <vscale x 16 x i8> [[VS2]], <vscale x 16 x i8> [[VS1]], i64 [[VL]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.vabdu.nxv16i8.i64(<vscale x 16 x i8> poison, <vscale x 16 x i8> [[VS2]], <vscale x 16 x i8> [[VS1]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 vuint8m2_t test_vabdu_vv_u8m2(vuint8m2_t vs2, vuint8m2_t vs1, size_t vl) {
@@ -60,7 +60,7 @@ vuint8m2_t test_vabdu_vv_u8m2(vuint8m2_t vs2, vuint8m2_t vs1, size_t vl) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vabdu_vv_u8m4
 // CHECK-RV64-SAME: (<vscale x 32 x i8> [[VS2:%.*]], <vscale x 32 x i8> [[VS1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i8> @llvm.riscv.vabdu.nxv32i8.nxv32i8.i64(<vscale x 32 x i8> poison, <vscale x 32 x i8> [[VS2]], <vscale x 32 x i8> [[VS1]], i64 [[VL]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i8> @llvm.riscv.vabdu.nxv32i8.i64(<vscale x 32 x i8> poison, <vscale x 32 x i8> [[VS2]], <vscale x 32 x i8> [[VS1]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret <vscale x 32 x i8> [[TMP0]]
 //
 vuint8m4_t test_vabdu_vv_u8m4(vuint8m4_t vs2, vuint8m4_t vs1, size_t vl) {
@@ -70,7 +70,7 @@ vuint8m4_t test_vabdu_vv_u8m4(vuint8m4_t vs2, vuint8m4_t vs1, size_t vl) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 64 x i8> @test_vabdu_vv_u8m8
 // CHECK-RV64-SAME: (<vscale x 64 x i8> [[VS2:%.*]], <vscale x 64 x i8> [[VS1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i8> @llvm.riscv.vabdu.nxv64i8.nxv64i8.i64(<vscale x 64 x i8> poison, <vscale x 64 x i8> [[VS2]], <vscale x 64 x i8> [[VS1]], i64 [[VL]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i8> @llvm.riscv.vabdu.nxv64i8.i64(<vscale x 64 x i8> poison, <vscale x 64 x i8> [[VS2]], <vscale x 64 x i8> [[VS1]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret <vscale x 64 x i8> [[TMP0]]
 //
 vuint8m8_t test_vabdu_vv_u8m8(vuint8m8_t vs2, vuint8m8_t vs1, size_t vl) {
@@ -80,7 +80,7 @@ vuint8m8_t test_vabdu_vv_u8m8(vuint8m8_t vs2, vuint8m8_t vs1, size_t vl) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vabdu_vv_u16mf4
 // CHECK-RV64-SAME: (<vscale x 1 x i16> [[VS2:%.*]], <vscale x 1 x i16> [[VS1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.vabdu.nxv1i16.nxv1i16.i64(<vscale x 1 x i16> poison, <vscale x 1 x i16> [[VS2]], <vscale x 1 x i16> [[VS1]], i64 [[VL]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.vabdu.nxv1i16.i64(<vscale x 1 x i16> poison, <vscale x 1 x i16> [[VS2]], <vscale x 1 x i16> [[VS1]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vuint16mf4_t test_vabdu_vv_u16mf4(vuint16mf4_t vs2, vuint16mf4_t vs1, size_t vl) {
@@ -90,7 +90,7 @@ vuint16mf4_t test_vabdu_vv_u16mf4(vuint16mf4_t vs2, vuint16mf4_t vs1, size_t vl)
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vabdu_vv_u16mf2
 // CHECK-RV64-SAME: (<vscale x 2 x i16> [[VS2:%.*]], <vscale x 2 x i16> [[VS1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.vabdu.nxv2i16.nxv2i16.i64(<vscale x 2 x i16> poison, <vscale x 2 x i16> [[VS2]], <vscale x 2 x i16> [[VS1]], i64 [[VL]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.vabdu.nxv2i16.i64(<vscale x 2 x i16> poison, <vscale x 2 x i16> [[VS2]], <vscale x 2 x i16> [[VS1]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vuint16mf2_t test_vabdu_vv_u16mf2(vuint16mf2_t vs2, vuint16mf2_t vs1, size_t vl) {
@@ -100,7 +100,7 @@ vuint16mf2_t test_vabdu_vv_u16mf2(vuint16mf2_t vs2, vuint16mf2_t vs1, size_t vl)
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vabdu_vv_u16m1
 // CHECK-RV64-SAME: (<vscale x 4 x i16> [[VS2:%.*]], <vscale x 4 x i16> [[VS1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.vabdu.nxv4i16.nxv4i16.i64(<vscale x 4 x i16> poison, <vscale x 4 x i16> [[VS2]], <vscale x 4 x i16> [[VS1]], i64 [[VL]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.vabdu.nxv4i16.i64(<vscale x 4 x i16> poison, <vscale x 4 x i16> [[VS2]], <vscale x 4 x i16> [[VS1]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vabdu_vv_u16m1(vuint16m1_t vs2, vuint16m1_t vs1, size_t vl) {
@@ -110,7 +110,7 @@ vuint16m1_t test_vabdu_vv_u16m1(vuint16m1_t vs2, vuint16m1_t vs1, size_t vl) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i16> @test_vabdu_vv_u16m2
 // CHECK-RV64-SAME: (<vscale x 8 x i16> [[VS2:%.*]], <vscale x 8 x i16> [[VS1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.riscv.vabdu.nxv8i16.nxv8i16.i64(<vscale x 8 x i16> poison, <vscale x 8 x i16> [[VS2]], <vscale x 8 x i16> [[VS1]], i64 [[VL]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.riscv.vabdu.nxv8i16.i64(<vscale x 8 x i16> poison, <vscale x 8 x i16> [[VS2]], <vscale x 8 x i16> [[VS1]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 vuint16m2_t test_vabdu_vv_u16m2(vuint16m2_t vs2, vuint16m2_t vs1, size_t vl) {
@@ -120,7 +120,7 @@ vuint16m2_t test_vabdu_vv_u16m2(vuint16m2_t vs2, vuint16m2_t vs1, size_t vl) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i16> @test_vabdu_vv_u16m4
 // CHECK-RV64-SAME: (<vscale x 16 x i16> [[VS2:%.*]], <vscale x 16 x i16> [[VS1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i16> @llvm.riscv.vabdu.nxv16i16.nxv16i16.i64(<vscale x 16 x i16> poison, <vscale x 16 x i16> [[VS2]], <vscale x 16 x i16> [[VS1]], i64 [[VL]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i16> @llvm.riscv.vabdu.nxv16i16.i64(<vscale x 16 x i16> poison, <vscale x 16 x i16> [[VS2]], <vscale x 16 x i16> [[VS1]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i16> [[TMP0]]
 //
 vuint16m4_t test_vabdu_vv_u16m4(vuint16m4_t vs2, vuint16m4_t vs1, size_t vl) {
@@ -130,7 +130,7 @@ vuint16m4_t test_vabdu_vv_u16m4(vuint16m4_t vs2, vuint16m4_t vs1, size_t vl) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i16> @test_vabdu_vv_u16m8
 // CHECK-RV64-SAME: (<vscale x 32 x i16> [[VS2:%.*]], <vscale x 32 x i16> [[VS1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i16> @llvm.riscv.vabdu.nxv32i16.nxv32i16.i64(<vscale x 32 x i16> poison, <vscale x 32 x i16> [[VS2]], <vscale x 32 x i16> [[VS1]], i64 [[VL]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i16> @llvm.riscv.vabdu.nxv32i16.i64(<vscale x 32 x i16> poison, <vscale x 32 x i16> [[VS2]], <vscale x 32 x i16> [[VS1]], i64 [[VL]])
 // CHECK-RV64-NEXT:    ret <vscale x 32 x i16> [[TMP0]]
 //
 vuint16m8_t test_vabdu_vv_u16m8(vuint16m8_t vs2, vuint16m8_t vs1, size_t vl) {
