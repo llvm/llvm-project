@@ -530,7 +530,7 @@ public:
   const SIRegisterInfo *TRI = nullptr;
   const MachineRegisterInfo *MRI = nullptr;
   InstCounterType SmemAccessCounter;
-  const MachineFunction *MF = nullptr;
+  bool IsExpertMode = false;
 
 private:
   DenseMap<const Value *, MachineBasicBlock *> SLoadAddresses;
@@ -1081,8 +1081,7 @@ bool WaitcntBrackets::hasPointSamplePendingVmemTypes(const MachineInstr &MI,
 
 void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
   InstCounterType T = Context->getCounterFromEvent(E);
-  assert(T < getMaxCounter(*Context->ST,
-                           isExpertMode(*Context->MF, *Context->ST)) &&
+  assert(T < getMaxCounter(*Context->ST, Context->IsExpertMode) &&
          "T not supported in current mode!");
 
   unsigned UB = getScoreUB(T);
@@ -1303,8 +1302,7 @@ void WaitcntBrackets::recordAsyncMark(MachineInstr &Inst) {
 void WaitcntBrackets::print(raw_ostream &OS) const {
   const GCNSubtarget *ST = Context->ST;
 
-  for (auto T : inst_counter_types(
-           getMaxCounter(*ST, isExpertMode(*Context->MF, *Context->ST)))) {
+  for (auto T : inst_counter_types(getMaxCounter(*ST, Context->IsExpertMode))) {
     unsigned SR = getScoreRange(T);
     switch (T) {
     case LOAD_CNT:
@@ -2842,7 +2840,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
   bool IsVMEMAccess = false;
   bool IsSMEMAccess = false;
 
-  if (isExpertMode(*MF, *ST)) {
+  if (IsExpertMode) {
     if (const auto ET = getExpertSchedulingEventType(Inst))
       ScoreBrackets->updateByEvent(*ET, Inst);
   }
@@ -3016,8 +3014,8 @@ bool WaitcntBrackets::mergeAsyncMarks(ArrayRef<MergeInfo> MergeInfos,
   unsigned MergeCount = std::min(OtherSize, OurSize);
   assert(OurSize == MaxSize);
   for (unsigned Idx = 1; Idx <= MergeCount; ++Idx) {
-    for (auto T : inst_counter_types(getMaxCounter(
-             *Context->ST, isExpertMode(*Context->MF, *Context->ST)))) {
+    for (auto T : inst_counter_types(
+             getMaxCounter(*Context->ST, Context->IsExpertMode))) {
       StrictDom |= mergeScore(MergeInfos[T], AsyncMarks[OurSize - Idx][T],
                               OtherMarks[OtherSize - Idx][T]);
     }
@@ -3052,8 +3050,8 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
   // Array to store MergeInfo for each counter type
   MergeInfo MergeInfos[NUM_INST_CNTS];
 
-  for (auto T : inst_counter_types(getMaxCounter(
-           *Context->ST, isExpertMode(*Context->MF, *Context->ST)))) {
+  for (auto T :
+       inst_counter_types(getMaxCounter(*Context->ST, Context->IsExpertMode))) {
     // Merge event flags for this counter
     const WaitEventSet &EventsForT = Context->getWaitEvents(T);
     const WaitEventSet OldEvents = PendingEvents & EventsForT;
@@ -3116,8 +3114,8 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
   }
 
   StrictDom |= mergeAsyncMarks(MergeInfos, Other.AsyncMarks);
-  for (auto T : inst_counter_types(getMaxCounter(
-           *Context->ST, isExpertMode(*Context->MF, *Context->ST))))
+  for (auto T :
+       inst_counter_types(getMaxCounter(*Context->ST, Context->IsExpertMode)))
     StrictDom |= mergeScore(MergeInfos[T], AsyncScore[T], Other.AsyncScore[T]);
 
   purgeEmptyTrackingData();
@@ -3222,8 +3220,8 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
     // Track pre-existing waitcnts that were added in earlier iterations or by
     // the memory legalizer.
-    if (isWaitInstr(Inst) || (isExpertMode(MF, *ST) &&
-                              Inst.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR)) {
+    if (isWaitInstr(Inst) ||
+        (IsExpertMode && Inst.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR)) {
       ++Iter;
       bool IsSoftXcnt = isSoftXcnt(Inst);
       // The Memory Legalizer conservatively inserts a soft xcnt before each
@@ -3577,7 +3575,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   TRI = &TII->getRegisterInfo();
   MRI = &MF.getRegInfo();
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  this->MF = &MF;
+  IsExpertMode = isExpertMode(MF, *ST);
 
   AMDGPU::IsaVersion IV = AMDGPU::getIsaVersion(ST->getCPU());
 
@@ -3628,7 +3626,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
                 TII->get(instrsForExtendedCounterTypes[CT]))
             .addImm(0);
       }
-      if (isExpertMode(MF, *ST)) {
+      if (IsExpertMode) {
         unsigned Enc = AMDGPU::DepCtr::encodeFieldVaVdst(0, *ST);
         Enc = AMDGPU::DepCtr::encodeFieldVmVsrc(Enc, 0);
         BuildMI(EntryBB, I, DebugLoc(), TII->get(AMDGPU::S_WAITCNT_DEPCTR))
@@ -3767,7 +3765,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
     }
   }
 
-  if (isExpertMode(MF, *ST)) {
+  if (IsExpertMode) {
     // Enable expert scheduling on function entry. To satisfy ABI requirements
     // and to allow calls between function with different expert scheduling
     // settings, disable it around calls and before returns.
