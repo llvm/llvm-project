@@ -366,10 +366,10 @@ ValueObjectSynthetic::GetIndexOfChildWithName(llvm::StringRef name_ref) {
       index = *index_or_err;
     } else {
       // Provide automatic support for subscript child names ("[N]").
-      auto maybe_subscript = ParseSubscriptIndex(*this, name);
-      if (!maybe_subscript)
+      auto maybe_index = ParseSubscriptIndex(*this, name);
+      if (!maybe_index)
         return index_or_err.takeError();
-      index = *maybe_subscript;
+      index = *maybe_index;
       llvm::consumeError(index_or_err.takeError());
     }
     std::lock_guard<std::mutex> guard(m_child_mutex);
