@@ -34,6 +34,7 @@
 ; O0-NEXT: stack-protector
 ; O0-NEXT: verify)
 ; O0-NEXT: function(machine-function(x86-isel
+; O0-NEXT: x86-global-base-reg
 ; O0-NEXT: x86-argument-stack-slot
 ; O0-NEXT: finalize-isel
 ; O0-NEXT: localstackalloc
@@ -55,7 +56,9 @@
 ; O0-NEXT: fentry-insert
 ; O0-NEXT: xray-instrumentation
 ; O0-NEXT: patchable-function
+; O0-NEXT: x86-indirect-branch-tracking
 ; O0-NEXT: x86-compress-evex
+; O0-NEXT: x86-insert-x87-wait
 ; O0-NEXT: FuncletLayoutPass
 ; O0-NEXT: remove-loads-into-fake-uses
 ; O0-NEXT: StackMapLivenessPass
@@ -103,6 +106,8 @@
 ; O2-NEXT: stack-protector
 ; O2-NEXT: verify)
 ; O2-NEXT: function(machine-function(x86-isel
+; O2-NEXT: x86-cleanup-local-dynamic-tls
+; O2-NEXT: x86-global-base-reg
 ; O2-NEXT: x86-argument-stack-slot
 ; O2-NEXT: finalize-isel
 ; O2-NEXT: early-tailduplication
@@ -163,11 +168,13 @@
 ; O2-NEXT: xray-instrumentation
 ; O2-NEXT: patchable-function
 ; O2-NEXT: BreakFalseDepsPass
+; O2-NEXT: x86-indirect-branch-tracking
 ; O2-NEXT: x86-fixup-bw-insts
 ; O2-NEXT: x86-fixup-leas
 ; O2-NEXT: x86-fixup-inst-tuning
 ; O2-NEXT: x86-fixup-inst-tuning
 ; O2-NEXT: x86-compress-evex
+; O2-NEXT: x86-insert-x87-wait
 ; O2-NEXT: FuncletLayoutPass
 ; O2-NEXT: remove-loads-into-fake-uses
 ; O2-NEXT: StackMapLivenessPass
@@ -206,6 +213,7 @@
 ; O0-WINDOWS-NEXT: stack-protector
 ; O0-WINDOWS-NEXT: verify)
 ; O0-WINDOWS-NEXT: function(machine-function(x86-isel
+; O0-WINDOWS-NEXT: x86-global-base-reg
 ; O0-WINDOWS-NEXT: x86-argument-stack-slot
 ; O0-WINDOWS-NEXT: finalize-isel
 ; O0-WINDOWS-NEXT: localstackalloc
@@ -227,7 +235,9 @@
 ; O0-WINDOWS-NEXT: fentry-insert
 ; O0-WINDOWS-NEXT: xray-instrumentation
 ; O0-WINDOWS-NEXT: patchable-function
+; O0-WINDOWS-NEXT: x86-indirect-branch-tracking
 ; O0-WINDOWS-NEXT: x86-compress-evex
+; O0-WINDOWS-NEXT: x86-insert-x87-wait
 ; O0-WINDOWS-NEXT: FuncletLayoutPass
 ; O0-WINDOWS-NEXT: remove-loads-into-fake-uses
 ; O0-WINDOWS-NEXT: StackMapLivenessPass
@@ -279,6 +289,7 @@
 ; O3-WINDOWS-NEXT: stack-protector
 ; O3-WINDOWS-NEXT: verify)
 ; O3-WINDOWS-NEXT: function(machine-function(x86-isel
+; O3-WINDOWS-NEXT: x86-global-base-reg
 ; O3-WINDOWS-NEXT: x86-argument-stack-slot
 ; O3-WINDOWS-NEXT: finalize-isel
 ; O3-WINDOWS-NEXT: early-tailduplication
@@ -339,11 +350,13 @@
 ; O3-WINDOWS-NEXT: xray-instrumentation
 ; O3-WINDOWS-NEXT: patchable-function
 ; O3-WINDOWS-NEXT: BreakFalseDepsPass
+; O3-WINDOWS-NEXT: x86-indirect-branch-tracking
 ; O3-WINDOWS-NEXT: x86-fixup-bw-insts
 ; O3-WINDOWS-NEXT: x86-fixup-leas
 ; O3-WINDOWS-NEXT: x86-fixup-inst-tuning
 ; O3-WINDOWS-NEXT: x86-fixup-inst-tuning
 ; O3-WINDOWS-NEXT: x86-compress-evex
+; O3-WINDOWS-NEXT: x86-insert-x87-wait
 ; O3-WINDOWS-NEXT: FuncletLayoutPass
 ; O3-WINDOWS-NEXT: remove-loads-into-fake-uses
 ; O3-WINDOWS-NEXT: StackMapLivenessPass

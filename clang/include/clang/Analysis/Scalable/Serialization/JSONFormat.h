@@ -44,7 +44,7 @@ public:
     const JSONFormat &Format;
   };
 
-  explicit JSONFormat(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
+  JSONFormat();
 
   ~JSONFormat() = default;
 

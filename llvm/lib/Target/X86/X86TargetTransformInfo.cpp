@@ -1566,7 +1566,8 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
   // Treat Transpose as 2-op shuffles - there's no difference in lowering.
   if (Kind == TTI::SK_Transpose)
-    Kind = TTI::SK_PermuteTwoSrc;
+    if (LT.second != MVT::v4f64 && LT.second != MVT::v4i64)
+      Kind = TTI::SK_PermuteTwoSrc;
 
   if (Kind == TTI::SK_Broadcast) {
     // For Broadcasts we are splatting the first element from the first input
@@ -1974,6 +1975,9 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     { TTI::SK_PermuteSingleSrc, MVT::v16f16, { 1, 1, 1, 1 } }, // vpshufb
     { TTI::SK_PermuteSingleSrc, MVT::v32i8,  { 1, 1, 1, 1 } }, // vpshufb
 
+    { TTI::SK_Transpose,        MVT::v4f64,  { 1, 1, 1, 1 } }, // vshufpd/vunpck
+    { TTI::SK_Transpose,        MVT::v4i64,  { 1, 1, 1, 1 } }, // vshufpd/vunpck
+
     { TTI::SK_PermuteTwoSrc,    MVT::v4f64,  { 2, 2, 2, 2 } }, // 2*vshufpd + vblendpd
     { TTI::SK_PermuteTwoSrc,    MVT::v8f32,  { 2, 2, 2, 2 } }, // 2*vshufps + vblendps
     { TTI::SK_PermuteTwoSrc,    MVT::v4i64,  { 2, 2, 2, 2 } }, // 2*vpshufd + vpblendd
@@ -2077,6 +2081,9 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                                                // + vpor + vinsertf128
     { TTI::SK_PermuteSingleSrc, MVT::v32i8,  { 4, 4, 4, 4 } }, // vextractf128 + 2*pshufb
                                                                // + vpor + vinsertf128
+
+    { TTI::SK_Transpose,     MVT::v4f64,  { 1, 1, 1, 1 } }, // vshufpd/vunpck
+    { TTI::SK_Transpose,     MVT::v4i64,  { 1, 1, 1, 1 } }, // vshufpd/vunpck
 
     { TTI::SK_PermuteTwoSrc, MVT::v4f64,  { 2, 2, 2, 2 } }, // 2*vshufpd + vblendpd
     { TTI::SK_PermuteTwoSrc, MVT::v8f32,  { 2, 2, 2, 2 } }, // 2*vshufps + vblendps

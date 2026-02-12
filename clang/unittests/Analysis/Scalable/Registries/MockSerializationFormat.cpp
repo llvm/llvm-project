@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <functional>
@@ -26,9 +27,7 @@
 using namespace clang;
 using namespace ssaf;
 
-MockSerializationFormat::MockSerializationFormat(
-    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
-    : SerializationFormat(FS) {
+MockSerializationFormat::MockSerializationFormat() {
   for (const auto &FormatInfoEntry : llvm::Registry<FormatInfo>::entries()) {
     std::unique_ptr<FormatInfo> Info = FormatInfoEntry.instantiate();
     bool Inserted = FormatInfos.try_emplace(Info->ForSummary, *Info).second;
@@ -45,7 +44,7 @@ MockSerializationFormat::readTUSummary(llvm::StringRef Path) {
   BuildNamespace NS(BuildNamespaceKind::CompilationUnit, "Mock.cpp");
   TUSummary Summary(NS);
 
-  auto ManifestFile = FS->getBufferForFile(Path + "/analyses.txt");
+  auto ManifestFile = llvm::MemoryBuffer::getFile(Path + "/analyses.txt");
   if (!ManifestFile) {
     return llvm::createStringError(ManifestFile.getError(),
                                    "Failed to read manifest file");
@@ -58,7 +57,8 @@ MockSerializationFormat::readTUSummary(llvm::StringRef Path) {
 
   for (llvm::StringRef Analysis : Analyses) {
     SummaryName Name(Analysis.str());
-    auto InputFile = FS->getBufferForFile(Path + "/" + Name.str() + ".special");
+    auto InputFile =
+        llvm::MemoryBuffer::getFile(Path + "/" + Name.str() + ".special");
     if (!InputFile) {
       return llvm::createStringError(InputFile.getError(),
                                      "Failed to read analysis file");

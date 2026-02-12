@@ -245,8 +245,7 @@ llvm::Error writeJSON(Value &&Value, llvm::StringRef Path) {
 // JSONFormat Constructor
 //----------------------------------------------------------------------------
 
-JSONFormat::JSONFormat(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
-    : SerializationFormat(FS) {
+JSONFormat::JSONFormat() : SerializationFormat() {
   for (const auto &FormatInfoEntry : llvm::Registry<FormatInfo>::entries()) {
     std::unique_ptr<FormatInfo> Info = FormatInfoEntry.instantiate();
     bool Inserted = FormatInfos.try_emplace(Info->ForSummary, *Info).second;
@@ -277,11 +276,11 @@ llvm::StringRef summaryNameToJSON(const SummaryName &SN) { return SN.str(); }
 //----------------------------------------------------------------------------
 
 EntityId JSONFormat::entityIdFromJSON(const uint64_t EntityIdIndex) const {
-  return SerializationFormat::makeEntityId(static_cast<size_t>(EntityIdIndex));
+  return makeEntityId(static_cast<size_t>(EntityIdIndex));
 }
 
 uint64_t JSONFormat::entityIdToJSON(EntityId EI) const {
-  return static_cast<uint64_t>(SerializationFormat::getEntityIdIndex(EI));
+  return static_cast<uint64_t>(getIndex(EI));
 }
 
 //----------------------------------------------------------------------------
@@ -342,8 +341,8 @@ JSONFormat::buildNamespaceFromJSON(const Object &BuildNamespaceObject) const {
 
 Object JSONFormat::buildNamespaceToJSON(const BuildNamespace &BN) const {
   Object Result;
-  Result["kind"] = buildNamespaceKindToJSON(getBuildNamespaceKind(BN));
-  Result["name"] = getBuildNamespaceName(BN);
+  Result["kind"] = buildNamespaceKindToJSON(getKind(BN));
+  Result["name"] = getName(BN);
   return Result;
 }
 
@@ -385,7 +384,7 @@ llvm::Expected<NestedBuildNamespace> JSONFormat::nestedBuildNamespaceFromJSON(
 Array JSONFormat::nestedBuildNamespaceToJSON(
     const NestedBuildNamespace &NBN) const {
   Array Result;
-  const auto &Namespaces = getNestedBuildNamespaces(NBN);
+  const auto &Namespaces = getNamespaces(NBN);
   Result.reserve(Namespaces.size());
 
   for (const auto &BN : Namespaces) {
@@ -438,9 +437,9 @@ JSONFormat::entityNameFromJSON(const Object &EntityNameObject) const {
 
 Object JSONFormat::entityNameToJSON(const EntityName &EN) const {
   Object Result;
-  Result["usr"] = getEntityNameUSR(EN);
-  Result["suffix"] = getEntityNameSuffix(EN);
-  Result["namespace"] = nestedBuildNamespaceToJSON(getEntityNameNamespace(EN));
+  Result["usr"] = getUSR(EN);
+  Result["suffix"] = getSuffix(EN);
+  Result["namespace"] = nestedBuildNamespaceToJSON(getNamespace(EN));
   return Result;
 }
 
@@ -533,7 +532,7 @@ JSONFormat::entityIdTableFromJSON(const Array &EntityIdTableArray) const {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedInsertionOnDuplication,
                                   "EntityIdTable entry", Index, "EntityId",
-                                  getEntityIdIndex(EntityIt->second))
+                                  getIndex(EntityIt->second))
           .build();
     }
   }
@@ -680,7 +679,7 @@ JSONFormat::entityDataMapFromJSON(const SummaryName &SN,
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedInsertionOnDuplication,
                                   "EntitySummary entry", Index, "EntityId",
-                                  getEntityIdIndex(DataIt->first))
+                                  getIndex(DataIt->first))
           .build();
     }
   }

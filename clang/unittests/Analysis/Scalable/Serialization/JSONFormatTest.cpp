@@ -13,14 +13,12 @@
 
 #include "clang/Analysis/Scalable/Serialization/JSONFormat.h"
 #include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Registry.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
@@ -40,8 +38,12 @@ namespace {
 // Test Analysis - Simple analysis for testing JSON serialization
 // ============================================================================
 
-struct TestAnalysis : EntitySummary {
-  TestAnalysis() : EntitySummary(SummaryName("test_summary")) {}
+struct TestAnalysis final : EntitySummary {
+
+  SummaryName getSummaryName() const override {
+    return SummaryName("TestAnalysis");
+  }
+
   std::vector<std::pair<EntityId, EntityId>> Pairs;
 };
 
@@ -91,7 +93,7 @@ deserializeTestAnalysis(const json::Object &Obj, EntityIdTable &IdTable,
 
 struct TestAnalysisFormatInfo : JSONFormat::FormatInfo {
   TestAnalysisFormatInfo()
-      : JSONFormat::FormatInfo(SummaryName("test_summary"),
+      : JSONFormat::FormatInfo(SummaryName("TestSummary"),
                                serializeTestAnalysis, deserializeTestAnalysis) {
   }
 };
@@ -126,7 +128,7 @@ protected:
     OS << JSON;
     OS.close();
 
-    return JSONFormat(vfs::getRealFileSystem()).readTUSummary(FilePath);
+    return JSONFormat().readTUSummary(FilePath);
   }
 
   void readWriteJSON(StringRef InputJSON) {
@@ -138,7 +140,7 @@ protected:
     SmallString<128> Output1Path = TestDir;
     sys::path::append(Output1Path, "output1.json");
 
-    JSONFormat Format(vfs::getRealFileSystem());
+    JSONFormat Format;
     auto WriteErr1 = Format.writeTUSummary(*Summary1, Output1Path);
     ASSERT_THAT_ERROR(std::move(WriteErr1), Succeeded());
 
@@ -173,7 +175,7 @@ TEST_F(JSONFormatTest, NonexistentFile) {
   SmallString<128> NonexistentPath = TestDir;
   sys::path::append(NonexistentPath, "nonexistent.json");
 
-  JSONFormat Format(vfs::getRealFileSystem());
+  JSONFormat Format;
   auto Result = Format.readTUSummary(NonexistentPath);
 
   EXPECT_THAT_EXPECTED(
@@ -188,7 +190,7 @@ TEST_F(JSONFormatTest, PathIsDirectory) {
   std::error_code EC = sys::fs::create_directory(DirPath);
   ASSERT_FALSE(EC) << "Failed to create directory: " << EC.message();
 
-  JSONFormat Format(vfs::getRealFileSystem());
+  JSONFormat Format;
   auto Result = Format.readTUSummary(DirPath);
 
   EXPECT_THAT_EXPECTED(
@@ -218,7 +220,7 @@ TEST_F(JSONFormatTest, BrokenSymlink) {
   std::error_code EC = sys::fs::create_link(TargetPath, SymlinkPath);
   ASSERT_FALSE(EC) << "Failed to create symlink: " << EC.message();
 
-  JSONFormat Format(vfs::getRealFileSystem());
+  JSONFormat Format;
   auto Result = Format.readTUSummary(SymlinkPath);
 
   EXPECT_THAT_EXPECTED(
@@ -254,7 +256,7 @@ TEST_F(JSONFormatTest, NoReadPermission) {
   EC = sys::fs::setPermissions(FilePath, Perms);
   ASSERT_FALSE(EC) << "Failed to set permissions: " << EC.message();
 
-  JSONFormat Format(vfs::getRealFileSystem());
+  JSONFormat Format;
   auto Result = Format.readTUSummary(FilePath);
 
   EXPECT_THAT_EXPECTED(
@@ -686,7 +688,7 @@ TEST_F(JSONFormatTest, TestAnalysisMissingField) {
     "id_table": [],
     "data": [
       {
-        "summary_name": "test_summary",
+        "summary_name": "TestSummary",
         "summary_data": [
           {
             "entity_id": 0,
@@ -718,7 +720,7 @@ TEST_F(JSONFormatTest, TestAnalysisInvalidPair) {
     "id_table": [],
     "data": [
       {
-        "summary_name": "test_summary",
+        "summary_name": "TestSummary",
         "summary_data": [
           {
             "entity_id": 0,
@@ -761,7 +763,7 @@ TEST_F(JSONFormatTest, EntityDataMissingEntityID) {
     "id_table": [],
     "data": [
       {
-        "summary_name": "test_summary",
+        "summary_name": "TestSummary",
         "summary_data": [
           {
             "entity_summary": {}
@@ -792,7 +794,7 @@ TEST_F(JSONFormatTest, EntityDataMissingEntitySummary) {
     "id_table": [],
     "data": [
       {
-        "summary_name": "test_summary",
+        "summary_name": "TestSummary",
         "summary_data": [
           {
             "entity_id": 0
@@ -823,7 +825,7 @@ TEST_F(JSONFormatTest, EntityIDNotUInt64) {
     "id_table": [],
     "data": [
       {
-        "summary_name": "test_summary",
+        "summary_name": "TestSummary",
         "summary_data": [
           {
             "entity_id": "not_a_number",
@@ -859,7 +861,7 @@ TEST_F(JSONFormatTest, EntityDataElementNotObject) {
     "id_table": [],
     "data": [
       {
-        "summary_name": "test_summary",
+        "summary_name": "TestSummary",
         "summary_data": ["invalid"]
       }
     ]
@@ -894,7 +896,7 @@ TEST_F(JSONFormatTest, DuplicateEntityIdInDataMap) {
     ],
     "data": [
       {
-        "summary_name": "test_summary",
+        "summary_name": "TestSummary",
         "summary_data": [
           {
             "entity_id": 0,
@@ -961,7 +963,7 @@ TEST_F(JSONFormatTest, DataEntryMissingData) {
     "id_table": [],
     "data": [
       {
-        "summary_name": "test_summary"
+        "summary_name": "TestSummary"
       }
     ]
   })");
@@ -1026,11 +1028,11 @@ TEST_F(JSONFormatTest, DuplicateSummaryName) {
     "id_table": [],
     "data": [
       {
-        "summary_name": "test_summary",
+        "summary_name": "TestSummary",
         "summary_data": []
       },
       {
-        "summary_name": "test_summary",
+        "summary_name": "TestSummary",
         "summary_data": []
       }
     ]
@@ -1038,11 +1040,11 @@ TEST_F(JSONFormatTest, DuplicateSummaryName) {
 
   EXPECT_THAT_EXPECTED(
       Result,
-      FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
-          HasSubstr("reading SummaryData entries from field 'data'"),
-          HasSubstr("failed to insert SummaryData entry at index '1'"),
-          HasSubstr("encountered duplicate SummaryName 'test_summary'"))));
+      FailedWithMessage(
+          AllOf(HasSubstr("reading TUSummary from file"),
+                HasSubstr("reading SummaryData entries from field 'data'"),
+                HasSubstr("failed to insert SummaryData entry at index '1'"),
+                HasSubstr("encountered duplicate SummaryName 'TestSummary'"))));
 }
 
 // ============================================================================
@@ -1114,7 +1116,7 @@ TEST_F(JSONFormatTest, WriteFileAlreadyExists) {
   // Try to write to the same path
   TUSummary Summary(
       BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
-  JSONFormat Format(vfs::getRealFileSystem());
+  JSONFormat Format;
   auto Result = Format.writeTUSummary(Summary, FilePath);
 
   EXPECT_THAT_ERROR(
@@ -1130,7 +1132,7 @@ TEST_F(JSONFormatTest, WriteParentDirectoryNotFound) {
 
   TUSummary Summary(
       BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
-  JSONFormat Format(vfs::getRealFileSystem());
+  JSONFormat Format;
   auto Result = Format.writeTUSummary(Summary, FilePath);
 
   EXPECT_THAT_ERROR(
@@ -1146,7 +1148,7 @@ TEST_F(JSONFormatTest, WriteNotJsonExtension) {
 
   TUSummary Summary(
       BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
-  JSONFormat Format(vfs::getRealFileSystem());
+  JSONFormat Format;
   auto Result = Format.writeTUSummary(Summary, FilePath);
 
   EXPECT_THAT_ERROR(
@@ -1178,7 +1180,7 @@ TEST_F(JSONFormatTest, WriteStreamOpenFailure) {
 
   TUSummary Summary(
       BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
-  JSONFormat Format(vfs::getRealFileSystem());
+  JSONFormat Format;
   auto Result = Format.writeTUSummary(Summary, FilePath);
 
   EXPECT_THAT_ERROR(
@@ -1267,7 +1269,7 @@ TEST_F(JSONFormatTest, WithEmptyDataEntry) {
     "id_table": [],
     "data": [
       {
-        "summary_name": "test_summary",
+        "summary_name": "TestSummary",
         "summary_data": []
       }
     ]
@@ -1348,7 +1350,7 @@ TEST_F(JSONFormatTest, RoundTripTestAnalysis) {
     ],
     "data": [
       {
-        "summary_name": "test_summary",
+        "summary_name": "TestSummary",
         "summary_data": [
           {
             "entity_id": 0,

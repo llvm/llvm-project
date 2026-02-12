@@ -259,7 +259,7 @@ OffloadBinary::create(MemoryBufferRef Buf, std::optional<uint64_t> Index) {
       return std::move(Err);
 
     Binaries.emplace_back(new OffloadBinary(Buf, TheHeader, TheEntry, *Index));
-    return Binaries;
+    return std::move(Binaries);
   }
 
   uint64_t EntriesCount = TheHeader->Version == 1 ? 1 : TheHeader->EntriesCount;
@@ -271,7 +271,7 @@ OffloadBinary::create(MemoryBufferRef Buf, std::optional<uint64_t> Index) {
     Binaries.emplace_back(new OffloadBinary(Buf, TheHeader, TheEntry, I));
   }
 
-  return Binaries;
+  return std::move(Binaries);
 }
 
 SmallString<0> OffloadBinary::write(ArrayRef<OffloadingImage> OffloadingData) {
@@ -423,6 +423,7 @@ ImageKind object::getImageKind(StringRef Name) {
       .Case("cubin", IMG_Cubin)
       .Case("fatbin", IMG_Fatbinary)
       .Case("s", IMG_PTX)
+      .Case("spv", IMG_SPIRV)
       .Default(IMG_None);
 }
 
@@ -438,6 +439,8 @@ StringRef object::getImageKindName(ImageKind Kind) {
     return "fatbin";
   case IMG_PTX:
     return "s";
+  case IMG_SPIRV:
+    return "spv";
   default:
     return "";
   }

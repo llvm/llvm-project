@@ -18,8 +18,7 @@ namespace clang::ssaf {
 
 class MockSerializationFormat final : public SerializationFormat {
 public:
-  explicit MockSerializationFormat(
-      llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
+  MockSerializationFormat();
 
   llvm::Expected<TUSummary> readTUSummary(llvm::StringRef Path) override;
 
@@ -37,6 +36,8 @@ public:
 
   using FormatInfo = FormatInfoEntry<SerializerFn, DeserializerFn>;
   std::map<SummaryName, FormatInfo> FormatInfos;
+
+  static char ID;
 };
 
 } // namespace clang::ssaf
