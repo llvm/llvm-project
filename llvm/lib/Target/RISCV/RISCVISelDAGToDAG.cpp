@@ -1160,7 +1160,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     assert((!Subtarget->is64Bit() || Opcode == RISCVISD::BuildGPRPair) &&
            "BuildPairF64 only handled here on rv32i_zdinx");
 
-    MVT VT = Node->getSimpleValueType(0);
     SDValue N =
         buildGPRPair(CurDAG, DL, VT, Node->getOperand(0), Node->getOperand(1));
     ReplaceNode(Node, N.getNode());
