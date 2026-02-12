@@ -80,11 +80,11 @@ define void @always_taken(ptr noalias %p0, ptr noalias %p1, i1 %c0, i1 %c1) {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i1> poison, i1 [[C0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 2 x i1> [[BROADCAST_SPLATINSERT1]], <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = select <vscale x 2 x i1> [[BROADCAST_SPLAT2]], <vscale x 2 x i1> [[BROADCAST_SPLAT]], <vscale x 2 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP3]] to i64
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[P0]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP3]] to i64
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i64, ptr [[TMP10]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP10]], <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP20]], <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> poison)
