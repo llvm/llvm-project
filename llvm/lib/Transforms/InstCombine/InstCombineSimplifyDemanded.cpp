@@ -3157,6 +3157,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (Known.KnownFPClasses == fcZero) {
         if (FMF.noSignedZeros())
           return ConstantFP::getZero(VTy);
+        IRBuilderBase::InsertPointGuard Guard(Builder);
+        Builder.SetInsertPoint(CI);
 
         Value *Copysign = Builder.CreateCopySign(ConstantFP::getZero(VTy),
                                                  CI->getArgOperand(0), FMF);
