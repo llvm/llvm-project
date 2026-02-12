@@ -5014,9 +5014,9 @@ will be used.
 
   The interaction between non-temporal memory instructions and cross-thread
   memory ordering guarantees has not been fully explored across hardware
-  targets, nor has it been fully specified here. The interaction between these
-  relaxed memory ordering semantics and LLVM’s optimization passes has also not
-  yet been fully explored and verified.
+  targets, nor has it been fully specified here. The interaction between the
+  less strict memory ordering semantics and LLVM's optimization passes has also
+  not yet been fully explored and verified.
 
   Using these operations correctly is effectively "left as an exercise for the
   reader" at the moment. See `issue #64521

@@ -4012,37 +4012,36 @@ Certain memory access operations are marked as "non-temporal". The :ref:`load
 attaching the ``!nontemporal`` metadata. Some target-specific intrinsics may
 also be specified as doing a non-temporal memory access.
 
-Hardware provides these special non-temporal access instructions (such as the
-``MOVNT`` instructions on x86), in order to permit specialized code to reduce
-cache utilization and bandwidth, when the program knows that the memory is
-unlikely to be reused in cache in the near future. However, because they avoid
-caches, these operations can also easily *reduce* your program's performance
-when used inappropriately.
+Hardware provides non-temporal access instructions (such as the ``MOVNT``
+instructions on x86) in order to permit specialized code to improve cache
+utilization and bandwidth, when the program knows that the memory is unlikely to
+be reused in cache in the near future. However, because they avoid caches, these
+operations can also easily *reduce* your program's performance when used
+inappropriately.
 
-Non-temporal memory operations may also have relaxed memory ordering guarantees
-which do not conform with LLVM's Memory Model for Concurrent Operations. In
-particular, non-temporal memory accesses *might not* be ordered by a
-cross-thread "synchronizes-with" edge, unless additional fences are
-used. Converting a memory operation from normal to non-temporal will not change
-the semantics of a single-threaded program execution, but, because of the
-relaxed memory ordering, it *will* change the semantics of a multithreaded
-program.
+Non-temporal memory operations may also have memory ordering semantics which do
+not conform with LLVM's Memory Model for Concurrent Operations. In particular,
+non-temporal memory accesses *might not* be ordered by a cross-thread
+"synchronizes-with" edge, unless additional fences are used. Converting a memory
+operation from normal to non-temporal will not change the semantics of a
+single-threaded program execution, but, because of the less strict memory
+ordering, it *can* change the semantics of a multithreaded program.
 
 If your program requires non-temporal stores to become visible to another
 thread, or stores made from another thread to become visible to a non-temporal
 load, you must emit a special non-temporal fence between the non-temporal
 load/store and the cross-thread synchronizing operation. Unfortunately, no such
-such cross-target fence operation has yet been defined in LLVM IR. (Yes, this is
-a bug). You will therefore need to use a target-specific fence intrinsic if one
-exists, or inline assembly, or knowledge that on some particular target, no
-additional fence is required.
+cross-target fence operations have yet been defined in LLVM IR. (Yes, this is a
+bug). You will therefore need to use some target-specific fence intrinsics, or
+inline assembly, or external knowledge that on a particular target no additional
+fences are required.
 
 .. warning::
  The interaction between non-temporal memory instructions and cross-thread
- memory ordering guarantees has not been fully explored across hardware
- targets, nor has it been fully specified here. The interaction between these
- relaxed memory ordering semantics and LLVM's optimization passes has also not
- yet been fully explored and verified.
+ memory ordering guarantees has not been fully explored across hardware targets,
+ nor has it been fully specified here. The interaction between the less strict
+ memory ordering semantics and LLVM's optimization passes has also not yet been
+ fully explored and verified.
 
  Using these operations correctly is effectively "left as an exercise for the
  reader" at the moment. See `issue #64521
