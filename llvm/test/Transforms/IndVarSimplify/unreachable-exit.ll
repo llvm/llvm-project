@@ -97,12 +97,12 @@ define void @should_optimize_two_trap(i32 %block_size) {
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
-; CHECK:       [[IF_THEN2:.*]]:
-; CHECK-NEXT:    call void @llvm.trap()
-; CHECK-NEXT:    unreachable
 ; CHECK:       [[IF_END4]]:
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ugt i32 [[I_015]], 1
-; CHECK-NEXT:    br i1 [[CMP2]], label %[[IF_THEN2]], label %[[IF_END5]]
+; CHECK-NEXT:    br i1 [[CMP2]], label %[[IF_THEN2:.*]], label %[[IF_END5]]
+; CHECK:       [[IF_THEN2]]:
+; CHECK-NEXT:    call void @llvm.trap()
+; CHECK-NEXT:    unreachable
 ; CHECK:       [[IF_END5]]:
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [1024 x i8], ptr [[FOO_ARR]], i64 0, i32 [[I_015]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
@@ -139,13 +139,13 @@ if.then:                                          ; preds = %for.body
   call void @llvm.trap()
   unreachable
 
-if.then2:                                          ; preds = %if.end4
-  call void @llvm.trap()
-  unreachable
-
 if.end4:
   %cmp2 = icmp samesign ugt i32 %i.015, 1
   br i1 %cmp2, label %if.then2, label %if.end5
+
+if.then2:                                          ; preds = %if.end4
+  call void @llvm.trap()
+  unreachable
 
 if.end5:                                          ; preds = %if.end4
   %arrayidx = getelementptr inbounds nuw [1024 x i8], ptr %foo_arr, i64 0, i32 %i.015
