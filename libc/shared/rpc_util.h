@@ -82,6 +82,7 @@ template <typename T> struct is_void : type_constant<bool, false> {};
 template <> struct is_void<void> : type_constant<bool, true> {};
 template <typename T> RPC_ATTRS constexpr bool is_void_v = is_void<T>::value;
 
+// Scary trait that can change within a TU, use with caution.
 template <typename...> using void_t = void;
 template <typename T, typename = void>
 struct is_complete : type_constant<bool, false> {};
@@ -89,7 +90,7 @@ template <typename T>
 struct is_complete<T, void_t<decltype(sizeof(T))>> : type_constant<bool, true> {
 };
 template <typename T>
-inline constexpr bool is_complete_v = is_complete<T>::value;
+RPC_ATTRS constexpr bool is_complete_v = is_complete<T>::value;
 
 template <typename T>
 struct is_trivially_copyable
