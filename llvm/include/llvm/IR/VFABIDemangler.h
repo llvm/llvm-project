@@ -134,15 +134,13 @@ struct VFInfo {
     unsigned ParamCount = Shape.Parameters.size();
 
 #ifndef NDEBUG
-    unsigned NumMaskParams = 0, MaskIdx = 0;
-    for (unsigned I = 0; I < ParamCount; I++) {
-      if (Shape.Parameters[I].ParamKind == VFParamKind::GlobalPredicate) {
-        NumMaskParams++;
-        MaskIdx = I;
-      }
-    }
+    unsigned NumMaskParams =
+        llvm::count_if(Shape.Parameters, [](const VFParameter &I) {
+          return I.ParamKind == VFParamKind::GlobalPredicate;
+        });
     assert(NumMaskParams <= 1 && "Unexpected number of mask parameters");
-    assert((!NumMaskParams || MaskIdx == (ParamCount - 1)) &&
+    assert((!NumMaskParams || Shape.Parameters[ParamCount - 1].ParamKind ==
+                                  VFParamKind::GlobalPredicate) &&
            "Mask parameter in unexpected position");
 #endif
 
