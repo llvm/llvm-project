@@ -10903,8 +10903,8 @@ def : Pat<(i64 (int_aarch64_neon_urshl (i64 FPR64:$Rn), (i64 FPR64:$Rm))),
 //
 // Currently we only support NT stores lowering for little-endian targets.
 //
-// Coordinated with STNP constraints in `AArch64TargetLowering::LowerNTStore`
-// and `AArch64TTIImpl::isLegalNTStore`.
+// Coordinated with STNP constraints in `LowerNTStore`
+// and `isLegalNTStore` from `AArch64ISelLowering.cpp`.
 //
 // Currently, STNP lowering can only either keep or increase code size, thus
 // we predicate it to not apply when optimizing for code size.

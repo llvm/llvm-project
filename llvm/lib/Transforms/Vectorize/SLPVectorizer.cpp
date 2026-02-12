@@ -2676,6 +2676,8 @@ public:
 
       // Recursion towards the operands of I1 and I2. We are trying all possible
       // operand pairs, and keeping track of the best score.
+      if (I1->getNumOperands() != I2->getNumOperands())
+        return LookAheadHeuristics::ScoreSameOpcode;
       for (unsigned OpIdx1 = 0, NumOperands1 = I1->getNumOperands();
            OpIdx1 != NumOperands1; ++OpIdx1) {
         // Try to pair op1I with the best operand of I2.
@@ -17091,6 +17093,8 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
       NodesCosts.erase(TE.get());
       GatheredLoadsToDelete.insert(TE.get());
     }
+    if (GatheredLoadsToDelete.contains(TE.get()))
+      DeletedNodes.insert(TE.get());
   }
 
   for (std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
@@ -17120,6 +17124,22 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
     DeletedNodes.clear();
     TransformedToGatherNodes.clear();
     NewCost = Cost;
+  } else {
+    // If the remaining tree is just a buildvector - exit, it will cause
+    // endless attempts to vectorize.
+    if (VectorizableTree.size()>= 2 && VectorizableTree.front()->hasState() &&
+        VectorizableTree.front()->getOpcode() == Instruction::InsertElement &&
+       TransformedToGatherNodes.contains(VectorizableTree[1].get()))
+      return InstructionCost::getInvalid();
+    if (VectorizableTree.size() >= 3 && VectorizableTree.front()->hasState() &&
+        VectorizableTree.front()->getOpcode() == Instruction::InsertElement &&
+        VectorizableTree[1]->hasState() &&
+        VectorizableTree[1]->State == TreeEntry::Vectorize &&
+        (VectorizableTree[1]->getOpcode() == Instruction::ZExt ||
+         VectorizableTree[1]->getOpcode() == Instruction::SExt ||
+         VectorizableTree[1]->getOpcode() == Instruction::Trunc) &&
+        TransformedToGatherNodes.contains(VectorizableTree[2].get()))
+      return InstructionCost::getInvalid();
   }
   return NewCost;
 }
