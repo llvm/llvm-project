@@ -64,8 +64,7 @@ static bool validateVectorContractOperands(Value prodOp, bool isVnni) {
   // The x86vector.avx.cvt.packed.even/odd.indexed_to_f32 operations require
   // an eight-element tuple of bf16 values to be contiguous.
   int dimsToCheck = isVnni ? 2 : 1;
-  if (!llvm::cast<mlir::MemRefType>(srcType).areTrailingDimsContiguous(
-          dimsToCheck))
+  if (!cast<mlir::MemRefType>(srcType).areTrailingDimsContiguous(dimsToCheck))
     return false;
 
   // Return false if the vnni offset of load or transfer_read is not zero.
@@ -127,7 +126,7 @@ getSubviewFromVectorInput(Location loc, PatternRewriter &rewriter, Value prodOp,
   }
 
   auto one = rewriter.getIndexAttr(1);
-  llvm::SmallVector<memref::SubViewOp> subviews;
+  SmallVector<memref::SubViewOp> subviews;
 
   if (!isVNNI) {
     SmallVector<OpFoldResult> strides(indexVals.size(), one);
@@ -380,7 +379,7 @@ struct VectorContractBF16ToFMA
       Operation *accReadOp1 =
           traceToVectorReadLikeParentOperation(pairContractOp.getAcc());
 
-      // Iterate dowm to find the users of contact operations until it is store
+      // Iterate down to find the users of contact operations until it is store
       // or transfer_write.
       Operation *resultWriteOp0 =
           traceToVectorWriteLikeUserOperation(contractOp.getResult());
@@ -390,7 +389,7 @@ struct VectorContractBF16ToFMA
       if (!accReadOp0 || !accReadOp1)
         return rewriter.notifyMatchFailure(
             contractOp,
-            "Operands doesn't have load or transfer_read as it's parent op");
+            "Operand doesn't have load or transfer_read as its parent op");
 
       if (!resultWriteOp0 || !resultWriteOp1)
         return rewriter.notifyMatchFailure(
@@ -458,7 +457,7 @@ struct VectorContractBF16ToFMA
                                                     accTyPairCont, oddIdxFMA);
       rewriter.replaceOp(pairContractOp, castOddFma);
 
-      // Shuffle the output of contract operations before it's use.
+      // Shuffle the output of contract operations before its use.
       LogicalResult writeShuffle = shuffleBeforeWriteLikeOp(
           rewriter, resultWriteOp0, resultWriteOp1, nonUnitDim, accTy);
 

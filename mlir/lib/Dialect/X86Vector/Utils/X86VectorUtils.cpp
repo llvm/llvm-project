@@ -147,13 +147,11 @@ Operation *traceToVectorReadLikeParentOperation(Value v) {
   while (true) {
     // Case 1: Value defined by an operation
     if (Operation *defOp = v.getDefiningOp()) {
-      if (isa<vector::TransferReadOp, vector::LoadOp>(defOp)) {
+      if (isa<vector::TransferReadOp, vector::LoadOp>(defOp))
         return defOp;
-      }
 
-      if (isa<vector::ShapeCastOp, vector::ShuffleOp>(defOp)) {
+      if (isa<vector::ShapeCastOp, vector::ShuffleOp>(defOp))
         return nullptr;
-      }
 
       if (defOp->getNumOperands() == 1) {
         v = defOp->getOperand(0);

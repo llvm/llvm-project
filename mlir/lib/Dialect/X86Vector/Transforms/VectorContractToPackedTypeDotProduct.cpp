@@ -298,7 +298,7 @@ struct VectorContractToPackedTypeDotProduct
         Operation *accReadOp1 =
             traceToVectorReadLikeParentOperation(pairContractOp.getAcc());
 
-        // Iterate dowm to find the users of contact operations until it is
+        // Iterate down to find the users of contact operations until it is
         // store or transfer_write.
         Operation *resultWriteOp0 =
             traceToVectorWriteLikeUserOperation(contractOp.getResult());

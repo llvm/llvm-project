@@ -377,6 +377,84 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+!vecA = vector<1x1x1xbf16>
+!vecB = vector<1x1x8xbf16>
+!vecC = vector<1x8xf32>
+!memrefA = memref<1x1x1xbf16, strided<[2048, 32, 1], offset: ?>>
+!memrefB = memref<1x1x16xbf16, strided<[2048, 64, 1], offset: ?>>
+!memrefC = memref<1x16xf32, strided<[64, 1], offset: ?>>
+#map = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+#map1 = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
+#map2 = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+
+func.func @matmul_to_fma_flat_layout_loop(%arg0: memref<16x64x32xbf16>, %arg1: memref<16x32x64xbf16>, 
+              %arg2: memref<64x64xf32>) -> memref<64x64xf32>  {
+  %c8 = arith.constant 8 : index
+  %0 = ub.poison : f32
+  %1 = ub.poison : bf16
+  %c0 = arith.constant 0 : index
+  %c64 = arith.constant 64 : index
+  %c16 = arith.constant 16 : index
+  %c32 = arith.constant 32 : index
+  %c1 = arith.constant 1 : index
+  scf.for %arg3 = %c0 to %c64 step %c1 {
+    scf.for %arg4 = %c0 to %c64 step %c16 {
+      %subview = memref.subview %arg2[%arg3, %arg4] [1, 16] [1, 1] : memref<64x64xf32> to !memrefC
+      %2 = vector.transfer_read %subview[%c0, %c0], %0 {in_bounds = [true, true]} : !memrefC, !vecC
+      %3 = vector.transfer_read %subview[%c0, %c8], %0 {in_bounds = [true, true]} : !memrefC, !vecC
+
+      %4:2 = scf.for %arg5 = %c0 to %c16 step %c1 iter_args(%arg6 = %2, %arg7 = %3) -> (!vecC, !vecC) {
+        %5:2 = scf.for %arg8 = %c0 to %c32 step %c1 iter_args(%arg9 = %arg6, %arg10 = %arg7) -> (!vecC, !vecC) {
+
+          %subview_0 = memref.subview %arg0[%arg5, %arg3, %arg8] [1, 1, 1] [1, 1, 1] : memref<16x64x32xbf16> to !memrefA
+          %subview_1 = memref.subview %arg1[%arg5, %arg8, %arg4] [1, 1, 16] [1, 1, 1] : memref<16x32x64xbf16> to !memrefB
+
+          %6 = vector.transfer_read %subview_0[%c0, %c0, %c0], %1 {in_bounds = [true, true, true]} : !memrefA, !vecA
+          %7 = vector.transfer_read %subview_1[%c0, %c0, %c0], %1 {in_bounds = [true, true, true]} : !memrefB, !vecB
+          %8 = vector.transfer_read %subview_1[%c0, %c0, %c8], %1 {in_bounds = [true, true, true]} : !memrefB, !vecB
+
+          %9 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types = ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>} %6, %7, %arg9 {unroll_shape = array<i64: 1, 1, 8, 1>} : !vecA, !vecB into !vecC
+          %10 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types = ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>} %6, %8, %arg10 {unroll_shape = array<i64: 1, 1, 8, 1>} : !vecA, !vecB into !vecC
+
+          scf.yield %9, %10 : !vecC, !vecC
+        }
+        scf.yield %5#0, %5#1 : !vecC, !vecC
+      }
+
+      vector.transfer_write %4#1, %subview[%c0, %c8] {in_bounds = [true, true]} : !vecC, !memrefC
+      vector.transfer_write %4#0, %subview[%c0, %c0] {in_bounds = [true, true]} : !vecC, !memrefC
+    }
+  }
+
+  return %arg2 : memref<64x64xf32>
+}
+
+// CHECK-LABEL: @matmul_to_fma_flat_layout_loop
+// CHECK: vector.shuffle{{.*}}[0, 8, 1, 9, 2, 10, 3, 11] : vector<8xf32>, vector<8xf32>
+// CHECK-NEXT: vector.shuffle{{.*}}[4, 12, 5, 13, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+// CHECK: scf.for
+// CHECK: scf.for
+// CHECK: x86vector.avx.bcst_to_f32.packed
+// CHECK: x86vector.avx.cvt.packed.even.indexed_to_f32
+// CHECK: vector.fma {{.*}} : vector<8xf32>
+// CHECK: x86vector.avx.cvt.packed.odd.indexed_to_f32
+// CHECK: vector.fma {{.*}} : vector<8xf32>
+// CHECK: scf.yield
+// CHECK: vector.shuffle{{.*}}[0, 8, 1, 9, 2, 10, 3, 11] : vector<8xf32>, vector<8xf32>
+// CHECK-NEXT: vector.shuffle{{.*}}[4, 12, 5, 13, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86vector.vector_contract_bf16_to_fma
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 !vecA = vector<8x1xbf16>
 !vecB = vector<1x1xbf16>
 !vecC = vector<8x1xf32>
