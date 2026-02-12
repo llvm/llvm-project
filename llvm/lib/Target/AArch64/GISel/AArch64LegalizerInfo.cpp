@@ -810,7 +810,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .alwaysLegal();
 
   getActionDefinitionsBuilder({G_TRUNC_SSAT_S, G_TRUNC_SSAT_U, G_TRUNC_USAT_U})
-      .legalFor({{v8s8, v8s16}, {v4s16, v4s32}, {v2s32, v2s64}});
+      .legalFor({{v8s8, v8s16}, {v4s16, v4s32}, {v2s32, v2s64}})
+      .clampNumElements(0, v2s32, v2s32);
 
   getActionDefinitionsBuilder(G_SEXT_INREG)
       .legalFor({s32, s64})
