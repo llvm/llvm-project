@@ -31,6 +31,7 @@
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -1511,49 +1512,29 @@ public:
   /// Return how this load with extension should be treated: either it is legal,
   /// needs to be promoted to a larger size, needs to be expanded to some other
   /// code sequence, or the target has a custom expander for it.
-  LegalizeAction getLoadExtAction(unsigned ExtType, EVT ValVT,
-                                  EVT MemVT) const {
-    if (ValVT.isExtended() || MemVT.isExtended()) return Expand;
-    unsigned ValI = (unsigned) ValVT.getSimpleVT().SimpleTy;
-    unsigned MemI = (unsigned) MemVT.getSimpleVT().SimpleTy;
-    assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValI < MVT::VALUETYPE_SIZE &&
-           MemI < MVT::VALUETYPE_SIZE && "Table isn't big enough!");
-    unsigned Shift = 4 * ExtType;
-    return (LegalizeAction)((LoadExtActions[ValI][MemI] >> Shift) & 0xf);
-  }
+  virtual LegalizeAction getLoadAction(EVT ValVT, EVT MemVT, Align Alignment,
+                                       MachineMemOperand::Flags MMOFlags,
+                                       unsigned AddrSpace, unsigned ExtType,
+                                       bool Atomic) const;
 
   /// Return true if the specified load with extension is legal on this target.
-  bool isLoadExtLegal(unsigned ExtType, EVT ValVT, EVT MemVT) const {
-    return getLoadExtAction(ExtType, ValVT, MemVT) == Legal;
+  bool isLoadLegal(EVT ValVT, EVT MemVT, Align Alignment,
+                   MachineMemOperand::Flags MMOFlags, unsigned AddrSpace,
+                   unsigned ExtType, bool Atomic) const {
+    return getLoadAction(ValVT, MemVT, Alignment, MMOFlags, AddrSpace, ExtType,
+                         Atomic) == Legal;
   }
 
   /// Return true if the specified load with extension is legal or custom
   /// on this target.
-  bool isLoadExtLegalOrCustom(unsigned ExtType, EVT ValVT, EVT MemVT) const {
-    return getLoadExtAction(ExtType, ValVT, MemVT) == Legal ||
-           getLoadExtAction(ExtType, ValVT, MemVT) == Custom;
-  }
-
-  /// Same as getLoadExtAction, but for atomic loads.
-  LegalizeAction getAtomicLoadExtAction(unsigned ExtType, EVT ValVT,
-                                        EVT MemVT) const {
-    if (ValVT.isExtended() || MemVT.isExtended()) return Expand;
-    unsigned ValI = (unsigned)ValVT.getSimpleVT().SimpleTy;
-    unsigned MemI = (unsigned)MemVT.getSimpleVT().SimpleTy;
-    assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValI < MVT::VALUETYPE_SIZE &&
-           MemI < MVT::VALUETYPE_SIZE && "Table isn't big enough!");
-    unsigned Shift = 4 * ExtType;
-    LegalizeAction Action =
-        (LegalizeAction)((AtomicLoadExtActions[ValI][MemI] >> Shift) & 0xf);
-    assert((Action == Legal || Action == Expand) &&
-           "Unsupported atomic load extension action.");
-    return Action;
-  }
-
-  /// Return true if the specified atomic load with extension is legal on
-  /// this target.
-  bool isAtomicLoadExtLegal(unsigned ExtType, EVT ValVT, EVT MemVT) const {
-    return getAtomicLoadExtAction(ExtType, ValVT, MemVT) == Legal;
+  bool isLoadLegalOrCustom(EVT ValVT, EVT MemVT, Align Alignment,
+                           MachineMemOperand::Flags MMOFlags,
+                           unsigned AddrSpace, unsigned ExtType,
+                           bool Atomic) const {
+    return getLoadAction(ValVT, MemVT, Alignment, MMOFlags, AddrSpace, ExtType,
+                         Atomic) == Legal ||
+           getLoadAction(ValVT, MemVT, Alignment, MMOFlags, AddrSpace, ExtType,
+                         Atomic) == Custom;
   }
 
   /// Return how this store with truncation should be treated: either it is
@@ -3182,7 +3163,9 @@ public:
       LType = ISD::SEXTLOAD;
     }
 
-    return isLoadExtLegal(LType, VT, LoadVT);
+    return isLoadLegal(VT, LoadVT, Load->getAlign(),
+                       getLoadMemOperandFlags(*Load, DL),
+                       Load->getPointerAddressSpace(), LType, false);
   }
 
   /// Return true if any actual instruction that defines a value of type FromTy

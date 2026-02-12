@@ -20,6 +20,7 @@
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -2027,6 +2028,28 @@ bool TargetLoweringBase::isSuitableForJumpTable(const SwitchInst *SI,
 MVT TargetLoweringBase::getPreferredSwitchConditionType(LLVMContext &Context,
                                                         EVT ConditionVT) const {
   return getRegisterType(Context, ConditionVT);
+}
+
+TargetLoweringBase::LegalizeAction TargetLoweringBase::getLoadAction(
+    EVT ValVT, EVT MemVT, Align Alignment, MachineMemOperand::Flags MMOFlags,
+    unsigned AddrSpace, unsigned ExtType, bool Atomic) const {
+  if (ValVT.isExtended() || MemVT.isExtended())
+    return Expand;
+  unsigned ValI = (unsigned)ValVT.getSimpleVT().SimpleTy;
+  unsigned MemI = (unsigned)MemVT.getSimpleVT().SimpleTy;
+  assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValI < MVT::VALUETYPE_SIZE &&
+         MemI < MVT::VALUETYPE_SIZE && "Table isn't big enough!");
+  unsigned Shift = 4 * ExtType;
+
+  if (Atomic) {
+    LegalizeAction Action =
+        (LegalizeAction)((AtomicLoadExtActions[ValI][MemI] >> Shift) & 0xf);
+    assert((Action == Legal || Action == Expand) &&
+           "Unsupported atomic load extension action.");
+    return Action;
+  }
+
+  return (LegalizeAction)((LoadExtActions[ValI][MemI] >> Shift) & 0xf);
 }
 
 /// Get the EVTs and ArgFlags collections that represent the legalized return

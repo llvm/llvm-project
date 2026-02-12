@@ -7047,7 +7047,9 @@ bool DAGCombiner::isAndLoadExtLoad(ConstantSDNode *AndC, LoadSDNode *LoadN,
 
   if (ExtVT == LoadedVT &&
       (!LegalOperations ||
-       TLI.isLoadExtLegal(ISD::ZEXTLOAD, LoadResultTy, ExtVT))) {
+       TLI.isLoadLegal(LoadResultTy, ExtVT, LoadN->getAlign(),
+                       LoadN->getMemOperand()->getFlags(),
+                       LoadN->getAddressSpace(), ISD::ZEXTLOAD, false))) {
     // ZEXTLOAD will match without needing to change the size of the value being
     // loaded.
     return true;
@@ -7063,7 +7065,9 @@ bool DAGCombiner::isAndLoadExtLoad(ConstantSDNode *AndC, LoadSDNode *LoadN,
     return false;
 
   if (LegalOperations &&
-      !TLI.isLoadExtLegal(ISD::ZEXTLOAD, LoadResultTy, ExtVT))
+      !TLI.isLoadLegal(LoadResultTy, ExtVT, LoadN->getAlign(),
+                       LoadN->getMemOperand()->getFlags(),
+                       LoadN->getAddressSpace(), ISD::ZEXTLOAD, false))
     return false;
 
   if (!TLI.shouldReduceLoadWidth(LoadN, ISD::ZEXTLOAD, ExtVT, /*ByteOffset=*/0))
@@ -7126,7 +7130,9 @@ bool DAGCombiner::isLegalNarrowLdSt(LSBaseSDNode *LDST,
       return false;
 
     if (LegalOperations &&
-        !TLI.isLoadExtLegal(ExtType, Load->getValueType(0), MemVT))
+        !TLI.isLoadLegal(Load->getValueType(0), MemVT, Load->getAlign(),
+                         Load->getMemOperand()->getFlags(),
+                         Load->getAddressSpace(), ExtType, false))
       return false;
 
     // For the transform to be legal, the load must produce only two values
@@ -7638,7 +7644,9 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     ConstantSDNode *Splat = isConstOrConstSplat(N1, true, true);
     if (MLoad && MLoad->getExtensionType() == ISD::EXTLOAD && Splat) {
       EVT MemVT = MLoad->getMemoryVT();
-      if (TLI.isLoadExtLegal(ISD::ZEXTLOAD, VT, MemVT)) {
+      if (TLI.isLoadLegal(VT, MemVT, MLoad->getAlign(),
+                          MLoad->getMemOperand()->getFlags(),
+                          MLoad->getAddressSpace(), ISD::ZEXTLOAD, false)) {
         // For this AND to be a zero extension of the masked load the elements
         // of the BuildVec must mask the bottom bits of the extended element
         // type
@@ -7785,9 +7793,10 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     // If we want to change an EXTLOAD to a ZEXTLOAD, ensure a ZEXTLOAD is
     // actually legal and isn't going to get expanded, else this is a false
     // optimisation.
-    bool CanZextLoadProfitably = TLI.isLoadExtLegal(ISD::ZEXTLOAD,
-                                                    Load->getValueType(0),
-                                                    Load->getMemoryVT());
+    bool CanZextLoadProfitably =
+        TLI.isLoadLegal(Load->getValueType(0), Load->getMemoryVT(),
+                        Load->getAlign(), Load->getMemOperand()->getFlags(),
+                        Load->getAddressSpace(), ISD::ZEXTLOAD, false);
 
     // Resize the constant to the same size as the original memory access before
     // extension. If it is still the AllOnesValue then this AND is completely
@@ -7979,7 +7988,9 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     APInt ExtBits = APInt::getHighBitsSet(ExtBitSize, ExtBitSize - MemBitSize);
     if (DAG.MaskedValueIsZero(N1, ExtBits) &&
         ((!LegalOperations && LN0->isSimple()) ||
-         TLI.isLoadExtLegal(ISD::ZEXTLOAD, VT, MemVT))) {
+         TLI.isLoadLegal(VT, MemVT, LN0->getAlign(),
+                         LN0->getMemOperand()->getFlags(),
+                         LN0->getAddressSpace(), ISD::ZEXTLOAD, false))) {
       SDValue ExtLoad =
           DAG.getExtLoad(ISD::ZEXTLOAD, SDLoc(N0), VT, LN0->getChain(),
                          LN0->getBasePtr(), MemVT, LN0->getMemOperand());
@@ -9901,10 +9912,17 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   // Before legalize we can introduce too wide illegal loads which will be later
   // split into legal sized loads. This enables us to combine i64 load by i8
   // patterns to a couple of i32 loads on 32 bit targets.
-  if (LegalOperations &&
-      !TLI.isLoadExtLegal(NeedsZext ? ISD::ZEXTLOAD : ISD::NON_EXTLOAD, VT,
-                          MemVT))
-    return SDValue();
+  if (LegalOperations) {
+    for (auto *L : Loads) {
+      if (!TLI.isLoadLegal(VT, MemVT, L->getAlign(),
+                           L->getMemOperand()->getFlags(), L->getAddressSpace(),
+                           NeedsZext ? ISD::ZEXTLOAD : ISD::NON_EXTLOAD,
+                           false)) {
+
+        return SDValue();
+      }
+    }
+  }
 
   // Check if the bytes of the OR we are looking at match with either big or
   // little endian value load
@@ -13782,20 +13800,27 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
       unsigned WideWidth = WideVT.getScalarSizeInBits();
       bool IsSigned = isSignedIntSetCC(CC);
       auto LoadExtOpcode = IsSigned ? ISD::SEXTLOAD : ISD::ZEXTLOAD;
-      if (LHS.getOpcode() == ISD::LOAD && LHS.hasOneUse() &&
-          SetCCWidth != 1 && SetCCWidth < WideWidth &&
-          TLI.isLoadExtLegalOrCustom(LoadExtOpcode, WideVT, NarrowVT) &&
+      if (LHS.getOpcode() == ISD::LOAD && LHS.hasOneUse() && SetCCWidth != 1 &&
+          SetCCWidth < WideWidth &&
           TLI.isOperationLegalOrCustom(ISD::SETCC, WideVT)) {
-        // Both compare operands can be widened for free. The LHS can use an
-        // extended load, and the RHS is a constant:
-        //   vselect (ext (setcc load(X), C)), N1, N2 -->
-        //   vselect (setcc extload(X), C'), N1, N2
-        auto ExtOpcode = IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
-        SDValue WideLHS = DAG.getNode(ExtOpcode, DL, WideVT, LHS);
-        SDValue WideRHS = DAG.getNode(ExtOpcode, DL, WideVT, RHS);
-        EVT WideSetCCVT = getSetCCResultType(WideVT);
-        SDValue WideSetCC = DAG.getSetCC(DL, WideSetCCVT, WideLHS, WideRHS, CC);
-        return DAG.getSelect(DL, N1.getValueType(), WideSetCC, N1, N2);
+        LoadSDNode *Ld = cast<LoadSDNode>(LHS);
+
+        if (TLI.isLoadLegalOrCustom(WideVT, NarrowVT, Ld->getAlign(),
+                                    Ld->getMemOperand()->getFlags(),
+                                    Ld->getAddressSpace(), LoadExtOpcode,
+                                    false)) {
+          // Both compare operands can be widened for free. The LHS can use an
+          // extended load, and the RHS is a constant:
+          //   vselect (ext (setcc load(X), C)), N1, N2 -->
+          //   vselect (setcc extload(X), C'), N1, N2
+          auto ExtOpcode = IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+          SDValue WideLHS = DAG.getNode(ExtOpcode, DL, WideVT, LHS);
+          SDValue WideRHS = DAG.getNode(ExtOpcode, DL, WideVT, RHS);
+          EVT WideSetCCVT = getSetCCResultType(WideVT);
+          SDValue WideSetCC =
+              DAG.getSetCC(DL, WideSetCCVT, WideLHS, WideRHS, CC);
+          return DAG.getSelect(DL, N1.getValueType(), WideSetCC, N1, N2);
+        }
       }
     }
 
@@ -14230,8 +14255,12 @@ static SDValue tryToFoldExtendSelectLoad(SDNode *N, const TargetLowering &TLI,
   // Combine2), so we should conservatively check the OperationAction.
   LoadSDNode *Load1 = cast<LoadSDNode>(Op1);
   LoadSDNode *Load2 = cast<LoadSDNode>(Op2);
-  if (!TLI.isLoadExtLegal(ExtLoadOpcode, VT, Load1->getMemoryVT()) ||
-      !TLI.isLoadExtLegal(ExtLoadOpcode, VT, Load2->getMemoryVT()) ||
+  if (!TLI.isLoadLegal(VT, Load1->getMemoryVT(), Load1->getAlign(),
+                       Load1->getMemOperand()->getFlags(),
+                       Load1->getAddressSpace(), ExtLoadOpcode, false) ||
+      !TLI.isLoadLegal(VT, Load2->getMemoryVT(), Load2->getAlign(),
+                       Load2->getMemOperand()->getFlags(),
+                       Load2->getAddressSpace(), ExtLoadOpcode, false) ||
       (N0->getOpcode() == ISD::VSELECT && Level >= AfterLegalizeTypes &&
        TLI.getOperationAction(ISD::VSELECT, VT) != TargetLowering::Legal))
     return SDValue();
@@ -14455,13 +14484,17 @@ SDValue DAGCombiner::CombineExtLoad(SDNode *N) {
   // Try to split the vector types to get down to legal types.
   EVT SplitSrcVT = SrcVT;
   EVT SplitDstVT = DstVT;
-  while (!TLI.isLoadExtLegalOrCustom(ExtType, SplitDstVT, SplitSrcVT) &&
+  while (!TLI.isLoadLegalOrCustom(SplitDstVT, SplitSrcVT, LN0->getAlign(),
+                                  LN0->getMemOperand()->getFlags(),
+                                  LN0->getAddressSpace(), ExtType, false) &&
          SplitSrcVT.getVectorNumElements() > 1) {
     SplitDstVT = DAG.GetSplitDestVTs(SplitDstVT).first;
     SplitSrcVT = DAG.GetSplitDestVTs(SplitSrcVT).first;
   }
 
-  if (!TLI.isLoadExtLegalOrCustom(ExtType, SplitDstVT, SplitSrcVT))
+  if (!TLI.isLoadLegalOrCustom(SplitDstVT, SplitSrcVT, LN0->getAlign(),
+                               LN0->getMemOperand()->getFlags(),
+                               LN0->getAddressSpace(), ExtType, false))
     return SDValue();
 
   assert(!DstVT.isScalableVector() && "Unexpected scalable vector type");
@@ -14534,7 +14567,9 @@ SDValue DAGCombiner::CombineZExtLogicopShiftLoad(SDNode *N) {
     return SDValue();
   LoadSDNode *Load = cast<LoadSDNode>(N1.getOperand(0));
   EVT MemVT = Load->getMemoryVT();
-  if (!TLI.isLoadExtLegal(ISD::ZEXTLOAD, VT, MemVT) ||
+  if (!TLI.isLoadLegal(VT, MemVT, Load->getAlign(),
+                          Load->getMemOperand()->getFlags(),
+                          Load->getAddressSpace(), ISD::ZEXTLOAD, false) ||
       Load->getExtensionType() == ISD::SEXTLOAD || Load->isIndexed())
     return SDValue();
 
@@ -14647,7 +14682,9 @@ static SDValue tryToFoldExtOfExtload(SelectionDAG &DAG, DAGCombiner &Combiner,
 
   EVT MemVT = OldExtLoad->getMemoryVT();
   if ((LegalOperations || !OldExtLoad->isSimple() || VT.isVector()) &&
-      !TLI.isLoadExtLegal(ExtLoadType, VT, MemVT))
+      !TLI.isLoadLegal(VT, MemVT, OldExtLoad->getAlign(),
+                       OldExtLoad->getMemOperand()->getFlags(),
+                       OldExtLoad->getAddressSpace(), ExtLoadType, false))
     return SDValue();
 
   SDLoc DL(OldExtLoad);
@@ -14707,7 +14744,9 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
   // code generation being the result of that target's implementation of
   // isVectorLoadExtDesirable().
   if ((LegalOperations || VT.isFixedLengthVector() || !Load->isSimple()) &&
-      !TLI.isLoadExtLegal(ExtLoadType, VT, Load->getValueType(0)))
+      !TLI.isLoadLegal(VT, Load->getValueType(0), Load->getAlign(),
+                       Load->getMemOperand()->getFlags(),
+                       Load->getAddressSpace(), ExtLoadType, false))
     return {};
 
   bool DoXform = true;
@@ -14763,7 +14802,9 @@ tryToFoldExtOfMaskedLoad(SelectionDAG &DAG, const TargetLowering &TLI, EVT VT,
     return SDValue();
 
   if ((LegalOperations || !cast<MaskedLoadSDNode>(N0)->isSimple()) &&
-      !TLI.isLoadExtLegalOrCustom(ExtLoadType, VT, Ld->getValueType(0)))
+      !TLI.isLoadLegalOrCustom(VT, Ld->getValueType(0), Ld->getAlign(),
+                               Ld->getMemOperand()->getFlags(),
+                               Ld->getAddressSpace(), ExtLoadType, false))
     return SDValue();
 
   if (!TLI.isVectorLoadExtDesirable(SDValue(N, 0)))
@@ -14788,7 +14829,7 @@ static SDValue tryToFoldExtOfAtomicLoad(SelectionDAG &DAG,
   if (!ALoad || ALoad->getOpcode() != ISD::ATOMIC_LOAD)
     return {};
   EVT MemoryVT = ALoad->getMemoryVT();
-  if (!TLI.isAtomicLoadExtLegal(ExtLoadType, VT, MemoryVT))
+  if (!TLI.isLoadLegal(VT, MemoryVT, ALoad->getAlign(), ALoad->getMemOperand()->getFlags(), ALoad->getAddressSpace(), ExtLoadType, true))
     return {};
   // Can't fold into ALoad if it is already extending differently.
   ISD::LoadExtType ALoadExtTy = ALoad->getExtensionType();
@@ -14905,9 +14946,15 @@ SDValue DAGCombiner::foldSextSetcc(SDNode *N) {
         // legal {z/s}ext-load.
         // TODO: Allow widening of an existing {z/s}ext-load?
         if (!(ISD::isNON_EXTLoad(V.getNode()) &&
-              ISD::isUNINDEXEDLoad(V.getNode()) &&
-              cast<LoadSDNode>(V)->isSimple() &&
-              TLI.isLoadExtLegal(LoadOpcode, VT, V.getValueType())))
+              ISD::isUNINDEXEDLoad(V.getNode())))
+          return false;
+
+        LoadSDNode *Ld = cast<LoadSDNode>(V.getNode());
+
+        if (!(Ld->isSimple() &&
+              TLI.isLoadLegal(VT, V.getValueType(), Ld->getAlign(),
+                              Ld->getMemOperand()->getFlags(),
+                              Ld->getAddressSpace(), LoadOpcode, false)))
           return false;
 
         // Non-chain users of this value must either be the setcc in this
@@ -15104,8 +15151,10 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
       (!LegalOperations && TLI.isOperationLegal(N0.getOpcode(), VT))) {
     LoadSDNode *LN00 = cast<LoadSDNode>(N0.getOperand(0));
     EVT MemVT = LN00->getMemoryVT();
-    if (TLI.isLoadExtLegal(ISD::SEXTLOAD, VT, MemVT) &&
-      LN00->getExtensionType() != ISD::ZEXTLOAD && LN00->isUnindexed()) {
+    if (TLI.isLoadLegal(VT, MemVT, LN00->getAlign(),
+                        LN00->getMemOperand()->getFlags(),
+                        LN00->getAddressSpace(), ISD::SEXTLOAD, false) &&
+        LN00->getExtensionType() != ISD::ZEXTLOAD && LN00->isUnindexed()) {
       SmallVector<SDNode*, 4> SetCCs;
       bool DoXform = ExtendUsesToFormExtLoad(VT, N0.getNode(), N0.getOperand(0),
                                              ISD::SIGN_EXTEND, SetCCs, TLI);
@@ -15422,7 +15471,9 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
       (!LegalOperations && TLI.isOperationLegal(N0.getOpcode(), VT))) {
     LoadSDNode *LN00 = cast<LoadSDNode>(N0.getOperand(0));
     EVT MemVT = LN00->getMemoryVT();
-    if (TLI.isLoadExtLegal(ISD::ZEXTLOAD, VT, MemVT) &&
+    if (TLI.isLoadLegal(VT, MemVT, LN00->getAlign(),
+                        LN00->getMemOperand()->getFlags(),
+                        LN00->getAddressSpace(), ISD::ZEXTLOAD, false) &&
         LN00->getExtensionType() != ISD::SEXTLOAD && LN00->isUnindexed()) {
       bool DoXform = true;
       SmallVector<SDNode*, 4> SetCCs;
@@ -15652,31 +15703,34 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
                                ISD::ZEXTLOAD, ISD::ZERO_EXTEND))
       return foldedExt;
   } else if (ISD::isNON_EXTLoad(N0.getNode()) &&
-             ISD::isUNINDEXEDLoad(N0.getNode()) &&
-             TLI.isLoadExtLegalOrCustom(ISD::EXTLOAD, VT, N0.getValueType())) {
-    bool DoXform = true;
-    SmallVector<SDNode *, 4> SetCCs;
-    if (!N0.hasOneUse())
-      DoXform =
-          ExtendUsesToFormExtLoad(VT, N, N0, ISD::ANY_EXTEND, SetCCs, TLI);
-    if (DoXform) {
-      LoadSDNode *LN0 = cast<LoadSDNode>(N0);
-      SDValue ExtLoad = DAG.getExtLoad(ISD::EXTLOAD, DL, VT, LN0->getChain(),
-                                       LN0->getBasePtr(), N0.getValueType(),
-                                       LN0->getMemOperand());
-      ExtendSetCCUses(SetCCs, N0, ExtLoad, ISD::ANY_EXTEND);
-      // If the load value is used only by N, replace it via CombineTo N.
-      bool NoReplaceTrunc = N0.hasOneUse();
-      CombineTo(N, ExtLoad);
-      if (NoReplaceTrunc) {
-        DAG.ReplaceAllUsesOfValueWith(SDValue(LN0, 1), ExtLoad.getValue(1));
-        recursivelyDeleteUnusedNodes(LN0);
-      } else {
-        SDValue Trunc =
-            DAG.getNode(ISD::TRUNCATE, SDLoc(N0), N0.getValueType(), ExtLoad);
-        CombineTo(LN0, Trunc, ExtLoad.getValue(1));
+             ISD::isUNINDEXEDLoad(N0.getNode())) {
+    LoadSDNode *LN0 = cast<LoadSDNode>(N0);
+    if (TLI.isLoadLegalOrCustom(VT, N0.getValueType(), LN0->getAlign(),
+                                LN0->getMemOperand()->getFlags(),
+                                LN0->getAddressSpace(), ISD::EXTLOAD, false)) {
+      bool DoXform = true;
+      SmallVector<SDNode *, 4> SetCCs;
+      if (!N0.hasOneUse())
+        DoXform =
+            ExtendUsesToFormExtLoad(VT, N, N0, ISD::ANY_EXTEND, SetCCs, TLI);
+      if (DoXform) {
+        SDValue ExtLoad = DAG.getExtLoad(ISD::EXTLOAD, DL, VT, LN0->getChain(),
+                                         LN0->getBasePtr(), N0.getValueType(),
+                                         LN0->getMemOperand());
+        ExtendSetCCUses(SetCCs, N0, ExtLoad, ISD::ANY_EXTEND);
+        // If the load value is used only by N, replace it via CombineTo N.
+        bool NoReplaceTrunc = N0.hasOneUse();
+        CombineTo(N, ExtLoad);
+        if (NoReplaceTrunc) {
+          DAG.ReplaceAllUsesOfValueWith(SDValue(LN0, 1), ExtLoad.getValue(1));
+          recursivelyDeleteUnusedNodes(LN0);
+        } else {
+          SDValue Trunc =
+              DAG.getNode(ISD::TRUNCATE, SDLoc(N0), N0.getValueType(), ExtLoad);
+          CombineTo(LN0, Trunc, ExtLoad.getValue(1));
+        }
+        return SDValue(N, 0); // Return N so it doesn't get rechecked!
       }
-      return SDValue(N, 0); // Return N so it doesn't get rechecked!
     }
   }
 
@@ -15688,7 +15742,10 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
     LoadSDNode *LN0 = cast<LoadSDNode>(N0);
     ISD::LoadExtType ExtType = LN0->getExtensionType();
     EVT MemVT = LN0->getMemoryVT();
-    if (!LegalOperations || TLI.isLoadExtLegal(ExtType, VT, MemVT)) {
+    if (!LegalOperations ||
+        TLI.isLoadLegal(VT, MemVT, LN0->getAlign(),
+                        LN0->getMemOperand()->getFlags(),
+                        LN0->getAddressSpace(), ExtType, false)) {
       SDValue ExtLoad =
           DAG.getExtLoad(ExtType, DL, VT, LN0->getChain(), LN0->getBasePtr(),
                          MemVT, LN0->getMemOperand());
@@ -16002,7 +16059,9 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
             EVT::getIntegerVT(*DAG.getContext(), ShiftMask.countr_one());
         // If the mask is smaller, recompute the type.
         if ((ExtVT.getScalarSizeInBits() > MaskedVT.getScalarSizeInBits()) &&
-            TLI.isLoadExtLegal(ExtType, SRL.getValueType(), MaskedVT))
+            TLI.isLoadLegal(SRL.getValueType(), MaskedVT, LN->getAlign(),
+                            LN->getMemOperand()->getFlags(),
+                            LN->getAddressSpace(), ExtType, false))
           ExtVT = MaskedVT;
       } else if (ExtType == ISD::ZEXTLOAD &&
                  ShiftMask.isShiftedMask(Offset, ActiveBits) &&
@@ -16011,7 +16070,9 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
         // If the mask is shifted we can use a narrower load and a shl to insert
         // the trailing zeros.
         if (((Offset + ActiveBits) <= ExtVT.getScalarSizeInBits()) &&
-            TLI.isLoadExtLegal(ExtType, SRL.getValueType(), MaskedVT)) {
+            TLI.isLoadLegal(SRL.getValueType(), MaskedVT, LN->getAlign(),
+                            LN->getMemOperand()->getFlags(),
+                            LN->getAddressSpace(), ExtType, false)) {
           ExtVT = MaskedVT;
           ShAmt = Offset + ShAmt;
           ShiftedOffset = Offset;
@@ -16233,33 +16294,39 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
   // If sextload is not supported by target, we can only do the combine when
   // load has one use. Doing otherwise can block folding the extload with other
   // extends that the target does support.
-  if (ISD::isEXTLoad(N0.getNode()) && ISD::isUNINDEXEDLoad(N0.getNode()) &&
-      ExtVT == cast<LoadSDNode>(N0)->getMemoryVT() &&
-      ((!LegalOperations && cast<LoadSDNode>(N0)->isSimple() &&
-        N0.hasOneUse()) ||
-       TLI.isLoadExtLegal(ISD::SEXTLOAD, VT, ExtVT))) {
+  if (ISD::isEXTLoad(N0.getNode()) && ISD::isUNINDEXEDLoad(N0.getNode())) {
     auto *LN0 = cast<LoadSDNode>(N0);
-    SDValue ExtLoad =
-        DAG.getExtLoad(ISD::SEXTLOAD, DL, VT, LN0->getChain(),
-                       LN0->getBasePtr(), ExtVT, LN0->getMemOperand());
-    CombineTo(N, ExtLoad);
-    CombineTo(N0.getNode(), ExtLoad, ExtLoad.getValue(1));
-    AddToWorklist(ExtLoad.getNode());
-    return SDValue(N, 0); // Return N so it doesn't get rechecked!
+    if (ExtVT == LN0->getMemoryVT() &&
+        ((!LegalOperations && LN0->isSimple() && N0.hasOneUse()) ||
+         TLI.isLoadLegal(VT, ExtVT, LN0->getAlign(),
+                         LN0->getMemOperand()->getFlags(),
+                         LN0->getAddressSpace(), ISD::SEXTLOAD, false))) {
+      SDValue ExtLoad =
+          DAG.getExtLoad(ISD::SEXTLOAD, DL, VT, LN0->getChain(),
+                         LN0->getBasePtr(), ExtVT, LN0->getMemOperand());
+      CombineTo(N, ExtLoad);
+      CombineTo(N0.getNode(), ExtLoad, ExtLoad.getValue(1));
+      AddToWorklist(ExtLoad.getNode());
+      return SDValue(N, 0); // Return N so it doesn't get rechecked!
+    }
   }
 
   // fold (sext_inreg (zextload x)) -> (sextload x) iff load has one use
-  if (ISD::isZEXTLoad(N0.getNode()) && ISD::isUNINDEXEDLoad(N0.getNode()) &&
-      N0.hasOneUse() && ExtVT == cast<LoadSDNode>(N0)->getMemoryVT() &&
-      ((!LegalOperations && cast<LoadSDNode>(N0)->isSimple()) &&
-       TLI.isLoadExtLegal(ISD::SEXTLOAD, VT, ExtVT))) {
+  if (ISD::isZEXTLoad(N0.getNode()) && ISD::isUNINDEXEDLoad(N0.getNode())) {
     auto *LN0 = cast<LoadSDNode>(N0);
-    SDValue ExtLoad =
-        DAG.getExtLoad(ISD::SEXTLOAD, DL, VT, LN0->getChain(),
-                       LN0->getBasePtr(), ExtVT, LN0->getMemOperand());
-    CombineTo(N, ExtLoad);
-    CombineTo(N0.getNode(), ExtLoad, ExtLoad.getValue(1));
-    return SDValue(N, 0); // Return N so it doesn't get rechecked!
+
+    if (N0.hasOneUse() && ExtVT == LN0->getMemoryVT() &&
+        ((!LegalOperations && LN0->isSimple()) &&
+         TLI.isLoadLegal(VT, ExtVT, LN0->getAlign(),
+                         LN0->getMemOperand()->getFlags(),
+                         LN0->getAddressSpace(), ISD::SEXTLOAD, false))) {
+      SDValue ExtLoad =
+          DAG.getExtLoad(ISD::SEXTLOAD, DL, VT, LN0->getChain(),
+                         LN0->getBasePtr(), ExtVT, LN0->getMemOperand());
+      CombineTo(N, ExtLoad);
+      CombineTo(N0.getNode(), ExtLoad, ExtLoad.getValue(1));
+      return SDValue(N, 0); // Return N so it doesn't get rechecked!
+    }
   }
 
   // fold (sext_inreg (masked_load x)) -> (sext_masked_load x)
@@ -16268,7 +16335,9 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
   if (auto *Ld = dyn_cast<MaskedLoadSDNode>(Frozen ? N0.getOperand(0) : N0)) {
     if (ExtVT == Ld->getMemoryVT() && Ld->hasNUsesOfValue(1, 0) &&
         Ld->getExtensionType() != ISD::LoadExtType::NON_EXTLOAD &&
-        TLI.isLoadExtLegal(ISD::SEXTLOAD, VT, ExtVT)) {
+        TLI.isLoadLegal(VT, ExtVT, Ld->getAlign(),
+                        Ld->getMemOperand()->getFlags(), Ld->getAddressSpace(),
+                        ISD::SEXTLOAD, false)) {
       SDValue ExtMaskedLoad = DAG.getMaskedLoad(
           VT, DL, Ld->getChain(), Ld->getBasePtr(), Ld->getOffset(),
           Ld->getMask(), Ld->getPassThru(), ExtVT, Ld->getMemOperand(),
@@ -19726,20 +19795,22 @@ SDValue DAGCombiner::visitFP_EXTEND(SDNode *N) {
   }
 
   // fold (fpext (load x)) -> (fpext (fptrunc (extload x)))
-  if (ISD::isNormalLoad(N0.getNode()) && N0.hasOneUse() &&
-      TLI.isLoadExtLegalOrCustom(ISD::EXTLOAD, VT, N0.getValueType())) {
+  if (ISD::isNormalLoad(N0.getNode()) && N0.hasOneUse()) {
     LoadSDNode *LN0 = cast<LoadSDNode>(N0);
-    SDValue ExtLoad = DAG.getExtLoad(ISD::EXTLOAD, DL, VT,
-                                     LN0->getChain(),
-                                     LN0->getBasePtr(), N0.getValueType(),
-                                     LN0->getMemOperand());
-    CombineTo(N, ExtLoad);
-    CombineTo(
-        N0.getNode(),
-        DAG.getNode(ISD::FP_ROUND, SDLoc(N0), N0.getValueType(), ExtLoad,
-                    DAG.getIntPtrConstant(1, SDLoc(N0), /*isTarget=*/true)),
-        ExtLoad.getValue(1));
-    return SDValue(N, 0);   // Return N so it doesn't get rechecked!
+    if (TLI.isLoadLegalOrCustom(VT, N0.getValueType(), LN0->getAlign(),
+                                LN0->getMemOperand()->getFlags(),
+                                LN0->getAddressSpace(), ISD::EXTLOAD, false)) {
+      SDValue ExtLoad = DAG.getExtLoad(ISD::EXTLOAD, DL, VT, LN0->getChain(),
+                                       LN0->getBasePtr(), N0.getValueType(),
+                                       LN0->getMemOperand());
+      CombineTo(N, ExtLoad);
+      CombineTo(
+          N0.getNode(),
+          DAG.getNode(ISD::FP_ROUND, SDLoc(N0), N0.getValueType(), ExtLoad,
+                      DAG.getIntPtrConstant(1, SDLoc(N0), /*isTarget=*/true)),
+          ExtLoad.getValue(1));
+      return SDValue(N, 0); // Return N so it doesn't get rechecked!
+    }
   }
 
   if (SDValue NewVSel = matchVSelectOpSizesWithSetCC(N))
@@ -22829,9 +22900,18 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
         if (TLI.isTruncStoreLegal(LegalizedStoredValTy, StoreTy) &&
             TLI.canMergeStoresTo(FirstStoreAS, LegalizedStoredValTy,
                                  DAG.getMachineFunction()) &&
-            TLI.isLoadExtLegal(ISD::ZEXTLOAD, LegalizedStoredValTy, StoreTy) &&
-            TLI.isLoadExtLegal(ISD::SEXTLOAD, LegalizedStoredValTy, StoreTy) &&
-            TLI.isLoadExtLegal(ISD::EXTLOAD, LegalizedStoredValTy, StoreTy) &&
+            TLI.isLoadLegal(
+                LegalizedStoredValTy, StoreTy, FirstLoad->getAlign(),
+                FirstLoad->getMemOperand()->getFlags(),
+                FirstLoad->getAddressSpace(), ISD::ZEXTLOAD, false) &&
+            TLI.isLoadLegal(
+                LegalizedStoredValTy, StoreTy, FirstLoad->getAlign(),
+                FirstLoad->getMemOperand()->getFlags(),
+                FirstLoad->getAddressSpace(), ISD::SEXTLOAD, false) &&
+            TLI.isLoadLegal(
+                LegalizedStoredValTy, StoreTy, FirstLoad->getAlign(),
+                FirstLoad->getMemOperand()->getFlags(),
+                FirstLoad->getAddressSpace(), ISD::EXTLOAD, false) &&
             TLI.allowsMemoryAccess(Context, DL, StoreTy,
                                    *FirstInChain->getMemOperand(), &IsFastSt) &&
             IsFastSt &&
