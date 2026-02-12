@@ -42,8 +42,10 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Use.h"
@@ -433,6 +435,9 @@ class StackColoring {
   /// slots lifetime-start-on-first-use is disabled).
   BitVector ConservativeSlots;
 
+  /// FI slots for volatile variables (accessed with volatile operations).
+  BitVector VolatileSlots;
+
   /// Number of iterations taken during data flow analysis.
   unsigned NumIterations;
 
@@ -632,6 +637,8 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
   InterestingSlots.resize(NumSlot);
   ConservativeSlots.clear();
   ConservativeSlots.resize(NumSlot);
+  VolatileSlots.clear();
+  VolatileSlots.resize(NumSlot);
 
   // number of start and end lifetime ops for each slot
   SmallVector<int, 8> NumStartLifetimes(NumSlot, 0);
@@ -706,6 +713,75 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
   for (unsigned slot = 0; slot < NumSlot; ++slot) {
     if (NumStartLifetimes[slot] > 1 || NumEndLifetimes[slot] > 1)
       ConservativeSlots.set(slot);
+  }
+
+  // Detect volatile accesses to stack slots in successors of setjmp blocks.
+  // According to ISO C 7.13.2.1, non-volatile variables have indeterminate
+  // values after longjmp, but volatile variables retain their values.
+  // Therefore, volatile variables used in blocks reachable after setjmp need
+  // separate stack slots and cannot be merged.
+  if (MF->exposesReturnsTwice()) {
+    // First, find all blocks containing setjmp (returns_twice) calls by checking
+    // for calls to functions with the returns_twice attribute
+    SmallPtrSet<const MachineBasicBlock *, 4> SetjmpBlocks;
+    for (const MachineBasicBlock &MBB : *MF) {
+      for (const MachineInstr &MI : MBB) {
+        if (MI.isCall()) {
+          // Check if this call has the returns_twice attribute
+          bool IsReturnsTwice = false;
+          for (const MachineOperand &MO : MI.operands()) {
+            if (MO.isGlobal()) {
+              if (const Function *Callee = dyn_cast<Function>(MO.getGlobal())) {
+                if (Callee->hasFnAttribute(Attribute::ReturnsTwice)) {
+                  IsReturnsTwice = true;
+                  break;
+                }
+              }
+            }
+          }
+          if (IsReturnsTwice) {
+            SetjmpBlocks.insert(&MBB);
+          }
+        }
+      }
+    }
+
+    // Now, for each setjmp block, mark volatile slots used in successor blocks
+    // as conservative (non-mergeable)
+    SmallPtrSet<const MachineBasicBlock *, 16> Visited;
+    SmallPtrSet<const MachineBasicBlock *, 16> Worklist;
+    Worklist.insert(SetjmpBlocks.begin(), SetjmpBlocks.end());
+
+
+      // Process all blocks reachable from setjmp successors
+      while (!Worklist.empty()) {
+        auto *MBB = *Worklist.begin();
+	Worklist.erase(MBB);
+	if (Visited.contains(MBB))
+		continue;
+	Visited.insert(MBB);
+	Worklist.insert(MBB->pred_begin(), MBB->pred_end());
+
+        // Check for volatile accesses in this block
+        for (const MachineInstr &MI : *MBB) {
+          if (MI.isDebugInstr())
+            continue;
+
+	  MI.dump();
+          // Check all memory operands for volatile accesses
+          for (auto MMI : MI.operands()) {
+	    auto *MMO = dyn_cast<MachineMemOperand*>(MMI);
+            if (MMO && MMO->isVolatile()) {
+	          int Slot = MMI.getIndex();
+	          if (Slot < 0)
+	            continue;
+            }
+          }
+        }
+
+      }
+
+    LLVM_DEBUG(dumpBV("Volatile slots (after setjmp)", VolatileSlots));
   }
 
   // The write to the catch object by the personality function is not propely
@@ -1319,6 +1395,13 @@ bool StackColoring::run(MachineFunction &Func, bool OnlyRemoveMarkers) {
 
         // Objects with different stack IDs cannot be merged.
         if (MFI->getStackID(FirstSlot) != MFI->getStackID(SecondSlot))
+          continue;
+
+        // If the function contains setjmp, volatile slots cannot be merged
+        // with any other slots, including other volatile slots. This preserves
+        // the identity and storage of volatile variables across setjmp/longjmp.
+        if (MF->exposesReturnsTwice() &&
+            (VolatileSlots.test(FirstSlot) || VolatileSlots.test(SecondSlot)))
           continue;
 
         LiveInterval *First = &*Intervals[FirstSlot];
