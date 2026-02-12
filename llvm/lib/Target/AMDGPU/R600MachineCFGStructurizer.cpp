@@ -464,7 +464,7 @@ void R600MachineCFGStructurizer::insertCondBranchBefore(
   MachineInstr *NewMI = MF->CreateMachineInstr(TII->get(NewOpcode), DL);
   MBB->insert(I, NewMI);
   MachineInstrBuilder MIB(*MF, NewMI);
-  MIB.addReg(OldMI->getOperand(1).getReg(), false);
+  MIB.addReg(OldMI->getOperand(1).getReg());
   SHOWNEWINSTR(NewMI);
   //erase later oldInstr->eraseFromParent();
 }
@@ -476,7 +476,7 @@ void R600MachineCFGStructurizer::insertCondBranchBefore(
   MachineInstr *NewInstr = MF->CreateMachineInstr(TII->get(NewOpcode), DL);
   //insert before
   blk->insert(I, NewInstr);
-  MachineInstrBuilder(*MF, NewInstr).addReg(RegNum, false);
+  MachineInstrBuilder(*MF, NewInstr).addReg(RegNum);
   SHOWNEWINSTR(NewInstr);
 }
 

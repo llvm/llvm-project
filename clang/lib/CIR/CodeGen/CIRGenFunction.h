@@ -36,6 +36,7 @@
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/TypeEvaluationKind.h"
 #include "llvm/ADT/ScopedHashTable.h"
+#include "llvm/IR/Instructions.h"
 
 namespace {
 class ScalarExprEmitter;
@@ -1269,6 +1270,8 @@ public:
   bool getAArch64SVEProcessedOperands(unsigned builtinID, const CallExpr *expr,
                                       SmallVectorImpl<mlir::Value> &ops,
                                       clang::SVETypeFlags typeFlags);
+  mlir::Value emitSVEPredicateCast(mlir::Value pred, unsigned minNumElts,
+                                   mlir::Location loc);
   std::optional<mlir::Value>
   emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
                          ReturnValueSlot returnValue,
@@ -1360,6 +1363,13 @@ public:
   Address emitArrayToPointerDecay(const Expr *e,
                                   LValueBaseInfo *baseInfo = nullptr);
 
+  std::pair<mlir::Value, mlir::Type>
+  emitAsmInputLValue(const TargetInfo::ConstraintInfo &info, LValue inputValue,
+                     QualType inputType, std::string &constraintString,
+                     SourceLocation loc);
+  std::pair<mlir::Value, mlir::Type>
+  emitAsmInput(const TargetInfo::ConstraintInfo &info, const Expr *inputExpr,
+               std::string &constraintString);
   mlir::LogicalResult emitAsmStmt(const clang::AsmStmt &s);
 
   RValue emitAtomicExpr(AtomicExpr *e);
@@ -1553,6 +1563,9 @@ public:
       clang::NestedNameSpecifier qualifier, bool isArrow,
       const clang::Expr *base);
 
+  RValue emitCXXMemberPointerCallExpr(const CXXMemberCallExpr *ce,
+                                      ReturnValueSlot returnValue);
+
   mlir::Value emitCXXNewExpr(const CXXNewExpr *e);
 
   void emitNewArrayInitializer(const CXXNewExpr *e, QualType elementType,
@@ -1664,6 +1677,10 @@ public:
                                   CallArgList &callArgs);
 
   RValue emitCoawaitExpr(const CoawaitExpr &e,
+                         AggValueSlot aggSlot = AggValueSlot::ignored(),
+                         bool ignoreResult = false);
+
+  RValue emitCoyieldExpr(const CoyieldExpr &e,
                          AggValueSlot aggSlot = AggValueSlot::ignored(),
                          bool ignoreResult = false);
   /// Emit the computation of the specified expression of complex type,
@@ -1788,6 +1805,10 @@ public:
 
   LValue emitMemberExpr(const MemberExpr *e);
 
+  /// Emit a call to an AMDGPU builtin function.
+  std::optional<mlir::Value> emitAMDGPUBuiltinExpr(unsigned builtinID,
+                                                   const CallExpr *expr);
+
   LValue emitOpaqueValueLValue(const OpaqueValueExpr *e);
 
   LValue emitConditionalOperatorLValue(const AbstractConditionalOperator *expr);
@@ -1860,6 +1881,10 @@ public:
   /// Note: CIR defers most of the special casting to the final lowering passes
   /// to conserve the high level information.
   mlir::Value emitToMemory(mlir::Value value, clang::QualType ty);
+
+  /// EmitFromMemory - Change a scalar value from its memory
+  /// representation to its value representation.
+  mlir::Value emitFromMemory(mlir::Value value, clang::QualType ty);
 
   /// Emit a trap instruction, which is used to abort the program in an abnormal
   /// way, usually for debugging purposes.
@@ -2046,6 +2071,12 @@ public:
   Address createMemTemp(QualType t, CharUnits align, mlir::Location loc,
                         const Twine &name = "tmp", Address *alloca = nullptr,
                         mlir::OpBuilder::InsertPoint ip = {});
+
+  mlir::Value performAddrSpaceCast(mlir::Value v, mlir::Type destTy) const {
+    if (cir::GlobalOp globalOp = v.getDefiningOp<cir::GlobalOp>())
+      cgm.errorNYI("Global op addrspace cast");
+    return builder.createAddrSpaceCast(v, destTy);
+  }
 
   //===--------------------------------------------------------------------===//
   //                         OpenMP Emission

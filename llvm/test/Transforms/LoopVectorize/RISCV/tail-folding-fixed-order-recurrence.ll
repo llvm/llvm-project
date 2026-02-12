@@ -431,9 +431,6 @@ define i32 @FOR_reduction(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
 ; IF-EVL-NEXT:    [[TMP28:%.*]] = sub i64 [[TMP13]], 1
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = sub i64 [[TMP28]], 1
-; IF-EVL-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP19:%.*]] = mul nuw i64 [[TMP18]], 4
-; IF-EVL-NEXT:    [[TMP20:%.*]] = mul i64 [[TMP19]], 0
 ; IF-EVL-NEXT:    [[TMP21:%.*]] = extractelement <vscale x 4 x i32> [[WIDE_LOAD]], i64 [[TMP17]]
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vscale.i32()
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = mul nuw i32 [[TMP14]], 4

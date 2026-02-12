@@ -33,6 +33,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Basic/AttrSubjectMatchRules.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CapturedStmt.h"
@@ -1165,10 +1166,8 @@ public:
 
   /// getCurFunctionOrMethodDecl - Return the Decl for the current ObjC method
   /// or C function we're in, otherwise return null.  If we're currently
-  /// in a 'block', this returns the containing context. If \p AllowLambda is
-  /// true, this can return the call operator of an enclosing lambda, otherwise
-  /// lambdas are skipped when looking for an enclosing function.
-  NamedDecl *getCurFunctionOrMethodDecl(bool AllowLambda = false) const;
+  /// in a 'block', this returns the containing context.
+  NamedDecl *getCurFunctionOrMethodDecl() const;
 
   /// Warn if we're implicitly casting from a _Nullable pointer type to a
   /// _Nonnull one.
@@ -1257,6 +1256,10 @@ public:
   bool tryToRecoverWithCall(ExprResult &E, const PartialDiagnostic &PD,
                             bool ForceComplain = false,
                             bool (*IsPlausibleResult)(QualType) = nullptr);
+
+  // Adds implicit lifetime bound attribute for implicit this to its
+  // TypeSourceInfo.
+  void addLifetimeBoundToImplicitThis(CXXMethodDecl *MD);
 
   /// Figure out if an expression could be turned into a call.
   ///
@@ -2316,6 +2319,23 @@ public:
   ActOnPragmaMSFunction(SourceLocation Loc,
                         const llvm::SmallVectorImpl<StringRef> &NoBuiltins);
 
+  NamedDecl *lookupExternCFunctionOrVariable(IdentifierInfo *IdentId,
+                                             SourceLocation NameLoc,
+                                             Scope *curScope);
+
+  /// Information from a C++ #pragma export, for a symbol that we
+  /// haven't seen the declaration for yet.
+  struct PendingPragmaInfo {
+    SourceLocation NameLoc;
+    bool Used;
+  };
+
+  llvm::DenseMap<IdentifierInfo *, PendingPragmaInfo> PendingExportedNames;
+
+  /// ActonPragmaExport - called on well-formed '\#pragma export'.
+  void ActOnPragmaExport(IdentifierInfo *IdentId, SourceLocation ExportNameLoc,
+                         Scope *curScope);
+
   /// Only called on function definitions; if there is a pragma in scope
   /// with the effect of a range-based optnone, consider marking the function
   /// with attribute optnone.
@@ -3040,9 +3060,6 @@ private:
 
   void CheckMaxUnsignedZero(const CallExpr *Call, const FunctionDecl *FDecl);
 
-  void CheckUseOfAtomicThreadFenceWithTSan(const CallExpr *Call,
-                                           const FunctionDecl *FDecl);
-
   /// Check for dangerous or invalid arguments to memset().
   ///
   /// This issues warnings on known problematic, dangerous or unspecified
@@ -3527,6 +3544,10 @@ public:
   /// attribute.
   mutable llvm::DenseMap<const EnumDecl *, llvm::APInt> FlagBitsCache;
 
+  /// A cache of enumerator values for enums checked by -Wassign-enum.
+  llvm::DenseMap<const EnumDecl *, llvm::SmallVector<llvm::APSInt>>
+      AssignEnumCache;
+
   /// WeakUndeclaredIdentifiers - Identifiers contained in \#pragma weak before
   /// declared. Rare. May alias another identifier, declared or undeclared.
   ///
@@ -3847,6 +3868,8 @@ public:
 
   void warnOnReservedIdentifier(const NamedDecl *D);
   void warnOnCTypeHiddenInCPlusPlus(const NamedDecl *D);
+
+  void ProcessPragmaExport(DeclaratorDecl *newDecl);
 
   Decl *ActOnDeclarator(Scope *S, Declarator &D);
 
@@ -4938,6 +4961,8 @@ public:
                           TypeVisibilityAttr::VisibilityType Vis);
   VisibilityAttr *mergeVisibilityAttr(Decl *D, const AttributeCommonInfo &CI,
                                       VisibilityAttr::VisibilityType Vis);
+  void mergeVisibilityType(Decl *D, SourceLocation Loc,
+                           VisibilityAttr::VisibilityType Type);
   SectionAttr *mergeSectionAttr(Decl *D, const AttributeCommonInfo &CI,
                                 StringRef Name);
 
@@ -6993,7 +7018,7 @@ public:
                          const ObjCInterfaceDecl *UnknownObjCClass = nullptr,
                          bool ObjCPropertyAccess = false,
                          bool AvoidPartialAvailabilityChecks = false,
-                         ObjCInterfaceDecl *ClassReciever = nullptr,
+                         ObjCInterfaceDecl *ClassReceiver = nullptr,
                          bool SkipTrailingRequiresClause = false);
 
   /// Emit a note explaining that this function is deleted.
@@ -13477,7 +13502,7 @@ public:
   bool SubstTemplateArgumentsInParameterMapping(
       ArrayRef<TemplateArgumentLoc> Args, SourceLocation BaseLoc,
       const MultiLevelTemplateArgumentList &TemplateArgs,
-      TemplateArgumentListInfo &Out, bool BuildPackExpansionTypes);
+      TemplateArgumentListInfo &Out);
 
   /// Retrieve the template argument list(s) that should be used to
   /// instantiate the definition of the given declaration.
@@ -14814,6 +14839,12 @@ public:
   ///@{
 
 public:
+  ExprResult ActOnCXXReflectExpr(SourceLocation OpLoc, TypeSourceInfo *TSI);
+
+  ExprResult BuildCXXReflectExpr(SourceLocation OperatorLoc,
+                                 TypeSourceInfo *TSI);
+
+public:
   void PushSatisfactionStackEntry(const NamedDecl *D,
                                   const llvm::FoldingSetNodeID &ID) {
     const NamedDecl *Can = cast<NamedDecl>(D->getCanonicalDecl());
@@ -14892,16 +14923,6 @@ public:
       SourceRange TemplateIDRange, ConstraintSatisfaction &Satisfaction,
       const ConceptReference *TopLevelConceptId = nullptr,
       Expr **ConvertedExpr = nullptr);
-
-  /// \brief Check whether the given non-dependent constraint expression is
-  /// satisfied. Returns false and updates Satisfaction with the satisfaction
-  /// verdict if successful, emits a diagnostic and returns true if an error
-  /// occurred and satisfaction could not be determined.
-  ///
-  /// \returns true if an error occurred, false otherwise.
-  bool
-  CheckConstraintSatisfaction(const ConceptSpecializationExpr *ConstraintExpr,
-                              ConstraintSatisfaction &Satisfaction);
 
   /// Check whether the given function decl's trailing requires clause is
   /// satisfied, if any. Returns false and updates Satisfaction with the
@@ -15328,6 +15349,17 @@ public:
                                              SourceLocation DiagLoc,
                                              bool AllowArrayTypes,
                                              bool OverrideExisting);
+
+  /// Check whether the given variable declaration has a size that fits within
+  /// the address space it is declared in. This issues a diagnostic if not.
+  ///
+  /// \param VD The variable declaration to check the size of.
+  ///
+  /// \param AS The address space to check the size of \p VD against.
+  ///
+  /// \returns true if the variable's size fits within the address space, false
+  /// otherwise.
+  bool CheckVarDeclSizeAddressSpace(const VarDecl *VD, LangAS AS);
 
   /// Get the type of expression E, triggering instantiation to complete the
   /// type if necessary -- that is, if the expression refers to a templated

@@ -128,7 +128,7 @@ def clamp : OperandWithDefaultOps <i1, (ops (i1 0))>;
 // CHECK-NEXT:       // (fexp2:{ *:[f32] } (SelectClamp:{ *:[f32] } f32:{ *:[f32] }:$src0, i1:{ *:[i1] }:$clamp))  =>  (FEEPLE:{ *:[f32] } FPR32:{ *:[f32] }:$src0, (FFOO:{ *:[f32] } FPR32:{ *:[f32] }:$src0), clamp:{ *:[i1] }:$clamp)
 // CHECK-NEXT:       GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
 // CHECK-NEXT:       GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(MyTarget::FFOO),
-// CHECK-NEXT:       GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
+// CHECK-NEXT:       GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define)),
 // CHECK-NEXT:       GIR_ComplexSubOperandRenderer, /*InsnID*/1, /*RendererID*/GIMT_Encode2(0), /*SubOperand*/0, // src0
 // CHECK-NEXT:       GIR_AddImm8, /*InsnID*/1, /*Imm*/0,
 // CHECK-NEXT:       GIR_ConstrainSelectedInstOperands, /*InsnID*/1,

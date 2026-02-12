@@ -65,7 +65,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     MachineFunctionPass::getAnalysisUsage(AU);
     AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addRequired<MachineDominanceFrontier>();
+    AU.addRequired<MachineDominanceFrontierWrapperPass>();
     AU.setPreservesAll();
   }
 
@@ -128,7 +128,7 @@ char HexagonOptAddrMode::ID = 0;
 INITIALIZE_PASS_BEGIN(HexagonOptAddrMode, "amode-opt",
                       "Optimize addressing mode", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontier)
+INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontierWrapperPass)
 INITIALIZE_PASS_END(HexagonOptAddrMode, "amode-opt", "Optimize addressing mode",
                     false, false)
 
@@ -1155,7 +1155,7 @@ bool HexagonOptAddrMode::runOnMachineFunction(MachineFunction &MF) {
   TRI = MF.getSubtarget().getRegisterInfo();
   HII = HST.getInstrInfo();
   HRI = HST.getRegisterInfo();
-  const auto &MDF = getAnalysis<MachineDominanceFrontier>();
+  const auto &MDF = getAnalysis<MachineDominanceFrontierWrapperPass>().getMDF();
   MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   DataFlowGraph G(MF, *HII, *HRI, *MDT, MDF);
