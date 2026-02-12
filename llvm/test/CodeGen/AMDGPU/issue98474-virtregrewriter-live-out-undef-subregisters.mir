@@ -489,7 +489,7 @@ body:             |
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; CHECK-NEXT:   $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-  ; CHECK-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr40, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
+  ; CHECK-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr40, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $vgpr40, 0
   ; CHECK-NEXT:   $exec = S_MOV_B64 killed $sgpr4_sgpr5
   ; CHECK-NEXT:   $vgpr40 = SI_SPILL_S32_TO_VGPR $sgpr30, 0, $vgpr40
@@ -526,9 +526,35 @@ body:             |
   ; CHECK-NEXT:   $sgpr31 = SI_RESTORE_S32_FROM_VGPR $vgpr40, 1
   ; CHECK-NEXT:   $sgpr30 = SI_RESTORE_S32_FROM_VGPR $vgpr40, 0
   ; CHECK-NEXT:   $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-  ; CHECK-NEXT:   $vgpr40 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+  ; CHECK-NEXT:   $vgpr40 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
   ; CHECK-NEXT:   $exec = S_MOV_B64 killed $sgpr4_sgpr5
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
+  ; check-next:   frame-setup cfi_instruction undefined $sgpr47
+  ; check-next:   frame-setup cfi_instruction undefined $sgpr56
+  ; check-next:   frame-setup cfi_instruction undefined $sgpr57
+  ; check-next:   frame-setup cfi_instruction undefined $sgpr58
+  ; check-next:   frame-setup cfi_instruction undefined $sgpr59
+  ; check-next:   frame-setup cfi_instruction undefined $sgpr60
+  ; check-next:   frame-setup cfi_instruction undefined $sgpr61
+  ; check-next:   frame-setup cfi_instruction undefined $sgpr62
+  ; check-next:   frame-setup cfi_instruction undefined $sgpr63
+  ; check-next:   frame-setup cfi_instruction undefined $sgpr72
+  ; check-next:   frame-setup cfi_instruction undefined $sgpr73
+  ; check-next:   frame-setup cfi_instruction undefined $sgpr74
+  ; check-next:   frame-setup cfi_instruction undefined $sgpr75
+  ; check-next:   frame-setup cfi_instruction undefined $sgpr76
+  ; check-next:   frame-setup cfi_instruction undefined $sgpr77
+  ; check-next:   frame-setup cfi_instruction undefined $sgpr78
+  ; check-next:   frame-setup cfi_instruction undefined $sgpr79
+  ; check-next:   frame-setup cfi_instruction undefined $sgpr88
+  ; check-next:   frame-setup cfi_instruction undefined $sgpr89
+  ; check-next:   frame-setup cfi_instruction undefined $sgpr90
+  ; check-next:   frame-setup cfi_instruction undefined $sgpr91
+  ; check-next:   frame-setup cfi_instruction undefined $sgpr92
+  ; check-next:   frame-setup cfi_instruction undefined $sgpr93
+  ; check-next:   frame-setup cfi_instruction undefined $sgpr94
+  ; check-next:   frame-setup cfi_instruction undefined $sgpr95
+  ; check-next:   $sgpr4_sgpr5 = s_or_saveexec_b64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
   bb.0:
     liveins: $sgpr30, $sgpr31, $sgpr34, $sgpr35, $sgpr36, $sgpr37, $vgpr0, $vgpr1, $vgpr63
 

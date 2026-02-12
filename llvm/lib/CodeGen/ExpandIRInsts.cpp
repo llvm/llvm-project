@@ -507,7 +507,7 @@ static void expandFPToI(Instruction *FPToI) {
   // FIXME: fp16's range is covered by i32. So `fptoi half` can convert
   // to i32 first following a sext/zext to target integer type.
   Value *A1 = nullptr;
-  if (FloatVal->getType()->isHalfTy()) {
+  if (FloatVal->getType()->isHalfTy() && BitWidth >= 32) {
     if (FPToI->getOpcode() == Instruction::FPToUI) {
       Value *A0 = Builder.CreateFPToUI(FloatVal, Builder.getInt32Ty());
       A1 = Builder.CreateZExt(A0, IntTy);
@@ -528,94 +528,101 @@ static void expandFPToI(Instruction *FPToI) {
       PowerOf2Ceil(FloatVal->getType()->getScalarSizeInBits());
   unsigned ExponentWidth = FloatWidth - FPMantissaWidth - 1;
   unsigned ExponentBias = (1 << (ExponentWidth - 1)) - 1;
-  Value *ImplicitBit = Builder.CreateShl(
-      Builder.getIntN(BitWidth, 1), Builder.getIntN(BitWidth, FPMantissaWidth));
-  Value *SignificandMask =
-      Builder.CreateSub(ImplicitBit, Builder.getIntN(BitWidth, 1));
-  Value *NegOne = Builder.CreateSExt(
-      ConstantInt::getSigned(Builder.getInt32Ty(), -1), IntTy);
-  Value *NegInf =
-      Builder.CreateShl(ConstantInt::getSigned(IntTy, 1),
-                        ConstantInt::getSigned(IntTy, BitWidth - 1));
+  IntegerType *FloatIntTy = Builder.getIntNTy(FloatWidth);
+  Value *ImplicitBit = ConstantInt::get(
+      FloatIntTy, APInt::getOneBitSet(FloatWidth, FPMantissaWidth));
+  Value *SignificandMask = ConstantInt::get(
+      FloatIntTy, APInt::getLowBitsSet(FloatWidth, FPMantissaWidth));
 
   BasicBlock *Entry = Builder.GetInsertBlock();
   Function *F = Entry->getParent();
   Entry->setName(Twine(Entry->getName(), "fp-to-i-entry"));
   BasicBlock *End =
       Entry->splitBasicBlock(Builder.GetInsertPoint(), "fp-to-i-cleanup");
-  BasicBlock *IfEnd =
-      BasicBlock::Create(Builder.getContext(), "fp-to-i-if-end", F, End);
-  BasicBlock *IfThen5 =
-      BasicBlock::Create(Builder.getContext(), "fp-to-i-if-then5", F, End);
-  BasicBlock *IfEnd9 =
-      BasicBlock::Create(Builder.getContext(), "fp-to-i-if-end9", F, End);
-  BasicBlock *IfThen12 =
-      BasicBlock::Create(Builder.getContext(), "fp-to-i-if-then12", F, End);
-  BasicBlock *IfElse =
-      BasicBlock::Create(Builder.getContext(), "fp-to-i-if-else", F, End);
+  BasicBlock *CheckSaturateBB = BasicBlock::Create(
+      Builder.getContext(), "fp-to-i-if-check.saturate", F, End);
+  BasicBlock *SaturateBB =
+      BasicBlock::Create(Builder.getContext(), "fp-to-i-if-saturate", F, End);
+  BasicBlock *CheckExpSizeBB = BasicBlock::Create(
+      Builder.getContext(), "fp-to-i-if-check.exp.size", F, End);
+  BasicBlock *ExpSmallBB =
+      BasicBlock::Create(Builder.getContext(), "fp-to-i-if-exp.small", F, End);
+  BasicBlock *ExpLargeBB =
+      BasicBlock::Create(Builder.getContext(), "fp-to-i-if-exp.large", F, End);
 
   Entry->getTerminator()->eraseFromParent();
 
   // entry:
   Builder.SetInsertPoint(Entry);
-  Value *FloatVal0 = FloatVal;
+  // We're going to introduce branches on the value, so freeze it.
+  if (!isGuaranteedNotToBeUndefOrPoison(FloatVal))
+    FloatVal = Builder.CreateFreeze(FloatVal);
   // fp80 conversion is implemented by fpext to fp128 first then do the
   // conversion.
   if (FloatVal->getType()->isX86_FP80Ty())
-    FloatVal0 =
+    FloatVal =
         Builder.CreateFPExt(FloatVal, Type::getFP128Ty(Builder.getContext()));
-  Value *ARep0 =
-      Builder.CreateBitCast(FloatVal0, Builder.getIntNTy(FloatWidth));
-  Value *ARep = Builder.CreateZExt(ARep0, FPToI->getType());
-  Value *PosOrNeg = Builder.CreateICmpSGT(
-      ARep0, ConstantInt::getSigned(Builder.getIntNTy(FloatWidth), -1));
+  Value *ARep = Builder.CreateBitCast(FloatVal, FloatIntTy);
+  Value *PosOrNeg =
+      Builder.CreateICmpSGT(ARep, ConstantInt::getSigned(FloatIntTy, -1));
   Value *Sign = Builder.CreateSelect(PosOrNeg, ConstantInt::getSigned(IntTy, 1),
-                                     ConstantInt::getSigned(IntTy, -1));
+                                     ConstantInt::getSigned(IntTy, -1), "sign");
   Value *And =
-      Builder.CreateLShr(ARep, Builder.getIntN(BitWidth, FPMantissaWidth));
-  Value *And2 = Builder.CreateAnd(
-      And, Builder.getIntN(BitWidth, (1 << ExponentWidth) - 1));
+      Builder.CreateLShr(ARep, Builder.getIntN(FloatWidth, FPMantissaWidth));
+  Value *BiasedExp = Builder.CreateAnd(
+      And, Builder.getIntN(FloatWidth, (1 << ExponentWidth) - 1), "biased.exp");
   Value *Abs = Builder.CreateAnd(ARep, SignificandMask);
-  Value *Or = Builder.CreateOr(Abs, ImplicitBit);
-  Value *Cmp =
-      Builder.CreateICmpULT(And2, Builder.getIntN(BitWidth, ExponentBias));
-  Builder.CreateCondBr(Cmp, End, IfEnd);
+  Value *Significand = Builder.CreateOr(Abs, ImplicitBit, "significand");
+  Value *ExpIsNegative = Builder.CreateICmpULT(
+      BiasedExp, Builder.getIntN(FloatWidth, ExponentBias), "exp.is.negative");
+  Builder.CreateCondBr(ExpIsNegative, End, CheckSaturateBB);
 
-  // if.end:
-  Builder.SetInsertPoint(IfEnd);
+  // check.saturate:
+  Builder.SetInsertPoint(CheckSaturateBB);
   Value *Add1 = Builder.CreateAdd(
-      And2, ConstantInt::getSigned(
-                IntTy, -static_cast<int64_t>(ExponentBias + BitWidth)));
+      BiasedExp,
+      ConstantInt::getSigned(FloatIntTy,
+                             -static_cast<int64_t>(ExponentBias + BitWidth)));
   Value *Cmp3 = Builder.CreateICmpULT(
-      Add1, ConstantInt::getSigned(IntTy, -static_cast<int64_t>(BitWidth)));
-  Builder.CreateCondBr(Cmp3, IfThen5, IfEnd9);
+      Add1,
+      ConstantInt::getSigned(FloatIntTy, -static_cast<int64_t>(BitWidth)));
+  Builder.CreateCondBr(Cmp3, SaturateBB, CheckExpSizeBB);
 
-  // if.then5:
-  Builder.SetInsertPoint(IfThen5);
-  Value *PosInf = Builder.CreateXor(NegOne, NegInf);
-  Value *Cond8 = Builder.CreateSelect(PosOrNeg, PosInf, NegInf);
+  // saturate:
+  Builder.SetInsertPoint(SaturateBB);
+  Value *SignedMax =
+      ConstantInt::get(IntTy, APInt::getSignedMaxValue(BitWidth));
+  Value *SignedMin =
+      ConstantInt::get(IntTy, APInt::getSignedMinValue(BitWidth));
+  Value *Saturated =
+      Builder.CreateSelect(PosOrNeg, SignedMax, SignedMin, "saturated");
   Builder.CreateBr(End);
 
   // if.end9:
-  Builder.SetInsertPoint(IfEnd9);
-  Value *Cmp10 = Builder.CreateICmpULT(
-      And2, Builder.getIntN(BitWidth, ExponentBias + FPMantissaWidth));
-  Builder.CreateCondBr(Cmp10, IfThen12, IfElse);
+  Builder.SetInsertPoint(CheckExpSizeBB);
+  Value *ExpSmallerMantissaWidth = Builder.CreateICmpULT(
+      BiasedExp, Builder.getIntN(FloatWidth, ExponentBias + FPMantissaWidth),
+      "exp.smaller.mantissa.width");
+  Builder.CreateCondBr(ExpSmallerMantissaWidth, ExpSmallBB, ExpLargeBB);
 
-  // if.then12:
-  Builder.SetInsertPoint(IfThen12);
+  // exp.small:
+  Builder.SetInsertPoint(ExpSmallBB);
   Value *Sub13 = Builder.CreateSub(
-      Builder.getIntN(BitWidth, ExponentBias + FPMantissaWidth), And2);
-  Value *Shr14 = Builder.CreateLShr(Or, Sub13);
+      Builder.getIntN(FloatWidth, ExponentBias + FPMantissaWidth), BiasedExp);
+  Value *Shr14 =
+      Builder.CreateZExtOrTrunc(Builder.CreateLShr(Significand, Sub13), IntTy);
   Value *Mul = Builder.CreateMul(Shr14, Sign);
   Builder.CreateBr(End);
 
-  // if.else:
-  Builder.SetInsertPoint(IfElse);
+  // exp.large:
+  Builder.SetInsertPoint(ExpLargeBB);
   Value *Sub15 = Builder.CreateAdd(
-      And2, ConstantInt::getSigned(
-                IntTy, -static_cast<int64_t>(ExponentBias + FPMantissaWidth)));
-  Value *Shl = Builder.CreateShl(Or, Sub15);
+      BiasedExp,
+      ConstantInt::getSigned(
+          FloatIntTy, -static_cast<int64_t>(ExponentBias + FPMantissaWidth)));
+  Value *SignificandCast = Builder.CreateZExtOrTrunc(Significand, IntTy);
+  Value *Shl = Builder.CreateShl(SignificandCast,
+                                 Builder.CreateZExtOrTrunc(Sub15, IntTy));
   Value *Mul16 = Builder.CreateMul(Shl, Sign);
   Builder.CreateBr(End);
 
@@ -623,9 +630,9 @@ static void expandFPToI(Instruction *FPToI) {
   Builder.SetInsertPoint(End, End->begin());
   PHINode *Retval0 = Builder.CreatePHI(FPToI->getType(), 4);
 
-  Retval0->addIncoming(Cond8, IfThen5);
-  Retval0->addIncoming(Mul, IfThen12);
-  Retval0->addIncoming(Mul16, IfElse);
+  Retval0->addIncoming(Saturated, SaturateBB);
+  Retval0->addIncoming(Mul, ExpSmallBB);
+  Retval0->addIncoming(Mul16, ExpLargeBB);
   Retval0->addIncoming(Builder.getIntN(BitWidth, 0), Entry);
 
   FPToI->replaceAllUsesWith(Retval0);
@@ -735,8 +742,17 @@ static void expandIToFP(Instruction *IToFP) {
   unsigned FloatWidth = PowerOf2Ceil(FPMantissaWidth);
   bool IsSigned = IToFP->getOpcode() == Instruction::SIToFP;
 
-  assert(BitWidth > FloatWidth && "Unexpected conversion. expandIToFP() "
-                                  "assumes integer width is larger than fp.");
+  // We're going to introduce branches on the value, so freeze it.
+  if (!isGuaranteedNotToBeUndefOrPoison(IntVal))
+    IntVal = Builder.CreateFreeze(IntVal);
+
+  // The expansion below assumes that int width >= float width. Zero or sign
+  // extend the integer accordingly.
+  if (BitWidth < FloatWidth) {
+    BitWidth = FloatWidth;
+    IntTy = Builder.getIntNTy(BitWidth);
+    IntVal = Builder.CreateIntCast(IntVal, IntTy, IsSigned);
+  }
 
   Value *Temp1 =
       Builder.CreateShl(Builder.getIntN(BitWidth, 1),

@@ -127,16 +127,16 @@ static std::vector<std::pair<SourceLocation, StringRef>>
 getCommentsBeforeLoc(ASTContext *Ctx, SourceLocation Loc) {
   std::vector<std::pair<SourceLocation, StringRef>> Comments;
   while (Loc.isValid()) {
-    const clang::Token Tok = utils::lexer::getPreviousToken(
+    const std::optional<Token> Tok = utils::lexer::getPreviousToken(
         Loc, Ctx->getSourceManager(), Ctx->getLangOpts(),
         /*SkipComments=*/false);
-    if (Tok.isNot(tok::comment))
+    if (!Tok || Tok->isNot(tok::comment))
       break;
-    Loc = Tok.getLocation();
+    Loc = Tok->getLocation();
     Comments.emplace_back(
         Loc,
         Lexer::getSourceText(CharSourceRange::getCharRange(
-                                 Loc, Loc.getLocWithOffset(Tok.getLength())),
+                                 Loc, Loc.getLocWithOffset(Tok->getLength())),
                              Ctx->getSourceManager(), Ctx->getLangOpts()));
   }
   return Comments;
@@ -268,6 +268,11 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
     return;
 
   Callee = Callee->getFirstDecl();
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(Callee);
+      Ctor && Ctor->isInheritingConstructor()) {
+    if (const auto *BaseCtor = Ctor->getInheritedConstructor().getConstructor())
+      Callee = BaseCtor->getFirstDecl();
+  }
   const unsigned NumArgs =
       std::min<unsigned>(Args.size(), Callee->getNumParams());
   if ((NumArgs == 0) || (IgnoreSingleArgument && NumArgs == 1))

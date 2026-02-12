@@ -119,6 +119,7 @@ public:
 
   bool processDetach(mlir::omp::DetachClauseOps &result) const;
   // 'Repeatable' clauses: They can appear multiple times in the clause list.
+  bool processAffinity(mlir::omp::AffinityClauseOps &result) const;
   bool processAligned(mlir::omp::AlignedClauseOps &result) const;
   bool processAllocate(mlir::omp::AllocateClauseOps &result) const;
   bool processCopyin() const;

@@ -4247,13 +4247,13 @@ void NVPTXTargetLowering::LowerAsmOperandForConstraint(
 // because we need the information that is only available in the "Value" type
 // of destination
 // pointer. In particular, the address space information.
-bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                             const CallBase &I,
-                                             MachineFunction &MF,
-                                             unsigned Intrinsic) const {
+void NVPTXTargetLowering::getTgtMemIntrinsic(
+    SmallVectorImpl<IntrinsicInfo> &Infos, const CallBase &I,
+    MachineFunction &MF, unsigned Intrinsic) const {
+  IntrinsicInfo Info;
   switch (Intrinsic) {
   default:
-    return false;
+    return;
   case Intrinsic::nvvm_match_all_sync_i32p:
   case Intrinsic::nvvm_match_all_sync_i64p:
     Info.opc = ISD::INTRINSIC_W_CHAIN;
@@ -4264,7 +4264,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 
     // Our result depends on both our and other thread's arguments.
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
-    return true;
+    Infos.push_back(Info);
+    return;
   case Intrinsic::nvvm_wmma_m16n16k16_load_a_f16_col:
   case Intrinsic::nvvm_wmma_m16n16k16_load_a_f16_row:
   case Intrinsic::nvvm_wmma_m16n16k16_load_a_f16_col_stride:
@@ -4295,7 +4296,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   case Intrinsic::nvvm_wmma_m16n16k16_load_a_s8_col:
   case Intrinsic::nvvm_wmma_m16n16k16_load_a_s8_col_stride:
@@ -4327,7 +4329,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(8);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_wmma_m32n8k16_load_a_s8_col:
@@ -4376,7 +4379,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_wmma_m32n8k16_load_b_s8_col:
@@ -4418,7 +4422,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(4);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_wmma_m16n16k16_load_c_f16_col:
@@ -4439,7 +4444,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_wmma_m16n16k16_load_c_f32_col:
@@ -4464,7 +4470,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_wmma_m32n8k16_load_a_bf16_col:
@@ -4495,7 +4502,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_wmma_m8n8k128_load_c_s32_col:
@@ -4519,7 +4527,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(8);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_wmma_m8n8k4_load_a_f64_col:
@@ -4537,7 +4546,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(8);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_wmma_m8n8k4_load_c_f64_col:
@@ -4550,7 +4560,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_wmma_m16n16k16_store_d_f16_col:
@@ -4571,7 +4582,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_wmma_m16n16k16_store_d_f32_col:
@@ -4596,7 +4608,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_wmma_m16n16k16_store_d_s32_col:
@@ -4617,7 +4630,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_wmma_m8n8k128_store_d_s32_col:
@@ -4637,7 +4651,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align = Align(8);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_wmma_m8n8k4_store_d_f64_col:
@@ -4650,7 +4665,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x1_b16:
@@ -4662,7 +4678,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align = Align(4);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x4_b16:
@@ -4674,7 +4691,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_atomic_add_gen_f_cta:
@@ -4706,7 +4724,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_prefetch_tensormap: {
@@ -4718,7 +4737,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.flags =
         MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tensormap_replace_global_address:
@@ -4729,7 +4749,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tensormap_replace_rank:
@@ -4747,7 +4768,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_ldu_global_i:
@@ -4760,7 +4782,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = cast<ConstantInt>(I.getArgOperand(1))->getMaybeAlignValue();
 
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   case Intrinsic::nvvm_tex_1d_v4f32_s32:
   case Intrinsic::nvvm_tex_1d_v4f32_f32:
@@ -4826,7 +4849,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
 
   case Intrinsic::nvvm_tex_1d_v4s32_s32:
   case Intrinsic::nvvm_tex_1d_v4s32_f32:
@@ -4950,7 +4974,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
 
   case Intrinsic::nvvm_suld_1d_i8_clamp:
   case Intrinsic::nvvm_suld_1d_v2i8_clamp:
@@ -5003,7 +5028,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
 
   case Intrinsic::nvvm_suld_1d_i16_clamp:
   case Intrinsic::nvvm_suld_1d_v2i16_clamp:
@@ -5056,7 +5082,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
 
   case Intrinsic::nvvm_suld_1d_i32_clamp:
   case Intrinsic::nvvm_suld_1d_v2i32_clamp:
@@ -5109,7 +5136,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
 
   case Intrinsic::nvvm_suld_1d_i64_clamp:
   case Intrinsic::nvvm_suld_1d_v2i64_clamp:
@@ -5147,7 +5175,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
 
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x1:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x1:
@@ -5158,7 +5187,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x2:
@@ -5173,7 +5203,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x2_f32:
@@ -5184,7 +5215,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x4:
@@ -5200,7 +5232,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x4_f32:
@@ -5211,7 +5244,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x8:
@@ -5227,7 +5261,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x8_f32:
@@ -5238,7 +5273,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x16:
@@ -5254,7 +5290,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x16_f32:
@@ -5265,7 +5302,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x32:
@@ -5281,7 +5319,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x32_f32:
@@ -5292,7 +5331,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x64:
@@ -5308,7 +5348,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x64_f32:
@@ -5319,7 +5360,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x128:
@@ -5335,7 +5377,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x128_f32:
@@ -5346,7 +5389,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_st_16x64b_x1:
@@ -5358,7 +5402,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_st_16x64b_x2:
@@ -5371,7 +5416,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_st_16x64b_x4:
@@ -5385,7 +5431,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_st_16x64b_x8:
@@ -5399,7 +5446,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_st_16x64b_x16:
@@ -5413,7 +5461,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_st_16x64b_x32:
@@ -5427,7 +5476,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_st_16x64b_x64:
@@ -5441,7 +5491,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_st_16x64b_x128:
@@ -5455,7 +5506,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg1:
   case Intrinsic::nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg1:
@@ -5478,7 +5530,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg2:
@@ -5502,10 +5555,10 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   }
-  return false;
 }
 
 /// getFunctionParamOptimizedAlign - since function arguments are passed via
@@ -7382,46 +7435,84 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
 
 bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
     const Instruction *I) const {
-  auto *CI = dyn_cast<AtomicCmpXchgInst>(I);
-  // When CAS bitwidth is not supported on the hardware, the CAS is emulated
-  // using a retry loop that uses a higher-bitwidth monotonic CAS. We enforce
-  // the memory order using explicit fences around the retry loop.
-  // The memory order of natively supported CAS operations can be enforced
-  // by lowering to an atom.cas with the right memory synchronizing effect.
-  // However, atom.cas only supports relaxed, acquire, release and acq_rel.
-  // So we also use explicit fences for enforcing memory order for
-  // seq_cast CAS with natively-supported bitwidths.
-  return CI &&
-         (cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() <
-              STI.getMinCmpXchgSizeInBits() ||
-          CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent);
+  // This function returns true iff the operation is emulated using a CAS-loop,
+  // or if it has the memory order seq_cst (which is not natively supported in
+  // the PTX `atom` instruction).
+  //
+  // atomicrmw and cmpxchg instructions not efficiently supported by PTX
+  // are lowered to CAS emulation loops that preserve their memory order,
+  // syncscope, and volatile semantics. For PTX, it is more efficient to use
+  // atom.cas.relaxed.sco instructions within the loop, and fences before and
+  // after the loop to restore order.
+  //
+  // Atomic instructions efficiently supported by PTX are lowered to
+  // `atom.<op>.<sem>.<scope` instruction with their corresponding memory order
+  // and scope. Since PTX does not support seq_cst, we emulate it by lowering to
+  // a fence.sc followed by an atom according to the PTX atomics ABI
+  // https://docs.nvidia.com/cuda/ptx-writers-guide-to-interoperability/atomic-abi.html
+  if (auto *CI = dyn_cast<AtomicCmpXchgInst>(I))
+    return (cast<IntegerType>(CI->getCompareOperand()->getType())
+                ->getBitWidth() < STI.getMinCmpXchgSizeInBits()) ||
+           CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent;
+  if (auto *RI = dyn_cast<AtomicRMWInst>(I))
+    return shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg ||
+           RI->getOrdering() == AtomicOrdering::SequentiallyConsistent;
+  return false;
 }
 
 AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
     const Instruction *I) const {
-  auto *CI = dyn_cast<AtomicCmpXchgInst>(I);
-  bool BitwidthSupportedAndIsSeqCst =
+  // If the operation is emulated by a CAS-loop, we lower the instruction to
+  // atom.<op>.relaxed, since AtomicExpandPass will insert fences for enforcing
+  // the correct memory ordering around the CAS loop.
+  //
+  // When the operation is not emulated, but the memory order is seq_cst,
+  // we must lower to "fence.sc.<scope>; atom.<op>.acquire.<scope>;" to conform
+  // to the PTX atomics ABI.
+  // https://docs.nvidia.com/cuda/ptx-writers-guide-to-interoperability/atomic-abi.html
+  // For such cases, emitLeadingFence() will separately insert the leading
+  // "fence.sc.<scope>;". Here, we only set the memory order to acquire.
+  //
+  // Otherwise, the operation is not emulated, and the memory order is not
+  // seq_cst.  In this case, the LLVM memory order is natively supported by the
+  // PTX `atom` instruction, and we just lower to the corresponding
+  // `atom.<op>.relaxed|acquire|release|acq_rel". For such cases, this function
+  // will NOT be called.
+  // prerequisite: shouldInsertFencesForAtomic() should have returned `true` for
+  // I before its memory order was modified.
+  if (auto *CI = dyn_cast<AtomicCmpXchgInst>(I);
       CI && CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent &&
       cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() >=
-          STI.getMinCmpXchgSizeInBits();
-  return BitwidthSupportedAndIsSeqCst ? AtomicOrdering::Acquire
-                                      : AtomicOrdering::Monotonic;
+          STI.getMinCmpXchgSizeInBits())
+    return AtomicOrdering::Acquire;
+  else if (auto *RI = dyn_cast<AtomicRMWInst>(I);
+           RI && RI->getOrdering() == AtomicOrdering::SequentiallyConsistent &&
+           shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::None)
+    return AtomicOrdering::Acquire;
+
+  return AtomicOrdering::Monotonic;
 }
 
 Instruction *NVPTXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
                                                    Instruction *Inst,
                                                    AtomicOrdering Ord) const {
-  if (!isa<AtomicCmpXchgInst>(Inst))
+  // prerequisite: shouldInsertFencesForAtomic() should have returned `true` for
+  // `Inst` before its memory order was modified. We cannot enforce this with an
+  // assert, because AtomicExpandPass will have modified the memory order
+  // between the initial call to shouldInsertFencesForAtomic() and the call to
+  // this function.
+  if (!isa<AtomicCmpXchgInst>(Inst) && !isa<AtomicRMWInst>(Inst))
     return TargetLoweringBase::emitLeadingFence(Builder, Inst, Ord);
 
-  // Specialize for cmpxchg
-  // Emit a fence.sc leading fence for cmpxchg seq_cst which are not emulated
-  SyncScope::ID SSID = cast<AtomicCmpXchgInst>(Inst)->getSyncScopeID();
+  // Specialize for cmpxchg and atomicrmw
+  auto SSID = getAtomicSyncScopeID(Inst);
+  assert(SSID.has_value() && "Expected an atomic operation");
+
   if (isReleaseOrStronger(Ord))
     return Builder.CreateFence(Ord == AtomicOrdering::SequentiallyConsistent
-                                   ? Ord
+                                   ? AtomicOrdering::SequentiallyConsistent
                                    : AtomicOrdering::Release,
-                               SSID);
+                               SSID.value());
 
   return nullptr;
 }
@@ -7429,19 +7520,25 @@ Instruction *NVPTXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
 Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
                                                     Instruction *Inst,
                                                     AtomicOrdering Ord) const {
-  // Specialize for cmpxchg
-  if (!isa<AtomicCmpXchgInst>(Inst))
+  // prerequisite: shouldInsertFencesForAtomic() should have returned `true` for
+  // `Inst` before its memory order was modified. See `emitLeadingFence` for why
+  // this cannot be enforced with an assert.  Specialize for cmpxchg and
+  // atomicrmw
+  auto *CI = dyn_cast<AtomicCmpXchgInst>(Inst);
+  auto *RI = dyn_cast<AtomicRMWInst>(Inst);
+  if (!CI && !RI)
     return TargetLoweringBase::emitTrailingFence(Builder, Inst, Ord);
 
-  auto *CI = cast<AtomicCmpXchgInst>(Inst);
-  auto CASWidth =
-      cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth();
-  SyncScope::ID SSID = CI->getSyncScopeID();
-  // Do not emit a trailing fence for cmpxchg seq_cst which are not emulated
-  if (isAcquireOrStronger(Ord) &&
-      (Ord != AtomicOrdering::SequentiallyConsistent ||
-       CASWidth < STI.getMinCmpXchgSizeInBits()))
-    return Builder.CreateFence(AtomicOrdering::Acquire, SSID);
+  auto SSID = getAtomicSyncScopeID(Inst);
+  assert(SSID.has_value() && "Expected an atomic operation");
+
+  bool IsEmulated =
+      CI ? cast<IntegerType>(CI->getCompareOperand()->getType())
+                   ->getBitWidth() < STI.getMinCmpXchgSizeInBits()
+         : shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg;
+
+  if (isAcquireOrStronger(Ord) && IsEmulated)
+    return Builder.CreateFence(AtomicOrdering::Acquire, SSID.value());
 
   return nullptr;
 }

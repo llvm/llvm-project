@@ -686,6 +686,11 @@ bool CompilerInstanceWithContext::computeDependencies(
   assert(CIPtr && "CIPtr must be initialized before calling this method");
   auto &CI = *CIPtr;
 
+  // We need to reset the diagnostics, so that the diagnostics issued
+  // during a previous computeDependencies call do not affect the current call.
+  // If we do not reset, we may inherit fatal errors from a previous call.
+  CI.getDiagnostics().Reset();
+
   // We create this cleanup object because computeDependencies may exit
   // early with errors.
   llvm::scope_exit CleanUp([&]() {

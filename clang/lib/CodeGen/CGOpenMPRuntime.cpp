@@ -1098,6 +1098,8 @@ emitCombinerOrInitializer(CodeGenModule &CGM, QualType Ty,
   auto *Fn = llvm::Function::Create(FnTy, llvm::GlobalValue::InternalLinkage,
                                     Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   if (CGM.getCodeGenOpts().OptimizationLevel != 0) {
     Fn->removeFnAttr(llvm::Attribute::NoInline);
     Fn->removeFnAttr(llvm::Attribute::OptimizeNone);
@@ -2269,6 +2271,8 @@ static llvm::Value *emitCopyprivateCopyFunction(
                                     llvm::GlobalValue::InternalLinkage, Name,
                                     &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, CGFI);
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   Fn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, CGFI, Args, Loc, Loc);
@@ -3143,6 +3147,8 @@ emitProxyTaskFunction(CodeGenModule &CGM, SourceLocation Loc,
   auto *TaskEntry = llvm::Function::Create(
       TaskEntryTy, llvm::GlobalValue::InternalLinkage, Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), TaskEntry, TaskEntryFnInfo);
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    TaskEntry->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   TaskEntry->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), KmpInt32Ty, TaskEntry, TaskEntryFnInfo, Args,
@@ -3248,6 +3254,8 @@ static llvm::Value *emitDestructorsFunction(CodeGenModule &CGM,
                              Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), DestructorFn,
                                     DestructorFnInfo);
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    DestructorFn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   DestructorFn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), KmpInt32Ty, DestructorFn, DestructorFnInfo,
@@ -3351,6 +3359,9 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
       &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), TaskPrivatesMap,
                                     TaskPrivatesMapFnInfo);
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    TaskPrivatesMap->addFnAttr("sample-profile-suffix-elision-policy",
+                               "selected");
   if (CGM.getCodeGenOpts().OptimizationLevel != 0) {
     TaskPrivatesMap->removeFnAttr(llvm::Attribute::NoInline);
     TaskPrivatesMap->removeFnAttr(llvm::Attribute::OptimizeNone);
@@ -3555,6 +3566,8 @@ emitTaskDupFunction(CodeGenModule &CGM, SourceLocation Loc,
   auto *TaskDup = llvm::Function::Create(
       TaskDupTy, llvm::GlobalValue::InternalLinkage, Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), TaskDup, TaskDupFnInfo);
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    TaskDup->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   TaskDup->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, TaskDup, TaskDupFnInfo, Args, Loc,
@@ -4971,6 +4984,8 @@ llvm::Function *CGOpenMPRuntime::emitReductionFunction(
                                     llvm::GlobalValue::InternalLinkage, Name,
                                     &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, CGFI);
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   Fn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, CGFI, Args, Loc, Loc);
@@ -5684,6 +5699,8 @@ static llvm::Value *emitReduceInitFunction(CodeGenModule &CGM,
   auto *Fn = llvm::Function::Create(FnTy, llvm::GlobalValue::InternalLinkage,
                                     Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   Fn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, FnInfo, Args, Loc, Loc);
@@ -5754,6 +5771,8 @@ static llvm::Value *emitReduceCombFunction(CodeGenModule &CGM,
   auto *Fn = llvm::Function::Create(FnTy, llvm::GlobalValue::InternalLinkage,
                                     Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   Fn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, FnInfo, Args, Loc, Loc);
@@ -5822,6 +5841,8 @@ static llvm::Value *emitReduceFiniFunction(CodeGenModule &CGM,
   auto *Fn = llvm::Function::Create(FnTy, llvm::GlobalValue::InternalLinkage,
                                     Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   Fn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, FnInfo, Args, Loc, Loc);
@@ -10473,10 +10494,8 @@ getNestedDistributeDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
 ///                                           void *base, void *begin,
 ///                                           int64_t size, int64_t type,
 ///                                           void *name = nullptr) {
-///   // Allocate space for an array section first or add a base/begin for
-///   // pointer dereference.
-///   if ((size > 1 || (base != begin && maptype.IsPtrAndObj)) &&
-///       !maptype.IsDelete)
+///   // Allocate space for an array section first.
+///   if ((size > 1 || (base != begin)) && !maptype.IsDelete)
 ///     __tgt_push_mapper_component(rt_mapper_handle, base, begin,
 ///                                 size*sizeof(Ty), clearToFromMember(type));
 ///   // Map members.

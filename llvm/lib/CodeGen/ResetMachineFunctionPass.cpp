@@ -60,26 +60,36 @@ namespace {
       llvm::scope_exit ClearVRegTypesOnReturn(
           [&MF]() { MF.getRegInfo().clearVirtRegTypes(); });
 
-      if (MF.getProperties().hasFailedISel()) {
-        if (AbortOnFailedISel)
-          report_fatal_error("Instruction selection failed");
-        LLVM_DEBUG(dbgs() << "Resetting: " << MF.getName() << '\n');
-        ++NumFunctionsReset;
+      if (!MF.getProperties().hasFailedISel())
+        return false;
+
+      if (AbortOnFailedISel)
+        report_fatal_error("Instruction selection failed");
+
+      LLVM_DEBUG(dbgs() << "Resetting: " << MF.getName() << '\n');
+      ++NumFunctionsReset;
+
+      if (MF.empty()) {
+        // Nothing was materialized in the MachineFunction, so avoid the cost of
+        // tearing down and rebuilding all of the per-function state. Just clear
+        // the FailedISel bit so the SelectionDAG pipeline can proceed.
+        auto &Props = MF.getProperties();
+        Props.resetToInitial();
+      } else {
         MF.reset();
         MF.initTargetMachineFunctionInfo(MF.getSubtarget());
 
         const TargetMachine &TM = MF.getTarget();
         // MRI callback for target specific initializations.
         TM.registerMachineRegisterInfoCallback(MF);
-
-        if (EmitFallbackDiag) {
-          const Function &F = MF.getFunction();
-          DiagnosticInfoISelFallback DiagFallback(F);
-          F.getContext().diagnose(DiagFallback);
-        }
-        return true;
       }
-      return false;
+
+      if (EmitFallbackDiag) {
+        const Function &F = MF.getFunction();
+        DiagnosticInfoISelFallback DiagFallback(F);
+        F.getContext().diagnose(DiagFallback);
+      }
+      return true;
     }
 
   };

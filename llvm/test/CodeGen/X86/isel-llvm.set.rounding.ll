@@ -117,10 +117,7 @@ define void @func_02() nounwind {
 ; GISEL-X86-NOSSE:       # %bb.0:
 ; GISEL-X86-NOSSE-NEXT:    pushl %eax
 ; GISEL-X86-NOSSE-NEXT:    fnstcw (%esp)
-; GISEL-X86-NOSSE-NEXT:    movw $-3073, %ax # imm = 0xF3FF
-; GISEL-X86-NOSSE-NEXT:    andw (%esp), %ax
-; GISEL-X86-NOSSE-NEXT:    orw $0, %ax
-; GISEL-X86-NOSSE-NEXT:    movw %ax, (%esp)
+; GISEL-X86-NOSSE-NEXT:    andw $-3073, (%esp) # imm = 0xF3FF
 ; GISEL-X86-NOSSE-NEXT:    fldcw (%esp)
 ; GISEL-X86-NOSSE-NEXT:    popl %eax
 ; GISEL-X86-NOSSE-NEXT:    retl
@@ -135,10 +132,7 @@ define void @func_02() nounwind {
 ; GISEL-X64-NOSSE-LABEL: func_02:
 ; GISEL-X64-NOSSE:       # %bb.0:
 ; GISEL-X64-NOSSE-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
-; GISEL-X64-NOSSE-NEXT:    movw $-3073, %ax # imm = 0xF3FF
-; GISEL-X64-NOSSE-NEXT:    andw -{{[0-9]+}}(%rsp), %ax
-; GISEL-X64-NOSSE-NEXT:    orw $0, %ax
-; GISEL-X64-NOSSE-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; GISEL-X64-NOSSE-NEXT:    andw $-3073, -{{[0-9]+}}(%rsp) # imm = 0xF3FF
 ; GISEL-X64-NOSSE-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; GISEL-X64-NOSSE-NEXT:    retq
 ;
@@ -155,10 +149,7 @@ define void @func_02() nounwind {
 ; GISEL-X86:       # %bb.0:
 ; GISEL-X86-NEXT:    pushl %eax
 ; GISEL-X86-NEXT:    fnstcw (%esp)
-; GISEL-X86-NEXT:    movw $-3073, %ax # imm = 0xF3FF
-; GISEL-X86-NEXT:    andw (%esp), %ax
-; GISEL-X86-NEXT:    orw $0, %ax
-; GISEL-X86-NEXT:    movw %ax, (%esp)
+; GISEL-X86-NEXT:    andw $-3073, (%esp) # imm = 0xF3FF
 ; GISEL-X86-NEXT:    fldcw (%esp)
 ; GISEL-X86-NEXT:    popl %eax
 ; GISEL-X86-NEXT:    retl
@@ -176,16 +167,10 @@ define void @func_02() nounwind {
 ; GISEL-X64-LABEL: func_02:
 ; GISEL-X64:       # %bb.0:
 ; GISEL-X64-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    movw $-3073, %ax # imm = 0xF3FF
-; GISEL-X64-NEXT:    andw -{{[0-9]+}}(%rsp), %ax
-; GISEL-X64-NEXT:    orw $0, %ax
-; GISEL-X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    andw $-3073, -{{[0-9]+}}(%rsp) # imm = 0xF3FF
 ; GISEL-X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; GISEL-X64-NEXT:    stmxcsr -{{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    movl $-24577, %eax # imm = 0x9FFF
-; GISEL-X64-NEXT:    andl -{{[0-9]+}}(%rsp), %eax
-; GISEL-X64-NEXT:    orl $0, %eax
-; GISEL-X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    andl $-24577, -{{[0-9]+}}(%rsp) # imm = 0x9FFF
 ; GISEL-X64-NEXT:    ldmxcsr -{{[0-9]+}}(%rsp)
 ; GISEL-X64-NEXT:    retq
   call void @llvm.set.rounding(i32 1)  ; ToNearestTiesToEven (CW[11-10] = 00)

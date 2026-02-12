@@ -666,6 +666,15 @@ public:
     return false;
   }
 
+  /// Checks whether the pointer can be dereferenced to the given PrimType.
+  bool canDeref(PrimType T) const {
+    if (const Descriptor *FieldDesc = getFieldDesc()) {
+      return (FieldDesc->isPrimitive() || FieldDesc->isPrimitiveArray()) &&
+             FieldDesc->getPrimType() == T;
+    }
+    return false;
+  }
+
   /// Dereferences the pointer, if it's live.
   template <typename T> T &deref() const {
     assert(isLive() && "Invalid pointer");

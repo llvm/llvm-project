@@ -1043,8 +1043,7 @@ define <1 x i64> @smulh_v1i64(<1 x i64> %op1, <1 x i64> %op2) {
 ; NONEON-NOSVE-NEXT:    fmov x8, d0
 ; NONEON-NOSVE-NEXT:    fmov x9, d1
 ; NONEON-NOSVE-NEXT:    smulh x8, x8, x9
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %1 = sext <1 x i64> %op1 to <1 x i128>
@@ -1075,9 +1074,7 @@ define <2 x i64> @smulh_v2i64(<2 x i64> %op1, <2 x i64> %op2) {
 ; NONEON-NOSVE-NEXT:    ldp x11, x10, [sp, #16]
 ; NONEON-NOSVE-NEXT:    smulh x8, x8, x10
 ; NONEON-NOSVE-NEXT:    smulh x9, x9, x11
-; NONEON-NOSVE-NEXT:    stp x9, x8, [sp, #32]
-; NONEON-NOSVE-NEXT:    ldp d0, d1, [sp, #32]
-; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #48]
+; NONEON-NOSVE-NEXT:    stp x9, x8, [sp, #48]
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #48]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
@@ -1125,12 +1122,8 @@ define void @smulh_v4i64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    smulh x11, x11, x13
 ; NONEON-NOSVE-NEXT:    smulh x8, x8, x12
 ; NONEON-NOSVE-NEXT:    smulh x9, x9, x14
-; NONEON-NOSVE-NEXT:    stp x11, x10, [sp, #64]
-; NONEON-NOSVE-NEXT:    stp x9, x8, [sp, #80]
-; NONEON-NOSVE-NEXT:    ldp d0, d1, [sp, #80]
-; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #112]
-; NONEON-NOSVE-NEXT:    ldp d0, d1, [sp, #64]
-; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #96]
+; NONEON-NOSVE-NEXT:    stp x11, x10, [sp, #96]
+; NONEON-NOSVE-NEXT:    stp x9, x8, [sp, #112]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #96]
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [x0]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #128
@@ -2178,8 +2171,7 @@ define <1 x i64> @umulh_v1i64(<1 x i64> %op1, <1 x i64> %op2) {
 ; NONEON-NOSVE-NEXT:    fmov x8, d0
 ; NONEON-NOSVE-NEXT:    fmov x9, d1
 ; NONEON-NOSVE-NEXT:    umulh x8, x8, x9
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %1 = zext <1 x i64> %op1 to <1 x i128>
@@ -2210,9 +2202,7 @@ define <2 x i64> @umulh_v2i64(<2 x i64> %op1, <2 x i64> %op2) {
 ; NONEON-NOSVE-NEXT:    ldp x11, x10, [sp, #16]
 ; NONEON-NOSVE-NEXT:    umulh x8, x8, x10
 ; NONEON-NOSVE-NEXT:    umulh x9, x9, x11
-; NONEON-NOSVE-NEXT:    stp x9, x8, [sp, #32]
-; NONEON-NOSVE-NEXT:    ldp d0, d1, [sp, #32]
-; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #48]
+; NONEON-NOSVE-NEXT:    stp x9, x8, [sp, #48]
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #48]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
@@ -2260,12 +2250,8 @@ define void @umulh_v4i64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    umulh x11, x11, x13
 ; NONEON-NOSVE-NEXT:    umulh x8, x8, x12
 ; NONEON-NOSVE-NEXT:    umulh x9, x9, x14
-; NONEON-NOSVE-NEXT:    stp x11, x10, [sp, #64]
-; NONEON-NOSVE-NEXT:    stp x9, x8, [sp, #80]
-; NONEON-NOSVE-NEXT:    ldp d0, d1, [sp, #80]
-; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #112]
-; NONEON-NOSVE-NEXT:    ldp d0, d1, [sp, #64]
-; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #96]
+; NONEON-NOSVE-NEXT:    stp x11, x10, [sp, #96]
+; NONEON-NOSVE-NEXT:    stp x9, x8, [sp, #112]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #96]
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [x0]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #128

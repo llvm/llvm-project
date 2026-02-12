@@ -996,15 +996,18 @@ PdbAstBuilderClang::CreateFunctionDeclFromId(PdbTypeSymId func_tid,
   SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
       m_clang.GetSymbolFile()->GetBackingSymbolFile());
   PdbIndex &index = pdb->GetIndex();
-  CVType func_cvt = index.ipi().getType(func_tid.index);
+  std::optional<CVType> func_cvt =
+      index.ipi().typeCollection().tryGetType(func_tid.index);
+  if (!func_cvt)
+    return nullptr;
   llvm::StringRef func_name;
   TypeIndex func_ti;
   clang::DeclContext *parent = nullptr;
-  switch (func_cvt.kind()) {
+  switch (func_cvt->kind()) {
   case LF_MFUNC_ID: {
     MemberFuncIdRecord mfr;
     cantFail(
-        TypeDeserializer::deserializeAs<MemberFuncIdRecord>(func_cvt, mfr));
+        TypeDeserializer::deserializeAs<MemberFuncIdRecord>(*func_cvt, mfr));
     func_name = mfr.getName();
     func_ti = mfr.getFunctionType();
     PdbTypeSymId class_type_id(mfr.ClassType, false);
@@ -1013,7 +1016,7 @@ PdbAstBuilderClang::CreateFunctionDeclFromId(PdbTypeSymId func_tid,
   }
   case LF_FUNC_ID: {
     FuncIdRecord fir;
-    cantFail(TypeDeserializer::deserializeAs<FuncIdRecord>(func_cvt, fir));
+    cantFail(TypeDeserializer::deserializeAs<FuncIdRecord>(*func_cvt, fir));
     func_name = fir.getName();
     func_ti = fir.getFunctionType();
     parent = FromCompilerDeclContext(GetTranslationUnitDecl());
@@ -1504,7 +1507,9 @@ PdbAstBuilderClang::ToCompilerDeclContext(clang::DeclContext *context) {
 }
 
 clang::Decl *PdbAstBuilderClang::FromCompilerDecl(CompilerDecl decl) {
-  return ClangUtil::GetDecl(decl);
+  if (decl.GetTypeSystem() != nullptr)
+    return ClangUtil::GetDecl(decl);
+  return nullptr;
 }
 
 clang::DeclContext *

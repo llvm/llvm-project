@@ -203,6 +203,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL_FIELD(KeepEmptyLines.AtStartOfBlock,
                          "KeepEmptyLinesAtTheStartOfBlocks");
   CHECK_PARSE_BOOL(KeepFormFeed);
+  CHECK_PARSE_BOOL(ObjCSpaceAfterMethodDeclarationPrefix);
   CHECK_PARSE_BOOL(ObjCSpaceAfterProperty);
   CHECK_PARSE_BOOL(ObjCSpaceBeforeProtocolList);
   CHECK_PARSE_BOOL(RemoveBracesLLVM);

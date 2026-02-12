@@ -324,9 +324,9 @@ void DebugInfoFinder::processSubprogram(DISubprogram *SP) {
   }
 
   SP->forEachRetainedNode(
-      [this](const DILocalVariable *LV) { processVariable(LV); },
-      [](const DILabel *L) {},
-      [this](const DIImportedEntity *IE) { processImportedEntity(IE); });
+      [this](DILocalVariable *LV) { processVariable(LV); }, [](DILabel *L) {},
+      [this](DIImportedEntity *IE) { processImportedEntity(IE); },
+      [this](DIType *T) { processType(T); });
 }
 
 void DebugInfoFinder::processVariable(const DILocalVariable *DV) {

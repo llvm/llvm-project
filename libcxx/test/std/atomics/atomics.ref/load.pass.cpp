@@ -23,7 +23,7 @@
 template <typename T>
 struct TestLoad {
   void operator()() const {
-    T x(T(1));
+    alignas(std::atomic_ref<T>::required_alignment) T x(T(1));
     std::atomic_ref<T> const a(x);
 
     {

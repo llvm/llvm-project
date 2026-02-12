@@ -296,8 +296,8 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC,
 
   // And in any case, remove the fixed parameters (the non-variadic ones)
   // at the end.
-  for (PrimType Ty : Func->args_reverse())
-    TYPE_SWITCH(Ty, S.Stk.discard<T>());
+  for (const Function::ParamDescriptor &PDesc : Func->args_reverse())
+    TYPE_SWITCH(PDesc.T, S.Stk.discard<T>());
 }
 
 bool isConstexprUnknown(const Pointer &P) {
@@ -1548,6 +1548,8 @@ bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckTemporary(S, OpPC, Ptr.block(), AK_Destroy))
     return false;
   if (!CheckRange(S, OpPC, Ptr, AK_Destroy))
+    return false;
+  if (!CheckLifetime(S, OpPC, Ptr.getLifetime(), AK_Destroy))
     return false;
 
   // Can't call a dtor on a global variable.

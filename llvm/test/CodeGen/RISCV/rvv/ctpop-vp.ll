@@ -2388,7 +2388,7 @@ define <vscale x 1 x i9> @vp_ctpop_nxv1i9(<vscale x 1 x i9> %va, <vscale x 1 x i
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 511
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; CHECK-NEXT:    vand.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    vand.vx v8, v8, a1
 ; CHECK-NEXT:    lui a0, 5
 ; CHECK-NEXT:    addi a0, a0, 1365
 ; CHECK-NEXT:    vsrl.vi v9, v8, 1, v0.t
@@ -2414,7 +2414,7 @@ define <vscale x 1 x i9> @vp_ctpop_nxv1i9(<vscale x 1 x i9> %va, <vscale x 1 x i
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    li a1, 511
 ; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; CHECK-ZVBB-NEXT:    vand.vx v8, v8, a1, v0.t
+; CHECK-ZVBB-NEXT:    vand.vx v8, v8, a1
 ; CHECK-ZVBB-NEXT:    vcpop.v v8, v8, v0.t
 ; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 1 x i9> @llvm.vp.ctpop.nxv1i9(<vscale x 1 x i9> %va, <vscale x 1 x i1> %m, i32 %evl)

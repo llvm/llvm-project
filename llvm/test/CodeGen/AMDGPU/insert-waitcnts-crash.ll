@@ -221,15 +221,15 @@ define fastcc i32 @foo() {
   ; CHECK-NEXT:   $sgpr16 = S_MOV_B32 $sgpr33
   ; CHECK-NEXT:   $sgpr33 = S_MOV_B32 $sgpr32
   ; CHECK-NEXT:   $sgpr17 = S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-  ; CHECK-NEXT:   BUFFER_STORE_DWORD_OFFSET $vgpr40, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.1, addrspace 5)
+  ; CHECK-NEXT:   BUFFER_STORE_DWORD_OFFSET $vgpr40, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr33, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.1, addrspace 5)
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $vgpr40, 0
   ; CHECK-NEXT:   $exec_lo = S_MOV_B32 killed $sgpr17
   ; CHECK-NEXT:   $vgpr40 = V_WRITELANE_B32 killed $sgpr16, 2, undef $vgpr40
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr33, $vgpr40, 2, 32
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_register $sgpr33
-  ; CHECK-NEXT:   $vgpr40 = V_WRITELANE_B32 killed $sgpr30, 0, $vgpr40
+  ; CHECK-NEXT:   $vgpr40 = V_WRITELANE_B32 killed $sgpr30, 0, $vgpr40, implicit-def $sgpr30_sgpr31, implicit $sgpr30_sgpr31
   ; CHECK-NEXT:   $sgpr32 = frame-setup S_ADDK_I32 $sgpr32, 512, implicit-def dead $scc
-  ; CHECK-NEXT:   $vgpr40 = V_WRITELANE_B32 killed $sgpr31, 1, $vgpr40
+  ; CHECK-NEXT:   $vgpr40 = V_WRITELANE_B32 killed $sgpr31, 1, $vgpr40, implicit $sgpr30_sgpr31
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $pc_reg, $vgpr40, 0, 32, $vgpr40, 1, 32
   ; CHECK-NEXT:   BUNDLE implicit-def $sgpr16_sgpr17, implicit-def $sgpr16, implicit-def $scc, implicit-def $sgpr17 {
   ; CHECK-NEXT:     $sgpr16_sgpr17 = S_GETPC_B64
@@ -251,12 +251,12 @@ define fastcc i32 @foo() {
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc_lo
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.DummyReturnBlock:
-  ; CHECK-NEXT:   $sgpr30 = V_READLANE_B32 $vgpr40, 0
+  ; CHECK-NEXT:   $sgpr30 = V_READLANE_B32 $vgpr40, 0, implicit-def $sgpr30_sgpr31
   ; CHECK-NEXT:   $sgpr31 = V_READLANE_B32 $vgpr40, 1
   ; CHECK-NEXT:   $sgpr32 = S_MOV_B32 $sgpr33
   ; CHECK-NEXT:   $sgpr4 = V_READLANE_B32 $vgpr40, 2
   ; CHECK-NEXT:   $sgpr5 = S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-  ; CHECK-NEXT:   $vgpr40 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.1, addrspace 5)
+  ; CHECK-NEXT:   $vgpr40 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr33, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.1, addrspace 5)
   ; CHECK-NEXT:   $exec_lo = S_MOV_B32 killed $sgpr5
   ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION def_cfa_register $sgpr32
   ; CHECK-NEXT:   $sgpr33 = S_MOV_B32 killed $sgpr4

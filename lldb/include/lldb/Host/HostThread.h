@@ -42,6 +42,7 @@ public:
   lldb::thread_result_t GetResult() const;
 
   bool EqualsThread(lldb::thread_t thread) const;
+  bool EqualsThread(const HostThread &thread) const;
 
   bool HasThread() const;
 

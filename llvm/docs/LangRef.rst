@@ -470,7 +470,7 @@ added in the future:
     registers to pass arguments. This attribute doesn't impact non-general
     purpose registers (e.g., floating point registers, on X86 XMMs/YMMs).
     Non-general purpose registers still follow the standard C calling
-    convention. Currently it is for x86_64 and AArch64 only.
+    convention. Currently it is for x86_64, AArch64 and LoongArch only.
 "``cxx_fast_tlscc``" - The `CXX_FAST_TLS` calling convention for access functions
     Clang generates an access function to access C++-style Thread Local Storage
     (TLS). The access function generally has an entry block, an exit block and an
@@ -1671,7 +1671,7 @@ Currently, only the following parameter attributes are defined:
    This does not depend on the floating-point environment. For
    example, a function parameter marked ``nofpclass(zero)`` indicates
    no zero inputs. If this is applied to an argument in a function
-   marked with :ref:`\"denormal-fp-math\" <denormal_fp_math>`
+   marked with :ref:`denormal_fpenv <denormal_fpenv>`
    indicating zero treatment of input denormals, it does not imply the
    value cannot be a denormal value which would compare equal to 0.
 
@@ -2655,28 +2655,28 @@ For example:
     might otherwise be set or cleared by calling this function. LLVM will
     not introduce any new floating-point instructions that may trap.
 
-.. _denormal_fp_math:
+.. _denormal_fpenv:
 
-``"denormal-fp-math"``
+``denormal_fpenv``
     This indicates the denormal (subnormal) handling that may be
-    assumed for the default floating-point environment. This is a
-    comma separated pair. The elements may be one of ``"ieee"``,
-    ``"preserve-sign"``, ``"positive-zero"``, or ``"dynamic"``. The
-    first entry indicates the flushing mode for the result of floating
-    point operations. The second indicates the handling of denormal inputs
+    assumed for the default floating-point environment. The base form
+    is a ``|`` separated pair. The elements may be one of ``ieee``,
+    ``preservesign``, ``positivezero``, or ``dynamic``. The first
+    entry indicates the flushing mode for the result of floating point
+    operations. The second indicates the handling of denormal inputs
     to floating point instructions. For compatibility with older
     bitcode, if the second value is omitted, both input and output
     modes will assume the same mode.
 
-    If this is attribute is not specified, the default is ``"ieee,ieee"``.
+    If this is attribute is not specified, the default is ``ieee|ieee``.
 
-    If the output mode is ``"preserve-sign"``, or ``"positive-zero"``,
+    If the output mode is ``preservesign``, or ``positivezero``,
     denormal outputs may be flushed to zero by standard floating-point
     operations. It is not mandated that flushing to zero occurs, but if
     a denormal output is flushed to zero, it must respect the sign
     mode. Not all targets support all modes.
 
-    If the mode is ``"dynamic"``, the behavior is derived from the
+    If the mode is ``dynamic``, the behavior is derived from the
     dynamic state of the floating-point environment. Transformations
     which depend on the behavior of denormal values should not be
     performed.
@@ -2686,19 +2686,30 @@ For example:
     the mode is consistent. User or platform code is expected to set
     the floating point mode appropriately before function entry.
 
-    If the input mode is ``"preserve-sign"``, or ``"positive-zero"``,
+    This may optionally specify a second pair, prefixed with
+    ``float:``. This provides an override for the behavior of 32-bit
+    float type (or vectors of 32-bit floats).
+
+    If the input mode is ``preservesign``, or ``positivezero``,
     a floating-point operation must treat any input denormal value as
     zero. In some situations, if an instruction does not respect this
     mode, the input may need to be converted to 0 as if by
     ``@llvm.canonicalize`` during lowering for correctness.
 
-``"denormal-fp-math-f32"``
-    Same as ``"denormal-fp-math"``, but only controls the behavior of
-    the 32-bit float type (or vectors of 32-bit floats). If both are
-    are present, this overrides ``"denormal-fp-math"``. Not all targets
-    support separately setting the denormal mode per type, and no
-    attempt is made to diagnose unsupported uses. Currently this
+    This may optionally specify a second pair, prefixed with
+    ``float:``. This provides an override for the behavior of 32-bit
+    float type. (or vectors of 32-bit floats). If this is present,
+    this overrides the base handling of the default mode. Not all
+    targets support separately setting the denormal mode per type, and
+    no attempt is made to diagnose unsupported uses. Currently this
     attribute is respected by the AMDGPU and NVPTX backends.
+
+:Examples:
+   ``denormal_fpenv(preservesign)``
+   ``denormal_fpenv(float: preservesign)``
+   ``denormal_fpenv(dynamic, float: preservesign|ieee)``
+   ``denormal_fpenv(ieee|ieee, float: preservesign|preservesign)``
+   ``denormal_fpenv(ieee|dynamic, float: preservesign|ieee)``
 
 ``"thunk"``
     This attribute indicates that the function will delegate to some other
@@ -4013,10 +4024,11 @@ not have side effects and may be speculated freely. Results assume the
 round-to-nearest rounding mode, and subnormals are assumed to be preserved.
 
 Running LLVM code in an environment where these assumptions are not met
-typically leads to undefined behavior. The ``strictfp`` and ``denormal-fp-math``
-attributes as well as :ref:`Constrained Floating-Point Intrinsics
-<constrainedfp>` can be used to weaken LLVM's assumptions and ensure defined
-behavior in non-default floating-point environments; see their respective
+typically leads to undefined behavior. The ``strictfp`` and
+:ref:`denormal_fpenv <denormal_fpenv>` attributes as well as
+:ref:`Constrained Floating-Point Intrinsics <constrainedfp>` can be
+used to weaken LLVM's assumptions and ensure defined behavior in
+non-default floating-point environments; see their respective
 documentation for details.
 
 .. _floatnan:
@@ -4119,7 +4131,7 @@ exceptions.)
 Various flags, attributes, and metadata can alter the behavior of these
 operations and thus make them not bit-identical across machines and optimization
 levels any more: most notably, the :ref:`fast-math flags <fastmath>` as well as
-the :ref:`strictfp <strictfp>` and :ref:`denormal-fp-math <denormal_fp_math>`
+the :ref:`strictfp <strictfp>` and :ref:`denormal_fpenv <denormal_fpenv>`
 attributes and :ref:`!fpmath metadata <fpmath-metadata>`. See their
 corresponding documentation for details.
 
@@ -12751,8 +12763,8 @@ Example:
       %X = uitofp i32 257 to float         ; yields float:257.0
       %Y = uitofp i8 -1 to double          ; yields double:255.0
 
-      %a = uitofp nneg i32 256 to i32      ; yields float:256.0
-      %b = uitofp nneg i32 -256 to i32     ; yields i32 poison
+      %a = uitofp nneg i32 256 to float    ; yields float:256.0
+      %b = uitofp nneg i32 -256 to float   ; yields float poison
 
 '``sitofp .. to``' Instruction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -30256,8 +30268,8 @@ normal value. The function never raises floating-point exceptions. The
 function does not canonicalize its input value and does not depend
 on the floating-point environment. If the floating-point environment
 has a zeroing treatment of subnormal input values (such as indicated
-by the ``"denormal-fp-math"`` attribute), a subnormal value will be
-observed (will not be implicitly treated as zero).
+by the :ref:`denormal_fpenv <denormal_fpenv>` attribute), a subnormal
+value will be observed (will not be implicitly treated as zero).
 
 
 General Intrinsics

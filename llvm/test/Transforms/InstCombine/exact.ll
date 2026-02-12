@@ -150,8 +150,7 @@ define <2 x i1> @ashr_icmp2_vec(<2 x i64> %X) {
 ; Make sure we don't transform the ashr here into an sdiv
 define i1 @pr9998(i32 %V) {
 ; CHECK-LABEL: @pr9998(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[V:%.*]], 1
-; CHECK-NEXT:    [[Z:%.*]] = icmp ne i32 [[TMP1]], 0
+; CHECK-NEXT:    [[Z:%.*]] = trunc i32 [[V:%.*]] to i1
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
   %W = shl i32 %V, 31

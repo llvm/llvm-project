@@ -64,7 +64,6 @@ DEPENDENTS_TO_TEST = {
         "mlir",
         "polly",
         "flang",
-        "libclc",
         "openmp",
     },
 }
@@ -83,7 +82,7 @@ DEPENDENT_RUNTIMES_TO_TEST = {
     "compiler-rt": {"compiler-rt"},
     "flang": {"flang-rt"},
     "flang-rt": {"flang-rt"},
-    ".ci": {"compiler-rt", "libc", "flang-rt"},
+    ".ci": {"compiler-rt", "libc", "flang-rt", "libclc"},
 }
 DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {
     "llvm": {"libcxx", "libcxxabi", "libunwind"},

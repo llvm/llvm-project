@@ -429,7 +429,7 @@ def any_riscv_fsetccs_vl : PatFrags<(ops node:$lhs, node:$rhs, node:$cc, node:$p
 let HasMaskOp = true in {
   // Matches the semantics of vrgather.vx and vrgather.vv with extra operands
   // for passthru and VL, except that out of bound indices result in a poison
-  // result not zero.  Operands are (src, index, mask, passthru, vl).
+  // result not zero.  Operands are (src, index, passthru, mask, vl).
   def riscv_vrgather_vx_vl : RVSDNode<"VRGATHER_VX_VL",
                                       SDTypeProfile<1, 5, [SDTCisVec<0>,
                                                           SDTCisSameAs<0, 1>,
@@ -912,9 +912,10 @@ class VPatBinaryVL_XI<SDPatternOperator vop,
 
 multiclass VPatBinaryVL_VV_VX<SDPatternOperator vop, string instruction_name,
                               list<VTypeInfo> vtilist = AllIntegerVectors,
-                              bit isSEWAware = 0> {
+                              bit isSEWAware = 0,
+                              list<Predicate> ExtraPreds = []> {
   foreach vti = vtilist in {
-    let Predicates = GetVTypePredicates<vti>.Predicates in {
+    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in {
       def : VPatBinaryVL_V<vop, instruction_name, "VV",
                            vti.Vector, vti.Vector, vti.Vector, vti.Mask,
                            vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
@@ -928,10 +929,11 @@ multiclass VPatBinaryVL_VV_VX<SDPatternOperator vop, string instruction_name,
 }
 
 multiclass VPatBinaryVL_VV_VX_VI<SDPatternOperator vop, string instruction_name,
-                                 Operand ImmType = simm5>
-    : VPatBinaryVL_VV_VX<vop, instruction_name> {
+                                 Operand ImmType = simm5,
+                                 list<Predicate> ExtraPreds = []>
+    : VPatBinaryVL_VV_VX<vop, instruction_name, ExtraPreds=ExtraPreds> {
   foreach vti = AllIntegerVectors in {
-    let Predicates = GetVTypePredicates<vti>.Predicates in
+    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in
     def : VPatBinaryVL_XI<vop, instruction_name, "VI",
                           vti.Vector, vti.Vector, vti.Vector, vti.Mask,
                           vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,

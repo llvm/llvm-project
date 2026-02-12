@@ -1549,6 +1549,7 @@ module std [system] {
     module sortable                   { header "__iterator/sortable.h" }
     module static_bounded_iter        { header "__iterator/static_bounded_iter.h" }
     module unreachable_sentinel       { header "__iterator/unreachable_sentinel.h" }
+    module capacity_aware_iterator    { header "__iterator/capacity_aware_iterator.h" }
     module wrap_iter                  { header "__iterator/wrap_iter.h" }
 
     header "iterator"

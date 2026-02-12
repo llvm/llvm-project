@@ -13,7 +13,7 @@
 
 namespace clang::tidy::utils::lexer {
 
-std::pair<Token, SourceLocation>
+std::pair<std::optional<Token>, SourceLocation>
 getPreviousTokenAndStart(SourceLocation Location, const SourceManager &SM,
                          const LangOptions &LangOpts, bool SkipComments) {
   const std::optional<Token> Tok =
@@ -22,13 +22,13 @@ getPreviousTokenAndStart(SourceLocation Location, const SourceManager &SM,
   if (Tok.has_value())
     return {*Tok, Lexer::GetBeginningOfToken(Tok->getLocation(), SM, LangOpts)};
 
-  Token Token;
-  Token.setKind(tok::unknown);
-  return {Token, SourceLocation()};
+  return {std::nullopt, SourceLocation()};
 }
 
-Token getPreviousToken(SourceLocation Location, const SourceManager &SM,
-                       const LangOptions &LangOpts, bool SkipComments) {
+std::optional<Token> getPreviousToken(SourceLocation Location,
+                                      const SourceManager &SM,
+                                      const LangOptions &LangOpts,
+                                      bool SkipComments) {
   auto [Token, Start] =
       getPreviousTokenAndStart(Location, SM, LangOpts, SkipComments);
   return Token;

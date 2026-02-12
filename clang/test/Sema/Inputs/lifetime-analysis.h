@@ -16,6 +16,9 @@ template<typename T> struct remove_reference       { typedef T type; };
 template<typename T> struct remove_reference<T &>  { typedef T type; };
 template<typename T> struct remove_reference<T &&> { typedef T type; };
 
+template< class InputIt, class T >
+InputIt find( InputIt first, InputIt last, const T& value );
+
 template<typename T>
 typename remove_reference<T>::type &&move(T &&t) noexcept;
 
@@ -85,6 +88,8 @@ template<class _Mystr> struct iter {
 template<typename T>
 struct basic_string {
   basic_string();
+  basic_string(const basic_string<T> &);
+  basic_string(basic_string<T> &&);
   basic_string(const T *);
   ~basic_string();
   const T *c_str() const;
@@ -96,6 +101,8 @@ using string = basic_string<char>;
 
 template<typename T>
 struct unique_ptr {
+  unique_ptr();
+  unique_ptr(unique_ptr<T>&&);
   ~unique_ptr();
   T &operator*();
   T *get() const;

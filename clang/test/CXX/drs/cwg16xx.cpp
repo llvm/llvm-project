@@ -162,10 +162,10 @@ namespace cwg1653 { // cwg1653: 4 c++17
   void f(bool b) {
     ++b;
     // cxx98-14-warning@-1 {{incrementing expression of type bool is deprecated and incompatible with C++17}}
-    // since-cxx17-error@-2 {{SO C++17 does not allow incrementing expression of type bool}}
+    // since-cxx17-error@-2 {{ISO C++17 does not allow incrementing expression of type bool}}
     b++;
     // cxx98-14-warning@-1 {{incrementing expression of type bool is deprecated and incompatible with C++17}}
-    // since-cxx17-error@-2 {{SO C++17 does not allow incrementing expression of type bool}}
+    // since-cxx17-error@-2 {{ISO C++17 does not allow incrementing expression of type bool}}
     --b;
     // expected-error@-1 {{cannot decrement expression of type bool}}
     b--;
@@ -453,7 +453,7 @@ namespace cwg1696 { // cwg1696: 7
     struct A1 {
       A1() : v(42) {}
       // since-cxx14-error@-1 {{reference member 'v' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
-      // since-cxx14-note@#cwg1696-A1 {{reference member declared here}}
+      //   since-cxx14-note@#cwg1696-A1 {{reference member declared here}}
       const int &v; // #cwg1696-A1
     };
 
@@ -551,7 +551,7 @@ namespace cwg1696 { // cwg1696: 7
     std::initializer_list<int> il = {1, 2, 3}; // #cwg1696-il-5
     haslist5() {}
     // since-cxx11-error@-1 {{backing array for 'std::initializer_list' member 'il' is a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
-    //   since-cxx11-note@#cwg1696-il-5 {{nitializing field 'il' with default member initializer}}
+    //   since-cxx11-note@#cwg1696-il-5 {{initializing field 'il' with default member initializer}}
   };
 #endif
 } // namespace cwg1696

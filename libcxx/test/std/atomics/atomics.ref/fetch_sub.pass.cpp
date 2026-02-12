@@ -38,7 +38,7 @@ template <typename T>
 struct TestFetchSub {
   void operator()() const {
     if constexpr (std::is_arithmetic_v<T>) {
-      T x(T(7));
+      alignas(std::atomic_ref<T>::required_alignment) T x(T(7));
       std::atomic_ref<T> const a(x);
 
       {

@@ -528,11 +528,11 @@ namespace cwg1359 { // cwg1359: 3.5
   union B { constexpr B() = default; int a; }; // #cwg1359-B
   // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr before C++23}}
   union C { constexpr C() = default; int a, b; }; // #cwg1359-C
-  // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr}}
+  // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr before C++23}}
   struct X { constexpr X() = default; union {}; };
   // since-cxx11-error@-1 {{declaration does not declare anything}}
   struct Y { constexpr Y() = default; union { int a; }; }; // #cwg1359-Y
-  // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr}}
+  // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr before C++23}}
 
   constexpr A a = A();
   constexpr B b = B();

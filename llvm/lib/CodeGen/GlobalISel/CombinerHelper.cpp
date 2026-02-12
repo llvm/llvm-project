@@ -3046,13 +3046,6 @@ bool CombinerHelper::matchBinOpSameVal(MachineInstr &MI) const {
                        MRI);
 }
 
-bool CombinerHelper::matchOperandIsZero(MachineInstr &MI,
-                                        unsigned OpIdx) const {
-  return matchConstantOp(MI.getOperand(OpIdx), 0) &&
-         canReplaceReg(MI.getOperand(0).getReg(), MI.getOperand(OpIdx).getReg(),
-                       MRI);
-}
-
 bool CombinerHelper::matchOperandIsUndef(MachineInstr &MI,
                                          unsigned OpIdx) const {
   MachineOperand &MO = MI.getOperand(OpIdx);

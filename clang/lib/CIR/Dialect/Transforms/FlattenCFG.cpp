@@ -662,9 +662,6 @@ void CIRFlattenCFGPass::runOnOperation() {
   // Collect operations to apply patterns.
   llvm::SmallVector<Operation *, 16> ops;
   getOperation()->walk<mlir::WalkOrder::PostOrder>([&](Operation *op) {
-    assert(!cir::MissingFeatures::ifOp());
-    assert(!cir::MissingFeatures::switchOp());
-    assert(!cir::MissingFeatures::tryOp());
     if (isa<IfOp, ScopeOp, SwitchOp, LoopOpInterface, TernaryOp, TryOp>(op))
       ops.push_back(op);
   });

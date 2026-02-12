@@ -93,10 +93,10 @@ MVT SPIRVTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
   return getRegisterType(Context, VT);
 }
 
-bool SPIRVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                             const CallBase &I,
-                                             MachineFunction &MF,
-                                             unsigned Intrinsic) const {
+void SPIRVTargetLowering::getTgtMemIntrinsic(
+    SmallVectorImpl<IntrinsicInfo> &Infos, const CallBase &I,
+    MachineFunction &MF, unsigned Intrinsic) const {
+  IntrinsicInfo Info;
   unsigned AlignIdx = 3;
   switch (Intrinsic) {
   case Intrinsic::spv_load:
@@ -112,13 +112,12 @@ bool SPIRVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = MVT::i64;
     // TODO: take into account opaque pointers (don't use getElementType).
     // MVT::getVT(PtrTy->getElementType());
-    return true;
-    break;
+    Infos.push_back(Info);
+    return;
   }
   default:
     break;
   }
-  return false;
 }
 
 std::pair<unsigned, const TargetRegisterClass *>
@@ -152,14 +151,12 @@ static void doInsertBitcast(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
                             SPIRVType *NewPtrType) {
   MachineIRBuilder MIB(I);
   Register NewReg = createVirtualRegister(NewPtrType, &GR, MRI, MIB.getMF());
-  bool Res = MIB.buildInstr(SPIRV::OpBitcast)
-                 .addDef(NewReg)
-                 .addUse(GR.getSPIRVTypeID(NewPtrType))
-                 .addUse(OpReg)
-                 .constrainAllUses(*STI.getInstrInfo(), *STI.getRegisterInfo(),
-                                   *STI.getRegBankInfo());
-  if (!Res)
-    report_fatal_error("insert validation bitcast: cannot constrain all uses");
+  MIB.buildInstr(SPIRV::OpBitcast)
+      .addDef(NewReg)
+      .addUse(GR.getSPIRVTypeID(NewPtrType))
+      .addUse(OpReg)
+      .constrainAllUses(*STI.getInstrInfo(), *STI.getRegisterInfo(),
+                        *STI.getRegBankInfo());
   I.getOperand(OpIdx).setReg(NewReg);
 }
 
@@ -620,10 +617,11 @@ bool SPIRVTargetLowering::insertLogicalCopyOnResult(
   OldType.setReg(NewTypeReg);
 
   MachineIRBuilder MIB(*I.getNextNode());
-  return MIB.buildInstr(SPIRV::OpCopyLogical)
+  MIB.buildInstr(SPIRV::OpCopyLogical)
       .addDef(OldResultReg)
       .addUse(OldTypeReg)
       .addUse(NewResultReg)
       .constrainAllUses(*STI.getInstrInfo(), *STI.getRegisterInfo(),
                         *STI.getRegBankInfo());
+  return true;
 }

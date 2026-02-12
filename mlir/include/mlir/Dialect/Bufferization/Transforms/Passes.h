@@ -182,8 +182,15 @@ LogicalResult
 promoteBufferResultsToOutParams(ModuleOp module,
                                 const BufferResultsToOutParamsOpts &options);
 
+/// Options for dropping equivalent memref buffer results.
+struct DropBufferResultsOpts {
+  /// If true, signatures of public functions are modified.
+  bool modifyPublicFunctions = false;
+};
+
 /// Drop all memref function results that are equivalent to a function argument.
-LogicalResult dropEquivalentBufferResults(ModuleOp module);
+LogicalResult dropEquivalentBufferResults(
+    ModuleOp module, DropBufferResultsOpts options = DropBufferResultsOpts());
 
 /// Creates a pass that promotes heap-based allocations to stack-based ones.
 /// Only buffers smaller with `isSmallAlloc(alloc) == true` are promoted.

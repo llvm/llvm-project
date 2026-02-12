@@ -681,7 +681,7 @@ static inline Expected<LeafRecord> fromCodeViewRecordImpl(CVType Type) {
   auto Impl = std::make_shared<LeafRecordImpl<T>>(Type.kind());
   if (auto EC = Impl->fromCodeViewRecord(Type))
     return std::move(EC);
-  Result.Leaf = Impl;
+  Result.Leaf = std::move(Impl);
   return Result;
 }
 

@@ -489,7 +489,7 @@ public:
     void eraseCalleeEdge(const ContextEdge *Edge);
     void eraseCallerEdge(const ContextEdge *Edge);
 
-    void setCall(CallInfo C) { Call = C; }
+    void setCall(CallInfo C) { Call = std::move(C); }
 
     bool hasCall() const { return (bool)Call.call(); }
 

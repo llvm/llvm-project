@@ -1,6 +1,7 @@
 add_mlir_unittest(MLIROpenACCTests
   OpenACCOpsTest.cpp
   OpenACCOpsInterfacesTest.cpp
+  OpenACCTypeInterfacesTest.cpp
   OpenACCUtilsTest.cpp
   OpenACCUtilsTilingTest.cpp
   OpenACCUtilsLoopTest.cpp

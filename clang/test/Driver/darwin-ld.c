@@ -198,6 +198,16 @@
 // LINK_DRIVERKIT-NOT: lSystem
 // LINK_DRIVERKIT: libclang_rt.driverkit.a
 
+// RUN: %clang -target arm64-apple-firmware1.0 -fuse-ld= -mlinker-version=400 -resource-dir=%S/Inputs/resource_dir -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=LINK_FIRMWARE %s < %t.log
+// RUN: %clang -target arm64-apple-firmware1.0 -static -fuse-ld= -mlinker-version=400 -resource-dir=%S/Inputs/resource_dir -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=LINK_FIRMWARE %s < %t.log
+// LINK_FIRMWARE: {{ld(.exe)?"}}
+// LINK_FIRMWARE-NOT: crt
+// LINK_FIRMWARE-NOT: lgcc_s.1
+// LINK_FIRMWARE-NOT: lSystem
+// LINK_FIRMWARE: libclang_rt.soft_static.a
+
 // RUN: %clang -target armv7k-apple-watchos2.0 -fuse-ld= -mlinker-version=400 -mwatchos-version-min=2.0 -resource-dir=%S/Inputs/resource_dir -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_WATCHOS_ARM %s < %t.log
 // LINK_WATCHOS_ARM: {{ld(.exe)?"}}

@@ -15,7 +15,7 @@ name: s_getreg_status
 body: |
   bb.0:
     ; GCN-LABEL: name: s_getreg_status
-    ; GCN: S_WAITCNT_DEPCTR 0
+    ; GCN: S_WAITCNT_DEPCTR .VaVdst_0_VaSdst_0_VaSsrc_0_HoldCnt_0_VmVsrc_0_VaVcc_0_SaSdst_0
     ; GCN-NEXT: $sgpr0 = S_GETREG_B32 2, implicit $mode
     $sgpr0 = S_GETREG_B32 2, implicit $mode
 ...
@@ -25,7 +25,7 @@ name: s_getreg_status_masked
 body: |
   bb.0:
     ; GCN-LABEL: name: s_getreg_status_masked
-    ; GCN: S_WAITCNT_DEPCTR 0
+    ; GCN: S_WAITCNT_DEPCTR .VaVdst_0_VaSdst_0_VaSsrc_0_HoldCnt_0_VmVsrc_0_VaVcc_0_SaSdst_0
     ; GCN-NEXT: $sgpr0 = S_GETREG_B32 66, implicit $mode
     $sgpr0 = S_GETREG_B32 66, implicit $mode
 ...
@@ -35,7 +35,7 @@ name: s_getreg_state_priv
 body: |
   bb.0:
     ; GCN-LABEL: name: s_getreg_state_priv
-    ; GCN: S_WAITCNT_DEPCTR 0
+    ; GCN: S_WAITCNT_DEPCTR .VaVdst_0_VaSdst_0_VaSsrc_0_HoldCnt_0_VmVsrc_0_VaVcc_0_SaSdst_0
     ; GCN-NEXT: $sgpr0 = S_GETREG_B32 4, implicit $mode
     $sgpr0 = S_GETREG_B32 4, implicit $mode
 ...
@@ -45,7 +45,7 @@ name: s_getreg_excp_flag_priv
 body: |
   bb.0:
     ; GCN-LABEL: name: s_getreg_excp_flag_priv
-    ; GCN: S_WAITCNT_DEPCTR 0
+    ; GCN: S_WAITCNT_DEPCTR .VaVdst_0_VaSdst_0_VaSsrc_0_HoldCnt_0_VmVsrc_0_VaVcc_0_SaSdst_0
     ; GCN-NEXT: $sgpr0 = S_GETREG_B32 17, implicit $mode
     $sgpr0 = S_GETREG_B32 17, implicit $mode
 ...
@@ -55,7 +55,7 @@ name: s_getreg_excp_flag_user
 body: |
   bb.0:
     ; GCN-LABEL: name: s_getreg_excp_flag_user
-    ; GCN: S_WAITCNT_DEPCTR 0
+    ; GCN: S_WAITCNT_DEPCTR .VaVdst_0_VaSdst_0_VaSsrc_0_HoldCnt_0_VmVsrc_0_VaVcc_0_SaSdst_0
     ; GCN-NEXT: $sgpr0 = S_GETREG_B32 18, implicit $mode
     $sgpr0 = S_GETREG_B32 18, implicit $mode
 ...
@@ -67,7 +67,7 @@ body: |
     ; GCN-LABEL: name: s_getreg_status_in_bundle
     ; GCN: BUNDLE {
     ; GCN-NEXT:   S_NOP 0
-    ; GCN-NEXT:   S_WAITCNT_DEPCTR 0
+    ; GCN-NEXT:   S_WAITCNT_DEPCTR .VaVdst_0_VaSdst_0_VaSsrc_0_HoldCnt_0_VmVsrc_0_VaVcc_0_SaSdst_0
     ; GCN-NEXT:   $sgpr0 = S_GETREG_B32 2, implicit $mode
     ; GCN-NEXT: }
     BUNDLE {
@@ -82,7 +82,7 @@ body: |
   bb.0:
     ; GCN-LABEL: name: s_getreg_status_top_of_bundle
     ; GCN: BUNDLE {
-    ; GCN-NEXT:   S_WAITCNT_DEPCTR 0
+    ; GCN-NEXT:   S_WAITCNT_DEPCTR .VaVdst_0_VaSdst_0_VaSsrc_0_HoldCnt_0_VmVsrc_0_VaVcc_0_SaSdst_0
     ; GCN-NEXT:   $sgpr0 = S_GETREG_B32 2, implicit $mode
     ; GCN-NEXT: }
     BUNDLE {

@@ -1,0 +1,47 @@
+# RUN: llc -mtriple amdgcn-amd-amdhsa -run-pass=amdgpu-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
+
+---
+name:            merge_unmerge
+alignment:       4
+legalized:       true
+liveins:
+body:             |
+  bb.1.entry:
+      liveins: $vgpr0_vgpr1
+
+        ; CHECK-LABEL: name: merge_unmerge
+        ; CHECK: liveins: $vgpr0_vgpr1
+        ; CHECK-NEXT: {{  $}}
+        ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+        ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[COPY]](s64)
+        ; CHECK-NEXT: SI_RETURN implicit $vgpr0_vgpr1
+        %0:_(s64) = COPY $vgpr0_vgpr1
+        %a:_(s32), %b:_(s32) = G_UNMERGE_VALUES %0
+        %merge:_(s64) = G_MERGE_VALUES %a, %b
+        $vgpr0_vgpr1 = COPY %merge(s64)
+        SI_RETURN implicit $vgpr0_vgpr1
+
+...
+---
+name:            merge_unmerge_vector_type
+alignment:       4
+legalized:       true
+liveins:
+body:             |
+  bb.1.entry:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: merge_unmerge
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[BITCAST:%[a-z]+]]:_(s64) = G_BITCAST [[COPY]](<2 x s32>) 
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST]](s64)
+    ; CHECK-NEXT: SI_RETURN implicit $vgpr0_vgpr1
+    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %a:_(s32), %b:_(s32) = G_UNMERGE_VALUES %0:_(<2 x s32>)
+    %merge:_(s64) = G_MERGE_VALUES %a:_(s32), %b:_(s32)
+    $vgpr0_vgpr1 = COPY %merge(s64)
+    SI_RETURN implicit $vgpr0_vgpr1
+
+...

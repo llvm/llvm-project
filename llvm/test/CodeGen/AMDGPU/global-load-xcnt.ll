@@ -11,21 +11,19 @@ define void @test_i8load_v4i8store(ptr addrspace(1) %ptr_a, ptr addrspace(1) %pt
 ; GCN-SDAG:       ; %bb.0:
 ; GCN-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GCN-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GCN-SDAG-NEXT:    global_load_u8 v6, v[2:3], off
-; GCN-SDAG-NEXT:    global_load_u8 v7, v[4:5], off
+; GCN-SDAG-NEXT:    global_load_u8 v6, v[4:5], off
+; GCN-SDAG-NEXT:    global_load_u8 v7, v[2:3], off
 ; GCN-SDAG-NEXT:    global_load_u8 v10, v[0:1], off
 ; GCN-SDAG-NEXT:    s_wait_loadcnt 0x2
 ; GCN-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GCN-SDAG-NEXT:    v_lshlrev_b16 v0, 8, v6
-; GCN-SDAG-NEXT:    s_wait_loadcnt 0x1
-; GCN-SDAG-NEXT:    v_lshlrev_b16 v1, 8, v7
-; GCN-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GCN-SDAG-NEXT:    v_or_b32_e32 v1, v7, v1
 ; GCN-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GCN-SDAG-NEXT:    v_dual_lshlrev_b32 v1, 16, v1 :: v_dual_bitop2_b32 v0, v10, v0 bitop3:0x54
-; GCN-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GCN-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GCN-SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
+; GCN-SDAG-NEXT:    v_perm_b32 v1, v10, v7, 0xc0c0004
+; GCN-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GCN-SDAG-NEXT:    v_or_b32_e32 v0, v6, v0
+; GCN-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GCN-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GCN-SDAG-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GCN-SDAG-NEXT:    global_store_b32 v[8:9], v0, off
 ; GCN-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;

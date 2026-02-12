@@ -1,3 +1,4 @@
+import("//compiler-rt/gen_dynamic_list.gni")
 import("//compiler-rt/gen_version_script.gni")
 import("//compiler-rt/target.gni")
 
@@ -5,9 +6,13 @@ group("ubsan") {
   deps = [
     ":ubsan_shared",
     ":ubsan_static",
+    ":ubsan_static_dynamic_list",
   ]
   if (current_os != "mac") {
-    deps += [ ":ubsan_static_cxx" ]
+    deps += [
+      ":ubsan_static_cxx",
+      ":ubsan_static_cxx_dynamic_list",
+    ]
   }
 }
 
@@ -108,6 +113,12 @@ static_library("ubsan_static") {
   }
 }
 
+gen_dynamic_list("ubsan_static_dynamic_list") {
+  extra = "ubsan.syms.extra"
+  lib = ":ubsan_static"
+  lib_name = "ubsan_standalone"
+}
+
 if (current_os != "mac") {
   static_library("ubsan_static_cxx") {
     output_dir = crt_current_out_dir
@@ -119,6 +130,12 @@ if (current_os != "mac") {
     ]
     configs += [ "//llvm/utils/gn/build:crt_code" ]
     deps = [ ":cxx_sources" ]
+  }
+
+  gen_dynamic_list("ubsan_static_cxx_dynamic_list") {
+    extra = "ubsan.syms.extra"
+    lib = ":ubsan_static_cxx"
+    lib_name = "ubsan_standalone_cxx"
   }
 }
 

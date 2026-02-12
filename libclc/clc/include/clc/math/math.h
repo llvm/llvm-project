@@ -11,7 +11,6 @@
 
 #include <clc/clc_as_type.h>
 #include <clc/clcfunc.h>
-#include <clc/math/clc_subnormal_config.h>
 
 #define SNAN 0x001
 #define QNAN 0x002
@@ -24,11 +23,8 @@
 #define PNOR 0x100
 #define PINF 0x200
 
-#if (defined __AMDGCN__ || defined __R600__) && !defined __HAS_FMAF__
+#ifdef __R600__
 #define __CLC_HAVE_HW_FMA32() (0)
-#elif defined(CLC_SPIRV)
-bool __attribute__((noinline)) __clc_runtime_has_hw_fma32(void);
-#define __CLC_HAVE_HW_FMA32() __clc_runtime_has_hw_fma32()
 #else
 #define __CLC_HAVE_HW_FMA32() (1)
 #endif
@@ -64,16 +60,6 @@ bool __attribute__((noinline)) __clc_runtime_has_hw_fma32(void);
 #define BASEDIGITS_SP32 7
 
 #define LOG_MAGIC_NUM_SP32 (1 + NUMEXPBITS_SP32 - EXPBIAS_SP32)
-
-_CLC_OVERLOAD _CLC_INLINE float __clc_flush_denormal_if_not_supported(float x) {
-  int ix = __clc_as_int(x);
-  if (!__clc_fp32_subnormals_supported() && ((ix & EXPBITS_SP32) == 0) &&
-      ((ix & MANTBITS_SP32) != 0)) {
-    ix &= SIGNBIT_SP32;
-    x = __clc_as_float(ix);
-  }
-  return x;
-}
 
 #ifdef cl_khr_fp64
 

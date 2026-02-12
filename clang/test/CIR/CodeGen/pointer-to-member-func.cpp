@@ -12,6 +12,22 @@ struct Foo {
   virtual void m3(int);
 };
 
+// Global pointer to non-virtual method
+void (Foo::*m1_ptr)(int) = &Foo::m1;
+
+// CIR-BEFORE: cir.global external @m1_ptr = #cir.method<@_ZN3Foo2m1Ei> : !cir.method<!cir.func<(!s32i)> in !rec_Foo>
+// CIR-AFTER: cir.global external @m1_ptr = #cir.const_record<{#cir.global_view<@_ZN3Foo2m1Ei> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct
+// LLVM: @m1_ptr = global { i64, i64 } { i64 ptrtoint (ptr @_ZN3Foo2m1Ei to i64), i64 0 }
+// OGCG: @m1_ptr = global { i64, i64 } { i64 ptrtoint (ptr @_ZN3Foo2m1Ei to i64), i64 0 }
+
+// Global pointer to virtual method
+void (Foo::*m2_ptr)(int) = &Foo::m2;
+
+// CIR-BEFORE: cir.global external @m2_ptr = #cir.method<vtable_offset = 0> : !cir.method<!cir.func<(!s32i)> in !rec_Foo>
+// CIR-AFTER: cir.global external @m2_ptr = #cir.const_record<{#cir.int<1> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct
+// LLVM: @m2_ptr = global { i64, i64 } { i64 1, i64 0 }
+// OGCG: @m2_ptr = global { i64, i64 } { i64 1, i64 0 }
+
 auto make_non_virtual() -> void (Foo::*)(int) {
   return &Foo::m1;
 }

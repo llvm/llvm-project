@@ -33,7 +33,7 @@ namespace impl {
 ///{
 #ifdef __AMDGPU__
 
-[[clang::loader_uninitialized]] static Local<uint32_t> namedBarrierTracker;
+[[clang::loader_uninitialized]] Local<uint32_t> namedBarrierTracker;
 
 void namedBarrierInit() {
   // Don't have global ctors, and shared memory is not zero init
@@ -85,12 +85,6 @@ void namedBarrier() {
     }
   }
   fence::team(atomic::release);
-}
-
-void syncWarp(__kmpc_impl_lanemask_t) {
-  // This is a no-op on current AMDGPU hardware but it is used by the optimizer
-  // to enforce convergent behaviour between control flow graphs.
-  __builtin_amdgcn_wave_barrier();
 }
 
 void syncThreadsAligned(atomic::OrderingTy Ordering) {
@@ -185,6 +179,37 @@ void setCriticalLock(omp_lock_t *Lock) { setLock(Lock); }
 
 #endif
 ///}
+
+#if defined(__SPIRV__)
+void namedBarrierInit() { __builtin_trap(); } // TODO
+void namedBarrier() { __builtin_trap(); }     // TODO
+
+void unsetLock(omp_lock_t *Lock) {
+  atomic::store((int32_t *)Lock, 0, atomic::seq_cst);
+}
+int testLock(omp_lock_t *Lock) {
+  return atomic::add((int32_t *)Lock, 0, atomic::seq_cst);
+}
+void initLock(omp_lock_t *Lock) { unsetLock(Lock); }
+void destroyLock(omp_lock_t *Lock) { unsetLock(Lock); }
+void setLock(omp_lock_t *Lock) {
+  int32_t *Lock_ptr = (int32_t *)Lock;
+  bool Acquired = false;
+  int32_t Expected;
+  while (!Acquired) {
+    Expected = 0;
+    if (Expected == atomic::load(Lock_ptr, atomic::seq_cst))
+      Acquired =
+          atomic::cas(Lock_ptr, Expected, 1, atomic::seq_cst, atomic::seq_cst);
+  }
+}
+
+void unsetCriticalLock(omp_lock_t *Lock) { unsetLock(Lock); }
+void setCriticalLock(omp_lock_t *Lock) { setLock(Lock); }
+void syncThreadsAligned(atomic::OrderingTy Ordering) {
+  synchronize::threads(Ordering);
+}
+#endif
 
 } // namespace impl
 

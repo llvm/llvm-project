@@ -37,7 +37,7 @@ constexpr fputil::ExceptValues<float16, N_EXCEPTS> TANF16_EXCEPTS{{
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LLVM_LIBC_FUNCTION(float16, tanf16, (float16 x)) {
-  using namespace sincosf16_internal;
+  using namespace math::sincosf16_internal;
   using FPBits = fputil::FPBits<float16>;
   FPBits xbits(x);
 

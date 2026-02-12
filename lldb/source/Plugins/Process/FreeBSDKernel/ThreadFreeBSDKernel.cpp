@@ -8,6 +8,7 @@
 
 #include "ThreadFreeBSDKernel.h"
 
+#include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Unwind.h"
 #include "lldb/Utility/Log.h"
 
@@ -82,4 +83,12 @@ ThreadFreeBSDKernel::CreateRegisterContextForFrame(StackFrame *frame) {
   return reg_ctx_sp;
 }
 
-bool ThreadFreeBSDKernel::CalculateStopInfo() { return false; }
+bool ThreadFreeBSDKernel::CalculateStopInfo() {
+  if (m_is_crashed) {
+    // Set a stop reason for crashing threads only so that they get selected
+    // preferentially.
+    SetStopInfo(StopInfo::CreateStopReasonWithException(*this, "kernel panic"));
+    return true;
+  }
+  return false;
+}

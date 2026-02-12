@@ -793,7 +793,7 @@ size_t SymbolFileCTF::ParseFunctions(CompileUnit &cu) {
     const uint16_t kind = GetKind(info);
     const uint16_t variable_length = GetVLen(info);
 
-    Symbol *symbol = symtab->FindSymbolWithType(
+    const Symbol *symbol = symtab->FindSymbolWithType(
         eSymbolTypeCode, Symtab::eDebugYes, Symtab::eVisibilityAny, symbol_idx);
 
     // Skip padding.
@@ -907,7 +907,7 @@ size_t SymbolFileCTF::ParseObjects(CompileUnit &comp_unit) {
   while (object_offset < object_offset_end) {
     const uint32_t type_uid = m_data.GetU32(&object_offset);
 
-    if (Symbol *symbol =
+    if (const Symbol *symbol =
             symtab->FindSymbolWithType(eSymbolTypeData, Symtab::eDebugYes,
                                        Symtab::eVisibilityAny, symbol_idx)) {
       Variable::RangeList ranges;
