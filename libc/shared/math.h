@@ -85,6 +85,7 @@
 #include "math/llogbf.h"
 #include "math/llogbf128.h"
 #include "math/llogbf16.h"
+#include "math/llogbl.h"
 #include "math/log.h"
 #include "math/log10.h"
 #include "math/log1p.h"
