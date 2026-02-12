@@ -586,7 +586,7 @@ static cir::AllocaOp getOrCreateCleanupDestSlot(cir::FuncOp funcOp,
   // Look for an existing cleanup dest slot in the entry block.
   auto it = llvm::find_if(entryBlock, [](auto &op) {
     return mlir::isa<AllocaOp>(&op) &&
-           mlir::cast<AllocaOp>(&op).getName() == "__cleanup_dest_slot";
+           mlir::cast<AllocaOp>(&op).getCleanupDestSlot();
   });
   if (it != entryBlock.end())
     return mlir::cast<cir::AllocaOp>(*it);
@@ -599,9 +599,11 @@ static cir::AllocaOp getOrCreateCleanupDestSlot(cir::FuncOp funcOp,
   cir::PointerType ptrToS32Type = cir::PointerType::get(s32Type);
   cir::CIRDataLayout dataLayout(funcOp->getParentOfType<mlir::ModuleOp>());
   uint64_t alignment = dataLayout.getAlignment(s32Type, true).value();
-  return cir::AllocaOp::create(
+  auto allocaOp = cir::AllocaOp::create(
       rewriter, loc, ptrToS32Type, s32Type, "__cleanup_dest_slot",
       /*alignment=*/rewriter.getI64IntegerAttr(alignment));
+  allocaOp.setCleanupDestSlot(true);
+  return allocaOp;
 }
 
 class CIRCleanupScopeOpFlattening
