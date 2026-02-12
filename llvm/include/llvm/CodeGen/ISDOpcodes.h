@@ -1088,8 +1088,8 @@ enum NodeType {
   /// These treat -0 as ordered less than +0, matching the behavior of IEEE-754
   /// 2019's minimumNumber/maximumNumber.
   ///
-  /// Deprecated, and will be removed soon, as FMINNUM/FMAXNUM have the same
-  /// semantics now.
+  /// Some ISAs have such instructions, such as AArch64, MIPSr6, LoongArch etc.
+  /// Normally these ISAs claim that they have maxNum/minNum of IEEE754-2008.
   FMINNUM_IEEE,
   FMAXNUM_IEEE,
 
