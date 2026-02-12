@@ -3046,26 +3046,25 @@ define i32 @sink_into_replication_region_multiple(ptr %x, i32 %y) {
 ; UNROLL-NO-VF:       pred.udiv.continue:
 ; UNROLL-NO-VF-NEXT:    [[TMP7:%.*]] = phi i32 [ poison, [[VECTOR_BODY]] ], [ [[TMP6]], [[PRED_UDIV_IF]] ]
 ; UNROLL-NO-VF-NEXT:    br i1 [[TMP5]], label [[PRED_UDIV_IF3:%.*]], label [[PRED_UDIV_CONTINUE4:%.*]]
-; UNROLL-NO-VF:       pred.udiv.if3:
+; UNROLL-NO-VF:       pred.udiv.if2:
 ; UNROLL-NO-VF-NEXT:    [[TMP8:%.*]] = udiv i32 219220132, [[TMP3]]
 ; UNROLL-NO-VF-NEXT:    br label [[PRED_UDIV_CONTINUE4]]
-; UNROLL-NO-VF:       pred.udiv.continue4:
+; UNROLL-NO-VF:       pred.udiv.continue3:
 ; UNROLL-NO-VF-NEXT:    [[TMP9]] = phi i32 [ poison, [[PRED_UDIV_CONTINUE]] ], [ [[TMP8]], [[PRED_UDIV_IF3]] ]
 ; UNROLL-NO-VF-NEXT:    [[TMP10]] = add i32 [[VEC_PHI]], [[VECTOR_RECUR]]
 ; UNROLL-NO-VF-NEXT:    [[TMP11]] = add i32 [[VEC_PHI1]], [[TMP7]]
 ; UNROLL-NO-VF-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; UNROLL-NO-VF:       pred.store.if:
-; UNROLL-NO-VF-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[X:%.*]], i32 [[INDEX]]
+; UNROLL-NO-VF-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[X:%.*]], i32 [[VEC_IV]]
 ; UNROLL-NO-VF-NEXT:    store i32 [[OFFSET_IDX]], ptr [[TMP12]], align 4
 ; UNROLL-NO-VF-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; UNROLL-NO-VF:       pred.store.continue:
 ; UNROLL-NO-VF-NEXT:    br i1 [[TMP5]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6]]
-; UNROLL-NO-VF:       pred.store.if5:
-; UNROLL-NO-VF-NEXT:    [[TMP14:%.*]] = add i32 [[INDEX]], 1
-; UNROLL-NO-VF-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 [[TMP14]]
+; UNROLL-NO-VF:       pred.store.if4:
+; UNROLL-NO-VF-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 [[VEC_IV2]]
 ; UNROLL-NO-VF-NEXT:    store i32 [[TMP3]], ptr [[TMP15]], align 4
 ; UNROLL-NO-VF-NEXT:    br label [[PRED_STORE_CONTINUE6]]
-; UNROLL-NO-VF:       pred.store.continue6:
+; UNROLL-NO-VF:       pred.store.continue5:
 ; UNROLL-NO-VF-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; UNROLL-NO-VF-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; UNROLL-NO-VF-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF25]], !llvm.loop [[LOOP28:![0-9]+]]

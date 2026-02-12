@@ -656,7 +656,8 @@ static void removeRedundantCanonicalIVs(VPlan &Plan) {
     // everything WidenNewIV's users need. That is, WidenOriginalIV will
     // generate a vector phi or all users of WidenNewIV demand the first lane
     // only.
-    if (!vputils::onlyScalarValuesUsed(WidenOriginalIV) ||
+    if (Plan.hasScalarVFOnly() ||
+        !vputils::onlyScalarValuesUsed(WidenOriginalIV) ||
         vputils::onlyFirstLaneUsed(WidenNewIV)) {
       // We are replacing a wide canonical iv with a suitable wide induction.
       // This is used to compute header mask, hence all lanes will be used and
