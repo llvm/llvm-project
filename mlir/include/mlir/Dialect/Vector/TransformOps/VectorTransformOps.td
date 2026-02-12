@@ -243,8 +243,8 @@ def ApplyLowerMultiReductionPatternsOp : Op<Transform_Dialect,
   }];
 }
 
-def ApplyReorderMultiReductionDimsPatternsOp : Op<Transform_Dialect,
-    "apply_patterns.vector.reorder_multi_reduction_dims",
+def ApplyReorderAndExpandMultiReductionPatternsOp: Op<Transform_Dialect,
+    "apply_patterns.vector.reorder_and_expand_multi_reduction_dims",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
     Indicates that vector multi_reduction-like operations should be
