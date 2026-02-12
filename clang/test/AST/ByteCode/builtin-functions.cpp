@@ -1183,6 +1183,37 @@ namespace shufflevector {
                                                                        // both-error {{index for __builtin_shufflevector not within the bounds of the input vectors; index of -1 found at position 0 is not permitted in a constexpr context}}
           vector4charConst1,
           vector4charConst2, -1, -1, -1, -1);
+
+  constexpr int discarded1() {
+    int i = 0;
+    vector4char a = {0};
+    __builtin_shufflevector((++i, a), a, 0); // both-warning {{expression result unused}}
+    return i;
+  }
+  static_assert(discarded1() == 1);
+
+  constexpr int discarded2() { // both-error {{never produces a constant expression}}
+    int i = 0;
+    vector4char a = {0};
+    __builtin_shufflevector((++i, a), a, -1); // both-error 2{{index for __builtin_shufflevector not within the bounds of the input vectors; index of -1 found at position 0 is not permitted in a constexpr context}} \
+                                              // both-warning {{expression result unused}}
+    return i;
+  }
+  static_assert(discarded2() == 1); // both-error {{not an integral constant expression}} \
+                                    // both-note {{in call to}}
+
+#if __cplusplus >= 202002L
+  constexpr int discarded3() {
+    int i = 0;
+    vector4char a;
+    __builtin_shufflevector((++i, a), a, 0); // both-note {{read of uninitialized object}} \
+                                             // both-warning {{expression result unused}}
+    return i;
+  }
+  static_assert(discarded3() == 1); // both-error {{not an integral constant expression}} \
+                                    // both-note {{in call to}}
+#endif
+
 }
 
 #endif

@@ -66,6 +66,9 @@ Changes to the LLVM IR
 * "denormal-fp-math" and "denormal-fp-math-f32" string attributes were
   migrated to first-class denormal_fpenv attribute.
 
+* The `"nooutline"` attribute is now writen as `nooutline`. Existing IR and
+  bitcode will be automatically updated.
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -132,6 +135,8 @@ Changes to the RISC-V Backend
   `sspush`, `sspopchk`, `ssrdp`, `c.sspush`, `c.sspopchk`) are now always
   available in the assembler and disassembler without requiring their respective
   extensions.
+* Adds experimental assembler support for the 'Zvabd` (RISC-V Integer Vector
+  Absolute Difference) extension.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -177,9 +182,18 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------
 
-* Support for FreeBSD on MIPS64 has been removed.
-* The minimum assumed version of FreeBSD is now 14. The effect of which is that watchpoints are
+### FreeBSD
+
+#### Userspace Debugging
+
+* Support for MIPS64 has been removed.
+* The minimum assumed FreeBSD version is now 14. The effect of which is that watchpoints are
   assumed to be supported.
+
+#### Kernel Debugging
+
+* The crashed thread is now automatically selected on start.
+* Threads are listed in incrmental order by pid then by tid.
 
 Changes to BOLT
 ---------------

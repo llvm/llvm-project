@@ -6111,6 +6111,11 @@ static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
 }
 
 bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest) {
+  if (!Src.isBlockPointer() || Src.getFieldDesc()->isPrimitive())
+    return false;
+  if (!Dest.isBlockPointer() || Dest.getFieldDesc()->isPrimitive())
+    return false;
+
   return copyComposite(S, OpPC, Src, Dest);
 }
 

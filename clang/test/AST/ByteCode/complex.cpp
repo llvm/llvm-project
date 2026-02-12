@@ -319,6 +319,8 @@ namespace Builtin {
 
 
   constexpr _Complex float C = __builtin_complex(10.0f, 20.0); // both-error {{arguments are of different types}}
+
+  constexpr int Discarded = (__builtin_complex(1., 2.), 12);
 }
 
 namespace Cmp {
@@ -457,4 +459,20 @@ namespace Discard {
     return k;
   }
   static_assert(test_side_effect() == 1);
+
+  constexpr int discardedMulDiv() {
+    (void)(3 * 2i);
+    (void)(3 / 2i);
+    return 0;
+  }
+  static_assert(discardedMulDiv() == 0, "");
+}
+
+namespace MemcpyOp {
+  const double x = 0.;
+
+  void foo() {
+    _Complex double z;
+    z = *(_Complex double *)&x;
+  };
 }

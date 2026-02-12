@@ -58,7 +58,8 @@ void TargetLoweringPass::runOnOperation() {
   }
 
   mod->walk([&](mlir::Operation *op) {
-    if (mlir::isa<cir::LoadOp, cir::StoreOp>(op))
+    if (mlir::isa<cir::LoadOp, cir::StoreOp, cir::AtomicXchgOp,
+                  cir::AtomicCmpXchgOp, cir::AtomicFetchOp>(op))
       convertSyncScopeIfPresent(op, *lowerModule);
   });
 }

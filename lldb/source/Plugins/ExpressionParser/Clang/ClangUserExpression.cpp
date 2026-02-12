@@ -56,6 +56,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 
+#include "clang/Basic/DiagnosticSema.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -955,12 +956,8 @@ void ClangUserExpression::FixupCVRParseErrorDiagnostics(
       [](std::unique_ptr<Diagnostic> const &diag) {
         switch (diag->GetCompilerID()) {
         case clang::diag::err_member_function_call_bad_cvr:
+        case clang::diag::err_typecheck_assign_const_method:
           return true;
-        case clang::diag::err_typecheck_assign_const:
-          // FIXME: can we split this particular error into a separate
-          // diagnostic ID so we don't need to scan the error message?
-          return diag->GetDetail().message.find(
-                     "within const member function") != std::string::npos;
         default:
           return false;
         }
@@ -988,9 +985,33 @@ void ClangUserExpression::FixupCVRParseErrorDiagnostics(
       !m_fixed_text.empty() ? m_fixed_text.c_str() : m_expr_text.c_str());
 }
 
+void ClangUserExpression::FixupTemplateLookupDiagnostics(
+    DiagnosticManager &diagnostic_manager) const {
+  if (llvm::none_of(diagnostic_manager.Diagnostics(),
+                    [](std::unique_ptr<Diagnostic> const &diag) {
+                      switch (diag->GetCompilerID()) {
+                      // FIXME: should we also be checking
+                      // clang::diag::err_no_member_template?
+                      case clang::diag::err_no_template:
+                      case clang::diag::err_non_template_in_template_id:
+                        return true;
+                      default:
+                        return false;
+                      }
+                    }))
+    return;
+
+  diagnostic_manager.AddDiagnostic(
+      "Naming template instantiation not yet supported. Template functions "
+      "can be invoked via their mangled name. For example, using "
+      "`_Z3fooIiEvi(123)` for `foo<int>(123)`",
+      lldb::eSeverityInfo, eDiagnosticOriginLLDB);
+}
+
 void ClangUserExpression::FixupParseErrorDiagnostics(
     DiagnosticManager &diagnostic_manager) const {
   FixupCVRParseErrorDiagnostics(diagnostic_manager);
+  FixupTemplateLookupDiagnostics(diagnostic_manager);
 }
 
 char ClangUserExpression::ClangUserExpressionHelper::ID;

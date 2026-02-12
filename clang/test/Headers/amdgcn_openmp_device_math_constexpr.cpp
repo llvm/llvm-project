@@ -182,7 +182,7 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-NEXT:    store float -4.000000e+00, ptr [[__Y_ADDR_ASCAST_I]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[__X_ADDR_ASCAST_I]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[__Y_ADDR_ASCAST_I]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = call noundef float @llvm.minnum.f32(float [[TMP0]], float [[TMP1]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call nsz noundef float @llvm.minnum.f32(float [[TMP0]], float [[TMP1]])
 // CHECK-NEXT:    store float [[TMP2]], ptr addrspacecast (ptr addrspace(1) @_ZL17constexpr_min_f32 to ptr), align 4
 // CHECK-NEXT:    ret void
 //
@@ -198,7 +198,7 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-NEXT:    store float -4.000000e+00, ptr [[__Y_ADDR_ASCAST_I]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[__X_ADDR_ASCAST_I]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[__Y_ADDR_ASCAST_I]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = call noundef float @llvm.maxnum.f32(float [[TMP0]], float [[TMP1]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call nsz noundef float @llvm.maxnum.f32(float [[TMP0]], float [[TMP1]])
 // CHECK-NEXT:    store float [[TMP2]], ptr addrspacecast (ptr addrspace(1) @_ZL17constexpr_max_f32 to ptr), align 4
 // CHECK-NEXT:    ret void
 //
@@ -230,7 +230,7 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-NEXT:    store float -4.000000e+00, ptr [[__Y_ADDR_ASCAST_I]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[__X_ADDR_ASCAST_I]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[__Y_ADDR_ASCAST_I]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = call noundef float @llvm.minnum.f32(float [[TMP0]], float [[TMP1]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call nsz noundef float @llvm.minnum.f32(float [[TMP0]], float [[TMP1]])
 // CHECK-NEXT:    store float [[TMP2]], ptr addrspacecast (ptr addrspace(1) @_ZL19constexpr_fminf_f32 to ptr), align 4
 // CHECK-NEXT:    ret void
 //
@@ -246,7 +246,7 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-NEXT:    store float -4.000000e+00, ptr [[__Y_ADDR_ASCAST_I]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[__X_ADDR_ASCAST_I]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[__Y_ADDR_ASCAST_I]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = call noundef float @llvm.maxnum.f32(float [[TMP0]], float [[TMP1]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call nsz noundef float @llvm.maxnum.f32(float [[TMP0]], float [[TMP1]])
 // CHECK-NEXT:    store float [[TMP2]], ptr addrspacecast (ptr addrspace(1) @_ZL19constexpr_fmaxf_f32 to ptr), align 4
 // CHECK-NEXT:    ret void
 //

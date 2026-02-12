@@ -383,22 +383,22 @@ void test_float_builtin_ops(float F, double D, long double LD, int I) {
   // CHECK: call [[LDTYPE]] @llvm.canonicalize.[[LDLLVMTY]]([[LDTYPE]]
 
   resf = __builtin_fminf(F, F);
-  // CHECK: call float @llvm.minnum.f32
+  // CHECK: call nsz float @llvm.minnum.f32
 
   resd = __builtin_fmin(D, D);
-  // CHECK: call double @llvm.minnum.f64
+  // CHECK: call nsz double @llvm.minnum.f64
 
   resld = __builtin_fminl(LD, LD);
-  // CHECK: call [[LDTYPE]] @llvm.minnum.[[LDLLVMTY]]
+  // CHECK: call nsz [[LDTYPE]] @llvm.minnum.[[LDLLVMTY]]
 
   resf = __builtin_fmaxf(F, F);
-  // CHECK: call float @llvm.maxnum.f32
+  // CHECK: call nsz float @llvm.maxnum.f32
 
   resd = __builtin_fmax(D, D);
-  // CHECK: call double @llvm.maxnum.f64
+  // CHECK: call nsz double @llvm.maxnum.f64
 
   resld = __builtin_fmaxl(LD, LD);
-  // CHECK: call [[LDTYPE]] @llvm.maxnum.[[LDLLVMTY]]
+  // CHECK: call nsz [[LDTYPE]] @llvm.maxnum.[[LDLLVMTY]]
 
   resf = __builtin_fminimum_numf(F, F);
   // CHECK: call float @llvm.minimumnum.f32
