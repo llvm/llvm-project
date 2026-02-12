@@ -1111,11 +1111,12 @@ mlir::LogicalResult CIRToLLVMAtomicFetchOpLowering::matchAndRewrite(
   }
 
   mlir::LLVM::AtomicOrdering llvmOrder = getLLVMMemOrder(op.getMemOrder());
+  llvm::StringRef llvmSyncScope = getLLVMSyncScope(op.getSyncScope());
   mlir::LLVM::AtomicBinOp llvmBinOp =
       getLLVMAtomicBinOp(op.getBinop(), isInt, isSignedInt);
-  auto rmwVal = mlir::LLVM::AtomicRMWOp::create(rewriter, op.getLoc(),
-                                                llvmBinOp, adaptor.getPtr(),
-                                                adaptor.getVal(), llvmOrder);
+  auto rmwVal = mlir::LLVM::AtomicRMWOp::create(
+      rewriter, op.getLoc(), llvmBinOp, adaptor.getPtr(), adaptor.getVal(),
+      llvmOrder, llvmSyncScope);
 
   mlir::Value result = rmwVal.getResult();
   if (!op.getFetchFirst()) {
