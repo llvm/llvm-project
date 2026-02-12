@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++26 -fsyntax-only -fcxx-exceptions -verify=ref,both %s
-// RUN: %clang_cc1 -std=c++26 -fsyntax-only -fcxx-exceptions -verify=expected,both %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++26 -fsyntax-only -verify=ref,both      %s
+// RUN: %clang_cc1 -std=c++26 -fsyntax-only -verify=expected,both %s -fexperimental-new-constant-interpreter
 
 namespace std {
   using size_t = decltype(sizeof(0));
@@ -49,7 +49,7 @@ static_assert(*f == 12);
 namespace ExplicitThisInBacktrace {
   struct S {
     constexpr void foo(this const S& self) {
-      throw; // both-note {{not valid in a constant expression}}
+      __builtin_abort(); // both-note {{not valid in a constant expression}}
     }
   };
 

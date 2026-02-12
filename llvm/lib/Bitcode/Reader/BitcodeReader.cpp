@@ -2271,6 +2271,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoCreateUndefOrPoison;
   case bitc::ATTR_KIND_DENORMAL_FPENV:
     return Attribute::DenormalFPEnv;
+  case bitc::ATTR_KIND_NOOUTLINE:
+    return Attribute::NoOutline;
   }
 }
 
