@@ -421,16 +421,16 @@ define i32 @not_shl_one_i32(i32 %x) {
 define i64 @not_shl_one_i64(i64 %x) {
 ; CHECK-LABEL: not_shl_one_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, a0, -32
-; CHECK-NEXT:    li a2, 1
-; CHECK-NEXT:    srli a1, a1, 31
-; CHECK-NEXT:    sll a0, a2, a0
-; CHECK-NEXT:    neg a2, a1
-; CHECK-NEXT:    addi a1, a1, -1
-; CHECK-NEXT:    and a2, a2, a0
+; CHECK-NEXT:    li a1, 1
+; CHECK-NEXT:    addi a2, a0, -32
+; CHECK-NEXT:    sll a0, a1, a0
+; CHECK-NEXT:    srli a2, a2, 31
+; CHECK-NEXT:    neg a1, a2
+; CHECK-NEXT:    addi a2, a2, -1
 ; CHECK-NEXT:    and a1, a1, a0
-; CHECK-NEXT:    not a0, a2
-; CHECK-NEXT:    not a1, a1
+; CHECK-NEXT:    and a2, a2, a0
+; CHECK-NEXT:    not a0, a1
+; CHECK-NEXT:    not a1, a2
 ; CHECK-NEXT:    ret
   %1 = shl i64 1, %x
   %2 = xor i64 %1, -1

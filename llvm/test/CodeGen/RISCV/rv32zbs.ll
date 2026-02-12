@@ -74,11 +74,11 @@ define i32 @bclr_i32_mask_multiple(i32 %a, i32 %b, i32 %shamt) nounwind {
 define i64 @bclr_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: bclr_i64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a3, a2, 63
-; RV32I-NEXT:    li a4, 1
-; RV32I-NEXT:    addi a5, a3, -32
-; RV32I-NEXT:    sll a2, a4, a2
-; RV32I-NEXT:    sll a3, a4, a3
+; RV32I-NEXT:    li a3, 1
+; RV32I-NEXT:    andi a4, a2, 63
+; RV32I-NEXT:    sll a2, a3, a2
+; RV32I-NEXT:    addi a5, a4, -32
+; RV32I-NEXT:    sll a3, a3, a4
 ; RV32I-NEXT:    srli a5, a5, 31
 ; RV32I-NEXT:    neg a4, a5
 ; RV32I-NEXT:    addi a5, a5, -1
@@ -212,14 +212,14 @@ define i64 @bset_i64(i64 %a, i64 %b) nounwind {
 define signext i64 @bset_i64_zero(i64 signext %a) nounwind {
 ; RV32I-LABEL: bset_i64_zero:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi a1, a0, -32
-; RV32I-NEXT:    li a2, 1
-; RV32I-NEXT:    srli a1, a1, 31
-; RV32I-NEXT:    sll a2, a2, a0
-; RV32I-NEXT:    neg a0, a1
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a2
-; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    li a1, 1
+; RV32I-NEXT:    addi a2, a0, -32
+; RV32I-NEXT:    sll a1, a1, a0
+; RV32I-NEXT:    srli a2, a2, 31
+; RV32I-NEXT:    neg a0, a2
+; RV32I-NEXT:    addi a2, a2, -1
+; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    and a1, a2, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBS-LABEL: bset_i64_zero:
@@ -829,16 +829,16 @@ define i32 @bset_trailing_ones_i32_no_mask(i32 %a) nounwind {
 define i64 @bset_trailing_ones_i64_mask(i64 %a) nounwind {
 ; CHECK-LABEL: bset_trailing_ones_i64_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi a2, a0, 63
-; CHECK-NEXT:    li a3, -1
-; CHECK-NEXT:    addi a1, a2, -32
-; CHECK-NEXT:    sll a0, a3, a0
+; CHECK-NEXT:    li a2, -1
+; CHECK-NEXT:    andi a3, a0, 63
+; CHECK-NEXT:    addi a1, a3, -32
+; CHECK-NEXT:    sll a0, a2, a0
 ; CHECK-NEXT:    bltz a1, .LBB45_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    sll a2, a3, a2
+; CHECK-NEXT:    sll a2, a2, a3
 ; CHECK-NEXT:    j .LBB45_3
 ; CHECK-NEXT:  .LBB45_2:
-; CHECK-NEXT:    not a2, a2
+; CHECK-NEXT:    not a2, a3
 ; CHECK-NEXT:    lui a3, 524288
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    srl a2, a3, a2
