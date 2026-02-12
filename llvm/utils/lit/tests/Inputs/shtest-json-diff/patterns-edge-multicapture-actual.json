@@ -1,0 +1,8 @@
+{
+    "user_id": "user_123",
+    "key": {
+        "session_id": "sess_abc",
+        "request_user_id": "user_123"
+    },
+    "request_session_id": "sess_abc"
+}

@@ -1,0 +1,15 @@
+# Test capture pattern (@&) - comprehensive tests
+
+# Basic capture pattern - same value captured multiple times
+# RUN: json-diff %S/patterns-capture-expected.json %S/patterns-capture-actual.json
+
+# Capture pattern mismatch - different values for same capture name
+# RUN: not json-diff %S/patterns-capture-fail-expected.json %S/patterns-capture-fail-actual.json 2>&1 | FileCheck --check-prefix=MISMATCH %s
+# MISMATCH: Match failure: capture 'ID' mismatch: expected '123', got '999'.
+
+# Multiple different captures - using different capture names
+# RUN: json-diff %S/patterns-edge-multicapture-expected.json %S/patterns-edge-multicapture-actual.json
+
+# Invalid capture name error (starts with number)
+# RUN: not json-diff %S/errors-invalid-capture-expected.json %S/errors-invalid-capture-actual.json 2>&1 | FileCheck --check-prefix=INVALID %s
+# INVALID: Error: invalid capture name

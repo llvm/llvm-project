@@ -65,9 +65,9 @@
 # Test with invalid context value (negative number)
 # RUN: not json-diff -c -1 %S/context-expected.json %S/context-actual.json 2>&1 | FileCheck --check-prefix=INVALID %s
 
-# INVALID: Error: invalid context value: -1
+# INVALID: Error: invalid context value: '-1'.
 
 # Test with invalid context value (non-numeric)
 # RUN: not json-diff -c abc %S/context-expected.json %S/context-actual.json 2>&1 | FileCheck --check-prefix=INVALID2 %s
 
-# INVALID2: Error: invalid context value: abc
+# INVALID2: Error: invalid context value: 'abc'.

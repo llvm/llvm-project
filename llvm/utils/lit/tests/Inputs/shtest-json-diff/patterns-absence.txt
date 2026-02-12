@@ -1,0 +1,7 @@
+# Test absence pattern (@!)
+# Test that keys marked with @! should not exist in actual JSON
+# RUN: json-diff %S/patterns-absence-expected.json %S/patterns-absence-actual.json
+
+# Test that presence of key marked with @! causes failure
+# RUN: not json-diff %S/patterns-absence-fail-expected.json %S/patterns-absence-fail-actual.json 2>&1 | FileCheck --check-prefix=FAIL %s
+# FAIL: Match failure: pattern '@!' requires the key to be absent, got

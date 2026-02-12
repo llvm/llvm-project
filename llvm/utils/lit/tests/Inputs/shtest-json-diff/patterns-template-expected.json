@@ -1,0 +1,4 @@
+{
+  "api_url": "@%{base}/api/{version}",
+  "docs_url": "@%{base}/docs"
+}
