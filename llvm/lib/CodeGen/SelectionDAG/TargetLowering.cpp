@@ -8821,7 +8821,7 @@ SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
       return DAG.getNode(IEEE2019Op, dl, VT, Op0, Op1, Flags);
   }
 
-  // If the target has FMINIMUM/FMAXIMUM but not FMINNUM/FMAXNUM use that
+  // If the target has FMINIMUMNUM/FMAXIMUMNUM but not FMINNUM/FMAXNUM use that
   // instead if there are no NaNs.
   if (Flags.hasNoNaNs() ||
       (DAG.isKnownNeverSNaN(Op0) && DAG.isKnownNeverSNaN(Op1))) {
