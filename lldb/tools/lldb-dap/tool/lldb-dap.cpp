@@ -523,11 +523,6 @@ int main(int argc, char *argv[]) {
                         "~/Library/Logs/DiagnosticReports/.\n");
 #endif
 
-#ifdef _WIN32
-  if (llvm::Error error = SetupPythonRuntimeLibrary())
-    llvm::WithColor::error() << llvm::toString(std::move(error)) << '\n';
-#endif
-
   llvm::SmallString<256> program_path(argv[0]);
   llvm::sys::fs::make_absolute(program_path);
   DAP::debug_adapter_path = program_path;
@@ -546,6 +541,30 @@ int main(int argc, char *argv[]) {
     PrintVersion();
     return EXIT_SUCCESS;
   }
+
+#ifdef _WIN32
+  if (input_args.hasArg(OPT_check_python)) {
+    auto python_path_or_err = SetupPythonRuntimeLibrary();
+    if (!python_path_or_err) {
+      llvm::WithColor::error()
+          << llvm::toString(python_path_or_err.takeError()) << '\n';
+      return EXIT_FAILURE;
+    }
+    std::string python_path = *python_path_or_err;
+    if (python_path.empty()) {
+      llvm::WithColor::error()
+          << "unable to look for the Python shared library" << '\n';
+      return EXIT_FAILURE;
+    }
+    llvm::outs() << python_path << '\n';
+    return EXIT_SUCCESS;
+  }
+
+  auto python_path_or_err = SetupPythonRuntimeLibrary();
+  if (!python_path_or_err)
+    llvm::WithColor::error()
+        << llvm::toString(python_path_or_err.takeError()) << '\n';
+#endif
 
   if (input_args.hasArg(OPT_client)) {
     if (llvm::Error error = LaunchClient(input_args)) {
