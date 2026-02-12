@@ -4161,8 +4161,12 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
   //
   // For 3 exits (cond.0, cond.1, cond.2), this creates:
   //
+  // latch:
+  //   ...
+  //   EMIT vp<%combined> = logical-or vp<%cond.0>, vp<%cond.1>, vp<%cond.2>
+  //   ...
+  //
   // vector.early.exit.check:
-  //   EMIT vp<%combined> = or vp<%cond.0>, vp<%cond.1>, vp<%cond.2>
   //   EMIT vp<%first.lane> = first-active-lane vp<%combined>
   //   EMIT vp<%at.cond.0> = extract-lane vp<%first.lane>, vp<%cond.0>
   //   EMIT branch-on-cond vp<%at.cond.0>
