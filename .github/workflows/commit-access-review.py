@@ -295,7 +295,12 @@ def main():
 
     # 4 because that's how many cores the default github runners have.
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-        executor.map(lambda user:triage_list[user].add_reviewed(get_review_count(gh, user, one_year_ago)), list(triage_list.keys()))
+        executor.map(
+            lambda user: triage_list[user].add_reviewed(
+                get_review_count(gh, user, one_year_ago)
+            ),
+            list(triage_list.keys()),
+        )
 
     print("After Reviews:", len(triage_list), "triagers")
 
@@ -306,7 +311,12 @@ def main():
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
         # Override the total number of commits to not double count commits and
         # authored PRs.
-        executor.map(lambda user: triage_list[user].set_authored(get_num_commits(gh, user, one_year_ago)),list(triage_list.keys()))
+        executor.map(
+            lambda user: triage_list[user].set_authored(
+                get_num_commits(gh, user, one_year_ago)
+            ),
+            list(triage_list.keys()),
+        )
 
     print("After Commits:", len(triage_list), "triagers")
 
