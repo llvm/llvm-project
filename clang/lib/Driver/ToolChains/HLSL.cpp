@@ -327,6 +327,13 @@ void tools::hlsl::MetalConverter::ConstructJob(
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 
+  StringRef Reflection = Args.getLastArgValue(options::OPT_dxc_Fre);
+  if (!Reflection.empty()) {
+    const char *ReflectionStr =
+        Args.MakeArgString(StringRef("--output-reflection-file=") + Reflection);
+    CmdArgs.push_back(ReflectionStr);
+  }
+
   const char *Exec = Args.MakeArgString(MSCPath);
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
                                          Exec, CmdArgs, Inputs, Input));
@@ -528,6 +535,21 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
                         Opts.getOption(options::OPT_fmatrix_memory_layout_EQ),
                         "row-major");
       A->claim();
+      continue;
+    }
+
+    // This is a temporary check until we support reflection generation for
+    // other targets.
+    if (A->getOption().getID() == options::OPT_dxc_Fre) {
+      if (Args.hasArg(options::OPT_metal)) {
+        if (!Args.hasArg(options::OPT_dxc_Fo))
+          getDriver().Diag(diag::err_drv_dxc_Fre_requires_Fo_metal);
+      } else
+        getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
+            << "-Fre" << getTriple().getArchName();
+      A->claim();
+      DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_dxc_Fre),
+                          A->getValue());
       continue;
     }
 
