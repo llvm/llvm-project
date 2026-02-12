@@ -93,6 +93,7 @@
 #include "math/log1p.h"
 #include "math/log1pf.h"
 #include "math/log2.h"
+#include "math/log2f.h"
 #include "math/log2f16.h"
 #include "math/logbf.h"
 #include "math/logbf128.h"
