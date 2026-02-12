@@ -2153,12 +2153,9 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
             .addExternalSymbol(SpillLibCall, RISCVII::MO_CALL)
             .setMIFlag(MachineInstr::FrameSetup);
 
-    for (auto &CS : CSI) {
-      // Add registers spilled as implicit used.
+    // Add registers spilled as implicit used.
+    for (auto &CS : CSI)
       NewMI.addUse(CS.getReg(), RegState::Implicit);
-      // Add registers spilled in libcall as liveins.
-      MBB.addLiveIn(CS.getReg());
-    }
   }
 
   // Manually spill values not spilled by libcall & Push/Pop.
