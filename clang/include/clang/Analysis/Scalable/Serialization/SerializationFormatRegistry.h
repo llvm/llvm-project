@@ -51,21 +51,16 @@ bool isFormatRegistered(llvm::StringRef FormatName);
 /// This might return null if the construction of the desired
 /// SerializationFormat failed.
 /// It's a fatal error if there is no format registered with the name.
-std::unique_ptr<SerializationFormat>
-makeFormat(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-           llvm::StringRef FormatName);
+std::unique_ptr<SerializationFormat> makeFormat(llvm::StringRef FormatName);
 
 // Registry for adding new SerializationFormat implementations.
-using SerializationFormatRegistry =
-    llvm::Registry<SerializationFormat,
-                   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>>;
+using SerializationFormatRegistry = llvm::Registry<SerializationFormat>;
 
 } // namespace clang::ssaf
 
 namespace llvm {
 extern template class CLANG_TEMPLATE_ABI
-    Registry<clang::ssaf::SerializationFormat,
-             llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>>;
+    Registry<clang::ssaf::SerializationFormat>;
 } // namespace llvm
 
 #endif // CLANG_ANALYSIS_SCALABLE_SERIALIZATION_SERIALIZATION_FORMAT_REGISTRY_H

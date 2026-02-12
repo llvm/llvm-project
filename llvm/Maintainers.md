@@ -245,8 +245,12 @@ mail@justinbogner.com (email), [bogner](https://github.com/bogner) (GitHub)
 
 #### Hexagon backend
 
-Sundeep Kushwaha \
-sundeepk@qti.qualcomm.com (email), [SundeepKushwaha](https://github.com/SundeepKushwaha) (GitHub)
+Brian Cain \
+brian.cain@oss.qualcomm.com (email), [androm3da](https://github.com/androm3da) (GitHub) \
+Ikhlas Ajbar \
+iajbar@qti.qualcomm.com (email), [iajbar](https://github.com/iajbar) \
+Ankit Aggarwal \
+aankit@qti.qualcomm.com (email), [aankit-ca](https://github.com/aankit-ca)
 
 #### Lanai backend
 
@@ -557,7 +561,8 @@ Michael Spencer (bigcheesegs@gmail.com), [Bigcheese](https://github.com/Bigchees
 Alexei Starovoitov (alexei.starovoitov@gmail.com, [4ast](https://github.com/4ast)) -- BPF backend \
 Evgeniy Stepanov ([eugenis](https://github.com/eugenis)) -- Sanitizers \
 Zheng Chen (czhengsz@cn.ibm.com, [chenzheng1030](https://github.com/chenzheng1030)) -- PowerPC backend \
-Dan Gohman (llvm@sunfishcode.online, [sunfishcode](https://github.com/sunfishcode)) -- WebAssembly backend
+Dan Gohman (llvm@sunfishcode.online, [sunfishcode](https://github.com/sunfishcode)) -- WebAssembly backend \
+Sundeep Kushwaha (sundeepk@qti.qualcomm.com, [SundeepKushwaha](https://github.com/SundeepKushwaha)) -- Hexagon backend
 
 ### Former maintainers of removed components
 

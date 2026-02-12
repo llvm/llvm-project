@@ -18,9 +18,21 @@ define amdgpu_ps void @buffer_load_lds(<4 x i32> inreg %rsrc, ptr addrspace(3) i
   ret void
 }
 
+;--- struct.async.ll
+define amdgpu_ps void @buffer_load_lds(<4 x i32> inreg %rsrc, ptr addrspace(3) inreg %lds) {
+  call void @llvm.amdgcn.struct.buffer.load.async.lds(<4 x i32> %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 0, i32 0)
+  ret void
+}
+
 ;--- struct.ptr.ll
 define amdgpu_ps void @buffer_load_lds(ptr addrspace(8) inreg %rsrc, ptr addrspace(3) inreg %lds) {
   call void @llvm.amdgcn.struct.ptr.buffer.load.lds(ptr addrspace(8) %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 0, i32 0)
+  ret void
+}
+
+;--- struct.ptr.async.ll
+define amdgpu_ps void @buffer_load_lds(ptr addrspace(8) inreg %rsrc, ptr addrspace(3) inreg %lds) {
+  call void @llvm.amdgcn.struct.ptr.buffer.load.async.lds(ptr addrspace(8) %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 0, i32 0)
   ret void
 }
 
@@ -30,8 +42,20 @@ define amdgpu_ps void @buffer_load_lds(<4 x i32> inreg %rsrc, ptr addrspace(3) i
   ret void
 }
 
+;--- raw.async.ll
+define amdgpu_ps void @buffer_load_lds(<4 x i32> inreg %rsrc, ptr addrspace(3) inreg %lds) {
+  call void @llvm.amdgcn.raw.buffer.load.async.lds(<4 x i32> %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 0)
+  ret void
+}
+
 ;--- raw.ptr.ll
 define amdgpu_ps void @buffer_load_lds(ptr addrspace(8) inreg %rsrc, ptr addrspace(3) inreg %lds) {
   call void @llvm.amdgcn.raw.ptr.buffer.load.lds(ptr addrspace(8) %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 0)
+  ret void
+}
+
+;--- raw.ptr.async.ll
+define amdgpu_ps void @buffer_load_lds(ptr addrspace(8) inreg %rsrc, ptr addrspace(3) inreg %lds) {
+  call void @llvm.amdgcn.raw.ptr.buffer.load.async.lds(ptr addrspace(8) %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 0)
   ret void
 }

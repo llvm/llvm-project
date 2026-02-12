@@ -1147,7 +1147,7 @@ TEST_F(VPRecipeTest, CastVPBlendRecipeToVPUser) {
   Args.push_back(I1);
   Args.push_back(I2);
   Args.push_back(M2);
-  VPBlendRecipe Recipe(Phi, Args, {});
+  VPBlendRecipe Recipe(Phi, Args, {}, {});
 
   checkVPRecipeCastImpl<VPBlendRecipe, VPUser>(&Recipe);
 
