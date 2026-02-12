@@ -843,11 +843,17 @@ public:
   unsigned getIndexOfDstInMCOperands() const { return MC_DST_IDX[Kind]; }
 
   // Return the index of the specified src operand in MCInst operands.
-  unsigned getIndexOfSrcInMCOperands(unsigned CompSrcIdx, bool VOPD3) const {
+  unsigned getIndexOfSrcInMCOperands(unsigned CompSrcIdx, bool VOPD3,
+                                     bool VOP3Dot = false) const {
     assert(CompSrcIdx < Component::MAX_SRC_NUM);
 
     if (Kind == SINGLE && CompSrcIdx == 2 && BitOp3Idx != -1)
       return BitOp3Idx;
+
+    if (VOP3Dot) {
+      return SINGLE_MC_SRC_IDX[3][CompSrcIdx] + getPrevCompSrcNum() +
+             (Kind != SINGLE ? 1 : 0);
+    }
 
     if (VOPD3) {
       return SINGLE_MC_SRC_IDX[VOPD3ModsNum][CompSrcIdx] + getPrevCompSrcNum() +

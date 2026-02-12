@@ -2645,6 +2645,9 @@ def isWave32Strict : Predicate<"Subtarget->isWave32()">,
 def isWave64Strict : Predicate<"Subtarget->isWave64()">,
   AssemblerPredicate <(all_of FeatureWavefrontSize64)>;
 
+def HasOnlyDualDot2AccF32F16 : Predicate<"Subtarget->hasVOPDInsts() && Subtarget->hasDot10Insts() && !Subtarget->hasDot5Insts()">;
+def HasOnlyDualDot2AccF32BF16 : Predicate<"Subtarget->hasVOPDInsts() && Subtarget->hasDot12Insts() && !Subtarget->hasDot13Insts()">;
+
 //===----------------------------------------------------------------------===//
 // HwModes
 //===----------------------------------------------------------------------===//

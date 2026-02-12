@@ -87,11 +87,13 @@ multiclass VOP3PInst<string OpName, VOPProfile P,
 }
 
 multiclass VOP3PInstDotWithDual<string OpName, VOPProfile P,
-                                SDPatternOperator node = null_frag> {
+                                SDPatternOperator node = null_frag,
+                                bits<6> VOPDOp, string VOPDName> {
   def NAME : VOP3P_Pseudo<OpName, P,
                           getVOP3PModPat<P, node,
                                          1 /*HasExplicitClamp*/, 1/*IsDOT*/,
-                                         VOP3PModsDOT, VOP3PModsF32>.ret>;
+                                         VOP3PModsDOT, VOP3PModsF32>.ret>,
+             VOPD_Component<VOPDOp, VOPDName>;
   let SubtargetPredicate = isGFX11Plus in {
   if P.HasExtVOP3DPP then
     def _dpp : VOP3_DPP_Pseudo<OpName, P> {
@@ -616,7 +618,7 @@ defm V_DOT2_F32_F16 :
   VOP3PInstDotWithDual<"v_dot2_f32_f16",
                        VOP3P_Profile<VOP_F32_V2F16_V2F16_F32, VOP3_REGULAR,
                                      /*HasDPP*/ 1>,
-                       AMDGPUfdot2>;
+                       AMDGPUfdot2, 0xC, "v_dot2acc_f32_f16">;
 
 let OtherPredicates = [HasDot7Insts] in {
 defm V_DOT4_U32_U8  : VOP3PInst<"v_dot4_u32_u8",
@@ -641,11 +643,36 @@ let SubtargetPredicate = HasDot12Insts  in {
 
 defm V_DOT2_F32_BF16 :
   VOP3PInstDotWithDual<"v_dot2_f32_bf16", DOT2_BF16_Profile,
-                       int_amdgcn_fdot2_f32_bf16>;
+                       int_amdgcn_fdot2_f32_bf16, 0xD, "v_dot2acc_f32_bf16">;
 
 } // End SubtargetPredicate = HasDot12Insts
 
 } // End let IsDOT = 1
+
+let IsDOT = 1, Constraints = "$vdst = $src2" in {
+let OtherPredicates = [HasOnlyDualDot2AccF32F16] in
+def V_DOT2ACC_F32_F16_PSEUDO
+  : VOP3P_Pseudo<"", VOP3P_Profile<VOP_F32_V2F16_V2F16_F32, VOP3_REGULAR>>;
+
+let OtherPredicates = [HasOnlyDualDot2AccF32BF16] in
+def V_DOT2ACC_F32_BF16_PSEUDO :
+  VOP3P_Pseudo<"", VOP3P_Profile<VOP_F32_V2BF16_V2BF16_F32, VOP3_REGULAR>>;
+}
+
+class Dot2AccPseudo_Pat <SDPatternOperator node, Instruction inst, ValueType ty>
+  : GCNPat <
+    (f32 (node (ty (VOP3PNoModsDOT ty:$src0)), (ty (VOP3PNoModsDOT ty:$src1)),
+               (f32 (VOP3PNoModsF32 f32:$src2)), (i1 DSTCLAMP.NONE))),
+    (f32 (inst (i32 SRCMODS.OP_SEL_1), $src0, (i32 SRCMODS.OP_SEL_1), $src1,
+               (i32 SRCMODS.OP_SEL_1), $src2))
+>;
+
+let SubtargetPredicate = HasOnlyDualDot2AccF32F16 in
+def : Dot2AccPseudo_Pat<AMDGPUfdot2, V_DOT2ACC_F32_F16_PSEUDO, v2f16>;
+
+let SubtargetPredicate = HasOnlyDualDot2AccF32BF16 in
+def : Dot2AccPseudo_Pat<int_amdgcn_fdot2_f32_bf16, V_DOT2ACC_F32_BF16_PSEUDO,
+                        v2bf16>;
 
 multiclass VOP3PDOTIUInst <string OpName, SDPatternOperator intrinsic_node> {
   let IsDOT = 1 in
