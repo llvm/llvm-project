@@ -5079,10 +5079,7 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
   //
   // FIXME: For types which don't have a destructor, consider using a
   // narrower lifetime bound.
-  // FIXME: This should work fine w/ exceptions, but somehow breaks the
-  // dominance relationship in the def-use chain.
-  if (!CGM.getLangOpts().Exceptions &&
-      hasAggregateEvaluationKind(E->getType())) {
+  if (hasAggregateEvaluationKind(E->getType())) {
     RawAddress ArgSlotAlloca = Address::invalid();
     ArgSlot = CreateAggTemp(E->getType(), "agg.tmp", &ArgSlotAlloca);
 
