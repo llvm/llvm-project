@@ -1405,7 +1405,7 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
   DeclSpec DS(AttrFactory);
   DS.SetRangeStart(IdLoc);
   DS.SetRangeEnd(EndLocation);
-  DS.getTypeSpecScope() = SS;
+  DS.getTypeSpecScope() = std::move(SS);
 
   const char *PrevSpec = nullptr;
   unsigned DiagID;

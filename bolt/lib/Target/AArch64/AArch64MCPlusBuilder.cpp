@@ -1733,6 +1733,70 @@ public:
     BC.createInstructionPatch(PLTFunction.getAddress(), NewPLTSeq);
   }
 
+  void applyBTIFixupToSymbol(BinaryContext &BC, const MCSymbol *TargetSymbol,
+                             MCInst &Call) override {
+    BinaryFunction *TargetFunction = BC.getFunctionForSymbol(TargetSymbol);
+    applyBTIFixupCommon(TargetSymbol, TargetFunction, nullptr, Call);
+  }
+
+  void applyBTIFixupToTarget(BinaryBasicBlock &StubBB) override {
+    BinaryFunction &Func = *StubBB.getFunction();
+    BinaryContext &BC = Func.getBinaryContext();
+    const MCSymbol *RealTargetSym = BC.MIB->getTargetSymbol(*StubBB.begin());
+    BinaryFunction *TargetFunction = BC.getFunctionForSymbol(RealTargetSym);
+    BinaryBasicBlock *TgtBB = Func.getBasicBlockForLabel(RealTargetSym);
+    applyBTIFixupCommon(RealTargetSym, TargetFunction, TgtBB,
+                        *StubBB.getLastNonPseudoInstr());
+  }
+
+  void applyBTIFixupCommon(const MCSymbol *RealTargetSym,
+                           BinaryFunction *TargetFunction,
+                           BinaryBasicBlock *TargetBB, MCInst &Call) override {
+    // TODO: add support for editing each type, and remove errors.
+    if (!TargetFunction && !TargetBB) {
+      errs() << "BOLT-ERROR: Cannot add BTI to function with symbol "
+             << RealTargetSym->getName() << "\n";
+      exit(1);
+    }
+    if (TargetFunction && TargetFunction->isPLTFunction()) {
+      patchPLTEntryForBTI(*TargetFunction, Call);
+      return;
+    }
+    if (TargetFunction && TargetFunction->isIgnored()) {
+      errs() << "BOLT-ERROR: Cannot add BTI landing pad to ignored function "
+             << TargetFunction->getPrintName() << "\n";
+      exit(1);
+    }
+    if (TargetFunction && !TargetFunction->hasCFG()) {
+      if (TargetFunction->hasInstructions()) {
+        auto FirstII = TargetFunction->instrs().begin();
+        MCInst FirstInst = FirstII->second;
+        if (isCallCoveredByBTI(Call, FirstInst))
+          return;
+      }
+      errs()
+          << "BOLT-ERROR: Cannot add BTI landing pad to function without CFG: "
+          << TargetFunction->getPrintName() << "\n";
+      exit(1);
+    }
+    if (!TargetBB)
+      // No need to check TargetFunction for nullptr, because
+      // !TargetBB &&!TargetFunction has already been checked.
+      TargetBB = &*TargetFunction->begin();
+    if (TargetBB) {
+      if (!TargetBB->hasParent()) {
+        errs() << "BOLT-ERROR: Cannot add BTI to block with no parent "
+                  "function. Targeted symbol: "
+               << RealTargetSym->getName() << "\n";
+        exit(1);
+      }
+      insertBTI(*TargetBB, Call);
+      return;
+    }
+    errs() << "BOLT-ERROR: unhandled case when applying BTI fixup\n";
+    exit(1);
+  }
+
   unsigned getInvertedBranchOpcode(unsigned Opcode) const {
     switch (Opcode) {
     default:

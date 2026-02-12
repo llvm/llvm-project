@@ -7,8 +7,8 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-vopd=0 | FileCheck -check-prefixes=GFX11-PACKED,GFX11-PACKED-FAKE16 %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 -mattr=+real-true16 -amdgpu-enable-vopd=0 | FileCheck -check-prefixes=GFX12-PACKED,GFX12-PACKED-SDAG,GFX12-PACKED-SDAG-TRUE16 %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 -amdgpu-enable-vopd=0 | FileCheck -check-prefixes=GFX12-PACKED,GFX12-PACKED-SDAG,GFX12-PACKED-SDAG-FAKE16 %s
-; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1200 -mattr=+real-true16 -amdgpu-enable-vopd=0 | FileCheck -check-prefixes=GFX12-PACKED,GFX12-PACKED-GISEL,GFX12-PACKED-GISEL-TRUE16 %s
-; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 -amdgpu-enable-vopd=0 | FileCheck -check-prefixes=GFX12-PACKED,GFX12-PACKED-GISEL,GFX12-PACKED-GISEL-FAKE16 %s
+; RUN: llc < %s -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1200 -mattr=+real-true16 -amdgpu-enable-vopd=0 | FileCheck -check-prefixes=GFX12-PACKED,GFX12-PACKED-GISEL,GFX12-PACKED-GISEL-TRUE16 %s
+; RUN: llc < %s -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 -amdgpu-enable-vopd=0 | FileCheck -check-prefixes=GFX12-PACKED,GFX12-PACKED-GISEL,GFX12-PACKED-GISEL-FAKE16 %s
 
 define amdgpu_kernel void @tbuffer_store_d16_x(<4 x i32> %rsrc, half %data) {
 ; PREGFX10-UNPACKED-LABEL: tbuffer_store_d16_x:
