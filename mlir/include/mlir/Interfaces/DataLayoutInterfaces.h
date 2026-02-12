@@ -153,9 +153,9 @@ llvm::TypeSize divideCeil(llvm::TypeSize numerator, uint64_t denominator);
 } // namespace mlir
 
 #include "mlir/Interfaces/DataLayoutAttrInterface.h.inc"
+#include "mlir/Interfaces/DataLayoutDialectInterface.h.inc"
 #include "mlir/Interfaces/DataLayoutOpInterface.h.inc"
 #include "mlir/Interfaces/DataLayoutTypeInterface.h.inc"
-#include "mlir/Interfaces/DataLayoutDialectInterface.h.inc"
 
 namespace mlir {
 
