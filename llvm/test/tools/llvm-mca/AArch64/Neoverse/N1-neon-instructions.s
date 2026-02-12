@@ -613,10 +613,10 @@
 # CHECK-NEXT:  1      2     0.50                        mla	v0.8b, v0.8b, v0.8b
 # CHECK-NEXT:  1      2     0.50                        mla	v15.8h, v22.8h, v4.h[3]
 # CHECK-NEXT:  1      2     0.50                        mla	v28.2s, v10.2s, v2.s[0]
-# CHECK-NEXT:  1      4     1.00                        mls	v0.4h, v0.4h, v0.4h
+# CHECK-NEXT:  1      5     1.00                        mls	v0.4h, v0.4h, v0.4h
 # CHECK-NEXT:  1      2     0.50                        mls	v25.8h, v29.8h, v0.h[4]
 # CHECK-NEXT:  1      2     0.50                        mls	v22.2s, v29.2s, v0.s[3]
-# CHECK-NEXT:  2      5     2.00                        mls	v26.4s, v5.4s, v28.4s
+# CHECK-NEXT:  1      5     2.00                        mls	v26.4s, v5.4s, v28.4s
 # CHECK-NEXT:  1      2     0.50                        mov	b0, v0.b[15]
 # CHECK-NEXT:  1      2     0.50                        mov	d6, v0.d[1]
 # CHECK-NEXT:  1      2     0.50                        mov	h2, v0.h[5]
@@ -938,10 +938,10 @@
 # CHECK-NEXT:  1      2     0.50                        sqrdmlah	v0.4s, v1.4s, v2.s[1]
 # CHECK-NEXT:  1      4     1.00                        sqrdmlah	h0, h1, h2
 # CHECK-NEXT:  1      4     1.00                        sqrdmlah	v0.4h, v1.4h, v2.4h
-# CHECK-NEXT:  2      5     2.00                        sqrdmlah	v0.8h, v1.8h, v2.8h
+# CHECK-NEXT:  1      5     2.00                        sqrdmlah	v0.8h, v1.8h, v2.8h
 # CHECK-NEXT:  1      4     1.00                        sqrdmlah	s0, s1, s2
 # CHECK-NEXT:  1      4     1.00                        sqrdmlah	v0.2s, v1.2s, v2.2s
-# CHECK-NEXT:  2      5     2.00                        sqrdmlah	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT:  1      5     2.00                        sqrdmlah	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT:  1      2     0.50                        sqrdmlsh	h0, h1, v2.h[3]
 # CHECK-NEXT:  1      2     0.50                        sqrdmlsh	v0.4h, v1.4h, v2.h[3]
 # CHECK-NEXT:  1      2     0.50                        sqrdmlsh	v0.8h, v1.8h, v2.h[3]
@@ -950,10 +950,10 @@
 # CHECK-NEXT:  1      2     0.50                        sqrdmlsh	v0.4s, v1.4s, v2.s[1]
 # CHECK-NEXT:  1      4     1.00                        sqrdmlsh	h0, h1, h2
 # CHECK-NEXT:  1      4     1.00                        sqrdmlsh	v0.4h, v1.4h, v2.4h
-# CHECK-NEXT:  2      5     2.00                        sqrdmlsh	v0.8h, v1.8h, v2.8h
+# CHECK-NEXT:  1      5     2.00                        sqrdmlsh	v0.8h, v1.8h, v2.8h
 # CHECK-NEXT:  1      4     1.00                        sqrdmlsh	s0, s1, s2
 # CHECK-NEXT:  1      4     1.00                        sqrdmlsh	v0.2s, v1.2s, v2.2s
-# CHECK-NEXT:  2      5     2.00                        sqrdmlsh	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT:  1      5     2.00                        sqrdmlsh	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT:  1      4     1.00                        sqrdmulh	h10, h11, h12
 # CHECK-NEXT:  1      2     0.50                        sqrdmulh	h7, h15, v0.h[3]
 # CHECK-NEXT:  1      2     0.50                        sqrdmulh	s15, s14, v0.s[1]
