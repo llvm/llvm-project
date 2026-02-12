@@ -998,6 +998,11 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
                               << ", TripMultiple=" << TripMultiple << "\n");
 
   UnrollPragmaInfo PInfo(L);
+  // If a user provided an explicit unroll pragma, it should override expensive
+  // trip count checks
+  if (PInfo.ExplicitUnroll) {
+    UP.AllowExpensiveTripCount = true;
+  }
   LLVM_DEBUG({
     if (PInfo.ExplicitUnroll) {
       dbgs().indent(1) << "Explicit unroll requested:";
