@@ -1422,7 +1422,7 @@ td_library(
     name = "DialectFoldInterfaceTdFiles",
     srcs = ["include/mlir/Interfaces/DialectFoldInterface.td"],
     includes = ["include"],
-    deps = [":OptBaseTdFiles"],
+    deps = [":OpBaseTdFiles"],
 )
 
 gentbl_cc_library(
