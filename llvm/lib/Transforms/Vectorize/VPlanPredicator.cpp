@@ -14,6 +14,7 @@
 #include "VPRecipeBuilder.h"
 #include "VPlan.h"
 #include "VPlanCFG.h"
+#include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
 #include "VPlanUtils.h"
@@ -26,6 +27,9 @@ namespace {
 class VPPredicator {
   /// Builder to construct recipes to compute masks.
   VPBuilder Builder;
+
+  /// Post-dominator tree for the VPlan.
+  VPPostDominatorTree VPPDT;
 
   /// When we if-convert we need to create edge masks. We have to cache values
   /// so that we don't end up with exponential recursion/IR.
@@ -63,6 +67,8 @@ class VPPredicator {
   }
 
 public:
+  VPPredicator(VPlan &Plan) : VPPDT(Plan) {}
+
   /// Returns the *entry* mask for \p VPBB.
   VPValue *getBlockInMask(VPBasicBlock *VPBB) const {
     return BlockMaskCache.lookup(VPBB);
@@ -127,15 +133,33 @@ VPValue *VPPredicator::createEdgeMask(VPBasicBlock *Src, VPBasicBlock *Dst) {
 }
 
 void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
-  // Start inserting after the block's phis, which be replaced by blends later.
+  // Compute the edge masks for all incoming edges to VPBB. Insert after the
+  // block's phis, which will be replaced by blends later.
+  // TODO: Skip creating edge masks for blocks that are control-flow equivalent
+  // to header and have no phis.
   Builder.setInsertPoint(VPBB, VPBB->getFirstNonPhi());
+  for (auto *Predecessor : SetVector<VPBlockBase *>(
+           VPBB->getPredecessors().begin(), VPBB->getPredecessors().end()))
+    createEdgeMask(cast<VPBasicBlock>(Predecessor), VPBB);
+
+  // Reuse the mask of header block if VPBB is control-flow equivalent to
+  // header.
+  // TODO: Generalize to reuse mask of immediate dominator.
+  VPBasicBlock *Header =
+      VPBB->getPlan()->getVectorLoopRegion()->getEntryBasicBlock();
+  if (VPPDT.properlyDominates(VPBB, Header)) {
+    setBlockInMask(VPBB, getBlockInMask(Header));
+    return;
+  }
+
   // All-one mask is modelled as no-mask following the convention for masked
   // load/store/gather/scatter. Initialize BlockMask to no-mask.
   VPValue *BlockMask = nullptr;
+
   // This is the block mask. We OR all unique incoming edges.
   for (auto *Predecessor : SetVector<VPBlockBase *>(
            VPBB->getPredecessors().begin(), VPBB->getPredecessors().end())) {
-    VPValue *EdgeMask = createEdgeMask(cast<VPBasicBlock>(Predecessor), VPBB);
+    VPValue *EdgeMask = getEdgeMask(cast<VPBasicBlock>(Predecessor), VPBB);
     if (!EdgeMask) { // Mask of predecessor is all-one so mask of block is
                      // too.
       setBlockInMask(VPBB, EdgeMask);
@@ -272,7 +296,7 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       Header);
-  VPPredicator Predicator;
+  VPPredicator Predicator(Plan);
   for (VPBlockBase *VPB : RPOT) {
     // Non-outer regions with VPBBs only are supported at the moment.
     auto *VPBB = cast<VPBasicBlock>(VPB);
