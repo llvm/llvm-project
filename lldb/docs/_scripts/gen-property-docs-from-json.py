@@ -4,16 +4,57 @@ from dataclasses import dataclass
 import json
 
 
-class Property(TypedDict):
+PropertyDef = TypedDict(
+    "PropertyDef",
+    {
+        "!superclasses": list[str],
+        "Name": str,
+        "Path": str,
+        "Type": str,
+        "Description": NotRequired[str],
+        "HasDefaultUnsignedValue": NotRequired[int],
+        "HasDefaultBooleanValue": NotRequired[int],
+        "DefaultUnsignedValue": NotRequired[int],
+        "HasDefaultStringValue": NotRequired[int],
+        "DefaultStringValue": NotRequired[str],
+        "HasDefaultEnumValue": NotRequired[int],
+        "DefaultEnumValue": NotRequired[str],
+        "EnumValues": NotRequired[str],
+    },
+)
+
+
+class Property:
     name: str
+    path: str
     type: str
-    default: NotRequired[str]
-    description: NotRequired[str]
+    description: str
+    default: Optional[str]
+
+    def __init__(self, definition: PropertyDef):
+        self.name = definition["Name"]
+        self.path = definition["Path"]
+        self.type = definition["Type"]
+        self.description = definition.get("Description", "").strip()
+        self.default = None
+
+        has_default_unsigned = definition.get("HasDefaultUnsignedValue")
+        has_default_bool = definition.get("HasDefaultBooleanValue")
+        has_default_str = definition.get("HasDefaultStringValue")
+        if has_default_bool == 1:
+            assert has_default_unsigned
+            self.default = (
+                "true" if definition.get("DefaultUnsignedValue", 0) != 0 else "false"
+            )
+        elif has_default_unsigned:
+            self.default = str(definition.get("DefaultUnsignedValue", 0))
+        elif has_default_str:
+            self.default = definition.get("DefaultStringValue")
 
 
 class PropertyGroup(TypedDict):
     path: str
-    """The full path to this group separated by dots"""
+    """The full path to this group separated by dots (e.g. 'target.process')"""
     properties: list[Property]
 
 
@@ -22,8 +63,8 @@ class PropertyTree:
     items: dict[str, Union["PropertyTree", Property]]
 
 
-def append_group(tree: PropertyTree, group: PropertyGroup):
-    segments = group["path"].split(".") if group["path"] else []
+def append_property(tree: PropertyTree, prop: Property):
+    segments = prop.path.split(".") if prop.path else []
 
     subtree = tree
     for segment in segments:
@@ -32,17 +73,18 @@ def append_group(tree: PropertyTree, group: PropertyGroup):
         subtree = subtree.items[segment]
         assert isinstance(subtree, PropertyTree)
 
-    for property in group["properties"]:
-        subtree.items[property["name"]] = property
+    subtree.items[prop.name] = prop
 
 
 def print_property(f: TextIO, path: str, property: Property):
+    # Invoke lldbsetting directive. See MyST reference:
+    # https://myst-parser.readthedocs.io/en/latest/syntax/roles-and-directives.html
     f.write(f"```{{lldbsetting}} {path}\n")
-    f.write(f":type: \"{property['type']}\"\n\n")
-    f.write(property.get("description", "").strip())
+    f.write(f':type: "{property.type}"\n\n')
+    f.write(property.description)
     f.write("\n\n")
-    if "default" in property and property["default"]:
-        f.write(f":default: {property['default']}\n")
+    if property.default:
+        f.write(f":default: {property.default}\n")
     # FIXME: add enumerations (":enum {name}: {description}")
     f.write("```\n")
 
@@ -52,11 +94,11 @@ def print_tree(f: TextIO, level: int, prefix: str, name: str, tree: PropertyTree
         f.write(f"{'#' * (level + 2)} {name}\n\n")
 
     leafs = sorted(
-        filter(lambda it: isinstance(it[1], dict), tree.items.items()),
+        filter(lambda it: isinstance(it[1], Property), tree.items.items()),
         key=lambda it: it[0],
     )
     for key, prop in leafs:
-        assert isinstance(prop, dict)  # only needed for typing
+        assert isinstance(prop, Property)  # only needed for typing
         path = f"{prefix}.{key}" if prefix else key
         print_property(f, path, prop)
 
@@ -93,9 +135,13 @@ def main():
     root = PropertyTree(items={})
     for input in args.inputs:
         with open(input) as f:
-            groups: list[PropertyGroup] = json.load(f)
-        for group in groups:
-            append_group(root, group)
+            properties: dict[str, PropertyDef] = json.load(f)
+        for key, prop in properties.items():
+            if key.startswith("!"):
+                continue  # tablegen metadata
+            if "Property" not in prop["!superclasses"]:
+                continue  # not a property
+            append_property(root, Property(prop))
 
     with open(args.output, "w") as f:
         f.write(HEADER)

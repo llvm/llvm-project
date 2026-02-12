@@ -6,7 +6,7 @@ lldb_tablegen(LanguageCPlusPlusPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE LanguageCPlusPlusProperties.td
   TARGET LLDBPluginLanguageCPlusPlusPropertiesEnumGen)
 
-lldb_tablegen(LanguageCPlusPlusProperties.json -gen-lldb-property-docs-json
+lldb_tablegen(LanguageCPlusPlusProperties.json -dump-json
   SOURCE LanguageCPlusPlusProperties.td
   TARGET LLDBPluginLanguageCPlusPlusPropertiesJsonGen)
 

@@ -6,7 +6,7 @@ lldb_tablegen(TargetPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE TargetProperties.td
   TARGET LLDBTargetPropertiesEnumGen)
 
-lldb_tablegen(TargetProperties.json -gen-lldb-property-docs-json
+lldb_tablegen(TargetProperties.json -dump-json
   SOURCE TargetProperties.td
   TARGET LLDBTargetPropertiesJsonGen)
 

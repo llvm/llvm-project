@@ -6,7 +6,7 @@ lldb_tablegen(PlatformMacOSXPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE PlatformMacOSXProperties.td
   TARGET LLDBPluginPlatformMacOSXPropertiesEnumGen)
 
-lldb_tablegen(PlatformMacOSXProperties.json -gen-lldb-property-docs-json
+lldb_tablegen(PlatformMacOSXProperties.json -dump-json
   SOURCE PlatformMacOSXProperties.td
   TARGET LLDBPluginPlatformMacOSXPropertiesJsonGen)
 

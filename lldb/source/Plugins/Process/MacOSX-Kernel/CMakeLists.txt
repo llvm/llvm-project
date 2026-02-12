@@ -6,7 +6,7 @@ lldb_tablegen(ProcessKDPPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE ProcessKDPProperties.td
   TARGET LLDBPluginProcessMacOSXKernelPropertiesEnumGen)
 
-lldb_tablegen(ProcessKDPProperties.json -gen-lldb-property-docs-json
+lldb_tablegen(ProcessKDPProperties.json -dump-json
   SOURCE ProcessKDPProperties.td
   TARGET LLDBPluginProcessMacOSXKernelPropertiesJsonGen)
 

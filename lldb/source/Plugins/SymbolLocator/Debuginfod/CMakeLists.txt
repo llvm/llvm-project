@@ -6,7 +6,7 @@ lldb_tablegen(SymbolLocatorDebuginfodPropertiesEnum.inc -gen-lldb-property-enum-
   SOURCE SymbolLocatorDebuginfodProperties.td
   TARGET LLDBPluginSymbolLocatorDebuginfodPropertiesEnumGen)
 
-lldb_tablegen(SymbolLocatorDebuginfodProperties.json -gen-lldb-property-docs-json
+lldb_tablegen(SymbolLocatorDebuginfodProperties.json -dump-json
   SOURCE SymbolLocatorDebuginfodProperties.td
   TARGET LLDBPluginSymbolLocatorDebuginfodPropertiesJsonGen)
 

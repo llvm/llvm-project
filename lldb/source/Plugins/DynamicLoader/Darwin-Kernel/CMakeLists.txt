@@ -6,7 +6,7 @@ lldb_tablegen(DynamicLoaderDarwinKernelPropertiesEnum.inc -gen-lldb-property-enu
   SOURCE DynamicLoaderDarwinKernelProperties.td
   TARGET LLDBPluginDynamicLoaderDarwinKernelPropertiesEnumGen)
 
-lldb_tablegen(DynamicLoaderDarwinKernelProperties.json -gen-lldb-property-docs-json
+lldb_tablegen(DynamicLoaderDarwinKernelProperties.json -dump-json
   SOURCE DynamicLoaderDarwinKernelProperties.td
   TARGET LLDBPluginDynamicLoaderDarwinKernelPropertiesJsonGen)
 

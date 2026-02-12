@@ -6,7 +6,7 @@ lldb_tablegen(PlatformWasmPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE PlatformWasmProperties.td
   TARGET LLDBPluginPlatformWasmPropertiesEnumGen)
 
-lldb_tablegen(PlatformWasmProperties.json -gen-lldb-property-docs-json
+lldb_tablegen(PlatformWasmProperties.json -dump-json
   SOURCE PlatformWasmProperties.td
   TARGET LLDBPluginPlatformWasmPropertiesJsonGen)
 

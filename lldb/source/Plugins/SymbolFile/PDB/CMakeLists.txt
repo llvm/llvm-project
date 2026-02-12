@@ -6,7 +6,7 @@ lldb_tablegen(SymbolFilePDBPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE SymbolFilePDBProperties.td
   TARGET LLDBPluginSymbolFilePDBPropertiesEnumGen)
 
-lldb_tablegen(SymbolFilePDBProperties.json -gen-lldb-property-docs-json
+lldb_tablegen(SymbolFilePDBProperties.json -dump-json
   SOURCE SymbolFilePDBProperties.td
   TARGET LLDBPluginSymbolFilePDBPropertiesJsonGen)
 

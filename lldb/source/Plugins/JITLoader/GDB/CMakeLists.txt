@@ -6,7 +6,7 @@ lldb_tablegen(JITLoaderGDBPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE JITLoaderGDBProperties.td
   TARGET LLDBPluginJITLoaderGDBPropertiesEnumGen)
 
-lldb_tablegen(JITLoaderGDBProperties.json -gen-lldb-property-docs-json
+lldb_tablegen(JITLoaderGDBProperties.json -dump-json
   SOURCE JITLoaderGDBProperties.td
   TARGET LLDBPluginJITLoaderGDBPropertiesJsonGen)
 

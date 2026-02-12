@@ -6,7 +6,7 @@ lldb_tablegen(SymbolFileDWARFPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE SymbolFileDWARFProperties.td
   TARGET LLDBPluginSymbolFileDWARFPropertiesEnumGen)
 
-lldb_tablegen(SymbolFileDWARFProperties.json -gen-lldb-property-docs-json
+lldb_tablegen(SymbolFileDWARFProperties.json -dump-json
   SOURCE SymbolFileDWARFProperties.td
   TARGET LLDBPluginSymbolFileDWARFPropertiesJsonGen)
 

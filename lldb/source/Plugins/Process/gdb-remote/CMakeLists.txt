@@ -6,7 +6,7 @@ lldb_tablegen(ProcessGDBRemotePropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE ProcessGDBRemoteProperties.td
   TARGET LLDBPluginProcessGDBRemotePropertiesEnumGen)
 
-lldb_tablegen(ProcessGDBRemoteProperties.json -gen-lldb-property-docs-json
+lldb_tablegen(ProcessGDBRemoteProperties.json -dump-json
   SOURCE ProcessGDBRemoteProperties.td
   TARGET LLDBPluginProcessGDBRemotePropertiesJsonGen)
 

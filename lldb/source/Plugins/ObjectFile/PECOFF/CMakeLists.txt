@@ -13,7 +13,7 @@ lldb_tablegen(ObjectFilePECOFFPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE ObjectFilePECOFFProperties.td
   TARGET LLDBPluginObjectFilePECOFFPropertiesEnumGen)
 
-lldb_tablegen(ObjectFilePECOFFProperties.json -gen-lldb-property-docs-json
+lldb_tablegen(ObjectFilePECOFFProperties.json -dump-json
   SOURCE ObjectFilePECOFFProperties.td
   TARGET LLDBPluginObjectFilePECOFFPropertiesJsonGen)
 

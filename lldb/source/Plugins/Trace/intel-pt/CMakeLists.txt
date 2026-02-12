@@ -10,7 +10,7 @@ lldb_tablegen(TraceIntelPTPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE TraceIntelPTProperties.td
   TARGET TraceIntelPTPropertiesEnumGen)
 
-lldb_tablegen(TraceIntelPTProperties.json -gen-lldb-property-docs-json
+lldb_tablegen(TraceIntelPTProperties.json -dump-json
   SOURCE TraceIntelPTProperties.td
   TARGET TraceIntelPTPropertiesJsonGen)
 

@@ -6,7 +6,7 @@ lldb_tablegen(InterpreterPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE InterpreterProperties.td
   TARGET LLDBInterpreterPropertiesEnumGen)
 
-lldb_tablegen(InterpreterProperties.json -gen-lldb-property-docs-json
+lldb_tablegen(InterpreterProperties.json -dump-json
   SOURCE InterpreterProperties.td
   TARGET LLDBInterpreterPropertiesJsonGen)
 

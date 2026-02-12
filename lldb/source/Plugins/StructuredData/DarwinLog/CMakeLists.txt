@@ -6,7 +6,7 @@ lldb_tablegen(StructuredDataDarwinLogPropertiesEnum.inc -gen-lldb-property-enum-
   SOURCE StructuredDataDarwinLogProperties.td
   TARGET LLDBPluginStructuredDataDarwinLogPropertiesEnumGen)
 
-lldb_tablegen(StructuredDataDarwinLogProperties.json -gen-lldb-property-docs-json
+lldb_tablegen(StructuredDataDarwinLogProperties.json -dump-json
   SOURCE StructuredDataDarwinLogProperties.td
   TARGET LLDBPluginStructuredDataDarwinLogPropertiesJsonGen)
 
