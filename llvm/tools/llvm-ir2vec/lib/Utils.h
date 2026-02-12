@@ -94,6 +94,10 @@ private:
 public:
   explicit IR2VecTool(Module &M) : M(M) {}
 
+  /// Creates the embedding object for downstream embedding streaming
+  Expected<std::unique_ptr<Embedder>> getIR2VecEmbedder(const Function &F,
+                                                        IR2VecKind Kind) const;
+
   /// Initialize the IR2Vec vocabulary from the specified file path.
   Error initializeVocabulary(StringRef VocabPath);
 
