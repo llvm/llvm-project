@@ -8139,18 +8139,30 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
     VFRange SubRange = {VF, MaxVFTimes2};
     if (auto Plan = tryToBuildVPlanWithVPRecipes(
             std::unique_ptr<VPlan>(VPlan0->duplicate()), SubRange, &LVer)) {
+      // Add the start VF to prevent optimizations on scalar VF.
+      Plan->addVF(SubRange.Start);
+      Plan->setName("Initial VPlan");
       // Now optimize the initial VPlan.
       VPlanTransforms::hoistPredicatedLoads(*Plan, PSE, OrigLoop);
       VPlanTransforms::sinkPredicatedStores(*Plan, PSE, OrigLoop);
       RUN_VPLAN_PASS(VPlanTransforms::truncateToMinimalBitwidths, *Plan,
                      CM.getMinimalBitwidths());
       RUN_VPLAN_PASS(VPlanTransforms::optimize, *Plan);
+      VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind, CM.PSE,
+                            OrigLoop);
+      RUN_VPLAN_PASS(VPlanTransforms::narrowScatters, *Plan, CostCtx, SubRange,
+                     CM.foldTailWithEVL());
+
       // TODO: try to put addExplicitVectorLength close to addActiveLaneMask
       if (CM.foldTailWithEVL()) {
         RUN_VPLAN_PASS(VPlanTransforms::addExplicitVectorLength, *Plan,
                        CM.getMaxSafeElements());
         RUN_VPLAN_PASS(VPlanTransforms::optimizeEVLMasks, *Plan);
       }
+
+      for (ElementCount VF : drop_begin(SubRange))
+        Plan->addVF(VF);
+
       assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
       VPlans.push_back(std::move(Plan));
     }
@@ -8367,10 +8379,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     RUN_VPLAN_PASS(VPlanTransforms::convertToAbstractRecipes, *Plan, CostCtx,
                    Range);
   }
-
-  for (ElementCount VF : Range)
-    Plan->addVF(VF);
-  Plan->setName("Initial VPlan");
 
   // Interleave memory: for each Interleave Group we marked earlier as relevant
   // for this VPlan, replace the Recipes widening its memory instructions with a

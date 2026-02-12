@@ -1081,6 +1081,14 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
   /// Compute the cost for this recipe for \p VF, using \p Opcode and \p Ctx.
   InstructionCost getCostForRecipeWithOpcode(unsigned Opcode, ElementCount VF,
                                              VPCostContext &Ctx) const;
+
+  /// Compute the cost for a recipe with \p VF using \p Opcode, \p RetTy and \p
+  /// ArgTys. This function may not be as accurate as
+  /// `getCostForRecipeWithOpcode` since it only provides type-based queries.
+  static InstructionCost getCostForRecipeWithOpcodeAndTypes(unsigned Opcode,
+                                                            Type *RetTy,
+                                                            ElementCount VF,
+                                                            VPCostContext &Ctx);
 };
 
 /// Helper to access the operand that contains the unroll part for this recipe
