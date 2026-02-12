@@ -263,14 +263,13 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       break;
 
       // PLT-generating relocations:
+    case R_AARCH64_PLT32:
+      sym.thunkAccessed = true;
+      [[fallthrough]];
     case R_AARCH64_CALL26:
     case R_AARCH64_CONDBR19:
     case R_AARCH64_JUMP26:
     case R_AARCH64_TSTBR14:
-      rs.processR_PLT_PC(type, offset, addend, sym);
-      continue;
-    case R_AARCH64_PLT32:
-      sym.thunkAccessed = true;
       rs.processR_PLT_PC(type, offset, addend, sym);
       continue;
 
