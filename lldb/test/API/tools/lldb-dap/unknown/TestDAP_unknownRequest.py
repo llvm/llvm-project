@@ -1,8 +1,7 @@
 """
-Test lldb-dap custom request.
+Test lldb-dap unknown request.
 """
 
-from lldbsuite.test.decorators import expectedFailureWindows
 import lldbdap_testcase
 
 
