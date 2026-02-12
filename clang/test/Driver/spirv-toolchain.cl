@@ -64,7 +64,7 @@
 // SPLINK-SAME: "-o" [[SPV1:".*o"]]
 // SPLINK: "-cc1" "-triple" "spirv64"
 // SPLINK-SAME: "-o" [[SPV2:".*o"]]
-// SPLINK: {{spirv-link.*"}} [[SPV1]] [[SPV2]] "-o" "a.out"
+// SPLINK: {{spirv-link.*"}} [[SPV1]] [[SPV2]] "--allow-partial-linkage" "-o" "a.out"
 
 //-----------------------------------------------------------------------------
 // Check bindings when linking when multiple input files are passed.
