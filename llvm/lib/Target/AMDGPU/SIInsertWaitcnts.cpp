@@ -1002,6 +1002,15 @@ private:
 
   // State of all counters at each async mark encountered so far.
   SmallVector<CounterValueArray> AsyncMarks;
+
+  // For each backedge in isolation, the algorithm reachs a fixed point after
+  // the first call to merge(). This is unchanged even with the AsyncMarks
+  // array because we call mergeScore just like the other cases.
+  //
+  // But in the rare pathological case, a nest of loops that pushes marks
+  // without waiting on any mark can cause AsyncMarks to grow very large. We cap
+  // it to a reasonable limit. We can tune this later or potentially introduce a
+  // user option to control the value.
   static constexpr unsigned MaxAsyncMarks = 16;
 
   // Track the upper bound score for async operations that are not part of a
@@ -1256,7 +1265,8 @@ void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
     // counters too, so will need a map from instruction or event types to
     // counter types.
     if (Context->isAsyncLdsDmaWrite(Inst) && T == LOAD_CNT) {
-      assert(!SIInstrInfo::usesASYNC_CNT(Inst));
+      assert(!SIInstrInfo::usesASYNC_CNT(Inst) &&
+             "unexpected GFX1250 instruction");
       AsyncScore[T] = CurrScore;
     }
 
@@ -1539,7 +1549,6 @@ AMDGPU::Waitcnt WaitcntBrackets::determineAsyncWait(unsigned N) {
     }
   });
 
-  AMDGPU::Waitcnt Wait;
   if (AsyncMarks.size() == MaxAsyncMarks) {
     // Enforcing MaxAsyncMarks here is unnecessary work because the size of
     // MaxAsyncMarks is linear when traversing straightline code. But we do
@@ -1549,6 +1558,7 @@ AMDGPU::Waitcnt WaitcntBrackets::determineAsyncWait(unsigned N) {
     N = std::min(N, (unsigned)MaxAsyncMarks - 1);
   }
 
+  AMDGPU::Waitcnt Wait;
   if (AsyncMarks.size() <= N) {
     LLVM_DEBUG(dbgs() << "No additional wait for async mark.\n");
     return Wait;
@@ -2952,15 +2962,6 @@ bool WaitcntBrackets::mergeAsyncMarks(ArrayRef<MergeInfo> MergeInfos,
 
   // Determine maximum length needed after merging
   auto MaxSize = (unsigned)std::max(AsyncMarks.size(), OtherMarks.size());
-
-  // For each backedge in isolation, the algorithm reachs a fixed point after
-  // the first call to merge(). This is unchanged even with the AsyncMarks
-  // array because we call mergeScore just like the other cases.
-  //
-  // But in the rare pathological case, a nest of loops that pushes marks
-  // without waiting on any mark can cause AsyncMarks to grow very large. We cap
-  // it to a reasonable limit. We can tune this later or potentially introduce a
-  // user option to control the value.
   MaxSize = std::min(MaxSize, MaxAsyncMarks);
 
   // Keep only the most recent marks within our limit.
@@ -2972,7 +2973,7 @@ bool WaitcntBrackets::mergeAsyncMarks(ArrayRef<MergeInfo> MergeInfos,
   // pending async operations at this checkpoint" and acts as the identity
   // element for max() during merging. We pad at the beginning since the marks
   // need to be aligned in most-recent order.
-  CounterValueArray ZeroMark{};
+  constexpr CounterValueArray ZeroMark{};
   AsyncMarks.insert(AsyncMarks.begin(), MaxSize - AsyncMarks.size(), ZeroMark);
 
   LLVM_DEBUG({
@@ -2981,9 +2982,6 @@ bool WaitcntBrackets::mergeAsyncMarks(ArrayRef<MergeInfo> MergeInfos,
       llvm::interleaveComma(Mark, dbgs());
       dbgs() << '\n';
     }
-  });
-
-  LLVM_DEBUG({
     dbgs() << "Other marks:\n";
     for (const auto &Mark : OtherMarks) {
       llvm::interleaveComma(Mark, dbgs());
@@ -2997,8 +2995,7 @@ bool WaitcntBrackets::mergeAsyncMarks(ArrayRef<MergeInfo> MergeInfos,
   unsigned OtherSize = OtherMarks.size();
   unsigned OurSize = AsyncMarks.size();
   unsigned MergeCount = std::min(OtherSize, OurSize);
-  assert(OurSize == MaxSize);
-  for (unsigned Idx = 1; Idx <= MergeCount; ++Idx) {
+  for (auto Idx : seq<unsigned>(1, MergeCount)) {
     for (auto T : inst_counter_types(Context->MaxCounter)) {
       StrictDom |= mergeScore(MergeInfos[T], AsyncMarks[OurSize - Idx][T],
                               OtherMarks[OtherSize - Idx][T]);
