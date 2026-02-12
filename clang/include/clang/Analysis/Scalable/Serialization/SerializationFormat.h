@@ -18,7 +18,6 @@
 #include "clang/Analysis/Scalable/Model/SummaryName.h"
 #include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/ExtensibleRTTI.h"
 
 namespace clang::ssaf {
 
@@ -28,8 +27,7 @@ class EntityName;
 class EntitySummary;
 
 /// Abstract base class for serialization formats.
-class SerializationFormat
-    : public llvm::RTTIExtends<SerializationFormat, llvm::RTTIRoot> {
+class SerializationFormat {
 public:
   virtual ~SerializationFormat() = default;
 
@@ -37,8 +35,6 @@ public:
 
   virtual void writeTUSummary(const TUSummary &Summary,
                               llvm::StringRef OutputDir) = 0;
-
-  static char ID; // For RTTIExtends.
 
 protected:
   // Helpers providing access to implementation details of basic data structures
