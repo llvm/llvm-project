@@ -27,7 +27,6 @@
 #include "lldb/API/SBPlatform.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBThread.h"
-#include "lldb/API/SBThreadCollection.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 #include "llvm/Support/Error.h"

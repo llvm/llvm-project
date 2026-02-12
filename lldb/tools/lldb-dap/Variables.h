@@ -80,7 +80,8 @@ struct VariableReferenceStorage {
   /// \return variableReference assigned to this expandable variable.
   var_ref_t Insert(const lldb::SBValue &variable, bool is_permanent);
 
-  /// Insert a new value list.
+  /// Insert a value list. Used to store references to lldb repl command
+  /// outputs.
   var_ref_t Insert(const lldb::SBValueList &values);
 
   std::vector<protocol::Scope> Insert(const lldb::SBFrame &frame);

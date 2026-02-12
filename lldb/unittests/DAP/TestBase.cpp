@@ -48,18 +48,13 @@ void TransportBase::SetUp() {
   EXPECT_THAT_ERROR(to_client->RegisterMessageHandler(client), Succeeded());
 }
 
-void TransportBase::Run() {
+void TransportBase::Run(std::chrono::milliseconds delay) {
   bool addition_succeeded = loop.AddCallback(
-      [](lldb_private::MainLoopBase &loop) {
-        llvm::errs() << "Terminating\n";
-        loop.RequestTermination();
-      },
-      std::chrono::seconds(1));
+      [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); },
+      delay);
   EXPECT_TRUE(addition_succeeded);
   EXPECT_THAT_ERROR(loop.Run().takeError(), llvm::Succeeded());
 }
-
-// void DAPTestBase::SetUp() { TransportBase::SetUp(); }
 
 void DAPTestBase::TearDown() {
   if (core)
