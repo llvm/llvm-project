@@ -19,6 +19,7 @@
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIR/MissingFeatures.h"
@@ -596,9 +597,11 @@ static cir::AllocaOp getOrCreateCleanupDestSlot(cir::FuncOp funcOp,
   cir::IntType s32Type =
       cir::IntType::get(rewriter.getContext(), 32, /*isSigned=*/true);
   cir::PointerType ptrToS32Type = cir::PointerType::get(s32Type);
-  return cir::AllocaOp::create(rewriter, loc, ptrToS32Type, s32Type,
-                               "__cleanup_dest_slot",
-                               /*alignment=*/rewriter.getI64IntegerAttr(4));
+  cir::CIRDataLayout dataLayout(funcOp->getParentOfType<mlir::ModuleOp>());
+  uint64_t alignment = dataLayout.getAlignment(s32Type, true).value();
+  return cir::AllocaOp::create(
+      rewriter, loc, ptrToS32Type, s32Type, "__cleanup_dest_slot",
+      /*alignment=*/rewriter.getI64IntegerAttr(alignment));
 }
 
 class CIRCleanupScopeOpFlattening
@@ -792,10 +795,14 @@ public:
         {
           mlir::OpBuilder::InsertionGuard guard(rewriter);
           rewriter.setInsertionPointToStart(&funcEntryBlock);
+          cir::CIRDataLayout dataLayout(
+              funcOp->getParentOfType<mlir::ModuleOp>());
+          uint64_t alignment =
+              dataLayout.getAlignment(operand.getType(), true).value();
           cir::PointerType ptrType = cir::PointerType::get(operand.getType());
           alloca = cir::AllocaOp::create(rewriter, loc, ptrType,
                                          operand.getType(), "__ret_operand_tmp",
-                                         rewriter.getI64IntegerAttr(4));
+                                         rewriter.getI64IntegerAttr(alignment));
         }
 
         // Store the operand value at the original return location.
