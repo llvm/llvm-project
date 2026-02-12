@@ -22,6 +22,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -291,10 +292,41 @@ lldb::ChildCacheState BytecodeSyntheticChildren::FrontEnd::Update() {
     return ChildCacheState::eRefetch;
   }
 
+  // If the top of the stack is a 0 or 1, that value is popped of the stack and
+  // treated as a return value of eRefetch or eReuse respectively. If the top of
+  // the stack is any other value, it stays on the stack and becomes part of
+  // `self`.
+  //
+  // This dynamic logic can lead to errors for synthetic formatter authors.
+  // Consider the case where an `update` implementation places the number of
+  // children last on the stack. LLDB will _sometimes_ (but not always) consume
+  // that value as a ChildCacheState value. This would cause downstream problems
+  // in `num_children`, because the count won't be on the stack.
+  //
+  // Bytecode authors are encouraged to explicitly push a ChildCacheState value
+  // on to the stack.
+  std::optional<ChildCacheState> cache_state = std::nullopt;
+  const FormatterBytecode::DataStackElement &top = data.back();
+  if (auto *u = std::get_if<uint64_t>(&top))
+    if (*u == 0 || *u == 1)
+      cache_state = static_cast<ChildCacheState>(*u);
+  if (auto *i = std::get_if<int64_t>(&top))
+    if (*i == 0 || *i == 1)
+      cache_state = static_cast<ChildCacheState>(*i);
+
+  if (cache_state) {
+    data.pop_back();
+    if (cache_state == ChildCacheState::eReuse)
+      LLDB_LOG(GetLog(LLDBLog::DataFormatters),
+               "Bytecode formatter returned eReuse from `update` (type: `{0}`, "
+               "name: `{1}`)",
+               m_backend.GetDisplayTypeName(), m_backend.GetName());
+  }
+
   if (data.size() > 0)
     m_self = std::move(data);
 
-  return ChildCacheState::eRefetch;
+  return cache_state.value_or(ChildCacheState::eRefetch);
 }
 
 llvm::Expected<uint32_t>
