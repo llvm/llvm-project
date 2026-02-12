@@ -4335,25 +4335,38 @@ define i128 @v_sdiv_i128_v_pow2k(i128 %lhs) {
 ; GFX9-G-O0-LABEL: v_sdiv_i128_v_pow2k:
 ; GFX9-G-O0:       ; %bb.0:
 ; GFX9-G-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-G-O0-NEXT:    v_mov_b32_e32 v4, v0
+; GFX9-G-O0-NEXT:    v_mov_b32_e32 v8, v0
+; GFX9-G-O0-NEXT:    ; kill: def $vgpr8 killed $vgpr8 def $vgpr8_vgpr9_vgpr10_vgpr11 killed $exec
+; GFX9-G-O0-NEXT:    v_mov_b32_e32 v9, v1
+; GFX9-G-O0-NEXT:    v_mov_b32_e32 v10, v2
+; GFX9-G-O0-NEXT:    v_mov_b32_e32 v11, v3
+; GFX9-G-O0-NEXT:    ; kill: def $vgpr0_vgpr1 killed $vgpr8_vgpr9 killed $exec
+; GFX9-G-O0-NEXT:    v_mov_b32_e32 v0, v10
+; GFX9-G-O0-NEXT:    v_mov_b32_e32 v1, v11
+; GFX9-G-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr0 killed $exec
+; GFX9-G-O0-NEXT:    ; kill: def $vgpr1 killed $vgpr1 killed $vgpr0_vgpr1 killed $exec
 ; GFX9-G-O0-NEXT:    s_mov_b32 s4, 31
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v0, s4
-; GFX9-G-O0-NEXT:    v_ashrrev_i32_e64 v0, v0, v3
-; GFX9-G-O0-NEXT:    v_mov_b32_e32 v5, v0
-; GFX9-G-O0-NEXT:    v_mov_b32_e32 v6, v0
+; GFX9-G-O0-NEXT:    v_ashrrev_i32_e64 v0, v0, v1
+; GFX9-G-O0-NEXT:    v_mov_b32_e32 v1, v0
+; GFX9-G-O0-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX9-G-O0-NEXT:    s_mov_b32 s4, 31
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v0, s4
-; GFX9-G-O0-NEXT:    v_lshrrev_b64 v[6:7], v0, v[5:6]
+; GFX9-G-O0-NEXT:    v_lshrrev_b64 v[6:7], v0, v[1:2]
+; GFX9-G-O0-NEXT:    v_mov_b32_e32 v4, v8
+; GFX9-G-O0-NEXT:    v_mov_b32_e32 v1, v9
+; GFX9-G-O0-NEXT:    v_mov_b32_e32 v2, v10
+; GFX9-G-O0-NEXT:    v_mov_b32_e32 v0, v11
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v5, v6
-; GFX9-G-O0-NEXT:    v_mov_b32_e32 v0, v7
+; GFX9-G-O0-NEXT:    v_mov_b32_e32 v3, v7
 ; GFX9-G-O0-NEXT:    s_mov_b32 s8, 0
 ; GFX9-G-O0-NEXT:    s_mov_b32 s5, 0
 ; GFX9-G-O0-NEXT:    v_add_co_u32_e64 v4, s[6:7], v4, v5
-; GFX9-G-O0-NEXT:    v_addc_co_u32_e64 v1, s[6:7], v1, v0, s[6:7]
-; GFX9-G-O0-NEXT:    v_mov_b32_e32 v0, s8
-; GFX9-G-O0-NEXT:    v_addc_co_u32_e64 v5, s[6:7], v2, v0, s[6:7]
-; GFX9-G-O0-NEXT:    v_mov_b32_e32 v0, s5
-; GFX9-G-O0-NEXT:    v_addc_co_u32_e64 v4, s[6:7], v3, v0, s[6:7]
+; GFX9-G-O0-NEXT:    v_addc_co_u32_e64 v1, s[6:7], v1, v3, s[6:7]
+; GFX9-G-O0-NEXT:    v_mov_b32_e32 v3, s8
+; GFX9-G-O0-NEXT:    v_addc_co_u32_e64 v5, s[6:7], v2, v3, s[6:7]
+; GFX9-G-O0-NEXT:    v_mov_b32_e32 v2, s5
+; GFX9-G-O0-NEXT:    v_addc_co_u32_e64 v4, s[6:7], v0, v2, s[6:7]
 ; GFX9-G-O0-NEXT:    ; kill: def $vgpr5 killed $vgpr5 def $vgpr5_vgpr6 killed $exec
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX9-G-O0-NEXT:    s_mov_b32 s5, 1

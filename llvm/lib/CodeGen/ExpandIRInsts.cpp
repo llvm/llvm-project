@@ -129,6 +129,11 @@ static void expandPow2Division(BinaryOperator *Div) {
     // X / 1 = X, X / -1 = -X.
     Result = IsNegativeDivisor ? Builder.CreateNeg(X) : X;
   } else if (IsSigned) {
+    // The signed expansion uses X multiple times (in the bias computation and
+    // the shift). Freeze X to ensure consistent behavior if it is undef/poison,
+    // matching the approach in IntegerDivision.cpp and expandFPToI.
+    if (!IsExact && !isGuaranteedNotToBeUndefOrPoison(X))
+      X = Builder.CreateFreeze(X, X->getName() + ".fr");
     // For exact division, no bias is needed since there's no rounding.
     Value *Dividend =
         IsExact ? X : addSignedBias(Builder, X, BitWidth, ShiftAmt);
@@ -171,6 +176,10 @@ static void expandPow2Remainder(BinaryOperator *Rem) {
     // Remainder by 1 or -1 is always 0.
     Result = ConstantInt::get(Ty, 0);
   } else if (IsSigned) {
+    // The signed expansion uses X multiple times (bias computation, shift, and
+    // final sub). Freeze X to ensure consistent behavior if it is undef/poison.
+    if (!isGuaranteedNotToBeUndefOrPoison(X))
+      X = Builder.CreateFreeze(X, X->getName() + ".fr");
     Value *Adjusted = addSignedBias(Builder, X, BitWidth, ShiftAmt);
     // Clear lower ShiftAmt bits via round-trip shift:
     //   Truncated = (Adjusted >> ShiftAmt) << ShiftAmt

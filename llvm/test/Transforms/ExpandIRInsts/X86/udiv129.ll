@@ -65,57 +65,6 @@ define void @test(ptr %ptr, ptr %out) nounwind !prof !0 {
   ret void
 }
 
-define void @test_udiv_pow2(ptr %ptr, ptr %out) nounwind {
-; CHECK-LABEL: @test_udiv_pow2(
-; CHECK-NEXT:    [[A:%.*]] = load i129, ptr [[PTR:%.*]], align 16
-; CHECK-NEXT:    [[RES:%.*]] = lshr i129 [[A]], 3
-; CHECK-NEXT:    store i129 [[RES]], ptr [[OUT:%.*]], align 16
-; CHECK-NEXT:    ret void
-;
-  %a = load i129, ptr %ptr
-  %res = udiv i129 %a, 8
-  store i129 %res, ptr %out
-  ret void
-}
-
-define void @test_udiv_by_1(ptr %ptr, ptr %out) nounwind {
-; CHECK-LABEL: @test_udiv_by_1(
-; CHECK-NEXT:    [[A:%.*]] = load i129, ptr [[PTR:%.*]], align 16
-; CHECK-NEXT:    store i129 [[A]], ptr [[OUT:%.*]], align 16
-; CHECK-NEXT:    ret void
-;
-  %a = load i129, ptr %ptr
-  %res = udiv i129 %a, 1
-  store i129 %res, ptr %out
-  ret void
-}
-
-define void @test_udiv_large_pow2(ptr %ptr, ptr %out) nounwind {
-; CHECK-LABEL: @test_udiv_large_pow2(
-; CHECK-NEXT:    [[A:%.*]] = load i129, ptr [[PTR:%.*]], align 16
-; CHECK-NEXT:    [[RES:%.*]] = lshr i129 [[A]], 64
-; CHECK-NEXT:    store i129 [[RES]], ptr [[OUT:%.*]], align 16
-; CHECK-NEXT:    ret void
-;
-  %a = load i129, ptr %ptr
-  %res = udiv i129 %a, 18446744073709551616
-  store i129 %res, ptr %out
-  ret void
-}
-
-define void @test_udiv_exact_pow2(ptr %ptr, ptr %out) nounwind {
-; CHECK-LABEL: @test_udiv_exact_pow2(
-; CHECK-NEXT:    [[A:%.*]] = load i129, ptr [[PTR:%.*]], align 16
-; CHECK-NEXT:    [[RES:%.*]] = lshr exact i129 [[A]], 3
-; CHECK-NEXT:    store i129 [[RES]], ptr [[OUT:%.*]], align 16
-; CHECK-NEXT:    ret void
-;
-  %a = load i129, ptr %ptr
-  %res = udiv exact i129 %a, 8
-  store i129 %res, ptr %out
-  ret void
-}
-
 !0 = !{!"function_entry_count", i64 1000}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind }

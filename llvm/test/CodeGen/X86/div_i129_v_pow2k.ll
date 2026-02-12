@@ -53,13 +53,13 @@ define i129 @v_sdiv_i129_v_pow2k(i129 %lhs) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %ecx, %ebx
 ; X86-NEXT:    andl $1, %ebx
 ; X86-NEXT:    negl %ebx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl %ebx, %edi
 ; X86-NEXT:    andl $1, %edi
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %ebx
