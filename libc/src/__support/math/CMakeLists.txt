@@ -621,6 +621,7 @@ add_header_library(
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.common
     libc.src.__support.macros.config
+    libc.include.llvm-libc-macros.float16_macros
 )
 
 add_header_library(
