@@ -1611,23 +1611,21 @@ static void reassociateHeaderMask(VPlan &Plan) {
   VPValue *HeaderMask = vputils::findHeaderMask(Plan);
   if (!HeaderMask)
     return;
-  SmallSetVector<VPUser *, 8> Worklist(HeaderMask->user_begin(),
-                                       HeaderMask->user_end());
+  SmallVector<VPUser *> Worklist(HeaderMask->users());
   while (!Worklist.empty()) {
     auto *R = dyn_cast<VPSingleDefRecipe>(Worklist.pop_back_val());
     if (!R)
       continue;
     VPValue *X, *Y;
     if (match(R, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue())))
-      Worklist.insert_range(R->users());
+      Worklist.append(R->user_begin(), R->user_end());
     else if (match(R, m_LogicalAnd(
                           m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(X)),
                           m_VPValue(Y)))) {
       VPBuilder Builder(R);
-      Worklist.insert_range(R->users());
+      Worklist.append(R->user_begin(), R->user_end());
       R->replaceAllUsesWith(
           Builder.createLogicalAnd(HeaderMask, Builder.createLogicalAnd(X, Y)));
-      R->eraseFromParent();
     }
   }
 }
