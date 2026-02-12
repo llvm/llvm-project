@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s --transform-interpreter='entry-point=innerreduction' | FileCheck %s --check-prefix=INNER_REDUCTION
-// RUN: mlir-opt %s --transform-interpreter='entry-point=innerparallel' | FileCheck %s --check-prefix=INNER_PARALLEL
+// RUN: mlir-opt %s --transform-interpreter='entry-point=innerreduction' | FileCheck %s --check-prefix=INNER_REDUCTION,ALL
+// RUN: mlir-opt %s --transform-interpreter='entry-point=innerparallel' | FileCheck %s --check-prefix=INNER_PARALLEL,ALL
 
 // INNER_REDUCTION-LABEL: func @inner_reduction_to_inner_parallel
 // INNER_REDUCTION-SAME:    %[[INPUT:.+]]: vector<3x2x4xf32>
@@ -46,28 +46,19 @@ func.func @transpose_parallel_middle(%arg0: vector<3x4x5xf32>, %acc: vector<4xf3
     return %0 : vector<4xf32>
 }
 
-// INNER_REDUCTION-LABEL: func @one_dim_to_two_dim_innerreduction
-// INNER_REDUCTION-SAME:    %[[INPUT:.+]]: vector<8xf32>
-// INNER_REDUCTION-SAME:    %[[ACC:.+]]: f32
-func.func @one_dim_to_two_dim_innerreduction(%arg0: vector<8xf32>, %acc: f32) -> f32 {
-    // INNER_REDUCTION: %[[CAST:.+]] = vector.shape_cast %[[INPUT]] : vector<8xf32> to vector<1x8xf32>
-    // INNER_REDUCTION: %[[BROADCAST:.+]] = vector.broadcast %[[ACC]] : f32 to vector<1xf32>
+// ALL-LABEL: func @one_dim_to_two_dim
+// ALL-SAME:    %[[INPUT:.+]]: vector<8xf32>
+// ALL-SAME:    %[[ACC:.+]]: f32
+func.func @one_dim_to_two_dim(%arg0: vector<8xf32>, %acc: f32) -> f32 {
+    // ALL: %[[CAST:.+]] = vector.shape_cast %[[INPUT]] : vector<8xf32> to vector<1x8xf32>
+    // ALL: %[[BROADCAST:.+]] = vector.broadcast %[[ACC]] : f32 to vector<1xf32>
     // INNER_REDUCTION: %[[RESULT:.+]] = vector.multi_reduction <add>, %[[CAST]], %[[BROADCAST]] [1]
-    %0 = vector.multi_reduction <add>, %arg0, %acc [0] : vector<8xf32> to f32
-    // INNER_REDUCTION: %[[EXTRACT:.+]] = vector.extract %[[RESULT]][0]
-    // INNER_REDUCTION: return %[[EXTRACT]]
-    return %0 : f32
-}
-
-// INNER_PARALLEL-LABEL: func @one_dim_to_two_dim_innerparallel
-// INNER_PARALLEL-SAME:    %[[INPUT:.+]]: vector<2xf32>
-// INNER_PARALLEL-SAME:    %[[ACC:.+]]: f32
-func.func @one_dim_to_two_dim_innerparallel(%arg0: vector<2xf32>, %acc: f32) -> f32 {
-    // INNER_PARALLEL: %[[CAST:.+]] = vector.shape_cast %[[INPUT]] : vector<2xf32> to vector<1x2xf32>
-    // INNER_PARALLEL: %[[BROADCAST:.+]] = vector.broadcast %[[ACC]] : f32 to vector<1xf32>
+    // INNER_REDUCTION: %[[SCALAR:.+]] = vector.extract %[[RESULT]][0]
     // INNER_PARALLEL: %[[TRANSPOSED:.+]] = vector.transpose %[[CAST]], [1, 0]
-    // INNER_PARALLEL: vector.multi_reduction <maxnumf>, %[[TRANSPOSED]], %[[BROADCAST]] [0]
-    %0 = vector.multi_reduction <maxnumf>, %arg0, %acc [0] : vector<2xf32> to f32
+    // INNER_PARALLEL: %[[RESULT:.+]] = vector.multi_reduction <add>, %[[TRANSPOSED]], %[[BROADCAST]] [0]
+    // INNER_PARALLEL: %[[SCALAR:.+]] = vector.extract %[[RESULT]][0]
+    %0 = vector.multi_reduction <add>, %arg0, %acc [0] : vector<8xf32> to f32
+    // ALL: return %[[SCALAR]]
     return %0 : f32
 }
 
