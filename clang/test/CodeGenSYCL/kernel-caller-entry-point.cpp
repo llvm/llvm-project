@@ -148,7 +148,7 @@ int main() {
 // CHECK-HOST-LINUX-NEXT:   %0 = load i32, ptr %a.addr, align 4
 // CHECK-HOST-LINUX-NEXT:   %1 = load i32, ptr %b.addr, align 4
 // CHECK-HOST-LINUX-NEXT:   call void @_ZN7handler18sycl_kernel_launchIZ4mainE2KNJZ4mainEUliiE_iiEEEvPKcDpT0_(ptr noundef nonnull align 1 dereferenceable(1) %this1, ptr noundef @.str.3, ptr noundef %agg.tmp, i32 noundef %0, i32 noundef %1)
-// CHECK-HOST-LINUX-NEXT:   call void @_ZZ4mainENUliiE_D1Ev(ptr noundef nonnull align 4 dereferenceable(4) %agg.tmp) #{{[0-9]+}}
+// CHECK-HOST-LINUX-NEXT:   call void @_ZZ4mainENUliiE_D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %agg.tmp) #{{[0-9]+}}
 // CHECK-HOST-LINUX-NEXT:   ret void
 // CHECK-HOST-LINUX-NEXT: }
 
@@ -211,7 +211,7 @@ int main() {
 // CHECK-HOST-WINDOWS-NEXT:   %coerce.dive4 = getelementptr inbounds nuw %struct.copyable, ptr %coerce.dive3, i32 0, i32 0
 // CHECK-HOST-WINDOWS-NEXT:   %2 = load i32, ptr %coerce.dive4, align 4
 // CHECK-HOST-WINDOWS-NEXT:   call void @"??$sycl_kernel_launch@UKN@?1??main@@9@V<lambda_3>@?0??2@9@HH@handler@@AEAAXPEBDV<lambda_3>@?0??main@@9@HH@Z"(ptr noundef nonnull align 1 dereferenceable(1) %this2, ptr noundef @"??_C@_0P@DLGHPODL@_ZTSZ4mainE2KN?$AA@", i32 %2, i32 noundef %1, i32 noundef %0)
-// CHECK-HOST-WINDOWS-NEXT:   call void @"??1<lambda_3>@?0??main@@9@QEAA@XZ"(ptr noundef nonnull align 4 dereferenceable(4) %k) #{{[0-9]+}}
+// CHECK-HOST-WINDOWS-NEXT:   call void @"??1<lambda_3>@?0??main@@9@QEAA@XZ"(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %k) #{{[0-9]+}}
 // CHECK-HOST-WINDOWS-NEXT:   ret void
 // CHECK-HOST-WINDOWS-NEXT: }
 
