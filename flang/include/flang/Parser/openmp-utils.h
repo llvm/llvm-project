@@ -268,15 +268,14 @@ struct ExecutionPartIterator {
   using IteratorRange = llvm::iterator_range<IteratorType>;
 
   struct Construct {
-    Construct(IteratorType b, IteratorType e,
-        const ExecutionPartConstruct *c = nullptr)
+    Construct(IteratorType b, IteratorType e, const ExecutionPartConstruct *c)
         : range(b, e), owner(c) {}
     template <typename R>
-    Construct(const R &r, const ExecutionPartConstruct *c = nullptr)
+    Construct(const R &r, const ExecutionPartConstruct *c)
         : range(r), owner(c) {}
     Construct(const Construct &c) = default;
     IteratorRange range;
-    const ExecutionPartConstruct *owner = nullptr;
+    const ExecutionPartConstruct *owner;
   };
 
   ExecutionPartIterator() = default;
