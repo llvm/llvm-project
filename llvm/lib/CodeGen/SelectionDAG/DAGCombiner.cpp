@@ -482,8 +482,9 @@ namespace {
     SDValue visitCTTZ_ZERO_POISON(SDNode *N);
     SDValue visitCTPOP(SDNode *N);
     SDValue visitSELECT(SDNode *N);
-    // visit CTSELECT Node
-    SDValue visitConstantTimeSelect(SDNode *N);
+    // ISD::CTSELECT - Constant-Time SELECT (not related to CT in
+    // CTPOP/CTLZ/CTTZ where CT means "count").
+    SDValue visitCT_SELECT(SDNode *N);
     SDValue visitVSELECT(SDNode *N);
     SDValue visitVP_SELECT(SDNode *N);
     SDValue visitSELECT_CC(SDNode *N);
@@ -2006,7 +2007,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::CTTZ_ZERO_POISON:   return visitCTTZ_ZERO_POISON(N);
   case ISD::CTPOP:              return visitCTPOP(N);
   case ISD::SELECT:             return visitSELECT(N);
-  case ISD::CTSELECT:           return visitConstantTimeSelect(N);
+  case ISD::CTSELECT:           return visitCT_SELECT(N);
   case ISD::VSELECT:            return visitVSELECT(N);
   case ISD::SELECT_CC:          return visitSELECT_CC(N);
   case ISD::SETCC:              return visitSETCC(N);
@@ -12823,7 +12824,7 @@ static SDValue foldBoolSelectToLogic(SDNode *N, const SDLoc &DL,
                                      SelectionDAG &DAG) {
   assert((N->getOpcode() == ISD::SELECT || N->getOpcode() == ISD::VSELECT ||
           N->getOpcode() == ISD::VP_SELECT) &&
-         "Expected a (v)(vp.)(ct) select");
+         "Expected a (v)(vp.)select");
   SDValue Cond = N->getOperand(0);
   SDValue T = N->getOperand(1), F = N->getOperand(2);
   EVT VT = N->getValueType(0);
@@ -13218,7 +13219,7 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
 //  - i1 CTSELECT nesting merges via AND/OR that keep the result as CTSELECT.
 // Broader rewrites should be done in target-specific lowering when stronger
 // guarantees about legality and constant-time preservation are available.
-SDValue DAGCombiner::visitConstantTimeSelect(SDNode *N) {
+SDValue DAGCombiner::visitCT_SELECT(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   SDValue N2 = N->getOperand(2);
