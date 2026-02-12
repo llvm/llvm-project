@@ -635,27 +635,28 @@ bool CodeGenPrepare::_run(Function &F) {
   // (plus arguments that we can get rid of).
   EverMadeChange |= eliminateAssumptions(F);
 
+  auto resetLoopInfo = [this]() {
+    LI->releaseMemory();
+    LI->analyze(DTU->getDomTree());
+  };
+
   // Eliminate blocks that contain only PHI nodes and an
   // unconditional branch.
   bool ResetLI = false;
   EverMadeChange |= eliminateMostlyEmptyBlocks(F, ResetLI);
-  if (ResetLI) {
-    LI->releaseMemory();
-    LI->analyze(DTU->getDomTree());
-  }
+  if (ResetLI)
+    resetLoopInfo();
 
   if (!DisableBranchOpts)
     EverMadeChange |= splitBranchCondition(F);
 
   // Split some critical edges where one of the sources is an indirect branch,
   // to help generate sane code for PHIs involving such edges.
-  bool Split = SplitIndirectBrCriticalEdges(F, /*IgnoreBlocksWithoutPHI=*/true);
+  bool Split = SplitIndirectBrCriticalEdges(F, /*IgnoreBlocksWithoutPHI=*/true,
+                                            BPI.get(), BFI.get(), DTU);
   EverMadeChange |= Split;
-  if (Split) {
-    DTU->recalculate(F);
-    LI->releaseMemory();
-    LI->analyze(DTU->getDomTree());
-  }
+  if (Split)
+    resetLoopInfo();
 
 #ifndef NDEBUG
   if (VerifyDT)
