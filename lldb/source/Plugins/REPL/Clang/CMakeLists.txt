@@ -11,6 +11,5 @@ add_lldb_library(lldbPluginClangREPL PLUGIN
     lldbTarget
     lldbUtility
     lldbPluginClangCommon
-    lldbPluginCPPRuntime
     lldbPluginTypeSystemClang
 )

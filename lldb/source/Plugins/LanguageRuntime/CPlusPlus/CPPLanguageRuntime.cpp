@@ -12,6 +12,7 @@
 #include <memory>
 
 #include "CPPLanguageRuntime.h"
+#include "CommandObjectCPlusPlus.h"
 #include "VerboseTrapFrameRecognizer.h"
 
 #include "llvm/ADT/StringRef.h"
@@ -35,6 +36,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+LLDB_PLUGIN_DEFINE_ADV(CPPLanguageRuntime, CPPRuntime)
 
 static ConstString g_this = ConstString("this");
 // Artificial coroutine-related variables emitted by clang.
@@ -107,7 +110,7 @@ public:
 };
 
 CPPLanguageRuntime::CPPLanguageRuntime(Process *process)
-    : LanguageRuntime(process) {
+    : LanguageRuntime(process), m_itanium_runtime(process) {
   if (process) {
     process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
         StackFrameRecognizerSP(new LibCXXFrameRecognizer()), {},
@@ -490,4 +493,184 @@ bool CPPLanguageRuntime::IsSymbolARuntimeThunk(const Symbol &symbol) {
   // prefix.
   return mangled_name.starts_with("_ZTh") || mangled_name.starts_with("_ZTv") ||
          mangled_name.starts_with("_ZTc");
+}
+
+bool CPPLanguageRuntime::CouldHaveDynamicValue(ValueObject &in_value) {
+  const bool check_cxx = true;
+  const bool check_objc = false;
+  return in_value.GetCompilerType().IsPossibleDynamicType(nullptr, check_cxx,
+                                                          check_objc);
+}
+
+bool CPPLanguageRuntime::GetDynamicTypeAndAddress(
+    ValueObject &in_value, lldb::DynamicValueType use_dynamic,
+    TypeAndOrName &class_type_or_name, Address &dynamic_address,
+    Value::ValueType &value_type, llvm::ArrayRef<uint8_t> &local_buffer) {
+  class_type_or_name.Clear();
+  value_type = Value::ValueType::Scalar;
+
+  if (!CouldHaveDynamicValue(in_value))
+    return false;
+
+  return m_itanium_runtime.GetDynamicTypeAndAddress(
+      in_value, use_dynamic, class_type_or_name, dynamic_address, value_type);
+}
+
+TypeAndOrName
+CPPLanguageRuntime::FixUpDynamicType(const TypeAndOrName &type_and_or_name,
+                                     ValueObject &static_value) {
+  CompilerType static_type(static_value.GetCompilerType());
+  Flags static_type_flags(static_type.GetTypeInfo());
+
+  TypeAndOrName ret(type_and_or_name);
+  if (type_and_or_name.HasType()) {
+    // The type will always be the type of the dynamic object.  If our parent's
+    // type was a pointer, then our type should be a pointer to the type of the
+    // dynamic object.  If a reference, then the original type should be
+    // okay...
+    CompilerType orig_type = type_and_or_name.GetCompilerType();
+    CompilerType corrected_type = orig_type;
+    if (static_type_flags.AllSet(eTypeIsPointer))
+      corrected_type = orig_type.GetPointerType();
+    else if (static_type_flags.AllSet(eTypeIsReference))
+      corrected_type = orig_type.GetLValueReferenceType();
+    ret.SetCompilerType(corrected_type);
+  } else {
+    // If we are here we need to adjust our dynamic type name to include the
+    // correct & or * symbol
+    std::string corrected_name(type_and_or_name.GetName().GetCString());
+    if (static_type_flags.AllSet(eTypeIsPointer))
+      corrected_name.append(" *");
+    else if (static_type_flags.AllSet(eTypeIsReference))
+      corrected_name.append(" &");
+    // the parent type should be a correctly pointer'ed or referenc'ed type
+    ret.SetCompilerType(static_type);
+    ret.SetName(corrected_name.c_str());
+  }
+  return ret;
+}
+
+LanguageRuntime *
+CPPLanguageRuntime::CreateInstance(Process *process,
+                                   lldb::LanguageType language) {
+  if (language == eLanguageTypeC_plus_plus ||
+      language == eLanguageTypeC_plus_plus_03 ||
+      language == eLanguageTypeC_plus_plus_11 ||
+      language == eLanguageTypeC_plus_plus_14)
+    return new CPPLanguageRuntime(process);
+  else
+    return nullptr;
+}
+
+void CPPLanguageRuntime::Initialize() {
+  PluginManager::RegisterPlugin(
+      GetPluginNameStatic(), "C++ language runtime", CreateInstance,
+      [](CommandInterpreter &interpreter) -> lldb::CommandObjectSP {
+        return CommandObjectSP(new CommandObjectCPlusPlus(interpreter));
+      });
+}
+
+void CPPLanguageRuntime::Terminate() {
+  PluginManager::UnregisterPlugin(CreateInstance);
+}
+
+llvm::Expected<LanguageRuntime::VTableInfo>
+CPPLanguageRuntime::GetVTableInfo(ValueObject &in_value, bool check_type) {
+  return m_itanium_runtime.GetVTableInfo(in_value, check_type);
+}
+
+BreakpointResolverSP
+CPPLanguageRuntime::CreateExceptionResolver(const BreakpointSP &bkpt,
+                                            bool catch_bp, bool throw_bp) {
+  return CreateExceptionResolver(bkpt, catch_bp, throw_bp, false);
+}
+
+BreakpointResolverSP
+CPPLanguageRuntime::CreateExceptionResolver(const BreakpointSP &bkpt,
+                                            bool catch_bp, bool throw_bp,
+                                            bool for_expressions) {
+  std::vector<const char *> exception_names;
+  m_itanium_runtime.AppendExceptionBreakpointFunctions(
+      exception_names, catch_bp, throw_bp, for_expressions);
+
+  BreakpointResolverSP resolver_sp(new BreakpointResolverName(
+      bkpt, exception_names.data(), exception_names.size(),
+      eFunctionNameTypeBase, eLanguageTypeUnknown, 0, eLazyBoolNo));
+
+  return resolver_sp;
+}
+
+lldb::SearchFilterSP CPPLanguageRuntime::CreateExceptionSearchFilter() {
+  Target &target = m_process->GetTarget();
+
+  FileSpecList filter_modules;
+  m_itanium_runtime.AppendExceptionBreakpointFilterModules(filter_modules,
+                                                           target);
+  return target.GetSearchFilterForModuleList(&filter_modules);
+}
+
+lldb::BreakpointSP CPPLanguageRuntime::CreateExceptionBreakpoint(
+    bool catch_bp, bool throw_bp, bool for_expressions, bool is_internal) {
+  Target &target = m_process->GetTarget();
+  FileSpecList filter_modules;
+  BreakpointResolverSP exception_resolver_sp =
+      CreateExceptionResolver(nullptr, catch_bp, throw_bp, for_expressions);
+  SearchFilterSP filter_sp(CreateExceptionSearchFilter());
+  const bool hardware = false;
+  const bool resolve_indirect_functions = false;
+  return target.CreateBreakpoint(filter_sp, exception_resolver_sp, is_internal,
+                                 hardware, resolve_indirect_functions);
+}
+
+void CPPLanguageRuntime::SetExceptionBreakpoints() {
+  if (!m_process)
+    return;
+
+  const bool catch_bp = false;
+  const bool throw_bp = true;
+  const bool is_internal = true;
+  const bool for_expressions = true;
+
+  // For the exception breakpoints set by the Expression parser, we'll be a
+  // little more aggressive and stop at exception allocation as well.
+
+  if (m_cxx_exception_bp_sp) {
+    m_cxx_exception_bp_sp->SetEnabled(true);
+  } else {
+    m_cxx_exception_bp_sp = CreateExceptionBreakpoint(
+        catch_bp, throw_bp, for_expressions, is_internal);
+    if (m_cxx_exception_bp_sp)
+      m_cxx_exception_bp_sp->SetBreakpointKind("c++ exception");
+  }
+}
+
+void CPPLanguageRuntime::ClearExceptionBreakpoints() {
+  if (!m_process)
+    return;
+
+  if (m_cxx_exception_bp_sp) {
+    m_cxx_exception_bp_sp->SetEnabled(false);
+  }
+}
+
+bool CPPLanguageRuntime::ExceptionBreakpointsAreSet() {
+  return m_cxx_exception_bp_sp && m_cxx_exception_bp_sp->IsEnabled();
+}
+
+bool CPPLanguageRuntime::ExceptionBreakpointsExplainStop(
+    lldb::StopInfoSP stop_reason) {
+  if (!m_process)
+    return false;
+
+  if (!stop_reason || stop_reason->GetStopReason() != eStopReasonBreakpoint)
+    return false;
+
+  uint64_t break_site_id = stop_reason->GetValue();
+  return m_process->GetBreakpointSiteList().StopPointSiteContainsBreakpoint(
+      break_site_id, m_cxx_exception_bp_sp->GetID());
+}
+
+lldb::ValueObjectSP
+CPPLanguageRuntime::GetExceptionObjectForThread(lldb::ThreadSP thread_sp) {
+  return m_itanium_runtime.GetExceptionObjectForThread(std::move(thread_sp));
 }

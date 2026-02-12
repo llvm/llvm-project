@@ -1,4 +1,4 @@
-//===-- ItaniumABILanguageRuntime.cpp -------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,56 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ItaniumABILanguageRuntime.h"
+#include "ItaniumABIRuntime.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
-#include "lldb/Breakpoint/BreakpointLocation.h"
-#include "lldb/Core/Mangled.h"
-#include "lldb/Core/Module.h"
-#include "lldb/Core/PluginManager.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
-#include "lldb/Interpreter/CommandObject.h"
-#include "lldb/Interpreter/CommandObjectMultiword.h"
-#include "lldb/Interpreter/CommandReturnObject.h"
-#include "lldb/Symbol/Symbol.h"
-#include "lldb/Symbol/SymbolFile.h"
-#include "lldb/Symbol/TypeList.h"
-#include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
-#include "lldb/Target/SectionLoadList.h"
-#include "lldb/Target/StopInfo.h"
-#include "lldb/Target/Target.h"
-#include "lldb/Target/Thread.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Scalar.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/ValueObject/ValueObject.h"
-#include "lldb/ValueObject/ValueObjectMemory.h"
-
-#include <vector>
 
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN_DEFINE_ADV(ItaniumABILanguageRuntime, CXXItaniumABI)
-
 static const char *vtable_demangled_prefix = "vtable for ";
 
-char ItaniumABILanguageRuntime::ID = 0;
+ItaniumABIRuntime::ItaniumABIRuntime(Process *process) : m_process(process) {}
 
-bool ItaniumABILanguageRuntime::CouldHaveDynamicValue(ValueObject &in_value) {
-  const bool check_cxx = true;
-  const bool check_objc = false;
-  return in_value.GetCompilerType().IsPossibleDynamicType(nullptr, check_cxx,
-                                                          check_objc);
-}
-
-TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfo(
-    ValueObject &in_value, const VTableInfo &vtable_info) {
+TypeAndOrName
+ItaniumABIRuntime::GetTypeInfo(ValueObject &in_value,
+                               const LanguageRuntime::VTableInfo &vtable_info) {
   if (vtable_info.addr.IsSectionOffset()) {
     // See if we have cached info for this type already
     TypeAndOrName type_info = GetDynamicTypeInfo(vtable_info.addr);
@@ -179,7 +147,7 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfo(
   return TypeAndOrName();
 }
 
-llvm::Error ItaniumABILanguageRuntime::TypeHasVTable(CompilerType type) {
+llvm::Error ItaniumABIRuntime::TypeHasVTable(CompilerType type) {
   // Check to make sure the class has a vtable.
   CompilerType original_type = type;
   if (type.IsPointerOrReferenceType()) {
@@ -191,7 +159,8 @@ llvm::Error ItaniumABILanguageRuntime::TypeHasVTable(CompilerType type) {
   // Make sure this is a class or a struct first by checking the type class
   // bitfield that gets returned.
   if ((type.GetTypeClass() & (eTypeClassStruct | eTypeClassClass)) == 0) {
-    return llvm::createStringError(std::errc::invalid_argument,
+    return llvm::createStringError(
+        std::errc::invalid_argument,
         "type \"%s\" is not a class or struct or a pointer to one",
         original_type.GetTypeName().AsCString("<invalid>"));
   }
@@ -199,8 +168,8 @@ llvm::Error ItaniumABILanguageRuntime::TypeHasVTable(CompilerType type) {
   // Check if the type has virtual functions by asking it if it is polymorphic.
   if (!type.IsPolymorphicClass()) {
     return llvm::createStringError(std::errc::invalid_argument,
-        "type \"%s\" doesn't have a vtable",
-        type.GetTypeName().AsCString("<invalid>"));
+                                   "type \"%s\" doesn't have a vtable",
+                                   type.GetTypeName().AsCString("<invalid>"));
   }
   return llvm::Error::success();
 }
@@ -213,8 +182,7 @@ llvm::Error ItaniumABILanguageRuntime::TypeHasVTable(CompilerType type) {
 // and is can pass in instances of classes which is not suitable for dynamic
 // type detection, these cases should pass true for \a check_type.
 llvm::Expected<LanguageRuntime::VTableInfo>
- ItaniumABILanguageRuntime::GetVTableInfo(ValueObject &in_value,
-                                          bool check_type) {
+ItaniumABIRuntime::GetVTableInfo(ValueObject &in_value, bool check_type) {
 
   CompilerType type = in_value.GetCompilerType();
   if (check_type) {
@@ -240,7 +208,8 @@ llvm::Expected<LanguageRuntime::VTableInfo>
       process->ReadPointerFromMemory(original_ptr, error);
 
   if (!error.Success() || vtable_load_addr == LLDB_INVALID_ADDRESS)
-    return llvm::createStringError(std::errc::invalid_argument,
+    return llvm::createStringError(
+        std::errc::invalid_argument,
         "failed to read vtable pointer from memory at 0x%" PRIx64,
         original_ptr);
 
@@ -252,8 +221,9 @@ llvm::Expected<LanguageRuntime::VTableInfo>
   Address vtable_addr;
   if (!process->GetTarget().ResolveLoadAddress(vtable_load_addr, vtable_addr))
     return llvm::createStringError(std::errc::invalid_argument,
-                                   "failed to resolve vtable pointer 0x%"
-                                   PRIx64 "to a section", vtable_load_addr);
+                                   "failed to resolve vtable pointer 0x%" PRIx64
+                                   "to a section",
+                                   vtable_load_addr);
 
   // Check our cache first to see if we already have this info
   {
@@ -270,20 +240,21 @@ llvm::Expected<LanguageRuntime::VTableInfo>
                                    vtable_load_addr);
   llvm::StringRef name = symbol->GetMangled().GetDemangledName().GetStringRef();
   if (name.starts_with(vtable_demangled_prefix)) {
-    VTableInfo info = {vtable_addr, symbol};
+    LanguageRuntime::VTableInfo info = {vtable_addr, symbol};
     std::lock_guard<std::mutex> locker(m_mutex);
     auto pos = m_vtable_info_map[vtable_addr] = info;
     return info;
   }
   return llvm::createStringError(std::errc::invalid_argument,
-      "symbol found that contains 0x%" PRIx64 " is not a vtable symbol",
-      vtable_load_addr);
+                                 "symbol found that contains 0x%" PRIx64
+                                 " is not a vtable symbol",
+                                 vtable_load_addr);
 }
 
-bool ItaniumABILanguageRuntime::GetDynamicTypeAndAddress(
+bool ItaniumABIRuntime::GetDynamicTypeAndAddress(
     ValueObject &in_value, lldb::DynamicValueType use_dynamic,
     TypeAndOrName &class_type_or_name, Address &dynamic_address,
-    Value::ValueType &value_type, llvm::ArrayRef<uint8_t> &local_buffer) {
+    Value::ValueType &value_type) {
   // For Itanium, if the type has a vtable pointer in the object, it will be at
   // offset 0 in the object.  That will point to the "address point" within the
   // vtable (not the beginning of the vtable.)  We can then look up the symbol
@@ -291,27 +262,20 @@ bool ItaniumABILanguageRuntime::GetDynamicTypeAndAddress(
   // contain the full class name. The second pointer above the "address point"
   // is the "offset_to_top".  We'll use that to get the start of the value
   // object which holds the dynamic type.
-  //
-
-  class_type_or_name.Clear();
-  value_type = Value::ValueType::Scalar;
-
-  if (!CouldHaveDynamicValue(in_value))
-    return false;
 
   // Check if we have a vtable pointer in this value. If we don't it will
   // return an error, else it will return a valid resolved address. We don't
   // want GetVTableInfo to check the type since we accept void * as a possible
   // dynamic type and that won't pass the type check. We already checked the
   // type above in CouldHaveDynamicValue(...).
-  llvm::Expected<VTableInfo> vtable_info_or_err =
+  llvm::Expected<LanguageRuntime::VTableInfo> vtable_info_or_err =
       GetVTableInfo(in_value, /*check_type=*/false);
   if (!vtable_info_or_err) {
     llvm::consumeError(vtable_info_or_err.takeError());
     return false;
   }
 
-  const VTableInfo &vtable_info = vtable_info_or_err.get();
+  const LanguageRuntime::VTableInfo &vtable_info = vtable_info_or_err.get();
   class_type_or_name = GetTypeInfo(in_value, vtable_info);
 
   if (!class_type_or_name)
@@ -353,146 +317,15 @@ bool ItaniumABILanguageRuntime::GetDynamicTypeAndAddress(
   // the original address.
   lldb::addr_t dynamic_addr =
       in_value.GetPointerValue().address + offset_to_top;
-  if (!m_process->GetTarget().ResolveLoadAddress(
-          dynamic_addr, dynamic_address)) {
+  if (!m_process->GetTarget().ResolveLoadAddress(dynamic_addr,
+                                                 dynamic_address)) {
     dynamic_address.SetRawAddress(dynamic_addr);
   }
   return true;
 }
 
-TypeAndOrName ItaniumABILanguageRuntime::FixUpDynamicType(
-    const TypeAndOrName &type_and_or_name, ValueObject &static_value) {
-  CompilerType static_type(static_value.GetCompilerType());
-  Flags static_type_flags(static_type.GetTypeInfo());
-
-  TypeAndOrName ret(type_and_or_name);
-  if (type_and_or_name.HasType()) {
-    // The type will always be the type of the dynamic object.  If our parent's
-    // type was a pointer, then our type should be a pointer to the type of the
-    // dynamic object.  If a reference, then the original type should be
-    // okay...
-    CompilerType orig_type = type_and_or_name.GetCompilerType();
-    CompilerType corrected_type = orig_type;
-    if (static_type_flags.AllSet(eTypeIsPointer))
-      corrected_type = orig_type.GetPointerType();
-    else if (static_type_flags.AllSet(eTypeIsReference))
-      corrected_type = orig_type.GetLValueReferenceType();
-    ret.SetCompilerType(corrected_type);
-  } else {
-    // If we are here we need to adjust our dynamic type name to include the
-    // correct & or * symbol
-    std::string corrected_name(type_and_or_name.GetName().GetCString());
-    if (static_type_flags.AllSet(eTypeIsPointer))
-      corrected_name.append(" *");
-    else if (static_type_flags.AllSet(eTypeIsReference))
-      corrected_name.append(" &");
-    // the parent type should be a correctly pointer'ed or referenc'ed type
-    ret.SetCompilerType(static_type);
-    ret.SetName(corrected_name.c_str());
-  }
-  return ret;
-}
-
-// Static Functions
-LanguageRuntime *
-ItaniumABILanguageRuntime::CreateInstance(Process *process,
-                                          lldb::LanguageType language) {
-  // FIXME: We have to check the process and make sure we actually know that
-  // this process supports
-  // the Itanium ABI.
-  if (language == eLanguageTypeC_plus_plus ||
-      language == eLanguageTypeC_plus_plus_03 ||
-      language == eLanguageTypeC_plus_plus_11 ||
-      language == eLanguageTypeC_plus_plus_14)
-    return new ItaniumABILanguageRuntime(process);
-  else
-    return nullptr;
-}
-
-class CommandObjectMultiwordItaniumABI_Demangle : public CommandObjectParsed {
-public:
-  CommandObjectMultiwordItaniumABI_Demangle(CommandInterpreter &interpreter)
-      : CommandObjectParsed(
-            interpreter, "demangle", "Demangle a C++ mangled name.",
-            "language cplusplus demangle [<mangled-name> ...]") {
-    AddSimpleArgumentList(eArgTypeSymbol, eArgRepeatPlus);
-  }
-
-  ~CommandObjectMultiwordItaniumABI_Demangle() override = default;
-
-protected:
-  void DoExecute(Args &command, CommandReturnObject &result) override {
-    bool demangled_any = false;
-    bool error_any = false;
-    for (auto &entry : command.entries()) {
-      if (entry.ref().empty())
-        continue;
-
-      // the actual Mangled class should be strict about this, but on the
-      // command line if you're copying mangled names out of 'nm' on Darwin,
-      // they will come out with an extra underscore - be willing to strip this
-      // on behalf of the user.   This is the moral equivalent of the -_/-n
-      // options to c++filt
-      auto name = entry.ref();
-      if (name.starts_with("__Z"))
-        name = name.drop_front();
-
-      Mangled mangled(name);
-      if (mangled.GuessLanguage() == lldb::eLanguageTypeC_plus_plus) {
-        ConstString demangled(mangled.GetDisplayDemangledName());
-        demangled_any = true;
-        result.AppendMessageWithFormat("%s ---> %s\n", entry.c_str(),
-                                       demangled.GetCString());
-      } else {
-        error_any = true;
-        result.AppendErrorWithFormat("%s is not a valid C++ mangled name\n",
-                                     entry.ref().str().c_str());
-      }
-    }
-
-    result.SetStatus(
-        error_any ? lldb::eReturnStatusFailed
-                  : (demangled_any ? lldb::eReturnStatusSuccessFinishResult
-                                   : lldb::eReturnStatusSuccessFinishNoResult));
-  }
-};
-
-class CommandObjectMultiwordItaniumABI : public CommandObjectMultiword {
-public:
-  CommandObjectMultiwordItaniumABI(CommandInterpreter &interpreter)
-      : CommandObjectMultiword(
-            interpreter, "cplusplus",
-            "Commands for operating on the C++ language runtime.",
-            "cplusplus <subcommand> [<subcommand-options>]") {
-    LoadSubCommand(
-        "demangle",
-        CommandObjectSP(
-            new CommandObjectMultiwordItaniumABI_Demangle(interpreter)));
-  }
-
-  ~CommandObjectMultiwordItaniumABI() override = default;
-};
-
-void ItaniumABILanguageRuntime::Initialize() {
-  PluginManager::RegisterPlugin(
-      GetPluginNameStatic(), "Itanium ABI for the C++ language", CreateInstance,
-      [](CommandInterpreter &interpreter) -> lldb::CommandObjectSP {
-        return CommandObjectSP(
-            new CommandObjectMultiwordItaniumABI(interpreter));
-      });
-}
-
-void ItaniumABILanguageRuntime::Terminate() {
-  PluginManager::UnregisterPlugin(CreateInstance);
-}
-
-BreakpointResolverSP ItaniumABILanguageRuntime::CreateExceptionResolver(
-    const BreakpointSP &bkpt, bool catch_bp, bool throw_bp) {
-  return CreateExceptionResolver(bkpt, catch_bp, throw_bp, false);
-}
-
-BreakpointResolverSP ItaniumABILanguageRuntime::CreateExceptionResolver(
-    const BreakpointSP &bkpt, bool catch_bp, bool throw_bp,
+void ItaniumABIRuntime::AppendExceptionBreakpointFunctions(
+    std::vector<const char *> &names, bool catch_bp, bool throw_bp,
     bool for_expressions) {
   // One complication here is that most users DON'T want to stop at
   // __cxa_allocate_expression, but until we can do anything better with
@@ -505,30 +338,21 @@ BreakpointResolverSP ItaniumABILanguageRuntime::CreateExceptionResolver(
   static const char *g_throw_name1 = "__cxa_throw";
   static const char *g_throw_name2 = "__cxa_rethrow";
   static const char *g_exception_throw_name = "__cxa_allocate_exception";
-  std::vector<const char *> exception_names;
-  exception_names.reserve(4);
+
   if (catch_bp)
-    exception_names.push_back(g_catch_name);
+    names.push_back(g_catch_name);
 
   if (throw_bp) {
-    exception_names.push_back(g_throw_name1);
-    exception_names.push_back(g_throw_name2);
+    names.push_back(g_throw_name1);
+    names.push_back(g_throw_name2);
   }
 
   if (for_expressions)
-    exception_names.push_back(g_exception_throw_name);
-
-  BreakpointResolverSP resolver_sp(new BreakpointResolverName(
-      bkpt, exception_names.data(), exception_names.size(),
-      eFunctionNameTypeBase, eLanguageTypeUnknown, 0, eLazyBoolNo));
-
-  return resolver_sp;
+    names.push_back(g_exception_throw_name);
 }
 
-lldb::SearchFilterSP ItaniumABILanguageRuntime::CreateExceptionSearchFilter() {
-  Target &target = m_process->GetTarget();
-
-  FileSpecList filter_modules;
+void ItaniumABIRuntime::AppendExceptionBreakpointFilterModules(
+    FileSpecList &filter_modules, const Target &target) {
   if (target.GetArchitecture().GetTriple().getVendor() == llvm::Triple::Apple) {
     // Limit the number of modules that are searched for these breakpoints for
     // Apple binaries.
@@ -537,72 +361,10 @@ lldb::SearchFilterSP ItaniumABILanguageRuntime::CreateExceptionSearchFilter() {
     filter_modules.EmplaceBack("libc++abi.1.0.dylib");
     filter_modules.EmplaceBack("libc++abi.1.dylib");
   }
-  return target.GetSearchFilterForModuleList(&filter_modules);
 }
 
-lldb::BreakpointSP ItaniumABILanguageRuntime::CreateExceptionBreakpoint(
-    bool catch_bp, bool throw_bp, bool for_expressions, bool is_internal) {
-  Target &target = m_process->GetTarget();
-  FileSpecList filter_modules;
-  BreakpointResolverSP exception_resolver_sp =
-      CreateExceptionResolver(nullptr, catch_bp, throw_bp, for_expressions);
-  SearchFilterSP filter_sp(CreateExceptionSearchFilter());
-  const bool hardware = false;
-  const bool resolve_indirect_functions = false;
-  return target.CreateBreakpoint(filter_sp, exception_resolver_sp, is_internal,
-                                 hardware, resolve_indirect_functions);
-}
-
-void ItaniumABILanguageRuntime::SetExceptionBreakpoints() {
-  if (!m_process)
-    return;
-
-  const bool catch_bp = false;
-  const bool throw_bp = true;
-  const bool is_internal = true;
-  const bool for_expressions = true;
-
-  // For the exception breakpoints set by the Expression parser, we'll be a
-  // little more aggressive and stop at exception allocation as well.
-
-  if (m_cxx_exception_bp_sp) {
-    m_cxx_exception_bp_sp->SetEnabled(true);
-  } else {
-    m_cxx_exception_bp_sp = CreateExceptionBreakpoint(
-        catch_bp, throw_bp, for_expressions, is_internal);
-    if (m_cxx_exception_bp_sp)
-      m_cxx_exception_bp_sp->SetBreakpointKind("c++ exception");
-  }
-}
-
-void ItaniumABILanguageRuntime::ClearExceptionBreakpoints() {
-  if (!m_process)
-    return;
-
-  if (m_cxx_exception_bp_sp) {
-    m_cxx_exception_bp_sp->SetEnabled(false);
-  }
-}
-
-bool ItaniumABILanguageRuntime::ExceptionBreakpointsAreSet() {
-  return m_cxx_exception_bp_sp && m_cxx_exception_bp_sp->IsEnabled();
-}
-
-bool ItaniumABILanguageRuntime::ExceptionBreakpointsExplainStop(
-    lldb::StopInfoSP stop_reason) {
-  if (!m_process)
-    return false;
-
-  if (!stop_reason || stop_reason->GetStopReason() != eStopReasonBreakpoint)
-    return false;
-
-  uint64_t break_site_id = stop_reason->GetValue();
-  return m_process->GetBreakpointSiteList().StopPointSiteContainsBreakpoint(
-      break_site_id, m_cxx_exception_bp_sp->GetID());
-}
-
-ValueObjectSP ItaniumABILanguageRuntime::GetExceptionObjectForThread(
-    ThreadSP thread_sp) {
+ValueObjectSP
+ItaniumABIRuntime::GetExceptionObjectForThread(ThreadSP thread_sp) {
   if (!thread_sp->SafeToCallFunctions())
     return {};
 
@@ -664,16 +426,16 @@ ValueObjectSP ItaniumABILanguageRuntime::GetExceptionObjectForThread(
   ValueObjectSP exception = ValueObject::CreateValueObjectFromData(
       "exception", exception_isw.GetAsData(m_process->GetByteOrder()), exe_ctx,
       voidstar);
-  ValueObjectSP dyn_exception
-      = exception->GetDynamicValue(eDynamicDontRunTarget);
+  ValueObjectSP dyn_exception =
+      exception->GetDynamicValue(eDynamicDontRunTarget);
   // If we succeed in making a dynamic value, return that:
   if (dyn_exception)
-     return dyn_exception;
+    return dyn_exception;
 
   return exception;
 }
 
-TypeAndOrName ItaniumABILanguageRuntime::GetDynamicTypeInfo(
+TypeAndOrName ItaniumABIRuntime::GetDynamicTypeInfo(
     const lldb_private::Address &vtable_addr) {
   std::lock_guard<std::mutex> locker(m_mutex);
   DynamicTypeCache::const_iterator pos = m_dynamic_type_map.find(vtable_addr);
@@ -683,7 +445,7 @@ TypeAndOrName ItaniumABILanguageRuntime::GetDynamicTypeInfo(
     return pos->second;
 }
 
-void ItaniumABILanguageRuntime::SetDynamicTypeInfo(
+void ItaniumABIRuntime::SetDynamicTypeInfo(
     const lldb_private::Address &vtable_addr, const TypeAndOrName &type_info) {
   std::lock_guard<std::mutex> locker(m_mutex);
   m_dynamic_type_map[vtable_addr] = type_info;
