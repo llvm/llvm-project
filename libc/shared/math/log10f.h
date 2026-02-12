@@ -1,4 +1,4 @@
-//===-- Single-precision log10(x) function --------------------------------===//
+//===-- Shared log10f function ----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/log10f.h"
+#ifndef LLVM_LIBC_SHARED_MATH_LOG10F_H
+#define LLVM_LIBC_SHARED_MATH_LOG10F_H
+
+#include "shared/libc_common.h"
 #include "src/__support/math/log10f.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(float, log10f, (float x)) { return math::log10f(x); }
+using math::log10f;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_LOG10F_H
