@@ -143,12 +143,17 @@ New Compiler Flags
 - New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added
   to enable or disable Microsoft's anonymous struct/union extension without
   enabling other ``-fms-extensions`` features (#GH177607).
+- New option ``--precompile-reduced-bmi`` allows build system to generate a
+  reduced BMI only for a C++20 importable module unit. Previously the users
+  can only generate the reduced BMI as a by-product, e.g, an object files or
+  a full BMI.
 
 Deprecated Compiler Flags
 -------------------------
 
 Modified Compiler Flags
 -----------------------
+- The `-mno-outline` and `-moutline` compiler flags are now allowed on RISC-V and X86, which both support the machine outliner.
 
 Removed Compiler Flags
 ----------------------
@@ -226,6 +231,9 @@ Improvements to Clang's diagnostics
 - Fixed a false negative in ``-Warray-bounds`` where the warning was suppressed
   when accessing a member function on a past-the-end array element.
   (#GH179128)
+
+- Added a missing space to the FixIt for the ``implicit-int`` group of diagnostics and 
+  made sure that only one such diagnostic and FixIt is emitted per declaration group. (#GH179354)
 
 Improvements to Clang's time-trace
 ----------------------------------
