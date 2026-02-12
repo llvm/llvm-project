@@ -286,6 +286,16 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
     return;
   }
 
+  // Collect only call-like symbol users. Non-call users (e.g. spirv.EntryPoint)
+  // are skipped because we cannot safely modify the function signature without
+  // knowing how such users depend on it.
+  SmallVector<Operation *> callUses;
+  auto symbolUses = funcOp.getSymbolUses(module);
+  for (SymbolTable::SymbolUse use : *symbolUses) {
+    if (isa<CallOpInterface>(use.getUser()))
+      callUses.push_back(use.getUser());
+  }
+
   // Get the list of unnecessary (non-live) arguments in `nonLiveArgs`.
   SmallVector<Value> arguments(funcOp.getArguments());
   BitVector nonLiveArgs = markLives(arguments, nonLiveSet, la);
@@ -299,10 +309,7 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   // Do (2). (Skip creating generic operand cleanup entries for call ops.
   // Call arguments will be removed in the call-site specific segment-aware
   // cleanup, avoiding generic eraseOperands bitvector mechanics.)
-  SymbolTable::UseRange uses = *funcOp.getSymbolUses(module);
-  for (SymbolTable::SymbolUse use : uses) {
-    Operation *callOp = use.getUser();
-    assert(isa<CallOpInterface>(callOp) && "expected a call-like user");
+  for (Operation *callOp : callUses) {
     // Push an empty operand cleanup entry so that call-site specific logic in
     // cleanUpDeadVals runs (it keys off CallOpInterface). The BitVector is
     // intentionally all false to avoid generic erasure.
@@ -336,9 +343,7 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   // since it forwards only to non-live value(s) (%1#1).
   size_t numReturns = funcOp.getNumResults();
   BitVector nonLiveRets(numReturns, true);
-  for (SymbolTable::SymbolUse use : uses) {
-    Operation *callOp = use.getUser();
-    assert(isa<CallOpInterface>(callOp) && "expected a call-like user");
+  for (Operation *callOp : callUses) {
     BitVector liveCallRets = markLives(callOp->getResults(), nonLiveSet, la);
     nonLiveRets &= liveCallRets.flip();
   }
@@ -360,9 +365,7 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   // Do (5) and (6).
   if (numReturns == 0)
     return;
-  for (SymbolTable::SymbolUse use : uses) {
-    Operation *callOp = use.getUser();
-    assert(isa<CallOpInterface>(callOp) && "expected a call-like user");
+  for (Operation *callOp : callUses) {
     cl.results.push_back({callOp, nonLiveRets});
     collectNonLiveValues(nonLiveSet, callOp->getResults(), nonLiveRets);
   }

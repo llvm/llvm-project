@@ -796,3 +796,19 @@ func.func @scf_while_dead_iter_args() -> i32 {
   }
   return %result#0 : i32
 }
+
+// -----
+
+// Verify that `remove-dead-values` does not crash when a function has a
+// non-call symbol user (e.g. spirv.EntryPoint). The function should be
+// preserved as-is since its signature cannot be safely modified.
+
+// CHECK-LABEL: module
+// CHECK: spirv.EntryPoint "GLCompute" @main_func
+// CHECK: llvm.func @main_func()
+module {
+  spirv.EntryPoint "GLCompute" @main_func
+  llvm.func @main_func() attributes {sym_visibility = "private"} {
+    llvm.return
+  }
+}
