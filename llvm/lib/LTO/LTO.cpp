@@ -71,10 +71,39 @@ using namespace object;
 
 #define DEBUG_TYPE "lto"
 
+Expected<std::unique_ptr<LTO::DiagnosticSession>>
+LTO::DiagnosticSession::create(LTO &L) {
+  // Setup the remark streamer according to the provided configuration.
+  auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
+      L.RegularLTO.Ctx, L.Conf.RemarksFilename, L.Conf.RemarksPasses,
+      L.Conf.RemarksFormat, L.Conf.RemarksWithHotness,
+      L.Conf.RemarksHotnessThreshold);
+  if (!DiagFileOrErr)
+    return DiagFileOrErr.takeError();
+
+  auto Session = std::unique_ptr<DiagnosticSession>(new DiagnosticSession(L));
+  L.DiagnosticOutputFile = std::move(*DiagFileOrErr);
+  if (L.DiagnosticOutputFile)
+    L.DiagnosticOutputFile->keep();
+
+  return std::move(Session);
+}
+
+LTO::DiagnosticSession::~DiagnosticSession() {
+  // Finalize the remarks, flushing the stream and closing the file.
+  consumeError(
+      finalizeOptimizationRemarks(std::move(Parent.DiagnosticOutputFile)));
+}
+
+void LTO::emitRemark(OptimizationRemark &Remark) {
+  const Function &F = Remark.getFunction();
+  OptimizationRemarkEmitter ORE(const_cast<Function *>(&F));
+  ORE.emit(Remark);
+}
+
 static cl::opt<bool>
     DumpThinCGSCCs("dump-thin-cg-sccs", cl::init(false), cl::Hidden,
                    cl::desc("Dump the SCCs in the ThinLTO index's callgraph"));
-
 namespace llvm {
 extern cl::opt<bool> CodeGenDataThinLTOTwoRounds;
 extern cl::opt<bool> ForceImportAll;
@@ -1068,10 +1097,9 @@ Error LTO::linkRegularLTO(RegularLTOState::AddedModule Mod,
         if (DiagnosticOutputFile) {
           if (Error Err = F->materialize())
             return Err;
-          OptimizationRemarkEmitter ORE(F, nullptr);
-          ORE.emit(OptimizationRemark(DEBUG_TYPE, "deadfunction", F)
-                   << ore::NV("Function", F)
-                   << " not added to the combined module ");
+          auto R = OptimizationRemark(DEBUG_TYPE, "deadfunction", F);
+          R << ore::NV("Function", F) << " not added to the combined module ";
+          emitRemark(R);
         }
       }
       continue;
@@ -1269,6 +1297,10 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
     return StatsFileOrErr.takeError();
   std::unique_ptr<ToolOutputFile> StatsFile = std::move(StatsFileOrErr.get());
 
+  auto DiagSessionOrErr = DiagnosticSession::create(*this);
+  if (!DiagSessionOrErr)
+    return DiagSessionOrErr.takeError();
+
   // TODO: Ideally this would be controlled automatically by detecting that we
   // are linking with an allocator that supports these interfaces, rather than
   // an internal option (which would still be needed for tests, however). For
@@ -1291,15 +1323,7 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
 
 Error LTO::runRegularLTO(AddStreamFn AddStream) {
   llvm::TimeTraceScope timeScope("Run regular LTO");
-  LLVMContext &CombinedCtx = RegularLTO.CombinedModule->getContext();
-  // Setup optimization remarks.
-  auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
-      CombinedCtx, Conf.RemarksFilename, Conf.RemarksPasses, Conf.RemarksFormat,
-      Conf.RemarksWithHotness, Conf.RemarksHotnessThreshold);
   LLVM_DEBUG(dbgs() << "Running regular LTO\n");
-  if (!DiagFileOrErr)
-    return DiagFileOrErr.takeError();
-  DiagnosticOutputFile = std::move(*DiagFileOrErr);
 
   // Finalize linking of regular LTO modules containing summaries now that
   // we have computed liveness information.
@@ -1371,7 +1395,7 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
 
   if (Conf.PreOptModuleHook &&
       !Conf.PreOptModuleHook(0, *RegularLTO.CombinedModule))
-    return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+    return Error::success();
 
   if (!Conf.CodeGenOnly) {
     for (const auto &R : *GlobalResolutions) {
@@ -1410,7 +1434,7 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
 
     if (Conf.PostInternalizeModuleHook &&
         !Conf.PostInternalizeModuleHook(0, *RegularLTO.CombinedModule))
-      return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+      return Error::success();
   }
 
   if (!RegularLTO.EmptyCombinedModule || Conf.AlwaysEmitRegularLTOObj) {
@@ -1420,7 +1444,7 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
       return Err;
   }
 
-  return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+  return Error::success();
 }
 
 SmallVector<const char *> LTO::getRuntimeLibcallSymbols(const Triple &TT) {

@@ -427,6 +427,21 @@ public:
     LTOK_UnifiedThin,
   };
 
+  /// RAII guard for optimization remarks and LTO-link diagnostics.
+  struct DiagnosticSession {
+    /// The LTO object that owns the diagnostic resources.
+    LTO &Parent;
+
+    DiagnosticSession(LTO &L) : Parent(L) {}
+
+    /// Factory method to initialize a diagnostic session. This sets up the
+    /// remark streamer.
+    static Expected<std::unique_ptr<DiagnosticSession>> create(LTO &L);
+
+    /// Finalizes optimization remarks.
+    ~DiagnosticSession();
+  };
+
   /// Create an LTO object. A default constructed LTO object has a reasonable
   /// production configuration, but you can customize it by passing arguments to
   /// this constructor.
@@ -643,6 +658,10 @@ private:
   LLVMRemarkFileHandle DiagnosticOutputFile;
 
 public:
+  /// Helper to emit an optimization remark during the LTO link when outside of
+  /// the standard optimization pass pipeline.
+  void emitRemark(OptimizationRemark &Remark);
+
   virtual Expected<std::shared_ptr<lto::InputFile>>
   addInput(std::unique_ptr<lto::InputFile> InputPtr) {
     return std::shared_ptr<lto::InputFile>(InputPtr.release());
