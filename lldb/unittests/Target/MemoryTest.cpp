@@ -381,6 +381,13 @@ TEST_F(MemoryTest, TestReadMemoryRanges) {
 using MemoryDeathTest = MemoryTest;
 
 TEST_F(MemoryDeathTest, TestReadMemoryRangesReturnsTooMuch) {
+  // gtest death-tests execute in a sub-process (fork), which invalidates
+  // any signpost handles and would cause spurious crashes if used. Use the
+  // "threadsafe" style of death-test to work around this.
+  // FIXME: we should set this only if signposts are enabled, and do so
+  // for the entire test-suite.
+  GTEST_FLAG_SET(death_test_style, "threadsafe");
+
   ArchSpec arch("x86_64-apple-macosx-");
   Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
   DebuggerSP debugger_sp = Debugger::CreateInstance();
@@ -409,6 +416,13 @@ TEST_F(MemoryDeathTest, TestReadMemoryRangesReturnsTooMuch) {
 }
 
 TEST_F(MemoryDeathTest, TestReadMemoryRangesWithShortBuffer) {
+  // gtest death-tests execute in a sub-process (fork), which invalidates
+  // any signpost handles and would cause spurious crashes if used. Use the
+  // "threadsafe" style of death-test to work around this.
+  // FIXME: we should set this only if signposts are enabled, and do so
+  // for the entire test-suite.
+  GTEST_FLAG_SET(death_test_style, "threadsafe");
+
   ArchSpec arch("x86_64-apple-macosx-");
   Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
   DebuggerSP debugger_sp = Debugger::CreateInstance();

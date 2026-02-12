@@ -20,6 +20,7 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
 
+#include <array>
 #include <functional>
 #include <optional>
 #include <string>
@@ -440,13 +441,20 @@ void PyOpOperandIterator::bind(nb::module_ &m) {
 // PyThreadPool
 //------------------------------------------------------------------------------
 
-PyThreadPool::PyThreadPool() {
-  ownedThreadPool = std::make_unique<llvm::DefaultThreadPool>();
+PyThreadPool::PyThreadPool() { threadPool = mlirLlvmThreadPoolCreate(); }
+
+PyThreadPool::~PyThreadPool() {
+  if (threadPool.ptr)
+    mlirLlvmThreadPoolDestroy(threadPool);
+}
+
+int PyThreadPool::getMaxConcurrency() const {
+  return mlirLlvmThreadPoolGetMaxConcurrency(threadPool);
 }
 
 std::string PyThreadPool::_mlir_thread_pool_ptr() const {
   std::stringstream ss;
-  ss << ownedThreadPool.get();
+  ss << threadPool.ptr;
   return ss.str();
 }
 

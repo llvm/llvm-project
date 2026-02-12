@@ -1295,11 +1295,11 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return Def->replaceAllUsesWith(X);
 
   // x && false -> false
-  if (match(Def, m_LogicalAnd(m_VPValue(X), m_False())))
-    return Def->replaceAllUsesWith(Def->getOperand(1));
+  if (match(Def, m_c_LogicalAnd(m_VPValue(X), m_False())))
+    return Def->replaceAllUsesWith(Plan->getFalse());
 
-  // true && x -> x
-  if (match(Def, m_LogicalAnd(m_True(), m_VPValue(X))))
+  // x && true -> x
+  if (match(Def, m_c_LogicalAnd(m_VPValue(X), m_True())))
     return Def->replaceAllUsesWith(X);
 
   // (x && y) | (x && z) -> x && (y | z)
