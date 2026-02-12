@@ -3,12 +3,6 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-;
-; The replace-with-veclib pass does not work with scalable types, thus
-; the mappings aren't utilised. Tests will need to be regenerated when the
-; pass is improved.
-;
-
 declare <2 x double> @llvm.cos.v2f64(<2 x double>)
 declare <4 x float> @llvm.cos.v4f32(<4 x float>)
 declare <vscale x 2 x double> @llvm.cos.nxv2f64(<vscale x 2 x double>)
