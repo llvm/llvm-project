@@ -347,7 +347,7 @@ public:
 
   const FuncTy &getFunction() const { return F; }
 
-  ReferenceTy operator*() const { F(*this->I); }
+  ReferenceTy operator*() const { return F(*this->I); }
 
 private:
   callable_detail::Callable<FuncTy> F{};
