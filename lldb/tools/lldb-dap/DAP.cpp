@@ -25,7 +25,6 @@
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBLanguageRuntime.h"
 #include "lldb/API/SBListener.h"
-#include "lldb/API/SBMutex.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/MainLoop.h"
@@ -43,6 +42,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/Errno.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -223,6 +223,9 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
 
 llvm::Expected<std::pair<IOWrapper, IOWrapper>>
 IOWrapper::CreatePseudoTerminal() {
+#ifdef WIN32
+  return llvm::createStringError("not supported");
+#else
   // For testing purposes return an error to cause us to fallback to a pair of
   // pipes.
   if (getenv("LLDB_DAP_FORCE_REPL_PIPE"))
@@ -231,8 +234,11 @@ IOWrapper::CreatePseudoTerminal() {
   lldb_private::PseudoTerminal pty;
   if (auto err = pty.OpenFirstAvailablePrimary(O_RDWR | O_NOCTTY | O_CLOEXEC))
     return err;
-  if (auto err = pty.OpenSecondary(O_RDWR | O_NOCTTY | O_CLOEXEC))
-    return err;
+  int replica_fd =
+      llvm::sys::RetryAfterSignal(-1, ::open, pty.GetSecondaryName().c_str(),
+                                  O_RDWR | O_NOCTTY | O_CLOEXEC);
+  if (replica_fd == -1)
+    return llvm::errorCodeToError(llvm::errnoAsErrorCode());
 
   lldb_private::Terminal term(pty.GetPrimaryFileDescriptor());
   if (llvm::Error err = term.SetCanonical(false))
@@ -241,7 +247,6 @@ IOWrapper::CreatePseudoTerminal() {
     return err;
 
   int primary_fd = pty.ReleasePrimaryFileDescriptor();
-  int replica_fd = pty.ReleaseSecondaryFileDescriptor();
 
   return std::make_pair(
       IOWrapper(
@@ -254,6 +259,7 @@ IOWrapper::CreatePseudoTerminal() {
               replica_fd, lldb_private::File::eOpenOptionReadOnly, false),
           /*write=*/std::make_shared<lldb_private::NativeFile>(
               replica_fd, lldb_private::File::eOpenOptionWriteOnly, true)));
+#endif
 }
 
 // Hookup a pair of pipes such that reading from one writes to the other.

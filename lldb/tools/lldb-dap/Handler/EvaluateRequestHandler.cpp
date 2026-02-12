@@ -51,6 +51,12 @@ static lldb::SBValue EvaluateVariableExpression(lldb::SBTarget &target,
   return value;
 }
 
+/// Check if we need to run `expr` as an lldb command or as a variable
+/// expression.
+static bool IsReplCommand(DAP &dap, lldb::SBFrame &frame, std::string &expr) {
+  return dap.DetectReplMode(frame, expr, false) == ReplMode::Command;
+}
+
 /// Evaluates the given expression in the context of a stack frame.
 ///
 /// The expression has access to any variables and arguments that are in scope.
@@ -63,21 +69,12 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
   const bool run_as_expression = arguments.context != eEvaluateContextHover;
   lldb::SBValue value;
 
-  if (arguments.context == protocol::eEvaluateContextRepl &&
-      dap.DetectReplMode(frame, expression, false) == ReplMode::Command) {
-    const lldb::StateType process_state = dap.target.GetProcess().GetState();
-    if (!lldb::SBDebugger::StateIsStoppedState(process_state))
-      return llvm::make_error<DAPError>(
-          "Cannot evaluate expressions while the process is running. Pause "
-          "the process and try again.",
-          /**error_code=*/llvm::inconvertibleErrorCode(),
-          /**show_user=*/false);
+  // If we're evaluating a command relative to the current frame, set the
+  // focus_tid to the current frame for any thread related events.
+  if (frame.IsValid())
+    dap.focus_tid = frame.GetThread().GetThreadID();
 
-    // If we're evaluating a command relative to the current frame, set the
-    // focus_tid to the current frame for any thread related events.
-    if (frame.IsValid())
-      dap.focus_tid = frame.GetThread().GetThreadID();
-
+  if (is_repl_context && IsReplCommand(dap, frame, expression)) {
     Expected<std::pair<std::string, lldb::SBValueList>> result =
         EvaluateContext::Run(dap, expression + "\n");
     if (!result)
@@ -93,12 +90,16 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
       body.variablesReference = dap.variables.Insert(result->second);
     }
   } else {
+    if (dap.ProcessIsNotStopped())
+      return llvm::make_error<NotStoppedError>();
+
     value = EvaluateVariableExpression(dap.target, frame, expression,
                                        run_as_expression);
 
     if (value.GetError().Fail())
       return ToError(value.GetError(), /*show_user=*/false);
 
+    // Freeze dry the value in case users expand it later in the debug console
     if (is_repl_context)
       value = value.Persist();
 
