@@ -20,10 +20,9 @@ class HiddenFrameMarkerTest(TestBase):
             "bt",
             substrs=[
                 "   * frame #0:",
-                "  ﹍ frame #1:",
-                "  ﹉ frame #7:",
-                "     frame #8:",
-                "     frame #9:",
+                "  ﹍ frame #2:",
+                "  ﹉ frame #3:",
+                "     frame #4:",
             ],
         )
 
@@ -32,10 +31,9 @@ class HiddenFrameMarkerTest(TestBase):
             "bt",
             substrs=[
                 "     frame #0:",
-                "   * frame #1:",
-                "  ﹉ frame #7:",
-                "     frame #8:",
-                "     frame #9:",
+                "   * frame #2:",
+                "  ﹉ frame #3:",
+                "     frame #4:",
             ],
         )
 
@@ -44,10 +42,9 @@ class HiddenFrameMarkerTest(TestBase):
             "bt",
             substrs=[
                 "     frame #0:",
-                "  ﹍ frame #1:",
-                "   * frame #7:",
-                "     frame #8:",
-                "     frame #9:",
+                "  ﹍ frame #2:",
+                "   * frame #3:",
+                "     frame #4:",
             ],
         )
 
@@ -65,10 +62,9 @@ class HiddenFrameMarkerTest(TestBase):
             "bt",
             substrs=[
                 "  * frame #0:",
-                "    frame #1:",
-                "    frame #7:",
-                "    frame #8:",
-                "    frame #9:",
+                "    frame #2:",
+                "    frame #3:",
+                "    frame #4:",
             ],
         )
 
@@ -77,10 +73,9 @@ class HiddenFrameMarkerTest(TestBase):
             "bt",
             substrs=[
                 "    frame #0:",
-                "  * frame #1:",
-                "    frame #7:",
-                "    frame #8:",
-                "    frame #9:",
+                "  * frame #2:",
+                "    frame #3:",
+                "    frame #4:",
             ],
         )
 
@@ -89,9 +84,8 @@ class HiddenFrameMarkerTest(TestBase):
             "bt",
             substrs=[
                 "    frame #0:",
-                "    frame #1:",
-                "  * frame #7:",
-                "    frame #8:",
-                "    frame #9:",
+                "    frame #2:",
+                "  * frame #3:",
+                "    frame #4:",
             ],
         )

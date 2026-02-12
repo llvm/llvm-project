@@ -64,7 +64,8 @@ public:
   /// If the terminal does not support Unicode rendering, the hidden frame
   /// markers are replaced with whitespaces.
   std::string FrameMarker(lldb::StackFrameSP frame_sp,
-                          lldb::StackFrameSP selected_frame_sp);
+                          lldb::StackFrameSP selected_frame_sp,
+                          bool show_hidden_marker);
 
   /// Get the currently selected frame index.
   /// We should only call SelectMostRelevantFrame if (a) the user hasn't already
