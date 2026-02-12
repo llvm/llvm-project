@@ -19,6 +19,9 @@
 
 #include "include/apple_availability.h"
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #ifdef __linux__
 
 #  include <linux/futex.h>
@@ -487,3 +490,5 @@ __libcpp_atomic_monitor(__cxx_atomic_contention_t const volatile* __location) no
 _LIBCPP_DIAGNOSTIC_POP
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
