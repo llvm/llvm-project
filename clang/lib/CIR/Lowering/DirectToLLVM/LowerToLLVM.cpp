@@ -189,7 +189,8 @@ convertCallingConv(cir::CallingConv callingConv) {
   case CIR::SpirFunction:
     return LLVM::SPIR_FUNC;
   case CIR::OpenCLKernel:
-    llvm_unreachable("NYI");
+    // TODO(cir): Implement OpenCL kernel calling convention lowering.
+    return std::nullopt;
   case CIR::PTXKernel:
     return LLVM::PTX_Kernel;
   case CIR::AMDGPUKernel:
