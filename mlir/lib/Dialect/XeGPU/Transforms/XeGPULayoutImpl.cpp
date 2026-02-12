@@ -90,7 +90,7 @@ bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
       if (!isa<VectorType>(operand.get().getType()))
         continue;
       // Skip block arguments since they don't have defining ops to attach
-      // layout attributes to
+      // layout attributes to.
       if (isa<BlockArgument>(operand.get()))
         continue;
       auto layout = xegpu::getDistributeLayoutAttr(operand.get());

@@ -89,6 +89,9 @@ public:
   bool selectShiftMask32(SDValue N, SDValue &ShAmt) {
     return selectShiftMask(N, 32, ShAmt);
   }
+  bool selectShiftMask64(SDValue N, SDValue &ShAmt) {
+    return selectShiftMask(N, 64, ShAmt);
+  }
 
   bool selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal, SDValue &Val);
   bool selectSETNE(SDValue N, SDValue &Val) {

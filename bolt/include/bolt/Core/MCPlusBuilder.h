@@ -1747,6 +1747,12 @@ public:
     return false;
   }
 
+  /// AArch64 uses this to perform diagnostics in the LongJmp pass.
+  virtual bool isShortRangeBranch(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
   /// Receives a list of MCInst of the basic block to analyze and interpret the
   /// terminators of this basic block. TBB must be initialized with the original
   /// fall-through for this BB.

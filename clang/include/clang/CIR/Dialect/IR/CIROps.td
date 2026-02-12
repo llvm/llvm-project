@@ -6661,12 +6661,14 @@ def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
     CIR_AnyIntOrFloatType:$val,
     CIR_AtomicFetchKind:$binop,
     Arg<CIR_MemOrder, "memory order">:$mem_order,
+    Arg<CIR_SyncScopeKind, "synchronization scope">:$sync_scope,
     UnitAttr:$is_volatile,
     UnitAttr:$fetch_first
   );
 
   let assemblyFormat = [{
     $binop $mem_order
+    `syncscope` `(` $sync_scope `)`
     (`fetch_first` $fetch_first^)?
     $ptr `,` $val
     (`volatile` $is_volatile^)?
