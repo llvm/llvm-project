@@ -1,6 +1,7 @@
 import subprocess
 import sys
 import os
+import logging
 
 import github
 
@@ -68,6 +69,13 @@ def get_user_branches_to_remove(
 ) -> list[str]:
     user_branches_to_remove = set(user_branches)
     for pr_user_branch in set(user_branches_from_prs):
+        if pr_user_branch not in user_branches_to_remove:
+            logging.warning(
+                f"Found branch {pr_user_branch} attached to a PR, but it "
+                "was not found in the repository. This is likely because "
+                "the PR was created after this workflow cloned the repository."
+            )
+            continue
         user_branches_to_remove.remove(pr_user_branch)
     return list(user_branches_to_remove)
 
