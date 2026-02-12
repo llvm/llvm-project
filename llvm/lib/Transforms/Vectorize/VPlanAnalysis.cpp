@@ -137,8 +137,11 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     return cast<LoadInst>(R->getUnderlyingValue())->getType();
   case Instruction::Alloca:
     return cast<AllocaInst>(R->getUnderlyingValue())->getType();
-  case Instruction::Call:
-    return cast<CallInst>(R->getUnderlyingValue())->getType();
+  case Instruction::Call: {
+    unsigned CallIdx = R->getNumOperandsWithoutMask() - 1;
+    return cast<Function>(R->getOperand(CallIdx)->getLiveInIRValue())
+        ->getReturnType();
+  }
   case Instruction::GetElementPtr:
     return inferScalarType(R->getOperand(0));
   case Instruction::ExtractValue:
