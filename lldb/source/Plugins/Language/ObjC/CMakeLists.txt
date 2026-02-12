@@ -27,7 +27,6 @@ add_lldb_library(lldbPluginObjCLanguage PLUGIN
     lldbUtility
     lldbValueObject
     lldbPluginAppleObjCRuntime
-    lldbPluginClangCommon
     lldbPluginTypeSystemClang
     ${SWIFT_LIBS}
   CLANG_LIBS

@@ -27,6 +27,7 @@ class Value;
 namespace lldb_private {
 class ScriptedInterfaceUsages;
 struct ScriptedFrameProviderDescriptor;
+class Highlighter;
 typedef lldb::ABISP (*ABICreateInstance)(lldb::ProcessSP process_sp,
                                          const ArchSpec &arch);
 typedef std::unique_ptr<Architecture> (*ArchitectureCreateInstance)(
@@ -137,6 +138,8 @@ typedef lldb::REPLSP (*REPLCreateInstance)(Status &error,
                                            const char *repl_options);
 typedef bool (*ScriptedInterfaceCreateInstance)(lldb::ScriptLanguage language,
                                                 ScriptedInterfaceUsages usages);
+
+typedef Highlighter *(*HighlighterCreateInstance)(lldb::LanguageType language);
 typedef int (*ComparisonFunction)(const void *, const void *);
 typedef void (*DebuggerInitializeCallback)(Debugger &debugger);
 /// Trace
