@@ -264,6 +264,7 @@ def count_prs(gh: github.Github, triage_list: dict, start_date: datetime.datetim
                 variables["after"] = data["search"]["pageInfo"]["endCursor"]
         date_begin = date_end
 
+
 # 4 because that's how many cores the default github runners have.  Also, if we
 # make this too high, we risk hitting some of GitHub's secondary rate limits.
 THREAD_POOL_MAX_WORKERS = 4
