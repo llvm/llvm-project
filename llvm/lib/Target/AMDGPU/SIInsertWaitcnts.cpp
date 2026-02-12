@@ -3013,9 +3013,10 @@ bool WaitcntBrackets::mergeAsyncMarks(ArrayRef<MergeInfo> MergeInfos,
   unsigned OurSize = AsyncMarks.size();
   unsigned MergeCount = std::min(OtherSize, OurSize);
   assert(OurSize == MaxSize);
+  const InstCounterType MaxCounter =
+      getMaxCounter(*Context->ST, Context->IsExpertMode);
   for (unsigned Idx = 1; Idx <= MergeCount; ++Idx) {
-    for (auto T : inst_counter_types(
-             getMaxCounter(*Context->ST, Context->IsExpertMode))) {
+    for (auto T : inst_counter_types(MaxCounter)) {
       StrictDom |= mergeScore(MergeInfos[T], AsyncMarks[OurSize - Idx][T],
                               OtherMarks[OtherSize - Idx][T]);
     }
