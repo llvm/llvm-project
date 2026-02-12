@@ -9,14 +9,14 @@
 // CHECK-NEXT:    5: m
 // CHECK-NEXT:    6: a
 // CHECK-NEXT:    7: [B1.6] (ImplicitCastExpr, LValueToRValue, int)
-// CHECK-NEXT:    8: [B1.5][[B1.7]] (OperatorCall)
+// CHECK-NEXT:    8: [B1.5]{{\[\[}}B1.7]] (OperatorCall)
 // CHECK-NEXT:    9: [B1.8] (ImplicitCastExpr, NoOp, const Map)
 // CHECK-NEXT:   10: operator[]
 // CHECK-NEXT:   11: [B1.10] (ImplicitCastExpr, FunctionToPointerDecay, Map &(*)(int))
 // CHECK-NEXT:   12: m
 // CHECK-NEXT:   13: b
 // CHECK-NEXT:   14: [B1.13] (ImplicitCastExpr, LValueToRValue, int)
-// CHECK-NEXT:   15: [B1.12][[B1.14]] (OperatorCall)
+// CHECK-NEXT:   15: [B1.12]{{\[\[}}B1.14]] (OperatorCall)
 // CHECK-NEXT:   16: [B1.15] = [B1.9] (OperatorCall)
 
 struct Map {
