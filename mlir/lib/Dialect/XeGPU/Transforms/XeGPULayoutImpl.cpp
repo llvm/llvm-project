@@ -860,10 +860,9 @@ xegpu::setupStoreMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
 // - `vnni` means data packing is column-wise (i.e., 2x1xf16 with vnni vs.
 // 1x2xf16 w/o vnni).
 template <typename RankedTy>
-static xegpu::LayoutAttr
-getDefaultLaneLayout(RankedTy ty, const xegpu::uArch::uArch *uArch,
-                     std::optional<unsigned> packingSize = std::nullopt,
-                     bool vnni = false) {
+static xegpu::LayoutAttr getDefaultLaneLayout2DBlockIo(
+    RankedTy ty, const xegpu::uArch::uArch *uArch,
+    std::optional<unsigned> packingSize = std::nullopt, bool vnni = false) {
   // Expecting a 1D or 2D vector.
   assert(((ty.getRank() == 1 && !vnni) || ty.getRank() == 2) &&
          "Expected 1D non-vnni or 2D vector.");
@@ -892,9 +891,9 @@ getDefaultLaneLayout(RankedTy ty, const xegpu::uArch::uArch *uArch,
 // Returns layouts:
 //   [(8,4), (16,2)], which correspond to sgData [16,16] and [8,32].
 using LayoutRepresentation = std::pair<int64_t, int64_t>;
-SmallVector<LayoutRepresentation> getValidLayouts(ArrayRef<int64_t> wgShape,
-                                                  ArrayRef<int64_t> instData,
-                                                  int64_t sgCount) {
+static SmallVector<LayoutRepresentation>
+getValidLayouts(ArrayRef<int64_t> wgShape, ArrayRef<int64_t> instData,
+                int64_t sgCount) {
   SmallVector<LayoutRepresentation> candidates;
   for (int sgLayout0 = 1; sgLayout0 <= sgCount; ++sgLayout0) {
     if (sgCount % sgLayout0)
@@ -921,7 +920,7 @@ SmallVector<LayoutRepresentation> getValidLayouts(ArrayRef<int64_t> wgShape,
   return candidates;
 }
 
-/// Sets up the anchor layouts for a dpas operands (A, B, and C/D).
+/// Sets up the anchor layouts for dpas operands (A, B, and C/D).
 /// The numSg and consumerLayout (optional) are only used by sg layout creation.
 std::optional<
     std::tuple<xegpu::DistributeLayoutAttr, xegpu::DistributeLayoutAttr,
@@ -935,52 +934,84 @@ xegpu::setupDpasLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
       dyn_cast<xegpu::uArch::SubgroupMatrixMultiplyAcc>(uArch->getInstruction(
           xegpu::uArch::InstructionKind::SubgroupMatrixMultiplyAcc));
 
+  auto getInstDataVectors = [&]()
+      -> std::optional<std::tuple<SmallVector<int64_t>, SmallVector<int64_t>,
+                                  SmallVector<int64_t>>> {
+    const int subgroupSize = uArch->getSubgroupSize();
+    const unsigned dataALen = aTy.getShape().front();
+    auto supportedALen = uArchInstruction->getSupportedM(aTy.getElementType());
+    const int maxALen =
+        xegpu::getLargestDivisor(dataALen, ArrayRef<unsigned>(supportedALen));
+
+    const unsigned dataBLen = bTy.getShape().back();
+    auto supportedBLen = uArchInstruction->getSupportedN(bTy.getElementType());
+    const int maxBLen =
+        xegpu::getLargestDivisor(dataBLen, ArrayRef<unsigned>(supportedBLen));
+
+    auto supportedCLen = uArchInstruction->getSupportedN(cdTy.getElementType());
+    const int maxCLen =
+        xegpu::getLargestDivisor(dataBLen, ArrayRef<unsigned>(supportedCLen));
+    if (maxALen == -1 || maxBLen == -1 || maxCLen == -1)
+      return std::nullopt;
+
+    SmallVector<int64_t> instDataA(aTy.getRank(), 1);
+    instDataA[aTy.getRank() - 2] = maxALen;
+    instDataA[aTy.getRank() - 1] = subgroupSize;
+    SmallVector<int64_t> instDataB(bTy.getRank(), 1);
+    instDataB[bTy.getRank() - 2] = subgroupSize;
+    instDataB[bTy.getRank() - 1] = maxBLen;
+    SmallVector<int64_t> instDataCD(cdTy.getRank(), 1);
+    instDataCD[cdTy.getRank() - 2] = maxALen;
+    instDataCD[cdTy.getRank() - 1] = maxCLen;
+    return std::make_tuple(instDataA, instDataB, instDataCD);
+  };
+
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
     assert(numSg > 0 &&
            "Number of subgroups must be provided for sg layout creation.");
-    auto instDataLayouts =
-        xegpu::setupDpasLayout(xegpu::LayoutKind::InstData, aTy, bTy, cdTy,
-                               consumerLayout, uArch, numSg);
-    if (!instDataLayouts)
+    auto instDataVecs = getInstDataVectors();
+    if (!instDataVecs)
       return std::nullopt;
-    auto [instLayoutA, instLayoutB, instLayoutCD] = *instDataLayouts;
-    SmallVector<int64_t> instDataA = instLayoutA.getEffectiveInstDataAsInt();
-    SmallVector<int64_t> instDataB = instLayoutB.getEffectiveInstDataAsInt();
-    SmallVector<int64_t> instDataCD = instLayoutCD.getEffectiveInstDataAsInt();
+    auto [instDataA, instDataB, instDataCD] = *instDataVecs;
     assert(instDataA.size() == 2 && instDataB.size() == 2 &&
            instDataCD.size() == 2 &&
            "Sg layout creation expects valid 2D inst data");
 
-    std::optional<LayoutRepresentation> layoutDVal = std::nullopt;
-    if (consumerLayout) {
+    std::optional<LayoutRepresentation> consumerSgLayout = std::nullopt;
+    if (consumerLayout && consumerLayout.isForWorkgroup()) {
       SmallVector<int64_t> sgLayoutD =
           consumerLayout.getEffectiveSgLayoutAsInt();
-      layoutDVal = std::make_pair(sgLayoutD[0], sgLayoutD[1]);
+      consumerSgLayout = std::make_pair(sgLayoutD[0], sgLayoutD[1]);
     }
 
+    // Step 1. Get all valid layouts for A, B and C/D operands.
+    // Order them from most balanced to least balanced.
     auto layoutsA = getValidLayouts(aTy.getShape(), instDataA, numSg);
     auto layoutsB = getValidLayouts(bTy.getShape(), instDataB, numSg);
     auto layoutsCD = getValidLayouts(cdTy.getShape(), instDataCD, numSg);
     if (layoutsA.empty() || layoutsB.empty() || layoutsCD.empty())
       return std::nullopt;
 
-    // Step 2. If the result D layout can be reused for all operands, that
+    // Step 2. If the consumer layout can be reused for all operands, that
     // layout is chosen. Otherwise, pick the most balanced subgroup layout
     // that is valid for A, B and C (if present) operands
     llvm::DenseSet<LayoutRepresentation> setA(layoutsA.begin(), layoutsA.end());
     llvm::DenseSet<LayoutRepresentation> setCD(layoutsCD.begin(),
                                                layoutsCD.end());
     std::optional<LayoutRepresentation> bestPick;
-    for (auto &l : layoutsB) {
-      if (setA.contains(l) && setCD.contains(l)) {
+    for (auto &sgLayout : layoutsB) {
+      if (setA.contains(sgLayout) && setCD.contains(sgLayout)) {
         // Is in (A and B and CD) and matches consumer -> best pick
-        if (layoutDVal.has_value() && l == *layoutDVal) {
-          bestPick = l;
+        if (consumerSgLayout.has_value() && sgLayout == *consumerSgLayout) {
+          bestPick = sgLayout;
           break;
         }
-        // Is in (A and B and CD), balanced layout comes first
+        // Is in (A and B and CD) layoutsB is ordered from most
+        // balanced to least. So the first one we see is the most balanced one,
+        // remember it and later only update if there is one that matches the
+        // consumer.
         if (!bestPick)
-          bestPick = l;
+          bestPick = sgLayout;
       }
     }
     // Step 3. If there is no subgroup layout compatible with A, B and C (if
@@ -1018,41 +1049,23 @@ xegpu::setupDpasLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
         /*lane_data =*/nullptr, /*order =*/nullptr);
     return std::make_tuple(dpasALayout, dpasBLayout, dpasCDLayout);
   } else if (layoutKind == xegpu::LayoutKind::InstData) {
-    const int subgroupSize = uArch->getSubgroupSize();
-    const unsigned dataALen = aTy.getShape().front();
-    auto supportedALen = uArchInstruction->getSupportedM(aTy.getElementType());
-    const int maxALen =
-        xegpu::getLargestDivisor(dataALen, ArrayRef<unsigned>(supportedALen));
-
-    const unsigned dataBLen = bTy.getShape().back();
-    auto supportedBLen = uArchInstruction->getSupportedN(bTy.getElementType());
-    const int maxBLen =
-        xegpu::getLargestDivisor(dataBLen, ArrayRef<unsigned>(supportedBLen));
-
-    auto supportedCLen = uArchInstruction->getSupportedN(cdTy.getElementType());
-    const int maxCLen =
-        xegpu::getLargestDivisor(dataBLen, ArrayRef<unsigned>(supportedCLen));
-    if (maxALen == -1 || maxBLen == -1 || maxCLen == -1)
+    auto instDataVecs = getInstDataVectors();
+    if (!instDataVecs)
       return std::nullopt;
-
-    SmallVector<int> instDataA(aTy.getRank(), 1);
-    instDataA[aTy.getRank() - 2] = maxALen;
-    instDataA[aTy.getRank() - 1] = subgroupSize;
-    SmallVector<int> instDataB(bTy.getRank(), 1);
-    instDataB[bTy.getRank() - 2] = subgroupSize;
-    instDataB[bTy.getRank() - 1] = maxBLen;
-    SmallVector<int> instDataCD(cdTy.getRank(), 1);
-    instDataCD[cdTy.getRank() - 2] = maxALen;
-    instDataCD[cdTy.getRank() - 1] = maxCLen;
-    return std::make_tuple(xegpu::LayoutAttr::get(context, instDataA),
-                           xegpu::LayoutAttr::get(context, instDataB),
-                           xegpu::LayoutAttr::get(context, instDataCD));
+    auto [instDataA, instDataB, instDataCD] = *instDataVecs;
+    return std::make_tuple(
+        xegpu::LayoutAttr::get(
+            context, SmallVector<int>(instDataA.begin(), instDataA.end())),
+        xegpu::LayoutAttr::get(
+            context, SmallVector<int>(instDataB.begin(), instDataB.end())),
+        xegpu::LayoutAttr::get(
+            context, SmallVector<int>(instDataCD.begin(), instDataCD.end())));
   } else if (layoutKind == xegpu::LayoutKind::Lane) {
-    auto aLayout = getDefaultLaneLayout(
+    auto aLayout = getDefaultLaneLayout2DBlockIo(
         aTy, uArch, uArchInstruction->getPackedFormatBitSizeA());
-    auto bLayout = getDefaultLaneLayout(
+    auto bLayout = getDefaultLaneLayout2DBlockIo(
         bTy, uArch, uArchInstruction->getPackedFormatBitSizeB(), true);
-    auto cdLayout = getDefaultLaneLayout(
+    auto cdLayout = getDefaultLaneLayout2DBlockIo(
         cdTy, uArch, uArchInstruction->getPackedFormatBitSizeB());
     return std::make_tuple(aLayout, bLayout, cdLayout);
   }
