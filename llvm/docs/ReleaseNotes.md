@@ -194,6 +194,7 @@ Changes to LLDB
 
 * The crashed thread is now automatically selected on start.
 * Threads are listed in incrmental order by pid then by tid.
+* Message saved in msgbufp is now printed on start.
 
 Changes to BOLT
 ---------------
