@@ -15704,9 +15704,6 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
     Diag(New->getLocation(), diag::err_block_on_nonlocal);
   }
 
-  if (getLangOpts().OpenCL)
-    deduceOpenCLAddressSpace(New);
-
   return New;
 }
 
@@ -15853,6 +15850,19 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
       PPC().CheckPPCMMAType(New->getOriginalType(), New->getLocation())) {
     New->setInvalidDecl();
   }
+
+  // OpenCL parameters need to move into the opencl_private when
+  // spilled or passed indirectly byref, if not already specified.
+  if (getLangOpts().OpenCL)
+    if (!T.hasAddressSpace() && !T->isVoidType()) {
+      T = Context.getAddrSpaceQualType(T, LangAS::opencl_private);
+      if (T->isArrayType()) {
+        // Decay this, so that both the elements and array pointer can be marked private
+        T = Context.getDecayedType(T);
+        T = Context.getAddrSpaceQualType(T, LangAS::opencl_private);
+      }
+      New->setType(T);
+    }
 
   return New;
 }
