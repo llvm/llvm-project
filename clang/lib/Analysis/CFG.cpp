@@ -656,6 +656,7 @@ private:
                   bool ExternallyDestructed = false);
   CFGBlock *VisitStmt(Stmt *S, AddStmtChoice asc);
   CFGBlock *VisitChildren(Stmt *S);
+  CFGBlock *VisitCallExprChildren(CallExpr *C);
   CFGBlock *VisitNoRecurse(Expr *E, AddStmtChoice asc);
   CFGBlock *VisitOMPExecutableDirective(OMPExecutableDirective *D,
                                         AddStmtChoice asc);
@@ -2542,6 +2543,19 @@ CFGBlock *CFGBuilder::VisitChildren(Stmt *S) {
   return B;
 }
 
+CFGBlock *CFGBuilder::VisitCallExprChildren(CallExpr *C) {
+  // C++17 onwards require that the right operand is sequenced before the left
+  // operand.
+  if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(C)) {
+    if (OCE->isAssignmentOp()) {
+      Visit(OCE->getArg(0));
+      Visit(OCE->getArg(1));
+      return Visit(OCE->getCallee());
+    }
+  }
+  return VisitChildren(C);
+}
+
 CFGBlock *CFGBuilder::VisitInitListExpr(InitListExpr *ILE, AddStmtChoice asc) {
   if (asc.alwaysAdd(*this, ILE)) {
     autoCreateBlock();
@@ -2879,7 +2893,7 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
     autoCreateBlock();
     appendCall(Block, C);
 
-    return VisitChildren(C);
+    return VisitCallExprChildren(C);
   }
 
   if (Block) {
@@ -2903,7 +2917,7 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
       addSuccessor(Block, &cfg->getExit());
   }
 
-  return VisitChildren(C);
+  return VisitCallExprChildren(C);
 }
 
 CFGBlock *CFGBuilder::VisitChooseExpr(ChooseExpr *C,
