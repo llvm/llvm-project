@@ -3227,7 +3227,9 @@ protected:
         bool is_secondary_thread, // FIXME: Can I get rid of this?
         llvm::StringRef thread_name)
         : m_process(process), m_public_state(public_state),
-          m_private_state(private_state), m_thread_name(thread_name) {}
+          m_private_state(private_state),
+          m_is_secondary_thread(is_secondary_thread),
+          m_thread_name(thread_name) {}
     // This returns false if we couldn't start up the thread.  If that happens,
     // you won't be doing any debugging today.
     bool StartupThread();
@@ -3558,7 +3560,7 @@ private:
   // temporarily spin up a secondary state thread to handle events from a hand-
   // called function on the primary private state thread.
 
-  lldb::thread_result_t RunPrivateStateThread(bool is_secondary_thread);
+  lldb::thread_result_t RunPrivateStateThread();
 
 protected:
   void HandlePrivateEvent(lldb::EventSP &event_sp);

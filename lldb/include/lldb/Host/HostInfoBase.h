@@ -191,6 +191,22 @@ public:
   }
 
   static bool ComputeSharedLibraryDirectory(FileSpec &file_spec);
+  /// Return information about module \p image_name if it is loaded in
+  /// the current process's address space using shared cache \p uuid.
+  /// The shared cache UUID must have been previously indexed.
+  static SharedCacheImageInfo
+  GetSharedCacheImageInfo(llvm::StringRef image_name, const UUID &uuid) {
+    return {};
+  }
+
+  /// Scan the files in a shared cache, if the filepath and uuid match
+  /// on the debug host.
+  /// Returns false if the shared cache filepath did not exist, or uuid
+  /// did not match.
+  static bool SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid) {
+    return false;
+  }
+
   /// Returns the distribution id of the host
   ///
   /// This will be something like "ubuntu", "fedora", etc. on Linux.

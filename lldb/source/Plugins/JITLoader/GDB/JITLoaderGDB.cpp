@@ -95,7 +95,7 @@ public:
 
   PluginProperties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_jitloadergdb_properties);
+    m_collection_sp->Initialize(g_jitloadergdb_properties_def);
   }
 
   EnableJITLoaderGDB GetEnable() const {
