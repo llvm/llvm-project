@@ -35,7 +35,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          echo "${{ steps.app-token.outputs.app-slug }}[bot]"
           python3 .github/workflows/commit-access-review.py $GITHUB_TOKEN
 
       - name: Upload Triage List
