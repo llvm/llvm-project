@@ -194,6 +194,18 @@ namespace llvm {
 
     std::string SourceFileName;
 
+    FileLoc getTokLineColumnPos() {
+      if (ParserContext)
+        return Lex.getTokLineColumnPos();
+      return {0u, 0u};
+    }
+
+    FileLoc getPrevTokEndLineColumnPos() {
+      if (ParserContext)
+        return Lex.getPrevTokEndLineColumnPos();
+      return {0u, 0u};
+    }
+
   public:
     LLParser(StringRef F, SourceMgr &SM, SMDiagnostic &Err, Module *M,
              ModuleSummaryIndex *Index, LLVMContext &Context,

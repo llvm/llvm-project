@@ -27,17 +27,18 @@ ir = _cext.ir
 
 __all__ = [
     "Dialect",
+    "Operation",
     "Operand",
     "Result",
+    "Region",
     "register_dialect",
     "register_operation",
-    "Region",
-    "Operation",
 ]
 
 Operand = ir.Value
 Result = ir.OpResult
 Region = ir.Region
+
 register_dialect = _cext.register_dialect
 register_operation = _cext.register_operation
 
@@ -528,10 +529,12 @@ class Dialect(ir.Dialect):
 
         irdl.load_dialects(cls._mlir_module)
 
+        for op in cls.operations:
+            op._attach_traits()
+
         if register:
             register_dialect(cls)
 
             register_dialect_operation = register_operation(cls)
             for op in cls.operations:
-                op._attach_traits()
                 register_dialect_operation(op)

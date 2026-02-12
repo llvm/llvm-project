@@ -947,11 +947,13 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
       assert(floatAttr.getType() == eltType &&
              "expected float attribute type to equal element type");
       intVal = floatAttr.getValue().bitcastToAPInt();
-    } else {
-      auto intAttr = llvm::cast<IntegerAttr>(values[i]);
+    } else if (auto intAttr = llvm::dyn_cast<IntegerAttr>(values[i])) {
       assert(intAttr.getType() == eltType &&
              "expected integer attribute type to equal element type");
       intVal = intAttr.getValue();
+    } else {
+      // Unsupported attribute type.
+      return {};
     }
 
     assert(intVal.getBitWidth() == bitWidth &&
