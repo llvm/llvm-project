@@ -600,22 +600,32 @@ public:
     MCELFStreamer::emitValueImpl(Value, Size, Loc);
   }
 
-  /// If a label is defined before the .type directive sets the label's type
-  /// then the label can't be recorded as thumb function when the label is
-  /// defined. We override emitSymbolAttribute() which is called as part of the
-  /// parsing of .type so that if the symbol has already been defined we can
-  /// record the label as Thumb. FIXME: there is a corner case where the state
-  /// is changed in between the label definition and the .type directive, this
-  /// is not expected to occur in practice and handling it would require the
-  /// backend to track IsThumb for every label.
+  /// Called to set any attribute on a symbol.
+  ///
+  /// If this function is called for the .type directive that marks the symbol
+  /// as a function, and the label has been defined already without being typed
+  /// as a function, then this is the first opportunity we have to mark the
+  /// label as Thumb rather than Arm (if we're in Thumb mode).
+  ///
+  /// FIXME: there is a corner case where the state is changed in between the
+  /// label definition and the .type directive. This is not expected to occur
+  /// in practice, and handling it would require the backend to track IsThumb
+  /// for every label.
+  ///
+  /// We do not mark the symbol as Thumb due to any attributes other than
+  /// setting its type to 'function', because there _are_ cases in practice
+  /// where an attribute directive such as .hidden can be widely separated from
+  /// the symbol definition. (For example, bug #180358: rustc targeting mostly
+  /// Thumb generates a top-level Arm function entirely in inline assembly, and
+  /// then uses an LLVM IR `declare` statement to mark it as hidden symbol
+  /// visibility, which causes LLVM to emit a `.hidden` directive after having
+  /// switched back to Thumb mode.)
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
     bool Val = MCELFStreamer::emitSymbolAttribute(Symbol, Attribute);
 
-    if (!IsThumb)
-      return Val;
-
-    unsigned Type = static_cast<MCSymbolELF *>(Symbol)->getType();
-    if ((Type == ELF::STT_FUNC || Type == ELF::STT_GNU_IFUNC) &&
+    if (IsThumb &&
+        (Attribute == MCSA_ELF_TypeFunction ||
+         Attribute == MCSA_ELF_TypeIndFunction) &&
         Symbol->isDefined())
       getAssembler().setIsThumbFunc(Symbol);
 
