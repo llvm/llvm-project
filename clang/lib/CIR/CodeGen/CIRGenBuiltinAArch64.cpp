@@ -123,6 +123,17 @@ emitAArch64CompareBuiltinExpr(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
   return builder.createCast(loc, cir::CastKind::integral, cmp, retTy);
 }
 
+// Emit an intrinsic where all operands are of the same type as the result.
+// Depending on mode, this may be a constrained floating-point intrinsic.
+static mlir::Value
+emitCallMaybeConstrainedBuiltin(CIRGenBuilderTy &builder, mlir::Location loc,
+                                StringRef intrName, mlir::Type retTy,
+                                llvm::SmallVector<mlir::Value> &ops) {
+  assert(!cir::MissingFeatures::emitConstrainedFPCall());
+
+  return builder.emitIntrinsicCallOp(loc, intrName, retTy, ops);
+}
+
 bool CIRGenFunction::getAArch64SVEProcessedOperands(
     unsigned builtinID, const CallExpr *expr, SmallVectorImpl<mlir::Value> &ops,
     SVETypeFlags typeFlags) {
@@ -1508,7 +1519,17 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vsubh_f16:
   case NEON::BI__builtin_neon_vmulh_f16:
   case NEON::BI__builtin_neon_vdivh_f16:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case NEON::BI__builtin_neon_vfmah_f16:
+    ops.push_back(emitScalarExpr(expr->getArg(1)));
+    ops.push_back(emitScalarExpr(expr->getArg(2)));
+    ops.push_back(emitScalarExpr(expr->getArg(0)));
+    return emitCallMaybeConstrainedBuiltin(builder, loc, "fma",
+                                           convertType(expr->getType()), ops);
+    break;
   case NEON::BI__builtin_neon_vfmsh_f16:
   case NEON::BI__builtin_neon_vaddd_s64:
   case NEON::BI__builtin_neon_vaddd_u64:
