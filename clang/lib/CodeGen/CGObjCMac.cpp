@@ -3992,7 +3992,7 @@ CGObjCCommonMac::GenerateDirectMethod(const ObjCMethodDecl *OMD,
 /// Start an Objective-C direct method thunk.
 ///
 /// The thunk must use musttail to remain transparent to ARC - any
-/// ARC operations must happen in the caller, not in the thunk.
+/// ARC autorelease operations must happen in the caller, not in the thunk.
 void CodeGenFunction::StartObjCDirectThunk(const ObjCMethodDecl *OMD,
                                            llvm::Function *Fn,
                                            const CGFunctionInfo &FI) {

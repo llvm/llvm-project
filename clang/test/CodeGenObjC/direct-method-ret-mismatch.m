@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 -emit-llvm -fobjc-arc -triple x86_64-apple-darwin10 %s -o - | FileCheck %s
 // RUN: %clang_cc1 -emit-llvm -fobjc-arc -triple arm64-apple-darwin10 -fobjc-direct-precondition-thunk %s -o - | FileCheck %s --check-prefix=EXPOSE-DIRECT
 
-
 __attribute__((objc_root_class))
 @interface Root
 - (Root *)method __attribute__((objc_direct));
