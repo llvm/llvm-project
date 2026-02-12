@@ -6558,6 +6558,9 @@ def err_vm_func_decl : Error<
 def err_array_too_large : Error<
   "array is too large (%0 elements)">;
 
+def err_type_too_large_for_address_space : Error<
+  "%0 is too large for the address space (maximum allowed size of %1 bytes)">;
+
 def err_typecheck_negative_array_size : Error<"array size is negative">;
 def warn_typecheck_function_qualifiers_ignored : Warning<
   "'%0' qualifier on function type %1 has no effect">,
@@ -7961,24 +7964,31 @@ def warn_arith_conv_mixed_unicode_types
               "different Unicode character types %1 and %2">,
       InGroup<CharacterConversion>;
 
-def err_typecheck_assign_const : Error<
-  "%select{"
-  "cannot assign to return value because function %1 returns a const value|"
-  "cannot assign to variable %1 with const-qualified type %2|"
-  "cannot assign to %select{non-|}1static data member %2 "
-  "with const-qualified type %3|"
-  "cannot assign to non-static data member within const member function %1|"
-  "cannot assign to %select{variable %2|non-static data member %2|lvalue}1 "
-  "with %select{|nested }3const-qualified data member %4|"
-  "read-only variable is not assignable}0">;
+def err_typecheck_assign_const
+    : Error<"%select{"
+            "cannot assign to return value because function %1 returns a const "
+            "value|"
+            "cannot assign to variable %1 with const-qualified type %2|"
+            "cannot assign to %select{non-|}1static data member %2 "
+            "with const-qualified type %3|"
+            "cannot assign to %select{variable %2|non-static data member "
+            "%2|lvalue}1 "
+            "with %select{|nested }3const-qualified data member %4|"
+            "read-only variable is not assignable}0">;
 
-def note_typecheck_assign_const : Note<
-  "%select{"
-  "function %1 which returns const-qualified type %2 declared here|"
-  "variable %1 declared const here|"
-  "%select{non-|}1static data member %2 declared const here|"
-  "member function %q1 is declared const here|"
-  "%select{|nested }1data member %2 declared const here}0">;
+def note_typecheck_assign_const
+    : Note<"%select{"
+           "function %1 which returns const-qualified type %2 declared here|"
+           "variable %1 declared const here|"
+           "%select{non-|}1static data member %2 declared const here|"
+           "%select{|nested }1data member %2 declared const here}0">;
+
+def err_typecheck_assign_const_method
+    : Error<"cannot assign to non-static data member within const member "
+            "function %0">;
+
+def note_typecheck_assign_const_method
+    : Note<"member function %q0 is declared const here">;
 
 def warn_unsigned_always_true_comparison : Warning<
   "result of comparison of %select{%3|unsigned expression}0 %2 "
@@ -13506,6 +13516,9 @@ def err_hlsl_assign_to_global_resource: Error<
 
 def err_hlsl_push_constant_unique
     : Error<"cannot have more than one push constant block">;
+def err_hlsl_samplecmp_requires_float
+    : Error<"'SampleCmp' and 'SampleCmpLevelZero' require resource to contain "
+            "a floating point type">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
@@ -13968,6 +13981,13 @@ def note_amdgcn_unguarded_builtin_silence
          "this warning">;
 
 def err_amdgcn_coop_atomic_invalid_as : Error<"cooperative atomic requires a global or generic pointer">;
+
+def warn_amdgpu_s_wait_event_mask_no_effect_target :
+  Warning<"event mask has no effect for target">,
+  InGroup<DiagGroup<"amdgpu-wait-event-mask">>;
+
+def note_amdgpu_s_wait_event_suggested_value :
+  Note<"value of 2 valid for export_ready for gfx11 and gfx12+">;
 
 def warn_comparison_in_enum_initializer : Warning<
   "comparison operator '%0' is potentially a typo for a shift operator '%1'">,

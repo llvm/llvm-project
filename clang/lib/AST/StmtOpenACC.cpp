@@ -513,32 +513,31 @@ getCaptureStmtInfo(const Stmt *AssocStmt) {
     Read = getReadStmtInfo(Stmt2);
 
     return OpenACCAtomicConstruct::StmtInfo::createUpdateRead(*Update, *Read);
-  } else {
-    // All of the forms that can be done in a single line fall into 2
-    // categories: update/read, or read/update. The special cases are the
-    // postfix unary operators, which we have to make sure we do the 'read'
-    // first.  However, we still parse these as the RHS first, so we have a
-    // 'reversing' step. READ: UPDATE v = x++; v = x--; UPDATE: READ v = ++x; v
-    // = --x; v = x binop=expr v = x = x binop expr v = x = expr binop x
-
-    const Expr *E = cast<const Expr>(AssocStmt);
-
-    std::optional<OpenACCAtomicConstruct::SingleStmtInfo> Read =
-        getReadStmtInfo(E, /*ForAtomicComputeSingleStmt=*/true);
-    std::optional<OpenACCAtomicConstruct::SingleStmtInfo> Update =
-        getUpdateStmtInfo(Read->X);
-
-    // Fixup this, since the 'X' for the read is the result after write, but is
-    // the same value as the LHS-most variable of the update(its X).
-    Read->X = Update->X;
-
-    // Postfix is a read FIRST, then an update.
-    if (Update->IsPostfixIncDec)
-      return OpenACCAtomicConstruct::StmtInfo::createReadUpdate(*Read, *Update);
-
-    return OpenACCAtomicConstruct::StmtInfo::createUpdateRead(*Update, *Read);
   }
-  return {};
+
+  // All of the forms that can be done in a single line fall into 2
+  // categories: update/read, or read/update. The special cases are the
+  // postfix unary operators, which we have to make sure we do the 'read'
+  // first.  However, we still parse these as the RHS first, so we have a
+  // 'reversing' step. READ: UPDATE v = x++; v = x--; UPDATE: READ v = ++x; v
+  // = --x; v = x binop=expr v = x = x binop expr v = x = expr binop x
+
+  const Expr *E = cast<const Expr>(AssocStmt);
+
+  std::optional<OpenACCAtomicConstruct::SingleStmtInfo> Read =
+      getReadStmtInfo(E, /*ForAtomicComputeSingleStmt=*/true);
+  std::optional<OpenACCAtomicConstruct::SingleStmtInfo> Update =
+      getUpdateStmtInfo(Read->X);
+
+  // Fixup this, since the 'X' for the read is the result after write, but is
+  // the same value as the LHS-most variable of the update(its X).
+  Read->X = Update->X;
+
+  // Postfix is a read FIRST, then an update.
+  if (Update->IsPostfixIncDec)
+    return OpenACCAtomicConstruct::StmtInfo::createReadUpdate(*Read, *Update);
+
+  return OpenACCAtomicConstruct::StmtInfo::createUpdateRead(*Update, *Read);
 }
 
 const OpenACCAtomicConstruct::StmtInfo

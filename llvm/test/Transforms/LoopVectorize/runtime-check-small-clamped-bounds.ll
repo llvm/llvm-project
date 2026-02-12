@@ -13,8 +13,8 @@
 define void @load_clamped_index(ptr %A, ptr %B, i32 %N) {
 ; CHECK-LABEL: @load_clamped_index(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A:%.*]] to i64
-; CHECK-NEXT:    [[B1:%.*]] = ptrtoint ptr [[B:%.*]] to i64
+; CHECK-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A:%.*]] to i64
+; CHECK-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B:%.*]] to i64
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N:%.*]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
@@ -83,8 +83,8 @@ exit:
 define void @store_clamped_index(ptr %A, ptr %B, i32 %N) {
 ; CHECK-LABEL: @store_clamped_index(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B:%.*]] to i64
-; CHECK-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A:%.*]] to i64
+; CHECK-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B:%.*]] to i64
+; CHECK-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A:%.*]] to i64
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N:%.*]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
@@ -154,8 +154,8 @@ exit:
 define void @load_clamped_index_offset_1(ptr %A, ptr %B, i32 %N) {
 ; CHECK-LABEL: @load_clamped_index_offset_1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A:%.*]] to i64
-; CHECK-NEXT:    [[B1:%.*]] = ptrtoint ptr [[B:%.*]] to i64
+; CHECK-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A:%.*]] to i64
+; CHECK-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B:%.*]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N:%.*]], -1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]

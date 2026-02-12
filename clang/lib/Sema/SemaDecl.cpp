@@ -9195,6 +9195,12 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     RISCV().checkRVVTypeSupport(T, NewVD->getLocation(), cast<Decl>(CurContext),
                                 CallerFeatureMap);
   }
+
+  if (T.hasAddressSpace() &&
+      !CheckVarDeclSizeAddressSpace(NewVD, T.getAddressSpace())) {
+    NewVD->setInvalidDecl();
+    return;
+  }
 }
 
 bool Sema::CheckVariableDeclaration(VarDecl *NewVD, LookupResult &Previous) {
