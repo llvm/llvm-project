@@ -8,6 +8,7 @@
 
 #include "ClangHighlighter.h"
 
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/AnsiTerminal.h"
@@ -19,6 +20,8 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <optional>
+
+LLDB_PLUGIN_DEFINE_ADV(ClangHighlighter, HighlighterClang)
 
 using namespace lldb_private;
 
@@ -254,4 +257,19 @@ void ClangHighlighter::Highlight(const HighlightStyle &options,
     result << line;
     assert(false && "We couldn't find the user line in the input file?");
   }
+}
+
+Highlighter *ClangHighlighter::CreateInstance(lldb::LanguageType language) {
+  if (Language::LanguageIsCFamily(language))
+    return new ClangHighlighter();
+  return nullptr;
+}
+
+void ClangHighlighter::Initialize() {
+  PluginManager::RegisterPlugin(GetPluginNameStatic(), GetPluginNameStatic(),
+                                CreateInstance);
+}
+
+void ClangHighlighter::Terminate() {
+  PluginManager::UnregisterPlugin(CreateInstance);
 }
