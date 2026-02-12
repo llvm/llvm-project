@@ -29,9 +29,6 @@ using namespace lldb;
 using namespace lldb_dap;
 using namespace lldb_dap::protocol;
 using namespace lldb_dap_tests;
-using lldb_private::File;
-using lldb_private::FileSpec;
-using lldb_private::FileSystem;
 using lldb_private::MainLoop;
 using lldb_private::Pipe;
 
@@ -98,18 +95,11 @@ void DAPTestBase::CreateDebugger() {
   ASSERT_TRUE(dap->debugger);
   dap->target = dap->debugger.GetDummyTarget();
 
-  Expected<lldb::FileUP> dev_null = FileSystem::Instance().Open(
-      FileSpec(FileSystem::DEV_NULL), File::eOpenOptionReadWrite);
-  ASSERT_THAT_EXPECTED(dev_null, Succeeded());
-  lldb::FileSP dev_null_sp = std::move(*dev_null);
-
-  std::FILE *dev_null_stream = dev_null_sp->GetStream();
-  ASSERT_THAT_ERROR(dap->ConfigureIO(dev_null_stream, dev_null_stream),
-                    Succeeded());
+  ASSERT_THAT_ERROR(dap->ConfigureIO(), Succeeded());
 
   dap->no_lldbinit = true;
   ASSERT_THAT_ERROR(dap->InitializeDebugger(), Succeeded());
-  ASSERT_THAT_ERROR(dap->ActivateRepl(), Succeeded());
+  dap->ActivateRepl();
 }
 
 void DAPTestBase::LoadCore() {

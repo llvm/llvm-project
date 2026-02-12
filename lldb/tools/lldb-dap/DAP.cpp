@@ -297,17 +297,19 @@ llvm::Error DAP::ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr) {
 
   std::tie(primary, replica) = *io;
 
-  if (auto Error = stdout_redirect.RedirectTo(
-          overrideOut, [this](llvm::StringRef output) {
-            SendOutput(OutputType::Console, output);
-          }))
-    return Error;
+  if (overrideOut)
+    if (auto Error = stdout_redirect.RedirectTo(
+            overrideOut, [this](llvm::StringRef output) {
+              SendOutput(OutputType::Console, output);
+            }))
+      return Error;
 
-  if (auto Error = stderr_redirect.RedirectTo(
-          overrideErr, [this](llvm::StringRef output) {
-            SendOutput(OutputType::Console, output);
-          }))
-    return Error;
+  if (overrideErr)
+    if (auto Error = stderr_redirect.RedirectTo(
+            overrideErr, [this](llvm::StringRef output) {
+              SendOutput(OutputType::Console, output);
+            }))
+      return Error;
 
   return llvm::Error::success();
 }
