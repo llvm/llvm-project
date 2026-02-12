@@ -7499,10 +7499,9 @@ void testEscapeInvalidationHappensRightAfterTheCall(Foo* F) {
     Foo* L;
     L = F;
     L->mu.Lock();
-    // Release the lock hold by 'L' before clear its definition.
+    // Release the lock held by 'L' before clearing its definition.
     unlockFooWithEscapablePointer(&L);
 }
-
 
 void testEscapeInvalidationHappensRightAfterTheCtorCall(Foo* F) {
   Foo* L = F;
