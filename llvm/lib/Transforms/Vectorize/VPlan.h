@@ -2598,8 +2598,7 @@ inline ReductionStyle getReductionStyle(bool InLoop, bool Ordered,
 /// A recipe for handling reduction phis. The start value is the first operand
 /// of the recipe and the incoming value from the backedge is the second
 /// operand.
-class VPReductionPHIRecipe : public VPHeaderPHIRecipe,
-                             public VPUnrollPartAccessor<2> {
+class VPReductionPHIRecipe : public VPHeaderPHIRecipe {
   /// The recurrence kind of the reduction.
   const RecurKind Kind;
 

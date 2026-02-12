@@ -17171,6 +17171,26 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
           return LHS.getOperand(0);
       }
     }
+
+    // setcc v.64, 0xXXXX'XXXX'0000'0000, lt/ge
+    //    => setcc v.hi32, 0xXXXX'XXXX, lt/ge
+    //
+    // setcc v.64, 0xXXXX'XXXX'FFFF'FFFF, le/gt
+    //    => setcc v.hi32, 0xXXXX'XXXX, le/gt
+    if (VT == MVT::i64) {
+      const uint64_t Mask32 = maskTrailingOnes<uint64_t>(32);
+      const uint64_t CRHSInt = CRHSVal.getZExtValue();
+
+      if ( // setcc v.64, 0xXXXX'XXXX'0000'0000, lt/ge
+          ((CRHSInt & Mask32) == 0 && (CC == ISD::SETULT || CC == ISD::SETUGE ||
+                                       CC == ISD::SETLT || CC == ISD::SETGE)) ||
+          // setcc v.64, 0xXXXX'XXXX'FFFF'FFFF, le/gt
+          ((CRHSInt & Mask32) == Mask32 &&
+           (CC == ISD::SETULE || CC == ISD::SETUGT || CC == ISD::SETLE ||
+            CC == ISD::SETGT)))
+        return DAG.getSetCC(SL, N->getValueType(0), getHiHalf64(LHS, DAG),
+                            DAG.getConstant(CRHSInt >> 32, SL, MVT::i32), CC);
+    }
   }
 
   // Eliminate setcc by using carryout from add/sub instruction
@@ -18661,6 +18681,11 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
     break;
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT:
     Known.Zero.setHighBits(16);
+    break;
+  case AMDGPU::G_AMDGPU_COPY_SCC_VCC:
+    // G_AMDGPU_COPY_SCC_VCC converts a uniform boolean in VCC to SGPR s32,
+    // producing exactly 0 or 1.
+    Known.Zero.setHighBits(Known.getBitWidth() - 1);
     break;
   case AMDGPU::G_AMDGPU_SMED3:
   case AMDGPU::G_AMDGPU_UMED3: {
