@@ -136,11 +136,11 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
     // We are expanding a variable that has children, so we will return its
     // children.
     lldb::SBValue variable = dap.variables.GetVariable(var_ref);
-    if (!variable.IsValid()) {
-      if (!variable.IsInScope())
-        return make_error<DAPError>("value is no longer in scope.");
+    if (!variable.IsValid())
       return make_error<DAPError>("invalid variable reference");
-    }
+
+    if (!variable.IsInScope())
+      return make_error<DAPError>("value is no longer in scope.");
 
     const bool is_permanent =
         dap.variables.IsPermanentVariableReference(var_ref);
