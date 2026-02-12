@@ -2595,15 +2595,15 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ;
 ; RV32ZHINX-LABEL: fcanonicalize_v8f16:
 ; RV32ZHINX:       # %bb.0:
-; RV32ZHINX-NEXT:    lh t0, 0(sp)
 ; RV32ZHINX-NEXT:    fmin.h a1, a1, a1
+; RV32ZHINX-NEXT:    lh t0, 0(sp)
 ; RV32ZHINX-NEXT:    fmin.h a2, a2, a2
-; RV32ZHINX-NEXT:    fmin.h a3, a3, a3
-; RV32ZHINX-NEXT:    fmin.h a4, a4, a4
 ; RV32ZHINX-NEXT:    fmin.h a5, a5, a5
 ; RV32ZHINX-NEXT:    fmin.h a6, a6, a6
 ; RV32ZHINX-NEXT:    fmin.h a7, a7, a7
 ; RV32ZHINX-NEXT:    fmin.h t0, t0, t0
+; RV32ZHINX-NEXT:    fmin.h a3, a3, a3
+; RV32ZHINX-NEXT:    fmin.h a4, a4, a4
 ; RV32ZHINX-NEXT:    sh a5, 8(a0)
 ; RV32ZHINX-NEXT:    sh a6, 10(a0)
 ; RV32ZHINX-NEXT:    sh a7, 12(a0)
@@ -2616,15 +2616,15 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ;
 ; RV64ZHINX-LABEL: fcanonicalize_v8f16:
 ; RV64ZHINX:       # %bb.0:
-; RV64ZHINX-NEXT:    lh t0, 0(sp)
 ; RV64ZHINX-NEXT:    fmin.h a1, a1, a1
+; RV64ZHINX-NEXT:    lh t0, 0(sp)
 ; RV64ZHINX-NEXT:    fmin.h a2, a2, a2
-; RV64ZHINX-NEXT:    fmin.h a3, a3, a3
-; RV64ZHINX-NEXT:    fmin.h a4, a4, a4
 ; RV64ZHINX-NEXT:    fmin.h a5, a5, a5
 ; RV64ZHINX-NEXT:    fmin.h a6, a6, a6
 ; RV64ZHINX-NEXT:    fmin.h a7, a7, a7
 ; RV64ZHINX-NEXT:    fmin.h t0, t0, t0
+; RV64ZHINX-NEXT:    fmin.h a3, a3, a3
+; RV64ZHINX-NEXT:    fmin.h a4, a4, a4
 ; RV64ZHINX-NEXT:    sh a5, 8(a0)
 ; RV64ZHINX-NEXT:    sh a6, 10(a0)
 ; RV64ZHINX-NEXT:    sh a7, 12(a0)
@@ -3503,15 +3503,15 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ;
 ; RV32ZHINX-LABEL: fcanonicalize_v8f16_nnan:
 ; RV32ZHINX:       # %bb.0:
-; RV32ZHINX-NEXT:    lh t0, 0(sp)
 ; RV32ZHINX-NEXT:    fmin.h a1, a1, a1
+; RV32ZHINX-NEXT:    lh t0, 0(sp)
 ; RV32ZHINX-NEXT:    fmin.h a2, a2, a2
-; RV32ZHINX-NEXT:    fmin.h a3, a3, a3
-; RV32ZHINX-NEXT:    fmin.h a4, a4, a4
 ; RV32ZHINX-NEXT:    fmin.h a5, a5, a5
 ; RV32ZHINX-NEXT:    fmin.h a6, a6, a6
 ; RV32ZHINX-NEXT:    fmin.h a7, a7, a7
 ; RV32ZHINX-NEXT:    fmin.h t0, t0, t0
+; RV32ZHINX-NEXT:    fmin.h a3, a3, a3
+; RV32ZHINX-NEXT:    fmin.h a4, a4, a4
 ; RV32ZHINX-NEXT:    sh a5, 8(a0)
 ; RV32ZHINX-NEXT:    sh a6, 10(a0)
 ; RV32ZHINX-NEXT:    sh a7, 12(a0)
@@ -3524,15 +3524,15 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ;
 ; RV64ZHINX-LABEL: fcanonicalize_v8f16_nnan:
 ; RV64ZHINX:       # %bb.0:
-; RV64ZHINX-NEXT:    lh t0, 0(sp)
 ; RV64ZHINX-NEXT:    fmin.h a1, a1, a1
+; RV64ZHINX-NEXT:    lh t0, 0(sp)
 ; RV64ZHINX-NEXT:    fmin.h a2, a2, a2
-; RV64ZHINX-NEXT:    fmin.h a3, a3, a3
-; RV64ZHINX-NEXT:    fmin.h a4, a4, a4
 ; RV64ZHINX-NEXT:    fmin.h a5, a5, a5
 ; RV64ZHINX-NEXT:    fmin.h a6, a6, a6
 ; RV64ZHINX-NEXT:    fmin.h a7, a7, a7
 ; RV64ZHINX-NEXT:    fmin.h t0, t0, t0
+; RV64ZHINX-NEXT:    fmin.h a3, a3, a3
+; RV64ZHINX-NEXT:    fmin.h a4, a4, a4
 ; RV64ZHINX-NEXT:    sh a5, 8(a0)
 ; RV64ZHINX-NEXT:    sh a6, 10(a0)
 ; RV64ZHINX-NEXT:    sh a7, 12(a0)
@@ -5160,10 +5160,10 @@ define double @fcanonicalize_softfloat(double, double) unnamed_addr #0 {
 ;
 ; RV64ZDINX-LABEL: fcanonicalize_softfloat:
 ; RV64ZDINX:       # %bb.0: # %start
-; RV64ZDINX-NEXT:    flt.d a2, a0, a1
-; RV64ZDINX-NEXT:    feq.d a3, a0, a0
-; RV64ZDINX-NEXT:    xori a3, a3, 1
-; RV64ZDINX-NEXT:    or a2, a3, a2
+; RV64ZDINX-NEXT:    feq.d a2, a0, a0
+; RV64ZDINX-NEXT:    flt.d a3, a0, a1
+; RV64ZDINX-NEXT:    xori a2, a2, 1
+; RV64ZDINX-NEXT:    or a2, a2, a3
 ; RV64ZDINX-NEXT:    bnez a2, .LBB15_2
 ; RV64ZDINX-NEXT:  # %bb.1: # %start
 ; RV64ZDINX-NEXT:    mv a1, a0

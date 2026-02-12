@@ -821,11 +821,11 @@ define <vscale x 16 x i64> @vp_abs_nxv16i64(<vscale x 16 x i64> %va, <vscale x 1
 ; ZVABD-NEXT:    vmv1r.v v24, v0
 ; ZVABD-NEXT:    csrr a1, vlenb
 ; ZVABD-NEXT:    srli a2, a1, 3
-; ZVABD-NEXT:    sub a3, a0, a1
 ; ZVABD-NEXT:    vslidedown.vx v0, v0, a2
-; ZVABD-NEXT:    sltu a2, a0, a3
-; ZVABD-NEXT:    addi a2, a2, -1
-; ZVABD-NEXT:    and a2, a2, a3
+; ZVABD-NEXT:    sub a2, a0, a1
+; ZVABD-NEXT:    sltu a3, a0, a2
+; ZVABD-NEXT:    addi a3, a3, -1
+; ZVABD-NEXT:    and a2, a3, a2
 ; ZVABD-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; ZVABD-NEXT:    vabs.v v16, v16, v0.t
 ; ZVABD-NEXT:    bltu a0, a1, .LBB46_2

@@ -612,9 +612,9 @@ define <32 x i64> @vp_abs_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %evl)
 ;
 ; ZVABD-LABEL: vp_abs_v32i64:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    li a2, 16
 ; ZVABD-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; ZVABD-NEXT:    vslidedown.vi v24, v0, 2
+; ZVABD-NEXT:    li a2, 16
 ; ZVABD-NEXT:    mv a1, a0
 ; ZVABD-NEXT:    bltu a0, a2, .LBB34_2
 ; ZVABD-NEXT:  # %bb.1:
@@ -623,10 +623,10 @@ define <32 x i64> @vp_abs_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %evl)
 ; ZVABD-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; ZVABD-NEXT:    vabs.v v8, v8, v0.t
 ; ZVABD-NEXT:    addi a1, a0, -16
+; ZVABD-NEXT:    vmv1r.v v0, v24
 ; ZVABD-NEXT:    sltu a0, a0, a1
 ; ZVABD-NEXT:    addi a0, a0, -1
 ; ZVABD-NEXT:    and a0, a0, a1
-; ZVABD-NEXT:    vmv1r.v v0, v24
 ; ZVABD-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; ZVABD-NEXT:    vabs.v v16, v16, v0.t
 ; ZVABD-NEXT:    ret

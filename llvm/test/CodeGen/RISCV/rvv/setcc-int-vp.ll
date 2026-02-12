@@ -1080,15 +1080,15 @@ define <vscale x 128 x i1> @icmp_eq_vv_nxv128i8(<vscale x 128 x i8> %va, <vscale
 ; CHECK-NEXT:    and a2, a4, a2
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vv v6, v16, v24, v0.t
-; CHECK-NEXT:    vl8r.v v24, (a0)
+; CHECK-NEXT:    vl8r.v v16, (a0)
 ; CHECK-NEXT:    bltu a3, a1, .LBB96_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a3, a1
 ; CHECK-NEXT:  .LBB96_2:
 ; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
-; CHECK-NEXT:    vmseq.vv v16, v8, v24, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v16
+; CHECK-NEXT:    vmseq.vv v24, v8, v16, v0.t
+; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vmv1r.v v8, v6
 ; CHECK-NEXT:    ret
   %v = call <vscale x 128 x i1> @llvm.vp.icmp.nxv128i8(<vscale x 128 x i8> %va, <vscale x 128 x i8> %vb, metadata !"eq", <vscale x 128 x i1> %m, i32 %evl)
@@ -2196,17 +2196,17 @@ define <vscale x 32 x i1> @icmp_eq_vv_nxv32i32(<vscale x 32 x i32> %va, <vscale 
 ; CHECK-NEXT:    and a4, a5, a4
 ; CHECK-NEXT:    vsetvli zero, a4, e32, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vv v6, v16, v24, v0.t
-; CHECK-NEXT:    vl8re32.v v24, (a0)
+; CHECK-NEXT:    vl8re32.v v16, (a0)
 ; CHECK-NEXT:    bltu a2, a3, .LBB189_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, a3
 ; CHECK-NEXT:  .LBB189_2:
 ; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
-; CHECK-NEXT:    vmseq.vv v16, v8, v24, v0.t
+; CHECK-NEXT:    vmseq.vv v24, v8, v16, v0.t
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vslideup.vx v16, v6, a1
-; CHECK-NEXT:    vmv1r.v v0, v16
+; CHECK-NEXT:    vslideup.vx v24, v6, a1
+; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    ret
   %v = call <vscale x 32 x i1> @llvm.vp.icmp.nxv32i32(<vscale x 32 x i32> %va, <vscale x 32 x i32> %vb, metadata !"eq", <vscale x 32 x i1> %m, i32 %evl)
   ret <vscale x 32 x i1> %v

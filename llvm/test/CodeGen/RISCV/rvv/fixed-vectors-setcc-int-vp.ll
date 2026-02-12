@@ -598,15 +598,15 @@ define <256 x i1> @icmp_eq_vv_v256i8(<256 x i8> %va, <256 x i8> %vb, <256 x i1> 
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vv v6, v16, v24, v0.t
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
-; CHECK-NEXT:    vle8.v v24, (a0)
+; CHECK-NEXT:    vle8.v v16, (a0)
 ; CHECK-NEXT:    bltu a3, a1, .LBB51_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a3, 128
 ; CHECK-NEXT:  .LBB51_2:
 ; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
-; CHECK-NEXT:    vmseq.vv v16, v8, v24, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v16
+; CHECK-NEXT:    vmseq.vv v24, v8, v16, v0.t
+; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vmv1r.v v8, v6
 ; CHECK-NEXT:    ret
   %v = call <256 x i1> @llvm.vp.icmp.v256i8(<256 x i8> %va, <256 x i8> %vb, metadata !"eq", <256 x i1> %m, i32 %evl)
