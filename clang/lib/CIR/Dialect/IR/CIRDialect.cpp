@@ -132,6 +132,7 @@ template <typename Ty> struct EnumTraits {};
 
 REGISTER_ENUM_TYPE(GlobalLinkageKind);
 REGISTER_ENUM_TYPE(VisibilityKind);
+REGISTER_ENUM_TYPE(CallingConv);
 REGISTER_ENUM_TYPE(SideEffect);
 } // namespace
 
@@ -882,16 +883,30 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
   if (parser.resolveOperands(ops, opsFnTy.getInputs(), opsLoc, result.operands))
     return mlir::failure();
 
+  bool hasCallConv = parser.parseOptionalKeyword("cc").succeeded() ||
+                     parser.parseOptionalKeyword("call_conv").succeeded();
+  if (hasCallConv) {
+    if (parser.parseLParen().failed())
+      return failure();
+    cir::CallingConv callingConv;
+    if (parseCIRKeyword<cir::CallingConv>(parser, callingConv).failed())
+      return failure();
+    if (parser.parseRParen().failed())
+      return failure();
+    result.addAttribute(
+        CIRDialect::getCallingConvAttrName(),
+        cir::CallingConvAttr::get(parser.getContext(), callingConv));
+  }
+
   return mlir::success();
 }
 
-static void printCallCommon(mlir::Operation *op,
-                            mlir::FlatSymbolRefAttr calleeSym,
-                            mlir::Value indirectCallee,
-                            mlir::OpAsmPrinter &printer, bool isNothrow,
-                            cir::SideEffect sideEffect,
-                            mlir::Block *normalDest = nullptr,
-                            mlir::Block *unwindDest = nullptr) {
+static void
+printCallCommon(mlir::Operation *op, mlir::FlatSymbolRefAttr calleeSym,
+                mlir::Value indirectCallee, mlir::OpAsmPrinter &printer,
+                bool isNothrow, cir::CallingConv callingConv,
+                cir::SideEffect sideEffect, mlir::Block *normalDest = nullptr,
+                mlir::Block *unwindDest = nullptr) {
   printer << ' ';
 
   auto callLikeOp = mlir::cast<cir::CIRCallOpInterface>(op);
@@ -928,12 +943,18 @@ static void printCallCommon(mlir::Operation *op,
 
   llvm::SmallVector<::llvm::StringRef> elidedAttrs = {
       CIRDialect::getCalleeAttrName(), CIRDialect::getNoThrowAttrName(),
-      CIRDialect::getSideEffectAttrName(),
+      CIRDialect::getSideEffectAttrName(), CIRDialect::getCallingConvAttrName(),
       CIRDialect::getOperandSegmentSizesAttrName()};
   printer.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
   printer << " : ";
   printer.printFunctionalType(op->getOperands().getTypes(),
                               op->getResultTypes());
+
+  if (callingConv != cir::CallingConv::C) {
+    printer << " cc(";
+    printer << stringifyCallingConv(callingConv);
+    printer << ")";
+  }
 }
 
 mlir::ParseResult cir::CallOp::parse(mlir::OpAsmParser &parser,
@@ -945,7 +966,7 @@ void cir::CallOp::print(mlir::OpAsmPrinter &p) {
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
   cir::SideEffect sideEffect = getSideEffect();
   printCallCommon(*this, getCalleeAttr(), indirectCallee, p, getNothrow(),
-                  sideEffect);
+                  getCallingConv(), sideEffect);
 }
 
 static LogicalResult
@@ -985,7 +1006,11 @@ verifyCallCommInSymbolUses(mlir::Operation *op,
                << op->getOperand(i).getType() << " for operand number " << i;
   }
 
-  assert(!cir::MissingFeatures::opCallCallConv());
+  // Calling convention must match.
+  if (callIf.getCallingConv() != fn.getCallingConv())
+    return op->emitOpError("calling convention mismatch: expected ")
+           << stringifyCallingConv(fn.getCallingConv()) << ", but provided "
+           << stringifyCallingConv(callIf.getCallingConv());
 
   // Void function must not return any results.
   if (fnType.hasVoidReturn() && op->getNumResults() != 0)
@@ -1061,7 +1086,8 @@ void cir::TryCallOp::print(::mlir::OpAsmPrinter &p) {
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
   cir::SideEffect sideEffect = getSideEffect();
   printCallCommon(*this, getCalleeAttr(), indirectCallee, p, getNothrow(),
-                  sideEffect, getNormalDest(), getUnwindDest());
+                  getCallingConv(), sideEffect, getNormalDest(),
+                  getUnwindDest());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2074,6 +2100,21 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
       return failure();
   }
 
+  auto callConvNameAttr = getCallingConvAttrName(state.name);
+  bool hasCallConv = parser.parseOptionalKeyword("cc").succeeded() ||
+                     parser.parseOptionalKeyword("call_conv").succeeded();
+  if (hasCallConv) {
+    CallingConv callConv;
+    if (parser.parseLParen().failed())
+      return failure();
+    if (parseCIRKeyword<CallingConv>(parser, callConv).failed())
+      return parser.emitError(loc) << "unknown calling convention";
+    if (parser.parseRParen().failed())
+      return failure();
+    state.addAttribute(callConvNameAttr,
+                       CallingConvAttr::get(parser.getContext(), callConv));
+  }
+
   auto parseGlobalDtorCtor =
       [&](StringRef keyword,
           llvm::function_ref<void(std::optional<int> prio)> createAttr)
@@ -2290,6 +2331,12 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   if (std::optional<StringRef> personalityName = getPersonality()) {
     p << " personality(";
     p.printSymbolName(*personalityName);
+    p << ")";
+  }
+
+  if (getCallingConv() != CallingConv::C) {
+    p << " cc(";
+    p << stringifyCallingConv(getCallingConv());
     p << ")";
   }
 

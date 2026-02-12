@@ -71,7 +71,7 @@ struct MissingFeatures {
   static bool opFuncArmNewAttr() { return false; }
   static bool opFuncArmStreamingAttr() { return false; }
   static bool opFuncAstDeclAttr() { return false; }
-  static bool opFuncCallingConv() { return false; }
+  static bool opFuncCallingConv() { return true; }
   static bool opFuncColdHotAttr() { return false; }
   static bool opFuncCPUAndFeaturesAttributes() { return false; }
   static bool opFuncExceptions() { return false; }
@@ -103,7 +103,7 @@ struct MissingFeatures {
   static bool opCallImplicitObjectSizeArgs() { return false; }
   static bool opCallReturn() { return false; }
   static bool opCallArgEvaluationOrder() { return false; }
-  static bool opCallCallConv() { return false; }
+  static bool opCallCallConv() { return true; }
   static bool opCallSideEffect() { return false; }
   static bool opCallMustTail() { return false; }
   static bool opCallInAlloca() { return false; }

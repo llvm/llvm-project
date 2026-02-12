@@ -147,7 +147,7 @@ static mlir::Value emitToMemory(mlir::ConversionPatternRewriter &rewriter,
   return value;
 }
 
-mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage) {
+static mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage) {
   using CIR = cir::GlobalLinkageKind;
   using LLVM = mlir::LLVM::Linkage;
 
@@ -174,6 +174,28 @@ mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage) {
     return LLVM::WeakODR;
   };
   llvm_unreachable("Unknown CIR linkage type");
+}
+
+static std::optional<mlir::LLVM::CConv>
+convertCallingConv(cir::CallingConv callingConv) {
+  using CIR = cir::CallingConv;
+  using LLVM = mlir::LLVM::CConv;
+
+  switch (callingConv) {
+  case CIR::C:
+    return LLVM::C;
+  case CIR::SpirKernel:
+    return LLVM::SPIR_KERNEL;
+  case CIR::SpirFunction:
+    return LLVM::SPIR_FUNC;
+  case CIR::OpenCLKernel:
+    llvm_unreachable("NYI");
+  case CIR::PTXKernel:
+    return LLVM::PTX_Kernel;
+  case CIR::AMDGPUKernel:
+    return LLVM::AMDGPU_KERNEL;
+  }
+  llvm_unreachable("Unknown calling convention");
 }
 
 mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
@@ -1815,8 +1837,8 @@ mlir::LogicalResult CIRToLLVMRotateOpLowering::matchAndRewrite(
 static void lowerCallAttributes(cir::CIRCallOpInterface op,
                                 SmallVectorImpl<mlir::NamedAttribute> &result) {
   for (mlir::NamedAttribute attr : op->getAttrs()) {
-    assert(!cir::MissingFeatures::opFuncCallingConv());
     if (attr.getName() == CIRDialect::getCalleeAttrName() ||
+        attr.getName() == CIRDialect::getCallingConvAttrName() ||
         attr.getName() == CIRDialect::getSideEffectAttrName() ||
         attr.getName() == CIRDialect::getNoThrowAttrName() ||
         attr.getName() == CIRDialect::getNoUnwindAttrName() ||
@@ -1840,7 +1862,10 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
   if (converter->convertTypes(cirResults, llvmResults).failed())
     return mlir::failure();
 
-  assert(!cir::MissingFeatures::opCallCallConv());
+  auto cconv = convertCallingConv(call.getCallingConv());
+  if (!cconv)
+    return op->emitOpError("unsupported calling convention for LLVM lowering: ")
+           << stringifyCallingConv(call.getCallingConv());
 
   mlir::LLVM::MemoryEffectsAttr memoryEffects;
   bool noUnwind = false;
@@ -1905,10 +1930,10 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
 
   assert(!cir::MissingFeatures::opCallLandingPad());
   assert(!cir::MissingFeatures::opCallContinueBlock());
-  assert(!cir::MissingFeatures::opCallCallConv());
 
   auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
       op, llvmFnTy, calleeAttr, callOperands);
+  newOp.setCConv(*cconv);
   newOp->setAttrs(attributes);
   if (memoryEffects)
     newOp.setMemoryEffectsAttr(memoryEffects);
@@ -2285,15 +2310,14 @@ mlir::LogicalResult CIRToLLVMFAbsOpLowering::matchAndRewrite(
 void CIRToLLVMFuncOpLowering::lowerFuncAttributes(
     cir::FuncOp func, bool filterArgAndResAttrs,
     SmallVectorImpl<mlir::NamedAttribute> &result) const {
-  assert(!cir::MissingFeatures::opFuncCallingConv());
   for (mlir::NamedAttribute attr : func->getAttrs()) {
-    assert(!cir::MissingFeatures::opFuncCallingConv());
     if (attr.getName() == mlir::SymbolTable::getSymbolAttrName() ||
         attr.getName() == func.getFunctionTypeAttrName() ||
         attr.getName() == getLinkageAttrNameString() ||
         attr.getName() == func.getGlobalVisibilityAttrName() ||
         attr.getName() == func.getDsoLocalAttrName() ||
         attr.getName() == func.getInlineKindAttrName() ||
+        attr.getName() == func.getCallingConvAttrName() ||
         attr.getName() == func.getSideEffectAttrName() ||
         attr.getName() == CIRDialect::getNoReturnAttrName() ||
         (filterArgAndResAttrs &&
@@ -2369,13 +2393,15 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
          "expected single location or unknown location here");
 
   mlir::LLVM::Linkage linkage = convertLinkage(op.getLinkage());
-  assert(!cir::MissingFeatures::opFuncCallingConv());
-  mlir::LLVM::CConv cconv = mlir::LLVM::CConv::C;
+  auto cconv = convertCallingConv(op.getCallingConv());
+  if (!cconv)
+    return op.emitOpError("unsupported calling convention for LLVM lowering: ")
+           << stringifyCallingConv(op.getCallingConv());
   SmallVector<mlir::NamedAttribute, 4> attributes;
   lowerFuncAttributes(op, /*filterArgAndResAttrs=*/false, attributes);
 
   mlir::LLVM::LLVMFuncOp fn = mlir::LLVM::LLVMFuncOp::create(
-      rewriter, loc, op.getName(), llvmFnTy, linkage, isDsoLocal, cconv,
+      rewriter, loc, op.getName(), llvmFnTy, linkage, isDsoLocal, *cconv,
       mlir::SymbolRefAttr(), attributes);
 
   assert(!cir::MissingFeatures::opFuncMultipleReturnVals());

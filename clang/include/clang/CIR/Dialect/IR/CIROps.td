@@ -3091,9 +3091,16 @@ def CIR_OptionalPriorityAttr : OptionalAttr<
   >
 >;
 
-// TODO(CIR): CallingConv is a placeholder here so we can use it in
-// infrastructure calls, but it currently has no values.
-def CIR_CallingConv : CIR_I32EnumAttr<"CallingConv", "calling convention", []>;
+// The enumeration values are not necessarily in sync with `clang::CallingConv`
+// or `llvm::CallingConv`.
+def CIR_CallingConv : CIR_I32EnumAttr<"CallingConv", "calling convention", [
+  I32EnumAttrCase<"C", 1, "c">,
+  I32EnumAttrCase<"SpirKernel", 2, "spir_kernel">,
+  I32EnumAttrCase<"SpirFunction", 3, "spir_function">,
+  I32EnumAttrCase<"OpenCLKernel", 4, "opencl_kernel">,
+  I32EnumAttrCase<"PTXKernel", 5, "ptx_kernel">,
+  I32EnumAttrCase<"AMDGPUKernel", 6, "amdgpu_kernel">
+]>;
 
 def CIR_FuncOp : CIR_Op<"func", [
   AutomaticAllocationScope, CallableOpInterface, FunctionOpInterface,
@@ -3108,6 +3115,9 @@ def CIR_FuncOp : CIR_Op<"func", [
 
     The function linkage information is specified by `linkage`, as defined by
     `GlobalLinkageKind` attribute.
+
+    The `calling_conv` attribute specifies the calling convention of the
+    function. The default calling convention is `CallingConv::C`.
 
     A compiler builtin function must be marked as `builtin` for further
     processing when lowering from CIR.
@@ -3178,6 +3188,9 @@ def CIR_FuncOp : CIR_Op<"func", [
       CIR_GlobalLinkageKind,
       "cir::GlobalLinkageKind::ExternalLinkage"
     >:$linkage,
+    DefaultValuedAttr<
+      CIR_CallingConv, "CallingConv::C"
+    >:$calling_conv,
     OptionalAttr<StrAttr>:$sym_visibility,
     UnitAttr:$comdat,
     OptionalAttr<DictArrayAttr>:$arg_attrs,
@@ -3364,6 +3377,7 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
 
   dag commonArgs = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
       Variadic<CIR_AnyType>:$args,
+      DefaultValuedAttr<CIR_CallingConv, "CallingConv::C">:$calling_conv,
       UnitAttr:$nothrow,
       DefaultValuedAttr<CIR_SideEffect, "SideEffect::All">:$side_effect);
 }

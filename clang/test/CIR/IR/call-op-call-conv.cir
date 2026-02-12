@@ -1,0 +1,19 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!fnptr = !cir.ptr<!cir.func<(!s32i) -> !s32i>>
+
+module {
+  cir.func @my_add(%a: !s32i, %b: !s32i) -> !s32i cc(spir_function) {
+    %c = cir.binop(add, %a, %b) : !s32i
+    cir.return %c : !s32i
+  }
+
+  // CHECK: %{{[0-9]+}} = cir.call %{{.*}}(%{{.*}}) : (!cir.ptr<!cir.func<(!s32i) -> !s32i>>, !s32i) -> !s32i cc(spir_kernel)
+  // CHECK: %{{[0-9]+}} = cir.call %{{.*}}(%{{.*}}) : (!cir.ptr<!cir.func<(!s32i) -> !s32i>>, !s32i) -> !s32i cc(spir_function)
+  cir.func @ind(%fnptr: !fnptr, %a : !s32i) {
+    %1 = cir.call %fnptr(%a) : (!fnptr, !s32i) -> !s32i cc(spir_kernel)
+    %2 = cir.call %fnptr(%a) : (!fnptr, !s32i) -> !s32i cc(spir_function)
+    cir.return
+  }
+}

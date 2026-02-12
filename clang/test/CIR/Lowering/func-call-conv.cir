@@ -1,0 +1,18 @@
+// RUN: cir-opt %s --cir-to-llvm | FileCheck %s
+
+module {
+  // CHECK: llvm.func @foo()
+  cir.func @foo() cc(c) {
+    cir.return
+  }
+
+  // CHECK: llvm.func{{( spir_kernelcc @bar\(\)| @bar\(\).*spir_kernelcc)}}
+  cir.func @bar() cc(spir_kernel) {
+    cir.return
+  }
+
+  // CHECK: llvm.func{{( spir_funccc @baz\(\)| @baz\(\).*spir_funccc)}}
+  cir.func @baz() cc(spir_function) {
+    cir.return
+  }
+}

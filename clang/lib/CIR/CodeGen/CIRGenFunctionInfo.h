@@ -16,6 +16,7 @@
 #define LLVM_CLANG_CIR_CIRGENFUNCTIONINFO_H
 
 #include "clang/AST/CanonicalType.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -72,6 +73,16 @@ public:
 class CIRGenFunctionInfo final
     : public llvm::FoldingSetNode,
       private llvm::TrailingObjects<CIRGenFunctionInfo, CanQualType> {
+  /// The cir::CallingConv to use for this function (as specified by the user).
+  cir::CallingConv callingConvention : 8;
+
+  /// The cir::CallingConv to actually use for this function, which may depend
+  /// on the ABI.
+  cir::CallingConv effectiveCallingConvention : 8;
+
+  /// The clang::CallingConv that this was originally created with.
+  unsigned astCallingConvention : 6;
+
   // Whether this function has noreturn.
   LLVM_PREFERRED_TYPE(bool)
   unsigned noReturn : 1;
@@ -90,13 +101,15 @@ class CIRGenFunctionInfo final
     // here instead of explicit false/0.
     return FunctionType::ExtInfo(
         isNoReturn(), /*getHasRegParm=*/false, /*getRegParm=*/false,
-        /*getASTCallingConvention=*/CallingConv(0), /*isReturnsRetained=*/false,
+        /*getASTCallingConvention=*/getASTCallingConvention(),
+        /*isReturnsRetained=*/false,
         /*isNoCallerSavedRegs=*/false, /*isNoCfCheck=*/false,
         /*isCmseNSCall=*/false);
   }
 
 public:
-  static CIRGenFunctionInfo *create(FunctionType::ExtInfo info,
+  static CIRGenFunctionInfo *create(cir::CallingConv cirCC,
+                                    FunctionType::ExtInfo info,
                                     CanQualType resultType,
                                     llvm::ArrayRef<CanQualType> argTypes,
                                     RequiredArgs required);
@@ -115,6 +128,7 @@ public:
   static void Profile(llvm::FoldingSetNodeID &id, FunctionType::ExtInfo info,
                       RequiredArgs required, CanQualType resultType,
                       llvm::ArrayRef<CanQualType> argTypes) {
+    id.AddInteger(info.getCC());
     id.AddBoolean(info.getNoReturn());
     id.AddBoolean(required.getOpaqueData());
     resultType.Profile(id);
@@ -162,6 +176,20 @@ public:
   }
 
   bool isNoReturn() const { return noReturn; }
+
+  /// getASTCallingConvention - Return the AST-specified calling convention.
+  clang::CallingConv getASTCallingConvention() const {
+    return clang::CallingConv(astCallingConvention);
+  }
+
+  /// getCallingConvention - Return the user specified calling convention.
+  cir::CallingConv getCallingConvention() const { return callingConvention; }
+
+  /// getEffectiveCallingConvention - Return the actual calling convention to
+  /// use, which may depend on the ABI.
+  cir::CallingConv getEffectiveCallingConvention() const {
+    return effectiveCallingConvention;
+  }
 };
 
 } // namespace clang::CIRGen
