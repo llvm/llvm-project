@@ -101,7 +101,7 @@ static cl::opt<bool> PrintMaxRPRegUsageAfterScheduler(
 
 static cl::opt<bool> DisableRewriteMFMAFormSchedStage(
     "amdgpu-disable-rewrite-mfma-form-sched-stage", cl::Hidden,
-    cl::desc("Disable rewrie mfma rewrite scheduling stage"), cl::init(true));
+    cl::desc("Disable rewrie mfma rewrite scheduling stage"), cl::init(false));
 
 const unsigned ScheduleMetrics::ScaleFactor = 100;
 
@@ -2351,6 +2351,8 @@ double RewriteMFMAFormStage::getRewriteCost(
 
     MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
     assert(Src2);
+    if (!Src2->isReg())
+      continue;
 
     // Have to get src types separately since subregs may cause C and D
     // registers to be different types even though the actual operand is
