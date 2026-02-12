@@ -28874,7 +28874,6 @@ static unsigned getReductionForOpcode(unsigned Op) {
 }
 
 static SDValue performMINMAXCombine(SDNode *N, SelectionDAG &DAG,
-                                    const AArch64Subtarget &Subtarget,
                                     const AArch64TargetLowering &TLI) {
   using namespace llvm::SDPatternMatch;
   if (SDValue V = trySQDMULHCombine(N, DAG))
@@ -28923,7 +28922,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::UMIN:
   case ISD::SMAX:
   case ISD::SMIN:
-    return performMINMAXCombine(N, DAG, *Subtarget, *this);
+    return performMINMAXCombine(N, DAG, *this);
   case ISD::TRUNCATE:
     return performTruncateCombine(N, DAG, DCI);
   case AArch64ISD::ANDS:
