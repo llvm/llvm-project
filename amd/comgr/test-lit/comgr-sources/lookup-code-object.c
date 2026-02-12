@@ -43,8 +43,8 @@ int main(int argc, char *argv[]) {
 
   for (int i = 0; i < 3; ++i) {
     printf("ObjectInfo[%d].isa: %s\n", i, ObjectInfo[i].isa);
-    printf("ObjectInfo[%d].size: %ld\n", i, ObjectInfo[i].size);
-    printf("ObjectInfo[%d].offset: %ld\n", i, ObjectInfo[i].offset);
+    printf("ObjectInfo[%d].size: %zu\n", i, ObjectInfo[i].size);
+    printf("ObjectInfo[%d].offset: %" PRIu64 "\n", i, ObjectInfo[i].offset);
   }
 
   amd_comgr_(release_data(DataObject));

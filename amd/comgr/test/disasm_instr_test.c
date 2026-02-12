@@ -16,8 +16,8 @@
 
 const int ExpectedUserData;
 
-void checkUserData(void *UserData) {
-  if (UserData != (void *)&ExpectedUserData) {
+void checkUserData(const void *UserData) {
+  if (UserData != (const void *)&ExpectedUserData) {
     fail("user_data changed");
   }
 }

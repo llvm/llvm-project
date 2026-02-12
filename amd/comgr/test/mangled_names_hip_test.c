@@ -101,7 +101,7 @@ int main(int argc, char *argv[]) {
   Status = amd_comgr_populate_mangled_names(DataBc, &NumNames);
   checkError(Status, "amd_comgr_populate_mangled_names");
 
-  char *MangledSubstr = "__hip_cuid_";
+  const char *MangledSubstr = "__hip_cuid_";
   bool BcFound = false;
 
   for (size_t I = 0; I < NumNames; ++I) {
