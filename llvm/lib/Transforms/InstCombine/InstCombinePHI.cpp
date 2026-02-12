@@ -178,8 +178,10 @@ bool InstCombinerImpl::foldIntegerTypedPHI(PHINode &PN) {
 
     // First look backward:
     if (auto *PI = dyn_cast<PtrToIntInst>(Arg)) {
-      AvailablePtrVals.emplace_back(PI->getOperand(0));
-      continue;
+      if (PI->getOperand(0)->getType() == IntToPtr->getType()) {
+        AvailablePtrVals.emplace_back(PI->getOperand(0));
+        continue;
+      }
     }
 
     // Next look forward:
