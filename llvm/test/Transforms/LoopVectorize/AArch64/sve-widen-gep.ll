@@ -29,11 +29,11 @@ define void @pointer_induction_used_as_vector(ptr noalias %start.1, ptr noalias 
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 8
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START_1:%.*]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[IND_END2:%.*]] = getelementptr i8, ptr [[START_2:%.*]], i64 [[N_VEC]]
+; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[START_2]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
 ; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <vscale x 2 x i64> [[TMP7]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <vscale x 2 x ptr> [[VECTOR_GEP]], i32 0
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8

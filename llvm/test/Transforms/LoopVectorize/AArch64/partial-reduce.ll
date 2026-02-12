@@ -738,6 +738,8 @@ define i32 @zext_sub_reduc_i8_i32_has_neon_dotprod(ptr %a) #1 {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP4]], 2
 ; CHECK-INTERLEAVED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP2]]
 ; CHECK-INTERLEAVED-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP4]], 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP10:%.*]] = mul nuw nsw i64 [[TMP4]], 3
 ; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-INTERLEAVED:       vector.body:
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -746,8 +748,6 @@ define i32 @zext_sub_reduc_i8_i32_has_neon_dotprod(ptr %a) #1 {
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI2:%.*]] = phi <vscale x 8 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP18:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI3:%.*]] = phi <vscale x 8 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP4]], 1
-; CHECK-INTERLEAVED-NEXT:    [[TMP10:%.*]] = mul nuw nsw i64 [[TMP4]], 3
 ; CHECK-INTERLEAVED-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP1]], i64 [[TMP4]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP1]], i64 [[TMP7]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP1]], i64 [[TMP10]]
@@ -980,6 +980,7 @@ define i32 @add_of_zext_outside_loop(i32 %a, ptr noalias %b, i8 %c, i32 %d) #0 {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP6:%.*]] = insertelement <vscale x 16 x i32> zeroinitializer, i32 [[A]], i32 0
 ; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[CONV1]], i64 0
 ; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
+; CHECK-INTERLEAVED-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP16]] to i64
 ; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-INTERLEAVED:       vector.body:
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP21:%.*]], [[VECTOR_BODY]] ]
@@ -987,7 +988,6 @@ define i32 @add_of_zext_outside_loop(i32 %a, ptr noalias %b, i8 %c, i32 %d) #0 {
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI2:%.*]] = phi <vscale x 16 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP12:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[D]], [[VEC_PHI1]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 [[OFFSET_IDX]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP16]] to i64
 ; CHECK-INTERLEAVED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i64 [[TMP9]]
 ; CHECK-INTERLEAVED-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[TMP3]], align 1
 ; CHECK-INTERLEAVED-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[TMP10]], align 1
@@ -1075,6 +1075,7 @@ define i32 @add_of_loop_invariant_zext(i32 %a, ptr %b, i8 %c, i32 %d) #0 {
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP6:%.*]] = insertelement <vscale x 4 x i32> zeroinitializer, i32 [[A]], i32 0
 ; CHECK-INTERLEAVE1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[C]], i64 0
 ; CHECK-INTERLEAVE1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+; CHECK-INTERLEAVE1-NEXT:    [[TMP8:%.*]] = zext <vscale x 16 x i8> [[BROADCAST_SPLAT]] to <vscale x 16 x i32>
 ; CHECK-INTERLEAVE1-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-INTERLEAVE1:       vector.body:
 ; CHECK-INTERLEAVE1-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[FOR_BODY]] ]
@@ -1082,7 +1083,6 @@ define i32 @add_of_loop_invariant_zext(i32 %a, ptr %b, i8 %c, i32 %d) #0 {
 ; CHECK-INTERLEAVE1-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[D]], [[INDEX]]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 [[OFFSET_IDX]]
 ; CHECK-INTERLEAVE1-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[TMP4]], align 1
-; CHECK-INTERLEAVE1-NEXT:    [[TMP8:%.*]] = zext <vscale x 16 x i8> [[BROADCAST_SPLAT]] to <vscale x 16 x i32>
 ; CHECK-INTERLEAVE1-NEXT:    [[PARTIAL_REDUCE]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP8]])
 ; CHECK-INTERLEAVE1-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP9]]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
@@ -1111,6 +1111,8 @@ define i32 @add_of_loop_invariant_zext(i32 %a, ptr %b, i8 %c, i32 %d) #0 {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP6:%.*]] = insertelement <vscale x 4 x i32> zeroinitializer, i32 [[A]], i32 0
 ; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[C]], i64 0
 ; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+; CHECK-INTERLEAVED-NEXT:    [[TMP14:%.*]] = zext i32 [[TMP8]] to i64
+; CHECK-INTERLEAVED-NEXT:    [[TMP15:%.*]] = zext <vscale x 16 x i8> [[BROADCAST_SPLAT]] to <vscale x 16 x i32>
 ; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-INTERLEAVED:       vector.body:
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP22:%.*]], [[VECTOR_BODY]] ]
@@ -1118,11 +1120,9 @@ define i32 @add_of_loop_invariant_zext(i32 %a, ptr %b, i8 %c, i32 %d) #0 {
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI2:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE2:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[D]], [[VEC_PHI1]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 [[OFFSET_IDX]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP14:%.*]] = zext i32 [[TMP8]] to i64
 ; CHECK-INTERLEAVED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i64 [[TMP14]]
 ; CHECK-INTERLEAVED-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[TMP4]], align 1
 ; CHECK-INTERLEAVED-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[TMP10]], align 1
-; CHECK-INTERLEAVED-NEXT:    [[TMP15:%.*]] = zext <vscale x 16 x i8> [[BROADCAST_SPLAT]] to <vscale x 16 x i32>
 ; CHECK-INTERLEAVED-NEXT:    [[PARTIAL_REDUCE]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP15]])
 ; CHECK-INTERLEAVED-NEXT:    [[PARTIAL_REDUCE2]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI2]], <vscale x 16 x i32> [[TMP15]])
 ; CHECK-INTERLEAVED-NEXT:    [[TMP22]] = add nuw i32 [[VEC_PHI1]], [[TMP12]]
@@ -1152,6 +1152,7 @@ define i32 @add_of_loop_invariant_zext(i32 %a, ptr %b, i8 %c, i32 %d) #0 {
 ; CHECK-MAXBW-NEXT:    [[TMP8:%.*]] = insertelement <vscale x 4 x i32> zeroinitializer, i32 [[A]], i32 0
 ; CHECK-MAXBW-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[C]], i64 0
 ; CHECK-MAXBW-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+; CHECK-MAXBW-NEXT:    [[TMP9:%.*]] = zext <vscale x 16 x i8> [[BROADCAST_SPLAT]] to <vscale x 16 x i32>
 ; CHECK-MAXBW-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-MAXBW:       vector.body:
 ; CHECK-MAXBW-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[FOR_BODY]] ]
@@ -1159,7 +1160,6 @@ define i32 @add_of_loop_invariant_zext(i32 %a, ptr %b, i8 %c, i32 %d) #0 {
 ; CHECK-MAXBW-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[D]], [[INDEX]]
 ; CHECK-MAXBW-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 [[OFFSET_IDX]]
 ; CHECK-MAXBW-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[TMP10]], align 1
-; CHECK-MAXBW-NEXT:    [[TMP9:%.*]] = zext <vscale x 16 x i8> [[BROADCAST_SPLAT]] to <vscale x 16 x i32>
 ; CHECK-MAXBW-NEXT:    [[PARTIAL_REDUCE]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP9]])
 ; CHECK-MAXBW-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP4]]
 ; CHECK-MAXBW-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]

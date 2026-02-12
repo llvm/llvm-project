@@ -172,12 +172,12 @@ define ptr @both(ptr %p, i32 %k)  {
 ; VEC:       [[VECTOR_BODY]]:
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VEC-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[BASE]], %[[VECTOR_PH]] ], [ [[PTR_IND:%.*]], %[[VECTOR_BODY]] ]
-; VEC-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <2 x i64> <i64 0, i64 4>
 ; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VEC-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 8
 ; VEC-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VEC-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; VEC:       [[MIDDLE_BLOCK]]:
+; VEC-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <2 x i64> <i64 0, i64 4>
 ; VEC-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <2 x ptr> [[VECTOR_GEP]], i32 1
 ; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; VEC-NEXT:    [[IND_ESCAPE:%.*]] = getelementptr i8, ptr [[TMP5]], i64 -4

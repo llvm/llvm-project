@@ -194,6 +194,8 @@ define float @fadd_strict_unroll(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-UNORDERED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
 ; CHECK-UNORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
 ; CHECK-UNORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-UNORDERED-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[TMP3]], 1
+; CHECK-UNORDERED-NEXT:    [[TMP6:%.*]] = mul nuw nsw i64 [[TMP3]], 3
 ; CHECK-UNORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-UNORDERED:       vector.body:
 ; CHECK-UNORDERED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -201,13 +203,11 @@ define float @fadd_strict_unroll(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-UNORDERED-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 8 x float> [ splat (float -0.000000e+00), [[VECTOR_PH]] ], [ [[TMP12:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-UNORDERED-NEXT:    [[VEC_PHI2:%.*]] = phi <vscale x 8 x float> [ splat (float -0.000000e+00), [[VECTOR_PH]] ], [ [[TMP13:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-UNORDERED-NEXT:    [[VEC_PHI3:%.*]] = phi <vscale x 8 x float> [ splat (float -0.000000e+00), [[VECTOR_PH]] ], [ [[TMP14:%.*]], [[VECTOR_BODY]] ]
-; CHECK-UNORDERED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
-; CHECK-UNORDERED-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[TMP3]], 1
-; CHECK-UNORDERED-NEXT:    [[TMP7:%.*]] = mul nuw nsw i64 [[TMP3]], 3
-; CHECK-UNORDERED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i64 [[TMP3]]
-; CHECK-UNORDERED-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i64 [[TMP6]]
-; CHECK-UNORDERED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i64 [[TMP7]]
-; CHECK-UNORDERED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x float>, ptr [[TMP5]], align 4
+; CHECK-UNORDERED-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; CHECK-UNORDERED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i64 [[TMP3]]
+; CHECK-UNORDERED-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i64 [[TMP5]]
+; CHECK-UNORDERED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i64 [[TMP6]]
+; CHECK-UNORDERED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x float>, ptr [[TMP7]], align 4
 ; CHECK-UNORDERED-NEXT:    [[WIDE_LOAD4:%.*]] = load <vscale x 8 x float>, ptr [[TMP8]], align 4
 ; CHECK-UNORDERED-NEXT:    [[WIDE_LOAD5:%.*]] = load <vscale x 8 x float>, ptr [[TMP9]], align 4
 ; CHECK-UNORDERED-NEXT:    [[WIDE_LOAD6:%.*]] = load <vscale x 8 x float>, ptr [[TMP10]], align 4
@@ -255,17 +255,17 @@ define float @fadd_strict_unroll(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-ORDERED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
 ; CHECK-ORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
 ; CHECK-ORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-ORDERED-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[TMP3]], 1
+; CHECK-ORDERED-NEXT:    [[TMP6:%.*]] = mul nuw nsw i64 [[TMP3]], 3
 ; CHECK-ORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-ORDERED:       vector.body:
 ; CHECK-ORDERED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-ORDERED-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, [[VECTOR_PH]] ], [ [[TMP14:%.*]], [[VECTOR_BODY]] ]
-; CHECK-ORDERED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
-; CHECK-ORDERED-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[TMP3]], 1
-; CHECK-ORDERED-NEXT:    [[TMP7:%.*]] = mul nuw nsw i64 [[TMP3]], 3
-; CHECK-ORDERED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i64 [[TMP3]]
-; CHECK-ORDERED-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i64 [[TMP6]]
-; CHECK-ORDERED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i64 [[TMP7]]
-; CHECK-ORDERED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x float>, ptr [[TMP5]], align 4
+; CHECK-ORDERED-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; CHECK-ORDERED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i64 [[TMP3]]
+; CHECK-ORDERED-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i64 [[TMP5]]
+; CHECK-ORDERED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i64 [[TMP6]]
+; CHECK-ORDERED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x float>, ptr [[TMP7]], align 4
 ; CHECK-ORDERED-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 8 x float>, ptr [[TMP8]], align 4
 ; CHECK-ORDERED-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 8 x float>, ptr [[TMP9]], align 4
 ; CHECK-ORDERED-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 8 x float>, ptr [[TMP10]], align 4
@@ -1186,6 +1186,8 @@ define float @fmuladd_strict(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-UNORDERED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
 ; CHECK-UNORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
 ; CHECK-UNORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-UNORDERED-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[TMP3]], 1
+; CHECK-UNORDERED-NEXT:    [[TMP6:%.*]] = mul nuw nsw i64 [[TMP3]], 3
 ; CHECK-UNORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-UNORDERED:       vector.body:
 ; CHECK-UNORDERED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -1193,20 +1195,18 @@ define float @fmuladd_strict(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-UNORDERED-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 8 x float> [ splat (float -0.000000e+00), [[VECTOR_PH]] ], [ [[TMP16:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-UNORDERED-NEXT:    [[VEC_PHI2:%.*]] = phi <vscale x 8 x float> [ splat (float -0.000000e+00), [[VECTOR_PH]] ], [ [[TMP17:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-UNORDERED-NEXT:    [[VEC_PHI3:%.*]] = phi <vscale x 8 x float> [ splat (float -0.000000e+00), [[VECTOR_PH]] ], [ [[TMP18:%.*]], [[VECTOR_BODY]] ]
-; CHECK-UNORDERED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
-; CHECK-UNORDERED-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[TMP3]], 1
-; CHECK-UNORDERED-NEXT:    [[TMP7:%.*]] = mul nuw nsw i64 [[TMP3]], 3
-; CHECK-UNORDERED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i64 [[TMP3]]
-; CHECK-UNORDERED-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i64 [[TMP6]]
-; CHECK-UNORDERED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i64 [[TMP7]]
-; CHECK-UNORDERED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x float>, ptr [[TMP5]], align 4
+; CHECK-UNORDERED-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; CHECK-UNORDERED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i64 [[TMP3]]
+; CHECK-UNORDERED-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i64 [[TMP5]]
+; CHECK-UNORDERED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i64 [[TMP6]]
+; CHECK-UNORDERED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x float>, ptr [[TMP7]], align 4
 ; CHECK-UNORDERED-NEXT:    [[WIDE_LOAD4:%.*]] = load <vscale x 8 x float>, ptr [[TMP8]], align 4
 ; CHECK-UNORDERED-NEXT:    [[WIDE_LOAD5:%.*]] = load <vscale x 8 x float>, ptr [[TMP9]], align 4
 ; CHECK-UNORDERED-NEXT:    [[WIDE_LOAD6:%.*]] = load <vscale x 8 x float>, ptr [[TMP10]], align 4
 ; CHECK-UNORDERED-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
 ; CHECK-UNORDERED-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[TMP3]]
-; CHECK-UNORDERED-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[TMP6]]
-; CHECK-UNORDERED-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[TMP7]]
+; CHECK-UNORDERED-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[TMP5]]
+; CHECK-UNORDERED-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[TMP6]]
 ; CHECK-UNORDERED-NEXT:    [[WIDE_LOAD7:%.*]] = load <vscale x 8 x float>, ptr [[TMP11]], align 4
 ; CHECK-UNORDERED-NEXT:    [[WIDE_LOAD8:%.*]] = load <vscale x 8 x float>, ptr [[TMP12]], align 4
 ; CHECK-UNORDERED-NEXT:    [[WIDE_LOAD9:%.*]] = load <vscale x 8 x float>, ptr [[TMP13]], align 4
@@ -1257,24 +1257,24 @@ define float @fmuladd_strict(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-ORDERED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
 ; CHECK-ORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
 ; CHECK-ORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-ORDERED-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[TMP3]], 1
+; CHECK-ORDERED-NEXT:    [[TMP6:%.*]] = mul nuw nsw i64 [[TMP3]], 3
 ; CHECK-ORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-ORDERED:       vector.body:
 ; CHECK-ORDERED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-ORDERED-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, [[VECTOR_PH]] ], [ [[TMP22:%.*]], [[VECTOR_BODY]] ]
-; CHECK-ORDERED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
-; CHECK-ORDERED-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[TMP3]], 1
-; CHECK-ORDERED-NEXT:    [[TMP7:%.*]] = mul nuw nsw i64 [[TMP3]], 3
-; CHECK-ORDERED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i64 [[TMP3]]
-; CHECK-ORDERED-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i64 [[TMP6]]
-; CHECK-ORDERED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i64 [[TMP7]]
-; CHECK-ORDERED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x float>, ptr [[TMP5]], align 4
+; CHECK-ORDERED-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; CHECK-ORDERED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i64 [[TMP3]]
+; CHECK-ORDERED-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i64 [[TMP5]]
+; CHECK-ORDERED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i64 [[TMP6]]
+; CHECK-ORDERED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x float>, ptr [[TMP7]], align 4
 ; CHECK-ORDERED-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 8 x float>, ptr [[TMP8]], align 4
 ; CHECK-ORDERED-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 8 x float>, ptr [[TMP9]], align 4
 ; CHECK-ORDERED-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 8 x float>, ptr [[TMP10]], align 4
 ; CHECK-ORDERED-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
 ; CHECK-ORDERED-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[TMP3]]
-; CHECK-ORDERED-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[TMP6]]
-; CHECK-ORDERED-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[TMP7]]
+; CHECK-ORDERED-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[TMP5]]
+; CHECK-ORDERED-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[TMP6]]
 ; CHECK-ORDERED-NEXT:    [[WIDE_LOAD4:%.*]] = load <vscale x 8 x float>, ptr [[TMP11]], align 4
 ; CHECK-ORDERED-NEXT:    [[WIDE_LOAD5:%.*]] = load <vscale x 8 x float>, ptr [[TMP12]], align 4
 ; CHECK-ORDERED-NEXT:    [[WIDE_LOAD6:%.*]] = load <vscale x 8 x float>, ptr [[TMP13]], align 4
@@ -1438,6 +1438,8 @@ define float @fmuladd_strict_fmf(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-UNORDERED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
 ; CHECK-UNORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
 ; CHECK-UNORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-UNORDERED-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[TMP3]], 1
+; CHECK-UNORDERED-NEXT:    [[TMP6:%.*]] = mul nuw nsw i64 [[TMP3]], 3
 ; CHECK-UNORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-UNORDERED:       vector.body:
 ; CHECK-UNORDERED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -1445,20 +1447,18 @@ define float @fmuladd_strict_fmf(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-UNORDERED-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 8 x float> [ splat (float -0.000000e+00), [[VECTOR_PH]] ], [ [[TMP16:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-UNORDERED-NEXT:    [[VEC_PHI2:%.*]] = phi <vscale x 8 x float> [ splat (float -0.000000e+00), [[VECTOR_PH]] ], [ [[TMP17:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-UNORDERED-NEXT:    [[VEC_PHI3:%.*]] = phi <vscale x 8 x float> [ splat (float -0.000000e+00), [[VECTOR_PH]] ], [ [[TMP18:%.*]], [[VECTOR_BODY]] ]
-; CHECK-UNORDERED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
-; CHECK-UNORDERED-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[TMP3]], 1
-; CHECK-UNORDERED-NEXT:    [[TMP7:%.*]] = mul nuw nsw i64 [[TMP3]], 3
-; CHECK-UNORDERED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i64 [[TMP3]]
-; CHECK-UNORDERED-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i64 [[TMP6]]
-; CHECK-UNORDERED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i64 [[TMP7]]
-; CHECK-UNORDERED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x float>, ptr [[TMP5]], align 4
+; CHECK-UNORDERED-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; CHECK-UNORDERED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i64 [[TMP3]]
+; CHECK-UNORDERED-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i64 [[TMP5]]
+; CHECK-UNORDERED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i64 [[TMP6]]
+; CHECK-UNORDERED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x float>, ptr [[TMP7]], align 4
 ; CHECK-UNORDERED-NEXT:    [[WIDE_LOAD4:%.*]] = load <vscale x 8 x float>, ptr [[TMP8]], align 4
 ; CHECK-UNORDERED-NEXT:    [[WIDE_LOAD5:%.*]] = load <vscale x 8 x float>, ptr [[TMP9]], align 4
 ; CHECK-UNORDERED-NEXT:    [[WIDE_LOAD6:%.*]] = load <vscale x 8 x float>, ptr [[TMP10]], align 4
 ; CHECK-UNORDERED-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
 ; CHECK-UNORDERED-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[TMP3]]
-; CHECK-UNORDERED-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[TMP6]]
-; CHECK-UNORDERED-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[TMP7]]
+; CHECK-UNORDERED-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[TMP5]]
+; CHECK-UNORDERED-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[TMP6]]
 ; CHECK-UNORDERED-NEXT:    [[WIDE_LOAD7:%.*]] = load <vscale x 8 x float>, ptr [[TMP11]], align 4
 ; CHECK-UNORDERED-NEXT:    [[WIDE_LOAD8:%.*]] = load <vscale x 8 x float>, ptr [[TMP12]], align 4
 ; CHECK-UNORDERED-NEXT:    [[WIDE_LOAD9:%.*]] = load <vscale x 8 x float>, ptr [[TMP13]], align 4
@@ -1509,24 +1509,24 @@ define float @fmuladd_strict_fmf(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-ORDERED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
 ; CHECK-ORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
 ; CHECK-ORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-ORDERED-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[TMP3]], 1
+; CHECK-ORDERED-NEXT:    [[TMP6:%.*]] = mul nuw nsw i64 [[TMP3]], 3
 ; CHECK-ORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-ORDERED:       vector.body:
 ; CHECK-ORDERED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-ORDERED-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, [[VECTOR_PH]] ], [ [[TMP22:%.*]], [[VECTOR_BODY]] ]
-; CHECK-ORDERED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
-; CHECK-ORDERED-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[TMP3]], 1
-; CHECK-ORDERED-NEXT:    [[TMP7:%.*]] = mul nuw nsw i64 [[TMP3]], 3
-; CHECK-ORDERED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i64 [[TMP3]]
-; CHECK-ORDERED-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i64 [[TMP6]]
-; CHECK-ORDERED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i64 [[TMP7]]
-; CHECK-ORDERED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x float>, ptr [[TMP5]], align 4
+; CHECK-ORDERED-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; CHECK-ORDERED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i64 [[TMP3]]
+; CHECK-ORDERED-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i64 [[TMP5]]
+; CHECK-ORDERED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i64 [[TMP6]]
+; CHECK-ORDERED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x float>, ptr [[TMP7]], align 4
 ; CHECK-ORDERED-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 8 x float>, ptr [[TMP8]], align 4
 ; CHECK-ORDERED-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 8 x float>, ptr [[TMP9]], align 4
 ; CHECK-ORDERED-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 8 x float>, ptr [[TMP10]], align 4
 ; CHECK-ORDERED-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
 ; CHECK-ORDERED-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[TMP3]]
-; CHECK-ORDERED-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[TMP6]]
-; CHECK-ORDERED-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[TMP7]]
+; CHECK-ORDERED-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[TMP5]]
+; CHECK-ORDERED-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[TMP6]]
 ; CHECK-ORDERED-NEXT:    [[WIDE_LOAD4:%.*]] = load <vscale x 8 x float>, ptr [[TMP11]], align 4
 ; CHECK-ORDERED-NEXT:    [[WIDE_LOAD5:%.*]] = load <vscale x 8 x float>, ptr [[TMP12]], align 4
 ; CHECK-ORDERED-NEXT:    [[WIDE_LOAD6:%.*]] = load <vscale x 8 x float>, ptr [[TMP13]], align 4

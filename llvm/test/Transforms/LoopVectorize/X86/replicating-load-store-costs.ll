@@ -472,11 +472,11 @@ define double @test_load_used_by_other_load_scev(ptr %ptr.a, ptr %ptr.b, ptr %pt
 ; I64-NEXT:    [[TMP1:%.*]] = fadd double [[TMP10]], 0.000000e+00
 ; I64-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[TMP1]], i64 0
 ; I64-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <2 x i32> zeroinitializer
-; I64-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[BROADCAST_SPLAT]], zeroinitializer
 ; I64-NEXT:    [[IV]] = add nuw i64 [[INDEX]], 2
 ; I64-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV]], 100
 ; I64-NEXT:    br i1 [[EXITCOND]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; I64:       [[MIDDLE_BLOCK]]:
+; I64-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[BROADCAST_SPLAT]], zeroinitializer
 ; I64-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <2 x double> [[TMP2]], i32 1
 ; I64-NEXT:    br label %[[SCALAR_PH:.*]]
 ; I64:       [[SCALAR_PH]]:
