@@ -236,8 +236,6 @@ public:
 /// added to the builder (either as the input node set or as the newly
 /// constructed nodes) but did not have any outgoing transitions added.
 class NodeBuilder {
-  virtual void anchor();
-
 protected:
   const NodeBuilderContext &C;
 
@@ -272,8 +270,6 @@ public:
     Frontier.insert(SrcSet);
     assert(hasNoSinksInFrontier());
   }
-
-  virtual ~NodeBuilder() = default;
 
   /// Generates a node in the ExplodedGraph.
   ExplodedNode *generateNode(const ProgramPoint &PP,
@@ -321,30 +317,18 @@ public:
 /// This builder class is useful for generating nodes that resulted from
 /// visiting a statement. The main difference from its parent NodeBuilder is
 /// that it creates a statement specific ProgramPoint.
-class StmtNodeBuilder final : public NodeBuilder {
-  NodeBuilder *EnclosingBldr;
-
+/// FIXME: This class is not meaningfully different from plain NodeBuilder.
+class StmtNodeBuilder : public NodeBuilder {
 public:
-  /// Constructs a StmtNodeBuilder. If the builder is going to process
-  /// nodes currently owned by another builder(with larger scope), use
-  /// Enclosing builder to transfer ownership.
   StmtNodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
-                  const NodeBuilderContext &Ctx,
-                  NodeBuilder *Enclosing = nullptr)
-      : NodeBuilder(SrcNode, DstSet, Ctx), EnclosingBldr(Enclosing) {
-    if (EnclosingBldr)
-      EnclosingBldr->takeNodes(SrcNode);
+                  const NodeBuilderContext &Ctx)
+      : NodeBuilder(SrcNode, DstSet, Ctx) {
   }
 
   StmtNodeBuilder(ExplodedNodeSet &SrcSet, ExplodedNodeSet &DstSet,
-                  const NodeBuilderContext &Ctx,
-                  NodeBuilder *Enclosing = nullptr)
-      : NodeBuilder(SrcSet, DstSet, Ctx), EnclosingBldr(Enclosing) {
-    if (EnclosingBldr)
-      EnclosingBldr->takeNodes(SrcSet);
+                  const NodeBuilderContext &Ctx)
+      : NodeBuilder(SrcSet, DstSet, Ctx) {
   }
-
-  ~StmtNodeBuilder() override;
 
   using NodeBuilder::generateNode;
   using NodeBuilder::generateSink;
@@ -372,11 +356,9 @@ public:
 
 /// BranchNodeBuilder is responsible for constructing the nodes
 /// corresponding to the two branches of the if statement - true and false.
-class BranchNodeBuilder final : public NodeBuilder {
+class BranchNodeBuilder : public NodeBuilder {
   const CFGBlock *DstT;
   const CFGBlock *DstF;
-
-  void anchor() override;
 
 public:
   BranchNodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
@@ -399,11 +381,9 @@ public:
                              ExplodedNode *Pred);
 };
 
-class IndirectGotoNodeBuilder final : public NodeBuilder {
+class IndirectGotoNodeBuilder : public NodeBuilder {
   const CFGBlock &DispatchBlock;
   const Expr *Target;
-
-  void anchor() override;
 
 public:
   IndirectGotoNodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
@@ -432,9 +412,7 @@ public:
   }
 };
 
-class SwitchNodeBuilder final : public NodeBuilder {
-  void anchor() override;
-
+class SwitchNodeBuilder : public NodeBuilder {
 public:
   SwitchNodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
                     const NodeBuilderContext &Ctx)

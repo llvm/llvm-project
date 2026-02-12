@@ -688,8 +688,6 @@ void CoreEngine::enqueueEndOfFunction(ExplodedNodeSet &Set, const ReturnStmt *RS
   }
 }
 
-void NodeBuilder::anchor() {}
-
 ExplodedNode* NodeBuilder::generateNodeImpl(const ProgramPoint &Loc,
                                             ProgramStateRef State,
                                             ExplodedNode *FromN,
@@ -709,14 +707,6 @@ ExplodedNode* NodeBuilder::generateNodeImpl(const ProgramPoint &Loc,
   return N;
 }
 
-StmtNodeBuilder::~StmtNodeBuilder() {
-  if (EnclosingBldr)
-    for (const auto I : Frontier)
-      EnclosingBldr->addNodes(I);
-}
-
-void BranchNodeBuilder::anchor() {}
-
 ExplodedNode *BranchNodeBuilder::generateNode(ProgramStateRef State,
                                               bool Branch,
                                               ExplodedNode *NodePred) {
@@ -731,16 +721,12 @@ ExplodedNode *BranchNodeBuilder::generateNode(ProgramStateRef State,
   return Succ;
 }
 
-void IndirectGotoNodeBuilder::anchor() {}
-
 ExplodedNode *IndirectGotoNodeBuilder::generateNode(const CFGBlock *Block,
                                                     ProgramStateRef St,
                                                     ExplodedNode *Pred) {
   BlockEdge BE(C.getBlock(), Block, Pred->getLocationContext());
   return generateNode(BE, St, Pred);
 }
-
-void SwitchNodeBuilder::anchor() {}
 
 ExplodedNode *SwitchNodeBuilder::generateCaseStmtNode(const CFGBlock *Block,
                                                       ProgramStateRef St,
