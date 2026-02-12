@@ -1,0 +1,21 @@
+# ALLOW_RETRIES: 4
+
+# RUN: split-file %s %t
+# RUN: cp %S/1.in %t/out.txt
+
+# RUN: diff %t/test2.expected %t/out.txt
+# RUN: diff %t/test3.expected %t/out.txt
+# RUN: diff %t/test4.expected %t/out.txt
+# RUN: diff %t/test5.expected %t/out.txt
+# RUN: not echo "fail with nothing left to updated"
+
+#--- test1.expected
+unrelated
+#--- test2.expected
+FOO
+#--- test3.expected
+FOO
+#--- test4.expected
+FOO
+#--- test5.expected
+FOO
