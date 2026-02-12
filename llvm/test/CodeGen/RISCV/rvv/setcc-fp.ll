@@ -1558,15 +1558,6 @@ define <vscale x 8 x i1> @fcmp_oeq_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfeq.vv v0, v16, v12
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_oeq_vv_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v10
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfeq.vv v0, v16, v12
-; ZVFBFA-NEXT:    ret
   %vc = fcmp oeq <vscale x 8 x half> %va, %vb
   ret <vscale x 8 x i1> %vc
 }
@@ -1586,15 +1577,6 @@ define <vscale x 8 x i1> @fcmp_oeq_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfeq.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_oeq_vf_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfeq.vf v0, v12, fa5
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp oeq <vscale x 8 x half> %va, %splat
@@ -1616,15 +1598,6 @@ define <vscale x 8 x i1> @fcmp_oeq_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfeq.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_oeq_fv_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfeq.vf v0, v12, fa5
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp oeq <vscale x 8 x half> %splat, %va
@@ -1646,15 +1619,6 @@ define <vscale x 8 x i1> @fcmp_oeq_vv_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfeq.vv v0, v16, v12
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_oeq_vv_nxv8f16_nonans:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v10
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfeq.vv v0, v16, v12
-; ZVFBFA-NEXT:    ret
   %vc = fcmp oeq <vscale x 8 x half> %va, %vb
   ret <vscale x 8 x i1> %vc
 }
@@ -1674,15 +1638,6 @@ define <vscale x 8 x i1> @fcmp_oeq_vf_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfeq.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_oeq_vf_nxv8f16_nonans:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfeq.vf v0, v12, fa5
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp oeq <vscale x 8 x half> %va, %splat
@@ -1704,15 +1659,6 @@ define <vscale x 8 x i1> @fcmp_ogt_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmflt.vv v0, v16, v12
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ogt_vv_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v10
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmflt.vv v0, v16, v12
-; ZVFBFA-NEXT:    ret
   %vc = fcmp ogt <vscale x 8 x half> %va, %vb
   ret <vscale x 8 x i1> %vc
 }
@@ -1732,15 +1678,6 @@ define <vscale x 8 x i1> @fcmp_ogt_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfgt.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ogt_vf_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfgt.vf v0, v12, fa5
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp ogt <vscale x 8 x half> %va, %splat
@@ -1762,15 +1699,6 @@ define <vscale x 8 x i1> @fcmp_ogt_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ogt_fv_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmflt.vf v0, v12, fa5
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp ogt <vscale x 8 x half> %splat, %va
@@ -1792,15 +1720,6 @@ define <vscale x 8 x i1> @fcmp_ogt_vv_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmflt.vv v0, v16, v12
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ogt_vv_nxv8f16_nonans:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v10
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmflt.vv v0, v16, v12
-; ZVFBFA-NEXT:    ret
   %vc = fcmp ogt <vscale x 8 x half> %va, %vb
   ret <vscale x 8 x i1> %vc
 }
@@ -1820,15 +1739,6 @@ define <vscale x 8 x i1> @fcmp_ogt_vf_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfgt.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ogt_vf_nxv8f16_nonans:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfgt.vf v0, v12, fa5
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp ogt <vscale x 8 x half> %va, %splat
@@ -1850,15 +1760,6 @@ define <vscale x 8 x i1> @fcmp_oge_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfle.vv v0, v16, v12
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_oge_vv_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v10
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfle.vv v0, v16, v12
-; ZVFBFA-NEXT:    ret
   %vc = fcmp oge <vscale x 8 x half> %va, %vb
   ret <vscale x 8 x i1> %vc
 }
@@ -1878,15 +1779,6 @@ define <vscale x 8 x i1> @fcmp_oge_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfge.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_oge_vf_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfge.vf v0, v12, fa5
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp oge <vscale x 8 x half> %va, %splat
@@ -1908,15 +1800,6 @@ define <vscale x 8 x i1> @fcmp_oge_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfle.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_oge_fv_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfle.vf v0, v12, fa5
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp oge <vscale x 8 x half> %splat, %va
@@ -1938,15 +1821,6 @@ define <vscale x 8 x i1> @fcmp_oge_vv_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfle.vv v0, v16, v12
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_oge_vv_nxv8f16_nonans:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v10
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfle.vv v0, v16, v12
-; ZVFBFA-NEXT:    ret
   %vc = fcmp oge <vscale x 8 x half> %va, %vb
   ret <vscale x 8 x i1> %vc
 }
@@ -1966,15 +1840,6 @@ define <vscale x 8 x i1> @fcmp_oge_vf_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfge.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_oge_vf_nxv8f16_nonans:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfge.vf v0, v12, fa5
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp oge <vscale x 8 x half> %va, %splat
@@ -1996,15 +1861,6 @@ define <vscale x 8 x i1> @fcmp_olt_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmflt.vv v0, v16, v12
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_olt_vv_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v10
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmflt.vv v0, v16, v12
-; ZVFBFA-NEXT:    ret
   %vc = fcmp olt <vscale x 8 x half> %va, %vb
   ret <vscale x 8 x i1> %vc
 }
@@ -2024,15 +1880,6 @@ define <vscale x 8 x i1> @fcmp_olt_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_olt_vf_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmflt.vf v0, v12, fa5
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp olt <vscale x 8 x half> %va, %splat
@@ -2054,15 +1901,6 @@ define <vscale x 8 x i1> @fcmp_olt_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfgt.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_olt_fv_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfgt.vf v0, v12, fa5
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp olt <vscale x 8 x half> %splat, %va
@@ -2084,15 +1922,6 @@ define <vscale x 8 x i1> @fcmp_olt_vv_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmflt.vv v0, v16, v12
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_olt_vv_nxv8f16_nonans:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v10
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmflt.vv v0, v16, v12
-; ZVFBFA-NEXT:    ret
   %vc = fcmp olt <vscale x 8 x half> %va, %vb
   ret <vscale x 8 x i1> %vc
 }
@@ -2112,15 +1941,6 @@ define <vscale x 8 x i1> @fcmp_olt_vf_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_olt_vf_nxv8f16_nonans:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmflt.vf v0, v12, fa5
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp olt <vscale x 8 x half> %va, %splat
@@ -2142,15 +1962,6 @@ define <vscale x 8 x i1> @fcmp_ole_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfle.vv v0, v16, v12
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ole_vv_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v10
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfle.vv v0, v16, v12
-; ZVFBFA-NEXT:    ret
   %vc = fcmp ole <vscale x 8 x half> %va, %vb
   ret <vscale x 8 x i1> %vc
 }
@@ -2170,15 +1981,6 @@ define <vscale x 8 x i1> @fcmp_ole_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfle.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ole_vf_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfle.vf v0, v12, fa5
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp ole <vscale x 8 x half> %va, %splat
@@ -2200,15 +2002,6 @@ define <vscale x 8 x i1> @fcmp_ole_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfge.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ole_fv_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfge.vf v0, v12, fa5
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp ole <vscale x 8 x half> %splat, %va
@@ -2230,15 +2023,6 @@ define <vscale x 8 x i1> @fcmp_ole_vv_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfle.vv v0, v16, v12
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ole_vv_nxv8f16_nonans:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v10
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfle.vv v0, v16, v12
-; ZVFBFA-NEXT:    ret
   %vc = fcmp ole <vscale x 8 x half> %va, %vb
   ret <vscale x 8 x i1> %vc
 }
@@ -2258,15 +2042,6 @@ define <vscale x 8 x i1> @fcmp_ole_vf_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfle.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ole_vf_nxv8f16_nonans:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfle.vf v0, v12, fa5
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp ole <vscale x 8 x half> %va, %splat
@@ -2292,17 +2067,6 @@ define <vscale x 8 x i1> @fcmp_one_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x
 ; ZVFHMIN-NEXT:    vmflt.vv v9, v12, v16
 ; ZVFHMIN-NEXT:    vmor.mm v0, v9, v8
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_one_vv_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v10
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmflt.vv v8, v16, v12
-; ZVFBFA-NEXT:    vmflt.vv v9, v12, v16
-; ZVFBFA-NEXT:    vmor.mm v0, v9, v8
-; ZVFBFA-NEXT:    ret
   %vc = fcmp one <vscale x 8 x half> %va, %vb
   ret <vscale x 8 x i1> %vc
 }
@@ -2326,17 +2090,6 @@ define <vscale x 8 x i1> @fcmp_one_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-NEXT:    vmfgt.vf v9, v12, fa5
 ; ZVFHMIN-NEXT:    vmor.mm v0, v9, v8
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_one_vf_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmflt.vf v8, v12, fa5
-; ZVFBFA-NEXT:    vmfgt.vf v9, v12, fa5
-; ZVFBFA-NEXT:    vmor.mm v0, v9, v8
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp one <vscale x 8 x half> %va, %splat
@@ -2362,17 +2115,6 @@ define <vscale x 8 x i1> @fcmp_one_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-NEXT:    vmflt.vf v9, v12, fa5
 ; ZVFHMIN-NEXT:    vmor.mm v0, v9, v8
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_one_fv_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfgt.vf v8, v12, fa5
-; ZVFBFA-NEXT:    vmflt.vf v9, v12, fa5
-; ZVFBFA-NEXT:    vmor.mm v0, v9, v8
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp one <vscale x 8 x half> %splat, %va
@@ -2394,15 +2136,6 @@ define <vscale x 8 x i1> @fcmp_one_vv_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfne.vv v0, v16, v12
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_one_vv_nxv8f16_nonans:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v10
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfne.vv v0, v16, v12
-; ZVFBFA-NEXT:    ret
   %vc = fcmp one <vscale x 8 x half> %va, %vb
   ret <vscale x 8 x i1> %vc
 }
@@ -2422,15 +2155,6 @@ define <vscale x 8 x i1> @fcmp_one_vf_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfne.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_one_vf_nxv8f16_nonans:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfne.vf v0, v12, fa5
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp one <vscale x 8 x half> %va, %splat
@@ -2458,19 +2182,6 @@ define <vscale x 8 x i1> @fcmp_ord_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x
 ; ZVFHMIN-NEXT:    vmfeq.vv v8, v12, v12
 ; ZVFHMIN-NEXT:    vmand.mm v0, v8, v10
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ord_vv_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v10
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfeq.vv v10, v12, v12
-; ZVFBFA-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfeq.vv v8, v12, v12
-; ZVFBFA-NEXT:    vmand.mm v0, v8, v10
-; ZVFBFA-NEXT:    ret
   %vc = fcmp ord <vscale x 8 x half> %va, %vb
   ret <vscale x 8 x i1> %vc
 }
@@ -2496,18 +2207,6 @@ define <vscale x 8 x i1> @fcmp_ord_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-NEXT:    vmfeq.vv v8, v12, v12
 ; ZVFHMIN-NEXT:    vmand.mm v0, v8, v16
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ord_vf_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vfmv.v.f v8, fa5
-; ZVFBFA-NEXT:    vmfeq.vf v16, v8, fa5
-; ZVFBFA-NEXT:    vmfeq.vv v8, v12, v12
-; ZVFBFA-NEXT:    vmand.mm v0, v8, v16
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp ord <vscale x 8 x half> %va, %splat
@@ -2535,18 +2234,6 @@ define <vscale x 8 x i1> @fcmp_ord_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-NEXT:    vmfeq.vv v8, v12, v12
 ; ZVFHMIN-NEXT:    vmand.mm v0, v16, v8
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ord_fv_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vfmv.v.f v8, fa5
-; ZVFBFA-NEXT:    vmfeq.vf v16, v8, fa5
-; ZVFBFA-NEXT:    vmfeq.vv v8, v12, v12
-; ZVFBFA-NEXT:    vmand.mm v0, v16, v8
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp ord <vscale x 8 x half> %splat, %va
@@ -2574,19 +2261,6 @@ define <vscale x 8 x i1> @fcmp_ord_vv_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    vmfeq.vv v8, v12, v12
 ; ZVFHMIN-NEXT:    vmand.mm v0, v8, v10
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ord_vv_nxv8f16_nonans:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v10
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfeq.vv v10, v12, v12
-; ZVFBFA-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfeq.vv v8, v12, v12
-; ZVFBFA-NEXT:    vmand.mm v0, v8, v10
-; ZVFBFA-NEXT:    ret
   %vc = fcmp ord <vscale x 8 x half> %va, %vb
   ret <vscale x 8 x i1> %vc
 }
@@ -2612,18 +2286,6 @@ define <vscale x 8 x i1> @fcmp_ord_vf_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    vmfeq.vv v8, v12, v12
 ; ZVFHMIN-NEXT:    vmand.mm v0, v8, v16
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ord_vf_nxv8f16_nonans:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vfmv.v.f v8, fa5
-; ZVFBFA-NEXT:    vmfeq.vf v16, v8, fa5
-; ZVFBFA-NEXT:    vmfeq.vv v8, v12, v12
-; ZVFBFA-NEXT:    vmand.mm v0, v8, v16
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp ord <vscale x 8 x half> %va, %splat
@@ -2649,17 +2311,6 @@ define <vscale x 8 x i1> @fcmp_ueq_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x
 ; ZVFHMIN-NEXT:    vmflt.vv v9, v12, v16
 ; ZVFHMIN-NEXT:    vmnor.mm v0, v9, v8
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ueq_vv_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v10
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmflt.vv v8, v16, v12
-; ZVFBFA-NEXT:    vmflt.vv v9, v12, v16
-; ZVFBFA-NEXT:    vmnor.mm v0, v9, v8
-; ZVFBFA-NEXT:    ret
   %vc = fcmp ueq <vscale x 8 x half> %va, %vb
   ret <vscale x 8 x i1> %vc
 }
@@ -2683,17 +2334,6 @@ define <vscale x 8 x i1> @fcmp_ueq_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-NEXT:    vmfgt.vf v9, v12, fa5
 ; ZVFHMIN-NEXT:    vmnor.mm v0, v9, v8
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ueq_vf_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmflt.vf v8, v12, fa5
-; ZVFBFA-NEXT:    vmfgt.vf v9, v12, fa5
-; ZVFBFA-NEXT:    vmnor.mm v0, v9, v8
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp ueq <vscale x 8 x half> %va, %splat
@@ -2719,17 +2359,6 @@ define <vscale x 8 x i1> @fcmp_ueq_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-NEXT:    vmflt.vf v9, v12, fa5
 ; ZVFHMIN-NEXT:    vmnor.mm v0, v9, v8
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ueq_fv_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfgt.vf v8, v12, fa5
-; ZVFBFA-NEXT:    vmflt.vf v9, v12, fa5
-; ZVFBFA-NEXT:    vmnor.mm v0, v9, v8
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp ueq <vscale x 8 x half> %splat, %va
@@ -2751,15 +2380,6 @@ define <vscale x 8 x i1> @fcmp_ueq_vv_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfeq.vv v0, v16, v12
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ueq_vv_nxv8f16_nonans:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v10
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfeq.vv v0, v16, v12
-; ZVFBFA-NEXT:    ret
   %vc = fcmp ueq <vscale x 8 x half> %va, %vb
   ret <vscale x 8 x i1> %vc
 }
@@ -2779,15 +2399,6 @@ define <vscale x 8 x i1> @fcmp_ueq_vf_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfeq.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ueq_vf_nxv8f16_nonans:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfeq.vf v0, v12, fa5
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp ueq <vscale x 8 x half> %va, %splat
@@ -2811,16 +2422,6 @@ define <vscale x 8 x i1> @fcmp_ugt_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x
 ; ZVFHMIN-NEXT:    vmfle.vv v8, v16, v12
 ; ZVFHMIN-NEXT:    vmnot.m v0, v8
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ugt_vv_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v10
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfle.vv v8, v16, v12
-; ZVFBFA-NEXT:    vmnot.m v0, v8
-; ZVFBFA-NEXT:    ret
   %vc = fcmp ugt <vscale x 8 x half> %va, %vb
   ret <vscale x 8 x i1> %vc
 }
@@ -2842,16 +2443,6 @@ define <vscale x 8 x i1> @fcmp_ugt_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-NEXT:    vmfle.vf v8, v12, fa5
 ; ZVFHMIN-NEXT:    vmnot.m v0, v8
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ugt_vf_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfle.vf v8, v12, fa5
-; ZVFBFA-NEXT:    vmnot.m v0, v8
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp ugt <vscale x 8 x half> %va, %splat
@@ -2875,16 +2466,6 @@ define <vscale x 8 x i1> @fcmp_ugt_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-NEXT:    vmfge.vf v8, v12, fa5
 ; ZVFHMIN-NEXT:    vmnot.m v0, v8
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ugt_fv_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfge.vf v8, v12, fa5
-; ZVFBFA-NEXT:    vmnot.m v0, v8
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp ugt <vscale x 8 x half> %splat, %va
@@ -2906,15 +2487,6 @@ define <vscale x 8 x i1> @fcmp_ugt_vv_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmflt.vv v0, v16, v12
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ugt_vv_nxv8f16_nonans:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v10
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmflt.vv v0, v16, v12
-; ZVFBFA-NEXT:    ret
   %vc = fcmp ugt <vscale x 8 x half> %va, %vb
   ret <vscale x 8 x i1> %vc
 }
@@ -2934,15 +2506,6 @@ define <vscale x 8 x i1> @fcmp_ugt_vf_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfgt.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ugt_vf_nxv8f16_nonans:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfgt.vf v0, v12, fa5
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp ugt <vscale x 8 x half> %va, %splat
@@ -2966,16 +2529,6 @@ define <vscale x 8 x i1> @fcmp_uge_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x
 ; ZVFHMIN-NEXT:    vmflt.vv v8, v16, v12
 ; ZVFHMIN-NEXT:    vmnot.m v0, v8
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_uge_vv_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v10
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmflt.vv v8, v16, v12
-; ZVFBFA-NEXT:    vmnot.m v0, v8
-; ZVFBFA-NEXT:    ret
   %vc = fcmp uge <vscale x 8 x half> %va, %vb
   ret <vscale x 8 x i1> %vc
 }
@@ -2997,16 +2550,6 @@ define <vscale x 8 x i1> @fcmp_uge_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-NEXT:    vmflt.vf v8, v12, fa5
 ; ZVFHMIN-NEXT:    vmnot.m v0, v8
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_uge_vf_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmflt.vf v8, v12, fa5
-; ZVFBFA-NEXT:    vmnot.m v0, v8
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp uge <vscale x 8 x half> %va, %splat
@@ -3030,16 +2573,6 @@ define <vscale x 8 x i1> @fcmp_uge_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-NEXT:    vmfgt.vf v8, v12, fa5
 ; ZVFHMIN-NEXT:    vmnot.m v0, v8
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_uge_fv_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfgt.vf v8, v12, fa5
-; ZVFBFA-NEXT:    vmnot.m v0, v8
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp uge <vscale x 8 x half> %splat, %va
@@ -3061,15 +2594,6 @@ define <vscale x 8 x i1> @fcmp_uge_vv_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfle.vv v0, v16, v12
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_uge_vv_nxv8f16_nonans:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v10
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfle.vv v0, v16, v12
-; ZVFBFA-NEXT:    ret
   %vc = fcmp uge <vscale x 8 x half> %va, %vb
   ret <vscale x 8 x i1> %vc
 }
@@ -3089,15 +2613,6 @@ define <vscale x 8 x i1> @fcmp_uge_vf_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfge.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_uge_vf_nxv8f16_nonans:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfge.vf v0, v12, fa5
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp uge <vscale x 8 x half> %va, %splat
@@ -3121,16 +2636,6 @@ define <vscale x 8 x i1> @fcmp_ult_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x
 ; ZVFHMIN-NEXT:    vmfle.vv v8, v16, v12
 ; ZVFHMIN-NEXT:    vmnot.m v0, v8
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ult_vv_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v10
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfle.vv v8, v16, v12
-; ZVFBFA-NEXT:    vmnot.m v0, v8
-; ZVFBFA-NEXT:    ret
   %vc = fcmp ult <vscale x 8 x half> %va, %vb
   ret <vscale x 8 x i1> %vc
 }
@@ -3152,16 +2657,6 @@ define <vscale x 8 x i1> @fcmp_ult_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-NEXT:    vmfge.vf v8, v12, fa5
 ; ZVFHMIN-NEXT:    vmnot.m v0, v8
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ult_vf_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfge.vf v8, v12, fa5
-; ZVFBFA-NEXT:    vmnot.m v0, v8
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp ult <vscale x 8 x half> %va, %splat
@@ -3185,16 +2680,6 @@ define <vscale x 8 x i1> @fcmp_ult_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-NEXT:    vmfle.vf v8, v12, fa5
 ; ZVFHMIN-NEXT:    vmnot.m v0, v8
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ult_fv_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfle.vf v8, v12, fa5
-; ZVFBFA-NEXT:    vmnot.m v0, v8
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp ult <vscale x 8 x half> %splat, %va
@@ -3216,15 +2701,6 @@ define <vscale x 8 x i1> @fcmp_ult_vv_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmflt.vv v0, v16, v12
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ult_vv_nxv8f16_nonans:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v10
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmflt.vv v0, v16, v12
-; ZVFBFA-NEXT:    ret
   %vc = fcmp ult <vscale x 8 x half> %va, %vb
   ret <vscale x 8 x i1> %vc
 }
@@ -3244,15 +2720,6 @@ define <vscale x 8 x i1> @fcmp_ult_vf_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ult_vf_nxv8f16_nonans:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmflt.vf v0, v12, fa5
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp ult <vscale x 8 x half> %va, %splat
@@ -3276,16 +2743,6 @@ define <vscale x 8 x i1> @fcmp_ule_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x
 ; ZVFHMIN-NEXT:    vmflt.vv v8, v16, v12
 ; ZVFHMIN-NEXT:    vmnot.m v0, v8
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ule_vv_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v10
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmflt.vv v8, v16, v12
-; ZVFBFA-NEXT:    vmnot.m v0, v8
-; ZVFBFA-NEXT:    ret
   %vc = fcmp ule <vscale x 8 x half> %va, %vb
   ret <vscale x 8 x i1> %vc
 }
@@ -3307,16 +2764,6 @@ define <vscale x 8 x i1> @fcmp_ule_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-NEXT:    vmfgt.vf v8, v12, fa5
 ; ZVFHMIN-NEXT:    vmnot.m v0, v8
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ule_vf_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfgt.vf v8, v12, fa5
-; ZVFBFA-NEXT:    vmnot.m v0, v8
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp ule <vscale x 8 x half> %va, %splat
@@ -3340,16 +2787,6 @@ define <vscale x 8 x i1> @fcmp_ule_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-NEXT:    vmflt.vf v8, v12, fa5
 ; ZVFHMIN-NEXT:    vmnot.m v0, v8
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ule_fv_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmflt.vf v8, v12, fa5
-; ZVFBFA-NEXT:    vmnot.m v0, v8
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp ule <vscale x 8 x half> %splat, %va
@@ -3371,15 +2808,6 @@ define <vscale x 8 x i1> @fcmp_ule_vv_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfle.vv v0, v16, v12
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ule_vv_nxv8f16_nonans:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v10
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfle.vv v0, v16, v12
-; ZVFBFA-NEXT:    ret
   %vc = fcmp ule <vscale x 8 x half> %va, %vb
   ret <vscale x 8 x i1> %vc
 }
@@ -3399,15 +2827,6 @@ define <vscale x 8 x i1> @fcmp_ule_vf_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfle.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_ule_vf_nxv8f16_nonans:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfle.vf v0, v12, fa5
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp ule <vscale x 8 x half> %va, %splat
@@ -3429,15 +2848,6 @@ define <vscale x 8 x i1> @fcmp_une_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfne.vv v0, v16, v12
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_une_vv_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v10
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfne.vv v0, v16, v12
-; ZVFBFA-NEXT:    ret
   %vc = fcmp une <vscale x 8 x half> %va, %vb
   ret <vscale x 8 x i1> %vc
 }
@@ -3457,15 +2867,6 @@ define <vscale x 8 x i1> @fcmp_une_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfne.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_une_vf_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfne.vf v0, v12, fa5
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp une <vscale x 8 x half> %va, %splat
@@ -3487,15 +2888,6 @@ define <vscale x 8 x i1> @fcmp_une_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfne.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_une_fv_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfne.vf v0, v12, fa5
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp une <vscale x 8 x half> %splat, %va
@@ -3517,15 +2909,6 @@ define <vscale x 8 x i1> @fcmp_une_vv_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfne.vv v0, v16, v12
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_une_vv_nxv8f16_nonans:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v10
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfne.vv v0, v16, v12
-; ZVFBFA-NEXT:    ret
   %vc = fcmp une <vscale x 8 x half> %va, %vb
   ret <vscale x 8 x i1> %vc
 }
@@ -3545,15 +2928,6 @@ define <vscale x 8 x i1> @fcmp_une_vf_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfne.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_une_vf_nxv8f16_nonans:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfne.vf v0, v12, fa5
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp une <vscale x 8 x half> %va, %splat
@@ -3581,19 +2955,6 @@ define <vscale x 8 x i1> @fcmp_uno_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x
 ; ZVFHMIN-NEXT:    vmfne.vv v8, v12, v12
 ; ZVFHMIN-NEXT:    vmor.mm v0, v8, v10
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_uno_vv_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v10
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfne.vv v10, v12, v12
-; ZVFBFA-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfne.vv v8, v12, v12
-; ZVFBFA-NEXT:    vmor.mm v0, v8, v10
-; ZVFBFA-NEXT:    ret
   %vc = fcmp uno <vscale x 8 x half> %va, %vb
   ret <vscale x 8 x i1> %vc
 }
@@ -3619,18 +2980,6 @@ define <vscale x 8 x i1> @fcmp_uno_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-NEXT:    vmfne.vv v8, v12, v12
 ; ZVFHMIN-NEXT:    vmor.mm v0, v8, v16
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_uno_vf_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vfmv.v.f v8, fa5
-; ZVFBFA-NEXT:    vmfne.vf v16, v8, fa5
-; ZVFBFA-NEXT:    vmfne.vv v8, v12, v12
-; ZVFBFA-NEXT:    vmor.mm v0, v8, v16
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp uno <vscale x 8 x half> %va, %splat
@@ -3658,18 +3007,6 @@ define <vscale x 8 x i1> @fcmp_uno_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-NEXT:    vmfne.vv v8, v12, v12
 ; ZVFHMIN-NEXT:    vmor.mm v0, v16, v8
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_uno_fv_nxv8f16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vfmv.v.f v8, fa5
-; ZVFBFA-NEXT:    vmfne.vf v16, v8, fa5
-; ZVFBFA-NEXT:    vmfne.vv v8, v12, v12
-; ZVFBFA-NEXT:    vmor.mm v0, v16, v8
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp uno <vscale x 8 x half> %splat, %va
@@ -3697,19 +3034,6 @@ define <vscale x 8 x i1> @fcmp_uno_vv_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    vmfne.vv v8, v12, v12
 ; ZVFHMIN-NEXT:    vmor.mm v0, v8, v10
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_uno_vv_nxv8f16_nonans:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v10
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfne.vv v10, v12, v12
-; ZVFBFA-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfne.vv v8, v12, v12
-; ZVFBFA-NEXT:    vmor.mm v0, v8, v10
-; ZVFBFA-NEXT:    ret
   %vc = fcmp uno <vscale x 8 x half> %va, %vb
   ret <vscale x 8 x i1> %vc
 }
@@ -3735,18 +3059,6 @@ define <vscale x 8 x i1> @fcmp_uno_vf_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    vmfne.vv v8, v12, v12
 ; ZVFHMIN-NEXT:    vmor.mm v0, v8, v16
 ; ZVFHMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: fcmp_uno_vf_nxv8f16_nonans:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    fcvt.s.h fa5, fa0
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vfmv.v.f v8, fa5
-; ZVFBFA-NEXT:    vmfne.vf v16, v8, fa5
-; ZVFBFA-NEXT:    vmfne.vv v8, v12, v12
-; ZVFBFA-NEXT:    vmor.mm v0, v8, v16
-; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %vc = fcmp uno <vscale x 8 x half> %va, %splat
