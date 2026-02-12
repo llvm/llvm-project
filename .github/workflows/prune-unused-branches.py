@@ -75,6 +75,7 @@ def get_branches_from_open_prs(github_token) -> list[str]:
         else:
             assert pr["baseRefName"].startswith("users/")
             user_branches.append(pr["baseRefName"])
+    # Convert to a set to ensure we have no duplicates.
     return list(set(user_branches))
 
 
