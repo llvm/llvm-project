@@ -897,3 +897,93 @@ func.func @test_min_shape() -> !tosa.shape<6> {
   %c = tosa.min_shape %a, %b : (!tosa.shape<6>, !tosa.shape<6>) -> !tosa.shape<6>
   return %c : !tosa.shape<6>
 }
+
+// -----
+
+// CHECK-LABEL: @test_exp2_shape
+// CHECK: tosa.const_shape  {values = dense<[4, 8, 2, 16, 64, 32]> : tensor<6xindex>} : () -> !tosa.shape<6>
+func.func @test_exp2_shape() -> !tosa.shape<6> {
+  %a = tosa.const_shape {values = dense<[2, 3, 1, 4, 6, 5]> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %c = tosa.exp2_shape %a : (!tosa.shape<6>) -> !tosa.shape<6>
+  return %c : !tosa.shape<6>
+}
+
+// -----
+
+// CHECK-LABEL: @test_neg_exp2_shape
+// CHECK: tosa.exp2_shape
+func.func @test_neg_exp2_shape() -> !tosa.shape<6> {
+  %a = tosa.const_shape {values = dense<[-10, 3, 1, 4, 6, 5]> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %c = tosa.exp2_shape %a : (!tosa.shape<6>) -> !tosa.shape<6>
+  return %c : !tosa.shape<6>
+}
+
+// -----
+
+// CHECK-LABEL: @test_high_exp2_shape
+// CHECK: tosa.exp2_shape
+func.func @test_high_exp2_shape() -> !tosa.shape<6> {
+  %a = tosa.const_shape {values = dense<[32, 64, 1, 4, 6, 5]> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %c = tosa.exp2_shape %a : (!tosa.shape<6>) -> !tosa.shape<6>
+  return %c : !tosa.shape<6>
+}
+
+// -----
+
+// CHECK-LABEL: @test_log2_ceil_shape
+// CHECK: tosa.const_shape  {values = dense<[2, 4, 4, 0, 3, 5]> : tensor<6xindex>} : () -> !tosa.shape<6>
+func.func @test_log2_ceil_shape() -> !tosa.shape<6> {
+  %a = tosa.const_shape {values = dense<[4, 9, 14, 1, 7, 30]> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %c = tosa.log2_ceil_shape %a : (!tosa.shape<6>) -> !tosa.shape<6>
+  return %c : !tosa.shape<6>
+}
+
+// -----
+
+// CHECK-LABEL: @test_log2_ceil_shape_zero
+// CHECK: tosa.log2_ceil_shape
+func.func @test_log2_ceil_shape_zero() -> !tosa.shape<6> {
+  %a = tosa.const_shape {values = dense<[4, 9, 0, 1, 7, 30]> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %c = tosa.log2_ceil_shape %a : (!tosa.shape<6>) -> !tosa.shape<6>
+  return %c : !tosa.shape<6>
+}
+
+// -----
+
+// CHECK-LABEL: @test_log2_ceil_shape_neg
+// CHECK: tosa.log2_ceil_shape
+func.func @test_log2_ceil_shape_neg() -> !tosa.shape<6> {
+  %a = tosa.const_shape {values = dense<[4, 9, -123, 1, 7, 30]> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %c = tosa.log2_ceil_shape %a : (!tosa.shape<6>) -> !tosa.shape<6>
+  return %c : !tosa.shape<6>
+}
+
+// -----
+
+// CHECK-LABEL: @test_log2_floor_shape
+// CHECK: tosa.const_shape  {values = dense<[2, 3, 3, 0, 2, 4]> : tensor<6xindex>} : () -> !tosa.shape<6>
+func.func @test_log2_floor_shape() -> !tosa.shape<6> {
+  %a = tosa.const_shape {values = dense<[4, 9, 14, 1, 7, 30]> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %c = tosa.log2_floor_shape %a : (!tosa.shape<6>) -> !tosa.shape<6>
+  return %c : !tosa.shape<6>
+}
+
+// -----
+
+// CHECK-LABEL: @test_log2_floor_shape_zero
+// CHECK: tosa.log2_floor_shape
+func.func @test_log2_floor_shape_zero() -> !tosa.shape<6> {
+  %a = tosa.const_shape {values = dense<[4, 9, 0, 1, 7, 30]> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %c = tosa.log2_floor_shape %a : (!tosa.shape<6>) -> !tosa.shape<6>
+  return %c : !tosa.shape<6>
+}
+
+// -----
+
+// CHECK-LABEL: @test_log2_floor_shape_neg
+// CHECK: tosa.log2_floor_shape
+func.func @test_log2_floor_shape_neg() -> !tosa.shape<6> {
+  %a = tosa.const_shape {values = dense<[4, 9, -123, 1, 7, 30]> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %c = tosa.log2_floor_shape %a : (!tosa.shape<6>) -> !tosa.shape<6>
+  return %c : !tosa.shape<6>
+}
