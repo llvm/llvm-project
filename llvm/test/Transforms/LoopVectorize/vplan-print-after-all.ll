@@ -29,7 +29,6 @@
 ; CHECK: VPlan after removeBranchOnConst
 ; CHECK: VPlan after removeDeadRecipes
 ; CHECK: VPlan after createAndOptimizeReplicateRegions
-; CHECK: VPlan after hoistInvariantLoads
 ; CHECK: VPlan after mergeBlocksIntoPredecessors
 ; CHECK: VPlan after licm
 ; CHECK: VPlan after VPlanTransforms::optimize
