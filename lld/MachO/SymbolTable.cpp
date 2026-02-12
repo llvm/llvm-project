@@ -411,19 +411,23 @@ static void handleSegmentBoundarySymbol(const Undefined &sym, StringRef segName,
 static bool recoverFromUndefinedSymbol(const Undefined &sym) {
   // Handle start/end symbols.
   StringRef name = sym.getName();
-  if (name.consume_front("section$start$")) {
+  if (name.consume_front("section$start$") ||
+      name.consume_front("_section$start$")) {
     handleSectionBoundarySymbol(sym, name, Boundary::Start);
     return true;
   }
-  if (name.consume_front("section$end$")) {
+  if (name.consume_front("section$end$") ||
+      name.consume_front("_section$end$")) {
     handleSectionBoundarySymbol(sym, name, Boundary::End);
     return true;
   }
-  if (name.consume_front("segment$start$")) {
+  if (name.consume_front("segment$start$") ||
+      name.consume_front("_segment$start$")) {
     handleSegmentBoundarySymbol(sym, name, Boundary::Start);
     return true;
   }
-  if (name.consume_front("segment$end$")) {
+  if (name.consume_front("segment$end$") ||
+      name.consume_front("_segment$end$")) {
     handleSegmentBoundarySymbol(sym, name, Boundary::End);
     return true;
   }
