@@ -1747,6 +1747,12 @@ public:
     return false;
   }
 
+  /// AArch64 uses this to perform diagnostics in the LongJmp pass.
+  virtual bool isShortRangeBranch(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
   /// Receives a list of MCInst of the basic block to analyze and interpret the
   /// terminators of this basic block. TBB must be initialized with the original
   /// fall-through for this BB.
@@ -1784,6 +1790,21 @@ public:
   }
 
   virtual void patchPLTEntryForBTI(BinaryFunction &PLTFunction, MCInst &Call) {
+    llvm_unreachable("not implemented");
+  }
+
+  virtual void applyBTIFixupToTarget(BinaryBasicBlock &StubBB) {
+    llvm_unreachable("not implemented");
+  }
+
+  virtual void applyBTIFixupToSymbol(BinaryContext &BC, const MCSymbol *Symbol,
+                                     MCInst &Call) {
+    llvm_unreachable("not implemented");
+  }
+
+  virtual void applyBTIFixupCommon(const MCSymbol *RealTargetSym,
+                                   BinaryFunction *TgtFunction,
+                                   BinaryBasicBlock *TgtBB, MCInst &Call) {
     llvm_unreachable("not implemented");
   }
 

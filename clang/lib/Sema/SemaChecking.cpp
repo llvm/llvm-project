@@ -2200,7 +2200,7 @@ checkMathBuiltinElementType(Sema &S, SourceLocation Loc, QualType ArgTy,
     }
     break;
   case Sema::EltwiseBuiltinArgTyRestriction::SignedIntOrFloatTy:
-    if (EltTy->isUnsignedIntegerType()) {
+    if (!EltTy->isSignedIntegerType() && !EltTy->isRealFloatingType()) {
       return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
              << 1 << /* scalar or vector */ 5 << /* signed int */ 2
              << /* or fp */ 1 << ArgTy;
@@ -2285,6 +2285,32 @@ static bool BuiltinBswapg(Sema &S, CallExpr *TheCall) {
           << ArgTy << BT->getNumBits();
       return true;
     }
+  }
+  TheCall->setType(ArgTy);
+  return false;
+}
+
+/// Checks that __builtin_bitreverseg was called with a single argument, which
+/// is an integer
+static bool BuiltinBitreverseg(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCount(TheCall, 1))
+    return true;
+  ExprResult ArgRes = S.DefaultLvalueConversion(TheCall->getArg(0));
+  if (ArgRes.isInvalid())
+    return true;
+
+  Expr *Arg = ArgRes.get();
+  TheCall->setArg(0, Arg);
+  if (Arg->isTypeDependent())
+    return false;
+
+  QualType ArgTy = Arg->getType();
+
+  if (!ArgTy->isIntegerType()) {
+    S.Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+        << 1 << /*scalar=*/1 << /*unsigned integer*/ 1 << /*float point*/ 0
+        << ArgTy;
+    return true;
   }
   TheCall->setType(ArgTy);
   return false;
@@ -3697,6 +3723,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   }
   case Builtin::BI__builtin_bswapg:
     if (BuiltinBswapg(*this, TheCall))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_bitreverseg:
+    if (BuiltinBitreverseg(*this, TheCall))
       return ExprError();
     break;
   case Builtin::BI__builtin_popcountg:
