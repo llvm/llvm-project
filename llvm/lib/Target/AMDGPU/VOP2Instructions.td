@@ -1300,19 +1300,21 @@ let Constraints = "$vdst = $src2",
     defm V_DOT2C_F32_BF16 : VOP2Inst_VOPD<"v_dot2c_f32_bf16", VOP_DOT_ACC_F32_V2BF16, 0xd, "v_dot2acc_f32_bf16">;
 }
 
+class Dot2F32NoModsPat <SDPatternOperator node, Instruction inst, ValueType ty>
+  : GCNPat <
+    (f32 (node (ty (VOP3PNoModsDOT ty:$src0)), (ty (VOP3PNoModsDOT ty:$src1)),
+               (f32 (VOP3PNoModsF32 f32:$src2)), (i1 DSTCLAMP.NONE))),
+    (f32 (inst $src0, $src1, $src2))
+>;
+
 let AddedComplexity = 30 in {
-  def : GCNPat<
-    (f32 (AMDGPUfdot2 v2f16:$src0, v2f16:$src1, f32:$src2, (i1 DSTCLAMP.NONE))),
-    (f32 (V_DOT2C_F32_F16_e32 $src0, $src1, $src2))
-  > {
-    let SubtargetPredicate = HasDot5Insts;
-  }
-  def : GCNPat<
-    (f32 (int_amdgcn_fdot2_f32_bf16 v2bf16:$src0, v2bf16:$src1, f32:$src2, (i1 DSTCLAMP.NONE))),
-    (f32 (V_DOT2C_F32_BF16_e32 $src0, $src1, $src2))
-  > {
-    let SubtargetPredicate = HasDot13Insts;
-  }
+  let SubtargetPredicate = HasDot5Insts in
+  def : Dot2F32NoModsPat<AMDGPUfdot2, V_DOT2C_F32_F16_e32, v2f16>;
+
+  let SubtargetPredicate = HasDot13Insts in
+  def : Dot2F32NoModsPat<int_amdgcn_fdot2_f32_bf16, V_DOT2C_F32_BF16_e32,
+                         v2bf16>;
+
   def : GCNPat<
     (i32 (int_amdgcn_sdot4 i32:$src0, i32:$src1, i32:$src2, (i1 DSTCLAMP.NONE))),
     (i32 (V_DOT4C_I32_I8_e32 $src0, $src1, $src2))
