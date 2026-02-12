@@ -58,7 +58,8 @@ public:
   /// Constructs an interface instance from an object that is either an
   /// operation or a subclass of OpView. In the latter case, only the static
   /// methods of the interface are accessible to the caller.
-  PyConcreteOpInterface(nanobind::object object, DefaultingPyMlirContext context)
+  PyConcreteOpInterface(nanobind::object object,
+                        DefaultingPyMlirContext context)
       : obj(std::move(object)) {
     if (!nanobind::try_cast<PyOperation *>(obj, operation)) {
       PyOpView *opview;
@@ -94,7 +95,8 @@ public:
   /// Creates the Python bindings for this class in the given module.
   static void bind(nanobind::module_ &m) {
     nanobind::class_<ConcreteIface> cls(m, ConcreteIface::pyClassName);
-    cls.def(nanobind::init<nanobind::object, DefaultingPyMlirContext>(), nanobind::arg("object"),
+    cls.def(nanobind::init<nanobind::object, DefaultingPyMlirContext>(),
+            nanobind::arg("object"),
             nanobind::arg("context") = nanobind::none(), constructorDoc)
         .def_prop_ro("operation", &PyConcreteOpInterface::getOperationObject,
                      operationDoc)
@@ -114,7 +116,8 @@ public:
   /// OpView.
   nanobind::typed<nanobind::object, PyOperation> getOperationObject() {
     if (operation == nullptr)
-      throw nanobind::type_error("Cannot get an operation from a static interface");
+      throw nanobind::type_error(
+          "Cannot get an operation from a static interface");
     return operation->getRef().releaseObject();
   }
 
@@ -123,7 +126,8 @@ public:
   /// subclass of OpView.
   nanobind::typed<nanobind::object, PyOpView> getOpView() {
     if (operation == nullptr)
-      throw nanobind::type_error("Cannot get an opview from a static interface");
+      throw nanobind::type_error(
+          "Cannot get an opview from a static interface");
     return operation->createOpView();
   }
 
