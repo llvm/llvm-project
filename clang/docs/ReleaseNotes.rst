@@ -278,7 +278,7 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash when using loop hint with a value dependent argument inside a
   generic lambda. (#GH172289)
 - Fixed a crash in C++ overload resolution with ``_Atomic``-qualified argument types. (#GH170433)
-- Fixed an assertion failure in ObjC++ ARC when binding a ``__strong`` rvalue reference to a ``const __autoreleasing`` reference. (#GH178524)
+- Fixed an assertion failure in ObjC++ ARC when binding a rvalue reference to reference with different lifetimes (#GH178524)
 
 
 OpenACC Specific Changes
