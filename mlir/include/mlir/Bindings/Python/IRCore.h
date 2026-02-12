@@ -1876,7 +1876,7 @@ MLIR_PYTHON_API_EXPORTED void populateRoot(nanobind::module_ &m);
 
 /// Helper for creating an @classmethod.
 template <class Func, typename... Args>
-static nanobind::object classmethod(Func f, Args... args) {
+inline nanobind::object classmethod(Func f, Args... args) {
   nanobind::object cf = nanobind::cpp_function(f, args...);
   return nanobind::borrow<nanobind::object>((PyClassMethod_New(cf.ptr())));
 }

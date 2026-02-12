@@ -529,9 +529,9 @@ class Dialect(ir.Dialect):
         irdl.load_dialects(cls._mlir_module)
 
         if register:
-            _cext.register_dialect(cls)
+            register_dialect(cls)
 
-            register_dialect_operation = _cext.register_operation(cls)
+            register_dialect_operation = register_operation(cls)
             for op in cls.operations:
                 op._attach_traits()
                 register_dialect_operation(op)

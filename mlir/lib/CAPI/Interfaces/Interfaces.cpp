@@ -226,11 +226,7 @@ void mlirMemoryEffectsOpInterfaceAttachFallbackModel(
   std::optional<RegisteredOperationName> opInfo =
       RegisteredOperationName::lookup(unwrap(opName), unwrap(ctx));
 
-  if (!opInfo.has_value()) {
-    llvm::errs() << "Operation '" << unwrap(opName)
-                 << "' not found in context\n";
-    return;
-  }
+  assert(opInfo.has_value() && "operation not found in context");
 
   // NB: the following default-constructs the FallbackModel _without_ being able
   // to provide arguments.

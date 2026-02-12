@@ -16,8 +16,6 @@
 
 #include <nanobind/nanobind.h>
 
-namespace nb = nanobind;
-
 namespace mlir {
 namespace python {
 namespace MLIR_BINDINGS_PYTHON_DOMAIN {
@@ -53,18 +51,18 @@ constructed)";
 template <typename ConcreteIface>
 class PyConcreteOpInterface {
 protected:
-  using ClassTy = nb::class_<ConcreteIface>;
+  using ClassTy = nanobind::class_<ConcreteIface>;
   using GetTypeIDFunctionTy = MlirTypeID (*)();
 
 public:
   /// Constructs an interface instance from an object that is either an
   /// operation or a subclass of OpView. In the latter case, only the static
   /// methods of the interface are accessible to the caller.
-  PyConcreteOpInterface(nb::object object, DefaultingPyMlirContext context)
+  PyConcreteOpInterface(nanobind::object object, DefaultingPyMlirContext context)
       : obj(std::move(object)) {
-    if (!nb::try_cast<PyOperation *>(obj, operation)) {
+    if (!nanobind::try_cast<PyOperation *>(obj, operation)) {
       PyOpView *opview;
-      if (nb::try_cast<PyOpView *>(obj, opview)) {
+      if (nanobind::try_cast<PyOpView *>(obj, opview)) {
         operation = &opview->getOperation();
       };
     }
@@ -73,31 +71,31 @@ public:
       if (!mlirOperationImplementsInterface(*operation,
                                             ConcreteIface::getInterfaceID())) {
         std::string msg = "the operation does not implement ";
-        throw nb::value_error((msg + ConcreteIface::pyClassName).c_str());
+        throw nanobind::value_error((msg + ConcreteIface::pyClassName).c_str());
       }
 
       MlirIdentifier identifier = mlirOperationGetName(*operation);
       MlirStringRef stringRef = mlirIdentifierStr(identifier);
       opName = std::string(stringRef.data, stringRef.length);
     } else {
-      if (!nb::try_cast<std::string>(obj.attr("OPERATION_NAME"), opName))
-        throw nb::type_error(
+      if (!nanobind::try_cast<std::string>(obj.attr("OPERATION_NAME"), opName))
+        throw nanobind::type_error(
             "Op interface does not refer to an operation or OpView class");
 
       if (!mlirOperationImplementsInterfaceStatic(
               mlirStringRefCreate(opName.data(), opName.length()),
               context.resolve().get(), ConcreteIface::getInterfaceID())) {
         std::string msg = "the operation does not implement ";
-        throw nb::value_error((msg + ConcreteIface::pyClassName).c_str());
+        throw nanobind::value_error((msg + ConcreteIface::pyClassName).c_str());
       }
     }
   }
 
   /// Creates the Python bindings for this class in the given module.
-  static void bind(nb::module_ &m) {
-    nb::class_<ConcreteIface> cls(m, ConcreteIface::pyClassName);
-    cls.def(nb::init<nb::object, DefaultingPyMlirContext>(), nb::arg("object"),
-            nb::arg("context") = nb::none(), constructorDoc)
+  static void bind(nanobind::module_ &m) {
+    nanobind::class_<ConcreteIface> cls(m, ConcreteIface::pyClassName);
+    cls.def(nanobind::init<nanobind::object, DefaultingPyMlirContext>(), nanobind::arg("object"),
+            nanobind::arg("context") = nanobind::none(), constructorDoc)
         .def_prop_ro("operation", &PyConcreteOpInterface::getOperationObject,
                      operationDoc)
         .def_prop_ro("opview", &PyConcreteOpInterface::getOpView, opviewDoc);
@@ -114,18 +112,18 @@ public:
   /// Returns the operation instance from which this object was constructed.
   /// Throws a type error if this object was constructed from a subclass of
   /// OpView.
-  nb::typed<nb::object, PyOperation> getOperationObject() {
+  nanobind::typed<nanobind::object, PyOperation> getOperationObject() {
     if (operation == nullptr)
-      throw nb::type_error("Cannot get an operation from a static interface");
+      throw nanobind::type_error("Cannot get an operation from a static interface");
     return operation->getRef().releaseObject();
   }
 
   /// Returns the opview of the operation instance from which this object was
   /// constructed. Throws a type error if this object was constructed form a
   /// subclass of OpView.
-  nb::typed<nb::object, PyOpView> getOpView() {
+  nanobind::typed<nanobind::object, PyOpView> getOpView() {
     if (operation == nullptr)
-      throw nb::type_error("Cannot get an opview from a static interface");
+      throw nanobind::type_error("Cannot get an opview from a static interface");
     return operation->createOpView();
   }
 
@@ -136,7 +134,7 @@ public:
 private:
   PyOperation *operation = nullptr;
   std::string opName;
-  nb::object obj;
+  nanobind::object obj;
 };
 
 struct PyMemoryEffectsInstanceList {

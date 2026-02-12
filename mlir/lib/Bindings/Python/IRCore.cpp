@@ -55,13 +55,6 @@ static size_t hash(const T &value) {
   return std::hash<T>{}(value);
 }
 
-/// Helper for creating an @classmethod.
-template <class Func, typename... Args>
-static nb::object classmethod(Func f, Args... args) {
-  nb::object cf = nb::cpp_function(f, args...);
-  return nb::borrow<nb::object>((PyClassMethod_New(cf.ptr())));
-}
-
 static nb::object
 createCustomDialectWrapper(const std::string &dialectNamespace,
                            nb::object dialectDescriptor) {
