@@ -266,8 +266,7 @@ void Options::OutputFormattedUsageText(Stream &strm,
                                        bool use_color) {
   std::string actual_text;
   if (option_def.validator) {
-    const char *condition = option_def.validator->ShortConditionString();
-    if (condition) {
+    if (const char *condition = option_def.validator->ShortConditionString()) {
       actual_text = "[";
       actual_text.append(condition);
       actual_text.append("] ");
@@ -275,53 +274,8 @@ void Options::OutputFormattedUsageText(Stream &strm,
   }
   actual_text.append(
       ansi::FormatAnsiTerminalCodes(option_def.usage_text, use_color));
-  const size_t visible_length = ansi::ColumnWidth(actual_text);
 
-  // Will it all fit on one line?
-
-  if (static_cast<uint32_t>(visible_length + strm.GetIndentLevel()) <
-      output_max_columns) {
-    // Output it as a single line.
-    strm.Indent(ansi::FormatAnsiTerminalCodes(actual_text, use_color));
-    strm.EOL();
-  } else {
-    // We need to break it up into multiple lines.
-
-    int text_width = output_max_columns - strm.GetIndentLevel() - 1;
-    int start = 0;
-    int end = start;
-    int final_end = visible_length;
-    int sub_len;
-
-    while (end < final_end) {
-      // Don't start the 'text' on a space, since we're already outputting the
-      // indentation.
-      while ((start < final_end) && (actual_text[start] == ' '))
-        start++;
-
-      end = start + text_width;
-      if (end > final_end)
-        end = final_end;
-      else {
-        // If we're not at the end of the text, make sure we break the line on
-        // white space.
-        while (end > start && actual_text[end] != ' ' &&
-               actual_text[end] != '\t' && actual_text[end] != '\n')
-          end--;
-      }
-
-      sub_len = end - start;
-      if (start != 0)
-        strm.EOL();
-      strm.Indent();
-      assert(start < final_end);
-      assert(start + sub_len <= final_end);
-      strm.PutCString(ansi::FormatAnsiTerminalCodes(
-          llvm::StringRef(actual_text.c_str() + start, sub_len), use_color));
-      start = end + 1;
-    }
-    strm.EOL();
-  }
+  ansi::OutputWordWrappedLines(strm, actual_text, output_max_columns);
 }
 
 bool Options::SupportsLongOption(const char *long_option) {

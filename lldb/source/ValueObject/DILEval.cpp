@@ -13,6 +13,7 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/ValueObject/DILAST.h"
+#include "lldb/ValueObject/DILParser.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectRegister.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
@@ -41,19 +42,6 @@ GetDynamicOrSyntheticValue(lldb::ValueObjectSP value_sp,
   }
 
   return value_sp;
-}
-
-static llvm::Expected<lldb::TypeSystemSP>
-GetTypeSystemFromCU(std::shared_ptr<ExecutionContextScope> ctx) {
-  auto stack_frame = ctx->CalculateStackFrame();
-  if (!stack_frame)
-    return llvm::createStringError("no stack frame in this context");
-  SymbolContext symbol_context =
-      stack_frame->GetSymbolContext(lldb::eSymbolContextCompUnit);
-  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
-
-  symbol_context = stack_frame->GetSymbolContext(lldb::eSymbolContextModule);
-  return symbol_context.module_sp->GetTypeSystemForLanguage(language);
 }
 
 static CompilerType GetBasicType(lldb::TypeSystemSP type_system,
@@ -811,7 +799,7 @@ Interpreter::VerifyArithmeticCast(CompilerType source_type,
                                   CompilerType target_type, int location) {
   if (source_type.IsPointerType() || source_type.IsNullPtrType()) {
     // Cast from pointer to float/double is not allowed.
-    if (target_type.IsFloat()) {
+    if (target_type.GetTypeInfo() & lldb::eTypeIsFloat) {
       std::string errMsg = llvm::formatv("Cast from {0} to {1} is not allowed",
                                          source_type.TypeDescription(),
                                          target_type.TypeDescription());
@@ -948,7 +936,9 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode &node) {
 
   switch (cast_kind) {
   case CastKind::eEnumeration: {
-    if (op_type.IsFloat() || op_type.IsInteger() || op_type.IsEnumerationType())
+    // FIXME: is this correct for float vector types?
+    if (op_type.GetTypeInfo() & lldb::eTypeIsFloat || op_type.IsInteger() ||
+        op_type.IsEnumerationType())
       return operand->CastToEnumType(target_type);
     break;
   }

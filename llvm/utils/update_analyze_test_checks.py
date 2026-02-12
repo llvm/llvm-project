@@ -99,35 +99,36 @@ def update_test(opt_basename: str, ti: common.TestInfo):
 
         raw_tool_outputs = common.invoke_tool(ti.args.opt_binary, opt_args, ti.path)
 
-        if re.search(r"Printing analysis ", raw_tool_outputs) is not None:
-            # Split analysis outputs by "Printing analysis " declarations.
-            for raw_tool_output in re.split(r"Printing analysis ", raw_tool_outputs):
+        regex_map = {
+            r"Printing analysis ": common.ANALYZE_FUNCTION_RE,
+            r"(LV|LDist|HashRecognize): Checking a loop in ": common.LOOP_PASS_DEBUG_RE,
+            r"VPlan for loop in ": common.VPLAN_RE,
+        }
+
+        for split_by, regex in regex_map.items():
+            if re.search(split_by, raw_tool_outputs) is None:
+                continue
+            for raw_tool_output in re.split(split_by, raw_tool_outputs):
+                # For VPlan mode, don't scrub whitespace - preserve exact alignment
+                scrubber = (
+                    (lambda body: body)
+                    if regex == common.VPLAN_RE
+                    else common.scrub_body
+                )
                 builder.process_run_line(
-                    common.ANALYZE_FUNCTION_RE,
-                    common.scrub_body,
+                    regex,
+                    scrubber,
                     raw_tool_output,
                     prefixes,
                 )
-        elif (
-            re.search(
-                r"(LV|LDist|HashRecognize): Checking a loop in ", raw_tool_outputs
-            )
-            is not None
-        ):
-            for raw_tool_output in re.split(
-                r"(LV|LDist|HashRecognize): Checking a loop in ", raw_tool_outputs
-            ):
-                builder.process_run_line(
-                    common.LOOP_PASS_DEBUG_RE,
-                    common.scrub_body,
-                    raw_tool_output,
-                    prefixes,
-                )
+            break
         else:
             common.warn("Don't know how to deal with this output")
             continue
 
         builder.processed_prefixes(prefixes)
+
+    check_label_prefix = "VPlan for loop in " if regex == common.VPLAN_RE else ""
 
     func_dict = builder.finish_and_get_func_dict()
     is_in_function = False
@@ -159,6 +160,7 @@ def update_test(opt_basename: str, ti: common.TestInfo):
                     func_name,
                     ginfo,
                     is_filtered=builder.is_filtered(),
+                    check_label_prefix=check_label_prefix,
                 )
             )
             is_in_function_start = False

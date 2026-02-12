@@ -117,8 +117,9 @@ public:
   ///  safe pattern;
   ///  is 3 if string arguments do not guarantee null-termination
   ///  is 4 if the callee takes va_list
+  ///  has bit 3 (0x8) set if the callee is a function with the format attribute
   /// \param UnsafeArg one of the actual arguments that is unsafe, non-null
-  /// only when `2 <= PrintfInfo <= 3`
+  /// only when `2 <= PrintfInfo <= 3 (ignoring the "format attribute" bit)`
   virtual void handleUnsafeLibcCall(const CallExpr *Call, unsigned PrintfInfo,
                                     ASTContext &Ctx,
                                     const Expr *UnsafeArg = nullptr) = 0;

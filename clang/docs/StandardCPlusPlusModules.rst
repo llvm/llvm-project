@@ -208,11 +208,15 @@ is ``-std=c++20`` or newer.
 How to produce a BMI
 ~~~~~~~~~~~~~~~~~~~~
 
-To generate a BMI for an importable module unit, use either the ``--precompile``
-or ``-fmodule-output`` command line options.
+To generate a BMI for an importable module unit, use either the ``--precompile``,
+``--precompile-reduced-bmi``, or ``-fmodule-output`` command line options.
 
 The ``--precompile`` option generates the BMI as the output of the compilation
 with the output path specified using the ``-o`` option.
+
+The ``--precompile-reduced-bmi`` option generates a Reduced BMI (See the
+following section for the definition of Reduced BMI) as the output of
+the compilation with the output path specified using the ``-o`` option.
 
 The ``-fmodule-output`` option generates the BMI as a by-product of the
 compilation. If ``-fmodule-output=`` is specified, the BMI will be emitted to
@@ -604,8 +608,14 @@ unnecessary dependencies for the BMI. To mitigate the problem, Clang has a
 compiler option to reduce the information contained in the BMI. These two
 formats are known as Full BMI and Reduced BMI, respectively.
 
-Users can use the ``-fmodules-reduced-bmi`` option to produce a
-Reduced BMI.
+Users can use the ``-fmodules-reduced-bmi`` or ``--precompile-reduced-bmi``
+option to produce a Reduced BMI.
+
+The ``--precompile-reduced-bmi`` option will produce the reduced BMI
+to the location specified by ``-o``.
+
+Note that ``--precompile`` will always generate the full BMI. So that build
+system which may generate the BMI only should take care of this.
 
 For the one-phase compilation model (CMake implements this model), with
 ``-fmodules-reduced-bmi``, the generated BMI will be a Reduced
@@ -1140,6 +1150,189 @@ This can potentially be improved by introducing a module partition
 implementation unit. An internal module partition unit is an importable
 module unit which is internal to the module itself.
 
+The ABI of your library
+^^^^^^^^^^^^^^^^^^^^^^^
+
+You can skip this section your library doesn't ship ABI.
+
+With the ABI breaking style, for every ABI you shipped in your library, 
+you should provide a corresponding ABI within the modules version.
+
+For example, if this your library before provding modules,
+
+.. code-block:: c++
+
+  // header.h
+  #pragma once
+
+  #include <cstdint>
+
+  namespace example {
+  class C {
+  public:
+      std::size_t inline_get() { return 42; }
+      std::size_t get();
+  };
+  }
+
+  // src.cpp
+  #include "header.h"
+
+  std::size_t example::C::get() {
+      return 43 + inline_get();
+  }
+
+Then you will ship ABI may be like:
+
+.. code-block:: text
+
+  $nm -ACD libexample.so
+  libexample.so:0000000000001130 W example::C::inline_get()
+  libexample.so:0000000000001110 T example::C::get()
+
+Then with ABI breaking style, your code may look like:
+
+.. code-block:: c++
+
+  // example.cppm
+  export module example;
+  import std;
+  // and other third-party modules, if any
+  #define IN_MODULE_WRAPPER
+  #include "header.h" // omit changing of header.h for brevity
+
+  // src.module.cpp
+  module example;
+  #define IN_MODULE_IMPL
+  #include "src.cpp" // omit changing of src.cpp for brevity
+
+And your ABI should look like:
+
+.. code-block:: text
+
+  $llvm-nm -ACD libexample.so
+  libexample.so: 0000000000001060 T initializer for module example
+  libexample.so: 0000000000001150 W example::C::inline_get()
+  libexample.so: 0000000000001130 T example::C::get()
+  libexample.so: 0000000000001180 T example::C@example::inline_get()
+  libexample.so: 0000000000001160 T example::C@example::get()
+
+Here ``example::C@example::inline_get()`` and ``example::C@example::get()`` is
+the corresponding version for ``example::C::inline_get()`` and ``example::C::get()``
+in modules version.
+
+Which part of the ABI will be broken?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+While your library keeps ABI compatible by providing both ABI versions.
+The users's ABI may be breaking if they used the ABI of modules' version.
+
+This is similar with 
+`the famous ABI break in GCC 5's libstdc++ for C++11 <https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_dual_abi.html>`_.
+
+Although your library remains compatible with both ABIs, for your library's users,
+choosing the module-based ABI will also break their ABI. For example, if your user's
+code contains:
+
+.. code-block:: c++
+
+  #include "header.h"
+
+  namespace user {
+      void user_def(example::C& c) {
+          
+      }
+  }
+
+then, (if your user will ship ABI too), their shipped ABI may look like:
+
+.. code-block:: c++
+
+  $ llvm-nm -ACD libuser.so
+  libuser.so: 0000000000001100 T user::user_def(example::C&)
+
+But when your user switches to your ABI-breaking style module:
+
+.. code-block:: c++
+
+  import example;
+
+  namespace user {
+      void user_def(example::C& c) {
+          
+      }
+  }
+
+The corresponding ABI may look like:
+
+.. code-block:: text
+
+  $ llvm-nm -ACD libuser.so
+  libuser.so: 0000000000001100 T user::user_def(example::C@example&)
+
+Here we can find the ABI break from ``user::user_def(example::C&)`` to
+``user::user_def(example::C@example&)``.
+
+Less duplicated generated code
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Another benefit of ABI breaking style is, it is more likely to modules native
+style. So that compiler can generate the previously implicitly inline entities
+(e.g., virtual tables, variables and functions)
+to the module unit instead of generating them in every translation unit used.
+
+e.g, for the above example, in header version, the definition of
+``example::C::inline_get()`` will be generated in every translation unit used.
+But in modules version, ``example::C::inline_get()`` will only be generated once
+in the module unit.
+
+This is helpful for the whole build process to generate less duplicated code,
+which will results in smaller binary size and faster compilation speed.
+
+Note that for compatibility, the explicitly inline entities will still be inline
+in modules. So that if you have explicitly inline entities and you're using
+ABI breaking style, it is suggestted to use a macro to control inliness of the entity.
+
+e.g.,
+
+.. code-block:: c++
+
+  // your_header.h
+  #include <cstdint>
+
+  inline void your_interface() {}
+
+within ABI breaking style, we suggest,
+
+.. code-block:: c++
+
+  // your_header.h
+  #ifndef IN_MODULE_WRAPPER
+  #include <cstdint>
+  #endif
+
+  #ifdef IN_MODULE_WRAPPER
+  #define MY_EXPORT export
+  #else
+  #define MY_EXPORT
+  #endif
+
+  #ifdef IN_MODULE_WRAPPER
+  #define MY_INLINE
+  #else
+  #define MY_INLINE inline
+  #endif
+
+  MY_EXPORT MY_INLINE void your_interface() {}
+
+  // your_module_interface.cppm
+  export module your_library;
+  import std;
+  #define IN_MODULE_WRAPPER
+  #include "your_header.h"
+
+So that ``your_interface()`` will not be inline in modules version.
+
 Providing a header to skip parsing redundant headers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1320,6 +1513,280 @@ indirectly imported internal partition units are not reachable.
 The suggested approach for using an internal partition unit in Clang is
 to only import them in the implementation unit.
 
+Using Clang Module Map to Avoid mixing #include and import problems
+-------------------------------------------------------------------
+
+.. note::
+  Discussion in this section is experimental.
+
+Problems Background
+~~~~~~~~~~~~~~~~~~~
+
+As discussed before, the redeclaration in different TU is one of the major problems
+of using modules from the perspective of the compiler. The redeclaration pattern
+is a major trigger of compiler bugs. And even if the compiler accepts the redeclaration
+pattern as expected, the compilation performance will be affected too.
+
+e.g,
+
+.. code-block:: c++
+
+  // a.h
+  #pragma once
+  class A { ... };
+
+  // a.cppm
+  module;
+  #include "a.h"
+  export module a;
+  export using ::A;
+
+  // a.cc
+  import a;
+  #include "a.h"
+  A a;
+
+Here in ``a.cc``, we have redeclaration for ``A``, one from ``a.cppm`` and one from ``a.cc``
+itself.
+
+To avoid the redeclaration pattern, in previous section, we suggested users to comment
+out thirdparty headers manually.
+
+And here we will introduce another approach to avoid such redeclaration pattern by using
+clang module map.
+
+Clang Module Map Background
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Clang Module Map is a feature of Clang Header Modules. See `Clang Module <Modules.html>`_
+for full introduction of Clang Header Modules. Here we would only introduce Clang Header
+Modules to make this document self contained.
+
+Clang Implicit Header Modules
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In Clang Implicit Header Module mode, Clang will read the module map and compile the
+header in the module map into a module file and use the module file automatically. 
+This sounds very nice. But due to the complexity, this is not so wonderful in practice.
+Clang has to compile the same header in different preprocessor context into 
+different module file for correctness conservatively. Then this may trigger the
+redeclaration in different TU problems. So that the user of implicit header modules
+has to design a module system bottom up carefully. And clang implicit header module 
+`has many issues with soundness and performance due to tradeoffs made for module
+reuse and filesystem contention
+<https://discourse.llvm.org/t/clang-modules-build-daemon-build-system-agnostic-support-for-explicitly-built-modules>`_.
+
+Clang Explicit Header Modules
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Clang explicit header modules offloads the job of creating and managing module files
+to the build system. Given the C++20 modules and clang header modules actually share the
+same underlying implementation, it is actually possible to reuse the interface of clang module
+map for C++20 named modules.
+
+Technically, Clang Explicit Header Modules may be able to solve the redeclaration problem.
+For the above example,
+
+e.g,
+
+.. code-block:: c++
+
+  // a.h
+  #pragma once
+  class A { ... };
+
+  // a.cppm
+  module;
+  #include "a.h"
+  export module a;
+  export using ::A;
+
+  // a.cc
+  import a;
+  #include "a.h"
+  A a;
+
+The build system can build the header into a module file and use it in both ``a.cppm`` and ``a.cc``.
+Then there is no redeclaration in the example. All the declaration of ``class A`` come from the
+synthesized TU ``a.h``.
+
+But there are problems: (1) the build system needs to support clang explicit module. 
+(2) The interaction between clang named modules and clang header modules are theoriticall fine but
+not verified in practice. And also the document itself is about standard C++ modules, so we won't
+expand here.
+
+Examples
+~~~~~~~~
+
+To use Clang Module Map for C++20 Named Modules, end users have to wait for the support
+from build systems. Here we ignore the build systems to help users to understand the
+mechanism.
+
+Here is an example of using clang module map to replace a header to an import of a module.
+
+.. code-block:: c++
+
+  // a.h
+  #pragma once
+  static_assert(false, "don't include a.h");
+
+  // main.cpp
+  #include "a.h"
+  int main() {
+      return 0;
+  }
+
+  // a.cppm
+  module;
+  #include <iostream>
+  export module a;
+  struct Init {
+      Init() {
+          std::cout << "Module 'a' got imported" << std::endl;
+      }
+  };
+  Init a;
+
+  // a.cppm.modulemap
+  module a {
+    header "a.h"
+  }
+
+Then invoke Clang with:
+
+.. code-block:: console
+
+  $ clang++ -std=c++20 a.cppm -c -fmodule-output=a.pcm -o a.o
+  $ clang++ -std=c++20 main.cpp -fmodule-map-file=a.cppm.modulemap -fmodule-file=a=a.pcm a.o -o main
+  $ ./main
+  Module 'a' got imported
+
+We can find that the header file ``a.h`` is not included actually (otherwise the compilation should fail due to the static assert).
+And it imports the module ``a`` and then the varaible in module ``a`` got initialized.
+
+The secret comes from the flag ``-fmodule-map-file=a.cppm.modulemap``, the content of ``a.cppm.modulemap`` says:
+map the #include of ``a.h`` to the import to module ``a``. Then when the compiler sees ``#include "a.h"``, the compiler
+won't include ``a.h`` actually but tries to import the module ``a``. And the from the command line ``-fmodule-file=a=a.pcm``,
+the compiler get the module file of module ``a``, then module file of module ``a`` get imported and the inclusion of ``a.h``
+is skipped.
+
+Then we can try to use the mechanism to avoid redeclaration pattern for header wrapping modules.
+
+.. code-block:: c++
+
+  // a.h
+  #pragma once
+  class A { ... };
+
+  // a.cppm
+  module;
+  #include "a.h"
+  export module a;
+  export using ::A;
+
+  // a.cc
+  import a;
+  #include "a.h"
+  A a;
+
+  // a.cppm.modulemap
+  module a {
+    header "a.h"
+  }
+
+Similarly, when we compile ``a.cc``, if we add the flag ``-fmodule-map-file=a.cppm.modulemap``, the compiler
+will map the inclusion of ``a.h`` to the import of module ``a``. And the module ``a`` is already imported.
+So we avoid the redeclaration of class ``A`` in ``a.cc``.
+
+An imaginable problem with this approach maybe the hidden inclusion. e.g,
+
+.. code-block:: c++
+
+  // b.h
+  #pragma once
+  struct B {};
+
+  // a.h
+  #pragma once
+  #include "b.h"
+  struct A { B b; };
+
+  // b.cppm
+  export module b;
+  export extern "C++" struct B { };
+
+  // a.cppm
+  export module a;
+  import b;
+  export extern "C++" struct A { B b; };
+
+  // test.cc
+  import a;
+  #include "a.h"
+  A a;
+  B b;
+
+  // a.cppm.modulemap
+  module a {
+    header "a.h"
+  }
+
+  // b.cppm.modulemap
+  module b {
+    header "b.h"
+  }
+
+The example is valid if we don't use the module map:
+
+.. code-block:: console
+
+  $ clang++ -std=c++20 b.cppm -c -fmodule-output=b.pcm -o b.o
+  $ clang++ -std=c++20 a.cppm -c -fmodule-output=a.pcm -fmodule-file=b=b.pcm -o a.o
+  $ clang++ -std=c++20 test.cc -fmodule-file=a=a.pcm  -fmodule-file=b=b.pcm  -fsyntax-only
+
+But if we enable the module map, the example is invalid:
+
+.. code-block:: console
+
+  $ clang++ -std=c++20 test.cc -fmodule-map-file=a.cppm.modulemap -fmodule-file=a=a.pcm -fmodule-map-file=b.cppm.modulemap -fmodule-file=b=b.pcm -fsyntax-only
+  test.cc:4:1: error: declaration of 'B' must be imported from module 'b' before it is required
+      4 | B b;
+        | ^
+  b.cppm:2:28: note: declaration here is not visible
+      2 | export extern "C++" struct B { };
+        |                            ^
+  1 error generated.
+
+A suggested convention for end users and build systems
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+As said, the build system is a vital role in this strategy. 
+However, for build systems, it is not easy to support clang explicit header modules or
+support the module map with C++20 named modules generally. The complexity for build system
+won't be less than supporting C++20 named modules.
+
+So here we suggest a convention between end users and build systems to ease the implementation
+burden of build systems and help end users to avoid the redeclaration problem from mixing #include
+and import.
+
+For end users who is the author of header based library offering named module wrappers, The header's interface
+should be a subset of the module interface excluding user-facing macros.
+
+* Extract all user facing headers into a single header file. Since C++20 named modules 
+* For each named module interface, provide a module map file to map the interface headers to the named module. The name of the module map should be the name of the module interface unit plus ``.modulemap``. 
+
+The number of the module map may not be a lot sicne this is still a
+header based library.
+
+For build systems,
+
+* For each Translation Units, if the unit doesn't import any named modules, stop. This is not what we want.
+* If the TU imports named module, for all imported named module unit, look up for the module map file in the same path of the imported module unit with the name of the module unit plus ``.modulemap``. e.g., if the name of the module unit is ``a.cppm``, we should lookup for ``a.cppm.modulemap``.
+* For the found module map, pass ``-fmodule-map-file=<module_map_file_path>`` to the clang compiler.
+
+The point of the approach is, the build system can reuse the result of C++20 named modules to manage depencies. So that
+the implementation burden of build systems is largely reduced.
+
 Known Issues
 ------------
 
@@ -1383,33 +1850,6 @@ When Clang writes BMIs, it will ignore the ``preferred_name`` attribute on
 declarations which use it. Thus, the preferred name will not be displayed in
 the debugger as expected. This is tracked by
 `#56490 <https://github.com/llvm/llvm-project/issues/56490>`_.
-
-Don't emit macros about module declaration
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-This is covered by `P1857R3 <https://wg21.link/P1857R3>`_. It is mentioned here
-because we want users to be aware that we don't yet implement it.
-
-A direct approach to write code that can be compiled by both modules and
-non-module builds may look like:
-
-.. code-block:: c++
-
-  MODULE
-  IMPORT header_name
-  EXPORT_MODULE MODULE_NAME;
-  IMPORT header_name
-  EXPORT ...
-
-The intent of this is that this file can be compiled like a module unit or a
-non-module unit depending on the definition of some macros. However, this usage
-is forbidden by P1857R3 which is not yet implemented in Clang. This means that
-is possible to write invalid modules which will no longer be accepted once
-P1857R3 is implemented. This is tracked by
-`#54047 <https://github.com/llvm/llvm-project/issues/54047>`_.
-
-Until then, it is recommended not to mix macros with module declarations.
-
 
 Inconsistent filename suffix requirement for importable module units
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

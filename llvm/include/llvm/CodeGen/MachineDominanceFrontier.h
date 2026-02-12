@@ -12,72 +12,60 @@
 #include "llvm/Analysis/DominanceFrontier.h"
 #include "llvm/Analysis/DominanceFrontierImpl.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/Support/GenericDomTree.h"
 
 namespace llvm {
 
-class MachineDominanceFrontier : public MachineFunctionPass {
-  ForwardDominanceFrontierBase<MachineBasicBlock> Base;
-
+class MachineDominanceFrontier
+    : public DominanceFrontierBase<MachineBasicBlock, false> {
 public:
  using DomTreeT = DomTreeBase<MachineBasicBlock>;
  using DomTreeNodeT = DomTreeNodeBase<MachineBasicBlock>;
- using DomSetType = DominanceFrontierBase<MachineBasicBlock, false>::DomSetType;
- using iterator = DominanceFrontierBase<MachineBasicBlock, false>::iterator;
- using const_iterator =
-     DominanceFrontierBase<MachineBasicBlock, false>::const_iterator;
+ using DomSetType = MachineDominanceFrontier::DomSetType;
+ using iterator = MachineDominanceFrontier::iterator;
+ using const_iterator = MachineDominanceFrontier ::const_iterator;
 
- MachineDominanceFrontier(const MachineDominanceFrontier &) = delete;
- MachineDominanceFrontier &operator=(const MachineDominanceFrontier &) = delete;
+ MachineDominanceFrontier() = default;
 
- static char ID;
+ bool invalidate(MachineFunction &F, const PreservedAnalyses &PA,
+                 MachineFunctionAnalysisManager::Invalidator &);
+};
 
- MachineDominanceFrontier();
+class MachineDominanceFrontierWrapperPass : public MachineFunctionPass {
+private:
+  MachineDominanceFrontier MDF;
 
- ForwardDominanceFrontierBase<MachineBasicBlock> &getBase() { return Base; }
+public:
+  MachineDominanceFrontierWrapperPass();
 
- const SmallVectorImpl<MachineBasicBlock *> &getRoots() const {
-   return Base.getRoots();
-  }
+  MachineDominanceFrontierWrapperPass(
+      const MachineDominanceFrontierWrapperPass &) = delete;
+  MachineDominanceFrontierWrapperPass &
+  operator=(const MachineDominanceFrontierWrapperPass &) = delete;
 
-  MachineBasicBlock *getRoot() const {
-    return Base.getRoot();
-  }
-
-  bool isPostDominator() const {
-    return Base.isPostDominator();
-  }
-
-  iterator begin() {
-    return Base.begin();
-  }
-
-  const_iterator begin() const {
-    return Base.begin();
-  }
-
-  iterator end() {
-    return Base.end();
-  }
-
-  const_iterator end() const {
-    return Base.end();
-  }
-
-  iterator find(MachineBasicBlock *B) {
-    return Base.find(B);
-  }
-
-  const_iterator find(MachineBasicBlock *B) const {
-    return Base.find(B);
-  }
+  static char ID;
 
   bool runOnMachineFunction(MachineFunction &F) override;
 
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+
   void releaseMemory() override;
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  MachineDominanceFrontier &getMDF() { return MDF; }
+};
+
+class MachineDominanceFrontierAnalysis
+    : public AnalysisInfoMixin<MachineDominanceFrontierAnalysis> {
+  friend AnalysisInfoMixin<MachineDominanceFrontierAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  using Result = MachineDominanceFrontier;
+
+  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
 };
 
 } // end namespace llvm

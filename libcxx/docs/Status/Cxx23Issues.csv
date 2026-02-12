@@ -1,7 +1,7 @@
 "Issue #","Issue Name","Meeting","Status","First released version","GitHub issue","Notes"
 "`LWG2839 <https://wg21.link/LWG2839>`__","Self-move-assignment of library types, again","2020-11 (Virtual)","|Nothing To Do|","","`#104255 <https://github.com/llvm/llvm-project/issues/104255>`__",""
 "`LWG3117 <https://wg21.link/LWG3117>`__","Missing ``packaged_task`` deduction guides","2020-11 (Virtual)","|Complete|","16","`#104256 <https://github.com/llvm/llvm-project/issues/104256>`__",""
-"`LWG3143 <https://wg21.link/LWG3143>`__","``monotonic_buffer_resource`` growth policy is unclear","2020-11 (Virtual)","","","`#104258 <https://github.com/llvm/llvm-project/issues/104258>`__",""
+"`LWG3143 <https://wg21.link/LWG3143>`__","``monotonic_buffer_resource`` growth policy is unclear","2020-11 (Virtual)","|Complete|","16","`#104258 <https://github.com/llvm/llvm-project/issues/104258>`__",""
 "`LWG3195 <https://wg21.link/LWG3195>`__","What is the stored pointer value of an empty ``weak_ptr``?","2020-11 (Virtual)","|Nothing To Do|","","`#104259 <https://github.com/llvm/llvm-project/issues/104259>`__",""
 "`LWG3211 <https://wg21.link/LWG3211>`__","``std::tuple<>`` should be trivially constructible","2020-11 (Virtual)","|Complete|","9","`#104260 <https://github.com/llvm/llvm-project/issues/104260>`__",""
 "`LWG3236 <https://wg21.link/LWG3236>`__","Random access iterator requirements lack limiting relational operators domain to comparing those from the same range","2020-11 (Virtual)","|Nothing To Do|","","`#104261 <https://github.com/llvm/llvm-project/issues/104261>`__",""
