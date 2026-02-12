@@ -781,10 +781,8 @@ Value *InstCombinerImpl::getShiftedValue(Value *V, unsigned NumBits,
     return InsertNewInstWith(And, I->getIterator());
   }
   case Instruction::Add: {
-    if (ShiftOp == Instruction::Shl) {
-      I->setHasNoUnsignedWrap(false);
-      I->setHasNoSignedWrap(false);
-    }
+    if (ShiftOp == Instruction::Shl)
+      I->dropPoisonGeneratingFlags();
     I->setOperand(0, getShiftedValue(I->getOperand(0), NumBits, ShiftOp));
     I->setOperand(1, getShiftedValue(I->getOperand(1), NumBits, ShiftOp));
     return I;
