@@ -32,7 +32,7 @@ findGeneratorByName(llvm::StringRef Format) {
 
 // Enum conversion
 
-std::string getTagType(TagTypeKind AS) {
+llvm::StringRef getTagType(TagTypeKind AS) {
   switch (AS) {
   case TagTypeKind::Class:
     return "class";
