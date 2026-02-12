@@ -15,10 +15,10 @@
 #include "CIRGenCXXABI.h"
 #include "CIRGenFunction.h"
 #include "CIRGenFunctionInfo.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "clang/CIR/ABIArgInfo.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/TypeSize.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -312,14 +312,11 @@ void CIRGenModule::addDefaultFunctionAttributes(StringRef name,
 }
 
 /// Construct the CIR attribute list of a function or call.
-void CIRGenModule::constructAttributeList(llvm::StringRef name,
-                                          const CIRGenFunctionInfo &info,
-                                          CIRGenCalleeInfo calleeInfo,
-                                          mlir::NamedAttrList &attrs,
-                                          mlir::NamedAttrList &retAttrs,
-                                          cir::CallingConv &callingConv,
-                                          cir::SideEffect &sideEffect,
-                                          bool attrOnCallSite, bool isThunk) {
+void CIRGenModule::constructAttributeList(
+    llvm::StringRef name, const CIRGenFunctionInfo &info,
+    CIRGenCalleeInfo calleeInfo, mlir::NamedAttrList &attrs,
+    mlir::NamedAttrList &retAttrs, cir::CallingConv &callingConv,
+    cir::SideEffect &sideEffect, bool attrOnCallSite, bool isThunk) {
   assert(!cir::MissingFeatures::opCallCallConv());
   sideEffect = cir::SideEffect::All;
 
@@ -548,10 +545,10 @@ static bool determineNoUndef(QualType clangTy, CIRGenTypes &types,
     // bits from the perspective of LLVM IR.
     return false;
 
-    assert(!cir::MissingFeatures::opCallCallConv());
-    // TODO(cir): The calling convention code needs to figure if the
-    // coerced-to-type is larger than the actual type, and remove the noundef
-    // attribute. Classic compiler did it here.
+  assert(!cir::MissingFeatures::opCallCallConv());
+  // TODO(cir): The calling convention code needs to figure if the
+  // coerced-to-type is larger than the actual type, and remove the noundef
+  // attribute. Classic compiler did it here.
   if (clangTy->isBitIntType())
     return true;
   if (clangTy->isReferenceType())
@@ -580,8 +577,7 @@ static bool determineNoUndef(QualType clangTy, CIRGenTypes &types,
 }
 
 void CIRGenModule::constructFunctionReturnAttributes(
-    const CIRGenFunctionInfo &info, const Decl *targetDecl,
-    bool isThunk,
+    const CIRGenFunctionInfo &info, const Decl *targetDecl, bool isThunk,
     mlir::NamedAttrList &retAttrs) {
   // Collect attributes from arguments and return values.
   QualType retTy = info.getReturnType();
@@ -600,7 +596,7 @@ void CIRGenModule::constructFunctionReturnAttributes(
 
   if (!isThunk) {
     // TODO(cir): following comment taken from classic codegen, so if anything
-    // happens there, we should reflect it here. 
+    // happens there, we should reflect it here.
     // FIXME: fix this properly, https://reviews.llvm.org/D100388
     if (const auto *refTy = retTy->getAs<ReferenceType>()) {
       QualType pointeeTy = refTy->getPointeeType();

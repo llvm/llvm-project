@@ -104,8 +104,7 @@ private:
 
   /// A helper for constructAttributeList that handles return attributes.
   void constructFunctionReturnAttributes(const CIRGenFunctionInfo &info,
-                                         const Decl *targetDecl,
-                                         bool isThunk,
+                                         const Decl *targetDecl, bool isThunk,
                                          mlir::NamedAttrList &retAttrs);
   /// A helper for constructAttributeList that handles argument attributes.
   void constructFunctionArgumentAttributes();
@@ -290,14 +289,11 @@ public:
   /// attributes.
   /// \param attrOnCallSite - Whether or not the attributes are on a call site.
   /// \param isThunk - Whether the function is a thunk.
-  void constructAttributeList(llvm::StringRef name,
-                              const CIRGenFunctionInfo &info,
-                              CIRGenCalleeInfo calleeInfo,
-                              mlir::NamedAttrList &attrs,
-                              mlir::NamedAttrList &retAttrs,
-                              cir::CallingConv &callingConv,
-                              cir::SideEffect &sideEffect, bool attrOnCallSite,
-                              bool isThunk);
+  void constructAttributeList(
+      llvm::StringRef name, const CIRGenFunctionInfo &info,
+      CIRGenCalleeInfo calleeInfo, mlir::NamedAttrList &attrs,
+      mlir::NamedAttrList &retAttrs, cir::CallingConv &callingConv,
+      cir::SideEffect &sideEffect, bool attrOnCallSite, bool isThunk);
   /// Helper function for constructAttributeList/others.  Builds a set of
   /// function attributes to add to a function based on language opts, codegen
   /// opts, and some small properties.
