@@ -284,7 +284,6 @@ void UnrollState::unrollHeaderPHIByUF(VPHeaderPHIRecipe *R,
         for (unsigned Part = 1; Part != UF; ++Part)
           VPV2Parts[VPI][Part - 1] = StartV;
       }
-      Copy->addOperand(getConstantInt(Part));
     } else {
       assert(isa<VPActiveLaneMaskPHIRecipe>(R) &&
              "unexpected header phi recipe not needing unrolled part");

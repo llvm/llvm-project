@@ -2076,7 +2076,9 @@ bool ClusteredLowOccStage::shouldRevertScheduling(unsigned WavesAfter) {
 }
 
 bool PreRARematStage::shouldRevertScheduling(unsigned WavesAfter) {
-  return mayCauseSpilling(WavesAfter);
+  // When trying to increase occupancy (TargetOcc == true) the stage manages
+  // region reverts globally (all or none), so we always return false here.
+  return !TargetOcc && mayCauseSpilling(WavesAfter);
 }
 
 bool ILPInitialScheduleStage::shouldRevertScheduling(unsigned WavesAfter) {
@@ -3019,32 +3021,6 @@ void PreRARematStage::rematerialize(const RematReg &Remat,
   RescheduleRegions |= Remat.Live;
 }
 
-void PreRARematStage::rollback(const RollbackInfo &Rollback) const {
-  const auto &[Remat, RematMI, RegMap] = Rollback;
-
-  // Restore the original defining instruction to its original state.
-  Remat->DefMI->setDesc(DAG.TII->get(RematMI->getOpcode()));
-  for (const auto &[MOIdx, Reg] : RegMap)
-    Remat->DefMI->getOperand(MOIdx).setReg(Reg);
-
-  // Switch back to using the original register and delete the
-  // rematerialization.
-  Register Reg = RematMI->getOperand(0).getReg();
-  Register OriginalReg = Remat->DefMI->getOperand(0).getReg();
-  Remat->UseMI->substituteRegister(Reg, OriginalReg, 0, *DAG.TRI);
-  REMAT_DEBUG(dbgs() << '[' << Remat->UseRegion
-                     << "] Deleting rematerialization " << *RematMI);
-  DAG.deleteMI(Remat->UseRegion, RematMI);
-
-  // Re-add the defined register as a live-in/live-out in all regions it used to
-  // be one in.
-  std::pair<Register, LaneBitmask> LiveReg(OriginalReg, Remat->Mask);
-  for (unsigned I : Remat->LiveIn.set_bits())
-    DAG.LiveIns[I].insert(LiveReg);
-  for (unsigned I : Remat->LiveOut.set_bits())
-    DAG.RegionLiveOuts.getLiveRegsForRegionIdx(I).insert(LiveReg);
-}
-
 void PreRARematStage::commitRematerializations() const {
   REMAT_DEBUG(dbgs() << "Commiting all rematerializations\n");
   for (const RollbackInfo &Rollback : Rollbacks)
@@ -3109,6 +3085,25 @@ void PreRARematStage::finalizeGCNSchedStage() {
     commitRematerializations();
     return;
   }
+
+  // It is possible that re-scheduling lowers occupancy over the one achieved
+  // just through rematerializations, in which case we revert re-scheduling in
+  // all regions but do not roll back rematerializations.
+  const bool ShouldRollbackRemats = AchievedOcc < *TargetOcc;
+
+  // When we both need to revert re-scheduling and rollback rematerializations,
+  // restore rematerialized MIs' original state before reverting so that they
+  // are treated as non-debug instructions by the revert logic.
+  if (ShouldRollbackRemats) {
+    for (const RollbackInfo &Rollback : Rollbacks) {
+      const auto &[Remat, RematMI, RegMap] = Rollback;
+      Remat->DefMI->setDesc(DAG.TII->get(RematMI->getOpcode()));
+      for (const auto &[MOIdx, Reg] : RegMap)
+        Remat->DefMI->getOperand(MOIdx).setReg(Reg);
+    }
+  }
+
+  // Revert re-scheduling in all affected regions.
   for (const auto &[RegionIdx, OrigMIOrder, MaxPressure] : RegionReverts) {
     REMAT_DEBUG(dbgs() << "Reverting re-scheduling in region " << RegionIdx
                        << '\n');
@@ -3116,23 +3111,40 @@ void PreRARematStage::finalizeGCNSchedStage() {
     modifyRegionSchedule(RegionIdx, RegionBB[RegionIdx], OrigMIOrder);
   }
 
-  // It is possible that re-scheduling lowers occupancy over the one achieved
-  // just through rematerializations, in which case we revert re-scheduling in
-  // all regions but do not roll back rematerializations.
-  if (AchievedOcc >= *TargetOcc) {
+  if (!ShouldRollbackRemats) {
     commitRematerializations();
     DAG.setTargetOccupancy(AchievedOcc);
     return;
   }
+
   // Reset the target occupancy to what it was pre-rematerialization.
   DAG.setTargetOccupancy(*TargetOcc - 1);
 
-  // Rollback, then recompute pressure in all affected regions.
+  // Finish rolling back rematerializations, then recompute pressure in all
+  // affected regions.
   REMAT_DEBUG(dbgs() << "==== ROLLBACK ====\n");
   BitVector RecomputeRP(DAG.Regions.size());
   DenseSet<Register> RecomputeLI;
   for (const RollbackInfo &Rollback : Rollbacks) {
-    rollback(Rollback);
+    const auto &[Remat, RematMI, RegMap] = Rollback;
+
+    // Switch back to using the original register and delete the
+    // rematerialization.
+    Register Reg = RematMI->getOperand(0).getReg();
+    Register OriginalReg = Remat->DefMI->getOperand(0).getReg();
+    Remat->UseMI->substituteRegister(Reg, OriginalReg, 0, *DAG.TRI);
+    REMAT_DEBUG(dbgs() << '[' << Remat->UseRegion
+                       << "] Deleting rematerialization " << *RematMI);
+    DAG.deleteMI(Remat->UseRegion, RematMI);
+
+    // Re-add the defined register as a live-in/live-out in all regions it used
+    // to be one in.
+    std::pair<Register, LaneBitmask> LiveReg(OriginalReg, Remat->Mask);
+    for (unsigned I : Remat->LiveIn.set_bits())
+      DAG.LiveIns[I].insert(LiveReg);
+    for (unsigned I : Remat->LiveOut.set_bits())
+      DAG.RegionLiveOuts.getLiveRegsForRegionIdx(I).insert(LiveReg);
+
     RecomputeRP |= Rollback.Remat->Live;
     // Regenerate intervals for all register operands of rematerialized MIs as
     // slot indices may have changed slightly from before re-scheduling.
@@ -3145,6 +3157,11 @@ void PreRARematStage::finalizeGCNSchedStage() {
     DAG.LIS->removeInterval(Reg);
     DAG.LIS->createAndComputeVirtRegInterval(Reg);
   }
+#ifdef EXPENSIVE_CHECKS
+  // In particular, we want to check for coherent MI/slot order in regions in
+  // which reverts and/or rollbacks may have happened.
+  MF.verify();
+#endif
   for (unsigned I : RecomputeRP.set_bits())
     DAG.Pressure[I] = DAG.getRealRegPressure(I);
 

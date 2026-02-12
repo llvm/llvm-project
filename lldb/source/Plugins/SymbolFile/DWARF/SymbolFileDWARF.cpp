@@ -3574,6 +3574,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
   DWARFFormValue type_die_form;
   bool is_external = false;
   bool is_artificial = false;
+  std::optional<uint64_t> tag_offset = std::nullopt;
   DWARFFormValue const_value_form, location_form;
   Variable::RangeList scope_ranges;
 
@@ -3584,6 +3585,9 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
     if (!attributes.ExtractFormValueAtIndex(i, form_value))
       continue;
     switch (attr) {
+    case DW_AT_LLVM_tag_offset:
+      tag_offset = form_value.Unsigned();
+      break;
     case DW_AT_decl_file:
       decl.SetFile(
           attributes.CompileUnitAtIndex(i)->GetFile(form_value.Unsigned()));
@@ -3824,7 +3828,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
   return std::make_shared<Variable>(
       die.GetID(), name, mangled, type_sp, scope, symbol_context_scope,
       scope_ranges, &decl, location_list, is_external, is_artificial,
-      location_is_const_value_data, is_static_member);
+      location_is_const_value_data, is_static_member, tag_offset);
 }
 
 DWARFDIE
