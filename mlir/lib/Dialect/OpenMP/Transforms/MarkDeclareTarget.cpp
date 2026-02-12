@@ -166,5 +166,4 @@ class MarkDeclareTargetPass
     });
   }
 };
-
 } // namespace
