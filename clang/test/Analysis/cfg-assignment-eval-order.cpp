@@ -1,7 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -std=c++17 %s > %t 2>&1
 // RUN: FileCheck --input-file=%t %s
 
-// CHECK-LABEL: void test(Map &m, int a, int b)
+// CHECK-LABEL: void test_eval_order(Map &m, int a, int b)
 // CHECK:         1: operator=
 // CHECK-NEXT:    2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, Map &(*)(const Map &))
 // CHECK-NEXT:    3: operator[]
@@ -20,10 +20,36 @@
 // CHECK-NEXT:   16: [B1.15] = [B1.9] (OperatorCall)
 
 struct Map {
-    Map &operator[](int);
-    Map &operator=(const Map &);
+  Map &operator[](int);
+  Map &operator=(const Map &);
 };
 
-void test(Map &m, int a, int b) {
-    m[b] = m[a];
+void test_eval_order(Map &m, int a, int b) {
+  m[b] = m[a];
+}
+
+struct A {
+  A();
+  ~A();
+  A &operator=(const A &);
+};
+
+struct B {
+  B();
+  ~B();
+};
+
+struct C {
+  C();
+  ~C();
+};
+
+A &getLHS(const B &);
+A &getRHS(const C &);
+
+// CHECK-LABEL: void test_temp_dtor_order()
+// CHECK:       ~B() (Temporary object destructor)
+// CHECK-NEXT:  ~C() (Temporary object destructor)
+void test_temp_dtor_order() {
+  getLHS(B()) = getRHS(C());
 }

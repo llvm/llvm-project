@@ -5109,6 +5109,18 @@ tryAgain:
                                                   ExternallyDestructed,
                                                   Context);
 
+    case Stmt::CXXOperatorCallExprClass: {
+      auto *OCE = cast<CXXOperatorCallExpr>(E);
+      if (OCE->isAssignmentOp()) {
+        CFGBlock *RHSBlock =
+            VisitForTemporaryDtors(OCE->getArg(1), false, Context);
+        CFGBlock *LHSBlock =
+            VisitForTemporaryDtors(OCE->getArg(0), false, Context);
+        return LHSBlock ? LHSBlock : RHSBlock;
+      }
+      return VisitChildrenForTemporaryDtors(E, false, Context);
+    }
+
     case Stmt::CXXBindTemporaryExprClass:
       return VisitCXXBindTemporaryExprForTemporaryDtors(
           cast<CXXBindTemporaryExpr>(E), ExternallyDestructed, Context);
