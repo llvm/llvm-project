@@ -8,6 +8,7 @@ module Clang_Analysis {
   umbrella "clang/Analysis"
 
   textual header "clang/Analysis/Analyses/ThreadSafetyOps.def"
+  textual header "clang/Analysis/Scalable/Model/PrivateFieldNames.def"
 
   module * { export * }
 
