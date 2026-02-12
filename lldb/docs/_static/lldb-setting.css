@@ -1,12 +1,9 @@
 /* 
   Terms use normal weight and upper case by default.
   For settings, the term should be bold and use the original case.
+  Need to use chained :not here to increase the specificity of the selector.
 */
-dl[class]:not(
-    .option-list,
-    .field-list,
-    .footnote,
-    .glossary,
+dl[class]:not(.option-list):not(.field-list):not(.footnote):not(.glossary):not(
     .simple
   ).lldbsetting
   .field-list
