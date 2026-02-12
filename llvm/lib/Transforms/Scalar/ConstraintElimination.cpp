@@ -175,6 +175,7 @@ struct State {
   ScalarEvolution &SE;
   TargetLibraryInfo &TLI;
   SmallVector<FactOrCheck, 64> WorkList;
+  SmallPtrSet<Value *, 16> RangeFactsComputed;
 
   State(DominatorTree &DT, LoopInfo &LI, ScalarEvolution &SE,
         TargetLibraryInfo &TLI)
@@ -182,6 +183,10 @@ struct State {
 
   /// Process block \p BB and add known facts to work-list.
   void addInfoFor(BasicBlock &BB);
+
+  /// Add constant range facts for \p V at \p DTN. Deduplicates using
+  /// RangeFactsComputed.
+  void addConstantRangeFact(Value *V, DomTreeNode *DTN);
 
   /// Try to add facts for loop inductions (AddRecs) in EQ/NE compares
   /// controlling the loop header.
@@ -1126,27 +1131,26 @@ static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
   return true;
 }
 
-/// Compute ConstantRange bounds for \p V and push them as ConditionFact
-/// entries into \p WorkList. Trivial bounds are skipped.
-static void
-addConstantRangeFactsToWorkList(SmallVectorImpl<FactOrCheck> &WorkList,
-                                Value *V, DomTreeNode *DTN) {
+void State::addConstantRangeFact(Value *V, DomTreeNode *DTN) {
+  if (!RangeFactsComputed.insert(V).second)
+    return;
   Type *Ty = V->getType();
   if (!Ty->isIntegerTy() || Ty->getIntegerBitWidth() > 64)
     return;
 
-  ConstantRange UCR =
+  ConstantRange CR =
       computeConstantRange(V, /*ForSigned=*/false, /*UseInstrInfo=*/true);
-  if (!UCR.isFullSet() && !UCR.isEmptySet()) {
-    APInt UMin = UCR.getUnsignedMin();
-    APInt UMax = UCR.getUnsignedMax();
-    if (!UMin.isZero())
-      WorkList.push_back(FactOrCheck::getConditionFact(
-          DTN, CmpInst::ICMP_UGE, V, ConstantInt::get(Ty, UMin)));
-    if (!UMax.isAllOnes())
-      WorkList.push_back(FactOrCheck::getConditionFact(
-          DTN, CmpInst::ICMP_ULE, V, ConstantInt::get(Ty, UMax)));
-  }
+  if (CR.isFullSet() || CR.isEmptySet())
+    return;
+
+  APInt UMin = CR.getUnsignedMin();
+  APInt UMax = CR.getUnsignedMax();
+  if (!UMin.isZero())
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, CmpInst::ICMP_UGE, V, ConstantInt::get(Ty, UMin)));
+  if (!UMax.isAllOnes())
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, CmpInst::ICMP_ULE, V, ConstantInt::get(Ty, UMax)));
 }
 
 void State::addInfoFor(BasicBlock &BB) {
@@ -1164,6 +1168,19 @@ void State::addInfoFor(BasicBlock &BB) {
         if (!DTN)
           continue;
         WorkList.push_back(FactOrCheck::getCheck(DTN, &U));
+      }
+      // Target operands feeding into comparisons for computeConstantRange.
+      // Only explore two levels deep, and exclude eq and ne because of
+      // outsized compile time impact and marginal benefit.
+      if (!Cmp->isEquality()) {
+        for (Value *Op : Cmp->operands()) {
+          if (auto *OpI = dyn_cast<Instruction>(Op)) {
+            addConstantRangeFact(OpI, DT.getNode(OpI->getParent()));
+            for (Value *SubOp : OpI->operands())
+              if (auto *SubI = dyn_cast<Instruction>(SubOp))
+                addConstantRangeFact(SubI, DT.getNode(SubI->getParent()));
+          }
+        }
       }
       continue;
     }
@@ -1256,9 +1273,6 @@ void State::addInfoFor(BasicBlock &BB) {
           isGuaranteedNotToBePoison(BO))
         WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), BO));
     }
-
-    // Add range facts from computeConstantRange
-    addConstantRangeFactsToWorkList(WorkList, &I, DT.getNode(I.getParent()));
 
     GuaranteedToExecute &= isGuaranteedToTransferExecutionToSuccessor(&I);
   }
@@ -1874,7 +1888,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
   DomTreeNode *EntryDTN = DT.getNode(&F.getEntryBlock());
   if (EntryDTN) {
     for (Argument &Arg : F.args())
-      addConstantRangeFactsToWorkList(S.WorkList, &Arg, EntryDTN);
+      S.addConstantRangeFact(&Arg, EntryDTN);
   }
 
   // Collect conditions implied by branches and blocks with their
