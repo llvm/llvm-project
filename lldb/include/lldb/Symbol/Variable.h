@@ -34,7 +34,8 @@ public:
            SymbolContextScope *owner_scope, const RangeList &scope_range,
            Declaration *decl, const DWARFExpressionList &location,
            bool external, bool artificial, bool location_is_constant_data,
-           bool static_member = false, bool constant = false);
+           bool static_member = false, bool constant = false,
+           std::optional<uint64_t> tag_offset = std::nullopt);
 
   virtual ~Variable();
 
@@ -80,6 +81,10 @@ public:
   const DWARFExpressionList &LocationExpressionList() const {
     return m_location_list;
   }
+
+  uint64_t GetTagOffset() const { return m_tag_offset.value(); }
+
+  bool HasTagOffset() const { return m_tag_offset.has_value(); }
 
   // When given invalid address, it dumps all locations. Otherwise it only dumps
   // the location that contains this address.
@@ -148,6 +153,8 @@ protected:
   /// Indicates whether the variable is a constant, for example, Swift \c let
   /// binding.
   uint8_t m_constant : 1;
+  /// The value of DW_AT_LLVM_tag_offset if present.
+  std::optional<uint64_t> m_tag_offset;
 
 private:
   Variable(const Variable &rhs) = delete;
