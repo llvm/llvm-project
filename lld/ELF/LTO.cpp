@@ -46,9 +46,15 @@ static std::string getThinLTOOutputFile(Ctx &ctx, StringRef modulePath) {
 static std::shared_ptr<MemoryBuffer> getBBSectionsMemoryBuffer(Ctx &ctx) {
   if (ctx.arg.ltoBasicBlockSections.empty() ||
       ctx.arg.ltoBasicBlockSections == "all" ||
-      ctx.arg.ltoBasicBlockSections == "labels" ||
       ctx.arg.ltoBasicBlockSections == "none")
     return nullptr;
+
+  if (ctx.arg.ltoBasicBlockSections == "labels") {
+    Warn(ctx)
+        << "'--lto-basic-block-sections=labels' is deprecated; Please use "
+           "'--lto-basic-block-address-map' instead";
+    return nullptr;
+  }
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> mbOrErr =
       MemoryBuffer::getFile(ctx.arg.ltoBasicBlockSections.str());
@@ -82,9 +88,6 @@ static lto::Config createConfig(Ctx &ctx) {
         options.BBSections = BasicBlockSection::All;
       } else if (ctx.arg.ltoBasicBlockSections == "labels") {
         options.BBAddrMap = true;
-        Warn(ctx)
-            << "'--lto-basic-block-sections=labels' is deprecated; Please use "
-               "'--lto-basic-block-address-map' instead";
       } else if (ctx.arg.ltoBasicBlockSections == "none") {
         options.BBSections = BasicBlockSection::None;
       } else {
