@@ -128,6 +128,11 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
   EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::tanf(0.0f));
 }
 
+TEST(LlvmLibcSharedMathTest, AllInteger) {
+  EXPECT_EQ(3u, LIBC_NAMESPACE::shared::sqrti(10u));
+  EXPECT_EQ(65535u, LIBC_NAMESPACE::shared::sqrti(4294836225u));
+}
+
 TEST(LlvmLibcSharedMathTest, AllDouble) {
   EXPECT_FP_EQ(0x1.921fb54442d18p+0, LIBC_NAMESPACE::shared::acos(0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::asin(0.0));
