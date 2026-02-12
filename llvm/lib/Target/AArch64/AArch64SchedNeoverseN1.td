@@ -329,9 +329,6 @@ def : SchedAlias<WriteBrReg, N1Write_1c_1B>;
 // Branch and link, register
 def : InstRW<[N1Write_1c_1B_1I], (instrs BL, BLR)>;
 
-// Compare and branch
-def : InstRW<[N1Write_1c_1B], (instregex "^[CT]BN?Z[XW]$")>;
-
 
 // Arithmetic and Logical Instructions
 // -----------------------------------------------------------------------------
@@ -351,7 +348,7 @@ def : SchedAlias<WriteI, N1Write_1c_1I>;
 def : SchedAlias<WriteIEReg, N1Write_2c_1M>;
 
 // Arithmetic, LSL shift, shift <= 4
-// Arithmetic, flagset, LSL shift, shift <= 4ah
+// Arithmetic, flagset, LSL shift, shift <= 4
 // Arithmetic, LSR/ASR/ROR shift or LSL shift > 4
 def N1WriteISReg : SchedWriteVariant<[
                      SchedVar<IsCheapLSL,  [N1Write_1c_1I]>,
