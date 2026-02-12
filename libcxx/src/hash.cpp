@@ -32,7 +32,7 @@ const unsigned indices[] = {
 
 // These are the amount we increment by when checking for potential
 // primes in the  loop in __next_prime.
-const size_t increments[] = {
+const uint8_t increments[] = {
     0, 10, 2, 4, 2, 4, 6, 2, 6, 4, 2, 4, 6, 6, 2, 6, 4, 2, 6, 4, 6, 8, 4, 2,
     4, 2,  4, 8, 6, 4, 6, 2, 4, 6, 2, 6, 6, 4, 2, 4, 6, 2, 6, 4, 2, 4, 2, 10,
 };
