@@ -89,8 +89,8 @@ defm : VPatBinaryVL_VV<riscv_abdu_vl, "PseudoVABDU", ABDIntVectors>;
 defm : VPatUnaryV_V<"int_riscv_vabs", "PseudoVABS", AllIntegerVectors>;
 defm : VPatBinaryV_VV<"int_riscv_vabd", "PseudoVABD", ABDIntVectors>;
 defm : VPatBinaryV_VV<"int_riscv_vabdu", "PseudoVABDU", ABDIntVectors>;
-defm : VPatTernaryW_VV<"int_riscv_vwabdacc", "PseudoVWABDA", ABDAIntVectors>;
-defm : VPatTernaryW_VV<"int_riscv_vwabdaccu", "PseudoVWABDAU", ABDAIntVectors>;
+defm : VPatTernaryW_VV<"int_riscv_vwabda", "PseudoVWABDA", ABDAIntVectors>;
+defm : VPatTernaryW_VV<"int_riscv_vwabdau", "PseudoVWABDAU", ABDAIntVectors>;
 
 foreach vti = AllIntegerVectors in {
   def : Pat<(vti.Vector (abs (vti.Vector vti.RegClass:$rs2))),

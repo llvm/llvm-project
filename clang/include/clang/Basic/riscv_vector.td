@@ -2046,20 +2046,18 @@ let UnMaskedPolicyScheme = HasPassthruOperand in {
 
   // zvabd
   let RequiredFeatures = ["zvabd"] in {
-    defm vabs : RVVOutBuiltinSet<"vabs", "csil", [["v", "v", "vv"]]>;
-    defm vabd : RVVOutOp1BuiltinSet<"vabd", "cs", [["vv", "v", "vvv"]]>;
+    defm vabs : RVVOutBuiltinSet<"vabs", "csil", [["v", "Uv", "Uvv"]]>;
+    defm vabd : RVVOutOp1BuiltinSet<"vabd", "cs", [["vv", "Uv", "Uvvv"]]>;
     defm vabdu : RVVOutOp1BuiltinSet<"vabdu", "cs", [["vv", "Uv", "UvUvUv"]]>;
   }
 }
 
 let UnMaskedPolicyScheme = HasPolicyOperand in {
   let RequiredFeatures = ["zvabd"] in {
-    defm vwabdacc : RVVBuiltinSet<"vwabdacc", "cs",
-                                  [["vv", "w", "wwvv"]],
-                                  [-1, 1, 2]>;
-    defm vwabdaccu : RVVBuiltinSet<"vwabdaccu", "cs",
-                                   [["vv", "Uw", "UwUwUvUv"]],
-                                   [-1, 1, 2]>;
+    defm vwabda : RVVOutOp1Op2BuiltinSet<"vwabda", "cs",
+                                         [["vv", "Uw", "UwUwvv"]]>;
+    defm vwabdau : RVVOutOp1Op2BuiltinSet<"vwabdau", "cs",
+                                          [["vv", "Uw", "UwUwUvUv"]]>;
   }
 }
 

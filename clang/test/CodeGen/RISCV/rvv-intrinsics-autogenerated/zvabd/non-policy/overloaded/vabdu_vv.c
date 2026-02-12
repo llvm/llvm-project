@@ -136,4 +136,3 @@ vuint16m4_t test_vabdu_vv_u16m4(vuint16m4_t vs2, vuint16m4_t vs1, size_t vl) {
 vuint16m8_t test_vabdu_vv_u16m8(vuint16m8_t vs2, vuint16m8_t vs1, size_t vl) {
   return __riscv_vabdu(vs2, vs1, vl);
 }
-

@@ -14,11 +14,9 @@ define <vscale x 1 x i8> @vabs_v_i8mf8(<vscale x 1 x i8> %a) {
 ; RV64-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; RV64-NEXT:    vabs.v v8, v8
 ; RV64-NEXT:    ret
-  %res = call <vscale x 1 x i8> @llvm.riscv.vabs.vscalex1xi8(<vscale x 1 x i8> poison, <vscale x 1 x i8> %a, iXLen -1)
+  %res = call <vscale x 1 x i8> @llvm.riscv.vabs(<vscale x 1 x i8> poison, <vscale x 1 x i8> %a, iXLen -1)
   ret <vscale x 1 x i8> %res
 }
-
-declare <vscale x 1 x i8> @llvm.riscv.vabs.vscalex1xi8(<vscale x 1 x i8>, <vscale x 1 x i8>, iXLen)
 
 define <vscale x 2 x i8> @vabs_v_i8mf4(<vscale x 2 x i8> %a) {
 ; RV32-LABEL: vabs_v_i8mf4:
@@ -32,11 +30,9 @@ define <vscale x 2 x i8> @vabs_v_i8mf4(<vscale x 2 x i8> %a) {
 ; RV64-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
 ; RV64-NEXT:    vabs.v v8, v8
 ; RV64-NEXT:    ret
-  %res = call <vscale x 2 x i8> @llvm.riscv.vabs.vscalex2xi8(<vscale x 2 x i8> poison, <vscale x 2 x i8> %a, iXLen -1)
+  %res = call <vscale x 2 x i8> @llvm.riscv.vabs(<vscale x 2 x i8> poison, <vscale x 2 x i8> %a, iXLen -1)
   ret <vscale x 2 x i8> %res
 }
-
-declare <vscale x 2 x i8> @llvm.riscv.vabs.vscalex2xi8(<vscale x 2 x i8>, <vscale x 2 x i8>, iXLen)
 
 define <vscale x 4 x i8> @vabs_v_i8mf2(<vscale x 4 x i8> %a) {
 ; RV32-LABEL: vabs_v_i8mf2:
@@ -50,11 +46,9 @@ define <vscale x 4 x i8> @vabs_v_i8mf2(<vscale x 4 x i8> %a) {
 ; RV64-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; RV64-NEXT:    vabs.v v8, v8
 ; RV64-NEXT:    ret
-  %res = call <vscale x 4 x i8> @llvm.riscv.vabs.vscalex4xi8(<vscale x 4 x i8> poison, <vscale x 4 x i8> %a, iXLen -1)
+  %res = call <vscale x 4 x i8> @llvm.riscv.vabs(<vscale x 4 x i8> poison, <vscale x 4 x i8> %a, iXLen -1)
   ret <vscale x 4 x i8> %res
 }
-
-declare <vscale x 4 x i8> @llvm.riscv.vabs.vscalex4xi8(<vscale x 4 x i8>, <vscale x 4 x i8>, iXLen)
 
 define <vscale x 8 x i8> @vabs_v_i8m1(<vscale x 8 x i8> %a) {
 ; RV32-LABEL: vabs_v_i8m1:
@@ -68,11 +62,9 @@ define <vscale x 8 x i8> @vabs_v_i8m1(<vscale x 8 x i8> %a) {
 ; RV64-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; RV64-NEXT:    vabs.v v8, v8
 ; RV64-NEXT:    ret
-  %res = call <vscale x 8 x i8> @llvm.riscv.vabs.vscalex8xi8(<vscale x 8 x i8> poison, <vscale x 8 x i8> %a, iXLen -1)
+  %res = call <vscale x 8 x i8> @llvm.riscv.vabs(<vscale x 8 x i8> poison, <vscale x 8 x i8> %a, iXLen -1)
   ret <vscale x 8 x i8> %res
 }
-
-declare <vscale x 8 x i8> @llvm.riscv.vabs.vscalex8xi8(<vscale x 8 x i8>, <vscale x 8 x i8>, iXLen)
 
 define <vscale x 16 x i8> @vabs_v_i8m2(<vscale x 16 x i8> %a) {
 ; RV32-LABEL: vabs_v_i8m2:
@@ -86,11 +78,9 @@ define <vscale x 16 x i8> @vabs_v_i8m2(<vscale x 16 x i8> %a) {
 ; RV64-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; RV64-NEXT:    vabs.v v8, v8
 ; RV64-NEXT:    ret
-  %res = call <vscale x 16 x i8> @llvm.riscv.vabs.vscalex16xi8(<vscale x 16 x i8> poison, <vscale x 16 x i8> %a, iXLen -1)
+  %res = call <vscale x 16 x i8> @llvm.riscv.vabs(<vscale x 16 x i8> poison, <vscale x 16 x i8> %a, iXLen -1)
   ret <vscale x 16 x i8> %res
 }
-
-declare <vscale x 16 x i8> @llvm.riscv.vabs.vscalex16xi8(<vscale x 16 x i8>, <vscale x 16 x i8>, iXLen)
 
 define <vscale x 32 x i8> @vabs_v_i8m4(<vscale x 32 x i8> %a) {
 ; RV32-LABEL: vabs_v_i8m4:
@@ -104,11 +94,9 @@ define <vscale x 32 x i8> @vabs_v_i8m4(<vscale x 32 x i8> %a) {
 ; RV64-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; RV64-NEXT:    vabs.v v8, v8
 ; RV64-NEXT:    ret
-  %res = call <vscale x 32 x i8> @llvm.riscv.vabs.vscalex32xi8(<vscale x 32 x i8> poison, <vscale x 32 x i8> %a, iXLen -1)
+  %res = call <vscale x 32 x i8> @llvm.riscv.vabs(<vscale x 32 x i8> poison, <vscale x 32 x i8> %a, iXLen -1)
   ret <vscale x 32 x i8> %res
 }
-
-declare <vscale x 32 x i8> @llvm.riscv.vabs.vscalex32xi8(<vscale x 32 x i8>, <vscale x 32 x i8>, iXLen)
 
 define <vscale x 64 x i8> @vabs_v_i8m8(<vscale x 64 x i8> %a) {
 ; RV32-LABEL: vabs_v_i8m8:
@@ -122,11 +110,9 @@ define <vscale x 64 x i8> @vabs_v_i8m8(<vscale x 64 x i8> %a) {
 ; RV64-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; RV64-NEXT:    vabs.v v8, v8
 ; RV64-NEXT:    ret
-  %res = call <vscale x 64 x i8> @llvm.riscv.vabs.vscalex64xi8(<vscale x 64 x i8> poison, <vscale x 64 x i8> %a, iXLen -1)
+  %res = call <vscale x 64 x i8> @llvm.riscv.vabs(<vscale x 64 x i8> poison, <vscale x 64 x i8> %a, iXLen -1)
   ret <vscale x 64 x i8> %res
 }
-
-declare <vscale x 64 x i8> @llvm.riscv.vabs.vscalex64xi8(<vscale x 64 x i8>, <vscale x 64 x i8>, iXLen)
 
 define <vscale x 1 x i16> @vabs_v_i16mf4(<vscale x 1 x i16> %a) {
 ; RV32-LABEL: vabs_v_i16mf4:
@@ -140,11 +126,9 @@ define <vscale x 1 x i16> @vabs_v_i16mf4(<vscale x 1 x i16> %a) {
 ; RV64-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; RV64-NEXT:    vabs.v v8, v8
 ; RV64-NEXT:    ret
-  %res = call <vscale x 1 x i16> @llvm.riscv.vabs.vscalex1xi16(<vscale x 1 x i16> poison, <vscale x 1 x i16> %a, iXLen -1)
+  %res = call <vscale x 1 x i16> @llvm.riscv.vabs(<vscale x 1 x i16> poison, <vscale x 1 x i16> %a, iXLen -1)
   ret <vscale x 1 x i16> %res
 }
-
-declare <vscale x 1 x i16> @llvm.riscv.vabs.vscalex1xi16(<vscale x 1 x i16>, <vscale x 1 x i16>, iXLen)
 
 define <vscale x 2 x i16> @vabs_v_i16mf2(<vscale x 2 x i16> %a) {
 ; RV32-LABEL: vabs_v_i16mf2:
@@ -158,11 +142,9 @@ define <vscale x 2 x i16> @vabs_v_i16mf2(<vscale x 2 x i16> %a) {
 ; RV64-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; RV64-NEXT:    vabs.v v8, v8
 ; RV64-NEXT:    ret
-  %res = call <vscale x 2 x i16> @llvm.riscv.vabs.vscalex2xi16(<vscale x 2 x i16> poison, <vscale x 2 x i16> %a, iXLen -1)
+  %res = call <vscale x 2 x i16> @llvm.riscv.vabs(<vscale x 2 x i16> poison, <vscale x 2 x i16> %a, iXLen -1)
   ret <vscale x 2 x i16> %res
 }
-
-declare <vscale x 2 x i16> @llvm.riscv.vabs.vscalex2xi16(<vscale x 2 x i16>, <vscale x 2 x i16>, iXLen)
 
 define <vscale x 4 x i16> @vabs_v_i16m1(<vscale x 4 x i16> %a) {
 ; RV32-LABEL: vabs_v_i16m1:
@@ -176,11 +158,9 @@ define <vscale x 4 x i16> @vabs_v_i16m1(<vscale x 4 x i16> %a) {
 ; RV64-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; RV64-NEXT:    vabs.v v8, v8
 ; RV64-NEXT:    ret
-  %res = call <vscale x 4 x i16> @llvm.riscv.vabs.vscalex4xi16(<vscale x 4 x i16> poison, <vscale x 4 x i16> %a, iXLen -1)
+  %res = call <vscale x 4 x i16> @llvm.riscv.vabs(<vscale x 4 x i16> poison, <vscale x 4 x i16> %a, iXLen -1)
   ret <vscale x 4 x i16> %res
 }
-
-declare <vscale x 4 x i16> @llvm.riscv.vabs.vscalex4xi16(<vscale x 4 x i16>, <vscale x 4 x i16>, iXLen)
 
 define <vscale x 8 x i16> @vabs_v_i16m2(<vscale x 8 x i16> %a) {
 ; RV32-LABEL: vabs_v_i16m2:
@@ -194,11 +174,9 @@ define <vscale x 8 x i16> @vabs_v_i16m2(<vscale x 8 x i16> %a) {
 ; RV64-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; RV64-NEXT:    vabs.v v8, v8
 ; RV64-NEXT:    ret
-  %res = call <vscale x 8 x i16> @llvm.riscv.vabs.vscalex8xi16(<vscale x 8 x i16> poison, <vscale x 8 x i16> %a, iXLen -1)
+  %res = call <vscale x 8 x i16> @llvm.riscv.vabs(<vscale x 8 x i16> poison, <vscale x 8 x i16> %a, iXLen -1)
   ret <vscale x 8 x i16> %res
 }
-
-declare <vscale x 8 x i16> @llvm.riscv.vabs.vscalex8xi16(<vscale x 8 x i16>, <vscale x 8 x i16>, iXLen)
 
 define <vscale x 16 x i16> @vabs_v_i16m4(<vscale x 16 x i16> %a) {
 ; RV32-LABEL: vabs_v_i16m4:
@@ -212,11 +190,9 @@ define <vscale x 16 x i16> @vabs_v_i16m4(<vscale x 16 x i16> %a) {
 ; RV64-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; RV64-NEXT:    vabs.v v8, v8
 ; RV64-NEXT:    ret
-  %res = call <vscale x 16 x i16> @llvm.riscv.vabs.vscalex16xi16(<vscale x 16 x i16> poison, <vscale x 16 x i16> %a, iXLen -1)
+  %res = call <vscale x 16 x i16> @llvm.riscv.vabs(<vscale x 16 x i16> poison, <vscale x 16 x i16> %a, iXLen -1)
   ret <vscale x 16 x i16> %res
 }
-
-declare <vscale x 16 x i16> @llvm.riscv.vabs.vscalex16xi16(<vscale x 16 x i16>, <vscale x 16 x i16>, iXLen)
 
 define <vscale x 32 x i16> @vabs_v_i16m8(<vscale x 32 x i16> %a) {
 ; RV32-LABEL: vabs_v_i16m8:
@@ -230,11 +206,9 @@ define <vscale x 32 x i16> @vabs_v_i16m8(<vscale x 32 x i16> %a) {
 ; RV64-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
 ; RV64-NEXT:    vabs.v v8, v8
 ; RV64-NEXT:    ret
-  %res = call <vscale x 32 x i16> @llvm.riscv.vabs.vscalex32xi16(<vscale x 32 x i16> poison, <vscale x 32 x i16> %a, iXLen -1)
+  %res = call <vscale x 32 x i16> @llvm.riscv.vabs(<vscale x 32 x i16> poison, <vscale x 32 x i16> %a, iXLen -1)
   ret <vscale x 32 x i16> %res
 }
-
-declare <vscale x 32 x i16> @llvm.riscv.vabs.vscalex32xi16(<vscale x 32 x i16>, <vscale x 32 x i16>, iXLen)
 
 define <vscale x 1 x i32> @vabs_v_i32mf2(<vscale x 1 x i32> %a) {
 ; RV32-LABEL: vabs_v_i32mf2:
@@ -248,11 +222,9 @@ define <vscale x 1 x i32> @vabs_v_i32mf2(<vscale x 1 x i32> %a) {
 ; RV64-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; RV64-NEXT:    vabs.v v8, v8
 ; RV64-NEXT:    ret
-  %res = call <vscale x 1 x i32> @llvm.riscv.vabs.vscalex1xi32(<vscale x 1 x i32> poison, <vscale x 1 x i32> %a, iXLen -1)
+  %res = call <vscale x 1 x i32> @llvm.riscv.vabs(<vscale x 1 x i32> poison, <vscale x 1 x i32> %a, iXLen -1)
   ret <vscale x 1 x i32> %res
 }
-
-declare <vscale x 1 x i32> @llvm.riscv.vabs.vscalex1xi32(<vscale x 1 x i32>, <vscale x 1 x i32>, iXLen)
 
 define <vscale x 2 x i32> @vabs_v_i32m1(<vscale x 2 x i32> %a) {
 ; RV32-LABEL: vabs_v_i32m1:
@@ -266,11 +238,9 @@ define <vscale x 2 x i32> @vabs_v_i32m1(<vscale x 2 x i32> %a) {
 ; RV64-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; RV64-NEXT:    vabs.v v8, v8
 ; RV64-NEXT:    ret
-  %res = call <vscale x 2 x i32> @llvm.riscv.vabs.vscalex2xi32(<vscale x 2 x i32> poison, <vscale x 2 x i32> %a, iXLen -1)
+  %res = call <vscale x 2 x i32> @llvm.riscv.vabs(<vscale x 2 x i32> poison, <vscale x 2 x i32> %a, iXLen -1)
   ret <vscale x 2 x i32> %res
 }
-
-declare <vscale x 2 x i32> @llvm.riscv.vabs.vscalex2xi32(<vscale x 2 x i32>, <vscale x 2 x i32>, iXLen)
 
 define <vscale x 4 x i32> @vabs_v_i32m2(<vscale x 4 x i32> %a) {
 ; RV32-LABEL: vabs_v_i32m2:
@@ -284,11 +254,9 @@ define <vscale x 4 x i32> @vabs_v_i32m2(<vscale x 4 x i32> %a) {
 ; RV64-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; RV64-NEXT:    vabs.v v8, v8
 ; RV64-NEXT:    ret
-  %res = call <vscale x 4 x i32> @llvm.riscv.vabs.vscalex4xi32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen -1)
+  %res = call <vscale x 4 x i32> @llvm.riscv.vabs(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen -1)
   ret <vscale x 4 x i32> %res
 }
-
-declare <vscale x 4 x i32> @llvm.riscv.vabs.vscalex4xi32(<vscale x 4 x i32>, <vscale x 4 x i32>, iXLen)
 
 define <vscale x 8 x i32> @vabs_v_i32m4(<vscale x 8 x i32> %a) {
 ; RV32-LABEL: vabs_v_i32m4:
@@ -302,11 +270,9 @@ define <vscale x 8 x i32> @vabs_v_i32m4(<vscale x 8 x i32> %a) {
 ; RV64-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; RV64-NEXT:    vabs.v v8, v8
 ; RV64-NEXT:    ret
-  %res = call <vscale x 8 x i32> @llvm.riscv.vabs.vscalex8xi32(<vscale x 8 x i32> poison, <vscale x 8 x i32> %a, iXLen -1)
+  %res = call <vscale x 8 x i32> @llvm.riscv.vabs(<vscale x 8 x i32> poison, <vscale x 8 x i32> %a, iXLen -1)
   ret <vscale x 8 x i32> %res
 }
-
-declare <vscale x 8 x i32> @llvm.riscv.vabs.vscalex8xi32(<vscale x 8 x i32>, <vscale x 8 x i32>, iXLen)
 
 define <vscale x 16 x i32> @vabs_v_i32m8(<vscale x 16 x i32> %a) {
 ; RV32-LABEL: vabs_v_i32m8:
@@ -320,11 +286,9 @@ define <vscale x 16 x i32> @vabs_v_i32m8(<vscale x 16 x i32> %a) {
 ; RV64-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; RV64-NEXT:    vabs.v v8, v8
 ; RV64-NEXT:    ret
-  %res = call <vscale x 16 x i32> @llvm.riscv.vabs.vscalex16xi32(<vscale x 16 x i32> poison, <vscale x 16 x i32> %a, iXLen -1)
+  %res = call <vscale x 16 x i32> @llvm.riscv.vabs(<vscale x 16 x i32> poison, <vscale x 16 x i32> %a, iXLen -1)
   ret <vscale x 16 x i32> %res
 }
-
-declare <vscale x 16 x i32> @llvm.riscv.vabs.vscalex16xi32(<vscale x 16 x i32>, <vscale x 16 x i32>, iXLen)
 
 define <vscale x 1 x i64> @vabs_v_i64m1(<vscale x 1 x i64> %a) {
 ; RV32-LABEL: vabs_v_i64m1:
@@ -338,11 +302,9 @@ define <vscale x 1 x i64> @vabs_v_i64m1(<vscale x 1 x i64> %a) {
 ; RV64-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; RV64-NEXT:    vabs.v v8, v8
 ; RV64-NEXT:    ret
-  %res = call <vscale x 1 x i64> @llvm.riscv.vabs.vscalex1xi64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %a, iXLen -1)
+  %res = call <vscale x 1 x i64> @llvm.riscv.vabs(<vscale x 1 x i64> poison, <vscale x 1 x i64> %a, iXLen -1)
   ret <vscale x 1 x i64> %res
 }
-
-declare <vscale x 1 x i64> @llvm.riscv.vabs.vscalex1xi64(<vscale x 1 x i64>, <vscale x 1 x i64>, iXLen)
 
 define <vscale x 2 x i64> @vabs_v_i64m2(<vscale x 2 x i64> %a) {
 ; RV32-LABEL: vabs_v_i64m2:
@@ -356,11 +318,9 @@ define <vscale x 2 x i64> @vabs_v_i64m2(<vscale x 2 x i64> %a) {
 ; RV64-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
 ; RV64-NEXT:    vabs.v v8, v8
 ; RV64-NEXT:    ret
-  %res = call <vscale x 2 x i64> @llvm.riscv.vabs.vscalex2xi64(<vscale x 2 x i64> poison, <vscale x 2 x i64> %a, iXLen -1)
+  %res = call <vscale x 2 x i64> @llvm.riscv.vabs(<vscale x 2 x i64> poison, <vscale x 2 x i64> %a, iXLen -1)
   ret <vscale x 2 x i64> %res
 }
-
-declare <vscale x 2 x i64> @llvm.riscv.vabs.vscalex2xi64(<vscale x 2 x i64>, <vscale x 2 x i64>, iXLen)
 
 define <vscale x 4 x i64> @vabs_v_i64m4(<vscale x 4 x i64> %a) {
 ; RV32-LABEL: vabs_v_i64m4:
@@ -374,11 +334,9 @@ define <vscale x 4 x i64> @vabs_v_i64m4(<vscale x 4 x i64> %a) {
 ; RV64-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
 ; RV64-NEXT:    vabs.v v8, v8
 ; RV64-NEXT:    ret
-  %res = call <vscale x 4 x i64> @llvm.riscv.vabs.vscalex4xi64(<vscale x 4 x i64> poison, <vscale x 4 x i64> %a, iXLen -1)
+  %res = call <vscale x 4 x i64> @llvm.riscv.vabs(<vscale x 4 x i64> poison, <vscale x 4 x i64> %a, iXLen -1)
   ret <vscale x 4 x i64> %res
 }
-
-declare <vscale x 4 x i64> @llvm.riscv.vabs.vscalex4xi64(<vscale x 4 x i64>, <vscale x 4 x i64>, iXLen)
 
 define <vscale x 8 x i64> @vabs_v_i64m8(<vscale x 8 x i64> %a) {
 ; RV32-LABEL: vabs_v_i64m8:
@@ -392,9 +350,6 @@ define <vscale x 8 x i64> @vabs_v_i64m8(<vscale x 8 x i64> %a) {
 ; RV64-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vabs.v v8, v8
 ; RV64-NEXT:    ret
-  %res = call <vscale x 8 x i64> @llvm.riscv.vabs.vscalex8xi64(<vscale x 8 x i64> poison, <vscale x 8 x i64> %a, iXLen -1)
+  %res = call <vscale x 8 x i64> @llvm.riscv.vabs(<vscale x 8 x i64> poison, <vscale x 8 x i64> %a, iXLen -1)
   ret <vscale x 8 x i64> %res
 }
-
-declare <vscale x 8 x i64> @llvm.riscv.vabs.vscalex8xi64(<vscale x 8 x i64>, <vscale x 8 x i64>, iXLen)
-
