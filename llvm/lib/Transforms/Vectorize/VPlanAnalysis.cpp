@@ -504,6 +504,8 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
   auto MaxType = [](Type *CurMax, Type *T) {
     if (!CurMax)
       return T;
+    assert(CurMax->isScalableTy() == T->isScalableTy() &&
+           "Expected either both or neither to be scalable");
     if (TypeSize::isKnownGT(T->getPrimitiveSizeInBits(),
                             CurMax->getPrimitiveSizeInBits()))
       return T;
