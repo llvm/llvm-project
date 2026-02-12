@@ -7902,6 +7902,19 @@ def : Pat<(i64 (and (i64 (anyext (i32 (vector_extract (v8i16 V128:$Rn),
 
 defm INS : SIMDIns;
 
+// Patterns for v2i64/v1i64 clmul->pmull
+let Predicates = [HasAES] in {
+  def : Pat<(clmul v1i64:$Rn, v1i64:$Rm),
+            (v1i64 (EXTRACT_SUBREG (v2i64 (PMULLv1i64 $Rn, $Rm)),
+                                           dsub))>;
+  def : Pat<(clmul v2i64:$Rn, v2i64:$Rm),
+            (v2i64 (INSvi64lane (v2i64 (PMULLv1i64 (v1i64 (EXTRACT_SUBREG $Rn, dsub)),
+                                                   (v1i64 (EXTRACT_SUBREG $Rm, dsub)))),
+                                (i64 1),
+                                (v2i64 (PMULLv2i64 $Rn, $Rm)),
+                                (i64 0)))>;
+}
+
 def : Pat<(v16i8 (vec_ins_or_scal_vec GPR32:$Rn)),
           (SUBREG_TO_REG (f32 (COPY_TO_REGCLASS GPR32:$Rn, FPR32)), ssub)>;
 def : Pat<(v8i8 (vec_ins_or_scal_vec GPR32:$Rn)),
