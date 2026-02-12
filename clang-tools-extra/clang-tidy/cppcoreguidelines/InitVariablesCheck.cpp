@@ -95,7 +95,7 @@ void InitVariablesCheck::check(const MatchFinder::MatchResult &Result) {
   else if (TypePtr->isFloatingType()) {
     InitializationString = " = NAN";
     AddMathInclude = true;
-  } else if (TypePtr->isAnyPointerType()) {
+  } else if (TypePtr->isAnyPointerType() || TypePtr->isMemberPointerType()) {
     if (getLangOpts().CPlusPlus11)
       InitializationString = " = nullptr";
     else
