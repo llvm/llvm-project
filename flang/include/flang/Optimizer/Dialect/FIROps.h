@@ -51,12 +51,18 @@ static constexpr llvm::StringRef getNormalizedLowerBoundAttrName() {
 struct DebuggingResource
     : public mlir::SideEffects::Resource::Base<DebuggingResource> {
   mlir::StringRef getName() final { return "DebuggingResource"; }
+  mlir::SideEffects::MemoryRegion *getMemoryRegion() const override {
+    return mlir::SideEffects::NonAddressableMemory::get();
+  }
 };
 
 /// Model operations which read from/write to volatile memory
 struct VolatileMemoryResource
     : public mlir::SideEffects::Resource::Base<VolatileMemoryResource> {
   mlir::StringRef getName() final { return "VolatileMemoryResource"; }
+  mlir::SideEffects::MemoryRegion *getMemoryRegion() const override {
+    return mlir::SideEffects::NonAddressableMemory::get();
+  }
 };
 
 class CoordinateIndicesAdaptor;

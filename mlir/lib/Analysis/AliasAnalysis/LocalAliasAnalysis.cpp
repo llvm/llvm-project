@@ -525,7 +525,17 @@ ModRefResult LocalAliasAnalysis::getModRef(Operation *op, Value location) {
                  : aliasResult.isNo() ? "NoAlias"
                                       : "MayAlias");
     } else {
-      LDBG() << "    No effect value, assuming MayAlias";
+      // If the effect's resource is in a memory region disjoint from
+      // AddressableMemory, it cannot alias a location accessible
+      // through a pointer.
+      auto *effectRegion = effect.getResource()->getMemoryRegion();
+      if (effectRegion->isDisjointFrom(SideEffects::AddressableMemory::get())) {
+        LDBG() << "    Effect on non-addressable region '"
+               << effectRegion->getName() << "', skipping (NoAlias)";
+        aliasResult = AliasResult::NoAlias;
+      } else {
+        LDBG() << "    No effect value, assuming MayAlias";
+      }
     }
 
     // If we don't alias, ignore this effect.

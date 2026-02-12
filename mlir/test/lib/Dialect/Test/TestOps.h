@@ -56,6 +56,55 @@ struct TestResource : public mlir::SideEffects::Resource::Base<TestResource> {
   llvm::StringRef getName() final { return "<Test>"; }
 };
 
+/// A test resource in NonAddressableMemory (disjoint from AddressableMemory).
+struct TestNonAddressableResource
+    : public mlir::SideEffects::Resource::Base<TestNonAddressableResource> {
+  llvm::StringRef getName() final { return "<TestNonAddressable>"; }
+  mlir::SideEffects::MemoryRegion *getMemoryRegion() const override {
+    return mlir::SideEffects::NonAddressableMemory::get();
+  }
+};
+
+/// Two disjoint sub-regions under NonAddressableMemory for testing sibling
+/// disjointness within non-addressable memory.
+struct TestNonAddressableSubRegionA
+    : public mlir::SideEffects::MemoryRegion::Base<
+          TestNonAddressableSubRegionA> {
+  llvm::StringRef getName() const override {
+    return "TestNonAddressableSubRegionA";
+  }
+  mlir::SideEffects::MemoryRegion *getParent() const override {
+    return mlir::SideEffects::NonAddressableMemory::get();
+  }
+};
+
+struct TestNonAddressableSubRegionB
+    : public mlir::SideEffects::MemoryRegion::Base<
+          TestNonAddressableSubRegionB> {
+  llvm::StringRef getName() const override {
+    return "TestNonAddressableSubRegionB";
+  }
+  mlir::SideEffects::MemoryRegion *getParent() const override {
+    return mlir::SideEffects::NonAddressableMemory::get();
+  }
+};
+
+struct TestNonAddressableResourceA
+    : public mlir::SideEffects::Resource::Base<TestNonAddressableResourceA> {
+  llvm::StringRef getName() final { return "<TestNonAddressableA>"; }
+  mlir::SideEffects::MemoryRegion *getMemoryRegion() const override {
+    return TestNonAddressableSubRegionA::get();
+  }
+};
+
+struct TestNonAddressableResourceB
+    : public mlir::SideEffects::Resource::Base<TestNonAddressableResourceB> {
+  llvm::StringRef getName() final { return "<TestNonAddressableB>"; }
+  mlir::SideEffects::MemoryRegion *getMemoryRegion() const override {
+    return TestNonAddressableSubRegionB::get();
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // PropertiesWithCustomPrint
 //===----------------------------------------------------------------------===//

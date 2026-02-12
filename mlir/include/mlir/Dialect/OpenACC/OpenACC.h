@@ -212,16 +212,25 @@ static constexpr StringLiteral getCombinedConstructsAttrName() {
 struct RuntimeCounters
     : public mlir::SideEffects::Resource::Base<RuntimeCounters> {
   mlir::StringRef getName() final { return "AccRuntimeCounters"; }
+  mlir::SideEffects::MemoryRegion *getMemoryRegion() const override {
+    return mlir::SideEffects::NonAddressableMemory::get();
+  }
 };
 
 struct ConstructResource
     : public mlir::SideEffects::Resource::Base<ConstructResource> {
   mlir::StringRef getName() final { return "AccConstructResource"; }
+  mlir::SideEffects::MemoryRegion *getMemoryRegion() const override {
+    return mlir::SideEffects::NonAddressableMemory::get();
+  }
 };
 
 struct CurrentDeviceIdResource
     : public mlir::SideEffects::Resource::Base<CurrentDeviceIdResource> {
   mlir::StringRef getName() final { return "AccCurrentDeviceIdResource"; }
+  mlir::SideEffects::MemoryRegion *getMemoryRegion() const override {
+    return mlir::SideEffects::NonAddressableMemory::get();
+  }
 };
 
 } // namespace acc

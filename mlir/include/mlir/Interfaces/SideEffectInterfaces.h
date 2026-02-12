@@ -71,6 +71,91 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
+// Memory Regions
+//===----------------------------------------------------------------------===//
+
+/// Represents a memory region in a hierarchy. Two regions are disjoint if
+/// neither is an ancestor of the other, meaning operations scoped to disjoint
+/// regions cannot conflict.
+class MemoryRegion {
+public:
+  virtual ~MemoryRegion() = default;
+
+  /// This base class is used for derived regions that are non-parametric.
+  template <typename DerivedRegion, typename BaseRegion = MemoryRegion>
+  class Base : public BaseRegion {
+  public:
+    using BaseT = Base<DerivedRegion>;
+
+    /// Returns a unique singleton instance for the given region class.
+    static DerivedRegion *get() {
+      static DerivedRegion instance;
+      return &instance;
+    }
+
+    /// Return the unique identifier for this region class.
+    static TypeID getRegionID() { return TypeID::get<DerivedRegion>(); }
+
+    /// 'classof' used to support llvm style cast functionality.
+    static bool classof(const MemoryRegion *region) {
+      return region->getRegionID() == BaseT::getRegionID();
+    }
+
+  protected:
+    Base() : BaseRegion(BaseT::getRegionID()) {}
+  };
+
+  /// Return the unique identifier for this region.
+  TypeID getRegionID() const { return id; }
+
+  /// Return a human-readable name for this region.
+  virtual StringRef getName() const = 0;
+
+  /// Return the parent region in the hierarchy, or nullptr for the root.
+  virtual MemoryRegion *getParent() const { return nullptr; }
+
+  /// Returns true if this region is a subregion of (or equal to) another.
+  bool isSubregionOf(const MemoryRegion *other) const {
+    for (const MemoryRegion *r = this; r != nullptr; r = r->getParent())
+      if (r->getRegionID() == other->getRegionID())
+        return true;
+    return false;
+  }
+
+  /// Returns true if this region is disjoint from another region.
+  /// Two regions are disjoint if neither is an ancestor of the other.
+  bool isDisjointFrom(const MemoryRegion *other) const {
+    return !isSubregionOf(other) && !other->isSubregionOf(this);
+  }
+
+protected:
+  MemoryRegion(TypeID id) : id(id) {}
+
+private:
+  TypeID id;
+};
+
+/// Root of the memory region hierarchy. All other regions are subregions of
+/// this. An effect on AllMemory may conflict with any other effect.
+struct AllMemory : public MemoryRegion::Base<AllMemory> {
+  StringRef getName() const override { return "AllMemory"; }
+};
+
+/// Memory that can be accessed via pointers/Values. This is the default region
+/// for resources that don't specify one (conservative assumption).
+struct AddressableMemory : public MemoryRegion::Base<AddressableMemory> {
+  StringRef getName() const override { return "AddressableMemory"; }
+  MemoryRegion *getParent() const override { return AllMemory::get(); }
+};
+
+/// Memory that cannot be accessed via any pointer. Effects on
+/// NonAddressableMemory are disjoint from effects on AddressableMemory.
+struct NonAddressableMemory : public MemoryRegion::Base<NonAddressableMemory> {
+  StringRef getName() const override { return "NonAddressableMemory"; }
+  MemoryRegion *getParent() const override { return AllMemory::get(); }
+};
+
+//===----------------------------------------------------------------------===//
 // Resources
 //===----------------------------------------------------------------------===//
 
@@ -109,6 +194,13 @@ public:
 
   /// Return a string name of the resource.
   virtual StringRef getName() = 0;
+
+  /// Return the memory region this resource belongs to. Defaults to
+  /// AddressableMemory (conservative: assumes pointer-based access is
+  /// possible). Override in derived resources to specify a different region.
+  virtual MemoryRegion *getMemoryRegion() const {
+    return AddressableMemory::get();
+  }
 
 protected:
   Resource(TypeID id) : id(id) {}
@@ -152,7 +244,9 @@ public:
   EffectInstance(EffectT *effect, T value,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(value), stage(0),
-        effectOnFullRegion(false) {}
+        effectOnFullRegion(false) {
+    checkNonAddressableValue();
+  }
   template <typename T,
             std::enable_if_t<
                 llvm::is_one_of<T, OpOperand *, OpResult, BlockArgument>::value,
@@ -160,7 +254,9 @@ public:
   EffectInstance(EffectT *effect, T value, int stage, bool effectOnFullRegion,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(value), stage(stage),
-        effectOnFullRegion(effectOnFullRegion) {}
+        effectOnFullRegion(effectOnFullRegion) {
+    checkNonAddressableValue();
+  }
   EffectInstance(EffectT *effect, SymbolRefAttr symbol,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(symbol), stage(0),
@@ -186,7 +282,9 @@ public:
   EffectInstance(EffectT *effect, T value, Attribute parameters,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(value),
-        parameters(parameters), stage(0), effectOnFullRegion(false) {}
+        parameters(parameters), stage(0), effectOnFullRegion(false) {
+    checkNonAddressableValue();
+  }
   template <typename T,
             std::enable_if_t<
                 llvm::is_one_of<T, OpOperand *, OpResult, BlockArgument>::value,
@@ -196,7 +294,9 @@ public:
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(value),
         parameters(parameters), stage(stage),
-        effectOnFullRegion(effectOnFullRegion) {}
+        effectOnFullRegion(effectOnFullRegion) {
+    checkNonAddressableValue();
+  }
   EffectInstance(EffectT *effect, SymbolRefAttr symbol, Attribute parameters,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(symbol),
@@ -256,6 +356,15 @@ public:
   bool getEffectOnFullRegion() const { return effectOnFullRegion; }
 
 private:
+  /// Check that a Value is not associated with a non-addressable resource.
+  void checkNonAddressableValue() {
+    if (resource &&
+        resource->getMemoryRegion()->isSubregionOf(NonAddressableMemory::get()))
+      llvm::report_fatal_error("EffectInstance: non-addressable resource '" +
+                               resource->getName() +
+                               "' cannot have an associated Value");
+  }
+
   /// The specific effect being applied.
   EffectT *effect;
 
