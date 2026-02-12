@@ -51,8 +51,9 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.intersphinx",
     "lldb_setting",
-    "build_include",
 ]
+if "LLDB_BUILD_DIR" in os.environ:
+    extensions.append("build_include")
 
 # When building man pages, we do not use the markdown pages,
 # So, we can continue without the myst_parser dependencies.

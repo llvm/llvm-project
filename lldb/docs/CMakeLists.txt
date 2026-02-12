@@ -64,7 +64,8 @@ if (LLDB_ENABLE_PYTHON AND SPHINX_FOUND)
     # the path to the module via the LLDB_SWIG_MODULE environment variable.
     add_sphinx_target(html lldb
       ENV_VARS
-        "LLDB_SWIG_MODULE=${CMAKE_CURRENT_BINARY_DIR} LLDB_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}"
+        "LLDB_SWIG_MODULE=${CMAKE_CURRENT_BINARY_DIR}"
+        "LLDB_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}"
       )
     # Sphinx does not reliably update the custom CSS files, so force
     # a clean rebuild of the documentation every time.
