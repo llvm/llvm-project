@@ -1508,7 +1508,7 @@ def riscv_nsra : RVSDNode<"NSRA", SDT_RISCVNarrowingShift>;
 def shiftMask64 : ComplexPattern<i32, 1, "selectShiftMask64", [], [], 0>;
 
 // Build a GPRPair from two GPR registers for narrowing shift instructions.
-def BuildPairGPRPair : OutPatFrag<(ops node:$lo, node:$hi),
+def BuildGPRPair : OutPatFrag<(ops node:$lo, node:$hi),
   (REG_SEQUENCE GPRPair, $lo, sub_gpr_even, $hi, sub_gpr_odd)>;
 
 // Averaging subtraction, (a - b) >> 2
@@ -1736,14 +1736,14 @@ let Predicates = [HasStdExtP, IsRV32] in {
   // Narrowing shift patterns (NSRL/NSRA)
   // Immediate shift amount patterns
   def : Pat<(i32 (riscv_nsrl GPR:$lo, GPR:$hi, uimm6:$shamt)),
-            (NSRLI (BuildPairGPRPair GPR:$lo, GPR:$hi), uimm6:$shamt)>;
+            (NSRLI (BuildGPRPair GPR:$lo, GPR:$hi), uimm6:$shamt)>;
   def : Pat<(i32 (riscv_nsra GPR:$lo, GPR:$hi, uimm6:$shamt)),
-            (NSRAI (BuildPairGPRPair GPR:$lo, GPR:$hi), uimm6:$shamt)>;
+            (NSRAI (BuildGPRPair GPR:$lo, GPR:$hi), uimm6:$shamt)>;
   // Register shift amount patterns
   def : Pat<(i32 (riscv_nsrl GPR:$lo, GPR:$hi, shiftMask64:$shamt)),
-            (NSRL (BuildPairGPRPair GPR:$lo, GPR:$hi), shiftMask64:$shamt)>;
+            (NSRL (BuildGPRPair GPR:$lo, GPR:$hi), shiftMask64:$shamt)>;
   def : Pat<(i32 (riscv_nsra GPR:$lo, GPR:$hi, shiftMask64:$shamt)),
-            (NSRA (BuildPairGPRPair GPR:$lo, GPR:$hi), shiftMask64:$shamt)>;
+            (NSRA (BuildGPRPair GPR:$lo, GPR:$hi), shiftMask64:$shamt)>;
 
   // 8/16-bit multiply low patterns
   def: Pat<(v4i8 (mul GPR:$rs1, GPR:$rs2)),
