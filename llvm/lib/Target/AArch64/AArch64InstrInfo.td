@@ -1224,8 +1224,9 @@ def AArch64rshrnb_pf : PatFrags<(ops node:$rs, node:$i),
                             [(AArch64rshrnb node:$rs, node:$i),
                             (int_aarch64_sve_rshrnb node:$rs, node:$i)]>;
 
+// res = cttz.elts(pg, op)
 def AArch64CttzElts : SDNode<"AArch64ISD::CTTZ_ELTS", SDTypeProfile<1, 2,
-                             [SDTCisInt<0>, SDTCisVec<1>, SDTCisInt<2>]>, []>;
+                             [SDTCisInt<0>, SDTCVecEltisVT<1,i1>, SDTCisSameAs<1,2>]>, []>;
 
 // NEON Load/Store with post-increment base updates.
 // TODO: Complete SDTypeProfile constraints.
@@ -7901,6 +7902,19 @@ def : Pat<(i64 (and (i64 (anyext (i32 (vector_extract (v8i16 V128:$Rn),
 
 defm INS : SIMDIns;
 
+// Patterns for v2i64/v1i64 clmul->pmull
+let Predicates = [HasAES] in {
+  def : Pat<(clmul v1i64:$Rn, v1i64:$Rm),
+            (v1i64 (EXTRACT_SUBREG (v2i64 (PMULLv1i64 $Rn, $Rm)),
+                                           dsub))>;
+  def : Pat<(clmul v2i64:$Rn, v2i64:$Rm),
+            (v2i64 (INSvi64lane (v2i64 (PMULLv1i64 (v1i64 (EXTRACT_SUBREG $Rn, dsub)),
+                                                   (v1i64 (EXTRACT_SUBREG $Rm, dsub)))),
+                                (i64 1),
+                                (v2i64 (PMULLv2i64 $Rn, $Rm)),
+                                (i64 0)))>;
+}
+
 def : Pat<(v16i8 (vec_ins_or_scal_vec GPR32:$Rn)),
           (SUBREG_TO_REG (f32 (COPY_TO_REGCLASS GPR32:$Rn, FPR32)), ssub)>;
 def : Pat<(v8i8 (vec_ins_or_scal_vec GPR32:$Rn)),
@@ -9116,12 +9130,25 @@ def fixedpoint_vec_xform : SDNodeXForm<timm, [{
   (void)N;
   return V;
 }]>;
+def gi_fixedpoint_vec_xform : GICustomOperandRenderer<"renderFixedPointXForm">,
+  GISDNodeXFormEquiv<fixedpoint_vec_xform>;
 
 def fixedpoint_v2f64 : fixedpoint_vec_f64<v2f64>;
 def fixedpoint_v2f32 : fixedpoint_vec_f32<v2f32>;
 def fixedpoint_v4f32 : fixedpoint_vec_f32<v4f32>;
 def fixedpoint_v4f16 : fixedpoint_vec_f16<v4f16>;
 def fixedpoint_v8f16 : fixedpoint_vec_f16<v8f16>;
+
+def gi_fixedpoint_v2f64 : GIComplexOperandMatcher<v2s64, "selectCVTFixedPointVec">,
+                          GIComplexPatternEquiv<fixedpoint_v2f64>;
+def gi_fixedpoint_v2f32 : GIComplexOperandMatcher<v2s32, "selectCVTFixedPointVec">,
+                          GIComplexPatternEquiv<fixedpoint_v2f32>;
+def gi_fixedpoint_v4f32 : GIComplexOperandMatcher<v4s32, "selectCVTFixedPointVec">,
+                          GIComplexPatternEquiv<fixedpoint_v4f32>;
+def gi_fixedpoint_v4f16 : GIComplexOperandMatcher<v4s16, "selectCVTFixedPointVec">,
+                          GIComplexPatternEquiv<fixedpoint_v4f16>;
+def gi_fixedpoint_v8f16 : GIComplexOperandMatcher<v8s16, "selectCVTFixedPointVec">,
+                          GIComplexPatternEquiv<fixedpoint_v8f16>;
 
 let Predicates = [HasNEON] in {
 def : Pat<(v2f32 (sint_to_fp (v2i32 (AArch64vashr_exact v2i32:$Vn, i32:$shift)))),
@@ -9161,11 +9188,15 @@ multiclass FCVTPat<ValueType FVT, ValueType IVT, ValueType ScalarVT, RegisterOpe
             (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
   def : Pat<(IVT (fp_to_sint_sat (FVT (fmul FVT:$Vn, fixedpoint:$scale)), ScalarVT)),
             (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
+  def : Pat<(IVT (fp_to_sint_sat_gi (FVT (fmul FVT:$Vn, fixedpoint:$scale)))),
+            (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
 
   // fptoui(fmul(x, power2)) -> FCVTZU_shift x, log2(power2)
   def : Pat<(IVT (fp_to_uint (FVT (fmul FVT:$Vn, fixedpoint:$scale)))),
             (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
   def : Pat<(IVT (fp_to_uint_sat (FVT (fmul FVT:$Vn, fixedpoint:$scale)), ScalarVT)),
+            (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
+  def : Pat<(IVT (fp_to_uint_sat_gi (FVT (fmul FVT:$Vn, fixedpoint:$scale)))),
             (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
 }
 
@@ -9987,7 +10018,7 @@ def SHA256SU0rr : SHATiedInstVV<0b0010, "sha256su0",int_aarch64_crypto_sha256su0
 // FIXME: Like for X86, these should go in their own separate .td file.
 
 // For an anyext, we don't care what the high bits are, so we can perform an
-// INSERT_SUBREF into an IMPLICIT_DEF.
+// INSERT_SUBREG into an IMPLICIT_DEF.
 def : Pat<(i64 (anyext GPR32:$src)),
           (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$src, sub_32)>;
 
@@ -10885,8 +10916,8 @@ def : Pat<(i64 (int_aarch64_neon_urshl (i64 FPR64:$Rn), (i64 FPR64:$Rm))),
 //
 // Currently we only support NT stores lowering for little-endian targets.
 //
-// Coordinated with STNP constraints in `AArch64TargetLowering::LowerNTStore`
-// and `AArch64TTIImpl::isLegalNTStore`.
+// Coordinated with STNP constraints in `LowerNTStore`
+// and `isLegalNTStore` from `AArch64ISelLowering.cpp`.
 //
 // Currently, STNP lowering can only either keep or increase code size, thus
 // we predicate it to not apply when optimizing for code size.

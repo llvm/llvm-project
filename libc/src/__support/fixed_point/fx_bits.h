@@ -23,8 +23,6 @@
 
 #include "fx_rep.h"
 
-#include <stdio.h>
-
 #ifdef LIBC_COMPILER_HAS_FIXED_POINT
 
 namespace LIBC_NAMESPACE_DECL {

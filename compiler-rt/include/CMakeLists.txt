@@ -14,6 +14,7 @@ if (COMPILER_RT_BUILD_SANITIZERS)
     sanitizer/scudo_interface.h
     sanitizer/tsan_interface.h
     sanitizer/tsan_interface_atomic.h
+    sanitizer/tysan_interface.h
     sanitizer/ubsan_interface.h
     )
   set(FUZZER_HEADERS
