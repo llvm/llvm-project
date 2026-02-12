@@ -2228,8 +2228,7 @@ Value *llvm::addDiffRuntimeChecks(
           RuntimeVF, ConstantInt::get(Ty, IC * AccessSize));
       // Check if the same compare has already been created earlier. In that
       // case, there is no need to check it again.
-      IsConflict = SeenCompares.lookup({Diff, VFTimesICTimesSize});
-      if (IsConflict)
+      if (SeenCompares.contains({Diff, VFTimesICTimesSize}))
         continue;
 
       IsConflict =
@@ -2237,8 +2236,7 @@ Value *llvm::addDiffRuntimeChecks(
       SeenCompares.insert({{Diff, VFTimesICTimesSize}, IsConflict});
     } else {
       Value *LoopAccessSize = ChkBuilder.getInt64(AccessSize);
-      IsConflict = SeenCompares.lookup({Diff, LoopAccessSize});
-      if (IsConflict)
+      if (SeenCompares.contains({Diff, LoopAccessSize}))
         continue;
 
       // Note: This creates loop.dependence.war.mask(ptr null, ptr %diff). This
