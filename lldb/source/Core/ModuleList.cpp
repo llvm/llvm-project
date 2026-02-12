@@ -80,7 +80,7 @@ enum {
 
 ModuleListProperties::ModuleListProperties() {
   m_collection_sp = std::make_shared<OptionValueProperties>("symbols");
-  m_collection_sp->Initialize(g_modulelist_properties);
+  m_collection_sp->Initialize(g_modulelist_properties_def);
   m_collection_sp->SetValueChangedCallback(ePropertySymLinkPaths,
                                            [this] { UpdateSymlinkMappings(); });
 
@@ -116,6 +116,16 @@ SymbolDownload ModuleListProperties::GetSymbolAutoDownload() const {
   return GetPropertyAtIndexAs<lldb::SymbolDownload>(
       idx, static_cast<lldb::SymbolDownload>(
                g_modulelist_properties[idx].default_uint_value));
+}
+
+bool ModuleListProperties::GetSharedCacheBinaryLoading() const {
+  const uint32_t idx = ePropertySharedCacheBinaryLoading;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_modulelist_properties[idx].default_uint_value != 0);
+}
+
+bool ModuleListProperties::SetSharedCacheBinaryLoading(bool new_value) {
+  return SetPropertyAtIndex(ePropertySharedCacheBinaryLoading, new_value);
 }
 
 FileSpec ModuleListProperties::GetClangModulesCachePath() const {

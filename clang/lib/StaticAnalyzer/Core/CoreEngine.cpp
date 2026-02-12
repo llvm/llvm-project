@@ -320,12 +320,12 @@ void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
   // Call into the ExprEngine to process entering the CFGBlock.
   BlockEntrance BE(L.getSrc(), L.getDst(), Pred->getLocationContext());
   ExplodedNodeSet DstNodes;
-  NodeBuilderWithSinks NodeBuilder(Pred, DstNodes, BuilderCtx, BE);
-  ExprEng.processCFGBlockEntrance(L, NodeBuilder, Pred);
+  NodeBuilder Builder(Pred, DstNodes, BuilderCtx);
+  ExprEng.processCFGBlockEntrance(L, BE, Builder, Pred);
 
   // Auto-generate a node.
-  if (!NodeBuilder.hasGeneratedNodes()) {
-    NodeBuilder.generateNode(Pred->State, Pred);
+  if (!Builder.hasGeneratedNodes()) {
+    Builder.generateNode(BE, Pred->State, Pred);
   }
 
   ExplodedNodeSet CheckerNodes;
@@ -702,8 +702,6 @@ ExplodedNode* NodeBuilder::generateNodeImpl(const ProgramPoint &Loc,
   return N;
 }
 
-void NodeBuilderWithSinks::anchor() {}
-
 StmtNodeBuilder::~StmtNodeBuilder() {
   if (EnclosingBldr)
     for (const auto I : Frontier)
@@ -726,14 +724,12 @@ ExplodedNode *BranchNodeBuilder::generateNode(ProgramStateRef State,
   return Succ;
 }
 
-ExplodedNode*
-IndirectGotoNodeBuilder::generateNode(const iterator &I,
-                                      ProgramStateRef St,
-                                      bool IsSink) {
+ExplodedNode *IndirectGotoNodeBuilder::generateNode(const CFGBlock *Block,
+                                                    ProgramStateRef St,
+                                                    bool IsSink) {
   bool IsNew;
-  ExplodedNode *Succ =
-      Eng.G.getNode(BlockEdge(Src, I.getBlock(), Pred->getLocationContext()),
-                    St, IsSink, &IsNew);
+  ExplodedNode *Succ = Eng.G.getNode(
+      BlockEdge(Src, Block, Pred->getLocationContext()), St, IsSink, &IsNew);
   Succ->addPredecessor(Pred, Eng.G);
 
   if (!IsNew)
