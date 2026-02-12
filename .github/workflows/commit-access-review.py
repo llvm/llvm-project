@@ -9,6 +9,7 @@
 #
 # ===------------------------------------------------------------------------===#
 
+import concurrent.futures
 import datetime
 import github
 import re
@@ -291,9 +292,10 @@ def main():
         sys.exit(0)
 
     # Step 2 check for reviews
-    for user in list(triage_list.keys()):
-        review_count = get_review_count(gh, user, one_year_ago)
-        triage_list[user].add_reviewed(review_count)
+
+    # 4 because that's how many cores the default github runners have.
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        executor.map(lambda user:triage_list[user].add_reviewed(get_review_count(gh, user, one_year_ago)), list(triage_list.keys()))
 
     print("After Reviews:", len(triage_list), "triagers")
 
@@ -301,11 +303,10 @@ def main():
         sys.exit(0)
 
     # Step 3 check for number of commits
-    for user in list(triage_list.keys()):
-        num_commits = get_num_commits(gh, user, one_year_ago)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
         # Override the total number of commits to not double count commits and
         # authored PRs.
-        triage_list[user].set_authored(num_commits)
+        executor.map(lambda user: triage_list[user].set_authored(get_num_commits(gh, user, one_year_ago)),list(triage_list.keys()))
 
     print("After Commits:", len(triage_list), "triagers")
 
