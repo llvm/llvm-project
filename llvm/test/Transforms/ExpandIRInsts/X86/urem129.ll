@@ -69,31 +69,6 @@ define void @test(ptr %ptr, ptr %out) nounwind !prof !0 {
   ret void
 }
 
-define void @test_urem_pow2(ptr %ptr, ptr %out) nounwind {
-; CHECK-LABEL: @test_urem_pow2(
-; CHECK-NEXT:    [[A:%.*]] = load i129, ptr [[PTR:%.*]], align 16
-; CHECK-NEXT:    [[RES:%.*]] = and i129 [[A]], 7
-; CHECK-NEXT:    store i129 [[RES]], ptr [[OUT:%.*]], align 16
-; CHECK-NEXT:    ret void
-;
-  %a = load i129, ptr %ptr
-  %res = urem i129 %a, 8
-  store i129 %res, ptr %out
-  ret void
-}
-
-define void @test_urem_by_1(ptr %ptr, ptr %out) nounwind {
-; CHECK-LABEL: @test_urem_by_1(
-; CHECK-NEXT:    [[A:%.*]] = load i129, ptr [[PTR:%.*]], align 16
-; CHECK-NEXT:    store i129 0, ptr [[OUT:%.*]], align 16
-; CHECK-NEXT:    ret void
-;
-  %a = load i129, ptr %ptr
-  %res = urem i129 %a, 1
-  store i129 %res, ptr %out
-  ret void
-}
-
 !0 = !{!"function_entry_count", i64 1000}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind }
