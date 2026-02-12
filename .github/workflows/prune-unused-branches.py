@@ -121,11 +121,14 @@ def delete_branches(branches_to_remove: list[str]):
 def main(github_token):
     if len(sys.argv) != 2:
         print(
-            "Invalid invocation. Correct usage: python3 prune-unused-branches.py <patch output diectory>"
+            "Invalid invocation. Correct usage: python3 prune-unused-branches.py <output diectory>"
         )
         sys.exit(1)
 
     user_branches = get_branches()
+    output_dir = sys.argv[1]
+    with open(os.path.join(output_dir, "branches.txt"), "w") as branches_file:
+        branches_file.writelines(user_branches)
     user_branches_from_prs = get_branches_from_open_prs(github_token)
     print(f"Found {len(user_branches)} user branches in the repository")
     print(f"Found {len(user_branches_from_prs)} user branches associated with PRs")
@@ -133,7 +136,7 @@ def main(github_token):
         user_branches, user_branches_from_prs
     )
     print(f"Deleting {len(user_branches_to_remove)} user branches.")
-    generate_patches_for_all_branches(user_branches_to_remove, sys.argv[1])
+    generate_patches_for_all_branches(user_branches_to_remove, os.path.join(output_dir, "patches"))
     delete_branches(user_branches_to_remove)
 
 
