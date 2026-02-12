@@ -73,6 +73,19 @@ this default is set to an empty array:
    # Specify an array of paths to limit spotlight searches to certain directories
    % defaults write com.apple.DebugSymbols DBGSpotlightPaths -array /path/dir1 /path/dir2
 
+
+**DBGSearchPaths**
+
+You can specify an ordered list of directories to use when manually searching
+for dSYM files. Each directory will be recursively searched for any dSYM
+bundles, and the the first UUID match will be returned.
+
+::
+
+   $ defaults write com.apple.DebugSymbols DBGSearchPaths -string /single/path/to/search
+   $ defaults write com.apple.DebugSymbols DBGSearchPaths -array /path/to/search1 /path/to/search2
+
+
 Shell Script Property List Format
 ---------------------------------
 

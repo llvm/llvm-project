@@ -1985,6 +1985,39 @@ LanguageSet PluginManager::GetREPLAllTypeSystemSupportedLanguages() {
   return all;
 }
 
+#pragma mark Highlighter
+
+struct HighlighterInstance : public PluginInstance<HighlighterCreateInstance> {
+  HighlighterInstance(llvm::StringRef name, llvm::StringRef description,
+                      CallbackType create_callback)
+      : PluginInstance<HighlighterCreateInstance>(name, description,
+                                                  create_callback) {}
+};
+
+typedef PluginInstances<HighlighterInstance> HighlighterInstances;
+
+static HighlighterInstances &GetHighlighterInstances() {
+  static HighlighterInstances g_instances;
+  return g_instances;
+}
+
+bool PluginManager::RegisterPlugin(llvm::StringRef name,
+                                   llvm::StringRef description,
+                                   HighlighterCreateInstance create_callback) {
+  return GetHighlighterInstances().RegisterPlugin(name, description,
+                                                  create_callback);
+}
+
+bool PluginManager::UnregisterPlugin(
+    HighlighterCreateInstance create_callback) {
+  return GetHighlighterInstances().UnregisterPlugin(create_callback);
+}
+
+HighlighterCreateInstance
+PluginManager::GetHighlighterCreateCallbackAtIndex(uint32_t idx) {
+  return GetHighlighterInstances().GetCallbackAtIndex(idx);
+}
+
 #pragma mark PluginManager
 
 void PluginManager::DebuggerInitialize(Debugger &debugger) {

@@ -185,7 +185,7 @@ void macros() {
 
 // Check that user-defined literals do not cause any diags.
 
-unsigned long long int operator"" _ull(unsigned long long int);
+unsigned long long int operator""_ull(unsigned long long int);
 void user_defined_literals() {
   1_ull;
 }

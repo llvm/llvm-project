@@ -153,6 +153,17 @@ int main(void) {
   // CHECK: @llvm.bitreverse.i16
   // CHECK: @llvm.bitreverse.i32
   // CHECK: @llvm.bitreverse.i64
+  // CHECK: @llvm.bitreverse.i128
+  P(bitreverseg, ((char)N));
+  P(bitreverseg, ((short)N));
+  P(bitreverseg, ((int)N));
+  P(bitreverseg, ((unsigned long)N));
+  P(bitreverseg, ((_BitInt(8))N));
+  P(bitreverseg, ((_BitInt(16))N));
+  P(bitreverseg, ((_BitInt(32))N));
+  P(bitreverseg, ((_BitInt(64))N));
+  P(bitreverseg, ((_BitInt(128))N));
+  P(bitreverseg, (N));
   P(bitreverse8, (N));
   P(bitreverse16, (N));
   P(bitreverse32, (N));
@@ -962,4 +973,57 @@ void test_builtin_bswapg(unsigned char uc, unsigned short us, unsigned int ui,
   // CHECK: call i64 @llvm.bswap.i64
   bi128 = __builtin_bswapg(bi128);
   // CHECK: call i128 @llvm.bswap.i128
+}
+// CHECK-LABEL: define{{.*}} void @test_builtin_bitreverseg
+void test_builtin_bitreverseg(unsigned char uc, unsigned short us, unsigned int ui,
+                       unsigned long ul, unsigned long long ull, bool b,
+                       unsigned _BitInt(1) bi1,
+#ifdef __SIZEOF_INT128__
+                       unsigned __int128 ui128,
+#endif
+                       _BitInt(8) bi8,
+                       _BitInt(16) bi16, _BitInt(32) bi32, 
+                       _BitInt(64) bi64, _BitInt(128) bi128) {
+#if __aarch64__
+  int x = 0;
+  x = x * 2;
+#endif
+  b = __builtin_bitreverseg(b);
+  // CHECK: %{{.*}} = load i8, ptr %b.addr
+  // CHECK: %{{.*}} = trunc i8 %{{.*}} to i1
+  // CHECK: %{{.*}} = zext i1 %{{.*}} to i8
+  // CHECK: store i8 %{{.*}}, ptr %b.addr
+  bi1 = __builtin_bitreverseg(bi1);
+  // CHECK: %{{.*}} = load i8, ptr %bi1.addr
+  // CHECK: %{{.*}} = trunc i8 %{{.*}} to i1
+  // CHECK: %{{.*}} = zext i1 %{{.*}} to i8
+  // CHECK: store i8 %{{.*}}, ptr %bi1.addr
+  uc = __builtin_bitreverseg(uc);
+  // CHECK: %{{.*}} = load i8, ptr %uc.addr
+  // CHECK: %{{.*}} = call i8 @llvm.bitreverse.i8(i8 %{{.*}})
+  // CHECK: store i8 %{{.*}}, ptr %uc.addr
+  us = __builtin_bitreverseg(us);
+  // CHECK: call i16 @llvm.bitreverse.i16
+  ui = __builtin_bitreverseg(ui);
+  // CHECK: call i32 @llvm.bitreverse.i32
+  ul = __builtin_bitreverseg(ul);
+  // CHECK: call [[LONGINTTY]] @llvm.bitreverse.[[LONGINTTY]]
+  ull = __builtin_bitreverseg(ull);
+  // CHECK: call i64 @llvm.bitreverse.i64
+#ifdef __SIZEOF_INT128__
+  ui128 = __builtin_bitreverseg(ui128);
+  // I128: call i128 @llvm.bitreverse.i128
+#endif
+  bi8 = __builtin_bitreverseg(bi8);
+  // CHECK: %{{.*}} = load i8, ptr %bi8.addr, align 1
+  // CHECK: %{{.*}} = call i8 @llvm.bitreverse.i8(i8 %{{.*}})
+  // CHECK: store i8 %{{.*}}, ptr %bi8.addr
+  bi16 = __builtin_bitreverseg(bi16);
+  // CHECK: call i16 @llvm.bitreverse.i16
+  bi32 = __builtin_bitreverseg(bi32);
+  // CHECK: call i32 @llvm.bitreverse.i32
+  bi64 = __builtin_bitreverseg(bi64);
+  // CHECK: call i64 @llvm.bitreverse.i64
+  bi128 = __builtin_bitreverseg(bi128);
+  // CHECK: call i128 @llvm.bitreverse.i128
 }

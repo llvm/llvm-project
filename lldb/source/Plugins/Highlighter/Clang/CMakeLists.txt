@@ -1,4 +1,4 @@
-add_lldb_library(lldbPluginClangCommon
+add_lldb_library(lldbPluginHighlighterClang PLUGIN
   ClangHighlighter.cpp
 
   LINK_COMPONENTS

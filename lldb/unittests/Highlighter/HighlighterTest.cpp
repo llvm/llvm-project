@@ -8,12 +8,14 @@
 
 #include "gtest/gtest.h"
 
-#include "lldb/Core/Highlighter.h"
-#include "lldb/Host/FileSystem.h"
-
+#include "Plugins/Highlighter/Clang/ClangHighlighter.h"
+#include "Plugins/Highlighter/Default/DefaultHighlighter.h"
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "Plugins/Language/ObjCPlusPlus/ObjCPlusPlusLanguage.h"
+#include "lldb/Core/Highlighter.h"
+#include "lldb/Host/FileSystem.h"
+
 #include "TestingSupport/SubsystemRAII.h"
 #include <optional>
 
@@ -21,8 +23,10 @@ using namespace lldb_private;
 
 namespace {
 class HighlighterTest : public testing::Test {
-  SubsystemRAII<FileSystem, CPlusPlusLanguage, ObjCLanguage,
-                ObjCPlusPlusLanguage>
+  // We need the language plugins for detecting the language based on the
+  // filename.
+  SubsystemRAII<FileSystem, ClangHighlighter, DefaultHighlighter,
+                CPlusPlusLanguage, ObjCLanguage, ObjCPlusPlusLanguage>
       subsystems;
 };
 } // namespace
@@ -88,7 +92,8 @@ static std::string
 highlightDefault(llvm::StringRef code, HighlightStyle style,
                  std::optional<size_t> cursor = std::optional<size_t>()) {
   HighlighterManager mgr;
-  return mgr.getDefaultHighlighter().Highlight(style, code, cursor);
+  return mgr.getHighlighterFor(lldb::LanguageType::eLanguageTypeUnknown, "")
+      .Highlight(style, code, cursor);
 }
 
 TEST_F(HighlighterTest, DefaultHighlighter) {
