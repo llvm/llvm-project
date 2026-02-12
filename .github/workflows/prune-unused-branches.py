@@ -136,7 +136,9 @@ def main(github_token):
         user_branches, user_branches_from_prs
     )
     print(f"Deleting {len(user_branches_to_remove)} user branches.")
-    generate_patches_for_all_branches(user_branches_to_remove, os.path.join(output_dir, "patches"))
+    generate_patches_for_all_branches(
+        user_branches_to_remove, os.path.join(output_dir, "patches")
+    )
     delete_branches(user_branches_to_remove)
 
 
