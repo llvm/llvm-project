@@ -249,7 +249,7 @@ void ValueObject::ClearDynamicTypeInformation() {
   SetSyntheticChildren(lldb::SyntheticChildrenSP());
 }
 
-CompilerType ValueObject::MaybeCalculateCompleteType() {
+CompilerType ValueObject::GetCompilerType() {
   CompilerType compiler_type(GetCompilerTypeImpl());
 
   if (m_flags.m_did_calculate_complete_objc_class_type) {

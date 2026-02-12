@@ -979,12 +979,11 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   // offset from each is accumulated.
   Value *NewBase;
   const APInt *BaseOffset;
-  const bool ExtractBase =
-      match(GEP->getPointerOperand(),
-            m_PtrAdd(m_Value(NewBase), m_APInt(BaseOffset)));
+  bool ExtractBase = match(GEP->getPointerOperand(),
+                           m_PtrAdd(m_Value(NewBase), m_APInt(BaseOffset)));
 
   unsigned IdxWidth = DL->getIndexTypeSizeInBits(GEP->getType());
-  const APInt BaseByteOffset =
+  APInt BaseByteOffset =
       ExtractBase ? BaseOffset->sextOrTrunc(IdxWidth) : APInt(IdxWidth, 0);
 
   // The backend can already nicely handle the case where all indices are
@@ -995,8 +994,8 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   bool Changed = canonicalizeArrayIndicesToIndexSize(GEP);
 
   bool NeedsExtraction;
-  APInt AccumulativeByteOffset =
-      BaseByteOffset + accumulateByteOffset(GEP, NeedsExtraction);
+  APInt NonBaseByteOffset = accumulateByteOffset(GEP, NeedsExtraction);
+  APInt AccumulativeByteOffset = BaseByteOffset + NonBaseByteOffset;
 
   TargetTransformInfo &TTI = GetTTI(*GEP->getFunction());
 
@@ -1018,7 +1017,21 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
             GEP->getResultElementType(),
             /*BaseGV=*/nullptr, AccumulativeByteOffset.getSExtValue(),
             /*HasBaseReg=*/true, /*Scale=*/0, AddrSpace)) {
-      return Changed;
+      // If the addressing mode was not legal and the base byte offset was not
+      // 0, it could be a case where the total offset became too large for
+      // the addressing mode. Try again without extracting the base offset.
+      if (!ExtractBase)
+        return Changed;
+      ExtractBase = false;
+      BaseByteOffset = APInt(IdxWidth, 0);
+      AccumulativeByteOffset = NonBaseByteOffset;
+      if (!TTI.isLegalAddressingMode(
+              GEP->getResultElementType(),
+              /*BaseGV=*/nullptr, AccumulativeByteOffset.getSExtValue(),
+              /*HasBaseReg=*/true, /*Scale=*/0, AddrSpace))
+        return Changed;
+      // We can proceed with just extracting the other (non-base) offsets.
+      NeedsExtraction = true;
     }
   }
 

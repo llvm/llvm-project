@@ -1,6 +1,7 @@
 import subprocess
 import sys
 import os
+import logging
 
 import github
 
@@ -68,12 +69,25 @@ def get_user_branches_to_remove(
 ) -> list[str]:
     user_branches_to_remove = set(user_branches)
     for pr_user_branch in set(user_branches_from_prs):
+        if pr_user_branch not in user_branches_to_remove:
+            logging.warning(
+                f"Found branch {pr_user_branch} attached to a PR, but it "
+                "was not found in the repository. This is likely because "
+                "the PR was created after this workflow cloned the repository."
+            )
+            continue
         user_branches_to_remove.remove(pr_user_branch)
     return list(user_branches_to_remove)
 
 
 def generate_patch_for_branch(branch_name: str) -> bytes:
-    command_vector = ["git", "diff", f"origin/main...origin/{branch_name}"]
+    command_vector = [
+        "git",
+        "format-patch",
+        "--stdout",
+        "-k",
+        f"origin/main..origin/{branch_name}",
+    ]
     try:
         result = subprocess.run(
             command_vector, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
