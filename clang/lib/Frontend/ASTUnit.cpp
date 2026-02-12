@@ -1477,7 +1477,7 @@ ASTUnit::create(std::shared_ptr<CompilerInvocation> CI,
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
       createVFSFromCompilerInvocation(*CI, *Diags);
   AST->DiagOpts = std::move(DiagOpts);
-  AST->Diagnostics = Diags;
+  AST->Diagnostics = std::move(Diags);
   AST->FileSystemOpts = CI->getFileSystemOpts();
   AST->Invocation = std::move(CI);
   AST->FileMgr =
