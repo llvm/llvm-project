@@ -975,8 +975,7 @@ public:
     return false;
   }
 
-  void addCatchHandlerAttr(mlir::Region *catchRegion,
-                           const CXXCatchStmt *catchStmt,
+  void addCatchHandlerAttr(const CXXCatchStmt *catchStmt,
                            SmallVector<mlir::Attribute> &handlerAttrs);
 
   /// The cleanup depth enclosing all the cleanups associated with the
