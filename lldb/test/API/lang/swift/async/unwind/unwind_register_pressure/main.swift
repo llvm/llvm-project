@@ -20,22 +20,14 @@ func ASYNC___1___() async -> Int {
   var a26 = 26, a27 = 27, a28 = 28, a29 = 29, a30 = 30
   a1 = use(a1, a2) 
   a3 = use(a3, a4)
-  a5 = use(a5, a6)
-  a7 = use(a7, a8)
   a9 = use(a9, a10)
   a11 = use(a11, a12)
   a13 = use(a13, a14)
   a15 = use(a15, a16)
   a17 = use(a17, a18)
-  a19 = use(a19, a20)
-  a21 = use(a21, a22)
-  a23 = use(a23, a24)
-  a25 = use(a25, a26)
-  a27 = use(a27, a28)
-  a29 = use(a29, a30)
-  work(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24,a25, a26,a27, a28, a29, a30)
-  arr = [a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24,a25, a26,a27, a28, a29, a30]
-  return a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + a10 + a11 + a12 + a13 + a14 + a15 + a16 + a17 + a18 + a19
+  work(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a18, a19, a20, a21)
+  arr = [a1, a2, a3, a4, a5, a6, a7, a8, a9, a13, a14, a15, a16, a17, a18, a19, a20]
+  return a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + a10 + a11 + a12 + a13
 }
 
 func ASYNC___2___() async -> Int {
