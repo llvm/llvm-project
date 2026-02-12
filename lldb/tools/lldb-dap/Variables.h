@@ -90,6 +90,9 @@ struct Variables {
   /// Insert a new \p variable.
   /// \return variableReference assigned to this expandable variable.
   int64_t InsertVariable(lldb::SBValue variable, bool is_permanent);
+
+  /// Insert a value list. Used to store references to lldb repl command
+  /// outputs.
   int64_t Insert(lldb::SBValueList values);
 
   std::optional<ScopeData> GetTopLevelScope(int64_t variablesReference);

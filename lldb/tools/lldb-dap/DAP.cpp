@@ -224,6 +224,8 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
 llvm::Expected<std::pair<IOWrapper, IOWrapper>>
 IOWrapper::CreatePseudoTerminal() {
 #ifdef WIN32
+  // Fallback to a pair of pipes until we have better support for a
+  // PsuedoConsole on Windows.
   return llvm::createStringError("not supported");
 #else
   // For testing purposes return an error to cause us to fallback to a pair of
@@ -234,6 +236,15 @@ IOWrapper::CreatePseudoTerminal() {
   lldb_private::PseudoTerminal pty;
   if (auto err = pty.OpenFirstAvailablePrimary(O_RDWR | O_NOCTTY | O_CLOEXEC))
     return err;
+
+  // We cannot use 'lldb_private::PseudoTerminal::OpenSecondary()' because it
+  // references 'lldb_private::FileSystem'. FileSystem not part of the SBAPI and
+  // would be statically linked into lldb-dap and liblldb. However, if liblldb
+  // is built as a static library then we will end up initializing it twice if
+  // we call 'lldb_private::FileSystem::Initialize()' which can trigger asserts
+  // depending on the build settings.
+  //
+  // For now, avoid this API and call 'open' directly.
   int replica_fd =
       llvm::sys::RetryAfterSignal(-1, ::open, pty.GetSecondaryName().c_str(),
                                   O_RDWR | O_NOCTTY | O_CLOEXEC);

@@ -114,6 +114,9 @@ json::Value ProgressEvent::ToJSON() const {
 
   if (m_event_type == progressStart) {
     EmplaceSafeString(body, "title", m_message);
+    // Cancel will set `lldb::SBDebugger::RequestInterrupt()`, which may cause
+    // co-operative tasks to stop early. This is a best effort only, not all
+    // operations can be interrupted.
     body.try_emplace("cancellable", true);
   }
 

@@ -17,12 +17,12 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/MainLoop.h"
-#include "lldb/Host/MainLoopBase.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <chrono>
 #include <memory>
 #include <optional>
 
@@ -71,7 +71,7 @@ protected:
 
   void SetUp() override;
 
-  void Run();
+  void Run(std::chrono::milliseconds delay = std::chrono::milliseconds(1000));
 };
 
 /// A matcher for a DAP event.
