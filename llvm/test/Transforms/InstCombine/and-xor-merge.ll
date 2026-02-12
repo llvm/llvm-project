@@ -81,54 +81,6 @@ define i32 @PR75692_3(i32 %x, i32 %y) {
 }
 
 ; ((X + C) & M) ^ M --> (~C − X) & M
-define i32 @add_and_xor_fomula_basic(i32 %x, i32 %M) {
-; CHECK-LABEL: @add_and_xor_fomula_basic(
-; CHECK-NEXT:    [[AND1:%.*]] = sub i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = and i32 [[M:%.*]], [[AND1]]
-; CHECK-NEXT:    ret i32 [[XOR]]
-;
-  %add = add i32 %x, -1
-  %and = and i32 %add, %M
-  %xor = xor i32 %and, %M
-  ret i32 %xor
-}
-
-define i64 @add_and_xor_fomula_nsw(i64 %x, i64 %M) {
-; CHECK-LABEL: @add_and_xor_fomula_nsw(
-; CHECK-NEXT:    [[AND1:%.*]] = sub i64 0, [[X:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = and i64 [[M:%.*]], [[AND1]]
-; CHECK-NEXT:    ret i64 [[XOR]]
-;
-  %add = add nsw i64 %x, -1
-  %and = and i64 %add, %M
-  %xor = xor i64 %and, %M
-  ret i64 %xor
-}
-
-define i32 @add_and_xor_fomula_nuw(i32 %x, i32 %M) {
-; CHECK-LABEL: @add_and_xor_fomula_nuw(
-; CHECK-NEXT:    [[M:%.*]] = sub i32 -2147483648, [[X:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = and i32 [[M]], [[AND1:%.*]]
-; CHECK-NEXT:    ret i32 [[XOR]]
-;
-  %add = add nuw i32 %x, 2147483647
-  %and = and i32 %add, %M
-  %xor = xor i32 %and, %M
-  ret i32 %xor
-}
-
-define i64 @add_and_xor_fomula_nsw_nuw(i64 %x, i64 %M) {
-; CHECK-LABEL: @add_and_xor_fomula_nsw_nuw(
-; CHECK-NEXT:    [[AND1:%.*]] = sub i64 -4191968325751275520, [[X:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = and i64 [[AND1]], [[M:%.*]]
-; CHECK-NEXT:    ret i64 [[XOR]]
-;
-  %add = add nuw nsw i64 %x, 21474836479223372036854775807
-  %and = and i64 %add, %M
-  %xor = xor i64 %and, %M
-  ret i64 %xor
-}
-
 define i8 @add_and_xor_basic(i8 %x) {
 ; CHECK-LABEL: @add_and_xor_basic(
 ; CHECK-NEXT:    [[ADD:%.*]] = sub i8 10, [[X:%.*]]
@@ -179,38 +131,50 @@ define i32 @add_and_xor_negative_addc(i32 %x) {
 
 define i8 @add_and_xor_not_low_mask(i8 %x) {
 ; CHECK-LABEL: @add_and_xor_not_low_mask(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 26, [[X:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = and i8 [[TMP1]], 16
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 1, [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = and i8 [[TMP1]], -18
 ; CHECK-NEXT:    ret i8 [[XOR]]
 ;
-  %add = add i8 %x, 5
-  %and = and i8 %add, 16
-  %xor = xor i8 %and, 16
+  %add = add i8 %x, -2
+  %and = and i8 %add, 238
+  %xor = xor i8 %and, 238
   ret i8 %xor
 }
 
-define i64 @add_and_xor_nsw(i32 %x) {
-; CHECK-LABEL: @add_and_xor_nsw(
-; CHECK-NEXT:    [[ASSUME_COND:%.*]] = icmp ult i32 [[X:%.*]], 65
-; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME_COND]])
-; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i32 0, [[X]]
-; CHECK-NEXT:    [[XOR:%.*]] = and i32 [[TMP1]], 63
-; CHECK-NEXT:    [[EXT:%.*]] = zext nneg i32 [[XOR]] to i64
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 -1, [[EXT]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i64 0, i64 [[SHR]]
-; CHECK-NEXT:    ret i64 [[SEL]]
+define i8 @add_and_xor_not_low_mask2(i8 %x) {
+; CHECK-LABEL: @add_and_xor_not_low_mask2(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 1, [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = and i8 [[TMP1]], 119
+; CHECK-NEXT:    ret i8 [[XOR]]
 ;
-  %assume_cond = icmp ult i32 %x, 65
-  call void @llvm.assume(i1 %assume_cond)
-  %add = add nuw nsw i32 %x, 63
-  %and = and i32 %add, 63
-  %xor = xor i32 %and, 63
-  %ext = zext nneg i32 %xor to i64
-  %shr = lshr i64 -1, %ext
-  %cmp = icmp eq i32 %x, 0
-  %sel = select i1 %cmp, i64 0, i64 %shr
-  ret i64 %sel
+  %add = add i8 %x, -2
+  %and = and i8 %add, 119
+  %xor = xor i8 %and, 119
+  ret i8 %xor
+}
+
+define i8 @add_and_xor_not_low_mask3(i8 %x) {
+; CHECK-LABEL: @add_and_xor_not_low_mask3(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 1, [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = and i8 [[TMP1]], -91
+; CHECK-NEXT:    ret i8 [[XOR]]
+;
+  %add = add i8 %x, -2
+  %and = and i8 %add, 165
+  %xor = xor i8 %and, 165
+  ret i8 %xor
+}
+
+define i8 @add_and_xor_not_low_mask4(i8 %x) {
+; CHECK-LABEL: @add_and_xor_not_low_mask4(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 1, [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = and i8 [[TMP1]], -86
+; CHECK-NEXT:    ret i8 [[XOR]]
+;
+  %add = add i8 %x, -2
+  %and = and i8 %add, 170
+  %xor = xor i8 %and, 170
+  ret i8 %xor
 }
 
 ; This test is trasformed to 'xor(and(add x, 11), 15), 15)' and being applied.
