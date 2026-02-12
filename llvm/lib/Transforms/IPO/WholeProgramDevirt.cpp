@@ -773,8 +773,10 @@ struct DevirtIndex {
   // resolution for local targets in case they are exported by cross module
   // importing.
   std::map<ValueInfo, std::vector<VTableSlotSummary>> &LocalWPDTargetsMap;
-  // If not null, the set records local functions which are exported to
-  // other modules.
+  // We have hardcoded the promoted and renamed function name in the WPD
+  // summary, so we need to ensure that they will be renamed. Note this and
+  // that adding the current names to this set ensures we continue to rename
+  // them.
   DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr;
 
   MapVector<VTableSlotSummary, VTableSlotInfo> CallSlots;

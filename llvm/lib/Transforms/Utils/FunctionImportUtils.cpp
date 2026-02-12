@@ -28,6 +28,10 @@ static cl::opt<bool> UseSourceFilenameForPromotedLocals(
              "This requires that the source filename has a unique name / "
              "path to avoid name collisions."));
 
+static cl::opt<bool>
+    AlwaysRenamePromotedLocals("always-rename-promoted-locals", cl::Hidden,
+                               cl::desc("Always rename promoted locals."));
+
 cl::list<GlobalValue::GUID> MoveSymbolGUID(
     "thinlto-move-symbols",
     cl::desc(
@@ -305,14 +309,14 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
   }
 
   GlobalValueSummary *Summary = nullptr;
-  if (VI)
+  if (VI && GV.hasLocalLinkage())
     Summary = ImportIndex.findSummaryInModule(
         VI, GV.getParent()->getModuleIdentifier());
 
   if (GV.hasLocalLinkage() && shouldPromoteLocalToGlobal(&GV, Summary)) {
     // Save the original name string before we rename GV below.
     auto Name = GV.getName().str();
-    if (!Summary || Summary->renameOnPromotion())
+    if (AlwaysRenamePromotedLocals || !Summary || Summary->renameOnPromotion())
       GV.setName(getPromotedName(&GV));
 
     GV.setLinkage(getLinkage(&GV, /* DoPromote */ true));
