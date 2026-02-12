@@ -2484,10 +2484,22 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     Value *Val = SI.getCondition();
     Value *ShadowVal = getShadow(Val);
+    // TODO: add fast path - if the condition is fully initialized, we know
+    // there is no UUM, without needing to consider the case values below.
+
+    // Some code (e.g., AMDGPUGenMCCodeEmitter.inc) has tens of thousands of
+    // cases. This results in an extremely long chained expression for MSan's
+    // switch instrumentation, which can cause the JumpThreadingPass to have a
+    // stack overflow or excessive runtime. We limit the number of cases
+    // considered, with the tradeoff of niche false negatives.
+    // TODO: figure out a better solution.
+    int casesToConsider = 99;
 
     Value *ShadowCases = nullptr;
     for (auto Case : SI.cases()) {
       Value *Comparator = Case.getCaseValue();
+      // TODO: some simplification is possible when comparing multiple cases
+      // simultaneously.
       Value *ComparisonShadow = propagateEqualityComparison(
           IRB, Val, Comparator, ShadowVal, getShadow(Comparator));
 
@@ -2495,6 +2507,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         ShadowCases = IRB.CreateOr(ShadowCases, ComparisonShadow);
       else
         ShadowCases = ComparisonShadow;
+
+      casesToConsider--;
+      if (casesToConsider <= 0)
+        break;
     }
 
     if (ShadowCases)
