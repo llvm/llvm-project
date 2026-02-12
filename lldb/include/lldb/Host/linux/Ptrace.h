@@ -38,9 +38,15 @@ typedef int __ptrace_request;
 #ifndef PTRACE_SETREGSET
 #define PTRACE_SETREGSET 0x4205
 #endif
+
 #ifndef PTRACE_GET_THREAD_AREA
+#ifdef __arm__
+#define PTRACE_GET_THREAD_AREA 22
+#else
 #define PTRACE_GET_THREAD_AREA 25
-#endif
+#endif // __arm__
+#endif // PTRACE_GET_THREAD_AREA
+
 #ifndef PTRACE_ARCH_PRCTL
 #define PTRACE_ARCH_PRCTL 30
 #endif

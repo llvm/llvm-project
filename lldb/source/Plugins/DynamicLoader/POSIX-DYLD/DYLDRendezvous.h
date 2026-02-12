@@ -133,6 +133,7 @@ public:
   // the per-thread state.
   struct ThreadInfo {
     bool valid;             // whether we read valid metadata
+    uint32_t pthread_size;  // size of struct pthread
     uint32_t dtv_offset;    // offset of DTV pointer within pthread
     uint32_t dtv_slot_size; // size of one DTV slot
     uint32_t modid_offset;  // offset of module ID within link_map
@@ -345,7 +346,7 @@ protected:
   /// supplied by the runtime linker.
   bool TakeSnapshot(SOEntryList &entry_list);
 
-  enum PThreadField { eSize, eNElem, eOffset };
+  enum PThreadField { eSize, eNElem, eOffset, eStructSize };
 
   bool FindMetadata(const char *name, PThreadField field, uint32_t &value);
 

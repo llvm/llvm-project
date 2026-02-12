@@ -51,6 +51,8 @@ protected:
 
   bool IsFPR(unsigned reg);
 
+  bool IsTLS(unsigned reg);
+
   size_t GetFPUSize() { return sizeof(RegisterInfoPOSIX_arm::FPU); }
 
   virtual bool ReadGPR() = 0;

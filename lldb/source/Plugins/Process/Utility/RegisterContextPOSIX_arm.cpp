@@ -39,6 +39,13 @@ bool RegisterContextPOSIX_arm::IsFPR(unsigned reg) {
   return false;
 }
 
+bool RegisterContextPOSIX_arm::IsTLS(unsigned reg) {
+  if (m_register_info_up->GetRegisterSetFromRegisterIndex(reg) ==
+      RegisterInfoPOSIX_arm::TLSRegSet)
+    return true;
+  return false;
+}
+
 RegisterContextPOSIX_arm::RegisterContextPOSIX_arm(
     lldb_private::Thread &thread,
     std::unique_ptr<RegisterInfoPOSIX_arm> register_info)
