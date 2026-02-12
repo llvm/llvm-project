@@ -2984,14 +2984,9 @@ static bool matchEquivZeroRHS(CmpPredicate &Pred, const Value *RHS) {
       // icmp sle X, -1 --> icmp slt X, 0
       Pred = ICmpInst::ICMP_SLT;
       return true;
-    case ICmpInst::ICMP_UGT:
-      // icmp ugt X, -1 --> icmp ult X, 0
-      Pred = ICmpInst::ICMP_ULT;
-      return true;
-    case ICmpInst::ICMP_ULE:
-      // icmp ule X, -1 --> icmp uge X, 0
-      Pred = ICmpInst::ICMP_UGE;
-      return true;
+    // Note: unsigned comparisons with -1 (UINT_MAX) are not handled here:
+    // - icmp ugt X, -1 is always false (nothing > UINT_MAX)
+    // - icmp ule X, -1 is always true (everything <= UINT_MAX)
     default:
       return false;
     }
