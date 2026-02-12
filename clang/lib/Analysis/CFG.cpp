@@ -2544,14 +2544,14 @@ CFGBlock *CFGBuilder::VisitChildren(Stmt *S) {
 }
 
 CFGBlock *CFGBuilder::VisitCallExprChildren(CallExpr *C) {
-  // C++17 onwards require that the right operand is sequenced before the left
-  // operand.
-  if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(C)) {
-    if (OCE->isAssignmentOp()) {
-      Visit(OCE->getArg(0));
-      Visit(OCE->getArg(1));
-      return Visit(OCE->getCallee());
-    }
+  // For overloaded assignment operators, visit arguments in reverse order (LHS
+  // then RHS) so that RHS is sequenced before LHS in the CFG, matching C++17
+  // sequencing rules.
+  if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(C);
+      OCE && OCE->isAssignmentOp()) {
+    Visit(OCE->getArg(0));
+    Visit(OCE->getArg(1));
+    return Visit(OCE->getCallee());
   }
   return VisitChildren(C);
 }
