@@ -297,7 +297,9 @@ def main():
 
     # Step 2 check for reviews
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=THREAD_POOL_MAX_WORKERS) as executor:
+    with concurrent.futures.ThreadPoolExecutor(
+        max_workers=THREAD_POOL_MAX_WORKERS
+    ) as executor:
         executor.map(
             lambda user: triage_list[user].add_reviewed(
                 get_review_count(gh, user, one_year_ago)
@@ -311,7 +313,9 @@ def main():
         sys.exit(0)
 
     # Step 3 check for number of commits
-    with concurrent.futures.ThreadPoolExecutor(max_workers=THREAD_POOL_MAX_WORKERS) as executor:
+    with concurrent.futures.ThreadPoolExecutor(
+        max_workers=THREAD_POOL_MAX_WORKERS
+    ) as executor:
         # Override the total number of commits to not double count commits and
         # authored PRs.
         executor.map(
