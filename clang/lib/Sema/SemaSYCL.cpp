@@ -30,7 +30,7 @@ SemaSYCL::SemaSYCL(Sema &S) : SemaBase(S) {}
 Sema::SemaDiagnosticBuilder SemaSYCL::DiagIfDeviceCode(SourceLocation Loc,
                                                        unsigned DiagID) {
   assert(getLangOpts().SYCLIsDevice &&
-         "Should only be called during SYCL compilation");
+         "Device diagnostics Should only be issued during device compilation");
   SemaDiagnosticBuilder::Kind DiagKind = SemaDiagnosticBuilder::K_Nop;
   FunctionDecl *FD = SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);
   if (FD) {
@@ -223,7 +223,7 @@ void SemaSYCL::handleKernelEntryPointAttr(Decl *D, const ParsedAttr &AL) {
 
 void SemaSYCL::CheckDeviceUseOfDecl(NamedDecl *D, SourceLocation Loc) {
   assert(getLangOpts().SYCLIsDevice &&
-         "Should only be called during SYCL compilation");
+         "Should only be called during SYCL device compilation");
 
   // Function declarations with the sycl_kernel_entry_point attribute cannot
   // be ODR-used in a potentially evaluated context.
@@ -428,7 +428,8 @@ ExprResult SemaSYCL::BuildSYCLKernelLaunchIdExpr(FunctionDecl *FD,
                                                  QualType KNT) {
   // The current context must be the function definition context to ensure
   // that name lookup is performed within the correct scope.
-  assert(SemaRef.CurContext == FD);
+  assert(SemaRef.CurContext == FD && "The current declaration context does not "
+                                     "match the requested function context");
 
   // An appropriate source location is required to emit diagnostics if
   // lookup fails to produce an overload set. The desired location is the
@@ -502,7 +503,8 @@ bool BuildSYCLKernelLaunchCallArgs(Sema &SemaRef, FunctionDecl *FD,
                                    SourceLocation Loc) {
   // The current context must be the function definition context to ensure
   // that parameter references occur within the correct scope.
-  assert(SemaRef.CurContext == FD);
+  assert(SemaRef.CurContext == FD && "The current declaration context does not "
+                                     "match the requested function context");
 
   // Prepare a string literal that contains the kernel name.
   ASTContext &Ctx = SemaRef.getASTContext();
@@ -673,7 +675,8 @@ StmtResult SemaSYCL::BuildSYCLKernelCallStmt(FunctionDecl *FD,
   // The current context must be the function definition context to ensure
   // that name lookup and parameter and local variable creation are performed
   // within the correct scope.
-  assert(SemaRef.CurContext == FD);
+  assert(SemaRef.CurContext == FD && "The current declaration context does not "
+                                     "match the requested function context");
 
   const auto *SKEPAttr = FD->getAttr<SYCLKernelEntryPointAttr>();
   assert(SKEPAttr && "Missing sycl_kernel_entry_point attribute");
