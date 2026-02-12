@@ -1089,7 +1089,7 @@ private:
 
     BasicBlock *StartBB = nullptr, *EndBB = nullptr;
     auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
-                         ArrayRef<InsertPointTy> DeallocIPs) {
+                         ArrayRef<BasicBlock *> DeallocBlocks) {
       BasicBlock *CGStartBB = CodeGenIP.getBlock();
       BasicBlock *CGEndBB =
           SplitBlock(CGStartBB, &*CodeGenIP.getPoint(), DT, LI);
@@ -1130,7 +1130,7 @@ private:
       ParentBB->getTerminator()->eraseFromParent();
 
       auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
-                           ArrayRef<InsertPointTy> DeallocIPs) {
+                           ArrayRef<BasicBlock *> DeallocBlocks) {
         BasicBlock *CGStartBB = CodeGenIP.getBlock();
         BasicBlock *CGEndBB =
             SplitBlock(CGStartBB, &*CodeGenIP.getPoint(), DT, LI);
@@ -1260,7 +1260,7 @@ private:
       // avoid overriding binding settings, and without explicit cancellation.
       OpenMPIRBuilder::InsertPointTy AfterIP =
           cantFail(OMPInfoCache.OMPBuilder.createParallel(
-              Loc, AllocaIP, /* DeallocIPs */ {}, BodyGenCB, PrivCB, FiniCB,
+              Loc, AllocaIP, /* DeallocBlocks */ {}, BodyGenCB, PrivCB, FiniCB,
               nullptr, nullptr, OMP_PROC_BIND_default,
               /* IsCancellable */ false));
       BranchInst::Create(AfterBB, AfterIP.getBlock());

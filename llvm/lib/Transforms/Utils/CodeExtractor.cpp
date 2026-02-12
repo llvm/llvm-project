@@ -443,24 +443,24 @@ CodeExtractor::findOrCreateBlockForHoisting(BasicBlock *CommonExitBlock) {
   return CommonExitBlock;
 }
 
-Instruction *CodeExtractor::allocateVar(BasicBlock *BB,
-                                        BasicBlock::iterator AllocaIP,
+Instruction *CodeExtractor::allocateVar(IRBuilder<>::InsertPoint AllocaIP,
                                         Type *VarType, const Twine &Name,
                                         AddrSpaceCastInst **CastedAlloc) {
-  const DataLayout &DL = BB->getModule()->getDataLayout();
-  Instruction *Alloca =
-      new AllocaInst(VarType, DL.getAllocaAddrSpace(), nullptr, Name, AllocaIP);
+  const DataLayout &DL = AllocaIP.getBlock()->getModule()->getDataLayout();
+  Instruction *Alloca = new AllocaInst(VarType, DL.getAllocaAddrSpace(),
+                                       nullptr, Name, AllocaIP.getPoint());
 
   if (CastedAlloc && ArgsInZeroAddressSpace && DL.getAllocaAddrSpace() != 0) {
     *CastedAlloc = new AddrSpaceCastInst(
-        Alloca, PointerType::get(BB->getContext(), 0), Name + ".ascast");
+        Alloca, PointerType::get(AllocaIP.getBlock()->getContext(), 0),
+        Name + ".ascast");
     (*CastedAlloc)->insertAfter(Alloca->getIterator());
   }
   return Alloca;
 }
 
-Instruction *CodeExtractor::deallocateVar(BasicBlock *, BasicBlock::iterator,
-                                          Value *, Type *) {
+Instruction *CodeExtractor::deallocateVar(IRBuilder<>::InsertPoint, Value *,
+                                          Type *) {
   // Default alloca instructions created by allocateVar are released implicitly.
   return nullptr;
 }
@@ -1875,7 +1875,8 @@ CallInst *CodeExtractor::emitReplacerCall(
       continue;
 
     Value *OutAlloc =
-        allocateVar(AllocaBlock, AllocaBlock->getFirstInsertionPt(),
+        allocateVar(IRBuilder<>::InsertPoint(
+                        AllocaBlock, AllocaBlock->getFirstInsertionPt()),
                     output->getType(), output->getName() + ".loc");
     params.push_back(OutAlloc);
     ReloadOutputs.push_back(OutAlloc);
@@ -1884,7 +1885,8 @@ CallInst *CodeExtractor::emitReplacerCall(
   Instruction *Struct = nullptr;
   if (!StructValues.empty()) {
     AddrSpaceCastInst *StructSpaceCast = nullptr;
-    Struct = allocateVar(AllocaBlock, AllocaBlock->getFirstInsertionPt(),
+    Struct = allocateVar(IRBuilder<>::InsertPoint(
+                             AllocaBlock, AllocaBlock->getFirstInsertionPt()),
                          StructArgTy, "structArg", &StructSpaceCast);
     if (StructSpaceCast)
       params.push_back(StructSpaceCast);
@@ -2038,12 +2040,13 @@ CallInst *CodeExtractor::emitReplacerCall(
     int Index = 0;
     for (Value *Output : outputs) {
       if (!StructValues.contains(Output))
-        deallocateVar(DeallocBlock, DeallocIP, ReloadOutputs[Index++],
-                      Output->getType());
+        deallocateVar(IRBuilder<>::InsertPoint(DeallocBlock, DeallocIP),
+                      ReloadOutputs[Index++], Output->getType());
     }
 
     if (Struct)
-      deallocateVar(DeallocBlock, DeallocIP, Struct, StructArgTy);
+      deallocateVar(IRBuilder<>::InsertPoint(DeallocBlock, DeallocIP), Struct,
+                    StructArgTy);
   };
 
   if (DeallocationBlocks.empty()) {
