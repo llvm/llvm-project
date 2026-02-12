@@ -184,9 +184,9 @@ static void* mmap_interceptor(Mmap real_mmap, void* addr, SIZE_T length,
 #  if SANITIZER_POSIX
   if (length == 0)
     return real_mmap(addr, length, prot, flags, fd, offset);
-  uptr start = reinterpret_cast<uptr>(addr);
+  const uptr start = reinterpret_cast<uptr>(addr);
   uptr end_excl;
-  if (UNLIKELY(__builtin_add_overflow(start, (uptr)length, &end_excl))) {
+  if (UNLIKELY(__builtin_add_overflow(start, static_cast<uptr>(length), &end_excl))) {
     errno = errno_EINVAL;
     return (void*)-1;
   }
@@ -220,12 +220,12 @@ static int munmap_interceptor(Munmap real_munmap, void* addr, SIZE_T length) {
     return real_munmap(addr, length);
 
   uptr end_excl;
-  if (UNLIKELY(__builtin_add_overflow(beg, (uptr)length, &end_excl))) {
+  if (UNLIKELY(__builtin_add_overflow(start, static_cast<uptr>(length), &end_excl))) {
     errno = errno_EINVAL;
     return -1;
   }
   //TODO: shadow gap may need to be checked
-  if (__asan::IntersectsShadow(beg, end_excl)) {
+  if (__asan::IntersectsShadow(start, end_excl)) {
     errno = errno_EINVAL;
     return -1;
   }
@@ -233,11 +233,11 @@ static int munmap_interceptor(Munmap real_munmap, void* addr, SIZE_T length) {
 
   // We should not tag if munmap fail, but it's to late to tag after
   // real_munmap, as the pages could be mmaped by another thread.
-  if (length && IsAligned(beg, GetPageSize())) {
+  if (length && IsAligned(start, GetPageSize())) {
     SIZE_T rounded_length = RoundUpTo(length, GetPageSize());
     // Protect from unmapping the shadow.
-    if (AddrIsInMem(beg) && AddrIsInMem(beg + rounded_length - 1))
-      PoisonShadow(beg, rounded_length, 0);
+    if (AddrIsInMem(start) && AddrIsInMem(start + rounded_length - 1))
+      PoisonShadow(start, rounded_length, 0);
   }
   return real_munmap(addr, length);
 }
