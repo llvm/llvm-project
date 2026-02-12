@@ -453,7 +453,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, {Value, Strategy});
   }
   case AMDGPU::BI__builtin_amdgcn_wave_shuffle:
-    // TODO: can we unify this with wave_reduce?
     return emitBuiltinWithOneOverloadedType<2>(*this, E,
                                                Intrinsic::amdgcn_wave_shuffle);
   case AMDGPU::BI__builtin_amdgcn_div_scale:
