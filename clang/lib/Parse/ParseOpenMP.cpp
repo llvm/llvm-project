@@ -5095,8 +5095,9 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
         if (Depth == 0)
           break;
         Depth--;
-      } else if (Tok.is(tok::comma) && Depth == 0)
+      } else if (Tok.is(tok::comma) && Depth == 0) {
         break; // comma-separated syntax
+      }
       else if (Tok.is(tok::colon) && Depth == 0) {
         HasColon = true;
         break;

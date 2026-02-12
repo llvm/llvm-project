@@ -2294,21 +2294,16 @@ void OMPClausePrinter::VisitOMPNumTeamsClause(OMPNumTeamsClause *Node) {
     // Handle lower-bound:upper-bound syntax when there are exactly 2
     // expressions
     if (Node->varlist_size() == 2) {
-      auto *I = Node->varlist_begin();
-      (*I)->printPretty(OS, nullptr, Policy, 0);
-      OS << ":";
-      ++I;
-      (*I)->printPretty(OS, nullptr, Policy, 0);
+      llvm::interleave(Node->varlist(), OS, 
+                       [&](const auto *Expr) {
+                         Expr->printPretty(OS, nullptr, Policy, 0);
+                       }, 
+                       ":");
     } else {
       // For single expression or other cases, use comma-separated list
-      bool First = true;
-      for (auto *I = Node->varlist_begin(), *E = Node->varlist_end(); I != E;
-           ++I) {
-        if (!First)
-          OS << ",";
-        First = false;
-        (*I)->printPretty(OS, nullptr, Policy, 0);
-      }
+       llvm::interleaveComma(Node->varlist(), OS, [&](const auto *Expr) {
+        Expr->printPretty(OS, nullptr, Policy, 0);
+      });
     }
     OS << ")";
   }
