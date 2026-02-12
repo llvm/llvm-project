@@ -4473,70 +4473,22 @@ define <4 x float> @vselect_oge_nnan(<4 x float> %a, <4 x float> %b, <4 x float>
 }
 
 define <4 x float> @vselect_olt_nnan(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
-; CHECK-SD-LABEL: vselect_olt_nnan:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov s4, v1.s[1]
-; CHECK-SD-NEXT:    mov s5, v0.s[1]
-; CHECK-SD-NEXT:    fcmp s5, s4
-; CHECK-SD-NEXT:    mov s4, v1.s[2]
-; CHECK-SD-NEXT:    mov s5, v0.s[2]
-; CHECK-SD-NEXT:    csetm w8, lt
-; CHECK-SD-NEXT:    fcmp s0, s1
-; CHECK-SD-NEXT:    mov s1, v1.s[3]
-; CHECK-SD-NEXT:    mov s0, v0.s[3]
-; CHECK-SD-NEXT:    csetm w9, lt
-; CHECK-SD-NEXT:    fcmp s5, s4
-; CHECK-SD-NEXT:    fmov s6, w9
-; CHECK-SD-NEXT:    mov v6.s[1], w8
-; CHECK-SD-NEXT:    csetm w8, lt
-; CHECK-SD-NEXT:    fcmp s0, s1
-; CHECK-SD-NEXT:    mov v6.s[2], w8
-; CHECK-SD-NEXT:    csetm w8, lt
-; CHECK-SD-NEXT:    mov v6.s[3], w8
-; CHECK-SD-NEXT:    mov v0.16b, v6.16b
-; CHECK-SD-NEXT:    bsl v0.16b, v2.16b, v3.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: vselect_olt_nnan:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: vselect_olt_nnan:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-NEXT:    ret
   %c = fcmp nnan olt <4 x float> %a, %b
   %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
   ret <4 x float> %r
 }
 
 define <4 x float> @vselect_ole_nnan(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
-; CHECK-SD-LABEL: vselect_ole_nnan:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov s4, v1.s[1]
-; CHECK-SD-NEXT:    mov s5, v0.s[1]
-; CHECK-SD-NEXT:    fcmp s5, s4
-; CHECK-SD-NEXT:    mov s4, v1.s[2]
-; CHECK-SD-NEXT:    mov s5, v0.s[2]
-; CHECK-SD-NEXT:    csetm w8, le
-; CHECK-SD-NEXT:    fcmp s0, s1
-; CHECK-SD-NEXT:    mov s1, v1.s[3]
-; CHECK-SD-NEXT:    mov s0, v0.s[3]
-; CHECK-SD-NEXT:    csetm w9, le
-; CHECK-SD-NEXT:    fcmp s5, s4
-; CHECK-SD-NEXT:    fmov s6, w9
-; CHECK-SD-NEXT:    mov v6.s[1], w8
-; CHECK-SD-NEXT:    csetm w8, le
-; CHECK-SD-NEXT:    fcmp s0, s1
-; CHECK-SD-NEXT:    mov v6.s[2], w8
-; CHECK-SD-NEXT:    csetm w8, le
-; CHECK-SD-NEXT:    mov v6.s[3], w8
-; CHECK-SD-NEXT:    mov v0.16b, v6.16b
-; CHECK-SD-NEXT:    bsl v0.16b, v2.16b, v3.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: vselect_ole_nnan:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fcmge v0.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: vselect_ole_nnan:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-NEXT:    ret
   %c = fcmp nnan ole <4 x float> %a, %b
   %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
   ret <4 x float> %r
@@ -4633,25 +4585,7 @@ define <4 x float> @vselect_uge_nnan(<4 x float> %a, <4 x float> %b, <4 x float>
 define <4 x float> @vselect_ult_nnan(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
 ; CHECK-SD-LABEL: vselect_ult_nnan:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov s4, v1.s[1]
-; CHECK-SD-NEXT:    mov s5, v0.s[1]
-; CHECK-SD-NEXT:    fcmp s5, s4
-; CHECK-SD-NEXT:    mov s4, v1.s[2]
-; CHECK-SD-NEXT:    mov s5, v0.s[2]
-; CHECK-SD-NEXT:    csetm w8, lt
-; CHECK-SD-NEXT:    fcmp s0, s1
-; CHECK-SD-NEXT:    mov s1, v1.s[3]
-; CHECK-SD-NEXT:    mov s0, v0.s[3]
-; CHECK-SD-NEXT:    csetm w9, lt
-; CHECK-SD-NEXT:    fcmp s5, s4
-; CHECK-SD-NEXT:    fmov s6, w9
-; CHECK-SD-NEXT:    mov v6.s[1], w8
-; CHECK-SD-NEXT:    csetm w8, lt
-; CHECK-SD-NEXT:    fcmp s0, s1
-; CHECK-SD-NEXT:    mov v6.s[2], w8
-; CHECK-SD-NEXT:    csetm w8, lt
-; CHECK-SD-NEXT:    mov v6.s[3], w8
-; CHECK-SD-NEXT:    mov v0.16b, v6.16b
+; CHECK-SD-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
 ; CHECK-SD-NEXT:    bsl v0.16b, v2.16b, v3.16b
 ; CHECK-SD-NEXT:    ret
 ;
@@ -4669,25 +4603,7 @@ define <4 x float> @vselect_ult_nnan(<4 x float> %a, <4 x float> %b, <4 x float>
 define <4 x float> @vselect_ule_nnan(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
 ; CHECK-SD-LABEL: vselect_ule_nnan:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov s4, v1.s[1]
-; CHECK-SD-NEXT:    mov s5, v0.s[1]
-; CHECK-SD-NEXT:    fcmp s5, s4
-; CHECK-SD-NEXT:    mov s4, v1.s[2]
-; CHECK-SD-NEXT:    mov s5, v0.s[2]
-; CHECK-SD-NEXT:    csetm w8, le
-; CHECK-SD-NEXT:    fcmp s0, s1
-; CHECK-SD-NEXT:    mov s1, v1.s[3]
-; CHECK-SD-NEXT:    mov s0, v0.s[3]
-; CHECK-SD-NEXT:    csetm w9, le
-; CHECK-SD-NEXT:    fcmp s5, s4
-; CHECK-SD-NEXT:    fmov s6, w9
-; CHECK-SD-NEXT:    mov v6.s[1], w8
-; CHECK-SD-NEXT:    csetm w8, le
-; CHECK-SD-NEXT:    fcmp s0, s1
-; CHECK-SD-NEXT:    mov v6.s[2], w8
-; CHECK-SD-NEXT:    csetm w8, le
-; CHECK-SD-NEXT:    mov v6.s[3], w8
-; CHECK-SD-NEXT:    mov v0.16b, v6.16b
+; CHECK-SD-NEXT:    fcmge v0.4s, v1.4s, v0.4s
 ; CHECK-SD-NEXT:    bsl v0.16b, v2.16b, v3.16b
 ; CHECK-SD-NEXT:    ret
 ;
