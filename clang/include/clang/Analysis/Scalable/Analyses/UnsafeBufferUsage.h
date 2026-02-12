@@ -10,18 +10,18 @@
 #define LLVM_CLANG_ANALYSIS_SCALABLE_ANALYSES_UNSAFEBUFFERUSAGE_H
 
 #include "clang/Analysis/Scalable/Model/EntityId.h"
+#include "clang/Analysis/Scalable/Model/SummaryName.h"
 #include "clang/Analysis/Scalable/TUSummary/EntitySummary.h"
 #include "clang/Analysis/Scalable/TUSummary/TUSummaryBuilder.h"
 #include "clang/Analysis/Scalable/TUSummary/TUSummaryExtractor.h"
-#include "llvm/ADT/SmallVector.h"
-#include <limits>
+#include "llvm/ADT/iterator_range.h"
 #include <memory>
 #include <set>
 
 namespace clang::ssaf {
 
 /// A PointerKindVariable is associated with a pointer type as (a spelling part
-/// of) the declared type of an entity.  In other words,  a PointerKindVariable
+/// of) the declared type of an entity. In other words, a PointerKindVariable
 /// is associated with a `*` in the fully expanded spelling of the declared
 /// type.
 ///
@@ -33,12 +33,16 @@ namespace clang::ssaf {
 /// pointer level with 1 referring to the whole declared pointer type.
 ///
 /// For the same example `int **p;`, the two PointerKindVariables are:
-/// `(p, 1)` for `int **` and `(p, 2)` for `int *`.
+/// '(p, 1)' for `int **` and '(p, 2)' for `int *`.
 ///
-/// Reserve pointer level value 0 for implementation-internal use.
+/// Reserve pointer level value 0 for representing address-of expressions in
+/// implementations internally. For the same example, `&p` can be represented as
+/// '(p, 0)'. With that, the PointerKindVariable derived from pointer expression
+/// `*(&p)` or `&(*p)` is naturally equivalent to the one derived from
+/// expression `p`.
 class PointerKindVariable {
-  const EntityId Entity;
-  const unsigned PointerLevel;
+  EntityId Entity;
+  unsigned PointerLevel;
 
   friend class UnsafeBufferUsageTUSummaryBuilder;
   friend class UnsafeBufferUsageEntitySummary;
@@ -59,24 +63,38 @@ public:
   }
 
   bool operator<(const PointerKindVariable &Other) const {
-    if (Entity == Other.Entity)
-      return PointerLevel < Other.PointerLevel;
-    return Entity < Other.Entity;
+    return std::tie(Entity, PointerLevel) <
+           std::tie(Other.Entity, Other.PointerLevel);
   }
+
+  // Comparator supporting partial comparison against EntityId:
+  struct Comparator {
+    using is_transparent = void;
+    bool operator()(const PointerKindVariable &L,
+                    const PointerKindVariable &R) const {
+      return L < R;
+    }
+    bool operator()(const EntityId &L, const PointerKindVariable &R) const {
+      return L < R.getEntity();
+    }
+    bool operator()(const PointerKindVariable &L, const EntityId &R) const {
+      return L.getEntity() < R;
+    }
+  };
 };
 
-using PointerKindVariableSet = std::set<PointerKindVariable>;
+using PointerKindVariableSet =
+    std::set<PointerKindVariable, PointerKindVariable::Comparator>;
 
 /// An UnsafeBufferUsageEntitySummary is an immutable set of unsafe buffers, in
 /// the form of PointerKindVariable.
-class UnsafeBufferUsageEntitySummary : public EntitySummary {
+class UnsafeBufferUsageEntitySummary final : public EntitySummary {
   const PointerKindVariableSet UnsafeBuffers;
 
   friend class UnsafeBufferUsageTUSummaryBuilder;
 
   UnsafeBufferUsageEntitySummary(PointerKindVariableSet &&UnsafeBuffers)
-      : EntitySummary(SummaryName{"UnsafeBufferUsage"}),
-        UnsafeBuffers(std::move(UnsafeBuffers)) {}
+      : EntitySummary(), UnsafeBuffers(std::move(UnsafeBuffers)) {}
 
 public:
   using const_iterator = PointerKindVariableSet::const_iterator;
@@ -89,26 +107,27 @@ public:
   }
 
   llvm::iterator_range<const_iterator> getSubsetOf(EntityId Entity) const {
-    auto Begin = UnsafeBuffers.lower_bound({Entity, 0});
-    auto End = UnsafeBuffers.upper_bound(
-        {Entity, std::numeric_limits<unsigned>::max()});
-    return {Begin, End};
+    return llvm::make_range(UnsafeBuffers.equal_range(Entity));
   }
 
   size_t getNumUnsafeBuffers() { return UnsafeBuffers.size(); }
+
+  SummaryName getSummaryName() const override {
+    return SummaryName{"UnsafeBufferUsage"};
+  };
 };
 
 class UnsafeBufferUsageTUSummaryBuilder : public TUSummaryBuilder {
 public:
-  PointerKindVariable buildPointerKindVariable(EntityId Entity,
-                                               unsigned PointerLevel) {
+  static PointerKindVariable buildPointerKindVariable(EntityId Entity,
+                                                      unsigned PointerLevel) {
     return {Entity, PointerLevel};
   }
 
-  std::unique_ptr<UnsafeBufferUsageEntitySummary>
+  static std::unique_ptr<UnsafeBufferUsageEntitySummary>
   buildUnsafeBufferUsageEntitySummary(PointerKindVariableSet &&UnsafeBuffers) {
-    return std::unique_ptr<UnsafeBufferUsageEntitySummary>(
-        new UnsafeBufferUsageEntitySummary(std::move(UnsafeBuffers)));
+    return std::make_unique<UnsafeBufferUsageEntitySummary>(
+        UnsafeBufferUsageEntitySummary(std::move(UnsafeBuffers)));
   }
 };
 } // namespace clang::ssaf
