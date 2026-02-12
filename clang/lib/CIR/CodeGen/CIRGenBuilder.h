@@ -345,10 +345,9 @@ public:
     return getType<cir::RecordType>(members, packed, padded, kind);
   }
 
-  //
+  //===--------------------------------------------------------------------===//
   // Constant creation helpers
-  // -------------------------
-  //
+  //===--------------------------------------------------------------------===//
   cir::ConstantOp getSInt32(int32_t c, mlir::Location loc) {
     return getConstantInt(loc, getSInt32Ty(), c);
   }
@@ -362,10 +361,19 @@ public:
     return getConstantInt(loc, getUInt64Ty(), c);
   }
 
-  //
+  /// Create constant nullptr for pointer-to-data-member type ty.
+  cir::ConstantOp getNullDataMemberPtr(cir::DataMemberType ty,
+                                       mlir::Location loc) {
+    return cir::ConstantOp::create(*this, loc, getNullDataMemberAttr(ty));
+  }
+
+  cir::ConstantOp getNullMethodPtr(cir::MethodType ty, mlir::Location loc) {
+    return cir::ConstantOp::create(*this, loc, getNullMethodAttr(ty));
+  }
+
+  //===--------------------------------------------------------------------===//
   // UnaryOp creation helpers
-  // -------------------------
-  //
+  //===--------------------------------------------------------------------===//
   mlir::Value createNeg(mlir::Value value) {
 
     if (auto intTy = mlir::dyn_cast<cir::IntType>(value.getType())) {
@@ -391,30 +399,9 @@ public:
                                 cir::UnaryOpKind::Minus, value);
   }
 
-  cir::IsFPClassOp createIsFPClass(mlir::Location loc, mlir::Value src,
-                                   cir::FPClassTest flags) {
-    return cir::IsFPClassOp::create(*this, loc, src, flags);
-  }
-
-  /// Create constant nullptr for pointer-to-data-member type ty.
-  cir::ConstantOp getNullDataMemberPtr(cir::DataMemberType ty,
-                                       mlir::Location loc) {
-    return cir::ConstantOp::create(*this, loc, getNullDataMemberAttr(ty));
-  }
-
-  cir::ConstantOp getNullMethodPtr(cir::MethodType ty, mlir::Location loc) {
-    return cir::ConstantOp::create(*this, loc, getNullMethodAttr(ty));
-  }
-
-  // TODO: split this to createFPExt/createFPTrunc when we have dedicated cast
-  // operations.
-  mlir::Value createFloatingCast(mlir::Value v, mlir::Type destType) {
-    assert(!cir::MissingFeatures::fpConstraints());
-
-    return cir::CastOp::create(*this, v.getLoc(), destType,
-                               cir::CastKind::floating, v);
-  }
-
+  //===--------------------------------------------------------------------===//
+  // BinaryOp creation helpers
+  //===--------------------------------------------------------------------===//
   mlir::Value createFSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
     assert(!cir::MissingFeatures::fpConstraints());
@@ -446,6 +433,19 @@ public:
     return cir::BinOp::create(*this, loc, cir::BinOpKind::Div, lhs, rhs);
   }
 
+  //===--------------------------------------------------------------------===//
+  // CastOp creation helpers
+  //===--------------------------------------------------------------------===//
+
+  // TODO: split this to createFPExt/createFPTrunc when we have dedicated cast
+  // operations.
+  mlir::Value createFloatingCast(mlir::Value v, mlir::Type destType) {
+    assert(!cir::MissingFeatures::fpConstraints());
+
+    return cir::CastOp::create(*this, v.getLoc(), destType,
+                               cir::CastKind::floating, v);
+  }
+
   mlir::Value createDynCast(mlir::Location loc, mlir::Value src,
                             cir::PointerType destType, bool isRefCast,
                             cir::DynamicCastInfoAttr info) {
@@ -465,6 +465,9 @@ public:
         cir::DynamicCastInfoAttr{}, vtableUseRelativeLayout);
   }
 
+  //===--------------------------------------------------------------------===//
+  // Address creation helpers
+  //===--------------------------------------------------------------------===//
   Address createBaseClassAddr(mlir::Location loc, Address addr,
                               mlir::Type destType, unsigned offset,
                               bool assumeNotNull) {
@@ -491,6 +494,9 @@ public:
     return Address(derivedAddr, destType, addr.getAlignment());
   }
 
+  //===--------------------------------------------------------------------===//
+  // Virtual Address creation helpers
+  //===--------------------------------------------------------------------===//
   mlir::Value createVTTAddrPoint(mlir::Location loc, mlir::Type retTy,
                                  mlir::Value addr, uint64_t offset) {
     return cir::VTTAddrPointOp::create(*this, loc, retTy,
@@ -501,6 +507,14 @@ public:
                                  mlir::FlatSymbolRefAttr sym, uint64_t offset) {
     return cir::VTTAddrPointOp::create(*this, loc, retTy, sym, mlir::Value{},
                                        offset);
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Other creation helpers
+  //===--------------------------------------------------------------------===//
+  cir::IsFPClassOp createIsFPClass(mlir::Location loc, mlir::Value src,
+                                   cir::FPClassTest flags) {
+    return cir::IsFPClassOp::create(*this, loc, src, flags);
   }
 
   /// Cast the element type of the given address to a different type,
