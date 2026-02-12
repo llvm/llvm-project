@@ -1031,6 +1031,8 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
   if (Target.getRegistersAreIntervals()) {
     OS << "extern const unsigned " << TargetName
        << "RegUnitIntervals[][2] = {\n";
+    // Add entry for NoRegister
+    OS << "  { 0, 0 },\n";
     for (const CodeGenRegister &Reg : Regs) {
       const auto &Units = Reg.getNativeRegUnits();
       if (Units.empty()) {
@@ -1133,7 +1135,10 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
      << TargetName << "LaneMaskLists, " << TargetName << "RegStrings, "
      << TargetName << "RegClassStrings, " << TargetName << "SubRegIdxLists, "
      << (llvm::size(SubRegIndices) + 1) << ",\n"
-     << TargetName << "RegEncodingTable);\n\n";
+     << TargetName << "RegEncodingTable, "
+     << (Target.getRegistersAreIntervals() ? TargetName + "RegUnitIntervals"
+                                           : "nullptr")
+     << ");\n\n";
 
   EmitRegMapping(OS, Regs, false);
 
@@ -1670,6 +1675,8 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
   OS << "extern const MCPhysReg " << TargetName << "RegUnitRoots[][2];\n";
   OS << "extern const uint16_t " << TargetName << "SubRegIdxLists[];\n";
   OS << "extern const uint16_t " << TargetName << "RegEncodingTable[];\n";
+  if (Target.getRegistersAreIntervals())
+    OS << "extern const unsigned " << TargetName << "RegUnitIntervals[][2];\n";
 
   EmitRegMappingTables(OS, Regs, true);
 
@@ -1695,7 +1702,11 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
      << "                     " << TargetName << "RegClassStrings,\n"
      << "                     " << TargetName << "SubRegIdxLists,\n"
      << "                     " << SubRegIndicesSize + 1 << ",\n"
-     << "                     " << TargetName << "RegEncodingTable);\n\n";
+     << "                     " << TargetName << "RegEncodingTable,\n"
+     << "                     "
+     << (Target.getRegistersAreIntervals() ? TargetName + "RegUnitIntervals"
+                                           : "nullptr")
+     << ");\n\n";
 
   EmitRegMapping(OS, Regs, true);
 
