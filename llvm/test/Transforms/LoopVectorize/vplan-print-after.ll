@@ -3,13 +3,13 @@
 ; RUN:   2>&1 | FileCheck %s --implicit-check-not "VPlan after"
 ; REQUIRES: asserts
 
-; CHECK:      VPlan after simplifyRecipes
+; CHECK:      VPlan for loop in 'foo' after simplifyRecipes
 ; CHECK-NEXT: VPlan 'Initial VPlan for VF={4},UF>=1' {
-; CHECK:      VPlan after simplifyBlends
+; CHECK:      VPlan for loop in 'foo' after simplifyBlends
 ; CHECK-NEXT: VPlan 'Initial VPlan for VF={4},UF>=1' {
-; CHECK:      VPlan after simplifyRecipes
+; CHECK:      VPlan for loop in 'foo' after simplifyRecipes
 ; CHECK-NEXT: VPlan 'Initial VPlan for VF={4},UF>=1' {
-; CHECK:      VPlan after printFinalVPlan
+; CHECK:      VPlan for loop in 'foo' after printFinalVPlan
 ; CHECK-NEXT: VPlan 'Final VPlan for VF={4},UF={1}' {
 
 define void @foo(ptr %ptr, i64 %n) {

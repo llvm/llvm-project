@@ -61,16 +61,16 @@ define i32 @test_load(ptr %a) sanitize_hwaddress {
 ; FUCHSIA-LABEL: define i32 @test_load
 ; FUCHSIA-SAME: (ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FUCHSIA-NEXT:  entry:
-; FUCHSIA-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
-; FUCHSIA-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr [[A]], i32 2, i64 0)
+; FUCHSIA-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = load ptr, ptr @__hwasan_shadow_memory_dynamic_address, align 8
+; FUCHSIA-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 2)
 ; FUCHSIA-NEXT:    [[X:%.*]] = load i32, ptr [[A]], align 4
 ; FUCHSIA-NEXT:    ret i32 [[X]]
 ;
 ; FUCHSIA-LIBCALL-LABEL: define i32 @test_load
 ; FUCHSIA-LIBCALL-SAME: (ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FUCHSIA-LIBCALL-NEXT:  entry:
-; FUCHSIA-LIBCALL-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
-; FUCHSIA-LIBCALL-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr [[A]], i32 2, i64 0)
+; FUCHSIA-LIBCALL-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = load ptr, ptr @__hwasan_shadow_memory_dynamic_address, align 8
+; FUCHSIA-LIBCALL-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 2)
 ; FUCHSIA-LIBCALL-NEXT:    [[X:%.*]] = load i32, ptr [[A]], align 4
 ; FUCHSIA-LIBCALL-NEXT:    ret i32 [[X]]
 ;
@@ -273,7 +273,7 @@ define void @test_alloca() sanitize_hwaddress {
 ; FUCHSIA-LABEL: define void @test_alloca
 ; FUCHSIA-SAME: () #[[ATTR0]] personality ptr @__hwasan_personality_thunk {
 ; FUCHSIA-NEXT:  entry:
-; FUCHSIA-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; FUCHSIA-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = load ptr, ptr @__hwasan_shadow_memory_dynamic_address, align 8
 ; FUCHSIA-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
 ; FUCHSIA-NEXT:    [[TMP1:%.*]] = ashr i64 [[TMP0]], 3
 ; FUCHSIA-NEXT:    [[TMP2:%.*]] = call i64 @llvm.read_register.i64(metadata [[META1:![0-9]+]])
@@ -301,7 +301,7 @@ define void @test_alloca() sanitize_hwaddress {
 ; FUCHSIA-NEXT:    [[TMP19:%.*]] = ptrtoint ptr [[X]] to i64
 ; FUCHSIA-NEXT:    [[TMP20:%.*]] = and i64 [[TMP19]], 72057594037927935
 ; FUCHSIA-NEXT:    [[TMP21:%.*]] = lshr i64 [[TMP20]], 4
-; FUCHSIA-NEXT:    [[TMP22:%.*]] = inttoptr i64 [[TMP21]] to ptr
+; FUCHSIA-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP21]]
 ; FUCHSIA-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[TMP22]], i32 0
 ; FUCHSIA-NEXT:    store i8 4, ptr [[TMP23]], align 1
 ; FUCHSIA-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[X]], i32 15
@@ -311,14 +311,14 @@ define void @test_alloca() sanitize_hwaddress {
 ; FUCHSIA-NEXT:    [[TMP26:%.*]] = ptrtoint ptr [[X]] to i64
 ; FUCHSIA-NEXT:    [[TMP27:%.*]] = and i64 [[TMP26]], 72057594037927935
 ; FUCHSIA-NEXT:    [[TMP28:%.*]] = lshr i64 [[TMP27]], 4
-; FUCHSIA-NEXT:    [[TMP29:%.*]] = inttoptr i64 [[TMP28]] to ptr
+; FUCHSIA-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP28]]
 ; FUCHSIA-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP29]], i8 [[TMP25]], i64 1, i1 false)
 ; FUCHSIA-NEXT:    ret void
 ;
 ; FUCHSIA-LIBCALL-LABEL: define void @test_alloca
 ; FUCHSIA-LIBCALL-SAME: () #[[ATTR0]] personality ptr @__hwasan_personality_thunk {
 ; FUCHSIA-LIBCALL-NEXT:  entry:
-; FUCHSIA-LIBCALL-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; FUCHSIA-LIBCALL-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = load ptr, ptr @__hwasan_shadow_memory_dynamic_address, align 8
 ; FUCHSIA-LIBCALL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.read_register.i64(metadata [[META1:![0-9]+]])
 ; FUCHSIA-LIBCALL-NEXT:    [[TMP1:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
 ; FUCHSIA-LIBCALL-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
@@ -339,7 +339,7 @@ define void @test_alloca() sanitize_hwaddress {
 ; FUCHSIA-LIBCALL-NEXT:    [[TMP12:%.*]] = ptrtoint ptr [[X]] to i64
 ; FUCHSIA-LIBCALL-NEXT:    [[TMP13:%.*]] = and i64 [[TMP12]], 72057594037927935
 ; FUCHSIA-LIBCALL-NEXT:    [[TMP14:%.*]] = lshr i64 [[TMP13]], 4
-; FUCHSIA-LIBCALL-NEXT:    [[TMP15:%.*]] = inttoptr i64 [[TMP14]] to ptr
+; FUCHSIA-LIBCALL-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP14]]
 ; FUCHSIA-LIBCALL-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP15]], i32 0
 ; FUCHSIA-LIBCALL-NEXT:    store i8 4, ptr [[TMP16]], align 1
 ; FUCHSIA-LIBCALL-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[X]], i32 15
@@ -349,7 +349,7 @@ define void @test_alloca() sanitize_hwaddress {
 ; FUCHSIA-LIBCALL-NEXT:    [[TMP19:%.*]] = ptrtoint ptr [[X]] to i64
 ; FUCHSIA-LIBCALL-NEXT:    [[TMP20:%.*]] = and i64 [[TMP19]], 72057594037927935
 ; FUCHSIA-LIBCALL-NEXT:    [[TMP21:%.*]] = lshr i64 [[TMP20]], 4
-; FUCHSIA-LIBCALL-NEXT:    [[TMP22:%.*]] = inttoptr i64 [[TMP21]] to ptr
+; FUCHSIA-LIBCALL-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP21]]
 ; FUCHSIA-LIBCALL-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP22]], i8 [[TMP18]], i64 1, i1 false)
 ; FUCHSIA-LIBCALL-NEXT:    ret void
 ;
