@@ -5,6 +5,7 @@ executable("c-index-test") {
     "//clang/lib/AST",
     "//clang/lib/Basic",
     "//clang/lib/CodeGen",
+    "//clang/lib/Driver",
     "//clang/lib/Frontend",
     "//clang/lib/Index",
     "//clang/lib/Serialization",
