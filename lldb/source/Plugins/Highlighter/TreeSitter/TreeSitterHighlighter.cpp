@@ -196,8 +196,10 @@ void TreeSitterHighlighter::Highlight(const HighlightStyle &options,
             [](const HLRange &a, const HLRange &b) {
               if (a.start_byte != b.start_byte)
                 return a.start_byte < b.start_byte;
-              // Prefer longer matches.
-              return (a.end_byte - a.start_byte) > (b.end_byte - b.start_byte);
+              // Prefer shorter matches. For example, if we have an expression
+              // consisting of a variable and a property, we want to highlight
+              // them as individual components.
+              return (b.end_byte - b.start_byte) > (a.end_byte - a.start_byte);
             });
 
   uint32_t current_pos = 0;
