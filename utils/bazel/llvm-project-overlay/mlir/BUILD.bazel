@@ -861,8 +861,8 @@ mlir_c_api_cc_library(
     ],
     capi_deps = [":CAPIIR"],
     header_deps = [
-        ":TransformDialectTransformsIncGen",
         ":TransformDialectInterfaces",
+        ":TransformDialectTransformsIncGen",
     ],
     includes = ["include"],
     deps = [
@@ -12193,6 +12193,7 @@ cc_library(
     name = "TransformDialectInterfaces",
     srcs = glob(["lib/Dialect/Transform/Interfaces/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/Transform/Interfaces/*.h"]),
+    includes = ["include"],
     deps = [
         ":CastInterfaces",
         ":IR",
