@@ -3734,6 +3734,14 @@ static void changeVectorFPCCToAArch64CC(ISD::CondCode CC,
     CondCode = AArch64CC::MI;
     CondCode2 = AArch64CC::GE;
     break;
+  case ISD::SETLE:
+    CondCode = AArch64CC::LS;
+    CondCode2 = AArch64CC::AL;
+    break;
+  case ISD::SETLT:
+    CondCode = AArch64CC::MI;
+    CondCode2 = AArch64CC::AL;
+    break;
   case ISD::SETUEQ:
   case ISD::SETULT:
   case ISD::SETULE:
@@ -6058,7 +6066,8 @@ static SDValue optimizeBrk(SDNode *N, SelectionDAG &DAG) {
   // We're looking for an upper bound based on CTTZ_ELTS; this would be selected
   // as a cntp(brk(Pg, Mask)), but if we're just going to make a whilelo based
   // on that then we just need the brk.
-  if (Upper.getOpcode() != AArch64ISD::CTTZ_ELTS || !VT.isScalableVector())
+  if (Upper.getOpcode() != AArch64ISD::CTTZ_ELTS || !VT.isScalableVector() ||
+      Upper.getOperand(0).getValueType() != VT)
     return SDValue();
 
   SDValue Pg = Upper->getOperand(0);
@@ -20686,6 +20695,9 @@ tryToReplaceScalarFPConversionWithSVE(SDNode *N, SelectionDAG &DAG,
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
+  if (Subtarget->hasFPRCVT())
+    return SDValue();
+
   if (!Subtarget->isSVEorStreamingSVEAvailable() ||
       (!Subtarget->isStreaming() && !Subtarget->isStreamingCompatible()))
     return SDValue();
@@ -20719,7 +20731,13 @@ tryToReplaceScalarFPConversionWithSVE(SDNode *N, SelectionDAG &DAG,
   SDValue ZeroIdx = DAG.getVectorIdxConstant(0, DL);
   SDValue Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, SrcVecTy,
                             DAG.getPOISON(SrcVecTy), SrcVal, ZeroIdx);
-  SDValue Convert = DAG.getNode(N->getOpcode(), DL, DestVecTy, Vec);
+
+  // FP_TO_*_SAT carries the saturating scalar VT as operand 1, so preserve it.
+  SmallVector<SDValue, 2> ConvertOps = {Vec};
+  if (N->getOpcode() == ISD::FP_TO_SINT_SAT ||
+      N->getOpcode() == ISD::FP_TO_UINT_SAT)
+    ConvertOps.push_back(DAG.getValueType(DestVecTy.getVectorElementType()));
+  SDValue Convert = DAG.getNode(N->getOpcode(), DL, DestVecTy, ConvertOps);
   return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, DestTy, Convert, ZeroIdx);
 }
 
