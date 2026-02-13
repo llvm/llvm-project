@@ -132,6 +132,9 @@ void rdar7342806(void) {
 //  Note: CheckerVisit mistakenly cleared an existing node, and the cleared
 //  node was resurrected by GRStmtNodeBuilder::~GRStmtNodeBuilder(), where
 //  'p' was not assigned.
+//  Note 2: This "resurrecting" destructor was removed from the codebase by
+//  commit 320d0b5467b9586a188e06dd2620126f5cb99318 (in 2026) because it was
+//  already dead code at that time.
 //===---------------------------------------------------------------------===//
 
 float *pr5627_f(int y);

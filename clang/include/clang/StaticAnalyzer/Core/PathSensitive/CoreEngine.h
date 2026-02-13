@@ -291,6 +291,26 @@ public:
     return generateNodeImpl(PP, State, Pred, true);
   }
 
+  ExplodedNode *generateNode(const Stmt *S,
+                             ExplodedNode *Pred,
+                             ProgramStateRef St,
+                             const ProgramPointTag *tag = nullptr,
+                             ProgramPoint::Kind K = ProgramPoint::PostStmtKind){
+    const ProgramPoint &L = ProgramPoint::getProgramPoint(S, K,
+                                  Pred->getLocationContext(), tag);
+    return generateNode(L, St, Pred);
+  }
+
+  ExplodedNode *generateSink(const Stmt *S,
+                             ExplodedNode *Pred,
+                             ProgramStateRef St,
+                             const ProgramPointTag *tag = nullptr,
+                             ProgramPoint::Kind K = ProgramPoint::PostStmtKind){
+    const ProgramPoint &L = ProgramPoint::getProgramPoint(S, K,
+                                  Pred->getLocationContext(), tag);
+    return generateSink(L, St, Pred);
+  }
+
   const ExplodedNodeSet &getResults() { return Frontier; }
 
   const NodeBuilderContext &getContext() { return C; }
@@ -304,45 +324,6 @@ public:
   void takeNodes(ExplodedNode *N) { Frontier.erase(N); }
   void addNodes(const ExplodedNodeSet &S) { Frontier.insert(S); }
   void addNodes(ExplodedNode *N) { Frontier.Add(N); }
-};
-
-/// \class StmtNodeBuilder
-/// This builder class is useful for generating nodes that resulted from
-/// visiting a statement. The main difference from its parent NodeBuilder is
-/// that it creates a statement specific ProgramPoint.
-/// FIXME: This class is not meaningfully different from plain NodeBuilder.
-class StmtNodeBuilder : public NodeBuilder {
-public:
-  StmtNodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
-                  const NodeBuilderContext &Ctx)
-      : NodeBuilder(SrcNode, DstSet, Ctx) {}
-
-  StmtNodeBuilder(ExplodedNodeSet &SrcSet, ExplodedNodeSet &DstSet,
-                  const NodeBuilderContext &Ctx)
-      : NodeBuilder(SrcSet, DstSet, Ctx) {}
-
-  using NodeBuilder::generateNode;
-  using NodeBuilder::generateSink;
-
-  ExplodedNode *generateNode(const Stmt *S,
-                             ExplodedNode *Pred,
-                             ProgramStateRef St,
-                             const ProgramPointTag *tag = nullptr,
-                             ProgramPoint::Kind K = ProgramPoint::PostStmtKind){
-    const ProgramPoint &L = ProgramPoint::getProgramPoint(S, K,
-                                  Pred->getLocationContext(), tag);
-    return NodeBuilder::generateNode(L, St, Pred);
-  }
-
-  ExplodedNode *generateSink(const Stmt *S,
-                             ExplodedNode *Pred,
-                             ProgramStateRef St,
-                             const ProgramPointTag *tag = nullptr,
-                             ProgramPoint::Kind K = ProgramPoint::PostStmtKind){
-    const ProgramPoint &L = ProgramPoint::getProgramPoint(S, K,
-                                  Pred->getLocationContext(), tag);
-    return NodeBuilder::generateSink(L, St, Pred);
-  }
 };
 
 /// BranchNodeBuilder is responsible for constructing the nodes
