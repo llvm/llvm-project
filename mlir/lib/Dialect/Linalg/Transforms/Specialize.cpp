@@ -147,10 +147,10 @@ static LinalgOp replaceWithMatmulVariant(RewriterBase &rewriter, GenericOp op,
     castAttrVec = {rewriter.getNamedAttr(
         "cast", TypeFnAttr::get(rewriter.getContext(), *castTy))};
 
-  LinalgOp namedOp = rewriter.replaceOpWithNewOp<NamedOpTy>(
+  auto namedOp = rewriter.replaceOpWithNewOp<NamedOpTy>(
       op, ValueRange{op.getDpsInputs()[0], op.getDpsInputs()[1]},
       ValueRange{op.getDpsInits()[0]}, castAttrVec);
-  return namedOp;
+  return cast<LinalgOp>(namedOp.getOperation());
 }
 
 // Returns the cast type to use for a matmul-like named op. If the generic
@@ -299,8 +299,22 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
 
   /// Codegen the different matmul variants.
   if (numOfBatchDims) {
+    if (a == IndexMatchResult::Transposed)
+      return replaceWithMatmulVariant<BatchMatmulTransposeAOp>(rewriter,
+                                                               genericOp,
+                                                               castTy);
+    if (b == IndexMatchResult::Transposed)
+      return replaceWithMatmulVariant<BatchMatmulTransposeBOp>(rewriter,
+                                                               genericOp,
+                                                               castTy);
     return replaceWithMatmulVariant<BatchMatmulOp>(rewriter, genericOp, castTy);
   }
+  if (a == IndexMatchResult::Transposed)
+    return replaceWithMatmulVariant<MatmulTransposeAOp>(rewriter, genericOp,
+                                                        castTy);
+  if (b == IndexMatchResult::Transposed)
+    return replaceWithMatmulVariant<MatmulTransposeBOp>(rewriter, genericOp,
+                                                        castTy);
   return replaceWithMatmulVariant<MatmulOp>(rewriter, genericOp, castTy);
 }
 
