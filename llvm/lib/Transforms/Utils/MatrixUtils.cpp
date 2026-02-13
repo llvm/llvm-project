@@ -52,8 +52,8 @@ BasicBlock *TileInfo::CreateLoop(BasicBlock *Preheader, BasicBlock *Exit,
   auto *BR = BranchInst::Create(Header, Exit, Cond, Latch);
   if (!ProfcheckDisableMetadataFixes) {
     assert(Step->getZExtValue() != 0 &&
-           "Expected a non-zero step size. Matrices are expected to always be "
-           "finite sized.");
+           "Expected a non-zero step size. This is chosen by the pass and "
+           "should always be non-zero to imply a finite loop.");
     MDBuilder MDB(Preheader->getContext());
     setFittedBranchWeights(
         *BR, {Bound->getZExtValue() / Step->getZExtValue(), 1}, false);
