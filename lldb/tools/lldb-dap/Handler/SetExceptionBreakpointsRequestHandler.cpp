@@ -37,20 +37,20 @@ SetExceptionBreakpointsRequestHandler::Run(
 
   SetExceptionBreakpointsResponseBody body;
   for (const auto &filter : arguments.filters) {
-    auto *exc_bp = dap.GetExceptionBreakpoint(filter);
+    auto *exc_bp = dap.GetExceptionBreakpoint(filter.str());
     if (!exc_bp)
       continue;
 
     body.breakpoints.push_back(exc_bp->SetBreakpoint());
-    unset_filters.erase(filter);
+    unset_filters.erase(filter.str());
   }
   for (const auto &filterOptions : arguments.filterOptions) {
-    auto *exc_bp = dap.GetExceptionBreakpoint(filterOptions.filterId);
+    auto *exc_bp = dap.GetExceptionBreakpoint(filterOptions.filterId.str());
     if (!exc_bp)
       continue;
 
     body.breakpoints.push_back(exc_bp->SetBreakpoint(filterOptions.condition));
-    unset_filters.erase(filterOptions.filterId);
+    unset_filters.erase(filterOptions.filterId.str());
   }
 
   // Clear any unset filters.

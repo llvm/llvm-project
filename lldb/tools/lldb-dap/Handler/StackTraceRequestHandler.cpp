@@ -47,7 +47,7 @@ static StackFrame CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
 
   // We only include `[opt]` if a custom frame format is not specified.
   if (!format && frame.GetFunction().GetIsOptimized())
-    stack_frame.name += " [opt]";
+    stack_frame.name.str() += " [opt]";
 
   std::optional<protocol::Source> source = dap.ResolveSource(frame);
   if (source && !IsAssemblySource(*source)) {
@@ -97,9 +97,10 @@ static StackFrame CreateExtendedStackFrameLabel(lldb::SBThread &thread,
     if (llvm::StringRef queue_name = thread.GetQueueName();
         !queue_name.empty()) {
       stack_frame.name = llvm::formatv("Enqueued from {0} (Thread {1})",
-                                       queue_name, thread_idx);
+                                       queue_name, thread_idx)
+                             .str();
     } else {
-      stack_frame.name = llvm::formatv("Thread {0}", thread_idx);
+      stack_frame.name = llvm::formatv("Thread {0}", thread_idx).str();
     }
   }
 

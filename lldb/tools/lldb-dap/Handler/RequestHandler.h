@@ -112,7 +112,7 @@ llvm::Expected<Args> parseArgs(const protocol::Request &request) {
   if (request.arguments && !fromJSON(*request.arguments, arguments, root)) {
     std::string parse_failure;
     llvm::raw_string_ostream OS(parse_failure);
-    OS << "invalid arguments for request '" << request.command
+    OS << "invalid arguments for request '" << llvm::StringRef(request.command)
        << "': " << llvm::toString(root.getError()) << "\n";
     root.printErrorContext(*request.arguments, OS);
     return llvm::make_error<DAPError>(parse_failure);

@@ -123,14 +123,14 @@ static std::string capitalize(llvm::StringRef str) {
 llvm::StringRef DAP::debug_adapter_path = "";
 
 DAP::DAP(Log &log, const ReplMode default_repl_mode,
-         std::vector<std::string> pre_init_commands, bool no_lldbinit,
+         std::vector<String> pre_init_commands, bool no_lldbinit,
          llvm::StringRef client_name, DAPTransport &transport, MainLoop &loop)
     : log(log), transport(transport), broadcaster("lldb-dap"),
       progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
       repl_mode(default_repl_mode), no_lldbinit(no_lldbinit),
       m_client_name(client_name), m_loop(loop) {
-  configuration.preInitCommands = std::move(pre_init_commands);
+  configuration.preInitCommands = pre_init_commands;
   RegisterRequests();
 }
 
@@ -413,7 +413,7 @@ void DAP::SendOutput(OutputType o, const llvm::StringRef output) {
     llvm::json::Object event(CreateEventObject("output"));
     llvm::json::Object body{
         {"category", category},
-        {"output", protocol::SanitizedString(output.slice(idx, end + 1).str())},
+        {"output", protocol::String(output.slice(idx, end + 1).str())},
     };
     event.try_emplace("body", std::move(body));
     SendJSON(llvm::json::Value(std::move(event)));
@@ -604,7 +604,7 @@ ReplMode DAP::DetectReplMode(lldb::SBFrame &frame, std::string &expression,
                              bool partial_expression) {
   // Check for the escape hatch prefix.
   if (llvm::StringRef expr_ref = expression;
-      expr_ref.consume_front(configuration.commandEscapePrefix)) {
+      expr_ref.consume_front(configuration.commandEscapePrefix.str())) {
     expression = expr_ref;
     return ReplMode::Command;
   }
@@ -722,7 +722,7 @@ DAP::ResolveAssemblySource(lldb::SBAddress address) {
 }
 
 bool DAP::RunLLDBCommands(llvm::StringRef prefix,
-                          llvm::ArrayRef<std::string> commands) {
+                          llvm::ArrayRef<String> commands) {
   bool required_command_failed = false;
   std::string output = ::RunLLDBCommands(
       debugger, prefix, commands, required_command_failed,
@@ -741,15 +741,13 @@ static llvm::Error createRunLLDBCommandsErrorMessage(llvm::StringRef category) {
           .c_str());
 }
 
-llvm::Error
-DAP::RunAttachCommands(llvm::ArrayRef<std::string> attach_commands) {
+llvm::Error DAP::RunAttachCommands(llvm::ArrayRef<String> attach_commands) {
   if (!RunLLDBCommands("Running attachCommands:", attach_commands))
     return createRunLLDBCommandsErrorMessage("attach");
   return llvm::Error::success();
 }
 
-llvm::Error
-DAP::RunLaunchCommands(llvm::ArrayRef<std::string> launch_commands) {
+llvm::Error DAP::RunLaunchCommands(llvm::ArrayRef<String> launch_commands) {
   if (!RunLLDBCommands("Running launchCommands:", launch_commands))
     return createRunLLDBCommandsErrorMessage("launch");
   return llvm::Error::success();
@@ -801,9 +799,9 @@ lldb::SBTarget DAP::CreateTarget(lldb::SBError &error) {
   // omitted at all), so it is good to leave the user an opportunity to specify
   // those. Any of those three can be left empty.
   auto target = this->debugger.CreateTarget(
-      /*filename=*/configuration.program.data(),
-      /*target_triple=*/configuration.targetTriple.data(),
-      /*platform_name=*/configuration.platformName.data(),
+      /*filename=*/configuration.program.str().data(),
+      /*target_triple=*/configuration.targetTriple.str().data(),
+      /*platform_name=*/configuration.platformName.str().data(),
       /*add_dependent_modules=*/true, // Add dependent modules.
       error);
 
@@ -855,8 +853,8 @@ bool DAP::HandleObject(const Message &M) {
       return true; // Success
     }
 
-    dispatcher.Set("error",
-                   llvm::Twine("unhandled-command:" + req->command).str());
+    dispatcher.Set(
+        "error", llvm::Twine("unhandled-command:" + req->command.str()).str());
     DAP_LOG(log, "error: unhandled command '{0}'", req->command);
     return false; // Fail
   }
@@ -886,7 +884,7 @@ bool DAP::HandleObject(const Message &M) {
       if (resp->message) {
         message =
             std::visit(llvm::makeVisitor(
-                           [](const std::string &message) -> llvm::StringRef {
+                           [](const String &message) -> llvm::StringRef {
                              return message;
                            },
                            [](const protocol::ResponseMessage &message)
@@ -987,7 +985,7 @@ void DAP::Received(const protocol::Event &event) {
 }
 
 void DAP::Received(const protocol::Request &request) {
-  if (request.command == "disconnect")
+  if (request.command.str() == "disconnect")
     m_disconnecting = true;
 
   const std::optional<CancelArguments> cancel_args =
@@ -1161,7 +1159,8 @@ lldb::SBError DAP::WaitForProcessToStop(std::chrono::seconds seconds) {
 }
 
 void DAP::ConfigureSourceMaps() {
-  if (configuration.sourceMap.empty() && configuration.sourcePath.empty())
+  llvm::StringRef srcPath = configuration.sourcePath;
+  if (configuration.sourceMap.empty() && srcPath.empty())
     return;
 
   std::string sourceMapCommand;
@@ -1170,10 +1169,10 @@ void DAP::ConfigureSourceMaps() {
 
   if (!configuration.sourceMap.empty()) {
     for (const auto &kv : configuration.sourceMap) {
-      strm << "\"" << kv.first << "\" \"" << kv.second << "\" ";
+      strm << "\"" << kv.first.str() << "\" \"" << kv.second.str() << "\" ";
     }
-  } else if (!configuration.sourcePath.empty()) {
-    strm << "\".\" \"" << configuration.sourcePath << "\"";
+  } else if (!srcPath.empty()) {
+    strm << "\".\" \"" << srcPath << "\"";
   }
 
   RunLLDBCommands("Setting source map:", {sourceMapCommand});
@@ -1268,7 +1267,7 @@ protocol::Capabilities DAP::GetCapabilities() {
   capabilities.exceptionBreakpointFilters = std::move(filters);
 
   // FIXME: This should be registered based on the supported languages?
-  std::vector<std::string> completion_characters;
+  std::vector<String> completion_characters;
   completion_characters.emplace_back(".");
   // FIXME: I wonder if we should remove this key... its very aggressive
   // triggering and accepting completions.

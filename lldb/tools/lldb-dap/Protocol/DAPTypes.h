@@ -16,11 +16,11 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_PROTOCOL_DAP_TYPES_H
 #define LLDB_TOOLS_LLDB_DAP_PROTOCOL_DAP_TYPES_H
 
+#include "Protocol/ProtocolBase.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 #include "llvm/Support/JSON.h"
 #include <optional>
-#include <string>
 
 namespace lldb_dap::protocol {
 
@@ -30,10 +30,10 @@ namespace lldb_dap::protocol {
 /// breakpoints the path and line are the same For each session.
 struct PersistenceData {
   /// The source module path.
-  std::string module_path;
+  String module_path;
 
   /// The symbol name of the Source.
-  std::string symbol_name;
+  String symbol_name;
 };
 bool fromJSON(const llvm::json::Value &, PersistenceData &, llvm::json::Path);
 llvm::json::Value toJSON(const PersistenceData &);
@@ -76,7 +76,7 @@ struct Symbol {
   lldb::addr_t size = 0;
 
   /// The symbol name.
-  std::string name;
+  String name;
 };
 bool fromJSON(const llvm::json::Value &, Symbol &, llvm::json::Path);
 llvm::json::Value toJSON(const Symbol &);

@@ -32,7 +32,7 @@
 namespace lldb_dap {
 
 bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
-                     const llvm::ArrayRef<std::string> &commands,
+                     const llvm::ArrayRef<protocol::String> &commands,
                      llvm::raw_ostream &strm, bool parse_command_directives,
                      bool echo_commands) {
   if (commands.empty())
@@ -115,7 +115,7 @@ bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
 }
 
 std::string RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
-                            const llvm::ArrayRef<std::string> &commands,
+                            const llvm::ArrayRef<protocol::String> &commands,
                             bool &required_command_failed,
                             bool parse_command_directives, bool echo_commands) {
   required_command_failed = false;

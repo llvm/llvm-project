@@ -21,7 +21,9 @@
 #define LLDB_TOOLS_LLDB_DAP_PROTOCOL_PROTOCOL_BASE_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -38,28 +40,55 @@ using Id = uint64_t;
 /// the current session.
 static constexpr Id kCalculateSeq = UINT64_MAX;
 
-/// A wrapper around a string to ensure the contents are sanitized as utf8
-/// during serialization. This value should be used for any strings that may
-/// contain raw data like variable values.
-class SanitizedString {
+/// A wrapper around a 'std::string' to ensure the contents are valid utf8
+/// during serialization.
+class String {
 public:
-  SanitizedString(std::string str) : m_str(str) {}
-  SanitizedString(llvm::StringRef str) : m_str(str.str()) {}
-  SanitizedString(const char *str) : m_str(str) {}
-  SanitizedString() = default;
+  String(std::string str) : m_str(str) {}
+  String(llvm::StringRef str) : m_str(str.str()) {}
+  String(const char *str) : m_str(str) {}
+  String() = default;
 
+  operator llvm::Twine() { return m_str; }
+  operator std::string &() { return m_str; }
   operator std::string() const { return m_str; }
+  operator llvm::StringRef() const { return llvm::StringRef(m_str); }
+
+  void clear() { m_str.clear(); }
+  bool empty() const { return m_str.empty(); }
+  const char *c_str() const { return m_str.c_str(); }
+  const char *data() const { return m_str.data(); }
+  std::string str() const { return m_str; }
+  std::string &str() { return m_str; }
 
 private:
   std::string m_str;
 };
-llvm::json::Value toJSON(const SanitizedString &s);
-bool fromJSON(const llvm::json::Value &, SanitizedString &, llvm::json::Path);
+llvm::json::Value toJSON(const String &s);
+bool fromJSON(const llvm::json::Value &, String &, llvm::json::Path);
+inline bool operator==(const String &a, const String &b) {
+  return a.str() == b.str();
+}
+inline bool operator==(const String &a, const char *b) { return a.str() == b; }
+inline bool operator==(const char *a, const String &b) { return a == b.str(); }
+inline bool operator==(llvm::StringRef a, const String &b) {
+  return a.str() == b.str();
+}
+inline bool operator==(const String &a, llvm::StringRef b) {
+  return a.str() == b.str();
+}
+inline bool operator<(const String &a, const String &b) {
+  return a.str() < b.str();
+}
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const String &S) {
+  OS << S.str();
+  return OS;
+}
 
 /// A client or debug adapter initiated request.
 struct Request {
   /// The command to execute.
-  std::string command;
+  String command;
 
   /// Object containing arguments for the command.
   ///
@@ -83,7 +112,7 @@ bool operator==(const Request &, const Request &);
 /// A debug adapter initiated event.
 struct Event {
   /// Type of event.
-  std::string event;
+  String event;
 
   /// Event-specific information.
   std::optional<llvm::json::Value> body = std::nullopt;
@@ -114,7 +143,7 @@ struct Response {
   Id request_seq = 0;
 
   /// The command requested.
-  std::string command;
+  String command;
 
   /// Outcome of the request. If true, the request was successful and the `body`
   /// attribute may contain the result of the request. If the value is false,
@@ -127,8 +156,7 @@ struct Response {
   /// Contains the raw error in short form if `success` is false. This raw error
   /// might be interpreted by the client and is not shown in the UI. Some
   /// predefined values exist.
-  std::optional<std::variant<ResponseMessage, std::string>> message =
-      std::nullopt;
+  std::optional<std::variant<ResponseMessage, String>> message = std::nullopt;
 
   /// Contains request result if success is true and error details if success is
   /// false.
@@ -163,11 +191,11 @@ struct ErrorMessage {
   /// `{name}`. If variable name starts with an underscore character, the
   /// variable does not contain user data (PII) and can be safely used for
   /// telemetry purposes.
-  std::string format;
+  String format;
 
   /// An object used as a dictionary for looking up the variables in the format
   /// string.
-  std::optional<std::map<std::string, std::string>> variables;
+  std::map<String, String> variables;
 
   /// If true send to telemetry.
   bool sendTelemetry = false;
@@ -176,10 +204,10 @@ struct ErrorMessage {
   bool showUser = false;
 
   /// A url where additional information about this message can be found.
-  std::optional<std::string> url;
+  String url;
 
   /// A label that is presented to the user as the UI for opening the url.
-  std::optional<std::string> urlLabel;
+  String urlLabel;
 };
 bool fromJSON(const llvm::json::Value &, ErrorMessage &, llvm::json::Path);
 llvm::json::Value toJSON(const ErrorMessage &);

@@ -120,7 +120,7 @@ static DisassembledInstruction ConvertSBInstructionToDisassembledInstruction(
     bytes.pop_back();
   disassembled_inst.instructionBytes = std::move(bytes);
 
-  llvm::raw_string_ostream si(disassembled_inst.instruction);
+  llvm::raw_string_ostream si(disassembled_inst.instruction.str());
   si << llvm::formatv("{0,-7} {1,-25}", m, o);
 
   // Only add the symbol on the first line of the function.

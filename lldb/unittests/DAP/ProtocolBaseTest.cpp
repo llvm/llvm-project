@@ -21,7 +21,7 @@ TEST(ProtocolBaseTest, SanitizedString) {
   for (auto [input, json] : std::vector<std::pair<const char *, const char *>>{
            {"valid str", R"("valid str")"},
            {"lone trailing \x81\x82 bytes", R"("lone trailing �� bytes")"}}) {
-    SanitizedString str = input;
+    String str = input;
     Expected<Value> expected_str = parse(json);
     ASSERT_THAT_EXPECTED(expected_str, llvm::Succeeded());
     EXPECT_EQ(PrettyPrint(*expected_str), PrettyPrint(str));

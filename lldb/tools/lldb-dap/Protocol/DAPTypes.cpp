@@ -15,11 +15,11 @@ bool fromJSON(const llvm::json::Value &Params, PersistenceData &PD,
 
 llvm::json::Value toJSON(const PersistenceData &PD) {
   json::Object result{
-      {"module_path", PD.module_path},
-      {"symbol_name", PD.symbol_name},
+      {"module_path", std::move(PD.module_path)},
+      {"symbol_name", std::move(PD.symbol_name)},
   };
 
-  return result;
+  return std::move(result);
 }
 
 bool fromJSON(const llvm::json::Value &Params, SourceLLDBData &SLD,
