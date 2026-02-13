@@ -1064,8 +1064,9 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
 
     VPValue *Op0, *Op1;
     bool IsLogicalAnd =
-        match(this, m_LogicalAnd(m_VPValue(Op0), m_VPValue(Op1)));
-    bool IsLogicalOr = match(this, m_LogicalOr(m_VPValue(Op0), m_VPValue(Op1)));
+        match(this, m_c_LogicalAnd(m_VPValue(Op0), m_VPValue(Op1)));
+    bool IsLogicalOr =
+        match(this, m_c_LogicalOr(m_VPValue(Op0), m_VPValue(Op1)));
     // Also match the inverted forms:
     // select x, false, y --> !x & y (still AND)
     // select x, y, true --> !x | y (still OR)
