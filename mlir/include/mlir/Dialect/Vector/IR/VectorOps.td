@@ -2087,7 +2087,10 @@ def Vector_GatherOp :
     result[i,j] := if mask[i,j] then base[i0, i1, i2 + indices[i,j]]
                    else pass_thru[i,j]
     ```
-    The index into `base` only varies in the innermost ((k-1)-th) dimension.
+    The index into `base` only varies in the innermost ((k-1)-th) dimension and
+    is treated as a logical rather than a physical index, i.e. it does not
+    encode any potential non-identity strides in the underlying MemRef layout
+    (Tensors do not model strided layouts, so only logical indexing is possible).
 
     If a mask bit is set and the corresponding index is out-of-bounds for the
     given base, the behavior is undefined. If a mask bit is not set, the value
@@ -2179,6 +2182,11 @@ def Vector_ScatterOp
     given base, the behavior is undefined. If a mask bit is not set, no value
     is stored regardless of the index, and the index is allowed to be
     out-of-bounds.
+
+    The index into `base` only varies in the innermost ((k-1)-th) dimension and
+    is treated as a logical rather than a physical index, i.e. it does not
+    encode any potential non-identity strides in the underlying MemRef layout
+    (Tensors do not model strided layouts, so only logical indexing is possible).
 
     If the index vector contains two or more duplicate indices, the behavior is
     undefined. Underlying implementation may enforce strict sequential

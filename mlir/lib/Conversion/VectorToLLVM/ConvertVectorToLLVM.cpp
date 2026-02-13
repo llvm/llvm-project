@@ -290,6 +290,7 @@ public:
     MemRefType memRefType = dyn_cast<MemRefType>(gather.getBaseType());
     assert(memRefType && "The base should be bufferized");
 
+    // TODO: Add support for strided MemRef.
     if (failed(isMemRefTypeSupported(memRefType, *this->getTypeConverter())))
       return rewriter.notifyMatchFailure(gather, "memref type not supported");
 
@@ -348,6 +349,7 @@ public:
     auto memRefType = dyn_cast<MemRefType>(scatter.getBaseType());
     assert(memRefType && "The base should be bufferized");
 
+    // TODO: Add support for strided MemRef.
     if (failed(isMemRefTypeSupported(memRefType, *this->getTypeConverter())))
       return rewriter.notifyMatchFailure(scatter, "memref type not supported");
 
