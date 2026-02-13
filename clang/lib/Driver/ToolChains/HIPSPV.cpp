@@ -165,7 +165,7 @@ void HIPSPVToolChain::addClangTargetOptions(
          "Only HIP offloading kinds are supported for GPUs.");
 
   CC1Args.append(
-      {"-fcuda-is-device", "-fcuda-allow-variadic-functions",
+      {"-fcuda-is-device",
        // A crude workaround for llvm-spirv which does not handle the
        // autovectorized code well (vector reductions, non-i{8,16,32,64} types).
        // TODO: Allow autovectorization when SPIR-V backend arrives.

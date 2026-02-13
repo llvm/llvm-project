@@ -81,40 +81,49 @@ _start:
 # CHECK-ALL-NEXT:        Index:           1
 # CHECK-ALL-NEXT:      - Name:            foo_global
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
-# CHECK-ALL-NEXT:        Index:           1
+# CHECK-ALL-NEXT:        Index:           4
 # CHECK-ALL-NEXT:      - Name:            bar_global
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
-# CHECK-ALL-NEXT:        Index:           2
+# CHECK-ALL-NEXT:        Index:           5
 # CHECK-ALL-NEXT:      - Name:            __dso_handle
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
-# CHECK-ALL-NEXT:        Index:           3
+# CHECK-ALL-NEXT:        Index:           6
 # CHECK-ALL-NEXT:      - Name:            __data_end
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
-# CHECK-ALL-NEXT:        Index:           4
-# CHECK-ALL-NEXT:      - Name:            __stack_low
-# CHECK-ALL-NEXT:        Kind:            GLOBAL
-# CHECK-ALL-NEXT:        Index:           5
-# CHECK-ALL-NEXT:      - Name:            __stack_high
-# CHECK-ALL-NEXT:        Kind:            GLOBAL
-# CHECK-ALL-NEXT:        Index:           6
-# CHECK-ALL-NEXT:      - Name:            __global_base
-# CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           7
-# CHECK-ALL-NEXT:      - Name:            __heap_base
+# CHECK-ALL-NEXT:      - Name:            __rodata_start
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           8
-# CHECK-ALL-NEXT:      - Name:            __heap_end
+# CHECK-ALL-NEXT:      - Name:            __rodata_end
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           9
-# CHECK-ALL-NEXT:      - Name:            __memory_base
+# CHECK-ALL-NEXT:      - Name:            __stack_low
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           10
-# CHECK-ALL-NEXT:      - Name:            __table_base
+# CHECK-ALL-NEXT:      - Name:            __stack_high
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           11
-# CHECK-ALL-NEXT:      - Name:            __wasm_first_page_end
+# CHECK-ALL-NEXT:      - Name:            __global_base
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           12
+# CHECK-ALL-NEXT:      - Name:            __heap_base
+# CHECK-ALL-NEXT:        Kind:            GLOBAL
+# CHECK-ALL-NEXT:        Index:           13
+# CHECK-ALL-NEXT:      - Name:            __heap_end
+# CHECK-ALL-NEXT:        Kind:            GLOBAL
+# CHECK-ALL-NEXT:        Index:           14
+# CHECK-ALL-NEXT:      - Name:            __memory_base
+# CHECK-ALL-NEXT:        Kind:            GLOBAL
+# CHECK-ALL-NEXT:        Index:           1
+# CHECK-ALL-NEXT:      - Name:            __table_base
+# CHECK-ALL-NEXT:        Kind:            GLOBAL
+# CHECK-ALL-NEXT:        Index:           2
+# CHECK-ALL-NEXT:      - Name:            __wasm_first_page_end
+# CHECK-ALL-NEXT:        Kind:            GLOBAL
+# CHECK-ALL-NEXT:        Index:           15
+# CHECK-ALL-NEXT:      - Name:            __tls_base
+# CHECK-ALL-NEXT:        Kind:            GLOBAL
+# CHECK-ALL-NEXT:        Index:           3
 # CHECK-ALL-NEXT:  - Type:            CODE
 
 # CHECK-ALL:         Name:            target_features

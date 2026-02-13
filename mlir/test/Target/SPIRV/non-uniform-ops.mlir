@@ -149,16 +149,14 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.3, [Shader, Linkage, GroupNo
   }
 
   spirv.func @group_non_uniform_quad_swap_vec(%val: vector<4xf32>) -> vector<4xf32> "None" {
-    %dir = spirv.Constant 0 : i32
-    // CHECK: %{{.+}} = spirv.GroupNonUniformQuadSwap <Subgroup> %{{.+}} %{{.+}} : vector<4xf32>, i32
-    %0 = spirv.GroupNonUniformQuadSwap <Subgroup> %val %dir : vector<4xf32>, i32
+    // CHECK: %{{.+}} = spirv.GroupNonUniformQuadSwap <Subgroup> <Vertical> %{{.+}} : vector<4xf32>
+    %0 = spirv.GroupNonUniformQuadSwap <Subgroup> <Vertical> %val : vector<4xf32>
     spirv.ReturnValue %0: vector<4xf32>
   }
 
   spirv.func @group_non_uniform_quad_swap_scalar(%val: f32) -> f32 "None" {
-    %dir = spirv.Constant 0 : i32
-    // CHECK: %{{.+}} = spirv.GroupNonUniformQuadSwap <Subgroup> %{{.+}} %{{.+}} : f32, i32
-    %0 = spirv.GroupNonUniformQuadSwap <Subgroup> %val %dir : f32, i32
+    // CHECK: %{{.+}} = spirv.GroupNonUniformQuadSwap <Subgroup> <Horizontal> %{{.+}} : f32
+    %0 = spirv.GroupNonUniformQuadSwap <Subgroup> <Horizontal> %val : f32
     spirv.ReturnValue %0: f32
   }
 }

@@ -1847,6 +1847,11 @@ def err_placeholder_expected_auto_or_decltype_auto : Error<
   "expected 'auto' or 'decltype(auto)' after concept name">;
 }
 
+let CategoryName = "Reflection Diagnostics" in {
+def err_cannot_reflect_operand : Error<
+  "unknown or unimplemented reflectable entity">;
+}
+
 def warn_max_tokens : Warning<
   "the number of preprocessor source tokens (%0) exceeds this token limit (%1)">,
   InGroup<MaxTokens>, DefaultIgnore;

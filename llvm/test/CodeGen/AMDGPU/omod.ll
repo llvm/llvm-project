@@ -393,7 +393,7 @@ define amdgpu_ps void @v_omod_div2_f32(float %a) #0 {
 ; GFX11PLUS-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX11PLUS-NEXT:    s_endpgm
   %add = fadd float %a, 1.0
-  %div2 = fmul float %add, 0.5
+  %div2 = fmul nsz float %add, 0.5
   store float %div2, ptr addrspace(1) poison
   ret void
 }
@@ -451,7 +451,7 @@ define amdgpu_ps void @v_omod_mul2_f32(float %a) #0 {
 ; GFX11PLUS-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX11PLUS-NEXT:    s_endpgm
   %add = fadd float %a, 1.0
-  %div2 = fmul float %add, 2.0
+  %div2 = fmul nsz float %add, 2.0
   store float %div2, ptr addrspace(1) poison
   ret void
 }
@@ -483,7 +483,7 @@ define amdgpu_ps void @v_omod_mul2_med3(float %x, float %y, float %z) #0 {
 ; GFX12-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX12-NEXT:    s_endpgm
   %fmed3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float %z)
-  %div2 = fmul float %fmed3, 2.0
+  %div2 = fmul nsz float %fmed3, 2.0
   store float %div2, ptr addrspace(1) poison
   ret void
 }
@@ -541,7 +541,7 @@ define amdgpu_ps void @v_omod_mul4_f32(float %a) #0 {
 ; GFX11PLUS-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX11PLUS-NEXT:    s_endpgm
   %add = fadd float %a, 1.0
-  %div2 = fmul float %add, 4.0
+  %div2 = fmul nsz float %add, 4.0
   store float %div2, ptr addrspace(1) poison
   ret void
 }
@@ -649,7 +649,7 @@ define amdgpu_ps void @v_omod_mul4_dbg_use_f32(float %a) #0 {
 ; GFX11PLUS-NEXT:    s_endpgm
   %add = fadd float %a, 1.0
   call void @llvm.dbg.value(metadata float %add, i64 0, metadata !4, metadata !9), !dbg !10
-  %div2 = fmul float %add, 4.0
+  %div2 = fmul nsz float %add, 4.0
   store float %div2, ptr addrspace(1) poison
   ret void
 }
@@ -676,7 +676,7 @@ define amdgpu_ps void @v_clamp_omod_div2_f32(float %a) #0 {
 ; GFX11PLUS-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX11PLUS-NEXT:    s_endpgm
   %add = fadd float %a, 1.0
-  %div2 = fmul float %add, 0.5
+  %div2 = fmul nsz float %add, 0.5
 
   %max = call float @llvm.maxnum.f32(float %div2, float 0.0)
   %clamp = call float @llvm.minnum.f32(float %max, float 1.0)
@@ -933,7 +933,7 @@ define amdgpu_ps void @v_omod_div2_omod_div2_f32(float %a) #0 {
 ; GFX11PLUS-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX11PLUS-NEXT:    s_endpgm
   %add = fadd float %a, 1.0
-  %div2.0 = fmul float %add, 0.5
+  %div2.0 = fmul nsz float %add, 0.5
   %div2.1 = fmul float %div2.0, 0.5
   store float %div2.1, ptr addrspace(1) poison
   ret void
@@ -1132,7 +1132,7 @@ define amdgpu_ps void @v_omod_div2_f16_denormals(half %a) #0 {
 ; GFX12-FAKE16-NEXT:    global_store_b16 v[0:1], v0, off
 ; GFX12-FAKE16-NEXT:    s_endpgm
   %add = fadd half %a, 1.0
-  %div2 = fmul half %add, 0.5
+  %div2 = fmul nsz half %add, 0.5
   store half %div2, ptr addrspace(1) poison
   ret void
 }
@@ -1190,7 +1190,7 @@ define amdgpu_ps void @v_omod_mul2_f16_denormals(half %a) #0 {
 ; GFX12-FAKE16-NEXT:    global_store_b16 v[0:1], v0, off
 ; GFX12-FAKE16-NEXT:    s_endpgm
   %add = fadd half %a, 1.0
-  %mul2 = fadd half %add, %add
+  %mul2 = fadd nsz half %add, %add
   store half %mul2, ptr addrspace(1) poison
   ret void
 }
@@ -1238,7 +1238,7 @@ define amdgpu_ps void @v_omod_div2_f16_no_denormals(half %a) #3 {
 ; GFX12-FAKE16-NEXT:    global_store_b16 v[0:1], v0, off
 ; GFX12-FAKE16-NEXT:    s_endpgm
   %add = fadd half %a, 1.0
-  %div2 = fmul half %add, 0.5
+  %div2 = fmul nsz half %add, 0.5
   store half %div2, ptr addrspace(1) poison
   ret void
 }
@@ -1270,7 +1270,7 @@ define amdgpu_ps void @v_omod_mac_to_mad(float %b, float %a) #0 {
 ; GFX11PLUS-NEXT:    s_endpgm
   %mul = fmul float %a, %a
   %add = fadd float %mul, %b
-  %mad = fmul float %add, 2.0
+  %mad = fmul nsz float %add, 2.0
   %res = fmul float %mad, %b
   store float %res, ptr addrspace(1) poison
   ret void
@@ -1297,7 +1297,7 @@ define amdgpu_ps void @v_clamp_omod_div2_f32_minimumnum_maximumnum(float %a) #0 
 ; GFX11PLUS-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX11PLUS-NEXT:    s_endpgm
   %add = fadd float %a, 1.0
-  %div2 = fmul float %add, 0.5
+  %div2 = fmul nsz float %add, 0.5
 
   %max = call float @llvm.maximumnum.f32(float %div2, float 0.0)
   %clamp = call float @llvm.minimumnum.f32(float %max, float 1.0)
@@ -1319,13 +1319,13 @@ declare half @llvm.minnum.f16(half, half) #1
 declare half @llvm.maxnum.f16(half, half) #1
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
 
-attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-signed-zeros-fp-math"="true" }
+attributes #0 = { nounwind denormal_fpenv(float: preservesign) }
 attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "denormal-fp-math-f32"="ieee,ieee" "no-signed-zeros-fp-math"="true" }
-attributes #3 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" "no-signed-zeros-fp-math"="true" }
+attributes #2 = { nounwind denormal_fpenv(float: ieee) }
+attributes #3 = { nounwind denormal_fpenv(preservesign) }
 attributes #4 = { nounwind "no-signed-zeros-fp-math"="false" }
-attributes #5 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #6 = { nounwind "denormal-fp-math"="ieee,ieee" "no-signed-zeros-fp-math"="true" }
+attributes #5 = { nounwind denormal_fpenv(preservesign) }
+attributes #6 = { nounwind denormal_fpenv(ieee) }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3}

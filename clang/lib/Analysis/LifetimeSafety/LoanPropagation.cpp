@@ -63,9 +63,11 @@ static llvm::BitVector computePersistentOrigins(const FactManager &FactMgr,
              Cur = Cur->peelOuterOrigin())
           CheckOrigin(Cur->getOuterOriginID());
         break;
+      case Fact::Kind::MovedOrigin:
       case Fact::Kind::OriginEscapes:
       case Fact::Kind::Expire:
       case Fact::Kind::TestPoint:
+      case Fact::Kind::InvalidateOrigin:
         break;
       }
     }

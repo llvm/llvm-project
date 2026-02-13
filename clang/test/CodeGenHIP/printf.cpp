@@ -12,9 +12,7 @@ extern "C" __device__ int printf(const char *format, ...);
 // AMDGCN-LABEL: define dso_local noundef i32 @_Z4foo1v(
 // AMDGCN-SAME: ) #[[ATTR0:[0-9]+]] {
 // AMDGCN-NEXT:  [[ENTRY:.*]]:
-// AMDGCN-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN-NEXT:    [[S:%.*]] = alloca ptr, align 8, addrspace(5)
-// AMDGCN-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN-NEXT:    [[S_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[S]] to ptr
 // AMDGCN-NEXT:    store ptr addrspacecast (ptr addrspace(4) @.str to ptr), ptr [[S_ASCAST]], align 8
 // AMDGCN-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ASCAST]], align 8
@@ -65,9 +63,7 @@ extern "C" __device__ int printf(const char *format, ...);
 // AMDGCNSPIRV-LABEL: define spir_func noundef i32 @_Z4foo1v(
 // AMDGCNSPIRV-SAME: ) addrspace(4) #[[ATTR0:[0-9]+]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*]]:
-// AMDGCNSPIRV-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // AMDGCNSPIRV-NEXT:    [[S:%.*]] = alloca ptr addrspace(4), align 8
-// AMDGCNSPIRV-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    [[S_ASCAST:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    store ptr addrspace(4) addrspacecast (ptr addrspace(1) @.str to ptr addrspace(4)), ptr addrspace(4) [[S_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[S_ASCAST]], align 8
@@ -125,8 +121,6 @@ __device__ char *dstr;
 // AMDGCN-LABEL: define dso_local noundef i32 @_Z4foo2v(
 // AMDGCN-SAME: ) #[[ATTR0:[0-9]+]] {
 // AMDGCN-NEXT:  [[ENTRY:.*]]:
-// AMDGCN-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
-// AMDGCN-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspacecast (ptr addrspace(1) @dstr to ptr), align 8
 // AMDGCN-NEXT:    [[TMP1:%.*]] = load ptr, ptr addrspacecast (ptr addrspace(1) @dstr to ptr), align 8
 // AMDGCN-NEXT:    [[TMP2:%.*]] = call i64 @__ockl_printf_begin(i64 0)
@@ -171,8 +165,6 @@ __device__ char *dstr;
 // AMDGCNSPIRV-LABEL: define spir_func noundef i32 @_Z4foo2v(
 // AMDGCNSPIRV-SAME: ) addrspace(4) #[[ATTR0:[0-9]+]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*]]:
-// AMDGCNSPIRV-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// AMDGCNSPIRV-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) addrspacecast (ptr addrspace(1) @dstr to ptr addrspace(4)), align 8
 // AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = load ptr addrspace(4), ptr addrspace(4) addrspacecast (ptr addrspace(1) @dstr to ptr addrspace(4)), align 8
 // AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = call addrspace(4) i64 @__ockl_printf_begin(i64 0)
