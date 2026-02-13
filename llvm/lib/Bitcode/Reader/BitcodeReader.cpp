@@ -1175,6 +1175,7 @@ static GlobalValueSummary::GVFlags getDecodedGVSummaryFlags(uint64_t RawFlags,
   auto Linkage = GlobalValue::LinkageTypes(RawFlags & 0xF); // 4 bits
   auto Visibility = GlobalValue::VisibilityTypes((RawFlags >> 8) & 3); // 2 bits
   auto IK = GlobalValueSummary::ImportKind((RawFlags >> 10) & 1);      // 1 bit
+  bool RenameOnPromotion = ((RawFlags >> 11) & 1);                     // 1 bit
   RawFlags = RawFlags >> 4;
   bool NotEligibleToImport = (RawFlags & 0x1) || Version < 3;
   // The Live flag wasn't introduced until version 3. For dead stripping
@@ -1183,8 +1184,6 @@ static GlobalValueSummary::GVFlags getDecodedGVSummaryFlags(uint64_t RawFlags,
   bool Live = (RawFlags & 0x2) || Version < 3;
   bool Local = (RawFlags & 0x4);
   bool AutoHide = (RawFlags & 0x8);
-  // RenameOnPromotion should be true. The value may be adjusted at thinLTO.
-  bool RenameOnPromotion = true;
 
   return GlobalValueSummary::GVFlags(Linkage, Visibility, NotEligibleToImport,
                                      Live, Local, AutoHide, IK,

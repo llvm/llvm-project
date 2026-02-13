@@ -41,27 +41,27 @@
 ; CHECK:       <GLOBALVAL_SUMMARY_BLOCK
 ; Function main contains call to func, as well as address reference to func:
 ; op0=main op4=func op5=func
-; CHECK-DAG:    <PERMODULE_PROFILE {{.*}} op0=11 op1=0 {{.*}} op4=1 op5=0 op6=0 op7=2 op8=2 op9=0/>
+; CHECK-DAG:    <PERMODULE_PROFILE {{.*}} op0=11 op1=2048 {{.*}} op4=1 op5=0 op6=0 op7=2 op8=2 op9=0/>
 ; Function W contains a tail call to func3 as well as a reference to globalvar:
 ; op0=W op4=globalvar op5=func3
-; CHECK-DAG:    <PERMODULE_PROFILE {{.*}} op0=6 op1=5 {{.*}} op4=1 op5=0 op6=0 op7=1 op8=5 op9=8/>
+; CHECK-DAG:    <PERMODULE_PROFILE {{.*}} op0=6 op1=2053 {{.*}} op4=1 op5=0 op6=0 op7=1 op8=5 op9=8/>
 ; Function X contains call to foo, as well as address reference to foo
 ; which is in the same instruction as the call:
 ; op0=X op4=foo op5=foo
-; CHECK-DAG:    <PERMODULE_PROFILE {{.*}} op0=7 op1=1 {{.*}} op4=1 op5=0 op6=0 op7=4 op8=4 op9=0/>
+; CHECK-DAG:    <PERMODULE_PROFILE {{.*}} op0=7 op1=2049 {{.*}} op4=1 op5=0 op6=0 op7=4 op8=4 op9=0/>
 ; Function Y contains tail call to func2, and ensures we don't incorrectly add
 ; a reference to it when reached while earlier analyzing the phi using its
 ; return value:
 ; op0=Y op4=func2
-; CHECK-DAG:    <PERMODULE_PROFILE {{.*}} op0=8 op1=72 {{.*}} op4=0 op5=0 op6=0 op7=3 op8=8/>
+; CHECK-DAG:    <PERMODULE_PROFILE {{.*}} op0=8 op1=2120 {{.*}} op4=0 op5=0 op6=0 op7=3 op8=8/>
 ; Function Z contains a tail call to func2, and ensures we don't incorrectly add
 ; a reference to it when reached while analyzing subsequent use of its return
 ; value:
 ; op0=Z op4=func2
-; CHECK-DAG:    <PERMODULE_PROFILE {{.*}} op0=9 op1=3 {{.*}} op4=0 op5=0 op6=0 op7=3 op8=8/>
+; CHECK-DAG:    <PERMODULE_PROFILE {{.*}} op0=9 op1=2051 {{.*}} op4=0 op5=0 op6=0 op7=3 op8=8/>
 ; Variable bar initialization contains address reference to func:
 ; op0=bar op2=func
-; CHECK-DAG:    <PERMODULE_GLOBALVAR_INIT_REFS {{.*}} op0=0 op1=0 op2=3 op3=2/>
+; CHECK-DAG:    <PERMODULE_GLOBALVAR_INIT_REFS {{.*}} op0=0 op1=2048 op2=3 op3=2/>
 ; CHECK:  </GLOBALVAL_SUMMARY_BLOCK>
 
 ; CHECK: <STRTAB_BLOCK
