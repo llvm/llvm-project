@@ -10,16 +10,29 @@ int main() {
   if (ptr)
     std::cerr << "allocated!\n";
 
-  // Zero-size allocations are internally upgraded to size 1.
-  // __sanitizer_get_allocated_size reports bytes reserved, not requested.
-  // Dereferencing the pointer will be detected as a heap-buffer-overflow.
+  // Check the 'allocate 1 instead of 0' hack hasn't changed
+  // Note that as of b3452d90b043a398639e62b0ab01aa339cc649de, dereferencing
+  // the pointer will be detected as a heap-buffer-overflow.
   if (__sanitizer_get_allocated_size(ptr) != 1)
     return 1;
 
   free(ptr);
 
-  // Zero-size HeapAlloc/HeapReAlloc should report size 0 via HeapSize,
-  // matching the originally requested size.
+  /*
+        HeapAlloc hack for our asan interceptor is to change 0
+        sized allocations to size 1 to avoid weird inconsistencies
+        between how realloc and heaprealloc handle 0 size allocations.
+
+        Note this test relies on these instructions being intercepted.
+        Without ASAN HeapRealloc on line 27 would return a ptr whose
+        HeapSize would be 0. This test makes sure that the underlying behavior
+        of our hack hasn't changed underneath us.
+
+        We can get rid of the test (or change it to test for the correct
+        behavior) once we fix the interceptor or write a different allocator
+        to handle 0 sized allocations properly by default.
+
+    */
   ptr = HeapAlloc(GetProcessHeap(), 0, 0);
   if (!ptr)
     return 1;
