@@ -2181,6 +2181,7 @@ def AMDGPU : Target {
                                 VOP3_DPPAsmParserVariant];
   let AssemblyWriters = [AMDGPUAsmWriter];
   let AllowRegisterRenaming = 1;
+  let RegistersAreIntervals  = 1;
 }
 
 // Dummy Instruction itineraries for pseudo instructions
