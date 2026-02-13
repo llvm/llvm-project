@@ -89,7 +89,8 @@ TEST_F(ObjectFileMachOTest, ModuleFromSharedCacheInfo) {
 
 TEST_F(ObjectFileMachOTest, IndirectSymbolsInTheSharedCache) {
   ModuleSpec mod_spec;
-  mod_spec.GetFileSpec() = FileSpec("/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit");
+  mod_spec.GetFileSpec() =
+      FileSpec("/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit");
   SharedCacheImageInfo image_info = HostInfo::GetSharedCacheImageInfo(mod_spec);
   ModuleSpec spec(FileSpec(), UUID(), image_info.GetExtractor());
   lldb::ModuleSP module = std::make_shared<Module>(spec);
