@@ -9,7 +9,7 @@ void expect(int x) {
   if (__builtin_expect(x, 0))
     bar();
 }
-// CIR-O0: cir.func dso_local @expect
+// CIR-O0: cir.func no_inline dso_local @expect
 // CIR-O0:   cir.if {{%.*}} {
 // CIR-O0:     cir.call @bar() : () -> ()
 
@@ -33,7 +33,7 @@ void expect_with_probability(int x) {
   if (__builtin_expect_with_probability(x, 1, 0.8))
     bar();
 }
-// CIR-O0: cir.func dso_local @expect_with_probability
+// CIR-O0: cir.func no_inline dso_local @expect_with_probability
 // CIR-O0:   cir.if {{%.*}} {
 // CIR-O0:     cir.call @bar() : () -> ()
 
@@ -57,7 +57,7 @@ void unpredictable(int x) {
   if (__builtin_unpredictable(x > 1))
     bar();
 }
-// CIR-O0: cir.func dso_local @unpredictable
+// CIR-O0: cir.func no_inline dso_local @unpredictable
 // CIR-O0:   cir.if {{%.*}} {
 // CIR-O0:     cir.call @bar() : () -> ()
 
