@@ -440,6 +440,7 @@ cc_library(
         ":BytecodeOpInterfaceIncGen",
         ":CallOpInterfacesIncGen",
         ":DataLayoutInterfacesIncGen",
+        ":DialectFoldInterfaceIncGen",
         ":InferIntRangeInterfaceIncGen",
         ":OpAsmInterfaceIncGen",
         ":QuantStorageTypeInterfaceIncGen",
@@ -1415,6 +1416,23 @@ td_library(
     srcs = ["include/mlir/Interfaces/DestinationStyleOpInterface.td"],
     includes = ["include"],
     deps = [":OpBaseTdFiles"],
+)
+
+td_library(
+    name = "DialectFoldInterfaceTdFiles",
+    srcs = ["include/mlir/Interfaces/DialectFoldInterface.td"],
+    includes = ["include"],
+    deps = [":OpBaseTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "DialectFoldInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Interfaces/DialectFoldInterface.h.inc": ["-gen-dialect-interface-decls"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Interfaces/DialectFoldInterface.td",
+    deps = [":DialectFoldInterfaceTdFiles"],
 )
 
 td_library(
@@ -4515,6 +4533,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":DataLayoutInterfacesIncGen",
+        ":DialectFoldInterfaceIncGen",
         ":IR",
         "//llvm:Support",
     ],

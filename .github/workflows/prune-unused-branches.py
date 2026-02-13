@@ -1,6 +1,7 @@
 import subprocess
 import sys
 import os
+import logging
 
 import github
 
@@ -68,12 +69,25 @@ def get_user_branches_to_remove(
 ) -> list[str]:
     user_branches_to_remove = set(user_branches)
     for pr_user_branch in set(user_branches_from_prs):
+        if pr_user_branch not in user_branches_to_remove:
+            logging.warning(
+                f"Found branch {pr_user_branch} attached to a PR, but it "
+                "was not found in the repository. This is likely because "
+                "the PR was created after this workflow cloned the repository."
+            )
+            continue
         user_branches_to_remove.remove(pr_user_branch)
     return list(user_branches_to_remove)
 
 
 def generate_patch_for_branch(branch_name: str) -> bytes:
-    command_vector = ["git", "diff", f"origin/main...origin/{branch_name}"]
+    command_vector = [
+        "git",
+        "format-patch",
+        "--stdout",
+        "-k",
+        f"origin/main..origin/{branch_name}",
+    ]
     try:
         result = subprocess.run(
             command_vector, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
@@ -121,11 +135,14 @@ def delete_branches(branches_to_remove: list[str]):
 def main(github_token):
     if len(sys.argv) != 2:
         print(
-            "Invalid invocation. Correct usage: python3 prune-unused-branches.py <patch output diectory>"
+            "Invalid invocation. Correct usage: python3 prune-unused-branches.py <output diectory>"
         )
         sys.exit(1)
 
     user_branches = get_branches()
+    output_dir = sys.argv[1]
+    with open(os.path.join(output_dir, "branches.txt"), "w") as branches_file:
+        branches_file.writelines([user_branch + "\n" for user_branch in user_branches])
     user_branches_from_prs = get_branches_from_open_prs(github_token)
     print(f"Found {len(user_branches)} user branches in the repository")
     print(f"Found {len(user_branches_from_prs)} user branches associated with PRs")
@@ -133,7 +150,9 @@ def main(github_token):
         user_branches, user_branches_from_prs
     )
     print(f"Deleting {len(user_branches_to_remove)} user branches.")
-    generate_patches_for_all_branches(user_branches_to_remove, sys.argv[1])
+    generate_patches_for_all_branches(
+        user_branches_to_remove, os.path.join(output_dir, "patches")
+    )
     delete_branches(user_branches_to_remove)
 
 
