@@ -48,16 +48,20 @@ std::optional<std::string> doPathMapping(llvm::StringRef S,
 std::optional<std::string> doFilePathMapping(llvm::StringRef FilePath,
                                              PathMapping::Direction Dir,
                                              const PathMappings &Mappings) {
-  for (const auto &Mapping : Mappings) {
-    const std::string &From = Dir == PathMapping::Direction::ClientToServer
-                                  ? Mapping.ClientPath
-                                  : Mapping.ServerPath;
-    const std::string &To = Dir == PathMapping::Direction::ClientToServer
-                                ? Mapping.ServerPath
-                                : Mapping.ClientPath;
-    if (FilePath.consume_front(From) &&
-        (FilePath.empty() || FilePath.front() == '/'))
-      return (To + FilePath).str();
+  // Convert the file path to a file:// URI, apply the mapping, then resolve
+  // back to a native path. Reuse doPathMapping to hande platform specific
+  // path normalization and mapping logic in one place.
+  std::string URIStr = URI::createFile(FilePath).toString();
+  if (auto Mapped = doPathMapping(URIStr, Dir, Mappings)) {
+    auto ParsedURI = URI::parse(*Mapped);
+    if (!ParsedURI) {
+      llvm::consumeError(ParsedURI.takeError());
+      return std::nullopt;
+    }
+    if (auto Path = URI::resolve(*ParsedURI, FilePath))
+      return std::move(*Path);
+    else
+      llvm::consumeError(Path.takeError());
   }
   return std::nullopt;
 }
