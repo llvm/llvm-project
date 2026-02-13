@@ -119,8 +119,227 @@ br1: ; preds = %br2, %entry, %for.body.for.end.loopexit_crit_edge.i
   %coerce.val.pi.pre-phi.i = phi i64 [ %coerce.val.pi.i.i14, %entry ], [ %.pre14.i, %for.body.for.end.loopexit_crit_edge.i ], [ %coerce.val.pi.i.i14, %br2 ]
   ret i64 %coerce.val.pi.pre-phi.i
 }
-
 ; Function Attrs: mustprogress nocallback nounwind willreturn memory(inaccessiblemem: write)
+
+; Function Attrs: mustprogress norecurse nounwind ssp memory(read, inaccessiblemem: write, target_mem0: none, target_mem1: none) uwtable(sync)
+define i64 @volatileVectorizingTest(ptr noundef nonnull readonly align 8 captures(none) dereferenceable(24) %v, i32 noundef %n) local_unnamed_addr #0 {
+; CHECK-LABEL: define i64 @volatileVectorizingTest(
+; CHECK-SAME: ptr noundef nonnull readonly align 8 captures(none) dereferenceable(24) [[V:%.*]], i32 noundef [[N:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V]], align 8
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP0]], i64 4) ]
+; CHECK-NEXT:    [[__END__I:%.*]] = getelementptr inbounds nuw i8, ptr [[V]], i64 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[__END__I]], align 8
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP1]], i64 4) ]
+; CHECK-NEXT:    [[VOLATILE:%.*]] = load volatile ptr, ptr [[V]], align 8
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP0]], i64 4) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP1]], i64 4) ]
+; CHECK-NEXT:    [[CMP_I_I7_NOT11_I:%.*]] = icmp eq ptr [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[CMP_I_I7_NOT11_I]], label %[[BR1:.*]], label %[[FOR_BODY_I:.*]]
+; CHECK:       [[FOR_BODY_I]]:
+; CHECK-NEXT:    [[__FIRST_SROA_0_012_I:%.*]] = phi ptr [ [[INCDEC_PTR_I_I:%.*]], %[[FOR_INC_I:.*]] ], [ [[TMP0]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[__FIRST_SROA_0_012_I]], align 4
+; CHECK-NEXT:    [[CMP_I_I:%.*]] = icmp slt i32 [[TMP2]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP_I_I]], label %[[BR1]], label %[[FOR_INC_I]]
+; CHECK:       [[FOR_INC_I]]:
+; CHECK-NEXT:    [[INCDEC_PTR_I_I]] = getelementptr inbounds nuw i8, ptr [[__FIRST_SROA_0_012_I]], i64 4
+; CHECK-NEXT:    [[CMP_I_I7_NOT_I:%.*]] = icmp eq ptr [[INCDEC_PTR_I_I]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[CMP_I_I7_NOT_I]], label %[[BR1]], label %[[FOR_BODY_I]]
+; CHECK:       [[BR1]]:
+; CHECK-NEXT:    [[COERCE_VAL_PI_PRE_PHI_I_IN:%.*]] = phi ptr [ [[TMP1]], %[[ENTRY]] ], [ [[TMP1]], %[[FOR_INC_I]] ], [ [[__FIRST_SROA_0_012_I]], %[[FOR_BODY_I]] ]
+; CHECK-NEXT:    [[COERCE_VAL_PI_PRE_PHI_I:%.*]] = ptrtoint ptr [[COERCE_VAL_PI_PRE_PHI_I_IN]] to i64
+; CHECK-NEXT:    ret i64 [[COERCE_VAL_PI_PRE_PHI_I]]
+;
+entry:
+  %0 = load ptr, ptr %v, align 8
+  call void @llvm.assume(i1 true) [ "align"(ptr %0, i64 4) ]
+  %coerce.val.pi.i.i = ptrtoint ptr %0 to i64
+  %__end_.i = getelementptr inbounds nuw i8, ptr %v, i64 8
+  %1 = load ptr, ptr %__end_.i, align 8
+  call void @llvm.assume(i1 true) [ "align"(ptr %1, i64 4) ]
+  %coerce.val.pi.i.i14 = ptrtoint ptr %1 to i64
+  %sub.ptr.sub.i.i.i = sub i64 %coerce.val.pi.i.i14, %coerce.val.pi.i.i
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %0, i64 %sub.ptr.sub.i.i.i) ]
+  %volatile = load volatile ptr, ptr %v, align 8                     ; Volatile Instruction
+  call void @llvm.assume(i1 true) [ "align"(ptr %0, i64 4) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %1, i64 4) ]
+  %cmp.i.i7.not11.i = icmp eq ptr %0, %1
+  br i1 %cmp.i.i7.not11.i, label %br1, label %for.body.i.preheader
+
+for.body.i.preheader:                             ; preds = %entry
+  br label %for.body.i
+
+for.body.i:                                       ; preds = %for.body.i.preheader, %for.inc.i
+  %__first.sroa.0.012.i = phi ptr [ %incdec.ptr.i.i, %for.inc.i ], [ %0, %for.body.i.preheader ]
+  %2 = load i32, ptr %__first.sroa.0.012.i, align 4
+  %cmp.i.i = icmp slt i32 %2, %n
+  br i1 %cmp.i.i, label %for.body.for.end.loopexit_crit_edge.i, label %for.inc.i
+
+for.body.for.end.loopexit_crit_edge.i:            ; preds = %for.body.i
+  %__first.sroa.0.012.i.lcssa = phi ptr [ %__first.sroa.0.012.i, %for.body.i ]
+  %.pre14.i = ptrtoint ptr %__first.sroa.0.012.i.lcssa to i64
+  br label %br1
+
+for.inc.i:                                        ; preds = %for.body.i
+  %incdec.ptr.i.i = getelementptr inbounds nuw i8, ptr %__first.sroa.0.012.i, i64 4
+  %cmp.i.i7.not.i = icmp eq ptr %incdec.ptr.i.i, %1
+  br i1 %cmp.i.i7.not.i, label %br2, label %for.body.i
+
+br2: ; preds = %for.inc.i
+  br label %br1
+
+br1: ; preds = %br2, %entry, %for.body.for.end.loopexit_crit_edge.i
+  %coerce.val.pi.pre-phi.i = phi i64 [ %coerce.val.pi.i.i14, %entry ], [ %.pre14.i, %for.body.for.end.loopexit_crit_edge.i ], [ %coerce.val.pi.i.i14, %br2 ]
+  ret i64 %coerce.val.pi.pre-phi.i
+}
+; Function Attrs: mustprogress nocallback nounwind willreturn memory(inaccessiblemem: write)
+
+; Function Attrs: mustprogress norecurse nounwind ssp memory(read, inaccessiblemem: write, target_mem0: none, target_mem1: none) uwtable(sync)
+define i64 @fenceVectorizingTest(ptr noundef nonnull readonly align 8 captures(none) dereferenceable(24) %v, i32 noundef %n) local_unnamed_addr #0 {
+; CHECK-LABEL: define i64 @fenceVectorizingTest(
+; CHECK-SAME: ptr noundef nonnull readonly align 8 captures(none) dereferenceable(24) [[V:%.*]], i32 noundef [[N:%.*]]) local_unnamed_addr #[[ATTR1]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V]], align 8
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP0]], i64 4) ]
+; CHECK-NEXT:    [[__END__I:%.*]] = getelementptr inbounds nuw i8, ptr [[V]], i64 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[__END__I]], align 8
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP1]], i64 4) ]
+; CHECK-NEXT:    fence seq_cst
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP0]], i64 4) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP1]], i64 4) ]
+; CHECK-NEXT:    [[CMP_I_I7_NOT11_I:%.*]] = icmp eq ptr [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[CMP_I_I7_NOT11_I]], label %[[BR1:.*]], label %[[FOR_BODY_I:.*]]
+; CHECK:       [[FOR_BODY_I]]:
+; CHECK-NEXT:    [[__FIRST_SROA_0_012_I:%.*]] = phi ptr [ [[INCDEC_PTR_I_I:%.*]], %[[FOR_INC_I:.*]] ], [ [[TMP0]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[__FIRST_SROA_0_012_I]], align 4
+; CHECK-NEXT:    [[CMP_I_I:%.*]] = icmp slt i32 [[TMP2]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP_I_I]], label %[[BR1]], label %[[FOR_INC_I]]
+; CHECK:       [[FOR_INC_I]]:
+; CHECK-NEXT:    [[INCDEC_PTR_I_I]] = getelementptr inbounds nuw i8, ptr [[__FIRST_SROA_0_012_I]], i64 4
+; CHECK-NEXT:    [[CMP_I_I7_NOT_I:%.*]] = icmp eq ptr [[INCDEC_PTR_I_I]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[CMP_I_I7_NOT_I]], label %[[BR1]], label %[[FOR_BODY_I]]
+; CHECK:       [[BR1]]:
+; CHECK-NEXT:    [[COERCE_VAL_PI_PRE_PHI_I_IN:%.*]] = phi ptr [ [[TMP1]], %[[ENTRY]] ], [ [[TMP1]], %[[FOR_INC_I]] ], [ [[__FIRST_SROA_0_012_I]], %[[FOR_BODY_I]] ]
+; CHECK-NEXT:    [[COERCE_VAL_PI_PRE_PHI_I:%.*]] = ptrtoint ptr [[COERCE_VAL_PI_PRE_PHI_I_IN]] to i64
+; CHECK-NEXT:    ret i64 [[COERCE_VAL_PI_PRE_PHI_I]]
+;
+entry:
+  %0 = load ptr, ptr %v, align 8
+  call void @llvm.assume(i1 true) [ "align"(ptr %0, i64 4) ]
+  %coerce.val.pi.i.i = ptrtoint ptr %0 to i64
+  %__end_.i = getelementptr inbounds nuw i8, ptr %v, i64 8
+  %1 = load ptr, ptr %__end_.i, align 8
+  call void @llvm.assume(i1 true) [ "align"(ptr %1, i64 4) ]
+  %coerce.val.pi.i.i14 = ptrtoint ptr %1 to i64
+  %sub.ptr.sub.i.i.i = sub i64 %coerce.val.pi.i.i14, %coerce.val.pi.i.i
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %0, i64 %sub.ptr.sub.i.i.i) ]
+  fence seq_cst                                                 ; Fence Instruction
+  call void @llvm.assume(i1 true) [ "align"(ptr %0, i64 4) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %1, i64 4) ]
+  %cmp.i.i7.not11.i = icmp eq ptr %0, %1
+  br i1 %cmp.i.i7.not11.i, label %br1, label %for.body.i.preheader
+
+for.body.i.preheader:                             ; preds = %entry
+  br label %for.body.i
+
+for.body.i:                                       ; preds = %for.body.i.preheader, %for.inc.i
+  %__first.sroa.0.012.i = phi ptr [ %incdec.ptr.i.i, %for.inc.i ], [ %0, %for.body.i.preheader ]
+  %2 = load i32, ptr %__first.sroa.0.012.i, align 4
+  %cmp.i.i = icmp slt i32 %2, %n
+  br i1 %cmp.i.i, label %for.body.for.end.loopexit_crit_edge.i, label %for.inc.i
+
+for.body.for.end.loopexit_crit_edge.i:            ; preds = %for.body.i
+  %__first.sroa.0.012.i.lcssa = phi ptr [ %__first.sroa.0.012.i, %for.body.i ]
+  %.pre14.i = ptrtoint ptr %__first.sroa.0.012.i.lcssa to i64
+  br label %br1
+
+for.inc.i:                                        ; preds = %for.body.i
+  %incdec.ptr.i.i = getelementptr inbounds nuw i8, ptr %__first.sroa.0.012.i, i64 4
+  %cmp.i.i7.not.i = icmp eq ptr %incdec.ptr.i.i, %1
+  br i1 %cmp.i.i7.not.i, label %br2, label %for.body.i
+
+br2: ; preds = %for.inc.i
+  br label %br1
+
+br1: ; preds = %br2, %entry, %for.body.for.end.loopexit_crit_edge.i
+  %coerce.val.pi.pre-phi.i = phi i64 [ %coerce.val.pi.i.i14, %entry ], [ %.pre14.i, %for.body.for.end.loopexit_crit_edge.i ], [ %coerce.val.pi.i.i14, %br2 ]
+  ret i64 %coerce.val.pi.pre-phi.i
+}
+; Function Attrs: mustprogress nocallback nounwind willreturn memory(inaccessiblemem: write)
+
+; Function Attrs: mustprogress norecurse nounwind ssp memory(read, inaccessiblemem: write, target_mem0: none, target_mem1: none) uwtable(sync)
+define i64 @atomicVectorizingTest(ptr noundef nonnull readonly align 8 captures(none) dereferenceable(24) %v, i32 noundef %n) local_unnamed_addr #0 {
+; CHECK-LABEL: define i64 @atomicVectorizingTest(
+; CHECK-SAME: ptr noundef nonnull readonly align 8 captures(none) dereferenceable(24) [[V:%.*]], i32 noundef [[N:%.*]]) local_unnamed_addr #[[ATTR1]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V]], align 8
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP0]], i64 4) ]
+; CHECK-NEXT:    [[__END__I:%.*]] = getelementptr inbounds nuw i8, ptr [[V]], i64 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[__END__I]], align 8
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP1]], i64 4) ]
+; CHECK-NEXT:    [[ATOMIC:%.*]] = load atomic ptr, ptr [[V]] seq_cst, align 8
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP0]], i64 4) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP1]], i64 4) ]
+; CHECK-NEXT:    [[CMP_I_I7_NOT11_I:%.*]] = icmp eq ptr [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[CMP_I_I7_NOT11_I]], label %[[BR1:.*]], label %[[FOR_BODY_I:.*]]
+; CHECK:       [[FOR_BODY_I]]:
+; CHECK-NEXT:    [[__FIRST_SROA_0_012_I:%.*]] = phi ptr [ [[INCDEC_PTR_I_I:%.*]], %[[FOR_INC_I:.*]] ], [ [[TMP0]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[__FIRST_SROA_0_012_I]], align 4
+; CHECK-NEXT:    [[CMP_I_I:%.*]] = icmp slt i32 [[TMP2]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP_I_I]], label %[[BR1]], label %[[FOR_INC_I]]
+; CHECK:       [[FOR_INC_I]]:
+; CHECK-NEXT:    [[INCDEC_PTR_I_I]] = getelementptr inbounds nuw i8, ptr [[__FIRST_SROA_0_012_I]], i64 4
+; CHECK-NEXT:    [[CMP_I_I7_NOT_I:%.*]] = icmp eq ptr [[INCDEC_PTR_I_I]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[CMP_I_I7_NOT_I]], label %[[BR1]], label %[[FOR_BODY_I]]
+; CHECK:       [[BR1]]:
+; CHECK-NEXT:    [[COERCE_VAL_PI_PRE_PHI_I_IN:%.*]] = phi ptr [ [[TMP1]], %[[ENTRY]] ], [ [[TMP1]], %[[FOR_INC_I]] ], [ [[__FIRST_SROA_0_012_I]], %[[FOR_BODY_I]] ]
+; CHECK-NEXT:    [[COERCE_VAL_PI_PRE_PHI_I:%.*]] = ptrtoint ptr [[COERCE_VAL_PI_PRE_PHI_I_IN]] to i64
+; CHECK-NEXT:    ret i64 [[COERCE_VAL_PI_PRE_PHI_I]]
+;
+entry:
+  %0 = load ptr, ptr %v, align 8
+  call void @llvm.assume(i1 true) [ "align"(ptr %0, i64 4) ]
+  %coerce.val.pi.i.i = ptrtoint ptr %0 to i64
+  %__end_.i = getelementptr inbounds nuw i8, ptr %v, i64 8
+  %1 = load ptr, ptr %__end_.i, align 8
+  call void @llvm.assume(i1 true) [ "align"(ptr %1, i64 4) ]
+  %coerce.val.pi.i.i14 = ptrtoint ptr %1 to i64
+  %sub.ptr.sub.i.i.i = sub i64 %coerce.val.pi.i.i14, %coerce.val.pi.i.i
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %0, i64 %sub.ptr.sub.i.i.i) ]
+  %atomic = load atomic ptr, ptr %v seq_cst, align 8                ; Atomic Instruction
+  call void @llvm.assume(i1 true) [ "align"(ptr %0, i64 4) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %1, i64 4) ]
+  %cmp.i.i7.not11.i = icmp eq ptr %0, %1
+  br i1 %cmp.i.i7.not11.i, label %br1, label %for.body.i.preheader
+
+for.body.i.preheader:                             ; preds = %entry
+  br label %for.body.i
+
+for.body.i:                                       ; preds = %for.body.i.preheader, %for.inc.i
+  %__first.sroa.0.012.i = phi ptr [ %incdec.ptr.i.i, %for.inc.i ], [ %0, %for.body.i.preheader ]
+  %2 = load i32, ptr %__first.sroa.0.012.i, align 4
+  %cmp.i.i = icmp slt i32 %2, %n
+  br i1 %cmp.i.i, label %for.body.for.end.loopexit_crit_edge.i, label %for.inc.i
+
+for.body.for.end.loopexit_crit_edge.i:            ; preds = %for.body.i
+  %__first.sroa.0.012.i.lcssa = phi ptr [ %__first.sroa.0.012.i, %for.body.i ]
+  %.pre14.i = ptrtoint ptr %__first.sroa.0.012.i.lcssa to i64
+  br label %br1
+
+for.inc.i:                                        ; preds = %for.body.i
+  %incdec.ptr.i.i = getelementptr inbounds nuw i8, ptr %__first.sroa.0.012.i, i64 4
+  %cmp.i.i7.not.i = icmp eq ptr %incdec.ptr.i.i, %1
+  br i1 %cmp.i.i7.not.i, label %br2, label %for.body.i
+
+br2: ; preds = %for.inc.i
+  br label %br1
+
+br1: ; preds = %br2, %entry, %for.body.for.end.loopexit_crit_edge.i
+  %coerce.val.pi.pre-phi.i = phi i64 [ %coerce.val.pi.i.i14, %entry ], [ %.pre14.i, %for.body.for.end.loopexit_crit_edge.i ], [ %coerce.val.pi.i.i14, %br2 ]
+  ret i64 %coerce.val.pi.pre-phi.i
+}
+; Function Attrs: mustprogress nocallback nounwind willreturn memory(inaccessiblemem: write)
+
 declare void @llvm.assume(i1 noundef) #1
 
 attributes #0 = { mustprogress nounwind ssp memory(read, inaccessiblemem: write, target_mem0: none, target_mem1: none) uwtable(sync) "frame-pointer"="non-leaf-no-reserve" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }

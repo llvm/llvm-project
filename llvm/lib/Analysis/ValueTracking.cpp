@@ -718,13 +718,49 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
 
   // Helper to make sure the current function cannot arrange for
   // another thread to free on its behalf.
-  auto hasNoSyncCalls = [](auto Range) {
+  auto hasNoSync = [](auto Range) {
     for (const auto &[Idx, I] : enumerate(Range)) {
       if (Idx > MaxInstrsToCheckForFree)
         return false;
-      if (const auto *CB = dyn_cast<CallBase>(&I))
-        if (!CB->hasFnAttr(Attribute::NoSync))
+      if (I.isVolatile()) {
+        return false;
+      }
+
+      auto isOrderedAtomic = [](const Instruction *Inst) {
+        if (!Inst->isAtomic())
           return false;
+
+        if (auto *FI = dyn_cast<FenceInst>(Inst))
+          // All legal orderings for fence are stronger than monotonic.
+          return FI->getSyncScopeID() != SyncScope::SingleThread;
+        else if (isa<AtomicCmpXchgInst>(Inst) || isa<AtomicRMWInst>(Inst))
+          return true;
+        else if (auto *SI = dyn_cast<StoreInst>(Inst))
+          return !SI->isUnordered();
+        else if (auto *LI = dyn_cast<LoadInst>(Inst))
+          return !LI->isUnordered();
+        else {
+          llvm_unreachable("unknown atomic instruction?");
+        }
+      };
+      // An ordered atomic may synchronize.
+      if (isOrderedAtomic(&I)) {
+        return false;
+      }
+
+      auto *CB = dyn_cast<CallBase>(&I);
+      if (!CB)
+        // Non call site cases covered by the two checks above
+        continue;
+
+      if (CB->hasFnAttr(Attribute::NoSync))
+        continue;
+
+      // Non volatile memset/memcpy/memmoves are nosync
+      if (auto *MI = dyn_cast<MemIntrinsic>(&I))
+        if (!MI->isVolatile())
+          continue;
+      return false;
     }
     return true;
   };
@@ -738,8 +774,8 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
       return false;
 
     if (!hasNoFreeCalls(make_range(CtxBB->begin(), CtxIter)) ||
-        !hasNoSyncCalls(make_range(CtxBB->begin(), CtxIter)))
-      return false;
+        !hasNoSync(make_range(CtxBB->begin(), CtxIter)))
+          return false;
 
     CtxIter = AssumeBB->end();
   } else {
@@ -747,11 +783,10 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
     if (!Assume->comesBefore(CtxI))
       return false;
   }
-
   // Check if there are any calls between Assume and CtxIter that may free
   // memory.
   return hasNoFreeCalls(make_range(Assume->getIterator(), CtxIter)) &&
-         hasNoSyncCalls(make_range(Assume->getIterator(), CtxIter));
+         hasNoSync(make_range(Assume->getIterator(), CtxIter));
 }
 
 // TODO: cmpExcludesZero misses many cases where `RHS` is non-constant but
