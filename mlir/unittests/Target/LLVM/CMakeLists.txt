@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS nativecodegen BitReader)
 
 add_mlir_unittest(MLIRTargetLLVMTests
+  Offload.cpp
   SerializeNVVMTarget.cpp
   SerializeROCDLTarget.cpp
   SerializeToLLVMBitcode.cpp
