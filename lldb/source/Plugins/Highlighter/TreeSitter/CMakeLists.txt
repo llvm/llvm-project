@@ -4,6 +4,7 @@ add_lldb_library(lldbTreeSitter
   LINK_COMPONENTS
     Support
   LINK_LIBS
+    lldbCore
     lldbUtility
     ${TreeSitter_LIBRARY}
 )
