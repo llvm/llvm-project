@@ -332,9 +332,13 @@ def GetPtrThisField : OffsetOpcode;
 def GetPtrBase : OffsetOpcode;
 // [Pointer] -> [Pointer]
 def GetPtrBasePop : OffsetOpcode { let Args = [ArgUint32, ArgBool]; }
-def GetMemberPtrBasePop : Opcode {
+def CastMemberPtrBasePop : Opcode {
   // Offset of field, which is a base.
-  let Args = [ArgSint32];
+  let Args = [ArgSint32, ArgRecordDecl];
+}
+def CastMemberPtrDerivedPop : Opcode {
+  // Offset of field, which is a base.
+  let Args = [ArgSint32, ArgRecordDecl];
 }
 
 def FinishInitPop : Opcode;
