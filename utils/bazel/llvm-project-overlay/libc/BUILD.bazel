@@ -3219,6 +3219,10 @@ libc_support_library(
         ":__support_common",
         ":__support_fputil_manipulation_functions",
         ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_log10f16",
     hdrs = ["src/__support/math/log10f16.h"],
     deps = [
