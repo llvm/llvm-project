@@ -833,9 +833,10 @@ inline auto m_c_LogicalAnd(const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t, typename Op1_t>
-inline AllRecipe_match<Instruction::Select, Op0_t, specific_intval<1>, Op1_t>
-m_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_Select(Op0, m_True(), Op1);
+inline auto m_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_CombineOr(
+      m_c_VPInstruction<VPInstruction::LogicalOr, Op0_t, Op1_t>(Op0, Op1),
+      m_Select(Op0, m_True(), Op1));
 }
 
 template <typename Op0_t, typename Op1_t>
