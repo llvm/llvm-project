@@ -860,11 +860,24 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI_m_prefetchw:
     return emitPrefetch(*this, builtinID, expr, ops);
   case X86::BI__rdtsc:
+    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()), "x86.rdtsc",
+                                       builder.getUInt64Ty());
   case X86::BI__builtin_ia32_rdtscp: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented X86 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    mlir::Type i64Ty = builder.getUInt64Ty();
+    mlir::Type i32Ty = builder.getUInt32Ty();
+    mlir::Type structTy = builder.getAnonRecordTy({i64Ty, i32Ty});
+    mlir::Value result =
+        builder.emitIntrinsicCallOp(loc, "x86.rdtscp", structTy);
+
+    // Extract and store processor_id (element 1 of the returned struct)
+    mlir::Value processorId =
+        cir::ExtractMemberOp::create(builder, loc, i32Ty, result, 1);
+    // ops[0] is the address to store the processor ID
+    builder.createStore(loc, processorId, Address{ops[0], CharUnits::One()});
+
+    // Return timestamp (element 0 of the returned struct)
+    return cir::ExtractMemberOp::create(builder, loc, i64Ty, result, 0);
   }
   case X86::BI__builtin_ia32_lzcnt_u16:
   case X86::BI__builtin_ia32_lzcnt_u32:
