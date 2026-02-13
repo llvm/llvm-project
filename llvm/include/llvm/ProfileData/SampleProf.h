@@ -224,6 +224,12 @@ enum class SecFuncOffsetFlags : uint32_t {
   SecFlagOrdered = (1 << 0),
 };
 
+enum class SecProfileSymbolListFlags : uint32_t {
+  SecFlagInvalid = 0,
+  // The symbol list stores MD5 hashes (uint64_t) instead of strings.
+  SecFlagMD5 = (1 << 0),
+};
+
 // Verify section specific flag is used for the correct section.
 template <class SecFlagType>
 static inline void verifySecFlag(SecType Type, SecFlagType Flag) {
@@ -242,6 +248,9 @@ static inline void verifySecFlag(SecType Type, SecFlagType Flag) {
     break;
   case SecFuncMetadata:
     IsFlagLegal = std::is_same<SecFuncMetadataFlags, SecFlagType>();
+    break;
+  case SecProfileSymbolList:
+    IsFlagLegal = std::is_same<SecProfileSymbolListFlags, SecFlagType>();
     break;
   default:
   case SecFuncOffsetTable:
@@ -1659,40 +1668,73 @@ private:
 /// in the profile and a function newly added.
 class ProfileSymbolList {
 public:
+  void setUseMD5(bool V) { UseMD5 = V; }
+  bool useMD5() const { return UseMD5; }
+
   /// copy indicates whether we need to copy the underlying memory
   /// for the input Name.
   void add(StringRef Name, bool Copy = false) {
-    if (!Copy) {
-      Syms.insert(Name);
-      return;
+    if (UseMD5) {
+      HashSyms.insert(MD5Hash(Name));
+    } else {
+      if (!Copy) {
+        Syms.insert(Name);
+        return;
+      }
+      Syms.insert(Name.copy(Allocator));
     }
-    Syms.insert(Name.copy(Allocator));
   }
 
-  bool contains(StringRef Name) { return Syms.count(Name); }
+  /// Add a pre-computed MD5 hash directly (e.g., GUID from pseudo probes).
+  /// Only valid when useMD5() is true.
+  void add(uint64_t Hash) {
+    assert(UseMD5 && "add hash only valid when useMD5() is true");
+    HashSyms.insert(Hash);
+  }
+
+  bool contains(StringRef Name) {
+    if (UseMD5)
+      return HashSyms.count(MD5Hash(Name));
+    return Syms.count(Name);
+  }
 
   void merge(const ProfileSymbolList &List) {
-    for (auto Sym : List.Syms)
-      add(Sym, true);
+    if (UseMD5) {
+      if (List.useMD5()) {
+        for (auto Sym : List.HashSyms)
+          HashSyms.insert(Sym);
+      } else {
+        for (auto Sym : List.Syms)
+          HashSyms.insert(MD5Hash(Sym));
+      }
+    } else {
+      assert(List.useMD5() == false && "Can't merge MD5 list with string list");
+      for (auto Sym : List.Syms)
+        add(Sym, true);
+    }
   }
 
-  unsigned size() { return Syms.size(); }
+  unsigned size() { return UseMD5 ? HashSyms.size() : Syms.size(); }
   void reserve(size_t Size) { Syms.reserve(Size); }
 
   void setToCompress(bool TC) { ToCompress = TC; }
   bool toCompress() { return ToCompress; }
 
-  LLVM_ABI std::error_code read(const uint8_t *Data, uint64_t ListSize);
+  LLVM_ABI std::error_code read(const uint8_t *Data, uint64_t ListSize,
+                                bool IsMD5 = false);
   LLVM_ABI std::error_code write(raw_ostream &OS);
   LLVM_ABI void dump(raw_ostream &OS = dbgs()) const;
 
 private:
+  // Whether to use MD5 hashes instead of strings.
+  bool UseMD5 = false;
   // Determine whether or not to compress the symbol list when
   // writing it into profile. The variable is unused when the symbol
   // list is read from an existing profile.
   bool ToCompress = false;
   DenseSet<StringRef> Syms;
   BumpPtrAllocator Allocator;
+  DenseSet<uint64_t> HashSyms;
 };
 
 } // end namespace sampleprof

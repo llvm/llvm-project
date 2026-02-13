@@ -903,10 +903,13 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
       return EC;
     break;
   }
-  case SecProfileSymbolList:
-    if (std::error_code EC = readProfileSymbolList())
+  case SecProfileSymbolList: {
+    bool IsMD5 =
+        hasSecFlag(Entry, SecProfileSymbolListFlags::SecFlagMD5);
+    if (std::error_code EC = readProfileSymbolList(IsMD5))
       return EC;
     break;
+  }
   default:
     if (std::error_code EC = readCustomSection(Entry))
       return EC;
@@ -1134,11 +1137,12 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
   return sampleprof_error::success;
 }
 
-std::error_code SampleProfileReaderExtBinaryBase::readProfileSymbolList() {
+std::error_code
+SampleProfileReaderExtBinaryBase::readProfileSymbolList(bool IsMD5) {
   if (!ProfSymList)
     ProfSymList = std::make_unique<ProfileSymbolList>();
 
-  if (std::error_code EC = ProfSymList->read(Data, End - Data))
+  if (std::error_code EC = ProfSymList->read(Data, End - Data, IsMD5))
     return EC;
 
   Data = End;
