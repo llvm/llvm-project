@@ -19,8 +19,13 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // end namespace llvm
 
 BasicBlock *TileInfo::CreateLoop(BasicBlock *Preheader, BasicBlock *Exit,
                                  ConstantInt *Bound, ConstantInt *Step,
@@ -37,17 +42,19 @@ BasicBlock *TileInfo::CreateLoop(BasicBlock *Preheader, BasicBlock *Exit,
   Type *I32Ty = Type::getInt64Ty(Ctx);
   BranchInst::Create(Body, Header);
   BranchInst::Create(Latch, Body);
-  PHINode *IV = PHINode::Create(I32Ty, 2, Name + ".iv",
-                                Header->getTerminator()->getIterator());
+  PHINode *IV =
+      PHINode::Create(I32Ty, 2, Name + ".iv", Header->getTerminator()->getIterator());
   IV->addIncoming(ConstantInt::get(I32Ty, 0), Preheader);
 
   B.SetInsertPoint(Latch);
   Value *Inc = B.CreateAdd(IV, Step, Name + ".step");
   Value *Cond = B.CreateICmpNE(Inc, Bound, Name + ".cond");
   auto *BR = BranchInst::Create(Header, Exit, Cond, Latch);
-  MDBuilder MDB(Preheader->getContext());
-  setFittedBranchWeights(*BR, {Bound->getZExtValue() / Step->getZExtValue(), 1},
-                         false);
+  if (!ProfcheckDisableMetadataFixes) {
+    MDBuilder MDB(Preheader->getContext());
+    setFittedBranchWeights(
+        *BR, {Bound->getZExtValue() / Step->getZExtValue(), 1}, false);
+  }
   IV->addIncoming(Inc, Latch);
 
   BranchInst *PreheaderBr = cast<BranchInst>(Preheader->getTerminator());

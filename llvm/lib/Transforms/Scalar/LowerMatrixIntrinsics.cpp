@@ -105,6 +105,10 @@ static cl::opt<unsigned> SplitMatmulRemainderOverThreshold(
              "in the inner loop of matmul"),
     cl::init(0));
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // end namespace llvm
+
 /// Helper function to either return Scope, if it is a subprogram or the
 /// attached subprogram for a local scope.
 static DISubprogram *getSubprogram(DIScope *Scope) {
@@ -2469,7 +2473,8 @@ public:
     } else {
       CondV.resize(A.getNumVectors());
       llvm::fill(CondV, Cond);
-      MDFrom = Inst;
+      if (!ProfcheckDisableMetadataFixes)
+        MDFrom = Inst;
     }
 
     for (auto [CV, AV, BV] : llvm::zip_equal(CondV, A.vectors(), B.vectors()))
