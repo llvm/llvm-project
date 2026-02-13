@@ -54,6 +54,9 @@ enum class StorageKind {
   Aggregate, // Struct, Array or Vector
 };
 
+/// Tri-state boolean value.
+enum class BooleanKind { False, True, Poison };
+
 class Pointer {
   // The underlying memory object. It can be null for invalid or dangling
   // pointers.
@@ -139,6 +142,12 @@ public:
            "Expect an aggregate/vector value");
     assert(I < AggVal.size() && "Index out of bounds");
     return AggVal[I];
+  }
+
+  BooleanKind asBoolean() const {
+    if (isPoison())
+      return BooleanKind::Poison;
+    return asInteger().isZero() ? BooleanKind::False : BooleanKind::True;
   }
 };
 

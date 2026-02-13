@@ -1420,6 +1420,19 @@ enum NameMatchStyle {
   eNameMatchStyleRegex = eFunctionNameTypeSelector << 1
 };
 
+/// Data Inspection Language (DIL) evaluation modes.
+/// DIL will only attempt evaluating expressions that contain tokens
+/// allowed by a selected mode.
+enum DILMode {
+  /// Allowed: identifiers, operators: '.'.
+  eDILModeSimple,
+  /// Allowed: identifiers, integers, operators: '.', '->', '*', '&', '[]'.
+  eDILModeLegacy,
+  /// Allowed: everything supported by DIL.
+  /// \see lldb/docs/dil-expr-lang.ebnf
+  eDILModeFull
+};
+
 } // namespace lldb
 
 #endif // LLDB_LLDB_ENUMERATIONS_H

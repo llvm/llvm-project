@@ -316,11 +316,16 @@ public:
   /// \param[in] error
   ///     Record any errors encountered while evaluating var_expr.
   ///
+  /// \param[in] mode
+  ///     Data Inspection Language (DIL) evaluation mode.
+  ///     \see lldb::DILMode
+  ///
   /// \return
   ///     A shared pointer to the ValueObject described by var_expr.
   virtual lldb::ValueObjectSP GetValueForVariableExpressionPath(
       llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
-      uint32_t options, lldb::VariableSP &var_sp, Status &error);
+      uint32_t options, lldb::VariableSP &var_sp, Status &error,
+      lldb::DILMode mode = lldb::eDILModeFull);
 
   /// Determine whether this StackFrame has debug information available or not.
   ///
@@ -615,7 +620,8 @@ private:
 
   lldb::ValueObjectSP DILGetValueForVariableExpressionPath(
       llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
-      uint32_t options, lldb::VariableSP &var_sp, Status &error);
+      uint32_t options, lldb::VariableSP &var_sp, Status &error,
+      lldb::DILMode mode = lldb::eDILModeFull);
 
   StackFrame(const StackFrame &) = delete;
   const StackFrame &operator=(const StackFrame &) = delete;

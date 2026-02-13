@@ -25,9 +25,31 @@ AnyValue Context::getConstantValueImpl(Constant *C) {
   if (isa<PoisonValue>(C))
     return AnyValue::getPoisonValue(*this, C->getType());
 
-  // TODO: Handle ConstantInt vector.
-  if (auto *CI = dyn_cast<ConstantInt>(C))
+  if (isa<ConstantAggregateZero>(C))
+    return AnyValue::getNullValue(*this, C->getType());
+
+  if (auto *CI = dyn_cast<ConstantInt>(C)) {
+    if (auto *VecTy = dyn_cast<VectorType>(CI->getType()))
+      return std::vector<AnyValue>(getEVL(VecTy->getElementCount()),
+                                   AnyValue(CI->getValue()));
     return CI->getValue();
+  }
+
+  if (auto *CDS = dyn_cast<ConstantDataSequential>(C)) {
+    std::vector<AnyValue> Elts;
+    Elts.reserve(CDS->getNumElements());
+    for (uint32_t I = 0, E = CDS->getNumElements(); I != E; ++I)
+      Elts.push_back(getConstantValue(CDS->getElementAsConstant(I)));
+    return std::move(Elts);
+  }
+
+  if (auto *CA = dyn_cast<ConstantAggregate>(C)) {
+    std::vector<AnyValue> Elts;
+    Elts.reserve(CA->getNumOperands());
+    for (uint32_t I = 0, E = CA->getNumOperands(); I != E; ++I)
+      Elts.push_back(getConstantValue(CA->getOperand(I)));
+    return std::move(Elts);
+  }
 
   llvm_unreachable("Unrecognized constant");
 }
