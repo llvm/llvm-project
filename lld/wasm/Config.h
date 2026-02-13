@@ -174,6 +174,11 @@ struct Ctx {
     // Symbol whose value is the alignment of the TLS block.
     GlobalSymbol *tlsAlign;
 
+    // __rodata_start/__rodata_end
+    // Symbols marking the start/end of readonly data
+    DefinedData *rodataStart;
+    DefinedData *rodataEnd;
+
     // __data_end
     // Symbol marking the end of the data and bss.
     DefinedData *dataEnd;

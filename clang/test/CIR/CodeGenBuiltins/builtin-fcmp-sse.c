@@ -27,7 +27,7 @@ __m128 test_cmpnleps(__m128 A, __m128 B) {
   // CIR:         } 
 
   // LLVM-LABEL: define dso_local <4 x float> @test_cmpnleps(
-  // LLVM-SAME: <4 x float> [[TMP0:%.*]], <4 x float> [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
+  // LLVM-SAME: <4 x float> [[TMP0:%.*]], <4 x float> [[TMP1:%.*]]) #{{[0-9]+}} {
   // LLVM-NEXT:    [[TMP3:%.*]] = alloca <4 x float>, i64 1, align 16
   // LLVM-NEXT:    [[TMP4:%.*]] = alloca <4 x float>, i64 1, align 16
   // LLVM-NEXT:    [[TMP5:%.*]] = alloca <4 x float>, i64 1, align 16
@@ -44,7 +44,7 @@ __m128 test_cmpnleps(__m128 A, __m128 B) {
   // LLVM-NEXT:    ret <4 x float> [[TMP12]]
 
   // OGCG-LABEL: define dso_local <4 x float> @test_cmpnleps(
-  // OGCG-SAME: <4 x float> noundef [[A:%.*]], <4 x float> noundef [[B:%.*]]) #[[ATTR0:[0-9]+]] {
+  // OGCG-SAME: <4 x float> noundef [[A:%.*]], <4 x float> noundef [[B:%.*]]) #{{[0-9]+}} {
   // OGCG-NEXT:  [[ENTRY:.*:]]
   // OGCG-NEXT:    [[A_ADDR:%.*]] = alloca <4 x float>, align 16
   // OGCG-NEXT:    [[B_ADDR:%.*]] = alloca <4 x float>, align 16
@@ -78,7 +78,7 @@ __m128d test_cmpnlepd(__m128d A, __m128d B) {
   // CIR:         } 
 
   // LLVM-LABEL: define dso_local <2 x double> @test_cmpnlepd(
-  // LLVM-SAME: <2 x double> [[TMP0:%.*]], <2 x double> [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
+  // LLVM-SAME: <2 x double> [[TMP0:%.*]], <2 x double> [[TMP1:%.*]]) #{{[0-9]+}} {
   // LLVM-NEXT:    [[TMP3:%.*]] = alloca <2 x double>, i64 1, align 16
   // LLVM-NEXT:    [[TMP4:%.*]] = alloca <2 x double>, i64 1, align 16
   // LLVM-NEXT:    [[TMP5:%.*]] = alloca <2 x double>, i64 1, align 16
@@ -95,7 +95,7 @@ __m128d test_cmpnlepd(__m128d A, __m128d B) {
   // LLVM-NEXT:    ret <2 x double> [[TMP12]]
 
   // OGCG-LABEL: define dso_local <2 x double> @test_cmpnlepd(
-  // OGCG-SAME: <2 x double> noundef [[A:%.*]], <2 x double> noundef [[B:%.*]]) #[[ATTR0:[0-9]+]] {
+  // OGCG-SAME: <2 x double> noundef [[A:%.*]], <2 x double> noundef [[B:%.*]]) #{{[0-9]+}} {
   // OGCG-NEXT:  [[ENTRY:.*:]]
   // OGCG-NEXT:    [[A_ADDR:%.*]] = alloca <2 x double>, align 16
   // OGCG-NEXT:    [[B_ADDR:%.*]] = alloca <2 x double>, align 16
@@ -129,7 +129,7 @@ __m128 test_cmpnltps(__m128 A, __m128 B) {
   // CIR:         } 
 
   // LLVM-LABEL: define dso_local <4 x float> @test_cmpnltps(
-  // LLVM-SAME: <4 x float> [[TMP0:%.*]], <4 x float> [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
+  // LLVM-SAME: <4 x float> [[TMP0:%.*]], <4 x float> [[TMP1:%.*]]) #{{[0-9]+}} {
   // LLVM-NEXT:    [[TMP3:%.*]] = alloca <4 x float>, i64 1, align 16
   // LLVM-NEXT:    [[TMP4:%.*]] = alloca <4 x float>, i64 1, align 16
   // LLVM-NEXT:    [[TMP5:%.*]] = alloca <4 x float>, i64 1, align 16
@@ -146,7 +146,7 @@ __m128 test_cmpnltps(__m128 A, __m128 B) {
   // LLVM-NEXT:    ret <4 x float> [[TMP12]]
 
   // OGCG-LABEL: define dso_local <4 x float> @test_cmpnltps(
-  // OGCG-SAME: <4 x float> noundef [[A:%.*]], <4 x float> noundef [[B:%.*]]) #[[ATTR0:[0-9]+]] {
+  // OGCG-SAME: <4 x float> noundef [[A:%.*]], <4 x float> noundef [[B:%.*]]) #{{[0-9]+}} {
   // OGCG-NEXT:  [[ENTRY:.*:]]
   // OGCG-NEXT:    [[A_ADDR:%.*]] = alloca <4 x float>, align 16
   // OGCG-NEXT:    [[B_ADDR:%.*]] = alloca <4 x float>, align 16
@@ -180,7 +180,7 @@ __m128d test_cmpnltpd(__m128d A, __m128d B) {
   // CIR:         } 
 
   // LLVM-LABEL: define dso_local <2 x double> @test_cmpnltpd(
-  // LLVM-SAME: <2 x double> [[TMP0:%.*]], <2 x double> [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
+  // LLVM-SAME: <2 x double> [[TMP0:%.*]], <2 x double> [[TMP1:%.*]]) #{{[0-9]+}} {
   // LLVM-NEXT:    [[TMP3:%.*]] = alloca <2 x double>, i64 1, align 16
   // LLVM-NEXT:    [[TMP4:%.*]] = alloca <2 x double>, i64 1, align 16
   // LLVM-NEXT:    [[TMP5:%.*]] = alloca <2 x double>, i64 1, align 16
@@ -197,7 +197,7 @@ __m128d test_cmpnltpd(__m128d A, __m128d B) {
   // LLVM-NEXT:    ret <2 x double> [[TMP12]]
 
   // OGCG-LABEL: define dso_local <2 x double> @test_cmpnltpd(
-  // OGCG-SAME: <2 x double> noundef [[A:%.*]], <2 x double> noundef [[B:%.*]]) #[[ATTR0:[0-9]+]] {
+  // OGCG-SAME: <2 x double> noundef [[A:%.*]], <2 x double> noundef [[B:%.*]]) #{{[0-9]+}} {
   // OGCG-NEXT:  [[ENTRY:.*:]]
   // OGCG-NEXT:    [[A_ADDR:%.*]] = alloca <2 x double>, align 16
   // OGCG-NEXT:    [[B_ADDR:%.*]] = alloca <2 x double>, align 16

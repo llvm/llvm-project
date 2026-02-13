@@ -27,11 +27,11 @@ gpu.module @test_elementwise_ops {
     %load_a = xegpu.load_nd %tdesc_a {layout = #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8], lane_layout = [2, 8], lane_data = [1, 1]>}
       : !xegpu.tensor_desc<24x32xf32, #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8], lane_layout = [2, 8], lane_data = [1, 1]>>
       -> vector<24x32xf32>
-    // CHECK: math.exp {{.*}} {layout_result_0 =  #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1]>} : vector<12x8xf32>
+    // CHECK: math.exp {{.*}} : vector<12x8xf32>
     %exp = math.exp %load_a
       {layout_result_0 = #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8], lane_layout = [2, 8], lane_data = [1, 1]>}
       : vector<24x32xf32>
-    // CHECK: arith.negf {{.*}} {layout_result_0 =  #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1]>} : vector<12x8xf32>
+    // CHECK: arith.negf {{.*}} : vector<12x8xf32>
     %negf = arith.negf %load_a
       {layout_result_0 = #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8], lane_layout = [2, 8], lane_data = [1, 1]>}
       : vector<24x32xf32>
@@ -50,13 +50,11 @@ gpu.module @test_elementwise_ops {
     %load_b = xegpu.load_nd %tdesc_b {layout = #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8], lane_layout = [2, 8], lane_data = [1, 1]>}
       : !xegpu.tensor_desc<24x32xf32, #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8], lane_layout = [2, 8], lane_data = [1, 1]>>
       -> vector<24x32xf32>
-    // CHECK: arith.addf {{.*}}, {{.*}} {layout_result_0 =  #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1]>}
-    // CHECK-SAME: : vector<12x8xf32>
+    // CHECK: arith.addf {{.*}}, {{.*}} : vector<12x8xf32>
     %addf = arith.addf %load_a, %load_b
       {layout_result_0 = #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8], lane_layout = [2, 8], lane_data = [1, 1]>}
       : vector<24x32xf32>
-    // CHECK: math.powf {{.*}}, {{.*}} {layout_result_0 =  #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1]>}
-    // CHECK-SAME: : vector<12x8xf32>
+    // CHECK: math.powf {{.*}}, {{.*}} : vector<12x8xf32>
     %powf = math.powf %load_a, %load_b
       {layout_result_0 = #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8], lane_layout = [2, 8], lane_data = [1, 1]>}
       : vector<24x32xf32>
@@ -80,13 +78,11 @@ gpu.module @test_elementwise_ops {
     %load_c = xegpu.load_nd %tdesc_c {layout = #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8], lane_layout = [2, 8], lane_data = [1, 1]>}
       : !xegpu.tensor_desc<24x32xi1, #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8], lane_layout = [2, 8], lane_data = [1, 1]>>
       -> vector<24x32xi1>
-    // CHECK: arith.select {{.*}}, {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1]>}
-    // CHECK-SAME: : vector<12x8xi1>, vector<12x8xf32>
+    // CHECK: arith.select {{.*}}, {{.*}}, {{.*}} : vector<12x8xi1>, vector<12x8xf32>
     %select = arith.select %load_c, %load_a, %load_b
       {layout_result_0 = #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8], lane_layout = [2, 8], lane_data = [1, 1]>}
       : vector<24x32xi1>, vector<24x32xf32>
-    // CHECK: math.fma  {{.*}}, {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1]>}
-    // CHECK-SAME: : vector<12x8xf32>
+    // CHECK: math.fma  {{.*}}, {{.*}}, {{.*}} : vector<12x8xf32>
     %fma = math.fma %load_a, %load_b, %load_a
       {layout_result_0 = #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8], lane_layout = [2, 8], lane_data = [1, 1]>}
       : vector<24x32xf32>
@@ -105,13 +101,11 @@ gpu.module @test_elementwise_ops {
     %load_b = xegpu.load_nd %tdesc_b {layout = #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8], lane_layout = [2, 8], lane_data = [1, 1]>}
       : !xegpu.tensor_desc<24x32xi32, #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8], lane_layout = [2, 8], lane_data = [1, 1]>>
       -> vector<24x32xi32>
-    // CHECK: arith.truncf {{.*}} {layout_result_0 =  #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1]>}
-    // CHECK-SAME: : vector<12x8xf32> to vector<12x8xf16>
+    // CHECK: arith.truncf {{.*}} : vector<12x8xf32> to vector<12x8xf16>
     %truncf = arith.truncf %load_a
       {layout_result_0 = #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8], lane_layout = [2, 8], lane_data = [1, 1]>}
       : vector<24x32xf32> to vector<24x32xf16>
-    // CHECK: arith.bitcast {{.*}} {layout_result_0 =  #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1]>}
-    // CHECK-SAME: : vector<12x8xi32> to vector<12x8xf32>
+    // CHECK: arith.bitcast {{.*}} : vector<12x8xi32> to vector<12x8xf32>
     %bitcast = arith.bitcast %load_b
       {layout_result_0 = #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8], lane_layout = [2, 8], lane_data = [1, 1]>}
       : vector<24x32xi32> to vector<24x32xf32>
@@ -140,13 +134,11 @@ gpu.module @test_elementwise_ops {
     %load_d = xegpu.load_nd %tdesc_d {layout = #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8], lane_layout = [2, 8], lane_data = [1, 1]>}
       : !xegpu.tensor_desc<24x32xi32, #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8], lane_layout = [2, 8], lane_data = [1, 1]>>
       -> vector<24x32xi32>
-    // CHECK: arith.cmpf ult, {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1]>}
-    // CHECK-SAME: : vector<12x8xf32>
+    // CHECK: arith.cmpf ult, {{.*}}, {{.*}} : vector<12x8xf32>
     %cmpf = arith.cmpf ult, %load_a, %load_b
       {layout_result_0 = #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8], lane_layout = [2, 8], lane_data = [1, 1]>}
       : vector<24x32xf32>
-    // CHECK: arith.cmpi eq, {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1]>}
-    // CHECK-SAME: : vector<12x8xi32>
+    // CHECK: arith.cmpi eq, {{.*}}, {{.*}} : vector<12x8xi32>
     %cmpi = arith.cmpi eq, %load_c, %load_d
       {layout_result_0 = #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8], lane_layout = [2, 8], lane_data = [1, 1]>}
       : vector<24x32xi32>
@@ -166,12 +158,12 @@ gpu.module @test_elementwise_ops {
     %load_b = xegpu.load_nd %tdesc_b {layout = #xegpu.layout<sg_layout = [4, 4], sg_data = [2, 2], lane_layout = [2, 2], lane_data = [1, 1]>}
       : !xegpu.tensor_desc<24x32xf32, #xegpu.layout<sg_layout = [4, 4], sg_data = [2, 2], lane_layout = [2, 2], lane_data = [1, 1]>>
       -> vector<24x32xf32>
-    // CHECK-COUNT-12: arith.negf {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+    // CHECK-COUNT-12: arith.negf {{.*}} : vector<2x2xf32>
     // CHECK-NOT: arith.negf
     %negf = arith.negf %load_a
       {layout_result_0 = #xegpu.layout<sg_layout = [4, 4], sg_data = [2, 2], lane_layout = [2, 2], lane_data = [1, 1]>}
       : vector<24x32xf32>
-    // CHECK-COUNT-12: math.powf {{.*}}, {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>} : vector<2x2xf32>
+    // CHECK-COUNT-12: math.powf {{.*}}, {{.*}} : vector<2x2xf32>
     // CHECK-NOT: math.powf
     %powf = math.powf %load_a, %load_b
       {layout_result_0 = #xegpu.layout<sg_layout = [4, 4], sg_data = [2, 2], lane_layout = [2, 2], lane_data = [1, 1]>}
@@ -179,3 +171,4 @@ gpu.module @test_elementwise_ops {
     gpu.return
   }
 }
+

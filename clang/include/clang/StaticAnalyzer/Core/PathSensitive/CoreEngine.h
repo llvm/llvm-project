@@ -48,8 +48,6 @@ class ExprEngine;
 /// CoreEngine - Implements the core logic of the graph-reachability analysis.
 /// It traverses the CFG and generates the ExplodedGraph.
 class CoreEngine {
-  friend class CommonNodeBuilder;
-  friend class EndOfFunctionNodeBuilder;
   friend class ExprEngine;
   friend class IndirectGotoNodeBuilder;
   friend class NodeBuilder;
@@ -402,48 +400,25 @@ public:
 };
 
 class IndirectGotoNodeBuilder {
-  CoreEngine& Eng;
+  const CoreEngine &Eng;
   const CFGBlock *Src;
   const CFGBlock &DispatchBlock;
   const Expr *E;
   ExplodedNode *Pred;
 
 public:
-  IndirectGotoNodeBuilder(ExplodedNode *pred, const CFGBlock *src,
-                    const Expr *e, const CFGBlock *dispatch, CoreEngine* eng)
-      : Eng(*eng), Src(src), DispatchBlock(*dispatch), E(e), Pred(pred) {}
+  IndirectGotoNodeBuilder(ExplodedNode *Pred, const CFGBlock *Src,
+                          const Expr *E, const CFGBlock *Dispatch,
+                          const CoreEngine *Eng)
+      : Eng(*Eng), Src(Src), DispatchBlock(*Dispatch), E(E), Pred(Pred) {}
 
-  class iterator {
-    friend class IndirectGotoNodeBuilder;
+  using iterator = CFGBlock::const_succ_iterator;
 
-    CFGBlock::const_succ_iterator I;
+  iterator begin() { return DispatchBlock.succ_begin(); }
+  iterator end() { return DispatchBlock.succ_end(); }
 
-    iterator(CFGBlock::const_succ_iterator i) : I(i) {}
-
-  public:
-    // This isn't really a conventional iterator.
-    // We just implement the deref as a no-op for now to make range-based for
-    // loops work.
-    const iterator &operator*() const { return *this; }
-
-    iterator &operator++() { ++I; return *this; }
-    bool operator!=(const iterator &X) const { return I != X.I; }
-
-    const LabelDecl *getLabel() const {
-      return cast<LabelStmt>((*I)->getLabel())->getDecl();
-    }
-
-    const CFGBlock *getBlock() const {
-      return *I;
-    }
-  };
-
-  iterator begin() { return iterator(DispatchBlock.succ_begin()); }
-  iterator end() { return iterator(DispatchBlock.succ_end()); }
-
-  ExplodedNode *generateNode(const iterator &I,
-                             ProgramStateRef State,
-                             bool isSink = false);
+  ExplodedNode *generateNode(const CFGBlock *Block, ProgramStateRef State,
+                             bool IsSink = false);
 
   const Expr *getTarget() const { return E; }
 

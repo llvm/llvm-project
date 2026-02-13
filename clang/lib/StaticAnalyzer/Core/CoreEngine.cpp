@@ -724,14 +724,12 @@ ExplodedNode *BranchNodeBuilder::generateNode(ProgramStateRef State,
   return Succ;
 }
 
-ExplodedNode*
-IndirectGotoNodeBuilder::generateNode(const iterator &I,
-                                      ProgramStateRef St,
-                                      bool IsSink) {
+ExplodedNode *IndirectGotoNodeBuilder::generateNode(const CFGBlock *Block,
+                                                    ProgramStateRef St,
+                                                    bool IsSink) {
   bool IsNew;
-  ExplodedNode *Succ =
-      Eng.G.getNode(BlockEdge(Src, I.getBlock(), Pred->getLocationContext()),
-                    St, IsSink, &IsNew);
+  ExplodedNode *Succ = Eng.G.getNode(
+      BlockEdge(Src, Block, Pred->getLocationContext()), St, IsSink, &IsNew);
   Succ->addPredecessor(Pred, Eng.G);
 
   if (!IsNew)

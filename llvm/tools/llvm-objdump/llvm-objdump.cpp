@@ -2686,8 +2686,8 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs,
     Features.AddFeature("+all");
   } else if (MCPU.empty() && Obj->makeTriple().isAVR()) {
     if (const auto *Elf = dyn_cast<ELFObjectFileBase>(Obj)) {
-      if (Expected<std::string> VersionOrErr =
-              AVR::getFeatureSetFromEFlag(Elf)) {
+      if (Expected<std::string> VersionOrErr = AVR::getFeatureSetFromEFlag(
+              Elf->getPlatformFlags() & ELF::EF_AVR_ARCH_MASK)) {
         Features.AddFeature('+' + *VersionOrErr);
       } else {
         // If the architecture version cannot be determined from ELF flags,
@@ -3862,6 +3862,7 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
            (I + Tool.size() == Stem.size() || !isAlnum(Stem[I + Tool.size()]));
   };
   if (Is("otool")) {
+    IsOtool = true;
     T = std::make_unique<OtoolOptTable>();
     Unknown = OTOOL_UNKNOWN;
     HelpFlag = OTOOL_help;

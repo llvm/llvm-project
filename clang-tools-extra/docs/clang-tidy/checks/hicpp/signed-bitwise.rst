@@ -6,7 +6,7 @@ hicpp-signed-bitwise
 Finds uses of bitwise operations on signed integer types, which may lead to
 undefined or implementation defined behavior.
 
-The according rule is defined in the `High Integrity C++ Standard, Section 5.6.1 <https://www.perforce.com/resources/qac/high-integrity-cpp-coding-standard-expressions>`_.
+The according rule is defined in the `High Integrity C++ Standard, Section 5.6.1 <https://www.perforce.com/resources/qac/high-integrity-cpp-coding-rules>`_.
 
 Options
 -------
