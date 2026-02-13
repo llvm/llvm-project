@@ -188,9 +188,9 @@ struct FunctionCallgraphInfo {
   uint64_t FunctionAddress;
   uint8_t FormatVersionNumber;
   bool IsIndirectTarget;
-  uint64_t FunctionTypeId;
+  uint64_t FunctionTypeID;
   SmallSet<uint64_t, 4> DirectCallees;
-  SmallSet<uint64_t, 4> IndirectTypeIds;
+  SmallSet<uint64_t, 4> IndirectTypeIDs;
 };
 
 namespace {
@@ -5399,15 +5399,15 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
     bool IsIndirectTarget =
         (CGFlags & callgraph::IsIndirectTarget) != callgraph::None;
     CGInfo.IsIndirectTarget = IsIndirectTarget;
-    uint64_t TypeId = Data.getU64(C);
+    uint64_t TypeID = Data.getU64(C);
     if (!C) {
-      reportWarning(createError("failed while reading function type Id: " +
+      reportWarning(createError("failed while reading function type ID: " +
                                 toString(C.takeError())),
                     FileName);
       return false;
     }
-    CGInfo.FunctionTypeId = TypeId;
-    if (IsIndirectTarget && TypeId == 0)
+    CGInfo.FunctionTypeID = TypeID;
+    if (IsIndirectTarget && TypeID == 0)
       ++UnknownCount;
 
     if (CGFlags & callgraph::HasDirectCallees) {
@@ -5436,26 +5436,26 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
     }
 
     if (CGFlags & callgraph::HasIndirectCallees) {
-      uint64_t NumIndirectTargetTypeIds = Data.getULEB128(C);
+      uint64_t NumIndirectTargetTypeIDs = Data.getULEB128(C);
       if (!C) {
         reportWarning(
             createError(
-                "failed while reading number of indirect target type Ids: " +
+                "failed while reading number of indirect target type IDs: " +
                 toString(C.takeError())),
             FileName);
         return false;
       }
-      // Read unique indirect target type Ids and populate FuncCGInfos.
-      for (uint64_t I = 0; I < NumIndirectTargetTypeIds; ++I) {
+      // Read unique indirect target type IDs and populate FuncCGInfos.
+      for (uint64_t I = 0; I < NumIndirectTargetTypeIDs; ++I) {
         uint64_t TargetType = Data.getU64(C);
         if (!C) {
           reportWarning(
-              createError("failed while reading indirect target type Id: " +
+              createError("failed while reading indirect target type ID: " +
                           toString(C.takeError())),
               FileName);
           return false;
         }
-        CGInfo.IndirectTypeIds.insert(TargetType);
+        CGInfo.IndirectTypeIDs.insert(TargetType);
       }
     }
     FuncCGInfos.push_back(CGInfo);
@@ -5463,7 +5463,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
 
   if (UnknownCount)
     reportUniqueWarning(
-        "SHT_LLVM_CALL_GRAPH type section has unknown type id for " +
+        "SHT_LLVM_CALL_GRAPH type section has unknown type ID for " +
         Twine(UnknownCount) + " indirect targets");
   return true;
 }
@@ -8389,7 +8389,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
     PrintFunc(CGInfo.FunctionAddress);
     W.printNumber("Version", CGInfo.FormatVersionNumber);
     W.printBoolean("IsIndirectTarget", CGInfo.IsIndirectTarget);
-    W.printHex("TypeId", CGInfo.FunctionTypeId);
+    W.printHex("TypeID", CGInfo.FunctionTypeID);
     W.printNumber("NumDirectCallees", CGInfo.DirectCallees.size());
     {
       ListScope DCs(W, "DirectCallees");
@@ -8398,10 +8398,10 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
         PrintFunc(CalleePC);
       }
     }
-    W.printNumber("NumIndirectTargetTypeIds", CGInfo.IndirectTypeIds.size());
-    SmallVector<uint64_t, 4> IndirectTypeIdsList(CGInfo.IndirectTypeIds.begin(),
-                                                 CGInfo.IndirectTypeIds.end());
-    W.printHexList("IndirectTypeIds", ArrayRef(IndirectTypeIdsList));
+    W.printNumber("NumIndirectTargetTypeIDs", CGInfo.IndirectTypeIDs.size());
+    SmallVector<uint64_t, 4> IndirectTypeIDsList(CGInfo.IndirectTypeIDs.begin(),
+                                                 CGInfo.IndirectTypeIDs.end());
+    W.printHexList("IndirectTypeIDs", ArrayRef(IndirectTypeIDsList));
   }
 }
 
