@@ -17357,8 +17357,8 @@ static SDValue combineXorSelectCC(SDNode *N, SelectionDAG &DAG) {
   if (!TrueConst || !FalseConst)
     return SDValue();
 
-  if (!(TrueConst->isOne() && FalseConst->isZero() ||
-        TrueConst->isZero() && FalseConst->isOne()))
+  if (!((TrueConst->isOne() && FalseConst->isZero()) ||
+        (TrueConst->isZero() && FalseConst->isOne())))
     return SDValue();
 
   // Pattern matched! Create new SELECT_CC with swapped operands
