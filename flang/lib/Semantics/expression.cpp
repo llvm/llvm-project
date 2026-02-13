@@ -2804,6 +2804,10 @@ struct CudaMatchingDistance {
   bool isInfinite{false};
 };
 
+// Compare CUDA matching distances using lexicographical comparison of per-argument
+// distances. This is needed to differentiate procedures that would have similar
+// total distance when summing the per-argument weights, allowing the compiler to
+// select the best match based on argument-by-argument comparison.
 static int CompareCudaMatchingDistance(
     const CudaMatchingDistance &x, const CudaMatchingDistance &y) {
   if (x.isInfinite != y.isInfinite) {
