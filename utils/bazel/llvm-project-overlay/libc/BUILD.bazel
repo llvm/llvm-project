@@ -3289,6 +3289,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_bf16div",
+    hdrs = ["src/__support/math/bf16div.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_generic_div",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_logbf16",
     hdrs = ["src/__support/math/logbf16.h"],
     deps = [
@@ -4251,6 +4261,11 @@ libc_math_function(
 libc_math_function(
     name = "atanhf16",
     additional_deps = [":__support_math_atanhf16"],
+)
+
+libc_math_function(
+    name = "bf16div",
+    additional_deps = [":__support_math_bf16div"],
 )
 
 libc_math_function(name = "canonicalize")
