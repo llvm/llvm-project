@@ -75,9 +75,9 @@ if.end4:                                          ; preds = %for.body
 
 ; FIXME: This doesn't currently optimize, but we should be able to hoist
 ; the two cmp out of the loop.
-define void @should_optimize_two_trap(i32 %block_size) {
-; CHECK-LABEL: define void @should_optimize_two_trap(
-; CHECK-SAME: i32 [[BLOCK_SIZE:%.*]]) {
+define void @optimize_two_trap(i32 %block_size, i32 %onebound, i32 %otherbound) {
+; CHECK-LABEL: define void @optimize_two_trap(
+; CHECK-SAME: i32 [[BLOCK_SIZE:%.*]], i32 [[ONEBOUND:%.*]], i32 [[OTHERBOUND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[FOO_ARR:%.*]] = alloca [2 x i8], align 16
 ; CHECK-NEXT:    [[BAR_ARR:%.*]] = alloca [2 x i8], align 16
@@ -85,6 +85,16 @@ define void @should_optimize_two_trap(i32 %block_size) {
 ; CHECK-NEXT:    [[CMP14_NOT:%.*]] = icmp eq i32 [[BLOCK_SIZE]], 0
 ; CHECK-NEXT:    br i1 [[CMP14_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
 ; CHECK:       [[FOR_BODY_PREHEADER]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[ONEBOUND]] to i64
+; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw i64 [[TMP7]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[OTHERBOUND]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
+; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 [[TMP8]])
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[BLOCK_SIZE]], -1
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
+; CHECK-NEXT:    [[UMIN1:%.*]] = call i64 @llvm.umin.i64(i64 [[UMIN]], i64 [[TMP5]])
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP8]], [[UMIN1]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i64 [[TMP3]], [[UMIN1]]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP_LOOPEXIT:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND_CLEANUP]]
@@ -93,12 +103,11 @@ define void @should_optimize_two_trap(i32 %block_size) {
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[I_015:%.*]] = phi i32 [ [[INC:%.*]], %[[IF_END5:.*]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    br i1 false, label %[[IF_THEN:.*]], label %[[IF_END4:.*]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[IF_THEN:.*]], label %[[IF_END4:.*]]
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[IF_END4]]:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ugt i32 [[I_015]], 1
 ; CHECK-NEXT:    br i1 [[CMP2]], label %[[IF_THEN2:.*]], label %[[IF_END5]]
 ; CHECK:       [[IF_THEN2]]:
 ; CHECK-NEXT:    call void @llvm.trap()
@@ -132,7 +141,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
 
 for.body:                                         ; preds = %for.body.preheader, %if.end4
   %i.015 = phi i32 [ %inc, %if.end5 ], [ 0, %for.body.preheader ]
-  %cmp1 = icmp samesign ugt i32 %i.015, 2
+  %cmp1 = icmp samesign ugt i32 %i.015, %onebound
   br i1 %cmp1, label %if.then, label %if.end4
 
 if.then:                                          ; preds = %for.body
@@ -140,7 +149,7 @@ if.then:                                          ; preds = %for.body
   unreachable
 
 if.end4:
-  %cmp2 = icmp samesign ugt i32 %i.015, 1
+  %cmp2 = icmp samesign ugt i32 %i.015, %otherbound
   br i1 %cmp2, label %if.then2, label %if.end5
 
 if.then2:                                          ; preds = %if.end4

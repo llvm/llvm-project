@@ -138,8 +138,8 @@ template <bool Invert> struct Process {
     return inverted_outbox;
   }
 
-  // Given the current outbox and inbox values, wait until the inbox changes
-  // to indicate that this thread owns the buffer element.
+  /// Given the current outbox and inbox values, wait until the inbox changes
+  /// to indicate that this thread owns the buffer element.
   RPC_ATTRS void wait_for_ownership(uint64_t lane_mask, uint32_t index,
                                     uint32_t outbox, uint32_t in) {
     while (buffer_unavailable(in, outbox)) {
@@ -169,9 +169,10 @@ template <bool Invert> struct Process {
   /// single lock on success, e.g. the result of rpc::get_lane_mask()
   /// The lock is held when the n-th bit of the lock bitfield is set.
   RPC_ATTRS bool try_lock(uint64_t lane_mask, uint32_t index) {
-    // On amdgpu, test and set to the nth lock bit and a sync_lane would suffice
-    // On volta, need to handle differences between the threads running and
-    // the threads that were detected in the previous call to get_lane_mask()
+    // On AMDGPU, test and set to the n-th lock bit and a sync_lane would
+    // suffice On NVIDIA with ITS we need to handle differences between the
+    // threads running and the threads that were detected in the previous call
+    // to get_lane_mask()
     //
     // All threads in lane_mask try to claim the lock. At most one can succeed.
     // There may be threads active which are not in lane mask which must not
