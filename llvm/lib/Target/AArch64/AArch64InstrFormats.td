@@ -1842,10 +1842,10 @@ def PHintInstOperand : AsmOperandClass {
 
 def phint_op : Operand<i64> {
     let ParserMatchClass = PHintInstOperand;
-   let PrintMethod = "printPHintOp";
-   let OperandType = "OPERAND_IMMEDIATE";
-   let MIOperandInfo = (ops i64imm);
-  let DecoderMethod = "DecodeUImm<3>";
+    let PrintMethod = "printPHintOp";
+    let OperandType = "OPERAND_IMMEDIATE";
+    let MIOperandInfo = (ops i64imm);
+    let DecoderMethod = "DecodeUImm<3>";
 }
 
 class STSHHI

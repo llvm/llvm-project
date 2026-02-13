@@ -5300,7 +5300,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Value *StoreValue = EmitScalarExpr(Arg1);
 
     llvm::APSInt OrderVal = Arg2->EvaluateKnownConstInt(getContext());
-    llvm::APSInt RetVal = Arg3->EvaluateKnownConstInt(getContext());
+    llvm::APSInt RetentionPolicy = Arg3->EvaluateKnownConstInt(getContext());
 
     llvm::AtomicOrdering Ordering;
     switch (OrderVal.getZExtValue()) {
@@ -5318,10 +5318,6 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
           "unexpected memory order for __arm_atomic_store_with_stshh");
     }
 
-    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_stshh);
-    llvm::Value *Arg = llvm::ConstantInt::get(Int64Ty, RetVal.getZExtValue());
-    CallInst *HintCall = Builder.CreateCall(F, Arg);
-
     QualType ValQT = Arg0->IgnoreParenImpCasts()
                          ->getType()
                          ->castAs<PointerType>()
@@ -5332,10 +5328,15 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Address Addr = Address(StoreAddr, ValTy, ValAlign);
     LValue LVal = MakeAddrLValue(Addr, ValQT);
 
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_stshh);
+    llvm::Value *Arg =
+        llvm::ConstantInt::get(Int64Ty, RetentionPolicy.getZExtValue());
+    Builder.CreateCall(F, Arg);
+
     EmitAtomicStore(RValue::get(StoreValue), LVal, Ordering,
                     /* isVolatile= */ false,
                     /* isInit= */ false);
-    return HintCall;
+    return nullptr;
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_rndr ||
