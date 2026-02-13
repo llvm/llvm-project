@@ -400,6 +400,11 @@ public:
 
   mlir::Value VisitExtVectorElementExpr(Expr *e) { return emitLoadOfLValue(e); }
 
+  mlir::Value VisitMatrixElementExpr(Expr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: matrix element");
+    return {};
+  }
+
   mlir::Value VisitMemberExpr(MemberExpr *e);
 
   mlir::Value VisitCompoundLiteralExpr(CompoundLiteralExpr *e) {
@@ -792,8 +797,13 @@ public:
     else
       operand = Visit(e->getSubExpr());
 
-    bool nsw =
-        kind == cir::UnaryOpKind::Minus && e->getType()->isSignedIntegerType();
+    // TODO(cir): We might have to change this to support overflow trapping.
+    //            Classic codegen routes unary minus through emitSub to ensure
+    //            that the overflow behavior is handled correctly.
+    bool nsw = kind == cir::UnaryOpKind::Minus &&
+               e->getType()->isSignedIntegerType() &&
+               cgf.getLangOpts().getSignedOverflowBehavior() !=
+                   LangOptions::SOB_Defined;
 
     // NOTE: LLVM codegen will lower this directly to either a FNeg
     // or a Sub instruction.  In CIR this will be handled later in LowerToLLVM.
@@ -2137,22 +2147,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
       return cgf.cgm.emitNullConstant(destTy,
                                       cgf.getLoc(subExpr->getExprLoc()));
     }
-
-    clang::QualType srcTy = subExpr->IgnoreImpCasts()->getType();
-    if (srcTy->isPointerType() || srcTy->isReferenceType())
-      srcTy = srcTy->getPointeeType();
-
-    clang::LangAS srcLangAS = srcTy.getAddressSpace();
-    cir::TargetAddressSpaceAttr subExprAS;
-    if (clang::isTargetAddressSpace(srcLangAS))
-      subExprAS = cir::toCIRTargetAddressSpace(cgf.getMLIRContext(), srcLangAS);
-    else
-      cgf.cgm.errorNYI(subExpr->getSourceRange(),
-                       "non-target address space conversion");
-    // Since target may map different address spaces in AST to the same address
-    // space, an address space conversion may end up as a bitcast.
-    return cgf.cgm.getTargetCIRGenInfo().performAddrSpaceCast(
-        cgf, Visit(subExpr), subExprAS, convertType(destTy));
+    return cgf.performAddrSpaceCast(Visit(subExpr), convertType(destTy));
   }
 
   case CK_AtomicToNonAtomic: {
@@ -2281,9 +2276,10 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     mlir::IntegerAttr offsetAttr = builder.getIndexAttr(offset.getQuantity());
 
     if (subExpr->getType()->isMemberFunctionPointerType()) {
-      cgf.cgm.errorNYI(subExpr->getSourceRange(),
-                       "VisitCastExpr: member function pointer");
-      return {};
+      if (kind == CK_BaseToDerivedMemberPointer)
+        return cir::DerivedMethodOp::create(builder, loc, resultTy, src,
+                                            offsetAttr);
+      return cir::BaseMethodOp::create(builder, loc, resultTy, src, offsetAttr);
     }
 
     if (kind == CK_BaseToDerivedMemberPointer)

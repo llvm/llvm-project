@@ -71,12 +71,11 @@ class TestDAP_restart_console(lldbdap_testcase.DAPTestCaseBase):
         self.build_and_launch(program, console="integratedTerminal", stopOnEntry=True)
         [bp_main] = self.set_function_breakpoints(["main"])
 
-        self.dap_server.request_configurationDone()
+        self.verify_configuration_done()
         self.verify_stop_on_entry()
 
         # Then, if we continue, we should hit the breakpoint at main.
-        self.dap_server.request_continue()
-        self.verify_breakpoint_hit([bp_main])
+        self.continue_to_breakpoints([bp_main])
 
         # Restart and check that we still get a stopped event before reaching
         # main.
@@ -84,7 +83,6 @@ class TestDAP_restart_console(lldbdap_testcase.DAPTestCaseBase):
         self.verify_stop_on_entry()
 
         # continue to main
-        self.dap_server.request_continue()
-        self.verify_breakpoint_hit([bp_main])
+        self.continue_to_breakpoints([bp_main])
 
         self.continue_to_exit()

@@ -210,7 +210,7 @@ Address HexagonABIInfo::EmitVAArgFromMemory(CodeGenFunction &CGF,
 
     // Create a mask which should be "AND"ed
     // with (overflow_arg_area + align - 1)
-    llvm::Value *Mask = llvm::ConstantInt::get(CGF.Int32Ty, -(int)Align);
+    llvm::Value *Mask = llvm::ConstantInt::getSigned(CGF.Int32Ty, -(int)Align);
     __overflow_area_pointer = CGF.Builder.CreateIntToPtr(
         CGF.Builder.CreateAnd(AsInt, Mask), __overflow_area_pointer->getType(),
         "__overflow_area_pointer.align");

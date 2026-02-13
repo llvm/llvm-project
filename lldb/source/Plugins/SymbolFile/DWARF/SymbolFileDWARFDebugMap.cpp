@@ -97,7 +97,7 @@ SymbolFileDWARFDebugMap::CompileUnitInfo::GetFileRangeMap(
       for (uint32_t idx = comp_unit_info->first_symbol_index +
                           2; // Skip the N_SO and N_OSO
            idx < oso_end_idx; ++idx) {
-        Symbol *exe_symbol = exe_symtab->SymbolAtIndex(idx);
+        const Symbol *exe_symbol = exe_symtab->SymbolAtIndex(idx);
         if (exe_symbol) {
           if (!exe_symbol->IsDebug())
             continue;
@@ -117,9 +117,10 @@ SymbolFileDWARFDebugMap::CompileUnitInfo::GetFileRangeMap(
             // correctly to the new addresses in the main executable.
 
             // First we find the original symbol in the .o file's symbol table
-            Symbol *oso_fun_symbol = oso_symtab->FindFirstSymbolWithNameAndType(
-                exe_symbol->GetMangled().GetName(Mangled::ePreferMangled),
-                eSymbolTypeCode, Symtab::eDebugNo, Symtab::eVisibilityAny);
+            const Symbol *oso_fun_symbol =
+                oso_symtab->FindFirstSymbolWithNameAndType(
+                    exe_symbol->GetMangled().GetName(Mangled::ePreferMangled),
+                    eSymbolTypeCode, Symtab::eDebugNo, Symtab::eVisibilityAny);
             if (oso_fun_symbol) {
               // Add the inverse OSO file address to debug map entry mapping
               exe_symfile->AddOSOFileRange(
@@ -146,7 +147,7 @@ SymbolFileDWARFDebugMap::CompileUnitInfo::GetFileRangeMap(
 
             // Next we find the non-stab entry that corresponds to the N_GSYM
             // in the .o file
-            Symbol *oso_gsym_symbol =
+            const Symbol *oso_gsym_symbol =
                 oso_symtab->FindFirstSymbolWithNameAndType(
                     exe_symbol->GetMangled().GetName(Mangled::ePreferMangled),
                     eSymbolTypeData, Symtab::eDebugNo, Symtab::eVisibilityAny);
@@ -1563,7 +1564,7 @@ Status SymbolFileDWARFDebugMap::CalculateFrameVariableError(StackFrame &frame) {
       const DebugMap::Entry *debug_map_entry =
           m_debug_map.FindEntryThatContains(pc_addr.GetFileAddress());
       if (debug_map_entry) {
-        Symbol *symbol =
+        const Symbol *symbol =
             symtab->SymbolAtIndex(debug_map_entry->data.GetExeSymbolIndex());
         if (symbol) {
           uint32_t oso_idx = 0;

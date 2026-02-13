@@ -205,6 +205,36 @@ TEST(EmbeddingTest, ApproximatelyEqual) {
   EXPECT_TRUE(E1.approximatelyEquals(E5));
 }
 
+TEST(EmbeddingTest, IsZero) {
+  // Empty embedding is zero
+  Embedding Empty;
+  EXPECT_TRUE(Empty.isZero());
+
+  // All zeros
+  Embedding AllZeros = {0.0, 0.0, 0.0};
+  EXPECT_TRUE(AllZeros.isZero());
+
+  // Size constructor with default value (0.0)
+  Embedding SizeZeros(5);
+  EXPECT_TRUE(SizeZeros.isZero());
+
+  // Size constructor with explicit 0.0
+  Embedding ExplicitZeros(3, 0.0);
+  EXPECT_TRUE(ExplicitZeros.isZero());
+
+  // Non-zero embedding
+  Embedding NonZero = {1.0, 2.0, 3.0};
+  EXPECT_FALSE(NonZero.isZero());
+
+  // Single non-zero element
+  Embedding OneNonZero = {0.0, 0.0, 1.0};
+  EXPECT_FALSE(OneNonZero.isZero());
+
+  // Very small non-zero value
+  Embedding SmallNonZero = {0.0, 0.0, 1e-10};
+  EXPECT_FALSE(SmallNonZero.isZero());
+}
+
 #if GTEST_HAS_DEATH_TEST
 #ifndef NDEBUG
 TEST(EmbeddingTest, AccessOutOfBounds) {

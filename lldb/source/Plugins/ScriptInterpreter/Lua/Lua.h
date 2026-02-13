@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Lua_h_
-#define liblldb_Lua_h_
+#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_LUA_LUA_H
+#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_LUA_LUA_H
 
 #include "lldb/API/SBBreakpointLocation.h"
 #include "lldb/API/SBFrame.h"
@@ -51,4 +51,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Lua_h_
+#endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_LUA_LUA_H

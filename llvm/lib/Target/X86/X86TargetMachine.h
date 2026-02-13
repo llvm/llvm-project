@@ -83,6 +83,8 @@ public:
   createMachineScheduler(MachineSchedContext *C) const override;
   ScheduleDAGInstrs *
   createPostMachineScheduler(MachineSchedContext *C) const override;
+
+  bool canLowerCondLoop() const override { return true; }
 };
 
 } // end namespace llvm

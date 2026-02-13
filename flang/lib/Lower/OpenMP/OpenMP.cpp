@@ -97,14 +97,14 @@ public:
     if (ops.numTeamsLower)
       vars.push_back(ops.numTeamsLower);
 
-    if (ops.numTeamsUpper)
-      vars.push_back(ops.numTeamsUpper);
+    for (auto numTeamsUpper : ops.numTeamsUpperVars)
+      vars.push_back(numTeamsUpper);
 
-    if (ops.numThreads)
-      vars.push_back(ops.numThreads);
+    for (auto numThreads : ops.numThreadsVars)
+      vars.push_back(numThreads);
 
-    if (ops.threadLimit)
-      vars.push_back(ops.threadLimit);
+    for (mlir::Value val : ops.threadLimitVars)
+      vars.push_back(val);
   }
 
   /// Update \c ops, replacing all values with the corresponding block argument
@@ -116,8 +116,8 @@ public:
     assert(args.size() ==
                ops.loopLowerBounds.size() + ops.loopUpperBounds.size() +
                    ops.loopSteps.size() + (ops.numTeamsLower ? 1 : 0) +
-                   (ops.numTeamsUpper ? 1 : 0) + (ops.numThreads ? 1 : 0) +
-                   (ops.threadLimit ? 1 : 0) &&
+                   ops.numTeamsUpperVars.size() + ops.numThreadsVars.size() +
+                   ops.threadLimitVars.size() &&
            "invalid block argument list");
     int argIndex = 0;
     for (size_t i = 0; i < ops.loopLowerBounds.size(); ++i)
@@ -132,14 +132,14 @@ public:
     if (ops.numTeamsLower)
       ops.numTeamsLower = args[argIndex++];
 
-    if (ops.numTeamsUpper)
-      ops.numTeamsUpper = args[argIndex++];
+    for (size_t i = 0; i < ops.numTeamsUpperVars.size(); ++i)
+      ops.numTeamsUpperVars[i] = args[argIndex++];
 
-    if (ops.numThreads)
-      ops.numThreads = args[argIndex++];
+    for (size_t i = 0; i < ops.numThreadsVars.size(); ++i)
+      ops.numThreadsVars[i] = args[argIndex++];
 
-    if (ops.threadLimit)
-      ops.threadLimit = args[argIndex++];
+    for (size_t i = 0; i < ops.threadLimitVars.size(); ++i)
+      ops.threadLimitVars[i] = args[argIndex++];
   }
 
   /// Update \p clauseOps and \p ivOut with the corresponding host-evaluated
@@ -170,13 +170,13 @@ public:
   /// \returns whether an update was performed. If not, these clauses were not
   ///          evaluated in the host device.
   bool apply(mlir::omp::ParallelOperands &clauseOps) {
-    if (!ops.numThreads || parallelApplied) {
+    if (ops.numThreadsVars.empty() || parallelApplied) {
       parallelApplied = true;
       return false;
     }
 
     parallelApplied = true;
-    clauseOps.numThreads = ops.numThreads;
+    clauseOps.numThreadsVars = ops.numThreadsVars;
     return true;
   }
 
@@ -186,12 +186,13 @@ public:
   /// \returns whether an update was performed. If not, these clauses were not
   ///          evaluated in the host device.
   bool apply(mlir::omp::TeamsOperands &clauseOps) {
-    if (!ops.numTeamsLower && !ops.numTeamsUpper && !ops.threadLimit)
+    if (!ops.numTeamsLower && ops.numTeamsUpperVars.empty() &&
+        ops.threadLimitVars.empty())
       return false;
 
     clauseOps.numTeamsLower = ops.numTeamsLower;
-    clauseOps.numTeamsUpper = ops.numTeamsUpper;
-    clauseOps.threadLimit = ops.threadLimit;
+    clauseOps.numTeamsUpperVars = ops.numTeamsUpperVars;
+    clauseOps.threadLimitVars = ops.threadLimitVars;
     return true;
   }
 
@@ -1800,6 +1801,7 @@ static void genTaskClauses(
     mlir::omp::TaskOperands &clauseOps,
     llvm::SmallVectorImpl<const semantics::Symbol *> &inReductionSyms) {
   ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processAffinity(clauseOps);
   cp.processAllocate(clauseOps);
   cp.processDepend(symTable, stmtCtx, clauseOps);
   cp.processFinal(stmtCtx, clauseOps);
@@ -1809,8 +1811,6 @@ static void genTaskClauses(
   cp.processPriority(stmtCtx, clauseOps);
   cp.processUntied(clauseOps);
   cp.processDetach(clauseOps);
-
-  cp.processTODO<clause::Affinity>(loc, llvm::omp::Directive::OMPD_task);
 }
 
 static void genTaskgroupClauses(
@@ -1887,14 +1887,13 @@ static void genWsloopClauses(
     mlir::Location loc, mlir::omp::WsloopOperands &clauseOps,
     llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSyms) {
   ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processAllocate(clauseOps);
   cp.processNowait(clauseOps);
   cp.processOrder(clauseOps);
   cp.processOrdered(clauseOps);
   cp.processReduction(loc, clauseOps, reductionSyms);
   cp.processSchedule(stmtCtx, clauseOps);
   cp.processLinear(clauseOps);
-
-  cp.processTODO<clause::Allocate>(loc, llvm::omp::Directive::OMPD_do);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2766,10 +2765,9 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
               firOpBuilder, converter, defaultMaps, eleType, loc, sym);
 
       mlir::FlatSymbolRefAttr mapperId;
-      if (defaultMaps.empty()) {
-        // TODO: Honor user-provided defaultmap clauses (aggregates/pointers)
-        // instead of blanket-disabling implicit mapper generation whenever any
-        // explicit default map is present.
+      auto defaultmapBehaviour = getDefaultmapIfPresent(defaultMaps, eleType);
+      if (defaultmapBehaviour ==
+          clause::Defaultmap::ImplicitBehavior::Default) {
         const semantics::DerivedTypeSpec *typeSpec =
             sym.GetType() ? sym.GetType()->AsDerived() : nullptr;
         if (typeSpec) {
@@ -3767,9 +3765,15 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
       fir::FortranVariableFlagsAttr attributes =
           Fortran::lower::translateSymbolAttributes(builder.getContext(),
                                                     *object.sym(), extraFlags);
+      // For character types, we need to provide the length parameter
+      llvm::SmallVector<mlir::Value> typeParams;
+      if (hlfir::isFortranEntity(addr)) {
+        hlfir::genLengthParameters(loc, builder, hlfir::Entity{addr},
+                                   typeParams);
+      }
       auto declareOp =
-          hlfir::DeclareOp::create(builder, loc, addr, name, nullptr, {},
-                                   nullptr, nullptr, 0, attributes);
+          hlfir::DeclareOp::create(builder, loc, addr, name, nullptr,
+                                   typeParams, nullptr, nullptr, 0, attributes);
       if (name == "omp_out")
         ompOutVar = declareOp.getResult(0);
       symTable.addVariableDefinition(*object.sym(), declareOp);
@@ -3789,10 +3793,13 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
                   loc, converter, evalExpr, symTable, stmtCtx));
               // Optional load may be generated if we get a reference to the
               // reduction type.
-              if (auto refType =
-                      llvm::dyn_cast<fir::ReferenceType>(exprResult.getType()))
-                if (lhs.getType() == refType.getElementType())
+              if (auto refType = llvm::dyn_cast<fir::ReferenceType>(
+                      exprResult.getType())) {
+                mlir::Type expectedType =
+                    isByRef ? fir::unwrapRefType(lhs.getType()) : lhs.getType();
+                if (expectedType == refType.getElementType())
                   exprResult = fir::LoadOp::create(builder, loc, exprResult);
+              }
               return exprResult;
             }},
         evalExpr.u);
@@ -3884,31 +3891,29 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   const auto &specifier =
       DEREF(parser::omp::GetFirstArgument<parser::OmpReductionSpecifier>(
           construct.v));
-  if (std::get<parser::OmpTypeNameList>(specifier.t).v.size() > 1)
-    TODO(converter.getCurrentLocation(),
-         "multiple types in declare reduction is not yet supported");
-
-  mlir::Type reductionType = getReductionType(converter, specifier);
+  const auto &typeNameList = std::get<parser::OmpTypeNameList>(specifier.t);
   List<Clause> clauses = makeClauses(construct.v.Clauses(), semaCtx);
   const clause::Combiner &combiner =
       appendCombiner(construct, clauses, semaCtx);
-
-  ReductionProcessor::GenCombinerCBTy genCombinerCB =
-      processReductionCombiner(converter, symTable, semaCtx, combiner);
-
-  ReductionProcessor::GenInitValueCBTy genInitValueCB;
-  ClauseProcessor cp(converter, semaCtx, clauses);
-  cp.processInitializer(symTable, genInitValueCB);
-
   const auto &identifier =
       std::get<parser::OmpReductionIdentifier>(specifier.t);
   const auto &designator = std::get<parser::ProcedureDesignator>(identifier.u);
   const auto &reductionName = std::get<parser::Name>(designator.u);
-  bool isByRef = ReductionProcessor::doReductionByRef(reductionType);
-  ReductionProcessor::createDeclareReductionHelper<
-      mlir::omp::DeclareReductionOp>(
-      converter, reductionName.ToString(), reductionType,
-      converter.getCurrentLocation(), isByRef, genCombinerCB, genInitValueCB);
+
+  for (const auto &typeSpec : typeNameList.v) {
+    (void)typeSpec; // Currently unused
+    mlir::Type reductionType = getReductionType(converter, specifier);
+    ReductionProcessor::GenCombinerCBTy genCombinerCB =
+        processReductionCombiner(converter, symTable, semaCtx, combiner);
+    ReductionProcessor::GenInitValueCBTy genInitValueCB;
+    ClauseProcessor cp(converter, semaCtx, clauses);
+    cp.processInitializer(symTable, genInitValueCB);
+    bool isByRef = ReductionProcessor::doReductionByRef(reductionType);
+    ReductionProcessor::createDeclareReductionHelper<
+        mlir::omp::DeclareReductionOp>(
+        converter, reductionName.ToString(), reductionType,
+        converter.getCurrentLocation(), isByRef, genCombinerCB, genInitValueCB);
+  }
 }
 
 static void

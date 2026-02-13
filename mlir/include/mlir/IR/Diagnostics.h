@@ -208,6 +208,17 @@ public:
   /// Stream in a Value.
   Diagnostic &operator<<(Value val);
 
+  /// Stream in an enum that has a `stringifyEnum` function.
+  template <typename EnumT>
+  std::enable_if_t<
+      std::is_enum_v<EnumT> &&
+          std::is_convertible_v<decltype(stringifyEnum(std::declval<EnumT>())),
+                                StringRef>,
+      Diagnostic &>
+  operator<<(EnumT val) {
+    return *this << stringifyEnum(val);
+  }
+
   /// Stream in a range.
   template <typename T, typename ValueT = llvm::detail::ValueOfRange<T>>
   std::enable_if_t<!std::is_constructible<DiagnosticArgument, T>::value,

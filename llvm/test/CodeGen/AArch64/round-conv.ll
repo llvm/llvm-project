@@ -280,8 +280,7 @@ entry:
 define i32 @testnsws(float %a) {
 ; CHECK-LABEL: testnsws:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    frintn s0, s0
-; CHECK-NEXT:    fcvtzs w0, s0
+; CHECK-NEXT:    fcvtns w0, s0
 ; CHECK-NEXT:    ret
 entry:
   %call = call float @llvm.roundeven.f32(float %a)
@@ -303,8 +302,7 @@ entry:
 define i64 @testnsxs(float %a) {
 ; CHECK-LABEL: testnsxs:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    frintn s0, s0
-; CHECK-NEXT:    fcvtzs x0, s0
+; CHECK-NEXT:    fcvtns x0, s0
 ; CHECK-NEXT:    ret
 entry:
   %call = call float @llvm.roundeven.f32(float %a)
@@ -326,8 +324,7 @@ entry:
 define i32 @testnswd(double %a) {
 ; CHECK-LABEL: testnswd:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    frintn d0, d0
-; CHECK-NEXT:    fcvtzs w0, d0
+; CHECK-NEXT:    fcvtns w0, d0
 ; CHECK-NEXT:    ret
 entry:
   %call = call double @llvm.roundeven.f64(double %a)
@@ -349,8 +346,7 @@ entry:
 define i64 @testnsxd(double %a) {
 ; CHECK-LABEL: testnsxd:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    frintn d0, d0
-; CHECK-NEXT:    fcvtzs x0, d0
+; CHECK-NEXT:    fcvtns x0, d0
 ; CHECK-NEXT:    ret
 entry:
   %call = call double @llvm.roundeven.f64(double %a)
@@ -372,8 +368,7 @@ entry:
 define i32 @testnuws(float %a) {
 ; CHECK-LABEL: testnuws:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    frintn s0, s0
-; CHECK-NEXT:    fcvtzu w0, s0
+; CHECK-NEXT:    fcvtnu w0, s0
 ; CHECK-NEXT:    ret
 entry:
   %call = call float @llvm.roundeven.f32(float %a)
@@ -395,8 +390,7 @@ entry:
 define i64 @testnuxs(float %a) {
 ; CHECK-LABEL: testnuxs:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    frintn s0, s0
-; CHECK-NEXT:    fcvtzu x0, s0
+; CHECK-NEXT:    fcvtnu x0, s0
 ; CHECK-NEXT:    ret
 entry:
   %call = call float @llvm.roundeven.f32(float %a)
@@ -418,8 +412,7 @@ entry:
 define i32 @testnuwd(double %a) {
 ; CHECK-LABEL: testnuwd:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    frintn d0, d0
-; CHECK-NEXT:    fcvtzu w0, d0
+; CHECK-NEXT:    fcvtnu w0, d0
 ; CHECK-NEXT:    ret
 entry:
   %call = call double @llvm.roundeven.f64(double %a)
@@ -441,8 +434,7 @@ entry:
 define i64 @testnuxd(double %a) {
 ; CHECK-LABEL: testnuxd:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    frintn d0, d0
-; CHECK-NEXT:    fcvtzu x0, d0
+; CHECK-NEXT:    fcvtnu x0, d0
 ; CHECK-NEXT:    ret
 entry:
   %call = call double @llvm.roundeven.f64(double %a)

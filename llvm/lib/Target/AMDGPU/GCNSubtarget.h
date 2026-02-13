@@ -475,6 +475,10 @@ public:
     return HasDPP && getGeneration() < GFX10;
   }
 
+  bool hasDPPRowShare() const {
+    return HasDPP && (HasGFX90AInsts || getGeneration() >= GFX10);
+  }
+
   // Has V_PK_MOV_B32 opcode
   bool hasPkMovB32() const { return HasGFX90AInsts; }
 
@@ -1007,6 +1011,10 @@ public:
   // supported and the support for fake True16 instructions is removed.
   bool useRealTrue16Insts() const {
     return hasTrue16BitInsts() && EnableRealTrue16Insts;
+  }
+
+  bool requiresWaitOnWorkgroupReleaseFence() const {
+    return getGeneration() >= GFX10 || isTgSplitEnabled();
   }
 };
 

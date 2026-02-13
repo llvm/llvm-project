@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Basic/SDNodeProperties.h"
+#include "Basic/SequenceToOffsetTable.h"
 #include "Common/CodeGenDAGPatterns.h"
 #include "Common/CodeGenInstruction.h"
 #include "Common/CodeGenRegisters.h"
@@ -73,6 +74,8 @@ class MatcherTableEmitter {
 
   std::map<ValueTypeByHwMode, unsigned> ValueTypeMap;
 
+  SequenceToOffsetTable<std::vector<uint8_t>> OperandTable;
+
   unsigned getPatternIdxFromTable(std::string &&P, std::string &&include_loc) {
     const auto [It, Inserted] =
         VecPatterns.try_emplace(std::move(P), VecPatterns.size());
@@ -86,7 +89,8 @@ class MatcherTableEmitter {
 public:
   MatcherTableEmitter(const MatcherList &TheMatcher,
                       const CodeGenDAGPatterns &cgp)
-      : CGP(cgp), OpcodeCounts(Matcher::HighestKind + 1, 0) {
+      : CGP(cgp), OpcodeCounts(Matcher::HighestKind + 1, 0),
+        OperandTable(std::nullopt) {
     // Record the usage of ComplexPattern.
     MapVector<const ComplexPattern *, unsigned> ComplexPatternUsage;
     // Record the usage of PatternPredicate.
@@ -113,9 +117,23 @@ public:
               ++PatternPredicateUsage[CPPM->getPredicate()];
             else if (auto *PM = dyn_cast<CheckPredicateMatcher>(N))
               ++PredicateUsage[PM->getPredicate().getOrigPatFragRecord()];
+
+            if (const auto *EN = dyn_cast<EmitNodeMatcherCommon>(N)) {
+              ArrayRef<unsigned> Ops = EN->getOperandList();
+              std::vector<uint8_t> OpBytes;
+              for (unsigned Op : Ops) {
+                uint8_t Buffer[5];
+                unsigned Len = encodeULEB128(Op, Buffer);
+                for (unsigned i = 0; i < Len; ++i)
+                  OpBytes.push_back(Buffer[i]);
+              }
+              OperandTable.add(OpBytes);
+            }
           }
         };
     Statistic(TheMatcher);
+
+    OperandTable.layout();
 
     // Sort ComplexPatterns by usage.
     std::vector<std::pair<const ComplexPattern *, unsigned>> ComplexPatternList(
@@ -172,6 +190,8 @@ public:
 
   unsigned EmitMatcherList(const MatcherList &ML, const unsigned Indent,
                            unsigned StartIdx, raw_ostream &OS);
+
+  void EmitOperandLists(raw_ostream &OS);
 
   unsigned SizeMatcherList(MatcherList &ML, raw_ostream &OS);
 
@@ -945,7 +965,7 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       OS << ", ";
     OS << Slot << ',';
     if (!OmitComments)
-      OS << " // #" << CTTM->getResultNo();
+      OS << " // #" << CTTM->getResultNo() << " = ConvertToTarget #" << Slot;
     OS << '\n';
     return 1 + (Slot >= 8);
   }
@@ -974,19 +994,22 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
     if (Reg->EnumValue > 255) {
       assert(isUInt<16>(Reg->EnumValue) && "not handled");
       OS << "OPC_EmitCopyToRegTwoByte, " << Slot << ", "
-         << "TARGET_VAL(" << getQualifiedName(Reg->TheDef) << "),\n";
+         << "TARGET_VAL(" << getQualifiedName(Reg->TheDef) << "),";
       ++Bytes;
     } else {
       if (Slot < 8) {
         OS << "OPC_EmitCopyToReg" << Slot << ", "
-           << getQualifiedName(Reg->TheDef) << ",\n";
+           << getQualifiedName(Reg->TheDef) << ",";
         --Bytes;
       } else {
         OS << "OPC_EmitCopyToReg, " << Slot << ", "
-           << getQualifiedName(Reg->TheDef) << ",\n";
+           << getQualifiedName(Reg->TheDef) << ",";
       }
     }
+    if (!OmitComments)
+      OS << " // = #" << Slot;
 
+    OS << '\n';
     return Bytes;
   }
   case Matcher::EmitNodeXForm: {
@@ -994,8 +1017,8 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
     OS << "OPC_EmitNodeXForm, " << getNodeXFormID(XF->getNodeXForm()) << ", "
        << XF->getSlot() << ',';
     if (!OmitComments)
-      OS << " // " << XF->getNodeXForm()->getName() << " #"
-         << XF->getResultNo();
+      OS << " // #" << XF->getResultNo() << " = "
+         << XF->getNodeXForm()->getName() << " #" << XF->getSlot();
     OS << '\n';
     return 3;
   }
@@ -1108,21 +1131,42 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       }
     }
 
-    OS << ' ' << EN->getNumOperands();
+    unsigned NumOps = EN->getNumOperands();
+    OS << ' ' << NumOps;
     if (!OmitComments)
       OS << "/*#Ops*/";
     OS << ',';
+
     unsigned NumOperandBytes = 0;
-    for (unsigned i = 0, e = EN->getNumOperands(); i != e; ++i) {
+    if (NumOps != 0) {
+      std::vector<uint8_t> OpBytes;
+      for (unsigned i = 0, e = EN->getNumOperands(); i != e; ++i) {
+        uint8_t Buffer[5];
+        unsigned Len = encodeULEB128(EN->getOperand(i), Buffer);
+        for (unsigned i = 0; i < Len; ++i)
+          OpBytes.push_back(Buffer[i]);
+      }
+      unsigned Index = OperandTable.get(OpBytes);
       OS << ' ';
-      NumOperandBytes += EmitVBRValue(EN->getOperand(i), OS);
+      if (!OmitComments)
+        OS << "/*OperandList*/";
+      NumOperandBytes = EmitVBRValue(Index, OS);
     }
 
     if (!OmitComments) {
+      // Print the operand #'s.
+      ArrayRef<unsigned> Ops = EN->getOperandList();
+      OS << " // Ops =";
+      if (Ops.empty())
+        OS << " None";
+      else
+        for (unsigned OpNo : Ops)
+          OS << " #" << OpNo;
+
       // Print the result #'s for EmitNode.
       if (const EmitNodeMatcher *E = dyn_cast<EmitNodeMatcher>(EN)) {
         if (unsigned NumResults = EN->getNumVTs()) {
-          OS << " // Results =";
+          OS << " Results =";
           unsigned First = E->getFirstResultSlot();
           for (unsigned i = 0; i != NumResults; ++i)
             OS << " #" << First + i;
@@ -1199,6 +1243,10 @@ unsigned MatcherTableEmitter::EmitMatcherList(const MatcherList &ML,
     CurrentIdx += MatcherSize;
   }
   return Size;
+}
+
+void MatcherTableEmitter::EmitOperandLists(raw_ostream &OS) {
+  OperandTable.emit(OS, [](raw_ostream &OS, uint8_t O) { OS << (unsigned)O; });
 }
 
 void MatcherTableEmitter::EmitNodePredicatesFunction(
@@ -1532,14 +1580,18 @@ void llvm::EmitMatcherTable(MatcherList &TheMatcher,
   OS << "(unsigned(X) >> 16) & 255, (unsigned(X) >> 24) & 255\n";
   OS << "  static const uint8_t MatcherTable[] = {\n";
   TotalSize = MatcherEmitter.EmitMatcherList(TheMatcher, 1, 0, OS);
-  OS << "    0\n  }; // Total Array size is " << (TotalSize + 1)
-     << " bytes\n\n";
+  OS << "  }; // Total Array size is " << TotalSize << " bytes\n\n";
 
   MatcherEmitter.EmitHistogram(OS);
 
+  OS << "  static const uint8_t OperandLists[] = {\n";
+  MatcherEmitter.EmitOperandLists(OS);
+  OS << "  };\n\n";
+
   OS << "  #undef COVERAGE_IDX_VAL\n";
   OS << "  #undef TARGET_VAL\n";
-  OS << "  SelectCodeCommon(N, MatcherTable, sizeof(MatcherTable));\n";
+  OS << "  SelectCodeCommon(N, MatcherTable, sizeof(MatcherTable),\n";
+  OS << "                   OperandLists);\n";
   OS << "}\n";
   EndEmitFunction(OS);
 

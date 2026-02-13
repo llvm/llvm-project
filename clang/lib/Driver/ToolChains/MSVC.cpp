@@ -518,7 +518,9 @@ void MSVCToolChain::addSYCLIncludeArgs(const ArgList &DriverArgs,
 
 void MSVCToolChain::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
                                      ArgStringList &CmdArgs) const {
-  if (Args.hasArg(options::OPT_no_hip_rt) || Args.hasArg(options::OPT_r))
+  if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
+                    true) ||
+      Args.hasArg(options::OPT_no_hip_rt) || Args.hasArg(options::OPT_r))
     return;
 
   if (ActiveKinds & Action::OFK_HIP) {

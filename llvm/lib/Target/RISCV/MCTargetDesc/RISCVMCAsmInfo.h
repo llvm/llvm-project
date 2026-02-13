@@ -41,7 +41,10 @@ enum {
   // Specifiers mapping to distinct relocation types.
   S_LO = FirstTargetFixupKind,
   S_PCREL_LO,
+  S_PCREL_HI,
   S_TPREL_LO,
+  S_CALL_PLT,
+  S_GOT_HI,
   // Vendor-specific relocation types might conflict across vendors.
   // Refer to them using Specifier constants.
   S_QC_ABS20,
@@ -54,6 +57,8 @@ StringRef getSpecifierName(Specifier Kind);
 class RISCVMCAsmInfoDarwin : public MCAsmInfoDarwin {
 public:
   explicit RISCVMCAsmInfoDarwin();
+  void printSpecifierExpr(raw_ostream &OS,
+                          const MCSpecifierExpr &Expr) const override;
 };
 
 } // namespace llvm

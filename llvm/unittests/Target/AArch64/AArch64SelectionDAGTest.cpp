@@ -105,7 +105,7 @@ TEST_F(AArch64SelectionDAGTest, computeKnownBitsSVE_ZERO_EXTEND_VECTOR_INREG) {
   auto OutVecVT = EVT::getVectorVT(Context, Int16VT, 2, true);
   auto InVec = DAG->getConstant(0, Loc, InVecVT);
   auto Op = DAG->getNode(ISD::ZERO_EXTEND_VECTOR_INREG, Loc, OutVecVT, InVec);
-  auto DemandedElts = APInt(2, 3);
+  auto DemandedElts = APInt(1, 1);
   KnownBits Known = DAG->computeKnownBits(Op, DemandedElts);
 
   // We don't know anything for SVE at the moment.
@@ -718,6 +718,24 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_SUB) {
   // Known.Zero = 10000000 (0x80)
   KnownBits Known = DAG->computeKnownBits(Op);
   EXPECT_EQ(Known.Zero, APInt(8, 0x80));
+  EXPECT_EQ(Known.One, APInt(8, 0x1));
+}
+
+// Test that we can compute the known bits of a subvector extract
+// from a scalable vector, which requires this knowledge to be known
+// for all elements of the scalable source vector.
+TEST_F(AArch64SelectionDAGTest, ComputeKnownBitsSVE_EXTRACT_SUBVECTOR) {
+  SDLoc Loc;
+  auto IntVT = EVT::getIntegerVT(Context, 8);
+  auto ScalableVecVT =
+      EVT::getVectorVT(Context, IntVT, 16, /*IsScalable=*/true);
+  auto FixedVecVT = EVT::getVectorVT(Context, IntVT, 16, /*IsScalable=*/false);
+  auto IdxVT = EVT::getIntegerVT(Context, 64);
+  auto Vec = DAG->getConstant(1, Loc, ScalableVecVT);
+  auto ZeroIdx = DAG->getConstant(0, Loc, IdxVT);
+  auto Op = DAG->getNode(ISD::EXTRACT_SUBVECTOR, Loc, FixedVecVT, Vec, ZeroIdx);
+  KnownBits Known = DAG->computeKnownBits(Op);
+  EXPECT_EQ(Known.Zero, APInt(8, 0xFE));
   EXPECT_EQ(Known.One, APInt(8, 0x1));
 }
 

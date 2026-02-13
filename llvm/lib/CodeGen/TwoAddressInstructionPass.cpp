@@ -357,10 +357,10 @@ bool TwoAddressInstructionImpl::isCopyToReg(MachineInstr &MI, Register &SrcReg,
                                             bool &IsDstPhys) const {
   SrcReg = 0;
   DstReg = 0;
-  if (MI.isCopy()) {
+  if (MI.isCopy() || MI.isSubregToReg()) {
     DstReg = MI.getOperand(0).getReg();
     SrcReg = MI.getOperand(1).getReg();
-  } else if (MI.isInsertSubreg() || MI.isSubregToReg()) {
+  } else if (MI.isInsertSubreg()) {
     DstReg = MI.getOperand(0).getReg();
     SrcReg = MI.getOperand(2).getReg();
   } else {
@@ -2014,6 +2014,16 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
     }
   }
 
+  // If there are no live intervals information, we scan the use list once
+  // in order to find which subregisters are used.
+  LaneBitmask UsedLanes = LaneBitmask::getNone();
+  if (!LIS) {
+    for (MachineOperand &Use : MRI->use_nodbg_operands(DstReg)) {
+      if (unsigned SubReg = Use.getSubReg())
+        UsedLanes |= TRI->getSubRegIndexLaneMask(SubReg);
+    }
+  }
+
   LaneBitmask UndefLanes = LaneBitmask::getNone();
   bool DefEmitted = false;
   for (unsigned i = 1, e = MI.getNumOperands(); i < e; i += 2) {
@@ -2021,9 +2031,14 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
     Register SrcReg = UseMO.getReg();
     unsigned SubIdx = MI.getOperand(i+1).getImm();
     // Nothing needs to be inserted for undef operands.
+    // Unless there are no live intervals, and they are used at a later
+    // instruction as operand.
     if (UseMO.isUndef()) {
-      UndefLanes |= TRI->getSubRegIndexLaneMask(SubIdx);
-      continue;
+      LaneBitmask LaneMask = TRI->getSubRegIndexLaneMask(SubIdx);
+      if (LIS || (UsedLanes & LaneMask).none()) {
+        UndefLanes |= LaneMask;
+        continue;
+      }
     }
 
     // Defer any kill flag to the last operand using SrcReg. Otherwise, we

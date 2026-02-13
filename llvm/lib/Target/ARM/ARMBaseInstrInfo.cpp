@@ -619,6 +619,11 @@ unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return MCID.getSize();
   case TargetOpcode::BUNDLE:
     return getInstBundleLength(MI);
+  case TargetOpcode::COPY:
+    if (!MF->getInfo<ARMFunctionInfo>()->isThumbFunction())
+      return 4;
+    else
+      return 2;
   case ARM::CONSTPOOL_ENTRY:
   case ARM::JUMPTABLE_INSTS:
   case ARM::JUMPTABLE_ADDRS:
@@ -2160,27 +2165,6 @@ ARMBaseInstrInfo::canFoldIntoMOVCC(Register Reg, const MachineRegisterInfo &MRI,
   if (!MI->isSafeToMove(DontMoveAcrossStores))
     return nullptr;
   return MI;
-}
-
-bool ARMBaseInstrInfo::analyzeSelect(const MachineInstr &MI,
-                                     SmallVectorImpl<MachineOperand> &Cond,
-                                     unsigned &TrueOp, unsigned &FalseOp,
-                                     bool &Optimizable) const {
-  assert((MI.getOpcode() == ARM::MOVCCr || MI.getOpcode() == ARM::t2MOVCCr) &&
-         "Unknown select instruction");
-  // MOVCC operands:
-  // 0: Def.
-  // 1: True use.
-  // 2: False use.
-  // 3: Condition code.
-  // 4: CPSR use.
-  TrueOp = 1;
-  FalseOp = 2;
-  Cond.push_back(MI.getOperand(3));
-  Cond.push_back(MI.getOperand(4));
-  // We can always fold a def.
-  Optimizable = true;
-  return false;
 }
 
 MachineInstr *
