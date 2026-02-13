@@ -160,9 +160,14 @@ RISCV::RISCV(Ctx &ctx) : TargetInfo(ctx) {
 }
 
 static uint32_t getEFlags(Ctx &ctx, InputFile *f) {
-  if (ctx.arg.is64)
-    return cast<ObjFile<ELF64LE>>(f)->getObj().getHeader().e_flags;
-  return cast<ObjFile<ELF32LE>>(f)->getObj().getHeader().e_flags;
+  if (ctx.arg.is64) {
+    if (ctx.arg.isLE)
+      return cast<ObjFile<ELF64LE>>(f)->getObj().getHeader().e_flags;
+    return cast<ObjFile<ELF64BE>>(f)->getObj().getHeader().e_flags;
+  }
+  if (ctx.arg.isLE)
+    return cast<ObjFile<ELF32LE>>(f)->getObj().getHeader().e_flags;
+  return cast<ObjFile<ELF32BE>>(f)->getObj().getHeader().e_flags;
 }
 
 uint32_t RISCV::calcEFlags() const {
@@ -219,24 +224,24 @@ int64_t RISCV::getImplicitAddend(const uint8_t *buf, RelType type) const {
 
 void RISCV::writeGotHeader(uint8_t *buf) const {
   if (ctx.arg.is64)
-    write64le(buf, ctx.mainPart->dynamic->getVA());
+    write64(buf, ctx.mainPart->dynamic->getVA(), ctx.arg.endianness);
   else
-    write32le(buf, ctx.mainPart->dynamic->getVA());
+    write32(buf, ctx.mainPart->dynamic->getVA(), ctx.arg.endianness);
 }
 
 void RISCV::writeGotPlt(uint8_t *buf, const Symbol &s) const {
   if (ctx.arg.is64)
-    write64le(buf, ctx.in.plt->getVA());
+    write64(buf, ctx.in.plt->getVA(), ctx.arg.endianness);
   else
-    write32le(buf, ctx.in.plt->getVA());
+    write32(buf, ctx.in.plt->getVA(), ctx.arg.endianness);
 }
 
 void RISCV::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
   if (ctx.arg.writeAddends) {
     if (ctx.arg.is64)
-      write64le(buf, s.getVA(ctx));
+      write64(buf, s.getVA(ctx), ctx.arg.endianness);
     else
-      write32le(buf, s.getVA(ctx));
+      write32(buf, s.getVA(ctx), ctx.arg.endianness);
   }
 }
 
@@ -363,10 +368,10 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 
   switch (rel.type) {
   case R_RISCV_32:
-    write32le(loc, val);
+    write32(loc, val, ctx.arg.endianness);
     return;
   case R_RISCV_64:
-    write64le(loc, val);
+    write64(loc, val, ctx.arg.endianness);
     return;
 
   case R_RISCV_RVC_BRANCH: {
@@ -507,13 +512,13 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     *loc += val;
     return;
   case R_RISCV_ADD16:
-    write16le(loc, read16le(loc) + val);
+    write16(loc, read16(loc, ctx.arg.endianness) + val, ctx.arg.endianness);
     return;
   case R_RISCV_ADD32:
-    write32le(loc, read32le(loc) + val);
+    write32(loc, read32(loc, ctx.arg.endianness) + val, ctx.arg.endianness);
     return;
   case R_RISCV_ADD64:
-    write64le(loc, read64le(loc) + val);
+    write64(loc, read64(loc, ctx.arg.endianness) + val, ctx.arg.endianness);
     return;
   case R_RISCV_SUB6:
     *loc = (*loc & 0xc0) | (((*loc & 0x3f) - val) & 0x3f);
@@ -522,13 +527,13 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     *loc -= val;
     return;
   case R_RISCV_SUB16:
-    write16le(loc, read16le(loc) - val);
+    write16(loc, read16(loc, ctx.arg.endianness) - val, ctx.arg.endianness);
     return;
   case R_RISCV_SUB32:
-    write32le(loc, read32le(loc) - val);
+    write32(loc, read32(loc, ctx.arg.endianness) - val, ctx.arg.endianness);
     return;
   case R_RISCV_SUB64:
-    write64le(loc, read64le(loc) - val);
+    write64(loc, read64(loc, ctx.arg.endianness) - val, ctx.arg.endianness);
     return;
   case R_RISCV_SET6:
     *loc = (*loc & 0xc0) | (val & 0x3f);
@@ -544,14 +549,14 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_RISCV_PLT32:
   case R_RISCV_GOT32_PCREL:
     checkInt(ctx, loc, val, 32, rel);
-    write32le(loc, val);
+    write32(loc, val, ctx.arg.endianness);
     return;
 
   case R_RISCV_TLS_DTPREL32:
-    write32le(loc, val - dtpOffset);
+    write32(loc, val - dtpOffset, ctx.arg.endianness);
     break;
   case R_RISCV_TLS_DTPREL64:
-    write64le(loc, val - dtpOffset);
+    write64(loc, val - dtpOffset, ctx.arg.endianness);
     break;
 
   case R_RISCV_RELAX:
@@ -1090,9 +1095,14 @@ bool RISCV::synthesizeAlignAux(uint64_t &dot, InputSection *sec) {
 // relocations.
 bool RISCV::synthesizeAlign(uint64_t &dot, InputSection *sec) {
   assert(ctx.arg.relocatable);
-  if (ctx.arg.is64)
-    return synthesizeAlignAux<ELF64LE>(dot, sec);
-  return synthesizeAlignAux<ELF32LE>(dot, sec);
+  if (ctx.arg.is64) {
+    if (ctx.arg.isLE)
+      return synthesizeAlignAux<ELF64LE>(dot, sec);
+    return synthesizeAlignAux<ELF64BE>(dot, sec);
+  }
+  if (ctx.arg.isLE)
+    return synthesizeAlignAux<ELF32LE>(dot, sec);
+  return synthesizeAlignAux<ELF32BE>(dot, sec);
 }
 
 void RISCV::finalizeRelax(int passes) const {
@@ -1542,10 +1552,17 @@ void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
 }
 
 void RISCV::scanSection(InputSectionBase &sec) {
-  if (ctx.arg.is64)
-    elf::scanSection1<RISCV, ELF64LE>(*this, sec);
-  else
-    elf::scanSection1<RISCV, ELF32LE>(*this, sec);
+  if (ctx.arg.is64) {
+    if (ctx.arg.isLE)
+      elf::scanSection1<RISCV, ELF64LE>(*this, sec);
+    else
+      elf::scanSection1<RISCV, ELF64BE>(*this, sec);
+  } else {
+    if (ctx.arg.isLE)
+      elf::scanSection1<RISCV, ELF32LE>(*this, sec);
+    else
+      elf::scanSection1<RISCV, ELF32BE>(*this, sec);
+  }
 }
 
 uint32_t elf::getRISCVVendorRelMarker(StringRef rvVendor) {
