@@ -2699,7 +2699,7 @@ public:
     }
     llvm::support::ulittle32_t align;
     memcpy(&align, blobData->data(), sizeof(uint32_t));
-    if (align && !llvm::isPowerOf2_32(align)) {
+    if (align==0 || !llvm::isPowerOf2_32(align)) {
       return p.emitError(value.getLoc(),
                          "expected hex string blob for key '" + key +
                              "' to encode alignment in first 4 bytes, but got "
