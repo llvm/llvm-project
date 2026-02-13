@@ -1029,9 +1029,7 @@ SharedCacheInfo &GetSharedCacheSingleton() {
 
 SharedCacheImageInfo
 HostInfoMacOSX::GetSharedCacheImageInfo(llvm::StringRef image_name) {
-  SharedCacheImageInfo *entry =
-      GetSharedCacheSingleton().GetFilenameToImageInfoMap().lookup(image_name);
-  if (entry)
+  if (SharedCacheImageInfo *entry = GetSharedCacheSingleton().GetFilenameToImageInfoMap().lookup(image_name))
     return *entry;
   return {};
 }
