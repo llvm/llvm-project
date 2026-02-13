@@ -23,12 +23,12 @@
 # (3) test-execstack
 #  - Tests if stack is executable
 #  - Fails if stack is executable. Should only be readable and writable. Not executable.
-#  - Program dependencies: perl, readelf
+#  - Program dependencies: readelf
 #  - Available for Unix dynamic library builds. Not available otherwise.
 # (4) test-deps
 #  - Tests newly created libomp for library dependencies
 #  - Fails if sees a dependence not listed in td_exp variable below
-#  - Program dependencies: perl, (unix)readelf, (mac)otool[64], (windows)link.exe
+#  - Program dependencies: (unix)readelf, (mac)otool[64], (windows)link.exe
 #  - Available for Unix,Mac,Windows, Intel(R) MIC Architecture dynamic builds and Windows
 #    static builds. Not available otherwise.
 
