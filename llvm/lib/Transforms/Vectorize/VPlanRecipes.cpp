@@ -814,7 +814,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateLogicalAnd(A, B, Name);
   }
   case VPInstruction::PtrAdd: {
-    assert(vputils::onlyFirstLaneUsed(this) &&
+    assert((State.VF.isScalar() || vputils::onlyFirstLaneUsed(this)) &&
            "can only generate first lane for PtrAdd");
     Value *Ptr = State.get(getOperand(0), VPLane(0));
     Value *Addend = State.get(getOperand(1), VPLane(0));
@@ -1064,8 +1064,9 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
 
     VPValue *Op0, *Op1;
     bool IsLogicalAnd =
-        match(this, m_LogicalAnd(m_VPValue(Op0), m_VPValue(Op1)));
-    bool IsLogicalOr = match(this, m_LogicalOr(m_VPValue(Op0), m_VPValue(Op1)));
+        match(this, m_c_LogicalAnd(m_VPValue(Op0), m_VPValue(Op1)));
+    bool IsLogicalOr =
+        match(this, m_c_LogicalOr(m_VPValue(Op0), m_VPValue(Op1)));
     // Also match the inverted forms:
     // select x, false, y --> !x & y (still AND)
     // select x, y, true --> !x | y (still OR)
@@ -1849,7 +1850,12 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
   if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1,
                                              State.TTI)) {
     Type *RetTy = toVectorizedTy(getResultType(), State.VF);
-    append_range(TysForDecl, getContainedTypes(RetTy));
+    ArrayRef<Type *> ContainedTys = getContainedTypes(RetTy);
+    for (auto [Idx, Ty] : enumerate(ContainedTys)) {
+      if (isVectorIntrinsicWithStructReturnOverloadAtField(VectorIntrinsicID,
+                                                           Idx, State.TTI))
+        TysForDecl.push_back(Ty);
+    }
   }
   SmallVector<Value *, 4> Args;
   for (const auto &I : enumerate(operands())) {
@@ -2753,7 +2759,7 @@ void VPBlendRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
       if (I != 0)
         O << " ";
       getIncomingValue(I)->printAsOperand(O, SlotTracker);
-      if (I == 0)
+      if (I == 0 && isNormalized())
         continue;
       O << "/";
       getMask(I)->printAsOperand(O, SlotTracker);

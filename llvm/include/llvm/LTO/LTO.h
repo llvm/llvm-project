@@ -465,7 +465,7 @@ public:
 
 protected:
   // Called at the start of run().
-  virtual Error handleArchiveInputs() { return Error::success(); }
+  virtual Error serializeInputsForDistribution() { return Error::success(); }
 
   // Called before returning from run().
   virtual void cleanup() {}

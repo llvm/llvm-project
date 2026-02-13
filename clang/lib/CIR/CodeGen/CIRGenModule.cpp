@@ -829,8 +829,10 @@ mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty,
   bool tlsAccess = d->getTLSKind() != VarDecl::TLS_None;
   cir::GlobalOp g = getOrCreateCIRGlobal(d, ty, isForDefinition);
   mlir::Type ptrTy = builder.getPointerTo(g.getSymType());
-  return cir::GetGlobalOp::create(builder, getLoc(d->getSourceRange()), ptrTy,
-                                  g.getSymNameAttr(), tlsAccess);
+  return cir::GetGlobalOp::create(
+      builder, getLoc(d->getSourceRange()), ptrTy, g.getSymNameAttr(),
+      tlsAccess,
+      /*static_local=*/g.getStaticLocalGuard().has_value());
 }
 
 cir::GlobalViewAttr CIRGenModule::getAddrOfGlobalVarAttr(const VarDecl *d) {
@@ -2318,9 +2320,8 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
   } else if (codeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining) {
     // If inlining is disabled, force everything that isn't always_inline
     // to carry an explicit noinline attribute.
-    if (!isAlwaysInline) {
+    if (!isAlwaysInline)
       f.setInlineKind(cir::InlineKind::NoInline);
-    }
   } else {
     // Otherwise, propagate the inline hint attribute and potentially use its
     // absence to mark things as noinline.
