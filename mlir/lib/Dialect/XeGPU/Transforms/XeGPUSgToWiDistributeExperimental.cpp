@@ -411,24 +411,30 @@ struct SgToWiVectorReduction : public OpConversionPattern<vector::ReductionOp> {
     if (!layout || !layout.isForSubgroup())
       return failure();
 
-    VectorType vectorType = op.getSourceVectorType();
-
+    VectorType srcVecType = op.getSourceVectorType();
     // Only rank 1 vectors supported.
-    if (vectorType.getRank() != 1)
+    if (srcVecType.getRank() != 1)
       return rewriter.notifyMatchFailure(
           op, "Only rank 1 reductions can be distributed.");
     // Lane layout must have the same rank as the vector.
-    if (layout.getRank() != vectorType.getRank())
+    if (layout.getRank() != srcVecType.getRank())
       return rewriter.notifyMatchFailure(
           op, "Layout rank does not match vector rank.");
 
     // Get the subgroup size from the layout.
     int64_t sgSize = layout.getEffectiveLaneLayoutAsInt()[0];
+    const auto *uArch = getUArch(xegpu::getChipStr(op).value_or(""));
+    if (!uArch)
+      return rewriter.notifyMatchFailure(
+          op, "xegpu::ReductionOp require target attribute attached to "
+              "determine subgroup size");
 
     // Only subgroup-sized vectors supported.
-    if (vectorType.getShape()[0] % sgSize != 0)
-      return rewriter.notifyMatchFailure(
-          op, "Reduction vector dimension must match subgroup size.");
+    if (sgSize != uArch->getSubgroupSize() ||
+        srcVecType.getShape()[0] % sgSize != 0)
+      return rewriter.notifyMatchFailure(op,
+                                         "Invalid layout or reduction vector "
+                                         "dimension must match subgroup size.");
 
     if (!op.getType().isIntOrFloat())
       return rewriter.notifyMatchFailure(
