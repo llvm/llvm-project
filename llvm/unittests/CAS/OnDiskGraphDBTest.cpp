@@ -8,9 +8,7 @@
 
 #include "CASTestConfig.h"
 #include "OnDiskCommonUtils.h"
-#include "llvm/Support/Alignment.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Process.h"
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
@@ -296,50 +294,6 @@ TEST_F(OnDiskCASTest, OnDiskGraphDBFaultInPolicyConflict) {
                            OnDiskGraphDB::FaultInPolicy::SingleNode);
 }
 
-static std::unique_ptr<unittest::TempFile> createLargeFile(char initChar) {
-  auto TmpFile = std::make_unique<unittest::TempFile>(
-      "largefile.o", /*Suffix=*/"", /*Contents=*/"",
-      /*Unique=*/true);
-  StringRef Path = TmpFile->path();
-  std::error_code EC;
-  raw_fd_stream Out(Path, EC);
-  EXPECT_FALSE(EC);
-  SmallString<200> Data;
-  Data += initChar;
-  for (unsigned i = 1; i != 200; ++i) {
-    Data += i;
-  }
-  for (unsigned i = 0; i != 1000; ++i) {
-    Out.write(Data.data(), Data.size());
-  }
-  return TmpFile;
-}
-
-static std::unique_ptr<unittest::TempFile>
-createLargePageAlignedFile(char initChar) {
-  auto TmpFile = std::make_unique<unittest::TempFile>(
-      "largepagealignedfile.o", /*Suffix=*/"", /*Contents=*/"",
-      /*Unique=*/true);
-  StringRef Path = TmpFile->path();
-  std::error_code EC;
-  raw_fd_stream Out(Path, EC);
-  EXPECT_FALSE(EC);
-  SmallString<256> Data;
-  Data += initChar;
-  for (unsigned i = 1; i != sys::Process::getPageSizeEstimate(); ++i) {
-    Data += char(i);
-  }
-  for (unsigned i = 0; i != 64; ++i) {
-    Out.write(Data.data(), Data.size());
-  }
-  Out.close();
-  uint64_t FileSize;
-  EC = sys::fs::file_size(Path, FileSize);
-  EXPECT_FALSE(EC);
-  assert(isAligned(Align(sys::Process::getPageSizeEstimate()), FileSize));
-  return TmpFile;
-}
-
 TEST_F(OnDiskCASTest, OnDiskGraphDBFaultInLargeFile) {
   auto runCommonTests =
       [](function_ref<std::unique_ptr<unittest::TempFile>(char)> createFileFn) {
@@ -396,23 +350,9 @@ TEST_F(OnDiskCASTest, OnDiskGraphDBFileAPIs) {
 
   SmallVector<std::unique_ptr<unittest::TempFile>, 4> TempFiles;
 
-  // Create a file with small size and and controlling the initial byte so
-  // caller can create different contents.
   auto createSmallFile = [&TempFiles](char initChar) -> StringRef {
-    TempFiles.push_back(std::make_unique<unittest::TempFile>(
-        "smallfile.o", /*Suffix=*/"", /*Contents=*/"",
-        /*Unique=*/true));
-    StringRef Path = TempFiles.back()->path();
-    std::error_code EC;
-    raw_fd_stream Out(Path, EC);
-    EXPECT_FALSE(EC);
-    SmallString<200> Data;
-    Data += initChar;
-    for (unsigned i = 1; i != 200; ++i) {
-      Data += i;
-    }
-    Out.write(Data.data(), Data.size());
-    return Path;
+    TempFiles.push_back(::createSmallFile(initChar));
+    return TempFiles.back()->path();
   };
 
   auto createLargeFile = [&TempFiles](char initChar) -> StringRef {

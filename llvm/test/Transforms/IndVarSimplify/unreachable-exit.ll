@@ -581,8 +581,8 @@ if.end4:                                          ; preds = %for.body
   br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit
 }
 
-define void @no_optimize_depdendent_ubsan_trap(i32 %block_size) {
-; CHECK-LABEL: define void @no_optimize_depdendent_ubsan_trap(
+define void @no_optimize_dependent_ubsan_trap(i32 %block_size) {
+; CHECK-LABEL: define void @no_optimize_dependent_ubsan_trap(
 ; CHECK-SAME: i32 [[BLOCK_SIZE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[FOO_ARR:%.*]] = alloca [2 x i8], align 16
@@ -652,8 +652,8 @@ if.end4:                                          ; preds = %for.body
   br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit
 }
 
-define void @no_optimize_depdendent_load_trap(i32 %block_size) {
-; CHECK-LABEL: define void @no_optimize_depdendent_load_trap(
+define void @no_optimize_dependent_load_trap(i32 %block_size) {
+; CHECK-LABEL: define void @no_optimize_dependent_load_trap(
 ; CHECK-SAME: i32 [[BLOCK_SIZE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[FOO_ARR:%.*]] = alloca [2 x i8], align 16

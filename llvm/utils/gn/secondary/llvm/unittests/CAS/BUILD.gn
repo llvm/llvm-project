@@ -13,6 +13,7 @@ unittest("CASTests") {
     "CASTestConfig.cpp",
     "NamedValuesSchemaTest.cpp",
     "ObjectStoreTest.cpp",
+    "OnDiskCommonUtils.cpp",
   ]
 
   if (llvm_enable_ondisk_cas) {

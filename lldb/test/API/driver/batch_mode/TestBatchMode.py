@@ -19,7 +19,7 @@ class DriverBatchModeTest(PExpectTest):
         """--batch should immediately quit if there are no commands given."""
         try:
             proc = subprocess.run(
-                [lldbtest_config.lldbExec, "--batch"],
+                [lldbtest_config.lldbExec, "--batch", "--no-lldbinit"],
                 timeout=60,
                 stdout=subprocess.PIPE,
                 text=True,
