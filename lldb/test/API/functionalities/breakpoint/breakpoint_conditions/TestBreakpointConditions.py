@@ -41,6 +41,12 @@ class BreakpointConditionsTestCase(TestBase):
         self.build()
         self.breakpoint_invalid_conditions_python()
 
+    @add_test_categories(["pyapi"])
+    def test_breakpoint_condition_changes(self):
+        """Use Python APIs to set breakpoint conditions."""
+        self.build()
+        self.breakpoint_condition_changes()
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -259,3 +265,30 @@ class BreakpointConditionsTestCase(TestBase):
 
         # The hit count for the breakpoint should be 1.
         self.assertEqual(breakpoint.GetHitCount(), 1)
+
+    def breakpoint_condition_changes(self):
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self,
+            "// a.1. -> b.1. -> c.1.",
+            lldb.SBFileSpec("main.c"))
+
+        cond_bp = target.BreakpointCreateByName("a")
+        cond_bp.SetCondition("val == 1")
+        threads = lldbutil.continue_to_breakpoint(process, cond_bp)
+        self.assertEqual(len(threads), 1, "Hit one thread")
+        self.assertEqual(threads[0].id, thread.id,"Hit our thread")
+
+        val = thread.frames[0].FindVariable("val")
+        self.assertEqual(val.GetValueAsSigned(), 1, "val is right")
+
+        # Now change the condition, continue and make sure we hit it again:
+
+        cond_bp.SetCondition("val == 3")
+
+        threads = lldbutil.continue_to_breakpoint(process, cond_bp)
+        self.assertEqual(len(threads), 1, "Hit one thread")
+        self.assertEqual(threads[0].id, thread.id,"Hit our thread")
+
+        val = thread.frames[0].FindVariable("val")
+        self.assertEqual(val.GetValueAsSigned(), 3, "val is right")
+        
