@@ -13,6 +13,7 @@
 #include "Context.h"
 #include "Value.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/Support/Allocator.h"
 
 namespace llvm::ubi {
@@ -75,6 +76,42 @@ struct Frame {
   }
 };
 
+static AnyValue addNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
+                          bool HasNUW) {
+  APInt Res = LHS + RHS;
+  if (HasNUW && Res.ult(RHS))
+    return AnyValue::poison();
+  if (HasNSW && LHS.isNonNegative() == RHS.isNonNegative() &&
+      LHS.isNonNegative() != Res.isNonNegative())
+    return AnyValue::poison();
+  return Res;
+}
+
+static AnyValue subNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
+                          bool HasNUW) {
+  APInt Res = LHS - RHS;
+  if (HasNUW && Res.ugt(LHS))
+    return AnyValue::poison();
+  if (HasNSW && LHS.isNonNegative() != RHS.isNonNegative() &&
+      LHS.isNonNegative() != Res.isNonNegative())
+    return AnyValue::poison();
+  return Res;
+}
+
+static AnyValue mulNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
+                          bool HasNUW) {
+  bool Overflow = false;
+  APInt Res = LHS.smul_ov(RHS, Overflow);
+  if (HasNSW && Overflow)
+    return AnyValue::poison();
+  if (HasNUW) {
+    (void)LHS.umul_ov(RHS, Overflow);
+    if (Overflow)
+      return AnyValue::poison();
+  }
+  return Res;
+}
+
 /// Instruction executor using the visitor pattern.
 /// visit* methods return true on success, false on error.
 /// Unlike the Context class that manages the global state,
@@ -103,6 +140,74 @@ class InstExecutor : public InstVisitor<InstExecutor, bool> {
     return CurrentFrame->ValueMap.at(V);
   }
 
+  bool setResult(Instruction &I, AnyValue V) {
+    if (Status)
+      Handler.onInstructionExecuted(I, V);
+    CurrentFrame->ValueMap.insert_or_assign(&I, std::move(V));
+    return true;
+  }
+
+  AnyValue computeUnOp(Type *Ty, const AnyValue &Operand,
+                       function_ref<AnyValue(const AnyValue &)> ScalarFn) {
+    if (Ty->isVectorTy()) {
+      auto &OperandVec = Operand.asAggregate();
+      std::vector<AnyValue> ResVec;
+      ResVec.reserve(OperandVec.size());
+      for (const auto &Scalar : OperandVec)
+        ResVec.push_back(ScalarFn(Scalar));
+      return std::move(ResVec);
+    }
+    return ScalarFn(Operand);
+  }
+
+  bool visitUnOp(Instruction &I,
+                 function_ref<AnyValue(const AnyValue &)> ScalarFn) {
+    return setResult(
+        I, computeUnOp(I.getType(), getValue(I.getOperand(0)), ScalarFn));
+  }
+
+  bool visitIntUnOp(Instruction &I,
+                    function_ref<AnyValue(const APInt &)> ScalarFn) {
+    return visitUnOp(I, [&](const AnyValue &Operand) -> AnyValue {
+      if (Operand.isPoison())
+        return AnyValue::poison();
+      return ScalarFn(Operand.asInteger());
+    });
+  }
+
+  AnyValue computeBinOp(
+      Type *Ty, const AnyValue &LHS, const AnyValue &RHS,
+      function_ref<AnyValue(const AnyValue &, const AnyValue &)> ScalarFn) {
+    if (Ty->isVectorTy()) {
+      auto &LHSVec = LHS.asAggregate();
+      auto &RHSVec = RHS.asAggregate();
+      std::vector<AnyValue> ResVec;
+      ResVec.reserve(LHSVec.size());
+      for (const auto &[ScalarLHS, ScalarRHS] : zip(LHSVec, RHSVec))
+        ResVec.push_back(ScalarFn(ScalarLHS, ScalarRHS));
+      return std::move(ResVec);
+    }
+    return ScalarFn(LHS, RHS);
+  }
+
+  bool visitBinOp(
+      Instruction &I,
+      function_ref<AnyValue(const AnyValue &, const AnyValue &)> ScalarFn) {
+    return setResult(I, computeBinOp(I.getType(), getValue(I.getOperand(0)),
+                                     getValue(I.getOperand(1)), ScalarFn));
+  }
+
+  bool
+  visitIntBinOp(Instruction &I,
+                function_ref<AnyValue(const APInt &, const APInt &)> ScalarFn) {
+    return visitBinOp(
+        I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
+          if (LHS.isPoison() || RHS.isPoison())
+            return AnyValue::poison();
+          return ScalarFn(LHS.asInteger(), RHS.asInteger());
+        });
+  }
+
 public:
   InstExecutor(Context &C, EventHandler &H, Function &F,
                ArrayRef<AnyValue> Args, AnyValue &RetVal)
@@ -110,12 +215,265 @@ public:
     CallStack.emplace_back(F, /*CallSite=*/nullptr, /*LastFrame=*/nullptr, Args,
                            RetVal, Ctx.getTLIImpl());
   }
+
   bool visitReturnInst(ReturnInst &RI) {
     if (auto *RV = RI.getReturnValue())
       CurrentFrame->RetVal = getValue(RV);
     CurrentFrame->State = FrameState::Exit;
     return Handler.onInstructionExecuted(RI, None);
   }
+
+  bool visitAdd(BinaryOperator &I) {
+    return visitIntBinOp(I, [&](const APInt &LHS, const APInt &RHS) {
+      return addNoWrap(LHS, RHS, I.hasNoSignedWrap(), I.hasNoUnsignedWrap());
+    });
+  }
+
+  bool visitSub(BinaryOperator &I) {
+    return visitIntBinOp(I, [&](const APInt &LHS, const APInt &RHS) {
+      return subNoWrap(LHS, RHS, I.hasNoSignedWrap(), I.hasNoUnsignedWrap());
+    });
+  }
+
+  bool visitMul(BinaryOperator &I) {
+    return visitIntBinOp(I, [&](const APInt &LHS, const APInt &RHS) {
+      return mulNoWrap(LHS, RHS, I.hasNoSignedWrap(), I.hasNoUnsignedWrap());
+    });
+  }
+
+  bool visitSDiv(BinaryOperator &I) {
+    return visitBinOp(
+        I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
+          // Priority: Immediate UB > poison > normal value
+          if (RHS.isPoison()) {
+            reportImmediateUB("Division by zero (refine RHS to 0).");
+            return AnyValue::poison();
+          }
+          const APInt &RHSVal = RHS.asInteger();
+          if (RHSVal.isZero()) {
+            reportImmediateUB("Division by zero.");
+            return AnyValue::poison();
+          }
+          if (LHS.isPoison()) {
+            if (RHSVal.isAllOnes())
+              reportImmediateUB(
+                  "Signed division overflow (refine LHS to INT_MIN).");
+            return AnyValue::poison();
+          }
+          const APInt &LHSVal = LHS.asInteger();
+          if (LHSVal.isMinSignedValue() && RHSVal.isAllOnes()) {
+            reportImmediateUB("Signed division overflow.");
+            return AnyValue::poison();
+          }
+
+          if (I.isExact()) {
+            APInt Q, R;
+            APInt::sdivrem(LHSVal, RHSVal, Q, R);
+            if (!R.isZero())
+              return AnyValue::poison();
+            return Q;
+          } else {
+            return LHSVal.sdiv(RHSVal);
+          }
+        });
+  }
+
+  bool visitSRem(BinaryOperator &I) {
+    return visitBinOp(
+        I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
+          // Priority: Immediate UB > poison > normal value
+          if (RHS.isPoison()) {
+            reportImmediateUB("Division by zero (refine RHS to 0).");
+            return AnyValue::poison();
+          }
+          const APInt &RHSVal = RHS.asInteger();
+          if (RHSVal.isZero()) {
+            reportImmediateUB("Division by zero.");
+            return AnyValue::poison();
+          }
+          if (LHS.isPoison()) {
+            if (RHSVal.isAllOnes())
+              reportImmediateUB(
+                  "Signed division overflow (refine LHS to INT_MIN).");
+            return AnyValue::poison();
+          }
+          const APInt &LHSVal = LHS.asInteger();
+          if (LHSVal.isMinSignedValue() && RHSVal.isAllOnes()) {
+            reportImmediateUB("Signed division overflow.");
+            return AnyValue::poison();
+          }
+
+          return LHSVal.srem(RHSVal);
+        });
+  }
+
+  bool visitUDiv(BinaryOperator &I) {
+    return visitBinOp(
+        I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
+          // Priority: Immediate UB > poison > normal value
+          if (RHS.isPoison()) {
+            reportImmediateUB("Division by zero (refine RHS to 0).");
+            return AnyValue::poison();
+          }
+          const APInt &RHSVal = RHS.asInteger();
+          if (RHSVal.isZero()) {
+            reportImmediateUB("Division by zero.");
+            return AnyValue::poison();
+          }
+          if (LHS.isPoison())
+            return AnyValue::poison();
+          const APInt &LHSVal = LHS.asInteger();
+
+          if (I.isExact()) {
+            APInt Q, R;
+            APInt::udivrem(LHSVal, RHSVal, Q, R);
+            if (!R.isZero())
+              return AnyValue::poison();
+            return Q;
+          } else {
+            return LHSVal.udiv(RHSVal);
+          }
+        });
+  }
+
+  bool visitURem(BinaryOperator &I) {
+    return visitBinOp(
+        I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
+          // Priority: Immediate UB > poison > normal value
+          if (RHS.isPoison()) {
+            reportImmediateUB("Division by zero (refine RHS to 0).");
+            return AnyValue::poison();
+          }
+          const APInt &RHSVal = RHS.asInteger();
+          if (RHSVal.isZero()) {
+            reportImmediateUB("Division by zero.");
+            return AnyValue::poison();
+          }
+          if (LHS.isPoison())
+            return AnyValue::poison();
+          const APInt &LHSVal = LHS.asInteger();
+          return LHSVal.urem(RHSVal);
+        });
+  }
+
+  bool visitTruncInst(TruncInst &Trunc) {
+    return visitIntUnOp(Trunc, [&](const APInt &Operand) -> AnyValue {
+      unsigned DestBW = Trunc.getType()->getScalarSizeInBits();
+      if (Trunc.hasNoSignedWrap() && Operand.getSignificantBits() > DestBW)
+        return AnyValue::poison();
+      if (Trunc.hasNoUnsignedWrap() && Operand.getActiveBits() > DestBW)
+        return AnyValue::poison();
+      return Operand.trunc(DestBW);
+    });
+  }
+
+  bool visitZExtInst(ZExtInst &ZExt) {
+    return visitIntUnOp(ZExt, [&](const APInt &Operand) -> AnyValue {
+      uint32_t DestBW = ZExt.getDestTy()->getScalarSizeInBits();
+      if (ZExt.hasNonNeg() && Operand.isNegative())
+        return AnyValue::poison();
+      return Operand.zext(DestBW);
+    });
+  }
+
+  bool visitSExtInst(SExtInst &SExt) {
+    return visitIntUnOp(SExt, [&](const APInt &Operand) -> AnyValue {
+      uint32_t DestBW = SExt.getDestTy()->getScalarSizeInBits();
+      return Operand.sext(DestBW);
+    });
+  }
+
+  bool visitAnd(BinaryOperator &I) {
+    return visitIntBinOp(I, [](const APInt &LHS, const APInt &RHS) -> AnyValue {
+      return LHS & RHS;
+    });
+  }
+
+  bool visitXor(BinaryOperator &I) {
+    return visitIntBinOp(I, [](const APInt &LHS, const APInt &RHS) -> AnyValue {
+      return LHS ^ RHS;
+    });
+  }
+
+  bool visitOr(BinaryOperator &I) {
+    return visitIntBinOp(
+        I, [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
+          if (cast<PossiblyDisjointInst>(I).isDisjoint() && LHS.intersects(RHS))
+            return AnyValue::poison();
+          return LHS | RHS;
+        });
+  }
+
+  bool visitShl(BinaryOperator &I) {
+    return visitIntBinOp(
+        I, [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
+          if (RHS.uge(LHS.getBitWidth()))
+            return AnyValue::poison();
+          if (I.hasNoSignedWrap() && RHS.uge(LHS.getNumSignBits()))
+            return AnyValue::poison();
+          if (I.hasNoUnsignedWrap() && RHS.ugt(LHS.countl_zero()))
+            return AnyValue::poison();
+          return LHS.shl(RHS);
+        });
+  }
+
+  bool visitLShr(BinaryOperator &I) {
+    return visitIntBinOp(I,
+                         [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
+                           if (RHS.uge(cast<PossiblyExactOperator>(I).isExact()
+                                           ? LHS.countr_zero() + 1
+                                           : LHS.getBitWidth()))
+                             return AnyValue::poison();
+                           return LHS.lshr(RHS);
+                         });
+  }
+
+  bool visitAShr(BinaryOperator &I) {
+    return visitIntBinOp(I,
+                         [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
+                           if (RHS.uge(cast<PossiblyExactOperator>(I).isExact()
+                                           ? LHS.countr_zero() + 1
+                                           : LHS.getBitWidth()))
+                             return AnyValue::poison();
+                           return LHS.ashr(RHS);
+                         });
+  }
+
+  bool visitSelect(SelectInst &SI) {
+    // TODO: handle fast-math flags.
+    if (SI.getCondition()->getType()->isIntegerTy(1)) {
+      switch (getValue(SI.getCondition()).asBoolean()) {
+      case BooleanKind::True:
+        return setResult(SI, getValue(SI.getTrueValue()));
+      case BooleanKind::False:
+        return setResult(SI, getValue(SI.getFalseValue()));
+      case BooleanKind::Poison:
+        return setResult(SI, AnyValue::getPoisonValue(Ctx, SI.getType()));
+      }
+    }
+
+    auto &Cond = getValue(SI.getCondition()).asAggregate();
+    auto &TV = getValue(SI.getTrueValue()).asAggregate();
+    auto &FV = getValue(SI.getFalseValue()).asAggregate();
+    std::vector<AnyValue> Res;
+    size_t Len = Cond.size();
+    Res.reserve(Len);
+    for (uint32_t I = 0; I != Len; ++I) {
+      switch (Cond[I].asBoolean()) {
+      case BooleanKind::True:
+        Res.push_back(TV[I]);
+        break;
+      case BooleanKind::False:
+        Res.push_back(FV[I]);
+        break;
+      case BooleanKind::Poison:
+        Res.push_back(AnyValue::poison());
+        break;
+      }
+    }
+    return setResult(SI, std::move(Res));
+  }
+
   bool visitInstruction(Instruction &I) {
     Handler.onUnrecognizedInstruction(I);
     return false;
@@ -156,13 +514,6 @@ public:
         }
         if (!Status)
           break;
-
-        if (Top.State != FrameState::Pending && !I.isTerminator()) {
-          if (I.getType()->isVoidTy())
-            Handler.onInstructionExecuted(I, None);
-          else
-            Handler.onInstructionExecuted(I, Top.ValueMap.at(&I));
-        }
 
         // A function call or return has occurred.
         // We need to exit the inner loop and switch to a different frame.
