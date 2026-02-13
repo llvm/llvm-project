@@ -14,6 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lf_allocator.h"
 #include "lf_interface.h"
 #include "lf_config.h"
 #include "sanitizer_common/sanitizer_common.h"
@@ -24,8 +25,8 @@ using namespace __sanitizer;
 
 namespace __lowfat {
 
-// Flag to track initialization state
-static bool lowfat_inited = false;
+// Flag to track initialization state (not static — accessed by lf_interceptors.cpp)
+bool lowfat_inited = false;
 
 // Region table - initialized in __lf_init
 // TODO: not actually needed, to use for convenience
@@ -81,7 +82,7 @@ static bool InitMemoryRegions() {
 
 // Allocate from a LowFat region
 // First checks the free list, then falls back to bump allocation
-static void *Allocate(uptr size) {
+void *Allocate(uptr size) {
   // Printf("LowFat: allocating %zu bytes\n", size);
   if (size == 0)
     size = 1;
@@ -120,7 +121,7 @@ static void *Allocate(uptr size) {
 }
 
 // Free a LowFat allocation by adding it to the free list
-static void Deallocate(void *ptr) {
+void Deallocate(void *ptr) {
   if (!ptr)
     return;
   
@@ -194,6 +195,8 @@ void __lf_init() {
   // Printf("LowFat Sanitizer: initialized runtime\n");
 
   __lowfat::lowfat_inited = true;
+
+  __lowfat::InitializeInterceptors();
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE

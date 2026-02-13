@@ -2,9 +2,11 @@ include_directories(..)
 
 set(LOWFAT_SOURCES
   lf_rtl.cpp
+  lf_interceptors.cpp
 )
 
 set(LOWFAT_HEADERS
+  lf_allocator.h
   lf_config.h
   lf_interface.h
 )
@@ -26,7 +28,8 @@ if(COMPILER_RT_HAS_LOWFAT)
       ARCHS ${LOWFAT_SUPPORTED_ARCH}
       SOURCES ${LOWFAT_SOURCES}
       ADDITIONAL_HEADERS ${LOWFAT_HEADERS}
-      OBJECT_LIBS RTSanitizerCommon
+      OBJECT_LIBS RTInterception
+                  RTSanitizerCommon
                   RTSanitizerCommonLibc
                   RTSanitizerCommonSymbolizer
       CFLAGS ${LOWFAT_CFLAGS}
@@ -39,7 +42,8 @@ if(COMPILER_RT_HAS_LOWFAT)
       ARCHS ${LOWFAT_SUPPORTED_ARCH}
       SOURCES ${LOWFAT_SOURCES}
       ADDITIONAL_HEADERS ${LOWFAT_HEADERS}
-      OBJECT_LIBS RTSanitizerCommon
+      OBJECT_LIBS RTInterception
+                  RTSanitizerCommon
                   RTSanitizerCommonLibc
                   RTSanitizerCommonSymbolizer
                   RTSanitizerCommonSymbolizerInternal
