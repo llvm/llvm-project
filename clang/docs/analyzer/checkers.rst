@@ -1413,8 +1413,12 @@ For a more detailed description of configuration options, please see the
 
 **Configuration**
 
-* `Config`  Specifies the name of the YAML configuration file. The user can
-  define their own taint sources and sinks.
+* ``optin.taint.TaintPropagation:Config``  Specifies the name of the YAML
+  configuration file. The user can define their own taint sources and sinks.
+* ``optin.taint.TaintPropagation:EnableDefaultConfig`` If set to false,
+   the default source, sink and propagation rules are not loaded. This way,
+   advanced users can fully customize their taint configuration model.
+   Default: ``true``.
 
 **Related Guidelines**
 

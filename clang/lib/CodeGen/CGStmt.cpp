@@ -3339,6 +3339,8 @@ CodeGenFunction::GenerateCapturedStmtFunction(const CapturedStmt &S) {
     llvm::Function::Create(FuncLLVMTy, llvm::GlobalValue::InternalLinkage,
                            CapturedStmtInfo->getHelperName(), &CGM.getModule());
   CGM.SetInternalFunctionAttributes(CD, F, FuncInfo);
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    F->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   if (CD->isNothrow())
     F->addFnAttr(llvm::Attribute::NoUnwind);
 

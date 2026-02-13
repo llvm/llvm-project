@@ -3691,6 +3691,20 @@ static bool CheckSymbolSupportsType(const Scope &scope,
       return reductionDetails->SupportsType(type);
     }
   }
+  // Look through module scopes in the global scope.
+  // This covers reductions declared in a module and used via USE association
+  const SemanticsContext &semCtx{scope.context()};
+  Scope &global = const_cast<SemanticsContext &>(semCtx).globalScope();
+  for (const Scope &child : global.children()) {
+    if (child.kind() == Scope::Kind::Module) {
+      if (const auto *symbol{child.FindSymbol(name)}) {
+        if (const auto *reductionDetails{
+                symbol->detailsIf<UserReductionDetails>()}) {
+          return reductionDetails->SupportsType(type);
+        }
+      }
+    }
+  }
   return false;
 }
 
@@ -4700,6 +4714,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
   SymbolSourceMap currSymbols;
   GetSymbolsInObjectList(objectList, currSymbols);
   CheckDefinableObjects(currSymbols, llvm::omp::Clause::OMPC_lastprivate);
+  CheckIntentInPointer(currSymbols, llvm::omp::Clause::OMPC_lastprivate);
   CheckCopyingPolymorphicAllocatable(
       currSymbols, llvm::omp::Clause::OMPC_lastprivate);
 

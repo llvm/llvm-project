@@ -620,6 +620,15 @@ public:
 
   static LanguageSet GetREPLAllTypeSystemSupportedLanguages();
 
+  // Higlhighter
+  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                             HighlighterCreateInstance create_callback);
+
+  static bool UnregisterPlugin(HighlighterCreateInstance create_callback);
+
+  static HighlighterCreateInstance
+  GetHighlighterCreateCallbackAtIndex(uint32_t idx);
+
   // Some plug-ins might register a DebuggerInitializeCallback callback when
   // registering the plug-in. After a new Debugger instance is created, this
   // DebuggerInitialize function will get called. This allows plug-ins to

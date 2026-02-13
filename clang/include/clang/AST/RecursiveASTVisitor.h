@@ -2884,6 +2884,8 @@ DEF_TRAVERSE_STMT(CXXUnresolvedConstructExpr, {
   TRY_TO(TraverseTypeLoc(S->getTypeSourceInfo()->getTypeLoc()));
 })
 
+DEF_TRAVERSE_STMT(CXXReflectExpr, {/*TODO*/})
+
 // These expressions all might take explicit template arguments.
 // We traverse those if so.  FIXME: implement these.
 DEF_TRAVERSE_STMT(CXXConstructExpr, {})
@@ -2942,6 +2944,7 @@ DEF_TRAVERSE_STMT(UserDefinedLiteral, {})
 DEF_TRAVERSE_STMT(DesignatedInitExpr, {})
 DEF_TRAVERSE_STMT(DesignatedInitUpdateExpr, {})
 DEF_TRAVERSE_STMT(ExtVectorElementExpr, {})
+DEF_TRAVERSE_STMT(MatrixElementExpr, {})
 DEF_TRAVERSE_STMT(GNUNullExpr, {})
 DEF_TRAVERSE_STMT(ImplicitValueInitExpr, {})
 DEF_TRAVERSE_STMT(NoInitExpr, {})

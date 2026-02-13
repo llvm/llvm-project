@@ -128,9 +128,8 @@ define i1 @test3_noarrayty(i32 %X) {
 
 define i1 @test4(i32 %X) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 1, [[X:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 933
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 933, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[TMP1]] to i1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %P = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i32 %X
@@ -142,9 +141,8 @@ define i1 @test4(i32 %X) {
 define i1 @test4_i16(i16 %X) {
 ; CHECK-LABEL: @test4_i16(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i16 [[X:%.*]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i32 1, [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 933
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 933, [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[TMP2]] to i1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %P = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i16 %X
@@ -377,9 +375,8 @@ define i1 @pr93017(i64 %idx) {
 ; Mask is 0b10101010
 define i1 @load_vs_array_type_mismatch1(i32 %idx) {
 ; CHECK-LABEL: @load_vs_array_type_mismatch1(
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i32 1, [[TMP1:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 170
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 170, [[IDX:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = trunc i32 [[TMP1]] to i1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep = getelementptr inbounds i16, ptr @g_i32_lo, i32 %idx
@@ -393,9 +390,8 @@ define i1 @load_vs_array_type_mismatch1(i32 %idx) {
 ; Mask is 0b01010101
 define i1 @load_vs_array_type_mismatch2(i32 %idx) {
 ; CHECK-LABEL: @load_vs_array_type_mismatch2(
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i32 1, [[TMP1:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 85
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 85, [[IDX:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = trunc i32 [[TMP1]] to i1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep = getelementptr inbounds i16, ptr @g_i32_hi, i32 %idx
@@ -492,9 +488,8 @@ define i1 @cmp_load_constant_array_messy(i32 %x){
 ; CHECK-LABEL: @cmp_load_constant_array_messy(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0:%.*]], 1073741823
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i32 1, [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 373
-; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 373, [[TMP1]]
+; CHECK-NEXT:    [[COND:%.*]] = trunc i32 [[TMP2]] to i1
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
 
@@ -508,9 +503,8 @@ entry:
 define i1 @cmp_diff_load_constant_array_messy0(i32 %x){
 ; CHECK-LABEL: @cmp_diff_load_constant_array_messy0(
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1:%.*]], 1073741823
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i32 1, [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], 373
-; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[TMP4]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 373, [[TMP2]]
+; CHECK-NEXT:    [[COND:%.*]] = trunc i32 [[TMP3]] to i1
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %isOK_ptr = getelementptr i32, ptr @CG_MESSY, i32 %x

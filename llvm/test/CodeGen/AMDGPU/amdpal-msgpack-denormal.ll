@@ -66,7 +66,7 @@ define amdgpu_vs half @vs_amdpal(half %arg0) #0 {
   ret half %add
 }
 
-attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #0 = { denormal_fpenv(float: preservesign) }
 
 ; amdgpu.pal.metadata.msgpack represents this:
 ;

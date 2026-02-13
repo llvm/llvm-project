@@ -482,6 +482,14 @@ static Value *getAddrSizeInt(Module *M, uint64_t C) {
   return IRB.getIntN(M->getDataLayout().getPointerSizeInBits(), C);
 }
 
+// Returns true if the function has "target-features"="+exception-handling"
+// attribute.
+static bool hasEHTargetFeatureAttr(const Function &F) {
+  Attribute FeaturesAttr = F.getFnAttribute("target-features");
+  return FeaturesAttr.isValid() &&
+         FeaturesAttr.getValueAsString().contains("+exception-handling");
+}
+
 // Returns __cxa_find_matching_catch_N function, where N = NumClauses + 2.
 // This is because a landingpad instruction contains two more arguments, a
 // personality function and a cleanup bit, and __cxa_find_matching_catch_N
@@ -1004,6 +1012,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
   // Function registration and data pre-gathering for setjmp/longjmp handling
   if (DoSjLj) {
     assert(EnableEmSjLj || EnableWasmSjLj);
+
     if (EnableEmSjLj) {
       // Register emscripten_longjmp function
       FunctionType *FTy = FunctionType::get(
@@ -1017,6 +1026,22 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
           IRB.getVoidTy(), {Int8PtrTy, IRB.getInt32Ty()}, false);
       WasmLongjmpF = getFunction(FTy, "__wasm_longjmp", &M);
       WasmLongjmpF->addFnAttr(Attribute::NoReturn);
+    }
+
+    if (EnableWasmSjLj) {
+      for (auto *SjLjF : {SetjmpF, LongjmpF}) {
+        if (SjLjF) {
+          for (User *U : SjLjF->users()) {
+            if (auto *CI = dyn_cast<CallInst>(U)) {
+              auto &F = *CI->getFunction();
+              if (!hasEHTargetFeatureAttr(F))
+                report_fatal_error("Function " + F.getName() +
+                                   " is using setjmp/longjmp but does not have "
+                                   "+exception-handling target feature");
+            }
+          }
+        }
+      }
     }
 
     if (SetjmpF) {
