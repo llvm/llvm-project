@@ -16,14 +16,16 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 
 using namespace llvm;
 
 BasicBlock *TileInfo::CreateLoop(BasicBlock *Preheader, BasicBlock *Exit,
-                                 Value *Bound, Value *Step, StringRef Name,
-                                 IRBuilderBase &B, DomTreeUpdater &DTU, Loop *L,
-                                 LoopInfo &LI) {
+                                 ConstantInt *Bound, ConstantInt *Step,
+                                 StringRef Name, IRBuilderBase &B,
+                                 DomTreeUpdater &DTU, Loop *L, LoopInfo &LI) {
   LLVMContext &Ctx = Preheader->getContext();
   BasicBlock *Header = BasicBlock::Create(
       Preheader->getContext(), Name + ".header", Preheader->getParent(), Exit);
@@ -35,14 +37,17 @@ BasicBlock *TileInfo::CreateLoop(BasicBlock *Preheader, BasicBlock *Exit,
   Type *I32Ty = Type::getInt64Ty(Ctx);
   BranchInst::Create(Body, Header);
   BranchInst::Create(Latch, Body);
-  PHINode *IV =
-      PHINode::Create(I32Ty, 2, Name + ".iv", Header->getTerminator()->getIterator());
+  PHINode *IV = PHINode::Create(I32Ty, 2, Name + ".iv",
+                                Header->getTerminator()->getIterator());
   IV->addIncoming(ConstantInt::get(I32Ty, 0), Preheader);
 
   B.SetInsertPoint(Latch);
   Value *Inc = B.CreateAdd(IV, Step, Name + ".step");
   Value *Cond = B.CreateICmpNE(Inc, Bound, Name + ".cond");
-  BranchInst::Create(Header, Exit, Cond, Latch);
+  auto *BR = BranchInst::Create(Header, Exit, Cond, Latch);
+  MDBuilder MDB(Preheader->getContext());
+  setFittedBranchWeights(*BR, {Bound->getZExtValue() / Step->getZExtValue(), 1},
+                         false);
   IV->addIncoming(Inc, Latch);
 
   BranchInst *PreheaderBr = cast<BranchInst>(Preheader->getTerminator());
