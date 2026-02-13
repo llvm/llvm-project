@@ -5931,6 +5931,11 @@ namespace {
       Visit(TL.getModifiedLoc());
       fillAttributedTypeLoc(TL, State);
     }
+    void VisitLateParsedAttrTypeLoc(LateParsedAttrTypeLoc TL) {
+      Visit(TL.getInnerLoc());
+      if (auto *LateAttr = TL.getLateParsedAttribute())
+        TL.setAttrNameLoc(LateAttr->AttrNameLoc);
+    }
     void VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
       Visit(TL.getWrappedLoc());
     }
@@ -6217,7 +6222,8 @@ namespace {
       // nothing
     }
     void VisitLateParsedAttrTypeLoc(LateParsedAttrTypeLoc TL) {
-      // nothing
+      if (auto *LateAttr = TL.getLateParsedAttribute())
+        TL.setAttrNameLoc(LateAttr->AttrNameLoc);
     }
     void VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
       // nothing
@@ -6383,8 +6389,16 @@ GetTypeSourceInfoForDeclarator(TypeProcessingState &State,
         break;
       }
 
+      case TypeLoc::LateParsedAttr: {
+        auto TL = CurrTL.castAs<LateParsedAttrTypeLoc>();
+        if (auto *LateAttr = TL.getLateParsedAttribute()) {
+          TL.setAttrNameLoc(LateAttr->AttrNameLoc);
+        }
+        CurrTL = TL.getNextTypeLoc().getUnqualifiedLoc();
+        break;
+      }
+
       case TypeLoc::CountAttributed:
-      case TypeLoc::LateParsedAttr:
       case TypeLoc::Adjusted:
       case TypeLoc::BTFTagAttributed: {
         CurrTL = CurrTL.getNextTypeLoc().getUnqualifiedLoc();
@@ -9080,7 +9094,7 @@ static bool processLateTypeAttrs(TypeProcessingState &state, QualType &type,
       return false;
 
     type = S.getASTContext().getLateParsedAttrType(
-        type, static_cast<LateParsedTypeAttribute *>(LA));
+        type, dyn_cast<LateParsedTypeAttribute>(LA));
   }
   return true;
 }

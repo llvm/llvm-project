@@ -19789,6 +19789,11 @@ struct RebuildTypeWithLateParsedAttr
 
     // Parse the cached attribute tokens
     LTA->ParseInto(Attrs);
+    // LateParsedTypeAttribute is no longer needed so delete it. Ideally,
+    // LateParsedAttrType would own this object, but LateParsedTypeAttribute
+    // is intentionally forward declared to avoid making the AST depend on
+    // Sema/Parser components.
+    delete LTA;
 
     // Invalid argument
     if (Attrs.empty())

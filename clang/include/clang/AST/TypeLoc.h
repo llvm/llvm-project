@@ -1330,7 +1330,9 @@ public:
   SourceRange getLocalSourceRange() const;
 };
 
-struct LateParsedAttrLocInfo {}; // Nothing.
+struct LateParsedAttrLocInfo {
+  SourceLocation AttrNameLoc;
+};
 
 class LateParsedAttrTypeLoc
     : public ConcreteTypeLoc<UnqualTypeLoc, LateParsedAttrTypeLoc,
@@ -1338,11 +1340,19 @@ class LateParsedAttrTypeLoc
 public:
   TypeLoc getInnerLoc() const { return getInnerTypeLoc(); }
 
-  void initializeLocal(ASTContext &Context, SourceLocation Loc) {
-    // Nothing to initialize
+  SourceLocation getAttrNameLoc() const { return getLocalData()->AttrNameLoc; }
+
+  void setAttrNameLoc(SourceLocation Loc) { getLocalData()->AttrNameLoc = Loc; }
+
+  SourceRange getLocalSourceRange() const {
+    return SourceRange(getAttrNameLoc(), getAttrNameLoc());
   }
 
-  SourceRange getLocalSourceRange() const;
+  void initializeLocal(ASTContext &Context, SourceLocation Loc) {
+    setAttrNameLoc(Loc);
+  }
+
+  unsigned getLocalDataSize() const { return sizeof(LateParsedAttrLocInfo); }
 
   QualType getInnerType() const { return getTypePtr()->getWrappedType(); }
 

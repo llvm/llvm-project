@@ -22,7 +22,6 @@
 #include "clang/AST/TypeLocVisitor.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Sema/DeclSpec.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -593,14 +592,6 @@ SourceRange AttributedTypeLoc::getLocalSourceRange() const {
 
 SourceRange CountAttributedTypeLoc::getLocalSourceRange() const {
   return getCountExpr() ? getCountExpr()->getSourceRange() : SourceRange();
-}
-
-SourceRange LateParsedAttrTypeLoc::getLocalSourceRange() const {
-  // LateParsedAttrType is a transient type that wraps an unparsed attribute.
-  // Return the attribute's name location if available.
-  if (auto *Attr = getLateParsedAttribute())
-    return SourceRange(Attr->AttrNameLoc);
-  return {};
 }
 
 SourceRange BTFTagAttributedTypeLoc::getLocalSourceRange() const {
