@@ -966,17 +966,17 @@ bool StackFrameList::IsPreviousFrameHidden(lldb_private::StackFrame &frame) {
   return frame_sp->IsHidden();
 }
 
-std::string StackFrameList::FrameMarker(lldb::StackFrameSP frame_sp,
-                                        lldb::StackFrameSP selected_frame_sp,
-                                        bool show_hidden_marker) {
+std::string StackFrameList::GetFrameMarker(lldb::StackFrameSP frame_sp,
+                                           lldb::StackFrameSP selected_frame_sp,
+                                           bool show_hidden_marker) {
   bool show_unicode_marker = Terminal::SupportsUnicode() && show_hidden_marker;
   if (frame_sp == selected_frame_sp)
     return show_unicode_marker ? u8" * " : u8"* ";
-  else if (!show_unicode_marker)
+  if (!show_unicode_marker)
     return u8"  ";
-  else if (IsPreviousFrameHidden(*frame_sp))
+  if (IsPreviousFrameHidden(*frame_sp))
     return u8"﹉ ";
-  else if (IsNextFrameHidden(*frame_sp))
+  if (IsNextFrameHidden(*frame_sp))
     return u8"﹍ ";
   return u8"   ";
 }
@@ -1012,10 +1012,10 @@ size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
       break;
 
     if (show_selected_frame)
-      marker = FrameMarker(frame_sp, selected_frame_sp, show_hidden_marker);
+      marker = GetFrameMarker(frame_sp, selected_frame_sp, show_hidden_marker);
     else
-      marker = FrameMarker(frame_sp, /*selected_frame_sp=*/nullptr,
-                           show_hidden_marker);
+      marker = GetFrameMarker(frame_sp, /*selected_frame_sp=*/nullptr,
+                              show_hidden_marker);
 
     // Hide uninteresting frames unless it's the selected frame.
     if (!show_hidden && frame_sp != selected_frame_sp && frame_sp->IsHidden())
