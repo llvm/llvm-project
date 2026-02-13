@@ -2,7 +2,8 @@
 ; Verifies that phi and invoke definitions before CoroBegin are spilled properly.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse,simplifycfg' -S | FileCheck %s
 
-; CHECK: %f.Frame = type { ptr, ptr, i32, i32, i1 }
+
+target datalayout = "e-m:e-p:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
 define ptr @f(i1 %n) presplitcoroutine personality i32 0 {
 ; CHECK-LABEL: define ptr @f(
@@ -15,15 +16,15 @@ define ptr @f(i1 %n) presplitcoroutine personality i32 0 {
 ; CHECK-NEXT:    [[VALUE_INVOKE:%.*]] = call i32 @calc()
 ; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @f.resume, ptr [[HDL]], align 8
-; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds nuw [[F_FRAME:%.*]], ptr [[HDL]], i32 0, i32 1
+; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 8
 ; CHECK-NEXT:    store ptr @f.destroy, ptr [[DESTROY_ADDR]], align 8
-; CHECK-NEXT:    [[VALUE_INVOKE_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 3
+; CHECK-NEXT:    [[VALUE_INVOKE_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 20
 ; CHECK-NEXT:    store i32 [[VALUE_INVOKE]], ptr [[VALUE_INVOKE_SPILL_ADDR]], align 4
-; CHECK-NEXT:    [[VALUE_PHI_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 2
+; CHECK-NEXT:    [[VALUE_PHI_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
 ; CHECK-NEXT:    store i32 [[SPEC_SELECT]], ptr [[VALUE_PHI_SPILL_ADDR]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @print(i32 [[SPEC_SELECT]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @print(i32 [[VALUE_INVOKE]])
-; CHECK-NEXT:    [[INDEX_ADDR2:%.*]] = getelementptr inbounds nuw [[F_FRAME]], ptr [[HDL]], i32 0, i32 4
+; CHECK-NEXT:    [[INDEX_ADDR2:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 24
 ; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR2]], align 1
 ; CHECK-NEXT:    ret ptr [[HDL]]
 ;

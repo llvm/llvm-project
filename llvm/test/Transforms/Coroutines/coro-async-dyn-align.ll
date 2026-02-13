@@ -9,7 +9,6 @@ target datalayout = "p:64:64:64"
 
 %async.ctxt = type { ptr, ptr }
 
-; CHECK: %my_async_function.Frame = type { i64, [48 x i8], i64, i64, [16 x i8], ptr, i64, ptr }
 
 @my_other_async_function_fp = external global <{ i32, i32 }>
 declare void @my_other_async_function(ptr %async.ctxt)
@@ -64,27 +63,27 @@ define swiftcc void @my_async_function(ptr swiftasync %async.ctxt) presplitcorou
 ; CHECK-LABEL: define swiftcc void @my_async_function(
 ; CHECK-SAME: ptr swiftasync [[ASYNC_CTXT:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ASYNC_CTX_FRAMEPTR:%.*]] = getelementptr inbounds i8, ptr [[ASYNC_CTXT]], i32 32
-; CHECK-NEXT:    [[STACK:%.*]] = getelementptr inbounds [[MY_ASYNC_FUNCTION_FRAME:%.*]], ptr [[ASYNC_CTX_FRAMEPTR]], i32 0, i32 2
-; CHECK-NEXT:    [[STACK2:%.*]] = getelementptr inbounds [[MY_ASYNC_FUNCTION_FRAME]], ptr [[ASYNC_CTX_FRAMEPTR]], i32 0, i32 6
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[MY_ASYNC_FUNCTION_FRAME]], ptr [[ASYNC_CTX_FRAMEPTR]], i32 0, i32 3
+; CHECK-NEXT:    [[ASYNC_CTX_FRAMEPTR:%.*]] = getelementptr inbounds i8, ptr [[ASYNC_CTXT]], i64 32
+; CHECK-NEXT:    [[STACK:%.*]] = getelementptr inbounds i8, ptr [[ASYNC_CTX_FRAMEPTR]], i64 56
+; CHECK-NEXT:    [[STACK2:%.*]] = getelementptr inbounds i8, ptr [[ASYNC_CTX_FRAMEPTR]], i64 96
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[ASYNC_CTX_FRAMEPTR]], i64 64
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 31
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], -32
 ; CHECK-NEXT:    [[STACK3:%.*]] = inttoptr i64 [[TMP3]] to ptr
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[MY_ASYNC_FUNCTION_FRAME]], ptr [[ASYNC_CTX_FRAMEPTR]], i32 0, i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[ASYNC_CTX_FRAMEPTR]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[TMP4]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 63
 ; CHECK-NEXT:    [[TMP7:%.*]] = and i64 [[TMP6]], -64
 ; CHECK-NEXT:    [[STACK4:%.*]] = inttoptr i64 [[TMP7]] to ptr
-; CHECK-NEXT:    [[ASYNC_CTXT_SPILL_ADDR:%.*]] = getelementptr inbounds [[MY_ASYNC_FUNCTION_FRAME]], ptr [[ASYNC_CTX_FRAMEPTR]], i32 0, i32 5
+; CHECK-NEXT:    [[ASYNC_CTXT_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[ASYNC_CTX_FRAMEPTR]], i64 88
 ; CHECK-NEXT:    store ptr [[ASYNC_CTXT]], ptr [[ASYNC_CTXT_SPILL_ADDR]], align 8
 ; CHECK-NEXT:    store i64 0, ptr [[STACK]], align 4
 ; CHECK-NEXT:    store i64 1, ptr [[STACK2]], align 4
 ; CHECK-NEXT:    store i64 2, ptr [[STACK3]], align 4
 ; CHECK-NEXT:    store i64 3, ptr [[STACK4]], align 4
 ; CHECK-NEXT:    [[CALLEE_CONTEXT:%.*]] = call ptr @llvm.coro.async.context.alloc(ptr null, ptr null)
-; CHECK-NEXT:    [[CALLEE_CONTEXT_SPILL_ADDR:%.*]] = getelementptr inbounds [[MY_ASYNC_FUNCTION_FRAME]], ptr [[ASYNC_CTX_FRAMEPTR]], i32 0, i32 7
+; CHECK-NEXT:    [[CALLEE_CONTEXT_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[ASYNC_CTX_FRAMEPTR]], i64 104
 ; CHECK-NEXT:    store ptr [[CALLEE_CONTEXT]], ptr [[CALLEE_CONTEXT_SPILL_ADDR]], align 8
 ; CHECK-NEXT:    [[CALLEE_CONTEXT_RETURN_TO_CALLER_ADDR:%.*]] = getelementptr inbounds [[ASYNC_CTXT]], ptr [[CALLEE_CONTEXT]], i32 0, i32 1
 ; CHECK-NEXT:    store ptr @my_async_functionTQ0_, ptr [[CALLEE_CONTEXT_RETURN_TO_CALLER_ADDR]], align 8

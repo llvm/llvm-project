@@ -75,7 +75,6 @@ struct Shape {
 
     SwiftErrorOps.clear();
 
-    FrameTy = nullptr;
     FramePtr = nullptr;
     AllocaSpillBlock = nullptr;
   }
@@ -113,7 +112,6 @@ struct Shape {
 
   coro::ABI ABI;
 
-  StructType *FrameTy = nullptr;
   Align FrameAlign;
   uint64_t FrameSize = 0;
   Value *FramePtr = nullptr;
@@ -123,7 +121,9 @@ struct Shape {
     SwitchInst *ResumeSwitch;
     AllocaInst *PromiseAlloca;
     BasicBlock *ResumeEntryBlock;
-    unsigned IndexField;
+    IntegerType *IndexType;
+    unsigned ResumeOffset;
+    unsigned DestroyOffset;
     unsigned IndexAlign;
     unsigned IndexOffset;
     bool HasFinalSuspend;
@@ -172,15 +172,10 @@ struct Shape {
     return cast<CoroIdAsyncInst>(CoroBegin->getId());
   }
 
-  unsigned getSwitchIndexField() const {
-    assert(ABI == coro::ABI::Switch);
-    assert(FrameTy && "frame type not assigned");
-    return SwitchLowering.IndexField;
-  }
   IntegerType *getIndexType() const {
     assert(ABI == coro::ABI::Switch);
-    assert(FrameTy && "frame type not assigned");
-    return cast<IntegerType>(FrameTy->getElementType(getSwitchIndexField()));
+    assert(SwitchLowering.IndexType && "index type not assigned");
+    return SwitchLowering.IndexType;
   }
   ConstantInt *getIndex(uint64_t Value) const {
     return ConstantInt::get(getIndexType(), Value);
@@ -188,15 +183,15 @@ struct Shape {
 
   PointerType *getSwitchResumePointerType() const {
     assert(ABI == coro::ABI::Switch);
-    assert(FrameTy && "frame type not assigned");
-    return cast<PointerType>(FrameTy->getElementType(SwitchFieldIndex::Resume));
+    assert(CoroBegin && "CoroBegin not assigned");
+    return PointerType::getUnqual(CoroBegin->getContext());
   }
 
   FunctionType *getResumeFunctionType() const {
     switch (ABI) {
     case coro::ABI::Switch:
-      return FunctionType::get(Type::getVoidTy(FrameTy->getContext()),
-                               PointerType::getUnqual(FrameTy->getContext()),
+      return FunctionType::get(Type::getVoidTy(CoroBegin->getContext()),
+                               PointerType::getUnqual(CoroBegin->getContext()),
                                /*IsVarArg=*/false);
     case coro::ABI::Retcon:
     case coro::ABI::RetconOnce:
