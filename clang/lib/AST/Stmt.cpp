@@ -66,7 +66,7 @@ struct StmtClassNameTable {
 
 static StmtClassNameTable &getStmtInfoTableEntry(Stmt::StmtClass E) {
   static std::array<StmtClassNameTable, Stmt::lastStmtConstant + 1>
-      StmtClassInfo = []() {
+      StmtClassInfo = [] {
         std::array<StmtClassNameTable, Stmt::lastStmtConstant + 1> Table;
 #define ABSTRACT_STMT(STMT)
 #define STMT(CLASS, PARENT)                                                    \
