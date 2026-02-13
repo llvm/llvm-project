@@ -983,16 +983,6 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
     sym.setFlags(HAS_DIRECT_RELOC);
   }
 
-  processAux(expr, type, offset, sym, addend);
-}
-
-// Process relocation after needsGot/needsPlt flags are already handled.
-// This is the bottom half of process(), handling isStaticLinkTimeConstant
-// check, dynamic relocations, copy relocations, and error reporting.
-void RelocScan::processAux(RelExpr expr, RelType type, uint64_t offset,
-                           Symbol &sym, int64_t addend) const {
-  const bool isIfunc = sym.isGnuIFunc();
-
   // If the relocation is known to be a link-time constant, we know no dynamic
   // relocation will be created, pass the control to relocateAlloc() or
   // relocateNonAlloc() to resolve it.
@@ -1314,7 +1304,7 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
       sec->addReloc({R_RELAX_TLS_IE_TO_LE, type, offset, addend, &sym});
     } else if (expr != R_TLSIE_HINT) {
       sym.setFlags(NEEDS_TLSIE);
-      // R_GOT needs a relative relocation for PIC on Hexagon.
+      // R_GOT needs a relative relocation for PIC on i386 and Hexagon.
       if (expr == R_GOT && ctx.arg.isPic &&
           !ctx.target->usesOnlyLowPageBits(type))
         addRelativeReloc<true>(ctx, *sec, offset, sym, addend, expr, type);
