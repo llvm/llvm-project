@@ -3734,6 +3734,14 @@ static void changeVectorFPCCToAArch64CC(ISD::CondCode CC,
     CondCode = AArch64CC::MI;
     CondCode2 = AArch64CC::GE;
     break;
+  case ISD::SETLE:
+    CondCode = AArch64CC::LS;
+    CondCode2 = AArch64CC::AL;
+    break;
+  case ISD::SETLT:
+    CondCode = AArch64CC::MI;
+    CondCode2 = AArch64CC::AL;
+    break;
   case ISD::SETUEQ:
   case ISD::SETULT:
   case ISD::SETULE:

@@ -4704,36 +4704,13 @@ define <4 x float> @vselect_oge_knownnnan(<4 x i32> %a, <4 x float> %d, <4 x flo
 }
 
 define <4 x float> @vselect_olt_knownnnan(<4 x i32> %a, <4 x float> %d, <4 x float> %e) {
-; CHECK-SD-LABEL: vselect_olt_knownnnan:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-SD-NEXT:    fmov s3, #1.00000000
-; CHECK-SD-NEXT:    mov s4, v0.s[1]
-; CHECK-SD-NEXT:    fcmp s4, s3
-; CHECK-SD-NEXT:    mov s4, v0.s[2]
-; CHECK-SD-NEXT:    csetm w8, lt
-; CHECK-SD-NEXT:    fcmp s0, s3
-; CHECK-SD-NEXT:    mov s0, v0.s[3]
-; CHECK-SD-NEXT:    csetm w9, lt
-; CHECK-SD-NEXT:    fcmp s4, s3
-; CHECK-SD-NEXT:    fmov s5, w9
-; CHECK-SD-NEXT:    mov v5.s[1], w8
-; CHECK-SD-NEXT:    csetm w8, lt
-; CHECK-SD-NEXT:    fcmp s0, s3
-; CHECK-SD-NEXT:    mov v5.s[2], w8
-; CHECK-SD-NEXT:    csetm w8, lt
-; CHECK-SD-NEXT:    mov v5.s[3], w8
-; CHECK-SD-NEXT:    mov v0.16b, v5.16b
-; CHECK-SD-NEXT:    bsl v0.16b, v1.16b, v2.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: vselect_olt_knownnnan:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov v3.4s, #1.00000000
-; CHECK-GI-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-GI-NEXT:    fcmgt v0.4s, v3.4s, v0.4s
-; CHECK-GI-NEXT:    bsl v0.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: vselect_olt_knownnnan:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov v3.4s, #1.00000000
+; CHECK-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-NEXT:    fcmgt v0.4s, v3.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    ret
   %b = sitofp <4 x i32> %a to <4 x float>
   %c = fcmp olt <4 x float> %b, splat (float 1.0)
   %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
@@ -4741,36 +4718,13 @@ define <4 x float> @vselect_olt_knownnnan(<4 x i32> %a, <4 x float> %d, <4 x flo
 }
 
 define <4 x float> @vselect_ole_knownnnan(<4 x i32> %a, <4 x float> %d, <4 x float> %e) {
-; CHECK-SD-LABEL: vselect_ole_knownnnan:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-SD-NEXT:    fmov s3, #1.00000000
-; CHECK-SD-NEXT:    mov s4, v0.s[1]
-; CHECK-SD-NEXT:    fcmp s4, s3
-; CHECK-SD-NEXT:    mov s4, v0.s[2]
-; CHECK-SD-NEXT:    csetm w8, le
-; CHECK-SD-NEXT:    fcmp s0, s3
-; CHECK-SD-NEXT:    mov s0, v0.s[3]
-; CHECK-SD-NEXT:    csetm w9, le
-; CHECK-SD-NEXT:    fcmp s4, s3
-; CHECK-SD-NEXT:    fmov s5, w9
-; CHECK-SD-NEXT:    mov v5.s[1], w8
-; CHECK-SD-NEXT:    csetm w8, le
-; CHECK-SD-NEXT:    fcmp s0, s3
-; CHECK-SD-NEXT:    mov v5.s[2], w8
-; CHECK-SD-NEXT:    csetm w8, le
-; CHECK-SD-NEXT:    mov v5.s[3], w8
-; CHECK-SD-NEXT:    mov v0.16b, v5.16b
-; CHECK-SD-NEXT:    bsl v0.16b, v1.16b, v2.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: vselect_ole_knownnnan:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov v3.4s, #1.00000000
-; CHECK-GI-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-GI-NEXT:    fcmge v0.4s, v3.4s, v0.4s
-; CHECK-GI-NEXT:    bsl v0.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: vselect_ole_knownnnan:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov v3.4s, #1.00000000
+; CHECK-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-NEXT:    fcmge v0.4s, v3.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    ret
   %b = sitofp <4 x i32> %a to <4 x float>
   %c = fcmp ole <4 x float> %b, splat (float 1.0)
   %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
@@ -4898,24 +4852,9 @@ define <4 x float> @vselect_uge_knownnnan(<4 x i32> %a, <4 x float> %d, <4 x flo
 define <4 x float> @vselect_ult_knownnnan(<4 x i32> %a, <4 x float> %d, <4 x float> %e) {
 ; CHECK-SD-LABEL: vselect_ult_knownnnan:
 ; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov v3.4s, #1.00000000
 ; CHECK-SD-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-SD-NEXT:    fmov s3, #1.00000000
-; CHECK-SD-NEXT:    mov s4, v0.s[1]
-; CHECK-SD-NEXT:    fcmp s4, s3
-; CHECK-SD-NEXT:    mov s4, v0.s[2]
-; CHECK-SD-NEXT:    csetm w8, lt
-; CHECK-SD-NEXT:    fcmp s0, s3
-; CHECK-SD-NEXT:    mov s0, v0.s[3]
-; CHECK-SD-NEXT:    csetm w9, lt
-; CHECK-SD-NEXT:    fcmp s4, s3
-; CHECK-SD-NEXT:    fmov s5, w9
-; CHECK-SD-NEXT:    mov v5.s[1], w8
-; CHECK-SD-NEXT:    csetm w8, lt
-; CHECK-SD-NEXT:    fcmp s0, s3
-; CHECK-SD-NEXT:    mov v5.s[2], w8
-; CHECK-SD-NEXT:    csetm w8, lt
-; CHECK-SD-NEXT:    mov v5.s[3], w8
-; CHECK-SD-NEXT:    mov v0.16b, v5.16b
+; CHECK-SD-NEXT:    fcmgt v0.4s, v3.4s, v0.4s
 ; CHECK-SD-NEXT:    bsl v0.16b, v1.16b, v2.16b
 ; CHECK-SD-NEXT:    ret
 ;
@@ -4936,24 +4875,9 @@ define <4 x float> @vselect_ult_knownnnan(<4 x i32> %a, <4 x float> %d, <4 x flo
 define <4 x float> @vselect_ule_knownnnan(<4 x i32> %a, <4 x float> %d, <4 x float> %e) {
 ; CHECK-SD-LABEL: vselect_ule_knownnnan:
 ; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov v3.4s, #1.00000000
 ; CHECK-SD-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-SD-NEXT:    fmov s3, #1.00000000
-; CHECK-SD-NEXT:    mov s4, v0.s[1]
-; CHECK-SD-NEXT:    fcmp s4, s3
-; CHECK-SD-NEXT:    mov s4, v0.s[2]
-; CHECK-SD-NEXT:    csetm w8, le
-; CHECK-SD-NEXT:    fcmp s0, s3
-; CHECK-SD-NEXT:    mov s0, v0.s[3]
-; CHECK-SD-NEXT:    csetm w9, le
-; CHECK-SD-NEXT:    fcmp s4, s3
-; CHECK-SD-NEXT:    fmov s5, w9
-; CHECK-SD-NEXT:    mov v5.s[1], w8
-; CHECK-SD-NEXT:    csetm w8, le
-; CHECK-SD-NEXT:    fcmp s0, s3
-; CHECK-SD-NEXT:    mov v5.s[2], w8
-; CHECK-SD-NEXT:    csetm w8, le
-; CHECK-SD-NEXT:    mov v5.s[3], w8
-; CHECK-SD-NEXT:    mov v0.16b, v5.16b
+; CHECK-SD-NEXT:    fcmge v0.4s, v3.4s, v0.4s
 ; CHECK-SD-NEXT:    bsl v0.16b, v1.16b, v2.16b
 ; CHECK-SD-NEXT:    ret
 ;
