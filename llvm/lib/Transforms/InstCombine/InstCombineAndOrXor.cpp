@@ -4938,11 +4938,15 @@ bool InstCombinerImpl::sinkNotIntoLogicalOp(Instruction &I) {
 
   Builder.SetInsertPoint(*I.getInsertionPointAfterDef());
   Value *NewLogicOp;
-  if (IsBinaryOp)
+  if (IsBinaryOp) {
     NewLogicOp = Builder.CreateBinOp(NewOpc, Op0, Op1, I.getName() + ".not");
-  else
+  } else {
     NewLogicOp =
-        Builder.CreateLogicalOp(NewOpc, Op0, Op1, I.getName() + ".not");
+        Builder.CreateLogicalOp(NewOpc, Op0, Op1, I.getName() + ".not",
+                                ProfcheckDisableMetadataFixes ? nullptr : &I);
+    if (SelectInst *SI = dyn_cast<SelectInst>(NewLogicOp))
+      SI->swapProfMetadata();
+  }
 
   replaceInstUsesWith(I, NewLogicOp);
   // We can not just create an outer `not`, it will most likely be immediately
@@ -5020,7 +5024,11 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
   }
   if (match(NotOp, m_OneUse(m_LogicalAnd(m_Not(m_Value(X)), m_Value(Y))))) {
     Value *NotY = Builder.CreateNot(Y, Y->getName() + ".not");
-    return SelectInst::Create(X, ConstantInt::getTrue(Ty), NotY);
+    SelectInst *SI = SelectInst::Create(
+        X, ConstantInt::getTrue(Ty), NotY, "", nullptr,
+        ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(NotOp));
+    SI->swapProfMetadata();
+    return SI;
   }
 
   // ~(~X | Y) --> (X & ~Y)
@@ -5031,7 +5039,11 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
   }
   if (match(NotOp, m_OneUse(m_LogicalOr(m_Not(m_Value(X)), m_Value(Y))))) {
     Value *NotY = Builder.CreateNot(Y, Y->getName() + ".not");
-    return SelectInst::Create(X, NotY, ConstantInt::getFalse(Ty));
+    SelectInst *SI = SelectInst::Create(
+        X, NotY, ConstantInt::getFalse(Ty), "", nullptr,
+        ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(NotOp));
+    SI->swapProfMetadata();
+    return SI;
   }
 
   // Is this a 'not' (~) fed by a binary operator?
@@ -5185,6 +5197,27 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
   // than I) can be inverted.
   if (Value *R = getFreelyInverted(NotOp, NotOp->hasOneUse(), &Builder))
     return replaceInstUsesWith(I, R);
+
+  return nullptr;
+}
+
+// ((X + C) & M) ^ M --> (~C − X) & M
+static Instruction *foldMaskedAddXorPattern(BinaryOperator &I,
+                                            InstCombiner::BuilderTy &Builder) {
+  Value *X, *Mask;
+  Constant *AddC;
+  BinaryOperator *AddInst;
+  if (match(&I,
+            m_Xor(m_OneUse(m_And(m_OneUse(m_CombineAnd(
+                                     m_BinOp(AddInst),
+                                     m_Add(m_Value(X), m_ImmConstant(AddC)))),
+                                 m_Value(Mask))),
+                  m_Deferred(Mask)))) {
+    Value *NotC = Builder.CreateNot(AddC);
+    Value *NewSub = Builder.CreateSub(NotC, X, "", AddInst->hasNoUnsignedWrap(),
+                                      AddInst->hasNoSignedWrap());
+    return BinaryOperator::CreateAnd(NewSub, Mask);
+  }
 
   return nullptr;
 }
@@ -5532,6 +5565,9 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     return Res;
 
   if (Instruction *Res = foldBitwiseLogicWithIntrinsics(I, Builder))
+    return Res;
+
+  if (Instruction *Res = foldMaskedAddXorPattern(I, Builder))
     return Res;
 
   return nullptr;

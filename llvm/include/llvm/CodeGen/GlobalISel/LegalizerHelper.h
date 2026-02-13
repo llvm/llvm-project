@@ -209,6 +209,7 @@ public:
                                             Type *FromType,
                                             LostDebugLocObserver &LocObserver,
                                             bool IsSigned = false) const;
+  LegalizerHelper::LegalizeResult createAtomicLibcall(MachineInstr &MI) const;
 
   /// Create a libcall to memcpy et al.
   LLVM_ABI LegalizeResult
@@ -476,6 +477,8 @@ public:
                                            LLT Ty);
   LLVM_ABI LegalizeResult narrowScalarCTTZ(MachineInstr &MI, unsigned TypeIdx,
                                            LLT Ty);
+  LLVM_ABI LegalizeResult narrowScalarCTLS(MachineInstr &MI, unsigned TypeIdx,
+                                           LLT Ty);
   LLVM_ABI LegalizeResult narrowScalarCTPOP(MachineInstr &MI, unsigned TypeIdx,
                                             LLT Ty);
   LLVM_ABI LegalizeResult narrowScalarFLDEXP(MachineInstr &MI, unsigned TypeIdx,
@@ -523,6 +526,7 @@ public:
   LLVM_ABI LegalizeResult lowerFPTRUNC_F64_TO_F16(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFPTRUNC(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFPOWI(MachineInstr &MI);
+  LLVM_ABI LegalizeResult lowerFMODF(MachineInstr &MI);
 
   LLVM_ABI LegalizeResult lowerISFPCLASS(MachineInstr &MI);
 

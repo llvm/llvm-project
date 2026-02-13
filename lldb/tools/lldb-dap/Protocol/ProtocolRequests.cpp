@@ -335,7 +335,6 @@ bool fromJSON(const llvm::json::Value &Params, DAPSession &Ses,
               llvm::json::Path P) {
 
   json::ObjectMapper O(Params, P);
-  // Validate that both debuggerID and targetId are provided.
   return O && O.map("targetId", Ses.targetId) &&
          O.map("debuggerId", Ses.debuggerId);
 }

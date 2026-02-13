@@ -1890,6 +1890,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "nofpexcept ";
   if (getFlag(MachineInstr::NoMerge))
     OS << "nomerge ";
+  if (getFlag(MachineInstr::NoConvergent))
+    OS << "noconvergent ";
   if (getFlag(MachineInstr::NonNeg))
     OS << "nneg ";
   if (getFlag(MachineInstr::Disjoint))
@@ -1937,6 +1939,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
       OS << " [isconvergent]";
     if (ExtraInfo & InlineAsm::Extra_IsAlignStack)
       OS << " [alignstack]";
+    if (ExtraInfo & InlineAsm::Extra_MayUnwind)
+      OS << " [unwind]";
     if (getInlineAsmDialect() == InlineAsm::AD_ATT)
       OS << " [attdialect]";
     if (getInlineAsmDialect() == InlineAsm::AD_Intel)

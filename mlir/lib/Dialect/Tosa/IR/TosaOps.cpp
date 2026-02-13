@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
 #include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
@@ -26,6 +27,7 @@
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include <numeric>
@@ -134,9 +136,9 @@ SmallVector<Region *> tosa::WhileOp::getLoopRegions() {
 //===----------------------------------------------------------------------===//
 
 static SmallVector<int64_t> convertToMlirShape(ArrayRef<int64_t> shape) {
-  return to_vector(llvm::map_range(shape, [](int64_t dim) {
+  return map_to_vector(shape, [](int64_t dim) {
     return dim == -1 ? ShapedType::kDynamic : dim;
-  }));
+  });
 }
 
 // returns type of variable op
@@ -1140,9 +1142,8 @@ static LogicalResult verifyPoolingOp(T op) {
     const int64_t calculatedOutSize = calculatedOutSizeMinusOne.value() + 1;
     if (ShapedType::isStatic(outputSize) && calculatedOutSize != outputSize)
       return op.emitOpError("calculated output ")
-             << dimName << " did not match expected: "
-             << "calculated=" << calculatedOutSize
-             << ", expected=" << outputSize;
+             << dimName << " did not match expected: " << "calculated="
+             << calculatedOutSize << ", expected=" << outputSize;
 
     return success();
   };
@@ -1480,6 +1481,19 @@ static void buildVariableOp(OpBuilder &builder, OperationState &result,
 //===----------------------------------------------------------------------===//
 // TOSA Operator Return Type Inference.
 //===----------------------------------------------------------------------===//
+static FailureOr<int64_t> resolveBroadcastDim(const int64_t dim1,
+                                              const int64_t dim2) {
+  if (dim1 == 1)
+    return dim2;
+  if (dim2 == 1)
+    return dim1;
+
+  if (ShapedType::isStatic(dim1) && ShapedType::isStatic(dim2) && dim1 != dim2)
+    return failure();
+
+  // Prefer static dimension over dynamic
+  return ShapedType::isDynamic(dim1) ? dim2 : dim1;
+}
 
 static LogicalResult resolveBroadcastShape(const ValueShapeRange &operands,
                                            SmallVector<int64_t> &outShape) {
@@ -1503,15 +1517,12 @@ static LogicalResult resolveBroadcastShape(const ValueShapeRange &operands,
     for (size_t i = 0, e = shape.getRank(); i < e; ++i) {
       auto dim1 = outShape[i + rankDiff];
       auto dim2 = shape.getDimSize(i);
-      auto resolvedDim = dim1;
 
-      if (dim1 == 1) {
-        resolvedDim = dim2;
-      } else if (dim2 == 1) {
-        resolvedDim = dim1;
-      } else if (dim1 != dim2) {
+      const FailureOr<int64_t> maybeResolvedDim =
+          resolveBroadcastDim(dim1, dim2);
+      if (failed(maybeResolvedDim))
         return failure();
-      }
+      const int64_t resolvedDim = *maybeResolvedDim;
       outShape[i + rankDiff] = resolvedDim;
     }
   }
@@ -2047,8 +2058,7 @@ LogicalResult MatmulTBlockScaledOp::verify() {
       multiplesOfC != C / blockSize)
     return emitOpError(
                "expect scale operands dimension 2 to equal C/block_size (")
-           << C << "/" << blockSize << ")"
-           << ", got " << multiplesOfC;
+           << C << "/" << blockSize << ")" << ", got " << multiplesOfC;
 
   // Verify output shape
   N = ShapedType::isDynamic(N) ? D : N;
@@ -2142,17 +2152,14 @@ LogicalResult tosa::PadOp::verify() {
   if (!inputType || !outputType)
     return success();
 
-  auto inputRank = inputType.getRank();
-  auto outputRank = outputType.getRank();
-  if (inputRank != outputRank)
-    return emitOpError() << "expect same input and output tensor rank, but got "
-                         << "inputRank: " << inputRank
-                         << ", outputRank: " << outputRank;
-
-  DenseIntElementsAttr paddingAttr;
-  if (!matchPattern(getPadding(), m_Constant(&paddingAttr))) {
+  if (failed(verifyRanksMatch(getOperation(), inputType, outputType, "input",
+                              "output")))
     return failure();
-  }
+
+  auto inputRank = inputType.getRank();
+  DenseIntElementsAttr paddingAttr;
+  if (!matchPattern(getPadding(), m_Constant(&paddingAttr)))
+    return success();
 
   auto paddingValues = paddingAttr.getValues<APInt>();
   if (paddingValues.size() != static_cast<size_t>(inputRank * 2))
@@ -2389,9 +2396,9 @@ LogicalResult tosa::TableOp::verify() {
   if (!inputType.hasRank() || !outputType.hasRank())
     return success();
 
-  if (inputType.getRank() != outputType.getRank())
-    return emitOpError()
-           << "expected input tensor rank to equal result tensor rank";
+  if (failed(verifyRanksMatch(getOperation(), inputType, outputType, "input",
+                              "result")))
+    return failure();
 
   auto inputDims = inputType.getShape();
   auto outputDims = outputType.getShape();
@@ -2413,9 +2420,9 @@ tosa::TileOp::getConstantMultiples(SmallVector<int64_t> &multiples) {
   DenseIntElementsAttr multiplesAttr;
   if (!matchPattern(getMultiples(), m_Constant(&multiplesAttr)))
     return failure();
-  multiples = llvm::to_vector(
-      llvm::map_range(multiplesAttr.getValues<APInt>(),
-                      [](const APInt &val) { return val.getSExtValue(); }));
+  multiples =
+      llvm::map_to_vector(multiplesAttr.getValues<APInt>(),
+                          [](const APInt &val) { return val.getSExtValue(); });
   return success();
 }
 
@@ -2481,8 +2488,10 @@ LogicalResult tosa::TileOp::verify() {
     if (inputType.getRank() != multiplesRank)
       return emitOpError("expect 'multiples' to have rank ")
              << inputType.getRank() << " but got " << multiplesRank << ".";
-    if (outputType.hasRank() && inputType.getRank() != outputType.getRank())
-      return emitOpError("expect same input and output tensor rank.");
+    if (outputType.hasRank() &&
+        failed(verifyRanksMatch(getOperation(), inputType, outputType, "input",
+                                "output")))
+      return failure();
   } else if (outputType.hasRank() && outputType.getRank() != multiplesRank)
     return emitOpError("expect 'multiples' array to have length ")
            << outputType.getRank() << " but got " << multiplesRank << ".";
@@ -2807,8 +2816,8 @@ LogicalResult tosa::TransposeOp::verify() {
                       return s >= 0 &&
                              static_cast<size_t>(s) < constantPerms.size();
                     }) ||
-      !isPermutationVector(llvm::to_vector(llvm::map_range(
-          constantPerms, [](int32_t v) -> int64_t { return v; }))))
+      !isPermutationVector(llvm::map_to_vector(
+          constantPerms, [](int32_t v) -> int64_t { return v; })))
     return emitOpError() << "expected valid permutation indices";
 
   // ERROR_IF(tensor_size(shape1) != tensor_size(shape))
@@ -3410,7 +3419,7 @@ static LogicalResult poolingInferReturnTypes(
   outputShape.resize(4, ShapedType::kDynamic);
 
   // We only know the rank if the input type is unranked.
-  if (!inputShape) {
+  if (!inputShape.hasRank()) {
     inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
     return success();
   }
@@ -3877,10 +3886,10 @@ LogicalResult DepthwiseConv2DOp::inferReturnTypeComponents(
 
   // Bias shape can describe the output channels.
   ShapeAdaptor biasShape(adaptor.getBias().getType());
-  if (biasShape.hasRank()) {
-    outputShape[3] = ShapedType::isDynamic(outputShape[3])
-                         ? biasShape.getDimSize(0)
-                         : outputShape[3];
+  if (biasShape.hasRank() && ShapedType::isDynamic(outputShape[3])) {
+    int64_t bc = biasShape.getDimSize(0);
+    if (bc != ShapedType::kDynamic && bc != 1)
+      outputShape[3] = bc;
   }
 
   llvm::ArrayRef<int64_t> dilation = adaptor.getDilation();
@@ -3944,11 +3953,11 @@ LogicalResult TransposeConv2DOp::inferReturnTypeComponents(
   }
 
   // Bias shape can describe the output channels.
-  ShapeAdaptor biasShape(adaptor.getInput().getType());
-  if (biasShape.hasRank()) {
-    outputShape[3] = ShapedType::isDynamic(outputShape[3])
-                         ? biasShape.getDimSize(0)
-                         : outputShape[3];
+  ShapeAdaptor biasShape(adaptor.getBias().getType());
+  if (biasShape.hasRank() && ShapedType::isDynamic(outputShape[3])) {
+    int64_t bc = biasShape.getDimSize(0);
+    if (bc != ShapedType::kDynamic && bc != 1)
+      outputShape[3] = bc;
   }
 
   llvm::ArrayRef<int64_t> padding = adaptor.getOutPad();
@@ -4230,8 +4239,8 @@ LogicalResult CastFromBlockScaledOp::verify() {
   const Type outputDataType = getResult().getType();
   if (failed(verifyCompatibleShape(inputDataType, outputDataType)))
     return emitOpError() << "require compatible shapes for input_data ("
-                         << inputDataType << ") and "
-                         << "output_data (" << outputDataType << ")";
+                         << inputDataType << ") and " << "output_data ("
+                         << outputDataType << ")";
 
   const ShapeAdaptor inputDataShape = ShapeAdaptor(inputDataType);
 
@@ -4258,10 +4267,10 @@ LogicalResult CastFromBlockScaledOp::verify() {
           failed(verifyCompatibleShape(
               ArrayRef<int64_t>(inputDataDims).drop_back(1),
               ArrayRef<int64_t>(inputScaleDims).drop_back(1))))
-        return emitOpError() << "require compatible shapes for input_data ("
-                             << inputDataType << ") and "
-                             << "input_scale (" << inputScaleType
-                             << ") except for the last dimension";
+        return emitOpError()
+               << "require compatible shapes for input_data (" << inputDataType
+               << ") and " << "input_scale (" << inputScaleType
+               << ") except for the last dimension";
 
       const SmallVector<int64_t, 2> dimsToCheck{inputDataLastDim / blockSize,
                                                 inputScaleDims.back()};
@@ -4306,8 +4315,8 @@ LogicalResult CastToBlockScaledOp::verify() {
   const Type outputDataType = getResult(0).getType();
   if (failed(verifyCompatibleShape(inputDataType, outputDataType)))
     return emitOpError() << "require compatible shapes for input_data ("
-                         << inputDataType << ") and "
-                         << "output_data (" << outputDataType << ")";
+                         << inputDataType << ") and " << "output_data ("
+                         << outputDataType << ")";
 
   const unsigned int blockSize =
       BlockSizeAttr::getBlockSizeValue(getBlockSize());
@@ -4336,8 +4345,8 @@ LogicalResult CastToBlockScaledOp::verify() {
             ArrayRef<int64_t>(outputDataDims).drop_back(1),
             ArrayRef<int64_t>(outputScaleDims).drop_back(1))))
       return emitOpError() << "require compatible shapes for output_data ("
-                           << outputDataType << ") and "
-                           << "output_scale (" << outputScaleType
+                           << outputDataType << ") and " << "output_scale ("
+                           << outputScaleType
                            << ") except for the last dimension";
 
     const int64_t outputDataLastDim = outputDataDims.back();
@@ -4513,9 +4522,9 @@ ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
 
     if (functionType.getNumInputs() != operands.size()) {
       return parser.emitError(parser.getCurrentLocation())
-             << "expected as many input types as operands "
-             << "(expected " << operands.size() << " got "
-             << functionType.getNumInputs() << ")";
+             << "expected as many input types as operands " << "(expected "
+             << operands.size() << " got " << functionType.getNumInputs()
+             << ")";
     }
 
     // Resolve input operands.
@@ -4764,9 +4773,8 @@ ParseResult WhileOp::parse(OpAsmParser &parser, OperationState &result) {
 
   if (functionType.getNumInputs() != operands.size()) {
     return parser.emitError(typeLoc)
-           << "expected as many input types as operands "
-           << "(expected " << operands.size() << " got "
-           << functionType.getNumInputs() << ")";
+           << "expected as many input types as operands " << "(expected "
+           << operands.size() << " got " << functionType.getNumInputs() << ")";
   }
 
   // Resolve input operands.
@@ -4915,6 +4923,15 @@ LogicalResult tosa::ConcatShapeOp::verify() {
       cast<tosa::shapeType>(getResult().getType());
   const int64_t outputRank = outShapeType.getRank();
   const Operation::operand_range inputList = getInput();
+
+  if (inputList.size() == 0)
+    return emitOpError("requires at least one input shape");
+
+  if (llvm::any_of(inputList, [](Value v) {
+        return cast<tosa::shapeType>(v.getType()).getRank() == 0;
+      }))
+    return emitOpError("requires all inputs shapes have a rank greater than 0");
+
   const int64_t inputsRank =
       llvm::accumulate(inputList, 0, [](int64_t acc, const Value &input) {
         const tosa::shapeType inShapeType =

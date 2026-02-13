@@ -332,11 +332,13 @@ struct ComposeCollapseOfExpandOp : public OpRewritePattern<CollapseOpTy> {
         // the first dynamic size.
         Value result = dynamicSizes[0];
         for (Value v : llvm::drop_begin(dynamicSizes))
-          result = arith::MulIOp::create(rewriter, loc, result, v);
+          result = arith::MulIOp::create(rewriter, loc, result, v,
+                                         arith::IntegerOverflowFlags::nsw);
         if (numStaticElems != 1) {
           result = arith::MulIOp::create(
               rewriter, loc, result,
-              arith::ConstantIndexOp::create(rewriter, loc, numStaticElems));
+              arith::ConstantIndexOp::create(rewriter, loc, numStaticElems),
+              arith::IntegerOverflowFlags::nsw);
         }
         newOutputShape.push_back(result);
       }
@@ -370,7 +372,8 @@ struct ComposeExpandOfCollapseOp : public OpRewritePattern<ExpandOpTy> {
     if (hasNonIdentityLayout(expandOp.getSrc().getType()) ||
         hasNonIdentityLayout(collapseOp.getSrc().getType()) ||
         hasNonIdentityLayout(collapseOp.getResult().getType())) {
-      if (CastOpTy::areCastCompatible(srcType, resultType)) {
+      if (srcType.hasStaticShape() &&
+          CastOpTy::areCastCompatible(srcType, resultType)) {
         rewriter.replaceOpWithNewOp<CastOpTy>(expandOp, resultType,
                                               collapseOp.getSrc());
         return success();

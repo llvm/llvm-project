@@ -20,6 +20,7 @@
 #include "lldb/Utility/Listener.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -40,7 +41,7 @@ public:
   PluginProperties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(
         PlatformWasm::GetPluginNameStatic());
-    m_collection_sp->Initialize(g_platformwasm_properties);
+    m_collection_sp->Initialize(g_platformwasm_properties_def);
   }
 
   FileSpec GetRuntimePath() const {

@@ -4,31 +4,25 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
   omp.private {type = private} @_QFEj_private_i32 : i32 loc(#loc1)
   omp.private {type = private} @_QFEi_private_i32 : i32 loc(#loc1)
   llvm.func @test() {
-    %3 = llvm.mlir.constant(1 : i64) : i64
-    %4 = llvm.alloca %3 x i32 {bindc_name = "j"} : (i64) -> !llvm.ptr<5> loc(#loc4)
-    %5 = llvm.addrspacecast %4 : !llvm.ptr<5> to !llvm.ptr loc(#loc4)
-    %6 = llvm.mlir.constant(1 : i64) : i64
-    %7 = llvm.alloca %6 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr<5> loc(#loc4)
-    %8 = llvm.addrspacecast %7 : !llvm.ptr<5> to !llvm.ptr
-    %9 = llvm.mlir.constant(16383 : index) : i64
-    %10 = llvm.mlir.constant(0 : index) : i64
-    %11 = llvm.mlir.constant(1 : index) : i64
-    %12 = llvm.mlir.constant(16384 : i32) : i32
-    %14 = llvm.mlir.addressof @_QFEarray : !llvm.ptr
-    %18 = omp.map.info var_ptr(%8 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "i"} loc(#loc3)
-    %20 = omp.map.info var_ptr(%5 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "j"} loc(#loc3)
-    %22 = omp.map.bounds lower_bound(%10 : i64) upper_bound(%9 : i64) extent(%9 : i64) stride(%11 : i64) start_idx(%11 : i64) loc(#loc3)
-    %23 = omp.map.info var_ptr(%14 : !llvm.ptr, !llvm.array<16384 x i32>) map_clauses(implicit, tofrom) capture(ByRef) bounds(%22) -> !llvm.ptr {name = "array"} loc(#loc3)
-    %24 = omp.map.info var_ptr(%8 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "i"} loc(#loc3)
-    omp.target map_entries(%18 -> %arg0, %20 -> %arg2, %23 -> %arg4, %24 -> %arg5 : !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) {
-      %25 = llvm.mlir.constant(1 : i32) : i32
-      %27 = llvm.mlir.constant(16384 : i32) : i32
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %1 = llvm.alloca %0 x i32 {bindc_name = "j"} : (i64) -> !llvm.ptr<5> loc(#loc4)
+    %2 = llvm.addrspacecast %1 : !llvm.ptr<5> to !llvm.ptr loc(#loc4)
+    %3 = llvm.alloca %0 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr<5> loc(#loc4)
+    %4 = llvm.addrspacecast %3 : !llvm.ptr<5> to !llvm.ptr
+    %5 = llvm.mlir.addressof @_QFEarray : !llvm.ptr
+    %6 = omp.map.info var_ptr(%4 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "i"} loc(#loc3)
+    %7 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "j"} loc(#loc3)
+    %8 = omp.map.info var_ptr(%5 : !llvm.ptr, !llvm.array<16384 x i32>) map_clauses(implicit, tofrom) capture(ByRef) -> !llvm.ptr {name = "array"} loc(#loc3)
+    %9 = omp.map.info var_ptr(%4 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "i"} loc(#loc3)
+    omp.target map_entries(%6 -> %arg0, %7 -> %arg2, %8 -> %arg4, %9 -> %arg5 : !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) {
+      %10 = llvm.mlir.constant(1 : i32) : i32
+      %11 = llvm.mlir.constant(16384 : i32) : i32
       omp.teams {
         omp.distribute private(@_QFEi_private_i32 %arg5 -> %arg6 : !llvm.ptr) {
-          omp.loop_nest (%arg7) : i32 = (%25) to (%27) inclusive step (%25) {
+          omp.loop_nest (%arg7) : i32 = (%10) to (%11) inclusive step (%10) {
             omp.parallel {
               omp.wsloop private(@_QFEj_private_i32 %arg2 -> %arg8 : !llvm.ptr) {
-                omp.loop_nest (%arg9) : i32 = (%25) to (%27) inclusive step (%25) {
+                omp.loop_nest (%arg9) : i32 = (%10) to (%11) inclusive step (%10) {
                   llvm.store %arg9, %arg8 : i32, !llvm.ptr loc(#loc9)
                   omp.yield
                 } loc(#loc9)

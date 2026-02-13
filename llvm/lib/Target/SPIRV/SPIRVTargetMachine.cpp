@@ -33,6 +33,7 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/IPO/ExpandVariadics.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
 #include <optional>
@@ -173,11 +174,18 @@ TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void SPIRVPassConfig::addIRPasses() {
+  addPass(createAtomicExpandLegacyPass());
+
   TargetPassConfig::addIRPasses();
 
   addPass(createSPIRVRegularizerPass());
   addPass(createSPIRVPrepareFunctionsPass(TM));
   addPass(createSPIRVPrepareGlobalsPass());
+
+  // Variadic function calls aren't supported in shader code.
+  if (!TM.getSubtargetImpl()->isShader()) {
+    addPass(createExpandVariadicsPass(ExpandVariadicsMode::Lowering));
+  }
 }
 
 void SPIRVPassConfig::addISelPrepare() {

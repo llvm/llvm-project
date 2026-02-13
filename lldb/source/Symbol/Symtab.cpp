@@ -668,7 +668,8 @@ uint32_t Symtab::GetNameIndexes(ConstString symbol_name,
   if (getAsUnsignedInteger(name, /*Radix=*/16, file_address))
     return 0; // Failed to extract the user ID as an integer
 
-  Symbol *symbol = FindSymbolAtFileAddress(static_cast<addr_t>(file_address));
+  const Symbol *symbol =
+      FindSymbolAtFileAddress(static_cast<addr_t>(file_address));
   if (symbol == nullptr)
     return 0;
   const uint32_t symbol_idx = GetIndexForSymbol(symbol);

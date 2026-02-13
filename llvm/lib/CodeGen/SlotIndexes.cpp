@@ -35,9 +35,7 @@ SlotIndexesPrinterPass::run(MachineFunction &MF,
 }
 char SlotIndexesWrapperPass::ID = 0;
 
-SlotIndexesWrapperPass::SlotIndexesWrapperPass() : MachineFunctionPass(ID) {
-  initializeSlotIndexesWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+SlotIndexesWrapperPass::SlotIndexesWrapperPass() : MachineFunctionPass(ID) {}
 
 SlotIndexes::~SlotIndexes() {
   // The indexList's nodes are all allocated in the BumpPtrAllocator.

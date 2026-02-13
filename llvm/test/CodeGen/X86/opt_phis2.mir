@@ -29,7 +29,7 @@ body:             |
     %13:gr32 = ADD32rr %7, killed %12, implicit-def dead $eflags
     %14:gr32 = AND32ri8 %13, -4, implicit-def dead $eflags
     %15:gr32 = SUB32rr %7, %14, implicit-def dead $eflags
-    %10:gr64_nosp = SUBREG_TO_REG 0, %15, %subreg.sub_32bit
+    %10:gr64_nosp = SUBREG_TO_REG %15, %subreg.sub_32bit
     %16:gr32 = SUB32ri8 %15, 3, implicit-def $eflags
     JCC_1 %bb.8, 7, implicit $eflags
 

@@ -2,6 +2,7 @@
  * Copyright 2008-2009 Katholieke Universiteit Leuven
  * Copyright 2010      INRIA Saclay
  * Copyright 2016-2017 Sven Verdoolaege
+ * Copyright 2023      Cerebras Systems
  *
  * Use of this software is governed by the MIT license
  *
@@ -9,6 +10,7 @@
  * Computerwetenschappen, Celestijnenlaan 200A, B-3001 Leuven, Belgium
  * and INRIA Saclay - Ile-de-France, Parc Club Orsay Universite,
  * ZAC des vignes, 4 rue Jacques Monod, 91893 Orsay, France 
+ * and Cerebras Systems, 1237 E Arques Ave, Sunnyvale, CA, USA
  */
 
 #include <isl_ctx_private.h>
@@ -213,6 +215,32 @@ static void sol_free(struct isl_sol *sol)
 	free(sol);
 }
 
+/* Add equality constraint "eq" to the context of "sol".
+ * "check" is set if "eq" is not known to be a valid constraint.
+ * "update" is set if ineq_sign() may still get called on the context.
+ */
+static void sol_context_add_eq(struct isl_sol *sol, isl_int *eq, int check,
+	int update)
+{
+	sol->context->op->add_eq(sol->context, eq, check, update);
+	if (!sol->context->op->is_ok(sol->context))
+		sol->error = 1;
+}
+
+/* Add inequality constraint "ineq" to the context of "sol".
+ * "check" is set if "ineq" is not known to be a valid constraint.
+ * "update" is set if ineq_sign() may still get called on the context.
+ */
+static void sol_context_add_ineq(struct isl_sol *sol, isl_int *ineq, int check,
+	int update)
+{
+	if (sol->error)
+		return;
+	sol->context->op->add_ineq(sol->context, ineq, check, update);
+	if (!sol->context->op->is_ok(sol->context))
+		sol->error = 1;
+}
+
 /* Push a partial solution represented by a domain and function "ma"
  * onto the stack of partial solutions.
  * If "ma" is NULL, then "dom" represents a part of the domain
@@ -259,7 +287,7 @@ static isl_stat check_final_columns_are_zero(__isl_keep isl_mat *M,
 		return isl_stat_error;
 	n = cols - first;
 	for (i = 0; i < rows; ++i)
-		if (isl_seq_first_non_zero(M->row[i] + first, n) != -1)
+		if (isl_seq_any_non_zero(M->row[i] + first, n))
 			isl_die(isl_mat_get_ctx(M), isl_error_internal,
 				"final columns should be zero",
 				return isl_stat_error);
@@ -1540,8 +1568,8 @@ static int is_constant(struct isl_tab *tab, int row)
 {
 	unsigned off = 2 + tab->M;
 
-	return isl_seq_first_non_zero(tab->mat->row[row] + off + tab->n_dead,
-					tab->n_col - tab->n_dead) == -1;
+	return !isl_seq_any_non_zero(tab->mat->row[row] + off + tab->n_dead,
+					tab->n_col - tab->n_dead);
 }
 
 /* Is the given row a parametric constant?
@@ -3929,13 +3957,14 @@ static void find_in_pos(struct isl_sol *sol, struct isl_tab *tab, isl_int *ineq)
 
 	if (!sol->context)
 		goto error;
-	saved = sol->context->op->save(sol->context);
 
 	tab = isl_tab_dup(tab);
 	if (!tab)
 		goto error;
 
-	sol->context->op->add_ineq(sol->context, ineq, 0, 1);
+	saved = sol->context->op->save(sol->context);
+
+	sol_context_add_ineq(sol, ineq, 0, 1);
 
 	find_solutions(sol, tab);
 
@@ -3963,9 +3992,7 @@ static void no_sol_in_strict(struct isl_sol *sol,
 
 	isl_int_sub_ui(ineq->el[0], ineq->el[0], 1);
 
-	sol->context->op->add_ineq(sol->context, ineq->el, 1, 0);
-	if (!sol->context)
-		goto error;
+	sol_context_add_ineq(sol, ineq->el, 1, 0);
 
 	empty = tab->empty;
 	tab->empty = 1;
@@ -3975,6 +4002,8 @@ static void no_sol_in_strict(struct isl_sol *sol,
 	isl_int_add_ui(ineq->el[0], ineq->el[0], 1);
 
 	sol->context->op->restore(sol->context, saved);
+	if (!sol->context->op->is_ok(sol->context))
+		goto error;
 	return;
 error:
 	sol->error = 1;
@@ -4144,8 +4173,7 @@ static void find_solutions(struct isl_sol *sol, struct isl_tab *tab)
 			tab->row_sign[split] = isl_tab_row_neg;
 			isl_seq_neg(ineq->el, ineq->el, ineq->size);
 			isl_int_sub_ui(ineq->el[0], ineq->el[0], 1);
-			if (!sol->error)
-				context->op->add_ineq(context, ineq->el, 0, 1);
+			sol_context_add_ineq(sol, ineq->el, 0, 1);
 			isl_vec_free(ineq);
 			if (sol->error)
 				goto error;
@@ -4180,7 +4208,7 @@ static void find_solutions(struct isl_sol *sol, struct isl_tab *tab)
 			sol_inc_level(sol);
 			no_sol_in_strict(sol, tab, ineq);
 			isl_seq_neg(ineq->el, ineq->el, ineq->size);
-			context->op->add_ineq(context, ineq->el, 1, 1);
+			sol_context_add_ineq(sol, ineq->el, 1, 1);
 			isl_vec_free(ineq);
 			if (sol->error || !context->op->is_ok(context))
 				goto error;
@@ -4278,7 +4306,7 @@ static void find_solutions_main(struct isl_sol *sol, struct isl_tab *tab)
 		no_sol_in_strict(sol, tab, eq);
 		isl_seq_neg(eq->el, eq->el, eq->size);
 
-		sol->context->op->add_eq(sol->context, eq->el, 1, 1);
+		sol_context_add_eq(sol, eq->el, 1, 1);
 
 		isl_vec_free(eq);
 
@@ -4309,39 +4337,145 @@ error:
 	sol->error = 1;
 }
 
+/* Is the local variable "div" of "bmap" an integer division
+ * with a known expression that does not involve the "n" variables
+ * starting at "first"?
+ */
+static isl_bool is_known_div_not_involving(__isl_keep isl_basic_map *bmap,
+	unsigned div, unsigned first, unsigned n)
+{
+	isl_bool unknown, involves;
+
+	unknown = isl_basic_map_div_is_marked_unknown(bmap, div);
+	if (unknown < 0 || unknown)
+		return isl_bool_not(unknown);
+	involves = isl_basic_map_div_expr_involves_vars(bmap, div, first, n);
+	return isl_bool_not(involves);
+}
+
+/* Check if integer division "div" of "src" also occurs in "dst",
+ * where the integer division "div" is known to involve
+ * only the first "n_shared" variables.
+ * If so, return its position within the local variables.
+ * Otherwise, return a position beyond the local variables.
+ */
+static isl_size find_div_involving_only(__isl_keep isl_basic_map *dst,
+	__isl_keep isl_basic_map *src, unsigned div, unsigned n_shared)
+{
+	int i;
+	isl_size total;
+	isl_size n_div;
+
+	total = isl_basic_map_dim(dst, isl_dim_all);
+	n_div = isl_basic_map_dim(dst, isl_dim_div);
+	if (total < 0 || n_div < 0)
+		return isl_size_error;
+
+	for (i = 0; i < n_div; ++i) {
+		isl_bool ok;
+
+		ok = is_known_div_not_involving(dst, i,
+						n_shared, total - n_shared);
+		if (ok < 0)
+			return isl_size_error;
+		if (!ok)
+			continue;
+		if (isl_seq_eq(dst->div[i], src->div[div], 2 + n_shared))
+			return i;
+	}
+	return n_div;
+}
+
 /* Check if integer division "div" of "dom" also occurs in "bmap".
  * If so, return its position within the divs.
  * Otherwise, return a position beyond the integer divisions.
  */
-static int find_context_div(__isl_keep isl_basic_map *bmap,
+static isl_size find_context_div(__isl_keep isl_basic_map *bmap,
 	__isl_keep isl_basic_set *dom, unsigned div)
 {
-	int i;
-	isl_size b_v_div, d_v_div;
-	isl_size n_div;
+	isl_size d_v_div;
+	isl_size n_div, d_n_div;
+	isl_bool ok;
 
-	b_v_div = isl_basic_map_var_offset(bmap, isl_dim_div);
 	d_v_div = isl_basic_set_var_offset(dom, isl_dim_div);
 	n_div = isl_basic_map_dim(bmap, isl_dim_div);
-	if (b_v_div < 0 || d_v_div < 0 || n_div < 0)
-		return -1;
+	d_n_div = isl_basic_set_dim(dom, isl_dim_div);
+	if (d_v_div < 0 || n_div < 0 || d_n_div < 0)
+		return isl_size_error;
 
-	if (isl_int_is_zero(dom->div[div][0]))
-		return n_div;
-	if (isl_seq_first_non_zero(dom->div[div] + 2 + d_v_div,
-				    dom->n_div) != -1)
+	ok = is_known_div_not_involving(bset_to_bmap(dom), div,
+					d_v_div, d_n_div);
+	if (ok < 0)
+		return isl_size_error;
+	if (!ok)
 		return n_div;
 
-	for (i = 0; i < n_div; ++i) {
-		if (isl_int_is_zero(bmap->div[i][0]))
+	return find_div_involving_only(bmap, bset_to_bmap(dom), div, d_v_div);
+}
+
+/* Copy integer division "div" of "bmap", which is known to only involve
+ * the first "n_shared" variables, to "dom" at position "dom_div".
+ */
+static __isl_give isl_basic_set *copy_div(__isl_take isl_basic_set *dom,
+	__isl_keep isl_basic_map *bmap,
+	unsigned div, unsigned n_shared, unsigned dom_div)
+{
+	isl_vec *v;
+	isl_size total;
+
+	total = isl_basic_set_dim(dom, isl_dim_all);
+	if (total < 0)
+		return isl_basic_set_free(dom);
+
+	v = isl_vec_alloc(isl_basic_set_get_ctx(dom), 1 + 1 + total);
+	if (!v)
+		return isl_basic_set_free(dom);
+
+	isl_seq_cpy(v->el, bmap->div[div], 1 + 1 + n_shared);
+	isl_seq_clr(v->el + 1 + 1 + n_shared, total - n_shared);
+	dom = isl_basic_set_insert_div(dom, dom_div, v);
+	dom = isl_basic_set_add_div_constraints(dom, dom_div);
+	isl_vec_free(v);
+
+	return dom;
+}
+
+/* Copy the integer divisions of "bmap" that only involve variables in "dom" and
+ * that do not already appear in "dom" to "dom".
+ */
+static __isl_give isl_basic_set *copy_divs(__isl_take isl_basic_set *dom,
+	__isl_keep isl_basic_map *bmap)
+{
+	int i;
+	isl_size dom_n_div, bmap_n_div, total;
+	isl_size v_out;
+
+	dom_n_div = isl_basic_set_dim(dom, isl_dim_div);
+	bmap_n_div = isl_basic_map_dim(bmap, isl_dim_div);
+	total = isl_basic_map_dim(bmap, isl_dim_all);
+	v_out = isl_basic_map_var_offset(bmap, isl_dim_out);
+	if (dom_n_div < 0 || bmap_n_div < 0 || total < 0 || v_out < 0)
+		return isl_basic_set_free(dom);
+
+	for (i = 0; i < bmap_n_div; ++i) {
+		isl_bool ok;
+		isl_size pos;
+
+		ok = is_known_div_not_involving(bmap, i, v_out, total - v_out);
+		if (ok < 0)
+			return isl_basic_set_free(dom);
+		if (!ok)
 			continue;
-		if (isl_seq_first_non_zero(bmap->div[i] + 2 + d_v_div,
-					   (b_v_div - d_v_div) + n_div) != -1)
+		pos = find_div_involving_only(bset_to_bmap(dom),
+						bmap, i, v_out);
+		if (pos < 0)
+			return isl_basic_set_free(dom);
+		if (pos < dom_n_div)
 			continue;
-		if (isl_seq_eq(bmap->div[i], dom->div[div], 2 + d_v_div))
-			return i;
+		dom = copy_div(dom, bmap, i, v_out, dom_n_div++);
 	}
-	return n_div;
+
+	return dom;
 }
 
 /* The correspondence between the variables in the main tableau,
@@ -4364,12 +4498,15 @@ static __isl_give isl_basic_map *align_context_divs(
 	int i;
 	int common = 0;
 	int other;
-	unsigned bmap_n_div;
+	isl_size bmap_n_div, dom_n_div;
 
 	bmap_n_div = isl_basic_map_dim(bmap, isl_dim_div);
+	dom_n_div = isl_basic_set_dim(dom, isl_dim_div);
+	if (bmap_n_div < 0 || dom_n_div < 0)
+		return isl_basic_map_free(bmap);
 
-	for (i = 0; i < dom->n_div; ++i) {
-		int pos;
+	for (i = 0; i < dom_n_div; ++i) {
+		isl_size pos;
 
 		pos = find_context_div(bmap, dom, i);
 		if (pos < 0)
@@ -4378,14 +4515,14 @@ static __isl_give isl_basic_map *align_context_divs(
 			common++;
 	}
 	other = bmap_n_div - common;
-	if (dom->n_div - common > 0) {
+	if (dom_n_div - common > 0) {
 		bmap = isl_basic_map_cow(bmap);
-		bmap = isl_basic_map_extend(bmap, dom->n_div - common, 0, 0);
+		bmap = isl_basic_map_extend(bmap, dom_n_div - common, 0, 0);
 		if (!bmap)
 			return NULL;
 	}
-	for (i = 0; i < dom->n_div; ++i) {
-		int pos = find_context_div(bmap, dom, i);
+	for (i = 0; i < dom_n_div; ++i) {
+		isl_size pos = find_context_div(bmap, dom, i);
 		if (pos < 0)
 			bmap = isl_basic_map_free(bmap);
 		if (pos >= bmap_n_div) {
@@ -4415,6 +4552,10 @@ error:
  * may depend on the known integer divisions, while anything that
  * depends on any variable starting from the first unknown integer
  * division is ignored in sol_pma_add.
+ * First copy over any integer divisions from "bmap" that do not
+ * already appear in "dom".  This ensures that the tableau
+ * will not be split on the corresponding integer division constraints
+ * since they will be known to hold in "dom".
  */
 static struct isl_sol *basic_map_partial_lexopt_base_sol(
 	__isl_take isl_basic_map *bmap, __isl_take isl_basic_set *dom,
@@ -4426,10 +4567,9 @@ static struct isl_sol *basic_map_partial_lexopt_base_sol(
 	struct isl_sol *sol = NULL;
 	struct isl_context *context;
 
-	if (dom->n_div) {
-		dom = isl_basic_set_sort_divs(dom);
-		bmap = align_context_divs(bmap, dom);
-	}
+	dom = copy_divs(dom, bmap);
+	dom = isl_basic_set_sort_divs(dom);
+	bmap = align_context_divs(bmap, dom);
 	sol = init(bmap, dom, !!empty, max);
 	if (!sol)
 		goto error;
@@ -4617,9 +4757,9 @@ static isl_bool parallel_constraints(__isl_keep isl_basic_map *bmap,
 		uint32_t hash;
 
 		info.val = bmap->ineq[i] + 1 + info.n_in;
-		if (isl_seq_first_non_zero(info.val, n_out) < 0)
+		if (!isl_seq_any_non_zero(info.val, n_out))
 			continue;
-		if (isl_seq_first_non_zero(info.val + n_out, n_div) >= 0)
+		if (isl_seq_any_non_zero(info.val + n_out, n_div))
 			continue;
 		if (!single_occurrence(info.n_in, bmap->ineq[i] + 1,
 					occurrences))
@@ -4748,6 +4888,7 @@ static isl_bool need_split_basic_map(__isl_keep isl_basic_map *bmap,
 	__isl_keep isl_mat *cst)
 {
 	int i, j;
+	isl_bool involves;
 	isl_size total;
 	unsigned pos;
 
@@ -4756,9 +4897,9 @@ static isl_bool need_split_basic_map(__isl_keep isl_basic_map *bmap,
 	if (total < 0)
 		return isl_bool_error;
 
-	for (i = 0; i < bmap->n_div; ++i)
-		if (!isl_int_is_zero(bmap->div[i][2 + pos]))
-			return isl_bool_true;
+	involves = isl_basic_map_any_div_involves_vars(bmap, pos, 1);
+	if (involves < 0 || involves)
+		return involves;
 
 	for (i = 0; i < bmap->n_eq; ++i)
 		if (!isl_int_is_zero(bmap->eq[i][1 + pos]))
@@ -4769,8 +4910,8 @@ static isl_bool need_split_basic_map(__isl_keep isl_basic_map *bmap,
 			continue;
 		if (!isl_int_is_negone(bmap->ineq[i][1 + pos]))
 			return isl_bool_true;
-		if (isl_seq_first_non_zero(bmap->ineq[i] + 1 + pos + 1,
-					   total - pos - 1) >= 0)
+		if (isl_seq_any_non_zero(bmap->ineq[i] + 1 + pos + 1,
+					   total - pos - 1))
 			return isl_bool_true;
 
 		for (j = 0; j < cst->n_row; ++j)
@@ -4973,6 +5114,7 @@ static __isl_give isl_basic_set *extract_domain(__isl_keep isl_basic_map *bmap,
 #define TYPE	isl_map
 #undef SUFFIX
 #define SUFFIX
+#define isl_map_pullback_multi_aff isl_map_preimage_domain_multi_aff
 #include "isl_tab_lexopt_templ.c"
 
 /* Extract the subsequence of the sample value of "tab"

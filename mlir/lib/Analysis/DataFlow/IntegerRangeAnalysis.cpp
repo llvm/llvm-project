@@ -138,8 +138,11 @@ LogicalResult IntegerRangeAnalysis::visitOperation(
 }
 
 void IntegerRangeAnalysis::visitNonControlFlowArguments(
-    Operation *op, const RegionSuccessor &successor, ValueRange successorInputs,
-    ArrayRef<IntegerValueRangeLattice *> argLattices, unsigned firstIndex) {
+    Operation *op, const RegionSuccessor &successor,
+    ValueRange nonSuccessorInputs,
+    ArrayRef<IntegerValueRangeLattice *> nonSuccessorInputLattices) {
+  assert(nonSuccessorInputs.size() == nonSuccessorInputLattices.size() &&
+         "size mismatch");
   if (auto inferrable = dyn_cast<InferIntRangeInterface>(op)) {
     LDBG() << "Inferring ranges for "
            << OpWithFlags(op, OpPrintingFlags().skipRegions());
@@ -156,7 +159,11 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
         return;
 
       LDBG() << "Inferred range " << attrs;
-      IntegerValueRangeLattice *lattice = argLattices[arg.getArgNumber()];
+      auto it = llvm::find(successor.getSuccessor()->getArguments(), arg);
+      unsigned nonSuccessorInputIdx =
+          std::distance(successor.getSuccessor()->getArguments().begin(), it);
+      IntegerValueRangeLattice *lattice =
+          nonSuccessorInputLattices[nonSuccessorInputIdx];
       IntegerValueRange oldRange = lattice->getValue();
 
       ChangeResult changed = lattice->join(attrs);
@@ -208,7 +215,7 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
         loop.getLoopInductionVars();
     if (!maybeIvs) {
       return SparseForwardDataFlowAnalysis ::visitNonControlFlowArguments(
-          op, successor, successorInputs, argLattices, firstIndex);
+          op, successor, nonSuccessorInputs, nonSuccessorInputLattices);
     }
     // This shouldn't be returning nullopt if there are indunction variables.
     SmallVector<OpFoldResult> lowerBounds = *loop.getLoopLowerBounds();
@@ -246,5 +253,5 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
   }
 
   return SparseForwardDataFlowAnalysis::visitNonControlFlowArguments(
-      op, successor, successorInputs, argLattices, firstIndex);
+      op, successor, nonSuccessorInputs, nonSuccessorInputLattices);
 }

@@ -22,6 +22,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;

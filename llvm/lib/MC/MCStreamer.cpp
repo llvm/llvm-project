@@ -13,7 +13,6 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
-#include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCContext.h"
@@ -120,12 +119,6 @@ void MCStreamer::emitRawComment(const Twine &T, bool TabPrefix) {}
 
 void MCStreamer::addExplicitComment(const Twine &T) {}
 void MCStreamer::emitExplicitComments() {}
-
-void MCStreamer::generateCompactUnwindEncodings(MCAsmBackend *MAB) {
-  for (auto &FI : DwarfFrameInfos)
-    FI.CompactUnwindEncoding =
-        (MAB ? MAB->generateCompactUnwindEncoding(&FI, &Context) : 0);
-}
 
 /// EmitIntValue - Special case of EmitValue that avoids the client having to
 /// pass in a MCExpr for constant integers.
@@ -885,7 +878,7 @@ MCSection *MCStreamer::getAssociatedXDataSection(const MCSection *TextSec) {
                           TextSec);
 }
 
-void MCStreamer::emitSyntaxDirective() {}
+void MCStreamer::emitSyntaxDirective(StringRef Syntax, StringRef Options) {}
 
 static unsigned encodeSEHRegNum(MCContext &Ctx, MCRegister Reg) {
   return Ctx.getRegisterInfo()->getSEHRegNum(Reg);
@@ -1353,6 +1346,7 @@ void MCStreamer::emitFill(const MCExpr &NumBytes, uint64_t Value, SMLoc Loc) {}
 void MCStreamer::emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
                           SMLoc Loc) {}
 void MCStreamer::emitValueToAlignment(Align, int64_t, uint8_t, unsigned) {}
+void MCStreamer::emitPrefAlign(Align A) {}
 void MCStreamer::emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                                    unsigned MaxBytesToEmit) {}
 void MCStreamer::emitValueToOffset(const MCExpr *Offset, unsigned char Value,

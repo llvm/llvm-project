@@ -19,12 +19,12 @@ define i32 @select_not_cond_true_false(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i8> [[WIDE_LOAD]] to <4 x i1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor <4 x i1> [[TMP2]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP5]] = zext <4 x i1> [[TMP3]] to <4 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[TMP5]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[TMP6:%.*]] = or <4 x i32> [[TMP4]], splat (i32 1)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[TMP5]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP6:%.*]] = or <4 x i32> [[TMP9]], splat (i32 1)
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP5]], i32 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP6]], i32 3
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]

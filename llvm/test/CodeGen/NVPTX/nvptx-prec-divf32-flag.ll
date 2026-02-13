@@ -6,7 +6,7 @@
 
 target triple = "nvptx64-nvidia-cuda"
 
-define float @div_ftz(float %a, float %b) "denormal-fp-math-f32" = "preserve-sign" {
+define float @div_ftz(float %a, float %b) denormal_fpenv(float: preservesign) {
 ; APPROX-LABEL: div_ftz(
 ; APPROX:       {
 ; APPROX-NEXT:    .reg .b32 %r<4>;

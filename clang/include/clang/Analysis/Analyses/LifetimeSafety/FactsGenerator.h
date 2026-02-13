@@ -37,6 +37,7 @@ public:
   void VisitDeclRefExpr(const DeclRefExpr *DRE);
   void VisitCXXConstructExpr(const CXXConstructExpr *CCE);
   void VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE);
+  void VisitMemberExpr(const MemberExpr *ME);
   void VisitCallExpr(const CallExpr *CE);
   void VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *N);
   void VisitImplicitCastExpr(const ImplicitCastExpr *ICE);
@@ -47,6 +48,7 @@ public:
   void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE);
   void VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *FCE);
   void VisitInitListExpr(const InitListExpr *ILE);
+  void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE);
   void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *MTE);
 
 private:
@@ -57,11 +59,21 @@ private:
 
   void handleAssignment(const Expr *LHSExpr, const Expr *RHSExpr);
 
+  void handleCXXCtorInitializer(const CXXCtorInitializer *CII);
   void handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds);
-
   void handleTemporaryDtor(const CFGTemporaryDtor &TemporaryDtor);
 
+  void handleExitBlock();
+
   void handleGSLPointerConstruction(const CXXConstructExpr *CCE);
+
+  /// Detects arguments passed to rvalue reference parameters and creates
+  /// MovedOriginFact for them. The MovedLoansAnalysis then uses these facts
+  /// to track in a flow-sensitive manner which loans have been moved at each
+  /// program point, allowing warnings to distinguish potentially moved storage
+  /// from other use-after-free errors.
+  void handleMovedArgsInCall(const FunctionDecl *FD,
+                             ArrayRef<const Expr *> Args);
 
   /// Checks if a call-like expression creates a borrow by passing a value to a
   /// reference parameter, creating an IssueFact if it does.
@@ -70,6 +82,11 @@ private:
   void handleFunctionCall(const Expr *Call, const FunctionDecl *FD,
                           ArrayRef<const Expr *> Args,
                           bool IsGslConstruction = false);
+
+  // Detect container methods that invalidate iterators/references.
+  // For instance methods, Args[0] is the implicit 'this' pointer.
+  void handleInvalidatingCall(const Expr *Call, const FunctionDecl *FD,
+                              ArrayRef<const Expr *> Args);
 
   template <typename Destination, typename Source>
   void flowOrigin(const Destination &D, const Source &S) {
@@ -106,15 +123,6 @@ private:
   // corresponding to the left-hand side is updated to be a "write", thereby
   // exempting it from the check.
   llvm::DenseMap<const DeclRefExpr *, UseFact *> UseFacts;
-
-  // This is a flow-insensitive approximation: once a declaration is moved
-  // anywhere in the function, it's treated as moved everywhere. This can lead
-  // to false negatives on control flow paths where the value is not actually
-  // moved, but these are considered lower priority than the false positives
-  // this tracking prevents.
-  // TODO: The ideal solution would be flow-sensitive ownership tracking that
-  // records where values are moved from and to, but this is more complex.
-  llvm::DenseSet<const ValueDecl *> MovedDecls;
 };
 
 } // namespace clang::lifetimes::internal

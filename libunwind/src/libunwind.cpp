@@ -32,7 +32,7 @@
 
 using namespace libunwind;
 
-/// internal object to represent this processes address space
+/// internal object to represent this process's address space
 LocalAddressSpace LocalAddressSpace::sThisAddressSpace;
 
 _LIBUNWIND_EXPORT unw_addr_space_t unw_local_addr_space =
@@ -306,7 +306,7 @@ _LIBUNWIND_HIDDEN int __unw_is_fpreg(unw_cursor_t *cursor,
 }
 _LIBUNWIND_WEAK_ALIAS(__unw_is_fpreg, unw_is_fpreg)
 
-/// Checks if a register is a floating-point register.
+/// Get name of specified register at cursor position in stack frame.
 _LIBUNWIND_HIDDEN const char *__unw_regname(unw_cursor_t *cursor,
                                             unw_regnum_t regNum) {
   _LIBUNWIND_TRACE_API("__unw_regname(cursor=%p, regNum=%d)",

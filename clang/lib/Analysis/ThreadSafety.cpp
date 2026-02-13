@@ -726,11 +726,12 @@ void VarMapBuilder::VisitCallExpr(const CallExpr *CE) {
       }
     }
 
-    if (VDec && Ctx.lookup(VDec)) {
+    if (VDec)
       Ctx = VMap->clearDefinition(VDec, Ctx);
-      VMap->saveContext(CE, Ctx);
-    }
   }
+  // Save the context after the call where escaped variables' definitions (if
+  // they exist) are cleared.
+  VMap->saveContext(CE, Ctx);
 }
 
 // Computes the intersection of two contexts.  The intersection is the

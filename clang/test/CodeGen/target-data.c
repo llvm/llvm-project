@@ -207,11 +207,11 @@
 // RUN: FileCheck %s -check-prefix=SYSTEMZ
 // RUN: %clang_cc1 -triple s390x-unknown -target-cpu z13 -target-feature +soft-float -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=SYSTEMZ
-// SYSTEMZ: target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
+// SYSTEMZ: target datalayout = "E-S64-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
 
 // RUN: %clang_cc1 -triple s390x-unknown -target-cpu z13 -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=SYSTEMZ-VECTOR
-// SYSTEMZ-VECTOR: target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
+// SYSTEMZ-VECTOR: target datalayout = "E-S64-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
 
 // RUN: %clang_cc1 -triple s390x-none-zos -target-cpu z10 -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=ZOS
@@ -219,7 +219,7 @@
 // RUN: FileCheck %s -check-prefix=ZOS
 // RUN: %clang_cc1 -triple s390x-none-zos -target-cpu z13 -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=ZOS
-// ZOS: target datalayout = "E-m:l-p1:32:32-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
+// ZOS: target datalayout = "E-S64-m:l-p1:32:32-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
 
 // RUN: %clang_cc1 -triple msp430-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=MSP430

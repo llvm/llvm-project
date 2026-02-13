@@ -181,7 +181,6 @@ public:
                  uint64_t pltEntryAddr) const override;
   template <class ELFT, class RelTy>
   void scanSectionImpl(InputSectionBase &, Relocs<RelTy>);
-  template <class ELFT> void scanSection1(InputSectionBase &);
   void scanSection(InputSectionBase &) override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
@@ -1312,8 +1311,7 @@ void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
     uint32_t symIdx = rel.getSymbol(false);
     Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
     RelType type = rel.getType(false);
-    RelExpr expr =
-        ctx.target->getRelExpr(type, sym, sec.content().data() + offset);
+    RelExpr expr = getRelExpr(type, sym, sec.content().data() + offset);
     if (expr == R_NONE)
       continue;
     if (sym.isUndefined() && symIdx != 0 &&
@@ -1373,19 +1371,11 @@ void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
   }
 }
 
-template <class ELFT> void PPC64::scanSection1(InputSectionBase &sec) {
-  auto relocs = sec.template relsOrRelas<ELFT>();
-  if (relocs.areRelocsCrel())
-    scanSectionImpl<ELFT>(sec, relocs.crels);
-  else
-    scanSectionImpl<ELFT>(sec, relocs.relas);
-}
-
 void PPC64::scanSection(InputSectionBase &sec) {
   if (ctx.arg.isLE)
-    scanSection1<ELF64LE>(sec);
+    elf::scanSection1<PPC64, ELF64LE>(*this, sec);
   else
-    scanSection1<ELF64BE>(sec);
+    elf::scanSection1<PPC64, ELF64BE>(*this, sec);
 }
 
 void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
@@ -1719,7 +1709,7 @@ void PPC64::relocateAlloc(InputSection &sec, uint8_t *buf) const {
       // entry, there may be R_PPC64_TOC16_HA not paired with
       // R_PPC64_TOC16_LO_DS. Don't relax. This loses some relaxation
       // opportunities but is safe.
-      if (ctx.ppc64noTocRelax.count({rel.sym, rel.addend}) ||
+      if (ctx.ppc64noTocRelax.contains({rel.sym, rel.addend}) ||
           !tryRelaxPPC64TocIndirection(ctx, rel, loc))
         relocate(loc, rel, val);
       break;

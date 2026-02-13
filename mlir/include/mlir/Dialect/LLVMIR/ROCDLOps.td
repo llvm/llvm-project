@@ -351,6 +351,10 @@ def ROCDL_ClusterIdXOp : ROCDL_SpecialIdRegisterOp<"cluster.id.x">;
 def ROCDL_ClusterIdYOp : ROCDL_SpecialIdRegisterOp<"cluster.id.y">;
 def ROCDL_ClusterIdZOp : ROCDL_SpecialIdRegisterOp<"cluster.id.z">;
 
+def ROCDL_ClusterWorkgroupIdXOp : ROCDL_SpecialIdRegisterOp<"cluster.workgroup.id.x">;
+def ROCDL_ClusterWorkgroupIdYOp : ROCDL_SpecialIdRegisterOp<"cluster.workgroup.id.y">;
+def ROCDL_ClusterWorkgroupIdZOp : ROCDL_SpecialIdRegisterOp<"cluster.workgroup.id.z">;
+
 def ROCDL_WaveId : ROCDL_SpecialIdRegisterOp<"wave.id">;
 def ROCDL_WavefrontSizeOp : ROCDL_SpecialIdRegisterOp<"wavefrontsize">;
 
@@ -586,6 +590,61 @@ def ROCDL_WaitTensorcntOp: ROCDL_ConcreteNonMemIntrOp<"s.wait.tensorcnt", [], 0,
   let assemblyFormat = "$count attr-dict";
 }
 
+def ROCDL_AsyncmarkOp : ROCDL_ConcreteNonMemIntrOp<"asyncmark", [], 0>,
+    Arguments<(ins)> {
+  let summary = "Mark the end of a group of asynchronous operations";
+  let description = [{
+      This operation, in conjunction with `rocdl.wait.asyncmark`, forms the
+      compiler-provided framework for tracking explicitly asynchronous
+      memory operations, such as copies to LDS that use async intrinsics
+      and gfx1250's tensor loads.
+
+      Details of its behavior can be found in
+      [the LLVM documentation on async tracking](/llvm/docs/AMDGPUAsyncOperations.rst).
+
+      See `rocdl.wait.asyncmark`'s documentation for a usage example.
+
+      Available on gfx9 and later.
+  }];
+  let results = (outs);
+  let assemblyFormat = "attr-dict";
+}
+
+def ROCDL_WaitAsyncmarkOp: ROCDL_ConcreteNonMemIntrOp<"wait.asyncmark", [], 0, [0], ["count"]>,
+    Arguments<(ins I16Attr:$count)> {
+  let summary = "Wait until N or fewer async operation groups are unexecuted";
+  let description = [{
+      This operation, along with `rocdl.asyncmark`, forms the compiler-provided
+      framework for explicitly tracking asynchronous operations.
+
+      At the point where a wait.asyncmark operation is executed, all async operations
+      that were parts of any async group (established by asyncmark in program order)
+      other than the `count` previously-added ones will have finished executing.
+
+      For more detail, including on how this mechanism composes with function calls,
+      see [the LLVM documentation on async tracking](/llvm/docs/AMDGPUAsyncOperations.rst).
+
+      Available on gfx9 and later.
+
+      Example:
+      ```mlir
+      rocdl.tensor.load.to.lds ...
+      rocdl.global.async.load.to.lds ...
+
+      rocdl.asyncmark
+
+      rocdl.tensor.load.to.lds ...
+      rocdl.global.async.load.to.lds ...
+
+      rocdl.asyncmark
+
+      rocdl.wait.asyncmark 1 // First group of loads completes after this
+      ```
+  }];
+  let results = (outs);
+  let assemblyFormat = "$count attr-dict";
+}
+
 def ROCDL_SetPrioOp : ROCDL_ConcreteNonMemIntrOp<"s.setprio", [], 0, [0], ["priority"]>,
   Arguments<(ins I16Attr:$priority)> {
   let assemblyFormat = "$priority attr-dict";
@@ -611,107 +670,139 @@ def ROCDL_IglpOpt : ROCDL_ConcreteNonMemIntrOp<"iglp.opt", [], 0, [0], ["variant
 //===---------------------------------------------------------------------===//
 // Xdlops intrinsics
 
-class ROCDL_Mfma_IntrOp<string mnemonic, list<Trait> traits = []> :
-  ROCDL_IntrOp<mnemonic, [], [], traits, 1>,
-  Arguments<(ins Variadic<LLVM_Type>:$args)> {
-  let assemblyFormat =
-    "$args attr-dict `:` functional-type($args, $res)";
+class ROCDL_Mfma_IntrOp<string mnemonic, Type ABType, Type CDType> :
+  ROCDL_IntrOp<mnemonic, [], [], [], 1, 0, 0, 0, [3, 4, 5], ["cbsz", "abid", "blgp"]>,
+  Arguments<(ins
+             ABType:$a,
+             ABType:$b,
+             CDType:$c,
+             I32Attr:$cbsz,
+             I32Attr:$abid,
+             I32Attr:$blgp)> {
+  let results = (outs CDType:$res);
+  let assemblyFormat = [{
+    $a `,` $b `,` $c `,` $cbsz `,` $abid `,` $blgp attr-dict `:` functional-type(operands, $res)
+  }];
 }
 
-//===---------------------------------------------------------------------===//
-// MFMA intrinsics with overloaded operands
-class ROCDL_Mfma_OO_IntrOp<string mnemonic, list<int> overloadedOperands,
-                        list<Trait> traits = []> :
-  ROCDL_IntrOp<mnemonic, [], overloadedOperands, traits, 1>,
-  Arguments<(ins Variadic<LLVM_Type>:$args)> {
-  let assemblyFormat =
-    "$args attr-dict `:` functional-type($args, $res)";
+class ROCDL_Mfma_Scale_IntrOp<string mnemonic, Type AB, Type CD> :
+  ROCDL_IntrOp<mnemonic, [], [0, 1], [], 1, 0, 0, 0, [3, 4, 5, 7], ["cbsz", "blgp", "opselA", "opselB"]>,
+  Arguments<(ins
+             LLVM_VectorOf<AB>:$a,
+             LLVM_VectorOf<AB>:$b,
+             LLVM_VectorOf<CD>:$c,
+             I32Attr:$cbsz,
+             I32Attr:$blgp,
+             I32Attr:$opselA,
+             I32:$scaleA,
+             I32Attr:$opselB,
+             I32:$scaleB)> {
+  let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
+  let assemblyFormat = [{
+    $a `,` $b `,` $c `,` $cbsz `,` $blgp `,` $opselA `,` $scaleA `,` $opselB `,` $scaleB attr-dict `:` functional-type(operands, $res)
+  }];
+}
+
+class ROCDL_Smfmac_IntrOp<string mnemonic, Type AType, Type BType, Type CDType> :
+  ROCDL_IntrOp<mnemonic, [], [], [], 1, 0, 0, 0, [4, 5], ["cbsz", "abid"]>,
+  Arguments<(ins
+             AType:$a,
+             BType:$b,
+             CDType:$c,
+             I32:$index,
+             I32Attr:$cbsz,
+             I32Attr:$abid)> {
+  let results = (outs CDType:$res);
+  let assemblyFormat = [{
+    $a `,` $b `,` $c `,` $index `,` $cbsz `,` $abid attr-dict `:` functional-type(operands, $res)
+  }];
 }
 
 // Available on all CDNA.
-def ROCDL_mfma_f32_32x32x1f32 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x1f32">;
-def ROCDL_mfma_f32_16x16x1f32 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x1f32">;
-def ROCDL_mfma_f32_4x4x1f32 : ROCDL_Mfma_IntrOp<"mfma.f32.4x4x1f32">;
-def ROCDL_mfma_f32_32x32x2f32 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x2f32">;
-def ROCDL_mfma_f32_16x16x4f32 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x4f32">;
-def ROCDL_mfma_f32_32x32x4f16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x4f16">;
-def ROCDL_mfma_f32_16x16x4f16 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x4f16">;
-def ROCDL_mfma_f32_4x4x4f16 : ROCDL_Mfma_IntrOp<"mfma.f32.4x4x4f16">;
-def ROCDL_mfma_f32_32x32x8f16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x8f16">;
-def ROCDL_mfma_f32_16x16x16f16 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x16f16">;
-def ROCDL_mfma_i32_32x32x4i8 : ROCDL_Mfma_IntrOp<"mfma.i32.32x32x4i8">;
-def ROCDL_mfma_i32_16x16x4i8 : ROCDL_Mfma_IntrOp<"mfma.i32.16x16x4i8">;
-def ROCDL_mfma_i32_4x4x4i8 : ROCDL_Mfma_IntrOp<"mfma.i32.4x4x4i8">;
-def ROCDL_mfma_i32_32x32x8i8 : ROCDL_Mfma_IntrOp<"mfma.i32.32x32x8i8">;
-def ROCDL_mfma_i32_16x16x16i8 : ROCDL_Mfma_IntrOp<"mfma.i32.16x16x16i8">;
-def ROCDL_mfma_f32_32x32x2bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x2bf16">;
-def ROCDL_mfma_f32_16x16x2bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x2bf16">;
-def ROCDL_mfma_f32_4x4x2bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.4x4x2bf16">;
-def ROCDL_mfma_f32_32x32x4bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x4bf16">;
-def ROCDL_mfma_f32_16x16x8bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x8bf16">;
+def ROCDL_mfma_f32_32x32x1f32 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x1f32", /*Type AB=*/F32, /*Type CD=*/ROCDL_ConcreteVector<F32, 32>>;
+def ROCDL_mfma_f32_16x16x1f32 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x1f32", F32, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_mfma_f32_4x4x1f32 : ROCDL_Mfma_IntrOp<"mfma.f32.4x4x1f32", F32, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_mfma_f32_32x32x2f32 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x2f32", F32, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_mfma_f32_16x16x4f32 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x4f32", F32, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_mfma_f32_32x32x4f16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x4f16", ROCDL_ConcreteVector<F16, 4>, ROCDL_ConcreteVector<F32, 32>>;
+def ROCDL_mfma_f32_16x16x4f16 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x4f16", ROCDL_ConcreteVector<F16, 4>, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_mfma_f32_4x4x4f16 : ROCDL_Mfma_IntrOp<"mfma.f32.4x4x4f16", ROCDL_ConcreteVector<F16, 4>, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_mfma_f32_32x32x8f16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x8f16", ROCDL_ConcreteVector<F16, 4>, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_mfma_f32_16x16x16f16 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x16f16", ROCDL_ConcreteVector<F16, 4>, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_mfma_i32_32x32x4i8 : ROCDL_Mfma_IntrOp<"mfma.i32.32x32x4i8", I32, ROCDL_ConcreteVector<I32, 32>>;
+def ROCDL_mfma_i32_16x16x4i8 : ROCDL_Mfma_IntrOp<"mfma.i32.16x16x4i8", I32, ROCDL_ConcreteVector<I32, 16>>;
+def ROCDL_mfma_i32_4x4x4i8 : ROCDL_Mfma_IntrOp<"mfma.i32.4x4x4i8", I32, ROCDL_ConcreteVector<I32, 4>>;
+def ROCDL_mfma_i32_32x32x8i8 : ROCDL_Mfma_IntrOp<"mfma.i32.32x32x8i8", I32, ROCDL_ConcreteVector<I32, 16>>;
+def ROCDL_mfma_i32_16x16x16i8 : ROCDL_Mfma_IntrOp<"mfma.i32.16x16x16i8", I32, ROCDL_ConcreteVector<I32, 4>>;
+def ROCDL_mfma_f32_32x32x2bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x2bf16", ROCDL_ConcreteVector<I16, 2>, ROCDL_ConcreteVector<F32, 32>>;
+def ROCDL_mfma_f32_16x16x2bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x2bf16", ROCDL_ConcreteVector<I16, 2>, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_mfma_f32_4x4x2bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.4x4x2bf16", ROCDL_ConcreteVector<I16, 2>, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_mfma_f32_32x32x4bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x4bf16", ROCDL_ConcreteVector<I16, 2>, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_mfma_f32_16x16x8bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x8bf16", ROCDL_ConcreteVector<I16, 2>, ROCDL_ConcreteVector<F32, 4>>;
 // New in gfx90a.
-def ROCDL_mfma_f32_32x32x4bf16_1k : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x4bf16.1k">;
-def ROCDL_mfma_f32_16x16x4bf16_1k : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x4bf16.1k">;
-def ROCDL_mfma_f32_4x4x4bf16_1k : ROCDL_Mfma_IntrOp<"mfma.f32.4x4x4bf16.1k">;
-def ROCDL_mfma_f32_32x32x8bf16_1k : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x8bf16.1k">;
-def ROCDL_mfma_f32_16x16x16bf16_1k : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x16bf16.1k">;
+def ROCDL_mfma_f32_32x32x4bf16_1k : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x4bf16.1k", ROCDL_ConcreteVector<I16, 4>, ROCDL_ConcreteVector<F32, 32>>;
+def ROCDL_mfma_f32_16x16x4bf16_1k : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x4bf16.1k", ROCDL_ConcreteVector<I16, 4>, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_mfma_f32_4x4x4bf16_1k : ROCDL_Mfma_IntrOp<"mfma.f32.4x4x4bf16.1k", ROCDL_ConcreteVector<I16, 4>, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_mfma_f32_32x32x8bf16_1k : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x8bf16.1k", ROCDL_ConcreteVector<I16, 4>, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_mfma_f32_16x16x16bf16_1k : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x16bf16.1k", ROCDL_ConcreteVector<I16, 4>, ROCDL_ConcreteVector<F32, 4>>;
 // Note: in gfx94x, unlike in gfx90a, the f64 xdlops use the "blgp" argument as
 // a NEG bitfield. See IntrinsicsAMDGPU.td for more info.
-def ROCDL_mfma_f64_16x16x4f64 : ROCDL_Mfma_IntrOp<"mfma.f64.16x16x4f64">;
-def ROCDL_mfma_f64_4x4x4f64 : ROCDL_Mfma_IntrOp<"mfma.f64.4x4x4f64">;
+def ROCDL_mfma_f64_16x16x4f64 : ROCDL_Mfma_IntrOp<"mfma.f64.16x16x4f64", F64, ROCDL_ConcreteVector<F64, 4>>;
+def ROCDL_mfma_f64_4x4x4f64 : ROCDL_Mfma_IntrOp<"mfma.f64.4x4x4f64", F64, F64>;
 // New in gfx94x.
-def ROCDL_mfma_i32_16x16x32_i8 : ROCDL_Mfma_IntrOp<"mfma.i32.16x16x32.i8">;
-def ROCDL_mfma_i32_32x32x16_i8 : ROCDL_Mfma_IntrOp<"mfma.i32.32x32x16.i8">;
-def ROCDL_mfma_f32_16x16x8_xf32 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x8.xf32">;
-def ROCDL_mfma_f32_32x32x4_xf32 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x4.xf32">;
-def ROCDL_mfma_f32_16x16x32_bf8_bf8 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x32.bf8.bf8">;
-def ROCDL_mfma_f32_16x16x32_bf8_fp8 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x32.bf8.fp8">;
-def ROCDL_mfma_f32_16x16x32_fp8_bf8 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x32.fp8.bf8">;
-def ROCDL_mfma_f32_16x16x32_fp8_fp8 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x32.fp8.fp8">;
-def ROCDL_mfma_f32_32x32x16_bf8_bf8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.bf8.bf8">;
-def ROCDL_mfma_f32_32x32x16_bf8_fp8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.bf8.fp8">;
-def ROCDL_mfma_f32_32x32x16_fp8_bf8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.fp8.bf8">;
-def ROCDL_mfma_f32_32x32x16_fp8_fp8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.fp8.fp8">;
+def ROCDL_mfma_i32_16x16x32_i8 : ROCDL_Mfma_IntrOp<"mfma.i32.16x16x32.i8", I64, ROCDL_ConcreteVector<I32, 4>>;
+def ROCDL_mfma_i32_32x32x16_i8 : ROCDL_Mfma_IntrOp<"mfma.i32.32x32x16.i8", I64, ROCDL_ConcreteVector<I32, 16>>;
+def ROCDL_mfma_f32_16x16x8_xf32 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x8.xf32", ROCDL_ConcreteVector<F32, 2>, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_mfma_f32_32x32x4_xf32 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x4.xf32", ROCDL_ConcreteVector<F32, 2>, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_mfma_f32_16x16x32_bf8_bf8 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x32.bf8.bf8", I64, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_mfma_f32_16x16x32_bf8_fp8 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x32.bf8.fp8", I64, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_mfma_f32_16x16x32_fp8_bf8 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x32.fp8.bf8", I64, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_mfma_f32_16x16x32_fp8_fp8 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x32.fp8.fp8", I64, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_mfma_f32_32x32x16_bf8_bf8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.bf8.bf8", I64, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_mfma_f32_32x32x16_bf8_fp8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.bf8.fp8", I64, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_mfma_f32_32x32x16_fp8_bf8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.fp8.bf8", I64, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_mfma_f32_32x32x16_fp8_fp8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.fp8.fp8", I64, ROCDL_ConcreteVector<F32, 16>>;
 // New in gfx950.
-def ROCDL_mfma_f32_16x16x32_bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x32.bf16">;
-def ROCDL_mfma_i32_16x16x64_i8 : ROCDL_Mfma_IntrOp<"mfma.i32.16x16x64.i8">;
-def ROCDL_mfma_f32_16x16x32_f16 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x32.f16">;
-def ROCDL_mfma_f32_32x32x16_bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.bf16">;
-def ROCDL_mfma_i32_32x32x32_i8 : ROCDL_Mfma_IntrOp<"mfma.i32.32x32x32.i8">;
-def ROCDL_mfma_f32_32x32x16_f16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.f16">;
-def ROCDL_mfma_scale_f32_16x16x128_f8f6f4 : ROCDL_Mfma_OO_IntrOp<"mfma.scale.f32.16x16x128.f8f6f4", [0,1]>;
-def ROCDL_mfma_scale_f32_32x32x64_f8f6f4 : ROCDL_Mfma_OO_IntrOp<"mfma.scale.f32.32x32x64.f8f6f4", [0,1]>;
+def ROCDL_mfma_f32_16x16x32_bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x32.bf16", ROCDL_ConcreteVector<BF16, 8>, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_mfma_i32_16x16x64_i8 : ROCDL_Mfma_IntrOp<"mfma.i32.16x16x64.i8", ROCDL_ConcreteVector<I32, 4>, ROCDL_ConcreteVector<I32, 4>>;
+def ROCDL_mfma_f32_16x16x32_f16 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x32.f16", ROCDL_ConcreteVector<F16, 8>, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_mfma_f32_32x32x16_bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.bf16", ROCDL_ConcreteVector<BF16, 8>, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_mfma_i32_32x32x32_i8 : ROCDL_Mfma_IntrOp<"mfma.i32.32x32x32.i8", ROCDL_ConcreteVector<I32, 4>, ROCDL_ConcreteVector<I32, 16>>;
+def ROCDL_mfma_f32_32x32x16_f16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.f16", ROCDL_ConcreteVector<F16, 8>, ROCDL_ConcreteVector<F32, 16>>;
+
+def ROCDL_mfma_scale_f32_16x16x128_f8f6f4 : ROCDL_Mfma_Scale_IntrOp<"mfma.scale.f32.16x16x128.f8f6f4", I32, F32>;
+def ROCDL_mfma_scale_f32_32x32x64_f8f6f4 : ROCDL_Mfma_Scale_IntrOp<"mfma.scale.f32.32x32x64.f8f6f4", I32, F32>;
 
 // 2:4 Sparsity ops (GFX94x)
-def ROCDL_smfmac_f32_16x16x32_f16 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x32.f16">;
-def ROCDL_smfmac_f32_32x32x16_f16 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x16.f16">;
-def ROCDL_smfmac_f32_16x16x32_bf16 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x32.bf16">;
-def ROCDL_smfmac_f32_32x32x16_bf16 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x16.bf16">;
-def ROCDL_smfmac_i32_16x16x64_i8 : ROCDL_Mfma_IntrOp<"smfmac.i32.16x16x64.i8">;
-def ROCDL_smfmac_i32_32x32x32_i8 : ROCDL_Mfma_IntrOp<"smfmac.i32.32x32x32.i8">;
-def ROCDL_smfmac_f32_16x16x64_bf8_bf8 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x64.bf8.bf8">;
-def ROCDL_smfmac_f32_16x16x64_bf8_fp8 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x64.bf8.fp8">;
-def ROCDL_smfmac_f32_16x16x64_fp8_bf8 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x64.fp8.bf8">;
-def ROCDL_smfmac_f32_16x16x64_fp8_fp8 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x64.fp8.fp8">;
-def ROCDL_smfmac_f32_32x32x32_bf8_bf8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x32.bf8.bf8">;
-def ROCDL_smfmac_f32_32x32x32_bf8_fp8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x32.bf8.fp8">;
-def ROCDL_smfmac_f32_32x32x32_fp8_bf8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x32.fp8.bf8">;
-def ROCDL_smfmac_f32_32x32x32_fp8_fp8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x32.fp8.fp8">;
+def ROCDL_smfmac_f32_16x16x32_f16 : ROCDL_Smfmac_IntrOp<"smfmac.f32.16x16x32.f16", ROCDL_ConcreteVector<F16, 4>, ROCDL_ConcreteVector<F16, 8>, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_smfmac_f32_32x32x16_f16 : ROCDL_Smfmac_IntrOp<"smfmac.f32.32x32x16.f16", ROCDL_ConcreteVector<F16, 4>, ROCDL_ConcreteVector<F16, 8>, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_smfmac_f32_16x16x32_bf16 : ROCDL_Smfmac_IntrOp<"smfmac.f32.16x16x32.bf16", ROCDL_ConcreteVector<I16, 4>, ROCDL_ConcreteVector<I16, 8>, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_smfmac_f32_32x32x16_bf16 : ROCDL_Smfmac_IntrOp<"smfmac.f32.32x32x16.bf16", ROCDL_ConcreteVector<I16, 4>, ROCDL_ConcreteVector<I16, 8>, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_smfmac_i32_16x16x64_i8 : ROCDL_Smfmac_IntrOp<"smfmac.i32.16x16x64.i8", ROCDL_ConcreteVector<I32, 2>, ROCDL_ConcreteVector<I32, 4>, ROCDL_ConcreteVector<I32, 4>>;
+def ROCDL_smfmac_i32_32x32x32_i8 : ROCDL_Smfmac_IntrOp<"smfmac.i32.32x32x32.i8", ROCDL_ConcreteVector<I32, 2>, ROCDL_ConcreteVector<I32, 4>, ROCDL_ConcreteVector<I32, 16>>;
+def ROCDL_smfmac_f32_16x16x64_bf8_bf8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.16x16x64.bf8.bf8", ROCDL_ConcreteVector<I32, 2>, ROCDL_ConcreteVector<I32, 4>, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_smfmac_f32_16x16x64_bf8_fp8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.16x16x64.bf8.fp8", ROCDL_ConcreteVector<I32, 2>, ROCDL_ConcreteVector<I32, 4>, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_smfmac_f32_16x16x64_fp8_bf8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.16x16x64.fp8.bf8", ROCDL_ConcreteVector<I32, 2>, ROCDL_ConcreteVector<I32, 4>, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_smfmac_f32_16x16x64_fp8_fp8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.16x16x64.fp8.fp8", ROCDL_ConcreteVector<I32, 2>, ROCDL_ConcreteVector<I32, 4>, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_smfmac_f32_32x32x32_bf8_bf8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.32x32x32.bf8.bf8", ROCDL_ConcreteVector<I32, 2>, ROCDL_ConcreteVector<I32, 4>, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_smfmac_f32_32x32x32_bf8_fp8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.32x32x32.bf8.fp8", ROCDL_ConcreteVector<I32, 2>, ROCDL_ConcreteVector<I32, 4>, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_smfmac_f32_32x32x32_fp8_bf8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.32x32x32.fp8.bf8", ROCDL_ConcreteVector<I32, 2>, ROCDL_ConcreteVector<I32, 4>, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_smfmac_f32_32x32x32_fp8_fp8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.32x32x32.fp8.fp8", ROCDL_ConcreteVector<I32, 2>, ROCDL_ConcreteVector<I32, 4>, ROCDL_ConcreteVector<F32, 16>>;
 // New in gfx950.
-def ROCDL_smfmac_f32_16x16x64_bf16 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x64.bf16">;
-def ROCDL_smfmac_f32_16x16x64_f16 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x64.f16">;
-def ROCDL_smfmac_i32_16x16x128_i8 : ROCDL_Mfma_IntrOp<"smfmac.i32.16x16x128.i8">;
-def ROCDL_smfmac_f32_16x16x128_bf8_bf8 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x128.bf8.bf8">;
-def ROCDL_smfmac_f32_16x16x128_bf8_fp8 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x128.bf8.fp8">;
-def ROCDL_smfmac_f32_16x16x128_fp8_bf8 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x128.fp8.bf8">;
-def ROCDL_smfmac_f32_16x16x128_fp8_fp8 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x128.fp8.fp8">;
-def ROCDL_smfmac_f32_32x32x32_bf16 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x32.bf16">;
-def ROCDL_smfmac_f32_32x32x32_f16 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x32.f16">;
-def ROCDL_smfmac_i32_32x32x64_i8 : ROCDL_Mfma_IntrOp<"smfmac.i32.32x32x64.i8">;
-def ROCDL_smfmac_f32_32x32x64_bf8_bf8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x64.bf8.bf8">;
-def ROCDL_smfmac_f32_32x32x64_bf8_fp8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x64.bf8.fp8">;
-def ROCDL_smfmac_f32_32x32x64_fp8_bf8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x64.fp8.bf8">;
-def ROCDL_smfmac_f32_32x32x64_fp8_fp8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x64.fp8.fp8">;
+def ROCDL_smfmac_f32_16x16x64_bf16 : ROCDL_Smfmac_IntrOp<"smfmac.f32.16x16x64.bf16", ROCDL_ConcreteVector<BF16, 8>, ROCDL_ConcreteVector<BF16, 16>, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_smfmac_f32_16x16x64_f16 : ROCDL_Smfmac_IntrOp<"smfmac.f32.16x16x64.f16", ROCDL_ConcreteVector<F16, 8>, ROCDL_ConcreteVector<F16, 16>, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_smfmac_i32_16x16x128_i8 : ROCDL_Smfmac_IntrOp<"smfmac.i32.16x16x128.i8", ROCDL_ConcreteVector<I32, 4>, ROCDL_ConcreteVector<I32, 8>, ROCDL_ConcreteVector<I32, 4>>;
+def ROCDL_smfmac_f32_16x16x128_bf8_bf8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.16x16x128.bf8.bf8", ROCDL_ConcreteVector<I32, 4>, ROCDL_ConcreteVector<I32, 8>, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_smfmac_f32_16x16x128_bf8_fp8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.16x16x128.bf8.fp8", ROCDL_ConcreteVector<I32, 4>, ROCDL_ConcreteVector<I32, 8>, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_smfmac_f32_16x16x128_fp8_bf8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.16x16x128.fp8.bf8", ROCDL_ConcreteVector<I32, 4>, ROCDL_ConcreteVector<I32, 8>, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_smfmac_f32_16x16x128_fp8_fp8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.16x16x128.fp8.fp8", ROCDL_ConcreteVector<I32, 4>, ROCDL_ConcreteVector<I32, 8>, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_smfmac_f32_32x32x32_bf16 : ROCDL_Smfmac_IntrOp<"smfmac.f32.32x32x32.bf16", ROCDL_ConcreteVector<BF16, 8>, ROCDL_ConcreteVector<BF16, 16>, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_smfmac_f32_32x32x32_f16 : ROCDL_Smfmac_IntrOp<"smfmac.f32.32x32x32.f16", ROCDL_ConcreteVector<F16, 8>, ROCDL_ConcreteVector<F16, 16>, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_smfmac_i32_32x32x64_i8 : ROCDL_Smfmac_IntrOp<"smfmac.i32.32x32x64.i8", ROCDL_ConcreteVector<I32, 4>, ROCDL_ConcreteVector<I32, 8>, ROCDL_ConcreteVector<I32, 16>>;
+def ROCDL_smfmac_f32_32x32x64_bf8_bf8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.32x32x64.bf8.bf8", ROCDL_ConcreteVector<I32, 4>, ROCDL_ConcreteVector<I32, 8>, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_smfmac_f32_32x32x64_bf8_fp8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.32x32x64.bf8.fp8", ROCDL_ConcreteVector<I32, 4>, ROCDL_ConcreteVector<I32, 8>, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_smfmac_f32_32x32x64_fp8_bf8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.32x32x64.fp8.bf8", ROCDL_ConcreteVector<I32, 4>, ROCDL_ConcreteVector<I32, 8>, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_smfmac_f32_32x32x64_fp8_fp8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.32x32x64.fp8.fp8", ROCDL_ConcreteVector<I32, 4>, ROCDL_ConcreteVector<I32, 8>, ROCDL_ConcreteVector<F32, 16>>;
 
 
 //===---------------------------------------------------------------------===//

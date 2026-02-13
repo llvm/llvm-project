@@ -15,7 +15,6 @@ define void @test1() {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[FOR_END41:%.*]], label [[VECTOR_PH]]
 ; CHECK:       for.end41:
-; CHECK-NEXT:    [[DOTLCSSA92:%.*]] = phi i16 [ 1, [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret void
 ;
 entry:

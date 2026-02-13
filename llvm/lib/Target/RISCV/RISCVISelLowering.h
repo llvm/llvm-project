@@ -35,8 +35,8 @@ public:
 
   const RISCVSubtarget &getSubtarget() const { return Subtarget; }
 
-  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
-                          MachineFunction &MF,
+  void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
+                          const CallBase &I, MachineFunction &MF,
                           unsigned Intrinsic) const override;
   bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
                              unsigned AS,
@@ -409,7 +409,8 @@ public:
 
   /// If the target has a standard location for the stack protector cookie,
   /// returns the address of that location. Otherwise, returns nullptr.
-  Value *getIRStackGuard(IRBuilderBase &IRB) const override;
+  Value *getIRStackGuard(IRBuilderBase &IRB,
+                         const LibcallLoweringInfo &Libcalls) const override;
 
   /// Returns whether or not generating a interleaved load/store intrinsic for
   /// this type will be legal.

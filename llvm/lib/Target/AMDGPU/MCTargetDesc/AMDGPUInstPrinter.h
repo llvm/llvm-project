@@ -235,6 +235,8 @@ protected:
                    raw_ostream &O);
   void printSendMsg(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
+  void printWaitEvent(const MCInst *MI, unsigned OpNo,
+                      const MCSubtargetInfo &STI, raw_ostream &O);
   void printSwizzle(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
   void printSWaitCnt(const MCInst *MI, unsigned OpNo,

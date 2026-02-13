@@ -644,10 +644,9 @@ void DwarfCompileUnit::constructScopeDIE(LexicalScope *Scope,
     return;
 
   // Emit lexical blocks.
-  DIE *ScopeDIE = constructLexicalScopeDIE(Scope);
+  DIE *ScopeDIE = getOrCreateLexicalBlockDIE(Scope, ParentScopeDIE);
   assert(ScopeDIE && "Scope DIE should not be null.");
 
-  ParentScopeDIE.addChild(ScopeDIE);
   createAndAddScopeChildren(Scope, *ScopeDIE);
 }
 
@@ -768,14 +767,15 @@ DIE *DwarfCompileUnit::constructInlinedScopeDIE(LexicalScope *Scope,
   return ScopeDIE;
 }
 
-// Construct new DW_TAG_lexical_block for this scope and attach
-// DW_AT_low_pc/DW_AT_high_pc labels.
-DIE *DwarfCompileUnit::constructLexicalScopeDIE(LexicalScope *Scope) {
+DIE *DwarfCompileUnit::getOrCreateLexicalBlockDIE(LexicalScope *Scope,
+                                                  DIE &ParentScopeDIE) {
   if (DD->isLexicalScopeDIENull(Scope))
     return nullptr;
   const auto *DS = Scope->getScopeNode();
 
   auto ScopeDIE = DIE::get(DIEValueAllocator, dwarf::DW_TAG_lexical_block);
+  ParentScopeDIE.addChild(ScopeDIE);
+
   if (Scope->isAbstractScope()) {
     assert(!getAbstractScopeDIEs().count(DS) &&
            "Abstract DIE for this scope exists!");
@@ -1141,7 +1141,7 @@ DIE &DwarfCompileUnit::constructSubprogramScopeDIE(const DISubprogram *Sub,
   }
 
   // If this is a variadic function, add an unspecified parameter.
-  DITypeRefArray FnArgs = Sub->getType()->getTypeArray();
+  DITypeArray FnArgs = Sub->getType()->getTypeArray();
 
   // If we have a single element of null, it is a function that returns void.
   // If we have more than one elements and the last one is null, it is a
@@ -1839,7 +1839,7 @@ void DwarfCompileUnit::createBaseTypeDIEs() {
   }
 }
 
-DIE *DwarfCompileUnit::getLexicalBlockDIE(const DILexicalBlock *LB) {
+DIE *DwarfCompileUnit::getLocalContextDIE(const DILexicalBlock *LB) {
   // Assume if there is an abstract tree all the DIEs are already emitted.
   bool isAbstract = getAbstractScopeDIEs().count(LB->getSubprogram());
   if (isAbstract) {
@@ -1849,8 +1849,14 @@ DIE *DwarfCompileUnit::getLexicalBlockDIE(const DILexicalBlock *LB) {
   }
   assert(!isAbstract && "Missed lexical block DIE in abstract tree!");
 
-  // Return a concrete DIE if it exists or nullptr otherwise.
-  return LexicalBlockDIEs.lookup(LB);
+  // Check if we have a concrete DIE.
+  if (auto It = LexicalBlockDIEs.find(LB); It != LexicalBlockDIEs.end())
+    return It->second;
+
+  // If nothing available found, we cannot just create a new lexical block,
+  // because it isn't known where to put it into the DIE tree.
+  // So, we may only try to find the most close avaiable parent DIE.
+  return getOrCreateContextDIE(LB->getScope()->getNonLexicalBlockFileScope());
 }
 
 DIE *DwarfCompileUnit::getOrCreateContextDIE(const DIScope *Context) {
@@ -1858,7 +1864,7 @@ DIE *DwarfCompileUnit::getOrCreateContextDIE(const DIScope *Context) {
     if (auto *LFScope = dyn_cast<DILexicalBlockFile>(Context))
       Context = LFScope->getNonLexicalBlockFileScope();
     if (auto *LScope = dyn_cast<DILexicalBlock>(Context))
-      return getLexicalBlockDIE(LScope);
+      return getLocalContextDIE(LScope);
 
     // Otherwise the context must be a DISubprogram.
     auto *SPScope = cast<DISubprogram>(Context);

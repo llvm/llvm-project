@@ -571,6 +571,8 @@ bool isTypeFoldingSupported(unsigned Opcode);
 
 // Get loop controls from llvm.loop. metadata.
 SmallVector<unsigned, 1> getSpirvLoopControlOperandsFromLoopMetadata(Loop *L);
+SmallVector<unsigned, 1>
+getSpirvLoopControlOperandsFromLoopMetadata(MDNode *LoopMD);
 
 // Traversing [g]MIR accounting for pseudo-instructions.
 MachineInstr *passCopy(MachineInstr *Def, const MachineRegisterInfo *MRI);

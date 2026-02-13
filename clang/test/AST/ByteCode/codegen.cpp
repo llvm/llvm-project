@@ -27,6 +27,11 @@ S s;
 // CHECK: @sp = constant ptr getelementptr (i8, ptr @s, i64 16), align 8
 float &sp = s.c[3];
 
+// CHECK: @PR9558 = global float 0.000000e+0
+float PR9558 = reinterpret_cast<const float&>("asd");
+// CHECK: @i = constant ptr @PR9558
+int &i = reinterpret_cast<int&>(PR9558);
+
 namespace NearlyZeroInit {
   // CHECK: @_ZN14NearlyZeroInit1bE ={{.*}} global{{.*}} { i32, <{ i32, [2147483647 x i32] }> } { i32 1, <{ i32, [2147483647 x i32] }> <{ i32 2, [2147483647 x i32] zeroinitializer }> }{{.*}}
   struct B { int n; int arr[1024 * 1024 * 1024 * 2u]; } b = {1, {2}};

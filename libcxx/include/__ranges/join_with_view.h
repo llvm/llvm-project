@@ -372,7 +372,7 @@ public:
     return __tmp;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __iterator& __y)
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __iterator& __y)
     requires __ref_is_glvalue && forward_range<_Base> && equality_comparable<_InnerIter>
   {
     return __x.__outer_it_ == __y.__outer_it_ && __x.__inner_it_ == __y.__inner_it_;
@@ -420,8 +420,7 @@ public:
 
   template <bool _OtherConst>
     requires sentinel_for<sentinel_t<_Base>, iterator_t<__maybe_const<_OtherConst, _View>>>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr bool
-  operator==(const __iterator<_OtherConst>& __x, const __sentinel& __y) {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator<_OtherConst>& __x, const __sentinel& __y) {
     return __get_outer_of(__x) == __y.__end_;
   }
 };

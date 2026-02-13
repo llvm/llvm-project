@@ -1229,7 +1229,7 @@ template <class ELFT> void ObjFile<ELFT>::importCmseSymbols() {
       continue;
     }
 
-    if (ctx.symtab->cmseImportLib.count(sym->getName())) {
+    if (ctx.symtab->cmseImportLib.contains(sym->getName())) {
       Err(ctx) << "CMSE symbol '" << sym->getName()
                << "' is multiply defined in import library '" << this << "'";
       continue;
@@ -1343,7 +1343,7 @@ ArmCmseSGSection::ArmCmseSGSection(Ctx &ctx)
     addSGVeneer(cast<Defined>(entryFunc.acleSeSym),
                 cast<Defined>(entryFunc.sym));
   for (auto &[_, sym] : ctx.symtab->cmseImportLib) {
-    if (!ctx.symtab->inCMSEOutImpLib.count(sym->getName()))
+    if (!ctx.symtab->inCMSEOutImpLib.contains(sym->getName()))
       Warn(ctx)
           << "entry function '" << sym->getName()
           << "' from CMSE import library is not present in secure application";
@@ -1352,7 +1352,7 @@ ArmCmseSGSection::ArmCmseSGSection(Ctx &ctx)
   if (!ctx.symtab->cmseImportLib.empty() && ctx.arg.cmseOutputLib.empty()) {
     for (auto &[_, entryFunc] : ctx.symtab->cmseSymMap) {
       Symbol *sym = entryFunc.sym;
-      if (!ctx.symtab->inCMSEOutImpLib.count(sym->getName()))
+      if (!ctx.symtab->inCMSEOutImpLib.contains(sym->getName()))
         Warn(ctx) << "new entry function '" << sym->getName()
                   << "' introduced but no output import library specified";
     }
@@ -1361,7 +1361,7 @@ ArmCmseSGSection::ArmCmseSGSection(Ctx &ctx)
 
 void ArmCmseSGSection::addSGVeneer(Symbol *acleSeSym, Symbol *sym) {
   entries.emplace_back(acleSeSym, sym);
-  if (ctx.symtab->cmseImportLib.count(sym->getName()))
+  if (ctx.symtab->cmseImportLib.contains(sym->getName()))
     ctx.symtab->inCMSEOutImpLib[sym->getName()] = true;
   // Symbol addresses different, nothing to do.
   if (acleSeSym->file != sym->file ||

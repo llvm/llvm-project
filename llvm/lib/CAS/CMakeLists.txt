@@ -6,10 +6,13 @@ add_llvm_component_library(LLVMCAS
   ActionCache.cpp
   ActionCaches.cpp
   BuiltinCAS.cpp
+  BuiltinObjectHasher.cpp
   BuiltinUnifiedCASDatabases.cpp
+  CASNodeSchema.cpp
   DatabaseFile.cpp
   InMemoryCAS.cpp
   MappedFileRegionArena.cpp
+  NamedValuesSchema.cpp
   ObjectStore.cpp
   OnDiskCAS.cpp
   OnDiskCASLogger.cpp

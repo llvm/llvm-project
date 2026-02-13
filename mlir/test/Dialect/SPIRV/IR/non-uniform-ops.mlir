@@ -21,7 +21,7 @@ func.func @group_non_uniform_ballot(%predicate: i1) -> vector<4xi32> {
 // -----
 
 func.func @group_non_uniform_ballot(%predicate: i1) -> vector<4xsi32> {
-  // expected-error @+1 {{op result #0 must be vector of 8/16/32/64-bit signless/unsigned integer values of length 4, but got 'vector<4xsi32>'}}
+  // expected-error @+1 {{op result #0 must be vector of 8/16/32/64-bit signless/unsigned integer values of length 4 of ranks 1, but got 'vector<4xsi32>'}}
   %0 = spirv.GroupNonUniformBallot <Workgroup> %predicate : vector<4xsi32>
   return %0: vector<4xsi32>
 }
@@ -185,7 +185,7 @@ func.func @group_non_uniform_fmul_clustered_reduce(%val: vector<2xf32>) -> vecto
 // -----
 
 func.func @group_non_uniform_bf16_fmul_reduce(%val: bf16) -> bf16 {
-  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4/8/16, but got 'bf16'}}
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1, but got 'bf16'}}
   %0 = spirv.GroupNonUniformFMul <Workgroup> <Reduce> %val : bf16 -> bf16
   return %0: bf16
 }
@@ -206,7 +206,7 @@ func.func @group_non_uniform_fmax_reduce(%val: f32) -> f32 {
 // -----
 
 func.func @group_non_uniform_bf16_fmax_reduce(%val: bf16) -> bf16 {
-  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4/8/16, but got 'bf16'}}
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1, but got 'bf16'}}
   %0 = spirv.GroupNonUniformFMax <Workgroup> <Reduce> %val : bf16 -> bf16
   return %0: bf16
 }
@@ -511,7 +511,7 @@ func.func @group_non_uniform_bitwise_and(%val: i32) -> i32 {
 // -----
 
 func.func @group_non_uniform_bitwise_and(%val: i1) -> i1 {
-  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4/8/16, but got 'i1'}}
+  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4/8/16 of ranks 1, but got 'i1'}}
   %0 = spirv.GroupNonUniformBitwiseAnd <Workgroup> <Reduce> %val : i1 -> i1
   return %0: i1
 }
@@ -532,7 +532,7 @@ func.func @group_non_uniform_bitwise_or(%val: i32) -> i32 {
 // -----
 
 func.func @group_non_uniform_bitwise_or(%val: i1) -> i1 {
-  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4/8/16, but got 'i1'}}
+  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4/8/16 of ranks 1, but got 'i1'}}
   %0 = spirv.GroupNonUniformBitwiseOr <Workgroup> <Reduce> %val : i1 -> i1
   return %0: i1
 }
@@ -553,7 +553,7 @@ func.func @group_non_uniform_bitwise_xor(%val: i32) -> i32 {
 // -----
 
 func.func @group_non_uniform_bitwise_xor(%val: i1) -> i1 {
-  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4/8/16, but got 'i1'}}
+  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4/8/16 of ranks 1, but got 'i1'}}
   %0 = spirv.GroupNonUniformBitwiseXor <Workgroup> <Reduce> %val : i1 -> i1
   return %0: i1
 }
@@ -574,7 +574,7 @@ func.func @group_non_uniform_logical_and(%val: i1) -> i1 {
 // -----
 
 func.func @group_non_uniform_logical_and(%val: i32) -> i32 {
-  // expected-error @+1 {{operand #0 must be bool or fixed-length vector of bool values of length 2/3/4/8/16, but got 'i32'}}
+  // expected-error @+1 {{operand #0 must be bool or fixed-length vector of bool values of length 2/3/4/8/16 of ranks 1, but got 'i32'}}
   %0 = spirv.GroupNonUniformLogicalAnd <Workgroup> <Reduce> %val : i32 -> i32
   return %0: i32
 }
@@ -595,7 +595,7 @@ func.func @group_non_uniform_logical_or(%val: i1) -> i1 {
 // -----
 
 func.func @group_non_uniform_logical_or(%val: i32) -> i32 {
-  // expected-error @+1 {{operand #0 must be bool or fixed-length vector of bool values of length 2/3/4/8/16, but got 'i32'}}
+  // expected-error @+1 {{operand #0 must be bool or fixed-length vector of bool values of length 2/3/4/8/16 of ranks 1, but got 'i32'}}
   %0 = spirv.GroupNonUniformLogicalOr <Workgroup> <Reduce> %val : i32 -> i32
   return %0: i32
 }
@@ -616,7 +616,7 @@ func.func @group_non_uniform_logical_xor(%val: i1) -> i1 {
 // -----
 
 func.func @group_non_uniform_logical_xor(%val: i32) -> i32 {
-  // expected-error @+1 {{operand #0 must be bool or fixed-length vector of bool values of length 2/3/4/8/16, but got 'i32'}}
+  // expected-error @+1 {{operand #0 must be bool or fixed-length vector of bool values of length 2/3/4/8/16 of ranks 1, but got 'i32'}}
   %0 = spirv.GroupNonUniformLogicalXor <Workgroup> <Reduce> %val : i32 -> i32
   return %0: i32
 }
@@ -769,28 +769,29 @@ func.func @group_non_uniform_all_equal(%value: f32) -> i1 {
 
 // CHECK-LABEL: @group_non_uniform_quad_swap
 func.func @group_non_uniform_quad_swap(%value: f32) -> f32 {
-  %dir = spirv.Constant 0 : i32
-  // CHECK: %{{.+}} = spirv.GroupNonUniformQuadSwap <Subgroup> %{{.+}} %{{.+}} : f32, i32
-  %0 = spirv.GroupNonUniformQuadSwap <Subgroup> %value %dir : f32, i32
-  return %0: f32
+  // CHECK: %{{.+}} = spirv.GroupNonUniformQuadSwap <Subgroup> <Horizontal> %{{.+}} : f32
+  %0 = spirv.GroupNonUniformQuadSwap <Subgroup> <Horizontal> %value : f32
+  // CHECK: %{{.+}} = spirv.GroupNonUniformQuadSwap <Subgroup> <Vertical> %{{.+}} : f32
+  %1 = spirv.GroupNonUniformQuadSwap <Subgroup> <Vertical> %0 : f32
+  // CHECK: %{{.+}} = spirv.GroupNonUniformQuadSwap <Subgroup> <Diagonal> %{{.+}} : f32
+  %2 = spirv.GroupNonUniformQuadSwap <Subgroup> <Diagonal> %1 : f32
+  return %2: f32
 }
 
 // -----
 
 // CHECK-LABEL: @group_non_uniform_quad_swap
 func.func @group_non_uniform_quad_swap(%value: vector<4xf32>) -> vector<4xf32> {
-  %dir = spirv.Constant 0 : i32
-  // CHECK: %{{.+}} = spirv.GroupNonUniformQuadSwap <Subgroup> %{{.+}} %{{.+}} : vector<4xf32>, i32
-  %0 = spirv.GroupNonUniformQuadSwap <Subgroup> %value %dir : vector<4xf32>, i32
+  // CHECK: %{{.+}} = spirv.GroupNonUniformQuadSwap <Subgroup> <Horizontal> %{{.+}} : vector<4xf32>
+  %0 = spirv.GroupNonUniformQuadSwap <Subgroup> <Horizontal> %value : vector<4xf32>
   return %0: vector<4xf32>
 }
 
 // -----
 
 func.func @group_non_uniform_quad_swap(%value: vector<4xf32>) -> vector<4xf32> {
-  %dir = spirv.Constant 0 : i32
   // expected-error @+1 {{execution_scope must be Scope of value Subgroup}}
-  %0 = spirv.GroupNonUniformQuadSwap <Device> %value %dir : vector<4xf32>, i32
+  %0 = spirv.GroupNonUniformQuadSwap <Device> <Horizontal> %value : vector<4xf32>
   return %0: vector<4xf32>
 }
 
@@ -798,16 +799,15 @@ func.func @group_non_uniform_quad_swap(%value: vector<4xf32>) -> vector<4xf32> {
 
 func.func @group_non_uniform_quad_swap(%value: vector<4xf32>) -> vector<4xf32> {
   %dir = spirv.Constant 0.0 : f32
-  // expected-error @+1 {{op operand #1 must be 8/16/32/64-bit signless/unsigned integer, but got 'f32'}}
-  %0 = spirv.GroupNonUniformQuadSwap <Device> %value %dir : vector<4xf32>, f32
+  // expected-error @+1 {{expected '<'}}
+  %0 = spirv.GroupNonUniformQuadSwap <Device> %dir %value : vector<4xf32>
   return %0: vector<4xf32>
 }
 
 // -----
 
 func.func @group_non_uniform_quad_swap(%value: !spirv.array<3 x i32>) -> !spirv.array<3 x i32> {
-  %dir = spirv.Constant 0 : i32
-  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4/8/16 or 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4/8/16 or bool or fixed-length vector of bool values of length 2/3/4/8/16, but got '!spirv.array<3 x i32>'}}
-  %0 = spirv.GroupNonUniformQuadSwap <Device> %value %dir : !spirv.array<3 x i32>, i32
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1 or 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4/8/16 of ranks 1 or bool or fixed-length vector of bool values of length 2/3/4/8/16 of ranks 1, but got '!spirv.array<3 x i32>'}}
+  %0 = spirv.GroupNonUniformQuadSwap <Device> <Horizontal> %value : !spirv.array<3 x i32>
   return %0: !spirv.array<3 x i32>
 }
