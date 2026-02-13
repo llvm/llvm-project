@@ -357,7 +357,8 @@ public:
   AnyValue callLibFunc(CallBase &CB, Function *ResolvedCallee) {
     LibFunc LF;
     // Respect nobuiltin attributes on call site.
-    if (CB.isNoBuiltin() || !CurrentFrame->TLI.getLibFunc(*ResolvedCallee, LF)) {
+    if (CB.isNoBuiltin() ||
+        !CurrentFrame->TLI.getLibFunc(*ResolvedCallee, LF)) {
       Handler.onUnrecognizedInstruction(CB);
       Status = false;
       return AnyValue();
