@@ -12,7 +12,6 @@
 
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/Analysis.h"
@@ -6792,6 +6791,9 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   const unsigned SVTBits = SVT.getSizeInBits();
 
   bool UseNPQ = false, UsePreShift = false, UsePostShift = false;
+  EVT WideVT64 = EVT::getIntegerVT(*DAG.getContext(), 64);
+  bool HasWideVT64MULHU = isOperationLegalOrCustom(ISD::MULHU, WideVT64, IsAfterLegalization);
+  bool HasWideVT64UMUL_LOHI = isOperationLegalOrCustom(ISD::UMUL_LOHI, WideVT64, IsAfterLegalization);
   bool Use33BitOptimization = false;
   SmallVector<SDValue, 16> PreShifts, PostShifts, MagicFactors, NPQFactors;
 
@@ -6814,18 +6816,13 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
           UnsignedDivisionByConstantInfo::get(
               Divisor, std::min(KnownLeadingZeros, Divisor.countl_zero()));
 
-      // Our Approach: For 32-bit division with IsAdd (33-bit
-      // magic case), use optimized method: preshift c by (64-a) bits to
-      // eliminate runtime shift. This requires 64x64->128 bit multiplication.
+      // For 32-bit division with IsAdd (33-bit magic case), use optimized method:
+      // preshift c by (64-a) bits to eliminate runtime shift.
+      // This requires 64x64->128 bit multiplication.
       // Only apply to scalar types since SIMD lacks 64x64->128 high multiply.
       // Note: IsAdd=true implies PreShift=0 by algorithm design.
       // Check if 64-bit MULHU is available before applying this optimization.
-      EVT WideVT64 = EVT::getIntegerVT(*DAG.getContext(), 64);
-      bool Has64BitMULHU =
-          isOperationLegalOrCustom(ISD::MULHU, WideVT64, IsAfterLegalization) ||
-          isOperationLegalOrCustom(ISD::UMUL_LOHI, WideVT64,
-                                   IsAfterLegalization);
-      if (EltBits == 32 && !VT.isVector() && Has64BitMULHU && magics.IsAdd) {
+        if (EltBits == 32 && !VT.isVector() && (HasWideVT64MULHU || HasWideVT64UMUL_LOHI) && magics.IsAdd) {
         // For IsAdd case, actual magic constant is 2^32 + Magic (33-bit)
         unsigned OriginalShift = magics.PostShift + 33;
         APInt RealMagic = APInt(65, 1).shl(32) + magics.Magic.zext(65); // 2^32 + Magic
@@ -6894,12 +6891,10 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
     PostShift = PostShifts[0];
   }
 
-  // Our Approach: Use optimized 33-bit method for 32-bit division
   if (Use33BitOptimization) {
     // x is i32, MagicFactor is pre-shifted i64 constant
     // Compute: (i64(x) * MagicFactor) >> 64
-    EVT WideVT = EVT::getIntegerVT(*DAG.getContext(), 64);
-    SDValue X64 = DAG.getNode(ISD::ZERO_EXTEND, dl, WideVT, N0);
+    SDValue X64 = DAG.getNode(ISD::ZERO_EXTEND, dl, WideVT64, N0);
 
     // Get the pre-shifted constant (it's already in MagicFactor as i64)
     SDValue MagicFactor64 = isa<ConstantSDNode>(MagicFactor)
@@ -6908,22 +6903,18 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
 
     SDValue Result;
     // Perform 64x64 -> 128 multiplication and extract high 64 bits
-    if (isOperationLegalOrCustom(ISD::MULHU, WideVT, IsAfterLegalization)) {
-      SDValue High = DAG.getNode(ISD::MULHU, dl, WideVT, X64, MagicFactor64);
+    if (HasWideVT64MULHU) {
+      SDValue High = DAG.getNode(ISD::MULHU, dl, WideVT64, X64, MagicFactor64);
       Created.push_back(High.getNode());
       // Truncate back to i32
       Result = DAG.getNode(ISD::TRUNCATE, dl, VT, High);
-    } else if (isOperationLegalOrCustom(ISD::UMUL_LOHI, WideVT, IsAfterLegalization)) {
+    } else if (HasWideVT64UMUL_LOHI) {
       SDValue LoHi = DAG.getNode(ISD::UMUL_LOHI, dl,
-                                  DAG.getVTList(WideVT, WideVT),
+                                  DAG.getVTList(WideVT64, WideVT64),
                                   X64, MagicFactor64);
       SDValue High = SDValue(LoHi.getNode(), 1);
       Created.push_back(LoHi.getNode());
       Result = DAG.getNode(ISD::TRUNCATE, dl, VT, High);
-    } else {
-      // Fallback to standard path if 64-bit MULHU is not available
-      Use33BitOptimization = false;
-      goto standard_path;
     }
 
     // Handle divisor == 1 case with SELECT
@@ -6933,7 +6924,6 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
     return DAG.getSelect(dl, VT, IsOne, N0, Result);
   }
 
-standard_path:
   SDValue Q = N0;
   if (UsePreShift) {
     Q = DAG.getNode(ISD::SRL, dl, VT, Q, PreShift);
