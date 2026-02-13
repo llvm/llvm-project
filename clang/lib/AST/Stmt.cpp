@@ -106,7 +106,7 @@ void Stmt::PrintStats() {
   unsigned sum = 0;
   llvm::errs() << "\n*** Stmt/Expr Stats:\n";
   for (int i = 0; i != Stmt::lastStmtConstant+1; i++) {
-    StmtClassNameTable &entry =
+    const StmtClassNameTable &entry =
         getStmtInfoTableEntry(static_cast<Stmt::StmtClass>(i));
     if (entry.Name == nullptr)
       continue;
@@ -115,7 +115,7 @@ void Stmt::PrintStats() {
   llvm::errs() << "  " << sum << " stmts/exprs total.\n";
   sum = 0;
   for (int i = 0; i != Stmt::lastStmtConstant+1; i++) {
-    StmtClassNameTable &entry =
+    const StmtClassNameTable &entry =
         getStmtInfoTableEntry(static_cast<Stmt::StmtClass>(i));
     if (entry.Name == nullptr)
       continue;
