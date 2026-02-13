@@ -5111,10 +5111,9 @@ tryAgain:
                                                   ExternallyDestructed,
                                                   Context);
 
-    case Stmt::CXXOperatorCallExprClass: {
+    case Stmt::CXXOperatorCallExprClass:
       return VisitCXXOperatorCallExprForTemporaryDtors(
           cast<CXXOperatorCallExpr>(E), Context);
-    }
 
     case Stmt::CXXBindTemporaryExprClass:
       return VisitCXXBindTemporaryExprForTemporaryDtors(
