@@ -12,8 +12,10 @@
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-defines.h"
 #include "gtest/gtest.h"
 
@@ -37,8 +39,10 @@ TEST_F(ObjectFileMachOTest, ModuleFromSharedCacheInfo) {
 
   Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
 
+  ModuleSpec mod_spec;
+  mod_spec.GetFileSpec() = FileSpec("/usr/lib/libobjc.A.dylib");
   SharedCacheImageInfo image_info =
-      HostInfo::GetSharedCacheImageInfo("/usr/lib/libobjc.A.dylib");
+      HostInfo::GetSharedCacheImageInfo(mod_spec);
   EXPECT_TRUE(image_info.GetUUID());
   EXPECT_TRUE(image_info.GetExtractor());
 
@@ -85,8 +89,10 @@ TEST_F(ObjectFileMachOTest, ModuleFromSharedCacheInfo) {
 }
 
 TEST_F(ObjectFileMachOTest, IndirectSymbolsInTheSharedCache) {
+  ModuleSpec mod_spec;
+  mod_spec.GetFileSpec() = FileSpec("/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit");
   SharedCacheImageInfo image_info = HostInfo::GetSharedCacheImageInfo(
-      "/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit");
+      mod_spec);
   ModuleSpec spec(FileSpec(), UUID(), image_info.GetExtractor());
   lldb::ModuleSP module = std::make_shared<Module>(spec);
 

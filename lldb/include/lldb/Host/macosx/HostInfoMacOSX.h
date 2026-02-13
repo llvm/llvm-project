@@ -42,13 +42,9 @@ public:
                                                      llvm::StringRef tool);
 
   /// Shared cache utilities
-  static SharedCacheImageInfo
-  GetSharedCacheImageInfo(llvm::StringRef image_name);
+  static SharedCacheImageInfo GetSharedCacheImageInfo(const ModuleSpec &spec);
 
-  static SharedCacheImageInfo
-  GetSharedCacheImageInfo(llvm::StringRef image_name, const UUID &uuid);
-
-  static SharedCacheImageInfo GetSharedCacheImageInfo(const UUID &file_uuid,
+  static SharedCacheImageInfo GetSharedCacheImageInfo(const ModuleSpec &spec,
                                                       const UUID &sc_uuid);
 
   static bool SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid);

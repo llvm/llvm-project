@@ -187,25 +187,16 @@ public:
     return llvm::errorCodeToError(llvm::errc::no_such_file_or_directory);
   }
 
-  /// Return information about module \p image_name if it is loaded in
+  /// Return information about module \p spec if it is loaded in
   /// the current process's address space.
-  static SharedCacheImageInfo
-  GetSharedCacheImageInfo(llvm::StringRef image_name) {
-    return {};
-  }
-
-  /// Return information about module \p image_name if it is loaded in
-  /// the current process's address space using shared cache \p uuid.
-  /// The shared cache UUID must have been previously indexed.
-  static SharedCacheImageInfo
-  GetSharedCacheImageInfo(llvm::StringRef image_name, const UUID &uuid) {
+  static SharedCacheImageInfo GetSharedCacheImageInfo(const ModuleSpec &spec) {
     return {};
   }
 
   /// Return information about module with UUID \p file_uuid, if it is loaded in
   /// the current process's address space using shared cache \p sc_uuid.
   /// The shared cache must have been previously indexed.
-  static SharedCacheImageInfo GetSharedCacheImageInfo(const UUID &file_uuid,
+  static SharedCacheImageInfo GetSharedCacheImageInfo(const ModuleSpec &spec,
                                                       const UUID &sc_uuid) {
     return {};
   }

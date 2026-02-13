@@ -686,33 +686,26 @@ const char *dyld_image_get_file_path(dyld_image_t image);
 namespace {
 class SharedCacheInfo {
 public:
-  llvm::StringMap<SharedCacheImageInfo *> &GetFilenameToImageInfoMap() {
+  llvm::DenseMap<ConstString, SharedCacheImageInfo *> &
+  GetHostSCFilenameToImageInfoMap() {
     return m_filename_map[m_host_uuid];
   }
-  llvm::DenseMap<UUID, SharedCacheImageInfo *> &GetUUIDToImageInfoMap() {
+  llvm::DenseMap<UUID, SharedCacheImageInfo *> &GetHostSCUUIDToImageInfoMap() {
     return m_uuid_map[m_host_uuid];
   }
 
-  bool
-  GetFilenameToImageInfoMap(llvm::StringMap<SharedCacheImageInfo *> **images,
-                            const UUID &sc_uuid) {
-    if (m_filename_map.contains(sc_uuid)) {
-      *images = &m_filename_map[sc_uuid];
-      return true;
-    }
-    *images = nullptr;
-    return false;
+  llvm::DenseMap<ConstString, SharedCacheImageInfo *> *
+  GetFilenameToImageInfoMap(const UUID &sc_uuid) {
+    if (m_filename_map.contains(sc_uuid))
+      return &m_filename_map[sc_uuid];
+    return nullptr;
   }
 
-  bool
-  GetUUIDToImageInfoMap(llvm::DenseMap<UUID, SharedCacheImageInfo *> **images,
-                        const UUID &sc_uuid) {
-    if (m_uuid_map.contains(sc_uuid)) {
-      *images = &m_uuid_map[sc_uuid];
-      return true;
-    }
-    *images = nullptr;
-    return false;
+  llvm::DenseMap<UUID, SharedCacheImageInfo *> *
+  GetUUIDToImageInfoMap(const UUID &sc_uuid) {
+    if (m_uuid_map.contains(sc_uuid))
+      return &m_uuid_map[sc_uuid];
+    return nullptr;
   }
 
   /// Given the UUID and filepath to a shared cache on the local debug host
@@ -727,7 +720,7 @@ private:
   bool CreateHostSharedCacheImageList();
 
   std::vector<SharedCacheImageInfo> m_file_infos;
-  llvm::SmallDenseMap<UUID, llvm::StringMap<SharedCacheImageInfo *>>
+  llvm::SmallDenseMap<UUID, llvm::DenseMap<ConstString, SharedCacheImageInfo *>>
       m_filename_map;
   llvm::SmallDenseMap<UUID, llvm::DenseMap<UUID, SharedCacheImageInfo *>>
       m_uuid_map;
@@ -1012,7 +1005,7 @@ void SharedCacheInfo::CreateSharedCacheInfoLLDBsVirtualMemory() {
             filepath, UUID(info->dylibUuid, 16), extractor_sp));
       });
 
-  // vector of SharedCacheImageInfos has been fully populated, we can
+  // std::vector of SharedCacheImageInfos has been fully populated, we can
   // take pointers to the objects now.
   size_t file_info_size = m_file_infos.size();
   for (size_t i = 0; i < file_info_size; i++) {
@@ -1028,33 +1021,36 @@ SharedCacheInfo &GetSharedCacheSingleton() {
 }
 
 SharedCacheImageInfo
-HostInfoMacOSX::GetSharedCacheImageInfo(llvm::StringRef image_name) {
-  if (SharedCacheImageInfo *entry = GetSharedCacheSingleton().GetFilenameToImageInfoMap().lookup(image_name))
+HostInfoMacOSX::GetSharedCacheImageInfo(const ModuleSpec &spec) {
+  SharedCacheImageInfo *entry = nullptr;
+  if (spec.GetUUID())
+    entry = GetSharedCacheSingleton().GetHostSCUUIDToImageInfoMap().lookup(
+        spec.GetUUID());
+  else
+    entry = GetSharedCacheSingleton().GetHostSCFilenameToImageInfoMap().lookup(
+        spec.GetFileSpec().GetPathAsConstString());
+  if (entry)
     return *entry;
   return {};
 }
 
 SharedCacheImageInfo
-HostInfoMacOSX::GetSharedCacheImageInfo(llvm::StringRef image_name,
-                                        const UUID &uuid) {
-  llvm::StringMap<SharedCacheImageInfo *> *shared_cache_info;
-  if (GetSharedCacheSingleton().GetFilenameToImageInfoMap(&shared_cache_info,
-                                                          uuid)) {
-    if (SharedCacheImageInfo *entry = shared_cache_info->lookup(image_name))
-      return *entry;
-  }
-  return {};
-}
-
-SharedCacheImageInfo
-HostInfoMacOSX::GetSharedCacheImageInfo(const UUID &file_uuid,
+HostInfoMacOSX::GetSharedCacheImageInfo(const ModuleSpec &spec,
                                         const UUID &sc_uuid) {
-  llvm::DenseMap<UUID, SharedCacheImageInfo *> *shared_cache_info;
-  if (GetSharedCacheSingleton().GetUUIDToImageInfoMap(&shared_cache_info,
-                                                      sc_uuid)) {
-    if (SharedCacheImageInfo *entry = shared_cache_info->lookup(file_uuid))
-      return *entry;
-  }
+  llvm::DenseMap<UUID, SharedCacheImageInfo *> *uuid_to_fileinfos =
+      GetSharedCacheSingleton().GetUUIDToImageInfoMap(sc_uuid);
+  llvm::DenseMap<ConstString, SharedCacheImageInfo *> *filename_to_fileinfos =
+      GetSharedCacheSingleton().GetFilenameToImageInfoMap(sc_uuid);
+
+  SharedCacheImageInfo *entry = nullptr;
+  if (uuid_to_fileinfos && spec.GetUUID())
+    entry = uuid_to_fileinfos->lookup(spec.GetUUID());
+  else if (filename_to_fileinfos)
+    entry = filename_to_fileinfos->lookup(
+        spec.GetFileSpec().GetPathAsConstString());
+
+  if (entry)
+    return *entry;
   return {};
 }
 
