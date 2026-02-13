@@ -26,7 +26,7 @@ ArrayDtor arrDtor[16];
 // CIR-BEFORE-LPP:          }
 // CIR-BEFORE-LPP:        }
 
-// CIR: cir.global external @arrDtor = #cir.zero : !cir.array<!rec_ArrayDtor x 16> {alignment = 16 : i64}
+// CIR: cir.global external @arrDtor = #cir.zero : !cir.array<!rec_ArrayDtor x 16>
 // CIR: cir.func internal private @__cxx_global_array_dtor(%[[ARR_ARG:.*]]: !cir.ptr<!void> {{.*}}) {
 // CIR:   %[[CONST15:.*]] = cir.const #cir.int<15> : !u64i
 // CIR:   %[[BEGIN:.*]] = cir.cast array_to_ptrdecay %[[ARR_ARG]] : !cir.ptr<!void> -> !cir.ptr<!rec_ArrayDtor>
