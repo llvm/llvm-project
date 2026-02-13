@@ -2608,9 +2608,9 @@ struct AMDGPUPermlaneLowering : public ConvertOpToLLVMPattern<PermlaneSwapOp> {
 
 // Bit layout of ds_barrier_state (as i64):
 // [63:32] init count (32 bits)
-// [31:28] phase (4 bits)
-// [27:0] pending count (28 bits)
-constexpr int32_t kDsBarrierPendingCountBitWidth = 28;
+// [31:29] phase (3 bits)
+// [28:0] pending count (29 bits)
+constexpr int32_t kDsBarrierPendingCountBitWidth = 29;
 constexpr int32_t kDsBarrierPhasePos = kDsBarrierPendingCountBitWidth;
 constexpr int32_t kDsBarrierInitCountPos = 32;
 constexpr int32_t kDsBarrierPendingCountMask =

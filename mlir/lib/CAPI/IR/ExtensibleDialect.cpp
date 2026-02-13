@@ -31,16 +31,16 @@ bool mlirDynamicOpTraitAttach(MlirDynamicOpTrait dynamicOpTrait,
       static_cast<RegisteredOperationNameWithImpl &>(*opNameFound).getImpl();
 
   std::unique_ptr<DynamicOpTrait> trait(unwrap(dynamicOpTrait));
-  // TODO: we should check whether the `impl` is a DynamicOpDefinition here
-  // via llvm-style RTTI.
+  // TODO: we should enable llvm-style RTTI for `OperationName::Impl` and check
+  // whether the `impl` is a `DynamicOpDefinition` here.
   return static_cast<DynamicOpDefinition *>(impl)->addTrait(std::move(trait));
 }
 
-MlirDynamicOpTrait mlirDynamicOpTraitGetIsTerminator() {
+MlirDynamicOpTrait mlirDynamicOpTraitIsTerminatorCreate() {
   return wrap(new DynamicOpTraits::IsTerminator());
 }
 
-MlirDynamicOpTrait mlirDynamicOpTraitGetNoTerminator() {
+MlirDynamicOpTrait mlirDynamicOpTraitNoTerminatorCreate() {
   return wrap(new DynamicOpTraits::NoTerminator());
 }
 

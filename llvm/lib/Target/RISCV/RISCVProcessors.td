@@ -89,7 +89,8 @@ class RISCVTuneProcessorModel<string n, SchedMachineModel m,
   list<RISCVTuneFeature> ConfigurableTuneFeatures = [];
 }
 
-defvar GenericTuneFeatures = [TuneOptimizedNF2SegmentLoadStore];
+defvar GenericTuneFeatures = [TuneOptimizedNF2SegmentLoadStore,
+                              TuneEnableSelectOptimize];
 
 def GENERIC_RV32 : RISCVProcessorModel<"generic-rv32",
                                        NoSchedModel,
@@ -425,6 +426,7 @@ def SIFIVE_P470 : RISCVProcessorModel<"sifive-p470", SiFiveP400Model,
                                                    TuneVXRMPipelineFlush])>;
 
 defvar SiFiveP500TuneFeatures = [TuneNoDefaultUnroll,
+                                 TuneEnableSelectOptimize,
                                  TuneConditionalCompressedMoveFusion,
                                  TuneLUIADDIFusion,
                                  TuneAUIPCADDIFusion,
@@ -768,6 +770,7 @@ def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
                                         TuneOptimizedNF2SegmentLoadStore,
                                         TuneOptimizedNF3SegmentLoadStore,
                                         TuneOptimizedNF4SegmentLoadStore,
+                                        TuneEnableSelectOptimize,
                                         TuneVXRMPipelineFlush]> {
   let MVendorID = 0x710;
   let MArchID = 0x8000000058000001;

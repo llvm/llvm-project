@@ -1909,7 +1909,7 @@ def TuneOptimizedZeroStrideLoad
                       "true", "Optimized (perform fewer memory operations)"
                       "zero-stride vector load">;
 
-def FeatureEnableSelectOptimize
+def TuneEnableSelectOptimize
     : SubtargetFeature<"enable-select-opt", "EnableSelectOptimize", "true",
                        "Enable the select optimize pass for select loop heuristics">;
 
