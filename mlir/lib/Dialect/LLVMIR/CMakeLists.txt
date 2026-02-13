@@ -20,6 +20,7 @@ add_mlir_dialect_library(MLIRLLVMDialect
   MLIRLLVMIntrinsicOpsIncGen
   MLIRLLVMInterfacesIncGen
   MLIROpenMPOpsIncGen
+  MLIRLLVMTranslationDialectInterfaceIncGen
   intrinsics_gen
 
   LINK_COMPONENTS
