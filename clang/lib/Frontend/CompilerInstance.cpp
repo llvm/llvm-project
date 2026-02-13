@@ -2261,6 +2261,10 @@ GlobalModuleIndex *CompilerInstance::loadGlobalModuleIndex(
   // we need to make the global index cover all modules, so we do that here.
   if (!HaveFullGlobalModuleIndex && GlobalIndex && !buildingModule()) {
     ModuleMap &MMap = getPreprocessor().getHeaderSearchInfo().getModuleMap();
+
+    // Load modules that were parsed from module maps but not loaded yet.
+    MMap.loadAllParsedModules();
+
     bool RecreateIndex = false;
     for (ModuleMap::module_iterator I = MMap.module_begin(),
         E = MMap.module_end(); I != E; ++I) {
