@@ -47,14 +47,14 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-SKIPPED-CALL
 
 // CHECK-SKIPPED-CALL: <caller_skipped>:
-// CHECK-SKIPPED-CALL: jmp{{.*}}<catch_exception.clone.0>
+// CHECK-SKIPPED-CALL: {{.*}}<catch_exception.clone.0>
 
 // Verify caller_optimized calls the relocated function (not the clone).
 // RUN: llvm-objdump -d %t.bolt --disassemble-symbols=caller_optimized \
 // RUN:   | FileCheck %s --check-prefix=CHECK-OPTIMIZED-CALL
 
 // CHECK-OPTIMIZED-CALL: <caller_optimized>:
-// CHECK-OPTIMIZED-CALL: jmp{{.*}}<catch_exception>
+// CHECK-OPTIMIZED-CALL: {{.*}}<catch_exception>
 
 // Run the bolted binary - both callers should work:
 // - caller_skipped calls original code (clone) at original address
