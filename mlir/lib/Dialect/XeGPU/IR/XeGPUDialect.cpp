@@ -389,6 +389,13 @@ LayoutAttr::computeDistributedCoords(OpBuilder &builder, Location loc,
   return genCoordinates(builder, loc, ids, layout, subShape, shape);
 }
 
+bool LayoutAttr::isEqualTo(const xegpu::DistributeLayoutAttr &other) {
+  if (dyn_cast<xegpu::SliceAttr>(other))
+    return false;
+
+  return *this == dyn_cast<xegpu::LayoutAttr>(other);
+}
+
 // set the layout for unit dims: sg_data, inst_data and lane_data to 1
 DistributeLayoutAttr
 LayoutAttr::setUnitDimData(SmallVector<int64_t> unitDims) const {
@@ -746,6 +753,17 @@ bool SliceAttr::isSliceOf(const xegpu::DistributeLayoutAttr &other) {
       flattenedThis.getDims().asArrayRef().end());
   return llvm::all_of(flattenedOther.getDims().asArrayRef(),
                       [&](int64_t dim) { return thisDims.contains(dim); });
+}
+
+bool SliceAttr::isEqualTo(const xegpu::DistributeLayoutAttr &other) {
+  if (dyn_cast<xegpu::LayoutAttr>(other))
+    return false;
+
+  auto flattenedThis = flatten();
+  auto flattenedOther = dyn_cast<xegpu::SliceAttr>(other).flatten();
+
+  return ((flattenedThis.getParent() == flattenedOther.getParent()) &&
+          (flattenedThis.getDims() == flattenedOther.getDims()));
 }
 
 xegpu::SliceAttr SliceAttr::dropSliceDims(ArrayRef<int64_t> sliceDimsToDrop) {

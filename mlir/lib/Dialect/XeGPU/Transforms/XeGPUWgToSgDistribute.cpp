@@ -626,7 +626,8 @@ struct WgToSgConvertLayoutOp
     SmallVector<int64_t> targetSgData = targetLayout.getEffectiveSgDataAsInt();
 
     // Fast path: if sg_layout and sg_data are identical, no SLM needed
-    if (inputLayout.isEqualTo(targetLayout, xegpu::LayoutKind::Subgroup)) {
+    if (inputLayout.isCompatibleWith(targetLayout,
+                                     xegpu::LayoutKind::Subgroup)) {
       inputLayout = inputLayout.dropSgLayoutAndData();
       targetLayout = targetLayout.dropSgLayoutAndData();
 

@@ -1536,8 +1536,7 @@ struct VectorBroadcastDistribution : public gpu::WarpDistributionPattern {
         auto broadcastUnitDimsSet = broadcastOp.computeBroadcastedUnitDims();
         SmallVector<int64_t> broadcastUnitDims(broadcastUnitDimsSet.begin(),
                                                broadcastUnitDimsSet.end());
-        bool isEqualTo =
-            sourceLayout.isEqualTo(resultLayout, xegpu::LayoutKind::Lane);
+        bool isEqualTo = sourceLayout.isEqualTo(resultLayout);
         if (!isEqualTo)
           return rewriter.notifyMatchFailure(
               warpOp, "For same-rank broadcast, source must be identical to "
