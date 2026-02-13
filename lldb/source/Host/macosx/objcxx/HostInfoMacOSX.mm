@@ -1052,8 +1052,7 @@ HostInfoMacOSX::GetSharedCacheImageInfo(const UUID &file_uuid,
   llvm::DenseMap<UUID, SharedCacheImageInfo *> *shared_cache_info;
   if (GetSharedCacheSingleton().GetUUIDToImageInfoMap(&shared_cache_info,
                                                       sc_uuid)) {
-    SharedCacheImageInfo *entry = shared_cache_info->lookup(file_uuid);
-    if (entry)
+    if (SharedCacheImageInfo *entry = shared_cache_info->lookup(file_uuid))
       return *entry;
   }
   return {};
