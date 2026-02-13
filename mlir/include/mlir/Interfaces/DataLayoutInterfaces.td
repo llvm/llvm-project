@@ -749,7 +749,7 @@ def DataLayoutDialectInterface : DialectInterface<"DataLayoutDialectInterface"> 
       "::mlir::LogicalResult", "verifyEntry",
       (ins "::mlir::DataLayoutEntryInterface":$entry, "::mlir::Location":$loc),
       [{
-        return success();
+        return ::llvm::success();
       }]
     >,
     InterfaceMethod<[{
@@ -759,7 +759,7 @@ def DataLayoutDialectInterface : DialectInterface<"DataLayoutDialectInterface"> 
       "::mlir::LogicalResult", "verifyEntry",
       (ins "::mlir::TargetDeviceSpecInterface":$entry, "::mlir::Location":$loc),
       [{
-        return success();
+        return ::llvm::success();
       }]
     >,
     InterfaceMethod<[{
