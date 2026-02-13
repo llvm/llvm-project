@@ -109,7 +109,7 @@ void UseStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
               << AssignValue->getDecl()->getName();
           break;
         }
-        // The reference is being referenced before the assignment, bail out.
+        // The reference is being referenced after the assignment, bail out.
         if (!allDeclRefExprs(*cast<VarDecl>(AssignValue->getDecl()), *EltStmt,
                              *Result.Context)
                  .empty())
