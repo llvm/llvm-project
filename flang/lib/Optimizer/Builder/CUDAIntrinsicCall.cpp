@@ -1143,7 +1143,6 @@ fir::ExtendedValue CUDAIntrinsicLibrary::genCUDAGetDefaultStreamArg(
   assert(args.size() == 1);
   mlir::Value devptr = fir::getBase(args[0]);
   mlir::Type i64Ty = builder.getI64Type();
-  mlir::Type i32Ty = builder.getI32Type();
   auto ctx = builder.getContext();
   mlir::Type voidPtrTy =
       fir::LLVMPointerType::get(ctx, mlir::IntegerType::get(ctx, 8));
