@@ -6896,22 +6896,17 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
     // Compute: (i64(x) * MagicFactor) >> 64
     SDValue X64 = DAG.getNode(ISD::ZERO_EXTEND, dl, WideVT64, N0);
 
-    // Get the pre-shifted constant (it's already in MagicFactor as i64)
-    SDValue MagicFactor64 = isa<ConstantSDNode>(MagicFactor)
-        ? MagicFactor
-        : MagicFactors[0];
-
     SDValue Result;
     // Perform 64x64 -> 128 multiplication and extract high 64 bits
     if (HasWideVT64MULHU) {
-      SDValue High = DAG.getNode(ISD::MULHU, dl, WideVT64, X64, MagicFactor64);
+      SDValue High = DAG.getNode(ISD::MULHU, dl, WideVT64, X64, MagicFactor);
       Created.push_back(High.getNode());
       // Truncate back to i32
       Result = DAG.getNode(ISD::TRUNCATE, dl, VT, High);
     } else if (HasWideVT64UMUL_LOHI) {
       SDValue LoHi = DAG.getNode(ISD::UMUL_LOHI, dl,
                                   DAG.getVTList(WideVT64, WideVT64),
-                                  X64, MagicFactor64);
+                                  X64, MagicFactor);
       SDValue High = SDValue(LoHi.getNode(), 1);
       Created.push_back(LoHi.getNode());
       Result = DAG.getNode(ISD::TRUNCATE, dl, VT, High);
