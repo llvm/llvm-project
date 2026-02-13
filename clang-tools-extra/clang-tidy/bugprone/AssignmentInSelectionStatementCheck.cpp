@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "AssignmentInSelectionStatementCheck.h"
+#include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace clang;
 using namespace clang::ast_matchers;
@@ -47,19 +49,48 @@ AST_MATCHER_P(Expr, conditionValueCanPropagateFrom,
   return Found;
 }
 
+// Ignore implicit casts (including C++ conversion member calls) but not parens.
+AST_MATCHER_P(Expr, ignoringImplicitAsWritten,
+              ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
+  auto IgnoreImplicitMemberCallSingleStep = [](Expr *E) {
+    if (auto *C = dyn_cast<CXXMemberCallExpr>(E)) {
+      Expr *ExprNode = C->getImplicitObjectArgument();
+      if (ExprNode->getSourceRange() == E->getSourceRange())
+        return ExprNode;
+      if (auto *PE = dyn_cast<ParenExpr>(ExprNode)) {
+        if (PE->getSourceRange() == C->getSourceRange())
+          return cast<Expr>(PE);
+      }
+      ExprNode = ExprNode->IgnoreParenImpCasts();
+      if (ExprNode->getSourceRange() == E->getSourceRange())
+        return ExprNode;
+    }
+    return E;
+  };
+
+  const Expr *IgnoreE = IgnoreExprNodes(&Node, IgnoreImplicitSingleStep,
+                                        IgnoreImplicitCastsExtraSingleStep,
+                                        IgnoreImplicitMemberCallSingleStep);
+
+  return InnerMatcher.matches(*IgnoreE, Finder, Builder);
+}
+
 } // namespace
 
 namespace clang::tidy::bugprone {
 
 void AssignmentInSelectionStatementCheck::registerMatchers(
     MatchFinder *Finder) {
-  auto AssignOp = binaryOperation(hasOperatorName("=")).bind("assignment");
+  auto AssignOpNoParens = ignoringImplicitAsWritten(
+      binaryOperation(hasOperatorName("=")).bind("assignment"));
+  auto AssignOpMaybeParens = ignoringParenImpCasts(
+      binaryOperation(hasOperatorName("=")).bind("assignment"));
+  auto AssignOpFromEmbeddedExpr = expr(ignoringParenImpCasts(
+      conditionValueCanPropagateFrom(AssignOpMaybeParens)));
 
-  auto CondExprWithAssign = expr(
-      anyOf(ignoringImpCasts(AssignOp),
-            ignoringParenImpCasts(conditionValueCanPropagateFrom(AssignOp))));
-  auto OpCondExprWithAssign = expr(ignoringParenImpCasts(
-      anyOf(AssignOp, conditionValueCanPropagateFrom(AssignOp))));
+  auto CondExprWithAssign = anyOf(AssignOpNoParens, AssignOpFromEmbeddedExpr);
+  auto OpCondExprWithAssign =
+      anyOf(AssignOpMaybeParens, AssignOpFromEmbeddedExpr);
 
   // In these cases "single primary expression" is possible.
   // A single assignment within a 'ParenExpr' is allowed (but not if mixed with
@@ -83,37 +114,35 @@ void AssignmentInSelectionStatementCheck::registerMatchers(
 
 void AssignmentInSelectionStatementCheck::check(
     const MatchFinder::MatchResult &Result) {
-  const auto *FoundAssignment =
-      Result.Nodes.getNodeAs<BinaryOperator>("assignment");
-  if (!FoundAssignment)
-    return;
+  const auto *FoundAssignment = Result.Nodes.getNodeAs<Stmt>("assignment");
+  assert(FoundAssignment);
+
   const auto *ParentStmt = Result.Nodes.getNodeAs<Stmt>("parent");
-  const char *CondStr = nullptr;
-  switch (ParentStmt->getStmtClass()) {
-  case Stmt::IfStmtClass:
-    CondStr = "condition of 'if' statement";
-    break;
-  case Stmt::WhileStmtClass:
-    CondStr = "condition of 'while' statement";
-    break;
-  case Stmt::DoStmtClass:
-    CondStr = "condition of 'do' statement";
-    break;
-  case Stmt::ForStmtClass:
-    CondStr = "condition of 'for' statement";
-    break;
-  case Stmt::ConditionalOperatorClass:
-    CondStr = "condition of conditional operator";
-    break;
-  case Stmt::BinaryOperatorClass:
-    CondStr = "operand of a logical operator";
-    break;
-  default:
-    llvm_unreachable("unexpected statement class, should not match");
-  };
-  diag(FoundAssignment->getOperatorLoc(),
-       "Assignment within %0 may indicate programmer error")
+  StringRef CondStr =
+      llvm::TypeSwitch<const Stmt *, const char *>(ParentStmt)
+          .Case<IfStmt>(
+              [](const IfStmt *) { return "condition of 'if' statement"; })
+          .Case<WhileStmt, DoStmt, ForStmt>(
+              [](const Stmt *) { return "condition of a loop"; })
+          .Case<ConditionalOperator>([](const ConditionalOperator *) {
+            return "condition of a ternary operator";
+          })
+          .Case<BinaryOperator>([](const BinaryOperator *) {
+            return "operand of a logical operator";
+          })
+          .DefaultUnreachable();
+
+  SourceLocation OpLoc =
+      llvm::TypeSwitch<const Stmt *, SourceLocation>(FoundAssignment)
+          .Case<BinaryOperator, CXXOperatorCallExpr>(
+              [](const auto *Op) { return Op->getOperatorLoc(); })
+          .Default(FoundAssignment->getBeginLoc());
+  diag(OpLoc, "assignment within %0 may indicate programmer error")
       << FoundAssignment->getSourceRange() << CondStr;
+  diag(OpLoc, "if it should be an assignment, move it out of the condition",
+       DiagnosticIDs::Note);
+  diag(OpLoc, "if it is meant to be an equality check, change '=' to '=='",
+       DiagnosticIDs::Note);
 }
 
 } // namespace clang::tidy::bugprone
