@@ -14,14 +14,14 @@ class HiddenFrameMarkerTest(TestBase):
         """Test that hidden frame markers are rendered in backtraces"""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, "// break here", lldb.SBFileSpec("main.cpp")
+            self, "// break here first", lldb.SBFileSpec("main.cpp")
         )
         self.expect(
             "bt",
             substrs=[
                 "   * frame #0:",
-                "  ﹍ frame #2:",
-                "  ﹉ frame #3:",
+                "  ﹉ frame #2:",
+                "     frame #3:",
                 "     frame #4:",
             ],
         )
@@ -30,9 +30,9 @@ class HiddenFrameMarkerTest(TestBase):
         self.expect(
             "bt",
             substrs=[
-                "     frame #0:",
+                "  ﹍ frame #0:",
                 "   * frame #2:",
-                "  ﹉ frame #3:",
+                "     frame #3:",
                 "     frame #4:",
             ],
         )
@@ -41,14 +41,80 @@ class HiddenFrameMarkerTest(TestBase):
         self.expect(
             "bt",
             substrs=[
-                "     frame #0:",
-                "  ﹍ frame #2:",
+                "  ﹍ frame #0:",
+                "  ﹉ frame #2:",
                 "   * frame #3:",
                 "     frame #4:",
             ],
         )
 
-    def test_hidden_frame_markers(self):
+    @unicode_test
+    def test_nested_hidden_frame_markers(self):
+        """Test that nested hidden frame markers are rendered in backtraces"""
+        self.build()
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here after", lldb.SBFileSpec("main.cpp")
+        )
+        self.expect(
+            "bt",
+            substrs=[
+                "   * frame #0:",
+                "  ﹉ frame #2:",
+                "  ﹍ frame #3:",
+                "  ﹉ frame #5:",
+                "     frame #6:",
+            ],
+        )
+
+        self.runCmd("f 2")
+        self.expect(
+            "bt",
+            substrs=[
+                "  ﹍ frame #0:",
+                "   * frame #2:",
+                "  ﹍ frame #3:",
+                "  ﹉ frame #5:",
+                "     frame #6:",
+            ],
+        )
+
+        self.runCmd("f 3")
+        self.expect(
+            "bt",
+            substrs=[
+                "  ﹍ frame #0:",
+                "  ﹉ frame #2:",
+                "   * frame #3:",
+                "  ﹉ frame #5:",
+                "     frame #6:",
+            ],
+        )
+
+        self.runCmd("f 5")
+        self.expect(
+            "bt",
+            substrs=[
+                "  ﹍ frame #0:",
+                "  ﹉ frame #2:",
+                "  ﹍ frame #3:",
+                "   * frame #5:",
+                "     frame #6:",
+            ],
+        )
+
+        self.runCmd("f 6")
+        self.expect(
+            "bt",
+            substrs=[
+                "  ﹍ frame #0:",
+                "  ﹉ frame #2:",
+                "  ﹍ frame #3:",
+                "  ﹉ frame #5:",
+                "   * frame #6:",
+            ],
+        )
+
+    def test_deactivated_hidden_frame_markers(self):
         """
         Test that hidden frame markers are not rendered in backtraces when
         mark-hidden-frames is set to false
@@ -56,7 +122,7 @@ class HiddenFrameMarkerTest(TestBase):
         self.build()
         self.runCmd("settings set mark-hidden-frames 0")
         lldbutil.run_to_source_breakpoint(
-            self, "// break here", lldb.SBFileSpec("main.cpp")
+            self, "// break here first", lldb.SBFileSpec("main.cpp")
         )
         self.expect(
             "bt",
