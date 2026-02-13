@@ -83,6 +83,10 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
     set(libc_flags -DLLVM_LIBC_GPU_BUILD=ON)
   endif()
 
+  if(PYTHON_EXECUTABLE)
+    set(python_executable_flag "-DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE}")
+  endif()
+
   add_custom_command(OUTPUT ${${project_name}_${target_name}_BUILD}/CMakeCache.txt
     COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}"
         "-DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}"
@@ -103,7 +107,7 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
         -DLLVM_INCLUDE_BENCHMARKS=OFF
         -DLLVM_INCLUDE_TESTS=OFF
         -DLLVM_TABLEGEN_FLAGS="${llvm_tablegen_flags}"
-        -DPYTHON_EXECUTABLE="${PYTHON_EXECUTABLE}"
+        ${python_executable_flag}
         ${build_type_flags} ${linker_flag} ${external_clang_dir} ${libc_flags}
         ${ARGN}
     WORKING_DIRECTORY ${${project_name}_${target_name}_BUILD}

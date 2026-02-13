@@ -201,7 +201,13 @@ s_delay_alu instid1(SALU_CYCLE_3)
 // GFX13: s_delay_alu instid1(SALU_CYCLE_3)       ; encoding: [0x80,0x05,0xae,0xbf]
 
 s_wait_event 0
-// GFX13: s_wait_event 0x0                        ; encoding: [0x00,0x00,0xaf,0xbf]
+// GFX13: s_wait_event { export_ready: 0 }        ; encoding: [0x00,0x00,0xaf,0xbf]
+
+s_wait_event 1
+// GFX13: s_wait_event 0x1                        ; encoding: [0x01,0x00,0xaf,0xbf]
+
+s_wait_event 2
+// GFX13: s_wait_event { export_ready: 1 }        ; encoding: [0x02,0x00,0xaf,0xbf]
 
 s_wait_event 0x1234
 // GFX13: s_wait_event 0x1234                     ; encoding: [0x34,0x12,0xaf,0xbf]

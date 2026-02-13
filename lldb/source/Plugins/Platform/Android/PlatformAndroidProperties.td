@@ -1,6 +1,6 @@
 include "../../../../include/lldb/Core/PropertiesBase.td"
 
-let Definition = "android" in {
+let Definition = "android", Path = "platform.plugin.remote-android" in {
   def PlatformPackageName: Property<"package-name", "String">,
     Global,
     DefaultStringValue<"">,

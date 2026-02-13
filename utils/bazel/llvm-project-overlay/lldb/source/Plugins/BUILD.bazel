@@ -14,9 +14,9 @@ package(
 licenses(["notice"])
 
 cc_library(
-    name = "PluginClangCommon",
-    srcs = glob(["Language/ClangCommon/*.cpp"]),
-    hdrs = glob(["Language/ClangCommon/*.h"]),
+    name = "PluginClangHighlighter",
+    srcs = glob(["Highlighter/Clang/*.cpp"]),
+    hdrs = glob(["Highlighter/Clang/*.h"]),
     includes = [".."],
     deps = [
         "//clang:basic",
@@ -1342,6 +1342,7 @@ cc_library(
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
@@ -1358,6 +1359,7 @@ cc_library(
         "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//lldb:UtilityPrivateHeaders",
+        "//llvm:Support",
     ],
 )
 
@@ -1372,6 +1374,7 @@ cc_library(
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 

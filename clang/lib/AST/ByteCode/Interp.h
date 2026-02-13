@@ -217,6 +217,12 @@ bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR);
 bool InvalidDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR,
                     bool InitializerFailed);
 
+/// DerivedToBaseMemberPointer
+bool CastMemberPtrBasePop(InterpState &S, CodePtr OpPC, int32_t Off,
+                          const RecordDecl *BaseDecl);
+/// BaseToDerivedMemberPointer
+bool CastMemberPtrDerivedPop(InterpState &S, CodePtr OpPC, int32_t Off,
+                             const RecordDecl *BaseDecl);
 enum class ArithOp { Add, Sub };
 
 //===----------------------------------------------------------------------===//
@@ -1544,6 +1550,14 @@ bool InitGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
       Val.take(NewMemory);
     }
 
+  } else if constexpr (std::is_same_v<T, MemberPointer>) {
+    auto &Val = P.deref<MemberPointer>();
+    unsigned PathLength = Val.getPathLength();
+    auto *NewPath = new (S.P) const CXXRecordDecl *[PathLength];
+    for (unsigned I = 0; I != PathLength; ++I) {
+      NewPath[I] = Val.getPathEntry(I);
+    }
+    Val.takePath(NewPath);
   } else if constexpr (needsAlloc<T>()) {
     auto &Val = P.deref<T>();
     if (!Val.singleWord()) {
@@ -1703,16 +1717,15 @@ bool InitBitField(InterpState &S, CodePtr OpPC, const Record::Field *F) {
 
   const Pointer &Field = Ptr.atField(F->Offset);
 
+  unsigned BitWidth = std::min(F->Decl->getBitWidthValue(), Value.bitWidth());
   if constexpr (needsAlloc<T>()) {
     T Result = S.allocAP<T>(Value.bitWidth());
-    if (T::isSigned())
-      Result.copy(Value.toAPSInt()
-                      .trunc(F->Decl->getBitWidthValue())
-                      .sextOrTrunc(Value.bitWidth()));
+    if constexpr (T::isSigned())
+      Result.copy(
+          Value.toAPSInt().trunc(BitWidth).sextOrTrunc(Value.bitWidth()));
     else
-      Result.copy(Value.toAPSInt()
-                      .trunc(F->Decl->getBitWidthValue())
-                      .zextOrTrunc(Value.bitWidth()));
+      Result.copy(
+          Value.toAPSInt().trunc(BitWidth).zextOrTrunc(Value.bitWidth()));
 
     Field.deref<T>() = Result;
   } else {
@@ -1735,16 +1748,15 @@ bool InitBitFieldActivate(InterpState &S, CodePtr OpPC,
 
   const Pointer &Field = Ptr.atField(F->Offset);
 
+  unsigned BitWidth = std::min(F->Decl->getBitWidthValue(), Value.bitWidth());
   if constexpr (needsAlloc<T>()) {
     T Result = S.allocAP<T>(Value.bitWidth());
-    if (T::isSigned())
-      Result.copy(Value.toAPSInt()
-                      .trunc(F->Decl->getBitWidthValue())
-                      .sextOrTrunc(Value.bitWidth()));
+    if constexpr (T::isSigned())
+      Result.copy(
+          Value.toAPSInt().trunc(BitWidth).sextOrTrunc(Value.bitWidth()));
     else
-      Result.copy(Value.toAPSInt()
-                      .trunc(F->Decl->getBitWidthValue())
-                      .zextOrTrunc(Value.bitWidth()));
+      Result.copy(
+          Value.toAPSInt().trunc(BitWidth).zextOrTrunc(Value.bitWidth()));
 
     Field.deref<T>() = Result;
   } else {
@@ -1866,12 +1878,6 @@ inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off,
   if (Result.isPastEnd() || !Result.isBaseClass())
     return false;
   S.Stk.push<Pointer>(Result);
-  return true;
-}
-
-inline bool GetMemberPtrBasePop(InterpState &S, CodePtr OpPC, int32_t Off) {
-  const auto &Ptr = S.Stk.pop<MemberPointer>();
-  S.Stk.push<MemberPointer>(Ptr.atInstanceBase(Off));
   return true;
 }
 

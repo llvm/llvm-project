@@ -12,6 +12,7 @@
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatProviders.h"
 #include "llvm/Support/FormatVariadicDetails.h"
@@ -181,8 +182,7 @@ static llvm::Error TypeCheck(llvm::ArrayRef<DataStackElement> data,
   return TypeCheck(data.drop_back(1), type2, type1);
 }
 
-llvm::Error Interpret(std::vector<ControlStackElement> &control,
-                      DataStack &data, Selectors sel) {
+llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
   if (control.empty())
     return llvm::Error::success();
   // Since the only data types are single endian and ULEBs, the
@@ -223,7 +223,7 @@ llvm::Error Interpret(std::vector<ControlStackElement> &control,
       return pc.takeError();
 
     LLDB_LOGV(GetLog(LLDBLog::DataFormatters),
-              "[eval {0}] opcode={1}, control={2}, data={3}", toString(sel),
+              "[eval {0}] opcode={1}, control={2}, data={3}", toString(sig),
               toString(opcode), control.size(), toString(data));
 
     // Various shorthands to improve the readability of error handling.
@@ -509,6 +509,18 @@ llvm::Error Interpret(std::vector<ControlStackElement> &control,
         auto type = data.Pop<CompilerType>();
         // FIXME: There is more code in SBType::GetTemplateArgumentType().
         data.Push(type.GetTypeTemplateArgument(index, true));
+        break;
+      }
+      case sel_get_synthetic_value: {
+        TYPE_CHECK(Object);
+        POP_VALOBJ(valobj);
+        data.Push(valobj->GetSyntheticValue());
+        break;
+      }
+      case sel_get_non_synthetic_value: {
+        TYPE_CHECK(Object);
+        POP_VALOBJ(valobj);
+        data.Push(valobj->GetNonSyntheticValue());
         break;
       }
       case sel_get_value: {

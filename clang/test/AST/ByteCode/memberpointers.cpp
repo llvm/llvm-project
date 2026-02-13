@@ -267,3 +267,39 @@ namespace CastMemberPtrPtrFailed{
   static_assert(S().g(), ""); // both-error {{constant expression}} \
                               // both-note {{in call to 'S().g()'}}
 }
+
+namespace DiscardedAddrOfOperator {
+  class Foo {
+  public:
+    void bar();
+  };
+
+  void baz() { &Foo::bar, Foo(); } // both-warning {{left operand of comma operator has no effect}}
+}
+
+namespace Equality {
+  struct B     { int x; };
+  struct C : B { int z; };
+  static_assert(&C::x == &B::x, "");
+  static_assert(&C::x == &C::x, "");
+
+  constexpr auto A = (int C::*)&B::x;
+  constexpr auto B = (int C::*)&B::x;
+  static_assert(A == B, "");
+
+  struct K {
+    int C::*const M = (int C::*)&B::x;
+  };
+  constexpr K k;
+  static_assert(A== k.M, "");
+
+  constexpr int C::*const MPA[] = {&B::x, &C::x};
+  static_assert(MPA[1] == A, "");
+
+  template<int n> struct T : T<n-1> { const int X = n;};
+  template<> struct T<0> { int n; char k;};
+  template<> struct T<30> : T<29> { int m; };
+
+  constexpr int (T<17>::*deepm) = (int(T<10>::*))&T<30>::m;
+  static_assert(deepm == &T<50>::m, "");
+}

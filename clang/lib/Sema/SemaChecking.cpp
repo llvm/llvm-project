@@ -1217,12 +1217,12 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
       return std::nullopt;
 
     const Expr *ObjArg = TheCall->getArg(NewIndex);
-    uint64_t Result;
-    if (!ObjArg->tryEvaluateObjectSize(Result, getASTContext(), BOSType))
-      return std::nullopt;
-
-    // Get the object size in the target's size_t width.
-    return llvm::APSInt::getUnsigned(Result).extOrTrunc(SizeTypeWidth);
+    if (std::optional<uint64_t> ObjSize =
+            ObjArg->tryEvaluateObjectSize(getASTContext(), BOSType)) {
+      // Get the object size in the target's size_t width.
+      return llvm::APSInt::getUnsigned(*ObjSize).extOrTrunc(SizeTypeWidth);
+    }
+    return std::nullopt;
   };
 
   auto ComputeStrLenArgument =
@@ -1233,11 +1233,13 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     unsigned NewIndex = *IndexOptional;
 
     const Expr *ObjArg = TheCall->getArg(NewIndex);
-    uint64_t Result;
-    if (!ObjArg->tryEvaluateStrLen(Result, getASTContext()))
-      return std::nullopt;
-    // Add 1 for null byte.
-    return llvm::APSInt::getUnsigned(Result + 1).extOrTrunc(SizeTypeWidth);
+
+    if (std::optional<uint64_t> Result =
+            ObjArg->tryEvaluateStrLen(getASTContext())) {
+      // Add 1 for null byte.
+      return llvm::APSInt::getUnsigned(*Result + 1).extOrTrunc(SizeTypeWidth);
+    }
+    return std::nullopt;
   };
 
   std::optional<llvm::APSInt> SourceSize;
@@ -2143,6 +2145,8 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
     return AMDGPU().CheckAMDGCNBuiltinFunctionCall(BuiltinID, TheCall);
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
     return RISCV().CheckBuiltinFunctionCall(TI, BuiltinID, TheCall);
   case llvm::Triple::loongarch32:
   case llvm::Triple::loongarch64:
@@ -2196,7 +2200,7 @@ checkMathBuiltinElementType(Sema &S, SourceLocation Loc, QualType ArgTy,
     }
     break;
   case Sema::EltwiseBuiltinArgTyRestriction::SignedIntOrFloatTy:
-    if (EltTy->isUnsignedIntegerType()) {
+    if (!EltTy->isSignedIntegerType() && !EltTy->isRealFloatingType()) {
       return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
              << 1 << /* scalar or vector */ 5 << /* signed int */ 2
              << /* or fp */ 1 << ArgTy;
@@ -2281,6 +2285,32 @@ static bool BuiltinBswapg(Sema &S, CallExpr *TheCall) {
           << ArgTy << BT->getNumBits();
       return true;
     }
+  }
+  TheCall->setType(ArgTy);
+  return false;
+}
+
+/// Checks that __builtin_bitreverseg was called with a single argument, which
+/// is an integer
+static bool BuiltinBitreverseg(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCount(TheCall, 1))
+    return true;
+  ExprResult ArgRes = S.DefaultLvalueConversion(TheCall->getArg(0));
+  if (ArgRes.isInvalid())
+    return true;
+
+  Expr *Arg = ArgRes.get();
+  TheCall->setArg(0, Arg);
+  if (Arg->isTypeDependent())
+    return false;
+
+  QualType ArgTy = Arg->getType();
+
+  if (!ArgTy->isIntegerType()) {
+    S.Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+        << 1 << /*scalar=*/1 << /*unsigned integer*/ 1 << /*float point*/ 0
+        << ArgTy;
+    return true;
   }
   TheCall->setType(ArgTy);
   return false;
@@ -3693,6 +3723,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   }
   case Builtin::BI__builtin_bswapg:
     if (BuiltinBswapg(*this, TheCall))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_bitreverseg:
+    if (BuiltinBitreverseg(*this, TheCall))
       return ExprError();
     break;
   case Builtin::BI__builtin_popcountg:
@@ -15448,6 +15482,10 @@ void Sema::CheckArrayAccess(const Expr *expr) {
       }
       case Stmt::MemberExprClass: {
         expr = cast<MemberExpr>(expr)->getBase();
+        break;
+      }
+      case Stmt::CXXMemberCallExprClass: {
+        expr = cast<CXXMemberCallExpr>(expr)->getImplicitObjectArgument();
         break;
       }
       case Stmt::ArraySectionExprClass: {
