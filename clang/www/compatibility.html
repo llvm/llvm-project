@@ -8,6 +8,7 @@
   <link type="text/css" rel="stylesheet" href="content.css">
   <style type="text/css">
 </style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css">
 </head>
 <body>
 
@@ -29,49 +30,49 @@
   problem in your code when Clang emits an error message.</p>
 
 <ul>
-  <li><a href="#c">C compatibility</a>
+  <li><a href="#c" class="link-warning">C compatibility</a>
     <ul>
-      <li><a href="#inline">C99 inline functions</a></li>
-      <li><a href="#vector_builtins">"missing" vector __builtin functions</a></li>
-      <li><a href="#lvalue-cast">Lvalue casts</a></li>
-      <li><a href="#blocks-in-protected-scope">Jumps to within <tt>__block</tt> variable scope</a></li>
-      <li><a href="#block-variable-initialization">Non-initialization of <tt>__block</tt> variables</a></li>
-      <li><a href="#inline-asm">Inline assembly</a></li>
+      <li><a href="#inline" class="link-success">C99 inline functions</a></li>
+      <li><a href="#vector_builtins" class="link-success">"missing" vector __builtin functions</a></li>
+      <li><a href="#lvalue-cast" class="link-success">Lvalue casts</a></li>
+      <li><a href="#blocks-in-protected-scope" class="link-success">Jumps to within <tt>__block</tt> variable scope</a></li>
+      <li><a href="#block-variable-initialization" class="link-success">Non-initialization of <tt>__block</tt> variables</a></li>
+      <li><a href="#inline-asm" class="link-success">Inline assembly</a></li>
     </ul>
   </li>
-  <li><a href="#objective-c">Objective-C compatibility</a>
+  <li><a href="#objective-c" class="link-warning">Objective-C compatibility</a>
     <ul>
-      <li><a href="#super-cast">Cast of super</a></li>
-      <li><a href="#sizeof-interface">Size of interfaces</a></li>
-      <li><a href="#objc_objs-cast">Internal Objective-C types</a></li>
-      <li><a href="#c_variables-class">C variables in @class or @protocol</a></li>
+      <li><a href="#super-cast" class="link-success">Cast of super</a></li>
+      <li><a href="#sizeof-interface" class="link-success">Size of interfaces</a></li>
+      <li><a href="#objc_objs-cast" class="link-success">Internal Objective-C types</a></li>
+      <li><a href="#c_variables-class" class="link-success">C variables in @class or @protocol</a></li>
     </ul>
   </li>
-  <li><a href="#cxx">C++ compatibility</a>
+  <li><a href="#cxx" class="link-warning">C++ compatibility</a>
     <ul>
-      <li><a href="#vla">Variable-length arrays</a></li>
-      <li><a href="#dep_lookup">Unqualified lookup in templates</a></li>
-      <li><a href="#dep_lookup_bases">Unqualified lookup into dependent bases of class templates</a></li>
-      <li><a href="#undep_incomplete">Incomplete types in templates</a></li>
-      <li><a href="#bad_templates">Templates with no valid instantiations</a></li>
-      <li><a href="#default_init_const">Default initialization of const
+      <li><a href="#vla" class="link-success">Variable-length arrays</a></li>
+      <li><a href="#dep_lookup" class="link-success">Unqualified lookup in templates</a></li>
+      <li><a href="#dep_lookup_bases" class="link-success">Unqualified lookup into dependent bases of class templates</a></li>
+      <li><a href="#undep_incomplete" class="link-success">Incomplete types in templates</a></li>
+      <li><a href="#bad_templates" class="link-success">Templates with no valid instantiations</a></li>
+      <li><a href="#default_init_const"class="link-success">Default initialization of const
       variable of a class type requires user-defined default
       constructor</a></li>
-      <li><a href="#param_name_lookup">Parameter name lookup</a></li>
+      <li><a href="#param_name_lookup" class="link-success">Parameter name lookup</a></li>
     </ul>
   </li>
-  <li><a href="#cxx11">C++11 compatibility</a>
+  <li><a href="#cxx11" class="link-warning">C++11 compatibility</a>
     <ul>
-      <li><a href="#deleted-special-func">Deleted special member
+      <li><a href="#deleted-special-func" class="link-success">Deleted special member
   functions</a></li>
     </ul>
   </li>
-  <li><a href="#objective-cxx">Objective-C++ compatibility</a>
+  <li><a href="#objective-cxx" class="link-warning">Objective-C++ compatibility</a>
     <ul>
-      <li><a href="#implicit-downcasts">Implicit downcasts</a></li>
+      <li><a href="#implicit-downcasts" class="link-success"> Implicit downcasts</a></li>
     </ul>
     <ul>
-      <li><a href="#class-as-property-name">Using <code>class</code> as a property name</a></li>
+      <li><a href="#class-as-property-name" class="link-success">Using <code>class</code> as a property name</a></li>
     </ul>
   </li>
 </ul>
@@ -858,6 +859,7 @@ int cls;
 </pre>
 
 <p>Use explicit message-send syntax instead, i.e. <code>[I class]</code>.</p>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
 
 </div>
 </body>
