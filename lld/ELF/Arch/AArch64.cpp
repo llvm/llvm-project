@@ -274,9 +274,22 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       continue;
 
       // GOT relocations:
+    case R_AARCH64_ADR_GOT_PAGE:
+      expr = RE_AARCH64_GOT_PAGE_PC;
+      break;
     case R_AARCH64_LD64_GOT_LO12_NC:
       expr = R_GOT;
       break;
+    case R_AARCH64_LD64_GOTPAGE_LO15:
+      expr = RE_AARCH64_GOT_PAGE;
+      break;
+    case R_AARCH64_GOTPCREL32:
+    case R_AARCH64_GOT_LD_PREL19:
+      expr = R_GOT_PC;
+      break;
+
+      // AUTH GOT relocations. Set NEEDS_GOT_AUTH to detect incompatibility with
+      // NEEDS_GOT_NONAUTH. rs.process does not set the flag.
     case R_AARCH64_AUTH_LD64_GOT_LO12_NC:
     case R_AARCH64_AUTH_GOT_ADD_LO12_NC:
       sym.setFlags(NEEDS_GOT | NEEDS_GOT_AUTH);
@@ -287,20 +300,10 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       sym.setFlags(NEEDS_GOT | NEEDS_GOT_AUTH);
       rs.processAux(R_GOT_PC, type, offset, sym, addend);
       continue;
-    case R_AARCH64_ADR_GOT_PAGE:
-      expr = RE_AARCH64_GOT_PAGE_PC;
-      break;
     case R_AARCH64_AUTH_ADR_GOT_PAGE:
       sym.setFlags(NEEDS_GOT | NEEDS_GOT_AUTH);
       rs.processAux(RE_AARCH64_GOT_PAGE_PC, type, offset, sym, addend);
       continue;
-    case R_AARCH64_LD64_GOTPAGE_LO15:
-      expr = RE_AARCH64_GOT_PAGE;
-      break;
-    case R_AARCH64_GOTPCREL32:
-    case R_AARCH64_GOT_LD_PREL19:
-      expr = R_GOT_PC;
-      break;
 
       // TLS LE relocations:
     case R_AARCH64_TLSLE_ADD_TPREL_HI12:
