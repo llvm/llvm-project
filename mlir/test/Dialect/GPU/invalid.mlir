@@ -10,6 +10,15 @@ func.func @not_enough_sizes(%sz : index) {
 
 // -----
 
+func.func @not_empty_body(%sz : index) {
+  // expected-error@+1 {{expected a non-empty body region}}
+  "gpu.launch"(%sz, %sz, %sz, %sz, %sz, %sz) ({
+  }) {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0>}: (index, index, index, index, index, index) -> ()
+  return
+}
+
+// -----
+
 func.func @no_region_attrs(%sz : index) {
   // expected-error@+1 {{unexpected number of region arguments}}
   "gpu.launch"(%sz, %sz, %sz, %sz, %sz, %sz) ({
