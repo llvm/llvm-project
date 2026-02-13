@@ -82,7 +82,7 @@ enum class Shapes {
 
 // COM: FIXME: Serialize "enum class" in template
 // HTML-INDEX:     <div>
-// HTML-INDEX:         <pre><code class="language-cpp code-clang-doc">enum Shapes</code></pre>
+// HTML-INDEX:         <pre><code class="language-cpp code-clang-doc">enum Shapes : int</code></pre>
 // HTML-INDEX:     </div>
 // HTML-INDEX:     <table class="table-wrapper">
 // HTML-INDEX:         <tbody>
