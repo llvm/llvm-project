@@ -247,25 +247,10 @@ buildPointerKindVariables(std::set<const Expr *> UnsafePointers,
 }
 } // namespace
 
-namespace clang::ssaf {
-
 std::unique_ptr<UnsafeBufferUsageEntitySummary>
-UnsafeBufferUsageTUSummaryExtractor::extractEntitySummary(
+clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::extractEntitySummary(
     EntityId Contributor, const Decl *ContributorDefn, ASTContext &Ctx) {
-  switch (ContributorDefn->getKind()) {
-  case Decl::Kind::Function: {
-    const auto *FD = cast<FunctionDecl>(ContributorDefn);
-
-    assert(FD->hasBody());
-    return builder().buildUnsafeBufferUsageEntitySummary(
-        buildPointerKindVariables(findUnsafePointers(FD), builder()));
-  }
-  // FIXME: Add more contributor entity kinds
-  default:
-#ifndef NDEBUG
-    // FIXME: Log missing case
-#endif
-    return nullptr;
-  }
+  return builder().buildUnsafeBufferUsageEntitySummary(
+      buildPointerKindVariables(findUnsafePointers(ContributorDefn),
+                                builder()));
 }
-} // namespace clang::ssaf

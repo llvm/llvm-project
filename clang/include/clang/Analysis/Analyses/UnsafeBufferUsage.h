@@ -201,7 +201,7 @@ bool anyConflict(const llvm::SmallVectorImpl<FixItHint> &FixIts,
                  const SourceManager &SM);
 } // namespace internal
 
-std::set<const Expr *> findUnsafePointers(const FunctionDecl *FD);
+std::set<const Expr *> findUnsafePointers(const Decl *FD);
 } // end namespace clang
 
 #endif /* LLVM_CLANG_ANALYSIS_ANALYSES_UNSAFEBUFFERUSAGE_H */
