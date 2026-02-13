@@ -1115,6 +1115,10 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_popcountg:
     return emitBuiltinBitOp<cir::BitPopcountOp>(*this, e);
 
+  // Always return the argument of __builtin_unpredictable.  LLVM does not
+  // have an intrinsic corresponding to this builtin.  Metadata for this
+  // builtin should be added directly to instructions such as branches or
+  // switches that use it.
   case Builtin::BI__builtin_unpredictable: {
         // Always return the argument of __builtin_unpredictable. LLVM does not
         // have an intrinsic corresponding to this builtin. Metadata for this builtin
@@ -1126,6 +1130,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_expect:
   case Builtin::BI__builtin_expect_with_probability: {
     mlir::Value argValue = emitScalarExpr(e->getArg(0));
+    if (cgm.getCodeGenOpts().OptimizationLevel == 0)
+      return RValue::get(argValue);
+
     mlir::Value expectedValue = emitScalarExpr(e->getArg(1));
 
     mlir::FloatAttr probAttr;
