@@ -1355,6 +1355,7 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.WhitespaceSensitiveMacros);
     IO.mapOptional("WrapNamespaceBodyWithEmptyLines",
                    Style.WrapNamespaceBodyWithEmptyLines);
+    IO.mapOptional("MaxParametersOnLine", Style.MaxParametersOnLine);
 
     // If AlwaysBreakAfterDefinitionReturnType was specified but
     // BreakAfterReturnType was not, initialize the latter from the former for

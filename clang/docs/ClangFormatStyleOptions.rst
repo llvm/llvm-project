@@ -5252,6 +5252,37 @@ the configuration (without a prefix: ``Auto``).
        return i;
      }
 
+.. _MaxParametersOnLine:
+
+**MaxParametersOnLine** (``Unsigned``) :versionbadge:`clang-format 23` :ref:`¶ <MaxParametersOnLine>`
+  The maximum amount of parameters that may appear on a single line in a
+  function declaration. This option can be used with ``BPPS_OnePerLine`` to
+  put every parameter on its own line if the function has more than
+  ``MaxParametersOnLine`` parameters. If this option is 0, there is no maximum.
+
+  .. code-block:: c++
+
+    MaxParametersOnLine: 3
+    BinPackParameters: BPPS_BinPack
+
+    void foo(int a, int b, int c);
+
+    void foo(int a, int b, int c,
+             int d);
+
+    void foo(int a, int b, int c,
+             int d, int e, int f,
+             int g, int h, int i);
+
+    BinPackParameters: BPPS_OnePerLine
+
+    void foo(int a, int b, int c);
+
+    void foo(int a,
+             int b,
+             int c,
+             int d);
+
 .. _NamespaceIndentation:
 
 **NamespaceIndentation** (``NamespaceIndentationKind``) :versionbadge:`clang-format 3.7` :ref:`¶ <NamespaceIndentation>`

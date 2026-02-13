@@ -1254,6 +1254,35 @@ struct FormatStyle {
   /// \version 3.7
   BinPackParametersStyle BinPackParameters;
 
+  /// The maximum amount of parameters that may appear on a single line in a
+  /// function declaration. This option can be used with \c BPPS_OnePerLine to
+  /// put every parameter on its own line if the function has more than
+  /// \c MaxParametersOnLine parameters. If this option is 0, there is no maximum.
+  /// \code
+  ///   MaxParametersOnLine: 3
+  ///   BinPackParameters: BPPS_BinPack
+  ///
+  ///   void foo(int a, int b, int c);
+  ///
+  ///   void foo(int a, int b, int c,
+  ///            int d);
+  ///
+  ///   void foo(int a, int b, int c,
+  ///            int d, int e, int f,
+  ///            int g, int h, int i);
+  ///
+  ///   BinPackParameters: BPPS_OnePerLine
+  ///
+  ///   void foo(int a, int b, int c);
+  ///
+  ///   void foo(int a,
+  ///            int b,
+  ///            int c,
+  ///            int d);
+  /// \endcode
+  /// \version 23
+  unsigned MaxParametersOnLine;
+
   /// Styles for adding spacing around ``:`` in bitfield definitions.
   enum BitFieldColonSpacingStyle : int8_t {
     /// Add one space on each side of the ``:``
@@ -5694,6 +5723,7 @@ struct FormatStyle {
            BinPackArguments == R.BinPackArguments &&
            BinPackLongBracedList == R.BinPackLongBracedList &&
            BinPackParameters == R.BinPackParameters &&
+           MaxParametersOnLine == R.MaxParametersOnLine &&
            BitFieldColonSpacing == R.BitFieldColonSpacing &&
            BracedInitializerIndentWidth == R.BracedInitializerIndentWidth &&
            BreakAdjacentStringLiterals == R.BreakAdjacentStringLiterals &&
