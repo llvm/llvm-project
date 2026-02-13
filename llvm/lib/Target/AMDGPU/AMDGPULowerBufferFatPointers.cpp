@@ -2208,6 +2208,7 @@ static bool isRemovablePointerIntrinsic(Intrinsic::ID IID) {
   case Intrinsic::memset_inline:
   case Intrinsic::experimental_memset_pattern:
   case Intrinsic::amdgcn_load_to_lds:
+  case Intrinsic::amdgcn_load_async_to_lds:
     return true;
   }
 }
@@ -2296,7 +2297,8 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
     SplitUsers.insert(&I);
     return {NewRsrc, Off};
   }
-  case Intrinsic::amdgcn_load_to_lds: {
+  case Intrinsic::amdgcn_load_to_lds:
+  case Intrinsic::amdgcn_load_async_to_lds: {
     Value *Ptr = I.getArgOperand(0);
     if (!isSplitFatPtr(Ptr->getType()))
       return {nullptr, nullptr};
@@ -2307,9 +2309,12 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
     Value *ImmOff = I.getArgOperand(3);
     Value *Aux = I.getArgOperand(4);
     Value *SOffset = IRB.getInt32(0);
+    Intrinsic::ID NewIntr =
+        IID == Intrinsic::amdgcn_load_to_lds
+            ? Intrinsic::amdgcn_raw_ptr_buffer_load_lds
+            : Intrinsic::amdgcn_raw_ptr_buffer_load_async_lds;
     Instruction *NewLoad = IRB.CreateIntrinsic(
-        Intrinsic::amdgcn_raw_ptr_buffer_load_lds, {},
-        {Rsrc, LDSPtr, LoadSize, Off, SOffset, ImmOff, Aux});
+        NewIntr, {}, {Rsrc, LDSPtr, LoadSize, Off, SOffset, ImmOff, Aux});
     copyMetadata(NewLoad, &I);
     SplitUsers.insert(&I);
     I.replaceAllUsesWith(NewLoad);

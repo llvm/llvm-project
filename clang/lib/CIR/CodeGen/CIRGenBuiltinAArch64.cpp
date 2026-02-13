@@ -1446,6 +1446,18 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vcged_s64:
   case NEON::BI__builtin_neon_vcled_u64:
   case NEON::BI__builtin_neon_vcled_s64:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
+  case NEON::BI__builtin_neon_vnegd_s64: {
+    ops.push_back(emitScalarExpr(expr->getArg(0)));
+    return builder.createNeg(ops[0]);
+  }
+  case NEON::BI__builtin_neon_vnegh_f16: {
+    ops.push_back(emitScalarExpr(expr->getArg(0)));
+    return builder.createFNeg(ops[0]);
+  }
   case NEON::BI__builtin_neon_vtstd_s64:
   case NEON::BI__builtin_neon_vtstd_u64:
   case NEON::BI__builtin_neon_vset_lane_i8:
@@ -1706,8 +1718,6 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vmulxh_laneq_f16:
   case NEON::BI__builtin_neon_vmul_lane_v:
   case NEON::BI__builtin_neon_vmul_laneq_v:
-  case NEON::BI__builtin_neon_vnegd_s64:
-  case NEON::BI__builtin_neon_vnegh_f16:
   case NEON::BI__builtin_neon_vpmaxnm_v:
   case NEON::BI__builtin_neon_vpmaxnmq_v:
   case NEON::BI__builtin_neon_vpminnm_v:
