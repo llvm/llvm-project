@@ -107,6 +107,16 @@ public:
 } // namespace
 
 //----------------------------------------------------------------------------
+// File Format Constant
+//----------------------------------------------------------------------------
+
+namespace {
+
+constexpr const char *JSONFormatFileExtension = ".json";
+
+}
+
+//----------------------------------------------------------------------------
 // Error Message Constants
 //----------------------------------------------------------------------------
 
@@ -118,8 +128,7 @@ constexpr const char *FailedToReadFile = "failed to read file '{0}': {1}";
 constexpr const char *FailedToWriteFile = "failed to write file '{0}': {1}";
 constexpr const char *FileNotFound = "file does not exist";
 constexpr const char *FileIsDirectory = "path is a directory, not a file";
-constexpr const char *FileIsNotJSON =
-    "file does not end with '.json' extension";
+constexpr const char *FileIsNotJSON = "file does not end with '{0}' extension";
 constexpr const char *FileExists = "file already exists";
 constexpr const char *ParentDirectoryNotFound =
     "parent directory does not exist";
@@ -176,10 +185,11 @@ llvm::Expected<Value> readJSON(llvm::StringRef Path) {
         .build();
   }
 
-  if (!Path.ends_with_insensitive(".json")) {
+  if (!Path.ends_with_insensitive(JSONFormatFileExtension)) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToReadFile, Path,
-                                ErrorMessages::FileIsNotJSON)
+                                llvm::formatv(ErrorMessages::FileIsNotJSON,
+                                              JSONFormatFileExtension))
         .build();
   }
 
@@ -210,10 +220,11 @@ llvm::Error writeJSON(Value &&Value, llvm::StringRef Path) {
         .build();
   }
 
-  if (!Path.ends_with_insensitive(".json")) {
+  if (!Path.ends_with_insensitive(JSONFormatFileExtension)) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToWriteFile, Path,
-                                ErrorMessages::FileIsNotJSON)
+                                llvm::formatv(ErrorMessages::FileIsNotJSON,
+                                              JSONFormatFileExtension))
         .build();
   }
 
