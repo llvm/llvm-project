@@ -144,6 +144,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/argument-comment>` to also check for C++11
   inherited constructors.
 
+- Improved :doc:`bugprone-bad-signal-to-kill-thread
+  <clang-tidy/checks/bugprone/bad-signal-to-kill-thread>` check by fixing false
+  negatives when the ``SIGTERM`` macro is obtained from a precompiled header.
+
 - Improved :doc:`bugprone-exception-escape
   <clang-tidy/checks/bugprone/exception-escape>` check by adding
   `TreatFunctionsWithoutSpecificationAsThrowing` option to support reporting
@@ -168,6 +172,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/use-after-move>` check by including the name of
   the invalidating function in the warning message when a custom invalidation
   function is used (via the `InvalidationFunctions` option).
+
+- Improved :doc:`cppcoreguidelines-init-variables
+  <clang-tidy/checks/cppcoreguidelines/init-variables>` check by ensuring that
+  member pointers are correctly flagged as uninitialized.
 
 - Improved :doc:`cppcoreguidelines-pro-type-vararg
   <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>` check by no longer

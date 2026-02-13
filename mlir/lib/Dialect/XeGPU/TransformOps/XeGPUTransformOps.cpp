@@ -291,7 +291,7 @@ void transform::SetOpLayoutAttrOp::build(
     OpBuilder &builder, OperationState &ostate, Value target, int64_t index,
     ArrayRef<OpFoldResult> mixedSgLayout, ArrayRef<OpFoldResult> mixedSgData,
     ArrayRef<OpFoldResult> mixedInstData, ArrayRef<int64_t> sliceDims,
-    bool result) {
+    bool result, bool operand) {
   SmallVector<int64_t> staticSgLayout, staticSgData, staticInstData;
   SmallVector<Value> dynamicSgLayout, dynamicSgData, dynamicInstData;
   dispatchIndexOpFoldResults(mixedSgLayout, dynamicSgLayout, staticSgLayout);
@@ -307,7 +307,8 @@ void transform::SetOpLayoutAttrOp::build(
         /*static_sg_data=*/staticSgData,
         /*static_inst_data=*/staticInstData,
         /*slice_dims=*/sliceDims,
-        /*result=*/result);
+        /*result=*/result,
+        /*operand=*/operand);
 }
 
 DiagnosedSilenceableFailure
@@ -322,13 +323,14 @@ transform::SetOpLayoutAttrOp::apply(transform::TransformRewriter &rewriter,
   Operation *target = *targetOps.begin();
 
   bool resultTarget = getResult();
+  bool operandTarget = getOperand();
 
   int64_t index = getIndex();
   if (resultTarget && index >= target->getNumResults()) {
     return emitSilenceableFailure(getLoc())
            << "Index exceeds the number of op results";
   }
-  if (!resultTarget && index >= target->getNumOperands()) {
+  if (operandTarget && index >= target->getNumOperands()) {
     return emitSilenceableFailure(getLoc())
            << "Index exceeds the number of op operands";
   }
@@ -348,11 +350,38 @@ transform::SetOpLayoutAttrOp::apply(transform::TransformRewriter &rewriter,
         getContext(), layout, DenseI64ArrayAttr::get(getContext(), sliceDims));
   }
 
-  // Set layout attribute for the op result or operand
-  if (resultTarget)
+  // Set layout attribute
+  if (resultTarget) {
+    // op result
     xegpu::setDistributeLayoutAttr(target->getResult(index), layout);
-  else
+  } else if (operandTarget) {
+    // op operand
     xegpu::setDistributeLayoutAttr(target->getOpOperand(index), layout);
+  } else if (auto dpasOp = dyn_cast<xegpu::DpasOp>(target)) {
+    // dpas op is a special case where layout needs to be set for A, B, and C
+    if (index == 0)
+      dpasOp.getProperties().layout_a = layout;
+    else if (index == 1)
+      dpasOp.getProperties().layout_b = layout;
+    else if (index == 2)
+      dpasOp.getProperties().layout_cd = layout;
+    else {
+      auto diag = emitSilenceableFailure(getLoc())
+                  << "Invalid index for setting dpas op layout: " << index;
+      diag.attachNote(target->getLoc()) << "target op";
+      return diag;
+    }
+  } else {
+    // op's anchor layout.
+    auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(target);
+    if (!anchorOp) {
+      auto diag = emitSilenceableFailure(getLoc())
+                  << "Cannot set anchor layout to op: " << target->getName();
+      diag.attachNote(target->getLoc()) << "target op";
+      return diag;
+    }
+    anchorOp.setAnchorLayout(layout);
+  }
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -363,6 +392,13 @@ void transform::SetOpLayoutAttrOp::getEffects(
   onlyReadsHandle(getSgDataMutable(), effects);
   onlyReadsHandle(getInstDataMutable(), effects);
   modifiesPayload(effects);
+}
+
+LogicalResult transform::SetOpLayoutAttrOp::verify() {
+  if (getResult() && getOperand()) {
+    return emitOpError("Cannot set both result and operand simultaneously.");
+  }
+  return success();
 }
 
 void transform::SetGPULaunchThreadsOp::build(

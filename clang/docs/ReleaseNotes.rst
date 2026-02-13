@@ -138,6 +138,10 @@ Non-comprehensive list of changes in this release
   Usable in constant expressions. Implicit conversion is supported for
   class/struct types with conversion operators.
 
+- A new generic bit-reverse builtin function ``__builtin_bitreverseg`` that
+  extends bit-reversal support to all standard integers type, including
+  ``_BitInt``
+
 New Compiler Flags
 ------------------
 - New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added
@@ -235,6 +239,9 @@ Improvements to Clang's diagnostics
 - Added a missing space to the FixIt for the ``implicit-int`` group of diagnostics and 
   made sure that only one such diagnostic and FixIt is emitted per declaration group. (#GH179354)
 
+- The ``-Wloop-analysis`` warning has been extended to catch more cases of
+  variable modification inside lambda expressions (#GH132038).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -257,6 +264,7 @@ Bug Fixes in This Version
 - Fixes an assertion failure when evaluating ``__underlying_type`` on enum redeclarations. (#GH177943)
 
 - Clang now outputs relative paths of embeds for dependency output. (#GH161950)
+- Fixed an assertion failure when evaluating ``_Countof`` on invalid ``void``-typed operands. (#GH180893)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -270,6 +278,7 @@ Bug Fixes to C++ Support
 - Fixed a crash when instantiating ``requires`` expressions involving substitution failures in C++ concepts. (#GH176402)
 - Fixed a crash when a default argument is passed to an explicit object parameter. (#GH176639)
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
+- Fixed a crash when evaluating uninitialized GCC vector/ext_vector_type vectors in ``constexpr``. (#GH180044)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -286,6 +295,7 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash when using loop hint with a value dependent argument inside a
   generic lambda. (#GH172289)
 - Fixed a crash in C++ overload resolution with ``_Atomic``-qualified argument types. (#GH170433)
+- Fixed an assertion when diagnosing address-space qualified ``new``/``delete`` in language-defined address spaces such as OpenCL ``__local``. (#GH178319)
 
 OpenACC Specific Changes
 ------------------------
