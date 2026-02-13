@@ -17,7 +17,6 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
-
 class TestSwiftConditionalBreakpoint(TestBase):
     @swiftTest
     def test_swift_conditional_breakpoint(self):
