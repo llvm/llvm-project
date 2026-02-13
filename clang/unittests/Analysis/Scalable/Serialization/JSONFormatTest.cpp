@@ -38,19 +38,20 @@ namespace {
 // Test Analysis - Simple analysis for testing JSON serialization
 // ============================================================================
 
-struct TestAnalysis final : EntitySummary {
+struct PairsEntitySummaryForJSONFormatTest final : EntitySummary {
 
   SummaryName getSummaryName() const override {
-    return SummaryName("TestAnalysis");
+    return SummaryName("PairsEntitySummaryForJSONFormatTest");
   }
 
   std::vector<std::pair<EntityId, EntityId>> Pairs;
 };
 
-static json::Object
-serializeTestAnalysis(const EntitySummary &Summary,
-                      const JSONFormat::EntityIdConverter &Converter) {
-  const auto &TA = static_cast<const TestAnalysis &>(Summary);
+static json::Object serializePairsEntitySummaryForJSONFormatTest(
+    const EntitySummary &Summary,
+    const JSONFormat::EntityIdConverter &Converter) {
+  const auto &TA =
+      static_cast<const PairsEntitySummaryForJSONFormatTest &>(Summary);
   json::Array PairsArray;
   for (const auto &[First, Second] : TA.Pairs) {
     PairsArray.push_back(json::Object{
@@ -62,9 +63,10 @@ serializeTestAnalysis(const EntitySummary &Summary,
 }
 
 static Expected<std::unique_ptr<EntitySummary>>
-deserializeTestAnalysis(const json::Object &Obj, EntityIdTable &IdTable,
-                        const JSONFormat::EntityIdConverter &Converter) {
-  auto Result = std::make_unique<TestAnalysis>();
+deserializePairsEntitySummaryForJSONFormatTest(
+    const json::Object &Obj, EntityIdTable &IdTable,
+    const JSONFormat::EntityIdConverter &Converter) {
+  auto Result = std::make_unique<PairsEntitySummaryForJSONFormatTest>();
   const json::Array *PairsArray = Obj.getArray("pairs");
   if (!PairsArray)
     return createStringError(inconvertibleErrorCode(),
@@ -91,15 +93,19 @@ deserializeTestAnalysis(const json::Object &Obj, EntityIdTable &IdTable,
   return std::move(Result);
 }
 
-struct TestAnalysisFormatInfo : JSONFormat::FormatInfo {
-  TestAnalysisFormatInfo()
-      : JSONFormat::FormatInfo(SummaryName("TestSummary"),
-                               serializeTestAnalysis, deserializeTestAnalysis) {
-  }
+struct PairsEntitySummaryForJSONFormatTestFormatInfo : JSONFormat::FormatInfo {
+  PairsEntitySummaryForJSONFormatTestFormatInfo()
+      : JSONFormat::FormatInfo(
+            SummaryName("PairsEntitySummaryForJSONFormatTest"),
+            serializePairsEntitySummaryForJSONFormatTest,
+            deserializePairsEntitySummaryForJSONFormatTest) {}
 };
 
-static llvm::Registry<JSONFormat::FormatInfo>::Add<TestAnalysisFormatInfo>
-    RegisterTestAnalysis("TestAnalysis", "Format info for test analysis data");
+static llvm::Registry<JSONFormat::FormatInfo>::Add<
+    PairsEntitySummaryForJSONFormatTestFormatInfo>
+    RegisterPairsEntitySummaryForJSONFormatTest(
+        "PairsEntitySummaryForJSONFormatTest",
+        "Format info for PairsArrayEntitySummary");
 
 // ============================================================================
 // Test Fixture
@@ -679,7 +685,7 @@ TEST_F(JSONFormatTest, EntitySummaryNoFormatInfo) {
               "no FormatInfo registered for summary 'unknown_summary_type'"))));
 }
 
-TEST_F(JSONFormatTest, TestAnalysisMissingField) {
+TEST_F(JSONFormatTest, PairsEntitySummaryForJSONFormatTestMissingField) {
   auto Result = readJSON(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -688,7 +694,7 @@ TEST_F(JSONFormatTest, TestAnalysisMissingField) {
     "id_table": [],
     "data": [
       {
-        "summary_name": "TestSummary",
+        "summary_name": "PairsEntitySummaryForJSONFormatTest",
         "summary_data": [
           {
             "entity_id": 0,
@@ -711,7 +717,7 @@ TEST_F(JSONFormatTest, TestAnalysisMissingField) {
           HasSubstr("missing or invalid field 'pairs'"))));
 }
 
-TEST_F(JSONFormatTest, TestAnalysisInvalidPair) {
+TEST_F(JSONFormatTest, PairsEntitySummaryForJSONFormatTestInvalidPair) {
   auto Result = readJSON(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -720,7 +726,7 @@ TEST_F(JSONFormatTest, TestAnalysisInvalidPair) {
     "id_table": [],
     "data": [
       {
-        "summary_name": "TestSummary",
+        "summary_name": "PairsEntitySummaryForJSONFormatTest",
         "summary_data": [
           {
             "entity_id": 0,
@@ -763,7 +769,7 @@ TEST_F(JSONFormatTest, EntityDataMissingEntityID) {
     "id_table": [],
     "data": [
       {
-        "summary_name": "TestSummary",
+        "summary_name": "PairsEntitySummaryForJSONFormatTest",
         "summary_data": [
           {
             "entity_summary": {}
@@ -794,7 +800,7 @@ TEST_F(JSONFormatTest, EntityDataMissingEntitySummary) {
     "id_table": [],
     "data": [
       {
-        "summary_name": "TestSummary",
+        "summary_name": "PairsEntitySummaryForJSONFormatTest",
         "summary_data": [
           {
             "entity_id": 0
@@ -825,7 +831,7 @@ TEST_F(JSONFormatTest, EntityIDNotUInt64) {
     "id_table": [],
     "data": [
       {
-        "summary_name": "TestSummary",
+        "summary_name": "PairsEntitySummaryForJSONFormatTest",
         "summary_data": [
           {
             "entity_id": "not_a_number",
@@ -861,7 +867,7 @@ TEST_F(JSONFormatTest, EntityDataElementNotObject) {
     "id_table": [],
     "data": [
       {
-        "summary_name": "TestSummary",
+        "summary_name": "PairsEntitySummaryForJSONFormatTest",
         "summary_data": ["invalid"]
       }
     ]
@@ -896,7 +902,7 @@ TEST_F(JSONFormatTest, DuplicateEntityIdInDataMap) {
     ],
     "data": [
       {
-        "summary_name": "TestSummary",
+        "summary_name": "PairsEntitySummaryForJSONFormatTest",
         "summary_data": [
           {
             "entity_id": 0,
@@ -963,7 +969,7 @@ TEST_F(JSONFormatTest, DataEntryMissingData) {
     "id_table": [],
     "data": [
       {
-        "summary_name": "TestSummary"
+        "summary_name": "PairsEntitySummaryForJSONFormatTest"
       }
     ]
   })");
@@ -1028,23 +1034,23 @@ TEST_F(JSONFormatTest, DuplicateSummaryName) {
     "id_table": [],
     "data": [
       {
-        "summary_name": "TestSummary",
+        "summary_name": "PairsEntitySummaryForJSONFormatTest",
         "summary_data": []
       },
       {
-        "summary_name": "TestSummary",
+        "summary_name": "PairsEntitySummaryForJSONFormatTest",
         "summary_data": []
       }
     ]
   })");
 
   EXPECT_THAT_EXPECTED(
-      Result,
-      FailedWithMessage(
-          AllOf(HasSubstr("reading TUSummary from file"),
-                HasSubstr("reading SummaryData entries from field 'data'"),
-                HasSubstr("failed to insert SummaryData entry at index '1'"),
-                HasSubstr("encountered duplicate SummaryName 'TestSummary'"))));
+      Result, FailedWithMessage(AllOf(
+                  HasSubstr("reading TUSummary from file"),
+                  HasSubstr("reading SummaryData entries from field 'data'"),
+                  HasSubstr("failed to insert SummaryData entry at index '1'"),
+                  HasSubstr("encountered duplicate SummaryName "
+                            "'PairsEntitySummaryForJSONFormatTest'"))));
 }
 
 // ============================================================================
@@ -1269,7 +1275,7 @@ TEST_F(JSONFormatTest, WithEmptyDataEntry) {
     "id_table": [],
     "data": [
       {
-        "summary_name": "TestSummary",
+        "summary_name": "PairsEntitySummaryForJSONFormatTest",
         "summary_data": []
       }
     ]
@@ -1301,7 +1307,7 @@ TEST_F(JSONFormatTest, RoundTripWithIDTable) {
   })");
 }
 
-TEST_F(JSONFormatTest, RoundTripTestAnalysis) {
+TEST_F(JSONFormatTest, RoundTripPairsEntitySummaryForJSONFormatTest) {
   readWriteJSON(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -1350,7 +1356,7 @@ TEST_F(JSONFormatTest, RoundTripTestAnalysis) {
     ],
     "data": [
       {
-        "summary_name": "TestSummary",
+        "summary_name": "PairsEntitySummaryForJSONFormatTest",
         "summary_data": [
           {
             "entity_id": 0,
