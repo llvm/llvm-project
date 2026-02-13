@@ -1,10 +1,11 @@
-// RUN: cir-opt %s -cir-flatten-cfg -verify-diagnostics -split-input-file -o -
+// RUN: cir-opt %s -cir-flatten-cfg -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
 
 !s32i = !cir.int<s, 32>
 !rec_SomeClass = !cir.record<struct "SomeClass" {!s32i}>
 
-// Test that we detect multiple exits in a loop with a break that branches
-// through a cleanup region.
+// Test that a cleanup scope with break that branches through cleanup is
+// properly flattened with a destination slot and switch dispatch.
 cir.func @test_multi_exit_with_break() {
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
   cir.while {
@@ -12,7 +13,6 @@ cir.func @test_multi_exit_with_break() {
     cir.condition(%true)
   } do {
     cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-    // expected-error @below {{cleanup scope with multiple exits is not yet implemented}}
     cir.cleanup.scope {
       %cond = cir.call @shouldBreak() : () -> !cir.bool
       cir.brcond %cond ^bb_break, ^bb_normal
@@ -29,17 +29,53 @@ cir.func @test_multi_exit_with_break() {
   cir.return
 }
 
+// CHECK-LABEL: cir.func @test_multi_exit_with_break()
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot", cleanup_dest_slot]
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         cir.br ^[[LOOP_COND:bb[0-9]+]]
+// CHECK:       ^[[LOOP_COND]]:
+// CHECK:         %[[TRUE:.*]] = cir.const #true
+// CHECK:         cir.brcond %[[TRUE]] ^[[LOOP_BODY:bb[0-9]+]], ^[[LOOP_EXIT:bb[0-9]+]]
+// CHECK:       ^[[LOOP_BODY]]:
+// CHECK:         cir.call @ctor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[CLEANUP_BODY:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP_BODY]]:
+// CHECK:         %[[COND:.*]] = cir.call @shouldBreak()
+// CHECK:         cir.brcond %[[COND]] ^[[BREAK_PATH:bb[0-9]+]], ^[[YIELD_PATH:bb[0-9]+]]
+// CHECK:       ^[[BREAK_PATH]]:
+// CHECK:         %[[BREAK_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[BREAK_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[YIELD_PATH]]:
+// CHECK:         %[[YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[CLEANUP]]
+// CHECK:       ^[[CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[DISPATCH]]:
+// CHECK:         %[[SLOT_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[SLOT_VAL]] : !s32i, ^[[DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[BREAK_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[YIELD_DEST]]:
+// CHECK:         cir.br ^[[LOOP_CONTINUE:bb[0-9]+]]
+// CHECK:       ^[[BREAK_DEST]]:
+// CHECK:         cir.br ^[[LOOP_EXIT]]
+// CHECK:       ^[[DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[LOOP_CONTINUE]]:
+// CHECK:         cir.br ^[[LOOP_COND]]
+// CHECK:       ^[[LOOP_EXIT]]:
+// CHECK:         cir.return
+
 cir.func private @ctor(!cir.ptr<!rec_SomeClass>)
 cir.func private @dtor(!cir.ptr<!rec_SomeClass>)
 cir.func private @shouldBreak() -> !cir.bool
 
-// -----
-
-!s32i = !cir.int<s, 32>
-!rec_SomeClass = !cir.record<struct "SomeClass" {!s32i}>
-
-// Test that we detect multiple exits in a loop with a continue that branches
-// through a cleanup region.
+// Test that a cleanup scope with continue that branches through cleanup is
+// properly flattened.
 cir.func @test_multi_exit_with_continue() {
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
   cir.while {
@@ -47,12 +83,11 @@ cir.func @test_multi_exit_with_continue() {
     cir.condition(%true)
   } do {
     cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-    // expected-error @below {{cleanup scope with multiple exits is not yet implemented}}
     cir.cleanup.scope {
       %cond = cir.call @shouldContinue() : () -> !cir.bool
       cir.brcond %cond ^bb_continue, ^bb_normal
     ^bb_continue:
-      cir.continue  // Continue through cleanup - exits the region
+      cir.continue  // Continue through cleanup
     ^bb_normal:
       cir.yield  // Normal exit through cleanup
     } cleanup normal {
@@ -64,18 +99,50 @@ cir.func @test_multi_exit_with_continue() {
   cir.return
 }
 
-cir.func private @ctor(!cir.ptr<!rec_SomeClass>)
-cir.func private @dtor(!cir.ptr<!rec_SomeClass>)
+// CHECK-LABEL: cir.func @test_multi_exit_with_continue()
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot", cleanup_dest_slot]
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         cir.br ^[[LOOP_COND:bb[0-9]+]]
+// CHECK:       ^[[LOOP_COND]]:
+// CHECK:         %[[TRUE:.*]] = cir.const #true
+// CHECK:         cir.brcond %[[TRUE]] ^[[LOOP_BODY:bb[0-9]+]], ^[[LOOP_EXIT:bb[0-9]+]]
+// CHECK:       ^[[LOOP_BODY]]:
+// CHECK:         cir.call @ctor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[CLEANUP_BODY:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP_BODY]]:
+// CHECK:         %[[COND:.*]] = cir.call @shouldContinue()
+// CHECK:         cir.brcond %[[COND]] ^[[CONTINUE_PATH:bb[0-9]+]], ^[[YIELD_PATH:bb[0-9]+]]
+// CHECK:       ^[[CONTINUE_PATH]]:
+// CHECK:         %[[CONTINUE_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[CONTINUE_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[YIELD_PATH]]:
+// CHECK:         %[[YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[CLEANUP]]
+// CHECK:       ^[[CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[DISPATCH]]:
+// CHECK:         %[[SLOT_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[SLOT_VAL]] : !s32i, ^[[DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[CONTINUE_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[YIELD_DEST]]:
+// CHECK:         cir.br ^[[LOOP_CONTINUE:bb[0-9]+]]
+// CHECK:       ^[[CONTINUE_DEST]]:
+// CHECK:         cir.br ^[[LOOP_COND]]
+// CHECK:       ^[[DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[LOOP_CONTINUE]]:
+// CHECK:         cir.br ^[[LOOP_COND]]
+// CHECK:       ^[[LOOP_EXIT]]:
+// CHECK:         cir.return
+
 cir.func private @shouldContinue() -> !cir.bool
 
-// -----
-
-!s32i = !cir.int<s, 32>
-!rec_SomeClass = !cir.record<struct "SomeClass" {!s32i}>
-
-// Test that we detect multiple exits in a switch statement nested within a
-// loop with a continue statement inside the switch that branches through a
-// cleanup region.
+// Test continue inside a switch that's inside a cleanup scope.
 cir.func @test_continue_in_switch() {
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
   cir.while {
@@ -83,10 +150,8 @@ cir.func @test_continue_in_switch() {
     cir.condition(%true)
   } do {
     cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-    // expected-error @below {{cleanup scope with multiple exits is not yet implemented}}
     cir.cleanup.scope {
       %x = cir.const #cir.int<1> : !s32i
-      // expected-error @below {{cannot lower switch: cleanup with multiple exits}}
       cir.switch (%x : !s32i) {
         cir.case (equal, [#cir.int<1> : !s32i]) {
           cir.break     // Break from switch -- no cleanup exit
@@ -106,16 +171,55 @@ cir.func @test_continue_in_switch() {
   cir.return
 }
 
-cir.func private @ctor(!cir.ptr<!rec_SomeClass>)
-cir.func private @dtor(!cir.ptr<!rec_SomeClass>)
+// CHECK-LABEL: cir.func @test_continue_in_switch()
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot", cleanup_dest_slot]
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         cir.br ^[[LOOP_COND:bb[0-9]+]]
+// CHECK:       ^[[LOOP_COND]]:
+// CHECK:         %[[TRUE:.*]] = cir.const #true
+// CHECK:         cir.brcond %[[TRUE]] ^[[LOOP_BODY:bb[0-9]+]], ^[[LOOP_EXIT:bb[0-9]+]]
+// CHECK:       ^[[LOOP_BODY]]:
+// CHECK:         cir.call @ctor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[CLEANUP_BODY:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP_BODY]]:
+// CHECK:         %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.br ^[[SWITCH_ENTRY:bb[0-9]+]]
+// CHECK:       ^[[SWITCH_ENTRY]]:
+// CHECK:         cir.switch.flat %[[ONE]] : !s32i, ^[[SWITCH_DEFAULT:bb[0-9]+]] [
+// CHECK:           1: ^[[CASE_ONE:bb[0-9]+]],
+// CHECK:           2: ^[[CASE_TWO:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[CASE_ONE]]:
+// CHECK:         cir.br ^[[SWITCH_DEFAULT]]
+// CHECK:       ^[[CASE_TWO]]:
+// CHECK:         %[[CONTINUE_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[CONTINUE_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[SWITCH_DEFAULT]]:
+// CHECK:         %[[YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[CLEANUP]]
+// CHECK:       ^[[CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[DISPATCH]]:
+// CHECK:         %[[SLOT_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[SLOT_VAL]] : !s32i, ^[[DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[CONTINUE_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[YIELD_DEST]]:
+// CHECK:         cir.br ^[[LOOP_CONTINUE:bb[0-9]+]]
+// CHECK:       ^[[CONTINUE_DEST]]:
+// CHECK:         cir.br ^[[LOOP_COND]]
+// CHECK:       ^[[DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[LOOP_CONTINUE]]:
+// CHECK:         cir.br ^[[LOOP_COND]]
+// CHECK:       ^[[LOOP_EXIT]]:
+// CHECK:         cir.return
 
-// -----
-
-!s32i = !cir.int<s, 32>
-!rec_SomeClass = !cir.record<struct "SomeClass" {!s32i}>
-
-// Test that we detect return inside a loop inside a switch inside a cleanup
-// scope. The return must be found even though it's nested inside the loop.
+// Test return inside a loop inside a switch inside a cleanup scope.
 cir.func @test_return_in_loop_in_switch() {
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
   cir.while {
@@ -123,14 +227,11 @@ cir.func @test_return_in_loop_in_switch() {
     cir.condition(%true)
   } do {
     cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-    // expected-error @below {{cleanup scope with multiple exits is not yet implemented}}
     cir.cleanup.scope {
       %x = cir.const #cir.int<1> : !s32i
-      // expected-error @below {{cannot lower switch: cleanup with multiple exits}}
       cir.switch (%x : !s32i) {
         cir.case (equal, [#cir.int<1> : !s32i]) {
           // Nested loop inside switch
-          // expected-error @below {{cannot lower loop: cleanup with multiple exits}}
           cir.while {
             %cond = cir.call @shouldContinue() : () -> !cir.bool
             cir.condition(%cond)
@@ -156,26 +257,72 @@ cir.func @test_return_in_loop_in_switch() {
   cir.return
 }
 
-cir.func private @ctor(!cir.ptr<!rec_SomeClass>)
-cir.func private @dtor(!cir.ptr<!rec_SomeClass>)
-cir.func private @shouldContinue() -> !cir.bool
+// CHECK-LABEL: cir.func @test_return_in_loop_in_switch()
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot", cleanup_dest_slot]
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         cir.br ^[[LOOP_COND:bb[0-9]+]]
+// CHECK:       ^[[LOOP_COND]]:
+// CHECK:         %[[TRUE:.*]] = cir.const #true
+// CHECK:         cir.brcond %[[TRUE]] ^[[LOOP_BODY:bb[0-9]+]], ^[[LOOP_EXIT:bb[0-9]+]]
+// CHECK:       ^[[LOOP_BODY]]:
+// CHECK:         cir.call @ctor
+// CHECK:         cir.br ^[[CLEANUP_SCOPE_ENTRY:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP_SCOPE_ENTRY]]:
+// CHECK:         %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.br ^[[SWITCH_ENTRY:bb[0-9]+]]
+// CHECK:       ^[[SWITCH_ENTRY]]:
+// CHECK:         cir.switch.flat %[[ONE]] : !s32i, ^[[SWITCH_FALLTHROUGH:bb[0-9]+]] [
+// CHECK:           1: ^[[CASE_ONE:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[CASE_ONE]]:
+// CHECK:         cir.br ^[[INNER_LOOP_COND:bb[0-9]+]]
+// CHECK:       ^[[INNER_LOOP_COND]]:
+// CHECK:         %[[SHOULD_CONTINUE:.*]] = cir.call @shouldContinue()
+// CHECK:         cir.brcond %[[SHOULD_CONTINUE]] ^[[INNER_LOOP_BODY:bb[0-9]+]], ^[[INNER_LOOP_EXIT:bb[0-9]+]]
+// CHECK:       ^[[INNER_LOOP_BODY]]:
+// CHECK:         %[[SHOULD_RETURN:.*]] = cir.call @shouldReturn()
+// CHECK:         cir.brcond %[[SHOULD_RETURN]] ^[[RETURN_FROM_INNER:bb[0-9]+]], ^[[NORMAL_PATH:bb[0-9]+]]
+// CHECK:       ^[[RETURN_FROM_INNER]]:
+// CHECK:         %[[RETURN_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[RETURN_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[CLEANUP_ENTRY:bb[0-9]+]]
+// CHECK:       ^[[NORMAL_PATH]]:
+// CHECK:         cir.br ^[[INNER_LOOP_COND]]
+// CHECK:       ^[[INNER_LOOP_EXIT]]:
+// CHECK:         cir.br ^[[SWITCH_EXIT:bb[0-9]+]]
+// CHECK:       ^[[SWITCH_EXIT]]:
+// CHECK:         %[[YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[CLEANUP_ENTRY]]
+// CHECK:       ^[[CLEANUP_ENTRY]]:
+// CHECK:         cir.call @dtor
+// CHECK:         cir.br ^[[DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[DISPATCH]]:
+// CHECK:         %[[SLOT_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[SLOT_VAL]] : !s32i, ^[[DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[RET_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[YIELD_DEST]]:
+// CHECK:         cir.br ^[[OUTER_LOOP_BODY_DONE:bb[0-9]+]]
+// CHECK:       ^[[RET_DEST]]:
+// CHECK:         cir.return
+// CHECK:       ^[[DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[OUTER_LOOP_BODY_DONE]]:
+// CHECK:         cir.br ^[[LOOP_COND]]
+// CHECK:       ^[[LOOP_EXIT]]:
+// CHECK:         cir.return
+
 cir.func private @shouldReturn() -> !cir.bool
 
-// -----
-
-!s32i = !cir.int<s, 32>
-!rec_SomeClass = !cir.record<struct "SomeClass" {!s32i}>
-
-// Test that a return inside nested cleanup scopes causes both to be detected
-// as having multiple exits. The return must go through both cleanup regions.
+// Test return inside nested cleanup scopes - both need multi-exit handling.
 cir.func @test_return_in_nested_cleanup() {
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}
   %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-  // expected-error @below {{cleanup scope with multiple exits is not yet implemented}}
   cir.cleanup.scope {
     cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
-    // expected-error @below {{cleanup scope with multiple exits is not yet implemented}}
     cir.cleanup.scope {
       %cond = cir.call @shouldReturn() : () -> !cir.bool
       cir.brcond %cond ^bb_return, ^bb_normal
@@ -195,30 +342,78 @@ cir.func @test_return_in_nested_cleanup() {
   cir.return
 }
 
-cir.func private @ctor(!cir.ptr<!rec_SomeClass>)
-cir.func private @dtor(!cir.ptr<!rec_SomeClass>)
-cir.func private @shouldReturn() -> !cir.bool
+// CHECK-LABEL: cir.func @test_return_in_nested_cleanup()
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot", cleanup_dest_slot]
+// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1"
+// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2"
+// CHECK:         cir.call @ctor(%[[ALLOCA_C1]])
+// CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
+// CHECK:       ^[[OUTER_BODY]]:
+// CHECK:         cir.call @ctor(%[[ALLOCA_C2]])
+// CHECK:         cir.br ^[[INNER_BODY:bb[0-9]+]]
+// CHECK:       ^[[INNER_BODY]]:
+// CHECK:         %[[COND:.*]] = cir.call @shouldReturn()
+// CHECK:         cir.brcond %[[COND]] ^[[RET_PATH:bb[0-9]+]], ^[[YIELD_PATH:bb[0-9]+]]
+// CHECK:       ^[[RET_PATH]]:
+// CHECK:         %[[RET_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[RET_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[INNER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[YIELD_PATH]]:
+// CHECK:         %[[YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[INNER_CLEANUP]]
+// CHECK:       ^[[INNER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA_C2]])
+// CHECK:         cir.br ^[[INNER_DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[INNER_DISPATCH]]:
+// CHECK:         %[[INNER_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[INNER_VAL]] : !s32i, ^[[INNER_DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[INNER_YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[INNER_RET_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[INNER_YIELD_DEST]]:
+// CHECK:         cir.br ^[[OUTER_YIELD_STORE:bb[0-9]+]]
+// CHECK:       ^[[INNER_RET_DEST]]:
+// CHECK:         %[[OUTER_RET_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[OUTER_RET_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[OUTER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[INNER_DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[OUTER_YIELD_STORE]]:
+// CHECK:         %[[OUTER_YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[OUTER_YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[OUTER_CLEANUP]]
+// CHECK:       ^[[OUTER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA_C1]])
+// CHECK:         cir.br ^[[OUTER_DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[OUTER_DISPATCH]]:
+// CHECK:         %[[OUTER_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[OUTER_VAL]] : !s32i, ^[[OUTER_DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[OUTER_YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[OUTER_RET_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[OUTER_YIELD_DEST]]:
+// CHECK:         cir.br ^[[FINAL_RET:bb[0-9]+]]
+// CHECK:       ^[[OUTER_RET_DEST]]:
+// CHECK:         cir.return
+// CHECK:       ^[[OUTER_DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[FINAL_RET]]:
+// CHECK:         cir.return
 
-// -----
-
-!s32i = !cir.int<s, 32>
-!rec_SomeClass = !cir.record<struct "SomeClass" {!s32i}>
-
-// Test that a goto inside nested cleanup scopes causes both to be detected
-// as having multiple exits. The goto must go through both cleanup regions.
-cir.func @test_goto_in_nested_cleanup() {
+// Test return inside nested cleanup scopes.
+cir.func @test_return_constant_in_nested_cleanup() -> !s32i {
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}
   %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-  // expected-error @below {{cleanup scope with multiple exits is not yet implemented}}
   cir.cleanup.scope {
     cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
-    // expected-error @below {{cleanup scope with multiple exits is not yet implemented}}
     cir.cleanup.scope {
-      %cond = cir.call @shouldGoto() : () -> !cir.bool
-      cir.brcond %cond ^bb_goto, ^bb_normal
-    ^bb_goto:
-      cir.goto "target"  // Goto exits through BOTH cleanup scopes
+      %cond = cir.call @shouldReturn() : () -> !cir.bool
+      cir.brcond %cond ^bb_return, ^bb_normal
+    ^bb_return:
+      %2 = cir.const #cir.int<-1> : !s32i
+      cir.return %2 : !s32i  // Return exits through BOTH cleanup scopes
     ^bb_normal:
       cir.yield
     } cleanup normal {
@@ -230,25 +425,351 @@ cir.func @test_goto_in_nested_cleanup() {
     cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
     cir.yield
   }
-  cir.br ^bb_end
-^bb_goto_target:
-  cir.label "target"
-  cir.br ^bb_end
-^bb_end:
-  cir.return
+  %3 = cir.const #cir.int<0> : !s32i
+  cir.return %3 : !s32i
 }
 
-cir.func private @ctor(!cir.ptr<!rec_SomeClass>)
-cir.func private @dtor(!cir.ptr<!rec_SomeClass>)
-cir.func private @shouldGoto() -> !cir.bool
+// CHECK-LABEL: cir.func @test_return_constant_in_nested_cleanup()
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot", cleanup_dest_slot]
+// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init]
+// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init]
+// CHECK:         cir.call @ctor(%[[ALLOCA_C1]])
+// CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
+// CHECK:       ^[[OUTER_BODY]]:
+// CHECK:         cir.call @ctor(%[[ALLOCA_C2]])
+// CHECK:         cir.br ^[[INNER_BODY:bb[0-9]+]]
+// CHECK:       ^[[INNER_BODY]]:
+// CHECK:         %[[COND:.*]] = cir.call @shouldReturn()
+// CHECK:         cir.brcond %[[COND]] ^[[RET_PATH:bb[0-9]+]], ^[[YIELD_PATH:bb[0-9]+]]
+// CHECK:       ^[[RET_PATH]]:
+// CHECK:         %[[RET_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[RET_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[INNER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[YIELD_PATH]]:
+// CHECK:         %[[YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[INNER_CLEANUP]]
+// CHECK:       ^[[INNER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA_C2]])
+// CHECK:         cir.br ^[[INNER_DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[INNER_DISPATCH]]:
+// CHECK:         %[[INNER_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[INNER_VAL]] : !s32i, ^[[INNER_DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[INNER_YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[INNER_RET_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[INNER_YIELD_DEST]]:
+// CHECK:         cir.br ^[[OUTER_YIELD_STORE:bb[0-9]+]]
+// CHECK:       ^[[INNER_RET_DEST]]:
+// CHECK:         %[[OUTER_RET_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[OUTER_RET_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[OUTER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[INNER_DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[OUTER_YIELD_STORE]]:
+// CHECK:         %[[OUTER_YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[OUTER_YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[OUTER_CLEANUP]]
+// CHECK:       ^[[OUTER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA_C1]])
+// CHECK:         cir.br ^[[OUTER_DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[OUTER_DISPATCH]]:
+// CHECK:         %[[OUTER_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[OUTER_VAL]] : !s32i, ^[[OUTER_DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[OUTER_YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[OUTER_RET_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[OUTER_YIELD_DEST]]:
+// CHECK:         cir.br ^[[FINAL_RET:bb[0-9]+]]
+// CHECK:       ^[[OUTER_RET_DEST]]:
+// CHECK:         %[[MINUS_ONE:.*]] = cir.const #cir.int<-1> : !s32i
+// CHECK:         cir.return %[[MINUS_ONE]] : !s32i
+// CHECK:       ^[[OUTER_DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[FINAL_RET]]:
+// CHECK:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.return %[[ZERO]]
 
-// -----
+// Test return with computed value.
+cir.func @test_return_computed_value(%arg0: !s32i) -> !s32i {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}
+  %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.cleanup.scope {
+      %cond = cir.call @shouldReturn() : () -> !cir.bool
+      cir.brcond %cond ^bb_return, ^bb_normal
+    ^bb_return:
+      %retval = cir.unary(not, %arg0) : !s32i, !s32i
+      cir.return %retval : !s32i
+    ^bb_normal:
+      cir.yield
+    } cleanup normal {
+      cir.call @dtor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
+    }
+    cir.yield
+  } cleanup normal {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  %zero = cir.const #cir.int<0> : !s32i
+  cir.return %zero : !s32i
+}
 
-!s32i = !cir.int<s, 32>
-!rec_SomeClass = !cir.record<struct "SomeClass" {!s32i}>
+// CHECK-LABEL: cir.func @test_return_computed_value
+// CHECK-SAME: (%[[ARG0:.*]]: !s32i)
+// CHECK:         %[[RET_TMP:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__ret_operand_tmp"]
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot", cleanup_dest_slot]
+// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init]
+// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init]
+// CHECK:         cir.call @ctor(%[[ALLOCA_C1]])
+// CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
+// CHECK:       ^[[OUTER_BODY]]:
+// CHECK:         cir.call @ctor(%[[ALLOCA_C2]])
+// CHECK:         cir.br ^[[INNER_BODY:bb[0-9]+]]
+// CHECK:       ^[[INNER_BODY]]:
+// CHECK:         %[[COND:.*]] = cir.call @shouldReturn()
+// CHECK:         cir.brcond %[[COND]] ^[[RET_PATH:bb[0-9]+]], ^[[YIELD_PATH:bb[0-9]+]]
+// CHECK:       ^[[RET_PATH]]:
+// CHECK:         %[[COMPUTED:.*]] = cir.unary(not, %[[ARG0]]) : !s32i, !s32i
+// CHECK:         cir.store %[[COMPUTED]], %[[RET_TMP]]
+// CHECK:         %[[RET_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[RET_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[INNER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[YIELD_PATH]]:
+// CHECK:         %[[YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[INNER_CLEANUP]]
+// CHECK:       ^[[INNER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA_C2]])
+// CHECK:         cir.br ^[[INNER_DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[INNER_DISPATCH]]:
+// CHECK:         %[[INNER_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[INNER_VAL]] : !s32i, ^[[INNER_DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[INNER_YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[INNER_RET_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[INNER_YIELD_DEST]]:
+// CHECK:         cir.br ^[[OUTER_YIELD_STORE:bb[0-9]+]]
+// CHECK:       ^[[INNER_RET_DEST]]:
+// CHECK:         %[[OUTER_RET_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[OUTER_RET_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[OUTER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[INNER_DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[OUTER_YIELD_STORE]]:
+// CHECK:         %[[OUTER_YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[OUTER_YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[OUTER_CLEANUP]]
+// CHECK:       ^[[OUTER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA_C1]])
+// CHECK:         cir.br ^[[OUTER_DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[OUTER_DISPATCH]]:
+// CHECK:         %[[OUTER_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[OUTER_VAL]] : !s32i, ^[[OUTER_DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[OUTER_YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[OUTER_RET_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[OUTER_YIELD_DEST]]:
+// CHECK:         cir.br ^[[FINAL_RET:bb[0-9]+]]
+// CHECK:       ^[[OUTER_RET_DEST]]:
+// CHECK:         %[[LOADED_RET:.*]] = cir.load %[[RET_TMP]]
+// CHECK:         cir.return %[[LOADED_RET]] : !s32i
+// CHECK:       ^[[OUTER_DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[FINAL_RET]]:
+// CHECK:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.return %[[ZERO]]
 
-// Test that a break inside nested cleanup scopes (within a loop) causes both
-// to be detected as having multiple exits. The break exits through both cleanups.
+// Test return with of a function parameter value.
+cir.func @test_return_param_value(%arg0: !s32i) -> !s32i {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}
+  %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.cleanup.scope {
+      %cond = cir.call @shouldReturn() : () -> !cir.bool
+      cir.brcond %cond ^bb_return, ^bb_normal
+    ^bb_return:
+      cir.return %arg0 : !s32i
+    ^bb_normal:
+      cir.yield
+    } cleanup normal {
+      cir.call @dtor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
+    }
+    cir.yield
+  } cleanup normal {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  %zero = cir.const #cir.int<0> : !s32i
+  cir.return %zero : !s32i
+}
+
+// CHECK-LABEL: cir.func @test_return_param_value
+// CHECK-SAME: (%[[ARG0:.*]]: !s32i)
+// CHECK:         %[[RET_TMP:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__ret_operand_tmp"]
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot", cleanup_dest_slot]
+// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init]
+// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init]
+// CHECK:         cir.call @ctor(%[[ALLOCA_C1]])
+// CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
+// CHECK:       ^[[OUTER_BODY]]:
+// CHECK:         cir.call @ctor(%[[ALLOCA_C2]])
+// CHECK:         cir.br ^[[INNER_BODY:bb[0-9]+]]
+// CHECK:       ^[[INNER_BODY]]:
+// CHECK:         %[[COND:.*]] = cir.call @shouldReturn()
+// CHECK:         cir.brcond %[[COND]] ^[[RET_PATH:bb[0-9]+]], ^[[YIELD_PATH:bb[0-9]+]]
+// CHECK:       ^[[RET_PATH]]:
+// CHECK:         cir.store %[[ARG0]], %[[RET_TMP]]
+// CHECK:         %[[RET_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[RET_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[INNER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[YIELD_PATH]]:
+// CHECK:         %[[YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[INNER_CLEANUP]]
+// CHECK:       ^[[INNER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA_C2]])
+// CHECK:         cir.br ^[[INNER_DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[INNER_DISPATCH]]:
+// CHECK:         %[[INNER_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[INNER_VAL]] : !s32i, ^[[INNER_DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[INNER_YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[INNER_RET_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[INNER_YIELD_DEST]]:
+// CHECK:         cir.br ^[[OUTER_YIELD_STORE:bb[0-9]+]]
+// CHECK:       ^[[INNER_RET_DEST]]:
+// CHECK:         %[[OUTER_RET_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[OUTER_RET_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[OUTER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[INNER_DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[OUTER_YIELD_STORE]]:
+// CHECK:         %[[OUTER_YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[OUTER_YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[OUTER_CLEANUP]]
+// CHECK:       ^[[OUTER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA_C1]])
+// CHECK:         cir.br ^[[OUTER_DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[OUTER_DISPATCH]]:
+// CHECK:         %[[OUTER_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[OUTER_VAL]] : !s32i, ^[[OUTER_DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[OUTER_YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[OUTER_RET_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[OUTER_YIELD_DEST]]:
+// CHECK:         cir.br ^[[FINAL_RET:bb[0-9]+]]
+// CHECK:       ^[[OUTER_RET_DEST]]:
+// CHECK:         %[[LOADED_RET:.*]] = cir.load %[[RET_TMP]]
+// CHECK:         cir.return %[[LOADED_RET]] : !s32i
+// CHECK:       ^[[OUTER_DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[FINAL_RET]]:
+// CHECK:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.return %[[ZERO]]
+
+// Test return of a block argument value.
+cir.func @test_return_blockarg_value(%arg0: !s32i) -> !s32i {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}
+  %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.cleanup.scope {
+      %cond = cir.call @shouldReturn() : () -> !cir.bool
+      cir.brcond %cond ^bb_return, ^bb_normal
+    ^bb_return:
+      cir.br ^bb_return_arg(%arg0 : !s32i)
+    ^bb_return_arg(%block_arg: !s32i):
+      cir.return %block_arg : !s32i
+    ^bb_normal:
+      cir.yield
+    } cleanup normal {
+      cir.call @dtor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
+    }
+    cir.yield
+  } cleanup normal {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  %zero = cir.const #cir.int<0> : !s32i
+  cir.return %zero : !s32i
+}
+
+// CHECK-LABEL: cir.func @test_return_blockarg_value
+// CHECK-SAME: (%[[ARG0:.*]]: !s32i)
+// CHECK:         %[[RET_TMP:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__ret_operand_tmp"]
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot", cleanup_dest_slot]
+// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init]
+// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init]
+// CHECK:         cir.call @ctor(%[[ALLOCA_C1]])
+// CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
+// CHECK:       ^[[OUTER_BODY]]:
+// CHECK:         cir.call @ctor(%[[ALLOCA_C2]])
+// CHECK:         cir.br ^[[INNER_BODY:bb[0-9]+]]
+// CHECK:       ^[[INNER_BODY]]:
+// CHECK:         %[[COND:.*]] = cir.call @shouldReturn()
+// CHECK:         cir.brcond %[[COND]] ^[[RET_PATH:bb[0-9]+]], ^[[YIELD_PATH:bb[0-9]+]]
+// CHECK:       ^[[RET_PATH]]:
+// CHECK:         cir.br ^[[RET_ARG_PATH:.*]](%[[ARG0]] : !s32i)
+// CHECK:       ^[[RET_ARG_PATH]](%[[BLOCK_ARG:.*]]: !s32i):
+// CHECK:         cir.store %[[BLOCK_ARG]], %[[RET_TMP]]
+// CHECK:         %[[RET_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[RET_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[INNER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[YIELD_PATH]]:
+// CHECK:         %[[YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[INNER_CLEANUP]]
+// CHECK:       ^[[INNER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA_C2]])
+// CHECK:         cir.br ^[[INNER_DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[INNER_DISPATCH]]:
+// CHECK:         %[[INNER_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[INNER_VAL]] : !s32i, ^[[INNER_DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[INNER_YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[INNER_RET_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[INNER_YIELD_DEST]]:
+// CHECK:         cir.br ^[[OUTER_YIELD_STORE:bb[0-9]+]]
+// CHECK:       ^[[INNER_RET_DEST]]:
+// CHECK:         %[[OUTER_RET_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[OUTER_RET_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[OUTER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[INNER_DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[OUTER_YIELD_STORE]]:
+// CHECK:         %[[OUTER_YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[OUTER_YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[OUTER_CLEANUP]]
+// CHECK:       ^[[OUTER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA_C1]])
+// CHECK:         cir.br ^[[OUTER_DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[OUTER_DISPATCH]]:
+// CHECK:         %[[OUTER_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[OUTER_VAL]] : !s32i, ^[[OUTER_DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[OUTER_YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[OUTER_RET_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[OUTER_YIELD_DEST]]:
+// CHECK:         cir.br ^[[FINAL_RET:bb[0-9]+]]
+// CHECK:       ^[[OUTER_RET_DEST]]:
+// CHECK:         %[[LOADED_RET:.*]] = cir.load %[[RET_TMP]]
+// CHECK:         cir.return %[[LOADED_RET]] : !s32i
+// CHECK:       ^[[OUTER_DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[FINAL_RET]]:
+// CHECK:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.return %[[ZERO]]
+
+// Test break inside nested cleanup scopes within a loop.
 cir.func @test_break_in_nested_cleanup() {
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}
   %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
@@ -257,10 +778,8 @@ cir.func @test_break_in_nested_cleanup() {
     cir.condition(%true)
   } do {
     cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-    // expected-error @below {{cleanup scope with multiple exits is not yet implemented}}
     cir.cleanup.scope {
       cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
-      // expected-error @below {{cleanup scope with multiple exits is not yet implemented}}
       cir.cleanup.scope {
         %cond = cir.call @shouldBreak() : () -> !cir.bool
         cir.brcond %cond ^bb_break, ^bb_normal
@@ -282,17 +801,73 @@ cir.func @test_break_in_nested_cleanup() {
   cir.return
 }
 
-cir.func private @ctor(!cir.ptr<!rec_SomeClass>)
-cir.func private @dtor(!cir.ptr<!rec_SomeClass>)
-cir.func private @shouldBreak() -> !cir.bool
+// CHECK-LABEL: cir.func @test_break_in_nested_cleanup()
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot", cleanup_dest_slot]
+// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1"
+// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2"
+// CHECK:         cir.br ^[[LOOP_COND:bb[0-9]+]]
+// CHECK:       ^[[LOOP_COND]]:
+// CHECK:         %[[TRUE:.*]] = cir.const #true
+// CHECK:         cir.brcond %[[TRUE]] ^[[LOOP_BODY:bb[0-9]+]], ^[[LOOP_EXIT:bb[0-9]+]]
+// CHECK:       ^[[LOOP_BODY]]:
+// CHECK:         cir.call @ctor(%[[ALLOCA_C1]])
+// CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
+// CHECK:       ^[[OUTER_BODY]]:
+// CHECK:         cir.call @ctor(%[[ALLOCA_C2]])
+// CHECK:         cir.br ^[[INNER_BODY:bb[0-9]+]]
+// CHECK:       ^[[INNER_BODY]]:
+// CHECK:         %[[COND:.*]] = cir.call @shouldBreak()
+// CHECK:         cir.brcond %[[COND]] ^[[BREAK_PATH:bb[0-9]+]], ^[[YIELD_PATH:bb[0-9]+]]
+// CHECK:       ^[[BREAK_PATH]]:
+// CHECK:         %[[BREAK_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[BREAK_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[INNER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[YIELD_PATH]]:
+// CHECK:         %[[YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[INNER_CLEANUP]]
+// CHECK:       ^[[INNER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA_C2]])
+// CHECK:         cir.br ^[[INNER_DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[INNER_DISPATCH]]:
+// CHECK:         %[[INNER_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[INNER_VAL]] : !s32i, ^[[INNER_DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[INNER_YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[INNER_BREAK_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[INNER_YIELD_DEST]]:
+// CHECK:         cir.br ^[[OUTER_YIELD_STORE:bb[0-9]+]]
+// CHECK:       ^[[INNER_BREAK_DEST]]:
+// CHECK:         %[[OUTER_BREAK_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[OUTER_BREAK_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[OUTER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[INNER_DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[OUTER_YIELD_STORE]]:
+// CHECK:         %[[OUTER_YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[OUTER_YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[OUTER_CLEANUP]]
+// CHECK:       ^[[OUTER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA_C1]])
+// CHECK:         cir.br ^[[OUTER_DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[OUTER_DISPATCH]]:
+// CHECK:         %[[OUTER_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[OUTER_VAL]] : !s32i, ^[[OUTER_DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[OUTER_YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[OUTER_BREAK_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[OUTER_YIELD_DEST]]:
+// CHECK:         cir.br ^[[LOOP_CONTINUE:bb[0-9]+]]
+// CHECK:       ^[[OUTER_BREAK_DEST]]:
+// CHECK:         cir.br ^[[LOOP_EXIT]]
+// CHECK:       ^[[OUTER_DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[LOOP_CONTINUE]]:
+// CHECK:         cir.br ^[[LOOP_COND]]
+// CHECK:       ^[[LOOP_EXIT]]:
+// CHECK:         cir.return
 
-// -----
-
-!s32i = !cir.int<s, 32>
-!rec_SomeClass = !cir.record<struct "SomeClass" {!s32i}>
-
-// Test that a continue inside nested cleanup scopes (within a loop) causes both
-// to be detected as having multiple exits. The continue exits through both cleanups.
+// Test continue inside nested cleanup scopes within a loop.
 cir.func @test_continue_in_nested_cleanup() {
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}
   %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
@@ -301,10 +876,8 @@ cir.func @test_continue_in_nested_cleanup() {
     cir.condition(%true)
   } do {
     cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-    // expected-error @below {{cleanup scope with multiple exits is not yet implemented}}
     cir.cleanup.scope {
       cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
-      // expected-error @below {{cleanup scope with multiple exits is not yet implemented}}
       cir.cleanup.scope {
         %cond = cir.call @shouldContinue() : () -> !cir.bool
         cir.brcond %cond ^bb_continue, ^bb_normal
@@ -326,17 +899,73 @@ cir.func @test_continue_in_nested_cleanup() {
   cir.return
 }
 
-cir.func private @ctor(!cir.ptr<!rec_SomeClass>)
-cir.func private @dtor(!cir.ptr<!rec_SomeClass>)
-cir.func private @shouldContinue() -> !cir.bool
+// CHECK-LABEL: cir.func @test_continue_in_nested_cleanup()
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot", cleanup_dest_slot]
+// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1"
+// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2"
+// CHECK:         cir.br ^[[LOOP_COND:bb[0-9]+]]
+// CHECK:       ^[[LOOP_COND]]:
+// CHECK:         %[[TRUE:.*]] = cir.const #true
+// CHECK:         cir.brcond %[[TRUE]] ^[[LOOP_BODY:bb[0-9]+]], ^[[LOOP_EXIT:bb[0-9]+]]
+// CHECK:       ^[[LOOP_BODY]]:
+// CHECK:         cir.call @ctor(%[[ALLOCA_C1]])
+// CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
+// CHECK:       ^[[OUTER_BODY]]:
+// CHECK:         cir.call @ctor(%[[ALLOCA_C2]])
+// CHECK:         cir.br ^[[INNER_BODY:bb[0-9]+]]
+// CHECK:       ^[[INNER_BODY]]:
+// CHECK:         %[[COND:.*]] = cir.call @shouldContinue()
+// CHECK:         cir.brcond %[[COND]] ^[[CONTINUE_PATH:bb[0-9]+]], ^[[YIELD_PATH:bb[0-9]+]]
+// CHECK:       ^[[CONTINUE_PATH]]:
+// CHECK:         %[[CONTINUE_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[CONTINUE_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[INNER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[YIELD_PATH]]:
+// CHECK:         %[[YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[INNER_CLEANUP]]
+// CHECK:       ^[[INNER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA_C2]])
+// CHECK:         cir.br ^[[INNER_DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[INNER_DISPATCH]]:
+// CHECK:         %[[INNER_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[INNER_VAL]] : !s32i, ^[[INNER_DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[INNER_YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[INNER_CONTINUE_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[INNER_YIELD_DEST]]:
+// CHECK:         cir.br ^[[OUTER_YIELD_STORE:bb[0-9]+]]
+// CHECK:       ^[[INNER_CONTINUE_DEST]]:
+// CHECK:         %[[OUTER_CONTINUE_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[OUTER_CONTINUE_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[OUTER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[INNER_DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[OUTER_YIELD_STORE]]:
+// CHECK:         %[[OUTER_YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[OUTER_YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[OUTER_CLEANUP]]
+// CHECK:       ^[[OUTER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA_C1]])
+// CHECK:         cir.br ^[[OUTER_DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[OUTER_DISPATCH]]:
+// CHECK:         %[[OUTER_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[OUTER_VAL]] : !s32i, ^[[OUTER_DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[OUTER_YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[OUTER_CONTINUE_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[OUTER_YIELD_DEST]]:
+// CHECK:         cir.br ^[[LOOP_CONTINUE:bb[0-9]+]]
+// CHECK:       ^[[OUTER_CONTINUE_DEST]]:
+// CHECK:         cir.br ^[[LOOP_COND]]
+// CHECK:       ^[[OUTER_DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[LOOP_CONTINUE]]:
+// CHECK:         cir.br ^[[LOOP_COND]]
+// CHECK:       ^[[LOOP_EXIT]]:
+// CHECK:         cir.return
 
-// -----
-
-!s32i = !cir.int<s, 32>
-!rec_SomeClass = !cir.record<struct "SomeClass" {!s32i}>
-
-// Test a cleanup scope containing a switch which contains a nested cleanup
-// scope with a continue. The continue must branch through both cleanup scopes.
+// Test continue inside nested cleanup in switch.
 cir.func @test_continue_in_nested_cleanup_in_switch() {
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}
   %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
@@ -346,10 +975,8 @@ cir.func @test_continue_in_nested_cleanup_in_switch() {
     cir.condition(%true)
   } do {
     cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-    // expected-error @below {{cleanup scope with multiple exits is not yet implemented}}
     cir.cleanup.scope {
       %x = cir.load %2 : !cir.ptr<!s32i>, !s32i
-      // expected-error @below {{cannot lower switch: cleanup with multiple exits}}
       cir.switch (%x : !s32i) {
         cir.case (equal, [#cir.int<1> : !s32i]) {
           cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -373,22 +1000,66 @@ cir.func @test_continue_in_nested_cleanup_in_switch() {
   cir.return
 }
 
-cir.func private @ctor(!cir.ptr<!rec_SomeClass>)
-cir.func private @dtor(!cir.ptr<!rec_SomeClass>)
+// CHECK-LABEL: cir.func @test_continue_in_nested_cleanup_in_switch()
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot", cleanup_dest_slot]
+// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1"
+// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2"
+// CHECK:         %[[ALLOCA_X:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x"
+// CHECK:         cir.br ^[[LOOP_COND:bb[0-9]+]]
+// CHECK:       ^[[LOOP_COND]]:
+// CHECK:         %[[TRUE:.*]] = cir.const #true
+// CHECK:         cir.brcond %[[TRUE]] ^[[LOOP_BODY:bb[0-9]+]], ^[[LOOP_EXIT:bb[0-9]+]]
+// CHECK:       ^[[LOOP_BODY]]:
+// CHECK:         cir.call @ctor(%[[ALLOCA_C1]])
+// CHECK:         cir.br ^[[CLEANUP_BODY:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP_BODY]]:
+// CHECK:         %[[X:.*]] = cir.load %[[ALLOCA_X]]
+// CHECK:         cir.br ^[[SWITCH_ENTRY:bb[0-9]+]]
+// CHECK:       ^[[SWITCH_ENTRY]]:
+// CHECK:         cir.switch.flat %[[X]] : !s32i, ^[[SWITCH_DEFAULT:bb[0-9]+]] [
+// CHECK:           1: ^[[CASE_ONE:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[CASE_ONE]]:
+// CHECK:         cir.call @ctor(%[[ALLOCA_C2]])
+// CHECK:         cir.br ^[[INNER_BODY:bb[0-9]+]]
+// CHECK:       ^[[INNER_BODY]]:
+// CHECK:         cir.br ^[[INNER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[INNER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA_C2]])
+// CHECK:         cir.br ^[[INNER_EXIT:bb[0-9]+]]
+// CHECK:       ^[[INNER_EXIT]]:
+// CHECK:         %[[CONTINUE_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[CONTINUE_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[SWITCH_DEFAULT]]:
+// CHECK:         %[[YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[CLEANUP]]
+// CHECK:       ^[[CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA_C1]])
+// CHECK:         cir.br ^[[DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[DISPATCH]]:
+// CHECK:         %[[SLOT_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[SLOT_VAL]] : !s32i, ^[[DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[CONTINUE_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[YIELD_DEST]]:
+// CHECK:         cir.br ^[[LOOP_CONTINUE:bb[0-9]+]]
+// CHECK:       ^[[CONTINUE_DEST]]:
+// CHECK:         cir.br ^[[LOOP_COND]]
+// CHECK:       ^[[DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[LOOP_CONTINUE]]:
+// CHECK:         cir.br ^[[LOOP_COND]]
+// CHECK:       ^[[LOOP_EXIT]]:
+// CHECK:         cir.return
 
-// -----
-
-!s32i = !cir.int<s, 32>
-!rec_SomeClass = !cir.record<struct "SomeClass" {!s32i}>
-
-// Test a cleanup scope containing a loop with a conditional return.
-// The return must branch through the cleanup scope.
+// Test return inside loop inside cleanup scope.
 cir.func @test_return_in_loop_in_cleanup() {
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-  // expected-error @below {{cleanup scope with multiple exits is not yet implemented}}
   cir.cleanup.scope {
-    // expected-error @below {{cannot lower loop: cleanup with multiple exits}}
     cir.while {
       %true = cir.const #cir.bool<true> : !cir.bool
       cir.condition(%true)
@@ -408,6 +1079,43 @@ cir.func @test_return_in_loop_in_cleanup() {
   cir.return
 }
 
-cir.func private @ctor(!cir.ptr<!rec_SomeClass>)
-cir.func private @dtor(!cir.ptr<!rec_SomeClass>)
-cir.func private @shouldReturn() -> !cir.bool
+// CHECK-LABEL: cir.func @test_return_in_loop_in_cleanup()
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot", cleanup_dest_slot]
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         cir.call @ctor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[CLEANUP_BODY:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP_BODY]]:
+// CHECK:         cir.br ^[[LOOP_COND:bb[0-9]+]]
+// CHECK:       ^[[LOOP_COND]]:
+// CHECK:         %[[TRUE:.*]] = cir.const #true
+// CHECK:         cir.brcond %[[TRUE]] ^[[LOOP_BODY:bb[0-9]+]], ^[[LOOP_EXIT:bb[0-9]+]]
+// CHECK:       ^[[LOOP_BODY]]:
+// CHECK:         %[[COND:.*]] = cir.call @shouldReturn()
+// CHECK:         cir.brcond %[[COND]] ^[[RET_PATH:bb[0-9]+]], ^[[CONTINUE_PATH:bb[0-9]+]]
+// CHECK:       ^[[RET_PATH]]:
+// CHECK:         %[[RET_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[RET_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[CONTINUE_PATH]]:
+// CHECK:         cir.br ^[[LOOP_COND]]
+// CHECK:       ^[[LOOP_EXIT]]:
+// CHECK:         %[[YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[CLEANUP]]
+// CHECK:       ^[[CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[DISPATCH]]:
+// CHECK:         %[[SLOT_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[SLOT_VAL]] : !s32i, ^[[DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[RET_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[YIELD_DEST]]:
+// CHECK:         cir.br ^[[FINAL_RET:bb[0-9]+]]
+// CHECK:       ^[[RET_DEST]]:
+// CHECK:         cir.return
+// CHECK:       ^[[DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[FINAL_RET]]:
+// CHECK:         cir.return

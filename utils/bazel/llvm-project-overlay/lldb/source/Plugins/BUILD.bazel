@@ -14,9 +14,9 @@ package(
 licenses(["notice"])
 
 cc_library(
-    name = "PluginClangCommon",
-    srcs = glob(["Language/ClangCommon/*.cpp"]),
-    hdrs = glob(["Language/ClangCommon/*.h"]),
+    name = "PluginClangHighlighter",
+    srcs = glob(["Highlighter/Clang/*.cpp"]),
+    hdrs = glob(["Highlighter/Clang/*.h"]),
     includes = [".."],
     deps = [
         "//clang:basic",

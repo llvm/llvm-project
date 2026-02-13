@@ -217,7 +217,7 @@ dispatch(rpc::Client &client, FnTy, CallArgs... args) {
 // Invoke a function on the server on behalf of the client. Recieves the
 // arguments through the interface and forwards them to the function.
 template <uint32_t NUM_LANES, typename FnTy>
-RPC_ATTRS constexpr void invoke(FnTy fn, rpc::Server::Port &port) {
+RPC_ATTRS constexpr void invoke(rpc::Server::Port &port, FnTy fn) {
   using Traits = function_traits<FnTy>;
   using RetTy = typename Traits::return_type;
   using TupleTy = typename Traits::arg_types;

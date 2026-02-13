@@ -1005,6 +1005,27 @@ static bool isApplicableToPLI(int Val) {
   return isInt<10>(Bit31To16) || Bit15To8 == Bit7To0;
 }
 
+static SDValue buildGPRPair(SelectionDAG *CurDAG, const SDLoc &DL, MVT VT,
+                            SDValue Lo, SDValue Hi) {
+  SDValue Ops[] = {
+      CurDAG->getTargetConstant(RISCV::GPRPairRegClassID, DL, MVT::i32), Lo,
+      CurDAG->getTargetConstant(RISCV::sub_gpr_even, DL, MVT::i32), Hi,
+      CurDAG->getTargetConstant(RISCV::sub_gpr_odd, DL, MVT::i32)};
+
+  return SDValue(
+      CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL, VT, Ops), 0);
+}
+
+// Helper to extract Lo and Hi values from a GPR pair.
+static std::pair<SDValue, SDValue>
+extractGPRPair(SelectionDAG *CurDAG, const SDLoc &DL, SDValue Pair) {
+  SDValue Lo =
+      CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_even, DL, MVT::i32, Pair);
+  SDValue Hi =
+      CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_odd, DL, MVT::i32, Pair);
+  return {Lo, Hi};
+}
+
 void RISCVDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we have already selected.
   if (Node->isMachineOpcode()) {
@@ -1139,15 +1160,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     assert((!Subtarget->is64Bit() || Opcode == RISCVISD::BuildGPRPair) &&
            "BuildPairF64 only handled here on rv32i_zdinx");
 
-    SDValue Ops[] = {
-        CurDAG->getTargetConstant(RISCV::GPRPairRegClassID, DL, MVT::i32),
-        Node->getOperand(0),
-        CurDAG->getTargetConstant(RISCV::sub_gpr_even, DL, MVT::i32),
-        Node->getOperand(1),
-        CurDAG->getTargetConstant(RISCV::sub_gpr_odd, DL, MVT::i32)};
-
-    SDNode *N = CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL, VT, Ops);
-    ReplaceNode(Node, N);
+    SDValue N =
+        buildGPRPair(CurDAG, DL, VT, Node->getOperand(0), Node->getOperand(1));
+    ReplaceNode(Node, N.getNode());
     return;
   }
   case RISCVISD::SplitGPRPair:
@@ -1782,47 +1797,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     SDNode *WMUL = CurDAG->getMachineNode(
         Opc, DL, MVT::Untyped, Node->getOperand(0), Node->getOperand(1));
 
-    SDValue Lo = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_even, DL,
-                                                MVT::i32, SDValue(WMUL, 0));
-    SDValue Hi = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_odd, DL,
-                                                MVT::i32, SDValue(WMUL, 0));
+    auto [Lo, Hi] = extractGPRPair(CurDAG, DL, SDValue(WMUL, 0));
     ReplaceUses(SDValue(Node, 0), Lo);
     ReplaceUses(SDValue(Node, 1), Hi);
     CurDAG->RemoveDeadNode(Node);
-    return;
-  }
-  case RISCVISD::NSRL:
-  case RISCVISD::NSRA: {
-    assert(Subtarget->hasStdExtP() && !Subtarget->is64Bit() && VT == MVT::i32 &&
-           "Unexpected opcode");
-
-    bool IsSRA = Node->getOpcode() == RISCVISD::NSRA;
-    SDValue Lo = Node->getOperand(0);
-    SDValue Hi = Node->getOperand(1);
-    SDValue ShAmt = Node->getOperand(2);
-
-    SDValue Ops[] = {
-        CurDAG->getTargetConstant(RISCV::GPRPairRegClassID, DL, MVT::i32), Lo,
-        CurDAG->getTargetConstant(RISCV::sub_gpr_even, DL, MVT::i32), Hi,
-        CurDAG->getTargetConstant(RISCV::sub_gpr_odd, DL, MVT::i32)};
-    SDValue Pair = SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE,
-                                                  DL, MVT::Untyped, Ops),
-                           0);
-
-    MachineSDNode *Res;
-    if (auto *ShAmtC = dyn_cast<ConstantSDNode>(ShAmt)) {
-      unsigned Opc = IsSRA ? RISCV::NSRAI : RISCV::NSRLI;
-      Res = CurDAG->getMachineNode(
-          Opc, DL, MVT::i32, Pair,
-          CurDAG->getTargetConstant(*ShAmtC->getConstantIntValue(), DL,
-                                    MVT::i32));
-    } else {
-      // NSRL/NSRA only read 6 bits of the shift amount.
-      selectShiftMask(ShAmt, 64, ShAmt);
-      unsigned Opc = IsSRA ? RISCV::NSRA : RISCV::NSRL;
-      Res = CurDAG->getMachineNode(Opc, DL, MVT::i32, Pair, ShAmt);
-    }
-    ReplaceNode(Node, Res);
     return;
   }
   case ISD::LOAD: {
@@ -1902,10 +1880,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     SDValue Ops[] = {Base, Offset, Chain};
     MachineSDNode *New = CurDAG->getMachineNode(
         RISCV::LD_RV32, DL, {MVT::Untyped, MVT::Other}, Ops);
-    SDValue Lo = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_even, DL,
-                                                MVT::i32, SDValue(New, 0));
-    SDValue Hi = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_odd, DL,
-                                                MVT::i32, SDValue(New, 0));
+    auto [Lo, Hi] = extractGPRPair(CurDAG, DL, SDValue(New, 0));
     CurDAG->setNodeMemRefs(New, {cast<MemSDNode>(Node)->getMemOperand()});
     ReplaceUses(SDValue(Node, 0), Lo);
     ReplaceUses(SDValue(Node, 1), Hi);
@@ -1927,14 +1902,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     if (isNullConstant(Lo) && isNullConstant(Hi)) {
       RegPair = CurDAG->getRegister(RISCV::X0_Pair, MVT::Untyped);
     } else {
-      SDValue Ops[] = {
-          CurDAG->getTargetConstant(RISCV::GPRPairRegClassID, DL, MVT::i32), Lo,
-          CurDAG->getTargetConstant(RISCV::sub_gpr_even, DL, MVT::i32), Hi,
-          CurDAG->getTargetConstant(RISCV::sub_gpr_odd, DL, MVT::i32)};
-
-      RegPair = SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL,
-                                               MVT::Untyped, Ops),
-                        0);
+      RegPair = buildGPRPair(CurDAG, DL, MVT::Untyped, Lo, Hi);
     }
 
     MachineSDNode *New = CurDAG->getMachineNode(RISCV::SD_RV32, DL, MVT::Other,
@@ -1957,13 +1925,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     SDValue AddHi = Node->getOperand(3);
 
     // Build the register pair for the accumulator input
-    SDValue AccOps[] = {
-        CurDAG->getTargetConstant(RISCV::GPRPairRegClassID, DL, MVT::i32),
-        AddLo, CurDAG->getTargetConstant(RISCV::sub_gpr_even, DL, MVT::i32),
-        AddHi, CurDAG->getTargetConstant(RISCV::sub_gpr_odd, DL, MVT::i32)};
-    SDValue Acc = SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL,
-                                                 MVT::Untyped, AccOps),
-                          0);
+    SDValue Acc = buildGPRPair(CurDAG, DL, MVT::Untyped, AddLo, AddHi);
 
     unsigned Opc;
     switch (Node->getOpcode()) {
@@ -1984,10 +1946,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     MachineSDNode *New =
         CurDAG->getMachineNode(Opc, DL, MVT::Untyped, Acc, M1, M2);
 
-    SDValue Lo = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_even, DL,
-                                                MVT::i32, SDValue(New, 0));
-    SDValue Hi = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_odd, DL,
-                                                MVT::i32, SDValue(New, 0));
+    auto [Lo, Hi] = extractGPRPair(CurDAG, DL, SDValue(New, 0));
 
     ReplaceUses(SDValue(Node, 0), Lo);
     ReplaceUses(SDValue(Node, 1), Hi);
@@ -2009,25 +1968,12 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     if (isNullConstant(Op0Lo) && isNullConstant(Op0Hi)) {
       Op0 = CurDAG->getRegister(RISCV::X0_Pair, MVT::Untyped);
     } else {
-      SDValue Ops[] = {
-          CurDAG->getTargetConstant(RISCV::GPRPairRegClassID, DL, MVT::i32),
-          Op0Lo, CurDAG->getTargetConstant(RISCV::sub_gpr_even, DL, MVT::i32),
-          Op0Hi, CurDAG->getTargetConstant(RISCV::sub_gpr_odd, DL, MVT::i32)};
-      Op0 = SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL,
-                                           MVT::Untyped, Ops),
-                    0);
+      Op0 = buildGPRPair(CurDAG, DL, MVT::Untyped, Op0Lo, Op0Hi);
     }
 
     SDValue Op1Lo = Node->getOperand(2);
     SDValue Op1Hi = Node->getOperand(3);
-    SDValue Ops[] = {
-        CurDAG->getTargetConstant(RISCV::GPRPairRegClassID, DL, MVT::i32),
-        Op1Lo, CurDAG->getTargetConstant(RISCV::sub_gpr_even, DL, MVT::i32),
-        Op1Hi, CurDAG->getTargetConstant(RISCV::sub_gpr_odd, DL, MVT::i32)};
-
-    SDValue Op1 = SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL,
-                                                 MVT::Untyped, Ops),
-                          0);
+    SDValue Op1 = buildGPRPair(CurDAG, DL, MVT::Untyped, Op1Lo, Op1Hi);
 
     unsigned Opc;
     switch (Node->getOpcode()) {
@@ -2047,10 +1993,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     MachineSDNode *New =
         CurDAG->getMachineNode(Opc, DL, MVT::Untyped, Op0, Op1);
 
-    SDValue Lo = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_even, DL,
-                                                MVT::i32, SDValue(New, 0));
-    SDValue Hi = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_odd, DL,
-                                                MVT::i32, SDValue(New, 0));
+    auto [Lo, Hi] = extractGPRPair(CurDAG, DL, SDValue(New, 0));
     ReplaceUses(SDValue(Node, 0), Lo);
     ReplaceUses(SDValue(Node, 1), Hi);
     CurDAG->RemoveDeadNode(Node);

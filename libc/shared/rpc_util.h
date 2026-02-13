@@ -440,13 +440,17 @@ RPC_ATTRS constexpr uint64_t string_length(const char *s) {
   return static_cast<uint64_t>(end - s + 1);
 }
 
-/// Helper for dealing with function types.
+/// Helper for dealing with function pointers and lambda types.
 template <typename> struct function_traits;
 template <typename R, typename... Args> struct function_traits<R (*)(Args...)> {
   using return_type = R;
   using arg_types = rpc::tuple<Args...>;
   static constexpr uint64_t ARITY = sizeof...(Args);
 };
+template <typename T> T &&declval();
+template <typename T>
+struct function_traits
+    : function_traits<decltype(+declval<rpc::remove_reference_t<T>>())> {};
 
 template <typename T, typename U>
 RPC_ATTRS constexpr T max(const T &a, const U &b) {

@@ -6,7 +6,6 @@ static_library("ObjCPlusPlus") {
   ]
   deps = [
     "//lldb/source/Core",
-    "//lldb/source/Plugins/Language/ClangCommon",
     "//lldb/source/Target",
   ]
 

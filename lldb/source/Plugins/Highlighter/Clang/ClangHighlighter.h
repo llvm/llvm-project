@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_CLANGCOMMON_CLANGHIGHLIGHTER_H
-#define LLDB_SOURCE_PLUGINS_LANGUAGE_CLANGCOMMON_CLANGHIGHLIGHTER_H
+#ifndef LLDB_SOURCE_PLUGINS_HIGHLIGHTER_CLANGHIGHLIGHTER_H
+#define LLDB_SOURCE_PLUGINS_HIGHLIGHTER_CLANGHIGHLIGHTER_H
 
 #include "lldb/Utility/Stream.h"
 #include "llvm/ADT/StringSet.h"
@@ -31,8 +31,16 @@ public:
   /// Returns true if the given string represents a keywords in any Clang
   /// supported language.
   bool isKeyword(llvm::StringRef token) const;
+
+  static Highlighter *CreateInstance(lldb::LanguageType language);
+
+  static void Terminate();
+  static void Initialize();
+
+  static llvm::StringRef GetPluginNameStatic() { return "Clang Highlighter"; }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_LANGUAGE_CLANGCOMMON_CLANGHIGHLIGHTER_H
+#endif

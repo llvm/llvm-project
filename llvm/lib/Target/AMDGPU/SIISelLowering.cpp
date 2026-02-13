@@ -10568,7 +10568,10 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return SDValue();
 
     SDLoc SL(Op);
-    auto IndexKeyi64 = DAG.getAnyExtOrTrunc(Op.getOperand(4), SL, MVT::i64);
+    auto IndexKeyi64 =
+        Op.getOperand(4).getValueType() == MVT::v2i32
+            ? DAG.getBitcast(MVT::i64, Op.getOperand(4))
+            : DAG.getAnyExtOrTrunc(Op.getOperand(4), SL, MVT::i64);
     return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, Op.getValueType(),
                        {Op.getOperand(0), Op.getOperand(1), Op.getOperand(2),
                         Op.getOperand(3), IndexKeyi64, Op.getOperand(5),
@@ -10587,7 +10590,10 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return SDValue();
 
     SDLoc SL(Op);
-    auto IndexKey = DAG.getAnyExtOrTrunc(Op.getOperand(6), SL, IndexKeyTy);
+    auto IndexKey =
+        Op.getOperand(6).getValueType().isVector()
+            ? DAG.getBitcast(IndexKeyTy, Op.getOperand(6))
+            : DAG.getAnyExtOrTrunc(Op.getOperand(6), SL, IndexKeyTy);
     SmallVector<SDValue> Args{
         Op.getOperand(0), Op.getOperand(1), Op.getOperand(2),
         Op.getOperand(3), Op.getOperand(4), Op.getOperand(5),
