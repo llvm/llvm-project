@@ -72,3 +72,31 @@
 # RUN: ls %/t/.cache/clangd/index/ | sort > %/t/shards-canonical.txt
 # RUN: ls %/t2/.cache/clangd/index/ | sort > %/t2/shards-local.txt
 # RUN: diff %/t/shards-canonical.txt %/t2/shards-local.txt
+
+###############################################################################
+# 3. Validate multiple comma-separated path mappings
+###############################################################################
+
+# Set up a third client at %/t3 with the same sources and copied shards.
+# RUN: rm -rf %/t3
+# RUN: mkdir -p %/t3
+# RUN: cp -r %/S/Inputs/background-index/* %/t3/
+# RUN: mkdir -p %/t3/.cache/clangd/index
+# RUN: cp %/t/.cache/clangd/index/*.idx %/t3/.cache/clangd/index/
+# RUN: mkdir -p %/t3/sub_dir/.cache/clangd/index
+# RUN: cp %/t/sub_dir/.cache/clangd/index/*.idx %/t3/sub_dir/.cache/clangd/index/
+# RUN: sed -e "s|DIRECTORY|%/t3|" %/S/Inputs/background-index/compile_commands.json.tmpl > %/t3/compile_commands.json
+# RUN: sed -e "s|DIRECTORY|%/t3|" %/S/Inputs/background-index/definition.jsonrpc.tmpl > %/t3/definition.jsonrpc.1
+# RUN: sed -E -e 's|"file://([A-Z]):/|"file:///\1:/|g' %/t3/definition.jsonrpc.1 > %/t3/definition.jsonrpc
+
+# The first specified mapping is intentionally non-matching; the second is the
+# real mapping. This validates that multiple mappings can be specified and the
+# correct one is applied.
+# RUN: clangd -background-index --background-index-path-mappings=/no/match=/also/no/match,%/t3=%/t -lit-test < %/t3/definition.jsonrpc > %/t3/clangd-output.json
+# RUN: FileCheck %/t3/definition.jsonrpc < %/t3/clangd-output.json
+# RUN: FileCheck --check-prefix=MULTI-LOCAL %s -DDIR=%/t3 < %/t3/clangd-output.json
+# MULTI-LOCAL: "uri": "file://{{/?}}[[DIR]]/foo.cpp"
+
+# Verify shard filenames are unchanged with multiple mappings
+# RUN: ls %/t3/.cache/clangd/index/ | sort > %/t3/shards-multi.txt
+# RUN: diff %/t/shards-canonical.txt %/t3/shards-multi.txt
