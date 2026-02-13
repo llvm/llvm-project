@@ -35,8 +35,8 @@ BasicBlock *TileInfo::CreateLoop(BasicBlock *Preheader, BasicBlock *Exit,
   Type *I32Ty = Type::getInt64Ty(Ctx);
   BranchInst::Create(Body, Header);
   BranchInst::Create(Latch, Body);
-  PHINode *IV = PHINode::Create(I32Ty, 2, Name + ".iv",
-                                Header->getTerminator()->getIterator());
+  PHINode *IV =
+      PHINode::Create(I32Ty, 2, Name + ".iv", Header->getTerminator()->getIterator());
   IV->addIncoming(ConstantInt::get(I32Ty, 0), Preheader);
 
   B.SetInsertPoint(Latch);
