@@ -732,6 +732,9 @@ private:
   CFGBlock *VisitBinaryOperatorForTemporaryDtors(BinaryOperator *E,
                                                  bool ExternallyDestructed,
                                                  TempDtorContext &Context);
+  CFGBlock *
+  VisitCXXOperatorCallExprClassForTemporaryDtors(CXXOperatorCallExpr *E,
+                                                 TempDtorContext &Context);
   CFGBlock *VisitCXXBindTemporaryExprForTemporaryDtors(
       CXXBindTemporaryExpr *E, bool ExternallyDestructed, TempDtorContext &Context);
   CFGBlock *VisitConditionalOperatorForTemporaryDtors(
@@ -5110,15 +5113,8 @@ tryAgain:
                                                   Context);
 
     case Stmt::CXXOperatorCallExprClass: {
-      auto *OCE = cast<CXXOperatorCallExpr>(E);
-      if (OCE->isAssignmentOp()) {
-        CFGBlock *RHSBlock =
-            VisitForTemporaryDtors(OCE->getArg(1), false, Context);
-        CFGBlock *LHSBlock =
-            VisitForTemporaryDtors(OCE->getArg(0), false, Context);
-        return LHSBlock ? LHSBlock : RHSBlock;
-      }
-      return VisitChildrenForTemporaryDtors(E, false, Context);
+      return VisitCXXOperatorCallExprClassForTemporaryDtors(
+          cast<CXXOperatorCallExpr>(E), Context);
     }
 
     case Stmt::CXXBindTemporaryExprClass:
@@ -5259,6 +5255,18 @@ CFGBlock *CFGBuilder::VisitBinaryOperatorForTemporaryDtors(
 
   // Any other operator is visited normally.
   return VisitChildrenForTemporaryDtors(E, ExternallyDestructed, Context);
+}
+
+CFGBlock *CFGBuilder::VisitCXXOperatorCallExprClassForTemporaryDtors(
+    CXXOperatorCallExpr *E, TempDtorContext &Context) {
+  if (E->isAssignmentOp()) {
+    // For assignment operators, the RHS expression is evaluated before the LHS
+    // expression, so prepend temporary destructors for the RHS first.
+    CFGBlock *RHSBlock = VisitForTemporaryDtors(E->getArg(1), false, Context);
+    CFGBlock *LHSBlock = VisitForTemporaryDtors(E->getArg(0), false, Context);
+    return LHSBlock ? LHSBlock : RHSBlock;
+  }
+  return VisitChildrenForTemporaryDtors(E, false, Context);
 }
 
 CFGBlock *CFGBuilder::VisitCXXBindTemporaryExprForTemporaryDtors(
