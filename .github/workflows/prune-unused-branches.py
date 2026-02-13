@@ -70,7 +70,9 @@ def get_branches_from_open_prs(github_token) -> list[str]:
 
 
 def get_user_branches_to_remove(
-    user_branches: list[str], user_branches_from_prs: list[str], previous_run_branches: list[str]
+    user_branches: list[str],
+    user_branches_from_prs: list[str],
+    previous_run_branches: list[str],
 ) -> list[str]:
     user_branches_to_remove = set(user_branches)
     for pr_user_branch in set(user_branches_from_prs):
@@ -175,7 +177,9 @@ def main(github_token):
         sys.exit(1)
 
     previous_run_branches = get_branches_found_in_previous_run(github_token)
-    print(f"{len(previous_run_branches)} branches existed the last time the workflow ran.")
+    print(
+        f"{len(previous_run_branches)} branches existed the last time the workflow ran."
+    )
     user_branches = get_branches()
     output_dir = sys.argv[1]
     with open(os.path.join(output_dir, "branches.txt"), "w") as branches_file:
