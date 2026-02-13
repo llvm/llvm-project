@@ -8,8 +8,6 @@ import urllib.request
 
 import github
 
-GITHUB_WORKFLOW_ID = 57373867111
-
 
 def get_branches() -> list[str]:
     git_process = subprocess.run(
