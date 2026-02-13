@@ -3538,7 +3538,7 @@ bool X86DAGToDAGISel::checkTCRetEnoughRegs(SDNode *N) const {
     // but it could apply to 64-bit too.
     const SDValue &BasePtr = cast<LoadSDNode>(N->getOperand(1))->getBasePtr();
     if (isa<FrameIndexSDNode>(BasePtr)) {
-      LoadGPRs -= 1; // Base is ESP, no reg needed.
+      LoadGPRs -= 2; // Base is fixed index off ESP; no regs needed.
     } else if (BasePtr->getNumOperands() &&
                isa<GlobalAddressSDNode>(BasePtr->getOperand(0))) {
       assert(!getTargetMachine().isPositionIndependent());
