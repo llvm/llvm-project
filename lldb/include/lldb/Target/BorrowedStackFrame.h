@@ -86,7 +86,8 @@ public:
 
   lldb::ValueObjectSP GetValueForVariableExpressionPath(
       llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
-      uint32_t options, lldb::VariableSP &var_sp, Status &error) override;
+      uint32_t options, lldb::VariableSP &var_sp, Status &error,
+      lldb::DILMode mode = lldb::eDILModeFull) override;
 
   bool HasDebugInformation() override;
 
