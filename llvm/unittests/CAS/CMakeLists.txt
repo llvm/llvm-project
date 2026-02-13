@@ -8,7 +8,6 @@ set(ONDISK_CAS_TEST_SOURCES
   BuiltinUnifiedCASDatabasesTest.cpp
   CASConfigurationTest.cpp
   OnDiskCASLoggerTest.cpp
-  OnDiskCommonUtils.cpp
   OnDiskGraphDBTest.cpp
   OnDiskDataAllocatorTest.cpp
   OnDiskKeyValueDBTest.cpp
@@ -53,6 +52,7 @@ add_llvm_unittest(CASTests
   HierarchicalTreeBuilderTest.cpp
   NamedValuesSchemaTest.cpp
   ObjectStoreTest.cpp
+  OnDiskCommonUtils.cpp
   ThreadSafeAllocatorTest.cpp
   TreeSchemaTest.cpp
 
