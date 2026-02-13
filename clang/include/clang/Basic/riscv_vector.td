@@ -2052,7 +2052,7 @@ let UnMaskedPolicyScheme = HasPassthruOperand in {
   }
 }
 
-let UnMaskedPolicyScheme = HasPolicyOperand in {
+let UnMaskedPolicyScheme = HasPolicyOperand, HasMaskedOffOperand = false in {
   let RequiredFeatures = ["zvabd"] in {
     defm vwabda : RVVOutOp1Op2BuiltinSet<"vwabda", "cs",
                                          [["vv", "Uw", "UwUwvv"]]>;
