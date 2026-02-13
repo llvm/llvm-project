@@ -712,7 +712,19 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
       if (auto *CB = dyn_cast<CallBase>(&I)) {
         if (!CB->hasFnAttr(Attribute::NoFree))
           return false;
+<<<<<<< HEAD
       } else if (I.maySynchronize())
+=======
+    }
+    return true;
+  };
+
+  // Helper to make sure the current function cannot arrange for
+  // another thread to free on its behalf.
+  auto hasNoSyncCalls = [](auto Range) {
+    for (const auto &[Idx, I] : enumerate(Range)) {
+      if (Idx > MaxInstrsToCheckForFree)
+>>>>>>> 77b28d9e6747 (nitpick)
         return false;
     }
     return true;
