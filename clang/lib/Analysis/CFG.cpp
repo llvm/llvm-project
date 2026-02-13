@@ -732,9 +732,8 @@ private:
   CFGBlock *VisitBinaryOperatorForTemporaryDtors(BinaryOperator *E,
                                                  bool ExternallyDestructed,
                                                  TempDtorContext &Context);
-  CFGBlock *
-  VisitCXXOperatorCallExprClassForTemporaryDtors(CXXOperatorCallExpr *E,
-                                                 TempDtorContext &Context);
+  CFGBlock *VisitCXXOperatorCallExprForTemporaryDtors(CXXOperatorCallExpr *E,
+                                                      TempDtorContext &Context);
   CFGBlock *VisitCXXBindTemporaryExprForTemporaryDtors(
       CXXBindTemporaryExpr *E, bool ExternallyDestructed, TempDtorContext &Context);
   CFGBlock *VisitConditionalOperatorForTemporaryDtors(
@@ -5113,7 +5112,7 @@ tryAgain:
                                                   Context);
 
     case Stmt::CXXOperatorCallExprClass: {
-      return VisitCXXOperatorCallExprClassForTemporaryDtors(
+      return VisitCXXOperatorCallExprForTemporaryDtors(
           cast<CXXOperatorCallExpr>(E), Context);
     }
 
@@ -5257,7 +5256,7 @@ CFGBlock *CFGBuilder::VisitBinaryOperatorForTemporaryDtors(
   return VisitChildrenForTemporaryDtors(E, ExternallyDestructed, Context);
 }
 
-CFGBlock *CFGBuilder::VisitCXXOperatorCallExprClassForTemporaryDtors(
+CFGBlock *CFGBuilder::VisitCXXOperatorCallExprForTemporaryDtors(
     CXXOperatorCallExpr *E, TempDtorContext &Context) {
   if (E->isAssignmentOp()) {
     // For assignment operators, the RHS expression is evaluated before the LHS
