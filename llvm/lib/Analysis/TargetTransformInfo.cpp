@@ -1450,7 +1450,8 @@ bool TargetTransformInfo::preferPredicatedReductionSelect() const {
   return TTIImpl->preferPredicatedReductionSelect();
 }
 
-bool TargetTransformInfo::preferEpilogueVectorization(ElementCount Iters) const {
+bool TargetTransformInfo::preferEpilogueVectorization(
+    ElementCount Iters) const {
   return TTIImpl->preferEpilogueVectorization(Iters);
 }
 
