@@ -73,8 +73,6 @@ if.end4:                                          ; preds = %for.body
   br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit
 }
 
-; FIXME: This doesn't currently optimize, but we should be able to hoist
-; the two cmp out of the loop.
 define void @optimize_two_trap(i32 %block_size, i32 %onebound, i32 %otherbound) {
 ; CHECK-LABEL: define void @optimize_two_trap(
 ; CHECK-SAME: i32 [[BLOCK_SIZE:%.*]], i32 [[ONEBOUND:%.*]], i32 [[OTHERBOUND:%.*]]) {
