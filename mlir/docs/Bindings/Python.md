@@ -1319,6 +1319,7 @@ class AddOp(MyInt.Operation, name="add"):
 MyInt.load()
 
 module = Module.create()
+i32 = IntegerType.get(32)
 with InsertionPoint(module.body):
     two = ConstantOp(IntegerAttr.get(i32, 2))
     three = ConstantOp(IntegerAttr.get(i32, 3))
