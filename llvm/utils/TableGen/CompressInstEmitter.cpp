@@ -72,6 +72,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -608,15 +609,19 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
   raw_string_ostream Func(F);
   raw_string_ostream FuncH(FH);
 
-  if (EType == EmitterType::Compress)
-    OS << "\n#ifdef GEN_COMPRESS_INSTR\n"
-       << "#undef GEN_COMPRESS_INSTR\n\n";
-  else if (EType == EmitterType::Uncompress)
-    OS << "\n#ifdef GEN_UNCOMPRESS_INSTR\n"
-       << "#undef GEN_UNCOMPRESS_INSTR\n\n";
-  else if (EType == EmitterType::CheckCompress)
-    OS << "\n#ifdef GEN_CHECK_COMPRESS_INSTR\n"
-       << "#undef GEN_CHECK_COMPRESS_INSTR\n\n";
+  auto GetEmitterGuard = [EType]() -> StringRef {
+    switch (EType) {
+    case EmitterType::Compress:
+      return "GEN_COMPRESS_INSTR";
+    case EmitterType::Uncompress:
+      return "GEN_UNCOMPRESS_INSTR";
+    case EmitterType::CheckCompress:
+      return "GEN_CHECK_COMPRESS_INSTR";
+    }
+    llvm_unreachable("Invalid emitter type");
+  };
+
+  IfDefEmitter IfDef(OS, GetEmitterGuard());
 
   if (EType == EmitterType::Compress) {
     FuncH << "static bool compressInst(MCInst &OutInst,\n";
@@ -638,12 +643,6 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
   if (CompressPatterns.empty()) {
     OS << FH;
     OS.indent(2) << "return false;\n}\n";
-    if (EType == EmitterType::Compress)
-      OS << "\n#endif //GEN_COMPRESS_INSTR\n";
-    else if (EType == EmitterType::Uncompress)
-      OS << "\n#endif //GEN_UNCOMPRESS_INSTR\n\n";
-    else if (EType == EmitterType::CheckCompress)
-      OS << "\n#endif //GEN_CHECK_COMPRESS_INSTR\n\n";
     return;
   }
 
@@ -940,13 +939,6 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
 
   OS << FH;
   OS << F;
-
-  if (EType == EmitterType::Compress)
-    OS << "\n#endif //GEN_COMPRESS_INSTR\n";
-  else if (EType == EmitterType::Uncompress)
-    OS << "\n#endif //GEN_UNCOMPRESS_INSTR\n\n";
-  else if (EType == EmitterType::CheckCompress)
-    OS << "\n#endif //GEN_CHECK_COMPRESS_INSTR\n\n";
 }
 
 void CompressInstEmitter::run(raw_ostream &OS) {

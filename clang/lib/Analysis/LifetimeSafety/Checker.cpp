@@ -24,6 +24,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
 
@@ -47,6 +48,8 @@ namespace {
 struct PendingWarning {
   SourceLocation ExpiryLoc; // Where the loan expired.
   llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> CausingFact;
+  const Expr *MovedExpr;
+  const Expr *InvalidatedByExpr;
   Confidence ConfidenceLevel;
 };
 
@@ -60,22 +63,27 @@ private:
   llvm::DenseMap<AnnotationTarget, const Expr *> AnnotationWarningsMap;
   llvm::DenseMap<const ParmVarDecl *, EscapingTarget> NoescapeWarningsMap;
   const LoanPropagationAnalysis &LoanPropagation;
+  const MovedLoansAnalysis &MovedLoans;
   const LiveOriginsAnalysis &LiveOrigins;
-  const FactManager &FactMgr;
+  FactManager &FactMgr;
   LifetimeSafetySemaHelper *SemaHelper;
   ASTContext &AST;
 
 public:
   LifetimeChecker(const LoanPropagationAnalysis &LoanPropagation,
-                  const LiveOriginsAnalysis &LiveOrigins, const FactManager &FM,
+                  const MovedLoansAnalysis &MovedLoans,
+                  const LiveOriginsAnalysis &LiveOrigins, FactManager &FM,
                   AnalysisDeclContext &ADC,
                   LifetimeSafetySemaHelper *SemaHelper)
-      : LoanPropagation(LoanPropagation), LiveOrigins(LiveOrigins), FactMgr(FM),
-        SemaHelper(SemaHelper), AST(ADC.getASTContext()) {
+      : LoanPropagation(LoanPropagation), MovedLoans(MovedLoans),
+        LiveOrigins(LiveOrigins), FactMgr(FM), SemaHelper(SemaHelper),
+        AST(ADC.getASTContext()) {
     for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>())
       for (const Fact *F : FactMgr.getFacts(B))
         if (const auto *EF = F->getAs<ExpireFact>())
           checkExpiry(EF);
+        else if (const auto *IOF = F->getAs<InvalidateOriginFact>())
+          checkInvalidation(IOF);
         else if (const auto *OEF = F->getAs<OriginEscapesFact>())
           checkAnnotations(OEF);
     issuePendingWarnings();
@@ -140,6 +148,10 @@ public:
   /// propagation (e.g., a loan may only be held on some execution paths).
   void checkExpiry(const ExpireFact *EF) {
     LoanID ExpiredLoan = EF->getLoanID();
+    const Expr *MovedExpr = nullptr;
+    if (auto *ME = MovedLoans.getMovedLoans(EF).lookup(ExpiredLoan))
+      MovedExpr = *ME;
+
     LivenessMap Origins = LiveOrigins.getLiveOriginsAt(EF);
     Confidence CurConfidence = Confidence::None;
     // The UseFact or OriginEscapesFact most indicative of a lifetime error,
@@ -166,7 +178,57 @@ public:
       return;
     FinalWarningsMap[ExpiredLoan] = {/*ExpiryLoc=*/EF->getExpiryLoc(),
                                      /*BestCausingFact=*/BestCausingFact,
+                                     /*MovedExpr=*/MovedExpr,
+                                     /*InvalidatedByExpr=*/nullptr,
                                      /*ConfidenceLevel=*/CurConfidence};
+  }
+
+  /// Checks for use-after-invalidation errors when a container is modified.
+  ///
+  /// This method identifies origins that are live at the point of invalidation
+  /// and checks if they hold loans that are invalidated by the operation
+  /// (e.g., iterators into a vector that is being pushed to).
+  void checkInvalidation(const InvalidateOriginFact *IOF) {
+    OriginID InvalidatedOrigin = IOF->getInvalidatedOrigin();
+    /// Get loans directly pointing to the invalidated container
+    LoanSet DirectlyInvalidatedLoans =
+        LoanPropagation.getLoans(InvalidatedOrigin, IOF);
+    auto IsInvalidated = [&](const Loan *L) {
+      auto *PathL = dyn_cast<PathLoan>(L);
+      auto *PlaceholderL = dyn_cast<PlaceholderLoan>(L);
+      for (LoanID InvalidID : DirectlyInvalidatedLoans) {
+        const Loan *L = FactMgr.getLoanMgr().getLoan(InvalidID);
+        auto *InvalidPathL = dyn_cast<PathLoan>(L);
+        auto *InvalidPlaceholderL = dyn_cast<PlaceholderLoan>(L);
+        if (PathL && InvalidPathL &&
+            PathL->getAccessPath() == InvalidPathL->getAccessPath())
+          return true;
+        if (PlaceholderL && InvalidPlaceholderL &&
+            PlaceholderL->getParmVarDecl() ==
+                InvalidPlaceholderL->getParmVarDecl())
+          return true;
+      }
+      return false;
+    };
+    // For each live origin, check if it holds an invalidated loan and report.
+    LivenessMap Origins = LiveOrigins.getLiveOriginsAt(IOF);
+    for (auto &[OID, LiveInfo] : Origins) {
+      LoanSet HeldLoans = LoanPropagation.getLoans(OID, IOF);
+      for (LoanID LiveLoanID : HeldLoans)
+        if (IsInvalidated(FactMgr.getLoanMgr().getLoan(LiveLoanID))) {
+          Confidence CurConfidence = livenessKindToConfidence(LiveInfo.Kind);
+          Confidence LastConf =
+              FinalWarningsMap.lookup(LiveLoanID).ConfidenceLevel;
+          if (LastConf < CurConfidence) {
+            FinalWarningsMap[LiveLoanID] = {
+                /*ExpiryLoc=*/{},
+                /*CausingFact=*/LiveInfo.CausingFact,
+                /*MovedExpr=*/nullptr,
+                /*InvalidatedByExpr=*/IOF->getInvalidationExpr(),
+                /*ConfidenceLevel=*/CurConfidence};
+          }
+        }
+    }
   }
 
   void issuePendingWarnings() {
@@ -174,24 +236,40 @@ public:
       return;
     for (const auto &[LID, Warning] : FinalWarningsMap) {
       const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
-      const auto *BL = cast<PathLoan>(L);
-      const Expr *IssueExpr = BL->getIssueExpr();
+
+      const Expr *IssueExpr = nullptr;
+      if (const auto *BL = dyn_cast<PathLoan>(L))
+        IssueExpr = BL->getIssueExpr();
+      const ParmVarDecl *InvalidatedPVD = nullptr;
+      if (const auto *PL = dyn_cast<PlaceholderLoan>(L))
+        InvalidatedPVD = PL->getParmVarDecl();
       llvm::PointerUnion<const UseFact *, const OriginEscapesFact *>
           CausingFact = Warning.CausingFact;
       Confidence Confidence = Warning.ConfidenceLevel;
+      const Expr *MovedExpr = Warning.MovedExpr;
       SourceLocation ExpiryLoc = Warning.ExpiryLoc;
 
-      if (const auto *UF = CausingFact.dyn_cast<const UseFact *>())
-        SemaHelper->reportUseAfterFree(IssueExpr, UF->getUseExpr(), ExpiryLoc,
-                                       Confidence);
-      else if (const auto *OEF =
-                   CausingFact.dyn_cast<const OriginEscapesFact *>()) {
+      if (const auto *UF = CausingFact.dyn_cast<const UseFact *>()) {
+        if (Warning.InvalidatedByExpr) {
+          if (IssueExpr)
+            SemaHelper->reportUseAfterInvalidation(IssueExpr, UF->getUseExpr(),
+                                                   Warning.InvalidatedByExpr);
+          if (InvalidatedPVD)
+            SemaHelper->reportUseAfterInvalidation(
+                InvalidatedPVD, UF->getUseExpr(), Warning.InvalidatedByExpr);
+
+        } else
+          SemaHelper->reportUseAfterFree(IssueExpr, UF->getUseExpr(), MovedExpr,
+                                         ExpiryLoc, Confidence);
+      } else if (const auto *OEF =
+                     CausingFact.dyn_cast<const OriginEscapesFact *>()) {
         if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF))
-          SemaHelper->reportUseAfterReturn(
-              IssueExpr, RetEscape->getReturnExpr(), ExpiryLoc, Confidence);
+          SemaHelper->reportUseAfterReturn(IssueExpr,
+                                           RetEscape->getReturnExpr(),
+                                           MovedExpr, ExpiryLoc, Confidence);
         else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF))
           SemaHelper->reportDanglingField(
-              IssueExpr, FieldEscape->getFieldDecl(), ExpiryLoc);
+              IssueExpr, FieldEscape->getFieldDecl(), MovedExpr, ExpiryLoc);
         else
           llvm_unreachable("Unhandled OriginEscapesFact type");
       } else
@@ -293,11 +371,12 @@ public:
 } // namespace
 
 void runLifetimeChecker(const LoanPropagationAnalysis &LP,
-                        const LiveOriginsAnalysis &LO,
-                        const FactManager &FactMgr, AnalysisDeclContext &ADC,
+                        const MovedLoansAnalysis &MovedLoans,
+                        const LiveOriginsAnalysis &LO, FactManager &FactMgr,
+                        AnalysisDeclContext &ADC,
                         LifetimeSafetySemaHelper *SemaHelper) {
   llvm::TimeTraceScope TimeProfile("LifetimeChecker");
-  LifetimeChecker Checker(LP, LO, FactMgr, ADC, SemaHelper);
+  LifetimeChecker Checker(LP, MovedLoans, LO, FactMgr, ADC, SemaHelper);
 }
 
 } // namespace clang::lifetimes::internal

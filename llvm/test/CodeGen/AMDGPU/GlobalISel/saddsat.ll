@@ -4269,11 +4269,10 @@ define amdgpu_ps i48 @s_saddsat_i48(i48 inreg %lhs, i48 inreg %rhs) {
 ; GFX6-NEXT:    v_cmp_lt_i64_e64 s[0:1], s[0:1], 0
 ; GFX6-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
 ; GFX6-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX6-NEXT:    s_xor_b32 s2, s0, s3
 ; GFX6-NEXT:    s_ashr_i32 s1, s7, 31
+; GFX6-NEXT:    s_xor_b32 s2, s0, s3
 ; GFX6-NEXT:    s_ashr_i32 s0, s7, 15
 ; GFX6-NEXT:    s_addk_i32 s1, 0x8000
-; GFX6-NEXT:    s_and_b32 s2, s2, 1
 ; GFX6-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX6-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[4:5]
 ; GFX6-NEXT:    ; return to shader part epilog
@@ -4293,11 +4292,10 @@ define amdgpu_ps i48 @s_saddsat_i48(i48 inreg %lhs, i48 inreg %rhs) {
 ; GFX8-NEXT:    v_cmp_lt_i64_e64 s[0:1], s[0:1], 0
 ; GFX8-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX8-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX8-NEXT:    s_xor_b32 s2, s0, s3
 ; GFX8-NEXT:    s_ashr_i32 s1, s7, 31
+; GFX8-NEXT:    s_xor_b32 s2, s0, s3
 ; GFX8-NEXT:    s_ashr_i32 s0, s7, 15
 ; GFX8-NEXT:    s_addk_i32 s1, 0x8000
-; GFX8-NEXT:    s_and_b32 s2, s2, 1
 ; GFX8-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX8-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[4:5]
 ; GFX8-NEXT:    ; return to shader part epilog
@@ -4319,7 +4317,6 @@ define amdgpu_ps i48 @s_saddsat_i48(i48 inreg %lhs, i48 inreg %rhs) {
 ; GFX9-NEXT:    s_xor_b32 s2, s0, s6
 ; GFX9-NEXT:    s_ashr_i32 s0, s5, 31
 ; GFX9-NEXT:    s_add_i32 s1, s0, 0x80000000
-; GFX9-NEXT:    s_and_b32 s2, s2, 1
 ; GFX9-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX9-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[4:5]
 ; GFX9-NEXT:    s_ashr_i64 s[0:1], s[0:1], 16
@@ -4334,12 +4331,11 @@ define amdgpu_ps i48 @s_saddsat_i48(i48 inreg %lhs, i48 inreg %rhs) {
 ; GFX10PLUS-NEXT:    v_cmp_lt_i64_e64 s0, s[4:5], s[0:1]
 ; GFX10PLUS-NEXT:    v_cmp_lt_i64_e64 s1, s[2:3], 0
 ; GFX10PLUS-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX10PLUS-NEXT:    s_cselect_b32 s0, 1, 0
+; GFX10PLUS-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX10PLUS-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX10PLUS-NEXT:    s_cselect_b32 s1, 1, 0
-; GFX10PLUS-NEXT:    s_xor_b32 s1, s1, s0
 ; GFX10PLUS-NEXT:    s_ashr_i32 s0, s5, 31
-; GFX10PLUS-NEXT:    s_and_b32 s2, s1, 1
+; GFX10PLUS-NEXT:    s_xor_b32 s2, s1, s2
 ; GFX10PLUS-NEXT:    s_add_i32 s1, s0, 0x80000000
 ; GFX10PLUS-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX10PLUS-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[4:5]
@@ -4638,7 +4634,6 @@ define amdgpu_ps i64 @s_saddsat_i64(i64 inreg %lhs, i64 inreg %rhs) {
 ; GFX6-NEXT:    s_xor_b32 s2, s0, s6
 ; GFX6-NEXT:    s_ashr_i32 s0, s5, 31
 ; GFX6-NEXT:    s_add_i32 s1, s0, 0x80000000
-; GFX6-NEXT:    s_and_b32 s2, s2, 1
 ; GFX6-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX6-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[4:5]
 ; GFX6-NEXT:    ; return to shader part epilog
@@ -4658,7 +4653,6 @@ define amdgpu_ps i64 @s_saddsat_i64(i64 inreg %lhs, i64 inreg %rhs) {
 ; GFX8-NEXT:    s_xor_b32 s2, s0, s6
 ; GFX8-NEXT:    s_ashr_i32 s0, s5, 31
 ; GFX8-NEXT:    s_add_i32 s1, s0, 0x80000000
-; GFX8-NEXT:    s_and_b32 s2, s2, 1
 ; GFX8-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX8-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[4:5]
 ; GFX8-NEXT:    ; return to shader part epilog
@@ -4678,7 +4672,6 @@ define amdgpu_ps i64 @s_saddsat_i64(i64 inreg %lhs, i64 inreg %rhs) {
 ; GFX9-NEXT:    s_xor_b32 s2, s0, s6
 ; GFX9-NEXT:    s_ashr_i32 s0, s5, 31
 ; GFX9-NEXT:    s_add_i32 s1, s0, 0x80000000
-; GFX9-NEXT:    s_and_b32 s2, s2, 1
 ; GFX9-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX9-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[4:5]
 ; GFX9-NEXT:    ; return to shader part epilog
@@ -4690,12 +4683,11 @@ define amdgpu_ps i64 @s_saddsat_i64(i64 inreg %lhs, i64 inreg %rhs) {
 ; GFX10PLUS-NEXT:    v_cmp_lt_i64_e64 s0, s[4:5], s[0:1]
 ; GFX10PLUS-NEXT:    v_cmp_lt_i64_e64 s1, s[2:3], 0
 ; GFX10PLUS-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX10PLUS-NEXT:    s_cselect_b32 s0, 1, 0
+; GFX10PLUS-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX10PLUS-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX10PLUS-NEXT:    s_cselect_b32 s1, 1, 0
-; GFX10PLUS-NEXT:    s_xor_b32 s1, s1, s0
 ; GFX10PLUS-NEXT:    s_ashr_i32 s0, s5, 31
-; GFX10PLUS-NEXT:    s_and_b32 s2, s1, 1
+; GFX10PLUS-NEXT:    s_xor_b32 s2, s1, s2
 ; GFX10PLUS-NEXT:    s_add_i32 s1, s0, 0x80000000
 ; GFX10PLUS-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX10PLUS-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[4:5]
@@ -4994,7 +4986,6 @@ define amdgpu_ps <2 x i64> @s_saddsat_v2i64(<2 x i64> inreg %lhs, <2 x i64> inre
 ; GFX6-NEXT:    s_xor_b32 s4, s0, s10
 ; GFX6-NEXT:    s_ashr_i32 s0, s9, 31
 ; GFX6-NEXT:    s_add_i32 s1, s0, 0x80000000
-; GFX6-NEXT:    s_and_b32 s4, s4, 1
 ; GFX6-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX6-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[8:9]
 ; GFX6-NEXT:    s_add_u32 s4, s2, s6
@@ -5009,7 +5000,6 @@ define amdgpu_ps <2 x i64> @s_saddsat_v2i64(<2 x i64> inreg %lhs, <2 x i64> inre
 ; GFX6-NEXT:    s_xor_b32 s6, s2, s8
 ; GFX6-NEXT:    s_ashr_i32 s2, s5, 31
 ; GFX6-NEXT:    s_add_i32 s3, s2, 0x80000000
-; GFX6-NEXT:    s_and_b32 s6, s6, 1
 ; GFX6-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX6-NEXT:    s_cselect_b64 s[2:3], s[2:3], s[4:5]
 ; GFX6-NEXT:    ; return to shader part epilog
@@ -5029,7 +5019,6 @@ define amdgpu_ps <2 x i64> @s_saddsat_v2i64(<2 x i64> inreg %lhs, <2 x i64> inre
 ; GFX8-NEXT:    s_xor_b32 s4, s0, s10
 ; GFX8-NEXT:    s_ashr_i32 s0, s9, 31
 ; GFX8-NEXT:    s_add_i32 s1, s0, 0x80000000
-; GFX8-NEXT:    s_and_b32 s4, s4, 1
 ; GFX8-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX8-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[8:9]
 ; GFX8-NEXT:    s_add_u32 s4, s2, s6
@@ -5045,7 +5034,6 @@ define amdgpu_ps <2 x i64> @s_saddsat_v2i64(<2 x i64> inreg %lhs, <2 x i64> inre
 ; GFX8-NEXT:    s_xor_b32 s6, s2, s8
 ; GFX8-NEXT:    s_ashr_i32 s2, s5, 31
 ; GFX8-NEXT:    s_add_i32 s3, s2, 0x80000000
-; GFX8-NEXT:    s_and_b32 s6, s6, 1
 ; GFX8-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX8-NEXT:    s_cselect_b64 s[2:3], s[2:3], s[4:5]
 ; GFX8-NEXT:    ; return to shader part epilog
@@ -5065,7 +5053,6 @@ define amdgpu_ps <2 x i64> @s_saddsat_v2i64(<2 x i64> inreg %lhs, <2 x i64> inre
 ; GFX9-NEXT:    s_xor_b32 s4, s0, s10
 ; GFX9-NEXT:    s_ashr_i32 s0, s9, 31
 ; GFX9-NEXT:    s_add_i32 s1, s0, 0x80000000
-; GFX9-NEXT:    s_and_b32 s4, s4, 1
 ; GFX9-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX9-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[8:9]
 ; GFX9-NEXT:    s_add_u32 s4, s2, s6
@@ -5081,7 +5068,6 @@ define amdgpu_ps <2 x i64> @s_saddsat_v2i64(<2 x i64> inreg %lhs, <2 x i64> inre
 ; GFX9-NEXT:    s_xor_b32 s6, s2, s8
 ; GFX9-NEXT:    s_ashr_i32 s2, s5, 31
 ; GFX9-NEXT:    s_add_i32 s3, s2, 0x80000000
-; GFX9-NEXT:    s_and_b32 s6, s6, 1
 ; GFX9-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX9-NEXT:    s_cselect_b64 s[2:3], s[2:3], s[4:5]
 ; GFX9-NEXT:    ; return to shader part epilog
@@ -5093,12 +5079,11 @@ define amdgpu_ps <2 x i64> @s_saddsat_v2i64(<2 x i64> inreg %lhs, <2 x i64> inre
 ; GFX10PLUS-NEXT:    v_cmp_lt_i64_e64 s0, s[8:9], s[0:1]
 ; GFX10PLUS-NEXT:    v_cmp_lt_i64_e64 s1, s[4:5], 0
 ; GFX10PLUS-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX10PLUS-NEXT:    s_cselect_b32 s0, 1, 0
+; GFX10PLUS-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX10PLUS-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX10PLUS-NEXT:    s_cselect_b32 s1, 1, 0
-; GFX10PLUS-NEXT:    s_xor_b32 s1, s1, s0
 ; GFX10PLUS-NEXT:    s_ashr_i32 s0, s9, 31
-; GFX10PLUS-NEXT:    s_and_b32 s4, s1, 1
+; GFX10PLUS-NEXT:    s_xor_b32 s4, s1, s4
 ; GFX10PLUS-NEXT:    s_add_i32 s1, s0, 0x80000000
 ; GFX10PLUS-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX10PLUS-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[8:9]
@@ -5107,12 +5092,11 @@ define amdgpu_ps <2 x i64> @s_saddsat_v2i64(<2 x i64> inreg %lhs, <2 x i64> inre
 ; GFX10PLUS-NEXT:    v_cmp_lt_i64_e64 s2, s[4:5], s[2:3]
 ; GFX10PLUS-NEXT:    v_cmp_lt_i64_e64 s3, s[6:7], 0
 ; GFX10PLUS-NEXT:    s_cmp_lg_u32 s2, 0
-; GFX10PLUS-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX10PLUS-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX10PLUS-NEXT:    s_cmp_lg_u32 s3, 0
 ; GFX10PLUS-NEXT:    s_cselect_b32 s3, 1, 0
-; GFX10PLUS-NEXT:    s_xor_b32 s3, s3, s2
 ; GFX10PLUS-NEXT:    s_ashr_i32 s2, s5, 31
-; GFX10PLUS-NEXT:    s_and_b32 s6, s3, 1
+; GFX10PLUS-NEXT:    s_xor_b32 s6, s3, s6
 ; GFX10PLUS-NEXT:    s_add_i32 s3, s2, 0x80000000
 ; GFX10PLUS-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX10PLUS-NEXT:    s_cselect_b64 s[2:3], s[2:3], s[4:5]
@@ -5140,18 +5124,12 @@ define amdgpu_ps i128 @s_saddsat_i128(i128 inreg %lhs, i128 inreg %rhs) {
 ; GFX6-NEXT:    v_cmp_eq_u64_e32 vcc, s[8:9], v[0:1]
 ; GFX6-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX6-NEXT:    s_or_b64 s[0:1], vcc, vcc
-; GFX6-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX6-NEXT:    s_and_b32 s3, s0, 1
 ; GFX6-NEXT:    v_cmp_lt_i64_e64 s[0:1], s[6:7], 0
-; GFX6-NEXT:    s_cmp_lg_u32 s3, 0
 ; GFX6-NEXT:    s_cselect_b32 s2, s10, s2
 ; GFX6-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
 ; GFX6-NEXT:    v_cmp_eq_u64_e64 s[0:1], s[6:7], 0
 ; GFX6-NEXT:    s_cselect_b32 s3, 1, 0
 ; GFX6-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
-; GFX6-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX6-NEXT:    s_and_b32 s0, s0, 1
-; GFX6-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX6-NEXT:    s_cselect_b32 s0, 0, s3
 ; GFX6-NEXT:    s_xor_b32 s6, s0, s2
 ; GFX6-NEXT:    s_ashr_i32 s0, s9, 31
@@ -5416,22 +5394,19 @@ define amdgpu_ps <4 x float> @saddsat_i128_vs(i128 %lhs, i128 inreg %rhs) {
 ; GFX6-NEXT:    v_add_i32_e32 v4, vcc, s0, v0
 ; GFX6-NEXT:    v_addc_u32_e32 v5, vcc, v1, v5, vcc
 ; GFX6-NEXT:    v_mov_b32_e32 v6, s2
-; GFX6-NEXT:    v_cmp_lt_i64_e64 s[0:1], s[2:3], 0
 ; GFX6-NEXT:    v_mov_b32_e32 v7, s3
 ; GFX6-NEXT:    v_addc_u32_e32 v6, vcc, v2, v6, vcc
 ; GFX6-NEXT:    v_addc_u32_e32 v7, vcc, v3, v7, vcc
-; GFX6-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
 ; GFX6-NEXT:    v_cmp_lt_u64_e32 vcc, v[4:5], v[0:1]
-; GFX6-NEXT:    v_cmp_eq_u64_e64 s[0:1], s[2:3], 0
+; GFX6-NEXT:    v_cmp_lt_i64_e64 s[0:1], s[2:3], 0
 ; GFX6-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX6-NEXT:    v_cmp_lt_i64_e32 vcc, v[6:7], v[2:3]
-; GFX6-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX6-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
-; GFX6-NEXT:    s_cselect_b32 s0, 1, 0
+; GFX6-NEXT:    v_cmp_eq_u64_e64 s[0:1], s[2:3], 0
 ; GFX6-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; GFX6-NEXT:    v_cmp_eq_u64_e32 vcc, v[6:7], v[2:3]
-; GFX6-NEXT:    s_and_b32 s0, s0, 1
-; GFX6-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX6-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX6-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
 ; GFX6-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GFX6-NEXT:    s_cselect_b32 s0, 0, s4
 ; GFX6-NEXT:    v_xor_b32_e32 v0, s0, v0
@@ -5465,9 +5440,8 @@ define amdgpu_ps <4 x float> @saddsat_i128_vs(i128 %lhs, i128 inreg %rhs) {
 ; GFX8-NEXT:    s_cmp_eq_u64 s[2:3], 0
 ; GFX8-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GFX8-NEXT:    s_cselect_b32 s0, 0, s0
-; GFX8-NEXT:    v_xor_b32_e32 v0, s0, v0
 ; GFX8-NEXT:    v_ashrrev_i32_e32 v2, 31, v7
-; GFX8-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX8-NEXT:    v_xor_b32_e32 v0, s0, v0
 ; GFX8-NEXT:    v_add_u32_e32 v3, vcc, 0x80000000, v2
 ; GFX8-NEXT:    v_cmp_ne_u16_e32 vcc, 0, v0
 ; GFX8-NEXT:    v_cndmask_b32_e32 v0, v4, v2, vcc
@@ -5497,7 +5471,6 @@ define amdgpu_ps <4 x float> @saddsat_i128_vs(i128 %lhs, i128 inreg %rhs) {
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GFX9-NEXT:    s_cselect_b32 s0, 0, s0
 ; GFX9-NEXT:    v_xor_b32_e32 v0, s0, v0
-; GFX9-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX9-NEXT:    v_ashrrev_i32_e32 v2, 31, v7
 ; GFX9-NEXT:    v_add_u32_e32 v3, 0x80000000, v2
 ; GFX9-NEXT:    v_cmp_ne_u16_e32 vcc, 0, v0
@@ -5527,7 +5500,6 @@ define amdgpu_ps <4 x float> @saddsat_i128_vs(i128 %lhs, i128 inreg %rhs) {
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
 ; GFX10-NEXT:    v_add_nc_u32_e32 v3, 0x80000000, v2
 ; GFX10-NEXT:    v_xor_b32_e32 v0, s0, v0
-; GFX10-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX10-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v0
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, v4, v2, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, v5, v2, vcc_lo
@@ -5554,7 +5526,6 @@ define amdgpu_ps <4 x float> @saddsat_i128_vs(i128 %lhs, i128 inreg %rhs) {
 ; GFX11-NEXT:    s_cselect_b32 s0, 0, s0
 ; GFX11-NEXT:    v_dual_cndmask_b32 v0, v1, v0 :: v_dual_add_nc_u32 v3, 0x80000000, v2
 ; GFX11-NEXT:    v_xor_b32_e32 v0, s0, v0
-; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX11-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v0
 ; GFX11-NEXT:    v_dual_cndmask_b32 v0, v4, v2 :: v_dual_cndmask_b32 v3, v7, v3
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, v5, v2, vcc_lo
@@ -5836,18 +5807,12 @@ define amdgpu_ps <2 x i128> @s_saddsat_v2i128(<2 x i128> inreg %lhs, <2 x i128> 
 ; GFX6-NEXT:    v_cmp_eq_u64_e32 vcc, s[16:17], v[0:1]
 ; GFX6-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX6-NEXT:    s_or_b64 s[0:1], vcc, vcc
-; GFX6-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX6-NEXT:    s_and_b32 s3, s0, 1
 ; GFX6-NEXT:    v_cmp_lt_i64_e64 s[0:1], s[10:11], 0
-; GFX6-NEXT:    s_cmp_lg_u32 s3, 0
 ; GFX6-NEXT:    s_cselect_b32 s2, s18, s2
 ; GFX6-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
 ; GFX6-NEXT:    v_cmp_eq_u64_e64 s[0:1], s[10:11], 0
 ; GFX6-NEXT:    s_cselect_b32 s3, 1, 0
 ; GFX6-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
-; GFX6-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX6-NEXT:    s_and_b32 s0, s0, 1
-; GFX6-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX6-NEXT:    s_cselect_b32 s0, 0, s3
 ; GFX6-NEXT:    s_xor_b32 s10, s0, s2
 ; GFX6-NEXT:    s_ashr_i32 s0, s17, 31
@@ -5874,18 +5839,12 @@ define amdgpu_ps <2 x i128> @s_saddsat_v2i128(<2 x i128> inreg %lhs, <2 x i128> 
 ; GFX6-NEXT:    v_cmp_eq_u64_e32 vcc, s[10:11], v[0:1]
 ; GFX6-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX6-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GFX6-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX6-NEXT:    s_and_b32 s7, s4, 1
 ; GFX6-NEXT:    v_cmp_lt_i64_e64 s[4:5], s[14:15], 0
-; GFX6-NEXT:    s_cmp_lg_u32 s7, 0
 ; GFX6-NEXT:    s_cselect_b32 s6, s12, s6
 ; GFX6-NEXT:    s_or_b64 s[4:5], s[4:5], s[4:5]
 ; GFX6-NEXT:    v_cmp_eq_u64_e64 s[4:5], s[14:15], 0
 ; GFX6-NEXT:    s_cselect_b32 s7, 1, 0
 ; GFX6-NEXT:    s_or_b64 s[4:5], s[4:5], s[4:5]
-; GFX6-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX6-NEXT:    s_and_b32 s4, s4, 1
-; GFX6-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX6-NEXT:    s_cselect_b32 s4, 0, s7
 ; GFX6-NEXT:    s_xor_b32 s12, s4, s6
 ; GFX6-NEXT:    s_ashr_i32 s4, s11, 31

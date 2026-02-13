@@ -773,10 +773,11 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
 
   // If True has a passthru operand then it needs to be the same as vmerge's
   // False, since False will be used for the result's passthru operand.
-  Register TruePassthru =
-      lookThruCopies(True.getOperand(True.getNumExplicitDefs()).getReg());
-  if (RISCVII::isFirstDefTiedToFirstUse(True.getDesc()) && TruePassthru &&
-      !(TruePassthru.isVirtual() && TruePassthru == FalseReg)) {
+  Register TruePassthru;
+  if (RISCVII::isFirstDefTiedToFirstUse(True.getDesc()))
+    TruePassthru =
+        lookThruCopies(True.getOperand(True.getNumExplicitDefs()).getReg());
+  if (TruePassthru && !(TruePassthru.isVirtual() && TruePassthru == FalseReg)) {
     // If True's passthru != False, check if it uses False in another operand
     // and try to commute it.
     int OtherIdx = True.findRegisterUseOperandIdx(FalseReg, TRI);
@@ -803,6 +804,9 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
   if (RISCV::isVLKnownLE(TrueVL, VMergeVL))
     MinVL = TrueVL;
   else if (RISCV::isVLKnownLE(VMergeVL, TrueVL))
+    MinVL = VMergeVL;
+  else if (!TruePassthru && !True.mayLoadOrStore())
+    // If True's passthru is undef, we can use vmerge's vl.
     MinVL = VMergeVL;
   else
     return false;

@@ -41,6 +41,8 @@ bool Type::isF32() const { return llvm::isa<Float32Type>(*this); }
 bool Type::isF64() const { return llvm::isa<Float64Type>(*this); }
 bool Type::isF80() const { return llvm::isa<Float80Type>(*this); }
 bool Type::isF128() const { return llvm::isa<Float128Type>(*this); }
+bool Type::isF8E4M3FN() const { return llvm::isa<Float8E4M3FNType>(*this); }
+bool Type::isF8E5M2() const { return llvm::isa<Float8E5M2Type>(*this); }
 
 bool Type::isFloat() const { return llvm::isa<FloatType>(*this); }
 

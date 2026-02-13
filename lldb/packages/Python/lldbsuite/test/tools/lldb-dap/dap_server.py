@@ -44,7 +44,7 @@ DEFAULT_TIMEOUT: Final[float] = 50.0 * (10.0 if ("ASAN_OPTIONS" in os.environ) e
 # A quiet period between events, used to determine if we're done receiving
 # events in a given window, otherwise 'wait_for_stopped' would need to wait
 # until the DEFAULT_TIMEOUT occurs, slows down tests significantly.
-EVENT_QUIET_PERIOD = 0.25
+EVENT_QUIET_PERIOD = 0.25 * (20.0 if ("ASAN_OPTIONS" in os.environ) else 1.0)
 
 
 # See lldbtest.Base.spawnSubprocess, which should help ensure any processes
@@ -300,6 +300,7 @@ class DebugCommunication(object):
         self.stopped_thread: Optional[dict] = None
         self.thread_stacks: Optional[Dict[int, List[dict]]]
         self.thread_stop_reasons: Dict[str, Any] = {}
+        self.focused_tid: Optional[int] = None
         self.frame_scopes: Dict[str, Any] = {}
         # keyed by breakpoint id
         self.resolved_breakpoints: dict[int, Breakpoint] = {}
@@ -309,6 +310,7 @@ class DebugCommunication(object):
 
         # trigger enqueue thread
         self._recv_thread.start()
+        self.initialized_event = None
 
     @classmethod
     def encode_content(cls, s: str) -> bytes:
@@ -515,6 +517,7 @@ class DebugCommunication(object):
                 self.output[category] = output
         elif event == "initialized":
             self.initialized = True
+            self.initialized_event = packet
         elif event == "process":
             # When a new process is attached or launched, remember the
             # details that are available in the body of the event
@@ -539,6 +542,8 @@ class DebugCommunication(object):
             self._process_stopped()
             tid = body["threadId"]
             self.thread_stop_reasons[tid] = body
+            if "preserveFocusHint" not in body or not body["preserveFocusHint"]:
+                self.focused_tid = tid
         elif event.startswith("progress"):
             # Progress events come in as 'progressStart', 'progressUpdate',
             # and 'progressEnd' events. Keep these around in case test
@@ -599,6 +604,7 @@ class DebugCommunication(object):
         self.frame_scopes = {}
         if all_threads_continued:
             self.thread_stop_reasons = {}
+            self.focused_tid = None
 
     def _update_verified_breakpoints(self, breakpoints: List[Breakpoint]):
         for bp in breakpoints:
@@ -1137,18 +1143,24 @@ class DebugCommunication(object):
     def request_evaluate(
         self,
         expression,
-        frameIndex=0,
+        frameIndex: Optional[int] = 0,
         threadId=None,
         context=None,
         is_hex: Optional[bool] = None,
     ) -> Response:
-        stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
-        if stackFrame is None:
-            raise ValueError("invalid frameIndex")
         args_dict = {
             "expression": expression,
-            "frameId": stackFrame["id"],
         }
+
+        if frameIndex is not None:
+            if threadId is None:
+                threadId = self.get_thread_id()
+            stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
+
+            if stackFrame is None:
+                raise ValueError("invalid frameIndex")
+            args_dict["frameId"] = stackFrame["id"]
+
         if context:
             args_dict["context"] = context
         if is_hex is not None:
@@ -1171,7 +1183,9 @@ class DebugCommunication(object):
         }
         return self._send_recv(command_dict)
 
-    def request_initialize(self, sourceInitFile=False):
+    def request_initialize(
+        self, client_features: Optional[dict[str, bool]] = None, sourceInitFile=False
+    ):
         command_dict = {
             "command": "initialize",
             "type": "request",
@@ -1192,6 +1206,13 @@ class DebugCommunication(object):
                 "$__lldb_sourceInitFile": sourceInitFile,
             },
         }
+
+        if client_features is not None:
+            arguments = command_dict["arguments"]
+            # replace the default client features.
+            for key, value in client_features.items():
+                arguments[key] = value
+
         response = self._send_recv(command_dict)
         if response:
             if "body" in response:
@@ -1593,7 +1614,7 @@ class DebugCommunication(object):
                 tid = thread["id"]
                 if tid in self.thread_stop_reasons:
                     thread_stop_info = self.thread_stop_reasons[tid]
-                    copy_keys = ["reason", "description", "text"]
+                    copy_keys = ["reason", "description", "text", "hitBreakpointIds"]
                     for key in copy_keys:
                         if key in thread_stop_info:
                             thread[key] = thread_stop_info[key]
@@ -1854,7 +1875,7 @@ def attach_options_specified(opts):
 
 
 def run_adapter(dbg: DebugCommunication, opts: argparse.Namespace) -> None:
-    dbg.request_initialize(opts.source_init_file)
+    dbg.request_initialize(sourceInitFile=opts.source_init_file)
 
     source_to_lines: Dict[str, List[int]] = {}
     for sbp in cast(List[str], opts.source_bp):

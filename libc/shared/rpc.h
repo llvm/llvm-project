@@ -138,8 +138,8 @@ template <bool Invert> struct Process {
     return inverted_outbox;
   }
 
-  // Given the current outbox and inbox values, wait until the inbox changes
-  // to indicate that this thread owns the buffer element.
+  /// Given the current outbox and inbox values, wait until the inbox changes
+  /// to indicate that this thread owns the buffer element.
   RPC_ATTRS void wait_for_ownership(uint64_t lane_mask, uint32_t index,
                                     uint32_t outbox, uint32_t in) {
     while (buffer_unavailable(in, outbox)) {
@@ -169,9 +169,10 @@ template <bool Invert> struct Process {
   /// single lock on success, e.g. the result of rpc::get_lane_mask()
   /// The lock is held when the n-th bit of the lock bitfield is set.
   RPC_ATTRS bool try_lock(uint64_t lane_mask, uint32_t index) {
-    // On amdgpu, test and set to the nth lock bit and a sync_lane would suffice
-    // On volta, need to handle differences between the threads running and
-    // the threads that were detected in the previous call to get_lane_mask()
+    // On AMDGPU, test and set to the n-th lock bit and a sync_lane would
+    // suffice On NVIDIA with ITS we need to handle differences between the
+    // threads running and the threads that were detected in the previous call
+    // to get_lane_mask()
     //
     // All threads in lane_mask try to claim the lock. At most one can succeed.
     // There may be threads active which are not in lane mask which must not
@@ -318,9 +319,18 @@ public:
   template <typename A>
   RPC_ATTRS void recv_n(void **dst, uint64_t *size, A &&alloc);
 
+  template <typename Ty> RPC_ATTRS void send_n(const Ty *src);
+  template <typename Ty> RPC_ATTRS void recv_n(Ty *dst);
+
   RPC_ATTRS uint32_t get_opcode() const { return process.header[index].opcode; }
 
   RPC_ATTRS uint32_t get_index() const { return index; }
+
+  RPC_ATTRS uint64_t get_lane_mask() const {
+    if constexpr (T)
+      return process.header[index].mask;
+    return lane_mask;
+  }
 
   RPC_ATTRS void close() {
     // Wait for all lanes to finish using the port.
@@ -392,7 +402,7 @@ template <bool T> template <typename F> RPC_ATTRS void Port<T>::send(F fill) {
   process.wait_for_ownership(lane_mask, index, out, in);
 
   // Apply the \p fill function to initialize the buffer and release the memory.
-  invoke_rpc(fill, lane_size, process.header[index].mask,
+  invoke_rpc(fill, lane_size, get_lane_mask(),
              process.get_packet(index, lane_size));
   out = process.invert_outbox(index, out);
   owns_buffer = false;
@@ -414,7 +424,7 @@ template <bool T> template <typename U> RPC_ATTRS void Port<T>::recv(U use) {
   process.wait_for_ownership(lane_mask, index, out, in);
 
   // Apply the \p use function to read the memory out of the buffer.
-  invoke_rpc(use, lane_size, process.header[index].mask,
+  invoke_rpc(use, lane_size, get_lane_mask(),
              process.get_packet(index, lane_size));
   receive = true;
   owns_buffer = true;
@@ -509,6 +519,30 @@ RPC_ATTRS void Port<T>::recv_n(void **dst, uint64_t *size, A &&alloc) {
   }
 }
 
+/// Simplified version of `send_n` where the size is a known constant.
+template <bool T>
+template <typename Ty>
+RPC_ATTRS void Port<T>::send_n(const Ty *src) {
+  for (uint64_t idx = 0; idx < sizeof(Ty); idx += sizeof(Buffer::data)) {
+    const uint64_t bytes = rpc::min(sizeof(Ty) - idx, sizeof(Buffer::data));
+    send([&](Buffer *buffer, uint32_t id) {
+      rpc_memcpy(buffer->data, advance(&lane_value(src, id), idx), bytes);
+    });
+  }
+}
+
+/// Simplified version of `recv_n` where the size is a known constant.
+template <bool T>
+template <typename Ty>
+RPC_ATTRS void Port<T>::recv_n(Ty *dst) {
+  for (uint64_t idx = 0; idx < sizeof(Ty); idx += sizeof(Buffer::data)) {
+    const uint64_t bytes = rpc::min(sizeof(Ty) - idx, sizeof(Buffer::data));
+    recv([&](Buffer *buffer, uint32_t id) {
+      rpc_memcpy(advance(&lane_value(dst, id), idx), buffer->data, bytes);
+    });
+  }
+}
+
 /// Continually attempts to open a port to use as the client. The client can
 /// only open a port if we find an index that is in a valid sending state. That
 /// is, there are send operations pending that haven't been serviced on this
@@ -590,7 +624,6 @@ RPC_ATTRS Server::Port Server::open(uint32_t lane_size) {
   }
 }
 
-#undef RPC_ATTRS
 #if !__has_builtin(__scoped_atomic_load_n)
 #undef __scoped_atomic_load_n
 #undef __scoped_atomic_store_n

@@ -165,18 +165,17 @@ define void @f5(ptr %a, ptr %b) {
   ; X86-NEXT:   [[LOAD2:%[0-9]+]]:gpr(s32) = G_LOAD [[LOAD]](p0) :: (load (s32) from %ir.a, align 8)
   ; X86-NEXT:   [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 4
   ; X86-NEXT:   [[PTR_ADD:%[0-9]+]]:gpr(p0) = nuw inbounds G_PTR_ADD [[LOAD]], [[C]](s32)
-  ; X86-NEXT:   [[COPY:%[0-9]+]]:gpr(p0) = COPY [[PTR_ADD]](p0)
-  ; X86-NEXT:   [[LOAD3:%[0-9]+]]:gpr(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.a + 4, basealign 8)
+  ; X86-NEXT:   [[LOAD3:%[0-9]+]]:gpr(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s32) from %ir.a + 4, basealign 8)
   ; X86-NEXT:   [[MV:%[0-9]+]]:gpr(s64) = G_MERGE_VALUES [[LOAD2]](s32), [[LOAD3]](s32)
   ; X86-NEXT:   [[LOAD4:%[0-9]+]]:gpr(s32) = G_LOAD [[LOAD1]](p0) :: (load (s32) from %ir.b, align 8)
   ; X86-NEXT:   [[PTR_ADD1:%[0-9]+]]:gpr(p0) = nuw inbounds G_PTR_ADD [[LOAD1]], [[C]](s32)
   ; X86-NEXT:   [[LOAD5:%[0-9]+]]:gpr(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s32) from %ir.b + 4, basealign 8)
   ; X86-NEXT:   [[MV1:%[0-9]+]]:gpr(s64) = G_MERGE_VALUES [[LOAD4]](s32), [[LOAD5]](s32)
-  ; X86-NEXT:   [[COPY1:%[0-9]+]]:psr(s64) = COPY [[MV]](s64)
-  ; X86-NEXT:   [[COPY2:%[0-9]+]]:psr(s64) = COPY [[MV1]](s64)
-  ; X86-NEXT:   [[FADD:%[0-9]+]]:psr(s64) = G_FADD [[COPY1]], [[COPY2]]
-  ; X86-NEXT:   [[COPY3:%[0-9]+]]:gpr(s64) = COPY [[FADD]](s64)
-  ; X86-NEXT:   [[UV:%[0-9]+]]:gpr(s32), [[UV1:%[0-9]+]]:gpr(s32) = G_UNMERGE_VALUES [[COPY3]](s64)
+  ; X86-NEXT:   [[COPY:%[0-9]+]]:psr(s64) = COPY [[MV]](s64)
+  ; X86-NEXT:   [[COPY1:%[0-9]+]]:psr(s64) = COPY [[MV1]](s64)
+  ; X86-NEXT:   [[FADD:%[0-9]+]]:psr(s64) = G_FADD [[COPY]], [[COPY1]]
+  ; X86-NEXT:   [[COPY2:%[0-9]+]]:gpr(s64) = COPY [[FADD]](s64)
+  ; X86-NEXT:   [[UV:%[0-9]+]]:gpr(s32), [[UV1:%[0-9]+]]:gpr(s32) = G_UNMERGE_VALUES [[COPY2]](s64)
   ; X86-NEXT:   G_STORE [[UV]](s32), [[LOAD]](p0) :: (store (s32) into %ir.a, align 8)
   ; X86-NEXT:   G_STORE [[UV1]](s32), [[PTR_ADD]](p0) :: (store (s32) into %ir.a + 4, basealign 8)
   ; X86-NEXT:   RET 0

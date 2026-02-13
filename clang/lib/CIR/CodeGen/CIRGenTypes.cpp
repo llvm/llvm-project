@@ -374,6 +374,10 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       resultType = cir::VectorType::get(builder.getDoubleTy(), 2,
                                         /*is_scalable=*/true);
       break;
+    case BuiltinType::SveBool:
+      resultType = cir::VectorType::get(builder.getUIntNTy(1), 16,
+                                        /*is_scalable=*/true);
+      break;
 
     // Unsigned integral types.
     case BuiltinType::Char8:

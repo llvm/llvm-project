@@ -12,12 +12,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/RISCVTargetParser.h"
+#include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 
 namespace llvm {
 namespace RISCV {
+
+char ParserError::ID = 0;
+char ParserWarning::ID = 0;
 
 enum CPUKind : unsigned {
 #define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_SCALAR_UNALIGN,                   \
@@ -145,6 +152,204 @@ void getFeaturesForCPU(StringRef CPU,
       EnabledFeatures.push_back(F.substr(1));
 }
 
+namespace {
+class RISCVTuneFeatureLookupTable {
+  struct RISCVTuneFeature {
+    unsigned PosIdx;
+    unsigned NegIdx;
+    unsigned FeatureIdx;
+  };
+
+  struct RISCVImpliedTuneFeature {
+    unsigned FeatureIdx;
+    unsigned ImpliedFeatureIdx;
+  };
+
+  struct RISCVConfigurableTuneFeatures {
+    StringRef Processor;
+    unsigned DirectiveIdx;
+
+    bool operator<(const RISCVConfigurableTuneFeatures &RHS) const {
+      return Processor < RHS.Processor;
+    }
+  };
+
+#define GET_TUNE_FEATURES
+#define GET_CONFIGURABLE_TUNE_FEATURES
+#include "llvm/TargetParser/RISCVTargetParserDef.inc"
+
+  // Positive directive name -> Feature name
+  StringMap<StringRef> PositiveMap;
+  // Negative directive name -> Feature name
+  StringMap<StringRef> NegativeMap;
+
+  StringMap<SmallVector<StringRef>> ImpliedFeatureMap;
+  StringMap<SmallVector<StringRef>> InvImpliedFeatureMap;
+
+public:
+  using SmallStringSet = SmallSet<StringRef, 4>;
+
+  static void getAllTuneFeatures(SmallVectorImpl<StringRef> &Features) {
+    for (const auto &TuneFeature : TuneFeatures)
+      Features.push_back(TuneFeatureStrings[TuneFeature.FeatureIdx]);
+  }
+
+  static void getConfigurableFeatures(StringRef ProcName,
+                                      SmallStringSet &Directives) {
+    // Entries for the same processor are always put together.
+    auto [ItFirst, ItEnd] =
+        std::equal_range(std::begin(ConfigurableTuneFeatures),
+                         std::end(ConfigurableTuneFeatures),
+                         RISCVConfigurableTuneFeatures{ProcName, 0});
+    for (; ItFirst != ItEnd; ++ItFirst)
+      Directives.insert(TuneFeatureStrings[ItFirst->DirectiveIdx]);
+  }
+
+  RISCVTuneFeatureLookupTable() {
+    for (const auto &TuneFeature : TuneFeatures) {
+      StringRef PosDirective = TuneFeatureStrings[TuneFeature.PosIdx];
+      StringRef NegDirective = TuneFeatureStrings[TuneFeature.NegIdx];
+      StringRef FeatureName = TuneFeatureStrings[TuneFeature.FeatureIdx];
+      PositiveMap[PosDirective] = FeatureName;
+      NegativeMap[NegDirective] = FeatureName;
+    }
+
+    for (const auto &Imp : ImpliedTuneFeatures) {
+      StringRef Feature = TuneFeatureStrings[Imp.FeatureIdx];
+      StringRef ImpliedFeature = TuneFeatureStrings[Imp.ImpliedFeatureIdx];
+      ImpliedFeatureMap[Feature].push_back(ImpliedFeature);
+      InvImpliedFeatureMap[ImpliedFeature].push_back(Feature);
+    }
+  }
+
+  /// Returns {Feature name, Is positive or not}, or empty feature name
+  /// if not found.
+  std::pair<StringRef, bool> getFeature(StringRef DirectiveName) const {
+    auto It = PositiveMap.find(DirectiveName);
+    if (It != PositiveMap.end())
+      return {It->getValue(), /*IsPositive=*/true};
+
+    return {NegativeMap.lookup(DirectiveName), /*IsPositive=*/false};
+  }
+
+  /// Returns the implied features, or empty ArrayRef if not found. Note:
+  /// ImpliedFeatureMap / InvImpliedFeatureMap are the owners of these implied
+  /// feature lists, so we can just return the ArrayRef.
+  ArrayRef<StringRef> featureImplies(StringRef FeatureName,
+                                     bool Inverse = false) const {
+    const auto &Map = Inverse ? InvImpliedFeatureMap : ImpliedFeatureMap;
+    auto It = Map.find(FeatureName);
+    if (It == Map.end())
+      return {};
+    return It->second;
+  }
+};
+} // namespace
+
+void getAllTuneFeatures(SmallVectorImpl<StringRef> &Features) {
+  RISCVTuneFeatureLookupTable::getAllTuneFeatures(Features);
+}
+
+Error parseTuneFeatureString(StringRef ProcName, StringRef TFString,
+                             SmallVectorImpl<std::string> &ResFeatures) {
+  RISCVTuneFeatureLookupTable TFLookup;
+  using SmallStringSet = RISCVTuneFeatureLookupTable::SmallStringSet;
+
+  // Do not create ParserWarning right away. Instead, we store the warning
+  // message until the last moment.
+  std::string WarningMsg;
+
+  TFString = TFString.trim();
+  if (TFString.empty())
+    return Error::success();
+
+  // Note: StringSet is not really ergonomic to use in this case here.
+  SmallStringSet PositiveFeatures;
+  SmallStringSet NegativeFeatures;
+  SmallStringSet PerProcDirectives;
+  RISCVTuneFeatureLookupTable::getConfigurableFeatures(ProcName,
+                                                       PerProcDirectives);
+  if (PerProcDirectives.empty() && !ProcName.empty())
+    return make_error<ParserError>("Processor '" + Twine(ProcName) +
+                                   "' has no "
+                                   "configurable tuning features");
+
+  // Phase 1: Collect explicit features.
+  StringRef DirectiveStr;
+  do {
+    std::tie(DirectiveStr, TFString) = TFString.split(",");
+    auto [FeatureName, IsPositive] = TFLookup.getFeature(DirectiveStr);
+    if (FeatureName.empty()) {
+      raw_string_ostream SS(WarningMsg);
+      SS << "unrecognized tune feature directive '" << DirectiveStr << "'";
+      continue;
+    }
+
+    auto &Features = IsPositive ? PositiveFeatures : NegativeFeatures;
+    if (!Features.insert(FeatureName).second)
+      return make_error<ParserError>(
+          "cannot specify more than one instance of '" + Twine(DirectiveStr) +
+          "'");
+
+    if (!PerProcDirectives.count(DirectiveStr) && !ProcName.empty())
+      return make_error<ParserError>("Directive '" + Twine(DirectiveStr) +
+                                     "' is not "
+                                     "allowed to be used with processor '" +
+                                     Twine(ProcName) + "'");
+  } while (!TFString.empty());
+
+  auto Intersection =
+      llvm::set_intersection(PositiveFeatures, NegativeFeatures);
+  if (!Intersection.empty()) {
+    std::string IntersectedStr = join(Intersection, "', '");
+    return make_error<ParserError>("Feature(s) '" + Twine(IntersectedStr) +
+                                   "' cannot appear in both "
+                                   "positive and negative directives");
+  }
+
+  // Phase 2: Derive implied features.
+  SmallStringSet DerivedPosFeatures;
+  SmallStringSet DerivedNegFeatures;
+  for (StringRef PF : PositiveFeatures) {
+    if (auto FeatureList = TFLookup.featureImplies(PF); !FeatureList.empty())
+      DerivedPosFeatures.insert_range(FeatureList);
+  }
+  for (StringRef NF : NegativeFeatures) {
+    if (auto FeatureList = TFLookup.featureImplies(NF, /*Inverse=*/true);
+        !FeatureList.empty())
+      DerivedNegFeatures.insert_range(FeatureList);
+  }
+  PositiveFeatures.insert_range(DerivedPosFeatures);
+  NegativeFeatures.insert_range(DerivedNegFeatures);
+
+  Intersection = llvm::set_intersection(PositiveFeatures, NegativeFeatures);
+  if (!Intersection.empty()) {
+    std::string IntersectedStr = join(Intersection, "', '");
+    return make_error<ParserError>("Feature(s) '" + Twine(IntersectedStr) +
+                                   "' were implied by both "
+                                   "positive and negative directives");
+  }
+
+  // Export the result.
+  const std::string PosPrefix("+");
+  const std::string NegPrefix("-");
+  for (StringRef PF : PositiveFeatures)
+    ResFeatures.emplace_back(PosPrefix + PF.str());
+  for (StringRef NF : NegativeFeatures)
+    ResFeatures.emplace_back(NegPrefix + NF.str());
+
+  if (WarningMsg.empty())
+    return Error::success();
+
+  return make_error<ParserWarning>(WarningMsg);
+}
+
+void getCPUConfigurableTuneFeatures(StringRef CPU,
+                                    SmallVectorImpl<StringRef> &Directives) {
+  RISCVTuneFeatureLookupTable::SmallStringSet DirectiveSet;
+  RISCVTuneFeatureLookupTable::getConfigurableFeatures(CPU, DirectiveSet);
+  Directives.assign(DirectiveSet.begin(), DirectiveSet.end());
+}
 } // namespace RISCV
 
 namespace RISCVVType {

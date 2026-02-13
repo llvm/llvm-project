@@ -79,5 +79,5 @@ program reproducer
   print *, "======= Test Passed! ======="
 end program reproducer
 
-! CHECK: "PluginInterface" device {{[0-9]+}} info: Launching kernel {{.*}}
+! CHECK: PluginInterface device {{[0-9]+}} info: Launching kernel {{.*}}
 ! CHECK: ======= Test Passed! =======

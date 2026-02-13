@@ -84,9 +84,9 @@ public:
 
   static bool classof(Type type);
 
-  /// Returns true if the given integer type is valid for the SPIR-V dialect.
-  static bool isValid(FloatType);
   /// Returns true if the given float type is valid for the SPIR-V dialect.
+  static bool isValid(FloatType);
+  /// Returns true if the given integer type is valid for the SPIR-V dialect.
   static bool isValid(IntegerType);
 };
 

@@ -10,7 +10,7 @@ define void @scev_expand_ptrtoint(i8 %x, ptr %start) {
 ; CHECK-LABEL: define void @scev_expand_ptrtoint(
 ; CHECK-SAME: i8 [[X:%.*]], ptr [[START:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[START1:%.*]] = ptrtoint ptr [[START]] to i64
+; CHECK-NEXT:    [[START1:%.*]] = ptrtoaddr ptr [[START]] to i64
 ; CHECK-NEXT:    br label %[[LOOP_1_HEADER:.*]]
 ; CHECK:       [[LOOP_1_HEADER]]:
 ; CHECK-NEXT:    [[PTR_IV_1:%.*]] = phi ptr [ [[START]], %[[ENTRY]] ], [ [[PTR_IV_1_NEXT:%.*]], %[[LOOP_1_LATCH:.*]] ]
@@ -36,7 +36,7 @@ define void @scev_expand_ptrtoint(i8 %x, ptr %start) {
 ; CHECK-NEXT:    [[INDVAR_LCSSA:%.*]] = phi i64 [ [[INDVAR]], %[[LOOP_2_HEADER]] ], [ [[INDVAR]], %[[LOOP_2_HEADER]] ]
 ; CHECK-NEXT:    [[PTR_IV_2_LCSSA:%.*]] = phi ptr [ [[PTR_IV_2]], %[[LOOP_2_HEADER]] ], [ [[PTR_IV_2]], %[[LOOP_2_HEADER]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 1, [[START1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR_IV_1_LCSSA]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoaddr ptr [[PTR_IV_1_LCSSA]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[CMP_EXT]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDVAR_LCSSA]], [[TMP4]]
@@ -218,6 +218,71 @@ loop.2.header:
 loop.2.latch:
   %iv.2.next = add i64 %iv.2, 1
   br label %loop.2.header
+
+exit:
+  ret void
+}
+
+define void @expand_truncated_ptrtoint(ptr %A, ptr %B) {
+; CHECK-LABEL: define void @expand_truncated_ptrtoint(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    br label %[[LOOP_1:.*]]
+; CHECK:       [[LOOP_1]]:
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ [[INDVAR_NEXT:%.*]], %[[LOOP_1]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[P_0:%.*]] = phi ptr [ [[A]], %[[ENTRY]] ], [ [[P_0_NEXT:%.*]], %[[LOOP_1]] ]
+; CHECK-NEXT:    [[P_0_NEXT]] = getelementptr i8, ptr [[P_0]], i64 -1
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    [[INDVAR_NEXT]] = add i32 [[INDVAR]], 1
+; CHECK-NEXT:    br i1 false, label %[[MIDDLE:.*]], label %[[LOOP_1]]
+; CHECK:       [[MIDDLE]]:
+; CHECK-NEXT:    [[INDVAR_LCSSA:%.*]] = phi i32 [ [[INDVAR]], %[[LOOP_1]] ]
+; CHECK-NEXT:    [[P_0_LCSSA:%.*]] = phi ptr [ [[P_0]], %[[LOOP_1]] ]
+; CHECK-NEXT:    [[P_0_TO_INT:%.*]] = ptrtoint ptr [[P_0_LCSSA]] to i64
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[P_0_TO_INT]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[TRUNC]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i64 [[TMP0]], -1
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[A1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 [[INDVAR_LCSSA]], -1
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP6]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP5]] to i64
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[SCEVGEP]], i8 0, i64 [[TMP4]], i1 false)
+; CHECK-NEXT:    br label %[[LOOP_2:.*]]
+; CHECK:       [[LOOP_2]]:
+; CHECK-NEXT:    [[P_1:%.*]] = phi ptr [ [[B]], %[[MIDDLE]] ], [ [[P_1_NEXT:%.*]], %[[LOOP_2]] ]
+; CHECK-NEXT:    [[P_2:%.*]] = phi i32 [ [[TRUNC]], %[[MIDDLE]] ], [ [[P_2_NEXT:%.*]], %[[LOOP_2]] ]
+; CHECK-NEXT:    [[P_1_NEXT]] = getelementptr i8, ptr [[P_1]], i64 -1
+; CHECK-NEXT:    [[P_2_NEXT]] = add i32 [[P_2]], -1
+; CHECK-NEXT:    [[EC:%.*]] = icmp sgt i32 [[P_2]], 0
+; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP_2]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.1
+
+loop.1:
+  %p.0 = phi ptr [ %A, %entry ], [ %p.0.next, %loop.1 ]
+  %p.0.next = getelementptr i8, ptr %p.0, i64 -1
+  call void @foo()
+  br i1 false, label %middle, label %loop.1
+
+middle:
+  %p.0.to.int = ptrtoint ptr %p.0 to i64
+  %trunc = trunc i64 %p.0.to.int to i32
+  br label %loop.2
+
+loop.2:
+  %p.1 = phi ptr [ %B, %middle ], [ %p.1.next, %loop.2 ]
+  %p.2 = phi i32 [ %trunc, %middle ], [ %p.2.next, %loop.2 ]
+  %p.1.next = getelementptr i8, ptr %p.1, i64 -1
+  store i8 0, ptr %p.1, align 1
+  %p.2.next = add i32 %p.2, -1
+  %ec = icmp sgt i32 %p.2, 0
+  br i1 %ec, label %loop.2, label %exit
 
 exit:
   ret void
