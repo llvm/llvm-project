@@ -644,10 +644,21 @@ static bool expandLoopTrap(Function &Intr) {
           continue;
         IRBuilder<> B(BI);
         Value *Cond;
+        // The looptrap can either be on the true branch or the false branch.
+        // We insert the cond loop before the branch, which uses the branch's
+        // original condition for going to the looptrap as its condition, and
+        // force the branch to take whichever path does not lead to the
+        // looptrap, as the original path to the looptrap is now unreachable
+        // thanks to the cond loop. The codegenprepare pass will clean up our
+        // "unconditional conditional branch" by combining the two basic blocks
+        // if possible, or replacing it with an unconditional branch.
         if (BI->getSuccessor(0) == Call->getParent()) {
+          // The looptrap is on the true branch. 
           Cond = BI->getCondition();
           BI->setCondition(ConstantInt::getFalse(BI->getContext()));
         } else {
+          // The looptrap is on the false branch, which means that we need to
+          // invert the condition.
           Cond = B.CreateNot(BI->getCondition());
           BI->setCondition(ConstantInt::getTrue(BI->getContext()));
         }
