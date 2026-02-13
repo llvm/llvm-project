@@ -33,8 +33,6 @@ class TensorDescType;
 
 namespace xegpu {
 
-enum class LayoutKind { Lane, InstData, Subgroup };
-
 LogicalResult propagateLayouts(OpBuilder &builder, Operation *target,
                                LayoutKind layoutKind, bool printOnly = false);
 
