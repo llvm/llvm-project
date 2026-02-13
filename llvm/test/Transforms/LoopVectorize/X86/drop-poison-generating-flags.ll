@@ -747,9 +747,7 @@ define void @recipe_without_underlying_instr_lanes_used(i64 %n, ptr noalias %dst
 ; CHECK:       [[PRED_LOAD_CONTINUE6]]:
 ; CHECK-NEXT:    [[TMP26:%.*]] = phi <4 x i8> [ [[TMP22]], %[[PRED_LOAD_CONTINUE4]] ], [ [[TMP28]], %[[PRED_LOAD_IF5]] ]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP1]], <4 x i8> [[TMP26]], <4 x i8> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI7:%.*]] = select <4 x i1> [[TMP1]], <4 x i64> poison, <4 x i64> zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i64> [[PREDPHI7]], i32 3
-; CHECK-NEXT:    store i64 [[TMP12]], ptr [[AUX]], align 8
+; CHECK-NEXT:    store i64 0, ptr [[AUX]], align 8
 ; CHECK-NEXT:    store <4 x i8> [[PREDPHI]], ptr [[DST]], align 4
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
