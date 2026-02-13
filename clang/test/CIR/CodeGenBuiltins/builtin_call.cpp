@@ -27,7 +27,7 @@ int is_constant_evaluated() {
   return __builtin_is_constant_evaluated();
 }
 
-// CIR: cir.func{{.*}} @_Z21is_constant_evaluatedv() -> !s32i
+// CIR: cir.func{{.*}} @_Z21is_constant_evaluatedv() -> (!s32i{{.*}})
 // CIR: %[[ZERO:.+]] = cir.const #cir.int<0>
 
 // LLVM: define {{.*}}i32 @_Z21is_constant_evaluatedv()
@@ -45,7 +45,7 @@ long double constant_fp_builtin_ld() {
   return __builtin_fabsl(-0.1L);
 }
 
-// CIR: cir.func{{.*}} @_Z22constant_fp_builtin_ldv() -> !cir.long_double<!cir.f80>
+// CIR: cir.func{{.*}} @_Z22constant_fp_builtin_ldv() -> (!cir.long_double<!cir.f80>{{.*}})
 // CIR: %[[PONE:.+]] = cir.const #cir.fp<1.000000e-01> : !cir.long_double<!cir.f80>
 
 // LLVM: define {{.*}}x86_fp80 @_Z22constant_fp_builtin_ldv()
@@ -63,7 +63,7 @@ float constant_fp_builtin_single() {
   return __builtin_fabsf(-0.1f);
 }
 
-// CIR: cir.func{{.*}} @_Z26constant_fp_builtin_singlev() -> !cir.float
+// CIR: cir.func{{.*}} @_Z26constant_fp_builtin_singlev() -> (!cir.float{{.*}})
 // CIR: %[[PONE:.+]] = cir.const #cir.fp<1.000000e-01> : !cir.float
 
 // LLVM: define {{.*}}float @_Z26constant_fp_builtin_singlev()

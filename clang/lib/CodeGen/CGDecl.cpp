@@ -2228,8 +2228,10 @@ void CodeGenFunction::EmitAutoVarCleanups(const AutoVarEmission &emission) {
 
   // Check the type for a cleanup.
   if (QualType::DestructionKind dtorKind = D.needsDestruction(getContext())) {
-    // Check if we're in a SEH block with EHa, prevent it
-    if (getLangOpts().EHAsynch && currentFunctionUsesSEHTry())
+    // Check if we're in a SEH block with /EH, prevent it
+    // TODO: /EHs* differs from /EHa, the former may not be executed to this
+    // point.
+    if (getLangOpts().CXXExceptions && currentFunctionUsesSEHTry())
       getContext().getDiagnostics().Report(D.getLocation(),
                                            diag::err_seh_object_unwinding);
     emitAutoVarTypeCleanup(emission, dtorKind);

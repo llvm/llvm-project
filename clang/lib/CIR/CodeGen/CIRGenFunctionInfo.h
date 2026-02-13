@@ -16,6 +16,7 @@
 #define LLVM_CLANG_CIR_CIRGENFUNCTIONINFO_H
 
 #include "clang/AST/CanonicalType.h"
+#include "clang/CIR/ABIArgInfo.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -139,6 +140,15 @@ public:
   }
 
   CanQualType getReturnType() const { return getArgTypes()[0]; }
+
+  cir::ABIArgInfo getReturnInfo() const {
+    assert(!cir::MissingFeatures::abiArgInfo());
+    // TODO(cir): we currently just 'fake' this, but should calculate
+    // this/figure out what it means when we get our ABI info set correctly.
+    // For now, we leave this as a direct return.
+
+    return cir::ABIArgInfo::getDirect();
+  }
 
   const_arg_iterator argTypesBegin() const { return getArgTypes() + 1; }
   const_arg_iterator argTypesEnd() const { return getArgTypes() + 1 + numArgs; }

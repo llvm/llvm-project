@@ -12,6 +12,8 @@
 // RUN:         -fms-extensions -x c++ -emit-llvm-only -verify %s -DERR3
 // RUN: %clang_cc1 -triple x86_64-windows -fcxx-exceptions -fexceptions \
 // RUN:         -fms-extensions -x c++ -emit-llvm-only -verify %s -DERR4
+// RUN: %clang_cc1 -triple x86_64-windows \
+// RUN:         -fms-extensions -x c++ -emit-llvm-only -verify %s -DNOERR
 
 extern "C" unsigned long _exception_code();
 extern "C" void might_throw();
@@ -206,6 +208,13 @@ void seh_unwinding() {
   }
 }
 #elif defined(ERR4)
+void seh_unwinding() {
+  __try {
+    HasCleanup x; // expected-error{{'__try' is not permitted in functions that require object unwinding}}
+  } __except (1) {
+  }
+}
+#elif defined(NOERR)
 void seh_unwinding() {
   __try {
     HasCleanup x; // expected-no-diagnostics

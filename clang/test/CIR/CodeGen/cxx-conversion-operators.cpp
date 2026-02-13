@@ -27,7 +27,7 @@ void test() {
   x = o;
 }
 
-// CIR: cir.func {{.*}} @_ZN20out_of_line_operatorcviEv(%[[THIS_ARG:.+]]: !cir.ptr<!rec_out_of_line_operator>{{.*}}) -> !s32i
+// CIR: cir.func {{.*}} @_ZN20out_of_line_operatorcviEv(%[[THIS_ARG:.+]]: !cir.ptr<!rec_out_of_line_operator>{{.*}}) -> (!s32i{{.*}})
 // CIR:   %[[THIS_ALLOCA:.+]] = cir.alloca !cir.ptr<!rec_out_of_line_operator>, !cir.ptr<!cir.ptr<!rec_out_of_line_operator>>, ["this", init]
 // CIR:   %[[RETVAL:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ALLOCA]] : !cir.ptr<!rec_out_of_line_operator>, !cir.ptr<!cir.ptr<!rec_out_of_line_operator>>
@@ -38,7 +38,7 @@ void test() {
 // CIR:   cir.return %[[RET_LOAD]] : !s32i
 // CIR: }
 
-// CIR: cir.func no_inline comdat linkonce_odr @_ZNK15inline_operatorcviEv(%[[INLINE_THIS_ARG:.+]]: !cir.ptr<!rec_inline_operator>{{.*}}) -> !s32i
+// CIR: cir.func no_inline comdat linkonce_odr @_ZNK15inline_operatorcviEv(%[[INLINE_THIS_ARG:.+]]: !cir.ptr<!rec_inline_operator>{{.*}}) -> (!s32i{{.*}})
 // CIR:   %[[INLINE_THIS_ALLOCA:.+]] = cir.alloca !cir.ptr<!rec_inline_operator>, !cir.ptr<!cir.ptr<!rec_inline_operator>>, ["this", init]
 // CIR:   %[[INLINE_RETVAL:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR:   cir.store %[[INLINE_THIS_ARG]], %[[INLINE_THIS_ALLOCA]] : !cir.ptr<!rec_inline_operator>, !cir.ptr<!cir.ptr<!rec_inline_operator>>
@@ -55,14 +55,14 @@ void test() {
 // CIR:   %[[O_ALLOCA:.+]] = cir.alloca {{.*}}, {{.*}}, ["o"]
 // CIR:   %[[CONST_42:.+]] = cir.const #cir.int<42> : !s32i
 // CIR:   cir.store align(4) %[[CONST_42]], %[[X_ALLOCA]] : !s32i, !cir.ptr<!s32i>
-// CIR:   %[[INLINE_CALL:.+]] = cir.call @_ZNK15inline_operatorcviEv(%[[I_ALLOCA]]) : ({{.*}}) -> !s32i
+// CIR:   %[[INLINE_CALL:.+]] = cir.call @_ZNK15inline_operatorcviEv(%[[I_ALLOCA]]) : ({{.*}}) -> (!s32i{{.*}})
 // CIR:   cir.store align(4) %[[INLINE_CALL]], %[[X_ALLOCA]] : !s32i, !cir.ptr<!s32i>
-// CIR:   %[[OUTLINE_CALL:.+]] = cir.call @_ZN20out_of_line_operatorcviEv(%[[O_ALLOCA]]) : ({{.*}}) -> !s32i
+// CIR:   %[[OUTLINE_CALL:.+]] = cir.call @_ZN20out_of_line_operatorcviEv(%[[O_ALLOCA]]) : ({{.*}}) -> (!s32i{{.*}})
 // CIR:   cir.store align(4) %[[OUTLINE_CALL]], %[[X_ALLOCA]] : !s32i, !cir.ptr<!s32i>
 // CIR:   cir.return
 // CIR: }
 
-// LLVM: define dso_local i32 @_ZN20out_of_line_operatorcviEv(ptr %[[PARAM0:.+]])
+// LLVM: define dso_local noundef i32 @_ZN20out_of_line_operatorcviEv(ptr %[[PARAM0:.+]])
 // LLVM:   %[[THIS_ALLOCA:.+]] = alloca ptr, i64 1
 // LLVM:   %[[RETVAL:.+]] = alloca i32, i64 1
 // LLVM:   store ptr %[[PARAM0]], ptr %[[THIS_ALLOCA]]
@@ -72,7 +72,7 @@ void test() {
 // LLVM:   ret i32 %[[RET_LOAD]]
 // LLVM: }
 
-// LLVM: define linkonce_odr i32 @_ZNK15inline_operatorcviEv(ptr %[[INLINE_PARAM0:.+]])
+// LLVM: define linkonce_odr noundef i32 @_ZNK15inline_operatorcviEv(ptr %[[INLINE_PARAM0:.+]])
 // LLVM:   %[[INLINE_THIS_ALLOCA:.+]] = alloca ptr, i64 1
 // LLVM:   %[[INLINE_RETVAL:.+]] = alloca i32, i64 1
 // LLVM:   store ptr %[[INLINE_PARAM0]], ptr %[[INLINE_THIS_ALLOCA]]
@@ -87,9 +87,9 @@ void test() {
 // LLVM:   %[[I_ALLOCA:.+]] = alloca {{.*}}, i64 1
 // LLVM:   %[[O_ALLOCA:.+]] = alloca {{.*}}, i64 1
 // LLVM:   store i32 42, ptr %[[X_ALLOCA]]
-// LLVM:   %[[INLINE_CALL:.+]] = call i32 @_ZNK15inline_operatorcviEv(ptr %[[I_ALLOCA]])
+// LLVM:   %[[INLINE_CALL:.+]] = call noundef i32 @_ZNK15inline_operatorcviEv(ptr %[[I_ALLOCA]])
 // LLVM:   store i32 %[[INLINE_CALL]], ptr %[[X_ALLOCA]]
-// LLVM:   %[[OUTLINE_CALL:.+]] = call i32 @_ZN20out_of_line_operatorcviEv(ptr %[[O_ALLOCA]])
+// LLVM:   %[[OUTLINE_CALL:.+]] = call noundef i32 @_ZN20out_of_line_operatorcviEv(ptr %[[O_ALLOCA]])
 // LLVM:   store i32 %[[OUTLINE_CALL]], ptr %[[X_ALLOCA]]
 // LLVM:   ret void
 // LLVM: }

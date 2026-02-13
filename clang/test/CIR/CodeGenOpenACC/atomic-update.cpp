@@ -102,7 +102,7 @@ void use(int x, unsigned int y, float f, HasOps ops) {
   // CHECK-NEXT: cir.store %[[RECIPE_ARG]], %[[TEMP_ALLOCA]] : !u32i, !cir.ptr<!u32i>
   //
   // CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load{{.*}} %[[TEMP_ALLOCA]] : !cir.ptr<!u32i>, !u32i
-  // CHECK-NEXT: %[[CALL:.*]] = cir.call {{.*}}(%[[OPS_ALLOCA]]) : (!cir.ptr<!rec_HasOps>) -> !s32i
+  // CHECK-NEXT: %[[CALL:.*]] = cir.call {{.*}}(%[[OPS_ALLOCA]]) : (!cir.ptr<!rec_HasOps>) -> (!s32i{{.*}})
   // CHECK-NEXT: %[[CALL_CAST:.*]] = cir.cast integral %[[CALL]] : !s32i -> !u32i
   // CHECK-NEXT: %[[MUL:.*]] = cir.binop(mul, %[[TEMP_LOAD]], %[[CALL_CAST]]) : !u32i
   // CHECK-NEXT: cir.store{{.*}} %[[MUL]], %[[TEMP_ALLOCA]] : !u32i, !cir.ptr<!u32i>
@@ -119,7 +119,7 @@ void use(int x, unsigned int y, float f, HasOps ops) {
   // CHECK-NEXT: %[[TEMP_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x_var", init]
   // CHECK-NEXT: cir.store %[[RECIPE_ARG]], %[[TEMP_ALLOCA]] : !s32i, !cir.ptr<!s32i>
   //
-  // CHECK-NEXT: %[[CALL:.*]] = cir.call {{.*}}(%[[OPS_ALLOCA]]) : (!cir.ptr<!rec_HasOps>) -> !s32i
+  // CHECK-NEXT: %[[CALL:.*]] = cir.call {{.*}}(%[[OPS_ALLOCA]]) : (!cir.ptr<!rec_HasOps>) -> (!s32i{{.*}})
   // CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load{{.*}} %[[TEMP_ALLOCA]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[OR:.*]] = cir.binop(or, %[[CALL]], %[[INT_TO_F]]) : !s32i
   // CHECK-NEXT: cir.store{{.*}} %[[OR]], %[[TEMP_ALLOCA]] : !s32i, !cir.ptr<!s32i>
@@ -139,7 +139,7 @@ void use(int x, unsigned int y, float f, HasOps ops) {
   // CHECK-NEXT: cir.store %[[RECIPE_ARG]], %[[TEMP_ALLOCA]] : !cir.float, !cir.ptr<!cir.float>
   //
   // CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load{{.*}} %[[TEMP_ALLOCA]] : !cir.ptr<!cir.float>, !cir.float
-  // CHECK-NEXT: %[[CALL:.*]] = cir.call {{.*}}(%[[OPS_ALLOCA]]) : (!cir.ptr<!rec_HasOps>) -> !cir.float
+  // CHECK-NEXT: %[[CALL:.*]] = cir.call {{.*}}(%[[OPS_ALLOCA]]) : (!cir.ptr<!rec_HasOps>) -> (!cir.float{{.*}})
   // CHECK-NEXT: %[[SUB:.*]] = cir.binop(sub, %[[TEMP_LOAD]], %[[CALL]]) : !cir.float
   // CHECK-NEXT: cir.store{{.*}} %[[SUB]], %[[TEMP_ALLOCA]] : !cir.float, !cir.ptr<!cir.float>
   //

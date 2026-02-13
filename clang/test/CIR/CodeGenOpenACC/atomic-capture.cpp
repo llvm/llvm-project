@@ -254,7 +254,7 @@ void use(int x, int v, float f, HasOps ops) {
   // CHECK-NEXT: cir.store %[[X_VAR]], %[[X_VAR_ALLOC]] : !s32i, !cir.ptr<!s32i>
   //
   // CHECK-NEXT: %[[F_LOAD:.*]] = cir.load{{.*}} %[[F_ALLOCA]] : !cir.ptr<!cir.float>, !cir.float
-  // CHECK-NEXT: %[[OPS_CONV:.*]] = cir.call @{{.*}}(%[[OPS_ALLOCA]]) : (!cir.ptr<!rec_HasOps>) -> !cir.float
+  // CHECK-NEXT: %[[OPS_CONV:.*]] = cir.call @{{.*}}(%[[OPS_ALLOCA]]) : (!cir.ptr<!rec_HasOps>) -> (!cir.float{{.*}})
   // CHECK-NEXT: %[[ADD:.*]] = cir.binop(add, %[[F_LOAD]], %[[OPS_CONV]]) : !cir.float
   // CHECK-NEXT: %[[X_VAR_LOAD:.*]] = cir.load{{.*}} %[[X_VAR_ALLOC]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[X_CAST:.*]] = cir.cast int_to_float %[[X_VAR_LOAD]] : !s32i -> !cir.float
@@ -306,7 +306,7 @@ void use(int x, int v, float f, HasOps ops) {
   // CHECK-NEXT: cir.store %[[X_VAR]], %[[X_VAR_ALLOC]] : !s32i, !cir.ptr<!s32i>
   //
   // CHECK-NEXT: %[[F_LOAD:.*]] = cir.load{{.*}} %[[F_ALLOCA]] : !cir.ptr<!cir.float>, !cir.float
-  // CHECK-NEXT: %[[OPS_CONV:.*]] = cir.call @{{.*}}(%[[OPS_ALLOCA]]) : (!cir.ptr<!rec_HasOps>) -> !cir.float
+  // CHECK-NEXT: %[[OPS_CONV:.*]] = cir.call @{{.*}}(%[[OPS_ALLOCA]]) : (!cir.ptr<!rec_HasOps>) -> (!cir.float{{.*}})
   // CHECK-NEXT: %[[ADD:.*]] = cir.binop(add, %[[F_LOAD]], %[[OPS_CONV]]) : !cir.float
   // CHECK-NEXT: %[[X_VAR_LOAD:.*]] = cir.load{{.*}} %[[X_VAR_ALLOC]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[X_CAST:.*]] = cir.cast int_to_float %[[X_VAR_LOAD]] : !s32i -> !cir.float
@@ -325,7 +325,7 @@ void use(int x, int v, float f, HasOps ops) {
     v = x;
   }
 
-  // CHECK-NEXT: %[[OPS_CONV:.*]] = cir.call @{{.*}}(%[[OPS_ALLOCA]]) : (!cir.ptr<!rec_HasOps>) -> !cir.float
+  // CHECK-NEXT: %[[OPS_CONV:.*]] = cir.call @{{.*}}(%[[OPS_ALLOCA]]) : (!cir.ptr<!rec_HasOps>) -> (!cir.float{{.*}})
   // CHECK-NEXT: %[[OPS_CONV_TO_INT:.*]] = cir.cast float_to_int %[[OPS_CONV]] : !cir.float -> !s32i
   //
   // CHECK-NEXT: acc.atomic.capture {
