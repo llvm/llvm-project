@@ -150,11 +150,11 @@ def __builtin_amdgcn_alignbit : AMDGPUBuiltin<"unsigned int(unsigned int, unsign
 def __builtin_amdgcn_alignbyte : AMDGPUBuiltin<"unsigned int(unsigned int, unsigned int, unsigned int)", [Const]>;
 def __builtin_amdgcn_ubfe : AMDGPUBuiltin<"unsigned int(unsigned int, unsigned int, unsigned int)", [Const]>;
 def __builtin_amdgcn_sbfe : AMDGPUBuiltin<"unsigned int(unsigned int, unsigned int, unsigned int)", [Const]>;
-def __builtin_amdgcn_cvt_pkrtz : AMDGPUBuiltin<"_Vector<2, __fp16>(float, float)", [Const]>;
-def __builtin_amdgcn_cvt_pknorm_i16 : AMDGPUBuiltin<"_Vector<2, short>(float, float)", [Const], "cvt-pknorm-vop2-insts">;
-def __builtin_amdgcn_cvt_pknorm_u16 : AMDGPUBuiltin<"_Vector<2, unsigned short>(float, float)", [Const], "cvt-pknorm-vop2-insts">;
-def __builtin_amdgcn_cvt_pk_i16 : AMDGPUBuiltin<"_Vector<2, short>(int, int)", [Const]>;
-def __builtin_amdgcn_cvt_pk_u16 : AMDGPUBuiltin<"_Vector<2, unsigned short>(unsigned int, unsigned int)", [Const]>;
+def __builtin_amdgcn_cvt_pkrtz : AMDGPUBuiltin<"_ExtVector<2, __fp16>(float, float)", [Const]>;
+def __builtin_amdgcn_cvt_pknorm_i16 : AMDGPUBuiltin<"_ExtVector<2, short>(float, float)", [Const], "cvt-pknorm-vop2-insts">;
+def __builtin_amdgcn_cvt_pknorm_u16 : AMDGPUBuiltin<"_ExtVector<2, unsigned short>(float, float)", [Const], "cvt-pknorm-vop2-insts">;
+def __builtin_amdgcn_cvt_pk_i16 : AMDGPUBuiltin<"_ExtVector<2, short>(int, int)", [Const]>;
+def __builtin_amdgcn_cvt_pk_u16 : AMDGPUBuiltin<"_ExtVector<2, unsigned short>(unsigned int, unsigned int)", [Const]>;
 def __builtin_amdgcn_cvt_pk_u8_f32 : AMDGPUBuiltin<"unsigned int(float, unsigned int, unsigned int)", [Const]>;
 def __builtin_amdgcn_cvt_off_f32_i4 : AMDGPUBuiltin<"float(int)", [Const]>;
 def __builtin_amdgcn_msad_u8 : AMDGPUBuiltin<"unsigned int(unsigned int, unsigned int, unsigned int)", [Const]>;
@@ -202,8 +202,8 @@ def __builtin_amdgcn_struct_ptr_buffer_load_async_lds : AMDGPUBuiltin<"void(__am
 def __builtin_amdgcn_asyncmark : AMDGPUBuiltin<"void()", [], "vmem-to-lds-load-insts">;
 def __builtin_amdgcn_wait_asyncmark : AMDGPUBuiltin<"void(_Constant unsigned short)", [], "vmem-to-lds-load-insts">;
 
-def __builtin_amdgcn_global_load_b128 : AMDGPUBuiltin<"_Vector<4, unsigned int>(_Vector<4, unsigned int address_space<1> *>, char const *)", [], "gfx9-insts">;
-def __builtin_amdgcn_global_store_b128 : AMDGPUBuiltin<"void(_Vector<4, unsigned int address_space<1> *>, _Vector<4, unsigned int>, char const *)", [], "gfx9-insts">;
+def __builtin_amdgcn_global_load_b128 : AMDGPUBuiltin<"_ExtVector<4, unsigned int>(_ExtVector<4, unsigned int address_space<1> *>, char const *)", [], "gfx9-insts">;
+def __builtin_amdgcn_global_store_b128 : AMDGPUBuiltin<"void(_ExtVector<4, unsigned int address_space<1> *>, _ExtVector<4, unsigned int>, char const *)", [], "gfx9-insts">;
 
 //===----------------------------------------------------------------------===//
 // Ballot builtins.
