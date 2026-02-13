@@ -1040,8 +1040,7 @@ HostInfoMacOSX::GetSharedCacheImageInfo(llvm::StringRef image_name,
   llvm::StringMap<SharedCacheImageInfo *> *shared_cache_info;
   if (GetSharedCacheSingleton().GetFilenameToImageInfoMap(&shared_cache_info,
                                                           uuid)) {
-    SharedCacheImageInfo *entry = shared_cache_info->lookup(image_name);
-    if (entry)
+    if (SharedCacheImageInfo *entry = shared_cache_info->lookup(image_name))
       return *entry;
   }
   return {};
