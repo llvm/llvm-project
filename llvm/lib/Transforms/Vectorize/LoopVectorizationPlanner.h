@@ -233,6 +233,12 @@ public:
     return createNaryOp(VPInstruction::LogicalAnd, {LHS, RHS}, DL, Name);
   }
 
+  VPInstruction *createLogicalOr(VPValue *LHS, VPValue *RHS,
+                                 DebugLoc DL = DebugLoc::getUnknown(),
+                                 const Twine &Name = "") {
+    return createNaryOp(VPInstruction::LogicalOr, {LHS, RHS}, DL, Name);
+  }
+
   VPInstruction *createSelect(VPValue *Cond, VPValue *TrueVal,
                               VPValue *FalseVal,
                               DebugLoc DL = DebugLoc::getUnknown(),

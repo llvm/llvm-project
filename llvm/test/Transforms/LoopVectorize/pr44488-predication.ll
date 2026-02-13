@@ -17,10 +17,7 @@ define i16 @test_true_and_false_branch_equal() {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_SREM_CONTINUE2:%.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr @v_38, align 1
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i16> poison, i16 [[TMP0]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT]], <2 x i16> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i16> [[BROADCAST_SPLAT]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i16 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[PRED_SREM_IF:%.*]], label [[PRED_SREM_CONTINUE:%.*]]
 ; CHECK:       pred.srem.if:
 ; CHECK-NEXT:    [[TMP4:%.*]] = srem i16 5786, [[TMP0]]
@@ -28,16 +25,14 @@ define i16 @test_true_and_false_branch_equal() {
 ; CHECK-NEXT:    br label [[PRED_SREM_CONTINUE]]
 ; CHECK:       pred.srem.continue:
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x i16> [ poison, [[VECTOR_BODY]] ], [ [[TMP5]], [[PRED_SREM_IF]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP2]], i32 1
-; CHECK-NEXT:    br i1 [[TMP7]], label [[PRED_SREM_IF1:%.*]], label [[PRED_SREM_CONTINUE2]]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[PRED_SREM_IF1:%.*]], label [[PRED_SREM_CONTINUE2]]
 ; CHECK:       pred.srem.if1:
 ; CHECK-NEXT:    [[TMP8:%.*]] = srem i16 5786, [[TMP0]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i16> [[TMP6]], i16 [[TMP8]], i32 1
 ; CHECK-NEXT:    br label [[PRED_SREM_CONTINUE2]]
 ; CHECK:       pred.srem.continue2:
 ; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x i16> [ [[TMP6]], [[PRED_SREM_CONTINUE]] ], [ [[TMP9]], [[PRED_SREM_IF1]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP13]], <2 x i16> [[TMP10]], <2 x i16> splat (i16 5786)
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP3]], <2 x i16> [[TMP10]], <2 x i16> splat (i16 5786)
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i16> [[PREDPHI]], i32 1
 ; CHECK-NEXT:    store i16 [[TMP11]], ptr @v_39, align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
