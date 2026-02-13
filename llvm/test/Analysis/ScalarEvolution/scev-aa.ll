@@ -342,7 +342,7 @@ for.end:
 }
 
 ; CHECK-LABEL: Function: test_different_pointer_bases_of_inttoptr: 2 pointers, 0 call sites
-; CHECK:   NoAlias:	<16 x i8>* %tmp5, <16 x i8>* %tmp7
+; CHECK:   MayAlias:	<16 x i8>* %tmp5, <16 x i8>* %tmp7
 
 define void @test_different_pointer_bases_of_inttoptr() {
 entry:

@@ -150,16 +150,20 @@ exit:
 
 define i8 @testnullptrint(ptr %buf, ptr %end) nounwind {
 ; PTR64-LABEL: @testnullptrint(
+; PTR64-NEXT:    [[BUF2:%.*]] = ptrtoaddr ptr [[BUF:%.*]] to i64
+; PTR64-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END:%.*]] to i64
 ; PTR64-NEXT:    br label [[LOOPGUARD:%.*]]
 ; PTR64:       loopguard:
-; PTR64-NEXT:    [[BI:%.*]] = ptrtoint ptr [[BUF:%.*]] to i32
-; PTR64-NEXT:    [[EI:%.*]] = ptrtoint ptr [[END:%.*]] to i32
+; PTR64-NEXT:    [[BI:%.*]] = ptrtoint ptr [[BUF]] to i32
+; PTR64-NEXT:    [[EI:%.*]] = ptrtoint ptr [[END]] to i32
 ; PTR64-NEXT:    [[CNT:%.*]] = sub i32 [[EI]], [[BI]]
 ; PTR64-NEXT:    [[GUARD:%.*]] = icmp ult i32 0, [[CNT]]
 ; PTR64-NEXT:    br i1 [[GUARD]], label [[PREHEADER:%.*]], label [[EXIT:%.*]]
 ; PTR64:       preheader:
-; PTR64-NEXT:    [[TMP1:%.*]] = add i32 [[EI]], -1
-; PTR64-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP1]], [[BI]]
+; PTR64-NEXT:    [[TMP1:%.*]] = trunc i64 [[END1]] to i32
+; PTR64-NEXT:    [[TMP5:%.*]] = add i32 [[TMP1]], -1
+; PTR64-NEXT:    [[TMP6:%.*]] = trunc i64 [[BUF2]] to i32
+; PTR64-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP5]], [[TMP6]]
 ; PTR64-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
 ; PTR64-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
 ; PTR64-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr null, i64 [[TMP4]]
@@ -245,7 +249,7 @@ define i8 @testptrint(ptr %buf, ptr %end) nounwind {
 ; PTR64-NEXT:    [[GEP]] = getelementptr inbounds i8, ptr [[P_01_US_US]], i64 1
 ; PTR64-NEXT:    [[SNEXT:%.*]] = load i8, ptr [[GEP]], align 1
 ; PTR64-NEXT:    [[IVNEXT]] = add nuw i32 [[IV]], 1
-; PTR64-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IVNEXT]], [[CNT]]
+; PTR64-NEXT:    [[EXITCOND:%.*]] = icmp ult i32 [[IVNEXT]], [[CNT]]
 ; PTR64-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; PTR64:       exit.loopexit:
 ; PTR64-NEXT:    [[SNEXT_LCSSA:%.*]] = phi i8 [ [[SNEXT]], [[LOOP]] ]
@@ -270,7 +274,7 @@ define i8 @testptrint(ptr %buf, ptr %end) nounwind {
 ; PTR32-NEXT:    [[GEP]] = getelementptr inbounds i8, ptr [[P_01_US_US]], i64 1
 ; PTR32-NEXT:    [[SNEXT:%.*]] = load i8, ptr [[GEP]], align 1
 ; PTR32-NEXT:    [[IVNEXT]] = add nuw i32 [[IV]], 1
-; PTR32-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IVNEXT]], [[CNT]]
+; PTR32-NEXT:    [[EXITCOND:%.*]] = icmp ult i32 [[IVNEXT]], [[CNT]]
 ; PTR32-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; PTR32:       exit.loopexit:
 ; PTR32-NEXT:    [[SNEXT_LCSSA:%.*]] = phi i8 [ [[SNEXT]], [[LOOP]] ]

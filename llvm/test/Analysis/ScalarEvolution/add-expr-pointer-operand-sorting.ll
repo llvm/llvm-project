@@ -30,7 +30,7 @@ define i32 @d(i32 %base) {
 ; CHECK-NEXT:    %load1 = load ptr, ptr @c, align 8
 ; CHECK-NEXT:    --> %load1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
 ; CHECK-NEXT:    %sub.ptr.lhs.cast = ptrtoint ptr %load1 to i64
-; CHECK-NEXT:    --> (ptrtoaddr ptr %load1 to i64) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
+; CHECK-NEXT:    --> %sub.ptr.lhs.cast U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
 ; CHECK-NEXT:    %sub.ptr.sub = sub i64 %sub.ptr.lhs.cast, ptrtoint (ptr @b to i64)
 ; CHECK-NEXT:    --> ((-1 * (ptrtoaddr ptr @b to i64)) + (ptrtoaddr ptr %load1 to i64)) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
 ; CHECK-NEXT:    %sub.ptr.div = sdiv exact i64 %sub.ptr.sub, 4
