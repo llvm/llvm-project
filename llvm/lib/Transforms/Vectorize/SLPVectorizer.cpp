@@ -1437,6 +1437,8 @@ public:
       return false;
     };
     Instruction *Op = getMatchingMainOpOrAltOp(I);
+    assert(Op &&
+           "The instruction should be compatible with either main or alt op.");
     return CheckForTransformedOpcode(Op, I);
   }
 
