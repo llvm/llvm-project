@@ -251,5 +251,4 @@ for.end24:
 !13 = !{!"is.gfx1010"}
 !14 = !{!"is.gfx1101"}
 !18 = !{!"has.gfx11-insts"}
-!19 = !{!"has.gfx10-insts"}
 !20 = !{!"has.gfx1250-insts"}
