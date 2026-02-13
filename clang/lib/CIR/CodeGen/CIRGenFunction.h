@@ -1849,6 +1849,11 @@ public:
 
   void emitStaticVarDecl(const VarDecl &d, cir::GlobalLinkageKind linkage);
 
+  /// Emit a guarded initializer for a static local variable or a static
+  /// data member of a class template instantiation.
+  void emitCXXGuardedInit(const VarDecl &varDecl, cir::GlobalOp globalOp,
+                          bool performInit);
+
   void emitStoreOfComplex(mlir::Location loc, mlir::Value v, LValue dest,
                           bool isInit);
 
