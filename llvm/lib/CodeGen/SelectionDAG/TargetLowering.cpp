@@ -6792,8 +6792,10 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
 
   bool UseNPQ = false, UsePreShift = false, UsePostShift = false;
   EVT WideVT64 = EVT::getIntegerVT(*DAG.getContext(), 64);
-  bool HasWideVT64MULHU = isOperationLegalOrCustom(ISD::MULHU, WideVT64, IsAfterLegalization);
-  bool HasWideVT64UMUL_LOHI = isOperationLegalOrCustom(ISD::UMUL_LOHI, WideVT64, IsAfterLegalization);
+  bool HasWideVT64MULHU =
+      isOperationLegalOrCustom(ISD::MULHU, WideVT64, IsAfterLegalization);
+  bool HasWideVT64UMUL_LOHI =
+      isOperationLegalOrCustom(ISD::UMUL_LOHI, WideVT64, IsAfterLegalization);
   bool Use33BitOptimization = false;
   SmallVector<SDValue, 16> PreShifts, PostShifts, MagicFactors, NPQFactors;
 
@@ -6816,21 +6818,24 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
           UnsignedDivisionByConstantInfo::get(
               Divisor, std::min(KnownLeadingZeros, Divisor.countl_zero()));
 
-      // For 32-bit division with IsAdd (33-bit magic case), use optimized method:
-      // preshift c by (64-a) bits to eliminate runtime shift.
-      // This requires 64x64->128 bit multiplication.
-      // Only apply to scalar types since SIMD lacks 64x64->128 high multiply.
-      // Note: IsAdd=true implies PreShift=0 by algorithm design.
-      // Check if 64-bit MULHU is available before applying this optimization.
-        if (EltBits == 32 && !VT.isVector() && (HasWideVT64MULHU || HasWideVT64UMUL_LOHI) && magics.IsAdd) {
+      // For 32-bit division with IsAdd (33-bit magic case), use optimized
+      // method: preshift c by (64-a) bits to eliminate runtime shift. This
+      // requires 64x64->128 bit multiplication. Only apply to scalar types
+      // since SIMD lacks 64x64->128 high multiply. Note: IsAdd=true implies
+      // PreShift=0 by algorithm design. Check if 64-bit MULHU is available
+      // before applying this optimization.
+      if (EltBits == 32 && !VT.isVector() &&
+          (HasWideVT64MULHU || HasWideVT64UMUL_LOHI) && magics.IsAdd) {
         // For IsAdd case, actual magic constant is 2^32 + Magic (33-bit)
         unsigned OriginalShift = magics.PostShift + 33;
-        APInt RealMagic = APInt(65, 1).shl(32) + magics.Magic.zext(65); // 2^32 + Magic
+        APInt RealMagic =
+            APInt(65, 1).shl(32) + magics.Magic.zext(65); // 2^32 + Magic
         Use33BitOptimization = true;
-        // Shift the constant left by (64 - OriginalShift) to avoid runtime shift
+        // Shift the constant left by (64 - OriginalShift) to avoid runtime
+        // shift
         APInt ShiftedMagic = RealMagic.shl(64 - OriginalShift).trunc(64);
         MagicFactor = DAG.getConstant(ShiftedMagic, dl,
-                                       EVT::getIntegerVT(*DAG.getContext(), 64));
+                                      EVT::getIntegerVT(*DAG.getContext(), 64));
         PreShift = DAG.getConstant(0, dl, ShSVT);
         PostShift = DAG.getConstant(0, dl, ShSVT);
         NPQFactor = DAG.getConstant(APInt::getZero(SVTBits), dl, SVT);
@@ -6904,16 +6909,17 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
       // Truncate back to i32
       Result = DAG.getNode(ISD::TRUNCATE, dl, VT, High);
     } else if (HasWideVT64UMUL_LOHI) {
-      SDValue LoHi = DAG.getNode(ISD::UMUL_LOHI, dl,
-                                  DAG.getVTList(WideVT64, WideVT64),
-                                  X64, MagicFactor);
+      SDValue LoHi =
+          DAG.getNode(ISD::UMUL_LOHI, dl, DAG.getVTList(WideVT64, WideVT64),
+                      X64, MagicFactor);
       SDValue High = SDValue(LoHi.getNode(), 1);
       Created.push_back(LoHi.getNode());
       Result = DAG.getNode(ISD::TRUNCATE, dl, VT, High);
     }
 
     // Handle divisor == 1 case with SELECT
-    EVT SetCCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+    EVT SetCCVT =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
     SDValue One = DAG.getConstant(1, dl, VT);
     SDValue IsOne = DAG.getSetCC(dl, SetCCVT, N1, One, ISD::SETEQ);
     return DAG.getSelect(dl, VT, IsOne, N0, Result);
