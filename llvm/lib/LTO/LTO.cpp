@@ -71,31 +71,22 @@ using namespace object;
 
 #define DEBUG_TYPE "lto"
 
-Expected<std::unique_ptr<LTO::DiagnosticSession>>
-LTO::DiagnosticSession::create(LTO &L) {
+Error LTO::setupOptimizationRemarks() {
   // Setup the remark streamer according to the provided configuration.
   auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
-      L.RegularLTO.Ctx, L.Conf.RemarksFilename, L.Conf.RemarksPasses,
-      L.Conf.RemarksFormat, L.Conf.RemarksWithHotness,
-      L.Conf.RemarksHotnessThreshold);
+      RegularLTO.Ctx, Conf.RemarksFilename, Conf.RemarksPasses,
+      Conf.RemarksFormat, Conf.RemarksWithHotness,
+      Conf.RemarksHotnessThreshold);
   if (!DiagFileOrErr)
     return DiagFileOrErr.takeError();
 
-  auto Session = std::unique_ptr<DiagnosticSession>(new DiagnosticSession(L));
-  L.DiagnosticOutputFile = std::move(*DiagFileOrErr);
-  if (L.DiagnosticOutputFile)
-    L.DiagnosticOutputFile->keep();
+  DiagnosticOutputFile = std::move(*DiagFileOrErr);
 
-  return std::move(Session);
-}
-
-LTO::DiagnosticSession::~DiagnosticSession() {
-  // Finalize the remarks, flushing the stream and closing the file.
-  consumeError(
-      finalizeOptimizationRemarks(std::move(Parent.DiagnosticOutputFile)));
+  return Error::success();
 }
 
 void LTO::emitRemark(OptimizationRemark &Remark) {
+
   const Function &F = Remark.getFunction();
   OptimizationRemarkEmitter ORE(const_cast<Function *>(&F));
   ORE.emit(Remark);
@@ -671,6 +662,10 @@ LTO::LTO(Config Conf, ThinBackend Backend,
 
 // Requires a destructor for MapVector<BitcodeModule>.
 LTO::~LTO() = default;
+
+void LTO::cleanup() {
+  consumeError(finalizeOptimizationRemarks(std::move(DiagnosticOutputFile)));
+}
 
 // Add the symbols in the given module to the GlobalResolutions map, and resolve
 // their partitions.
@@ -1297,9 +1292,8 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
     return StatsFileOrErr.takeError();
   std::unique_ptr<ToolOutputFile> StatsFile = std::move(StatsFileOrErr.get());
 
-  auto DiagSessionOrErr = DiagnosticSession::create(*this);
-  if (!DiagSessionOrErr)
-    return DiagSessionOrErr.takeError();
+  if (Error Err = setupOptimizationRemarks())
+    return Err;
 
   // TODO: Ideally this would be controlled automatically by detecting that we
   // are linking with an allocator that supports these interfaces, rather than
