@@ -531,7 +531,6 @@ mlir_c_api_cc_library(
         ":config",
         ":FuncTransformsPassIncGen",
         ":Rewrite",
-        ":SideEffectInterfaces",
         "//llvm:Support",
     ],
     includes = ["include"],
@@ -542,6 +541,7 @@ mlir_c_api_cc_library(
         ":IRDLDialect",
         ":InferTypeOpInterface",
         ":Parser",
+        ":SideEffectInterfaces",
         ":TransformsPassIncGen",
     ],
 )
