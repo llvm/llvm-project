@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#pragma clang fp contract(off)
-
 #include <clc/internal/clc.h>
 #include <clc/math/clc_cos.h>
 #include <clc/math/clc_sin.h>
