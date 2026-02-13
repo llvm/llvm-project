@@ -7718,7 +7718,7 @@
 #    error "__cpp_lib_raw_memory_algorithms should have the value 201606L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
+#  if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_HAS_EXPERIMENTAL_RCU)
 #    ifndef __cpp_lib_rcu
 #      error "__cpp_lib_rcu should be defined in c++26"
 #    endif
@@ -7727,7 +7727,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_rcu
-#      error "__cpp_lib_rcu should not be defined because it is unimplemented in libc++!"
+#      error "__cpp_lib_rcu should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_HAS_EXPERIMENTAL_RCU)' is not met!"
 #    endif
 #  endif
 
