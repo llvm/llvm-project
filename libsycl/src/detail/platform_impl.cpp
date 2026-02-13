@@ -9,6 +9,7 @@
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/detail/obj_utils.hpp>
 
+#include <detail/context_impl.hpp>
 #include <detail/device_impl.hpp>
 #include <detail/global_objects.hpp>
 #include <detail/platform_impl.hpp>
@@ -75,6 +76,8 @@ PlatformImpl::PlatformImpl(ol_platform_handle_t Platform, size_t PlatformIndex,
                   MRootDevices.emplace_back(std::make_unique<DeviceImpl>(
                       Device, *this, DeviceImpl::PrivateTag{}));
                 });
+
+  MDefaultContext = ContextImpl::create(*this);
 }
 
 const std::vector<DeviceImplUPtr> &PlatformImpl::getRootDevices() const {
@@ -117,6 +120,12 @@ void PlatformImpl::iterateDevices(
     if (KeepAll || DeviceType == Impl->getDeviceType())
       callback(Impl.get());
   }
+}
+
+ContextImpl &PlatformImpl::getDefaultContext() {
+  assert(MDefaultContext &&
+         "Default context for platform must be created in platform ctor");
+  return *MDefaultContext.get();
 }
 
 } // namespace detail

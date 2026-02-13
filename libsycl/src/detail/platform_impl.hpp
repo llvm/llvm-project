@@ -29,6 +29,7 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
 class DeviceImpl;
+class ContextImpl;
 
 using PlatformImplUPtr = std::unique_ptr<PlatformImpl>;
 using DeviceImplUPtr = std::unique_ptr<DeviceImpl>;
@@ -121,15 +122,28 @@ public:
   void iterateDevices(info::device_type DeviceType,
                       std::function<void(DeviceImpl *)> callback) const;
 
-private:
+  /// Returns all root devices for platform
+  ///
+  /// \return reference to collection of root devices
   const std::vector<DeviceImplUPtr> &getRootDevices() const;
 
-  ol_platform_handle_t MOffloadPlatform{};
-  size_t MOffloadPlatformIndex{};
-  ol_platform_backend_t MOffloadBackend{OL_PLATFORM_BACKEND_UNKNOWN};
-  backend MBackend{};
+  /// Returns context dummy (w/o liboffload handle) that represents all devices
+  /// in platform.
+  ///
+  /// \return context implementation object
+  ContextImpl &getDefaultContext();
+
+private:
+  const ol_platform_handle_t MOffloadPlatform{};
+  const size_t MOffloadPlatformIndex{};
+
+  ol_platform_backend_t MOffloadBackend;
+  backend MBackend;
 
   std::vector<DeviceImplUPtr> MRootDevices;
+
+  // To be redesigned  once liboffload supports context
+  std::shared_ptr<ContextImpl> MDefaultContext;
 };
 
 } // namespace detail

@@ -37,6 +37,10 @@ inline std::string formatCodeString(ol_result_t Result) {
          std::string(stringifyErrorCode(Result->Code)) + ") " + Result->Details;
 }
 
+inline bool isSuccess(const ol_result_t &Result) {
+  return Result == OL_SUCCESS;
+}
+
 /// Checks liboffload API call result.
 ///
 /// Used after calling the API without check.
@@ -48,7 +52,7 @@ inline std::string formatCodeString(ol_result_t Result) {
 /// \throw sycl::runtime_exception if the call was not successful.
 template <sycl::errc errc = sycl::errc::runtime>
 void checkAndThrow(ol_result_t Result) {
-  if (Result != OL_SUCCESS) {
+  if (!isSuccess(Result)) {
     throw sycl::exception(sycl::make_error_code(errc),
                           detail::formatCodeString(Result));
   }

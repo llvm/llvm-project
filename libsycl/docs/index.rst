@@ -105,4 +105,4 @@ TODO for added SYCL classes
   * ``has_extension``: deprecated API, to implement on RT level with ``device::has``
 
 * device selection: to add compatibility with old SYCL 1.2.1 device selectors, still part of SYCL 2020 specification
-
+* ``context``: to implement get_info, properties & public constructors once context support is added to liboffload
