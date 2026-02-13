@@ -31,6 +31,12 @@ class TestDisassembler(TestBase):
                 instr in output, "Zbb instructions should not be disassembled"
             )
 
+        self.assertEqual(
+            output.count("unknown"),
+            len(self.expected_zbb_instrs),
+            "Instructions from the Zbb extension should be displayed as <unknown>",
+        )
+
     @skipIfLLVMTargetMissing("RISCV")
     def test_with_riscv_attributes(self):
         """
