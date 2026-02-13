@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <memory>
 #include <type_traits>
 
 using namespace clang;
@@ -32,24 +33,24 @@ using testing::Optional;
 using testing::UnorderedElementsAre;
 
 [[nodiscard]]
-static TUSummary makeFakeSummary() {
-  return BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp");
-}
-
-[[nodiscard]]
 static EntityId addTestEntity(TUSummaryBuilder &Builder, llvm::StringRef USR) {
   return Builder.addEntity(EntityName(USR, /*Suffix=*/"", /*Namespace=*/{}));
 }
 
+struct FactResult {
+  EntitySummary *Fact;
+  bool Inserted;
+};
+
 template <class ConcreteEntitySummary>
 [[nodiscard]]
-static SummaryName addFactTo(TUSummaryBuilder &Builder, EntityId ID,
-                             ConcreteEntitySummary Fact) {
+static auto addFactTo(TUSummaryBuilder &Builder, EntityId ID,
+                      ConcreteEntitySummary Fact) {
   static_assert(std::is_base_of_v<EntitySummary, ConcreteEntitySummary>);
   auto NewFact = std::make_unique<ConcreteEntitySummary>(std::move(Fact));
   SummaryName Name = NewFact->getSummaryName();
-  Builder.addFact(ID, std::move(NewFact));
-  return Name;
+  auto [Place, Inserted] = Builder.addFact(ID, std::move(NewFact));
+  return std::pair{Name, FactResult{Place, Inserted}};
 }
 
 namespace {
@@ -90,6 +91,10 @@ void PrintTo(const MockSummaryData3 &S, std::ostream *OS) {
 }
 
 struct TUSummaryBuilderTest : ssaf::TestFixture {
+  TUSummary Summary =
+      BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp");
+  TUSummaryBuilder Builder = TUSummaryBuilder(this->Summary);
+
   [[nodiscard]] static SmallVector<SummaryName>
   summaryNames(const TUSummary &Summary) {
     return llvm::to_vector(llvm::make_first_range(getData(Summary)));
@@ -120,9 +125,6 @@ struct TUSummaryBuilderTest : ssaf::TestFixture {
 };
 
 TEST_F(TUSummaryBuilderTest, AddEntity) {
-  TUSummary Summary = makeFakeSummary();
-  TUSummaryBuilder Builder(Summary);
-
   EntityName EN1("c:@F@foo", "", /*Namespace=*/{});
   EntityName EN2("c:@F@bar", "", /*Namespace=*/{});
 
@@ -141,11 +143,10 @@ TEST_F(TUSummaryBuilderTest, AddEntity) {
 }
 
 TEST_F(TUSummaryBuilderTest, TUSummaryBuilderAddSingleFact) {
-  TUSummary Summary = makeFakeSummary();
-  TUSummaryBuilder Builder(Summary);
-
   EntityId ID = addTestEntity(Builder, "c:@F@foo");
-  SummaryName Name = addFactTo(Builder, ID, MockSummaryData1(10));
+  auto [Name, Res] = addFactTo(Builder, ID, MockSummaryData1(10));
+  ASSERT_TRUE(Res.Inserted);
+  ASSERT_TRUE(Res.Fact);
 
   // Should have a summary type with an entity.
   EXPECT_THAT(summaryNames(Summary), UnorderedElementsAre(Name));
@@ -156,14 +157,18 @@ TEST_F(TUSummaryBuilderTest, TUSummaryBuilderAddSingleFact) {
 }
 
 TEST_F(TUSummaryBuilderTest, AddMultipleFactsToSameEntity) {
-  TUSummary Summary = makeFakeSummary();
-  TUSummaryBuilder Builder(Summary);
   EntityId ID = addTestEntity(Builder, "c:@F@foo");
 
   // Add different summary types to the same entity.
-  SummaryName Name1 = addFactTo(Builder, ID, MockSummaryData1(42));
-  SummaryName Name2 = addFactTo(Builder, ID, MockSummaryData2("test data"));
-  SummaryName Name3 = addFactTo(Builder, ID, MockSummaryData3(true));
+  auto [Name1, Res1] = addFactTo(Builder, ID, MockSummaryData1(42));
+  auto [Name2, Res2] = addFactTo(Builder, ID, MockSummaryData2("test data"));
+  auto [Name3, Res3] = addFactTo(Builder, ID, MockSummaryData3(true));
+  ASSERT_TRUE(Res1.Inserted);
+  ASSERT_TRUE(Res2.Inserted);
+  ASSERT_TRUE(Res3.Inserted);
+  ASSERT_TRUE(Res1.Fact);
+  ASSERT_TRUE(Res2.Fact);
+  ASSERT_TRUE(Res3.Fact);
 
   // All Names must be unique
   EXPECT_EQ((std::set<SummaryName>{Name1, Name2, Name3}.size()), 3U);
@@ -183,17 +188,20 @@ TEST_F(TUSummaryBuilderTest, AddMultipleFactsToSameEntity) {
 }
 
 TEST_F(TUSummaryBuilderTest, AddSameFactTypeToMultipleEntities) {
-  TUSummary Summary = makeFakeSummary();
-  TUSummaryBuilder Builder(Summary);
-
   EntityId ID1 = addTestEntity(Builder, "c:@F@foo");
   EntityId ID2 = addTestEntity(Builder, "c:@F@bar");
   EntityId ID3 = addTestEntity(Builder, "c:@F@baz");
 
   // Add the same summary type to different entities.
-  SummaryName Name1 = addFactTo(Builder, ID1, MockSummaryData1(1));
-  SummaryName Name2 = addFactTo(Builder, ID2, MockSummaryData1(2));
-  SummaryName Name3 = addFactTo(Builder, ID3, MockSummaryData1(3));
+  auto [Name1, Res1] = addFactTo(Builder, ID1, MockSummaryData1(1));
+  auto [Name2, Res2] = addFactTo(Builder, ID2, MockSummaryData1(2));
+  auto [Name3, Res3] = addFactTo(Builder, ID3, MockSummaryData1(3));
+  ASSERT_TRUE(Res1.Inserted);
+  ASSERT_TRUE(Res2.Inserted);
+  ASSERT_TRUE(Res3.Inserted);
+  ASSERT_TRUE(Res1.Fact);
+  ASSERT_TRUE(Res2.Fact);
+  ASSERT_TRUE(Res3.Fact);
 
   // All 3 should be the same summary type.
   EXPECT_THAT((llvm::ArrayRef{Name1, Name2, Name3}), testing::Each(Name1));
@@ -211,12 +219,12 @@ TEST_F(TUSummaryBuilderTest, AddSameFactTypeToMultipleEntities) {
               Optional(Field(&MockSummaryData1::Value, 3)));
 }
 
-TEST_F(TUSummaryBuilderTest, AddFactReplacesExistingFact) {
-  TUSummary Summary = makeFakeSummary();
-  TUSummaryBuilder Builder(Summary);
+TEST_F(TUSummaryBuilderTest, AddConflictingFactToSameEntity) {
   EntityId ID = addTestEntity(Builder, "c:@F@foo");
 
-  SummaryName Name = addFactTo(Builder, ID, MockSummaryData1(10));
+  auto [Name, Res] = addFactTo(Builder, ID, MockSummaryData1(10));
+  ASSERT_TRUE(Res.Inserted);
+  ASSERT_TRUE(Res.Fact);
 
   // Check the initial value.
   EXPECT_THAT(summaryNames(Summary), UnorderedElementsAre(Name));
@@ -224,74 +232,39 @@ TEST_F(TUSummaryBuilderTest, AddFactReplacesExistingFact) {
   EXPECT_THAT(getAsEntitySummary<MockSummaryData1>(Summary, Name, ID),
               Optional(Field(&MockSummaryData1::Value, 10)));
 
-  // Add another fact with the same SummaryName.
-  // This should replace the previous fact.
-  SummaryName ReplacementName = addFactTo(Builder, ID, MockSummaryData1(20));
-  ASSERT_EQ(ReplacementName, Name);
+  // This is a different fact of the same kind.
+  std::unique_ptr<EntitySummary> NewFact =
+      std::make_unique<MockSummaryData1>(20);
+  ASSERT_EQ(NewFact->getSummaryName(), Name);
 
-  // Check that the value was replaced.
+  // Let's add this different fact.
+  // This should keep the map intact and give us the existing entity summary.
+  auto [Slot, Inserted] = Builder.addFact(ID, std::move(NewFact));
+  ASSERT_FALSE(Inserted);
+  ASSERT_TRUE(Slot);
+
+  // Check that the fact object is not consumed and remained the same.
+  ASSERT_TRUE(NewFact);
+  ASSERT_EQ(static_cast<MockSummaryData1 *>(NewFact.get())->Value, 20);
+
+  // Check that the Slot refers to the existing entity summary.
+  ASSERT_EQ(Slot->getSummaryName(), Name);
+  ASSERT_EQ(static_cast<MockSummaryData1 *>(Slot)->Value, 10);
+
+  // Check that the values remained the same.
   EXPECT_THAT(summaryNames(Summary), UnorderedElementsAre(Name));
   EXPECT_THAT(entitiesOfSummary(Summary, Name), UnorderedElementsAre(ID));
   EXPECT_THAT(getAsEntitySummary<MockSummaryData1>(Summary, Name, ID),
-              Optional(Field(&MockSummaryData1::Value, 20)));
-}
-
-TEST_F(TUSummaryBuilderTest, AddFactsComplexScenario) {
-  TUSummary Summary = makeFakeSummary();
-  TUSummaryBuilder Builder(Summary);
-
-  EntityId ID1 = addTestEntity(Builder, "c:@F@foo");
-  EntityId ID2 = addTestEntity(Builder, "c:@F@bar");
-
-  SummaryName Name1 = addFactTo(Builder, ID1, MockSummaryData1(10));
-  SummaryName Name2 = addFactTo(Builder, ID1, MockSummaryData2("twenty"));
-
-  SummaryName Name3 = addFactTo(Builder, ID2, MockSummaryData1(30));
-  SummaryName Name4 = addFactTo(Builder, ID2, MockSummaryData3(true));
-
-  // Check that we have only 3 distinct summary names.
-  EXPECT_EQ(Name1, Name3);
-  EXPECT_THAT((std::set{Name1, Name2, Name3, Name4}),
-              UnorderedElementsAre(Name1, Name2, Name4));
-
-  // Check that we have two facts for the two summaries each.
-  EXPECT_THAT(summaryNames(Summary), UnorderedElementsAre(Name1, Name2, Name4));
-  EXPECT_THAT(entitiesOfSummary(Summary, Name1),
-              UnorderedElementsAre(ID1, ID2));
-  EXPECT_THAT(entitiesOfSummary(Summary, Name2), UnorderedElementsAre(ID1));
-  EXPECT_THAT(entitiesOfSummary(Summary, Name4), UnorderedElementsAre(ID2));
-
-  EXPECT_THAT(getAsEntitySummary<MockSummaryData1>(Summary, Name1, ID1),
               Optional(Field(&MockSummaryData1::Value, 10)));
-  EXPECT_THAT(getAsEntitySummary<MockSummaryData1>(Summary, Name1, ID2),
+
+  // We can update the existing summary.
+  static_cast<MockSummaryData1 *>(Res.Fact)->Value = 30;
+
+  // Check that the values remained the same except what we updated.
+  EXPECT_THAT(summaryNames(Summary), UnorderedElementsAre(Name));
+  EXPECT_THAT(entitiesOfSummary(Summary, Name), UnorderedElementsAre(ID));
+  EXPECT_THAT(getAsEntitySummary<MockSummaryData1>(Summary, Name, ID),
               Optional(Field(&MockSummaryData1::Value, 30)));
-  EXPECT_THAT(getAsEntitySummary<MockSummaryData2>(Summary, Name2, ID1),
-              Optional(Field(&MockSummaryData2::Text, "twenty")));
-  EXPECT_THAT(getAsEntitySummary<MockSummaryData3>(Summary, Name4, ID2),
-              Optional(Field(&MockSummaryData3::Flag, true)));
-
-  // Replace a fact of Name1 on entity 1 with the new value 50.
-  SummaryName Name5 = addFactTo(Builder, ID1, MockSummaryData1(50));
-  ASSERT_EQ(Name5, Name1);
-
-  // Check that the summary names and entity IDs didn't change.
-  EXPECT_THAT(summaryNames(Summary), UnorderedElementsAre(Name1, Name2, Name4));
-  EXPECT_THAT(entitiesOfSummary(Summary, Name1),
-              UnorderedElementsAre(ID1, ID2));
-  EXPECT_THAT(entitiesOfSummary(Summary, Name2), UnorderedElementsAre(ID1));
-  EXPECT_THAT(entitiesOfSummary(Summary, Name4), UnorderedElementsAre(ID2));
-
-  // Check the Name1 ID1 entity summary value was changed to 50.
-  EXPECT_THAT(getAsEntitySummary<MockSummaryData1>(Summary, Name1, ID1),
-              Optional(Field(&MockSummaryData1::Value, 50)));
-
-  // Check that the rest remained the same.
-  EXPECT_THAT(getAsEntitySummary<MockSummaryData1>(Summary, Name1, ID2),
-              Optional(Field(&MockSummaryData1::Value, 30)));
-  EXPECT_THAT(getAsEntitySummary<MockSummaryData2>(Summary, Name2, ID1),
-              Optional(Field(&MockSummaryData2::Text, "twenty")));
-  EXPECT_THAT(getAsEntitySummary<MockSummaryData3>(Summary, Name4, ID2),
-              Optional(Field(&MockSummaryData3::Flag, true)));
 }
 
 } // namespace
