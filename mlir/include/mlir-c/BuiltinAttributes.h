@@ -465,6 +465,7 @@ MLIR_CAPI_EXPORTED double mlirDenseF64ArrayGetElement(MlirAttribute attr,
 
 /// Checks whether the given attribute is a dense elements attribute.
 MLIR_CAPI_EXPORTED bool mlirAttributeIsADenseElements(MlirAttribute attr);
+MLIR_CAPI_EXPORTED bool mlirAttributeIsADenseStringElements(MlirAttribute attr);
 MLIR_CAPI_EXPORTED bool mlirAttributeIsADenseIntElements(MlirAttribute attr);
 MLIR_CAPI_EXPORTED bool mlirAttributeIsADenseFPElements(MlirAttribute attr);
 
@@ -546,10 +547,19 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrBFloat16Get(
 MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrFloat16Get(
     MlirType shapedType, intptr_t numElements, const uint16_t *elements);
 
-/// Creates a dense elements attribute with the given shaped type from string
-/// elements.
-MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrStringGet(
+/// Creates a dense string elements attribute with the given shaped type from
+/// string elements.
+MLIR_CAPI_EXPORTED MlirAttribute mlirDenseStringElementsAttrStringGet(
     MlirType shapedType, intptr_t numElements, MlirStringRef *strs);
+
+/// Checks whether the given dense string elements attribute contains a single
+/// replicated value (splat).
+MLIR_CAPI_EXPORTED bool mlirDenseStringElementsAttrIsSplat(MlirAttribute attr);
+
+/// Returns the single replicated value (splat) of the given dense string
+/// elements attribute.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirDenseStringElementsAttrGetSplatValue(MlirAttribute attr);
 
 /// Creates a dense elements attribute that has the same data as the given dense
 /// elements attribute and a different shaped type. The new type must have the
@@ -584,7 +594,7 @@ mlirDenseElementsAttrGetFloatSplatValue(MlirAttribute attr);
 MLIR_CAPI_EXPORTED double
 mlirDenseElementsAttrGetDoubleSplatValue(MlirAttribute attr);
 MLIR_CAPI_EXPORTED MlirStringRef
-mlirDenseElementsAttrGetStringSplatValue(MlirAttribute attr);
+mlirDenseStringElementsAttrGetStringSplatValue(MlirAttribute attr);
 
 /// Returns the pos-th value (flat contiguous indexing) of a specific type
 /// contained by the given dense elements attribute.
@@ -613,7 +623,7 @@ MLIR_CAPI_EXPORTED float mlirDenseElementsAttrGetFloatValue(MlirAttribute attr,
 MLIR_CAPI_EXPORTED double
 mlirDenseElementsAttrGetDoubleValue(MlirAttribute attr, intptr_t pos);
 MLIR_CAPI_EXPORTED MlirStringRef
-mlirDenseElementsAttrGetStringValue(MlirAttribute attr, intptr_t pos);
+mlirDenseStringElementsAttrGetStringValue(MlirAttribute attr, intptr_t pos);
 
 /// Returns the raw data of the given dense elements attribute.
 MLIR_CAPI_EXPORTED const void *
