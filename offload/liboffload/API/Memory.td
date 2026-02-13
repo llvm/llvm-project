@@ -147,14 +147,14 @@ def olMemFill : Function {
 }
 
 def olMemRegister : Function {
-  let desc = "Register and page-lock host memory so it can be accessible by the device.";
+  let desc = "Register and optionally page-lock host memory so it can be accessible by the device.";
   let details = [
-        "Pins host memory to optimize transfers and returns the device accessible",
-        "stable pointer that devices should use for memory transfers involving the host",
-        "pinned allocation. If the buffer intersects with other existing buffer,",
+        "Registers host memory and optionally page-locks it to optimize transfers and returns",
+        "the device accessible stable pointer that devices should use for memory transfers",
+        "involving the host pinned allocation. If the buffer intersects with other existing buffer,",
         "if the buffer is locked outside of this API, or Flags doesn't contain LOCK_MEMORY 
-        "flag a new user will be registered. A partial overlapping is not allowed.",
-        "The pinned pointer can be accessed both on host and device and",
+        "flag a new user will be registered. Partial overlapping with an already registered range is",
+        "not allowed. The pinned pointer can be accessed both on host and device and",
         "no guarantees are made about consistency.",
         "The pinned pointer should be used to execute memory transfers",
         "as it is a stable pointer for memory access."  
@@ -174,11 +174,11 @@ def olMemRegister : Function {
 }
 
 def olMemUnregister : Function {
-  let desc = "Unregister and page-unlock host memory.";
+  let desc = "Unregister host memory and optionally page-unlock it.";
   let details = [
-        "Unpins host memory that was previously pinned or unregister the buffer",
-        "if other users are still using the buffer or Flags doesn't contain UNLOCK_MEMORY flag"
-        "Otherwise the memory is unlocked."
+        "Unregisters host memory and optionally page-unlocks it.",
+        "If other users are still using the buffer or Flags doesn't contain UNLOCK_MEMORY flag"
+        "the memory is unregistered, otherwise the memory is unlocked."
   ];
   let params = [
     Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,

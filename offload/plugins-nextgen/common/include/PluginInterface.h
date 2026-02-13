@@ -701,18 +701,19 @@ public:
   /// not be unlocked by this function.
   Error unregisterHostBuffer(void *HstPtr);
 
-  /// Lock the host buffer at \p HstPtr or register a new user if it intersects
-  /// with an already existing one, locked outside of this API or passed
-  /// LockMemory parameter as false. A partial overlapping with extension is not
-  /// allowed. The function returns the device accessible pointer of the pinned
-  /// buffer. The buffer must be unlocked using the unlockHostBuffer function.
+  /// Registers and optionally page-locks host memory at \p HstPtr . Registers
+  /// a new user if it intersects with an already existing one, locked outside
+  /// of this API or passed LockMemory parameter as false. A partial overlapping
+  /// with extension is not allowed. The function returns the device accessible
+  /// pointer of the pinned buffer. The buffer must be unlocked using the
+  /// unlockHostBuffer function.
   Expected<void *> registerMemory(void *HstPtr, size_t Size,
                                   bool LockMemory = true);
 
-  /// Unlock the host buffer at \p HstPtr or unregister a user if other users
-  /// are still using the pinned allocation or passed UnlockMemory parameter as
-  ///  false. If this was the last user, the pinned allocation is removed from
-  /// the map and the memory is unlocked.
+  /// Unregisters and optionally unlocks host memory at \p HstPtr . Unregister a
+  /// user if other users are still using the pinned allocation or passed
+  /// UnlockMemory parameter as false. If this was the last user, the pinned
+  /// allocation is removed from the map and the memory is unlocked.
   Error unregisterMemory(void *HstPtr, bool UnlockMemory = true);
 
   /// Return the device accessible pointer associated to the host pinned
@@ -849,7 +850,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return PinnedAllocs.registerMemory(HstPtr, Size, LockMemory);
   }
 
-  /// Unpin or unregister a host memory buffer that was previously pinned.
+  /// Unregisters and optionally page-unlocks a host memory buffer.
   Error unregisterMemory(void *HstPtr, bool UnlockMemory = true) {
     return PinnedAllocs.unregisterMemory(HstPtr, UnlockMemory);
   }
