@@ -9,7 +9,7 @@ a.out: main.o libfoo.a
 
 lib_ab.a: a.o b.o
 	$(AR) $(ARFLAGS) $@ $^
-	$(RM) $^
+	$(call RM,$^)
 
 # Here we make a .a file that has two a.o files with different modification
 # times and different content by first creating libfoo.a with only a.o and b.o,
@@ -22,6 +22,6 @@ libfoo.a: lib_ab.a c.o
 	touch c.o
 	mv c.o a.o
 	$(AR) $(ARFLAGS) $@ lib_ab.a a.o
-	$(RM) a.o
+	$(call RM,a.o)
 
 include Makefile.rules

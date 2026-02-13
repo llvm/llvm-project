@@ -118,6 +118,10 @@ public:
     // std::memset(Mem, 0, NumWords * sizeof(uint64_t)); // Debug
     return Floating(Mem, llvm::APFloatBase::SemanticsToEnum(Sem));
   }
+  const CXXRecordDecl **allocMemberPointerPath(unsigned Length) {
+    return reinterpret_cast<const CXXRecordDecl **>(
+        this->allocate(Length * sizeof(CXXRecordDecl *)));
+  }
 
   /// Note that a step has been executed. If there are no more steps remaining,
   /// diagnoses and returns \c false.
