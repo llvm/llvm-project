@@ -1396,13 +1396,6 @@ bool StackColoring::run(MachineFunction &Func, bool OnlyRemoveMarkers) {
         if (MFI->getStackID(FirstSlot) != MFI->getStackID(SecondSlot))
           continue;
 
-        // If the function contains setjmp, volatile slots cannot be merged
-        // with any other slots, including other volatile slots. This preserves
-        // the identity and storage of volatile variables across setjmp/longjmp.
-        if (MF->exposesReturnsTwice() && (VolatileAfterSetjmp.test(FirstSlot) ||
-                                          VolatileAfterSetjmp.test(SecondSlot)))
-          continue;
-
         LiveInterval *First = &*Intervals[FirstSlot];
         LiveInterval *Second = &*Intervals[SecondSlot];
         auto &FirstS = LiveStarts[FirstSlot];
