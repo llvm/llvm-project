@@ -66,16 +66,16 @@ struct StmtClassNameTable {
 
 static StmtClassNameTable &getStmtInfoTableEntry(Stmt::StmtClass E) {
   static std::array<StmtClassNameTable, Stmt::lastStmtConstant + 1>
-      stmtClassInfo = []() {
-        std::array<StmtClassNameTable, Stmt::lastStmtConstant + 1> table;
+      StmtClassInfo = []() {
+        std::array<StmtClassNameTable, Stmt::lastStmtConstant + 1> Table;
 #define ABSTRACT_STMT(STMT)
 #define STMT(CLASS, PARENT)                                                    \
-  table[static_cast<unsigned>(Stmt::CLASS##Class)].Name = #CLASS;              \
-  table[static_cast<unsigned>(Stmt::CLASS##Class)].Size = sizeof(CLASS);
+  Table[static_cast<unsigned>(Stmt::CLASS##Class)].Name = #CLASS;              \
+  Table[static_cast<unsigned>(Stmt::CLASS##Class)].Size = sizeof(CLASS);
 #include "clang/AST/StmtNodes.inc"
-        return table;
+        return Table;
       }();
-  return stmtClassInfo[E];
+  return StmtClassInfo[E];
 }
 
 void *Stmt::operator new(size_t bytes, const ASTContext& C,
@@ -112,25 +112,25 @@ void Stmt::PrintStats() {
   unsigned sum = 0;
   llvm::errs() << "\n*** Stmt/Expr Stats:\n";
   for (int i = 0; i != Stmt::lastStmtConstant+1; i++) {
-    const StmtClassNameTable &entry =
+    const StmtClassNameTable &Entry =
         getStmtInfoTableEntry(static_cast<Stmt::StmtClass>(i));
-    if (entry.Name == nullptr)
+    if (Entry.Name == nullptr)
       continue;
-    sum += entry.Counter;
+    sum += Entry.Counter;
   }
   llvm::errs() << "  " << sum << " stmts/exprs total.\n";
   sum = 0;
   for (int i = 0; i != Stmt::lastStmtConstant+1; i++) {
-    const StmtClassNameTable &entry =
+    const StmtClassNameTable &Entry =
         getStmtInfoTableEntry(static_cast<Stmt::StmtClass>(i));
-    if (entry.Name == nullptr)
+    if (Entry.Name == nullptr)
       continue;
-    if (entry.Counter == 0)
+    if (Entry.Counter == 0)
       continue;
-    llvm::errs() << "    " << entry.Counter << " " << entry.Name << ", "
-                 << entry.Size << " each (" << entry.Counter * entry.Size
+    llvm::errs() << "    " << Entry.Counter << " " << Entry.Name << ", "
+                 << Entry.Size << " each (" << Entry.Counter * Entry.Size
                  << " bytes)\n";
-    sum += entry.Counter * entry.Size;
+    sum += Entry.Counter * Entry.Size;
   }
 
   llvm::errs() << "Total bytes = " << sum << "\n";
