@@ -907,7 +907,7 @@ bool SharedCacheInfo::CreateSharedCacheImageList(UUID uuid,
   if (return_failed)
     return false;
 
-  // vector of SharedCacheImageInfos has been fully populated, we can
+  // Vector of SharedCacheImageInfos has been fully populated, we can
   // take pointers to the objects now.
   size_t file_info_size = m_file_infos.size();
   for (size_t i = 0; i < file_info_size; i++) {
