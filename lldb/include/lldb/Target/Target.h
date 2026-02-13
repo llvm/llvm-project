@@ -13,6 +13,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "lldb/Breakpoint/BreakpointList.h"
@@ -1705,6 +1706,22 @@ public:
 
   void SaveScriptedLaunchInfo(lldb_private::ProcessInfo &process_info);
 
+  // Scripted symbol locator per-target registration.
+  Status RegisterScriptedSymbolLocator(llvm::StringRef class_name,
+                                       StructuredData::DictionarySP args_sp);
+  void ClearScriptedSymbolLocator();
+  lldb::ScriptedSymbolLocatorInterfaceSP GetScriptedSymbolLocatorInterface();
+  llvm::StringRef GetScriptedSymbolLocatorClassName() const {
+    return m_scripted_symbol_locator_class_name;
+  }
+
+  /// Look up a previously cached source file resolution result.
+  /// Returns true if a cached entry exists (even if the result is nullopt).
+  bool LookupScriptedSourceFileCache(
+      const std::string &key, std::optional<FileSpec> &result) const;
+  void InsertScriptedSourceFileCache(const std::string &key,
+                                     const std::optional<FileSpec> &result);
+
   /// Add a signal for the target.  This will get copied over to the process
   /// if the signal exists on that target.  Only the values with Yes and No are
   /// set, Calculate values will be ignored.
@@ -1842,6 +1859,13 @@ protected:
   /// more usefully in the Dummy target where you can't know exactly what
   /// signals you will have.
   llvm::StringMap<DummySignalValues> m_dummy_signals;
+
+  // Per-target scripted symbol locator.
+  std::string m_scripted_symbol_locator_class_name;
+  StructuredData::DictionarySP m_scripted_symbol_locator_args_sp;
+  lldb::ScriptedSymbolLocatorInterfaceSP m_scripted_symbol_locator_interface_sp;
+  std::unordered_map<std::string, std::optional<FileSpec>>
+      m_scripted_source_file_cache;
 
   static void ImageSearchPathsChanged(const PathMappingList &path_list,
                                       void *baton);

@@ -20,6 +20,12 @@
 #include "lldb/Host/Config.h"
 #include "lldb/Interpreter/Interfaces/ScriptedInterface.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/FileSpecList.h"
+#include "lldb/Core/ModuleSpec.h"
+
+#include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBModuleSpec.h"
 
 #include "../PythonDataObjects.h"
 #include "../SWIGPythonBridge.h"
@@ -632,6 +638,10 @@ protected:
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
+  python::PythonObject Transform(lldb::ModuleSP arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
   python::PythonObject Transform(Event *arg) {
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
@@ -660,6 +670,62 @@ protected:
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
+  python::PythonObject Transform(const ModuleSpec &arg) {
+    // Build an SBModuleSpec using public API setters since the constructor
+    // from ModuleSpec is private.
+    lldb::SBModuleSpec sb_module_spec;
+
+    const UUID &uuid = arg.GetUUID();
+    if (uuid.IsValid())
+      sb_module_spec.SetUUIDBytes(uuid.GetBytes().data(),
+                                  uuid.GetBytes().size());
+
+    const FileSpec &file = arg.GetFileSpec();
+    if (file)
+      sb_module_spec.SetFileSpec(
+          lldb::SBFileSpec(file.GetPath().c_str(), false));
+
+    const FileSpec &platform_file = arg.GetPlatformFileSpec();
+    if (platform_file)
+      sb_module_spec.SetPlatformFileSpec(
+          lldb::SBFileSpec(platform_file.GetPath().c_str(), false));
+
+    const FileSpec &symbol_file = arg.GetSymbolFileSpec();
+    if (symbol_file)
+      sb_module_spec.SetSymbolFileSpec(
+          lldb::SBFileSpec(symbol_file.GetPath().c_str(), false));
+
+    const ArchSpec &arch = arg.GetArchitecture();
+    if (arch.IsValid())
+      sb_module_spec.SetTriple(arch.GetTriple().getTriple().c_str());
+
+    ConstString object_name = arg.GetObjectName();
+    if (object_name)
+      sb_module_spec.SetObjectName(object_name.GetCString());
+
+    sb_module_spec.SetObjectOffset(arg.GetObjectOffset());
+    sb_module_spec.SetObjectSize(arg.GetObjectSize());
+
+    return python::SWIGBridge::ToSWIGWrapper(
+        std::make_unique<lldb::SBModuleSpec>(sb_module_spec));
+  }
+
+  python::PythonObject Transform(const FileSpecList &arg) {
+    python::PythonList py_list(arg.GetSize());
+    for (size_t i = 0; i < arg.GetSize(); i++) {
+      const FileSpec &fs = arg.GetFileSpecAtIndex(i);
+      py_list.SetItemAtIndex(
+          i, python::SWIGBridge::ToSWIGWrapper(
+                 std::make_unique<lldb::SBFileSpec>(fs.GetPath().c_str(),
+                                                    false)));
+    }
+    return py_list;
+  }
+
+  python::PythonObject Transform(const std::string &arg) {
+    return python::PythonString(arg);
+  }
+
   template <typename T, typename U>
   void ReverseTransform(T &original_arg, U transformed_arg, Status &error) {
     // If U is not a PythonObject, don't touch it!
@@ -670,6 +736,20 @@ protected:
                         Status &error) {
     original_arg = ExtractValueFromPythonObject<T>(transformed_arg, error);
   }
+
+  // Read-only types: Python doesn't modify these, so reverse transform is a
+  // no-op.
+  void ReverseTransform(ModuleSpec &original_arg,
+                        python::PythonObject transformed_arg, Status &error) {}
+
+  void ReverseTransform(FileSpecList &original_arg,
+                        python::PythonObject transformed_arg, Status &error) {}
+
+  void ReverseTransform(std::string &original_arg,
+                        python::PythonObject transformed_arg, Status &error) {}
+
+  void ReverseTransform(lldb::ModuleSP &original_arg,
+                        python::PythonObject transformed_arg, Status &error) {}
 
   void ReverseTransform(bool &original_arg,
                         python::PythonObject transformed_arg, Status &error) {
@@ -826,6 +906,10 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectSP>(
 template <>
 lldb::ValueObjectListSP
 ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectListSP>(
+    python::PythonObject &p, Status &error);
+
+template <>
+FileSpec ScriptedPythonInterface::ExtractValueFromPythonObject<FileSpec>(
     python::PythonObject &p, Status &error);
 
 } // namespace lldb_private

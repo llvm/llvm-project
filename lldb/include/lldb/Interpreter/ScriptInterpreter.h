@@ -16,6 +16,7 @@
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBExecutionContext.h"
+#include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBFrameList.h"
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
@@ -34,6 +35,7 @@
 #include "lldb/Interpreter/Interfaces/ScriptedPlatformInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedProcessInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedThreadInterface.h"
+#include "lldb/Interpreter/Interfaces/ScriptedSymbolLocatorInterface.h"
 #include "lldb/Interpreter/ScriptObject.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Utility/Broadcaster.h"
@@ -545,6 +547,10 @@ public:
     return {};
   }
 
+  virtual lldb::ScriptedSymbolLocatorInterfaceSP CreateScriptedSymbolLocatorInterface() {
+    return {};
+  }
+
   virtual lldb::ScriptedThreadPlanInterfaceSP
   CreateScriptedThreadPlanInterface() {
     return {};
@@ -605,6 +611,9 @@ public:
 
   lldb::ExecutionContextRefSP GetOpaqueTypeFromSBExecutionContext(
       const lldb::SBExecutionContext &exe_ctx) const;
+
+  FileSpec
+  GetOpaqueTypeFromSBFileSpec(const lldb::SBFileSpec &file_spec) const;
 
   lldb::StackFrameListSP
   GetOpaqueTypeFromSBFrameList(const lldb::SBFrameList &exe_ctx) const;
