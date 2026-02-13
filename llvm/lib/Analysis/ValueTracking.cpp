@@ -716,7 +716,7 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
     return true;
   };
 
-  // Helper to make sure the current function cannot arrange for 
+  // Helper to make sure the current function cannot arrange for
   // another thread to free on its behalf.
   auto hasNoSyncCalls = [](auto Range) {
     for (const auto &[Idx, I] : enumerate(Range)) {
