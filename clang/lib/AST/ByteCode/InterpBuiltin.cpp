@@ -365,6 +365,8 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
 
   assert(StrPtr.getFieldDesc()->isPrimitiveArray());
   unsigned ElemSize = StrPtr.getFieldDesc()->getElemSize();
+  if (ElemSize != 1 && ElemSize != 2 && ElemSize != 4)
+    return Invalid(S, OpPC);
 
   if (ID == Builtin::BI__builtin_wcslen || ID == Builtin::BIwcslen) {
     const ASTContext &AC = S.getASTContext();
