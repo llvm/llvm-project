@@ -1,11 +1,11 @@
 // REQUIRES: comgr-has-spirv
 // COM: Generate a debuginfo SPIR-V file from a HIP kernel
-// RUN: clang -x hip --offload-arch=amdgcnspirv -nogpulib -nogpuinc \
+// RUN: %clang -x hip --offload-arch=amdgcnspirv -nogpulib -nogpuinc \
 // RUN:    --no-gpu-bundle-output --offload-device-only -O3 %s -o %t.dbg.spv -g
 
 // COM: Compile debuginfo SPIR-V source to a relocatable
 // RUN: AMD_COMGR_EMIT_VERBOSE_LOGS=1 AMD_COMGR_REDIRECT_LOGS=stdout \
-// RUN:   spirv-to-reloc %t.dbg.spv %t.dbg.o | FileCheck --dump-input-filter all \
+// RUN:   spirv-to-reloc %t.dbg.spv %t.dbg.o | %FileCheck --dump-input-filter all \
 // RUN:   -check-prefix=CHECK-DBG %s
 
 // COM: Check that debuginfo SPIR-V flags are correctly extracted

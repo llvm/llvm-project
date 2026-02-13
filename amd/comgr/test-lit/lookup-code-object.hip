@@ -1,8 +1,8 @@
 // COM: Create fatbin (executable)
-// RUN: clang --offload-arch=gfx900 --offload-device-only \
+// RUN: %clang --offload-arch=gfx900 --offload-device-only \
 // RUN:  --no-gpu-bundle-output -nogpulib -nogpuinc %s -o %t.so
 
-// RUN: lookup-code-object %t.so 0 | FileCheck --check-prefixes=EXEC %s
+// RUN: lookup-code-object %t.so 0 | %FileCheck --check-prefixes=EXEC %s
 
 // EXEC: ObjectInfo[0].isa: amdgcn-amd-amdhsa--gfx900
 // EXEC: ObjectInfo[0].size: {{[1-9][0-9]*}}
@@ -15,11 +15,11 @@
 // EXEC: ObjectInfo[2].offset: 0
 
 // COM: Create offload bundle
-// RUN: clang --offload-arch=gfx900,gfx942 --offload-device-only \
+// RUN: %clang --offload-arch=gfx900,gfx942 --offload-device-only \
 // RUN:   --gpu-bundle-output -nogpulib -nogpuinc \
 // RUN:   %s -o %t.bundle
 
-// RUN: lookup-code-object %t.bundle 1 | FileCheck --check-prefixes=BUNDLE %s
+// RUN: lookup-code-object %t.bundle 1 | %FileCheck --check-prefixes=BUNDLE %s
 
 // BUNDLE: ObjectInfo[0].isa: amdgcn-amd-amdhsa--gfx900
 // BUNDLE: ObjectInfo[0].size: {{[1-9][0-9]*}}
