@@ -41,7 +41,7 @@ jobs:
         run: |
           python3 -m venv .venv
           source .venv/bin/activate
-          python -m pip install pygithub
+          python -m pip install pygithub==2.8.1
 
       - name: Extract information from the PR
         id: vars
