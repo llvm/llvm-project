@@ -39,15 +39,11 @@ std::string getShardPathFromFilePath(llvm::StringRef ShardRoot,
                                      llvm::StringRef FilePath,
                                      const PathMappings &Mappings) {
   std::string HashInput;
-  if (Mappings.empty()) {
+  if (auto Remapped = doFilePathMapping(
+          FilePath, PathMapping::Direction::ClientToServer, Mappings))
+    HashInput = std::move(*Remapped);
+  else
     HashInput = FilePath.str();
-  } else {
-    // Hash the mapped URI so that shards are consistently named regardless of
-    // the path of the generating client
-    std::string FileURI = URI::createFile(FilePath).toString();
-    HashInput = applyPathMappingToURI(
-        FileURI, PathMapping::Direction::ClientToServer, Mappings);
-  }
   llvm::SmallString<128> ShardRootSS(ShardRoot);
   llvm::sys::path::append(ShardRootSS,
                           llvm::sys::path::filename(FilePath) + "." +

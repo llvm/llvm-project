@@ -444,33 +444,41 @@ TEST(SerializationTest, NoCrashOnBadStringTableSize) {
               testing::HasSubstr("bytes is implausible"));
 }
 
-// Verify path remapping is applied to all URI fields during load/store
+// Verify path remapping is applied to all URI fields during load/store.
+// An index is generated at /home/project. A second client at /workarea/project
+// loads and re-stores the shards. On-disk content always contains the
+// /home/project paths so the index remains portable.
 TEST(SerializationTest, URITransformRoundTrip) {
-  URITransform WriteTransform = [](llvm::StringRef URI) -> std::string {
+  // Store transform: map /workarea/project -> /home/project so that
+  // on-disk content stays in the canonical /home/project paths.
+  URITransform StoreTransform = [](llvm::StringRef URI) -> std::string {
     std::string S = URI.str();
-    size_t Pos = S.find("/original/");
+    size_t Pos = S.find("/workarea/project/");
     if (Pos != std::string::npos)
-      S.replace(Pos, strlen("/original/"), "/transformed/");
+      S.replace(Pos, strlen("/workarea/project/"), "/home/project/");
     return S;
   };
-  URITransform ReadTransform = [](llvm::StringRef URI) -> std::string {
+  // Load transform: map /home/project -> /workarea/project so that
+  // in-memory paths match the local filesystem.
+  URITransform LoadTransform = [](llvm::StringRef URI) -> std::string {
     std::string S = URI.str();
-    size_t Pos = S.find("/transformed/");
+    size_t Pos = S.find("/home/project/");
     if (Pos != std::string::npos)
-      S.replace(Pos, strlen("/transformed/"), "/original/");
+      S.replace(Pos, strlen("/home/project/"), "/workarea/project/");
     return S;
   };
 
-  // Build an index containing "/original/"
+  // The index is generated with /home/project paths.
   Symbol Sym;
   Sym.ID = cantFail(SymbolID::fromStr("057557CEBF6E6B2D"));
   Sym.Name = "TestFunc";
   Sym.Scope = "ns::";
-  Sym.Definition.FileURI = "file:///original/def.cpp";
-  Sym.CanonicalDeclaration.FileURI = "file:///original/decl.h";
-  Sym.IncludeHeaders.push_back({/*IncludeHeader=*/"file:///original/header.h",
-                                /*References=*/1,
-                                /*SupportedDirectives=*/Symbol::Include});
+  Sym.Definition.FileURI = "file:///home/project/def.cpp";
+  Sym.CanonicalDeclaration.FileURI = "file:///home/project/decl.h";
+  Sym.IncludeHeaders.push_back(
+      {/*IncludeHeader=*/"file:///home/project/header.h",
+       /*References=*/1,
+       /*SupportedDirectives=*/Symbol::Include});
   Sym.IncludeHeaders.push_back(
       {/*IncludeHeader=*/"<system_header>", // Literal, should not be modified
        /*References=*/1,
@@ -481,7 +489,7 @@ TEST(SerializationTest, URITransformRoundTrip) {
   SymbolSlab Symbols = std::move(SymbolBuilder).build();
 
   Ref R;
-  R.Location.FileURI = "file:///original/ref.cpp";
+  R.Location.FileURI = "file:///home/project/ref.cpp";
   R.Kind = RefKind::Reference;
   RefSlab::Builder RefBuilder;
   RefBuilder.insert(Sym.ID, R);
@@ -489,46 +497,46 @@ TEST(SerializationTest, URITransformRoundTrip) {
 
   IncludeGraph Sources;
   IncludeGraphNode IGN;
-  IGN.URI = "file:///original/source.cpp";
+  IGN.URI = "file:///home/project/source.cpp";
   IGN.Flags = IncludeGraphNode::SourceFlag::IsTU;
   IGN.Digest = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'};
-  IGN.DirectIncludes = {"file:///original/inc1.h", "file:///original/inc2.h"};
+  IGN.DirectIncludes = {"file:///home/project/inc1.h",
+                        "file:///home/project/inc2.h"};
   Sources[IGN.URI] = IGN;
 
+  // Serialize the index directly (no transform) to produce the canonical
+  // on-disk format containing /home/project paths.
   IndexFileOut Out;
   Out.Symbols = &Symbols;
   Out.Refs = &Refs;
   Out.Sources = &Sources;
   Out.Format = IndexFileFormat::RIFF;
-  Out.Transform = &WriteTransform;
   std::string Serialized = llvm::to_string(Out);
 
-  // Verify path mapping was applied by deserializing without the load
-  // transform. We cannot search raw bytes as the string table may be
-  // compressed.
+  // Verify the on-disk shard contains /home/project paths.
   auto Raw = readIndexFile(Serialized, SymbolOrigin::Background);
   ASSERT_TRUE(bool(Raw)) << Raw.takeError();
   ASSERT_TRUE(Raw->Symbols);
   EXPECT_EQ(llvm::StringRef(Raw->Symbols->find(Sym.ID)->Definition.FileURI),
-            "file:///transformed/def.cpp")
-      << "Write transform should have rewritten URIs on disk";
+            "file:///home/project/def.cpp")
+      << "On-disk shard should contain /home/project paths";
 
-  // Deserialize with load transform to restore "/original/"
-  auto In = readIndexFile(Serialized, SymbolOrigin::Background, &ReadTransform);
+  // Load with the transform to map /home/project -> /workarea/project.
+  auto In = readIndexFile(Serialized, SymbolOrigin::Background, &LoadTransform);
   ASSERT_TRUE(bool(In)) << In.takeError();
 
   ASSERT_TRUE(In->Symbols);
   auto &ReadSym = *In->Symbols->find(Sym.ID);
   EXPECT_EQ(llvm::StringRef(ReadSym.Definition.FileURI),
-            "file:///original/def.cpp")
-      << "Symbol.Definition.FileURI not transformed";
+            "file:///workarea/project/def.cpp")
+      << "Symbol.Definition.FileURI not mapped";
   EXPECT_EQ(llvm::StringRef(ReadSym.CanonicalDeclaration.FileURI),
-            "file:///original/decl.h")
-      << "Symbol.CanonicalDeclaration.FileURI not transformed";
+            "file:///workarea/project/decl.h")
+      << "Symbol.CanonicalDeclaration.FileURI not mapped";
   ASSERT_EQ(ReadSym.IncludeHeaders.size(), 2u);
   EXPECT_EQ(ReadSym.IncludeHeaders[0].IncludeHeader,
-            "file:///original/header.h")
-      << "Symbol.IncludeHeaders[0].IncludeHeader not transformed";
+            "file:///workarea/project/header.h")
+      << "Symbol.IncludeHeaders[0].IncludeHeader not mapped";
   EXPECT_EQ(ReadSym.IncludeHeaders[1].IncludeHeader, "<system_header>")
       << "Literal include header should not be modified";
 
@@ -538,18 +546,36 @@ TEST(SerializationTest, URITransformRoundTrip) {
   EXPECT_EQ(RefIt->first, Sym.ID);
   ASSERT_EQ(RefIt->second.size(), 1u);
   EXPECT_EQ(llvm::StringRef(RefIt->second[0].Location.FileURI),
-            "file:///original/ref.cpp")
-      << "Ref.Location.FileURI not transformed";
+            "file:///workarea/project/ref.cpp")
+      << "Ref.Location.FileURI not mapped";
 
   ASSERT_TRUE(In->Sources);
-  // After load, sources are keyed by the restored URI
-  auto SourceIt = In->Sources->find("file:///original/source.cpp");
-  ASSERT_NE(SourceIt, In->Sources->end()) << "Source URI key not transformed";
-  EXPECT_EQ(SourceIt->second.URI, "file:///original/source.cpp")
-      << "IncludeGraphNode.URI not transformed";
+  auto SourceIt = In->Sources->find("file:///workarea/project/source.cpp");
+  ASSERT_NE(SourceIt, In->Sources->end()) << "Source URI key not mapped";
+  EXPECT_EQ(SourceIt->second.URI, "file:///workarea/project/source.cpp")
+      << "IncludeGraphNode.URI not mapped";
   EXPECT_THAT(SourceIt->second.DirectIncludes,
-              ElementsAre("file:///original/inc1.h", "file:///original/inc2.h"))
-      << "IncludeGraphNode.DirectIncludes not transformed";
+              ElementsAre("file:///workarea/project/inc1.h",
+                          "file:///workarea/project/inc2.h"))
+      << "IncludeGraphNode.DirectIncludes not mapped";
+
+  // Re-serialize with the store transform. On-disk content should be
+  // back in /home/project paths so the index remains portable.
+  IndexFileOut WorkareaOut;
+  WorkareaOut.Symbols = &*In->Symbols;
+  WorkareaOut.Refs = &*In->Refs;
+  WorkareaOut.Sources = &*In->Sources;
+  WorkareaOut.Format = IndexFileFormat::RIFF;
+  WorkareaOut.Transform = &StoreTransform;
+  std::string WorkareaSerialized = llvm::to_string(WorkareaOut);
+
+  auto Restored = readIndexFile(WorkareaSerialized, SymbolOrigin::Background);
+  ASSERT_TRUE(bool(Restored)) << Restored.takeError();
+  ASSERT_TRUE(Restored->Symbols);
+  EXPECT_EQ(
+      llvm::StringRef(Restored->Symbols->find(Sym.ID)->Definition.FileURI),
+      "file:///home/project/def.cpp")
+      << "Store transform should restore /home/project paths on disk";
 }
 
 } // namespace

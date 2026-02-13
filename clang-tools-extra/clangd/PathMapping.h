@@ -54,6 +54,12 @@ std::optional<std::string> doPathMapping(llvm::StringRef S,
                                          PathMapping::Direction Dir,
                                          const PathMappings &Mappings);
 
+/// Like doPathMapping, but operates directly on a file path rather than a
+/// file:// URI. Returns std::nullopt if no mapping matches.
+std::optional<std::string> doFilePathMapping(llvm::StringRef FilePath,
+                                             PathMapping::Direction Dir,
+                                             const PathMappings &Mappings);
+
 /// Applies the \p Mappings to all the file:// URIs in \p Params.
 /// NOTE: The first matching mapping will be applied, otherwise \p Params will
 /// be untouched.

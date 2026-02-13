@@ -45,6 +45,23 @@ std::optional<std::string> doPathMapping(llvm::StringRef S,
   return std::nullopt;
 }
 
+std::optional<std::string> doFilePathMapping(llvm::StringRef FilePath,
+                                             PathMapping::Direction Dir,
+                                             const PathMappings &Mappings) {
+  for (const auto &Mapping : Mappings) {
+    const std::string &From = Dir == PathMapping::Direction::ClientToServer
+                                  ? Mapping.ClientPath
+                                  : Mapping.ServerPath;
+    const std::string &To = Dir == PathMapping::Direction::ClientToServer
+                                ? Mapping.ServerPath
+                                : Mapping.ClientPath;
+    if (FilePath.consume_front(From) &&
+        (FilePath.empty() || FilePath.front() == '/'))
+      return (To + FilePath).str();
+  }
+  return std::nullopt;
+}
+
 void applyPathMappings(llvm::json::Value &V, PathMapping::Direction Dir,
                        const PathMappings &Mappings) {
   using Kind = llvm::json::Value::Kind;

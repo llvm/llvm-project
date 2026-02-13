@@ -438,10 +438,10 @@ opt<bool> EnableTestScheme{
 opt<std::string> BackgroundIndexPathMappings{
     "background-index-path-mappings",
     cat(Protocol),
-    desc("Translate clients paths prior to writing background index files to "
-         "disk. Enables sharing of background index files between clients. "
+    desc("Translate client paths when reading and writing background index "
+         "files. Enables sharing of background index files between clients. "
          "Format is identical to --path-mappings. "
-         "e.g. /local/workspace=/TOKEN/workspace"),
+         "e.g. /home/project=/workarea/project"),
     init(""),
 };
 
