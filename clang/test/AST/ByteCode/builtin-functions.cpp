@@ -391,6 +391,10 @@ namespace floating_comparison {
   static_assert(UNORDERED(__builtin_nanf(""), __builtin_inff()));
   static_assert(UNORDERED(__builtin_nanl(""), 1.0L));
   static_assert(UNORDERED(__builtin_nanl(""), __builtin_infl()));
+
+  struct {
+  } const s;
+  static_assert(__builtin_nan((const char *)&s) == 0); // both-error {{not an integral constant expression}}
 }
 
 namespace fpclassify {
