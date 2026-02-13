@@ -737,7 +737,8 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
     if (CtxBB->getSinglePredecessor() != AssumeBB)
       return false;
 
-    if (!hasNoFreeCalls(make_range(CtxBB->begin(), CtxIter)) || !hasNoSyncCalls(make_range(CtxBB->begin(), CtxIter)))
+    if (!hasNoFreeCalls(make_range(CtxBB->begin(), CtxIter)) ||
+        !hasNoSyncCalls(make_range(CtxBB->begin(), CtxIter)))
       return false;
 
     CtxIter = AssumeBB->end();
@@ -749,7 +750,8 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
 
   // Check if there are any calls between Assume and CtxIter that may free
   // memory.
-  return hasNoFreeCalls(make_range(Assume->getIterator(), CtxIter)) && hasNoSyncCalls(make_range(Assume->getIterator(), CtxIter));
+  return hasNoFreeCalls(make_range(Assume->getIterator(), CtxIter)) &&
+         hasNoSyncCalls(make_range(Assume->getIterator(), CtxIter));
 }
 
 // TODO: cmpExcludesZero misses many cases where `RHS` is non-constant but
