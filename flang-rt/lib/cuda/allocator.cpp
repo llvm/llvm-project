@@ -149,7 +149,6 @@ void RTDECL(CUFSetAssociatedStream)(void *p, cudaStream_t stream) {
     insertAllocation(p, 0, stream);
   }
 }
-
 }
 
 void *CUFAllocPinned(
