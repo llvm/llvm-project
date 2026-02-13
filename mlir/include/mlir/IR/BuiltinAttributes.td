@@ -395,8 +395,7 @@ def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
 //===----------------------------------------------------------------------===//
 
 def Builtin_DenseStringElementsAttr : Builtin_Attr<
-    "DenseStringElements", "dense_string_elements", [ElementsAttrInterface],
-    "DenseElementsAttr"
+    "DenseStringElements", "dense_string_elements", [ElementsAttrInterface]
   > {
   let summary = "An Attribute containing a dense multi-dimensional array of "
                 "strings";
@@ -431,13 +430,97 @@ def Builtin_DenseStringElementsAttr : Builtin_Attr<
     }]>,
   ];
   let extraClassDeclaration = [{
-    using DenseElementsAttr::empty;
-    using DenseElementsAttr::getNumElements;
-    using DenseElementsAttr::getElementType;
-    using DenseElementsAttr::getValues;
-    using DenseElementsAttr::isSplat;
-    using DenseElementsAttr::size;
-    using DenseElementsAttr::value_begin;
+    /// Iterator for walking StringRef element values.
+    class StringRefElementIterator
+        : public detail::DenseElementIndexedIteratorImpl<StringRefElementIterator,
+                                                        const StringRef> {
+    public:
+      const StringRef &operator*() const {
+        return reinterpret_cast<const StringRef *>(this->getData())[this->getDataIndex()];
+      }
+      StringRefElementIterator(const char *data, bool isSplat, size_t dataIndex)
+          : detail::DenseElementIndexedIteratorImpl<StringRefElementIterator,
+                                                    const StringRef>(
+                data, isSplat, dataIndex) {}
+    };
+
+    /// Iterator for walking element values as Attribute (StringAttr).
+    class StringAttributeElementIterator
+        : public llvm::indexed_accessor_iterator<StringAttributeElementIterator,
+                                                 const void *, Attribute,
+                                                 Attribute, Attribute> {
+    public:
+      Attribute operator*() const;
+      StringAttributeElementIterator(const DenseStringElementsAttr *attr,
+                                     size_t index)
+          : llvm::indexed_accessor_iterator<StringAttributeElementIterator,
+                                            const void *, Attribute,
+                                            Attribute, Attribute>(
+                attr->getAsOpaquePointer(), index) {}
+    };
+
+    /// Return the type of this attribute (vector or tensor with static shape).
+    ShapedType getType() const;
+
+    /// Helper methods for ElementsAttr interface.
+    bool empty() const { return getNumElements() == 0; }
+    int64_t getNumElements() const { return getType().getNumElements(); }
+    Type getElementType() const { return getType().getElementType(); }
+    bool isSplat() const { return getRawStringData().size() == 1; }
+    int64_t size() const { return getNumElements(); }
+
+    /// Return the raw StringRef data held by this attribute.
+    ArrayRef<StringRef> getRawStringData() const;
+
+    /// Try to get the held element values as a range of StringRef.
+    template <typename T>
+    using StringRefValueTemplateCheckT =
+        std::enable_if_t<std::is_same<T, StringRef>::value>;
+    template <typename T, typename = StringRefValueTemplateCheckT<T>>
+    FailureOr<detail::ElementsAttrRange<StringRefElementIterator>>
+    tryGetValues() const {
+      auto stringRefs = getRawStringData();
+      const char *ptr = reinterpret_cast<const char *>(stringRefs.data());
+      bool splat = isSplat();
+      return detail::ElementsAttrRange<StringRefElementIterator>(
+          getType(), StringRefElementIterator(ptr, splat, 0),
+          StringRefElementIterator(ptr, splat, getNumElements()));
+    }
+
+    /// Try to get the held element values as a range of Attributes.
+    template <typename T>
+    using AttributeValueTemplateCheckT =
+        std::enable_if_t<std::is_same<T, Attribute>::value>;
+    template <typename T, typename = AttributeValueTemplateCheckT<T>>
+    FailureOr<detail::ElementsAttrRange<StringAttributeElementIterator>>
+    tryGetValues() const {
+      return detail::ElementsAttrRange<StringAttributeElementIterator>(
+          getType(), StringAttributeElementIterator(this, 0),
+          StringAttributeElementIterator(this, getNumElements()));
+    }
+
+    template <typename T>
+    auto getValues() const {
+      auto range = tryGetValues<T>();
+      assert(succeeded(range) && "element type cannot be iterated");
+      return std::move(*range);
+    }
+    template <typename T>
+    auto value_begin() const { return getValues<T>().begin(); }
+    template <typename T>
+    auto value_end() const { return getValues<T>().end(); }
+    /// Return the splat value. Asserts that the attribute is a splat.
+    template <typename T>
+    auto getSplatValue() const {
+      assert(isSplat() && "expected the attribute to be a splat");
+      return *value_begin<T>();
+    }
+    template <typename T>
+    auto try_value_begin() const {
+      auto range = tryGetValues<T>();
+      using iterator = decltype(range->begin());
+      return failed(range) ? FailureOr<iterator>(failure()) : range->begin();
+    }
 
     /// The set of data types that can be iterated by this attribute.
     using ContiguousIterableTypesT = std::tuple<StringRef>;
@@ -449,11 +532,6 @@ def Builtin_DenseStringElementsAttr : Builtin_Attr<
     auto try_value_begin_impl(OverloadToken<T>) const {
       return try_value_begin<T>();
     }
-
-  protected:
-    friend DenseElementsAttr;
-
-  public:
   }];
   let genAccessors = 0;
   let genStorageClass = 0;
@@ -931,9 +1009,7 @@ def Builtin_SparseElementsAttr : Builtin_Attr<
       std::complex<int16_t>, std::complex<int32_t>, std::complex<int64_t>,
       // Float types.
       APFloat, float, double,
-      std::complex<APFloat>, std::complex<float>, std::complex<double>,
-      // String types.
-      StringRef
+      std::complex<APFloat>, std::complex<float>, std::complex<double>
     >;
     using ElementsAttr::Trait<SparseElementsAttr>::getValues;
     using ElementsAttr::Trait<SparseElementsAttr>::value_begin;

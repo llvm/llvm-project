@@ -152,10 +152,6 @@ public:
   /// Overload of the above 'get' method that is specialized for boolean values.
   static DenseElementsAttr get(ShapedType type, ArrayRef<bool> values);
 
-  /// Overload of the above 'get' method that is specialized for StringRef
-  /// values.
-  static DenseElementsAttr get(ShapedType type, ArrayRef<StringRef> values);
-
   /// Constructs a dense integer elements attribute from an array of APInt
   /// values. Each APInt value is expected to have the same bitwidth as the
   /// element type of 'type'. 'type' must be a vector or tensor with static
@@ -223,7 +219,8 @@ public:
       decltype(std::declval<AttrT>().template getValues<T>());
 
   /// A utility iterator that allows walking over the internal Attribute values
-  /// of a DenseElementsAttr.
+  /// of a dense elements attribute (DenseElementsAttr or
+  /// DenseStringElementsAttr).
   class AttributeElementIterator
       : public llvm::indexed_accessor_iterator<AttributeElementIterator,
                                                const void *, Attribute,
@@ -232,11 +229,9 @@ public:
     /// Accesses the Attribute value at this iterator position.
     Attribute operator*() const;
 
-  private:
-    friend DenseElementsAttr;
-
-    /// Constructs a new iterator.
-    AttributeElementIterator(DenseElementsAttr attr, size_t index);
+    /// Constructs a new iterator. Accepts any attribute implementing
+    /// ElementsAttr (e.g. DenseElementsAttr, DenseStringElementsAttr).
+    AttributeElementIterator(Attribute attr, size_t index);
   };
 
   /// Iterator for walking raw element values of the specified type 'T', which
@@ -461,21 +456,6 @@ public:
         ElementIterator<T>(rawData, splat, getNumElements()));
   }
 
-  /// Try to get the held element values as a range of StringRef.
-  template <typename T>
-  using StringRefValueTemplateCheckT =
-      std::enable_if_t<std::is_same<T, StringRef>::value>;
-  template <typename T, typename = StringRefValueTemplateCheckT<T>>
-  FailureOr<iterator_range_impl<ElementIterator<StringRef>>>
-  tryGetValues() const {
-    auto stringRefs = getRawStringData();
-    const char *ptr = reinterpret_cast<const char *>(stringRefs.data());
-    bool splat = isSplat();
-    return iterator_range_impl<ElementIterator<StringRef>>(
-        getType(), ElementIterator<StringRef>(ptr, splat, 0),
-        ElementIterator<StringRef>(ptr, splat, getNumElements()));
-  }
-
   /// Try to get the held element values as a range of Attributes.
   template <typename T>
   using AttributeValueTemplateCheckT =
@@ -484,8 +464,8 @@ public:
   FailureOr<iterator_range_impl<AttributeElementIterator>>
   tryGetValues() const {
     return iterator_range_impl<AttributeElementIterator>(
-        getType(), AttributeElementIterator(*this, 0),
-        AttributeElementIterator(*this, getNumElements()));
+        getType(), AttributeElementIterator(Attribute(*this), 0),
+        AttributeElementIterator(Attribute(*this), getNumElements()));
   }
 
   /// Try to get the held element values a range of T, where T is a derived
@@ -577,9 +557,6 @@ public:
   /// not use this directly, as the internal storage format is not always in the
   /// form the user might expect.
   ArrayRef<char> getRawData() const;
-
-  /// Return the raw StringRef data held by this attribute.
-  ArrayRef<StringRef> getRawStringData() const;
 
   /// Return the type of this ElementsAttr, guaranteed to be a vector or tensor
   /// with static shape.

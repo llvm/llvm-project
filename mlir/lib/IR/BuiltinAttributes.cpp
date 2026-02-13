@@ -589,23 +589,14 @@ static bool hasSameNumElementsOrSplat(ShapedType type, const Values &values) {
 //===----------------------------------------------------------------------===//
 
 DenseElementsAttr::AttributeElementIterator::AttributeElementIterator(
-    DenseElementsAttr attr, size_t index)
+    Attribute attr, size_t index)
     : llvm::indexed_accessor_iterator<AttributeElementIterator, const void *,
                                       Attribute, Attribute, Attribute>(
           attr.getAsOpaquePointer(), index) {}
 
 Attribute DenseElementsAttr::AttributeElementIterator::operator*() const {
   auto owner = llvm::cast<DenseElementsAttr>(getFromOpaquePointer(base));
-  Type eltTy = owner.getElementType();
-
-  // Handle strings specially.
-  if (llvm::isa<DenseStringElementsAttr>(owner)) {
-    ArrayRef<StringRef> vals = owner.getRawStringData();
-    return StringAttr::get(owner.isSplat() ? vals.front() : vals[index], eltTy);
-  }
-
-  // All other types should implement DenseElementTypeInterface.
-  auto denseEltTy = llvm::cast<DenseElementType>(eltTy);
+  auto denseEltTy = llvm::cast<DenseElementType>(owner.getElementType());
   ArrayRef<char> rawData = owner.getRawData();
   // Storage is byte-aligned: align bit size up to next byte boundary.
   size_t bitSize = denseEltTy.getDenseElementBitSize();
@@ -864,28 +855,13 @@ template class DenseArrayAttrImpl<double>;
 
 /// Method for support type inquiry through isa, cast and dyn_cast.
 bool DenseElementsAttr::classof(Attribute attr) {
-  return llvm::isa<DenseIntOrFPElementsAttr, DenseStringElementsAttr>(attr);
+  return llvm::isa<DenseIntOrFPElementsAttr>(attr);
 }
 
 DenseElementsAttr DenseElementsAttr::get(ShapedType type,
                                          ArrayRef<Attribute> values) {
   assert(hasSameNumElementsOrSplat(type, values));
-  Type eltType = type.getElementType();
-
-  // Handle strings specially.
-  if (!llvm::isa<DenseElementType>(eltType)) {
-    SmallVector<StringRef, 8> stringValues;
-    stringValues.reserve(values.size());
-    for (Attribute attr : values) {
-      assert(llvm::isa<StringAttr>(attr) &&
-             "expected string value for non-DenseElementType element");
-      stringValues.push_back(llvm::cast<StringAttr>(attr).getValue());
-    }
-    return get(type, stringValues);
-  }
-
-  // All other types go through DenseElementTypeInterface.
-  auto denseEltType = llvm::dyn_cast<DenseElementType>(eltType);
+  auto denseEltType = llvm::dyn_cast<DenseElementType>(type.getElementType());
   assert(denseEltType &&
          "attempted to get DenseElementsAttr with unsupported element type");
   SmallVector<char> data;
@@ -904,12 +880,6 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
   return DenseIntOrFPElementsAttr::getRaw(
       type, ArrayRef<char>(reinterpret_cast<const char *>(values.data()),
                            values.size()));
-}
-
-DenseElementsAttr DenseElementsAttr::get(ShapedType type,
-                                         ArrayRef<StringRef> values) {
-  assert(!type.getElementType().isIntOrFloat());
-  return DenseStringElementsAttr::get(type, values);
 }
 
 /// Constructs a dense integer elements attribute from an array of APInt
@@ -1048,9 +1018,6 @@ bool DenseElementsAttr::isValidComplex(int64_t dataEltSize, bool isInt,
 /// values are the same.
 bool DenseElementsAttr::isSplat() const {
   // Splat iff the data array has exactly one element.
-  if (isa<DenseStringElementsAttr>(*this))
-    return getRawStringData().size() == 1;
-  // FP/Int case.
   size_t storageSize = llvm::divideCeil(
       getDenseElementBitWidth(getType().getElementType()), CHAR_BIT);
   return getRawData().size() == storageSize;
@@ -1098,10 +1065,6 @@ auto DenseElementsAttr::tryGetComplexFloatValues() const
 /// Return the raw storage data held by this attribute.
 ArrayRef<char> DenseElementsAttr::getRawData() const {
   return static_cast<DenseIntOrFPElementsAttrStorage *>(impl)->data;
-}
-
-ArrayRef<StringRef> DenseElementsAttr::getRawStringData() const {
-  return static_cast<DenseStringElementsAttrStorage *>(impl)->data;
 }
 
 /// Return a new DenseElementsAttr that has the same data as the current
@@ -1391,6 +1354,27 @@ bool DenseIntElementsAttr::classof(Attribute attr) {
 }
 
 //===----------------------------------------------------------------------===//
+// DenseStringElementsAttr
+//===----------------------------------------------------------------------===//
+
+ShapedType DenseStringElementsAttr::getType() const {
+  return static_cast<const DenseStringElementsAttrStorage *>(impl)->type;
+}
+
+ArrayRef<StringRef> DenseStringElementsAttr::getRawStringData() const {
+  return static_cast<const DenseStringElementsAttrStorage *>(impl)->data;
+}
+
+Attribute
+DenseStringElementsAttr::StringAttributeElementIterator::operator*() const {
+  auto attr = llvm::cast<DenseStringElementsAttr>(
+      Attribute::getFromOpaquePointer(this->base));
+  auto data = attr.getRawStringData();
+  return StringAttr::get(attr.isSplat() ? data.front() : data[this->index],
+                         attr.getElementType());
+}
+
+//===----------------------------------------------------------------------===//
 // DenseResourceElementsAttr
 //===----------------------------------------------------------------------===//
 
@@ -1556,10 +1540,6 @@ Attribute SparseElementsAttr::getZeroAttr() const {
     return ArrayAttr::get(complexTy.getContext(),
                           ArrayRef<Attribute>{zero, zero});
   }
-
-  // Handle string type.
-  if (llvm::isa<DenseStringElementsAttr>(getValues()))
-    return StringAttr::get("", eltType);
 
   // Otherwise, this is an integer.
   return IntegerAttr::get(eltType, 0);

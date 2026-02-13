@@ -472,8 +472,8 @@ public:
   ParseResult parse(bool allowHex);
 
   /// Build a dense attribute instance with the parsed elements and the given
-  /// shaped type.
-  DenseElementsAttr getAttr(SMLoc loc, ShapedType type);
+  /// shaped type. Returns DenseElementsAttr or DenseStringElementsAttr.
+  Attribute getAttr(SMLoc loc, ShapedType type);
 
   ArrayRef<int64_t> getShape() const { return shape; }
 
@@ -487,7 +487,7 @@ private:
                                    std::vector<APFloat> &floatValues);
 
   /// Build a Dense String attribute for the given type.
-  DenseElementsAttr getStringAttr(SMLoc loc, ShapedType type, Type eltTy);
+  DenseStringElementsAttr getStringAttr(SMLoc loc, ShapedType type, Type eltTy);
 
   /// Build a Dense attribute with hex data for the given type.
   DenseElementsAttr getHexAttr(SMLoc loc, ShapedType type);
@@ -539,7 +539,7 @@ ParseResult TensorLiteralParser::parse(bool allowHex) {
 
 /// Build a dense attribute instance with the parsed elements and the given
 /// shaped type.
-DenseElementsAttr TensorLiteralParser::getAttr(SMLoc loc, ShapedType type) {
+Attribute TensorLiteralParser::getAttr(SMLoc loc, ShapedType type) {
   Type eltType = type.getElementType();
 
   // Check to see if we parse the literal from a hex string.
@@ -679,8 +679,8 @@ TensorLiteralParser::getFloatAttrElements(SMLoc loc, FloatType eltTy,
 }
 
 /// Build a Dense String attribute for the given type.
-DenseElementsAttr TensorLiteralParser::getStringAttr(SMLoc loc, ShapedType type,
-                                                     Type eltTy) {
+DenseStringElementsAttr
+TensorLiteralParser::getStringAttr(SMLoc loc, ShapedType type, Type eltTy) {
   if (hexStorage.has_value()) {
     auto stringValue = hexStorage->getStringValue();
     return DenseStringElementsAttr::get(type, {stringValue});
@@ -1174,6 +1174,13 @@ Attribute Parser::parseSparseElementsAttr(Type attrType) {
     if (!type)
       return nullptr;
 
+    // SparseElementsAttr only supports int/float element types.
+    if (!type.getElementType().isIntOrIndexOrFloat()) {
+      emitError(loc) << "sparse elements attribute does not support string "
+                        "element type";
+      return nullptr;
+    }
+
     // Construct the sparse elements attr using zero element indice/value
     // attributes.
     ShapedType indicesType =
@@ -1219,9 +1226,10 @@ Attribute Parser::parseSparseElementsAttr(Type attrType) {
     // Otherwise, set the shape to the one parsed by the literal parser.
     indicesType = RankedTensorType::get(indiceParser.getShape(), indiceEltType);
   }
-  auto indices = indiceParser.getAttr(indicesLoc, indicesType);
-  if (!indices)
+  auto indicesAttr = indiceParser.getAttr(indicesLoc, indicesType);
+  if (!indicesAttr)
     return nullptr;
+  auto indices = llvm::cast<DenseIntElementsAttr>(indicesAttr);
 
   // If the values are a splat, set the shape explicitly based on the number of
   // indices. The number of indices is encoded in the first dimension of the
@@ -1231,9 +1239,17 @@ Attribute Parser::parseSparseElementsAttr(Type attrType) {
       valuesParser.getShape().empty()
           ? RankedTensorType::get({indicesType.getDimSize(0)}, valuesEltType)
           : RankedTensorType::get(valuesParser.getShape(), valuesEltType);
-  auto values = valuesParser.getAttr(valuesLoc, valuesType);
-  if (!values)
+  auto valuesAttr = valuesParser.getAttr(valuesLoc, valuesType);
+  if (!valuesAttr)
     return nullptr;
+
+  // SparseElementsAttr only supports DenseElementsAttr for values (not string).
+  auto values = llvm::dyn_cast<DenseElementsAttr>(valuesAttr);
+  if (!values) {
+    emitError(valuesLoc)
+        << "dense string elements not supported in sparse elements attribute";
+    return nullptr;
+  }
 
   // Build the sparse elements attribute by the indices and values.
   return getChecked<SparseElementsAttr>(loc, type, indices, values);

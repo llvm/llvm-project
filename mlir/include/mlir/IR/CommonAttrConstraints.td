@@ -565,8 +565,8 @@ def StringElementsAttr : ElementsAttrBase<
   CPred<"::llvm::isa<::mlir::DenseStringElementsAttr>($_self)" >,
   "string elements attribute"> {
 
-  let storageType = [{ ::mlir::DenseElementsAttr }];
-  let returnType = [{ ::mlir::DenseElementsAttr }];
+  let storageType = [{ ::mlir::DenseStringElementsAttr }];
+  let returnType = [{ ::mlir::DenseStringElementsAttr }];
 
   let convertFromStorage = "$_self";
 }

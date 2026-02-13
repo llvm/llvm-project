@@ -728,8 +728,8 @@ MlirAttribute mlirDenseElementsAttrStringGet(MlirType shapedType,
   for (intptr_t i = 0; i < numElements; ++i)
     values.push_back(unwrap(strs[i]));
 
-  return wrap(DenseElementsAttr::get(llvm::cast<ShapedType>(unwrap(shapedType)),
-                                     values));
+  return wrap(DenseStringElementsAttr::get(
+      llvm::cast<ShapedType>(unwrap(shapedType)), values));
 }
 
 MlirAttribute mlirDenseElementsAttrReshapeGet(MlirAttribute attr,
@@ -743,12 +743,18 @@ MlirAttribute mlirDenseElementsAttrReshapeGet(MlirAttribute attr,
 //===----------------------------------------------------------------------===//
 
 bool mlirDenseElementsAttrIsSplat(MlirAttribute attr) {
-  return llvm::cast<DenseElementsAttr>(unwrap(attr)).isSplat();
+  Attribute a = unwrap(attr);
+  if (auto strAttr = llvm::dyn_cast<DenseStringElementsAttr>(a))
+    return strAttr.isSplat();
+  return llvm::cast<DenseElementsAttr>(a).isSplat();
 }
 
 MlirAttribute mlirDenseElementsAttrGetSplatValue(MlirAttribute attr) {
+  mlir::Attribute a = unwrap(attr);
+  if (auto strAttr = llvm::dyn_cast<DenseStringElementsAttr>(a))
+    return wrap(strAttr.getSplatValue<mlir::Attribute>());
   return wrap(
-      llvm::cast<DenseElementsAttr>(unwrap(attr)).getSplatValue<Attribute>());
+      llvm::cast<DenseElementsAttr>(a).getSplatValue<mlir::Attribute>());
 }
 int mlirDenseElementsAttrGetBoolSplatValue(MlirAttribute attr) {
   return llvm::cast<DenseElementsAttr>(unwrap(attr)).getSplatValue<bool>();
@@ -778,8 +784,8 @@ double mlirDenseElementsAttrGetDoubleSplatValue(MlirAttribute attr) {
   return llvm::cast<DenseElementsAttr>(unwrap(attr)).getSplatValue<double>();
 }
 MlirStringRef mlirDenseElementsAttrGetStringSplatValue(MlirAttribute attr) {
-  return wrap(
-      llvm::cast<DenseElementsAttr>(unwrap(attr)).getSplatValue<StringRef>());
+  return wrap(llvm::cast<DenseStringElementsAttr>(unwrap(attr))
+                  .getSplatValue<llvm::StringRef>());
 }
 
 //===----------------------------------------------------------------------===//
@@ -824,8 +830,8 @@ double mlirDenseElementsAttrGetDoubleValue(MlirAttribute attr, intptr_t pos) {
 }
 MlirStringRef mlirDenseElementsAttrGetStringValue(MlirAttribute attr,
                                                   intptr_t pos) {
-  return wrap(
-      llvm::cast<DenseElementsAttr>(unwrap(attr)).getValues<StringRef>()[pos]);
+  return wrap(llvm::cast<DenseStringElementsAttr>(unwrap(attr))
+                  .getValues<StringRef>()[pos]);
 }
 
 //===----------------------------------------------------------------------===//
