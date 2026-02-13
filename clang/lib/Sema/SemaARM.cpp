@@ -1176,14 +1176,16 @@ static bool CheckAArch64AtomicStoreWithStshhCall(SemaARM &S,
   Expr *ValArg = ValRes.get();
   if (!ValArg->getType()->isIntegerType()) {
     SemaRef.Diag(Loc, diag::err_arm_atomic_store_with_stshh_bad_value_type)
-        << ValArg->getType() << ValArg->getSourceRange();
+        << Bits << Context.getTypeSize(ValArg->getType())
+        << ValArg->getSourceRange();
     return true;
   }
 
   // Value width must match the pointee width.
   if (Context.getTypeSize(ValArg->getType()) != Bits) {
     SemaRef.Diag(Loc, diag::err_arm_atomic_store_with_stshh_bad_value_type)
-        << ValArg->getType() << ValArg->getSourceRange();
+        << Bits << Context.getTypeSize(ValArg->getType())
+        << ValArg->getSourceRange();
     return true;
   }
 

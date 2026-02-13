@@ -5331,10 +5331,11 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrinsic::aarch64_stshh);
     llvm::Value *Arg =
         llvm::ConstantInt::get(Int64Ty, RetentionPolicy.getZExtValue());
+    // Execute hint before store to provide cache prefetch guidance.
     CallInst *HintCall = Builder.CreateCall(F, Arg);
 
     EmitAtomicStore(RValue::get(StoreValue), LVal, Ordering,
-                    /* isVolatile= */ false,
+                    /* isVolatile= */ LVal.isVolatile(),
                     /* isInit= */ false);
     return HintCall;
   }
