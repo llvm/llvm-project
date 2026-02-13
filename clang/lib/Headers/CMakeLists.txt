@@ -129,15 +129,15 @@ set(ppc_htm_files
   )
 
 set(riscv_files
+  andes_vector.h
   riscv_bitmanip.h
   riscv_corev_alu.h
   riscv_crypto.h
+  riscv_mips.h
   riscv_nds.h
   riscv_ntlh.h
-  sifive_vector.h
-  andes_vector.h
-  riscv_mips.h
   riscv_simd.h
+  sifive_vector.h
   )
 
 set(spirv_files
