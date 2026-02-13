@@ -72,6 +72,8 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
         STI.checkFeatures("+reference-types")) {
       printOperand(MI, TableOperand, OS);
       OS << ", ";
+    } else {
+      assert(MI->getOperand(TableOperand).getImm() == 0);
     }
     printOperand(MI, TypeOperand, OS);
     if (MI->getOpcode() == WebAssembly::CALL_INDIRECT)
