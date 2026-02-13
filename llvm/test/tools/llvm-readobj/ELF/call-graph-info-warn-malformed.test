@@ -209,10 +209,10 @@ Sections:
 # RUN:   FileCheck %s -DFILE=%t11 --check-prefixes=WARN-MISSING-INFO
 
 # WARN-MISSING-INFO: warning: '[[FILE]]': SHT_LLVM_CALL_GRAPH type section has unknown type id for 2 indirect targets
-# WARN-MISSING-INFO: warning: '[[FILE]]': unknown relocation at offset 2
-# WARN-MISSING-INFO: warning: '[[FILE]]': unknown relocation at offset 19
-# WARN-MISSING-INFO: warning: '[[FILE]]': unknown relocation at offset 29
-# WARN-MISSING-INFO: warning: '[[FILE]]': unknown relocation at offset 56
+# WARN-MISSING-INFO: warning: '[[FILE]]': missing relocation for symbol at offset 2
+# WARN-MISSING-INFO: warning: '[[FILE]]': missing relocation for symbol at offset 19
+# WARN-MISSING-INFO: warning: '[[FILE]]': missing relocation for symbol at offset 29
+# WARN-MISSING-INFO: warning: '[[FILE]]': missing relocation for symbol at offset 56
 
 --- !ELF
 FileHeader:

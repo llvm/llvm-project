@@ -8357,7 +8357,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
       return R.Offset == RelocOffset;
     });
     if (R == Relocations.end()) {
-      this->reportUniqueWarning("unknown relocation at offset " +
+      this->reportUniqueWarning("missing relocation for symbol at offset " +
                                 Twine(RelocOffset));
       return;
     }
