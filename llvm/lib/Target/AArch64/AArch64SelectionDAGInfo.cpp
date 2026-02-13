@@ -48,6 +48,10 @@ void AArch64SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
 #ifndef NDEBUG
   // Some additional checks not yet implemented by verifyTargetNode.
   switch (N->getOpcode()) {
+  case AArch64ISD::CTTZ_ELTS:
+    assert(N->getOperand(0).getValueType() == N->getOperand(1).getValueType() &&
+           "Expected the general-predicate and mask to have matching types");
+    break;
   case AArch64ISD::SADDWT:
   case AArch64ISD::SADDWB:
   case AArch64ISD::UADDWT:

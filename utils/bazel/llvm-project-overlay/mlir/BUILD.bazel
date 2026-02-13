@@ -854,11 +854,18 @@ mlir_c_api_cc_library(
 mlir_c_api_cc_library(
     name = "CAPITransformDialect",
     srcs = ["lib/CAPI/Dialect/Transform.cpp"],
-    hdrs = ["include/mlir-c/Dialect/Transform.h"],
+    hdrs = [
+        "include/mlir-c/Dialect/Transform.h",
+        "include/mlir/CAPI/Dialect/Transform.h",
+    ],
     capi_deps = [":CAPIIR"],
     header_deps = [":TransformDialectTransformsIncGen"],
     includes = ["include"],
-    deps = [":TransformDialect"],
+    deps = [
+        ":TransformDialect",
+        ":TransformDialectInterfaces",
+        "//llvm:Support",
+    ],
 )
 
 mlir_c_api_cc_library(

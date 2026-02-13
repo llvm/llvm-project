@@ -6058,7 +6058,8 @@ static SDValue optimizeBrk(SDNode *N, SelectionDAG &DAG) {
   // We're looking for an upper bound based on CTTZ_ELTS; this would be selected
   // as a cntp(brk(Pg, Mask)), but if we're just going to make a whilelo based
   // on that then we just need the brk.
-  if (Upper.getOpcode() != AArch64ISD::CTTZ_ELTS || !VT.isScalableVector())
+  if (Upper.getOpcode() != AArch64ISD::CTTZ_ELTS || !VT.isScalableVector() ||
+      Upper.getOperand(0).getValueType() != VT)
     return SDValue();
 
   SDValue Pg = Upper->getOperand(0);

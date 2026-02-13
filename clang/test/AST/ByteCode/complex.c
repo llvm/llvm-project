@@ -28,3 +28,5 @@ void testComplexFloat(_Atomic(_Complex float) *fp) {
   _Complex float f = *fp;
   *fp = f;
 }
+
+void ZeroNeedsAlloc() { 9999999999999999999wb / 1wbi; } // both-warning 2{{'_BitInt' suffix for literals is a C23 extension}}
