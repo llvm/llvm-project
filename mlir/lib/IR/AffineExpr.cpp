@@ -738,7 +738,7 @@ static AffineExpr simplifyAdd(AffineExpr lhs, AffineExpr rhs) {
   // and readable form.
 
   // Process '(expr floordiv c) * (-c)'.
-  if (!rBinOpExpr)
+  if (!rBinOpExpr || rBinOpExpr.getKind() != AffineExprKind::Mul)
     return nullptr;
 
   auto lrhs = rBinOpExpr.getLHS();
@@ -746,10 +746,10 @@ static AffineExpr simplifyAdd(AffineExpr lhs, AffineExpr rhs) {
 
   AffineExpr llrhs, rlrhs;
 
-  // Check if lrhsBinOpExpr is of the form (expr floordiv q) * q, where q is a
-  // symbolic expression.
+  // Check if lrhsBinOpExpr is of the form (expr floordiv q) * q,
+  // where q is a symbolic expression.
   auto lrhsBinOpExpr = dyn_cast<AffineBinaryOpExpr>(lrhs);
-  // Check rrhsConstOpExpr = -1.
+  // Check rrhsConstOpExpr = -1 as part of ((expr floordiv q) * q)) * (-1).
   auto rrhsConstOpExpr = dyn_cast<AffineConstantExpr>(rrhs);
   if (rrhsConstOpExpr && rrhsConstOpExpr.getValue() == -1 && lrhsBinOpExpr &&
       lrhsBinOpExpr.getKind() == AffineExprKind::Mul) {
