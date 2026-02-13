@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Analysis/Scalable/Analyses/UnsafeBufferUsage.h"
+#include "clang/Analysis/Scalable/Analyses/UnsafeBufferUsage/UnsafeBufferUsage.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Analysis/Scalable/ASTEntityMapping.h"
 #include "clang/Analysis/Scalable/Model/EntityId.h"

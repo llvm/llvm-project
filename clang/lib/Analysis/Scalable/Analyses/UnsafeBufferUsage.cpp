@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Analysis/Scalable/Analyses/UnsafeBufferUsage.h"
+#include "clang/Analysis/Scalable/Analyses/UnsafeBufferUsage/UnsafeBufferUsage.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
