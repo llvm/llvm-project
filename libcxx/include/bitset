@@ -27,15 +27,18 @@ public:
     // bit reference:
     class reference
     {
-        friend class bitset;
-        reference() noexcept;
     public:
-        ~reference() noexcept;
-        reference& operator=(bool x) noexcept;           // for b[i] = x;
-        reference& operator=(const reference&) noexcept; // for b[i] = b[j];
-        bool operator~() const noexcept;                 // flips the bit
-        operator bool() const noexcept;                  // for x = b[i];
-        reference& flip() noexcept;                      // for b[i].flip();
+        reference(const reference& x) noexcept;                 // constexpr since C++23
+        ~reference() noexcept;                                  // constexpr since C++23
+        reference& operator=(bool x) noexcept;                  // constexpr since C++23; for b[i] = x;
+        reference& operator=(const reference&) noexcept;        // constexpr since C++23; for b[i] = b[j];
+        constexpr reference& operator=(bool x) const noexcept;  // since C++23
+        bool operator~() const noexcept;                        // constexpr since C++23; flips the bit
+        operator bool() const noexcept;                         // constexpr since C++23; for x = b[i];
+        void flip() noexcept;                                   // constexpr since C++23; for b[i].flip();
+        friend void swap(reference x, reference y) noexcept;    // constexpr since C++23
+        friend void swap(reference x, bool& y) noexcept;        // constexpr since C++23
+        friend void swap(bool& x, reference y) noexcept;        // constexpr since C++23
     };
 
     // 23.3.5.1 constructors:
