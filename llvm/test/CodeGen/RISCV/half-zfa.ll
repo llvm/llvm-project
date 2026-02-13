@@ -322,9 +322,9 @@ define half @select_loadfpimm(half %x) nounwind {
 ;
 ; ZFHMIN-LABEL: select_loadfpimm:
 ; ZFHMIN:       # %bb.0: # %entry
-; ZFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; ZFHMIN-NEXT:    fmv.w.x fa4, zero
-; ZFHMIN-NEXT:    fle.s a0, fa4, fa5
+; ZFHMIN-NEXT:    fmv.w.x fa5, zero
+; ZFHMIN-NEXT:    fcvt.s.h fa4, fa0
+; ZFHMIN-NEXT:    fle.s a0, fa5, fa4
 ; ZFHMIN-NEXT:    beqz a0, .LBB17_2
 ; ZFHMIN-NEXT:  # %bb.1: # %entry
 ; ZFHMIN-NEXT:    li a0, 7

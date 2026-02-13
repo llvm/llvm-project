@@ -316,12 +316,12 @@ define i32 @cls_i32_knownbits_no_overestimate(i32 signext %x) {
 define i64 @sll_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: sll_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sll a3, a0, a2
+; CHECK-NEXT:    slli a3, a2, 26
 ; CHECK-NEXT:    slx a1, a0, a2
-; CHECK-NEXT:    slli a2, a2, 26
-; CHECK-NEXT:    srai a2, a2, 31
-; CHECK-NEXT:    mvm a1, a3, a2
-; CHECK-NEXT:    andn a0, a3, a2
+; CHECK-NEXT:    sll a0, a0, a2
+; CHECK-NEXT:    srai a3, a3, 31
+; CHECK-NEXT:    mvm a1, a0, a3
+; CHECK-NEXT:    andn a0, a0, a3
 ; CHECK-NEXT:    ret
   %b = shl i64 %x, %y
   ret i64 %b
@@ -330,9 +330,8 @@ define i64 @sll_i64(i64 %x, i64 %y) {
 define i64 @sll_small_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: sll_small_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sll a3, a0, a2
 ; CHECK-NEXT:    slx a1, a0, a2
-; CHECK-NEXT:    mv a0, a3
+; CHECK-NEXT:    sll a0, a0, a2
 ; CHECK-NEXT:    ret
   %a = and i64 %y, 31
   %b = shl i64 %x, %a
@@ -363,8 +362,9 @@ define i64 @slli_i64(i64 %x) {
 define i64 @slli_i64_large(i64 %x) {
 ; CHECK-LABEL: slli_i64_large:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a1, a0, 7
+; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    slli a1, a1, 7
 ; CHECK-NEXT:    ret
   %a = shl i64 %x, 39
   ret i64 %a
@@ -374,10 +374,10 @@ define i64 @srl_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: srl_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli a3, a2, 26
-; CHECK-NEXT:    nsrl a0, a0, a2
-; CHECK-NEXT:    srl a1, a1, a2
+; CHECK-NEXT:    srl a4, a1, a2
 ; CHECK-NEXT:    srai a3, a3, 31
-; CHECK-NEXT:    andn a1, a1, a3
+; CHECK-NEXT:    nsrl a0, a0, a2
+; CHECK-NEXT:    andn a1, a4, a3
 ; CHECK-NEXT:    ret
   %b = lshr i64 %x, %y
   ret i64 %b
@@ -411,10 +411,10 @@ define i64 @srl_mask63_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: srl_mask63_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli a3, a2, 26
-; CHECK-NEXT:    nsrl a0, a0, a2
-; CHECK-NEXT:    srl a1, a1, a2
+; CHECK-NEXT:    srl a4, a1, a2
 ; CHECK-NEXT:    srai a3, a3, 31
-; CHECK-NEXT:    andn a1, a1, a3
+; CHECK-NEXT:    nsrl a0, a0, a2
+; CHECK-NEXT:    andn a1, a4, a3
 ; CHECK-NEXT:    ret
   %a = and i64 %y, 63
   %b = lshr i64 %x, %a
@@ -434,8 +434,9 @@ define i64 @srli_i64(i64 %x) {
 define i64 @srli_i64_large(i64 %x) {
 ; CHECK-LABEL: srli_i64_large:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srli a0, a1, 7
+; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    srli a0, a0, 7
 ; CHECK-NEXT:    ret
   %a = lshr i64 %x, 39
   ret i64 %a
@@ -445,10 +446,10 @@ define i64 @sra_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: sra_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli a3, a2, 26
-; CHECK-NEXT:    nsra a0, a0, a2
-; CHECK-NEXT:    sra a1, a1, a2
+; CHECK-NEXT:    sra a4, a1, a2
 ; CHECK-NEXT:    srai a3, a3, 31
-; CHECK-NEXT:    sra a1, a1, a3
+; CHECK-NEXT:    nsra a0, a0, a2
+; CHECK-NEXT:    sra a1, a4, a3
 ; CHECK-NEXT:    ret
   %b = ashr i64 %x, %y
   ret i64 %b
@@ -482,10 +483,10 @@ define i64 @sra_mask63_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: sra_mask63_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli a3, a2, 26
-; CHECK-NEXT:    nsra a0, a0, a2
-; CHECK-NEXT:    sra a1, a1, a2
+; CHECK-NEXT:    sra a4, a1, a2
 ; CHECK-NEXT:    srai a3, a3, 31
-; CHECK-NEXT:    sra a1, a1, a3
+; CHECK-NEXT:    nsra a0, a0, a2
+; CHECK-NEXT:    sra a1, a4, a3
 ; CHECK-NEXT:    ret
   %a = and i64 %y, 63
   %b = ashr i64 %x, %a
@@ -669,10 +670,10 @@ define i16 @uadd_i16(i16 %x, i16 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    zext.h a1, a1
 ; CHECK-NEXT:    zext.h a0, a0
+; CHECK-NEXT:    lui a2, 16
 ; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    lui a1, 16
-; CHECK-NEXT:    addi a1, a1, -1
-; CHECK-NEXT:    minu a0, a0, a1
+; CHECK-NEXT:    addi a2, a2, -1
+; CHECK-NEXT:    minu a0, a0, a2
 ; CHECK-NEXT:    ret
   %a = call i16 @llvm.uadd.sat.i16(i16 %x, i16 %y)
   ret i16 %a

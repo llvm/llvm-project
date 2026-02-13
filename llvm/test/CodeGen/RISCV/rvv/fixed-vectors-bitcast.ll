@@ -646,10 +646,10 @@ define <4 x i16> @bitcast_i64_v4i16(i64 %a) {
 ; RV64ELEN32:       # %bb.0:
 ; RV64ELEN32-NEXT:    addi sp, sp, -16
 ; RV64ELEN32-NEXT:    .cfi_def_cfa_offset 16
+; RV64ELEN32-NEXT:    addi a1, sp, 8
 ; RV64ELEN32-NEXT:    sd a0, 8(sp)
-; RV64ELEN32-NEXT:    addi a0, sp, 8
 ; RV64ELEN32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV64ELEN32-NEXT:    vle16.v v8, (a0)
+; RV64ELEN32-NEXT:    vle16.v v8, (a1)
 ; RV64ELEN32-NEXT:    addi sp, sp, 16
 ; RV64ELEN32-NEXT:    .cfi_def_cfa_offset 0
 ; RV64ELEN32-NEXT:    ret
@@ -682,10 +682,10 @@ define <2 x i32> @bitcast_i64_v2i32(i64 %a) {
 ; RV64ELEN32:       # %bb.0:
 ; RV64ELEN32-NEXT:    addi sp, sp, -16
 ; RV64ELEN32-NEXT:    .cfi_def_cfa_offset 16
+; RV64ELEN32-NEXT:    addi a1, sp, 8
 ; RV64ELEN32-NEXT:    sd a0, 8(sp)
-; RV64ELEN32-NEXT:    addi a0, sp, 8
 ; RV64ELEN32-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; RV64ELEN32-NEXT:    vle32.v v8, (a0)
+; RV64ELEN32-NEXT:    vle32.v v8, (a1)
 ; RV64ELEN32-NEXT:    addi sp, sp, 16
 ; RV64ELEN32-NEXT:    .cfi_def_cfa_offset 0
 ; RV64ELEN32-NEXT:    ret

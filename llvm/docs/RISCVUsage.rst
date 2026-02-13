@@ -636,6 +636,19 @@ Sanitizers
 
   MSan intrinsics support is only required if code (including dependencies) manually calls the intrinsic.
 
+Scheduling Model and Tuning
+===========================
+
+RISC-V is highly configurable, meaning its scheduling models could be highly diversified as well. Yet we still believe it is helpful to provide a "generic" tuning processor / scheduling model that represents the "lowest common denominator" RISC-V implementation at the time. The idea is that it could serve as a "good-enough" baseline model for performance tuning purposes on some of the most common use cases.
+
+Though details of this generic scheduling model might evolve over time, we always have some _expectations_ on the kind of processors it is used for.
+
+For example, the ``generic`` tuning processor is expected to target in-order, superscalar application processors designed for general-purpose computing. It is usually RVA22U64- or RVA23U64-capable intended to run Linux. The ``generic-ooo`` has a similar set of expectations, except it is targeting out-of-order application processors.
+
+Right now, we simply assign a scheduling model that is widely used by the community to ``generic``. But in the future, we can create a standalone scheduling model for ``generic``, or even create a generic model for each of the individual sectors. For example, a ``generic-embedded`` for embedded processors and a ``generic-server`` for server workloads.
+
+These future generic models could even serve as the "base" model for other scheduling models to derive from: it's not uncommon for multiple processors to share a similar set of instruction scheduling info except a few key instructions, and this is especially true for RISC-V given its highly configurable nature. If we could design the base model in a way that it can be _parameterized_ by subtarget tuning features, we can substitue the traditional way of creating individual scheduling models with a combination of base scheduling model + different subtarget features.
+
 Processor-Specific Tuning Feature String
 ========================================
 Due to RISC-V's highly configurable nature, it is often desirable to share a single scheduling model across multiple similar RISC-V processors that only differ in a small number of (uArch) tuning features. An example of such tuning feature could be whether the latency of vector operations depend on VL or not. This could be extended to tuning features that are not directly connected to scheduling model but other parts of the RISC-V backend, like the cost of ``vrgather.vv`` instruction.

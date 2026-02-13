@@ -44,8 +44,9 @@ define <vscale x 2 x iXLen> @lrint_nxv2f32(<vscale x 2 x float> %x, <vscale x 2 
 ;
 ; RV64-i64-LABEL: lrint_nxv2f32:
 ; RV64-i64:       # %bb.0:
-; RV64-i64-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; RV64-i64-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV64-i64-NEXT:    vmv1r.v v10, v8
+; RV64-i64-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; RV64-i64-NEXT:    vfwcvt.x.f.v v8, v10, v0.t
 ; RV64-i64-NEXT:    ret
   %a = call <vscale x 2 x iXLen> @llvm.vp.lrint.nxv2iXLen.nxv2f32(<vscale x 2 x float> %x, <vscale x 2 x i1> %m, i32 %evl)
@@ -67,8 +68,9 @@ define <vscale x 4 x iXLen> @lrint_nxv4f32(<vscale x 4 x float> %x, <vscale x 4 
 ;
 ; RV64-i64-LABEL: lrint_nxv4f32:
 ; RV64-i64:       # %bb.0:
-; RV64-i64-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; RV64-i64-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV64-i64-NEXT:    vmv2r.v v12, v8
+; RV64-i64-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; RV64-i64-NEXT:    vfwcvt.x.f.v v8, v12, v0.t
 ; RV64-i64-NEXT:    ret
   %a = call <vscale x 4 x iXLen> @llvm.vp.lrint.nxv4iXLen.nxv4f32(<vscale x 4 x float> %x, <vscale x 4 x i1> %m, i32 %evl)
@@ -90,8 +92,9 @@ define <vscale x 8 x iXLen> @lrint_nxv8f32(<vscale x 8 x float> %x, <vscale x 8 
 ;
 ; RV64-i64-LABEL: lrint_nxv8f32:
 ; RV64-i64:       # %bb.0:
-; RV64-i64-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
+; RV64-i64-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV64-i64-NEXT:    vmv4r.v v16, v8
+; RV64-i64-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; RV64-i64-NEXT:    vfwcvt.x.f.v v8, v16, v0.t
 ; RV64-i64-NEXT:    ret
   %a = call <vscale x 8 x iXLen> @llvm.vp.lrint.nxv8iXLen.nxv8f32(<vscale x 8 x float> %x, <vscale x 8 x i1> %m, i32 %evl)
@@ -117,11 +120,11 @@ define <vscale x 16 x iXLen> @lrint_nxv16f32(<vscale x 16 x float> %x, <vscale x
 ; RV64-i64-NEXT:    vmv1r.v v24, v0
 ; RV64-i64-NEXT:    csrr a1, vlenb
 ; RV64-i64-NEXT:    srli a2, a1, 3
-; RV64-i64-NEXT:    sub a3, a0, a1
 ; RV64-i64-NEXT:    vslidedown.vx v0, v0, a2
-; RV64-i64-NEXT:    sltu a2, a0, a3
-; RV64-i64-NEXT:    addi a2, a2, -1
-; RV64-i64-NEXT:    and a2, a2, a3
+; RV64-i64-NEXT:    sub a2, a0, a1
+; RV64-i64-NEXT:    sltu a3, a0, a2
+; RV64-i64-NEXT:    addi a3, a3, -1
+; RV64-i64-NEXT:    and a2, a3, a2
 ; RV64-i64-NEXT:    vsetvli zero, a2, e32, m4, ta, ma
 ; RV64-i64-NEXT:    vfwcvt.x.f.v v16, v12, v0.t
 ; RV64-i64-NEXT:    bltu a0, a1, .LBB4_2

@@ -21,10 +21,10 @@ define <2 x double> @test_vp_reverse_v2f64_masked(<2 x double> %src, <2 x i1> %m
 define <2 x double> @test_vp_reverse_v2f64(<2 x double> %src, i32 zeroext %evl) {
 ; CHECK-LABEL: test_vp_reverse_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vrsub.vx v10, v9, a1
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    vrsub.vx v10, v9, a0
 ; CHECK-NEXT:    vrgather.vv v9, v8, v10
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
@@ -50,10 +50,10 @@ define <4 x float> @test_vp_reverse_v4f32_masked(<4 x float> %src, <4 x i1> %mas
 define <4 x float> @test_vp_reverse_v4f32(<4 x float> %src, i32 zeroext %evl) {
 ; CHECK-LABEL: test_vp_reverse_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vrsub.vx v10, v9, a1
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    vrsub.vx v10, v9, a0
 ; CHECK-NEXT:    vrgather.vv v9, v8, v10
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
@@ -79,10 +79,10 @@ define <4 x half> @test_vp_reverse_v4f16_masked(<4 x half> %src, <4 x i1> %mask,
 define <4 x half> @test_vp_reverse_v4f16(<4 x half> %src, i32 zeroext %evl) {
 ; CHECK-LABEL: test_vp_reverse_v4f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vrsub.vx v10, v9, a1
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    vrsub.vx v10, v9, a0
 ; CHECK-NEXT:    vrgather.vv v9, v8, v10
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -108,10 +108,10 @@ define <4 x bfloat> @test_vp_reverse_v4bf16_masked(<4 x bfloat> %src, <4 x i1> %
 define <4 x bfloat> @test_vp_reverse_v4bf16(<4 x bfloat> %src, i32 zeroext %evl) {
 ; CHECK-LABEL: test_vp_reverse_v4bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vrsub.vx v10, v9, a1
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    vrsub.vx v10, v9, a0
 ; CHECK-NEXT:    vrgather.vv v9, v8, v10
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret

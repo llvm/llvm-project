@@ -559,8 +559,8 @@ define <4 x i16> @test_insert_vector_16(<4 x i16> %a, i16 %val) {
 define <4 x i16> @test_insert_vector_16_elem2(<4 x i16> %a, i16 %val) {
 ; CHECK-LABEL: test_insert_vector_16_elem2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a1, a1, 32
 ; CHECK-NEXT:    lui a2, 65535
+; CHECK-NEXT:    slli a1, a1, 32
 ; CHECK-NEXT:    slli a2, a2, 20
 ; CHECK-NEXT:    mvm a0, a1, a2
 ; CHECK-NEXT:    ret
@@ -581,8 +581,8 @@ define <8 x i8> @test_insert_vector_8(<8 x i8> %a, i8 %val) {
 define <8 x i8> @test_insert_vector_8_elem3(<8 x i8> %a, i8 %val) {
 ; CHECK-LABEL: test_insert_vector_8_elem3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a1, a1, 24
 ; CHECK-NEXT:    li a2, 255
+; CHECK-NEXT:    slli a1, a1, 24
 ; CHECK-NEXT:    slli a2, a2, 24
 ; CHECK-NEXT:    mvm a0, a1, a2
 ; CHECK-NEXT:    ret
@@ -895,11 +895,11 @@ define <2 x i32> @test_psll_ws(<2 x i32> %a, i32 %shamt) {
 define <2 x i32> @test_psll_ws_vec_shamt(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: test_psll_ws_vec_shamt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sllw a2, a0, a1
-; CHECK-NEXT:    srli a1, a1, 32
-; CHECK-NEXT:    srli a0, a0, 32
+; CHECK-NEXT:    srli a2, a1, 32
+; CHECK-NEXT:    srli a3, a0, 32
 ; CHECK-NEXT:    sllw a0, a0, a1
-; CHECK-NEXT:    pack a0, a2, a0
+; CHECK-NEXT:    sllw a1, a3, a2
+; CHECK-NEXT:    pack a0, a0, a1
 ; CHECK-NEXT:    ret
   %res = shl <2 x i32> %a, %b
   ret <2 x i32> %res
@@ -933,11 +933,11 @@ define <2 x i32> @test_psra_ws(<2 x i32> %a, i32 %shamt) {
 define <2 x i32> @test_psrl_ws_vec_shamt(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: test_psrl_ws_vec_shamt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srlw a2, a0, a1
-; CHECK-NEXT:    srli a1, a1, 32
-; CHECK-NEXT:    srli a0, a0, 32
+; CHECK-NEXT:    srli a2, a1, 32
+; CHECK-NEXT:    srli a3, a0, 32
 ; CHECK-NEXT:    srlw a0, a0, a1
-; CHECK-NEXT:    pack a0, a2, a0
+; CHECK-NEXT:    srlw a1, a3, a2
+; CHECK-NEXT:    pack a0, a0, a1
 ; CHECK-NEXT:    ret
   %res = lshr <2 x i32> %a, %b
   ret <2 x i32> %res
@@ -947,11 +947,11 @@ define <2 x i32> @test_psrl_ws_vec_shamt(<2 x i32> %a, <2 x i32> %b) {
 define <2 x i32> @test_psra_ws_vec_shamt(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: test_psra_ws_vec_shamt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sraw a2, a0, a1
-; CHECK-NEXT:    srli a1, a1, 32
-; CHECK-NEXT:    srli a0, a0, 32
+; CHECK-NEXT:    srli a2, a1, 32
+; CHECK-NEXT:    srli a3, a0, 32
 ; CHECK-NEXT:    sraw a0, a0, a1
-; CHECK-NEXT:    pack a0, a2, a0
+; CHECK-NEXT:    sraw a1, a3, a2
+; CHECK-NEXT:    pack a0, a0, a1
 ; CHECK-NEXT:    ret
   %res = ashr <2 x i32> %a, %b
   ret <2 x i32> %res
@@ -1221,22 +1221,22 @@ define <4 x i16> @test_psdiv_h(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srai a2, a1, 48
 ; CHECK-NEXT:    srai a3, a0, 48
-; CHECK-NEXT:    srli a4, a1, 32
-; CHECK-NEXT:    sext.h a5, a1
 ; CHECK-NEXT:    divw a2, a3, a2
-; CHECK-NEXT:    sext.h a3, a0
-; CHECK-NEXT:    divw a3, a3, a5
-; CHECK-NEXT:    srli a5, a0, 32
+; CHECK-NEXT:    srli a3, a1, 32
+; CHECK-NEXT:    srli a4, a0, 32
+; CHECK-NEXT:    sext.h a3, a3
 ; CHECK-NEXT:    sext.h a4, a4
-; CHECK-NEXT:    sext.h a5, a5
+; CHECK-NEXT:    divw a3, a4, a3
+; CHECK-NEXT:    sext.h a4, a1
+; CHECK-NEXT:    sext.h a5, a0
 ; CHECK-NEXT:    divw a4, a5, a4
 ; CHECK-NEXT:    srli a1, a1, 16
 ; CHECK-NEXT:    srli a0, a0, 16
 ; CHECK-NEXT:    sext.h a1, a1
 ; CHECK-NEXT:    sext.h a0, a0
 ; CHECK-NEXT:    divw a0, a0, a1
-; CHECK-NEXT:    ppaire.h a1, a4, a2
-; CHECK-NEXT:    ppaire.h a0, a3, a0
+; CHECK-NEXT:    ppaire.h a1, a3, a2
+; CHECK-NEXT:    ppaire.h a0, a4, a0
 ; CHECK-NEXT:    pack a0, a0, a1
 ; CHECK-NEXT:    ret
   %res = sdiv <4 x i16> %a, %b
@@ -1248,46 +1248,46 @@ define <8 x i8> @test_psdiv_b(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srai a2, a1, 56
 ; CHECK-NEXT:    srai a3, a0, 56
-; CHECK-NEXT:    srli a4, a1, 48
-; CHECK-NEXT:    srli a5, a0, 48
-; CHECK-NEXT:    srli a6, a1, 40
-; CHECK-NEXT:    srli a7, a0, 40
-; CHECK-NEXT:    srli t0, a1, 32
-; CHECK-NEXT:    sext.b t1, a1
 ; CHECK-NEXT:    divw a2, a3, a2
-; CHECK-NEXT:    sext.b a3, a0
-; CHECK-NEXT:    divw a3, a3, t1
-; CHECK-NEXT:    srli t1, a0, 32
+; CHECK-NEXT:    srli a3, a1, 48
+; CHECK-NEXT:    srli a4, a0, 48
+; CHECK-NEXT:    sext.b a3, a3
+; CHECK-NEXT:    sext.b a4, a4
+; CHECK-NEXT:    divw a3, a4, a3
+; CHECK-NEXT:    srli a4, a1, 40
+; CHECK-NEXT:    srli a5, a0, 40
 ; CHECK-NEXT:    sext.b a4, a4
 ; CHECK-NEXT:    sext.b a5, a5
 ; CHECK-NEXT:    divw a4, a5, a4
-; CHECK-NEXT:    srli a5, a1, 24
+; CHECK-NEXT:    srli a5, a1, 32
+; CHECK-NEXT:    srli a6, a0, 32
+; CHECK-NEXT:    sext.b a5, a5
+; CHECK-NEXT:    sext.b a6, a6
+; CHECK-NEXT:    divw a5, a6, a5
+; CHECK-NEXT:    srli a6, a1, 24
+; CHECK-NEXT:    srli a7, a0, 24
 ; CHECK-NEXT:    sext.b a6, a6
 ; CHECK-NEXT:    sext.b a7, a7
 ; CHECK-NEXT:    divw a6, a7, a6
-; CHECK-NEXT:    srli a7, a0, 24
+; CHECK-NEXT:    srli a7, a1, 16
+; CHECK-NEXT:    srli t0, a0, 16
+; CHECK-NEXT:    sext.b a7, a7
 ; CHECK-NEXT:    sext.b t0, t0
-; CHECK-NEXT:    sext.b t1, t1
+; CHECK-NEXT:    divw a7, t0, a7
+; CHECK-NEXT:    sext.b t0, a1
+; CHECK-NEXT:    sext.b t1, a0
 ; CHECK-NEXT:    divw t0, t1, t0
-; CHECK-NEXT:    srli t1, a1, 16
-; CHECK-NEXT:    sext.b a5, a5
-; CHECK-NEXT:    sext.b a7, a7
-; CHECK-NEXT:    divw a5, a7, a5
-; CHECK-NEXT:    srli a7, a0, 16
-; CHECK-NEXT:    sext.b t1, t1
-; CHECK-NEXT:    sext.b a7, a7
-; CHECK-NEXT:    divw a7, a7, t1
 ; CHECK-NEXT:    srli a1, a1, 8
 ; CHECK-NEXT:    srli a0, a0, 8
 ; CHECK-NEXT:    sext.b a1, a1
 ; CHECK-NEXT:    sext.b a0, a0
 ; CHECK-NEXT:    divw a0, a0, a1
-; CHECK-NEXT:    ppaire.b a1, a4, a2
-; CHECK-NEXT:    ppaire.b a2, t0, a6
-; CHECK-NEXT:    ppaire.b a4, a7, a5
-; CHECK-NEXT:    ppaire.b a0, a3, a0
+; CHECK-NEXT:    ppaire.b a1, a3, a2
+; CHECK-NEXT:    ppaire.b a2, a5, a4
+; CHECK-NEXT:    ppaire.b a3, a7, a6
+; CHECK-NEXT:    ppaire.b a0, t0, a0
 ; CHECK-NEXT:    ppaire.h a1, a2, a1
-; CHECK-NEXT:    ppaire.h a0, a0, a4
+; CHECK-NEXT:    ppaire.h a0, a0, a3
 ; CHECK-NEXT:    pack a0, a0, a1
 ; CHECK-NEXT:    ret
   %res = sdiv <8 x i8> %a, %b
@@ -1312,20 +1312,20 @@ define <4 x i16> @test_pudiv_h(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srliw a2, a1, 16
 ; CHECK-NEXT:    srliw a3, a0, 16
-; CHECK-NEXT:    zext.h a4, a1
-; CHECK-NEXT:    zext.h a5, a0
 ; CHECK-NEXT:    divuw a2, a3, a2
-; CHECK-NEXT:    srli a3, a1, 48
-; CHECK-NEXT:    divuw a4, a5, a4
+; CHECK-NEXT:    zext.h a3, a1
+; CHECK-NEXT:    zext.h a4, a0
+; CHECK-NEXT:    divuw a3, a4, a3
+; CHECK-NEXT:    srli a4, a1, 48
 ; CHECK-NEXT:    srli a5, a0, 48
-; CHECK-NEXT:    divuw a3, a5, a3
+; CHECK-NEXT:    divuw a4, a5, a4
 ; CHECK-NEXT:    slli a1, a1, 16
 ; CHECK-NEXT:    slli a0, a0, 16
 ; CHECK-NEXT:    srli a1, a1, 48
 ; CHECK-NEXT:    srli a0, a0, 48
 ; CHECK-NEXT:    divuw a0, a0, a1
-; CHECK-NEXT:    ppaire.h a1, a4, a2
-; CHECK-NEXT:    ppaire.h a0, a0, a3
+; CHECK-NEXT:    ppaire.h a1, a3, a2
+; CHECK-NEXT:    ppaire.h a0, a0, a4
 ; CHECK-NEXT:    pack a0, a1, a0
 ; CHECK-NEXT:    ret
   %res = udiv <4 x i16> %a, %b
@@ -1337,44 +1337,44 @@ define <8 x i8> @test_pudiv_b(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srli a2, a1, 56
 ; CHECK-NEXT:    srli a3, a0, 56
-; CHECK-NEXT:    slli a4, a1, 8
-; CHECK-NEXT:    slli a5, a0, 8
-; CHECK-NEXT:    slli a6, a1, 16
-; CHECK-NEXT:    slli a7, a0, 16
-; CHECK-NEXT:    srliw t0, a1, 24
-; CHECK-NEXT:    srliw t1, a0, 24
 ; CHECK-NEXT:    divuw a2, a3, a2
-; CHECK-NEXT:    zext.b a3, a1
-; CHECK-NEXT:    divuw t0, t1, t0
-; CHECK-NEXT:    zext.b t1, a0
-; CHECK-NEXT:    divuw a3, t1, a3
-; CHECK-NEXT:    slli t1, a1, 24
+; CHECK-NEXT:    slli a3, a1, 8
+; CHECK-NEXT:    slli a4, a0, 8
+; CHECK-NEXT:    srli a3, a3, 56
+; CHECK-NEXT:    srli a4, a4, 56
+; CHECK-NEXT:    divuw a3, a4, a3
+; CHECK-NEXT:    slli a4, a1, 16
+; CHECK-NEXT:    slli a5, a0, 16
 ; CHECK-NEXT:    srli a4, a4, 56
 ; CHECK-NEXT:    srli a5, a5, 56
 ; CHECK-NEXT:    divuw a4, a5, a4
-; CHECK-NEXT:    slli a5, a0, 24
+; CHECK-NEXT:    slli a5, a1, 24
+; CHECK-NEXT:    slli a6, a0, 24
+; CHECK-NEXT:    srli a5, a5, 56
 ; CHECK-NEXT:    srli a6, a6, 56
-; CHECK-NEXT:    srli a7, a7, 56
+; CHECK-NEXT:    divuw a5, a6, a5
+; CHECK-NEXT:    srliw a6, a1, 24
+; CHECK-NEXT:    srliw a7, a0, 24
 ; CHECK-NEXT:    divuw a6, a7, a6
 ; CHECK-NEXT:    slli a7, a1, 40
-; CHECK-NEXT:    srli t1, t1, 56
-; CHECK-NEXT:    srli a5, a5, 56
-; CHECK-NEXT:    divuw a5, a5, t1
-; CHECK-NEXT:    slli t1, a0, 40
+; CHECK-NEXT:    slli t0, a0, 40
 ; CHECK-NEXT:    srli a7, a7, 56
-; CHECK-NEXT:    srli t1, t1, 56
-; CHECK-NEXT:    divuw a7, t1, a7
+; CHECK-NEXT:    srli t0, t0, 56
+; CHECK-NEXT:    divuw a7, t0, a7
+; CHECK-NEXT:    zext.b t0, a1
+; CHECK-NEXT:    zext.b t1, a0
+; CHECK-NEXT:    divuw t0, t1, t0
 ; CHECK-NEXT:    slli a1, a1, 48
 ; CHECK-NEXT:    slli a0, a0, 48
 ; CHECK-NEXT:    srli a1, a1, 56
 ; CHECK-NEXT:    srli a0, a0, 56
 ; CHECK-NEXT:    divuw a0, a0, a1
-; CHECK-NEXT:    ppaire.b a1, a4, a2
-; CHECK-NEXT:    ppaire.b a2, a5, a6
-; CHECK-NEXT:    ppaire.b a4, a7, t0
-; CHECK-NEXT:    ppaire.b a0, a3, a0
+; CHECK-NEXT:    ppaire.b a1, a3, a2
+; CHECK-NEXT:    ppaire.b a2, a5, a4
+; CHECK-NEXT:    ppaire.b a3, a7, a6
+; CHECK-NEXT:    ppaire.b a0, t0, a0
 ; CHECK-NEXT:    ppaire.h a1, a2, a1
-; CHECK-NEXT:    ppaire.h a0, a0, a4
+; CHECK-NEXT:    ppaire.h a0, a0, a3
 ; CHECK-NEXT:    pack a0, a0, a1
 ; CHECK-NEXT:    ret
   %res = udiv <8 x i8> %a, %b
@@ -1399,22 +1399,22 @@ define <4 x i16> @test_psrem_h(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srai a2, a1, 48
 ; CHECK-NEXT:    srai a3, a0, 48
-; CHECK-NEXT:    srli a4, a1, 32
-; CHECK-NEXT:    sext.h a5, a1
 ; CHECK-NEXT:    remw a2, a3, a2
-; CHECK-NEXT:    sext.h a3, a0
-; CHECK-NEXT:    remw a3, a3, a5
-; CHECK-NEXT:    srli a5, a0, 32
+; CHECK-NEXT:    srli a3, a1, 32
+; CHECK-NEXT:    srli a4, a0, 32
+; CHECK-NEXT:    sext.h a3, a3
 ; CHECK-NEXT:    sext.h a4, a4
-; CHECK-NEXT:    sext.h a5, a5
+; CHECK-NEXT:    remw a3, a4, a3
+; CHECK-NEXT:    sext.h a4, a1
+; CHECK-NEXT:    sext.h a5, a0
 ; CHECK-NEXT:    remw a4, a5, a4
 ; CHECK-NEXT:    srli a1, a1, 16
 ; CHECK-NEXT:    srli a0, a0, 16
 ; CHECK-NEXT:    sext.h a1, a1
 ; CHECK-NEXT:    sext.h a0, a0
 ; CHECK-NEXT:    remw a0, a0, a1
-; CHECK-NEXT:    ppaire.h a1, a4, a2
-; CHECK-NEXT:    ppaire.h a0, a3, a0
+; CHECK-NEXT:    ppaire.h a1, a3, a2
+; CHECK-NEXT:    ppaire.h a0, a4, a0
 ; CHECK-NEXT:    pack a0, a0, a1
 ; CHECK-NEXT:    ret
   %res = srem <4 x i16> %a, %b
@@ -1426,46 +1426,46 @@ define <8 x i8> @test_psrem_b(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srai a2, a1, 56
 ; CHECK-NEXT:    srai a3, a0, 56
-; CHECK-NEXT:    srli a4, a1, 48
-; CHECK-NEXT:    srli a5, a0, 48
-; CHECK-NEXT:    srli a6, a1, 40
-; CHECK-NEXT:    srli a7, a0, 40
-; CHECK-NEXT:    srli t0, a1, 32
-; CHECK-NEXT:    sext.b t1, a1
 ; CHECK-NEXT:    remw a2, a3, a2
-; CHECK-NEXT:    sext.b a3, a0
-; CHECK-NEXT:    remw a3, a3, t1
-; CHECK-NEXT:    srli t1, a0, 32
+; CHECK-NEXT:    srli a3, a1, 48
+; CHECK-NEXT:    srli a4, a0, 48
+; CHECK-NEXT:    sext.b a3, a3
+; CHECK-NEXT:    sext.b a4, a4
+; CHECK-NEXT:    remw a3, a4, a3
+; CHECK-NEXT:    srli a4, a1, 40
+; CHECK-NEXT:    srli a5, a0, 40
 ; CHECK-NEXT:    sext.b a4, a4
 ; CHECK-NEXT:    sext.b a5, a5
 ; CHECK-NEXT:    remw a4, a5, a4
-; CHECK-NEXT:    srli a5, a1, 24
+; CHECK-NEXT:    srli a5, a1, 32
+; CHECK-NEXT:    srli a6, a0, 32
+; CHECK-NEXT:    sext.b a5, a5
+; CHECK-NEXT:    sext.b a6, a6
+; CHECK-NEXT:    remw a5, a6, a5
+; CHECK-NEXT:    srli a6, a1, 24
+; CHECK-NEXT:    srli a7, a0, 24
 ; CHECK-NEXT:    sext.b a6, a6
 ; CHECK-NEXT:    sext.b a7, a7
 ; CHECK-NEXT:    remw a6, a7, a6
-; CHECK-NEXT:    srli a7, a0, 24
+; CHECK-NEXT:    srli a7, a1, 16
+; CHECK-NEXT:    srli t0, a0, 16
+; CHECK-NEXT:    sext.b a7, a7
 ; CHECK-NEXT:    sext.b t0, t0
-; CHECK-NEXT:    sext.b t1, t1
+; CHECK-NEXT:    remw a7, t0, a7
+; CHECK-NEXT:    sext.b t0, a1
+; CHECK-NEXT:    sext.b t1, a0
 ; CHECK-NEXT:    remw t0, t1, t0
-; CHECK-NEXT:    srli t1, a1, 16
-; CHECK-NEXT:    sext.b a5, a5
-; CHECK-NEXT:    sext.b a7, a7
-; CHECK-NEXT:    remw a5, a7, a5
-; CHECK-NEXT:    srli a7, a0, 16
-; CHECK-NEXT:    sext.b t1, t1
-; CHECK-NEXT:    sext.b a7, a7
-; CHECK-NEXT:    remw a7, a7, t1
 ; CHECK-NEXT:    srli a1, a1, 8
 ; CHECK-NEXT:    srli a0, a0, 8
 ; CHECK-NEXT:    sext.b a1, a1
 ; CHECK-NEXT:    sext.b a0, a0
 ; CHECK-NEXT:    remw a0, a0, a1
-; CHECK-NEXT:    ppaire.b a1, a4, a2
-; CHECK-NEXT:    ppaire.b a2, t0, a6
-; CHECK-NEXT:    ppaire.b a4, a7, a5
-; CHECK-NEXT:    ppaire.b a0, a3, a0
+; CHECK-NEXT:    ppaire.b a1, a3, a2
+; CHECK-NEXT:    ppaire.b a2, a5, a4
+; CHECK-NEXT:    ppaire.b a3, a7, a6
+; CHECK-NEXT:    ppaire.b a0, t0, a0
 ; CHECK-NEXT:    ppaire.h a1, a2, a1
-; CHECK-NEXT:    ppaire.h a0, a0, a4
+; CHECK-NEXT:    ppaire.h a0, a0, a3
 ; CHECK-NEXT:    pack a0, a0, a1
 ; CHECK-NEXT:    ret
   %res = srem <8 x i8> %a, %b
@@ -1490,20 +1490,20 @@ define <4 x i16> @test_purem_h(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srliw a2, a1, 16
 ; CHECK-NEXT:    srliw a3, a0, 16
-; CHECK-NEXT:    zext.h a4, a1
-; CHECK-NEXT:    zext.h a5, a0
 ; CHECK-NEXT:    remuw a2, a3, a2
-; CHECK-NEXT:    srli a3, a1, 48
-; CHECK-NEXT:    remuw a4, a5, a4
+; CHECK-NEXT:    zext.h a3, a1
+; CHECK-NEXT:    zext.h a4, a0
+; CHECK-NEXT:    remuw a3, a4, a3
+; CHECK-NEXT:    srli a4, a1, 48
 ; CHECK-NEXT:    srli a5, a0, 48
-; CHECK-NEXT:    remuw a3, a5, a3
+; CHECK-NEXT:    remuw a4, a5, a4
 ; CHECK-NEXT:    slli a1, a1, 16
 ; CHECK-NEXT:    slli a0, a0, 16
 ; CHECK-NEXT:    srli a1, a1, 48
 ; CHECK-NEXT:    srli a0, a0, 48
 ; CHECK-NEXT:    remuw a0, a0, a1
-; CHECK-NEXT:    ppaire.h a1, a4, a2
-; CHECK-NEXT:    ppaire.h a0, a0, a3
+; CHECK-NEXT:    ppaire.h a1, a3, a2
+; CHECK-NEXT:    ppaire.h a0, a0, a4
 ; CHECK-NEXT:    pack a0, a1, a0
 ; CHECK-NEXT:    ret
   %res = urem <4 x i16> %a, %b
@@ -1515,44 +1515,44 @@ define <8 x i8> @test_purem_b(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srli a2, a1, 56
 ; CHECK-NEXT:    srli a3, a0, 56
-; CHECK-NEXT:    slli a4, a1, 8
-; CHECK-NEXT:    slli a5, a0, 8
-; CHECK-NEXT:    slli a6, a1, 16
-; CHECK-NEXT:    slli a7, a0, 16
-; CHECK-NEXT:    srliw t0, a1, 24
-; CHECK-NEXT:    srliw t1, a0, 24
 ; CHECK-NEXT:    remuw a2, a3, a2
-; CHECK-NEXT:    zext.b a3, a1
-; CHECK-NEXT:    remuw t0, t1, t0
-; CHECK-NEXT:    zext.b t1, a0
-; CHECK-NEXT:    remuw a3, t1, a3
-; CHECK-NEXT:    slli t1, a1, 24
+; CHECK-NEXT:    slli a3, a1, 8
+; CHECK-NEXT:    slli a4, a0, 8
+; CHECK-NEXT:    srli a3, a3, 56
+; CHECK-NEXT:    srli a4, a4, 56
+; CHECK-NEXT:    remuw a3, a4, a3
+; CHECK-NEXT:    slli a4, a1, 16
+; CHECK-NEXT:    slli a5, a0, 16
 ; CHECK-NEXT:    srli a4, a4, 56
 ; CHECK-NEXT:    srli a5, a5, 56
 ; CHECK-NEXT:    remuw a4, a5, a4
-; CHECK-NEXT:    slli a5, a0, 24
+; CHECK-NEXT:    slli a5, a1, 24
+; CHECK-NEXT:    slli a6, a0, 24
+; CHECK-NEXT:    srli a5, a5, 56
 ; CHECK-NEXT:    srli a6, a6, 56
-; CHECK-NEXT:    srli a7, a7, 56
+; CHECK-NEXT:    remuw a5, a6, a5
+; CHECK-NEXT:    srliw a6, a1, 24
+; CHECK-NEXT:    srliw a7, a0, 24
 ; CHECK-NEXT:    remuw a6, a7, a6
 ; CHECK-NEXT:    slli a7, a1, 40
-; CHECK-NEXT:    srli t1, t1, 56
-; CHECK-NEXT:    srli a5, a5, 56
-; CHECK-NEXT:    remuw a5, a5, t1
-; CHECK-NEXT:    slli t1, a0, 40
+; CHECK-NEXT:    slli t0, a0, 40
 ; CHECK-NEXT:    srli a7, a7, 56
-; CHECK-NEXT:    srli t1, t1, 56
-; CHECK-NEXT:    remuw a7, t1, a7
+; CHECK-NEXT:    srli t0, t0, 56
+; CHECK-NEXT:    remuw a7, t0, a7
+; CHECK-NEXT:    zext.b t0, a1
+; CHECK-NEXT:    zext.b t1, a0
+; CHECK-NEXT:    remuw t0, t1, t0
 ; CHECK-NEXT:    slli a1, a1, 48
 ; CHECK-NEXT:    slli a0, a0, 48
 ; CHECK-NEXT:    srli a1, a1, 56
 ; CHECK-NEXT:    srli a0, a0, 56
 ; CHECK-NEXT:    remuw a0, a0, a1
-; CHECK-NEXT:    ppaire.b a1, a4, a2
-; CHECK-NEXT:    ppaire.b a2, a5, a6
-; CHECK-NEXT:    ppaire.b a4, a7, t0
-; CHECK-NEXT:    ppaire.b a0, a3, a0
+; CHECK-NEXT:    ppaire.b a1, a3, a2
+; CHECK-NEXT:    ppaire.b a2, a5, a4
+; CHECK-NEXT:    ppaire.b a3, a7, a6
+; CHECK-NEXT:    ppaire.b a0, t0, a0
 ; CHECK-NEXT:    ppaire.h a1, a2, a1
-; CHECK-NEXT:    ppaire.h a0, a0, a4
+; CHECK-NEXT:    ppaire.h a0, a0, a3
 ; CHECK-NEXT:    pack a0, a0, a1
 ; CHECK-NEXT:    ret
   %res = urem <8 x i8> %a, %b

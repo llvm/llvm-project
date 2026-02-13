@@ -25,10 +25,10 @@ define <vscale x 1 x double> @test2(<vscale x 1 x double> %a, <vscale x 1 x i1> 
 ; RV32-NEXT:    lui a1, %hi(.LCPI1_0)
 ; RV32-NEXT:    fld fa5, %lo(.LCPI1_0)(a1)
 ; RV32-NEXT:    lui a1, %hi(.LCPI1_1)
-; RV32-NEXT:    fld fa4, %lo(.LCPI1_1)(a1)
 ; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV32-NEXT:    vfmv.v.f v9, fa5
-; RV32-NEXT:    vfadd.vf v9, v9, fa4, v0.t
+; RV32-NEXT:    fld fa5, %lo(.LCPI1_1)(a1)
+; RV32-NEXT:    vfadd.vf v9, v9, fa5, v0.t
 ; RV32-NEXT:    vfmul.vv v8, v8, v9, v0.t
 ; RV32-NEXT:    ret
 ;
@@ -36,11 +36,11 @@ define <vscale x 1 x double> @test2(<vscale x 1 x double> %a, <vscale x 1 x i1> 
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    li a1, 1025
 ; RV64-NEXT:    slli a1, a1, 52
+; RV64-NEXT:    li a2, 1
 ; RV64-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV64-NEXT:    vmv.v.x v9, a1
-; RV64-NEXT:    li a0, 1
-; RV64-NEXT:    slli a0, a0, 62
-; RV64-NEXT:    fmv.d.x fa5, a0
+; RV64-NEXT:    slli a2, a2, 62
+; RV64-NEXT:    fmv.d.x fa5, a2
 ; RV64-NEXT:    vfadd.vf v9, v9, fa5, v0.t
 ; RV64-NEXT:    vfmul.vv v8, v8, v9, v0.t
 ; RV64-NEXT:    ret
@@ -56,10 +56,10 @@ define <vscale x 1 x double> @test3(<vscale x 1 x double> %a, <vscale x 1 x doub
 ; RV32-NEXT:    lui a1, %hi(.LCPI2_0)
 ; RV32-NEXT:    fld fa5, %lo(.LCPI2_0)(a1)
 ; RV32-NEXT:    lui a1, %hi(.LCPI2_1)
-; RV32-NEXT:    fld fa4, %lo(.LCPI2_1)(a1)
 ; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV32-NEXT:    vfmv.v.f v10, fa5
-; RV32-NEXT:    vfmul.vf v10, v10, fa4, v0.t
+; RV32-NEXT:    fld fa5, %lo(.LCPI2_1)(a1)
+; RV32-NEXT:    vfmul.vf v10, v10, fa5, v0.t
 ; RV32-NEXT:    vfmadd.vv v10, v8, v9, v0.t
 ; RV32-NEXT:    vmv.v.v v8, v10
 ; RV32-NEXT:    ret
@@ -68,11 +68,11 @@ define <vscale x 1 x double> @test3(<vscale x 1 x double> %a, <vscale x 1 x doub
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    li a1, 1025
 ; RV64-NEXT:    slli a1, a1, 52
+; RV64-NEXT:    li a2, 1
 ; RV64-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV64-NEXT:    vmv.v.x v10, a1
-; RV64-NEXT:    li a0, 1
-; RV64-NEXT:    slli a0, a0, 62
-; RV64-NEXT:    fmv.d.x fa5, a0
+; RV64-NEXT:    slli a2, a2, 62
+; RV64-NEXT:    fmv.d.x fa5, a2
 ; RV64-NEXT:    vfmul.vf v10, v10, fa5, v0.t
 ; RV64-NEXT:    vfmadd.vv v10, v8, v9, v0.t
 ; RV64-NEXT:    vmv.v.v v8, v10

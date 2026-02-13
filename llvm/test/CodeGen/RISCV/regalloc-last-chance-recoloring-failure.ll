@@ -24,8 +24,6 @@ define void @last_chance_recoloring_failure() {
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 16 * vlenb
 ; CHECK-NEXT:    li a0, 55
-; CHECK-NEXT:    vsetvli a2, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmclr.m v0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vloxseg2ei32.v v16, (a1), v8
 ; CHECK-NEXT:    csrr a0, vlenb
@@ -33,6 +31,8 @@ define void @last_chance_recoloring_failure() {
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vmclr.m v0
 ; CHECK-NEXT:    li s0, 36
 ; CHECK-NEXT:    vsetvli zero, s0, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwadd.vv v16, v8, v12, v0.t
@@ -76,8 +76,6 @@ define void @last_chance_recoloring_failure() {
 ; SUBREGLIVENESS-NEXT:    sub sp, sp, a0
 ; SUBREGLIVENESS-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 16 * vlenb
 ; SUBREGLIVENESS-NEXT:    li a0, 55
-; SUBREGLIVENESS-NEXT:    vsetvli a2, zero, e8, m2, ta, ma
-; SUBREGLIVENESS-NEXT:    vmclr.m v0
 ; SUBREGLIVENESS-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; SUBREGLIVENESS-NEXT:    vloxseg2ei32.v v16, (a1), v8
 ; SUBREGLIVENESS-NEXT:    csrr a0, vlenb
@@ -85,6 +83,8 @@ define void @last_chance_recoloring_failure() {
 ; SUBREGLIVENESS-NEXT:    add a0, sp, a0
 ; SUBREGLIVENESS-NEXT:    addi a0, a0, 16
 ; SUBREGLIVENESS-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
+; SUBREGLIVENESS-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
+; SUBREGLIVENESS-NEXT:    vmclr.m v0
 ; SUBREGLIVENESS-NEXT:    li s0, 36
 ; SUBREGLIVENESS-NEXT:    vsetvli zero, s0, e16, m4, ta, ma
 ; SUBREGLIVENESS-NEXT:    vfwadd.vv v16, v8, v12, v0.t

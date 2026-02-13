@@ -137,6 +137,7 @@ Changes to the RISC-V Backend
   extensions.
 * Adds experimental assembler support for the 'Zvabd` (RISC-V Integer Vector
   Absolute Difference) extension.
+* `-mtune=generic` now uses the scheduling model from SpacemitX60 instead of an empty scheduling model.
 
 Changes to the WebAssembly Backend
 ----------------------------------

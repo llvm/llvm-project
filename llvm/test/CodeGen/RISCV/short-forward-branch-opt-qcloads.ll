@@ -759,13 +759,14 @@ entry:
 define i32 @test_i8_s_store_op(ptr %base, i1 zeroext %x, i32 %b, ptr %base1, i32 %c) nounwind {
 ; RV32I-LABEL: test_i8_s_store_op:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    qc.e.lb a0, 10000(a0)
+; RV32I-NEXT:    mv a5, a0
+; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    qc.e.lb a2, 10000(a5)
 ; RV32I-NEXT:    sw a4, 0(a3)
 ; RV32I-NEXT:    bnez a1, .LBB20_2
 ; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    mv a2, a0
-; RV32I-NEXT:  .LBB20_2: # %entry
 ; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:  .LBB20_2: # %entry
 ; RV32I-NEXT:    ret
 ;
 ; RV32I-SFB-LABEL: test_i8_s_store_op:
@@ -799,13 +800,14 @@ entry:
 define i32 @test_i8_z_store_op(ptr %base, i1 zeroext %x, i32 %b, ptr %base1, i32 %c) nounwind {
 ; RV32I-LABEL: test_i8_z_store_op:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    qc.e.lbu a0, 10000(a0)
+; RV32I-NEXT:    mv a5, a0
+; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    qc.e.lbu a2, 10000(a5)
 ; RV32I-NEXT:    sw a4, 0(a3)
 ; RV32I-NEXT:    bnez a1, .LBB21_2
 ; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    mv a2, a0
-; RV32I-NEXT:  .LBB21_2: # %entry
 ; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:  .LBB21_2: # %entry
 ; RV32I-NEXT:    ret
 ;
 ; RV32I-SFB-LABEL: test_i8_z_store_op:
@@ -839,13 +841,14 @@ entry:
 define i32 @test_i16_s_store_op(ptr %base, i1 zeroext %x, i32 %b, ptr %base1, i32 %c) nounwind {
 ; RV32I-LABEL: test_i16_s_store_op:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    qc.e.lh a0, 20000(a0)
+; RV32I-NEXT:    mv a5, a0
+; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    qc.e.lh a2, 20000(a5)
 ; RV32I-NEXT:    sw a4, 0(a3)
 ; RV32I-NEXT:    bnez a1, .LBB22_2
 ; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    mv a2, a0
-; RV32I-NEXT:  .LBB22_2: # %entry
 ; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:  .LBB22_2: # %entry
 ; RV32I-NEXT:    ret
 ;
 ; RV32I-SFB-LABEL: test_i16_s_store_op:
@@ -879,13 +882,14 @@ entry:
 define i32 @test_i16_z_store_op(ptr %base, i1 zeroext %x, i32 %b, ptr %base1, i32 %c) nounwind {
 ; RV32I-LABEL: test_i16_z_store_op:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    qc.e.lhu a0, 20000(a0)
+; RV32I-NEXT:    mv a5, a0
+; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    qc.e.lhu a2, 20000(a5)
 ; RV32I-NEXT:    sw a4, 0(a3)
 ; RV32I-NEXT:    bnez a1, .LBB23_2
 ; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    mv a2, a0
-; RV32I-NEXT:  .LBB23_2: # %entry
 ; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:  .LBB23_2: # %entry
 ; RV32I-NEXT:    ret
 ;
 ; RV32I-SFB-LABEL: test_i16_z_store_op:
@@ -919,13 +923,14 @@ entry:
 define i32 @test_i32_store_op(ptr %base, i1 zeroext %x, i32 %b, ptr %base1, i32 %c) nounwind {
 ; RV32I-LABEL: test_i32_store_op:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    qc.e.lw a0, 40000(a0)
+; RV32I-NEXT:    mv a5, a0
+; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    qc.e.lw a2, 40000(a5)
 ; RV32I-NEXT:    sw a4, 0(a3)
 ; RV32I-NEXT:    bnez a1, .LBB24_2
 ; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    mv a2, a0
-; RV32I-NEXT:  .LBB24_2: # %entry
 ; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:  .LBB24_2: # %entry
 ; RV32I-NEXT:    ret
 ;
 ; RV32I-SFB-LABEL: test_i32_store_op:

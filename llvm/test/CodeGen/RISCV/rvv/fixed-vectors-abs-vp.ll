@@ -589,9 +589,9 @@ define <16 x i64> @vp_abs_v16i64_unmasked(<16 x i64> %va, i32 zeroext %evl) {
 define <32 x i64> @vp_abs_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_v32i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v7, v0, 2
+; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    bltu a0, a2, .LBB34_2
 ; CHECK-NEXT:  # %bb.1:
@@ -601,10 +601,10 @@ define <32 x i64> @vp_abs_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %evl)
 ; CHECK-NEXT:    vrsub.vi v24, v8, 0, v0.t
 ; CHECK-NEXT:    vmax.vv v8, v8, v24, v0.t
 ; CHECK-NEXT:    addi a1, a0, -16
+; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    sltu a0, a0, a1
 ; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vrsub.vi v24, v16, 0, v0.t
 ; CHECK-NEXT:    vmax.vv v16, v16, v24, v0.t
@@ -612,9 +612,9 @@ define <32 x i64> @vp_abs_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %evl)
 ;
 ; ZVABD-LABEL: vp_abs_v32i64:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    li a2, 16
 ; ZVABD-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; ZVABD-NEXT:    vslidedown.vi v24, v0, 2
+; ZVABD-NEXT:    li a2, 16
 ; ZVABD-NEXT:    mv a1, a0
 ; ZVABD-NEXT:    bltu a0, a2, .LBB34_2
 ; ZVABD-NEXT:  # %bb.1:
@@ -623,10 +623,10 @@ define <32 x i64> @vp_abs_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %evl)
 ; ZVABD-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; ZVABD-NEXT:    vabs.v v8, v8, v0.t
 ; ZVABD-NEXT:    addi a1, a0, -16
+; ZVABD-NEXT:    vmv1r.v v0, v24
 ; ZVABD-NEXT:    sltu a0, a0, a1
 ; ZVABD-NEXT:    addi a0, a0, -1
 ; ZVABD-NEXT:    and a0, a0, a1
-; ZVABD-NEXT:    vmv1r.v v0, v24
 ; ZVABD-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; ZVABD-NEXT:    vabs.v v16, v16, v0.t
 ; ZVABD-NEXT:    ret
@@ -645,14 +645,16 @@ define <32 x i64> @vp_abs_v32i64_unmasked(<32 x i64> %va, i32 zeroext %evl) {
 ; CHECK-NEXT:  .LBB35_2:
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    vrsub.vi v24, v8, 0
-; CHECK-NEXT:    vmax.vv v8, v8, v24
-; CHECK-NEXT:    addi a1, a0, -16
-; CHECK-NEXT:    sltu a0, a0, a1
+; CHECK-NEXT:    addi a2, a0, -16
+; CHECK-NEXT:    sltu a0, a0, a2
 ; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    and a0, a0, a2
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    vrsub.vi v24, v16, 0
-; CHECK-NEXT:    vmax.vv v16, v16, v24
+; CHECK-NEXT:    vrsub.vi v0, v16, 0
+; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; CHECK-NEXT:    vmax.vv v8, v8, v24
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    vmax.vv v16, v16, v0
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_v32i64_unmasked:

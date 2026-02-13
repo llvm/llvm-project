@@ -4,8 +4,9 @@
 define <vscale x 4 x ptr> @inttoptr_nxv4p0_nxv4i8(<vscale x 4 x i8> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: inttoptr_nxv4p0_nxv4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v12, v8
+; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-NEXT:    vzext.vf8 v8, v12, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 4 x ptr> @llvm.vp.inttoptr.nxv4p0.nxv4i8(<vscale x 4 x i8> %va, <vscale x 4 x i1> %m, i32 %evl)
@@ -15,8 +16,9 @@ define <vscale x 4 x ptr> @inttoptr_nxv4p0_nxv4i8(<vscale x 4 x i8> %va, <vscale
 define <vscale x 4 x ptr> @inttoptr_nxv4p0_nxv4i16(<vscale x 4 x i16> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: inttoptr_nxv4p0_nxv4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v12, v8
+; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-NEXT:    vzext.vf4 v8, v12, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 4 x ptr> @llvm.vp.inttoptr.nxv4p0.nxv4i16(<vscale x 4 x i16> %va, <vscale x 4 x i1> %m, i32 %evl)
@@ -26,8 +28,9 @@ define <vscale x 4 x ptr> @inttoptr_nxv4p0_nxv4i16(<vscale x 4 x i16> %va, <vsca
 define <vscale x 4 x ptr> @inttoptr_nxv4p0_nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: inttoptr_nxv4p0_nxv4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv2r.v v12, v8
+; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v8, v12, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 4 x ptr> @llvm.vp.inttoptr.nxv4p0.nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 x i1> %m, i32 %evl)

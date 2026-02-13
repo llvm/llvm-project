@@ -17,11 +17,8 @@ define i64 @test(i32 noundef signext %c, i32 noundef signext %d) {
 ; NOPIC-NEXT:    ld a2, %lo(.LCPI0_1)(a2)
 ; NOPIC-NEXT:    mul a0, a0, a2
 ; NOPIC-NEXT:    add a0, a0, a1
-; NOPIC-NEXT:    lui a1, 1015920
-; NOPIC-NEXT:    addi a1, a1, 1541
-; NOPIC-NEXT:    slli a1, a1, 16
-; NOPIC-NEXT:    addi a1, a1, 1027
-; NOPIC-NEXT:    slli a1, a1, 20
+; NOPIC-NEXT:    lui a1, %hi(.LCPI0_2)
+; NOPIC-NEXT:    ld a1, %lo(.LCPI0_2)(a1)
 ; NOPIC-NEXT:    add a0, a0, a1
 ; NOPIC-NEXT:    ret
 ;
@@ -43,11 +40,10 @@ define i64 @test(i32 noundef signext %c, i32 noundef signext %d) {
 ; PIC-NEXT:    ld a2, 0(a2)
 ; PIC-NEXT:    mul a0, a0, a2
 ; PIC-NEXT:    add a0, a0, a1
-; PIC-NEXT:    lui a1, 1015920
-; PIC-NEXT:    addi a1, a1, 1541
-; PIC-NEXT:    slli a1, a1, 16
-; PIC-NEXT:    addi a1, a1, 1027
-; PIC-NEXT:    slli a1, a1, 20
+; PIC-NEXT:  .Lpcrel_hi2:
+; PIC-NEXT:    auipc a1, %pcrel_hi(.LCPI0_2)
+; PIC-NEXT:    addi a1, a1, %pcrel_lo(.Lpcrel_hi2)
+; PIC-NEXT:    ld a1, 0(a1)
 ; PIC-NEXT:    add a0, a0, a1
 ; PIC-NEXT:    ret
 entry:

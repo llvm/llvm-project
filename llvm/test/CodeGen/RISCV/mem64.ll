@@ -213,13 +213,13 @@ define dso_local i16 @load_sext_zext_anyext_i1_i16(ptr %a) nounwind {
 define dso_local i64 @ld_sd_global(i64 %a) nounwind {
 ; RV64I-LABEL: ld_sd_global:
 ; RV64I:       # %bb.0:
+; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    lui a2, %hi(G)
 ; RV64I-NEXT:    addi a2, a2, %lo(G)
-; RV64I-NEXT:    ld a1, 0(a2)
-; RV64I-NEXT:    sd a0, 0(a2)
+; RV64I-NEXT:    ld a0, 0(a2)
+; RV64I-NEXT:    sd a1, 0(a2)
 ; RV64I-NEXT:    ld zero, 72(a2)
-; RV64I-NEXT:    sd a0, 72(a2)
-; RV64I-NEXT:    mv a0, a1
+; RV64I-NEXT:    sd a1, 72(a2)
 ; RV64I-NEXT:    ret
   %1 = load volatile i64, ptr @G
   store i64 %a, ptr @G

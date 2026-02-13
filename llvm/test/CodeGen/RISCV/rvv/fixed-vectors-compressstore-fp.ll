@@ -6,8 +6,8 @@ define void @compressstore_v1f16(ptr %base, <1 x half> %v, <1 x i1> %mask) {
 ; RV32-LABEL: compressstore_v1f16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; RV32-NEXT:    vcompress.vm v9, v8, v0
 ; RV32-NEXT:    vcpop.m a1, v0
+; RV32-NEXT:    vcompress.vm v9, v8, v0
 ; RV32-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; RV32-NEXT:    vse16.v v9, (a0)
 ; RV32-NEXT:    ret
@@ -15,8 +15,8 @@ define void @compressstore_v1f16(ptr %base, <1 x half> %v, <1 x i1> %mask) {
 ; RV64-LABEL: compressstore_v1f16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; RV64-NEXT:    vcompress.vm v9, v8, v0
 ; RV64-NEXT:    vcpop.m a1, v0
+; RV64-NEXT:    vcompress.vm v9, v8, v0
 ; RV64-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; RV64-NEXT:    vse16.v v9, (a0)
 ; RV64-NEXT:    ret
@@ -28,8 +28,8 @@ define void @compressstore_v2f16(ptr %base, <2 x half> %v, <2 x i1> %mask) {
 ; RV32-LABEL: compressstore_v2f16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; RV32-NEXT:    vcompress.vm v9, v8, v0
 ; RV32-NEXT:    vcpop.m a1, v0
+; RV32-NEXT:    vcompress.vm v9, v8, v0
 ; RV32-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; RV32-NEXT:    vse16.v v9, (a0)
 ; RV32-NEXT:    ret
@@ -37,8 +37,8 @@ define void @compressstore_v2f16(ptr %base, <2 x half> %v, <2 x i1> %mask) {
 ; RV64-LABEL: compressstore_v2f16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; RV64-NEXT:    vcompress.vm v9, v8, v0
 ; RV64-NEXT:    vcpop.m a1, v0
+; RV64-NEXT:    vcompress.vm v9, v8, v0
 ; RV64-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; RV64-NEXT:    vse16.v v9, (a0)
 ; RV64-NEXT:    ret
@@ -50,8 +50,8 @@ define void @compressstore_v4f16(ptr %base, <4 x half> %v, <4 x i1> %mask) {
 ; RV32-LABEL: compressstore_v4f16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vcompress.vm v9, v8, v0
 ; RV32-NEXT:    vcpop.m a1, v0
+; RV32-NEXT:    vcompress.vm v9, v8, v0
 ; RV32-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; RV32-NEXT:    vse16.v v9, (a0)
 ; RV32-NEXT:    ret
@@ -59,8 +59,8 @@ define void @compressstore_v4f16(ptr %base, <4 x half> %v, <4 x i1> %mask) {
 ; RV64-LABEL: compressstore_v4f16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV64-NEXT:    vcompress.vm v9, v8, v0
 ; RV64-NEXT:    vcpop.m a1, v0
+; RV64-NEXT:    vcompress.vm v9, v8, v0
 ; RV64-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; RV64-NEXT:    vse16.v v9, (a0)
 ; RV64-NEXT:    ret
@@ -72,8 +72,8 @@ define void @compressstore_v8f16(ptr %base, <8 x half> %v, <8 x i1> %mask) {
 ; RV32-LABEL: compressstore_v8f16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vcompress.vm v9, v8, v0
 ; RV32-NEXT:    vcpop.m a1, v0
+; RV32-NEXT:    vcompress.vm v9, v8, v0
 ; RV32-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; RV32-NEXT:    vse16.v v9, (a0)
 ; RV32-NEXT:    ret
@@ -81,8 +81,8 @@ define void @compressstore_v8f16(ptr %base, <8 x half> %v, <8 x i1> %mask) {
 ; RV64-LABEL: compressstore_v8f16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vcompress.vm v9, v8, v0
 ; RV64-NEXT:    vcpop.m a1, v0
+; RV64-NEXT:    vcompress.vm v9, v8, v0
 ; RV64-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; RV64-NEXT:    vse16.v v9, (a0)
 ; RV64-NEXT:    ret
@@ -94,8 +94,8 @@ define void @compressstore_v1f32(ptr %base, <1 x float> %v, <1 x i1> %mask) {
 ; RV32-LABEL: compressstore_v1f32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; RV32-NEXT:    vcompress.vm v9, v8, v0
 ; RV32-NEXT:    vcpop.m a1, v0
+; RV32-NEXT:    vcompress.vm v9, v8, v0
 ; RV32-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; RV32-NEXT:    vse32.v v9, (a0)
 ; RV32-NEXT:    ret
@@ -103,8 +103,8 @@ define void @compressstore_v1f32(ptr %base, <1 x float> %v, <1 x i1> %mask) {
 ; RV64-LABEL: compressstore_v1f32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; RV64-NEXT:    vcompress.vm v9, v8, v0
 ; RV64-NEXT:    vcpop.m a1, v0
+; RV64-NEXT:    vcompress.vm v9, v8, v0
 ; RV64-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; RV64-NEXT:    vse32.v v9, (a0)
 ; RV64-NEXT:    ret
@@ -116,8 +116,8 @@ define void @compressstore_v2f32(ptr %base, <2 x float> %v, <2 x i1> %mask) {
 ; RV32-LABEL: compressstore_v2f32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV32-NEXT:    vcompress.vm v9, v8, v0
 ; RV32-NEXT:    vcpop.m a1, v0
+; RV32-NEXT:    vcompress.vm v9, v8, v0
 ; RV32-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; RV32-NEXT:    vse32.v v9, (a0)
 ; RV32-NEXT:    ret
@@ -125,8 +125,8 @@ define void @compressstore_v2f32(ptr %base, <2 x float> %v, <2 x i1> %mask) {
 ; RV64-LABEL: compressstore_v2f32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV64-NEXT:    vcompress.vm v9, v8, v0
 ; RV64-NEXT:    vcpop.m a1, v0
+; RV64-NEXT:    vcompress.vm v9, v8, v0
 ; RV64-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; RV64-NEXT:    vse32.v v9, (a0)
 ; RV64-NEXT:    ret
@@ -138,8 +138,8 @@ define void @compressstore_v4f32(ptr %base, <4 x float> %v, <4 x i1> %mask) {
 ; RV32-LABEL: compressstore_v4f32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vcompress.vm v9, v8, v0
 ; RV32-NEXT:    vcpop.m a1, v0
+; RV32-NEXT:    vcompress.vm v9, v8, v0
 ; RV32-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; RV32-NEXT:    vse32.v v9, (a0)
 ; RV32-NEXT:    ret
@@ -147,8 +147,8 @@ define void @compressstore_v4f32(ptr %base, <4 x float> %v, <4 x i1> %mask) {
 ; RV64-LABEL: compressstore_v4f32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64-NEXT:    vcompress.vm v9, v8, v0
 ; RV64-NEXT:    vcpop.m a1, v0
+; RV64-NEXT:    vcompress.vm v9, v8, v0
 ; RV64-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; RV64-NEXT:    vse32.v v9, (a0)
 ; RV64-NEXT:    ret
@@ -182,8 +182,8 @@ define void @compressstore_v1f64(ptr %base, <1 x double> %v, <1 x i1> %mask) {
 ; RV32-LABEL: compressstore_v1f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV32-NEXT:    vcompress.vm v9, v8, v0
 ; RV32-NEXT:    vcpop.m a1, v0
+; RV32-NEXT:    vcompress.vm v9, v8, v0
 ; RV32-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; RV32-NEXT:    vse64.v v9, (a0)
 ; RV32-NEXT:    ret
@@ -191,8 +191,8 @@ define void @compressstore_v1f64(ptr %base, <1 x double> %v, <1 x i1> %mask) {
 ; RV64-LABEL: compressstore_v1f64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vcompress.vm v9, v8, v0
 ; RV64-NEXT:    vcpop.m a1, v0
+; RV64-NEXT:    vcompress.vm v9, v8, v0
 ; RV64-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; RV64-NEXT:    vse64.v v9, (a0)
 ; RV64-NEXT:    ret
@@ -204,8 +204,8 @@ define void @compressstore_v2f64(ptr %base, <2 x double> %v, <2 x i1> %mask) {
 ; RV32-LABEL: compressstore_v2f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-NEXT:    vcompress.vm v9, v8, v0
 ; RV32-NEXT:    vcpop.m a1, v0
+; RV32-NEXT:    vcompress.vm v9, v8, v0
 ; RV32-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; RV32-NEXT:    vse64.v v9, (a0)
 ; RV32-NEXT:    ret
@@ -213,8 +213,8 @@ define void @compressstore_v2f64(ptr %base, <2 x double> %v, <2 x i1> %mask) {
 ; RV64-LABEL: compressstore_v2f64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vcompress.vm v9, v8, v0
 ; RV64-NEXT:    vcpop.m a1, v0
+; RV64-NEXT:    vcompress.vm v9, v8, v0
 ; RV64-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; RV64-NEXT:    vse64.v v9, (a0)
 ; RV64-NEXT:    ret

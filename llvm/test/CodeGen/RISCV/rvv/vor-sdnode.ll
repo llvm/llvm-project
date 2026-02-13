@@ -1019,8 +1019,8 @@ define <vscale x 8 x i64> @vor_xx_nxv8i64(i64 %a, i64 %b) nounwind {
 ; RV32-LABEL: vor_xx_nxv8i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    or a1, a1, a3
 ; RV32-NEXT:    or a0, a0, a2
+; RV32-NEXT:    or a1, a1, a3
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8

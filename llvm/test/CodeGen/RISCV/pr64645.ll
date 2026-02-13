@@ -5,8 +5,8 @@
 define <2 x double> @v2f64(<2 x double> %x, <2 x double> %y) nounwind {
 ; CHECK-LABEL: v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fadd.d a2, a2, a6
 ; CHECK-NEXT:    fadd.d a0, a0, a4
+; CHECK-NEXT:    fadd.d a2, a2, a6
 ; CHECK-NEXT:    ret
   %1 = fadd <2 x double> %x, %y
   ret <2 x double> %1

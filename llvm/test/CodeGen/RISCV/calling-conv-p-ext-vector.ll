@@ -346,8 +346,8 @@ define <4 x i16> @test_exhaust_2xlen_rv32(i64 %dummy, i64 %dummy2, i64 %dummy3, 
 define <4 x i16> @test_exhaust_2xlen_rv32_2(i64 %dummy, i64 %dummy2, i64 %dummy3, i64 %dummy4, <4 x i16> %b) {
 ; RV32-LABEL: test_exhaust_2xlen_rv32_2:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lw a0, 0(sp)
 ; RV32-NEXT:    lw a1, 4(sp)
+; RV32-NEXT:    lw a0, 0(sp)
 ; RV32-NEXT:    padd.h a0, a0, a0
 ; RV32-NEXT:    padd.h a1, a1, a1
 ; RV32-NEXT:    ret

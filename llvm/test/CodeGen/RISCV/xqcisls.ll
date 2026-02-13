@@ -392,16 +392,16 @@ define void @srb(ptr %a, i32 %b, i8 %c) {
 define void @srh(ptr %a, i32 %b, i16 %c) {
 ; RV32I-LABEL: srh:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    add a2, a2, a2
 ; RV32I-NEXT:    slli a1, a1, 1
+; RV32I-NEXT:    add a2, a2, a2
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    sh a2, 0(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32IZBA-LABEL: srh:
 ; RV32IZBA:       # %bb.0:
-; RV32IZBA-NEXT:    add a2, a2, a2
 ; RV32IZBA-NEXT:    sh1add a0, a1, a0
+; RV32IZBA-NEXT:    add a2, a2, a2
 ; RV32IZBA-NEXT:    sh a2, 0(a0)
 ; RV32IZBA-NEXT:    ret
 ;
@@ -419,16 +419,16 @@ define void @srh(ptr %a, i32 %b, i16 %c) {
 define void @srw(ptr %a, i32 %b, i32 %c) {
 ; RV32I-LABEL: srw:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    add a2, a2, a2
 ; RV32I-NEXT:    slli a1, a1, 2
+; RV32I-NEXT:    add a2, a2, a2
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    sw a2, 0(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32IZBA-LABEL: srw:
 ; RV32IZBA:       # %bb.0:
-; RV32IZBA-NEXT:    add a2, a2, a2
 ; RV32IZBA-NEXT:    sh2add a0, a1, a0
+; RV32IZBA-NEXT:    add a2, a2, a2
 ; RV32IZBA-NEXT:    sw a2, 0(a0)
 ; RV32IZBA-NEXT:    ret
 ;
@@ -447,11 +447,11 @@ define void @srd(ptr %a, i32 %b, i64 %c) {
 ; RV32I-LABEL: srd:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    add a4, a2, a2
+; RV32I-NEXT:    sltu a2, a4, a2
 ; RV32I-NEXT:    add a3, a3, a3
 ; RV32I-NEXT:    slli a1, a1, 3
-; RV32I-NEXT:    sltu a2, a4, a2
-; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    add a2, a3, a2
+; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    sw a4, 0(a0)
 ; RV32I-NEXT:    sw a2, 4(a0)
 ; RV32I-NEXT:    ret
@@ -459,23 +459,23 @@ define void @srd(ptr %a, i32 %b, i64 %c) {
 ; RV32IZBA-LABEL: srd:
 ; RV32IZBA:       # %bb.0:
 ; RV32IZBA-NEXT:    add a4, a2, a2
+; RV32IZBA-NEXT:    sltu a2, a4, a2
 ; RV32IZBA-NEXT:    add a3, a3, a3
 ; RV32IZBA-NEXT:    sh3add a0, a1, a0
-; RV32IZBA-NEXT:    sltu a1, a4, a2
-; RV32IZBA-NEXT:    add a1, a3, a1
+; RV32IZBA-NEXT:    add a2, a3, a2
 ; RV32IZBA-NEXT:    sw a4, 0(a0)
-; RV32IZBA-NEXT:    sw a1, 4(a0)
+; RV32IZBA-NEXT:    sw a2, 4(a0)
 ; RV32IZBA-NEXT:    ret
 ;
 ; RV32IZBAXQCISLS-LABEL: srd:
 ; RV32IZBAXQCISLS:       # %bb.0:
 ; RV32IZBAXQCISLS-NEXT:    add a4, a2, a2
+; RV32IZBAXQCISLS-NEXT:    sltu a2, a4, a2
 ; RV32IZBAXQCISLS-NEXT:    add a3, a3, a3
 ; RV32IZBAXQCISLS-NEXT:    sh3add a0, a1, a0
-; RV32IZBAXQCISLS-NEXT:    sltu a1, a4, a2
-; RV32IZBAXQCISLS-NEXT:    add a1, a3, a1
+; RV32IZBAXQCISLS-NEXT:    add a2, a3, a2
 ; RV32IZBAXQCISLS-NEXT:    sw a4, 0(a0)
-; RV32IZBAXQCISLS-NEXT:    sw a1, 4(a0)
+; RV32IZBAXQCISLS-NEXT:    sw a2, 4(a0)
 ; RV32IZBAXQCISLS-NEXT:    ret
   %1 = add i64 %c, %c
   %2 = getelementptr i64, ptr %a, i32 %b

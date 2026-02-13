@@ -92,14 +92,16 @@ class RISCVTuneProcessorModel<string n, SchedMachineModel m,
 defvar GenericTuneFeatures = [TuneOptimizedNF2SegmentLoadStore,
                               TuneEnableSelectOptimize];
 
+// `generic-rv32`, and `generic-rv64` are expected to target
+// in-order application processors designed for general-purpose computing.
 def GENERIC_RV32 : RISCVProcessorModel<"generic-rv32",
-                                       NoSchedModel,
+                                       SpacemitX60Model,
                                        [Feature32Bit,
                                         FeatureStdExtI],
                                        GenericTuneFeatures>,
                    GenericTuneInfo;
 def GENERIC_RV64 : RISCVProcessorModel<"generic-rv64",
-                                       NoSchedModel,
+                                       SpacemitX60Model,
                                        [Feature64Bit,
                                         FeatureStdExtI],
                                        GenericTuneFeatures>,
@@ -107,6 +109,8 @@ def GENERIC_RV64 : RISCVProcessorModel<"generic-rv64",
 // Support generic for compatibility with other targets. The triple will be used
 // to change to the appropriate rv32/rv64 version.
 def GENERIC : RISCVTuneProcessorModel<"generic", NoSchedModel>, GenericTuneInfo;
+// `generic-ooo` is expected to target out-of-order application processors designed
+// for general-purpose computing.
 def GENERIC_OOO : RISCVTuneProcessorModel<"generic-ooo", GenericOOOModel>,
                   GenericTuneInfo;
 

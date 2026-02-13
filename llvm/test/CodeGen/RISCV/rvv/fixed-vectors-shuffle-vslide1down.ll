@@ -255,9 +255,9 @@ define <2 x double> @vslide1down_v2f64_inverted(<2 x double> %v, double %b) {
 ; CHECK-LABEL: vslide1down_v2f64_inverted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vfmv.s.f v10, fa0
 ; CHECK-NEXT:    vrgather.vi v9, v8, 0
-; CHECK-NEXT:    vfmv.s.f v8, fa0
-; CHECK-NEXT:    vslideup.vi v9, v8, 1
+; CHECK-NEXT:    vslideup.vi v9, v10, 1
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
   %v1 = shufflevector <2 x double> %v, <2 x double> poison, <2 x i32> <i32 0, i32 0>
@@ -269,10 +269,10 @@ define <4 x i8> @vslide1down_4xi8_inverted(<4 x i8> %v, i8 %b) {
 ; CHECK-LABEL: vslide1down_4xi8_inverted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vmv.s.x v10, a0
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1
-; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, tu, ma
-; CHECK-NEXT:    vslideup.vi v9, v8, 1
+; CHECK-NEXT:    vslideup.vi v9, v10, 1
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %v1 = shufflevector <4 x i8> %v, <4 x i8> poison, <4 x i32> <i32 poison, i32 0, i32 1, i32 2>

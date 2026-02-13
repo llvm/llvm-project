@@ -325,12 +325,12 @@ define dso_local noundef half @select_half_i1(i1 %cond, half %a, half %b) nounwi
 ; ZDINX_ZICOND:       # %bb.0: # %entry
 ; ZDINX_ZICOND-NEXT:    # kill: def $x12_w killed $x12_w def $x12
 ; ZDINX_ZICOND-NEXT:    # kill: def $x11_w killed $x11_w def $x11
+; ZDINX_ZICOND-NEXT:    lui a3, 1048560
 ; ZDINX_ZICOND-NEXT:    andi a0, a0, 1
 ; ZDINX_ZICOND-NEXT:    czero.nez a2, a2, a0
 ; ZDINX_ZICOND-NEXT:    czero.eqz a0, a1, a0
 ; ZDINX_ZICOND-NEXT:    or a0, a0, a2
-; ZDINX_ZICOND-NEXT:    lui a1, 1048560
-; ZDINX_ZICOND-NEXT:    or a0, a0, a1
+; ZDINX_ZICOND-NEXT:    or a0, a0, a3
 ; ZDINX_ZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; ZDINX_ZICOND-NEXT:    ret
 ;
@@ -378,12 +378,12 @@ define dso_local noundef half @select_half_i1(i1 %cond, half %a, half %b) nounwi
 ; RV32ZFINX_ZICOND:       # %bb.0: # %entry
 ; RV32ZFINX_ZICOND-NEXT:    # kill: def $x12_w killed $x12_w def $x12
 ; RV32ZFINX_ZICOND-NEXT:    # kill: def $x11_w killed $x11_w def $x11
+; RV32ZFINX_ZICOND-NEXT:    lui a3, 1048560
 ; RV32ZFINX_ZICOND-NEXT:    andi a0, a0, 1
 ; RV32ZFINX_ZICOND-NEXT:    czero.nez a2, a2, a0
 ; RV32ZFINX_ZICOND-NEXT:    czero.eqz a0, a1, a0
 ; RV32ZFINX_ZICOND-NEXT:    or a0, a0, a2
-; RV32ZFINX_ZICOND-NEXT:    lui a1, 1048560
-; RV32ZFINX_ZICOND-NEXT:    or a0, a0, a1
+; RV32ZFINX_ZICOND-NEXT:    or a0, a0, a3
 ; RV32ZFINX_ZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; RV32ZFINX_ZICOND-NEXT:    ret
 ;
@@ -587,10 +587,10 @@ define half @select_i1_half_0_add(i1 %cond, half %val) nounwind {
 ; RV64ZHINX_ZICOND:       # %bb.0: # %entry
 ; RV64ZHINX_ZICOND-NEXT:    # kill: def $x11_h killed $x11_h def $x11
 ; RV64ZHINX_ZICOND-NEXT:    andi a0, a0, 1
+; RV64ZHINX_ZICOND-NEXT:    li a2, 15
 ; RV64ZHINX_ZICOND-NEXT:    czero.eqz a0, a1, a0
-; RV64ZHINX_ZICOND-NEXT:    li a1, 15
-; RV64ZHINX_ZICOND-NEXT:    slli a1, a1, 10
-; RV64ZHINX_ZICOND-NEXT:    fadd.h a0, a0, a1
+; RV64ZHINX_ZICOND-NEXT:    slli a2, a2, 10
+; RV64ZHINX_ZICOND-NEXT:    fadd.h a0, a0, a2
 ; RV64ZHINX_ZICOND-NEXT:    ret
 ;
 ; RV64FD-LABEL: select_i1_half_0_add:
