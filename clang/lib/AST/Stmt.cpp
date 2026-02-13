@@ -40,6 +40,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cstring>
 #include <optional>
@@ -64,11 +65,16 @@ struct StmtClassNameTable {
 };
 
 static StmtClassNameTable &getStmtInfoTableEntry(Stmt::StmtClass E) {
-  static StmtClassNameTable stmtClassInfo[Stmt::lastStmtConstant + 1] = {
+  static std::array<StmtClassNameTable, Stmt::lastStmtConstant + 1>
+      stmtClassInfo = []() {
+        std::array<StmtClassNameTable, Stmt::lastStmtConstant + 1> table;
 #define ABSTRACT_STMT(STMT)
-#define STMT(CLASS, PARENT) {#CLASS, 0, sizeof(CLASS)},
+#define STMT(CLASS, PARENT)                                                    \
+  table[static_cast<unsigned>(Stmt::CLASS##Class)].Name = #CLASS;              \
+  table[static_cast<unsigned>(Stmt::CLASS##Class)].Size = sizeof(CLASS);
 #include "clang/AST/StmtNodes.inc"
-  };
+        return table;
+      }();
   return stmtClassInfo[E];
 }
 
