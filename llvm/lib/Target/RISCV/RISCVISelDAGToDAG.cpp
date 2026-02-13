@@ -918,35 +918,33 @@ bool RISCVDAGToDAGISel::tryWideningMulAcc(SDNode *Node, const SDLoc &DL) {
   SDValue Op1Lo = Node->getOperand(2);
   SDValue Op1Hi = Node->getOperand(3);
 
-  auto IsSupportedMul = [](unsigned Opc) {
-    return Opc == ISD::UMUL_LOHI || Opc == ISD::SMUL_LOHI ||
-           Opc == RISCVISD::WMULSU;
+  auto IsSupportedMulWithOneUse = [](SDValue Lo, SDValue Hi) {
+    unsigned Opc = Lo.getOpcode();
+    if (Opc != ISD::UMUL_LOHI && Opc != ISD::SMUL_LOHI &&
+        Opc != RISCVISD::WMULSU)
+      return false;
+    return Lo.getNode() == Hi.getNode() && Lo.getResNo() == 0 &&
+           Hi.getResNo() == 1 && Lo.hasOneUse() && Hi.hasOneUse();
   };
 
   SDNode *MulNode = nullptr;
   SDValue AddLo, AddHi;
 
-  // Check if first operand pair is a supported multiply.
-  if (IsSupportedMul(Op0Lo.getOpcode()) && Op0Lo.getNode() == Op0Hi.getNode() &&
-      Op0Lo.getResNo() == 0 && Op0Hi.getResNo() == 1) {
+  // Check if first operand pair is a supported multiply with single use.
+  if (IsSupportedMulWithOneUse(Op0Lo, Op0Hi)) {
     MulNode = Op0Lo.getNode();
     AddLo = Op1Lo;
     AddHi = Op1Hi;
   }
-  // ADDD is commutative. Check if second operand pair is a supported multiply.
-  else if (IsSupportedMul(Op1Lo.getOpcode()) &&
-           Op1Lo.getNode() == Op1Hi.getNode() && Op1Lo.getResNo() == 0 &&
-           Op1Hi.getResNo() == 1) {
+  // ADDD is commutative. Check if second operand pair is a supported multiply
+  // with single use.
+  else if (IsSupportedMulWithOneUse(Op1Lo, Op1Hi)) {
     MulNode = Op1Lo.getNode();
     AddLo = Op0Lo;
     AddHi = Op0Hi;
-  }
-
-  // Check that we found a multiply and this is the only user.
-  // FIXME: We should check the use count before trying to commuted case.
-  if (!MulNode || !SDValue(MulNode, 0).hasOneUse() ||
-      !SDValue(MulNode, 1).hasOneUse())
+  } else {
     return false;
+  }
 
   unsigned Opc;
   switch (MulNode->getOpcode()) {

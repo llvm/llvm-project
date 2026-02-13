@@ -915,6 +915,32 @@ define void @wmaccu_multiple_uses(i32 %a, i32 %b, i64 %c, ptr %out1, ptr %out2) 
   ret void
 }
 
+; First multiply has multiple uses, but second multiply has single use.
+; Make sure we fold the second multiply into wmacc.
+define i64 @wmacc_first_mul_multiple_uses(i32 %a, i32 %b, i32 %c, i32 %d, ptr %out) nounwind {
+; CHECK-LABEL: wmacc_first_mul_multiple_uses:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wmul a2, a2, a3
+; CHECK-NEXT:    mv a5, a3
+; CHECK-NEXT:    mv a6, a2
+; CHECK-NEXT:    wmacc a2, a0, a1
+; CHECK-NEXT:    sw a6, 0(a4)
+; CHECK-NEXT:    sw a5, 4(a4)
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:    ret
+  %aext = sext i32 %a to i64
+  %bext = sext i32 %b to i64
+  %cext = sext i32 %c to i64
+  %dext = sext i32 %d to i64
+  %mul1 = mul i64 %aext, %bext
+  %mul2 = mul i64 %cext, %dext
+  ; mul2 is first operand (has multiple uses), mul1 is second (single use)
+  %result = add i64 %mul2, %mul1
+  store i64 %mul2, ptr %out
+  ret i64 %result
+}
+
 ; Test bitwise merge: (mask & b) | (~mask & a)
 define i32 @merge_i32(i32 %mask, i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: merge_i32:

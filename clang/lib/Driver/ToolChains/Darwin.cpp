@@ -1119,10 +1119,14 @@ VersionTuple MachO::getLinkerVersion(const llvm::opt::ArgList &Args) const {
   }
 
   VersionTuple NewLinkerVersion;
-  if (Arg *A = Args.getLastArg(options::OPT_mlinker_version_EQ))
-    if (NewLinkerVersion.tryParse(A->getValue()))
+  if (Arg *A = Args.getLastArg(options::OPT_mlinker_version_EQ)) {
+    // Rejecting subbuild version is probably not necessary, but some
+    // existing tests depend on this.
+    if (NewLinkerVersion.tryParse(A->getValue()) ||
+        NewLinkerVersion.getSubbuild())
       getDriver().Diag(diag::err_drv_invalid_version_number)
-        << A->getAsString(Args);
+          << A->getAsString(Args);
+  }
 
   LinkerVersion = NewLinkerVersion;
   return *LinkerVersion;

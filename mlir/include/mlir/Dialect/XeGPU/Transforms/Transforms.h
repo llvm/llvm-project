@@ -82,6 +82,14 @@ void populateXeGPUSgToWiDistributeTypeConversions(TypeConverter &typeConverter);
 void populateXeGPUSgToWiDistributeTypeConversionAndLegality(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
     ConversionTarget &target);
+/// Appends patterns to rewrite vector::MultiDimReductionOp in terms of
+/// vector::ReductionOps if the multi-reduction involves cross-lane data
+/// movement. This pattern is used as pre-processing step before applying
+/// subgroup to workitem distribution patterns. This pattern will rewrite a
+/// multi reduction in terms of a series of simpler extract, reduction and
+/// insert ops if the reduction require cross-lane data movement.
+void populateXeGPUSgToWiLowerVectorMultiReductionAndLegality(
+    RewritePatternSet &patterns, ConversionTarget &target);
 
 /// Collect a set of patterns to unroll xegpu operations to a smaller shapes.
 /// Users can control whether an operation to be unrolled or not, as well as
@@ -93,7 +101,7 @@ void populateXeGPUSgToWiDistributeTypeConversionAndLegality(
 ///   1. the unrolled type `unrolledType` and number of unrolled instances
 ///   `numUnrolledInstances` are computed from the `targetShape`.
 ///   2. pack each operand. ExtractStridedSlice are created to break-up the
-///   vector operands. And BuiltinUnrealizedCastop are created to break-up
+///   vector operands. And BuiltinUnrealizedCastOp are created to break-up
 ///    the TensorDesc operands.
 ///   3. the original op is cloned `numUnrolledInstances` times, once for each
 ///   result.
