@@ -1280,6 +1280,20 @@ void SymbolFileDWARFDebugMap::DumpClangAST(Stream &s, llvm::StringRef filter,
   });
 }
 
+lldb_private::ModuleSpecList
+SymbolFileDWARFDebugMap::GetSeparateDebugInfoFiles() {
+  const uint32_t cu_count = GetNumCompileUnits();
+  lldb_private::ModuleSpecList spec_list;
+  for (uint32_t cu_idx = 0; cu_idx < cu_count; ++cu_idx) {
+    const auto &info = m_compile_unit_infos[cu_idx];
+    if (info.so_file.GetPath().empty())
+      continue;
+
+    spec_list.Append(lldb_private::FileSpec(info.oso_path));
+  }
+  return spec_list;
+}
+
 bool SymbolFileDWARFDebugMap::GetSeparateDebugInfo(
     lldb_private::StructuredData::Dictionary &d, bool errors_only,
     bool load_all_debug_info) {
