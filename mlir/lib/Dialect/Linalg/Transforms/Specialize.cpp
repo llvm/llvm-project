@@ -300,18 +300,18 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
   /// Codegen the different matmul variants.
   if (numOfBatchDims) {
     if (a == IndexMatchResult::Transposed)
-      return replaceWithMatmulVariant<BatchMatmulTransposeAOp>(rewriter,
-                                                               genericOp,
-                                                               castTy);
+      return replaceWithMatmulVariant<BatchMatmulTransposeAOp>(
+          rewriter, genericOp, castTy);
     if (b == IndexMatchResult::Transposed)
-      return replaceWithMatmulVariant<BatchMatmulTransposeBOp>(rewriter,
-                                                               genericOp,
-                                                               castTy);
+      return replaceWithMatmulVariant<BatchMatmulTransposeBOp>(
+          rewriter, genericOp, castTy);
+
     return replaceWithMatmulVariant<BatchMatmulOp>(rewriter, genericOp, castTy);
   }
   if (a == IndexMatchResult::Transposed)
     return replaceWithMatmulVariant<MatmulTransposeAOp>(rewriter, genericOp,
                                                         castTy);
+
   if (b == IndexMatchResult::Transposed)
     return replaceWithMatmulVariant<MatmulTransposeBOp>(rewriter, genericOp,
                                                         castTy);
