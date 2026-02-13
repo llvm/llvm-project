@@ -47,6 +47,7 @@ define void @main() {
 
   %zext = zext i8 -1 to i32
   %zext_poison = zext i8 poison to i32
+  %zext_nneg = zext nneg i8 1 to i32
   %zext_nneg_poison = zext nneg i8 -1 to i32
 
   %sext = sext i8 -1 to i32
@@ -117,6 +118,7 @@ define void @main() {
 ; CHECK-NEXT:   %trunc_nuw_poison = trunc nuw i32 511 to i8 => poison
 ; CHECK-NEXT:   %zext = zext i8 -1 to i32 => i32 255
 ; CHECK-NEXT:   %zext_poison = zext i8 poison to i32 => poison
+; CHECK-NEXT:   %zext_nneg = zext nneg i8 1 to i32 => i32 1
 ; CHECK-NEXT:   %zext_nneg_poison = zext nneg i8 -1 to i32 => poison
 ; CHECK-NEXT:   %sext = sext i8 -1 to i32 => i32 -1
 ; CHECK-NEXT:   %sext_poison = sext i8 poison to i32 => poison
