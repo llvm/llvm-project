@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_TRACE_EXPORTER_H
-#define LLDB_TARGET_TRACE_EXPORTER_H
+#ifndef LLDB_TARGET_TRACEEXPORTER_H
+#define LLDB_TARGET_TRACEEXPORTER_H
 
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/lldb-forward.h"
@@ -41,4 +41,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_TRACE_EXPORTER_H
+#endif // LLDB_TARGET_TRACEEXPORTER_H
