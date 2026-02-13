@@ -1138,9 +1138,14 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
     });
   };
 
-  DependencyScanningService Service(ScanMode, Format, OptimizeArgs,
-                                    EagerLoadModules, /*TraceVFS=*/Verbose,
-                                    AsyncScanModules);
+  DependencyScanningServiceOptions Opts;
+  Opts.Mode = ScanMode;
+  Opts.Format = Format;
+  Opts.OptimizeArgs = OptimizeArgs;
+  Opts.EagerLoadModules = EagerLoadModules;
+  Opts.TraceVFS = Verbose;
+  Opts.AsyncScanModules = AsyncScanModules;
+  DependencyScanningService Service(std::move(Opts));
 
   llvm::Timer T;
   T.startTimer();

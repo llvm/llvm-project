@@ -35,9 +35,12 @@ public:
   ModuleDependencyScanner(
       std::shared_ptr<const clang::tooling::CompilationDatabase> CDB,
       const ThreadsafeFS &TFS)
-      : CDB(CDB), TFS(TFS),
-        Service(dependencies::ScanningMode::CanonicalPreprocessing,
-                dependencies::ScanningOutputFormat::P1689) {}
+      : CDB(CDB), TFS(TFS), Service([] {
+          dependencies::DependencyScanningServiceOptions Opts;
+          Opts.Mode = dependencies::ScanningMode::CanonicalPreprocessing;
+          Opts.Format = dependencies::ScanningOutputFormat::P1689;
+          return Opts;
+        }()) {}
 
   /// The scanned modules dependency information for a specific source file.
   struct ModuleDependencyInfo {

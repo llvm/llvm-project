@@ -318,7 +318,7 @@ static cl::opt<bool> EnableLoadStoreRuntimeInterleave(
         "Enable runtime interleaving until load/store ports are saturated"));
 
 /// The number of stores in a loop that are allowed to need predication.
-static cl::opt<unsigned> NumberOfStoresToPredicate(
+cl::opt<unsigned> NumberOfStoresToPredicate(
     "vectorize-num-stores-pred", cl::init(1), cl::Hidden,
     cl::desc("Max number of stores to be predicated behind an if."));
 
@@ -6888,10 +6888,6 @@ bool VPCostContext::skipCostComputation(Instruction *UI, bool IsVector) const {
 
 unsigned VPCostContext::getPredBlockCostDivisor(BasicBlock *BB) const {
   return CM.getPredBlockCostDivisor(CostKind, BB);
-}
-
-bool VPCostContext::useEmulatedMaskMemRefHack(Instruction *I, ElementCount VF) {
-  return CM.useEmulatedMaskMemRefHack(I, VF);
 }
 
 InstructionCost

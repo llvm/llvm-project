@@ -689,11 +689,10 @@ void ExprEngine::handleConstructor(const Expr *E,
                                    "Prepare for object construction");
     ExplodedNodeSet DstPrepare;
     StmtNodeBuilder BldrPrepare(Pred, DstPrepare, *currBldrCtx);
-    BldrPrepare.generateNode(E, Pred, State, &T, ProgramPoint::PreStmtKind);
-    assert(DstPrepare.size() <= 1);
-    if (DstPrepare.size() == 0)
+    Pred =
+        BldrPrepare.generateNode(E, Pred, State, &T, ProgramPoint::PreStmtKind);
+    if (!Pred)
       return;
-    Pred = *BldrPrepare.begin();
   }
 
   const MemRegion *TargetRegion = Target.getAsRegion();
