@@ -2636,6 +2636,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_bf16add",
+    hdrs = ["src/__support/math/bf16add.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_bf16addf128",
     hdrs = ["src/__support/math/bf16addf128.h"],
     deps = [
@@ -4305,8 +4315,13 @@ libc_math_function(
 )
 
 libc_math_function(
+<<<<<<< HEAD
     name = "bf16addf128",
     additional_deps = [":__support_math_bf16addf128"],
+=======
+    name = "bf16add",
+    additional_deps = [":__support_math_bf16add"],
+>>>>>>> 18f1f1467e4e (initial commit)
 )
 
 libc_math_function(name = "canonicalize")
