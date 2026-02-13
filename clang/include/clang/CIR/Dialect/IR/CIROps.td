@@ -2385,6 +2385,11 @@ def CIR_GlobalOp : CIR_Op<"global", [
     The `linkage` tracks C/C++ linkage types, currently very similar to LLVM's.
     Symbol visibility in `sym_visibility` is defined in terms of MLIR's visibility
     and verified to be in accordance to `linkage`.
+
+    The `static_local_guard` attribute indicates that this global represents a
+    function-local static variable that requires guarded initialization
+    (e.g., C++ static local variables with non-constant initializers).
+    It contains the mangled name of the guard variable.
   }];
 
   // Note that both sym_name and sym_visibility are tied to Symbol trait.
@@ -2403,7 +2408,9 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        UnitAttr:$comdat,
                        UnitAttr:$constant,
                        UnitAttr:$dso_local,
-                       OptionalAttr<I64Attr>:$alignment);
+                       OptionalAttr<CIR_StaticLocalGuardAttr>:$static_local_guard,
+                       OptionalAttr<I64Attr>:$alignment,
+                       OptionalAttr<ASTVarDeclInterface>:$ast);
 
   let regions = (region MaxSizedRegion<1>:$ctorRegion,
                         MaxSizedRegion<1>:$dtorRegion);
@@ -2416,6 +2423,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
     (`comdat` $comdat^)?
     ($tls_model^)?
     (`dso_local` $dso_local^)?
+    (`static_local_guard` `` $static_local_guard^)?
     $sym_name
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value,
                                         $ctorRegion, $dtorRegion)
@@ -2483,19 +2491,27 @@ def CIR_GetGlobalOp : CIR_Op<"get_global", [
     Addresses of thread local globals can only be retrieved if this operation
     is marked `thread_local`, which indicates the address isn't constant.
 
+    The `static_local` attribute indicates that this global is a function-local
+    static variable that requires guarded initialization (e.g., C++ static
+    local variables with non-constant initializers).
+
     Example:
     ```mlir
     %x = cir.get_global @gv : !cir.ptr<i32>
     ...
     %y = cir.get_global thread_local @tls_gv : !cir.ptr<i32>
+    ...
+    %w = cir.get_global static_local @func_static : !cir.ptr<i32>
     ```
   }];
 
-  let arguments = (ins FlatSymbolRefAttr:$name, UnitAttr:$tls);
+  let arguments = (ins FlatSymbolRefAttr:$name, UnitAttr:$tls,
+                       UnitAttr:$static_local);
   let results = (outs Res<CIR_PointerType, "", []>:$addr);
 
   let assemblyFormat = [{
     (`thread_local` $tls^)?
+    (`static_local` $static_local^)?
     $name `:` qualified(type($addr)) attr-dict
   }];
 }
@@ -3317,6 +3333,7 @@ def CIR_LLVMIntrinsicCallOp : CIR_Op<"call_llvm_intrinsic"> {
 
 class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
     : CIR_Op<mnemonic, !listconcat(extra_traits, [
+        DeclareOpInterfaceMethods<ArgAndResultAttrsOpInterface>,
         DeclareOpInterfaceMethods<CIRCallOpInterface>,
         DeclareOpInterfaceMethods<SymbolUserOpInterface>
       ])> {
@@ -3335,15 +3352,6 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
       (*this)->setAttr(getCalleeAttrName(),
                        mlir::cast<mlir::SymbolRefAttr>(callee));
     }
-
-    mlir::ArrayAttr getArgAttrsAttr() { return {}; }
-    ::mlir::ArrayAttr getResAttrsAttr() { return {}; }
-
-    void setResAttrsAttr(::mlir::ArrayAttr attrs) {}
-    void setArgAttrsAttr(::mlir::ArrayAttr attrs) {}
-
-    ::mlir::Attribute removeArgAttrsAttr() { return {}; }
-    ::mlir::Attribute removeResAttrsAttr() { return {}; }
 
     bool isIndirect() { return !getCallee(); }
     mlir::Value getIndirectCall();
@@ -3370,7 +3378,10 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
   dag commonArgs = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
       Variadic<CIR_AnyType>:$args,
       UnitAttr:$nothrow,
-      DefaultValuedAttr<CIR_SideEffect, "SideEffect::All">:$side_effect);
+      DefaultValuedAttr<CIR_SideEffect, "SideEffect::All">:$side_effect,
+      OptionalAttr<DictArrayAttr>:$arg_attrs,
+      OptionalAttr<DictArrayAttr>:$res_attrs
+      );
 }
 
 def CIR_CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
@@ -6217,6 +6228,7 @@ def CIR_TryOp : CIR_Op<"try",[
       cir.call exception @function() : () -> ()
       cir.yield
     } catch [type #cir.global_view<@_ZTIPf> : !cir.ptr<!u8i>] {
+      %1 = cir.catch_param : !cir.ptr<!cir.float>
       ...
       cir.yield
     } unwind {
@@ -6277,7 +6289,7 @@ def CIR_TryOp : CIR_Op<"try",[
 def CIR_CatchParamOp : CIR_Op<"catch_param", [HasParent<"cir::TryOp">]> {
   let summary = "Represents the catch clause formal parameter";
   let description = [{
-    The `cir.catch_param` is used to retrieves the exception object inside
+    The `cir.catch_param` is used to retrieve the exception object inside
     the handler regions of `cir.try`.
 
     This operation is used only before the CFG flatterning pass.

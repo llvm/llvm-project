@@ -1211,6 +1211,7 @@ public:
     // during unrolling.
     ExtractPenultimateElement,
     LogicalAnd, // Non-poison propagating logical And.
+    LogicalOr,  // Non-poison propagating logical Or.
     // Add an offset in bytes (second operand) to a base pointer (first
     // operand). Only generates scalar values (either for the first lane only or
     // for all lanes, depending on its uses).
@@ -1519,6 +1520,9 @@ public:
 
   /// Returns the incoming block with index \p Idx.
   const VPBasicBlock *getIncomingBlock(unsigned Idx) const;
+
+  /// Returns the incoming value for \p VPBB. \p VPBB must be an incoming block.
+  VPValue *getIncomingValueForBlock(const VPBasicBlock *VPBB) const;
 
   /// Returns the number of incoming values, also number of incoming blocks.
   virtual unsigned getNumIncoming() const {
