@@ -19,6 +19,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Regex.h"
 
 namespace llvm {
 
@@ -38,7 +39,8 @@ LLVM_ABI_FOR_TEST extern cl::opt<bool> VerifyEachVPlan;
 LLVM_ABI_FOR_TEST extern cl::opt<bool> EnableWideActiveLaneMask;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_ABI_FOR_TEST extern cl::opt<bool> PrintAfterEachVPlanPass;
+LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintAfterAll;
+LLVM_ABI_FOR_TEST extern cl::list<std::string> VPlanPrintAfterPasses;
 #endif
 
 struct VPlanTransforms {
@@ -52,8 +54,15 @@ struct VPlanTransforms {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       // Make sure to print before verification, so that output is more useful
       // in case of failures:
-      if (PrintAfterEachVPlanPass) {
-        dbgs() << "VPlan after " << PassName << '\n';
+      if (VPlanPrintAfterAll ||
+          (VPlanPrintAfterPasses.getNumOccurrences() > 0 &&
+           any_of(VPlanPrintAfterPasses, [PassName](StringRef Entry) {
+             return Regex(Entry).match(PassName);
+           }))) {
+        dbgs()
+            << "VPlan for loop in '"
+            << Plan.getScalarHeader()->getIRBasicBlock()->getParent()->getName()
+            << "' after " << PassName << '\n';
         dbgs() << Plan << '\n';
       }
 #endif
@@ -127,11 +136,9 @@ struct VPlanTransforms {
 
   /// Create VPReductionRecipes for in-loop reductions. This processes chains
   /// of operations contributing to in-loop reductions and creates appropriate
-  /// VPReductionRecipe instances. Block masks from \p BlockMaskCache are used
-  /// to add predication for blocks in \p BlocksNeedingPredication.
+  /// VPReductionRecipe instances.
   static void createInLoopReductionRecipes(
-      VPlan &Plan, const DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache,
-      const DenseSet<BasicBlock *> &BlocksNeedingPredication,
+      VPlan &Plan, const DenseSet<BasicBlock *> &BlocksNeedingPredication,
       ElementCount MinVF);
 
   /// Update \p Plan to account for all early exits.
@@ -429,12 +436,8 @@ struct VPlanTransforms {
 
   /// Predicate and linearize the control-flow in the only loop region of
   /// \p Plan. If \p FoldTail is true, create a mask guarding the loop
-  /// header, otherwise use all-true for the header mask. Masks for blocks are
-  /// added to a block-to-mask map which is returned in order to be used later
-  /// for wide recipe construction. This argument is temporary and will be
-  /// removed in the future.
-  static DenseMap<VPBasicBlock *, VPValue *>
-  introduceMasksAndLinearize(VPlan &Plan, bool FoldTail);
+  /// header, otherwise use all-true for the header mask.
+  static void introduceMasksAndLinearize(VPlan &Plan, bool FoldTail);
 
   /// Add branch weight metadata, if the \p Plan's middle block is terminated by
   /// a BranchOnCond recipe.

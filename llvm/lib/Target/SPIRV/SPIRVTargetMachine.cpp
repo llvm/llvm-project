@@ -174,6 +174,8 @@ TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void SPIRVPassConfig::addIRPasses() {
+  addPass(createAtomicExpandLegacyPass());
+
   TargetPassConfig::addIRPasses();
 
   addPass(createSPIRVRegularizerPass());

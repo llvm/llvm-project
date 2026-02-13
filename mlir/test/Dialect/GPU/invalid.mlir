@@ -46,6 +46,40 @@ func.func @launch_result_no_async() {
 
 // -----
 
+func.func @launch_wrong_clusters(%sz : index) {
+  // expected-error@+1 {{'gpu.launch' clusters expects 3 arguments, but got 1}}
+  gpu.launch clusters(%cx) in (%scx = %sz, %scy = %sz, %scz = %sz)
+             blocks(%bx, %by, %bz) in (%sbx = %sz, %sby = %sz, %sbz = %sz)
+             threads(%tx, %ty, %tz) in (%stx = %sz, %sty = %sz, %stz = %sz) {
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @launch_wrong_blocks(%sz : index) {
+  // expected-error@+1 {{'gpu.launch' blocks expects 3 arguments, but got 1}}
+  gpu.launch blocks(%bx) in (%sbx = %sz, %sby = %sz, %sbz = %sz)
+             threads(%tx, %ty, %tz) in (%stx = %sz, %sty = %sz, %stz = %sz) {
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @launch_wrong_threads(%sz : index) {
+  // expected-error@+1 {{'gpu.launch' threads expects 3 arguments, but got 1}}
+  gpu.launch blocks(%bx, %by, %bz) in (%sbx = %sz, %sby = %sz, %sbz = %sz)
+             threads(%tx) in (%stx = %sz, %sty = %sz, %stz = %sz) {
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+
 func.func @launch_func_too_few_operands(%sz : index) {
   // expected-error@+1 {{expected 6 or more operands}}
   "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz)
