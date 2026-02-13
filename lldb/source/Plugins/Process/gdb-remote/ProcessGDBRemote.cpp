@@ -4375,13 +4375,12 @@ StructuredData::ObjectSP ProcessGDBRemote::GetSharedCacheInfo() {
         FileSpec sc_path(
             dict->GetValueForKey("shared_cache_path")->GetStringValue());
 
-        bool use_sc_binary_directly =
-            ModuleList::GetGlobalModuleListProperties()
-                .GetSharedCacheBinaryLoading();
         // Attempt to open the shared cache at sc_path, and
         // if the uuid matches, index all the files.
-        if (use_sc_binary_directly)
-          HostInfo::SharedCacheIndexFiles(sc_path, uuid);
+        HostInfo::SharedCacheIndexFiles(
+            sc_path, uuid,
+            ModuleList::GetGlobalModuleListProperties()
+                .GetSharedCacheBinaryLoading());
       }
       m_shared_cache_info_sp = response_sp;
     }

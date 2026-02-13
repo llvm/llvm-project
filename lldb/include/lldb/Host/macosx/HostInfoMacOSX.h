@@ -44,13 +44,14 @@ public:
   /// Shared cache utilities
   static SharedCacheImageInfo
   GetSharedCacheImageInfo(llvm::StringRef image_name,
-                          bool use_sc_binary_directly);
+                          lldb::SymbolSharedCacheUse sc_mode);
 
   static SharedCacheImageInfo
   GetSharedCacheImageInfo(llvm::StringRef image_name, const UUID &uuid,
-                          bool use_sc_binary_directly);
+                          lldb::SymbolSharedCacheUse sc_mode);
 
-  static bool SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid);
+  static bool SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid,
+                                    lldb::SymbolSharedCacheUse sc_mode);
 
 protected:
   static bool ComputeSupportExeDirectory(FileSpec &file_spec);
