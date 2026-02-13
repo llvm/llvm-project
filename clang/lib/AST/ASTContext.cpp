@@ -65,7 +65,6 @@
 #include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/XRayLists.h"
-#include "clang/Sema/DeclSpec.h"
 #include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"

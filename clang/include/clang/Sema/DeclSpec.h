@@ -1012,7 +1012,6 @@ public:
   ParsedAttributes &getAttributes() { return Attrs; }
   const ParsedAttributes &getAttributes() const { return Attrs; }
 
-  LateParsedAttrList *getLateAttributePtr() { return &LateParsedAttrs; }
   LateParsedAttrList &getLateAttributes() { return LateParsedAttrs; }
   const LateParsedAttrList &getLateAttributes() const {
     return LateParsedAttrs;
