@@ -28,7 +28,7 @@
 // Avoid introducing min as a macro from Windows headers.
 #define NOMINMAX
 #include <windows.h>
-#elif defined __linux__
+#else
 #include <time.h>
 #endif
 
@@ -136,8 +136,8 @@ public:
   }
 };
 
-#elif defined __linux__
-class PerfTimerLinux : public PerfTimerImpl {
+#else
+class PerfTimerPosix : public PerfTimerImpl {
 public:
   virtual bool Init() override {
     struct timespec StartTime;
@@ -174,8 +174,8 @@ public:
 bool PerfTimer::Init() {
 #if defined _WIN64 || defined _WIN32
   pImpl = std::make_unique<PerfTimerWindows>();
-#elif defined __linux__
-  pImpl = std::make_unique<PerfTimerLinux>();
+#else
+  pImpl = std::make_unique<PerfTimerPosix>();
 #endif
   return pImpl->Init();
 }
