@@ -16,6 +16,10 @@
 #include "lldb/Core/Highlighter.h"
 #include "lldb/Host/FileSystem.h"
 
+#if LLDB_ENABLE_TREESITTER
+#include "Plugins/Highlighter/TreeSitter/Swift/SwiftTreeSitterHighlighter.h"
+#endif
+
 #include "TestingSupport/SubsystemRAII.h"
 #include <optional>
 
@@ -25,8 +29,12 @@ namespace {
 class HighlighterTest : public testing::Test {
   // We need the language plugins for detecting the language based on the
   // filename.
-  SubsystemRAII<FileSystem, ClangHighlighter, DefaultHighlighter,
-                CPlusPlusLanguage, ObjCLanguage, ObjCPlusPlusLanguage>
+  SubsystemRAII<FileSystem, ClangHighlighter,
+#if LLDB_ENABLE_TREESITTER
+                SwiftTreeSitterHighlighter,
+#endif
+                DefaultHighlighter, CPlusPlusLanguage, ObjCLanguage,
+                ObjCPlusPlusLanguage>
       subsystems;
 };
 } // namespace
@@ -322,3 +330,22 @@ TEST_F(HighlighterTest, ClangCursorPosInOtherToken) {
   EXPECT_EQ(" <id><c>foo</c></id> <id>c</id> = <id>bar</id>(); return 1;",
             highlightC(" foo c = bar(); return 1;", s, 3));
 }
+
+#if LLDB_ENABLE_TREESITTER
+static std::string
+highlightSwift(llvm::StringRef code, HighlightStyle style,
+               std::optional<size_t> cursor = std::optional<size_t>()) {
+  HighlighterManager mgr;
+  const Highlighter &h =
+      mgr.getHighlighterFor(lldb::eLanguageTypeSwift, "main.swift");
+  return h.Highlight(style, code, cursor);
+}
+
+TEST_F(HighlighterTest, SwiftComments) {
+  HighlightStyle s;
+  s.comment.Set("<cc>", "</cc>");
+
+  EXPECT_EQ(" <cc>// I'm feeling lucky today</cc>",
+            highlightSwift(" // I'm feeling lucky today", s));
+}
+#endif
