@@ -70,7 +70,7 @@ enum FoundationClass {
 
 static FoundationClass findKnownClass(const ObjCInterfaceDecl *ID,
                                       bool IncludeSuperclasses = true) {
-  static llvm::StringMap<FoundationClass> Classes{
+  static const llvm::StringMap<FoundationClass> Classes{
       {"NSArray", FC_NSArray},           {"NSDictionary", FC_NSDictionary},
       {"NSEnumerator", FC_NSEnumerator}, {"NSNull", FC_NSNull},
       {"NSOrderedSet", FC_NSOrderedSet}, {"NSSet", FC_NSSet},
