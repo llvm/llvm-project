@@ -22,26 +22,26 @@ def get_branches() -> list[str]:
     return [branch.replace("remotes/origin/", "") for branch in filtered_branches]
 
 
-def query_prs(github_token, extra_query_criteria):
+def query_prs(github_token, extra_query_criteria) -> list[str]:
     gh = github.Github(auth=github.Auth.Token(github_token))
     query_template = """
-  query ($after: String) {
-    search(query: "is:pr repo:llvm/llvm-project is:open {extra_query_criteria}", type: ISSUE, first: 100, after: $after) {
-      nodes {
-        ... on PullRequest {
-          baseRefName
-          headRefName
-          isCrossRepository
-          number
-        }
-      }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-    }
-  }"""
-    query = query_template.format(extra_query_criteria=extra_query_criteria)
+    query ($after: String) {{
+        search(query: "is:pr repo:llvm/llvm-project is:open {query_param}", type: ISSUE, first: 100, after: $after) {{
+        nodes {{
+            ... on PullRequest {{
+            baseRefName
+            headRefName
+            isCrossRepository
+            number
+            }}
+        }}
+        pageInfo {{
+            hasNextPage
+            endCursor
+        }}
+        }}
+    }}"""
+    query = query_template.format(query_param=extra_query_criteria)
     pr_data = []
     has_next_page = True
     variables = {"after": None}
