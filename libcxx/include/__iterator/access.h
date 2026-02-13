@@ -32,23 +32,31 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp* end(_Tp (&__array)[_Np]) _NOEXCEPT 
 #if !defined(_LIBCPP_CXX03_LANG)
 
 template <class _Cp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 auto begin(_Cp& __c) -> decltype(__c.begin()) {
-  return __c.begin();
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 auto begin(_Cp& __c) //
+    noexcept(noexcept(__c.begin()))                                      //
+    -> decltype(/*-*/ __c.begin()) {
+  return /*--------*/ __c.begin();
 }
 
 template <class _Cp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 auto begin(const _Cp& __c) -> decltype(__c.begin()) {
-  return __c.begin();
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 auto begin(const _Cp& __c) //
+    noexcept(noexcept(__c.begin()))                                            //
+    -> decltype(/*-*/ __c.begin()) {
+  return /*--------*/ __c.begin();
 }
 
 template <class _Cp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 auto end(_Cp& __c) -> decltype(__c.end()) {
-  return __c.end();
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 auto end(_Cp& __c) //
+    noexcept(noexcept(__c.end()))                                      //
+    -> decltype(/*-*/ __c.end()) {
+  return /*--------*/ __c.end();
 }
 
 template <class _Cp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 auto end(const _Cp& __c) -> decltype(__c.end()) {
-  return __c.end();
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 auto end(const _Cp& __c) //
+    noexcept(noexcept(__c.end()))                                            //
+    -> decltype(/*-*/ __c.end()) {
+  return /*--------*/ __c.end();
 }
 
 #  if _LIBCPP_STD_VER >= 14
