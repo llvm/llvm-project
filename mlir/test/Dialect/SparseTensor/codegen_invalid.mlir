@@ -1,5 +1,11 @@
 // RUN: mlir-opt %s -sparse-tensor-codegen -verify-diagnostics
 
+// NOTE: This test has valid IR, however we are testing whether
+// the legalization failure occurs when important passes are
+// missing. Notably, using --lower-sparse-ops-to-foreach
+// followed by --lower-sparse-foreach-to-scf prior to
+// sparse codegen will convert the dense tensor correctly.
+
 #SparseVector = #sparse_tensor.encoding<{
   map = (d0) -> (d0 : compressed)
 }>
