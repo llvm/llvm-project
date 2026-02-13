@@ -26,7 +26,6 @@ define noundef zeroext i1 @_Z16ossIsValidDoubled(double noundef %in) local_unnam
 ; PWR10-NEXT:    rlwinm r3, r3, 27, 31, 31
 ; PWR10-NEXT:    blr
 
-
 entry:
   %test_data_class = tail call i32 @llvm.ppc.test.data.class.f64(double %in, i32 115)
   %tobool.not = icmp eq i32 %test_data_class, 0
