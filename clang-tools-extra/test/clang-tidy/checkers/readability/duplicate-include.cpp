@@ -1,6 +1,5 @@
 // RUN: %check_clang_tidy -check-header %S/Inputs/duplicate-include/duplicate-include.h \
 // RUN:   %s readability-duplicate-include %t -- \
-// RUN:   -header-filter='.*' \
 // RUN:   -- -isystem %S/Inputs/duplicate-include/system -I %S/Inputs/duplicate-include
 
 int a;

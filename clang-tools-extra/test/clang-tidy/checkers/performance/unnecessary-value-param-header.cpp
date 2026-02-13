@@ -1,7 +1,5 @@
 // RUN: %check_clang_tidy -check-header %S/Inputs/unnecessary-value-param/header.h \
-// RUN:   %s performance-unnecessary-value-param %t -- \
-// RUN:   -header-filter='.*' \
-// RUN:   -- -I %S/Inputs/unnecessary-value-param
+// RUN:   %s performance-unnecessary-value-param %t
 
 #include "header.h"
 

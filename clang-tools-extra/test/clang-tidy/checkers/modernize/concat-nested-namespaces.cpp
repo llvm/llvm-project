@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy -std=c++17 -check-suffix=NORMAL -check-header %S/Inputs/concat-nested-namespaces/modernize-concat-nested-namespaces.h %s modernize-concat-nested-namespaces %t -- -header-filter=".*" -- -I %S/Inputs/concat-nested-namespaces
-// RUN: %check_clang_tidy -std=c++20 -check-suffixes=NORMAL,CPP20 -check-header %S/Inputs/concat-nested-namespaces/modernize-concat-nested-namespaces.h %s modernize-concat-nested-namespaces %t -- -header-filter=".*" -- -I %S/Inputs/concat-nested-namespaces
+// RUN: %check_clang_tidy -std=c++17 -check-suffix=NORMAL -check-header %S/Inputs/concat-nested-namespaces/modernize-concat-nested-namespaces.h %s modernize-concat-nested-namespaces %t
+// RUN: %check_clang_tidy -std=c++20 -check-suffixes=NORMAL,CPP20 -check-header %S/Inputs/concat-nested-namespaces/modernize-concat-nested-namespaces.h %s modernize-concat-nested-namespaces %t
 
 #include "modernize-concat-nested-namespaces.h"
 

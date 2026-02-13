@@ -1,6 +1,5 @@
 // RUN: %check_clang_tidy -check-header %S/Inputs/pass-by-value/header-with-fix.h \
-// RUN:   %s modernize-pass-by-value %t -- -header-filter='.*' \
-// RUN:   -- -I %S/Inputs/pass-by-value -std=c++11
+// RUN:   %s modernize-pass-by-value %t -- -- -std=c++11
 
 #include "header-with-fix.h"
 
