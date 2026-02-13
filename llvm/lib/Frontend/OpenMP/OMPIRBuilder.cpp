@@ -4234,6 +4234,12 @@ Expected<Function *> OpenMPIRBuilder::createReductionFunction(
     }
 
   Builder.CreateRetVoid();
+
+  PostDominatorTree PostDomTree(*ReductionFunc);
+  for (llvm::BasicBlock &BB : *ReductionFunc)
+    if (PostDomTree.properlyDominates(&BB, &ReductionFunc->getEntryBlock()))
+      hoistNonEntryAllocasToEntryBlock(BB);
+
   return ReductionFunc;
 }
 
