@@ -9550,6 +9550,15 @@ def err_atomic_builtin_must_be_pointer_intfltptr : Error<
 def err_atomic_builtin_pointer_size : Error<
   "address argument to atomic builtin must be a pointer to 1,2,4,8 or 16 byte "
   "type (%0 invalid)">;
+def err_arm_atomic_store_with_stshh_bad_type : Error<
+  "address argument to '__arm_atomic_store_with_stshh' must be a pointer to an "
+  "8,16,32, or 64-bit integer type (%0 invalid)">;
+def err_arm_atomic_store_with_stshh_bad_value_type : Error<
+  "value argument to '__arm_atomic_store_with_stshh' must be an integer of the "
+  "same size as the pointed-to type (%0 invalid)">;
+def err_arm_atomic_store_with_stshh_bad_order : Error<
+  "memory order argument to '__arm_atomic_store_with_stshh' must be one of "
+  "__ATOMIC_RELAXED, __ATOMIC_RELEASE, or __ATOMIC_SEQ_CST">;
 def err_atomic_exclusive_builtin_pointer_size : Error<
   "address argument to load or store exclusive builtin must be a pointer to "
   // Because the range of legal sizes for load/store exclusive varies with the
