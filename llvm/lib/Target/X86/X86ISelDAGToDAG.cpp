@@ -3508,6 +3508,8 @@ bool X86DAGToDAGISel::checkTCRetEnoughRegs(SDNode *N) const {
 
   const X86RegisterInfo *RI = Subtarget->getRegisterInfo();
   unsigned AvailGPRs;
+  // The register classes below must stay in sync with what's used for
+  // TCRETURNri, TCRETURN_HIPE32ri, TCRETURN_WIN64ri, etc).
   if (Subtarget->is64Bit()) {
     const TargetRegisterClass *TCGPRs =
         Subtarget->isCallingConvWin64(MF->getFunction().getCallingConv())

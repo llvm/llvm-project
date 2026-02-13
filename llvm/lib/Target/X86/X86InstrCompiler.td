@@ -1327,7 +1327,8 @@ def : Pat<(X86imp_call (i64 tglobaladdr:$dst)),
 
 // Tailcall stuff. The TCRETURN instructions execute after the epilog, so they
 // can never use callee-saved registers. That is the purpose of the GR64_TC
-// register classes.
+// register classes. These (GR32_TC, GR64_TC, ..) need to stay in sync with
+// checkTCRetEnoughRegs.
 //
 // The only volatile register that is never used by the calling convention is
 // %r11. This happens when calling a vararg function with 6 arguments.
