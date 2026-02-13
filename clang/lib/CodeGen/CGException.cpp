@@ -425,13 +425,14 @@ void CodeGenFunction::EmitAnyExprToExn(const Expr *e, Address addr) {
 
 Address CodeGenFunction::getExceptionSlot() {
   if (!ExceptionSlot)
-    ExceptionSlot = CreateTempAlloca(Int8PtrTy, "exn.slot");
+    ExceptionSlot = CreateTempAlloca(Int8PtrTy, LangAS::Default, "exn.slot");
   return Address(ExceptionSlot, Int8PtrTy, getPointerAlign());
 }
 
 Address CodeGenFunction::getEHSelectorSlot() {
   if (!EHSelectorSlot)
-    EHSelectorSlot = CreateTempAlloca(Int32Ty, "ehselector.slot");
+    EHSelectorSlot =
+        CreateTempAlloca(Int32Ty, LangAS::Default, "ehselector.slot");
   return Address(EHSelectorSlot, Int32Ty, CharUnits::fromQuantity(4));
 }
 
@@ -1453,7 +1454,8 @@ void CodeGenFunction::FinallyInfo::enter(CodeGenFunction &CGF, const Stmt *body,
   llvm::FunctionType *rethrowFnTy = rethrowFn.getFunctionType();
   SavedExnVar = nullptr;
   if (rethrowFnTy->getNumParams())
-    SavedExnVar = CGF.CreateTempAlloca(CGF.Int8PtrTy, "finally.exn");
+    SavedExnVar =
+        CGF.CreateTempAlloca(CGF.Int8PtrTy, LangAS::Default, "finally.exn");
 
   // A finally block is a statement which must be executed on any edge
   // out of a given scope.  Unlike a cleanup, the finally block may
@@ -1473,7 +1475,8 @@ void CodeGenFunction::FinallyInfo::enter(CodeGenFunction &CGF, const Stmt *body,
   RethrowDest = CGF.getJumpDestInCurrentScope(CGF.getUnreachableBlock());
 
   // Whether the finally block is being executed for EH purposes.
-  ForEHVar = CGF.CreateTempAlloca(CGF.Builder.getInt1Ty(), "finally.for-eh");
+  ForEHVar = CGF.CreateTempAlloca(CGF.Builder.getInt1Ty(), LangAS::Default,
+                                  "finally.for-eh");
   CGF.Builder.CreateFlagStore(false, ForEHVar);
 
   // Enter a normal cleanup which will perform the @finally block.

@@ -354,8 +354,8 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
   CXXTryStmt *TryStmt = nullptr;
   if (Coro.ExceptionHandler && Kind == AwaitKind::Init &&
       StmtCanThrow(S.getResumeExpr())) {
-    Coro.ResumeEHVar =
-        CGF.CreateTempAlloca(Builder.getInt1Ty(), Prefix + Twine("resume.eh"));
+    Coro.ResumeEHVar = CGF.CreateTempAlloca(
+        Builder.getInt1Ty(), LangAS::Default, Prefix + Twine("resume.eh"));
     Builder.CreateFlagStore(true, Coro.ResumeEHVar);
 
     auto Loc = S.getResumeExpr()->getExprLoc();
@@ -717,8 +717,8 @@ struct GetReturnObjectManager {
     }
 
     // Set GRO flag that it is not initialized yet
-    GroActiveFlag = CGF.CreateTempAlloca(Builder.getInt1Ty(), CharUnits::One(),
-                                         "gro.active");
+    GroActiveFlag = CGF.CreateTempAlloca(Builder.getInt1Ty(), LangAS::Default,
+                                         CharUnits::One(), "gro.active");
     Builder.CreateStore(Builder.getFalse(), GroActiveFlag);
   }
 

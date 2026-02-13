@@ -358,9 +358,10 @@ Address CGNVCUDARuntime::prepareKernelArgsLLVMOffload(CodeGenFunction &CGF,
   llvm::StructType *KernelLaunchParamsTy =
       llvm::StructType::create(KernelLaunchParamsTypes);
   Address KernelArgs = CGF.CreateTempAllocaWithoutCast(
-      KernelArgsTy, CharUnits::fromQuantity(16), "kernel_args");
+      KernelArgsTy, LangAS::Default, CharUnits::fromQuantity(16),
+      "kernel_args");
   Address KernelLaunchParams = CGF.CreateTempAllocaWithoutCast(
-      KernelLaunchParamsTy, CharUnits::fromQuantity(16),
+      KernelLaunchParamsTy, LangAS::Default, CharUnits::fromQuantity(16),
       "kernel_launch_params");
 
   auto KernelArgsSize = CGM.getDataLayout().getTypeAllocSize(KernelArgsTy);

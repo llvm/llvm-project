@@ -5502,7 +5502,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       AI = new llvm::AllocaInst(ArgStruct, DL.getAllocaAddrSpace(), "argmem",
                                 IP->getIterator());
     } else {
-      AI = CreateTempAlloca(ArgStruct, "argmem");
+      AI = CreateTempAlloca(ArgStruct, LangAS::Default, "argmem");
     }
     auto Align = CallInfo.getArgStructAlignment();
     AI->setAlignment(Align.getAsAlign());
