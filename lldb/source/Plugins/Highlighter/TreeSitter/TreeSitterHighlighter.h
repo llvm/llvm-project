@@ -39,7 +39,7 @@ protected:
 
 private:
   /// Maps a tree-sitter capture name to a HighlightStyle color.
-  const HighlightStyle::ColorStyle *
+  HighlightStyle::ColorStyle
   GetStyleForCapture(llvm::StringRef capture_name,
                      const HighlightStyle &options) const;
 

@@ -63,29 +63,28 @@ TreeSitterHighlighter::TSState &TreeSitterHighlighter::GetTSState() const {
   return *m_ts_state;
 }
 
-const HighlightStyle::ColorStyle *
+HighlightStyle::ColorStyle
 TreeSitterHighlighter::GetStyleForCapture(llvm::StringRef capture_name,
                                           const HighlightStyle &options) const {
-  return llvm::StringSwitch<const HighlightStyle::ColorStyle *>(capture_name)
-      .Case("comment", &options.comment)
-      .Case("keyword", &options.keyword)
-      .Case("operator", &options.operators)
-      .Case("type", &options.keyword)
-      .Case("punctuation.delimiter.comma", &options.comma)
-      .Case("punctuation.delimiter.colon", &options.colon)
-      .Case("punctuation.delimiter.semicolon", &options.semicolons)
-      .Case("punctuation.bracket.square", &options.square_brackets)
-      .Cases({"keyword.directive", "preproc"}, &options.pp_directive)
-      .Cases({"string", "string.literal"}, &options.string_literal)
+  return llvm::StringSwitch<HighlightStyle::ColorStyle>(capture_name)
+      .Case("comment", options.comment)
+      .Case("keyword", options.keyword)
+      .Case("operator", options.operators)
+      .Case("type", options.keyword)
+      .Case("punctuation.delimiter.comma", options.comma)
+      .Case("punctuation.delimiter.colon", options.colon)
+      .Case("punctuation.delimiter.semicolon", options.semicolons)
+      .Case("punctuation.bracket.square", options.square_brackets)
+      .Cases({"keyword.directive", "preproc"}, options.pp_directive)
+      .Cases({"string", "string.literal"}, options.string_literal)
       .Cases({"number", "number.literal", "constant.numeric"},
-             &options.scalar_literal)
-      .Cases({"identifier", "variable", "function"}, &options.identifier)
-      .Cases({"punctuation.bracket.curly", "punctuation.brace"},
-             &options.braces)
+             options.scalar_literal)
+      .Cases({"identifier", "variable", "function"}, options.identifier)
+      .Cases({"punctuation.bracket.curly", "punctuation.brace"}, options.braces)
       .Cases({"punctuation.bracket.round", "punctuation.bracket",
               "punctuation.paren"},
-             &options.parentheses)
-      .Default(nullptr);
+             options.parentheses)
+      .Default({});
 }
 
 void TreeSitterHighlighter::HighlightRange(
@@ -181,7 +180,7 @@ void TreeSitterHighlighter::Highlight(const HighlightStyle &options,
     const char *capture_name = ts_query_capture_name_for_id(
         ts_state.query, capture.index, &capture_name_len);
 
-    const HighlightStyle::ColorStyle *style = GetStyleForCapture(
+    HighlightStyle::ColorStyle style = GetStyleForCapture(
         llvm::StringRef(capture_name, capture_name_len), options);
 
     TSNode node = capture.node;
