@@ -133,8 +133,8 @@ static IndexMatchResult matchOperandMap(AffineMap map, unsigned rowDimIdx,
 
 // Replaces genericOp with `NamedOpTy` op, supplied as a template arg.
 // All the variants expressed as pseudo regular expression:
-// `linalg.{batch_}?matmul{_transpose_a | _transpose_b}?`
-// have same number of ins/out, so its easy to stamp different versions.
+// `linalg.{batch_}?matmul` have same number of ins/out, so its easy to
+// stamp different versions.
 // `castTy` is an optional type function that indicates whether (and which) cast
 // attribute is needed for the named matmul op variant.
 template <typename NamedOpTy>
@@ -147,10 +147,16 @@ static LinalgOp replaceWithMatmulVariant(RewriterBase &rewriter, GenericOp op,
     castAttrVec = {rewriter.getNamedAttr(
         "cast", TypeFnAttr::get(rewriter.getContext(), *castTy))};
 
-  auto namedOp = rewriter.replaceOpWithNewOp<NamedOpTy>(
+  ArrayAttr indexingMaps = op.getIndexingMaps();
+
+  LinalgOp namedOp = rewriter.replaceOpWithNewOp<NamedOpTy>(
       op, ValueRange{op.getDpsInputs()[0], op.getDpsInputs()[1]},
       ValueRange{op.getDpsInits()[0]}, castAttrVec);
-  return cast<LinalgOp>(namedOp.getOperation());
+
+  // Set the original generic's maps to preserve transposed operand semantics.
+  namedOp->setAttr("indexing_maps", indexingMaps);
+
+  return namedOp;
 }
 
 // Returns the cast type to use for a matmul-like named op. If the generic
@@ -298,23 +304,10 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
         genericOp, "contains invalid cast ops for the named matmul op");
 
   /// Codegen the different matmul variants.
-  if (numOfBatchDims) {
-    if (a == IndexMatchResult::Transposed)
-      return replaceWithMatmulVariant<BatchMatmulTransposeAOp>(
-          rewriter, genericOp, castTy);
-    if (b == IndexMatchResult::Transposed)
-      return replaceWithMatmulVariant<BatchMatmulTransposeBOp>(
-          rewriter, genericOp, castTy);
-
+  /// maps to express transposed operands on the standard op.
+  if (numOfBatchDims)
     return replaceWithMatmulVariant<BatchMatmulOp>(rewriter, genericOp, castTy);
-  }
-  if (a == IndexMatchResult::Transposed)
-    return replaceWithMatmulVariant<MatmulTransposeAOp>(rewriter, genericOp,
-                                                        castTy);
 
-  if (b == IndexMatchResult::Transposed)
-    return replaceWithMatmulVariant<MatmulTransposeBOp>(rewriter, genericOp,
-                                                        castTy);
   return replaceWithMatmulVariant<MatmulOp>(rewriter, genericOp, castTy);
 }
 

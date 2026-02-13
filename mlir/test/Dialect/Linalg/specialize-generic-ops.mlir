@@ -417,13 +417,16 @@ func.func @op_matmul_transpose_a(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %Out:
    return %0 : tensor<?x?xf32>
 }
 
-// CHECK-DAG: #[[$MAP_TA_A:.+]] = affine_map<(d0, d1, d2) -> (d2, d0)>
-// CHECK-DAG: #[[$MAP_TA_B:.+]] = affine_map<(d0, d1, d2) -> (d2, d1)>
-// CHECK-DAG: #[[$MAP_TA_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+// CHECK-DAG: #[[$MAP_TA:.+]] = affine_map<(d0, d1, d2) -> (d2, d0)>
+// CHECK-DAG: #[[$MAP_B:.+]] = affine_map<(d0, d1, d2) -> (d2, d1)>
+// CHECK-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 // CHECK-LABEL: op_matmul_transpose_a
-// CHECK-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>, %[[Out:.+]]: tensor<?x?xf32>) -> tensor<?x?xf32>
+// CHECK-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>, %[[Out:.+]]: tensor<?x?xf32>
 // CHECK-NOT: linalg.generic
-// CHECK: linalg.matmul indexing_maps = [#[[$MAP_TA_A]], #[[$MAP_TA_B]], #[[$MAP_TA_C]]] ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>) outs(%[[Out]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+// CHECK: linalg.matmul
+// CHECK-SAME: indexing_maps = [#[[$MAP_TA]], #[[$MAP_B]], #[[$MAP_C]]]
+// CHECK-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
+// CHECK-SAME: outs(%[[Out]] : tensor<?x?xf32>) -> tensor<?x?xf32>
 
 // -----
 
@@ -443,13 +446,16 @@ func.func @op_matmul_transpose_b(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %Out:
    return %0 : tensor<?x?xf32>
 }
 
-// CHECK-DAG: #[[$MAP_TB_A:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
-// CHECK-DAG: #[[$MAP_TB_B:.+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
-// CHECK-DAG: #[[$MAP_TB_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+// CHECK-DAG: #[[$MAP_A:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// CHECK-DAG: #[[$MAP_TB:.+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
+// CHECK-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 // CHECK-LABEL: op_matmul_transpose_b
-// CHECK-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>, %[[Out:.+]]: tensor<?x?xf32>) -> tensor<?x?xf32>
+// CHECK-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>, %[[Out:.+]]: tensor<?x?xf32>
 // CHECK-NOT: linalg.generic
-// CHECK: linalg.matmul indexing_maps = [#[[$MAP_TB_A]], #[[$MAP_TB_B]], #[[$MAP_TB_C]]] ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>) outs(%[[Out]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+// CHECK: linalg.matmul
+// CHECK-SAME: indexing_maps = [#[[$MAP_A]], #[[$MAP_TB]], #[[$MAP_C]]]
+// CHECK-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
+// CHECK-SAME: outs(%[[Out]] : tensor<?x?xf32>) -> tensor<?x?xf32>
 
 // -----
 
@@ -469,13 +475,16 @@ func.func @op_batch_matmul_transpose_a(%A: tensor<2x8x4xf32>, %B: tensor<2x8x16x
   return %0 : tensor<2x4x16xf32>
 }
 
-// CHECK-DAG: #[[$MAP_BTA_A:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d1)>
-// CHECK-DAG: #[[$MAP_BTA_B:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
-// CHECK-DAG: #[[$MAP_BTA_C:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+// CHECK-DAG: #[[$MAP_TA:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d1)>
+// CHECK-DAG: #[[$MAP_B:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
+// CHECK-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
 // CHECK-LABEL: op_batch_matmul_transpose_a
-// CHECK-SAME: %[[A:.+]]: tensor<2x8x4xf32>, %[[B:.+]]: tensor<2x8x16xf32>, %[[Out:.+]]: tensor<2x4x16xf32>) -> tensor<2x4x16xf32>
+// CHECK-SAME: %[[A:.+]]: tensor<2x8x4xf32>, %[[B:.+]]: tensor<2x8x16xf32>, %[[Out:.+]]: tensor<2x4x16xf32>
 // CHECK-NOT: linalg.generic
-// CHECK: linalg.batch_matmul indexing_maps = [#[[$MAP_BTA_A]], #[[$MAP_BTA_B]], #[[$MAP_BTA_C]]] ins(%[[A]], %[[B]] : tensor<2x8x4xf32>, tensor<2x8x16xf32>) outs(%[[Out]] : tensor<2x4x16xf32>) -> tensor<2x4x16xf32>
+// CHECK: linalg.batch_matmul
+// CHECK-SAME: indexing_maps = [#[[$MAP_TA]], #[[$MAP_B]], #[[$MAP_C]]]
+// CHECK-SAME: ins(%[[A]], %[[B]] : tensor<2x8x4xf32>, tensor<2x8x16xf32>)
+// CHECK-SAME: outs(%[[Out]] : tensor<2x4x16xf32>) -> tensor<2x4x16xf32>
 
 // -----
 
@@ -495,10 +504,13 @@ func.func @op_batch_matmul_transpose_b(%A: tensor<2x4x8xf32>, %B: tensor<2x16x8x
   return %0 : tensor<2x4x16xf32>
 }
 
-// CHECK-DAG: #[[$MAP_BTB_A:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
-// CHECK-DAG: #[[$MAP_BTB_B:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>
-// CHECK-DAG: #[[$MAP_BTB_C:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+// CHECK-DAG: #[[$MAP_A:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+// CHECK-DAG: #[[$MAP_TB:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>
+// CHECK-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
 // CHECK-LABEL: op_batch_matmul_transpose_b
-// CHECK-SAME: %[[A:.+]]: tensor<2x4x8xf32>, %[[B:.+]]: tensor<2x16x8xf32>, %[[Out:.+]]: tensor<2x4x16xf32>) -> tensor<2x4x16xf32>
+// CHECK-SAME: %[[A:.+]]: tensor<2x4x8xf32>, %[[B:.+]]: tensor<2x16x8xf32>, %[[Out:.+]]: tensor<2x4x16xf32>
 // CHECK-NOT: linalg.generic
-// CHECK: linalg.batch_matmul indexing_maps = [#[[$MAP_BTB_A]], #[[$MAP_BTB_B]], #[[$MAP_BTB_C]]] ins(%[[A]], %[[B]] : tensor<2x4x8xf32>, tensor<2x16x8xf32>) outs(%[[Out]] : tensor<2x4x16xf32>) -> tensor<2x4x16xf32>
+// CHECK: linalg.batch_matmul
+// CHECK-SAME: indexing_maps = [#[[$MAP_A]], #[[$MAP_TB]], #[[$MAP_C]]]
+// CHECK-SAME: ins(%[[A]], %[[B]] : tensor<2x4x8xf32>, tensor<2x16x8xf32>)
+// CHECK-SAME: outs(%[[Out]] : tensor<2x4x16xf32>) -> tensor<2x4x16xf32>
