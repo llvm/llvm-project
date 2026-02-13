@@ -4952,6 +4952,10 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
     auto *ExpSCEV = dyn_cast<VPExpandSCEVRecipe>(&R);
     if (!ExpSCEV)
       break;
+    if (ExpSCEV->getNumUsers() == 0) {
+      ExpSCEV->eraseFromParent();
+      continue;
+    }
     const SCEV *Expr = ExpSCEV->getSCEV();
     Value *Res =
         Expander.expandCodeFor(Expr, Expr->getType(), EntryBB->getTerminator());
