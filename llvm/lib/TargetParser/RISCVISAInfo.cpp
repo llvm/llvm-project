@@ -750,7 +750,7 @@ Error RISCVISAInfo::checkDependency() {
       {"zcmt"}, {"zcmp"}, {"xqccmp"}, {"xqciac"}, {"xqcicm"},
   };
   static constexpr StringLiteral RV32Only[] = {
-      {"zcf"},     {"zilsd"},   {"zclsd"},    {"xwchc"},   {"xqci"},
+      {"zcf"},     {"zclsd"},   {"zilsd"},    {"xwchc"},   {"xqci"},
       {"xqcia"},   {"xqciac"},  {"xqcibi"},   {"xqcibm"},  {"xqcicli"},
       {"xqcicm"},  {"xqcics"},  {"xqcicsr"},  {"xqciint"}, {"xqciio"},
       {"xqcilb"},  {"xqcili"},  {"xqcilia"},  {"xqcilo"},  {"xqcilsm"},

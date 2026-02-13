@@ -656,20 +656,15 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
               "'zclsd' and 'zcf' extensions are incompatible");
   }
 
-  for (StringRef Input : {"rv64i_zilsd", "rv64i_zclsd"}) {
-    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "'zilsd' is only supported for 'rv32'");
-  }
-
   // In these ISA strings, the non-rv32 extension should be last, after an
   // underscore.
   for (StringRef Input : {
-           "rv64if_zcf",    "rv64i_xwchc",   "rv64i_xqcia",   "rv64i_xqciac",
-           "rv64i_xqcibi",  "rv64i_xqcibm",  "rv64i_xqcicli", "rv64i_xqcicm",
-           "rv64i_xqcics",  "rv64i_xqcicsr", "rv64i_xqciint", "rv64i_xqciio",
-           "rv64i_xqcilb",  "rv64i_xqcili",  "rv64i_xqcilia", "rv64i_xqcilo",
-           "rv64i_xqcilsm", "rv64i_xqcisim", "rv64i_xqcisls", "rv64i_xqcisync",
-           "rv64i_xqci",
+           "rv64if_zcf",    "rv64i_zclsd",    "rv64i_zilsd",   "rv64i_xwchc",
+           "rv64i_xqcia",   "rv64i_xqciac",   "rv64i_xqcibi",  "rv64i_xqcibm",
+           "rv64i_xqcicli", "rv64i_xqcicm",   "rv64i_xqcics",  "rv64i_xqcicsr",
+           "rv64i_xqciint", "rv64i_xqciio",   "rv64i_xqcilb",  "rv64i_xqcili",
+           "rv64i_xqcilia", "rv64i_xqcilo",   "rv64i_xqcilsm", "rv64i_xqcisim",
+           "rv64i_xqcisls", "rv64i_xqcisync", "rv64i_xqci",
        }) {
 
     auto [_, ConflictingExt] = Input.rsplit('_');
