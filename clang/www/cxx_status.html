@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv= "Content-Type" content="text/html; charset=utf-8">
   <title>Clang - C++ Programming Language Status</title>
   <link type="text/css" rel="stylesheet" href="menu.css">
   <link type="text/css" rel="stylesheet" href="content.css">
@@ -11,10 +11,23 @@
     .unreleased { background-color: #FFFF99 }
     .full { background-color: #CCFF99 }
     .na { background-color: #DDDDDD }
-    :target { background-color: #FFFFBB; outline: #DDDD55 solid thin; }
+    :target { background-color: #FFFFBB; outline : #DDDD55 solid thin; }
     th { background-color: #FFDDAA }
     td { vertical-align: middle }
     tt { white-space: nowrap }
+    a{ text-decoration: none;}
+    h1{ background-color: lightblue;
+      color :white;
+    border: 2px solid black;}
+    table tr td a:hover{
+  text-decoration: underline;
+  font-weight: 500;
+  font-size: 15px;
+
+}
+
+    
+
   </style>
 </head>
 <body>
@@ -24,10 +37,11 @@
 <div id="content">
 
 <!--*************************************************************************-->
-<h1>C++ Support in Clang</h1>
+<h1 style="background-color: rgb(12, 140, 219);
+border: 1px solid black;">C++ Support in Clang</h1>
 <!--*************************************************************************-->
 
-<p>Clang implements the following published and upcoming ISO C++ standards:</p>
+<p>Clang implements the following published and upcoming <b>ISO C++</b> standards:</p>
 
 <table width="689" border="1" cellspacing="0">
  <tr>
@@ -36,7 +50,7 @@
   <th>Available in Clang?</th>
  </tr>
  <tr>
-  <td><a href="#cxx26">C++2c</a></td>
+  <td><a href="#cxx26"></a></td>
   <td><tt>-std=c++2c</tt></td>
   <td class="partial" align="center">Partial</td>
  </tr>
