@@ -638,7 +638,6 @@ add_header_library(
   HDRS
     ffma.h
   DEPENDS
-    libc.src.__support.common
     libc.src.__support.FPUtil.fma
     libc.src.__support.macros.config
 )
