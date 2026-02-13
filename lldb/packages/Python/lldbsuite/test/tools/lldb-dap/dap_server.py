@@ -1677,6 +1677,14 @@ class DebugCommunication(object):
         }
         return self._send_recv(command_dict)
 
+    def request_custom(self, command: str, arguments: Optional[dict[str, Any]] = None):
+        command_dict = {
+            "command": command,
+            "type": "request",
+            "arguments": {} if arguments is None else arguments,
+        }
+        return self._send_recv(command_dict)
+
     def terminate(self):
         self.send.close()
         if self._recv_thread.is_alive():

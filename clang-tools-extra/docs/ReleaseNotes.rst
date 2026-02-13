@@ -94,6 +94,11 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
+- Improved :program:`check_clang_tidy.py` script by adding the `-check-header`
+  argument to simplify testing of header files. This argument automatically
+  manages the creation of temporary header files and ensures that diagnostics
+  and fixes are verified for the specified headers.
+
 New checks
 ^^^^^^^^^^
 
