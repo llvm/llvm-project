@@ -192,7 +192,7 @@ public:
   ///     Host.
   static SharedCacheImageInfo
   GetSharedCacheImageInfo(llvm::StringRef image_name,
-                          lldb::SymbolDownload sc_mode) {
+                          lldb::SymbolSharedCacheUse sc_mode) {
     return {};
   }
 
@@ -206,7 +206,7 @@ public:
   ///     Host.
   static SharedCacheImageInfo
   GetSharedCacheImageInfo(llvm::StringRef image_name, const UUID &uuid,
-                          lldb::SymbolDownload sc_mode) {
+                          lldb::SymbolSharedCacheUse sc_mode) {
     return {};
   }
 
@@ -215,7 +215,7 @@ public:
   /// Returns false if the shared cache filepath did not exist, or uuid
   /// did not match.
   static bool SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid,
-                                    lldb::SymbolDownload sc_mode) {
+                                    lldb::SymbolSharedCacheUse sc_mode) {
     return false;
   }
 
