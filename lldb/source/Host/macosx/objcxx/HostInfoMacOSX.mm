@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/macosx/HostInfoMacOSX.h"
-#include "lldb/Core/ModuleList.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
@@ -702,7 +701,7 @@ public:
   /// system, open it and add all of the binary images to m_caches.
   bool CreateSharedCacheImageList(UUID uuid, std::string filepath);
 
-  SharedCacheInfo();
+  SharedCacheInfo(bool use_sc_binary_directly);
 
 private:
   bool CreateSharedCacheInfoWithInstrospectionSPIs();
@@ -721,7 +720,7 @@ private:
 
 } // namespace
 
-SharedCacheInfo::SharedCacheInfo() {
+SharedCacheInfo::SharedCacheInfo(bool use_sc_binary_directly) {
   // macOS 26.4 and newer
   m_dyld_image_retain_4HWTrace =
       (void (*)(void *))dlsym(RTLD_DEFAULT, "dyld_image_retain_4HWTrace");
@@ -735,9 +734,7 @@ SharedCacheInfo::SharedCacheInfo() {
   _dyld_get_shared_cache_uuid(dsc_uuid);
   m_host_uuid = UUID(dsc_uuid);
 
-  if (ModuleList::GetGlobalModuleListProperties()
-          .GetSharedCacheBinaryLoading() &&
-      CreateHostSharedCacheImageList())
+  if (use_sc_binary_directly && CreateHostSharedCacheImageList())
     return;
 
   if (CreateSharedCacheInfoWithInstrospectionSPIs())
@@ -973,21 +970,24 @@ void SharedCacheInfo::CreateSharedCacheInfoLLDBsVirtualMemory() {
       });
 }
 
-SharedCacheInfo &GetSharedCacheSingleton() {
-  static SharedCacheInfo g_shared_cache_info;
+SharedCacheInfo &GetSharedCacheSingleton(bool use_sc_binary_directly) {
+  static SharedCacheInfo g_shared_cache_info(use_sc_binary_directly);
   return g_shared_cache_info;
 }
 
 SharedCacheImageInfo
-HostInfoMacOSX::GetSharedCacheImageInfo(llvm::StringRef image_name) {
-  return GetSharedCacheSingleton().GetImages().lookup(image_name);
+HostInfoMacOSX::GetSharedCacheImageInfo(llvm::StringRef image_name,
+                                        bool use_sc_binary_directly) {
+  return GetSharedCacheSingleton(use_sc_binary_directly)
+      .GetImages()
+      .lookup(image_name);
 }
 
-SharedCacheImageInfo
-HostInfoMacOSX::GetSharedCacheImageInfo(llvm::StringRef image_name,
-                                        const UUID &uuid) {
+SharedCacheImageInfo HostInfoMacOSX::GetSharedCacheImageInfo(
+    llvm::StringRef image_name, const UUID &uuid, bool use_sc_binary_directly) {
   llvm::StringMap<SharedCacheImageInfo> *shared_cache_info;
-  if (GetSharedCacheSingleton().GetImages(&shared_cache_info, uuid))
+  if (GetSharedCacheSingleton(use_sc_binary_directly)
+          .GetImages(&shared_cache_info, uuid))
     return shared_cache_info->lookup(image_name);
   return {};
 }
@@ -998,7 +998,7 @@ bool HostInfoMacOSX::SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid) {
   // cache is installed.  So require that we are given a filepath of
   // the shared cache.
   if (FileSystem::Instance().Exists(filepath))
-    return GetSharedCacheSingleton().CreateSharedCacheImageList(
-        uuid, filepath.GetPath());
+    return GetSharedCacheSingleton(/*use_sc_binary_directly=*/true)
+        .CreateSharedCacheImageList(uuid, filepath.GetPath());
   return false;
 }

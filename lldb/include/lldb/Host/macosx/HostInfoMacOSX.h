@@ -43,10 +43,12 @@ public:
 
   /// Shared cache utilities
   static SharedCacheImageInfo
-  GetSharedCacheImageInfo(llvm::StringRef image_name);
+  GetSharedCacheImageInfo(llvm::StringRef image_name,
+                          bool use_sc_binary_directly);
 
   static SharedCacheImageInfo
-  GetSharedCacheImageInfo(llvm::StringRef image_name, const UUID &uuid);
+  GetSharedCacheImageInfo(llvm::StringRef image_name, const UUID &uuid,
+                          bool use_sc_binary_directly);
 
   static bool SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid);
 
