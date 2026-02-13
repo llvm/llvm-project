@@ -11,6 +11,7 @@
 #include "gtest/gtest.h"
 #include "flang-rt/runtime/allocator-registry.h"
 #include "flang-rt/runtime/descriptor.h"
+#include "flang-rt/runtime/stat.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang/Runtime/CUDA/allocator.h"
 #include "flang/Runtime/CUDA/common.h"
@@ -197,7 +198,14 @@ TEST(AllocatableAsyncTest, SetStreamTest) {
   cudaStream_t s = RTDECL(CUFGetAssociatedStream)(a->raw().base_addr);
   EXPECT_EQ(s, defaultStream);
 
-  RTDECL(CUFSetAssociatedStream)(a->raw().base_addr, stream);
+  int stat1 = RTDECL(CUFSetAssociatedStream)(a->raw().base_addr, stream);
+  EXPECT_EQ(stat1, StatOk);
   s = RTDECL(CUFGetAssociatedStream)(a->raw().base_addr);
   EXPECT_EQ(s, stream);
+
+  // REAL(4), DEVICE, ALLOCATABLE :: b(:) - unallocated, base_addr is null
+  auto b{createAllocatable(TypeCategory::Real, 4)};
+  int stat2 = RTDECL(CUFSetAssociatedStream)(
+      b->raw().base_addr, stream, true, nullptr, __FILE__, __LINE__);
+  EXPECT_EQ(stat2, StatBaseNull);
 }
