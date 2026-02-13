@@ -71,6 +71,8 @@ public:
 
   bool preferScalarizeSplat(SDNode *N) const override;
 
+  void finalizeLowering(MachineFunction &MF) const override;
+
   /// Customize the preferred legalization strategy for certain types.
   LegalizeTypeAction getPreferredVectorAction(MVT VT) const override;
 
