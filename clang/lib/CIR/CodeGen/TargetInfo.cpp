@@ -67,6 +67,10 @@ class NVPTXTargetCIRGenInfo : public TargetCIRGenInfo {
 public:
   NVPTXTargetCIRGenInfo(CIRGenTypes &cgt)
       : TargetCIRGenInfo(std::make_unique<NVPTXABIInfo>(cgt)) {}
+
+  cir::CallingConv getDeviceKernelCallingConv() const override {
+    return cir::CallingConv::PTXKernel;
+  }
 };
 } // namespace
 

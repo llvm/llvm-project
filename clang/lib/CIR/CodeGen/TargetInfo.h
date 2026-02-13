@@ -52,6 +52,11 @@ public:
     return {};
   }
 
+  /// Get CIR calling convention for functions using CC_DeviceKernel.
+  virtual cir::CallingConv getDeviceKernelCallingConv() const {
+    return cir::CallingConv::C;
+  }
+
   /// Determine whether a call to an unprototyped functions under
   /// the given calling convention should use the variadic
   /// convention or the non-variadic convention.

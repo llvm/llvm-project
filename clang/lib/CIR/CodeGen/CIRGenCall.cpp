@@ -20,10 +20,9 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
-CIRGenFunctionInfo *
-CIRGenFunctionInfo::create(FunctionType::ExtInfo info, CanQualType resultType,
-                           llvm::ArrayRef<CanQualType> argTypes,
-                           RequiredArgs required) {
+CIRGenFunctionInfo *CIRGenFunctionInfo::create(
+    cir::CallingConv cirCC, FunctionType::ExtInfo info, CanQualType resultType,
+    llvm::ArrayRef<CanQualType> argTypes, RequiredArgs required) {
   // The first slot allocated for arg type slot is for the return value.
   void *buffer = operator new(
       totalSizeToAlloc<CanQualType>(argTypes.size() + 1));
@@ -32,6 +31,9 @@ CIRGenFunctionInfo::create(FunctionType::ExtInfo info, CanQualType resultType,
 
   CIRGenFunctionInfo *fi = new (buffer) CIRGenFunctionInfo();
 
+  fi->callingConvention = cirCC;
+  fi->effectiveCallingConvention = cirCC;
+  fi->astCallingConvention = info.getCC();
   fi->noReturn = info.getNoReturn();
 
   fi->required = required;
@@ -316,7 +318,7 @@ void CIRGenModule::constructAttributeList(llvm::StringRef name,
                                           cir::CallingConv &callingConv,
                                           cir::SideEffect &sideEffect,
                                           bool attrOnCallSite, bool isThunk) {
-  assert(!cir::MissingFeatures::opCallCallConv());
+  callingConv = info.getEffectiveCallingConvention();
   sideEffect = cir::SideEffect::All;
 
   auto addUnitAttr = [&](llvm::StringRef name) {
@@ -799,7 +801,7 @@ emitCallLikeOp(CIRGenFunction &cgf, mlir::Location callLoc,
                cir::FuncType indirectFuncTy, mlir::Value indirectFuncVal,
                cir::FuncOp directFuncOp,
                const SmallVectorImpl<mlir::Value> &cirCallArgs, bool isInvoke,
-               const mlir::NamedAttrList &attrs) {
+               cir::CallingConv callingConv, const mlir::NamedAttrList &attrs) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
 
   assert(!cir::MissingFeatures::opCallSurroundingTry());
@@ -835,6 +837,7 @@ emitCallLikeOp(CIRGenFunction &cgf, mlir::Location callLoc,
 
     callOpWithExceptions =
         builder.createCallOp(callLoc, directFuncOp, cirCallArgs);
+    callOpWithExceptions.setCallingConv(callingConv);
 
     cgf.populateCatchHandlersIfRequired(tryOp);
     return callOpWithExceptions;
@@ -844,13 +847,12 @@ emitCallLikeOp(CIRGenFunction &cgf, mlir::Location callLoc,
 
   cir::CallOp op;
   if (indirectFuncTy) {
-    // TODO(cir): Set calling convention for indirect calls.
-    assert(!cir::MissingFeatures::opCallCallConv());
     op = builder.createIndirectCallOp(callLoc, indirectFuncVal, indirectFuncTy,
                                       cirCallArgs, attrs);
   } else {
     op = builder.createCallOp(callLoc, directFuncOp, cirCallArgs, attrs);
   }
+  op.setCallingConv(callingConv);
 
   return op;
 }
@@ -966,7 +968,6 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   if (auto calleeFuncOp = dyn_cast<cir::FuncOp>(calleePtr))
     funcName = calleeFuncOp.getName();
 
-  assert(!cir::MissingFeatures::opCallCallConv());
   assert(!cir::MissingFeatures::opCallAttrs());
   cir::CallingConv callingConv;
   cir::SideEffect sideEffect;
@@ -1009,7 +1010,7 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   mlir::Location callLoc = loc;
   cir::CIRCallOpInterface theCall =
       emitCallLikeOp(*this, loc, indirectFuncTy, indirectFuncVal, directFuncOp,
-                     cirCallArgs, isInvoke, attrs);
+                     cirCallArgs, isInvoke, callingConv, attrs);
 
   if (callOp)
     *callOp = theCall;
@@ -1074,9 +1075,6 @@ void CallArg::copyInto(CIRGenFunction &cgf, Address addr,
 mlir::Value CIRGenFunction::emitRuntimeCall(mlir::Location loc,
                                             cir::FuncOp callee,
                                             ArrayRef<mlir::Value> args) {
-  // TODO(cir): set the calling convention to this runtime call.
-  assert(!cir::MissingFeatures::opFuncCallingConv());
-
   cir::CallOp call = builder.createCallOp(loc, callee, args);
   assert(call->getNumResults() <= 1 &&
          "runtime functions have at most 1 result");
@@ -1149,8 +1147,6 @@ void CIRGenFunction::emitCallArgs(
     AbstractCallee callee, unsigned paramsToSkip) {
   llvm::SmallVector<QualType, 16> argTypes;
 
-  assert(!cir::MissingFeatures::opCallCallConv());
-
   // First, if a prototype was provided, use those argument types.
   bool isVariadic = false;
   if (prototype.p) {
@@ -1158,7 +1154,6 @@ void CIRGenFunction::emitCallArgs(
 
     const auto *fpt = cast<const FunctionProtoType *>(prototype.p);
     isVariadic = fpt->isVariadic();
-    assert(!cir::MissingFeatures::opCallCallConv());
     argTypes.assign(fpt->param_type_begin() + paramsToSkip,
                     fpt->param_type_end());
   }

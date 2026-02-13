@@ -10,6 +10,9 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
+#include "llvm/ADT/Twine.h"
+#include "llvm/Support/ErrorHandling.h"
+
 #include <cassert>
 
 using namespace clang;
@@ -27,6 +30,23 @@ CIRGenTypes::~CIRGenTypes() {
 
 mlir::MLIRContext &CIRGenTypes::getMLIRContext() const {
   return *builder.getContext();
+}
+
+cir::CallingConv
+CIRGenTypes::ClangCallConvToCIRCallConv(clang::CallingConv CC) {
+  switch (CC) {
+  case CC_C:
+    return cir::CallingConv::C;
+  case CC_DeviceKernel:
+    return cgm.getTargetCIRGenInfo().getDeviceKernelCallingConv();
+  case CC_SpirFunction:
+    return cir::CallingConv::SpirFunction;
+  default:
+    cgm.errorNYI((llvm::Twine("unsupported calling convention: ") +
+                  FunctionType::getNameForCallConv(CC))
+                     .str());
+    return cir::CallingConv::C;
+  }
 }
 
 /// Return true if the specified type in a function parameter or result position
@@ -683,10 +703,9 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
     return *fi;
   }
 
-  assert(!cir::MissingFeatures::opCallCallConv());
-
   // Construction the function info. We co-allocate the ArgInfos.
-  fi = CIRGenFunctionInfo::create(info, returnType, argTypes, required);
+  cir::CallingConv cirCC = ClangCallConvToCIRCallConv(info.getCC());
+  fi = CIRGenFunctionInfo::create(cirCC, info, returnType, argTypes, required);
   functionInfos.InsertNode(fi, insertPos);
 
   return *fi;

@@ -1,0 +1,9 @@
+// RUN: cir-opt %s --cir-to-llvm -verify-diagnostics
+
+module {
+  // expected-error @below {{'cir.func' op unsupported calling convention for LLVM lowering: opencl_kernel}}
+  // expected-error @below {{failed to legalize operation 'cir.func' that was explicitly marked illegal}}
+  cir.func @kernel() cc(opencl_kernel) {
+    cir.return
+  }
+}

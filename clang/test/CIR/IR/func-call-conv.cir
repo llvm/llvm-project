@@ -1,0 +1,23 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  // CHECK: cir.func @foo()
+  cir.func @foo() cc(c) {
+    cir.return
+  }
+
+  // CHECK: cir.func @bar() cc(spir_kernel)
+  cir.func @bar() cc(spir_kernel) {
+    cir.return
+  }
+
+  // CHECK: cir.func @bar_alias() alias(@bar) cc(spir_kernel)
+  cir.func @bar_alias() alias(@bar) cc(spir_kernel)
+
+  // CHECK: cir.func no_inline @baz() cc(spir_function)
+  cir.func no_inline @baz() cc(spir_function) {
+    cir.return
+  }
+}

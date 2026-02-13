@@ -120,6 +120,9 @@ public:
 
   const CIRGenRecordLayout &getCIRGenRecordLayout(const clang::RecordDecl *rd);
 
+  /// Convert clang calling convention to CIR calling convention.
+  cir::CallingConv ClangCallConvToCIRCallConv(clang::CallingConv cc);
+
   /// Convert type T into an mlir::Type. This differs from convertType in that
   /// it is used to convert to the memory representation for a type. For
   /// example, the scalar representation for bool is i1, but the memory
