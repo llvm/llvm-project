@@ -703,17 +703,19 @@ bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
   if (Extern && S.checkingPotentialConstantExpression())
     return false;
 
-  if (const auto *VD = Desc->asVarDecl();
-      VD && (VD->isConstexpr() || VD->hasGlobalStorage())) {
+  const auto *VD = Desc->asVarDecl();
 
-    if (VD == S.EvaluatingDecl &&
-        !(S.getLangOpts().CPlusPlus23 && VD->getType()->isReferenceType())) {
+  if (VD && (VD->isConstexpr() || VD->hasGlobalStorage())) {
+
+    if (VD == S.EvaluatingDecl) {
       if (!S.getLangOpts().CPlusPlus14 &&
           !VD->getType().isConstant(S.getASTContext())) {
         // Diagnose as non-const read.
         diagnoseNonConstVariable(S, OpPC, VD);
+      } else if (const SourceInfo &Loc = S.Current->getSource(OpPC);
+                 VD->getType()->isReferenceType()) {
+        S.FFDiag(Loc, diag::note_constexpr_use_uninit_reference);
       } else {
-        const SourceInfo &Loc = S.Current->getSource(OpPC);
         // Diagnose as "read of object outside its lifetime".
         S.FFDiag(Loc, diag::note_constexpr_access_uninit)
             << AK << /*IsIndeterminate=*/false;
@@ -723,8 +725,12 @@ bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
 
     if (VD->getAnyInitializer()) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
-      S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
-      S.Note(VD->getLocation(), diag::note_declared_at);
+      if (VD->getType()->isReferenceType()) {
+        S.FFDiag(Loc, diag::note_constexpr_use_uninit_reference);
+      } else {
+        S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
+        S.Note(VD->getLocation(), diag::note_declared_at);
+      }
     } else {
       diagnoseMissingInitializer(S, OpPC, VD);
     }
@@ -732,8 +738,12 @@ bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
   }
 
   if (!S.checkingPotentialConstantExpression()) {
-    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_uninit)
-        << AK << /*uninitialized=*/true << S.Current->getRange(OpPC);
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    if (VD && VD->getType()->isReferenceType())
+      S.FFDiag(Loc, diag::note_constexpr_use_uninit_reference);
+    else
+      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_uninit)
+          << AK << /*uninitialized=*/true << S.Current->getRange(OpPC);
   }
   return false;
 }
