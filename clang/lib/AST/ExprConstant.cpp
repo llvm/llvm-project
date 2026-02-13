@@ -1775,9 +1775,9 @@ static bool EvaluateComplex(const Expr *E, ComplexValue &Res, EvalInfo &Info);
 static bool EvaluateAtomic(const Expr *E, const LValue *This, APValue &Result,
                            EvalInfo &Info);
 static bool EvaluateAsRValue(EvalInfo &Info, const Expr *E, APValue &Result);
-static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
-                                  EvalInfo &Info,
-                                  std::string *StringResult = nullptr);
+static std::optional<uint64_t>
+EvaluateBuiltinStrLen(const Expr *E, EvalInfo &Info,
+                      std::string *StringResult = nullptr);
 
 /// Evaluate an integer or fixed point expression into an APResult.
 static bool EvaluateFixedPointOrInteger(const Expr *E, APFixedPoint &Result,
@@ -3599,6 +3599,13 @@ static void expandArray(APValue &Array, unsigned Index) {
   Array.swap(NewValue);
 }
 
+// Expand an indeterminate vector to materialize all elements.
+static void expandVector(APValue &Vec, unsigned NumElements) {
+  assert(Vec.isIndeterminate());
+  SmallVector<APValue, 4> Elts(NumElements, APValue::IndeterminateValue());
+  Vec = APValue(Elts.data(), Elts.size());
+}
+
 /// Determine whether a type would actually be read by an lvalue-to-rvalue
 /// conversion. If it's of class type, we may assume that the copy operation
 /// is trivial. Note that this is never true for a union type with fields
@@ -4291,6 +4298,15 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
 
       ObjType = VT->getElementType();
       assert(I == N - 1 && "extracting subobject of scalar?");
+
+      if (O->isIndeterminate()) {
+        if (isRead(handler.AccessKind)) {
+          Info.FFDiag(E);
+          return handler.failed();
+        }
+        expandVector(*O, NumElements);
+      }
+      assert(O->isVector() && "unexpected object during vector element access");
       return handler.found(O->getVectorElt(Index), ObjType);
     } else if (const FieldDecl *Field = getAsField(Sub.Entries[I])) {
       if (Field->isMutable() &&
@@ -15781,8 +15797,8 @@ static bool determineEndOffset(EvalInfo &Info, SourceLocation ExprLoc,
 ///
 /// If @p WasError is non-null, this will report whether the failure to evaluate
 /// is to be treated as an Error in IntExprEvaluator.
-static bool tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type,
-                                         EvalInfo &Info, uint64_t &Size) {
+static std::optional<uint64_t>
+tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type, EvalInfo &Info) {
   // Determine the denoted object.
   LValue LVal;
   {
@@ -15797,31 +15813,27 @@ static bool tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type,
       // Expr::tryEvaluateObjectSize.
       APValue RVal;
       if (!EvaluateAsRValue(Info, E, RVal))
-        return false;
+        return std::nullopt;
       LVal.setFrom(Info.Ctx, RVal);
     } else if (!EvaluatePointer(ignorePointerCastsAndParens(E), LVal, Info,
                                 /*InvalidBaseOK=*/true))
-      return false;
+      return std::nullopt;
   }
 
   // If we point to before the start of the object, there are no accessible
   // bytes.
-  if (LVal.getLValueOffset().isNegative()) {
-    Size = 0;
-    return true;
-  }
+  if (LVal.getLValueOffset().isNegative())
+    return 0;
 
   CharUnits EndOffset;
   if (!determineEndOffset(Info, E->getExprLoc(), Type, LVal, EndOffset))
-    return false;
+    return std::nullopt;
 
   // If we've fallen outside of the end offset, just pretend there's nothing to
   // write to/read from.
   if (EndOffset <= LVal.getLValueOffset())
-    Size = 0;
-  else
-    Size = (EndOffset - LVal.getLValueOffset()).getQuantity();
-  return true;
+    return 0;
+  return (EndOffset - LVal.getLValueOffset()).getQuantity();
 }
 
 bool IntExprEvaluator::VisitCallExpr(const CallExpr *E) {
@@ -15952,9 +15964,9 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         E->getArg(1)->EvaluateKnownConstInt(Info.Ctx).getZExtValue();
     assert(Type <= 3 && "unexpected type");
 
-    uint64_t Size;
-    if (tryEvaluateBuiltinObjectSize(E->getArg(0), Type, Info, Size))
-      return Success(Size, E);
+    if (std::optional<uint64_t> Size =
+            tryEvaluateBuiltinObjectSize(E->getArg(0), Type, Info))
+      return Success(*Size, E);
 
     if (E->getArg(0)->HasSideEffects(Info.Ctx))
       return Success((Type & 2) ? 0 : -1, E);
@@ -16041,6 +16053,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(AlignedVal, E);
   }
 
+  case Builtin::BI__builtin_bitreverseg:
   case Builtin::BI__builtin_bitreverse8:
   case Builtin::BI__builtin_bitreverse16:
   case Builtin::BI__builtin_bitreverse32:
@@ -16059,7 +16072,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     APSInt Val;
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;
-    if (Val.getBitWidth() == 8)
+    if (Val.getBitWidth() == 8 || Val.getBitWidth() == 1)
       return Success(Val, E);
 
     return Success(Val.byteSwap(), E);
@@ -16552,9 +16565,9 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_wcslen: {
     // As an extension, we support __builtin_strlen() as a constant expression,
     // and support folding strlen() to a constant.
-    uint64_t StrLen;
-    if (EvaluateBuiltinStrLen(E->getArg(0), StrLen, Info))
-      return Success(StrLen, E);
+    if (std::optional<uint64_t> StrLen =
+            EvaluateBuiltinStrLen(E->getArg(0), Info))
+      return Success(*StrLen, E);
     return false;
   }
 
@@ -21000,6 +21013,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::CompoundAssignOperatorClass:
   case Expr::CompoundLiteralExprClass:
   case Expr::ExtVectorElementExprClass:
+  case Expr::MatrixElementExprClass:
   case Expr::DesignatedInitExprClass:
   case Expr::ArrayInitLoopExprClass:
   case Expr::ArrayInitIndexExprClass:
@@ -21117,6 +21131,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::ArrayTypeTraitExprClass:
   case Expr::ExpressionTraitExprClass:
   case Expr::CXXNoexceptExprClass:
+  case Expr::CXXReflectExprClass:
     return NoDiag();
   case Expr::CallExprClass:
   case Expr::CXXOperatorCallExprClass: {
@@ -21659,29 +21674,28 @@ bool Expr::isPotentialConstantExprUnevaluated(Expr *E,
   return Diags.empty();
 }
 
-bool Expr::tryEvaluateObjectSize(uint64_t &Result, ASTContext &Ctx,
-                                 unsigned Type) const {
+std::optional<uint64_t> Expr::tryEvaluateObjectSize(const ASTContext &Ctx,
+                                                    unsigned Type) const {
   if (!getType()->isPointerType())
-    return false;
+    return std::nullopt;
 
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
-  if (Info.EnableNewConstInterp) {
-    return Info.Ctx.getInterpContext().tryEvaluateObjectSize(Info, this, Type,
-                                                             Result);
-  }
-  return tryEvaluateBuiltinObjectSize(this, Type, Info, Result);
+  if (Info.EnableNewConstInterp)
+    return Info.Ctx.getInterpContext().tryEvaluateObjectSize(Info, this, Type);
+  return tryEvaluateBuiltinObjectSize(this, Type, Info);
 }
 
-static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
-                                  EvalInfo &Info, std::string *StringResult) {
+static std::optional<uint64_t>
+EvaluateBuiltinStrLen(const Expr *E, EvalInfo &Info,
+                      std::string *StringResult) {
   if (!E->getType()->hasPointerRepresentation() || !E->isPRValue())
-    return false;
+    return std::nullopt;
 
   LValue String;
 
   if (!EvaluatePointer(E, String, Info))
-    return false;
+    return std::nullopt;
 
   QualType CharTy = E->getType()->getPointeeType();
 
@@ -21700,10 +21714,9 @@ static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
       if (Pos != StringRef::npos)
         Str = Str.substr(0, Pos);
 
-      Result = Str.size();
       if (StringResult)
         *StringResult = Str;
-      return true;
+      return Str.size();
     }
 
     // Fall through to slow path.
@@ -21714,21 +21727,19 @@ static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
     APValue Char;
     if (!handleLValueToRValueConversion(Info, E, CharTy, String, Char) ||
         !Char.isInt())
-      return false;
-    if (!Char.getInt()) {
-      Result = Strlen;
-      return true;
-    } else if (StringResult)
+      return std::nullopt;
+    if (!Char.getInt())
+      return Strlen;
+    else if (StringResult)
       StringResult->push_back(Char.getInt().getExtValue());
     if (!HandleLValueArrayAdjustment(Info, E, String, CharTy, 1))
-      return false;
+      return std::nullopt;
   }
 }
 
 std::optional<std::string> Expr::tryEvaluateString(ASTContext &Ctx) const {
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
-  uint64_t Result;
   std::string StringResult;
 
   if (Info.EnableNewConstInterp) {
@@ -21737,7 +21748,7 @@ std::optional<std::string> Expr::tryEvaluateString(ASTContext &Ctx) const {
     return StringResult;
   }
 
-  if (EvaluateBuiltinStrLen(this, Result, Info, &StringResult))
+  if (EvaluateBuiltinStrLen(this, Info, &StringResult))
     return StringResult;
   return std::nullopt;
 }
@@ -21814,14 +21825,13 @@ bool Expr::EvaluateCharRangeAsString(APValue &Result,
                                        PtrExpression, Ctx, Status);
 }
 
-bool Expr::tryEvaluateStrLen(uint64_t &Result, ASTContext &Ctx) const {
+std::optional<uint64_t> Expr::tryEvaluateStrLen(const ASTContext &Ctx) const {
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
 
   if (Info.EnableNewConstInterp)
-    return Info.Ctx.getInterpContext().evaluateStrlen(Info, this, Result);
-
-  return EvaluateBuiltinStrLen(this, Result, Info);
+    return Info.Ctx.getInterpContext().evaluateStrlen(Info, this);
+  return EvaluateBuiltinStrLen(this, Info);
 }
 
 namespace {

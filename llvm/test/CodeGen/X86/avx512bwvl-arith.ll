@@ -239,17 +239,28 @@ define i16 @PR90356(<16 x i1> %a) {
 ; CHECK-LABEL: PR90356:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsllw $7, %xmm0, %xmm0
-; CHECK-NEXT:    vpmovb2m %xmm0, %k1
-; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
-; CHECK-NEXT:    movb $63, %al
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    movw $4095, %ax # imm = 0xFFF
 ; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    vpexpandq %zmm0, %zmm0 {%k1} {z}
-; CHECK-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; CHECK-NEXT:    vpcmpgtb %xmm0, %xmm1, %k0 {%k1}
 ; CHECK-NEXT:    kmovd %k0, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %1 = shufflevector <16 x i1> %a, <16 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 28, i32 29, i32 30, i32 31>
   %2 = bitcast <16 x i1> %1 to i16
   ret i16 %2
+}
+
+define <4 x i1> @PR180472(<4 x i1> %0) {
+; CHECK-LABEL: PR180472:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpslld $31, %xmm0, %xmm0
+; CHECK-NEXT:    movb $5, %al
+; CHECK-NEXT:    kmovd %eax, %k1
+; CHECK-NEXT:    vptestmd %xmm0, %xmm0, %k1 {%k1}
+; CHECK-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
+; CHECK-NEXT:    retq
+  %x = shufflevector <4 x i1> %0, <4 x i1> zeroinitializer, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+  ret <4 x i1> %x
 }

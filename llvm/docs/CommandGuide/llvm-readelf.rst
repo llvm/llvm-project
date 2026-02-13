@@ -20,14 +20,14 @@ input. Otherwise, it will read from the specified ``filenames``.
 OPTIONS
 -------
 
-.. option:: --all, -a
-
- Equivalent to specifying all the main display options relevant to the file
- format.
-
 .. option:: --addrsig
 
  Display the address-significance table.
+
+ .. option:: --all, -a
+
+ Equivalent to specifying all the main display options relevant to the file
+ format.
 
 .. option:: --arch-specific, -A
 
@@ -63,6 +63,10 @@ OPTIONS
 
  Display the dependent libraries section.
 
+.. option:: --dynamic-table, --dynamic, -d
+
+ Display the dynamic table.
+
 .. option:: --dyn-relocations
 
  Display the dynamic relocation entries.
@@ -70,14 +74,6 @@ OPTIONS
 .. option:: --dyn-symbols, --dyn-syms
 
  Display the dynamic symbol table.
-
-.. option:: --dynamic-table, --dynamic, -d
-
- Display the dynamic table.
-
-.. option:: --histogram, -I
-
- Display a bucket list histogram for dynamic symbol hash tables.
 
 .. option:: --elf-linker-options
 
@@ -93,10 +89,6 @@ OPTIONS
 .. option:: --extra-sym-info
 
  Display extra information (section name) when showing symbols.
-
-.. option:: --section-groups, -g
-
- Display section groups.
 
 .. option:: --expand-relocs
 
@@ -133,6 +125,10 @@ OPTIONS
  Display the specified section(s) as hexadecimal bytes. ``section`` may be a
  section index or section name.
 
+.. option:: --histogram, -I
+
+ Display a bucket list histogram for dynamic symbol hash tables.
+
 .. option:: --memtag
 
  Display information about memory tagging present in the binary. This includes
@@ -168,10 +164,6 @@ OPTIONS
 
  Display the relocation entries in the file.
 
-.. option:: --sections, --section-headers, -S
-
- Display all sections.
-
 .. option:: --section-data
 
  When used with :option:`--sections`, display section data for each section
@@ -181,6 +173,10 @@ OPTIONS
 
  Display all section details. Used as an alternative to :option:`--sections`.
 
+.. option:: --section-groups, -g
+
+ Display section groups.
+
 .. option:: --section-mapping
 
  Display the section to segment mapping.
@@ -189,6 +185,10 @@ OPTIONS
 
  When used with :option:`--sections`, display relocations for each section
  shown. This option has no effect for GNU style output.
+
+.. option:: --sections, --section-headers, -S
+
+ Display all sections.
 
 .. option:: --section-symbols
 
