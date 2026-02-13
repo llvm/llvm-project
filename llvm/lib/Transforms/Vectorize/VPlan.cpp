@@ -67,6 +67,8 @@ const char LLVMLoopVectorizeFollowupEpilogue[] =
 
 extern cl::opt<unsigned> ForceTargetInstructionCost;
 
+extern cl::opt<unsigned> NumberOfStoresToPredicate;
+
 static cl::opt<bool> PrintVPlansInDotFormat(
     "vplan-print-in-dot-format", cl::Hidden,
     cl::desc("Use dot format instead of plain text when dumping VPlans"));
@@ -1802,4 +1804,32 @@ InstructionCost VPCostContext::getScalarizationOverhead(
   }
   return ScalarizationCost +
          TTI.getOperandsScalarizationOverhead(Tys, CostKind, VIC);
+}
+
+bool VPCostContext::useEmulatedMaskMemRefHack(const VPReplicateRecipe *R,
+                                              ElementCount VF) {
+  const Instruction *UI = R->getUnderlyingInstr();
+  if (isa<LoadInst>(UI))
+    return true;
+  assert(isa<StoreInst>(UI) && "R must either be a load or store");
+
+  if (!NumPredStores) {
+    // Count the number of predicated stores in the VPlan, caching the result.
+    const VPlan &Plan = *R->getParent()->getPlan();
+    NumPredStores = 0;
+    for (const VPRegionBlock *VPRB :
+         VPBlockUtils::blocksOnly<const VPRegionBlock>(
+             vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+      assert(VPRB->isReplicator() && "must only contain replicate regions");
+      for (const VPBasicBlock *VPBB :
+           VPBlockUtils::blocksOnly<const VPBasicBlock>(
+               vp_depth_first_shallow(VPRB->getEntry()))) {
+        *NumPredStores += count_if(*VPBB, [](const VPRecipeBase &R) {
+          auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+          return RepR && isa<StoreInst>(RepR->getUnderlyingInstr());
+        });
+      }
+    }
+  }
+  return *NumPredStores > NumberOfStoresToPredicate;
 }
