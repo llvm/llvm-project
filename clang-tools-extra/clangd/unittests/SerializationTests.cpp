@@ -448,10 +448,10 @@ TEST(SerializationTest, NoCrashOnBadStringTableSize) {
 // An index is generated at /home/project. A second client at /workarea/project
 // loads and re-stores the shards. On-disk content always contains the
 // /home/project paths so the index remains portable.
-TEST(SerializationTest, URITransformRoundTrip) {
+TEST(SerializationTest, PathTransformRoundTrip) {
   // Store transform: map /workarea/project -> /home/project so that
   // on-disk content stays in the canonical /home/project paths.
-  URITransform StoreTransform = [](llvm::StringRef URI) -> std::string {
+  PathTransform StoreTransform = [](llvm::StringRef URI) -> std::string {
     std::string S = URI.str();
     size_t Pos = S.find("/workarea/project/");
     if (Pos != std::string::npos)
@@ -460,7 +460,7 @@ TEST(SerializationTest, URITransformRoundTrip) {
   };
   // Load transform: map /home/project -> /workarea/project so that
   // in-memory paths match the local filesystem.
-  URITransform LoadTransform = [](llvm::StringRef URI) -> std::string {
+  PathTransform LoadTransform = [](llvm::StringRef URI) -> std::string {
     std::string S = URI.str();
     size_t Pos = S.find("/home/project/");
     if (Pos != std::string::npos)

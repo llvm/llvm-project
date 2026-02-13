@@ -8,7 +8,6 @@
 
 #include "GlobalCompilationDatabase.h"
 #include "PathMapping.h"
-#include "URI.h"
 #include "index/Background.h"
 #include "support/Logger.h"
 #include "support/Path.h"
@@ -74,8 +73,8 @@ std::string getShardPathFromFilePath(llvm::StringRef ShardRoot,
 class DiskBackedIndexStorage : public BackgroundIndexStorage {
   std::string DiskShardRoot;
   PathMappings Mappings;
-  URITransform LoadTransform;
-  URITransform StoreTransform;
+  PathTransform LoadTransform;
+  PathTransform StoreTransform;
 
 public:
   // Creates `DiskShardRoot` and any parents during construction.
@@ -116,7 +115,8 @@ public:
     auto Buffer = llvm::MemoryBuffer::getFile(ShardPath);
     if (!Buffer)
       return nullptr;
-    const URITransform *Transform = Mappings.empty() ? nullptr : &LoadTransform;
+    const PathTransform *Transform =
+        Mappings.empty() ? nullptr : &LoadTransform;
     if (auto I = readIndexFile(Buffer->get()->getBuffer(),
                                SymbolOrigin::Background, Transform))
       return std::make_unique<IndexFileIn>(std::move(*I));

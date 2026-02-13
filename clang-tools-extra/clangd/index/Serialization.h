@@ -35,8 +35,8 @@
 namespace clang {
 namespace clangd {
 
-// Used to remap URIs during serialization/deserialization
-using URITransform = llvm::unique_function<std::string(llvm::StringRef) const>;
+// Used to remap URIs and paths during serialization/deserialization.
+using PathTransform = llvm::unique_function<std::string(llvm::StringRef) const>;
 
 enum class IndexFileFormat {
   RIFF, // Versioned binary format, suitable for production use.
@@ -57,7 +57,7 @@ struct IndexFileIn {
 // If Transform is provided, use it to remap all URIs.
 llvm::Expected<IndexFileIn>
 readIndexFile(llvm::StringRef, SymbolOrigin,
-              const URITransform *Transform = nullptr);
+              const PathTransform *Transform = nullptr);
 
 // Specifies the contents of an index file to be written.
 struct IndexFileOut {
@@ -69,7 +69,7 @@ struct IndexFileOut {
   // TODO: Support serializing Dex posting lists.
   IndexFileFormat Format = IndexFileFormat::RIFF;
   const tooling::CompileCommand *Cmd = nullptr;
-  const URITransform *Transform = nullptr;
+  const PathTransform *Transform = nullptr;
 
   IndexFileOut() = default;
   IndexFileOut(const IndexFileIn &I)

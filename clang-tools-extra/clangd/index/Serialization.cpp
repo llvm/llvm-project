@@ -172,7 +172,7 @@ class StringTableOut {
   llvm::DenseMap<std::pair<const char *, size_t>, unsigned> Index;
   llvm::BumpPtrAllocator Arena;
   llvm::StringSaver TransformSaver{Arena};
-  const URITransform *Transform = nullptr;
+  const PathTransform *Transform = nullptr;
 
 public:
   StringTableOut() {
@@ -180,7 +180,7 @@ public:
     // Table size zero is reserved to indicate no compression.
     Unique.insert("");
   }
-  void setTransform(const URITransform *T) { Transform = T; }
+  void setTransform(const PathTransform *T) { Transform = T; }
   // Add a string to the table. Overwrites S if an identical string exists.
   // If path remapping is enabled, transform and store the new value.
   void intern(llvm::StringRef &S) {
@@ -228,7 +228,8 @@ struct StringTableIn {
 };
 
 llvm::Expected<StringTableIn>
-readStringTable(llvm::StringRef Data, const URITransform *Transform = nullptr) {
+readStringTable(llvm::StringRef Data,
+                const PathTransform *Transform = nullptr) {
   Reader R(Data);
   size_t UncompressedSize = R.consume32();
   if (R.err())
@@ -478,7 +479,7 @@ readCompileCommand(Reader CmdReader, llvm::ArrayRef<llvm::StringRef> Strings) {
 constexpr static uint32_t Version = 20;
 
 llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data, SymbolOrigin Origin,
-                                     const URITransform *Transform) {
+                                     const PathTransform *Transform) {
   auto RIFF = riff::readFile(Data);
   if (!RIFF)
     return RIFF.takeError();
@@ -712,7 +713,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const IndexFileOut &O) {
 
 llvm::Expected<IndexFileIn> readIndexFile(llvm::StringRef Data,
                                           SymbolOrigin Origin,
-                                          const URITransform *Transform) {
+                                          const PathTransform *Transform) {
   if (Data.starts_with("RIFF")) {
     return readRIFF(Data, Origin, Transform);
   }
