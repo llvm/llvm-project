@@ -83,7 +83,7 @@ declare void @free(ptr) willreturn allockind("free") "alloc-family"="malloc"
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(24) [[HDL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_RESUME:.*:]]
 ; CHECK-NEXT:    [[X_RELOAD_ADDR:%.*]] = getelementptr inbounds [[F_FRAME:%.*]], ptr [[HDL]], i32 0, i32 2
-; CHECK-NEXT:    [[X_RELOAD:%.*]] = load i32, ptr [[X_RELOAD_ADDR]], align 4
+; CHECK-NEXT:    [[X_RELOAD:%.*]] = load i32, ptr [[X_RELOAD_ADDR]], align 4, !tbaa [[F_FRAME_SLOT_TBAA4:![0-9]+]]
 ; CHECK-NEXT:    call void @print(i32 [[X_RELOAD]])
 ; CHECK-NEXT:    call void @free(ptr [[HDL]])
 ; CHECK-NEXT:    ret void
@@ -106,4 +106,6 @@ declare void @free(ptr) willreturn allockind("free") "alloc-family"="malloc"
 ; CHECK: [[META1]] = !{!"int", [[META2:![0-9]+]], i64 0}
 ; CHECK: [[META2]] = !{!"omnipotent char", [[META3:![0-9]+]], i64 0}
 ; CHECK: [[META3]] = !{!"Simple C++ TBAA"}
+; CHECK: [[F_FRAME_SLOT_TBAA4]] = !{[[META5:![0-9]+]], [[META5]], i64 0}
+; CHECK: [[META5]] = !{!"f.Frame Slot", [[META3]], i64 0}
 ;.

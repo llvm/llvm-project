@@ -3,6 +3,9 @@
 %promise_type = type { i8 }
 %struct.A = type <{ i64, i64, i32, [4 x i8] }>
 
+; Check that the frame will contain the entire struct, instead of just the
+; struct pointer, and that the alignment is taken into account.
+
 ; CHECK: %foo.Frame = type { ptr, ptr, %promise_type, i1, [6 x i8], %struct.A }
 
 ; Function Attrs: noinline ssp uwtable mustprogress
@@ -85,9 +88,6 @@ coro.ret:                                         ; preds = %coro.free, %cleanup
   call void @llvm.coro.end(ptr null, i1 false, token none) #10
   ret ptr %call2
 }
-
-; check that the frame contains the entire struct, instead of just the struct pointer,
-; and that the alignment is taken into account.
 
 ; Function Attrs: argmemonly nounwind readonly
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #1
