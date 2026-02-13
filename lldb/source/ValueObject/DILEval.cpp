@@ -180,15 +180,17 @@ Interpreter::ArithmeticConversion(lldb::ValueObjectSP &lhs,
     return CompilerType();
 
   // Handle conversions for floating types (float, double).
-  if (lhs_type.IsFloat() || rhs_type.IsFloat()) {
+  if (lhs_type.IsRealFloatingPointType() ||
+      rhs_type.IsRealFloatingPointType()) {
     // If both are floats, convert the smaller operand to the bigger.
-    if (lhs_type.IsFloat() && rhs_type.IsFloat()) {
+    if (lhs_type.IsRealFloatingPointType() &&
+        rhs_type.IsRealFloatingPointType()) {
       if (lhs_type.GetBasicTypeEnumeration() >
           rhs_type.GetBasicTypeEnumeration())
         return lhs_type;
       return rhs_type;
     }
-    if (lhs_type.IsFloat() && rhs_type.IsInteger())
+    if (lhs_type.IsRealFloatingPointType() && rhs_type.IsInteger())
       return lhs_type;
     return rhs_type;
   }
