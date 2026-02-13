@@ -314,50 +314,6 @@ func.func @negative_op_multi_reduction(%A: tensor<10x20x30xf32>,
 
 // -----
 
-// Both A and B transposed: no named op variant exists for this combination.
-#mapABt0 = affine_map<(d0, d1, d2) -> (d2, d0)>
-#mapABt1 = affine_map<(d0, d1, d2) -> (d1, d2)>
-#mapABt2 = affine_map<(d0, d1, d2) -> (d0, d1)>
-func.func @negative_matmul_transpose_a_and_b(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
-                                              %Out: tensor<?x?xf32>) -> tensor<?x?xf32> {
-  %0 = linalg.generic
-         {indexing_maps = [#mapABt0, #mapABt1, #mapABt2], iterator_types = ["parallel", "parallel", "reduction"]}
-         ins(%A, %B : tensor<?x?xf32>, tensor<?x?xf32>) outs(%Out : tensor<?x?xf32>) {
-   ^bb0(%in: f32, %in_0: f32, %out: f32):
-     %1 = arith.mulf %in, %in_0 : f32
-     %2 = arith.addf %out, %1 : f32
-     linalg.yield %2 : f32
-   } -> tensor<?x?xf32>
-   return %0 : tensor<?x?xf32>
-}
-
-// CHECK-LABEL: negative_matmul_transpose_a_and_b
-// CHECK: linalg.generic
-
-// -----
-
-// Output transposed: C is accessed as (n, m) instead of (m, n).
-#mapCt0 = affine_map<(d0, d1, d2) -> (d0, d2)>
-#mapCt1 = affine_map<(d0, d1, d2) -> (d2, d1)>
-#mapCt2 = affine_map<(d0, d1, d2) -> (d1, d0)>
-func.func @negative_matmul_transposed_output(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
-                                              %Out: tensor<?x?xf32>) -> tensor<?x?xf32> {
-  %0 = linalg.generic
-         {indexing_maps = [#mapCt0, #mapCt1, #mapCt2], iterator_types = ["parallel", "parallel", "reduction"]}
-         ins(%A, %B : tensor<?x?xf32>, tensor<?x?xf32>) outs(%Out : tensor<?x?xf32>) {
-   ^bb0(%in: f32, %in_0: f32, %out: f32):
-     %1 = arith.mulf %in, %in_0 : f32
-     %2 = arith.addf %out, %1 : f32
-     linalg.yield %2 : f32
-   } -> tensor<?x?xf32>
-   return %0 : tensor<?x?xf32>
-}
-
-// CHECK-LABEL: negative_matmul_transposed_output
-// CHECK: linalg.generic
-
-// -----
-
 // Batch dim not in identity position: batch dim d0 appears at result
 // position 1 in A's map instead of position 0.
 #mapBni0 = affine_map<(d0, d1, d2, d3) -> (d1, d0, d3)>
@@ -402,12 +358,12 @@ func.func @op_matvec(%A: tensor<?x?xf32>, %B: tensor<?xf32>, %Out: tensor<?xf32>
 // -----
 
 // Matmul transpose A: A is accessed as (k, m) instead of (m, k)
-#mapTA0 = affine_map<(d0, d1, d2) -> (d2, d0)>
-#mapTA1 = affine_map<(d0, d1, d2) -> (d2, d1)>
-#mapTA2 = affine_map<(d0, d1, d2) -> (d0, d1)>
+#map_ta = affine_map<(d0, d1, d2) -> (d2, d0)>
+#map_b = affine_map<(d0, d1, d2) -> (d2, d1)>
+#map_c = affine_map<(d0, d1, d2) -> (d0, d1)>
 func.func @op_matmul_transpose_a(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %Out: tensor<?x?xf32>) -> tensor<?x?xf32> {
   %0 = linalg.generic
-         {indexing_maps = [#mapTA0, #mapTA1, #mapTA2], iterator_types = ["parallel", "parallel", "reduction"]}
+         {indexing_maps = [#map_ta, #map_b, #map_c], iterator_types = ["parallel", "parallel", "reduction"]}
          ins(%A, %B : tensor<?x?xf32>, tensor<?x?xf32>) outs(%Out : tensor<?x?xf32>) {
    ^bb0(%in: f32, %in_0: f32, %out: f32):
      %1 = arith.mulf %in, %in_0 : f32
@@ -431,12 +387,12 @@ func.func @op_matmul_transpose_a(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %Out:
 // -----
 
 // Matmul transpose B: B is accessed as (n, k) instead of (k, n)
-#mapTB0 = affine_map<(d0, d1, d2) -> (d0, d2)>
-#mapTB1 = affine_map<(d0, d1, d2) -> (d1, d2)>
-#mapTB2 = affine_map<(d0, d1, d2) -> (d0, d1)>
+#map_a = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map_tb = affine_map<(d0, d1, d2) -> (d1, d2)>
+#map_c = affine_map<(d0, d1, d2) -> (d0, d1)>
 func.func @op_matmul_transpose_b(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %Out: tensor<?x?xf32>) -> tensor<?x?xf32> {
   %0 = linalg.generic
-         {indexing_maps = [#mapTB0, #mapTB1, #mapTB2], iterator_types = ["parallel", "parallel", "reduction"]}
+         {indexing_maps = [#map_a, #map_tb, #map_c], iterator_types = ["parallel", "parallel", "reduction"]}
          ins(%A, %B : tensor<?x?xf32>, tensor<?x?xf32>) outs(%Out : tensor<?x?xf32>) {
    ^bb0(%in: f32, %in_0: f32, %out: f32):
      %1 = arith.mulf %in, %in_0 : f32
@@ -460,12 +416,12 @@ func.func @op_matmul_transpose_b(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %Out:
 // -----
 
 // Batch matmul transpose A: A is accessed as (b, k, m) instead of (b, m, k)
-#mapBTA0 = affine_map<(d0, d1, d2, d3) -> (d0, d3, d1)>
-#mapBTA1 = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
-#mapBTA2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+#map_ta = affine_map<(d0, d1, d2, d3) -> (d0, d3, d1)>
+#map_b = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
+#map_c = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
 func.func @op_batch_matmul_transpose_a(%A: tensor<2x8x4xf32>, %B: tensor<2x8x16xf32>, %Out: tensor<2x4x16xf32>) -> tensor<2x4x16xf32> {
   %0 = linalg.generic
-           {indexing_maps = [#mapBTA0, #mapBTA1, #mapBTA2], iterator_types = ["parallel", "parallel", "parallel", "reduction"]}
+           {indexing_maps = [#map_ta, #map_b, #map_c], iterator_types = ["parallel", "parallel", "parallel", "reduction"]}
            ins(%A, %B : tensor<2x8x4xf32>, tensor<2x8x16xf32>) outs(%Out : tensor<2x4x16xf32>) {
   ^bb0(%in: f32, %in_0: f32, %out: f32):
     %1 = arith.mulf %in, %in_0 : f32
@@ -489,12 +445,12 @@ func.func @op_batch_matmul_transpose_a(%A: tensor<2x8x4xf32>, %B: tensor<2x8x16x
 // -----
 
 // Batch matmul transpose B: B is accessed as (b, n, k) instead of (b, k, n)
-#mapBTB0 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
-#mapBTB1 = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>
-#mapBTB2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+#map_a = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+#map_tb = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>
+#map_c = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
 func.func @op_batch_matmul_transpose_b(%A: tensor<2x4x8xf32>, %B: tensor<2x16x8xf32>, %Out: tensor<2x4x16xf32>) -> tensor<2x4x16xf32> {
   %0 = linalg.generic
-           {indexing_maps = [#mapBTB0, #mapBTB1, #mapBTB2], iterator_types = ["parallel", "parallel", "parallel", "reduction"]}
+           {indexing_maps = [#map_a, #map_tb, #map_c], iterator_types = ["parallel", "parallel", "parallel", "reduction"]}
            ins(%A, %B : tensor<2x4x8xf32>, tensor<2x16x8xf32>) outs(%Out : tensor<2x4x16xf32>) {
   ^bb0(%in: f32, %in_0: f32, %out: f32):
     %1 = arith.mulf %in, %in_0 : f32
@@ -514,3 +470,63 @@ func.func @op_batch_matmul_transpose_b(%A: tensor<2x4x8xf32>, %B: tensor<2x16x8x
 // CHECK-SAME: indexing_maps = [#[[$MAP_A]], #[[$MAP_TB]], #[[$MAP_C]]]
 // CHECK-SAME: ins(%[[A]], %[[B]] : tensor<2x4x8xf32>, tensor<2x16x8xf32>)
 // CHECK-SAME: outs(%[[Out]] : tensor<2x4x16xf32>) -> tensor<2x4x16xf32>
+
+// -----
+
+// Both A and B transposed.
+#map_ta = affine_map<(d0, d1, d2) -> (d2, d0)>
+#map_tb = affine_map<(d0, d1, d2) -> (d1, d2)>
+#map_c = affine_map<(d0, d1, d2) -> (d0, d1)>
+func.func @op_matmul_transpose_a_and_b(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
+                                        %Out: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %0 = linalg.generic
+         {indexing_maps = [#map_ta, #map_tb, #map_c], iterator_types = ["parallel", "parallel", "reduction"]}
+         ins(%A, %B : tensor<?x?xf32>, tensor<?x?xf32>) outs(%Out : tensor<?x?xf32>) {
+   ^bb0(%in: f32, %in_0: f32, %out: f32):
+     %1 = arith.mulf %in, %in_0 : f32
+     %2 = arith.addf %out, %1 : f32
+     linalg.yield %2 : f32
+   } -> tensor<?x?xf32>
+   return %0 : tensor<?x?xf32>
+}
+
+// CHECK-DAG: #[[$MAP_TA:.+]] = affine_map<(d0, d1, d2) -> (d2, d0)>
+// CHECK-DAG: #[[$MAP_TB:.+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
+// CHECK-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+// CHECK-LABEL: op_matmul_transpose_a_and_b
+// CHECK-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>, %[[Out:.+]]: tensor<?x?xf32>
+// CHECK-NOT: linalg.generic
+// CHECK: linalg.matmul
+// CHECK-SAME: indexing_maps = [#[[$MAP_TA]], #[[$MAP_TB]], #[[$MAP_C]]]
+// CHECK-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
+// CHECK-SAME: outs(%[[Out]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+
+// -----
+
+// Output transposed: C is accessed as (n, m) instead of (m, n).
+#map_a = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map_b = affine_map<(d0, d1, d2) -> (d2, d1)>
+#map_tc = affine_map<(d0, d1, d2) -> (d1, d0)>
+func.func @op_matmul_transposed_output(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
+                                        %Out: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %0 = linalg.generic
+         {indexing_maps = [#map_a, #map_b, #map_tc], iterator_types = ["parallel", "parallel", "reduction"]}
+         ins(%A, %B : tensor<?x?xf32>, tensor<?x?xf32>) outs(%Out : tensor<?x?xf32>) {
+   ^bb0(%in: f32, %in_0: f32, %out: f32):
+     %1 = arith.mulf %in, %in_0 : f32
+     %2 = arith.addf %out, %1 : f32
+     linalg.yield %2 : f32
+   } -> tensor<?x?xf32>
+   return %0 : tensor<?x?xf32>
+}
+
+// CHECK-DAG: #[[$MAP_A:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// CHECK-DAG: #[[$MAP_B:.+]] = affine_map<(d0, d1, d2) -> (d2, d1)>
+// CHECK-DAG: #[[$MAP_TC:.+]] = affine_map<(d0, d1, d2) -> (d1, d0)>
+// CHECK-LABEL: op_matmul_transposed_output
+// CHECK-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>, %[[Out:.+]]: tensor<?x?xf32>
+// CHECK-NOT: linalg.generic
+// CHECK: linalg.matmul
+// CHECK-SAME: indexing_maps = [#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_TC]]]
+// CHECK-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
+// CHECK-SAME: outs(%[[Out]] : tensor<?x?xf32>) -> tensor<?x?xf32>

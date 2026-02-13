@@ -292,10 +292,6 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
   if (llvm::is_contained({a, b, c}, IndexMatchResult::Mismatch))
     return failure();
 
-  if (c != IndexMatchResult::Match ||
-      (a == IndexMatchResult::Transposed && b == IndexMatchResult::Transposed))
-    return failure();
-
   // Determine the cast type for the named matmul op, or bail out if casts
   // cannot be represented by the named op.
   std::optional<TypeFn> castTy = getCastTypeForMatmulLikeOp(genericOp);
