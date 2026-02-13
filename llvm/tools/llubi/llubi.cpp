@@ -94,6 +94,7 @@ public:
   bool onBBJump(Instruction &I, BasicBlock &To) override {
     errs() << I << " jump to ";
     To.printAsOperand(errs(), /*PrintType=*/false);
+    errs() << '\n';
     return true;
   }
 

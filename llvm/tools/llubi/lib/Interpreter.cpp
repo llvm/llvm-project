@@ -12,6 +12,7 @@
 
 #include "Context.h"
 #include "Value.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/Allocator.h"
@@ -58,6 +59,7 @@ struct Frame {
   DenseMap<Value *, AnyValue> ValueMap;
 
   // Reserved for in-flight subroutines.
+  Function *ResolvedCallee = nullptr;
   SmallVector<AnyValue> CalleeArgs;
   AnyValue CalleeRetVal;
 
@@ -204,6 +206,39 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
     });
   }
 
+  void jumpTo(Instruction &Terminator, BasicBlock *DestBB) {
+    if (!Handler.onBBJump(Terminator, *DestBB))
+      return;
+    BasicBlock *From = CurrentFrame->BB;
+    CurrentFrame->BB = DestBB;
+    CurrentFrame->PC = DestBB->begin();
+    // Update PHI nodes in batch to avoid the interference between PHI nodes.
+    // We need to store the incoming values into a temporary buffer.
+    // Otherwise, the incoming value may be overwritten before it is
+    // used by other PHI nodes.
+    SmallVector<std::pair<PHINode *, AnyValue>> IncomingValues;
+    PHINode *PHI = nullptr;
+    while ((PHI = dyn_cast<PHINode>(CurrentFrame->PC))) {
+      Value *Incoming = PHI->getIncomingValueForBlock(From);
+      // Bail out on the self-referential value.
+      if (Incoming != PHI) {
+        // TODO: handle fast-math flags.
+        IncomingValues.emplace_back(PHI, getValue(Incoming));
+      }
+      ++CurrentFrame->PC;
+    }
+    for (auto &[K, V] : IncomingValues)
+      setResult(*K, std::move(V));
+  }
+
+  /// Helper function to determine whether an inline asm is a no-op, which is
+  /// used to implement black_box style optimization blockers.
+  bool isNoopInlineAsm(Value *V, Type *RetTy) {
+    if (auto *Asm = dyn_cast<InlineAsm>(V))
+      return Asm->getAsmString().empty() && RetTy->isVoidTy();
+    return false;
+  }
+
 public:
   InstExecutor(Context &C, EventHandler &H, Function &F,
                ArrayRef<AnyValue> Args, AnyValue &RetVal)
@@ -217,6 +252,187 @@ public:
       CurrentFrame->RetVal = getValue(RV);
     CurrentFrame->State = FrameState::Exit;
     Status &= Handler.onInstructionExecuted(RI, None);
+  }
+
+  void visitBranchInst(BranchInst &BI) {
+    if (BI.isConditional()) {
+      switch (getValue(BI.getCondition()).asBoolean()) {
+      case BooleanKind::True:
+        jumpTo(BI, BI.getSuccessor(0));
+        return;
+      case BooleanKind::False:
+        jumpTo(BI, BI.getSuccessor(1));
+        return;
+      case BooleanKind::Poison:
+        reportImmediateUB("Branch on poison condition.");
+        return;
+      }
+    }
+    jumpTo(BI, BI.getSuccessor(0));
+  }
+
+  void visitSwitchInst(SwitchInst &SI) {
+    auto &Cond = getValue(SI.getCondition());
+    if (Cond.isPoison()) {
+      reportImmediateUB("Switch on poison condition.");
+      return;
+    }
+    for (auto &Case : SI.cases()) {
+      if (Case.getCaseValue()->getValue() == Cond.asInteger()) {
+        jumpTo(SI, Case.getCaseSuccessor());
+        return;
+      }
+    }
+    jumpTo(SI, SI.getDefaultDest());
+  }
+
+  void visitUnreachableInst(UnreachableInst &) {
+    reportImmediateUB("Unreachable code.");
+  }
+
+  void visitCallBrInst(CallBrInst &CI) {
+    if (isNoopInlineAsm(CI.getCalledOperand(), CI.getType())) {
+      jumpTo(CI, CI.getDefaultDest());
+      return;
+    }
+
+    Handler.onUnrecognizedInstruction(CI);
+    Status = false;
+  }
+
+  void visitIndirectBrInst(IndirectBrInst &IBI) {
+    auto &Target = getValue(IBI.getAddress());
+    if (Target.isPoison()) {
+      reportImmediateUB("Indirect branch on poison.");
+      return;
+    }
+    if (BasicBlock *DestBB = Ctx.getTargetBlock(Target.asPointer())) {
+      if (any_of(IBI.successors(),
+                 [DestBB](BasicBlock *Succ) { return Succ == DestBB; }))
+        jumpTo(IBI, DestBB);
+      else
+        reportImmediateUB("Indirect branch on unlisted target BB.");
+
+      return;
+    }
+    reportImmediateUB("Indirect branch on invalid target BB.");
+  }
+
+  void returnFromCallee() {
+    // TODO: handle retval attributes (Attributes from known callee should be
+    // applied if available).
+    // TODO: handle metadata
+    auto &CB = cast<CallBase>(*CurrentFrame->PC);
+    CurrentFrame->CalleeArgs.clear();
+    AnyValue &RetVal = CurrentFrame->CalleeRetVal;
+    setResult(CB, std::move(RetVal));
+
+    if (auto *II = dyn_cast<InvokeInst>(&CB))
+      jumpTo(*II, II->getNormalDest());
+    else if (CurrentFrame->State == FrameState::Pending)
+      ++CurrentFrame->PC;
+  }
+
+  AnyValue callIntrinsic(CallBase &CB) {
+    Intrinsic::ID IID = CB.getIntrinsicID();
+    switch (IID) {
+    case Intrinsic::assume:
+      switch (getValue(CB.getArgOperand(0)).asBoolean()) {
+      case BooleanKind::True:
+        break;
+      case BooleanKind::False:
+      case BooleanKind::Poison:
+        reportImmediateUB("Assume on false or poison condition.");
+        break;
+      }
+      // TODO: handle llvm.assume with operand bundles
+      return AnyValue();
+    default:
+      Handler.onUnrecognizedInstruction(CB);
+      Status = false;
+      return AnyValue();
+    }
+  }
+
+  AnyValue callLibFunc(CallBase &CB, Function *ResolvedCallee) {
+    LibFunc LF;
+    // Respect nobuiltin attributes on call site.
+    if (CB.isNoBuiltin() || !CurrentFrame->TLI.getLibFunc(*ResolvedCallee, LF)) {
+      Handler.onUnrecognizedInstruction(CB);
+      Status = false;
+      return AnyValue();
+    }
+
+    Handler.onUnrecognizedInstruction(CB);
+    Status = false;
+    return AnyValue();
+  }
+
+  void enterCall(CallBase &CB) {
+    Function *Callee = CB.getCalledFunction();
+    // TODO: handle parameter attributes (Attributes from known callee should be
+    // applied if available).
+    // TODO: handle byval/initializes
+    auto &CalleeArgs = CurrentFrame->CalleeArgs;
+    CalleeArgs.clear();
+    for (Value *Arg : CB.args())
+      CalleeArgs.push_back(getValue(Arg));
+
+    if (!Callee) {
+      Value *CalledOperand = CB.getCalledOperand();
+      if (isNoopInlineAsm(CalledOperand, CB.getType())) {
+        CurrentFrame->ResolvedCallee = nullptr;
+        returnFromCallee();
+        return;
+      } else if (isa<InlineAsm>(CalledOperand)) {
+        Handler.onUnrecognizedInstruction(CB);
+        Status = false;
+        return;
+      }
+
+      auto &CalleeVal = getValue(CalledOperand);
+      if (CalleeVal.isPoison()) {
+        reportImmediateUB("Indirect call through poison function pointer.");
+        return;
+      }
+      Callee = Ctx.getTargetFunction(CalleeVal.asPointer());
+      if (!Callee) {
+        reportImmediateUB("Indirect call through invalid function pointer.");
+        return;
+      }
+    }
+
+    assert(Callee && "Expected a resolved callee function.");
+    CurrentFrame->ResolvedCallee = Callee;
+    if (Callee->isIntrinsic()) {
+      CurrentFrame->CalleeRetVal = callIntrinsic(CB);
+      returnFromCallee();
+      return;
+    } else if (Callee->isDeclaration()) {
+      CurrentFrame->CalleeRetVal = callLibFunc(CB, Callee);
+      returnFromCallee();
+      return;
+    } else {
+      uint32_t MaxStackDepth = Ctx.getMaxStackDepth();
+      if (MaxStackDepth && CallStack.size() >= MaxStackDepth) {
+        reportImmediateUB("Maximum stack depth exceeded.");
+        return;
+      }
+      assert(!Callee->empty() && "Expected a defined function.");
+      // Suspend the current frame and push the callee frame onto the stack.
+      ArrayRef<AnyValue> Args = CurrentFrame->CalleeArgs;
+      AnyValue &RetVal = CurrentFrame->CalleeRetVal;
+      CurrentFrame->State = FrameState::Pending;
+      CallStack.emplace_back(*Callee, &CB, CurrentFrame, Args, RetVal,
+                             Ctx.getTLIImpl());
+    }
+  }
+
+  void visitCallInst(CallInst &CI) { enterCall(CI); }
+
+  void visitInvokeInst(InvokeInst &II) {
+    // TODO: handle exceptions
+    enterCall(II);
   }
 
   void visitAdd(BinaryOperator &I) {
@@ -427,6 +643,20 @@ public:
     });
   }
 
+  void visitICmpInst(ICmpInst &I) {
+    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
+      if (LHS.isPoison() || RHS.isPoison())
+        return AnyValue::poison();
+      // TODO: handle pointer comparison.
+      const APInt &LHSVal = LHS.asInteger();
+      const APInt &RHSVal = RHS.asInteger();
+      if (I.hasSameSign() && LHSVal.isNonNegative() != RHSVal.isNonNegative())
+        return AnyValue::poison();
+      return AnyValue::boolean(
+          ICmpInst::compare(LHSVal, RHSVal, I.getPredicate()));
+    });
+  }
+
   void visitSelect(SelectInst &SI) {
     // TODO: handle fast-math flags.
     if (SI.getCondition()->getType()->isIntegerTy(1)) {
@@ -481,10 +711,10 @@ public:
       CurrentFrame = &Top;
       if (Top.State == FrameState::Entry) {
         Handler.onFunctionEntry(Top.Func, Top.Args, Top.CallSite);
-        // TODO: Handle arg attributes
       } else {
         assert(Top.State == FrameState::Pending &&
                "Expected to return from a callee.");
+        returnFromCallee();
       }
 
       Top.State = FrameState::Running;
@@ -520,7 +750,6 @@ public:
       if (Top.State == FrameState::Exit) {
         assert((Top.Func.getReturnType()->isVoidTy() || !Top.RetVal.isNone()) &&
                "Expected return value to be set on function exit.");
-        // TODO:Handle retval attributes
         Handler.onFunctionExit(Top.Func, Top.RetVal);
         CallStack.pop_back();
       } else {

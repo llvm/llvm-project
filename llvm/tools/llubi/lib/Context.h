@@ -133,6 +133,12 @@ class Context {
   // Constants
   // Use std::map to avoid iterator/reference invalidation.
   std::map<Constant *, AnyValue> ConstCache;
+  DenseMap<Function *, Pointer> FuncAddrMap;
+  DenseMap<BasicBlock *, Pointer> BlockAddrMap;
+  DenseMap<uint64_t, std::pair<Function *, IntrusiveRefCntPtr<MemoryObject>>>
+      ValidFuncTargets;
+  DenseMap<uint64_t, std::pair<BasicBlock *, IntrusiveRefCntPtr<MemoryObject>>>
+      ValidBlockTargets;
   AnyValue getConstantValueImpl(Constant *C);
 
   // TODO: errno and fpenv
@@ -168,9 +174,12 @@ public:
                                             StringRef Name, unsigned AS,
                                             MemInitKind InitKind);
   bool free(uint64_t Address);
-  // Derive a pointer from a memory object with offset 0.
-  // Please use Pointer's interface for further manipulations.
+  /// Derive a pointer from a memory object with offset 0.
+  /// Please use Pointer's interface for further manipulations.
   Pointer deriveFromMemoryObject(IntrusiveRefCntPtr<MemoryObject> Obj);
+
+  Function *getTargetFunction(const Pointer &Ptr);
+  BasicBlock *getTargetBlock(const Pointer &Ptr);
 
   /// Execute the function \p F with arguments \p Args, and store the return
   /// value in \p RetVal if the function is not void.

@@ -7,6 +7,6 @@ define i32 @main(i32 %argc, ptr %argv) {
 
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   i32 %argc = i32 1
-; CHECK-NEXT:   ptr %argv = ptr 0x8 [argv]
+; CHECK-NEXT:   ptr %argv = ptr 0x10 [argv]
 ; CHECK-NEXT:   ret i32 0
 ; CHECK-NEXT: Exiting function: main
