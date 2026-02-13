@@ -16,6 +16,7 @@
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "mlir/Interfaces/HoistingContainerOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/Passes.h"
@@ -163,6 +164,11 @@ LogicalResult CSEDriver::hoistPureOp(Operation *existing, Operation *op) {
            << "failed";
     return failure();
   }
+
+  if (ancestorBlock->getParent() != existing->getParentRegion() &&
+      !canContainHoistedOps(ancestorBlock->getParentOp()))
+    return failure();
+
   if (isBlockCrossIsIsolatedFromAbove(domInfo, ancestorBlock,
                                       existing->getBlock()))
     return failure();
