@@ -942,10 +942,9 @@ bool RISCVDAGToDAGISel::tryWideningMulAcc(SDNode *Node, const SDLoc &DL) {
     MulNode = Op1Lo.getNode();
     AddLo = Op0Lo;
     AddHi = Op0Hi;
-  }
-
-  if (!MulNode)
+  } else {
     return false;
+  }
 
   unsigned Opc;
   switch (MulNode->getOpcode()) {
