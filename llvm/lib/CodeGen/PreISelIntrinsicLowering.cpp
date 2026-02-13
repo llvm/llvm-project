@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/ObjCARCInstKind.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -631,6 +632,36 @@ static bool expandCondLoop(Function &Intr) {
   return true;
 }
 
+static bool expandLoopTrap(Function &Intr) {
+  for (User *U : make_early_inc_range(Intr.users())) {
+    auto *Call = cast<CallInst>(U);
+    if (!Call->getParent()->isEntryBlock() &&
+        std::all_of(Call->getParent()->begin(), BasicBlock::iterator(Call),
+                    [](Instruction &I) { return !I.mayHaveSideEffects(); })) {
+      for (auto *BB : predecessors(Call->getParent())) {
+        auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
+        if (!BI || BI->isUnconditional())
+          continue;
+        IRBuilder<> B(BI);
+        Value *Cond;
+        if (BI->getSuccessor(0) == Call->getParent()) {
+          Cond = BI->getCondition();
+          BI->setCondition(ConstantInt::getFalse(BI->getContext()));
+        } else {
+          Cond = B.CreateNot(BI->getCondition());
+          BI->setCondition(ConstantInt::getTrue(BI->getContext()));
+        }
+        B.CreateIntrinsic(Intrinsic::cond_loop, Cond);
+      }
+    }
+    IRBuilder<> B(Call);
+    B.CreateIntrinsic(Intrinsic::cond_loop,
+                      ConstantInt::getTrue(Call->getContext()));
+    Call->eraseFromParent();
+  }
+  return true;
+}
+
 bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
   // Map unique constants to globals.
   DenseMap<Constant *, GlobalVariable *> CMap;
@@ -779,6 +810,12 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
     case Intrinsic::cond_loop:
       if (!TM->canLowerCondLoop())
         Changed |= expandCondLoop(F);
+      break;
+    case Intrinsic::looptrap:
+      Changed |= expandLoopTrap(F);
+      if (!TM->canLowerCondLoop())
+        if (auto *CondLoop = M.getFunction("llvm.cond.loop"))
+          Changed |= expandCondLoop(*CondLoop);
       break;
     }
   }
