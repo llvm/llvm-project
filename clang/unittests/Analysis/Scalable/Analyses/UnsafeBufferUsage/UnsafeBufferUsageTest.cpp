@@ -119,7 +119,6 @@ TEST_F(UnsafeBufferUsageTest, UnsafeBufferUsageEntitySummaryTest) {
   EntityId E1 = Builder.addEntity({"c:@F@foo", "", {}});
   EntityId E2 = Builder.addEntity({"c:@F@bar", "", {}});
   EntityId E3 = Builder.addEntity({"c:@F@baz", "", {}});
-  EntityId Contributor = Builder.addEntity({"c:@F@owner", "", {}});
 
   auto P1 = Builder.buildPointerKindVariable(E1, 1);
   auto P2 = Builder.buildPointerKindVariable(E1, 2);

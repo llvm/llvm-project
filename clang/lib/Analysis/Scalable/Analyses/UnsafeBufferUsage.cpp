@@ -258,7 +258,6 @@ UnsafeBufferUsageTUSummaryExtractor::extractEntitySummary(
 
     assert(FD->hasBody());
     return builder().buildUnsafeBufferUsageEntitySummary(
-        Contributor,
         buildPointerKindVariables(findUnsafePointers(FD), builder()));
   }
   // FIXME: Add more contributor entity kinds
