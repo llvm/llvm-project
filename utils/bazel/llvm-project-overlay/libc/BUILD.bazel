@@ -2933,7 +2933,6 @@ libc_support_library(
     name = "__support_math_ffma",
     hdrs = ["src/__support/math/ffma.h"],
     deps = [
-        ":__support_common",
         ":__support_fputil_fma",
         ":__support_macros_config",
     ],
@@ -2943,6 +2942,7 @@ libc_support_library(
     name = "__support_math_ffmal",
     hdrs = ["src/__support/math/ffmal.h"],
     deps = [
+        ":__support_common",
         ":__support_fputil_fma",
         ":__support_macros_config",
     ],
