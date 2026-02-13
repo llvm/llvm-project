@@ -714,13 +714,6 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
       // Generic vector without riscv_vls_cc should fall through and pass by
       // reference.
       return coerceVLSVector(Ty, ABIVLen);
-    if (getContext().getTargetInfo().hasFeature("experimental-p") &&
-        VT->getVectorKind() == VectorKind::Generic &&
-        VT->getElementType()->isIntegerType() && (Size == 32 || Size == 64)) {
-      uint64_t EltSize = getContext().getTypeSize(VT->getElementType());
-      if (EltSize == 8 || EltSize == 16 || EltSize == 32)
-        return ABIArgInfo::getDirect();
-    }
   }
 
   // Aggregates which are <= 2*XLen will be passed in registers if possible,
