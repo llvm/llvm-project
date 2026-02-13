@@ -4047,6 +4047,8 @@ bool RISCVDAGToDAGISel::selectNegImm(SDValue N, SDValue &Val) {
   int64_t Imm = cast<ConstantSDNode>(N)->getSExtValue();
   if (isInt<32>(Imm))
     return false;
+  if (Imm == INT64_MIN)
+    return false;
 
   for (const SDNode *U : N->users()) {
     switch (U->getOpcode()) {
