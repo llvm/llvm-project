@@ -107,7 +107,9 @@ private:
                                          const Decl *targetDecl, bool isThunk,
                                          mlir::NamedAttrList &retAttrs);
   /// A helper for constructAttributeList that handles argument attributes.
-  void constructFunctionArgumentAttributes();
+  void constructFunctionArgumentAttributes(
+      const CIRGenFunctionInfo &info, bool isThunk,
+      llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs);
   /// A helper function for constructAttributeList that determines whether a
   /// return value might have been discarded.
   bool mayDropFunctionReturn(const ASTContext &context, QualType retTy);
@@ -292,6 +294,7 @@ public:
   void constructAttributeList(
       llvm::StringRef name, const CIRGenFunctionInfo &info,
       CIRGenCalleeInfo calleeInfo, mlir::NamedAttrList &attrs,
+      llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs,
       mlir::NamedAttrList &retAttrs, cir::CallingConv &callingConv,
       cir::SideEffect &sideEffect, bool attrOnCallSite, bool isThunk);
   /// Helper function for constructAttributeList/others.  Builds a set of

@@ -2225,18 +2225,21 @@ void CIRGenModule::setCIRFunctionAttributes(GlobalDecl globalDecl,
   assert(!cir::MissingFeatures::opFuncExtraAttrs());
   // Initialize PAL with existing attributes to merge attributes.
   mlir::NamedAttrList pal{};
+  std::vector<mlir::NamedAttrList> argAttrs(info.arguments().size());
   mlir::NamedAttrList retAttrs{};
-  constructAttributeList(func.getName(), info, globalDecl, pal, retAttrs,
-                         callingConv, sideEffect,
+  constructAttributeList(func.getName(), info, globalDecl, pal, argAttrs,
+                         retAttrs, callingConv, sideEffect,
                          /*attrOnCallSite=*/false, isThunk);
 
   for (mlir::NamedAttribute attr : pal)
     func->setAttr(attr.getName(), attr.getValue());
 
-  assert(!cir::MissingFeatures::functionArgumentAttrs());
-
-  for (mlir::NamedAttribute attr : retAttrs)
-    func.setResultAttr(/*index=*/0, attr.getName(), attr.getValue());
+  llvm::for_each(llvm::enumerate(argAttrs), [func](auto idx_arg_pair) {
+    mlir::function_interface_impl::setArgAttrs(func, idx_arg_pair.index(),
+                                               idx_arg_pair.value());
+  });
+  if (!retAttrs.empty())
+    mlir::function_interface_impl::setResultAttrs(func, 0, retAttrs);
 
   // TODO(cir): Check X86_VectorCall incompatibility wiht WinARM64EC
 
