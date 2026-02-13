@@ -364,6 +364,13 @@ namespace std {
     template<class OtherIndexType>
       constexpr reference operator[](const array<OtherIndexType, rank()>& indices) const;
 
+    template<class... OtherIndexTypes>
+      constexpr reference at(OtherIndexTypes... indices) const;
+    template<class OtherIndexType>
+      constexpr reference at(span<OtherIndexType, rank()> indices) const;
+    template<class OtherIndexType>
+      constexpr reference at(const array<OtherIndexType, rank()>& indices) const;
+
     constexpr size_type size() const noexcept;
     [[nodiscard]] constexpr bool empty() const noexcept;
 
