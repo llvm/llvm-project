@@ -19,11 +19,10 @@
 namespace llvm {
 
 class VPlanTestPass : public PassInfoMixin<VPlanTestPass> {
-  std::string TransformPipeline;
+  StringRef TransformPipeline;
 
 public:
-  VPlanTestPass(std::string Pipeline = "")
-      : TransformPipeline(std::move(Pipeline)) {}
+  VPlanTestPass(StringRef Pipeline = "") : TransformPipeline(Pipeline) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 

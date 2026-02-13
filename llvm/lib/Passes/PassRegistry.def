@@ -579,8 +579,8 @@ FUNCTION_PASS_WITH_PARAMS(
     parseCFGuardPassOptions, "check;dispatch")
 FUNCTION_PASS_WITH_PARAMS(
     "vplan-test", "VPlanTestPass",
-    [](std::string Pipeline) { return VPlanTestPass(std::move(Pipeline)); },
-    parseVPlanTestPassOptions, "")
+    [](StringRef Pipeline) { return VPlanTestPass(Pipeline); },
+    [](StringRef Params) -> Expected<StringRef> { return Params; }, "")
 FUNCTION_PASS_WITH_PARAMS(
     "early-cse", "EarlyCSEPass",
     [](bool UseMemorySSA) { return EarlyCSEPass(UseMemorySSA); },

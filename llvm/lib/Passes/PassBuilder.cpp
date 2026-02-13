@@ -504,12 +504,6 @@ static Expected<OptimizationLevel> parseOptLevelParam(StringRef S) {
       inconvertibleErrorCode());
 }
 
-static Expected<std::string> parseVPlanTestPassOptions(StringRef Params) {
-  // VPlanTestPass accepts a semicolon-separated list of transform names, e.g.
-  // "widen-from-metadata;licm"
-  return Params.str();
-}
-
 PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
                          std::optional<PGOOptions> PGOOpt,
                          PassInstrumentationCallbacks *PIC,
