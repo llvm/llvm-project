@@ -19,7 +19,8 @@
 #include "make_test_thread.h"
 #include "test_macros.h"
 
-int main(int, char**) {
+int main(int, char**)
+{
   auto const start = std::chrono::steady_clock::now();
 
   std::counting_semaphore<> s(0);
