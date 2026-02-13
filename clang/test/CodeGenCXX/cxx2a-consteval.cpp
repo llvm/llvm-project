@@ -2,16 +2,17 @@
 // RUN: FileCheck -check-prefix=EVAL -input-file=%t.ll %s
 // RUN: FileCheck -check-prefix=EVAL-STATIC -input-file=%t.ll %s
 // RUN: FileCheck -check-prefix=EVAL-FN -input-file=%t.ll %s
+// RUN: FileCheck -check-prefix=EVAL-FN-NONEXPR -input-file=%t.ll %s
 //
 // RUN: %clang_cc1 -emit-llvm %s -Dconsteval="" -std=c++2a -triple x86_64-unknown-linux-gnu -o %t.ll
 // RUN: FileCheck -check-prefix=EXPR -input-file=%t.ll %s
 
-// RUN: %clang_cc1 -emit-llvm %s -std=c++2a -triple x86_64-unknown-linux-gnu -o %t.ll -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -emit-llvm %s -DEXPR -std=c++2a -triple x86_64-unknown-linux-gnu -o %t.ll -fexperimental-new-constant-interpreter
 // RUN: FileCheck -check-prefix=EVAL -input-file=%t.ll %s
 // RUN: FileCheck -check-prefix=EVAL-STATIC -input-file=%t.ll %s
 // RUN: FileCheck -check-prefix=EVAL-FN -input-file=%t.ll %s
 //
-// RUN: %clang_cc1 -emit-llvm %s -Dconsteval="" -std=c++2a -triple x86_64-unknown-linux-gnu -o %t.ll -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -emit-llvm %s -DEXPR -Dconsteval="" -std=c++2a -triple x86_64-unknown-linux-gnu -o %t.ll -fexperimental-new-constant-interpreter
 // RUN: FileCheck -check-prefix=EXPR -input-file=%t.ll %s
 
 // there is two version of symbol checks to ensure
@@ -258,6 +259,28 @@ consteval int test_UserConvOverload_helper_ceval(int a) { return a; }
 int test_UserConvOverload_ceval() {
   return test_UserConvOverload_helper_ceval(UserConv());
 }
+
+#ifndef EXPR
+namespace virt {
+struct A { alignas(32) char a[32]; };
+struct B : virtual A {
+  long long x, y;
+};
+struct C { virtual void v(); };
+struct D : C, B {};
+
+extern D d;
+consteval B& c() { return d; }
+long long f() { return c().y; }
+
+// Make sure the non-virtual alignment is used.
+
+// EVAL-FN-NONEXPR-LABEL: define {{.*}} i64 @_ZN4virt1fEv()
+// EVAL-FN-NONEXPR-NEXT: entry:
+// EVAL-FN-NONEXPR-NEXT: load i64, ptr getelementptr inbounds nuw (%"struct.virt::B", ptr getelementptr (i8, ptr @_ZN4virt1dE, i64 8), i32 0, i32 2), align 8
+// EVAL-FN-NONEXPR-NEXT: ret i64
+} // namespace virt
+#endif
 
 consteval void void_test() {}
 void void_call() { // EVAL-FN-LABEL: define {{.*}} @_Z9void_call
