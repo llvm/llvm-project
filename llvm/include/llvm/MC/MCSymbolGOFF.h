@@ -21,6 +21,7 @@
 #include "llvm/MC/MCSymbolTableEntry.h"
 
 namespace llvm {
+class MCContext;
 
 class MCSymbolGOFF : public MCSymbol {
   // Associated data area of the section. Needs to be emitted first.
@@ -30,9 +31,14 @@ class MCSymbolGOFF : public MCSymbol {
   GOFF::ESDLinkageType Linkage = GOFF::ESDLinkageType::ESD_LT_XPLink;
 
   enum SymbolFlags : uint16_t {
-    SF_Hidden = 0x01, // Symbol is hidden, aka not exported.
-    SF_Weak = 0x02,   // Symbol is weak.
+    SF_Hidden = 0x01,    // Symbol is hidden, aka not exported.
+    SF_Weak = 0x02,      // Symbol is weak.
+    SF_Indirect = 0x200, // Symbol referenced indirectly.
   };
+
+  mutable StringRef ExternalName; // Alternate external name.
+
+  mutable MCSymbolGOFF *IndirectSym = nullptr;
 
 public:
   MCSymbolGOFF(const MCSymbolTableEntry *Name, bool IsTemporary)
@@ -47,11 +53,24 @@ public:
   bool isExternal() const { return IsExternal; }
   void setExternal(bool Value) const { IsExternal = Value; }
 
+  bool hasExternalName() const { return !ExternalName.empty(); }
+  void setExternalName(StringRef Name) { ExternalName = Name; }
+  StringRef getExternalName() const { return ExternalName; }
+
+  StringRef getNameInObjectFile() const {
+    return hasExternalName() ? getExternalName() : getName();
+  }
+
   void setHidden(bool Value = true) {
     modifyFlags(Value ? SF_Hidden : 0, SF_Hidden);
   }
   bool isHidden() const { return getFlags() & SF_Hidden; }
   bool isExported() const { return !isHidden(); }
+
+  void setIndirect(bool Value = true) {
+    modifyFlags(Value ? SF_Indirect : 0, SF_Indirect);
+  }
+  bool isIndirect() const { return getFlags() & SF_Indirect; }
 
   void setWeak(bool Value = true) { modifyFlags(Value ? SF_Weak : 0, SF_Weak); }
   bool isWeak() const { return getFlags() & SF_Weak; }
@@ -79,6 +98,9 @@ public:
   bool isInEDSection() const {
     return isInSection() && static_cast<MCSectionGOFF &>(getSection()).isED();
   }
+
+  MCSymbolGOFF *getOrCreateIndirectSymbol(MCContext &Ctx);
+  MCSymbolGOFF *getIndirectSymbol() const { return IndirectSym; }
 };
 } // end namespace llvm
 

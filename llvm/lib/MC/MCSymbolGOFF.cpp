@@ -8,6 +8,7 @@
 
 #include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/BinaryFormat/GOFF.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -66,4 +67,18 @@ bool MCSymbolGOFF::setSymbolAttribute(MCSymbolAttr Attribute) {
   }
 
   return true;
+}
+
+MCSymbolGOFF *MCSymbolGOFF::getOrCreateIndirectSymbol(MCContext &Ctx) {
+  if (IndirectSym)
+    return IndirectSym;
+
+  IndirectSym = static_cast<MCSymbolGOFF *>(
+      Ctx.getOrCreateSymbol(Twine(getName()).concat("@indirect")));
+  IndirectSym->setHidden(false);
+  IndirectSym->setCodeData(getCodeData());
+  IndirectSym->setExternal(isExternal());
+  IndirectSym->setExternalName(getName());
+  IndirectSym->setIndirect(true);
+  return IndirectSym;
 }
