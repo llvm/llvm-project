@@ -542,7 +542,6 @@ mlir_c_api_cc_library(
         ":IRDLDialect",
         ":InferTypeOpInterface",
         ":Parser",
-        ":SideEffectInterfaces",
         ":TransformsPassIncGen",
     ],
 )
@@ -856,11 +855,20 @@ mlir_c_api_cc_library(
 mlir_c_api_cc_library(
     name = "CAPITransformDialect",
     srcs = ["lib/CAPI/Dialect/Transform.cpp"],
-    hdrs = ["include/mlir-c/Dialect/Transform.h"],
+    hdrs = [
+        "include/mlir-c/Dialect/Transform.h",
+        "include/mlir/CAPI/Dialect/Transform.h",
+    ],
     capi_deps = [":CAPIIR"],
-    header_deps = [":TransformDialectTransformsIncGen"],
+    header_deps = [
+        ":TransformDialectTransformsIncGen",
+        ":TransformDialectInterfaces",
+    ],
     includes = ["include"],
-    deps = [":TransformDialect"],
+    deps = [
+        ":TransformDialect",
+        "//llvm:Support",
+    ],
 )
 
 mlir_c_api_cc_library(
