@@ -45,6 +45,8 @@ public:
   void printBrList(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printWebAssemblyP2AlignOperand(const MCInst *MI, unsigned OpNo,
                                       raw_ostream &O);
+  void printWebAssemblyMemOrderOperand(const MCInst *MI, unsigned OpNo,
+                                       raw_ostream &O);
   void printWebAssemblySignatureOperand(const MCInst *MI, unsigned OpNo,
                                         raw_ostream &O);
   void printCatchList(const MCInst *MI, unsigned OpNo, raw_ostream &O);

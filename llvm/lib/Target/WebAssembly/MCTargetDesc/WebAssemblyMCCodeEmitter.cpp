@@ -111,6 +111,7 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
           break;
         case WebAssembly::OPERAND_SIGNATURE:
         case WebAssembly::OPERAND_VEC_I8IMM:
+        case WebAssembly::OPERAND_MEMORDER:
           support::endian::write<uint8_t>(OS, MO.getImm(),
                                           llvm::endianness::little);
           break;

@@ -230,6 +230,12 @@ def tag_op : Operand<i32>;
 
 } // OperandType = "OPERAND_P2ALIGN"
 
+let OperandType = "OPERAND_MEMORDER" in {
+def MemOrder : Operand<i32> {
+  let PrintMethod = "printWebAssemblyMemOrderOperand";
+}
+} // OperandType = "OPERAND_MEMORDER"
+
 let OperandType = "OPERAND_SIGNATURE" in
 def Signature : Operand<i32> {
   let PrintMethod = "printWebAssemblySignatureOperand";

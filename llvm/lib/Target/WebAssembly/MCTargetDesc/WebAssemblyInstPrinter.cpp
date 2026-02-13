@@ -370,6 +370,31 @@ void WebAssemblyInstPrinter::printWebAssemblyP2AlignOperand(const MCInst *MI,
   O << ":p2align=" << Imm;
 }
 
+void WebAssemblyInstPrinter::printWebAssemblyMemOrderOperand(const MCInst *MI,
+                                                             unsigned OpNo,
+                                                             raw_ostream &O) {
+  int64_t Imm = MI->getOperand(OpNo).getImm();
+  switch (Imm) {
+  case WebAssembly::MEM_ORDER_NONE:
+    // none is the default, print nothing
+    return;
+  case WebAssembly::MEM_ORDER_ACQUIRE:
+    O << " acquire";
+    break;
+  case WebAssembly::MEM_ORDER_RELEASE:
+    O << " release";
+    break;
+  case WebAssembly::MEM_ORDER_ACQ_REL:
+    O << " acq_rel";
+    break;
+  case WebAssembly::MEM_ORDER_SEQ_CST:
+    O << " seq_cst";
+    break;
+  default:
+    llvm_unreachable("Unknown memory ordering");
+  }
+}
+
 void WebAssemblyInstPrinter::printWebAssemblySignatureOperand(const MCInst *MI,
                                                               unsigned OpNo,
                                                               raw_ostream &O) {
