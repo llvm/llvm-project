@@ -159,7 +159,7 @@ static void __platform_wait_on_address(void const* __ptr, void const* __val, May
     _umtx_op(const_cast<void*>(__ptr),
              UMTX_OP_WAIT,
              value,
-             static_cast<void*>(static_cast<uintptr_t>(sizeof(timeout))),
+             reinterpret_cast<void*>(static_cast<uintptr_t>(sizeof(timeout))),
              &timeout);
   }
 }
