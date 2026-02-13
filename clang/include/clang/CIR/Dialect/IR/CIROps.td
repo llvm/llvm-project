@@ -2385,6 +2385,10 @@ def CIR_GlobalOp : CIR_Op<"global", [
     The `linkage` tracks C/C++ linkage types, currently very similar to LLVM's.
     Symbol visibility in `sym_visibility` is defined in terms of MLIR's visibility
     and verified to be in accordance to `linkage`.
+
+    The `static_local` attribute indicates that this global represents a
+    function-local static variable that requires guarded initialization
+    (e.g., C++ static local variables with non-constant initializers).
   }];
 
   // Note that both sym_name and sym_visibility are tied to Symbol trait.
@@ -2403,6 +2407,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        UnitAttr:$comdat,
                        UnitAttr:$constant,
                        UnitAttr:$dso_local,
+                       UnitAttr:$static_local,
                        OptionalAttr<I64Attr>:$alignment);
 
   let regions = (region MaxSizedRegion<1>:$ctorRegion,
@@ -2416,6 +2421,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
     (`comdat` $comdat^)?
     ($tls_model^)?
     (`dso_local` $dso_local^)?
+    (`static_local` $static_local^)?
     $sym_name
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value,
                                         $ctorRegion, $dtorRegion)
@@ -2483,19 +2489,27 @@ def CIR_GetGlobalOp : CIR_Op<"get_global", [
     Addresses of thread local globals can only be retrieved if this operation
     is marked `thread_local`, which indicates the address isn't constant.
 
+    The `static_local` attribute indicates that this global is a function-local
+    static variable that requires guarded initialization (e.g., C++ static
+    local variables with non-constant initializers).
+
     Example:
     ```mlir
     %x = cir.get_global @gv : !cir.ptr<i32>
     ...
     %y = cir.get_global thread_local @tls_gv : !cir.ptr<i32>
+    ...
+    %w = cir.get_global static_local @func_static : !cir.ptr<i32>
     ```
   }];
 
-  let arguments = (ins FlatSymbolRefAttr:$name, UnitAttr:$tls);
+  let arguments = (ins FlatSymbolRefAttr:$name, UnitAttr:$tls,
+                       UnitAttr:$static_local);
   let results = (outs Res<CIR_PointerType, "", []>:$addr);
 
   let assemblyFormat = [{
     (`thread_local` $tls^)?
+    (`static_local` $static_local^)?
     $name `:` qualified(type($addr)) attr-dict
   }];
 }
