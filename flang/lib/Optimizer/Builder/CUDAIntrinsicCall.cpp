@@ -1114,7 +1114,7 @@ CUDAIntrinsicLibrary::genClusterDimBlocks(mlir::Type resultType,
   return res;
 }
 
-// CUDAFORSETSTREAMARRAY
+// CUDASETSTREAMARRAY
 fir::ExtendedValue CUDAIntrinsicLibrary::genCUDASetDefaultStreamArray(
     mlir::Type resTy, llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 2);
