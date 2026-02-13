@@ -452,8 +452,7 @@ static void serializeArray(const Container &Records, Object &Obj,
     json::Value ItemVal = Object();
     auto &ItemObj = *ItemVal.getAsObject();
     SerializeInfo(Records[Index], ItemObj);
-    if (Index == Records.size() - 1)
-      ItemObj["End"] = true;
+    ItemObj["End"] = (Index == Records.size() - 1);
     RecordsArrayRef.push_back(ItemVal);
   }
   Obj[Key] = RecordsArray;
@@ -536,10 +535,14 @@ static void serializeInfo(const FunctionInfo &F, json::Object &Obj,
                           const std::optional<StringRef> RepositoryLine) {
   serializeCommonAttributes(F, Obj, RepositoryURL, RepositoryLine);
   Obj["IsStatic"] = F.IsStatic;
+  size_t ParamLen = F.Name.size() + 1;
 
   auto ReturnTypeObj = Object();
   serializeInfo(F.ReturnType, ReturnTypeObj);
   Obj["ReturnType"] = std::move(ReturnTypeObj);
+  ParamLen += F.ReturnType.Type.Name.size();
+  ParamLen += 2;
+  Obj["ParamLength"] = ParamLen;
 
   if (!F.Params.empty())
     serializeArray(F.Params, Obj, "Params", SerializeInfoLambda);
