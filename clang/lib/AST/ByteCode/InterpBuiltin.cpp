@@ -1987,11 +1987,7 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  if (PtrA.isDummy() || PtrB.isDummy())
-    return false;
-
-  if (!CheckRange(S, OpPC, PtrA, AK_Read) ||
-      !CheckRange(S, OpPC, PtrB, AK_Read))
+  if (!CheckLoad(S, OpPC, PtrA, AK_Read) || !CheckLoad(S, OpPC, PtrB, AK_Read))
     return false;
 
   // Now, read both pointers to a buffer and compare those.
