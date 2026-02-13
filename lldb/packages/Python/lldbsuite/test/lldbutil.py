@@ -1921,3 +1921,17 @@ def launch_exe_in_apple_simulator(
             break
 
     return exe_path, matched_strings
+
+def ignore_swift_stdlib_when_stepping(platform, tester):
+        system = platform.system()
+        if system == "Darwin":
+            lib_name = "libswiftCore.dylib"
+        elif system == "Windows":
+            lib_name = "swiftCore.dll"
+        else:
+            lib_name = "libswiftCore.so"
+
+        tester.dbg.HandleCommand(
+            "settings set "
+            "target.process.thread.step-avoid-libraries {}".format(lib_name)
+        )

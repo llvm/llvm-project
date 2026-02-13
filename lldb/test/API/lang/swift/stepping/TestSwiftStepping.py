@@ -34,18 +34,7 @@ class TestSwiftStepping(lldbtest.TestBase):
         lldbtest.TestBase.setUp(self)
         self.main_source = "main.swift"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
-        # If you are running against a debug swift you are going to
-        # end up stepping into the stdlib and that will make stepping
-        # tests impossible to write.  So avoid that.
-
-        if platform.system() == 'Darwin':
-            lib_name = "libswiftCore.dylib"
-        else:
-            lib_name = "libswiftCore.so"
-
-        self.dbg.HandleCommand(
-            "settings set "
-            "target.process.thread.step-avoid-libraries {}".format(lib_name))
+        lldbutil.ignore_swift_stdlib_when_stepping(platform, self)
 
     def correct_stop_reason(self, thread):
         # We are always just stepping, so that should be the thread stop reason:
