@@ -4590,10 +4590,10 @@ SelectionDAG::computeOverflowForUnsignedSub(SDValue N0, SDValue N1) const {
   if (isNullConstant(N1))
     return OFK_Never;
 
-  KnownBits N0Known = computeKnownBits(N0);
-  KnownBits N1Known = computeKnownBits(N1);
-  ConstantRange N0Range = ConstantRange::fromKnownBits(N0Known, false);
-  ConstantRange N1Range = ConstantRange::fromKnownBits(N1Known, false);
+  ConstantRange N0Range =
+      computeConstantRangeIncludingKnownBits(N0, /*ForSigned=*/false);
+  ConstantRange N1Range =
+      computeConstantRangeIncludingKnownBits(N1, /*ForSigned=*/false);
   return mapOverflowResult(N0Range.unsignedSubMayOverflow(N1Range));
 }
 
@@ -4603,10 +4603,8 @@ SelectionDAG::computeOverflowForUnsignedMul(SDValue N0, SDValue N1) const {
   if (isNullConstant(N1) || isOneConstant(N1))
     return OFK_Never;
 
-  KnownBits N0Known = computeKnownBits(N0);
-  KnownBits N1Known = computeKnownBits(N1);
-  ConstantRange N0Range = ConstantRange::fromKnownBits(N0Known, false);
-  ConstantRange N1Range = ConstantRange::fromKnownBits(N1Known, false);
+  ConstantRange N0Range = computeConstantRangeIncludingKnownBits(N0, false);
+  ConstantRange N1Range = computeConstantRangeIncludingKnownBits(N1, false);
   return mapOverflowResult(N0Range.unsignedMulMayOverflow(N1Range));
 }
 
@@ -4638,6 +4636,65 @@ SelectionDAG::computeOverflowForSignedMul(SDValue N0, SDValue N1) const {
   }
 
   return OFK_Sometime;
+}
+
+ConstantRange SelectionDAG::computeConstantRange(SDValue Op,
+                                                 unsigned Depth) const {
+  EVT VT = Op.getValueType();
+  APInt DemandedElts = VT.isFixedLengthVector()
+                           ? APInt::getAllOnes(VT.getVectorNumElements())
+                           : APInt(1, 1);
+  return computeConstantRange(Op, DemandedElts, Depth);
+}
+
+ConstantRange SelectionDAG::computeConstantRange(SDValue Op,
+                                                 const APInt &DemandedElts,
+                                                 unsigned Depth) const {
+  EVT VT = Op.getValueType();
+  unsigned BitWidth = VT.getScalarSizeInBits();
+
+  if (Depth >= MaxRecursionDepth)
+    return ConstantRange::getFull(BitWidth);
+
+  if (ConstantSDNode *C = isConstOrConstSplat(Op, DemandedElts))
+    return ConstantRange(C->getAPIntValue());
+
+  unsigned Opcode = Op.getOpcode();
+  switch (Opcode) {
+  case ISD::VSCALE: {
+    const Function &F = getMachineFunction().getFunction();
+    const APInt &Multiplier = Op.getConstantOperandAPInt(0);
+    return getVScaleRange(&F, BitWidth).multiply(Multiplier);
+  }
+  default:
+    break;
+  }
+
+  return ConstantRange::getFull(BitWidth);
+}
+
+ConstantRange
+SelectionDAG::computeConstantRangeIncludingKnownBits(SDValue Op, bool ForSigned,
+                                                     unsigned Depth) const {
+  EVT VT = Op.getValueType();
+
+  APInt DemandedElts = VT.isFixedLengthVector()
+                           ? APInt::getAllOnes(VT.getVectorNumElements())
+                           : APInt(1, 1);
+
+  return computeConstantRangeIncludingKnownBits(Op, DemandedElts, ForSigned,
+                                                Depth);
+}
+
+ConstantRange SelectionDAG::computeConstantRangeIncludingKnownBits(
+    SDValue Op, const APInt &DemandedElts, bool ForSigned,
+    unsigned Depth) const {
+  KnownBits Known = computeKnownBits(Op, DemandedElts, Depth);
+  ConstantRange CR1 = ConstantRange::fromKnownBits(Known, ForSigned);
+  ConstantRange CR2 = computeConstantRange(Op, DemandedElts, Depth);
+  ConstantRange::PreferredRangeType RangeType =
+      ForSigned ? ConstantRange::Signed : ConstantRange::Unsigned;
+  return CR1.intersectWith(CR2, RangeType);
 }
 
 bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth) const {
