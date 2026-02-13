@@ -435,9 +435,8 @@ const GISelInstProfileBuilder &GISelInstProfileBuilder::addNodeIDMachineOperand(
 }
 
 GISelCSEInfo &
-GISelCSEAnalysisWrapper::get(std::unique_ptr<CSEConfigBase> CSEOpt,
-                             bool Recompute) {
-  if (!AlreadyComputed || Recompute) {
+GISelCSEAnalysisWrapper::get(std::unique_ptr<CSEConfigBase> CSEOpt) {
+  if (!AlreadyComputed) {
     Info.releaseMemory();
     Info.setCSEConfig(std::move(CSEOpt));
     Info.analyze(*MF);

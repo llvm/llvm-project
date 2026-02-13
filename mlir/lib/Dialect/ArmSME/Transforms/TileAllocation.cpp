@@ -53,6 +53,7 @@
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "llvm/ADT/IntervalMap.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 namespace mlir::arm_sme {
@@ -417,11 +418,11 @@ static void forEachPredecessorTileValue(BlockArgument blockArg,
   unsigned argNumber = blockArg.getArgNumber();
   for (Block *pred : block->getPredecessors()) {
     TypeSwitch<Operation *>(pred->getTerminator())
-        .Case<cf::BranchOp>([&](auto branch) {
+        .Case([&](cf::BranchOp branch) {
           Value predecessorOperand = branch.getDestOperands()[argNumber];
           callback(predecessorOperand);
         })
-        .Case<cf::CondBranchOp>([&](auto condBranch) {
+        .Case([&](cf::CondBranchOp condBranch) {
           if (condBranch.getFalseDest() == block) {
             Value predecessorOperand =
                 condBranch.getFalseDestOperands()[argNumber];
@@ -819,8 +820,8 @@ LogicalResult mlir::arm_sme::allocateSMETiles(FunctionOpInterface function,
     auto nonEmpty = llvm::make_filter_range(
         llvm::make_second_range(initialLiveRanges),
         [&](LiveRange const &liveRange) { return !liveRange.empty(); });
-    auto initialRanges = llvm::to_vector(llvm::map_range(
-        nonEmpty, [](LiveRange const &liveRange) { return &liveRange; }));
+    auto initialRanges = llvm::map_to_vector(
+        nonEmpty, [](LiveRange const &liveRange) { return &liveRange; });
     llvm::sort(initialRanges,
                [](LiveRange const *a, LiveRange const *b) { return *a < *b; });
     llvm::errs() << "\n========== Initial Live Ranges:\n";

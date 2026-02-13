@@ -969,7 +969,7 @@ private:
     // of all blocks
     if (UnknownBlocks.size() != AcyclicOrder.size())
       return false;
-    UnknownBlocks = AcyclicOrder;
+    UnknownBlocks = std::move(AcyclicOrder);
     return true;
   }
 

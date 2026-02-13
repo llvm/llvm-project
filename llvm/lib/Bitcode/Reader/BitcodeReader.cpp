@@ -2269,6 +2269,10 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::DeadOnReturn;
   case bitc::ATTR_KIND_NO_CREATE_UNDEF_OR_POISON:
     return Attribute::NoCreateUndefOrPoison;
+  case bitc::ATTR_KIND_DENORMAL_FPENV:
+    return Attribute::DenormalFPEnv;
+  case bitc::ATTR_KIND_NOOUTLINE:
+    return Attribute::NoOutline;
   }
 }
 
@@ -2442,6 +2446,10 @@ Error BitcodeReader::parseAttributeGroupBlock() {
           else if (Kind == Attribute::NoFPClass)
             B.addNoFPClassAttr(
                 static_cast<FPClassTest>(Record[++i] & fcAllFlags));
+          else if (Kind == Attribute::DenormalFPEnv) {
+            B.addDenormalFPEnvAttr(
+                DenormalFPEnv::createFromIntValue(Record[++i]));
+          }
         } else if (Record[i] == 3 || Record[i] == 4) { // String attribute
           bool HasValue = (Record[i++] == 4);
           SmallString<64> KindStr;

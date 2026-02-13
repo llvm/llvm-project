@@ -202,14 +202,14 @@ def MOVZX64rm16 : RI<0xB7, MRMSrcMem, (outs GR64:$dst), (ins i16mem:$src),
 // 64-bit zero-extension patterns use SUBREG_TO_REG and an operation writing a
 // 32-bit register.
 def : Pat<(i64 (zext GR8:$src)),
-          (SUBREG_TO_REG (i64 0), (MOVZX32rr8 GR8:$src), sub_32bit)>;
+          (SUBREG_TO_REG (MOVZX32rr8 GR8:$src), sub_32bit)>;
 def : Pat<(zextloadi64i8 addr:$src),
-          (SUBREG_TO_REG (i64 0), (MOVZX32rm8 addr:$src), sub_32bit)>;
+          (SUBREG_TO_REG (MOVZX32rm8 addr:$src), sub_32bit)>;
 
 def : Pat<(i64 (zext GR16:$src)),
-          (SUBREG_TO_REG (i64 0), (MOVZX32rr16 GR16:$src), sub_32bit)>;
+          (SUBREG_TO_REG (MOVZX32rr16 GR16:$src), sub_32bit)>;
 def : Pat<(zextloadi64i16 addr:$src),
-          (SUBREG_TO_REG (i64 0), (MOVZX32rm16 addr:$src), sub_32bit)>;
+          (SUBREG_TO_REG (MOVZX32rm16 addr:$src), sub_32bit)>;
 
 // The preferred way to do 32-bit-to-64-bit zero extension on x86-64 is to use a
 // SUBREG_TO_REG to utilize implicit zero-extension, however this isn't possible
@@ -217,6 +217,6 @@ def : Pat<(zextloadi64i16 addr:$src),
 // where the high bits aren't necessarily all zero. In such cases, we fall back
 // to these explicit zext instructions.
 def : Pat<(i64 (zext GR32:$src)),
-          (SUBREG_TO_REG (i64 0), (MOV32rr GR32:$src), sub_32bit)>;
+          (SUBREG_TO_REG (MOV32rr GR32:$src), sub_32bit)>;
 def : Pat<(i64 (zextloadi64i32 addr:$src)),
-          (SUBREG_TO_REG (i64 0), (MOV32rm addr:$src), sub_32bit)>;
+          (SUBREG_TO_REG (MOV32rm addr:$src), sub_32bit)>;

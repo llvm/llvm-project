@@ -915,7 +915,7 @@ static bool mergeConsecutivePartStores(ArrayRef<PartStore> Parts,
   Value *Val = First.Val;
   if (First.ValOffset != 0)
     Val = Builder.CreateLShr(Val, First.ValOffset);
-  Val = Builder.CreateTrunc(Val, NewTy);
+  Val = Builder.CreateZExtOrTrunc(Val, NewTy);
   StoreInst *Store = Builder.CreateAlignedStore(
       Val, First.Store->getPointerOperand(), First.Store->getAlign());
 

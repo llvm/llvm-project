@@ -35,6 +35,29 @@ return:                                           ; preds = %if.end, %if.then
   ret i32 %retval
 }
 
+; CHECK-LABEL: define float @phi_load_nofpclass_metadata(
+; CHECK: %retval = load float, ptr %retval.in, align 4, !nofpclass ![[NOFPCLASS:[0-9]+]]
+
+define float @phi_load_nofpclass_metadata(ptr %s1, ptr %s2, i32 %c) #0 {
+entry:
+  %tobool = icmp eq i32 %c, 0
+  br i1 %tobool, label %if.end, label %if.then
+
+if.then:                                          ; preds = %entry
+  %i = getelementptr inbounds %struct.S1, ptr %s2, i64 0, i32 1
+  %val = load float, ptr %i, align 4, !nofpclass !{i32 3}
+  br label %return
+
+if.end:                                           ; preds = %entry
+  %val2 = load float, ptr %s1, align 4, !nofpclass !{i32 519}
+  br label %return
+
+return:                                           ; preds = %if.end, %if.then
+  %retval = phi float [ %val, %if.then ], [ %val2, %if.end ]
+  ret float %retval
+}
+
+
 ; CHECK: ![[EMPTYNODE]] = !{}
 ; CHECK: ![[TBAA]] = !{![[TAG1:[0-9]+]], ![[TAG1]], i64 0}
 ; CHECK: ![[TAG1]] = !{!"int", !{{[0-9]+}}, i64 0}
@@ -45,6 +68,7 @@ return:                                           ; preds = %if.end, %if.then
 ; CHECK: ![[SCOPE2]] = distinct !{![[SCOPE2]], !{{[0-9]+}}, !"scope2"}
 ; CHECK: ![[NOALIAS]] = !{![[SCOPE3:[0-9]+]]}
 ; CHECK: ![[SCOPE3]] = distinct !{![[SCOPE3]], !{{[0-9]+}}, !"scope3"}
+; CHECK: ![[NOFPCLASS]] = !{i32 3}
 
 !0 = !{!1, !4, i64 4}
 !1 = !{!"", !7, i64 0, !4, i64 4}

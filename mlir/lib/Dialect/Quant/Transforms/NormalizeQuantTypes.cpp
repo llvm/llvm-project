@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Quant/IR/QuantTypes.h"
 #include "mlir/Dialect/Quant/Transforms/Passes.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 namespace mlir {
 namespace quant {
@@ -86,12 +87,12 @@ class NormalizedQuantTypesConverter : public TypeConverter {
       auto shape = subChannelType.getScales().getType().getShape();
       const auto *quantizedDimItr =
           llvm::find_if(shape, [](int64_t dim) { return dim != 1; });
-      auto scales = llvm::to_vector(llvm::map_range(
+      auto scales = llvm::map_to_vector(
           subChannelType.getScales().getValues<APFloat>(),
-          [](const APFloat &scale) { return scale.convertToDouble(); }));
-      auto zeroPoints = llvm::to_vector(llvm::map_range(
+          [](const APFloat &scale) { return scale.convertToDouble(); });
+      auto zeroPoints = llvm::map_to_vector(
           subChannelType.getZeroPoints().getValues<APInt>(),
-          [](const APInt &zeroPoint) { return zeroPoint.getSExtValue(); }));
+          [](const APInt &zeroPoint) { return zeroPoint.getSExtValue(); });
       auto perAxisType = UniformQuantizedPerAxisType::get(
           subChannelType.getFlags(), subChannelType.getStorageType(),
           subChannelType.getExpressedType(), scales, zeroPoints,

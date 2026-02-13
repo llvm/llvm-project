@@ -22,6 +22,22 @@ module {
 // CHECK:    cir.return %2 : !cir.method<!cir.func<(!s32i)> in !rec_Foo>
 // CHECK:  }
 
+  cir.func no_inline dso_local @_Z12make_virtualv() -> !cir.method<!cir.func<(!s32i)> in !rec_Foo> {
+    %0 = cir.alloca !cir.method<!cir.func<(!s32i)> in !rec_Foo>, !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Foo>>, ["__retval"] {alignment = 8 : i64}
+    %1 = cir.const #cir.method<vtable_offset = 8> : !cir.method<!cir.func<(!s32i)> in !rec_Foo>
+    cir.store %1, %0 : !cir.method<!cir.func<(!s32i)> in !rec_Foo>, !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Foo>>
+    %2 = cir.load %0 : !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Foo>>, !cir.method<!cir.func<(!s32i)> in !rec_Foo>
+    cir.return %2 : !cir.method<!cir.func<(!s32i)> in !rec_Foo>
+  }
+
+// CHECK:  cir.func no_inline dso_local @_Z12make_virtualv() -> !cir.method<!cir.func<(!s32i)> in !rec_Foo> {
+// CHECK:    %0 = cir.alloca !cir.method<!cir.func<(!s32i)> in !rec_Foo>, !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Foo>>, ["__retval"] {alignment = 8 : i64}
+// CHECK:    %1 = cir.const #cir.method<vtable_offset = 8> : !cir.method<!cir.func<(!s32i)> in !rec_Foo>
+// CHECK:    cir.store %1, %0 : !cir.method<!cir.func<(!s32i)> in !rec_Foo>, !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Foo>>
+// CHECK:    %2 = cir.load %0 : !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Foo>>, !cir.method<!cir.func<(!s32i)> in !rec_Foo>
+// CHECK:    cir.return %2 : !cir.method<!cir.func<(!s32i)> in !rec_Foo>
+// CHECK:  }
+
   cir.func no_inline dso_local @_Z9make_nullv() -> !cir.method<!cir.func<(!s32i)> in !rec_Foo> {
     %0 = cir.alloca !cir.method<!cir.func<(!s32i)> in !rec_Foo>, !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Foo>>, ["__retval"] {alignment = 8 : i64}
     %1 = cir.const #cir.method<null> : !cir.method<!cir.func<(!s32i)> in !rec_Foo>

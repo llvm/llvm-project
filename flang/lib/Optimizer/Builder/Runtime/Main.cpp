@@ -74,8 +74,8 @@ void fir::runtime::genMain(
     mif::InitOp::create(builder, loc);
 
   fir::CallOp::create(builder, loc, qqMainFn);
-  fir::CallOp::create(builder, loc, stopFn);
 
   mlir::Value ret = builder.createIntegerConstant(loc, argcTy, 0);
+  fir::CallOp::create(builder, loc, stopFn);
   mlir::func::ReturnOp::create(builder, loc, ret);
 }

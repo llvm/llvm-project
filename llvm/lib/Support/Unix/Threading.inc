@@ -33,12 +33,7 @@
 #include <pthread_np.h> // For pthread_getthreadid_np() / pthread_set_name_np()
 #endif
 
-// Must be included after Threading.inc to provide definition for llvm::thread
-// because FreeBSD's condvar.h (included by user.h) misuses the "thread"
-// keyword.
-#ifndef __FreeBSD__
 #include "llvm/Support/thread.h"
-#endif
 
 #if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
 #include <errno.h>
@@ -278,7 +273,8 @@ void llvm::get_thread_name(SmallVectorImpl<char> &Name) {
 #endif
 }
 
-SetThreadPriorityResult llvm::set_thread_priority(ThreadPriority Priority) {
+llvm::SetThreadPriorityResult
+llvm::set_thread_priority(ThreadPriority Priority) {
 #if (defined(__linux__) || defined(__CYGWIN__)) && defined(SCHED_IDLE)
   // Some *really* old glibcs are missing SCHED_IDLE.
   // http://man7.org/linux/man-pages/man3/pthread_setschedparam.3.html
@@ -376,15 +372,15 @@ static int computeHostNumPhysicalCores() {
                  << "/proc/cpuinfo: " << EC.message() << "\n";
     return -1;
   }
-  SmallVector<StringRef, 8> strs;
+  llvm::SmallVector<llvm::StringRef, 8> strs;
   (*Text)->getBuffer().split(strs, "\n", /*MaxSplit=*/-1,
                              /*KeepEmpty=*/false);
   int CurProcessor = -1;
   int CurPhysicalId = -1;
   int CurSiblings = -1;
   int CurCoreId = -1;
-  for (StringRef Line : strs) {
-    std::pair<StringRef, StringRef> Data = Line.split(':');
+  for (llvm::StringRef Line : strs) {
+    std::pair<llvm::StringRef, llvm::StringRef> Data = Line.split(':');
     auto Name = Data.first.trim();
     auto Val = Data.second.trim();
     // These fields are available if the kernel is configured with CONFIG_SMP.

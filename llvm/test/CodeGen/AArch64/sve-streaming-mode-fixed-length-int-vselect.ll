@@ -950,8 +950,7 @@ define <1 x i64> @select_v1i64(<1 x i64> %op1, <1 x i64> %op2, <1 x i1> %mask) {
 ; NONEON-NOSVE-NEXT:    fmov x9, d0
 ; NONEON-NOSVE-NEXT:    tst w0, #0x1
 ; NONEON-NOSVE-NEXT:    csel x8, x9, x8, ne
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %sel = select <1 x i1> %mask, <1 x i64> %op1, <1 x i64> %op2

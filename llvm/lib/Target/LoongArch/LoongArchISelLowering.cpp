@@ -411,7 +411,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Legal);
 
-      setOperationAction(ISD::SETCC, VT, Legal);
+      setOperationAction(ISD::SETCC, VT, Custom);
       setOperationAction(ISD::VSELECT, VT, Legal);
       setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
     }
@@ -613,6 +613,8 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerVECREDUCE(Op, DAG);
   case ISD::ConstantFP:
     return lowerConstantFP(Op, DAG);
+  case ISD::SETCC:
+    return lowerSETCC(Op, DAG);
   }
   return SDValue();
 }
@@ -723,6 +725,35 @@ SDValue LoongArchTargetLowering::lowerConstantFP(SDValue Op,
   }
 
   return SDValue();
+}
+
+// Ensure SETCC result and operand have the same bit width; isel does not
+// support mismatched widths.
+SDValue LoongArchTargetLowering::lowerSETCC(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT ResultVT = Op.getValueType();
+  EVT OperandVT = Op.getOperand(0).getValueType();
+
+  EVT SetCCResultVT =
+      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), OperandVT);
+
+  if (ResultVT == SetCCResultVT)
+    return Op;
+
+  assert(Op.getOperand(0).getValueType() == Op.getOperand(1).getValueType() &&
+         "SETCC operands must have the same type!");
+
+  SDValue SetCCNode =
+      DAG.getNode(ISD::SETCC, DL, SetCCResultVT, Op.getOperand(0),
+                  Op.getOperand(1), Op.getOperand(2));
+
+  if (ResultVT.bitsGT(SetCCResultVT))
+    SetCCNode = DAG.getNode(ISD::SIGN_EXTEND, DL, ResultVT, SetCCNode);
+  else if (ResultVT.bitsLT(SetCCResultVT))
+    SetCCNode = DAG.getNode(ISD::TRUNCATE, DL, ResultVT, SetCCNode);
+
+  return SetCCNode;
 }
 
 // Lower vecreduce_add using vhaddw instructions.
@@ -7217,7 +7248,7 @@ emitPseudoXVINSGR2VR(MachineInstr &MI, MachineBasicBlock *BB,
     Register ScratchSubReg2 = MRI.createVirtualRegister(SubRC);
 
     BuildMI(*BB, MI, DL, TII->get(LoongArch::COPY), ScratchSubReg1)
-        .addReg(XSrc, 0, LoongArch::sub_128);
+        .addReg(XSrc, {}, LoongArch::sub_128);
     BuildMI(*BB, MI, DL,
             TII->get(HalfSize == 8 ? LoongArch::VINSGR2VR_H
                                    : LoongArch::VINSGR2VR_B),
@@ -7227,7 +7258,6 @@ emitPseudoXVINSGR2VR(MachineInstr &MI, MachineBasicBlock *BB,
         .addImm(Idx);
 
     BuildMI(*BB, MI, DL, TII->get(LoongArch::SUBREG_TO_REG), XDst)
-        .addImm(0)
         .addReg(ScratchSubReg2)
         .addImm(LoongArch::sub_128);
   } else {
@@ -7712,6 +7742,28 @@ bool LoongArchTargetLowering::allowsMisalignedMemoryAccesses(
 const MCPhysReg ArgGPRs[] = {LoongArch::R4,  LoongArch::R5, LoongArch::R6,
                              LoongArch::R7,  LoongArch::R8, LoongArch::R9,
                              LoongArch::R10, LoongArch::R11};
+
+// PreserveNone calling convention:
+// Arguments may be passed in any general-purpose registers except:
+//  - R1  : return address register
+//  - R22 : frame pointer
+//  - R31 : base pointer
+//
+// All general-purpose registers are treated as caller-saved,
+// except R1 (RA) and R22 (FP).
+//
+// Non-volatile registers are allocated first so that a function
+// can call normal functions without having to spill and reload
+// argument registers.
+const MCPhysReg PreserveNoneArgGPRs[] = {
+    LoongArch::R23, LoongArch::R24, LoongArch::R25, LoongArch::R26,
+    LoongArch::R27, LoongArch::R28, LoongArch::R29, LoongArch::R30,
+    LoongArch::R4,  LoongArch::R5,  LoongArch::R6,  LoongArch::R7,
+    LoongArch::R8,  LoongArch::R9,  LoongArch::R10, LoongArch::R11,
+    LoongArch::R12, LoongArch::R13, LoongArch::R14, LoongArch::R15,
+    LoongArch::R16, LoongArch::R17, LoongArch::R18, LoongArch::R19,
+    LoongArch::R20};
+
 // Eight floating-point registers fa0-fa7 used for passing floating-point
 // arguments, and fa0-fa1 are also used to return values.
 const MCPhysReg ArgFPR32s[] = {LoongArch::F0, LoongArch::F1, LoongArch::F2,
@@ -7730,6 +7782,17 @@ const MCPhysReg ArgXRs[] = {LoongArch::XR0, LoongArch::XR1, LoongArch::XR2,
                             LoongArch::XR3, LoongArch::XR4, LoongArch::XR5,
                             LoongArch::XR6, LoongArch::XR7};
 
+static Register allocateArgGPR(CCState &State) {
+  switch (State.getCallingConv()) {
+  case CallingConv::PreserveNone:
+    if (!State.isVarArg())
+      return State.AllocateReg(PreserveNoneArgGPRs);
+    [[fallthrough]];
+  default:
+    return State.AllocateReg(ArgGPRs);
+  }
+}
+
 // Pass a 2*GRLen argument that has been split into two GRLen values through
 // registers or the stack as necessary.
 static bool CC_LoongArchAssign2GRLen(unsigned GRLen, CCState &State,
@@ -7737,7 +7800,7 @@ static bool CC_LoongArchAssign2GRLen(unsigned GRLen, CCState &State,
                                      unsigned ValNo2, MVT ValVT2, MVT LocVT2,
                                      ISD::ArgFlagsTy ArgFlags2) {
   unsigned GRLenInBytes = GRLen / 8;
-  if (Register Reg = State.AllocateReg(ArgGPRs)) {
+  if (Register Reg = allocateArgGPR(State)) {
     // At least one half can be passed via register.
     State.addLoc(CCValAssign::getReg(VA1.getValNo(), VA1.getValVT(), Reg,
                                      VA1.getLocVT(), CCValAssign::Full));
@@ -7754,7 +7817,7 @@ static bool CC_LoongArchAssign2GRLen(unsigned GRLen, CCState &State,
         LocVT2, CCValAssign::Full));
     return false;
   }
-  if (Register Reg = State.AllocateReg(ArgGPRs)) {
+  if (Register Reg = allocateArgGPR(State)) {
     // The second half can also be passed via register.
     State.addLoc(
         CCValAssign::getReg(ValNo2, ValVT2, Reg, LocVT2, CCValAssign::Full));
@@ -7841,7 +7904,7 @@ static bool CC_LoongArch(const DataLayout &DL, LoongArchABI::ABI ABI,
     // GPRs, split between a GPR and the stack, or passed completely on the
     // stack. LowerCall/LowerFormalArguments/LowerReturn must recognise these
     // cases.
-    MCRegister Reg = State.AllocateReg(ArgGPRs);
+    MCRegister Reg = allocateArgGPR(State);
     if (!Reg) {
       int64_t StackOffset = State.AllocateStack(8, Align(8));
       State.addLoc(
@@ -7850,7 +7913,7 @@ static bool CC_LoongArch(const DataLayout &DL, LoongArchABI::ABI ABI,
     }
     LocVT = MVT::i32;
     State.addLoc(CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
-    MCRegister HiReg = State.AllocateReg(ArgGPRs);
+    MCRegister HiReg = allocateArgGPR(State);
     if (HiReg) {
       State.addLoc(
           CCValAssign::getCustomReg(ValNo, ValVT, HiReg, LocVT, LocInfo));
@@ -7910,7 +7973,7 @@ static bool CC_LoongArch(const DataLayout &DL, LoongArchABI::ABI ABI,
     StoreSizeBytes = 32;
     StackAlign = Align(32);
   } else {
-    Reg = State.AllocateReg(ArgGPRs);
+    Reg = allocateArgGPR(State);
   }
 
   unsigned StackOffset =
@@ -8177,6 +8240,7 @@ SDValue LoongArchTargetLowering::LowerFormalArguments(
     llvm_unreachable("Unsupported calling convention");
   case CallingConv::C:
   case CallingConv::Fast:
+  case CallingConv::PreserveNone:
   case CallingConv::PreserveMost:
     break;
   case CallingConv::GHC:
@@ -8972,17 +9036,17 @@ bool LoongArchTargetLowering::hasAndNot(SDValue Y) const {
   return VT.isScalarInteger() && !isa<ConstantSDNode>(Y);
 }
 
-bool LoongArchTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                                 const CallBase &I,
-                                                 MachineFunction &MF,
-                                                 unsigned Intrinsic) const {
+void LoongArchTargetLowering::getTgtMemIntrinsic(
+    SmallVectorImpl<IntrinsicInfo> &Infos, const CallBase &I,
+    MachineFunction &MF, unsigned Intrinsic) const {
   switch (Intrinsic) {
   default:
-    return false;
+    return;
   case Intrinsic::loongarch_masked_atomicrmw_xchg_i32:
   case Intrinsic::loongarch_masked_atomicrmw_add_i32:
   case Intrinsic::loongarch_masked_atomicrmw_sub_i32:
-  case Intrinsic::loongarch_masked_atomicrmw_nand_i32:
+  case Intrinsic::loongarch_masked_atomicrmw_nand_i32: {
+    IntrinsicInfo Info;
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::i32;
     Info.ptrVal = I.getArgOperand(0);
@@ -8990,8 +9054,10 @@ bool LoongArchTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.align = Align(4);
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore |
                  MachineMemOperand::MOVolatile;
-    return true;
+    Infos.push_back(Info);
+    return;
     // TODO: Add more Intrinsics later.
+  }
   }
 }
 

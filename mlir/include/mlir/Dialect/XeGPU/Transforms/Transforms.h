@@ -9,7 +9,9 @@
 #ifndef MLIR_DIALECT_XEGPU_TRANSFORMS_TRANSFORMS_H
 #define MLIR_DIALECT_XEGPU_TRANSFORMS_TRANSFORMS_H
 
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/LogicalResult.h"
 
@@ -70,6 +72,16 @@ void populateXeGPUMoveFuncBodyToWarpOpPatterns(RewritePatternSet &patterns);
 /// Appends patterns for XeGPU workgroup to subgroup distribution into
 /// `patterns`.
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns);
+/// Define only the type conversions needed for XeGPU subgroup to workitem
+/// distribution.
+void populateXeGPUSgToWiDistributeTypeConversions(TypeConverter &typeConverter);
+/// Defines type conversions and legality for XeGPU subgroup to workitem
+/// distribution and appends the required conversion patterns into `patterns`.
+/// Appends patterns for XeGPU subgroup to workitem distribution into
+/// `patterns`.
+void populateXeGPUSgToWiDistributeTypeConversionAndLegality(
+    TypeConverter &typeConverter, RewritePatternSet &patterns,
+    ConversionTarget &target);
 
 /// Collect a set of patterns to unroll xegpu operations to a smaller shapes.
 /// Users can control whether an operation to be unrolled or not, as well as

@@ -718,14 +718,19 @@ void FormatTokenLexer::tryParseJavaTextBlock() {
   ++S; // Skip the `"""` that begins a text block.
 
   // Find the `"""` that ends the text block.
+  bool Escaped = false;
   for (int Count = 0; Count < 3 && S < End; ++S) {
+    if (Escaped) {
+      Escaped = false;
+      continue;
+    }
     switch (*S) {
-    case '\\':
-      Count = -1;
-      break;
     case '\"':
       ++Count;
       break;
+    case '\\':
+      Escaped = true;
+      [[fallthrough]];
     default:
       Count = 0;
     }

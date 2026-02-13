@@ -1667,12 +1667,20 @@ std::unique_ptr<CFG> CFGBuilder::buildCFG(const Decl *D, Stmt *Statement) {
   assert(Succ == &cfg->getExit());
   Block = nullptr;  // the EXIT block is empty.  Create all other blocks lazily.
 
-  // Add parameters to the initial scope to handle their dtos and lifetime ends.
-  LocalScope *paramScope = nullptr;
-  if (const auto *FD = dyn_cast_or_null<FunctionDecl>(D))
-    for (ParmVarDecl *PD : FD->parameters())
-      paramScope = addLocalScopeForVarDecl(PD, paramScope);
-
+  if (BuildOpts.AddLifetime && BuildOpts.AddParameterLifetimes) {
+    // Add parameters to the initial scope to handle lifetime ends.
+    LocalScope *paramScope = nullptr;
+    if (const auto *FD = dyn_cast_or_null<FunctionDecl>(D))
+      for (ParmVarDecl *PD : FD->parameters()) {
+        paramScope = addLocalScopeForVarDecl(PD, paramScope);
+      }
+    if (auto *C = dyn_cast<CompoundStmt>(Statement))
+      if (C->body_empty() || !isa<ReturnStmt>(*C->body_rbegin()))
+        // If the body ends with a ReturnStmt, the dtors will be added in
+        // VisitReturnStmt.
+        addAutomaticObjHandling(ScopePos, LocalScope::const_iterator(),
+                                Statement);
+  }
   if (BuildOpts.AddImplicitDtors)
     if (const CXXDestructorDecl *DD = dyn_cast_or_null<CXXDestructorDecl>(D))
       addImplicitDtorsForDestructor(DD);

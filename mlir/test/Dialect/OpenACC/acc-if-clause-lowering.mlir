@@ -312,3 +312,29 @@ func.func @test_acc_reduction(%arg0: memref<i32>, %cond: i1) {
   }
   return
 }
+
+acc.private.recipe @privatization_memref_i32 : memref<i32> init {
+^bb0(%arg0: memref<i32>):
+  %0 = memref.alloca() : memref<i32>
+  acc.yield %0 : memref<i32>
+}
+
+func.func @test_acc_private(%arg0: memref<i32>, %cond: i1) {
+
+  %c0_i32 = arith.constant 0 : i32
+  %private = acc.private varPtr(%arg0 : memref<i32>) recipe(@privatization_memref_i32) -> memref<i32>
+
+  // In the else branch, uses of %private should be replaced with %arg0
+  // CHECK: scf.if
+  // CHECK: [[PRIVATE:%.*]] = acc.private varPtr(%arg0 : memref<i32>) recipe(@privatization_memref_i32) -> memref<i32>
+  // CHECK: acc.parallel private([[PRIVATE]] : memref<i32>) {
+  // CHECK: } else {
+  // CHECK: memref.store {{.*}}, %arg0[] : memref<i32>
+  // CHECK: }
+
+  acc.parallel private(%private : memref<i32>) if(%cond) {
+    memref.store %c0_i32, %private[] : memref<i32>
+    acc.yield
+  }
+  return
+}

@@ -81,6 +81,8 @@ public:
   bool SetClangModulesCachePath(const FileSpec &path);
   bool GetEnableExternalLookup() const;
   bool SetEnableExternalLookup(bool new_value);
+  bool GetSharedCacheBinaryLoading() const;
+  bool SetSharedCacheBinaryLoading(bool new_value);
   bool GetEnableLLDBIndexCache() const;
   bool SetEnableLLDBIndexCache(bool new_value);
   uint64_t GetLLDBIndexCacheMaxByteSize();
@@ -88,11 +90,8 @@ public:
   uint64_t GetLLDBIndexCacheExpirationDays();
   FileSpec GetLLDBIndexCachePath() const;
   bool SetLLDBIndexCachePath(const FileSpec &path);
-
-  bool GetLoadSymbolOnDemand();
-
+  bool GetLoadSymbolOnDemand() const;
   lldb::SymbolDownload GetSymbolAutoDownload() const;
-
   PathMappingList GetSymlinkMappings() const;
 };
 

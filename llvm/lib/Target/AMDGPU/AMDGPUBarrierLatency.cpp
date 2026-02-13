@@ -21,6 +21,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUBarrierLatency.h"
+#include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
@@ -47,6 +48,12 @@ public:
     IgnoredScopes.insert(Context.getOrInsertSyncScopeID("wavefront"));
     IgnoredScopes.insert(Context.getOrInsertSyncScopeID("wavefront-one-as"));
     IgnoredScopes.insert(Context.getOrInsertSyncScopeID("singlethread-one-as"));
+
+    const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+    if (!ST.requiresWaitOnWorkgroupReleaseFence()) {
+      // Prior to GFX10 workgroup scope does not normally require waitcnts
+      IgnoredScopes.insert(Context.getOrInsertSyncScopeID("workgroup"));
+    }
   }
   void apply(ScheduleDAGInstrs *DAG) override;
 };
