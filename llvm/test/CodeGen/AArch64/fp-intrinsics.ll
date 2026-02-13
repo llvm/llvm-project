@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=aarch64 %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64 -global-isel=true -global-isel-abort=2 %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; Check that constrained fp intrinsics are correctly lowered.
-
 ; CHECK-GI:       warning: Instruction selection used fallback path for add_f32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sub_f32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for mul_f32
@@ -243,6 +241,7 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for exp_v1f64
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for exp2_v1f64
 
+; Check that constrained fp intrinsics are correctly lowered.
 
 ; Single-precision intrinsics
 

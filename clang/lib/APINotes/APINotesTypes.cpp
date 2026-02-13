@@ -18,6 +18,21 @@ LLVM_DUMP_METHOD void CommonEntityInfo::dump(llvm::raw_ostream &OS) const {
     OS << "[UnavailableInSwift] ";
   if (SwiftPrivateSpecified)
     OS << (SwiftPrivate ? "[SwiftPrivate] " : "");
+  if (SwiftSafetyAudited) {
+    switch (*getSwiftSafety()) {
+    case SwiftSafetyKind::Safe:
+      OS << "[Safe] ";
+      break;
+    case SwiftSafetyKind::Unsafe:
+      OS << "[Unsafe] ";
+      break;
+    case SwiftSafetyKind::Unspecified:
+      OS << "[Unspecified] ";
+      break;
+    case SwiftSafetyKind::None:
+      break;
+    }
+  }
   if (!SwiftName.empty())
     OS << "Swift Name: " << SwiftName << ' ';
   OS << '\n';

@@ -153,5 +153,12 @@ int mlir::MlirTblgenMain(int argc, char **argv) {
 
   cl::ParseCommandLineOptions(argc, argv);
 
-  return TableGenMain(argv[0], &mlirTableGenMain);
+  return TableGenMain(
+      argv[0], [](TableGenOutputFiles &OutFiles, const RecordKeeper &RK) {
+        std::string S;
+        raw_string_ostream OS(S);
+        bool Res = mlirTableGenMain(OS, RK);
+        OutFiles = {S, {}};
+        return Res;
+      });
 }

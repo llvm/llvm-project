@@ -145,6 +145,12 @@ bool lldb_private::formatters::IsMsvcStlStringType(ValueObject &valobj) {
                                                                 indexes) > 0;
 }
 
+bool lldb_private::formatters::IsMsvcStlStringViewType(ValueObject &valobj) {
+  std::vector<uint32_t> indexes;
+  return valobj.GetCompilerType().GetIndexOfChildMemberWithName("_Mydata", true,
+                                                                indexes) > 0;
+}
+
 bool lldb_private::formatters::MsvcStlWStringSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &summary_options) {
@@ -215,4 +221,87 @@ bool lldb_private::formatters::MsvcStlStringViewSummaryProvider<
                               const TypeSummaryOptions &summary_options) {
   return formatStringViewImpl<StringElementType::UTF32>(valobj, stream,
                                                         summary_options, "U");
+}
+
+bool lldb_private::formatters::IsMsvcStlOrdering(ValueObject &valobj) {
+  std::vector<uint32_t> indexes;
+  return valobj.GetCompilerType().GetIndexOfChildMemberWithName("_Value", true,
+                                                                indexes) > 0;
+}
+
+static std::optional<int64_t> MsvcStlExtractOrderingValue(ValueObject &valobj) {
+  lldb::ValueObjectSP value_sp = valobj.GetChildMemberWithName("_Value");
+  if (!value_sp)
+    return std::nullopt;
+  bool success;
+  int64_t value = value_sp->GetValueAsSigned(0, &success);
+  if (!success)
+    return std::nullopt;
+  return value;
+}
+
+bool lldb_private::formatters::MsvcStlPartialOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  std::optional<int64_t> value = MsvcStlExtractOrderingValue(valobj);
+  if (!value)
+    return false;
+  switch (*value) {
+  case -1:
+    stream << "less";
+    break;
+  case 0:
+    stream << "equivalent";
+    break;
+  case 1:
+    stream << "greater";
+    break;
+  case -128:
+    stream << "unordered";
+    break;
+  default:
+    return false;
+  }
+  return true;
+}
+
+bool lldb_private::formatters::MsvcStlWeakOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  std::optional<int64_t> value = MsvcStlExtractOrderingValue(valobj);
+  if (!value)
+    return false;
+  switch (*value) {
+  case -1:
+    stream << "less";
+    break;
+  case 0:
+    stream << "equivalent";
+    break;
+  case 1:
+    stream << "greater";
+    break;
+  default:
+    return false;
+  }
+  return true;
+}
+
+bool lldb_private::formatters::MsvcStlStrongOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  std::optional<int64_t> value = MsvcStlExtractOrderingValue(valobj);
+  if (!value)
+    return false;
+  switch (*value) {
+  case -1:
+    stream << "less";
+    break;
+  case 0:
+    stream << "equal";
+    break;
+  case 1:
+    stream << "greater";
+    break;
+  default:
+    return false;
+  }
+  return true;
 }

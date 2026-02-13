@@ -28,12 +28,15 @@ define amdgpu_ps <2 x i32> @s_or_v2i32_disjoint(<2 x i32> inreg %a, <2 x i32> in
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr2
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr1
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-  ; CHECK-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = disjoint S_OR_B32 [[COPY2]], [[COPY]], implicit-def dead $scc
-  ; CHECK-NEXT:   [[S_OR_B32_1:%[0-9]+]]:sreg_32 = disjoint S_OR_B32 [[COPY3]], [[COPY1]], implicit-def dead $scc
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[S_OR_B32_1]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY4]], implicit $exec
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[S_OR_B32_]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY5]], implicit $exec
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY]], %subreg.sub1
+  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; CHECK-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = disjoint S_OR_B64 killed [[REG_SEQUENCE1]], killed [[REG_SEQUENCE]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_]].sub0
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[COPY4]]
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY5]], implicit $exec
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_]].sub1
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY7]], implicit $exec
   ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
   ; CHECK-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG $sgpr0, $sgpr1
@@ -64,10 +67,19 @@ define <2 x i32> @v_or_v2i32_disjoint(<2 x i32> %a, <2 x i32> %b) {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; CHECK-NEXT:   [[V_OR_B32_e64_:%[0-9]+]]:vgpr_32 = disjoint V_OR_B32_e64 [[COPY3]], [[COPY1]], implicit $exec
-  ; CHECK-NEXT:   [[V_OR_B32_e64_1:%[0-9]+]]:vgpr_32 = disjoint V_OR_B32_e64 [[COPY2]], [[COPY]], implicit $exec
-  ; CHECK-NEXT:   $vgpr0 = COPY [[V_OR_B32_e64_]]
-  ; CHECK-NEXT:   $vgpr1 = COPY [[V_OR_B32_e64_1]]
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY]], %subreg.sub1
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; CHECK-NEXT:   [[V_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 killed [[COPY5]], killed [[COPY4]], implicit $exec
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
+  ; CHECK-NEXT:   [[V_OR_B32_e64_1:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 killed [[COPY7]], killed [[COPY6]], implicit $exec
+  ; CHECK-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE killed [[V_OR_B32_e64_1]], %subreg.sub0, killed [[V_OR_B32_e64_]], %subreg.sub1
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE2]].sub0
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE2]].sub1
+  ; CHECK-NEXT:   $vgpr0 = COPY [[COPY8]]
+  ; CHECK-NEXT:   $vgpr1 = COPY [[COPY9]]
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   %result = or disjoint <2 x i32> %a, %b
   ret <2 x i32> %result

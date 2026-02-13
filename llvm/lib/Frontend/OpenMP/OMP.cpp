@@ -53,7 +53,7 @@ getFirstCompositeRange(iterator_range<ArrayRef<Directive>::iterator> Leafs) {
   auto firstLoopAssociated =
       [](iterator_range<ArrayRef<Directive>::iterator> List) {
         for (auto It = List.begin(), End = List.end(); It != End; ++It) {
-          if (getDirectiveAssociation(*It) == Association::Loop)
+          if (getDirectiveAssociation(*It) == Association::LoopNest)
             return It;
         }
         return List.end();
@@ -71,7 +71,7 @@ getFirstCompositeRange(iterator_range<ArrayRef<Directive>::iterator> Leafs) {
     return Empty;
 
   for (; End != Leafs.end(); ++End) {
-    if (getDirectiveAssociation(*End) != Association::Loop)
+    if (getDirectiveAssociation(*End) != Association::LoopNest)
       break;
   }
   return llvm::make_range(Begin, End);

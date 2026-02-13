@@ -1,7 +1,7 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
-! C737 If EXTENDS appears and the type being defined has a potential 
-! subobject component of type EVENT_TYPE or LOCK_TYPE from the intrinsic 
-! module ISO_FORTRAN_ENV, its parent type shall be EVENT_TYPE or LOCK_TYPE 
+! C737 If EXTENDS appears and the type being defined has a potential
+! subobject component of type EVENT_TYPE or LOCK_TYPE from the intrinsic
+! module ISO_FORTRAN_ENV, its parent type shall be EVENT_TYPE or LOCK_TYPE
 ! or have a potential subobject component of type EVENT_TYPE or LOCK_TYPE.
 module not_iso_fortran_env
   type event_type

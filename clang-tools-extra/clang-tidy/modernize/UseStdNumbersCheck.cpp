@@ -1,4 +1,4 @@
-//===--- UseStdNumbersCheck.cpp - clang_tidy ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -27,7 +27,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/MathExtras.h"
 #include <array>
 #include <cmath>
 #include <cstdint>
@@ -81,16 +80,17 @@ AST_MATCHER_P(clang::Expr, anyOfExhaustive, std::vector<Matcher<clang::Stmt>>,
 // literals.
 struct MatchBuilder {
   auto
-  ignoreParenAndArithmeticCasting(const Matcher<clang::Expr> Matcher) const {
+  ignoreParenAndArithmeticCasting(const Matcher<clang::Expr> &Matcher) const {
     return expr(hasType(qualType(isArithmetic())), ignoringParenCasts(Matcher));
   }
 
-  auto ignoreParenAndFloatingCasting(const Matcher<clang::Expr> Matcher) const {
+  auto
+  ignoreParenAndFloatingCasting(const Matcher<clang::Expr> &Matcher) const {
     return expr(hasType(qualType(isFloating())), ignoringParenCasts(Matcher));
   }
 
   auto matchMathCall(const StringRef FunctionName,
-                     const Matcher<clang::Expr> ArgumentMatcher) const {
+                     const Matcher<clang::Expr> &ArgumentMatcher) const {
     auto HasAnyPrecisionName = hasAnyName(
         FunctionName, (FunctionName + "l").str(),
         (FunctionName + "f").str()); // Support long double(l) and float(f).
@@ -100,7 +100,7 @@ struct MatchBuilder {
                  hasArgument(0, ArgumentMatcher))));
   }
 
-  auto matchSqrt(const Matcher<clang::Expr> ArgumentMatcher) const {
+  auto matchSqrt(const Matcher<clang::Expr> &ArgumentMatcher) const {
     return matchMathCall("sqrt", ArgumentMatcher);
   }
 
@@ -148,7 +148,7 @@ struct MatchBuilder {
     return expr(anyOf(Int, Float, Dref));
   }
 
-  auto match1Div(const Matcher<clang::Expr> Match) const {
+  auto match1Div(const Matcher<clang::Expr> &Match) const {
     return binaryOperator(hasOperatorName("/"), hasLHS(matchValue(1)),
                           hasRHS(Match));
   }
@@ -255,39 +255,33 @@ struct MatchBuilder {
   double DiffThreshold;
 };
 
-std::string getCode(const StringRef Constant, const bool IsFloat,
-                    const bool IsLongDouble) {
-  if (IsFloat) {
+} // namespace
+
+static std::string getCode(const StringRef Constant, const bool IsFloat,
+                           const bool IsLongDouble) {
+  if (IsFloat)
     return ("std::numbers::" + Constant + "_v<float>").str();
-  }
-  if (IsLongDouble) {
+  if (IsLongDouble)
     return ("std::numbers::" + Constant + "_v<long double>").str();
-  }
   return ("std::numbers::" + Constant).str();
 }
 
-bool isRangeOfCompleteMacro(const clang::SourceRange &Range,
-                            const clang::SourceManager &SM,
-                            const clang::LangOptions &LO) {
-  if (!Range.getBegin().isMacroID()) {
+static bool isRangeOfCompleteMacro(const clang::SourceRange &Range,
+                                   const clang::SourceManager &SM,
+                                   const clang::LangOptions &LO) {
+  if (!Range.getBegin().isMacroID())
     return false;
-  }
-  if (!clang::Lexer::isAtStartOfMacroExpansion(Range.getBegin(), SM, LO)) {
+  if (!clang::Lexer::isAtStartOfMacroExpansion(Range.getBegin(), SM, LO))
     return false;
-  }
 
-  if (!Range.getEnd().isMacroID()) {
+  if (!Range.getEnd().isMacroID())
     return false;
-  }
 
-  if (!clang::Lexer::isAtEndOfMacroExpansion(Range.getEnd(), SM, LO)) {
+  if (!clang::Lexer::isAtEndOfMacroExpansion(Range.getEnd(), SM, LO))
     return false;
-  }
 
   return true;
 }
-
-} // namespace
 
 namespace clang::tidy::modernize {
 UseStdNumbersCheck::UseStdNumbersCheck(const StringRef Name,
@@ -307,7 +301,7 @@ UseStdNumbersCheck::UseStdNumbersCheck(const StringRef Name,
 
 void UseStdNumbersCheck::registerMatchers(MatchFinder *const Finder) {
   const auto Matches = MatchBuilder{DiffThreshold};
-  std::vector<Matcher<clang::Stmt>> ConstantMatchers = {
+  const std::vector<Matcher<clang::Stmt>> ConstantMatchers = {
       Matches.matchLog2Euler(),     Matches.matchLog10Euler(),
       Matches.matchEulerTopLevel(), Matches.matchEgamma(),
       Matches.matchInvSqrtPi(),     Matches.matchInvPi(),
@@ -377,9 +371,8 @@ void UseStdNumbersCheck::check(const MatchFinder::MatchResult &Result) {
 
   for (const auto &[ConstantName, ConstantValue] : Constants) {
     const auto *const Match = Result.Nodes.getNodeAs<Expr>(ConstantName);
-    if (Match == nullptr) {
+    if (Match == nullptr)
       continue;
-    }
 
     const auto Range = Match->getSourceRange();
 
@@ -387,9 +380,8 @@ void UseStdNumbersCheck::check(const MatchFinder::MatchResult &Result) {
 
     // We do not want to emit a diagnostic when we are matching a macro, but the
     // match inside of the macro does not cover the whole macro.
-    if (IsMacro && !isRangeOfCompleteMacro(Range, SM, LO)) {
+    if (IsMacro && !isRangeOfCompleteMacro(Range, SM, LO))
       continue;
-    }
 
     if (const auto PatternBindString = (ConstantName + "_pattern").str();
         Result.Nodes.getNodeAs<Expr>(PatternBindString) != nullptr) {
@@ -411,9 +403,8 @@ void UseStdNumbersCheck::check(const MatchFinder::MatchResult &Result) {
 
   // We may have had no matches with literals, but a match with a pattern that
   // was a part of a macro which was therefore skipped.
-  if (MatchedLiterals.empty()) {
+  if (MatchedLiterals.empty())
     return;
-  }
 
   llvm::sort(MatchedLiterals, llvm::less_second());
 
@@ -424,9 +415,8 @@ void UseStdNumbersCheck::check(const MatchFinder::MatchResult &Result) {
 
   // We do not want to emit a diagnostic when we are matching a macro, but the
   // match inside of the macro does not cover the whole macro.
-  if (IsMacro && !isRangeOfCompleteMacro(Range, SM, LO)) {
+  if (IsMacro && !isRangeOfCompleteMacro(Range, SM, LO))
     return;
-  }
 
   const auto Code = getCode(Constant, IsFloat, IsLongDouble);
   diag(Range.getBegin(),

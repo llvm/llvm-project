@@ -72,13 +72,16 @@ multiclass VPseudoVQDOT_VV_VX {
   }
 }
 
-// TODO: Add pseudo and patterns for vqdotus.vx
 // TODO: Add isCommutable for VQDOT and VQDOTU
 let Predicates = [HasStdExtZvqdotq], mayLoad = 0, mayStore = 0,
     hasSideEffects = 0 in {
   defm PseudoVQDOT : VPseudoVQDOT_VV_VX;
   defm PseudoVQDOTU : VPseudoVQDOT_VV_VX;
   defm PseudoVQDOTSU : VPseudoVQDOT_VV_VX;
+  // VQDOTUS does not have a VV variant
+  foreach m = MxListVF4 in {
+    defm "PseudoVQDOTUS_VX" : VPseudoTernaryWithPolicy<m.vrclass, m.vrclass, GPR, m>;
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -86,7 +89,59 @@ let Predicates = [HasStdExtZvqdotq], mayLoad = 0, mayStore = 0,
 //===----------------------------------------------------------------------===//
 
 defvar AllE32Vectors = [VI32MF2, VI32M1, VI32M2, VI32M4, VI32M8];
-defm : VPatBinaryVL_VV_VX<riscv_vqdot_vl, "PseudoVQDOT", AllE32Vectors>;
-defm : VPatBinaryVL_VV_VX<riscv_vqdotu_vl, "PseudoVQDOTU", AllE32Vectors>;
-defm : VPatBinaryVL_VV_VX<riscv_vqdotsu_vl, "PseudoVQDOTSU", AllE32Vectors>;
+defm : VPatBinaryVL_VV_VX<riscv_vqdot_vl, "PseudoVQDOT", AllE32Vectors, ExtraPreds=[HasStdExtZvqdotq]>;
+defm : VPatBinaryVL_VV_VX<riscv_vqdotu_vl, "PseudoVQDOTU", AllE32Vectors, ExtraPreds=[HasStdExtZvqdotq]>;
+defm : VPatBinaryVL_VV_VX<riscv_vqdotsu_vl, "PseudoVQDOTSU", AllE32Vectors, ExtraPreds=[HasStdExtZvqdotq]>;
 
+// These VPat definitions are for vqdot because they have a different operand
+// order with other ternary instructions (i.e. vop.vx vd, vs2, rs1)
+multiclass VPatTernaryV_VX_AABX<string intrinsic, string instruction,
+                                list<VTypeInfoToWide> info_pairs,
+                                list<Predicate> ExtraPreds> {
+  foreach pair = info_pairs in {
+    defvar VdInfo = pair.Wti;
+    defvar Vs2Info = pair.Vti;
+    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<VdInfo>.Predicates) in
+    defm : VPatTernaryWithPolicy<intrinsic, instruction,
+                                 "V"#VdInfo.ScalarSuffix,
+                                 VdInfo.Vector, Vs2Info.Vector, Vs2Info.Scalar,
+                                 VdInfo.Mask, VdInfo.Log2SEW, VdInfo.LMul,
+                                 VdInfo.RegClass, Vs2Info.RegClass,
+                                 Vs2Info.ScalarRegClass>;
+  }
+}
+
+multiclass VPatTernaryV_VV_AABX<string intrinsic, string instruction,
+                                list<VTypeInfoToWide> info_pairs,
+                                list<Predicate> ExtraPreds> {
+  foreach pair = info_pairs in {
+    defvar VdInfo = pair.Wti;
+    defvar Vs2Info = pair.Vti;
+    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<VdInfo>.Predicates) in
+    defm : VPatTernaryWithPolicy<intrinsic, instruction,
+                                 "VV",
+                                 VdInfo.Vector, Vs2Info.Vector, Vs2Info.Vector,
+                                 VdInfo.Mask, VdInfo.Log2SEW, VdInfo.LMul,
+                                 VdInfo.RegClass, Vs2Info.RegClass,
+                                 Vs2Info.RegClass>;
+  }
+}
+
+multiclass VPatTernaryV_VV_VX_AABX<string intrinsic, string instruction,
+                                   list<VTypeInfoToWide> info_pairs,
+                                   list<Predicate> ExtraPreds>
+    : VPatTernaryV_VV_AABX<intrinsic, instruction, info_pairs, ExtraPreds>,
+      VPatTernaryV_VX_AABX<intrinsic, instruction, info_pairs, ExtraPreds>;
+
+defset list<VTypeInfoToWide> VQDOTInfoPairs = {
+  def : VTypeInfoToWide<VI8MF2, VI32MF2>;
+  def : VTypeInfoToWide<VI8M1, VI32M1>;
+  def : VTypeInfoToWide<VI8M2, VI32M2>;
+  def : VTypeInfoToWide<VI8M4, VI32M4>;
+  def : VTypeInfoToWide<VI8M8, VI32M8>;
+}
+
+defm : VPatTernaryV_VV_VX_AABX<"int_riscv_vqdot", "PseudoVQDOT", VQDOTInfoPairs, [HasStdExtZvqdotq]>;
+defm : VPatTernaryV_VV_VX_AABX<"int_riscv_vqdotu", "PseudoVQDOTU", VQDOTInfoPairs, [HasStdExtZvqdotq]>;
+defm : VPatTernaryV_VV_VX_AABX<"int_riscv_vqdotsu", "PseudoVQDOTSU", VQDOTInfoPairs, [HasStdExtZvqdotq]>;
+defm : VPatTernaryV_VX_AABX<"int_riscv_vqdotus", "PseudoVQDOTUS", VQDOTInfoPairs, [HasStdExtZvqdotq]>;

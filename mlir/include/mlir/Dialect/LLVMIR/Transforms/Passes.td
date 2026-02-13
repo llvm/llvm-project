@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_LLVMIR_TRANSFORMS_PASSES
 #define MLIR_DIALECT_LLVMIR_TRANSFORMS_PASSES
 
+include "mlir/Dialect/LLVMIR/LLVMOps.td"
 include "mlir/Pass/PassBase.td"
 
 def LLVMAddComdats : Pass<"llvm-add-comdats", "::mlir::ModuleOp"> {
@@ -45,6 +46,24 @@ def LLVMRequestCWrappersPass
   }];
 }
 
+def LLVMUseDefaultVisibilityPass
+    : Pass<"llvm-use-default-visibility", "::mlir::ModuleOp"> {
+  let summary =
+      "Update default visibility of all global values and function definitions";
+  let description = [{
+    Update the default visibility of all global values and function definitions
+    to `visibility`, as with -fvisibility=(hidden|protected).
+  }];
+  let options =
+      [Option<"useVisibility", "visibility", "::mlir::LLVM::Visibility",
+              /*default=*/"::mlir::LLVM::Visibility::Default",
+              "Visibility to use in place of default.", [{::llvm::cl::values(
+	     clEnumValN(::mlir::LLVM::Visibility::Hidden, "hidden", "Hidden"),
+	     clEnumValN(::mlir::LLVM::Visibility::Protected, "protected", "Protected")
+	   )}]>,
+  ];
+}
+
 def NVVMOptimizeForTargetPass : Pass<"llvm-optimize-for-nvvm-target"> {
   let summary = "Optimize NVVM IR";
 }
@@ -56,7 +75,7 @@ def DIScopeForLLVMFuncOpPass : Pass<"ensure-debug-info-scope-on-llvm-func", "::m
     emitting line tables from MLIR FileLocCol locations.
 
     This is not intended to be a proper replacement for frontends to emit
-    complete debug informations, however it is a convenient way to get line
+    complete debug information, however it is a convenient way to get line
     tables for debugging purposes. This allow to step trough in a debugger
     line-by-line or get a backtrace with line numbers.
   }];

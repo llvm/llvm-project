@@ -12,6 +12,7 @@
 
 #include "SparcInstPrinter.h"
 #include "Sparc.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -235,12 +236,10 @@ void SparcInstPrinter::printMembarTag(const MCInst *MI, int opNum,
     return;
   }
 
-  bool First = true;
+  ListSeparator LS(" | ");
   for (unsigned i = 0; i < std::size(TagNames); i++) {
-    if (Imm & (1 << i)) {
-      O << (First ? "" : " | ") << TagNames[i];
-      First = false;
-    }
+    if (Imm & (1 << i))
+      O << LS << TagNames[i];
   }
 }
 

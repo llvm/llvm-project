@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s bugprone-posix-return %t
+// RUN: %check_clang_tidy %s bugprone-posix-return %t
 
 #define NULL nullptr
 #define ZERO 0
@@ -43,40 +43,40 @@ extern "C" int pthread_yield(void);
 void warningLessThanZero() {
   if (posix_fadvise(0, 0, 0, 0) < 0) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: the comparison always evaluates to false because posix_fadvise always returns non-negative values
-  // CHECK-FIXES: posix_fadvise(0, 0, 0, 0) > 0
+  // CHECK-FIXES: if (posix_fadvise(0, 0, 0, 0) > 0) {}
   if (posix_fallocate(0, 0, 0) < 0) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:32: warning:
-  // CHECK-FIXES: posix_fallocate(0, 0, 0) > 0
+  // CHECK-FIXES: if (posix_fallocate(0, 0, 0) > 0) {}
   if (posix_madvise(NULL, 0, 0) < 0) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:33: warning:
-  // CHECK-FIXES: posix_madvise(NULL, 0, 0) > 0
+  // CHECK-FIXES: if (posix_madvise(NULL, 0, 0) > 0) {}
   if (posix_memalign(NULL, 0, 0) < 0) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:34: warning:
-  // CHECK-FIXES: posix_memalign(NULL, 0, 0) > 0
+  // CHECK-FIXES: if (posix_memalign(NULL, 0, 0) > 0) {}
   if (posix_spawn(NULL, NULL, NULL, NULL, {NULL}, {NULL}) < 0) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:59: warning:
-  // CHECK-FIXES: posix_spawn(NULL, NULL, NULL, NULL, {NULL}, {NULL}) > 0
+  // CHECK-FIXES: if (posix_spawn(NULL, NULL, NULL, NULL, {NULL}, {NULL}) > 0) {}
   if (posix_spawnp(NULL, NULL, NULL, NULL, {NULL}, {NULL}) < 0) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:60: warning:
-  // CHECK-FIXES: posix_spawnp(NULL, NULL, NULL, NULL, {NULL}, {NULL}) > 0
+  // CHECK-FIXES: if (posix_spawnp(NULL, NULL, NULL, NULL, {NULL}, {NULL}) > 0) {}
   if (pthread_create(NULL, NULL, NULL, NULL) < 0) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:46: warning: the comparison always evaluates to false because pthread_create always returns non-negative values
-  // CHECK-FIXES: pthread_create(NULL, NULL, NULL, NULL) > 0
+  // CHECK-FIXES: if (pthread_create(NULL, NULL, NULL, NULL) > 0) {}
   if (pthread_attr_setaffinity_np(NULL, 0, NULL) < 0) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:50: warning:
-  // CHECK-FIXES: pthread_attr_setaffinity_np(NULL, 0, NULL) > 0
+  // CHECK-FIXES: if (pthread_attr_setaffinity_np(NULL, 0, NULL) > 0) {}
   if (pthread_attr_setschedpolicy(NULL, 0) < 0) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:44: warning:
-  // CHECK-FIXES: pthread_attr_setschedpolicy(NULL, 0) > 0)
+  // CHECK-FIXES: if (pthread_attr_setschedpolicy(NULL, 0) > 0) {}
   if (pthread_attr_init(NULL) < 0) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning:
-  // CHECK-FIXES: pthread_attr_init(NULL) > 0
+  // CHECK-FIXES: if (pthread_attr_init(NULL) > 0) {}
   if (pthread_yield() < 0) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:23: warning:
-  // CHECK-FIXES: pthread_yield() > 0
-  if (0 > pthread_yield() ) {}
+  // CHECK-FIXES: if (pthread_yield() > 0) {}
+  if (0 > pthread_yield()) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning:
-  // CHECK-FIXES: 0 < pthread_yield()
+  // CHECK-FIXES: if (0 < pthread_yield()) {}
 
 }
 
@@ -137,7 +137,7 @@ void warningEqualsNegative() {
 void WarningWithMacro() {
   if (posix_fadvise(0, 0, 0, 0) < ZERO) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:33: warning:
-  // CHECK-FIXES: posix_fadvise(0, 0, 0, 0) > ZERO
+  // CHECK-FIXES: if (posix_fadvise(0, 0, 0, 0) > ZERO) {}
   if (posix_fadvise(0, 0, 0, 0) >= ZERO) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:33: warning:
   if (posix_fadvise(0, 0, 0, 0) == NEGATIVE_ONE) {}
@@ -150,7 +150,7 @@ void WarningWithMacro() {
   // CHECK-MESSAGES: :[[@LINE-1]]:33: warning:
   if (pthread_create(NULL, NULL, NULL, NULL) < ZERO) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:46: warning:
-  // CHECK-FIXES: pthread_create(NULL, NULL, NULL, NULL) > ZERO
+  // CHECK-FIXES: if (pthread_create(NULL, NULL, NULL, NULL) > ZERO) {}
   if (pthread_create(NULL, NULL, NULL, NULL) >= ZERO) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:46: warning:
   if (pthread_create(NULL, NULL, NULL, NULL) == NEGATIVE_ONE) {}

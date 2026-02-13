@@ -21,7 +21,7 @@ end function
 
 ! Check this is not lowered as a simple macro: e.g. argument is only
 ! evaluated once even if it appears in several placed inside the
-! statement function expression 
+! statement function expression
 ! CHECK-LABEL: func @_QPtest_stmt_only_eval_arg_once() -> f32
 real(4) function test_stmt_only_eval_arg_once()
   real(4) :: only_once, x1
@@ -129,7 +129,6 @@ integer function test_stmt_character_with_different_length_2(c, n)
   character(n) :: argc
   character(*) :: c
   ! CHECK: %[[unboxed:.*]]:2 = fir.unboxchar %[[arg0]] :
-  ! CHECK: fir.load %[[arg1]] : !fir.ref<i32>
   ! CHECK: %[[n:.*]] = fir.load %[[arg1]] : !fir.ref<i32>
   ! CHECK: %[[n_is_positive:.*]] = arith.cmpi sgt, %[[n]], %c0{{.*}} : i32
   ! CHECK: %[[len:.*]] = arith.select %[[n_is_positive]], %[[n]], %c0{{.*}} : i32

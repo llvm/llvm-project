@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-delicm>' -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<delicm>' -polly-print-delicm -disable-output < %s | FileCheck %s
 
 ; When %b is 0, %for.body13 is an infinite loop. In this case the loaded
 ; value %1 is not used anywhere.

@@ -22,6 +22,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -347,12 +348,15 @@ llvm::Expected<FileEntryRef> FileManager::getSTDIN() {
   if (STDIN)
     return *STDIN;
 
-  std::unique_ptr<llvm::MemoryBuffer> Content;
-  if (auto ContentOrError = llvm::MemoryBuffer::getSTDIN())
-    Content = std::move(*ContentOrError);
-  else
+  auto ContentOrError = [] {
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+    return llvm::MemoryBuffer::getSTDIN();
+  }();
+
+  if (!ContentOrError)
     return llvm::errorCodeToError(ContentOrError.getError());
 
+  auto Content = std::move(*ContentOrError);
   STDIN = getVirtualFileRef(Content->getBufferIdentifier(),
                             Content->getBufferSize(), 0);
   FileEntry &FE = const_cast<FileEntry &>(STDIN->getFileEntry());
@@ -474,8 +478,9 @@ OptionalFileEntryRef FileManager::getBypassFile(FileEntryRef VF) {
   return FileEntryRef(*Insertion.first);
 }
 
-bool FileManager::FixupRelativePath(SmallVectorImpl<char> &path) const {
-  StringRef pathRef(path.data(), path.size());
+bool FileManager::fixupRelativePath(const FileSystemOptions &FileSystemOpts,
+                                    SmallVectorImpl<char> &Path) {
+  StringRef pathRef(Path.data(), Path.size());
 
   if (FileSystemOpts.WorkingDir.empty()
       || llvm::sys::path::is_absolute(pathRef))
@@ -483,7 +488,7 @@ bool FileManager::FixupRelativePath(SmallVectorImpl<char> &path) const {
 
   SmallString<128> NewPath(FileSystemOpts.WorkingDir);
   llvm::sys::path::append(NewPath, pathRef);
-  path = NewPath;
+  Path = NewPath;
   return true;
 }
 

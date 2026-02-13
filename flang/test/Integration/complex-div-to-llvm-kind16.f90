@@ -1,12 +1,12 @@
 ! Test lowering complex division to llvm ir according to options
 
 ! REQUIRES: flang-supports-f128-math
-! RUN: %flang -fcomplex-arithmetic=improved -mmlir --force-no-alias=false -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,IMPRVD
-! RUN: %flang -fcomplex-arithmetic=basic -mmlir --force-no-alias=false -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,BASIC
+! RUN: %flang -fcomplex-arithmetic=improved -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,IMPRVD
+! RUN: %flang -fcomplex-arithmetic=basic -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,BASIC
 
 
 ! CHECK-LABEL: @div_test_quad
-! CHECK-SAME: ptr %[[RET:.*]], ptr %[[LHS:.*]], ptr %[[RHS:.*]])
+! CHECK-SAME: ptr noalias %[[RET:.*]], ptr noalias %[[LHS:.*]], ptr noalias %[[RHS:.*]])
 ! CHECK: %[[LOAD_LHS:.*]] = load { fp128, fp128 }, ptr %[[LHS]], align 16
 ! CHECK: %[[LOAD_RHS:.*]] = load { fp128, fp128 }, ptr %[[RHS]], align 16
 ! CHECK: %[[LHS_REAL:.*]] = extractvalue { fp128, fp128 } %[[LOAD_LHS]], 0

@@ -156,8 +156,15 @@ int SANITIZER_CDECL __sanitizer_acquire_crash_state();
 /// \param end End of memory region.
 /// \param old_mid Old middle of memory region.
 /// \param new_mid New middle of memory region.
+#ifdef __SANITIZER_DISABLE_CONTAINER_OVERFLOW__
+__attribute__((__internal_linkage__)) inline void SANITIZER_CDECL
+__sanitizer_annotate_contiguous_container(const void *beg, const void *end,
+                                          const void *old_mid,
+                                          const void *new_mid) {}
+#else
 void SANITIZER_CDECL __sanitizer_annotate_contiguous_container(
     const void *beg, const void *end, const void *old_mid, const void *new_mid);
+#endif
 
 /// Similar to <c>__sanitizer_annotate_contiguous_container</c>.
 ///
@@ -188,10 +195,18 @@ void SANITIZER_CDECL __sanitizer_annotate_contiguous_container(
 /// \param old_container_end End of used region.
 /// \param new_container_beg New beginning of used region.
 /// \param new_container_end New end of used region.
+#ifdef __SANITIZER_DISABLE_CONTAINER_OVERFLOW__
+__attribute__((__internal_linkage__)) inline void
+    SANITIZER_CDECL __sanitizer_annotate_double_ended_contiguous_container(
+        const void *storage_beg, const void *storage_end,
+        const void *old_container_beg, const void *old_container_end,
+        const void *new_container_beg, const void *new_container_end) {}
+#else
 void SANITIZER_CDECL __sanitizer_annotate_double_ended_contiguous_container(
     const void *storage_beg, const void *storage_end,
     const void *old_container_beg, const void *old_container_end,
     const void *new_container_beg, const void *new_container_end);
+#endif
 
 /// Copies memory annotations from a source storage region to a destination
 /// storage region. After the operation, the destination region has the same
@@ -226,9 +241,17 @@ void SANITIZER_CDECL __sanitizer_annotate_double_ended_contiguous_container(
 /// \param src_end End of the source container region.
 /// \param dst_begin Begin of the destination container region.
 /// \param dst_end End of the destination container region.
+#ifdef __SANITIZER_DISABLE_CONTAINER_OVERFLOW__
+__attribute__((__internal_linkage__)) inline void SANITIZER_CDECL
+__sanitizer_copy_contiguous_container_annotations(const void *src_begin,
+                                                  const void *src_end,
+                                                  const void *dst_begin,
+                                                  const void *dst_end) {}
+#else
 void SANITIZER_CDECL __sanitizer_copy_contiguous_container_annotations(
     const void *src_begin, const void *src_end, const void *dst_begin,
     const void *dst_end);
+#endif
 
 /// Returns true if the contiguous container <c>[beg, end)</c> is properly
 /// poisoned.
@@ -246,9 +269,16 @@ void SANITIZER_CDECL __sanitizer_copy_contiguous_container_annotations(
 ///
 /// \returns True if the contiguous container <c>[beg, end)</c> is properly
 ///  poisoned.
+#ifdef __SANITIZER_DISABLE_CONTAINER_OVERFLOW__
+__attribute__((__internal_linkage__)) inline int
+    SANITIZER_CDECL __sanitizer_verify_contiguous_container(const void *beg,
+                                                            const void *mid,
+                                                            const void *end) {}
+#else
 int SANITIZER_CDECL __sanitizer_verify_contiguous_container(const void *beg,
                                                             const void *mid,
                                                             const void *end);
+#endif
 
 /// Returns true if the double ended contiguous
 /// container <c>[storage_beg, storage_end)</c> is properly poisoned.
@@ -271,9 +301,17 @@ int SANITIZER_CDECL __sanitizer_verify_contiguous_container(const void *beg,
 /// \returns True if the double-ended contiguous container <c>[storage_beg,
 /// container_beg, container_end, end)</c> is properly poisoned - only
 /// [container_beg; container_end) is addressable.
+#ifdef __SANITIZER_DISABLE_CONTAINER_OVERFLOW__
+__attribute__((__internal_linkage__)) inline int SANITIZER_CDECL
+__sanitizer_verify_double_ended_contiguous_container(const void *storage_beg,
+                                                     const void *container_beg,
+                                                     const void *container_end,
+                                                     const void *storage_end) {}
+#else
 int SANITIZER_CDECL __sanitizer_verify_double_ended_contiguous_container(
     const void *storage_beg, const void *container_beg,
     const void *container_end, const void *storage_end);
+#endif
 
 /// Similar to <c>__sanitizer_verify_contiguous_container()</c> but also
 /// returns the address of the first improperly poisoned byte.
@@ -285,8 +323,15 @@ int SANITIZER_CDECL __sanitizer_verify_double_ended_contiguous_container(
 /// \param end Old end of memory region.
 ///
 /// \returns The bad address or NULL.
+#ifdef __SANITIZER_DISABLE_CONTAINER_OVERFLOW__
+__attribute__((__internal_linkage__)) inline const void *SANITIZER_CDECL
+__sanitizer_contiguous_container_find_bad_address(const void *beg,
+                                                  const void *mid,
+                                                  const void *end) {}
+#else
 const void *SANITIZER_CDECL __sanitizer_contiguous_container_find_bad_address(
     const void *beg, const void *mid, const void *end);
+#endif
 
 /// returns the address of the first improperly poisoned byte.
 ///
@@ -298,10 +343,17 @@ const void *SANITIZER_CDECL __sanitizer_contiguous_container_find_bad_address(
 /// \param storage_end End of memory region.
 ///
 /// \returns The bad address or NULL.
+#ifdef __SANITIZER_DISABLE_CONTAINER_OVERFLOW__
+__attribute__((__internal_linkage__)) inline const void *SANITIZER_CDECL
+__sanitizer_double_ended_contiguous_container_find_bad_address(
+    const void *storage_beg, const void *container_beg,
+    const void *container_end, const void *storage_end) {}
+#else
 const void *SANITIZER_CDECL
 __sanitizer_double_ended_contiguous_container_find_bad_address(
     const void *storage_beg, const void *container_beg,
     const void *container_end, const void *storage_end);
+#endif
 
 /// Prints the stack trace leading to this call (useful for calling from the
 /// debugger).

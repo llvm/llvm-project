@@ -75,7 +75,12 @@ static_assert(!HasPartialSortCopyIter<int*, int*, int*, int*, IndirectUnaryPredi
 static_assert(!HasPartialSortCopyIter<int*, int*, int*, int*, IndirectUnaryPredicateNotCopyConstructible>);
 
 // !indirectly_copyable<I1, I2>
-static_assert(!HasPartialSortCopyIter<int*, int*, MoveOnly*>);
+struct OrderedConvertibleToInt {
+  friend auto operator<=>(OrderedConvertibleToInt const&, OrderedConvertibleToInt const&) = default;
+  operator int() const;
+};
+
+static_assert(!HasPartialSortCopyIter<int*, int*, OrderedConvertibleToInt*, OrderedConvertibleToInt*>);
 
 // !sortable<I2, Comp, Proj2>
 static_assert(!HasPartialSortCopyIter<int*, int*, const int*, const int*>);
@@ -83,6 +88,9 @@ static_assert(!HasPartialSortCopyIter<int*, int*, const int*, const int*>);
 struct NoComparator {};
 // !indirect_strict_weak_order<Comp, projected<I1, Proj1>, projected<I2, Proj2>>
 static_assert(!HasPartialSortCopyIter<NoComparator*, NoComparator*, NoComparator*, NoComparator*>);
+
+// P2404
+static_assert(HasPartialSortCopyIter<int*, int*, MoveOnly*, MoveOnly*>);
 
 // Test constraints of the (range) overload.
 // ======================================================
@@ -109,13 +117,16 @@ static_assert(!HasPartialSortCopyRange<R<int*>, RandomAccessRangeNotDerivedFrom>
 static_assert(!HasPartialSortCopyRange<R<int*>, RandomAccessRangeBadIndex>);
 
 // !indirectly_copyable<iterator_t<R1>, iterator_t<R2>>
-static_assert(!HasPartialSortCopyRange<R<int*>, R<MoveOnly*>>);
+static_assert(!HasPartialSortCopyRange<R<int*>, R<OrderedConvertibleToInt*>>);
 
 // !sortable<iterator_t<R2>, Comp, Proj2>
 static_assert(!HasPartialSortCopyRange<R<int*>, R<const int*>>);
 
 // !indirect_strict_weak_order<Comp, projected<iterator_t<R1>, Proj1>, projected<iterator_t<R2>, Proj2>>
 static_assert(!HasPartialSortCopyRange<R<NoComparator*>, R<NoComparator*>>);
+
+// P2404
+static_assert(HasPartialSortCopyRange<R<int*>, R<MoveOnly*>>);
 
 static_assert(std::is_same_v<std::ranges::partial_sort_copy_result<int, int>, std::ranges::in_out_result<int, int>>);
 

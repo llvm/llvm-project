@@ -50,7 +50,7 @@ CHECK-NEXT:                DW_AT_type	(0x000000ac "int[2]")
 CHECK-NEXT:                DW_AT_external	(true)
 CHECK-NEXT:                DW_AT_decl_file	("{{.*}}hi_foo.c")
 CHECK-NEXT:                DW_AT_decl_line	(1)
-CHECK:                     DW_AT_location	(DW_OP_addr 0x400)
+CHECK:                     DW_AT_location	(DW_OP_addr 0x10000)
 
 CHECK:   DW_TAG_array_type
 

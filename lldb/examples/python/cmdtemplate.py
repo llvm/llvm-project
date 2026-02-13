@@ -74,6 +74,11 @@ class FrameStatCommand(ParsedCommand):
             dest = "statics",
             default = True,
         )
+        ov_parser.add_option(
+            "t",
+            "test-flag",
+            help="test a flag value.",
+        )
 
     def get_repeat_command(self, args):
         """As an example, make the command not auto-repeat:"""
@@ -123,6 +128,11 @@ class FrameStatCommand(ParsedCommand):
                 % (variables_count, total_size, average_size),
                 file=result,
             )
+        if ov_parser.was_set("test-flag"):
+            print("Got the test flag")
+        else:
+            print("Got no test flag")
+
         # not returning anything is akin to returning success
 
 

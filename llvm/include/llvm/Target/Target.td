@@ -20,15 +20,20 @@ class Predicate; // Forward def
 // Register file description - These classes are used to fill in the target
 // description classes.
 
-class HwMode<string FS, list<Predicate> Ps> {
-  // A string representing subtarget features that turn on this HW mode.
-  // For example, "+feat1,-feat2" will indicate that the mode is active
-  // when "feat1" is enabled and "feat2" is disabled at the same time.
-  // Any other features are not checked.
-  // When multiple modes are used, they should be mutually exclusive,
-  // otherwise the results are unpredictable.
-  string Features = FS;
+// Code that will be inserted at the start of the generated
+// `*GenSubtargetInfo::getHwModeSet()` method. It is expected to define
+// variables used in Predicate::CondString. If this class is never instantiated,
+// the default
+//
+//   [[maybe_unused]] const auto *Subtarget =
+//        static_cast<const <TargetName>Subtarget *>(this);
+//
+// will be inserted, where <TargetName> is the name of the Target record.
+class HwModePredicateProlog<code c> {
+  code Code = c;
+}
 
+class HwMode<list<Predicate> Ps> {
   // A list of predicates that turn on this HW mode.
   list<Predicate> Predicates = Ps;
 }
@@ -36,7 +41,7 @@ class HwMode<string FS, list<Predicate> Ps> {
 // A special mode recognized by tablegen. This mode is considered active
 // when no other mode is active. For targets that do not use specific hw
 // modes, this is the only mode.
-def DefaultMode : HwMode<"", []>;
+def DefaultMode : HwMode<[]>;
 
 // A class used to associate objects with HW modes. It is only intended to
 // be used as a base class, where the derived class should contain a member
@@ -56,7 +61,7 @@ class HwModeSelect<list<HwMode> Ms, int ObjectsLength> {
 // objects could be used. This is specifically applicable to selection
 // patterns.
 class ValueTypeByHwMode<list<HwMode> Ms, list<ValueType> Ts>
-    : HwModeSelect<Ms, !size(Ts)>, ValueType<0, 0> {
+    : HwModeSelect<Ms, !size(Ts)>, ValueType<0, "INVALID_SIMPLE_VALUE_TYPE"> {
   // The length of this list must be the same as the length of Ms.
   list<ValueType> Objects = Ts;
 }
@@ -68,7 +73,7 @@ class ValueTypeByHwMode<list<HwMode> Ms, list<ValueType> Ts>
 // patterns.
 class PtrValueTypeByHwMode<ValueTypeByHwMode scalar, int addrspace>
     : HwModeSelect<scalar.Modes, !size(scalar.Objects)>,
-      PtrValueType<ValueType<0, 0>, addrspace> {
+      PtrValueType<ValueType<0, "INVALID_SIMPLE_VALUE_TYPE">, addrspace> {
   // The length of this list must be the same as the length of Ms.
   list<ValueType> Objects = scalar.Objects;
 }
@@ -249,9 +254,32 @@ class RegisterWithSubRegs<string n, list<Register> subregs> : Register<n> {
 // RegisterClass's and other Operand's.
 class DAGOperand {
   string OperandNamespace = "MCOI";
+
+  // Per-operand equivalent of InstructionEncoding's `DecoderMethod`.
+  //
+  // This will be called with one of the following signatures:
+  // ```
+  //   // If the operand is decoded from a field in the instruction. `TmpType`
+  //   // will either be the same as `InsnType` (if it's integral), or it will
+  //   // be `uint64_t`. `InsnType` is templated type the generated
+  //   // `decodeToMCInst` is used with.
+  //   DecodeStatus DecoderMethod(MCInst &Inst, TmpType Field, int64_t Address,
+  //                              const MCDisassembler *Decoder)
+  //   // If the operand does not appear in the instruction encoding
+  //   DecodeStatus DecoderMethod(MCInst &Inst, const MCDisassembler *Decoder)
+  // ```
   string DecoderMethod = "";
+
+  // Operand equivalent of InstructionEncoding's `hasCompleteDecoder`; if this
+  // is true, then other instructions will be tried before decoding fails.
   bit hasCompleteDecoder = true;
 }
+
+/// Abstract base class common to RegisterClass and
+/// RegClassByHwMode. This permits using RegClassByHwMode in
+/// RegisterOperand contexts without creating an artificial
+/// RegisterClass.
+class RegisterClassLike : DAGOperand;
 
 // RegisterClass - Now that all of the registers are defined, and aliases
 // between registers are defined, specify which registers belong to which
@@ -260,7 +288,7 @@ class DAGOperand {
 //
 class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
                     dag regList, RegAltNameIndex idx = NoRegAltName>
-  : DAGOperand {
+  : RegisterClassLike {
   string Namespace = namespace;
 
   // The register size/alignment information, parameterized by a HW mode.
@@ -549,6 +577,18 @@ class InstructionEncoding {
   // List of predicates which will be turned into isel matching code.
   list<Predicate> Predicates = [];
 
+  // The name of a custom C++ decoder method to use to decode this instruction.
+  //
+  // If the instruction has a `DecoderMethod`, then the fields for its operands
+  // are not automatically decoded, and the decoder method is responsible for
+  // constructing all the MCInst's operands.
+  //
+  // Will be called with the following signature (where `InsnType` is the
+  // template type that `decodeToMCInst` is called with):
+  // ```
+  //   DecodeStatus DecoderMethod(MCInst &Inst, InsnType insn, int64_t Address,
+  //                              const MCDisassembler *Decoder)
+  // ```
   string DecoderMethod = "";
 
   // Is the instruction decoder method able to completely determine if the
@@ -683,6 +723,7 @@ class Instruction : InstructionEncoding {
                                 // If so, make sure to override
                                 // TargetInstrInfo::getInsertSubregLikeInputs.
   bit variadicOpsAreDefs = false; // Are variadic operands definitions?
+  bit supportsDeactivationSymbol = false;
 
   // Does the instruction have side effects that are not captured by any
   // operands of the instruction or other flags?
@@ -735,6 +776,14 @@ class Instruction : InstructionEncoding {
   ///   discussion of inline assembly constraint strings.
   string Constraints = "";
 
+  /// This is used by `getBinaryCodeForInstr` to fixup the instruction encoding
+  /// for the instruction.
+  /// It is called with the following signature, expecting to return the new
+  /// value of `Value`, after the operand has been encoded into `Value`:
+  /// ```
+  ///   InstType = PostEncoderMethod(const MCInst &MI, InstType Value,
+  ///                                const MCSubtargetInfo &STI);
+  /// ```
   string PostEncoderMethod = "";
 
   /// Target-specific flags. This becomes the TSFlags field in TargetInstrDesc.
@@ -743,6 +792,14 @@ class Instruction : InstructionEncoding {
   ///@name Assembler Parser Support
   ///@{
 
+  /// Custom Assembly Converter. If non-zero, this is used for converting the
+  /// matched mnemonic's operand tokens into MCOperands and adding them to the
+  /// MCInst.
+  ///
+  /// Will be called as:
+  /// `void AsmMatchConverter(MCInst &Inst, const OperandVector &Operands);`
+  ///
+  /// See also: InstAlias.UseInstAsmMatchConverter.
   string AsmMatchConverter = "";
 
   /// TwoOperandAliasConstraint - Enable TableGen to auto-generate a
@@ -816,8 +873,15 @@ class PseudoInstExpansion<dag Result> {
 
 /// Predicates - These are extra conditionals which are turned into instruction
 /// selector matching code. Currently each predicate is just a string.
-class Predicate<string cond> {
-  string CondString = cond;
+class Predicate<code cond> {
+
+  /// This is a C++ expression which can be evaluated to return a bool,
+  /// representing whether the predicate is satisfied.
+  ///
+  /// The following variables are in scope:
+  /// - `const GET_DAGISEL_BODY *this` representing the target's DAGToDAGISel
+  ///   instance.
+  code CondString = cond;
 
   /// AssemblerMatcherPredicate - If this feature can be used by the assembler
   /// matcher, this is true. Targets should set this by inheriting their
@@ -907,20 +971,35 @@ def slice;
 def encoder;
 def decoder;
 
-/// PointerLikeRegClass - Values that are designed to have pointer width are
-/// derived from this. TableGen treats the register class as having a symbolic
-/// type that it doesn't know, and resolves the actual regclass to use by using
-/// the TargetRegisterInfo::getPointerRegClass() hook at codegen time.
+/// PointerLikeRegClass - Pseudoinstruction operands that are designed
+/// to have pointer width are derived from this. This should only be
+/// used by StandardPseudoInstruction instructions. No target specific
+/// instruction should use this.
 class PointerLikeRegClass<int Kind> {
   int RegClassKind = Kind;
 }
 
-
-/// ptr_rc definition - Mark this operand as being a pointer value whose
-/// register class is resolved dynamically via a callback to TargetInstrInfo.
-/// FIXME: We should probably change this to a class which contain a list of
-/// flags. But currently we have but one flag.
+/// ptr_rc definition - Mark this operand as being a pointer value
+/// whose register class needs to be defined by the target. Targets
+/// should provide instruction definition overrides which substitute
+/// the uses of this with the backend defined RegisterClass or
+/// RegClassByHwMode to use for pointer virtual registers for a
+/// particular opcode (typically by defining a subsitute instruction
+/// with RemapPointerOperands).
 def ptr_rc : PointerLikeRegClass<0>;
+
+/// RegClassByHwMode - Operands that change the register class based
+/// on the subtarget are derived from this. TableGen
+/// treats the register class as having a symbolic kind that it
+/// doesn't know, and resolves the actual regclass to use by using the
+/// a mapping in TargetInstrInfo at codegen time. This can be used to
+/// define operands which swap the register class with the pointer
+/// type.
+class RegClassByHwMode<list<HwMode> Modes,
+                       list<RegisterClass> RegClasses>
+  : HwModeSelect<Modes, !size(RegClasses)>, RegisterClassLike {
+  list<RegisterClass> Objects = RegClasses;
+}
 
 /// unknown definition - Mark this operand as being of unknown type, causing
 /// it to be resolved by inference in the context it is used.
@@ -962,7 +1041,9 @@ class AsmOperandClass {
   /// The name of the method on the target specific operand to call to custom
   /// handle the operand parsing. This is useful when the operands do not relate
   /// to immediates or registers and are very instruction specific (as flags to
-  /// set in a processor register, coprocessor number, ...).
+  /// set in a processor register, coprocessor number, ...). The method
+  /// signature should be:
+  ///   ParseStatus ParserMethod(OperandVector &Operands);
   string ParserMethod = ?;
 
   // The diagnostic type to present when referencing this operand in a
@@ -998,14 +1079,41 @@ def ImmAsmOperand : AsmOperandClass {
 /// needed, though this should not be needed for RISC targets.
 class Operand<ValueType ty> : DAGOperand {
   ValueType Type = ty;
+
+  // Custom method for printing the current operand.
+  //
+  // This will be invoked with the following signature, on the class denoted
+  // by `TargetName # AsmWriter.AsmWriterClassName`
+  // ```
+  //   void Class::PrintMethod(const MCInst *MI, unsigned OpNo,
+  //                           const MCSubtargetInfo &STI, raw_ostream &O);
+  // ```
   string PrintMethod = "printOperand";
+
+  /// This method will be used to encode the operand into bits, which will be
+  /// placed into the final instruction according to the Encoding information.
+  ///
+  /// This will be called with the following signature:
+  /// ```
+  ///   uint64_t MCCodeEmitter::EncoderMethod(const MCInst &MI, unsigned OpNo,
+  ///                                         SmallVectorImpl<MCFixup> &Fixups,
+  ///                                         const MCSubtargetInfo &STI) const;
+  /// ```
   string EncoderMethod = "";
+
   string OperandType = "OPERAND_UNKNOWN";
+
+  /// This operand may have sub-operands. Their use is complex, but this is
+  /// where they would be described.
   dag MIOperandInfo = (ops);
 
-  // MCOperandPredicate - Optionally, a code fragment operating on
-  // const MCOperand &MCOp, and returning a bool, to indicate if
-  // the value of MCOp is valid for the specific subclass of Operand
+  // MCOperandPredicate - Optionally, a C++ fragment returning a bool to
+  // indicate if the value of the operand is valid for this specific subclass of
+  // Operand.
+  //
+  // The following variables are in scope:
+  // - `const MCOperand &MCOp` representing the current Operand
+  // - `const MCSubtargetInfo &STI` representing the current subtarget.
   code MCOperandPredicate;
 
   // ParserMatchClass - The "match class" that operands of this type fit
@@ -1019,17 +1127,18 @@ class Operand<ValueType ty> : DAGOperand {
   AsmOperandClass ParserMatchClass = ImmAsmOperand;
 }
 
-class RegisterOperand<RegisterClass regclass, string pm = "printOperand">
+class RegisterOperand<RegisterClassLike regclass, string pm = "printOperand">
   : DAGOperand {
   // RegClass - The register class of the operand.
-  RegisterClass RegClass = regclass;
+  RegisterClassLike RegClass = regclass;
+
   // PrintMethod - The target method to call to print register operands of
   // this type. The method normally will just use an alt-name index to look
   // up the name to print. Default to the generic printOperand().
   string PrintMethod = pm;
 
   // EncoderMethod - The target method name to call to encode this register
-  // operand.
+  // operand. See `Operand.EncoderMethod`.
   string EncoderMethod = "";
 
   // ParserMatchClass - The "match class" that operands of this type fit
@@ -1264,7 +1373,7 @@ def INIT_UNDEF : StandardPseudoInstruction {
 }
 def SUBREG_TO_REG : StandardPseudoInstruction {
   let OutOperandList = (outs unknown:$dst);
-  let InOperandList = (ins unknown:$implsrc, unknown:$subsrc, i32imm:$subidx);
+  let InOperandList = (ins unknown:$subsrc, i32imm:$subidx);
   let AsmString = "";
   let hasSideEffects = false;
 }
@@ -1324,6 +1433,13 @@ def COPY : StandardPseudoInstruction {
   let hasSideEffects = false;
   let isAsCheapAsAMove = true;
   let hasNoSchedulingInfo = false;
+}
+def COPY_LANEMASK : StandardPseudoInstruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins unknown:$src, unknown:$lanemask);
+  let AsmString = "";
+  let hasSideEffects = false;
+  let isAsCheapAsAMove = true;
 }
 def BUNDLE : StandardPseudoInstruction {
   let OutOperandList = (outs);
@@ -1410,9 +1526,9 @@ def PREALLOCATED_ARG : StandardPseudoInstruction {
 def LOCAL_ESCAPE : StandardPseudoInstruction {
   // This instruction is really just a label. It has to be part of the chain so
   // that it doesn't get dropped from the DAG, but it produces nothing and has
-  // no side effects.
+  // no side effects. Symbol operand is expected to be a label.
   let OutOperandList = (outs);
-  let InOperandList = (ins ptr_rc:$symbol, i32imm:$id);
+  let InOperandList = (ins unknown:$symbol, i32imm:$id);
   let hasSideEffects = false;
   let hasCtrlDep = true;
 }
@@ -1528,6 +1644,11 @@ def JUMP_TABLE_DEBUG_INFO : StandardPseudoInstruction {
   let Size = 0;
   let isMeta = true;
 }
+def RELOC_NONE : StandardPseudoInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins unknown:$symbol);
+  let hasSideEffects = true;
+}
 
 let hasSideEffects = false, isMeta = true, isConvergent = true in {
 def CONVERGENCECTRL_ANCHOR : StandardPseudoInstruction {
@@ -1546,6 +1667,99 @@ def CONVERGENCECTRL_GLUE : StandardPseudoInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins unknown:$src);
 }
+}
+
+/// Allow a target to replace the instruction definition of a
+/// StandardPseudoInstruction. A target should only define one
+/// instance of this per instruction.
+///
+/// This is intended to allow targets to specify the register class
+/// used for pointers. It should not be used to change the fundamental
+/// operand structure (e.g., this should not add or remove operands,
+/// or change the operand types).
+class TargetSpecializedStandardPseudoInstruction<
+  StandardPseudoInstruction base_inst> : Instruction {
+
+  StandardPseudoInstruction Instruction = base_inst;
+  let OutOperandList = base_inst.OutOperandList;
+  let InOperandList = base_inst.InOperandList;
+
+  // TODO: Copy everything
+  let usesCustomInserter = base_inst.usesCustomInserter;
+  let hasSideEffects = base_inst.hasSideEffects;
+  let mayLoad = base_inst.mayLoad;
+  let mayStore = base_inst.mayStore;
+  let isTerminator = base_inst.isTerminator;
+  let isBranch = base_inst.isBranch;
+  let isIndirectBranch = base_inst.isIndirectBranch;
+  let isEHScopeReturn = base_inst.isEHScopeReturn;
+  let isReturn = base_inst.isReturn;
+  let isCall = base_inst.isCall;
+  let hasCtrlDep = base_inst.hasCtrlDep;
+  let isReMaterializable = base_inst.isReMaterializable;
+  let isMeta = base_inst.isMeta;
+  let Size = base_inst.Size;
+  let isAsCheapAsAMove = base_inst.isAsCheapAsAMove;
+  let isPseudo = true;
+  let hasNoSchedulingInfo = true;
+  let isNotDuplicable = base_inst.isNotDuplicable;
+  let isConvergent = base_inst.isConvergent;
+  let hasExtraSrcRegAllocReq = base_inst.hasExtraSrcRegAllocReq;
+  let hasExtraDefRegAllocReq = base_inst.hasExtraDefRegAllocReq;
+}
+
+// All pseudo instructions which need a pointer register class, which
+// should be specialized by a target.
+defvar PseudosWithPtrOps = [
+  LOAD_STACK_GUARD,
+  PREALLOCATED_ARG,
+  PATCHABLE_EVENT_CALL,
+  PATCHABLE_TYPED_EVENT_CALL
+];
+
+
+/// Replace PointerLikeRegClass operands in OperandList with new_rc.
+class RemapPointerOperandList<dag OperandList, RegisterClassLike new_rc> {
+  // Collect the set of names so we can query and rewrite them.
+  list<string> op_names = !foreach(i, !range(!size(OperandList)),
+                                      !getdagname(OperandList, i));
+
+  // Beautiful language. This would be a lot easier if !getdagarg
+  // didn't require a specific type. We can't just collect a list of
+  // the operand values and reconstruct the dag, since there isn't a
+  // common base class for all the field kinds used in
+  // pseudoinstruction definitions; therefore everything must be
+  // maintained as a dag, so use a foldl. Additionally, ? doesn't
+  // evaluate as false so we get even more noise.
+  dag ret =
+    !foldl(OperandList, op_names, acc, name,
+      !cond(
+        !initialized(!getdagarg<PointerLikeRegClass>(OperandList, name))
+          : !setdagarg(acc, name, new_rc),
+        !initialized(!getdagarg<unknown_class>(OperandList, name)) : acc,
+        !initialized(!getdagarg<DAGOperand>(OperandList, name)) : acc
+      )
+    );
+}
+
+/// Define an override for a pseudoinstruction which uses a pointer
+/// register class, specialized to the target's pointer type.
+class RemapPointerOperands<StandardPseudoInstruction inst,
+                           RegisterClassLike new_rc> :
+  TargetSpecializedStandardPseudoInstruction<inst> {
+  let OutOperandList =
+    RemapPointerOperandList<inst.OutOperandList, new_rc>.ret;
+  let InOperandList =
+    RemapPointerOperandList<inst.InOperandList, new_rc>.ret;
+}
+
+/// Helper to replace all pseudoinstructions using pointers to a
+/// target register class. Most targets should use this.
+multiclass RemapAllTargetPseudoPointerOperands<
+  RegisterClassLike default_ptr_rc> {
+  foreach inst = PseudosWithPtrOps in {
+    def : RemapPointerOperands<inst, default_ptr_rc>;
+  }
 }
 
 // Generic opcodes used in GlobalISel.
@@ -1567,6 +1781,11 @@ class AsmParser {
   // AsmParserInstCleanup - If non-empty, this is the name of a custom member
   // function of the AsmParser class to call on every matched instruction.
   // This can be used to perform target specific instruction post-processing.
+  //
+  // This will be invoked with the following signature:
+  // ```
+  //   void AsmParserInstCleanup(MCInst &Inst);
+  // ```
   string AsmParserInstCleanup  = "";
 
   // ShouldEmitMatchRegisterName - Set to false if the target needs a hand
@@ -1602,8 +1821,16 @@ class AsmParser {
   bit ReportMultipleNearMisses = false;
 
   // OperandParserMethod - If non-empty, this is the name of a custom
-  // member function of the AsmParser class to call for every instruction
-  // operand to be parsed.
+  // member function of the AsmParser class to call for every custom instruction
+  // operand to be parsed. If unset, this defaults to calling the generated
+  // `tryCustomParseOperand` implementation.
+  //
+  // This will be invoked with the following signature, on the target's
+  // `AsmParser` subclass. The `MCK` operand represents the generated
+  // Match Class Kind.
+  // ```
+  //   ParseStatus OperandParserMethod(OperandVector &Operands, unsigned MCK);
+  // ```
   string OperandParserMethod = "";
 
   // CallCustomParserForAllOperands - Set to true if the custom parser
@@ -1613,15 +1840,15 @@ class AsmParser {
 
   // PreferSmallerInstructions - Should the assembly matcher prefer the smaller
   // instructions.
-  // 
+  //
   // This is useful for the ARM instructions set where smaller encodings must
   // be preferentially selected.
   //
-  // The preference order is: 
+  // The preference order is:
   //    Instrution size (if this option is enabled, smallest first)
-  //    Number of Operands (least first), 
-  //    Operand Classes (lexicographically by operand), 
-  //    (Optional) Instruction id (see AsmMatcherEmitter.cpp for details), 
+  //    Number of Operands (least first),
+  //    Operand Classes (lexicographically by operand),
+  //    (Optional) Instruction id (see AsmMatcherEmitter.cpp for details),
   //    Number of required features (least first)
   bit PreferSmallerInstructions = false;
 }
@@ -1670,8 +1897,11 @@ def all_of;
 /// AssemblerPredicate - This is a Predicate that can be used when the assembler
 /// matches instructions and aliases.
 class AssemblerPredicate<dag cond, string name = ""> {
+  // See `Predicate.AssemblerMatcherPredicate`
   bit AssemblerMatcherPredicate = true;
+  // See: Predicate.AssemblerCondDag`
   dag AssemblerCondDag = cond;
+  // See: Predicate.PredicateName
   string PredicateName = name;
 }
 
@@ -1803,6 +2033,19 @@ class Target {
   // setting hasExtraDefRegAllocReq and hasExtraSrcRegAllocReq to 1
   // for all opcodes if this flag is set to 0.
   int AllowRegisterRenaming = 0;
+
+  // RegistersAreIntervals - Controls whether registers units must form
+  // contiguous intervals for each register.
+  //
+  // Specifically, for each register, its register units must be numbered
+  // consecutively (e.g, units 5,6,7 rather than 5,7,9). If enabled,
+  // CodeGenRegisters will enforce this property and attempt to fix violations
+  // that can be resolved by rearranging regunits. Unresolved violations will
+  // result in a fatal error.
+  //
+  // This enables interval-based representation of register units, which can
+  // improve data structure representations in target backends.
+  int RegistersAreIntervals = 0;
 }
 
 //===----------------------------------------------------------------------===//

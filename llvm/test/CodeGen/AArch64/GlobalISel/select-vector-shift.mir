@@ -499,8 +499,7 @@ body:             |
     ; CHECK-NEXT: $d0 = COPY [[SSHRv4i16_shift]]
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:fpr(<4 x s16>) = COPY $d0
-    %1:gpr(s32) = G_CONSTANT i32 5
-    %2:fpr(<4 x s16>) = G_VASHR %0, %1
+    %2:fpr(<4 x s16>) = G_VASHR %0, 5
     $d0 = COPY %2(<4 x s16>)
     RET_ReallyLR implicit $d0
 ...
@@ -520,8 +519,7 @@ body:             |
     ; CHECK-NEXT: $d0 = COPY [[USHRv4i16_shift]]
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:fpr(<4 x s16>) = COPY $d0
-    %1:gpr(s32) = G_CONSTANT i32 5
-    %2:fpr(<4 x s16>) = G_VLSHR %0, %1
+    %2:fpr(<4 x s16>) = G_VLSHR %0, 5
     $d0 = COPY %2(<4 x s16>)
     RET_ReallyLR implicit $d0
 ...

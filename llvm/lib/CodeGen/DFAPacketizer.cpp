@@ -39,7 +39,6 @@
 #include <cassert>
 #include <iterator>
 #include <memory>
-#include <vector>
 
 using namespace llvm;
 

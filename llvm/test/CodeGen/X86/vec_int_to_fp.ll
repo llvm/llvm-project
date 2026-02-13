@@ -5435,7 +5435,7 @@ define double @extract3_uitofp_v4i32_f64(<4 x i32> %x) nounwind {
   ret double %r
 }
 
-define void @PR43609(ptr nocapture %x, <2 x i64> %y) #0 {
+define void @PR43609(ptr nocapture %x, <2 x i64> %y) {
 ; SSE2-LABEL: PR43609:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2,2]
@@ -5643,6 +5643,3 @@ define void @PR43609(ptr nocapture %x, <2 x i64> %y) #0 {
   store <2 x double> %t23, ptr %t26, align 8
   ret void
 }
-
-attributes #0 = { "unsafe-fp-math"="true" }
-

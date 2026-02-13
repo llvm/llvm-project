@@ -121,3 +121,54 @@ TEST(AllocatableCUFTest, StreamDeviceAllocatable) {
   cudaDeviceSynchronize();
   EXPECT_EQ(cudaSuccess, cudaGetLastError());
 }
+
+TEST(AllocatableAsyncTest, StreamDeviceAllocatable) {
+  using Fortran::common::TypeCategory;
+  RTNAME(CUFRegisterAllocator)();
+  // REAL(4), DEVICE, ALLOCATABLE :: a(:)
+  auto a{createAllocatable(TypeCategory::Real, 4)};
+  a->SetAllocIdx(kDeviceAllocatorPos);
+  EXPECT_EQ((int)kDeviceAllocatorPos, a->GetAllocIdx());
+  EXPECT_FALSE(a->HasAddendum());
+  RTNAME(AllocatableSetBounds)(*a, 0, 1, 10);
+
+  cudaStream_t stream;
+  cudaStreamCreate(&stream);
+  EXPECT_EQ(cudaSuccess, cudaGetLastError());
+
+  RTNAME(AllocatableAllocate)
+  (*a, /*asyncObject=*/(int64_t *)&stream, /*hasStat=*/false,
+      /*errMsg=*/nullptr, __FILE__, __LINE__);
+  EXPECT_TRUE(a->IsAllocated());
+  cudaDeviceSynchronize();
+  EXPECT_EQ(cudaSuccess, cudaGetLastError());
+  cudaStream_t s = RTDECL(CUFGetAssociatedStream)(a->raw().base_addr);
+  EXPECT_EQ(s, stream);
+  RTNAME(AllocatableDeallocate)
+  (*a, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
+  EXPECT_FALSE(a->IsAllocated());
+  cudaDeviceSynchronize();
+
+  cudaStream_t defaultStream = 0;
+  RTNAME(AllocatableAllocate)
+  (*a, /*asyncObject=*/(int64_t *)&defaultStream, /*hasStat=*/false,
+      /*errMsg=*/nullptr, __FILE__, __LINE__);
+  EXPECT_TRUE(a->IsAllocated());
+  cudaDeviceSynchronize();
+  EXPECT_EQ(cudaSuccess, cudaGetLastError());
+  cudaStream_t d = RTDECL(CUFGetAssociatedStream)(a->raw().base_addr);
+  EXPECT_EQ(d, defaultStream);
+  RTNAME(AllocatableDeallocate)
+  (*a, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
+  EXPECT_FALSE(a->IsAllocated());
+  cudaDeviceSynchronize();
+
+  RTNAME(AllocatableAllocate)
+  (*a, /*asyncObject=*/nullptr, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__,
+      __LINE__);
+  EXPECT_TRUE(a->IsAllocated());
+  cudaDeviceSynchronize();
+  EXPECT_EQ(cudaSuccess, cudaGetLastError());
+  cudaStream_t empty = RTDECL(CUFGetAssociatedStream)(a->raw().base_addr);
+  EXPECT_EQ(empty, nullptr);
+}

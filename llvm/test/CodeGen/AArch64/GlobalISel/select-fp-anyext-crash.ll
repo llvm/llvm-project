@@ -18,7 +18,7 @@ define i32 @test() {
 ; CHECK-NEXT:    ; kill: def $d0 killed $s0
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    mov w9, #0 ; =0x0
-; CHECK-NEXT:    str w9, [sp, #60] ; 4-byte Folded Spill
+; CHECK-NEXT:    str w9, [sp, #60] ; 4-byte Spill
 ; CHECK-NEXT:    str xzr, [x8]
 ; CHECK-NEXT:    str xzr, [x8, #8]
 ; CHECK-NEXT:    str xzr, [x8, #16]
@@ -28,7 +28,7 @@ define i32 @test() {
 ; CHECK-NEXT:    mov x8, #0 ; =0x0
 ; CHECK-NEXT:    mov x0, x8
 ; CHECK-NEXT:    blr x8
-; CHECK-NEXT:    ldr w0, [sp, #60] ; 4-byte Folded Reload
+; CHECK-NEXT:    ldr w0, [sp, #60] ; 4-byte Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp, #64] ; 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #80
 ; CHECK-NEXT:    ret

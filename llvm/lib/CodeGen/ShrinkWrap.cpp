@@ -260,9 +260,7 @@ class ShrinkWrapLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  ShrinkWrapLegacy() : MachineFunctionPass(ID) {
-    initializeShrinkWrapLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  ShrinkWrapLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
@@ -319,7 +317,7 @@ bool ShrinkWrapImpl::useOrDefCSROrFI(const MachineInstr &MI, RegScavenger *RS,
       return isa<GlobalValue>(UO);
     }
     if (const PseudoSourceValue *PSV = Op->getPseudoValue())
-      return PSV->isJumpTable();
+      return PSV->isJumpTable() || PSV->isConstantPool();
     return false;
   };
   // Load/store operations may access the stack indirectly when we previously
@@ -618,6 +616,8 @@ bool ShrinkWrapImpl::postShrinkWrapping(bool HasCandidate, MachineFunction &MF,
 
   DenseSet<const MachineBasicBlock *> DirtyBBs;
   for (MachineBasicBlock &MBB : MF) {
+    if (!MDT->isReachableFromEntry(&MBB))
+      continue;
     if (MBB.isEHPad()) {
       DirtyBBs.insert(&MBB);
       continue;
@@ -648,9 +648,17 @@ bool ShrinkWrapImpl::postShrinkWrapping(bool HasCandidate, MachineFunction &MF,
                      EntryFreq < MBFI->getBlockFreq(NewSave) ||
                      /*Entry freq has been observed more than a loop block in
                         some cases*/
-                     MLI->getLoopFor(NewSave)))
-    NewSave = FindIDom<>(**NewSave->pred_begin(), NewSave->predecessors(), *MDT,
+                     MLI->getLoopFor(NewSave))) {
+    SmallVector<MachineBasicBlock*> ReachablePreds;
+    for (auto BB: NewSave->predecessors())
+      if (MDT->isReachableFromEntry(BB))
+        ReachablePreds.push_back(BB);
+    if (ReachablePreds.empty())
+      break;
+
+    NewSave = FindIDom<>(**ReachablePreds.begin(), ReachablePreds, *MDT,
                          false);
+  }
 
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
   if (!NewSave || NewSave == InitSave ||
@@ -774,7 +782,11 @@ void ShrinkWrapImpl::updateSaveRestorePoints(MachineBasicBlock &MBB,
       if (MLI->getLoopDepth(Save) > MLI->getLoopDepth(Restore)) {
         // Push Save outside of this loop if immediate dominator is different
         // from save block. If immediate dominator is not different, bail out.
-        Save = FindIDom<>(*Save, Save->predecessors(), *MDT);
+        SmallVector<MachineBasicBlock *> Preds;
+        for (auto *PBB : Save->predecessors())
+          if (MDT->isReachableFromEntry(PBB))
+            Preds.push_back(PBB);
+        Save = FindIDom<>(*Save, Preds, *MDT);
         if (!Save)
           break;
       } else {
@@ -967,12 +979,12 @@ bool ShrinkWrapImpl::run(MachineFunction &MF) {
                     << "\nRestore: " << printMBBReference(*Restore) << '\n');
 
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  SmallVector<MachineBasicBlock *, 4> SavePoints;
-  SmallVector<MachineBasicBlock *, 4> RestorePoints;
-  if (Save) {
-    SavePoints.push_back(Save);
-    RestorePoints.push_back(Restore);
-  }
+
+  // List of CalleeSavedInfo for registers will be added during prologepilog
+  // pass
+  SaveRestorePoints SavePoints({{Save, {}}});
+  SaveRestorePoints RestorePoints({{Restore, {}}});
+
   MFI.setSavePoints(SavePoints);
   MFI.setRestorePoints(RestorePoints);
   ++NumCandidates;

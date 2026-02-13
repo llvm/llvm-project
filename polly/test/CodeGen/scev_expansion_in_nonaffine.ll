@@ -1,5 +1,4 @@
-; RUN: opt %loadNPMPolly -passes=polly-codegen -S \
-; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -S -polly-invariant-load-hoisting=true < %s | FileCheck %s
 
 ; bugpoint-reduced testcase of MiBench/consumer-lame/quantize-pvt.c from the
 ; test-suite.
@@ -31,7 +30,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @reduce_sidechannel = external global i32, align 4
 
 ; Function Attrs: nounwind uwtable
-define void @iteration_init(ptr %gfp, ptr %l3_side, ptr %l3_enc) #0 {
+define void @iteration_init(ptr %gfp, ptr %l3_side, ptr %l3_enc) {
 entry:
   %resvDrain = getelementptr inbounds %struct.III_side_info_t.7.62.139.227.293, ptr %l3_side, i64 0, i32 2
   store i32 0, ptr %resvDrain, align 8
@@ -86,5 +85,3 @@ for.inc.117:                                      ; preds = %for.inc.114, %for.c
   %cmp95 = icmp slt i64 %indvars.iv.next158, %6
   br i1 %cmp95, label %for.cond.98.preheader, label %for.cond.120.preheader
 }
-
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }

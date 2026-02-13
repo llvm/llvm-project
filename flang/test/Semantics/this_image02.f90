@@ -86,7 +86,7 @@ program this_image_tests
   !ERROR: No explicit type declared for 'team'
   images = this_image(coarray=co_array, team)
 
-  ! non-scalar team_type argument 
+  ! non-scalar team_type argument
   !ERROR: missing mandatory 'coarray=' argument
   n = this_image(team=league)
 

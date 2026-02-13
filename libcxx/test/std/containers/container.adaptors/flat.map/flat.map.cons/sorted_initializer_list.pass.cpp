@@ -35,8 +35,8 @@ template <class T, class U>
 constexpr std::initializer_list<std::pair<T, U>> il = {{1, 1}, {2, 2}, {4, 4}, {5, 5}};
 
 constexpr auto il1 = il<int, int>;
-constexpr auto il2 = il<int, short>;
-constexpr auto il3 = il<short, int>;
+constexpr auto il2 = il<int, long>;
+constexpr auto il3 = il<long, int>;
 
 template <template <class...> class KeyContainer, template <class...> class ValueContainer>
 constexpr void test() {
@@ -73,8 +73,8 @@ constexpr void test() {
   {
     // flat_map(sorted_unique_t, initializer_list<value_type>,  const Allocator&)
     using A1      = test_allocator<int>;
-    using A2      = test_allocator<short>;
-    using M       = std::flat_map<int, short, std::less<int>, KeyContainer<int, A1>, ValueContainer<short, A2>>;
+    using A2      = test_allocator<long>;
+    using M       = std::flat_map<int, long, std::less<int>, KeyContainer<int, A1>, ValueContainer<long, A2>>;
     auto m        = M(std::sorted_unique, il2, A1(5));
     auto expected = M{{1, 1}, {2, 2}, {4, 4}, {5, 5}};
     assert(m == expected);
@@ -91,8 +91,8 @@ constexpr void test() {
     // flat_map(sorted_unique_t, initializer_list<value_type>, const key_compare&, const Allocator&);
     using C  = test_less<int>;
     using A1 = test_allocator<int>;
-    using A2 = test_allocator<short>;
-    using M  = std::flat_map<int, short, C, KeyContainer<int, A1>, ValueContainer<short, A2>>;
+    using A2 = test_allocator<long>;
+    using M  = std::flat_map<int, long, C, KeyContainer<int, A1>, ValueContainer<long, A2>>;
     auto m   = M(std::sorted_unique, il2, C(3), A1(5));
     assert((m == M{{1, 1}, {2, 2}, {4, 4}, {5, 5}}));
     assert(m.key_comp() == C(3));
@@ -102,9 +102,9 @@ constexpr void test() {
   {
     // flat_map(sorted_unique_t, initializer_list<value_type>, const key_compare&, const Allocator&);
     // explicit(false)
-    using A1 = test_allocator<short>;
+    using A1 = test_allocator<long>;
     using A2 = test_allocator<int>;
-    using M  = std::flat_map<short, int, std::less<int>, KeyContainer<short, A1>, ValueContainer<int, A2>>;
+    using M  = std::flat_map<long, int, std::less<int>, KeyContainer<long, A1>, ValueContainer<int, A2>>;
     M m      = {std::sorted_unique, il3, {}, A1(5)}; // implicit ctor
     assert((m == M{{1, 1}, {2, 2}, {4, 4}, {5, 5}}));
     assert(m.keys().get_allocator() == A1(5));

@@ -37,9 +37,9 @@ int main(void)
      warning, unless done from an 'id'.  */
   obj_c = obj;    /* Ok */
   obj_c = obj_p;  // expected-warning {{assigning to 'MyClass *' from incompatible type 'id<MyProtocol>'}}
-  obj_c = obj_cp; // expected-warning {{incompatible pointer types assigning to 'MyClass *' from 'MyOtherClass *'}}
-  obj_c = obj_C;  // expected-warning {{incompatible pointer types assigning to 'MyClass *' from 'Class'}}
-  obj_c = obj_CP; // expected-warning {{incompatible pointer types assigning to 'MyClass *' from 'Class<MyProtocol>'}}
+  obj_c = obj_cp; // expected-error {{incompatible pointer types assigning to 'MyClass *' from 'MyOtherClass *'}}
+  obj_c = obj_C;  // expected-error {{incompatible pointer types assigning to 'MyClass *' from 'Class'}}
+  obj_c = obj_CP; // expected-error {{incompatible pointer types assigning to 'MyClass *' from 'Class<MyProtocol>'}}
 
   /* Assigning to an 'id<MyProtocol>' variable should generate a
      warning if done from a 'MyClass *' (which doesn't implement
@@ -48,28 +48,28 @@ int main(void)
   obj_p = obj;    /* Ok */
   obj_p = obj_c;  // expected-warning {{assigning to 'id<MyProtocol>' from incompatible type 'MyClass *'}}
   obj_p = obj_cp; /* Ok  */
-  obj_p = obj_C;  // expected-warning {{incompatible pointer types assigning to 'id<MyProtocol>' from 'Class'}}
+  obj_p = obj_C;  // expected-error {{incompatible pointer types assigning to 'id<MyProtocol>' from 'Class'}}
   obj_p = obj_CP; // expected-warning {{assigning to 'id<MyProtocol>' from incompatible type 'Class<MyProtocol>'}}
 
   /* Assigning to a 'MyOtherClass *' variable should always generate
      a warning, unless done from an 'id' or an 'id<MyProtocol>' (since
      MyOtherClass implements MyProtocol).  */
   obj_cp = obj;    /* Ok */
-  obj_cp = obj_c;  // expected-warning {{incompatible pointer types assigning to 'MyOtherClass *' from 'MyClass *'}}
+  obj_cp = obj_c;  // expected-error {{incompatible pointer types assigning to 'MyOtherClass *' from 'MyClass *'}}
   obj_cp = obj_p;  /* Ok */
-  obj_cp = obj_C;  // expected-warning {{incompatible pointer types assigning to 'MyOtherClass *' from 'Class'}}
-  obj_cp = obj_CP; // expected-warning {{incompatible pointer types assigning to 'MyOtherClass *' from 'Class<MyProtocol>'}}
+  obj_cp = obj_C;  // expected-error {{incompatible pointer types assigning to 'MyOtherClass *' from 'Class'}}
+  obj_cp = obj_CP; // expected-error {{incompatible pointer types assigning to 'MyOtherClass *' from 'Class<MyProtocol>'}}
 
   obj_C = obj;     // Ok
-  obj_C = obj_p;   // expected-warning {{incompatible pointer types assigning to 'Class' from 'id<MyProtocol>'}}
-  obj_C = obj_c;   // expected-warning {{incompatible pointer types assigning to 'Class' from 'MyClass *'}}
-  obj_C = obj_cp;  // expected-warning {{incompatible pointer types assigning to 'Class' from 'MyOtherClass *'}}
+  obj_C = obj_p;   // expected-error {{incompatible pointer types assigning to 'Class' from 'id<MyProtocol>'}}
+  obj_C = obj_c;   // expected-error {{incompatible pointer types assigning to 'Class' from 'MyClass *'}}
+  obj_C = obj_cp;  // expected-error {{incompatible pointer types assigning to 'Class' from 'MyOtherClass *'}}
   obj_C = obj_CP;  // Ok
 
   obj_CP = obj;     // Ok
   obj_CP = obj_p;   // expected-warning {{assigning to 'Class<MyProtocol>' from incompatible type 'id<MyProtocol>'}}
-  obj_CP = obj_c;   // expected-warning {{incompatible pointer types assigning to 'Class<MyProtocol>' from 'MyClass *}}
-  obj_CP = obj_cp;  // expected-warning {{incompatible pointer types assigning to 'Class<MyProtocol>' from 'MyOtherClass *'}}
+  obj_CP = obj_c;   // expected-error {{incompatible pointer types assigning to 'Class<MyProtocol>' from 'MyClass *}}
+  obj_CP = obj_cp;  // expected-error {{incompatible pointer types assigning to 'Class<MyProtocol>' from 'MyOtherClass *'}}
   obj_CP = obj_C;   // Ok
 
   /* Any comparison involving an 'id' must be without warnings.  */

@@ -112,7 +112,7 @@ func.func @scf_while_non_equiv_condition_and_body(%A: tensor<5xi1>,
 //  CHECK-SAME:     %[[arg0:.*]]: tensor<100xf32>, %[[arg1:.*]]: tensor<100xf32>
 // CHECK-FUNC-LABEL: func @scf_forall_out_of_place(
 func.func @scf_forall_out_of_place(%in: tensor<100xf32>,
-                                           %out: tensor<100xf32>) {
+                                   %out: tensor<100xf32>) {
   %c1 = arith.constant 1 : index
   %num_threads = arith.constant 100 : index
 
@@ -131,4 +131,32 @@ func.func @scf_forall_out_of_place(%in: tensor<100xf32>,
   // CHECK: } {mapping = [#gpu.thread<x>]}
   } {mapping = [#gpu.thread<x>]}
   return
+}
+
+// -----
+
+// CHECK-LABEL: func @in_order_multiple_parallel_writes
+func.func @in_order_multiple_parallel_writes(%2: tensor<320xf32>,
+                                             %3: tensor<320xf32>)
+  -> (tensor<320xf32>, tensor<320xf32>)
+{
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant -0.000000e+00 : f32
+  %c320 = arith.constant 320 : index
+  %4:2 = scf.forall (%arg0) in (%c320) shared_outs(%arg1 = %2, %arg2 = %3) -> (tensor<320xf32>, tensor<320xf32>) {
+    // CHECK: tensor.extract_slice {{.*}}
+    %6 = tensor.extract_slice %arg1[%arg0] [1] [1] : tensor<320xf32> to tensor<1xf32>
+    // CHECK: tensor.extract_slice {{.*}}
+    %7 = tensor.extract_slice %arg2[%arg0] [1] [1] : tensor<320xf32> to tensor<1xf32>
+    // CHECK: linalg.fill {{.*}}
+    %8 = linalg.fill ins(%cst : f32) outs(%7 : tensor<1xf32>) -> tensor<1xf32>
+
+    // CHECK: tensor.parallel_insert_slice {{.*}}
+    // CHECK: tensor.parallel_insert_slice {{.*}}
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %6 into %arg2[%arg0] [1] [1] : tensor<1xf32> into tensor<320xf32>
+      tensor.parallel_insert_slice %8 into %arg1[%arg0] [1] [1] : tensor<1xf32> into tensor<320xf32>
+    }
+  }
+  return %4#0, %4#1 : tensor<320xf32>, tensor<320xf32>
 }

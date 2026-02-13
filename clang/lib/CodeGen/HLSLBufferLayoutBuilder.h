@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/TypeBase.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DerivedTypes.h"
 
 namespace clang {
-class RecordType;
-class FieldDecl;
-
 namespace CodeGen {
+class CGHLSLOffsetInfo;
 class CodeGenModule;
+class CGHLSLOffsetInfo;
 
 //===----------------------------------------------------------------------===//
 // Implementation of constant buffer layout common between DirectX and
@@ -24,23 +24,30 @@ class CodeGenModule;
 class HLSLBufferLayoutBuilder {
 private:
   CodeGenModule &CGM;
-  llvm::StringRef LayoutTypeName;
 
 public:
-  HLSLBufferLayoutBuilder(CodeGenModule &CGM, llvm::StringRef LayoutTypeName)
-      : CGM(CGM), LayoutTypeName(LayoutTypeName) {}
+  HLSLBufferLayoutBuilder(CodeGenModule &CGM) : CGM(CGM) {}
 
-  // Returns LLVM target extension type with the name LayoutTypeName
-  // for given structure type and layout data. The first number in
-  // the Layout is the size followed by offsets for each struct element.
-  llvm::TargetExtType *
-  createLayoutType(const RecordType *StructType,
-                   const llvm::SmallVector<int32_t> *Packoffsets = nullptr);
+  /// Lays out a struct type following HLSL buffer rules and considering any
+  /// explicit offset information. Previously created layout structs are cached
+  /// by CGHLSLRuntime.
+  ///
+  /// The function iterates over all fields of the record type (including base
+  /// classes) and works out a padded llvm type to represent the buffer layout.
+  ///
+  /// If a non-empty OffsetInfo is provided (ie, from `packoffset` annotations
+  /// in the source), any provided offsets offsets will be respected. If the
+  /// OffsetInfo is available but has empty entries, those will be layed out at
+  /// the end of the structure.
+  llvm::StructType *layOutStruct(const RecordType *StructType,
+                                 const CGHLSLOffsetInfo &OffsetInfo);
 
-private:
-  bool layoutField(const clang::FieldDecl *FD, unsigned &EndOffset,
-                   unsigned &FieldOffset, llvm::Type *&FieldType,
-                   int Packoffset = -1);
+  /// Lays out an array type following HLSL buffer rules.
+  llvm::Type *layOutArray(const ConstantArrayType *AT);
+
+  /// Lays out a type following HLSL buffer rules. Arrays and structures will be
+  /// padded appropriately and nested objects will be converted as appropriate.
+  llvm::Type *layOutType(QualType Type);
 };
 
 } // namespace CodeGen

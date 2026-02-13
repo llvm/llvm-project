@@ -12,6 +12,5 @@
 // CHECK-SAME: error: unknown type name
 This do not compile
 
-// REQUIRES: shell
 // Don't make symlinks on Windows.
 // UNSUPPORTED: system-windows

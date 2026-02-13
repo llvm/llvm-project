@@ -7,11 +7,11 @@
 ! CHECK-SAME:  %[[lengthParam:.*]]: !fir.ref<i32> {fir.bindc_name = "length", fir.optional},
 ! CHECK-SAME:  %[[statusParam:.*]]: !fir.ref<i32> {fir.bindc_name = "status", fir.optional},
 ! CHECK-SAME:  %[[errmsgParam:.*]]: !fir.boxchar<1> {fir.bindc_name = "errmsg", fir.optional}) {
-subroutine test(number, value, length, status, errmsg) 
+subroutine test(number, value, length, status, errmsg)
   integer, optional :: number, status, length
   character(*), optional :: value, errmsg
   ! Note: number cannot be absent
-  call get_command_argument(number, value, length, status, errmsg) 
+  call get_command_argument(number, value, length, status, errmsg)
 ! CHECK:  %[[errmsgUnboxed:.*]]:2 = fir.unboxchar %[[errmsgParam]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:  %[[valueUnboxed:.*]]:2 = fir.unboxchar %[[valueParam]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:  %[[number:.*]] = fir.load %[[numberParam]] : !fir.ref<i32>

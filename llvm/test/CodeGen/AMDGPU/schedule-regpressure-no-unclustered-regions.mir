@@ -1,0 +1,56 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -start-before=machine-scheduler -stop-after=greedy,2 -stress-regalloc=4 -debug-only=machine-scheduler %s -o - 2>&1 | FileCheck %s
+
+--- |
+  define amdgpu_kernel void @no_sched_metric_due_to_spills() #0 {
+    ret void
+  }
+
+  attributes #0 = { "amdgpu-flat-work-group-size"="1,256" }
+...
+
+# This test checks for the following scenario: Unclustered high-RP-reschedule
+# stage raises the occupancy target temporarily but no region gets scheduled
+# because of constraints. Then, DAG and MFI min-occupancy should not be changed
+# at the end of the unclustered schedule stage.
+# CHECK: Retrying function scheduling without clustering. Aggressively try to reduce register pressure to achieve occupancy 5.
+# CHECK: Unclustered High Register Pressure Reschedule: No regions scheduled, min occupancy stays at 4, MFI occupancy stays at 4.
+
+---
+name:            no_sched_metric_due_to_spills
+tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
+  occupancy:       4
+body:             |
+  bb.0:
+    liveins: $vgpr0, $sgpr0_sgpr1, $sgpr15
+
+    %0:sgpr_32 = COPY $sgpr15
+    %1:sgpr_64 = COPY $sgpr0_sgpr1
+    %2:vgpr_32 = COPY $vgpr0
+    %3:sgpr_128 = S_LOAD_DWORDX4_IMM %1, 0, 0 :: (dereferenceable invariant load (s128), addrspace 4)
+    undef %4.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM %1, 16, 0 :: (dereferenceable invariant load (s64), align 16, addrspace 4)
+    %5:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %1, 32, 0 :: (dereferenceable invariant load (s32), align 8, addrspace 4)
+    %6:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %1, 64, 0 :: (dereferenceable invariant load (s32), align 8, addrspace 4)
+    %7:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %1, 84, 0 :: (dereferenceable invariant load (s32), addrspace 4)
+    %8:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %1, 112, 0 :: (dereferenceable invariant load (s32), align 8, addrspace 4)
+    %9:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %1, 128, 0 :: (dereferenceable invariant load (s32), align 8, addrspace 4)
+    %10:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %1, 176, 0 :: (dereferenceable invariant load (s32), align 8, addrspace 4)
+    %11:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %1, 192, 0 :: (dereferenceable invariant load (s32), align 8, addrspace 4)
+    %12:sreg_64_xexec = S_LOAD_DWORDX2_IMM %1, 216, 0 :: (dereferenceable invariant load (s64), addrspace 4)
+    %13:sreg_32 = S_ADD_I32 %12.sub0, 127, implicit-def dead $scc
+    %14:sreg_32 = S_ASHR_I32 %13, 31, implicit-def dead $scc
+    %15:sreg_32 = S_LSHR_B32 %14, 25, implicit-def dead $scc
+    %16:sreg_32 = S_ADD_I32 %13, %15, implicit-def dead $scc
+    %17:sreg_32 = S_ASHR_I32 %16, 7, implicit-def dead $scc
+    %18:sreg_32 = S_ADD_I32 %12.sub1, 255, implicit-def dead $scc
+    %19:sreg_32 = S_ASHR_I32 %18, 31, implicit-def dead $scc
+    %20:sreg_32 = S_LSHR_B32 %19, 24, implicit-def dead $scc
+    %21:sreg_32 = S_ADD_I32 %18, %20, implicit-def dead $scc
+    %22:sreg_32 = S_ASHR_I32 %21, 8, implicit-def dead $scc
+    %23:sreg_32 = nsw S_MUL_I32 %22, %17
+    %24:sreg_32 = S_ASHR_I32 %0, 31, implicit-def dead $scc
+    S_ENDPGM 0
+
+...

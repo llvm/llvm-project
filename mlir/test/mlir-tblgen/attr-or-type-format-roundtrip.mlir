@@ -32,7 +32,11 @@ attributes {
   // CHECK: #test.attr_with_optional_enum<a>
   attr_12 = #test.attr_with_optional_enum<a>,
   // CHECK: #test.attr_with_optional_enum<b>
-  attr_13 = #test.attr_with_optional_enum<b>
+  attr_13 = #test.attr_with_optional_enum<b>,
+  // CHECK: #test<simple_enum"+">
+  attr_14 = #test<simple_enum "+">,
+  // CHECK: #test<simple_enum"dash-separated-sentence">
+  attr_15 = #test<simple_enum "dash-separated-sentence">
 }
 
 // CHECK-LABEL: @test_roundtrip_default_parsers_struct

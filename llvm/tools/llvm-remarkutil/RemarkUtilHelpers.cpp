@@ -54,6 +54,20 @@ getOutputFileForRemarks(StringRef OutputFileName, Format OutputFormat) {
                                                     : sys::fs::OF_None);
 }
 
+Format getSerializerFormat(StringRef OutputFileName, Format SelectedFormat,
+                           Format DefaultFormat) {
+  if (SelectedFormat != Format::Auto)
+    return SelectedFormat;
+  SelectedFormat = DefaultFormat;
+  if (OutputFileName.empty() || OutputFileName == "-" ||
+      OutputFileName.ends_with_insensitive(".yaml") ||
+      OutputFileName.ends_with_insensitive(".yml"))
+    SelectedFormat = Format::YAML;
+  if (OutputFileName.ends_with_insensitive(".bitstream"))
+    SelectedFormat = Format::Bitstream;
+  return SelectedFormat;
+}
+
 Expected<FilterMatcher>
 FilterMatcher::createRE(const llvm::cl::opt<std::string> &Arg) {
   return createRE(Arg.ArgStr, Arg);
@@ -90,6 +104,23 @@ FilterMatcher::createExactOrRE(const llvm::cl::opt<std::string> &ExactArg,
     return createRE(REArg);
 
   return std::nullopt;
+}
+
+bool Filters::filterRemark(const Remark &Remark) {
+  if (FunctionFilter && !FunctionFilter->match(Remark.FunctionName))
+    return false;
+  if (RemarkNameFilter && !RemarkNameFilter->match(Remark.RemarkName))
+    return false;
+  if (PassNameFilter && !PassNameFilter->match(Remark.PassName))
+    return false;
+  if (RemarkTypeFilter)
+    return *RemarkTypeFilter == Remark.RemarkType;
+  if (ArgFilter) {
+    if (!any_of(Remark.Args,
+                [this](Argument Arg) { return ArgFilter->match(Arg.Val); }))
+      return false;
+  }
+  return true;
 }
 
 } // namespace remarks

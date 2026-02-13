@@ -24,6 +24,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Analysis/IssueHash.h"
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
@@ -1073,6 +1074,19 @@ unsigned PathDiagnostic::full_size() {
   unsigned size = 0;
   compute_path_size(path, size);
   return size;
+}
+
+SmallString<32>
+PathDiagnostic::getIssueHash(const SourceManager &SrcMgr,
+                             const LangOptions &LangOpts) const {
+  PathDiagnosticLocation UPDLoc = getUniqueingLoc();
+  FullSourceLoc FullLoc(
+      SrcMgr.getExpansionLoc(UPDLoc.isValid() ? UPDLoc.asLocation()
+                                              : getLocation().asLocation()),
+      SrcMgr);
+
+  return clang::getIssueHash(FullLoc, getCheckerName(), getBugType(),
+                             getDeclWithIssue(), LangOpts);
 }
 
 //===----------------------------------------------------------------------===//

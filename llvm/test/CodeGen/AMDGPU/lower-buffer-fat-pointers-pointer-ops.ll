@@ -282,9 +282,9 @@ define i160 @ptrtoaddr_ext(ptr addrspace(7) %ptr) {
 ; CHECK-LABEL: define i160 @ptrtoaddr_ext
 ; CHECK-SAME: ({ ptr addrspace(8), i32 } [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[PTR_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 0
-; CHECK-NEXT:    [[PTR_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 1
-; CHECK-NEXT:    [[RET:%.*]] = zext i32 [[PTR_OFF]] to i160
-; CHECK-NEXT:    ret i160 [[RET]]
+; CHECK-NEXT:    [[ADDR:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 1
+; CHECK-NEXT:    [[EXT:%.*]] = zext i32 [[ADDR]] to i160
+; CHECK-NEXT:    ret i160 [[EXT]]
 ;
   %addr = ptrtoaddr ptr addrspace(7) %ptr to i32
   %ext = zext i32 %addr to i160
@@ -296,9 +296,9 @@ define i16 @ptrtoaddr_trunc(ptr addrspace(7) %ptr) {
 ; CHECK-LABEL: define i16 @ptrtoaddr_trunc
 ; CHECK-SAME: ({ ptr addrspace(8), i32 } [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[PTR_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 0
-; CHECK-NEXT:    [[PTR_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 1
-; CHECK-NEXT:    [[RET:%.*]] = trunc i32 [[PTR_OFF]] to i16
-; CHECK-NEXT:    ret i16 [[RET]]
+; CHECK-NEXT:    [[ADDR:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 1
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[ADDR]] to i16
+; CHECK-NEXT:    ret i16 [[TRUNC]]
 ;
   %addr = ptrtoaddr ptr addrspace(7) %ptr to i32
   %trunc = trunc i32 %addr to i16
@@ -405,9 +405,7 @@ define i1 @test_null(ptr addrspace(7) %p) {
 ; CHECK-SAME: ({ ptr addrspace(8), i32 } [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[P_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[P]], 0
 ; CHECK-NEXT:    [[P_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[P]], 1
-; CHECK-NEXT:    [[IS_NULL_RSRC:%.*]] = icmp eq ptr addrspace(8) [[P_RSRC]], null
-; CHECK-NEXT:    [[IS_NULL_OFF:%.*]] = icmp eq i32 [[P_OFF]], 0
-; CHECK-NEXT:    [[IS_NULL:%.*]] = and i1 [[IS_NULL_RSRC]], [[IS_NULL_OFF]]
+; CHECK-NEXT:    [[IS_NULL:%.*]] = icmp eq i32 [[P_OFF]], 0
 ; CHECK-NEXT:    ret i1 [[IS_NULL]]
 ;
   %is.null = icmp eq ptr addrspace(7) %p, addrspacecast (ptr null to ptr addrspace(7))
@@ -450,17 +448,17 @@ define <2 x ptr addrspace(7)> @addrspacecast_poison_vec() {
   ret <2 x ptr addrspace(7)> %ret
 }
 
-declare ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1), i16, i32, i32)
+declare ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1), i16, i64, i32)
 
-define ptr addrspace(7) @make_buffer_rsrc(ptr addrspace(1) %buf, i16 %stride, i32 %numRecords, i32 %flags) {
+define ptr addrspace(7) @make_buffer_rsrc(ptr addrspace(1) %buf, i16 %stride, i64 %numRecords, i32 %flags) {
 ; CHECK-LABEL: define { ptr addrspace(8), i32 } @make_buffer_rsrc
-; CHECK-SAME: (ptr addrspace(1) [[BUF:%.*]], i16 [[STRIDE:%.*]], i32 [[NUMRECORDS:%.*]], i32 [[FLAGS:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RET:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) [[BUF]], i16 [[STRIDE]], i32 [[NUMRECORDS]], i32 [[FLAGS]])
+; CHECK-SAME: (ptr addrspace(1) [[BUF:%.*]], i16 [[STRIDE:%.*]], i64 [[NUMRECORDS:%.*]], i32 [[FLAGS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[RET:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) [[BUF]], i16 [[STRIDE]], i64 [[NUMRECORDS]], i32 [[FLAGS]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[RET]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP1]], i32 0, 1
 ; CHECK-NEXT:    ret { ptr addrspace(8), i32 } [[TMP2]]
 ;
-  %ret = call ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1) %buf, i16 %stride, i32 %numRecords, i32 %flags)
+  %ret = call ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1) %buf, i16 %stride, i64 %numRecords, i32 %flags)
   ret ptr addrspace(7) %ret
 }
 
@@ -471,9 +469,7 @@ define i1 @icmp_eq(ptr addrspace(7) %a, ptr addrspace(7) %b) {
 ; CHECK-NEXT:    [[B_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[B]], 1
 ; CHECK-NEXT:    [[A_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[A]], 0
 ; CHECK-NEXT:    [[A_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[A]], 1
-; CHECK-NEXT:    [[RET_RSRC:%.*]] = icmp eq ptr addrspace(8) [[A_RSRC]], [[B_RSRC]]
-; CHECK-NEXT:    [[RET_OFF:%.*]] = icmp eq i32 [[A_OFF]], [[B_OFF]]
-; CHECK-NEXT:    [[RET:%.*]] = and i1 [[RET_RSRC]], [[RET_OFF]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp eq i32 [[A_OFF]], [[B_OFF]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %ret = icmp eq ptr addrspace(7) %a, %b
@@ -487,9 +483,7 @@ define i1 @icmp_ne(ptr addrspace(7) %a, ptr addrspace(7) %b) {
 ; CHECK-NEXT:    [[B_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[B]], 1
 ; CHECK-NEXT:    [[A_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[A]], 0
 ; CHECK-NEXT:    [[A_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[A]], 1
-; CHECK-NEXT:    [[RET_RSRC:%.*]] = icmp ne ptr addrspace(8) [[A_RSRC]], [[B_RSRC]]
-; CHECK-NEXT:    [[RET_OFF:%.*]] = icmp ne i32 [[A_OFF]], [[B_OFF]]
-; CHECK-NEXT:    [[RET:%.*]] = or i1 [[RET_RSRC]], [[RET_OFF]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne i32 [[A_OFF]], [[B_OFF]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %ret = icmp ne ptr addrspace(7) %a, %b
@@ -503,9 +497,7 @@ define <2 x i1> @icmp_eq_vec(<2 x ptr addrspace(7)> %a, <2 x ptr addrspace(7)> %
 ; CHECK-NEXT:    [[B_OFF:%.*]] = extractvalue { <2 x ptr addrspace(8)>, <2 x i32> } [[B]], 1
 ; CHECK-NEXT:    [[A_RSRC:%.*]] = extractvalue { <2 x ptr addrspace(8)>, <2 x i32> } [[A]], 0
 ; CHECK-NEXT:    [[A_OFF:%.*]] = extractvalue { <2 x ptr addrspace(8)>, <2 x i32> } [[A]], 1
-; CHECK-NEXT:    [[RET_RSRC:%.*]] = icmp eq <2 x ptr addrspace(8)> [[A_RSRC]], [[B_RSRC]]
-; CHECK-NEXT:    [[RET_OFF:%.*]] = icmp eq <2 x i32> [[A_OFF]], [[B_OFF]]
-; CHECK-NEXT:    [[RET:%.*]] = and <2 x i1> [[RET_RSRC]], [[RET_OFF]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp eq <2 x i32> [[A_OFF]], [[B_OFF]]
 ; CHECK-NEXT:    ret <2 x i1> [[RET]]
 ;
   %ret = icmp eq <2 x ptr addrspace(7)> %a, %b
@@ -519,9 +511,7 @@ define <2 x i1> @icmp_ne_vec(<2 x ptr addrspace(7)> %a, <2 x ptr addrspace(7)> %
 ; CHECK-NEXT:    [[B_OFF:%.*]] = extractvalue { <2 x ptr addrspace(8)>, <2 x i32> } [[B]], 1
 ; CHECK-NEXT:    [[A_RSRC:%.*]] = extractvalue { <2 x ptr addrspace(8)>, <2 x i32> } [[A]], 0
 ; CHECK-NEXT:    [[A_OFF:%.*]] = extractvalue { <2 x ptr addrspace(8)>, <2 x i32> } [[A]], 1
-; CHECK-NEXT:    [[RET_RSRC:%.*]] = icmp ne <2 x ptr addrspace(8)> [[A_RSRC]], [[B_RSRC]]
-; CHECK-NEXT:    [[RET_OFF:%.*]] = icmp ne <2 x i32> [[A_OFF]], [[B_OFF]]
-; CHECK-NEXT:    [[RET:%.*]] = or <2 x i1> [[RET_RSRC]], [[RET_OFF]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne <2 x i32> [[A_OFF]], [[B_OFF]]
 ; CHECK-NEXT:    ret <2 x i1> [[RET]]
 ;
   %ret = icmp ne <2 x ptr addrspace(7)> %a, %b

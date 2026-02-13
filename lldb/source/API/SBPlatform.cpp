@@ -331,6 +331,11 @@ SBPlatform::operator bool() const {
   return m_opaque_sp.get() != nullptr;
 }
 
+bool SBPlatform::IsHost() const {
+  LLDB_INSTRUMENT_VA(this);
+  return m_opaque_sp.get() != nullptr && m_opaque_sp->IsHost();
+}
+
 void SBPlatform::Clear() {
   LLDB_INSTRUMENT_VA(this);
 

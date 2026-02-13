@@ -86,3 +86,14 @@ define <4 x ptr> @test7(<4 x i128> %arg) nounwind {
   %p1 = inttoptr <4 x i128> %arg to <4 x ptr>
   ret <4 x ptr> %p1
 }
+
+define i64 @ptrtoint_gep_sub(ptr %ptr, i64 %end.addr) {
+; CHECK-LABEL: @ptrtoint_gep_sub(
+; CHECK-NEXT:    ret i64 [[END_ADDR:%.*]]
+;
+  %ptr.addr = ptrtoint ptr %ptr to i64
+  %size = sub i64 %end.addr, %ptr.addr
+  %end = getelementptr i8, ptr %ptr, i64 %size
+  %end.addr2 = ptrtoint ptr %end to i64
+  ret i64 %end.addr2
+}

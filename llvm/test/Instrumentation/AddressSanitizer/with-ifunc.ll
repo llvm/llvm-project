@@ -4,13 +4,10 @@
 ; RUN: opt -passes=asan -S -asan-with-ifunc=1 -asan-with-ifunc-suppress-remat=0 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-IFUNC
 ; RUN: opt -passes=asan -S -asan-with-ifunc=1 -asan-with-ifunc-suppress-remat=1 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-IFUNC-NOREMAT
 
-; Pre-Lollipop Android does not support ifunc.
-; RUN: opt -passes=asan -S -asan-with-ifunc=1 -asan-with-ifunc-suppress-remat=0 -mtriple=armv7-linux-android20 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-NOIFUNC
-; RUN: opt -passes=asan -S -asan-with-ifunc=1 -asan-with-ifunc-suppress-remat=0 -mtriple=armv7-linux-android < %s | FileCheck %s --check-prefixes=CHECK,CHECK-NOIFUNC
-; RUN: opt -passes=asan -S -asan-with-ifunc=1 -asan-with-ifunc-suppress-remat=0 -mtriple=armv7-linux-android21 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-IFUNC
+; RUN: opt -passes=asan -S -asan-with-ifunc=1 -asan-with-ifunc-suppress-remat=0 -mtriple=armv7-linux-android < %s | FileCheck %s --check-prefixes=CHECK,CHECK-IFUNC
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
-target triple = "armv7--linux-android22"
+target triple = "armv7--linux-android"
 
 ; CHECK-IFUNC: @__asan_shadow = external global [0 x i8]
 ; CHECK-NOIFUNC: @__asan_shadow_memory_dynamic_address = external global i32

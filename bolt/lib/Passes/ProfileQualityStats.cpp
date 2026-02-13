@@ -37,7 +37,7 @@ static cl::opt<unsigned> PercentileForProfileQualityCheck(
 } // namespace opts
 
 namespace {
-using FunctionListType = std::vector<const BinaryFunction *>;
+using FunctionListType = ConstBinaryFunctionListType;
 using function_iterator = FunctionListType::iterator;
 
 // Function number -> vector of flows for BBs in the function

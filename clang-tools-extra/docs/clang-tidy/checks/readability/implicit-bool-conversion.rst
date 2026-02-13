@@ -4,9 +4,9 @@ readability-implicit-bool-conversion
 ====================================
 
 This check can be used to find implicit conversions between built-in types and
-booleans. Depending on use case, it may simply help with readability of the code,
-or in some cases, point to potential bugs which remain unnoticed due to implicit
-conversions.
+booleans. Depending on use case, it may simply help with readability of the
+code, or in some cases, point to potential bugs which remain unnoticed due to
+implicit conversions.
 
 The following is a real-world example of bug which was hiding behind implicit
 ``bool`` conversion:
@@ -117,6 +117,11 @@ Some additional accommodations are made for pre-C++11 dialects:
 - ``false`` literal conversion to pointer is detected,
 
 - instead of ``nullptr`` literal, ``0`` is proposed as replacement.
+
+Some additional accommodations are made for C:
+
+- ``bool`` (or ``_Bool``) operands in logical operators (``&&``, ``||``) are
+  ignored.
 
 Occurrences of implicit conversions inside macros and template instantiations
 are deliberately ignored, as it is not clear how to deal with such cases.

@@ -10,6 +10,13 @@
 # alphabetic macros. Also ensure that we don't swallow the definition of user
 # provided macros (in other words, ensure that we push/pop correctly everywhere).
 
+# This test fails with MSVC headers, with Clang 20 (and early 21 versions);
+# the headers end up pulling in Clang intrinsics headers, which in 20.x and
+# early 21.x versions use unreserved identifiers,
+# see https://github.com/llvm/llvm-project/issues/161808.
+#
+# UNSUPPORTED: clang-20 && msvc
+
 # RUN: %{python} %s %{libcxx-dir}/utils
 # END.
 
@@ -76,7 +83,7 @@ for header in public_headers:
 
 // Test that libc++ doesn't use names that collide with FreeBSD system macros.
 // newlib and picolibc also define these macros
-#if !defined(__FreeBSD__) && !defined(_NEWLIB_VERSION)
+#if !defined(__FreeBSD__) && !_LIBCPP_LIBC_NEWLIB
 #  define __null_sentinel SYSTEM_RESERVED_NAME
 #  define __generic SYSTEM_RESERVED_NAME
 #endif
@@ -115,7 +122,7 @@ for header in public_headers:
 #endif
 
 // Newlib & picolibc use __input as a parameter name of a64l & l64a
-#ifndef _NEWLIB_VERSION
+#if !_LIBCPP_LIBC_NEWLIB
 # define __input SYSTEM_RESERVED_NAME
 #endif
 #define __output SYSTEM_RESERVED_NAME

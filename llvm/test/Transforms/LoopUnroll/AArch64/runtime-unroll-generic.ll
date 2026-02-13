@@ -69,12 +69,14 @@ define void @runtime_unroll_generic(i32 %arg_0, ptr %arg_1, ptr %arg_2, ptr %arg
 ; CHECK-A55-NEXT:    [[INDVARS_IV_NEXT_3]] = add nuw nsw i64 [[INDVARS_IV]], 4
 ; CHECK-A55-NEXT:    [[NITER_NEXT_3]] = add i64 [[NITER]], 4
 ; CHECK-A55-NEXT:    [[NITER_NCMP_3:%.*]] = icmp eq i64 [[NITER_NEXT_3]], [[UNROLL_ITER]]
-; CHECK-A55-NEXT:    br i1 [[NITER_NCMP_3]], label [[FOR_END_LOOPEXIT_UNR_LCSSA]], label [[FOR_BODY6]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-A55-NEXT:    br i1 [[NITER_NCMP_3]], label [[FOR_END_LOOPEXIT_UNR_LCSSA1:%.*]], label [[FOR_BODY6]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-A55:       for.end.loopexit.unr-lcssa:
-; CHECK-A55-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ 0, [[FOR_BODY6_PREHEADER]] ], [ [[INDVARS_IV_NEXT_3]], [[FOR_BODY6]] ]
 ; CHECK-A55-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i64 [[XTRAITER]], 0
-; CHECK-A55-NEXT:    br i1 [[LCMP_MOD_NOT]], label [[FOR_END]], label [[FOR_BODY6_EPIL:%.*]]
-; CHECK-A55:       for.body6.epil:
+; CHECK-A55-NEXT:    br i1 [[LCMP_MOD_NOT]], label [[FOR_END]], label [[FOR_END_LOOPEXIT_UNR_LCSSA]]
+; CHECK-A55:       for.body6.epil.preheader:
+; CHECK-A55-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ 0, [[FOR_BODY6_PREHEADER]] ], [ [[INDVARS_IV_NEXT_3]], [[FOR_END_LOOPEXIT_UNR_LCSSA1]] ]
+; CHECK-A55-NEXT:    [[LCMP_MOD5:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-A55-NEXT:    tail call void @llvm.assume(i1 [[LCMP_MOD5]])
 ; CHECK-A55-NEXT:    [[ARRAYIDX10_EPIL:%.*]] = getelementptr inbounds nuw i16, ptr [[ARG_2]], i64 [[INDVARS_IV_UNR]]
 ; CHECK-A55-NEXT:    [[TMP13:%.*]] = load i16, ptr [[ARRAYIDX10_EPIL]], align 2
 ; CHECK-A55-NEXT:    [[CONV_EPIL:%.*]] = sext i16 [[TMP13]] to i32

@@ -1,4 +1,10 @@
-; RUN: llc -mtriple s390x-ibm-zos -mcpu=z15 -asm-verbose=true < %s | FileCheck %s
+; RUN: sed -e 's/!"MODE"/!"ascii"/' -e 's/BYTE/133/' %s > %t.ascii.ll
+; RUN: llc -mtriple s390x-ibm-zos -mcpu=z15 -asm-verbose=true < %t.ascii.ll | \
+; RUN: FileCheck %t.ascii.ll
+
+; RUN: sed -e 's/!"MODE"/!"ebcdic"/' -e 's/BYTE/129/' %s > %t.ebcdic.ll
+; RUN: llc -mtriple s390x-ibm-zos -mcpu=z15 -asm-verbose=true < %t.ebcdic.ll | \
+; RUN: FileCheck %t.ebcdic.ll
 
 ; CHECK: C_CODE64 CATTR
 ; CHECK: L#PPA2:
@@ -10,7 +16,7 @@
 ; CHECK:    .long   0
 ; CHECK:    .long   L#DVS-L#PPA2
 ; CHECK:    .long   0
-; CHECK:    .byte   129
+; CHECK:    .byte   BYTE
 ; CHECK:    .byte   0
 ; CHECK:    .short  0
 ; CHECK: L#DVS:
@@ -24,6 +30,10 @@
 ; CHECK:    .byte   3
 ; CHECK:    .short  30
 ; CHECK:    .ascii  "\323\323\345\324@@@@@@{{((\\3[0-7]{2}){4})}}\361\371\367\360\360\361\360\361\360\360\360\360\360\360\360\360"
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"zos_le_char_mode", !"MODE"}
+
 define void @void_test() {
 entry:
   ret void

@@ -1203,16 +1203,16 @@ define i1 @fcmp_double_dynamic_dynamic_normals() #11 {
   ret i1 %cmp
 }
 
-attributes #0 = { nounwind "denormal-fp-math"="ieee,ieee" }
-attributes #1 = { nounwind "denormal-fp-math"="positive-zero,ieee" }
-attributes #2 = { nounwind "denormal-fp-math"="preserve-sign,ieee" }
-attributes #3 = { nounwind "denormal-fp-math"="ieee,positive-zero" }
-attributes #4 = { nounwind "denormal-fp-math"="ieee,preserve-sign" }
-attributes #5 = { nounwind "denormal-fp-math"="ieee,ieee" "denormal-fp-math-f32"="positive-zero,ieee" }
-attributes #6 = { nounwind "denormal-fp-math"="positive-zero,positive-zero" }
-attributes #7 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #8 = { nounwind "denormal-fp-math"="ieee,ieee" "denormal-fp-math-f32"="positive-zero,positive-zero" }
-attributes #9 = { nounwind "denormal-fp-math"="dynamic,ieee" }
-attributes #10 = { nounwind "denormal-fp-math"="ieee,dynamic" }
-attributes #11 = { nounwind "denormal-fp-math"="dynamic,dynamic" }
-attributes #12 = { nounwind "denormal-fp-math"="dynamic,preserve-sign" }
+attributes #0 = { nounwind denormal_fpenv(ieee) }
+attributes #1 = { nounwind denormal_fpenv(positivezero|ieee) }
+attributes #2 = { nounwind denormal_fpenv(preservesign|ieee) }
+attributes #3 = { nounwind denormal_fpenv(ieee|positivezero) }
+attributes #4 = { nounwind denormal_fpenv(ieee|preservesign) }
+attributes #5 = { nounwind denormal_fpenv(ieee, float: positivezero|ieee) }
+attributes #6 = { nounwind denormal_fpenv(positivezero|positivezero) }
+attributes #7 = { nounwind denormal_fpenv(preservesign) }
+attributes #8 = { nounwind denormal_fpenv(ieee, float: positivezero) }
+attributes #9 = { nounwind denormal_fpenv(dynamic|ieee) }
+attributes #10 = { nounwind denormal_fpenv(ieee|dynamic) }
+attributes #11 = { nounwind denormal_fpenv(dynamic) }
+attributes #12 = { nounwind denormal_fpenv(dynamic|preservesign) }

@@ -479,7 +479,8 @@ public:
   /// the input type, and the element type is an integer type of the same width
   /// as the input element type.
   static VectorType *getInteger(VectorType *VTy) {
-    unsigned EltBits = VTy->getElementType()->getPrimitiveSizeInBits();
+    unsigned EltBits =
+        VTy->getElementType()->getPrimitiveSizeInBits().getFixedValue();
     assert(EltBits && "Element size must be of a non-zero size");
     Type *EltTy = IntegerType::get(VTy->getContext(), EltBits);
     return VectorType::get(EltTy, VTy->getElementCount());
@@ -510,7 +511,8 @@ public:
         llvm_unreachable("Cannot create narrower fp vector element type");
       }
     } else {
-      unsigned EltBits = VTy->getElementType()->getPrimitiveSizeInBits();
+      unsigned EltBits =
+          VTy->getElementType()->getPrimitiveSizeInBits().getFixedValue();
       assert((EltBits & 1) == 0 &&
              "Cannot truncate vector element with odd bit-width");
       EltTy = IntegerType::get(VTy->getContext(), EltBits / 2);

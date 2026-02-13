@@ -5,7 +5,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define i8 @add(i8 %a, i8 %b) {
   ; CHECK: @add.dfsan
   ; CHECK-DAG: %[[#ALABEL:]] = load i8, ptr @__dfsan_arg_tls, align [[ALIGN:2]]
-  ; CHECK-DAG: %[[#BLABEL:]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align [[ALIGN]]
+  ; CHECK-DAG: %[[#BLABEL:]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align [[ALIGN]]
   ; CHECK: %[[#UNION:]] = or i8 %[[#ALABEL]], %[[#BLABEL]]
   ; CHECK: %c = add i8 %a, %b
   ; CHECK: store i8 %[[#UNION]], ptr @__dfsan_retval_tls, align [[ALIGN]]

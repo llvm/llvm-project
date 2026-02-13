@@ -1,8 +1,8 @@
 ! RUN: bbc -emit-hlfir %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func.func @_QPall_args(
-! CHECK-SAME:    %[[commandArg:.*]]: !fir.boxchar<1> {fir.bindc_name = "command"}, 
-! CHECK-SAME:    %[[exitstatArg:.*]]: !fir.ref<i32> {fir.bindc_name = "exitstat"}) { 
+! CHECK-SAME:    %[[commandArg:.*]]: !fir.boxchar<1> {fir.bindc_name = "command"},
+! CHECK-SAME:    %[[exitstatArg:.*]]: !fir.ref<i32> {fir.bindc_name = "exitstat"}) {
 subroutine all_args(command, exitstat)
 CHARACTER(*) :: command
 INTEGER :: exitstat
@@ -10,8 +10,8 @@ call system(command, exitstat)
 ! CHECK-NEXT:   %[[cmdstatVal:.*]] = fir.alloca i16
 ! CHECK-NEXT:   %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK-NEXT:   %[[commandUnbox:.*]]:2 = fir.unboxchar %[[commandArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK-NEXT:   %[[commandDeclare:.*]]:2 = hlfir.declare %[[commandUnbox]]#0 typeparams %[[commandUnbox]]#1 dummy_scope %[[DSCOPE]] {uniq_name = "_QFall_argsEcommand"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-! CHECK-NEXT:   %[[exitstatDeclare:.*]]:2 = hlfir.declare %[[exitstatArg]] dummy_scope %[[DSCOPE]] {uniq_name = "_QFall_argsEexitstat"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK-NEXT:   %[[commandDeclare:.*]]:2 = hlfir.declare %[[commandUnbox]]#0 typeparams %[[commandUnbox]]#1 dummy_scope %[[DSCOPE]] arg {{[0-9]+}} {uniq_name = "_QFall_argsEcommand"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK-NEXT:   %[[exitstatDeclare:.*]]:2 = hlfir.declare %[[exitstatArg]] dummy_scope %[[DSCOPE]] arg {{[0-9]+}} {uniq_name = "_QFall_argsEexitstat"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK-NEXT:   %[[commandBox:.*]] = fir.embox %[[commandDeclare]]#1 typeparams %[[commandUnbox]]#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
 ! CHECK-NEXT:   %[[exitstatBox:.*]] = fir.embox %[[exitstatDeclare]]#0 : (!fir.ref<i32>) -> !fir.box<i32>
 ! CHECK-NEXT:   %[[true:.*]] = arith.constant true
@@ -36,7 +36,7 @@ call system(command)
 ! CHECK-NEXT:   %[[cmdstatVal:.*]] = fir.alloca i16
 ! CHECK-NEXT:   %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK-NEXT:   %[[commandUnbox:.*]]:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK-NEXT:   %[[commandDeclare:.*]]:2 = hlfir.declare %[[commandUnbox]]#0 typeparams %[[commandUnbox]]#1 dummy_scope %[[DSCOPE]] {uniq_name = "_QFonly_commandEcommand"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK-NEXT:   %[[commandDeclare:.*]]:2 = hlfir.declare %[[commandUnbox]]#0 typeparams %[[commandUnbox]]#1 dummy_scope %[[DSCOPE]] arg {{[0-9]+}} {uniq_name = "_QFonly_commandEcommand"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 ! CHECK-NEXT:   %[[commandBox:.*]] = fir.embox %[[commandDeclare]]#1 typeparams %[[commandUnbox]]#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
 ! CHECK-NEXT:   %[[true:.*]] = arith.constant true
 ! CHECK-NEXT:   %[[absentBox:.*]] = fir.absent !fir.box<none>
@@ -63,7 +63,7 @@ end subroutine
 ! CHECK-NEXT:   %[[RETVAL:.*]] = fir.alloca i32
 ! CHECK-NEXT:   %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK-NEXT:   %[[commandUnbox:.*]]:2 = fir.unboxchar %[[commandArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK-NEXT:   %[[commandDeclare:.*]]:2 = hlfir.declare %[[commandUnbox]]#0 typeparams %[[commandUnbox]]#1 dummy_scope %[[DSCOPE]] {uniq_name = "_QFas_functionEcommand"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK-NEXT:   %[[commandDeclare:.*]]:2 = hlfir.declare %[[commandUnbox]]#0 typeparams %[[commandUnbox]]#1 dummy_scope %[[DSCOPE]] arg {{[0-9]+}} {uniq_name = "_QFas_functionEcommand"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 ! CHECK-NEXT:   %[[EXITSTAT_ALLOC:.*]] = fir.alloca i32
 ! CHECK-NEXT:   %[[exitstatDeclare:.*]]:2 = hlfir.declare %[[EXITSTAT_ALLOC]] {uniq_name = "_QFas_functionEexitstat"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK-NEXT:   %[[commandBox:.*]] = fir.embox %[[commandDeclare]]#1 typeparams %[[commandUnbox]]#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>

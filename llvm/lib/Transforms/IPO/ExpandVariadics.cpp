@@ -124,6 +124,9 @@ public:
   };
   virtual VAArgSlotInfo slotInfo(const DataLayout &DL, Type *Parameter) = 0;
 
+  // Per-target overrides of special symbols.
+  virtual bool ignoreFunction(Function *F) { return false; }
+
   // Targets implemented so far all have the same trivial lowering for these
   bool vaEndIsNop() { return true; }
   bool vaCopyIsMemcpy() { return true; }
@@ -152,6 +155,11 @@ public:
   StringRef getPassName() const override { return "Expand variadic functions"; }
 
   bool rewriteABI() { return Mode == ExpandVariadicsMode::Lowering; }
+
+  template <typename T> bool isValidCallingConv(T *F) {
+    return F->getCallingConv() == CallingConv::C ||
+           F->getCallingConv() == CallingConv::SPIR_FUNC;
+  }
 
   bool runOnModule(Module &M) override;
 
@@ -230,7 +238,10 @@ public:
         F->hasFnAttribute(Attribute::Naked))
       return false;
 
-    if (F->getCallingConv() != CallingConv::C)
+    if (ABI->ignoreFunction(F))
+      return false;
+
+    if (!isValidCallingConv(F))
       return false;
 
     if (rewriteABI())
@@ -249,7 +260,7 @@ public:
         return false;
       }
 
-      if (CI->getCallingConv() != CallingConv::C)
+      if (!isValidCallingConv(CI))
         return false;
 
       return true;
@@ -299,9 +310,7 @@ public:
     }
 
     void initializeStructAlloca(const DataLayout &DL, IRBuilder<> &Builder,
-                                AllocaInst *Alloced) {
-
-      StructType *VarargsTy = cast<StructType>(Alloced->getAllocatedType());
+                                AllocaInst *Alloced, StructType *VarargsTy) {
 
       for (size_t I = 0; I < size(); I++) {
 
@@ -380,7 +389,7 @@ bool ExpandVariadics::runOnModule(Module &M) {
           if (CB->isIndirectCall()) {
             FunctionType *FTy = CB->getFunctionType();
             if (FTy->isVarArg())
-              Changed |= expandCall(M, Builder, CB, FTy, 0);
+              Changed |= expandCall(M, Builder, CB, FTy, /*NF=*/nullptr);
           }
         }
       }
@@ -421,6 +430,13 @@ bool ExpandVariadics::runOnFunction(Module &M, IRBuilder<> &Builder,
       defineVariadicWrapper(M, Builder, VariadicWrapper, FixedArityReplacement);
   assert(VariadicWrapperDefine == VariadicWrapper);
   assert(!VariadicWrapper->isDeclaration());
+
+  // Add the prof metadata from the original function to the wrapper. Because
+  // FixedArityReplacement is the owner of original function's prof metadata
+  // after the splice, we need to transfer it to VariadicWrapper.
+  VariadicWrapper->setMetadata(
+      LLVMContext::MD_prof,
+      FixedArityReplacement->getMetadata(LLVMContext::MD_prof));
 
   // We now have:
   // 1. the original function, now as a declaration with no uses
@@ -602,6 +618,9 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   bool Changed = false;
   const DataLayout &DL = M.getDataLayout();
 
+  if (ABI->ignoreFunction(CB->getCalledFunction()))
+    return Changed;
+
   if (!expansionApplicableToFunctionCall(CB)) {
     if (rewriteABI())
       report_fatal_error("Cannot lower callbase instruction");
@@ -737,7 +756,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   // Initialize the fields in the struct
   Builder.SetInsertPoint(CB);
   Builder.CreateLifetimeStart(Alloced);
-  Frame.initializeStructAlloca(DL, Builder, Alloced);
+  Frame.initializeStructAlloca(DL, Builder, Alloced, VarargsTy);
 
   const unsigned NumArgs = FuncType->getNumParams();
   SmallVector<Value *> Args(CB->arg_begin(), CB->arg_begin() + NumArgs);
@@ -933,6 +952,39 @@ struct NVPTX final : public VariadicABIInfo {
   }
 };
 
+struct SPIRV final : public VariadicABIInfo {
+
+  bool enableForTarget() override { return true; }
+
+  bool vaListPassedInSSARegister() override { return true; }
+
+  Type *vaListType(LLVMContext &Ctx) override {
+    return PointerType::getUnqual(Ctx);
+  }
+
+  Type *vaListParameterType(Module &M) override {
+    return PointerType::getUnqual(M.getContext());
+  }
+
+  Value *initializeVaList(Module &M, LLVMContext &Ctx, IRBuilder<> &Builder,
+                          AllocaInst *, Value *Buffer) override {
+    return Builder.CreateAddrSpaceCast(Buffer, vaListParameterType(M));
+  }
+
+  VAArgSlotInfo slotInfo(const DataLayout &DL, Type *Parameter) override {
+    // Expects natural alignment in all cases. The variadic call ABI will handle
+    // promoting types to their appropriate size and alignment.
+    Align A = DL.getABITypeAlign(Parameter);
+    return {A, false};
+  }
+
+  // The SPIR-V backend has special handling for SPIR-V mangled printf
+  // functions.
+  bool ignoreFunction(Function *F) override {
+    return F->getName().starts_with('_') && F->getName().contains("printf");
+  }
+};
+
 struct Wasm final : public VariadicABIInfo {
 
   bool enableForTarget() override {
@@ -986,6 +1038,11 @@ std::unique_ptr<VariadicABIInfo> VariadicABIInfo::create(const Triple &T) {
   case Triple::nvptx:
   case Triple::nvptx64: {
     return std::make_unique<NVPTX>();
+  }
+
+  case Triple::spirv:
+  case Triple::spirv64: {
+    return std::make_unique<SPIRV>();
   }
 
   default:

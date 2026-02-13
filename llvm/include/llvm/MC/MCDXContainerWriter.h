@@ -23,7 +23,7 @@ protected:
   MCDXContainerTargetWriter() {}
 
 public:
-  virtual ~MCDXContainerTargetWriter();
+  ~MCDXContainerTargetWriter() override;
 
   Triple::ObjectFormatType getFormat() const override {
     return Triple::DXContainer;

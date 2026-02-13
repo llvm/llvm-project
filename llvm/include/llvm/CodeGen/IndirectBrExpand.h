@@ -19,7 +19,7 @@ class IndirectBrExpandPass : public PassInfoMixin<IndirectBrExpandPass> {
   const TargetMachine *TM;
 
 public:
-  IndirectBrExpandPass(const TargetMachine *TM) : TM(TM) {}
+  IndirectBrExpandPass(const TargetMachine &TM) : TM(&TM) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 

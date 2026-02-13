@@ -306,13 +306,13 @@ void SymbolFileOnDemand::Dump(lldb_private::Stream &s) {
 }
 
 void SymbolFileOnDemand::DumpClangAST(lldb_private::Stream &s,
-                                      llvm::StringRef filter) {
+                                      llvm::StringRef filter, bool show_color) {
   if (!m_debug_info_enabled) {
     LLDB_LOG(GetLog(), "[{0}] {1} is skipped", GetSymbolFileName(),
              __FUNCTION__);
     return;
   }
-  return m_sym_file_impl->DumpClangAST(s, filter);
+  return m_sym_file_impl->DumpClangAST(s, filter, show_color);
 }
 
 void SymbolFileOnDemand::FindGlobalVariables(const RegularExpression &regex,
@@ -337,7 +337,7 @@ void SymbolFileOnDemand::FindGlobalVariables(
                GetSymbolFileName(), __FUNCTION__);
       return;
     }
-    Symbol *sym = symtab->FindFirstSymbolWithNameAndType(
+    const Symbol *sym = symtab->FindFirstSymbolWithNameAndType(
         name, eSymbolTypeData, Symtab::eDebugAny, Symtab::eVisibilityAny);
     if (!sym) {
       LLDB_LOG(log, "[{0}] {1} is skipped - fail to find match in symtab",
@@ -508,7 +508,7 @@ SymbolFileOnDemand::GetUnwindPlan(const Address &address,
 }
 
 llvm::Expected<lldb::addr_t>
-SymbolFileOnDemand::GetParameterStackSize(Symbol &symbol) {
+SymbolFileOnDemand::GetParameterStackSize(const Symbol &symbol) {
   if (!m_debug_info_enabled) {
     Log *log = GetLog();
     LLDB_LOG(log, "[{0}] {1} is skipped", GetSymbolFileName(), __FUNCTION__);

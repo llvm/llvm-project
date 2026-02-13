@@ -1,4 +1,4 @@
-; RUN: not --crash opt %loadNPMPolly -polly-stmt-granularity=bb -passes=polly-import-jscop -polly-import-jscop-postfix=transformed -disable-output < %s 2>&1 | FileCheck %s
+; RUN: not --crash opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly-custom<import-jscop>' -polly-import-jscop-postfix=transformed -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; #define Ni 1056
 ; #define Nj 1056

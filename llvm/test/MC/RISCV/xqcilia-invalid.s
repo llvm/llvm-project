@@ -1,7 +1,7 @@
 # Xqcilia - Qualcomm uC Large Immediate Arithmetic extension
-# RUN: not llvm-mc -triple riscv32 -mattr=+experimental-xqcilia < %s 2>&1 \
+# RUN: not llvm-mc -triple riscv32 -mattr=+xqcilia < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-PLUS,CHECK-IMM %s
-# RUN: not llvm-mc -triple riscv32 -mattr=-experimental-xqcilia < %s 2>&1 \
+# RUN: not llvm-mc -triple riscv32 -mattr=-xqcilia < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-MINUS,CHECK-EXT %s
 
 # CHECK-PLUS: :[[@LINE+2]]:12: error: register must be a GPR excluding zero (x0)

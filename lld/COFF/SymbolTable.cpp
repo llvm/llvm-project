@@ -381,7 +381,7 @@ void SymbolTable::reportProblemSymbols(
     return;
 
   for (Symbol *b : ctx.config.gcroot) {
-    if (undefs.count(b))
+    if (undefs.contains(b))
       errorOrWarn(ctx) << "<root>: undefined symbol: " << printSymbol(b);
     if (localImports)
       if (Symbol *imp = localImports->lookup(b))
@@ -399,7 +399,7 @@ void SymbolTable::reportProblemSymbols(
       ++symIndex;
       if (!sym)
         continue;
-      if (undefs.count(sym)) {
+      if (undefs.contains(sym)) {
         auto [it, inserted] = firstDiag.try_emplace(sym, undefDiags.size());
         if (inserted)
           undefDiags.push_back({sym, {{file, symIndex}}});
@@ -1437,11 +1437,13 @@ void SymbolTable::compileBitcodeFiles() {
   if (bitcodeFileInstances.empty())
     return;
 
-  llvm::TimeTraceScope timeScope("Compile bitcode");
   ScopedTimer t(ctx.ltoTimer);
   lto.reset(new BitcodeCompiler(ctx));
-  for (BitcodeFile *f : bitcodeFileInstances)
-    lto->add(*f);
+  {
+    llvm::TimeTraceScope addScope("Add bitcode file instances");
+    for (BitcodeFile *f : bitcodeFileInstances)
+      lto->add(*f);
+  }
   for (InputFile *newObj : lto->compile()) {
     ObjFile *obj = cast<ObjFile>(newObj);
     obj->parse();

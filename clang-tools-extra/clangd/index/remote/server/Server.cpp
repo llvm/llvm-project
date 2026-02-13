@@ -33,8 +33,8 @@
 #include "llvm/Support/VirtualFileSystem.h"
 
 #include <chrono>
-#include <grpc++/grpc++.h>
-#include <grpc++/health_check_service_interface.h>
+#include <grpcpp/grpcpp.h>
+#include <grpcpp/health_check_service_interface.h>
 #include <memory>
 #include <optional>
 #include <string>
@@ -42,7 +42,7 @@
 #include <utility>
 
 #if ENABLE_GRPC_REFLECTION
-#include <grpc++/ext/proto_server_reflection_plugin.h>
+#include <grpcpp/ext/proto_server_reflection_plugin.h>
 #endif
 
 #ifdef __GLIBC__
@@ -348,6 +348,54 @@ private:
     SPAN_ATTACH(Tracer, "Sent", Sent);
     SPAN_ATTACH(Tracer, "Failed to send", FailedToSend);
     logRequestSummary("v1/Relations", Sent, StartTime);
+    return grpc::Status::OK;
+  }
+
+  grpc::Status
+  ReverseRelations(grpc::ServerContext *Context,
+                   const RelationsRequest *Request,
+                   grpc::ServerWriter<RelationsReply> *Reply) override {
+    auto StartTime = stopwatch::now();
+    WithContextValue WithRequestContext(CurrentRequest, Context);
+    logRequest(*Request);
+    trace::Span Tracer("ReverseRelationsRequest");
+    auto Req = ProtobufMarshaller->fromProtobuf(Request);
+    if (!Req) {
+      elog("Can not parse ReverseRelationsRequest from protobuf: {0}",
+           Req.takeError());
+      return grpc::Status::CANCELLED;
+    }
+    if (!Req->Limit || *Req->Limit > LimitResults) {
+      log("[public] Limiting result size for ReverseRelations request from {0} "
+          "to "
+          "{1}.",
+          Req->Limit, LimitResults);
+      Req->Limit = LimitResults;
+    }
+    unsigned Sent = 0;
+    unsigned FailedToSend = 0;
+    Index.reverseRelations(
+        *Req, [&](const SymbolID &Subject, const clangd::Symbol &Object) {
+          auto SerializedItem = ProtobufMarshaller->toProtobuf(Subject, Object);
+          if (!SerializedItem) {
+            elog("Unable to convert Relation to protobuf: {0}",
+                 SerializedItem.takeError());
+            ++FailedToSend;
+            return;
+          }
+          RelationsReply NextMessage;
+          *NextMessage.mutable_stream_result() = *SerializedItem;
+          logResponse(NextMessage);
+          Reply->Write(NextMessage);
+          ++Sent;
+        });
+    RelationsReply LastMessage;
+    LastMessage.mutable_final_result()->set_has_more(true);
+    logResponse(LastMessage);
+    Reply->Write(LastMessage);
+    SPAN_ATTACH(Tracer, "Sent", Sent);
+    SPAN_ATTACH(Tracer, "Failed to send", FailedToSend);
+    logRequestSummary("v1/ReverseRelations", Sent, StartTime);
     return grpc::Status::OK;
   }
 

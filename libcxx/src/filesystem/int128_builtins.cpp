@@ -16,6 +16,8 @@
 #include <__config>
 #include <climits>
 
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wmissing-prototypes") // See the FIXME above
+
 #if _LIBCPP_HAS_INT128
 
 extern "C" __attribute__((no_sanitize("undefined"))) _LIBCPP_EXPORTED_FROM_ABI __int128_t

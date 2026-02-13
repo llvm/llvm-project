@@ -80,25 +80,29 @@ define amdgpu_ps {<4 x float>, <4 x float>, <4 x float>} @buffer_load_volatile(p
 ; PREGFX10-LABEL: buffer_load_volatile:
 ; PREGFX10:       ; %bb.0: ; %main_body
 ; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 glc
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
 ; PREGFX10-NEXT:    buffer_load_dwordx4 v[4:7], off, s[0:3], 0 glc
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
 ; PREGFX10-NEXT:    buffer_load_dwordx4 v[8:11], off, s[0:3], 0 glc slc
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
 ; PREGFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: buffer_load_volatile:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    s_clause 0x2
 ; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 glc dlc
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    buffer_load_dwordx4 v[4:7], off, s[0:3], 0 glc dlc
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    buffer_load_dwordx4 v[8:11], off, s[0:3], 0 glc slc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: buffer_load_volatile:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    s_clause 0x2
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], 0 glc dlc
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_load_b128 v[4:7], off, s[0:3], 0 glc dlc
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_load_b128 v[8:11], off, s[0:3], 0 glc slc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog

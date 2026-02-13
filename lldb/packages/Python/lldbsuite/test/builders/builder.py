@@ -258,6 +258,7 @@ class Builder:
             "gmodules": {"MAKE_DSYM": "NO", "MAKE_GMODULES": "YES"},
             "debug_names": {"MAKE_DEBUG_NAMES": "YES"},
             "dwp": {"MAKE_DSYM": "NO", "MAKE_DWP": "YES"},
+            "pdb": {"MAKE_PDB": "YES"},
         }
 
         # Collect all flags, with later options overriding earlier ones

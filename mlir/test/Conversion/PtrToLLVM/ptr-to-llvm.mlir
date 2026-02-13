@@ -16,10 +16,10 @@
 // CHECK:           llvm.return %[[VAL_8]] : !llvm.struct<(ptr, ptr, ptr, ptr)>
 // CHECK:         }
 func.func @test_ptr_add(%arg0: !ptr.ptr<#ptr.generic_space>, %arg1: index) -> (!ptr.ptr<#ptr.generic_space>, !ptr.ptr<#ptr.generic_space>, !ptr.ptr<#ptr.generic_space>, !ptr.ptr<#ptr.generic_space>) {
-  %0 = ptr.ptr_add %arg0, %arg1 : <#ptr.generic_space>, index
-  %1 = ptr.ptr_add nusw %arg0, %arg1 : <#ptr.generic_space>, index
-  %2 = ptr.ptr_add nuw %arg0, %arg1 : <#ptr.generic_space>, index
-  %3 = ptr.ptr_add inbounds %arg0, %arg1 : <#ptr.generic_space>, index
+  %0 = ptr.ptr_add %arg0, %arg1 : !ptr.ptr<#ptr.generic_space>, index
+  %1 = ptr.ptr_add nusw %arg0, %arg1 : !ptr.ptr<#ptr.generic_space>, index
+  %2 = ptr.ptr_add nuw %arg0, %arg1 : !ptr.ptr<#ptr.generic_space>, index
+  %3 = ptr.ptr_add inbounds %arg0, %arg1 : !ptr.ptr<#ptr.generic_space>, index
   return %0, %1, %2, %3 : !ptr.ptr<#ptr.generic_space>, !ptr.ptr<#ptr.generic_space>, !ptr.ptr<#ptr.generic_space>, !ptr.ptr<#ptr.generic_space>
 }
 
@@ -263,7 +263,7 @@ func.func @test_comprehensive_dynamic(%arg0: memref<?x?xf32, strided<[?, ?], off
   %0 = ptr.to_ptr %arg0 : memref<?x?xf32, strided<[?, ?], offset: ?>, #ptr.generic_space> -> <#ptr.generic_space>
   %1 = ptr.get_metadata %arg0 : memref<?x?xf32, strided<[?, ?], offset: ?>, #ptr.generic_space>
   %2 = ptr.type_offset f32 : index
-  %3 = ptr.ptr_add inbounds %0, %2 : <#ptr.generic_space>, index
+  %3 = ptr.ptr_add inbounds %0, %2 : !ptr.ptr<#ptr.generic_space>, index
   %4 = ptr.from_ptr %3 metadata %1 : <#ptr.generic_space> -> memref<?x?xf32, strided<[?, ?], offset: ?>, #ptr.generic_space>
   return %4 : memref<?x?xf32, strided<[?, ?], offset: ?>, #ptr.generic_space>
 }
@@ -313,6 +313,6 @@ func.func @test_memref_ptradd_indexing(%arg0: memref<10x?x30xf32, #ptr.generic_s
   %0 = ptr.to_ptr %arg0 : memref<10x?x30xf32, #ptr.generic_space> -> <#ptr.generic_space>
   %1 = ptr.type_offset f32 : index
   %2 = arith.muli %1, %arg1 : index
-  %3 = ptr.ptr_add %0, %2 : <#ptr.generic_space>, index
+  %3 = ptr.ptr_add %0, %2 : !ptr.ptr<#ptr.generic_space>, index
   return %3 : !ptr.ptr<#ptr.generic_space>
 }

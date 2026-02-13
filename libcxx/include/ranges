@@ -116,6 +116,10 @@ namespace std::ranges {
   // [range.dangling], dangling iterator handling
   struct dangling;
 
+  // [range.elementsof], class template elements_of
+  template<range R, class Allocator = allocator<byte>>
+    struct elements_of;
+
   template<range R>
     using borrowed_iterator_t = see below;
 
@@ -267,6 +271,11 @@ namespace std::ranges {
   template<class W, class Bound>
     inline constexpr bool enable_borrowed_range<iota_view<W, Bound>> = true;
 
+  namespace views {
+    inline constexpr unspecified iota = unspecified;
+    inline constexpr unspecified indices = unspecified; // Since C++26
+  }
+
   // [range.repeat], repeat view
   template<class T>
     concept integer-like-with-usable-difference-type =  // exposition only
@@ -348,6 +357,31 @@ namespace std::ranges {
 
   namespace views { inline constexpr unspecified zip_transform = unspecified; }     // C++23
 
+  // [range.adjacent], adjacent view
+  template<forward_range V, size_t N>
+    requires view<V> && (N > 0)
+  class adjacent_view;
+
+  template<class V, size_t N>
+    constexpr bool enable_borrowed_range<adjacent_view<V, N>> =
+      enable_borrowed_range<V>;
+
+  namespace views {
+    template<size_t N>
+      constexpr unspecified adjacent = unspecified;
+    inline constexpr auto pairwise = adjacent<2>;
+  }
+
+  // [range.adjacent.transform], adjacent transform view
+  template<forward_range V, move_constructible F, size_t N>
+    requires see below
+  class adjacent_transform_view;
+
+  namespace views {
+    template<size_t N>
+      constexpr unspecified adjacent_transform = unspecified;
+    inline constexpr auto pairwise_transform = adjacent_transform<2>;
+  }
 
   // [range.as.rvalue]
   template <view V>
@@ -414,6 +448,7 @@ namespace std {
 #    include <__ranges/data.h>
 #    include <__ranges/drop_view.h>
 #    include <__ranges/drop_while_view.h>
+#    include <__ranges/elements_of.h>
 #    include <__ranges/elements_view.h>
 #    include <__ranges/empty.h>
 #    include <__ranges/empty_view.h>
@@ -443,6 +478,8 @@ namespace std {
 #  endif
 
 #  if _LIBCPP_STD_VER >= 23
+#    include <__ranges/adjacent_transform_view.h>
+#    include <__ranges/adjacent_view.h>
 #    include <__ranges/as_rvalue_view.h>
 #    include <__ranges/chunk_by_view.h>
 #    include <__ranges/from_range.h>

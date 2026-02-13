@@ -149,6 +149,9 @@ void NVPTXInstPrinter::printCvtMode(const MCInst *MI, int OpNum, raw_ostream &O,
     case NVPTX::PTXCvtMode::RNA:
       O << ".rna";
       return;
+    case NVPTX::PTXCvtMode::RS:
+      O << ".rs";
+      return;
     }
   }
   llvm_unreachable("Invalid conversion modifier");
@@ -392,6 +395,25 @@ void NVPTXInstPrinter::printMemOperand(const MCInst *MI, int OpNum,
   }
 }
 
+void NVPTXInstPrinter::printUsedBytesMaskPragma(const MCInst *MI, int OpNum,
+                                                raw_ostream &O) {
+  auto &Op = MI->getOperand(OpNum);
+  assert(Op.isImm() && "Invalid operand");
+  uint32_t Imm = (uint32_t)Op.getImm();
+  if (Imm != UINT32_MAX) {
+    O << ".pragma \"used_bytes_mask " << format_hex(Imm, 1) << "\";\n\t";
+  }
+}
+
+void NVPTXInstPrinter::printRegisterOrSinkSymbol(const MCInst *MI, int OpNum,
+                                                 raw_ostream &O) {
+  const MCOperand &Op = MI->getOperand(OpNum);
+  if (Op.isReg() && Op.getReg() == MCRegister::NoRegister)
+    O << "_";
+  else
+    printOperand(MI, OpNum, O);
+}
+
 void NVPTXInstPrinter::printHexu32imm(const MCInst *MI, int OpNum,
                                       raw_ostream &O) {
   int64_t Imm = MI->getOperand(OpNum).getImm();
@@ -512,4 +534,16 @@ void NVPTXInstPrinter::printCallOperand(const MCInst *MI, int OpNum,
     return;
   }
   llvm_unreachable("Invalid modifier");
+}
+
+template <unsigned Bits>
+void NVPTXInstPrinter::printHexUImm(const MCInst *MI, int OpNum,
+                                    raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+  assert(MO.isImm() && "Expected immediate operand");
+  assert(isInt<Bits>(MO.getImm()) &&
+         "Immediate value does not fit in specified bits");
+  uint64_t Imm = MO.getImm();
+  Imm &= maskTrailingOnes<uint64_t>(Bits);
+  O << formatHex(Imm) << "U";
 }

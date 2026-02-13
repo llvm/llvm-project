@@ -38,14 +38,13 @@ static cl::opt<std::string>
     InputFilename("input-file", cl::desc("File to check (defaults to stdin)"),
                   cl::init("-"), cl::value_desc("filename"));
 
-static cl::list<std::string> CheckPrefixes(
-    "check-prefix",
-    cl::desc("Prefix to use from check file (defaults to 'CHECK')"));
-static cl::alias CheckPrefixesAlias(
-    "check-prefixes", cl::aliasopt(CheckPrefixes), cl::CommaSeparated,
-    cl::NotHidden,
-    cl::desc(
-        "Alias for -check-prefix permitting multiple comma separated values"));
+static cl::list<std::string>
+    CheckPrefixes("check-prefixes", cl::CommaSeparated,
+                  cl::desc("Comma separated list of prefixes to use from check "
+                           "file\n(defaults to 'CHECK')"));
+static cl::alias CheckPrefixesAlias("check-prefix", cl::aliasopt(CheckPrefixes),
+                                    cl::CommaSeparated, cl::NotHidden,
+                                    cl::desc("Alias for -check-prefixes"));
 
 static cl::list<std::string> CommentPrefixes(
     "comment-prefixes", cl::CommaSeparated, cl::Hidden,
@@ -193,7 +192,7 @@ struct MarkerStyle {
   std::string Note;
   /// Does this marker indicate inclusion by -dump-input-filter=error?
   bool FiltersAsError;
-  MarkerStyle() {}
+  MarkerStyle() = default;
   MarkerStyle(char Lead, raw_ostream::Colors Color,
               const std::string &Note = "", bool FiltersAsError = false)
       : Lead(Lead), Color(Color), Note(Note), FiltersAsError(FiltersAsError) {
@@ -384,7 +383,7 @@ BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
                       std::vector<InputAnnotation> &Annotations,
                       unsigned &LabelWidth) {
   struct CompareSMLoc {
-    bool operator()(const SMLoc &LHS, const SMLoc &RHS) const {
+    bool operator()(SMLoc LHS, SMLoc RHS) const {
       return LHS.getPointer() < RHS.getPointer();
     }
   };
@@ -595,7 +594,7 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
   unsigned LineCount = InputFileText.count('\n');
   if (InputFileEnd[-1] != '\n')
     ++LineCount;
-  unsigned LineNoWidth = std::log10(LineCount) + 1;
+  unsigned LineNoWidth = NumDigitsBase10(LineCount);
   // +3 below adds spaces (1) to the left of the (right-aligned) line numbers
   // on input lines and (2) to the right of the (left-aligned) labels on
   // annotation lines so that input lines and annotation lines are more
@@ -735,7 +734,7 @@ int main(int argc, char **argv) {
 
   InitLLVM X(argc, argv);
   cl::ParseCommandLineOptions(argc, argv, /*Overview*/ "", /*Errs*/ nullptr,
-                              "FILECHECK_OPTS");
+                              /*VFS*/ nullptr, "FILECHECK_OPTS");
 
   // Select -dump-input* values.  The -help documentation specifies the default
   // value and which value to choose if an option is specified multiple times.

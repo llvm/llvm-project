@@ -23,7 +23,7 @@ namespace {
 
 class ConstOpConverter : public OpRewritePattern<tosa::ConstOp> {
 public:
-  using OpRewritePattern<tosa::ConstOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::ConstOp op,
                                 PatternRewriter &rewriter) const final {
@@ -60,7 +60,7 @@ Value getConstantValue(Location loc, Type type, int64_t value,
 class ApplyScaleGenericOpConverter
     : public OpRewritePattern<tosa::ApplyScaleOp> {
 public:
-  using OpRewritePattern<tosa::ApplyScaleOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::ApplyScaleOp op,
                                 PatternRewriter &rewriter) const final {
@@ -126,7 +126,7 @@ public:
 
 class ApplyScale32BitOpConverter : public OpRewritePattern<tosa::ApplyScaleOp> {
 public:
-  using OpRewritePattern<tosa::ApplyScaleOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::ApplyScaleOp op,
                                 PatternRewriter &rewriter) const final {

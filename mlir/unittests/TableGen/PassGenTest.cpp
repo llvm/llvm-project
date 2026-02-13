@@ -11,7 +11,8 @@
 
 #include "gmock/gmock.h"
 
-std::unique_ptr<mlir::Pass> createTestPassWithCustomConstructor(int v = 0);
+static std::unique_ptr<mlir::Pass>
+createTestPassWithCustomConstructor(int v = 0);
 
 #define GEN_PASS_DECL
 #define GEN_PASS_REGISTRATION

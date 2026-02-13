@@ -18,21 +18,21 @@ define void @test_no_stackslot_scavenging(float %f) #0 {
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Spill
 ; CHECK-NEXT:    stp x30, x24, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str s0, [sp, #12] // 4-byte Folded Spill
+; CHECK-NEXT:    str s0, [sp, #12] // 4-byte Spill
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    smstop sm
-; CHECK-NEXT:    ldr s0, [sp, #12] // 4-byte Folded Reload
+; CHECK-NEXT:    ldr s0, [sp, #12] // 4-byte Reload
 ; CHECK-NEXT:    bl use_f
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ldp x30, x24, [sp, #80] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -60,7 +60,7 @@ define void @test_no_stackslot_scavenging_with_fp(float %f, i64 %n) #0 "frame-po
 ; CHECK-NEXT:    lsl x9, x0, #3
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    mov x19, sp
-; CHECK-NEXT:    str s0, [x19, #12] // 4-byte Folded Spill
+; CHECK-NEXT:    str s0, [x19, #12] // 4-byte Spill
 ; CHECK-NEXT:    add x9, x9, #15
 ; CHECK-NEXT:    and x9, x9, #0xfffffffffffffff0
 ; CHECK-NEXT:    sub x8, x8, x9
@@ -68,7 +68,7 @@ define void @test_no_stackslot_scavenging_with_fp(float %f, i64 %n) #0 "frame-po
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    smstop sm
-; CHECK-NEXT:    ldr s0, [x19, #12] // 4-byte Folded Reload
+; CHECK-NEXT:    ldr s0, [x19, #12] // 4-byte Reload
 ; CHECK-NEXT:    bl use_f
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    sub sp, x29, #64

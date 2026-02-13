@@ -91,7 +91,7 @@ class LinuxCoreThreadsTestCase(TestBase):
             reason = thread.GetStopReason()
             if thread.GetThreadID() == tid:
                 self.assertStopReason(reason, lldb.eStopReasonSignal)
-                signal = thread.GetStopReasonDataAtIndex(1)
+                signal = thread.GetStopReasonDataAtIndex(0)
                 # Check we got signal 4 (SIGILL)
                 self.assertEqual(signal, 4)
             else:

@@ -83,7 +83,7 @@ unsigned StringMapImpl::LookupBucketFor(StringRef Name,
   // Hash table unallocated so far?
   if (NumBuckets == 0)
     init(16);
-  if (shouldReverseIterate())
+  if constexpr (shouldReverseIterate())
     FullHashValue = ~FullHashValue;
   unsigned BucketNo = FullHashValue & (NumBuckets - 1);
   unsigned *HashTable = getHashTable(TheTable, NumBuckets);
@@ -142,7 +142,7 @@ int StringMapImpl::FindKey(StringRef Key, uint32_t FullHashValue) const {
 #ifdef EXPENSIVE_CHECKS
   assert(FullHashValue == hash(Key));
 #endif
-  if (shouldReverseIterate())
+  if constexpr (shouldReverseIterate())
     FullHashValue = ~FullHashValue;
   unsigned BucketNo = FullHashValue & (NumBuckets - 1);
   unsigned *HashTable = getHashTable(TheTable, NumBuckets);

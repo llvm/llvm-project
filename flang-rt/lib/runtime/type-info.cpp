@@ -99,6 +99,14 @@ RT_API_ATTRS void Component::EstablishDescriptor(Descriptor &descriptor,
           : genre_ == Genre::Pointer ? CFI_attribute_pointer
                                      : CFI_attribute_other)};
   TypeCategory cat{category()};
+  unsigned allocatorIdx{kDefaultAllocator};
+  if (memorySpace_ == MemorySpace::Device) {
+    allocatorIdx = kDeviceAllocatorPos;
+  } else if (memorySpace_ == MemorySpace::Managed) {
+    allocatorIdx = kManagedAllocatorPos;
+  } else if (memorySpace_ == MemorySpace::Unified) {
+    allocatorIdx = kUnifiedAllocatorPos;
+  }
   if (cat == TypeCategory::Character) {
     std::size_t lengthInChars{0};
     if (auto length{characterLen_.GetValue(&container)}) {
@@ -107,17 +115,19 @@ RT_API_ATTRS void Component::EstablishDescriptor(Descriptor &descriptor,
       RUNTIME_CHECK(
           terminator, characterLen_.genre() == Value::Genre::Deferred);
     }
-    descriptor.Establish(
-        kind_, lengthInChars, nullptr, rank_, nullptr, attribute);
+    descriptor.Establish(kind_, lengthInChars, nullptr, rank_, nullptr,
+        attribute, false, allocatorIdx);
   } else if (cat == TypeCategory::Derived) {
     if (const DerivedType * type{derivedType()}) {
-      descriptor.Establish(*type, nullptr, rank_, nullptr, attribute);
+      descriptor.Establish(
+          *type, nullptr, rank_, nullptr, attribute, allocatorIdx);
     } else { // unlimited polymorphic
       descriptor.Establish(TypeCode{TypeCategory::Derived, 0}, 0, nullptr,
-          rank_, nullptr, attribute, true);
+          rank_, nullptr, attribute, true, allocatorIdx);
     }
   } else {
-    descriptor.Establish(cat, kind_, nullptr, rank_, nullptr, attribute);
+    descriptor.Establish(
+        cat, kind_, nullptr, rank_, nullptr, attribute, false, allocatorIdx);
   }
   if (rank_ && genre_ != Genre::Allocatable && genre_ != Genre::Pointer) {
     const typeInfo::Value *boundValues{bounds()};
@@ -267,16 +277,17 @@ FILE *Component::Dump(FILE *f) const {
   std::fputs("    name: ", f);
   DumpScalarCharacter(f, name(), "Component::name");
   if (genre_ == Genre::Data) {
-    std::fputs("    Data       ", f);
+    std::fputs("    Data            ", f);
   } else if (genre_ == Genre::Pointer) {
-    std::fputs("    Pointer    ", f);
+    std::fputs("    Pointer          ", f);
   } else if (genre_ == Genre::Allocatable) {
-    std::fputs("    Allocatable", f);
+    std::fputs("    Allocatable.     ", f);
   } else if (genre_ == Genre::Automatic) {
-    std::fputs("    Automatic  ", f);
+    std::fputs("    Automatic        ", f);
   } else {
     std::fprintf(f, "    (bad genre 0x%x)", static_cast<int>(genre_));
   }
+  // TODO: valentin
   std::fprintf(f, " category %d  kind %d  rank %d  offset 0x%zx\n", category_,
       kind_, rank_, static_cast<std::size_t>(offset_));
   const auto &dtDesc{derivedType_.descriptor()};

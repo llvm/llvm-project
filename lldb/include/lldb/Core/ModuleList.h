@@ -81,6 +81,8 @@ public:
   bool SetClangModulesCachePath(const FileSpec &path);
   bool GetEnableExternalLookup() const;
   bool SetEnableExternalLookup(bool new_value);
+  bool GetSharedCacheBinaryLoading() const;
+  bool SetSharedCacheBinaryLoading(bool new_value);
   bool GetEnableLLDBIndexCache() const;
   bool SetEnableLLDBIndexCache(bool new_value);
   uint64_t GetLLDBIndexCacheMaxByteSize();
@@ -88,11 +90,8 @@ public:
   uint64_t GetLLDBIndexCacheExpirationDays();
   FileSpec GetLLDBIndexCachePath() const;
   bool SetLLDBIndexCachePath(const FileSpec &path);
-
-  bool GetLoadSymbolOnDemand();
-
+  bool GetLoadSymbolOnDemand() const;
   lldb::SymbolDownload GetSymbolAutoDownload() const;
-
   PathMappingList GetSymlinkMappings() const;
 };
 
@@ -435,7 +434,7 @@ public:
 
   size_t Remove(ModuleList &module_list);
 
-  bool RemoveIfOrphaned(const Module *module_ptr);
+  bool RemoveIfOrphaned(const lldb::ModuleWP module_ptr);
 
   size_t RemoveOrphans(bool mandatory);
 
@@ -476,9 +475,8 @@ public:
 
   static Status
   GetSharedModule(const ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
-                  const FileSpecList *module_search_paths_ptr,
                   llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
-                  bool *did_create_ptr, bool always_create = false);
+                  bool *did_create_ptr, bool invoke_locate_callback = true);
 
   static bool RemoveSharedModule(lldb::ModuleSP &module_sp);
 
@@ -489,7 +487,7 @@ public:
 
   static size_t RemoveOrphanSharedModules(bool mandatory);
 
-  static bool RemoveSharedModuleIfOrphaned(const Module *module_ptr);
+  static bool RemoveSharedModuleIfOrphaned(const lldb::ModuleWP module_ptr);
 
   /// Applies 'callback' to each module in this ModuleList.
   /// If 'callback' returns false, iteration terminates.
@@ -511,6 +509,12 @@ public:
   /// Atomically swaps the contents of this module list with \a other.
   void Swap(ModuleList &other);
 
+  /// For each module in this ModuleList, preload its symbols.
+  ///
+  /// \param[in] parallelize
+  ///     If true, all modules will be preloaded in parallel.
+  void PreloadSymbols(bool parallelize) const;
+
 protected:
   // Class typedefs.
   typedef std::vector<lldb::ModuleSP>
@@ -530,6 +534,9 @@ protected:
   mutable std::recursive_mutex m_modules_mutex;
 
   Notifier *m_notifier = nullptr;
+
+  /// An orphaned module that lives only in the ModuleList has a count of 1.
+  static constexpr long kUseCountModuleListOrphaned = 1;
 
 public:
   typedef LockingAdaptedIterable<std::recursive_mutex, collection>

@@ -367,10 +367,10 @@ bool AMDGPUPostLegalizerCombinerImpl::matchRemoveFcanonicalize(
   return TLI->isCanonicalized(Reg, MF);
 }
 
-// The buffer_load_{i8, i16} intrinsics are intially lowered as buffer_load_{u8,
-// u16} instructions. Here, the buffer_load_{u8, u16} instructions are combined
-// with sign extension instrucions in order to generate buffer_load_{i8, i16}
-// instructions.
+// The buffer_load_{i8, i16} intrinsics are initially lowered as
+// buffer_load_{u8, u16} instructions. Here, the buffer_load_{u8, u16}
+// instructions are combined with sign extension instrucions in order to
+// generate buffer_load_{i8, i16} instructions.
 
 // Identify buffer_load_{u8, u16}.
 bool AMDGPUPostLegalizerCombinerImpl::matchCombineSignExtendInReg(

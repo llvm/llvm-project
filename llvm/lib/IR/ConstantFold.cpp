@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/ConstantFold.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
@@ -55,15 +56,8 @@ foldConstantCastPair(
   Type *MidTy = Op->getType();
   Instruction::CastOps firstOp = Instruction::CastOps(Op->getOpcode());
   Instruction::CastOps secondOp = Instruction::CastOps(opc);
-
-  // Assume that pointers are never more than 64 bits wide, and only use this
-  // for the middle type. Otherwise we could end up folding away illegal
-  // bitcasts between address spaces with different sizes.
-  IntegerType *FakeIntPtrTy = Type::getInt64Ty(DstTy->getContext());
-
-  // Let CastInst::isEliminableCastPair do the heavy lifting.
   return CastInst::isEliminableCastPair(firstOp, secondOp, SrcTy, MidTy, DstTy,
-                                        nullptr, FakeIntPtrTy, nullptr);
+                                        /*DL=*/nullptr);
 }
 
 static Constant *FoldBitCast(Constant *V, Type *DestTy) {
@@ -93,8 +87,14 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
         APFloat(DestTy->getScalarType()->getFltSemantics(), CI->getValue()));
   }
 
-  // Handle ConstantFP -> ConstantInt
+  // Handle ConstantFP -> Constant{Int, FP}
   if (ConstantFP *FP = dyn_cast<ConstantFP>(V)) {
+    // Handle half <-> bfloat
+    if (!isa<VectorType>(SrcTy) && DestTy->isFloatingPointTy()) {
+      APInt Val = FP->getValueAPF().bitcastToAPInt();
+      APFloat ResultFP(DestTy->getFltSemantics(), Val);
+      return ConstantFP::get(DestTy->getContext(), ResultFP);
+    }
     // Canonicalize scalar-to-vector bitcasts into vector-to-vector bitcasts
     // This allows for other simplifications (although some of them
     // can only be handled by Analysis/ConstantFolding.cpp).
@@ -453,13 +453,13 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
   Type *EltTy = V1VTy->getElementType();
 
   // Poison shuffle mask -> poison value.
-  if (all_of(Mask, [](int Elt) { return Elt == PoisonMaskElem; })) {
+  if (all_of(Mask, equal_to(PoisonMaskElem))) {
     return PoisonValue::get(VectorType::get(EltTy, MaskEltCount));
   }
 
   // If the mask is all zeros this is a splat, no need to go through all
   // elements.
-  if (all_of(Mask, [](int Elt) { return Elt == 0; })) {
+  if (all_of(Mask, equal_to(0))) {
     Type *Ty = IntegerType::get(V1->getContext(), 32);
     Constant *Elt =
         ConstantExpr::getExtractElement(V1, ConstantInt::get(Ty, 0));
@@ -748,7 +748,8 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
       assert(!CI2->isZero() && "And zero handled above");
       if (ConstantExpr *CE1 = dyn_cast<ConstantExpr>(C1)) {
         // If and'ing the address of a global with a constant, fold it.
-        if (CE1->getOpcode() == Instruction::PtrToInt &&
+        if ((CE1->getOpcode() == Instruction::PtrToInt ||
+             CE1->getOpcode() == Instruction::PtrToAddr) &&
             isa<GlobalValue>(CE1->getOperand(0))) {
           GlobalValue *GV = cast<GlobalValue>(CE1->getOperand(0));
 

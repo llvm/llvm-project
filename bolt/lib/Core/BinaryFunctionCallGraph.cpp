@@ -122,7 +122,7 @@ buildCallGraph(BinaryContext &BC, CgFilterFunction Filter, bool CgFromPerfData,
       // create a node for a function unless it was the target of a call from
       // a hot block.  The alternative would be to set the count to one or
       // accumulate the number of calls from the callsite into the function
-      // samples.  Results from perfomance testing seem to favor the zero
+      // samples.  Results from performance testing seem to favor the zero
       // count though, so I'm leaving it this way for now.
       return Cg.addNode(Function, Size, Function->getKnownExecutionCount());
     }

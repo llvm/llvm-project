@@ -200,6 +200,49 @@ public:
   /// with another range.  The resultant range is guaranteed to include the
   /// elements of both sets, but may contain more.
   LLVM_ABI ConstantFPRange unionWith(const ConstantFPRange &CR) const;
+
+  /// Calculate absolute value range.
+  LLVM_ABI ConstantFPRange abs() const;
+
+  /// Calculate range of negated values.
+  LLVM_ABI ConstantFPRange negate() const;
+
+  /// Get the range without NaNs. It is useful when we apply nnan flag to range
+  /// of operands/results.
+  ConstantFPRange getWithoutNaN() const {
+    return ConstantFPRange(Lower, Upper, false, false);
+  }
+
+  /// Get the range without infinities. It is useful when we apply ninf flag to
+  /// range of operands/results.
+  LLVM_ABI ConstantFPRange getWithoutInf() const;
+
+  /// Return a new range in the specified format with the specified rounding
+  /// mode.
+  LLVM_ABI ConstantFPRange
+  cast(const fltSemantics &DstSem,
+       APFloat::roundingMode RM = APFloat::rmNearestTiesToEven) const;
+
+  /// Return a new range representing the possible values resulting
+  /// from an addition of a value in this range and a value in \p Other.
+  LLVM_ABI ConstantFPRange add(const ConstantFPRange &Other) const;
+
+  /// Return a new range representing the possible values resulting
+  /// from a subtraction of a value in this range and a value in \p Other.
+  LLVM_ABI ConstantFPRange sub(const ConstantFPRange &Other) const;
+
+  /// Return a new range representing the possible values resulting
+  /// from a multiplication of a value in this range and a value in \p Other.
+  LLVM_ABI ConstantFPRange mul(const ConstantFPRange &Other) const;
+
+  /// Return a new range representing the possible values resulting
+  /// from a division of a value in this range and a value in
+  /// \p Other.
+  LLVM_ABI ConstantFPRange div(const ConstantFPRange &Other) const;
+
+  /// Flush denormal values to zero according to the specified mode.
+  /// For dynamic mode, we return the union of all possible results.
+  LLVM_ABI void flushDenormals(DenormalMode::DenormalModeKind Mode);
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const ConstantFPRange &CR) {

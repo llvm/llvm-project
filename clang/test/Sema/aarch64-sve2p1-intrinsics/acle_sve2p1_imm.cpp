@@ -255,3 +255,29 @@ void test_svdup_laneq(){
   svdup_laneq_f64(zn_f64,-1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 1]}}
   svdup_laneq_bf16(zn_bf16,-1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
 }
+
+__attribute__((target("+sve-aes2")))
+void test_aes_x2_imm_0_3(svuint8x2_t op1, svuint8_t op2) {
+  svaesd_lane(op1, op2, -1);  // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  svaesdimc_lane(op1, op2, -1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  svaese_lane(op1, op2, -1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  svaesemc_lane(op1, op2, -1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+
+  svaesd_lane(op1, op2, 4);  // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+  svaesdimc_lane(op1, op2, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+  svaese_lane(op1, op2, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+  svaesemc_lane(op1, op2, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+}
+
+__attribute__((target("+sve-aes2")))
+void test_aes_x4_imm_0_3(svuint8x4_t op1, svuint8_t op2) {
+  svaesd_lane(op1, op2, -1);  // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  svaesdimc_lane(op1, op2, -1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  svaese_lane(op1, op2, -1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  svaesemc_lane(op1, op2, -1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+
+  svaesd_lane(op1, op2, 4);  // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+  svaesdimc_lane(op1, op2, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+  svaese_lane(op1, op2, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+  svaesemc_lane(op1, op2, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+}

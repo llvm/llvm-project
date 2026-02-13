@@ -7,23 +7,25 @@ define void @memcpy_fixed_align(ptr addrspace(5)  %dst, ptr addrspace(1) %src) {
 ; MUBUF-LABEL: memcpy_fixed_align:
 ; MUBUF:       ; %bb.0:
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; MUBUF-NEXT:    global_load_dwordx2 v[11:12], v[1:2], off offset:32
 ; MUBUF-NEXT:    global_load_dwordx4 v[3:6], v[1:2], off
 ; MUBUF-NEXT:    global_load_dwordx4 v[7:10], v[1:2], off offset:16
+; MUBUF-NEXT:    global_load_dwordx4 v[11:14], v[1:2], off offset:24
 ; MUBUF-NEXT:    s_lshr_b32 s4, s32, 6
 ; MUBUF-NEXT:    s_waitcnt vmcnt(2)
-; MUBUF-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:32
-; MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:36
-; MUBUF-NEXT:    s_waitcnt vmcnt(3)
 ; MUBUF-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:12
 ; MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:8
 ; MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:4
 ; MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], s32
-; MUBUF-NEXT:    s_waitcnt vmcnt(6)
+; MUBUF-NEXT:    s_waitcnt vmcnt(5)
 ; MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:28
 ; MUBUF-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:24
 ; MUBUF-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:20
 ; MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:16
+; MUBUF-NEXT:    s_waitcnt vmcnt(8)
+; MUBUF-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:36
+; MUBUF-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:32
+; MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:28
+; MUBUF-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:24
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ; use s4
 ; MUBUF-NEXT:    ;;#ASMEND
@@ -35,14 +37,14 @@ define void @memcpy_fixed_align(ptr addrspace(5)  %dst, ptr addrspace(1) %src) {
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; FLATSCR-NEXT:    global_load_dwordx4 v[3:6], v[1:2], off
 ; FLATSCR-NEXT:    global_load_dwordx4 v[7:10], v[1:2], off offset:16
-; FLATSCR-NEXT:    global_load_dwordx2 v[11:12], v[1:2], off offset:32
+; FLATSCR-NEXT:    global_load_dwordx4 v[11:14], v[1:2], off offset:24
 ; FLATSCR-NEXT:    s_mov_b32 s0, s32
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(2)
 ; FLATSCR-NEXT:    scratch_store_dwordx4 off, v[3:6], s32
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(2)
 ; FLATSCR-NEXT:    scratch_store_dwordx4 off, v[7:10], s32 offset:16
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(2)
-; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[11:12], s32 offset:32
+; FLATSCR-NEXT:    scratch_store_dwordx4 off, v[11:14], s32 offset:24
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ; use s0
 ; FLATSCR-NEXT:    ;;#ASMEND

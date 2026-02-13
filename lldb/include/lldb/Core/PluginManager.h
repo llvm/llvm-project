@@ -356,6 +356,24 @@ public:
   GetScriptInterpreterForLanguage(lldb::ScriptLanguage script_lang,
                                   Debugger &debugger);
 
+  // SyntheticFrameProvider
+  static bool
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                 SyntheticFrameProviderCreateInstance create_native_callback,
+                 ScriptedFrameProviderCreateInstance create_scripted_callback);
+
+  static bool
+  UnregisterPlugin(SyntheticFrameProviderCreateInstance create_callback);
+
+  static bool
+  UnregisterPlugin(ScriptedFrameProviderCreateInstance create_callback);
+
+  static SyntheticFrameProviderCreateInstance
+  GetSyntheticFrameProviderCreateCallbackForPluginName(llvm::StringRef name);
+
+  static ScriptedFrameProviderCreateInstance
+  GetScriptedFrameProviderCreateCallbackAtIndex(uint32_t idx);
+
   // StructuredDataPlugin
 
   /// Register a StructuredDataPlugin class along with optional
@@ -601,6 +619,15 @@ public:
   static LanguageSet GetREPLSupportedLanguagesAtIndex(uint32_t idx);
 
   static LanguageSet GetREPLAllTypeSystemSupportedLanguages();
+
+  // Higlhighter
+  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                             HighlighterCreateInstance create_callback);
+
+  static bool UnregisterPlugin(HighlighterCreateInstance create_callback);
+
+  static HighlighterCreateInstance
+  GetHighlighterCreateCallbackAtIndex(uint32_t idx);
 
   // Some plug-ins might register a DebuggerInitializeCallback callback when
   // registering the plug-in. After a new Debugger instance is created, this

@@ -3,22 +3,22 @@
 ## Add [namesz, descsz, type, name, desc] for a build id.
 
 ## Notes should be padded to 8 bytes.
-# RUN: printf "\x04\x00\x00\x00" >  %t-miss-padding-note.bin
-# RUN: printf "\x07\x00\x00\x00" >> %t-miss-padding-note.bin
-# RUN: printf "\x03\x00\x00\x00" >> %t-miss-padding-note.bin
-# RUN: printf "GNU\x00"          >> %t-miss-padding-note.bin
-# RUN: printf "\x0c\x0d\x0e"     >> %t-miss-padding-note.bin
+# RUN: printf "\004\000\000\000" >  %t-miss-padding-note.bin
+# RUN: printf "\007\000\000\000" >> %t-miss-padding-note.bin
+# RUN: printf "\003\000\000\000" >> %t-miss-padding-note.bin
+# RUN: printf "GNU\000"          >> %t-miss-padding-note.bin
+# RUN: printf "\014\015\016"     >> %t-miss-padding-note.bin
 
 ## The namesz field bit is incorrect.
-# RUN: printf "\x08\x00\x00\x00" >  %t-invalid-size-note.bin
-# RUN: printf "\x07\x00\x00\x00" >> %t-invalid-size-note.bin
-# RUN: printf "\x03\x00\x00\x00" >> %t-invalid-size-note.bin
-# RUN: printf "GNU\x00"          >> %t-invalid-size-note.bin
-# RUN: printf "\x0c\x0d\x0e\x00" >> %t-invalid-size-note.bin
+# RUN: printf "\010\000\000\000" >  %t-invalid-size-note.bin
+# RUN: printf "\007\000\000\000" >> %t-invalid-size-note.bin
+# RUN: printf "\003\000\000\000" >> %t-invalid-size-note.bin
+# RUN: printf "GNU\000"          >> %t-invalid-size-note.bin
+# RUN: printf "\014\015\016\000" >> %t-invalid-size-note.bin
 
 ## Missing type field.
-# RUN: printf "\x08\x00\x00\x00" >  %t-short-note.bin
-# RUN: printf "\x07\x00\x00\x00" >> %t-short-note.bin
+# RUN: printf "\010\000\000\000" >  %t-short-note.bin
+# RUN: printf "\007\000\000\000" >> %t-short-note.bin
 
 # RUN: yaml2obj %s -o %t.o
 
@@ -33,11 +33,11 @@
 # CHECK-SHORT: .note.short data must be either empty or at least 12 bytes long
 
 ## Test compatibility with .note.gnu.property, which has 8-byte alignment.
-# RUN: printf "\x04\x00\x00\x00\x40\x00\x00\x00\x05\x00\x00\x00\x47\x4e\x55\x00" >  %t-note-gnu-property.bin
-# RUN: printf "\x02\x00\x00\xc0\x04\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00" >> %t-note-gnu-property.bin
-# RUN: printf "\x01\x80\x01\xc0\x04\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00" >> %t-note-gnu-property.bin
-# RUN: printf "\x01\x00\x01\xc0\x04\x00\x00\x00\x0b\x00\x00\x00\x00\x00\x00\x00" >> %t-note-gnu-property.bin
-# RUN: printf "\x02\x00\x01\xc0\x04\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00" >> %t-note-gnu-property.bin
+# RUN: printf "\004\000\000\000\100\000\000\000\005\000\000\000\107\116\125\000" >  %t-note-gnu-property.bin
+# RUN: printf "\002\000\000\300\004\000\000\000\003\000\000\000\000\000\000\000" >> %t-note-gnu-property.bin
+# RUN: printf "\001\200\001\300\004\000\000\000\001\000\000\000\000\000\000\000" >> %t-note-gnu-property.bin
+# RUN: printf "\001\000\001\300\004\000\000\000\013\000\000\000\000\000\000\000" >> %t-note-gnu-property.bin
+# RUN: printf "\002\000\001\300\004\000\000\000\001\000\000\000\000\000\000\000" >> %t-note-gnu-property.bin
 # RUN: llvm-objcopy --add-section=.note.gnu.property=%t-note-gnu-property.bin %t.o %t-with-note-gnu-property.o
 
 ## Test that verification can be disabled.

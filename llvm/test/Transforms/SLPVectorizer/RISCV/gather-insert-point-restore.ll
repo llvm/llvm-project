@@ -13,7 +13,7 @@ define i16 @test(ptr %i) {
 ; CHECK-NEXT:    br label %[[FOR_COND5_US:.*]]
 ; CHECK:       [[FOR_COND5_US]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i16> @llvm.experimental.vp.strided.load.v4i16.p0.i64(ptr align 2 [[GEP_US154_2]], i64 4914, <4 x i1> splat (i1 true), i32 4)
-; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr> [[TMP3]], i32 2, <4 x i1> splat (i1 true), <4 x i16> poison)
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr> align 2 [[TMP3]], <4 x i1> splat (i1 true), <4 x i16> poison)
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i16> [[TMP4]], <4 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i16> [[TMP5]], <4 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i16> [[TMP4]], <4 x i16> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>

@@ -22,7 +22,7 @@ constexpr int foo(Q &&q) {
   return a * 10 + b;
 }
 
-auto [noinit]; // expected-error{{decomposition declaration '[noinit]' requires an initializer}}
+auto [noinit]; // expected-error{{structured binding declaration '[noinit]' requires an initializer}}
 
 #else
 
@@ -31,7 +31,7 @@ int k = decomp(arr);
 
 static_assert(foo({1, 2}) == 12);
 
-// expected-error@15 {{cannot decompose non-class, non-array type 'const int'}}
+// expected-error@15 {{cannot bind non-class, non-array type 'const int'}}
 int z = decomp(10); // expected-note {{instantiation of}}
 
 #endif

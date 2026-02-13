@@ -66,8 +66,8 @@ public:
 // one more method, completed, which is invoked when all children of a
 // node have been processed. It is intended to distinguish of back and
 // cross edges in the spanning tree but is not used in the common case.
-template <typename NodeRef, unsigned SmallSize=8>
-struct df_iterator_default_set : public SmallPtrSet<NodeRef, SmallSize> {
+template <typename NodeRef, unsigned SmallSize = 8>
+struct df_iterator_default_set : SmallPtrSet<NodeRef, SmallSize> {
   using BaseSet = SmallPtrSet<NodeRef, SmallSize>;
   using iterator = typename BaseSet::iterator;
 
@@ -235,8 +235,10 @@ iterator_range<df_iterator<T>> depth_first(const T& G) {
 }
 
 // Provide global definitions of external depth first iterators...
-template <class T, class SetTy = df_iterator_default_set<typename GraphTraits<T>::NodeRef>>
-struct df_ext_iterator : public df_iterator<T, SetTy, true> {
+template <class T,
+          class SetTy =
+              df_iterator_default_set<typename GraphTraits<T>::NodeRef>>
+struct df_ext_iterator : df_iterator<T, SetTy, true> {
   df_ext_iterator(const df_iterator<T, SetTy, true> &V)
     : df_iterator<T, SetTy, true>(V) {}
 };
@@ -262,7 +264,7 @@ template <class T,
           class SetTy =
               df_iterator_default_set<typename GraphTraits<T>::NodeRef>,
           bool External = false>
-struct idf_iterator : public df_iterator<Inverse<T>, SetTy, External> {
+struct idf_iterator : df_iterator<Inverse<T>, SetTy, External> {
   idf_iterator(const df_iterator<Inverse<T>, SetTy, External> &V)
     : df_iterator<Inverse<T>, SetTy, External>(V) {}
 };
@@ -284,8 +286,10 @@ iterator_range<idf_iterator<T>> inverse_depth_first(const T& G) {
 }
 
 // Provide global definitions of external inverse depth first iterators...
-template <class T, class SetTy = df_iterator_default_set<typename GraphTraits<T>::NodeRef>>
-struct idf_ext_iterator : public idf_iterator<T, SetTy, true> {
+template <class T,
+          class SetTy =
+              df_iterator_default_set<typename GraphTraits<T>::NodeRef>>
+struct idf_ext_iterator : idf_iterator<T, SetTy, true> {
   idf_ext_iterator(const idf_iterator<T, SetTy, true> &V)
     : idf_iterator<T, SetTy, true>(V) {}
   idf_ext_iterator(const df_iterator<Inverse<T>, SetTy, true> &V)

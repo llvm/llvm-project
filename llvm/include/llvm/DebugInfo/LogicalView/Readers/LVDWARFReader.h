@@ -123,7 +123,7 @@ public:
         Obj(Obj) {}
   LVDWARFReader(const LVDWARFReader &) = delete;
   LVDWARFReader &operator=(const LVDWARFReader &) = delete;
-  ~LVDWARFReader() = default;
+  ~LVDWARFReader() override = default;
 
   LVAddress getCUBaseAddress() const { return CUBaseAddress; }
   void setCUBaseAddress(LVAddress Address) { CUBaseAddress = Address; }

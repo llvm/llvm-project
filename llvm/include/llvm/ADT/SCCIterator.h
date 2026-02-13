@@ -313,10 +313,10 @@ scc_member_iterator<GraphT, GT>::scc_member_iterator(
   // Initialize auxilary node information.
   NodeInfoMap.clear();
   for (auto *Node : InputNodes) {
-    // This is specifically used to construct a `NodeInfo` object in place. An
-    // insert operation will involve a copy construction which invalidate the
-    // initial value of the `Group` field which should be `this`.
-    (void)NodeInfoMap[Node].Group;
+    // Construct a `NodeInfo` object in place.  `insert()` would involve a copy
+    // construction, invalidating the initial value of the `Group` field, which
+    // should be `this`.
+    NodeInfoMap.try_emplace(Node);
   }
 
   // Sort edges by weights.

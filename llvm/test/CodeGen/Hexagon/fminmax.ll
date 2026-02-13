@@ -4,7 +4,7 @@ target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i
 target triple = "hexagon"
 
 ; CHECK-LABEL: cfminf
-; CHECK: call fminf
+; CHECK: jump fminf
 define float @cfminf(float %x, float %y) #0 {
 entry:
   %call = tail call float @fminf(float %x, float %y) #1
@@ -12,7 +12,7 @@ entry:
 }
 
 ; CHECK-LABEL: cfmaxf
-; CHECK: call fmaxf
+; CHECK: jump fmaxf
 define float @cfmaxf(float %x, float %y) #0 {
 entry:
   %call = tail call float @fmaxf(float %x, float %y) #1
@@ -20,7 +20,7 @@ entry:
 }
 
 ; CHECK-LABEL: minnum
-; CHECK: call fminf
+; CHECK: jump fminf
 define float @minnum(float %x, float %y) #0 {
 entry:
   %call = tail call float @llvm.minnum.f32(float %x, float %y) #1
@@ -28,7 +28,7 @@ entry:
 }
 
 ; CHECK-LABEL: maxnum
-; CHECK: call fmaxf
+; CHECK: jump fmaxf
 define float @maxnum(float %x, float %y) #0 {
 entry:
   %call = tail call float @llvm.maxnum.f32(float %x, float %y) #1
@@ -55,6 +55,6 @@ entry:
 declare float @fminf(float, float) #0
 declare float @fmaxf(float, float) #0
 
-attributes #0 = { nounwind readnone "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-length64b" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind readnone "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-length64b" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
 

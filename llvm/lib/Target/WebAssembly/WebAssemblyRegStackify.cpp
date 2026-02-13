@@ -247,7 +247,8 @@ static void query(const MachineInstr &MI, bool &Read, bool &Write,
   // Check for writes to __stack_pointer global.
   if ((MI.getOpcode() == WebAssembly::GLOBAL_SET_I32 ||
        MI.getOpcode() == WebAssembly::GLOBAL_SET_I64) &&
-      strcmp(MI.getOperand(0).getSymbolName(), "__stack_pointer") == 0)
+      MI.getOperand(0).isSymbol() &&
+      !strcmp(MI.getOperand(0).getSymbolName(), "__stack_pointer"))
     StackPointer = true;
 
   // Analyze calls.
@@ -864,6 +865,10 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
 
       // Ignore debugging intrinsics.
       if (Insert->isDebugValue())
+        continue;
+
+      // Ignore FAKE_USEs, which are no-ops and will be deleted later.
+      if (Insert->isFakeUse())
         continue;
 
       // Iterate through the inputs in reverse order, since we'll be pulling

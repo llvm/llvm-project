@@ -734,7 +734,7 @@ define <1 x i64> @mullu_v2i32_0(<2 x i32> %s0, <2 x i32> %s1) {
 ; CHECK-GI-NEXT:    ushll v1.2d, v1.2s, #0
 ; CHECK-GI-NEXT:    fmov x8, d0
 ; CHECK-GI-NEXT:    fmov x9, d1
-; CHECK-GI-NEXT:    mul x8, x8, x9
+; CHECK-GI-NEXT:    umull x8, w8, w9
 ; CHECK-GI-NEXT:    fmov d0, x8
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -770,4 +770,32 @@ entry:
   %t1 = shufflevector <2 x i64> %s1s, <2 x i64> poison, <1 x i32> <i32 0>
   %m = mul <1 x i64> %s0, %t1
   ret <1 x i64> %m
+}
+
+define <2 x i8> @extract_scalable_vec() vscale_range(1,16) "target-features"="+sve" {
+; CHECK-SD-LABEL: extract_scalable_vec:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov x8, xzr
+; CHECK-SD-NEXT:    index z1.s, #2, #3
+; CHECK-SD-NEXT:    ldr h0, [x8]
+; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_scalable_vec:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov x8, xzr
+; CHECK-GI-NEXT:    mov x9, #1 // =0x1
+; CHECK-GI-NEXT:    ld1 { v0.b }[0], [x8]
+; CHECK-GI-NEXT:    ldr b1, [x9]
+; CHECK-GI-NEXT:    adrp x8, .LCPI36_0
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI36_0]
+; CHECK-GI-NEXT:    mul v0.2s, v0.2s, v1.2s
+; CHECK-GI-NEXT:    ret
+entry:
+  %0 = load <2 x i8>, ptr null, align 2
+  %mul = mul <2 x i8> %0, <i8 2, i8 5>
+  ret <2 x i8> %mul
 }

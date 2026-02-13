@@ -157,7 +157,8 @@ RT_API_ATTRS void *AllocateValidatedPointerPayload(
 }
 
 int RTDEF(PointerAllocate)(Descriptor &pointer, bool hasStat,
-    const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
+    const Descriptor *errMsg, const char *sourceFile, int sourceLine,
+    MemcpyFct memcpyFct) {
   Terminator terminator{sourceFile, sourceLine};
   if (!pointer.IsPointer()) {
     return ReturnError(terminator, StatInvalidDescriptor, errMsg, hasStat);
@@ -179,7 +180,8 @@ int RTDEF(PointerAllocate)(Descriptor &pointer, bool hasStat,
   if (const DescriptorAddendum * addendum{pointer.Addendum()}) {
     if (const auto *derived{addendum->derivedType()}) {
       if (!derived->noInitializationNeeded()) {
-        stat = Initialize(pointer, *derived, terminator, hasStat, errMsg);
+        stat = Initialize(
+            pointer, *derived, terminator, hasStat, errMsg, memcpyFct);
       }
     }
   }

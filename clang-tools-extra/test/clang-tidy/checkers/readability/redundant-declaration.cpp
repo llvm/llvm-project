@@ -21,23 +21,23 @@
 extern int Xyz;
 extern int Xyz; // Xyz
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant 'Xyz' declaration [readability-redundant-declaration]
-// CHECK-FIXES: {{^}}// Xyz{{$}}
+// CHECK-FIXES: // Xyz
 int Xyz = 123;
 
 extern int A;
 extern int A, B;
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant 'A' declaration
-// CHECK-FIXES: {{^}}extern int A, B;{{$}}
+// CHECK-FIXES: extern int A, B;
 
 extern int Buf[10];
 extern int Buf[10]; // Buf[10]
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant 'Buf' declaration
-// CHECK-FIXES: {{^}}// Buf[10]{{$}}
+// CHECK-FIXES: // Buf[10]
 
 static int f();
 static int f(); // f
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant 'f' declaration
-// CHECK-FIXES: {{^}}// f{{$}}
+// CHECK-FIXES: // f
 static int f() { return 0; }
 
 // Original check crashed for the code below.
@@ -102,10 +102,10 @@ namespace macros {
 DECLARE(test);
 DEFINE(test);
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: redundant 'test' declaration
-// CHECK-FIXES: {{^}}#define DECLARE(x) extern int x{{$}}
-// CHECK-FIXES: {{^}}#define DEFINE(x) extern int x; int x = 42{{$}}
-// CHECK-FIXES: {{^}}DECLARE(test);{{$}}
-// CHECK-FIXES: {{^}}DEFINE(test);{{$}}
+// CHECK-FIXES: #define DECLARE(x) extern int x
+// CHECK-FIXES: #define DEFINE(x) extern int x; int x = 42
+// CHECK-FIXES: DECLARE(test);
+// CHECK-FIXES: DEFINE(test);
 
 } // namespace macros
 
@@ -113,16 +113,16 @@ inline void g() {}
 
 inline void g(); // g
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: redundant 'g' declaration
-// CHECK-FIXES: {{^}}// g{{$}}
+// CHECK-FIXES: // g
 
 #if defined(EXTERNINLINE)
 extern inline void g(); // extern g
 // CHECK-MESSAGES-NOMSCOMPAT: :[[@LINE-1]]:20: warning: redundant 'g' declaration
-// CHECK-FIXES-NOMSCOMPAT: {{^}}// extern g{{$}}
+// CHECK-FIXES-NOMSCOMPAT: // extern g
 #endif
 
 // PR42068
 extern "C" int externX;
 int dummyBeforeBegin;extern "C" int externX;int dummyAfterEnd;
 // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: redundant 'externX' declaration [readability-redundant-declaration]
-// CHECK-FIXES: {{^}}int dummyBeforeBegin;int dummyAfterEnd;{{$}}
+// CHECK-FIXES: int dummyBeforeBegin;int dummyAfterEnd;

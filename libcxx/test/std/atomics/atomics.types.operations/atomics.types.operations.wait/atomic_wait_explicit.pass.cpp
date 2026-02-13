@@ -10,8 +10,6 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // XFAIL: !has-1024-bit-atomics
 
-// XFAIL: availability-synchronization_library-missing
-
 // <atomic>
 
 // template<class T>

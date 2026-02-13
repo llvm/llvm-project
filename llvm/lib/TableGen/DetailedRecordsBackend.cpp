@@ -22,7 +22,6 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <string>
-#include <utility>
 
 using namespace llvm;
 

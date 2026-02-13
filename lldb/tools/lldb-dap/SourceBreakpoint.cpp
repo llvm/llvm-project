@@ -10,7 +10,6 @@
 #include "BreakpointBase.h"
 #include "DAP.h"
 #include "JSONUtils.h"
-#include "ProtocolUtils.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBFileSpecList.h"

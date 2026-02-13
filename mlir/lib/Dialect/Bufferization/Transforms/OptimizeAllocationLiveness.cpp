@@ -148,7 +148,7 @@ public:
             continue;
 
           // find the ancestor of user that is in the same block as the allocOp.
-          auto topUser = allocOp->getBlock()->findAncestorOpInBlock(*user);
+          auto *topUser = allocOp->getBlock()->findAncestorOpInBlock(*user);
           if (!lastUser || happensBefore(lastUser, topUser)) {
             lastUser = topUser;
           }

@@ -52,7 +52,7 @@
 ; CHECK: DW_TAG_imported_module
 ; CHECK:   DW_AT_decl_file ([[F2:.*]])
 ; CHECK:   DW_AT_decl_line (15)
-; CHECK:   DW_AT_import ([[NS2]])
+; CHECK:   DW_AT_import ([[NS2]] "B")
 ; CHECK: DW_TAG_imported_declaration
 ; CHECK: NULL
 
@@ -72,60 +72,60 @@
 ; CHECK:   DW_TAG_imported_module
 ; CHECK:     DW_AT_decl_file ([[F2:.*]])
 ; CHECK:     DW_AT_decl_line (26)
-; CHECK:     DW_AT_import ([[NS1]])
+; CHECK:     DW_AT_import ([[NS1]] "A")
 ; CHECK:   DW_TAG_imported_declaration
 ; CHECK:     DW_AT_decl_file ([[F2]])
 ; CHECK:     DW_AT_decl_line (27)
-; CHECK:     DW_AT_import ([[FOO]])
+; CHECK:     DW_AT_import ([[FOO]] "foo")
 ; CHECK:   DW_TAG_imported_declaration
 ; CHECK:     DW_AT_decl_file ([[F2]])
 ; CHECK:     DW_AT_decl_line (28)
-; CHECK:     DW_AT_import ([[BAR]])
+; CHECK:     DW_AT_import ([[BAR]] "bar")
 ; CHECK:   DW_TAG_imported_declaration
 ; CHECK:     DW_AT_decl_file ([[F2]])
 ; CHECK:     DW_AT_decl_line (29)
-; CHECK:     DW_AT_import ([[FUNC1]])
+; CHECK:     DW_AT_import ([[FUNC1]] {{.*}})
 ; CHECK:   DW_TAG_imported_declaration
 ; CHECK:     DW_AT_decl_file ([[F2]])
 ; CHECK:     DW_AT_decl_line (30)
-; CHECK:     DW_AT_import ([[I]])
+; CHECK:     DW_AT_import ([[I]] "_ZN1A1B1iE")
 ; CHECK:   DW_TAG_imported_declaration
 ; CHECK:     DW_AT_decl_file ([[F2]])
 ; CHECK:     DW_AT_decl_line (31)
-; CHECK:     DW_AT_import ([[BAZ]])
+; CHECK:     DW_AT_import ([[BAZ]] "baz")
 ; CHECK:   [[X:0x[0-9a-f]*]]:{{ *}}DW_TAG_imported_declaration
 ; CHECK:     DW_AT_decl_file ([[F2]])
 ; CHECK:     DW_AT_decl_line (32)
-; CHECK:     DW_AT_import ([[NS1]])
+; CHECK:     DW_AT_import ([[NS1]] "A")
 ; CHECK:     DW_AT_name ("X")
 ; CHECK:   DW_TAG_imported_declaration
 ; CHECK:     DW_AT_decl_file ([[F2]])
 ; CHECK:     DW_AT_decl_line (33)
-; CHECK:     DW_AT_import ([[X]])
+; CHECK:     DW_AT_import ([[X]] "X")
 ; CHECK:     DW_AT_name ("Y")
 ; CHECK:   DW_TAG_imported_declaration
 ; CHECK:     DW_AT_decl_file ([[F2]])
 ; CHECK:     DW_AT_decl_line (34)
-; CHECK:     DW_AT_import ([[VAR_DECL]])
+; CHECK:     DW_AT_import ([[VAR_DECL]] "_ZN1A1B8var_declE")
 ; CHECK:   DW_TAG_imported_declaration
 ; CHECK:     DW_AT_decl_file ([[F2]])
 ; CHECK:     DW_AT_decl_line (35)
-; CHECK:     DW_AT_import ([[FUNC_DECL]])
+; CHECK:     DW_AT_import ([[FUNC_DECL]] "_ZN1A1B9func_declEv")
 ; CHECK:   DW_TAG_imported_declaration
 ; CHECK:     DW_AT_decl_file ([[F2]])
 ; CHECK:     DW_AT_decl_line (36)
-; CHECK:     DW_AT_import ([[VAR_FWD]])
+; CHECK:     DW_AT_import ([[VAR_FWD]] "_ZN1A1B7var_fwdE")
 ; CHECK:   DW_TAG_imported_declaration
 ; CHECK:     DW_AT_decl_file ([[F2]])
 ; CHECK:     DW_AT_decl_line (37)
-; CHECK:     DW_AT_import ([[FUNC_FWD]])
+; CHECK:     DW_AT_import ([[FUNC_FWD]] "_ZN1A1B8func_fwdEv")
 ; CHECK:   NULL
 
 ; CHECK: DW_TAG_subprogram
 ; CHECK: DW_TAG_imported_module
 ; CHECK:   DW_AT_decl_file ([[F2:.*]])
 ; CHECK:   DW_AT_decl_line (18)
-; CHECK:   DW_AT_import ([[NS1]])
+; CHECK:   DW_AT_import ([[NS1]] "A")
 ; CHECK: DW_TAG_imported_declaration
 ; CHECK: DW_TAG_base_type
 ; CHECK: NULL
@@ -266,7 +266,7 @@ entry:
   ret void, !dbg !74
 }
 
-attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}

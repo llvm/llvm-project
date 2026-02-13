@@ -65,7 +65,7 @@ for.j.body:
   %add.2 = fadd float %add.1, %d
   %add.3 = fadd float %add.2, %e
   %add.4 = fadd float %add.3, %f
-  %a.1.index = getelementptr nuw inbounds [256 x [256 x float]], ptr @A, i64 %j, i64 %i
+  %a.1.index = getelementptr nuw inbounds [256 x float], ptr @A, i64 %j, i64 %i
   store float %add.4, ptr %a.1.index, align 4
   %j.next = add nuw nsw i64 %j, 1
   %cmp.j = icmp eq i64 %j.next, 256

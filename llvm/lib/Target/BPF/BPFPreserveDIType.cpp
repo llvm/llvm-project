@@ -27,10 +27,6 @@
 
 #define DEBUG_TYPE "bpf-preserve-di-type"
 
-namespace llvm {
-constexpr StringRef BPFCoreSharedInfo::TypeIdAttr;
-} // namespace llvm
-
 using namespace llvm;
 
 namespace {

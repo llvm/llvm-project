@@ -29,7 +29,7 @@
 )
 */
 
-// CHECK-LABEL:   wasmssa.func nested @func_0() -> f32 {
+// CHECK-LABEL:   wasmssa.func @func_0() -> f32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.local of type f32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.local of type f32
 // CHECK:           %[[VAL_2:.*]] = wasmssa.const 8.000000e+00 : f32
@@ -40,7 +40,7 @@
 // CHECK:           %[[VAL_6:.*]] = wasmssa.add %[[VAL_3]] %[[VAL_5]] : f32
 // CHECK:           wasmssa.return %[[VAL_6]] : f32
 
-// CHECK-LABEL:   wasmssa.func nested @func_1() -> i32 {
+// CHECK-LABEL:   wasmssa.func @func_1() -> i32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.local of type i32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.local of type i32
 // CHECK:           %[[VAL_2:.*]] = wasmssa.const 8 : i32
@@ -51,7 +51,7 @@
 // CHECK:           %[[VAL_6:.*]] = wasmssa.add %[[VAL_3]] %[[VAL_5]] : i32
 // CHECK:           wasmssa.return %[[VAL_6]] : i32
 
-// CHECK-LABEL:   wasmssa.func nested @func_2(
+// CHECK-LABEL:   wasmssa.func @func_2(
 // CHECK-SAME:      %[[ARG0:.*]]: !wasmssa<local ref to i32>) -> i32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 3 : i32
 // CHECK:           wasmssa.local_set %[[ARG0]] :  ref to i32 to %[[VAL_0]] : i32

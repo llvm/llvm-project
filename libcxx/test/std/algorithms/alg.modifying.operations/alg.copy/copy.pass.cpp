@@ -12,8 +12,6 @@
 //   constexpr OutIter   // constexpr after C++17
 //   copy(InIter first, InIter last, OutIter result);
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <algorithm>
 #include <cassert>
 #include <vector>
@@ -114,7 +112,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
 
   // Validate std::copy with std::vector<bool> iterators and custom storage types.
   // Ensure that assigned bits hold the intended values, while unassigned bits stay unchanged.
-  // Related issue: https://github.com/llvm/llvm-project/issues/131692.
+  // Related issue: https://llvm.org/PR131692.
   {
     //// Tests for std::copy with aligned bits
 

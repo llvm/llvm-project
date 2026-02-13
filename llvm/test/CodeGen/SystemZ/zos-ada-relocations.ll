@@ -60,10 +60,10 @@ declare signext i32 @callout(i32 signext)
 ; CHECK: stdin#S XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(SECTION)
 ; CHECK:  .set L#DoFunc@indirect0, DoFunc
 ; CHECK:      .indirect_symbol   L#DoFunc@indirect0
-; CHECK:  .quad V(L#DoFunc@indirect0)          * Offset 0 pointer to function descriptor DoFunc
-; CHECK:  .quad R(Caller)                      * Offset 8 function descriptor of Caller
-; CHECK:  .quad V(Caller)
-; CHECK:  .quad A(i2)                           * Offset 24 pointer to data symbol i2
-; CHECK:  .quad A(i)                            * Offset 32 pointer to data symbol i
-; CHECK:  .quad R(callout)                      * Offset 40 function descriptor of callout
-; CHECK:  .quad V(callout)
+; CHECK:  .quad VD(L#DoFunc@indirect0)         * Offset 0 pointer to function descriptor DoFunc
+; CHECK:  .quad RD(Caller)                     * Offset 8 function descriptor of Caller
+; CHECK:  .quad VD(Caller)
+; CHECK:  .quad AD(i2)                          * Offset 24 pointer to data symbol i2
+; CHECK:  .quad AD(i)                           * Offset 32 pointer to data symbol i
+; CHECK:  .quad RD(callout)                     * Offset 40 function descriptor of callout
+; CHECK:  .quad VD(callout)

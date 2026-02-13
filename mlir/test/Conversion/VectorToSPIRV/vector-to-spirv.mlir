@@ -281,32 +281,45 @@ func.func @to_elements_dead_elements(%a: vector<4xf32>) -> (f32, f32) {
 
 // -----
 
-// CHECK-LABEL: @from_elements_0d
+// CHECK-LABEL: @from_elements_0d_f32
 //  CHECK-SAME: %[[ARG0:.+]]: f32
 //       CHECK:   %[[RETVAL:.+]] = builtin.unrealized_conversion_cast %[[ARG0]]
 //       CHECK:   return %[[RETVAL]]
-func.func @from_elements_0d(%arg0 : f32) -> vector<f32> {
+func.func @from_elements_0d_f32(%arg0 : f32) -> vector<f32> {
   %0 = vector.from_elements %arg0 : vector<f32>
   return %0: vector<f32>
 }
 
-// CHECK-LABEL: @from_elements_1x
+// CHECK-LABEL: @from_elements_1xf32
 //  CHECK-SAME: %[[ARG0:.+]]: f32
 //       CHECK:   %[[RETVAL:.+]] = builtin.unrealized_conversion_cast %[[ARG0]]
 //       CHECK:   return %[[RETVAL]]
-func.func @from_elements_1x(%arg0 : f32) -> vector<1xf32> {
+func.func @from_elements_1xf32(%arg0 : f32) -> vector<1xf32> {
   %0 = vector.from_elements %arg0 : vector<1xf32>
   return %0: vector<1xf32>
 }
 
-// CHECK-LABEL: @from_elements_3x
+// CHECK-LABEL: @from_elements_3xf32
 //  CHECK-SAME: %[[ARG0:.+]]: f32, %[[ARG1:.+]]: f32, %[[ARG2:.+]]: f32
 //       CHECK:   %[[RETVAL:.+]] = spirv.CompositeConstruct %[[ARG0]], %[[ARG1]], %[[ARG2]] : (f32, f32, f32) -> vector<3xf32>
 //       CHECK:   return %[[RETVAL]]
-func.func @from_elements_3x(%arg0 : f32, %arg1 : f32, %arg2 : f32) -> vector<3xf32> {
+func.func @from_elements_3xf32(%arg0 : f32, %arg1 : f32, %arg2 : f32) -> vector<3xf32> {
   %0 = vector.from_elements %arg0, %arg1, %arg2 : vector<3xf32>
   return %0: vector<3xf32>
 }
+
+func.func @from_elements_3xi8(%arg0 : i8, %arg1 : i8, %arg2 : i8) -> vector<3xi8> {
+  %0 = vector.from_elements %arg0, %arg1, %arg2 : vector<3xi8>
+  return %0: vector<3xi8>
+}
+// CHECK-LABEL: @from_elements_3xi8
+//  CHECK-SAME: %[[ARG0:.+]]: i8, %[[ARG1:.+]]: i8, %[[ARG2:.+]]: i8
+//   CHECK-DAG:   %[[CAST0:.*]] = builtin.unrealized_conversion_cast %[[ARG0]] : i8 to i32
+//   CHECK-DAG:   %[[CAST1:.*]] = builtin.unrealized_conversion_cast %[[ARG1]] : i8 to i32
+//   CHECK-DAG:   %[[CAST2:.*]] = builtin.unrealized_conversion_cast %[[ARG2]] : i8 to i32
+//       CHECK:   %[[VAL:.+]] = spirv.CompositeConstruct %[[CAST0]], %[[CAST1]], %[[CAST2]] : (i32, i32, i32) -> vector<3xi32>
+//       CHECK:   %[[RETVAL:.*]] = builtin.unrealized_conversion_cast %[[VAL]] : vector<3xi32> to vector<3xi8>
+//       CHECK:   return %[[RETVAL]]
 
 // -----
 

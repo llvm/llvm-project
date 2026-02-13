@@ -57,7 +57,7 @@ namespace clang::CIRGen {
 ///   cir.func @store_field() {
 ///     %0 = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s"] {alignment = 4 : i64}
 ///     %1 = cir.const #cir.int<2> : !s32i
-///     %2 = cir.cast(integral, %1 : !s32i), !u32i
+///     %2 = cir.cast integral %1 : !s32i -> !u32i
 ///     %3 = cir.get_member %0[3] {name = "more_bits"} : !cir.ptr<!rec_S> ->
 ///     !cir.ptr<!u16i>
 ///     %4 = cir.set_bitfield(#bfi_more_bits, %3 :
@@ -182,6 +182,11 @@ public:
     fd = fd->getCanonicalDecl();
     assert(fieldIdxMap.count(fd) && "Invalid field for record!");
     return fieldIdxMap.lookup(fd);
+  }
+
+  unsigned getNonVirtualBaseCIRFieldNo(const CXXRecordDecl *rd) const {
+    assert(nonVirtualBases.count(rd) && "Invalid non-virtual base!");
+    return nonVirtualBases.lookup(rd);
   }
 
   /// Check whether this struct can be C++ zero-initialized

@@ -56,7 +56,7 @@ constexpr bool test() {
   // The other tests use a synthetic struct that clobbers its tail padding
   // on construction, making the issue easier to reproduce.
   //
-  // See https://github.com/llvm/llvm-project/issues/68552 and the linked PR.
+  // See https://llvm.org/PR68552 and the linked PR.
   {
     auto f1 = []() -> std::expected<std::optional<int>, long> { return 0; };
 

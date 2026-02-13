@@ -29,6 +29,7 @@
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 #include <optional>
 
@@ -992,8 +993,8 @@ public:
     Value crd = genLoad(rewriter, loc, added, i);
     Value value = genLoad(rewriter, loc, values, crd);
     SmallVector<Value> params(desc.getFields().begin(), desc.getFields().end());
-    SmallVector<Type> flatSpTensorTps = llvm::to_vector(
-        llvm::map_range(desc.getFields(), [](Value v) { return v.getType(); }));
+    SmallVector<Type> flatSpTensorTps = llvm::map_to_vector(
+        desc.getFields(), [](Value v) { return v.getType(); });
     SmallVector<Value> flatLvlCoords = flattenValues(adaptor.getLvlCoords());
     params.append(flatLvlCoords.begin(), flatLvlCoords.end());
     params.push_back(crd);
@@ -1050,7 +1051,7 @@ public:
 /// Sparse codegen rule for position accesses.
 class SparseToPositionsConverter : public OpConversionPattern<ToPositionsOp> {
 public:
-  using OpAdaptor = typename ToPositionsOp::Adaptor;
+  using OpAdaptor = ToPositionsOp::Adaptor;
   using OpConversionPattern<ToPositionsOp>::OpConversionPattern;
   LogicalResult
   matchAndRewrite(ToPositionsOp op, OneToNOpAdaptor adaptor,
@@ -1073,7 +1074,7 @@ public:
 class SparseToCoordinatesConverter
     : public OpConversionPattern<ToCoordinatesOp> {
 public:
-  using OpAdaptor = typename ToCoordinatesOp::Adaptor;
+  using OpAdaptor = ToCoordinatesOp::Adaptor;
   using OpConversionPattern<ToCoordinatesOp>::OpConversionPattern;
   LogicalResult
   matchAndRewrite(ToCoordinatesOp op, OneToNOpAdaptor adaptor,
@@ -1099,7 +1100,7 @@ public:
 class SparseToCoordinatesBufferConverter
     : public OpConversionPattern<ToCoordinatesBufferOp> {
 public:
-  using OpAdaptor = typename ToCoordinatesBufferOp::Adaptor;
+  using OpAdaptor = ToCoordinatesBufferOp::Adaptor;
   using OpConversionPattern<ToCoordinatesBufferOp>::OpConversionPattern;
   LogicalResult
   matchAndRewrite(ToCoordinatesBufferOp op, OneToNOpAdaptor adaptor,
@@ -1121,7 +1122,7 @@ public:
 /// Sparse codegen rule for value accesses.
 class SparseToValuesConverter : public OpConversionPattern<ToValuesOp> {
 public:
-  using OpAdaptor = typename ToValuesOp::Adaptor;
+  using OpAdaptor = ToValuesOp::Adaptor;
   using OpConversionPattern<ToValuesOp>::OpConversionPattern;
   LogicalResult
   matchAndRewrite(ToValuesOp op, OneToNOpAdaptor adaptor,
@@ -1473,12 +1474,12 @@ struct SparseDisassembleOpConverter
     });
 
     // Converts MemRefs back to Tensors.
-    SmallVector<Value> retValues = llvm::to_vector(
-        llvm::map_range(retMem, [&rewriter, loc](Value v) -> Value {
+    SmallVector<Value> retValues =
+        llvm::map_to_vector(retMem, [&rewriter, loc](Value v) -> Value {
           return bufferization::ToTensorOp::create(
               rewriter, loc, memref::getTensorTypeFromMemRefType(v.getType()),
               v);
-        }));
+        });
     // Appends the actual memory length used in each buffer returned.
     retValues.append(retLen.begin(), retLen.end());
     rewriter.replaceOp(op, retValues);

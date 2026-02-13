@@ -1,7 +1,7 @@
 // Test that misexpect emits no warning when condition is not a compile-time constant
 
 // RUN: llvm-profdata merge %S/Inputs/misexpect-branch-nonconst-expect-arg.proftext -o %t.profdata
-// RUN: %clang_cc1 %s -O2 -o - -disable-llvm-passes -emit-llvm -fprofile-instrument-use-path=%t.profdata -verify -Wmisexpect
+// RUN: %clang_cc1 %s -O2 -o - -disable-llvm-passes -emit-llvm -fprofile-instrument-use=clang -fprofile-instrument-use-path=%t.profdata -verify -Wmisexpect
 
 // expected-no-diagnostics
 int foo(int);

@@ -24,8 +24,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "Target.h"
+#include "Arch/RISCVInternalRelocations.h"
 #include "InputFiles.h"
 #include "OutputSections.h"
+#include "RelocScan.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"
@@ -39,6 +41,14 @@ using namespace lld::elf;
 
 std::string elf::toStr(Ctx &ctx, RelType type) {
   StringRef s = getELFRelocationTypeName(ctx.arg.emachine, type);
+  if (ctx.arg.emachine == EM_RISCV && s == "Unknown") {
+    auto VendorString = getRISCVVendorString(type);
+    if (VendorString)
+      s = getRISCVVendorRelocationTypeName(type & ~INTERNAL_RISCV_VENDOR_MASK,
+                                           *VendorString);
+    if (s == "Unknown")
+      return ("Unknown vendor-specific (" + Twine(type) + ")").str();
+  }
   if (s == "Unknown")
     return ("Unknown (" + Twine(type) + ")").str();
   return std::string(s);
@@ -148,20 +158,28 @@ RelExpr TargetInfo::adjustGotPcExpr(RelType type, int64_t addend,
   return R_GOT_PC;
 }
 
-void TargetInfo::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
+static void relocateImpl(const TargetInfo &target, InputSectionBase &sec,
+                         uint64_t secAddr, uint8_t *buf) {
+  auto &ctx = target.ctx;
   const unsigned bits = ctx.arg.is64 ? 64 : 32;
-  uint64_t secAddr = sec.getOutputSection()->addr;
-  if (auto *s = dyn_cast<InputSection>(&sec))
-    secAddr += s->outSecOff;
-  else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
-    secAddr += ehIn->getParent()->outSecOff;
   for (const Relocation &rel : sec.relocs()) {
     uint8_t *loc = buf + rel.offset;
     const uint64_t val = SignExtend64(
         sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset), bits);
     if (rel.expr != R_RELAX_HINT)
-      relocate(loc, rel, val);
+      target.relocate(loc, rel, val);
   }
+}
+
+void TargetInfo::relocateAlloc(InputSection &sec, uint8_t *buf) const {
+  uint64_t secAddr = sec.getOutputSection()->addr + sec.outSecOff;
+  relocateImpl(*this, sec, secAddr, buf);
+}
+
+// A variant of relocateAlloc that processes an EhInputSection.
+void TargetInfo::relocateEh(EhInputSection &sec, uint8_t *buf) const {
+  uint64_t secAddr = sec.getOutputSection()->addr + sec.getParent()->outSecOff;
+  relocateImpl(*this, sec, secAddr, buf);
 }
 
 uint64_t TargetInfo::getImageBase() const {

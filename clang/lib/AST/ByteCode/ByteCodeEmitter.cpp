@@ -24,25 +24,23 @@ void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
                                   Function *Func) {
   assert(FuncDecl);
   assert(Func);
+  assert(FuncDecl->isThisDeclarationADefinition());
 
   // Manually created functions that haven't been assigned proper
   // parameters yet.
   if (!FuncDecl->param_empty() && !FuncDecl->param_begin())
     return;
 
-  if (!FuncDecl->isDefined())
-    return;
-
   // Set up lambda captures.
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl);
-      MD && isLambdaCallOperator(MD)) {
+  if (Func->isLambdaCallOperator()) {
     // Set up lambda capture to closure record field mapping.
-    const Record *R = P.getOrCreateRecord(MD->getParent());
+    const CXXRecordDecl *ParentDecl = Func->getParentDecl();
+    const Record *R = P.getOrCreateRecord(ParentDecl);
     assert(R);
     llvm::DenseMap<const ValueDecl *, FieldDecl *> LC;
     FieldDecl *LTC;
 
-    MD->getParent()->getCaptureFields(LC, LTC);
+    ParentDecl->getCaptureFields(LC, LTC);
 
     for (auto Cap : LC) {
       unsigned Offset = R->getField(Cap.second)->Offset;
@@ -56,14 +54,18 @@ void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
     }
   }
 
+  bool IsValid = !FuncDecl->isInvalidDecl();
   // Register parameters with their offset.
   unsigned ParamIndex = 0;
   unsigned Drop = Func->hasRVO() +
                   (Func->hasThisPointer() && !Func->isThisPointerExplicit());
-  for (auto ParamOffset : llvm::drop_begin(Func->ParamOffsets, Drop)) {
-    const ParmVarDecl *PD = FuncDecl->parameters()[ParamIndex];
-    OptPrimType T = Ctx.classify(PD->getType());
-    this->Params.insert({PD, {ParamOffset, T != std::nullopt}});
+
+  for (const auto &ParamDesc : llvm::drop_begin(Func->ParamDescriptors, Drop)) {
+    const ParmVarDecl *PD = FuncDecl->getParamDecl(ParamIndex);
+    if (PD->isInvalidDecl())
+      IsValid = false;
+    this->Params.insert(
+        {PD, {ParamDesc.Offset, Ctx.canClassify(PD->getType())}});
     ++ParamIndex;
   }
 
@@ -87,8 +89,8 @@ void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
   }
 
   // Set the function's code.
-  Func->setCode(NextLocalOffset, std::move(Code), std::move(SrcMap),
-                std::move(Scopes), FuncDecl->hasBody());
+  Func->setCode(FuncDecl, NextLocalOffset, std::move(Code), std::move(SrcMap),
+                std::move(Scopes), FuncDecl->hasBody(), IsValid);
   Func->setIsFullyCompiled(true);
 }
 
@@ -209,8 +211,7 @@ void emit(Program &P, llvm::SmallVectorImpl<std::byte> &Code,
 }
 
 template <typename... Tys>
-bool ByteCodeEmitter::emitOp(Opcode Op, const Tys &...Args,
-                             const SourceInfo &SI) {
+bool ByteCodeEmitter::emitOp(Opcode Op, const Tys &...Args, SourceInfo SI) {
   bool Success = true;
 
   // The opcode is followed by arguments. The source info is

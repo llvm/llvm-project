@@ -21,7 +21,7 @@ define void @pr70207(i128 %arg1, i128 %arg2) nounwind {
 ; CHECK-NEXT:    str x8, [sp, #-32]!
 ; CHECK-NEXT:    stp x9, x30, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    bl func
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   tail call void @func(i64 0, i64 0, i64 0, i64 0, i64 0, i128 %arg1, i128 %arg2)

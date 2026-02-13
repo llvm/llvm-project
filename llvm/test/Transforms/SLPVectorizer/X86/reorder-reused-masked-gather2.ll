@@ -8,7 +8,7 @@ define void @"foo"(ptr addrspace(1) %0, ptr addrspace(1) %1) #0 {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP0:%.*]], i64 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP1:%.*]], i64 8
-; CHECK-NEXT:    [[TMP5:%.*]] = call <6 x float> @llvm.masked.load.v6f32.p1(ptr addrspace(1) [[TMP3]], i32 4, <6 x i1> <i1 true, i1 true, i1 false, i1 false, i1 true, i1 true>, <6 x float> poison)
+; CHECK-NEXT:    [[TMP5:%.*]] = call <6 x float> @llvm.masked.load.v6f32.p1(ptr addrspace(1) align 4 [[TMP3]], <6 x i1> <i1 true, i1 true, i1 false, i1 false, i1 true, i1 true>, <6 x float> poison)
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <6 x float> [[TMP5]], <6 x float> poison, <4 x i32> <i32 0, i32 1, i32 5, i32 4>
 ; CHECK-NEXT:    [[TMP9:%.*]] = load <8 x float>, ptr addrspace(1) [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <6 x float> [[TMP5]], <6 x float> poison, <8 x i32> <i32 0, i32 4, i32 0, i32 4, i32 5, i32 1, i32 5, i32 1>

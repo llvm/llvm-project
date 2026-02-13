@@ -262,6 +262,67 @@ faceforward(__detail::HLSL_FIXED_VECTOR<float, L> N,
 }
 
 //===----------------------------------------------------------------------===//
+// firstbithigh builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T firstbithigh(T Val)
+/// \brief Returns the location of the first set bit starting from the lowest
+/// order bit and working upward, per component.
+/// \param Val the input value.
+
+#ifdef __HLSL_ENABLE_16_BIT
+
+template <typename T>
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+const inline __detail::enable_if_t<__detail::is_same<int16_t, T>::value ||
+                                       __detail::is_same<uint16_t, T>::value,
+                                   uint> firstbithigh(T X) {
+  return __detail::firstbithigh_impl<uint, T, 16>(X);
+}
+
+template <typename T, int N>
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+const
+    inline __detail::enable_if_t<__detail::is_same<int16_t, T>::value ||
+                                     __detail::is_same<uint16_t, T>::value,
+                                 vector<uint, N>> firstbithigh(vector<T, N> X) {
+  return __detail::firstbithigh_impl<vector<uint, N>, vector<T, N>, 16>(X);
+}
+
+#endif
+
+template <typename T>
+const inline __detail::enable_if_t<
+    __detail::is_same<int, T>::value || __detail::is_same<uint, T>::value, uint>
+firstbithigh(T X) {
+  return __detail::firstbithigh_impl<uint, T, 32>(X);
+}
+
+template <typename T, int N>
+const inline __detail::enable_if_t<__detail::is_same<int, T>::value ||
+                                       __detail::is_same<uint, T>::value,
+                                   vector<uint, N>>
+firstbithigh(vector<T, N> X) {
+  return __detail::firstbithigh_impl<vector<uint, N>, vector<T, N>, 32>(X);
+}
+
+template <typename T>
+const inline __detail::enable_if_t<__detail::is_same<int64_t, T>::value ||
+                                       __detail::is_same<uint64_t, T>::value,
+                                   uint>
+firstbithigh(T X) {
+  return __detail::firstbithigh_impl<uint, T, 64>(X);
+}
+
+template <typename T, int N>
+const inline __detail::enable_if_t<__detail::is_same<int64_t, T>::value ||
+                                       __detail::is_same<uint64_t, T>::value,
+                                   vector<uint, N>>
+firstbithigh(vector<T, N> X) {
+  return __detail::firstbithigh_impl<vector<uint, N>, vector<T, N>, 64>(X);
+}
+
+//===----------------------------------------------------------------------===//
 // fmod builtins
 //===----------------------------------------------------------------------===//
 
@@ -423,6 +484,30 @@ constexpr int4 D3DCOLORtoUBYTE4(float4 V) {
 }
 
 //===----------------------------------------------------------------------===//
+// NonUniformResourceIndex builtin
+//===----------------------------------------------------------------------===//
+
+/// \fn uint NonUniformResourceIndex(uint I)
+/// \brief A compiler hint to indicate that a resource index varies across
+/// threads within a wave (i.e., it is non-uniform).
+/// \param I [in] Resource array index
+///
+/// The return value is the \Index parameter.
+///
+/// When indexing into an array of shader resources (e.g., textures, buffers),
+/// some GPU hardware and drivers require the compiler to know whether the index
+/// is uniform (same for all threads) or non-uniform (varies per thread).
+///
+/// Using NonUniformResourceIndex explicitly marks an index as non-uniform,
+/// disabling certain assumptions or optimizations that could lead to incorrect
+/// behavior when dynamically accessing resource arrays with non-uniform
+/// indices.
+
+constexpr uint32_t NonUniformResourceIndex(uint32_t Index) {
+  return __builtin_hlsl_resource_nonuniformindex(Index);
+}
+
+//===----------------------------------------------------------------------===//
 // reflect builtin
 //===----------------------------------------------------------------------===//
 
@@ -579,6 +664,130 @@ smoothstep(__detail::HLSL_FIXED_VECTOR<float, N> Min,
            __detail::HLSL_FIXED_VECTOR<float, N> Max,
            __detail::HLSL_FIXED_VECTOR<float, N> X) {
   return __detail::smoothstep_vec_impl(Min, Max, X);
+}
+
+inline bool CheckAccessFullyMapped(uint Status) {
+  return static_cast<bool>(Status);
+}
+
+//===----------------------------------------------------------------------===//
+// ddx builtin
+//===----------------------------------------------------------------------===//
+
+/// \fn T ddx(T x)
+/// \brief Computes the sum of the absolute values of the partial derivatives
+/// with regard to the x screen space coordinate.
+/// \param x [in] The floating-point scalar or vector to process.
+///
+/// The return value is a floating-point scalar or vector where each element
+/// holds the computation of the matching element in the input.
+
+template <typename T>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline __detail::enable_if_t<__detail::is_arithmetic<T>::Value &&
+                                       __detail::is_same<half, T>::value,
+                                   T> ddx(T input) {
+  return __detail::ddx_impl(input);
+}
+
+template <typename T>
+const inline __detail::enable_if_t<
+    __detail::is_arithmetic<T>::Value && __detail::is_same<float, T>::value, T>
+ddx(T input) {
+  return __detail::ddx_impl(input);
+}
+
+template <int N>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline __detail::HLSL_FIXED_VECTOR<half, N> ddx(
+    __detail::HLSL_FIXED_VECTOR<half, N> input) {
+  return __detail::ddx_impl(input);
+}
+
+template <int N>
+const inline __detail::HLSL_FIXED_VECTOR<float, N>
+ddx(__detail::HLSL_FIXED_VECTOR<float, N> input) {
+  return __detail::ddx_impl(input);
+}
+
+//===----------------------------------------------------------------------===//
+// ddy builtin
+//===----------------------------------------------------------------------===//
+
+/// \fn T ddy(T x)
+/// \brief Computes the sum of the absolute values of the partial derivatives
+/// with regard to the y screen space coordinate.
+/// \param x [in] The floating-point scalar or vector to process.
+///
+/// The return value is a floating-point scalar or vector where each element
+/// holds the computation of the matching element in the input.
+
+template <typename T>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline __detail::enable_if_t<__detail::is_arithmetic<T>::Value &&
+                                       __detail::is_same<half, T>::value,
+                                   T> ddy(T input) {
+  return __detail::ddy_impl(input);
+}
+
+template <typename T>
+const inline __detail::enable_if_t<
+    __detail::is_arithmetic<T>::Value && __detail::is_same<float, T>::value, T>
+ddy(T input) {
+  return __detail::ddy_impl(input);
+}
+
+template <int N>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline __detail::HLSL_FIXED_VECTOR<half, N> ddy(
+    __detail::HLSL_FIXED_VECTOR<half, N> input) {
+  return __detail::ddy_impl(input);
+}
+
+template <int N>
+const inline __detail::HLSL_FIXED_VECTOR<float, N>
+ddy(__detail::HLSL_FIXED_VECTOR<float, N> input) {
+  return __detail::ddy_impl(input);
+}
+
+//===----------------------------------------------------------------------===//
+// fwidth builtin
+//===----------------------------------------------------------------------===//
+
+/// \fn T fwidth(T x)
+/// \brief Computes the sum of the absolute values of the partial derivatives
+/// with regard to the x and y screen space coordinates.
+/// \param x [in] The floating-point scalar or vector to process.
+///
+/// The return value is a floating-point scalar or vector where each element
+/// holds the computation of the matching element in the input.
+
+template <typename T>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline __detail::enable_if_t<__detail::is_arithmetic<T>::Value &&
+                                       __detail::is_same<half, T>::value,
+                                   T> fwidth(T input) {
+  return __detail::fwidth_impl(input);
+}
+
+template <typename T>
+const inline __detail::enable_if_t<
+    __detail::is_arithmetic<T>::Value && __detail::is_same<float, T>::value, T>
+fwidth(T input) {
+  return __detail::fwidth_impl(input);
+}
+
+template <int N>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline __detail::HLSL_FIXED_VECTOR<half, N> fwidth(
+    __detail::HLSL_FIXED_VECTOR<half, N> input) {
+  return __detail::fwidth_impl(input);
+}
+
+template <int N>
+const inline __detail::HLSL_FIXED_VECTOR<float, N>
+fwidth(__detail::HLSL_FIXED_VECTOR<float, N> input) {
+  return __detail::fwidth_impl(input);
 }
 
 } // namespace hlsl

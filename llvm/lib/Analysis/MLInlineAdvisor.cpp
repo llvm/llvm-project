@@ -61,6 +61,9 @@ static cl::opt<SkipMLPolicyCriteria> SkipPolicy(
 static cl::opt<std::string> ModelSelector("ml-inliner-model-selector",
                                           cl::Hidden, cl::init(""));
 
+static cl::opt<bool> StopImmediatelyForTest("ml-inliner-stop-immediately",
+                                            cl::Hidden);
+
 #if defined(LLVM_HAVE_TF_AOT_INLINERSIZEMODEL)
 // codegen-ed file
 #include "InlinerSizeModel.h" // NOLINT
@@ -214,6 +217,7 @@ MLInlineAdvisor::MLInlineAdvisor(
     return;
   }
   ModelRunner->switchContext("");
+  ForceStop = StopImmediatelyForTest;
 }
 
 unsigned MLInlineAdvisor::getInitialFunctionLevel(const Function &F) const {
@@ -320,32 +324,44 @@ void MLInlineAdvisor::onSuccessfulInlining(const MLInlineAdvice &Advice,
     FAM.invalidate(*Caller, PA);
   }
   Advice.updateCachedCallerFPI(FAM);
-  int64_t IRSizeAfter =
-      getIRSize(*Caller) + (CalleeWasDeleted ? 0 : Advice.CalleeIRSize);
-  CurrentIRSize += IRSizeAfter - (Advice.CallerIRSize + Advice.CalleeIRSize);
+  if (Caller == Callee) {
+    assert(!CalleeWasDeleted);
+    // We double-counted CallerAndCalleeEdges - since the caller and callee
+    // would be the same
+    assert(Advice.CallerAndCalleeEdges % 2 == 0);
+    CurrentIRSize += getIRSize(*Caller) - Advice.CallerIRSize;
+    EdgeCount += getCachedFPI(*Caller).DirectCallsToDefinedFunctions -
+                 Advice.CallerAndCalleeEdges / 2;
+    // The NodeCount would stay the same.
+  } else {
+    int64_t IRSizeAfter =
+        getIRSize(*Caller) + (CalleeWasDeleted ? 0 : Advice.CalleeIRSize);
+    CurrentIRSize += IRSizeAfter - (Advice.CallerIRSize + Advice.CalleeIRSize);
+
+    // We can delta-update module-wide features. We know the inlining only
+    // changed the caller, and maybe the callee (by deleting the latter). Nodes
+    // are simple to update. For edges, we 'forget' the edges that the caller
+    // and callee used to have before inlining, and add back what they currently
+    // have together.
+    int64_t NewCallerAndCalleeEdges =
+        getCachedFPI(*Caller).DirectCallsToDefinedFunctions;
+
+    // A dead function's node is not actually removed from the call graph until
+    // the end of the call graph walk, but the node no longer belongs to any
+    // valid SCC.
+    if (CalleeWasDeleted) {
+      --NodeCount;
+      NodesInLastSCC.erase(CG.lookup(*Callee));
+      DeadFunctions.insert(Callee);
+    } else {
+      NewCallerAndCalleeEdges +=
+          getCachedFPI(*Callee).DirectCallsToDefinedFunctions;
+    }
+    EdgeCount += (NewCallerAndCalleeEdges - Advice.CallerAndCalleeEdges);
+  }
   if (CurrentIRSize > SizeIncreaseThreshold * InitialIRSize)
     ForceStop = true;
 
-  // We can delta-update module-wide features. We know the inlining only changed
-  // the caller, and maybe the callee (by deleting the latter).
-  // Nodes are simple to update.
-  // For edges, we 'forget' the edges that the caller and callee used to have
-  // before inlining, and add back what they currently have together.
-  int64_t NewCallerAndCalleeEdges =
-      getCachedFPI(*Caller).DirectCallsToDefinedFunctions;
-
-  // A dead function's node is not actually removed from the call graph until
-  // the end of the call graph walk, but the node no longer belongs to any valid
-  // SCC.
-  if (CalleeWasDeleted) {
-    --NodeCount;
-    NodesInLastSCC.erase(CG.lookup(*Callee));
-    DeadFunctions.insert(Callee);
-  } else {
-    NewCallerAndCalleeEdges +=
-        getCachedFPI(*Callee).DirectCallsToDefinedFunctions;
-  }
-  EdgeCount += (NewCallerAndCalleeEdges - Advice.CallerAndCalleeEdges);
   assert(CurrentIRSize >= 0 && EdgeCount >= 0 && NodeCount >= 0);
 }
 
@@ -379,9 +395,17 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(Caller);
 
   if (SkipPolicy == SkipMLPolicyCriteria::IfCallerIsNotCold) {
-    if (!PSI.isFunctionEntryCold(&Caller))
-      return std::make_unique<InlineAdvice>(this, CB, ORE,
-                                            GetDefaultAdvice(CB));
+    if (!PSI.isFunctionEntryCold(&Caller)) {
+      // Return a MLInlineAdvice, despite delegating to the default advice,
+      // because we need to keep track of the internal state. This is different
+      // from the other instances where we return a "default" InlineAdvice,
+      // which happen at points we won't come back to the MLAdvisor for
+      // decisions requiring that state.
+      return ForceStop ? std::make_unique<InlineAdvice>(this, CB, ORE,
+                                                        GetDefaultAdvice(CB))
+                       : std::make_unique<MLInlineAdvice>(this, CB, ORE,
+                                                          GetDefaultAdvice(CB));
+    }
   }
   auto MandatoryKind = InlineAdvisor::getMandatoryKind(CB, FAM, ORE);
   // If this is a "never inline" case, there won't be any changes to internal

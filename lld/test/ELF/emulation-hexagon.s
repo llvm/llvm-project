@@ -23,7 +23,7 @@
 # CHECK-NEXT:    Type:                              EXEC (Executable file)
 # CHECK-NEXT:    Machine:                           Qualcomm Hexagon
 # CHECK-NEXT:    Version:                           0x1
-# CHECK-NEXT:    Entry point address:               0x200B4
+# CHECK-NEXT:    Entry point address:               0x200b4
 # CHECK-NEXT:    Start of program headers:          52 (bytes into file)
 # CHECK-NEXT:    Start of section headers:
 # CHECK-NEXT:    Flags:                             0x73

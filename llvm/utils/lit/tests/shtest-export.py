@@ -1,6 +1,6 @@
 ## Test the export command.
 
-# RUN: not %{lit} -a -v %{inputs}/shtest-export \
+# RUN: not %{lit} -v %{inputs}/shtest-export \
 # RUN: | FileCheck -match-full-lines %s
 #
 # END.

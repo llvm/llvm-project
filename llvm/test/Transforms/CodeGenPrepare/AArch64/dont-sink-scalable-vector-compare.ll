@@ -13,9 +13,9 @@ define void @do_not_sink_scalable_vector_compare(ptr %a, ptr %b) #0 {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[SRC:%.*]] = getelementptr inbounds ptr, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr [[SRC]], i32 4, <vscale x 4 x i1> [[TMP0]], <vscale x 4 x i32> poison)
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[SRC]], <vscale x 4 x i1> [[TMP0]], <vscale x 4 x i32> poison)
 ; CHECK-NEXT:    [[DST:%.*]] = getelementptr inbounds ptr, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[WIDE_LOAD]], ptr [[DST]], i32 4, <vscale x 4 x i1> [[TMP0]])
+; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[WIDE_LOAD]], ptr align 4 [[DST]], <vscale x 4 x i1> [[TMP0]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[VECTOR_END:.*]], label %[[VECTOR_BODY]]

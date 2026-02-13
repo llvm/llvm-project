@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=nvptx64-nvidia-cuda -mattr=+ptx70 < %s | FileCheck %s
-; RUN: %if ptxas %{ llc -mtriple=nvptx64-nvidia-cuda < %s -mattr=+ptx70 | %ptxas-verify %}
+; RUN: %if ptxas-isa-7.0 %{ llc -mtriple=nvptx64-nvidia-cuda < %s -mattr=+ptx70 | %ptxas-verify %}
 
 ; CHECK: .target sm_{{[0-9]+}}, debug
 
@@ -88,9 +88,9 @@ if.end4:                                          ; preds = %if.then2, %if.end
 
 declare signext i8 @_ZN1A3fooEv(ptr) #2
 
-attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
-attributes #2 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #2 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0, !9}
 !llvm.module.flags = !{!18, !19}

@@ -6,8 +6,8 @@ define i32 @test(i32 %0, i1 %1) {
 ; CHECK-SAME: i32 [[TMP0:%.*]], i1 [[TMP1:%.*]]) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = sitofp <2 x i32> [[TMP4]] to <2 x double>
 ; CHECK-NEXT:    [[TMP6:%.*]] = sitofp <2 x i32> [[TMP4]] to <2 x double>
+; CHECK-NEXT:    [[TMP5:%.*]] = sitofp <2 x i32> [[TMP4]] to <2 x double>
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[BB7:.*]], label %[[BB9:.*]]
 ; CHECK:       [[BB7]]:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP6]], <2 x double> zeroinitializer, <2 x double> zeroinitializer)

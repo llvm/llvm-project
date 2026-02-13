@@ -18,7 +18,7 @@ use omp_lib
   !$omp end target
 
   !$omp target
-      !ERROR: ALLOCATE directives that appear in a TARGET region must specify an allocator clause
+      !ERROR: An ALLOCATE directive in a TARGET region must specify an ALLOCATOR clause or REQUIRES(DYNAMIC_ALLOCATORS) must be specified
       !$omp allocate
           allocate ( darray(a, b) )
   !$omp end target

@@ -1,4 +1,4 @@
-//===------------- Aliasing.cpp - clang-tidy ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -37,9 +37,8 @@ static bool isPtrOrReferenceForVar(const Stmt *S, const ValueDecl *Var) {
   if (const auto *DS = dyn_cast<DeclStmt>(S)) {
     for (const Decl *D : DS->getDeclGroup()) {
       if (const auto *LeftVar = dyn_cast<VarDecl>(D)) {
-        if (LeftVar->hasInit() && LeftVar->getType()->isReferenceType()) {
+        if (LeftVar->hasInit() && LeftVar->getType()->isReferenceType())
           return isAccessForVar(LeftVar->getInit(), Var);
-        }
       }
     }
   } else if (const auto *UnOp = dyn_cast<UnaryOperator>(S)) {
@@ -65,15 +64,9 @@ static bool hasPtrOrReferenceInStmt(const Stmt *S, const ValueDecl *Var) {
   if (isPtrOrReferenceForVar(S, Var))
     return true;
 
-  for (const Stmt *Child : S->children()) {
-    if (!Child)
-      continue;
-
-    if (hasPtrOrReferenceInStmt(Child, Var))
-      return true;
-  }
-
-  return false;
+  return llvm::any_of(S->children(), [&](const Stmt *Child) {
+    return Child && hasPtrOrReferenceInStmt(Child, Var);
+  });
 }
 
 static bool refersToEnclosingLambdaCaptureByRef(const Decl *Func,

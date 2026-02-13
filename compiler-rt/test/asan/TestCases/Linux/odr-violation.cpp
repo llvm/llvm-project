@@ -10,38 +10,39 @@
 // -fno-sanitize-address-use-odr-indicator turns off both.
 //
 // Different size: detect a bug if detect_odr_violation>=1
+// RUN: mkdir -p %t.dir && cd %t.dir
 // RUN: %clangxx_asan -g -DBUILD_SO=1 -fPIC -shared -fno-sanitize-address-use-odr-indicator %s -o %dynamiclib
-// RUN: %clangxx_asan -g -fno-sanitize-address-use-odr-indicator %s %ld_flags_rpath_exe -o %t-ODR-EXE
-// RUN: %env_asan_opts=fast_unwind_on_malloc=0:detect_odr_violation=1 not %run %t-ODR-EXE 2>&1 | FileCheck %s
-// RUN: %env_asan_opts=fast_unwind_on_malloc=0:detect_odr_violation=2 not %run %t-ODR-EXE 2>&1 | FileCheck %s
-// RUN: %env_asan_opts=fast_unwind_on_malloc=0:detect_odr_violation=0     %run %t-ODR-EXE 2>&1 | FileCheck %s --check-prefix=DISABLED
-// RUN: %env_asan_opts=fast_unwind_on_malloc=0                        not %run %t-ODR-EXE 2>&1 | FileCheck %s
+// RUN: %clangxx_asan -g -fno-sanitize-address-use-odr-indicator %s %ld_flags_rpath_exe -o %t.dir/ODR-EXE
+// RUN: %env_asan_opts=fast_unwind_on_malloc=0:detect_odr_violation=1 not %run %t.dir/ODR-EXE 2>&1 | FileCheck %s
+// RUN: %env_asan_opts=fast_unwind_on_malloc=0:detect_odr_violation=2 not %run %t.dir/ODR-EXE 2>&1 | FileCheck %s
+// RUN: %env_asan_opts=fast_unwind_on_malloc=0:detect_odr_violation=0     %run %t.dir/ODR-EXE 2>&1 | FileCheck %s --check-prefix=DISABLED
+// RUN: %env_asan_opts=fast_unwind_on_malloc=0                        not %run %t.dir/ODR-EXE 2>&1 | FileCheck %s
 //
 // Same size: report a bug only if detect_odr_violation>=2.
 // RUN: %clangxx_asan -g -DBUILD_SO=1 -fPIC -shared -fno-sanitize-address-use-odr-indicator %s -o %dynamiclib -DSZ=100
-// RUN: %env_asan_opts=fast_unwind_on_malloc=0:detect_odr_violation=1     %run %t-ODR-EXE 2>&1 | FileCheck %s --check-prefix=DISABLED
-// RUN: %env_asan_opts=fast_unwind_on_malloc=0:detect_odr_violation=2 not %run %t-ODR-EXE 2>&1 | FileCheck %s
-// RUN: %env_asan_opts=fast_unwind_on_malloc=0                        not %run %t-ODR-EXE 2>&1 | FileCheck %s
-// RUN: echo "odr_violation:foo::ZZZ" > %t.supp
-// RUN: %env_asan_opts=fast_unwind_on_malloc=0:detect_odr_violation=2:suppressions=%t.supp  not %run %t-ODR-EXE 2>&1 | FileCheck %s
-// RUN: echo "odr_violation:foo::G" > %t.supp
-// RUN: %env_asan_opts=fast_unwind_on_malloc=0:detect_odr_violation=2:suppressions=%t.supp      %run %t-ODR-EXE 2>&1 | FileCheck %s --check-prefix=DISABLED
-// RUN: rm -f %t.supp
+// RUN: %env_asan_opts=fast_unwind_on_malloc=0:detect_odr_violation=1     %run %t.dir/ODR-EXE 2>&1 | FileCheck %s --check-prefix=DISABLED
+// RUN: %env_asan_opts=fast_unwind_on_malloc=0:detect_odr_violation=2 not %run %t.dir/ODR-EXE 2>&1 | FileCheck %s
+// RUN: %env_asan_opts=fast_unwind_on_malloc=0                        not %run %t.dir/ODR-EXE 2>&1 | FileCheck %s
+// RUN: echo "odr_violation:foo::ZZZ" > %t.dir/supp
+// RUN: %env_asan_opts=fast_unwind_on_malloc=0:detect_odr_violation=2:suppressions=%t.dir/supp  not %run %t.dir/ODR-EXE 2>&1 | FileCheck %s
+// RUN: echo "odr_violation:foo::G" > %t.dir/supp
+// RUN: %env_asan_opts=fast_unwind_on_malloc=0:detect_odr_violation=2:suppressions=%t.dir/supp      %run %t.dir/ODR-EXE 2>&1 | FileCheck %s --check-prefix=DISABLED
+// RUN: rm -f %t.dir/supp
 //
 // Use private aliases for global variables without indicator symbol.
 // RUN: %clangxx_asan -g -DBUILD_SO=1 -fPIC -shared -mllvm -asan-use-odr-indicator=0 %s -o %dynamiclib -DSZ=100
-// RUN: %clangxx_asan -g -mllvm -asan-use-odr-indicator=0 %s %ld_flags_rpath_exe -o %t-ODR-EXE
-// RUN: %env_asan_opts=fast_unwind_on_malloc=0 %run %t-ODR-EXE 2>&1 | FileCheck %s --check-prefix=DISABLED
+// RUN: %clangxx_asan -g -mllvm -asan-use-odr-indicator=0 %s %ld_flags_rpath_exe -o %t.dir/ODR-EXE
+// RUN: %env_asan_opts=fast_unwind_on_malloc=0 %run %t.dir/ODR-EXE 2>&1 | FileCheck %s --check-prefix=DISABLED
 
 // Use private aliases for global variables: use indicator symbol to detect ODR violation.
 // RUN: %clangxx_asan -g -DBUILD_SO=1 -fPIC -shared %s -o %dynamiclib -DSZ=100
-// RUN: %clangxx_asan -g %s %ld_flags_rpath_exe -o %t-ODR-EXE
-// RUN: %env_asan_opts=fast_unwind_on_malloc=0 not %run %t-ODR-EXE 2>&1 | FileCheck %s
+// RUN: %clangxx_asan -g %s %ld_flags_rpath_exe -o %t.dir/ODR-EXE
+// RUN: %env_asan_opts=fast_unwind_on_malloc=0 not %run %t.dir/ODR-EXE 2>&1 | FileCheck %s
 
 // Same as above but with clang switches.
 // RUN: %clangxx_asan -g -DBUILD_SO=1 -fPIC -shared -fsanitize-address-use-odr-indicator %s -o %dynamiclib -DSZ=100
-// RUN: %clangxx_asan -g -fsanitize-address-use-odr-indicator %s %ld_flags_rpath_exe -o %t-ODR-EXE
-// RUN: %env_asan_opts=fast_unwind_on_malloc=0 not %run %t-ODR-EXE 2>&1 | FileCheck %s
+// RUN: %clangxx_asan -g -fsanitize-address-use-odr-indicator %s %ld_flags_rpath_exe -o %t.dir/ODR-EXE
+// RUN: %env_asan_opts=fast_unwind_on_malloc=0 not %run %t.dir/ODR-EXE 2>&1 | FileCheck %s
 
 // GNU driver doesn't handle .so files properly.
 // REQUIRES: Clang
@@ -58,7 +59,7 @@ namespace foo { char G[SZ]; }
 #include <stdio.h>
 namespace foo { char G[100]; }
 // CHECK: ERROR: AddressSanitizer: odr-violation
-// CHECK: size=100 'foo::G' {{.*}}odr-violation.cpp:[[@LINE-2]] in {{.*}}.tmp-ODR-EXE
+// CHECK: size=100 'foo::G' {{.*}}odr-violation.cpp:[[@LINE-2]] in {{.*}}/ODR-EXE
 // CHECK: size={{4|100}} 'foo::G'
 int main(int argc, char **argv) {
   printf("PASS: %p\n", &foo::G);

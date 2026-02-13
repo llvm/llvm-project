@@ -1,0 +1,17 @@
+{
+  'version': 0,
+  'use-external-names': true,
+  'roots': [
+    {
+      'name': 'DIR',
+      'type': 'directory',
+      'contents': [
+        {
+          'name': 'taint-generic-config-virtual.yaml',
+          'type': 'file',
+          'external-contents': 'DIR/taint-generic-config.yaml'
+        }
+      ]
+    }
+  ]
+}

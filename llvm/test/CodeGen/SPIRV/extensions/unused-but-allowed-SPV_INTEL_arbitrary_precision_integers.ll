@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_arbitrary_precision_integers %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_ALTERA_arbitrary_precision_integers %s -o - | FileCheck %s
 
 define i8 @getConstantI8() {
   ret i8 2
@@ -15,5 +15,5 @@ define i64 @getConstantI64() {
 }
 
 ;; Capabilities:
-; CHECK-NOT: OpExtension "SPV_INTEL_arbitrary_precision_integers"
-; CHECK-NOT: OpCapability ArbitraryPrecisionIntegersINTEL
+; CHECK-NOT: OpExtension "SPV_ALTERA_arbitrary_precision_integers"
+; CHECK-NOT: OpCapability ArbitraryPrecisionIntegersALTERA

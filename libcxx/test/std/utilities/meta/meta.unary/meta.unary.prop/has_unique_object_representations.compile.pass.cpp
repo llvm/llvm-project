@@ -95,7 +95,7 @@ void test() {
   test<true, char[][2]>();
   test<true, char[][2][3]>();
 
-  // Important test case for https://github.com/llvm/llvm-project/issues/95311.
+  // Important test case for https://llvm.org/PR95311.
   // Note that the order is important here, we want to instantiate the array
   // variants before the non-array ones, otherwise we don't trigger the bug.
   {

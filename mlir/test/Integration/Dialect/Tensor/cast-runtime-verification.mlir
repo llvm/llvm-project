@@ -40,14 +40,14 @@ func.func @main() {
   %alloc = tensor.empty() : tensor<5xf32>
 
   //      CHECK: ERROR: Runtime op verification failed
-  // CHECK-NEXT: "tensor.cast"(%{{.*}}) : (tensor<?xf32>) -> tensor<10xf32>
+  // CHECK-NEXT: tensor.cast %{{.*}} : tensor<?xf32> to tensor<10xf32>
   // CHECK-NEXT: ^ size mismatch of dim 0
   // CHECK-NEXT: Location: loc({{.*}})
   %1 = tensor.cast %alloc : tensor<5xf32> to tensor<?xf32>
   func.call @cast_to_static_dim(%1) : (tensor<?xf32>) -> (tensor<10xf32>)
 
   // CHECK-NEXT: ERROR: Runtime op verification failed
-  // CHECK-NEXT: "tensor.cast"(%{{.*}}) : (tensor<*xf32>) -> tensor<f32>
+  // CHECK-NEXT: tensor.cast %{{.*}} : tensor<*xf32> to tensor<f32>
   // CHECK-NEXT: ^ rank mismatch
   // CHECK-NEXT: Location: loc({{.*}})
   %3 = tensor.cast %alloc : tensor<5xf32> to tensor<*xf32>

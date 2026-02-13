@@ -8,8 +8,6 @@
 
 // std::prev
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <iterator>
 #include "test_iterators.h"
 

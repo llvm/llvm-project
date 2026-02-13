@@ -36,7 +36,7 @@ namespace {
 class SPIRVGlobalVariableOpLayoutInfoDecoration
     : public OpRewritePattern<spirv::GlobalVariableOp> {
 public:
-  using OpRewritePattern<spirv::GlobalVariableOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(spirv::GlobalVariableOp op,
                                 PatternRewriter &rewriter) const override {
@@ -69,7 +69,7 @@ public:
 class SPIRVAddressOfOpLayoutInfoDecoration
     : public OpRewritePattern<spirv::AddressOfOp> {
 public:
-  using OpRewritePattern<spirv::AddressOfOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(spirv::AddressOfOp op,
                                 PatternRewriter &rewriter) const override {

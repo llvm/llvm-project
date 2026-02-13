@@ -108,7 +108,7 @@ if (LLVM_ENABLE_SPHINX)
       "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}"
 
       COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-      "${CMAKE_CURRENT_SOURCE_DIR}/../Maintainers.rst"
+      "${CMAKE_CURRENT_SOURCE_DIR}/../Maintainers.md"
       "${CMAKE_CURRENT_BINARY_DIR}"
     )
 
@@ -132,7 +132,7 @@ if (LLVM_ENABLE_SPHINX)
     # Generated files
     gen_rst_file_from_td(AttributeReference.rst -gen-attr-docs ../include/clang/Basic/Attr.td "${docs_targets}")
     gen_rst_file_from_td(DiagnosticsReference.rst -gen-diag-docs ../include/clang/Basic/Diagnostic.td "${docs_targets}")
-    gen_rst_file_from_td(ClangCommandLineReference.rst -gen-opt-docs ../include/clang/Driver/ClangOptionDocs.td "${docs_targets}")
+    gen_rst_file_from_td(ClangCommandLineReference.rst -gen-opt-docs ../include/clang/Options/ClangOptionDocs.td "${docs_targets}")
 
     # Another generated file from a different source
     set(docs_tools_dir ${CMAKE_CURRENT_SOURCE_DIR}/tools)

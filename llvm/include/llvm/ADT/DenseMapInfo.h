@@ -139,13 +139,11 @@ struct DenseMapInfo<std::pair<T, U>> {
   using SecondInfo = DenseMapInfo<U>;
 
   static constexpr Pair getEmptyKey() {
-    return std::make_pair(FirstInfo::getEmptyKey(),
-                          SecondInfo::getEmptyKey());
+    return {FirstInfo::getEmptyKey(), SecondInfo::getEmptyKey()};
   }
 
   static constexpr Pair getTombstoneKey() {
-    return std::make_pair(FirstInfo::getTombstoneKey(),
-                          SecondInfo::getTombstoneKey());
+    return {FirstInfo::getTombstoneKey(), SecondInfo::getTombstoneKey()};
   }
 
   static unsigned getHashValue(const Pair& PairVal) {
@@ -179,41 +177,31 @@ template <typename... Ts> struct DenseMapInfo<std::tuple<Ts...>> {
     return Tuple(DenseMapInfo<Ts>::getTombstoneKey()...);
   }
 
-  template <unsigned I>
-  static unsigned getHashValueImpl(const Tuple &values, std::false_type) {
-    using EltType = std::tuple_element_t<I, Tuple>;
-    std::integral_constant<bool, I + 1 == sizeof...(Ts)> atEnd;
-    return detail::combineHashValue(
-        DenseMapInfo<EltType>::getHashValue(std::get<I>(values)),
-        getHashValueImpl<I + 1>(values, atEnd));
-  }
-
-  template <unsigned I>
-  static unsigned getHashValueImpl(const Tuple &, std::true_type) {
-    return 0;
+  template <unsigned I> static unsigned getHashValueImpl(const Tuple &values) {
+    if constexpr (I == sizeof...(Ts)) {
+      return 0;
+    } else {
+      using EltType = std::tuple_element_t<I, Tuple>;
+      return detail::combineHashValue(
+          DenseMapInfo<EltType>::getHashValue(std::get<I>(values)),
+          getHashValueImpl<I + 1>(values));
+    }
   }
 
   static unsigned getHashValue(const std::tuple<Ts...> &values) {
-    std::integral_constant<bool, 0 == sizeof...(Ts)> atEnd;
-    return getHashValueImpl<0>(values, atEnd);
+    return getHashValueImpl<0>(values);
   }
 
-  template <unsigned I>
-  static bool isEqualImpl(const Tuple &lhs, const Tuple &rhs, std::false_type) {
-    using EltType = std::tuple_element_t<I, Tuple>;
-    std::integral_constant<bool, I + 1 == sizeof...(Ts)> atEnd;
-    return DenseMapInfo<EltType>::isEqual(std::get<I>(lhs), std::get<I>(rhs)) &&
-           isEqualImpl<I + 1>(lhs, rhs, atEnd);
-  }
-
-  template <unsigned I>
-  static bool isEqualImpl(const Tuple &, const Tuple &, std::true_type) {
-    return true;
+  template <std::size_t... Is>
+  static bool isEqualImpl(const Tuple &lhs, const Tuple &rhs,
+                          std::index_sequence<Is...>) {
+    return (DenseMapInfo<std::tuple_element_t<Is, Tuple>>::isEqual(
+                std::get<Is>(lhs), std::get<Is>(rhs)) &&
+            ...);
   }
 
   static bool isEqual(const Tuple &lhs, const Tuple &rhs) {
-    std::integral_constant<bool, 0 == sizeof...(Ts)> atEnd;
-    return isEqualImpl<0>(lhs, rhs, atEnd);
+    return isEqualImpl(lhs, rhs, std::index_sequence_for<Ts...>{});
   }
 };
 

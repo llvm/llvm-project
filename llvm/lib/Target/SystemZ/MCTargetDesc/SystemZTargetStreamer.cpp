@@ -15,6 +15,7 @@
 #include "SystemZTargetStreamer.h"
 #include "SystemZHLASMAsmStreamer.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCGOFFStreamer.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 
 using namespace llvm;
@@ -37,12 +38,6 @@ void SystemZTargetStreamer::emitConstantPools() {
 SystemZHLASMAsmStreamer &SystemZTargetHLASMStreamer::getHLASMStreamer() {
   return static_cast<SystemZHLASMAsmStreamer &>(getStreamer());
 }
-
-void SystemZTargetHLASMStreamer::emitExtern(StringRef Sym) {
-  getStreamer().emitRawText(Twine(" EXTRN ") + Twine(Sym));
-}
-
-void SystemZTargetHLASMStreamer::emitEnd() { getHLASMStreamer().emitEnd(); }
 
 // HLASM statements can only perform a single operation at a time
 const MCExpr *SystemZTargetHLASMStreamer::createWordDiffExpr(

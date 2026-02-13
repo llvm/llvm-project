@@ -589,8 +589,8 @@ define void @masked_store_v32i8(ptr %dst, <32 x i1> %mask) {
 define void @masked_store_v2f16(ptr %dst, <2 x i1> %mask) {
 ; CHECK-LABEL: masked_store_v2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    fmov s1, wzr
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z2.s, z0.s[1]
 ; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    zip1 z0.h, z0.h, z2.h

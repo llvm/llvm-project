@@ -32,6 +32,12 @@ SCUDO_FLAG(bool, delete_size_mismatch, true,
            "Terminate on a size mismatch between a sized-delete and the actual "
            "size of a chunk (as provided to new/new[]).")
 
+#if SCUDO_FUCHSIA
+SCUDO_FLAG(int, zero_on_dealloc_max_size, 0,
+           "Only chunks smaller or equal to this threshold will be zeroed on "
+           "deallocation. Requires zero on dealloc to be enabled.")
+#endif
+
 SCUDO_FLAG(bool, zero_contents, false, "Zero chunk contents on allocation.")
 
 SCUDO_FLAG(bool, pattern_fill_contents, false,

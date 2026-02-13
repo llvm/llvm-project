@@ -18,10 +18,9 @@ define void @test_scoped_alloca(i64 %n) {
 ; CHECK-NEXT:    .cfi_offset %rbx, -24
 ; CHECK-NEXT:    movq %rsp, %rbx
 ; CHECK-NEXT:    movq %rsp, %rax
-; CHECK-NEXT:    imulq $1, %rdi, %rcx
-; CHECK-NEXT:    addq $15, %rcx
-; CHECK-NEXT:    andq $-16, %rcx
-; CHECK-NEXT:    subq %rcx, %rax
+; CHECK-NEXT:    addq $15, %rdi
+; CHECK-NEXT:    andq $-16, %rdi
+; CHECK-NEXT:    subq %rdi, %rax
 ; CHECK-NEXT:    movq %rax, %rsp
 ; CHECK-NEXT:    movq %rax, %rdi
 ; CHECK-NEXT:    callq use_addr

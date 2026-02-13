@@ -1081,9 +1081,6 @@ let SchedModel = SwiftModel in {
   def : WriteRes<WriteVST2, []>;
   def : WriteRes<WriteVST3, []>;
   def : WriteRes<WriteVST4, []>;
-
-  // Not specified.
-  def : InstRW<[SwiftWriteP01OneCycle2x], (instregex "ABS")>;
   // Preload.
   def : WriteRes<WritePreLd, [SwiftUnitP2]> { let Latency = 0;
     let ReleaseAtCycles = [0];

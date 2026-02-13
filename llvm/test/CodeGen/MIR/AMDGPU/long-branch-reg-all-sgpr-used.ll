@@ -12,7 +12,6 @@
 ; CHECK-NEXT:   dynLDSAlign:     1
 ; CHECK-NEXT:   isEntryFunction: true
 ; CHECK-NEXT:   isChainFunction: false
-; CHECK-NEXT:   noSignedZerosFPMath: false
 ; CHECK-NEXT:   memoryBound:     false
 ; CHECK-NEXT:   waveLimiter:     false
 ; CHECK-NEXT:   hasSpilledSGPRs: false
@@ -48,6 +47,7 @@
 ; CHECK-NEXT:   hasInitWholeWave: false
 ; CHECK-NEXT:   dynamicVGPRBlockSize: 0
 ; CHECK-NEXT:   scratchReservedForDynamicVGPRs: 0
+; CHECK-NEXT:   numKernargPreloadSGPRs: 0
 ; CHECK-NEXT:   isWholeWaveFunction: false
 ; CHECK-NEXT: body:
   define amdgpu_kernel void @long_branch_used_all_sgprs(ptr addrspace(1) %arg, i32 %cnd) #0 {
@@ -284,7 +284,6 @@
 ; CHECK-NEXT:   dynLDSAlign:     1
 ; CHECK-NEXT:   isEntryFunction: true
 ; CHECK-NEXT:   isChainFunction: false
-; CHECK-NEXT:   noSignedZerosFPMath: false
 ; CHECK-NEXT:   memoryBound:     false
 ; CHECK-NEXT:   waveLimiter:     false
 ; CHECK-NEXT:   hasSpilledSGPRs: false
@@ -320,6 +319,7 @@
 ; CHECK-NEXT:   hasInitWholeWave: false
 ; CHECK-NEXT:   dynamicVGPRBlockSize: 0
 ; CHECK-NEXT:   scratchReservedForDynamicVGPRs: 0
+; CHECK-NEXT:   numKernargPreloadSGPRs: 0
 ; CHECK-NEXT:   isWholeWaveFunction: false
 ; CHECK-NEXT: body:
   define amdgpu_kernel void @long_branch_high_num_sgprs_used(ptr addrspace(1) %arg, i32 %cnd) #0 {
@@ -540,7 +540,7 @@
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare align 4 ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #2
 
-attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-cluster-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 attributes #1 = { nounwind }
 attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 !0 = !{}

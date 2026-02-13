@@ -28,18 +28,20 @@ using testing::IsEmpty;
 using testing::Not;
 using testing::NotNull;
 
-constexpr const char kTriple[] = "aarch64-unknown-linux";
+constexpr char kTriple[] = "aarch64-unknown-linux";
 
 class AArch64TargetTest : public ::testing::Test {
 protected:
+  const Triple TT;
+
   AArch64TargetTest()
-      : ExegesisTarget_(ExegesisTarget::lookup(Triple(kTriple))) {
+      : TT(kTriple), ExegesisTarget_(ExegesisTarget::lookup(TT)) {
     EXPECT_THAT(ExegesisTarget_, NotNull());
     std::string error;
-    Target_ = TargetRegistry::lookupTarget(kTriple, error);
+    Target_ = TargetRegistry::lookupTarget(TT, error);
     EXPECT_THAT(Target_, NotNull());
     STI_.reset(
-        Target_->createMCSubtargetInfo(kTriple, "generic", /*no features*/ ""));
+        Target_->createMCSubtargetInfo(TT, "generic", /*no features*/ ""));
   }
 
   static void SetUpTestCase() {

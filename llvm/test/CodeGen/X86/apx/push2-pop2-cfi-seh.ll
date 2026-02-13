@@ -2,7 +2,9 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck %s --check-prefix=LIN-REF
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+push2pop2 | FileCheck %s --check-prefix=LIN
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+push2pop2,+ppx | FileCheck %s --check-prefix=LIN-PPX
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=diamondrapids | FileCheck %s --check-prefix=LIN-PPX
 ; RUN: llc < %s -mtriple=x86_64-windows-msvc | FileCheck %s --check-prefix=WIN-REF
+; RUN: llc < %s -mtriple=x86_64-windows-msvc -mcpu=diamondrapids | FileCheck %s --check-prefix=WIN-REF
 ; RUN: llc < %s -mtriple=x86_64-windows-msvc -mattr=+push2pop2 | FileCheck %s --check-prefix=WIN
 ; RUN: llc < %s -mtriple=x86_64-windows-msvc -mattr=+push2pop2,+ppx | FileCheck %s --check-prefix=WIN-PPX
 
@@ -81,7 +83,7 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; LIN-NEXT:    .cfi_def_cfa_offset 32
 ; LIN-NEXT:    pop2 %rbp, %r15
 ; LIN-NEXT:    .cfi_def_cfa_offset 16
-; LIN-NEXT:    popq %rcx
+; LIN-NEXT:    popq %rax
 ; LIN-NEXT:    .cfi_def_cfa_offset 8
 ; LIN-NEXT:    retq
 ;
@@ -116,7 +118,7 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; LIN-PPX-NEXT:    .cfi_def_cfa_offset 32
 ; LIN-PPX-NEXT:    pop2p %rbp, %r15
 ; LIN-PPX-NEXT:    .cfi_def_cfa_offset 16
-; LIN-PPX-NEXT:    popq %rcx
+; LIN-PPX-NEXT:    popq %rax
 ; LIN-PPX-NEXT:    .cfi_def_cfa_offset 8
 ; LIN-PPX-NEXT:    retq
 ;
@@ -180,7 +182,7 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; WIN-NEXT:    pop2 %rbp, %rbx
 ; WIN-NEXT:    pop2 %r13, %r12
 ; WIN-NEXT:    pop2 %r15, %r14
-; WIN-NEXT:    popq %rcx
+; WIN-NEXT:    popq %rax
 ; WIN-NEXT:    .seh_endepilogue
 ; WIN-NEXT:    retq
 ; WIN-NEXT:    .seh_endproc
@@ -211,7 +213,7 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; WIN-PPX-NEXT:    pop2p %rbp, %rbx
 ; WIN-PPX-NEXT:    pop2p %r13, %r12
 ; WIN-PPX-NEXT:    pop2p %r15, %r14
-; WIN-PPX-NEXT:    popq %rcx
+; WIN-PPX-NEXT:    popq %rax
 ; WIN-PPX-NEXT:    .seh_endepilogue
 ; WIN-PPX-NEXT:    retq
 ; WIN-PPX-NEXT:    .seh_endproc

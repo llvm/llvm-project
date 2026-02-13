@@ -108,17 +108,21 @@ public:
           __bound_ >= 0, "The behavior is undefined if Bound is not unreachable_sentinel_t and bound is negative");
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() const { return __iterator(std::addressof(*__value_)); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() const {
+    return __iterator(std::addressof(*__value_));
+  }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator end() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator end() const
     requires(!same_as<_Bound, unreachable_sentinel_t>)
   {
     return __iterator(std::addressof(*__value_), __bound_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr unreachable_sentinel_t end() const noexcept { return unreachable_sentinel; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr unreachable_sentinel_t end() const noexcept {
+    return unreachable_sentinel;
+  }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
     requires(!same_as<_Bound, unreachable_sentinel_t>)
   {
     return std::__to_unsigned_like(__bound_);
@@ -152,7 +156,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI __iterator() = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& operator*() const noexcept { return *__value_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& operator*() const noexcept { return *__value_; }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
     ++__current_;
@@ -192,7 +196,9 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& operator[](difference_type __n) const noexcept { return *(*this + __n); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& operator[](difference_type __n) const noexcept {
+    return *(*this + __n);
+  }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __iterator& __y) {
     return __x.__current_ == __y.__current_;
@@ -202,22 +208,23 @@ public:
     return __x.__current_ <=> __y.__current_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(__iterator __i, difference_type __n) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(__iterator __i, difference_type __n) {
     __i += __n;
     return __i;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(difference_type __n, __iterator __i) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(difference_type __n, __iterator __i) {
     __i += __n;
     return __i;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator-(__iterator __i, difference_type __n) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator-(__iterator __i, difference_type __n) {
     __i -= __n;
     return __i;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type operator-(const __iterator& __x, const __iterator& __y) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
+  operator-(const __iterator& __x, const __iterator& __y) {
     return static_cast<difference_type>(__x.__current_) - static_cast<difference_type>(__y.__current_);
   }
 

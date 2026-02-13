@@ -285,6 +285,24 @@ Error YAMLOutputStyle::dumpDbiStream() {
       }
     }
   }
+
+  if (opts::pdb2yaml::DumpSectionHeaders) {
+    for (const auto &Section : DS.getSectionHeaders()) {
+      yaml::CoffSectionHeader Hdr;
+      Hdr.Name = Section.Name;
+      Hdr.VirtualSize = Section.VirtualSize;
+      Hdr.VirtualAddress = Section.VirtualAddress;
+      Hdr.SizeOfRawData = Section.SizeOfRawData;
+      Hdr.PointerToRawData = Section.PointerToRawData;
+      Hdr.PointerToRelocations = Section.PointerToRelocations;
+      Hdr.PointerToLinenumbers = Section.PointerToLinenumbers;
+      Hdr.NumberOfRelocations = Section.NumberOfRelocations;
+      Hdr.NumberOfLinenumbers = Section.NumberOfLinenumbers;
+      Hdr.Characteristics = Section.Characteristics;
+      Obj.DbiStream->SectionHeaders.emplace_back(Hdr);
+    }
+  }
+
   return Error::success();
 }
 

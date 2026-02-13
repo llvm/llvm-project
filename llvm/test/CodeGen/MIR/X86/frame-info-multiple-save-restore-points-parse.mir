@@ -32,10 +32,14 @@ liveins:
 # CHECK: frameInfo:
 # CHECK:      savePoint:
 # CHECK-NEXT:   - point:           '%bb.1'
+# CHECK-NEXT:     registers: []
 # CHECK-NEXT:   - point:           '%bb.2'
+# CHECK-NEXT:     registers: []
 # CHECK:      restorePoint:
 # CHECK-NEXT:   - point:           '%bb.2'
+# CHECK-NEXT:     registers: []
 # CHECK-NEXT:   - point:           '%bb.3'
+# CHECK-NEXT:     registers: []
 # CHECK: stack
 frameInfo:
   maxAlignment:  4

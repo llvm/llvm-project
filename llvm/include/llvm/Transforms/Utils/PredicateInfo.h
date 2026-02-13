@@ -67,7 +67,12 @@ class Value;
 class IntrinsicInst;
 class raw_ostream;
 
-enum PredicateType { PT_Branch, PT_Assume, PT_Switch };
+enum PredicateType {
+  PT_Branch,
+  PT_ConditionAssume,
+  PT_BundleAssume,
+  PT_Switch
+};
 
 /// Constraint for a predicate of the form "cmp Pred Op, OtherOp", where Op
 /// is the value the constraint applies to (the bitcast result).
@@ -96,8 +101,8 @@ public:
   PredicateBase &operator=(const PredicateBase &) = delete;
   PredicateBase() = delete;
   static bool classof(const PredicateBase *PB) {
-    return PB->Type == PT_Assume || PB->Type == PT_Branch ||
-           PB->Type == PT_Switch;
+    return PB->Type == PT_BundleAssume || PB->Type == PT_ConditionAssume ||
+           PB->Type == PT_Branch || PB->Type == PT_Switch;
   }
 
   /// Fetch condition in the form of PredicateConstraint, if possible.
@@ -114,11 +119,38 @@ protected:
 class PredicateAssume : public PredicateBase {
 public:
   IntrinsicInst *AssumeInst;
-  PredicateAssume(Value *Op, IntrinsicInst *AssumeInst, Value *Condition)
-      : PredicateBase(PT_Assume, Op, Condition), AssumeInst(AssumeInst) {}
-  PredicateAssume() = delete;
+
   static bool classof(const PredicateBase *PB) {
-    return PB->Type == PT_Assume;
+    return PB->Type == PT_ConditionAssume || PB->Type == PT_BundleAssume;
+  }
+
+protected:
+  PredicateAssume(PredicateType PT, Value *Op, IntrinsicInst *AssumeInst,
+                  Value *Condition)
+      : PredicateBase(PT, Op, Condition), AssumeInst(AssumeInst) {}
+};
+
+class PredicateBundleAssume : public PredicateAssume {
+public:
+  Attribute::AttrKind AttrKind;
+  PredicateBundleAssume(Value *Op, IntrinsicInst *AssumeInst,
+                        Attribute::AttrKind AttrKind)
+      : PredicateAssume(PT_BundleAssume, Op, AssumeInst, nullptr),
+        AttrKind(AttrKind) {}
+
+  static bool classof(const PredicateBase *PB) {
+    return PB->Type == PT_BundleAssume;
+  }
+};
+
+class PredicateConditionAssume : public PredicateAssume {
+public:
+  PredicateConditionAssume(Value *Op, IntrinsicInst *AssumeInst,
+                           Value *Condition)
+      : PredicateAssume(PT_ConditionAssume, Op, AssumeInst, Condition) {}
+
+  static bool classof(const PredicateBase *PB) {
+    return PB->Type == PT_ConditionAssume;
   }
 };
 

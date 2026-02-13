@@ -18,7 +18,6 @@
 define void @foo(i64 %a, i64 %b) nounwind uwtable {
 ; CHECK-LABEL: 'foo'
 ; CHECK-NEXT:  Inst: store double 1.000000e+00, ptr %arrayidx10.us.us, align 8
-; CHECK-NEXT:  In Loop with Header: for.body9.us.us
 ; CHECK-NEXT:  AccessFunction: {{\{\{}}0,+,{8,+,8}<%for.cond7.preheader.lr.ph.split.us.us>}<%for.body9.lr.ph.us.us>,+,8}<%for.body9.us.us>
 ; CHECK-NEXT:  failed to delinearize
 ;

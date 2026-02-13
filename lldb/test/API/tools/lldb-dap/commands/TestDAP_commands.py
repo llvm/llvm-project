@@ -23,7 +23,6 @@ class TestDAP_commands(lldbdap_testcase.DAPTestCaseBase):
             exitCommands=["?" + command_quiet, command_not_quiet],
         )
         full_output = self.collect_console(
-            timeout=1.0,
             pattern=command_not_quiet,
         )
         self.assertNotIn(command_quiet, full_output)
@@ -48,10 +47,9 @@ class TestDAP_commands(lldbdap_testcase.DAPTestCaseBase):
             launchCommands=commands if use_launch_commands else None,
             preRunCommands=commands if use_pre_run_commands else None,
             postRunCommands=commands if use_post_run_commands else None,
-            expectFailure=True,
         )
+        self.verify_configuration_done(use_post_run_commands)
         full_output = self.collect_console(
-            timeout=1.0,
             pattern=command_abort_on_error,
         )
         self.assertNotIn(command_quiet, full_output)
@@ -75,10 +73,9 @@ class TestDAP_commands(lldbdap_testcase.DAPTestCaseBase):
         )
         command_abort_on_error = "settings set foo bar"
         program = self.build_and_create_debug_adapter_for_attach()
-        resp = self.attach(
+        resp = self.attach_and_configurationDone(
             program=program,
             attachCommands=["?!" + command_quiet, "!" + command_abort_on_error],
-            expectFailure=True,
         )
         self.assertFalse(resp["success"], "expected 'attach' failure")
         full_output = self.collect_console(pattern=command_abort_on_error)

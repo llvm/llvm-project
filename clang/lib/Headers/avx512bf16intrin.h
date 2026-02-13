@@ -19,12 +19,19 @@ typedef __bf16 __v32bf __attribute__((__vector_size__(64), __aligned__(64)));
 typedef __bf16 __m512bh __attribute__((__vector_size__(64), __aligned__(64)));
 typedef __bf16 __bfloat16 __attribute__((deprecated("use __bf16 instead")));
 
-#define __DEFAULT_FN_ATTRS512 \
-  __attribute__((__always_inline__, __nodebug__, __target__("avx512bf16,evex512"), \
+#define __DEFAULT_FN_ATTRS512                                                  \
+  __attribute__((__always_inline__, __nodebug__, __target__("avx512bf16"),     \
                  __min_vector_width__(512)))
 #define __DEFAULT_FN_ATTRS                                                     \
-  __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("avx512bf16,no-evex512")))
+  __attribute__((__always_inline__, __nodebug__, __target__("avx512bf16")))
+
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS512_CONSTEXPR __DEFAULT_FN_ATTRS512 constexpr
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr
+#else
+#define __DEFAULT_FN_ATTRS512_CONSTEXPR __DEFAULT_FN_ATTRS512
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS
+#endif
 
 /// Convert One BF16 Data to One Single Float Data.
 ///
@@ -36,8 +43,8 @@ typedef __bf16 __bfloat16 __attribute__((deprecated("use __bf16 instead")));
 ///    A bfloat data.
 /// \returns A float data whose sign field and exponent field keep unchanged,
 ///    and fraction field is extended to 23 bits.
-static __inline__ float __DEFAULT_FN_ATTRS _mm_cvtsbh_ss(__bf16 __A) {
-  return __builtin_ia32_cvtsbf162ss_32(__A);
+static __inline__ float __DEFAULT_FN_ATTRS_CONSTEXPR _mm_cvtsbh_ss(__bf16 __A) {
+  return (float)(__A);
 }
 
 /// Convert Two Packed Single Data to One Packed BF16 Data.
@@ -236,9 +243,9 @@ _mm512_maskz_dpbf16_ps(__mmask16 __U, __m512 __D, __m512bh __A, __m512bh __B) {
 /// \param __A
 ///    A 256-bit vector of [16 x bfloat].
 /// \returns A 512-bit vector of [16 x float] come from conversion of __A
-static __inline__ __m512 __DEFAULT_FN_ATTRS512 _mm512_cvtpbh_ps(__m256bh __A) {
-  return _mm512_castsi512_ps((__m512i)_mm512_slli_epi32(
-      (__m512i)_mm512_cvtepi16_epi32((__m256i)__A), 16));
+static __inline__ __m512 __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_cvtpbh_ps(__m256bh __A) {
+  return (__m512) __builtin_convertvector(__A, __v16sf);
 }
 
 /// Convert Packed BF16 Data to Packed float Data using zeroing mask.
@@ -251,10 +258,11 @@ static __inline__ __m512 __DEFAULT_FN_ATTRS512 _mm512_cvtpbh_ps(__m256bh __A) {
 /// \param __A
 ///    A 256-bit vector of [16 x bfloat].
 /// \returns A 512-bit vector of [16 x float] come from conversion of __A
-static __inline__ __m512 __DEFAULT_FN_ATTRS512
+static __inline__ __m512 __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_maskz_cvtpbh_ps(__mmask16 __U, __m256bh __A) {
-  return _mm512_castsi512_ps((__m512i)_mm512_slli_epi32(
-      (__m512i)_mm512_maskz_cvtepi16_epi32((__mmask16)__U, (__m256i)__A), 16));
+  return (__m512)__builtin_ia32_selectps_512((__mmask16)__U,
+                                             (__v16sf)_mm512_cvtpbh_ps(__A),
+                                             (__v16sf)_mm512_setzero_ps());
 }
 
 /// Convert Packed BF16 Data to Packed float Data using merging mask.
@@ -269,15 +277,16 @@ _mm512_maskz_cvtpbh_ps(__mmask16 __U, __m256bh __A) {
 /// \param __A
 ///    A 256-bit vector of [16 x bfloat].
 /// \returns A 512-bit vector of [16 x float] come from conversion of __A
-static __inline__ __m512 __DEFAULT_FN_ATTRS512
+static __inline__ __m512 __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_mask_cvtpbh_ps(__m512 __S, __mmask16 __U, __m256bh __A) {
-  return _mm512_castsi512_ps((__m512i)_mm512_mask_slli_epi32(
-      (__m512i)__S, (__mmask16)__U,
-      (__m512i)_mm512_cvtepi16_epi32((__m256i)__A), 16));
+  return (__m512)__builtin_ia32_selectps_512(
+      (__mmask16)__U, (__v16sf)_mm512_cvtpbh_ps(__A), (__v16sf)__S);
 }
 
 #undef __DEFAULT_FN_ATTRS
+#undef __DEFAULT_FN_ATTRS_CONSTEXPR
 #undef __DEFAULT_FN_ATTRS512
+#undef __DEFAULT_FN_ATTRS512_CONSTEXPR
 
 #endif
 #endif

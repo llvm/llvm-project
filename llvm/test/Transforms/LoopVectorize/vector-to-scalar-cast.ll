@@ -7,7 +7,7 @@ define void @vector_to_scalar_cast(ptr %out) {
 ; CHECK-LABEL: define void @vector_to_scalar_cast(
 ; CHECK-SAME: ptr [[OUT:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[VEC0:%.*]] = insertelement <2 x i16> undef, i16 0, i64 0
+; CHECK-NEXT:    [[VEC0:%.*]] = insertelement <2 x i16> poison, i16 0, i64 0
 ; CHECK-NEXT:    [[VEC1:%.*]] = insertelement <2 x i16> [[VEC0]], i16 0, i64 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
@@ -22,7 +22,7 @@ define void @vector_to_scalar_cast(ptr %out) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %vec0 = insertelement <2 x i16> undef, i16 0, i64 0
+  %vec0 = insertelement <2 x i16> poison, i16 0, i64 0
   %vec1 = insertelement <2 x i16> %vec0, i16 0, i64 1
   br label %loop
 

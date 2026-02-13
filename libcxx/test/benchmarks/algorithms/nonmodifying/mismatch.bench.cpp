@@ -39,13 +39,6 @@ int main(int argc, char** argv) {
       return x == y;
     });
   };
-  auto ranges_mismatch_4leg_pred = [](auto first1, auto last1, auto first2, auto last2) {
-    return std::ranges::mismatch(first1, last1, first2, last2, [](auto x, auto y) {
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(y);
-      return x == y;
-    });
-  };
 
   // Benchmark {std,ranges}::mismatch where we find the mismatching element at the very end (worst case).
   //
@@ -92,17 +85,11 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::mismatch(vector<int>) (it, it, it, it)", std_mismatch_4leg);
     bm.operator()<std::deque<int>>("std::mismatch(deque<int>) (it, it, it, it)", std_mismatch_4leg);
     bm.operator()<std::list<int>>("std::mismatch(list<int>) (it, it, it, it)", std_mismatch_4leg);
-    bm.operator()<std::vector<int>>("rng::mismatch(vector<int>) (it, it, it, it)", std::ranges::mismatch);
-    bm.operator()<std::deque<int>>("rng::mismatch(deque<int>) (it, it, it, it)", std::ranges::mismatch);
-    bm.operator()<std::list<int>>("rng::mismatch(list<int>) (it, it, it, it)", std::ranges::mismatch);
 
     // {std,ranges}::mismatch(it, it, it, it, pred)
     bm.operator()<std::vector<int>>("std::mismatch(vector<int>) (it, it, it, it, pred)", std_mismatch_4leg_pred);
     bm.operator()<std::deque<int>>("std::mismatch(deque<int>) (it, it, it, it, pred)", std_mismatch_4leg_pred);
     bm.operator()<std::list<int>>("std::mismatch(list<int>) (it, it, it, it, pred)", std_mismatch_4leg_pred);
-    bm.operator()<std::vector<int>>("rng::mismatch(vector<int>) (it, it, it, it, pred)", ranges_mismatch_4leg_pred);
-    bm.operator()<std::deque<int>>("rng::mismatch(deque<int>) (it, it, it, it, pred)", ranges_mismatch_4leg_pred);
-    bm.operator()<std::list<int>>("rng::mismatch(list<int>) (it, it, it, it, pred)", ranges_mismatch_4leg_pred);
   }
 
   benchmark::Initialize(&argc, argv);

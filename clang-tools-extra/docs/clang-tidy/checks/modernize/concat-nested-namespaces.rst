@@ -3,8 +3,10 @@
 modernize-concat-nested-namespaces
 ==================================
 
-Checks for use of nested namespaces such as ``namespace a { namespace b { ... } }``
-and suggests changing to the more concise syntax introduced in C++17: ``namespace a::b { ... }``.
+Checks for use of nested namespaces such as
+``namespace a { namespace b { ... } }``
+and suggests changing to the more concise syntax introduced
+in C++17: ``namespace a::b { ... }``.
 Inline namespaces are not modified.
 
 For example:

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both -flax-vector-conversions=none %s
-// RUN: %clang_cc1 -verify=ref,both -flax-vector-conversions=none %s
+// RUN: %clang_cc1 -Wno-c++20-extensions -fexperimental-new-constant-interpreter -verify=expected,both -flax-vector-conversions=none %s
+// RUN: %clang_cc1 -Wno-c++20-extensions -verify=ref,both -flax-vector-conversions=none %s
 
 typedef int __attribute__((vector_size(16))) VI4;
 constexpr VI4 A = {1,2,3,4};
@@ -38,6 +38,10 @@ static_assert(arr4[1][0] == 0, "");
 static_assert(arr4[1][0] == 0, "");
 
 constexpr VI4 B = __extension__(A);
+
+/// Can initialize atomic vectors.
+typedef char vs4 __attribute__((vector_size(4)));
+constexpr _Atomic vs4 foo = (vs4)0xDEADBEEF;
 
 /// From constant-expression-cxx11.cpp
 namespace Vector {
@@ -147,7 +151,7 @@ namespace {
 namespace Assign {
   constexpr int a2() {
       VI a = {0, 0, 0, 0};
-      VI b; // both-warning {{C++20 extension}}
+      VI b;
 
       b = {1,1,1,1};
       return b[0] + b[1] + b[2] + b[3];
@@ -161,10 +165,22 @@ namespace Assign {
 
   constexpr bool invalid() {
     v2int16_t a = {0, 0};
-    v2int_t b; // both-warning {{C++20 extension}}
+    v2int_t b;
     b = a; // both-error {{incompatible type}}
 
     return true;
   }
   static_assert(invalid()); // both-error {{not an integral constant expression}}
+}
+
+namespace CopyArrayDummy {
+  struct S {
+    long a, b, c, d;
+  };
+  typedef long T __attribute__((vector_size(4 * sizeof(long))));
+
+  void foo(void) {
+    struct S s;
+    *(T *)&s = (T){0, 1, 2, 3};
+  }
 }

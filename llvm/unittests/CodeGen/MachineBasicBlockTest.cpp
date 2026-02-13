@@ -40,8 +40,8 @@ TEST(FindDebugLocTest, DifferentIterators) {
   // scope.
   DIBuilder DIB(Mod);
   DIFile *OurFile = DIB.createFile("foo.c", "/bar");
-  DICompileUnit *OurCU =
-      DIB.createCompileUnit(dwarf::DW_LANG_C99, OurFile, "", false, "", 0);
+  DICompileUnit *OurCU = DIB.createCompileUnit(
+      DISourceLanguageName(dwarf::DW_LANG_C99), OurFile, "", false, "", 0);
   auto OurSubT = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
   DISubprogram *OurFunc =
       DIB.createFunction(OurCU, "bees", "", OurFile, 1, OurSubT, 1,

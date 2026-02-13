@@ -46,16 +46,18 @@ StringRef clang::languageToString(Language L) {
   llvm_unreachable("unhandled language kind");
 }
 
-#define LANGSTANDARD(id, name, lang, desc, features)                           \
-  static const LangStandard Lang_##id = {name, desc, features, Language::lang};
+#define LANGSTANDARD(id, name, lang, desc, features, version)                  \
+  static const LangStandard Lang_##id = {name, desc, features, Language::lang, \
+                                         version};
 #include "clang/Basic/LangStandards.def"
 
 const LangStandard &LangStandard::getLangStandardForKind(Kind K) {
   switch (K) {
   case lang_unspecified:
     llvm::report_fatal_error("getLangStandardForKind() on unspecified kind");
-#define LANGSTANDARD(id, name, lang, desc, features) \
-    case lang_##id: return Lang_##id;
+#define LANGSTANDARD(id, name, lang, desc, features, version)                  \
+  case lang_##id:                                                              \
+    return Lang_##id;
 #include "clang/Basic/LangStandards.def"
   }
   llvm_unreachable("Invalid language kind!");
@@ -63,7 +65,8 @@ const LangStandard &LangStandard::getLangStandardForKind(Kind K) {
 
 LangStandard::Kind LangStandard::getLangKind(StringRef Name) {
   return llvm::StringSwitch<Kind>(Name)
-#define LANGSTANDARD(id, name, lang, desc, features) .Case(name, lang_##id)
+#define LANGSTANDARD(id, name, lang, desc, features, version)                  \
+  .Case(name, lang_##id)
 #define LANGSTANDARD_ALIAS(id, alias) .Case(alias, lang_##id)
 #include "clang/Basic/LangStandards.def"
       .Default(lang_unspecified);

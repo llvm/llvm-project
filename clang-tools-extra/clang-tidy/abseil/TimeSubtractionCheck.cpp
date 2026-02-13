@@ -1,4 +1,4 @@
-//===--- TimeSubtractionCheck.cpp - clang-tidy ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -93,7 +93,7 @@ void TimeSubtractionCheck::emitDiagnostic(const Expr *Node,
 void TimeSubtractionCheck::registerMatchers(MatchFinder *Finder) {
   for (const char *ScaleName :
        {"Hours", "Minutes", "Seconds", "Millis", "Micros", "Nanos"}) {
-    std::string TimeInverse = (llvm::Twine("ToUnix") + ScaleName).str();
+    const std::string TimeInverse = (llvm::Twine("ToUnix") + ScaleName).str();
     std::optional<DurationScale> Scale = getScaleForTimeInverse(TimeInverse);
     assert(Scale && "Unknown scale encountered");
 
@@ -127,7 +127,7 @@ void TimeSubtractionCheck::registerMatchers(MatchFinder *Finder) {
 
 void TimeSubtractionCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *BinOp = Result.Nodes.getNodeAs<BinaryOperator>("binop");
-  std::string InverseName =
+  const std::string InverseName =
       Result.Nodes.getNodeAs<FunctionDecl>("func_decl")->getNameAsString();
   if (insideMacroDefinition(Result, BinOp->getSourceRange()))
     return;
@@ -144,7 +144,7 @@ void TimeSubtractionCheck::check(const MatchFinder::MatchResult &Result) {
     // We're working with the first case of matcher, and need to replace the
     // entire 'Duration' factory call. (Which also means being careful about
     // our order-of-operations and optionally putting in some parenthesis.
-    bool NeedParens = parensRequired(Result, OuterCall);
+    const bool NeedParens = parensRequired(Result, OuterCall);
 
     emitDiagnostic(
         OuterCall,
@@ -169,7 +169,7 @@ void TimeSubtractionCheck::check(const MatchFinder::MatchResult &Result) {
       // converts it from the inverse to a Duration.  In this case, we replace
       // the outer with just the subtraction expression, which gives the right
       // type and scale, taking care again about parenthesis.
-      bool NeedParens = parensRequired(Result, MaybeCallArg);
+      const bool NeedParens = parensRequired(Result, MaybeCallArg);
 
       emitDiagnostic(
           MaybeCallArg,

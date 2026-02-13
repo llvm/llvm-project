@@ -29,7 +29,7 @@ define <2 x i64> @scalarize_v2i64(ptr %p, <2 x i1> %mask, <2 x i64> %passthru) {
 ; CHECK-LE-NEXT:    ret <2 x i64> [[RES_PHI_ELSE3]]
 ;
 ; CHECK-LE-SVE-LABEL: @scalarize_v2i64(
-; CHECK-LE-SVE-NEXT:    [[RET:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr [[P:%.*]], i32 128, <2 x i1> [[MASK:%.*]], <2 x i64> [[PASSTHRU:%.*]])
+; CHECK-LE-SVE-NEXT:    [[RET:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr align 128 [[P:%.*]], <2 x i1> [[MASK:%.*]], <2 x i64> [[PASSTHRU:%.*]])
 ; CHECK-LE-SVE-NEXT:    ret <2 x i64> [[RET]]
 ;
 ; CHECK-BE-LABEL: @scalarize_v2i64(
@@ -66,7 +66,7 @@ define <2 x i64> @scalarize_v2i64_ones_mask(ptr %p, <2 x i64> %passthru) {
 ; CHECK-LE-NEXT:    ret <2 x i64> [[TMP1]]
 ;
 ; CHECK-LE-SVE-LABEL: @scalarize_v2i64_ones_mask(
-; CHECK-LE-SVE-NEXT:    [[RET:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr [[P:%.*]], i32 8, <2 x i1> splat (i1 true), <2 x i64> [[PASSTHRU:%.*]])
+; CHECK-LE-SVE-NEXT:    [[RET:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr align 8 [[P:%.*]], <2 x i1> splat (i1 true), <2 x i64> [[PASSTHRU:%.*]])
 ; CHECK-LE-SVE-NEXT:    ret <2 x i64> [[RET]]
 ;
 ; CHECK-BE-LABEL: @scalarize_v2i64_ones_mask(
@@ -82,7 +82,7 @@ define <2 x i64> @scalarize_v2i64_zero_mask(ptr %p, <2 x i64> %passthru) {
 ; CHECK-LE-NEXT:    ret <2 x i64> [[PASSTHRU:%.*]]
 ;
 ; CHECK-LE-SVE-LABEL: @scalarize_v2i64_zero_mask(
-; CHECK-LE-SVE-NEXT:    [[RET:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr [[P:%.*]], i32 8, <2 x i1> zeroinitializer, <2 x i64> [[PASSTHRU:%.*]])
+; CHECK-LE-SVE-NEXT:    [[RET:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr align 8 [[P:%.*]], <2 x i1> zeroinitializer, <2 x i64> [[PASSTHRU:%.*]])
 ; CHECK-LE-SVE-NEXT:    ret <2 x i64> [[RET]]
 ;
 ; CHECK-BE-LABEL: @scalarize_v2i64_zero_mask(
@@ -100,7 +100,7 @@ define <2 x i64> @scalarize_v2i64_const_mask(ptr %p, <2 x i64> %passthru) {
 ; CHECK-LE-NEXT:    ret <2 x i64> [[TMP3]]
 ;
 ; CHECK-LE-SVE-LABEL: @scalarize_v2i64_const_mask(
-; CHECK-LE-SVE-NEXT:    [[RET:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr [[P:%.*]], i32 8, <2 x i1> <i1 false, i1 true>, <2 x i64> [[PASSTHRU:%.*]])
+; CHECK-LE-SVE-NEXT:    [[RET:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr align 8 [[P:%.*]], <2 x i1> <i1 false, i1 true>, <2 x i64> [[PASSTHRU:%.*]])
 ; CHECK-LE-SVE-NEXT:    ret <2 x i64> [[RET]]
 ;
 ; CHECK-BE-LABEL: @scalarize_v2i64_const_mask(
