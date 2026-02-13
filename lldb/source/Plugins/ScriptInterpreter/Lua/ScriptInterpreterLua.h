@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ScriptInterpreterLua_h_
-#define liblldb_ScriptInterpreterLua_h_
+#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_LUA_SCRIPTINTERPRETERLUA_H
+#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_LUA_SCRIPTINTERPRETERLUA_H
 
 #include <vector>
 
@@ -115,4 +115,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ScriptInterpreterLua_h_
+#endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_LUA_SCRIPTINTERPRETERLUA_H
