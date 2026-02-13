@@ -255,13 +255,13 @@ def get_gdb_version_string():
             subprocess.check_output(["gdb", "--version"]).decode().splitlines()
         )
     except:
-        return None  # We coudln't find gdb or something went wrong running it.
+        return None  # We couldn't find gdb or something went wrong running it.
     if len(gdb_vers_lines) < 1:
-        print("Unkown GDB version format (too few lines)", file=sys.stderr)
+        print("Unknown GDB version format (too few lines)", file=sys.stderr)
         return None
     match = re.search(r"GNU gdb \(.*?\) ((\d|\.)+)", gdb_vers_lines[0].strip())
     if match is None:
-        print(f"Unkown GDB version format: {gdb_vers_lines[0]}", file=sys.stderr)
+        print(f"Unknown GDB version format: {gdb_vers_lines[0]}", file=sys.stderr)
         return None
     return match.group(1)
 
@@ -300,11 +300,11 @@ def get_lldb_version_string():
     except:
         return None
     if len(lldb_vers_lines) < 1:
-        print("Unkown LLDB version format (too few lines)", file=sys.stderr)
+        print("Unknown LLDB version format (too few lines)", file=sys.stderr)
         return None
-    match = re.search(r"lldb.*[ -]((\d|\.)+)", lldb_vers_lines[0].strip())
+    match = re.search(r"lldb.*?[ -]((\d|\.)+)", lldb_vers_lines[0].strip())
     if match is None:
-        print(f"Unkown LLDB version format: {lldb_vers_lines[0]}", file=sys.stderr)
+        print(f"Unknown LLDB version format: {lldb_vers_lines[0]}", file=sys.stderr)
         return None
     return match.group(1)
 

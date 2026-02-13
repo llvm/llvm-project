@@ -102,9 +102,10 @@ RPC_ATTRS constexpr void prepare_arg(rpc::Server::Port &port) {
 template <uint64_t Idx, typename Tuple>
 RPC_ATTRS constexpr void finish_arg(rpc::Client::Port &port, Tuple &t) {
   using ArgTy = rpc::tuple_element_t<Idx, Tuple>;
+  using ElemTy = rpc::remove_pointer_t<ArgTy>;
   using MemoryTy = rpc::remove_const_t<rpc::remove_pointer_t<ArgTy>> *;
   if constexpr (rpc::is_pointer_v<ArgTy> && !rpc::is_const_v<ArgTy> &&
-                rpc::is_complete_v<MemoryTy> && !rpc::is_void_v<MemoryTy>) {
+                rpc::is_complete_v<ElemTy> && !rpc::is_void_v<ElemTy>) {
     uint64_t size{};
     void *buf{};
     port.recv_n(&buf, &size, [&](uint64_t) {
@@ -216,7 +217,7 @@ dispatch(rpc::Client &client, FnTy, CallArgs... args) {
 // Invoke a function on the server on behalf of the client. Recieves the
 // arguments through the interface and forwards them to the function.
 template <uint32_t NUM_LANES, typename FnTy>
-RPC_ATTRS constexpr void invoke(FnTy fn, rpc::Server::Port &port) {
+RPC_ATTRS constexpr void invoke(rpc::Server::Port &port, FnTy fn) {
   using Traits = function_traits<FnTy>;
   using RetTy = typename Traits::return_type;
   using TupleTy = typename Traits::arg_types;

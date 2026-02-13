@@ -82,6 +82,7 @@ template <typename T> struct is_void : type_constant<bool, false> {};
 template <> struct is_void<void> : type_constant<bool, true> {};
 template <typename T> RPC_ATTRS constexpr bool is_void_v = is_void<T>::value;
 
+// Scary trait that can change within a TU, use with caution.
 template <typename...> using void_t = void;
 template <typename T, typename = void>
 struct is_complete : type_constant<bool, false> {};
@@ -89,7 +90,7 @@ template <typename T>
 struct is_complete<T, void_t<decltype(sizeof(T))>> : type_constant<bool, true> {
 };
 template <typename T>
-inline constexpr bool is_complete_v = is_complete<T>::value;
+RPC_ATTRS constexpr bool is_complete_v = is_complete<T>::value;
 
 template <typename T>
 struct is_trivially_copyable
@@ -439,13 +440,17 @@ RPC_ATTRS constexpr uint64_t string_length(const char *s) {
   return static_cast<uint64_t>(end - s + 1);
 }
 
-/// Helper for dealing with function types.
+/// Helper for dealing with function pointers and lambda types.
 template <typename> struct function_traits;
 template <typename R, typename... Args> struct function_traits<R (*)(Args...)> {
   using return_type = R;
   using arg_types = rpc::tuple<Args...>;
   static constexpr uint64_t ARITY = sizeof...(Args);
 };
+template <typename T> T &&declval();
+template <typename T>
+struct function_traits
+    : function_traits<decltype(+declval<rpc::remove_reference_t<T>>())> {};
 
 template <typename T, typename U>
 RPC_ATTRS constexpr T max(const T &a, const U &b) {

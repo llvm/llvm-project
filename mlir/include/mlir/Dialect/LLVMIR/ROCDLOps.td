@@ -590,6 +590,61 @@ def ROCDL_WaitTensorcntOp: ROCDL_ConcreteNonMemIntrOp<"s.wait.tensorcnt", [], 0,
   let assemblyFormat = "$count attr-dict";
 }
 
+def ROCDL_AsyncmarkOp : ROCDL_ConcreteNonMemIntrOp<"asyncmark", [], 0>,
+    Arguments<(ins)> {
+  let summary = "Mark the end of a group of asynchronous operations";
+  let description = [{
+      This operation, in conjunction with `rocdl.wait.asyncmark`, forms the
+      compiler-provided framework for tracking explicitly asynchronous
+      memory operations, such as copies to LDS that use async intrinsics
+      and gfx1250's tensor loads.
+
+      Details of its behavior can be found in
+      [the LLVM documentation on async tracking](/llvm/docs/AMDGPUAsyncOperations.rst).
+
+      See `rocdl.wait.asyncmark`'s documentation for a usage example.
+
+      Available on gfx9 and later.
+  }];
+  let results = (outs);
+  let assemblyFormat = "attr-dict";
+}
+
+def ROCDL_WaitAsyncmarkOp: ROCDL_ConcreteNonMemIntrOp<"wait.asyncmark", [], 0, [0], ["count"]>,
+    Arguments<(ins I16Attr:$count)> {
+  let summary = "Wait until N or fewer async operation groups are unexecuted";
+  let description = [{
+      This operation, along with `rocdl.asyncmark`, forms the compiler-provided
+      framework for explicitly tracking asynchronous operations.
+
+      At the point where a wait.asyncmark operation is executed, all async operations
+      that were parts of any async group (established by asyncmark in program order)
+      other than the `count` previously-added ones will have finished executing.
+
+      For more detail, including on how this mechanism composes with function calls,
+      see [the LLVM documentation on async tracking](/llvm/docs/AMDGPUAsyncOperations.rst).
+
+      Available on gfx9 and later.
+
+      Example:
+      ```mlir
+      rocdl.tensor.load.to.lds ...
+      rocdl.global.async.load.to.lds ...
+
+      rocdl.asyncmark
+
+      rocdl.tensor.load.to.lds ...
+      rocdl.global.async.load.to.lds ...
+
+      rocdl.asyncmark
+
+      rocdl.wait.asyncmark 1 // First group of loads completes after this
+      ```
+  }];
+  let results = (outs);
+  let assemblyFormat = "$count attr-dict";
+}
+
 def ROCDL_SetPrioOp : ROCDL_ConcreteNonMemIntrOp<"s.setprio", [], 0, [0], ["priority"]>,
   Arguments<(ins I16Attr:$priority)> {
   let assemblyFormat = "$priority attr-dict";
