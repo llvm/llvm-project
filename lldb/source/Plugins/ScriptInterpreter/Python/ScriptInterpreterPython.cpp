@@ -120,22 +120,22 @@ public:
       return spec.GetPath();
     }();
     if (!g_python_home.empty()) {
-      PyStatus py_status =
+      PyStatus status =
           PyConfig_SetBytesString(&config, &config.home, g_python_home.c_str());
-      if (py_status._type == PyStatus::_PyStatus_TYPE_ERROR) {
+      if (PyStatus_Exception(status)) {
         PyConfig_Clear(&config);
-        llvm::WithColor::error() << "Failed to set the Python config: '"
-                                 << py_status.err_msg << "'.\n";
+        llvm::WithColor::error()
+            << "Failed to set the Python config: '" << status.err_msg << "'.\n";
         return;
       }
     }
 
     config.install_signal_handlers = 0;
-    PyStatus py_status = Py_InitializeFromConfig(&config);
+    PyStatus status = Py_InitializeFromConfig(&config);
     PyConfig_Clear(&config);
-    if (py_status._type == PyStatus::_PyStatus_TYPE_ERROR) {
+    if (PyStatus_Exception(status)) {
       llvm::WithColor::error()
-          << "Python failed to initialize: '" << py_status.err_msg << "'.\n";
+          << "Python failed to initialize: '" << status.err_msg << "'.\n";
       return;
     }
 #else
