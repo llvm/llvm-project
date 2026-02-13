@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +pcdphint -D__ARM_FEATURE_PCDPHINT -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
 #include <arm_acle.h>
 

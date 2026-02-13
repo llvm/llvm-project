@@ -5331,12 +5331,12 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrinsic::aarch64_stshh);
     llvm::Value *Arg =
         llvm::ConstantInt::get(Int64Ty, RetentionPolicy.getZExtValue());
-    Builder.CreateCall(F, Arg);
+    CallInst *HintCall = Builder.CreateCall(F, Arg);
 
     EmitAtomicStore(RValue::get(StoreValue), LVal, Ordering,
                     /* isVolatile= */ false,
                     /* isInit= */ false);
-    return nullptr;
+    return HintCall;
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_rndr ||

@@ -1217,7 +1217,7 @@ static bool CheckAArch64AtomicStoreWithStshhCall(SemaARM &S,
     return true;
   }
 
-  // Validate order; not used here; used later in codegen.
+  // Validate order here; the value is mapped to LLVM ordering in codegen.
   llvm::APSInt OrderVal = *OrderValOpt;
   int64_t Order = OrderVal.getSExtValue();
   // __ATOMIC_RELAXED=0, __ATOMIC_RELEASE=3, __ATOMIC_SEQ_CST=5.
