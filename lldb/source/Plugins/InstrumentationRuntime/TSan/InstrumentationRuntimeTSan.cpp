@@ -88,18 +88,13 @@ extern "C"
     // TODO: dlsym won't work on Windows.
     void *dlsym(void* handle, const char* symbol);
     int (*ptr__tsan_get_report_loc_object_type)(void *report, unsigned long idx, const char **object_type);
-)"
 #if defined(__linux__)
-                                                           R"(
-    void *const RTLD_DEFAULT = (void *)0;
-  }
-)";
+#define RTLD_DEFAULT	((void *) 0)
 #else
-                                                           R"(
-    void *const RTLD_DEFAULT = (void *)-2;
+#define RTLD_DEFAULT	((void *) -2)
+#endif
   }
 )";
-#endif
 
 const char *thread_sanitizer_retrieve_report_data_command = R"(
 
