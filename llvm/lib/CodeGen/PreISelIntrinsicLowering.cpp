@@ -653,7 +653,7 @@ static bool expandLoopTrap(Function &Intr) {
         // "unconditional conditional branch" by combining the two basic blocks
         // if possible, or replacing it with an unconditional branch.
         if (BI->getSuccessor(0) == Call->getParent()) {
-          // The looptrap is on the true branch. 
+          // The looptrap is on the true branch.
           Cond = BI->getCondition();
           BI->setCondition(ConstantInt::getFalse(BI->getContext()));
         } else {
