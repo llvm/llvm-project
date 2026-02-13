@@ -27,3 +27,7 @@ void test_invalid_retention_policy(unsigned int *p, unsigned int v) {
   __arm_atomic_store_with_stshh(p, v, __ATOMIC_RELAXED, 2);
   // expected-error@-1 {{argument value 2 is outside the valid range [0, 1]}}
 }
+
+void test_signed_ok(int *p, int v) {
+  __arm_atomic_store_with_stshh(p, v, __ATOMIC_RELAXED, 0);
+}
