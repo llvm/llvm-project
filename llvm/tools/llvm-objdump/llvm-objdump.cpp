@@ -3862,6 +3862,7 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
            (I + Tool.size() == Stem.size() || !isAlnum(Stem[I + Tool.size()]));
   };
   if (Is("otool")) {
+    IsOtool = true;
     T = std::make_unique<OtoolOptTable>();
     Unknown = OTOOL_UNKNOWN;
     HelpFlag = OTOOL_help;
