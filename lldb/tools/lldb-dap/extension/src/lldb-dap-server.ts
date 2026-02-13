@@ -52,7 +52,9 @@ class ServerSpawnInfo {
       // Sort to make it easier to compare. Sorting isn't necessary for the
       // `isDeepStrictEqual` check.
       .sort()
-      .join("\n");
+      // Joining with newlines makes it difficult to truncate by string length,
+      // so we opt for space.
+      .join(" ");
 
     let display = cmd.join(" ");
     if (env) {
