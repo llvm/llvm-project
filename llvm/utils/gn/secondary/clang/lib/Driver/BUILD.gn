@@ -14,6 +14,7 @@ static_library("Driver") {
     # See the review thread of r311958 for details.
     "//clang/include/clang/StaticAnalyzer/Checkers",
     "//clang/lib/Basic",
+    "//clang/lib/Frontend",
     "//clang/lib/Options",
     "//llvm/include/llvm/Config:llvm-config",
     "//llvm/lib/BinaryFormat",
