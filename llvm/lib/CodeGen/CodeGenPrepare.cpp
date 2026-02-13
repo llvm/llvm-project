@@ -778,9 +778,6 @@ bool CodeGenPrepare::_run(Function &F) {
           WorkList.insert(Succ);
     }
 
-    // Flush pending DT updates in order to finalise deletion of dead blocks.
-    DTU->flush();
-
     // Merge pairs of basic blocks with unconditional branches, connected by
     // a single edge.
     if (EverMadeChange || MadeChange)
@@ -869,16 +866,11 @@ void CodeGenPrepare::removeAllAssertingVHReferences(Value *V) {
 /// which has a single predecessor.
 bool CodeGenPrepare::eliminateFallThrough(Function &F) {
   bool Changed = false;
+  SmallPtrSet<BasicBlock *, 8> Preds;
   // Scan all of the blocks in the function, except for the entry block.
-  // Use a temporary array to avoid iterator being invalidated when
-  // deleting blocks.
-  SmallVector<WeakTrackingVH, 16> Blocks(
-      llvm::make_pointer_range(llvm::drop_begin(F)));
-
-  SmallSet<WeakTrackingVH, 16> Preds;
-  for (auto &Block : Blocks) {
-    auto *BB = cast_or_null<BasicBlock>(Block);
-    if (!BB)
+  for (auto &Block : llvm::drop_begin(F)) {
+    auto *BB = &Block;
+    if (DTU->isBBPendingDeletion(BB))
       continue;
     // If the destination block has a single pred, then this is a trivial
     // edge, just collapse it.
@@ -907,9 +899,9 @@ bool CodeGenPrepare::eliminateFallThrough(Function &F) {
 
   // (Repeatedly) merging blocks into their predecessors can create redundant
   // debug intrinsics.
-  for (const auto &Pred : Preds)
-    if (auto *BB = cast_or_null<BasicBlock>(Pred))
-      RemoveRedundantDbgInstrs(BB);
+  for (auto *Pred : Preds)
+    if (!DTU->isBBPendingDeletion(Pred))
+      RemoveRedundantDbgInstrs(Pred);
 
   return Changed;
 }
@@ -957,20 +949,14 @@ bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F, bool &ResetLI) {
 
   ResetLI = false;
   bool MadeChange = false;
-  // Copy blocks into a temporary array to avoid iterator invalidation issues
-  // as we remove them.
   // Note that this intentionally skips the entry block.
-  SmallVector<WeakTrackingVH, 16> Blocks;
   for (auto &Block : llvm::drop_begin(F)) {
+    auto *BB = &Block;
     // Delete phi nodes that could block deleting other empty blocks.
     if (!DisableDeletePHIs)
-      MadeChange |= DeleteDeadPHIs(&Block, TLInfo);
-    Blocks.push_back(&Block);
-  }
+      MadeChange |= DeleteDeadPHIs(BB, TLInfo);
 
-  for (auto &Block : Blocks) {
-    BasicBlock *BB = cast_or_null<BasicBlock>(Block);
-    if (!BB || DTU->isBBPendingDeletion(BB))
+    if (DTU->isBBPendingDeletion(BB))
       continue;
     BasicBlock *DestBB = findDestBlockOfMergeableEmptyBlock(BB);
     if (!DestBB ||
