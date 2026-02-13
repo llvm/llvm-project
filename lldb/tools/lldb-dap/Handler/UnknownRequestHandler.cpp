@@ -15,5 +15,5 @@ using namespace lldb_dap;
 using namespace lldb_dap::protocol;
 
 llvm::Error UnknownRequestHandler::Run(const UnknownArguments &args) const {
-  return llvm::make_error<DAPError>("Unknown request");
+  return llvm::make_error<DAPError>("unknown request");
 }

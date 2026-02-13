@@ -18,7 +18,7 @@ class TestDAP_unknown_request(lldbdap_testcase.DAPTestCaseBase):
 
         response = self.dap_server.request_custom("unknown")
         self.assertFalse(response["success"])
-        self.assertEqual(response["body"]["error"]["format"], "Unknown request")
+        self.assertEqual(response["body"]["error"]["format"], "unknown request")
 
         self.continue_to_exit()
 
@@ -30,6 +30,6 @@ class TestDAP_unknown_request(lldbdap_testcase.DAPTestCaseBase):
 
         response = self.dap_server.request_custom("unknown", {"foo": "bar", "id": 42})
         self.assertFalse(response["success"])
-        self.assertEqual(response["body"]["error"]["format"], "Unknown request")
+        self.assertEqual(response["body"]["error"]["format"], "unknown request")
 
         self.continue_to_exit()
