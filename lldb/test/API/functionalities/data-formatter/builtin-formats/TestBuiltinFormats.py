@@ -37,7 +37,7 @@ class TestCase(TestBase):
     @no_debug_info_test
     @skipIfWindows
     # uint128_t not available on arm.
-    @skipIf(archs=["arm"])
+    @skipIf(archs=["arm$"])
     def test(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -118,10 +118,12 @@ class TestCase(TestBase):
         self.assertIn("= 0x1p1\n", self.getFormatted("hex float", "2.0f"))
         self.assertIn("= 0x1p1\n", self.getFormatted("hex float", "2.0"))
         # FIXME: long double not supported.
-        self.assertIn(
-            "= error: unsupported byte size (16) for hex float format\n",
-            self.getFormatted("hex float", "2.0l"),
-        )
+        # on Darwin arm64, long double is 8 bytes, same as long.
+        if self.getArchitecture() != "arm64":
+            self.assertIn(
+                "= error: unsupported byte size (16) for hex float format\n",
+                self.getFormatted("hex float", "2.0l"),
+            )
 
         # uppercase hex
         self.assertIn("= 0x00ABC123\n", self.getFormatted("uppercase hex", "0xABC123"))

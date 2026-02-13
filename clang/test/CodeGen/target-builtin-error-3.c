@@ -24,6 +24,26 @@ static inline half16 __attribute__((__overloadable__)) convert_half( float16 a )
 }
 void avx_test( uint16_t *destData, float16 argbF)
 {
-  // expected-warning@+1{{AVX vector argument of type 'float16' (vector of 16 'float' values) without 'avx512f' enabled changes the ABI}}
   ((half16U *)destData)[0] = convert_half(argbF);
+}
+
+half16 test( float16 a ) {
+  half16 r;
+  r.lo = convert_half(a.lo);
+  return r;
+}
+void avx_test2( uint16_t *destData, float16 argbF)
+{
+  // expected-warning@+1{{AVX vector argument of type 'float16' (vector of 16 'float' values) without 'avx512f' enabled changes the ABI}}
+  ((half16U *)destData)[0] = test(argbF);
+}
+
+__attribute__((always_inline)) half16 test2( float16 a ) {
+  half16 r;
+  r.lo = convert_half(a.lo);
+  return r;
+}
+void avx_test3( uint16_t *destData, float16 argbF)
+{
+  ((half16U *)destData)[0] = test2(argbF);
 }

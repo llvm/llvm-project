@@ -11,6 +11,7 @@
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -42,7 +43,7 @@ protected:
 
   RISCVInstrInfoTest() {
     std::string Error;
-    auto TT(Triple::normalize(GetParam()));
+    Triple TT(GetParam());
     const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
     TargetOptions Options;
 
@@ -62,7 +63,7 @@ protected:
         TM->getTargetFeatureString(),
         TM->getTargetTriple().isArch64Bit() ? "lp64" : "ilp32", 0, 0, *TM);
 
-    MF = std::make_unique<MachineFunction>(*F, *TM, *ST, 42, *MMI);
+    MF = std::make_unique<MachineFunction>(*F, *TM, *ST, MMI->getContext(), 42);
   }
 };
 
@@ -134,27 +135,70 @@ TEST_P(RISCVInstrInfoTest, IsCopyInstrImpl) {
   EXPECT_EQ(MI4Res->Destination->getReg(), RISCV::F1_D);
   EXPECT_EQ(MI4Res->Source->getReg(), RISCV::F2_D);
 
-  // ADD. TODO: Should return true for add reg, x0 and add x0, reg.
-  MachineInstr *MI5 = BuildMI(*MF, DL, TII->get(RISCV::ADD), RISCV::X1)
-                          .addReg(RISCV::X2)
-                          .addReg(RISCV::X3)
-                          .getInstr();
-  auto MI5Res = TII->isCopyInstrImpl(*MI5);
-  EXPECT_FALSE(MI5Res.has_value());
+  // ADD/OR/XOR.
+  for (unsigned Opc : {RISCV::ADD, RISCV::OR, RISCV::XOR}) {
+    MachineInstr *MI5 = BuildMI(*MF, DL, TII->get(Opc), RISCV::X1)
+                            .addReg(RISCV::X2)
+                            .addReg(RISCV::X3)
+                            .getInstr();
+    auto MI5Res = TII->isCopyInstrImpl(*MI5);
+    EXPECT_FALSE(MI5Res.has_value());
 
-  MachineInstr *MI6 = BuildMI(*MF, DL, TII->get(RISCV::ADD), RISCV::X1)
+    MachineInstr *MI6 = BuildMI(*MF, DL, TII->get(Opc), RISCV::X1)
+                            .addReg(RISCV::X0)
+                            .addReg(RISCV::X2)
+                            .getInstr();
+    auto MI6Res = TII->isCopyInstrImpl(*MI6);
+    ASSERT_TRUE(MI6Res.has_value());
+    EXPECT_EQ(MI6Res->Destination->getReg(), RISCV::X1);
+    EXPECT_EQ(MI6Res->Source->getReg(), RISCV::X2);
+
+    MachineInstr *MI7 = BuildMI(*MF, DL, TII->get(Opc), RISCV::X1)
+                            .addReg(RISCV::X2)
+                            .addReg(RISCV::X0)
+                            .getInstr();
+    auto MI7Res = TII->isCopyInstrImpl(*MI7);
+    ASSERT_TRUE(MI7Res.has_value());
+    EXPECT_EQ(MI7Res->Destination->getReg(), RISCV::X1);
+    EXPECT_EQ(MI7Res->Source->getReg(), RISCV::X2);
+  }
+
+  // SUB.
+  MachineInstr *MI8 = BuildMI(*MF, DL, TII->get(RISCV::SUB), RISCV::X1)
                           .addReg(RISCV::X0)
                           .addReg(RISCV::X2)
                           .getInstr();
-  auto MI6Res = TII->isCopyInstrImpl(*MI6);
-  EXPECT_FALSE(MI6Res.has_value());
+  auto MI8Res = TII->isCopyInstrImpl(*MI8);
+  EXPECT_FALSE(MI8Res.has_value());
 
-  MachineInstr *MI7 = BuildMI(*MF, DL, TII->get(RISCV::ADD), RISCV::X1)
+  MachineInstr *MI9 = BuildMI(*MF, DL, TII->get(RISCV::SUB), RISCV::X1)
                           .addReg(RISCV::X2)
                           .addReg(RISCV::X0)
                           .getInstr();
-  auto MI7Res = TII->isCopyInstrImpl(*MI7);
-  EXPECT_FALSE(MI7Res.has_value());
+  auto MI9Res = TII->isCopyInstrImpl(*MI9);
+  ASSERT_TRUE(MI9Res.has_value());
+  EXPECT_EQ(MI9Res->Destination->getReg(), RISCV::X1);
+  EXPECT_EQ(MI9Res->Source->getReg(), RISCV::X2);
+
+  // SH1ADD(_UW), SH2ADD(_UW), SH3ADD(_UW).
+  for (unsigned Opc : {RISCV::SH1ADD, RISCV::SH1ADD_UW, RISCV::SH2ADD,
+                       RISCV::SH2ADD_UW, RISCV::SH3ADD, RISCV::SH3ADD_UW}) {
+    MachineInstr *MI10 = BuildMI(*MF, DL, TII->get(Opc), RISCV::X1)
+                             .addReg(RISCV::X2)
+                             .addReg(RISCV::X3)
+                             .getInstr();
+    auto MI10Res = TII->isCopyInstrImpl(*MI10);
+    EXPECT_FALSE(MI10Res.has_value());
+
+    MachineInstr *MI11 = BuildMI(*MF, DL, TII->get(Opc), RISCV::X1)
+                             .addReg(RISCV::X0)
+                             .addReg(RISCV::X2)
+                             .getInstr();
+    auto MI11Res = TII->isCopyInstrImpl(*MI11);
+    ASSERT_TRUE(MI11Res.has_value());
+    EXPECT_EQ(MI11Res->Destination->getReg(), RISCV::X1);
+    EXPECT_EQ(MI11Res->Source->getReg(), RISCV::X2);
+  }
 }
 
 TEST_P(RISCVInstrInfoTest, GetMemOperandsWithOffsetWidth) {
@@ -163,7 +207,7 @@ TEST_P(RISCVInstrInfoTest, GetMemOperandsWithOffsetWidth) {
   DebugLoc DL;
 
   SmallVector<const MachineOperand *> BaseOps;
-  LocationSize Width = 0;
+  LocationSize Width = LocationSize::precise(0);
   int64_t Offset;
   bool OffsetIsScalable;
 
@@ -242,8 +286,7 @@ static void expectDIEPrintResult(const DIExpression *Expr, StringRef Expected) {
   std::string Output;
   raw_string_ostream OS(Output);
   Expr->print(OS);
-  OS.flush();
-  EXPECT_EQ(OS.str(), Expected);
+  EXPECT_EQ(Output, Expected);
 }
 
 TEST_P(RISCVInstrInfoTest, DescribeLoadedValue) {
@@ -251,7 +294,7 @@ TEST_P(RISCVInstrInfoTest, DescribeLoadedValue) {
   DebugLoc DL;
 
   MachineBasicBlock *MBB = MF->CreateMachineBasicBlock();
-  MF->getProperties().set(MachineFunctionProperties::Property::NoVRegs);
+  MF->getProperties().setNoVRegs();
 
   // Register move.
   auto *MI1 = BuildMI(*MBB, MBB->begin(), DL, TII->get(RISCV::ADDI), RISCV::X1)
@@ -313,6 +356,27 @@ TEST_P(RISCVInstrInfoTest, DescribeLoadedValue) {
       "!DIExpression(DW_OP_constu, 128, DW_OP_minus, DW_OP_deref_size, 1)");
 
   MF->deleteMachineBasicBlock(MBB);
+}
+
+TEST_P(RISCVInstrInfoTest, GetDestEEW) {
+  const RISCVInstrInfo *TII = ST->getInstrInfo();
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VADD_VV), 3), 3u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VWADD_VV), 3), 4u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VLE32_V), 5), 5u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VLSE32_V), 5), 5u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VREDSUM_VS), 4), 4u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VWREDSUM_VS), 4), 5u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VFWREDOSUM_VS), 5), 6u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VFCVT_RTZ_XU_F_V), 4), 4u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VFWCVT_RTZ_XU_F_V), 4), 5u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VSLL_VI), 4), 4u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VWSLL_VI), 4), 5u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VMSEQ_VV), 4), 0u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VMAND_MM), 0), 0u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VIOTA_M), 3), 3u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::SF_VQMACCU_2x8x2), 3), 5u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::SF_VFWMACC_4x4x4), 4), 5u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::TH_VMAQA_VV), 5), 5u);
 }
 
 } // namespace

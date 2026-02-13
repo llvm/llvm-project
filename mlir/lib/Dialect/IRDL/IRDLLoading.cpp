@@ -13,16 +13,13 @@
 #include "mlir/Dialect/IRDL/IRDLLoading.h"
 #include "mlir/Dialect/IRDL/IR/IRDL.h"
 #include "mlir/Dialect/IRDL/IR/IRDLInterfaces.h"
+#include "mlir/Dialect/IRDL/IRDLSymbols.h"
 #include "mlir/Dialect/IRDL/IRDLVerifiers.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/OperationSupport.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Support/SMLoc.h"
-#include <numeric>
 
 using namespace mlir;
 using namespace mlir::irdl;
@@ -172,7 +169,7 @@ LogicalResult getSegmentSizes(Operation *op, StringRef elemName,
 LogicalResult getOperandSegmentSizes(Operation *op,
                                      ArrayRef<Variadicity> variadicities,
                                      SmallVectorImpl<int> &segmentSizes) {
-  return getSegmentSizes(op, "operand", "operand_segment_sizes",
+  return getSegmentSizes(op, "operand", "operandSegmentSizes",
                          op->getNumOperands(), variadicities, segmentSizes);
 }
 
@@ -183,7 +180,7 @@ LogicalResult getOperandSegmentSizes(Operation *op,
 LogicalResult getResultSegmentSizes(Operation *op,
                                     ArrayRef<Variadicity> variadicities,
                                     SmallVectorImpl<int> &segmentSizes) {
-  return getSegmentSizes(op, "result", "result_segment_sizes",
+  return getSegmentSizes(op, "result", "resultSegmentSizes",
                          op->getNumResults(), variadicities, segmentSizes);
 }
 
@@ -523,7 +520,7 @@ static bool getBases(Operation *op, SmallPtrSet<TypeID, 4> &paramIds,
   // For `irdl.parametric`, we get directly the base from the operation.
   if (auto params = dyn_cast<ParametricOp>(op)) {
     SymbolRefAttr symRef = params.getBaseType();
-    Operation *defOp = SymbolTable::lookupNearestSymbolFrom(op, symRef);
+    Operation *defOp = irdl::lookupSymbolNearDialect(op, symRef);
     assert(defOp && "symbol reference should refer to an existing operation");
     paramIrdlOps.insert(defOp);
     return false;

@@ -57,3 +57,65 @@ foreach f = ["FPR16", "FPR32", "FPR64"] in {
 }
 }
 }
+
+defm "" : LMULSchedWritesImpl<"WriteSF_VFNRClipV", !listremove(SchedMxListW, ["M4"])>;
+defm "" : LMULSchedReadsImpl<"ReadSF_VFNRClipV",   !listremove(SchedMxListW, ["M4"])>;
+defm "" : LMULSchedReadsImpl<"ReadSF_VFNRClipF",   !listremove(SchedMxListW, ["M4"])>;
+
+multiclass UnsupportedSchedXSfvfnrclipxfqf {
+let Unsupported = true in {
+defm : LMULWriteRes<"WriteSF_VFNRClipV", []>;
+defm : LMULReadAdvance<"ReadSF_VFNRClipV", 0>;
+defm : LMULReadAdvance<"ReadSF_VFNRClipF", 0>;
+} // Unsupported = true
+}
+
+defm "" : LMULSchedWritesImpl<"WriteSF_VQMACC_DOD", ["M1", "M2", "M4", "M8"]>;
+defm "" : LMULSchedReadsImpl<"ReadSF_VQMACC_DOD",   ["M1", "M2", "M4", "M8"]>;
+
+multiclass UnsupportedSchedXSfvqmaccdod {
+let Unsupported = true in {
+defm : LMULWriteRes<"WriteSF_VQMACC_DOD", []>;
+defm : LMULReadAdvance<"ReadSF_VQMACC_DOD", 0>;
+} // Unsupported = true
+}
+
+defm "" : LMULSchedWritesImpl<"WriteSF_VQMACC_QOQ", ["MF2", "M1", "M2", "M4"]>;
+defm "" : LMULSchedReadsImpl<"ReadSF_VQMACC_QOQ",   ["MF2", "M1", "M2", "M4"]>;
+
+multiclass UnsupportedSchedXSfvqmaccqoq {
+let Unsupported = true in {
+defm : LMULWriteRes<"WriteSF_VQMACC_QOQ", []>;
+defm : LMULReadAdvance<"ReadSF_VQMACC_QOQ", 0>;
+} // Unsupported = true
+}
+
+defm "" : LMULSchedWritesImpl<"WriteSF_VFWMACC_QQQ", SchedMxListFW>;
+defm "" : LMULSchedReadsImpl<"ReadSF_VFWMACC_QQQ",   SchedMxListFW>;
+
+multiclass UnsupportedSchedXSfvfwmaccqqq {
+let Unsupported = true in {
+defm : LMULWriteRes<"WriteSF_VFWMACC_QQQ", []>;
+defm : LMULReadAdvance<"ReadSF_VFWMACC_QQQ", 0>;
+} // Unsupported = true
+}
+
+defm "" : LMULSEWSchedWritesF<"WriteSF_VFExp">;
+defm "" : LMULSEWSchedReadsF<"ReadSF_VFExp">;
+
+multiclass UnsupportedSchedXSfvfexp {
+let Unsupported = true in {
+defm : LMULSEWWriteResF<"WriteSF_VFExp", []>;
+defm : LMULSEWReadAdvanceF<"ReadSF_VFExp", 0>;
+} // Unsupported = true
+}
+
+defm "" : LMULSEWSchedWritesF<"WriteSF_VFExpa">;
+defm "" : LMULSEWSchedReadsF<"ReadSF_VFExpa">;
+
+multiclass UnsupportedSchedXSfvfexpa {
+let Unsupported = true in {
+defm : LMULSEWWriteResF<"WriteSF_VFExpa", []>;
+defm : LMULSEWReadAdvanceF<"ReadSF_VFExpa", 0>;
+} // Unsupported = true
+}

@@ -12,6 +12,7 @@
 
 #include "LoongArchSubtarget.h"
 #include "LoongArchFrameLowering.h"
+#include "LoongArchSelectionDAGInfo.h"
 #include "MCTargetDesc/LoongArchBaseInfo.h"
 
 using namespace llvm;
@@ -22,7 +23,14 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "LoongArchGenSubtargetInfo.inc"
 
+static cl::opt<bool> UseAA("loongarch-use-aa", cl::init(true),
+                           cl::desc("Enable the use of AA during codegen."));
+
 void LoongArchSubtarget::anchor() {}
+
+// Enable use of alias analysis during code generation (during MI scheduling,
+// DAGCombine, etc.).
+bool LoongArchSubtarget::useAA() const { return UseAA; }
 
 LoongArchSubtarget &LoongArchSubtarget::initializeSubtargetDependencies(
     const Triple &TT, StringRef CPU, StringRef TuneCPU, StringRef FS,
@@ -50,7 +58,7 @@ LoongArchSubtarget &LoongArchSubtarget::initializeSubtargetDependencies(
   if (!Is64Bit && HasLA64)
     report_fatal_error("Feature 64bit should be used for loongarch64 target.");
 
-  TargetABI = LoongArchABI::computeTargetABI(TT, ABIName);
+  TargetABI = LoongArchABI::computeTargetABI(TT, getFeatureBits(), ABIName);
 
   return *this;
 }
@@ -88,4 +96,12 @@ LoongArchSubtarget::LoongArchSubtarget(const Triple &TT, StringRef CPU,
     : LoongArchGenSubtargetInfo(TT, CPU, TuneCPU, FS),
       FrameLowering(
           initializeSubtargetDependencies(TT, CPU, TuneCPU, FS, ABIName)),
-      InstrInfo(*this), RegInfo(getHwMode()), TLInfo(TM, *this) {}
+      InstrInfo(*this), TLInfo(TM, *this) {
+  TSInfo = std::make_unique<LoongArchSelectionDAGInfo>();
+}
+
+LoongArchSubtarget::~LoongArchSubtarget() = default;
+
+const SelectionDAGTargetInfo *LoongArchSubtarget::getSelectionDAGInfo() const {
+  return TSInfo.get();
+}

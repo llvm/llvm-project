@@ -9,7 +9,6 @@
 #include "mlir/Interfaces/LoopLikeInterface.h"
 
 #include "mlir/Interfaces/FunctionInterfaces.h"
-#include "llvm/ADT/DenseSet.h"
 
 using namespace mlir;
 
@@ -109,6 +108,17 @@ LogicalResult detail::verifyLoopLikeOpInterface(Operation *op) {
                << " != " << std::get<1>(it).getType();
     }
     ++i;
+  }
+
+  // Verify that all induction variables have valid types.
+  auto inductionVars = loopLikeOp.getLoopInductionVars();
+  if (inductionVars.has_value()) {
+    for (auto [index, inductionVar] : llvm::enumerate(*inductionVars)) {
+      if (!loopLikeOp.isValidInductionVarType(inductionVar.getType()))
+        return op->emitOpError(std::to_string(index))
+               << "-th induction variable has invalid type: "
+               << inductionVar.getType();
+    }
   }
 
   return success();

@@ -9,11 +9,11 @@ subroutine test(dp1, dp2)
       real, intent(in) :: x
     end
   end interface
-  !PORTABILITY: A dummy procedure should not have an ELEMENTAL intrinsic as its interface
+  !PORTABILITY: A dummy procedure should not have an ELEMENTAL intrinsic as its interface [-Wportability]
   procedure(sin) :: dp1
   !ERROR: A dummy procedure may not be ELEMENTAL
   procedure(elemental) :: dp2
-  !PORTABILITY: Procedure pointer 'pp1' should not have an ELEMENTAL intrinsic as its interface
+  !PORTABILITY: Procedure pointer 'pp1' should not have an ELEMENTAL intrinsic as its interface [-Wportability]
   procedure(sin), pointer :: pp1
   !ERROR: Procedure pointer 'pp2' may not be ELEMENTAL
   procedure(elemental), pointer :: pp2

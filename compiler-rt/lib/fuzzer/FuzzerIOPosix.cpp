@@ -12,6 +12,7 @@
 
 #include "FuzzerExtFunctions.h"
 #include "FuzzerIO.h"
+#include <cerrno>
 #include <cstdarg>
 #include <cstdio>
 #include <dirent.h>

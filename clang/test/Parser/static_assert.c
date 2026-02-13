@@ -20,7 +20,6 @@ static_assert(1, ""); // c17-warning {{'static_assert' is a keyword in C23}} \
                       // c17-error {{expected ')'}} \
                       // c17-note {{to match this '('}} \
                       // c17-error {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}} \
-                      // c17-ms-warning {{use of 'static_assert' without inclusion of <assert.h> is a Microsoft extension}}
 
 #endif
 

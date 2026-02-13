@@ -433,11 +433,11 @@ entry:
   %b = alloca i32, align 4
   store i32 %a, ptr %a.addr, align 4
   call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr nonnull @1, i32 1, ptr @.omp_outlined..14, ptr nonnull %a.addr)
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %b)
+  call void @llvm.lifetime.start.p0(ptr nonnull %b)
   %0 = ptrtoint ptr %b to i64
   %1 = trunc i64 %0 to i32
   store i32 %1, ptr %b, align 4
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %b)
+  call void @llvm.lifetime.end.p0(ptr nonnull %b)
   call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr nonnull @1, i32 1, ptr @.omp_outlined..15, ptr nonnull %a.addr)
   ret void
 }
@@ -449,9 +449,9 @@ entry:
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 define internal void @.omp_outlined..15(ptr noalias nocapture readnone %.global_tid., ptr noalias nocapture readnone %.bound_tid., ptr nocapture nonnull readonly align 4 dereferenceable(4) %a)  {
 entry:
@@ -466,12 +466,12 @@ entry:
   %b = alloca i32, align 4
   store i32 %a, ptr %a.addr, align 4
   call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr nonnull @1, i32 1, ptr @.omp_outlined..16, ptr nonnull %a.addr)
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %b)
+  call void @llvm.lifetime.start.p0(ptr nonnull %b)
   %0 = load i32, ptr %a.addr, align 4
   %add = add nsw i32 %0, 1
   store i32 %add, ptr %b, align 4
   call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr nonnull @1, i32 2, ptr @.omp_outlined..17, ptr nonnull %a.addr, ptr nonnull %b)
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %b)
+  call void @llvm.lifetime.end.p0(ptr nonnull %b)
   ret void
 }
 
@@ -1184,11 +1184,11 @@ entry:
 ; CHECK:       omp_region.body:
 ; CHECK-NEXT:    br label [[SEQ_PAR_MERGED:%.*]]
 ; CHECK:       seq.par.merged:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr noundef nonnull [[B]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP4]] to i32
 ; CHECK-NEXT:    store i32 [[TMP5]], ptr [[B]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr noundef nonnull [[B]])
 ; CHECK-NEXT:    br label [[OMP_PAR_MERGED_SPLIT:%.*]]
 ; CHECK:       omp.par.merged.split:
 ; CHECK-NEXT:    br label [[OMP_REGION_BODY_SPLIT:%.*]]
@@ -1216,7 +1216,7 @@ entry:
 ; CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 ; CHECK-NEXT:    br label [[OMP_PARALLEL:%.*]]
 ; CHECK:       omp_parallel:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[B]])
 ; CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 2, ptr @merge_seq_par_use..omp_par, ptr [[A_ADDR]], ptr [[B]])
 ; CHECK-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
 ; CHECK:       omp.par.outlined.exit:
@@ -1224,7 +1224,7 @@ entry:
 ; CHECK:       omp.par.exit.split:
 ; CHECK-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK:       entry.split.split:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr noundef nonnull [[B]])
 ; CHECK-NEXT:    ret void
 ; CHECK-LABEL: define {{[^@]+}}@merge_seq_par_use..omp_par
 ; CHECK-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[A_ADDR:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
@@ -2155,11 +2155,11 @@ entry:
 ; CHECK:       omp_region.body:
 ; CHECK-NEXT:    br label [[SEQ_PAR_MERGED:%.*]]
 ; CHECK:       seq.par.merged:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr noundef nonnull [[B]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP4]] to i32
 ; CHECK-NEXT:    store i32 [[TMP5]], ptr [[B]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr noundef nonnull [[B]])
 ; CHECK-NEXT:    br label [[OMP_PAR_MERGED_SPLIT:%.*]]
 ; CHECK:       omp.par.merged.split:
 ; CHECK-NEXT:    br label [[OMP_REGION_BODY_SPLIT:%.*]]
@@ -2187,7 +2187,7 @@ entry:
 ; CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 ; CHECK-NEXT:    br label [[OMP_PARALLEL:%.*]]
 ; CHECK:       omp_parallel:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[B]])
 ; CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 2, ptr @merge_seq_par_use..omp_par, ptr [[A_ADDR]], ptr [[B]])
 ; CHECK-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
 ; CHECK:       omp.par.outlined.exit:
@@ -2195,7 +2195,7 @@ entry:
 ; CHECK:       omp.par.exit.split:
 ; CHECK-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK:       entry.split.split:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr noundef nonnull [[B]])
 ; CHECK-NEXT:    ret void
 ; CHECK-LABEL: define {{[^@]+}}@merge_seq_par_use..omp_par
 ; CHECK-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[A_ADDR:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
@@ -3126,11 +3126,11 @@ entry:
 ; CHECK:       omp_region.body:
 ; CHECK-NEXT:    br label [[SEQ_PAR_MERGED:%.*]]
 ; CHECK:       seq.par.merged:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr noundef nonnull [[B]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP4]] to i32
 ; CHECK-NEXT:    store i32 [[TMP5]], ptr [[B]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr noundef nonnull [[B]])
 ; CHECK-NEXT:    br label [[OMP_PAR_MERGED_SPLIT:%.*]]
 ; CHECK:       omp.par.merged.split:
 ; CHECK-NEXT:    br label [[OMP_REGION_BODY_SPLIT:%.*]]
@@ -3158,7 +3158,7 @@ entry:
 ; CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 ; CHECK-NEXT:    br label [[OMP_PARALLEL:%.*]]
 ; CHECK:       omp_parallel:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[B]])
 ; CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 2, ptr @merge_seq_par_use..omp_par, ptr [[A_ADDR]], ptr [[B]])
 ; CHECK-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
 ; CHECK:       omp.par.outlined.exit:
@@ -3166,7 +3166,7 @@ entry:
 ; CHECK:       omp.par.exit.split:
 ; CHECK-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK:       entry.split.split:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr noundef nonnull [[B]])
 ; CHECK-NEXT:    ret void
 ; CHECK-LABEL: define {{[^@]+}}@merge_seq_par_use..omp_par
 ; CHECK-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[A_ADDR:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
@@ -4097,11 +4097,11 @@ entry:
 ; CHECK:       omp_region.body:
 ; CHECK-NEXT:    br label [[SEQ_PAR_MERGED:%.*]]
 ; CHECK:       seq.par.merged:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr noundef nonnull [[B]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP4]] to i32
 ; CHECK-NEXT:    store i32 [[TMP5]], ptr [[B]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr noundef nonnull [[B]])
 ; CHECK-NEXT:    br label [[OMP_PAR_MERGED_SPLIT:%.*]]
 ; CHECK:       omp.par.merged.split:
 ; CHECK-NEXT:    br label [[OMP_REGION_BODY_SPLIT:%.*]]
@@ -4129,7 +4129,7 @@ entry:
 ; CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 ; CHECK-NEXT:    br label [[OMP_PARALLEL:%.*]]
 ; CHECK:       omp_parallel:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[B]])
 ; CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 2, ptr @merge_seq_par_use..omp_par, ptr [[A_ADDR]], ptr [[B]])
 ; CHECK-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
 ; CHECK:       omp.par.outlined.exit:
@@ -4137,7 +4137,7 @@ entry:
 ; CHECK:       omp.par.exit.split:
 ; CHECK-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK:       entry.split.split:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr noundef nonnull [[B]])
 ; CHECK-NEXT:    ret void
 ; CHECK-LABEL: define {{[^@]+}}@merge_seq_par_use..omp_par
 ; CHECK-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[A_ADDR:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
@@ -4683,9 +4683,7 @@ entry:
 ; CHECK2-NEXT:    store ptr [[A_ADDR]], ptr [[GEP_A_ADDR]], align 8
 ; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @merge..omp_par, ptr [[STRUCTARG]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-; CHECK2:       omp.par.outlined.exit:
-; CHECK2-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-; CHECK2:       omp.par.exit.split:
+; CHECK2:       omp.par.exit:
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK2:       entry.split.split:
 ; CHECK2-NEXT:    ret void
@@ -4704,10 +4702,10 @@ entry:
 ; CHECK2:       omp.par.region:
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK2:       omp.par.merged:
-; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined.(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOADGEP_A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined.(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[LOADGEP_A_ADDR]])
 ; CHECK2-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2]])
 ; CHECK2-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM]])
-; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..1(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOADGEP_A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..1(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[LOADGEP_A_ADDR]])
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT:%.*]]
 ; CHECK2:       entry.split:
 ; CHECK2-NEXT:    br label [[OMP_PAR_REGION_SPLIT:%.*]]
@@ -4715,12 +4713,12 @@ entry:
 ; CHECK2-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 ; CHECK2:       omp.par.pre_finalize:
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2:       omp.par.exit.exitStub:
 ; CHECK2-NEXT:    ret void
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined.
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -4728,7 +4726,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..1
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -4742,13 +4740,13 @@ entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1:[0-9]+]])
 ; CHECK2-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 ; CHECK2-NEXT:    call void @__kmpc_push_proc_bind(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 [[TMP0]], i32 noundef 3)
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..2, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..3, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..2, ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..3, ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A_ADDR]])
 ; CHECK2-NEXT:    ret void
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..2
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -4756,7 +4754,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..3
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -4770,13 +4768,13 @@ entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]])
 ; CHECK2-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 ; CHECK2-NEXT:    call void @__kmpc_push_num_threads(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 [[TMP0]], i32 [[A]])
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..4, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..5, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..4, ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..5, ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A_ADDR]])
 ; CHECK2-NEXT:    ret void
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..4
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -4784,7 +4782,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..5
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -4796,14 +4794,14 @@ entry:
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 ; CHECK2-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..6, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..6, ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A_ADDR]])
 ; CHECK2-NEXT:    call void (...) @foo()
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..7, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..7, ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A_ADDR]])
 ; CHECK2-NEXT:    ret void
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..6
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -4811,7 +4809,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..7
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -4831,9 +4829,7 @@ entry:
 ; CHECK2-NEXT:    store ptr [[A_ADDR]], ptr [[GEP_A_ADDR]], align 8
 ; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @merge_seq..omp_par, ptr [[STRUCTARG]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-; CHECK2:       omp.par.outlined.exit:
-; CHECK2-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-; CHECK2:       omp.par.exit.split:
+; CHECK2:       omp.par.exit:
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK2:       entry.split.split:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
@@ -4854,7 +4850,7 @@ entry:
 ; CHECK2:       omp.par.region:
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK2:       omp.par.merged:
-; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..8(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOADGEP_A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..8(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[LOADGEP_A_ADDR]])
 ; CHECK2-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2]])
 ; CHECK2-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
 ; CHECK2-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2]])
@@ -4866,7 +4862,7 @@ entry:
 ; CHECK2-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3]], i32 [[OMP_GLOBAL_THREAD_NUM1]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED_SPLIT_SPLIT:%.*]]
 ; CHECK2:       omp.par.merged.split.split:
-; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..9(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOADGEP_A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..9(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[LOADGEP_A_ADDR]])
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT:%.*]]
 ; CHECK2:       entry.split:
 ; CHECK2-NEXT:    br label [[OMP_PAR_REGION_SPLIT:%.*]]
@@ -4884,14 +4880,16 @@ entry:
 ; CHECK2:       omp.par.merged.split:
 ; CHECK2-NEXT:    br label [[OMP_REGION_BODY_SPLIT:%.*]]
 ; CHECK2:       omp_region.body.split:
+; CHECK2-NEXT:    br label [[OMP_REGION_FINALIZE:%.*]]
+; CHECK2:       omp_region.finalize:
 ; CHECK2-NEXT:    call void @__kmpc_end_master(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 ; CHECK2-NEXT:    br label [[OMP_REGION_END]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2:       omp.par.exit.exitStub:
 ; CHECK2-NEXT:    ret void
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..8
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -4899,7 +4897,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..9
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -4907,7 +4905,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@merge_seq_float
-; CHECK2-SAME: (float [[F:%.*]], ptr nocapture nofree writeonly [[P:%.*]]) local_unnamed_addr {
+; CHECK2-SAME: (float [[F:%.*]], ptr nofree writeonly captures(none) [[P:%.*]]) local_unnamed_addr {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[STRUCTARG:%.*]] = alloca { ptr, ptr, ptr }, align 8
 ; CHECK2-NEXT:    [[F_RELOADED:%.*]] = alloca float, align 4
@@ -4925,9 +4923,7 @@ entry:
 ; CHECK2-NEXT:    store ptr [[P]], ptr [[GEP_P]], align 8
 ; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @merge_seq_float..omp_par, ptr [[STRUCTARG]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-; CHECK2:       omp.par.outlined.exit:
-; CHECK2-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-; CHECK2:       omp.par.exit.split:
+; CHECK2:       omp.par.exit:
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK2:       entry.split.split:
 ; CHECK2-NEXT:    ret void
@@ -4951,7 +4947,7 @@ entry:
 ; CHECK2:       omp.par.region:
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK2:       omp.par.merged:
-; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..10(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOADGEP_F_ADDR]])
+; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..10(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[LOADGEP_F_ADDR]])
 ; CHECK2-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2]])
 ; CHECK2-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
 ; CHECK2-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2]])
@@ -4963,7 +4959,7 @@ entry:
 ; CHECK2-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3]], i32 [[OMP_GLOBAL_THREAD_NUM1]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED_SPLIT_SPLIT:%.*]]
 ; CHECK2:       omp.par.merged.split.split:
-; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..11(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOADGEP_F_ADDR]])
+; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..11(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[LOADGEP_F_ADDR]])
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT:%.*]]
 ; CHECK2:       entry.split:
 ; CHECK2-NEXT:    br label [[OMP_PAR_REGION_SPLIT:%.*]]
@@ -4980,14 +4976,16 @@ entry:
 ; CHECK2:       omp.par.merged.split:
 ; CHECK2-NEXT:    br label [[OMP_REGION_BODY_SPLIT:%.*]]
 ; CHECK2:       omp_region.body.split:
+; CHECK2-NEXT:    br label [[OMP_REGION_FINALIZE:%.*]]
+; CHECK2:       omp_region.finalize:
 ; CHECK2-NEXT:    call void @__kmpc_end_master(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 ; CHECK2-NEXT:    br label [[OMP_REGION_END]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2:       omp.par.exit.exitStub:
 ; CHECK2-NEXT:    ret void
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..10
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[F:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[F:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load float, ptr [[F]], align 4
 ; CHECK2-NEXT:    [[CONV:%.*]] = fptosi float [[TMP0]] to i32
@@ -4996,7 +4994,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..11
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[F:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[F:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load float, ptr [[F]], align 4
 ; CHECK2-NEXT:    [[CONV:%.*]] = fptosi float [[TMP0]] to i32
@@ -5020,9 +5018,7 @@ entry:
 ; CHECK2-NEXT:    store ptr [[A_CASTED_SROA_0_0_INSERT_EXT_SEQ_OUTPUT_ALLOC]], ptr [[GEP_A_CASTED_SROA_0_0_INSERT_EXT_SEQ_OUTPUT_ALLOC]], align 8
 ; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @merge_seq_firstprivate..omp_par, ptr [[STRUCTARG]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-; CHECK2:       omp.par.outlined.exit:
-; CHECK2-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-; CHECK2:       omp.par.exit.split:
+; CHECK2:       omp.par.exit:
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK2:       entry.split.split:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
@@ -5045,7 +5041,7 @@ entry:
 ; CHECK2:       omp.par.region:
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK2:       omp.par.merged:
-; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..12(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOADGEP_A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..12(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[LOADGEP_A_ADDR]])
 ; CHECK2-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2]])
 ; CHECK2-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
 ; CHECK2-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2]])
@@ -5078,14 +5074,16 @@ entry:
 ; CHECK2:       omp.par.merged.split:
 ; CHECK2-NEXT:    br label [[OMP_REGION_BODY_SPLIT:%.*]]
 ; CHECK2:       omp_region.body.split:
+; CHECK2-NEXT:    br label [[OMP_REGION_FINALIZE:%.*]]
+; CHECK2:       omp_region.finalize:
 ; CHECK2-NEXT:    call void @__kmpc_end_master(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 ; CHECK2-NEXT:    br label [[OMP_REGION_END]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2:       omp.par.exit.exitStub:
 ; CHECK2-NEXT:    ret void
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..12
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -5093,7 +5091,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..13
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], i64 [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], i64 [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[A_ADDR_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[A]] to i32
 ; CHECK2-NEXT:    call void @use(i32 [[A_ADDR_SROA_0_0_EXTRACT_TRUNC]])
@@ -5113,9 +5111,7 @@ entry:
 ; CHECK2-NEXT:    store ptr [[A_ADDR]], ptr [[GEP_A_ADDR]], align 8
 ; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @merge_seq_sink_lt..omp_par, ptr [[STRUCTARG]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-; CHECK2:       omp.par.outlined.exit:
-; CHECK2-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-; CHECK2:       omp.par.exit.split:
+; CHECK2:       omp.par.exit:
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK2:       entry.split.split:
 ; CHECK2-NEXT:    ret void
@@ -5135,7 +5131,7 @@ entry:
 ; CHECK2:       omp.par.region:
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK2:       omp.par.merged:
-; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..14(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOADGEP_A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..14(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[LOADGEP_A_ADDR]])
 ; CHECK2-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2]])
 ; CHECK2-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
 ; CHECK2-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2]])
@@ -5147,7 +5143,7 @@ entry:
 ; CHECK2-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3]], i32 [[OMP_GLOBAL_THREAD_NUM1]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED_SPLIT_SPLIT:%.*]]
 ; CHECK2:       omp.par.merged.split.split:
-; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..15(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOADGEP_A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..15(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[LOADGEP_A_ADDR]])
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT:%.*]]
 ; CHECK2:       entry.split:
 ; CHECK2-NEXT:    br label [[OMP_PAR_REGION_SPLIT:%.*]]
@@ -5158,23 +5154,25 @@ entry:
 ; CHECK2:       omp_region.body:
 ; CHECK2-NEXT:    br label [[SEQ_PAR_MERGED:%.*]]
 ; CHECK2:       seq.par.merged:
-; CHECK2-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK2-NEXT:    call void @llvm.lifetime.start.p0(ptr noundef nonnull [[B]])
 ; CHECK2-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK2-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP4]] to i32
 ; CHECK2-NEXT:    store i32 [[TMP5]], ptr [[B]], align 4
-; CHECK2-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK2-NEXT:    call void @llvm.lifetime.end.p0(ptr noundef nonnull [[B]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED_SPLIT:%.*]]
 ; CHECK2:       omp.par.merged.split:
 ; CHECK2-NEXT:    br label [[OMP_REGION_BODY_SPLIT:%.*]]
 ; CHECK2:       omp_region.body.split:
+; CHECK2-NEXT:    br label [[OMP_REGION_FINALIZE:%.*]]
+; CHECK2:       omp_region.finalize:
 ; CHECK2-NEXT:    call void @__kmpc_end_master(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 ; CHECK2-NEXT:    br label [[OMP_REGION_END]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2:       omp.par.exit.exitStub:
 ; CHECK2-NEXT:    ret void
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..14
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -5182,7 +5180,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..15
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -5207,15 +5205,13 @@ entry:
 ; CHECK2-NEXT:    store ptr [[A_ADDR]], ptr [[GEP_A_ADDR]], align 8
 ; CHECK2-NEXT:    [[GEP_B:%.*]] = getelementptr { ptr, ptr, ptr }, ptr [[STRUCTARG]], i32 0, i32 2
 ; CHECK2-NEXT:    store ptr [[B]], ptr [[GEP_B]], align 8
-; CHECK2-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[B]])
+; CHECK2-NEXT:    call void @llvm.lifetime.start.p0(ptr [[B]])
 ; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @merge_seq_par_use..omp_par, ptr [[STRUCTARG]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-; CHECK2:       omp.par.outlined.exit:
-; CHECK2-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-; CHECK2:       omp.par.exit.split:
+; CHECK2:       omp.par.exit:
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK2:       entry.split.split:
-; CHECK2-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK2-NEXT:    call void @llvm.lifetime.end.p0(ptr noundef nonnull [[B]])
 ; CHECK2-NEXT:    ret void
 ;
 ;
@@ -5237,7 +5233,7 @@ entry:
 ; CHECK2:       omp.par.region:
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK2:       omp.par.merged:
-; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..16(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOADGEP_A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..16(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[LOADGEP_A_ADDR]])
 ; CHECK2-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2]])
 ; CHECK2-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
 ; CHECK2-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2]])
@@ -5249,7 +5245,7 @@ entry:
 ; CHECK2-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3]], i32 [[OMP_GLOBAL_THREAD_NUM1]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED_SPLIT_SPLIT:%.*]]
 ; CHECK2:       omp.par.merged.split.split:
-; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..17(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOADGEP_A_ADDR]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOADGEP_B]])
+; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..17(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[LOADGEP_A_ADDR]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[LOADGEP_B]])
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT:%.*]]
 ; CHECK2:       entry.split:
 ; CHECK2-NEXT:    br label [[OMP_PAR_REGION_SPLIT:%.*]]
@@ -5266,14 +5262,16 @@ entry:
 ; CHECK2:       omp.par.merged.split:
 ; CHECK2-NEXT:    br label [[OMP_REGION_BODY_SPLIT:%.*]]
 ; CHECK2:       omp_region.body.split:
+; CHECK2-NEXT:    br label [[OMP_REGION_FINALIZE:%.*]]
+; CHECK2:       omp_region.finalize:
 ; CHECK2-NEXT:    call void @__kmpc_end_master(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 ; CHECK2-NEXT:    br label [[OMP_REGION_END]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2:       omp.par.exit.exitStub:
 ; CHECK2-NEXT:    ret void
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..16
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -5281,7 +5279,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..17
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[B:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -5307,9 +5305,7 @@ entry:
 ; CHECK2-NEXT:    store ptr [[CANCEL2_ADDR]], ptr [[GEP_CANCEL2_ADDR]], align 8
 ; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @merge_cancellable_regions..omp_par, ptr [[STRUCTARG]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-; CHECK2:       omp.par.outlined.exit:
-; CHECK2-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-; CHECK2:       omp.par.exit.split:
+; CHECK2:       omp.par.exit:
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK2:       entry.split.split:
 ; CHECK2-NEXT:    ret void
@@ -5330,10 +5326,10 @@ entry:
 ; CHECK2:       omp.par.region:
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK2:       omp.par.merged:
-; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..18(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOADGEP_CANCEL1_ADDR]])
+; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..18(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[LOADGEP_CANCEL1_ADDR]])
 ; CHECK2-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2]])
 ; CHECK2-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3]], i32 [[OMP_GLOBAL_THREAD_NUM]])
-; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..19(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOADGEP_CANCEL2_ADDR]])
+; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..19(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[LOADGEP_CANCEL2_ADDR]])
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT:%.*]]
 ; CHECK2:       entry.split:
 ; CHECK2-NEXT:    br label [[OMP_PAR_REGION_SPLIT:%.*]]
@@ -5341,12 +5337,12 @@ entry:
 ; CHECK2-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 ; CHECK2:       omp.par.pre_finalize:
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2:       omp.par.exit.exitStub:
 ; CHECK2-NEXT:    ret void
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..18
-; CHECK2-SAME: (ptr noalias nocapture nofree readonly [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[CANCEL1:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readonly captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[CANCEL1:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[CANCEL1]], align 4
 ; CHECK2-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[TMP0]], 0
@@ -5360,7 +5356,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..19
-; CHECK2-SAME: (ptr noalias nocapture nofree readonly [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[CANCEL2:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readonly captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[CANCEL2:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[CANCEL2]], align 4
 ; CHECK2-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[TMP0]], 0
@@ -5394,9 +5390,7 @@ entry:
 ; CHECK2-NEXT:    store ptr [[CANCEL2_ADDR]], ptr [[GEP_CANCEL2_ADDR]], align 8
 ; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @merge_cancellable_regions_seq..omp_par, ptr [[STRUCTARG]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-; CHECK2:       omp.par.outlined.exit:
-; CHECK2-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-; CHECK2:       omp.par.exit.split:
+; CHECK2:       omp.par.exit:
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK2:       entry.split.split:
 ; CHECK2-NEXT:    ret void
@@ -5420,7 +5414,7 @@ entry:
 ; CHECK2:       omp.par.region:
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK2:       omp.par.merged:
-; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..20(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOADGEP_CANCEL1_ADDR]])
+; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..20(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[LOADGEP_CANCEL1_ADDR]])
 ; CHECK2-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2]])
 ; CHECK2-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
 ; CHECK2-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2]])
@@ -5432,7 +5426,7 @@ entry:
 ; CHECK2-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3]], i32 [[OMP_GLOBAL_THREAD_NUM1]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED_SPLIT_SPLIT:%.*]]
 ; CHECK2:       omp.par.merged.split.split:
-; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..21(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOADGEP_CANCEL2_ADDR]])
+; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..21(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[LOADGEP_CANCEL2_ADDR]])
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT:%.*]]
 ; CHECK2:       entry.split:
 ; CHECK2-NEXT:    br label [[OMP_PAR_REGION_SPLIT:%.*]]
@@ -5450,14 +5444,16 @@ entry:
 ; CHECK2:       omp.par.merged.split:
 ; CHECK2-NEXT:    br label [[OMP_REGION_BODY_SPLIT:%.*]]
 ; CHECK2:       omp_region.body.split:
+; CHECK2-NEXT:    br label [[OMP_REGION_FINALIZE:%.*]]
+; CHECK2:       omp_region.finalize:
 ; CHECK2-NEXT:    call void @__kmpc_end_master(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 ; CHECK2-NEXT:    br label [[OMP_REGION_END]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2:       omp.par.exit.exitStub:
 ; CHECK2-NEXT:    ret void
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..20
-; CHECK2-SAME: (ptr noalias nocapture nofree readonly [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[CANCEL1:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readonly captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[CANCEL1:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[CANCEL1]], align 4
 ; CHECK2-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[TMP0]], 0
@@ -5471,7 +5467,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..21
-; CHECK2-SAME: (ptr noalias nocapture nofree readonly [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[CANCEL2:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readonly captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[CANCEL2:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[CANCEL2]], align 4
 ; CHECK2-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[TMP0]], 0
@@ -5497,9 +5493,7 @@ entry:
 ; CHECK2-NEXT:    store ptr [[A_ADDR]], ptr [[GEP_A_ADDR]], align 8
 ; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @merge_3..omp_par, ptr [[STRUCTARG]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-; CHECK2:       omp.par.outlined.exit:
-; CHECK2-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-; CHECK2:       omp.par.exit.split:
+; CHECK2:       omp.par.exit:
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK2:       entry.split.split:
 ; CHECK2-NEXT:    ret void
@@ -5518,13 +5512,13 @@ entry:
 ; CHECK2:       omp.par.region:
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK2:       omp.par.merged:
-; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..22(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOADGEP_A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..22(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[LOADGEP_A_ADDR]])
 ; CHECK2-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2]])
 ; CHECK2-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3]], i32 [[OMP_GLOBAL_THREAD_NUM]])
-; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..23(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOADGEP_A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..23(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[LOADGEP_A_ADDR]])
 ; CHECK2-NEXT:    [[OMP_GLOBAL_THREAD_NUM1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2]])
 ; CHECK2-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3]], i32 [[OMP_GLOBAL_THREAD_NUM1]])
-; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..24(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOADGEP_A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..24(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[LOADGEP_A_ADDR]])
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT:%.*]]
 ; CHECK2:       entry.split:
 ; CHECK2-NEXT:    br label [[OMP_PAR_REGION_SPLIT:%.*]]
@@ -5532,12 +5526,12 @@ entry:
 ; CHECK2-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 ; CHECK2:       omp.par.pre_finalize:
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2:       omp.par.exit.exitStub:
 ; CHECK2-NEXT:    ret void
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..22
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -5545,7 +5539,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..23
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -5553,7 +5547,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..24
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -5583,9 +5577,7 @@ entry:
 ; CHECK2-NEXT:    store ptr [[ADD1_SEQ_OUTPUT_ALLOC]], ptr [[GEP_ADD1_SEQ_OUTPUT_ALLOC]], align 8
 ; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @merge_3_seq..omp_par, ptr [[STRUCTARG]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-; CHECK2:       omp.par.outlined.exit:
-; CHECK2-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-; CHECK2:       omp.par.exit.split:
+; CHECK2:       omp.par.exit:
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK2:       entry.split.split:
 ; CHECK2-NEXT:    [[ADD1_SEQ_OUTPUT_LOAD:%.*]] = load i32, ptr [[ADD1_SEQ_OUTPUT_ALLOC]], align 4
@@ -5613,7 +5605,7 @@ entry:
 ; CHECK2:       omp.par.region:
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK2:       omp.par.merged:
-; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..25(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOADGEP_A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..25(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[LOADGEP_A_ADDR]])
 ; CHECK2-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2]])
 ; CHECK2-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
 ; CHECK2-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2]])
@@ -5625,7 +5617,7 @@ entry:
 ; CHECK2-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3]], i32 [[OMP_GLOBAL_THREAD_NUM1]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED_SPLIT_SPLIT:%.*]]
 ; CHECK2:       omp.par.merged.split.split:
-; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..26(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOADGEP_A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..26(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[LOADGEP_A_ADDR]])
 ; CHECK2-NEXT:    [[OMP_GLOBAL_THREAD_NUM4:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2]])
 ; CHECK2-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3]], i32 [[OMP_GLOBAL_THREAD_NUM4]])
 ; CHECK2-NEXT:    [[OMP_GLOBAL_THREAD_NUM3:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2]])
@@ -5637,15 +5629,17 @@ entry:
 ; CHECK2-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3]], i32 [[OMP_GLOBAL_THREAD_NUM6]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED_SPLIT_SPLIT_SPLIT_SPLIT:%.*]]
 ; CHECK2:       omp.par.merged.split.split.split.split:
-; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..27(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOADGEP_A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..27(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[LOADGEP_A_ADDR]])
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT:%.*]]
 ; CHECK2:       entry.split:
 ; CHECK2-NEXT:    br label [[OMP_PAR_REGION_SPLIT:%.*]]
 ; CHECK2:       omp.par.region.split:
 ; CHECK2-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 ; CHECK2:       omp.par.pre_finalize:
-; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
-; CHECK2:       omp_region.body5:
+; CHECK2-NEXT:    br label [[FINI:%.*]]
+; CHECK2:       .fini:
+; CHECK2-NEXT:    br label [[OMP_PAR_EXIT_EXITSTUB:.*]]
+; CHECK2:       omp_region.body6:
 ; CHECK2-NEXT:    br label [[SEQ_PAR_MERGED2:%.*]]
 ; CHECK2:       seq.par.merged2:
 ; CHECK2-NEXT:    [[ADD_SEQ_OUTPUT_LOAD:%.*]] = load i32, ptr [[LOADGEP_ADD_SEQ_OUTPUT_ALLOC]], align 4
@@ -5654,7 +5648,9 @@ entry:
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED_SPLIT_SPLIT_SPLIT:%.*]]
 ; CHECK2:       omp.par.merged.split.split.split:
 ; CHECK2-NEXT:    br label [[OMP_REGION_BODY5_SPLIT:%.*]]
-; CHECK2:       omp_region.body5.split:
+; CHECK2:       omp_region.body6.split:
+; CHECK2-NEXT:    br label [[OMP_REGION_FINALIZE5:%.*]]
+; CHECK2:       omp_region.finalize{{.*}}:
 ; CHECK2-NEXT:    call void @__kmpc_end_master(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM3]])
 ; CHECK2-NEXT:    br label [[OMP_REGION_END4]]
 ; CHECK2:       omp_region.body:
@@ -5666,14 +5662,16 @@ entry:
 ; CHECK2:       omp.par.merged.split:
 ; CHECK2-NEXT:    br label [[OMP_REGION_BODY_SPLIT:%.*]]
 ; CHECK2:       omp_region.body.split:
+; CHECK2-NEXT:    br label [[OMP_REGION_FINALIZE:%.*]]
+; CHECK2:       omp_region.finalize:
 ; CHECK2-NEXT:    call void @__kmpc_end_master(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 ; CHECK2-NEXT:    br label [[OMP_REGION_END]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2:       omp.par.exit.exitStub:
 ; CHECK2-NEXT:    ret void
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..25
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -5681,7 +5679,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..26
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -5689,7 +5687,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..27
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -5701,16 +5699,16 @@ entry:
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 ; CHECK2-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..28, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..28, ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A_ADDR]])
 ; CHECK2-NEXT:    call void (...) @foo()
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..29, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..29, ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A_ADDR]])
 ; CHECK2-NEXT:    call void (...) @foo()
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..30, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..30, ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A_ADDR]])
 ; CHECK2-NEXT:    ret void
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..28
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -5718,7 +5716,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..29
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -5726,7 +5724,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..30
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -5739,15 +5737,15 @@ entry:
 ; CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 ; CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]])
 ; CHECK2-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..31, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..31, ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A_ADDR]])
 ; CHECK2-NEXT:    call void @__kmpc_push_proc_bind(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 [[TMP0]], i32 noundef 3)
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..32, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..33, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..32, ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..33, ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A_ADDR]])
 ; CHECK2-NEXT:    ret void
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..31
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -5755,7 +5753,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..32
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -5763,7 +5761,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..33
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -5776,15 +5774,15 @@ entry:
 ; CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 ; CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]])
 ; CHECK2-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..34, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..34, ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A_ADDR]])
 ; CHECK2-NEXT:    call void @__kmpc_push_num_threads(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 [[TMP0]], i32 [[A]])
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..35, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..36, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..35, ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..36, ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A_ADDR]])
 ; CHECK2-NEXT:    ret void
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..34
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -5792,7 +5790,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..35
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -5800,7 +5798,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..36
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -5820,13 +5818,11 @@ entry:
 ; CHECK2-NEXT:    store ptr [[A_ADDR]], ptr [[GEP_A_ADDR]], align 8
 ; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @merge_2_unmergable_1..omp_par, ptr [[STRUCTARG]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-; CHECK2:       omp.par.outlined.exit:
-; CHECK2-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-; CHECK2:       omp.par.exit.split:
+; CHECK2:       omp.par.exit:
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK2:       entry.split.split:
 ; CHECK2-NEXT:    call void (...) @foo()
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..39, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..39, ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A_ADDR]])
 ; CHECK2-NEXT:    ret void
 ;
 ;
@@ -5843,10 +5839,10 @@ entry:
 ; CHECK2:       omp.par.region:
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK2:       omp.par.merged:
-; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..37(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOADGEP_A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..37(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[LOADGEP_A_ADDR]])
 ; CHECK2-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2]])
 ; CHECK2-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3]], i32 [[OMP_GLOBAL_THREAD_NUM]])
-; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..38(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOADGEP_A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, ptr, ...) @.omp_outlined..38(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[LOADGEP_A_ADDR]])
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT:%.*]]
 ; CHECK2:       entry.split:
 ; CHECK2-NEXT:    br label [[OMP_PAR_REGION_SPLIT:%.*]]
@@ -5854,12 +5850,12 @@ entry:
 ; CHECK2-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 ; CHECK2:       omp.par.pre_finalize:
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2:       omp.par.exit.exitStub:
 ; CHECK2-NEXT:    ret void
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..37
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -5867,7 +5863,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..38
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
@@ -5875,7 +5871,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..39
-; CHECK2-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK2-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])

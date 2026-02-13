@@ -638,6 +638,15 @@ struct PR69979 {
   const char (&d)[9];
 } e {"12345678"};
 
+namespace GH147949 {
+  struct Coordinate {};
+  Coordinate Make();
+  void TestBody() {
+    // CHECK: call {{.*}} @_ZN8GH1479494MakeEv
+    const Coordinate x{Make()};
+  }
+}
+
 // VirtualMembers::TemplateClass::templateMethod() must be defined in this TU,
 // not just declared.
 // CHECK: define linkonce_odr void @_ZN14VirtualMembers13TemplateClassIiE14templateMethodEv(ptr {{[^,]*}} %this)

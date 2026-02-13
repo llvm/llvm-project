@@ -9,7 +9,7 @@ declare dso_local void @ptr_fn(ptr)
 ; CHECK-NOT: mov x19, sp
 ; CHECK: addvl sp, sp, #-1
 ; CHECK-NOT: __stack_chk_guard
-; CHECK: st1w { {{z[0-9]+.s}} }, {{p[0-9]+}}, [x29, #-1, mul vl]
+; CHECK: str {{z[0-9]+}}, [x29, #-1, mul vl]
 define void @call_value() #0 {
 entry:
   %x = alloca <vscale x 4 x float>, align 16
@@ -23,7 +23,7 @@ entry:
 ; CHECK-NOT: mov x19, sp
 ; CHECK: addvl sp, sp, #-1
 ; CHECK-NOT: __stack_chk_guard
-; CHECK: st1w { {{z[0-9]+.s}} }, {{p[0-9]+}}, [x29, #-1, mul vl]
+; CHECK: str {{z[0-9]+}}, [x29, #-1, mul vl]
 define void @call_value_strong() #1 {
 entry:
   %x = alloca <vscale x 4 x float>, align 16
@@ -70,7 +70,7 @@ entry:
 ; CHECK: mov x29, sp
 ; CHECK: addvl sp, sp, #-2
 ; CHECK-NOT: __stack_chk_guard
-; CHECK: st1w { {{z[0-9]+.s}} }, {{p[0-9]+}}, [x29, #-1, mul vl]
+; CHECK: str {{z[0-9]+}}, [x29, #-1, mul vl]
 ; CHECK: bl val_fn
 ; CHECK: addvl x0, x29, #-2
 ; CHECK: bl ptr_fn
@@ -91,7 +91,7 @@ entry:
 ; CHECK-DAG: addvl [[ADDR:x[0-9]+]], x29, #-1
 ; CHECK-DAG: ldr [[VAL:x[0-9]+]], [{{x[0-9]+}}, :lo12:__stack_chk_guard]
 ; CHECK-DAG: str [[VAL]], [[[ADDR]]]
-; CHECK-DAG: st1w { {{z[0-9]+.s}} }, {{p[0-9]+}}, [x29, #-2, mul vl]
+; CHECK-DAG: str {{z[0-9]+}}, [x29, #-2, mul vl]
 ; CHECK: bl val_fn
 ; CHECK: addvl x0, x29, #-3
 ; CHECK: bl ptr_fn
@@ -115,8 +115,7 @@ entry:
 ; CHECK-NOT: mov x29, sp
 ; CHECK: addvl sp, sp, #-1
 ; CHECK-NOT: __stack_chk_guard
-; CHECK: addvl [[REG:x[0-9]+]], x29, #-11
-; CHECK: st1w { {{z[0-9]+.s}} }, {{p[0-9]+}}, [[[REG]], #-8, mul vl]
+; CHECK: str {{z[0-9]+}}, [x29, #-19, mul vl]
 define void @callee_save(<vscale x 4 x float> %x) #0 {
 entry:
   %x.addr = alloca <vscale x 4 x float>, align 16
@@ -133,8 +132,7 @@ entry:
 ; CHECK-DAG: addvl [[ADDR:x[0-9]+]], x29, #-19
 ; CHECK-DAG: ldr [[VAL:x[0-9]+]], [{{x[0-9]+}}, :lo12:__stack_chk_guard]
 ; CHECK-DAG: str [[VAL]], [[[ADDR]]]
-; CHECK-DAG: addvl [[ADDR2:x[0-9]+]], x29, #-12
-; CHECK-DAG: st1w { z0.s }, p0, [[[ADDR2]], #-8, mul vl]
+; CHECK-DAG: str z0, [x29, #-20, mul vl]
 define void @callee_save_strong(<vscale x 4 x float> %x) #1 {
 entry:
   %x.addr = alloca <vscale x 4 x float>, align 16

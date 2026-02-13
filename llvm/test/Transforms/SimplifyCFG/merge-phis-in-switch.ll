@@ -6,13 +6,13 @@
 declare void @use(i8)
 
 define i8 @phis_of_switch_minimal(i8 noundef %arg) {
-; CHECK-LABEL: define i8 @phis_of_switch_minimal
-; CHECK-SAME: (i8 noundef [[ARG:%.*]]) {
+; CHECK-LABEL: define i8 @phis_of_switch_minimal(
+; CHECK-SAME: i8 noundef [[ARG:%.*]]) {
 ; CHECK-NEXT:  start:
 ; CHECK-NEXT:    switch i8 [[ARG]], label [[UNREACHABLE:%.*]] [
-; CHECK-NEXT:    i8 0, label [[CASE01:%.*]]
-; CHECK-NEXT:    i8 1, label [[CASE1:%.*]]
-; CHECK-NEXT:    i8 2, label [[END:%.*]]
+; CHECK-NEXT:      i8 0, label [[CASE01:%.*]]
+; CHECK-NEXT:      i8 1, label [[CASE1:%.*]]
+; CHECK-NEXT:      i8 2, label [[END:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       unreachable:
 ; CHECK-NEXT:    unreachable
@@ -45,14 +45,14 @@ end:
 }
 
 define i8 @phis_of_switch(i8 noundef %arg) {
-; CHECK-LABEL: define i8 @phis_of_switch
-; CHECK-SAME: (i8 noundef [[ARG:%.*]]) {
+; CHECK-LABEL: define i8 @phis_of_switch(
+; CHECK-SAME: i8 noundef [[ARG:%.*]]) {
 ; CHECK-NEXT:  start:
 ; CHECK-NEXT:    switch i8 [[ARG]], label [[UNREACHABLE:%.*]] [
-; CHECK-NEXT:    i8 0, label [[CASE012:%.*]]
-; CHECK-NEXT:    i8 1, label [[CASE1:%.*]]
-; CHECK-NEXT:    i8 2, label [[CASE2:%.*]]
-; CHECK-NEXT:    i8 3, label [[END:%.*]]
+; CHECK-NEXT:      i8 0, label [[CASE012:%.*]]
+; CHECK-NEXT:      i8 1, label [[CASE1:%.*]]
+; CHECK-NEXT:      i8 2, label [[CASE2:%.*]]
+; CHECK-NEXT:      i8 3, label [[END:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       unreachable:
 ; CHECK-NEXT:    unreachable
@@ -91,14 +91,14 @@ end:
 }
 
 define i8 @multiple_phis_of_switch(i8 noundef %arg) {
-; CHECK-LABEL: define i8 @multiple_phis_of_switch
-; CHECK-SAME: (i8 noundef [[ARG:%.*]]) {
+; CHECK-LABEL: define i8 @multiple_phis_of_switch(
+; CHECK-SAME: i8 noundef [[ARG:%.*]]) {
 ; CHECK-NEXT:  start:
 ; CHECK-NEXT:    switch i8 [[ARG]], label [[UNREACHABLE:%.*]] [
-; CHECK-NEXT:    i8 0, label [[CASE012:%.*]]
-; CHECK-NEXT:    i8 1, label [[CASE1:%.*]]
-; CHECK-NEXT:    i8 2, label [[CASE2:%.*]]
-; CHECK-NEXT:    i8 3, label [[END:%.*]]
+; CHECK-NEXT:      i8 0, label [[CASE012:%.*]]
+; CHECK-NEXT:      i8 1, label [[CASE1:%.*]]
+; CHECK-NEXT:      i8 2, label [[CASE2:%.*]]
+; CHECK-NEXT:      i8 3, label [[END:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       unreachable:
 ; CHECK-NEXT:    unreachable
@@ -148,16 +148,16 @@ end:
 }
 
 define i8 @phis_of_switch_multiple_stage0(i8 noundef %arg) {
-; CHECK-LABEL: define i8 @phis_of_switch_multiple_stage0
-; CHECK-SAME: (i8 noundef [[ARG:%.*]]) {
+; CHECK-LABEL: define i8 @phis_of_switch_multiple_stage0(
+; CHECK-SAME: i8 noundef [[ARG:%.*]]) {
 ; CHECK-NEXT:  start:
 ; CHECK-NEXT:    switch i8 [[ARG]], label [[UNREACHABLE:%.*]] [
-; CHECK-NEXT:    i8 0, label [[CASE0:%.*]]
-; CHECK-NEXT:    i8 1, label [[CASE1:%.*]]
-; CHECK-NEXT:    i8 2, label [[CASE2:%.*]]
-; CHECK-NEXT:    i8 3, label [[CASE0123:%.*]]
-; CHECK-NEXT:    i8 4, label [[CASE01234:%.*]]
-; CHECK-NEXT:    i8 5, label [[END:%.*]]
+; CHECK-NEXT:      i8 0, label [[CASE0:%.*]]
+; CHECK-NEXT:      i8 1, label [[CASE1:%.*]]
+; CHECK-NEXT:      i8 2, label [[CASE2:%.*]]
+; CHECK-NEXT:      i8 3, label [[CASE0123:%.*]]
+; CHECK-NEXT:      i8 4, label [[CASE01234:%.*]]
+; CHECK-NEXT:      i8 5, label [[END:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       unreachable:
 ; CHECK-NEXT:    unreachable
@@ -210,17 +210,17 @@ end:
 }
 
 define i8 @phis_of_switch_multiple_stage1(i8 noundef %arg) {
-; CHECK-LABEL: define i8 @phis_of_switch_multiple_stage1
-; CHECK-SAME: (i8 noundef [[ARG:%.*]]) {
+; CHECK-LABEL: define i8 @phis_of_switch_multiple_stage1(
+; CHECK-SAME: i8 noundef [[ARG:%.*]]) {
 ; CHECK-NEXT:  start:
 ; CHECK-NEXT:    switch i8 [[ARG]], label [[UNREACHABLE:%.*]] [
-; CHECK-NEXT:    i8 0, label [[CASE0:%.*]]
-; CHECK-NEXT:    i8 1, label [[CASE1:%.*]]
-; CHECK-NEXT:    i8 2, label [[CASE012:%.*]]
-; CHECK-NEXT:    i8 3, label [[CASE3:%.*]]
-; CHECK-NEXT:    i8 4, label [[CASE4:%.*]]
-; CHECK-NEXT:    i8 5, label [[CASE345:%.*]]
-; CHECK-NEXT:    i8 6, label [[CASE0123456:%.*]]
+; CHECK-NEXT:      i8 0, label [[CASE0:%.*]]
+; CHECK-NEXT:      i8 1, label [[CASE1:%.*]]
+; CHECK-NEXT:      i8 2, label [[CASE012:%.*]]
+; CHECK-NEXT:      i8 3, label [[CASE3:%.*]]
+; CHECK-NEXT:      i8 4, label [[CASE4:%.*]]
+; CHECK-NEXT:      i8 5, label [[CASE345:%.*]]
+; CHECK-NEXT:      i8 6, label [[CASE0123456:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       unreachable:
 ; CHECK-NEXT:    unreachable
@@ -237,7 +237,7 @@ define i8 @phis_of_switch_multiple_stage1(i8 noundef %arg) {
 ; CHECK:       case345:
 ; CHECK-NEXT:    br label [[CASE0123456]]
 ; CHECK:       case0123456:
-; CHECK-NEXT:    [[PHI1234567:%.*]] = phi i8 [ 7, [[START:%.*]] ], [ 2, [[CASE1]] ], [ 1, [[CASE0]] ], [ 3, [[CASE012]] ], [ 5, [[CASE4]] ], [ 4, [[CASE3]] ], [ 6, [[CASE345]] ]
+; CHECK-NEXT:    [[PHI1234567:%.*]] = phi i8 [ 7, [[START:%.*]] ], [ 3, [[CASE012]] ], [ 2, [[CASE1]] ], [ 1, [[CASE0]] ], [ 5, [[CASE4]] ], [ 4, [[CASE3]] ], [ 6, [[CASE345]] ]
 ; CHECK-NEXT:    ret i8 [[PHI1234567]]
 ;
 start:
@@ -279,14 +279,14 @@ case0123456:
 }
 
 define i8 @phis_of_switch_extra_use_fail(i8 noundef %arg) {
-; CHECK-LABEL: define i8 @phis_of_switch_extra_use_fail
-; CHECK-SAME: (i8 noundef [[ARG:%.*]]) {
+; CHECK-LABEL: define i8 @phis_of_switch_extra_use_fail(
+; CHECK-SAME: i8 noundef [[ARG:%.*]]) {
 ; CHECK-NEXT:  start:
 ; CHECK-NEXT:    switch i8 [[ARG]], label [[UNREACHABLE:%.*]] [
-; CHECK-NEXT:    i8 0, label [[CASE012:%.*]]
-; CHECK-NEXT:    i8 1, label [[CASE1:%.*]]
-; CHECK-NEXT:    i8 2, label [[CASE2:%.*]]
-; CHECK-NEXT:    i8 3, label [[END:%.*]]
+; CHECK-NEXT:      i8 0, label [[CASE012:%.*]]
+; CHECK-NEXT:      i8 1, label [[CASE1:%.*]]
+; CHECK-NEXT:      i8 2, label [[CASE2:%.*]]
+; CHECK-NEXT:      i8 3, label [[END:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       unreachable:
 ; CHECK-NEXT:    unreachable

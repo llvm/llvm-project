@@ -5,13 +5,13 @@
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck --check-prefixes=GFX89,GFX9 %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1012 -show-encoding %s | FileCheck --check-prefixes=GFX10,GFX1012 %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1030 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck --check-prefixes=NOSICI,NOSICIGFX10,NOSICIGFX1030,NOSICIVIGFX1030 --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire %s 2>&1 | FileCheck --check-prefixes=NOSICI,NOSICIGFX10,NOSICIGFX1030,NOSICIVIGFX1030 --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=kaveri %s 2>&1 | FileCheck --check-prefixes=NOSICI,NOSICIGFX10,NOSICIGFX1030,NOSICIVIGFX1030 --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s 2>&1 | FileCheck --check-prefixes=NOVI,NOSICIVIGFX1030 --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck --check-prefixes=NOGFX9GFX10,NOGFX9GFX1012,NOGFX9 --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1012 %s 2>&1 | FileCheck --check-prefixes=NOSICIGFX10,NOGFX9GFX10,NOGFX9GFX1012,NOGFX10 --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1030 %s 2>&1 | FileCheck --check-prefixes=NOSICIGFX1030,NOSICIVIGFX1030,NOSICIGFX10,NOGFX9GFX10,NOGFX1030,NOGFX10 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s -filetype=null 2>&1 | FileCheck --check-prefixes=NOSICI,NOSICIGFX10,NOSICIGFX1030,NOSICIVIGFX1030 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire %s -filetype=null 2>&1 | FileCheck --check-prefixes=NOSICI,NOSICIGFX10,NOSICIGFX1030,NOSICIVIGFX1030 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=kaveri %s -filetype=null 2>&1 | FileCheck --check-prefixes=NOSICI,NOSICIGFX10,NOSICIGFX1030,NOSICIVIGFX1030 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s -filetype=null 2>&1 | FileCheck --check-prefixes=NOVI,NOSICIVIGFX1030 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 %s -filetype=null 2>&1 | FileCheck --check-prefixes=NOGFX9GFX10,NOGFX9GFX1012,NOGFX9 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1012 %s -filetype=null 2>&1 | FileCheck --check-prefixes=NOSICIGFX10,NOGFX9GFX10,NOGFX9GFX1012,NOGFX10 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1030 %s -filetype=null 2>&1 | FileCheck --check-prefixes=NOSICIGFX1030,NOSICIVIGFX1030,NOSICIGFX10,NOGFX9GFX10,NOGFX1030,NOGFX10 --implicit-check-not=error: %s
 
 s_dcache_wb
 // GFX89: s_dcache_wb  ; encoding: [0x00,0x00,0x84,0xc0,0x00,0x00,0x00,0x00]
@@ -50,12 +50,12 @@ s_memrealtime s[4:5]
 s_memrealtime tba
 // VI: s_memrealtime tba ; encoding: [0x00,0x1b,0x94,0xc0,0x00,0x00,0x00,0x00]
 // NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// NOGFX9GFX10: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX9GFX10: :[[@LINE-3]]:{{[0-9]+}}: error: tba register not available on this GPU
 
 s_memrealtime tma
 // VI: s_memrealtime tma ; encoding: [0x80,0x1b,0x94,0xc0,0x00,0x00,0x00,0x00]
 // NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// NOGFX9GFX10: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX9GFX10: :[[@LINE-3]]:{{[0-9]+}}: error: tma register not available on this GPU
 
 s_memrealtime ttmp[0:1]
 // VI:    s_memrealtime ttmp[0:1] ; encoding: [0x00,0x1c,0x94,0xc0,0x00,0x00,0x00,0x00]
@@ -86,25 +86,25 @@ s_store_dword s1, s[2:3], s4 glc
 s_store_dword tba_lo, s[2:3], s4
 // VI: s_store_dword tba_lo, s[2:3], s4 ; encoding: [0x01,0x1b,0x40,0xc0,0x04,0x00,0x00,0x00]
 // NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// NOGFX9GFX1012: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX9GFX1012: :[[@LINE-3]]:{{[0-9]+}}: error: tba_lo register not available on this GPU
 // NOGFX1030: :[[@LINE-4]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_store_dword tba_hi, s[2:3], s4
 // VI: s_store_dword tba_hi, s[2:3], s4 ; encoding: [0x41,0x1b,0x40,0xc0,0x04,0x00,0x00,0x00]
 // NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// NOGFX9GFX1012: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX9GFX1012: :[[@LINE-3]]:{{[0-9]+}}: error: tba_hi register not available on this GPU
 // NOGFX1030: :[[@LINE-4]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_store_dword tma_lo, s[2:3], s4
 // VI: s_store_dword tma_lo, s[2:3], s4 ; encoding: [0x81,0x1b,0x40,0xc0,0x04,0x00,0x00,0x00]
 // NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// NOGFX9GFX1012: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX9GFX1012: :[[@LINE-3]]:{{[0-9]+}}: error: tma_lo register not available on this GPU
 // NOGFX1030: :[[@LINE-4]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_store_dword tma_hi, s[2:3], s4
 // VI: s_store_dword tma_hi, s[2:3], s4 ; encoding: [0xc1,0x1b,0x40,0xc0,0x04,0x00,0x00,0x00]
 // NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// NOGFX9GFX1012: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX9GFX1012: :[[@LINE-3]]:{{[0-9]+}}: error: tma_hi register not available on this GPU
 // NOGFX1030: :[[@LINE-4]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_load_dword s1, s[2:3], 0xfc glc
@@ -125,25 +125,25 @@ s_buffer_store_dword s10, s[92:95], m0
 s_buffer_store_dword tba_lo, s[92:95], m0
 // VI: s_buffer_store_dword tba_lo, s[92:95], m0 ; encoding: [0x2e,0x1b,0x60,0xc0,0x7c,0x00,0x00,0x00]
 // NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// NOGFX9GFX1012: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX9GFX1012: :[[@LINE-3]]:{{[0-9]+}}: error: tba_lo register not available on this GPU
 // NOGFX1030: :[[@LINE-4]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_buffer_store_dword tba_hi, s[92:95], m0
 // VI: s_buffer_store_dword tba_hi, s[92:95], m0 ; encoding: [0x6e,0x1b,0x60,0xc0,0x7c,0x00,0x00,0x00]
 // NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// NOGFX9GFX1012: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX9GFX1012: :[[@LINE-3]]:{{[0-9]+}}: error: tba_hi register not available on this GPU
 // NOGFX1030: :[[@LINE-4]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_buffer_store_dword tma_lo, s[92:95], m0
 // VI: s_buffer_store_dword tma_lo, s[92:95], m0 ; encoding: [0xae,0x1b,0x60,0xc0,0x7c,0x00,0x00,0x00]
 // NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// NOGFX9GFX1012: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX9GFX1012: :[[@LINE-3]]:{{[0-9]+}}: error: tma_lo register not available on this GPU
 // NOGFX1030: :[[@LINE-4]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_buffer_store_dword tma_hi, s[92:95], m0
 // VI: s_buffer_store_dword tma_hi, s[92:95], m0 ; encoding: [0xee,0x1b,0x60,0xc0,0x7c,0x00,0x00,0x00]
 // NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// NOGFX9GFX1012: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX9GFX1012: :[[@LINE-3]]:{{[0-9]+}}: error: tma_hi register not available on this GPU
 // NOGFX1030: :[[@LINE-4]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_buffer_store_dword ttmp0, s[92:95], m0
@@ -165,7 +165,7 @@ s_buffer_store_dwordx4 s[8:11], s[92:95], m0 glc
 s_buffer_store_dwordx2 tba, s[92:95], m0 glc
 // VI: s_buffer_store_dwordx2 tba, s[92:95], m0 glc ; encoding: [0x2e,0x1b,0x65,0xc0,0x7c,0x00,0x00,0x00]
 // NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// NOGFX9GFX1012: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX9GFX1012: :[[@LINE-3]]:{{[0-9]+}}: error: tba register not available on this GPU
 // NOGFX1030: :[[@LINE-4]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_buffer_load_dword s10, s[92:95], m0
@@ -176,22 +176,22 @@ s_buffer_load_dword s10, s[92:95], m0
 s_buffer_load_dword tba_lo, s[92:95], m0
 // VI: s_buffer_load_dword tba_lo, s[92:95], m0 ; encoding: [0x2e,0x1b,0x20,0xc0,0x7c,0x00,0x00,0x00]
 // SICI: s_buffer_load_dword tba_lo, s[92:95], m0 ; encoding: [0x7c,0x5c,0x36,0xc2]
-// NOGFX9GFX10: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX9GFX10: :[[@LINE-3]]:{{[0-9]+}}: error: tba_lo register not available on this GPU
 
 s_buffer_load_dword tba_hi, s[92:95], m0
 // VI: s_buffer_load_dword tba_hi, s[92:95], m0 ; encoding: [0x6e,0x1b,0x20,0xc0,0x7c,0x00,0x00,0x00]
 // SICI: s_buffer_load_dword tba_hi, s[92:95], m0 ; encoding: [0x7c,0xdc,0x36,0xc2]
-// NOGFX9GFX10: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX9GFX10: :[[@LINE-3]]:{{[0-9]+}}: error: tba_hi register not available on this GPU
 
 s_buffer_load_dword tma_lo, s[92:95], m0
 // VI: s_buffer_load_dword tma_lo, s[92:95], m0 ; encoding: [0xae,0x1b,0x20,0xc0,0x7c,0x00,0x00,0x00]
 // SICI: s_buffer_load_dword tma_lo, s[92:95], m0 ; encoding: [0x7c,0x5c,0x37,0xc2]
-// NOGFX9GFX10: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX9GFX10: :[[@LINE-3]]:{{[0-9]+}}: error: tma_lo register not available on this GPU
 
 s_buffer_load_dword tma_hi, s[92:95], m0
 // VI: s_buffer_load_dword tma_hi, s[92:95], m0 ; encoding: [0xee,0x1b,0x20,0xc0,0x7c,0x00,0x00,0x00]
 // SICI: s_buffer_load_dword tma_hi, s[92:95], m0 ; encoding: [0x7c,0xdc,0x37,0xc2]
-// NOGFX9GFX10: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX9GFX10: :[[@LINE-3]]:{{[0-9]+}}: error: tma_hi register not available on this GPU
 
 s_buffer_load_dword ttmp0, s[92:95], m0
 // VI:    s_buffer_load_dword ttmp0, s[92:95], m0 ; encoding: [0x2e,0x1c,0x20,0xc0,0x7c,0x00,0x00,0x00]
@@ -207,12 +207,12 @@ s_buffer_load_dwordx2 s[10:11], s[92:95], m0
 s_buffer_load_dwordx2 tba, s[92:95], m0
 // VI:   s_buffer_load_dwordx2 tba, s[92:95], m0 ; encoding: [0x2e,0x1b,0x24,0xc0,0x7c,0x00,0x00,0x00]
 // SICI: s_buffer_load_dwordx2 tba, s[92:95], m0 ; encoding: [0x7c,0x5c,0x76,0xc2]
-// NOGFX9GFX10: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX9GFX10: :[[@LINE-3]]:{{[0-9]+}}: error: tba register not available on this GPU
 
 s_buffer_load_dwordx2 tma, s[92:95], m0
 // VI: s_buffer_load_dwordx2 tma, s[92:95], m0 ; encoding: [0xae,0x1b,0x24,0xc0,0x7c,0x00,0x00,0x00]
 // SICI: s_buffer_load_dwordx2 tma, s[92:95], m0 ; encoding: [0x7c,0x5c,0x77,0xc2]
-// NOGFX9GFX10: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX9GFX10: :[[@LINE-3]]:{{[0-9]+}}: error: tma register not available on this GPU
 
 s_buffer_load_dwordx2 ttmp[0:1], s[92:95], m0
 // VI:    s_buffer_load_dwordx2 ttmp[0:1], s[92:95], m0 ; encoding: [0x2e,0x1c,0x24,0xc0,0x7c,0x00,0x00,0x00]

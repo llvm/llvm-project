@@ -6,7 +6,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
-
+from lldbsuite.test import lldbplatformutil
 
 class TypeAndTypeListTestCase(TestBase):
     def setUp(self):
@@ -132,7 +132,7 @@ class TypeAndTypeListTestCase(TestBase):
                         "my_type_is_named has a named type",
                     )
                     self.assertTrue(field.type.IsAggregateType())
-                elif field.name == None:
+                elif field.name is None:
                     self.assertTrue(
                         field.type.IsAnonymousType(), "Nameless type is not anonymous"
                     )
@@ -248,7 +248,7 @@ class TypeAndTypeListTestCase(TestBase):
         self.assertEqual(myint_arr_element_type, myint_type)
 
         # Test enum methods. Requires DW_AT_enum_class which was added in Dwarf 4.
-        if configuration.dwarf_version >= 4:
+        if int(lldbplatformutil.getDwarfVersion()) >= 4:
             enum_type = target.FindFirstType("EnumType")
             self.assertTrue(enum_type)
             self.DebugSBType(enum_type)
@@ -272,6 +272,22 @@ class TypeAndTypeListTestCase(TestBase):
             self.assertTrue(int_enum_uchar)
             self.DebugSBType(int_enum_uchar)
             self.assertEqual(int_enum_uchar.GetName(), "unsigned char")
+
+    def test_nested_typedef(self):
+        """Exercise FindDirectNestedType for typedefs."""
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact())
+        self.assertTrue(target)
+
+        with_nested_typedef = target.FindFirstType("WithNestedTypedef")
+        self.assertTrue(with_nested_typedef)
+
+        # This is necessary to work around #91186
+        self.assertTrue(target.FindFirstGlobalVariable("typedefed_value").GetType())
+
+        the_typedef = with_nested_typedef.FindDirectNestedType("TheTypedef")
+        self.assertTrue(the_typedef)
+        self.assertEqual(the_typedef.GetTypedefedType().GetName(), "int")
 
     def test_GetByteAlign(self):
         """Exercise SBType::GetByteAlign"""

@@ -118,7 +118,7 @@ pragmatic solution. The following non-exhaustive list refers to some of the
 projects that influenced Linalg design:
 
 - [ONNX](https://onnx.ai/),
-- [LIFT](https://www.lift-project.org/),
+- [LIFT](https://lift-project.github.io/),
 - [XLA](https://www.tensorflow.org/xla/architecture),
 - [Halide](https://halide-lang.org/) and [TVM](https://tvm.apache.org/),
 - [TACO](http://tensor-compiler.org/),
@@ -171,12 +171,12 @@ Linalg hopes to additionally address the following:
   other, thus simplifying the intermediate representation.
 
 ### Lessons from LIFT<a name="lessonslift"></a>
-[LIFT](https://www.lift-project.org/) is a system to write computational
+[LIFT](https://lift-project.github.io/) is a system to write computational
 kernels based on functional abstractions. Transformations are
 represented by additional nodes in the IR, whose semantics are at the
 level of the algorithm (e.g. `partialReduce`).
 LIFT applies and composes transformations by using [local rewrite
-rules](https://www.lift-project.org/presentations/2015/ICFP-2015.pdf) that
+rules](https://lift-project.github.io/publications/2015/steuwer15generating.pdf) that
 embed these additional nodes directly in the functional abstraction.
 
 Similarly to LIFT, Linalg uses local rewrite rules implemented with the MLIR
@@ -194,9 +194,9 @@ Linalg builds on, and helps separate concerns in the LIFT approach as follows:
 LIFT is expected to further influence the design of Linalg as it evolves. In
 particular, extending the data structure abstractions to support non-dense
 tensors can use the experience of LIFT abstractions for
-[sparse](https://www.lift-project.org/publications/2016/harries16sparse.pdf)
+[sparse](https://lift-project.github.io/publications/2016/harries16sparse.pdf)
 and [position-dependent
-arrays](https://www.lift-project.org/publications/2019/pizzuti19positiondependentarrays.pdf).
+arrays](https://lift-project.github.io/publications/2019/pizzuti19positiondependentarrays.pdf).
 
 ### Lessons from XLA<a name="lessonsxla"></a>
 [XLA](https://www.tensorflow.org/xla/architecture) is one of the first
@@ -505,6 +505,72 @@ ops and dialects. Then each transformation application reduces the
 potential by introducing lower-level IR ops and *smaller* Linalg ops.
 This gradually reduces the potential, all the way to Loops + VectorOps
 and LLVMIR.
+
+### Interchangeability of Forms<a name="forms"></a>
+
+#### The Linalg Forms
+
+The core Linalg operation set has four forms:
+* **Generic:** Represented by `linalg.generic` and can encode all perfectly-nested
+loop operations.
+* **Category:** For example, `linalg.contract` and `linalg.elementwise`, that encode
+higher-level semantics of a `linalg.generic` while still representing multiple _named_
+operations via attributes and syntax. In the future, other category operations are
+planned (e.g.: `linalg.convolution` and `linalg.pooling`).
+* **Named:** For example, `linalg.matmul`, `linalg.add`, etc. All _named_ forms that
+can be converted to either a single _category_ or _generic_ forms, ie. are _perfectly nested_.
+* **Composite:** For example `linalg.softmax` and the `winograd` variations. These
+operations are not perfectly nested, and are converted to a list of other operations
+(of various dialects).
+
+The forms correlate in the following manner:
+```
++ generic
+ \__ + category
+      \__ + named
++ composite
+```
+
+The `category` and `named` forms are derived from `linalg.generic` and are *equivalent*.
+It should always be possible to convert a `named` operation into a `category` and that
+into a `generic` and back to `named`. However, it may not be possible to convert a
+`generic` into a `named` if there is no such `named` form.
+
+`Composite` operations cannot be converted to the other three classes and forms a
+sub-set on its own. But they can use other Linalg forms when expanding. There can be
+a pattern-matching transform to detect a graph of operations and convert into a
+`composite` operation.
+
+The various forms in the Linalg dialect are meant to facilitate
+pattern matching (single operations or DAGs) and to be able to consider
+different forms as *canonical* for different transforms.
+
+Linalg's various forms also carry information, and that
+information should be preserved as much as possible during the progressive
+lowering. A `matmul` operation is a special case of a `contract` operation,
+which in turn is a special case of a `generic` operation. Transformations on
+Linalg operations (in any form) should avoid breaking down into
+loops + arithmetic if they can still be represented as a Linalg operation,
+preferably in their original form.
+
+#### Canonical Forms<a name="canonical_forms"></a>
+
+With multiple (often exchangeable) forms, and with transformation simplicity
+in mind, compilers should aim for reducing matching and replacing complexity
+as much as possible. When matching a single operation with a complex pattern,
+having all the information in a `generic` Op is useful to iteratively match
+different patterns in turn. However, when assembling a DAG of operations to
+form a pattern, it's much simpler to match against named operations (like
+`max` + `div` + `reduce` + `broadcast`) than their generic counterparts.
+
+This is where the interchangeability of forms comes in handy. Linalg has the
+ability to specialize and generalize in order to convert the IR to a form that
+is easier for a particular type of transform. With forms being semantically
+equivalent, one can convert back-and-forth throughout the various transforms
+to match the needs of each transform. For that particular transform, such
+form can be considered _canonical_ and therefore "expected" for the pattern
+to _match_. This reduces complexity of pattern matchers and simplifies compiler
+pipelines.
 
 ### Composable and Declarative Transformations<a name="declarative_transformations"></a>
 Complex and impactful transformations need not be hard to manipulate, write or

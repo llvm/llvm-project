@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUSUBTARGET_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUSUBTARGET_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/TargetParser/Triple.h"
@@ -41,29 +42,18 @@ public:
     GFX10 = 9,
     GFX11 = 10,
     GFX12 = 11,
+    GFX13 = 12,
   };
 
 private:
   Triple TargetTriple;
 
 protected:
-  bool GCN3Encoding = false;
-  bool Has16BitInsts = false;
-  bool HasTrue16BitInsts = false;
-  bool EnableRealTrue16Insts = false;
-  bool HasMadMixInsts = false;
-  bool HasMadMacF32Insts = false;
-  bool HasDsSrc2Insts = false;
-  bool HasSDWA = false;
-  bool HasVOP3PInsts = false;
   bool HasMulI24 = true;
   bool HasMulU24 = true;
   bool HasSMulHi = false;
-  bool HasInv2PiInlineImm = false;
   bool HasFminFmaxLegacy = true;
-  bool EnablePromoteAlloca = false;
-  bool HasTrigReducedRange = false;
-  bool FastFMAF32 = false;
+
   unsigned EUsPerCU = 4;
   unsigned MaxWavesPerEU = 10;
   unsigned LocalMemorySize = 0;
@@ -71,7 +61,7 @@ protected:
   char WavefrontSizeLog2 = 0;
 
 public:
-  AMDGPUSubtarget(const Triple &TT);
+  AMDGPUSubtarget(Triple TT) : TargetTriple(std::move(TT)) {}
 
   static const AMDGPUSubtarget &get(const MachineFunction &MF);
   static const AMDGPUSubtarget &get(const TargetMachine &TM,
@@ -89,6 +79,26 @@ public:
   /// be converted to integer, or violate subtarget's specifications.
   std::pair<unsigned, unsigned> getFlatWorkGroupSizes(const Function &F) const;
 
+  /// \returns The required size of workgroups that will be used to execute \p F
+  /// in the \p Dim dimension, if it is known (from `!reqd_work_group_size`
+  /// metadata. Otherwise, returns std::nullopt.
+  std::optional<unsigned> getReqdWorkGroupSize(const Function &F,
+                                               unsigned Dim) const;
+
+  /// \returns true if \p F will execute in a manner that leaves the X
+  /// dimensions of the workitem ID evenly tiling wavefronts - that is, if X /
+  /// wavefrontsize is uniform. This is true if either the Y and Z block
+  /// dimensions are known to always be 1 or if the X dimension will always be a
+  /// power of 2. If \p RequireUniformYZ is true, it also ensures that the Y and
+  /// Z workitem IDs will be uniform (so, while a (32, 2, 1) launch with
+  /// wavesize64 would ordinarily pass this test, it won't with
+  /// \pRequiresUniformYZ).
+  ///
+  /// This information is currently only gathered from the !reqd_work_group_size
+  /// metadata on \p F, but this may be improved in the future.
+  bool hasWavefrontsEvenlySplittingXDim(const Function &F,
+                                        bool REquiresUniformYZ = false) const;
+
   /// \returns Subtarget's default pair of minimum/maximum number of waves per
   /// execution unit for function \p F, or minimum/maximum number of waves per
   /// execution unit explicitly requested using "amdgpu-waves-per-eu" attribute
@@ -98,32 +108,54 @@ public:
   /// be converted to integer, violate subtarget's specifications, or are not
   /// compatible with minimum/maximum number of waves limited by flat work group
   /// size, register usage, and/or lds usage.
-  std::pair<unsigned, unsigned> getWavesPerEU(const Function &F) const {
-    // Default/requested minimum/maximum flat work group sizes.
-    std::pair<unsigned, unsigned> FlatWorkGroupSizes = getFlatWorkGroupSizes(F);
-    return getWavesPerEU(F, FlatWorkGroupSizes);
-  }
+  std::pair<unsigned, unsigned> getWavesPerEU(const Function &F) const;
 
-  /// Overload which uses the specified values for the flat work group sizes,
-  /// rather than querying the function itself. \p FlatWorkGroupSizes Should
-  /// correspond to the function's value for getFlatWorkGroupSizes.
+  /// Overload which uses the specified values for the flat workgroup sizes and
+  /// LDS space rather than querying the function itself. \p FlatWorkGroupSizes
+  /// should correspond to the function's value for getFlatWorkGroupSizes and \p
+  /// LDSBytes to the per-workgroup LDS allocation.
   std::pair<unsigned, unsigned>
-  getWavesPerEU(const Function &F,
-                std::pair<unsigned, unsigned> FlatWorkGroupSizes) const;
-  std::pair<unsigned, unsigned> getEffectiveWavesPerEU(
-      std::pair<unsigned, unsigned> WavesPerEU,
-      std::pair<unsigned, unsigned> FlatWorkGroupSizes) const;
+  getWavesPerEU(std::pair<unsigned, unsigned> FlatWorkGroupSizes,
+                unsigned LDSBytes, const Function &F) const;
+
+  /// Returns the target minimum/maximum number of waves per EU. This is based
+  /// on the minimum/maximum number of \p RequestedWavesPerEU and further
+  /// limited by the maximum achievable occupancy derived from the range of \p
+  /// FlatWorkGroupSizes and number of \p LDSBytes per workgroup.
+  std::pair<unsigned, unsigned>
+  getEffectiveWavesPerEU(std::pair<unsigned, unsigned> RequestedWavesPerEU,
+                         std::pair<unsigned, unsigned> FlatWorkGroupSizes,
+                         unsigned LDSBytes) const;
 
   /// Return the amount of LDS that can be used that will not restrict the
   /// occupancy lower than WaveCount.
   unsigned getMaxLocalMemSizeWithWaveCount(unsigned WaveCount,
                                            const Function &) const;
 
-  /// Inverse of getMaxLocalMemWithWaveCount. Return the maximum wavecount if
-  /// the given LDS memory size is the only constraint.
-  unsigned getOccupancyWithLocalMemSize(uint32_t Bytes, const Function &) const;
+  /// Subtarget's minimum/maximum occupancy, in number of waves per EU, that can
+  /// be achieved when the only function running on a CU is \p F and each
+  /// workgroup running the function requires \p LDSBytes bytes of LDS space.
+  /// This notably depends on the range of allowed flat group sizes for the
+  /// function and hardware characteristics.
+  std::pair<unsigned, unsigned>
+  getOccupancyWithWorkGroupSizes(uint32_t LDSBytes, const Function &F) const {
+    return getOccupancyWithWorkGroupSizes(LDSBytes, getFlatWorkGroupSizes(F));
+  }
 
-  unsigned getOccupancyWithLocalMemSize(const MachineFunction &MF) const;
+  /// Overload which uses the specified values for the flat work group sizes,
+  /// rather than querying the function itself. \p FlatWorkGroupSizes should
+  /// correspond to the function's value for getFlatWorkGroupSizes.
+  std::pair<unsigned, unsigned> getOccupancyWithWorkGroupSizes(
+      uint32_t LDSBytes,
+      std::pair<unsigned, unsigned> FlatWorkGroupSizes) const;
+
+  /// Subtarget's minimum/maximum occupancy, in number of waves per EU, that can
+  /// be achieved when the only function running on a CU is \p MF. This notably
+  /// depends on the range of allowed flat group sizes for the function, the
+  /// amount of per-workgroup LDS space required by the function, and hardware
+  /// characteristics.
+  std::pair<unsigned, unsigned>
+  getOccupancyWithWorkGroupSizes(const MachineFunction &MF) const;
 
   bool isAmdHsaOS() const {
     return TargetTriple.getOS() == Triple::AMDHSA;
@@ -143,20 +175,15 @@ public:
     return isAmdHsaOS() || isMesaKernel(F);
   }
 
-  bool isGCN() const {
-    return TargetTriple.getArch() == Triple::amdgcn;
-  }
+  bool isGCN() const { return TargetTriple.isAMDGCN(); }
 
-  bool isGCN3Encoding() const {
-    return GCN3Encoding;
-  }
-
-  bool has16BitInsts() const {
-    return Has16BitInsts;
-  }
-
-  /// Return true if the subtarget supports True16 instructions.
-  bool hasTrue16BitInsts() const { return HasTrue16BitInsts; }
+  //==---------------------------------------------------------------------===//
+  // TableGen-generated feature getters.
+  //==---------------------------------------------------------------------===//
+#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
+  virtual bool GETTER() const { return false; }
+#include "AMDGPUGenSubtargetInfo.inc"
+  //==---------------------------------------------------------------------===//
 
   /// Return true if real (non-fake) variants of True16 instructions using
   /// 16-bit registers should be code-generated. Fake True16 instructions are
@@ -164,26 +191,8 @@ public:
   /// operands and always use their low halves.
   // TODO: Remove and use hasTrue16BitInsts() instead once True16 is fully
   // supported and the support for fake True16 instructions is removed.
-  bool useRealTrue16Insts() const;
-
-  bool hasMadMixInsts() const {
-    return HasMadMixInsts;
-  }
-
-  bool hasMadMacF32Insts() const {
-    return HasMadMacF32Insts || !isGCN();
-  }
-
-  bool hasDsSrc2Insts() const {
-    return HasDsSrc2Insts;
-  }
-
-  bool hasSDWA() const {
-    return HasSDWA;
-  }
-
-  bool hasVOP3PInsts() const {
-    return HasVOP3PInsts;
+  bool useRealTrue16Insts() const {
+    return hasTrue16BitInsts() && enableRealTrue16Insts();
   }
 
   bool hasMulI24() const {
@@ -198,24 +207,8 @@ public:
     return HasSMulHi;
   }
 
-  bool hasInv2PiInlineImm() const {
-    return HasInv2PiInlineImm;
-  }
-
   bool hasFminFmaxLegacy() const {
     return HasFminFmaxLegacy;
-  }
-
-  bool hasTrigReducedRange() const {
-    return HasTrigReducedRange;
-  }
-
-  bool hasFastFMAF32() const {
-    return FastFMAF32;
-  }
-
-  bool isPromoteAllocaEnabled() const {
-    return EnablePromoteAlloca;
   }
 
   unsigned getWavefrontSize() const {
@@ -226,10 +219,18 @@ public:
     return WavefrontSizeLog2;
   }
 
+  /// Return the maximum number of bytes of LDS available for all workgroups
+  /// running on the same WGP or CU.
+  /// For GFX10-GFX12 in WGP mode this is 128k even though each workgroup is
+  /// limited to 64k.
   unsigned getLocalMemorySize() const {
     return LocalMemorySize;
   }
 
+  /// Return the maximum number of bytes of LDS that can be allocated to a
+  /// single workgroup.
+  /// For GFX10-GFX12 in WGP mode this is limited to 64k even though the WGP has
+  /// 128k in total.
   unsigned getAddressableLocalMemorySize() const {
     return AddressableLocalMemorySize;
   }

@@ -5,8 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: no-threads
 
 // <mutex>
 
@@ -14,16 +12,21 @@
 
 // unique_lock();
 
-#include <mutex>
 #include <cassert>
+#include <mutex>
+#include <type_traits>
 
+#include "checking_mutex.h"
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    std::unique_lock<std::mutex> ul;
-    assert(!ul.owns_lock());
-    assert(ul.mutex() == nullptr);
+#if TEST_STD_VER >= 11
+static_assert(std::is_nothrow_default_constructible<std::unique_lock<checking_mutex>>::value, "");
+#endif
+
+int main(int, char**) {
+  std::unique_lock<checking_mutex> ul;
+  assert(!ul.owns_lock());
+  assert(ul.mutex() == nullptr);
 
   return 0;
 }

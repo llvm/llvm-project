@@ -71,7 +71,7 @@ public:
   /// Set the language using a pair of language code and version as
   /// defined by the DWARF 6 specification.
   /// WARNING: These codes may change until DWARF 6 is finalized.
-  void SetLanguage(SBSourceLanguageName name, uint32_t version);
+  void SetLanguage(lldb::SBSourceLanguageName name, uint32_t version);
 
 #ifndef SWIG
   void SetCancelCallback(lldb::ExpressionCancelCallback callback, void *baton);
@@ -106,6 +106,10 @@ public:
 
   // Sets whether we will JIT an expression if it cannot be interpreted
   void SetAllowJIT(bool allow);
+
+  bool GetBooleanLanguageOption(const char *option_name, SBError &error) const;
+
+  SBError SetBooleanLanguageOption(const char *option_name, bool value);
 
 protected:
   lldb_private::EvaluateExpressionOptions *get() const;

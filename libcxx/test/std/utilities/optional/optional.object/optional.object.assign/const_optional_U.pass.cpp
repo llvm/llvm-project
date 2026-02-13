@@ -195,6 +195,34 @@ void test_ambiguous_assign() {
     }
 }
 
+#if TEST_STD_VER >= 26
+constexpr bool test_ref() {
+  {
+    int t{2};
+    const std::optional<int&> o1{t};
+    std::optional<int&> o2 = o1;
+
+    assert(&(*o2) == &t);
+    assert(o1.has_value());
+    assert(o2.has_value());
+    assert(*o2 == 2);
+  }
+
+  {
+    int t{2};
+
+    const std::optional<int&> o1{t};
+    std::optional<int> o2 = o1;
+
+    assert(&(*o2) != &t);
+    assert(o1.has_value());
+    assert(o2.has_value());
+    assert(*o2 == 2);
+  }
+
+  return true;
+}
+#endif
 
 int main(int, char**)
 {
@@ -251,5 +279,10 @@ int main(int, char**)
     }
 #endif
 
-  return 0;
+#if TEST_STD_VER >= 26
+    assert(test_ref());
+    static_assert(test_ref());
+#endif
+
+    return 0;
 }

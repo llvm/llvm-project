@@ -1,0 +1,67 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -start-before=amdgpu-insert-delay-alu %s -o - | FileCheck %s
+
+---
+name: wmma_xdl_twoaddr_trans
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}wmma_xdl_twoaddr_trans:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_wmma_f32_16x16x64_fp8_fp8 v[8:15], v[0:7], v[0:7], v[8:15]
+    ; CHECK-NEXT: v_exp_f32_e32 v16, v16
+    ; CHECK-NEXT: s_delay_alu instid0(TRANS32_DEP_2)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v17, v17, v8
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16, $vgpr17
+    $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_WMMA_F32_16X16X64_FP8_FP8_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, 0, implicit $exec
+    $vgpr16 = V_EXP_F32_e32 $vgpr16, implicit $exec, implicit $mode
+    $vgpr17 = V_ADD_U32_e32 $vgpr17, $vgpr8, implicit $exec
+...
+
+---
+name: wmma_xdl_threeaddr_trans
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}wmma_xdl_threeaddr_trans:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_wmma_f32_16x16x64_fp8_fp8 v[8:15], v[0:7], v[0:7], v[16:23]
+    ; CHECK-NEXT: v_exp_f32_e32 v24, v24
+    ; CHECK-NEXT: s_delay_alu instid0(TRANS32_DEP_2)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v25, v25, v8
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24, $vgpr25
+    $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_WMMA_F32_16X16X64_FP8_FP8_w32_threeaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $vgpr24 = V_EXP_F32_e32 $vgpr24, implicit $exec, implicit $mode
+    $vgpr25 = V_ADD_U32_e32 $vgpr25, $vgpr8, implicit $exec
+...
+
+name: swmmac_xdl_twoaddr_trans
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}swmmac_xdl_twoaddr_trans:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_swmmac_f16_16x16x128_bf8_bf8 v[24:27], v[0:7], v[8:23], v[28:29]
+    ; CHECK-NEXT: v_exp_f32_e32 v30, v30
+    ; CHECK-NEXT: s_delay_alu instid0(TRANS32_DEP_2)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v31, v31, v24
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24_vgpr25_vgpr26_vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31
+    $vgpr24_vgpr25_vgpr26_vgpr27 = V_SWMMAC_F16_16X16X128_BF8_BF8_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24_vgpr25_vgpr26_vgpr27, $vgpr28_vgpr29, 0, 0, 0, implicit $exec
+    $vgpr30 = V_EXP_F32_e32 $vgpr30, implicit $exec, implicit $mode
+    $vgpr31 = V_ADD_U32_e32 $vgpr31, $vgpr24, implicit $exec
+...
+
+name: wmma_non_xdl_large_data_valu
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}wmma_non_xdl_large_data_valu:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_wmma_f32_16x16x4_f32 v[4:11], v[0:1], v[2:3], v[4:11] matrix_b_reuse
+    ; CHECK-NEXT: v_exp_f32_e32 v12, v12
+    ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_1)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v13, v13, v8
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, $vgpr12, $vgpr13
+    $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X4_F32_w32_twoaddr 8, $vgpr0_vgpr1, 8, $vgpr2_vgpr3, 8, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 0, -1, 0, 0, implicit $exec
+    $vgpr12 = V_EXP_F32_e32 $vgpr12, implicit $exec, implicit $mode
+    $vgpr13 = V_ADD_U32_e32 $vgpr13, $vgpr8, implicit $exec
+...

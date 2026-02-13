@@ -17,7 +17,7 @@
 #include <ranges>
 #include <tuple>
 
-#include "../types.h"
+#include "../../range_adaptor_types.h"
 #include "test_range.h"
 
 using Iterator = random_access_iterator<int*>;

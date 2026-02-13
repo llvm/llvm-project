@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "program-tree.h"
+#include "flang/Semantics/program-tree.h"
 #include "flang/Common/idioms.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Semantics/scope.h"
@@ -130,13 +130,13 @@ static ProgramTree BuildModuleTree(
   return node;
 }
 
-ProgramTree ProgramTree::Build(
+ProgramTree &ProgramTree::Build(
     const parser::ProgramUnit &x, SemanticsContext &context) {
   return common::visit(
-      [&](const auto &y) {
+      [&](const auto &y) -> ProgramTree & {
         auto node{Build(y.value(), context)};
         CHECK(node.has_value());
-        return std::move(*node);
+        return context.SaveProgramTree(std::move(*node));
       },
       x.u);
 }
@@ -161,8 +161,9 @@ std::optional<ProgramTree> ProgramTree::Build(
   const parser::LanguageBindingSpec *bindingSpec{};
   if (const auto &suffix{
           std::get<std::optional<parser::Suffix>>(stmt.statement.t)}) {
-    if (suffix->binding) {
-      bindingSpec = &*suffix->binding;
+    if (const auto &binding{
+            std::get<std::optional<parser::LanguageBindingSpec>>(suffix->t)}) {
+      bindingSpec = &*binding;
     }
   }
   return BuildSubprogramTree(name, context, x)

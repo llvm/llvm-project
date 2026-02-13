@@ -9,7 +9,6 @@
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
-#include "mlir/Dialect/SparseTensor/IR/SparseTensorType.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 
 using namespace mlir;
@@ -42,7 +41,7 @@ struct GuardSparseAlloc
     // operation that leaves the underlying storage in a proper state
     // before the tensor escapes across the method boundary.
     rewriter.setInsertionPointAfter(op);
-    auto load = rewriter.create<LoadOp>(op.getLoc(), op.getResult(), true);
+    auto load = LoadOp::create(rewriter, op.getLoc(), op.getResult(), true);
     rewriter.replaceAllUsesExcept(op, load, load);
     return success();
   }
@@ -61,7 +60,7 @@ struct StageUnorderedSparseOps : public OpRewritePattern<StageWithSortOp> {
     // Deallocate tmpBuf.
     // TODO: Delegate to buffer deallocation pass in the future.
     if (succeeded(stageResult) && tmpBuf)
-      rewriter.create<bufferization::DeallocTensorOp>(loc, tmpBuf);
+      bufferization::DeallocTensorOp::create(rewriter, loc, tmpBuf);
 
     return stageResult;
   }

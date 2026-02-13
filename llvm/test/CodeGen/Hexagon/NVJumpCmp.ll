@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 -mcpu=hexagonv60  < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 -mcpu=hexagonv60 < %s | FileCheck %s
 
 ; Look for an instruction, we really just do not want to see an abort.
 ; CHECK: trace_event
@@ -75,7 +75,7 @@ if.else:                                          ; preds = %entry
   unreachable
 }
 
-attributes #0 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 
 !llvm.module.flags = !{!0}
 

@@ -17,8 +17,8 @@
 
 ; Check that the type map will unique two DICompositeTypes.
 
-; CHECK:   !named = !{!0, !1, !2, !3, !0, !1, !2, !3}
-; NOMAP:   !named = !{!0, !1, !2, !3, !0, !4, !5, !6}
+; CHECK:   !named = !{!0, !1, !2, !3}
+; NOMAP:   !named = !{!0, !1, !2, !3, !4, !5, !6}
 !named = !{!0, !1, !2, !3}
 
 ; Check both directions.

@@ -98,8 +98,8 @@ public:
     auto H = DylibMgr->open("", 0);
     if (!H)
       return H.takeError();
-    return std::unique_ptr<RemoteResolver>(
-        new RemoteResolver(std::move(*DylibMgr), std::move(*H)));
+    return std::make_unique<RemoteResolver>(std::move(*DylibMgr),
+                                            std::move(*H));
   }
 
   JITSymbol findSymbol(const std::string &Name) override {
@@ -109,8 +109,11 @@ public:
       if (Syms->size() != 1)
         return make_error<StringError>("Unexpected remote lookup result",
                                        inconvertibleErrorCode());
-      return JITSymbol(Syms->front().getAddress().getValue(),
-                       Syms->front().getFlags());
+      if (!Syms->front())
+        return make_error<StringError>("Expected valid address",
+                                       inconvertibleErrorCode());
+      return JITSymbol(Syms->front()->getAddress().getValue(),
+                       Syms->front()->getFlags());
     } else
       return Syms.takeError();
   }

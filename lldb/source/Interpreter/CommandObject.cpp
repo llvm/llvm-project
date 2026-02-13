@@ -32,7 +32,6 @@
 #include "lldb/Target/Language.h"
 
 #include "lldb/Interpreter/CommandInterpreter.h"
-#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 
 using namespace lldb;
@@ -120,26 +119,24 @@ bool CommandObject::ParseOptions(Args &args, CommandReturnObject &result) {
     if (args_or) {
       args = std::move(*args_or);
       error = options->NotifyOptionParsingFinished(&exe_ctx);
-    } else
-      error = args_or.takeError();
-
-    if (error.Success()) {
-      if (options->VerifyOptions(result))
-        return true;
     } else {
-      const char *error_cstr = error.AsCString();
-      if (error_cstr) {
-        // We got an error string, lets use that
-        result.AppendError(error_cstr);
-      } else {
-        // No error string, output the usage information into result
-        options->GenerateOptionUsage(
-            result.GetErrorStream(), *this,
-            GetCommandInterpreter().GetDebugger().GetTerminalWidth());
-      }
+      error = Status::FromError(args_or.takeError());
     }
-    result.SetStatus(eReturnStatusFailed);
-    return false;
+
+    if (error.Fail()) {
+      result.SetError(error.takeError());
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
+    if (llvm::Error error = options->VerifyOptions()) {
+      result.SetError(std::move(error));
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
+    return true;
   }
   return true;
 }
@@ -220,7 +217,7 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
     if (process == nullptr) {
       // A process that is not running is considered paused.
       if (GetFlags().Test(eCommandProcessMustBeLaunched)) {
-        result.AppendError("Process must exist.");
+        result.AppendError("process must exist");
         return false;
       }
     } else {
@@ -239,7 +236,7 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
       case eStateExited:
       case eStateUnloaded:
         if (GetFlags().Test(eCommandProcessMustBeLaunched)) {
-          result.AppendError("Process must be launched.");
+          result.AppendError("process must be launched");
           return false;
         }
         break;
@@ -258,7 +255,7 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
   if (GetFlags().Test(eCommandProcessMustBeTraced)) {
     Target *target = m_exe_ctx.GetTargetPtr();
     if (target && !target->GetTrace()) {
-      result.AppendError("Process is not being traced.");
+      result.AppendError("process is not being traced");
       return false;
     }
   }
@@ -275,7 +272,7 @@ void CommandObject::Cleanup() {
 void CommandObject::HandleCompletion(CompletionRequest &request) {
 
   m_exe_ctx = m_interpreter.GetExecutionContext();
-  auto reset_ctx = llvm::make_scope_exit([this]() { Cleanup(); });
+  llvm::scope_exit reset_ctx([this]() { Cleanup(); });
 
   // Default implementation of WantsCompletion() is !WantsRawCommandString().
   // Subclasses who want raw command string but desire, for example, argument
@@ -287,7 +284,6 @@ void CommandObject::HandleCompletion(CompletionRequest &request) {
   } else {
     // Can we do anything generic with the options?
     Options *cur_options = GetOptions();
-    CommandReturnObject result(m_interpreter.GetDebugger().GetUseColor());
     OptionElementVector opt_element_vector;
 
     if (cur_options != nullptr) {
@@ -341,14 +337,11 @@ void CommandObject::HandleArgumentCompletion(
 
 }
 
-
 bool CommandObject::HelpTextContainsWord(llvm::StringRef search_word,
                                          bool search_short_help,
                                          bool search_long_help,
                                          bool search_syntax,
                                          bool search_options) {
-  std::string options_usage_help;
-
   bool found_word = false;
 
   llvm::StringRef short_help = GetHelp();
@@ -366,7 +359,8 @@ bool CommandObject::HelpTextContainsWord(llvm::StringRef search_word,
     StreamString usage_help;
     GetOptions()->GenerateOptionUsage(
         usage_help, *this,
-        GetCommandInterpreter().GetDebugger().GetTerminalWidth());
+        GetCommandInterpreter().GetDebugger().GetTerminalWidth(),
+        GetCommandInterpreter().GetDebugger().GetUseColor());
     if (!usage_help.Empty()) {
       llvm::StringRef usage_text = usage_help.GetString();
       if (usage_text.contains_insensitive(search_word))
@@ -679,7 +673,8 @@ void CommandObject::GenerateHelpText(Stream &output_strm) {
   if (options != nullptr) {
     options->GenerateOptionUsage(
         output_strm, *this,
-        GetCommandInterpreter().GetDebugger().GetTerminalWidth());
+        GetCommandInterpreter().GetDebugger().GetTerminalWidth(),
+        GetCommandInterpreter().GetDebugger().GetUseColor());
   }
   llvm::StringRef long_help = GetHelpLong();
   if (!long_help.empty()) {
@@ -758,17 +753,23 @@ Target &CommandObject::GetDummyTarget() {
   return m_interpreter.GetDebugger().GetDummyTarget();
 }
 
-Target &CommandObject::GetSelectedOrDummyTarget(bool prefer_dummy) {
-  return m_interpreter.GetDebugger().GetSelectedOrDummyTarget(prefer_dummy);
-}
+Target &CommandObject::GetTarget() {
+  // Prefer the frozen execution context in the command object.
+  if (Target *target = m_exe_ctx.GetTargetPtr())
+    return *target;
 
-Target &CommandObject::GetSelectedTarget() {
-  assert(m_flags.AnySet(eCommandRequiresTarget | eCommandProcessMustBePaused |
-                        eCommandProcessMustBeLaunched | eCommandRequiresFrame |
-                        eCommandRequiresThread | eCommandRequiresProcess |
-                        eCommandRequiresRegContext) &&
-         "GetSelectedTarget called from object that may have no target");
-  return *m_interpreter.GetDebugger().GetSelectedTarget();
+  // Fallback to the command interpreter's execution context in case we get
+  // called after DoExecute has finished. For example, when doing multi-line
+  // expression that uses an input reader or breakpoint callbacks.
+  if (Target *target = m_interpreter.GetExecutionContext().GetTargetPtr())
+    return *target;
+
+  // Finally, if we have no other target, get the selected target.
+  if (TargetSP target_sp = m_interpreter.GetDebugger().GetSelectedTarget())
+    return *target_sp;
+
+  // We only have the dummy target.
+  return GetDummyTarget();
 }
 
 Thread *CommandObject::GetDefaultThread() {

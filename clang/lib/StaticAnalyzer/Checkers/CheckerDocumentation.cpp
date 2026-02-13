@@ -16,7 +16,6 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 
 using namespace clang;
 using namespace ento;
@@ -40,6 +39,7 @@ class CheckerDocumentation
           check::ASTDecl<FunctionDecl>,
           check::BeginFunction,
           check::Bind,
+          check::BlockEntrance,
           check::BranchCondition,
           check::ConstPointerEscape,
           check::DeadSymbols,
@@ -129,7 +129,20 @@ public:
   /// check::PostCall
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const {}
 
-  /// Pre-visit of the condition statement of a branch (such as IfStmt).
+  /// Pre-visit of the condition statement of a branch.
+  /// For example:
+  ///  - logical operators (&&, ||)
+  ///  - if, do, while, for, ranged-for statements
+  ///  - ternary operators (?:), gnu conditionals, gnu choose expressions
+  /// Interestingly, switch statements don't seem to trigger BranchCondition.
+  ///
+  /// check::BlockEntrance is a similar callback, which is strictly more
+  /// generic. Prefer check::BranchCondition to check::BlockEntrance if
+  /// pre-visiting conditional statements is enough for the checker.
+  /// Note that check::BlockEntrance is also invoked for leaving basic blocks
+  /// while entering the next.
+  ///
+  /// check::BranchCondition
   void checkBranchCondition(const Stmt *Condition, CheckerContext &Ctx) const {}
 
   /// Post-visit the C++ operator new's allocation call.
@@ -162,9 +175,35 @@ public:
   /// \param Loc The value of the location (pointer).
   /// \param Val The value which will be stored at the location Loc.
   /// \param S   The bind is performed while processing the statement S.
+  /// \param AtDeclInit Whether the bind is performed during declaration
+  ///                   initialization.
   ///
   /// check::Bind
-  void checkBind(SVal Loc, SVal Val, const Stmt *S, CheckerContext &) const {}
+  void checkBind(SVal Loc, SVal Val, const Stmt *S, bool AtDeclInit,
+                 CheckerContext &) const {}
+
+  /// Called after a CFG edge is taken within a function.
+  ///
+  /// This callback can be used to obtain information about potential branching
+  /// points or any other constructs that involve traversing a CFG edge.
+  ///
+  /// check::BranchCondition is a similar callback, which is only invoked for
+  /// pre-visiting the condition statement of a branch. Prefer that callback if
+  /// possible.
+  ///
+  /// \remark There is no CFG edge from the caller to a callee, consequently
+  /// this callback is not invoked for "inlining" a function call.
+  /// \remark Once a function call is inlined, we will start from the imaginary
+  /// "entry" basic block of that CFG. This callback will be invoked for
+  /// entering the real first basic block of the "inlined" function body from
+  /// that "entry" basic block.
+  /// \remark This callback is also invoked for entering the imaginary "exit"
+  /// basic block of the CFG when returning from a function.
+  ///
+  /// \param E The ProgramPoint that describes the transition.
+  ///
+  /// check::BlockEntrance
+  void checkBlockEntrance(const BlockEntrance &E, CheckerContext &) const {}
 
   /// Called whenever a symbol becomes dead.
   ///
@@ -222,6 +261,15 @@ public:
   /// functions have special meaning, which should be reflected in the program
   /// state. This callback allows a checker to provide domain specific knowledge
   /// about the particular functions it knows about.
+  ///
+  /// Note that to evaluate a call, the handler MUST bind the return value if
+  /// its a non-void function. Invalidate the arguments if necessary.
+  ///
+  /// Note that in general, user-provided functions should not be eval-called
+  /// because the checker can't predict the exact semantics/contract of the
+  /// callee, and by having the eval::Call callback, we also prevent it from
+  /// getting inlined, potentially regressing analysis quality.
+  /// Consider using check::PreCall or check::PostCall to allow inlining.
   ///
   /// \returns true if the call has been successfully evaluated
   /// and false otherwise. Note, that only one checker can evaluate a call. If

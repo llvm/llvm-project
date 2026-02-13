@@ -1,0 +1,278 @@
+# Instrument block coverage
+:single_byte_coverage
+big_switch
+# Func Hash:
+461999971447013334
+# Num Counters:
+25
+# Counter Values:
+1
+1
+1
+1
+0
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+0
+0
+0
+0
+0
+1
+
+boolean_operators
+# Func Hash:
+1245693242827665
+# Num Counters:
+26
+# Counter Values:
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+0
+1
+1
+1
+1
+1
+1
+1
+0
+
+boolop_loops
+# Func Hash:
+873389568252105055
+# Num Counters:
+21
+# Counter Values:
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+0
+1
+1
+1
+0
+1
+1
+1
+
+branch-c-general.c:static_func
+# Func Hash:
+18129
+# Num Counters:
+2
+# Counter Values:
+1
+1
+
+conditional_operator
+# Func Hash:
+54992
+# Num Counters:
+5
+# Counter Values:
+1
+0
+1
+1
+0
+
+conditionals
+# Func Hash:
+293081517422662482
+# Num Counters:
+24
+# Counter Values:
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+0
+1
+0
+1
+1
+0
+1
+1
+0
+1
+
+do_fallthrough
+# Func Hash:
+644163604256451218
+# Num Counters:
+6
+# Counter Values:
+1
+1
+1
+1
+1
+1
+
+early_exits
+# Func Hash:
+574511640547777597
+# Num Counters:
+17
+# Counter Values:
+1
+0
+1
+1
+1
+1
+1
+1
+0
+1
+1
+1
+0
+0
+1
+0
+0
+
+jumps
+# Func Hash:
+63440946314451995
+# Num Counters:
+33
+# Counter Values:
+1
+1
+0
+1
+0
+0
+1
+0
+1
+1
+1
+1
+0
+1
+0
+1
+1
+1
+1
+0
+1
+1
+0
+0
+1
+1
+1
+1
+0
+1
+0
+1
+1
+
+main
+# Func Hash:
+24
+# Num Counters:
+1
+# Counter Values:
+1
+
+simple_loops
+# Func Hash:
+1245818015463121
+# Num Counters:
+4
+# Counter Values:
+1
+1
+1
+1
+
+switches
+# Func Hash:
+43242458792028222
+# Num Counters:
+28
+# Counter Values:
+1
+1
+1
+1
+1
+1
+0
+1
+1
+1
+1
+1
+1
+0
+1
+1
+1
+1
+0
+1
+1
+0
+0
+0
+0
+1
+0
+0
+

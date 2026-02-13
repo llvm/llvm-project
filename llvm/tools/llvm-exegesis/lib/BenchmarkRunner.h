@@ -68,12 +68,13 @@ public:
 
   std::pair<Error, Benchmark>
   runConfiguration(RunnableConfiguration &&RC,
-                   const std::optional<StringRef> &DumpFile) const;
+                   const std::optional<StringRef> &DumpFile,
+                   std::optional<int> BenchmarkProcessCPU) const;
 
   // Scratch space to run instructions that touch memory.
   struct ScratchSpace {
-    static constexpr const size_t kAlignment = 1024;
-    static constexpr const size_t kSize = 1 << 20; // 1MB.
+    static constexpr size_t kAlignment = 1024;
+    static constexpr size_t kSize = 1 << 20; // 1MB.
     ScratchSpace()
         : UnalignedPtr(std::make_unique<char[]>(kSize + kAlignment)),
           AlignedPtr(
@@ -135,7 +136,8 @@ private:
 
   Expected<std::unique_ptr<FunctionExecutor>>
   createFunctionExecutor(object::OwningBinary<object::ObjectFile> Obj,
-                         const BenchmarkKey &Key) const;
+                         const BenchmarkKey &Key,
+                         std::optional<int> BenchmarkProcessCPU) const;
 };
 
 } // namespace exegesis

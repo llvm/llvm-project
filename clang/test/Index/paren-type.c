@@ -9,7 +9,7 @@ extern int (VariableWithParentheses);
 
 typedef int MyTypedef;
 // CHECK-TYPE: VarDecl=VariableWithParentheses2:
-// CHECK-TYPE-SAME: [type=MyTypedef] [typekind=Elaborated]
+// CHECK-TYPE-SAME: [type=MyTypedef] [typekind=Typedef]
 // CHECK-TYPE-SAME: [canonicaltype=int] [canonicaltypekind=Int]
 // CHECK-TYPEDECL: VarDecl=VariableWithParentheses2
 // CHECK-TYPEDECL-SAME: [typedeclaration=MyTypedef] [typekind=Typedef]

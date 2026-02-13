@@ -1,0 +1,27 @@
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+Function:        home
+Args:
+  - INST_nop: '1'
+  - INST_add: '3'
+  - INST_mul: '5'
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+Function:        homeowner
+Args:
+  - INST_nop: '2'
+  - INST_add: '4'
+  - INST_mul: '6'
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+Function:        meow
+Args:
+  - INST_nop: '7'
+  - INST_add: '8'
+  - INST_mul: '9'
+...

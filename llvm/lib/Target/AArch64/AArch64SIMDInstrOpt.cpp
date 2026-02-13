@@ -33,6 +33,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64InstrInfo.h"
+#include "AArch64Subtarget.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -49,8 +50,8 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Pass.h"
-#include <unordered_map>
 #include <map>
+#include <unordered_map>
 
 using namespace llvm;
 
@@ -67,7 +68,7 @@ namespace {
 struct AArch64SIMDInstrOpt : public MachineFunctionPass {
   static char ID;
 
-  const TargetInstrInfo *TII;
+  const AArch64InstrInfo *TII;
   MachineRegisterInfo *MRI;
   TargetSchedModel SchedModel;
 
@@ -147,12 +148,10 @@ struct AArch64SIMDInstrOpt : public MachineFunctionPass {
   };
 
   // A costly instruction is replaced in this work by N efficient instructions
-  // The maximum of N is curently 10 and it is for ST4 case.
+  // The maximum of N is currently 10 and it is for ST4 case.
   static const unsigned MaxNumRepl = 10;
 
-  AArch64SIMDInstrOpt() : MachineFunctionPass(ID) {
-    initializeAArch64SIMDInstrOptPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64SIMDInstrOpt() : MachineFunctionPass(ID) {}
 
   /// Based only on latency of instructions, determine if it is cost efficient
   /// to replace the instruction InstDesc by the instructions stored in the
@@ -185,8 +184,8 @@ struct AArch64SIMDInstrOpt : public MachineFunctionPass {
   /// Example of such instructions.
   ///    %dest = REG_SEQUENCE %st2_src1, dsub0, %st2_src2, dsub1;
   /// Return true when the instruction is processed successfully.
-  bool processSeqRegInst(MachineInstr *DefiningMI, unsigned* StReg,
-                         unsigned* StRegKill, unsigned NumArg) const;
+  bool processSeqRegInst(MachineInstr *DefiningMI, unsigned *StReg,
+                         RegState *StRegKill, unsigned NumArg) const;
 
   /// Load/Store Interleaving instructions are not always beneficial.
   /// Replace them by ZIP instructionand classical load/store.
@@ -432,15 +431,15 @@ bool AArch64SIMDInstrOpt::optimizeVectElement(MachineInstr &MI) {
   // Get the operands of the current SIMD arithmetic instruction.
   Register MulDest = MI.getOperand(0).getReg();
   Register SrcReg0 = MI.getOperand(1).getReg();
-  unsigned Src0IsKill = getKillRegState(MI.getOperand(1).isKill());
+  RegState Src0IsKill = getKillRegState(MI.getOperand(1).isKill());
   Register SrcReg1 = MI.getOperand(2).getReg();
-  unsigned Src1IsKill = getKillRegState(MI.getOperand(2).isKill());
+  RegState Src1IsKill = getKillRegState(MI.getOperand(2).isKill());
   unsigned DupDest;
 
   // Instructions of interest have either 4 or 5 operands.
   if (MI.getNumOperands() == 5) {
     Register SrcReg2 = MI.getOperand(3).getReg();
-    unsigned Src2IsKill = getKillRegState(MI.getOperand(3).isKill());
+    RegState Src2IsKill = getKillRegState(MI.getOperand(3).isKill());
     unsigned LaneNumber = MI.getOperand(4).getImm();
     // Create a new DUP instruction. Note that if an equivalent DUP instruction
     // has already been created before, then use that one instead of creating
@@ -506,7 +505,8 @@ bool AArch64SIMDInstrOpt::optimizeVectElement(MachineInstr &MI) {
 bool AArch64SIMDInstrOpt::optimizeLdStInterleave(MachineInstr &MI) {
 
   unsigned SeqReg, AddrReg;
-  unsigned StReg[4], StRegKill[4];
+  unsigned StReg[4];
+  RegState StRegKill[4];
   MachineInstr *DefiningMI;
   const DebugLoc &DL = MI.getDebugLoc();
   MachineBasicBlock &MBB = *MI.getParent();
@@ -633,7 +633,9 @@ bool AArch64SIMDInstrOpt::optimizeLdStInterleave(MachineInstr &MI) {
 ///    %dest = REG_SEQUENCE %st2_src1, dsub0, %st2_src2, dsub1;
 /// Return true when the instruction is processed successfully.
 bool AArch64SIMDInstrOpt::processSeqRegInst(MachineInstr *DefiningMI,
-     unsigned* StReg, unsigned* StRegKill, unsigned NumArg) const {
+                                            unsigned *StReg,
+                                            RegState *StRegKill,
+                                            unsigned NumArg) const {
   assert(DefiningMI != nullptr);
   if (DefiningMI->getOpcode() != AArch64::REG_SEQUENCE)
     return false;
@@ -696,13 +698,9 @@ bool AArch64SIMDInstrOpt::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  TII = MF.getSubtarget().getInstrInfo();
   MRI = &MF.getRegInfo();
-  const TargetSubtargetInfo &ST = MF.getSubtarget();
-  const AArch64InstrInfo *AAII =
-      static_cast<const AArch64InstrInfo *>(ST.getInstrInfo());
-  if (!AAII)
-    return false;
+  const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
+  TII = ST.getInstrInfo();
   SchedModel.init(&ST);
   if (!SchedModel.hasInstrSchedModel())
     return false;

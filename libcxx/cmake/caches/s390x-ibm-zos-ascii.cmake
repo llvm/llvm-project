@@ -20,3 +20,4 @@ set(LIBCXX_CXX_ABI system-libcxxabi CACHE STRING "")
 
 set(LIBCXX_ADDITIONAL_COMPILE_FLAGS "-fzos-le-char-mode=ascii" CACHE STRING "")
 set(LIBCXX_ADDITIONAL_LIBRARIES "-L../s390x-ibm-zos/lib -Wl,../s390x-ibm-zos/lib/libunwind.x" CACHE STRING "")
+set(LIBCXX_ABI_DEFINES "_LIBCPP_ABI_IOS_ALLOW_ARBITRARY_FILL_VALUE" CACHE STRING "")

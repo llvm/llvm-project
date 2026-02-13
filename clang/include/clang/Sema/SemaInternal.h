@@ -15,15 +15,12 @@
 #define LLVM_CLANG_SEMA_SEMAINTERNAL_H
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaDiagnostic.h"
 
 namespace clang {
-
-inline PartialDiagnostic Sema::PDiag(unsigned DiagID) {
-  return PartialDiagnostic(DiagID, Context.getDiagAllocator());
-}
 
 inline bool
 FTIHasSingleVoidParameter(const DeclaratorChunk::FunctionTypeInfo &FTI) {
@@ -62,7 +59,7 @@ inline InheritableAttr *getDLLAttr(Decl *D) {
 }
 
 /// Retrieve the depth and index of a template parameter.
-inline std::pair<unsigned, unsigned> getDepthAndIndex(NamedDecl *ND) {
+inline std::pair<unsigned, unsigned> getDepthAndIndex(const NamedDecl *ND) {
   if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(ND))
     return std::make_pair(TTP->getDepth(), TTP->getIndex());
 
@@ -74,12 +71,17 @@ inline std::pair<unsigned, unsigned> getDepthAndIndex(NamedDecl *ND) {
 }
 
 /// Retrieve the depth and index of an unexpanded parameter pack.
-inline std::pair<unsigned, unsigned>
+/// Returns nullopt when the unexpanded packs do not correspond to template
+/// parameters, e.g. __builtin_dedup_types.
+inline std::optional<std::pair<unsigned, unsigned>>
 getDepthAndIndex(UnexpandedParameterPack UPP) {
-  if (const auto *TTP = UPP.first.dyn_cast<const TemplateTypeParmType *>())
+  if (const auto *TTP = dyn_cast<const TemplateTypeParmType *>(UPP.first))
     return std::make_pair(TTP->getDepth(), TTP->getIndex());
-
-  return getDepthAndIndex(UPP.first.get<NamedDecl *>());
+  if (isa<NamedDecl *>(UPP.first))
+    return getDepthAndIndex(cast<NamedDecl *>(UPP.first));
+  assert((isa<const TemplateSpecializationType *,
+              const SubstBuiltinTemplatePackType *>(UPP.first)));
+  return std::nullopt;
 }
 
 class TypoCorrectionConsumer : public VisibleDeclConsumer {
@@ -212,7 +214,7 @@ private:
   class NamespaceSpecifierSet {
     struct SpecifierInfo {
       DeclContext* DeclCtx;
-      NestedNameSpecifier* NameSpecifier;
+      NestedNameSpecifier NameSpecifier;
       unsigned EditDistance;
     };
 
@@ -232,9 +234,9 @@ private:
     static DeclContextList buildContextChain(DeclContext *Start);
 
     unsigned buildNestedNameSpecifier(DeclContextList &DeclChain,
-                                      NestedNameSpecifier *&NNS);
+                                      NestedNameSpecifier &NNS);
 
-   public:
+  public:
     NamespaceSpecifierSet(ASTContext &Context, DeclContext *CurContext,
                           CXXScopeSpec *CurScopeSpec);
 
@@ -279,7 +281,7 @@ private:
   };
 
   void addName(StringRef Name, NamedDecl *ND,
-               NestedNameSpecifier *NNS = nullptr, bool isKeyword = false);
+               NestedNameSpecifier NNS = std::nullopt, bool isKeyword = false);
 
   /// Find any visible decls for the given typo correction candidate.
   /// If none are found, it to the set of candidates for which qualified lookups
@@ -317,20 +319,6 @@ private:
   bool EnteringContext;
   bool SearchNamespaces;
 };
-
-inline Sema::TypoExprState::TypoExprState() {}
-
-inline Sema::TypoExprState::TypoExprState(TypoExprState &&other) noexcept {
-  *this = std::move(other);
-}
-
-inline Sema::TypoExprState &Sema::TypoExprState::
-operator=(Sema::TypoExprState &&other) noexcept {
-  Consumer = std::move(other.Consumer);
-  DiagHandler = std::move(other.DiagHandler);
-  RecoveryHandler = std::move(other.RecoveryHandler);
-  return *this;
-}
 
 } // end namespace clang
 

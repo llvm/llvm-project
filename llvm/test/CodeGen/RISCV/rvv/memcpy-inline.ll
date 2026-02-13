@@ -11,7 +11,6 @@
 ; ----------------------------------------------------------------------
 ; Fully unaligned cases
 
-
 define void @unaligned_memcpy1(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32-BOTH-LABEL: unaligned_memcpy1:
 ; RV32-BOTH:       # %bb.0: # %entry
@@ -218,8 +217,8 @@ define void @unaligned_memcpy15(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32-NEXT:    sb a2, 14(a0)
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV32-NEXT:    vle8.v v8, (a1)
-; RV32-NEXT:    vse8.v v8, (a0)
 ; RV32-NEXT:    addi a2, a1, 12
+; RV32-NEXT:    vse8.v v8, (a0)
 ; RV32-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; RV32-NEXT:    vle8.v v8, (a2)
 ; RV32-NEXT:    addi a2, a0, 12
@@ -237,8 +236,8 @@ define void @unaligned_memcpy15(ptr nocapture %dest, ptr %src) nounwind {
 ; RV64-NEXT:    sb a2, 14(a0)
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV64-NEXT:    vle8.v v8, (a1)
-; RV64-NEXT:    vse8.v v8, (a0)
 ; RV64-NEXT:    addi a2, a1, 12
+; RV64-NEXT:    vse8.v v8, (a0)
 ; RV64-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; RV64-NEXT:    vle8.v v8, (a2)
 ; RV64-NEXT:    addi a2, a0, 12
@@ -431,8 +430,8 @@ define void @unaligned_memcpy96(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32-NEXT:    li a2, 64
 ; RV32-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
 ; RV32-NEXT:    vle8.v v8, (a1)
-; RV32-NEXT:    vse8.v v8, (a0)
 ; RV32-NEXT:    addi a1, a1, 64
+; RV32-NEXT:    vse8.v v8, (a0)
 ; RV32-NEXT:    li a2, 32
 ; RV32-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
 ; RV32-NEXT:    vle8.v v8, (a1)
@@ -445,8 +444,8 @@ define void @unaligned_memcpy96(ptr nocapture %dest, ptr %src) nounwind {
 ; RV64-NEXT:    li a2, 64
 ; RV64-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
 ; RV64-NEXT:    vle8.v v8, (a1)
-; RV64-NEXT:    vse8.v v8, (a0)
 ; RV64-NEXT:    addi a1, a1, 64
+; RV64-NEXT:    vse8.v v8, (a0)
 ; RV64-NEXT:    li a2, 32
 ; RV64-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
 ; RV64-NEXT:    vle8.v v8, (a1)
@@ -523,8 +522,8 @@ define void @unaligned_memcpy196(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32-NEXT:    li a2, 128
 ; RV32-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; RV32-NEXT:    vle8.v v8, (a1)
-; RV32-NEXT:    vse8.v v8, (a0)
 ; RV32-NEXT:    addi a2, a1, 128
+; RV32-NEXT:    vse8.v v8, (a0)
 ; RV32-NEXT:    li a3, 64
 ; RV32-NEXT:    vsetvli zero, a3, e8, m4, ta, ma
 ; RV32-NEXT:    vle8.v v8, (a2)
@@ -545,8 +544,8 @@ define void @unaligned_memcpy196(ptr nocapture %dest, ptr %src) nounwind {
 ; RV64-NEXT:    li a2, 128
 ; RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; RV64-NEXT:    vle8.v v8, (a1)
-; RV64-NEXT:    vse8.v v8, (a0)
 ; RV64-NEXT:    addi a2, a1, 128
+; RV64-NEXT:    vse8.v v8, (a0)
 ; RV64-NEXT:    li a3, 64
 ; RV64-NEXT:    vsetvli zero, a3, e8, m4, ta, ma
 ; RV64-NEXT:    vle8.v v8, (a2)
@@ -644,7 +643,6 @@ entry:
   tail call void @llvm.memcpy.inline.p0.p0.i64(ptr %dest, ptr %src, i64 256, i1 false)
   ret void
 }
-
 
 ; ----------------------------------------------------------------------
 ; Fully aligned cases
@@ -1031,7 +1029,6 @@ entry:
 ; ------------------------------------------------------------------------
 ; A few partially aligned cases
 
-
 define void @memcpy16_align4(ptr nocapture %dest, ptr nocapture %src) nounwind {
 ; RV32-LABEL: memcpy16_align4:
 ; RV32:       # %bb.0: # %entry
@@ -1112,6 +1109,3 @@ entry:
   ret i32 0
 }
 
-
-declare void @llvm.memcpy.inline.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind
-declare void @llvm.memcpy.inline.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind

@@ -326,55 +326,52 @@ namespace N0 {
       // None of the following should be found in the current instantiation.
 
       new M4; // expected-error{{unknown type name 'M4'}}
-      new B::M4; // expected-error{{no type named 'M4' in 'B<T>'}}
+      new B::M4; // expected-error{{no type named 'M4' in 'N0::B<T>'}}
       new A::M4; // expected-error{{no type named 'M4' in 'N0::A'}}
       new B::A::M4; // expected-error{{no type named 'M4' in 'N0::A'}}
 
       x4; // expected-error{{use of undeclared identifier 'x4'}}
-      B::x4; // expected-error{{no member named 'x4' in 'B<T>'}}
+      B::x4; // expected-error{{no member named 'x4' in 'N0::B<T>'}}
       A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
       B::A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
       f4(); // expected-error{{use of undeclared identifier 'f4'}}
-      B::f4(); // expected-error{{no member named 'f4' in 'B<T>'}}
+      B::f4(); // expected-error{{no member named 'f4' in 'N0::B<T>'}}
       A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
       B::A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
 
-      this->x4; // expected-error{{no member named 'x4' in 'B<T>'}}
-      this->B::x4; // expected-error{{no member named 'x4' in 'B<T>'}}
+      this->x4; // expected-error{{no member named 'x4' in 'N0::B<T>'}}
+      this->B::x4; // expected-error{{no member named 'x4' in 'N0::B<T>'}}
       this->A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
       this->B::A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
-      this->f4(); // expected-error{{no member named 'f4' in 'B<T>'}}
-      this->B::f4(); // expected-error{{no member named 'f4' in 'B<T>'}}
+      this->f4(); // expected-error{{no member named 'f4' in 'N0::B<T>'}}
+      this->B::f4(); // expected-error{{no member named 'f4' in 'N0::B<T>'}}
       this->A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
       this->B::A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
 
-      a->x4; // expected-error{{no member named 'x4' in 'B<T>'}}
-      a->B::x4; // expected-error{{no member named 'x4' in 'B<T>'}}
+      a->x4; // expected-error{{no member named 'x4' in 'N0::B<T>'}}
+      a->B::x4; // expected-error{{no member named 'x4' in 'N0::B<T>'}}
       a->A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
       a->B::A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
-      a->f4(); // expected-error{{no member named 'f4' in 'B<T>'}}
-      a->B::f4(); // expected-error{{no member named 'f4' in 'B<T>'}}
+      a->f4(); // expected-error{{no member named 'f4' in 'N0::B<T>'}}
+      a->B::f4(); // expected-error{{no member named 'f4' in 'N0::B<T>'}}
       a->A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
       a->B::A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
 
-      // FIXME: An overloaded unary 'operator*' is built for these
-      // even though the operand is a pointer (to a dependent type).
-      // Type::isOverloadableType should return false for such cases.
-      (*this).x4;
-      (*this).B::x4;
-      (*this).A::x4;
-      (*this).B::A::x4;
-      (*this).f4();
-      (*this).B::f4();
-      (*this).A::f4();
-      (*this).B::A::f4();
+      (*this).x4; // expected-error{{no member named 'x4' in 'N0::B<T>'}}
+      (*this).B::x4; // expected-error{{no member named 'x4' in 'N0::B<T>'}}
+      (*this).A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
+      (*this).B::A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
+      (*this).f4(); // expected-error{{no member named 'f4' in 'N0::B<T>'}}
+      (*this).B::f4(); // expected-error{{no member named 'f4' in 'N0::B<T>'}}
+      (*this).A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
+      (*this).B::A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
 
-      b.x4; // expected-error{{no member named 'x4' in 'B<T>'}}
-      b.B::x4; // expected-error{{no member named 'x4' in 'B<T>'}}
+      b.x4; // expected-error{{no member named 'x4' in 'N0::B<T>'}}
+      b.B::x4; // expected-error{{no member named 'x4' in 'N0::B<T>'}}
       b.A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
       b.B::A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
-      b.f4(); // expected-error{{no member named 'f4' in 'B<T>'}}
-      b.B::f4(); // expected-error{{no member named 'f4' in 'B<T>'}}
+      b.f4(); // expected-error{{no member named 'f4' in 'N0::B<T>'}}
+      b.B::f4(); // expected-error{{no member named 'f4' in 'N0::B<T>'}}
       b.A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
       b.B::A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
     }
@@ -399,15 +396,13 @@ namespace N1 {
       f<0>();
       this->f<0>();
       a->f<0>();
-      // FIXME: This should not require 'template'!
-      (*this).f<0>(); // expected-error{{missing 'template' keyword prior to dependent template name 'f'}}
+      (*this).f<0>();
       b.f<0>();
 
       x.f<0>();
       this->x.f<0>();
       a->x.f<0>();
-      // FIXME: This should not require 'template'!
-      (*this).x.f<0>(); // expected-error{{missing 'template' keyword prior to dependent template name 'f'}}
+      (*this).x.f<0>();
       b.x.f<0>();
 
       // FIXME: None of these should require 'template'!
@@ -429,7 +424,7 @@ namespace N2 {
       void not_instantiated(A *a, B *b) {
         b->x; // expected-error{{no member named 'x' in 'N2::A::B'}}
         b->B::x; // expected-error{{no member named 'x' in 'N2::A::B'}}
-        a->B::C::x; // expected-error{{no member named 'x' in 'A<T>'}}
+        a->B::C::x; // expected-error{{no member named 'x' in 'N2::A<T>'}}
       }
     };
 
@@ -471,6 +466,18 @@ namespace N3 {
       this->C::operator=(*this);
     }
   };
+
+  template<typename T>
+  struct D {
+    auto not_instantiated() -> decltype(operator=(0)); // expected-error {{use of undeclared 'operator='}}
+  };
+
+  template<typename T>
+  struct E {
+    auto instantiated(E& e) -> decltype(operator=(e)); // expected-error {{use of undeclared 'operator='}}
+  };
+
+  template struct E<int>; // expected-note {{in instantiation of template class 'N3::E<int>' requested here}}
 } // namespace N3
 
 namespace N4 {
@@ -527,6 +534,17 @@ namespace N4 {
       a->y;
       a->f();
       a->g();
+
+      a->T::x;
+      a->T::y;
+      a->T::f();
+      a->T::g();
+
+      // FIXME: 'U' should be a dependent name, and its lookup context should be 'a.operator->()'!
+      a->U::x; // expected-error {{use of undeclared identifier 'U'}}
+      a->U::y; // expected-error {{use of undeclared identifier 'U'}}
+      a->U::f(); // expected-error {{use of undeclared identifier 'U'}}
+      a->U::g(); // expected-error {{use of undeclared identifier 'U'}}
     }
 
     void instantiated(D a) {
@@ -534,8 +552,56 @@ namespace N4 {
       a->y; // expected-error {{no member named 'y' in 'N4::B'}}
       a->f();
       a->g(); // expected-error {{no member named 'g' in 'N4::B'}}
+
+      a->T::x;
+      a->T::y; // expected-error {{no member named 'y' in 'N4::B'}}
+      a->T::f();
+      a->T::g(); // expected-error {{no member named 'g' in 'N4::B'}}
     }
   };
 
   template void D<B>::instantiated(D); // expected-note {{in instantiation of}}
+
+  template<typename T>
+  struct Typo {
+    T *operator->();
+
+    void not_instantiated(Typo a) {
+      a->Not_instantiated;
+      a->typo;
+      a->T::Not_instantiated;
+      a->T::typo;
+    }
+  };
 } // namespace N4
+
+namespace N5 {
+  struct A {
+    int x;
+  };
+
+  template<typename T>
+  void f() {
+    A y = T::x; // expected-error {{type 'int' cannot be used prior to '::' because it has no members}}
+    y.x;
+  }
+
+  template void f<int>(); // expected-note {{in instantiation of}}
+
+  struct B {
+    template<typename T>
+    B(T&&);
+
+    int x;
+  };
+
+  template<typename T>
+  void g(T y) {
+    B z([&]() { // expected-note {{while substituting into a lambda expression here}}
+      h(&y); // expected-error {{use of undeclared identifier 'h'}}
+    });
+    z.x;
+  }
+
+  template void g(int); // expected-note {{in instantiation of}}
+} // namespace N5

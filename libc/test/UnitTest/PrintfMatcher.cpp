@@ -8,15 +8,15 @@
 
 #include "PrintfMatcher.h"
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/core_structs.h"
 
 #include "test/UnitTest/StringUtils.h"
 #include "test/UnitTest/Test.h"
 
-#include <stdint.h>
-
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 using printf_core::FormatFlags;
@@ -71,8 +71,10 @@ static void display(FormatSection form) {
       CASE_LM(z);
       CASE_LM(t);
       CASE_LM(L);
+#ifndef LIBC_COPT_PRINTF_DISABLE_BITINT
       CASE_LM_BIT_WIDTH(w, form.bit_width);
       CASE_LM_BIT_WIDTH(wf, form.bit_width);
+#endif // LIBC_COPT_PRINTF_DISABLE_BITINT
     }
     tlog << "\n";
     tlog << "\tconversion name: " << form.conv_name << "\n";
@@ -100,4 +102,4 @@ void FormatSectionMatcher::explainError() {
 }
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

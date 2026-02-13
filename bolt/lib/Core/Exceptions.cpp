@@ -108,8 +108,7 @@ Error BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
   DWARFDataExtractor Data(
       StringRef(reinterpret_cast<const char *>(LSDASectionData.data()),
                 LSDASectionData.size()),
-      BC.DwCtx->getDWARFObj().isLittleEndian(),
-      BC.DwCtx->getDWARFObj().getAddressSize());
+      BC.AsmInfo->isLittleEndian(), BC.AsmInfo->getCodePointerSize());
   uint64_t Offset = getLSDAAddress() - LSDASectionAddress;
   assert(Data.isValidOffset(Offset) && "wrong LSDA address");
 
@@ -207,7 +206,7 @@ Error BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
                "BOLT-ERROR: cannot find landing pad fragment");
         BC.addInterproceduralReference(this, Fragment->getAddress());
         BC.processInterproceduralReferences();
-        assert(isParentOrChildOf(*Fragment) &&
+        assert(BC.areRelatedFragments(this, Fragment) &&
                "BOLT-ERROR: cannot have landing pads in different functions");
         setHasIndirectTargetToSplitFragment(true);
         BC.addFragmentsToSkip(this);
@@ -501,7 +500,7 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
 
   const FDE &CurFDE = *I->second;
   std::optional<uint64_t> LSDA = CurFDE.getLSDAAddress();
-  Function.setLSDAAddress(LSDA ? *LSDA : 0);
+  Function.setLSDAAddress(LSDA.value_or(0));
 
   uint64_t Offset = Function.getFirstInstructionOffset();
   uint64_t CodeAlignment = CurFDE.getLinkedCIE()->getCodeAlignmentFactor();
@@ -569,10 +568,25 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
     case DW_CFA_remember_state:
       Function.addCFIInstruction(
           Offset, MCCFIInstruction::createRememberState(nullptr));
+
+      if (Function.getBinaryContext().isAArch64()) {
+        // Support for pointer authentication:
+        // We need to annotate instructions that modify the RA State, to work
+        // out the state of each instruction in PointerAuthCFIAnalyzer Pass.
+        if (Offset != 0)
+          Function.setInstModifiesRAState(DW_CFA_remember_state, Offset);
+      }
       break;
     case DW_CFA_restore_state:
       Function.addCFIInstruction(Offset,
                                  MCCFIInstruction::createRestoreState(nullptr));
+      if (Function.getBinaryContext().isAArch64()) {
+        // Support for pointer authentication:
+        // We need to annotate instructions that modify the RA State, to work
+        // out the state of each instruction in PointerAuthCFIAnalyzer Pass.
+        if (Offset != 0)
+          Function.setInstModifiesRAState(DW_CFA_restore_state, Offset);
+      }
       break;
     case DW_CFA_def_cfa:
       Function.addCFIInstruction(
@@ -630,11 +644,24 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
         BC.errs() << "BOLT-WARNING: DW_CFA_MIPS_advance_loc unimplemented\n";
       return false;
     case DW_CFA_GNU_window_save:
-      // DW_CFA_GNU_window_save and DW_CFA_GNU_NegateRAState just use the same
-      // id but mean different things. The latter is used in AArch64.
+      // DW_CFA_GNU_window_save and DW_CFA_AARCH64_negate_ra_state just use the
+      // same id but mean different things. The latter is used in AArch64.
       if (Function.getBinaryContext().isAArch64()) {
-        Function.addCFIInstruction(
-            Offset, MCCFIInstruction::createNegateRAState(nullptr));
+        Function.setContainedNegateRAState();
+        // The location OpNegateRAState CFIs are needed depends on the order of
+        // BasicBlocks, which changes during optimizations. Instead of adding
+        // OpNegateRAState CFIs, an annotation is added to the instruction, to
+        // mark that the instruction modifies the RA State. The actual state for
+        // instructions are worked out in PointerAuthCFIAnalyzer based on these
+        // annotations.
+        if (Offset != 0)
+          Function.setInstModifiesRAState(DW_CFA_AARCH64_negate_ra_state,
+                                          Offset);
+        else
+          // We cannot Annotate an instruction at Offset == 0.
+          // Instead, we save the initial (Signed) state, and push it to
+          // PointerAuthCFIAnalyzer's RAStateStack.
+          Function.setInitialRAState(true);
         break;
       }
       if (opts::Verbosity >= 1)
@@ -666,15 +693,12 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
   return true;
 }
 
-std::vector<char> CFIReaderWriter::generateEHFrameHeader(
-    const DWARFDebugFrame &OldEHFrame, const DWARFDebugFrame &NewEHFrame,
-    uint64_t EHFrameHeaderAddress,
-    std::vector<uint64_t> &FailedAddresses) const {
+std::vector<char>
+CFIReaderWriter::generateEHFrameHeader(const DWARFDebugFrame &OldEHFrame,
+                                       const DWARFDebugFrame &NewEHFrame,
+                                       uint64_t EHFrameHeaderAddress) const {
   // Common PC -> FDE map to be written into .eh_frame_hdr.
   std::map<uint64_t, uint64_t> PCToFDE;
-
-  // Presort array for binary search.
-  llvm::sort(FailedAddresses);
 
   // Initialize PCToFDE using NewEHFrame.
   for (dwarf::FrameEntry &Entry : NewEHFrame.entries()) {
@@ -690,13 +714,7 @@ std::vector<char> CFIReaderWriter::generateEHFrameHeader(
       continue;
 
     // Add the address to the map unless we failed to write it.
-    if (!std::binary_search(FailedAddresses.begin(), FailedAddresses.end(),
-                            FuncAddress)) {
-      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: FDE for function at 0x"
-                        << Twine::utohexstr(FuncAddress) << " is at 0x"
-                        << Twine::utohexstr(FDEAddress) << '\n');
-      PCToFDE[FuncAddress] = FDEAddress;
-    }
+    PCToFDE[FuncAddress] = FDEAddress;
   };
 
   LLVM_DEBUG(dbgs() << "BOLT-DEBUG: new .eh_frame contains "

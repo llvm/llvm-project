@@ -18,14 +18,9 @@
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
 # RUN: %clang %cflags %S/Inputs/unclaimed-jt-entries.c -no-pie %t.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -v=1 -o %t.out --sequential-disassembly |& FileCheck %s
+# RUN: llvm-bolt %t.exe -o %t.out 2>&1 | FileCheck %s
 
-# CHECK: BOLT-WARNING: unclaimed data to code reference (possibly an unrecognized jump table entry) to .Ltmp[[#]] in func
-# CHECK: BOLT-WARNING: unclaimed data to code reference (possibly an unrecognized jump table entry) to .Ltmp[[#]] in func
-# CHECK: BOLT-WARNING: unclaimed data to code reference (possibly an unrecognized jump table entry) to .Ltmp[[#]] in func
-# CHECK: BOLT-WARNING: unclaimed data to code reference (possibly an unrecognized jump table entry) to .Ltmp[[#]] in func
-# CHECK: BOLT-WARNING: unclaimed data to code reference (possibly an unrecognized jump table entry) to .Ltmp[[#]] in func
-# CHECK: BOLT-WARNING: failed to post-process indirect branches for func
+# CHECK: BOLT-WARNING: 11 unclaimed data relocations remain against function func
 
 # Run the optimized binary
 # RUN: %t.out 3 | FileCheck %s --check-prefix=CHECK3

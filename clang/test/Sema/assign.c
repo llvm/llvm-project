@@ -6,13 +6,13 @@ void test2 (const struct {int a;} *x) {
   // expected-note@-1 {{variable 'x' declared const here}}
 
   x->a = 10;
-  // expected-error-re@-1 {{cannot assign to variable 'x' with const-qualified type 'const struct (unnamed struct at {{.*}}assign.c:5:19) *'}}
+  // expected-error-re@-1 {{cannot assign to variable 'x' with const-qualified type 'const struct (unnamed at {{.*}}assign.c:5:19) *'}}
 }
 
 typedef int arr[10];
 void test3(void) {
-  const arr b;      // expected-note {{variable 'b' declared const here}}
-  const int b2[10]; // expected-note {{variable 'b2' declared const here}}
+  const arr b = {};      // expected-note {{variable 'b' declared const here}}
+  const int b2[10] = {}; // expected-note {{variable 'b2' declared const here}}
   b[4] = 1;         // expected-error {{cannot assign to variable 'b' with const-qualified type 'const arr' (aka 'const int[10]')}}
   b2[4] = 1;        // expected-error {{cannot assign to variable 'b2' with const-qualified type 'const int[10]'}}
 }

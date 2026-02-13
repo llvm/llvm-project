@@ -29,8 +29,17 @@ struct S
 
 typedef void (S::*mf)(int);
 
+enum E : long;
+int efunc(E);
+
+// Produce the underlying `long` type implicitly.
+enum E2 { big = __LONG_MAX__ };
+int e2func(E2);
+
 void foo() {
   a = (f1 *)x;
+  a = (f1 *)efunc; // strict-warning {{cast from 'int (*)(E)' to 'f1 *' (aka 'int (*)(long)') converts to incompatible function type}}
+  a = (f1 *)e2func; // strict-warning {{cast from 'int (*)(E2)' to 'f1 *' (aka 'int (*)(long)') converts to incompatible function type}}
   b = (f2 *)x; // expected-warning {{cast from 'int (*)(long)' to 'f2 *' (aka 'int (*)(void *)') converts to incompatible function type}}
   b = reinterpret_cast<f2 *>(x); // expected-warning {{cast from 'int (*)(long)' to 'f2 *' (aka 'int (*)(void *)') converts to incompatible function type}}
   c = (f3 *)x; // strict-warning {{cast from 'int (*)(long)' to 'f3 *' (aka 'int (*)(...)') converts to incompatible function type}}

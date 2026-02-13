@@ -1,14 +1,9 @@
-import os
-from clang.cindex import Config
+from clang.cindex import Diagnostic
 
-if "CLANG_LIBRARY_PATH" in os.environ:
-    Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
-
-from clang.cindex import *
-from .util import get_tu
 
 import unittest
 
+from .util import get_tu
 
 # FIXME: We need support for invalid translation units to test better.
 
@@ -46,6 +41,8 @@ class TestDiagnostics(unittest.TestCase):
         self.assertEqual(tu.diagnostics[0].location.column, 26)
         self.assertRegex(tu.diagnostics[0].spelling, "use of GNU old-style.*")
         self.assertEqual(len(tu.diagnostics[0].fixits), 1)
+        with self.assertRaises(IndexError):
+            tu.diagnostics[0].fixits[1]
         self.assertEqual(tu.diagnostics[0].fixits[0].range.start.line, 1)
         self.assertEqual(tu.diagnostics[0].fixits[0].range.start.column, 26)
         self.assertEqual(tu.diagnostics[0].fixits[0].range.end.line, 1)
@@ -78,7 +75,7 @@ class TestDiagnostics(unittest.TestCase):
         self.assertEqual(d.location.line, 1)
         self.assertEqual(d.location.column, 11)
 
-        self.assertEqual(d.category_number, 2)
+        self.assertEqual(d.category_number, 3)
         self.assertEqual(d.category_name, "Semantic Issue")
 
     def test_diagnostic_option(self):
@@ -97,6 +94,8 @@ class TestDiagnostics(unittest.TestCase):
 
         children = d.children
         self.assertEqual(len(children), 1)
+        with self.assertRaises(IndexError):
+            children[1]
         self.assertEqual(children[0].severity, Diagnostic.Note)
         self.assertRegex(children[0].spelling, ".*declared here")
         self.assertEqual(children[0].location.line, 1)
@@ -111,3 +110,16 @@ class TestDiagnostics(unittest.TestCase):
             repr(d),
             "<Diagnostic severity 3, location <SourceLocation file 't.c', line 1, column 26>, spelling \"expected ';' after struct\">",
         )
+
+    def test_diagnostic_string_format(self):
+        tu = get_tu("struct MissingSemicolon{}")
+        self.assertEqual(len(tu.diagnostics), 1)
+        d = tu.diagnostics[0]
+
+        self.assertEqual(str(d), "t.c:1:26: error: expected ';' after struct")
+        self.assertEqual(
+            d.format(0b111111),
+            "t.c:1:26: error: expected ';' after struct [2, Parse Issue]",
+        )
+        with self.assertRaises(ValueError):
+            d.format(0b1000000)

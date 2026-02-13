@@ -75,8 +75,9 @@ DynamicLoader *DynamicLoaderMacOSXDYLD::CreateInstance(Process *process,
       case llvm::Triple::IOS:
       case llvm::Triple::TvOS:
       case llvm::Triple::WatchOS:
-      case llvm::Triple::XROS:
       case llvm::Triple::BridgeOS:
+      case llvm::Triple::DriverKit:
+      case llvm::Triple::XROS:
         create = triple_ref.getVendor() == llvm::Triple::Apple;
         break;
       default:
@@ -259,10 +260,13 @@ bool DynamicLoaderMacOSXDYLD::ReadDYLDInfoFromMemoryAndSetNotificationCallback(
       ModuleSP dyld_module_sp;
       if (ParseLoadCommands(data, m_dyld, &m_dyld.file_spec)) {
         if (m_dyld.file_spec) {
-          UpdateDYLDImageInfoFromNewImageInfo(m_dyld);
+          if (!UpdateDYLDImageInfoFromNewImageInfo(m_dyld))
+            return false;
         }
       }
       dyld_module_sp = GetDYLDModule();
+      if (!dyld_module_sp)
+        return false;
 
       Target &target = m_process->GetTarget();
 
@@ -569,8 +573,9 @@ bool DynamicLoaderMacOSXDYLD::AddModulesUsingImageInfosAddress(
               ->GetSize() == image_infos_count) {
     bool return_value = false;
     if (JSONImageInformationIntoImageInfo(image_infos_json_sp, image_infos)) {
-      UpdateSpecialBinariesFromNewImageInfos(image_infos);
-      return_value = AddModulesUsingImageInfos(image_infos);
+      auto images = PreloadModulesFromImageInfos(image_infos);
+      UpdateSpecialBinariesFromPreloadedModules(images);
+      return_value = AddModulesUsingPreloadedModules(images);
     }
     m_dyld_image_infos_stop_id = m_process->GetStopID();
     return return_value;
@@ -1060,13 +1065,13 @@ Status DynamicLoaderMacOSXDYLD::CanLoadImage() {
       return error; // Success
   }
 
-  error.SetErrorString("unsafe to load or unload shared libraries");
+  error = Status::FromErrorString("unsafe to load or unload shared libraries");
   return error;
 }
 
 bool DynamicLoaderMacOSXDYLD::GetSharedCacheInformation(
     lldb::addr_t &base_address, UUID &uuid, LazyBool &using_shared_cache,
-    LazyBool &private_shared_cache) {
+    LazyBool &private_shared_cache, FileSpec &shared_cache_filepath) {
   base_address = LLDB_INVALID_ADDRESS;
   uuid.Clear();
   using_shared_cache = eLazyBoolCalculate;

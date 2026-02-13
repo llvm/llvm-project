@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   BinaryFormat
   DebugInfoBTF
   DebugInfoDWARF
+  DebugInfoDWARFLowLevel
   Demangle
   MC
   MCDisassembler
@@ -27,6 +28,7 @@ add_llvm_tool(llvm-objdump
   llvm-objdump.cpp
   SourcePrinter.cpp
   COFFDump.cpp
+  DXContainerDump.cpp
   ELFDump.cpp
   MachODump.cpp
   OffloadDump.cpp

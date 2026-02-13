@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv60 -O2 -disable-post-ra  < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv60 -O2 -disable-post-ra < %s | FileCheck %s
 
 ; CHECK: q{{[0-3]}} = vand(v{{[0-9]*}},r{{[0-9]*}})
 ; CHECK: q{{[0-3]}} |= vand(v{{[0-9]*}},r{{[0-9]*}})
@@ -2554,5 +2554,5 @@ declare <32 x i32> @llvm.hexagon.V6.vunpackh(<16 x i32>) #1
 ; Function Attrs: nounwind readnone
 declare <32 x i32> @llvm.hexagon.V6.vunpackoh(<32 x i32>, <16 x i32>) #1
 
-attributes #0 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length64b" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length64b" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }

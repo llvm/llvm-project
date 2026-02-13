@@ -30,13 +30,13 @@ struct LLVM_LIBRARY_VISIBILITY MCUInfo {
 
 // NOTE: This list has been synchronized with gcc-avr 5.4.0 and avr-libc 2.0.0.
 static MCUInfo AVRMcus[] = {
-    {"avr1", NULL, "1", 0},
+    {"avr1", nullptr, "1", 0},
     {"at90s1200", "__AVR_AT90S1200__", "1", 0},
     {"attiny11", "__AVR_ATtiny11__", "1", 0},
     {"attiny12", "__AVR_ATtiny12__", "1", 0},
     {"attiny15", "__AVR_ATtiny15__", "1", 0},
     {"attiny28", "__AVR_ATtiny28__", "1", 0},
-    {"avr2", NULL, "2", 1},
+    {"avr2", nullptr, "2", 1},
     {"at90s2313", "__AVR_AT90S2313__", "2", 1},
     {"at90s2323", "__AVR_AT90S2323__", "2", 1},
     {"at90s2333", "__AVR_AT90S2333__", "2", 1},
@@ -50,7 +50,7 @@ static MCUInfo AVRMcus[] = {
     {"at90s8515", "__AVR_AT90S8515__", "2", 1},
     {"at90c8534", "__AVR_AT90c8534__", "2", 1},
     {"at90s8535", "__AVR_AT90S8535__", "2", 1},
-    {"avr25", NULL, "25", 1},
+    {"avr25", nullptr, "25", 1},
     {"ata5272", "__AVR_ATA5272__", "25", 1},
     {"ata6616c", "__AVR_ATA6616c__", "25", 1},
     {"attiny13", "__AVR_ATtiny13__", "25", 1},
@@ -80,13 +80,13 @@ static MCUInfo AVRMcus[] = {
     {"attiny48", "__AVR_ATtiny48__", "25", 1},
     {"attiny88", "__AVR_ATtiny88__", "25", 1},
     {"attiny828", "__AVR_ATtiny828__", "25", 1},
-    {"avr3", NULL, "3", 1},
+    {"avr3", nullptr, "3", 1},
     {"at43usb355", "__AVR_AT43USB355__", "3", 1},
     {"at76c711", "__AVR_AT76C711__", "3", 1},
-    {"avr31", NULL, "31", 1},
+    {"avr31", nullptr, "31", 1},
     {"atmega103", "__AVR_ATmega103__", "31", 1},
     {"at43usb320", "__AVR_AT43USB320__", "31", 1},
-    {"avr35", NULL, "35", 1},
+    {"avr35", nullptr, "35", 1},
     {"attiny167", "__AVR_ATtiny167__", "35", 1},
     {"at90usb82", "__AVR_AT90USB82__", "35", 1},
     {"at90usb162", "__AVR_AT90USB162__", "35", 1},
@@ -97,7 +97,7 @@ static MCUInfo AVRMcus[] = {
     {"atmega16u2", "__AVR_ATmega16U2__", "35", 1},
     {"atmega32u2", "__AVR_ATmega32U2__", "35", 1},
     {"attiny1634", "__AVR_ATtiny1634__", "35", 1},
-    {"avr4", NULL, "4", 1},
+    {"avr4", nullptr, "4", 1},
     {"atmega8", "__AVR_ATmega8__", "4", 1},
     {"ata6289", "__AVR_ATA6289__", "4", 1},
     {"atmega8a", "__AVR_ATmega8A__", "4", 1},
@@ -123,7 +123,7 @@ static MCUInfo AVRMcus[] = {
     {"at90pwm3", "__AVR_AT90PWM3__", "4", 1},
     {"at90pwm3b", "__AVR_AT90PWM3B__", "4", 1},
     {"at90pwm81", "__AVR_AT90PWM81__", "4", 1},
-    {"avr5", NULL, "5", 1},
+    {"avr5", nullptr, "5", 1},
     {"ata5702m322", "__AVR_ATA5702M322__", "5", 1},
     {"ata5782", "__AVR_ATA5782__", "5", 1},
     {"ata5790", "__AVR_ATA5790__", "5", 1},
@@ -230,7 +230,7 @@ static MCUInfo AVRMcus[] = {
     {"at90scr100", "__AVR_AT90SCR100__", "5", 1},
     {"at94k", "__AVR_AT94K__", "5", 1},
     {"m3000", "__AVR_AT000__", "5", 1},
-    {"avr51", NULL, "51", 2},
+    {"avr51", nullptr, "51", 2},
     {"atmega128", "__AVR_ATmega128__", "51", 2},
     {"atmega128a", "__AVR_ATmega128A__", "51", 2},
     {"atmega1280", "__AVR_ATmega1280__", "51", 2},
@@ -243,12 +243,12 @@ static MCUInfo AVRMcus[] = {
     {"at90can128", "__AVR_AT90CAN128__", "51", 2},
     {"at90usb1286", "__AVR_AT90USB1286__", "51", 2},
     {"at90usb1287", "__AVR_AT90USB1287__", "51", 2},
-    {"avr6", NULL, "6", 4},
+    {"avr6", nullptr, "6", 4},
     {"atmega2560", "__AVR_ATmega2560__", "6", 4},
     {"atmega2561", "__AVR_ATmega2561__", "6", 4},
     {"atmega256rfr2", "__AVR_ATmega256RFR2__", "6", 4},
     {"atmega2564rfr2", "__AVR_ATmega2564RFR2__", "6", 4},
-    {"avrxmega2", NULL, "102", 1},
+    {"avrxmega2", nullptr, "102", 1},
     {"atxmega16a4", "__AVR_ATxmega16A4__", "102", 1},
     {"atxmega16a4u", "__AVR_ATxmega16A4U__", "102", 1},
     {"atxmega16c4", "__AVR_ATxmega16C4__", "102", 1},
@@ -262,7 +262,7 @@ static MCUInfo AVRMcus[] = {
     {"atxmega32e5", "__AVR_ATxmega32E5__", "102", 1},
     {"atxmega16e5", "__AVR_ATxmega16E5__", "102", 1},
     {"atxmega8e5", "__AVR_ATxmega8E5__", "102", 1},
-    {"avrxmega4", NULL, "104", 1},
+    {"avrxmega4", nullptr, "104", 1},
     {"atxmega64a3", "__AVR_ATxmega64A3__", "104", 1},
     {"atxmega64a3u", "__AVR_ATxmega64A3U__", "104", 1},
     {"atxmega64a4u", "__AVR_ATxmega64A4U__", "104", 1},
@@ -271,10 +271,10 @@ static MCUInfo AVRMcus[] = {
     {"atxmega64c3", "__AVR_ATxmega64C3__", "104", 1},
     {"atxmega64d3", "__AVR_ATxmega64D3__", "104", 1},
     {"atxmega64d4", "__AVR_ATxmega64D4__", "104", 1},
-    {"avrxmega5", NULL, "105", 1},
+    {"avrxmega5", nullptr, "105", 1},
     {"atxmega64a1", "__AVR_ATxmega64A1__", "105", 1},
     {"atxmega64a1u", "__AVR_ATxmega64A1U__", "105", 1},
-    {"avrxmega6", NULL, "106", 6},
+    {"avrxmega6", nullptr, "106", 6},
     {"atxmega128a3", "__AVR_ATxmega128A3__", "106", 2},
     {"atxmega128a3u", "__AVR_ATxmega128A3U__", "106", 2},
     {"atxmega128b1", "__AVR_ATxmega128B1__", "106", 2},
@@ -294,11 +294,11 @@ static MCUInfo AVRMcus[] = {
     {"atxmega256d3", "__AVR_ATxmega256D3__", "106", 4},
     {"atxmega384c3", "__AVR_ATxmega384C3__", "106", 6},
     {"atxmega384d3", "__AVR_ATxmega384D3__", "106", 6},
-    {"avrxmega7", NULL, "107", 2},
+    {"avrxmega7", nullptr, "107", 2},
     {"atxmega128a1", "__AVR_ATxmega128A1__", "107", 2},
     {"atxmega128a1u", "__AVR_ATxmega128A1U__", "107", 2},
     {"atxmega128a4u", "__AVR_ATxmega128A4U__", "107", 2},
-    {"avrtiny", NULL, "100", 0},
+    {"avrtiny", nullptr, "100", 0},
     {"attiny4", "__AVR_ATtiny4__", "100", 0},
     {"attiny5", "__AVR_ATtiny5__", "100", 0},
     {"attiny9", "__AVR_ATtiny9__", "100", 0},
@@ -307,7 +307,7 @@ static MCUInfo AVRMcus[] = {
     {"attiny40", "__AVR_ATtiny40__", "100", 0},
     {"attiny102", "__AVR_ATtiny102__", "100", 0},
     {"attiny104", "__AVR_ATtiny104__", "100", 0},
-    {"avrxmega3", NULL, "103", 1},
+    {"avrxmega3", nullptr, "103", 1},
     {"attiny202", "__AVR_ATtiny202__", "103", 1},
     {"attiny402", "__AVR_ATtiny402__", "103", 1},
     {"attiny204", "__AVR_ATtiny204__", "103", 1},
@@ -336,6 +336,9 @@ static MCUInfo AVRMcus[] = {
     {"attiny1624", "__AVR_ATtiny1624__", "103", 1},
     {"attiny1626", "__AVR_ATtiny1626__", "103", 1},
     {"attiny1627", "__AVR_ATtiny1627__", "103", 1},
+    {"attiny3224", "__AVR_ATtiny3224__", "103", 1},
+    {"attiny3226", "__AVR_ATtiny3226__", "103", 1},
+    {"attiny3227", "__AVR_ATtiny3227__", "103", 1},
     {"atmega808", "__AVR_ATmega808__", "103", 1},
     {"atmega809", "__AVR_ATmega809__", "103", 1},
     {"atmega1608", "__AVR_ATmega1608__", "103", 1},
@@ -344,6 +347,72 @@ static MCUInfo AVRMcus[] = {
     {"atmega3209", "__AVR_ATmega3209__", "103", 1},
     {"atmega4808", "__AVR_ATmega4808__", "103", 1},
     {"atmega4809", "__AVR_ATmega4809__", "103", 1},
+
+    // gcc 14 additions:
+
+    {"avr64da28", "__AVR_AVR64DA28__", "102", 1},
+    {"avr64da32", "__AVR_AVR64DA32__", "102", 1},
+    {"avr64da48", "__AVR_AVR64DA48__", "102", 1},
+    {"avr64da64", "__AVR_AVR64DA64__", "102", 1},
+    {"avr64db28", "__AVR_AVR64DB28__", "102", 1},
+    {"avr64db32", "__AVR_AVR64DB32__", "102", 1},
+    {"avr64db48", "__AVR_AVR64DB48__", "102", 1},
+    {"avr64db64", "__AVR_AVR64DB64__", "102", 1},
+    {"avr64dd14", "__AVR_AVR64DD14__", "102", 1},
+    {"avr64dd20", "__AVR_AVR64DD20__", "102", 1},
+    {"avr64dd28", "__AVR_AVR64DD28__", "102", 1},
+    {"avr64dd32", "__AVR_AVR64DD32__", "102", 1},
+    {"avr64du28", "__AVR_AVR64DU28__", "102", 1},
+    {"avr64du32", "__AVR_AVR64DU32__", "102", 1},
+    {"avr64ea28", "__AVR_AVR64EA28__", "102", 1},
+    {"avr64ea32", "__AVR_AVR64EA32__", "102", 1},
+    {"avr64ea48", "__AVR_AVR64EA48__", "102", 1},
+    {"avr64sd28", "__AVR_AVR64SD28__", "102", 1},
+    {"avr64sd32", "__AVR_AVR64SD32__", "102", 1},
+    {"avr64sd48", "__AVR_AVR64SD48__", "102", 1},
+
+    {"avr16dd20", "__AVR_AVR16DD20__", "103", 1},
+    {"avr16dd28", "__AVR_AVR16DD28__", "103", 1},
+    {"avr16dd32", "__AVR_AVR16DD32__", "103", 1},
+    {"avr16du14", "__AVR_AVR16DU14__", "103", 1},
+    {"avr16du20", "__AVR_AVR16DU20__", "103", 1},
+    {"avr16du28", "__AVR_AVR16DU28__", "103", 1},
+    {"avr16du32", "__AVR_AVR16DU32__", "103", 1},
+    {"avr32da28", "__AVR_AVR32DA28__", "103", 1},
+    {"avr32da32", "__AVR_AVR32DA32__", "103", 1},
+    {"avr32da48", "__AVR_AVR32DA48__", "103", 1},
+    {"avr32db28", "__AVR_AVR32DB28__", "103", 1},
+    {"avr32db32", "__AVR_AVR32DB32__", "103", 1},
+    {"avr32db48", "__AVR_AVR32DB48__", "103", 1},
+    {"avr32dd14", "__AVR_AVR32DD14__", "103", 1},
+    {"avr32dd20", "__AVR_AVR32DD20__", "103", 1},
+    {"avr32dd28", "__AVR_AVR32DD28__", "103", 1},
+    {"avr32dd32", "__AVR_AVR32DD32__", "103", 1},
+    {"avr32du14", "__AVR_AVR32DU14__", "103", 1},
+    {"avr32du20", "__AVR_AVR32DU20__", "103", 1},
+    {"avr32du28", "__AVR_AVR32DU28__", "103", 1},
+    {"avr32du32", "__AVR_AVR32DU32__", "103", 1},
+    {"avr16eb14", "__AVR_AVR16EB14__", "103", 1},
+    {"avr16eb20", "__AVR_AVR16EB20__", "103", 1},
+    {"avr16eb28", "__AVR_AVR16EB28__", "103", 1},
+    {"avr16eb32", "__AVR_AVR16EB32__", "103", 1},
+    {"avr16ea28", "__AVR_AVR16EA28__", "103", 1},
+    {"avr16ea32", "__AVR_AVR16EA32__", "103", 1},
+    {"avr16ea48", "__AVR_AVR16EA48__", "103", 1},
+    {"avr32ea28", "__AVR_AVR32EA28__", "103", 1},
+    {"avr32ea32", "__AVR_AVR32EA32__", "103", 1},
+    {"avr32ea48", "__AVR_AVR32EA48__", "103", 1},
+    {"avr32sd20", "__AVR_AVR32SD20__", "103", 1},
+    {"avr32sd28", "__AVR_AVR32SD28__", "103", 1},
+    {"avr32sd32", "__AVR_AVR32SD32__", "103", 1},
+    {"avr128da28", "__AVR_AVR128DA28__", "104", 2},
+    {"avr128da32", "__AVR_AVR128DA32__", "104", 2},
+    {"avr128da48", "__AVR_AVR128DA48__", "104", 2},
+    {"avr128da64", "__AVR_AVR128DA64__", "104", 2},
+    {"avr128db28", "__AVR_AVR128DB28__", "104", 2},
+    {"avr128db32", "__AVR_AVR128DB32__", "104", 2},
+    {"avr128db48", "__AVR_AVR128DB48__", "104", 2},
+    {"avr128db64", "__AVR_AVR128DB64__", "104", 2},
 };
 
 } // namespace targets
@@ -351,23 +420,23 @@ static MCUInfo AVRMcus[] = {
 
 static bool ArchHasELPM(StringRef Arch) {
   return llvm::StringSwitch<bool>(Arch)
-    .Cases("31", "51", "6", true)
-    .Cases("102", "104", "105", "106", "107", true)
-    .Default(false);
+      .Cases({"31", "51", "6"}, true)
+      .Cases({"102", "104", "105", "106", "107"}, true)
+      .Default(false);
 }
 
 static bool ArchHasELPMX(StringRef Arch) {
   return llvm::StringSwitch<bool>(Arch)
-    .Cases("51", "6", true)
-    .Cases("102", "104", "105", "106", "107", true)
-    .Default(false);
+      .Cases({"51", "6"}, true)
+      .Cases({"102", "104", "105", "106", "107"}, true)
+      .Default(false);
 }
 
 static bool ArchHasMOVW(StringRef Arch) {
   return llvm::StringSwitch<bool>(Arch)
-    .Cases("25", "35", "4", "5", "51", "6", true)
-    .Cases("102", "103", "104", "105", "106", "107", true)
-    .Default(false);
+      .Cases({"25", "35", "4", "5", "51", "6"}, true)
+      .Cases({"102", "103", "104", "105", "106", "107"}, true)
+      .Default(false);
 }
 
 static bool ArchHasLPMX(StringRef Arch) {
@@ -376,16 +445,16 @@ static bool ArchHasLPMX(StringRef Arch) {
 
 static bool ArchHasMUL(StringRef Arch) {
   return llvm::StringSwitch<bool>(Arch)
-    .Cases("4", "5", "51", "6", true)
-    .Cases("102", "103", "104", "105", "106", "107", true)
-    .Default(false);
+      .Cases({"4", "5", "51", "6"}, true)
+      .Cases({"102", "103", "104", "105", "106", "107"}, true)
+      .Default(false);
 }
 
 static bool ArchHasJMPCALL(StringRef Arch) {
   return llvm::StringSwitch<bool>(Arch)
-    .Cases("3", "31", "35", "5", "51", "6", true)
-    .Cases("102", "103", "104", "105", "106", "107", true)
-    .Default(false);
+      .Cases({"3", "31", "35", "5", "51", "6"}, true)
+      .Cases({"102", "103", "104", "105", "106", "107"}, true)
+      .Default(false);
 }
 
 static bool ArchHas3BytePC(StringRef Arch) {

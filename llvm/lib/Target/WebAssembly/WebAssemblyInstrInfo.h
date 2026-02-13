@@ -27,12 +27,6 @@
 
 namespace llvm {
 
-namespace WebAssembly {
-
-int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIndex);
-
-}
-
 class WebAssemblySubtarget;
 
 class WebAssemblyInstrInfo final : public WebAssemblyGenInstrInfo {
@@ -43,11 +37,12 @@ public:
 
   const WebAssemblyRegisterInfo &getRegisterInfo() const { return RI; }
 
-  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
+  bool isReMaterializableImpl(const MachineInstr &MI) const override;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                   const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
-                   bool KillSrc) const override;
+                   const DebugLoc &DL, Register DestReg, Register SrcReg,
+                   bool KillSrc, bool RenamableDest = false,
+                   bool RenamableSrc = false) const override;
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx1,
                                        unsigned OpIdx2) const override;

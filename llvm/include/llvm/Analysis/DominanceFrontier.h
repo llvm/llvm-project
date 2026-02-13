@@ -9,8 +9,12 @@
 // This file defines the DominanceFrontier class, which calculate and holds the
 // dominance frontier for a function.
 //
-// This should be considered deprecated, don't add any more uses of this data
-// structure.
+// CAUTION: For SSA-construction-like problems there are more efficient ways to
+// do that, take a look at GenericIteratedDominanceFrontier.h/SSAUpdater.h. Also
+// note that that this analysis computes dominance frontiers for *every* block
+// which inherently increases complexity. Unless you do need *all* of them and
+// *without* any modifications to the DomTree/CFG in between queries there
+// should be better alternatives.
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,15 +24,14 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/GenericDomTree.h"
 #include <cassert>
-#include <utility>
 
 namespace llvm {
 
+class BasicBlock;
 class Function;
 class raw_ostream;
 
@@ -43,9 +46,12 @@ public:
   // deterministic.
   using DomSetType = SetVector<BlockT *>;
   using DomSetMapType = DenseMap<BlockT *, DomSetType>; // Dom set map
+  using DomTreeT = DominatorTreeBase<BlockT, IsPostDom>;
+  using DomTreeNodeT = DomTreeNodeBase<BlockT>;
 
 protected:
-  using BlockTraits = GraphTraits<BlockT *>;
+  using GraphTy = std::conditional_t<IsPostDom, Inverse<BlockT *>, BlockT *>;
+  using BlockTraits = GraphTraits<GraphTy>;
 
   DomSetMapType Frontiers;
   // Postdominators can have multiple roots.
@@ -85,26 +91,6 @@ public:
   iterator find(BlockT *B) { return Frontiers.find(B); }
   const_iterator find(BlockT *B) const { return Frontiers.find(B); }
 
-  iterator addBasicBlock(BlockT *BB, const DomSetType &frontier) {
-    assert(find(BB) == end() && "Block already in DominanceFrontier!");
-    return Frontiers.insert(std::make_pair(BB, frontier)).first;
-  }
-
-  /// removeBlock - Remove basic block BB's frontier.
-  void removeBlock(BlockT *BB);
-
-  void addToFrontier(iterator I, BlockT *Node);
-
-  void removeFromFrontier(iterator I, BlockT *Node);
-
-  /// compareDomSet - Return false if two domsets match. Otherwise
-  /// return true;
-  bool compareDomSet(DomSetType &DS1, const DomSetType &DS2) const;
-
-  /// compare - Return false if the other dominance frontier base matches
-  /// this dominance frontier base. Otherwise return true.
-  bool compare(DominanceFrontierBase &Other) const;
-
   /// print - Convert to human readable form
   ///
   void print(raw_ostream &OS) const;
@@ -113,41 +99,27 @@ public:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() const;
 #endif
-};
-
-//===-------------------------------------
-/// DominanceFrontier Class - Concrete subclass of DominanceFrontierBase that is
-/// used to compute a forward dominator frontiers.
-///
-template <class BlockT>
-class ForwardDominanceFrontierBase
-    : public DominanceFrontierBase<BlockT, false> {
-private:
-  using BlockTraits = GraphTraits<BlockT *>;
-
-public:
-  using DomTreeT = DomTreeBase<BlockT>;
-  using DomTreeNodeT = DomTreeNodeBase<BlockT>;
-  using DomSetType = typename DominanceFrontierBase<BlockT, false>::DomSetType;
 
   void analyze(DomTreeT &DT) {
+    assert(IsPostDom || DT.root_size() == 1 &&
+                            "Only one entry block for forward domfronts!");
     assert(DT.root_size() == 1 &&
-           "Only one entry block for forward domfronts!");
+           "Support for post-dom frontiers with multiple roots hasn't been "
+           "implemented yet!");
     this->Roots = {DT.getRoot()};
     calculate(DT, DT[this->Roots[0]]);
   }
 
-  const DomSetType &calculate(const DomTreeT &DT, const DomTreeNodeT *Node);
+  void calculate(const DomTreeT &DT, const DomTreeNodeT *Node);
 };
 
-class DominanceFrontier : public ForwardDominanceFrontierBase<BasicBlock> {
+class DominanceFrontier : public DominanceFrontierBase<BasicBlock, false> {
 public:
   using DomTreeT = DomTreeBase<BasicBlock>;
   using DomTreeNodeT = DomTreeNodeBase<BasicBlock>;
-  using DomSetType = DominanceFrontierBase<BasicBlock, false>::DomSetType;
-  using iterator = DominanceFrontierBase<BasicBlock, false>::iterator;
-  using const_iterator =
-      DominanceFrontierBase<BasicBlock, false>::const_iterator;
+  using DomSetType = DominanceFrontier::DomSetType;
+  using iterator = DominanceFrontier::iterator;
+  using const_iterator = DominanceFrontier::const_iterator;
 
   /// Handle invalidation explicitly.
   bool invalidate(Function &F, const PreservedAnalyses &PA,
@@ -178,7 +150,6 @@ public:
 
 extern template class DominanceFrontierBase<BasicBlock, false>;
 extern template class DominanceFrontierBase<BasicBlock, true>;
-extern template class ForwardDominanceFrontierBase<BasicBlock>;
 
 /// Analysis pass which computes a \c DominanceFrontier.
 class DominanceFrontierAnalysis

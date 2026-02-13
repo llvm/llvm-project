@@ -70,9 +70,36 @@
 #define ANSI_1_CTRL(ctrl1) "\033["##ctrl1 ANSI_ESC_END
 #define ANSI_2_CTRL(ctrl1, ctrl2) "\033["##ctrl1 ";"##ctrl2 ANSI_ESC_END
 
+#define ANSI_ESC_START_LEN 2
+
+// Cursor Position, set cursor to position [l, c] (default = [1, 1]).
+#define ANSI_CSI_CUP(...) ANSI_ESC_START #__VA_ARGS__ "H"
+// Reset cursor to position.
+#define ANSI_CSI_RESET_CURSOR ANSI_CSI_CUP()
+// Erase In Display.
+#define ANSI_CSI_ED(opt) ANSI_ESC_START #opt "J"
+// Erase complete viewport.
+#define ANSI_CSI_ERASE_VIEWPORT ANSI_CSI_ED(2)
+// Erase scrollback.
+#define ANSI_CSI_ERASE_SCROLLBACK ANSI_CSI_ED(3)
+
+// OSC (Operating System Commands)
+// https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+#define OSC_ESCAPE_START "\033"
+#define OSC_ESCAPE_END "\x07"
+
+// https://conemu.github.io/en/AnsiEscapeCodes.html#ConEmu_specific_OSC
+#define OSC_PROGRESS_REMOVE OSC_ESCAPE_START "]9;4;0;0" OSC_ESCAPE_END
+#define OSC_PROGRESS_SHOW OSC_ESCAPE_START "]9;4;1;%u" OSC_ESCAPE_END
+#define OSC_PROGRESS_ERROR OSC_ESCAPE_START "]9;4;2;%u" OSC_ESCAPE_END
+#define OSC_PROGRESS_INDETERMINATE OSC_ESCAPE_START "]9;4;3;%u" OSC_ESCAPE_END
+
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Locale.h"
+
+#include "lldb/Utility/Stream.h"
 
 #include <string>
 
@@ -171,7 +198,160 @@ inline std::string FormatAnsiTerminalCodes(llvm::StringRef format,
   }
   return fmt;
 }
+
+inline std::tuple<llvm::StringRef, llvm::StringRef, llvm::StringRef>
+FindNextAnsiSequence(llvm::StringRef str) {
+  llvm::StringRef left;
+  llvm::StringRef right = str;
+
+  while (!right.empty()) {
+    const size_t start = right.find(ANSI_ESC_START);
+
+    // ANSI_ESC_START not found.
+    if (start == llvm::StringRef::npos)
+      return {str, {}, {}};
+
+    // Split the string around the current ANSI_ESC_START.
+    left = str.take_front(left.size() + start);
+    llvm::StringRef escape = right.substr(start);
+    right = right.substr(start + ANSI_ESC_START_LEN + 1);
+
+    const size_t end = right.find_first_not_of("0123456789;");
+
+    // ANSI_ESC_END found.
+    if (end < right.size() && (right[end] == 'm' || right[end] == 'G'))
+      return {left, escape.take_front(ANSI_ESC_START_LEN + 1 + end + 1),
+              right.substr(end + 1)};
+
+    // Maintain the invariant that str == left + right at the start of the loop.
+    left = str.take_front(left.size() + ANSI_ESC_START_LEN + 1);
+  }
+
+  return {str, {}, {}};
 }
+
+inline std::string StripAnsiTerminalCodes(llvm::StringRef str) {
+  std::string stripped;
+  while (!str.empty()) {
+    auto [left, escape, right] = FindNextAnsiSequence(str);
+    stripped += left;
+    str = right;
+  }
+  return stripped;
+}
+
+inline std::string TrimAndPad(llvm::StringRef str, size_t visible_length,
+                              char padding = ' ') {
+  std::string result;
+  result.reserve(visible_length);
+  size_t result_visibile_length = 0;
+
+  // Trim the string to the given visible length.
+  while (!str.empty()) {
+    auto [left, escape, right] = FindNextAnsiSequence(str);
+    str = right;
+
+    // Compute the length of the string without escape codes. If it fits, append
+    // it together with the invisible escape code.
+    size_t column_width = llvm::sys::locale::columnWidth(left);
+    if (result_visibile_length + column_width <= visible_length) {
+      result.append(left).append(escape);
+      result_visibile_length += column_width;
+      continue;
+    }
+
+    // The string might contain unicode which means it's not safe to truncate.
+    // Repeatedly trim the string until it its valid unicode and fits.
+    llvm::StringRef trimmed = left;
+    while (!trimmed.empty()) {
+      // This relies on columnWidth returning -2 for invalid/partial unicode
+      // characters, which after conversion to size_t will be larger than the
+      // visible width.
+      column_width = llvm::sys::locale::columnWidth(trimmed);
+      if (result_visibile_length + column_width <= visible_length) {
+        result.append(trimmed);
+        result_visibile_length += column_width;
+        break;
+      }
+      trimmed = trimmed.drop_back();
+    }
+  }
+
+  // Pad the string.
+  if (result_visibile_length < visible_length)
+    result.append(visible_length - result_visibile_length, padding);
+
+  return result;
+}
+
+inline size_t ColumnWidth(llvm::StringRef str) {
+  std::string stripped = ansi::StripAnsiTerminalCodes(str);
+  return llvm::sys::locale::columnWidth(stripped);
+}
+
+// Output text that may contain ANSI codes, word wrapped (wrapped at whitespace)
+// to the given stream. The indent level of the stream is counted towards the
+// output line length.
+// FIXME: This contains several bugs and does not handle unicode.
+inline void OutputWordWrappedLines(Stream &strm,
+                                   // FIXME: should be StringRef, but triggers
+                                   // a crash when changed.
+                                   const std::string &text,
+                                   uint32_t output_max_columns) {
+  const size_t visible_length = ansi::ColumnWidth(text);
+
+  // Will it all fit on one line?
+  if (static_cast<uint32_t>(visible_length + strm.GetIndentLevel()) <
+      output_max_columns) {
+    // Output it as a single line.
+    strm.Indent(text);
+    strm.EOL();
+    return;
+  }
+
+  // We need to break it up into multiple lines. We can do this based on the
+  // formatted text because we know that:
+  // * We only break lines on whitespace, therefore we will not break in the
+  //   middle of a Unicode character or escape code.
+  // * Escape codes are so far not applied to multiple words, so there is no
+  //   risk of breaking up a phrase and the escape code being incorrectly
+  //   applied to the indent too.
+
+  const int max_text_width = output_max_columns - strm.GetIndentLevel() - 1;
+  int start = 0;
+  int end = start;
+  const int final_end = visible_length;
+
+  while (end < final_end) {
+    // Don't start the 'text' on a space, since we're already outputting the
+    // indentation.
+    while ((start < final_end) && (text[start] == ' '))
+      start++;
+
+    end = start + max_text_width;
+    if (end > final_end) {
+      end = final_end;
+    } else {
+      // If we're not at the end of the text, make sure we break the line on
+      // white space.
+      while (end > start && text[end] != ' ' && text[end] != '\t' &&
+             text[end] != '\n')
+        end--;
+    }
+
+    const int sub_len = end - start;
+    if (start != 0)
+      strm.EOL();
+    strm.Indent();
+    assert(start < final_end);
+    assert(start + sub_len <= final_end);
+    strm.PutCString(llvm::StringRef(text.c_str() + start, sub_len));
+    start = end + 1;
+  }
+  strm.EOL();
+}
+
+} // namespace ansi
 } // namespace lldb_private
 
 #endif

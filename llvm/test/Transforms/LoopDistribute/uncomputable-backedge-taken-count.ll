@@ -1,9 +1,6 @@
 ; RUN: opt -passes=loop-distribute -enable-loop-distribute -verify-loop-info -verify-dom-info -S \
 ; RUN:   < %s | FileCheck %s
 
-target datalayout = "e-m:o-i32:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-apple-macosx10.10.0"
-
 ; NOTE: The tests below use infinite loops to force unknown backedge-taken counts.
 ; Making the exit condition depend on a load would break current loop-distribute,
 ; because it requires all accesses to end up in either of the loops, but not both.
@@ -11,9 +8,7 @@ target triple = "x86_64-apple-macosx10.10.0"
 ; TODO
 ; Can distribute with unknown backedge-taken count, because no runtime checks are
 ; required.
-define void @unknown_btc_distribute_no_checks_needed(ptr noalias %a,
-               ptr noalias %c,
-               ptr noalias %d) {
+define void @unknown_btc_distribute_no_checks_needed(ptr noalias %a, ptr noalias %c, ptr noalias %d) {
 ; CHECK-LABEL: @unknown_btc_distribute_no_checks_needed(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label %for.body
@@ -49,9 +44,7 @@ for.end:                                          ; preds = %for.body
 
 ; Cannot distribute with unknown backedge-taken count, because runtime checks for
 ; induction wrapping are required.
-define void @unknown_btc_do_not_distribute_wrapping_checks(ptr noalias %a,
-               ptr noalias %c,
-               ptr noalias %d) {
+define void @unknown_btc_do_not_distribute_wrapping_checks(ptr noalias %a, ptr noalias %c, ptr noalias %d) {
 ; CHECK-LABEL: @unknown_btc_do_not_distribute_wrapping_checks(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label %for.body

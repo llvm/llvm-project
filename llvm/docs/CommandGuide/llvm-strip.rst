@@ -37,9 +37,10 @@ multiple file formats.
 
 .. option:: --discard-all, -x
 
- Remove most local symbols from the output. Different file formats may limit
- this to a subset of the local symbols. For example, file and section symbols in
- ELF objects will not be discarded. Additionally, remove all debug sections.
+ Remove most local symbols not referenced by relocations from the output.
+ Different file formats may limit this to a subset of the local symbols. For
+ example, file and section symbols in ELF objects will not be discarded.
+ Additionally, remove all debug sections.
 
 .. option::  --enable-deterministic-archives, -D
 
@@ -89,8 +90,11 @@ multiple file formats.
  within segments, except for .gnu.warning, .ARM.attribute sections and the
  section name table.
 
- For COFF objects, remove all symbols, debug sections, and relocations from the
- output.
+ For COFF and Mach-O objects, remove all symbols, debug sections, and
+ relocations from the output.
+
+ For WebAssembly objects, remove all custom sections except for those named
+ metadata.code.*.
 
 .. option:: --strip-debug, -d, -g, -S
 
@@ -152,7 +156,7 @@ them.
 
 .. option:: --discard-locals, -X
 
- Remove local symbols starting with ".L" from the output.
+ Remove local symbols starting with ".L" not referenced by relocations from the output.
 
 .. option:: --keep-file-symbols
 
@@ -177,6 +181,13 @@ them.
  Remove from the output all section headers and all section data not within
  segments. Note that many tools will not be able to use an object without
  section headers.
+
+MACH-O-SPECIFIC OPTIONS
+-----------------------
+
+The following options are implemented only for Mach-O objects. If used with other
+objects, :program:`llvm-strip` will either emit an error or silently ignore
+them.
 
 .. option:: -T
 

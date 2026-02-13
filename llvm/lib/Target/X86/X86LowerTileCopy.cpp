@@ -19,6 +19,7 @@
 #include "X86.h"
 #include "X86InstrBuilder.h"
 #include "X86InstrInfo.h"
+#include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -30,8 +31,6 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/DebugLoc.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 
@@ -39,11 +38,11 @@ using namespace llvm;
 
 namespace {
 
-class X86LowerTileCopy : public MachineFunctionPass {
+class X86LowerTileCopyLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  X86LowerTileCopy() : MachineFunctionPass(ID) {}
+  X86LowerTileCopyLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
@@ -54,43 +53,37 @@ public:
 
 } // namespace
 
-char X86LowerTileCopy::ID = 0;
+char X86LowerTileCopyLegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(X86LowerTileCopy, "lowertilecopy", "Tile Copy Lowering",
+INITIALIZE_PASS_BEGIN(X86LowerTileCopyLegacy, DEBUG_TYPE, "Tile Copy Lowering",
                       false, false)
-INITIALIZE_PASS_END(X86LowerTileCopy, "lowertilecopy", "Tile Copy Lowering",
+INITIALIZE_PASS_END(X86LowerTileCopyLegacy, DEBUG_TYPE, "Tile Copy Lowering",
                     false, false)
 
-void X86LowerTileCopy::getAnalysisUsage(AnalysisUsage &AU) const {
+void X86LowerTileCopyLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-FunctionPass *llvm::createX86LowerTileCopyPass() {
-  return new X86LowerTileCopy();
+FunctionPass *llvm::createX86LowerTileCopyLegacyPass() {
+  return new X86LowerTileCopyLegacy();
 }
 
-bool X86LowerTileCopy::runOnMachineFunction(MachineFunction &MF) {
+static bool lowerTileCopy(MachineFunction &MF) {
+  X86MachineFunctionInfo *FuncInfo = MF.getInfo<X86MachineFunctionInfo>();
+  if (FuncInfo->getAMXProgModel() != AMXProgModelEnum::ManagedRA)
+    return false;
+
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
+  assert(ST.hasAMXTILE() && "Only supported on AMXTILE targets");
+
   const X86InstrInfo *TII = ST.getInstrInfo();
   const TargetRegisterInfo *TRI = ST.getRegisterInfo();
   BitVector GR64Regs =
       TRI->getAllocatableSet(MF, TRI->getRegClass(X86::GR64RegClassID));
-  BitVector TILERegs =
-      TRI->getAllocatableSet(MF, TRI->getRegClass(X86::TILERegClassID));
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
-    // There won't be a tile copy if no tile register live in.
-    bool HasTileCopy = false;
-    for (const auto &LI : MBB.liveins()) {
-      if (TILERegs.test(LI.PhysReg)) {
-        HasTileCopy = true;
-        break;
-      }
-    }
-    if (!HasTileCopy)
-      continue;
     LiveRegUnits UsedRegs(*TRI);
     UsedRegs.addLiveOuts(MBB);
     for (MachineInstr &MI : llvm::make_early_inc_range(reverse(MBB))) {
@@ -145,23 +138,37 @@ bool X86LowerTileCopy::runOnMachineFunction(MachineFunction &MF) {
       MachineInstr *NewMI =
           addFrameReference(BuildMI(MBB, MI, DL, TII->get(Opc)), TileSS)
               .addReg(SrcReg, getKillRegState(SrcMO.isKill()));
-      MachineOperand &MO = NewMI->getOperand(2);
-      MO.setReg(GR64Cand);
-      MO.setIsKill(true);
+      MachineOperand *MO = &NewMI->getOperand(X86::AddrIndexReg);
+      MO->setReg(GR64Cand ? GR64Cand : X86::RAX);
       // tileloadd (%sp, %idx), %tmm
       Opc = GET_EGPR_IF_ENABLED(X86::TILELOADD);
 #undef GET_EGPR_IF_ENABLED
       NewMI = addFrameReference(BuildMI(MBB, MI, DL, TII->get(Opc), DstReg),
                                 TileSS);
+      MO = &NewMI->getOperand(1 + X86::AddrIndexReg);
+      MO->setReg(GR64Cand ? GR64Cand : X86::RAX);
+      MO->setIsKill(true);
       if (!GR64Cand) {
         // restore %rax
         // mov (%sp) %rax
         addFrameReference(
-            BuildMI(MBB, MI, DL, TII->get(X86::MOV64rm), GR64Cand), StrideSS);
+            BuildMI(MBB, MI, DL, TII->get(X86::MOV64rm), X86::RAX), StrideSS);
       }
       MI.eraseFromParent();
       Changed = true;
     }
   }
   return Changed;
+}
+
+bool X86LowerTileCopyLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return lowerTileCopy(MF);
+}
+
+PreservedAnalyses
+X86LowerTileCopyPass::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  return lowerTileCopy(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                 .preserveSet<CFGAnalyses>()
+                           : PreservedAnalyses::all();
 }

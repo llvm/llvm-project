@@ -55,8 +55,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     StringRef getPassName() const override { return "X86 vzeroupper inserter"; }
@@ -67,7 +66,7 @@ namespace {
                           MachineBasicBlock &MBB);
     void addDirtySuccessor(MachineBasicBlock &MBB);
 
-    using BlockExitState = enum { PASS_THROUGH, EXITS_CLEAN, EXITS_DIRTY };
+    enum BlockExitState { PASS_THROUGH, EXITS_CLEAN, EXITS_DIRTY };
 
     static const char* getBlockExitStateName(BlockExitState ST);
 
@@ -130,13 +129,13 @@ const char* VZeroUpperInserter::getBlockExitStateName(BlockExitState ST) {
 
 /// VZEROUPPER cleans state that is related to Y/ZMM0-15 only.
 /// Thus, there is no need to check for Y/ZMM16 and above.
-static bool isYmmOrZmmReg(unsigned Reg) {
+static bool isYmmOrZmmReg(MCRegister Reg) {
   return (Reg >= X86::YMM0 && Reg <= X86::YMM15) ||
          (Reg >= X86::ZMM0 && Reg <= X86::ZMM15);
 }
 
 static bool checkFnHasLiveInYmmOrZmm(MachineRegisterInfo &MRI) {
-  for (std::pair<unsigned, unsigned> LI : MRI.liveins())
+  for (std::pair<MCRegister, Register> LI : MRI.liveins())
     if (isYmmOrZmmReg(LI.first))
       return true;
 
@@ -163,7 +162,7 @@ static bool hasYmmOrZmmReg(MachineInstr &MI) {
       continue;
     if (MO.isDebug())
       continue;
-    if (isYmmOrZmmReg(MO.getReg()))
+    if (isYmmOrZmmReg(MO.getReg().asMCReg()))
       return true;
   }
   return false;

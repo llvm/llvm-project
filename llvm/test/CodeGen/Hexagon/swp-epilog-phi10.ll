@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -simplifycfg-require-and-preserve-domtree=1 < %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 -simplifycfg-require-and-preserve-domtree=1 < %s
 ; REQUIRES: asserts
 
 define void @test(ptr noalias nocapture readonly %src, i32 %srcStride) local_unnamed_addr #0 {
@@ -84,5 +84,5 @@ for.end:
   unreachable
 }
 
-attributes #0 = { norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv5" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv5" "use-soft-float"="false" }
 

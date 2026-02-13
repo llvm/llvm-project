@@ -132,7 +132,7 @@ for.end:
 ; CHECK-LABEL: @f6
 ; CHECK-NOT: <2 x i32>
 
-define i32 @f6(ptr %a, i32 %tmp) {
+define void @f6(ptr %a, i32 %tmp) {
 entry:
   br label %for.body
 
@@ -149,7 +149,7 @@ for.body:
   br i1 %exitcond, label %for.body, label %for.end
 
 for.end:
-  ret i32 undef
+  ret void
 }
 
 ; Don't vectorize true loop carried dependencies that are not a multiple of the
@@ -244,7 +244,7 @@ for.end:
 ; RIGHTVF-LABEL: @pr34283
 ; RIGHTVF: <4 x i64>
 
-; WRONGVF-LABLE: @pr34283
+; WRONGVF-LABEL: @pr34283
 ; WRONGVF-NOT: <8 x i64>
 
 @a = common local_unnamed_addr global [64 x i32] zeroinitializer, align 16

@@ -17,12 +17,12 @@
 # CHECK-LABEL: bb.3.bb3:
 # CHECK:      DBG_VALUE $ecx, $noreg, !{{[0-9]+}},
 # CHECK-SAME:                 !DIExpression(DW_OP_LLVM_fragment, 0, 32)
-# CHECK-NEXT: DBG_VALUE_LIST !{{[0-9]+}}, 
+# CHECK-NEXT: DBG_VALUE_LIST !{{[0-9]+}},
 # CHECK-SAME:                 !DIExpression({{[^)]+}}, DW_OP_LLVM_fragment, 0, 32)
 # CHECK-SAME:                 $ecx, $r8d
 # CHECK-NEXT: DBG_VALUE $ebx, $noreg, !{{[0-9]+}},
 # CHECK-SAME:                 !DIExpression(DW_OP_LLVM_fragment, 32, 32)
-# CHECK-NEXT: DBG_VALUE_LIST !{{[0-9]+}}, 
+# CHECK-NEXT: DBG_VALUE_LIST !{{[0-9]+}},
 # CHECK-SAME:                 !DIExpression({{[^)]+}}, DW_OP_LLVM_fragment, 32, 32)
 # CHECK-SAME:                 $ebx, $r10d
 # CHECK-NEXT: XOR32rr

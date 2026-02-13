@@ -55,7 +55,7 @@ constexpr void testOne() {
 constexpr bool test() {
   testOne<float>();
   testOne<double>();
-  // TODO https://github.com/llvm/llvm-project/issues/47978
+  // TODO https://llvm.org/PR48634
   // testOne<long double>();
   return true;
 }

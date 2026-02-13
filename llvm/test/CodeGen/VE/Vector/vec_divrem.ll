@@ -7,19 +7,22 @@
 define <4 x i8> @udiv_by_minus_one(<4 x i8> %x) {
 ; CHECK-LABEL: udiv_by_minus_one:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s0, %s0, (56)0
-; CHECK-NEXT:    lea %s4, 16843010
-; CHECK-NEXT:    muls.l %s0, %s0, %s4
-; CHECK-NEXT:    srl %s0, %s0, 32
+; CHECK-NEXT:    and %s4, %s0, (56)0
 ; CHECK-NEXT:    and %s1, %s1, (56)0
-; CHECK-NEXT:    muls.l %s1, %s1, %s4
-; CHECK-NEXT:    srl %s1, %s1, 32
 ; CHECK-NEXT:    and %s2, %s2, (56)0
-; CHECK-NEXT:    muls.l %s2, %s2, %s4
-; CHECK-NEXT:    srl %s2, %s2, 32
 ; CHECK-NEXT:    and %s3, %s3, (56)0
-; CHECK-NEXT:    muls.l %s3, %s3, %s4
-; CHECK-NEXT:    srl %s3, %s3, 32
+; CHECK-NEXT:    or %s0, 0, (0)1
+; CHECK-NEXT:    cmpu.w %s5, %s3, (56)0
+; CHECK-NEXT:    or %s3, 0, (0)1
+; CHECK-NEXT:    cmov.w.eq %s3, (63)0, %s5
+; CHECK-NEXT:    cmpu.w %s5, %s2, (56)0
+; CHECK-NEXT:    or %s2, 0, (0)1
+; CHECK-NEXT:    cmov.w.eq %s2, (63)0, %s5
+; CHECK-NEXT:    cmpu.w %s5, %s1, (56)0
+; CHECK-NEXT:    or %s1, 0, (0)1
+; CHECK-NEXT:    cmov.w.eq %s1, (63)0, %s5
+; CHECK-NEXT:    cmpu.w %s4, %s4, (56)0
+; CHECK-NEXT:    cmov.w.eq %s0, (63)0, %s4
 ; CHECK-NEXT:    b.l.t (, %s10)
   %r = udiv <4 x i8> %x, <i8 255, i8 255, i8 255, i8 255>
   ret <4 x i8> %r
@@ -28,27 +31,18 @@ define <4 x i8> @udiv_by_minus_one(<4 x i8> %x) {
 define <4 x i8> @urem_by_minus_one(<4 x i8> %x) {
 ; CHECK-LABEL: urem_by_minus_one:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s0, %s0, (56)0
-; CHECK-NEXT:    and %s1, %s1, (56)0
-; CHECK-NEXT:    and %s2, %s2, (56)0
-; CHECK-NEXT:    and %s3, %s3, (56)0
-; CHECK-NEXT:    lea %s4, 16843010
-; CHECK-NEXT:    muls.l %s5, %s3, %s4
-; CHECK-NEXT:    srl %s5, %s5, 32
-; CHECK-NEXT:    muls.w.sx %s5, %s5, (56)0
-; CHECK-NEXT:    subs.w.sx %s3, %s3, %s5
-; CHECK-NEXT:    muls.l %s5, %s2, %s4
-; CHECK-NEXT:    srl %s5, %s5, 32
-; CHECK-NEXT:    muls.w.sx %s5, %s5, (56)0
-; CHECK-NEXT:    subs.w.sx %s2, %s2, %s5
-; CHECK-NEXT:    muls.l %s5, %s1, %s4
-; CHECK-NEXT:    srl %s5, %s5, 32
-; CHECK-NEXT:    muls.w.sx %s5, %s5, (56)0
-; CHECK-NEXT:    subs.w.sx %s1, %s1, %s5
-; CHECK-NEXT:    muls.l %s4, %s0, %s4
-; CHECK-NEXT:    srl %s4, %s4, 32
-; CHECK-NEXT:    muls.w.sx %s4, %s4, (56)0
-; CHECK-NEXT:    subs.w.sx %s0, %s0, %s4
+; CHECK-NEXT:    and %s4, %s0, (56)0
+; CHECK-NEXT:    and %s5, %s1, (56)0
+; CHECK-NEXT:    and %s6, %s2, (56)0
+; CHECK-NEXT:    and %s7, %s3, (56)0
+; CHECK-NEXT:    cmpu.w %s7, %s7, (56)0
+; CHECK-NEXT:    cmov.w.eq %s3, (0)1, %s7
+; CHECK-NEXT:    cmpu.w %s6, %s6, (56)0
+; CHECK-NEXT:    cmov.w.eq %s2, (0)1, %s6
+; CHECK-NEXT:    cmpu.w %s5, %s5, (56)0
+; CHECK-NEXT:    cmov.w.eq %s1, (0)1, %s5
+; CHECK-NEXT:    cmpu.w %s4, %s4, (56)0
+; CHECK-NEXT:    cmov.w.eq %s0, (0)1, %s4
 ; CHECK-NEXT:    b.l.t (, %s10)
   %r = urem <4 x i8> %x, <i8 255, i8 255, i8 255, i8 255>
   ret <4 x i8> %r

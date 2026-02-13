@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; CHECK: r[[V:[0-9]+]] = ##16843009
 ; CHECK: vsplat(r[[V]])

@@ -1,0 +1,93 @@
+# RUN: llc %s --start-after=livedebugvalues --dwarf-use-key-instructions --filetype=obj -o - \
+# RUN: | llvm-objdump -d - --no-show-raw-insn \
+# RUN: | FileCheck %s --check-prefix=OBJ
+
+# RUN: llc %s --start-after=livedebugvalues --dwarf-use-key-instructions --filetype=obj -o - \
+# RUN: | llvm-dwarfdump - --debug-line \
+# RUN: | FileCheck %s --check-prefix=DBG
+
+# Test is_stmt emission for a key-instructions function inlined into a
+# not-key-instructions function, and vice versa.
+
+--- |
+  target triple = "x86_64-unknown-linux-gnu"
+
+  define hidden noundef i32 @key() local_unnamed_addr !dbg !5 {
+  entry:
+    ret i32 0
+  }
+
+  define hidden noundef i32 @not_key() local_unnamed_addr !dbg !9 {
+  entry:
+    ret i32 0
+  }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2, !3}
+  !llvm.ident = !{!4}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_17, file: !1, producer: "clang version 21.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "test.cpp", directory: "/")
+  !2 = !{i32 7, !"Dwarf Version", i32 5}
+  !3 = !{i32 2, !"Debug Info Version", i32 3}
+  !4 = !{!"clang version 21.0.0"}
+  !5 = distinct !DISubprogram(name: "key", scope: !1, file: !1, line: 1, type: !6, scopeLine: 1, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, keyInstructions: true)
+  !6 = !DISubroutineType(types: !7)
+  !7 = !{}
+  !9 = distinct !DISubprogram(name: "not_key", scope: !1, file: !1, line: 1, type: !6, scopeLine: 1, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, keyInstructions: false)
+  !10 = distinct !DILocation(line: 5, scope: !5)
+  !11 = distinct !DILocation(line: 9, scope: !9)
+...
+---
+name:            key
+alignment:       16
+body:             |
+  bb.0.entry:
+
+    ; OBJ: 0000000000000000 <key>:
+    ; OBJ-NEXT:  0: movl $0x1, %eax
+    ; OBJ-NEXT:  5: movl $0x2, %eax
+    ; OBJ-NEXT:  a: movl $0x3, %eax
+    ; OBJ-NEXT:  f: movl $0x4, %eax
+    ; OBJ-NEXT: 14: movl $0x5, %eax
+    ; OBJ-NEXT: 19: retq
+    ;
+    ; DBG:      Address            Line   Column File   ISA Discriminator OpIndex Flags
+    ; DBG-NEXT: ------------------ ------ ------ ------ --- ------------- ------- -------------
+    ; DBG-NEXT: 0x0000000000000000      1      0      0   0             0       0  is_stmt prologue_end
+    ; DBG-NEXT: 0x0000000000000005      2      0      0   0             0       0  is_stmt
+    ; DBG-NEXT: 0x000000000000000a      2      0      0   0             0       0
+    ; DBG-NEXT: 0x000000000000000f      3      0      0   0             0       0  is_stmt
+    ; DBG-NEXT: 0x0000000000000014      3      0      0   0             0       0
+    ;
+    $eax = MOV32ri 1,  debug-location !DILocation(line: 1, scope: !5)                            ; is_stmt (prologue_end)
+    $eax = MOV32ri 2,  debug-location !DILocation(line: 2, scope: !5, atomGroup: 1, atomRank: 1) ; is_stmt (key)
+    $eax = MOV32ri 3,  debug-location !DILocation(line: 2, scope: !9, inlinedAt: !10)
+    $eax = MOV32ri 4,  debug-location !DILocation(line: 3, scope: !9, inlinedAt: !10)            ; is_stmt (not_key)
+    $eax = MOV32ri 5,  debug-location !DILocation(line: 3, scope: !5, atomGroup: 1, atomRank: 2) ; is_stmt (key)
+    RET64 $eax,        debug-location !DILocation(line: 3, scope: !5, atomGroup: 1, atomRank: 1)
+...
+---
+name:            not_key
+alignment:       16
+body:             |
+  bb.0.entry:
+
+    ; OBJ: 0000000000000020 <not_key>:
+    ; OBJ-NEXT: 20: movl $0x1, %eax
+    ; OBJ-NEXT: 25: movl $0x2, %eax
+    ; OBJ-NEXT: 2a: movl $0x3, %eax
+    ; OBJ-NEXT: 2f: retq
+    ;
+    ;           Address            Line   Column File   ISA Discriminator OpIndex Flags
+    ;           ------------------ ------ ------ ------ --- ------------- ------- -------------
+    ; DBG-NEXT: 0x0000000000000020      1      0      0   0             0       0  is_stmt prologue_end
+    ; DBG-NEXT: 0x0000000000000025      2      0      0   0             0       0
+    ; DBG-NEXT: 0x000000000000002a      3      0      0   0             0       0  is_stmt
+    ; DBG-NEXT: 0x000000000000002f      3      0      0   0             0       0
+    ;
+    $eax = MOV32ri 1,  debug-location !DILocation(line: 1, scope: !9)                                            ; is_stmt (prologue_end)
+    $eax = MOV32ri 2,  debug-location !DILocation(line: 2, scope: !5, inlinedAt: !11, atomGroup: 1, atomRank: 2)
+    $eax = MOV32ri 3,  debug-location !DILocation(line: 3, scope: !5, inlinedAt: !11, atomGroup: 1, atomRank: 1) ; is_stmt (key)
+    RET64 $eax,        debug-location !DILocation(line: 3, scope: !9)
+...

@@ -1,4 +1,4 @@
-//=== ClangTypeNodesEmitter.cpp - Generate type node tables -----*- C++ -*-===//
+//===-- ClangTypeNodesEmitter.cpp - Generate type node tables -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -40,8 +40,9 @@
 // There is a sixth macro, independent of the others.  Most clients
 // will not need to use it.
 //
-//    LEAF_TYPE(Class) - A type that never has inner types.  Clients
-//    which can operate on such types more efficiently may wish to do so.
+//    ALWAYS_CANONICAL_TYPE(Class) - A type which is always identical to its
+//    canonical type.  Clients which can operate on such types more efficiently
+//    may wish to do so.
 //
 //===----------------------------------------------------------------------===//
 
@@ -52,8 +53,6 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include <set>
-#include <string>
 #include <vector>
 
 using namespace llvm;
@@ -68,22 +67,21 @@ using namespace clang::tblgen;
 #define NonCanonicalUnlessDependentTypeMacroName "NON_CANONICAL_UNLESS_DEPENDENT_TYPE"
 #define TypeMacroArgs "(Class, Base)"
 #define LastTypeMacroName "LAST_TYPE"
-#define LeafTypeMacroName "LEAF_TYPE"
+#define AlwaysCanonicalTypeMacroName "ALWAYS_CANONICAL_TYPE"
 
 #define TypeClassName "Type"
 
 namespace {
 class TypeNodeEmitter {
-  RecordKeeper &Records;
+  const RecordKeeper &Records;
   raw_ostream &Out;
-  const std::vector<Record*> Types;
+  ArrayRef<const Record *> Types;
   std::vector<StringRef> MacrosToUndef;
 
 public:
-  TypeNodeEmitter(RecordKeeper &records, raw_ostream &out)
-    : Records(records), Out(out),
-      Types(Records.getAllDerivedDefinitions(TypeNodeClassName)) {
-  }
+  TypeNodeEmitter(const RecordKeeper &records, raw_ostream &out)
+      : Records(records), Out(out),
+        Types(Records.getAllDerivedDefinitions(TypeNodeClassName)) {}
 
   void emit();
 
@@ -93,7 +91,7 @@ private:
 
   void emitNodeInvocations();
   void emitLastNodeInvocation(TypeNode lastType);
-  void emitLeafNodeInvocations();
+  void emitAlwaysCanonicalNodeInvocations();
 
   void addMacroToUndef(StringRef macroName);
   void emitUndefs();
@@ -112,12 +110,12 @@ void TypeNodeEmitter::emit() {
   emitFallbackDefine(AbstractTypeMacroName, TypeMacroName, TypeMacroArgs);
   emitFallbackDefine(NonCanonicalTypeMacroName, TypeMacroName, TypeMacroArgs);
   emitFallbackDefine(DependentTypeMacroName, TypeMacroName, TypeMacroArgs);
-  emitFallbackDefine(NonCanonicalUnlessDependentTypeMacroName, TypeMacroName, 
+  emitFallbackDefine(NonCanonicalUnlessDependentTypeMacroName, TypeMacroName,
                      TypeMacroArgs);
 
   // Invocations.
   emitNodeInvocations();
-  emitLeafNodeInvocations();
+  emitAlwaysCanonicalNodeInvocations();
 
   // Postmatter
   emitUndefs();
@@ -181,15 +179,16 @@ void TypeNodeEmitter::emitLastNodeInvocation(TypeNode type) {
          "#endif\n";
 }
 
-void TypeNodeEmitter::emitLeafNodeInvocations() {
-  Out << "#ifdef " LeafTypeMacroName "\n";
+void TypeNodeEmitter::emitAlwaysCanonicalNodeInvocations() {
+  Out << "#ifdef " AlwaysCanonicalTypeMacroName "\n";
 
   for (TypeNode type : Types) {
-    if (!type.isSubClassOf(LeafTypeClassName)) continue;
-    Out << LeafTypeMacroName "(" << type.getId() << ")\n";
+    if (!type.isSubClassOf(AlwaysCanonicalTypeClassName))
+      continue;
+    Out << AlwaysCanonicalTypeMacroName "(" << type.getId() << ")\n";
   }
 
-  Out << "#undef " LeafTypeMacroName "\n"
+  Out << "#undef " AlwaysCanonicalTypeMacroName "\n"
          "#endif\n";
 }
 
@@ -203,6 +202,6 @@ void TypeNodeEmitter::emitUndefs() {
   }
 }
 
-void clang::EmitClangTypeNodes(RecordKeeper &records, raw_ostream &out) {
+void clang::EmitClangTypeNodes(const RecordKeeper &records, raw_ostream &out) {
   TypeNodeEmitter(records, out).emit();
 }

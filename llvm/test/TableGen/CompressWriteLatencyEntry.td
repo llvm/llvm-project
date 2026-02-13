@@ -33,10 +33,10 @@ def Read_D : SchedRead;
 // CHECK-NEXT: }; // MyTargetReadAdvanceTable
 
 // CHECK:  static const llvm::MCSchedClassDesc SchedModel_ASchedClasses[] = {
-// CHECK-NEXT:  {DBGFIELD("InvalidSchedClass")  8191, false, false, false, 0, 0,  0, 0,  0, 0},
-// CHECK-NEXT:  {DBGFIELD("Inst_A")             1, false, false, false,  0, 0,  1, 1,  0, 0}, // #1
-// CHECK-NEXT:  {DBGFIELD("Inst_B")             1, false, false, false,  0, 0,  2, 1,  0, 0}, // #2
-// CHECK-NEXT:  {DBGFIELD("Inst_C")             1, false, false, false,  0, 0,  1, 1,  1, 1}, // #3
+// CHECK-NEXT:  {DBGFIELD(1)  8191, false, false, false, 0, 0,  0, 0,  0, 0},
+// CHECK-NEXT:  {DBGFIELD(/*Inst_A*/ {{[0-9]+}})             1, false, false, false,  0, 0,  1, 1,  0, 0}, // #1
+// CHECK-NEXT:  {DBGFIELD(/*Inst_B*/ {{[0-9]+}})             1, false, false, false,  0, 0,  2, 1,  0, 0}, // #2
+// CHECK-NEXT:  {DBGFIELD(/*Inst_C*/ {{[0-9]+}})             1, false, false, false,  0, 0,  1, 1,  1, 1}, // #3
 // CHECK-NEXT: }; // SchedModel_ASchedClasses
 
 let SchedModel = SchedModel_A in {

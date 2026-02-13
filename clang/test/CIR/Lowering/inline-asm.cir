@@ -1,0 +1,86 @@
+// RUN: cir-translate %s -cir-to-llvmir --target x86_64-unknown-linux-gnu --disable-cc-lowering  | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+
+module {
+cir.func @f1() {
+  // CHECK: call void asm "", "~{dirflag},~{fpsr},~{flags}"()
+  cir.asm(x86_att, 
+    out = [],
+    in = [],
+    in_out = [],
+    {"" "~{dirflag},~{fpsr},~{flags}"})
+  cir.return
+}
+
+cir.func @f2() {
+  // CHECK: call void asm sideeffect "", "~{dirflag},~{fpsr},~{flags}"()
+  cir.asm(x86_att, 
+    out = [],
+    in = [],
+    in_out = [],
+    {"" "~{dirflag},~{fpsr},~{flags}"}) side_effects
+  cir.return
+}
+
+cir.func @f3() {
+  // CHECK: call void asm sideeffect "abc", "~{dirflag},~{fpsr},~{flags}"()
+  cir.asm(x86_att,
+    out = [],
+    in = [],
+    in_out = [],
+    {"abc" "~{dirflag},~{fpsr},~{flags}"}) side_effects
+  cir.return
+}
+
+cir.func @f4(%arg0: !s32i) {
+  %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {alignment = 4 : i64}
+  cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+  // CHECK: call void asm sideeffect "", "*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) %2)
+  cir.asm(x86_att, 
+    out = [],
+    in = [%0 : !cir.ptr<!s32i> (maybe_memory)],
+    in_out = [],
+    {"" "*m,~{dirflag},~{fpsr},~{flags}"}) side_effects
+  cir.return
+}
+
+cir.func @f5() {
+  // CHECK: call void asm inteldialect "", "~{dirflag},~{fpsr},~{flags}"()
+  cir.asm(x86_intel, 
+    out = [],
+    in = [],
+    in_out = [],
+    {"" "~{dirflag},~{fpsr},~{flags}"})
+  cir.return
+}
+
+cir.func @f6() -> !s32i {
+  %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {alignment = 4 : i64}
+  // CHECK: %2 = call i32 asm sideeffect "movl $$42, $0", "=r,~{dirflag},~{fpsr},~{flags}"()
+  %1 = cir.asm(x86_att, 
+    out = [],
+    in = [],
+    in_out = [],
+    {"movl $$42, $0" "=r,~{dirflag},~{fpsr},~{flags}"}) side_effects -> !s32i
+  cir.store align(4) %1, %0 : !s32i, !cir.ptr<!s32i>
+  %3 = cir.load align(4) %0 : !cir.ptr<!s32i>, !s32i
+  cir.return %3 : !s32i
+}
+
+cir.func @f7(%arg0: !u32i) -> !u32i {
+  %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["x", init] {alignment = 4 : i64}
+  cir.store %arg0, %0 : !u32i, !cir.ptr<!u32i>
+  %1 = cir.load align(4) %0 : !cir.ptr<!u32i>, !u32i
+  // CHECK: %4 = call i32 asm sideeffect "addl $$42, $0", "=r,0,~{dirflag},~{fpsr},~{flags}"(i32 %3)
+  %2 = cir.asm(x86_att, 
+    out = [],
+    in = [],
+    in_out = [%1 : !u32i],
+    {"addl $$42, $0" "=r,0,~{dirflag},~{fpsr},~{flags}"}) side_effects -> !u32i
+   cir.store align(4) %2, %0 : !u32i, !cir.ptr<!u32i>
+   %3 = cir.load align(4) %0 : !cir.ptr<!u32i>, !u32i
+   cir.return %3 : !u32i
+}
+}

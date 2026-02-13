@@ -17,7 +17,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b, %c = transform.structured.fuse %matmul [10, 20]
+    %a, %b, %c = transform.structured.fuse %matmul tile_sizes [10, 20]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -69,7 +69,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b, %c = transform.structured.fuse %generic [10, 20]
+    %a, %b, %c = transform.structured.fuse %generic tile_sizes [10, 20]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -125,7 +125,7 @@ module attributes {transform.with_named_sequence} {
       : (!transform.any_op) -> !transform.any_op
     %mm1, %mm2 = transform.split_handle %matmuls
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-    %a, %b = transform.structured.fuse %mm2 [10]
+    %a, %b = transform.structured.fuse %mm2 tile_sizes [10]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -188,7 +188,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b, %c = transform.structured.fuse %generic [10, 20]
+    %a, %b, %c = transform.structured.fuse %generic tile_sizes [10, 20]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -248,7 +248,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b, %c = transform.structured.fuse %generic [10, 20] interchange[1, 0]
+    %a, %b, %c = transform.structured.fuse %generic tile_sizes [10, 20] interchange[1, 0]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -307,7 +307,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b, %c = transform.structured.fuse %generic [10, 20]
+    %a, %b, %c = transform.structured.fuse %generic tile_sizes [10, 20]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -367,7 +367,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b, %c = transform.structured.fuse %generic [10, 20]
+    %a, %b, %c = transform.structured.fuse %generic tile_sizes [10, 20]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -423,12 +423,12 @@ module attributes {transform.with_named_sequence} {
       : (!transform.any_op) -> !transform.any_op
     %mm1, %mm2, %mm3 = transform.split_handle %matmuls
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
-    %a, %b = transform.structured.fuse %mm3 [10]
+    %a, %b = transform.structured.fuse %mm3 tile_sizes [10]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
-//       CHECK: #[[MAP:.+]] = affine_map<(d0)[s0] -> (10, -d0 + s0)>
+//       CHECK: #[[MAP:.+]] = affine_map<(d0)[s0] -> (-d0 + s0, 10)>
 //       CHECK: func @matmul_sequence_fusion(
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
@@ -512,7 +512,7 @@ module attributes {transform.with_named_sequence} {
       : (!transform.any_op) -> !transform.any_op
     %generic1, %generic2, %generic3 = transform.split_handle %generics
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
-    %a, %b = transform.structured.fuse %generic3 [10]
+    %a, %b = transform.structured.fuse %generic3 tile_sizes [10]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -542,3 +542,196 @@ module attributes {transform.with_named_sequence} {
 //   CHECK-DAG:     %[[INSERTSLICE:.+]] = tensor.insert_slice %[[GENERIC2]] into %[[ITERARG0]][%[[IV]], 0]
 //       CHECK:     scf.yield %[[INSERTSLICE]]
 //       CHECK:   return %[[RESULT]]
+
+// -----
+
+func.func @pad_producer_fusion(%arg0 : tensor<10xf32>) -> tensor<16xf32> {
+  %0 = tensor.empty() : tensor<10xf32>
+  %1 = linalg.generic {
+      indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>],
+      iterator_types = ["parallel"]}
+      ins(%arg0 : tensor<10xf32>) outs(%0 : tensor<10xf32>) {
+    ^bb0(%b0 : f32, %b1 : f32):
+      %2 = arith.addf %b0, %b0: f32
+      linalg.yield %2 : f32
+  } -> tensor<10xf32>
+  %cst = arith.constant 0.0 : f32
+  %2 = tensor.pad %1 low[4] high[2] {
+    ^bb0(%arg1 : index):
+      tensor.yield %cst : f32
+  } : tensor<10xf32> to tensor<16xf32>
+  return %2 : tensor<16xf32>
+}
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %pad = transform.structured.match ops{["tensor.pad"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %a, %b = transform.structured.fuse %pad tile_sizes [8]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+// CHECK-LABEL: func @pad_producer_fusion
+//  CHECK-SAME:     %[[ARG0:.+]]: tensor<10xf32>
+//       CHECK:   %[[FOR_RESULT:.+]] = scf.for
+//       CHECK:     %[[IF_RESULT:.+]] = scf.if
+//       CHECK:     else
+//       CHECK:       %[[SLICE:.+]] = tensor.extract_slice %[[ARG0]]
+//       CHECK:       %[[GENERIC:.+]] = linalg.generic
+//  CHECK-SAME:           ins(%[[SLICE]] :
+//       CHECK:       %[[PAD:.+]] = tensor.pad %[[GENERIC]]
+//       CHECK:       %[[CAST:.+]] = tensor.cast %[[PAD]]
+//       CHECK:       scf.yield %[[CAST]]
+//       CHECK:     %[[INSERT_SLICE:.+]] = tensor.insert_slice %[[IF_RESULT]]
+//       CHECK:     scf.yield %[[INSERT_SLICE]]
+//       CHECK:   return %[[FOR_RESULT]]
+
+// -----
+
+func.func @imperfect_unpack_producer_fusion(%source: tensor<1x1x288x8x4xf32>, %dest: tensor<1x2x1152xf32>) -> tensor<1x2x1152xf32> {
+  %0 = linalg.unpack %source
+      outer_dims_perm = [0, 1, 2]
+      inner_dims_pos = [1, 2]
+      inner_tiles = [8, 4] into %dest
+      : tensor<1x1x288x8x4xf32> -> tensor<1x2x1152xf32>
+  %1 = tensor.empty() : tensor<1x2x1152xf32>
+  %cst = arith.constant 1.0 : f32
+  %2 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
+                                        affine_map<(d0, d1, d2) -> (d0, d1, d2)>],
+                       iterator_types = ["parallel", "parallel", "parallel"]}
+                       ins(%0 : tensor<1x2x1152xf32>)
+                       outs(%1 : tensor<1x2x1152xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    %7 = arith.addf %in, %cst : f32
+    linalg.yield %7 : f32
+  } -> tensor<1x2x1152xf32>
+  return %2 : tensor<1x2x1152xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %matmul = transform.structured.match ops{["linalg.generic"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %a, %b = transform.structured.fuse %matmul tile_sizes [0, 1, 0]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// CHECK-LABEL: func @imperfect_unpack_producer_fusion
+//  CHECK-SAME:     %[[ARG0:.+]]: tensor<1x1x288x8x4xf32>
+//  CHECK-SAME:     %[[ARG1:.+]]: tensor<1x2x1152xf32>
+//       CHECK:   %[[FOR_RESULT:.+]] = scf.for{{.*}}iter_args(%[[ITER_ARG:.+]] = {{.*}})
+//       CHECK:     %[[SLICE:.+]] = tensor.extract_slice %[[ARG0]]
+//       CHECK:     %[[UNPACK:.+]] = linalg.unpack %[[SLICE]]
+//   CHECK-DAG:     %[[UNPACK_SLICE:.+]] = tensor.extract_slice %[[UNPACK]]
+//   CHECK-DAG:     %[[INIT_SLICE:.+]] = tensor.extract_slice %[[ITER_ARG]]
+//       CHECK:     %[[GENERIC:.+]] = linalg.generic
+//  CHECK-SAME:         ins(%[[UNPACK_SLICE]]
+//  CHECK-SAME:         outs(%[[INIT_SLICE]]
+//       CHECK:     %[[INSERT_SLICE:.+]] = tensor.insert_slice %[[GENERIC]] into %[[ITER_ARG]]
+//       CHECK:     scf.yield %[[INSERT_SLICE]]
+//       CHECK:   return %[[FOR_RESULT]]
+
+// -----
+
+#map = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
+#map1 = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2, d1)>
+module {
+  func.func private @tile_one_consumer_using_tile_and_fuse(%arg0: tensor<16x128x48x96xf32>, %arg1: tensor<16x96x48x128xf32>) -> tensor<16x96x48x128xf32> {
+    %0 = linalg.generic {indexing_maps = [#map, #map1], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%arg0 : tensor<16x128x48x96xf32>) outs(%arg1 : tensor<16x96x48x128xf32>) {
+    ^bb0(%in: f32, %out: f32):
+      linalg.yield %in : f32
+    } -> tensor<16x96x48x128xf32>
+    return %0 : tensor<16x96x48x128xf32>
+  }
+}
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %a, %loops:4 = transform.structured.fuse %generic tile_sizes [1, 16, 16, 16] interchange [0, 1, 2, 3]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// CHECK-LABEL: func private @tile_one_consumer_using_tile_and_fuse
+//  CHECK-SAME:   %[[ARG0:.*]]: tensor<16x128x48x96xf32>
+//  CHECK-SAME:   %[[ARG1:.*]]: tensor<16x96x48x128xf32>
+//       CHECK:   scf.for %[[IV0:[a-zA-Z0-9]+]] =
+//  CHECK-SAME:     iter_args(%[[ITERARG0:.+]] = %[[ARG1]])
+//       CHECK:     scf.for %[[IV1:[a-zA-Z0-9]+]] =
+//  CHECK-SAME:       iter_args(%[[ITERARG1:.+]] = %[[ITERARG0]])
+//       CHECK:       scf.for %[[IV2:[a-zA-Z0-9]+]] =
+//  CHECK-SAME:         iter_args(%[[ITERARG2:.+]] = %[[ITERARG1]])
+//       CHECK:         scf.for %[[IV3:[a-zA-Z0-9]+]] =
+//  CHECK-SAME:           iter_args(%[[ITERARG3:.+]] = %[[ITERARG2]])
+//       CHECK:           %[[TILEDARG0:.*]] = tensor.extract_slice %[[ARG0]]{{\[}}%[[IV0]], %[[IV1]], %[[IV2]], %[[IV3]]]
+//       CHECK:           %[[TILEDARG1:.*]] = tensor.extract_slice %[[ITERARG3]]{{\[}}%[[IV0]], %[[IV3]], %[[IV2]], %[[IV1]]]
+//       CHECK:           %[[RES:.*]] = linalg.generic
+//  CHECK-SAME:           ins(%[[TILEDARG0]]
+//  CHECK-SAME:           outs(%[[TILEDARG1]]
+//       CHECK:           tensor.insert_slice %[[RES:.*]]
+
+// -----
+
+// Tests that rank-reducing slices created during fusion are tracked in
+// generatedSlices (via SwapExtractSliceWithProducerPatterns.cpp).
+// This enables cleanup patterns to transform them during tile-and-fuse.
+//
+// Affected cleanup patterns:
+// - SwapExtractSliceWithFillPatterns: swaps extract_slice(fill) -> fill(extract_slice).
+
+#map2d = affine_map<(d0, d1) -> (d0, d1)>
+
+func.func @fuse_fill_through_rank_reducing_slice(%arg0: tensor<4x96xf32>) -> tensor<4x96xf32> {
+  %cst = arith.constant 1.0 : f32
+
+  %empty_3d = tensor.empty() : tensor<4x1x96xf32>
+  %fill_3d = linalg.fill ins(%cst : f32) outs(%empty_3d : tensor<4x1x96xf32>) -> tensor<4x1x96xf32>
+
+  %slice_2d = tensor.extract_slice %fill_3d[0, 0, 0] [4, 1, 96] [1, 1, 1]
+      : tensor<4x1x96xf32> to tensor<4x96xf32>
+
+  %result = linalg.generic {
+      indexing_maps = [#map2d, #map2d],
+      iterator_types = ["parallel", "parallel"]}
+      ins(%slice_2d : tensor<4x96xf32>)
+      outs(%arg0 : tensor<4x96xf32>) {
+    ^bb0(%in: f32, %out: f32):
+      %sum = arith.addf %in, %out : f32
+      linalg.yield %sum : f32
+  } -> tensor<4x96xf32>
+
+  return %result : tensor<4x96xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %consumer = transform.structured.match ops{["linalg.generic"]} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    %tiled, %loop = transform.structured.fuse %consumer tile_sizes [0, 32] {apply_cleanup}
+        : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">)
+    transform.yield
+  }
+}
+
+// CHECK-LABEL: func.func @fuse_fill_through_rank_reducing_slice
+// CHECK-SAME:      %[[ARG0:[a-zA-Z0-9_]+]]: tensor<4x96xf32>
+// CHECK-DAG: %[[EMPTY_3D:.+]] = tensor.empty() : tensor<4x1x96xf32>
+// CHECK: scf.for %[[IV:[a-zA-Z0-9_]+]] = {{.*}} iter_args(%[[ITERARG:.+]] = %[[ARG0]])
+
+// CHECK: %[[TILE_3D:.+]] = tensor.extract_slice %[[EMPTY_3D]][0, 0, %[[IV]]] [4, 1, 32] [1, 1, 1]
+// CHECK-SAME: tensor<4x1x96xf32> to tensor<4x1x32xf32>
+// CHECK: %[[FILL:.+]] = linalg.fill
+// CHECK-SAME: outs(%[[TILE_3D]] : tensor<4x1x32xf32>)
+// CHECK: %[[RANK_REDUCED:.+]] = tensor.extract_slice %[[FILL]][0, 0, 0] [4, 1, 32] [1, 1, 1]
+// CHECK-SAME: tensor<4x1x32xf32> to tensor<4x32xf32>
+
+// CHECK: %[[CONSUMER_OUT:.+]] = tensor.extract_slice %[[ITERARG]][0, %[[IV]]] [4, 32]
+// CHECK: linalg.generic
+// CHECK-SAME: ins(%[[RANK_REDUCED]] : tensor<4x32xf32>)
+// CHECK-SAME: outs(%[[CONSUMER_OUT]] : tensor<4x32xf32>)

@@ -1,0 +1,99 @@
+# RUN: %llc_dwarf %s -o - -mtriple=x86_64-unknown-unknown --start-after=livedebugvalues | FileCheck %s
+
+## Check the line number from the ret above `.LBB0_2` doesn't leak onto the
+## frame setup instructions in the `.LBB0_2` block; `pushq   %rax` should
+## explicitly get set to line zero.
+
+# CHECK: loop:
+# CHECK-NEXT: .Lfunc_begin0:
+# CHECK-NEXT:         .cfi_startproc
+# CHECK-NEXT: # %bb.0:
+# CHECK-NEXT:         .file   1 "/" "test.c"
+# CHECK-NEXT:         .loc    1 5 16 prologue_end             # test.c:5:16
+# CHECK-NEXT:         testq   %rax, %rax
+# CHECK-NEXT:         je      .LBB0_2
+# CHECK-NEXT: # %bb.1:
+# CHECK-NEXT:         .loc    1 5 16                          # test.c:5:16
+# CHECK-NEXT:         retq
+# CHECK-NEXT: .LBB0_2:
+# -- Check the .loc below sets the current location to line 0.
+# CHECK-NEXT:         .loc    1 0 16 is_stmt 0                # test.c:0:16
+# CHECK-NEXT:         pushq   %rax
+# CHECK-NEXT:         .cfi_def_cfa_offset 16
+# CHECK-NEXT:         addq    $8, %rsp
+# CHECK-NEXT:         .cfi_def_cfa_offset 8
+# CHECK-NEXT:         .loc    1 5 16 is_stmt 1                # test.c:5:16
+# CHECK-NEXT:         retq
+
+--- |
+  source_filename = "reduced.ll"
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-unknown"
+
+  define void @loop(i64 %i) !dbg !4 {
+  entry:
+    %cmp.not = icmp eq i64 %i, 0, !dbg !7
+    br i1 %cmp.not, label %for.body, label %for.end
+
+  for.body:                                         ; preds = %entry
+    %puts10 = tail call i32 null(ptr null)
+    %inc = add i64 0, 0
+    br label %for.end
+
+  for.end:                                          ; preds = %for.body, %entry
+    ret void
+  }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C11, file: !1, producer: "clang version 22.0.0git", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, globals: !2, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "test.c", directory: "/")
+  !2 = !{}
+  !3 = !{i32 2, !"Debug Info Version", i32 3}
+  !4 = distinct !DISubprogram(name: "loop", scope: !1, file: !1, line: 4, type: !5, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2, keyInstructions: true)
+  !5 = !DISubroutineType(types: !6)
+  !6 = !{null}
+  !7 = !DILocation(line: 5, column: 16, scope: !8, atomGroup: 720, atomRank: 2)
+  !8 = distinct !DILexicalBlock(scope: !4, file: !1, line: 5, column: 9)
+...
+---
+name:            loop
+alignment:       16
+tracksRegLiveness: true
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+hasFakeUses:     false
+debugInstrRef:   true
+tracksDebugUserValues: true
+liveins:
+  - { reg: '$rdi' }
+frameInfo:
+  stackSize:       8
+  offsetAdjustment: -8
+  maxAlignment:    1
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+  isCalleeSavedInfoValid: true
+machineFunctionInfo:
+  amxProgModel:    None
+body:             |
+  bb.0:
+    successors: %bb.1(0x30000000), %bb.2(0x50000000)
+    liveins: $rdi
+
+    TEST64rr undef renamable $rax, undef renamable $rax, implicit-def $eflags,  debug-location !7
+    JCC_1 %bb.1, 4, implicit $eflags
+
+  bb.2:
+    RET64 debug-location !7
+
+  bb.1:
+    frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
+    frame-setup CFI_INSTRUCTION def_cfa_offset 16
+    $rsp = frame-destroy ADD64ri32 $rsp, 8, implicit-def dead $eflags
+    frame-destroy CFI_INSTRUCTION def_cfa_offset 8
+    RET64 debug-location !7
+...

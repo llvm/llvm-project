@@ -1,5 +1,4 @@
 ; RUN: opt < %s -passes=inline -S | FileCheck %s
-; RUN: opt < %s -passes='cgscc(inline)' -S | FileCheck %s
 target triple = "x86_64-apple-darwin"
 
 ; In inliner, we assume that inline asm does not throw. This testing case makes
@@ -9,8 +8,8 @@ target triple = "x86_64-apple-darwin"
 ; Make sure we are generating "call asm" instead of "invoke asm".
 ; CHECK: call void asm
 ; CHECK-LABEL: @callee_with_asm
-define void @caller() personality ptr @__objc_personality_v0 {
-  br i1 undef, label %1, label %4
+define void @caller(i1 %arg) personality ptr @__objc_personality_v0 {
+  br i1 %arg, label %1, label %4
 
 ; <label>:1
   invoke void @callee_with_asm()

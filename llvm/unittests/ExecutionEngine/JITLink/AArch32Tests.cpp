@@ -8,6 +8,7 @@
 
 #include <llvm/BinaryFormat/ELF.h>
 #include <llvm/ExecutionEngine/JITLink/aarch32.h>
+#include <llvm/Support/Compiler.h>
 
 #include "gtest/gtest.h"
 
@@ -96,21 +97,21 @@ namespace llvm {
 namespace jitlink {
 namespace aarch32 {
 
-HalfWords encodeImmBT4BlT1BlxT2(int64_t Value);
-HalfWords encodeImmBT4BlT1BlxT2_J1J2(int64_t Value);
-uint32_t encodeImmBA1BlA1BlxA2(int64_t Value);
-HalfWords encodeImmMovtT1MovwT3(uint16_t Value);
-HalfWords encodeRegMovtT1MovwT3(int64_t Value);
-uint32_t encodeImmMovtA1MovwA2(uint16_t Value);
-uint32_t encodeRegMovtA1MovwA2(int64_t Value);
+LLVM_ABI HalfWords encodeImmBT4BlT1BlxT2(int64_t Value);
+LLVM_ABI HalfWords encodeImmBT4BlT1BlxT2_J1J2(int64_t Value);
+LLVM_ABI uint32_t encodeImmBA1BlA1BlxA2(int64_t Value);
+LLVM_ABI HalfWords encodeImmMovtT1MovwT3(uint16_t Value);
+LLVM_ABI HalfWords encodeRegMovtT1MovwT3(int64_t Value);
+LLVM_ABI uint32_t encodeImmMovtA1MovwA2(uint16_t Value);
+LLVM_ABI uint32_t encodeRegMovtA1MovwA2(int64_t Value);
 
-int64_t decodeImmBT4BlT1BlxT2(uint32_t Hi, uint32_t Lo);
-int64_t decodeImmBT4BlT1BlxT2_J1J2(uint32_t Hi, uint32_t Lo);
-int64_t decodeImmBA1BlA1BlxA2(int64_t Value);
-uint16_t decodeImmMovtT1MovwT3(uint32_t Hi, uint32_t Lo);
-int64_t decodeRegMovtT1MovwT3(uint32_t Hi, uint32_t Lo);
-uint16_t decodeImmMovtA1MovwA2(uint64_t Value);
-int64_t decodeRegMovtA1MovwA2(uint64_t Value);
+LLVM_ABI int64_t decodeImmBT4BlT1BlxT2(uint32_t Hi, uint32_t Lo);
+LLVM_ABI int64_t decodeImmBT4BlT1BlxT2_J1J2(uint32_t Hi, uint32_t Lo);
+LLVM_ABI int64_t decodeImmBA1BlA1BlxA2(int64_t Value);
+LLVM_ABI uint16_t decodeImmMovtT1MovwT3(uint32_t Hi, uint32_t Lo);
+LLVM_ABI int64_t decodeRegMovtT1MovwT3(uint32_t Hi, uint32_t Lo);
+LLVM_ABI uint16_t decodeImmMovtA1MovwA2(uint64_t Value);
+LLVM_ABI int64_t decodeRegMovtA1MovwA2(uint64_t Value);
 
 } // namespace aarch32
 } // namespace jitlink

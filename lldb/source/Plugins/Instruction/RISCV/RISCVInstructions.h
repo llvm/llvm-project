@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_INSTRUCTION_RISCV_RISCVINSTRUCTION_H
-#define LLDB_SOURCE_PLUGINS_INSTRUCTION_RISCV_RISCVINSTRUCTION_H
+#ifndef LLDB_SOURCE_PLUGINS_INSTRUCTION_RISCV_RISCVINSTRUCTIONS_H
+#define LLDB_SOURCE_PLUGINS_INSTRUCTION_RISCV_RISCVINSTRUCTIONS_H
 
 #include <cstdint>
 #include <optional>
@@ -349,4 +349,4 @@ constexpr uint32_t NanUnBoxing(uint64_t val) {
 #undef DERIVE_EQ
 
 } // namespace lldb_private
-#endif // LLDB_SOURCE_PLUGINS_INSTRUCTION_RISCV_RISCVINSTRUCTION_H
+#endif // LLDB_SOURCE_PLUGINS_INSTRUCTION_RISCV_RISCVINSTRUCTIONS_H

@@ -12,9 +12,9 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK: Memory dependences are safe with run-time checks
 ; CHECK: Run-time memory checks:
 ; CHECK-NEXT: Check 0:
-; CHECK-NEXT:   Comparing group ({{.*}}):
+; CHECK-NEXT:   Comparing group
 ; CHECK-NEXT:     %arrayidxA = getelementptr inbounds i32, ptr %a, i64 %ind
-; CHECK-NEXT:   Against group ({{.*}}):
+; CHECK-NEXT:   Against group
 ; CHECK-NEXT:   ptr %b
 
 define void @f(ptr %a, ptr %b) {

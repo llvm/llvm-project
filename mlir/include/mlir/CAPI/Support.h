@@ -17,12 +17,13 @@
 
 #include "mlir-c/Support.h"
 #include "mlir/CAPI/Wrap.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/LogicalResult.h"
 
 namespace llvm {
 class ThreadPoolInterface;
+class raw_fd_ostream;
 } // namespace llvm
 
 /// Converts a StringRef into its MLIR C API equivalent.
@@ -35,17 +36,18 @@ inline llvm::StringRef unwrap(MlirStringRef ref) {
   return llvm::StringRef(ref.data, ref.length);
 }
 
-inline MlirLogicalResult wrap(mlir::LogicalResult res) {
+inline MlirLogicalResult wrap(llvm::LogicalResult res) {
   if (mlir::succeeded(res))
     return mlirLogicalResultSuccess();
   return mlirLogicalResultFailure();
 }
 
-inline mlir::LogicalResult unwrap(MlirLogicalResult res) {
+inline llvm::LogicalResult unwrap(MlirLogicalResult res) {
   return mlir::success(mlirLogicalResultIsSuccess(res));
 }
 
 DEFINE_C_API_PTR_METHODS(MlirLlvmThreadPool, llvm::ThreadPoolInterface)
+DEFINE_C_API_PTR_METHODS(MlirLlvmRawFdOStream, llvm::raw_fd_ostream)
 DEFINE_C_API_METHODS(MlirTypeID, mlir::TypeID)
 DEFINE_C_API_PTR_METHODS(MlirTypeIDAllocator, mlir::TypeIDAllocator)
 

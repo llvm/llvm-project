@@ -22,7 +22,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::repro;
 
 static const constexpr std::chrono::seconds TIMEOUT(0);
 static const constexpr size_t DEBUGGERS = 3;
@@ -55,9 +54,8 @@ TEST_F(DiagnosticEventTest, Warning) {
   ListenerSP listener_sp = Listener::MakeListener("test-listener");
 
   listener_sp->StartListeningForEvents(&broadcaster,
-                                       Debugger::eBroadcastBitWarning);
-  EXPECT_TRUE(
-      broadcaster.EventTypeHasListeners(Debugger::eBroadcastBitWarning));
+                                       lldb::eBroadcastBitWarning);
+  EXPECT_TRUE(broadcaster.EventTypeHasListeners(lldb::eBroadcastBitWarning));
 
   Debugger::ReportWarning("foo", debugger_sp->GetID());
 
@@ -80,9 +78,8 @@ TEST_F(DiagnosticEventTest, Error) {
   Broadcaster &broadcaster = debugger_sp->GetBroadcaster();
   ListenerSP listener_sp = Listener::MakeListener("test-listener");
 
-  listener_sp->StartListeningForEvents(&broadcaster,
-                                       Debugger::eBroadcastBitError);
-  EXPECT_TRUE(broadcaster.EventTypeHasListeners(Debugger::eBroadcastBitError));
+  listener_sp->StartListeningForEvents(&broadcaster, lldb::eBroadcastBitError);
+  EXPECT_TRUE(broadcaster.EventTypeHasListeners(lldb::eBroadcastBitError));
 
   Debugger::ReportError("bar", debugger_sp->GetID());
 
@@ -111,7 +108,7 @@ TEST_F(DiagnosticEventTest, MultipleDebuggers) {
     listeners.push_back(listener);
 
     listener->StartListeningForEvents(&debugger->GetBroadcaster(),
-                                      Debugger::eBroadcastBitError);
+                                      lldb::eBroadcastBitError);
   }
 
   Debugger::ReportError("baz");
@@ -140,9 +137,8 @@ TEST_F(DiagnosticEventTest, WarningOnce) {
   ListenerSP listener_sp = Listener::MakeListener("test-listener");
 
   listener_sp->StartListeningForEvents(&broadcaster,
-                                       Debugger::eBroadcastBitWarning);
-  EXPECT_TRUE(
-      broadcaster.EventTypeHasListeners(Debugger::eBroadcastBitWarning));
+                                       lldb::eBroadcastBitWarning);
+  EXPECT_TRUE(broadcaster.EventTypeHasListeners(lldb::eBroadcastBitWarning));
 
   std::once_flag once;
   Debugger::ReportWarning("foo", debugger_sp->GetID(), &once);

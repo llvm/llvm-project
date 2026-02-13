@@ -1,0 +1,68 @@
+# Test that we warn the user about truncated output
+# when target.max-children-count wasn't explicitly set.
+
+# RUN: split-file %s %t
+# RUN: %clangxx_host -g %t/main.cpp -o %t.out
+# RUN: %lldb -x -b -s %t/dwim-commands.input %t.out -o exit 2>&1 \
+# RUN:       | FileCheck %s --check-prefix=DWIM
+#
+# RUN: %lldb -x -b -s %t/expr-commands.input %t.out -o exit 2>&1 \
+# RUN:       | FileCheck %s --check-prefix=EXPR
+#
+# RUN: %lldb -x -b -s %t/frame-var-commands.input %t.out -o exit 2>&1 \
+# RUN:       | FileCheck %s --check-prefix=VAR
+#
+# RUN: %lldb -x -b -s %t/with-setting-commands.input %t.out -o exit 2>&1 \
+# RUN:       | FileCheck %s --check-prefix=SETTING
+
+#--- main.cpp
+
+int main() {
+  int arr[512] = { 3 };
+  __builtin_debugtrap();
+}
+
+#--- dwim-commands.input
+
+run
+dwim-print arr
+frame variable arr
+
+DWIM:      (lldb) dwim-print arr
+DWIM:      *** Some of the displayed variables have more members
+DWIM-SAME: use the --show-all-children option to dwim-print
+DWIM:      (lldb) frame variable arr
+DWIM-NOT:  *** Some of the displayed variables have more members
+
+#--- expr-commands.input
+
+run
+expression arr
+frame variable arr
+
+EXPR:      (lldb) expression arr
+EXPR:      *** Some of the displayed variables have more members
+EXPR-SAME: use the --show-all-children option to expression
+EXPR:      (lldb) frame variable arr
+EXPR-NOT:  *** Some of the displayed variables have more members
+
+#--- frame-var-commands.input
+
+run
+frame variable arr
+dwim-print arr
+
+VAR:      (lldb) frame variable arr
+VAR:      *** Some of the displayed variables have more members
+VAR-SAME: use the --show-all-children option to frame variable
+VAR:      (lldb) dwim-print arr
+VAR-NOT:  *** Some of the displayed variables have more members
+
+#--- with-setting-commands.input
+
+run
+settings set target.max-children-count 1
+frame variable arr
+
+SETTING:      (lldb) frame variable arr
+SETTING-NOT:  *** Some of the displayed variables have more members

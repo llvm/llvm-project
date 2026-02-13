@@ -19,8 +19,8 @@ static WEAK int h; // expected-warning {{'objc_ownership' only applies to Object
 ak int i;
 
 static id [[clang::objc_gc(weak)]] j;
-[[clang::objc_gc(weak)]] static id k; // expected-warning {{applying attribute 'objc_gc' to a declaration is deprecated; apply it to the type instead}}
-static id l [[clang::objc_gc(weak)]]; // expected-warning {{applying attribute 'objc_gc' to a declaration is deprecated; apply it to the type instead}}
+[[clang::objc_gc(weak)]] static id k; // expected-warning {{applying attribute 'clang::objc_gc' to a declaration is deprecated; apply it to the type instead}}
+static id l [[clang::objc_gc(weak)]]; // expected-warning {{applying attribute 'clang::objc_gc' to a declaration is deprecated; apply it to the type instead}}
 
 void test2(id __attribute((objc_gc(strong))) *strong,
            id __attribute((objc_gc(weak))) *weak) {

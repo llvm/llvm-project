@@ -55,7 +55,7 @@ local_label:
 # O32:                                      #   fixup A - offset: 0, value: %got(local_label), kind:   fixup_Mips_GOT
 # O32: addiu  $25, $25, %lo(local_label)    # encoding: [0x27,0x39,A,A]
 # O32:                                      #   fixup A - offset: 0, value: %lo(local_label), kind:   fixup_Mips_LO16
-# O32-NEXT: .reloc ($tmp0), R_MIPS_JALR, local_label
+# O32-NEXT: .reloc $tmp0, R_MIPS_JALR, local_label
 
 # ELF-O32:      8f 99 00 00 lw $25, 0($gp)
 # ELF-O32-NEXT:                 R_MIPS_GOT16 .text
@@ -68,7 +68,7 @@ local_label:
 # XO32-NEXT:                                    #   fixup A - offset: 0, value: %got(local_label), kind:   fixup_Mips_GOT
 # XO32-NEXT: addiu $25, $25, %lo(local_label)   # encoding: [0x27,0x39,A,A]
 # XO32-NEXT:                                    #   fixup A - offset: 0, value: %lo(local_label), kind:   fixup_Mips_LO16
-# XO32-NEXT: .reloc ($tmp0), R_MIPS_JALR, local_label
+# XO32-NEXT: .reloc $tmp0, R_MIPS_JALR, local_label
 
 # ELF-XO32:      8f 99 00 00 lw $25, 0($gp)
 # ELF-XO32-NEXT:                 R_MIPS_GOT16 .text
@@ -117,7 +117,7 @@ local_label:
 # O32-MM:                                        #   fixup A - offset: 0, value: %got(local_label), kind:   fixup_MICROMIPS_GOT16
 # O32-MM: addiu $25, $25, %lo(local_label)       # encoding: [0x33,0x39,A,A]
 # O32-MM:                                        #   fixup A - offset: 0, value: %lo(local_label), kind:   fixup_MICROMIPS_LO16
-# O32-MM-NEXT: .reloc ($tmp0), R_MICROMIPS_JALR, local_label
+# O32-MM-NEXT: .reloc $tmp0, R_MICROMIPS_JALR, local_label
 
 # MIPS: jalr $25      # encoding: [0x03,0x20,0xf8,0x09]
 # MM:   jalr $ra, $25 # encoding: [0x03,0xf9,0x0f,0x3c]
@@ -212,7 +212,7 @@ local_label:
 # Expanding "jal weak_label":
 # O32: lw  $25, %call16(weak_label)($gp) # encoding: [0x8f,0x99,A,A]
 # O32:                                   #   fixup A - offset: 0, value: %call16(weak_label), kind:   fixup_Mips_CALL16
-# O32-NEXT: .reloc ($tmp1), R_MIPS_JALR, weak_label
+# O32-NEXT: .reloc $tmp1, R_MIPS_JALR, weak_label
 
 # ELF-O32:      8f 99 00 00 lw $25, 0($gp)
 # ELF-O32-NEXT:                 R_MIPS_CALL16 weak_label
@@ -224,7 +224,7 @@ local_label:
 # XO32-NEXT: addu $25, $25, $gp                   # encoding: [0x03,0x3c,0xc8,0x21]
 # XO32-NEXT: lw   $25, %call_lo(weak_label)($25)  # encoding: [0x8f,0x39,A,A]
 # XO32-NEXT:                                      #   fixup A - offset: 0, value: %call_lo(weak_label), kind: fixup_Mips_CALL_LO16
-# XO32-NEXT: .reloc ($tmp1), R_MIPS_JALR, weak_label
+# XO32-NEXT: .reloc $tmp1, R_MIPS_JALR, weak_label
 
 # ELF-XO32:      3c 19 00 00 lui $25, 0
 # ELF-XO32-MEXT:                  R_MIPS_CALL_HI16 weak_label
@@ -284,7 +284,7 @@ local_label:
 
 # O32-MM: lw  $25, %call16(weak_label)($gp) # encoding: [0xff,0x3c,A,A]
 # O32-MM:                                   #   fixup A - offset: 0, value: %call16(weak_label), kind:   fixup_MICROMIPS_CALL16
-# O32-MM-NEXT: .reloc ($tmp1), R_MICROMIPS_JALR, weak_label
+# O32-MM-NEXT: .reloc $tmp1, R_MICROMIPS_JALR, weak_label
 
 # MIPS: jalr $25      # encoding: [0x03,0x20,0xf8,0x09]
 # MM:   jalr $ra, $25 # encoding: [0x03,0xf9,0x0f,0x3c]
@@ -392,7 +392,7 @@ local_label:
 # Expanding "jal global_label":
 # O32: lw  $25, %call16(global_label)($gp)  # encoding: [0x8f,0x99,A,A]
 # O32-NEXT:                                 #   fixup A - offset: 0, value: %call16(global_label), kind: fixup_Mips_CALL16
-# O32-NEXT: .reloc ($tmp2), R_MIPS_JALR, global_label
+# O32-NEXT: .reloc $tmp2, R_MIPS_JALR, global_label
 
 # ELF-O32:      8f 99 00 00 lw $25, 0($gp)
 # ELF-O32-NEXT:                 R_MIPS_CALL16 global_label
@@ -404,7 +404,7 @@ local_label:
 # XO32-NEXT: addu $25, $25, $gp                     # encoding: [0x03,0x3c,0xc8,0x21]
 # XO32-NEXT: lw   $25, %call_lo(global_label)($25)  # encoding: [0x8f,0x39,A,A]
 # XO32-NEXT:                                        #   fixup A - offset: 0, value: %call_lo(global_label), kind: fixup_Mips_CALL_LO16
-# XO32-NEXT: .reloc ($tmp2), R_MIPS_JALR, global_label
+# XO32-NEXT: .reloc $tmp2, R_MIPS_JALR, global_label
 
 # ELF-XO32:      3c 19 00 00 lui $25, 0
 # ELF-XO32-NEXT:                  R_MIPS_CALL_HI16 global_label
@@ -464,7 +464,7 @@ local_label:
 
 # O32-MM: lw  $25, %call16(global_label)($gp) # encoding: [0xff,0x3c,A,A]
 # O32-MM-NEXT:                                #   fixup A - offset: 0, value: %call16(global_label), kind: fixup_MICROMIPS_CALL16
-# O32-MM-NEXT: .reloc ($tmp2), R_MICROMIPS_JALR, global_label
+# O32-MM-NEXT: .reloc $tmp2, R_MICROMIPS_JALR, global_label
 
 # MIPS: jalr $25      # encoding: [0x03,0x20,0xf8,0x09]
 # MM:   jalr $ra, $25 # encoding: [0x03,0xf9,0x0f,0x3c]
@@ -580,7 +580,7 @@ local_label:
 # XO32-NEXT:                              #   fixup A - offset: 0, value: %got(.text), kind: fixup_Mips_GOT
 # XO32-NEXT: addiu $25, $25, %lo(.text)   # encoding: [0x27,0x39,A,A]
 # XO32-NEXT:                              #   fixup A - offset: 0, value: %lo(.text), kind: fixup_Mips_LO16
-# XO32-NEXT: .reloc ($tmp3), R_MIPS_JALR, .text
+# XO32-NEXT: .reloc $tmp3, R_MIPS_JALR, .text
 
 # ELF-XO32:      8f 99 00 00 lw $25, 0($gp)
 # ELF-XO32-NEXT:                 R_MIPS_GOT16 .text
@@ -623,7 +623,7 @@ local_label:
 # O32-MM-NEXT:                                  #   fixup A - offset: 0, value: %got(.text), kind: fixup_MICROMIPS_GOT16
 # O32-MM-NEXT: addiu $25, $25, %lo(.text)       # encoding: [0x33,0x39,A,A]
 # O32-MM-NEXT:                                  #   fixup A - offset: 0, value: %lo(.text), kind: fixup_MICROMIPS_LO16
-# O42-MM-NEXT: .reloc ($tmp3), R_MICROMIPS_JALR, .text
+# O42-MM-NEXT: .reloc $tmp3, R_MICROMIPS_JALR, .text
 
 # MIPS: jalr $25      # encoding: [0x03,0x20,0xf8,0x09]
 # MM:   jalr $ra, $25 # encoding: [0x03,0xf9,0x0f,0x3c]
@@ -689,7 +689,7 @@ local_label:
 # O32-MM-NEXT:                                #   fixup A - offset: 0, value: %got(.text+8), kind: fixup_MICROMIPS_GOT16
 # O32-MM-NEXT: addiu $25, $25, %lo(.text+8)   # encoding: [0x33,0x39,A,A]
 # O32-MM-NEXT:                                #   fixup A - offset: 0, value: %lo(.text+8), kind: fixup_MICROMIPS_LO16
-# O42-MM-NEXT: .reloc ($tmp4), R_MICROMIPS_JALR, .text
+# O42-MM-NEXT: .reloc $tmp4, R_MICROMIPS_JALR, .text
 
 # MIPS: jalr $25      # encoding: [0x03,0x20,0xf8,0x09]
 # MM:   jalr $ra, $25 # encoding: [0x03,0xf9,0x0f,0x3c]
@@ -704,7 +704,7 @@ local_label:
 # O32-NEXT:                               #   fixup A - offset: 0, value: %got($tmp4), kind: fixup_Mips_GOT
 # O32-NEXT: addiu  $25, $25, %lo($tmp4)   # encoding: [0x27,0x39,A,A]
 # O32-NEXT:                               #   fixup A - offset: 0, value: %lo($tmp4), kind: fixup_Mips_LO16
-# O32-NEXT: .reloc ($tmp5), R_MIPS_JALR, ($tmp4)
+# O32-NEXT: .reloc $tmp5, R_MIPS_JALR, $tmp4
 
 # ELF-O32:      8f 99 00 00 lw $25, 0($gp)
 # ELF-O32-NEXT:                 R_MIPS_GOT16 .text
@@ -717,7 +717,7 @@ local_label:
 # XO32-NEXT:                              #   fixup A - offset: 0, value: %got($tmp4), kind: fixup_Mips_GOT
 # XO32-NEXT: addiu $25, $25, %lo($tmp4)   # encoding: [0x27,0x39,A,A]
 # XO32-NEXT:                              #   fixup A - offset: 0, value: %lo($tmp4), kind: fixup_Mips_LO16
-# XO32-NEXT: .reloc ($tmp5), R_MIPS_JALR, ($tmp4)
+# XO32-NEXT: .reloc $tmp5, R_MIPS_JALR, $tmp4
 
 # ELF-XO32:      8f 99 00 00 lw $25, 0($gp)
 # ELF-XO32-NEXT:                 R_MIPS_GOT16 .text
@@ -760,7 +760,7 @@ local_label:
 # O32-MM-NEXT:                            #   fixup A - offset: 0, value: %got($tmp4), kind: fixup_MICROMIPS_GOT16
 # O32-MM-NEXT: addiu $25, $25, %lo($tmp4) # encoding: [0x33,0x39,A,A]
 # O32-MM-NEXT:                            #   fixup A - offset: 0, value: %lo($tmp4), kind: fixup_MICROMIPS_LO16
-# O32-MM-NEXT: .reloc ($tmp5), R_MICROMIPS_JALR, ($tmp4)
+# O32-MM-NEXT: .reloc $tmp5, R_MICROMIPS_JALR, $tmp4
 
 # MIPS: jalr $25      # encoding: [0x03,0x20,0xf8,0x09]
 # MM:   jalr $ra, $25 # encoding: [0x03,0xf9,0x0f,0x3c]
@@ -769,10 +769,10 @@ local_label:
   jal 1f+8
   nop
 
-# O32:      lw     $25, %got(($tmp4)+8)($gp)  # encoding: [0x8f,0x99,A,A]
-# O32-NEXT:                                   #   fixup A - offset: 0, value: %got(($tmp4)+8), kind: fixup_Mips_GOT
-# O32-NEXT: addiu  $25, $25, %lo(($tmp4)+8)   # encoding: [0x27,0x39,A,A]
-# O32-NEXT:                                   #   fixup A - offset: 0, value: %lo(($tmp4)+8), kind: fixup_Mips_LO16
+# O32:      lw     $25, %got($tmp4+8)($gp)  # encoding: [0x8f,0x99,A,A]
+# O32-NEXT:                                   #   fixup A - offset: 0, value: %got($tmp4+8), kind: fixup_Mips_GOT
+# O32-NEXT: addiu  $25, $25, %lo($tmp4+8)   # encoding: [0x27,0x39,A,A]
+# O32-NEXT:                                   #   fixup A - offset: 0, value: %lo($tmp4+8), kind: fixup_Mips_LO16
 # O32-NOT:  .reloc
 
 # ELF-O32:      8f 99 00 00 lw $25, 0($gp)
@@ -782,10 +782,10 @@ local_label:
 # ELF-O32-NEXT: 03 20 f8 09 jalr $25
 # ELF-O32-NEXT: 00 00 00 00 nop
 
-# XO32:      lw    $25, %got(($tmp4)+8)($gp)  # encoding: [0x8f,0x99,A,A]
-# XO32-NEXT:                                  #   fixup A - offset: 0, value: %got(($tmp4)+8), kind: fixup_Mips_GOT
-# XO32-NEXT: addiu $25, $25, %lo(($tmp4)+8)   # encoding: [0x27,0x39,A,A]
-# XO32-NEXT:                                  #   fixup A - offset: 0, value: %lo(($tmp4)+8), kind: fixup_Mips_LO16
+# XO32:      lw    $25, %got($tmp4+8)($gp)  # encoding: [0x8f,0x99,A,A]
+# XO32-NEXT:                                  #   fixup A - offset: 0, value: %got($tmp4+8), kind: fixup_Mips_GOT
+# XO32-NEXT: addiu $25, $25, %lo($tmp4+8)   # encoding: [0x27,0x39,A,A]
+# XO32-NEXT:                                  #   fixup A - offset: 0, value: %lo($tmp4+8), kind: fixup_Mips_LO16
 # XO32-NOT:  .reloc
 
 # ELF-XO32:      8f 99 00 00 lw $25, 0($gp)
@@ -829,10 +829,10 @@ local_label:
 # ELF-XN64-NEXT: 03 20 f8 09 jalr $25
 # ELF-XN64-NEXT:                 R_MIPS_JALR/R_MIPS_NONE/R_MIPS_NONE .Ltmp0
 
-# O32-MM:      lw    $25, %got(($tmp4)+8)($gp)  # encoding: [0xff,0x3c,A,A]
-# O32-MM-NEXT:                                  #   fixup A - offset: 0, value: %got(($tmp4)+8), kind: fixup_MICROMIPS_GOT16
-# O32-MM-NEXT: addiu $25, $25, %lo(($tmp4)+8)   # encoding: [0x33,0x39,A,A]
-# O32-MM-NEXT:                                  #   fixup A - offset: 0, value: %lo(($tmp4)+8), kind: fixup_MICROMIPS_LO16
+# O32-MM:      lw    $25, %got($tmp4+8)($gp)  # encoding: [0xff,0x3c,A,A]
+# O32-MM-NEXT:                                  #   fixup A - offset: 0, value: %got($tmp4+8), kind: fixup_MICROMIPS_GOT16
+# O32-MM-NEXT: addiu $25, $25, %lo($tmp4+8)   # encoding: [0x33,0x39,A,A]
+# O32-MM-NEXT:                                  #   fixup A - offset: 0, value: %lo($tmp4+8), kind: fixup_MICROMIPS_LO16
 # O32-MM-NOT:  .reloc
 
 # MIPS: jalr $25      # encoding: [0x03,0x20,0xf8,0x09]
@@ -848,7 +848,7 @@ local_label:
 # O32-FIXME:                                                         #   fixup A - offset: 0, value: %got(forward_local), kind:   fixup_Mips_GOT
 # O32-FIXME: addiu  $25, $25, %lo(forward_local)                     # encoding: [0x27,0x39,A,A]
 # O32-FIXME::                                                         #   fixup A - offset: 0, value: %lo(forward_local), kind:   fixup_Mips_LO16
-# O32-FIXME: .reloc ($tmp6), R_MIPS_JALR, forward_local
+# O32-FIXME: .reloc $tmp6, R_MIPS_JALR, forward_local
 
 # ELF-O32:      8f 99 00 00 lw $25, 0($gp)
 # ELF-O32-NEXT:                 R_MIPS_GOT16 .text
@@ -873,7 +873,7 @@ local_label:
 # O32-MM-FIXME:                                                #   fixup A - offset: 0, value: %got(forward_local), kind:   fixup_MICROMIPS_GOT16
 # O32-MM-FIXME: addiu $25, $25, %lo(forward_local)             # encoding: [0x33,0x39,A,A]
 # O32-MM-FIXME:                                                #   fixup A - offset: 0, value: %lo(forward_local), kind:   fixup_MICROMIPS_LO16
-# O32-MM-FIXME: .reloc ($tmp6), R_MIPS_JALR, forward_local
+# O32-MM-FIXME: .reloc $tmp6, R_MIPS_JALR, forward_local
 
 # MIPS: jalr $25      # encoding: [0x03,0x20,0xf8,0x09]
 # MM:   jalr $ra, $25 # encoding: [0x03,0xf9,0x0f,0x3c]
@@ -887,7 +887,7 @@ local_label:
 # O32-FIXME:                                        #   fixup A - offset: 0, value: %got(forward_local+8), kind:   fixup_Mips_GOT
 # O32-FIXME: addiu  $25, $25, %lo(forward_local+8)  # encoding: [0x27,0x39,A,A]
 # O32-FIXME::                                       #   fixup A - offset: 0, value: %lo(forward_local+8), kind:   fixup_Mips_LO16
-# O32-FIXME: .reloc ($tmp7), R_MIPS_JALR, forward_local
+# O32-FIXME: .reloc $tmp7, R_MIPS_JALR, forward_local
 
 # ELF-O32:      8f 99 00 00 lw $25, 0($gp)
 # ELF-O32-NEXT:                 R_MIPS_GOT16 .text
@@ -912,7 +912,7 @@ local_label:
 # O32-MM-FIXME:                                                #   fixup A - offset: 0, value: %got(forward_local), kind:   fixup_MICROMIPS_GOT16
 # O32-MM-FIXME: addiu $25, $25, %lo(forward_local)             # encoding: [0x33,0x39,A,A]
 # O32-MM-FIXME:                                                #   fixup A - offset: 0, value: %lo(forward_local), kind:   fixup_MICROMIPS_LO16
-# O32-MM-FIXME: .reloc ($tmp6), R_MIPS_JALR, forward_local
+# O32-MM-FIXME: .reloc $tmp6, R_MIPS_JALR, forward_local
 
 # MIPS: jalr $25      # encoding: [0x03,0x20,0xf8,0x09]
 # MM:   jalr $ra, $25 # encoding: [0x03,0xf9,0x0f,0x3c]

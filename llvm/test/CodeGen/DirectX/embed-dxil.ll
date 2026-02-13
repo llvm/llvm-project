@@ -42,8 +42,8 @@ define i32 @add(i32 %a, i32 %b) {
 ; DXC-NEXT:       MinorVersion:    5
 ; DXC-NEXT:       ShaderKind:      6
 ; DXC-NEXT:       Size:            [[#div(SIZE,4)]]
-; DXC-NEXT:       DXILMajorVersion: [[#]]
-; DXC-NEXT:       DXILMinorVersion: [[#]]
+; DXC-NEXT:       DXILMajorVersion: 1
+; DXC-NEXT:       DXILMinorVersion: 5
 ; DXC-NEXT:       DXILSize:        [[#SIZE - 24]]
 ; DXC-NEXT:       DXIL:            [ 0x42, 0x43, 0xC0, 0xDE,
 ; DXC:      - Name:            SFI0

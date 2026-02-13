@@ -1,9 +1,5 @@
-; RUN: opt %loadPolly -polly-analyze-read-only-scalars=false -polly-codegen \
-; RUN:     \
-; RUN:     -S < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-analyze-read-only-scalars=true -polly-codegen \
-; RUN:     \
-; RUN:     -S < %s | FileCheck %s -check-prefix=SCALAR
+; RUN: opt %loadNPMPolly -polly-analyze-read-only-scalars=false '-passes=polly<no-default-opts>' -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-analyze-read-only-scalars=true '-passes=polly<no-default-opts>' -S < %s | FileCheck %s -check-prefix=SCALAR
 
 ; CHECK-NOT: alloca
 

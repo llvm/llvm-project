@@ -29,9 +29,12 @@ add_mlir_library(MLIRIR
   ODSSupport.cpp
   Operation.cpp
   OperationSupport.cpp
+  PatternLoggingListener.cpp
   PatternMatch.cpp
+  QuantStorageTypeInterface.cpp
   Region.cpp
   RegionKindInterface.cpp
+  Remarks.cpp
   SymbolTable.cpp
   TensorEncoding.cpp
   Types.cpp
@@ -55,17 +58,20 @@ add_mlir_library(MLIRIR
   MLIRBuiltinLocationAttributesIncGen
   MLIRBuiltinOpsIncGen
   MLIRBuiltinTypesIncGen
+  MLIRBuiltinTypeConstraintsIncGen
   MLIRBuiltinTypeInterfacesIncGen
   MLIRCallInterfacesIncGen
   MLIRCastInterfacesIncGen
   MLIRDataLayoutInterfacesIncGen
+  MLIRDialectFoldInterfaceIncGen
   MLIROpAsmInterfaceIncGen
+  MLIRQuantStorageTypeInterfaceIncGen
   MLIRRegionKindInterfaceIncGen
   MLIRSideEffectInterfacesIncGen
   MLIRSymbolInterfacesIncGen
   MLIRTensorEncodingIncGen
+  MLIROpAsmDialectInterfaceIncGen
 
   LINK_LIBS PUBLIC
   MLIRSupport
   )
-

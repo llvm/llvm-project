@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 // \file
-// This file contains a TargetTransformInfo::Concept conforming object specific
+// This file contains a TargetTransformInfoImplBase conforming object specific
 // to the ARC target machine. It uses the target's detailed information to
 // provide more precise answers to certain TTI queries, while letting the
 // target independent and default TTI implementations handle the rest.
@@ -26,7 +26,7 @@ class ARCSubtarget;
 class ARCTargetLowering;
 class ARCTargetMachine;
 
-class ARCTTIImpl : public BasicTTIImplBase<ARCTTIImpl> {
+class ARCTTIImpl final : public BasicTTIImplBase<ARCTTIImpl> {
   using BaseT = BasicTTIImplBase<ARCTTIImpl>;
   friend BaseT;
 
@@ -38,7 +38,7 @@ class ARCTTIImpl : public BasicTTIImplBase<ARCTTIImpl> {
 
 public:
   explicit ARCTTIImpl(const ARCTargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl()),
+      : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl()),
         TLI(ST->getTargetLowering()) {}
 
   // Provide value semantics. MSVC requires that we spell all of these out.

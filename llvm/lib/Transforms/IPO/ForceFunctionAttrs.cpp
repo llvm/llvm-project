@@ -44,6 +44,14 @@ static cl::opt<std::string> CSVFilePath(
         "Path to CSV file containing lines of function names and attributes to "
         "add to them in the form of `f1,attr1` or `f2,attr2=str`."));
 
+static bool hasConflictingFnAttr(Attribute::AttrKind Kind, Function &F) {
+  if (Kind == Attribute::AlwaysInline)
+    return F.hasFnAttribute(Attribute::NoInline);
+  if (Kind == Attribute::NoInline)
+    return F.hasFnAttribute(Attribute::AlwaysInline);
+  return false;
+}
+
 /// If F has any forced attributes given on the command line, add them.
 /// If F has any forced remove attributes given on the command line, remove
 /// them. When both force and force-remove are given to a function, the latter
@@ -69,7 +77,8 @@ static void forceAttributes(Function &F) {
 
   for (const auto &S : ForceAttributes) {
     auto Kind = ParseFunctionAndAttr(S);
-    if (Kind == Attribute::None || F.hasFnAttribute(Kind))
+    if (Kind == Attribute::None || F.hasFnAttribute(Kind) ||
+        hasConflictingFnAttr(Kind, F))
       continue;
     F.addFnAttr(Kind);
   }
@@ -91,8 +100,12 @@ PreservedAnalyses ForceFunctionAttrsPass::run(Module &M,
   bool Changed = false;
   if (!CSVFilePath.empty()) {
     auto BufferOrError = MemoryBuffer::getFileOrSTDIN(CSVFilePath);
-    if (!BufferOrError)
-      report_fatal_error("Cannot open CSV file.");
+    if (!BufferOrError) {
+      std::error_code EC = BufferOrError.getError();
+      M.getContext().emitError("cannot open CSV file: " + EC.message());
+      return PreservedAnalyses::all();
+    }
+
     StringRef Buffer = BufferOrError.get()->getBuffer();
     auto MemoryBuffer = MemoryBuffer::getMemBuffer(Buffer);
     line_iterator It(*MemoryBuffer);
@@ -111,7 +124,8 @@ PreservedAnalyses ForceFunctionAttrsPass::run(Module &M,
         } else {
           auto AttrKind = Attribute::getAttrKindFromName(SplitPair.second);
           if (AttrKind != Attribute::None &&
-              Attribute::canUseAsFnAttr(AttrKind)) {
+              Attribute::canUseAsFnAttr(AttrKind) &&
+              !hasConflictingFnAttr(AttrKind, *Func)) {
             // TODO: There could be string attributes without a value, we should
             // support those, too.
             Func->addFnAttr(AttrKind);

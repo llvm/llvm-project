@@ -1,7 +1,7 @@
-; RUN: llc -march=sparc < %s | FileCheck %s -check-prefix=V8 -check-prefix=V8-BE
-; RUN: llc -march=sparcel < %s | FileCheck %s -check-prefix=V8 -check-prefix=V8-EL
-; RUN: llc -march=sparc -O0 < %s | FileCheck %s -check-prefix=V8-UNOPT
-; RUN: llc -march=sparc -mattr=v9 < %s | FileCheck %s -check-prefix=V9
+; RUN: llc -mtriple=sparc < %s | FileCheck %s -check-prefix=V8 -check-prefix=V8-BE
+; RUN: llc -mtriple=sparcel < %s | FileCheck %s -check-prefix=V8 -check-prefix=V8-EL
+; RUN: llc -mtriple=sparc -O0 < %s | FileCheck %s -check-prefix=V8-UNOPT
+; RUN: llc -mtriple=sparc -mattr=v9 < %s | FileCheck %s -check-prefix=V9
 ; RUN: llc -mtriple=sparc64-unknown-linux < %s | FileCheck %s -check-prefix=SPARC64
 
 ; V8-LABEL:     test_neg:

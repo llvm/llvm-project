@@ -441,10 +441,10 @@ define <32 x i8> @ashr_32i8(<32 x i8> %r, <32 x i8> %a) nounwind {
 ; CHECK-NEXT:    vpsraw $4, %ymm3, %ymm4
 ; CHECK-NEXT:    vpblendvb %ymm2, %ymm4, %ymm3, %ymm3
 ; CHECK-NEXT:    vpsraw $2, %ymm3, %ymm4
-; CHECK-NEXT:    vpaddw %ymm2, %ymm2, %ymm2
-; CHECK-NEXT:    vpblendvb %ymm2, %ymm4, %ymm3, %ymm3
+; CHECK-NEXT:    vpaddw %ymm2, %ymm2, %ymm5
+; CHECK-NEXT:    vpblendvb %ymm5, %ymm4, %ymm3, %ymm3
 ; CHECK-NEXT:    vpsraw $1, %ymm3, %ymm4
-; CHECK-NEXT:    vpaddw %ymm2, %ymm2, %ymm2
+; CHECK-NEXT:    vpsllw $2, %ymm2, %ymm2
 ; CHECK-NEXT:    vpblendvb %ymm2, %ymm4, %ymm3, %ymm2
 ; CHECK-NEXT:    vpsrlw $8, %ymm2, %ymm2
 ; CHECK-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
@@ -452,10 +452,10 @@ define <32 x i8> @ashr_32i8(<32 x i8> %r, <32 x i8> %a) nounwind {
 ; CHECK-NEXT:    vpsraw $4, %ymm0, %ymm3
 ; CHECK-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
 ; CHECK-NEXT:    vpsraw $2, %ymm0, %ymm3
-; CHECK-NEXT:    vpaddw %ymm1, %ymm1, %ymm1
-; CHECK-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
+; CHECK-NEXT:    vpaddw %ymm1, %ymm1, %ymm4
+; CHECK-NEXT:    vpblendvb %ymm4, %ymm3, %ymm0, %ymm0
 ; CHECK-NEXT:    vpsraw $1, %ymm0, %ymm3
-; CHECK-NEXT:    vpaddw %ymm1, %ymm1, %ymm1
+; CHECK-NEXT:    vpsllw $2, %ymm1, %ymm1
 ; CHECK-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
 ; CHECK-NEXT:    vpsrlw $8, %ymm0, %ymm0
 ; CHECK-NEXT:    vpackuswb %ymm2, %ymm0, %ymm0

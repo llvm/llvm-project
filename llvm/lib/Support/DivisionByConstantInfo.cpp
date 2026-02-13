@@ -79,7 +79,8 @@ UnsignedDivisionByConstantInfo::get(const APInt &D, unsigned LeadingZeros,
   APInt Delta;
   struct UnsignedDivisionByConstantInfo Retval;
   Retval.IsAdd = false; // initialize "add" indicator
-  APInt AllOnes = APInt::getAllOnes(D.getBitWidth()).lshr(LeadingZeros);
+  APInt AllOnes =
+      APInt::getLowBitsSet(D.getBitWidth(), D.getBitWidth() - LeadingZeros);
   APInt SignedMin = APInt::getSignedMinValue(D.getBitWidth());
   APInt SignedMax = APInt::getSignedMaxValue(D.getBitWidth());
 

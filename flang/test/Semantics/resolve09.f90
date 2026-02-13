@@ -140,11 +140,11 @@ subroutine s9
     procedure(), nopass, pointer :: p1, p2
   end type
   type(t) x
+  !ERROR: Function result characteristics are not known
   print *, x%p1()
-  call x%p2
-  !ERROR: Cannot call function 'p1' like a subroutine
-  call x%p1
-  !ERROR: Cannot call subroutine 'p2' like a function
+  call x%p2 ! ok
+  call x%p1 ! ok
+  !ERROR: Function result characteristics are not known
   print *, x%p2()
 end subroutine
 
@@ -152,4 +152,11 @@ subroutine s10
   call a10
   !ERROR: Actual argument for 'a=' may not be a procedure
   print *, abs(a10)
+end
+
+subroutine s11
+  real, pointer :: p(:)
+  !ERROR: A NULL() pointer is not allowed for 'a=' intrinsic argument
+  print *, rank(null())
+  print *, rank(null(mold=p)) ! ok
 end

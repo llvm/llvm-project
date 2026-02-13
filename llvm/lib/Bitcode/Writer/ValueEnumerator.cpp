@@ -164,6 +164,10 @@ static OrderMap orderModule(const Module &M) {
           orderConstantValue(Op);
         if (auto *SVI = dyn_cast<ShuffleVectorInst>(&I))
           orderValue(SVI->getShuffleMaskForBitcode(), OM);
+        if (auto *SI = dyn_cast<SwitchInst>(&I)) {
+          for (const auto &Case : SI->cases())
+            orderValue(Case.getCaseValue(), OM);
+        }
         orderValue(&I, OM);
       }
   }
@@ -230,6 +234,9 @@ static void predictValueUseListOrderImpl(const Value *V, const Function *F,
 
 static void predictValueUseListOrder(const Value *V, const Function *F,
                                      OrderMap &OM, UseListOrderStack &Stack) {
+  if (!V->hasUseList())
+    return;
+
   auto &IDPair = OM[V];
   assert(IDPair.first && "Unmapped value");
   if (IDPair.second)
@@ -348,7 +355,7 @@ ValueEnumerator::ValueEnumerator(const Module &M,
   // Enumerate the functions.
   for (const Function & F : M) {
     EnumerateValue(&F);
-    EnumerateType(F.getValueType());
+    EnumerateType(F.getFunctionType());
     EnumerateAttributes(F.getAttributes());
   }
 
@@ -482,8 +489,8 @@ ValueEnumerator::ValueEnumerator(const Module &M,
         // Enumerate metadata attached with this instruction.
         MDs.clear();
         I.getAllMetadataOtherThanDebugLoc(MDs);
-        for (unsigned i = 0, e = MDs.size(); i != e; ++i)
-          EnumerateMetadata(&F, MDs[i].second);
+        for (const auto &MD : MDs)
+          EnumerateMetadata(&F, MD.second);
 
         // Don't enumerate the location directly -- it has a special record
         // type -- but enumerate its operands.
@@ -491,6 +498,12 @@ ValueEnumerator::ValueEnumerator(const Module &M,
           for (const Metadata *Op : L->operands())
             EnumerateMetadata(&F, Op);
       }
+  }
+  for (const GlobalIFunc &GIF : M.ifuncs()) {
+    MDs.clear();
+    GIF.getAllMetadata(MDs);
+    for (const auto &I : MDs)
+      EnumerateMetadata(nullptr, I.second);
   }
 
   // Optimize constant ordering.
@@ -607,9 +620,8 @@ void ValueEnumerator::OptimizeConstants(unsigned CstStart, unsigned CstEnd) {
 /// EnumerateValueSymbolTable - Insert all of the values in the specified symbol
 /// table into the values table.
 void ValueEnumerator::EnumerateValueSymbolTable(const ValueSymbolTable &VST) {
-  for (ValueSymbolTable::const_iterator VI = VST.begin(), VE = VST.end();
-       VI != VE; ++VI)
-    EnumerateValue(VI->getValue());
+  for (const auto &VI : VST)
+    EnumerateValue(VI.getValue());
 }
 
 /// Insert all of the values referenced by named metadata in the specified
@@ -620,8 +632,8 @@ void ValueEnumerator::EnumerateNamedMetadata(const Module &M) {
 }
 
 void ValueEnumerator::EnumerateNamedMDNode(const NamedMDNode *MD) {
-  for (unsigned i = 0, e = MD->getNumOperands(); i != e; ++i)
-    EnumerateMetadata(nullptr, MD->getOperand(i));
+  for (const MDNode *N : MD->operands())
+    EnumerateMetadata(nullptr, N);
 }
 
 unsigned ValueEnumerator::getMetadataFunctionID(const Function *F) const {
@@ -931,10 +943,9 @@ void ValueEnumerator::EnumerateValue(const Value *V) {
       // itself.  This makes it more likely that we can avoid forward references
       // in the reader.  We know that there can be no cycles in the constants
       // graph that don't go through a global variable.
-      for (User::const_op_iterator I = C->op_begin(), E = C->op_end();
-           I != E; ++I)
-        if (!isa<BasicBlock>(*I)) // Don't enumerate BB operand to BlockAddress.
-          EnumerateValue(*I);
+      for (const Use &U : C->operands())
+        if (!isa<BasicBlock>(U)) // Don't enumerate BB operand to BlockAddress.
+          EnumerateValue(U);
       if (auto *CE = dyn_cast<ConstantExpr>(C)) {
         if (CE->getOpcode() == Instruction::ShuffleVector)
           EnumerateValue(CE->getShuffleMaskForBitcode());
@@ -1085,6 +1096,10 @@ void ValueEnumerator::incorporateFunction(const Function &F) {
       }
       if (auto *SVI = dyn_cast<ShuffleVectorInst>(&I))
         EnumerateValue(SVI->getShuffleMaskForBitcode());
+      if (auto *SI = dyn_cast<SwitchInst>(&I)) {
+        for (const auto &Case : SI->cases())
+          EnumerateValue(Case.getCaseValue());
+      }
     }
     BasicBlocks.push_back(&BB);
     ValueMap[&BB] = BasicBlocks.size();
@@ -1144,12 +1159,12 @@ void ValueEnumerator::incorporateFunction(const Function &F) {
   }
 
   // Add all of the function-local metadata.
-  for (unsigned i = 0, e = FnLocalMDVector.size(); i != e; ++i) {
+  for (const LocalAsMetadata *Local : FnLocalMDVector) {
     // At this point, every local values have been incorporated, we shouldn't
     // have a metadata operand that references a value that hasn't been seen.
-    assert(ValueMap.count(FnLocalMDVector[i]->getValue()) &&
+    assert(ValueMap.count(Local->getValue()) &&
            "Missing value for metadata operand");
-    EnumerateFunctionLocalMetadata(F, FnLocalMDVector[i]);
+    EnumerateFunctionLocalMetadata(F, Local);
   }
   // DIArgList entries must come after function-local metadata, as it is not
   // possible to forward-reference them.
@@ -1159,8 +1174,8 @@ void ValueEnumerator::incorporateFunction(const Function &F) {
 
 void ValueEnumerator::purgeFunction() {
   /// Remove purged values from the ValueMap.
-  for (unsigned i = NumModuleValues, e = Values.size(); i != e; ++i)
-    ValueMap.erase(Values[i].first);
+  for (const auto &V : llvm::drop_begin(Values, NumModuleValues))
+    ValueMap.erase(V.first);
   for (const Metadata *MD : llvm::drop_begin(MDs, NumModuleMDs))
     MetadataMap.erase(MD);
   for (const BasicBlock *BB : BasicBlocks)
@@ -1191,6 +1206,6 @@ unsigned ValueEnumerator::getGlobalBasicBlockID(const BasicBlock *BB) const {
   return getGlobalBasicBlockID(BB);
 }
 
-uint64_t ValueEnumerator::computeBitsRequiredForTypeIndicies() const {
+uint64_t ValueEnumerator::computeBitsRequiredForTypeIndices() const {
   return Log2_32_Ceil(getTypes().size() + 1);
 }

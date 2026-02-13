@@ -207,7 +207,7 @@ define double @powi_fmul_powi_fast_on_powi(double %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P1:%.*]] = tail call fast double @llvm.powi.f64.i32(double [[X:%.*]], i32 [[Y:%.*]])
 ; CHECK-NEXT:    [[P2:%.*]] = tail call fast double @llvm.powi.f64.i32(double [[X]], i32 [[Z:%.*]])
-; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[P2]], [[P1]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan double [[P2]], [[P1]]
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
 entry:
@@ -563,4 +563,30 @@ define double @powi_fmul_powi_x_overflow(double noundef %x) {
   %p1 = tail call double @llvm.powi.f64.i32(double %x, i32 2147483647) ; INT_MAX
   %mul = fmul reassoc double %p1, %x
   ret double %mul
+}
+
+define <3 x float> @powi_unary_shuffle_ops(<3 x float> %x, i32 %power) {
+; CHECK-LABEL: @powi_unary_shuffle_ops(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x float> @llvm.powi.v3f32.i32(<3 x float> [[X:%.*]], i32 [[POWER:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <3 x float> [[TMP1]], <3 x float> poison, <3 x i32> <i32 1, i32 0, i32 2>
+; CHECK-NEXT:    ret <3 x float> [[R]]
+;
+  %sx = shufflevector <3 x float> %x, <3 x float> poison, <3 x i32> <i32 1, i32 0, i32 2>
+  %r = call <3 x float> @llvm.powi(<3 x float> %sx, i32 %power)
+  ret <3 x float> %r
+}
+
+; Negative test - multiple uses
+
+define <3 x float> @powi_unary_shuffle_ops_use(<3 x float> %x, i32 %power, ptr %p) {
+; CHECK-LABEL: @powi_unary_shuffle_ops_use(
+; CHECK-NEXT:    [[SX:%.*]] = shufflevector <3 x float> [[X:%.*]], <3 x float> poison, <3 x i32> <i32 1, i32 0, i32 2>
+; CHECK-NEXT:    store <3 x float> [[SX]], ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = call <3 x float> @llvm.powi.v3f32.i32(<3 x float> [[SX]], i32 [[POWER:%.*]])
+; CHECK-NEXT:    ret <3 x float> [[R]]
+;
+  %sx = shufflevector <3 x float> %x, <3 x float> poison, <3 x i32> <i32 1, i32 0, i32 2>
+  store <3 x float> %sx, ptr %p
+  %r = call <3 x float> @llvm.powi(<3 x float> %sx, i32 %power)
+  ret <3 x float> %r
 }

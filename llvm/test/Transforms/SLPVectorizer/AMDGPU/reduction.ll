@@ -5,7 +5,7 @@
 define half @reduction_half4(<4 x half> %a) {
 ; GFX9-LABEL: @reduction_half4(
 ; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH8000, <4 x half> [[A:%.*]])
+; GFX9-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> [[A:%.*]])
 ; GFX9-NEXT:    ret half [[TMP0]]
 ;
 ; VI-LABEL: @reduction_half4(
@@ -35,7 +35,7 @@ entry:
 define half @reduction_half8(<8 x half> %vec8) {
 ; GFX9-LABEL: @reduction_half8(
 ; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v8f16(half 0xH8000, <8 x half> [[VEC8:%.*]])
+; GFX9-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> [[VEC8:%.*]])
 ; GFX9-NEXT:    ret half [[TMP0]]
 ;
 ; VI-LABEL: @reduction_half8(
@@ -81,7 +81,7 @@ entry:
 define half @reduction_half16(<16 x half> %vec16) {
 ; GFX9-LABEL: @reduction_half16(
 ; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v16f16(half 0xH8000, <16 x half> [[VEC16:%.*]])
+; GFX9-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v16f16(half 0xH0000, <16 x half> [[VEC16:%.*]])
 ; GFX9-NEXT:    ret half [[TMP0]]
 ;
 ; VI-LABEL: @reduction_half16(
@@ -116,8 +116,8 @@ define half @reduction_half16(<16 x half> %vec16) {
 ; VI-NEXT:    [[ADD12:%.*]] = fadd fast half [[ELT12]], [[ADD11]]
 ; VI-NEXT:    [[ADD13:%.*]] = fadd fast half [[ELT13]], [[ADD12]]
 ; VI-NEXT:    [[ADD14:%.*]] = fadd fast half [[ELT14]], [[ADD13]]
-; VI-NEXT:    [[ADD15:%.*]] = fadd fast half [[ELT15]], [[ADD14]]
-; VI-NEXT:    ret half [[ADD15]]
+; VI-NEXT:    [[OP_RDX:%.*]] = fadd fast half [[ELT15]], [[ADD14]]
+; VI-NEXT:    ret half [[OP_RDX]]
 ;
 entry:
   %elt0 = extractelement <16 x half> %vec16, i64 0

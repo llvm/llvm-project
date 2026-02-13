@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_SCRIPTED_PROCESS_H
-#define LLDB_SOURCE_PLUGINS_SCRIPTED_PROCESS_H
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_SCRIPTED_SCRIPTEDPROCESS_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_SCRIPTED_SCRIPTEDPROCESS_H
 
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/ConstString.h"
@@ -52,7 +52,7 @@ public:
 
   void DidResume() override;
 
-  Status DoResume() override;
+  Status DoResume(lldb::RunDirection direction) override;
 
   Status DoAttachToProcessWithID(lldb::pid_t pid,
                                  const ProcessAttachInfo &attach_info) override;
@@ -133,4 +133,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_SCRIPTED_PROCESS_H
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_SCRIPTED_SCRIPTEDPROCESS_H

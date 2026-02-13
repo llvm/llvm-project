@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=mips | grep "b[ne][eq]" | count 1
+; RUN: llc < %s -mtriple=mips | grep "b[ne][eq]" | count 1
 
 ; FIXME: Disabled because branch instructions are generated where
 ; conditional move instructions are expected.

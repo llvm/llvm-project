@@ -45,3 +45,47 @@ entry:
   %6 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %5)
   ret i32 %6
 }
+
+define i32 @test_sad_v16i8_two_step_zext(ptr noundef readonly %a, ptr noundef readonly %b) {
+; CHECK-LABEL: test_sad_v16i8_two_step_zext:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    uabdl v2.8h, v1.8b, v0.8b
+; CHECK-NEXT:    uabal2 v2.8h, v1.16b, v0.16b
+; CHECK-NEXT:    uaddlv s0, v2.8h
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %0 = load <16 x i8>, ptr %a
+  %1 = zext <16 x i8> %0 to <16 x i16>
+  %2 = load <16 x i8>, ptr %b
+  %3 = zext <16 x i8> %2 to <16 x i16>
+  %4 = sub nsw <16 x i16> %3, %1
+  %5 = tail call <16 x i16> @llvm.abs.v16i16(<16 x i16> %4, i1 false)
+  %6 = zext <16 x i16> %5 to <16 x i32>
+  %7 = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %6)
+  ret i32 %7
+}
+
+define i32 @test_sad_v16i8_two_step_sext(ptr noundef readonly %a, ptr noundef readonly %b) {
+; CHECK-LABEL: test_sad_v16i8_two_step_sext:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    sabdl v2.8h, v1.8b, v0.8b
+; CHECK-NEXT:    sabal2 v2.8h, v1.16b, v0.16b
+; CHECK-NEXT:    uaddlv s0, v2.8h
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %0 = load <16 x i8>, ptr %a
+  %1 = sext <16 x i8> %0 to <16 x i16>
+  %2 = load <16 x i8>, ptr %b
+  %3 = sext <16 x i8> %2 to <16 x i16>
+  %4 = sub nsw <16 x i16> %3, %1
+  %5 = tail call <16 x i16> @llvm.abs.v16i16(<16 x i16> %4, i1 false)
+  %6 = zext <16 x i16> %5 to <16 x i32>
+  %7 = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %6)
+  ret i32 %7
+}

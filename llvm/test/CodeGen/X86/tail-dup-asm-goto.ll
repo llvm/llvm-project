@@ -39,7 +39,7 @@ define ptr @test1(ptr %arg1, ptr %arg2) {
   ; CHECK-NEXT:   INLINEASM_BR &"#$0 $1 $2", 9 /* sideeffect mayload attdialect */, 13 /* imm */, 42, 13 /* imm */, 0, 13 /* imm */, %bb.4, 12 /* clobber */, implicit-def early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def early-clobber $eflags
   ; CHECK-NEXT:   JMP_1 %bb.5
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.4.bb17.i.i.i (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.4.bb17.i.i.i (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.5(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5.kmem_cache_has_cpu_partial.exit:
@@ -96,7 +96,7 @@ define void @ceph_con_v2_try_read(i32 %__trans_tmp_3.sroa.0.0.copyload, i1 %tobo
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
-  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, killed [[MOV32r0_]], %subreg.sub_32bit
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG killed [[MOV32r0_]], %subreg.sub_32bit
   ; CHECK-NEXT:   [[LEA64r:%[0-9]+]]:gr64 = LEA64r %stack.0.skip.i.i, 1, $noreg, 0, $noreg
   ; CHECK-NEXT:   $rdi = COPY [[LEA64r]]
   ; CHECK-NEXT:   CALL64r killed [[SUBREG_TO_REG]], csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
@@ -118,7 +118,7 @@ define void @ceph_con_v2_try_read(i32 %__trans_tmp_3.sroa.0.0.copyload, i1 %tobo
   ; CHECK-NEXT:   LIFETIME_END %stack.0.skip.i.i
   ; CHECK-NEXT:   JMP_1 %bb.1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.5.if.end.i (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.5.if.end.i (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   LIFETIME_END %stack.0.skip.i.i

@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_GLOBALCOMPILATIONDATABASE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_GLOBALCOMPILATIONDATABASE_H
 
+#include "ProjectModules.h"
 #include "support/Function.h"
 #include "support/Path.h"
 #include "support/Threading.h"
@@ -34,6 +35,9 @@ struct ProjectInfo {
 /// Provides compilation arguments used for parsing C and C++ files.
 class GlobalCompilationDatabase {
 public:
+  GlobalCompilationDatabase(
+      std::optional<std::string> FallbackWorkingDirectory = std::nullopt)
+      : FallbackWorkingDirectory(FallbackWorkingDirectory) {}
   virtual ~GlobalCompilationDatabase() = default;
 
   /// If there are any known-good commands for building this file, returns one.
@@ -43,6 +47,12 @@ public:
   /// Finds the closest project to \p File.
   virtual std::optional<ProjectInfo> getProjectInfo(PathRef File) const {
     return std::nullopt;
+  }
+
+  /// Get the modules in the closest project to \p File
+  virtual std::unique_ptr<ProjectModules>
+  getProjectModules(PathRef File) const {
+    return nullptr;
   }
 
   /// Makes a guess at how to build a file.
@@ -62,19 +72,27 @@ public:
   }
 
 protected:
+  std::optional<std::string> FallbackWorkingDirectory;
   mutable CommandChanged OnCommandChanged;
 };
 
 // Helper class for implementing GlobalCompilationDatabases that wrap others.
 class DelegatingCDB : public GlobalCompilationDatabase {
 public:
-  DelegatingCDB(const GlobalCompilationDatabase *Base);
-  DelegatingCDB(std::unique_ptr<GlobalCompilationDatabase> Base);
+  DelegatingCDB(
+      const GlobalCompilationDatabase *Base,
+      std::optional<std::string> FallbackWorkingDirectory = std::nullopt);
+  DelegatingCDB(
+      std::unique_ptr<GlobalCompilationDatabase> Base,
+      std::optional<std::string> FallbackWorkingDirectory = std::nullopt);
 
   std::optional<tooling::CompileCommand>
   getCompileCommand(PathRef File) const override;
 
   std::optional<ProjectInfo> getProjectInfo(PathRef File) const override;
+
+  std::unique_ptr<ProjectModules>
+  getProjectModules(PathRef File) const override;
 
   tooling::CompileCommand getFallbackCommand(PathRef File) const override;
 
@@ -107,6 +125,12 @@ public:
     // Only look for a compilation database in this one fixed directory.
     // FIXME: fold this into config/context mechanism.
     std::optional<Path> CompileCommandsDir;
+    // Working directory for fallback commands
+    // If unset, parent directory of file should be used
+    std::optional<std::string> FallbackWorkingDirectory;
+
+    void applyFallbackWorkingDirectory(
+        std::optional<std::string> FallbackWorkingDirectory);
   };
 
   DirectoryBasedGlobalCompilationDatabase(const Options &Opts);
@@ -121,6 +145,9 @@ public:
   /// Returns the path to first directory containing a compilation database in
   /// \p File's parents.
   std::optional<ProjectInfo> getProjectInfo(PathRef File) const override;
+
+  std::unique_ptr<ProjectModules>
+  getProjectModules(PathRef File) const override;
 
   bool blockUntilIdle(Deadline Timeout) const override;
 
@@ -181,18 +208,25 @@ public:
   // Base may be null, in which case no entries are inherited.
   // FallbackFlags are added to the fallback compile command.
   // Adjuster is applied to all commands, fallback or not.
-  OverlayCDB(const GlobalCompilationDatabase *Base,
-             std::vector<std::string> FallbackFlags = {},
-             CommandMangler Mangler = nullptr);
+  OverlayCDB(
+      const GlobalCompilationDatabase *Base,
+      std::vector<std::string> FallbackFlags = {},
+      CommandMangler Mangler = nullptr,
+      std::optional<std::string> FallbackWorkingDirectory = std::nullopt);
 
   std::optional<tooling::CompileCommand>
   getCompileCommand(PathRef File) const override;
   tooling::CompileCommand getFallbackCommand(PathRef File) const override;
 
   /// Sets or clears the compilation command for a particular file.
-  void
+  /// Returns true if the command was changed (including insertion and removal),
+  /// false if it was unchanged.
+  bool
   setCompileCommand(PathRef File,
                     std::optional<tooling::CompileCommand> CompilationCommand);
+
+  std::unique_ptr<ProjectModules>
+  getProjectModules(PathRef File) const override;
 
 private:
   mutable std::mutex Mutex;

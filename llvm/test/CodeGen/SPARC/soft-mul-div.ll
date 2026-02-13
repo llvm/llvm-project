@@ -1,4 +1,4 @@
-; RUN: llc -march=sparc -mcpu=v7 -O0 < %s | FileCheck %s
+; RUN: llc -mtriple=sparc -mcpu=v7 -O0 < %s | FileCheck %s
 
 define i32 @test_mul32(i32 %a, i32 %b) #0 {
     ; CHECK-LABEL: test_mul32

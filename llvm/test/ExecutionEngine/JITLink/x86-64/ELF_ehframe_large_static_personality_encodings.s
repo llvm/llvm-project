@@ -2,8 +2,9 @@
 # UNSUPPORTED: system-windows
 # RUN: llvm-mc -triple=x86_64-pc-linux-gnu -large-code-model \
 # RUN:   -filetype=obj -o %t %s
-# RUN: llvm-jitlink -debug-only=jitlink -noexec -phony-externals %t 2>&1 | \
-# RUN:   FileCheck %s
+# RUN: llvm-jitlink -num-threads=0 -debug-only=jitlink -noexec \
+# RUN:              -phony-externals %t 2>&1 \
+# RUN:              | FileCheck %s
 #
 # Check handling of pointer encodings for personality functions when compiling
 # with `-mcmodel=large -static`.

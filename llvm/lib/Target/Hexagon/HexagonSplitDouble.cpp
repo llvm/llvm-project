@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
@@ -44,13 +45,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-
-  FunctionPass *createHexagonSplitDoubleRegs();
-  void initializeHexagonSplitDoubleRegsPass(PassRegistry&);
-
-} // end namespace llvm
-
 static cl::opt<int> MaxHSDR("max-hsdr", cl::Hidden, cl::init(-1),
     cl::desc("Maximum number of split partitions"));
 static cl::opt<bool> MemRefsFixed("hsdr-no-mem", cl::Hidden, cl::init(true),
@@ -71,8 +65,8 @@ namespace {
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineLoopInfo>();
-      AU.addPreserved<MachineLoopInfo>();
+      AU.addRequired<MachineLoopInfoWrapperPass>();
+      AU.addPreserved<MachineLoopInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -264,7 +258,7 @@ void HexagonSplitDoubleRegs::partitionRegisters(UUSetMap &P2Rs) {
         }
         if (MRI->getRegClass(T) != DoubleRC)
           continue;
-        unsigned u = Register::virtReg2Index(T);
+        unsigned u = T.virtRegIndex();
         if (FixedRegs[u])
           continue;
         LLVM_DEBUG(dbgs() << ' ' << printReg(T, TRI));
@@ -633,7 +627,7 @@ void HexagonSplitDoubleRegs::splitMemRef(MachineInstr *MI,
   unsigned AdrX = PostInc ? (Load ? 2 : 1)
                           : (Load ? 1 : 0);
   MachineOperand &AdrOp = MI->getOperand(AdrX);
-  unsigned RSA = getRegState(AdrOp);
+  RegState RSA = getRegState(AdrOp);
   MachineOperand &ValOp = Load ? MI->getOperand(0)
                                : (PostInc ? MI->getOperand(3)
                                           : MI->getOperand(2));
@@ -760,7 +754,7 @@ void HexagonSplitDoubleRegs::splitExt(MachineInstr *MI,
   UUPairMap::const_iterator F = PairMap.find(Op0.getReg());
   assert(F != PairMap.end());
   const UUPair &P = F->second;
-  unsigned RS = getRegState(Op1);
+  RegState RS = getRegState(Op1);
 
   BuildMI(B, MI, DL, TII->get(TargetOpcode::COPY), P.first)
     .addReg(Op1.getReg(), RS & ~RegState::Kill, Op1.getSubReg());
@@ -794,7 +788,7 @@ void HexagonSplitDoubleRegs::splitShift(MachineInstr *MI,
 
   MachineBasicBlock &B = *MI->getParent();
   DebugLoc DL = MI->getDebugLoc();
-  unsigned RS = getRegState(Op1);
+  RegState RS = getRegState(Op1);
   unsigned ShiftOpc = Left ? S2_asl_i_r
                            : (Signed ? S2_asr_i_r : S2_lsr_i_r);
   unsigned LoSR = isub_lo;
@@ -914,8 +908,8 @@ void HexagonSplitDoubleRegs::splitAslOr(MachineInstr *MI,
 
   MachineBasicBlock &B = *MI->getParent();
   DebugLoc DL = MI->getDebugLoc();
-  unsigned RS1 = getRegState(Op1);
-  unsigned RS2 = getRegState(Op2);
+  RegState RS1 = getRegState(Op1);
+  RegState RS2 = getRegState(Op2);
   const TargetRegisterClass *IntRC = &IntRegsRegClass;
 
   unsigned LoSR = isub_lo;
@@ -1191,7 +1185,7 @@ bool HexagonSplitDoubleRegs::runOnMachineFunction(MachineFunction &MF) {
   TRI = ST.getRegisterInfo();
   TII = ST.getInstrInfo();
   MRI = &MF.getRegInfo();
-  MLI = &getAnalysis<MachineLoopInfo>();
+  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
 
   UUSetMap P2Rs;
   LoopRegMap IRM;

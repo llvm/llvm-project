@@ -106,16 +106,11 @@ exit:
   ret void
 }
 
-define void @unknown_dep_not_known_safe_due_to_backedge_taken_count(ptr %A) {
-; CHECK-LABEL: 'unknown_dep_not_known_safe_due_to_backedge_taken_count'
+define void @backward_dep_known_safe_due_to_backedge_taken_count(ptr %A) {
+; CHECK-LABEL: 'backward_dep_known_safe_due_to_backedge_taken_count'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %l = load i32, ptr %gep, align 4 ->
-; CHECK-NEXT:            store i32 %add, ptr %gep.mul.2, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
@@ -135,6 +130,43 @@ loop:
   %l = load i32, ptr %gep, align 4
   %add = add nsw i32 %l, 5
   %gep.mul.2 = getelementptr inbounds i32, ptr %A.510, i64 %iv.mul.2
+  store i32 %add, ptr %gep.mul.2, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 256
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @backward_dep_known_distance_less_than_btc(ptr %A) {
+; CHECK-LABEL: 'backward_dep_known_distance_less_than_btc'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 4064 bits
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        BackwardVectorizable:
+; CHECK-NEXT:            %l = load i32, ptr %gep, align 4 ->
+; CHECK-NEXT:            store i32 %add, ptr %gep.mul.2, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %A.510 = getelementptr inbounds i32, ptr %A, i64 510
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.mul.2 = shl nuw nsw i64 %iv, 1
+  %gep = getelementptr inbounds i32, ptr %A, i64 %iv.mul.2
+  %l = load i32, ptr %gep, align 4
+  %add = add nsw i32 %l, 5
+  %gep.mul.2 = getelementptr inbounds i32, ptr %A.510, i64 %iv
   store i32 %add, ptr %gep.mul.2, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, 256

@@ -11,15 +11,15 @@
 #include "DWARFDIE.h"
 #include "SymbolFileDWARF.h"
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/StackFrame.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 
 std::optional<SymbolFile::ArrayInfo>
 DWARFASTParser::ParseChildArrayInfo(const DWARFDIE &parent_die,
@@ -37,7 +37,7 @@ DWARFASTParser::ParseChildArrayInfo(const DWARFDIE &parent_die,
     if (attributes.Size() == 0)
       continue;
 
-    uint64_t num_elements = 0;
+    std::optional<uint64_t> num_elements;
     uint64_t lower_bound = 0;
     uint64_t upper_bound = 0;
     bool upper_bound_valid = false;
@@ -91,7 +91,7 @@ DWARFASTParser::ParseChildArrayInfo(const DWARFDIE &parent_die,
       }
     }
 
-    if (num_elements == 0) {
+    if (!num_elements || *num_elements == 0) {
       if (upper_bound_valid && upper_bound >= lower_bound)
         num_elements = upper_bound - lower_bound + 1;
     }

@@ -18,6 +18,8 @@
 #include "DLWrap.h"
 #include "ffi.h"
 
+using namespace llvm::offload::debug;
+
 DLWRAP_INITIALIZE()
 
 DLWRAP(ffi_call, 4);
@@ -41,7 +43,8 @@ uint32_t ffi_init() {
       llvm::sys::DynamicLibrary::getPermanentLibrary(FFI_PATH, &ErrMsg));
 
   if (!DynlibHandle->isValid()) {
-    DP("Unable to load library '%s': %s!\n", FFI_PATH, ErrMsg.c_str());
+    ODBG(OLDT_Init) << "Unable to load library '" << FFI_PATH << "': " << ErrMsg
+                    << "!";
     return DYNAMIC_FFI_FAIL;
   }
 
@@ -50,10 +53,12 @@ uint32_t ffi_init() {
 
     void *P = DynlibHandle->getAddressOfSymbol(Sym);
     if (P == nullptr) {
-      DP("Unable to find '%s' in '%s'!\n", Sym, FFI_PATH);
+      ODBG(OLDT_Init) << "Unable to find '" << Sym << "' in '" << FFI_PATH
+                      << "'!";
       return DYNAMIC_FFI_FAIL;
     }
-    DP("Implementing %s with dlsym(%s) -> %p\n", Sym, Sym, P);
+    ODBG(OLDT_Init) << "Implementing " << Sym << " with dlsym(" << Sym
+                    << ") -> " << P;
 
     *dlwrap::pointer(I) = P;
   }
@@ -62,7 +67,8 @@ uint32_t ffi_init() {
   {                                                                            \
     void *SymbolPtr = DynlibHandle->getAddressOfSymbol(#SYMBOL);               \
     if (!SymbolPtr) {                                                          \
-      DP("Unable to find '%s' in '%s'!\n", #SYMBOL, FFI_PATH);                 \
+      ODBG(OLDT_Init) << "Unable to find '" << #SYMBOL << "' in '" << FFI_PATH \
+                      << "'!";                                                 \
       return DYNAMIC_FFI_FAIL;                                                 \
     }                                                                          \
     SYMBOL = *reinterpret_cast<decltype(SYMBOL) *>(SymbolPtr);                 \

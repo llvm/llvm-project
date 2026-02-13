@@ -12,11 +12,12 @@
 
 // ~basic_string() // implied noexcept; // constexpr since C++20
 
-#include <string>
 #include <cassert>
+#include <string>
+#include <type_traits>
 
-#include "test_macros.h"
 #include "test_allocator.h"
+#include "test_macros.h"
 
 template <class T>
 struct throwing_alloc {

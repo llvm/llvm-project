@@ -201,7 +201,7 @@ define i32 @neg_unroll_phi_select_constant_nonzero(i32 %arg) {
 ; CHECK-NEXT:    [[SELECTOR:%.*]] = phi i32 [ [[ARG:%.*]], [[ENTRY]] ], [ [[F:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[F]] = call i32 @f()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[I]], 4
+; CHECK-NEXT:    [[C:%.*]] = icmp samesign ult i32 [[I]], 4
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
 ; CHECK-NEXT:    [[SELECTOR_LCSSA:%.*]] = phi i32 [ [[SELECTOR]], [[LOOP]] ]

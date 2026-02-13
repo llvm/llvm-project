@@ -1,9 +1,9 @@
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
 //
-// RUN: %clang -std=gnu++11 -O0 -g -lstdc++ %s -o %t
+// RUN: %clang++ -std=gnu++11 -O0 -g %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --binary %t --debugger 'lldb' -- %s
+// RUN:     --binary %t %dexter_lldb_args -- %s
 // Radar 8945514
 
 class SVal {

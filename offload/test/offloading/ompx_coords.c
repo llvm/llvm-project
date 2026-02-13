@@ -1,11 +1,7 @@
 // RUN: %libomptarget-compileopt-run-and-check-generic
 //
-// UNSUPPORTED: x86_64-pc-linux-gnu
-// UNSUPPORTED: x86_64-pc-linux-gnu-LTO
-// UNSUPPORTED: aarch64-unknown-linux-gnu
-// UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
-// UNSUPPORTED: s390x-ibm-linux-gnu
-// UNSUPPORTED: s390x-ibm-linux-gnu-LTO
+// REQUIRES: gpu
+// XFAIL: intelgpu
 
 #include <omp.h>
 #include <ompx.h>

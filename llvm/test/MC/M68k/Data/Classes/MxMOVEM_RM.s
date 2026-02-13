@@ -13,3 +13,7 @@ movem.l	(%a1), %d0
 ; CHECK:      movem.l  (%a1), %d0-%d1
 ; CHECK-SAME: encoding: [0x4c,0xd1,0x00,0x03]
 movem.l	(%a1), %d0-%d1
+
+; CHECK:      movem.l  -(%sp), %d0-%d7/%a0-%a6
+; CHECK-SAME: encoding: [0x4c,0xe7,0xff,0xfe]
+movem.l -(%sp), %d0-%d7/%a0-%a6

@@ -1,7 +1,7 @@
 // Test that misexpect emits no warning when switch condition is non-const
 
 // RUN: llvm-profdata merge %S/Inputs/misexpect-switch-nonconst.proftext -o %t.profdata
-// RUN: %clang_cc1 %s -O2 -o - -disable-llvm-passes -emit-llvm -fprofile-instrument-use-path=%t.profdata -verify
+// RUN: %clang_cc1 %s -O2 -o - -disable-llvm-passes -emit-llvm -fprofile-instrument-use=clang -fprofile-instrument-use-path=%t.profdata -verify
 
 // expected-no-diagnostics
 

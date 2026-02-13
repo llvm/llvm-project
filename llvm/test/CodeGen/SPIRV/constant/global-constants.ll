@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 @global   = addrspace(1) constant i32 1 ; OpenCL global memory
@@ -6,17 +6,17 @@
 @local    = addrspace(3) constant i32 3 ; OpenCL local memory
 
 define i32 @getGlobal1() {
-  %g = load i32, i32 addrspace(1)* @global
+  %g = load i32, ptr addrspace(1) @global
   ret i32 %g
 }
 
 define i32 @getGlobal2() {
-  %g = load i32, i32 addrspace(2)* @constant
+  %g = load i32, ptr addrspace(2) @constant
   ret i32 %g
 }
 
 define i32 @getGlobal3() {
-  %g = load i32, i32 addrspace(3)* @local
+  %g = load i32, ptr addrspace(3) @local
   ret i32 %g
 }
 

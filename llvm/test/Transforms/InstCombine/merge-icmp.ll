@@ -38,7 +38,7 @@ define i1 @and_test1_logical(ptr %x) {
 define <2 x i1> @and_test1_vector(ptr %x) {
 ; CHECK-LABEL: @and_test1_vector(
 ; CHECK-NEXT:    [[LOAD:%.*]] = load <2 x i16>, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[OR:%.*]] = icmp eq <2 x i16> [[LOAD]], <i16 17791, i16 17791>
+; CHECK-NEXT:    [[OR:%.*]] = icmp eq <2 x i16> [[LOAD]], splat (i16 17791)
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
   %load = load <2 x i16>, ptr %x, align 4
@@ -83,7 +83,7 @@ define i1 @and_test2_logical(ptr %x) {
 define <2 x i1> @and_test2_vector(ptr %x) {
 ; CHECK-LABEL: @and_test2_vector(
 ; CHECK-NEXT:    [[LOAD:%.*]] = load <2 x i16>, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[OR:%.*]] = icmp eq <2 x i16> [[LOAD]], <i16 32581, i16 32581>
+; CHECK-NEXT:    [[OR:%.*]] = icmp eq <2 x i16> [[LOAD]], splat (i16 32581)
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
   %load = load <2 x i16>, ptr %x, align 4
@@ -123,7 +123,7 @@ define i1 @or_basic_commuted(i16 %load) {
 
 define <2 x i1> @or_vector(<2 x i16> %load) {
 ; CHECK-LABEL: @or_vector(
-; CHECK-NEXT:    [[OR:%.*]] = icmp ne <2 x i16> [[LOAD:%.*]], <i16 17791, i16 17791>
+; CHECK-NEXT:    [[OR:%.*]] = icmp ne <2 x i16> [[LOAD:%.*]], splat (i16 17791)
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
   %trunc = trunc <2 x i16> %load to <2 x i8>
@@ -167,9 +167,8 @@ define i1 @or_extra_use1(i16 %load) {
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i16 [[LOAD:%.*]] to i8
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[TRUNC]], 127
 ; CHECK-NEXT:    call void @use.i1(i1 [[CMP1]])
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[LOAD]], -4096
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i16 [[AND]], 20480
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i16 [[LOAD]], -3841
+; CHECK-NEXT:    [[OR:%.*]] = icmp ne i16 [[TMP1]], 20607
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %trunc = trunc i16 %load to i8
@@ -183,12 +182,11 @@ define i1 @or_extra_use1(i16 %load) {
 
 define i1 @or_extra_use2(i16 %load) {
 ; CHECK-LABEL: @or_extra_use2(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i16 [[LOAD:%.*]] to i8
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[TRUNC]], 127
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[LOAD]], -4096
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[LOAD:%.*]], -4096
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i16 [[AND]], 20480
 ; CHECK-NEXT:    call void @use.i1(i1 [[CMP2]])
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i16 [[LOAD]], -3841
+; CHECK-NEXT:    [[OR:%.*]] = icmp ne i16 [[TMP1]], 20607
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %trunc = trunc i16 %load to i8
@@ -316,11 +314,7 @@ define i1 @or_wrong_const1(i16 %load) {
 
 define i1 @or_wrong_const2(i16 %load) {
 ; CHECK-LABEL: @or_wrong_const2(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i16 [[LOAD:%.*]] to i8
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[TRUNC]], 127
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[LOAD]], -255
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i16 [[AND]], 17665
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[OR:%.*]] = icmp ne i16 [[LOAD:%.*]], 17791
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %trunc = trunc i16 %load to i8

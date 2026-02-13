@@ -18,8 +18,6 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/Function.h"
 
 using namespace llvm;
 
@@ -61,8 +59,7 @@ void LanaiFrameLowering::determineFrameLayout(MachineFunction &MF) const {
 // ADJDYNALLOC pseudo instructions with a Lanai:ADDI with the
 // maximum call frame size as the immediate.
 void LanaiFrameLowering::replaceAdjDynAllocPseudo(MachineFunction &MF) const {
-  const LanaiInstrInfo &LII =
-      *static_cast<const LanaiInstrInfo *>(STI.getInstrInfo());
+  const LanaiInstrInfo &LII = *STI.getInstrInfo();
   unsigned MaxCallFrameSize = MF.getFrameInfo().getMaxCallFrameSize();
 
   for (MachineBasicBlock &MBB : MF) {
@@ -90,8 +87,7 @@ void LanaiFrameLowering::emitPrologue(MachineFunction &MF,
   assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
 
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  const LanaiInstrInfo &LII =
-      *static_cast<const LanaiInstrInfo *>(STI.getInstrInfo());
+  const LanaiInstrInfo &LII = *STI.getInstrInfo();
   MachineBasicBlock::iterator MBBI = MBB.begin();
 
   // Debug location must be unknown since the first debug location is used
@@ -175,8 +171,7 @@ MachineBasicBlock::iterator LanaiFrameLowering::eliminateCallFramePseudoInstr(
 void LanaiFrameLowering::emitEpilogue(MachineFunction & /*MF*/,
                                       MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
-  const LanaiInstrInfo &LII =
-      *static_cast<const LanaiInstrInfo *>(STI.getInstrInfo());
+  const LanaiInstrInfo &LII = *STI.getInstrInfo();
   DebugLoc DL = MBBI->getDebugLoc();
 
   // Restore the stack pointer using the callee's frame pointer value.
@@ -197,8 +192,7 @@ void LanaiFrameLowering::determineCalleeSaves(MachineFunction &MF,
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
 
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  const LanaiRegisterInfo *LRI =
-      static_cast<const LanaiRegisterInfo *>(STI.getRegisterInfo());
+  const LanaiRegisterInfo *LRI = STI.getRegisterInfo();
   int Offset = -4;
 
   // Reserve 4 bytes for the saved RCA

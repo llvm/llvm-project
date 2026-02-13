@@ -9,10 +9,12 @@
 #ifndef LLVM_LIBC_SRC_MATH_EXP2_H
 #define LLVM_LIBC_SRC_MATH_EXP2_H
 
-namespace LIBC_NAMESPACE {
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
 
 double exp2(double x);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_EXP2_H

@@ -1,4 +1,4 @@
-; RUN: not llc -march=hexagon < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=hexagon < %s 2>&1 | FileCheck %s
 
 ; CHECK: error: couldn't allocate output register for constraint 'r'
 

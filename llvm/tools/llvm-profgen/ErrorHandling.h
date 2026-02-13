@@ -16,7 +16,7 @@
 #include "llvm/Support/WithColor.h"
 #include <system_error>
 
-using namespace llvm;
+namespace llvm {
 
 [[noreturn]] inline void exitWithError(const Twine &Message,
                                        StringRef Whence = StringRef(),
@@ -52,5 +52,7 @@ inline void emitWarningSummary(uint64_t Num, uint64_t Total, StringRef Msg) {
   WithColor::warning() << format("%.2f", static_cast<double>(Num) * 100 / Total)
                        << "%(" << Num << "/" << Total << ") " << Msg << "\n";
 }
+
+} // end namespace llvm
 
 #endif

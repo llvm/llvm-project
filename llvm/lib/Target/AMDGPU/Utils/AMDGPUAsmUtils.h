@@ -25,10 +25,10 @@ const int OPR_ID_UNSUPPORTED = -2;
 const int OPR_ID_DUPLICATE = -3;
 const int OPR_VAL_INVALID = -4;
 
-template <class T> struct CustomOperand {
+struct CustomOperand {
   StringLiteral Name;
-  int Encoding = 0;
-  bool (*Cond)(T Context) = nullptr;
+  unsigned Encoding = 0;
+  bool (*Cond)(const MCSubtargetInfo &STI) = nullptr;
 };
 
 struct CustomOperandVal {
@@ -60,20 +60,39 @@ extern const int DEP_CTR_SIZE;
 
 } // namespace DepCtr
 
-namespace SendMsg { // Symbolic names for the sendmsg(...) syntax.
+// Symbolic names for the sendmsg(msg_id, operation, stream) syntax.
+namespace SendMsg {
 
-extern const CustomOperand<const MCSubtargetInfo &> Msg[];
-extern const int MSG_SIZE;
+/// Map from a symbolic name for a msg_id to the message portion of the
+/// immediate encoding. A negative return value indicates that the Name was
+/// unknown or unsupported on this target.
+int64_t getMsgId(StringRef Name, const MCSubtargetInfo &STI);
 
-extern const char *const OpSysSymbolic[OP_SYS_LAST_];
-extern const char *const OpGsSymbolic[OP_GS_LAST_];
+/// Map from an encoding to the symbolic name for a msg_id immediate. This is
+/// doing opposite of getMsgId().
+StringRef getMsgName(uint64_t Encoding, const MCSubtargetInfo &STI);
+
+/// Map from a symbolic name for a sendmsg operation to the operation portion of
+/// the immediate encoding. A negative return value indicates that the Name was
+/// unknown or unsupported on this target.
+int64_t getMsgOpId(int64_t MsgId, StringRef Name, const MCSubtargetInfo &STI);
+
+/// Map from an encoding to the symbolic name for a sendmsg operation. This is
+/// doing opposite of getMsgOpId().
+StringRef getMsgOpName(int64_t MsgId, uint64_t Encoding,
+                       const MCSubtargetInfo &STI);
 
 } // namespace SendMsg
 
+namespace WaitEvent {
+int64_t getWaitEventMask(StringRef Name, const MCSubtargetInfo &STI);
+StringRef getWaitEventMaskName(uint64_t Encoding, const MCSubtargetInfo &STI);
+} // namespace WaitEvent
+
 namespace Hwreg { // Symbolic names for the hwreg(...) syntax.
 
-extern const CustomOperand<const MCSubtargetInfo &> Opr[];
-extern const int OPR_SIZE;
+int64_t getHwregId(StringRef Name, const MCSubtargetInfo &STI);
+StringRef getHwreg(uint64_t Encoding, const MCSubtargetInfo &STI);
 
 } // namespace Hwreg
 
@@ -101,6 +120,31 @@ namespace VGPRIndexMode { // Symbolic names for the gpr_idx(...) syntax.
 extern const char* const IdSymbolic[];
 
 } // namespace VGPRIndexMode
+
+namespace UCVersion {
+
+struct GFXVersion {
+  StringLiteral Symbol;
+  unsigned Code;
+};
+
+ArrayRef<GFXVersion> getGFXVersions();
+
+} // namespace UCVersion
+
+namespace WMMAMods {
+// These should match enum values in SIDefines.h
+
+constexpr const char *const ModMatrixFmt[] = {
+    "MATRIX_FMT_FP8", "MATRIX_FMT_BF8", "MATRIX_FMT_FP6", "MATRIX_FMT_BF6",
+    "MATRIX_FMT_FP4"};
+
+constexpr const char *const ModMatrixScale[] = {"MATRIX_SCALE_ROW0",
+                                                "MATRIX_SCALE_ROW1"};
+
+constexpr const char *const ModMatrixScaleFmt[] = {
+    "MATRIX_SCALE_FMT_E8", "MATRIX_SCALE_FMT_E5M3", "MATRIX_SCALE_FMT_E4M3"};
+} // namespace WMMAMods
 
 } // namespace AMDGPU
 } // namespace llvm

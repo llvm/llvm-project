@@ -1,9 +1,9 @@
-// RUN: not llvm-mc -triple=amdgcn %s 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,SICI,SICIVI --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,SICI,SICIVI --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=fiji %s 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,VI,SICIVI --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,GFX10 --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 %s 2>&1 | FileCheck --check-prefixes=GCN,GFX11PLUS,GFX11 --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 %s 2>&1 | FileCheck --check-prefixes=GCN,GFX11PLUS,GFX12 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn %s -filetype=null 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,SICI,SICIVI --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s -filetype=null 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,SICI,SICIVI --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=fiji %s -filetype=null 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,VI,SICIVI --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 %s -filetype=null 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,GFX10 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 %s -filetype=null 2>&1 | FileCheck --check-prefixes=GCN,GFX11PLUS,GFX11 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 %s -filetype=null 2>&1 | FileCheck --check-prefixes=GCN,GFX11PLUS,GFX12 --implicit-check-not=error: %s
 
 //===----------------------------------------------------------------------===//
 // sendmsg
@@ -198,6 +198,10 @@ s_sendmsg sendmsg(MSG_SYSMSG, 0)
 
 s_sendmsg sendmsg(MSG_SYSMSG, 5)
 // GCN: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operation id
+
+s_sendmsg sendmsg(MSG_SYSMSG, SYSMSG_OP_HOST_TRAP_ACK)
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: specified operation id is not supported on this GPU
+// GFX11PLUS: :[[@LINE-2]]:{{[0-9]+}}: error: specified operation id is not supported on this GPU
 
 //===----------------------------------------------------------------------===//
 // waitcnt

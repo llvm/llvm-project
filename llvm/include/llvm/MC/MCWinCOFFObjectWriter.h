@@ -29,7 +29,7 @@ protected:
   MCWinCOFFObjectTargetWriter(unsigned Machine_);
 
 public:
-  virtual ~MCWinCOFFObjectTargetWriter() = default;
+  ~MCWinCOFFObjectTargetWriter() override = default;
 
   Triple::ObjectFormatType getFormat() const override { return Triple::COFF; }
   static bool classof(const MCObjectTargetWriter *W) {
@@ -41,6 +41,37 @@ public:
                                 const MCFixup &Fixup, bool IsCrossSection,
                                 const MCAsmBackend &MAB) const = 0;
   virtual bool recordRelocation(const MCFixup &) const { return true; }
+};
+
+class WinCOFFWriter;
+
+class WinCOFFObjectWriter final : public MCObjectWriter {
+  friend class WinCOFFWriter;
+
+  std::unique_ptr<MCWinCOFFObjectTargetWriter> TargetObjectWriter;
+  std::unique_ptr<WinCOFFWriter> ObjWriter, DwoWriter;
+  bool IncrementalLinkerCompatible = false;
+
+public:
+  WinCOFFObjectWriter(std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW,
+                      raw_pwrite_stream &OS);
+  WinCOFFObjectWriter(std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW,
+                      raw_pwrite_stream &OS, raw_pwrite_stream &DwoOS);
+
+  // MCObjectWriter interface implementation.
+  void reset() override;
+  void setAssembler(MCAssembler *Asm) override;
+  void setIncrementalLinkerCompatible(bool Value) {
+    IncrementalLinkerCompatible = Value;
+  }
+  void executePostLayoutBinding() override;
+  bool isSymbolRefDifferenceFullyResolvedImpl(const MCSymbol &SymA,
+                                              const MCFragment &FB, bool InSet,
+                                              bool IsPCRel) const override;
+  void recordRelocation(const MCFragment &F, const MCFixup &Fixup,
+                        MCValue Target, uint64_t &FixedValue) override;
+  uint64_t writeObject() override;
+  int getSectionNumber(const MCSection &Section) const;
 };
 
 /// Construct a new Win COFF writer instance.

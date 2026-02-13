@@ -30,8 +30,13 @@ public:
   static FileSpec GetProgramFileSpec();
   static FileSpec GetXcodeContentsDirectory();
   static FileSpec GetXcodeDeveloperDirectory();
+  static FileSpec GetCurrentXcodeToolchainDirectory();
+  static FileSpec GetCurrentCommandLineToolsDirectory();
 
   /// Query xcrun to find an Xcode SDK directory.
+  ///
+  /// Note, this is an expensive operation if the SDK we're querying
+  /// does not exist in an Xcode installation path on the host.
   static llvm::Expected<llvm::StringRef> GetSDKRoot(SDKOptions options);
   static llvm::Expected<llvm::StringRef> FindSDKTool(XcodeSDK sdk,
                                                      llvm::StringRef tool);
@@ -40,6 +45,11 @@ public:
   static SharedCacheImageInfo
   GetSharedCacheImageInfo(llvm::StringRef image_name);
 
+  static SharedCacheImageInfo
+  GetSharedCacheImageInfo(llvm::StringRef image_name, const UUID &uuid);
+
+  static bool SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid);
+
 protected:
   static bool ComputeSupportExeDirectory(FileSpec &file_spec);
   static void ComputeHostArchitectureSupport(ArchSpec &arch_32,
@@ -47,7 +57,11 @@ protected:
   static bool ComputeHeaderDirectory(FileSpec &file_spec);
   static bool ComputeSystemPluginsDirectory(FileSpec &file_spec);
   static bool ComputeUserPluginsDirectory(FileSpec &file_spec);
+
+  static std::string FindComponentInPath(llvm::StringRef path,
+                                         llvm::StringRef component);
 };
-}
+
+} // namespace lldb_private
 
 #endif

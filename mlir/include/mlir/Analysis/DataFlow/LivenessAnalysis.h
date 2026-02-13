@@ -79,14 +79,17 @@ class LivenessAnalysis : public SparseBackwardDataFlowAnalysis<Liveness> {
 public:
   using SparseBackwardDataFlowAnalysis::SparseBackwardDataFlowAnalysis;
 
-  void visitOperation(Operation *op, ArrayRef<Liveness *> operands,
-                      ArrayRef<const Liveness *> results) override;
+  LogicalResult visitOperation(Operation *op, ArrayRef<Liveness *> operands,
+                               ArrayRef<const Liveness *> results) override;
 
   void visitBranchOperand(OpOperand &operand) override;
 
   void visitCallOperand(OpOperand &operand) override;
 
   void setToExitState(Liveness *lattice) override;
+
+  void visitNonControlFlowArguments(RegionSuccessor &successor,
+                                    ArrayRef<BlockArgument> arguments) override;
 };
 
 //===----------------------------------------------------------------------===//

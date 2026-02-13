@@ -1,11 +1,12 @@
 // Check that when forking in basic logging mode, we get the different tids for child and parent
 // RUN: %clangxx_xray -g -std=c++11 %s -o %t
 // RUN: rm -f fork-basic-logging-test-*
-// RUN: XRAY_OPTIONS="patch_premain=true xray_logfile_base=fork-basic-logging-test- \
+// RUN: env XRAY_OPTIONS="patch_premain=true xray_logfile_base=fork-basic-logging-test- \
 // RUN:     xray_mode=xray-basic verbosity=1 xray_naive_log_func_duration_threshold_us=0" \
 // RUN:     %run %t 2>&1 | FileCheck %s
+// RUN: ls -S fork-basic-logging-test-* | head -1 | tr -d '\n' > %t.log
 // RUN: %llvm_xray convert --symbolize --output-format=yaml -instr_map=%t \
-// RUN:     "`ls -S fork-basic-logging-test-* | head -1`" \
+// RUN:     "%{readfile:%t.log}" \
 // RUN:     | FileCheck %s --check-prefix=TRACE
 
 // REQUIRES: x86_64-target-arch

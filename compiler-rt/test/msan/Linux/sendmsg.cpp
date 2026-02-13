@@ -9,13 +9,13 @@
 // RUN: %clangxx_msan %s -DSENDMMSG -o %t && %run %t 2>&1 | FileCheck %s --check-prefix=NEGATIVE
 
 // RUN: %clangxx_msan %s -DSEND -DPOISON -o %t && \
-// RUN:   MSAN_OPTIONS=intercept_send=0 %run %t 2>&1 | FileCheck %s --check-prefix=NEGATIVE
+// RUN:   env MSAN_OPTIONS=intercept_send=0 %run %t 2>&1 | FileCheck %s --check-prefix=NEGATIVE
 // RUN: %clangxx_msan %s -DSENDTO -DPOISON -o %t && \
-// RUN:   MSAN_OPTIONS=intercept_send=0 %run %t 2>&1 | FileCheck %s --check-prefix=NEGATIVE
+// RUN:   env MSAN_OPTIONS=intercept_send=0 %run %t 2>&1 | FileCheck %s --check-prefix=NEGATIVE
 // RUN: %clangxx_msan %s -DSENDMSG -DPOISON -o %t && \
-// RUN:   MSAN_OPTIONS=intercept_send=0 %run %t 2>&1 | FileCheck %s --check-prefix=NEGATIVE
+// RUN:   env MSAN_OPTIONS=intercept_send=0 %run %t 2>&1 | FileCheck %s --check-prefix=NEGATIVE
 // RUN: %clangxx_msan %s -DSENDMMSG -DPOISON -o %t && \
-// RUN:   MSAN_OPTIONS=intercept_send=0 %run %t 2>&1 | FileCheck %s --check-prefix=NEGATIVE
+// RUN:   env MSAN_OPTIONS=intercept_send=0 %run %t 2>&1 | FileCheck %s --check-prefix=NEGATIVE
 
 // UNSUPPORTED: android
 

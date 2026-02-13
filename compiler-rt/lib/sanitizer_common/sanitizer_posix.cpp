@@ -130,8 +130,8 @@ static void *MmapFixedImpl(uptr fixed_addr, uptr size, bool tolerate_enomem,
     if (tolerate_enomem && reserrno == ENOMEM)
       return nullptr;
     char mem_type[40];
-    internal_snprintf(mem_type, sizeof(mem_type), "memory at address 0x%zx",
-                      fixed_addr);
+    internal_snprintf(mem_type, sizeof(mem_type), "memory at address %p",
+                      (void *)fixed_addr);
     ReportMmapFailureAndDie(size, mem_type, "allocate", reserrno);
   }
   IncreaseTotalMmap(size);
@@ -225,17 +225,9 @@ void *MapWritableFileToMemory(void *addr, uptr size, fd_t fd, OFF_T offset) {
   return (void *)p;
 }
 
-static inline bool IntervalsAreSeparate(uptr start1, uptr end1,
-                                        uptr start2, uptr end2) {
-  CHECK(start1 <= end1);
-  CHECK(start2 <= end2);
-  return (end1 < start2) || (end2 < start1);
-}
-
+#  if !SANITIZER_APPLE
 // FIXME: this is thread-unsafe, but should not cause problems most of the time.
-// When the shadow is mapped only a single thread usually exists (plus maybe
-// several worker threads on Mac, which aren't expected to map big chunks of
-// memory).
+// When the shadow is mapped only a single thread usually exists
 bool MemoryRangeIsAvailable(uptr range_start, uptr range_end) {
   MemoryMappingLayout proc_maps(/*cache_enabled*/true);
   if (proc_maps.Error())
@@ -251,7 +243,6 @@ bool MemoryRangeIsAvailable(uptr range_start, uptr range_end) {
   return true;
 }
 
-#if !SANITIZER_APPLE
 void DumpProcessMap() {
   MemoryMappingLayout proc_maps(/*cache_enabled*/true);
   const sptr kBufSize = 4095;
@@ -265,7 +256,7 @@ void DumpProcessMap() {
   Report("End of process memory map.\n");
   UnmapOrDie(filename, kBufSize);
 }
-#endif
+#  endif
 
 const char *GetPwd() {
   return GetEnv("PWD");
@@ -353,7 +344,15 @@ bool ShouldMockFailureToOpen(const char *path) {
          internal_strncmp(path, "/proc/", 6) == 0;
 }
 
-#if SANITIZER_LINUX && !SANITIZER_ANDROID && !SANITIZER_GO
+bool OpenReadsVaArgs(int oflag) {
+#  ifdef O_TMPFILE
+  return (oflag & (O_CREAT | O_TMPFILE)) != 0;
+#  else
+  return (oflag & O_CREAT) != 0;
+#  endif
+}
+
+#  if SANITIZER_LINUX && !SANITIZER_ANDROID && !SANITIZER_GO
 int GetNamedMappingFd(const char *name, uptr size, int *flags) {
   if (!common_flags()->decorate_proc_maps || !name)
     return -1;

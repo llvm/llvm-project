@@ -1,11 +1,15 @@
 // RUN: %check_clang_tidy -check-suffixes=,STRICT \
-// RUN:   -std=c++23 %s modernize-use-std-print %t -- \
-// RUN:   -config="{CheckOptions: {StrictMode: true}}" \
-// RUN:   -- -isystem %clang_tidy_headers -fexceptions
+// RUN:   -std=c++23-or-later %s modernize-use-std-print %t -- \
+// RUN:   -config="{CheckOptions: {modernize-use-std-print.StrictMode: true}}" \
+// RUN:   -- -isystem %clang_tidy_headers -fexceptions \
+// RUN:      -DPRI_CMDLINE_MACRO="\"s\"" \
+// RUN:      -D__PRI_CMDLINE_MACRO="\"s\""
 // RUN: %check_clang_tidy -check-suffixes=,NOTSTRICT \
-// RUN:   -std=c++23 %s modernize-use-std-print %t -- \
-// RUN:   -config="{CheckOptions: {StrictMode: false}}" \
-// RUN:   -- -isystem %clang_tidy_headers -fexceptions
+// RUN:   -std=c++23-or-later %s modernize-use-std-print %t -- \
+// RUN:   -config="{CheckOptions: {modernize-use-std-print.StrictMode: false}}" \
+// RUN:   -- -isystem %clang_tidy_headers -fexceptions \
+// RUN:      -DPRI_CMDLINE_MACRO="\"s\"" \
+// RUN:      -D__PRI_CMDLINE_MACRO="\"s\""
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -48,6 +52,12 @@ void printf_deceptive_newline() {
   printf("Hello\x0a");
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
   // CHECK-FIXES: std::println("Hello");
+}
+
+void printf_utf8_text() {
+  printf("你好世界\n");
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
+  // CHECK-FIXES: std::println("你好世界");
 }
 
 void printf_crlf_newline() {
@@ -109,7 +119,7 @@ int printf_uses_return_value(int choice) {
 
   for (printf("for init statement %d\n", i);;)
     // CHECK-MESSAGES: [[@LINE-1]]:8: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
-    // CHECK-FIXES: std::println("for init statement {}", i);
+    // CHECK-FIXES: for (std::println("for init statement {}", i);;)
     ;;
 
   for (int j = printf("for init statement %d\n", i);;)
@@ -120,7 +130,7 @@ int printf_uses_return_value(int choice) {
 
   for (;; printf("for expression %d\n", i))
     // CHECK-MESSAGES: [[@LINE-1]]:11: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
-    // CHECK-FIXES: std::println("for expression {}", i)
+    // CHECK-FIXES: for (;; std::println("for expression {}", i))
     ;;
 
   for (auto C : "foo")
@@ -224,7 +234,7 @@ int fprintf_uses_return_value(int choice) {
 
   for (fprintf(stderr, "for init statement %d\n", i);;)
     // CHECK-MESSAGES: [[@LINE-1]]:8: warning: use 'std::println' instead of 'fprintf' [modernize-use-std-print]
-    // CHECK-FIXES: std::println(stderr, "for init statement {}", i);
+    // CHECK-FIXES: for (std::println(stderr, "for init statement {}", i);;)
     ;;
 
   for (int j = fprintf(stderr, "for init statement %d\n", i);;)
@@ -235,7 +245,7 @@ int fprintf_uses_return_value(int choice) {
 
   for (;; fprintf(stderr, "for expression %d\n", i))
     // CHECK-MESSAGES: [[@LINE-1]]:11: warning: use 'std::println' instead of 'fprintf' [modernize-use-std-print]
-    // CHECK-FIXES: std::println(stderr, "for expression {}", i)
+    // CHECK-FIXES: for (;; std::println(stderr, "for expression {}", i))
     ;;
 
   for (auto C : "foo")
@@ -297,6 +307,12 @@ void fprintf_simple() {
   fprintf(stderr, "Hello");
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::print' instead of 'fprintf' [modernize-use-std-print]
   // CHECK-FIXES: std::print(stderr, "Hello");
+}
+
+void fprintf_utf8_text() {
+  fprintf(stderr, "你好世界\n");
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'fprintf' [modernize-use-std-print]
+  // CHECK-FIXES: std::println(stderr, "你好世界");
 }
 
 void std_printf_simple() {
@@ -1570,4 +1586,69 @@ void p(S s1, S *s2)
   printf("Not std::string %s %s", s1.data(), s2->data());
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::print' instead of 'printf' [modernize-use-std-print]
   // CHECK-FIXES: std::print("Not std::string {} {}", s1.data(), s2->data());
+}
+
+// These need PRI and __PRI prefixes so that the check gets as far as looking
+// for where the macro comes from.
+#define PRI_FMT_MACRO "s"
+#define __PRI_FMT_MACRO "s"
+
+void macro_expansion(const char *s)
+{
+  const uint64_t u64 = 42;
+  const uint32_t u32 = 32;
+
+  printf("Replaceable macro at end %" PRIu64, u64);
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::print' instead of 'printf' [modernize-use-std-print]
+  // CHECK-FIXES: std::print("Replaceable macro at end {}", u64);
+
+  printf("Replaceable macros in middle %" PRIu64 " %" PRIu32 "\n", u64, u32);
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
+  // CHECK-FIXES: std::println("Replaceable macros in middle {} {}", u64, u32);
+
+  printf("Unreplaceable macro at end %" PRI_FMT_MACRO, s);
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: unable to use 'std::print' instead of 'printf' because format string contains unreplaceable macro 'PRI_FMT_MACRO' [modernize-use-std-print]
+
+  printf(PRI_FMT_MACRO " Unreplaceable macro at beginning %s", s);
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: unable to use 'std::print' instead of 'printf' because format string contains unreplaceable macro 'PRI_FMT_MACRO' [modernize-use-std-print]
+
+  printf("Unreplacemable macro %" __PRI_FMT_MACRO " in the middle", s);
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: unable to use 'std::print' instead of 'printf' because format string contains unreplaceable macro '__PRI_FMT_MACRO' [modernize-use-std-print]
+
+  printf("First macro is replaceable %" PRIu64 " but second one is not %" PRI_FMT_MACRO, u64, s);
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: unable to use 'std::print' instead of 'printf' because format string contains unreplaceable macro 'PRI_FMT_MACRO' [modernize-use-std-print]
+
+  // Needs a PRI prefix so that we get as far as looking for where the macro comes from
+  printf(" macro from command line %" PRI_CMDLINE_MACRO, s);
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: unable to use 'std::print' instead of 'printf' because format string contains unreplaceable macro 'PRI_CMDLINE_MACRO' [modernize-use-std-print]
+
+  // Needs a __PRI prefix so that we get as far as looking for where the macro comes from
+  printf(" macro from command line %" __PRI_CMDLINE_MACRO, s);
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: unable to use 'std::print' instead of 'printf' because format string contains unreplaceable macro '__PRI_CMDLINE_MACRO' [modernize-use-std-print]
+
+  // We ought to be able to fix this since the macro surrounds the whole call
+  // and therefore can't change the format string independently. This is
+  // required to be able to fix calls inside Catch2 macros for example.
+#define SURROUND_ALL(x) x
+  SURROUND_ALL(printf("Macro surrounding entire invocation %" PRIu64, u64));
+  // CHECK-MESSAGES: [[@LINE-1]]:16: warning: use 'std::print' instead of 'printf' [modernize-use-std-print]
+  // CHECK-FIXES: SURROUND_ALL(std::print("Macro surrounding entire invocation {}", u64));
+
+  // But having that surrounding macro shouldn't stop us ignoring an
+  // unreplaceable macro elsewhere.
+  SURROUND_ALL(printf("Macro surrounding entire invocation with unreplaceable macro %" PRI_FMT_MACRO, s));
+  // CHECK-MESSAGES: [[@LINE-1]]:16: warning: unable to use 'std::print' instead of 'printf' because format string contains unreplaceable macro 'PRI_FMT_MACRO' [modernize-use-std-print]
+
+  // At the moment at least the check will replace occurrences where the
+  // function name is the result of expanding a macro.
+#define SURROUND_FUNCTION_NAME(x) x
+  SURROUND_FUNCTION_NAME(printf)("Hello %d", 4442);
+  // CHECK-MESSAGES: [[@LINE-1]]:26: warning: use 'std::print' instead of 'printf' [modernize-use-std-print]
+  // CHECK-FIXES: std::print("Hello {}", 4442);
+
+  // We can't safely fix occurrences where the macro may affect the format
+  // string differently in different builds.
+#define SURROUND_FORMAT(x) "!" x
+  printf(SURROUND_FORMAT("Hello %d"), 4443);
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: unable to use 'std::print' instead of 'printf' because format string contains unreplaceable macro 'SURROUND_FORMAT' [modernize-use-std-print]
 }

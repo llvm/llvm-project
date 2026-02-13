@@ -10,6 +10,7 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include <optional>
 
 using namespace mlir;
@@ -133,13 +134,13 @@ static Value getZero(OpBuilder &b, Location loc, Type elementType) {
   assert(elementType.isIntOrIndexOrFloat() &&
          "expected scalar type while computing zero value");
   if (isa<IntegerType>(elementType))
-    return b.create<arith::ConstantIntOp>(loc, 0, elementType);
+    return arith::ConstantIntOp::create(b, loc, elementType, 0);
   if (elementType.isIndex())
-    return b.create<arith::ConstantIndexOp>(loc, 0);
+    return arith::ConstantIndexOp::create(b, loc, 0);
   // Assume float.
   auto floatType = cast<FloatType>(elementType);
-  return b.create<arith::ConstantFloatOp>(
-      loc, APFloat::getZero(floatType.getFloatSemantics()), floatType);
+  return arith::ConstantFloatOp::create(
+      b, loc, floatType, APFloat::getZero(floatType.getFloatSemantics()));
 }
 
 GenericOp
@@ -188,8 +189,8 @@ DecomposeLinalgOp::createPeeledGenericOp(GenericOp genericOp,
 
     // Fall back path, use an `init_tensor` and identity indexing map.
     AffineMap indexingMap = rewriter.getMultiDimIdentityMap(domain.size());
-    Value emptyTensor =
-        rewriter.create<tensor::EmptyOp>(loc, domain, scalarOpResult.getType());
+    Value emptyTensor = tensor::EmptyOp::create(rewriter, loc, domain,
+                                                scalarOpResult.getType());
     newInitValues.push_back(emptyTensor);
     newResultTypes.push_back(emptyTensor.getType());
     peeledGenericOpIndexingMaps.push_back(indexingMap);
@@ -202,10 +203,10 @@ DecomposeLinalgOp::createPeeledGenericOp(GenericOp genericOp,
   resultTypes.append(newResultTypes.begin(), newResultTypes.end());
   auto indexingMapAttr =
       rewriter.getAffineMapArrayAttr(peeledGenericOpIndexingMaps);
-  return rewriter.create<GenericOp>(
-      loc, resultTypes, genericOp.getInputs(), outsOperands, indexingMapAttr,
-      genericOp.getIteratorTypes(), /*doc=*/nullptr, /*libraryCall=*/nullptr,
-      [](OpBuilder, Location, ValueRange) {});
+  return GenericOp::create(
+      rewriter, loc, resultTypes, genericOp.getInputs(), outsOperands,
+      indexingMapAttr, genericOp.getIteratorTypes(), /*doc=*/nullptr,
+      /*libraryCall=*/nullptr, [](OpBuilder, Location, ValueRange) {});
 }
 
 GenericOp
@@ -225,10 +226,10 @@ DecomposeLinalgOp::createResidualGenericOp(GenericOp genericOp,
 
   /// Add indexing maps for the newly added operands. Use the same map
   /// as those used for the new results of the peeledGenericOp.
-  auto indexingMaps = llvm::to_vector(
-      llvm::map_range(genericOp.getDpsInputOperands(), [&](OpOperand *operand) {
+  auto indexingMaps = llvm::map_to_vector(
+      genericOp.getDpsInputOperands(), [&](OpOperand *operand) {
         return genericOp.getMatchingIndexingMap(operand);
-      }));
+      });
   for (auto resultNum :
        llvm::seq<unsigned>(origNumResults, peeledGenericOpNumResults)) {
     OpResult result = cast<OpResult>(peeledGenericOp.getResult(resultNum));
@@ -239,8 +240,8 @@ DecomposeLinalgOp::createResidualGenericOp(GenericOp genericOp,
     indexingMaps.push_back(genericOp.getMatchingIndexingMap(&outOperand));
 
   auto indexingMapAttr = rewriter.getAffineMapArrayAttr(indexingMaps);
-  return rewriter.create<GenericOp>(
-      genericOp->getLoc(), genericOp->getResultTypes(),
+  return GenericOp::create(
+      rewriter, genericOp->getLoc(), genericOp->getResultTypes(),
       residualGenericOpOperands, genericOp.getOutputs(), indexingMapAttr,
       genericOp.getIteratorTypes(), /*doc=*/nullptr, /*libraryCall=*/nullptr,
       [](OpBuilder, Location, ValueRange) {});
@@ -321,10 +322,10 @@ DecomposeLinalgOp::matchAndRewrite(GenericOp genericOp,
             getZero(rewriter, genericOp.getLoc(), origYield.getType()));
       }
     }
-    yieldedVals.append(llvm::to_vector(
-        llvm::map_range(peeledScalarOperation->getResults(),
-                        [](OpResult opr) -> Value { return opr; })));
-    rewriter.create<YieldOp>(genericOp.getLoc(), yieldedVals);
+    yieldedVals.append(
+        llvm::map_to_vector(peeledScalarOperation->getResults(),
+                            [](OpResult opr) -> Value { return opr; }));
+    YieldOp::create(rewriter, genericOp.getLoc(), yieldedVals);
   }
 
   /// In the split operations, replace block arguments uses that refer to

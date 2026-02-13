@@ -15,6 +15,7 @@ entry:
 
 ; CHECK-LABEL: .Ltmp0:
 ; CHECK: callq  trap
+; CHECK: nop
 ; CHECK-LABEL: .Ltmp1:
 
   invoke void asm sideeffect unwind "call trap", "~{dirflag},~{fpsr},~{flags}"()
@@ -27,6 +28,7 @@ except:
 
 ; CHECK-LABEL: "?dtor$2@?0?test@4HA":
 ; CHECK: callq	printf
+; CHECK: nop
 
   %0 = cleanuppad within none []
   call void (ptr, ...) @printf(ptr @str) [ "funclet"(token %0) ]
@@ -42,11 +44,11 @@ declare dso_local void @printf(ptr, ...)
 ; CHECK-LABEL: $cppxdata$test:
 ; CHECK-NEXT:    .long    429065506                       # MagicNumber
 ; CHECK-NEXT:    .long    1                               # MaxState
-; CHECK-NEXT:    .long    ($stateUnwindMap$test)@IMGREL   # UnwindMap
+; CHECK-NEXT:    .long    $stateUnwindMap$test@IMGREL   # UnwindMap
 ; CHECK-NEXT:    .long    0                               # NumTryBlocks
 ; CHECK-NEXT:    .long    0                               # TryBlockMap
 ; CHECK-NEXT:    .long    3                               # IPMapEntries
-; CHECK-NEXT:    .long    ($ip2state$test)@IMGREL         # IPToStateXData
+; CHECK-NEXT:    .long    $ip2state$test@IMGREL         # IPToStateXData
 ; CHECK-NEXT:    .long    40                              # UnwindHelp
 ; CHECK-NEXT:    .long    0                               # ESTypeList
 ; CHECK-NEXT:    .long    1                               # EHFlags
@@ -56,8 +58,8 @@ declare dso_local void @printf(ptr, ...)
 ; CHECK-NEXT:$ip2state$test:
 ; CHECK-NEXT:    .long    .Lfunc_begin0@IMGREL            # IP
 ; CHECK-NEXT:    .long    -1                              # ToState
-; CHECK-NEXT:    .long    .Ltmp0@IMGREL+1                 # IP
+; CHECK-NEXT:    .long    .Ltmp0@IMGREL                   # IP
 ; CHECK-NEXT:    .long    0                               # ToState
-; CHECK-NEXT:    .long    .Ltmp1@IMGREL+1                 # IP
+; CHECK-NEXT:    .long    .Ltmp1@IMGREL                   # IP
 ; CHECK-NEXT:    .long    -1                              # ToState
 

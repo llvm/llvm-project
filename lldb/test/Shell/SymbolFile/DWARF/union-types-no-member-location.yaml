@@ -1,0 +1,178 @@
+# This test produces DWARF that contains a union type whose DW_TAG_member does
+# not have a DW_AT_data_member_location set to zero. This is how GCC emits
+# debug information for unions. There was code in the DWARFASTParserClang that
+# was emitting an invalid error in this case. This test verifies that this
+# error does not get emitted.
+#
+# 0x0000000b: DW_TAG_compile_unit
+#               DW_AT_name        ("main.cpp")
+#               DW_AT_language    (DW_LANG_C)
+#
+# 0x00000011:   DW_TAG_base_type
+#                 DW_AT_name      ("int")
+#                 DW_AT_encoding  (DW_ATE_signed_char)
+#                 DW_AT_byte_size (0x04)
+#
+# 0x00000018:   DW_TAG_base_type
+#                 DW_AT_name      ("__ARRAY_SIZE_TYPE__")
+#                 DW_AT_encoding  (DW_ATE_unsigned)
+#                 DW_AT_byte_size (0x08)
+#
+# 0x0000001f:   DW_TAG_array_type
+#                 DW_AT_type      (0x00000011 "int")
+#
+# 0x00000024:     DW_TAG_subrange_type
+#                   DW_AT_type    (0x00000018 "__ARRAY_SIZE_TYPE__")
+#                   DW_AT_count   (0x20)
+#
+# 0x0000002a:     NULL
+#
+# 0x0000002b:   DW_TAG_union_type
+#                 DW_AT_name      ("UnionType")
+#                 DW_AT_byte_size (0x20)
+#
+# 0x00000031:     DW_TAG_member
+#                   DW_AT_name    ("array")
+#                   DW_AT_type    (0x0000001f "int[32]")
+#
+# 0x0000003a:     NULL
+#
+# 0x0000003b:   DW_TAG_subprogram
+#                 DW_AT_low_pc    (0x0000000000001000)
+#                 DW_AT_high_pc   (0x0000000000001050)
+#                 DW_AT_name      ("foo")
+#                 DW_AT_type      (0x00000031 "array")
+#
+# 0x00000054:   NULL
+
+# RUN: yaml2obj %s > %t
+# RUN: lldb-test symbols --name=UnionType --find=type %t > %t.stdout
+# RUN: cat %t.stdout | FileCheck --check-prefix=STDOUT %s
+
+# STDOUT: Found 1 types:
+# STDOUT: {{(0x)?[0-9a-fA-F]+}}: Type{0x0000002b} , name = "UnionType", size = 32, compiler_type = 0x{{[0-9a-fA-F]+}} union UnionType {
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+DWARF:
+  debug_str:
+    - ''
+    - main.cpp
+    - int
+    - __ARRAY_SIZE_TYPE__
+    - UnionType
+    - array
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_udata
+        - Code:            0x2
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_encoding
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_byte_size
+              Form:            DW_FORM_data1
+        - Code:            0x3
+          Tag:             DW_TAG_array_type
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x4
+          Tag:             DW_TAG_subrange_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_count
+              Form:            DW_FORM_data1
+        - Code:            0x5
+          Tag:             DW_TAG_union_type
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_byte_size
+              Form:            DW_FORM_data1
+        - Code:            0x6
+          Tag:             DW_TAG_member
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x7
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+  debug_info:
+    - Length:          0x51
+      Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x1
+            - Value:           0x2
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xA
+            - Value:           0x6
+            - Value:           0x4
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xE
+            - Value:           0x7
+            - Value:           0x8
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x11
+        - AbbrCode:        0x4
+          Values:
+            - Value:           0x18
+            - Value:           0x20
+        - AbbrCode:        0x0
+        - AbbrCode:        0x5
+          Values:
+            - Value:           0x22
+            - Value:           0x20
+        - AbbrCode:        0x6
+          Values:
+            - Value:           0x2C
+            - Value:           0x1F
+        - AbbrCode:        0x0
+        - AbbrCode:        0x7
+          Values:
+            - Value:           0x1000
+            - Value:           0x1050
+            - Value:           0xDEADBEEFDEADBEEF
+              CStr:            foo
+            - Value:           0x31
+        - AbbrCode:        0x0
+...

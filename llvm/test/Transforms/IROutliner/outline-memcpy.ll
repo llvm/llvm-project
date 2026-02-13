@@ -27,20 +27,20 @@ entry:
 ; CHECK-LABEL: @function1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RET_LOC:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[RET_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[RET_LOC]])
 ; CHECK-NEXT:    call void @outlined_ir_func_0(ptr [[S:%.*]], ptr [[D:%.*]], i64 [[LEN:%.*]], ptr [[RET_LOC]])
 ; CHECK-NEXT:    [[RET_RELOAD:%.*]] = load i8, ptr [[RET_LOC]], align 1
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[RET_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[RET_LOC]])
 ; CHECK-NEXT:    ret i8 [[RET_RELOAD]]
 ;
 ;
 ; CHECK-LABEL: @function2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RET_LOC:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[RET_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[RET_LOC]])
 ; CHECK-NEXT:    call void @outlined_ir_func_0(ptr [[S:%.*]], ptr [[D:%.*]], i64 [[LEN:%.*]], ptr [[RET_LOC]])
 ; CHECK-NEXT:    [[RET_RELOAD:%.*]] = load i8, ptr [[RET_LOC]], align 1
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[RET_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[RET_LOC]])
 ; CHECK-NEXT:    ret i8 [[RET_RELOAD]]
 ;
 ;

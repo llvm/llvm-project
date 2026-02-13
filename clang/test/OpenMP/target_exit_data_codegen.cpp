@@ -43,8 +43,8 @@ double gc[100];
 
 // CK1: [[MTYPE03:@.+]] = {{.+}}constant [1 x i64] [i64 6]
 
-// CK1: [[SIZE04:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 24]
-// CK1: [[MTYPE04:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 281474976710672]
+// CK1: [[SIZE04:@.+]] = {{.+}}constant [1 x i64] [i64 24]
+// CK1: [[MTYPE04:@.+]] = {{.+}}constant [1 x i64] zeroinitializer
 
 // CK1: [[MTYPE05:@.+]] = {{.+}}constant [1 x i64] [i64 1026]
 
@@ -60,21 +60,21 @@ void foo(int arg) {
   // CK1-DAG: call i32 @__kmpc_omp_task(ptr @{{[^,]+}}, i32 %{{[^,]+}}, ptr [[TASK:%.+]])
   // CK1-DAG: [[TASK]] = call ptr @__kmpc_omp_target_task_alloc(ptr @{{[^,]+}}, i32 %{{[^,]+}}, i32 1, i[[sz:32|64]] {{36|64}}, i{{32|64}} 4, ptr [[OMP_TASK_ENTRY:@[^,]+]], i64 [[DEV:%.+]])
   // CK1-DAG: [[DEV]] = sext i32 [[DEV32:%.+]] to i64
-  // CK1-DAG: [[PRIVATES:%.+]] = getelementptr inbounds [[KMP_TASK_T_WITH_PRIVATES]], ptr [[TASK]], i32 0, i32 1
-  // CK1-32-DAG: [[FPBPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[PRIVATES]], i32 0, i32 1
-  // CK1-64-DAG: [[FPBPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[PRIVATES]], i32 0, i32 0
+  // CK1-DAG: [[PRIVATES:%.+]] = getelementptr inbounds nuw [[KMP_TASK_T_WITH_PRIVATES]], ptr [[TASK]], i32 0, i32 1
+  // CK1-32-DAG: [[FPBPGEP:%.+]] = getelementptr inbounds nuw [[KMP_PRIVATES_T]], ptr [[PRIVATES]], i32 0, i32 1
+  // CK1-64-DAG: [[FPBPGEP:%.+]] = getelementptr inbounds nuw [[KMP_PRIVATES_T]], ptr [[PRIVATES]], i32 0, i32 0
   // CK1-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPBPGEP]], ptr align {{4|8}} [[BPGEP:%.+]], i[[sz]] {{4|8}}, i1 false)
   // CK1-DAG: [[BPGEP]] = getelementptr inbounds [1 x ptr], ptr [[BP:%.+]], i32 0, i32 0
   // CK1-DAG: [[BPGEP:%.+]] = getelementptr inbounds [1 x ptr], ptr [[BP]], i32 0, i32 0
   // CK1-DAG: store ptr [[GC:@[^,]+]], ptr [[BPGEP]], align
-  // CK1-32-DAG: [[FPPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[PRIVATES]], i32 0, i32 2
-  // CK1-64-DAG: [[FPPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[PRIVATES]], i32 0, i32 1
+  // CK1-32-DAG: [[FPPGEP:%.+]] = getelementptr inbounds nuw [[KMP_PRIVATES_T]], ptr [[PRIVATES]], i32 0, i32 2
+  // CK1-64-DAG: [[FPPGEP:%.+]] = getelementptr inbounds nuw [[KMP_PRIVATES_T]], ptr [[PRIVATES]], i32 0, i32 1
   // CK1-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPPGEP]], ptr align {{4|8}} [[PGEP:%.+]], i[[sz]] {{4|8}}, i1 false)
   // CK1-DAG: [[PGEP]] = getelementptr inbounds [1 x ptr], ptr [[P:%.+]], i32 0, i32 0
   // CK1-DAG: [[PGEP:%.+]] = getelementptr inbounds [1 x ptr], ptr [[P]], i32 0, i32 0
   // CK1-DAG: store ptr [[GC]], ptr [[PGEP]], align
-  // CK1-32-DAG: [[FPSZGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[PRIVATES]], i32 0, i32 0
-  // CK1-64-DAG: [[FPSZGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[PRIVATES]], i32 0, i32 2
+  // CK1-32-DAG: [[FPSZGEP:%.+]] = getelementptr inbounds nuw [[KMP_PRIVATES_T]], ptr [[PRIVATES]], i32 0, i32 0
+  // CK1-64-DAG: [[FPSZGEP:%.+]] = getelementptr inbounds nuw [[KMP_PRIVATES_T]], ptr [[PRIVATES]], i32 0, i32 2
   // CK1-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPSZGEP]], ptr align {{4|8}} [[SIZE00]], i[[sz]] {{4|8}}, i1 false)
   #pragma omp target exit data if(1+3-5) device(arg) map(from: gc) nowait
   {++arg;}
@@ -132,27 +132,21 @@ void foo(int arg) {
   {++arg;}
 
   // Region 04
+
+  // &gb.b[0], &gb.b[0], 3 * sizeof(gb.b[0]), RELEASE
+
   // CK1-NOT: __tgt_target_data_begin
-  // CK1-DAG: call void @__tgt_target_data_end_mapper(ptr @{{.+}}, i64 -1, i32 2, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[GEPS:%.+]], ptr [[MTYPE04]]{{.+}}, ptr null)
+  // CK1-DAG: call void @__tgt_target_data_end_mapper(ptr @{{.+}}, i64 -1, i32 1, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[SIZE04]], ptr [[MTYPE04]]{{.+}}, ptr null)
   // CK1-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK1-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
-  // CK1-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]]
 
   // CK1-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
   // CK1-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-  // CK1-DAG: [[PS0:%.+]] = getelementptr inbounds {{.+}}[[PS]], i{{.+}} 0, i{{.+}} 0
-  // CK1-DAG: store ptr @gb, ptr [[BP0]]
-  // CK1-DAG: store ptr getelementptr inbounds ([[ST]], ptr @gb, i32 0, i32 1), ptr [[P0]]
-  // CK1-DAG: [[DIV:%.+]] = sdiv exact i64 sub (i64 ptrtoint (ptr getelementptr (ptr, ptr getelementptr inbounds (%struct.ST, ptr @gb, i32 0, i32 1), i32 1) to i64), i64 ptrtoint (ptr getelementptr inbounds (%struct.ST, ptr @gb, i32 0, i32 1) to i64)), ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-  // CK1-DAG: store i64 [[DIV]], ptr [[PS0]],
-
-
-  // CK1-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
-  // CK1-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-  // CK1-DAG: store ptr getelementptr inbounds ([[ST]], ptr @gb, i32 0, i32 1), ptr [[BP1]]
-  // CK1-DAG: store ptr [[SEC1:%[^,]+]], ptr [[P1]]
-  // CK1-DAG: [[SEC1]] = getelementptr inbounds {{.+}}ptr [[SEC11:%[^,]+]], i{{.+}} 0
-  // CK1-DAG: [[SEC11]] = load ptr, ptr getelementptr inbounds ([[ST]], ptr @gb, i32 0, i32 1),
+  // CK1-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
+  // CK1-DAG: store ptr [[SEC0:%.+]], ptr [[P0]]
+  // CK1-DAG: [[VAR0]] = load ptr, ptr getelementptr inbounds nuw ([[ST]], ptr @gb, i{{.*}} 0, i{{.*}} 1)
+  // CK1-DAG: [[SEC0]] = getelementptr inbounds nuw double, ptr [[SEC00:%.+]], i{{.*}} 0
+  // CK1-DAG: [[SEC00]] = load ptr, ptr getelementptr inbounds nuw ([[ST]], ptr @gb, i{{.*}} 0, i{{.*}} 1)
 
   // CK1: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
   #pragma omp target exit data map(release: gb.b[:3])
@@ -206,7 +200,7 @@ void foo(int arg) {
 }
 
 // CK1:     define internal {{.*}}i32 [[OMP_TASK_ENTRY]](i32 {{.*}}%{{[^,]+}}, ptr noalias noundef %{{[^,]+}})
-// CK1-DAG: call void @__tgt_target_data_end_nowait_mapper(ptr @{{.+}}, i64 %{{[^,]+}}, i32 1, ptr [[BP:%[^,]+]], ptr [[P:%[^,]+]], ptr [[SZ:%[^,]+]], ptr [[MTYPE00]], ptr null, ptr null)
+// CK1-DAG: call void @__tgt_target_data_end_nowait_mapper(ptr @{{.+}}, i64 %{{[^,]+}}, i32 1, ptr [[BP:%[^,]+]], ptr [[P:%[^,]+]], ptr [[SZ:%[^,]+]], ptr [[MTYPE00]], ptr null, ptr null, i32 0, ptr null, i32 0, ptr null)
 // CK1-DAG: [[BP]] = load ptr, ptr [[FPBPADDR:%[^,]+]], align
 // CK1-DAG: [[P]] = load ptr, ptr [[FPPADDR:%[^,]+]], align
 // CK1-DAG: [[SZ]] = load ptr, ptr [[FPSZADDR:%[^,]+]], align
@@ -246,8 +240,8 @@ struct ST {
   }
 };
 
-// CK2: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 24]
-// CK2: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 281474976710676]
+// CK2: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 24]
+// CK2: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 4]
 
 // CK2-LABEL: _Z3bari
 int bar(int arg){
@@ -256,31 +250,27 @@ int bar(int arg){
 }
 
 // Region 00
+
+// &b[0], &b[1], 3 * sizeof(b[0]), ALWAYS
+
 // CK2-NOT: __tgt_target_data_begin
 // CK2: br i1 %{{[^,]+}}, label %[[IFTHEN:[^,]+]], label %[[IFELSE:[^,]+]]
 // CK2: [[IFTHEN]]
-// CK2-DAG: call void @__tgt_target_data_end_mapper(ptr @{{.+}}, i64 [[DEV:%[^,]+]], i32 2, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[GEPS:%.+]], ptr [[MTYPE00]]{{.+}}, ptr null)
+// CK2-DAG: call void @__tgt_target_data_end_mapper(ptr @{{.+}}, i64 [[DEV:%[^,]+]], i32 1, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[SIZES]], ptr [[MTYPE00]]{{.+}}, ptr null)
 // CK2-DAG: [[DEV]] = sext i32 [[DEVi32:%[^,]+]] to i64
 // CK2-DAG: [[DEVi32]] = load i32, ptr %{{[^,]+}},
 // CK2-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
 // CK2-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
-// CK2-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]]
 
 // CK2-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
 // CK2-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-// CK2-DAG: [[PS0:%.+]] = getelementptr inbounds {{.+}}[[PS]], i{{.+}} 0, i{{.+}} 0
 // CK2-DAG: store ptr [[VAR0:%[^,]+]], ptr [[BP0]]
 // CK2-DAG: store ptr [[SEC0:%[^,]+]], ptr [[P0]]
-// CK2-DAG: store i64 [[CSVAL0:%[^,]+]], ptr [[PS0]],
-// CK2-DAG: [[SEC0]] = getelementptr inbounds {{.*}}ptr [[VAR0]], i32 0, i32 1
-
-// CK2-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
-// CK2-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-// CK2-DAG: store ptr [[SEC0]], ptr [[BP1]]
-// CK2-DAG: store ptr [[SEC1:%[^,]+]], ptr [[P1]]
-// CK2-DAG: [[SEC1]] = getelementptr inbounds {{.*}}ptr [[SEC11:%[^,]+]], i{{.+}} 1
-// CK2-DAG: [[SEC11]] = load ptr, ptr [[SEC111:%[^,]+]],
-// CK2-DAG: [[SEC111]] = getelementptr inbounds {{.*}}ptr [[VAR0]], i32 0, i32 1
+// CK2-DAG: [[VAR0]] = load ptr, ptr [[VAR00:%[^,]+]]
+// CK2-DAG: [[VAR00]] = getelementptr inbounds nuw [[ST]], ptr %{{.*}}, i32 0, i32 1
+// CK2-DAG: [[SEC0]] = getelementptr inbounds nuw double, ptr [[SEC00:%.+]], i{{.+}} 1
+// CK2-DAG: [[SEC00]] = load ptr, ptr [[SEC000:%[^,]+]]
+// CK2-DAG: [[SEC000]] = getelementptr inbounds nuw [[ST]], ptr %{{.*}}, i32 0, i32 1
 
 // CK2: br label %[[IFEND:[^,]+]]
 
@@ -347,8 +337,8 @@ struct STT {
   }
 };
 
-// CK4: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 24]
-// CK4: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 281474976711700]
+// CK4: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 24]
+// CK4: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x404]]]
 
 // CK4-LABEL: _Z3bari
 int bar(int arg){
@@ -357,31 +347,27 @@ int bar(int arg){
 }
 
 // Region 00
+
+// &b[0], &b[1], 3 * sizeof(b[0]), ALWAYS | CLOSE
+
 // CK4-NOT: __tgt_target_data_begin
 // CK4: br i1 %{{[^,]+}}, label %[[IFTHEN:[^,]+]], label %[[IFELSE:[^,]+]]
 // CK4: [[IFTHEN]]
-// CK4-DAG: call void @__tgt_target_data_end_mapper(ptr @{{.+}}, i64 [[DEV:%[^,]+]], i32 2, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[GEPS:%.+]], ptr [[MTYPE00]]{{.+}}, ptr null)
+// CK4-DAG: call void @__tgt_target_data_end_mapper(ptr @{{.+}}, i64 [[DEV:%[^,]+]], i32 1, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[SIZES]], ptr [[MTYPE00]]{{.+}}, ptr null)
 // CK4-DAG: [[DEV]] = sext i32 [[DEVi32:%[^,]+]] to i64
 // CK4-DAG: [[DEVi32]] = load i32, ptr %{{[^,]+}},
 // CK4-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
 // CK4-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
-// CK4-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]]
 
 // CK4-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
 // CK4-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-// CK4-DAG: [[PS0:%.+]] = getelementptr inbounds {{.+}}[[PS]], i{{.+}} 0, i{{.+}} 0
-// CK4-DAG: store ptr [[VAR0:%[^,]+]], ptr [[BP0]]
-// CK4-DAG: store ptr [[SEC0:%[^,]+]], ptr [[P0]]
-// CK4-DAG: store i64 [[CSVAL0:%[^,]+]], ptr [[PS0]],
-// CK4-DAG: [[SEC0]] = getelementptr inbounds {{.*}}ptr [[VAR0]], i32 0, i32 1
-
-// CK4-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
-// CK4-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-// CK4-DAG: store ptr [[SEC0]], ptr [[BP1]]
-// CK4-DAG: store ptr [[SEC1:%[^,]+]], ptr [[P1]]
-// CK4-DAG: [[SEC1]] = getelementptr inbounds {{.*}}ptr [[SEC11:%[^,]+]], i{{.+}} 1
-// CK4-DAG: [[SEC11]] = load ptr, ptr [[SEC111:%[^,]+]],
-// CK4-DAG: [[SEC111]] = getelementptr inbounds {{.*}}ptr [[VAR0]], i32 0, i32 1
+// CK4-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
+// CK4-DAG: store ptr [[SEC0:%.+]], ptr [[P0]]
+// CK4-DAG: [[VAR0]] = load ptr, ptr [[VAR00:%[^,]+]]
+// CK4-DAG: [[VAR00]] = getelementptr inbounds nuw [[STT]], ptr %{{.*}}, i32 0, i32 1
+// CK4-DAG: [[SEC0]] = getelementptr inbounds nuw double, ptr [[SEC00:%.+]], i{{.+}} 1
+// CK4-DAG: [[SEC00]] = load ptr, ptr [[SEC000:%[^,]+]]
+// CK4-DAG: [[SEC000]] = getelementptr inbounds nuw [[STT]], ptr %{{.*}}, i32 0, i32 1
 
 // CK4: br label %[[IFEND:[^,]+]]
 

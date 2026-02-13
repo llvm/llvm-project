@@ -92,7 +92,7 @@ public:
   /// dialect.
   bool usePropertiesForAttributes() const;
 
-  llvm::DagInit *getDiscardableAttributes() const;
+  const llvm::DagInit *getDiscardableAttributes() const;
 
   const llvm::Record *getDef() const { return def; }
 
@@ -107,6 +107,7 @@ public:
 
   // Returns whether the dialect is defined.
   explicit operator bool() const { return def != nullptr; }
+  bool isDefined() const { return def != nullptr; }
 
 private:
   const llvm::Record *def;

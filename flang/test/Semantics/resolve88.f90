@@ -21,7 +21,7 @@ module m
   end type testCoArrayType
 
   ! C747 If a coarray-spec appears, the component shall not be of type C_PTR or
-  ! C_FUNPTR from the intrinsic module ISO_C_BINDING (18.2), or of type 
+  ! C_FUNPTR from the intrinsic module ISO_C_BINDING (18.2), or of type
   ! TEAM_TYPE from the intrinsic module ISO_FORTRAN_ENV (16.10.2).
 
   type goodCoarrayType
@@ -64,11 +64,11 @@ module m
 
   type testType
     type(coarrayType) :: goodField
-    !ERROR: A component with a POINTER or ALLOCATABLE attribute may not be of a type with a coarray ultimate component (named 'goodcoarrayfield')
+    !ERROR: Pointer 'pointerfield' may not have a coarray potential component '%goodcoarrayfield'
     type(coarrayType), pointer :: pointerField
-    !ERROR: A component with a POINTER or ALLOCATABLE attribute may not be of a type with a coarray ultimate component (named 'goodcoarrayfield')
+    !ERROR: Allocatable or array component 'allocatablefield' may not have a coarray ultimate component '%goodcoarrayfield'
     type(coarrayType), allocatable :: allocatableField
-    !ERROR: An array or coarray component may not be of a type with a coarray ultimate component (named 'goodcoarrayfield')
+    !ERROR: Allocatable or array component 'arrayfield' may not have a coarray ultimate component '%goodcoarrayfield'
     type(coarrayType), dimension(3) :: arrayField
   end type testType
 

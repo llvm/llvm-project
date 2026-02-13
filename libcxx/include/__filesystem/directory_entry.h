@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___FILESYSTEM_DIRECTORY_ENTRY_H
 #define _LIBCPP___FILESYSTEM_DIRECTORY_ENTRY_H
 
-#include <__availability>
 #include <__chrono/time_point.h>
 #include <__compare/ordering.h>
 #include <__config>
@@ -21,8 +20,11 @@
 #include <__filesystem/operations.h>
 #include <__filesystem/path.h>
 #include <__filesystem/perms.h>
+#include <__fwd/ostream.h>
 #include <__system_error/errc.h>
+#include <__system_error/error_category.h>
 #include <__system_error/error_code.h>
+#include <__system_error/error_condition.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
 #include <cstdint>
@@ -34,11 +36,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-#if _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
+#if _LIBCPP_STD_VER >= 17 && _LIBCPP_HAS_FILESYSTEM
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
-
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH
 
 class directory_entry {
   typedef filesystem::path _Path;
@@ -87,80 +87,88 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void refresh(error_code& __ec) noexcept { __refresh(&__ec); }
 
-  _LIBCPP_HIDE_FROM_ABI _Path const& path() const noexcept { return __p_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _Path const& path() const noexcept { return __p_; }
 
   _LIBCPP_HIDE_FROM_ABI operator const _Path&() const noexcept { return __p_; }
 
-  _LIBCPP_HIDE_FROM_ABI bool exists() const { return filesystem::exists(file_status{__get_ft()}); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool exists() const { return filesystem::exists(file_status{__get_ft()}); }
 
-  _LIBCPP_HIDE_FROM_ABI bool exists(error_code& __ec) const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool exists(error_code& __ec) const noexcept {
     return filesystem::exists(file_status{__get_ft(&__ec)});
   }
 
-  _LIBCPP_HIDE_FROM_ABI bool is_block_file() const { return __get_ft() == file_type::block; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_block_file() const { return __get_ft() == file_type::block; }
 
-  _LIBCPP_HIDE_FROM_ABI bool is_block_file(error_code& __ec) const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_block_file(error_code& __ec) const noexcept {
     return __get_ft(&__ec) == file_type::block;
   }
 
-  _LIBCPP_HIDE_FROM_ABI bool is_character_file() const { return __get_ft() == file_type::character; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_character_file() const { return __get_ft() == file_type::character; }
 
-  _LIBCPP_HIDE_FROM_ABI bool is_character_file(error_code& __ec) const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_character_file(error_code& __ec) const noexcept {
     return __get_ft(&__ec) == file_type::character;
   }
 
-  _LIBCPP_HIDE_FROM_ABI bool is_directory() const { return __get_ft() == file_type::directory; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_directory() const { return __get_ft() == file_type::directory; }
 
-  _LIBCPP_HIDE_FROM_ABI bool is_directory(error_code& __ec) const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_directory(error_code& __ec) const noexcept {
     return __get_ft(&__ec) == file_type::directory;
   }
 
-  _LIBCPP_HIDE_FROM_ABI bool is_fifo() const { return __get_ft() == file_type::fifo; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_fifo() const { return __get_ft() == file_type::fifo; }
 
-  _LIBCPP_HIDE_FROM_ABI bool is_fifo(error_code& __ec) const noexcept { return __get_ft(&__ec) == file_type::fifo; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_fifo(error_code& __ec) const noexcept {
+    return __get_ft(&__ec) == file_type::fifo;
+  }
 
-  _LIBCPP_HIDE_FROM_ABI bool is_other() const { return filesystem::is_other(file_status{__get_ft()}); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_other() const { return filesystem::is_other(file_status{__get_ft()}); }
 
-  _LIBCPP_HIDE_FROM_ABI bool is_other(error_code& __ec) const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_other(error_code& __ec) const noexcept {
     return filesystem::is_other(file_status{__get_ft(&__ec)});
   }
 
-  _LIBCPP_HIDE_FROM_ABI bool is_regular_file() const { return __get_ft() == file_type::regular; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_regular_file() const { return __get_ft() == file_type::regular; }
 
-  _LIBCPP_HIDE_FROM_ABI bool is_regular_file(error_code& __ec) const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_regular_file(error_code& __ec) const noexcept {
     return __get_ft(&__ec) == file_type::regular;
   }
 
-  _LIBCPP_HIDE_FROM_ABI bool is_socket() const { return __get_ft() == file_type::socket; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_socket() const { return __get_ft() == file_type::socket; }
 
-  _LIBCPP_HIDE_FROM_ABI bool is_socket(error_code& __ec) const noexcept { return __get_ft(&__ec) == file_type::socket; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_socket(error_code& __ec) const noexcept {
+    return __get_ft(&__ec) == file_type::socket;
+  }
 
-  _LIBCPP_HIDE_FROM_ABI bool is_symlink() const { return __get_sym_ft() == file_type::symlink; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_symlink() const { return __get_sym_ft() == file_type::symlink; }
 
-  _LIBCPP_HIDE_FROM_ABI bool is_symlink(error_code& __ec) const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_symlink(error_code& __ec) const noexcept {
     return __get_sym_ft(&__ec) == file_type::symlink;
   }
-  _LIBCPP_HIDE_FROM_ABI uintmax_t file_size() const { return __get_size(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI uintmax_t file_size() const { return __get_size(); }
 
-  _LIBCPP_HIDE_FROM_ABI uintmax_t file_size(error_code& __ec) const noexcept { return __get_size(&__ec); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI uintmax_t file_size(error_code& __ec) const noexcept { return __get_size(&__ec); }
 
-  _LIBCPP_HIDE_FROM_ABI uintmax_t hard_link_count() const { return __get_nlink(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI uintmax_t hard_link_count() const { return __get_nlink(); }
 
-  _LIBCPP_HIDE_FROM_ABI uintmax_t hard_link_count(error_code& __ec) const noexcept { return __get_nlink(&__ec); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI uintmax_t hard_link_count(error_code& __ec) const noexcept {
+    return __get_nlink(&__ec);
+  }
 
-  _LIBCPP_HIDE_FROM_ABI file_time_type last_write_time() const { return __get_write_time(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI file_time_type last_write_time() const { return __get_write_time(); }
 
-  _LIBCPP_HIDE_FROM_ABI file_time_type last_write_time(error_code& __ec) const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI file_time_type last_write_time(error_code& __ec) const noexcept {
     return __get_write_time(&__ec);
   }
 
-  _LIBCPP_HIDE_FROM_ABI file_status status() const { return __get_status(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI file_status status() const { return __get_status(); }
 
-  _LIBCPP_HIDE_FROM_ABI file_status status(error_code& __ec) const noexcept { return __get_status(&__ec); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI file_status status(error_code& __ec) const noexcept {
+    return __get_status(&__ec);
+  }
 
-  _LIBCPP_HIDE_FROM_ABI file_status symlink_status() const { return __get_symlink_status(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI file_status symlink_status() const { return __get_symlink_status(); }
 
-  _LIBCPP_HIDE_FROM_ABI file_status symlink_status(error_code& __ec) const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI file_status symlink_status(error_code& __ec) const noexcept {
     return __get_symlink_status(&__ec);
   }
 
@@ -202,7 +210,9 @@ private:
     _IterNonSymlink,
     _RefreshSymlink,
     _RefreshSymlinkUnresolved,
-    _RefreshNonSymlink
+    _RefreshNonSymlink,
+    _IterCachedSymlink,
+    _IterCachedNonSymlink
   };
 
   struct __cached_data {
@@ -241,6 +251,29 @@ private:
     return __data;
   }
 
+  _LIBCPP_HIDE_FROM_ABI static __cached_data
+  __create_iter_cached_result(file_type __ft, uintmax_t __size, perms __perm, file_time_type __write_time) {
+    __cached_data __data;
+    __data.__type_       = __ft;
+    __data.__size_       = __size;
+    __data.__write_time_ = __write_time;
+    if (__ft == file_type::symlink)
+      __data.__sym_perms_ = __perm;
+    else
+      __data.__non_sym_perms_ = __perm;
+    __data.__cache_type_ = [&]() {
+      switch (__ft) {
+      case file_type::none:
+        return _Empty;
+      case file_type::symlink:
+        return _IterCachedSymlink;
+      default:
+        return _IterCachedNonSymlink;
+      }
+    }();
+    return __data;
+  }
+
   _LIBCPP_HIDE_FROM_ABI void __assign_iter_entry(_Path&& __p, __cached_data __dt) {
     __p_    = std::move(__p);
     __data_ = __dt;
@@ -249,15 +282,7 @@ private:
   _LIBCPP_EXPORTED_FROM_ABI error_code __do_refresh() noexcept;
 
   _LIBCPP_HIDE_FROM_ABI static bool __is_dne_error(error_code const& __ec) {
-    if (!__ec)
-      return true;
-    switch (static_cast<errc>(__ec.value())) {
-    case errc::no_such_file_or_directory:
-    case errc::not_a_directory:
-      return true;
-    default:
-      return false;
-    }
+    return !__ec || __ec == errc::no_such_file_or_directory || __ec == errc::not_a_directory;
   }
 
   _LIBCPP_HIDE_FROM_ABI void
@@ -267,7 +292,7 @@ private:
       return;
     }
     if (__ec && (!__allow_dne || !__is_dne_error(__ec)))
-      __throw_filesystem_error(__msg, __p_, __ec);
+      filesystem::__throw_filesystem_error(__msg, __p_, __ec);
   }
 
   _LIBCPP_HIDE_FROM_ABI void __refresh(error_code* __ec = nullptr) {
@@ -282,19 +307,22 @@ private:
     case _Empty:
       return __symlink_status(__p_, __ec).type();
     case _IterSymlink:
+    case _IterCachedSymlink:
     case _RefreshSymlink:
     case _RefreshSymlinkUnresolved:
       if (__ec)
         __ec->clear();
       return file_type::symlink;
+    case _IterCachedNonSymlink:
     case _IterNonSymlink:
-    case _RefreshNonSymlink:
+    case _RefreshNonSymlink: {
       file_status __st(__data_.__type_);
       if (__ec && !filesystem::exists(__st))
         *__ec = make_error_code(errc::no_such_file_or_directory);
       else if (__ec)
         __ec->clear();
       return __data_.__type_;
+    }
     }
     __libcpp_unreachable();
   }
@@ -303,8 +331,10 @@ private:
     switch (__data_.__cache_type_) {
     case _Empty:
     case _IterSymlink:
+    case _IterCachedSymlink:
     case _RefreshSymlinkUnresolved:
       return __status(__p_, __ec).type();
+    case _IterCachedNonSymlink:
     case _IterNonSymlink:
     case _RefreshNonSymlink:
     case _RefreshSymlink: {
@@ -324,8 +354,10 @@ private:
     case _Empty:
     case _IterNonSymlink:
     case _IterSymlink:
+    case _IterCachedSymlink:
     case _RefreshSymlinkUnresolved:
       return __status(__p_, __ec);
+    case _IterCachedNonSymlink:
     case _RefreshNonSymlink:
     case _RefreshSymlink:
       return file_status(__get_ft(__ec), __data_.__non_sym_perms_);
@@ -339,8 +371,10 @@ private:
     case _IterNonSymlink:
     case _IterSymlink:
       return __symlink_status(__p_, __ec);
+    case _IterCachedNonSymlink:
     case _RefreshNonSymlink:
       return file_status(__get_sym_ft(__ec), __data_.__non_sym_perms_);
+    case _IterCachedSymlink:
     case _RefreshSymlink:
     case _RefreshSymlinkUnresolved:
       return file_status(__get_sym_ft(__ec), __data_.__sym_perms_);
@@ -353,8 +387,10 @@ private:
     case _Empty:
     case _IterNonSymlink:
     case _IterSymlink:
+    case _IterCachedSymlink:
     case _RefreshSymlinkUnresolved:
       return filesystem::__file_size(__p_, __ec);
+    case _IterCachedNonSymlink:
     case _RefreshSymlink:
     case _RefreshNonSymlink: {
       error_code __m_ec;
@@ -375,6 +411,8 @@ private:
     case _Empty:
     case _IterNonSymlink:
     case _IterSymlink:
+    case _IterCachedNonSymlink:
+    case _IterCachedSymlink:
     case _RefreshSymlinkUnresolved:
       return filesystem::__hard_link_count(__p_, __ec);
     case _RefreshSymlink:
@@ -393,8 +431,10 @@ private:
     case _Empty:
     case _IterNonSymlink:
     case _IterSymlink:
+    case _IterCachedSymlink:
     case _RefreshSymlinkUnresolved:
       return filesystem::__last_write_time(__p_, __ec);
+    case _IterCachedNonSymlink:
     case _RefreshSymlink:
     case _RefreshNonSymlink: {
       error_code __m_ec;
@@ -425,11 +465,9 @@ private:
   directory_entry __elem_;
 };
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP
-
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
-#endif // _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
+#endif // _LIBCPP_STD_VER >= 17 && _LIBCPP_HAS_FILESYSTEM
 
 _LIBCPP_POP_MACROS
 

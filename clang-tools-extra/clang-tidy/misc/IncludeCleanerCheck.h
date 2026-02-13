@@ -1,4 +1,4 @@
-//===--- IncludeCleanerCheck.h - clang-tidy ---------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_INCLUDECLEANER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_INCLUDECLEANER_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_INCLUDECLEANERCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_INCLUDECLEANERCHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "../ClangTidyDiagnosticConsumer.h"
@@ -29,7 +29,7 @@ namespace clang::tidy::misc {
 /// Findings correspond to https://clangd.llvm.org/design/include-cleaner.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc/include-cleaner.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/misc/include-cleaner.html
 class IncludeCleanerCheck : public ClangTidyCheck {
 public:
   IncludeCleanerCheck(StringRef Name, ClangTidyContext *Context);
@@ -47,10 +47,14 @@ private:
   std::vector<StringRef> IgnoreHeaders;
   // Whether emit only one finding per usage of a symbol.
   const bool DeduplicateFindings;
+  // Whether to report unused includes.
+  const bool UnusedIncludes;
+  // Whether to report missing includes.
+  const bool MissingIncludes;
   llvm::SmallVector<llvm::Regex> IgnoreHeadersRegex;
   bool shouldIgnore(const include_cleaner::Header &H);
 };
 
 } // namespace clang::tidy::misc
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_INCLUDECLEANER_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_INCLUDECLEANERCHECK_H

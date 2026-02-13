@@ -12,13 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Analysis/RetainSummaryManager.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/ParentMap.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include <optional>
 
 using namespace clang;
@@ -148,8 +147,7 @@ static bool isSubclass(const Decl *D,
 
 static bool isExactClass(const Decl *D, StringRef ClassName) {
   using namespace ast_matchers;
-  DeclarationMatcher sameClassM =
-      cxxRecordDecl(hasName(std::string(ClassName)));
+  DeclarationMatcher sameClassM = cxxRecordDecl(hasName(ClassName));
   return !(match(sameClassM, *D, D->getASTContext()).empty());
 }
 
@@ -476,14 +474,13 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
       // "AppendValue", or "SetAttribute", then we assume that arguments may
       // "escape."  This means that something else holds on to the object,
       // allowing it be used even after its local retain count drops to 0.
-      ArgEffectKind E =
-          (StrInStrNoCase(FName, "InsertValue") != StringRef::npos ||
-           StrInStrNoCase(FName, "AddValue") != StringRef::npos ||
-           StrInStrNoCase(FName, "SetValue") != StringRef::npos ||
-           StrInStrNoCase(FName, "AppendValue") != StringRef::npos ||
-           StrInStrNoCase(FName, "SetAttribute") != StringRef::npos)
-              ? MayEscape
-              : DoNothing;
+      ArgEffectKind E = (FName.contains_insensitive("InsertValue") ||
+                         FName.contains_insensitive("AddValue") ||
+                         FName.contains_insensitive("SetValue") ||
+                         FName.contains_insensitive("AppendValue") ||
+                         FName.contains_insensitive("SetAttribute"))
+                            ? MayEscape
+                            : DoNothing;
 
       return getPersistentSummary(RetEffect::MakeNoRet(), ScratchArgs,
                                   ArgEffect(DoNothing), ArgEffect(E, ObjKind::CF));

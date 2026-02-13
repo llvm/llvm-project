@@ -22,80 +22,103 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
+int main(int, char**) {
+  {
+    typedef std::unordered_map<int, std::string> C;
+    typedef std::pair<int, std::string> P;
+    P a[] = {
+        P(1, "one"),
+        P(2, "two"),
+        P(3, "three"),
+        P(4, "four"),
+        P(1, "four"),
+        P(2, "four"),
+    };
+    C c(a, a + sizeof(a) / sizeof(a[0]));
+    C::const_iterator i = c.find(2);
+    C::const_iterator j = std::next(i, 1);
+    C::iterator k       = c.erase(i, i);
+    assert(k == i);
+    assert(c.size() == 4);
+    assert(c.at(1) == "one");
+    assert(c.at(2) == "two");
+    assert(c.at(3) == "three");
+    assert(c.at(4) == "four");
+
+    k = c.erase(i, j);
+    assert(c.size() == 3);
+    assert(k == j);
+    assert(c.at(1) == "one");
+    assert(c.at(3) == "three");
+    assert(c.at(4) == "four");
+
+    k = c.erase(c.cbegin(), c.cend());
+    assert(k == c.cend());
+    assert(c.size() == 0);
+    assert(k == c.end());
+  }
+  { // Make sure that we're properly updating the bucket list when we're erasing to the end
+    std::unordered_map<int, int> m;
+    m.insert(std::make_pair(1, 1));
+    m.insert(std::make_pair(2, 2));
+
     {
-        typedef std::unordered_map<int, std::string> C;
-        typedef std::pair<int, std::string> P;
-        P a[] =
-        {
-            P(1, "one"),
-            P(2, "two"),
-            P(3, "three"),
-            P(4, "four"),
-            P(1, "four"),
-            P(2, "four"),
-        };
-        C c(a, a + sizeof(a)/sizeof(a[0]));
-        C::const_iterator i = c.find(2);
-        C::const_iterator j = std::next(i, 1);
-        C::iterator k = c.erase(i, i);
-        assert(k == i);
-        assert(c.size() == 4);
-        assert(c.at(1) == "one");
-        assert(c.at(2) == "two");
-        assert(c.at(3) == "three");
-        assert(c.at(4) == "four");
-
-        k = c.erase(i, j);
-        assert(c.size() == 3);
-        assert(k == j);
-        assert(c.at(1) == "one");
-        assert(c.at(3) == "three");
-        assert(c.at(4) == "four");
-
-        k = c.erase(c.cbegin(), c.cend());
-        assert(k == c.cend());
-        assert(c.size() == 0);
-        assert(k == c.end());
+      auto pair = m.equal_range(1);
+      assert(pair.first != pair.second);
+      m.erase(pair.first, pair.second);
     }
+
+    {
+      auto pair = m.equal_range(2);
+      assert(pair.first != pair.second);
+      m.erase(pair.first, pair.second);
+    }
+
+    m.insert(std::make_pair(3, 3));
+    assert(m.size() == 1);
+    assert(*m.begin() == std::make_pair(3, 3));
+    assert(++m.begin() == m.end());
+  }
 #if TEST_STD_VER >= 11
-    {
-        typedef std::unordered_map<int, std::string, std::hash<int>, std::equal_to<int>,
-                            min_allocator<std::pair<const int, std::string>>> C;
-        typedef std::pair<int, std::string> P;
-        P a[] =
-        {
-            P(1, "one"),
-            P(2, "two"),
-            P(3, "three"),
-            P(4, "four"),
-            P(1, "four"),
-            P(2, "four"),
-        };
-        C c(a, a + sizeof(a)/sizeof(a[0]));
-        C::const_iterator i = c.find(2);
-        C::const_iterator j = std::next(i, 1);
-        C::iterator k = c.erase(i, i);
-        assert(k == i);
-        assert(c.size() == 4);
-        assert(c.at(1) == "one");
-        assert(c.at(2) == "two");
-        assert(c.at(3) == "three");
-        assert(c.at(4) == "four");
+  {
+    typedef std::unordered_map<int,
+                               std::string,
+                               std::hash<int>,
+                               std::equal_to<int>,
+                               min_allocator<std::pair<const int, std::string>>>
+        C;
+    typedef std::pair<int, std::string> P;
+    P a[] = {
+        P(1, "one"),
+        P(2, "two"),
+        P(3, "three"),
+        P(4, "four"),
+        P(1, "four"),
+        P(2, "four"),
+    };
+    C c(a, a + sizeof(a) / sizeof(a[0]));
+    C::const_iterator i = c.find(2);
+    C::const_iterator j = std::next(i, 1);
+    C::iterator k       = c.erase(i, i);
+    assert(k == i);
+    assert(c.size() == 4);
+    assert(c.at(1) == "one");
+    assert(c.at(2) == "two");
+    assert(c.at(3) == "three");
+    assert(c.at(4) == "four");
 
-        k = c.erase(i, j);
-        assert(c.size() == 3);
-        assert(k == j);
-        assert(c.at(1) == "one");
-        assert(c.at(3) == "three");
-        assert(c.at(4) == "four");
+    k = c.erase(i, j);
+    assert(c.size() == 3);
+    assert(k == j);
+    assert(c.at(1) == "one");
+    assert(c.at(3) == "three");
+    assert(c.at(4) == "four");
 
-        k = c.erase(c.cbegin(), c.cend());
-        assert(k == c.cend());
-        assert(c.size() == 0);
-        assert(k == c.end());
-    }
+    k = c.erase(c.cbegin(), c.cend());
+    assert(k == c.cend());
+    assert(c.size() == 0);
+    assert(k == c.end());
+  }
 #endif
 
   return 0;

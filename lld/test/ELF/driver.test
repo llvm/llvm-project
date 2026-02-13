@@ -47,7 +47,8 @@
 # ERR9: error: cannot open output file utput=/no/such/file
 
 # RUN: ld.lld %t -z foo -o /dev/null 2>&1 | FileCheck -check-prefix=ERR10 %s --implicit-check-not=warning:
-# RUN: ld.lld %t -z foo -z rel -z rela -z max-page-size=1 -z common-page-size=1 -o /dev/null --version 2>&1 | \
+# RUN: ld.lld %t -z foo -z rel -z rela -z max-page-size=1 -z common-page-size=1 -z dynamic-undefined-weak \
+# RUN:   -z nodynamic-undefined-weak -o /dev/null --version 2>&1 | \
 # RUN:   FileCheck -check-prefix=ERR10 %s --implicit-check-not=warning:
 # ERR10: warning: unknown -z value: foo
 

@@ -1,9 +1,9 @@
-; RUN: llc -march=mipsel < %s | FileCheck %s -check-prefixes=NO-MFHC1,ALL
-; RUN: llc -march=mips  < %s | FileCheck %s -check-prefixes=NO-MFHC1,ALL
-; RUN: llc -march=mipsel -mcpu=mips32r2 < %s | FileCheck %s -check-prefixes=HAS-MFHC1,ALL
-; RUN: llc -march=mips -mcpu=mips32r2 < %s | FileCheck %s -check-prefixes=HAS-MFHC1,ALL
-; RUN: llc -march=mipsel -mcpu=mips32r2 -mattr=+fp64 < %s | FileCheck %s -check-prefixes=HAS-MFHC1,ALL
-; RUN: llc -march=mips -mcpu=mips32r2 -mattr=+fp64 < %s | FileCheck %s -check-prefixes=HAS-MFHC1,ALL
+; RUN: llc -mtriple=mipsel < %s | FileCheck %s -check-prefixes=NO-MFHC1,ALL
+; RUN: llc -mtriple=mips  < %s | FileCheck %s -check-prefixes=NO-MFHC1,ALL
+; RUN: llc -mtriple=mipsel -mcpu=mips32r2 < %s | FileCheck %s -check-prefixes=HAS-MFHC1,ALL
+; RUN: llc -mtriple=mips -mcpu=mips32r2 < %s | FileCheck %s -check-prefixes=HAS-MFHC1,ALL
+; RUN: llc -mtriple=mipsel -mcpu=mips32r2 -mattr=+fp64 < %s | FileCheck %s -check-prefixes=HAS-MFHC1,ALL
+; RUN: llc -mtriple=mips -mcpu=mips32r2 -mattr=+fp64 < %s | FileCheck %s -check-prefixes=HAS-MFHC1,ALL
 
 @a = external global i32
 

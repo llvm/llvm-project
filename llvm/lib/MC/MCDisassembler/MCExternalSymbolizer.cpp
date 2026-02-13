@@ -10,6 +10,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstring>
 
@@ -182,14 +183,13 @@ void MCExternalSymbolizer::tryAddingPcLoadReferenceComment(raw_ostream &cStream,
   }
 }
 
-namespace llvm {
-MCSymbolizer *createMCSymbolizer(const Triple &TT, LLVMOpInfoCallback GetOpInfo,
-                                 LLVMSymbolLookupCallback SymbolLookUp,
-                                 void *DisInfo, MCContext *Ctx,
-                                 std::unique_ptr<MCRelocationInfo> &&RelInfo) {
+MCSymbolizer *
+llvm::createMCSymbolizer(const Triple &TT, LLVMOpInfoCallback GetOpInfo,
+                         LLVMSymbolLookupCallback SymbolLookUp, void *DisInfo,
+                         MCContext *Ctx,
+                         std::unique_ptr<MCRelocationInfo> &&RelInfo) {
   assert(Ctx && "No MCContext given for symbolic disassembly");
 
   return new MCExternalSymbolizer(*Ctx, std::move(RelInfo), GetOpInfo,
                                   SymbolLookUp, DisInfo);
-}
 }

@@ -1,32 +1,27 @@
 import os
-from clang.cindex import Config
 
-if "CLANG_LIBRARY_PATH" in os.environ:
-    Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
+from clang.cindex import (
+    Cursor,
+    CursorKind,
+    File,
+    Index,
+    SourceLocation,
+    SourceRange,
+    TranslationUnit,
+    TranslationUnitLoadError,
+    TranslationUnitSaveError,
+)
 
-from contextlib import contextmanager
+
 import gc
-import os
-import sys
 import tempfile
 import unittest
+from contextlib import contextmanager
+from pathlib import Path
 
-from clang.cindex import CursorKind
-from clang.cindex import Cursor
-from clang.cindex import File
-from clang.cindex import Index
-from clang.cindex import SourceLocation
-from clang.cindex import SourceRange
-from clang.cindex import TranslationUnitSaveError
-from clang.cindex import TranslationUnitLoadError
-from clang.cindex import TranslationUnit
-from .util import get_cursor
-from .util import get_tu
-from .util import skip_if_no_fspath
-from .util import str_to_path
+from .util import get_cursor, get_tu
 
-
-kInputsDir = os.path.join(os.path.dirname(__file__), "INPUTS")
+INPUTS_DIR = os.path.join(os.path.dirname(__file__), "INPUTS")
 
 
 @contextmanager
@@ -47,32 +42,32 @@ def save_tu_pathlike(tu):
     Returns the filename it was saved to.
     """
     with tempfile.NamedTemporaryFile() as t:
-        tu.save(str_to_path(t.name))
+        tu.save(Path(t.name))
         yield t.name
 
 
 class TestTranslationUnit(unittest.TestCase):
     def test_spelling(self):
-        path = os.path.join(kInputsDir, "hello.cpp")
+        path = os.path.join(INPUTS_DIR, "hello.cpp")
         tu = TranslationUnit.from_source(path)
         self.assertEqual(tu.spelling, path)
 
     def test_cursor(self):
-        path = os.path.join(kInputsDir, "hello.cpp")
+        path = os.path.join(INPUTS_DIR, "hello.cpp")
         tu = get_tu(path)
         c = tu.cursor
         self.assertIsInstance(c, Cursor)
         self.assertIs(c.kind, CursorKind.TRANSLATION_UNIT)
 
     def test_parse_arguments(self):
-        path = os.path.join(kInputsDir, "parse_arguments.c")
+        path = os.path.join(INPUTS_DIR, "parse_arguments.c")
         tu = TranslationUnit.from_source(path, ["-DDECL_ONE=hello", "-DDECL_TWO=hi"])
         spellings = [c.spelling for c in tu.cursor.get_children()]
         self.assertEqual(spellings[-2], "hello")
         self.assertEqual(spellings[-1], "hi")
 
     def test_reparse_arguments(self):
-        path = os.path.join(kInputsDir, "parse_arguments.c")
+        path = os.path.join(INPUTS_DIR, "parse_arguments.c")
         tu = TranslationUnit.from_source(path, ["-DDECL_ONE=hello", "-DDECL_TWO=hi"])
         tu.reparse()
         spellings = [c.spelling for c in tu.cursor.get_children()]
@@ -105,24 +100,21 @@ int SOME_DEFINE;
         self.assertEqual(spellings[-1], "y")
 
     def test_unsaved_files_2(self):
-        if sys.version_info.major >= 3:
-            from io import StringIO
-        else:
-            from io import BytesIO as StringIO
+        from io import StringIO
+
         tu = TranslationUnit.from_source(
             "fake.c", unsaved_files=[("fake.c", StringIO("int x;"))]
         )
         spellings = [c.spelling for c in tu.cursor.get_children()]
         self.assertEqual(spellings[-1], "x")
 
-    @skip_if_no_fspath
     def test_from_source_accepts_pathlike(self):
         tu = TranslationUnit.from_source(
-            str_to_path("fake.c"),
+            Path("fake.c"),
             ["-Iincludes"],
             unsaved_files=[
                 (
-                    str_to_path("fake.c"),
+                    Path("fake.c"),
                     """
 #include "fake.h"
     int x;
@@ -130,7 +122,7 @@ int SOME_DEFINE;
     """,
                 ),
                 (
-                    str_to_path("includes/fake.h"),
+                    Path("includes/fake.h"),
                     """
 #define SOME_DEFINE y
     """,
@@ -155,10 +147,10 @@ int SOME_DEFINE;
             else:
                 self.assert_normpaths_equal(expected[1], actual.include.name)
 
-        src = os.path.join(kInputsDir, "include.cpp")
-        h1 = os.path.join(kInputsDir, "header1.h")
-        h2 = os.path.join(kInputsDir, "header2.h")
-        h3 = os.path.join(kInputsDir, "header3.h")
+        src = os.path.join(INPUTS_DIR, "include.cpp")
+        h1 = os.path.join(INPUTS_DIR, "header1.h")
+        h2 = os.path.join(INPUTS_DIR, "header2.h")
+        h3 = os.path.join(INPUTS_DIR, "header3.h")
         inc = [(src, h1), (h1, h3), (src, h2), (h2, h3)]
 
         tu = TranslationUnit.from_source(src)
@@ -166,10 +158,10 @@ int SOME_DEFINE;
             eq(i[0], i[1])
 
     def test_inclusion_directive(self):
-        src = os.path.join(kInputsDir, "include.cpp")
-        h1 = os.path.join(kInputsDir, "header1.h")
-        h2 = os.path.join(kInputsDir, "header2.h")
-        h3 = os.path.join(kInputsDir, "header3.h")
+        src = os.path.join(INPUTS_DIR, "include.cpp")
+        h1 = os.path.join(INPUTS_DIR, "header1.h")
+        h2 = os.path.join(INPUTS_DIR, "header2.h")
+        h3 = os.path.join(INPUTS_DIR, "header3.h")
         inc = [h1, h3, h2, h3, h1]
 
         tu = TranslationUnit.from_source(
@@ -192,7 +184,6 @@ int SOME_DEFINE;
             self.assertTrue(os.path.exists(path))
             self.assertGreater(os.path.getsize(path), 0)
 
-    @skip_if_no_fspath
     def test_save_pathlike(self):
         """Ensure TranslationUnit.save() works with PathLike filename."""
 
@@ -234,14 +225,13 @@ int SOME_DEFINE;
             # Just in case there is an open file descriptor somewhere.
             del tu2
 
-    @skip_if_no_fspath
     def test_load_pathlike(self):
         """Ensure TranslationUnits can be constructed from saved files -
         PathLike variant."""
         tu = get_tu("int foo();")
         self.assertEqual(len(tu.diagnostics), 0)
         with save_tu(tu) as path:
-            tu2 = TranslationUnit.from_ast_file(filename=str_to_path(path))
+            tu2 = TranslationUnit.from_ast_file(filename=Path(path))
             self.assertEqual(len(tu2.diagnostics), 0)
 
             foo = get_cursor(tu2, "foo")
@@ -251,7 +241,7 @@ int SOME_DEFINE;
             del tu2
 
     def test_index_parse(self):
-        path = os.path.join(kInputsDir, "hello.cpp")
+        path = os.path.join(INPUTS_DIR, "hello.cpp")
         index = Index.create()
         tu = index.parse(path)
         self.assertIsInstance(tu, TranslationUnit)
@@ -268,18 +258,17 @@ int SOME_DEFINE;
         with self.assertRaises(Exception):
             f = tu.get_file("foobar.cpp")
 
-    @skip_if_no_fspath
     def test_get_file_pathlike(self):
         """Ensure tu.get_file() works appropriately with PathLike filenames."""
 
         tu = get_tu("int foo();")
 
-        f = tu.get_file(str_to_path("t.c"))
+        f = tu.get_file(Path("t.c"))
         self.assertIsInstance(f, File)
         self.assertEqual(f.name, "t.c")
 
         with self.assertRaises(Exception):
-            f = tu.get_file(str_to_path("foobar.cpp"))
+            f = tu.get_file(Path("foobar.cpp"))
 
     def test_get_source_location(self):
         """Ensure tu.get_source_location() works."""
@@ -349,7 +338,7 @@ int SOME_DEFINE;
         gc.collect()  # Just in case.
 
     def test_fail_from_source(self):
-        path = os.path.join(kInputsDir, "non-existent.cpp")
+        path = os.path.join(INPUTS_DIR, "non-existent.cpp")
         try:
             tu = TranslationUnit.from_source(path)
         except TranslationUnitLoadError:
@@ -357,7 +346,7 @@ int SOME_DEFINE;
         self.assertEqual(tu, None)
 
     def test_fail_from_ast_file(self):
-        path = os.path.join(kInputsDir, "non-existent.ast")
+        path = os.path.join(INPUTS_DIR, "non-existent.ast")
         try:
             tu = TranslationUnit.from_ast_file(path)
         except TranslationUnitLoadError:

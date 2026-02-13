@@ -41,10 +41,20 @@ DEFINE_C_API_STRUCT(MlirExecutionEngine, void);
 /// generation. The number and array of paths corresponding to shared libraries
 /// that will be loaded are specified via `numPaths` and `sharedLibPaths`
 /// respectively.
+/// The `enablePIC` arguments controls the relocation model, when true the
+/// generated code is emitted as "position independent", making it possible to
+/// save it and reload it as a shared object in another process.
 /// TODO: figure out other options.
 MLIR_CAPI_EXPORTED MlirExecutionEngine mlirExecutionEngineCreate(
     MlirModule op, int optLevel, int numPaths,
-    const MlirStringRef *sharedLibPaths, bool enableObjectDump);
+    const MlirStringRef *sharedLibPaths, bool enableObjectDump, bool enablePIC);
+
+/// Initialize the ExecutionEngine. Global constructors specified by
+/// `llvm.mlir.global_ctors` will be run. One common scenario is that kernel
+/// binary compiled from `gpu.module` gets loaded during initialization. Make
+/// sure all symbols are resolvable before initialization by calling
+/// `mlirExecutionEngineRegisterSymbol` or including shared libraries.
+MLIR_CAPI_EXPORTED void mlirExecutionEngineInitialize(MlirExecutionEngine jit);
 
 /// Destroy an ExecutionEngine instance.
 MLIR_CAPI_EXPORTED void mlirExecutionEngineDestroy(MlirExecutionEngine jit);

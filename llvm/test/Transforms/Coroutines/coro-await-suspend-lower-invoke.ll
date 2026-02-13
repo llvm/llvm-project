@@ -58,14 +58,13 @@ suspend.cond:
 ; CHECK-NEXT:       to label %[[STEP2_CONT:[^ ]+]] unwind label %[[PAD]]
 step2:
   %save2 = call token @llvm.coro.save(ptr null)
-  %resume.handle = invoke ptr @llvm.coro.await.suspend.handle(ptr %awaiter, ptr %hdl, ptr @await_suspend_wrapper_handle)
+  invoke void @llvm.coro.await.suspend.handle(ptr %awaiter, ptr %hdl, ptr @await_suspend_wrapper_handle)
     to label %step2.continue unwind label %pad
 
 ; CHECK:      [[STEP2_CONT]]:
 ; CHECK-NEXT:   %[[NEXT_RESUME:.+]] = call ptr @llvm.coro.subfn.addr(ptr %[[NEXT_HDL]], i8 0)
 ; CHECK-NEXT:   musttail call {{.*}} void %[[NEXT_RESUME]](ptr %[[NEXT_HDL]])
 step2.continue:
-  call void @llvm.coro.resume(ptr %resume.handle)
   %suspend2 = call i8 @llvm.coro.suspend(token %save2, i1 false)
   switch i8 %suspend2, label %ret [
     i8 0, label %step3
@@ -89,7 +88,7 @@ cleanup:
   br label %ret
 
 ret:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   ret void
 }
 
@@ -112,8 +111,8 @@ declare i1 @llvm.coro.alloc(token)
 declare ptr @llvm.coro.begin(token, ptr)
 declare void @llvm.coro.await.suspend.void(ptr, ptr, ptr)
 declare i1 @llvm.coro.await.suspend.bool(ptr, ptr, ptr)
-declare ptr @llvm.coro.await.suspend.handle(ptr, ptr, ptr)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.await.suspend.handle(ptr, ptr, ptr)
+declare void @llvm.coro.end(ptr, i1, token)
 
 declare ptr @__cxa_begin_catch(ptr)
 declare void @use_val(i32)

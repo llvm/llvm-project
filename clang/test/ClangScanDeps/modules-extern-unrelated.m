@@ -40,6 +40,7 @@ module second { header "second.h" }
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/first/module.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "first"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -49,9 +50,10 @@ module second { header "second.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/first/first_other.h",
-// CHECK-NEXT:         "[[PREFIX]]/first/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/first/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/first/first_other.h"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "first_other"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -67,10 +69,11 @@ module second { header "second.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/first/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/second/second.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/second/second.h",
-// CHECK-NEXT:         "[[PREFIX]]/second/second.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/first/module.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "second"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -90,11 +93,12 @@ module second { header "second.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/first/module.modulemap",
-// CHECK-NEXT:         "[[PREFIX]]/second/second.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/zeroth/module.modulemap",
-// CHECK-NEXT:         "[[PREFIX]]/zeroth/zeroth.h"
+// CHECK-NEXT:         "[[PREFIX]]/zeroth/zeroth.h",
+// CHECK-NEXT:         "[[PREFIX]]/first/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/second/second.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "zeroth"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],

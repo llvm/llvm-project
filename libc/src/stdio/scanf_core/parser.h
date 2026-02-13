@@ -11,13 +11,14 @@
 
 #include "src/__support/arg_list.h"
 #include "src/__support/ctype_utils.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/str_to_integer.h"
 #include "src/stdio/scanf_core/core_structs.h"
 #include "src/stdio/scanf_core/scanf_config.h"
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace scanf_core {
 
 #ifndef LIBC_COPT_SCANF_DISABLE_INDEX_MODE
@@ -77,7 +78,7 @@ public:
       if (internal::isdigit(str[cur_pos])) {
         auto result = internal::strtointeger<int>(str + cur_pos, 10);
         section.max_width = result.value;
-        cur_pos = cur_pos + result.parsed_len;
+        cur_pos = cur_pos + static_cast<size_t>(result.parsed_len);
       }
 
       // TODO(michaelrj): add posix allocate flag support.
@@ -149,10 +150,11 @@ public:
             char b = str[cur_pos + 1];
             char start = (a < b ? a : b);
             char end = (a < b ? b : a);
-            scan_set.set_range(start, end);
+            scan_set.set_range(static_cast<size_t>(start),
+                               static_cast<size_t>(end));
             cur_pos += 2;
           } else {
-            scan_set.set(str[cur_pos]);
+            scan_set.set(static_cast<size_t>(str[cur_pos]));
             ++cur_pos;
           }
         }
@@ -236,10 +238,10 @@ private:
   LIBC_INLINE size_t parse_index(size_t *local_pos) {
     if (internal::isdigit(str[*local_pos])) {
       auto result = internal::strtointeger<int>(str + *local_pos, 10);
-      size_t index = result.value;
-      if (str[*local_pos + result.parsed_len] != '$')
+      size_t index = static_cast<size_t>(result.value);
+      if (str[*local_pos + static_cast<size_t>(result.parsed_len)] != '$')
         return 0;
-      *local_pos = 1 + result.parsed_len + *local_pos;
+      *local_pos = static_cast<size_t>(1 + result.parsed_len) + *local_pos;
       return index;
     }
     return 0;
@@ -279,6 +281,6 @@ private:
 };
 
 } // namespace scanf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_SCANF_CORE_PARSER_H

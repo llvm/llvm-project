@@ -18,6 +18,10 @@
 # RUN: ls %/t/.cache/clangd/index/foo.cpp.*.idx
 # RUN: ls %/t/sub_dir/.cache/clangd/index/foo.h.*.idx
 
+# Test that the the newly created index directories also have a .gitignore file present.
+# RUN: ls %/t/.cache/clangd/index/.gitignore
+# RUN: ls %/t/sub_dir/.cache/clangd/index/.gitignore
+
 # Test the index is read from disk: delete code and restart clangd.
 # RUN: rm %/t/foo.cpp
 # RUN: clangd -background-index -lit-test < %/t/definition.jsonrpc | FileCheck %/t/definition.jsonrpc --check-prefixes=CHECK,USE

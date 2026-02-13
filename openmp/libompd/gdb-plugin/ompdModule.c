@@ -867,7 +867,7 @@ static PyObject *get_thread_handle(PyObject *self, PyObject *args) {
     return Py_BuildValue("i", -1);
   } else if (retVal != ompd_rc_ok) {
     _printf(
-        "An error occured when calling ompd_get_thread_handle! Error code: %d",
+        "An error occurred when calling ompd_get_thread_handle! Error code: %d",
         retVal);
     return Py_BuildValue("l", retVal);
   }
@@ -943,7 +943,8 @@ static PyObject *call_ompd_get_enclosing_parallel_handle(PyObject *self,
 
   if (retVal != ompd_rc_ok) {
     _printf("An error occurred when calling "
-            "ompd_get_enclosing_parallel_handle! Error code: %d",
+            "ompd_get_enclosing_parallel_handle!"
+            "Error code: %d",
             retVal);
     return Py_BuildValue("l", retVal);
   }
@@ -967,7 +968,7 @@ static PyObject *call_ompd_get_task_parallel_handle(PyObject *self,
 
   if (retVal != ompd_rc_ok) {
     _printf("An error occurred when calling ompd_get_task_parallel_handle! "
-            "Error code: %d");
+            "Error code: %d", retVal);
     return Py_BuildValue("l", retVal);
   }
   return PyCapsule_New(taskParallelHandle, "ParallelHandle",
@@ -1180,9 +1181,10 @@ static PyObject *call_ompd_get_icv_from_scope(PyObject *self, PyObject *args) {
 
   if (retVal != ompd_rc_ok) {
     if (retVal != ompd_rc_incomplete) {
-      _printf("An error occurred when calling ompd_get_icv_from_scope(%i, %i): "
-              "Error code: %d",
-              scope, icvId, retVal);
+      _printf(
+          "An error occurred when calling ompd_get_icv_from_scope(%i, %" PRIu64
+          "): Error code: %d",
+          scope, icvId, retVal);
     }
     return Py_None;
   }
@@ -1363,7 +1365,7 @@ static PyObject *call_ompd_get_tool_data(PyObject *self, PyObject *args) {
         (ompd_task_handle_t *)(PyCapsule_GetPointer(handlePy, "TaskHandle"));
     handle = taskHandle;
   } else {
-    _printf("An error occured when calling ompd_get_tool_data! Scope type not "
+    _printf("An error occurred when calling ompd_get_tool_data! Scope type not "
             "supported.");
     return Py_None;
   }
@@ -1374,7 +1376,7 @@ static PyObject *call_ompd_get_tool_data(PyObject *self, PyObject *args) {
   ompd_rc_t retVal = ompd_get_tool_data(handle, scope, &value, &ptr);
 
   if (retVal != ompd_rc_ok) {
-    _printf("An error occured when calling ompd_get_tool_data! Error code: %d",
+    _printf("An error occurred when calling ompd_get_tool_data! Error code: %d",
             retVal);
     return Py_None;
   }

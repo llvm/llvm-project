@@ -1,5 +1,5 @@
-; RUN: not llc -march=sparc <%s 2>&1 | FileCheck %s
-; RUN: not llc -march=sparcv9 <%s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=sparc <%s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=sparcv9 <%s 2>&1 | FileCheck %s
 
 ; CHECK: error: couldn't allocate input reg for constraint '{f32}'
 ; CHECK: error: couldn't allocate input reg for constraint '{f21}'
@@ -12,9 +12,8 @@ entry:
   ret void
 }
 
-; CHECK-label:test_twinword_error
-; CHECK: error: Hi part of pair should point to an even-numbered register
-; CHECK: error: (note that in some cases it might be necessary to manually bind the input/output registers instead of relying on automatic allocation)
+; CHECK: <unknown>:0: error: Hi part of pair should point to an even-numbered register
+; CHECK: <unknown>:0: error: (note that in some cases it might be necessary to manually bind the input/output registers instead of relying on automatic allocation)
 
 define i64 @test_twinword_error(){
   %1 = tail call i64 asm sideeffect "rd %asr5, ${0:L} \0A\09 srlx ${0:L}, 32, ${0:H}", "={i1}"()

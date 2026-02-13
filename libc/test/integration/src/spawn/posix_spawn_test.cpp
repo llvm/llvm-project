@@ -8,6 +8,7 @@
 
 #include "test_binary_properties.h"
 
+#include "hdr/stdint_proxy.h"
 #include "src/spawn/posix_spawn.h"
 #include "src/spawn/posix_spawn_file_actions_addopen.h"
 #include "src/spawn/posix_spawn_file_actions_destroy.h"
@@ -18,7 +19,6 @@
 #include <fcntl.h>
 #include <spawn.h>
 #include <stddef.h>
-#include <stdint.h>
 #include <sys/wait.h>
 
 char arg0[] = "libc_posix_spawn_test_binary";
@@ -45,7 +45,8 @@ void spawn_and_wait_for_normal_exit(char **envp) {
   ASSERT_EQ(exit_status, 0);
 }
 
-TEST_MAIN(int argc, char **argv, char **envp) {
+TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
+          char **envp) {
   spawn_and_wait_for_normal_exit(envp);
   return 0;
 }

@@ -46,12 +46,13 @@
 #ifndef LLVM_CODEGEN_MACHINETRACEMETRICS_H
 #define LLVM_CODEGEN_MACHINETRACEMETRICS_H
 
-#include "llvm/ADT/SparseSet.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SparseSet.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 
 namespace llvm {
@@ -72,15 +73,17 @@ class TargetRegisterInfo;
 // direction instructions are scanned, it could be the operand that defined the
 // regunit, or the highest operand to read the regunit.
 struct LiveRegUnit {
-  unsigned RegUnit;
+  MCRegUnit RegUnit;
   unsigned Cycle = 0;
   const MachineInstr *MI = nullptr;
   unsigned Op = 0;
 
-  unsigned getSparseSetIndex() const { return RegUnit; }
+  unsigned getSparseSetIndex() const { return static_cast<unsigned>(RegUnit); }
 
-  LiveRegUnit(unsigned RU) : RegUnit(RU) {}
+  explicit LiveRegUnit(MCRegUnit RU) : RegUnit(RU) {}
 };
+
+using LiveRegUnitSet = SparseSet<LiveRegUnit, MCRegUnit, MCRegUnitToIndex>;
 
 /// Strategies for selecting traces.
 enum class MachineTraceStrategy {
@@ -93,7 +96,7 @@ enum class MachineTraceStrategy {
   TS_NumStrategies
 };
 
-class MachineTraceMetrics : public MachineFunctionPass {
+class MachineTraceMetrics {
   const MachineFunction *MF = nullptr;
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
@@ -102,19 +105,25 @@ class MachineTraceMetrics : public MachineFunctionPass {
   TargetSchedModel SchedModel;
 
 public:
+  friend class MachineTraceMetricsWrapperPass;
   friend class Ensemble;
   friend class Trace;
 
   class Ensemble;
 
-  static char ID;
+  // For legacy pass.
+  MachineTraceMetrics() = default;
 
-  MachineTraceMetrics();
+  explicit MachineTraceMetrics(MachineFunction &MF, const MachineLoopInfo &LI) {
+    init(MF, LI);
+  }
 
-  void getAnalysisUsage(AnalysisUsage&) const override;
-  bool runOnMachineFunction(MachineFunction&) override;
-  void releaseMemory() override;
-  void verifyAnalysis() const override;
+  MachineTraceMetrics(MachineTraceMetrics &&) = default;
+
+  ~MachineTraceMetrics();
+
+  void init(MachineFunction &Func, const MachineLoopInfo &LI);
+  void clear();
 
   /// Per-basic block information that doesn't depend on the trace through the
   /// block.
@@ -149,13 +158,14 @@ public:
   /// successors.
   struct LiveInReg {
     /// The virtual register required, or a register unit.
-    Register Reg;
+    VirtRegOrUnit VRegOrUnit;
 
     /// For virtual registers: Minimum height of the defining instruction.
     /// For regunits: Height of the highest user in the trace.
     unsigned Height;
 
-    LiveInReg(Register Reg, unsigned Height = 0) : Reg(Reg), Height(Height) {}
+    explicit LiveInReg(VirtRegOrUnit VRegOrUnit, unsigned Height = 0)
+        : VRegOrUnit(VRegOrUnit), Height(Height) {}
   };
 
   /// Per-basic block information that relates to a specific trace through the
@@ -243,6 +253,7 @@ public:
     SmallVector<LiveInReg, 4> LiveIns;
 
     void print(raw_ostream&) const;
+    void dump() const { print(dbgs()); }
   };
 
   /// InstrCycles represents the cycle height and depth of an instruction in a
@@ -271,6 +282,7 @@ public:
     explicit Trace(Ensemble &te, TraceBlockInfo &tbi) : TE(te), TBI(tbi) {}
 
     void print(raw_ostream&) const;
+    void dump() const { print(dbgs()); }
 
     /// Compute the total number of instructions in the trace.
     unsigned getInstrCount() const {
@@ -293,9 +305,9 @@ public:
     /// classes are included. For the caller to account for extra machine
     /// instructions, it must first resolve each instruction's scheduling class.
     unsigned getResourceLength(
-        ArrayRef<const MachineBasicBlock *> Extrablocks = std::nullopt,
-        ArrayRef<const MCSchedClassDesc *> ExtraInstrs = std::nullopt,
-        ArrayRef<const MCSchedClassDesc *> RemoveInstrs = std::nullopt) const;
+        ArrayRef<const MachineBasicBlock *> Extrablocks = {},
+        ArrayRef<const MCSchedClassDesc *> ExtraInstrs = {},
+        ArrayRef<const MCSchedClassDesc *> RemoveInstrs = {}) const;
 
     /// Return the length of the (data dependency) critical path through the
     /// trace.
@@ -361,7 +373,8 @@ public:
     virtual ~Ensemble();
 
     virtual const char *getName() const = 0;
-    void print(raw_ostream&) const;
+    void print(raw_ostream &) const;
+    void dump() const { print(dbgs()); }
     void invalidate(const MachineBasicBlock *MBB);
     void verify() const;
 
@@ -370,16 +383,15 @@ public:
     Trace getTrace(const MachineBasicBlock *MBB);
 
     /// Updates the depth of an machine instruction, given RegUnits.
-    void updateDepth(TraceBlockInfo &TBI, const MachineInstr&,
-                     SparseSet<LiveRegUnit> &RegUnits);
-    void updateDepth(const MachineBasicBlock *, const MachineInstr&,
-                     SparseSet<LiveRegUnit> &RegUnits);
+    void updateDepth(TraceBlockInfo &TBI, const MachineInstr &,
+                     LiveRegUnitSet &RegUnits);
+    void updateDepth(const MachineBasicBlock *, const MachineInstr &,
+                     LiveRegUnitSet &RegUnits);
 
     /// Updates the depth of the instructions from Start to End.
     void updateDepths(MachineBasicBlock::iterator Start,
                       MachineBasicBlock::iterator End,
-                      SparseSet<LiveRegUnit> &RegUnits);
-
+                      LiveRegUnitSet &RegUnits);
   };
 
   /// Get the trace ensemble representing the given trace selection strategy.
@@ -397,6 +409,12 @@ public:
   /// Call Ensemble::getTrace() again to update any trace handles.
   void invalidate(const MachineBasicBlock *MBB);
 
+  /// Handle invalidation explicitly.
+  bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
+                  MachineFunctionAnalysisManager::Invalidator &);
+
+  void verifyAnalysis() const;
+
 private:
   // One entry per basic block, indexed by block number.
   SmallVector<FixedBlockInfo, 4> BlockInfo;
@@ -409,8 +427,8 @@ private:
   SmallVector<unsigned, 0> ProcReleaseAtCycles;
 
   // One ensemble per strategy.
-  Ensemble
-      *Ensembles[static_cast<size_t>(MachineTraceStrategy::TS_NumStrategies)];
+  std::unique_ptr<Ensemble>
+      Ensembles[static_cast<size_t>(MachineTraceStrategy::TS_NumStrategies)];
 
   // Convert scaled resource usage to a cycle count that can be compared with
   // latencies.
@@ -431,6 +449,38 @@ inline raw_ostream &operator<<(raw_ostream &OS,
   En.print(OS);
   return OS;
 }
+
+class MachineTraceMetricsAnalysis
+    : public AnalysisInfoMixin<MachineTraceMetricsAnalysis> {
+  friend AnalysisInfoMixin<MachineTraceMetricsAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  using Result = MachineTraceMetrics;
+  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+};
+
+/// Verifier pass for \c MachineTraceMetrics.
+struct MachineTraceMetricsVerifierPass
+    : PassInfoMixin<MachineTraceMetricsVerifierPass> {
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
+};
+
+class MachineTraceMetricsWrapperPass : public MachineFunctionPass {
+public:
+  static char ID;
+  MachineTraceMetrics MTM;
+
+  MachineTraceMetricsWrapperPass();
+
+  void getAnalysisUsage(AnalysisUsage &) const override;
+  bool runOnMachineFunction(MachineFunction &) override;
+  void releaseMemory() override { MTM.clear(); }
+  void verifyAnalysis() const override { MTM.verifyAnalysis(); }
+  MachineTraceMetrics &getMTM() { return MTM; }
+};
 
 } // end namespace llvm
 

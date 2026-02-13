@@ -85,6 +85,11 @@ class StaticInterfaceMethod<string desc, string retTy, string methodName,
     : InterfaceMethod<desc, retTy, methodName, args, methodBody,
                       defaultImplementation>;
 
+// This class represents a interface method declaration.
+class InterfaceMethodDeclaration<string desc, string retTy, string methodName,
+                            dag args = (ins)>
+    : InterfaceMethod<desc, retTy, methodName, args>;
+
 // Interface represents a base interface.
 class Interface<string name, list<Interface> baseInterfacesArg = []> {
   // A human-readable description of what this interface does.
@@ -146,6 +151,11 @@ class TypeInterface<string name, list<Interface> baseInterfaces = []>
 			name # " instance",
 			!if(!empty(cppNamespace),"", cppNamespace # "::") # name
     >;
+
+// DialectInterface represents a Dialect Interface.
+class DialectInterface<string name, list<Interface> baseInterfaces = []>
+  : Interface<name, baseInterfaces>, OpInterfaceTrait<name>;
+
 
 // Whether to declare the interface methods in the user entity's header. This
 // class simply wraps an Interface but is used to indicate that the method

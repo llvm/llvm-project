@@ -11,6 +11,7 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Target/DynamicLoader.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -295,8 +296,8 @@ BringInRemoteFile(Platform *platform,
 
 lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
     const lldb_private::ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
-    const lldb_private::FileSpecList *module_search_paths_ptr,
-    llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr) {
+    llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr,
+    Process *process) {
 
   Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOGF(log,
@@ -318,19 +319,32 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
     // exist on the filesystem, so let's use the images in our own memory
     // to create the modules.
 
-    // Check if the requested image is in our shared cache.
-    SharedCacheImageInfo image_info =
-        HostInfo::GetSharedCacheImageInfo(module_spec.GetFileSpec().GetPath());
+    SharedCacheImageInfo image_info;
+    if (process && process->GetDynamicLoader()) {
+      addr_t sc_base_addr;
+      UUID sc_uuid;
+      LazyBool using_sc, private_sc;
+      FileSpec sc_path;
+      if (process->GetDynamicLoader()->GetSharedCacheInformation(
+              sc_base_addr, sc_uuid, using_sc, private_sc, sc_path))
+        image_info = HostInfo::GetSharedCacheImageInfo(
+            module_spec.GetFileSpec().GetPath(), sc_uuid);
+    }
+
+    if (!image_info.GetUUID())
+      image_info = HostInfo::GetSharedCacheImageInfo(
+          module_spec.GetFileSpec().GetPath());
 
     // If we found it and it has the correct UUID, let's proceed with
     // creating a module from the memory contents.
-    if (image_info.uuid &&
-        (!module_spec.GetUUID() || module_spec.GetUUID() == image_info.uuid)) {
-      ModuleSpec shared_cache_spec(module_spec.GetFileSpec(), image_info.uuid,
-                                   image_info.data_sp);
+    if (image_info.GetUUID() &&
+        (!module_spec.GetUUID() ||
+         module_spec.GetUUID() == image_info.GetUUID())) {
+      ModuleSpec shared_cache_spec(module_spec.GetFileSpec(),
+                                   image_info.GetUUID(),
+                                   image_info.GetExtractor());
       err = ModuleList::GetSharedModule(shared_cache_spec, module_sp,
-                                        module_search_paths_ptr, old_modules,
-                                        did_create_ptr);
+                                        old_modules, did_create_ptr);
       if (module_sp) {
         LLDB_LOGF(log, "[%s] module %s was found in the in-memory shared cache",
                   (IsHost() ? "host" : "remote"),
@@ -348,8 +362,7 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
     FileSystem::Instance().Resolve(device_support_spec);
     if (FileSystem::Instance().Exists(device_support_spec)) {
       ModuleSpec local_spec(device_support_spec, module_spec.GetUUID());
-      err = ModuleList::GetSharedModule(local_spec, module_sp,
-                                        module_search_paths_ptr, old_modules,
+      err = ModuleList::GetSharedModule(local_spec, module_sp, old_modules,
                                         did_create_ptr);
       if (module_sp) {
         LLDB_LOGF(log,
@@ -363,8 +376,7 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
     }
   }
 
-  err = ModuleList::GetSharedModule(module_spec, module_sp,
-                                    module_search_paths_ptr, old_modules,
+  err = ModuleList::GetSharedModule(module_spec, module_sp, old_modules,
                                     did_create_ptr);
   if (module_sp)
     return err;
@@ -405,17 +417,21 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
           // when going over the *slow* GDB remote transfer mechanism we first
           // check the hashes of the files - and only do the actual transfer if
           // they differ
-          uint64_t high_local, high_remote, low_local, low_remote;
           auto MD5 = llvm::sys::fs::md5_contents(module_cache_spec.GetPath());
           if (!MD5)
             return Status(MD5.getError());
-          std::tie(high_local, low_local) = MD5->words();
 
-          m_remote_platform_sp->CalculateMD5(module_spec.GetFileSpec(),
-                                             low_remote, high_remote);
-          if (low_local != low_remote || high_local != high_remote) {
+          Log *log = GetLog(LLDBLog::Platform);
+          bool requires_transfer = true;
+          llvm::ErrorOr<llvm::MD5::MD5Result> remote_md5 =
+              m_remote_platform_sp->CalculateMD5(module_spec.GetFileSpec());
+          if (std::error_code ec = remote_md5.getError())
+            LLDB_LOG(log, "couldn't get md5 sum from remote: {0}",
+                     ec.message());
+          else
+            requires_transfer = *MD5 != *remote_md5;
+          if (requires_transfer) {
             // bring in the remote file
-            Log *log = GetLog(LLDBLog::Platform);
             LLDB_LOGF(log,
                       "[%s] module %s/%s needs to be replaced from remote copy",
                       (IsHost() ? "host" : "remote"),
@@ -458,9 +474,9 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
         module_sp->SetPlatformFileSpec(module_spec.GetFileSpec());
         return Status();
       } else
-        return Status("unable to obtain valid module file");
+        return Status::FromErrorString("unable to obtain valid module file");
     } else
-      return Status("no cache path");
+      return Status::FromErrorString("no cache path");
   } else
-    return Status("unable to resolve module");
+    return Status::FromErrorString("unable to resolve module");
 }

@@ -126,6 +126,14 @@ void SymbolFile::FindFunctions(const Module::LookupInfo &lookup_info,
                                bool include_inlines,
                                SymbolContextList &sc_list) {}
 
+void SymbolFile::FindFunctions(llvm::ArrayRef<Module::LookupInfo> lookup_infos,
+                               const CompilerDeclContext &parent_decl_ctx,
+                               bool include_inlines,
+                               SymbolContextList &sc_list) {
+  for (const auto &lookup_info : lookup_infos)
+    FindFunctions(lookup_info, parent_decl_ctx, include_inlines, sc_list);
+}
+
 void SymbolFile::FindFunctions(const RegularExpression &regex,
                                bool include_inlines,
                                SymbolContextList &sc_list) {}
@@ -152,10 +160,10 @@ void SymbolFile::AssertModuleLock() {
 
 SymbolFile::RegisterInfoResolver::~RegisterInfoResolver() = default;
 
-Symtab *SymbolFileCommon::GetSymtab() {
+Symtab *SymbolFileCommon::GetSymtab(bool can_create) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   // Fetch the symtab from the main object file.
-  auto *symtab = GetMainObjectFile()->GetSymtab();
+  auto *symtab = GetMainObjectFile()->GetSymtab(can_create);
   if (m_symtab != symtab) {
     m_symtab = symtab;
 
@@ -258,4 +266,10 @@ void SymbolFileCommon::Dump(Stream &s) {
 
   if (Symtab *symtab = GetSymtab())
     symtab->Dump(&s, nullptr, eSortOrderNone);
+}
+
+std::string SymbolFile::GetObjectName() const {
+  if (const ObjectFile *object_file = GetObjectFile())
+    return object_file->GetObjectName();
+  return "";
 }

@@ -14,7 +14,7 @@
 /// likely harmless to run it on something else, but it is also not valuable].
 //===----------------------------------------------------------------------===//
 
-#include "flang/ISO_Fortran_binding_wrapper.h"
+#include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Inquiry.h"
@@ -33,12 +33,13 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
+#include <mlir/IR/Diagnostics.h>
 
 namespace fir {
-#define GEN_PASS_DECL_VSCALEATTR
 #define GEN_PASS_DEF_VSCALEATTR
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 } // namespace fir
@@ -50,7 +51,8 @@ namespace {
 class VScaleAttrPass : public fir::impl::VScaleAttrBase<VScaleAttrPass> {
 public:
   VScaleAttrPass(const fir::VScaleAttrOptions &options) {
-    vscaleRange = options.vscaleRange;
+    vscaleMin = options.vscaleMin;
+    vscaleMax = options.vscaleMax;
   }
   VScaleAttrPass() {}
   void runOnOperation() override;
@@ -64,27 +66,28 @@ void VScaleAttrPass::runOnOperation() {
 
   LLVM_DEBUG(llvm::dbgs() << "Func-name:" << func.getSymName() << "\n");
 
+  if (!llvm::isPowerOf2_32(vscaleMin)) {
+    func->emitError(
+        "VScaleAttr: vscaleMin has to be a power-of-two greater than 0\n");
+    return signalPassFailure();
+  }
+
+  if (vscaleMax != 0 &&
+      (!llvm::isPowerOf2_32(vscaleMax) || (vscaleMin > vscaleMax))) {
+    func->emitError("VScaleAttr: vscaleMax has to be a power-of-two "
+                    "greater-than-or-equal to vscaleMin or 0 to signify "
+                    "an unbounded maximum\n");
+    return signalPassFailure();
+  }
+
   auto context = &getContext();
 
   auto intTy = mlir::IntegerType::get(context, 32);
 
-  assert(vscaleRange.first && "VScaleRange minimum should be non-zero");
-
   func->setAttr("vscale_range",
                 mlir::LLVM::VScaleRangeAttr::get(
-                    context, mlir::IntegerAttr::get(intTy, vscaleRange.first),
-                    mlir::IntegerAttr::get(intTy, vscaleRange.second)));
+                    context, mlir::IntegerAttr::get(intTy, vscaleMin),
+                    mlir::IntegerAttr::get(intTy, vscaleMax)));
 
   LLVM_DEBUG(llvm::dbgs() << "=== End " DEBUG_TYPE " ===\n");
-}
-
-std::unique_ptr<mlir::Pass>
-fir::createVScaleAttrPass(std::pair<unsigned, unsigned> vscaleAttr) {
-  VScaleAttrOptions opts;
-  opts.vscaleRange = vscaleAttr;
-  return std::make_unique<VScaleAttrPass>(opts);
-}
-
-std::unique_ptr<mlir::Pass> fir::createVScaleAttrPass() {
-  return std::make_unique<VScaleAttrPass>();
 }

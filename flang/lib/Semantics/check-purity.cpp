@@ -17,6 +17,7 @@ void PurityChecker::Enter(const parser::ExecutableConstruct &exec) {
         "An image control statement may not appear in a pure subprogram"_err_en_US);
   }
 }
+
 void PurityChecker::Enter(const parser::SubroutineSubprogram &subr) {
   const auto &stmt{std::get<parser::Statement<parser::SubroutineStmt>>(subr.t)};
   Entered(
@@ -33,18 +34,25 @@ void PurityChecker::Enter(const parser::FunctionSubprogram &func) {
 
 void PurityChecker::Leave(const parser::FunctionSubprogram &) { Left(); }
 
+void PurityChecker::Enter(const parser::MainProgram &) { ++depth_; }
+void PurityChecker::Leave(const parser::MainProgram &) { --depth_; }
+
 bool PurityChecker::InPureSubprogram() const {
   return pureDepth_ >= 0 && depth_ >= pureDepth_;
 }
 
 bool PurityChecker::HasPurePrefix(
     const std::list<parser::PrefixSpec> &prefixes) const {
+  bool result{false};
   for (const parser::PrefixSpec &prefix : prefixes) {
-    if (std::holds_alternative<parser::PrefixSpec::Pure>(prefix.u)) {
-      return true;
+    if (std::holds_alternative<parser::PrefixSpec::Impure>(prefix.u)) {
+      return false;
+    } else if (std::holds_alternative<parser::PrefixSpec::Pure>(prefix.u) ||
+        std::holds_alternative<parser::PrefixSpec::Elemental>(prefix.u)) {
+      result = true;
     }
   }
-  return false;
+  return result;
 }
 
 void PurityChecker::Entered(

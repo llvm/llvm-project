@@ -26,7 +26,11 @@ function(merge_relocatable_object name)
   )
   # Pass -r to the driver is much cleaner than passing -Wl,-r: the compiler knows it is
   # a relocatable linking and will not pass other irrelevant flags to the linker.
-  target_link_options(${relocatable_target} PRIVATE -r -nostdlib)
+  set(link_opts -r -nostdlib)
+  if (explicit_target_triple AND LLVM_ENABLE_LLD)
+    list(APPEND link_opts --target=${explicit_target_triple})
+  endif()
+  target_link_options(${relocatable_target} PRIVATE ${link_opts})
   set_target_properties(
     ${relocatable_target}
     PROPERTIES
@@ -85,17 +89,34 @@ endif()
 add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
 
 add_object_library(
+  gnu_property_section
+  SRCS
+    gnu_property_section.cpp
+  HDRS
+    gnu_property_section.h
+  DEPENDS
+    libc.src.__support.CPP.string_view
+    libc.src.__support.macros.config
+    libc.hdr.elf_proxy
+    libc.hdr.link_macros
+)
+
+add_object_library(
   do_start
   SRCS
     do_start.cpp
   HDRS
     do_start.h
   DEPENDS
-    libc.config.linux.app_h
+    libc.config.app_h
+    libc.hdr.elf_proxy
+    libc.hdr.link_macros
+    libc.hdr.stdint_proxy
     libc.include.sys_mman
     libc.include.sys_syscall
-    libc.src.__support.threads.thread
+    libc.src.__support.OSUtil.linux.auxv
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.threads.thread
     libc.src.stdlib.exit
     libc.src.stdlib.atexit
     libc.src.unistd.environ
@@ -111,6 +132,7 @@ merge_relocatable_object(
   .${LIBC_TARGET_ARCHITECTURE}.start
   .${LIBC_TARGET_ARCHITECTURE}.tls
   .do_start
+  .gnu_property_section
 )
 
 add_startup_object(
@@ -133,6 +155,5 @@ foreach(target IN LISTS startup_components)
   install(FILES $<TARGET_OBJECTS:${fq_target_name}>
           DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
           RENAME $<TARGET_PROPERTY:${fq_target_name},OUTPUT_NAME>
-          EXCLUDE_FROM_ALL
           COMPONENT libc)
 endforeach()

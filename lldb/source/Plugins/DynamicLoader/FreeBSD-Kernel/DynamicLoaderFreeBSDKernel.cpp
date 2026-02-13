@@ -200,9 +200,17 @@ lldb_private::UUID DynamicLoaderFreeBSDKernel::CheckForKernelImageAtAddress(
   if (header.e_type != llvm::ELF::ET_EXEC)
     return UUID();
 
-  ModuleSP memory_module_sp =
+  llvm::Expected<ModuleSP> memory_module_sp_or_err =
       process->ReadModuleFromMemory(FileSpec("temp_freebsd_kernel"), addr);
+  if (auto err = memory_module_sp_or_err.takeError()) {
+    LLDB_LOG_ERROR(log, std::move(err),
+                   "DynamicLoaderFreeBSDKernel::CheckForKernelImageAtAddress: "
+                   "Failed to read module in memory -- {0}");
+    *read_error = true;
+    return UUID();
+  }
 
+  ModuleSP memory_module_sp = *memory_module_sp_or_err;
   if (!memory_module_sp.get()) {
     *read_error = true;
     return UUID();
@@ -291,8 +299,15 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::ReadMemoryModule(
     }
   }
 
-  memory_module_sp =
+  llvm::Expected<ModuleSP> memory_module_sp_or_err =
       process->ReadModuleFromMemory(file_spec, m_load_address, size_to_read);
+  if (auto err = memory_module_sp_or_err.takeError()) {
+    LLDB_LOG_ERROR(log, std::move(err),
+                   "KextImageInfo::ReadMemoryModule: Failed to read module "
+                   "from memory -- {0}");
+    return false;
+  }
+  memory_module_sp = *memory_module_sp_or_err;
 
   if (!memory_module_sp)
     return false;
@@ -327,9 +342,9 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::LoadImageUsingMemoryModule(
   Target &target = process->GetTarget();
 
   if (IsKernel() && m_uuid.IsValid()) {
-    Stream &s = target.GetDebugger().GetOutputStream();
-    s.Printf("Kernel UUID: %s\n", m_uuid.GetAsString().c_str());
-    s.Printf("Load Address: 0x%" PRIx64 "\n", m_load_address);
+    lldb::StreamUP s = target.GetDebugger().GetAsyncOutputStream();
+    s->Printf("Kernel UUID: %s\n", m_uuid.GetAsString().c_str());
+    s->Printf("Load Address: 0x%" PRIx64 "\n", m_load_address);
   }
 
   // Test if the module is loaded into the taget,
@@ -355,9 +370,9 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::LoadImageUsingMemoryModule(
       if (!m_module_sp)
         m_module_sp = target.GetOrCreateModule(module_spec, true);
       if (IsKernel() && !m_module_sp) {
-        Stream &s = target.GetDebugger().GetOutputStream();
-        s.Printf("WARNING: Unable to locate kernel binary on the debugger "
-                 "system.\n");
+        target.GetDebugger().GetAsyncOutputStream()->Printf(
+            "WARNING: Unable to locate kernel binary on the debugger "
+            "system.\n");
       }
     }
 
@@ -464,20 +479,19 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::LoadImageUsingMemoryModule(
   }
 
   if (IsLoaded() && m_module_sp && IsKernel()) {
-    Stream &s = target.GetDebugger().GetOutputStream();
+    lldb::StreamUP s = target.GetDebugger().GetAsyncOutputStream();
     ObjectFile *kernel_object_file = m_module_sp->GetObjectFile();
     if (kernel_object_file) {
       addr_t file_address =
           kernel_object_file->GetBaseAddress().GetFileAddress();
       if (m_load_address != LLDB_INVALID_ADDRESS &&
           file_address != LLDB_INVALID_ADDRESS) {
-        s.Printf("Kernel slide 0x%" PRIx64 " in memory.\n",
-                 m_load_address - file_address);
-        s.Printf("Loaded kernel file %s\n",
-                 m_module_sp->GetFileSpec().GetPath().c_str());
+        s->Printf("Kernel slide 0x%" PRIx64 " in memory.\n",
+                  m_load_address - file_address);
+        s->Printf("Loaded kernel file %s\n",
+                  m_module_sp->GetFileSpec().GetPath().c_str());
       }
     }
-    s.Flush();
   }
 
   return IsLoaded();
@@ -552,9 +566,9 @@ bool DynamicLoaderFreeBSDKernel::ParseKmods(Address linker_files_head_addr) {
   m_process->GetTarget().ModulesDidUnload(remove_modules, false);
 
   for (KModImageInfo &image_info : linker_files_list) {
-    if (m_kld_name_to_uuid.find(image_info.GetName()) !=
-        m_kld_name_to_uuid.end())
-      image_info.SetUUID(m_kld_name_to_uuid[image_info.GetName()]);
+    auto it = m_kld_name_to_uuid.find(image_info.GetName());
+    if (it != m_kld_name_to_uuid.end())
+      image_info.SetUUID(it->second);
     bool failed_to_load = false;
     if (!image_info.LoadImageUsingMemoryModule(m_process)) {
       image_info.LoadImageUsingFileAddress(m_process);
@@ -783,6 +797,5 @@ ThreadPlanSP DynamicLoaderFreeBSDKernel::GetStepThroughTrampolinePlan(
 }
 
 Status DynamicLoaderFreeBSDKernel::CanLoadImage() {
-  Status error("shared object cannot be loaded into kernel");
-  return error;
+  return Status::FromErrorString("shared object cannot be loaded into kernel");
 }

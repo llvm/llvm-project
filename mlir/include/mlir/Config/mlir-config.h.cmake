@@ -20,9 +20,6 @@
 #ifndef MLIR_CONFIG_H
 #define MLIR_CONFIG_H
 
-/* If set, enable deprecated serialization passes. */
-#cmakedefine01 MLIR_DEPRECATED_GPU_SERIALIZATION_ENABLE
-
 /* Enable expensive checks to detect invalid pattern API usage. Failed checks
    manifest as fatal errors or invalid memory accesses (e.g., accessing
    deallocated memory) that cause a crash. Running with ASAN is recommended for
@@ -38,10 +35,6 @@
 
 /* If set, enables PDL usage. */
 #cmakedefine01 MLIR_ENABLE_PDL_IN_PATTERNMATCH
-
-/* If set, enables CUDA-related features in CUDA-related transforms, pipelines,
-   and targets. */
-#cmakedefine01 MLIR_ENABLE_CUDA_CONVERSIONS
 
 /* If set, enables features that depend on the NVIDIA's PTX compiler. */
 #cmakedefine01 MLIR_ENABLE_NVPTXCOMPILER

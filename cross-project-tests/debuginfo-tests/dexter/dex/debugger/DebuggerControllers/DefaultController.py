@@ -128,7 +128,7 @@ class DefaultController(DebuggerControllerBase):
                     break
 
             if in_source_file(self.source_files, step_info):
-                self.debugger.step()
+                self.debugger.step_in()
             else:
                 self.debugger.go()
 

@@ -26,8 +26,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
@@ -58,13 +58,25 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
   tooling::stdlib::Recognizer Recognizer;
   for (auto *Root : ASTRoots) {
     walkAST(*Root, [&](SourceLocation Loc, NamedDecl &ND, RefType RT) {
-      auto FID = SM.getFileID(SM.getSpellingLoc(Loc));
+      auto SpellLoc = SM.getSpellingLoc(Loc);
+      // Tokens resulting from macro concatenation ends up in scratch space and
+      // clang currently doesn't have a good/simple APIs for tracking where
+      // pieces of a concataned token originated from.
+      // So we use the macro expansion location instead, and downgrade reference
+      // type to ambigious to prevent false negatives.
+      if (SM.isWrittenInScratchSpace(SpellLoc)) {
+        Loc = SM.getExpansionLoc(Loc);
+        if (RT == RefType::Explicit)
+          RT = RefType::Ambiguous;
+        SpellLoc = SM.getSpellingLoc(Loc);
+      }
+      auto FID = SM.getFileID(SpellLoc);
       if (FID != SM.getMainFileID() && FID != SM.getPreambleFileID())
         return;
       // FIXME: Most of the work done here is repetitive. It might be useful to
       // have a cache/batching.
       SymbolReference SymRef{ND, Loc, RT};
-      return CB(SymRef, headersForSymbol(ND, SM, PI));
+      return CB(SymRef, headersForSymbol(ND, PP, PI));
     });
   }
   for (const SymbolReference &MacroRef : MacroRefs) {
@@ -72,7 +84,7 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
     if (!SM.isWrittenInMainFile(SM.getSpellingLoc(MacroRef.RefLocation)) ||
         shouldIgnoreMacroReference(PP, MacroRef.Target.macro()))
       continue;
-    CB(MacroRef, headersForSymbol(MacroRef.Target, SM, PI));
+    CB(MacroRef, headersForSymbol(MacroRef.Target, PP, PI));
   }
 }
 
@@ -82,11 +94,12 @@ analyze(llvm::ArrayRef<Decl *> ASTRoots,
         const PragmaIncludes *PI, const Preprocessor &PP,
         llvm::function_ref<bool(llvm::StringRef)> HeaderFilter) {
   auto &SM = PP.getSourceManager();
-  const FileEntry *MainFile = SM.getFileEntryForID(SM.getMainFileID());
+  const auto MainFile = *SM.getFileEntryRefForID(SM.getMainFileID());
   llvm::DenseSet<const Include *> Used;
-  llvm::StringSet<> Missing;
+  llvm::StringMap<Header> Missing;
+  constexpr auto DefaultHeaderFilter = [](llvm::StringRef) { return false; };
   if (!HeaderFilter)
-    HeaderFilter = [](llvm::StringRef) { return false; };
+    HeaderFilter = DefaultHeaderFilter;
   OptionalDirectoryEntryRef ResourceDir =
       PP.getHeaderSearchInfo().getModuleMap().getBuiltinDir();
   walkUsed(ASTRoots, MacroRefs, PI, PP,
@@ -95,7 +108,7 @@ analyze(llvm::ArrayRef<Decl *> ASTRoots,
              for (const Header &H : Providers) {
                if (H.kind() == Header::Physical &&
                    (H.physical() == MainFile ||
-                    (ResourceDir && H.physical().getDir() == *ResourceDir))) {
+                    H.physical().getDir() == ResourceDir)) {
                  Satisfied = true;
                }
                for (const Include *I : Inc.match(H)) {
@@ -103,18 +116,30 @@ analyze(llvm::ArrayRef<Decl *> ASTRoots,
                  Satisfied = true;
                }
              }
-             if (!Satisfied && !Providers.empty() &&
-                 Ref.RT == RefType::Explicit &&
-                 !HeaderFilter(Providers.front().resolvedPath()))
-               Missing.insert(spellHeader(
-                   {Providers.front(), PP.getHeaderSearchInfo(), MainFile}));
+             // Bail out if we can't (or need not) insert an include.
+             if (Satisfied || Providers.empty() || Ref.RT != RefType::Explicit)
+               return;
+             if (HeaderFilter(Providers.front().resolvedPath()))
+               return;
+             // Check if we have any headers with the same spelling, in edge
+             // cases like `#include_next "foo.h"`, the user can't ever
+             // include the physical foo.h, but can have a spelling that
+             // refers to it.
+             auto Spelling = spellHeader(
+                 {Providers.front(), PP.getHeaderSearchInfo(), MainFile});
+             for (const Include *I : Inc.match(Header{Spelling})) {
+               Used.insert(I);
+               Satisfied = true;
+             }
+             if (!Satisfied)
+               Missing.try_emplace(std::move(Spelling), Providers.front());
            });
 
   AnalysisResults Results;
   for (const Include &I : Inc.all()) {
     if (Used.contains(&I) || !I.Resolved ||
-        HeaderFilter(I.Resolved->getFileEntry().tryGetRealPathName()) ||
-        (ResourceDir && I.Resolved->getFileEntry().getDir() == *ResourceDir))
+        HeaderFilter(I.Resolved->getName()) ||
+        I.Resolved->getDir() == ResourceDir)
       continue;
     if (PI) {
       if (PI->shouldKeep(*I.Resolved))
@@ -126,14 +151,14 @@ analyze(llvm::ArrayRef<Decl *> ASTRoots,
         // Since most private -> public mappings happen in a verbatim way, we
         // check textually here. This might go wrong in presence of symlinks or
         // header mappings. But that's not different than rest of the places.
-        if (MainFile->tryGetRealPathName().ends_with(PHeader))
+        if (MainFile.getName().ends_with(PHeader))
           continue;
       }
     }
     Results.Unused.push_back(&I);
   }
-  for (llvm::StringRef S : Missing.keys())
-    Results.Missing.push_back(S.str());
+  for (auto &E : Missing)
+    Results.Missing.emplace_back(E.first().str(), E.second);
   llvm::sort(Results.Missing);
   return Results;
 }
@@ -146,9 +171,9 @@ std::string fixIncludes(const AnalysisResults &Results,
   // Encode insertions/deletions in the magic way clang-format understands.
   for (const Include *I : Results.Unused)
     cantFail(R.add(tooling::Replacement(FileName, UINT_MAX, 1, I->quote())));
-  for (llvm::StringRef Spelled : Results.Missing)
-    cantFail(R.add(tooling::Replacement(FileName, UINT_MAX, 0,
-                                        ("#include " + Spelled).str())));
+  for (auto &[Spelled, _] : Results.Missing)
+    cantFail(R.add(
+        tooling::Replacement(FileName, UINT_MAX, 0, "#include " + Spelled)));
   // "cleanup" actually turns the UINT_MAX replacements into concrete edits.
   auto Positioned = cantFail(format::cleanupAroundReplacements(Code, R, Style));
   return cantFail(tooling::applyAllReplacements(Code, Positioned));

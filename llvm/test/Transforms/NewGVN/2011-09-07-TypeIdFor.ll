@@ -10,7 +10,7 @@ declare void @_Z4barv()
 
 declare void @_Z7cleanupv()
 
-declare i32 @llvm.eh.typeid.for(ptr) nounwind readonly
+declare i32 @llvm.eh.typeid.for.p0(ptr) nounwind readonly
 
 declare ptr @__cxa_begin_catch(ptr) nounwind
 
@@ -32,11 +32,11 @@ define void @_Z3foov() uwtable personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:            catch ptr @_ZTIb
 ; CHECK-NEXT:    [[EXC_PTR2_I:%.*]] = extractvalue { ptr, i32 } [[TMP0]], 0
 ; CHECK-NEXT:    [[FILTER3_I:%.*]] = extractvalue { ptr, i32 } [[TMP0]], 1
-; CHECK-NEXT:    [[TYPEID_I:%.*]] = tail call i32 @llvm.eh.typeid.for(ptr @_ZTIi)
+; CHECK-NEXT:    [[TYPEID_I:%.*]] = tail call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi)
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[FILTER3_I]], [[TYPEID_I]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[PPAD:%.*]], label [[NEXT:%.*]]
 ; CHECK:       next:
-; CHECK-NEXT:    [[TYPEID1_I:%.*]] = tail call i32 @llvm.eh.typeid.for(ptr @_ZTIb)
+; CHECK-NEXT:    [[TYPEID1_I:%.*]] = tail call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIb)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[FILTER3_I]], [[TYPEID1_I]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[PPAD2:%.*]], label [[NEXT2:%.*]]
 ; CHECK:       ppad:
@@ -77,12 +77,12 @@ lpad:                                             ; preds = %entry
   catch ptr @_ZTIb
   %exc_ptr2.i = extractvalue { ptr, i32 } %0, 0
   %filter3.i = extractvalue { ptr, i32 } %0, 1
-  %typeid.i = tail call i32 @llvm.eh.typeid.for(ptr @_ZTIi)
+  %typeid.i = tail call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi)
   %1 = icmp eq i32 %filter3.i, %typeid.i
   br i1 %1, label %ppad, label %next
 
 next:                                             ; preds = %lpad
-  %typeid1.i = tail call i32 @llvm.eh.typeid.for(ptr @_ZTIb)
+  %typeid1.i = tail call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIb)
   %2 = icmp eq i32 %filter3.i, %typeid1.i
   br i1 %2, label %ppad2, label %next2
 
@@ -98,12 +98,12 @@ ppad2:                                            ; preds = %next
 
 next2:                                            ; preds = %next
   call void @_Z7cleanupv()
-  %typeid = tail call i32 @llvm.eh.typeid.for(ptr @_ZTIi)
+  %typeid = tail call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi)
   %4 = icmp eq i32 %filter3.i, %typeid
   br i1 %4, label %ppad3, label %next3
 
 next3:                                            ; preds = %next2
-  %typeid1 = tail call i32 @llvm.eh.typeid.for(ptr @_ZTIb)
+  %typeid1 = tail call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIb)
   %5 = icmp eq i32 %filter3.i, %typeid1
   br i1 %5, label %ppad4, label %unwind
 

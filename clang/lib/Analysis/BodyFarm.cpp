@@ -293,15 +293,14 @@ static CallExpr *create_call_once_lambda_call(ASTContext &C, ASTMaker M,
   FunctionDecl *callOperatorDecl = CallbackDecl->getLambdaCallOperator();
   assert(callOperatorDecl != nullptr);
 
-  DeclRefExpr *callOperatorDeclRef =
-      DeclRefExpr::Create(/* Ctx =*/ C,
-                          /* QualifierLoc =*/ NestedNameSpecifierLoc(),
-                          /* TemplateKWLoc =*/ SourceLocation(),
-                          const_cast<FunctionDecl *>(callOperatorDecl),
-                          /* RefersToEnclosingVariableOrCapture=*/ false,
-                          /* NameLoc =*/ SourceLocation(),
-                          /* T =*/ callOperatorDecl->getType(),
-                          /* VK =*/ VK_LValue);
+  DeclRefExpr *callOperatorDeclRef = DeclRefExpr::Create(
+      /* Ctx =*/C,
+      /* QualifierLoc =*/NestedNameSpecifierLoc(),
+      /* TemplateKWLoc =*/SourceLocation(), callOperatorDecl,
+      /* RefersToEnclosingVariableOrCapture=*/false,
+      /* NameLoc =*/SourceLocation(),
+      /* T =*/callOperatorDecl->getType(),
+      /* VK =*/VK_LValue);
 
   return CXXOperatorCallExpr::Create(
       /*AstContext=*/C, OO_Call, callOperatorDeclRef,
@@ -542,7 +541,7 @@ static Stmt *create_dispatch_once(ASTContext &C, const FunctionDecl *D) {
   CallExpr *CE = CallExpr::Create(
       /*ASTContext=*/C,
       /*StmtClass=*/M.makeLvalueToRvalue(/*Expr=*/Block),
-      /*Args=*/std::nullopt,
+      /*Args=*/{},
       /*QualType=*/C.VoidTy,
       /*ExprValueType=*/VK_PRValue,
       /*SourceLocation=*/SourceLocation(), FPOptionsOverride());
@@ -610,7 +609,7 @@ static Stmt *create_dispatch_sync(ASTContext &C, const FunctionDecl *D) {
   ASTMaker M(C);
   DeclRefExpr *DR = M.makeDeclRefExpr(PV);
   ImplicitCastExpr *ICE = M.makeLvalueToRvalue(DR, Ty);
-  CallExpr *CE = CallExpr::Create(C, ICE, std::nullopt, C.VoidTy, VK_PRValue,
+  CallExpr *CE = CallExpr::Create(C, ICE, {}, C.VoidTy, VK_PRValue,
                                   SourceLocation(), FPOptionsOverride());
   return CE;
 }

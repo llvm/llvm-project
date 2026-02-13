@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_SYS_MMAN_MPROTECT_H
 #define LLVM_LIBC_SRC_SYS_MMAN_MPROTECT_H
 
+#include "src/__support/macros/config.h"
 #include <sys/mman.h> // For size_t and off_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int mprotect(void *addr, size_t size, int prot);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SYS_MMAN_MPROTECT_H

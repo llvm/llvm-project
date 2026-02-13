@@ -20,6 +20,18 @@ void MetadataManager::registerRewriter(
   Rewriters.emplace_back(std::move(Rewriter));
 }
 
+void MetadataManager::runSectionInitializers() {
+  for (auto &Rewriter : Rewriters) {
+    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: invoking " << Rewriter->getName()
+                      << " after reading sections\n");
+    if (Error E = Rewriter->sectionInitializer()) {
+      errs() << "BOLT-ERROR: while running " << Rewriter->getName()
+             << " after reading sections: " << toString(std::move(E)) << '\n';
+      exit(1);
+    }
+  }
+}
+
 void MetadataManager::runInitializersPreCFG() {
   for (auto &Rewriter : Rewriters) {
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: invoking " << Rewriter->getName()

@@ -6,20 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPROCESSPYTHONINTERFACE_H
-#define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPROCESSPYTHONINTERFACE_H
+#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPROCESSPYTHONINTERFACE_H
+#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPROCESSPYTHONINTERFACE_H
 
 #include "lldb/Host/Config.h"
+#include "lldb/Interpreter/Interfaces/ScriptedProcessInterface.h"
 
 #if LLDB_ENABLE_PYTHON
 
 #include "ScriptedPythonInterface.h"
-#include "lldb/Interpreter/Interfaces/ScriptedProcessInterface.h"
+
 #include <optional>
 
 namespace lldb_private {
 class ScriptedProcessPythonInterface : public ScriptedProcessInterface,
-                                       public ScriptedPythonInterface {
+                                       public ScriptedPythonInterface,
+                                       public PluginInterface {
 public:
   ScriptedProcessPythonInterface(ScriptInterpreterPythonImpl &interpreter);
 
@@ -29,9 +31,12 @@ public:
                      StructuredData::DictionarySP args_sp,
                      StructuredData::Generic *script_obj = nullptr) override;
 
-  llvm::SmallVector<llvm::StringLiteral> GetAbstractMethods() const override {
-    return llvm::SmallVector<llvm::StringLiteral>(
-        {"read_memory_at_address", "is_alive", "get_scripted_thread_plugin"});
+  llvm::SmallVector<AbstractMethodRequirement>
+  GetAbstractMethodRequirements() const override {
+    return llvm::SmallVector<AbstractMethodRequirement>(
+        {{"read_memory_at_address", 4},
+         {"is_alive"},
+         {"get_scripted_thread_plugin"}});
   }
 
   StructuredData::DictionarySP GetCapabilities() override;
@@ -67,10 +72,20 @@ public:
 
   StructuredData::DictionarySP GetMetadata() override;
 
+  static void Initialize();
+
+  static void Terminate();
+
+  static llvm::StringRef GetPluginNameStatic() {
+    return "ScriptedProcessPythonInterface";
+  }
+
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
+
 private:
   lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() override;
 };
 } // namespace lldb_private
 
 #endif // LLDB_ENABLE_PYTHON
-#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPROCESSPYTHONINTERFACE_H
+#endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPROCESSPYTHONINTERFACE_H

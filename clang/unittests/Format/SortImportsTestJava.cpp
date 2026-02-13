@@ -7,7 +7,7 @@ namespace clang {
 namespace format {
 namespace {
 
-class SortImportsTestJava : public ::testing::Test {
+class SortImportsTestJava : public testing::Test {
 protected:
   std::vector<tooling::Range> GetCodeRange(StringRef Code) {
     return std::vector<tooling::Range>(1, tooling::Range(0, Code.size()));
@@ -31,8 +31,9 @@ protected:
 public:
   SortImportsTestJava() {
     FmtStyle = getGoogleStyle(FormatStyle::LK_Java);
+    EXPECT_TRUE(FmtStyle.SortIncludes.Enabled);
     FmtStyle.JavaImportGroups = {"com.test", "org", "com"};
-    FmtStyle.SortIncludes = FormatStyle::SI_CaseInsensitive;
+    FmtStyle.SortIncludes.IgnoreCase = true;
   }
 };
 

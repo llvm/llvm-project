@@ -4,9 +4,9 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+f -verify-machineinstrs < %s \
 ; RUN:   -target-abi=lp64f | FileCheck -check-prefix=CHECKIF %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zfinx -verify-machineinstrs < %s \
-; RUN:   -target-abi=ilp32 | FileCheck -check-prefix=CHECKIZFINX %s
+; RUN:   -target-abi=ilp32 | FileCheck -check-prefixes=CHECKIZFINX,RV32IZFINX %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zfinx -verify-machineinstrs < %s \
-; RUN:   -target-abi=lp64 | FileCheck -check-prefix=CHECKIZFINX %s
+; RUN:   -target-abi=lp64 | FileCheck -check-prefixes=CHECKIZFINX,RV64IZFINX %s
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32I %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
@@ -145,8 +145,6 @@ define float @fdiv_s(float %a, float %b) nounwind {
   ret float %1
 }
 
-declare float @llvm.sqrt.f32(float)
-
 define float @fsqrt_s(float %a) nounwind {
 ; CHECKIF-LABEL: fsqrt_s:
 ; CHECKIF:       # %bb.0:
@@ -179,8 +177,6 @@ define float @fsqrt_s(float %a) nounwind {
   ret float %1
 }
 
-declare float @llvm.copysign.f32(float, float)
-
 define float @fsgnj_s(float %a, float %b) nounwind {
 ; CHECKIF-LABEL: fsgnj_s:
 ; CHECKIF:       # %bb.0:
@@ -195,8 +191,8 @@ define float @fsgnj_s(float %a, float %b) nounwind {
 ; RV32I-LABEL: fsgnj_s:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a2, 524288
-; RV32I-NEXT:    and a1, a1, a2
 ; RV32I-NEXT:    slli a0, a0, 1
+; RV32I-NEXT:    and a1, a1, a2
 ; RV32I-NEXT:    srli a0, a0, 1
 ; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:    ret
@@ -204,8 +200,8 @@ define float @fsgnj_s(float %a, float %b) nounwind {
 ; RV64I-LABEL: fsgnj_s:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a2, 524288
-; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    slli a0, a0, 33
+; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    srli a0, a0, 33
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
@@ -284,8 +280,8 @@ define float @fsgnjn_s(float %a, float %b) nounwind {
 ; RV32I-NEXT:    call __addsf3
 ; RV32I-NEXT:    not a0, a0
 ; RV32I-NEXT:    lui a1, 524288
-; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    slli s0, s0, 1
+; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    srli s0, s0, 1
 ; RV32I-NEXT:    or a0, s0, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -302,8 +298,8 @@ define float @fsgnjn_s(float %a, float %b) nounwind {
 ; RV64I-NEXT:    call __addsf3
 ; RV64I-NEXT:    not a0, a0
 ; RV64I-NEXT:    lui a1, 524288
-; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    slli s0, s0, 33
+; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    srli s0, s0, 33
 ; RV64I-NEXT:    or a0, s0, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -315,8 +311,6 @@ define float @fsgnjn_s(float %a, float %b) nounwind {
   %3 = call float @llvm.copysign.f32(float %a, float %2)
   ret float %3
 }
-
-declare float @llvm.fabs.f32(float)
 
 define float @fabs_s(float %a, float %b) nounwind {
 ; CHECKIF-LABEL: fabs_s:
@@ -364,8 +358,6 @@ define float @fabs_s(float %a, float %b) nounwind {
   ret float %3
 }
 
-declare float @llvm.minnum.f32(float, float)
-
 define float @fmin_s(float %a, float %b) nounwind {
 ; CHECKIF-LABEL: fmin_s:
 ; CHECKIF:       # %bb.0:
@@ -398,8 +390,6 @@ define float @fmin_s(float %a, float %b) nounwind {
   ret float %1
 }
 
-declare float @llvm.maxnum.f32(float, float)
-
 define float @fmax_s(float %a, float %b) nounwind {
 ; CHECKIF-LABEL: fmax_s:
 ; CHECKIF:       # %bb.0:
@@ -431,8 +421,6 @@ define float @fmax_s(float %a, float %b) nounwind {
   %1 = call float @llvm.maxnum.f32(float %a, float %b)
   ret float %1
 }
-
-declare float @llvm.fma.f32(float, float, float)
 
 define float @fmadd_s(float %a, float %b, float %c) nounwind {
 ; CHECKIF-LABEL: fmadd_s:
@@ -526,6 +514,89 @@ define float @fmsub_s(float %a, float %b, float %c) nounwind {
   %c_ = fadd float 0.0, %c ; avoid negation using xor
   %negc = fsub float -0.0, %c_
   %1 = call float @llvm.fma.f32(float %a, float %b, float %negc)
+  ret float %1
+}
+
+define float @fmsub_s_fmul_fneg(float %a, float %b, float %c, float %d) nounwind {
+; CHECKIFD-LABEL: fmsub_d_fmul_fneg:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    fneg.d fa5, fa3
+; CHECKIFD-NEXT:    fmul.d fa5, fa2, fa5
+; CHECKIFD-NEXT:    fmadd.d fa0, fa0, fa1, fa5
+; CHECKIFD-NEXT:    ret
+;
+; RV32IZFINXZDINX-LABEL: fmsub_d_fmul_fneg:
+; RV32IZFINXZDINX:       # %bb.0:
+; RV32IZFINXZDINX-NEXT:    fneg.d a6, a6
+; RV32IZFINXZDINX-NEXT:    fmul.d a4, a4, a6
+; RV32IZFINXZDINX-NEXT:    fmadd.d a0, a0, a2, a4
+; RV32IZFINXZDINX-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: fmsub_d_fmul_fneg:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    fneg.d a3, a3
+; RV64IZFINXZDINX-NEXT:    fmul.d a2, a2, a3
+; RV64IZFINXZDINX-NEXT:    fmadd.d a0, a0, a1, a2
+; RV64IZFINXZDINX-NEXT:    ret
+;
+; CHECKIF-LABEL: fmsub_s_fmul_fneg:
+; CHECKIF:       # %bb.0:
+; CHECKIF-NEXT:    fmul.s fa5, fa2, fa3
+; CHECKIF-NEXT:    fmsub.s fa0, fa0, fa1, fa5
+; CHECKIF-NEXT:    ret
+;
+; CHECKIZFINX-LABEL: fmsub_s_fmul_fneg:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    fmul.s a2, a2, a3
+; CHECKIZFINX-NEXT:    fmsub.s a0, a0, a1, a2
+; CHECKIZFINX-NEXT:    ret
+;
+; RV32I-LABEL: fmsub_s_fmul_fneg:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    mv s0, a1
+; RV32I-NEXT:    mv s1, a0
+; RV32I-NEXT:    lui a1, 524288
+; RV32I-NEXT:    xor a1, a3, a1
+; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    call __mulsf3
+; RV32I-NEXT:    mv a2, a0
+; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    mv a1, s0
+; RV32I-NEXT:    call fmaf
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fmsub_s_fmul_fneg:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -32
+; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    mv s0, a1
+; RV64I-NEXT:    mv s1, a0
+; RV64I-NEXT:    lui a1, 524288
+; RV64I-NEXT:    xor a1, a3, a1
+; RV64I-NEXT:    mv a0, a2
+; RV64I-NEXT:    call __mulsf3
+; RV64I-NEXT:    mv a2, a0
+; RV64I-NEXT:    mv a0, s1
+; RV64I-NEXT:    mv a1, s0
+; RV64I-NEXT:    call fmaf
+; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 32
+; RV64I-NEXT:    ret
+  %negd = fneg float %d
+  %fmul = fmul float %c, %negd
+  %1 = call float @llvm.fma.f32(float %a, float %b, float %fmul)
   ret float %1
 }
 
@@ -709,8 +780,7 @@ define float @fnmadd_s_3(float %a, float %b, float %c) nounwind {
 ; CHECKIZFINX-LABEL: fnmadd_s_3:
 ; CHECKIZFINX:       # %bb.0:
 ; CHECKIZFINX-NEXT:    fmadd.s a0, a0, a1, a2
-; CHECKIZFINX-NEXT:    lui a1, 524288
-; CHECKIZFINX-NEXT:    xor a0, a0, a1
+; CHECKIZFINX-NEXT:    fneg.s a0, a0
 ; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmadd_s_3:
@@ -739,6 +809,91 @@ define float @fnmadd_s_3(float %a, float %b, float %c) nounwind {
   ret float %neg
 }
 
+define float @fnmadd_s_fmul_fneg(float %a, float %b, float %c, float %d) nounwind {
+; CHECKIFD-LABEL: fnmadd_d_fmul_fneg:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    fneg.d fa5, fa0
+; CHECKIFD-NEXT:    fmul.d fa5, fa1, fa5
+; CHECKIFD-NEXT:    fmadd.d fa0, fa2, fa3, fa5
+; CHECKIFD-NEXT:    ret
+;
+; RV32IZFINXZDINX-LABEL: fnmadd_d_fmul_fneg:
+; RV32IZFINXZDINX:       # %bb.0:
+; RV32IZFINXZDINX-NEXT:    fneg.d a0, a0
+; RV32IZFINXZDINX-NEXT:    fmul.d a0, a2, a0
+; RV32IZFINXZDINX-NEXT:    fmadd.d a0, a4, a6, a0
+; RV32IZFINXZDINX-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: fnmadd_d_fmul_fneg:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    fneg.d a0, a0
+; RV64IZFINXZDINX-NEXT:    fmul.d a0, a1, a0
+; RV64IZFINXZDINX-NEXT:    fmadd.d a0, a2, a3, a0
+; RV64IZFINXZDINX-NEXT:    ret
+;
+; CHECKIF-LABEL: fnmadd_s_fmul_fneg:
+; CHECKIF:       # %bb.0:
+; CHECKIF-NEXT:    fmul.s fa5, fa1, fa0
+; CHECKIF-NEXT:    fmsub.s fa0, fa2, fa3, fa5
+; CHECKIF-NEXT:    ret
+;
+; CHECKIZFINX-LABEL: fnmadd_s_fmul_fneg:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    fmul.s a0, a1, a0
+; CHECKIZFINX-NEXT:    fmsub.s a0, a2, a3, a0
+; CHECKIZFINX-NEXT:    ret
+;
+; RV32I-LABEL: fnmadd_s_fmul_fneg:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    mv s0, a3
+; RV32I-NEXT:    mv s1, a2
+; RV32I-NEXT:    mv a2, a1
+; RV32I-NEXT:    lui a1, 524288
+; RV32I-NEXT:    xor a1, a0, a1
+; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    call __mulsf3
+; RV32I-NEXT:    mv a2, a0
+; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    mv a1, s0
+; RV32I-NEXT:    call fmaf
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fnmadd_s_fmul_fneg:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -32
+; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    mv s0, a3
+; RV64I-NEXT:    mv s1, a2
+; RV64I-NEXT:    mv a2, a1
+; RV64I-NEXT:    lui a1, 524288
+; RV64I-NEXT:    xor a1, a0, a1
+; RV64I-NEXT:    mv a0, a2
+; RV64I-NEXT:    call __mulsf3
+; RV64I-NEXT:    mv a2, a0
+; RV64I-NEXT:    mv a0, s1
+; RV64I-NEXT:    mv a1, s0
+; RV64I-NEXT:    call fmaf
+; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 32
+; RV64I-NEXT:    ret
+  %nega = fneg float %a
+  %mul = fmul float %b, %nega
+  %1 = call float @llvm.fma.f32(float %c, float %d, float %mul)
+  ret float %1
+}
+
 define float @fnmadd_nsz(float %a, float %b, float %c) nounwind {
 ; RV32IF-LABEL: fnmadd_nsz:
 ; RV32IF:       # %bb.0:
@@ -757,9 +912,7 @@ define float @fnmadd_nsz(float %a, float %b, float %c) nounwind {
 ;
 ; CHECKIZFINX-LABEL: fnmadd_nsz:
 ; CHECKIZFINX:       # %bb.0:
-; CHECKIZFINX-NEXT:    fmadd.s a0, a0, a1, a2
-; CHECKIZFINX-NEXT:    lui a1, 524288
-; CHECKIZFINX-NEXT:    xor a0, a0, a1
+; CHECKIZFINX-NEXT:    fnmadd.s a0, a0, a1, a2
 ; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmadd_nsz:
@@ -1195,3 +1348,47 @@ define float @fnmsub_s_contract(float %a, float %b, float %c) nounwind {
   %2 = fsub contract float %c, %1
   ret float %2
 }
+
+define float @fsgnjx_f32(float %x, float %y) nounwind {
+; CHECKIF-LABEL: fsgnjx_f32:
+; CHECKIF:       # %bb.0:
+; CHECKIF-NEXT:    fsgnjx.s fa0, fa1, fa0
+; CHECKIF-NEXT:    ret
+;
+; CHECKIZFINX-LABEL: fsgnjx_f32:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    fsgnjx.s a0, a1, a0
+; CHECKIZFINX-NEXT:    ret
+;
+; RV32I-LABEL: fsgnjx_f32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    lui a2, 524288
+; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    lui a2, 260096
+; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    call __mulsf3
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fsgnjx_f32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    lui a2, 524288
+; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    lui a2, 260096
+; RV64I-NEXT:    or a0, a0, a2
+; RV64I-NEXT:    call __mulsf3
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %z = call float @llvm.copysign.f32(float 1.0, float %x)
+  %mul = fmul float %z, %y
+  ret float %mul
+}
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; RV32IZFINX: {{.*}}
+; RV64IZFINX: {{.*}}

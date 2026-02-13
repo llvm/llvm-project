@@ -5,7 +5,6 @@ static_library("Clang") {
     "//lldb/source/Core",
     "//lldb/source/DataFormatters",
     "//lldb/source/Host",
-    "//lldb/source/Plugins/Language/ClangCommon",
     "//lldb/source/Plugins/LanguageRuntime/CPlusPlus",
     "//lldb/source/Plugins/TypeSystem/Clang",
     "//lldb/source/Symbol",

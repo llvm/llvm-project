@@ -12,6 +12,6 @@ A2<int> *a2 = b2; // expected-error{{cannot initialize a variable of type 'A2<in
 
 typedef struct S s;
 const s *f();
-s *g1() { return f(); } // expected-error{{cannot initialize return object of type 's *' (aka 'S *') with an rvalue of type 'const s *' (aka 'const S *')}}
+s *g1() { return f(); } // expected-error{{cannot initialize return object of type 's *' (aka 'struct S *') with an rvalue of type 'const s *' (aka 'const struct S *')}}
 
-B1 *g2() { return f(); } // expected-error{{cannot initialize return object of type 'B1 *' with an rvalue of type 'const s *' (aka 'const S *')}}
+B1 *g2() { return f(); } // expected-error{{cannot initialize return object of type 'B1 *' with an rvalue of type 'const s *' (aka 'const struct S *')}}

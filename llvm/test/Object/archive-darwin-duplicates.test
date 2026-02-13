@@ -4,13 +4,13 @@ The two members with the duplicated name "test.o" must have unique
 non-zero timestamps, while baz.o, being unique, remains a zero
 timestamp.
 
-RUN: mkdir -p %T/sub1
-RUN: printf test > %T/test.o
-RUN: printf sub1/test > %T/sub1/test.o
-RUN: printf baz > %T/baz.o
+RUN: mkdir -p %t.dir/sub1
+RUN: printf test > %t.dir/test.o
+RUN: printf sub1/test > %t.dir/sub1/test.o
+RUN: printf baz > %t.dir/baz.o
 
 RUN: rm -f %t.a
-RUN: llvm-ar --format=darwin rcs %t.a %T/sub1/test.o %T/test.o %T/baz.o
+RUN: llvm-ar --format=darwin rcs %t.a %t.dir/sub1/test.o %t.dir/test.o %t.dir/baz.o
 RUN: FileCheck -strict-whitespace %s < %t.a
 
 CHECK:#1/12           1           0     0     644     28        `

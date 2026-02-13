@@ -130,6 +130,11 @@ public:
   SampleProfileInference(FunctionT &F, BlockEdgeMap &Successors,
                          BlockWeightMap &SampleBlockWeights)
       : F(F), Successors(Successors), SampleBlockWeights(SampleBlockWeights) {}
+  SampleProfileInference(FunctionT &F, BlockEdgeMap &Successors,
+                         BlockWeightMap &SampleBlockWeights,
+                         EdgeWeightMap &SampleEdgeWeights)
+      : F(F), Successors(Successors), SampleBlockWeights(SampleBlockWeights),
+        SampleEdgeWeights(SampleEdgeWeights) {}
 
   /// Apply the profile inference algorithm for a given function
   void apply(BlockWeightMap &BlockWeights, EdgeWeightMap &EdgeWeights);
@@ -157,6 +162,9 @@ private:
 
   /// Map basic blocks to their sampled weights.
   BlockWeightMap &SampleBlockWeights;
+
+  /// Map edges to their sampled weights.
+  EdgeWeightMap SampleEdgeWeights;
 };
 
 template <typename BT>
@@ -247,9 +255,10 @@ FlowFunction SampleProfileInference<BT>::createFlowFunction(
   // Create FlowBlocks
   for (const auto *BB : BasicBlocks) {
     FlowBlock Block;
-    if (SampleBlockWeights.contains(BB)) {
+    auto It = SampleBlockWeights.find(BB);
+    if (It != SampleBlockWeights.end()) {
       Block.HasUnknownWeight = false;
-      Block.Weight = SampleBlockWeights[BB];
+      Block.Weight = It->second;
     } else {
       Block.HasUnknownWeight = true;
       Block.Weight = 0;
@@ -265,6 +274,14 @@ FlowFunction SampleProfileInference<BT>::createFlowFunction(
       FlowJump Jump;
       Jump.Source = BlockIndex[BB];
       Jump.Target = BlockIndex[Succ];
+      auto It = SampleEdgeWeights.find(std::make_pair(BB, Succ));
+      if (It != SampleEdgeWeights.end()) {
+        Jump.HasUnknownWeight = false;
+        Jump.Weight = It->second;
+      } else {
+        Jump.HasUnknownWeight = true;
+        Jump.Weight = 0;
+      }
       Func.Jumps.push_back(Jump);
     }
   }

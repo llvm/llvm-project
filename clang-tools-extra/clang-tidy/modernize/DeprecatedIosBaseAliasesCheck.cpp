@@ -1,4 +1,4 @@
-//===--- DeprecatedIosBaseAliasesCheck.cpp - clang-tidy--------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "DeprecatedIosBaseAliasesCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include <optional>
 
@@ -30,32 +29,34 @@ static std::optional<const char *> getReplacementType(StringRef Type) {
 
 void DeprecatedIosBaseAliasesCheck::registerMatchers(MatchFinder *Finder) {
   auto IoStateDecl = typedefDecl(hasAnyName(DeprecatedTypes)).bind("TypeDecl");
-  auto IoStateType =
-      qualType(hasDeclaration(IoStateDecl), unless(elaboratedType()));
+  auto IoStateType = typedefType(hasDeclaration(IoStateDecl));
 
   Finder->addMatcher(typeLoc(loc(IoStateType)).bind("TypeLoc"), this);
 }
 
 void DeprecatedIosBaseAliasesCheck::check(
     const MatchFinder::MatchResult &Result) {
-  SourceManager &SM = *Result.SourceManager;
+  const SourceManager &SM = *Result.SourceManager;
 
   const auto *Typedef = Result.Nodes.getNodeAs<TypedefDecl>("TypeDecl");
-  StringRef TypeName = Typedef->getName();
+  const StringRef TypeName = Typedef->getName();
   auto Replacement = getReplacementType(TypeName);
 
-  const auto *TL = Result.Nodes.getNodeAs<TypeLoc>("TypeLoc");
-  SourceLocation IoStateLoc = TL->getBeginLoc();
+  TypeLoc TL = *Result.Nodes.getNodeAs<TypeLoc>("TypeLoc");
+  if (auto QTL = TL.getAs<QualifiedTypeLoc>())
+    TL = QTL.getUnqualifiedLoc();
 
+  SourceLocation IoStateLoc = TL.castAs<TypedefTypeLoc>().getNameLoc();
   // Do not generate fixits for matches depending on template arguments and
   // macro expansions.
-  bool Fix = Replacement && !TL->getType()->isDependentType();
+  bool Fix = Replacement && !TL.getType()->isDependentType();
   if (IoStateLoc.isMacroID()) {
     IoStateLoc = SM.getSpellingLoc(IoStateLoc);
     Fix = false;
   }
 
-  SourceLocation EndLoc = IoStateLoc.getLocWithOffset(TypeName.size() - 1);
+  const SourceLocation EndLoc =
+      IoStateLoc.getLocWithOffset(TypeName.size() - 1);
 
   if (Replacement) {
     const char *FixName = *Replacement;

@@ -1,7 +1,19 @@
 add_header(
+  error_number_macros
+  HDR
+    error-number-macros.h
+)
+
+add_header(
   fcntl_macros
   HDR
     fcntl-macros.h
+)
+
+add_header(
+  poll-macros
+  HDR
+    poll-macros.h
 )
 
 add_header(

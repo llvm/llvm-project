@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck %s
 ; CHECK-DAG: v{{[0-9]+}} = vsplat(r{{[0-9]+}})
 ; CHECK-DAG: v{{[0-9]+}} = vsplat(r{{[0-9]+}})
 ; CHECK-DAG: q{{[0-3]}} = vand(v{{[0-9]+}},r{{[0-9]+}})

@@ -1,5 +1,4 @@
-; RUN: llc -debug-only=machine-scheduler -mtriple=amdgcn-- -verify-machineinstrs %s -o - 2>&1| FileCheck -check-prefix=DEBUG %s
-target datalayout = "A5"
+; RUN: llc -debug-only=machine-scheduler -mtriple=amdgcn-- %s -o - 2>&1| FileCheck -check-prefix=DEBUG %s
 ; REQUIRES: asserts
 
 ; Verify that the extload generated from %eval has the default

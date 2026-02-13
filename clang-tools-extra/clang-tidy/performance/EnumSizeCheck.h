@@ -1,4 +1,4 @@
-//===--- EnumSizeCheck.h - clang-tidy ---------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@ namespace clang::tidy::performance {
 /// base.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/performance/enum-size.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/performance/enum-size.html
 class EnumSizeCheck : public ClangTidyCheck {
 public:
   EnumSizeCheck(StringRef Name, ClangTidyContext *Context);

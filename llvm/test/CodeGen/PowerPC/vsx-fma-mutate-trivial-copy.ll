@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -fp-contract=fast < %s | FileCheck %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -31,7 +31,7 @@ declare double @llvm.sqrt.f64(double) #1
 
 declare signext i32 @p_col_helper(...) #2
 
-attributes #0 = { nounwind "no-infs-fp-math"="true" "no-nans-fp-math"="true" "target-cpu"="pwr7" "unsafe-fp-math"="true" }
+attributes #0 = { nounwind "no-infs-fp-math"="true" "no-nans-fp-math"="true" "target-cpu"="pwr7" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind }
 

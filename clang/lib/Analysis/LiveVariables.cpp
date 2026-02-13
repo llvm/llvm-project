@@ -16,9 +16,11 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
+#include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <optional>
 #include <vector>
 
@@ -34,7 +36,7 @@ public:
   llvm::DenseMap<const CFGBlock *, LiveVariables::LivenessValues> blocksEndToLiveness;
   llvm::DenseMap<const CFGBlock *, LiveVariables::LivenessValues> blocksBeginToLiveness;
   llvm::DenseMap<const Stmt *, LiveVariables::LivenessValues> stmtsToLiveness;
-  llvm::DenseMap<const DeclRefExpr *, unsigned> inAssignment;
+  llvm::DenseSet<const DeclRefExpr *> inAssignment;
   const bool killAtAssign;
 
   LiveVariables::LivenessValues
@@ -70,15 +72,17 @@ bool LiveVariables::LivenessValues::isLive(const Expr *E) const {
 
 bool LiveVariables::LivenessValues::isLive(const VarDecl *D) const {
   if (const auto *DD = dyn_cast<DecompositionDecl>(D)) {
-    bool alive = false;
-    for (const BindingDecl *BD : DD->bindings())
-      alive |= liveBindings.contains(BD);
-
     // Note: the only known case this condition is necessary, is when a bindig
     // to a tuple-like structure is created. The HoldingVar initializers have a
     // DeclRefExpr to the DecompositionDecl.
-    alive |= liveDecls.contains(DD);
-    return alive;
+    if (liveDecls.contains(DD))
+      return true;
+
+    for (const BindingDecl *BD : DD->bindings()) {
+      if (liveBindings.contains(BD))
+        return true;
+    }
+    return false;
   }
   return liveDecls.contains(D);
 }
@@ -89,8 +93,8 @@ namespace {
     if (A.isEmpty())
       return B;
 
-    for (typename SET::iterator it = B.begin(), ei = B.end(); it != ei; ++it) {
-      A = A.add(*it);
+    for (const auto *Elem : B) {
+      A = A.add(Elem);
     }
     return A;
   }
@@ -126,8 +130,9 @@ LiveVariablesImpl::merge(LiveVariables::LivenessValues valsA,
                                        BSetRefA.asImmutableSet());
 }
 
-bool LiveVariables::LivenessValues::equals(const LivenessValues &V) const {
-  return liveExprs == V.liveExprs && liveDecls == V.liveDecls;
+bool LiveVariables::LivenessValues::operator==(const LivenessValues &V) const {
+  return liveExprs == V.liveExprs && liveDecls == V.liveDecls &&
+         liveBindings == V.liveBindings;
 }
 
 //===----------------------------------------------------------------------===//
@@ -173,7 +178,6 @@ public:
   void VisitDeclStmt(DeclStmt *DS);
   void VisitObjCForCollectionStmt(ObjCForCollectionStmt *OS);
   void VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *UE);
-  void VisitUnaryOperator(UnaryOperator *UO);
   void Visit(Stmt *S);
 };
 } // namespace
@@ -212,6 +216,22 @@ static void AddLiveExpr(llvm::ImmutableSet<const Expr *> &Set,
                         llvm::ImmutableSet<const Expr *>::Factory &F,
                         const Expr *E) {
   Set = F.add(Set, LookThroughExpr(E));
+}
+
+/// Add as a live expression all individual conditions in a logical expression.
+/// For example, for the expression:
+/// "(a < b) || (c && d && ((e || f) != (g && h)))"
+/// the following expressions will be added as live:
+/// "a < b", "c", "d", "((e || f) != (g && h))"
+static void AddAllConditionalTerms(llvm::ImmutableSet<const Expr *> &Set,
+                                   llvm::ImmutableSet<const Expr *>::Factory &F,
+                                   const Expr *Cond) {
+  AddLiveExpr(Set, F, Cond);
+  if (auto const *BO = dyn_cast<BinaryOperator>(Cond->IgnoreParens());
+      BO && BO->isLogicalOp()) {
+    AddAllConditionalTerms(Set, F, BO->getLHS());
+    AddAllConditionalTerms(Set, F, BO->getRHS());
+  }
 }
 
 void TransferFunctions::Visit(Stmt *S) {
@@ -313,7 +333,27 @@ void TransferFunctions::Visit(Stmt *S) {
       AddLiveExpr(val.liveExprs, LV.ESetFact, cast<ForStmt>(S)->getCond());
       return;
     }
-
+    case Stmt::ConditionalOperatorClass: {
+      // Keep not only direct children alive, but also all the short-circuited
+      // parts of the condition. Short-circuiting evaluation may cause the
+      // conditional operator evaluation to skip the evaluation of the entire
+      // condtion expression, so the value of the entire condition expression is
+      // never computed.
+      //
+      // This makes a difference when we compare exploded nodes coming from true
+      // and false expressions with no side effects: the only difference in the
+      // state is the value of (part of) the condition.
+      //
+      // BinaryConditionalOperatorClass ('x ?: y') is not affected because it
+      // explicitly calculates the value of the entire condition expression (to
+      // possibly use as a value for the "true expr") even if it is
+      // short-circuited.
+      auto const *CO = cast<ConditionalOperator>(S);
+      AddAllConditionalTerms(val.liveExprs, LV.ESetFact, CO->getCond());
+      AddLiveExpr(val.liveExprs, LV.ESetFact, CO->getTrueExpr());
+      AddLiveExpr(val.liveExprs, LV.ESetFact, CO->getFalseExpr());
+      return;
+    }
   }
 
   // HACK + FIXME: What is this? One could only guess that this is an attempt to
@@ -333,7 +373,7 @@ static bool writeShouldKill(const VarDecl *VD) {
 void TransferFunctions::VisitBinaryOperator(BinaryOperator *B) {
   if (LV.killAtAssign && B->getOpcode() == BO_Assign) {
     if (const auto *DR = dyn_cast<DeclRefExpr>(B->getLHS()->IgnoreParens())) {
-      LV.inAssignment[DR] = 1;
+      LV.inAssignment.insert(DR);
     }
   }
   if (B->isAssignmentOp()) {
@@ -359,11 +399,7 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *B) {
         Killed = writeShouldKill(VD);
         if (Killed)
           val.liveDecls = LV.DSetFact.remove(val.liveDecls, VD);
-
       }
-
-      if (Killed && observer)
-        observer->observerKill(DR);
     }
   }
 }
@@ -379,7 +415,7 @@ void TransferFunctions::VisitBlockExpr(BlockExpr *BE) {
 
 void TransferFunctions::VisitDeclRefExpr(DeclRefExpr *DR) {
   const Decl* D = DR->getDecl();
-  bool InAssignment = LV.inAssignment[DR];
+  bool InAssignment = LV.inAssignment.contains(DR);
   if (const auto *BD = dyn_cast<BindingDecl>(D)) {
     if (!InAssignment) {
       if (const auto *HV = BD->getHoldingVar())
@@ -428,8 +464,6 @@ void TransferFunctions::VisitObjCForCollectionStmt(ObjCForCollectionStmt *OS) {
 
   if (VD) {
     val.liveDecls = LV.DSetFact.remove(val.liveDecls, VD);
-    if (observer && DR)
-      observer->observerKill(DR);
   }
 }
 
@@ -446,32 +480,6 @@ VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *UE)
   if (subEx->getType()->isVariableArrayType()) {
     assert(subEx->isLValue());
     val.liveExprs = LV.ESetFact.add(val.liveExprs, subEx->IgnoreParens());
-  }
-}
-
-void TransferFunctions::VisitUnaryOperator(UnaryOperator *UO) {
-  // Treat ++/-- as a kill.
-  // Note we don't actually have to do anything if we don't have an observer,
-  // since a ++/-- acts as both a kill and a "use".
-  if (!observer)
-    return;
-
-  switch (UO->getOpcode()) {
-  default:
-    return;
-  case UO_PostInc:
-  case UO_PostDec:
-  case UO_PreInc:
-  case UO_PreDec:
-    break;
-  }
-
-  if (auto *DR = dyn_cast<DeclRefExpr>(UO->getSubExpr()->IgnoreParens())) {
-    const Decl *D = DR->getDecl();
-    if (isa<VarDecl>(D) || isa<BindingDecl>(D)) {
-      // Treat ++/-- as a kill.
-      observer->observerKill(DR);
-    }
   }
 }
 
@@ -509,8 +517,8 @@ LiveVariablesImpl::runOnBlock(const CFGBlock *block,
 
 void LiveVariables::runOnAllBlocks(LiveVariables::Observer &obs) {
   const CFG *cfg = getImpl(impl).analysisContext.getCFG();
-  for (CFG::const_iterator it = cfg->begin(), ei = cfg->end(); it != ei; ++it)
-    getImpl(impl).runOnBlock(*it, getImpl(impl).blocksEndToLiveness[*it], &obs);
+  for (CFGBlock *B : *cfg)
+    getImpl(impl).runOnBlock(B, getImpl(impl).blocksEndToLiveness[B], &obs);
 }
 
 LiveVariables::LiveVariables(void *im) : impl(im) {}
@@ -551,16 +559,15 @@ LiveVariables::computeLiveness(AnalysisDeclContext &AC, bool killAtAssign) {
 
     // Merge the values of all successor blocks.
     LivenessValues val;
-    for (CFGBlock::const_succ_iterator it = block->succ_begin(),
-                                       ei = block->succ_end(); it != ei; ++it) {
-      if (const CFGBlock *succ = *it) {
+    for (const CFGBlock *succ : block->succs()) {
+      if (succ) {
         val = LV->merge(val, LV->blocksBeginToLiveness[succ]);
       }
     }
 
     if (!everAnalyzedBlock[block->getBlockID()])
       everAnalyzedBlock[block->getBlockID()] = true;
-    else if (prevVal.equals(val))
+    else if (prevVal == val)
       continue;
 
     prevVal = val;
@@ -581,40 +588,26 @@ void LiveVariables::dumpBlockLiveness(const SourceManager &M) {
 
 void LiveVariablesImpl::dumpBlockLiveness(const SourceManager &M) {
   std::vector<const CFGBlock *> vec;
-  for (llvm::DenseMap<const CFGBlock *, LiveVariables::LivenessValues>::iterator
-       it = blocksEndToLiveness.begin(), ei = blocksEndToLiveness.end();
-       it != ei; ++it) {
-    vec.push_back(it->first);
-  }
+  vec.reserve(blocksEndToLiveness.size());
+  llvm::append_range(vec, llvm::make_first_range(blocksEndToLiveness));
   llvm::sort(vec, [](const CFGBlock *A, const CFGBlock *B) {
     return A->getBlockID() < B->getBlockID();
   });
 
   std::vector<const VarDecl*> declVec;
 
-  for (std::vector<const CFGBlock *>::iterator
-        it = vec.begin(), ei = vec.end(); it != ei; ++it) {
-    llvm::errs() << "\n[ B" << (*it)->getBlockID()
+  for (const CFGBlock *block : vec) {
+    llvm::errs() << "\n[ B" << block->getBlockID()
                  << " (live variables at block exit) ]\n";
-
-    LiveVariables::LivenessValues vals = blocksEndToLiveness[*it];
     declVec.clear();
-
-    for (llvm::ImmutableSet<const VarDecl *>::iterator si =
-          vals.liveDecls.begin(),
-          se = vals.liveDecls.end(); si != se; ++si) {
-      declVec.push_back(*si);
-    }
-
+    llvm::append_range(declVec, blocksEndToLiveness[block].liveDecls);
     llvm::sort(declVec, [](const Decl *A, const Decl *B) {
       return A->getBeginLoc() < B->getBeginLoc();
     });
 
-    for (std::vector<const VarDecl*>::iterator di = declVec.begin(),
-         de = declVec.end(); di != de; ++di) {
-      llvm::errs() << " " << (*di)->getDeclName().getAsString()
-                   << " <";
-      (*di)->getLocation().print(llvm::errs(), M);
+    for (const VarDecl *VD : declVec) {
+      llvm::errs() << " " << VD->getDeclName().getAsString() << " <";
+      VD->getLocation().print(llvm::errs(), M);
       llvm::errs() << ">\n";
     }
   }
@@ -626,12 +619,19 @@ void LiveVariables::dumpExprLiveness(const SourceManager &M) {
 }
 
 void LiveVariablesImpl::dumpExprLiveness(const SourceManager &M) {
+  const ASTContext &Ctx = analysisContext.getASTContext();
+  auto ByIDs = [&Ctx](const Expr *L, const Expr *R) {
+    return L->getID(Ctx) < R->getID(Ctx);
+  };
+
   // Don't iterate over blockEndsToLiveness directly because it's not sorted.
   for (const CFGBlock *B : *analysisContext.getCFG()) {
-
     llvm::errs() << "\n[ B" << B->getBlockID()
                  << " (live expressions at block exit) ]\n";
-    for (const Expr *E : blocksEndToLiveness[B].liveExprs) {
+    std::vector<const Expr *> LiveExprs;
+    llvm::append_range(LiveExprs, blocksEndToLiveness[B].liveExprs);
+    llvm::sort(LiveExprs, ByIDs);
+    for (const Expr *E : LiveExprs) {
       llvm::errs() << "\n";
       E->dump();
     }

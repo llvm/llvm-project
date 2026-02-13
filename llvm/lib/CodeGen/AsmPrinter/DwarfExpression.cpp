@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 
@@ -39,7 +40,7 @@ void DwarfExpression::emitConstu(uint64_t Value) {
   }
 }
 
-void DwarfExpression::addReg(int DwarfReg, const char *Comment) {
+void DwarfExpression::addReg(int64_t DwarfReg, const char *Comment) {
   assert(DwarfReg >= 0 && "invalid negative dwarf register number");
   assert((isUnknownLocation() || isRegisterLocation()) &&
          "location description already locked down");
@@ -52,7 +53,7 @@ void DwarfExpression::addReg(int DwarfReg, const char *Comment) {
   }
 }
 
-void DwarfExpression::addBReg(int DwarfReg, int Offset) {
+void DwarfExpression::addBReg(int64_t DwarfReg, int64_t Offset) {
   assert(DwarfReg >= 0 && "invalid negative dwarf register number");
   assert(!isRegisterLocation() && "location description already locked down");
   if (DwarfReg < 32) {
@@ -64,7 +65,7 @@ void DwarfExpression::addBReg(int DwarfReg, int Offset) {
   emitSigned(Offset);
 }
 
-void DwarfExpression::addFBReg(int Offset) {
+void DwarfExpression::addFBReg(int64_t Offset) {
   emitOp(dwarf::DW_OP_fbreg);
   emitSigned(Offset);
 }
@@ -104,10 +105,16 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
       DwarfRegs.push_back(Register::createRegister(-1, nullptr));
       return true;
     }
+    // Try getting dwarf register for virtual register anyway, eg. for NVPTX.
+    int64_t Reg = TRI.getDwarfRegNumForVirtReg(MachineReg, false);
+    if (Reg > 0) {
+      DwarfRegs.push_back(Register::createRegister(Reg, nullptr));
+      return true;
+    }
     return false;
   }
 
-  int Reg = TRI.getDwarfRegNum(MachineReg, false);
+  int64_t Reg = TRI.getDwarfRegNum(MachineReg, false);
 
   // If this is a valid register number, emit it.
   if (Reg >= 0) {
@@ -147,7 +154,7 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
     unsigned Size = TRI.getSubRegIdxSize(Idx);
     unsigned Offset = TRI.getSubRegIdxOffset(Idx);
     Reg = TRI.getDwarfRegNum(SR, false);
-    if (Reg < 0)
+    if (Reg < 0 || Offset + Size > RegSize)
       continue;
 
     // Used to build the intersection between the bits we already
@@ -157,7 +164,7 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
 
     // If this sub-register has a DWARF number and we haven't covered
     // its range, and its range covers the value, emit a DWARF piece for it.
-    if (Offset < MaxSize && CurSubReg.test(Coverage)) {
+    if (Offset < MaxSize && !CurSubReg.subsetOf(Coverage)) {
       // Emit a piece for any gap in the coverage.
       if (Offset > CurPos)
         DwarfRegs.push_back(Register::createSubRegister(
@@ -185,6 +192,15 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
 void DwarfExpression::addStackValue() {
   if (DwarfVersion >= 4)
     emitOp(dwarf::DW_OP_stack_value);
+}
+
+void DwarfExpression::addBooleanConstant(int64_t Value) {
+  assert(isImplicitLocation() || isUnknownLocation());
+  LocationKind = Implicit;
+  if (Value == 0)
+    emitOp(dwarf::DW_OP_lit0);
+  else
+    emitOp(dwarf::DW_OP_lit1);
 }
 
 void DwarfExpression::addSignedConstant(int64_t Value) {
@@ -546,6 +562,65 @@ bool DwarfExpression::addExpression(
       LocationKind = Unknown;
       return true;
     }
+    case dwarf::DW_OP_LLVM_extract_bits_sext:
+    case dwarf::DW_OP_LLVM_extract_bits_zext: {
+      unsigned SizeInBits = Op->getArg(1);
+      unsigned BitOffset = Op->getArg(0);
+      unsigned DerefSize = 0;
+      //  Operations are done in the DWARF "generic type" whose size
+      // is the size of a pointer.
+      unsigned PtrSizeInBytes = CU.getAsmPrinter()->MAI->getCodePointerSize();
+
+      // If we have a memory location then dereference to get the value, though
+      // we have to make sure we don't dereference any bytes past the end of the
+      // object.
+      if (isMemoryLocation()) {
+        DerefSize = alignTo(BitOffset + SizeInBits, 8) / 8;
+        if (DerefSize == PtrSizeInBytes) {
+          emitOp(dwarf::DW_OP_deref);
+        } else {
+          emitOp(dwarf::DW_OP_deref_size);
+          emitUnsigned(DerefSize);
+        }
+      }
+
+      // If a dereference was emitted for an unsigned value, and
+      // there's no bit offset, then a bit of optimization is
+      // possible.
+      if (OpNum == dwarf::DW_OP_LLVM_extract_bits_zext && BitOffset == 0) {
+        if (8 * DerefSize == SizeInBits) {
+          // The correct value is already on the stack.
+        } else {
+          // No need to shift, we can just mask off the desired bits.
+          emitOp(dwarf::DW_OP_constu);
+          emitUnsigned((1u << SizeInBits) - 1);
+          emitOp(dwarf::DW_OP_and);
+        }
+      } else {
+        // Extract the bits by a shift left (to shift out the bits after what we
+        // want to extract) followed by shift right (to shift the bits to
+        // position 0 and also sign/zero extend).
+        unsigned LeftShift = PtrSizeInBytes * 8 - (SizeInBits + BitOffset);
+        unsigned RightShift = LeftShift + BitOffset;
+        if (LeftShift) {
+          emitOp(dwarf::DW_OP_constu);
+          emitUnsigned(LeftShift);
+          emitOp(dwarf::DW_OP_shl);
+        }
+        if (RightShift) {
+          emitOp(dwarf::DW_OP_constu);
+          emitUnsigned(RightShift);
+          emitOp(OpNum == dwarf::DW_OP_LLVM_extract_bits_sext
+                     ? dwarf::DW_OP_shra
+                     : dwarf::DW_OP_shr);
+        }
+      }
+
+      // The value is now at the top of the stack, so set the location to
+      // implicit so that we get a stack_value at the end.
+      LocationKind = Implicit;
+      break;
+    }
     case dwarf::DW_OP_plus_uconst:
       assert(!isRegisterLocation());
       emitOp(dwarf::DW_OP_plus_uconst);
@@ -567,12 +642,15 @@ bool DwarfExpression::addExpression(
     case dwarf::DW_OP_dup:
     case dwarf::DW_OP_push_object_address:
     case dwarf::DW_OP_over:
+    case dwarf::DW_OP_rot:
     case dwarf::DW_OP_eq:
     case dwarf::DW_OP_ne:
     case dwarf::DW_OP_gt:
     case dwarf::DW_OP_ge:
     case dwarf::DW_OP_lt:
     case dwarf::DW_OP_le:
+    case dwarf::DW_OP_neg:
+    case dwarf::DW_OP_abs:
       emitOp(OpNum);
       break;
     case dwarf::DW_OP_deref:

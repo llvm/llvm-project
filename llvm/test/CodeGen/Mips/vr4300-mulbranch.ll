@@ -1,4 +1,4 @@
-; RUN: llc -march=mips -mfix4300 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=mips -mfix4300 -verify-machineinstrs < %s | FileCheck %s
 
 ; Function Attrs: nounwind
 define dso_local void @fun_s(float %a) local_unnamed_addr #0 {

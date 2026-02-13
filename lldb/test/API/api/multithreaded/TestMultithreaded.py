@@ -22,6 +22,7 @@ class SBBreakpointCallbackCase(TestBase):
         self.generateSource("test_listener_event_process_state.cpp")
         self.generateSource("test_listener_resume.cpp")
         self.generateSource("test_stop-hook.cpp")
+        self.generateSource("test_concurrent_unwind.cpp")
 
     @skipIfRemote
     # clang-cl does not support throw or catch (llvm.org/pr24538)
@@ -91,7 +92,19 @@ class SBBreakpointCallbackCase(TestBase):
             "test_listener_resume",
         )
 
-    def build_and_test(self, sources, test_name, args=None):
+    @skipIfRemote
+    # clang-cl does not support throw or catch (llvm.org/pr24538)
+    @skipIfWindows
+    @skipIfHostIncompatibleWithTarget
+    def test_concurrent_unwind(self):
+        """Test that you can run a python command in a stop-hook when stdin is File based."""
+        self.build_and_test(
+            "driver.cpp test_concurrent_unwind.cpp",
+            "test_concurrent_unwind",
+            inferior_source="deep_stack.cpp",
+        )
+
+    def build_and_test(self, sources, test_name, inferior_source="inferior.cpp"):
         """Build LLDB test from sources, and run expecting 0 exit code"""
 
         # These tests link against host lldb API.
@@ -104,7 +117,7 @@ class SBBreakpointCallbackCase(TestBase):
             )
 
         self.inferior = "inferior_program"
-        self.buildProgram("inferior.cpp", self.inferior)
+        self.buildProgram(inferior_source, self.inferior)
         self.addTearDownHook(lambda: os.remove(self.getBuildArtifact(self.inferior)))
 
         self.buildDriver(sources, test_name)

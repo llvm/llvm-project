@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; This testcase is known to generate an opportunity for creating vcombine
 ; in HexagonCopyToCombine.

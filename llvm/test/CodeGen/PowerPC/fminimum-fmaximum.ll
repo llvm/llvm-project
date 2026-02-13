@@ -45,74 +45,26 @@ define float @f32_minimum(float %a, float %b) {
 ;
 ; VSX-LABEL: f32_minimum:
 ; VSX:       # %bb.0: # %entry
-; VSX-NEXT:    xscvdpspn 0, 1
 ; VSX-NEXT:    fcmpu 0, 1, 2
-; VSX-NEXT:    xscvdpspn 3, 2
-; VSX-NEXT:    mffprwz 3, 0
 ; VSX-NEXT:    bc 12, 3, .LBB0_2
 ; VSX-NEXT:  # %bb.1: # %entry
-; VSX-NEXT:    xsmindp 0, 1, 2
-; VSX-NEXT:    b .LBB0_3
+; VSX-NEXT:    xsmindp 1, 1, 2
+; VSX-NEXT:    blr
 ; VSX-NEXT:  .LBB0_2:
-; VSX-NEXT:    addis 4, 2, .LCPI0_0@toc@ha
-; VSX-NEXT:    lfs 0, .LCPI0_0@toc@l(4)
-; VSX-NEXT:  .LBB0_3: # %entry
-; VSX-NEXT:    xoris 3, 3, 32768
-; VSX-NEXT:    mffprwz 4, 3
-; VSX-NEXT:    cmplwi 3, 0
-; VSX-NEXT:    bc 12, 2, .LBB0_5
-; VSX-NEXT:  # %bb.4: # %entry
-; VSX-NEXT:    fmr 1, 0
-; VSX-NEXT:  .LBB0_5: # %entry
-; VSX-NEXT:    xoris 3, 4, 32768
-; VSX-NEXT:    cmplwi 3, 0
-; VSX-NEXT:    bc 12, 2, .LBB0_7
-; VSX-NEXT:  # %bb.6: # %entry
-; VSX-NEXT:    fmr 2, 1
-; VSX-NEXT:  .LBB0_7: # %entry
-; VSX-NEXT:    xxlxor 1, 1, 1
-; VSX-NEXT:    fcmpu 0, 0, 1
-; VSX-NEXT:    bc 12, 2, .LBB0_9
-; VSX-NEXT:  # %bb.8: # %entry
-; VSX-NEXT:    fmr 2, 0
-; VSX-NEXT:  .LBB0_9: # %entry
-; VSX-NEXT:    fmr 1, 2
+; VSX-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
+; VSX-NEXT:    lfs 1, .LCPI0_0@toc@l(3)
 ; VSX-NEXT:    blr
 ;
 ; AIX-LABEL: f32_minimum:
 ; AIX:       # %bb.0: # %entry
-; AIX-NEXT:    xscvdpspn 0, 1
 ; AIX-NEXT:    fcmpu 0, 1, 2
-; AIX-NEXT:    xscvdpspn 3, 2
-; AIX-NEXT:    mffprwz 3, 0
 ; AIX-NEXT:    bc 12, 3, L..BB0_2
 ; AIX-NEXT:  # %bb.1: # %entry
-; AIX-NEXT:    xsmindp 0, 1, 2
-; AIX-NEXT:    b L..BB0_3
+; AIX-NEXT:    xsmindp 1, 1, 2
+; AIX-NEXT:    blr
 ; AIX-NEXT:  L..BB0_2:
-; AIX-NEXT:    ld 4, L..C0(2) # %const.0
-; AIX-NEXT:    lfs 0, 0(4)
-; AIX-NEXT:  L..BB0_3: # %entry
-; AIX-NEXT:    xoris 3, 3, 32768
-; AIX-NEXT:    mffprwz 4, 3
-; AIX-NEXT:    cmplwi 3, 0
-; AIX-NEXT:    bc 12, 2, L..BB0_5
-; AIX-NEXT:  # %bb.4: # %entry
-; AIX-NEXT:    fmr 1, 0
-; AIX-NEXT:  L..BB0_5: # %entry
-; AIX-NEXT:    xoris 3, 4, 32768
-; AIX-NEXT:    cmplwi 3, 0
-; AIX-NEXT:    bc 12, 2, L..BB0_7
-; AIX-NEXT:  # %bb.6: # %entry
-; AIX-NEXT:    fmr 2, 1
-; AIX-NEXT:  L..BB0_7: # %entry
-; AIX-NEXT:    xxlxor 1, 1, 1
-; AIX-NEXT:    fcmpu 0, 0, 1
-; AIX-NEXT:    bc 12, 2, L..BB0_9
-; AIX-NEXT:  # %bb.8: # %entry
-; AIX-NEXT:    fmr 2, 0
-; AIX-NEXT:  L..BB0_9: # %entry
-; AIX-NEXT:    fmr 1, 2
+; AIX-NEXT:    ld 3, L..C0(2) # %const.0
+; AIX-NEXT:    lfs 1, 0(3)
 ; AIX-NEXT:    blr
 entry:
   %m = call float @llvm.minimum.f32(float %a, float %b)
@@ -159,70 +111,26 @@ define float @f32_maximum(float %a, float %b) {
 ;
 ; VSX-LABEL: f32_maximum:
 ; VSX:       # %bb.0: # %entry
-; VSX-NEXT:    xscvdpspn 0, 1
 ; VSX-NEXT:    fcmpu 0, 1, 2
-; VSX-NEXT:    xscvdpspn 3, 2
-; VSX-NEXT:    mffprwz 3, 0
 ; VSX-NEXT:    bc 12, 3, .LBB1_2
 ; VSX-NEXT:  # %bb.1: # %entry
-; VSX-NEXT:    xsmaxdp 0, 1, 2
-; VSX-NEXT:    b .LBB1_3
+; VSX-NEXT:    xsmaxdp 1, 1, 2
+; VSX-NEXT:    blr
 ; VSX-NEXT:  .LBB1_2:
-; VSX-NEXT:    addis 4, 2, .LCPI1_0@toc@ha
-; VSX-NEXT:    lfs 0, .LCPI1_0@toc@l(4)
-; VSX-NEXT:  .LBB1_3: # %entry
-; VSX-NEXT:    mffprwz 4, 3
-; VSX-NEXT:    cmpwi 3, 0
-; VSX-NEXT:    bc 12, 2, .LBB1_5
-; VSX-NEXT:  # %bb.4: # %entry
-; VSX-NEXT:    fmr 1, 0
-; VSX-NEXT:  .LBB1_5: # %entry
-; VSX-NEXT:    cmpwi 4, 0
-; VSX-NEXT:    bc 12, 2, .LBB1_7
-; VSX-NEXT:  # %bb.6: # %entry
-; VSX-NEXT:    fmr 2, 1
-; VSX-NEXT:  .LBB1_7: # %entry
-; VSX-NEXT:    xxlxor 1, 1, 1
-; VSX-NEXT:    fcmpu 0, 0, 1
-; VSX-NEXT:    bc 12, 2, .LBB1_9
-; VSX-NEXT:  # %bb.8: # %entry
-; VSX-NEXT:    fmr 2, 0
-; VSX-NEXT:  .LBB1_9: # %entry
-; VSX-NEXT:    fmr 1, 2
+; VSX-NEXT:    addis 3, 2, .LCPI1_0@toc@ha
+; VSX-NEXT:    lfs 1, .LCPI1_0@toc@l(3)
 ; VSX-NEXT:    blr
 ;
 ; AIX-LABEL: f32_maximum:
 ; AIX:       # %bb.0: # %entry
-; AIX-NEXT:    xscvdpspn 0, 1
 ; AIX-NEXT:    fcmpu 0, 1, 2
-; AIX-NEXT:    xscvdpspn 3, 2
-; AIX-NEXT:    mffprwz 3, 0
 ; AIX-NEXT:    bc 12, 3, L..BB1_2
 ; AIX-NEXT:  # %bb.1: # %entry
-; AIX-NEXT:    xsmaxdp 0, 1, 2
-; AIX-NEXT:    b L..BB1_3
+; AIX-NEXT:    xsmaxdp 1, 1, 2
+; AIX-NEXT:    blr
 ; AIX-NEXT:  L..BB1_2:
-; AIX-NEXT:    ld 4, L..C1(2) # %const.0
-; AIX-NEXT:    lfs 0, 0(4)
-; AIX-NEXT:  L..BB1_3: # %entry
-; AIX-NEXT:    mffprwz 4, 3
-; AIX-NEXT:    cmpwi 3, 0
-; AIX-NEXT:    bc 12, 2, L..BB1_5
-; AIX-NEXT:  # %bb.4: # %entry
-; AIX-NEXT:    fmr 1, 0
-; AIX-NEXT:  L..BB1_5: # %entry
-; AIX-NEXT:    cmpwi 4, 0
-; AIX-NEXT:    bc 12, 2, L..BB1_7
-; AIX-NEXT:  # %bb.6: # %entry
-; AIX-NEXT:    fmr 2, 1
-; AIX-NEXT:  L..BB1_7: # %entry
-; AIX-NEXT:    xxlxor 1, 1, 1
-; AIX-NEXT:    fcmpu 0, 0, 1
-; AIX-NEXT:    bc 12, 2, L..BB1_9
-; AIX-NEXT:  # %bb.8: # %entry
-; AIX-NEXT:    fmr 2, 0
-; AIX-NEXT:  L..BB1_9: # %entry
-; AIX-NEXT:    fmr 1, 2
+; AIX-NEXT:    ld 3, L..C1(2) # %const.0
+; AIX-NEXT:    lfs 1, 0(3)
 ; AIX-NEXT:    blr
 entry:
   %m = call float @llvm.maximum.f32(float %a, float %b)
@@ -272,69 +180,25 @@ define double @f64_minimum(double %a, double %b) {
 ; VSX-LABEL: f64_minimum:
 ; VSX:       # %bb.0: # %entry
 ; VSX-NEXT:    fcmpu 0, 1, 2
-; VSX-NEXT:    mffprd 3, 1
 ; VSX-NEXT:    bc 12, 3, .LBB2_2
 ; VSX-NEXT:  # %bb.1: # %entry
-; VSX-NEXT:    xsmindp 0, 1, 2
-; VSX-NEXT:    b .LBB2_3
+; VSX-NEXT:    xsmindp 1, 1, 2
+; VSX-NEXT:    blr
 ; VSX-NEXT:  .LBB2_2:
-; VSX-NEXT:    addis 4, 2, .LCPI2_0@toc@ha
-; VSX-NEXT:    lfs 0, .LCPI2_0@toc@l(4)
-; VSX-NEXT:  .LBB2_3: # %entry
-; VSX-NEXT:    li 5, 1
-; VSX-NEXT:    mffprd 4, 2
-; VSX-NEXT:    rldic 5, 5, 63, 0
-; VSX-NEXT:    cmpd 3, 5
-; VSX-NEXT:    bc 12, 2, .LBB2_5
-; VSX-NEXT:  # %bb.4: # %entry
-; VSX-NEXT:    fmr 1, 0
-; VSX-NEXT:  .LBB2_5: # %entry
-; VSX-NEXT:    cmpd 4, 5
-; VSX-NEXT:    bc 12, 2, .LBB2_7
-; VSX-NEXT:  # %bb.6: # %entry
-; VSX-NEXT:    fmr 2, 1
-; VSX-NEXT:  .LBB2_7: # %entry
-; VSX-NEXT:    xxlxor 1, 1, 1
-; VSX-NEXT:    fcmpu 0, 0, 1
-; VSX-NEXT:    bc 12, 2, .LBB2_9
-; VSX-NEXT:  # %bb.8: # %entry
-; VSX-NEXT:    fmr 2, 0
-; VSX-NEXT:  .LBB2_9: # %entry
-; VSX-NEXT:    fmr 1, 2
+; VSX-NEXT:    addis 3, 2, .LCPI2_0@toc@ha
+; VSX-NEXT:    lfs 1, .LCPI2_0@toc@l(3)
 ; VSX-NEXT:    blr
 ;
 ; AIX-LABEL: f64_minimum:
 ; AIX:       # %bb.0: # %entry
 ; AIX-NEXT:    fcmpu 0, 1, 2
-; AIX-NEXT:    mffprd 3, 1
 ; AIX-NEXT:    bc 12, 3, L..BB2_2
 ; AIX-NEXT:  # %bb.1: # %entry
-; AIX-NEXT:    xsmindp 0, 1, 2
-; AIX-NEXT:    b L..BB2_3
+; AIX-NEXT:    xsmindp 1, 1, 2
+; AIX-NEXT:    blr
 ; AIX-NEXT:  L..BB2_2:
-; AIX-NEXT:    ld 4, L..C2(2) # %const.0
-; AIX-NEXT:    lfs 0, 0(4)
-; AIX-NEXT:  L..BB2_3: # %entry
-; AIX-NEXT:    li 5, 1
-; AIX-NEXT:    mffprd 4, 2
-; AIX-NEXT:    rldic 5, 5, 63, 0
-; AIX-NEXT:    cmpd 3, 5
-; AIX-NEXT:    bc 12, 2, L..BB2_5
-; AIX-NEXT:  # %bb.4: # %entry
-; AIX-NEXT:    fmr 1, 0
-; AIX-NEXT:  L..BB2_5: # %entry
-; AIX-NEXT:    cmpd 4, 5
-; AIX-NEXT:    bc 12, 2, L..BB2_7
-; AIX-NEXT:  # %bb.6: # %entry
-; AIX-NEXT:    fmr 2, 1
-; AIX-NEXT:  L..BB2_7: # %entry
-; AIX-NEXT:    xxlxor 1, 1, 1
-; AIX-NEXT:    fcmpu 0, 0, 1
-; AIX-NEXT:    bc 12, 2, L..BB2_9
-; AIX-NEXT:  # %bb.8: # %entry
-; AIX-NEXT:    fmr 2, 0
-; AIX-NEXT:  L..BB2_9: # %entry
-; AIX-NEXT:    fmr 1, 2
+; AIX-NEXT:    ld 3, L..C2(2) # %const.0
+; AIX-NEXT:    lfs 1, 0(3)
 ; AIX-NEXT:    blr
 entry:
   %m = call double @llvm.minimum.f64(double %a, double %b)
@@ -382,65 +246,25 @@ define double @f64_maximum(double %a, double %b) {
 ; VSX-LABEL: f64_maximum:
 ; VSX:       # %bb.0: # %entry
 ; VSX-NEXT:    fcmpu 0, 1, 2
-; VSX-NEXT:    mffprd 3, 1
 ; VSX-NEXT:    bc 12, 3, .LBB3_2
 ; VSX-NEXT:  # %bb.1: # %entry
-; VSX-NEXT:    xsmaxdp 0, 1, 2
-; VSX-NEXT:    b .LBB3_3
+; VSX-NEXT:    xsmaxdp 1, 1, 2
+; VSX-NEXT:    blr
 ; VSX-NEXT:  .LBB3_2:
-; VSX-NEXT:    addis 4, 2, .LCPI3_0@toc@ha
-; VSX-NEXT:    lfs 0, .LCPI3_0@toc@l(4)
-; VSX-NEXT:  .LBB3_3: # %entry
-; VSX-NEXT:    mffprd 4, 2
-; VSX-NEXT:    cmpdi 3, 0
-; VSX-NEXT:    bc 12, 2, .LBB3_5
-; VSX-NEXT:  # %bb.4: # %entry
-; VSX-NEXT:    fmr 1, 0
-; VSX-NEXT:  .LBB3_5: # %entry
-; VSX-NEXT:    cmpdi 4, 0
-; VSX-NEXT:    bc 12, 2, .LBB3_7
-; VSX-NEXT:  # %bb.6: # %entry
-; VSX-NEXT:    fmr 2, 1
-; VSX-NEXT:  .LBB3_7: # %entry
-; VSX-NEXT:    xxlxor 1, 1, 1
-; VSX-NEXT:    fcmpu 0, 0, 1
-; VSX-NEXT:    bc 12, 2, .LBB3_9
-; VSX-NEXT:  # %bb.8: # %entry
-; VSX-NEXT:    fmr 2, 0
-; VSX-NEXT:  .LBB3_9: # %entry
-; VSX-NEXT:    fmr 1, 2
+; VSX-NEXT:    addis 3, 2, .LCPI3_0@toc@ha
+; VSX-NEXT:    lfs 1, .LCPI3_0@toc@l(3)
 ; VSX-NEXT:    blr
 ;
 ; AIX-LABEL: f64_maximum:
 ; AIX:       # %bb.0: # %entry
 ; AIX-NEXT:    fcmpu 0, 1, 2
-; AIX-NEXT:    mffprd 3, 1
 ; AIX-NEXT:    bc 12, 3, L..BB3_2
 ; AIX-NEXT:  # %bb.1: # %entry
-; AIX-NEXT:    xsmaxdp 0, 1, 2
-; AIX-NEXT:    b L..BB3_3
+; AIX-NEXT:    xsmaxdp 1, 1, 2
+; AIX-NEXT:    blr
 ; AIX-NEXT:  L..BB3_2:
-; AIX-NEXT:    ld 4, L..C3(2) # %const.0
-; AIX-NEXT:    lfs 0, 0(4)
-; AIX-NEXT:  L..BB3_3: # %entry
-; AIX-NEXT:    mffprd 4, 2
-; AIX-NEXT:    cmpdi 3, 0
-; AIX-NEXT:    bc 12, 2, L..BB3_5
-; AIX-NEXT:  # %bb.4: # %entry
-; AIX-NEXT:    fmr 1, 0
-; AIX-NEXT:  L..BB3_5: # %entry
-; AIX-NEXT:    cmpdi 4, 0
-; AIX-NEXT:    bc 12, 2, L..BB3_7
-; AIX-NEXT:  # %bb.6: # %entry
-; AIX-NEXT:    fmr 2, 1
-; AIX-NEXT:  L..BB3_7: # %entry
-; AIX-NEXT:    xxlxor 1, 1, 1
-; AIX-NEXT:    fcmpu 0, 0, 1
-; AIX-NEXT:    bc 12, 2, L..BB3_9
-; AIX-NEXT:  # %bb.8: # %entry
-; AIX-NEXT:    fmr 2, 0
-; AIX-NEXT:  L..BB3_9: # %entry
-; AIX-NEXT:    fmr 1, 2
+; AIX-NEXT:    ld 3, L..C3(2) # %const.0
+; AIX-NEXT:    lfs 1, 0(3)
 ; AIX-NEXT:    blr
 entry:
   %m = call double @llvm.maximum.f64(double %a, double %b)
@@ -477,22 +301,13 @@ define <4 x float> @v4f32_minimum(<4 x float> %a, <4 x float> %b) {
 ; VSX-NEXT:    xvcmpeqsp 1, 35, 35
 ; VSX-NEXT:    xvcmpeqsp 2, 34, 34
 ; VSX-NEXT:    addis 3, 2, .LCPI4_0@toc@ha
-; VSX-NEXT:    xxleqv 36, 36, 36
-; VSX-NEXT:    xvminsp 0, 34, 35
-; VSX-NEXT:    vslw 4, 4, 4
 ; VSX-NEXT:    addi 3, 3, .LCPI4_0@toc@l
 ; VSX-NEXT:    xxlnor 1, 1, 1
 ; VSX-NEXT:    xxlnor 2, 2, 2
-; VSX-NEXT:    vcmpequw 5, 2, 4
+; VSX-NEXT:    xvminsp 0, 34, 35
 ; VSX-NEXT:    xxlor 1, 2, 1
 ; VSX-NEXT:    lxvd2x 2, 0, 3
-; VSX-NEXT:    xxsel 0, 0, 2, 1
-; VSX-NEXT:    xxlxor 2, 2, 2
-; VSX-NEXT:    xvcmpeqsp 2, 0, 2
-; VSX-NEXT:    xxsel 1, 0, 34, 37
-; VSX-NEXT:    vcmpequw 2, 3, 4
-; VSX-NEXT:    xxsel 1, 1, 35, 34
-; VSX-NEXT:    xxsel 34, 0, 1, 2
+; VSX-NEXT:    xxsel 34, 0, 2, 1
 ; VSX-NEXT:    blr
 ;
 ; AIX-LABEL: v4f32_minimum:
@@ -500,21 +315,12 @@ define <4 x float> @v4f32_minimum(<4 x float> %a, <4 x float> %b) {
 ; AIX-NEXT:    xvcmpeqsp 1, 35, 35
 ; AIX-NEXT:    xvcmpeqsp 2, 34, 34
 ; AIX-NEXT:    ld 3, L..C4(2) # %const.0
-; AIX-NEXT:    xxleqv 36, 36, 36
 ; AIX-NEXT:    xvminsp 0, 34, 35
-; AIX-NEXT:    vslw 4, 4, 4
 ; AIX-NEXT:    xxlnor 1, 1, 1
 ; AIX-NEXT:    xxlnor 2, 2, 2
-; AIX-NEXT:    vcmpequw 5, 2, 4
 ; AIX-NEXT:    xxlor 1, 2, 1
 ; AIX-NEXT:    lxvw4x 2, 0, 3
-; AIX-NEXT:    xxsel 0, 0, 2, 1
-; AIX-NEXT:    xxlxor 2, 2, 2
-; AIX-NEXT:    xvcmpeqsp 2, 0, 2
-; AIX-NEXT:    xxsel 1, 0, 34, 37
-; AIX-NEXT:    vcmpequw 2, 3, 4
-; AIX-NEXT:    xxsel 1, 1, 35, 34
-; AIX-NEXT:    xxsel 34, 0, 1, 2
+; AIX-NEXT:    xxsel 34, 0, 2, 1
 ; AIX-NEXT:    blr
 entry:
   %m = call <4 x float> @llvm.minimum.v4f32(<4 x float> %a, <4 x float> %b)
@@ -553,16 +359,9 @@ define <4 x float> @v4f32_maximum(<4 x float> %a, <4 x float> %b) {
 ; VSX-NEXT:    xxlnor 1, 1, 1
 ; VSX-NEXT:    xxlnor 2, 2, 2
 ; VSX-NEXT:    xvmaxsp 0, 34, 35
-; VSX-NEXT:    xxlxor 36, 36, 36
-; VSX-NEXT:    vcmpequw 5, 2, 4
 ; VSX-NEXT:    xxlor 1, 2, 1
 ; VSX-NEXT:    lxvd2x 2, 0, 3
-; VSX-NEXT:    xxsel 0, 0, 2, 1
-; VSX-NEXT:    xvcmpeqsp 2, 0, 36
-; VSX-NEXT:    xxsel 1, 0, 34, 37
-; VSX-NEXT:    vcmpequw 2, 3, 4
-; VSX-NEXT:    xxsel 1, 1, 35, 34
-; VSX-NEXT:    xxsel 34, 0, 1, 2
+; VSX-NEXT:    xxsel 34, 0, 2, 1
 ; VSX-NEXT:    blr
 ;
 ; AIX-LABEL: v4f32_maximum:
@@ -571,18 +370,11 @@ define <4 x float> @v4f32_maximum(<4 x float> %a, <4 x float> %b) {
 ; AIX-NEXT:    xvcmpeqsp 2, 34, 34
 ; AIX-NEXT:    ld 3, L..C5(2) # %const.0
 ; AIX-NEXT:    xvmaxsp 0, 34, 35
-; AIX-NEXT:    xxlxor 36, 36, 36
 ; AIX-NEXT:    xxlnor 1, 1, 1
 ; AIX-NEXT:    xxlnor 2, 2, 2
-; AIX-NEXT:    vcmpequw 5, 2, 4
 ; AIX-NEXT:    xxlor 1, 2, 1
 ; AIX-NEXT:    lxvw4x 2, 0, 3
-; AIX-NEXT:    xxsel 0, 0, 2, 1
-; AIX-NEXT:    xvcmpeqsp 2, 0, 36
-; AIX-NEXT:    xxsel 1, 0, 34, 37
-; AIX-NEXT:    vcmpequw 2, 3, 4
-; AIX-NEXT:    xxsel 1, 1, 35, 34
-; AIX-NEXT:    xxsel 34, 0, 1, 2
+; AIX-NEXT:    xxsel 34, 0, 2, 1
 ; AIX-NEXT:    blr
 entry:
   %m = call <4 x float> @llvm.maximum.v4f32(<4 x float> %a, <4 x float> %b)
@@ -669,47 +461,28 @@ define <2 x double> @v2f64_minimum(<2 x double> %a, <2 x double> %b) {
 ; VSX-LABEL: v2f64_minimum:
 ; VSX:       # %bb.0: # %entry
 ; VSX-NEXT:    addis 3, 2, .LCPI6_0@toc@ha
-; VSX-NEXT:    xvcmpeqdp 36, 35, 35
-; VSX-NEXT:    xvcmpeqdp 37, 34, 34
-; VSX-NEXT:    addi 3, 3, .LCPI6_0@toc@l
-; VSX-NEXT:    xxlnor 36, 36, 36
-; VSX-NEXT:    xxlnor 37, 37, 37
 ; VSX-NEXT:    xvmindp 0, 34, 35
+; VSX-NEXT:    xvcmpeqdp 35, 35, 35
+; VSX-NEXT:    addi 3, 3, .LCPI6_0@toc@l
+; VSX-NEXT:    xvcmpeqdp 34, 34, 34
+; VSX-NEXT:    xxlnor 35, 35, 35
+; VSX-NEXT:    xxlnor 34, 34, 34
 ; VSX-NEXT:    lxvd2x 2, 0, 3
-; VSX-NEXT:    addis 3, 2, .LCPI6_1@toc@ha
-; VSX-NEXT:    xxlor 1, 37, 36
-; VSX-NEXT:    addi 3, 3, .LCPI6_1@toc@l
-; VSX-NEXT:    lxvd2x 36, 0, 3
-; VSX-NEXT:    vcmpequd 5, 2, 4
-; VSX-NEXT:    xxsel 0, 0, 2, 1
-; VSX-NEXT:    xxlxor 2, 2, 2
-; VSX-NEXT:    xxsel 1, 0, 34, 37
-; VSX-NEXT:    vcmpequd 2, 3, 4
-; VSX-NEXT:    xxsel 1, 1, 35, 34
-; VSX-NEXT:    xvcmpeqdp 34, 0, 2
-; VSX-NEXT:    xxsel 34, 0, 1, 34
+; VSX-NEXT:    xxlor 1, 34, 35
+; VSX-NEXT:    xxsel 34, 0, 2, 1
 ; VSX-NEXT:    blr
 ;
 ; AIX-LABEL: v2f64_minimum:
 ; AIX:       # %bb.0: # %entry
 ; AIX-NEXT:    ld 3, L..C6(2) # %const.0
-; AIX-NEXT:    xvcmpeqdp 36, 35, 35
-; AIX-NEXT:    xvcmpeqdp 37, 34, 34
-; AIX-NEXT:    lxvd2x 2, 0, 3
-; AIX-NEXT:    ld 3, L..C7(2) # %const.1
-; AIX-NEXT:    xxlnor 36, 36, 36
-; AIX-NEXT:    xxlnor 37, 37, 37
 ; AIX-NEXT:    xvmindp 0, 34, 35
-; AIX-NEXT:    xxlor 1, 37, 36
-; AIX-NEXT:    lxvd2x 36, 0, 3
-; AIX-NEXT:    vcmpequd 5, 2, 4
-; AIX-NEXT:    xxsel 0, 0, 2, 1
-; AIX-NEXT:    xxlxor 2, 2, 2
-; AIX-NEXT:    xxsel 1, 0, 34, 37
-; AIX-NEXT:    vcmpequd 2, 3, 4
-; AIX-NEXT:    xxsel 1, 1, 35, 34
-; AIX-NEXT:    xvcmpeqdp 34, 0, 2
-; AIX-NEXT:    xxsel 34, 0, 1, 34
+; AIX-NEXT:    xvcmpeqdp 35, 35, 35
+; AIX-NEXT:    lxvd2x 2, 0, 3
+; AIX-NEXT:    xvcmpeqdp 34, 34, 34
+; AIX-NEXT:    xxlnor 35, 35, 35
+; AIX-NEXT:    xxlnor 34, 34, 34
+; AIX-NEXT:    xxlor 1, 34, 35
+; AIX-NEXT:    xxsel 34, 0, 2, 1
 ; AIX-NEXT:    blr
 entry:
   %m = call <2 x double> @llvm.minimum.v2f64(<2 x double> %a, <2 x double> %b)
@@ -794,42 +567,28 @@ define <2 x double> @v2f64_maximum(<2 x double> %a, <2 x double> %b) {
 ; VSX-LABEL: v2f64_maximum:
 ; VSX:       # %bb.0: # %entry
 ; VSX-NEXT:    addis 3, 2, .LCPI7_0@toc@ha
-; VSX-NEXT:    xvcmpeqdp 36, 35, 35
-; VSX-NEXT:    xvcmpeqdp 37, 34, 34
-; VSX-NEXT:    addi 3, 3, .LCPI7_0@toc@l
-; VSX-NEXT:    xxlnor 36, 36, 36
-; VSX-NEXT:    xxlnor 37, 37, 37
 ; VSX-NEXT:    xvmaxdp 0, 34, 35
+; VSX-NEXT:    xvcmpeqdp 35, 35, 35
+; VSX-NEXT:    addi 3, 3, .LCPI7_0@toc@l
+; VSX-NEXT:    xvcmpeqdp 34, 34, 34
+; VSX-NEXT:    xxlnor 35, 35, 35
+; VSX-NEXT:    xxlnor 34, 34, 34
 ; VSX-NEXT:    lxvd2x 2, 0, 3
-; VSX-NEXT:    xxlor 1, 37, 36
-; VSX-NEXT:    xxlxor 36, 36, 36
-; VSX-NEXT:    vcmpequd 5, 2, 4
-; VSX-NEXT:    xxsel 0, 0, 2, 1
-; VSX-NEXT:    xxsel 1, 0, 34, 37
-; VSX-NEXT:    vcmpequd 2, 3, 4
-; VSX-NEXT:    xxsel 1, 1, 35, 34
-; VSX-NEXT:    xvcmpeqdp 34, 0, 36
-; VSX-NEXT:    xxsel 34, 0, 1, 34
+; VSX-NEXT:    xxlor 1, 34, 35
+; VSX-NEXT:    xxsel 34, 0, 2, 1
 ; VSX-NEXT:    blr
 ;
 ; AIX-LABEL: v2f64_maximum:
 ; AIX:       # %bb.0: # %entry
-; AIX-NEXT:    ld 3, L..C8(2) # %const.0
-; AIX-NEXT:    xvcmpeqdp 36, 35, 35
-; AIX-NEXT:    xvcmpeqdp 37, 34, 34
-; AIX-NEXT:    lxvd2x 2, 0, 3
-; AIX-NEXT:    xxlnor 36, 36, 36
-; AIX-NEXT:    xxlnor 37, 37, 37
+; AIX-NEXT:    ld 3, L..C7(2) # %const.0
 ; AIX-NEXT:    xvmaxdp 0, 34, 35
-; AIX-NEXT:    xxlor 1, 37, 36
-; AIX-NEXT:    xxlxor 36, 36, 36
-; AIX-NEXT:    vcmpequd 5, 2, 4
-; AIX-NEXT:    xxsel 0, 0, 2, 1
-; AIX-NEXT:    xxsel 1, 0, 34, 37
-; AIX-NEXT:    vcmpequd 2, 3, 4
-; AIX-NEXT:    xxsel 1, 1, 35, 34
-; AIX-NEXT:    xvcmpeqdp 34, 0, 36
-; AIX-NEXT:    xxsel 34, 0, 1, 34
+; AIX-NEXT:    xvcmpeqdp 35, 35, 35
+; AIX-NEXT:    lxvd2x 2, 0, 3
+; AIX-NEXT:    xvcmpeqdp 34, 34, 34
+; AIX-NEXT:    xxlnor 35, 35, 35
+; AIX-NEXT:    xxlnor 34, 34, 34
+; AIX-NEXT:    xxlor 1, 34, 35
+; AIX-NEXT:    xxsel 34, 0, 2, 1
 ; AIX-NEXT:    blr
 entry:
   %m = call <2 x double> @llvm.maximum.v2f64(<2 x double> %a, <2 x double> %b)

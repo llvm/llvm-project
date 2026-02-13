@@ -112,8 +112,13 @@ void check_native_thread_id() {
 */
 
 void check_host() {
+#ifdef _WIN32
+  typedef DWORD buffer_size_t;
+#else
+  typedef int buffer_size_t;
+#endif
   int i;
-  int buffer_size = 256;
+  buffer_size_t buffer_size = 256;
   const char* formats[2] = {"%{host}", "%H"};
   char hostname[256];
   my_gethostname(hostname, buffer_size);

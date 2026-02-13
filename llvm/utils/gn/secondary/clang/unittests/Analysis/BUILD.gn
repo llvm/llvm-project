@@ -8,15 +8,18 @@ unittest("ClangAnalysisTests") {
     "//clang/lib/Analysis",
     "//clang/lib/Basic",
     "//clang/lib/Frontend",
+    "//clang/lib/Testing",
     "//clang/lib/Tooling",
     "//llvm/lib/Support",
   ]
   sources = [
+    "CFGBackEdgesTest.cpp",
     "CFGDominatorTree.cpp",
     "CFGTest.cpp",
     "CloneDetectionTest.cpp",
     "ExprMutationAnalyzerTest.cpp",
     "IntervalPartitionTest.cpp",
+    "LifetimeSafetyTest.cpp",
     "MacroExpansionContextTest.cpp",
     "UnsafeBufferUsageTest.cpp",
   ]

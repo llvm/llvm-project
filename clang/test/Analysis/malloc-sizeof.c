@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=unix.MallocSizeof -verify %s
+// RUN: %clang_analyze_cc1 -Wno-alloc-size -analyzer-checker=unix.MallocSizeof -verify %s
 
 #include <stddef.h>
 

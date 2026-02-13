@@ -189,6 +189,14 @@ void add_lc_segment(std::vector<std::vector<uint8_t>> &loadcmds,
 
 std::string get_uuid_from_binary(const char *fn, cpu_type_t &cputype,
                                  cpu_subtype_t &cpusubtype) {
+// We may be given a file, set reasonable values.
+#if defined(__x86_64__)
+  cputype = CPU_TYPE_X86;
+  cpusubtype = CPU_SUBTYPE_X86_ALL;
+#else
+  cputype = CPU_TYPE_ARM64;
+  cpusubtype = CPU_SUBTYPE_ARM64_ALL;
+#endif
   if (strlen(fn) == 0)
     return {};
 

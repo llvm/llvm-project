@@ -42,7 +42,7 @@ kernel void foo(image1d_t img) {
   // CHECK-AMDGCN: alloca ptr addrspace(4)
   event_t evt;
   // CHECK-SPIR: alloca target("spirv.Event")
-  // CHECK-AMDGCN: alloca ptr addrspace(5)
+  // CHECK-AMDGCN: alloca ptr
   clk_event_t clk_evt;
   // CHECK-SPIR: alloca target("spirv.DeviceEvent")
   // CHECK-AMDGCN: alloca ptr addrspace(1)
@@ -64,12 +64,90 @@ kernel void foo(image1d_t img) {
 
 kernel void foo_ro_pipe(read_only pipe int p) {}
 // CHECK-SPIR: @foo_ro_pipe(target("spirv.Pipe", 0) %p)
-// CHECK_AMDGCN: @foo_ro_pipe(ptr addrspace(1) %p)
+// CHECK-AMDGCN: @foo_ro_pipe(ptr addrspace(1) %p)
 
 kernel void foo_wo_pipe(write_only pipe int p) {}
 // CHECK-SPIR: @foo_wo_pipe(target("spirv.Pipe", 1) %p)
-// CHECK_AMDGCN: @foo_wo_pipe(ptr addrspace(1) %p)
+// CHECK-AMDGCN: @foo_wo_pipe(ptr addrspace(1) %p)
 
 void __attribute__((overloadable)) bad1(image1d_t b, image2d_t c, image2d_t d) {}
 // CHECK-SPIR-LABEL: @{{_Z4bad114ocl_image1d_ro14ocl_image2d_roS0_|"\\01\?bad1@@\$\$J0YAXPAUocl_image1d_ro@@PAUocl_image2d_ro@@1@Z"}}
 // CHECK-AMDGCN-LABEL: @{{_Z4bad114ocl_image1d_ro14ocl_image2d_roS0_|"\\01\?bad1@@\$\$J0YAXPAUocl_image1d_ro@@PAUocl_image2d_ro@@1@Z"}}(ptr addrspace(4){{.*}}ptr addrspace(4){{.*}}ptr addrspace(4){{.*}})
+
+
+// CHECK-AMDGCN: define dso_local void @_Z20img_type_mangle_test20ocl_image1d_array_ro(ptr addrspace(4) %img)
+__attribute__((overloadable))
+void img_type_mangle_test(read_only image1d_array_t img) {}
+
+// CHECK-AMDGCN: define dso_local void @_Z20img_type_mangle_test20ocl_image1d_array_wo(ptr addrspace(4) %img)
+__attribute__((overloadable))
+void img_type_mangle_test(write_only image1d_array_t img) {}
+
+// CHECK-AMDGCN: define dso_local void @_Z20img_type_mangle_test20ocl_image1d_array_rw(ptr addrspace(4) %img)
+__attribute__((overloadable))
+void img_type_mangle_test(read_write image1d_array_t img) {}
+
+
+// CHECK-AMDGCN: define dso_local void @_Z20img_type_mangle_test21ocl_image1d_buffer_ro(ptr addrspace(4) %img)
+__attribute__((overloadable))
+void img_type_mangle_test(read_only image1d_buffer_t img) {}
+
+// CHECK-AMDGCN: define dso_local void @_Z20img_type_mangle_test21ocl_image1d_buffer_wo(ptr addrspace(4) %img)
+__attribute__((overloadable))
+void img_type_mangle_test(write_only image1d_buffer_t img) {}
+
+// CHECK-AMDGCN: define dso_local void @_Z20img_type_mangle_test21ocl_image1d_buffer_rw(ptr addrspace(4) %img)
+__attribute__((overloadable))
+void img_type_mangle_test(read_write image1d_buffer_t img) {}
+
+
+// CHECK-AMDGCN: define dso_local void @_Z20img_type_mangle_test20ocl_image2d_array_ro(ptr addrspace(4) %img)
+__attribute__((overloadable))
+void img_type_mangle_test(read_only image2d_array_t img) {}
+
+// CHECK-AMDGCN: define dso_local void @_Z20img_type_mangle_test20ocl_image2d_array_wo(ptr addrspace(4) %img)
+__attribute__((overloadable))
+void img_type_mangle_test(write_only image2d_array_t img) {}
+
+// CHECK-AMDGCN: define dso_local void @_Z20img_type_mangle_test20ocl_image2d_array_rw(ptr addrspace(4) %img)
+__attribute__((overloadable))
+void img_type_mangle_test(read_write image2d_array_t img) {}
+
+
+// CHECK-AMDGCN: define dso_local void @_Z20img_type_mangle_test14ocl_image1d_ro(ptr addrspace(4) %img)
+__attribute__((overloadable))
+void img_type_mangle_test(read_only image1d_t img) {}
+
+// CHECK-AMDGCN: define dso_local void @_Z20img_type_mangle_test14ocl_image1d_wo(ptr addrspace(4) %img)
+__attribute__((overloadable))
+void img_type_mangle_test(write_only image1d_t img) {}
+
+// CHECK-AMDGCN: define dso_local void @_Z20img_type_mangle_test14ocl_image1d_rw(ptr addrspace(4) %img)
+__attribute__((overloadable))
+void img_type_mangle_test(read_write image1d_t img) {}
+
+
+// CHECK-AMDGCN: define dso_local void @_Z20img_type_mangle_test14ocl_image2d_ro(ptr addrspace(4) %img)
+__attribute__((overloadable))
+void img_type_mangle_test(read_only image2d_t img) {}
+
+// CHECK-AMDGCN: define dso_local void @_Z20img_type_mangle_test14ocl_image2d_wo(ptr addrspace(4) %img)
+__attribute__((overloadable))
+void img_type_mangle_test(write_only image2d_t img) {}
+
+// CHECK-AMDGCN: define dso_local void @_Z20img_type_mangle_test14ocl_image2d_rw(ptr addrspace(4) %img)
+__attribute__((overloadable))
+void img_type_mangle_test(read_write image2d_t img) {}
+
+
+// CHECK-AMDGCN: define dso_local void @_Z20img_type_mangle_test14ocl_image3d_ro(ptr addrspace(4) %img)
+__attribute__((overloadable))
+void img_type_mangle_test(read_only image3d_t img) {}
+
+// CHECK-AMDGCN: define dso_local void @_Z20img_type_mangle_test14ocl_image3d_wo(ptr addrspace(4) %img)
+__attribute__((overloadable))
+void img_type_mangle_test(write_only image3d_t img) {}
+
+// CHECK-AMDGCN: define dso_local void @_Z20img_type_mangle_test14ocl_image3d_rw(ptr addrspace(4) %img)
+__attribute__((overloadable))
+void img_type_mangle_test(read_write image3d_t img) {}

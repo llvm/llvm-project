@@ -11,10 +11,12 @@
 
 #include "mlir/IR/Region.h"
 #include "mlir/IR/Value.h"
+#include "mlir/IR/ValueRange.h"
 
 #include "llvm/ADT/SetVector.h"
 
 namespace mlir {
+class DominanceInfo;
 class RewriterBase;
 
 /// Check if all values in the provided range are defined above the `limit`
@@ -69,13 +71,54 @@ SmallVector<Value> makeRegionIsolatedFromAbove(
     llvm::function_ref<bool(Operation *)> cloneOperationIntoRegion =
         [](Operation *) { return false; });
 
+/// Move the operation dependencies (producers) of `op` before `insertionPoint`,
+/// so that `op` itself can subsequently be moved. This includes transitive
+/// dependencies. Supports movement within the same block or from nested regions
+/// to an outer block.
+///
+/// The following conditions cause the move to fail:
+/// - `insertionPoint` does not dominate `op`.
+/// - Movement across an isolated-from-above region boundary.
+/// - A dependency uses a block argument that wouldn't dominate
+/// `insertionPoint`.
+/// - `insertionPoint` is itself a dependency of `op` (cycle).
+/// - Any side-effecting operations in the dependency chain pessimistically
+/// blocks movement.
+LogicalResult moveOperationDependencies(RewriterBase &rewriter, Operation *op,
+                                        Operation *insertionPoint,
+                                        DominanceInfo &dominance);
+LogicalResult moveOperationDependencies(RewriterBase &rewriter, Operation *op,
+                                        Operation *insertionPoint);
+
+/// Move definitions of `values` (and their transitive dependencies) before
+/// `insertionPoint`. Supports movement within the same block or from nested
+/// regions to an outer block.
+///
+/// This is all-or-nothing: either all definitions are moved, or none are.
+///
+/// The following conditions cause the move to fail:
+/// - Any value is a block argument (cannot be moved).
+/// - Any side-effecting operations in the dependency chain.
+/// - Movement across an isolated-from-above region boundary.
+/// - A dependency uses a block argument that wouldn't dominate
+/// `insertionPoint`.
+/// - `insertionPoint` is itself a dependency (cycle).
+LogicalResult moveValueDefinitions(RewriterBase &rewriter, ValueRange values,
+                                   Operation *insertionPoint,
+                                   DominanceInfo &dominance);
+LogicalResult moveValueDefinitions(RewriterBase &rewriter, ValueRange values,
+                                   Operation *insertionPoint);
+
 /// Run a set of structural simplifications over the given regions. This
 /// includes transformations like unreachable block elimination, dead argument
 /// elimination, as well as some other DCE. This function returns success if any
 /// of the regions were simplified, failure otherwise. The provided rewriter is
 /// used to notify callers of operation and block deletion.
+/// Structurally similar blocks will be merged if the `mergeBlock` argument is
+/// true. Note this can lead to merged blocks with extra arguments.
 LogicalResult simplifyRegions(RewriterBase &rewriter,
-                              MutableArrayRef<Region> regions);
+                              MutableArrayRef<Region> regions,
+                              bool mergeBlocks = true);
 
 /// Erase the unreachable blocks within the provided regions. Returns success
 /// if any blocks were erased, failure otherwise.
@@ -86,9 +129,6 @@ LogicalResult eraseUnreachableBlocks(RewriterBase &rewriter,
 /// failure otherwise.
 LogicalResult runRegionDCE(RewriterBase &rewriter,
                            MutableArrayRef<Region> regions);
-
-/// Get a topologically sorted list of blocks of the given region.
-SetVector<Block *> getTopologicallySortedBlocks(Region &region);
 
 } // namespace mlir
 

@@ -14,7 +14,7 @@ void f2(void) {
   asm("foo" : : "r" (b)); // expected-error {{use of undeclared identifier 'b'}} 
 
   [[]] asm("");
-  [[gnu::deprecated]] asm(""); // expected-warning {{'deprecated' attribute ignored}}
+  [[gnu::deprecated]] asm(""); // expected-warning {{'gnu::deprecated' attribute ignored}}
 }
 
 void a(void) __asm__(""); // expected-error {{cannot use an empty string literal in 'asm'}}

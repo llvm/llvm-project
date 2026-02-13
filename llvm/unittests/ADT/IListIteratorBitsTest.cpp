@@ -27,6 +27,11 @@ struct PlainNode : ilist_node<PlainNode> {
   friend class dummy;
 };
 
+class Parent {};
+struct ParentNode
+    : ilist_node<ParentNode, ilist_iterator_bits<true>, ilist_parent<Parent>> {
+};
+
 TEST(IListIteratorBitsTest, DefaultConstructor) {
   simple_ilist<Node, ilist_iterator_bits<true>>::iterator I;
   simple_ilist<Node, ilist_iterator_bits<true>>::reverse_iterator RI;
@@ -88,8 +93,8 @@ TEST(IListIteratorBitsTest, ConsAndAssignment) {
 class dummy {
   // Test that we get an ilist_iterator_w_bits out of the node given that the
   // options are enabled.
-  using node_options = typename ilist_detail::compute_node_options<
-      Node, ilist_iterator_bits<true>>::type;
+  using node_options =
+      ilist_detail::compute_node_options<Node, ilist_iterator_bits<true>>::type;
   static_assert(std::is_same<Node::self_iterator,
                              llvm::ilist_iterator_w_bits<node_options, false,
                                                          false>>::value);
@@ -97,7 +102,7 @@ class dummy {
   // Now test that a plain node, without the option, gets a plain
   // ilist_iterator.
   using plain_node_options =
-      typename ilist_detail::compute_node_options<PlainNode>::type;
+      ilist_detail::compute_node_options<PlainNode>::type;
   static_assert(std::is_same<
                 PlainNode::self_iterator,
                 llvm::ilist_iterator<plain_node_options, false, false>>::value);
@@ -119,6 +124,24 @@ TEST(IListIteratorBitsTest, RangeIteration) {
 
   for (Node &N : make_range(RevIt, L.rend()))
     (void)N;
+}
+
+TEST(IListIteratorBitsTest, GetParent) {
+  simple_ilist<ParentNode, ilist_iterator_bits<true>, ilist_parent<Parent>> L;
+  Parent P;
+  ParentNode A;
+
+  // Parents are not set automatically.
+  A.setParent(&P);
+  L.insert(L.end(), A);
+  L.end().getNodePtr()->setParent(&P);
+
+  // Check we can get the node parent from all iterators, including for the
+  // sentinel.
+  EXPECT_EQ(&P, L.begin().getNodeParent());
+  EXPECT_EQ(&P, L.end().getNodeParent());
+  EXPECT_EQ(&P, L.rbegin().getNodeParent());
+  EXPECT_EQ(&P, L.rend().getNodeParent());
 }
 
 } // end namespace

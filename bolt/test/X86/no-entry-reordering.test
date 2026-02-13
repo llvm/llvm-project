@@ -1,5 +1,5 @@
-# Verifies that llvm-bolt reordering heuristic does not allocate a BB before the
-# entry point even if there is a hot edge from a block to entry point
+## Verifies that llvm-bolt reordering heuristic does not allocate a BB before the
+## entry point even if there is a hot edge from a block to entry point
 
 RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %S/Inputs/entry.s -o %t.o
 RUN: link_fdata %S/Inputs/entry.s %t.o %t.fdata --nmtool llvm-nm

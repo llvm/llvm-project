@@ -36,29 +36,33 @@ bool SPIRVCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                     const Value *Val, ArrayRef<Register> VRegs,
                                     FunctionLoweringInfo &FLI,
                                     Register SwiftErrorVReg) const {
-  // Maybe run postponed production of types for function pointers
-  if (IndirectCalls.size() > 0) {
-    produceIndirectPtrTypes(MIRBuilder);
-    IndirectCalls.clear();
-  }
+  // Ignore if called from the internal service function
+  if (MIRBuilder.getMF()
+          .getFunction()
+          .getFnAttribute(SPIRV_BACKEND_SERVICE_FUN_NAME)
+          .isValid())
+    return true;
 
   // Currently all return types should use a single register.
   // TODO: handle the case of multiple registers.
   if (VRegs.size() > 1)
     return false;
+
   if (Val) {
     const auto &STI = MIRBuilder.getMF().getSubtarget();
-    return MIRBuilder.buildInstr(SPIRV::OpReturnValue)
+    MIRBuilder.buildInstr(SPIRV::OpReturnValue)
         .addUse(VRegs[0])
         .constrainAllUses(MIRBuilder.getTII(), *STI.getRegisterInfo(),
                           *STI.getRegBankInfo());
+    return true;
   }
   MIRBuilder.buildInstr(SPIRV::OpReturn);
   return true;
 }
 
 // Based on the LLVM function attributes, get a SPIR-V FunctionControl.
-static uint32_t getFunctionControl(const Function &F) {
+static uint32_t getFunctionControl(const Function &F,
+                                   const SPIRVSubtarget *ST) {
   MemoryEffects MemEffects = F.getMemoryEffects();
 
   uint32_t FuncControl = static_cast<uint32_t>(SPIRV::FunctionControl::None);
@@ -72,6 +76,11 @@ static uint32_t getFunctionControl(const Function &F) {
     FuncControl |= static_cast<uint32_t>(SPIRV::FunctionControl::Pure);
   else if (MemEffects.onlyReadsMemory())
     FuncControl |= static_cast<uint32_t>(SPIRV::FunctionControl::Const);
+
+  if (ST->canUseExtension(SPIRV::Extension::SPV_INTEL_optnone) ||
+      ST->canUseExtension(SPIRV::Extension::SPV_EXT_optnone))
+    if (F.hasFnAttribute(Attribute::OptimizeNone))
+      FuncControl |= static_cast<uint32_t>(SPIRV::FunctionControl::OptNoneEXT);
 
   return FuncControl;
 }
@@ -92,11 +101,8 @@ static ConstantInt *getConstInt(MDNode *MD, unsigned NumOp) {
 // invalidating logic behind global registry and duplicates tracker.
 static FunctionType *
 fixFunctionTypeIfPtrArgs(SPIRVGlobalRegistry *GR, const Function &F,
-                         FunctionType *FTy, const SPIRVType *SRetTy,
-                         const SmallVector<SPIRVType *, 4> &SArgTys) {
-  if (F.getParent()->getNamedMetadata("spv.cloned_funcs"))
-    return FTy;
-
+                         FunctionType *FTy, SPIRVTypeInst SRetTy,
+                         const SmallVector<SPIRVTypeInst, 4> &SArgTys) {
   bool hasArgPtrs = false;
   for (auto &Arg : F.args()) {
     // check if it's an instance of a non-typed PointerType
@@ -121,47 +127,6 @@ fixFunctionTypeIfPtrArgs(SPIRVGlobalRegistry *GR, const Function &F,
   return FunctionType::get(const_cast<Type *>(RetTy), ArgTys, false);
 }
 
-// This code restores function args/retvalue types for composite cases
-// because the final types should still be aggregate whereas they're i32
-// during the translation to cope with aggregate flattening etc.
-static FunctionType *getOriginalFunctionType(const Function &F) {
-  auto *NamedMD = F.getParent()->getNamedMetadata("spv.cloned_funcs");
-  if (NamedMD == nullptr)
-    return F.getFunctionType();
-
-  Type *RetTy = F.getFunctionType()->getReturnType();
-  SmallVector<Type *, 4> ArgTypes;
-  for (auto &Arg : F.args())
-    ArgTypes.push_back(Arg.getType());
-
-  auto ThisFuncMDIt =
-      std::find_if(NamedMD->op_begin(), NamedMD->op_end(), [&F](MDNode *N) {
-        return isa<MDString>(N->getOperand(0)) &&
-               cast<MDString>(N->getOperand(0))->getString() == F.getName();
-      });
-  // TODO: probably one function can have numerous type mutations,
-  // so we should support this.
-  if (ThisFuncMDIt != NamedMD->op_end()) {
-    auto *ThisFuncMD = *ThisFuncMDIt;
-    MDNode *MD = dyn_cast<MDNode>(ThisFuncMD->getOperand(1));
-    assert(MD && "MDNode operand is expected");
-    ConstantInt *Const = getConstInt(MD, 0);
-    if (Const) {
-      auto *CMeta = dyn_cast<ConstantAsMetadata>(MD->getOperand(1));
-      assert(CMeta && "ConstantAsMetadata operand is expected");
-      assert(Const->getSExtValue() >= -1);
-      // Currently -1 indicates return value, greater values mean
-      // argument numbers.
-      if (Const->getSExtValue() == -1)
-        RetTy = CMeta->getType();
-      else
-        ArgTypes[Const->getSExtValue()] = CMeta->getType();
-    }
-  }
-
-  return FunctionType::get(RetTy, ArgTypes, F.isVarArg());
-}
-
 static SPIRV::AccessQualifier::AccessQualifier
 getArgAccessQual(const Function &F, unsigned ArgIdx) {
   if (F.getCallingConv() != CallingConv::SPIR_KERNEL)
@@ -171,9 +136,9 @@ getArgAccessQual(const Function &F, unsigned ArgIdx) {
   if (!ArgAttribute)
     return SPIRV::AccessQualifier::ReadWrite;
 
-  if (ArgAttribute->getString().compare("read_only") == 0)
+  if (ArgAttribute->getString() == "read_only")
     return SPIRV::AccessQualifier::ReadOnly;
-  if (ArgAttribute->getString().compare("write_only") == 0)
+  if (ArgAttribute->getString() == "write_only")
     return SPIRV::AccessQualifier::WriteOnly;
   return SPIRV::AccessQualifier::ReadWrite;
 }
@@ -181,33 +146,33 @@ getArgAccessQual(const Function &F, unsigned ArgIdx) {
 static std::vector<SPIRV::Decoration::Decoration>
 getKernelArgTypeQual(const Function &F, unsigned ArgIdx) {
   MDString *ArgAttribute = getOCLKernelArgTypeQual(F, ArgIdx);
-  if (ArgAttribute && ArgAttribute->getString().compare("volatile") == 0)
+  if (ArgAttribute && ArgAttribute->getString() == "volatile")
     return {SPIRV::Decoration::Volatile};
   return {};
 }
 
-static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
-                                  SPIRVGlobalRegistry *GR,
-                                  MachineIRBuilder &MIRBuilder,
-                                  const SPIRVSubtarget &ST) {
+static SPIRVTypeInst getArgSPIRVType(const Function &F, unsigned ArgIdx,
+                                     SPIRVGlobalRegistry *GR,
+                                     MachineIRBuilder &MIRBuilder,
+                                     const SPIRVSubtarget &ST) {
   // Read argument's access qualifier from metadata or default.
   SPIRV::AccessQualifier::AccessQualifier ArgAccessQual =
       getArgAccessQual(F, ArgIdx);
 
-  Type *OriginalArgType = getOriginalFunctionType(F)->getParamType(ArgIdx);
+  Type *OriginalArgType =
+      SPIRV::getOriginalFunctionType(F)->getParamType(ArgIdx);
 
   // If OriginalArgType is non-pointer, use the OriginalArgType (the type cannot
   // be legally reassigned later).
   if (!isPointerTy(OriginalArgType))
-    return GR->getOrCreateSPIRVType(OriginalArgType, MIRBuilder, ArgAccessQual);
+    return GR->getOrCreateSPIRVType(OriginalArgType, MIRBuilder, ArgAccessQual,
+                                    true);
 
   Argument *Arg = F.getArg(ArgIdx);
   Type *ArgType = Arg->getType();
   if (isTypedPointerTy(ArgType)) {
-    SPIRVType *ElementType = GR->getOrCreateSPIRVType(
-        cast<TypedPointerType>(ArgType)->getElementType(), MIRBuilder);
     return GR->getOrCreateSPIRVPointerType(
-        ElementType, MIRBuilder,
+        cast<TypedPointerType>(ArgType)->getElementType(), MIRBuilder,
         addressSpaceToStorageClass(getPointerAddressSpace(ArgType), ST));
   }
 
@@ -220,10 +185,8 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
   // spv_assign_ptr_type intrinsic or otherwise use default pointer element
   // type.
   if (hasPointeeTypeAttr(Arg)) {
-    SPIRVType *ElementType =
-        GR->getOrCreateSPIRVType(getPointeeTypeByAttr(Arg), MIRBuilder);
     return GR->getOrCreateSPIRVPointerType(
-        ElementType, MIRBuilder,
+        getPointeeTypeByAttr(Arg), MIRBuilder,
         addressSpaceToStorageClass(getPointerAddressSpace(ArgType), ST));
   }
 
@@ -235,7 +198,8 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
       Type *BuiltinType =
           cast<ConstantAsMetadata>(VMD->getMetadata())->getType();
       assert(BuiltinType->isTargetExtTy() && "Expected TargetExtType");
-      return GR->getOrCreateSPIRVType(BuiltinType, MIRBuilder, ArgAccessQual);
+      return GR->getOrCreateSPIRVType(BuiltinType, MIRBuilder, ArgAccessQual,
+                                      true);
     }
 
     // Check if this is spv_assign_ptr_type assigning pointer element type.
@@ -243,31 +207,26 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
       continue;
 
     MetadataAsValue *VMD = cast<MetadataAsValue>(II->getOperand(1));
-    Type *ElementTy = cast<ConstantAsMetadata>(VMD->getMetadata())->getType();
-    if (isUntypedPointerTy(ElementTy))
-      ElementTy =
-          TypedPointerType::get(IntegerType::getInt8Ty(II->getContext()),
-                                getPointerAddressSpace(ElementTy));
-    SPIRVType *ElementType = GR->getOrCreateSPIRVType(ElementTy, MIRBuilder);
+    Type *ElementTy =
+        toTypedPointer(cast<ConstantAsMetadata>(VMD->getMetadata())->getType());
     return GR->getOrCreateSPIRVPointerType(
-        ElementType, MIRBuilder,
+        ElementTy, MIRBuilder,
         addressSpaceToStorageClass(
             cast<ConstantInt>(II->getOperand(2))->getZExtValue(), ST));
   }
 
   // Replace PointerType with TypedPointerType to be able to map SPIR-V types to
   // LLVM types in a consistent manner
-  if (isUntypedPointerTy(OriginalArgType)) {
-    OriginalArgType =
-        TypedPointerType::get(Type::getInt8Ty(F.getContext()),
-                              getPointerAddressSpace(OriginalArgType));
-  }
-  return GR->getOrCreateSPIRVType(OriginalArgType, MIRBuilder, ArgAccessQual);
+  return GR->getOrCreateSPIRVType(toTypedPointer(OriginalArgType), MIRBuilder,
+                                  ArgAccessQual, true);
 }
 
 static SPIRV::ExecutionModel::ExecutionModel
 getExecutionModel(const SPIRVSubtarget &STI, const Function &F) {
-  if (STI.isOpenCLEnv())
+  assert(STI.getEnv() != SPIRVSubtarget::Unknown &&
+         "Environment must be resolved before lowering entry points.");
+
+  if (STI.isKernel())
     return SPIRV::ExecutionModel::Kernel;
 
   auto attribute = F.getFnAttribute("hlsl.shader");
@@ -279,6 +238,10 @@ getExecutionModel(const SPIRVSubtarget &STI, const Function &F) {
   const auto value = attribute.getValueAsString();
   if (value == "compute")
     return SPIRV::ExecutionModel::GLCompute;
+  if (value == "vertex")
+    return SPIRV::ExecutionModel::Vertex;
+  if (value == "pixel")
+    return SPIRV::ExecutionModel::Fragment;
 
   report_fatal_error("This HLSL entry point is not supported by this backend.");
 }
@@ -287,6 +250,10 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                              const Function &F,
                                              ArrayRef<ArrayRef<Register>> VRegs,
                                              FunctionLoweringInfo &FLI) const {
+  // Discard the internal service function
+  if (F.getFnAttribute(SPIRV_BACKEND_SERVICE_FUN_NAME).isValid())
+    return true;
+
   assert(GR && "Must initialize the SPIRV type registry before lowering args.");
   GR->setCurrentFunc(MIRBuilder.getMF());
 
@@ -295,7 +262,7 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
       static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
 
   // Assign types and names to all args, and store their types for later.
-  SmallVector<SPIRVType *, 4> ArgTypeVRegs;
+  SmallVector<SPIRVTypeInst, 4> ArgTypeVRegs;
   if (VRegs.size() > 0) {
     unsigned i = 0;
     for (const auto &Arg : F.args()) {
@@ -303,19 +270,19 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
       // TODO: handle the case of multiple registers.
       if (VRegs[i].size() > 1)
         return false;
-      auto *SpirvTy = getArgSPIRVType(F, i, GR, MIRBuilder, *ST);
+      SPIRVTypeInst SpirvTy = getArgSPIRVType(F, i, GR, MIRBuilder, *ST);
       GR->assignSPIRVTypeToVReg(SpirvTy, VRegs[i][0], MIRBuilder.getMF());
       ArgTypeVRegs.push_back(SpirvTy);
 
       if (Arg.hasName())
         buildOpName(VRegs[i][0], Arg.getName(), MIRBuilder);
-      if (isPointerTy(Arg.getType())) {
+      if (isPointerTyOrWrapper(Arg.getType())) {
         auto DerefBytes = static_cast<unsigned>(Arg.getDereferenceableBytes());
         if (DerefBytes != 0)
           buildOpDecorate(VRegs[i][0], MIRBuilder,
                           SPIRV::Decoration::MaxByteOffset, {DerefBytes});
       }
-      if (Arg.hasAttribute(Attribute::Alignment)) {
+      if (Arg.hasAttribute(Attribute::Alignment) && !ST->isShader()) {
         auto Alignment = static_cast<unsigned>(
             Arg.getAttribute(Attribute::Alignment).getValueAsInt());
         buildOpDecorate(VRegs[i][0], MIRBuilder, SPIRV::Decoration::Alignment,
@@ -339,9 +306,23 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
         buildOpDecorate(VRegs[i][0], MIRBuilder,
                         SPIRV::Decoration::FuncParamAttr, {Attr});
       }
-      if (Arg.hasAttribute(Attribute::ByVal)) {
+      // TODO: the AMDGPU BE only supports ByRef argument passing, thus for
+      //       AMDGCN flavoured SPIRV we CodeGen for ByRef, but lower it to
+      //       ByVal, handling the impedance mismatch during reverse
+      //       translation from SPIRV to LLVM IR; the vendor check should be
+      //       removed once / if SPIRV adds ByRef support.
+      if (Arg.hasAttribute(Attribute::ByVal) ||
+          (Arg.hasAttribute(Attribute::ByRef) &&
+           F.getParent()->getTargetTriple().getVendor() ==
+               Triple::VendorType::AMD)) {
         auto Attr =
             static_cast<unsigned>(SPIRV::FunctionParameterAttribute::ByVal);
+        buildOpDecorate(VRegs[i][0], MIRBuilder,
+                        SPIRV::Decoration::FuncParamAttr, {Attr});
+      }
+      if (Arg.hasAttribute(Attribute::StructRet)) {
+        auto Attr =
+            static_cast<unsigned>(SPIRV::FunctionParameterAttribute::Sret);
         buildOpDecorate(VRegs[i][0], MIRBuilder,
                         SPIRV::Decoration::FuncParamAttr, {Attr});
       }
@@ -378,25 +359,24 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   }
 
   auto MRI = MIRBuilder.getMRI();
-  Register FuncVReg = MRI->createGenericVirtualRegister(LLT::scalar(32));
-  MRI->setRegClass(FuncVReg, &SPIRV::IDRegClass);
-  if (F.isDeclaration())
-    GR->add(&F, &MIRBuilder.getMF(), FuncVReg);
-  FunctionType *FTy = getOriginalFunctionType(F);
+  Register FuncVReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
+  MRI->setRegClass(FuncVReg, &SPIRV::iIDRegClass);
+  FunctionType *FTy = SPIRV::getOriginalFunctionType(F);
   Type *FRetTy = FTy->getReturnType();
   if (isUntypedPointerTy(FRetTy)) {
     if (Type *FRetElemTy = GR->findDeducedElementType(&F)) {
-      TypedPointerType *DerivedTy =
-          TypedPointerType::get(FRetElemTy, getPointerAddressSpace(FRetTy));
+      TypedPointerType *DerivedTy = TypedPointerType::get(
+          toTypedPointer(FRetElemTy), getPointerAddressSpace(FRetTy));
       GR->addReturnType(&F, DerivedTy);
       FRetTy = DerivedTy;
     }
   }
-  SPIRVType *RetTy = GR->getOrCreateSPIRVType(FRetTy, MIRBuilder);
+  SPIRVTypeInst RetTy = GR->getOrCreateSPIRVType(
+      FRetTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
   FTy = fixFunctionTypeIfPtrArgs(GR, F, FTy, RetTy, ArgTypeVRegs);
-  SPIRVType *FuncTy = GR->getOrCreateOpTypeFunctionWithArgs(
+  SPIRVTypeInst FuncTy = GR->getOrCreateOpTypeFunctionWithArgs(
       FTy, RetTy, ArgTypeVRegs, MIRBuilder);
-  uint32_t FuncControl = getFunctionControl(F);
+  uint32_t FuncControl = getFunctionControl(F, ST);
 
   // Add OpFunction instruction
   MachineInstrBuilder MB = MIRBuilder.buildInstr(SPIRV::OpFunction)
@@ -405,17 +385,23 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                .addImm(FuncControl)
                                .addUse(GR->getSPIRVTypeID(FuncTy));
   GR->recordFunctionDefinition(&F, &MB.getInstr()->getOperand(0));
+  GR->addGlobalObject(&F, &MIRBuilder.getMF(), FuncVReg);
+  if (F.isDeclaration())
+    GR->add(&F, MB);
 
   // Add OpFunctionParameter instructions
   int i = 0;
   for (const auto &Arg : F.args()) {
     assert(VRegs[i].size() == 1 && "Formal arg has multiple vregs");
-    MRI->setRegClass(VRegs[i][0], &SPIRV::IDRegClass);
-    MIRBuilder.buildInstr(SPIRV::OpFunctionParameter)
-        .addDef(VRegs[i][0])
-        .addUse(GR->getSPIRVTypeID(ArgTypeVRegs[i]));
+    Register ArgReg = VRegs[i][0];
+    MRI->setRegClass(ArgReg, GR->getRegClass(ArgTypeVRegs[i]));
+    MRI->setType(ArgReg, GR->getRegType(ArgTypeVRegs[i]));
+    auto MIB = MIRBuilder.buildInstr(SPIRV::OpFunctionParameter)
+                   .addDef(ArgReg)
+                   .addUse(GR->getSPIRVTypeID(ArgTypeVRegs[i]));
     if (F.isDeclaration())
-      GR->add(&Arg, &MIRBuilder.getMF(), VRegs[i][0]);
+      GR->add(&Arg, MIB);
+    GR->addGlobalObject(&Arg, &MIRBuilder.getMF(), ArgReg);
     i++;
   }
   // Name the function.
@@ -424,24 +410,13 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
   // Handle entry points and function linkage.
   if (isEntryPoint(F)) {
-    const auto &STI = MIRBuilder.getMF().getSubtarget<SPIRVSubtarget>();
-    auto executionModel = getExecutionModel(STI, F);
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpEntryPoint)
-                   .addImm(static_cast<uint32_t>(executionModel))
+                   .addImm(static_cast<uint32_t>(getExecutionModel(*ST, F)))
                    .addUse(FuncVReg);
     addStringImm(F.getName(), MIB);
-  } else if (F.getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage ||
-             F.getLinkage() == GlobalValue::LinkOnceODRLinkage) {
-    SPIRV::LinkageType::LinkageType LnkTy =
-        F.isDeclaration()
-            ? SPIRV::LinkageType::Import
-            : (F.getLinkage() == GlobalValue::LinkOnceODRLinkage &&
-                       ST->canUseExtension(
-                           SPIRV::Extension::SPV_KHR_linkonce_odr)
-                   ? SPIRV::LinkageType::LinkOnceODR
-                   : SPIRV::LinkageType::Export);
+  } else if (const auto LnkTy = getSpirvLinkageTypeFor(*ST, F)) {
     buildOpDecorate(FuncVReg, MIRBuilder, SPIRV::Decoration::LinkageAttributes,
-                    {static_cast<uint32_t>(LnkTy)}, F.getGlobalIdentifier());
+                    {static_cast<uint32_t>(*LnkTy)}, F.getName());
   }
 
   // Handle function pointers decoration
@@ -460,36 +435,43 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   return true;
 }
 
-// Used to postpone producing of indirect function pointer types after all
-// indirect calls info is collected
 // TODO:
 // - add a topological sort of IndirectCalls to ensure the best types knowledge
 // - we may need to fix function formal parameter types if they are opaque
 //   pointers used as function pointers in these indirect calls
-void SPIRVCallLowering::produceIndirectPtrTypes(
-    MachineIRBuilder &MIRBuilder) const {
-  // Create indirect call data types if any
+// - defaulting to StorageClass::Function in the absence of the
+//   SPV_INTEL_function_pointers extension seems wrong, as that might not be
+//   able to hold a full width pointer to function, and it also does not model
+//   the semantics of a pointer to function in a generic fashion.
+void SPIRVCallLowering::produceIndirectPtrType(
+    MachineIRBuilder &MIRBuilder,
+    const SPIRVCallLowering::SPIRVIndirectCall &IC) const {
+  // Create indirect call data type if any
   MachineFunction &MF = MIRBuilder.getMF();
-  for (auto const &IC : IndirectCalls) {
-    SPIRVType *SpirvRetTy = GR->getOrCreateSPIRVType(IC.RetTy, MIRBuilder);
-    SmallVector<SPIRVType *, 4> SpirvArgTypes;
-    for (size_t i = 0; i < IC.ArgTys.size(); ++i) {
-      SPIRVType *SPIRVTy = GR->getOrCreateSPIRVType(IC.ArgTys[i], MIRBuilder);
-      SpirvArgTypes.push_back(SPIRVTy);
-      if (!GR->getSPIRVTypeForVReg(IC.ArgRegs[i]))
-        GR->assignSPIRVTypeToVReg(SPIRVTy, IC.ArgRegs[i], MF);
-    }
+  const SPIRVSubtarget &ST = MF.getSubtarget<SPIRVSubtarget>();
+  SPIRVTypeInst SpirvRetTy = GR->getOrCreateSPIRVType(
+      IC.RetTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
+  SmallVector<SPIRVTypeInst, 4> SpirvArgTypes;
+  for (size_t i = 0; i < IC.ArgTys.size(); ++i) {
+    SPIRVTypeInst SPIRVTy = GR->getOrCreateSPIRVType(
+        IC.ArgTys[i], MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
+    SpirvArgTypes.push_back(SPIRVTy);
+    if (!GR->getSPIRVTypeForVReg(IC.ArgRegs[i]))
+      GR->assignSPIRVTypeToVReg(SPIRVTy, IC.ArgRegs[i], MF);
+  }
     // SPIR-V function type:
     FunctionType *FTy =
         FunctionType::get(const_cast<Type *>(IC.RetTy), IC.ArgTys, false);
-    SPIRVType *SpirvFuncTy = GR->getOrCreateOpTypeFunctionWithArgs(
+    SPIRVTypeInst SpirvFuncTy = GR->getOrCreateOpTypeFunctionWithArgs(
         FTy, SpirvRetTy, SpirvArgTypes, MIRBuilder);
     // SPIR-V pointer to function type:
-    SPIRVType *IndirectFuncPtrTy = GR->getOrCreateSPIRVPointerType(
-        SpirvFuncTy, MIRBuilder, SPIRV::StorageClass::Function);
+    auto SC = ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)
+                  ? SPIRV::StorageClass::CodeSectionINTEL
+                  : SPIRV::StorageClass::Function;
+    SPIRVTypeInst IndirectFuncPtrTy =
+        GR->getOrCreateSPIRVPointerType(SpirvFuncTy, MIRBuilder, SC);
     // Correct the Callee type
     GR->assignSPIRVTypeToVReg(IndirectFuncPtrTy, IC.Callee, MF);
-  }
 }
 
 bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
@@ -514,12 +496,12 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     // TODO: support constexpr casts and indirect calls.
     if (CF == nullptr)
       return false;
-    if (FunctionType *FTy = getOriginalFunctionType(*CF)) {
-      OrigRetTy = FTy->getReturnType();
-      if (isUntypedPointerTy(OrigRetTy)) {
-        if (auto *DerivedRetTy = GR->findReturnType(CF))
-          OrigRetTy = DerivedRetTy;
-      }
+
+    FunctionType *FTy = SPIRV::getOriginalFunctionType(*CF);
+    OrigRetTy = FTy->getReturnType();
+    if (isUntypedPointerTy(OrigRetTy)) {
+      if (auto *DerivedRetTy = GR->findReturnType(CF))
+        OrigRetTy = DerivedRetTy;
     }
   }
 
@@ -529,26 +511,69 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   const auto *ST = static_cast<const SPIRVSubtarget *>(&MF.getSubtarget());
 
   bool isFunctionDecl = CF && CF->isDeclaration();
-  bool canUseOpenCL = ST->canUseExtInstSet(SPIRV::InstructionSet::OpenCL_std);
-  bool canUseGLSL = ST->canUseExtInstSet(SPIRV::InstructionSet::GLSL_std_450);
-  assert(canUseGLSL != canUseOpenCL &&
-         "Scenario where both sets are enabled is not supported.");
-
-  if (isFunctionDecl && !DemangledName.empty() &&
-      (canUseGLSL || canUseOpenCL)) {
+  if (isFunctionDecl && !DemangledName.empty()) {
+    if (ResVReg.isValid()) {
+      if (!GR->getSPIRVTypeForVReg(ResVReg)) {
+        const Type *RetTy = OrigRetTy;
+        if (auto *PtrRetTy = dyn_cast<PointerType>(OrigRetTy)) {
+          const Value *OrigValue = Info.OrigRet.OrigValue;
+          if (!OrigValue)
+            OrigValue = Info.CB;
+          if (OrigValue)
+            if (Type *ElemTy = GR->findDeducedElementType(OrigValue))
+              RetTy =
+                  TypedPointerType::get(ElemTy, PtrRetTy->getAddressSpace());
+        }
+        setRegClassType(ResVReg, RetTy, GR, MIRBuilder,
+                        SPIRV::AccessQualifier::ReadWrite, true);
+      }
+    } else {
+      ResVReg = createVirtualRegister(OrigRetTy, GR, MIRBuilder,
+                                      SPIRV::AccessQualifier::ReadWrite, true);
+    }
     SmallVector<Register, 8> ArgVRegs;
     for (auto Arg : Info.OrigArgs) {
       assert(Arg.Regs.size() == 1 && "Call arg has multiple VRegs");
-      ArgVRegs.push_back(Arg.Regs[0]);
-      SPIRVType *SPIRVTy = GR->getOrCreateSPIRVType(Arg.Ty, MIRBuilder);
-      if (!GR->getSPIRVTypeForVReg(Arg.Regs[0]))
-        GR->assignSPIRVTypeToVReg(SPIRVTy, Arg.Regs[0], MF);
+      Register ArgReg = Arg.Regs[0];
+      ArgVRegs.push_back(ArgReg);
+      SPIRVTypeInst SpvType = GR->getSPIRVTypeForVReg(ArgReg);
+      if (!SpvType) {
+        Type *ArgTy = nullptr;
+        if (auto *PtrArgTy = dyn_cast<PointerType>(Arg.Ty)) {
+          // If Arg.Ty is an untyped pointer (i.e., ptr [addrspace(...)]) and we
+          // don't have access to original value in LLVM IR or info about
+          // deduced pointee type, then we should wait with setting the type for
+          // the virtual register until pre-legalizer step when we access
+          // @llvm.spv.assign.ptr.type.p...(...)'s info.
+          if (Arg.OrigValue)
+            if (Type *ElemTy = GR->findDeducedElementType(Arg.OrigValue))
+              ArgTy =
+                  TypedPointerType::get(ElemTy, PtrArgTy->getAddressSpace());
+        } else {
+          ArgTy = Arg.Ty;
+        }
+        if (ArgTy) {
+          SpvType = GR->getOrCreateSPIRVType(
+              ArgTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
+          GR->assignSPIRVTypeToVReg(SpvType, ArgReg, MF);
+        }
+      }
+      if (!MRI->getRegClassOrNull(ArgReg)) {
+        // Either we have SpvType created, or Arg.Ty is an untyped pointer and
+        // we know its virtual register's class and type even if we don't know
+        // pointee type.
+        MRI->setRegClass(ArgReg, SpvType ? GR->getRegClass(SpvType)
+                                         : &SPIRV::pIDRegClass);
+        MRI->setType(
+            ArgReg,
+            SpvType ? GR->getRegType(SpvType)
+                    : LLT::pointer(cast<PointerType>(Arg.Ty)->getAddressSpace(),
+                                   GR->getPointerSize()));
+      }
     }
-    auto instructionSet = canUseOpenCL ? SPIRV::InstructionSet::OpenCL_std
-                                       : SPIRV::InstructionSet::GLSL_std_450;
-    if (auto Res =
-            SPIRV::lowerBuiltin(DemangledName, instructionSet, MIRBuilder,
-                                ResVReg, OrigRetTy, ArgVRegs, GR))
+    if (auto Res = SPIRV::lowerBuiltin(
+            DemangledName, ST->getPreferredInstructionSet(), MIRBuilder,
+            ResVReg, OrigRetTy, ArgVRegs, GR, *Info.CB))
       return *Res;
   }
 
@@ -564,14 +589,24 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     for (const Argument &Arg : CF->args()) {
       if (MIRBuilder.getDataLayout().getTypeStoreSize(Arg.getType()).isZero())
         continue; // Don't handle zero sized types.
-      Register Reg = MRI->createGenericVirtualRegister(LLT::scalar(32));
-      MRI->setRegClass(Reg, &SPIRV::IDRegClass);
+      Register Reg = MRI->createGenericVirtualRegister(LLT::scalar(64));
+      MRI->setRegClass(Reg, &SPIRV::iIDRegClass);
       ToInsert.push_back({Reg});
       VRegArgs.push_back(ToInsert.back());
     }
     // TODO: Reuse FunctionLoweringInfo
     FunctionLoweringInfo FuncInfo;
     lowerFormalArguments(FirstBlockBuilder, *CF, VRegArgs, FuncInfo);
+  }
+
+  // Ignore the call if it's called from the internal service function
+  if (MIRBuilder.getMF()
+          .getFunction()
+          .getFnAttribute(SPIRV_BACKEND_SERVICE_FUN_NAME)
+          .isValid()) {
+    // insert a no-op
+    MIRBuilder.buildTrap();
+    return true;
   }
 
   unsigned CallOp;
@@ -582,19 +617,22 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                          false);
     // Set instruction operation according to SPV_INTEL_function_pointers
     CallOp = SPIRV::OpFunctionPointerCallINTEL;
-    // Collect information about the indirect call to support possible
-    // specification of opaque ptr types of parent function's parameters
+    // Collect information about the indirect call to create correct types.
     Register CalleeReg = Info.Callee.getReg();
     if (CalleeReg.isValid()) {
       SPIRVCallLowering::SPIRVIndirectCall IndirectCall;
       IndirectCall.Callee = CalleeReg;
-      IndirectCall.RetTy = OrigRetTy;
-      for (const auto &Arg : Info.OrigArgs) {
-        assert(Arg.Regs.size() == 1 && "Call arg has multiple VRegs");
-        IndirectCall.ArgTys.push_back(Arg.Ty);
-        IndirectCall.ArgRegs.push_back(Arg.Regs[0]);
+      FunctionType *FTy = SPIRV::getOriginalFunctionType(*Info.CB);
+      IndirectCall.RetTy = OrigRetTy = FTy->getReturnType();
+      assert(FTy->getNumParams() == Info.OrigArgs.size() &&
+             "Function types mismatch");
+      for (unsigned I = 0; I != Info.OrigArgs.size(); ++I) {
+        assert(Info.OrigArgs[I].Regs.size() == 1 &&
+               "Call arg has multiple VRegs");
+        IndirectCall.ArgTys.push_back(FTy->getParamType(I));
+        IndirectCall.ArgRegs.push_back(Info.OrigArgs[I].Regs[0]);
       }
-      IndirectCalls.push_back(IndirectCall);
+      produceIndirectPtrType(MIRBuilder, IndirectCall);
     }
   } else {
     // Emit a regular OpFunctionCall
@@ -603,8 +641,9 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   // Make sure there's a valid return reg, even for functions returning void.
   if (!ResVReg.isValid())
-    ResVReg = MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::IDRegClass);
-  SPIRVType *RetType = GR->assignTypeToVReg(OrigRetTy, ResVReg, MIRBuilder);
+    ResVReg = MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::iIDRegClass);
+  SPIRVTypeInst RetType = GR->assignTypeToVReg(
+      OrigRetTy, ResVReg, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
 
   // Emit the call instruction and its args.
   auto MIB = MIRBuilder.buildInstr(CallOp)
@@ -618,6 +657,21 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       return false;
     MIB.addUse(Arg.Regs[0]);
   }
-  return MIB.constrainAllUses(MIRBuilder.getTII(), *ST->getRegisterInfo(),
-                              *ST->getRegBankInfo());
+
+  if (ST->canUseExtension(SPIRV::Extension::SPV_INTEL_memory_access_aliasing)) {
+    // Process aliasing metadata.
+    const CallBase *CI = Info.CB;
+    if (CI && CI->hasMetadata()) {
+      if (MDNode *MD = CI->getMetadata(LLVMContext::MD_alias_scope))
+        GR->buildMemAliasingOpDecorate(ResVReg, MIRBuilder,
+                                       SPIRV::Decoration::AliasScopeINTEL, MD);
+      if (MDNode *MD = CI->getMetadata(LLVMContext::MD_noalias))
+        GR->buildMemAliasingOpDecorate(ResVReg, MIRBuilder,
+                                       SPIRV::Decoration::NoAliasINTEL, MD);
+    }
+  }
+
+  MIB.constrainAllUses(MIRBuilder.getTII(), *ST->getRegisterInfo(),
+                       *ST->getRegBankInfo());
+  return true;
 }

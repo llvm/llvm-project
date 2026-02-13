@@ -19,12 +19,14 @@ body: |
 
     ; Here the types don't match.
     ; CHECK-LABEL: name: test_combines_2
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY]]
-    ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[ADD]](s32)
-    ; CHECK: $w0 = COPY [[COPY]](s32)
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY [[MV]](s64)
-    ; CHECK: $x0 = COPY [[COPY1]](s64)
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY]]
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[ADD]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[COPY]](s32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY [[MV]](s64)
+    ; CHECK-NEXT: $x0 = COPY [[COPY1]](s64)
     %0:_(s32) = COPY $w0
 
     %1:_(s32) = G_ADD %0, %0
@@ -43,10 +45,12 @@ body: |
     liveins: $w0
 
     ; CHECK-LABEL: name: test_combines_3
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY]]
-    ; CHECK: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[ADD]]
-    ; CHECK: $w0 = COPY [[ADD1]](s32)
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY]]
+    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[ADD]]
+    ; CHECK-NEXT: $w0 = COPY [[ADD1]](s32)
     %0:_(s32) = COPY $w0
 
     %1:_(s32) = G_ADD %0, %0
@@ -63,10 +67,12 @@ body: |
     liveins: $x0
 
     ; CHECK-LABEL: name: test_combines_4
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY [[COPY]](s64)
-    ; CHECK: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[COPY1]], [[COPY1]]
-    ; CHECK: $x0 = COPY [[ADD]](s64)
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY [[COPY]](s64)
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[COPY1]], [[COPY1]]
+    ; CHECK-NEXT: $x0 = COPY [[ADD]](s64)
     %0:_(s64) = COPY $x0
 
     %1:_(s128) = G_MERGE_VALUES %0, %0
@@ -82,10 +88,12 @@ body: |
     liveins: $w0
 
     ; CHECK-LABEL: name: test_combines_5
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY]]
-    ; CHECK: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[ADD]]
-    ; CHECK: $w0 = COPY [[ADD1]](s32)
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY]]
+    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[ADD]]
+    ; CHECK-NEXT: $w0 = COPY [[ADD1]](s32)
     %0:_(s32) = COPY $w0
 
     %1:_(s32) = G_ADD %0, %0
@@ -105,14 +113,16 @@ body: |
     liveins: $w0
 
     ; CHECK-LABEL: name: test_combines_6
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY]]
-    ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[ADD]](s32)
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY [[MV]](s64)
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY [[COPY1]](s64)
-    ; CHECK: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[ADD]]
-    ; CHECK: $w0 = COPY [[ADD1]](s32)
-    ; CHECK: $x0 = COPY [[COPY2]](s64)
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY]]
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[ADD]](s32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY [[MV]](s64)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY [[COPY1]](s64)
+    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[ADD]]
+    ; CHECK-NEXT: $w0 = COPY [[ADD1]](s32)
+    ; CHECK-NEXT: $x0 = COPY [[COPY2]](s64)
     %0:_(s32) = COPY $w0
 
     %1:_(s32) = G_ADD %0, %0

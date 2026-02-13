@@ -1,5 +1,5 @@
 // REQUIRES: plugins
-// RUN: clang-tidy -checks='-*,mytest*' --list-checks -load %llvmshlibdir/CTTestTidyModule%pluginext -load %llvmshlibdir/LLVMHello%pluginext | FileCheck --check-prefix=CHECK-LIST %s
+// RUN: clang-tidy -checks='-*,mytest*' --list-checks -load %llvmshlibdir/CTTestTidyModule%pluginext | FileCheck --check-prefix=CHECK-LIST %s
 // CHECK-LIST: Enabled checks:
 // CHECK-LIST-NEXT:    mytest1
 // CHECK-LIST-NEXT:    mytest2
@@ -10,7 +10,6 @@
 #include "clang-tidy/ClangTidy.h"
 #include "clang-tidy/ClangTidyCheck.h"
 #include "clang-tidy/ClangTidyModule.h"
-#include "clang-tidy/ClangTidyModuleRegistry.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 

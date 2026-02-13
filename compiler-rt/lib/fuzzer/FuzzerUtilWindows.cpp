@@ -24,7 +24,7 @@
 // clang-format off
 #include <windows.h>
 // These must be included after windows.h.
-// archicture need to be set before including
+// architecture need to be set before including
 // libloaderapi
 #include <libloaderapi.h>
 #include <stringapiset.h>
@@ -239,10 +239,15 @@ size_t PageSize() {
 }
 
 void SetThreadName(std::thread &thread, const std::string &name) {
+#ifndef __MINGW32__
+  // Not setting the thread name in MinGW environments. MinGW C++ standard
+  // libraries can either use native Windows threads or pthreads, so we
+  // don't know with certainty what kind of thread handle we're getting
+  // from thread.native_handle() here.
   typedef HRESULT(WINAPI * proc)(HANDLE, PCWSTR);
   HMODULE kbase = GetModuleHandleA("KernelBase.dll");
-  proc ThreadNameProc =
-      reinterpret_cast<proc>(GetProcAddress(kbase, "SetThreadDescription"));
+  proc ThreadNameProc = reinterpret_cast<proc>(
+      (void *)GetProcAddress(kbase, "SetThreadDescription"));
   if (ThreadNameProc) {
     std::wstring buf;
     auto sz = MultiByteToWideChar(CP_UTF8, 0, name.data(), -1, nullptr, 0);
@@ -253,6 +258,7 @@ void SetThreadName(std::thread &thread, const std::string &name) {
       }
     }
   }
+#endif
 }
 
 } // namespace fuzzer

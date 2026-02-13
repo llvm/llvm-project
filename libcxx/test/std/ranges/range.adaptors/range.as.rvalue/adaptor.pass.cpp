@@ -48,6 +48,18 @@ struct move_iterator_range {
 static_assert(!std::ranges::view<move_iterator_range>);
 static_assert(std::ranges::range<move_iterator_range>);
 
+// LWG4083: views::as_rvalue should reject non-input ranges
+struct I {
+  int operator*();
+  using difference_type = int;
+  I& operator++();
+  void operator++(int);
+};
+static_assert(!std::is_invocable_v<decltype(std::views::as_rvalue),
+                                   decltype(std::ranges::subrange{I{}, std::unreachable_sentinel})>);
+static_assert(
+    !HasPipe<decltype(std::ranges::subrange{I{}, std::unreachable_sentinel}), decltype(std::views::as_rvalue)>);
+
 constexpr bool test() {
   { // view | views::as_rvalue
     DefaultConstructibleView v{{}, 3};

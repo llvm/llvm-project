@@ -10,6 +10,7 @@
 
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/FileUtilities.h"
 #include "llvm/Support/FileSystem.h"
@@ -131,29 +132,23 @@ LogicalResult mlir::generateLocationsFromIR(StringRef fileName, StringRef tag,
 namespace {
 struct LocationSnapshotPass
     : public impl::LocationSnapshotBase<LocationSnapshotPass> {
-  LocationSnapshotPass() = default;
-  LocationSnapshotPass(OpPrintingFlags flags, StringRef fileName, StringRef tag)
-      : flags(flags) {
-    this->fileName = fileName.str();
-    this->tag = tag.str();
-  }
+  using impl::LocationSnapshotBase<LocationSnapshotPass>::LocationSnapshotBase;
 
   void runOnOperation() override {
     Operation *op = getOperation();
-    if (failed(generateLocationsFromIR(fileName, op, OpPrintingFlags(), tag)))
+    if (failed(generateLocationsFromIR(fileName, op, getFlags(), tag)))
       return signalPassFailure();
   }
 
-  /// The printing flags to use when creating the snapshot.
-  OpPrintingFlags flags;
+private:
+  /// build the flags from the command line arguments to the pass
+  OpPrintingFlags getFlags() {
+    OpPrintingFlags flags;
+    flags.enableDebugInfo(enableDebugInfo, printPrettyDebugInfo);
+    flags.printGenericOpForm(printGenericOpForm);
+    if (useLocalScope)
+      flags.useLocalScope();
+    return flags;
+  }
 };
 } // namespace
-
-std::unique_ptr<Pass> mlir::createLocationSnapshotPass(OpPrintingFlags flags,
-                                                       StringRef fileName,
-                                                       StringRef tag) {
-  return std::make_unique<LocationSnapshotPass>(flags, fileName, tag);
-}
-std::unique_ptr<Pass> mlir::createLocationSnapshotPass() {
-  return std::make_unique<LocationSnapshotPass>();
-}

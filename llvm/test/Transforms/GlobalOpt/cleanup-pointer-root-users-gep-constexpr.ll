@@ -44,16 +44,6 @@ entry:
   ret void
 }
 
-define void @stores_ptrtoint_constexpr() {
-; CHECK-LABEL: @stores_ptrtoint_constexpr(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret void
-;
-entry:
-  store i32 0, ptr inttoptr (i64 ptrtoint (ptr @global.20ptr to i64) to ptr), align 8
-  ret void
-}
-
 @gv = internal unnamed_addr global [3 x ptr] zeroinitializer, align 16
 @gv2 = internal unnamed_addr global i32 0, align 4
 

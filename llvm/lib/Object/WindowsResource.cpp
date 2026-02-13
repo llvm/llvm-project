@@ -80,7 +80,7 @@ Expected<ResourceEntryRef>
 ResourceEntryRef::create(BinaryStreamRef BSR, const WindowsResource *Owner) {
   auto Ref = ResourceEntryRef(BSR, Owner);
   if (auto E = Ref.loadNext())
-    return std::move(E);
+    return E;
   return Ref;
 }
 
@@ -1006,7 +1006,7 @@ writeWindowsResourceCOFF(COFF::MachineTypes MachineType,
   Error E = Error::success();
   WindowsResourceCOFFWriter Writer(MachineType, Parser, E);
   if (E)
-    return std::move(E);
+    return E;
   return Writer.write(TimeDateStamp);
 }
 

@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/BugReporter/BugSuppression.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/TimeProfiler.h"
 
 using namespace clang;
 using namespace ento;
@@ -76,13 +78,13 @@ inline bool fullyContains(SourceRange Larger, SourceRange Smaller,
          isLessOrEqual(Smaller.getEnd(), Larger.getEnd(), SM);
 }
 
-class CacheInitializer : public RecursiveASTVisitor<CacheInitializer> {
+class CacheInitializer : public DynamicRecursiveASTVisitor {
 public:
   static void initialize(const Decl *D, Ranges &ToInit) {
     CacheInitializer(ToInit).TraverseDecl(const_cast<Decl *>(D));
   }
 
-  bool VisitDecl(Decl *D) {
+  bool VisitDecl(Decl *D) override {
     // Bug location could be somewhere in the init value of
     // a freshly declared variable.  Even though it looks like the
     // user applied attribute to a statement, it will apply to a
@@ -90,7 +92,7 @@ public:
     return VisitAttributedNode(D);
   }
 
-  bool VisitAttributedStmt(AttributedStmt *AS) {
+  bool VisitAttributedStmt(AttributedStmt *AS) override {
     // When we apply attributes to statements, it actually creates
     // a wrapper statement that only contains attributes and the wrapped
     // statement.
@@ -115,9 +117,37 @@ private:
     }
   }
 
-  CacheInitializer(Ranges &R) : Result(R) {}
+  CacheInitializer(Ranges &R) : Result(R) {
+    ShouldVisitTemplateInstantiations = true;
+    ShouldWalkTypesOfTypeLocs = false;
+    ShouldVisitImplicitCode = false;
+    ShouldVisitLambdaBody = true;
+  }
   Ranges &Result;
 };
+
+std::string timeScopeName(const Decl *DeclWithIssue) {
+  if (!llvm::timeTraceProfilerEnabled())
+    return "";
+  return llvm::formatv(
+             "BugSuppression::isSuppressed init suppressions cache for {0}",
+             DeclWithIssue->getDeclKindName())
+      .str();
+}
+
+llvm::TimeTraceMetadata getDeclTimeTraceMetadata(const Decl *DeclWithIssue) {
+  assert(DeclWithIssue);
+  assert(llvm::timeTraceProfilerEnabled());
+  std::string Name = "<noname>";
+  if (const auto *ND = dyn_cast<NamedDecl>(DeclWithIssue)) {
+    Name = ND->getNameAsString();
+  }
+  const auto &SM = DeclWithIssue->getASTContext().getSourceManager();
+  auto Line = SM.getPresumedLineNumber(DeclWithIssue->getBeginLoc());
+  auto Fname = SM.getFilename(DeclWithIssue->getBeginLoc());
+  return llvm::TimeTraceMetadata{std::move(Name), Fname.str(),
+                                 static_cast<int>(Line)};
+}
 
 } // end anonymous namespace
 
@@ -133,6 +163,58 @@ bool BugSuppression::isSuppressed(const BugReport &R) {
 
   return isSuppressed(Location, DeclWithIssue, {}) ||
          isSuppressed(UniqueingLocation, DeclWithIssue, {});
+}
+
+// For template specializations, returns the primary template definition or
+// partial specialization that was used to instantiate the specialization.
+// This ensures suppression attributes on templates apply to their
+// specializations.
+//
+// For example, given:
+//   template <typename T> class [[clang::suppress]] Wrapper { ... };
+//   Wrapper<int> w; // instantiates ClassTemplateSpecializationDecl
+//
+// When analyzing code in Wrapper<int>, this function maps the specialization
+// back to the primary template definition, allowing us to find the suppression
+// attribute.
+//
+// The function handles two cases:
+// 1. Instantiation from a class template - searches redeclarations to find
+//    the definition (not just a forward declaration).
+// 2. Instantiation from a partial specialization - returns it directly.
+//
+// For non-template-specialization decls, returns the input unchanged.
+static const Decl *
+preferTemplateDefinitionForTemplateSpecializations(const Decl *D) {
+  const auto *SpecializationDecl = dyn_cast<ClassTemplateSpecializationDecl>(D);
+  if (!SpecializationDecl)
+    return D;
+
+  auto InstantiatedFrom = SpecializationDecl->getInstantiatedFrom();
+  if (!InstantiatedFrom)
+    return D;
+
+  // This might be a class template.
+  if (const auto *Tmpl = InstantiatedFrom.dyn_cast<ClassTemplateDecl *>()) {
+    // Interestingly, the source template might be a forward declaration, so we
+    // need to find the definition redeclaration.
+    for (const auto *Redecl : Tmpl->redecls()) {
+      if (cast<ClassTemplateDecl>(Redecl)->isThisDeclarationADefinition()) {
+        return Redecl;
+      }
+    }
+    assert(false &&
+           "This class template must have a redecl that is a definition");
+    return D;
+  }
+
+  // It might be a partial specialization.
+  const auto *PartialSpecialization =
+      InstantiatedFrom.dyn_cast<ClassTemplatePartialSpecializationDecl *>();
+
+  // The partial specialization should be a definition.
+  assert(PartialSpecialization->isThisDeclarationADefinition());
+  return PartialSpecialization;
 }
 
 bool BugSuppression::isSuppressed(const PathDiagnosticLocation &Location,
@@ -152,6 +234,17 @@ bool BugSuppression::isSuppressed(const PathDiagnosticLocation &Location,
     // declaration that isn't TranslationUnitDecl, because we should respect
     // attributes on the entire declaration chain.
     while (true) {
+
+      // Template specializations (e.g., Wrapper<int>) should inherit
+      // suppression attributes from their primary template or partial
+      // specialization. Transform specializations to their template definitions
+      // before checking for suppressions or walking up the lexical parent
+      // chain.
+      // Simply taking the lexical parent of template specializations might land
+      // us in a completely different namespace.
+      DeclWithIssue =
+          preferTemplateDefinitionForTemplateSpecializations(DeclWithIssue);
+
       // Use the "lexical" parent. Eg., if the attribute is on a class, suppress
       // warnings in inline methods but not in out-of-line methods.
       const Decl *Parent =
@@ -177,6 +270,9 @@ bool BugSuppression::isSuppressed(const PathDiagnosticLocation &Location,
       std::make_pair(DeclWithIssue, CachedRanges{}));
   Ranges &SuppressionRanges = InsertionResult.first->second;
   if (InsertionResult.second) {
+    llvm::TimeTraceScope TimeScope(
+        timeScopeName(DeclWithIssue),
+        [DeclWithIssue]() { return getDeclTimeTraceMetadata(DeclWithIssue); });
     // We haven't checked this declaration for suppressions yet!
     CacheInitializer::initialize(DeclWithIssue, SuppressionRanges);
   }

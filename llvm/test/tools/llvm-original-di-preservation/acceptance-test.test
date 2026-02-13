@@ -1,0 +1,70 @@
+RUN: not %llvm-original-di-preservation %p/Inputs/sample.json --acceptance-test | FileCheck %s
+CHECK:      DILocation Bugs:
+CHECK-NEXT:   test.ll:
+CHECK-NEXT:     no-name:
+CHECK-NEXT:     - action: not-generate
+CHECK-NEXT:       bb_name: no-name
+CHECK-NEXT:       fn_name: fn
+CHECK-NEXT:       instr: extractvalue
+CHECK-NEXT:     - action: not-generate
+CHECK-NEXT:       bb_name: no-name
+CHECK-NEXT:       fn_name: fn
+CHECK-NEXT:       instr: insertvalue
+CHECK-NEXT:     - action: not-generate
+CHECK-NEXT:       bb_name: no-name
+CHECK-NEXT:       fn_name: fn1
+CHECK-NEXT:       instr: insertvalue
+CHECK-NEXT:     - action: not-generate
+CHECK-NEXT:       bb_name: no-name
+CHECK-NEXT:       fn_name: fn1
+CHECK-NEXT:       instr: extractvalue
+CHECK:      Errors detected for:
+
+RUN: not %llvm-original-di-preservation %p/Inputs/sample.json --acceptance-test --reduce | FileCheck %s --check-prefix=COMPRESS
+COMPRESS:      DILocation Bugs:
+COMPRESS-NEXT:   test.ll:
+COMPRESS-NEXT:     no-name:
+COMPRESS-NEXT:     - action: not-generate
+COMPRESS-NEXT:       bb_name: no-name
+COMPRESS-NEXT:       fn_name: fn
+COMPRESS-NEXT:       instr: extractvalue
+COMPRESS-NEXT:     - action: not-generate
+COMPRESS-NEXT:       bb_name: no-name
+COMPRESS-NEXT:       fn_name: fn
+COMPRESS-NEXT:       instr: insertvalue
+COMPRESS:      Errors detected for:
+
+RUN: not %llvm-original-di-preservation %p/Inputs/origin.json --acceptance-test --reduce | FileCheck %s --check-prefix=ORIGIN
+ORIGIN:      DILocation Bugs:
+ORIGIN-NEXT:   test.ll:
+ORIGIN-NEXT:     LoopVectorizePass:
+ORIGIN-NEXT:     - action: not-generate
+ORIGIN-NEXT:       bb_name: no-name
+ORIGIN-NEXT:       fn_name: fn
+ORIGIN-NEXT:       instr: add
+ORIGIN-NEXT:       origin: |
+ORIGIN-NEXT:         Stack Trace 0:
+ORIGIN-NEXT:          #0 0x00005895d035c935 llvm::DbgLocOrigin::DbgLocOrigin(bool) /tmp/llvm-project/llvm/lib/IR/DebugLoc.cpp:22:9
+ORIGIN-NEXT:          #1 0x00005895d03af013 llvm::DILocAndCoverageTracking::DILocAndCoverageTracking() /tmp/llvm-project/llvm/include/llvm/IR/DebugLoc.h:90:11
+ORIGIN-NEXT:          #2 0x00005895d03af013 llvm::DebugLoc::DebugLoc() /tmp/llvm-project/llvm/include/llvm/IR/DebugLoc.h:133:5
+ORIGIN-NEXT:          #3 0x00005895d03af013 llvm::Instruction::Instruction(llvm::Type*, unsigned int, llvm::User::AllocInfo, llvm::InsertPosition) /tmp/llvm-project/llvm/lib/IR/Instruction.cpp:37:14
+ORIGIN-NEXT:          #4 0x00005895d06862b5 llvm::PHINode::PHINode(llvm::Type*, unsigned int, llvm::Twine const&, llvm::InsertPosition) /tmp/llvm-project/llvm/include/llvm/IR/Instructions.h:0:9
+ORIGIN-NEXT:          #5 0x00005895d06862b5 llvm::PHINode::Create(llvm::Type*, unsigned int, llvm::Twine const&, llvm::InsertPosition) /tmp/llvm-project/llvm/include/llvm/IR/Instructions.h:2651:9
+ORIGIN-NEXT:          #6 0x00005895d06862b5 llvm::InstCombinerImpl::foldPHIArgGEPIntoPHI(llvm::PHINode&) /tmp/llvm-project/llvm/lib/Transforms/InstCombine/InstCombinePHI.cpp:617:9
+ORIGIN-NEXT:          #7 0x00005895d0688fe0 llvm::InstCombinerImpl::visitPHINode(llvm::PHINode&) /tmp/llvm-project/llvm/lib/Transforms/InstCombine/InstCombinePHI.cpp:1456:22
+ORIGIN-NEXT:          #8 0x00005895d05cd21f llvm::InstCombinerImpl::run() /tmp/llvm-project/llvm/lib/Transforms/InstCombine/InstructionCombining.cpp:5327:22
+ORIGIN-NEXT:          #9 0x00005895d05d067e combineInstructionsOverFunction(llvm::Function&, llvm::InstructionWorklist&, llvm::AAResults*, llvm::AssumptionCache&, llvm::TargetLibraryInfo&, llvm::TargetTransformInfo&, llvm::DominatorTree&, llvm::OptimizationRemarkEmitter&, llvm::BlockFrequencyInfo*, llvm::BranchProbabilityInfo*, llvm::ProfileSummaryInfo*, llvm::InstCombineOptions const&) /tmp/llvm-project/llvm/lib/Transforms/InstCombine/InstructionCombining.cpp:5643:31
+ORIGIN-NEXT:         #10 0x00005895d05cf9a9 llvm::InstCombinePass::run(llvm::Function&, llvm::AnalysisManager&) /tmp/llvm-project/llvm/lib/Transforms/InstCombine/InstructionCombining.cpp:5706:8
+ORIGIN-NEXT:         #11 0x00005895d107d07d llvm::detail::PassModel>::run(llvm::Function&, llvm::AnalysisManager&) /tmp/llvm-project/llvm/include/llvm/IR/PassManagerInternal.h:91:5
+ORIGIN-NEXT:         #12 0x00005895d04204a7 llvm::PassManager>::run(llvm::Function&, llvm::AnalysisManager&) /tmp/llvm-project/llvm/include/llvm/IR/PassManagerImpl.h:85:8
+ORIGIN-NEXT:         #13 0x00005895ce4cb09d llvm::detail::PassModel>, llvm::AnalysisManager>::run(llvm::Function&, llvm::AnalysisManager&) /tmp/llvm-project/llvm/include/llvm/IR/PassManagerInternal.h:91:5
+ORIGIN-NEXT:         #14 0x00005895cfae2865 llvm::CGSCCToFunctionPassAdaptor::run(llvm::LazyCallGraph::SCC&, llvm::AnalysisManager&, llvm::LazyCallGraph&, llvm::CGSCCUpdateResult&) /tmp/llvm-project/llvm/lib/Analysis/CGSCCPassManager.cpp:0:38
+ORIGIN-NEXT:         #15 0x00005895ce4cad5d llvm::detail::PassModel, llvm::LazyCallGraph&, llvm::CGSCCUpdateResult&>::run(llvm::LazyCallGraph::SCC&, llvm::AnalysisManager&, llvm::LazyCallGraph&, llvm::CGSCCUpdateResult&) /tmp/llvm-project/llvm/include/llvm/IR/PassManagerInternal.h:91:5
+ORIGIN-NEXT:         #16 0x00005895cfade813 llvm::PassManager, llvm::LazyCallGraph&, llvm::CGSCCUpdateResult&>::run(llvm::LazyCallGraph::SCC&, llvm::AnalysisManager&, llvm::LazyCallGraph&, llvm::CGSCCUpdateResult&) /tmp/llvm-project/llvm/lib/Analysis/CGSCCPassManager.cpp:93:12
+ORIGIN-NEXT:         #17 0x00005895d1e3968d llvm::detail::PassModel, llvm::LazyCallGraph&, llvm::CGSCCUpdateResult&>, llvm::AnalysisManager, llvm::LazyCallGraph&, llvm::CGSCCUpdateResult&>::run(llvm::LazyCallGraph::SCC&, llvm::AnalysisManager&, llvm::LazyCallGraph&, llvm::CGSCCUpdateResult&) /tmp/llvm-project/llvm/include/llvm/IR/PassManagerInternal.h:91:5
+ORIGIN-NEXT:         #18 0x00005895cfae1224 llvm::DevirtSCCRepeatedPass::run(llvm::LazyCallGraph::SCC&, llvm::AnalysisManager&, llvm::LazyCallGraph&, llvm::CGSCCUpdateResult&) /tmp/llvm-project/llvm/lib/Analysis/CGSCCPassManager.cpp:0:38
+ORIGIN-NEXT:         #19 0x00005895d1e5067d llvm::detail::PassModel, llvm::LazyCallGraph&, llvm::CGSCCUpdateResult&>::run(llvm::LazyCallGraph::SCC&, llvm::AnalysisManager&, llvm::LazyCallGraph&, llvm::CGSCCUpdateResult&) /tmp/llvm-project/llvm/include/llvm/IR/PassManagerInternal.h:91:5
+ORIGIN:      Errors detected for:
+
+RUN: %llvm-original-di-preservation %p/Inputs/non-existent.json --acceptance-test | FileCheck %s --check-prefix=EMPTY
+EMPTY: No errors detected for:

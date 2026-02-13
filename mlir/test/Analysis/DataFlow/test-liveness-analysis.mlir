@@ -59,16 +59,49 @@ func.func @test_3_BranchOpInterface_type_1.b(%arg0: i32, %arg1: memref<i32>, %ar
 
 // -----
 
+// Positive test: Type(1.c) "is a non-forwarded branch operand and its branch
+// op could result in different result"
+// CHECK-LABEL: test_tag: cond_br:
+// CHECK-NEXT:  operand #0: live
+// CHECK-NEXT:  operand #1: live
+// CHECK-NEXT:  operand #2: live
+func.func @test_branch_result_in_different_result_1.c(%arg0 : tensor<f32>, %arg1 : tensor<f32>, %arg2 : i1) -> tensor<f32> {
+  cf.cond_br %arg2, ^bb1(%arg0 : tensor<f32>), ^bb2(%arg1 : tensor<f32>) {tag = "cond_br"}
+^bb1(%0 : tensor<f32>):
+  cf.br ^bb3(%0 : tensor<f32>)
+^bb2(%1 : tensor<f32>):
+  cf.br ^bb3(%1 : tensor<f32>)
+^bb3(%2 : tensor<f32>):
+  return %2 : tensor<f32>
+}
+
+// -----
+
+// Positive test: Type(1.c) "is a non-forwarded branch operand and its branch
+// op could result in different result"
+// CHECK-LABEL: test_tag: region_branch:
+// CHECK-NEXT:  operand #0: live
+func.func @test_region_branch_result_in_different_result_1.c(%arg0 : tensor<f32>, %arg1 : tensor<f32>, %arg2 : i1) -> tensor<f32> {
+  %0 = scf.if %arg2 -> tensor<f32> {
+    scf.yield %arg0 : tensor<f32>
+  } else {
+    scf.yield %arg1 : tensor<f32>
+  } {tag="region_branch"}
+  return %0 : tensor<f32>
+}
+
+// -----
+
 func.func private @private(%arg0 : i32, %arg1 : i32) {
   func.return
 }
 
-// Positive test: Type (1.c) "is a non-forwarded call operand"
+// Positive test: Type (1.d) "is a non-forwarded call operand"
 // CHECK-LABEL: test_tag: call
 // CHECK-LABEL:  operand #0: not live
 // CHECK-LABEL:  operand #1: not live
 // CHECK-LABEL:  operand #2: live
-func.func @test_4_type_1.c(%arg0: i32, %arg1: i32, %device: i32, %m0: memref<i32>) {
+func.func @test_4_type_1.d(%arg0: i32, %arg1: i32, %device: i32, %m0: memref<i32>) {
   test.call_on_device @private(%arg0, %arg1), %device {tag = "call"} : (i32, i32, i32) -> ()
   return
 }
@@ -151,6 +184,18 @@ func.func private @private0(%0 : i32) -> i32 {
 // CHECK-NEXT:  result #0: live
 // CHECK-LABEL: test_tag: y:
 // CHECK-NEXT:  result #0: not live
+// CHECK-LABEL: test_tag: for:
+// CHECK-NEXT:  operand #0: live
+// CHECK-NEXT:  operand #1: live
+// CHECK-NEXT:  operand #2: live
+// CHECK-NEXT:  operand #3: live
+// CHECK-NEXT:  operand #4: not live
+// CHECK-NEXT:  result #0: live
+// CHECK-NEXT:  result #1: not live
+// CHECK-NEXT:  region: #0:
+// CHECK-NEXT:  argument: #0: live
+// CHECK-NEXT:  argument: #1: not live
+// CHECK-NEXT:  argument: #2: not live
 func.func @test_7_type_3(%arg0: memref<i32>) {
   %c0 = arith.constant {tag = "zero"} 0 : index
   %c10 = arith.constant {tag = "ten"} 10 : index
@@ -161,7 +206,7 @@ func.func @test_7_type_3(%arg0: memref<i32>) {
     %1 = arith.addi %x, %x : i32
     %2 = func.call @private0(%1) : (i32) -> i32
     scf.yield %2, %arg3 : i32, i32
-  }
+  } {tag = "for"}
   memref.store %0#0, %arg0[] : memref<i32>
   return
 }
@@ -249,4 +294,86 @@ func.func private @private_1() -> (i32, i32) {
 func.func @test_10_negative() -> (i32) {
   %0:2 = func.call @private_1() : () -> (i32, i32)
   return %0#0 : i32
+}
+
+// -----
+
+// Test that we correctly set a liveness value for operations in dead block.
+// These won't be visited by the dataflow framework so the analysis need to
+// explicitly manage them.
+// CHECK-LABEL: test_tag: dead_block_cmpi:
+// CHECK-NEXT: operand #0: not live
+// CHECK-NEXT: operand #1: not live
+// CHECK-NEXT: result #0: not live
+func.func @dead_block() {
+  %false = arith.constant false
+  %zero = arith.constant 0 : i64
+  cf.cond_br %false, ^bb1, ^bb4
+  ^bb1:
+    %3 = arith.cmpi eq, %zero, %zero  {tag = "dead_block_cmpi"} : i64
+    cf.br ^bb1
+  ^bb4:
+    return
+}
+
+// -----
+
+// CHECK-LABEL: test_tag: for:
+// CHECK-NEXT: region: #0:
+// CHECK-NEXT:   argument: #0: live
+func.func @affine_loop_no_use_iv_has_side_effect_op() {
+  %c1 = arith.constant 1 : index
+  %alloc = memref.alloc() : memref<10xindex>
+  affine.for %arg0 = 0 to 79 {
+    memref.store %c1, %alloc[%c1] : memref<10xindex>
+  } {tag = "for"}
+  return
+}
+
+// -----
+
+// CHECK-LABEL: test_tag: for:
+// CHECK-NEXT: region: #0:
+// CHECK-NEXT:   argument: #0: not live
+func.func @affine_loop_no_use_iv() {
+  affine.for %arg0 = 0 to 79 {
+  } {tag = "for"}
+  return
+}
+
+// -----
+
+// CHECK-LABEL: test_tag: forall:
+// CHECK-NEXT: operand #0: live
+// CHECK-NEXT: region: #0:
+// CHECK-NEXT:   argument: #0: live
+
+func.func @forall_no_use_iv_has_side_effect_op(%idx1: index, %idx2: index) {
+  scf.parallel (%i) = (%idx1) to (%idx2) step (%idx2) {
+    %r = memref.alloca() : memref<10xf32>
+    %cst = arith.constant 0.0 : f32
+    scf.forall (%e2) in (%idx2) {
+      memref.store %cst, %r[%idx2] : memref<10xf32>
+    } {tag = "forall"}
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: test_tag: for:
+// CHECK-NEXT:   operand #0: not live
+// CHECK-NEXT:   operand #1: not live
+// CHECK-NEXT:   operand #2: not live
+// CHECK-NEXT:   operand #3: not live
+
+func.func @test_for_loop_read_only(%arg0: memref<10xindex>) {
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  %0 = scf.for %iv = %c0 to %c10 step %c1 iter_args(%idx = %c0) -> (index) {
+    %loaded = memref.load %arg0[%idx] : memref<10xindex>
+    scf.yield %loaded : index
+  } {tag = "for"}
+  return
 }

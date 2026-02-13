@@ -11,11 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS, LLVM_ON_UNIX
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
@@ -111,8 +112,8 @@ TEST_F(MemoryBufferTest, getOpenFile) {
   {
     Expected<sys::fs::file_t> File = sys::fs::openNativeFileForRead(TestPath);
     ASSERT_THAT_EXPECTED(File, Succeeded());
-    auto OnExit =
-        make_scope_exit([&] { ASSERT_NO_ERROR(sys::fs::closeFile(*File)); });
+    llvm::scope_exit OnExit(
+        [&] { ASSERT_NO_ERROR(sys::fs::closeFile(*File)); });
     ErrorOr<OwningBuffer> MB = MemoryBuffer::getOpenFile(*File, TestPath, 6);
     ASSERT_NO_ERROR(MB.getError());
     EXPECT_EQ("123456", MB.get()->getBuffer());
@@ -121,8 +122,8 @@ TEST_F(MemoryBufferTest, getOpenFile) {
     Expected<sys::fs::file_t> File = sys::fs::openNativeFileForWrite(
         TestPath, sys::fs::CD_OpenExisting, sys::fs::OF_None);
     ASSERT_THAT_EXPECTED(File, Succeeded());
-    auto OnExit =
-        make_scope_exit([&] { ASSERT_NO_ERROR(sys::fs::closeFile(*File)); });
+    llvm::scope_exit OnExit(
+        [&] { ASSERT_NO_ERROR(sys::fs::closeFile(*File)); });
     ASSERT_ERROR(MemoryBuffer::getOpenFile(*File, TestPath, 6).getError());
   }
 }
@@ -176,9 +177,9 @@ TEST_F(MemoryBufferTest, createFromPipe) {
   ASSERT_TRUE(::CreatePipe(&pipes[0], &pipes[1], nullptr, 0))
       << ::GetLastError();
 #endif
-  auto ReadCloser = make_scope_exit([&] { sys::fs::closeFile(pipes[0]); });
+  llvm::scope_exit ReadCloser([&] { sys::fs::closeFile(pipes[0]); });
   std::thread Writer([&] {
-    auto WriteCloser = make_scope_exit([&] { sys::fs::closeFile(pipes[1]); });
+    llvm::scope_exit WriteCloser([&] { sys::fs::closeFile(pipes[1]); });
     for (unsigned i = 0; i < 5; ++i) {
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
 #if LLVM_ON_UNIX
@@ -317,13 +318,13 @@ TEST_F(MemoryBufferTest, slice) {
   EXPECT_EQ(0x4000UL, MB.get()->getBufferSize());
  
   StringRef BufData = MB.get()->getBuffer();
-  EXPECT_TRUE(BufData.substr(0x0000,8).equals("12345678"));
-  EXPECT_TRUE(BufData.substr(0x0FF8,8).equals("12345678"));
-  EXPECT_TRUE(BufData.substr(0x1000,8).equals("abcdefgh"));
-  EXPECT_TRUE(BufData.substr(0x2FF8,8).equals("abcdefgh"));
-  EXPECT_TRUE(BufData.substr(0x3000,8).equals("ABCDEFGH"));
-  EXPECT_TRUE(BufData.substr(0x3FF8,8).equals("ABCDEFGH"));
-   
+  EXPECT_TRUE(BufData.substr(0x0000, 8) == "12345678");
+  EXPECT_TRUE(BufData.substr(0x0FF8, 8) == "12345678");
+  EXPECT_TRUE(BufData.substr(0x1000, 8) == "abcdefgh");
+  EXPECT_TRUE(BufData.substr(0x2FF8, 8) == "abcdefgh");
+  EXPECT_TRUE(BufData.substr(0x3000, 8) == "ABCDEFGH");
+  EXPECT_TRUE(BufData.substr(0x3FF8, 8) == "ABCDEFGH");
+
   // Try non-page aligned.
   ErrorOr<OwningBuffer> MB2 = MemoryBuffer::getFileSlice(TestPath.str(),
                                                          0x3000, 0x0800);
@@ -332,10 +333,10 @@ TEST_F(MemoryBufferTest, slice) {
   EXPECT_EQ(0x3000UL, MB2.get()->getBufferSize());
   
   StringRef BufData2 = MB2.get()->getBuffer();
-  EXPECT_TRUE(BufData2.substr(0x0000,8).equals("12345678"));
-  EXPECT_TRUE(BufData2.substr(0x17F8,8).equals("12345678"));
-  EXPECT_TRUE(BufData2.substr(0x1800,8).equals("abcdefgh"));
-  EXPECT_TRUE(BufData2.substr(0x2FF8,8).equals("abcdefgh"));
+  EXPECT_TRUE(BufData2.substr(0x0000, 8) == "12345678");
+  EXPECT_TRUE(BufData2.substr(0x17F8, 8) == "12345678");
+  EXPECT_TRUE(BufData2.substr(0x1800, 8) == "abcdefgh");
+  EXPECT_TRUE(BufData2.substr(0x2FF8, 8) == "abcdefgh");
 }
 
 TEST_F(MemoryBufferTest, writableSlice) {
@@ -423,8 +424,7 @@ TEST_F(MemoryBufferTest, mmapVolatileNoNull) {
 
   Expected<sys::fs::file_t> File = sys::fs::openNativeFileForRead(TestPath);
   ASSERT_THAT_EXPECTED(File, Succeeded());
-  auto OnExit =
-      make_scope_exit([&] { ASSERT_NO_ERROR(sys::fs::closeFile(*File)); });
+  llvm::scope_exit OnExit([&] { ASSERT_NO_ERROR(sys::fs::closeFile(*File)); });
 
   auto MBOrError = MemoryBuffer::getOpenFile(*File, TestPath,
       /*FileSize=*/-1, /*RequiresNullTerminator=*/false, /*IsVolatile=*/true);

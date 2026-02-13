@@ -1,4 +1,4 @@
-//===--- MoveForwardingReferenceCheck.cpp - clang-tidy --------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,9 +8,6 @@
 
 #include "MoveForwardingReferenceCheck.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/Support/raw_ostream.h"
-
-#include <algorithm>
 
 using namespace clang::ast_matchers;
 
@@ -24,7 +21,7 @@ static void replaceMoveWithForward(const UnresolvedLookupExpr *Callee,
   const SourceManager &SM = Context.getSourceManager();
   const LangOptions &LangOpts = Context.getLangOpts();
 
-  CharSourceRange CallRange =
+  const CharSourceRange CallRange =
       Lexer::makeFileCharRange(CharSourceRange::getTokenRange(
                                    Callee->getBeginLoc(), Callee->getEndLoc()),
                                SM, LangOpts);
@@ -42,24 +39,31 @@ static void replaceMoveWithForward(const UnresolvedLookupExpr *Callee,
     // std::move(). This will hopefully prevent erroneous replacements if the
     // code does unusual things (e.g. create an alias for std::move() in
     // another namespace).
-    NestedNameSpecifier *NNS = Callee->getQualifier();
-    if (!NNS) {
+    const NestedNameSpecifier NNS = Callee->getQualifier();
+    switch (NNS.getKind()) {
+    case NestedNameSpecifier::Kind::Null:
       // Called as "move" (i.e. presumably the code had a "using std::move;").
       // We still conservatively put a "std::" in front of the forward because
       // we don't know whether the code also had a "using std::forward;".
       Diag << FixItHint::CreateReplacement(CallRange, "std::" + ForwardName);
-    } else if (const NamespaceDecl *Namespace = NNS->getAsNamespace()) {
+      break;
+    case NestedNameSpecifier::Kind::Namespace: {
+      auto [Namespace, Prefix] = NNS.getAsNamespaceAndPrefix();
       if (Namespace->getName() == "std") {
-        if (!NNS->getPrefix()) {
+        if (!Prefix) {
           // Called as "std::move".
           Diag << FixItHint::CreateReplacement(CallRange,
                                                "std::" + ForwardName);
-        } else if (NNS->getPrefix()->getKind() == NestedNameSpecifier::Global) {
+        } else if (Prefix.getKind() == NestedNameSpecifier::Kind::Global) {
           // Called as "::std::move".
           Diag << FixItHint::CreateReplacement(CallRange,
                                                "::std::" + ForwardName);
         }
       }
+      break;
+    }
+    default:
+      return;
     }
   }
 }

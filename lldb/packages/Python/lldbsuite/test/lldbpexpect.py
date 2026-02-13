@@ -10,6 +10,7 @@ from lldbsuite.test.decorators import *
 
 
 @skipIfRemote
+@skipIfWindows
 @add_test_categories(["pexpect"])
 class PExpectTest(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
@@ -104,4 +105,4 @@ class PExpectTest(TestBase):
         Returns the escape sequence to move the cursor forward/right
         by a certain amount of characters.
         """
-        return b"\x1b\[" + str(chars_to_move).encode("utf-8") + b"C"
+        return b"\x1b\\[" + str(chars_to_move).encode("utf-8") + b"C"

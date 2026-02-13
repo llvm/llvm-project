@@ -8,16 +8,34 @@
 ; RUN: llvm-lto -thinlto-action=run %t1.bc %t2.bc -exported-symbol=_Z5Alphav
 ; RUN: llvm-nm %t1.bc.thinlto.o | FileCheck %s -check-prefix=ThinLTOa
 ; RUN: llvm-nm %t2.bc.thinlto.o | FileCheck %s -check-prefix=ThinLTOb
-
-;; Re-run with "new" debug-info mode, checking that we load / convert / emit
-;; the dbg.declares below correctly.
-; RUN: llvm-lto -thinlto-action=run %t1.bc %t2.bc -exported-symbol=_Z5Alphav --try-experimental-debuginfo-iterators
-; RUN: llvm-nm %t1.bc.thinlto.o | FileCheck %s -check-prefix=ThinLTOa
-; RUN: llvm-nm %t2.bc.thinlto.o | FileCheck %s -check-prefix=ThinLTOb
+; RUN: llvm-bcanalyzer -dump %t1.bc | FileCheck %s --implicit-check-not='<METADATA_BLOCK'
 
 ; ThinLTOa-DAG: T _Z5Bravov
 ; ThinLTOa-DAG: W _ZN4EchoD2Ev
 ; ThinLTOb-DAG: T _Z5Alphav
+
+; Make sure that lexical block was emitted into the module level metadata block,
+; and that metadata index for the module level metadata block is present, as it
+; is necessary to trigger lazy loading.
+; CHECK:  <MODULE_BLOCK
+; CHECK:      <METADATA_BLOCK
+; CHECK:      <INDEX_OFFSET
+; CHECK:      <LEXICAL_BLOCK
+; CHECK:      <INDEX
+; CHECK:    </METADATA_BLOCK>
+; CHECK:    <FUNCTION_BLOCK
+; CHECK:      <METADATA_BLOCK
+; CHECK:      </METADATA_BLOCK>
+; CHECK:    </FUNCTION_BLOCK
+; CHECK:    <FUNCTION_BLOCK
+; CHECK:      <METADATA_BLOCK
+; CHECK:      </METADATA_BLOCK>
+; CHECK:    </FUNCTION_BLOCK
+; CHECK:    <FUNCTION_BLOCK
+; CHECK:      <METADATA_BLOCK
+; CHECK:      </METADATA_BLOCK>
+; CHECK:    </FUNCTION_BLOCK
+; CHECK: </MODULE_BLOCK
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -42,14 +60,14 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 define linkonce_odr void @_ZN4EchoD2Ev(ptr %this) unnamed_addr comdat align 2 {
   %this.addr.i = alloca ptr, align 8
   call void @llvm.dbg.declare(metadata ptr %this.addr.i, metadata !29, metadata !DIExpression()), !dbg !32
-  %this1.i = load ptr, ptr %this.addr.i, align 8
+  %this1.i = load ptr, ptr %this.addr.i, align 8, !dbg !33
   ret void
 }
 
 define linkonce_odr void @_ZN5DeltaD2Ev(ptr %this) unnamed_addr comdat align 2 !dbg !36 {
   %this.addr.i = alloca ptr, align 8
   call void @llvm.dbg.declare(metadata ptr %this.addr.i, metadata !29, metadata !DIExpression()), !dbg !41
-  %this1.i = load ptr, ptr %this.addr.i, align 8
+  %this1.i = load ptr, ptr %this.addr.i, align 8, !dbg !48
   ret void
 }
 

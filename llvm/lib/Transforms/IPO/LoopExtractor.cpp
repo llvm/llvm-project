@@ -39,9 +39,7 @@ struct LoopExtractorLegacyPass : public ModulePass {
   unsigned NumLoops;
 
   explicit LoopExtractorLegacyPass(unsigned NumLoops = ~0)
-      : ModulePass(ID), NumLoops(NumLoops) {
-    initializeLoopExtractorLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+      : ModulePass(ID), NumLoops(NumLoops) {}
 
   bool runOnModule(Module &M) override;
 
@@ -241,7 +239,7 @@ bool LoopExtractor::extractLoop(Loop *L, LoopInfo &LI, DominatorTree &DT) {
   Function &Func = *L->getHeader()->getParent();
   AssumptionCache *AC = LookupAssumptionCache(Func);
   CodeExtractorAnalysisCache CEAC(Func);
-  CodeExtractor Extractor(DT, *L, false, nullptr, nullptr, AC);
+  CodeExtractor Extractor(L->getBlocks(), &DT, false, nullptr, nullptr, AC);
   if (Extractor.extractCodeRegion(CEAC)) {
     LI.erase(L);
     --NumLoops;

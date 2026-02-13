@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-delicm -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-delicm -disable-output -stats < %s 2>&1 | FileCheck %s --check-prefix=STATS
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly-custom<delicm>' -polly-print-delicm -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly-custom<delicm>' -disable-output -stats < %s 2>&1 | FileCheck %s --check-prefix=STATS
 ; REQUIRES: asserts
 ;
 ;    void func(double *A) {

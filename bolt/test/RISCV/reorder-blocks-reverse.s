@@ -7,6 +7,7 @@
   .p2align 1
 _start:
   nop
+  .reloc ., R_RISCV_BRANCH, 1f
   beq t0, t1, 1f
   nop
   beq t0, t2, 2f

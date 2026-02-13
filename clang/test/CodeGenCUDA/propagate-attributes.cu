@@ -12,18 +12,21 @@
 
 // RUN: %clang_cc1 -x cuda %s -emit-llvm -mlink-builtin-bitcode %t.bc -o - \
 // RUN:   -fcuda-is-device -triple nvptx-unknown-unknown \
-// RUN: | FileCheck %s --check-prefix=CHECK --check-prefix=NOFTZ --check-prefix=NOFAST
+// RUN: | FileCheck %s --check-prefix=CHECK --check-prefix=NOFTZ
 
 // RUN: %clang_cc1 -x cuda %s -emit-llvm -mlink-builtin-bitcode %t.bc \
 // RUN:   -fdenormal-fp-math-f32=preserve-sign -o - \
 // RUN:   -fcuda-is-device -triple nvptx-unknown-unknown \
-// RUN: | FileCheck %s --check-prefix=CHECK --check-prefix=FTZ \
-// RUN:   --check-prefix=NOFAST
+// RUN: | FileCheck %s --check-prefix=CHECK --check-prefix=FTZ
 
 // RUN: %clang_cc1 -x cuda %s -emit-llvm -mlink-builtin-bitcode %t.bc \
 // RUN:   -fdenormal-fp-math-f32=preserve-sign -o - \
 // RUN:   -fcuda-is-device -funsafe-math-optimizations -triple nvptx-unknown-unknown \
-// RUN: | FileCheck %s --check-prefix=CHECK --check-prefix=FAST
+// RUN: | FileCheck %s --check-prefix=CHECK
+
+#ifndef LIB
+#include "Inputs/cuda.h"
+#endif
 
 // Wrap everything in extern "C" so we don't have to worry about name mangling
 // in the IR.
@@ -36,7 +39,6 @@ void lib_fn() {}
 
 #else
 
-#include "Inputs/cuda.h"
 __device__ void lib_fn();
 __global__ void kernel() { lib_fn(); }
 
@@ -51,19 +53,16 @@ __global__ void kernel() { lib_fn(); }
 // line.
 
 // Check the attribute list for kernel.
+// NOFTZ-NOT: denormal_fpenv
+
 // CHECK: attributes [[kattr]] = {
 
 // CHECK-SAME: convergent
 // CHECK-SAME: norecurse
 
-// FTZ-NOT: "denormal-fp-math"
-// FTZ-SAME: "denormal-fp-math-f32"="preserve-sign,preserve-sign"
-// NOFTZ-NOT: "denormal-fp-math-f32"
+// FTZ-SAME: denormal_fpenv(float: preservesign)
 
 // CHECK-SAME: "no-trapping-math"="true"
-
-// FAST-SAME: "unsafe-fp-math"="true"
-// NOFAST-NOT: "unsafe-fp-math"="true"
 
 // Check the attribute list for lib_fn.
 // CHECK: attributes [[fattr]] = {
@@ -71,13 +70,4 @@ __global__ void kernel() { lib_fn(); }
 // CHECK-SAME: convergent
 // CHECK-NOT: norecurse
 
-// FTZ-NOT: "denormal-fp-math"
-// NOFTZ-NOT: "denormal-fp-math"
-
-// FTZ-SAME: "denormal-fp-math-f32"="preserve-sign,preserve-sign"
-// NOFTZ-NOT: "denormal-fp-math-f32"
-
 // CHECK-SAME: "no-trapping-math"="true"
-
-// FAST-SAME: "unsafe-fp-math"="true"
-// NOFAST-NOT: "unsafe-fp-math"="true"

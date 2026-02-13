@@ -10,4 +10,4 @@
 // on non-Windows unless -fms-extensions is passed. It won't fail in this way on
 // Windows because the filesystem will interpret the backslash as a directory
 // separator.
-// UNSUPPORTED: system-windows
+// UNSUPPORTED: system-windows, system-cygwin

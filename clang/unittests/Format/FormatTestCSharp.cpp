@@ -21,8 +21,8 @@ protected:
     return getMicrosoftStyle(FormatStyle::LK_CSharp);
   }
 
-  static std::string format(llvm::StringRef Code, unsigned Offset,
-                            unsigned Length, const FormatStyle &Style) {
+  static std::string format(StringRef Code, unsigned Offset, unsigned Length,
+                            const FormatStyle &Style) {
     LLVM_DEBUG(llvm::errs() << "---\n");
     LLVM_DEBUG(llvm::errs() << Code << "\n\n");
     std::vector<tooling::Range> Ranges(1, tooling::Range(Offset, Length));
@@ -34,7 +34,7 @@ protected:
   }
 
   static std::string
-  format(llvm::StringRef Code,
+  format(StringRef Code,
          const FormatStyle &Style = getMicrosoftStyle(FormatStyle::LK_CSharp)) {
     return format(Code, 0, Code.size(), Style);
   }
@@ -689,6 +689,13 @@ TEST_F(FormatTestCSharp, CSharpNewOperator) {
                Style);
 }
 
+TEST_F(FormatTestCSharp, NewModifier) {
+  verifyFormat("public new class NestedC {\n"
+               "  public int x = 100;\n"
+               "}",
+               getLLVMStyle(FormatStyle::LK_CSharp));
+}
+
 TEST_F(FormatTestCSharp, CSharpLambdas) {
   FormatStyle GoogleStyle = getGoogleStyle(FormatStyle::LK_CSharp);
   FormatStyle MicrosoftStyle = getMicrosoftStyle(FormatStyle::LK_CSharp);
@@ -874,7 +881,7 @@ public class Test
     private static void ComplexLambda(BuildReport protoReport)
     {
         allSelectedScenes =
-            veryVeryLongCollectionNameThatPutsTheLineLenghtAboveTheThresholds.Where(scene => scene.enabled)
+            veryVeryLongCollectionNameThatPutsTheLineLengthAboveTheThresholds.Where(scene => scene.enabled)
                 .Select(scene => scene.path)
                 .ToArray();
         if (allSelectedScenes.Count == 0)
@@ -892,7 +899,7 @@ public class Test
   verifyFormat(R"(//
 public class Test {
   private static void ComplexLambda(BuildReport protoReport) {
-    allSelectedScenes = veryVeryLongCollectionNameThatPutsTheLineLenghtAboveTheThresholds
+    allSelectedScenes = veryVeryLongCollectionNameThatPutsTheLineLengthAboveTheThresholds
                             .Where(scene => scene.enabled)
                             .Select(scene => scene.path)
                             .ToArray();
@@ -918,7 +925,7 @@ public class Test
     private static void MultipleLambdas(BuildReport protoReport)
     {
         allSelectedScenes =
-            veryVeryLongCollectionNameThatPutsTheLineLenghtAboveTheThresholds.Where(scene => scene.enabled)
+            veryVeryLongCollectionNameThatPutsTheLineLengthAboveTheThresholds.Where(scene => scene.enabled)
                 .Select(scene => scene.path)
                 .ToArray();
         preBindEnumerators.RemoveAll(enumerator => !enumerator.MoveNext());
@@ -937,7 +944,7 @@ public class Test
   verifyFormat(R"(//
 public class Test {
   private static void MultipleLambdas(BuildReport protoReport) {
-    allSelectedScenes = veryVeryLongCollectionNameThatPutsTheLineLenghtAboveTheThresholds
+    allSelectedScenes = veryVeryLongCollectionNameThatPutsTheLineLengthAboveTheThresholds
                             .Where(scene => scene.enabled)
                             .Select(scene => scene.path)
                             .ToArray();
@@ -1149,6 +1156,17 @@ public class SaleItem
     public decimal Price { get; set; }
 })",
                MicrosoftStyle);
+
+  verifyFormat("internal class Program\n"
+               "{\n"
+               "    bool AutoAllowKnownApps\n"
+               "    {\n"
+               "        get;\n"
+               "        [Simple]\n"
+               "        set;\n"
+               "    }\n"
+               "}",
+               MicrosoftStyle);
 }
 
 TEST_F(FormatTestCSharp, DefaultLiteral) {
@@ -1176,7 +1194,7 @@ TEST_F(FormatTestCSharp, CSharpSpaces) {
   Style.SpaceBeforeSquareBrackets = false;
   Style.SpacesInSquareBrackets = false;
   Style.SpaceBeforeCpp11BracedList = true;
-  Style.Cpp11BracedListStyle = false;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
   Style.SpacesInContainerLiterals = false;
   Style.SpaceAfterCStyleCast = false;
 
@@ -1301,6 +1319,12 @@ TEST_F(FormatTestCSharp, CSharpGenericTypeConstraints) {
 
   verifyFormat("class ItemFactory<T>\n"
                "    where T : new() {\n"
+               "}",
+               Style);
+
+  verifyFormat("namespace A {\n"
+               "  delegate T MyDelegate<T>()\n"
+               "      where T : new();\n"
                "}",
                Style);
 
@@ -1675,6 +1699,28 @@ TEST_F(FormatTestCSharp, ShortFunctions) {
 
 TEST_F(FormatTestCSharp, BrokenBrackets) {
   EXPECT_NE("", format("int where b <")); // reduced from crasher
+}
+
+TEST_F(FormatTestCSharp, GotoCaseLabel) {
+  verifyFormat("switch (i)\n"
+               "{\n"
+               "case 0:\n"
+               "    goto case 1;\n"
+               "case 1:\n"
+               "    j = 0;\n"
+               "    {\n"
+               "        break;\n"
+               "    }\n"
+               "}",
+               "switch (i) {\n"
+               "case 0:\n"
+               "  goto case 1;\n"
+               "case 1:\n"
+               "  j = 0;\n"
+               "  {\n"
+               "    break;\n"
+               "  }\n"
+               "}");
 }
 
 } // namespace

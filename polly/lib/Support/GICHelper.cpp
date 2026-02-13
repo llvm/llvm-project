@@ -59,7 +59,7 @@ APInt polly::APIntFromVal(__isl_take isl_val *Val) {
   Data = (uint64_t *)malloc(NumChunks * ChunkSize);
   isl_val_get_abs_num_chunks(Val, ChunkSize, Data);
   int NumBits = CHAR_BIT * ChunkSize * NumChunks;
-  APInt A(NumBits, NumChunks, Data);
+  APInt A(NumBits, ArrayRef(Data, NumChunks));
 
   // As isl provides only an interface to obtain data that describes the
   // absolute value of an isl_val, A at this point always contains a positive
@@ -143,11 +143,11 @@ static void replace(std::string &str, StringRef find, StringRef replace) {
 }
 
 static void makeIslCompatible(std::string &str) {
-  replace(str, ".", "_");
-  replace(str, "\"", "_");
-  replace(str, " ", "__");
-  replace(str, "=>", "TO");
-  replace(str, "+", "_");
+  llvm::replace(str, '.', '_');
+  llvm::replace(str, '\"', '_');
+  replace(str, StringRef(" "), StringRef("__"));
+  replace(str, StringRef("=>"), StringRef("TO"));
+  llvm::replace(str, '+', '_');
 }
 
 std::string polly::getIslCompatibleName(const std::string &Prefix,

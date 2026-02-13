@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj %s -o %t.o
+; RUN: llc -filetype=obj -mattr=-bulk-memory %s -o %t.o
 ; RUN: wasm-ld -no-gc-sections --no-entry -o %t.wasm %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s --check-prefixes=CHECK,NO-BSS
 ; RUN: wasm-ld -no-gc-sections --no-entry --import-memory -o %t.bss.wasm %t.o
@@ -16,29 +16,29 @@ target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: - Type:            DATA
 ; CHECK-NEXT:    Segments:
-; CHECK-NEXT:      - SectionOffset:   7
+; CHECK-NEXT:      - SectionOffset:   8
 ; CHECK-NEXT:        InitFlags:       0
 ; CHECK-NEXT:        Offset:
 ; CHECK-NEXT:          Opcode:          I32_CONST
-; CHECK-NEXT:          Value:           1024
+; CHECK-NEXT:          Value:           65536
 ; CHECK-NEXT:        Content:         '00000000'
-; CHECK-NEXT:      - SectionOffset:   17
+; CHECK-NEXT:      - SectionOffset:   19
 ; CHECK-NEXT:        InitFlags:       0
 ; CHECK-NEXT:        Offset:
 ; CHECK-NEXT:          Opcode:          I32_CONST
-; CHECK-NEXT:          Value:           1028
+; CHECK-NEXT:          Value:           65540
 ; CHECK-NEXT:        Content:         2A000000
-; CHECK-NEXT:      - SectionOffset:   27
+; CHECK-NEXT:      - SectionOffset:   30
 ; CHECK-NEXT:        InitFlags:       0
 ; CHECK-NEXT:        Offset:
 ; CHECK-NEXT:          Opcode:          I32_CONST
-; CHECK-NEXT:          Value:           1032
+; CHECK-NEXT:          Value:           65544
 ; CHECK-NEXT:        Content:         '07000000'
-; BSS-NEXT:        - SectionOffset:   37
+; BSS-NEXT:        - SectionOffset:   41
 ; BSS-NEXT:          InitFlags:       0
 ; BSS-NEXT:          Offset:
 ; BSS-NEXT:            Opcode:          I32_CONST
-; BSS-NEXT:            Value:           1036
+; BSS-NEXT:            Value:           65548
 ; BSS-NEXT:          Content:         '00000000'
 ; NO-BSS-NOT:      - SectionOffset:
 

@@ -30,13 +30,13 @@ define <2 x double> @insert_v2f64_z1(<2 x double> %a) {
 ; SSE41-LABEL: insert_v2f64_z1:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    xorps %xmm1, %xmm1
-; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; SSE41-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: insert_v2f64_z1:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; AVX-NEXT:    retq
   %1 = insertelement <2 x double> %a, double 0.0, i32 0
   ret <2 x double> %1
@@ -68,7 +68,7 @@ define <4 x double> @insert_v4f64_0zz3(<4 x double> %a) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
-; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm2[0,1],xmm1[2,3]
+; SSE41-NEXT:    movsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: insert_v4f64_0zz3:
@@ -103,7 +103,7 @@ define <2 x i64> @insert_v2i64_z1(<2 x i64> %a) {
 ; SSE41-LABEL: insert_v2i64_z1:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    xorps %xmm1, %xmm1
-; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; SSE41-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: insert_v2i64_z1:
@@ -137,7 +137,7 @@ define <4 x i64> @insert_v4i64_01z3(<4 x i64> %a) {
 ; SSE41-LABEL: insert_v4i64_01z3:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
-; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm2[0,1],xmm1[2,3]
+; SSE41-NEXT:    movsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: insert_v4i64_01z3:
@@ -214,7 +214,7 @@ define <8 x float> @insert_v8f32_z12345z7(<8 x float> %a) {
 ; SSE41-LABEL: insert_v8f32_z12345z7:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
-; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3]
+; SSE41-NEXT:    movss {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3]
 ; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm1[0,1],xmm2[2],xmm1[3]
 ; SSE41-NEXT:    retq
 ;
@@ -287,7 +287,7 @@ define <8 x i32> @insert_v8i32_z12345z7(<8 x i32> %a) {
 ; SSE41-LABEL: insert_v8i32_z12345z7:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
-; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3]
+; SSE41-NEXT:    movss {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3]
 ; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm1[0,1],xmm2[2],xmm1[3]
 ; SSE41-NEXT:    retq
 ;
@@ -508,8 +508,8 @@ define <8 x float> @PR41512_v8f32(float %x, float %y) {
 ; AVX-LABEL: PR41512_v8f32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %ins1 = insertelement <8 x float> zeroinitializer, float %x, i32 0
@@ -538,4 +538,44 @@ define <4 x i32> @PR41512_loads(ptr %p1, ptr %p2) {
   %ins2 = insertelement <4 x i32> <i32 undef, i32 0, i32 undef, i32 undef>, i32 %y, i32 0
   %r = shufflevector <4 x i32> %ins1, <4 x i32> %ins2, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   ret <4 x i32> %r
+}
+
+; Reproducer for bugs in DAGCombiner and SimplifyDemandedVectorElts.
+;
+; Problem was that DAGCombiner replaced INSERT_VECTOR_ELT by AND, without
+; considering that %i has poison elements.  So instead of overwriting those
+; poison elements by inserting zeroes, we got "AND poison, 0" which is poison
+; and not guaranteed to be folded as zero.
+;
+; When solving the above by inserting a FREEZE another bug
+; surfaced. SimplifyDemandedVectorElts was not demanding elements that were
+; known to be AND:ed by zero. So the FREEZE ended up being removed and we
+; still got "AND poison, 0".
+;
+; Expected result is that the add reduction computes the sum 0+0+0+0+0+77+0+77 = 154.
+define i64 @fold_insertelement_to_and(i32 noundef %arg) {
+; SSE-LABEL: fold_insertelement_to_and:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movl $154, %eax
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: fold_insertelement_to_and:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    movl $154, %eax
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: fold_insertelement_to_and:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [0,77]
+; AVX2-NEXT:    vpaddq %xmm0, %xmm0, %xmm1
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
+; AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vmovq %xmm0, %rax
+; AVX2-NEXT:    retq
+  %i = shufflevector <8 x i64> zeroinitializer, <8 x i64> splat (i64 77), <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 4, i32 8, i32 6, i32 10>
+  %i1 = insertelement <8 x i64> %i, i64 0, i64 0
+  %i2 = insertelement <8 x i64> %i1, i64 0, i64 2
+  %i3 = shufflevector <8 x i64> %i2, <8 x i64> poison, <8 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 5, i32 6, i32 7>
+  %i4 = tail call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> %i3)
+  ret i64 %i4
 }

@@ -2,6 +2,8 @@
 
 #include "absl/types/optional.h"
 #include "folly/types/Optional.h"
+#include "bde/types/bsl_optional.h"
+#include "bde/types/bdlb_nullablevalue.h"
 
 void unchecked_value_access(const absl::optional<int> &opt) {
   opt.value();
@@ -48,6 +50,174 @@ void folly_checked_access(const folly::Optional<int> &opt) {
   if (opt.hasValue()) {
     opt.value();
   }
+}
+
+void bsl_optional_unchecked_value_access(const bsl::optional<int> &opt) {
+  opt.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  int x = *opt;
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  if (!opt) {
+    return;
+  }
+
+  opt.value();
+  x = *opt;
+
+  bsl::optional<int> opt1;
+  opt1.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+}
+
+void bsl_optional_unchecked_value_access_for_allocator_aware_class(const bsl::optional<bsl::string> &opt) {
+  opt.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  bsl::string x = *opt;
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  if (!opt) {
+    return;
+  }
+
+  opt.value();
+  x = *opt;
+
+  bsl::optional<bsl::string> opt1;
+  opt1.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+}
+
+void bsl_optional_checked_access(const bsl::optional<int> &opt) {
+  if (opt.has_value()) {
+    opt.value();
+  }
+
+  if (opt) {
+    opt.value();
+  }
+
+  if (opt) {
+    bsl::optional<int> opt1(opt);
+    opt1.value();
+  }
+}
+
+void bsl_optional_value_after_swap(bsl::optional<int> &opt1, bsl::optional<int> &opt2) {
+  if (opt1) {
+    opt1.swap(opt2);
+    opt1.value();
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: unchecked access to optional value
+  }
+}
+
+void nullable_value_unchecked_value_access(const BloombergLP::bdlb::NullableValue<int> &opt) {
+  opt.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  int x = *opt;
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  if (opt.isNull()) {
+    opt.value();
+  }
+  // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  if (!opt) {
+    opt.value();
+  }
+  // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  if (!opt) {
+    return;
+  }
+
+  opt.value();
+  x = *opt;
+}
+
+void nullable_value_unchecked_value_access_for_allocator_aware_type(const BloombergLP::bdlb::NullableValue<bsl::string> &opt) {
+  opt.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  bsl::string x = *opt;
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  if (opt.isNull()) {
+    opt.value();
+  }
+  // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  if (!opt) {
+    opt.value();
+  }
+  // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  if (!opt.has_value()) {
+    return;
+  }
+
+  opt.value();
+  x = *opt;
+}
+
+void nullable_value_optional_checked_access(const BloombergLP::bdlb::NullableValue<int> &opt) {
+  if (opt.has_value()) {
+    opt.value();
+  }
+  if (opt) {
+    opt.value();
+  }
+  if (!opt.isNull()) {
+    opt.value();
+  }
+}
+
+void nullable_value_emplaced(BloombergLP::bdlb::NullableValue<int> &opt) {
+  opt.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  opt.emplace(1);
+  opt.value();
+
+  opt.reset();
+  opt.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+}
+
+void nullable_value_after_swap(BloombergLP::bdlb::NullableValue<int> &opt1, BloombergLP::bdlb::NullableValue<int> &opt2) {
+  if (opt1) {
+    opt1.swap(opt2);
+    opt1.value();
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: unchecked access to optional value
+  }
+}
+
+void nullable_value_make_value(BloombergLP::bdlb::NullableValue<int> &opt1, BloombergLP::bdlb::NullableValue<int> &opt2) {
+  if (opt1.isNull()) {
+    opt1.makeValue(42);
+  }
+
+  opt1.value();
+
+  if (opt2.isNull()) {
+    opt2.makeValueInplace(42);
+  }
+
+  opt2.value();
+}
+
+void assertion_handler() __attribute__((analyzer_noreturn));
+
+void function_calling_analyzer_noreturn(const bsl::optional<int>& opt)
+{
+  if (!opt) {
+      assertion_handler();
+  }
+
+  *opt; // no-warning: The previous condition guards this dereference.
 }
 
 template <typename T>

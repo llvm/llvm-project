@@ -305,13 +305,14 @@ void SymbolFileOnDemand::Dump(lldb_private::Stream &s) {
   return m_sym_file_impl->Dump(s);
 }
 
-void SymbolFileOnDemand::DumpClangAST(lldb_private::Stream &s) {
+void SymbolFileOnDemand::DumpClangAST(lldb_private::Stream &s,
+                                      llvm::StringRef filter, bool show_color) {
   if (!m_debug_info_enabled) {
     LLDB_LOG(GetLog(), "[{0}] {1} is skipped", GetSymbolFileName(),
              __FUNCTION__);
     return;
   }
-  return m_sym_file_impl->DumpClangAST(s);
+  return m_sym_file_impl->DumpClangAST(s, filter, show_color);
 }
 
 void SymbolFileOnDemand::FindGlobalVariables(const RegularExpression &regex,
@@ -336,7 +337,7 @@ void SymbolFileOnDemand::FindGlobalVariables(
                GetSymbolFileName(), __FUNCTION__);
       return;
     }
-    Symbol *sym = symtab->FindFirstSymbolWithNameAndType(
+    const Symbol *sym = symtab->FindFirstSymbolWithNameAndType(
         name, eSymbolTypeData, Symtab::eDebugAny, Symtab::eVisibilityAny);
     if (!sym) {
       LLDB_LOG(log, "[{0}] {1} is skipped - fail to find match in symtab",
@@ -457,9 +458,8 @@ SymbolFileOnDemand::GetTypeSystemForLanguage(LanguageType language) {
     Log *log = GetLog();
     LLDB_LOG(log, "[{0}] {1} is skipped for language type {2}",
              GetSymbolFileName(), __FUNCTION__, language);
-    return llvm::make_error<llvm::StringError>(
-        "GetTypeSystemForLanguage is skipped by SymbolFileOnDemand",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "GetTypeSystemForLanguage is skipped by SymbolFileOnDemand");
   }
   return m_sym_file_impl->GetTypeSystemForLanguage(language);
 }
@@ -508,7 +508,7 @@ SymbolFileOnDemand::GetUnwindPlan(const Address &address,
 }
 
 llvm::Expected<lldb::addr_t>
-SymbolFileOnDemand::GetParameterStackSize(Symbol &symbol) {
+SymbolFileOnDemand::GetParameterStackSize(const Symbol &symbol) {
   if (!m_debug_info_enabled) {
     Log *log = GetLog();
     LLDB_LOG(log, "[{0}] {1} is skipped", GetSymbolFileName(), __FUNCTION__);
@@ -554,6 +554,12 @@ StatsDuration::Duration SymbolFileOnDemand::GetDebugInfoIndexTime() {
   LLDB_LOG(GetLog(), "[{0}] {1} is not skipped", GetSymbolFileName(),
            __FUNCTION__);
   return m_sym_file_impl->GetDebugInfoIndexTime();
+}
+
+void SymbolFileOnDemand::ResetStatistics() {
+  LLDB_LOG(GetLog(), "[{0}] {1} is not skipped", GetSymbolFileName(),
+           __FUNCTION__);
+  return m_sym_file_impl->ResetStatistics();
 }
 
 void SymbolFileOnDemand::SetLoadDebugInfoEnabled() {

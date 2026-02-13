@@ -308,3 +308,84 @@ Sections:
   auto entry_point_addr = module_sp->GetObjectFile()->GetEntryPointAddress();
   ASSERT_EQ(entry_point_addr.GetAddressClass(), AddressClass::eCode);
 }
+
+TEST_F(ObjectFileELFTest, SkipsLocalMappingAndDotLSymbols) {
+  auto ExpectedFile = TestFile::fromYaml(R"(
+--- !ELF
+  FileHeader:
+    Class:           ELFCLASS64
+    Data:            ELFDATA2LSB
+    Type:            ET_EXEC
+    Machine:         EM_RISCV
+    Flags:           [ EF_RISCV_RVC, EF_RISCV_FLOAT_ABI_SINGLE ]
+    Entry:           0xC0A1B010
+  Sections:
+    - Name:            .text
+      Type:            SHT_PROGBITS
+      Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+      Address:         0x0000000000400180
+      AddressAlign:    0x0000000000000010
+      Content:         554889E5
+    - Name:            .data
+      Type:            SHT_PROGBITS
+      Flags:           [ SHF_WRITE, SHF_ALLOC ]
+      Address:         0x0000000000601000
+      AddressAlign:    0x0000000000000004
+      Content:         2F000000
+    - Name:            .riscv.attributes
+      Type:            SHT_PROGBITS
+      Flags:           [ SHF_ALLOC ]
+      Address:         0x0000000000610000
+      AddressAlign:    0x0000000000000004
+      Content:         "00"
+  Symbols:
+    - Name:            $d
+      Type:            STT_NOTYPE
+      Section:         .riscv.attributes
+      Value:           0x0000000000400180
+      Size:            0x10
+      Binding:         STB_LOCAL
+    - Name:            $x
+      Type:            STT_NOTYPE
+      Section:         .text
+      Value:           0xC0A1B010
+      Size:            0x10
+      Binding:         STB_LOCAL
+    - Name:            .Lfoo
+      Type:            STT_OBJECT
+      Section:         .data
+      Value:           0x0000000000601000
+      Size:            0x4
+      Binding:         STB_LOCAL
+    - Name:            global_func
+      Type:            STT_FUNC
+      Section:         .text
+      Value:           0x00000000004001A0
+      Size:            0x10
+      Binding:         STB_GLOBAL
+    - Name:            global_obj
+      Type:            STT_OBJECT
+      Section:         .data
+      Value:           0x0000000000601004
+      Size:            0x4
+      Binding:         STB_GLOBAL
+...
+  )");
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+  auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
+  auto *symtab = module_sp->GetSymtab();
+  ASSERT_NE(nullptr, symtab);
+  EXPECT_EQ(nullptr, module_sp->FindFirstSymbolWithNameAndType(
+                         ConstString("$d"), eSymbolTypeAny));
+  EXPECT_EQ(nullptr, module_sp->FindFirstSymbolWithNameAndType(
+                         ConstString("$x"), eSymbolTypeAny));
+  EXPECT_EQ(nullptr, module_sp->FindFirstSymbolWithNameAndType(
+                         ConstString(".Lfoo"), eSymbolTypeAny));
+  // assert that other symbols are present
+  const Symbol *global_func = module_sp->FindFirstSymbolWithNameAndType(
+      ConstString("global_func"), eSymbolTypeAny);
+  ASSERT_NE(nullptr, global_func);
+  const Symbol *global_obj = module_sp->FindFirstSymbolWithNameAndType(
+      ConstString("global_obj"), eSymbolTypeAny);
+  ASSERT_NE(nullptr, global_obj);
+}

@@ -119,7 +119,7 @@ define i1 @t6_const_shl_lshr_ne(i32 %x, i32 %y, i32 %shamt0, i32 %shamt1) {
 
 define <2 x i1> @t7_const_lshr_shl_ne_vec_splat(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @t7_const_lshr_shl_ne_vec_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 2, i32 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    [[T3:%.*]] = icmp ne <2 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[T3]]
@@ -171,7 +171,7 @@ define <3 x i1> @t10_const_lshr_shl_ne_vec_poison1(<3 x i32> %x, <3 x i32> %y) {
 }
 define <3 x i1> @t11_const_lshr_shl_ne_vec_poison2(<3 x i32> %x, <3 x i32> %y) {
 ; CHECK-LABEL: @t11_const_lshr_shl_ne_vec_poison2(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <3 x i32> [[X:%.*]], <i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <3 x i32> [[X:%.*]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <3 x i32> [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    [[T3:%.*]] = icmp ne <3 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    ret <3 x i1> [[T3]]
@@ -534,8 +534,7 @@ define i1 @t32_shift_of_const_oneuse0(i32 %x, i32 %y, i32 %len) {
 ; CHECK-NEXT:    call void @use32(i32 [[T2]])
 ; CHECK-NEXT:    [[T3:%.*]] = shl i32 [[Y:%.*]], [[T2]]
 ; CHECK-NEXT:    call void @use32(i32 [[T3]])
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[Y]], 1
-; CHECK-NEXT:    [[T5:%.*]] = icmp ne i32 [[TMP1]], 0
+; CHECK-NEXT:    [[T5:%.*]] = trunc i32 [[Y]] to i1
 ; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t0 = sub i32 32, %len
@@ -669,22 +668,23 @@ define <2 x i1> @n38_overshift(<2 x i32> %x, <2 x i32> %y) {
 }
 
 ; As usual, don't crash given constantexpr's :/
-@f.a = internal global i16 0
+@f.a = internal global i16 0, align 1
 define i1 @constantexpr() {
 ; CHECK-LABEL: @constantexpr(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr @f.a, align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i16 [[TMP0]], 1
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 icmp ne (i16 ptrtoint (ptr @f.a to i16), i16 1) to i16
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i16 1, [[ZEXT]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i16 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i16 [[TMP3]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i16 [[TMP0]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i16 ptrtoint (ptr @f.a to i16), 1
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i16
+; CHECK-NEXT:    [[SHR11:%.*]] = lshr i16 [[SHR]], [[ZEXT]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = trunc i16 [[SHR11]] to i1
 ; CHECK-NEXT:    ret i1 [[TOBOOL]]
 ;
 entry:
   %0 = load i16, ptr @f.a
   %shr = ashr i16 %0, 1
-  %zext = zext i1 icmp ne (i16 ptrtoint (ptr @f.a to i16), i16 1) to i16
+  %cmp = icmp ne i16 ptrtoint (ptr @f.a to i16), 1
+  %zext = zext i1 %cmp to i16
   %shr1 = ashr i16 %shr, %zext
   %and = and i16 %shr1, 1
   %tobool = icmp ne i16 %and, 0

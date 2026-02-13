@@ -32,7 +32,7 @@ template <size_t Version = 5> class FDRController {
   uint64_t LastFunctionEntryTSC = 0;
   uint64_t LatestTSC = 0;
   uint16_t LatestCPU = 0;
-  tid_t TId = 0;
+  ThreadID TId = 0;
   pid_t PId = 0;
   bool First = true;
 
@@ -84,7 +84,7 @@ template <size_t Version = 5> class FDRController {
         // buffer, associated with a particular thread, with a new CPU. For the
         // data, we have 15 bytes to squeeze as much information as we can. At
         // this point we only write down the following bytes:
-        //   - Thread ID (tid_t, cast to 4 bytes type due to Darwin being 8
+        //   - Thread ID (ThreadID, cast to 4 bytes type due to Darwin being 8
         //   bytes)
         createMetadataRecord<MetadataRecord::RecordKinds::NewBuffer>(
             static_cast<int32_t>(TId)),

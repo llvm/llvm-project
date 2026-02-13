@@ -147,7 +147,7 @@ namespace UsingDeclAttrs {
   static_assert(alignof(T) == 1, "");
 
   using [[gnu::aligned(1)]] T = int; // expected-error {{an attribute list cannot appear here}}
-  using T = int [[gnu::aligned(1)]]; // expected-error {{'aligned' attribute cannot be applied to types}}
+  using T = int [[gnu::aligned(1)]]; // expected-error {{'gnu::aligned' attribute cannot be applied to types}}
 }
 
 namespace DuplicateSpecifier {
@@ -214,6 +214,7 @@ struct MemberComponentOrder : Base {
 void NoMissingSemicolonHere(struct S
                             [3]);
 template<int ...N> void NoMissingSemicolonHereEither(struct S... [N]);
+// expected-warning@-1 {{'S...[N]' is no longer a pack expansion but a pack indexing type; add a name to specify a pack expansion}} \
 // expected-error@-1 {{'S' does not refer to the name of a parameter pack}} \
 // expected-error@-1 {{declaration of anonymous struct must be a definition}} \
 // expected-error@-1 {{expected parameter declarator}} \

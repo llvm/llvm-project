@@ -9,10 +9,13 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_MUTEX_H
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_MUTEX_H
 
-#include "src/__support/macros/properties/architectures.h"
+#include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
+
+#if LIBC_THREAD_MODE == LIBC_THREAD_MODE_PLATFORM
 
 // Platform independent code will include this header file which pulls
-// the platfrom specific specializations using platform macros.
+// the platform specific specializations using platform macros.
 //
 // The platform specific specializations should define a class by name
 // Mutex with non-static methods having the following signature:
@@ -37,24 +40,34 @@
 // few global locks. So, to avoid static initialization order fiasco, we
 // want the constructors of the Mutex classes to be constexprs.
 
-#if defined(__linux__)
-#include "linux/mutex.h"
-#elif defined(LIBC_TARGET_ARCH_IS_GPU)
-#include "gpu/mutex.h"
-#endif // __linux__
+#if defined(__linux__) || defined(__APPLE__)
+#include "src/__support/threads/unix_mutex.h"
+#endif
 
-namespace LIBC_NAMESPACE {
+#elif LIBC_THREAD_MODE == LIBC_THREAD_MODE_SINGLE
 
-// An RAII class for easy locking and unlocking of mutexes.
-class MutexLock {
-  Mutex *mutex;
+#include "src/__support/threads/mutex_common.h"
 
-public:
-  explicit MutexLock(Mutex *m) : mutex(m) { mutex->lock(); }
+namespace LIBC_NAMESPACE_DECL {
 
-  ~MutexLock() { mutex->unlock(); }
+/// Implementation of a simple passthrough mutex which guards nothing. A
+/// complete Mutex locks in general cannot be implemented on the GPU, or on some
+/// baremetal platforms. We simply define the Mutex interface and require that
+/// only a single thread executes code requiring a mutex lock.
+struct Mutex {
+  LIBC_INLINE constexpr Mutex(bool, bool, bool, bool) {}
+
+  LIBC_INLINE MutexError lock() { return MutexError::NONE; }
+  LIBC_INLINE MutexError unlock() { return MutexError::NONE; }
+  LIBC_INLINE MutexError reset() { return MutexError::NONE; }
 };
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
+
+#elif LIBC_THREAD_MODE == LIBC_THREAD_MODE_EXTERNAL
+
+// TODO: Implement the interfacing, if necessary, e.g. "extern struct Mutex;"
+
+#endif // LIBC_THREAD_MODE == LIBC_THREAD_MODE_PLATFORM
 
 #endif // LLVM_LIBC_SRC___SUPPORT_THREADS_MUTEX_H

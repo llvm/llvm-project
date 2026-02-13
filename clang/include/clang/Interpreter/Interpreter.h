@@ -14,35 +14,42 @@
 #ifndef LLVM_CLANG_INTERPRETER_INTERPRETER_H
 #define LLVM_CLANG_INTERPRETER_INTERPRETER_H
 
-#include "clang/AST/Decl.h"
 #include "clang/AST/GlobalDecl.h"
+#include "clang/Interpreter/IncrementalExecutor.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "clang/Interpreter/Value.h"
-#include "clang/Sema/Ownership.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/Support/Error.h"
+#include <cstdint>
 #include <memory>
 #include <vector>
 
 namespace llvm {
 namespace orc {
-class LLJIT;
-class LLJITBuilder;
 class ThreadSafeContext;
 } // namespace orc
 } // namespace llvm
 
 namespace clang {
 
+namespace driver {
+class Compilation;
+} // namespace driver
+
 class CompilerInstance;
-class IncrementalExecutor;
+class CXXRecordDecl;
+class Decl;
 class IncrementalParser;
+class IncrementalCUDADeviceParser;
 
 /// Create a pre-configured \c CompilerInstance for incremental processing.
 class IncrementalCompilerBuilder {
+  using DriverCompilationFn = llvm::Error(const driver::Compilation &);
+
 public:
   IncrementalCompilerBuilder() {}
 
@@ -61,11 +68,16 @@ public:
   // CUDA specific
   void SetCudaSDK(llvm::StringRef path) { CudaSDKPath = path; };
 
+  // Hand over the compilation.
+  void SetDriverCompilationCallback(std::function<DriverCompilationFn> C) {
+    CompilationCB = C;
+  }
+
   llvm::Expected<std::unique_ptr<CompilerInstance>> CreateCudaHost();
   llvm::Expected<std::unique_ptr<CompilerInstance>> CreateCudaDevice();
 
 private:
-  static llvm::Expected<std::unique_ptr<CompilerInstance>>
+  llvm::Expected<std::unique_ptr<CompilerInstance>>
   create(std::string TT, std::vector<const char *> &ClangArgv);
 
   llvm::Expected<std::unique_ptr<CompilerInstance>> createCuda(bool device);
@@ -75,27 +87,32 @@ private:
 
   llvm::StringRef OffloadArch;
   llvm::StringRef CudaSDKPath;
+
+  std::optional<std::function<DriverCompilationFn>> CompilationCB;
 };
 
-/// Generate glue code between the Interpreter's built-in runtime and user code.
-class RuntimeInterfaceBuilder {
-public:
-  virtual ~RuntimeInterfaceBuilder() = default;
-
-  using TransformExprFunction = ExprResult(RuntimeInterfaceBuilder *Builder,
-                                           Expr *, ArrayRef<Expr *>);
-  virtual TransformExprFunction *getPrintValueTransformer() = 0;
-};
+class IncrementalAction;
+class InProcessPrintingASTConsumer;
 
 /// Provides top-level interfaces for incremental compilation and execution.
 class Interpreter {
+  friend class Value;
+  friend InProcessPrintingASTConsumer;
+
   std::unique_ptr<llvm::orc::ThreadSafeContext> TSCtx;
+  /// Long-lived, incremental parsing action.
+  std::unique_ptr<IncrementalAction> Act;
   std::unique_ptr<IncrementalParser> IncrParser;
   std::unique_ptr<IncrementalExecutor> IncrExecutor;
-  std::unique_ptr<RuntimeInterfaceBuilder> RuntimeIB;
 
   // An optional parser for CUDA offloading
-  std::unique_ptr<IncrementalParser> DeviceParser;
+  std::unique_ptr<IncrementalCUDADeviceParser> DeviceParser;
+
+  // An optional action for CUDA offloading
+  std::unique_ptr<IncrementalAction> DeviceAct;
+
+  /// List containing information about each incrementally parsed piece of code.
+  std::list<PartialTranslationUnit> PTUs;
 
   unsigned InitPTUSize = 0;
 
@@ -104,15 +121,17 @@ class Interpreter {
   // printing happens, it's in an invalid state.
   Value LastValue;
 
-  // Add a call to an Expr to report its result. We query the function from
-  // RuntimeInterfaceBuilder once and store it as a function pointer to avoid
-  // frequent virtual function calls.
-  RuntimeInterfaceBuilder::TransformExprFunction *AddPrintValueCall = nullptr;
+  /// Compiler instance performing the incremental compilation.
+  std::unique_ptr<CompilerInstance> CI;
+
+  /// An optional compiler instance for CUDA offloading
+  std::unique_ptr<CompilerInstance> DeviceCI;
 
 protected:
-  // Derived classes can make use an extended interface of the Interpreter.
-  // That's useful for testing and out-of-tree clients.
-  Interpreter(std::unique_ptr<CompilerInstance> CI, llvm::Error &Err);
+  // Derived classes can use an extended interface of the Interpreter.
+  Interpreter(std::unique_ptr<CompilerInstance> Instance, llvm::Error &Err,
+              std::unique_ptr<IncrementalExecutorBuilder> IEB = nullptr,
+              std::unique_ptr<clang::ASTConsumer> Consumer = nullptr);
 
   // Create the internal IncrementalExecutor, or re-create it after calling
   // ResetExecutor().
@@ -120,39 +139,26 @@ protected:
 
   // Delete the internal IncrementalExecutor. This causes a hard shutdown of the
   // JIT engine. In particular, it doesn't run cleanup or destructors.
-  void ResetExecutor();
-
-  // Lazily construct the RuntimeInterfaceBuilder. The provided instance will be
-  // used for the entire lifetime of the interpreter. The default implementation
-  // targets the in-process __clang_Interpreter runtime. Override this to use a
-  // custom runtime.
-  virtual std::unique_ptr<RuntimeInterfaceBuilder> FindRuntimeInterface();
-
-  // Lazily construct thev ORCv2 JITBuilder. This called when the internal
-  // IncrementalExecutor is created. The default implementation populates an
-  // in-process JIT with debugging support. Override this to configure the JIT
-  // engine used for execution.
-  virtual llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
-  CreateJITBuilder(CompilerInstance &CI);
+  void ResetExecutor() { IncrExecutor.reset(); }
 
 public:
   virtual ~Interpreter();
-
   static llvm::Expected<std::unique_ptr<Interpreter>>
-  create(std::unique_ptr<CompilerInstance> CI);
+  create(std::unique_ptr<CompilerInstance> CI,
+         std::unique_ptr<IncrementalExecutorBuilder> IEB = nullptr);
   static llvm::Expected<std::unique_ptr<Interpreter>>
   createWithCUDA(std::unique_ptr<CompilerInstance> CI,
                  std::unique_ptr<CompilerInstance> DCI);
+
   const ASTContext &getASTContext() const;
   ASTContext &getASTContext();
   const CompilerInstance *getCompilerInstance() const;
   CompilerInstance *getCompilerInstance();
-  llvm::Expected<llvm::orc::LLJIT &> getExecutionEngine();
+  llvm::Expected<IncrementalExecutor &> getExecutionEngine();
 
   llvm::Expected<PartialTranslationUnit &> Parse(llvm::StringRef Code);
   llvm::Error Execute(PartialTranslationUnit &T);
   llvm::Error ParseAndExecute(llvm::StringRef Code, Value *V = nullptr);
-  llvm::Expected<llvm::orc::ExecutorAddr> CompileDtorCall(CXXRecordDecl *CXXRD);
 
   /// Undo N previous incremental inputs.
   llvm::Error Undo(unsigned N = 1);
@@ -174,21 +180,35 @@ public:
   llvm::Expected<llvm::orc::ExecutorAddr>
   getSymbolAddressFromLinkerName(llvm::StringRef LinkerName) const;
 
-  enum InterfaceKind { NoAlloc, WithAlloc, CopyArray, NewTag };
-
-  const llvm::SmallVectorImpl<Expr *> &getValuePrintingInfo() const {
-    return ValuePrintingInfo;
+  const IncrementalExecutorBuilder &getIncrementalExecutorBuilder() const {
+    return *IncrExecutorBuilder;
   }
-
-  Expr *SynthesizeExpr(Expr *E);
 
 private:
   size_t getEffectivePTUSize() const;
   void markUserCodeStart();
 
-  llvm::DenseMap<CXXRecordDecl *, llvm::orc::ExecutorAddr> Dtors;
+  // A cache for the compiled destructors used to for de-allocation of managed
+  // clang::Values.
+  mutable llvm::DenseMap<CXXRecordDecl *, llvm::orc::ExecutorAddr> Dtors;
 
-  llvm::SmallVector<Expr *, 4> ValuePrintingInfo;
+  std::array<Expr *, 4> ValuePrintingInfo = {0};
+
+  std::unique_ptr<IncrementalExecutorBuilder> IncrExecutorBuilder;
+
+  /// @}
+  /// @name Value and pretty printing support
+  /// @{
+
+  std::string ValueDataToString(const Value &V) const;
+  std::string ValueTypeToString(const Value &V) const;
+
+  llvm::Expected<Expr *> convertExprToValue(Expr *E);
+
+  // When we deallocate clang::Value we need to run the destructor of the type.
+  // This function forces emission of the needed dtor.
+  llvm::Expected<llvm::orc::ExecutorAddr>
+  CompileDtorCall(CXXRecordDecl *CXXRD) const;
 };
 } // namespace clang
 

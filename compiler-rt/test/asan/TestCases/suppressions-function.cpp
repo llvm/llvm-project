@@ -6,12 +6,14 @@
 // RUN: %clangxx_asan -O0 %s -o %t && %env_asan_opts=suppressions='"%t.supp"' %run %t 2>&1 | FileCheck --check-prefix=CHECK-IGNORE %s
 // RUN: %clangxx_asan -O3 %s -o %t && %env_asan_opts=suppressions='"%t.supp"' %run %t 2>&1 | FileCheck --check-prefix=CHECK-IGNORE %s
 
+// FIXME: Upload suppressions to device.
 // XFAIL: android
 // UNSUPPORTED: ios
 
 // FIXME: atos does not work for inlined functions, yet llvm-symbolizer
-// does not always work with debug info on Darwin.
+// does not always work with debug info on Darwin. Behavior is similar on MSVC x86 outside of /Od.
 // UNSUPPORTED: darwin
+// UNSUPPORTED: target={{.*windows-msvc.*}} && asan-32-bits
 
 #include <stdio.h>
 #include <stdlib.h>

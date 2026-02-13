@@ -6,7 +6,7 @@
 ; CHECK: vrintm.f32
 define float @test1(float %a) {
 entry:
-  %call = call float @floorf(float %a) nounwind readnone
+  %call = call float @llvm.floor.f32(float %a) nounwind readnone
   ret float %call
 }
 
@@ -15,7 +15,7 @@ entry:
 ; DP: vrintm.f64
 define double @test2(double %a) {
 entry:
-  %call = call double @floor(double %a) nounwind readnone
+  %call = call double @llvm.floor.f64(double %a) nounwind readnone
   ret double %call
 }
 
@@ -23,7 +23,7 @@ entry:
 ; CHECK: vrintp.f32
 define float @test3(float %a) {
 entry:
-  %call = call float @ceilf(float %a) nounwind readnone
+  %call = call float @llvm.ceil.f32(float %a) nounwind readnone
   ret float %call
 }
 
@@ -32,7 +32,7 @@ entry:
 ; DP: vrintp.f64
 define double @test4(double %a) {
 entry:
-  %call = call double @ceil(double %a) nounwind readnone
+  %call = call double @llvm.ceil.f64(double %a) nounwind readnone
   ret double %call
 }
 
@@ -40,7 +40,7 @@ entry:
 ; CHECK: vrinta.f32
 define float @test5(float %a) {
 entry:
-  %call = call float @roundf(float %a) nounwind readnone
+  %call = call float @llvm.round.f32(float %a) nounwind readnone
   ret float %call
 }
 
@@ -49,7 +49,7 @@ entry:
 ; DP: vrinta.f64
 define double @test6(double %a) {
 entry:
-  %call = call double @round(double %a) nounwind readnone
+  %call = call double @llvm.round.f64(double %a) nounwind readnone
   ret double %call
 }
 
@@ -57,7 +57,7 @@ entry:
 ; CHECK: vrintz.f32
 define float @test7(float %a) {
 entry:
-  %call = call float @truncf(float %a) nounwind readnone
+  %call = call float @llvm.trunc.f32(float %a) nounwind readnone
   ret float %call
 }
 
@@ -66,7 +66,7 @@ entry:
 ; DP: vrintz.f64
 define double @test8(double %a) {
 entry:
-  %call = call double @trunc(double %a) nounwind readnone
+  %call = call double @llvm.trunc.f64(double %a) nounwind readnone
   ret double %call
 }
 
@@ -74,7 +74,7 @@ entry:
 ; CHECK: vrintr.f32
 define float @test9(float %a) {
 entry:
-  %call = call float @nearbyintf(float %a) nounwind readnone
+  %call = call float @llvm.nearbyint.f32(float %a) nounwind readnone
   ret float %call
 }
 
@@ -83,7 +83,7 @@ entry:
 ; DP: vrintr.f64
 define double @test10(double %a) {
 entry:
-  %call = call double @nearbyint(double %a) nounwind readnone
+  %call = call double @llvm.nearbyint.f64(double %a) nounwind readnone
   ret double %call
 }
 
@@ -91,7 +91,7 @@ entry:
 ; CHECK: vrintx.f32
 define float @test11(float %a) {
 entry:
-  %call = call float @rintf(float %a) nounwind readnone
+  %call = call float @llvm.rint.f32(float %a) nounwind readnone
   ret float %call
 }
 
@@ -100,19 +100,35 @@ entry:
 ; DP: vrintx.f64
 define double @test12(double %a) {
 entry:
-  %call = call double @rint(double %a) nounwind readnone
+  %call = call double @llvm.rint.f64(double %a) nounwind readnone
   ret double %call
 }
 
-declare float @floorf(float) nounwind readnone
-declare double @floor(double) nounwind readnone
-declare float @ceilf(float) nounwind readnone
-declare double @ceil(double) nounwind readnone
-declare float @roundf(float) nounwind readnone
-declare double @round(double) nounwind readnone
-declare float @truncf(float) nounwind readnone
-declare double @trunc(double) nounwind readnone
-declare float @nearbyintf(float) nounwind readnone
-declare double @nearbyint(double) nounwind readnone
-declare float @rintf(float) nounwind readnone
-declare double @rint(double) nounwind readnone
+; CHECK-LABEL: test13
+; CHECK: vrintn.f32
+define float @test13(float %a) {
+entry:
+  %round = call float @llvm.roundeven.f32(float %a)
+  ret float %round
+}
+
+; CHECK-LABEL: test14
+; CHECK: vrintn.f64
+define double @test14(double %a) {
+entry:
+  %round = call double @llvm.roundeven.f64(double %a)
+  ret double %round
+}
+
+declare float @llvm.floor.f32(float) nounwind readnone
+declare double @llvm.floor.f64(double) nounwind readnone
+declare float @llvm.ceil.f32(float) nounwind readnone
+declare double @llvm.ceil.f64(double) nounwind readnone
+declare float @llvm.round.f32(float) nounwind readnone
+declare double @llvm.round.f64(double) nounwind readnone
+declare float @llvm.trunc.f32(float) nounwind readnone
+declare double @llvm.trunc.f64(double) nounwind readnone
+declare float @llvm.rint.f32(float) nounwind readnone
+declare double @llvm.rint.f64(double) nounwind readnone
+declare float @llvm.roundeven.f32(float)
+declare double @llvm.roundeven.f64(double)

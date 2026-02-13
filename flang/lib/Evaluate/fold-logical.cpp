@@ -44,6 +44,7 @@ static Expr<T> FoldAllAnyParity(FoldingContext &context, FunctionRef<T> &&ref,
 // OUT_OF_RANGE(x,mold[,round]) references are entirely rewritten here into
 // expressions, which are then folded into constants when 'x' and 'round'
 // are constant.  It is guaranteed that 'x' is evaluated at most once.
+// TODO: unsigned
 
 template <int X_RKIND, int MOLD_IKIND>
 Expr<SomeReal> RealToIntBoundHelper(bool round, bool negate) {
@@ -529,12 +530,11 @@ static Expr<Type<TypeCategory::Logical, KIND>> RewriteOutOfRange(
           if (args.size() >= 3) {
             // Bounds depend on round= value
             if (auto *round{UnwrapExpr<Expr<SomeType>>(args[2])}) {
-              if (const Symbol * whole{UnwrapWholeSymbolDataRef(*round)};
-                  whole && semantics::IsOptional(whole->GetUltimate()) &&
-                  context.languageFeatures().ShouldWarn(
-                      common::UsageWarning::OptionalMustBePresent)) {
+              if (const Symbol *whole{UnwrapWholeSymbolDataRef(*round)};
+                  whole && semantics::IsOptional(whole->GetUltimate())) {
                 if (auto source{args[2]->sourceLocation()}) {
-                  context.messages().Say(*source,
+                  context.Warn(common::UsageWarning::OptionalMustBePresent,
+                      *source,
                       "ROUND= argument to OUT_OF_RANGE() is an optional dummy argument that must be present at execution"_warn_en_US);
                 }
               }
@@ -620,6 +620,24 @@ static Expr<Type<TypeCategory::Logical, KIND>> RewriteOutOfRange(
   return AsExpr(std::move(funcRef));
 }
 
+static std::optional<common::RoundingMode> GetRoundingMode(
+    const std::optional<ActualArgument> &arg) {
+  if (arg) {
+    if (const auto *cst{UnwrapExpr<Constant<SomeDerived>>(*arg)}) {
+      if (auto constr{cst->GetScalarValue()}) {
+        if (StructureConstructorValues & values{constr->values()};
+            values.size() == 1) {
+          const Expr<SomeType> &value{values.begin()->second.value()};
+          if (auto code{ToInt64(value)}) {
+            return static_cast<common::RoundingMode>(*code);
+          }
+        }
+      }
+    }
+  }
+  return std::nullopt;
+}
+
 template <int KIND>
 Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
     FoldingContext &context,
@@ -629,25 +647,21 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
   auto *intrinsic{std::get_if<SpecificIntrinsic>(&funcRef.proc().u)};
   CHECK(intrinsic);
   std::string name{intrinsic->name};
-  using SameInt = Type<TypeCategory::Integer, KIND>;
   if (name == "all") {
     return FoldAllAnyParity(
         context, std::move(funcRef), &Scalar<T>::AND, Scalar<T>{true});
+  } else if (name == "allocated") {
+    if (IsNullAllocatable(args[0]->UnwrapExpr())) {
+      return Expr<T>{false};
+    }
   } else if (name == "any") {
     return FoldAllAnyParity(
         context, std::move(funcRef), &Scalar<T>::OR, Scalar<T>{false});
   } else if (name == "associated") {
-    bool gotConstant{true};
-    const Expr<SomeType> *firstArgExpr{args[0]->UnwrapExpr()};
-    if (!firstArgExpr || !IsNullPointer(*firstArgExpr)) {
-      gotConstant = false;
-    } else if (args[1]) { // There's a second argument
-      const Expr<SomeType> *secondArgExpr{args[1]->UnwrapExpr()};
-      if (!secondArgExpr || !IsNullPointer(*secondArgExpr)) {
-        gotConstant = false;
-      }
+    if (IsNullPointer(args[0]->UnwrapExpr()) ||
+        (args[1] && IsNullPointer(args[1]->UnwrapExpr()))) {
+      return Expr<T>{false};
     }
-    return gotConstant ? Expr<T>{false} : Expr<T>{std::move(funcRef)};
   } else if (name == "bge" || name == "bgt" || name == "ble" || name == "blt") {
     static_assert(std::is_same_v<Scalar<LargestInt>, BOZLiteralConstant>);
 
@@ -700,6 +714,7 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
       return Expr<T>{std::move(funcRef)};
     }
   } else if (name == "btest") {
+    using SameInt = Type<TypeCategory::Integer, KIND>;
     if (const auto *ix{UnwrapExpr<Expr<SomeInteger>>(args[0])}) {
       return common::visit(
           [&](const auto &x) {
@@ -718,6 +733,24 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
                     }));
           },
           ix->u);
+    } else if (const auto *ux{UnwrapExpr<Expr<SomeUnsigned>>(args[0])}) {
+      return common::visit(
+          [&](const auto &x) {
+            using UT = ResultType<decltype(x)>;
+            return FoldElementalIntrinsic<T, UT, SameInt>(context,
+                std::move(funcRef),
+                ScalarFunc<T, UT, SameInt>(
+                    [&](const Scalar<UT> &x, const Scalar<SameInt> &pos) {
+                      auto posVal{pos.ToInt64()};
+                      if (posVal < 0 || posVal >= x.bits) {
+                        context.messages().Say(
+                            "POS=%jd out of range for BTEST"_err_en_US,
+                            static_cast<std::intmax_t>(posVal));
+                      }
+                      return Scalar<T>{x.BTEST(posVal)};
+                    }));
+          },
+          ux->u);
     }
   } else if (name == "dot_product") {
     return FoldDotProduct<T>(context, std::move(funcRef));
@@ -766,14 +799,20 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
     }
   } else if (name == "is_contiguous") {
     if (args.at(0)) {
+      std::optional<bool> knownContiguous;
       if (auto *expr{args[0]->UnwrapExpr()}) {
-        if (auto contiguous{IsContiguous(*expr, context)}) {
-          return Expr<T>{*contiguous};
-        }
+        knownContiguous = IsContiguous(*expr, context);
       } else if (auto *assumedType{args[0]->GetAssumedTypeDummy()}) {
-        if (auto contiguous{IsContiguous(*assumedType, context)}) {
-          return Expr<T>{*contiguous};
+        knownContiguous = IsContiguous(*assumedType, context);
+      }
+      if (knownContiguous) {
+        if (*knownContiguous) {
+          if (auto source{args[0]->sourceLocation()}) {
+            context.Warn(common::UsageWarning::ConstantIsContiguous, *source,
+                "is_contiguous() is always true for named constants and subobjects of named constants"_warn_en_US);
+          }
         }
+        return Expr<T>{*knownContiguous};
       }
     }
   } else if (name == "is_iostat_end") {
@@ -831,17 +870,93 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
         }
       }
     }
-  } else if (name == "__builtin_ieee_support_datatype" ||
-      name == "__builtin_ieee_support_denormal" ||
-      name == "__builtin_ieee_support_divide" ||
-      name == "__builtin_ieee_support_inf" ||
-      name == "__builtin_ieee_support_io" ||
-      name == "__builtin_ieee_support_nan" ||
-      name == "__builtin_ieee_support_sqrt" ||
-      name == "__builtin_ieee_support_standard" ||
-      name == "__builtin_ieee_support_subnormal" ||
-      name == "__builtin_ieee_support_underflow_control") {
+  } else if (name == "__builtin_ieee_support_datatype") {
     return Expr<T>{true};
+  } else if (name == "__builtin_ieee_support_denormal") {
+    return Expr<T>{context.targetCharacteristics().ieeeFeatures().test(
+        IeeeFeature::Denormal)};
+  } else if (name == "__builtin_ieee_support_divide") {
+    return Expr<T>{context.targetCharacteristics().ieeeFeatures().test(
+        IeeeFeature::Divide)};
+  } else if (name == "__builtin_ieee_support_flag") {
+    if (context.targetCharacteristics().ieeeFeatures().test(
+            IeeeFeature::Flags)) {
+      if (args[0]) {
+        if (const auto *cst{UnwrapExpr<Constant<SomeDerived>>(args[0])}) {
+          if (auto constr{cst->GetScalarValue()}) {
+            if (StructureConstructorValues & values{constr->values()};
+                values.size() == 1) {
+              const Expr<SomeType> &value{values.begin()->second.value()};
+              if (auto flag{ToInt64(value)}) {
+                if (flag != _FORTRAN_RUNTIME_IEEE_DENORM) {
+                  // Check for suppport for standard exceptions.
+                  return Expr<T>{
+                      context.targetCharacteristics().ieeeFeatures().test(
+                          IeeeFeature::Flags)};
+                } else if (args[1]) {
+                  // Check for nonstandard ieee_denorm exception support for
+                  // a given kind.
+                  return Expr<T>{context.targetCharacteristics()
+                          .hasSubnormalExceptionSupport(
+                              args[1]->GetType().value().kind())};
+                } else {
+                  // Check for nonstandard ieee_denorm exception support for
+                  // all kinds.
+                  return Expr<T>{context.targetCharacteristics()
+                          .hasSubnormalExceptionSupport()};
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } else if (name == "__builtin_ieee_support_halting") {
+    if (!context.targetCharacteristics()
+            .haltingSupportIsUnknownAtCompileTime()) {
+      return Expr<T>{context.targetCharacteristics().ieeeFeatures().test(
+          IeeeFeature::Halting)};
+    }
+  } else if (name == "__builtin_ieee_support_inf") {
+    return Expr<T>{
+        context.targetCharacteristics().ieeeFeatures().test(IeeeFeature::Inf)};
+  } else if (name == "__builtin_ieee_support_io") {
+    return Expr<T>{
+        context.targetCharacteristics().ieeeFeatures().test(IeeeFeature::Io)};
+  } else if (name == "__builtin_ieee_support_nan") {
+    return Expr<T>{
+        context.targetCharacteristics().ieeeFeatures().test(IeeeFeature::NaN)};
+  } else if (name == "__builtin_ieee_support_rounding") {
+    if (context.targetCharacteristics().ieeeFeatures().test(
+            IeeeFeature::Rounding)) {
+      if (auto mode{GetRoundingMode(args[0])}) {
+        return Expr<T>{mode != common::RoundingMode::TiesAwayFromZero};
+      }
+    }
+  } else if (name == "__builtin_ieee_support_sqrt") {
+    return Expr<T>{
+        context.targetCharacteristics().ieeeFeatures().test(IeeeFeature::Sqrt)};
+  } else if (name == "__builtin_ieee_support_standard") {
+    // ieee_support_standard depends in part on ieee_support_halting.
+    if (!context.targetCharacteristics()
+            .haltingSupportIsUnknownAtCompileTime()) {
+      return Expr<T>{context.targetCharacteristics().ieeeFeatures().test(
+          IeeeFeature::Standard)};
+    }
+  } else if (name == "__builtin_ieee_support_subnormal") {
+    return Expr<T>{context.targetCharacteristics().ieeeFeatures().test(
+        IeeeFeature::Subnormal)};
+  } else if (name == "__builtin_ieee_support_underflow_control") {
+    // Setting kind=0 checks subnormal flushing control across all type kinds.
+    if (args[0]) {
+      return Expr<T>{
+          context.targetCharacteristics().hasSubnormalFlushingControl(
+              args[0]->GetType().value().kind())};
+    } else {
+      return Expr<T>{
+          context.targetCharacteristics().hasSubnormalFlushingControl(
+              /*any=*/false)};
+    }
   }
   return Expr<T>{std::move(funcRef)};
 }
@@ -862,6 +977,9 @@ Expr<LogicalResult> FoldOperation(
     if constexpr (T::category == TypeCategory::Integer) {
       result =
           Satisfies(relation.opr, folded->first.CompareSigned(folded->second));
+    } else if constexpr (T::category == TypeCategory::Unsigned) {
+      result = Satisfies(
+          relation.opr, folded->first.CompareUnsigned(folded->second));
     } else if constexpr (T::category == TypeCategory::Real) {
       result = Satisfies(relation.opr, folded->first.Compare(folded->second));
     } else if constexpr (T::category == TypeCategory::Complex) {

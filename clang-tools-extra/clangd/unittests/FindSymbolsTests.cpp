@@ -43,6 +43,12 @@ template <class... ChildMatchers>
   return Field(&DocumentSymbol::children, UnorderedElementsAre(ChildrenM...));
 }
 
+template <typename... Tags>
+::testing::Matcher<DocumentSymbol> withSymbolTags(Tags... tags) {
+  // Matches the tags vector ignoring element order.
+  return Field(&DocumentSymbol::tags, UnorderedElementsAre(tags...));
+}
+
 std::vector<SymbolInformation> getSymbols(TestTU &TU, llvm::StringRef Query,
                                           int Limit = 0) {
   auto SymbolInfos = getWorkspaceSymbols(Query, Limit, TU.index().get(),
@@ -106,14 +112,14 @@ TEST(WorkspaceSymbols, Unnamed) {
               ElementsAre(AllOf(qName("UnnamedStruct"),
                                 withKind(SymbolKind::Variable))));
   EXPECT_THAT(getSymbols(TU, "InUnnamed"),
-              ElementsAre(AllOf(qName("(anonymous struct)::InUnnamed"),
+              ElementsAre(AllOf(qName("(unnamed struct)::InUnnamed"),
                                 withKind(SymbolKind::Field))));
 }
 
 TEST(WorkspaceSymbols, InMainFile) {
   TestTU TU;
   TU.Code = R"cpp(
-      int test() {}
+      int test() { return 0; }
       static void test2() {}
       )cpp";
   EXPECT_THAT(getSymbols(TU, "test"),
@@ -335,6 +341,7 @@ TEST(DocumentSymbols, BasicSymbols) {
         Foo(int a) {}
         void $decl[[f]]();
         friend void f1();
+        friend void f2() {}
         friend class Friend;
         Foo& operator=(const Foo&);
         ~Foo();
@@ -346,7 +353,7 @@ TEST(DocumentSymbols, BasicSymbols) {
       };
 
       void f1();
-      inline void f2() {}
+      void f2();
       static const int KInt = 2;
       const char* kStr = "123";
 
@@ -385,6 +392,8 @@ TEST(DocumentSymbols, BasicSymbols) {
                      AllOf(withName("Foo"), withKind(SymbolKind::Constructor),
                            withDetail("(int)"), children()),
                      AllOf(withName("f"), withKind(SymbolKind::Method),
+                           withDetail("void ()"), children()),
+                     AllOf(withName("f2"), withKind(SymbolKind::Function),
                            withDetail("void ()"), children()),
                      AllOf(withName("operator="), withKind(SymbolKind::Method),
                            withDetail("Foo &(const Foo &)"), children()),
@@ -537,12 +546,14 @@ TEST(DocumentSymbols, InHeaderFile) {
   TestTU TU;
   TU.AdditionalFiles["bar.h"] = R"cpp(
       int foo() {
+        return 0;
       }
       )cpp";
   TU.Code = R"cpp(
       int i; // declaration to finish preamble
       #include "bar.h"
       int test() {
+        return 0;
       }
       )cpp";
   EXPECT_THAT(getSymbols(TU.build()),
@@ -651,15 +662,16 @@ TEST(DocumentSymbols, Enums) {
       getSymbols(TU.build()),
       ElementsAre(
           AllOf(withName("(anonymous enum)"), withDetail("enum"),
-                children(AllOf(withName("Red"), withDetail("(unnamed)")))),
+                children(AllOf(withName("Red"), withDetail("(unnamed enum)")))),
           AllOf(withName("Color"), withDetail("enum"),
                 children(AllOf(withName("Green"), withDetail("Color")))),
           AllOf(withName("Color2"), withDetail("enum"),
                 children(AllOf(withName("Yellow"), withDetail("Color2")))),
-          AllOf(withName("ns"),
-                children(AllOf(withName("(anonymous enum)"), withDetail("enum"),
-                               children(AllOf(withName("Black"),
-                                              withDetail("(unnamed)"))))))));
+          AllOf(
+              withName("ns"),
+              children(AllOf(withName("(anonymous enum)"), withDetail("enum"),
+                             children(AllOf(withName("Black"),
+                                            withDetail("(unnamed enum)"))))))));
 }
 
 TEST(DocumentSymbols, Macro) {
@@ -780,7 +792,7 @@ TEST(DocumentSymbols, FuncTemplates) {
   TestTU TU;
   Annotations Source(R"cpp(
     template <class T>
-    T foo() {}
+    T foo() { return T{}; }
 
     auto x = foo<int>();
     auto y = foo<double>();
@@ -1124,6 +1136,69 @@ TEST(DocumentSymbolsTest, PragmaMarkGroupsNoNesting) {
               UnorderedElementsAre(withName("Helpers"), withName("helpA"),
                                    withName("(unnamed group)"),
                                    withName("Core"), withName("coreMethod")));
+}
+
+TEST(DocumentSymbolsTest, SymbolTags) {
+  TestTU TU;
+  Annotations Main(R"cpp(
+    class AbstractClass {
+      public:
+        virtual ~AbstractClass() = default;
+        virtual void f1() = 0;
+        void f2() const;
+      protected:
+        void f3(){}
+      private:
+        static void f4(){}
+    };
+
+    void AbstractClass::f2() const {}
+
+    class ImplClass final: public AbstractClass {
+      public:
+        void f1() final {}
+    };
+    )cpp");
+
+  TU.Code = Main.code().str();
+  auto Symbols = getSymbols(TU.build());
+  EXPECT_THAT(
+      Symbols,
+      UnorderedElementsAre(
+          AllOf(
+              withName("AbstractClass"),
+              withSymbolTags(SymbolTag::Abstract, SymbolTag::Declaration,
+                             SymbolTag::Definition),
+              children(
+                  AllOf(withName("~AbstractClass"),
+                        withSymbolTags(SymbolTag::Public, SymbolTag::Virtual,
+                                       SymbolTag::Declaration,
+                                       SymbolTag::Definition)),
+                  AllOf(withName("f1"),
+                        withSymbolTags(SymbolTag::Public, SymbolTag::Abstract,
+                                       SymbolTag::Virtual,
+                                       SymbolTag::Declaration)),
+                  AllOf(withName("f2"), withSymbolTags(SymbolTag::Public,
+                                                       SymbolTag::Declaration,
+                                                       SymbolTag::ReadOnly)),
+                  AllOf(withName("f3"), withSymbolTags(SymbolTag::Protected,
+                                                       SymbolTag::Declaration,
+                                                       SymbolTag::Definition)),
+                  AllOf(withName("f4"),
+                        withSymbolTags(SymbolTag::Private, SymbolTag::Static,
+                                       SymbolTag::Declaration,
+                                       SymbolTag::Definition)))),
+          AllOf(withName("AbstractClass::f2"),
+                withSymbolTags(SymbolTag::Public, SymbolTag::Declaration,
+                               SymbolTag::Definition, SymbolTag::ReadOnly)),
+          AllOf(withName("ImplClass"),
+                withSymbolTags(SymbolTag::Final, SymbolTag::Declaration,
+                               SymbolTag::Definition),
+                children(AllOf(
+                    withName("f1"),
+                    withSymbolTags(SymbolTag::Public, SymbolTag::Final,
+                                   SymbolTag::Virtual, SymbolTag::Declaration,
+                                   SymbolTag::Definition))))));
 }
 
 } // namespace

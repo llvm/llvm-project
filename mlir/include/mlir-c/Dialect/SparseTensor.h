@@ -39,6 +39,7 @@ enum MlirSparseTensorLevelFormat {
 enum MlirSparseTensorLevelPropertyNondefault {
   MLIR_SPARSE_PROPERTY_NON_UNIQUE = 0x0001,
   MLIR_SPARSE_PROPERTY_NON_ORDERED = 0x0002,
+  MLIR_SPARSE_PROPERTY_SOA = 0x0004,
 };
 
 //===----------------------------------------------------------------------===//
@@ -55,6 +56,8 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirSparseTensorEncodingAttrGet(
     MlirSparseTensorLevelType const *lvlTypes, MlirAffineMap dimToLvl,
     MlirAffineMap lvlTodim, int posWidth, int crdWidth,
     MlirAttribute explicitVal, MlirAttribute implicitVal);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirSparseTensorEncodingAttrGetName(void);
 
 /// Returns the level-rank of the `sparse_tensor.encoding` attribute.
 MLIR_CAPI_EXPORTED intptr_t

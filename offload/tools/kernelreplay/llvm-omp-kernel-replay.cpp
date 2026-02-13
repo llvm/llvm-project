@@ -13,11 +13,12 @@
 
 #include "omptarget.h"
 
-#include "Shared/PluginAPI.h"
-
+#include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
+
 #include <cstdint>
 #include <cstdlib>
 
@@ -60,11 +61,11 @@ int main(int argc, char **argv) {
       MemoryBuffer::getFile(InputFilename, /*isText=*/true,
                             /*RequiresNullTerminator=*/true);
   if (!KernelInfoMB)
-    report_fatal_error("Error reading the kernel info json file");
+    reportFatalUsageError("Error reading the kernel info json file");
   Expected<json::Value> JsonKernelInfo =
       json::parse(KernelInfoMB.get()->getBuffer());
   if (auto Err = JsonKernelInfo.takeError())
-    report_fatal_error("Cannot parse the kernel info json file");
+    reportFatalUsageError("Cannot parse the kernel info json file");
 
   auto NumTeamsJson =
       JsonKernelInfo->getAsObject()->getInteger("NumTeamsClause");
@@ -74,7 +75,7 @@ int main(int argc, char **argv) {
   unsigned NumThreads =
       (NumThreadsOpt > 0 ? NumThreadsOpt : NumThreadsJson.value());
   // TODO: Print a warning if number of teams/threads is explicitly set in the
-  // kernel info but overriden through command line options.
+  // kernel info but overridden through command line options.
   auto LoopTripCount =
       JsonKernelInfo->getAsObject()->getInteger("LoopTripCount");
   auto KernelFunc = JsonKernelInfo->getAsObject()->getString("Name");
@@ -93,17 +94,18 @@ int main(int argc, char **argv) {
   void *BAllocStart = reinterpret_cast<void *>(
       JsonKernelInfo->getAsObject()->getInteger("BumpAllocVAStart").value());
 
-  __tgt_offload_entry KernelEntry = {nullptr, nullptr, 0, 0, 0};
+  llvm::offloading::EntryTy KernelEntry = {~0U,     0, 0, 0,      nullptr,
+                                           nullptr, 0, 0, nullptr};
   std::string KernelEntryName = KernelFunc.value().str();
-  KernelEntry.name = const_cast<char *>(KernelEntryName.c_str());
+  KernelEntry.SymbolName = const_cast<char *>(KernelEntryName.c_str());
   // Anything non-zero works to uniquely identify the kernel.
-  KernelEntry.addr = (void *)0x1;
+  KernelEntry.Address = (void *)0x1;
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> ImageMB =
       MemoryBuffer::getFile(KernelEntryName + ".image", /*isText=*/false,
                             /*RequiresNullTerminator=*/false);
   if (!ImageMB)
-    report_fatal_error("Error reading the kernel image.");
+    reportFatalUsageError("Error reading the kernel image.");
 
   __tgt_device_image DeviceImage;
   DeviceImage.ImageStart = const_cast<char *>(ImageMB.get()->getBufferStart());
@@ -144,7 +146,7 @@ int main(int argc, char **argv) {
                             /*RequiresNullTerminator=*/false);
 
   if (!DeviceMemoryMB)
-    report_fatal_error("Error reading the kernel input device memory.");
+    reportFatalUsageError("Error reading the kernel input device memory.");
 
   // On AMD for currently unknown reasons we cannot copy memory mapped data to
   // device. This is a work-around.
@@ -166,7 +168,7 @@ int main(int argc, char **argv) {
   }
 
   __tgt_target_kernel_replay(
-      /*Loc=*/nullptr, DeviceId, KernelEntry.addr, (char *)recored_data,
+      /*Loc=*/nullptr, DeviceId, KernelEntry.Address, (char *)recored_data,
       DeviceMemoryMB.get()->getBufferSize(), TgtArgs.data(),
       TgtArgOffsets.data(), NumArgs.value(), NumTeams, NumThreads,
       LoopTripCount.value());
@@ -177,14 +179,15 @@ int main(int argc, char **argv) {
                               /*isText=*/false,
                               /*RequiresNullTerminator=*/false);
     if (!OriginalOutputMB)
-      report_fatal_error("Error reading the kernel original output file, make "
-                         "sure LIBOMPTARGET_SAVE_OUTPUT is set when recording");
+      reportFatalUsageError(
+          "Error reading the kernel original output file, make sure "
+          "LIBOMPTARGET_SAVE_OUTPUT is set when recording");
     ErrorOr<std::unique_ptr<MemoryBuffer>> ReplayOutputMB =
         MemoryBuffer::getFile(KernelEntryName + ".replay.output",
                               /*isText=*/false,
                               /*RequiresNullTerminator=*/false);
     if (!ReplayOutputMB)
-      report_fatal_error("Error reading the kernel replay output file");
+      reportFatalUsageError("Error reading the kernel replay output file");
 
     StringRef OriginalOutput = OriginalOutputMB.get()->getBuffer();
     StringRef ReplayOutput = ReplayOutputMB.get()->getBuffer();

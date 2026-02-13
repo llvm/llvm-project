@@ -9,17 +9,30 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_NEAREST_INTEGER_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_NEAREST_INTEGER_H
 
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/cpu_features.h"
 
 #if (defined(LIBC_TARGET_ARCH_IS_X86_64) && defined(LIBC_TARGET_CPU_HAS_SSE4_2))
 #include "x86_64/nearest_integer.h"
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
+#elif (defined(LIBC_TARGET_ARCH_IS_AARCH64) && defined(__ARM_FP))
 #include "aarch64/nearest_integer.h"
+#elif defined(LIBC_TARGET_ARCH_IS_GPU)
+
+namespace LIBC_NAMESPACE_DECL {
+namespace fputil {
+
+LIBC_INLINE float nearest_integer(float x) { return __builtin_rintf(x); }
+
+LIBC_INLINE double nearest_integer(double x) { return __builtin_rint(x); }
+
+} // namespace fputil
+} // namespace LIBC_NAMESPACE_DECL
+
 #else
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 // This is a fast implementation for rounding to a nearest integer that.
@@ -27,7 +40,7 @@ namespace fputil {
 // Notice that for AARCH64 and x86-64 with SSE4.2 support, we will use their
 // corresponding rounding instruction instead.  And in those cases, the results
 // are rounded to the nearest integer, tie-to-even.
-LIBC_INLINE float nearest_integer(float x) {
+LIBC_INLINE static constexpr float nearest_integer(float x) {
   if (x < 0x1p24f && x > -0x1p24f) {
     float r = x < 0 ? (x - 0x1.0p23f) + 0x1.0p23f : (x + 0x1.0p23f) - 0x1.0p23f;
     float diff = x - r;
@@ -43,7 +56,7 @@ LIBC_INLINE float nearest_integer(float x) {
   return x;
 }
 
-LIBC_INLINE double nearest_integer(double x) {
+LIBC_INLINE static constexpr double nearest_integer(double x) {
   if (x < 0x1p53 && x > -0x1p53) {
     double r = x < 0 ? (x - 0x1.0p52) + 0x1.0p52 : (x + 0x1.0p52) - 0x1.0p52;
     double diff = x - r;
@@ -60,7 +73,7 @@ LIBC_INLINE double nearest_integer(double x) {
 }
 
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_NEAREST_INTEGER_H

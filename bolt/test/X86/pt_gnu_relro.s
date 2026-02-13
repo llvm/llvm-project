@@ -1,7 +1,7 @@
 # REQUIRES: system-linux
 
-# Check that BOLT recognizes PT_GNU_RELRO segment and marks respective sections
-# accordingly.
+## Check that BOLT recognizes PT_GNU_RELRO segment and marks respective sections
+## accordingly.
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t.exe -q --no-relax
@@ -22,7 +22,7 @@
 # READELF: 04 .got
 
 # RUN: llvm-bolt %t.exe --relocs -o %t.null -v=1 \
-# RUN:   |& FileCheck --check-prefix=BOLT %s
+# RUN:   2>&1 | FileCheck --check-prefix=BOLT %s
 # BOLT: BOLT-INFO: marking .got as GNU_RELRO
 
   .globl _start

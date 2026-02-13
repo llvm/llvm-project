@@ -28,7 +28,7 @@ public:
   generateCodeTemplates(InstructionTemplate Variant,
                         const BitVector &ForbiddenRegisters) const override;
 
-  static constexpr const size_t kMinNumDifferentAddresses = 6;
+  static constexpr size_t kMinNumDifferentAddresses = 6;
 
 private:
   // Instantiates memory operands within a snippet.
@@ -55,7 +55,7 @@ private:
   //   add eax, [rdi + 192]
   //   mov eax, [rdi + 256]
   void instantiateMemoryOperands(
-      unsigned ScratchSpaceReg,
+      MCRegister ScratchSpaceReg,
       std::vector<InstructionTemplate> &SnippetTemplate) const;
 };
 

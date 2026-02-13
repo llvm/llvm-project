@@ -11,6 +11,7 @@
 
 #include <__algorithm/in_in_result.h>
 #include <__algorithm/iterator_operations.h>
+#include <__algorithm/min.h>
 #include <__algorithm/swap_ranges.h>
 #include <__config>
 #include <__iterator/concepts.h>
@@ -18,7 +19,9 @@
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/dangling.h>
+#include <__type_traits/is_same.h>
 #include <__utility/move.h>
+#include <__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -36,15 +39,38 @@ namespace ranges {
 template <class _I1, class _I2>
 using swap_ranges_result = in_in_result<_I1, _I2>;
 
-namespace __swap_ranges {
-struct __fn {
+struct __swap_ranges {
   template <input_iterator _I1, sentinel_for<_I1> _S1, input_iterator _I2, sentinel_for<_I2> _S2>
     requires indirectly_swappable<_I1, _I2>
   _LIBCPP_HIDE_FROM_ABI constexpr swap_ranges_result<_I1, _I2>
   operator()(_I1 __first1, _S1 __last1, _I2 __first2, _S2 __last2) const {
-    auto __ret = std::__swap_ranges<_RangeAlgPolicy>(
-        std::move(__first1), std::move(__last1), std::move(__first2), std::move(__last2));
-    return {std::move(__ret.first), std::move(__ret.second)};
+    if constexpr (sized_sentinel_for<_I1, _S1> && sized_sentinel_for<_I2, _S2> &&
+                  (random_access_iterator<_I1> || random_access_iterator<_I2> ||
+                   (is_same_v<_I1, _S1> && is_same_v<_I2, _S2>))) {
+      auto __offset = std::min(__last1 - __first1, __last2 - __first2);
+
+      auto __ret = [&] {
+        if constexpr (random_access_iterator<_I1>)
+          return std::__swap_ranges<_RangeAlgPolicy>(__first1, __first1 + __offset, std::move(__first2));
+        else if constexpr (random_access_iterator<_I2>)
+          return std::__swap_ranges<_RangeAlgPolicy>(__first2, __first2 + __offset, std::move(__first1));
+        else if (__last2 - __first2 < __last1 - __first1) {
+          auto __reversed =
+              std::__swap_ranges<_RangeAlgPolicy>(std::move(__first2), std::move(__last2), std::move(__first1));
+          return std::pair<_I1, _I2>(std::move(__reversed.second), std::move(__reversed.first));
+        } else
+          return std::__swap_ranges<_RangeAlgPolicy>(std::move(__first1), std::move(__last1), std::move(__first2));
+      }();
+      return {std::move(__ret.first), std::move(__ret.second)};
+    } else {
+      while (__first1 != __last1 && __first2 != __last2) {
+        ranges::iter_swap(__first1, __first2);
+        ++__first1;
+        ++__first2;
+      }
+
+      return {std::move(__first1), std::move(__first2)};
+    }
   }
 
   template <input_range _R1, input_range _R2>
@@ -54,10 +80,9 @@ struct __fn {
     return operator()(ranges::begin(__r1), ranges::end(__r1), ranges::begin(__r2), ranges::end(__r2));
   }
 };
-} // namespace __swap_ranges
 
 inline namespace __cpo {
-inline constexpr auto swap_ranges = __swap_ranges::__fn{};
+inline constexpr auto swap_ranges = __swap_ranges{};
 } // namespace __cpo
 } // namespace ranges
 

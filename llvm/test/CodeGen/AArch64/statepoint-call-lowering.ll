@@ -202,19 +202,19 @@ define void @test_attributes(ptr byval(%struct2) %s) gc "statepoint-example" {
 ; CHECK-LABEL: test_attributes:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    ldr x8, [sp, #64]
 ; CHECK-NEXT:    ldr q0, [sp, #48]
-; CHECK-NEXT:    mov x18, xzr
+; CHECK-NEXT:    mov x15, xzr
 ; CHECK-NEXT:    mov w0, #42 // =0x2a
 ; CHECK-NEXT:    mov w1, #17 // =0x11
 ; CHECK-NEXT:    str x8, [sp, #16]
 ; CHECK-NEXT:    str q0, [sp]
 ; CHECK-NEXT:    bl consume_attributes
 ; CHECK-NEXT:  .Ltmp9:
-; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
 entry:

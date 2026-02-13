@@ -13,5 +13,5 @@ enforced to be safe in the language and so relies on programmer discipline to
 get it right.
 
 This rule is part of the `Type safety (Type.7)
-<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Pro-type-unions>`_
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#pro-type-unions>`_
 profile from the C++ Core Guidelines.

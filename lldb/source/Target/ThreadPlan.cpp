@@ -174,6 +174,7 @@ bool ThreadPlan::IsUsuallyUnexplainedStopReason(lldb::StopReason reason) {
   case eStopReasonFork:
   case eStopReasonVFork:
   case eStopReasonVForkDone:
+  case eStopReasonInterrupt:
     return true;
   default:
     return false;

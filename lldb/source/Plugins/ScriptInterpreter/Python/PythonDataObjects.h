@@ -44,9 +44,8 @@
 //   nonnull, and use optionals where necessary.
 //
 
-
-#ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONDATAOBJECTS_H
-#define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONDATAOBJECTS_H
+#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONDATAOBJECTS_H
+#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONDATAOBJECTS_H
 
 #include "lldb/Host/Config.h"
 
@@ -194,8 +193,8 @@ template <typename T, char F> struct PassthroughFormat {
 };
 
 template <> struct PythonFormat<char *> : PassthroughFormat<char *, 's'> {};
-template <> struct PythonFormat<const char *> : 
-    PassthroughFormat<const char *, 's'> {};
+template <>
+struct PythonFormat<const char *> : PassthroughFormat<const char *, 's'> {};
 template <> struct PythonFormat<char> : PassthroughFormat<char, 'b'> {};
 template <>
 struct PythonFormat<unsigned char> : PassthroughFormat<unsigned char, 'B'> {};
@@ -249,13 +248,6 @@ public:
   ~PythonObject() { Reset(); }
 
   void Reset();
-
-  void Dump() const {
-    if (m_py_obj)
-      _PyObject_Dump(m_py_obj);
-    else
-      puts("NULL");
-  }
 
   void Dump(Stream &strm) const;
 
@@ -780,9 +772,13 @@ private:
   operator=(const StructuredPythonObject &) = delete;
 };
 
+PyObject *RunString(const char *str, int start, PyObject *globals,
+                    PyObject *locals);
+int RunSimpleString(const char *str);
+
 } // namespace python
 } // namespace lldb_private
 
 #endif
 
-#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONDATAOBJECTS_H
+#endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONDATAOBJECTS_H

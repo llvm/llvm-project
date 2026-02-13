@@ -24,8 +24,6 @@
 #include "llvm/Support/GenericDomTree.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <set>
-#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -44,84 +42,6 @@ public:
   const DomTreeNodeT *Node;
   const DomTreeNodeT *parentNode;
 };
-
-template <class BlockT, bool IsPostDom>
-void DominanceFrontierBase<BlockT, IsPostDom>::removeBlock(BlockT *BB) {
-  assert(find(BB) != end() && "Block is not in DominanceFrontier!");
-  for (iterator I = begin(), E = end(); I != E; ++I)
-    I->second.remove(BB);
-  Frontiers.erase(BB);
-}
-
-template <class BlockT, bool IsPostDom>
-void DominanceFrontierBase<BlockT, IsPostDom>::addToFrontier(iterator I,
-                                                             BlockT *Node) {
-  assert(I != end() && "BB is not in DominanceFrontier!");
-  I->second.insert(Node);
-}
-
-template <class BlockT, bool IsPostDom>
-void DominanceFrontierBase<BlockT, IsPostDom>::removeFromFrontier(
-    iterator I, BlockT *Node) {
-  assert(I != end() && "BB is not in DominanceFrontier!");
-  assert(I->second.count(Node) && "Node is not in DominanceFrontier of BB");
-  I->second.remove(Node);
-}
-
-template <class BlockT, bool IsPostDom>
-bool DominanceFrontierBase<BlockT, IsPostDom>::compareDomSet(
-    DomSetType &DS1, const DomSetType &DS2) const {
-  std::set<BlockT *> tmpSet;
-  for (BlockT *BB : DS2)
-    tmpSet.insert(BB);
-
-  for (typename DomSetType::const_iterator I = DS1.begin(), E = DS1.end();
-       I != E;) {
-    BlockT *Node = *I++;
-
-    if (tmpSet.erase(Node) == 0)
-      // Node is in DS1 but tnot in DS2.
-      return true;
-  }
-
-  if (!tmpSet.empty()) {
-    // There are nodes that are in DS2 but not in DS1.
-    return true;
-  }
-
-  // DS1 and DS2 matches.
-  return false;
-}
-
-template <class BlockT, bool IsPostDom>
-bool DominanceFrontierBase<BlockT, IsPostDom>::compare(
-    DominanceFrontierBase<BlockT, IsPostDom> &Other) const {
-  DomSetMapType tmpFrontiers;
-  for (typename DomSetMapType::const_iterator I = Other.begin(),
-                                              E = Other.end();
-       I != E; ++I)
-    tmpFrontiers.insert(std::make_pair(I->first, I->second));
-
-  for (typename DomSetMapType::iterator I = tmpFrontiers.begin(),
-                                        E = tmpFrontiers.end();
-       I != E;) {
-    BlockT *Node = I->first;
-    const_iterator DFI = find(Node);
-    if (DFI == end())
-      return true;
-
-    if (compareDomSet(I->second, DFI->second))
-      return true;
-
-    ++I;
-    tmpFrontiers.erase(Node);
-  }
-
-  if (!tmpFrontiers.empty())
-    return true;
-
-  return false;
-}
 
 template <class BlockT, bool IsPostDom>
 void DominanceFrontierBase<BlockT, IsPostDom>::print(raw_ostream &OS) const {
@@ -153,12 +73,10 @@ void DominanceFrontierBase<BlockT, IsPostDom>::dump() const {
 }
 #endif
 
-template <class BlockT>
-const typename ForwardDominanceFrontierBase<BlockT>::DomSetType &
-ForwardDominanceFrontierBase<BlockT>::calculate(const DomTreeT &DT,
-                                                const DomTreeNodeT *Node) {
+template <class BlockT, bool IsPostDom>
+void DominanceFrontierBase<BlockT, IsPostDom>::calculate(
+    const DomTreeT &DT, const DomTreeNodeT *Node) {
   BlockT *BB = Node->getBlock();
-  DomSetType *Result = nullptr;
 
   std::vector<DFCalculateWorkObject<BlockT>> workList;
   SmallPtrSet<BlockT *, 32> visited;
@@ -179,10 +97,10 @@ ForwardDominanceFrontierBase<BlockT>::calculate(const DomTreeT &DT,
     // Visit each block only once.
     if (visited.insert(currentBB).second) {
       // Loop over CFG successors to calculate DFlocal[currentNode]
-      for (const auto Succ : children<BlockT *>(currentBB)) {
+      for (const auto Child : children<GraphTy>(currentBB)) {
         // Does Node immediately dominate this successor?
-        if (DT[Succ]->getIDom() != currentNode)
-          S.insert(Succ);
+        if (DT[Child]->getIDom() != currentNode)
+          S.insert(Child);
       }
     }
 
@@ -206,7 +124,6 @@ ForwardDominanceFrontierBase<BlockT>::calculate(const DomTreeT &DT,
     // from the workList.
     if (!visitChild) {
       if (!parentBB) {
-        Result = &S;
         break;
       }
 
@@ -220,8 +137,6 @@ ForwardDominanceFrontierBase<BlockT>::calculate(const DomTreeT &DT,
     }
 
   } while (!workList.empty());
-
-  return *Result;
 }
 
 } // end namespace llvm

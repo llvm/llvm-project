@@ -32,7 +32,7 @@ def StageWithSortSparseOpInterface : OpInterface<"StageWithSortSparseOp"> {
     /*methodBody=*/"">,
     InterfaceMethod<
     /*desc=*/"Stage the operation, return the final result value after staging.",
-    /*retTy=*/"::mlir::LogicalResult",
+    /*retTy=*/"::llvm::LogicalResult",
     /*methodName=*/"stageWithSort",
     /*args=*/(ins "::mlir::PatternRewriter &":$rewriter,
                   "Value &":$tmpBuf),

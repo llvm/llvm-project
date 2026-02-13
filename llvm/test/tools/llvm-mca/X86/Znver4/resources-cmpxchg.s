@@ -15,10 +15,10 @@ lock cmpxchg16b (%rax)
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  19     3     6.00    *      *            cmpxchg8b	(%rax)
-# CHECK-NEXT:  28     4     14.75   *      *            cmpxchg16b	(%rax)
-# CHECK-NEXT:  19     3     6.00    *      *            lock		cmpxchg8b	(%rax)
-# CHECK-NEXT:  28     4     14.75   *      *            lock		cmpxchg16b	(%rax)
+# CHECK-NEXT:  15     3     5.00    *      *            cmpxchg8b	(%rax)
+# CHECK-NEXT:  26     2     10.00   *      *            cmpxchg16b	(%rax)
+# CHECK-NEXT:  15     3     5.00    *      *            lock		cmpxchg8b	(%rax)
+# CHECK-NEXT:  26     2     10.00   *      *            lock		cmpxchg16b	(%rax)
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - Zn4AGU0
@@ -47,11 +47,11 @@ lock cmpxchg16b (%rax)
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -     41.50  41.50  41.50  41.50   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -     30.00  30.00  30.00  30.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -     6.00   6.00   6.00   6.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmpxchg8b	(%rax)
-# CHECK-NEXT:  -      -      -     14.75  14.75  14.75  14.75   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmpxchg16b	(%rax)
-# CHECK-NEXT:  -      -      -     6.00   6.00   6.00   6.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     lock		cmpxchg8b	(%rax)
-# CHECK-NEXT:  -      -      -     14.75  14.75  14.75  14.75   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     lock		cmpxchg16b	(%rax)
+# CHECK-NEXT:  -      -      -     5.00   5.00   5.00   5.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmpxchg8b	(%rax)
+# CHECK-NEXT:  -      -      -     10.00  10.00  10.00  10.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmpxchg16b	(%rax)
+# CHECK-NEXT:  -      -      -     5.00   5.00   5.00   5.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     lock		cmpxchg8b	(%rax)
+# CHECK-NEXT:  -      -      -     10.00  10.00  10.00  10.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     lock		cmpxchg16b	(%rax)

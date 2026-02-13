@@ -23,10 +23,6 @@
 
 #include <array>
 
-#if __FreeBSD_version >= 1300139
-#  define LLDB_HAS_FREEBSD_WATCHPOINT 1
-#endif
-
 namespace lldb_private {
 namespace process_freebsd {
 
@@ -37,7 +33,7 @@ class NativeRegisterContextFreeBSD_arm64
       public NativeRegisterContextDBReg_arm64 {
 public:
   NativeRegisterContextFreeBSD_arm64(const ArchSpec &target_arch,
-                                     NativeThreadProtocol &native_thread);
+                                     NativeThreadFreeBSD &native_thread);
 
   uint32_t GetRegisterSetCount() const override;
 
@@ -64,10 +60,8 @@ private:
   // and sizes, so we do not have to worry about these (and we have
   // a unittest to assert that).
   std::array<uint8_t, sizeof(reg) + sizeof(fpreg)> m_reg_data;
-#ifdef LLDB_HAS_FREEBSD_WATCHPOINT
   dbreg m_dbreg;
   bool m_read_dbreg;
-#endif
 
   Status ReadRegisterSet(uint32_t set);
   Status WriteRegisterSet(uint32_t set);

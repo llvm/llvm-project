@@ -108,7 +108,7 @@ void lazy() {
   (void)DoAnotherThing();
   (void)DoYetAnotherThing();
 
-  DoSomething(); // expected-warning {{ignoring return value}}
+  DoSomething(); // expected-warning {{ignoring return value of type 'Status' declared with 'clang::warn_unused_result'}}
   DoSomethingElse();
   DoAnotherThing();
   DoYetAnotherThing();
@@ -120,11 +120,11 @@ class [[clang::warn_unused_result]] StatusOr {
 StatusOr<int> doit();
 void test() {
   Foo f;
-  f.doStuff(); // expected-warning {{ignoring return value}}
-  doit(); // expected-warning {{ignoring return value}}
+  f.doStuff(); // expected-warning {{ignoring return value of type 'Status' declared with 'clang::warn_unused_result'}}
+  doit(); // expected-warning {{ignoring return value of type 'StatusOr<int>' declared with 'clang::warn_unused_result'}}
 
   auto func = []() { return Status(); };
-  func(); // expected-warning {{ignoring return value}}
+  func(); // expected-warning {{ignoring return value of type 'Status' declared with 'clang::warn_unused_result'}}
 }
 }
 
@@ -139,7 +139,7 @@ struct Status {};
 
 void Bar() {
   Foo f;
-  f.Bar(); // expected-warning {{ignoring return value}}
+  f.Bar(); // expected-warning {{ignoring return value of type 'Status' declared with 'clang::warn_unused_result'}}
 };
 
 }
@@ -215,18 +215,18 @@ P operator--(const P &) { return {}; };
 void f() {
   S s;
   P p;
-  s.DoThing(); // expected-warning {{ignoring return value}}
-  p.DoThing(); // expected-warning {{ignoring return value}}
+  s.DoThing(); // expected-warning {{ignoring return value of type 'S' declared with 'clang::warn_unused_result'}}
+  p.DoThing(); // expected-warning {{ignoring return value of type 'P' declared with 'clang::warn_unused_result'}}
   // Only postfix is expected to warn when written correctly.
-  s++; // expected-warning {{ignoring return value}}
-  s--; // expected-warning {{ignoring return value}}
-  p++; // expected-warning {{ignoring return value}}
-  p--; // expected-warning {{ignoring return value}}
+  s++; // expected-warning {{ignoring return value of type 'S' declared with 'clang::warn_unused_result'}}
+  s--; // expected-warning {{ignoring return value of type 'S' declared with 'clang::warn_unused_result'}}
+  p++; // expected-warning {{ignoring return value of type 'P' declared with 'clang::warn_unused_result'}}
+  p--; // expected-warning {{ignoring return value of type 'P' declared with 'clang::warn_unused_result'}}
   // Improperly written prefix operators should still warn.
-  ++s; // expected-warning {{ignoring return value}}
-  --s; // expected-warning {{ignoring return value}}
-  ++p; // expected-warning {{ignoring return value}}
-  --p; // expected-warning {{ignoring return value}}
+  ++s; // expected-warning {{ignoring return value of type 'S' declared with 'clang::warn_unused_result'}}
+  --s; // expected-warning {{ignoring return value of type 'S' declared with 'clang::warn_unused_result'}}
+  ++p; // expected-warning {{ignoring return value of type 'P' declared with 'clang::warn_unused_result'}}
+  --p; // expected-warning {{ignoring return value of type 'P' declared with 'clang::warn_unused_result'}}
 
   // Silencing the warning by cast to void still works.
   (void)s.DoThing();
@@ -243,7 +243,7 @@ namespace PR39837 {
 void g() {
   int a[2];
   for (int b : a)
-    f(b); // expected-warning {{ignoring return value}}
+    f(b); // expected-warning {{ignoring return value of function declared with 'clang::warn_unused_result'}}
 }
 } // namespace PR39837
 
@@ -261,12 +261,12 @@ typedef a indirect;
 a af1();
 indirect indirectf1();
 void af2() {
-  af1(); // expected-warning {{ignoring return value}}
+  af1(); // expected-warning {{ignoring return value of type 'a' declared with 'clang::warn_unused_result'}}
   void *(*a1)();
   a1(); // no warning
   a (*a2)();
-  a2(); // expected-warning {{ignoring return value}}
-  indirectf1(); // expected-warning {{ignoring return value}}
+  a2(); // expected-warning {{ignoring return value of type 'a' declared with 'clang::warn_unused_result'}}
+  indirectf1(); // expected-warning {{ignoring return value of type 'a' declared with 'clang::warn_unused_result'}}
 }
 [[nodiscard]] typedef void *b1; // expected-warning {{'[[nodiscard]]' attribute ignored when applied to a typedef; consider using '__attribute__((warn_unused_result))' or '[[clang::warn_unused_result]]' instead}}
 [[gnu::warn_unused_result]] typedef void *b2; // expected-warning {{'[[gnu::warn_unused_result]]' attribute ignored when applied to a typedef; consider using '__attribute__((warn_unused_result))' or '[[clang::warn_unused_result]]' instead}}
@@ -279,10 +279,216 @@ void bf2() {
 __attribute__((warn_unused_result)) typedef void *c;
 c cf1();
 void cf2() {
-  cf1(); // expected-warning {{ignoring return value}}
+  cf1(); // expected-warning {{ignoring return value of type 'c' declared with 'warn_unused_result'}}
   void *(*c1)();
   c1();
   c (*c2)();
-  c2(); // expected-warning {{ignoring return value}}
+  c2(); // expected-warning {{ignoring return value of type 'c' declared with 'warn_unused_result'}}
 }
 }
+
+namespace nodiscard_specialization {
+// Test to only mark a specialization of class template as nodiscard
+template<typename T> struct S { S(int) {} };
+template<> struct [[nodiscard]] S<int> { S(int) {} };
+template<typename T> struct [[clang::warn_unused_result]] S<const T> { S(int) {} };
+
+template<typename T>
+S<T> obtain(const T&) { return {2}; }
+
+template<typename T>
+[[nodiscard]] S<T> obtain2(const T&) { return {2}; }
+
+template<typename T>
+__attribute__((warn_unused_result)) S<T> obtain3(const T&) { return {2}; }
+
+void use() {
+  obtain(1.0);             // no warning
+  obtain(1);               // expected-warning {{ignoring return value of type 'S<int>' declared with 'nodiscard'}}
+  obtain<const double>(1); // expected-warning {{ignoring return value of type 'S<const double>' declared with 'clang::warn_unused_result'}}
+
+  S<double>(2);     // no warning
+  S<int>(2);        // expected-warning {{ignoring temporary of type 'S<int>' declared with 'nodiscard'}}
+  S<const char>(2); // expected-warning {{ignoring temporary of type 'S<const char>' declared with 'clang::warn_unused_result' attribute}}
+
+  // function should take precedence over type
+  obtain2(1.0);             // expected-warning {{ignoring return value of function declared with 'nodiscard'}}
+  obtain2(1);               // expected-warning {{ignoring return value of function declared with 'nodiscard'}}
+  obtain2<const double>(1); // expected-warning {{ignoring return value of function declared with 'nodiscard'}}
+  obtain3(1.0);             // expected-warning {{ignoring return value of function declared with 'warn_unused_result'}}
+  obtain3(1);               // expected-warning {{ignoring return value of function declared with 'warn_unused_result'}}
+  obtain3<const double>(1); // expected-warning {{ignoring return value of function declared with 'warn_unused_result'}}
+}
+
+// Test on constructor nodiscard
+struct H {
+  explicit H(int) {}
+  [[nodiscard]] explicit H(double) {}
+  __attribute__((warn_unused_result)) H(const char*) {}
+};
+
+struct [[nodiscard]] G {
+  explicit G(int) {}
+  [[nodiscard]] explicit G(double) {}
+  [[clang::warn_unused_result]] G(const char*) {}
+};
+
+void use2() {
+  H{2};       // no warning
+  H(2.0);     // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard'}}
+  H("Hello"); // expected-warning {{ignoring temporary created by a constructor declared with 'warn_unused_result' attribute}}
+
+  // no warning for explicit cast to void
+  (void)H(2);
+  (void)H{2.0};
+  (void)H{"Hello"};
+
+  // warns for all these invocations
+  // here, constructor/function should take precedence over type
+  G{2};       // expected-warning {{ignoring temporary of type 'G' declared with 'nodiscard'}}
+  G(2.0);     // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard'}}
+  G("Hello"); // expected-warning {{ignoring temporary created by a constructor declared with 'clang::warn_unused_result'}}
+
+  // no warning for explicit cast to void
+  (void)G(2);
+  (void)G{2.0};
+  (void)G{"Hello"};
+}
+} // namespace nodiscard_specialization
+
+namespace GH117975 {
+// Test for a regression for ICE in CallExpr::getUnusedResultAttr
+int f() { return 0; }
+void id_print_name() {
+  (int) // expected-warning {{expression result unused}}
+    ((int(*)())f)();
+}
+} // namespace GH117975
+
+namespace inheritance {
+// Test that [[nodiscard]] is not inherited by derived class types,
+// but is inherited by member functions
+struct [[nodiscard]] E {
+  [[nodiscard]] explicit E(int);
+  explicit E(const char*);
+  [[nodiscard]] int f();
+};
+struct F : E {
+  using E::E;
+};
+E e();
+F f();
+void test() {
+  e();     // expected-warning {{ignoring return value of type 'E' declared with 'nodiscard' attribute}}
+  f();     // no warning: derived class type does not inherit the attribute
+  E(1);    // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
+  E("x");  // expected-warning {{ignoring temporary of type 'E' declared with 'nodiscard' attribute}}
+  F(1);    // no warning: inherited constructor does not inherit the attribute either
+  F("x");  // no warning
+  e().f(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  f().f(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+}
+} // namespace inheritance
+
+namespace BuildStringOnClangScope {
+
+[[clang::warn_unused_result("Discarded result")]]
+bool makeClangTrue() { return true; }
+
+[[gnu::warn_unused_result("Discarded result")]]
+bool makeGccTrue() { return true; }
+
+void doClangThings() {
+  makeClangTrue(); // expected-warning {{ignoring return value of function declared with 'clang::warn_unused_result' attribute: Discarded result}}
+}
+
+void doGccThings() {
+  makeGccTrue(); // expected-warning {{ignoring return value of function declared with 'gnu::warn_unused_result' attribute}}
+}
+
+} // namespace BuildStringOnClangScope
+
+namespace candiscard {
+
+struct [[nodiscard]] NoDiscard {
+  [[nodiscard]] NoDiscard(int);
+  NoDiscard(const char *);
+};
+
+struct [[gnu::warn_unused]] WarnUnused {
+  [[gnu::warn_unused]] WarnUnused(int); // expected-warning {{'gnu::warn_unused' attribute only applies to structs, unions, and classes}}
+  WarnUnused(const char*);
+};
+
+struct [[gnu::warn_unused_result]] WarnUnusedResult {
+  [[gnu::warn_unused_result]] WarnUnusedResult(int);
+  WarnUnusedResult(const char*);
+};
+
+NoDiscard return_nodiscard();
+WarnUnused return_warnunused();
+WarnUnusedResult return_warnunusedresult();
+
+NoDiscard (*p_return_nodiscard)();
+WarnUnused (*p_return_warnunused)();
+WarnUnusedResult (*p_return_warnunusedresult)();
+
+NoDiscard (*(*pp_return_nodiscard)())();
+WarnUnused (*(*pp_return_warnunused)())();
+WarnUnusedResult (*(*pp_return_warnunusedresult)())();
+
+template <class T> T from_a_template();
+
+void test() {
+  // Unused but named variables
+  NoDiscard unused_variable1(1);         // no warning
+  NoDiscard unused_variable2("");        // no warning
+  WarnUnused unused_variable3(1);        // no warning
+  WarnUnused unused_variable4("");       // no warning
+  WarnUnusedResult unused_variable5(1);  // no warning
+  WarnUnusedResult unused_variable6(""); // no warning
+
+  // Constructor return values
+  NoDiscard(1);         // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
+  NoDiscard("");        // expected-warning {{ignoring temporary of type 'NoDiscard' declared with 'nodiscard' attribute}}
+  WarnUnused(1);        // expected-warning {{expression result unused}}
+  WarnUnused("");       // expected-warning {{expression result unused}}
+  WarnUnusedResult(1);  // expected-warning {{ignoring temporary created by a constructor declared with 'gnu::warn_unused_result' attribute}}
+  WarnUnusedResult(""); // expected-warning {{ignoring temporary of type 'WarnUnusedResult' declared with 'gnu::warn_unused_result' attribute}}
+
+  NoDiscard{1};         // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
+  NoDiscard{""};        // expected-warning {{ignoring temporary of type 'NoDiscard' declared with 'nodiscard' attribute}}
+  WarnUnused{1};        // expected-warning {{expression result unused}}
+  WarnUnused{""};       // expected-warning {{expression result unused}}
+  WarnUnusedResult{1};  // expected-warning {{ignoring temporary created by a constructor declared with 'gnu::warn_unused_result' attribute}}
+  WarnUnusedResult{""}; // expected-warning {{ignoring temporary of type 'WarnUnusedResult' declared with 'gnu::warn_unused_result' attribute}}
+
+  static_cast<NoDiscard>(1);         // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
+  static_cast<NoDiscard>("");        // expected-warning {{ignoring temporary of type 'NoDiscard' declared with 'nodiscard' attribute}}
+  static_cast<WarnUnused>(1);        // expected-warning {{expression result unused}}
+  static_cast<WarnUnused>("");       // expected-warning {{expression result unused}}
+  static_cast<WarnUnusedResult>(1);  // expected-warning {{ignoring temporary created by a constructor declared with 'gnu::warn_unused_result' attribute}}
+  static_cast<WarnUnusedResult>(""); // expected-warning {{ignoring temporary of type 'WarnUnusedResult' declared with 'gnu::warn_unused_result' attribute}}
+
+  // Function return values
+  return_nodiscard(); // expected-warning {{ignoring return value of type 'NoDiscard' declared with 'nodiscard' attribute}}
+  return_warnunused(); // no warning
+  return_warnunusedresult(); // expected-warning {{ignoring return value of type 'WarnUnusedResult' declared with 'gnu::warn_unused_result' attribute}}
+
+  // Function pointer return values
+  p_return_nodiscard(); // expected-warning {{ignoring return value of type 'NoDiscard' declared with 'nodiscard' attribute}}
+  p_return_warnunused(); // no warning
+  p_return_warnunusedresult(); // expected-warning {{ignoring return value of type 'WarnUnusedResult' declared with 'gnu::warn_unused_result' attribute}}
+
+  // Function pointer expression return values
+  pp_return_nodiscard()(); // expected-warning {{ignoring return value of type 'NoDiscard' declared with 'nodiscard' attribute}}
+  pp_return_warnunused()(); // no warning
+  pp_return_warnunusedresult()(); // expected-warning {{ignoring return value of type 'WarnUnusedResult' declared with 'gnu::warn_unused_result' attribute}}
+
+  // From a template
+  from_a_template<NoDiscard>(); // expected-warning {{ignoring return value of type 'NoDiscard' declared with 'nodiscard' attribute}}
+  from_a_template<WarnUnused>(); // no warning
+  from_a_template<WarnUnusedResult>(); // expected-warning {{ignoring return value of type 'WarnUnusedResult' declared with 'gnu::warn_unused_result' attribute}}
+}
+
+} // namespace candiscard

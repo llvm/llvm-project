@@ -1,7 +1,5 @@
-; RUN: opt %loadPolly -basic-aa -polly-stmt-granularity=bb -polly-print-scops -polly-allow-modref-calls \
-; RUN:     -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -basic-aa -polly-stmt-granularity=bb -polly-codegen -polly-allow-modref-calls \
-; RUN:     -disable-output < %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-stmt-granularity=bb '-passes=polly-custom<scops>' -polly-print-scops -polly-allow-modref-calls -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-stmt-granularity=bb '-passes=polly<no-default-opts>' -polly-allow-modref-calls -disable-output < %s
 ;
 ; Verify that we model the may-write access of the prefetch intrinsic
 ; correctly, thus that A is accessed by it but B is not.

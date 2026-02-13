@@ -1,4 +1,4 @@
-//===--- DurationAdditionCheck.cpp - clang-tidy----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,7 +21,7 @@ void DurationAdditionCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       binaryOperator(hasOperatorName("+"),
                      hasEitherOperand(expr(ignoringParenImpCasts(
-                         callExpr(callee(functionDecl(TimeConversionFunction())
+                         callExpr(callee(functionDecl(timeConversionFunction())
                                              .bind("function_decl")))
                              .bind("call")))))
           .bind("binop"),
@@ -41,7 +41,7 @@ void DurationAdditionCheck::check(const MatchFinder::MatchResult &Result) {
   if (!Scale)
     return;
 
-  llvm::StringRef TimeFactory = getTimeInverseForScale(*Scale);
+  const llvm::StringRef TimeFactory = getTimeInverseForScale(*Scale);
 
   FixItHint Hint;
   if (Call == Binop->getLHS()->IgnoreParenImpCasts()) {

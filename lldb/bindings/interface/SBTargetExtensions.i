@@ -79,11 +79,11 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTarget, lldb::eDescriptionLevelBrief)
                         module = self.sbtarget.GetModuleAtIndex(idx)
                         if module.uuid == key:
                             return module
-                elif type(key) is re.SRE_Pattern:
+                elif isinstance(key, type(re.compile(''))):
                     matching_modules = []
                     for idx in range(num_modules):
                         module = self.sbtarget.GetModuleAtIndex(idx)
-                        re_match = key.search(module.path.fullpath)
+                        re_match = key.search(module.file.fullpath)
                         if re_match:
                             matching_modules.append(module)
                     return matching_modules
@@ -190,6 +190,7 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTarget, lldb::eDescriptionLevelBrief)
         byte_order = property(GetByteOrder, None, doc='''A read only property that returns an lldb enumeration value (lldb.eByteOrderLittle, lldb.eByteOrderBig, lldb.eByteOrderInvalid) that represents the byte order for this target.''')
         addr_size = property(GetAddressByteSize, None, doc='''A read only property that returns the size in bytes of an address for this target.''')
         triple = property(GetTriple, None, doc='''A read only property that returns the target triple (arch-vendor-os) for this target as a string.''')
+        arch_name = property(GetArchName, None, doc='''A read only property that returns the architecture name for this target as a string.''')
         data_byte_size = property(GetDataByteSize, None, doc='''A read only property that returns the size in host bytes of a byte in the data address space for this target.''')
         code_byte_size = property(GetCodeByteSize, None, doc='''A read only property that returns the size in host bytes of a byte in the code address space for this target.''')
         platform = property(GetPlatform, None, doc='''A read only property that returns the platform associated with with this target.''')

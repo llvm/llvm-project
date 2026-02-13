@@ -198,13 +198,15 @@ func.func @mask_and_rhs_conflict(%arg0: !fir.box<!fir.array<?xi32>>) {
 func.func @test_where_mask_save(%arg0: !fir.box<!fir.array<?xi32>>) {
   %c0 = arith.constant 0 : index
   %c42_i32 = arith.constant 42 : i32
+  %c1 = arith.constant 1 : index
   %0:2 = hlfir.declare %arg0 {uniq_name = "x"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
   hlfir.where {
     %1:3 = fir.box_dims %0#0, %c0 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
     %2 = fir.shape %1#1 : (index) -> !fir.shape<1>
     %3 = hlfir.elemental %2 : (!fir.shape<1>) -> !hlfir.expr<?x!fir.logical<4>> {
     ^bb0(%arg1: index):
-      %4 = hlfir.designate %0#0 (%arg1)  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+      %add = arith.addi %arg1, %c1 : index
+      %4 = hlfir.designate %0#0 (%add)  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
       %5 = fir.load %4 : !fir.ref<i32>
       %6 = arith.cmpi sgt, %5, %c42_i32 : i32
       %7 = fir.convert %6 : (i1) -> !fir.logical<4>
@@ -226,12 +228,14 @@ func.func @test_where_mask_save(%arg0: !fir.box<!fir.array<?xi32>>) {
 // CHECK-SAME:                                    %[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>>) {
 // CHECK:           %[[VAL_1:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_2:.*]] = arith.constant 42 : i32
+// CHECK:           %[[C1:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "x"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
 // CHECK:           %[[VAL_4:.*]]:3 = fir.box_dims %[[VAL_3]]#0, %[[VAL_1]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 // CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_4]]#1 : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_6:.*]] = hlfir.elemental %[[VAL_5]] : (!fir.shape<1>) -> !hlfir.expr<?x!fir.logical<4>> {
 // CHECK:           ^bb0(%[[VAL_7:.*]]: index):
-// CHECK:             %[[VAL_8:.*]] = hlfir.designate %[[VAL_3]]#0 (%[[VAL_7]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+// CHECK:             %[[ADD:.*]] = arith.addi %[[VAL_7]], %[[C1]] : index
+// CHECK:             %[[VAL_8:.*]] = hlfir.designate %[[VAL_3]]#0 (%[[ADD]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:             %[[VAL_9:.*]] = fir.load %[[VAL_8]] : !fir.ref<i32>
 // CHECK:             %[[VAL_10:.*]] = arith.cmpi sgt, %[[VAL_9]], %[[VAL_2]] : i32
 // CHECK:             %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (i1) -> !fir.logical<4>
@@ -282,7 +286,6 @@ func.func @test_where_rhs_save(%x: !fir.ref<!fir.array<10xi32>>, %mask: !fir.ref
 // CHECK:           %[[VAL_7:.*]] = arith.constant 10 : index
 // CHECK:           %[[VAL_8:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_9:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_10:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_5]]:%[[VAL_4]]:%[[VAL_3]])  shape %[[VAL_6]] : (!fir.ref<!fir.array<10xi32>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<10xi32>>
 // CHECK:           %[[VAL_11:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_12:.*]] = arith.subi %[[VAL_7]], %[[VAL_9]] : index
 // CHECK:           %[[VAL_13:.*]] = arith.addi %[[VAL_12]], %[[VAL_9]] : index
@@ -300,6 +303,7 @@ func.func @test_where_rhs_save(%x: !fir.ref<!fir.array<10xi32>>, %mask: !fir.ref
 // CHECK:             %[[VAL_24:.*]] = fir.load %[[VAL_23]] : !fir.ref<!fir.logical<4>>
 // CHECK:             %[[VAL_25:.*]] = fir.convert %[[VAL_24]] : (!fir.logical<4>) -> i1
 // CHECK:             fir.if %[[VAL_25]] {
+// CHECK:           %[[VAL_10:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_5]]:%[[VAL_4]]:%[[VAL_3]])  shape %[[VAL_6]] : (!fir.ref<!fir.array<10xi32>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<10xi32>>
 // CHECK:               %[[VAL_26:.*]] = hlfir.designate %[[VAL_10]] (%[[VAL_22]])  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
 // CHECK:               %[[VAL_27:.*]] = fir.load %[[VAL_26]] : !fir.ref<i32>
 // CHECK:               %[[VAL_28:.*]] = fir.load %[[VAL_2]] : !fir.ref<index>

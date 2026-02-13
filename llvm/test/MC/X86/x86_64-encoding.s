@@ -133,12 +133,6 @@ movq %mm1, %r8
 // CHECK:  encoding: [0x48,0x0f,0x7e,0xca]
 movq %mm1, %rdx
 
-// rdar://7840289
-// CHECK: pshufb	CPI1_0(%rip), %xmm1
-// CHECK:  encoding: [0x66,0x0f,0x38,0x00,0x0d,A,A,A,A]
-// CHECK:  fixup A - offset: 5, value: CPI1_0-4
-pshufb	CPI1_0(%rip), %xmm1
-
 // CHECK: sha1rnds4 $1, %xmm1, %xmm2
 // CHECK:   encoding: [0x0f,0x3a,0xcc,0xd1,0x01]
 sha1rnds4 $1, %xmm1, %xmm2

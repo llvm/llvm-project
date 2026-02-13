@@ -49,14 +49,10 @@ struct TestPrintDefUsePass
           llvm::outs() << " has no uses\n";
           continue;
         }
-        if (result.hasOneUse()) {
+        if (result.hasOneUse())
           llvm::outs() << " has a single use: ";
-        } else {
-          llvm::outs() << " has "
-                       << std::distance(result.getUses().begin(),
-                                        result.getUses().end())
-                       << " uses:\n";
-        }
+        else
+          llvm::outs() << " has " << result.getNumUses() << " uses:\n";
         for (Operation *userOp : result.getUsers()) {
           llvm::outs() << "    - " << userOp->getName() << "\n";
         }

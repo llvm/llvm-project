@@ -30,7 +30,7 @@
 ; CHECK-LABEL:       <GLOBALVAL_SUMMARY_BLOCK
 ; CHECK-NEXT:    <VERSION
 ; CHECK-NEXT:    <FLAGS
-; CHECK-NEXT:    <VALUE_GUID op0=27 op1=123/>
+; CHECK-NEXT:    <VALUE_GUID {{.*}} op0=27 op1=0 op2=123/>
 ; op4=none1 op6=hot1 op8=cold1 op10=none2 op12=hot2 op14=cold2 op16=none3 op18=hot3 op20=cold3 op22=123
 ; CHECK-NEXT:    <PERMODULE_PROFILE {{.*}} op7=7 op8=0 op9=1 op10=3 op11=4 op12=1 op13=8 op14=0 op15=2 op16=3 op17=5 op18=1 op19=9 op20=0 op21=3 op22=3 op23=6 op24=1 op25=27 op26=4/>
 ; CHECK-NEXT:    <BLOCK_COUNT op0=4/>

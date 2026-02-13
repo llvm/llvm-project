@@ -1,4 +1,4 @@
-//===--- MisleadingCaptureDefaultByValueCheck.cpp - clang-tidy-------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -49,26 +49,22 @@ static std::string createReplacementText(const LambdaExpr *Lambda) {
   llvm::raw_string_ostream Stream(Replacement);
 
   auto AppendName = [&](llvm::StringRef Name) {
-    if (!Replacement.empty()) {
+    if (!Replacement.empty())
       Stream << ", ";
-    }
-    if (Lambda->getCaptureDefault() == LCD_ByRef && Name != "this") {
+    if (Lambda->getCaptureDefault() == LCD_ByRef && Name != "this")
       Stream << "&" << Name;
-    } else {
+    else
       Stream << Name;
-    }
   };
 
   for (const LambdaCapture &Capture : Lambda->implicit_captures()) {
     assert(Capture.isImplicit());
-    if (Capture.capturesVariable() && Capture.isImplicit()) {
+    if (Capture.capturesVariable() && Capture.isImplicit())
       AppendName(Capture.getCapturedVar()->getName());
-    } else if (Capture.capturesThis()) {
+    else if (Capture.capturesThis())
       AppendName("this");
-    }
   }
-  if (!Replacement.empty() &&
-      Lambda->explicit_capture_begin() != Lambda->explicit_capture_end()) {
+  if (!Replacement.empty() && !Lambda->explicit_captures().empty()) {
     // Add back separator if we are adding explicit capture variables.
     Stream << ", ";
   }
@@ -82,7 +78,7 @@ void MisleadingCaptureDefaultByValueCheck::check(
     return;
 
   if (Lambda->getCaptureDefault() == LCD_ByCopy) {
-    bool IsThisImplicitlyCaptured = std::any_of(
+    const bool IsThisImplicitlyCaptured = std::any_of(
         Lambda->implicit_capture_begin(), Lambda->implicit_capture_end(),
         [](const LambdaCapture &Capture) { return Capture.capturesThis(); });
     auto Diag = diag(Lambda->getCaptureDefaultLoc(),
@@ -90,8 +86,8 @@ void MisleadingCaptureDefaultByValueCheck::check(
                      "should not specify a by-value capture default")
                 << IsThisImplicitlyCaptured;
 
-    std::string ReplacementText = createReplacementText(Lambda);
-    SourceLocation DefaultCaptureEnd =
+    const std::string ReplacementText = createReplacementText(Lambda);
+    const SourceLocation DefaultCaptureEnd =
         findDefaultCaptureEnd(Lambda, *Result.Context);
     Diag << FixItHint::CreateReplacement(
         CharSourceRange::getCharRange(Lambda->getCaptureDefaultLoc(),

@@ -16,17 +16,16 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
-#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include <type_traits>
 
 namespace mlir {
 namespace tensor {
-#define GEN_PASS_DEF_FOLDTENSORSUBSETOPS
+#define GEN_PASS_DEF_FOLDTENSORSUBSETOPSPASS
 #include "mlir/Dialect/Tensor/Transforms/Passes.h.inc"
 } // namespace tensor
 } // namespace mlir
@@ -34,7 +33,7 @@ namespace tensor {
 using namespace mlir;
 
 static Value getTensorOperand(vector::TransferReadOp op) {
-  return op.getSource();
+  return op.getBase();
 }
 
 static Value getTensorOperand(tensor::InsertSliceOp op) {
@@ -48,12 +47,14 @@ static Value getTensorOperand(tensor::InsertSliceOp op) {
 namespace {
 /// Merge extract_slice operation with load/transferRead operation.
 class TransferReadOfExtractSliceOpFolder final
-    : public OpRewritePattern<vector::TransferReadOp> {
+    : public vector::MaskableOpRewritePattern<vector::TransferReadOp> {
 public:
-  using OpRewritePattern<vector::TransferReadOp>::OpRewritePattern;
+  using MaskableOpRewritePattern::MaskableOpRewritePattern;
 
-  LogicalResult matchAndRewrite(vector::TransferReadOp readOp,
-                                PatternRewriter &rewriter) const override;
+  FailureOr<mlir::Value>
+  matchAndRewriteMaskableOp(vector::TransferReadOp readOp,
+                            vector::MaskingOpInterface maskOp,
+                            PatternRewriter &rewriter) const override;
 };
 
 /// Merge insert_slice operation with store/transferWriteOp operation.
@@ -64,6 +65,10 @@ public:
 
   LogicalResult matchAndRewrite(tensor::InsertSliceOp insertSliceOp,
                                 PatternRewriter &rewriter) const override;
+
+private:
+  static bool
+  doesTransferWriteCoverInsertSlice(vector::TransferWriteOp writeOp);
 };
 } // namespace
 
@@ -84,8 +89,10 @@ static LogicalResult preconditionsFoldExtractOrInsertWithTransferOp(
   return success();
 }
 
-LogicalResult TransferReadOfExtractSliceOpFolder::matchAndRewrite(
-    vector::TransferReadOp readOp, PatternRewriter &rewriter) const {
+FailureOr<mlir::Value>
+TransferReadOfExtractSliceOpFolder::matchAndRewriteMaskableOp(
+    vector::TransferReadOp readOp, vector::MaskingOpInterface maskOp,
+    PatternRewriter &rewriter) const {
   auto extractSliceOp =
       getTensorOperand(readOp).getDefiningOp<tensor::ExtractSliceOp>();
   if (!extractSliceOp)
@@ -95,7 +102,7 @@ LogicalResult TransferReadOfExtractSliceOpFolder::matchAndRewrite(
       preconditionsFoldExtractOrInsertWithTransferOp(rewriter, readOp,
                                                      extractSliceOp);
   if (failed(preconditionResult))
-    return preconditionResult;
+    return rewriter.notifyMatchFailure(readOp, "Failed preconditions");
 
   SmallVector<Value> indices(readOp.getIndices().begin(),
                              readOp.getIndices().end());
@@ -105,15 +112,17 @@ LogicalResult TransferReadOfExtractSliceOpFolder::matchAndRewrite(
       extractSliceOp.getMixedStrides(), extractSliceOp.getDroppedDims(),
       indices, sourceIndices);
 
-  rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
-      readOp, readOp.getVectorType(), extractSliceOp.getSource(), sourceIndices,
+  Operation *newOp = vector::TransferReadOp::create(
+      rewriter, readOp.getLoc(), readOp.getVectorType(),
+      extractSliceOp.getSource(), sourceIndices,
       AffineMapAttr::get(expandDimsToRank(
           readOp.getPermutationMap(), extractSliceOp.getSourceType().getRank(),
           extractSliceOp.getDroppedDims())),
       readOp.getPadding(),
       /*mask=*/Value(), readOp.getInBoundsAttr());
-
-  return success();
+  if (maskOp)
+    newOp = mlir::vector::maskOperation(rewriter, newOp, maskOp.getMask());
+  return newOp->getResults()[0];
 }
 
 LogicalResult InsertSliceOfTransferWriteOpFolder::matchAndRewrite(
@@ -128,6 +137,10 @@ LogicalResult InsertSliceOfTransferWriteOpFolder::matchAndRewrite(
                                                      insertSliceOp);
   if (failed(preconditionResult))
     return preconditionResult;
+
+  if (!doesTransferWriteCoverInsertSlice(writeOp))
+    return rewriter.notifyMatchFailure(
+        insertSliceOp, "transfer_write does not cover insert_slice");
 
   SmallVector<Value> indices(writeOp.getIndices().begin(),
                              writeOp.getIndices().end());
@@ -145,6 +158,17 @@ LogicalResult InsertSliceOfTransferWriteOpFolder::matchAndRewrite(
       writeOp.getInBoundsAttr());
 
   return success();
+}
+
+bool InsertSliceOfTransferWriteOpFolder::doesTransferWriteCoverInsertSlice(
+    vector::TransferWriteOp writeOp) {
+  if (writeOp.getShapedType().hasStaticShape())
+    return llvm::equal(writeOp.getVectorType().getShape(),
+                       writeOp.getShapedType().getShape());
+
+  // TODO: Use ValueBoundsConstraintSet for dynamic shapes.
+
+  return false;
 }
 
 template <typename OpTy>
@@ -191,12 +215,11 @@ struct InsertSliceOfInsertSliceFolder : public OpRewritePattern<OpTy> {
                                         sourceInsertSliceOp.getMixedSizes(),
                                         droppedDims, resolvedSizes);
 
-    // If we are inside an InParallel region, temporarily set the insertion
-    // point outside: only tensor.parallel_insert_slice ops are allowed in
-    // there.
-    if (std::is_same_v<OpTy, tensor::ParallelInsertSliceOp>) {
-      rewriter.setInsertionPoint(
-          insertSliceOp->template getParentOfType<scf::InParallelOp>());
+    // If we are inside a ParallelCombining region, temporarily set the
+    // insertion point outside: only ops of ParallelCombiningOpInterface are
+    // allowed in there.
+    if (isa<mlir::ParallelCombiningOpInterface>(insertSliceOp.getOperation())) {
+      rewriter.setInsertionPoint(insertSliceOp->getParentOp());
     }
 
     // Resolve offsets according to source offsets and strides.
@@ -241,7 +264,8 @@ void tensor::populateFoldTensorSubsetIntoVectorTransferPatterns(
 namespace {
 
 struct FoldTensorSubsetOpsPass final
-    : public tensor::impl::FoldTensorSubsetOpsBase<FoldTensorSubsetOpsPass> {
+    : public tensor::impl::FoldTensorSubsetOpsPassBase<
+          FoldTensorSubsetOpsPass> {
   void runOnOperation() override;
 };
 
@@ -250,9 +274,5 @@ struct FoldTensorSubsetOpsPass final
 void FoldTensorSubsetOpsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   tensor::populateFoldTensorSubsetOpPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
-}
-
-std::unique_ptr<Pass> tensor::createFoldTensorSubsetOpsPass() {
-  return std::make_unique<FoldTensorSubsetOpsPass>();
+  (void)applyPatternsGreedily(getOperation(), std::move(patterns));
 }

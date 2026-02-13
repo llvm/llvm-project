@@ -14,8 +14,7 @@
 # RUN: cp t_all.a t_X32_64.a
 
 ## Test the OBJECT_MODE environment variable when adding symbol table.
-# RUN: unset OBJECT_MODE
-# RUN: llvm-ranlib t_X32.a
+# RUN: env -u OBJECT_MODE llvm-ranlib t_X32.a
 # RUN: llvm-nm --print-armap t_X32.a 2>&1 | FileCheck --check-prefixes=GLOB32 --implicit-check-not="in t64" %s
 # RUN: cp t_all.a t_X32.a
 # RUN: env OBJECT_MODE=32 llvm-ranlib t_X32.a

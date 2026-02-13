@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS -D_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0|13.0}}
+
+// Requires the fix in 390840f.
+// XFAIL: using-built-library-before-llvm-18
 
 #include <algorithm>
 #include <cassert>
@@ -482,7 +484,7 @@ template <class InternT, class ExternT>
 void utf8_to_utf16_in_ok(const std::codecvt<InternT, ExternT, mbstate_t>& cvt) {
   // UTF-8 string of 1-byte CP, 2-byte CP, 3-byte CP and 4-byte CP
   const unsigned char input[] = "b\u0448\uAAAA\U0010AAAA";
-  const char16_t expected[]   = {'b', 0x0448, 0xAAAA, 0xDBEA, 0xDEAA, 0};
+  const InternT expected[]    = {'b', 0x0448, 0xAAAA, 0xDBEA, 0xDEAA, 0};
   static_assert(array_size(input) == 11, "");
   static_assert(array_size(expected) == 6, "");
 
@@ -547,7 +549,7 @@ template <class InternT, class ExternT>
 void utf8_to_utf16_in_partial(const std::codecvt<InternT, ExternT, mbstate_t>& cvt) {
   // UTF-8 string of 1-byte CP, 2-byte CP, 3-byte CP and 4-byte CP
   const unsigned char input[] = "b\u0448\uAAAA\U0010AAAA";
-  const char16_t expected[]   = {'b', 0x0448, 0xAAAA, 0xDBEA, 0xDEAA, 0};
+  const InternT expected[]    = {'b', 0x0448, 0xAAAA, 0xDBEA, 0xDEAA, 0};
   static_assert(array_size(input) == 11, "");
   static_assert(array_size(expected) == 6, "");
 
@@ -616,7 +618,7 @@ template <class InternT, class ExternT>
 void utf8_to_utf16_in_error(const std::codecvt<InternT, ExternT, mbstate_t>& cvt) {
   // UTF-8 string of 1-byte CP, 2-byte CP, 3-byte CP, 4-byte CP
   const unsigned char input[] = "b\u0448\uD700\U0010AAAA";
-  const char16_t expected[]   = {'b', 0x0448, 0xD700, 0xDBEA, 0xDEAA, 0};
+  const InternT expected[]    = {'b', 0x0448, 0xD700, 0xDBEA, 0xDEAA, 0};
   static_assert(array_size(input) == 11, "");
   static_assert(array_size(expected) == 6, "");
 
@@ -763,7 +765,7 @@ void utf8_to_utf16_in(const std::codecvt<InternT, ExternT, mbstate_t>& cvt) {
 template <class InternT, class ExternT>
 void utf16_to_utf8_out_ok(const std::codecvt<InternT, ExternT, mbstate_t>& cvt) {
   // UTF-8 string of 1-byte CP, 2-byte CP, 3-byte CP and 4-byte CP
-  const char16_t input[]         = {'b', 0x0448, 0xAAAA, 0xDBEA, 0xDEAA, 0};
+  const InternT input[]          = {'b', 0x0448, 0xAAAA, 0xDBEA, 0xDEAA, 0};
   const unsigned char expected[] = "b\u0448\uAAAA\U0010AAAA";
   static_assert(array_size(input) == 6, "");
   static_assert(array_size(expected) == 11, "");
@@ -799,7 +801,7 @@ void utf16_to_utf8_out_ok(const std::codecvt<InternT, ExternT, mbstate_t>& cvt) 
 template <class InternT, class ExternT>
 void utf16_to_utf8_out_partial(const std::codecvt<InternT, ExternT, mbstate_t>& cvt) {
   // UTF-8 string of 1-byte CP, 2-byte CP, 3-byte CP and 4-byte CP
-  const char16_t input[]         = {'b', 0x0448, 0xAAAA, 0xDBEA, 0xDEAA, 0};
+  const InternT input[]          = {'b', 0x0448, 0xAAAA, 0xDBEA, 0xDEAA, 0};
   const unsigned char expected[] = "b\u0448\uAAAA\U0010AAAA";
   static_assert(array_size(input) == 6, "");
   static_assert(array_size(expected) == 11, "");
@@ -858,7 +860,7 @@ void utf16_to_utf8_out_partial(const std::codecvt<InternT, ExternT, mbstate_t>& 
 template <class InternT, class ExternT>
 void utf16_to_utf8_out_error(const std::codecvt<InternT, ExternT, mbstate_t>& cvt) {
   // UTF-8 string of 1-byte CP, 2-byte CP, 3-byte CP and 4-byte CP
-  const char16_t input[]         = {'b', 0x0448, 0xAAAA, 0xDBEA, 0xDEAA, 0};
+  const InternT input[]          = {'b', 0x0448, 0xAAAA, 0xDBEA, 0xDEAA, 0};
   const unsigned char expected[] = "b\u0448\uAAAA\U0010AAAA";
   static_assert(array_size(input) == 6, "");
   static_assert(array_size(expected) == 11, "");
@@ -2220,10 +2222,11 @@ void test_utf16_ucs2_codecvts() {
 #endif
 }
 
-int main() {
+int main(int, char**) {
   test_utf8_utf32_codecvts();
   test_utf8_utf16_codecvts();
   test_utf8_ucs2_codecvts();
   test_utf16_utf32_codecvts();
   test_utf16_ucs2_codecvts();
+  return 0;
 }

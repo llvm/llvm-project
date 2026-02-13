@@ -1,5 +1,5 @@
-; RUN: llc -march=hexagon -O3 -disable-hexagon-amodeopt < %s | FileCheck %s --check-prefix=CHECK-NO-AMODE
-; RUN: llc -march=hexagon -O3 < %s | FileCheck %s --check-prefix=CHECK-AMODE
+; RUN: llc -mtriple=hexagon -O3 -disable-hexagon-amodeopt < %s | FileCheck %s --check-prefix=CHECK-NO-AMODE
+; RUN: llc -mtriple=hexagon -O3 < %s | FileCheck %s --check-prefix=CHECK-AMODE
 
 ; CHECK-NO-AMODE: [[REG1:(r[0-9]+)]] = add({{r[0-9]+}},#0)
 
@@ -15,15 +15,19 @@
 ; CHECK-NO-AMODE: vmem([[REG5]]+#0) = vtmp.new
 ; CHECK-NO-AMODE: vmem([[REG6]]+#0) = vtmp.new
 
+; Since we added some extra code to modify the addi offsets and bring them into
+; the range of load/store instructions, we cannot guarantee which registers
+; would be preserved, but we know for sure that only one Addi should be present
+; and the other one should be removed followed by vmems with non-zero offset
 
-; CHECK-AMODE: [[REG1:(r[0-9]+)]] = add({{r[0-9]+}},#0)
+; CHECK-AMODE: [[REG1:(r[0-9]+)]] = add({{r[0-9]+}},#{{[0-9]+}})
 ; CHECK-AMODE-NOT: {{r[0-9]+}} = add([[REG1]],{{[0-9]+}})
-; CHECK-AMODE: vmem([[REG1]]+#0) = vtmp.new
-; CHECK-AMODE: vmem([[REG1]]+#1) = vtmp.new
-; CHECK-AMODE: vmem([[REG1]]+#2) = vtmp.new
-; CHECK-AMODE: vmem([[REG1]]+#3) = vtmp.new
-; CHECK-AMODE: vmem([[REG1]]+#4) = vtmp.new
-; CHECK-AMODE: vmem([[REG1]]+#5) = vtmp.new
+; CHECK-AMODE: vmem([[REG1]]+#{{[0-9]}}) = vtmp.new
+; CHECK-AMODE: vmem([[REG2:(r[0-9]+)]]+#{{-?[0-9]}}) = vtmp.new
+; CHECK-AMODE: vmem([[REG2]]+#{{-?[1-9]}}) = vtmp.new
+; CHECK-AMODE: vmem([[REG2]]+#{{-?[1-9]}}) = vtmp.new
+; CHECK-AMODE: vmem([[REG2]]+#{{-?[1-9]}}) = vtmp.new
+; CHECK-AMODE: vmem([[REG2]]+#{{-?[1-9]}}) = vtmp.new
 
 target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
 target triple = "hexagon"
@@ -88,7 +92,7 @@ declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
 
 declare <128 x i1> @llvm.hexagon.V6.vandvrt.128B(<32 x i32>, i32) #1
 
-attributes #0 = { nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv65" "target-features"="+hvx-length128b,+hvxv65,-long-calls" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv65" "target-features"="+hvx-length128b,+hvxv65,-long-calls" "use-soft-float"="false" }
 attributes #1 = { argmemonly nounwind }
 attributes #2 = { nounwind }
 

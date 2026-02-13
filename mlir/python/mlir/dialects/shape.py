@@ -3,3 +3,4 @@
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 from ._shape_ops_gen import *
+from ._shape_ops_gen import _Dialect

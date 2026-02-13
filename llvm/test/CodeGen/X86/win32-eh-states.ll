@@ -86,11 +86,11 @@ catch.7:
 ; X64-LABEL: $ip2state$f:
 ; X64-NEXT:   .long .Lfunc_begin0@IMGREL
 ; X64-NEXT:   .long -1
-; X64-NEXT:   .long .Ltmp{{.*}}@IMGREL+1
+; X64-NEXT:   .long .Ltmp{{.*}}@IMGREL
 ; X64-NEXT:   .long 0
-; X64-NEXT:   .long .Ltmp{{.*}}@IMGREL+1
+; X64-NEXT:   .long .Ltmp{{.*}}@IMGREL
 ; X64-NEXT:   .long 1
-; X64-NEXT:   .long .Ltmp{{.*}}@IMGREL+1
+; X64-NEXT:   .long .Ltmp{{.*}}@IMGREL
 ; X64-NEXT:   .long -1
 ; X64-NEXT:   .long "?catch${{.*}}@?0?f@4HA"@IMGREL
 ; X64-NEXT:   .long 2
@@ -189,15 +189,15 @@ unreachable:                                      ; preds = %entry
 ; X64-LABEL: $ip2state$g:
 ; X64-NEXT:   .long .Lfunc_begin1@IMGREL
 ; X64-NEXT:   .long -1
-; X64-NEXT:   .long .Ltmp{{.*}}@IMGREL+1
+; X64-NEXT:   .long .Ltmp{{.*}}@IMGREL
 ; X64-NEXT:   .long 1
-; X64-NEXT:   .long .Ltmp{{.*}}@IMGREL+1
+; X64-NEXT:   .long .Ltmp{{.*}}@IMGREL
 ; X64-NEXT:   .long -1
 ; X64-NEXT:   .long "?catch${{.*}}@?0?g@4HA"@IMGREL
 ; X64-NEXT:   .long 2
-; X64-NEXT:   .long .Ltmp{{.*}}@IMGREL+1
+; X64-NEXT:   .long .Ltmp{{.*}}@IMGREL
 ; X64-NEXT:   .long 3
-; X64-NEXT:   .long .Ltmp{{.*}}@IMGREL+1
+; X64-NEXT:   .long .Ltmp{{.*}}@IMGREL
 ; X64-NEXT:   .long 2
 
 

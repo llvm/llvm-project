@@ -1,4 +1,4 @@
-//===--- RedundantMemberInitCheck.cpp - clang-tidy-------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,7 +12,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
-#include <algorithm>
 
 using namespace clang::ast_matchers;
 using namespace clang::tidy::matchers;
@@ -22,16 +21,16 @@ namespace clang::tidy::readability {
 static SourceRange
 getFullInitRangeInclWhitespaces(SourceRange Range, const SourceManager &SM,
                                 const LangOptions &LangOpts) {
-  const Token PrevToken =
+  const std::optional<Token> PrevToken =
       utils::lexer::getPreviousToken(Range.getBegin(), SM, LangOpts, false);
-  if (PrevToken.is(tok::unknown))
+  if (!PrevToken)
     return Range;
 
-  if (PrevToken.isNot(tok::equal))
-    return {PrevToken.getEndLoc(), Range.getEnd()};
+  if (PrevToken->isNot(tok::equal))
+    return {PrevToken->getEndLoc(), Range.getEnd()};
 
   return getFullInitRangeInclWhitespaces(
-      {PrevToken.getLocation(), Range.getEnd()}, SM, LangOpts);
+      {PrevToken->getLocation(), Range.getEnd()}, SM, LangOpts);
 }
 
 void RedundantMemberInitCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
@@ -41,25 +40,35 @@ void RedundantMemberInitCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 void RedundantMemberInitCheck::registerMatchers(MatchFinder *Finder) {
   auto ConstructorMatcher =
-      cxxConstructExpr(argumentCountIs(0),
-                       hasDeclaration(cxxConstructorDecl(ofClass(cxxRecordDecl(
-                           unless(isTriviallyDefaultConstructible()))))))
+      cxxConstructExpr(
+          argumentCountIs(0),
+          hasDeclaration(cxxConstructorDecl(
+              ofClass(cxxRecordDecl(unless(isTriviallyDefaultConstructible()))
+                          .bind("class")))))
           .bind("construct");
+
+  auto HasUnionAsParent = hasParent(recordDecl(isUnion()));
+
+  auto HasTypeEqualToConstructorClass = hasType(qualType(
+      hasCanonicalType(qualType(hasDeclaration(equalsBoundNode("class"))))));
 
   Finder->addMatcher(
       cxxConstructorDecl(
           unless(isDelegatingConstructor()), ofClass(unless(isUnion())),
           forEachConstructorInitializer(
-              cxxCtorInitializer(withInitializer(ConstructorMatcher),
-                                 unless(forField(fieldDecl(
-                                     anyOf(hasType(isConstQualified()),
-                                           hasParent(recordDecl(isUnion())))))))
+              cxxCtorInitializer(
+                  withInitializer(ConstructorMatcher),
+                  anyOf(isBaseInitializer(),
+                        forField(fieldDecl(unless(hasType(isConstQualified())),
+                                           unless(HasUnionAsParent),
+                                           HasTypeEqualToConstructorClass))))
                   .bind("init")))
           .bind("constructor"),
       this);
 
   Finder->addMatcher(fieldDecl(hasInClassInitializer(ConstructorMatcher),
-                               unless(hasParent(recordDecl(isUnion()))))
+                               HasTypeEqualToConstructorClass,
+                               unless(HasUnionAsParent))
                          .bind("field"),
                      this);
 }

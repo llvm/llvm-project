@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon  -O3 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O3 < %s | FileCheck %s
 
 ; CHECK-NOT: [[REG0:(r[0-9]+)]] = memw([[REG0:(r[0-9]+)]]<<#2+##state-4)
 

@@ -1,8 +1,8 @@
-; RUN: sed -e "s/ORDER/monotonic/" %s | llc -march=hexagon | FileCheck %s
-; RUN: sed -e "s/ORDER/acquire/"   %s | llc -march=hexagon | FileCheck %s
-; RUN: sed -e "s/ORDER/release/"   %s | llc -march=hexagon | FileCheck %s
-; RUN: sed -e "s/ORDER/acq_rel/"   %s | llc -march=hexagon | FileCheck %s
-; RUN: sed -e "s/ORDER/seq_cst/"   %s | llc -march=hexagon | FileCheck %s
+; RUN: sed -e "s/ORDER/monotonic/" %s | llc -mtriple=hexagon | FileCheck %s
+; RUN: sed -e "s/ORDER/acquire/" %s | llc -mtriple=hexagon | FileCheck %s
+; RUN: sed -e "s/ORDER/release/" %s | llc -mtriple=hexagon | FileCheck %s
+; RUN: sed -e "s/ORDER/acq_rel/" %s | llc -mtriple=hexagon | FileCheck %s
+; RUN: sed -e "s/ORDER/seq_cst/" %s | llc -mtriple=hexagon | FileCheck %s
 
 @g0 = global i32 0, align 4
 @g1 = global i32 0, align 4

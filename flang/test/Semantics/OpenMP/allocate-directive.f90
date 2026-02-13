@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags
 ! Check OpenMP Allocate directive
 use omp_lib
 
@@ -11,7 +11,7 @@ integer :: x, y
 integer, allocatable :: a, b, m, n, t, z
 !$omp allocate(x, y)
 !$omp allocate(x, y) allocator(omp_default_mem_alloc)
-
+    continue
 !$omp allocate(a, b)
     allocate ( a, b )
 

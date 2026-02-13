@@ -59,7 +59,7 @@ define void @test2_a(ptr %ignore) {
 ; AFTER1: Function Attrs: nofree memory(read)
 ; AFTER2: Function Attrs: nofree nosync memory(none)
 ; BEFORE: define void @test2_a(ptr %ignore)
-; AFTER: define void @test2_a(ptr readnone %ignore)
+; AFTER: define void @test2_a(ptr readnone captures(address) %ignore)
 entry:
   %f1ptr = alloca ptr
   store ptr @readnone_with_arg, ptr %f1ptr
@@ -112,7 +112,7 @@ define void @test3(ptr %src, ptr %dest, i64 %size) noinline {
 ; CHECK-NOT: read
 ; CHECK-SAME: noinline
 ; BEFORE-LABEL: define void @test3(ptr %src, ptr %dest, i64 %size)
-; AFTER-LABEL: define void @test3(ptr nocapture readonly %src, ptr nocapture writeonly %dest, i64 %size)
+; AFTER-LABEL: define void @test3(ptr readonly captures(none) %src, ptr writeonly captures(none) %dest, i64 %size)
   %fptr = alloca ptr
   store ptr @memcpy, ptr %fptr
   %f = load ptr, ptr %fptr

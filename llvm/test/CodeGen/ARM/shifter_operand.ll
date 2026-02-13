@@ -121,7 +121,6 @@ define i32 @test_orr_extract_from_mul_1(i32 %x, i32 %y) {
 ; CHECK-THUMB-NEXT:    orrs r0, r1
 ; CHECK-THUMB-NEXT:    bx lr
 entry:
-; CHECk-THUMB: orrs r0, r1
   %mul = mul i32 %y, 63767
   %or = or i32 %mul, %x
   ret i32 %or

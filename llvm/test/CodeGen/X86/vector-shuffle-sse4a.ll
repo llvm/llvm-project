@@ -362,11 +362,9 @@ define <8 x i16> @shuf_089uuuuu(<8 x i16> %a0, <8 x i16> %a1) {
 define <16 x i8> @shuffle_8_18_uuuuuuuuuuuuuu(<16 x i8> %a, <16 x i8> %b) {
 ; AMD10H-LABEL: shuffle_8_18_uuuuuuuuuuuuuu:
 ; AMD10H:       # %bb.0:
-; AMD10H-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; AMD10H-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; AMD10H-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; AMD10H-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,1,2,3,4,5,6,7]
-; AMD10H-NEXT:    packuswb %xmm0, %xmm0
+; AMD10H-NEXT:    psrld $16, %xmm1
+; AMD10H-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; AMD10H-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; AMD10H-NEXT:    retq
 ;
 ; BTVER1-LABEL: shuffle_8_18_uuuuuuuuuuuuuu:

@@ -80,37 +80,10 @@ for.end:
   ret void
 }
 
-; CHECK-REMARKS: Scalable vectorization is not supported for all element types found in this loop
-define void @uniform_store_i1(ptr noalias %dst, ptr noalias %start, i64 %N) {
-; CHECK-LABEL: @uniform_store_i1
-; CHECK: vector.body
-; CHECK: %[[GEP:.*]] = getelementptr inbounds i64, <64 x ptr> {{.*}}, i64 1
-; CHECK: %[[ICMP:.*]] = icmp eq <64 x ptr> %[[GEP]], %[[SPLAT:.*]]
-; CHECK: %[[EXTRACT1:.*]] = extractelement <64 x i1> %[[ICMP]], i32 63
-; CHECK: store i1 %[[EXTRACT1]], ptr %dst
-; CHECK-NOT: vscale
-entry:
-  br label %for.body
-
-for.body:
-  %first.sroa = phi ptr [ %incdec.ptr, %for.body ], [ %start, %entry ]
-  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %iv.next = add i64 %iv, 1
-  %0 = load i64, ptr %first.sroa
-  %incdec.ptr = getelementptr inbounds i64, ptr %first.sroa, i64 1
-  %cmp.not = icmp eq ptr %incdec.ptr, %start
-  store i1 %cmp.not, ptr %dst
-  %cmp = icmp ult i64 %iv, %N
-  br i1 %cmp, label %for.body, label %end, !llvm.loop !0
-
-end:
-  ret void
-}
-
 define dso_local void @loop_fixed_width_i128(ptr nocapture %ptr, i64 %N) {
 ; CHECK-LABEL: @loop_fixed_width_i128
 ; CHECK: load <4 x i128>, ptr
-; CHECK: add nsw <4 x i128> {{.*}}, <i128 42, i128 42, i128 42, i128 42>
+; CHECK: add nsw <4 x i128> {{.*}}, splat (i128 42)
 ; CHECK: store <4 x i128> {{.*}} ptr
 ; CHECK-NOT: vscale
 entry:

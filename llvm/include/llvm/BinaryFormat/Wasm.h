@@ -17,6 +17,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {
@@ -28,8 +29,9 @@ const char WasmMagic[] = {'\0', 'a', 's', 'm'};
 const uint32_t WasmVersion = 0x1;
 // Wasm linking metadata version
 const uint32_t WasmMetadataVersion = 0x2;
-// Wasm uses a 64k page size
-const uint32_t WasmPageSize = 65536;
+// Wasm uses a 64k page size by default (but the custom-page-sizes proposal
+// allows changing it)
+const uint32_t WasmDefaultPageSize = 65536;
 
 enum : unsigned {
   WASM_SEC_CUSTOM = 0,     // Custom / User-defined section
@@ -58,15 +60,16 @@ enum : unsigned {
   WASM_TYPE_V128 = 0x7B,
   WASM_TYPE_NULLFUNCREF = 0x73,
   WASM_TYPE_NULLEXTERNREF = 0x72,
+  WASM_TYPE_NULLEXNREF = 0x74,
   WASM_TYPE_NULLREF = 0x71,
   WASM_TYPE_FUNCREF = 0x70,
   WASM_TYPE_EXTERNREF = 0x6F,
+  WASM_TYPE_EXNREF = 0x69,
   WASM_TYPE_ANYREF = 0x6E,
   WASM_TYPE_EQREF = 0x6D,
   WASM_TYPE_I31REF = 0x6C,
   WASM_TYPE_STRUCTREF = 0x6B,
   WASM_TYPE_ARRAYREF = 0x6A,
-  WASM_TYPE_EXNREF = 0x69,
   WASM_TYPE_NONNULLABLE = 0x64,
   WASM_TYPE_NULLABLE = 0x63,
   WASM_TYPE_FUNC = 0x60,
@@ -143,11 +146,20 @@ enum : unsigned {
   WASM_OPCODE_I32_RMW_CMPXCHG = 0x48,
 };
 
+// Sub-opcodes for catch clauses in a try_table instruction
+enum : unsigned {
+  WASM_OPCODE_CATCH = 0x00,
+  WASM_OPCODE_CATCH_REF = 0x01,
+  WASM_OPCODE_CATCH_ALL = 0x02,
+  WASM_OPCODE_CATCH_ALL_REF = 0x03,
+};
+
 enum : unsigned {
   WASM_LIMITS_FLAG_NONE = 0x0,
   WASM_LIMITS_FLAG_HAS_MAX = 0x1,
   WASM_LIMITS_FLAG_IS_SHARED = 0x2,
   WASM_LIMITS_FLAG_IS_64 = 0x4,
+  WASM_LIMITS_FLAG_HAS_PAGE_SIZE = 0x8,
 };
 
 enum : unsigned {
@@ -161,12 +173,11 @@ enum : unsigned {
   WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER = 0x02, // if passive == 0
   WASM_ELEM_SEGMENT_HAS_INIT_EXPRS = 0x04,
 };
-const unsigned WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND = 0x3;
+const unsigned WASM_ELEM_SEGMENT_MASK_HAS_ELEM_DESC = 0x3;
 
 // Feature policy prefixes used in the custom "target_features" section
 enum : uint8_t {
   WASM_FEATURE_PREFIX_USED = '+',
-  WASM_FEATURE_PREFIX_REQUIRED = '=',
   WASM_FEATURE_PREFIX_DISALLOWED = '-',
 };
 
@@ -193,6 +204,7 @@ enum : unsigned {
   WASM_DYLINK_NEEDED = 0x2,
   WASM_DYLINK_EXPORT_INFO = 0x3,
   WASM_DYLINK_IMPORT_INFO = 0x4,
+  WASM_DYLINK_RUNTIME_PATH = 0x5,
 };
 
 // Kind codes used in the custom "linking" section in the WASM_COMDAT_INFO
@@ -241,7 +253,7 @@ const unsigned WASM_SYMBOL_ABSOLUTE = 0x200;
 
 #define WASM_RELOC(name, value) name = value,
 
-enum : unsigned {
+enum WasmRelocType : unsigned {
 #include "WasmRelocs.def"
 };
 
@@ -261,8 +273,9 @@ enum class ValType {
   V128 = WASM_TYPE_V128,
   FUNCREF = WASM_TYPE_FUNCREF,
   EXTERNREF = WASM_TYPE_EXTERNREF,
+  EXNREF = WASM_TYPE_EXNREF,
   // Unmodeled value types include ref types with heap types other than
-  // func or extern, and type-specialized funcrefs
+  // func, extern or exn, and type-specialized funcrefs
   OTHERREF = 0xff,
 };
 
@@ -285,6 +298,7 @@ struct WasmDylinkInfo {
   std::vector<StringRef> Needed; // Shared library dependencies
   std::vector<WasmDylinkImportInfo> ImportInfo;
   std::vector<WasmDylinkExportInfo> ExportInfo;
+  std::vector<StringRef> RuntimePath;
 };
 
 struct WasmProducerInfo {
@@ -308,6 +322,7 @@ struct WasmLimits {
   uint8_t Flags;
   uint64_t Minimum;
   uint64_t Maximum;
+  uint32_t PageSize;
 };
 
 struct WasmTableType {
@@ -406,11 +421,16 @@ struct WasmDataSegment {
   uint32_t Comdat; // from the "comdat info" section
 };
 
+// 3 different element segment modes are encodable. This class is currently
+// only used during decoding (see WasmElemSegment below).
+enum class ElemSegmentMode { Active, Passive, Declarative };
+
 // Represents a Wasm element segment, with some limitations compared the spec:
 // 1) Does not model passive or declarative segments (Segment will end up with
 // an Offset field of i32.const 0)
 // 2) Does not model init exprs (Segment will get an empty Functions list)
-// 2) Does not model types other than basic funcref/externref (see ValType)
+// 3) Does not model types other than basic funcref/externref/exnref (see
+// ValType)
 struct WasmElemSegment {
   uint32_t Flags;
   uint32_t TableNumber;
@@ -432,6 +452,8 @@ struct WasmRelocation {
   uint32_t Index;  // Index into either symbol or type index space.
   uint64_t Offset; // Offset from the start of the section.
   int64_t Addend;  // A value to add to the symbol.
+
+  WasmRelocType getType() const { return static_cast<WasmRelocType>(Type); }
 };
 
 struct WasmInitFunc {
@@ -518,17 +540,20 @@ inline bool operator!=(const WasmGlobalType &LHS, const WasmGlobalType &RHS) {
 inline bool operator==(const WasmLimits &LHS, const WasmLimits &RHS) {
   return LHS.Flags == RHS.Flags && LHS.Minimum == RHS.Minimum &&
          (LHS.Flags & WASM_LIMITS_FLAG_HAS_MAX ? LHS.Maximum == RHS.Maximum
-                                               : true);
+                                               : true) &&
+         (LHS.Flags & WASM_LIMITS_FLAG_HAS_PAGE_SIZE
+              ? LHS.PageSize == RHS.PageSize
+              : true);
 }
 
 inline bool operator==(const WasmTableType &LHS, const WasmTableType &RHS) {
   return LHS.ElemType == RHS.ElemType && LHS.Limits == RHS.Limits;
 }
 
-llvm::StringRef toString(WasmSymbolType type);
-llvm::StringRef relocTypetoString(uint32_t type);
-llvm::StringRef sectionTypeToString(uint32_t type);
-bool relocTypeHasAddend(uint32_t type);
+LLVM_ABI llvm::StringRef toString(WasmSymbolType type);
+LLVM_ABI llvm::StringRef relocTypetoString(uint32_t type);
+LLVM_ABI llvm::StringRef sectionTypeToString(uint32_t type);
+LLVM_ABI bool relocTypeHasAddend(uint32_t type);
 
 } // end namespace wasm
 } // end namespace llvm

@@ -15,7 +15,7 @@ Introduction
 tags every 8 bytes of the application memory with a 1 byte tag (using *shadow memory*),
 uses *redzones* to find buffer-overflows and
 *quarantine* to find use-after-free.
-The redzones, the quarantine, and, to a less extent, the shadow, are the
+The redzones, the quarantine, and, to a lesser extent, the shadow, are the
 sources of AddressSanitizer's memory overhead.
 See the `AddressSanitizer paper`_ for details.
 
@@ -262,6 +262,14 @@ than that of AddressSanitizer:
 `1/TG` extra memory for the shadow
 and some overhead due to `TG`-aligning all objects.
 
+Security Considerations
+=======================
+
+HWASAN is a bug detection tool and its runtime is not meant to be
+linked against production executables. While it may be useful for testing,
+HWASAN's runtime was not developed with security-sensitive
+constraints in mind and may compromise the security of the resulting executable.
+
 Supported architectures
 =======================
 HWASAN relies on `Address Tagging`_ which is only available on AArch64.
@@ -283,7 +291,7 @@ implement page aliasing.
 
 Related Work
 ============
-* `SPARC ADI`_ implements a similar tool mostly in hardware.
+* `SPARC ADI`_ and `Arm MTE`_ implement a similar tool mostly in hardware.
 * `Effective and Efficient Memory Protection Using Dynamic Tainting`_ discusses
   similar approaches ("lock & key").
 * `Watchdog`_ discussed a heavier, but still somewhat similar
@@ -294,6 +302,7 @@ Related Work
 .. _Watchdog: https://www.cis.upenn.edu/acg/papers/isca12_watchdog.pdf
 .. _Effective and Efficient Memory Protection Using Dynamic Tainting: https://www.cc.gatech.edu/~orso/papers/clause.doudalis.orso.prvulovic.pdf
 .. _SPARC ADI: https://lazytyped.blogspot.com/2017/09/getting-started-with-adi.html
+.. _Arm MTE: https://developer.arm.com/documentation/108035/0100/Introduction-to-the-Memory-Tagging-Extension
 .. _AddressSanitizer paper: https://www.usenix.org/system/files/conference/atc12/atc12-final39.pdf
 .. _Address Tagging: http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.den0024a/ch12s05s01.html
 .. _Linear Address Masking: https://software.intel.com/content/www/us/en/develop/download/intel-architecture-instruction-set-extensions-programming-reference.html

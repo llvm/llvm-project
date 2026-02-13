@@ -20,8 +20,8 @@ operating system while executing on a GPU.
 We implemented remote procedure calls using unified virtual memory to create a
 shared communicate channel between the two processes. This memory is often
 pinned memory that can be accessed asynchronously and atomically by multiple
-processes simultaneously. This supports means that we can simply provide mutual
-exclusion on a shared better to swap work back and forth between the host system
+processes simultaneously. This support means that we can simply provide mutual
+exclusion on a shared buffer to swap work back and forth between the host system
 and the GPU. We can then use this to create a simple client-server protocol
 using this shared memory.
 
@@ -39,7 +39,7 @@ In order to make this transmission channel thread-safe, we abstract ownership of
 the given mailbox pair and buffer around a port, effectively acting as a lock
 and an index into the allocated buffer slice. The server and device have
 independent locks around the given port. In this scheme, the buffer can be used
-to communicate intent and data generically with the server. We them simply
+to communicate intent and data generically with the server. We then simply
 provide multiple copies of this protocol and expose them as multiple ports.
 
 If this were simply a standard CPU system, this would be sufficient. However,
@@ -92,20 +92,6 @@ asynchronous operations that do not need to wait until the server has completed
 them. If an operation requires more data than the fixed size buffer, we simply
 send multiple packets back and forth in a streaming fashion.
 
-Server Library
---------------
-
-The RPC server's basic functionality is provided by the LLVM C library. A static
-library called ``libllvmlibc_rpc_server.a`` includes handling for the basic
-operations, such as printing or exiting. This has a small API that handles
-setting up the unified buffer and an interface to check the opcodes.
-
-Some operations are too divergent to provide generic implementations for, such
-as allocating device accessible memory. For these cases, we provide a callback
-registration scheme to add a custom handler for any given opcode through the
-port API. More information can be found in the installed header
-``<install>/include/llvmlibc_rpc_server.h``.
-
 Client Example
 --------------
 
@@ -127,10 +113,10 @@ done. It can be omitted if asynchronous execution is desired.
   void rpc_host_call(void *fn, void *data, size_t size) {
     rpc::Client::Port port = rpc::client.open<RPC_HOST_CALL>();
     port.send_n(data, size);
-    port.send([=](rpc::Buffer *buffer) {
+    port.send([=](rpc::Buffer *buffer, uint32_t) {
       buffer->data[0] = reinterpret_cast<uintptr_t>(fn);
     });
-    port.recv([](rpc::Buffer *) {});
+    port.recv([](rpc::Buffer *, uint32_t) {});
     port.close();
   }
 
@@ -145,7 +131,7 @@ call a function pointer provided by the client.
 In this example, the server simply runs forever in a separate thread for
 brevity's sake. Because the client is a GPU potentially handling several threads
 at once, the server needs to loop over all the active threads on the GPU. We
-abstract this into the ``lane_size`` variable, which is simply the device's warp
+abstract this into the ``num_lanes`` variable, which is simply the device's warp
 or wavefront size. The identifier is simply the threads index into the current
 warp or wavefront. We allocate memory to copy the struct data into, and then
 call the given function pointer with that copied data. The final send simply
@@ -161,8 +147,8 @@ data.
 
     switch(port->get_opcode()) {
     case RPC_HOST_CALL: {
-      uint64_t sizes[LANE_SIZE];
-      void *args[LANE_SIZE];
+      uint64_t sizes[NUM_LANES];
+      void *args[NUM_LANES];
       port->recv_n(args, sizes, [&](uint64_t size) { return new char[size]; });
       port->recv([&](rpc::Buffer *buffer, uint32_t id) {
         reinterpret_cast<void (*)(void *)>(buffer->data[0])(args[id]);
@@ -176,14 +162,53 @@ data.
       port->recv([](rpc::Buffer *) {});
       break;
     }
+    port->close();
   }
+
+Function Dispatch
+-----------------
+
+There are cases where the client wants to simply execute a function as-is on the
+server. A helper function is provided to make this case almost automatic. By
+default, all memory is assumed to live privately on the client. Pointer
+arguments will be copied between the client and server for correctness. Pointers
+to void will all be treated as opaque pointers and copied by-value. Constant
+character pointers will be treated as C-strings and copied using its length.
+Functions returning void will wait for the server to complete execution rather
+than submitting asynchronously.
+
+.. code-block:: c++
+
+  double fn(int x, long y, char c, double d);
+
+  // Client-side dispatch.
+  double fn(int x, long y, char c, double d) {
+    return rpc::dispatch<OPCODE>(client, fn, x, y, c, d);
+  }
+
+  // Server-side handling.
+  for(;;) {
+    auto port = server.try_open(index);
+    if (!port)
+      return continue;
+
+    switch(port->get_opcode()) {
+    case OPCODE:
+      rpc::invoke<NUM_LANES>(fn, *port);
+    default:
+      port->recv([](rpc::Buffer *) {});
+      break;
+    }
+    port->close();
+  }
+
 
 CUDA Server Example
 -------------------
 
 The following code shows an example of using the exported RPC interface along
 with the C library to manually configure a working server using the CUDA
-language. Other runtimes can use the presence of the ``__llvm_libc_rpc_client``
+language. Other runtimes can use the presence of the ``__llvm_rpc_client``
 in the GPU executable as an indicator for whether or not the server can be
 checked. These details should ideally be handled by the GPU language runtime,
 but the following example shows how it can be used by a standard user.
@@ -196,53 +221,17 @@ but the following example shows how it can be used by a standard user.
   #include <cstdlib>
   #include <cuda_runtime.h>
 
-  #include <llvmlibc_rpc_server.h>
+  #include <shared/rpc.h>
+  #include <shared/rpc_opcodes.h>
+  #include <shared/rpc_server.h>
 
   [[noreturn]] void handle_error(cudaError_t err) {
     fprintf(stderr, "CUDA error: %s\n", cudaGetErrorString(err));
     exit(EXIT_FAILURE);
   }
 
-  [[noreturn]] void handle_error(rpc_status_t err) {
-    fprintf(stderr, "RPC error: %d\n", err);
-    exit(EXIT_FAILURE);
-  }
-
-  // The handle to the RPC client provided by the C library.
-  extern "C" __device__ void *__llvm_libc_rpc_client;
-
-  __global__ void get_client_ptr(void **ptr) { *ptr = __llvm_libc_rpc_client; }
-
-  // Obtain the RPC client's handle from the device. The CUDA language cannot look
-  // up the symbol directly like the driver API, so we launch a kernel to read it.
-  void *get_rpc_client() {
-    void *rpc_client = nullptr;
-    void **rpc_client_d = nullptr;
-
-    if (cudaError_t err = cudaMalloc(&rpc_client_d, sizeof(void *)))
-      handle_error(err);
-    get_client_ptr<<<1, 1>>>(rpc_client_d);
-    if (cudaError_t err = cudaDeviceSynchronize())
-      handle_error(err);
-    if (cudaError_t err = cudaMemcpy(&rpc_client, rpc_client_d, sizeof(void *),
-                                     cudaMemcpyDeviceToHost))
-      handle_error(err);
-    return rpc_client;
-  }
-
-  // Routines to allocate mapped memory that both the host and the device can
-  // access asychonrously to communicate with eachother.
-  void *alloc_host(size_t size, void *) {
-    void *sharable_ptr;
-    if (cudaError_t err = cudaMallocHost(&sharable_ptr, sizeof(void *)))
-      handle_error(err);
-    return sharable_ptr;
-  };
-
-  void free_host(void *ptr, void *) {
-    if (cudaError_t err = cudaFreeHost(ptr))
-      handle_error(err);
-  }
+  // Routes the library symbol into the CUDA runtime interface.
+  [[gnu::weak]] __device__ rpc::Client client asm("__llvm_rpc_client");
 
   // The device-side overload of the standard C function to call.
   extern "C" __device__ int puts(const char *);
@@ -251,18 +240,23 @@ but the following example shows how it can be used by a standard user.
   __global__ void hello() { puts("Hello world!"); }
 
   int main() {
-    // Initialize the RPC server to run on the given device.
-    rpc_device_t device;
-    if (rpc_status_t err =
-            rpc_server_init(&device, RPC_MAXIMUM_PORT_COUNT,
-                            /*warp_size=*/32, alloc_host, /*data=*/nullptr))
+    void *rpc_client = nullptr;
+    if (cudaError_t err = cudaGetSymbolAddress(&rpc_client, client))
       handle_error(err);
 
-    // Initialize the RPC client by copying the buffer to the device's handle.
-    void *rpc_client = get_rpc_client();
-    if (cudaError_t err =
-            cudaMemcpy(rpc_client, rpc_get_client_buffer(device),
-                       rpc_get_client_size(), cudaMemcpyHostToDevice))
+    // Initialize the RPC client and server interface.
+    uint32_t warp_size = 32;
+    void *rpc_buffer = nullptr;
+    if (cudaError_t err = cudaMallocHost(
+            &rpc_buffer,
+            rpc::Server::allocation_size(warp_size, rpc::MAX_PORT_COUNT)))
+      handle_error(err);
+    rpc::Server server(rpc::MAX_PORT_COUNT, rpc_buffer);
+    rpc::Client client(rpc::MAX_PORT_COUNT, rpc_buffer);
+
+    // Initialize the client on the device so it can communicate with the server.
+    if (cudaError_t err = cudaMemcpy(rpc_client, &client, sizeof(rpc::Client),
+                                     cudaMemcpyHostToDevice))
       handle_error(err);
 
     cudaStream_t stream;
@@ -274,27 +268,29 @@ but the following example shows how it can be used by a standard user.
 
     // While the kernel is executing, check the RPC server for work to do.
     // Requires non-blocking CUDA kernels but avoids a separate thread.
-    while (cudaStreamQuery(stream) == cudaErrorNotReady)
-      if (rpc_status_t err = rpc_handle_server(device))
-        handle_error(err);
+    do {
+      auto port = server.try_open(warp_size, /*index=*/0);
+      if (!port)
+        continue;
 
-    // Shut down the server running on the given device.
-    if (rpc_status_t err =
-            rpc_server_shutdown(device, free_host, /*data=*/nullptr))
-      handle_error(err);
-
-    return EXIT_SUCCESS;
+      // Only available in-tree from the 'libc' sources.
+      handle_libc_opcodes(*port, warp_size);
+      port->close();
+    } while (cudaStreamQuery(stream) == cudaErrorNotReady);
   }
 
 The above code must be compiled in CUDA's relocatable device code mode and with
 the advanced offloading driver to link in the library. Currently this can be
 done with the following invocation. Using LTO avoids the overhead normally
-associated with relocatable device code linking.
+associated with relocatable device code linking. The C library for GPU's
+handling is included through the ``shared/`` directory. This is not currently
+installed as it does not use a stable interface.
+
 
 .. code-block:: sh
 
-  $> clang++ -x cuda rpc.cpp --offload-arch=native -fgpu-rdc -lcudart -lcgpu-nvptx \
-       -I<install-path>include -L<install-path>/lib -lllvmlibc_rpc_server \
+  $> clang++ -x cuda rpc.cpp --offload-arch=native -fgpu-rdc -lcudart \
+       -I<install-path>include -L<install-path>/lib -Xoffload-linker -lc \
        -O3 -foffload-lto -o hello
   $> ./hello
   Hello world!
@@ -302,6 +298,7 @@ associated with relocatable device code linking.
 Extensions
 ----------
 
-We describe which operation the RPC server should take with a 16-bit opcode. We
-consider the first 32768 numbers to be reserved while the others are free to
-use.
+The opcode is a 32-bit integer that must be unique to the requested operation.
+All opcodes used by ``libc`` internally have the character ``c`` in the most
+significant byte. Any other opcode is available for use outside of the ``libc``
+implementation.

@@ -1,4 +1,4 @@
-//===--- NoSuspendWithLockCheck.h - clang-tidy ------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace clang::tidy::cppcoreguidelines {
 /// This check implements CppCoreGuideline CP.52.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/no-suspend-with-lock.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/no-suspend-with-lock.html
 class NoSuspendWithLockCheck : public ClangTidyCheck {
 public:
   NoSuspendWithLockCheck(StringRef Name, ClangTidyContext *Context)

@@ -4,7 +4,7 @@
 define <16 x i32> @test2(<16 x i32> %x) {
 ; CHECK-LABEL: test2:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; CHECK-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
    %res = add <16 x i32><i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, %x

@@ -57,14 +57,18 @@ GENERAL OPTIONS
 
 .. option:: -h, --help
 
- Show the :program:`lit` help message.
+ Show the :program:`lit` help message and exit.
 
-.. option:: -j N, --workers=N
+.. option:: --version
+
+ Show :program:`lit`'s version number and exit.
+
+.. option:: -j N, --workers N
 
  Run ``N`` tests in parallel.  By default, this is automatically chosen to
  match the number of detected available CPUs.
 
-.. option:: --config-prefix=NAME
+.. option:: --config-prefix NAME
 
  Search for :file:`{NAME}.cfg` and :file:`{NAME}.site.cfg` when searching for
  test suites, instead of :file:`lit.cfg` and :file:`lit.site.cfg`.
@@ -96,7 +100,7 @@ OUTPUT OPTIONS
 
  Each command is printed before it is executed. This can be valuable for
  debugging test failures, as the last printed command is the one that failed.
- Moreover, :program:`lit` inserts ``'RUN: at line N'`` before each
+ Moreover, :program:`lit` inserts ``'RUN: at line N'`` after each
  command pipeline in the output to help you locate the source line of
  the failed command.
 
@@ -108,24 +112,52 @@ OUTPUT OPTIONS
 
  Enable -v, but for all tests not just failed tests.
 
+.. option:: -o PATH, --output PATH
+
+ Write test results to the provided path.
+
 .. option:: --no-progress-bar
 
  Do not use curses based progress bar.
 
+.. option:: --show-excluded
+
+ Show excluded tests.
+
+.. option:: --show-skipped
+
+ Show skipped tests.
+
 .. option:: --show-unsupported
 
- Show the names of unsupported tests.
+ Show unsupported tests.
+
+.. option:: --show-pass
+
+ Show passed tests.
+
+.. option:: --show-flakypass
+
+ Show passed with retry tests.
 
 .. option:: --show-xfail
 
- Show the names of tests that were expected to fail.
+ Show expectedly failed tests.
 
 .. _execution-options:
 
 EXECUTION OPTIONS
 -----------------
 
-.. option:: --path=PATH
+.. option:: --gtest-sharding
+
+ Enable sharding for GoogleTest format.
+
+.. option:: --no-gtest-sharding
+
+ Disable sharding for GoogleTest format.
+
+.. option:: --path PATH
 
  Specify an additional ``PATH`` to use when searching for executables in tests.
 
@@ -139,11 +171,6 @@ EXECUTION OPTIONS
  "``valgrind``" feature that can be used to conditionally disable (or expect
  failure in) certain tests.
 
-.. option:: --vg-arg=ARG
-
- When :option:`--vg` is used, specify an additional argument to pass to
- :program:`valgrind` itself.
-
 .. option:: --vg-leak
 
  When :option:`--vg` is used, enable memory leak checks.  When this option is
@@ -151,15 +178,82 @@ EXECUTION OPTIONS
  feature that can be used to conditionally disable (or expect failure in)
  certain tests.
 
+.. option:: --vg-arg ARG
+
+ When :option:`--vg` is used, specify an additional argument to pass to
+ :program:`valgrind` itself.
+
+.. option:: --no-execute
+
+ Don't execute any tests (assume that they pass).
+
+.. option:: --xunit-xml-output XUNIT_XML_OUTPUT
+
+ Write XUnit-compatible XML test reports to the specified file.
+
+.. option:: --report-failures-only
+
+ Only include failures (see :ref:`test-status-results`) in the report.
+
+.. option:: --resultdb-output RESULTDB_OUTPUT
+
+ Write LuCI ResultDB compatible JSON to the specified file.
+
+.. option:: --time-trace-output TIME_TRACE_OUTPUT
+
+ Write Chrome tracing compatible JSON to the specified file
+
+.. option:: --timeout MAXINDIVIDUALTESTTIME
+
+ Maximum time to spend running a single test (in seconds). 0 means no time
+ limit. [Default: 0]
+
+.. option:: --timeout N
+
+ Spend at most ``N`` seconds (approximately) running each individual test.
+ ``0`` means no time limit, and ``0`` is the default. Note that this is not an
+ alias for :option:`--max-time`; the two are different kinds of maximums.
+
+.. option:: --max-failures MAX_FAILURES
+
+ Stop execution after the given number of failures.
+
+.. option:: --max-retries-per-test N
+
+ Retry running failed tests at most ``N`` times.
+ Out of the following options to rerun failed tests the
+ :option:`--max-retries-per-test` is the only one that doesn't
+ require a change in the test scripts or the test config:
+
+  * :option:`--max-retries-per-test` lit option
+  * ``config.test_retry_attempts`` test suite option
+  * ``ALLOW_RETRIES:`` annotation in test script
+
+ Any option in the list above overrules its predecessor.
+
+.. option:: --allow-empty-runs
+
+ Do not fail the run if all tests are filtered out.
+
+.. option:: --per-test-coverage
+
+ Emit the necessary test coverage data, divided per test case (involves
+ setting a unique value to LLVM_PROFILE_FILE for each RUN). The coverage
+ data files will be emitted in the directory specified by ``config.test_exec_root``.
+
+.. option:: --ignore-fail
+
+ Exit with status zero even if some tests fail.
+
+.. option:: --skip-test-time-recording
+
+ Do not track elapsed wall time for each test.
+
 .. option:: --time-tests
 
  Track the wall time individual tests take to execute and includes the results
  in the summary output.  This is useful for determining which tests in a test
  suite take the most time to execute.
-
-.. option:: --ignore-fail
-
- Exit with status zero even if some tests fail.
 
 .. _selection-options:
 
@@ -174,44 +268,17 @@ The timing data is stored in the `test_exec_root` in a file named
 `.lit_test_times.txt`. If this file does not exist, then `lit` checks the
 `test_source_root` for the file to optionally accelerate clean builds.
 
-.. option:: --shuffle
-
- Run the tests in a random order, not failing/slowest first. Deprecated,
- use :option:`--order` instead.
-
-.. option:: --per-test-coverage
-
- Emit the necessary test coverage data, divided per test case (involves
- setting a unique value to LLVM_PROFILE_FILE for each RUN). The coverage
- data files will be emitted in the directory specified by `config.test_exec_root`.
-
-.. option:: --max-failures N
-
- Stop execution after the given number ``N`` of failures.
- An integer argument should be passed on the command line
- prior to execution.
-
-.. option:: --max-tests=N
+.. option:: --max-tests N
 
  Run at most ``N`` tests and then terminate.
 
-.. option:: --max-time=N
+.. option:: --max-time N
 
  Spend at most ``N`` seconds (approximately) running tests and then terminate.
  Note that this is not an alias for :option:`--timeout`; the two are
  different kinds of maximums.
 
-.. option:: --num-shards=M
-
- Divide the set of selected tests into ``M`` equal-sized subsets or
- "shards", and run only one of them.  Must be used with the
- ``--run-shard=N`` option, which selects the shard to run. The environment
- variable ``LIT_NUM_SHARDS`` can also be used in place of this
- option. These two options provide a coarse mechanism for partitioning large
- testsuites, for parallel execution on separate machines (say in a large
- testing farm).
-
-.. option:: --order={lexical,random,smart}
+.. option:: --order {lexical,random,smart}
 
  Define the order in which tests are run. The supported values are:
 
@@ -224,34 +291,35 @@ The timing data is stored in the `test_exec_root` in a file named
    tests, all in descending execution time order. This is the default as it
    optimizes concurrency.
 
-.. option:: --run-shard=N
+.. option:: --shuffle
 
- Select which shard to run, assuming the ``--num-shards=M`` option was
- provided. The two options must be used together, and the value of ``N``
- must be in the range ``1..M``. The environment variable
- ``LIT_RUN_SHARD`` can also be used in place of this option.
+ Run the tests in a random order, not failing/slowest first. Deprecated,
+ use :option:`--order` instead.
 
-.. option:: --timeout=N
+.. option:: -i, --incremental
 
- Spend at most ``N`` seconds (approximately) running each individual test.
- ``0`` means no time limit, and ``0`` is the default. Note that this is not an
- alias for :option:`--max-time`; the two are different kinds of maximums.
+ Run failed tests first (DEPRECATED: use ``--order=smart``).
 
-.. option:: --filter=REGEXP
+.. option:: --filter REGEXP
 
   Run only those tests whose name matches the regular expression specified in
   ``REGEXP``. The environment variable ``LIT_FILTER`` can be also used in place
   of this option, which is especially useful in environments where the call
   to ``lit`` is issued indirectly.
 
-.. option:: --filter-out=REGEXP
+.. option:: --filter-out REGEXP
 
   Filter out those tests whose name matches the regular expression specified in
   ``REGEXP``. The environment variable ``LIT_FILTER_OUT`` can be also used in
   place of this option, which is especially useful in environments where the
   call to ``lit`` is issued indirectly.
 
-.. option:: --xfail=LIST
+.. option:: --filter-failed
+
+  Run only those tests that previously failed. Tests that have been newly added
+  but not yet run are not included.
+
+.. option:: --xfail LIST
 
   Treat those tests whose name is in the semicolon separated list ``LIST`` as
   ``XFAIL``. This can be helpful when one does not want to modify the test
@@ -283,7 +351,7 @@ The timing data is stored in the `test_exec_root` in a file named
 
     LIT_XFAIL="affinity/kmp-hw-subset.c;libomptarget :: x86_64-pc-linux-gnu :: offloading/memory_manager.cpp"
 
-.. option:: --xfail-not=LIST
+.. option:: --xfail-not LIST
 
   Do not treat the specified tests as ``XFAIL``.  The environment variable
   ``LIT_XFAIL_NOT`` can also be used in place of this option.  The syntax is the
@@ -292,6 +360,28 @@ The timing data is stored in the `test_exec_root` in a file named
   including an :option:`--xfail` appearing later on the command line.  The
   primary purpose is to suppress an ``XPASS`` result without modifying a test
   case that uses the ``XFAIL`` directive.
+
+.. option:: --exclude-xfail
+
+  ``XFAIL`` tests won't be run, unless they are listed in the ``--xfail-not``
+  (or ``LIT_XFAIL_NOT``) lists.
+
+.. option:: --num-shards M
+
+ Divide the set of selected tests into ``M`` equal-sized subsets or
+ "shards", and run only one of them.  Must be used with the
+ ``--run-shard=N`` option, which selects the shard to run. The environment
+ variable ``LIT_NUM_SHARDS`` can also be used in place of this
+ option. These two options provide a coarse mechanism for partitioning large
+ testsuites, for parallel execution on separate machines (say in a large
+ testing farm).
+
+.. option:: --run-shard N
+
+ Select which shard to run, assuming the ``--num-shards=M`` option was
+ provided. The two options must be used together, and the value of ``N``
+ must be in the range ``1..M``. The environment variable
+ ``LIT_RUN_SHARD`` can also be used in place of this option.
 
 ADDITIONAL OPTIONS
 ------------------
@@ -309,11 +399,22 @@ ADDITIONAL OPTIONS
 
  List all of the discovered tests and exit.
 
+.. option:: --show-used-features
+
+ Show all features used in the test suite (in ``XFAIL``, ``UNSUPPORTED`` and
+ ``REQUIRES``) and exit.
+
+.. option:: --update-tests
+
+ Pass failing tests to functions in the ``lit_config.test_updaters`` list to
+ check whether any of them know how to update the test to make it pass.
+
 EXIT STATUS
 -----------
 
-:program:`lit` will exit with an exit code of 1 if there are any FAIL or XPASS
-results.  Otherwise, it will exit with the status 0.  Other exit codes are used
+:program:`lit` will exit with an exit code of 1 if there are any failures
+(see :ref:`test-status-results`) and :option:`--ignore-fail` has not been
+passed.  Otherwise, it will exit with the status 0.  Other exit codes are used
 for non-test related failures (for example a user error or an internal program
 error).
 
@@ -389,8 +490,10 @@ Each test ultimately produces one of the following eight results:
 
 **TIMEOUT**
 
- The test was run, but it timed out before it was able to complete. This is
- considered a failure.
+ The test was run, but it timed out before it was able to complete.
+
+Unresolved (**UNRESOLVED**), timed out (**TIMEOUT**), failed (**FAIL**) and
+unexpectedly passed (**XPASS**) tests are considered failures.
 
 Depending on the test format tests may produce additional information about
 their status (generally only for failures).  See the :ref:`output-options`
@@ -530,30 +633,27 @@ TestRunner.py:
  %{fs-src-root}          root component of file system paths pointing to the LLVM checkout
  %{fs-tmp-root}          root component of file system paths pointing to the test's temporary directory
  %{fs-sep}               file system path separator
- %t                      temporary file name unique to the test
- %basename_t             The last path component of %t but without the ``.tmp`` extension
- %T                      parent directory of %t (not unique, deprecated, do not use)
+ %t                      a path unique to the test (which may be used to make files or directories)
+ %basename_t             The last path component of %t but without the ``.tmp`` extension (deprecated, use ``%{t:stem}`` instead)
  %%                      %
  %/s                     %s but ``\`` is replaced by ``/``
  %/S                     %S but ``\`` is replaced by ``/``
  %/p                     %p but ``\`` is replaced by ``/``
  %/t                     %t but ``\`` is replaced by ``/``
- %/T                     %T but ``\`` is replaced by ``/``
+ %{s:basename}           The last path component of %s
+ %{t:stem}               The last path component of %t but without the ``.tmp`` extension (alias for %basename_t)
  %{s:real}               %s after expanding all symbolic links and substitute drives
  %{S:real}               %S after expanding all symbolic links and substitute drives
  %{p:real}               %p after expanding all symbolic links and substitute drives
  %{t:real}               %t after expanding all symbolic links and substitute drives
- %{T:real}               %T after expanding all symbolic links and substitute drives
  %{/s:real}              %/s after expanding all symbolic links and substitute drives
  %{/S:real}              %/S after expanding all symbolic links and substitute drives
  %{/p:real}              %/p after expanding all symbolic links and substitute drives
  %{/t:real}              %/t after expanding all symbolic links and substitute drives
- %{/T:real}              %/T after expanding all symbolic links and substitute drives
  %{/s:regex_replacement} %/s but escaped for use in the replacement of a ``s@@@`` command in sed
  %{/S:regex_replacement} %/S but escaped for use in the replacement of a ``s@@@`` command in sed
  %{/p:regex_replacement} %/p but escaped for use in the replacement of a ``s@@@`` command in sed
  %{/t:regex_replacement} %/t but escaped for use in the replacement of a ``s@@@`` command in sed
- %{/T:regex_replacement} %/T but escaped for use in the replacement of a ``s@@@`` command in sed
  %:s                     On Windows, %/s but a ``:`` is removed if its the second character.
                          Otherwise, %s but with a single leading ``/`` removed.
  %:S                     On Windows, %/S but a ``:`` is removed if its the second character.
@@ -562,8 +662,7 @@ TestRunner.py:
                          Otherwise, %p but with a single leading ``/`` removed.
  %:t                     On Windows, %/t but a ``:`` is removed if its the second character.
                          Otherwise, %t but with a single leading ``/`` removed.
- %:T                     On Windows, %/T but a ``:`` is removed if its the second character.
-                         Otherwise, %T but with a single leading ``/`` removed.
+ %{readfile:<filename>}  Reads the file specified.
  ======================= ==============
 
 Other substitutions are provided that are variations on this base set and
@@ -598,6 +697,14 @@ newline.
 The ``<progress info>`` field can be used to report progress information such
 as (1/300) or can be empty, but even when empty the parentheses are required.
 
+Should a test be allowed retries (see ``ALLOW_RETRIES:`` annotation) and it
+needed more than one attempt to succeed, then ``<progress info>`` is extended
+by this information:
+
+.. code-block:: none
+
+  , <num_attempts_made> of <max_allowed_attempts> attempts
+
 Each test result may include additional (multiline) log information in the
 following format:
 
@@ -624,6 +731,23 @@ B, C, and D, and a log message for the failing test C:
   Test 'C' failed as a result of exit code 1.
   ********************
   PASS: D (4 of 4)
+
+DEFAULT FEATURES
+~~~~~~~~~~~~~~~~~
+
+For convenience :program:`lit` automatically adds **available_features** for
+some common use cases.
+
+:program:`lit` adds a feature based on the operating system being built on, for
+example: `system-darwin`, `system-linux`, etc. :program:`lit` also
+automatically adds a feature based on the current architecture, for example
+`target-x86_64`, `target-aarch64`, etc.
+
+When building with sanitizers enabled, :program:`lit` automatically adds the
+short name of the sanitizer, for example: `asan`, `tsan`, etc.
+
+To see the full list of features that can be added, see
+*llvm/utils/lit/lit/llvm/config.py*.
 
 LIT EXAMPLE TESTS
 ~~~~~~~~~~~~~~~~~

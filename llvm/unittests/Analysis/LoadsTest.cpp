@@ -7,8 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -36,10 +41,10 @@ define i32 @f() {
 entry:
   %o = alloca %class
   %f1 = getelementptr inbounds %class, %class* %o, i32 0, i32 0
-  store i32 42, i32* %f1
+  store i32 42, ptr %f1
   %f2 = getelementptr inbounds %class, %class* %o, i32 0, i32 1
-  store i32 43, i32* %f2
-  %v = load i32, i32* %f1
+  store i32 43, ptr %f2
+  %v = load i32, ptr %f1
   ret i32 %v
 }
 )IR");
@@ -68,16 +73,16 @@ TEST(LoadsTest, CanReplacePointersIfEqual) {
                                       R"IR(
 @y = common global [1 x i32] zeroinitializer, align 4
 @x = common global [1 x i32] zeroinitializer, align 4
-declare void @use(i32*)
+declare void @use(ptr)
 
-define void @f(i32* %p1, i32* %p2, i64 %i) {
-  call void @use(i32* getelementptr inbounds ([1 x i32], [1 x i32]* @y, i64 0, i64 0))
+define void @f(ptr %p1, ptr %p2, i64 %i) {
+  call void @use(ptr getelementptr inbounds ([1 x i32], ptr @y, i64 0, i64 0))
 
-  %p1_idx = getelementptr inbounds i32, i32* %p1, i64 %i
-  call void @use(i32* %p1_idx)
+  %p1_idx = getelementptr inbounds i32, ptr %p1, i64 %i
+  call void @use(ptr %p1_idx)
 
-  %icmp = icmp eq i32* %p1, getelementptr inbounds ([1 x i32], [1 x i32]* @y, i64 0, i64 0)
-  %ptrInt = ptrtoint i32* %p1 to i64
+  %icmp = icmp eq ptr %p1, getelementptr inbounds ([1 x i32], ptr @y, i64 0, i64 0)
+  %ptrInt = ptrtoint ptr %p1 to i64
   ret void
 }
 )IR");
@@ -113,4 +118,91 @@ define void @f(i32* %p1, i32* %p2, i64 %i) {
   EXPECT_FALSE(canReplacePointersInUseIfEqual(GEPUse, P2, DL));
   EXPECT_TRUE(canReplacePointersInUseIfEqual(PtrToIntUse, P2, DL));
   EXPECT_TRUE(canReplacePointersInUseIfEqual(IcmpUse, P2, DL));
+}
+
+TEST(LoadsTest, IsReadOnlyLoop) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C,
+                                      R"IR(
+define i64 @f1() {
+entry:
+  %p1 = alloca [1024 x i8]
+  %p2 = alloca [1024 x i8]
+  br label %loop
+
+loop:
+  %index = phi i64 [ %index.next, %loop.inc ], [ 3, %entry ]
+  %arrayidx = getelementptr inbounds i8, ptr %p1, i64 %index
+  %ld1 = load i8, ptr %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds i8, ptr %p2, i64 %index
+  %ld2 = load i8, ptr %arrayidx1, align 1
+  %cmp3 = icmp eq i8 %ld1, %ld2
+  br i1 %cmp3, label %loop.inc, label %loop.end
+
+loop.inc:
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 67
+  br i1 %exitcond, label %loop, label %loop.end
+
+loop.end:
+  %retval = phi i64 [ %index, %loop ], [ 67, %loop.inc ]
+  ret i64 %retval
+}
+
+define i64 @f2(ptr %p1) {
+entry:
+  %p2 = alloca [1024 x i8]
+  br label %loop
+
+loop:
+  %index = phi i64 [ %index.next, %loop.inc ], [ 3, %entry ]
+  %arrayidx = getelementptr inbounds i8, ptr %p1, i64 %index
+  %ld1 = load i8, ptr %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds i8, ptr %p2, i64 %index
+  %ld2 = load i8, ptr %arrayidx1, align 1
+  %cmp3 = icmp eq i8 %ld1, %ld2
+  br i1 %cmp3, label %loop.inc, label %loop.end
+
+loop.inc:
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 67
+  br i1 %exitcond, label %loop, label %loop.end
+
+loop.end:
+  %retval = phi i64 [ %index, %loop ], [ 67, %loop.inc ]
+  ret i64 %retval
+}
+)IR");
+  auto *GV1 = M->getNamedValue("f1");
+  auto *GV2 = M->getNamedValue("f2");
+  ASSERT_TRUE(GV1 && GV2);
+  auto *F1 = dyn_cast<Function>(GV1);
+  auto *F2 = dyn_cast<Function>(GV2);
+  ASSERT_TRUE(F1 && F2);
+
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
+  TargetLibraryInfo TLI(TLII);
+
+  auto IsReadOnlyLoop =
+      [&TLI](Function *F, SmallVector<LoadInst *, 4> &NonDerefLoads) -> bool {
+    AssumptionCache AC(*F);
+    DominatorTree DT(*F);
+    LoopInfo LI(DT);
+    ScalarEvolution SE(*F, TLI, AC, DT, LI);
+
+    Function::iterator FI = F->begin();
+    // First basic block is entry - skip it.
+    BasicBlock *Header = &*(++FI);
+    assert(Header->getName() == "loop");
+    Loop *L = LI.getLoopFor(Header);
+
+    return isReadOnlyLoop(L, &SE, &DT, &AC, NonDerefLoads);
+  };
+
+  SmallVector<LoadInst *, 4> NonDerefLoads;
+  ASSERT_TRUE(IsReadOnlyLoop(F1, NonDerefLoads));
+  ASSERT_TRUE(NonDerefLoads.empty());
+  ASSERT_TRUE(IsReadOnlyLoop(F2, NonDerefLoads));
+  ASSERT_TRUE((NonDerefLoads.size() == 1) &&
+              (NonDerefLoads[0]->getName() == "ld1"));
 }

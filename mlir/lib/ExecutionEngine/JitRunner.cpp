@@ -202,6 +202,8 @@ compileAndExecute(Options &options, Operation *module, StringRef entryPoint,
 
   auto engine = std::move(*expectedEngine);
 
+  engine->initialize();
+
   auto expectedFPtr = engine->lookupPacked(entryPoint);
   if (!expectedFPtr)
     return expectedFPtr.takeError();
@@ -222,8 +224,13 @@ static Error compileAndExecuteVoidFunction(
     CompileAndExecuteConfig config, std::unique_ptr<llvm::TargetMachine> tm) {
   auto mainFunction = dyn_cast_or_null<LLVM::LLVMFuncOp>(
       SymbolTable::lookupSymbolIn(module, entryPoint));
-  if (!mainFunction || mainFunction.empty())
+  if (!mainFunction || mainFunction.isExternal())
     return makeStringError("entry point not found");
+
+  if (cast<LLVM::LLVMFunctionType>(mainFunction.getFunctionType())
+          .getNumParams() != 0)
+    return makeStringError(
+        "JIT can't invoke a main function expecting arguments");
 
   auto resultType = dyn_cast<LLVM::LLVMVoidType>(
       mainFunction.getFunctionType().getReturnType());
@@ -264,7 +271,7 @@ Error checkCompatibleReturnType<float>(LLVM::LLVMFuncOp mainFunction) {
   return Error::success();
 }
 template <typename Type>
-Error compileAndExecuteSingleReturnFunction(
+static Error compileAndExecuteSingleReturnFunction(
     Options &options, Operation *module, StringRef entryPoint,
     CompileAndExecuteConfig config, std::unique_ptr<llvm::TargetMachine> tm) {
   auto mainFunction = dyn_cast_or_null<LLVM::LLVMFuncOp>(
@@ -274,7 +281,8 @@ Error compileAndExecuteSingleReturnFunction(
 
   if (cast<LLVM::LLVMFunctionType>(mainFunction.getFunctionType())
           .getNumParams() != 0)
-    return makeStringError("function inputs not supported");
+    return makeStringError(
+        "JIT can't invoke a main function expecting arguments");
 
   if (Error error = checkCompatibleReturnType<Type>(mainFunction))
     return error;

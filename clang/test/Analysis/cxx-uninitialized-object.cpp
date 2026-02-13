@@ -184,7 +184,7 @@ class CtorDelegationTest1 {
 public:
   CtorDelegationTest1(int)
       : a(9) {
-    // leaves 'b' unintialized, but we'll never check this function
+    // leaves 'b' uninitialized, but we'll never check this function
   }
 
   CtorDelegationTest1()
@@ -205,7 +205,7 @@ class CtorDelegationTest2 {
 public:
   CtorDelegationTest2(int)
       : b(11) {
-    // leaves 'a' unintialized, but we'll never check this function
+    // leaves 'a' uninitialized, but we'll never check this function
   }
 
   CtorDelegationTest2()
@@ -1181,4 +1181,25 @@ void fComplexTest() {
 
   // TODO: we should emit a warning for x2.x and x2.y.
   ComplexUninitTest x2;
+}
+
+struct PaddingBitfieldTest {
+  int a;
+  long long : 7; // padding, previously flagged as uninitialized
+  PaddingBitfieldTest(int a) : a(a) {}
+};
+
+void fPaddingBitfieldTest() {
+  PaddingBitfieldTest pb(42);
+  // no-warning: Unnamed bitfield is now ignored, fixing false positive
+}
+
+struct NamedBitfieldTest {
+  int b; 
+  long long named : 7; // expected-note{{uninitialized field 'this->named'}}
+  NamedBitfieldTest(int b) : b(b) {} // expected-warning{{1 uninitialized field at the end of the constructor call}}
+};
+
+void fNamedBitfieldTest() {
+  NamedBitfieldTest nb(42); 
 }

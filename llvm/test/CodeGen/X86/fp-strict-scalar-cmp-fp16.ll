@@ -2,8 +2,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse2  -O3 | FileCheck %s --check-prefixes=SSE2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+f16c  -O3 | FileCheck %s --check-prefixes=AVX
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f  -O3 | FileCheck %s --check-prefixes=AVX
-; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512fp16 -mattr=+avx512vl -O3 | FileCheck %s --check-prefixes=CHECK-32
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512fp16 -mattr=+avx512vl -O3 | FileCheck %s --check-prefixes=CHECK-64
+; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512fp16 -mattr=+avx512vl -O3 | FileCheck %s --check-prefixes=X86-FP16
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512fp16 -mattr=+avx512vl -O3 | FileCheck %s --check-prefixes=X64-FP16
 
 define i32 @test_f16_oeq_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; SSE2-LABEL: test_f16_oeq_q:
@@ -45,24 +45,24 @@ define i32 @test_f16_oeq_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-NEXT:    cmovpl %esi, %eax
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: test_f16_oeq_q:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    cmovnel %eax, %ecx
-; CHECK-32-NEXT:    cmovpl %eax, %ecx
-; CHECK-32-NEXT:    movl (%ecx), %eax
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: test_f16_oeq_q:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    cmovnel %eax, %ecx
+; X86-FP16-NEXT:    cmovpl %eax, %ecx
+; X86-FP16-NEXT:    movl (%ecx), %eax
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: test_f16_oeq_q:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    movl %edi, %eax
-; CHECK-64-NEXT:    vucomish %xmm1, %xmm0
-; CHECK-64-NEXT:    cmovnel %esi, %eax
-; CHECK-64-NEXT:    cmovpl %esi, %eax
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: test_f16_oeq_q:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    movl %edi, %eax
+; X64-FP16-NEXT:    vucomish %xmm1, %xmm0
+; X64-FP16-NEXT:    cmovnel %esi, %eax
+; X64-FP16-NEXT:    cmovpl %esi, %eax
+; X64-FP16-NEXT:    retq
   %cond = call i1 @llvm.experimental.constrained.fcmp.f16(
                                                half %f1, half %f2, metadata !"oeq",
                                                metadata !"fpexcept.strict") #0
@@ -108,22 +108,22 @@ define i32 @test_f16_ogt_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-NEXT:    cmovbel %esi, %eax
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: test_f16_ogt_q:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    cmoval %eax, %ecx
-; CHECK-32-NEXT:    movl (%ecx), %eax
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: test_f16_ogt_q:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    cmoval %eax, %ecx
+; X86-FP16-NEXT:    movl (%ecx), %eax
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: test_f16_ogt_q:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    movl %edi, %eax
-; CHECK-64-NEXT:    vucomish %xmm1, %xmm0
-; CHECK-64-NEXT:    cmovbel %esi, %eax
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: test_f16_ogt_q:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    movl %edi, %eax
+; X64-FP16-NEXT:    vucomish %xmm1, %xmm0
+; X64-FP16-NEXT:    cmovbel %esi, %eax
+; X64-FP16-NEXT:    retq
   %cond = call i1 @llvm.experimental.constrained.fcmp.f16(
                                                half %f1, half %f2, metadata !"ogt",
                                                metadata !"fpexcept.strict") #0
@@ -169,22 +169,22 @@ define i32 @test_f16_oge_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-NEXT:    cmovbl %esi, %eax
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: test_f16_oge_q:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    cmovael %eax, %ecx
-; CHECK-32-NEXT:    movl (%ecx), %eax
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: test_f16_oge_q:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    cmovael %eax, %ecx
+; X86-FP16-NEXT:    movl (%ecx), %eax
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: test_f16_oge_q:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    movl %edi, %eax
-; CHECK-64-NEXT:    vucomish %xmm1, %xmm0
-; CHECK-64-NEXT:    cmovbl %esi, %eax
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: test_f16_oge_q:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    movl %edi, %eax
+; X64-FP16-NEXT:    vucomish %xmm1, %xmm0
+; X64-FP16-NEXT:    cmovbl %esi, %eax
+; X64-FP16-NEXT:    retq
   %cond = call i1 @llvm.experimental.constrained.fcmp.f16(
                                                half %f1, half %f2, metadata !"oge",
                                                metadata !"fpexcept.strict") #0
@@ -232,22 +232,22 @@ define i32 @test_f16_olt_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-NEXT:    cmovbel %esi, %eax
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: test_f16_olt_q:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    cmoval %eax, %ecx
-; CHECK-32-NEXT:    movl (%ecx), %eax
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: test_f16_olt_q:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    cmoval %eax, %ecx
+; X86-FP16-NEXT:    movl (%ecx), %eax
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: test_f16_olt_q:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    movl %edi, %eax
-; CHECK-64-NEXT:    vucomish %xmm0, %xmm1
-; CHECK-64-NEXT:    cmovbel %esi, %eax
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: test_f16_olt_q:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    movl %edi, %eax
+; X64-FP16-NEXT:    vucomish %xmm0, %xmm1
+; X64-FP16-NEXT:    cmovbel %esi, %eax
+; X64-FP16-NEXT:    retq
   %cond = call i1 @llvm.experimental.constrained.fcmp.f16(
                                                half %f1, half %f2, metadata !"olt",
                                                metadata !"fpexcept.strict") #0
@@ -295,22 +295,22 @@ define i32 @test_f16_ole_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-NEXT:    cmovbl %esi, %eax
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: test_f16_ole_q:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    cmovael %eax, %ecx
-; CHECK-32-NEXT:    movl (%ecx), %eax
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: test_f16_ole_q:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    cmovael %eax, %ecx
+; X86-FP16-NEXT:    movl (%ecx), %eax
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: test_f16_ole_q:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    movl %edi, %eax
-; CHECK-64-NEXT:    vucomish %xmm0, %xmm1
-; CHECK-64-NEXT:    cmovbl %esi, %eax
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: test_f16_ole_q:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    movl %edi, %eax
+; X64-FP16-NEXT:    vucomish %xmm0, %xmm1
+; X64-FP16-NEXT:    cmovbl %esi, %eax
+; X64-FP16-NEXT:    retq
   %cond = call i1 @llvm.experimental.constrained.fcmp.f16(
                                                half %f1, half %f2, metadata !"ole",
                                                metadata !"fpexcept.strict") #0
@@ -356,22 +356,22 @@ define i32 @test_f16_one_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-NEXT:    cmovel %esi, %eax
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: test_f16_one_q:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    cmovnel %eax, %ecx
-; CHECK-32-NEXT:    movl (%ecx), %eax
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: test_f16_one_q:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    cmovnel %eax, %ecx
+; X86-FP16-NEXT:    movl (%ecx), %eax
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: test_f16_one_q:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    movl %edi, %eax
-; CHECK-64-NEXT:    vucomish %xmm1, %xmm0
-; CHECK-64-NEXT:    cmovel %esi, %eax
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: test_f16_one_q:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    movl %edi, %eax
+; X64-FP16-NEXT:    vucomish %xmm1, %xmm0
+; X64-FP16-NEXT:    cmovel %esi, %eax
+; X64-FP16-NEXT:    retq
   %cond = call i1 @llvm.experimental.constrained.fcmp.f16(
                                                half %f1, half %f2, metadata !"one",
                                                metadata !"fpexcept.strict") #0
@@ -417,22 +417,22 @@ define i32 @test_f16_ord_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-NEXT:    cmovpl %esi, %eax
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: test_f16_ord_q:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    cmovnpl %eax, %ecx
-; CHECK-32-NEXT:    movl (%ecx), %eax
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: test_f16_ord_q:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    cmovnpl %eax, %ecx
+; X86-FP16-NEXT:    movl (%ecx), %eax
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: test_f16_ord_q:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    movl %edi, %eax
-; CHECK-64-NEXT:    vucomish %xmm1, %xmm0
-; CHECK-64-NEXT:    cmovpl %esi, %eax
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: test_f16_ord_q:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    movl %edi, %eax
+; X64-FP16-NEXT:    vucomish %xmm1, %xmm0
+; X64-FP16-NEXT:    cmovpl %esi, %eax
+; X64-FP16-NEXT:    retq
   %cond = call i1 @llvm.experimental.constrained.fcmp.f16(
                                                half %f1, half %f2, metadata !"ord",
                                                metadata !"fpexcept.strict") #0
@@ -478,22 +478,22 @@ define i32 @test_f16_ueq_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-NEXT:    cmovnel %esi, %eax
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: test_f16_ueq_q:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    cmovel %eax, %ecx
-; CHECK-32-NEXT:    movl (%ecx), %eax
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: test_f16_ueq_q:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    cmovel %eax, %ecx
+; X86-FP16-NEXT:    movl (%ecx), %eax
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: test_f16_ueq_q:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    movl %edi, %eax
-; CHECK-64-NEXT:    vucomish %xmm1, %xmm0
-; CHECK-64-NEXT:    cmovnel %esi, %eax
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: test_f16_ueq_q:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    movl %edi, %eax
+; X64-FP16-NEXT:    vucomish %xmm1, %xmm0
+; X64-FP16-NEXT:    cmovnel %esi, %eax
+; X64-FP16-NEXT:    retq
   %cond = call i1 @llvm.experimental.constrained.fcmp.f16(
                                                half %f1, half %f2, metadata !"ueq",
                                                metadata !"fpexcept.strict") #0
@@ -541,22 +541,22 @@ define i32 @test_f16_ugt_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-NEXT:    cmovael %esi, %eax
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: test_f16_ugt_q:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    cmovbl %eax, %ecx
-; CHECK-32-NEXT:    movl (%ecx), %eax
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: test_f16_ugt_q:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    cmovbl %eax, %ecx
+; X86-FP16-NEXT:    movl (%ecx), %eax
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: test_f16_ugt_q:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    movl %edi, %eax
-; CHECK-64-NEXT:    vucomish %xmm0, %xmm1
-; CHECK-64-NEXT:    cmovael %esi, %eax
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: test_f16_ugt_q:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    movl %edi, %eax
+; X64-FP16-NEXT:    vucomish %xmm0, %xmm1
+; X64-FP16-NEXT:    cmovael %esi, %eax
+; X64-FP16-NEXT:    retq
   %cond = call i1 @llvm.experimental.constrained.fcmp.f16(
                                                half %f1, half %f2, metadata !"ugt",
                                                metadata !"fpexcept.strict") #0
@@ -604,22 +604,22 @@ define i32 @test_f16_uge_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-NEXT:    cmoval %esi, %eax
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: test_f16_uge_q:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    cmovbel %eax, %ecx
-; CHECK-32-NEXT:    movl (%ecx), %eax
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: test_f16_uge_q:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    cmovbel %eax, %ecx
+; X86-FP16-NEXT:    movl (%ecx), %eax
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: test_f16_uge_q:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    movl %edi, %eax
-; CHECK-64-NEXT:    vucomish %xmm0, %xmm1
-; CHECK-64-NEXT:    cmoval %esi, %eax
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: test_f16_uge_q:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    movl %edi, %eax
+; X64-FP16-NEXT:    vucomish %xmm0, %xmm1
+; X64-FP16-NEXT:    cmoval %esi, %eax
+; X64-FP16-NEXT:    retq
   %cond = call i1 @llvm.experimental.constrained.fcmp.f16(
                                                half %f1, half %f2, metadata !"uge",
                                                metadata !"fpexcept.strict") #0
@@ -665,22 +665,22 @@ define i32 @test_f16_ult_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-NEXT:    cmovael %esi, %eax
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: test_f16_ult_q:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    cmovbl %eax, %ecx
-; CHECK-32-NEXT:    movl (%ecx), %eax
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: test_f16_ult_q:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    cmovbl %eax, %ecx
+; X86-FP16-NEXT:    movl (%ecx), %eax
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: test_f16_ult_q:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    movl %edi, %eax
-; CHECK-64-NEXT:    vucomish %xmm1, %xmm0
-; CHECK-64-NEXT:    cmovael %esi, %eax
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: test_f16_ult_q:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    movl %edi, %eax
+; X64-FP16-NEXT:    vucomish %xmm1, %xmm0
+; X64-FP16-NEXT:    cmovael %esi, %eax
+; X64-FP16-NEXT:    retq
   %cond = call i1 @llvm.experimental.constrained.fcmp.f16(
                                                half %f1, half %f2, metadata !"ult",
                                                metadata !"fpexcept.strict") #0
@@ -726,22 +726,22 @@ define i32 @test_f16_ule_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-NEXT:    cmoval %esi, %eax
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: test_f16_ule_q:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    cmovbel %eax, %ecx
-; CHECK-32-NEXT:    movl (%ecx), %eax
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: test_f16_ule_q:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    cmovbel %eax, %ecx
+; X86-FP16-NEXT:    movl (%ecx), %eax
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: test_f16_ule_q:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    movl %edi, %eax
-; CHECK-64-NEXT:    vucomish %xmm1, %xmm0
-; CHECK-64-NEXT:    cmoval %esi, %eax
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: test_f16_ule_q:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    movl %edi, %eax
+; X64-FP16-NEXT:    vucomish %xmm1, %xmm0
+; X64-FP16-NEXT:    cmoval %esi, %eax
+; X64-FP16-NEXT:    retq
   %cond = call i1 @llvm.experimental.constrained.fcmp.f16(
                                                half %f1, half %f2, metadata !"ule",
                                                metadata !"fpexcept.strict") #0
@@ -789,24 +789,24 @@ define i32 @test_f16_une_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-NEXT:    cmovpl %edi, %eax
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: test_f16_une_q:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    cmovnel %eax, %ecx
-; CHECK-32-NEXT:    cmovpl %eax, %ecx
-; CHECK-32-NEXT:    movl (%ecx), %eax
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: test_f16_une_q:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    cmovnel %eax, %ecx
+; X86-FP16-NEXT:    cmovpl %eax, %ecx
+; X86-FP16-NEXT:    movl (%ecx), %eax
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: test_f16_une_q:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    movl %esi, %eax
-; CHECK-64-NEXT:    vucomish %xmm1, %xmm0
-; CHECK-64-NEXT:    cmovnel %edi, %eax
-; CHECK-64-NEXT:    cmovpl %edi, %eax
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: test_f16_une_q:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    movl %esi, %eax
+; X64-FP16-NEXT:    vucomish %xmm1, %xmm0
+; X64-FP16-NEXT:    cmovnel %edi, %eax
+; X64-FP16-NEXT:    cmovpl %edi, %eax
+; X64-FP16-NEXT:    retq
   %cond = call i1 @llvm.experimental.constrained.fcmp.f16(
                                                half %f1, half %f2, metadata !"une",
                                                metadata !"fpexcept.strict") #0
@@ -852,22 +852,22 @@ define i32 @test_f16_uno_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-NEXT:    cmovnpl %esi, %eax
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: test_f16_uno_q:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    cmovpl %eax, %ecx
-; CHECK-32-NEXT:    movl (%ecx), %eax
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: test_f16_uno_q:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    cmovpl %eax, %ecx
+; X86-FP16-NEXT:    movl (%ecx), %eax
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: test_f16_uno_q:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    movl %edi, %eax
-; CHECK-64-NEXT:    vucomish %xmm1, %xmm0
-; CHECK-64-NEXT:    cmovnpl %esi, %eax
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: test_f16_uno_q:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    movl %edi, %eax
+; X64-FP16-NEXT:    vucomish %xmm1, %xmm0
+; X64-FP16-NEXT:    cmovnpl %esi, %eax
+; X64-FP16-NEXT:    retq
   %cond = call i1 @llvm.experimental.constrained.fcmp.f16(
                                                half %f1, half %f2, metadata !"uno",
                                                metadata !"fpexcept.strict") #0
@@ -915,24 +915,24 @@ define i32 @test_f16_oeq_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-NEXT:    cmovpl %esi, %eax
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: test_f16_oeq_s:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    cmovnel %eax, %ecx
-; CHECK-32-NEXT:    cmovpl %eax, %ecx
-; CHECK-32-NEXT:    movl (%ecx), %eax
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: test_f16_oeq_s:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    cmovnel %eax, %ecx
+; X86-FP16-NEXT:    cmovpl %eax, %ecx
+; X86-FP16-NEXT:    movl (%ecx), %eax
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: test_f16_oeq_s:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    movl %edi, %eax
-; CHECK-64-NEXT:    vcomish %xmm1, %xmm0
-; CHECK-64-NEXT:    cmovnel %esi, %eax
-; CHECK-64-NEXT:    cmovpl %esi, %eax
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: test_f16_oeq_s:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    movl %edi, %eax
+; X64-FP16-NEXT:    vcomish %xmm1, %xmm0
+; X64-FP16-NEXT:    cmovnel %esi, %eax
+; X64-FP16-NEXT:    cmovpl %esi, %eax
+; X64-FP16-NEXT:    retq
   %cond = call i1 @llvm.experimental.constrained.fcmps.f16(
                                                half %f1, half %f2, metadata !"oeq",
                                                metadata !"fpexcept.strict") #0
@@ -978,22 +978,22 @@ define i32 @test_f16_ogt_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-NEXT:    cmovbel %esi, %eax
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: test_f16_ogt_s:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    cmoval %eax, %ecx
-; CHECK-32-NEXT:    movl (%ecx), %eax
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: test_f16_ogt_s:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    cmoval %eax, %ecx
+; X86-FP16-NEXT:    movl (%ecx), %eax
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: test_f16_ogt_s:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    movl %edi, %eax
-; CHECK-64-NEXT:    vcomish %xmm1, %xmm0
-; CHECK-64-NEXT:    cmovbel %esi, %eax
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: test_f16_ogt_s:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    movl %edi, %eax
+; X64-FP16-NEXT:    vcomish %xmm1, %xmm0
+; X64-FP16-NEXT:    cmovbel %esi, %eax
+; X64-FP16-NEXT:    retq
   %cond = call i1 @llvm.experimental.constrained.fcmps.f16(
                                                half %f1, half %f2, metadata !"ogt",
                                                metadata !"fpexcept.strict") #0
@@ -1039,22 +1039,22 @@ define i32 @test_f16_oge_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-NEXT:    cmovbl %esi, %eax
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: test_f16_oge_s:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    cmovael %eax, %ecx
-; CHECK-32-NEXT:    movl (%ecx), %eax
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: test_f16_oge_s:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    cmovael %eax, %ecx
+; X86-FP16-NEXT:    movl (%ecx), %eax
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: test_f16_oge_s:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    movl %edi, %eax
-; CHECK-64-NEXT:    vcomish %xmm1, %xmm0
-; CHECK-64-NEXT:    cmovbl %esi, %eax
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: test_f16_oge_s:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    movl %edi, %eax
+; X64-FP16-NEXT:    vcomish %xmm1, %xmm0
+; X64-FP16-NEXT:    cmovbl %esi, %eax
+; X64-FP16-NEXT:    retq
   %cond = call i1 @llvm.experimental.constrained.fcmps.f16(
                                                half %f1, half %f2, metadata !"oge",
                                                metadata !"fpexcept.strict") #0
@@ -1102,22 +1102,22 @@ define i32 @test_f16_olt_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-NEXT:    cmovbel %esi, %eax
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: test_f16_olt_s:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    cmoval %eax, %ecx
-; CHECK-32-NEXT:    movl (%ecx), %eax
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: test_f16_olt_s:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    cmoval %eax, %ecx
+; X86-FP16-NEXT:    movl (%ecx), %eax
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: test_f16_olt_s:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    movl %edi, %eax
-; CHECK-64-NEXT:    vcomish %xmm0, %xmm1
-; CHECK-64-NEXT:    cmovbel %esi, %eax
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: test_f16_olt_s:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    movl %edi, %eax
+; X64-FP16-NEXT:    vcomish %xmm0, %xmm1
+; X64-FP16-NEXT:    cmovbel %esi, %eax
+; X64-FP16-NEXT:    retq
   %cond = call i1 @llvm.experimental.constrained.fcmps.f16(
                                                half %f1, half %f2, metadata !"olt",
                                                metadata !"fpexcept.strict") #0
@@ -1165,22 +1165,22 @@ define i32 @test_f16_ole_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-NEXT:    cmovbl %esi, %eax
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: test_f16_ole_s:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    cmovael %eax, %ecx
-; CHECK-32-NEXT:    movl (%ecx), %eax
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: test_f16_ole_s:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    cmovael %eax, %ecx
+; X86-FP16-NEXT:    movl (%ecx), %eax
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: test_f16_ole_s:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    movl %edi, %eax
-; CHECK-64-NEXT:    vcomish %xmm0, %xmm1
-; CHECK-64-NEXT:    cmovbl %esi, %eax
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: test_f16_ole_s:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    movl %edi, %eax
+; X64-FP16-NEXT:    vcomish %xmm0, %xmm1
+; X64-FP16-NEXT:    cmovbl %esi, %eax
+; X64-FP16-NEXT:    retq
   %cond = call i1 @llvm.experimental.constrained.fcmps.f16(
                                                half %f1, half %f2, metadata !"ole",
                                                metadata !"fpexcept.strict") #0
@@ -1226,22 +1226,22 @@ define i32 @test_f16_one_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-NEXT:    cmovel %esi, %eax
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: test_f16_one_s:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    cmovnel %eax, %ecx
-; CHECK-32-NEXT:    movl (%ecx), %eax
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: test_f16_one_s:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    cmovnel %eax, %ecx
+; X86-FP16-NEXT:    movl (%ecx), %eax
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: test_f16_one_s:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    movl %edi, %eax
-; CHECK-64-NEXT:    vcomish %xmm1, %xmm0
-; CHECK-64-NEXT:    cmovel %esi, %eax
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: test_f16_one_s:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    movl %edi, %eax
+; X64-FP16-NEXT:    vcomish %xmm1, %xmm0
+; X64-FP16-NEXT:    cmovel %esi, %eax
+; X64-FP16-NEXT:    retq
   %cond = call i1 @llvm.experimental.constrained.fcmps.f16(
                                                half %f1, half %f2, metadata !"one",
                                                metadata !"fpexcept.strict") #0
@@ -1287,22 +1287,22 @@ define i32 @test_f16_ord_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-NEXT:    cmovpl %esi, %eax
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: test_f16_ord_s:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    cmovnpl %eax, %ecx
-; CHECK-32-NEXT:    movl (%ecx), %eax
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: test_f16_ord_s:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    cmovnpl %eax, %ecx
+; X86-FP16-NEXT:    movl (%ecx), %eax
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: test_f16_ord_s:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    movl %edi, %eax
-; CHECK-64-NEXT:    vcomish %xmm1, %xmm0
-; CHECK-64-NEXT:    cmovpl %esi, %eax
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: test_f16_ord_s:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    movl %edi, %eax
+; X64-FP16-NEXT:    vcomish %xmm1, %xmm0
+; X64-FP16-NEXT:    cmovpl %esi, %eax
+; X64-FP16-NEXT:    retq
   %cond = call i1 @llvm.experimental.constrained.fcmps.f16(
                                                half %f1, half %f2, metadata !"ord",
                                                metadata !"fpexcept.strict") #0
@@ -1348,22 +1348,22 @@ define i32 @test_f16_ueq_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-NEXT:    cmovnel %esi, %eax
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: test_f16_ueq_s:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    cmovel %eax, %ecx
-; CHECK-32-NEXT:    movl (%ecx), %eax
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: test_f16_ueq_s:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    cmovel %eax, %ecx
+; X86-FP16-NEXT:    movl (%ecx), %eax
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: test_f16_ueq_s:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    movl %edi, %eax
-; CHECK-64-NEXT:    vcomish %xmm1, %xmm0
-; CHECK-64-NEXT:    cmovnel %esi, %eax
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: test_f16_ueq_s:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    movl %edi, %eax
+; X64-FP16-NEXT:    vcomish %xmm1, %xmm0
+; X64-FP16-NEXT:    cmovnel %esi, %eax
+; X64-FP16-NEXT:    retq
   %cond = call i1 @llvm.experimental.constrained.fcmps.f16(
                                                half %f1, half %f2, metadata !"ueq",
                                                metadata !"fpexcept.strict") #0
@@ -1411,22 +1411,22 @@ define i32 @test_f16_ugt_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-NEXT:    cmovael %esi, %eax
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: test_f16_ugt_s:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    cmovbl %eax, %ecx
-; CHECK-32-NEXT:    movl (%ecx), %eax
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: test_f16_ugt_s:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    cmovbl %eax, %ecx
+; X86-FP16-NEXT:    movl (%ecx), %eax
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: test_f16_ugt_s:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    movl %edi, %eax
-; CHECK-64-NEXT:    vcomish %xmm0, %xmm1
-; CHECK-64-NEXT:    cmovael %esi, %eax
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: test_f16_ugt_s:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    movl %edi, %eax
+; X64-FP16-NEXT:    vcomish %xmm0, %xmm1
+; X64-FP16-NEXT:    cmovael %esi, %eax
+; X64-FP16-NEXT:    retq
   %cond = call i1 @llvm.experimental.constrained.fcmps.f16(
                                                half %f1, half %f2, metadata !"ugt",
                                                metadata !"fpexcept.strict") #0
@@ -1474,22 +1474,22 @@ define i32 @test_f16_uge_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-NEXT:    cmoval %esi, %eax
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: test_f16_uge_s:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    cmovbel %eax, %ecx
-; CHECK-32-NEXT:    movl (%ecx), %eax
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: test_f16_uge_s:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    cmovbel %eax, %ecx
+; X86-FP16-NEXT:    movl (%ecx), %eax
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: test_f16_uge_s:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    movl %edi, %eax
-; CHECK-64-NEXT:    vcomish %xmm0, %xmm1
-; CHECK-64-NEXT:    cmoval %esi, %eax
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: test_f16_uge_s:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    movl %edi, %eax
+; X64-FP16-NEXT:    vcomish %xmm0, %xmm1
+; X64-FP16-NEXT:    cmoval %esi, %eax
+; X64-FP16-NEXT:    retq
   %cond = call i1 @llvm.experimental.constrained.fcmps.f16(
                                                half %f1, half %f2, metadata !"uge",
                                                metadata !"fpexcept.strict") #0
@@ -1535,22 +1535,22 @@ define i32 @test_f16_ult_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-NEXT:    cmovael %esi, %eax
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: test_f16_ult_s:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    cmovbl %eax, %ecx
-; CHECK-32-NEXT:    movl (%ecx), %eax
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: test_f16_ult_s:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    cmovbl %eax, %ecx
+; X86-FP16-NEXT:    movl (%ecx), %eax
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: test_f16_ult_s:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    movl %edi, %eax
-; CHECK-64-NEXT:    vcomish %xmm1, %xmm0
-; CHECK-64-NEXT:    cmovael %esi, %eax
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: test_f16_ult_s:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    movl %edi, %eax
+; X64-FP16-NEXT:    vcomish %xmm1, %xmm0
+; X64-FP16-NEXT:    cmovael %esi, %eax
+; X64-FP16-NEXT:    retq
   %cond = call i1 @llvm.experimental.constrained.fcmps.f16(
                                                half %f1, half %f2, metadata !"ult",
                                                metadata !"fpexcept.strict") #0
@@ -1596,22 +1596,22 @@ define i32 @test_f16_ule_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-NEXT:    cmoval %esi, %eax
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: test_f16_ule_s:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    cmovbel %eax, %ecx
-; CHECK-32-NEXT:    movl (%ecx), %eax
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: test_f16_ule_s:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    cmovbel %eax, %ecx
+; X86-FP16-NEXT:    movl (%ecx), %eax
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: test_f16_ule_s:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    movl %edi, %eax
-; CHECK-64-NEXT:    vcomish %xmm1, %xmm0
-; CHECK-64-NEXT:    cmoval %esi, %eax
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: test_f16_ule_s:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    movl %edi, %eax
+; X64-FP16-NEXT:    vcomish %xmm1, %xmm0
+; X64-FP16-NEXT:    cmoval %esi, %eax
+; X64-FP16-NEXT:    retq
   %cond = call i1 @llvm.experimental.constrained.fcmps.f16(
                                                half %f1, half %f2, metadata !"ule",
                                                metadata !"fpexcept.strict") #0
@@ -1659,24 +1659,24 @@ define i32 @test_f16_une_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-NEXT:    cmovpl %edi, %eax
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: test_f16_une_s:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    cmovnel %eax, %ecx
-; CHECK-32-NEXT:    cmovpl %eax, %ecx
-; CHECK-32-NEXT:    movl (%ecx), %eax
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: test_f16_une_s:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    cmovnel %eax, %ecx
+; X86-FP16-NEXT:    cmovpl %eax, %ecx
+; X86-FP16-NEXT:    movl (%ecx), %eax
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: test_f16_une_s:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    movl %esi, %eax
-; CHECK-64-NEXT:    vcomish %xmm1, %xmm0
-; CHECK-64-NEXT:    cmovnel %edi, %eax
-; CHECK-64-NEXT:    cmovpl %edi, %eax
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: test_f16_une_s:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    movl %esi, %eax
+; X64-FP16-NEXT:    vcomish %xmm1, %xmm0
+; X64-FP16-NEXT:    cmovnel %edi, %eax
+; X64-FP16-NEXT:    cmovpl %edi, %eax
+; X64-FP16-NEXT:    retq
   %cond = call i1 @llvm.experimental.constrained.fcmps.f16(
                                                half %f1, half %f2, metadata !"une",
                                                metadata !"fpexcept.strict") #0
@@ -1722,22 +1722,22 @@ define i32 @test_f16_uno_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-NEXT:    cmovnpl %esi, %eax
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: test_f16_uno_s:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    cmovpl %eax, %ecx
-; CHECK-32-NEXT:    movl (%ecx), %eax
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: test_f16_uno_s:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    cmovpl %eax, %ecx
+; X86-FP16-NEXT:    movl (%ecx), %eax
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: test_f16_uno_s:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    movl %edi, %eax
-; CHECK-64-NEXT:    vcomish %xmm1, %xmm0
-; CHECK-64-NEXT:    cmovnpl %esi, %eax
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: test_f16_uno_s:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    movl %edi, %eax
+; X64-FP16-NEXT:    vcomish %xmm1, %xmm0
+; X64-FP16-NEXT:    cmovnpl %esi, %eax
+; X64-FP16-NEXT:    retq
   %cond = call i1 @llvm.experimental.constrained.fcmps.f16(
                                                half %f1, half %f2, metadata !"uno",
                                                metadata !"fpexcept.strict") #0
@@ -1780,20 +1780,20 @@ define void @foo(half %0, half %1) #0 {
 ; AVX-NEXT:  # %bb.1:
 ; AVX-NEXT:    retq
 ;
-; CHECK-32-LABEL: foo:
-; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
-; CHECK-32-NEXT:    ja bar@PLT # TAILCALL
-; CHECK-32-NEXT:  # %bb.1:
-; CHECK-32-NEXT:    retl
+; X86-FP16-LABEL: foo:
+; X86-FP16:       # %bb.0:
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
+; X86-FP16-NEXT:    ja bar@PLT # TAILCALL
+; X86-FP16-NEXT:  # %bb.1:
+; X86-FP16-NEXT:    retl
 ;
-; CHECK-64-LABEL: foo:
-; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    vucomish %xmm1, %xmm0
-; CHECK-64-NEXT:    ja bar@PLT # TAILCALL
-; CHECK-64-NEXT:  # %bb.1:
-; CHECK-64-NEXT:    retq
+; X64-FP16-LABEL: foo:
+; X64-FP16:       # %bb.0:
+; X64-FP16-NEXT:    vucomish %xmm1, %xmm0
+; X64-FP16-NEXT:    ja bar@PLT # TAILCALL
+; X64-FP16-NEXT:  # %bb.1:
+; X64-FP16-NEXT:    retq
   %3 = call i1 @llvm.experimental.constrained.fcmp.f16( half %0, half %1, metadata !"ogt", metadata !"fpexcept.strict") #0
   br i1 %3, label %4, label %5
 

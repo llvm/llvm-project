@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 -mcpu=hexagonv60  < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 -mcpu=hexagonv60 < %s | FileCheck %s
 
 ; CHECK: q{{[0-3]}} = vand(v{{[0-9]*}},r{{[0-9]*}})
 target datalayout = "e-m:e-p:32:32:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f64:64:64-f32:32:32-v64:64:64-v32:32:32-a:0-n16:32"
@@ -53,5 +53,5 @@ declare <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1>, i32) #1
 ; Function Attrs: nounwind readnone
 declare <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32>, i32) #1
 
-attributes #0 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length64b" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length64b" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }

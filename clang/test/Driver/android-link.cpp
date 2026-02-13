@@ -16,6 +16,16 @@
 // RUN: FileCheck -check-prefix=CORTEX-A57 < %t %s
 
 // RUN: %clang --target=aarch64-none-linux-android \
+// RUN:   -mno-fix-cortex-a53-843419 \
+// RUN:   -### -v %s 2> %t
+// RUN: FileCheck -check-prefix=OVERRIDDEN < %t %s
+//
+// RUN: %clang -target aarch64-none-linux-android \
+// RUN:   -mno-fix-cortex-a53-843419 -mfix-cortex-a53-843419 \
+// RUN:   -### -v %s 2> %t
+// RUN: FileCheck -check-prefix=OVERRIDDEN2 < %t %s
+//
+// RUN: %clang -target aarch64-none-linux-android \
 // RUN:   -### -v %s 2> %t
 // RUN: FileCheck -check-prefix=MAX-PAGE-SIZE-16KB < %t %s
 
@@ -31,6 +41,8 @@
 // GENERIC-ARM: --fix-cortex-a53-843419
 // CORTEX-A53: --fix-cortex-a53-843419
 // CORTEX-A57-NOT: --fix-cortex-a53-843419
+// OVERRIDDEN-NOT: --fix-cortex-a53-843419
+// OVERRIDDEN2: --fix-cortex-a53-843419
 // MAX-PAGE-SIZE-4KB: "-z" "max-page-size=4096"
 // MAX-PAGE-SIZE-16KB: "-z" "max-page-size=16384"
 // NO-MAX-PAGE-SIZE-16KB-NOT: "-z" "max-page-size=16384"

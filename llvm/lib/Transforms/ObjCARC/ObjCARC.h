@@ -22,6 +22,7 @@
 #ifndef LLVM_LIB_TRANSFORMS_OBJCARC_OBJCARC_H
 #define LLVM_LIB_TRANSFORMS_OBJCARC_OBJCARC_H
 
+#include "ARCRuntimeEntryPoints.h"
 #include "llvm/Analysis/ObjCARCAnalysisUtils.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/IR/EHPersonalities.h"
@@ -104,7 +105,9 @@ CallInst *createCallInstWithColors(
 
 class BundledRetainClaimRVs {
 public:
-  BundledRetainClaimRVs(bool ContractPass) : ContractPass(ContractPass) {}
+  BundledRetainClaimRVs(ARCRuntimeEntryPoints &EP, bool ContractPass,
+                        bool UseClaimRV)
+      : EP(EP), ContractPass(ContractPass), UseClaimRV(UseClaimRV) {}
   ~BundledRetainClaimRVs();
 
   /// Insert a retainRV/claimRV call to the normal destination blocks of invokes
@@ -155,7 +158,9 @@ private:
   /// A map of inserted retainRV/claimRV calls to annotated calls/invokes.
   DenseMap<CallInst *, CallBase *> RVCalls;
 
+  ARCRuntimeEntryPoints &EP;
   bool ContractPass;
+  bool UseClaimRV;
 };
 
 } // end namespace objcarc
