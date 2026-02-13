@@ -301,14 +301,16 @@ struct ErrorStringFunctionSizeOverflow : ErrorBase {
   const BufferedStackTrace *stack;
   AddressDescription addr_description;
   uptr size;
+  bool is_write;
 
   ErrorStringFunctionSizeOverflow() = default;  // (*)
-  ErrorStringFunctionSizeOverflow(u32 tid, BufferedStackTrace *stack_,
-                                  uptr addr, uptr size_)
+  ErrorStringFunctionSizeOverflow(u32 tid, BufferedStackTrace* stack_,
+                                  uptr addr, uptr size_, bool is_write_)
       : ErrorBase(tid, 10, "negative-size-param"),
         stack(stack_),
         addr_description(addr, /*shouldLockThreadRegistry=*/false),
-        size(size_) {}
+        size(size_),
+        is_write(is_write_) {}
   void Print();
 };
 

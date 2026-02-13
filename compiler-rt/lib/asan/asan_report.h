@@ -79,8 +79,8 @@ void ReportStringFunctionMemoryRangesOverlap(const char *function,
                                              const char *offset1, uptr length1,
                                              const char *offset2, uptr length2,
                                              BufferedStackTrace *stack);
-void ReportStringFunctionSizeOverflow(uptr offset, uptr size,
-                                      BufferedStackTrace *stack);
+void ReportStringFunctionSizeOverflow(uptr offset, uptr size, bool is_write,
+                                      BufferedStackTrace* stack);
 void ReportBadParamsToAnnotateContiguousContainer(uptr beg, uptr end,
                                                   uptr old_mid, uptr new_mid,
                                                   BufferedStackTrace *stack);
