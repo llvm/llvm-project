@@ -54,6 +54,7 @@
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/SymbolTable.h"
 
 namespace mlir {
@@ -83,23 +84,41 @@ public:
   using acc::impl::ACCDeclareGPUModuleInsertionBase<
       ACCDeclareGPUModuleInsertion>::ACCDeclareGPUModuleInsertionBase;
 
-  void copyGlobalsToGPUModule(gpu::GPUModuleOp gpuMod, ModuleOp mod) const {
+  LogicalResult copyGlobalsToGPUModule(gpu::GPUModuleOp gpuMod, ModuleOp mod,
+                                       acc::OpenACCSupport &accSupport) const {
     SymbolTable gpuSymTable(gpuMod);
 
     for (Operation &globalOp : mod.getBody()->getOperations()) {
       if (!globalOp.getAttr(acc::getDeclareAttrName()))
         continue;
 
-      StringAttr name =
-          globalOp.getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName());
-      if (!name)
+      auto symOp = dyn_cast<SymbolOpInterface>(&globalOp);
+      if (!symOp)
         continue;
 
-      if (gpuSymTable.lookup(name.getValue()))
+      StringAttr name = symOp.getNameAttr();
+
+      if (Operation *existing = gpuSymTable.lookup(name.getValue())) {
+        // Reuse only when the existing GPU symbol is structurally equivalent to
+        // the global we would insert. Otherwise treat as a conflict (different
+        // op type or different definition).
+        if (existing->getName() != globalOp.getName() ||
+            !OperationEquivalence::isEquivalentTo(
+                existing, &globalOp,
+                OperationEquivalence::ignoreValueEquivalence,
+                /*markEquivalent=*/nullptr,
+                OperationEquivalence::IgnoreLocations)) {
+          accSupport.emitNYI(globalOp.getLoc(),
+                             llvm::Twine("duplicate global symbol '") +
+                                 name.getValue() + "' in gpu module");
+          return failure();
+        }
         continue;
+      }
 
       gpuSymTable.insert(globalOp.clone());
     }
+    return success();
   }
 
   void runOnOperation() override {
@@ -118,7 +137,8 @@ public:
       return;
     }
 
-    copyGlobalsToGPUModule(*gpuMod, mod);
+    if (failed(copyGlobalsToGPUModule(*gpuMod, mod, accSupport)))
+      return;
   }
 };
 
