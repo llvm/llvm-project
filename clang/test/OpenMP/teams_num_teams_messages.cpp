@@ -175,3 +175,63 @@ void test_invalid_syntax() {
   #pragma omp target teams distribute simd num_teams(9:2)
   for (int i = 0; i < 100; ++i) { }
 }
+
+// Test non-matching parentheses and brackets
+void test_non_matching_delimiters() {
+  int arr[10];
+  int x = 5;
+
+  // expected-error@+4 {{expected ')'}}
+  // expected-error@+3 {{expected ')'}}
+  // expected-note@+2 {{to match this '('}}
+  // expected-note@+1 {{to match this '('}}
+  #pragma omp teams num_teams((x + 1:10)
+  { }
+
+  // expected-error@+2 {{expected ']'}}
+  // expected-note@+1 {{to match this '['}}
+  #pragma omp teams num_teams(arr[0:10)
+  { }
+
+  // expected-error@+2 {{expected ')'}}
+  // expected-note@+1 {{to match this '('}}
+  #pragma omp teams num_teams(x:((10 + 1))
+  { }
+}
+
+// Test multi-level non-matching parentheses and brackets
+void test_multi_level_non_matching_delimiters() {
+  int arr[10][10];
+  int x = 5, y = 10;
+
+  // expected-error@+4 {{expected ')'}}
+  // expected-note@+3 {{to match this '('}}
+  // expected-error@+2 {{expected ')'}}
+  // expected-note@+1 {{to match this '('}}
+  #pragma omp teams num_teams(((x + 1) * 2:10)
+  { }
+
+  // expected-error@+4 {{expected ')'}}
+  // expected-note@+3 {{to match this '('}}
+  // expected-error@+2 {{expected ')'}}
+  // expected-note@+1 {{to match this '('}}
+  #pragma omp teams num_teams((x + (y - 1):10)
+  { }
+ 
+  // expected-error@+2 {{expected ']'}}
+  // expected-note@+1 {{to match this '['}}
+  #pragma omp teams num_teams((arr[0 + 1):10)
+  { }
+
+  // expected-error@+2 {{expected ')'}}
+  // expected-note@+1 {{to match this '('}}
+  #pragma omp teams num_teams(x:((y + 1) * 2)
+  { }
+
+  // expected-error@+4 {{expected ']'}}
+  // expected-note@+3 {{to match this '['}}
+  // expected-error@+2 {{expected ']'}}
+  // expected-note@+1 {{to match this '['}}
+  #pragma omp teams num_teams(arr[0][1:arr[2][3)
+  { }
+}

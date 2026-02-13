@@ -40,3 +40,49 @@ void test_various_directives() {
   for (int i = 0; i < 100; ++i) { }
 }
 
+// CHECK-LABEL: void test_nested_expressions()
+void test_nested_expressions() {
+  int arr[10][10];
+  int x = 5, y = 10;
+
+  // CHECK: #pragma omp teams num_teams(arr[0][0]:arr[1][1])
+  #pragma omp teams num_teams(arr[0][0]:arr[1][1])
+  { foo(); }
+
+  // CHECK: #pragma omp teams num_teams(arr[x][0]:arr[y][1])
+  #pragma omp teams num_teams(arr[x][0]:arr[y][1])
+  { foo(); }
+
+  // CHECK: #pragma omp teams num_teams((x + 1):(y - 1))
+  #pragma omp teams num_teams((x + 1):(y - 1))
+  { foo(); }
+
+}
+
+// CHECK-LABEL: void test_multi_level_matching_delimiters()
+void test_multi_level_matching_delimiters() {
+  int arr[10][10];
+  int x = 5, y = 10;
+  
+  // CHECK: #pragma omp teams num_teams(((x + 1) * 2):((y - 1) * 3))
+  #pragma omp teams num_teams(((x + 1) * 2):((y - 1) * 3))
+  { foo(); }
+
+
+  // CHECK: #pragma omp teams num_teams(arr[arr[0][0]][0]:arr[arr[1][1]][1])
+  #pragma omp teams num_teams(arr[arr[0][0]][0]:arr[arr[1][1]][1])
+  { foo(); }
+
+  // CHECK: #pragma omp teams num_teams((arr[x][y] + 1):(arr[y][x] - 1))
+  #pragma omp teams num_teams((arr[x][y] + 1):(arr[y][x] - 1))
+  { foo(); }
+
+  // CHECK: #pragma omp teams num_teams((x + (y * 2)):((x * 2) + y))
+  #pragma omp teams num_teams((x + (y * 2)):((x * 2) + y))
+  { foo(); }
+
+  // CHECK: #pragma omp teams num_teams((arr[0][1] + arr[2][3]):(arr[4][5] + arr[6][7]))
+  #pragma omp teams num_teams((arr[0][1] + arr[2][3]):(arr[4][5] + arr[6][7]))
+  { foo(); }
+}
+
