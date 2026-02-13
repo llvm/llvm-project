@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_FILESPECLIST_H
-#define LLDB_CORE_FILESPECLIST_H
+#ifndef LLDB_UTILITY_FILESPECLIST_H
+#define LLDB_UTILITY_FILESPECLIST_H
 
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/SupportFile.h"
@@ -254,4 +254,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_FILESPECLIST_H
+#endif // LLDB_UTILITY_FILESPECLIST_H

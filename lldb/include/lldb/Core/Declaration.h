@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SYMBOL_DECLARATION_H
-#define LLDB_SYMBOL_DECLARATION_H
+#ifndef LLDB_CORE_DECLARATION_H
+#define LLDB_CORE_DECLARATION_H
 
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-private.h"
@@ -194,4 +194,4 @@ bool operator==(const Declaration &lhs, const Declaration &rhs);
 
 } // namespace lldb_private
 
-#endif // LLDB_SYMBOL_DECLARATION_H
+#endif // LLDB_CORE_DECLARATION_H

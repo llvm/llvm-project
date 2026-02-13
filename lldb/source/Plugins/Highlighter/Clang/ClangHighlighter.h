@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_HIGHLIGHTER_CLANGHIGHLIGHTER_H
-#define LLDB_SOURCE_PLUGINS_HIGHLIGHTER_CLANGHIGHLIGHTER_H
+#ifndef LLDB_SOURCE_PLUGINS_HIGHLIGHTER_CLANG_CLANGHIGHLIGHTER_H
+#define LLDB_SOURCE_PLUGINS_HIGHLIGHTER_CLANG_CLANGHIGHLIGHTER_H
 
 #include "lldb/Utility/Stream.h"
 #include "llvm/ADT/StringSet.h"

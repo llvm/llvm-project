@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Plugins_DynamicLoaderWasmDYLD_h_
-#define liblldb_Plugins_DynamicLoaderWasmDYLD_h_
+#ifndef LLDB_SOURCE_PLUGINS_DYNAMICLOADER_WASM_DYLD_DYNAMICLOADERWASMDYLD_H
+#define LLDB_SOURCE_PLUGINS_DYNAMICLOADER_WASM_DYLD_DYNAMICLOADERWASMDYLD_H
 
 #include "lldb/Target/DynamicLoader.h"
 
@@ -49,4 +49,4 @@ public:
 } // namespace wasm
 } // namespace lldb_private
 
-#endif // liblldb_Plugins_DynamicLoaderWasmDYLD_h_
+#endif // LLDB_SOURCE_PLUGINS_DYNAMICLOADER_WASM_DYLD_DYNAMICLOADERWASMDYLD_H

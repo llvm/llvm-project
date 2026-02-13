@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_PROTOCOL_MCP_TOOL_H
-#define LLDB_PLUGINS_PROTOCOL_MCP_TOOL_H
+#ifndef LLDB_SOURCE_PLUGINS_PROTOCOL_MCP_TOOL_H
+#define LLDB_SOURCE_PLUGINS_PROTOCOL_MCP_TOOL_H
 
 #include "lldb/Protocol/MCP/Protocol.h"
 #include "lldb/Protocol/MCP/Tool.h"

@@ -21251,80 +21251,6 @@ static SDValue performSHLCombine(SDNode *N,
                      Passthru, Mask, VL);
 }
 
-// Combine (ADDD (UMUL_LOHI x, y).0, (UMUL_LOHI x, y).1, a, b) into
-// (WMACCU x, y, a, b).
-// Combine (ADDD (SMUL_LOHI x, y).0, (SMUL_LOHI x, y).1, a, b) into
-// (WMACC x, y, a, b).
-// Combine (ADDD (WMULSU x, y).0, (WMULSU x, y).1, a, b) into
-// (WMACCSU x, y, a, b).
-static SDValue combineADDDToWMACC(SDNode *N, SelectionDAG &DAG,
-                                  const RISCVSubtarget &Subtarget) {
-  assert(N->getOpcode() == RISCVISD::ADDD && "Expected ADDD");
-  assert(!Subtarget.is64Bit() && Subtarget.hasStdExtP() &&
-         "ADDD requires RV32 with P extension");
-
-  // ADDD has 4 operands: (op0_lo, op0_hi, op1_lo, op1_hi)
-  // Try to match UMUL_LOHI, SMUL_LOHI, or WMULSU in either operand pair due to
-  // commutativity
-  SDValue Op0Lo = N->getOperand(0);
-  SDValue Op0Hi = N->getOperand(1);
-  SDValue Op1Lo = N->getOperand(2);
-  SDValue Op1Hi = N->getOperand(3);
-
-  auto IsSupportedMul = [](unsigned Opc) {
-    return Opc == ISD::UMUL_LOHI || Opc == ISD::SMUL_LOHI ||
-           Opc == RISCVISD::WMULSU;
-  };
-
-  SDNode *MulNode = nullptr;
-  SDValue AddLo, AddHi;
-
-  // Check if first operand pair is a supported multiply
-  if (IsSupportedMul(Op0Lo.getOpcode()) && Op0Lo.getNode() == Op0Hi.getNode() &&
-      Op0Lo.getResNo() == 0 && Op0Hi.getResNo() == 1) {
-    MulNode = Op0Lo.getNode();
-    AddLo = Op1Lo;
-    AddHi = Op1Hi;
-  }
-  // Check if second operand pair is a supported multiply (commutative case)
-  else if (IsSupportedMul(Op1Lo.getOpcode()) &&
-           Op1Lo.getNode() == Op1Hi.getNode() && Op1Lo.getResNo() == 0 &&
-           Op1Hi.getResNo() == 1) {
-    MulNode = Op1Lo.getNode();
-    AddLo = Op0Lo;
-    AddHi = Op0Hi;
-  } else {
-    return SDValue();
-  }
-
-  // Only combine if both multiply results are only used by this ADDD
-  if (!SDValue(MulNode, 0).hasOneUse() || !SDValue(MulNode, 1).hasOneUse())
-    return SDValue();
-
-  // Extract the multiply operands
-  SDValue MulOp0 = MulNode->getOperand(0);
-  SDValue MulOp1 = MulNode->getOperand(1);
-
-  // Create WMACCU, WMACC, or WMACCSU node: (m1, m2, addlo, addhi) -> (lo, hi)
-  SDLoc DL(N);
-  unsigned Opc;
-  switch (MulNode->getOpcode()) {
-  default:
-    llvm_unreachable("Unexpected multiply opcode");
-  case ISD::UMUL_LOHI:
-    Opc = RISCVISD::WMACCU;
-    break;
-  case ISD::SMUL_LOHI:
-    Opc = RISCVISD::WMACC;
-    break;
-  case RISCVISD::WMULSU:
-    Opc = RISCVISD::WMACCSU;
-    break;
-  }
-  return DAG.getNode(Opc, DL, DAG.getVTList(MVT::i32, MVT::i32), MulOp0, MulOp1,
-                     AddLo, AddHi);
-}
-
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -21415,8 +21341,6 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return SDValue(N, 0);
     break;
   }
-  case RISCVISD::ADDD:
-    return combineADDDToWMACC(N, DAG, Subtarget);
   case RISCVISD::WMULSU: {
     // Convert to MULHSU if only the upper half is used.
     if (!N->hasAnyUseOfValue(0)) {
