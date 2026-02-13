@@ -999,15 +999,15 @@ xegpu::setupDpasLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
     llvm::DenseSet<LayoutRepresentation> setCD(layoutsCD.begin(),
                                                layoutsCD.end());
     std::optional<LayoutRepresentation> bestPick;
-    auto checkSgDataAB = [&](LayoutRepresentation sgLayout) {
+    auto checkAlignedSgDataAB = [&](LayoutRepresentation sgLayout) {
       return aTy.getShape().back() / sgLayout.second ==
              bTy.getShape().front() / sgLayout.first;
     };
     for (auto &sgLayout : layoutsB) {
       if (setA.contains(sgLayout) && setCD.contains(sgLayout)) {
-        // Is in (A and B and CD) and matches consumer -> best pick
-        if (!checkSgDataAB(sgLayout))
+        if (!checkAlignedSgDataAB(sgLayout))
           continue;
+        // Is in (A and B and CD) and matches consumer -> best pick
         if (consumerSgLayout.has_value() && sgLayout == *consumerSgLayout) {
           bestPick = sgLayout;
           break;
