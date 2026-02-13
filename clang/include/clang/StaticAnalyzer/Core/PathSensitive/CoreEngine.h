@@ -293,13 +293,6 @@ public:
 
   const ExplodedNodeSet &getResults() { return Frontier; }
 
-  using iterator = ExplodedNodeSet::iterator;
-
-  /// Iterators through the results frontier.
-  iterator begin() { return Frontier.begin(); }
-
-  iterator end() { return Frontier.end(); }
-
   const NodeBuilderContext &getContext() { return C; }
   bool hasGeneratedNodes() { return HasGeneratedNodes; }
 
