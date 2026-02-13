@@ -87,19 +87,19 @@ template <typename SubPattern_t, int Flag> struct AllowFmf_match {
   FastMathFlags FMF;
 
   AllowFmf_match(const SubPattern_t &SP) : SubPattern(SP) {
-    if (Flag == FastMathFlags::AllowReassoc)
+    if (Flag & FastMathFlags::AllowReassoc)
       FMF.setAllowReassoc();
-    if (Flag == FastMathFlags::AllowReciprocal)
+    if (Flag & FastMathFlags::AllowReciprocal)
       FMF.setAllowReciprocal();
-    if (Flag == FastMathFlags::AllowContract)
+    if (Flag & FastMathFlags::AllowContract)
       FMF.setAllowContract();
-    if (Flag == FastMathFlags::ApproxFunc)
+    if (Flag & FastMathFlags::ApproxFunc)
       FMF.setApproxFunc();
-    if (Flag == FastMathFlags::NoNaNs)
+    if (Flag & FastMathFlags::NoNaNs)
       FMF.setNoNaNs();
-    if (Flag == FastMathFlags::NoInfs)
+    if (Flag & FastMathFlags::NoInfs)
       FMF.setNoInfs();
-    if (Flag == FastMathFlags::NoSignedZeros)
+    if (Flag & FastMathFlags::NoSignedZeros)
       FMF.setNoSignedZeros();
   }
 
@@ -146,12 +146,6 @@ inline AllowFmf_match<T, FastMathFlags::NoInfs> m_NoInfs(const T &SubPattern) {
 template <typename T>
 inline AllowFmf_match<T, FastMathFlags::NoSignedZeros>
 m_NoSignedZeros(const T &SubPattern) {
-  return SubPattern;
-}
-
-template <typename T>
-inline AllowFmf_match<T, FastMathFlags::AllFlagsMask>
-m_IsFast(const T &SubPattern) {
   return SubPattern;
 }
 
