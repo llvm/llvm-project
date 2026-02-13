@@ -12,28 +12,28 @@ implicit none
 integer, parameter :: cuda_stream_kind = int_ptr_kind()
 
 interface cudaforgetdefaultstream
-    integer(kind=cuda_stream_kind) function cudagetstreamdefaultarg(devptr)
-      import cuda_stream_kind
-      !DIR$ IGNORE_TKR (TKR) devptr
-      integer, device  :: devptr(*)
-    end function
-    integer(kind=cuda_stream_kind) function cudastreamgetdefaultnull()
-      import cuda_stream_kind
-    end function
+  integer(kind=cuda_stream_kind) function cudagetstreamdefaultarg(devptr)
+    import cuda_stream_kind
+    !DIR$ IGNORE_TKR (TKR) devptr
+    integer, device  :: devptr(*)
+  end function
+  integer(kind=cuda_stream_kind) function cudastreamgetdefaultnull()
+    import cuda_stream_kind
+  end function
 end interface
 
 interface cudaforsetdefaultstream
-    integer function cudasetdefaultstream(stream)
-      import cuda_stream_kind
-      !DIR$ IGNORE_TKR (K) stream
-      integer(kind=cuda_stream_kind), value :: stream
-    end function
-    integer function cudasetstreamarray(devptr, stream)
-      import cuda_stream_kind
-      !DIR$ IGNORE_TKR (K) stream, (TKR) devptr
-      integer, device  :: devptr(*)
-      integer(kind=cuda_stream_kind), value :: stream
-    end function
+  integer function cudasetdefaultstream(stream)
+    import cuda_stream_kind
+    !DIR$ IGNORE_TKR (K) stream
+    integer(kind=cuda_stream_kind), value :: stream
+  end function
+  integer function cudasetstreamarray(devptr, stream)
+    import cuda_stream_kind
+    !DIR$ IGNORE_TKR (K) stream, (TKR) devptr
+    integer, device  :: devptr(*)
+    integer(kind=cuda_stream_kind), value :: stream
+  end function
 end interface
 
 end module cuda_runtime_api
