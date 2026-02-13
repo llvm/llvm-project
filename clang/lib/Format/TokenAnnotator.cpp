@@ -4246,6 +4246,26 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
                              ChildSize + Current->SpacesRequiredBefore;
     }
 
+    if (Style.MaxParametersOnLine > 0 &&
+        Current->is(TT_FunctionDeclarationLParen) &&
+        Current->ParameterCount > Style.MaxParametersOnLine) {
+      const auto *RParen = Current->MatchingParen;
+      unsigned CurrentParamNum = 0;
+      for (auto *ParamTok = Current->Next; ParamTok && ParamTok != RParen;
+           ParamTok = ParamTok->Next) {
+        if (ParamTok->opensScope()) {
+          ParamTok = ParamTok->MatchingParen;
+          continue;
+        }
+
+        if (ParamTok->is(tok::comma) && ParamTok->Next &&
+            (++CurrentParamNum % Style.MaxParametersOnLine) == 0) {
+          ParamTok->Next->MustBreakBefore = true;
+          ParamTok->Next->CanBreakBefore = true;
+        }
+      }
+    }
+
     if (Current->is(TT_ControlStatementLBrace)) {
       if (Style.ColumnLimit > 0 &&
           Style.BraceWrapping.AfterControlStatement ==
