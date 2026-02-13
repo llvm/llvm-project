@@ -2408,7 +2408,8 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        UnitAttr:$constant,
                        UnitAttr:$dso_local,
                        UnitAttr:$static_local,
-                       OptionalAttr<I64Attr>:$alignment);
+                       OptionalAttr<I64Attr>:$alignment,
+                       OptionalAttr<ASTVarDeclInterface>:$ast);
 
   let regions = (region MaxSizedRegion<1>:$ctorRegion,
                         MaxSizedRegion<1>:$dtorRegion);
