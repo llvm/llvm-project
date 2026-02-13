@@ -1021,8 +1021,8 @@ define float @common_binop_demand_via_extelt_op1(<2 x float> %p, <2 x float> %y)
 
 define float @common_binop_demand_via_extelt_op0_commute(<2 x float> %p, <2 x float> %q) {
 ; CHECK-LABEL: @common_binop_demand_via_extelt_op0_commute(
-; CHECK-NEXT:    [[X:%.*]] = fsub <2 x float> <float 0.000000e+00, float poison>, [[P:%.*]]
-; CHECK-NEXT:    [[Y:%.*]] = fsub <2 x float> <float 3.000000e+00, float 2.000000e+00>, [[Q:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = fsub nnan <2 x float> <float 0.000000e+00, float poison>, [[P:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = fsub nnan <2 x float> <float 3.000000e+00, float 2.000000e+00>, [[Q:%.*]]
 ; CHECK-NEXT:    [[XSHUF:%.*]] = shufflevector <2 x float> [[X]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[B_Y_XSHUF:%.*]] = fmul nnan <2 x float> [[Y]], [[XSHUF]]
 ; CHECK-NEXT:    [[B_XY0:%.*]] = extractelement <2 x float> [[B_Y_XSHUF]], i64 0

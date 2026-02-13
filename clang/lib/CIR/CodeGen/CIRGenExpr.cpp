@@ -1933,8 +1933,12 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
 
     bool isPredefinedLibFunction =
         cgm.getASTContext().BuiltinInfo.isPredefinedLibFunction(builtinID);
-    // Assume nobuiltins everywhere until we actually read the attributes.
-    bool hasAttributeNoBuiltin = true;
+    // TODO: Read no-builtin function attribute and set this accordingly.
+    // Using false here matches OGCG's default behavior - builtins are called
+    // as builtins unless explicitly disabled. The previous value of true was
+    // overly conservative and caused functions to be marked as no_inline when
+    // they shouldn't be.
+    bool hasAttributeNoBuiltin = false;
     assert(!cir::MissingFeatures::attributeNoBuiltin());
 
     // When directing calling an inline builtin, call it through it's mangled

@@ -1,4 +1,5 @@
 ; RUN: opt -mtriple=i686-unknown-windows-msvc -S -x86-winehstate < %s | FileCheck %s
+; RUN: opt -mtriple=i686-unknown-windows-msvc -S -passes=x86-winehstate < %s | FileCheck %s
 
 $f = comdat any
 

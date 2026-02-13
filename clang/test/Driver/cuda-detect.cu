@@ -46,16 +46,16 @@
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_21 \
 // RUN:   --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON \
-// RUN:     -check-prefixes PTX42,LIBDEVICE,LIBDEVICE20
+// RUN:     -check-prefixes PTX50,LIBDEVICE,LIBDEVICE20
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_32 \
 // RUN:   --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON \
-// RUN:     -check-prefixes PTX42,LIBDEVICE,LIBDEVICE20
+// RUN:     -check-prefixes PTX50,LIBDEVICE,LIBDEVICE20
 // sm_30, sm_6x map to compute_30.
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_30 \
 // RUN:   --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON \
-// RUN:     -check-prefixes PTX42,LIBDEVICE,LIBDEVICE30
+// RUN:     -check-prefixes PTX50,LIBDEVICE,LIBDEVICE30
 // sm_5x is a special case. Maps to compute_30 for cuda-7.x only.
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_50 \
 // RUN:   --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
@@ -64,21 +64,21 @@
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_60 \
 // RUN:   --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON \
-// RUN:     -check-prefixes PTX42,LIBDEVICE,LIBDEVICE30
+// RUN:     -check-prefixes PTX50,LIBDEVICE,LIBDEVICE30
 // sm_35 and sm_37 -> compute_35
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_35 \
 // RUN:   --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON -check-prefix CUDAINC \
-// RUN:     -check-prefixes PTX42,LIBDEVICE,LIBDEVICE35
+// RUN:     -check-prefixes PTX50,LIBDEVICE,LIBDEVICE35
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_37 \
 // RUN:   --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON -check-prefix CUDAINC \
-// RUN:     -check-prefixes PTX42,LIBDEVICE,LIBDEVICE35
+// RUN:     -check-prefixes PTX50,LIBDEVICE,LIBDEVICE35
 // sm_5x -> compute_50 for CUDA-8.0 and newer.
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_50 \
 // RUN:   --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON \
-// RUN:     -check-prefixes PTX42,LIBDEVICE,LIBDEVICE50
+// RUN:     -check-prefixes PTX50,LIBDEVICE,LIBDEVICE50
 
 // CUDA-9+ uses the same libdevice for all GPU variants:
 // RUN: %clang -### -v --target=x86_64-unknown-linux --cuda-gpu-arch=sm_30 \
@@ -173,6 +173,7 @@
 // LIBDEVICE35-SAME: libdevice.compute_35.10.bc
 // LIBDEVICE50-SAME: libdevice.compute_50.10.bc
 // PTX42-SAME: "-target-feature" "+ptx42"
+// PTX50-SAME: "-target-feature" "+ptx50"
 // PTX60-SAME: "-target-feature" "+ptx60"
 // CUDAINC-SAME: "-include" "__clang_cuda_runtime_wrapper.h"
 // NOCUDAINC-NOT: "-include" "__clang_cuda_runtime_wrapper.h"

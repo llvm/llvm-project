@@ -2766,7 +2766,7 @@ For example:
     to signify an unbounded maximum. The syntax `vscale_range(<val>)` can be
     used to set both `min` and `max` to the same value. Functions that don't
     include this attribute make no assumptions about the value of `vscale`.
-``"nooutline"``
+``nooutline``
     This attribute indicates that outlining passes should not modify the
     function.
 ``nocreateundeforpoison``

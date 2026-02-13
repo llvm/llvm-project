@@ -154,7 +154,7 @@ endif()
 # List of all targets. Note that some are added dynamically below.
 set( LIBCLC_TARGETS_ALL
   amdgcn--
-  amdgcn-amd-amdhsa
+  amdgcn-amd-amdhsa-llvm
   clspv--
   clspv64--
   r600--
@@ -207,7 +207,7 @@ include_directories( ${LLVM_INCLUDE_DIRS} )
 set( r600--_devices cedar cypress barts cayman )
 set( amdgcn--_devices tahiti )
 set( amdgcn-mesa-mesa3d_devices ${amdgcn--_devices} )
-set( amdgcn-amd-amdhsa_devices none )
+set( amdgcn-amd-amdhsa-llvm_devices none )
 set( clspv--_devices none )
 set( clspv64--_devices none )
 set( nvptx64--_devices none )

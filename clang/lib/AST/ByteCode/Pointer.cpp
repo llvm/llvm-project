@@ -937,6 +937,10 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
     llvm_unreachable("invalid value to return");
   };
 
+  // Can't return functions as rvalues.
+  if (ResultType->isFunctionType())
+    return std::nullopt;
+
   // Invalid to read from.
   if (isDummy() || !isLive() || isPastEnd())
     return std::nullopt;

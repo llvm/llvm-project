@@ -81,10 +81,10 @@ define void @different_addresses(ptr %dst, ptr %src1, ptr %src2, ptr %cond) {
 ; CHECK-LABEL: define void @different_addresses(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC1:%.*]], ptr [[SRC2:%.*]], ptr [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[SRC15:%.*]] = ptrtoint ptr [[SRC1]] to i64
-; CHECK-NEXT:    [[SRC23:%.*]] = ptrtoint ptr [[SRC2]] to i64
-; CHECK-NEXT:    [[COND2:%.*]] = ptrtoint ptr [[COND]] to i64
-; CHECK-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
+; CHECK-NEXT:    [[SRC15:%.*]] = ptrtoaddr ptr [[SRC1]] to i64
+; CHECK-NEXT:    [[SRC23:%.*]] = ptrtoaddr ptr [[SRC2]] to i64
+; CHECK-NEXT:    [[COND2:%.*]] = ptrtoaddr ptr [[COND]] to i64
+; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[COND2]]

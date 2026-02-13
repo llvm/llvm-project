@@ -51,6 +51,9 @@ A list of non-standard directives supported by Flang
   be passed in registers, so it's not clear how lowering should handle this
   case. (Passing scalar actual argument to `ignore_tkr(R)` dummy argument
   that is a scalar with `VALUE` attribute is allowed.)
+* `!dir$ ivdep` asserts that there are no vector dependencies in the following loop,
+  allowing the compiler to vectorize or parallelize the loop if it chooses to do so
+  based on its cost model. It does not force vectorization.
 * `!dir$ assume_aligned desginator:alignment`, where designator is a variable,
   maybe with array indices, and alignment is what the compiler should assume the
   alignment to be. E.g A:64 or B(1,1,1):128. The alignment should be a power of 2,

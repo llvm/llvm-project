@@ -623,6 +623,8 @@ public:
                                FPClassTest DemandedMask, KnownFPClass &Known,
                                unsigned Depth = 0);
 
+  bool SimplifyDemandedInstructionFPClass(Instruction &Inst);
+
   /// Common transforms for add / disjoint or
   Instruction *foldAddLikeCommutative(Value *LHS, Value *RHS, bool NSW,
                                       bool NUW);

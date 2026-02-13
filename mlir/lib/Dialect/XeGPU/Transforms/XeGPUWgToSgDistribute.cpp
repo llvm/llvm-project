@@ -1847,4 +1847,18 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
     return signalPassFailure();
+
+  // Remove layout attributes from SCF ops
+  getOperation()->walk([](Operation *op) {
+    if (!isa<RegionBranchOpInterface, RegionBranchTerminatorOpInterface>(op))
+      return;
+
+    SmallVector<StringAttr> attrsToRemove;
+    for (auto namedAttr : op->getDiscardableAttrs()) {
+      if (isa<xegpu::DistributeLayoutAttr>(namedAttr.getValue()))
+        attrsToRemove.push_back(namedAttr.getName());
+    }
+    for (auto attrName : attrsToRemove)
+      op->removeDiscardableAttr(attrName);
+  });
 }

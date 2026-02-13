@@ -91,7 +91,7 @@ static std::pair<size_t, bool> GetIntegralTypeInfo(TypeIndex ti,
   case LF_POINTER: {
     PointerRecord pr;
     llvm::cantFail(TypeDeserializer::deserializeAs<PointerRecord>(cvt, pr));
-    return GetIntegralTypeInfo(pr.ReferentType, tpi);
+    return {pr.getSize(), false};
   }
   case LF_ENUM: {
     EnumRecord er;

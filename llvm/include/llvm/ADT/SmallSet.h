@@ -32,7 +32,8 @@ namespace llvm {
 template <typename T, unsigned N, typename C>
 class SmallSetIterator
     : public iterator_facade_base<SmallSetIterator<T, N, C>,
-                                  std::forward_iterator_tag, T> {
+                                  std::forward_iterator_tag, T, std::ptrdiff_t,
+                                  const T *, const T &> {
 private:
   using SetIterTy = typename std::set<T, C>::const_iterator;
   using VecIterTy = typename SmallVector<T, N>::const_iterator;

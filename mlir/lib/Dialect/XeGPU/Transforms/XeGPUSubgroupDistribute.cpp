@@ -778,6 +778,15 @@ struct GpuBarrierDistribution final : public gpu::WarpDistributionPattern {
 /// To
 ///    xegpu.store %payload, %src[%offset], %mask <{chunk_size=8}> :
 ///     vector<8xf16>, memref<256xf16>, vector<1xindex>, vector<1xi1>
+///
+/// Note that the store distribution pattern also handles leading unit
+/// dimensions in the payload, mask and offsets vectors. In this case the store
+/// distribution will only change the dimensions corresponding to the SG
+/// distribution and keep the leading unit dimensions unchanged.
+/// For example, a store with payload vector<1x16xf16> with lane layout [1, 16 ]
+/// will be distributed as vector<1x1xf16>. Shapecast ops are inserted for the
+/// offset/mask/payload when necessary so that the distributed store is workign
+/// on 1D shape vector to match the HW capability.
 struct StoreDistribution final : public gpu::WarpDistributionPattern {
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
@@ -792,30 +801,27 @@ struct StoreDistribution final : public gpu::WarpDistributionPattern {
           storeScatterOp, "Store op must have a vector of offsets argument");
     VectorType offsetsTy = cast<VectorType>(offsets.getType());
     VectorType maskTy = cast<VectorType>(storeScatterOp.getMask().getType());
-    if (offsetsTy.getRank() != 1 || maskTy.getRank() != 1)
-      return rewriter.notifyMatchFailure(storeScatterOp,
-                                         "Expected 1D offsets and mask vector");
     VectorType storeVecTy = cast<VectorType>(storeScatterOp.getValueType());
-    if (storeVecTy.getRank() > 2)
-      return rewriter.notifyMatchFailure(
-          storeScatterOp, "Expected at most 2D result at SG level");
 
-    std::string layoutPayloadName =
-        xegpu::getTemporaryLayoutName(storeScatterOp->getOpOperand(0));
-    std::string layoutOffsetsName =
-        xegpu::getTemporaryLayoutName(storeScatterOp->getOpOperand(2));
-    std::string layoutMaskName =
-        xegpu::getTemporaryLayoutName(storeScatterOp->getOpOperand(3));
+    // Add handling for leading unit dimensions support
+    int chunkSize = storeScatterOp.getChunkSize().value_or(1);
+    int effectiveVecRank = (chunkSize == 1) ? 1 : 2;
 
-    xegpu::DistributeLayoutAttr layoutPayload =
-        storeScatterOp->getAttrOfType<xegpu::DistributeLayoutAttr>(
-            layoutPayloadName);
-    xegpu::DistributeLayoutAttr layoutOffsets =
-        storeScatterOp->getAttrOfType<xegpu::DistributeLayoutAttr>(
-            layoutOffsetsName);
-    xegpu::DistributeLayoutAttr layoutMask =
-        storeScatterOp->getAttrOfType<xegpu::DistributeLayoutAttr>(
-            layoutMaskName);
+    // Check that all leading dimensions are unit dimensions
+    for (int i = 0; i < storeVecTy.getRank() - effectiveVecRank; i++) {
+      if (storeVecTy.getShape()[i] != 1) {
+        return rewriter.notifyMatchFailure(
+            storeScatterOp, "Only unit dimensions allowed for the leading "
+                            "dimensions of the store vector!");
+      }
+    }
+
+    auto layoutPayload =
+        xegpu::getTemporaryLayout(storeScatterOp->getOpOperand(0));
+    auto layoutOffsets =
+        xegpu::getTemporaryLayout(storeScatterOp->getOpOperand(2));
+    auto layoutMask =
+        xegpu::getTemporaryLayout(storeScatterOp->getOpOperand(3));
 
     FailureOr<VectorType> distStoreVecByWarpOpOrFailure =
         getDistVecTypeBasedOnLaneLayout(layoutPayload, storeVecTy);
@@ -830,29 +836,42 @@ struct StoreDistribution final : public gpu::WarpDistributionPattern {
           storeScatterOp,
           "Some vector operands have no layouts, using defaults instead.");
     }
-    // Distributed store payload type according to the lane layout.
-    VectorType distPayloadTyByWarpOp = distStoreVecByWarpOpOrFailure.value();
-    // Expected distributed payload type is always 1D.
-    VectorType expectedPayloadTy =
-        VectorType::get({distPayloadTyByWarpOp.getNumElements()},
-                        distPayloadTyByWarpOp.getElementType());
+
+    VectorType distPayloadTy = distStoreVecByWarpOpOrFailure.value();
+    VectorType distOffsetsTy = distOffsetsByWarpOpOrFailure.value();
+    VectorType distMaskTy = distMaskByWarpOpOrFailure.value();
 
     SmallVector<size_t> newRetIndices;
     SmallVector<Value> operands = storeScatterOp->getOperands();
     SmallVector<Type> operandTypesToYield = {
-        distPayloadTyByWarpOp, operands[1].getType(),
-        distOffsetsByWarpOpOrFailure.value(),
-        distMaskByWarpOpOrFailure.value()};
+        distPayloadTy, operands[1].getType(), distOffsetsTy, distMaskTy};
 
     gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
         rewriter, warpOp, operands, operandTypesToYield, newRetIndices);
-    SmallVector<Value> newStoreScatterOpOperands = llvm::map_to_vector(
-        newRetIndices, [&](size_t idx) { return newWarpOp.getResult(idx); });
-    // The payload operand may need type adjustment due to mismatch between warp
-    // distributed type and expected SIMT type.
+
     rewriter.setInsertionPointAfter(newWarpOp);
-    newStoreScatterOpOperands[0] = resolveDistributedTy(
-        newStoreScatterOpOperands[0], expectedPayloadTy, rewriter);
+
+    // Distributed store payload type is always 1D without leading unit dims
+    VectorType payloadTy1D = VectorType::get({distPayloadTy.getNumElements()},
+                                             distPayloadTy.getElementType());
+
+    VectorType distOffsetsTy1D = VectorType::get(
+        {distOffsetsTy.getNumElements()}, distOffsetsTy.getElementType());
+    VectorType distMaskTy1D = VectorType::get({distMaskTy.getNumElements()},
+                                              distMaskTy.getElementType());
+
+    // Resolve distributed types to 1D for SIMT execution
+    Value distPayloadVal = resolveDistributedTy(
+        newWarpOp.getResult(newRetIndices[0]), payloadTy1D, rewriter);
+    Value distOffsetVal = resolveDistributedTy(
+        newWarpOp.getResult(newRetIndices[2]), distOffsetsTy1D, rewriter);
+    Value distMaskVal = resolveDistributedTy(
+        newWarpOp.getResult(newRetIndices[3]), distMaskTy1D, rewriter);
+
+    SmallVector<Value> newStoreScatterOpOperands = {
+        distPayloadVal, newWarpOp.getResult(newRetIndices[1]), distOffsetVal,
+        distMaskVal};
+
     xegpu::StoreScatterOp newOp = xegpu::StoreScatterOp::create(
         rewriter, newWarpOp.getLoc(), TypeRange{}, newStoreScatterOpOperands,
         storeScatterOp->getAttrs());
@@ -1058,6 +1077,15 @@ struct StoreMatrixDistribution final : public gpu::WarpDistributionPattern {
 /// To
 ///    %0 = xegpu.load %payload, %src[%offset], %mask <{chunk_size=8}> :
 ///     memref<256xf16>, vector<1xindex>, vector<1xi1> -> vector<8xf16>
+///
+/// Note that the load distribution pattern also handles leading unit dimensions
+/// in the payload, mask, and offsets vector.The load distribution will only
+/// change the dimensions corresponding to the SG distribution and keep the
+/// leading unit dimensions unchanged. For example, a load with result type
+/// vector<1x16xf16> with lane layout [1, 16 ] will be distributed
+/// as result type vector<1x1xf16>. Shapecast ops are inserted for the
+/// offset/mask/payload when necessary so that the distributed load is workign
+/// on 1D shape vector to match the HW capability.
 struct LoadDistribution final : public gpu::WarpDistributionPattern {
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
@@ -1082,19 +1110,22 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
           "Load op must have a vector arguments for offsets and mask");
     VectorType offsetsTy = cast<VectorType>(offsets.getType());
     VectorType maskTy = cast<VectorType>(loadGatherOp.getMask().getType());
-    if (offsetsTy.getRank() != 1 || maskTy.getRank() != 1)
-      return rewriter.notifyMatchFailure(loadGatherOp,
-                                         "Expected 1D offsets and mask vector");
-    // Assume offset and mask producers will be distributed as well.
-    std::string layoutOffsetsName =
-        xegpu::getTemporaryLayoutName(loadGatherOp->getOpOperand(1));
-    std::string layoutMaskName =
-        xegpu::getTemporaryLayoutName(loadGatherOp->getOpOperand(2));
+    VectorType resultVecTy =
+        cast<VectorType>(loadGatherOp.getResult().getType());
+    // add handling leading unit dimensions support
+    int chunkSize = loadGatherOp.getChunkSize().value_or(1);
+    int effectiveVecRank = (chunkSize == 1) ? 1 : 2;
+    for (int i = 0; i < resultVecTy.getRank() - effectiveVecRank; i++) {
+      if (resultVecTy.getShape()[i] != 1) {
+        return rewriter.notifyMatchFailure(
+            loadGatherOp, "Only unit dimensions allowed for the leading "
+                          "dimensions of the load vector!");
+      }
+    }
 
-    xegpu::LayoutAttr layoutOffsets =
-        loadGatherOp->getAttrOfType<xegpu::LayoutAttr>(layoutOffsetsName);
-    xegpu::LayoutAttr layoutMask =
-        loadGatherOp->getAttrOfType<xegpu::LayoutAttr>(layoutMaskName);
+    auto layoutOffsets =
+        xegpu::getTemporaryLayout(loadGatherOp->getOpOperand(1));
+    auto layoutMask = xegpu::getTemporaryLayout(loadGatherOp->getOpOperand(2));
 
     FailureOr<VectorType> distOffsetsByWarpOpOrFailure =
         getDistVecTypeBasedOnLaneLayout(layoutOffsets, offsetsTy);
@@ -1109,26 +1140,42 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
 
     SmallVector<size_t> newRetIndices;
     SmallVector<Value> operands = loadGatherOp->getOperands();
-    SmallVector<Type> operandTypesToYield = {
-        operands[0].getType(), distOffsetsByWarpOpOrFailure.value(),
-        distMaskByWarpOpOrFailure.value()};
 
     const unsigned operandIdx = producedByLastLoad->getOperandNumber();
     VectorType distResultTy =
         cast<VectorType>(warpOp.getResult(operandIdx).getType());
-    // Distributed load op will always be 1D.
-    VectorType loadVecTy = VectorType::get({distResultTy.getNumElements()},
-                                           distResultTy.getElementType());
+    VectorType distOffsetsTy = distOffsetsByWarpOpOrFailure.value();
+    VectorType distMaskTy = distMaskByWarpOpOrFailure.value();
+
+    SmallVector<Type> operandTypesToYield = {operands[0].getType(),
+                                             distOffsetsTy, distMaskTy};
 
     gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
         rewriter, warpOp, operands, operandTypesToYield, newRetIndices);
 
-    SmallVector<Value> newLoadGatherOperands = llvm::map_to_vector(
-        newRetIndices, [&](size_t idx) { return newWarpOp.getResult(idx); });
-
     rewriter.setInsertionPointAfter(newWarpOp);
+
+    // Distributed load op will always be 1D.
+    VectorType loadVecTy1D = VectorType::get({distResultTy.getNumElements()},
+                                             distResultTy.getElementType());
+
+    VectorType distOffsetsTy1D =
+        VectorType::get({distOffsetsByWarpOpOrFailure.value().getNumElements()},
+                        distOffsetsByWarpOpOrFailure.value().getElementType());
+    VectorType distMaskTy1D =
+        VectorType::get({distMaskByWarpOpOrFailure.value().getNumElements()},
+                        distMaskByWarpOpOrFailure.value().getElementType());
+
+    Value distOffsetVal = resolveDistributedTy(
+        newWarpOp.getResult(newRetIndices[1]), distOffsetsTy1D, rewriter);
+    Value distmaskVal = resolveDistributedTy(
+        newWarpOp.getResult(newRetIndices[2]), distMaskTy1D, rewriter);
+
+    SmallVector<Value> newLoadGatherOperands = {
+        newWarpOp.getResult(newRetIndices[0]), distOffsetVal, distmaskVal};
+
     xegpu::LoadGatherOp newOp = xegpu::LoadGatherOp::create(
-        rewriter, newWarpOp.getLoc(), loadVecTy, newLoadGatherOperands,
+        rewriter, newWarpOp.getLoc(), loadVecTy1D, newLoadGatherOperands,
         loadGatherOp->getAttrs());
     xegpu::removeLayoutAttrs(newOp);
     Value distributedVal = newWarpOp.getResult(operandIdx);

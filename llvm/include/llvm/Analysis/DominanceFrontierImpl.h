@@ -73,9 +73,9 @@ void DominanceFrontierBase<BlockT, IsPostDom>::dump() const {
 }
 #endif
 
-template <class BlockT>
-void ForwardDominanceFrontierBase<BlockT>::calculate(const DomTreeT &DT,
-                                                     const DomTreeNodeT *Node) {
+template <class BlockT, bool IsPostDom>
+void DominanceFrontierBase<BlockT, IsPostDom>::calculate(
+    const DomTreeT &DT, const DomTreeNodeT *Node) {
   BlockT *BB = Node->getBlock();
 
   std::vector<DFCalculateWorkObject<BlockT>> workList;
@@ -97,10 +97,10 @@ void ForwardDominanceFrontierBase<BlockT>::calculate(const DomTreeT &DT,
     // Visit each block only once.
     if (visited.insert(currentBB).second) {
       // Loop over CFG successors to calculate DFlocal[currentNode]
-      for (const auto Succ : children<BlockT *>(currentBB)) {
+      for (const auto Child : children<GraphTy>(currentBB)) {
         // Does Node immediately dominate this successor?
-        if (DT[Succ]->getIDom() != currentNode)
-          S.insert(Succ);
+        if (DT[Child]->getIDom() != currentNode)
+          S.insert(Child);
       }
     }
 

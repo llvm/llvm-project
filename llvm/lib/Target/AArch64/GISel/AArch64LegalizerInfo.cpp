@@ -1769,6 +1769,12 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
+  case Intrinsic::aarch64_prefetch_ir: {
+    auto &AddrVal = MI.getOperand(1);
+    MIB.buildInstr(AArch64::G_AARCH64_PREFETCH).addImm(24).add(AddrVal);
+    MI.eraseFromParent();
+    return true;
+  }
   case Intrinsic::aarch64_neon_uaddv:
   case Intrinsic::aarch64_neon_saddv:
   case Intrinsic::aarch64_neon_umaxv:

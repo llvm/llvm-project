@@ -978,17 +978,24 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     // parser already though by it pretending to have seen an 'int' in this
     // case.
     if (S.getLangOpts().isImplicitIntRequired()) {
-      S.Diag(DeclLoc, diag::warn_missing_type_specifier)
-          << DS.getSourceRange()
-          << FixItHint::CreateInsertion(DS.getBeginLoc(), "int");
+      // Only emit the diagnostic for the first declarator in a DeclGroup, as
+      // the warning is always implied for all subsequent declarators, and the
+      // fix must only be applied exactly once as well.
+      if (declarator.isFirstDeclarator()) {
+        S.Diag(DeclLoc, diag::warn_missing_type_specifier)
+            << DS.getSourceRange()
+            << FixItHint::CreateInsertion(DS.getBeginLoc(), "int ");
+      }
     } else if (!DS.hasTypeSpecifier()) {
       // C99 and C++ require a type specifier.  For example, C99 6.7.2p2 says:
       // "At least one type specifier shall be given in the declaration
-      // specifiers in each declaration, and in the specifier-qualifier list in
-      // each struct declaration and type name."
+      // specifiers in each declaration, and in the specifier-qualifier list
+      // in each struct declaration and type name."
       if (!S.getLangOpts().isImplicitIntAllowed() && !DS.isTypeSpecPipe()) {
-        S.Diag(DeclLoc, diag::err_missing_type_specifier)
-            << DS.getSourceRange();
+        if (declarator.isFirstDeclarator()) {
+          S.Diag(DeclLoc, diag::err_missing_type_specifier)
+              << DS.getSourceRange();
+        }
 
         // When this occurs, often something is very broken with the value
         // being declared, poison it as invalid so we don't get chains of
@@ -996,15 +1003,17 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
         declarator.setInvalidType(true);
       } else if (S.getLangOpts().getOpenCLCompatibleVersion() >= 200 &&
                  DS.isTypeSpecPipe()) {
-        S.Diag(DeclLoc, diag::err_missing_actual_pipe_type)
-            << DS.getSourceRange();
+        if (declarator.isFirstDeclarator()) {
+          S.Diag(DeclLoc, diag::err_missing_actual_pipe_type)
+              << DS.getSourceRange();
+        }
         declarator.setInvalidType(true);
-      } else {
+      } else if (declarator.isFirstDeclarator()) {
         assert(S.getLangOpts().isImplicitIntAllowed() &&
                "implicit int is disabled?");
         S.Diag(DeclLoc, diag::ext_missing_type_specifier)
             << DS.getSourceRange()
-            << FixItHint::CreateInsertion(DS.getBeginLoc(), "int");
+            << FixItHint::CreateInsertion(DS.getBeginLoc(), "int ");
       }
     }
 

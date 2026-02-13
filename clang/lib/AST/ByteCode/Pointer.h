@@ -869,8 +869,12 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
   OS << ' ';
   if (const Descriptor *D = P.getFieldDesc())
     D->dump(OS);
-  if (P.isArrayElement())
-    OS << " index " << P.getIndex();
+  if (P.isArrayElement()) {
+    if (P.isOnePastEnd())
+      OS << " one-past-the-end";
+    else
+      OS << " index " << P.getIndex();
+  }
   return OS;
 }
 

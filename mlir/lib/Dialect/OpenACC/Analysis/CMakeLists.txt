@@ -5,6 +5,7 @@ add_mlir_dialect_library(MLIROpenACCAnalysis
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/OpenACC
 
   LINK_LIBS PUBLIC
+  MLIRGPUDialect
   MLIRIR
   MLIROpenACCDialect
   MLIROpenACCUtils

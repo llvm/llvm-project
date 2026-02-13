@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -22,7 +23,6 @@
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "mlir/Bindings/Python/NanobindUtils.h"
-#include "llvm/ADT/ScopeExit.h"
 
 namespace nb = nanobind;
 using namespace nanobind::literals;
@@ -45,16 +45,12 @@ For conversions outside of these types, a `type=` must be explicitly provided
 and the buffer contents must be bit-castable to the MLIR internal
 representation:
 
-  * Integer types (except for i1): the buffer must be byte aligned to the
-    next byte boundary.
+  * Integer types: the buffer must be byte aligned to the next byte boundary.
   * Floating point types: Must be bit-castable to the given floating point
     size.
-  * i1 (bool): Bit packed into 8bit words where the bit pattern matches a
-    row major ordering. An arbitrary Numpy `bool_` array can be bit packed to
-    this specification with: `np.packbits(ary, axis=None, bitorder='little')`.
+  * i1 (bool): Each boolean value is stored as a single byte (0 or 1).
 
-If a single element buffer is passed (or for i1, a single byte with value 0
-or 255), then a splat will be created.
+If a single element buffer is passed, then a splat will be created.
 
 Args:
   array: The array or buffer to convert.
@@ -63,8 +59,7 @@ Args:
   type: Skips inference of the MLIR element type and uses this instead. The
     storage size must be consistent with the actual contents of the buffer.
   shape: Overrides the shape of the buffer when constructing the MLIR
-    shaped type. This is needed when the physical and logical shape differ (as
-    for i1).
+    shaped type. This is needed when the physical and logical shape differ.
   context: Explicit context, if not from context manager.
 
 Returns:
@@ -121,6 +116,37 @@ Raises:
   ValueError: If the type of the buffer or array cannot be matched to an MLIR
     type or if the buffer does not meet expectations.
 )";
+
+namespace {
+/// Local helper adapted from llvm::scope_exit.
+template <typename Callable>
+class [[nodiscard]] scope_exit {
+  Callable ExitFunction;
+  bool Engaged = true; // False once moved-from or release()d.
+
+public:
+  template <typename Fp>
+  explicit scope_exit(Fp &&F) : ExitFunction(std::forward<Fp>(F)) {}
+
+  scope_exit(scope_exit &&Rhs)
+      : ExitFunction(std::move(Rhs.ExitFunction)), Engaged(Rhs.Engaged) {
+    Rhs.release();
+  }
+  scope_exit(const scope_exit &) = delete;
+  scope_exit &operator=(scope_exit &&) = delete;
+  scope_exit &operator=(const scope_exit &) = delete;
+
+  void release() { Engaged = false; }
+
+  ~scope_exit() {
+    if (Engaged)
+      ExitFunction();
+  }
+};
+
+template <typename Callable>
+scope_exit(Callable) -> scope_exit<Callable>;
+} // namespace
 
 namespace mlir {
 namespace python {
@@ -616,7 +642,7 @@ PyDenseElementsAttribute PyDenseElementsAttribute::getFromBuffer(
   if (PyObject_GetBuffer(array.ptr(), &view, flags) != 0) {
     throw nb::python_error();
   }
-  llvm::scope_exit freeBuffer([&]() { PyBuffer_Release(&view); });
+  scope_exit freeBuffer([&]() { PyBuffer_Release(&view); });
 
   MlirContext context = contextWrapper->get();
   MlirAttribute attr = getAttributeFromBuffer(
@@ -736,10 +762,7 @@ std::unique_ptr<nb_buffer_info> PyDenseElementsAttribute::accessBuffer() {
   } else if (mlirTypeIsAInteger(elementType) &&
              mlirIntegerTypeGetWidth(elementType) == 1) {
     // i1 / bool
-    // We can not send the buffer directly back to Python, because the i1
-    // values are bitpacked within MLIR. We call numpy's unpackbits function
-    // to convert the bytes.
-    return getBooleanBufferFromBitpackedAttribute();
+    return bufferInfo<bool>(shapedType);
   }
 
   // TODO: Currently crashes the program.
@@ -853,9 +876,7 @@ MlirAttribute PyDenseElementsAttribute::getAttributeFromBuffer(
       bulkLoadElementType = mlirF16TypeGet(context);
     } else if (format == "?") {
       // i1
-      // The i1 type needs to be bit-packed, so we will handle it separately
-      return getBitpackedAttributeFromBooleanBuffer(view, explicitShape,
-                                                    context);
+      bulkLoadElementType = mlirIntegerTypeGet(context, 1);
     } else if (isSignedIntegerFormat(format)) {
       if (view.itemsize == 4) {
         // i32
@@ -905,82 +926,6 @@ MlirAttribute PyDenseElementsAttribute::getAttributeFromBuffer(
 
   MlirType type = getShapedType(bulkLoadElementType, explicitShape, view);
   return mlirDenseElementsAttrRawBufferGet(type, view.len, view.buf);
-}
-
-MlirAttribute PyDenseElementsAttribute::getBitpackedAttributeFromBooleanBuffer(
-    Py_buffer &view, std::optional<std::vector<int64_t>> explicitShape,
-    MlirContext &context) {
-  if (llvm::endianness::native != llvm::endianness::little) {
-    // Given we have no good way of testing the behavior on big-endian
-    // systems we will throw
-    throw nb::type_error("Constructing a bit-packed MLIR attribute is "
-                         "unsupported on big-endian systems");
-  }
-  nb::ndarray<uint8_t, nb::numpy, nb::ndim<1>, nb::c_contig> unpackedArray(
-      /*data=*/static_cast<uint8_t *>(view.buf),
-      /*shape=*/{static_cast<size_t>(view.len)});
-
-  nb::module_ numpy = nb::module_::import_("numpy");
-  nb::object packbitsFunc = numpy.attr("packbits");
-  nb::object packedBooleans =
-      packbitsFunc(nb::cast(unpackedArray), "bitorder"_a = "little");
-  nb_buffer_info pythonBuffer = nb::cast<nb_buffer>(packedBooleans).request();
-
-  MlirType bitpackedType = getShapedType(mlirIntegerTypeGet(context, 1),
-                                         std::move(explicitShape), view);
-  assert(pythonBuffer.itemsize == 1 && "Packbits must return uint8");
-  // Notice that `mlirDenseElementsAttrRawBufferGet` copies the memory of
-  // packedBooleans, hence the MlirAttribute will remain valid even when
-  // packedBooleans get reclaimed by the end of the function.
-  return mlirDenseElementsAttrRawBufferGet(bitpackedType, pythonBuffer.size,
-                                           pythonBuffer.ptr);
-}
-
-std::unique_ptr<nb_buffer_info>
-PyDenseElementsAttribute::getBooleanBufferFromBitpackedAttribute() const {
-  if (llvm::endianness::native != llvm::endianness::little) {
-    // Given we have no good way of testing the behavior on big-endian
-    // systems we will throw
-    throw nb::type_error("Constructing a numpy array from a MLIR attribute "
-                         "is unsupported on big-endian systems");
-  }
-
-  int64_t numBooleans = mlirElementsAttrGetNumElements(*this);
-  int64_t numBitpackedBytes = llvm::divideCeil(numBooleans, 8);
-  uint8_t *bitpackedData = static_cast<uint8_t *>(
-      const_cast<void *>(mlirDenseElementsAttrGetRawData(*this)));
-  nb::ndarray<uint8_t, nb::numpy, nb::ndim<1>, nb::c_contig> packedArray(
-      /*data=*/bitpackedData,
-      /*shape=*/{static_cast<size_t>(numBitpackedBytes)});
-
-  nb::module_ numpy = nb::module_::import_("numpy");
-  nb::object unpackbitsFunc = numpy.attr("unpackbits");
-  nb::object equalFunc = numpy.attr("equal");
-  nb::object reshapeFunc = numpy.attr("reshape");
-  nb::object unpackedBooleans =
-      unpackbitsFunc(nb::cast(packedArray), "bitorder"_a = "little");
-
-  // Unpackbits operates on bytes and gives back a flat 0 / 1 integer array.
-  // We need to:
-  //   1. Slice away the padded bits
-  //   2. Make the boolean array have the correct shape
-  //   3. Convert the array to a boolean array
-  unpackedBooleans = unpackedBooleans[nb::slice(
-      nb::int_(0), nb::int_(numBooleans), nb::int_(1))];
-  unpackedBooleans = equalFunc(unpackedBooleans, 1);
-
-  MlirType shapedType = mlirAttributeGetType(*this);
-  intptr_t rank = mlirShapedTypeGetRank(shapedType);
-  std::vector<intptr_t> shape(rank);
-  for (intptr_t i = 0; i < rank; ++i) {
-    shape[i] = mlirShapedTypeGetDimSize(shapedType, i);
-  }
-  unpackedBooleans = reshapeFunc(unpackedBooleans, shape);
-
-  // Make sure the returned nb::buffer_view claims ownership of the data
-  // in `pythonBuffer` so it remains valid when Python reads it
-  nb_buffer pythonBuffer = nb::cast<nb_buffer>(unpackedBooleans);
-  return std::make_unique<nb_buffer_info>(pythonBuffer.request());
 }
 
 PyType_Slot PyDenseElementsAttribute::slots[] = {
@@ -1126,7 +1071,7 @@ PyDenseResourceElementsAttribute::getFromBuffer(
 
   // This scope releaser will only release if we haven't yet transferred
   // ownership.
-  llvm::scope_exit freeBuffer([&]() {
+  scope_exit freeBuffer([&]() {
     if (view)
       PyBuffer_Release(view.get());
   });

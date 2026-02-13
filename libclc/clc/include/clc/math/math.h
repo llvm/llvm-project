@@ -11,6 +11,7 @@
 
 #include <clc/clc_as_type.h>
 #include <clc/clcfunc.h>
+#include <clc/math/clc_subnormal_config.h>
 
 #define SNAN 0x001
 #define QNAN 0x002
@@ -60,6 +61,16 @@
 #define BASEDIGITS_SP32 7
 
 #define LOG_MAGIC_NUM_SP32 (1 + NUMEXPBITS_SP32 - EXPBIAS_SP32)
+
+_CLC_OVERLOAD _CLC_INLINE float __clc_flush_denormal_if_not_supported(float x) {
+  int ix = __clc_as_int(x);
+  if (!__clc_fp32_subnormals_supported() && ((ix & EXPBITS_SP32) == 0) &&
+      ((ix & MANTBITS_SP32) != 0)) {
+    ix &= SIGNBIT_SP32;
+    x = __clc_as_float(ix);
+  }
+  return x;
+}
 
 #ifdef cl_khr_fp64
 

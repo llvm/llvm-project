@@ -6,6 +6,10 @@
 // RUN: FileCheck %s --check-prefix=DID-YOU-MEAN
 // DID-YOU-MEAN: error: unknown argument '--hell'; did you mean '--help'?
 
+// RUN: not %clang %s -fno-modules-check-relocated -### 2>&1 | \
+// RUN: FileCheck %s --check-prefix=DID-YOU-MEAN-CC1
+// DID-YOU-MEAN-CC1: error: unknown argument '-fno-modules-check-relocated'; did you mean '-Xclang -fno-modules-check-relocated'?
+
 // RUN: not %clang --target=powerpc-ibm-aix %s -mlong-double-128 2>&1 | \
 // RUN: FileCheck %s --check-prefix=AIX-LONGDOUBLE128-ERR
 // AIX-LONGDOUBLE128-ERR: error: unsupported option '-mlong-double-128' for target 'powerpc-ibm-aix'
