@@ -1933,7 +1933,7 @@ public:
 
   /// Return true if the loop vectorizer should consider vectorizing an
   /// otherwise scalar epilogue loop if the loop already has been vectorized
-  /// with VF x IC, running \p Iters scalar iterations per vector iteration.
+  /// processing \p Iters scalar iterations per vector iteration.
   LLVM_ABI bool preferEpilogueVectorization(ElementCount Iters) const;
 
   /// \returns True if the loop vectorizer should discard any VFs where the
