@@ -10,7 +10,6 @@ permissions:
 
 jobs:
   auto-subscribe:
-    environment: main-branch-only
     runs-on: ubuntu-24.04
     if: github.repository == 'llvm/llvm-project'
     steps:
