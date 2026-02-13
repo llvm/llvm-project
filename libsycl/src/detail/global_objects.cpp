@@ -18,6 +18,20 @@
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
+struct StaticVarShutdownHandler {
+  StaticVarShutdownHandler(const StaticVarShutdownHandler &) = delete;
+  StaticVarShutdownHandler &
+  operator=(const StaticVarShutdownHandler &) = delete;
+  ~StaticVarShutdownHandler() {
+    // No error reporting in shutdown
+    std::ignore = olShutDown();
+  }
+};
+
+void registerStaticVarShutdownHandler() {
+  static StaticVarShutdownHandler handler{};
+}
+
 std::vector<detail::OffloadTopology> &getOffloadTopologies() {
   static std::vector<detail::OffloadTopology> Topologies(
       OL_PLATFORM_BACKEND_LAST);
@@ -29,43 +43,5 @@ std::vector<PlatformImplUPtr> &getPlatformCache() {
   return PlatformCache;
 }
 
-static void shutdown() {
-  // No error reporting in shutdown
-  std::ignore = olShutDown();
-}
-
-#ifdef _WIN32
-extern "C" _LIBSYCL_EXPORT BOOL WINAPI DllMain(HINSTANCE hinstDLL,
-                                               DWORD fdwReason,
-                                               LPVOID lpReserved) {
-  // Perform actions based on the reason for calling.
-  switch (fdwReason) {
-  case DLL_PROCESS_DETACH:
-    try {
-      shutdown();
-    } catch (std::exception &e) {
-      // TODO: Investigate how to handle and report errors that occur during
-      // shutdown.
-    }
-
-    break;
-  case DLL_PROCESS_ATTACH:
-    break;
-  case DLL_THREAD_ATTACH:
-    break;
-  case DLL_THREAD_DETACH:
-    break;
-  }
-  return TRUE; // Successful DLL_PROCESS_ATTACH.
-}
-#else
-
-// `syclUnload()` is declared as a low priority destructor to ensure it runs
-// after all other global destructors. Priorities 0-100 are reserved for use
-// by the compiler and C and C++ standard libraries. SYCL applications may use
-// priorities in the range 101-109 to schedule destructors to run after libsycl
-// finalization.
-__attribute__((destructor(110))) static void syclUnload() { shutdown(); }
-#endif
 } // namespace detail
 _LIBSYCL_END_NAMESPACE_SYCL
