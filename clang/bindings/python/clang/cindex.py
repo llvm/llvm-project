@@ -212,13 +212,13 @@ class TranslationUnitSaveError(Exception):
 
         if enumeration < 1 or enumeration > 3:
             raise Exception(
-                f"Encountered undefined TranslationUnit save error "
-                f"constant: {enumeration}. Please file a bug to have this "
-                f"value supported."
+                "Encountered undefined TranslationUnit save error "
+                "constant: {}. Please file a bug to have this "
+                "value supported.".format(enumeration)
             )
 
         self.save_error = enumeration
-        Exception.__init__(self, f"Error {enumeration}: {message}")
+        Exception.__init__(self, "Error {}: {}".format(enumeration, message))
 
 
 ### Structures and Utility Classes ###
@@ -247,7 +247,9 @@ class CachedProperty(Generic[TInstance, TResult]):
             property_name = self.wrapped.__name__
             class_name = instance_type.__name__
             raise TypeError(
-                f"'{property_name}' is not a static attribute of '{class_name}'"
+                "'{}' is not a static attribute of '{}'".format(
+                    property_name, class_name
+                )
             )
 
         value = self.wrapped(instance)
@@ -358,7 +360,9 @@ class SourceLocation(Structure):
             filename = self.file.name
         else:
             filename = None
-        return f"<SourceLocation file {filename!r}, line {self.line!r}, column {self.column!r}>"
+        return "<SourceLocation file {}, line {}, column {}>".format(
+            repr(filename), repr(self.line), repr(self.column)
+        )
 
 
 class SourceRange(Structure):
@@ -542,7 +546,9 @@ class Diagnostic:
         return _CXString.from_result(conf.lib.clang_formatDiagnostic(self, options))
 
     def __repr__(self):
-        return f"<Diagnostic severity {self.severity!r}, location {self.location!r}, spelling {self.spelling!r}>"
+        return "<Diagnostic severity {}, location {}, spelling {}>".format(
+            repr(self.severity), repr(self.location), repr(self.spelling)
+        )
 
     def __str__(self):
         return self.format()
@@ -563,7 +569,7 @@ class FixIt:
         self.value = value
 
     def __repr__(self):
-        return f"<FixIt range {self.range!r}, value {self.value!r}>"
+        return "<FixIt range {}, value {}>".format(repr(self.range), repr(self.value))
 
 
 class TokenGroup:
@@ -637,7 +643,7 @@ class BaseEnumeration(Enum):
         return cls(id)
 
     def __repr__(self):
-        return f"{self.__class__.__name__}.{self.name}"
+        return "{}.{}".format(self.__class__.__name__, self.name)
 
 
 class TokenKind(BaseEnumeration):
@@ -2719,7 +2725,9 @@ class Type(Structure):
 
                 if key >= len(self):
                     raise IndexError(
-                        f"Index greater than container length: {key} > {len(self)}"
+                        "Index greater than container length: {} > {}".format(
+                            key, len(self)
+                        )
                     )
 
                 result = Type.from_result(
@@ -3123,7 +3131,7 @@ class CompletionChunk:
         self.key = key
 
     def __repr__(self) -> str:
-        return f"{{'{self.spelling}', {self.kind}}}"
+        return "{{'{}', {}}}".format(self.spelling, self.kind)
 
     @CachedProperty
     def spelling(self) -> str:
@@ -3283,11 +3291,11 @@ class CompletionString(ClangObject):
         return _CXString.from_result(conf.lib.clang_getCompletionBriefComment(self.obj))
 
     def __repr__(self) -> str:
-        return (
-            f"{' | '.join(str(a) for a in self)}"
-            f" || Priority: {self.priority}"
-            f" || Availability: {self.availability}"
-            f" || Brief comment: {self.briefComment}"
+        return "{chunks} || Priority: {priority} || Availability: {availability} || Brief comment: {comment}".format(
+            chunks=" | ".join(str(a) for a in self),
+            priority=self.priority,
+            availability=self.availability,
+            comment=self.briefComment,
         )
 
 
@@ -3708,7 +3716,7 @@ class TranslationUnit(ClangObject):
             )
         )
         if result != 0:
-            msg = f"Error reparsing translation unit. Error code: {result}"
+            msg = "Error reparsing translation unit. Error code: {}".format(result)
             raise TranslationUnitLoadError(msg)
 
     def save(self, filename):
@@ -3826,7 +3834,7 @@ class File(ClangObject):
         return self.name
 
     def __repr__(self):
-        return f"<File: {self.name}>"
+        return "<File: {}>".format(self.name)
 
     def __eq__(self, other) -> bool:
         return isinstance(other, File) and bool(
@@ -3886,12 +3894,12 @@ class CompilationDatabaseError(Exception):
 
         if enumeration > 1:
             raise Exception(
-                f"Encountered undefined CompilationDatabase error constant: {enumeration}."
-                "Please file a bug to have this value supported."
+                "Encountered undefined CompilationDatabase error constant: {}."
+                "Please file a bug to have this value supported.".format(enumeration)
             )
 
         self.cdb_error = enumeration
-        Exception.__init__(self, f"Error {enumeration}: {message}")
+        Exception.__init__(self, "Error {}: {}".format(enumeration, message))
 
 
 class CompileCommand:
