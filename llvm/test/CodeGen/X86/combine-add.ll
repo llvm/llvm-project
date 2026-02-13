@@ -563,7 +563,7 @@ define i64 @add_notx_x(i64 %v0) nounwind {
 }
 
 ; Basic positive test
-define i32 @add_adc_to_adc(i32 %0, i32 %1, i32 %2) {
+define i32 @add_adc_to_adc(i32 %0, i32 %1, i32 %2) nounwind {
 ; CHECK-LABEL: add_adc_to_adc:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
@@ -580,8 +580,26 @@ define i32 @add_adc_to_adc(i32 %0, i32 %1, i32 %2) {
   ret i32 %9
 }
 
+; positive test: nonconst
+define i32 @add_adc_to_adc_nonconst(i32 %0, i32 %1, i32 %2, i32 %extra) nounwind {
+; CHECK-LABEL: add_adc_to_adc_nonconst:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    adcl %ecx, %edx
+; CHECK-NEXT:    cmovsl %esi, %eax
+; CHECK-NEXT:    retq
+  %c = icmp ult i32 %0, %1
+  %carry = zext i1 %c to i32
+  %adc = add i32 %2, %carry
+  %final = add i32 %adc, %extra
+  %neg = icmp slt i32 %final, 0
+  %sel = select i1 %neg, i32 %1, i32 %0
+  ret i32 %sel
+}
+
 ; Negative test: Carry or overflow flag is used
-define i32 @add_adc_wrong_flags(i32 %0, i32 %1, i32 %2) {
+define i32 @add_adc_wrong_flags(i32 %0, i32 %1, i32 %2) nounwind {
 ; CHECK-LABEL: add_adc_wrong_flags:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %esi, %eax
@@ -601,7 +619,7 @@ define i32 @add_adc_wrong_flags(i32 %0, i32 %1, i32 %2) {
 }
 
 ; Negative test: Multi-use
-define i32 @add_adc_multi_use(i32 %0, i32 %1, i32 %2) {
+define i32 @add_adc_multi_use(i32 %0, i32 %1, i32 %2) nounwind {
 ; CHECK-LABEL: add_adc_multi_use:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
