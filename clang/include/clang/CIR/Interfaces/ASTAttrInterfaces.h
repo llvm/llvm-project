@@ -10,11 +10,9 @@
 #define CLANG_CIR_INTERFACES_ASTATTRINTERFACES_H
 
 #include "mlir/IR/Attributes.h"
-#include "llvm/Support/raw_ostream.h"
 
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclTemplate.h"
-#include "clang/AST/Mangle.h"
 
 /// Include the generated interface declarations.
 #include "clang/CIR/Interfaces/ASTAttrInterfaces.h.inc"
