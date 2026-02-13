@@ -226,7 +226,7 @@ define i32 @sub_add_s_reduction_reduction(<vscale x 8 x i32> %v0, <vscale x 8 x 
 ; CHECK-SAME: <vscale x 8 x i32> [[V0:%.*]], <vscale x 8 x i32> [[V1:%.*]], i32 [[S1:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub <vscale x 8 x i32> [[V0]], [[V1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.nxv8i32(<vscale x 8 x i32> [[TMP1]])
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[S1]], [[TMP2]]
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[TMP2]], [[S1]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %v0_red = tail call i32 @llvm.vector.reduce.add.v8i32(<vscale x 8 x i32> %v0)
