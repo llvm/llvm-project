@@ -67,7 +67,7 @@ void checkElementProperties(LVReader *Reader) {
   LVScopeRoot *Root = Reader->getScopesRoot();
   LVScopeCompileUnit *CompileUnit = getFirstCompileUnit(Root);
 
-  EXPECT_EQ(Root->getFileFormatName(), "Textual IR");
+  EXPECT_EQ(Root->getFileFormatName(), "LLVM IR");
   EXPECT_EQ(Root->getName(), IrClang);
 
   EXPECT_EQ(CompileUnit->getBaseAddress(), 0u);
@@ -349,7 +349,7 @@ TEST(LogicalViewTest, IRReader) {
   TT.setOS(Triple::UnknownOS);
 
   std::string TargetLookupError;
-  if (!TargetRegistry::lookupTarget(std::string(TT.str()), TargetLookupError))
+  if (!TargetRegistry::lookupTarget(TT, TargetLookupError))
     GTEST_SKIP();
 
   SmallString<128> InputsDir = unittest::getInputFileDirectory(TestMainArgv0);

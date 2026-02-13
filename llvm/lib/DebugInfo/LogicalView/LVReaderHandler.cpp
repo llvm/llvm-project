@@ -27,7 +27,7 @@ using namespace llvm::logicalview;
 
 #define DEBUG_TYPE "ReaderHandler"
 
-static const StringRef IRFileFormat = "Textual IR";
+static constexpr StringRef IRFileFormatName = "LLVM IR";
 
 Error LVReaderHandler::process() {
   if (Error Err = createReaders())
@@ -61,16 +61,15 @@ Error LVReaderHandler::createReader(StringRef Filename, LVReaders &Readers,
       return std::make_unique<LVCodeViewReader>(Filename, FileFormatName, Pdb,
                                                 W, ExePath);
     }
-    if (isa<IRObjectFile *>(Input)) {
-      IRObjectFile *Ir = cast<IRObjectFile *>(Input);
+    if (IRObjectFile *Ir = dyn_cast<IRObjectFile *>(Input)) {
       return std::make_unique<LVIRReader>(Filename, FileFormatName, Ir, W);
     }
-    if (isa<MemoryBufferRef *>(Input)) {
+    if (MemoryBufferRef *MemBuf = dyn_cast<MemoryBufferRef *>(Input)) {
       // If the filename extension is '.ll' create an IR reader.
       const StringRef IRFileExt = ".ll";
-      MemoryBufferRef *MemBuf = cast<MemoryBufferRef *>(Input);
       if (llvm::sys::path::extension(Filename) == IRFileExt)
-        return std::make_unique<LVIRReader>(Filename, IRFileFormat, MemBuf, W);
+        return std::make_unique<LVIRReader>(Filename, IRFileFormatName, MemBuf,
+                                            W);
     }
     return nullptr;
   };
@@ -209,7 +208,7 @@ Error LVReaderHandler::handleBuffer(LVReaders &Readers, StringRef Filename,
   LLVMContext Context;
   Expected<std::unique_ptr<Binary>> BinOrErr = createBinary(Buffer, &Context);
   if (errorToErrorCode(BinOrErr.takeError())) {
-    // Assume it is textual representation (IR or C/C++ source code).
+    // Assume it is LLVM IR textual representation.
     return handleObject(Readers, Filename, Buffer);
   }
   return handleObject(Readers, Filename, *BinOrErr.get());
@@ -298,7 +297,7 @@ Error LVReaderHandler::handleObject(LVReaders &Readers, StringRef Filename,
 Error LVReaderHandler::handleObject(LVReaders &Readers, StringRef Filename,
                                     MemoryBufferRef Buffer) {
   if (InputHandle Input = dyn_cast<MemoryBufferRef>(&Buffer))
-    return createReader(Filename, Readers, Input, IRFileFormat);
+    return createReader(Filename, Readers, Input, IRFileFormatName);
 
   return createStringError(errc::not_supported,
                            "Binary object format in '%s' is not supported.",

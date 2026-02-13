@@ -25,10 +25,11 @@
 ; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
 
 ; ONE:      Logical View:
-; ONE-NEXT: [0x0000000000][000]            {File} '{{.*}}test-clang{{.*}}.ll' -> Textual IR
+; ONE-NEXT: [0x0000000000][000]            {File} '{{.*}}test-clang{{.*}}.ll' -> LLVM IR
 ; ONE-EMPTY:
 ; ONE-NEXT: [0x0000000004][001]              {CompileUnit} 'test.cpp'
 ; ONE-NEXT: [0x0000000004][002]                {Producer} 'clang version 20{{.*}}'
+; ONE-NEXT: [0x0000000004][002]                {Language} 'DW_LANG_C_plus_plus_14'
 ; ONE-NEXT:                                    {Directory} '{{.*}}/general'
 ; ONE-NEXT:                                    {File} 'test.cpp'
 ; ONE-NEXT:                                    {Public} 'foo' [0x0000000000:0x0000000023]

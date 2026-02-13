@@ -557,12 +557,12 @@ void LVElement::printLinkageName(raw_ostream &OS, bool Full, LVElement *Parent,
   if (options().getPrintFormatting() && options().getAttributeLinkage()) {
     // Include the section index only if '--attribute=offset', as the
     // index can be different depending on the specific reader.
-    std::string Section;
+    std::string Text;
     if (options().getAttributeOffset()) {
       LVSectionIndex SectionIndex = getReader().getSectionIndex(Scope);
-      Section = (Twine(" 0x" + Twine::utohexstr(SectionIndex) + " ")).str();
+      Text = Twine(" 0x" + Twine::utohexstr(SectionIndex) + " ").str();
     }
-    std::string Text = (Twine(Section + "'" + getLinkageName() + "'")).str();
+    Text += Twine("'" + getLinkageName() + "'").str();
     printAttributes(OS, Full, "{Linkage} ", Parent, Text,
                     /*UseQuotes=*/false, /*PrintRef=*/false);
   }

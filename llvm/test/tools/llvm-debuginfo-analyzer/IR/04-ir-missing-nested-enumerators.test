@@ -70,7 +70,7 @@
 ; RUN: FileCheck --strict-whitespace -check-prefix=TWO %s
 
 ; TWO:      Logical View:
-; TWO-NEXT: [000]           {File} 'pr-46466-clang.ll' -> Textual IR
+; TWO-NEXT: [000]           {File} 'pr-46466-clang.ll' -> LLVM IR
 ; TWO-EMPTY:
 ; TWO-NEXT: [001]             {CompileUnit} 'pr-46466.cpp'
 ; TWO-EMPTY:
@@ -112,7 +112,7 @@
 ; THREE-NEXT: Total            4          0
 ; THREE-EMPTY:
 ; THREE-NEXT: Logical View:
-; THREE-NEXT: [000]           {File} 'pr-46466-clang.ll' -> Textual IR
+; THREE-NEXT: [000]           {File} 'pr-46466-clang.ll' -> LLVM IR
 ; THREE-EMPTY:
 ; THREE-NEXT: [001]           {CompileUnit} 'pr-46466.cpp'
 ; THREE-EMPTY:

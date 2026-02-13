@@ -95,7 +95,7 @@
 ; RUN: FileCheck --strict-whitespace -check-prefix=TWO %s
 
 ; TWO:      Logical View:
-; TWO-NEXT: [000]           {File} 'pr-43860-clang.ll' -> Textual IR
+; TWO-NEXT: [000]           {File} 'pr-43860-clang.ll' -> LLVM IR
 ; TWO-EMPTY:
 ; TWO-NEXT: [001]           {CompileUnit} 'pr-43860.cpp'
 ; TWO-NEXT: [004]           {Variable} 'Var_1' -> 'int'

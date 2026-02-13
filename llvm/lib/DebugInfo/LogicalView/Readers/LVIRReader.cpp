@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This implements the LVIRReader class.
-// It supports LLVM text IR and bitcode format.
+// It supports LLVM textual and bitcode IR format.
 //
 //===----------------------------------------------------------------------===//
 
@@ -34,7 +34,121 @@ using namespace llvm::logicalview;
 
 #define DEBUG_TYPE "IRReader"
 
-// These flavours of DINodes are not implemented but technically possible:
+namespace {
+
+// Abstract scopes mapped to the associated inlined scopes.
+// When creating inlined scopes, there is no direct information to find
+// the correct lexical scope.
+using LVScopeEntry = std::pair<const DILocalScope *, const DILocation *>;
+using LVInlinedScopes = std::map<LVScopeEntry, LVScope *>;
+LVInlinedScopes InlinedScopes;
+
+void addInlinedScope(const DILocalScope *OriginContext,
+                     const DILocation *InlinedAt, LVScope *InlinedScope) {
+  auto Entry = LVScopeEntry(OriginContext, InlinedAt);
+  InlinedScopes.try_emplace(Entry, InlinedScope);
+}
+LVScope *getInlinedScope(const DILocalScope *OriginContext,
+                         const DILocation *InlinedAt) {
+  auto Entry = LVScopeEntry(OriginContext, InlinedAt);
+  LVInlinedScopes::const_iterator Iter = InlinedScopes.find(Entry);
+  return Iter != InlinedScopes.end() ? Iter->second : nullptr;
+}
+
+// Used to find the correct location for the inlined lexical blocks that
+// are allocated at their enclosing function level.
+// Keep a link between the inlined scope and its associated origin scope.
+using LVInlinedToOrigin = std::map<LVScope *, LVScope *>;
+LVInlinedToOrigin InlinedToOrigin;
+
+// Keep a list of inlined scopes created from the same origin scope.
+// The original scope can be inlined multiple times.
+using LVList = llvm::SmallVector<LVScope *, 2>;
+using LVInlinedList = std::map<LVScope *, LVList>;
+LVInlinedList InlinedList;
+
+void addInlinedInfo(LVScope *Origin, LVScope *Inlined) {
+  // Add the link between the inlined and the origin scopes.
+  InlinedToOrigin.try_emplace(Inlined, Origin);
+
+  // For the given origin scope, add the inlined scope to its inlined list.
+  auto It = InlinedList.find(Origin);
+  if (It == InlinedList.end()) {
+    LVList List;
+    List.push_back(Inlined);
+    InlinedList.try_emplace(Origin, std::move(List));
+  } else {
+    LVList &List = It->second;
+    List.push_back(Inlined);
+  }
+}
+
+LVList &getInlinedList(LVScope *Origin) {
+  static LVList List;
+  auto It = InlinedList.find(Origin);
+  return (It == InlinedList.end()) ? List : It->second;
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void dumpInlinedInfo(const char *Text, bool Full = false) {
+  // Use 17 as the field length; it corresponds to '{InlinedFunction}'
+  const unsigned LEN = 17;
+
+  auto PrintEntry = [&](auto Text, LVScope *Scope) {
+    std::stringstream SS;
+    SS << Text << hexSquareString(Scope->getID())
+       << hexSquareString(Scope->getParentScope()->getID()) << " "
+       << std::setw(LEN) << std::left << formattedKind(Scope->kind());
+    dbgs() << SS.str();
+  };
+  auto PrintExtra = [&](auto Text, LVScope *Scope) {
+    dbgs() << Text;
+    Scope->dumpCommon();
+  };
+
+  // For each origin scope prints its associated inlined scopes.
+  dbgs() << "\nOrigin -> Inlined list: " << Text << "\n\n";
+  for (auto &Entry : InlinedList) {
+    LVScope *OriginScope = Entry.first;
+    LVList &List = Entry.second;
+    PrintEntry("", OriginScope);
+    dbgs() << "\n";
+    unsigned Count = 0;
+    for (auto &Scope : List) {
+      dbgs() << decString(++Count, /*Width=*/2);
+      PrintEntry(" ", Scope);
+      dbgs() << "\n";
+    }
+  }
+
+  dbgs() << "\nOrigin -> Inlined: " << Text << "\n\n";
+  for (auto &Entry : InlinedToOrigin) {
+    LVScope *InlinedScope = Entry.first;
+    LVScope *OriginScope = Entry.second;
+    PrintEntry("", InlinedScope);
+    dbgs() << " -> ";
+    PrintEntry("", OriginScope);
+    dbgs() << "\n";
+  }
+
+  if (Full) {
+    dbgs() << "\n";
+    for (auto &Entry : InlinedToOrigin) {
+      LVScope *InlinedScope = Entry.first;
+      LVScope *OriginScope = Entry.second;
+      PrintExtra("OriginParent:  ", OriginScope->getParentScope());
+      PrintExtra("Origin:        ", OriginScope);
+      PrintExtra("InlinedParent: ", InlinedScope->getParentScope());
+      PrintExtra("Inlined:       ", InlinedScope);
+      dbgs() << "\n";
+    }
+  }
+}
+#endif
+
+} // namespace
+
+// These flavours of 'DINode's are not implemented but technically possible:
 //   DW_TAG_APPLE_property   = 0x4200
 //   DW_TAG_atomic_type      = 0x0047
 //   DW_TAG_common_block     = 0x001a
@@ -55,60 +169,49 @@ LVElement *LVIRReader::constructElement(const DINode *DN) {
     Element->setTag(Tag);
     addMD(DN, Element);
 
-    StringRef Name = getMDName(DN);
-    if (!Name.empty())
+    if (StringRef Name = getMDName(DN); !Name.empty())
       Element->setName(Name);
 
     // Record any file information.
     if (const DIFile *File = getMDFile(DN))
       getOrCreateSourceID(File);
   }
-
   return Element;
 }
 
-void LVIRReader::mapFortranLanguage(unsigned DWLang) {
-  switch (DWLang) {
-  case dwarf::DW_LANG_Fortran77:
-  case dwarf::DW_LANG_Fortran90:
-  case dwarf::DW_LANG_Fortran95:
-  case dwarf::DW_LANG_Fortran03:
-  case dwarf::DW_LANG_Fortran08:
-  case dwarf::DW_LANG_Fortran18:
-    LanguageIsFortran = true;
-    break;
-  default:
-    LanguageIsFortran = false;
-  }
+void LVIRReader::setDefaultLowerBound(LVSourceLanguage *SL) {
+  assert(SL && "Invalid language ID.");
+  StringRef LanguageName = SL->getName();
+
+  // Fortran uses 1 as the default lowerbound; other languages use 0.
+  DefaultLowerBound = LanguageName.contains("fortran") ? 1 : 0;
+
+  LLVM_DEBUG({ dbgs() << "Language Name: " << LanguageName << "\n"; });
 }
 
 bool LVIRReader::includeMinimalInlineScopes() const {
   return getCUNode()->getEmissionKind() == DICompileUnit::LineTablesOnly;
 }
 
-// For the given 'DIFile' generate an index 1-based to indicate the
-// source file where the logical element is declared.
-// The IR reader expects the indexes as 1-indexed.
-// Each compile unit, keeps track of the last assigned index.
 size_t LVIRReader::getOrCreateSourceID(const DIFile *File) {
   if (!File)
     return 0;
 
   LLVM_DEBUG({
-    dbgs() << "\n[getOrCreateSourceID] DIFile\n";
-    File->dump();
+    dbgs() << "\n[getOrCreateSourceID]\n";
+    dbgs() << "File: ";
+    File->dump(TheModule);
   });
-
   addMD(File, CompileUnit);
 
   LLVM_DEBUG({
     dbgs() << "Directory: '" << File->getDirectory() << "'\n";
     dbgs() << "Filename:  '" << File->getFilename() << "'\n";
   });
-  size_t FileIndex = 0;
-  LVCompileUnitFiles::iterator Iter = CompileUnitFiles.find(File);
-  if (Iter == CompileUnitFiles.end()) {
-    FileIndex = getFileIndex(CompileUnit);
+
+  size_t FileIndex = getFileIndex(CompileUnit);
+  auto [Iter, Inserted] = CompileUnitFiles.try_emplace(File, ++FileIndex);
+  if (Inserted) {
     std::string Directory(File->getDirectory());
     if (Directory.empty())
       Directory = std::string(CompileUnit->getCompilationDirectory());
@@ -117,7 +220,6 @@ size_t LVIRReader::getOrCreateSourceID(const DIFile *File) {
     raw_string_ostream Out(FullName);
     Out << Directory << "/" << llvm::sys::path::filename(File->getFilename());
     CompileUnit->addFilename(transformPath(FullName));
-    CompileUnitFiles.emplace(File, ++FileIndex);
     updateFileIndex(CompileUnit, FileIndex);
   } else {
     FileIndex = Iter->second;
@@ -133,7 +235,7 @@ void LVIRReader::addSourceLine(LVElement *Element, unsigned Line,
     return;
 
   // After the scopes are created, the generic reader traverses the 'Children'
-  // and perform additional setting tasks (resolve types names, references,
+  // and performs additional setting tasks (resolve types names, references,
   // etc.). One of those tasks is select the correct string pool index based on
   // the commmand line options: --attribute=filename or --attribute=pathname.
   // As the 'Children' do not include logical lines, do that selection now,
@@ -147,7 +249,7 @@ void LVIRReader::addSourceLine(LVElement *Element, unsigned Line,
 
   LLVM_DEBUG({
     dbgs() << "\n[addSourceLine]\n";
-    File->dump();
+    File->dump(TheModule);
     dbgs() << "FileIndex: " << Element->getFilenameIndex() << ", ";
     dbgs() << "ID:   " << Element->getID() << ", ";
     dbgs() << "Kind: " << Element->kind() << ", ";
@@ -181,9 +283,9 @@ void LVIRReader::addSourceLine(LVElement *Element, const DILocation *DL) {
   addSourceLine(Element, DL->getLine(), DL->getFile());
 }
 
-void LVIRReader::addSourceLine(LVElement *Element, const DIObjCProperty *Ty) {
-  assert(Ty);
-  addSourceLine(Element, Ty->getLine(), Ty->getFile());
+void LVIRReader::addSourceLine(LVElement *Element, const DIObjCProperty *OP) {
+  assert(OP);
+  addSourceLine(Element, OP->getLine(), OP->getFile());
 }
 
 void LVIRReader::addSourceLine(LVElement *Element, const DISubprogram *SP) {
@@ -203,20 +305,15 @@ void LVIRReader::addConstantValue(LVElement *Element,
   if (Constant == std::nullopt)
     return;
   std::stringstream Stream;
+  uint64_t Value = DIExpr->getElement(1);
   if (DIExpression::SignedOrUnsignedConstant::SignedConstant == Constant) {
-    int64_t Value = DIExpr->getElement(1);
-    if (Value < 0) {
+    if (int64_t SignedValue = static_cast<int64_t>(Value); SignedValue < 0) {
       Stream << "-";
-      Value = std::abs(Value);
+      Value = static_cast<uint64_t>(-SignedValue);
     }
-    Stream << hexString(Value, 2);
-    Element->setValue(Stream.str());
-  } else if (DIExpression::SignedOrUnsignedConstant::UnsignedConstant ==
-             Constant) {
-    uint64_t Value = DIExpr->getElement(1);
-    Stream << hexString(Value, 2);
-    Element->setValue(Stream.str());
   }
+  Stream << hexString(Value, 2);
+  Element->setValue(Stream.str());
 }
 
 void LVIRReader::addConstantValue(LVElement *Element, const ConstantInt *CI,
@@ -248,10 +345,6 @@ void LVIRReader::addConstantValue(LVElement *Element, const APInt &Value,
   Element->setValue(StringValue.str());
 }
 
-void LVIRReader::addString(LVElement *Element, StringRef String) {
-  Element->setValue(String);
-}
-
 void LVIRReader::processLocationGaps() {
   if (options().getAttributeAnyLocation())
     for (LVSymbol *Symbol : SymbolsWithLocations)
@@ -266,7 +359,7 @@ void LVIRReader::processScopes() {
   // - Resolve any line pattern match.
   // At this stage the compile unit and the root scopes they have the
   // same offset, which is incorrect. Update the compile unit offset.
-  LVOffset Offset = 4;
+  LVOffset Offset = OffsetIncrease;
   auto SetOffset = [&](LVElement *Element) {
     Element->setOffset(Offset);
     Offset += OffsetIncrease;
@@ -281,7 +374,7 @@ void LVIRReader::processScopes() {
       for (LVScope *Scope : *Scopes)
         TraverseScope(Scope);
 
-    // Set an arbitrary 'Offset' for symbols and types.
+    // Set an arbitrary, but strictly-increasing 'Offset' for symbols and types.
     if (const LVSymbols *Symbols = Current->getSymbols())
       for (LVSymbol *Symbol : *Symbols)
         SetOffset(Symbol);
@@ -331,8 +424,9 @@ LVScope *LVIRReader::getParentScopeImpl(const DIScope *Context) {
     return CompileUnit;
 
   LLVM_DEBUG({
-    dbgs() << "\n[getParentScopeImpl] DIScope\n";
-    Context->dump();
+    dbgs() << "\n[getParentScopeImpl]\n";
+    dbgs() << "Context: ";
+    Context->dump(TheModule);
   });
 
   // Check for an already seen scope parent.
@@ -347,8 +441,9 @@ LVScope *LVIRReader::getParentScopeImpl(const DIScope *Context) {
 LVScope *LVIRReader::getParentScope(const DILocation *DL) {
   assert(DL && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[getParentScope] DILocation\n";
-    DL->dump();
+    dbgs() << "\n[getParentScope]\n";
+    dbgs() << "DL: ";
+    DL->dump(TheModule);
   });
 
   return getParentScopeImpl(cast<DIScope>(DL->getScope()));
@@ -358,21 +453,22 @@ LVScope *LVIRReader::getParentScope(const DILocation *DL) {
 LVScope *LVIRReader::getParentScope(const DINode *DN) {
   assert(DN && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[getParentScope] DINode\n";
-    DN->dump();
+    dbgs() << "\n[getParentScope]\n";
+    dbgs() << "DN: ";
+    DN->dump(TheModule);
   });
 
   return getParentScopeImpl(getMDScope(DN));
 }
 
-// Traverse the scope hierarchy and create each node in the hierarchy.
 LVScope *LVIRReader::traverseParentScope(const DIScope *Context) {
   if (!Context)
     return CompileUnit;
 
   LLVM_DEBUG({
-    dbgs() << "\n[traverseParentScope] DIScope\n";
-    Context->dump();
+    dbgs() << "\n[traverseParentScope]\n";
+    dbgs() << "Context: \n";
+    Context->dump(TheModule);
   });
 
   // Check if the metadata is already seen.
@@ -419,26 +515,36 @@ LVType *LVIRReader::getIndexType() {
   return NodeIndexType;
 }
 
-// Add accessibility info if available.
 void LVIRReader::addAccess(LVElement *Element, DINode::DIFlags Flags) {
   assert(Element && "Invalid logical element.");
-  LLVM_DEBUG({ dbgs() << "\n[addAccess] DIFlags " << Flags << "\n"; });
+  LLVM_DEBUG({
+    dbgs() << "\n[addAccess]\n";
+    dbgs() << "Flags: " << Flags << "\n";
+  });
 
-  if ((Flags & DINode::FlagAccessibility) == DINode::FlagZero) {
-    LVScope *Parent = Element->getParentScope();
-    if (Parent->getIsClass())
-      Element->setAccessibilityCode(dwarf::DW_ACCESS_private);
-    else if (Parent->getIsStructure() || Parent->getIsUnion())
-      Element->setAccessibilityCode(dwarf::DW_ACCESS_public);
-    return;
-  }
-
-  if ((Flags & DINode::FlagAccessibility) == DINode::FlagProtected)
+  const unsigned Accessibility = (Flags & DINode::FlagAccessibility);
+  switch (Accessibility) {
+  case DINode::FlagProtected:
     Element->setAccessibilityCode(dwarf::DW_ACCESS_protected);
-  else if ((Flags & DINode::FlagAccessibility) == DINode::FlagPrivate)
+    return;
+  case DINode::FlagPrivate:
     Element->setAccessibilityCode(dwarf::DW_ACCESS_private);
-  else if ((Flags & DINode::FlagAccessibility) == DINode::FlagPublic)
+    return;
+  case DINode::FlagPublic:
     Element->setAccessibilityCode(dwarf::DW_ACCESS_public);
+    return;
+  case DINode::FlagZero:
+    // If no explicit access control, provide the default for the parent.
+    LVScope *Parent = Element->getParentScope();
+    if (Parent->getIsClass()) {
+      Element->setAccessibilityCode(dwarf::DW_ACCESS_private);
+      return;
+    }
+    if (Parent->getIsStructure() || Parent->getIsUnion()) {
+      Element->setAccessibilityCode(dwarf::DW_ACCESS_public);
+      return;
+    }
+  }
 }
 
 // getFile()
@@ -453,8 +559,9 @@ void LVIRReader::addAccess(LVElement *Element, DINode::DIFlags Flags) {
 const DIFile *LVIRReader::getMDFile(const MDNode *MD) const {
   assert(MD && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[getMDFile] MDNode\n";
-    MD->dump();
+    dbgs() << "\n[getMDFile]\n";
+    dbgs() << "MD: ";
+    MD->dump(TheModule);
   });
 
   if (auto *T = dyn_cast<DIScope>(MD))
@@ -484,7 +591,7 @@ const DIFile *LVIRReader::getMDFile(const MDNode *MD) const {
   return nullptr;
 }
 
-// getName()
+// getMDName()
 //   DIScope
 //   DIType
 //   DISubprogram
@@ -501,8 +608,9 @@ const DIFile *LVIRReader::getMDFile(const MDNode *MD) const {
 StringRef LVIRReader::getMDName(const DINode *DN) const {
   assert(DN && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[getMDName] DINode\n";
-    DN->dump();
+    dbgs() << "\n[getMDName]\n";
+    dbgs() << "DN: ";
+    DN->dump(TheModule);
   });
 
   if (auto *T = dyn_cast<DIImportedEntity>(DN))
@@ -520,7 +628,7 @@ StringRef LVIRReader::getMDName(const DINode *DN) const {
   if (auto *T = dyn_cast<DIEnumerator>(DN))
     return T->getName();
 
-  if (/*auto *T = */ dyn_cast<DISubrange>(DN))
+  if (isa<DISubrange>(DN))
     return StringRef();
 
   if (auto *T = dyn_cast<DIVariable>(DN))
@@ -548,8 +656,9 @@ StringRef LVIRReader::getMDName(const DINode *DN) const {
 const DIScope *LVIRReader::getMDScope(const DINode *DN) const {
   assert(DN && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[getMDScope] DINode\n";
-    DN->dump();
+    dbgs() << "\n[getMDScope]\n";
+    dbgs() << "DN: ";
+    DN->dump(TheModule);
   });
 
   if (dyn_cast<DIBasicType>(DN))
@@ -586,10 +695,11 @@ void LVIRReader::addTemplateParams(LVElement *Element,
   assert(Element && "Invalid logical element");
   // assert(TParams && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[addTemplateParams] DINodeArray\n";
-    // TParams->dump();
-    for (const auto *Entry : TParams)
-      Entry->dump();
+    dbgs() << "\n[addTemplateParams]\n";
+    for (const auto *Entry : TParams) {
+      dbgs() << "Entry: ";
+      Entry->dump(TheModule);
+    }
   });
 
   // Add template parameters.
@@ -608,8 +718,9 @@ void LVIRReader::applySubprogramAttributes(LVScope *Function,
   assert(Function && "Invalid logical element");
   assert(SP && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[applySubprogramAttributes] DISubprogram\n";
-    SP->dump();
+    dbgs() << "\n[applySubprogramAttributes]\n";
+    dbgs() << "SP: ";
+    SP->dump(TheModule);
   });
 
   // If -fdebug-info-for-profiling is enabled, need to emit the subprogram
@@ -627,7 +738,7 @@ void LVIRReader::applySubprogramAttributes(LVScope *Function,
   if (SkipSPAttributes)
     return;
 
-  DITypeRefArray Args;
+  DITypeArray Args;
   if (const DISubroutineType *SPTy = SP->getType())
     Args = SPTy->getTypeArray();
 
@@ -663,15 +774,16 @@ bool LVIRReader::applySubprogramDefinitionAttributes(LVScope *Function,
   assert(Function && "Invalid logical element");
   assert(SP && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[applySubprogramDefinitionAttributes] DISubprogram\n";
-    SP->dump();
+    dbgs() << "\n[applySubprogramDefinitionAttributes]\n";
+    dbgs() << "SP: ";
+    SP->dump(TheModule);
   });
 
   LVScope *Reference = nullptr;
   StringRef DeclLinkageName;
   if (const DISubprogram *SPDecl = SP->getDeclaration()) {
     if (!Minimal) {
-      DITypeRefArray DeclArgs, DefinitionArgs;
+      DITypeArray DeclArgs, DefinitionArgs;
       DeclArgs = SPDecl->getType()->getTypeArray();
       DefinitionArgs = SP->getType()->getTypeArray();
 
@@ -724,18 +836,15 @@ bool LVIRReader::applySubprogramDefinitionAttributes(LVScope *Function,
 
   // Add the linkage name if we have one and it isn't in the Decl.
   StringRef LinkageName = SP->getLinkageName();
-  assert(((LinkageName.empty() || DeclLinkageName.empty()) ||
-          LinkageName == DeclLinkageName) &&
-         "decl has a linkage name and it is different");
-  if (DeclLinkageName.empty() && (useAllLinkageNames()))
-    // Always emit it for abstract subprograms.
+  // Always emit it for abstract subprograms.
+  if (DeclLinkageName != LinkageName && (useAllLinkageNames()))
     Function->setLinkageName(LinkageName);
 
   if (!Reference)
     return false;
 
-  // Refer to the function declaration where all the other attributes will be
-  // found.
+  // Refer to the function declaration where all the other attributes
+  // will be found.
   Function->setReference(Reference);
   Function->setHasReferenceSpecification();
 
@@ -748,8 +857,9 @@ void LVIRReader::constructAggregate(LVScopeAggregate *Aggregate,
   assert(Aggregate && "Invalid logical element");
   assert(CTy && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[constructAggregate] DICompositeType\n";
-    CTy->dump();
+    dbgs() << "\n[constructAggregate]\n";
+    dbgs() << "CTy: ";
+    CTy->dump(TheModule);
   });
 
   if (Aggregate->getIsFinalized())
@@ -768,8 +878,8 @@ void LVIRReader::constructAggregate(LVScopeAggregate *Aggregate,
     if (!Member)
       continue;
     LLVM_DEBUG({
-      dbgs() << "\nAggregate Element\n";
-      Member->dump();
+      dbgs() << "\nMember: ";
+      Member->dump(TheModule);
     });
     if (const auto *SP = dyn_cast<DISubprogram>(Member))
       getOrCreateSubprogram(SP);
@@ -793,8 +903,9 @@ void LVIRReader::constructArray(LVScopeArray *Array,
   assert(Array && "Invalid logical element");
   assert(CTy && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[constructArray] DICompositeType\n";
-    CTy->dump();
+    dbgs() << "\n[constructArray]\n";
+    dbgs() << "CTy: ";
+    CTy->dump(TheModule);
   });
 
   if (Array->getIsFinalized())
@@ -825,8 +936,9 @@ void LVIRReader::constructEnum(LVScopeEnumeration *Enumeration,
   assert(Enumeration && "Invalid logical element");
   assert(CTy && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[constructEnum] DICompositeType\n";
-    CTy->dump();
+    dbgs() << "\n[constructEnum]\n";
+    dbgs() << "CTy: ";
+    CTy->dump(TheModule);
   });
 
   if (Enumeration->getIsFinalized())
@@ -861,8 +973,9 @@ void LVIRReader::constructGenericSubrange(LVScopeArray *Array,
   assert(Array && "Invalid logical element");
   assert(GSR && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[constructGenericSubrange] DIGenericSubrange\n";
-    GSR->dump();
+    dbgs() << "\n[constructGenericSubrange]\n";
+    dbgs() << "GSR: ";
+    GSR->dump(TheModule);
   });
 
   LLVM_DEBUG({ dbgs() << "\nNot implemented\n"; });
@@ -874,8 +987,9 @@ void LVIRReader::constructImportedEntity(LVElement *Element,
   assert(Element && "Invalid logical element");
   assert(IE && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[constructImportedEntity] DIImportedEntity\n";
-    IE->dump();
+    dbgs() << "\n[constructImportedEntity]\n";
+    dbgs() << "IE: ";
+    IE->dump(TheModule);
   });
 
   if (LVElement *Import = constructElement(IE)) {
@@ -900,109 +1014,118 @@ void LVIRReader::constructImportedEntity(LVElement *Element,
   }
 }
 
-LVScope *LVIRReader::getOrCreateInlinedScope(LVScope *AbstractScope,
-                                             const DILocation *DL) {
-  assert(AbstractScope && "Invalid logical element");
+// Traverse the 'inlinedAt' chain and create their associated inlined scopes.
+LVScope *LVIRReader::getOrCreateInlinedScope(const DILocation *DL) {
   assert(DL && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[getOrCreateInlinedScope] DILocation\n";
-    DL->dump();
+    dbgs() << "\n[getOrCreateInlinedScope]\n";
+    dbgs() << "DL: ";
+    DL->dump(TheModule);
   });
+
+  const DILocalScope *OriginContext = DL->getScope();
+  LLVM_DEBUG({
+    dbgs() << "OriginContext: ";
+    OriginContext->dump(TheModule);
+  });
+
+  auto CreateScope = [&](const DILocalScope *Context) -> LVScope * {
+    LVScope *Scope = nullptr;
+    if (const auto *SP = dyn_cast<DISubprogram>(Context))
+      Scope = getOrCreateSubprogram(SP);
+    else
+      Scope = getOrCreateScope(Context);
+    LLVM_DEBUG({
+      dbgs() << "Scope: ";
+      Scope->dumpCommon();
+    });
+
+    return Scope;
+  };
 
   const DILocation *InlinedAt = DL->getInlinedAt();
-  DILocalScope *Context = DL->getScope();
+  if (!InlinedAt)
+    return CreateScope(OriginContext);
+
   LLVM_DEBUG({
-    dbgs() << "\nParent Scope:\n";
-    AbstractScope->getParentScope()->dump();
-    dbgs() << "\nOriginScope:\n";
-    AbstractScope->dump();
-    dbgs() << "\nInlinedAt:\n";
-    InlinedAt->dump();
-    dbgs() << "\nContext:\n";
-    Context->dump();
+    dbgs() << "InlinedAt: ";
+    InlinedAt->dump(TheModule);
   });
 
-  dwarf::Tag Tag = AbstractScope->getTag();
-  if (AbstractScope->getIsFunction() || AbstractScope->getIsInlinedFunction()) {
+  // Check if the inlined scope is already created.
+  if (LVScope *InlinedScope = getInlinedScope(OriginContext, InlinedAt))
+    return InlinedScope;
+
+  // Get or create the original context, which will be the seed for the
+  // inlined scope that we intend to create.
+  LVScope *OriginScope = CreateScope(OriginContext);
+
+  dwarf::Tag Tag = OriginScope->getTag();
+  if (OriginScope->getIsFunction() || OriginScope->getIsInlinedFunction()) {
     Tag = dwarf::DW_TAG_inlined_subroutine;
-    AbstractScope->setInlineCode(dwarf::DW_INL_inlined);
+    OriginScope->setInlineCode(dwarf::DW_INL_inlined);
   }
   LVScope *InlinedScope = static_cast<LVScope *>(createElement(Tag));
   if (InlinedScope) {
-    addInlinedScope(AbstractScope, InlinedAt, InlinedScope);
+    addInlinedScope(OriginContext, InlinedAt, InlinedScope);
     InlinedScope->setTag(Tag);
     InlinedScope->setIsFinalized();
-    InlinedScope->setName(AbstractScope->getName());
-    InlinedScope->setType(AbstractScope->getType());
+    InlinedScope->setName(OriginScope->getName());
+    InlinedScope->setType(OriginScope->getType());
 
     InlinedScope->setCallLineNumber(InlinedAt->getLine());
     InlinedScope->setCallFilenameIndex(
         getOrCreateSourceID(InlinedAt->getFile()));
 
-    InlinedScope->setReference(AbstractScope);
+    InlinedScope->setReference(OriginScope);
     InlinedScope->setHasReferenceAbstract();
 
-    // Get or create the parent scope for the inlined subprogram.
-    LVScope *Parent =
-        InlinedScope->getIsLexicalBlock()
-            ? getInlinedScope(AbstractScope->getParentScope(), InlinedAt)
-            : getOrCreateScope(InlinedAt->getScope());
-    assert(Parent && "Parent scope is NULL.");
-    Parent->addElement(InlinedScope);
+    // Record the link between the origin and the inlined scope, to be
+    // used to get the correct parent scope for logical lexical scopes.
+    LLVM_DEBUG({
+      dbgs() << "Linking\n";
+      OriginScope->dumpCommon();
+      InlinedScope->dumpCommon();
+    });
+    addInlinedInfo(OriginScope, InlinedScope);
+
+    DILocalScope *AbstractContext = InlinedAt->getScope();
+    LLVM_DEBUG({
+      dbgs() << "AbstractContext: ";
+      AbstractContext->dump(TheModule);
+    });
+
+    LVScope *AbstractScope = getOrCreateInlinedScope(InlinedAt);
+    assert(AbstractScope && "Logical scope is NULL.");
+    LLVM_DEBUG({
+      dbgs() << "AbstractScope: ";
+      AbstractScope->dumpCommon();
+    });
+
+    // Add the created inlined scope.
+    AbstractScope->addElement(InlinedScope);
+
+    LLVM_DEBUG({
+      dbgs() << "InlinedScope:  ";
+      InlinedScope->dumpCommon();
+    });
   }
 
   return InlinedScope;
 }
 
-LVScope *LVIRReader::getOrCreateAbstractScope(LVScope *Parent,
-                                              const DILocation *DL) {
-  assert(Parent && "Invalid logical element");
+LVScope *LVIRReader::getOrCreateAbstractScope(const DILocation *DL) {
   assert(DL && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[getOrCreateAbstractScope] DILocation\n";
-    DL->dump();
-    dbgs() << "Parent Logical Scope:\n";
-    Parent->dump();
+    dbgs() << "\n[getOrCreateAbstractScope]\n";
+    dbgs() << "DL: ";
+    DL->dump(TheModule);
   });
 
-  const DILocation *InlinedAt = DL->getInlinedAt();
-  if (!InlinedAt)
-    return nullptr;
-
-  DILocalScope *Context = DL->getScope();
-  if (!Context)
-    return nullptr;
-
-  // Check if we have seen the scope.
-  LVScope *AbstractScope = getScopeForSeenMD(Context);
-  if (!AbstractScope) {
-    // Create the 'abstract' scope.
-    if (isa<DISubprogram>(Context)) {
-      AbstractScope =
-          getOrCreateSubprogram(static_cast<DISubprogram *>(Context));
-      AbstractScope->setInlineCode(dwarf::DW_INL_inlined);
-    } else if (isa<DILexicalBlock>(Context)) {
-      AbstractScope = getOrCreateScope(static_cast<DIScope *>(Context));
-    }
-    LLVM_DEBUG({
-      dbgs() << "\nParent Scope:\n";
-      AbstractScope->getParentScope()->dump();
-      dbgs() << "Abstract Scope:\n";
-      AbstractScope->dump();
-    });
-
-    // Create the 'inlined' scope.
-    LVScope *InlinedScope = getOrCreateInlinedScope(AbstractScope, DL);
-    assert(InlinedScope && "InlinedScope is null.");
-    LLVM_DEBUG({
-      dbgs() << "\nParent Scope:\n";
-      InlinedScope->getParentScope()->dump();
-      dbgs() << "\nInlined Scope:\n";
-      InlinedScope->dump();
-    });
-  }
-
-  return AbstractScope;
+  // Create the 'inlined' scope.
+  LVScope *InlinedScope = getOrCreateInlinedScope(DL);
+  assert(InlinedScope && "InlinedScope is null.");
+  return InlinedScope;
 }
 
 void LVIRReader::constructLine(LVScope *Scope, const DISubprogram *SP,
@@ -1011,15 +1134,21 @@ void LVIRReader::constructLine(LVScope *Scope, const DISubprogram *SP,
   assert(Scope && "Invalid logical element");
   assert(SP && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[constructLine] Instruction\n";
+    dbgs() << "\n[constructLine]\n";
+    dbgs() << "Instruction: ";
     I.dump();
-    dbgs() << "Logical Scope:\n";
-    Scope->dump();
+    dbgs() << "Logical Scope: ";
+    Scope->dumpCommon();
   });
 
   auto AddDebugLine = [&](LVScope *Parent, unsigned ID) -> LVLine * {
     assert(Parent && "Invalid logical element");
     assert(ID == Metadata::DILocationKind && "Invalid Metadata Object");
+    LLVM_DEBUG({
+      dbgs() << "\n[AddDebugLine]\n";
+      dbgs() << "Parent: ";
+      Parent->dumpCommon();
+    });
 
     LVLine *Line = createLineDebug();
     if (Line) {
@@ -1030,9 +1159,12 @@ void LVIRReader::constructLine(LVScope *Scope, const DISubprogram *SP,
 
       // FIXME: How to get discrimination flags:
       // IsStmt, BasicBlock, EndSequence, EpilogueBegin, PrologueEnd.
+      //
+      // Explore the 'Key Instructions' information added to the metadata:
+      //   !DILocation(line: ..., scope: ..., atomGroup: ..., atomRank: ...)
 
       // Add mapping for this debug line.
-      CompileUnit->addMapping(Line, SectionIndex);
+      CompileUnit->addMapping(Line, /*SectionIndex=*/0);
 
       // Replicate the DWARF reader functionality of adding a linkage
       // name to a function with ranges (logical lines), regardless if
@@ -1081,13 +1213,16 @@ void LVIRReader::constructLine(LVScope *Scope, const DISubprogram *SP,
   LVScope *Parent = Scope;
   if (const DebugLoc DbgLoc = I.getDebugLoc()) {
     const DILocation *DL = DbgLoc.get();
-    Parent = getParentScope(DL);
-    if (const DILocation *InlinedAt = DL->getInlinedAt())
-      Parent = getInlinedScope(Parent, InlinedAt);
-
     LLVM_DEBUG({
-      dbgs() << "\n[constructLine] DILocation\n";
-      DL->dump();
+      dbgs() << "DL: ";
+      DL->dump(TheModule);
+    });
+
+    Parent = getOrCreateAbstractScope(DL);
+    assert(Parent && "Invalid logical element");
+    LLVM_DEBUG({
+      dbgs() << "Parent: ";
+      Parent->dumpCommon();
     });
 
     if (options().getPrintLines() && DL->getLine()) {
@@ -1117,8 +1252,9 @@ LVSymbol *LVIRReader::getOrCreateMember(LVScope *Aggregate,
   assert(Aggregate && "Invalid logical element");
   assert(DT && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[getOrCreateMember] DIDerivedType\n";
-    DT->dump();
+    dbgs() << "\n[getOrCreateMember]\n";
+    dbgs() << "DT: ";
+    DT->dump(TheModule);
   });
 
   LVSymbol *Member = getSymbolForSeenMD(DT);
@@ -1198,22 +1334,23 @@ void LVIRReader::constructScope(LVElement *Element, const DIScope *Context) {
   assert(Element && "Invalid logical element");
   assert(Context && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[constructScope] DIScope\n";
-    Context->dump();
+    dbgs() << "\n[constructScope]\n";
+    dbgs() << "Context: ";
+    Context->dump(TheModule);
   });
 
-  if (Context && isa<DICompositeType>(Context)) {
-    const DICompositeType *CTy = cast<DICompositeType>(Context);
+  if (const DICompositeType *CTy =
+          dyn_cast_if_present<DICompositeType>(Context)) {
     constructType(static_cast<LVScope *>(Element), CTy);
-  } else if (Context && isa<DIDerivedType>(Context)) {
-    const DIDerivedType *DT = cast<DIDerivedType>(Context);
+  } else if (const DIDerivedType *DT =
+                 dyn_cast_if_present<DIDerivedType>(Context)) {
     constructType(Element, DT);
-  } else if (Context && isa<DISubprogram>(Context)) {
-    const DISubprogram *SP = cast<DISubprogram>(Context);
+  } else if (const DISubprogram *SP =
+                 dyn_cast_if_present<DISubprogram>(Context)) {
     getOrCreateSubprogram(static_cast<LVScope *>(Element), SP);
-  } else if (Context && isa<DINamespace>(Context)) {
+  } else if (dyn_cast_if_present<DINamespace>(Context)) {
     Element->setIsFinalized();
-  } else if (Context && isa<DILexicalBlock>(Context)) {
+  } else if (dyn_cast_if_present<DILexicalBlock>(Context)) {
     Element->setIsFinalized();
   }
 }
@@ -1223,8 +1360,9 @@ LVSymbol *LVIRReader::getOrCreateStaticMember(LVScope *Aggregate,
   assert(Aggregate && "Invalid logical element");
   assert(DT && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[getOrCreateStaticMember] DIDerivedType\n";
-    DT->dump();
+    dbgs() << "\n[getOrCreateStaticMember]\n";
+    dbgs() << "DT: ";
+    DT->dump(TheModule);
   });
 
   LVSymbol *Member = getSymbolForSeenMD(DT);
@@ -1252,8 +1390,9 @@ LVSymbol *LVIRReader::getOrCreateStaticMember(LVScope *Aggregate,
 LVScope *LVIRReader::getOrCreateSubprogram(const DISubprogram *SP) {
   assert(SP && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[getOrCreateSubprogram] DISubprogram\n";
-    SP->dump();
+    dbgs() << "\n[getOrCreateSubprogram]\n";
+    dbgs() << "SP: ";
+    SP->dump(TheModule);
   });
 
   LVScope *Function = getScopeForSeenMD(SP);
@@ -1290,8 +1429,9 @@ LVScope *LVIRReader::getOrCreateSubprogram(LVScope *Function,
   assert(Function && "Invalid logical element");
   assert(SP && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[getOrCreateSubprogram] DISubprogram\n";
-    SP->dump();
+    dbgs() << "\n[getOrCreateSubprogram]\n";
+    dbgs() << "SP: ";
+    SP->dump(TheModule);
   });
 
   if (Function->getIsFinalized())
@@ -1327,13 +1467,15 @@ LVScope *LVIRReader::getOrCreateSubprogram(LVScope *Function,
 }
 
 void LVIRReader::constructSubprogramArguments(LVScope *Function,
-                                              const DITypeRefArray Args) {
+                                              const DITypeArray Args) {
   assert(Function && "Invalid logical element");
   LLVM_DEBUG({
-    dbgs() << "\n[constructSubprogramArguments] DITypeRefArray\n";
+    dbgs() << "\n[constructSubprogramArguments]\n";
     for (unsigned i = 1, N = Args.size(); i < N; ++i) {
-      if (const DIType *Ty = Args[i])
-        Ty->dump();
+      if (const DIType *Ty = Args[i]) {
+        dbgs() << "Ty: ";
+        Ty->dump(TheModule);
+      }
     }
   });
 
@@ -1361,20 +1503,21 @@ void LVIRReader::constructSubprogramArguments(LVScope *Function,
 }
 
 // DISubrange
-void LVIRReader::constructSubrange(LVScopeArray *Array, const DISubrange *GSR,
+void LVIRReader::constructSubrange(LVScopeArray *Array, const DISubrange *SR,
                                    LVType *IndexType) {
   assert(Array && "Invalid logical element");
-  assert(GSR && "Invalid metadata node.");
+  assert(SR && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[constructSubrange] DISubrange\n";
-    GSR->dump();
+    dbgs() << "\n[constructSubrange]\n";
+    dbgs() << "SR: ";
+    SR->dump(TheModule);
   });
 
   // The DISubrange can be shared between different arrays, when they are
   // the same. We need to create independent logical elements for each one,
   // as they are going to be added to different arrays.
   if (LVTypeSubrange *Subrange =
-          static_cast<LVTypeSubrange *>(constructElement(GSR))) {
+          static_cast<LVTypeSubrange *>(constructElement(SR))) {
     Subrange->setIsFinalized();
     Array->addElement(Subrange);
     Subrange->setType(IndexType);
@@ -1384,13 +1527,13 @@ void LVIRReader::constructSubrange(LVScopeArray *Array, const DISubrange *GSR,
     // Otherwise, if it has an upperboud, use (upperbound - lowerbound + 1),
     // where lowerbound is from the LowerBound field of the Subrange,
     // or the language default lowerbound if that field is unspecified.
-    if (auto *CI = dyn_cast_if_present<ConstantInt *>(GSR->getCount()))
+    if (auto *CI = dyn_cast_if_present<ConstantInt *>(SR->getCount()))
       Count = CI->getSExtValue();
     else if (auto *UI =
-                 dyn_cast_if_present<ConstantInt *>(GSR->getUpperBound())) {
+                 dyn_cast_if_present<ConstantInt *>(SR->getUpperBound())) {
       // Fortran uses 1 as the default lowerbound; other languages use 0.
-      int64_t Lowerbound = (moduleIsInFortran()) ? 1 : 0;
-      auto *LI = dyn_cast_if_present<ConstantInt *>(GSR->getLowerBound());
+      int64_t Lowerbound = getDefaultLowerBound();
+      auto *LI = dyn_cast_if_present<ConstantInt *>(SR->getLowerBound());
       Lowerbound = (LI) ? LI->getSExtValue() : Lowerbound;
       Count = UI->getSExtValue() - Lowerbound + 1;
     }
@@ -1407,8 +1550,9 @@ void LVIRReader::constructTemplateTypeParameter(
   assert(Element && "Invalid logical element");
   assert(TTP && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[constructTemplateTypeParameter] DITemplateTypeParameter\n";
-    TTP->dump();
+    dbgs() << "\n[constructTemplateTypeParameter]\n";
+    dbgs() << "TTP: ";
+    TTP->dump(TheModule);
   });
 
   // The DITemplateTypeParameter can be shared between different subprogram
@@ -1439,8 +1583,9 @@ void LVIRReader::constructTemplateValueParameter(
   assert(Element && "Invalid logical element");
   assert(TVP && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[constructTemplateValueParameter] DITemplateValueParameter\n";
-    TVP->dump();
+    dbgs() << "\n[constructTemplateValueParameter]\n";
+    dbgs() << "TVP: ";
+    TVP->dump(TheModule);
   });
 
   // The DITemplateValueParameter can be shared between different subprogram
@@ -1490,8 +1635,9 @@ void LVIRReader::constructType(LVScope *Scope, const DICompositeType *CTy) {
   assert(Scope && "Invalid logical element");
   assert(CTy && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[constructType] DICompositeType\n";
-    CTy->dump();
+    dbgs() << "\n[constructType]\n";
+    dbgs() << "CTy: ";
+    CTy->dump(TheModule);
   });
 
   dwarf::Tag Tag = Scope->getTag();
@@ -1545,8 +1691,9 @@ void LVIRReader::constructType(LVElement *Element, const DIDerivedType *DT) {
   assert(Element && "Invalid logical element");
   assert(DT && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[constructType] DIDerivedType\n";
-    DT->dump();
+    dbgs() << "\n[constructType]\n";
+    dbgs() << "DT: ";
+    DT->dump(TheModule);
   });
 
   // For DW_TAG_member, the flag is set during the construction of the
@@ -1578,8 +1725,9 @@ void LVIRReader::constructType(LVScope *Function,
   assert(Function && "Invalid logical element");
   assert(SPTy && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[constructType] DISubroutineType\n";
-    SPTy->dump();
+    dbgs() << "\n[constructType]\n";
+    dbgs() << "SPTy: ";
+    SPTy->dump(TheModule);
   });
 
   if (Function->getIsFinalized())
@@ -1588,7 +1736,7 @@ void LVIRReader::constructType(LVScope *Function,
 
   // For DISubprogram, the DISubroutineType contains the types for:
   //   return type, param 1 type, ..., param n type
-  DITypeRefArray Args = SPTy->getTypeArray();
+  DITypeArray Args = SPTy->getTypeArray();
   if (Args.size()) {
     LVElement *ElementType = getOrCreateType(Args[0]);
     Function->setType(ElementType);
@@ -1600,8 +1748,9 @@ void LVIRReader::constructType(LVScope *Function,
 // DINamespace
 LVScope *LVIRReader::getOrCreateNamespace(const DINamespace *NS) {
   LLVM_DEBUG({
-    dbgs() << "\n[getOrCreateNamespace] DINamespace\n";
-    NS->dump();
+    dbgs() << "\n[getOrCreateNamespace]\n";
+    dbgs() << "NS: ";
+    NS->dump(TheModule);
   });
 
   LVScope *Scope = getOrCreateScope(NS);
@@ -1615,9 +1764,11 @@ LVScope *LVIRReader::getOrCreateNamespace(const DINamespace *NS) {
 }
 
 LVScope *LVIRReader::getOrCreateScope(const DIScope *Context) {
+  assert(Context && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[getOrCreateScope] DIScope\n";
-    Context->dump();
+    dbgs() << "\n[getOrCreateScope]\n";
+    dbgs() << "Context: ";
+    Context->dump(TheModule);
   });
 
   // Check if the scope is already created.
@@ -1643,8 +1794,9 @@ LVElement *LVIRReader::getOrCreateType(const DIType *Ty, LVScope *Scope) {
     return nullptr;
 
   LLVM_DEBUG({
-    dbgs() << "\n[getOrCreateType] DIType\n";
-    Ty->dump();
+    dbgs() << "\n[getOrCreateType]\n";
+    dbgs() << "Ty :";
+    Ty->dump(TheModule);
   });
 
   // Check if the element is already created.
@@ -1658,7 +1810,7 @@ LVElement *LVIRReader::getOrCreateType(const DIType *Ty, LVScope *Scope) {
     LVScope *Parent = Scope ? Scope : getParentScope(Ty);
     Parent->addElement(Element);
 
-    if (/*const DIBasicType *BT =*/dyn_cast<DIBasicType>(Ty)) {
+    if (isa<DIBasicType>(Ty)) {
       Element->setIsFinalized();
     } else if (const DIDerivedType *DT = dyn_cast<DIDerivedType>(Ty)) {
       constructType(Element, DT);
@@ -1677,8 +1829,9 @@ LVSymbol *
 LVIRReader::getOrCreateVariable(const DIGlobalVariableExpression *GVE) {
   assert(GVE && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[getOrCreateVariable] DIGlobalVariableExpression\n";
-    GVE->dump();
+    dbgs() << "\n[getOrCreateVariable]\n";
+    dbgs() << "GVE: ";
+    GVE->dump(TheModule);
   });
 
   const DIGlobalVariable *DIGV = GVE->getVariable();
@@ -1702,8 +1855,9 @@ LVSymbol *LVIRReader::getOrCreateInlinedVariable(LVSymbol *OriginSymbol,
   assert(OriginSymbol && "Invalid logical element");
   assert(DL && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[getOrCreateInlinedVariable] DIVariable\n";
-    DL->dump();
+    dbgs() << "\n[getOrCreateInlinedVariable]\n";
+    dbgs() << "DL: ";
+    DL->dump(TheModule);
   });
 
   const DILocation *InlinedAt = DL->getInlinedAt();
@@ -1730,13 +1884,11 @@ LVSymbol *LVIRReader::getOrCreateInlinedVariable(LVSymbol *OriginSymbol,
     if (OriginSymbol->getIsParameter())
       InlinedSymbol->setIsParameter();
 
-    LVScope *AbstractScope = OriginSymbol->getParentScope();
-    assert(AbstractScope && "Invalid logical element");
-    LVScope *InlinedScope = getInlinedScope(AbstractScope, InlinedAt);
-    if (!InlinedScope)
-      InlinedScope = getOrCreateInlinedScope(AbstractScope, DL);
+    // Get or create the local scope associated with the location.
+    LVScope *InlinedScope = getOrCreateInlinedScope(DL);
+    assert(InlinedScope && "Invalid logical element");
 
-    assert(InlinedScope && "Parent scope is NULL.");
+    // Add the created inlined scope.
     InlinedScope->addElement(InlinedSymbol);
   }
 
@@ -1749,11 +1901,12 @@ LVSymbol *LVIRReader::getOrCreateVariable(const DIVariable *Var,
                                           const DILocation *DL) {
   assert(Var && "Invalid metadata node.");
   LLVM_DEBUG({
-    dbgs() << "\n[getOrCreateVariable] DIVariable\n";
-    Var->dump();
+    dbgs() << "\n[getOrCreateVariable]\n";
+    dbgs() << "Var: ";
+    Var->dump(TheModule);
     if (DL) {
-      dbgs() << "DILocation\n";
-      DL->dump();
+      dbgs() << "DL: ";
+      DL->dump(TheModule);
     }
   });
 
@@ -1829,29 +1982,44 @@ LVSymbol *LVIRReader::getOrCreateVariable(const DIVariable *Var,
 
 #ifdef LLVM_DEBUG
 void LVIRReader::printAllInstructions(BasicBlock *BB) {
+  const Function *F = BB->getParent();
+  if (!F)
+    return;
+  const DISubprogram *SP = cast<DISubprogram>(F->getSubprogram());
   LLVM_DEBUG({
-    dbgs() << "\nBegin all instructions:\n";
+    dbgs() << "\nBegin all instructions: '" << SP->getName() << "'\n";
     for (Instruction &I : *BB) {
-      dbgs() << "Instruction: '" << I << "'\n";
-      for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
-        DVR.getVariable()->dump();
+      dbgs() << "I: '" << I << "'\n";
+      for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+        dbgs() << "  Var: ";
+        DVR.getVariable()->dump(TheModule);
+      }
+      if (const auto *DL =
+              cast_or_null<DILocation>(I.getMetadata(LLVMContext::MD_dbg))) {
+        dbgs() << "  DL: ";
+        DL->dump(TheModule);
+      }
     }
-    dbgs() << "End all instructions:\n\n";
+    dbgs() << "End all instructions: '" << SP->getName() << "'\n\n";
   });
 }
 #endif
 
-void LVIRReader::processBasicBlocks(Function &F, const DISubprogram *SP) {
-  assert(SP && "Invalid metadata node.");
+void LVIRReader::processBasicBlocks(Function &F) {
+  const DISubprogram *SP = cast_or_null<DISubprogram>(F.getSubprogram());
+  if (!SP)
+    return;
+
   LLVM_DEBUG({
-    dbgs() << "\n[processBasicBlocks] DISubprogram\n";
-    SP->dump();
+    dbgs() << "\n[processBasicBlocks]\n";
+    dbgs() << "SP: ";
+    SP->dump(TheModule);
   });
 
   // Check if we need to add a dwarf::DW_TAG_unspecified_parameters.
   bool AddUnspecifiedParameters = false;
   if (const DISubroutineType *SPTy = SP->getType()) {
-    DITypeRefArray Args = SPTy->getTypeArray();
+    DITypeArray Args = SPTy->getTypeArray();
     unsigned N = Args.size();
     if (N > 1) {
       const DIType *Ty = Args[N - 1];
@@ -1868,6 +2036,7 @@ void LVIRReader::processBasicBlocks(Function &F, const DISubprogram *SP) {
   auto HandleDbgVariable = [&](auto *DbgVar) {
     LLVM_DEBUG({
       dbgs() << "\n[HandleDbgVariable]\n";
+      dbgs() << "DbgVar: ";
       DbgVar->dump();
     });
 
@@ -1890,12 +2059,17 @@ void LVIRReader::processBasicBlocks(Function &F, const DISubprogram *SP) {
     for (Instruction &I : BB) {
       LLVM_DEBUG(dbgs() << "\nInstruction: '" << I << "'\n");
 
+      if (const auto *DL =
+              cast_or_null<DILocation>(I.getMetadata(LLVMContext::MD_dbg))) {
+        LLVM_DEBUG({
+          dbgs() << "  Location: ";
+          DL->dump(TheModule);
+        });
+        getOrCreateAbstractScope(DL);
+      }
+
       for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
         HandleDbgVariable(&DVR);
-
-      if (const auto *DL =
-              cast_or_null<DILocation>(I.getMetadata(LLVMContext::MD_dbg)))
-        getOrCreateAbstractScope(Scope, DL);
 
       if (options().getPrintAnyLine())
         constructLine(Scope, SP, I, GenerateLineBeforePrologue);
@@ -1917,8 +2091,8 @@ void LVIRReader::processBasicBlocks(Function &F, const DISubprogram *SP) {
     }
   }
 
-  LLVM_DEBUG({ dbgs() << "Traverse seen debug variables\n"; });
-  for (auto DVA : SeenVars) {
+  LLVM_DEBUG({ dbgs() << "\nTraverse seen debug variables\n"; });
+  for (const DebugVariableAggregate &DVA : SeenVars) {
     LLVM_DEBUG({ DbgValueRanges->printValues(DVA, dbgs()); });
     DILocalVariable *LV = const_cast<DILocalVariable *>(DVA.getVariable());
     LVSymbol *Symbol = getSymbolForSeenMD(LV);
@@ -1929,8 +2103,8 @@ void LVIRReader::processBasicBlocks(Function &F, const DISubprogram *SP) {
     DIType *Ty = LV->getType();
     uint64_t Size = Ty ? Ty->getSizeInBits() / CHAR_BIT : 1;
     LLVM_DEBUG({
-      LV->dump();
-      Ty->dump();
+      LV->dump(TheModule);
+      Ty->dump(TheModule);
       dbgs() << "Type size: " << Size << "\n";
     });
 
@@ -1970,7 +2144,8 @@ void LVIRReader::processBasicBlocks(Function &F, const DISubprogram *SP) {
       assert(DV.IsMemory && "Single location should be memory!");
       AddLocation(DV);
     } else {
-      for (DbgRangeEntry Entry : DbgValueRanges->getVariableRanges(DVA)) {
+      for (const DbgRangeEntry &Entry :
+           DbgValueRanges->getVariableRanges(DVA)) {
         // These line addresses should have already been inserted into the
         // InstrLineAddrMap, so we assume they are present here.
         LVOffset Start = InstrLineAddrMap.at(Entry.Start.getNodePtr());
@@ -2006,25 +2181,23 @@ Error LVIRReader::createScopes() {
       BitCodeIR ? BitCodeIR->getMemoryBufferRef() : *TextualIR, Err, Context);
   if (!M)
     return createStringError(errc::invalid_argument,
-                             "Could not create IR information: %s",
+                             "Could not create IR module for: %s",
                              getFilename().str().c_str());
 
-  if (!M->getNamedMetadata("llvm.dbg.cu")) {
+  TheModule = M.get();
+  if (!TheModule->getNamedMetadata("llvm.dbg.cu")) {
     LLVM_DEBUG(dbgs() << "Skipping module without debug info\n");
     return Error::success();
   }
 
-  DwarfVersion = M->getDwarfVersion();
+  DwarfVersion = TheModule->getDwarfVersion();
 
   LLVM_DEBUG({ dbgs() << "\nProcess CompileUnits\n"; });
-  for (const DICompileUnit *CU : M->debug_compile_units()) {
+  for (const DICompileUnit *CU : TheModule->debug_compile_units()) {
     LLVM_DEBUG({
-      dbgs() << "\nDICompileUnit:\n";
-      CU->dump();
+      dbgs() << "\nCU: ";
+      CU->dump(TheModule);
     });
-
-    // Record if the current source language is Fortran.
-    mapFortranLanguage(CU->getSourceLanguage().getUnversionedName());
 
     CompileUnit = static_cast<LVScopeCompileUnit *>(constructElement(CU));
     CUNode = const_cast<DICompileUnit *>(CU);
@@ -2035,6 +2208,18 @@ Error LVIRReader::createScopes() {
     CompileUnit->setIsFinalized();
 
     Root->addElement(CompileUnit);
+
+    uint16_t LanguageName = CU->getSourceLanguage().getUnversionedName();
+    LVSourceLanguage SL =
+        TheModule->getCodeViewFlag()
+            ? LVSourceLanguage(
+                  static_cast<llvm::codeview::SourceLanguage>(LanguageName))
+            : LVSourceLanguage(
+                  static_cast<llvm::dwarf::SourceLanguage>(LanguageName));
+    setDefaultLowerBound(&SL);
+
+    if (options().getAttributeLanguage())
+      CompileUnit->setSourceLanguage(SL);
 
     if (options().getAttributeProducer())
       CompileUnit->setProducer(CU->getProducer());
@@ -2072,21 +2257,23 @@ Error LVIRReader::createScopes() {
     dbgs() << "\nFunctions\n";
     for (Function &F : M->getFunctionList())
       if (const auto *SP = cast_or_null<DISubprogram>(F.getSubprogram()))
-        SP->dump();
+        SP->dump(TheModule);
   });
 
   for (Function &F : M->getFunctionList())
-    if (const auto *SP = cast_or_null<DISubprogram>(F.getSubprogram()))
-      processBasicBlocks(F, SP);
+    processBasicBlocks(F);
 
   // Perform extra tasks on the created scopes.
+  resolveInlinedLexicalScopes();
   removeEmptyScopes();
+
   processLocationGaps();
   processScopes();
 
   if (options().getInternalIntegrity())
     checkScopes(CompileUnit);
 
+  TheModule = nullptr;
   return Error::success();
 }
 
@@ -2109,12 +2296,12 @@ void LVIRReader::constructRange(LVScope *Scope, LVAddress LowPC,
         Scope->getIsFunction() && !Scope->getIsInlinedFunction())
       CompileUnit->addPublicName(Scope, LowPC, HighPC);
   }
-  addSectionRange(SectionIndex, Scope, LowPC, HighPC);
+  addSectionRange(/*SectionIndex=*/0, Scope, LowPC, HighPC);
 
   // Replicate DWARF reader funtionality of processing DW_AT_ranges for
   // the compilation unit.
   CompileUnit->addObject(LowPC, HighPC);
-  addSectionRange(SectionIndex, CompileUnit, LowPC, HighPC);
+  addSectionRange(/*SectionIndex=*/0, CompileUnit, LowPC, HighPC);
 }
 
 // Create the location ranges for the given scope and in the case of
@@ -2182,8 +2369,7 @@ void LVIRReader::constructRange(LVScope *Scope) {
 // The '--internal=id' is turned on just for debugging traces. Then
 // it is turned to its previous state.
 void LVIRReader::removeEmptyScopes() {
-  // Preserve current setting for '--internal=id'.
-  bool InternalID = options().getInternalID();
+  LLVM_DEBUG({ dbgs() << "\n[removeEmptyScopes]\n"; });
 
   SmallVector<LVScope *> EmptyScopes;
 
@@ -2252,17 +2438,147 @@ void LVIRReader::removeEmptyScopes() {
     }
   };
 
+  // Preserve current setting for '--internal=id'.
+  bool InternalID = options().getInternalID();
+  options().setInternalID();
+
+  LLVM_DEBUG({
+    dbgs() << "\nBefore - RemoveEmptyScopes\n";
+    printCollectedElements(Root);
+  });
+
   TraverseScope(CompileUnit);
   DeleteEmptyScopes();
 
+  LLVM_DEBUG({
+    dbgs() << "\nAfter - RemoveEmptyScopes\n";
+    printCollectedElements(Root);
+  });
+
   // Restore setting for '--internal=id'.
-  if (InternalID)
-    options().setInternalID();
+  if (!InternalID)
+    options().resetInternalID();
 }
 
-// During the IR Reader development, traverse all the logical elements
-// to check if they have been properly constructed (finalized).
+// The IR generated by Clang, allocates the inlined lexical scopes
+// at the enclosing function level. Move them to the correct scope.
+void LVIRReader::resolveInlinedLexicalScopes() {
+  LLVM_DEBUG({ dbgs() << "\n[resolveInlinedLexicalScopes]\n"; });
+  LLVM_DEBUG({ dumpInlinedInfo("Before", /*Full=*/false); });
+
+  std::function<void(LVScope * Scope)> TraverseChildren = [&](LVScope *Parent) {
+    LLVM_DEBUG({
+      dbgs() << "\nParent Scope: ";
+      Parent->dumpCommon();
+    });
+
+    // Get associated inlined scopes for the parent scope.
+    LVList &ParentInlinedList = getInlinedList(Parent);
+
+    // Check if the inlined scope parent is in the ParentInlinedList.
+    auto CheckInlinedScope = [&](LVList &ScopeInlinedList) -> bool {
+      bool Matched = true;
+      for (auto &InlinedScope : ScopeInlinedList) {
+        LLVM_DEBUG({
+          dbgs() << "Inlined Scope:  ";
+          InlinedScope->dumpCommon();
+        });
+        LVScope *ParentScope = InlinedScope->getParentScope();
+        for (auto &ParentInlinedScope : ParentInlinedList) {
+          if (ParentInlinedScope != ParentScope) {
+            // If the parent for the inlined scope is not the Parent Inlined
+            // list, it means the lexical scope is incorrect.
+            // Stop the traversal as the other inlined scopes will have the
+            // same problem as they were created from the same original scope.
+            LLVM_DEBUG({
+              dbgs() << "\nIncorrect parent scope\n";
+              dbgs() << "ParentInlinedScope: ";
+              ParentInlinedScope->dumpCommon();
+              dbgs() << "ParentScope: ";
+              ParentScope->dumpCommon();
+              dbgs() << "\n";
+            });
+            Matched = false;
+            break;
+          }
+        }
+        if (!Matched)
+          break;
+      }
+      return Matched;
+    };
+
+    // Adjust the inlined scopes based on the ParentInlinedList.
+    auto AdjustInlinedScope = [&](LVList &ScopeInlinedList) {
+      assert(ScopeInlinedList.size() == ParentInlinedList.size() &&
+             "Scope list do not have same number of items.");
+
+      LLVM_DEBUG({ dbgs() << "Begin scope adjustment\n"; });
+      LVScope *CurrentParent = nullptr;
+      LVScope *TargetParent = nullptr;
+      LVScope *InlinedScope = nullptr;
+      auto ItInlined = ScopeInlinedList.begin();
+      auto ItParent = ParentInlinedList.begin();
+      while (ItInlined != ScopeInlinedList.end()) {
+        TargetParent = *ItParent;
+        InlinedScope = *ItInlined;
+        CurrentParent = InlinedScope->getParentScope();
+
+        LLVM_DEBUG({
+          dbgs() << "Target Parent:  ";
+          TargetParent->dumpCommon();
+          dbgs() << "Current Parent: ";
+          CurrentParent->dumpCommon();
+          dbgs() << "Inlined:        ";
+          InlinedScope->dumpCommon();
+        });
+
+        // Correct lexical scope.
+        if (CurrentParent->removeElement(InlinedScope)) {
+          TargetParent->addElement(InlinedScope);
+          InlinedScope->updateLevel(TargetParent, /*Moved=*/false);
+        }
+        ++ItInlined;
+        ++ItParent;
+      }
+      LLVM_DEBUG({ dbgs() << "End scope adjustment\n"; });
+    };
+
+    // Traverse the scope children.
+    if (const LVScopes *Children = Parent->getScopes())
+      for (LVScope *Scope : *Children) {
+        LLVM_DEBUG({
+          dbgs() << "\nOrigin Scope: ";
+          Scope->dumpCommon();
+        });
+
+        // Get associated inlined scopes for the scope.
+        LVList &ScopeInlinedList = getInlinedList(Scope);
+        if (!CheckInlinedScope(ScopeInlinedList)) {
+          // AdjustInlinedScope to the correct lexical scope.
+          AdjustInlinedScope(ScopeInlinedList);
+        }
+        TraverseChildren(Scope);
+      }
+  };
+
+  // Traverse the origin scopes and for each function scope, analyze their
+  // associated inlined scopes to see if they have to be move to their
+  // correct lexical scope.
+  for (auto &Entry : InlinedList) {
+    LVScope *OriginScope = Entry.first;
+    if (OriginScope->getIsFunction())
+      TraverseChildren(OriginScope);
+  }
+
+  LLVM_DEBUG({ dumpInlinedInfo("After", /*Full=*/false); });
+}
+
+// During the IR-to-logical-view construction, traverse all the logical
+// elements to check if they have been properly constructed (finalized).
 void LVIRReader::checkScopes(LVScope *Scope) {
+  LLVM_DEBUG({ dbgs() << "\n[checkScopes]\n"; });
+
   auto PrintElement = [](LVElement *Element) {
     LLVM_DEBUG({
       dwarf::Tag Tag = Element->getTag();

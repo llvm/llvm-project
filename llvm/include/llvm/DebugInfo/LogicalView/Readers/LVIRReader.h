@@ -25,6 +25,7 @@ class DIScope;
 class DISubprogram;
 class DIVariable;
 class BasicBlock;
+class Module;
 
 namespace object {
 class IRObjectFile;
@@ -37,20 +38,23 @@ class LVLine;
 class LVScopeCompileUnit;
 class LVSymbol;
 class LVType;
+struct LVSourceLanguage;
 
 class LVIRReader final : public LVReader {
   object::IRObjectFile *BitCodeIR = nullptr;
   MemoryBufferRef *TextualIR = nullptr;
 
+  // Used by the metadata 'dump' functions, so the metadata nodes will be
+  // numbered canonically; otherwise, pointer addresses are substituted.
+  Module *TheModule = nullptr;
+
   // Symbols with locations for current compile unit.
   LVSymbols SymbolsWithLocations;
 
-  LVSectionIndex SectionIndex = 0;
-
   const DICompileUnit *CUNode = nullptr;
 
-  // The Dwarf Version (from the module flags).
-  unsigned DwarfVersion;
+  // The Dwarf version (from the module flags).
+  unsigned DwarfVersion = 0;
 
   // Location index for global variables.
   uint64_t PoolAddressIndex = 0;
@@ -64,16 +68,14 @@ class LVIRReader final : public LVReader {
   bool includeMinimalInlineScopes() const;
   bool useAllLinkageNames() const { return UseAllLinkageNames; }
 
-  bool LanguageIsFortran = false;
-  void mapFortranLanguage(unsigned DWLang);
-  bool moduleIsInFortran() const { return LanguageIsFortran; }
+  // Default lower bound for arrays.
+  int64_t DefaultLowerBound = 0;
+  int64_t getDefaultLowerBound() const { return DefaultLowerBound; }
+  void setDefaultLowerBound(LVSourceLanguage *SL);
 
   // We assume a constant instruction-size increase between instructions.
   const unsigned OffsetIncrease = 4;
   void updateLineOffset() { CurrentOffset += OffsetIncrease; }
-
-  // An anonymous type for index type.
-  LVType *NodeIndexType = nullptr;
 
   SSAValueNameMap ValueNameMap;
   DenseMap<void *, uint64_t> InstrLineAddrMap;
@@ -105,6 +107,10 @@ class LVIRReader final : public LVReader {
   using LVCompileUnitFiles = std::map<const DIFile *, size_t>;
   LVCompileUnitFiles CompileUnitFiles;
 
+  // For the given 'DIFile', generate a 1-based index to indicate the
+  // source file where the logical element is declared.
+  // The IR reader expects the indexes to be 1-based.
+  // Each compile unit, keeps track of the last assigned index.
   size_t getOrCreateSourceID(const DIFile *File);
 
   // Associate the metadata objects to logical elements.
@@ -112,8 +118,7 @@ class LVIRReader final : public LVReader {
   LVMDObjects MDObjects;
 
   void addMD(const MDNode *MD, LVElement *Element) {
-    if (MDObjects.find(MD) == MDObjects.end())
-      MDObjects.emplace(MD, Element);
+    MDObjects.try_emplace(MD, Element);
   }
   LVElement *getElementForSeenMD(const MDNode *MD) const {
     LVMDObjects::const_iterator Iter = MDObjects.find(MD);
@@ -132,46 +137,37 @@ class LVIRReader final : public LVReader {
     return static_cast<LVType *>(getElementForSeenMD(MD));
   }
 
-  // Abstract scopes mapped to the associated inlined scopes.
-  // When creating inlined scopes, there is no direct information to find
-  // the correct lexical scope.
-  using LVScopeEntry = std::pair<LVScope *, const DILocation *>;
-  using LVInlinedScopes = std::map<LVScopeEntry, LVScope *>;
-  LVInlinedScopes InlinedScopes;
-
-  void addInlinedScope(LVScope *AbstractScope, const DILocation *InlinedAt,
-                       LVScope *InlinedScope) {
-    auto Entry = LVScopeEntry(AbstractScope, InlinedAt);
-    if (InlinedScopes.find(Entry) == InlinedScopes.end())
-      InlinedScopes.emplace(Entry, InlinedScope);
-  }
-  LVScope *getInlinedScope(LVScope *AbstractScope,
-                           const DILocation *InlinedAt) const {
-    auto Entry = LVScopeEntry(AbstractScope, InlinedAt);
-    LVInlinedScopes::const_iterator Iter = InlinedScopes.find(Entry);
-    return Iter != InlinedScopes.end() ? Iter->second : nullptr;
-  }
-
   const DIFile *getMDFile(const MDNode *MD) const;
   StringRef getMDName(const DINode *DN) const;
   const DIScope *getMDScope(const DINode *DN) const;
 
+  // An anonymous type for index type.
+  LVType *NodeIndexType = nullptr;
   LVType *getIndexType();
 
+  // Get current metadata DICompileUnit object.
   const DICompileUnit *getCUNode() const { return CUNode; }
 
+  // Get the parent scope for the given metadata object.
   LVScope *getParentScopeImpl(const DIScope *Context);
   LVScope *getParentScope(const DINode *DN);
   LVScope *getParentScope(const DILocation *DL);
+
+  // Traverse the scope hierarchy and create each node in the hierarchy.
   LVScope *traverseParentScope(const DIScope *Context);
 
+  // Create the location ranges for the given scope and in the case of
+  // functions, generate an entry in the public names set.
   void constructRange(LVScope *Scope, LVAddress LowPC, LVAddress HighPC);
   void constructRange(LVScope *Scope);
 
-  void processBasicBlocks(Function &F, const DISubprogram *SP);
+  // Generate debug logical lines for the given function.
+  void processBasicBlocks(Function &F);
 
+  // Add accessibility information if available.
   void addAccess(LVElement *Element, DINode::DIFlags Flags);
 
+  // Add a constant value to a logical element.
   void addConstantValue(LVElement *Element, const DIExpression *DIExpr);
   void addConstantValue(LVElement *Element, const ConstantInt *CI,
                         const DIType *Ty);
@@ -181,8 +177,7 @@ class LVIRReader final : public LVReader {
   void addConstantValue(LVElement *Element, uint64_t Value, const DIType *Ty);
   void addConstantValue(LVElement *Element, uint64_t Value, bool Unsigned);
 
-  void addString(LVElement *Element, StringRef Str);
-
+  // Add template parameters to logical element.
   void addTemplateParams(LVElement *Element, const DINodeArray TParams);
 
   // Add location information to specified logical element.
@@ -192,7 +187,7 @@ class LVIRReader final : public LVReader {
   void addSourceLine(LVElement *Element, const DILabel *L);
   void addSourceLine(LVElement *Element, const DILocalVariable *LV);
   void addSourceLine(LVElement *Element, const DILocation *DL);
-  void addSourceLine(LVElement *Element, const DIObjCProperty *Ty);
+  void addSourceLine(LVElement *Element, const DIObjCProperty *OP);
   void addSourceLine(LVElement *Element, const DISubprogram *SP);
   void addSourceLine(LVElement *Element, const DIType *Ty);
 
@@ -226,14 +221,12 @@ class LVIRReader final : public LVReader {
   LVScope *getOrCreateSubprogram(const DISubprogram *SP);
   LVScope *getOrCreateSubprogram(LVScope *Function, const DISubprogram *SP,
                                  bool Minimal = false);
-  void constructSubprogramArguments(LVScope *Function,
-                                    const DITypeRefArray Args);
+  void constructSubprogramArguments(LVScope *Function, const DITypeArray Args);
 
-  LVScope *getOrCreateAbstractScope(LVScope *Parent, const DILocation *DL);
-  LVScope *getOrCreateInlinedScope(LVScope *AbstractScope,
-                                   const DILocation *DL);
+  LVScope *getOrCreateAbstractScope(const DILocation *DL);
+  LVScope *getOrCreateInlinedScope(const DILocation *DL);
 
-  void constructSubrange(LVScopeArray *Array, const DISubrange *GSR,
+  void constructSubrange(LVScopeArray *Array, const DISubrange *SR,
                          LVType *IndexType);
 
   void constructTemplateTypeParameter(LVElement *Element,
@@ -254,11 +247,16 @@ class LVIRReader final : public LVReader {
 
   LVElement *constructElement(const DINode *DN);
 
+  // After the scopes have been created, remove empty ones.
   void removeEmptyScopes();
+
+  // Adjust the inlined lexical scopes to their correct scope.
+  void resolveInlinedLexicalScopes();
+
   void processLocationGaps();
   void processScopes();
 
-  // These functions are only for development.
+  // Check if the scopes have been properly constructed (finalized).
   void checkScopes(LVScope *Scope);
 
 protected:
