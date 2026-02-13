@@ -186,16 +186,15 @@ define i64 @cls_i64(i64 %x) {
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    xor a0, a0, a2
 ; CHECK-NEXT:    clz a0, a0
-; CHECK-NEXT:    addi a0, a0, 32
+; CHECK-NEXT:    addi a2, a0, 32
 ; CHECK-NEXT:    j .LBB15_3
 ; CHECK-NEXT:  .LBB15_2:
 ; CHECK-NEXT:    xor a1, a1, a2
-; CHECK-NEXT:    clz a0, a1
+; CHECK-NEXT:    clz a2, a1
 ; CHECK-NEXT:  .LBB15_3:
-; CHECK-NEXT:    li a1, 0
-; CHECK-NEXT:    li a2, -1
-; CHECK-NEXT:    mv a3, a2
-; CHECK-NEXT:    addd a0, a0, a2
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    mv a1, a0
+; CHECK-NEXT:    waddau a0, a2, zero
 ; CHECK-NEXT:    ret
   %a = ashr i64 %x, 63
   %b = xor i64 %x, %a
@@ -1054,8 +1053,7 @@ define i32 @mvmn_xor_i32(i32 %b, i32 %mask, i32 %a) nounwind {
 define i64 @waddau_zext(i64 %acc, i32 %a) nounwind {
 ; CHECK-LABEL: waddau_zext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a3, 0
-; CHECK-NEXT:    addd a0, a0, a2
+; CHECK-NEXT:    waddau a0, a2, zero
 ; CHECK-NEXT:    ret
   %ext_a = zext i32 %a to i64
   %sum = add i64 %acc, %ext_a
@@ -1066,8 +1064,7 @@ define i64 @waddau_zext(i64 %acc, i32 %a) nounwind {
 define i64 @waddau_zext_commuted(i64 %acc, i32 %a) nounwind {
 ; CHECK-LABEL: waddau_zext_commuted:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a3, 0
-; CHECK-NEXT:    addd a0, a2, a0
+; CHECK-NEXT:    waddau a0, a2, zero
 ; CHECK-NEXT:    ret
   %ext_a = zext i32 %a to i64
   %sum = add i64 %ext_a, %acc
@@ -1078,11 +1075,7 @@ define i64 @waddau_zext_commuted(i64 %acc, i32 %a) nounwind {
 define i64 @waddau_zext_chain(i64 %acc, i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: waddau_zext_chain:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mv a4, a3
-; CHECK-NEXT:    li a3, 0
-; CHECK-NEXT:    addd a0, a0, a2
-; CHECK-NEXT:    li a5, 0
-; CHECK-NEXT:    addd a0, a0, a4
+; CHECK-NEXT:    waddau a0, a2, a3
 ; CHECK-NEXT:    ret
   %ext_a = zext i32 %a to i64
   %ext_b = zext i32 %b to i64
