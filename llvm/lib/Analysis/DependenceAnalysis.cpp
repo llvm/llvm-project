@@ -343,6 +343,9 @@ private:
   SCEVMonotonicity visitMulExpr(const SCEVMulExpr *Expr) {
     return invariantOrUnknown(Expr);
   }
+  SCEVMonotonicity visitPtrToAddrExpr(const SCEVPtrToAddrExpr *Expr) {
+    return invariantOrUnknown(Expr);
+  }
   SCEVMonotonicity visitPtrToIntExpr(const SCEVPtrToIntExpr *Expr) {
     return invariantOrUnknown(Expr);
   }
@@ -1209,57 +1212,6 @@ DependenceInfo::classifyPair(const SCEV *Src, const Loop *SrcLoopNest,
   return Subscript::MIV;
 }
 
-// A wrapper around SCEV::isKnownPredicate.
-// Looks for cases where we're interested in comparing for equality.
-// If both X and Y have been identically sign or zero extended,
-// it strips off the (confusing) extensions before invoking
-// SCEV::isKnownPredicate. Perhaps, someday, the ScalarEvolution package
-// will be similarly updated.
-//
-// If SCEV::isKnownPredicate can't prove the predicate,
-// we try simple subtraction, which seems to help in some cases
-// involving symbolics.
-bool DependenceInfo::isKnownPredicate(ICmpInst::Predicate Pred, const SCEV *X,
-                                      const SCEV *Y) const {
-  if (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE) {
-    if ((isa<SCEVSignExtendExpr>(X) && isa<SCEVSignExtendExpr>(Y)) ||
-        (isa<SCEVZeroExtendExpr>(X) && isa<SCEVZeroExtendExpr>(Y))) {
-      const SCEVIntegralCastExpr *CX = cast<SCEVIntegralCastExpr>(X);
-      const SCEVIntegralCastExpr *CY = cast<SCEVIntegralCastExpr>(Y);
-      const SCEV *Xop = CX->getOperand();
-      const SCEV *Yop = CY->getOperand();
-      if (Xop->getType() == Yop->getType()) {
-        X = Xop;
-        Y = Yop;
-      }
-    }
-  }
-  if (SE->isKnownPredicate(Pred, X, Y))
-    return true;
-  // If SE->isKnownPredicate can't prove the condition,
-  // we try the brute-force approach of subtracting
-  // and testing the difference.
-  // By testing with SE->isKnownPredicate first, we avoid
-  // the possibility of overflow when the arguments are constants.
-  const SCEV *Delta = SE->getMinusSCEV(X, Y);
-  switch (Pred) {
-  case CmpInst::ICMP_EQ:
-    return Delta->isZero();
-  case CmpInst::ICMP_NE:
-    return SE->isKnownNonZero(Delta);
-  case CmpInst::ICMP_SGE:
-    return SE->isKnownNonNegative(Delta);
-  case CmpInst::ICMP_SLE:
-    return SE->isKnownNonPositive(Delta);
-  case CmpInst::ICMP_SGT:
-    return SE->isKnownPositive(Delta);
-  case CmpInst::ICMP_SLT:
-    return SE->isKnownNegative(Delta);
-  default:
-    llvm_unreachable("unexpected predicate in isKnownPredicate");
-  }
-}
-
 // All subscripts are all the same type.
 // Loop bound may be smaller (e.g., a char).
 // Should zero extend loop bound, since it's always >= 0.
@@ -1341,11 +1293,11 @@ bool DependenceInfo::testZIV(const SCEV *Src, const SCEV *Dst,
   LLVM_DEBUG(dbgs() << "    src = " << *Src << "\n");
   LLVM_DEBUG(dbgs() << "    dst = " << *Dst << "\n");
   ++ZIVapplications;
-  if (isKnownPredicate(CmpInst::ICMP_EQ, Src, Dst)) {
+  if (SE->isKnownPredicate(CmpInst::ICMP_EQ, Src, Dst)) {
     LLVM_DEBUG(dbgs() << "    provably dependent\n");
     return false; // provably dependent
   }
-  if (isKnownPredicate(CmpInst::ICMP_NE, Src, Dst)) {
+  if (SE->isKnownPredicate(CmpInst::ICMP_NE, Src, Dst)) {
     LLVM_DEBUG(dbgs() << "    provably independent\n");
     ++ZIVindependence;
     return true; // provably independent
@@ -1424,7 +1376,7 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
     const SCEV *Product = mulSCEVNoSignedOverflow(UpperBound, AbsCoeff, *SE);
     if (!Product)
       return false;
-    return isKnownPredicate(CmpInst::ICMP_SGT, AbsDelta, Product);
+    return SE->isKnownPredicate(CmpInst::ICMP_SGT, AbsDelta, Product);
   }();
   if (IsDeltaLarge) {
     // Distance greater than trip count - no dependence
@@ -1611,13 +1563,13 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEV *Coeff,
     const SCEV *ML =
         SE->getMulExpr(SE->getMulExpr(ConstCoeff, UpperBound), ConstantTwo);
     LLVM_DEBUG(dbgs() << "\t    ML = " << *ML << "\n");
-    if (isKnownPredicate(CmpInst::ICMP_SGT, Delta, ML)) {
+    if (SE->isKnownPredicate(CmpInst::ICMP_SGT, Delta, ML)) {
       // Delta too big, no dependence
       ++WeakCrossingSIVindependence;
       ++WeakCrossingSIVsuccesses;
       return true;
     }
-    if (isKnownPredicate(CmpInst::ICMP_EQ, Delta, ML)) {
+    if (SE->isKnownPredicate(CmpInst::ICMP_EQ, Delta, ML)) {
       // i = i' = UB
       Result.DV[Level].Direction &= ~Dependence::DVEntry::LT;
       Result.DV[Level].Direction &= ~Dependence::DVEntry::GT;
@@ -2016,7 +1968,7 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
   Result.Consistent = false;
   const SCEV *Delta = SE->getMinusSCEV(SrcConst, DstConst);
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
-  if (isKnownPredicate(CmpInst::ICMP_EQ, SrcConst, DstConst)) {
+  if (SE->isKnownPredicate(CmpInst::ICMP_EQ, SrcConst, DstConst)) {
     if (Level < CommonLevels) {
       Result.DV[Level].Direction &= Dependence::DVEntry::GE;
       Result.DV[Level].PeelFirst = true;
@@ -2042,12 +1994,12 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
           collectUpperBound(CurSrcLoop, Delta->getType())) {
     LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
     const SCEV *Product = SE->getMulExpr(AbsCoeff, UpperBound);
-    if (isKnownPredicate(CmpInst::ICMP_SGT, NewDelta, Product)) {
+    if (SE->isKnownPredicate(CmpInst::ICMP_SGT, NewDelta, Product)) {
       ++WeakZeroSIVindependence;
       ++WeakZeroSIVsuccesses;
       return true;
     }
-    if (isKnownPredicate(CmpInst::ICMP_EQ, NewDelta, Product)) {
+    if (SE->isKnownPredicate(CmpInst::ICMP_EQ, NewDelta, Product)) {
       // dependences caused by last iteration
       if (Level < CommonLevels) {
         Result.DV[Level].Direction &= Dependence::DVEntry::LE;
@@ -2129,7 +2081,7 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
   Result.Consistent = false;
   const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
-  if (isKnownPredicate(CmpInst::ICMP_EQ, DstConst, SrcConst)) {
+  if (SE->isKnownPredicate(CmpInst::ICMP_EQ, DstConst, SrcConst)) {
     if (Level < CommonLevels) {
       Result.DV[Level].Direction &= Dependence::DVEntry::LE;
       Result.DV[Level].PeelFirst = true;
@@ -2155,12 +2107,12 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
           collectUpperBound(CurSrcLoop, Delta->getType())) {
     LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
     const SCEV *Product = SE->getMulExpr(AbsCoeff, UpperBound);
-    if (isKnownPredicate(CmpInst::ICMP_SGT, NewDelta, Product)) {
+    if (SE->isKnownPredicate(CmpInst::ICMP_SGT, NewDelta, Product)) {
       ++WeakZeroSIVindependence;
       ++WeakZeroSIVsuccesses;
       return true;
     }
-    if (isKnownPredicate(CmpInst::ICMP_EQ, NewDelta, Product)) {
+    if (SE->isKnownPredicate(CmpInst::ICMP_EQ, NewDelta, Product)) {
       // dependences caused by last iteration
       if (Level < CommonLevels) {
         Result.DV[Level].Direction &= Dependence::DVEntry::GE;
@@ -2373,7 +2325,7 @@ bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
         // make sure that c2 - c1 <= a1*N1
         const SCEV *A1N1 = SE->getMulExpr(A1, N1);
         LLVM_DEBUG(dbgs() << "\t    A1*N1 = " << *A1N1 << "\n");
-        if (isKnownPredicate(CmpInst::ICMP_SGT, C2_C1, A1N1)) {
+        if (SE->isKnownPredicate(CmpInst::ICMP_SGT, C2_C1, A1N1)) {
           ++SymbolicRDIVindependence;
           return true;
         }
@@ -2382,7 +2334,7 @@ bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
         // make sure that -a2*N2 <= c2 - c1, or a2*N2 >= c1 - c2
         const SCEV *A2N2 = SE->getMulExpr(A2, N2);
         LLVM_DEBUG(dbgs() << "\t    A2*N2 = " << *A2N2 << "\n");
-        if (isKnownPredicate(CmpInst::ICMP_SLT, A2N2, C1_C2)) {
+        if (SE->isKnownPredicate(CmpInst::ICMP_SLT, A2N2, C1_C2)) {
           ++SymbolicRDIVindependence;
           return true;
         }
@@ -2395,7 +2347,7 @@ bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
         const SCEV *A2N2 = SE->getMulExpr(A2, N2);
         const SCEV *A1N1_A2N2 = SE->getMinusSCEV(A1N1, A2N2);
         LLVM_DEBUG(dbgs() << "\t    A1*N1 - A2*N2 = " << *A1N1_A2N2 << "\n");
-        if (isKnownPredicate(CmpInst::ICMP_SGT, C2_C1, A1N1_A2N2)) {
+        if (SE->isKnownPredicate(CmpInst::ICMP_SGT, C2_C1, A1N1_A2N2)) {
           ++SymbolicRDIVindependence;
           return true;
         }
@@ -2415,7 +2367,7 @@ bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
         const SCEV *A2N2 = SE->getMulExpr(A2, N2);
         const SCEV *A1N1_A2N2 = SE->getMinusSCEV(A1N1, A2N2);
         LLVM_DEBUG(dbgs() << "\t    A1*N1 - A2*N2 = " << *A1N1_A2N2 << "\n");
-        if (isKnownPredicate(CmpInst::ICMP_SGT, A1N1_A2N2, C2_C1)) {
+        if (SE->isKnownPredicate(CmpInst::ICMP_SGT, A1N1_A2N2, C2_C1)) {
           ++SymbolicRDIVindependence;
           return true;
         }
@@ -2431,7 +2383,7 @@ bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
         // make sure that a1*N1 <= c2 - c1
         const SCEV *A1N1 = SE->getMulExpr(A1, N1);
         LLVM_DEBUG(dbgs() << "\t    A1*N1 = " << *A1N1 << "\n");
-        if (isKnownPredicate(CmpInst::ICMP_SGT, A1N1, C2_C1)) {
+        if (SE->isKnownPredicate(CmpInst::ICMP_SGT, A1N1, C2_C1)) {
           ++SymbolicRDIVindependence;
           return true;
         }
@@ -2440,7 +2392,7 @@ bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
         // make sure that c2 - c1 <= -a2*N2, or c1 - c2 >= a2*N2
         const SCEV *A2N2 = SE->getMulExpr(A2, N2);
         LLVM_DEBUG(dbgs() << "\t    A2*N2 = " << *A2N2 << "\n");
-        if (isKnownPredicate(CmpInst::ICMP_SLT, C1_C2, A2N2)) {
+        if (SE->isKnownPredicate(CmpInst::ICMP_SLT, C1_C2, A2N2)) {
           ++SymbolicRDIVindependence;
           return true;
         }
@@ -3018,10 +2970,10 @@ bool DependenceInfo::testBounds(unsigned char DirKind, unsigned Level,
                                 BoundInfo *Bound, const SCEV *Delta) const {
   Bound[Level].Direction = DirKind;
   if (const SCEV *LowerBound = getLowerBound(Bound))
-    if (isKnownPredicate(CmpInst::ICMP_SGT, LowerBound, Delta))
+    if (SE->isKnownPredicate(CmpInst::ICMP_SGT, LowerBound, Delta))
       return false;
   if (const SCEV *UpperBound = getUpperBound(Bound))
-    if (isKnownPredicate(CmpInst::ICMP_SGT, Delta, UpperBound))
+    if (SE->isKnownPredicate(CmpInst::ICMP_SGT, Delta, UpperBound))
       return false;
   return true;
 }
@@ -3054,10 +3006,10 @@ void DependenceInfo::findBoundsALL(CoefficientInfo *A, CoefficientInfo *B,
         SE->getMinusSCEV(A[K].PosPart, B[K].NegPart), Bound[K].Iterations);
   } else {
     // If the difference is 0, we won't need to know the number of iterations.
-    if (isKnownPredicate(CmpInst::ICMP_EQ, A[K].NegPart, B[K].PosPart))
+    if (SE->isKnownPredicate(CmpInst::ICMP_EQ, A[K].NegPart, B[K].PosPart))
       Bound[K].Lower[Dependence::DVEntry::ALL] =
           SE->getZero(A[K].Coeff->getType());
-    if (isKnownPredicate(CmpInst::ICMP_EQ, A[K].PosPart, B[K].NegPart))
+    if (SE->isKnownPredicate(CmpInst::ICMP_EQ, A[K].PosPart, B[K].NegPart))
       Bound[K].Upper[Dependence::DVEntry::ALL] =
           SE->getZero(A[K].Coeff->getType());
   }

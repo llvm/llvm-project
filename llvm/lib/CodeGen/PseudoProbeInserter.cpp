@@ -32,9 +32,7 @@ class PseudoProbeInserter : public MachineFunctionPass {
 public:
   static char ID;
 
-  PseudoProbeInserter() : MachineFunctionPass(ID) {
-    initializePseudoProbeInserterPass(*PassRegistry::getPassRegistry());
-  }
+  PseudoProbeInserter() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return "Pseudo Probe Inserter"; }
 

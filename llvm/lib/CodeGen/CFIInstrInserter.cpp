@@ -39,9 +39,7 @@ class CFIInstrInserter : public MachineFunctionPass {
  public:
   static char ID;
 
-  CFIInstrInserter() : MachineFunctionPass(ID) {
-    initializeCFIInstrInserterPass(*PassRegistry::getPassRegistry());
-  }
+  CFIInstrInserter() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
@@ -65,28 +63,7 @@ class CFIInstrInserter : public MachineFunctionPass {
     return insertedCFI;
   }
 
- private:
-  struct MBBCFAInfo {
-    MachineBasicBlock *MBB;
-    /// Value of cfa offset valid at basic block entry.
-    int64_t IncomingCFAOffset = -1;
-    /// Value of cfa offset valid at basic block exit.
-    int64_t OutgoingCFAOffset = -1;
-    /// Value of cfa register valid at basic block entry.
-    unsigned IncomingCFARegister = 0;
-    /// Value of cfa register valid at basic block exit.
-    unsigned OutgoingCFARegister = 0;
-    /// Set of callee saved registers saved at basic block entry.
-    BitVector IncomingCSRSaved;
-    /// Set of callee saved registers saved at basic block exit.
-    BitVector OutgoingCSRSaved;
-    /// If in/out cfa offset and register values for this block have already
-    /// been set or not.
-    bool Processed = false;
-  };
-
-#define INVALID_REG UINT_MAX
-#define INVALID_OFFSET INT_MAX
+private:
   /// contains the location where CSR register is saved.
   class CSRSavedLocation {
   public:
@@ -146,6 +123,38 @@ class CFIInstrInserter : public MachineFunctionPass {
     bool operator!=(const CSRSavedLocation &RHS) const {
       return !(*this == RHS);
     }
+    void dump(raw_ostream &OS) const {
+      switch (K) {
+      case Kind::Invalid:
+        OS << "Invalid";
+        break;
+      case Kind::Register:
+        OS << "In Dwarf register: " << Reg;
+        break;
+      case Kind::CFAOffset:
+        OS << "At CFA offset: " << Offset;
+        break;
+      }
+    }
+  };
+
+  struct MBBCFAInfo {
+    MachineBasicBlock *MBB;
+    /// Value of cfa offset valid at basic block entry.
+    int64_t IncomingCFAOffset = -1;
+    /// Value of cfa offset valid at basic block exit.
+    int64_t OutgoingCFAOffset = -1;
+    /// Value of cfa register valid at basic block entry.
+    unsigned IncomingCFARegister = 0;
+    /// Value of cfa register valid at basic block exit.
+    unsigned OutgoingCFARegister = 0;
+    /// Set of callee saved registers saved at basic block entry.
+    BitVector IncomingCSRSaved;
+    /// Set of callee saved registers saved at basic block exit.
+    BitVector OutgoingCSRSaved;
+    /// If in/out cfa offset and register values for this block have already
+    /// been set or not.
+    bool Processed = false;
   };
 
   /// Contains cfa offset and register values valid at entry and exit of basic

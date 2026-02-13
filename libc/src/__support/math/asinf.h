@@ -23,7 +23,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE static constexpr float asinf(float x) {
+LIBC_INLINE constexpr float asinf(float x) {
   using namespace inv_trigf_utils_internal;
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS

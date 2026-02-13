@@ -72,4 +72,4 @@ declare float @llvm.nvvm.sqrt.approx.f(float)
 declare float @llvm.nvvm.sqrt.approx.ftz.f(float)
 declare float @llvm.sqrt.f32(float)
 
-attributes #0 = { "denormal-fp-math-f32" = "preserve-sign" }
+attributes #0 = { denormal_fpenv(float: preservesign) }

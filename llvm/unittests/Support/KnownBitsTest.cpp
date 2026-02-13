@@ -567,6 +567,8 @@ TEST(KnownBitsTest, BinaryExhaustive) {
   testBinaryOpExhaustive("avgCeilU", KnownBits::avgCeilU, APIntOps::avgCeilU);
 
   testBinaryOpExhaustive("avgCeilS", KnownBits::avgCeilS, APIntOps::avgCeilS);
+
+  testBinaryOpExhaustive("clmul", KnownBits::clmul, APIntOps::clmul);
 }
 
 TEST(KnownBitsTest, UnaryExhaustive) {
@@ -913,10 +915,75 @@ TEST(KnownBitsTest, ReduceAddExhaustive) {
       EnumerateCombinations(0, APInt(Bits, 0));
 
       if (!Exact.hasConflict()) {
-        EXPECT_TRUE(checkResult("reduceAdd", Exact, Computed, {EltKnown},
-                                /*CheckOptimality=*/false));
+        EXPECT_TRUE(
+            checkResult("reduceAdd", Exact, Computed, {EltKnown}, false));
       }
     });
+  }
+}
+
+TEST(KnownBitsTest, TruncateSatExhaustive) {
+  for (unsigned FromBits : {4, 8}) {
+    for (unsigned ToBits = 1; ToBits < FromBits; ++ToBits) {
+      ForeachKnownBits(FromBits, [&](const KnownBits &Known) {
+        // Test truncSSat
+        {
+          KnownBits Computed = Known.truncSSat(ToBits);
+          KnownBits Exact(ToBits);
+          Exact.Zero.setAllBits();
+          Exact.One.setAllBits();
+
+          ForeachNumInKnownBits(Known, [&](const APInt &N) {
+            APInt Res = N.truncSSat(ToBits);
+            Exact.One &= Res;
+            Exact.Zero &= ~Res;
+          });
+
+          if (!Exact.hasConflict()) {
+            EXPECT_TRUE(
+                checkResult("truncSSat", Exact, Computed, {Known}, true));
+          }
+        }
+
+        // Test truncSSatU
+        {
+          KnownBits Computed = Known.truncSSatU(ToBits);
+          KnownBits Exact(ToBits);
+          Exact.Zero.setAllBits();
+          Exact.One.setAllBits();
+
+          ForeachNumInKnownBits(Known, [&](const APInt &N) {
+            APInt Res = N.truncSSatU(ToBits);
+            Exact.One &= Res;
+            Exact.Zero &= ~Res;
+          });
+
+          if (!Exact.hasConflict()) {
+            EXPECT_TRUE(
+                checkResult("truncSSatU", Exact, Computed, {Known}, true));
+          }
+        }
+
+        // Test truncUSat
+        {
+          KnownBits Computed = Known.truncUSat(ToBits);
+          KnownBits Exact(ToBits);
+          Exact.Zero.setAllBits();
+          Exact.One.setAllBits();
+
+          ForeachNumInKnownBits(Known, [&](const APInt &N) {
+            APInt Res = N.truncUSat(ToBits);
+            Exact.One &= Res;
+            Exact.Zero &= ~Res;
+          });
+
+          if (!Exact.hasConflict()) {
+            EXPECT_TRUE(
+                checkResult("truncUSat", Exact, Computed, {Known}, true));
+          }
+        }
+      });
+    }
   }
 }
 

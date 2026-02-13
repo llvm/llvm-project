@@ -509,16 +509,12 @@ ValueObjectSP ABISysV_loongarch::GetReturnValueObjectSimple(
     return ValueObjectConstResult::Create(thread.GetStackFrameAtIndex(0).get(),
                                           value, ConstString(""));
   }
-  if (type_flags & eTypeIsFloat) {
-    bool is_complex = false;
-
-    if (compiler_type.IsFloatingPointType(is_complex) &&
-        !(type_flags & eTypeIsVector) && !is_complex) {
-      return_valobj_sp =
-          GetValObjFromFPRegs(thread, reg_ctx, machine, type_flags, byte_size);
-      return return_valobj_sp;
-    }
+  if (compiler_type.IsRealFloatingPointType()) {
+    return_valobj_sp =
+        GetValObjFromFPRegs(thread, reg_ctx, machine, type_flags, byte_size);
+    return return_valobj_sp;
   }
+
   return return_valobj_sp;
 }
 

@@ -85,7 +85,7 @@ inline std::string mlirTypeToIntrinsicFortran(fir::FirOpBuilder &builder,
       return "REAL(KIND="s + std::to_string(*kind) + ")";
   } else if (auto cplxTy = mlir::dyn_cast<mlir::ComplexType>(type)) {
     if (std::optional<int> kind = mlirFloatTypeToKind(cplxTy.getElementType()))
-      return "COMPLEX(KIND+"s + std::to_string(*kind) + ")";
+      return "COMPLEX(KIND="s + std::to_string(*kind) + ")";
   } else if (type.isUnsignedInteger()) {
     if (type.isInteger(8))
       return "UNSIGNED(KIND=1)";

@@ -2098,7 +2098,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     llvm::function_ref<llvm::Expected<llvm::CanonicalLoopInfo *>()> LoopInfo,
     Value *LBVal, Value *UBVal, Value *StepVal, bool Untied, Value *IfCond,
     Value *GrainSize, bool NoGroup, int Sched, Value *Final, bool Mergeable,
-    Value *Priority, TaskDupCallbackTy DupCB, Value *TaskContextStructPtrVal) {
+    Value *Priority, uint64_t NumOfCollapseLoops, TaskDupCallbackTy DupCB,
+    Value *TaskContextStructPtrVal) {
 
   if (!updateToLocation(Loc))
     return InsertPointTy();
@@ -2151,11 +2152,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
   OI.Inputs.insert(FakeStep);
   if (TaskContextStructPtrVal)
     OI.Inputs.insert(TaskContextStructPtrVal);
-  assert(
-      (TaskContextStructPtrVal && DupCB) ||
-      (!TaskContextStructPtrVal && !DupCB) &&
-          "Task context struct ptr and duplication callback must be both set "
-          "or both null");
+  assert(((TaskContextStructPtrVal && DupCB) ||
+          (!TaskContextStructPtrVal && !DupCB)) &&
+         "Task context struct ptr and duplication callback must be both set "
+         "or both null");
 
   // It isn't safe to run the duplication bodygen callback inside the post
   // outlining callback so this has to be run now before we know the real task
@@ -2176,8 +2176,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
   OI.PostOutlineCB = [this, Ident, LBVal, UBVal, StepVal, Untied,
                       TaskloopAllocaBB, CLI, Loc, TaskDupFn, ToBeDeleted,
                       IfCond, GrainSize, NoGroup, Sched, FakeLB, FakeUB,
-                      FakeStep, Final, Mergeable,
-                      Priority](Function &OutlinedFn) mutable {
+                      FakeStep, Final, Mergeable, Priority,
+                      NumOfCollapseLoops](Function &OutlinedFn) mutable {
     // Replace the Stale CI by appropriate RTL function call.
     assert(OutlinedFn.hasOneUse() &&
            "there must be a single user for the outlined function");
@@ -2360,29 +2360,53 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     Builder.SetInsertPoint(CLI->getBody(),
                            CLI->getBody()->getFirstInsertionPt());
 
-    // The canonical loop is generated with a fixed lower bound. We need to
-    // update the index calculation code to use the task's lower bound. The
-    // generated code looks like this:
-    // %omp_loop.iv = phi ...
-    // ...
-    // %tmp = mul [type] %omp_loop.iv, step
-    // %user_index = add [type] tmp, lb
-    // OpenMPIRBuilder constructs canonical loops to have exactly three uses of
-    // the normalised induction variable:
-    // 1. This one: converting the normalised IV to the user IV
-    // 2. The increment (add)
-    // 3. The comparison against the trip count (icmp)
-    // (1) is the only use that is a mul followed by an add so this cannot match
-    // other IR.
-    assert(CLI->getIndVar()->getNumUses() == 3 &&
-           "Canonical loop should have exactly three uses of the ind var");
-    for (User *IVUser : CLI->getIndVar()->users()) {
-      if (auto *Mul = dyn_cast<BinaryOperator>(IVUser)) {
-        if (Mul->getOpcode() == Instruction::Mul) {
-          for (User *MulUser : Mul->users()) {
-            if (auto *Add = dyn_cast<BinaryOperator>(MulUser)) {
-              if (Add->getOpcode() == Instruction::Add) {
-                Add->setOperand(1, CastedTaskLB);
+    if (NumOfCollapseLoops > 1) {
+      llvm::SmallVector<User *> UsersToReplace;
+      // When using the collapse clause, the bounds of the loop have to be
+      // adjusted to properly represent the iterator of the outer loop.
+      Value *IVPlusTaskLB = Builder.CreateAdd(
+          CLI->getIndVar(),
+          Builder.CreateSub(CastedTaskLB, ConstantInt::get(IVTy, 1)));
+      // To ensure every Use is correctly captured, we first want to record
+      // which users to replace the value in, and then replace the value.
+      for (auto IVUse = CLI->getIndVar()->uses().begin();
+           IVUse != CLI->getIndVar()->uses().end(); IVUse++) {
+        User *IVUser = IVUse->getUser();
+        if (auto *Op = dyn_cast<BinaryOperator>(IVUser)) {
+          if (Op->getOpcode() == Instruction::URem ||
+              Op->getOpcode() == Instruction::UDiv) {
+            UsersToReplace.push_back(IVUser);
+          }
+        }
+      }
+      for (User *User : UsersToReplace) {
+        User->replaceUsesOfWith(CLI->getIndVar(), IVPlusTaskLB);
+      }
+    } else {
+      // The canonical loop is generated with a fixed lower bound. We need to
+      // update the index calculation code to use the task's lower bound. The
+      // generated code looks like this:
+      // %omp_loop.iv = phi ...
+      // ...
+      // %tmp = mul [type] %omp_loop.iv, step
+      // %user_index = add [type] tmp, lb
+      // OpenMPIRBuilder constructs canonical loops to have exactly three uses
+      // of the normalised induction variable:
+      // 1. This one: converting the normalised IV to the user IV
+      // 2. The increment (add)
+      // 3. The comparison against the trip count (icmp)
+      // (1) is the only use that is a mul followed by an add so this cannot
+      // match other IR.
+      assert(CLI->getIndVar()->getNumUses() == 3 &&
+             "Canonical loop should have exactly three uses of the ind var");
+      for (User *IVUser : CLI->getIndVar()->users()) {
+        if (auto *Mul = dyn_cast<BinaryOperator>(IVUser)) {
+          if (Mul->getOpcode() == Instruction::Mul) {
+            for (User *MulUser : Mul->users()) {
+              if (auto *Add = dyn_cast<BinaryOperator>(MulUser)) {
+                if (Add->getOpcode() == Instruction::Add) {
+                  Add->setOperand(1, CastedTaskLB);
+                }
               }
             }
           }
@@ -3076,19 +3100,16 @@ Error OpenMPIRBuilder::emitReductionListCopy(
                       RemoteLaneOffset, ReductionArrayTy, IsByRefElem);
 
       if (IsByRefElem) {
-        Value *GEP;
-        InsertPointOrErrorTy GenResult =
-            RI.DataPtrPtrGen(Builder.saveIP(),
-                             Builder.CreatePointerBitCastOrAddrSpaceCast(
-                                 DestAlloca, Builder.getPtrTy(), ".ascast"),
-                             GEP);
+        // Copy descriptor from source and update base_ptr to shuffled data
+        Value *DestDescriptorAddr = Builder.CreatePointerBitCastOrAddrSpaceCast(
+            DestAlloca, Builder.getPtrTy(), ".ascast");
+
+        InsertPointOrErrorTy GenResult = generateReductionDescriptor(
+            DestDescriptorAddr, LocalStorage, SrcElementAddr,
+            RI.ByRefAllocatedType, RI.DataPtrPtrGen);
 
         if (!GenResult)
           return GenResult.takeError();
-
-        Builder.CreateStore(Builder.CreatePointerBitCastOrAddrSpaceCast(
-                                LocalStorage, Builder.getPtrTy(), ".ascast"),
-                            GEP);
       }
     } else {
       switch (RI.EvaluationKind) {
@@ -3578,6 +3599,37 @@ Expected<Function *> OpenMPIRBuilder::emitShuffleAndReduceFunction(
   return SarFunc;
 }
 
+OpenMPIRBuilder::InsertPointOrErrorTy
+OpenMPIRBuilder::generateReductionDescriptor(
+    Value *DescriptorAddr, Value *DataPtr, Value *SrcDescriptorAddr,
+    Type *DescriptorType,
+    function_ref<InsertPointOrErrorTy(InsertPointTy, Value *, Value *&)>
+        DataPtrPtrGen) {
+
+  // Copy the source descriptor to preserve all metadata (rank, extents,
+  // strides, etc.)
+  Value *DescriptorSize =
+      Builder.getInt64(M.getDataLayout().getTypeStoreSize(DescriptorType));
+  Builder.CreateMemCpy(
+      DescriptorAddr, M.getDataLayout().getPrefTypeAlign(DescriptorType),
+      SrcDescriptorAddr, M.getDataLayout().getPrefTypeAlign(DescriptorType),
+      DescriptorSize);
+
+  // Update the base pointer field to point to the local shuffled data
+  Value *DataPtrField;
+  InsertPointOrErrorTy GenResult =
+      DataPtrPtrGen(Builder.saveIP(), DescriptorAddr, DataPtrField);
+
+  if (!GenResult)
+    return GenResult.takeError();
+
+  Builder.CreateStore(Builder.CreatePointerBitCastOrAddrSpaceCast(
+                          DataPtr, Builder.getPtrTy(), ".ascast"),
+                      DataPtrField);
+
+  return Builder.saveIP();
+}
+
 Expected<Function *> OpenMPIRBuilder::emitListToGlobalCopyFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Type *ReductionsBufferTy,
     AttributeList FuncAttrs, ArrayRef<bool> IsByRef) {
@@ -3790,15 +3842,24 @@ Expected<Function *> OpenMPIRBuilder::emitListToGlobalReduceFunction(
         ReductionsBufferTy, BufferVD, 0, En.index());
 
     if (!IsByRef.empty() && IsByRef[En.index()]) {
-      Value *ByRefDataPtr;
+      // Get source descriptor from the reduce list argument
+      Value *ReduceList =
+          Builder.CreateLoad(Builder.getPtrTy(), ReduceListArgAddrCast);
+      Value *SrcElementPtrPtr =
+          Builder.CreateInBoundsGEP(RedListArrayTy, ReduceList,
+                                    {ConstantInt::get(IndexTy, 0),
+                                     ConstantInt::get(IndexTy, En.index())});
+      Value *SrcDescriptorAddr =
+          Builder.CreateLoad(Builder.getPtrTy(), SrcElementPtrPtr);
 
+      // Copy descriptor from source and update base_ptr to global buffer data
       InsertPointOrErrorTy GenResult =
-          RI.DataPtrPtrGen(Builder.saveIP(), ByRefAlloc, ByRefDataPtr);
+          generateReductionDescriptor(ByRefAlloc, GlobValPtr, SrcDescriptorAddr,
+                                      RI.ByRefAllocatedType, RI.DataPtrPtrGen);
 
       if (!GenResult)
         return GenResult.takeError();
 
-      Builder.CreateStore(GlobValPtr, ByRefDataPtr);
       Builder.CreateStore(ByRefAlloc, TargetElementPtrPtr);
     } else {
       Builder.CreateStore(GlobValPtr, TargetElementPtrPtr);
@@ -4024,13 +4085,23 @@ Expected<Function *> OpenMPIRBuilder::emitGlobalToListReduceFunction(
         ReductionsBufferTy, BufferVD, 0, En.index());
 
     if (!IsByRef.empty() && IsByRef[En.index()]) {
-      Value *ByRefDataPtr;
+      // Get source descriptor from the reduce list
+      Value *ReduceListVal =
+          Builder.CreateLoad(Builder.getPtrTy(), ReduceListArgAddrCast);
+      Value *SrcElementPtrPtr =
+          Builder.CreateInBoundsGEP(RedListArrayTy, ReduceListVal,
+                                    {ConstantInt::get(IndexTy, 0),
+                                     ConstantInt::get(IndexTy, En.index())});
+      Value *SrcDescriptorAddr =
+          Builder.CreateLoad(Builder.getPtrTy(), SrcElementPtrPtr);
+
+      // Copy descriptor from source and update base_ptr to global buffer data
       InsertPointOrErrorTy GenResult =
-          RI.DataPtrPtrGen(Builder.saveIP(), ByRefAlloc, ByRefDataPtr);
+          generateReductionDescriptor(ByRefAlloc, GlobValPtr, SrcDescriptorAddr,
+                                      RI.ByRefAllocatedType, RI.DataPtrPtrGen);
       if (!GenResult)
         return GenResult.takeError();
 
-      Builder.CreateStore(GlobValPtr, ByRefDataPtr);
       Builder.CreateStore(ByRefAlloc, TargetElementPtrPtr);
     } else {
       Builder.CreateStore(GlobValPtr, TargetElementPtrPtr);
@@ -5831,8 +5902,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyWorkshareLoopTarget(
 
   // Mark the body loop as region which needs to be extracted
   OI.EntryBB = CLI->getBody();
-  OI.ExitBB = CLI->getLatch()->splitBasicBlock(CLI->getLatch()->begin(),
-                                               "omp.prelatch", true);
+  OI.ExitBB = CLI->getLatch()->splitBasicBlockBefore(CLI->getLatch()->begin(),
+                                                     "omp.prelatch");
 
   // Prepare loop body for extraction
   Builder.restoreIP({CLI->getPreheader(), CLI->getPreheader()->begin()});
@@ -5956,11 +6027,11 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyWorkshareLoop(
   case OMPScheduleType::BaseGreedy:
   case OMPScheduleType::BaseBalanced:
   case OMPScheduleType::BaseSteal:
-  case OMPScheduleType::BaseGuidedSimd:
   case OMPScheduleType::BaseRuntimeSimd:
     assert(!ChunkSize &&
            "schedule type does not support user-defined chunk sizes");
     [[fallthrough]];
+  case OMPScheduleType::BaseGuidedSimd:
   case OMPScheduleType::BaseDynamicChunked:
   case OMPScheduleType::BaseGuidedChunked:
   case OMPScheduleType::BaseGuidedIterativeChunked:
@@ -6650,8 +6721,8 @@ void OpenMPIRBuilder::createIfVersion(CanonicalLoopInfo *CanonicalLoop,
 
   // The loop latch must have only one predecessor. Currently it is branched to
   // from both the 'then' and 'else' branches.
-  L->getLoopLatch()->splitBasicBlock(
-      L->getLoopLatch()->begin(), NamePrefix + ".pre_latch", /*Before=*/true);
+  L->getLoopLatch()->splitBasicBlockBefore(L->getLoopLatch()->begin(),
+                                           NamePrefix + ".pre_latch");
 
   // Ensure that the then block is added to the loop so we add the attributes in
   // the next step
@@ -7851,17 +7922,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTargetData(
     return InsertPointTy();
 
   Builder.restoreIP(CodeGenIP);
-  // Disable TargetData CodeGen on Device pass.
-  if (Config.IsTargetDevice.value_or(false)) {
-    if (BodyGenCB) {
-      InsertPointOrErrorTy AfterIP =
-          BodyGenCB(Builder.saveIP(), BodyGenTy::NoPriv);
-      if (!AfterIP)
-        return AfterIP.takeError();
-      Builder.restoreIP(*AfterIP);
-    }
-    return Builder.saveIP();
-  }
 
   bool IsStandAlone = !BodyGenCB;
   MapInfosTy *MapInfo;
@@ -8320,7 +8380,7 @@ static Expected<Function *> createOutlinedFunction(
     // multiple mappings (technically not legal in OpenMP, but there is a case
     // in Fortran for Common Blocks where this is neccesary), we will end up
     // with GEP's into this array inside the kernel, that refer to the Global
-    // but are technically seperate arguments to the kernel for all intents and
+    // but are technically separate arguments to the kernel for all intents and
     // purposes. If we have mapped a segment that requires a GEP into the 0-th
     // index, it will fold into an referal to the Global, if we then encounter
     // this folded GEP during replacement all of the references to the
@@ -8328,7 +8388,7 @@ static Expected<Function *> createOutlinedFunction(
     // that corresponds to it, including any other GEP's that refer to the
     // Global that may be other arguments. This will invalidate all of the other
     // preceding mapped arguments that refer to the same global that may be
-    // seperate segments. To prevent this, we defer global processing until all
+    // separate segments. To prevent this, we defer global processing until all
     // other processing has been performed.
     if (llvm::isa<llvm::GlobalValue, llvm::GlobalObject, llvm::GlobalVariable>(
             removeASCastIfPresent(Input))) {
@@ -9466,14 +9526,6 @@ void OpenMPIRBuilder::emitUDMapperArrayInitOrDel(
   if (IsInit) {
     // base != begin?
     Value *BaseIsBegin = Builder.CreateICmpNE(Base, Begin);
-    // IsPtrAndObj?
-    Value *PtrAndObjBit = Builder.CreateAnd(
-        MapType,
-        Builder.getInt64(
-            static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-                OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ)));
-    PtrAndObjBit = Builder.CreateIsNotNull(PtrAndObjBit);
-    BaseIsBegin = Builder.CreateAnd(BaseIsBegin, PtrAndObjBit);
     Cond = Builder.CreateOr(IsArray, BaseIsBegin);
     DeleteCond = Builder.CreateIsNull(
         DeleteBit,
@@ -10694,10 +10746,21 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
     if (ThreadLimit == nullptr)
       ThreadLimit = Builder.getInt32(0);
 
+    // The __kmpc_push_num_teams_51 function expects int32 as the arguments. So,
+    // truncate or sign extend the passed values to match the int32 parameters.
+    Value *NumTeamsLowerInt32 =
+        Builder.CreateSExtOrTrunc(NumTeamsLower, Builder.getInt32Ty());
+    Value *NumTeamsUpperInt32 =
+        Builder.CreateSExtOrTrunc(NumTeamsUpper, Builder.getInt32Ty());
+    Value *ThreadLimitInt32 =
+        Builder.CreateSExtOrTrunc(ThreadLimit, Builder.getInt32Ty());
+
     Value *ThreadNum = getOrCreateThreadID(Ident);
+
     createRuntimeFunctionCall(
         getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_push_num_teams_51),
-        {Ident, ThreadNum, NumTeamsLower, NumTeamsUpper, ThreadLimit});
+        {Ident, ThreadNum, NumTeamsLowerInt32, NumTeamsUpperInt32,
+         ThreadLimitInt32});
   }
   // Generate the body of teams.
   InsertPointTy AllocaIP(AllocaBB, AllocaBB->begin());

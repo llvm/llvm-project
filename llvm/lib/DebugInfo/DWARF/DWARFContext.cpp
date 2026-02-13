@@ -101,7 +101,7 @@ void fixupIndexV4(DWARFContext &C, DWARFUnitIndex &Index) {
                                                        Header.getOffset()}});
       if (!Iter.second) {
         logAllUnhandledErrors(
-            createError("Collision occured between for truncated offset 0x" +
+            createError("Collision occurred between for truncated offset 0x" +
                         Twine::utohexstr(TruncOffset)),
             errs());
         Map.clear();

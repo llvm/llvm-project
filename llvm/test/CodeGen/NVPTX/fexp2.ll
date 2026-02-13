@@ -389,4 +389,4 @@ declare bfloat @llvm.exp2.bf16(bfloat %val)
 
 declare <2 x bfloat> @llvm.exp2.v2bf16(<2 x bfloat> %val)
 
-attributes #0 = {"denormal-fp-math"="preserve-sign"}
+attributes #0 = {denormal_fpenv(preservesign)}

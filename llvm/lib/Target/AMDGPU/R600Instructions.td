@@ -736,22 +736,22 @@ def MIN_DX10 : R600_2OP_Helper <0x6, "MIN_DX10", fminnum>;
 // XXX: Use the defs in TargetSelectionDAG.td instead of intrinsics.
 def SETE : R600_2OP <
   0x08, "SETE",
-  [(set f32:$dst, (selectcc f32:$src0, f32:$src1, FP_ONE, FP_ZERO, COND_OEQ))]
+  [(set f32:$dst, (selectcc f32:$src0, f32:$src1, fpimm_one, fpimm_zero, COND_OEQ))]
 >;
 
 def SGT : R600_2OP <
   0x09, "SETGT",
-  [(set f32:$dst, (selectcc f32:$src0, f32:$src1, FP_ONE, FP_ZERO, COND_OGT))]
+  [(set f32:$dst, (selectcc f32:$src0, f32:$src1, fpimm_one, fpimm_zero, COND_OGT))]
 >;
 
 def SGE : R600_2OP <
   0xA, "SETGE",
-  [(set f32:$dst, (selectcc f32:$src0, f32:$src1, FP_ONE, FP_ZERO, COND_OGE))]
+  [(set f32:$dst, (selectcc f32:$src0, f32:$src1, fpimm_one, fpimm_zero, COND_OGE))]
 >;
 
 def SNE : R600_2OP <
   0xB, "SETNE",
-  [(set f32:$dst, (selectcc f32:$src0, f32:$src1, FP_ONE, FP_ZERO, COND_UNE_NE))]
+  [(set f32:$dst, (selectcc f32:$src0, f32:$src1, fpimm_one, fpimm_zero, COND_UNE_NE))]
 >;
 
 def SETE_DX10 : R600_2OP <
@@ -1004,19 +1004,19 @@ class FMA_Common <bits<5> inst> : R600_3OP <
 
 class CNDE_Common <bits<5> inst> : R600_3OP <
   inst, "CNDE",
-  [(set f32:$dst, (selectcc f32:$src0, FP_ZERO, f32:$src1, f32:$src2, COND_OEQ))]
+  [(set f32:$dst, (selectcc f32:$src0, fpimm_zero, f32:$src1, f32:$src2, COND_OEQ))]
 >;
 
 class CNDGT_Common <bits<5> inst> : R600_3OP <
   inst, "CNDGT",
-  [(set f32:$dst, (selectcc f32:$src0, FP_ZERO, f32:$src1, f32:$src2, COND_OGT))]
+  [(set f32:$dst, (selectcc f32:$src0, fpimm_zero, f32:$src1, f32:$src2, COND_OGT))]
 > {
   let Itinerary = VecALU;
 }
 
 class CNDGE_Common <bits<5> inst> : R600_3OP <
   inst, "CNDGE",
-  [(set f32:$dst, (selectcc f32:$src0, FP_ZERO, f32:$src1, f32:$src2, COND_OGE))]
+  [(set f32:$dst, (selectcc f32:$src0, fpimm_zero, f32:$src1, f32:$src2, COND_OGE))]
 > {
   let Itinerary = VecALU;
 }

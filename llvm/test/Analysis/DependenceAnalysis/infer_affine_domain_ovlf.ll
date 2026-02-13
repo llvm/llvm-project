@@ -11,9 +11,6 @@
 ;     A[offset] = 1;
 ; }
 ;
-; FIXME: DependenceAnalysis curently fails to detect a dependency between the
-; two stores.
-;
 ;  memory access    | i == 0 | i == 4
 ; ------------------|--------|---------
 ;  A[i]             | A[0]   |
@@ -24,7 +21,7 @@ define void @infer_affine_domain_ovfl(ptr %A) {
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
-; CHECK-ALL-NEXT:    da analyze - none!
+; CHECK-ALL-NEXT:    da analyze - output [<>]!
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.1, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ;

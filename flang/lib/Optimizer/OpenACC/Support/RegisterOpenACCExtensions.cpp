@@ -45,6 +45,8 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
     fir::LLVMPointerType::attachInterface<
         OpenACCPointerLikeModel<fir::LLVMPointerType>>(*ctx);
 
+    fir::LogicalType::attachInterface<OpenACCReducibleLogicalModel>(*ctx);
+
     fir::ArrayCoorOp::attachInterface<
         PartialEntityAccessModel<fir::ArrayCoorOp>>(*ctx);
     fir::CoordinateOp::attachInterface<
@@ -89,6 +91,13 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
   // Register CUF operation interfaces
   registry.addExtension(+[](mlir::MLIRContext *ctx, cuf::CUFDialect *dialect) {
     cuf::KernelOp::attachInterface<OffloadRegionModel<cuf::KernelOp>>(*ctx);
+  });
+
+  // Attach FIR dialect interfaces to OpenACC operations.
+  registry.addExtension(+[](mlir::MLIRContext *ctx,
+                            mlir::acc::OpenACCDialect *dialect) {
+    mlir::acc::LoopOp::attachInterface<OperationMoveModel<mlir::acc::LoopOp>>(
+        *ctx);
   });
 
   registerAttrsExtensions(registry);

@@ -2631,6 +2631,388 @@ llvm.func @willreturn() attributes { will_return } {
 
 // -----
 
+// CHECK-LABEL: @noreturn
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @noreturn() attributes { noreturn } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: noreturn
+
+// -----
+
+// CHECK-LABEL: @returnstwice
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @returnstwice() attributes { returns_twice } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: returns_twice
+
+// -----
+
+// CHECK-LABEL: @hot
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @hot() attributes { hot } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: hot
+
+// -----
+
+// CHECK-LABEL: @cold
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @cold() attributes { cold } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME:cold
+
+// -----
+
+// CHECK-LABEL: @noduplicate
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @noduplicate() attributes { noduplicate } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: noduplicate
+
+// -----
+
+// CHECK-LABEL: @no_caller_saved_registers
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @no_caller_saved_registers() attributes { no_caller_saved_registers } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: no_caller_saved_registers
+
+// -----
+
+// CHECK-LABEL: @nocallback
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @nocallback() attributes { nocallback } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: nocallback 
+
+// -----
+
+// CHECK-LABEL: @modular_format
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @modular_format(%arg : i32) attributes { modular_format = "ident,1,1,foo,bar" } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "modular-format"="ident,1,1,foo,bar"
+
+// -----
+
+// CHECK-LABEL: @no_builtins_all
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @no_builtins_all() attributes { nobuiltins = [] } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: no-builtins
+
+// -----
+
+// CHECK-LABEL: @no_builtins_2
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @no_builtins_2() attributes { nobuiltins = ["asdf", "defg"] } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: no-builtin-asdf
+// CHECK-SAME: no-builtin-defg
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @no_builtins_call_all
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @no_builtins_call_all() {
+  llvm.call @f() {nobuiltins = [] } : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: no-builtins
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @no_builtins_call_2
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @no_builtins_call_2() {
+  llvm.call @f() {nobuiltins = ["asdf", "defg"] } : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: no-builtin-asdf
+// CHECK-SAME: no-builtin-defg
+
+// -----
+
+// CHECK-LABEL: @allocsize_1
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @allocsize_1(%arg: i32, %arg2: i32) attributes { allocsize = array<i32: 1> } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: allocsize(1)
+
+// -----
+
+// CHECK-LABEL: @allocsize_2
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @allocsize_2(%arg: i32, %arg2: i32) attributes { allocsize = array<i32:0, 1> } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: allocsize(0,1)
+
+// -----
+
+llvm.func @f(i32, i32)
+
+// CHECK-LABEL: @allocsize_call_1
+// CHECK: call void @f({{.*}}) #[[ATTRS:[0-9]+]]
+llvm.func @allocsize_call_1() {
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  llvm.call @f(%0, %0) {allocsize = array<i32: 1> } : (i32, i32) -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: allocsize(1)
+
+// -----
+
+llvm.func @f(i32, i32)
+
+// CHECK-LABEL: @allocsize_call_2
+// CHECK: call void @f({{.*}}) #[[ATTRS:[0-9]+]]
+llvm.func @allocsize_call_2() {
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  llvm.call @f(%0, %0) {allocsize = array<i32: 1, 0> } : (i32, i32) -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: allocsize(1,0)
+
+// -----
+
+// CHECK-LABEL: @minsize
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @minsize() attributes { minsize } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: minsize
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @minsize_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @minsize_call() {
+  llvm.call @f() {minsize} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: minsize
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @optsize
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @optsize() attributes { optsize } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: optsize
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @optsize_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @optsize_call() {
+  llvm.call @f() {optsize} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: optsize
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @save_reg_params
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @save_reg_params() attributes { save_reg_params } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "save-reg-params"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @save_reg_params_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @save_reg_params_call() {
+  llvm.call @f() {save_reg_params} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "save-reg-params"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @zero_call_used_regs_1
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @zero_call_used_regs_1() attributes { zero_call_used_regs = "skip"} {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "zero-call-used-regs"="skip"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @zero_call_used_regs_2
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @zero_call_used_regs_2() attributes { zero_call_used_regs = "all"} {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "zero-call-used-regs"="all"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @zero_call_used_regs_call_1
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @zero_call_used_regs_call_1() {
+  llvm.call @f() {zero_call_used_regs="used_gpr_all"} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "zero-call-used-regs"="used_gpr_all"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @zero_call_used_regs_call_2
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @zero_call_used_regs_call_2() {
+  llvm.call @f() {zero_call_used_regs="used"} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "zero-call-used-regs"="used"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @trap_func_name_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @trap_func_name_call() {
+  llvm.call @f() {trap_func_name="whatever"} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "trap-func-name"="whatever"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @default_func_attrs
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @default_func_attrs() attributes {default_func_attrs={key="value", justKey}} {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "justKey"
+// CHECK-SAME: "key"="value"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @default_func_attrs
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @default_func_attrs_call() {
+  llvm.call @f() {default_func_attrs={key="value", justKey}} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "justKey"
+// CHECK-SAME: "key"="value"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @nobuiltin_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @nobuiltin_call() {
+  llvm.call @f() {nobuiltin} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: nobuiltin
+
+// -----
+
 llvm.func @f()
 
 // CHECK-LABEL: @convergent_call
@@ -2670,6 +3052,20 @@ llvm.func @willreturn_call() {
 
 // CHECK: #[[ATTRS]]
 // CHECK-SAME: willreturn
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @noreturn_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @noreturn_call() {
+  llvm.call @f() {noreturn} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: noreturn
 
 // -----
 

@@ -16,15 +16,12 @@
 #include <__config>
 #include <__functional/identity.h>
 #include <__fwd/bit_reference.h>
-#include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
-#include <__memory/pointer_traits.h>
 #include <__string/constexpr_c_functions.h>
 #include <__type_traits/desugars_to.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_equality_comparable.h>
-#include <__type_traits/is_same.h>
 #include <__type_traits/is_volatile.h>
 #include <__utility/move.h>
 
@@ -247,11 +244,11 @@ equal(_InputIterator1 __first1,
       _InputIterator2 __first2,
       _InputIterator2 __last2,
       _BinaryPredicate __pred) {
-  static constexpr bool __both_random_access =
+  constexpr bool __both_random_access =
       __has_random_access_iterator_category<_InputIterator1>::value &&
       __has_random_access_iterator_category<_InputIterator2>::value;
   if constexpr (__both_random_access) {
-    if (std::distance(__first1, __last1) != std::distance(__first2, __last2))
+    if (__last1 - __first1 != __last2 - __first2)
       return false;
   }
   __identity __proj;

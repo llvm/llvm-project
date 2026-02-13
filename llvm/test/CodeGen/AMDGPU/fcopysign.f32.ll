@@ -1177,17 +1177,12 @@ define float @v_copysign_f32_0_f64(double %sign) {
 }
 
 define amdgpu_ps i32 @s_copysign_f32_0_f16(half inreg %sign) {
-; SI-LABEL: s_copysign_f32_0_f16:
-; SI:       ; %bb.0:
-; SI-NEXT:    s_and_b32 s0, s0, 0x80000000
-; SI-NEXT:    ; return to shader part epilog
-;
-; VI-LABEL: s_copysign_f32_0_f16:
-; VI:       ; %bb.0:
-; VI-NEXT:    v_cvt_f32_f16_e32 v0, s0
-; VI-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
-; VI-NEXT:    v_readfirstlane_b32 s0, v0
-; VI-NEXT:    ; return to shader part epilog
+; SIVI-LABEL: s_copysign_f32_0_f16:
+; SIVI:       ; %bb.0:
+; SIVI-NEXT:    v_cvt_f32_f16_e32 v0, s0
+; SIVI-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
+; SIVI-NEXT:    v_readfirstlane_b32 s0, v0
+; SIVI-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: s_copysign_f32_0_f16:
 ; GFX11:       ; %bb.0:
@@ -1206,6 +1201,7 @@ define float @v_copysign_f32_0_f16(half %sign) {
 ; SI-LABEL: v_copysign_f32_0_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;

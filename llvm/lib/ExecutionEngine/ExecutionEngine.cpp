@@ -486,7 +486,7 @@ EngineBuilder &EngineBuilder::setMCJITMemoryManager(
                                    std::unique_ptr<RTDyldMemoryManager> mcjmm) {
   auto SharedMM = std::shared_ptr<RTDyldMemoryManager>(std::move(mcjmm));
   MemMgr = SharedMM;
-  Resolver = SharedMM;
+  Resolver = std::move(SharedMM);
   return *this;
 }
 

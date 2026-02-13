@@ -156,7 +156,7 @@ v_mul_f32 v0, null, v2
 // NOSICIVI: :[[@LINE-2]]:15: error: 'null' operand is not supported on this GPU
 
 v_mul_f64 v[0:1], null, null
-// GFX10: v_mul_f64 v[0:1], null, null            ; encoding: [0x00,0x00,0x65,0xd5,0x7d,0xfa,0x00,0x00]
+// GFX10: v_mul_f64 v[0:1], null, null            ; encoding: [0x00,0x00,0x65,0xd5,0x7d,0xfa,0x00,0x02]
 // NOSICIVI: :[[@LINE-2]]:19: error: 'null' operand is not supported on this GPU
 
 s_add_u32 null, null, null

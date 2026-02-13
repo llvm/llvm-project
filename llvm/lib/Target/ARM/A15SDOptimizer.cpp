@@ -432,11 +432,8 @@ unsigned A15SDOptimizer::createExtractSubreg(
     const DebugLoc &DL, unsigned DReg, unsigned Lane,
     const TargetRegisterClass *TRC) {
   Register Out = MRI->createVirtualRegister(TRC);
-  BuildMI(MBB,
-          InsertBefore,
-          DL,
-          TII->get(TargetOpcode::COPY), Out)
-    .addReg(DReg, 0, Lane);
+  BuildMI(MBB, InsertBefore, DL, TII->get(TargetOpcode::COPY), Out)
+      .addReg(DReg, {}, Lane);
 
   return Out;
 }

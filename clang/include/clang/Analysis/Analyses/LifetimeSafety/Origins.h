@@ -15,6 +15,7 @@
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_ORIGINS_H
 
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/TypeBase.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
@@ -124,7 +125,7 @@ bool doesDeclHaveStorage(const ValueDecl *D);
 /// variables and expressions.
 class OriginManager {
 public:
-  explicit OriginManager(ASTContext &AST) : AST(AST) {}
+  explicit OriginManager(ASTContext &AST, const Decl *D);
 
   /// Gets or creates the OriginList for a given ValueDecl.
   ///
@@ -143,6 +144,10 @@ public:
   ///
   /// \returns The OriginList, or nullptr for non-pointer rvalues.
   OriginList *getOrCreateList(const Expr *E);
+
+  /// Returns the OriginList for the implicit 'this' parameter if the current
+  /// declaration is an instance method.
+  std::optional<OriginList *> getThisOrigins() const { return ThisOrigins; }
 
   const Origin &getOrigin(OriginID ID) const;
 
@@ -172,6 +177,7 @@ private:
   llvm::BumpPtrAllocator ListAllocator;
   llvm::DenseMap<const clang::ValueDecl *, OriginList *> DeclToList;
   llvm::DenseMap<const clang::Expr *, OriginList *> ExprToList;
+  std::optional<OriginList *> ThisOrigins;
 };
 } // namespace clang::lifetimes::internal
 

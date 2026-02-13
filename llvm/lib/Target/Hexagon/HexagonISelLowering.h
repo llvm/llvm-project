@@ -49,8 +49,8 @@ public:
       const SmallVectorImpl<SDValue> &OutVals,
       const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG& DAG) const;
 
-  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
-                          MachineFunction &MF,
+  void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
+                          const CallBase &I, MachineFunction &MF,
                           unsigned Intrinsic) const override;
 
   bool isTruncateFree(Type *Ty1, Type *Ty2) const override;
@@ -282,10 +282,10 @@ public:
   AtomicExpansionKind shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
   AtomicExpansionKind shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
   AtomicExpansionKind
-  shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const override;
+  shouldExpandAtomicCmpXchgInIR(const AtomicCmpXchgInst *AI) const override;
 
   AtomicExpansionKind
-  shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override {
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override {
     return AtomicExpansionKind::LLSC;
   }
 
@@ -487,6 +487,8 @@ private:
   SDValue LowerHvxPred64ToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxFpToInt(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxIntToFp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxStore(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxLoad(SDValue Op, SelectionDAG &DAG) const;
 
   VectorPair SplitVectorOp(SDValue Op, SelectionDAG &DAG) const;
 

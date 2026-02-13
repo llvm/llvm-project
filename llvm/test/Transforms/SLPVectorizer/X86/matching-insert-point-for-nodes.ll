@@ -7,7 +7,7 @@ define i32 @test() {
 ; CHECK-NEXT:    br label %[[BB1:.*]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i32> [ [[TMP16:%.*]], %[[BB24:.*]] ], [ <i32 poison, i32 poison, i32 0, i32 0>, %[[BB]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <4 x i32> [ [[TMP13:%.*]], %[[BB24]] ], [ <i32 poison, i32 poison, i32 0, i32 0>, %[[BB]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <4 x i32> [ [[TMP17:%.*]], %[[BB24]] ], [ <i32 poison, i32 poison, i32 0, i32 0>, %[[BB]] ]
 ; CHECK-NEXT:    br i1 false, label %[[BB4:.*]], label %[[BB11:.*]]
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x double> [ zeroinitializer, %[[BB1]] ]
@@ -31,13 +31,12 @@ define i32 @test() {
 ; CHECK-NEXT:    br label %[[BB24]]
 ; CHECK:       [[BB24]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = lshr <4 x i32> [[TMP8]], <i32 poison, i32 poison, i32 0, i32 0>
-; CHECK-NEXT:    [[TMP10:%.*]] = and <4 x i32> [[TMP9]], <i32 poison, i32 poison, i32 -1, i32 0>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, <4 x i32> <i32 0, i32 1, i32 6, i32 3>
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i32> [[TMP10]], <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, <4 x i32> <i32 0, i32 1, i32 6, i32 3>
-; CHECK-NEXT:    [[TMP13]] = lshr <4 x i32> [[TMP11]], [[TMP12]]
+; CHECK-NEXT:    [[TMP10:%.*]] = and <4 x i32> [[TMP9]], <i32 poison, i32 poison, i32 0, i32 -1>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> <i32 poison, i32 poison, i32 poison, i32 0>, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
 ; CHECK-NEXT:    [[TMP14:%.*]] = lshr <4 x i32> [[TMP11]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = or <4 x i32> [[TMP11]], [[TMP10]]
-; CHECK-NEXT:    [[TMP16]] = shufflevector <4 x i32> [[TMP14]], <4 x i32> [[TMP15]], <4 x i32> <i32 poison, i32 poison, i32 6, i32 3>
+; CHECK-NEXT:    [[TMP16]] = shufflevector <4 x i32> [[TMP14]], <4 x i32> [[TMP15]], <4 x i32> <i32 poison, i32 poison, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP17]] = shufflevector <4 x i32> [[TMP16]], <4 x i32> <i32 poison, i32 poison, i32 poison, i32 0>, <4 x i32> <i32 poison, i32 poison, i32 2, i32 7>
 ; CHECK-NEXT:    br label %[[BB1]]
 ;
 bb:

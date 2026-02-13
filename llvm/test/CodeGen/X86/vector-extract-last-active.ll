@@ -8,32 +8,28 @@
 define i32 @extract_last_active_v4i32(<4 x i32> %a, <4 x i1> %c) {
 ; CHECK-LABEL: extract_last_active_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[3,3,3,3]
+; CHECK-NEXT:    movd %xmm2, %eax
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
 ; CHECK-NEXT:    movd %xmm2, %ecx
+; CHECK-NEXT:    movd %xmm1, %edx
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,1,1]
-; CHECK-NEXT:    movd %xmm2, %edx
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,3,3,3]
-; CHECK-NEXT:    movd %xmm1, %esi
+; CHECK-NEXT:    movd %xmm2, %esi
 ; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    xorl %edi, %edi
-; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    setne %dil
-; CHECK-NEXT:    leal (%rdi,%rdi,2), %r8d
-; CHECK-NEXT:    xorl %r9d, %r9d
-; CHECK-NEXT:    testl %edx, %edx
-; CHECK-NEXT:    setne %r9b
-; CHECK-NEXT:    xorl %edi, %edi
-; CHECK-NEXT:    testl %ecx, %ecx
-; CHECK-NEXT:    setne %dil
-; CHECK-NEXT:    addl %edi, %edi
-; CHECK-NEXT:    cmpb %dil, %r9b
-; CHECK-NEXT:    cmoval %r9d, %edi
-; CHECK-NEXT:    cmpb %r8b, %dil
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; CHECK-NEXT:    movd %xmm0, %edi
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; CHECK-NEXT:    movd %xmm0, %r8d
+; CHECK-NEXT:    cmpl %edi, %r8d
+; CHECK-NEXT:    cmoval %r8d, %edi
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,3,3,3]
+; CHECK-NEXT:    movd %xmm0, %r8d
+; CHECK-NEXT:    cmpl %r8d, %edi
 ; CHECK-NEXT:    cmovbel %r8d, %edi
-; CHECK-NEXT:    orl %edx, %eax
-; CHECK-NEXT:    orl %esi, %ecx
+; CHECK-NEXT:    orl %edx, %esi
 ; CHECK-NEXT:    orl %eax, %ecx
+; CHECK-NEXT:    orl %esi, %ecx
 ; CHECK-NEXT:    andb $1, %cl
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpb $1, %cl
@@ -48,28 +44,18 @@ define i32 @extract_last_active_v4i32_no_default(<4 x i32> %a, <4 x i1> %c) {
 ; CHECK-LABEL: extract_last_active_v4i32_no_default:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,3,3,3]
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    setne %cl
-; CHECK-NEXT:    leal (%rcx,%rcx,2), %eax
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; CHECK-NEXT:    movd %xmm0, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    testl %ecx, %ecx
-; CHECK-NEXT:    setne %dl
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; CHECK-NEXT:    cmpl %eax, %ecx
+; CHECK-NEXT:    cmoval %ecx, %eax
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,3,3,3]
 ; CHECK-NEXT:    movd %xmm0, %ecx
-; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    testl %ecx, %ecx
-; CHECK-NEXT:    setne %sil
-; CHECK-NEXT:    addl %esi, %esi
-; CHECK-NEXT:    cmpb %sil, %dl
-; CHECK-NEXT:    cmoval %edx, %esi
-; CHECK-NEXT:    cmpb %al, %sil
-; CHECK-NEXT:    cmovbel %eax, %esi
-; CHECK-NEXT:    movl -24(%rsp,%rsi,4), %eax
+; CHECK-NEXT:    cmpl %ecx, %eax
+; CHECK-NEXT:    cmovbel %ecx, %eax
+; CHECK-NEXT:    movl -24(%rsp,%rax,4), %eax
 ; CHECK-NEXT:    retq
   %res = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> %a, <4 x i1> %c, i32 poison)
   ret i32 %res
@@ -81,18 +67,15 @@ define i32 @extract_last_active_v2i32(<2 x i32> %a, <2 x i1> %c) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
 ; CHECK-NEXT:    movq %xmm2, %rcx
-; CHECK-NEXT:    movq %xmm1, %rax
+; CHECK-NEXT:    movq %xmm1, %rdx
 ; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movl %ecx, %edx
-; CHECK-NEXT:    orl %eax, %edx
+; CHECK-NEXT:    orl %ecx, %edx
 ; CHECK-NEXT:    andb $1, %dl
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpb $1, %dl
 ; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    testq %rcx, %rcx
-; CHECK-NEXT:    setne %dl
-; CHECK-NEXT:    orl -24(%rsp,%rdx,4), %eax
+; CHECK-NEXT:    andl $1, %ecx
+; CHECK-NEXT:    orl -24(%rsp,%rcx,4), %eax
 ; CHECK-NEXT:    retq
   %res = call i32 @llvm.experimental.vector.extract.last.active.v2i32(<2 x i32> %a, <2 x i1> %c, i32 -1)
   ret i32 %res
@@ -103,23 +86,24 @@ define i32 @extract_last_active_v2i32(<2 x i32> %a, <2 x i1> %c) {
 define i32 @extract_last_active_v3i32(<3 x i32> %a, <3 x i1> %c) {
 ; CHECK-LABEL: extract_last_active_v3i32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    movd %edx, %xmm1
+; CHECK-NEXT:    movd %esi, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,1,1]
+; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm1[0]
 ; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,2,3]
+; CHECK-NEXT:    movd %xmm0, %ecx
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[1,1,1,1]
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    cmpl %ecx, %eax
+; CHECK-NEXT:    cmoval %eax, %ecx
 ; CHECK-NEXT:    orl %esi, %edi
 ; CHECK-NEXT:    orl %edx, %edi
 ; CHECK-NEXT:    andb $1, %dil
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpb $1, %dil
 ; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    setne %cl
-; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    testl %edx, %edx
-; CHECK-NEXT:    setne %sil
-; CHECK-NEXT:    addl %esi, %esi
-; CHECK-NEXT:    cmpb %sil, %cl
-; CHECK-NEXT:    cmoval %ecx, %esi
-; CHECK-NEXT:    movzbl %sil, %ecx
 ; CHECK-NEXT:    orl -24(%rsp,%rcx,4), %eax
 ; CHECK-NEXT:    retq
   %res = call i32 @llvm.experimental.vector.extract.last.active.v3i32(<3 x i32> %a, <3 x i1> %c, i32 -1)
@@ -130,75 +114,53 @@ define i32 @extract_last_active_v3i32(<3 x i32> %a, <3 x i1> %c) {
 define i32 @extract_last_active_v8i32(<8 x i32> %a, <8 x i1> %c) {
 ; CHECK-LABEL: extract_last_active_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    .cfi_offset %rbx, -24
-; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movd %xmm2, %edi
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    pextrw $7, %xmm2, %eax
-; CHECK-NEXT:    pextrw $6, %xmm2, %edx
+; CHECK-NEXT:    pextrw $6, %xmm2, %esi
 ; CHECK-NEXT:    pextrw $5, %xmm2, %r8d
 ; CHECK-NEXT:    pextrw $4, %xmm2, %ecx
-; CHECK-NEXT:    pextrw $2, %xmm2, %esi
-; CHECK-NEXT:    pextrw $1, %xmm2, %r10d
 ; CHECK-NEXT:    pextrw $3, %xmm2, %r9d
+; CHECK-NEXT:    pextrw $2, %xmm2, %edi
+; CHECK-NEXT:    pextrw $1, %xmm2, %r11d
+; CHECK-NEXT:    movd %xmm2, %r10d
 ; CHECK-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    xorl %r11d, %r11d
-; CHECK-NEXT:    testl %r9d, %r9d
-; CHECK-NEXT:    setne %r11b
-; CHECK-NEXT:    leal (%r11,%r11,2), %r11d
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testl %r10d, %r10d
-; CHECK-NEXT:    setne %bl
-; CHECK-NEXT:    xorl %ebp, %ebp
-; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    setne %bpl
-; CHECK-NEXT:    addl %ebp, %ebp
-; CHECK-NEXT:    cmpb %bpl, %bl
-; CHECK-NEXT:    cmoval %ebx, %ebp
-; CHECK-NEXT:    cmpb %r11b, %bpl
-; CHECK-NEXT:    cmovbel %r11d, %ebp
-; CHECK-NEXT:    xorl %r11d, %r11d
-; CHECK-NEXT:    testl %ecx, %ecx
-; CHECK-NEXT:    setne %r11b
-; CHECK-NEXT:    shll $2, %r11d
-; CHECK-NEXT:    cmpb %r11b, %bpl
-; CHECK-NEXT:    cmoval %ebp, %r11d
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testl %r8d, %r8d
-; CHECK-NEXT:    setne %bl
-; CHECK-NEXT:    leal (%rbx,%rbx,4), %ebx
-; CHECK-NEXT:    cmpb %bl, %r11b
-; CHECK-NEXT:    cmovbel %ebx, %r11d
-; CHECK-NEXT:    testl %edx, %edx
-; CHECK-NEXT:    movl $6, %ebx
-; CHECK-NEXT:    cmovel %edx, %ebx
-; CHECK-NEXT:    cmpb %bl, %r11b
-; CHECK-NEXT:    cmoval %r11d, %ebx
-; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    movl $7, %r11d
-; CHECK-NEXT:    cmovel %eax, %r11d
-; CHECK-NEXT:    cmpb %r11b, %bl
-; CHECK-NEXT:    cmoval %ebx, %r11d
-; CHECK-NEXT:    andl $7, %r11d
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; CHECK-NEXT:    pextrw $2, %xmm2, %edx
+; CHECK-NEXT:    pextrw $1, %xmm2, %ebx
+; CHECK-NEXT:    cmpw %dx, %bx
+; CHECK-NEXT:    cmoval %ebx, %edx
+; CHECK-NEXT:    pextrw $3, %xmm2, %ebx
+; CHECK-NEXT:    cmpw %bx, %dx
+; CHECK-NEXT:    cmovbel %ebx, %edx
+; CHECK-NEXT:    pextrw $4, %xmm2, %ebx
+; CHECK-NEXT:    cmpw %bx, %dx
+; CHECK-NEXT:    cmovbel %ebx, %edx
+; CHECK-NEXT:    pextrw $5, %xmm2, %ebx
+; CHECK-NEXT:    cmpw %bx, %dx
+; CHECK-NEXT:    cmovbel %ebx, %edx
+; CHECK-NEXT:    pextrw $6, %xmm2, %ebx
+; CHECK-NEXT:    cmpw %bx, %dx
+; CHECK-NEXT:    cmovbel %ebx, %edx
+; CHECK-NEXT:    pextrw $7, %xmm2, %ebx
+; CHECK-NEXT:    cmpw %bx, %dx
+; CHECK-NEXT:    cmovbel %ebx, %edx
+; CHECK-NEXT:    andl $7, %edx
+; CHECK-NEXT:    orl %r11d, %r10d
+; CHECK-NEXT:    orl %r9d, %edi
 ; CHECK-NEXT:    orl %r10d, %edi
-; CHECK-NEXT:    orl %r9d, %esi
-; CHECK-NEXT:    orl %edi, %esi
 ; CHECK-NEXT:    orl %r8d, %ecx
-; CHECK-NEXT:    orl %edx, %ecx
 ; CHECK-NEXT:    orl %esi, %ecx
+; CHECK-NEXT:    orl %edi, %ecx
 ; CHECK-NEXT:    orl %eax, %ecx
 ; CHECK-NEXT:    andb $1, %cl
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpb $1, %cl
 ; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    orl -40(%rsp,%r11,4), %eax
+; CHECK-NEXT:    orl -32(%rsp,%rdx,4), %eax
 ; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %res = call i32 @llvm.experimental.vector.extract.last.active.v8i32(<8 x i32> %a, <8 x i1> %c, i32 -1)
@@ -284,4 +246,182 @@ define i32 @extract_last_active_v16i32(<16 x i32> %a, <16 x i1> %c) {
 ; CHECK-NEXT:    retq
   %res = call i32 @llvm.experimental.vector.extract.last.active.v16i32(<16 x i32> %a, <16 x i1> %c, i32 -1)
   ret i32 %res
+}
+
+; Test for older x86 CPUs (pre-AVX) where the mask type legalization creates
+; larger element types, requiring the step vector type adjustment.
+define i32 @extract_last_active_v4i32_penryn(<4 x i32> %a, <4 x i1> %c) "target-cpu"="penryn" {
+; CHECK-LABEL: extract_last_active_v4i32_penryn:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movaps %xmm0, %xmm2
+; CHECK-NEXT:    xorps %xmm3, %xmm3
+; CHECK-NEXT:    movaps %xmm1, %xmm0
+; CHECK-NEXT:    blendvps %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
+; CHECK-NEXT:    extractps $2, %xmm3, %eax
+; CHECK-NEXT:    extractps $1, %xmm3, %ecx
+; CHECK-NEXT:    cmpl %eax, %ecx
+; CHECK-NEXT:    cmoval %ecx, %eax
+; CHECK-NEXT:    extractps $3, %xmm3, %ecx
+; CHECK-NEXT:    cmpl %ecx, %eax
+; CHECK-NEXT:    cmovbel %ecx, %eax
+; CHECK-NEXT:    movaps %xmm2, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    shll $2, %eax
+; CHECK-NEXT:    movl -24(%rsp,%rax), %eax
+; CHECK-NEXT:    retq
+  %res = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> %a, <4 x i1> %c, i32 poison)
+  ret i32 %res
+}
+
+define i8 @extract_last_active_split(<32 x i8> %data, <32 x i8> %mask, i8 %passthru) {
+; CHECK-LABEL: extract_last_active_split:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pxor %xmm4, %xmm4
+; CHECK-NEXT:    movdqa %xmm2, %xmm5
+; CHECK-NEXT:    por %xmm3, %xmm5
+; CHECK-NEXT:    pcmpeqb %xmm4, %xmm3
+; CHECK-NEXT:    pcmpeqd %xmm6, %xmm6
+; CHECK-NEXT:    movdqa %xmm3, %xmm7
+; CHECK-NEXT:    pxor %xmm6, %xmm7
+; CHECK-NEXT:    movdqa %xmm7, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    pcmpeqb %xmm4, %xmm2
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    movdqa {{.*#+}} xmm7 = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; CHECK-NEXT:    pandn %xmm7, %xmm2
+; CHECK-NEXT:    movdqa %xmm2, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    pandn %xmm7, %xmm3
+; CHECK-NEXT:    movdqa %xmm3, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    pcmpeqb %xmm4, %xmm5
+; CHECK-NEXT:    pxor %xmm6, %xmm5
+; CHECK-NEXT:    movdqa %xmm5, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
+; CHECK-NEXT:    cmpb %cl, %dl
+; CHECK-NEXT:    cmoval %edx, %ecx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
+; CHECK-NEXT:    cmpb %dl, %cl
+; CHECK-NEXT:    cmovbel %edx, %ecx
+; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %edx
+; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %esi
+; CHECK-NEXT:    cmpb %dl, %cl
+; CHECK-NEXT:    cmovbel %edx, %ecx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
+; CHECK-NEXT:    cmpb %dl, %cl
+; CHECK-NEXT:    cmovbel %edx, %ecx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
+; CHECK-NEXT:    cmpb %dl, %cl
+; CHECK-NEXT:    cmovbel %edx, %ecx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
+; CHECK-NEXT:    cmpb %dl, %cl
+; CHECK-NEXT:    cmovbel %edx, %ecx
+; CHECK-NEXT:    cmpb %sil, %cl
+; CHECK-NEXT:    cmovbel %esi, %ecx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
+; CHECK-NEXT:    cmpb %dl, %cl
+; CHECK-NEXT:    cmovbel %edx, %ecx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
+; CHECK-NEXT:    cmpb %dl, %cl
+; CHECK-NEXT:    cmovbel %edx, %ecx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
+; CHECK-NEXT:    cmpb %dl, %cl
+; CHECK-NEXT:    cmovbel %edx, %ecx
+; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %edx
+; CHECK-NEXT:    cmpb %dl, %cl
+; CHECK-NEXT:    cmovbel %edx, %ecx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
+; CHECK-NEXT:    cmpb %dl, %cl
+; CHECK-NEXT:    cmovbel %edx, %ecx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
+; CHECK-NEXT:    cmpb %dl, %cl
+; CHECK-NEXT:    cmovbel %edx, %ecx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
+; CHECK-NEXT:    cmpb %dl, %cl
+; CHECK-NEXT:    cmovbel %edx, %ecx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
+; CHECK-NEXT:    cmpb %dl, %sil
+; CHECK-NEXT:    cmoval %esi, %edx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
+; CHECK-NEXT:    cmpb %sil, %dl
+; CHECK-NEXT:    cmovbel %esi, %edx
+; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %esi
+; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %r8d
+; CHECK-NEXT:    cmpb %sil, %dl
+; CHECK-NEXT:    cmovbel %esi, %edx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
+; CHECK-NEXT:    cmpb %sil, %dl
+; CHECK-NEXT:    cmovbel %esi, %edx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
+; CHECK-NEXT:    cmpb %sil, %dl
+; CHECK-NEXT:    cmovbel %esi, %edx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
+; CHECK-NEXT:    cmpb %sil, %dl
+; CHECK-NEXT:    cmovbel %esi, %edx
+; CHECK-NEXT:    cmpb %r8b, %dl
+; CHECK-NEXT:    cmovbel %r8d, %edx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
+; CHECK-NEXT:    cmpb %sil, %dl
+; CHECK-NEXT:    cmovbel %esi, %edx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
+; CHECK-NEXT:    cmpb %sil, %dl
+; CHECK-NEXT:    cmovbel %esi, %edx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
+; CHECK-NEXT:    cmpb %sil, %dl
+; CHECK-NEXT:    cmovbel %esi, %edx
+; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %esi
+; CHECK-NEXT:    cmpb %sil, %dl
+; CHECK-NEXT:    cmovbel %esi, %edx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
+; CHECK-NEXT:    cmpb %sil, %dl
+; CHECK-NEXT:    cmovbel %esi, %edx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
+; CHECK-NEXT:    cmpb %sil, %dl
+; CHECK-NEXT:    cmovbel %esi, %edx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
+; CHECK-NEXT:    cmpb %sil, %dl
+; CHECK-NEXT:    cmovbel %esi, %edx
+; CHECK-NEXT:    addl $16, %edx
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %al
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %al
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %al
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %al
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %al
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %al
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %al
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %al
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %al
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %al
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %al
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %al
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %al
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %al
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %al
+; CHECK-NEXT:    testb $1, %al
+; CHECK-NEXT:    cmoveq %rcx, %rdx
+; CHECK-NEXT:    andl $31, %edx
+; CHECK-NEXT:    movzbl -40(%rsp,%rdx), %eax
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    testb $1, %cl
+; CHECK-NEXT:    cmovel %edi, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
+  %notzero = icmp ne <32 x i8> %mask, zeroinitializer
+  %res = call i8 @llvm.experimental.vector.extract.last.active.v16i8(<32 x i8> %data, <32 x i1> %notzero, i8 %passthru)
+  ret i8 %res
 }

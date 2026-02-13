@@ -134,12 +134,13 @@ NVPTXSubtarget &NVPTXSubtarget::initializeSubtargetDependencies(StringRef CPU,
     PTXVersion = MinPTX;
   } else if (PTXVersion < MinPTX) {
     // User explicitly requested an insufficient PTX version.
-    reportFatalUsageError(formatv(
-        "PTX version {0}.{1} does not support target '{2}'. "
-        "Minimum required PTX version is {3}.{4}. "
-        "Either remove the PTX version to use the default, "
-        "or increase it to at least {3}.{4}.",
-        PTXVersion / 10, PTXVersion % 10, CPU, MinPTX / 10, MinPTX % 10));
+    reportFatalUsageError(
+        formatv("PTX version {0}.{1} does not support target '{2}'. "
+                "Minimum required PTX version is {3}.{4}. "
+                "Either remove the PTX version to use the default, "
+                "or increase it to at least {3}.{4}.",
+                PTXVersion / 10, PTXVersion % 10, getTargetName(), MinPTX / 10,
+                MinPTX % 10));
   }
 
   return *this;
