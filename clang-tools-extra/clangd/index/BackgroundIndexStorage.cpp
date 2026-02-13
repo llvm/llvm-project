@@ -26,13 +26,32 @@ namespace clang {
 namespace clangd {
 namespace {
 
-// Apply path mapping to file URI. Return original URI if no mapping applies.
-std::string applyPathMappingToURI(llvm::StringRef URI,
-                                  PathMapping::Direction Direction,
-                                  const PathMappings &Mappings) {
-  if (auto Mapped = doPathMapping(URI, Direction, Mappings))
+// Apply path mapping to file:// URIs or raw file paths. Return unmodified
+// path if no mapping was applied.
+std::string applyPathMapping(llvm::StringRef S,
+                             PathMapping::Direction Direction,
+                             const PathMappings &Mappings) {
+  // First, attempt URI mapping
+  if (auto Mapped = doPathMapping(S, Direction, Mappings))
     return std::move(*Mapped);
-  return URI.str();
+  // If that didn't match, attempt file path mapping. Paths processed here may
+  // be standalone or after a flag: -I, -isystem, and so on.
+  for (const auto &Mapping : Mappings) {
+    const std::string &From =
+        Direction == PathMapping::Direction::ClientToServer
+            ? Mapping.ClientPath
+            : Mapping.ServerPath;
+    const std::string &To = Direction == PathMapping::Direction::ClientToServer
+                                ? Mapping.ServerPath
+                                : Mapping.ClientPath;
+    size_t Pos = S.find(From);
+    if (Pos != llvm::StringRef::npos) {
+      llvm::StringRef After = S.substr(Pos + From.size());
+      if (After.empty() || After.front() == '/')
+        return (S.substr(0, Pos) + To + After).str();
+    }
+  }
+  return S.str();
 }
 
 std::string getShardPathFromFilePath(llvm::StringRef ShardRoot,
@@ -64,14 +83,14 @@ public:
       : DiskShardRoot(Directory), Mappings(std::move(Mappings)) {
     // Background path mappings are specified as /local/path=/canonical/path.
     // During load we transform from canonical to local (ServerToClient).
-    LoadTransform = [this](llvm::StringRef URI) {
-      return applyPathMappingToURI(URI, PathMapping::Direction::ServerToClient,
-                                   this->Mappings);
+    LoadTransform = [this](llvm::StringRef S) {
+      return applyPathMapping(S, PathMapping::Direction::ServerToClient,
+                              this->Mappings);
     };
     // During store we transform from local to canonical (ClientToServer).
-    StoreTransform = [this](llvm::StringRef URI) {
-      return applyPathMappingToURI(URI, PathMapping::Direction::ClientToServer,
-                                   this->Mappings);
+    StoreTransform = [this](llvm::StringRef S) {
+      return applyPathMapping(S, PathMapping::Direction::ClientToServer,
+                              this->Mappings);
     };
     std::error_code OK;
     std::error_code EC = llvm::sys::fs::create_directories(DiskShardRoot);

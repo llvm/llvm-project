@@ -504,12 +504,24 @@ TEST(SerializationTest, URITransformRoundTrip) {
                         "file:///home/project/inc2.h"};
   Sources[IGN.URI] = IGN;
 
+  tooling::CompileCommand Cmd;
+  Cmd.Directory = "/home/project/src";
+  Cmd.CommandLine = {"/usr/bin/clang++",
+                     "-I/home/project/include",
+                     "-isystem/home/project/sysinclude",
+                     "-isystem",
+                     "/home/project/sysinclude2",
+                     "-DFOO=bar",
+                     "-DROOT=/home/project/src",
+                     "/home/project/src/test.cpp"};
+
   // Serialize the index directly (no transform) to produce the canonical
   // on-disk format containing /home/project paths.
   IndexFileOut Out;
   Out.Symbols = &Symbols;
   Out.Refs = &Refs;
   Out.Sources = &Sources;
+  Out.Cmd = &Cmd;
   Out.Format = IndexFileFormat::RIFF;
   std::string Serialized = llvm::to_string(Out);
 
@@ -520,6 +532,8 @@ TEST(SerializationTest, URITransformRoundTrip) {
   EXPECT_EQ(llvm::StringRef(Raw->Symbols->find(Sym.ID)->Definition.FileURI),
             "file:///home/project/def.cpp")
       << "On-disk shard should contain /home/project paths";
+  ASSERT_TRUE(Raw->Cmd);
+  EXPECT_EQ(Raw->Cmd->Directory, "/home/project/src");
 
   // Load with the transform to map /home/project -> /workarea/project.
   auto In = readIndexFile(Serialized, SymbolOrigin::Background, &LoadTransform);
@@ -559,12 +573,24 @@ TEST(SerializationTest, URITransformRoundTrip) {
                           "file:///workarea/project/inc2.h"))
       << "IncludeGraphNode.DirectIncludes not mapped";
 
+  ASSERT_TRUE(In->Cmd);
+  EXPECT_EQ(In->Cmd->Directory, "/workarea/project/src")
+      << "Cmd.Directory not mapped";
+  EXPECT_THAT(In->Cmd->CommandLine,
+              ElementsAre("/usr/bin/clang++", "-I/workarea/project/include",
+                          "-isystem/workarea/project/sysinclude", "-isystem",
+                          "/workarea/project/sysinclude2", "-DFOO=bar",
+                          "-DROOT=/workarea/project/src",
+                          "/workarea/project/src/test.cpp"))
+      << "Cmd.CommandLine not mapped";
+
   // Re-serialize with the store transform. On-disk content should be
   // back in /home/project paths so the index remains portable.
   IndexFileOut WorkareaOut;
   WorkareaOut.Symbols = &*In->Symbols;
   WorkareaOut.Refs = &*In->Refs;
   WorkareaOut.Sources = &*In->Sources;
+  WorkareaOut.Cmd = In->Cmd ? &*In->Cmd : nullptr;
   WorkareaOut.Format = IndexFileFormat::RIFF;
   WorkareaOut.Transform = &StoreTransform;
   std::string WorkareaSerialized = llvm::to_string(WorkareaOut);
@@ -576,6 +602,16 @@ TEST(SerializationTest, URITransformRoundTrip) {
       llvm::StringRef(Restored->Symbols->find(Sym.ID)->Definition.FileURI),
       "file:///home/project/def.cpp")
       << "Store transform should restore /home/project paths on disk";
+  ASSERT_TRUE(Restored->Cmd);
+  EXPECT_EQ(Restored->Cmd->Directory, "/home/project/src")
+      << "Store transform should restore Cmd.Directory on disk";
+  EXPECT_THAT(Restored->Cmd->CommandLine,
+              ElementsAre("/usr/bin/clang++", "-I/home/project/include",
+                          "-isystem/home/project/sysinclude", "-isystem",
+                          "/home/project/sysinclude2", "-DFOO=bar",
+                          "-DROOT=/home/project/src",
+                          "/home/project/src/test.cpp"))
+      << "Store transform should restore Cmd.CommandLine on disk";
 }
 
 } // namespace

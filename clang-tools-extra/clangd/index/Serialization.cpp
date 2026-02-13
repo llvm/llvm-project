@@ -184,8 +184,11 @@ public:
   // Add a string to the table. Overwrites S if an identical string exists.
   // If path remapping is enabled, transform and store the new value.
   void intern(llvm::StringRef &S) {
-    if (Transform && S.starts_with("file://"))
-      S = TransformSaver.save((*Transform)(S));
+    if (Transform) {
+      std::string Transformed = (*Transform)(S);
+      if (Transformed != S)
+        S = TransformSaver.save(std::move(Transformed));
+    }
     S = *Unique.insert(S).first;
   }
   // Finalize the table and write it to OS. No more strings may be added.
@@ -261,8 +264,7 @@ readStringTable(llvm::StringRef Data, const URITransform *Transform = nullptr) {
     if (Len == llvm::StringRef::npos)
       return error("Bad string table: not null terminated");
     llvm::StringRef S = R.consume(Len);
-    // Apply any provided path mapping transform to incoming file:// URIs
-    if (Transform && S.starts_with("file://"))
+    if (Transform)
       Table.Strings.push_back(Saver.save((*Transform)(S)));
     else
       Table.Strings.push_back(Saver.save(S));
