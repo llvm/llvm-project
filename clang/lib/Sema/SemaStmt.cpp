@@ -1996,10 +1996,10 @@ namespace {
     }
 
     void VisitDeclRefExpr(DeclRefExpr *E) {
-      if (VarDecl *VD = dyn_cast<VarDecl>(E->getDecl())) {
+      if (const auto *VD = dyn_cast<VarDecl>(E->getDecl())) {
         if (Decls.count(VD))
           FoundDecl = true;
-      } else if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(E->getDecl());
+      } else if (const auto *MD = dyn_cast<CXXMethodDecl>(E->getDecl());
                  MD && isLambdaCallOperator(MD)) {
         // FIXME: This has limitations handling updates to the loop control
         // variable that occur indirectly inside a lambda called from the loop
@@ -2018,7 +2018,7 @@ namespace {
           if (CK != LCK_ByRef)
             continue;
 
-          VarDecl *VD = dyn_cast<VarDecl>(Capture.getCapturedVar());
+          const auto *VD = dyn_cast<VarDecl>(Capture.getCapturedVar());
           if (VD && Decls.count(VD))
             FoundDecl = true;
         }
