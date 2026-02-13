@@ -1327,7 +1327,7 @@ with InsertionPoint(module.body):
     add3 = AddOp(add2, three)
 ```
 
-Dialects can also be defined directly through the IRDL dialect bindings in Python.
+Dialects can also be defined through the IRDL dialect bindings in Python.
 The IRDL bindings offer a `load_dialects` function that
 converts an MLIR module containing `irdl.dialect` ops into MLIR dialects.
 For further details, see the documentation of [the IRDL dialect](../Dialects/IRDL.md).
