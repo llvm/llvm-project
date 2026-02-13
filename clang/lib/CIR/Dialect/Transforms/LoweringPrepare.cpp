@@ -872,6 +872,10 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
 }
 
 void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
+  // Static locals are handled separately via guard variables.
+  if (op.getStaticLocal())
+    return;
+
   mlir::Region &ctorRegion = op.getCtorRegion();
   mlir::Region &dtorRegion = op.getDtorRegion();
 
