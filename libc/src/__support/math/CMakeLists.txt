@@ -1714,6 +1714,7 @@ add_header_library(
     .expxf16_utils
     libc.hdr.fenv_macros
     libc.src.__support.CPP.array
+    libc.src.__support.common
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.polyeval
@@ -1722,7 +1723,6 @@ add_header_library(
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.nearest_integer
     libc.src.__support.FPUtil.rounding_mode
-    libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
     libc.include.llvm-libc-macros.float16_macros
