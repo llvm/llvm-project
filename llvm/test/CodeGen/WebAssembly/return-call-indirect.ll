@@ -2,7 +2,7 @@
 ; RUN: llc < %s -asm-verbose=false -mattr=+reference-types,+tail-call -O2 | FileCheck --check-prefixes=CHECK,REF %s
 ; RUN: llc < %s -asm-verbose=false -mattr=+tail-call -O2 --filetype=obj | obj2yaml | FileCheck --check-prefix=OBJ %s
 
-; Test that compilation units with call_indirect but without any
+; Test that compilation units with return_call_indirect but without any
 ; function pointer declarations still get a table.
 
 target triple = "wasm32-unknown-unknown"
