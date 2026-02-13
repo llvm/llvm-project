@@ -54,6 +54,7 @@
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <memory>
@@ -718,8 +719,7 @@ private:
     }
 
     void track(const MaterializeTemporaryExpr *MTE) {
-      if (MTE)
-        CollectedMTEs.push_back(MTE);
+      CollectedMTEs.push_back(MTE);
     }
 
     const bool IsConditional = false;
@@ -2088,7 +2088,6 @@ void CFGBuilder::addScopeChangesHandling(LocalScope::const_iterator SrcPos,
 }
 
 void CFGBuilder::addFullExprCleanupMarker(TempDtorContext &Context) {
-
   CFGFullExprCleanup::MTEVecTy *ExpiringMTEs = nullptr;
   BumpVectorContext &BVC = cfg->getBumpVectorContext();
 
@@ -6081,12 +6080,24 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
     OS << " (Lifetime ends)";
     break;
 
-  case CFGElement::Kind::FullExprCleanup:
-    OS << "(FullExprCleanup collected "
-       << std::to_string(
-              E.castAs<CFGFullExprCleanup>().getExpiringMTEs().size())
-       << " MTEs)";
+  case CFGElement::Kind::FullExprCleanup: {
+    auto MTEs = E.castAs<CFGFullExprCleanup>().getExpiringMTEs();
+    size_t MTECount = MTEs.size();
+    OS << "(FullExprCleanup collected " << MTECount
+       << (MTECount > 1 ? " MTEs: " : " MTE: ");
+    bool FirstMTE = true;
+    for (const MaterializeTemporaryExpr *MTE : MTEs) {
+      if (!FirstMTE)
+        OS << ", ";
+      if (!Helper.handledStmt(MTE->getSubExpr(), OS)) {
+        // Pretty print the sub-expresion as a fallback
+        MTE->printPretty(OS, &Helper, PrintingPolicy(Helper.getLangOpts()));
+      };
+      FirstMTE = false;
+    }
+    OS << ")";
     break;
+  }
 
   case CFGElement::Kind::LoopExit:
     OS << E.castAs<CFGLoopExit>().getLoopStmt()->getStmtClassName()

@@ -110,8 +110,26 @@ void FactsGenerator::run() {
                    Element.getAs<CFGLifetimeEnds>())
         handleLifetimeEnds(*LifetimeEnds);
       else if (std::optional<CFGFullExprCleanup> FullExprCleanup =
-                   Element.getAs<CFGFullExprCleanup>())
-        handleFullExprCleanup(*FullExprCleanup);
+                   Element.getAs<CFGFullExprCleanup>()) {
+        ArrayRef<const MaterializeTemporaryExpr *> CollectedMTEs =
+            FullExprCleanup->getExpiringMTEs();
+        // Iterate through all loans to see if any expire.
+        for (const auto *Loan : FactMgr.getLoanMgr().getLoans()) {
+          if (const auto *PL = dyn_cast<PathLoan>(Loan)) {
+            // Check if the loan is for a temporary materialization and if that
+            // storage location is the one being destructed.
+            const AccessPath &AP = PL->getAccessPath();
+            const MaterializeTemporaryExpr *Path =
+                AP.getAsMaterializeTemporaryExpr();
+            if (!Path)
+              continue;
+            if (llvm::is_contained(CollectedMTEs, Path)) {
+              CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
+                  PL->getID(), Path->getEndLoc()));
+            }
+          }
+        }
+      }
     }
     if (Block == &Cfg.getExit())
       handleExitBlock();
@@ -443,27 +461,6 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
       if (Path == LifetimeEndsVD)
         CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
             BL->getID(), LifetimeEnds.getTriggerStmt()->getEndLoc()));
-    }
-  }
-}
-
-void FactsGenerator::handleFullExprCleanup(
-    const CFGFullExprCleanup &FullExprCleanup) {
-  ArrayRef<const MaterializeTemporaryExpr *> CollectedMTEs =
-      FullExprCleanup.getExpiringMTEs();
-  // Iterate through all loans to see if any expire.
-  for (const auto *Loan : FactMgr.getLoanMgr().getLoans()) {
-    if (const auto *PL = dyn_cast<PathLoan>(Loan)) {
-      // Check if the loan is for a temporary materialization and if that
-      // storage location is the one being destructed.
-      const AccessPath &AP = PL->getAccessPath();
-      const MaterializeTemporaryExpr *Path = AP.getAsMaterializeTemporaryExpr();
-      if (!Path)
-        continue;
-      if (is_contained(CollectedMTEs, Path)) {
-        CurrentBlockFacts.push_back(
-            FactMgr.createFact<ExpireFact>(PL->getID(), Path->getEndLoc()));
-      }
     }
   }
 }
