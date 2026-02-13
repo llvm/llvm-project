@@ -1720,25 +1720,25 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       if (!RepOrWidenR || !vputils::isSingleScalar(RepOrWidenR))
         continue;
 
-      // Skip recipes for which conversion to single-scalar does introduce
-      // additional broadcasts. No extra broadcasts are needed, if either only
-      // the scalars of the recipe are used, or at least one of the operands
-      // would require a broadcast. In the latter case, the single-scalar may
-      // need to be broadcasted, but another broadcast is removed.
-      if (!all_of(RepOrWidenR->users(),
-                  [RepOrWidenR](const VPUser *U) {
-                    if (auto *VPI = dyn_cast<VPInstruction>(U)) {
-                      unsigned Opcode = VPI->getOpcode();
-                      if (Opcode == VPInstruction::ExtractLastLane ||
-                          Opcode == VPInstruction::ExtractLastPart ||
-                          Opcode == VPInstruction::ExtractPenultimateElement)
-                        return true;
-                    }
+      // Predicate to check if a user of Op introduces extra broadcasts.
+      auto IntroducesBCastOf = [](const VPValue *Op) {
+        return [Op](const VPUser *U) {
+          if (auto *VPI = dyn_cast<VPInstruction>(U)) {
+            if (is_contained({VPInstruction::ExtractLastLane,
+                              VPInstruction::ExtractLastPart,
+                              VPInstruction::ExtractPenultimateElement},
+                             VPI->getOpcode()))
+              return false;
+          }
+          return !U->usesScalars(Op);
+        };
+      };
 
-                    return U->usesScalars(RepOrWidenR);
-                  }) &&
-          none_of(RepOrWidenR->operands(), [RepOrWidenR](VPValue *Op) {
-            if (Op->getSingleUser() != RepOrWidenR)
+      if (any_of(RepOrWidenR->users(), IntroducesBCastOf(RepOrWidenR)) &&
+          none_of(RepOrWidenR->operands(), [&](VPValue *Op) {
+            if (any_of(
+                    make_filter_range(Op->users(), not_equal_to(RepOrWidenR)),
+                    IntroducesBCastOf(Op)))
               return false;
             // Non-constant live-ins require broadcasts, while constants do not
             // need explicit broadcasts.
