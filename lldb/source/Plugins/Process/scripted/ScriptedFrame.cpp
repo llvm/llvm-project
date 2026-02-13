@@ -316,7 +316,8 @@ lldb::ValueObjectSP ScriptedFrame::GetValueObjectForFrameVariable(
 
 lldb::ValueObjectSP ScriptedFrame::GetValueForVariableExpressionPath(
     llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
-    uint32_t options, lldb::VariableSP &var_sp, Status &error) {
+    uint32_t options, lldb::VariableSP &var_sp, Status &error,
+    lldb::DILMode mode) {
   // Unless the frame implementation knows how to create variables (which it
   // doesn't), we can't construct anything for the variable. This may seem
   // somewhat out of place, but it's basically because of how this API is used -
