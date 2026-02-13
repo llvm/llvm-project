@@ -285,7 +285,7 @@ void BaseRequestHandler::PrintWelcomeMessage() const {
     OS << "\"<lldb-cmd>\" or \"help [<lldb-cmd>]\".\r\n";
     break;
   case ReplMode::Variable:
-    OS << "\"<variable>\" or \"" << dap.configuration.commandEscapePrefix.str()
+    OS << "\"<variable>\" or \"" << dap.configuration.commandEscapePrefix
        << "help [<lldb-cmd>]\".\r\n";
     break;
   }

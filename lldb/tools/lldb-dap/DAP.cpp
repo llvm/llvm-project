@@ -123,7 +123,7 @@ static std::string capitalize(llvm::StringRef str) {
 llvm::StringRef DAP::debug_adapter_path = "";
 
 DAP::DAP(Log &log, const ReplMode default_repl_mode,
-         std::vector<String> pre_init_commands, bool no_lldbinit,
+         const std::vector<String> &pre_init_commands, bool no_lldbinit,
          llvm::StringRef client_name, DAPTransport &transport, MainLoop &loop)
     : log(log), transport(transport), broadcaster("lldb-dap"),
       progress_event_reporter(
@@ -413,7 +413,7 @@ void DAP::SendOutput(OutputType o, const llvm::StringRef output) {
     llvm::json::Object event(CreateEventObject("output"));
     llvm::json::Object body{
         {"category", category},
-        {"output", protocol::String(output.slice(idx, end + 1).str())},
+        {"output", protocol::String(output.slice(idx, end + 1))},
     };
     event.try_emplace("body", std::move(body));
     SendJSON(llvm::json::Value(std::move(event)));
@@ -604,7 +604,7 @@ ReplMode DAP::DetectReplMode(lldb::SBFrame &frame, std::string &expression,
                              bool partial_expression) {
   // Check for the escape hatch prefix.
   if (llvm::StringRef expr_ref = expression;
-      expr_ref.consume_front(configuration.commandEscapePrefix.str())) {
+      expr_ref.consume_front(configuration.commandEscapePrefix)) {
     expression = expr_ref;
     return ReplMode::Command;
   }
@@ -799,9 +799,9 @@ lldb::SBTarget DAP::CreateTarget(lldb::SBError &error) {
   // omitted at all), so it is good to leave the user an opportunity to specify
   // those. Any of those three can be left empty.
   auto target = this->debugger.CreateTarget(
-      /*filename=*/configuration.program.str().data(),
-      /*target_triple=*/configuration.targetTriple.str().data(),
-      /*platform_name=*/configuration.platformName.str().data(),
+      /*filename=*/configuration.program.c_str(),
+      /*target_triple=*/configuration.targetTriple.c_str(),
+      /*platform_name=*/configuration.platformName.c_str(),
       /*add_dependent_modules=*/true, // Add dependent modules.
       error);
 
@@ -846,15 +846,13 @@ bool DAP::HandleObject(const Message &M) {
     });
 
     auto handler_pos = request_handlers.find(req->command);
-    dispatcher.Set("client_data",
-                   llvm::Twine("request_command:", req->command).str());
+    dispatcher.Set("client_data", "request_command:" + req->command);
     if (handler_pos != request_handlers.end()) {
       handler_pos->second->Run(*req);
       return true; // Success
     }
 
-    dispatcher.Set(
-        "error", llvm::Twine("unhandled-command:" + req->command.str()).str());
+    dispatcher.Set("error", "unhandled-command:" + req->command);
     DAP_LOG(log, "error: unhandled command '{0}'", req->command);
     return false; // Fail
   }
@@ -877,8 +875,7 @@ bool DAP::HandleObject(const Message &M) {
     // Result should be given, use null if not.
     if (resp->success) {
       (*response_handler)(resp->body);
-      dispatcher.Set("client_data",
-                     llvm::Twine("response_command:", resp->command).str());
+      dispatcher.Set("client_data", "response_command:" + resp->command);
     } else {
       llvm::StringRef message = "Unknown error, response failed";
       if (resp->message) {
@@ -968,7 +965,7 @@ void DAP::ClearCancelRequest(const CancelArguments &args) {
 
 template <typename T>
 static std::optional<T> getArgumentsIfRequest(const Request &req,
-                                              llvm::StringLiteral command) {
+                                              const protocol::String &command) {
   if (req.command != command)
     return std::nullopt;
 
@@ -985,7 +982,7 @@ void DAP::Received(const protocol::Event &event) {
 }
 
 void DAP::Received(const protocol::Request &request) {
-  if (request.command.str() == "disconnect")
+  if (request.command == "disconnect")
     m_disconnecting = true;
 
   const std::optional<CancelArguments> cancel_args =
@@ -1159,8 +1156,7 @@ lldb::SBError DAP::WaitForProcessToStop(std::chrono::seconds seconds) {
 }
 
 void DAP::ConfigureSourceMaps() {
-  llvm::StringRef srcPath = configuration.sourcePath;
-  if (configuration.sourceMap.empty() && srcPath.empty())
+  if (configuration.sourceMap.empty() && configuration.sourcePath.empty())
     return;
 
   std::string sourceMapCommand;
@@ -1169,10 +1165,10 @@ void DAP::ConfigureSourceMaps() {
 
   if (!configuration.sourceMap.empty()) {
     for (const auto &kv : configuration.sourceMap) {
-      strm << "\"" << kv.first.str() << "\" \"" << kv.second.str() << "\" ";
+      strm << "\"" << kv.first << "\" \"" << kv.second << "\" ";
     }
-  } else if (!srcPath.empty()) {
-    strm << "\".\" \"" << srcPath << "\"";
+  } else if (!configuration.sourcePath.empty()) {
+    strm << "\".\" \"" << configuration.sourcePath << "\"";
   }
 
   RunLLDBCommands("Setting source map:", {sourceMapCommand});

@@ -44,42 +44,74 @@ static constexpr Id kCalculateSeq = UINT64_MAX;
 /// during serialization.
 class String {
 public:
-  String(std::string str) : m_str(str) {}
+  String() = default;
+  String(const std::string &str) : m_str(str) {}
   String(llvm::StringRef str) : m_str(str.str()) {}
   String(const char *str) : m_str(str) {}
-  String() = default;
+  String(const llvm::formatv_object_base &payload) : m_str(payload.str()) {}
 
-  operator llvm::Twine() { return m_str; }
+  /// Conversion Operators
+  /// @{
   operator std::string &() { return m_str; }
+  operator llvm::Twine() const { return m_str; }
   operator std::string() const { return m_str; }
   operator llvm::StringRef() const { return llvm::StringRef(m_str); }
+  /// @}
 
   void clear() { m_str.clear(); }
   bool empty() const { return m_str.empty(); }
   const char *c_str() const { return m_str.c_str(); }
   const char *data() const { return m_str.data(); }
   std::string str() const { return m_str; }
-  std::string &str() { return m_str; }
+
+  inline String &operator+=(const String &RHS) {
+    m_str += RHS.m_str;
+    return *this;
+  }
 
 private:
   std::string m_str;
 };
 llvm::json::Value toJSON(const String &s);
 bool fromJSON(const llvm::json::Value &, String &, llvm::json::Path);
-inline bool operator==(const String &a, const String &b) {
-  return a.str() == b.str();
+
+/// @name String Comparision Operators
+/// @{
+
+inline bool operator==(const String &LHS, const String &RHS) {
+  return llvm::StringRef(LHS) == llvm::StringRef(RHS);
 }
-inline bool operator==(const String &a, const char *b) { return a.str() == b; }
-inline bool operator==(const char *a, const String &b) { return a == b.str(); }
-inline bool operator==(llvm::StringRef a, const String &b) {
-  return a.str() == b.str();
+
+inline bool operator!=(const String &LHS, const String &RHS) {
+  return !(LHS == RHS);
 }
-inline bool operator==(const String &a, llvm::StringRef b) {
-  return a.str() == b.str();
+
+inline bool operator<(const String &LHS, const String &RHS) {
+  return llvm::StringRef(LHS) < llvm::StringRef(RHS);
 }
-inline bool operator<(const String &a, const String &b) {
-  return a.str() < b.str();
+
+inline bool operator<=(const String &LHS, const String &RHS) {
+  return llvm::StringRef(LHS) <= llvm::StringRef(RHS);
 }
+
+inline bool operator>(const String &LHS, const String &RHS) {
+  return llvm::StringRef(LHS) > llvm::StringRef(RHS);
+}
+
+inline bool operator>=(const String &LHS, const String &RHS) {
+  return llvm::StringRef(LHS) >= llvm::StringRef(RHS);
+}
+
+/// @}
+
+inline String operator+(const char *LHS, const String &RHS) {
+  return std::string(LHS).append(RHS.str().data(), RHS.str().size());
+}
+
+inline String operator+(const std::string &LHS, const String &RHS) {
+  return std::string(LHS).append(RHS.str().data(), RHS.str().size());
+}
+
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const String &S) {
   OS << S.str();
   return OS;

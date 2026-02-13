@@ -66,7 +66,7 @@ json::Value toJSON(const String &S) {
 bool fromJSON(const llvm::json::Value &Param, String &Str,
               llvm::json::Path Path) {
   if (auto s = Param.getAsString()) {
-    Str = *s;
+    Str = *std::move(s);
     return true;
   }
   Path.report("expected string");
@@ -230,7 +230,7 @@ bool fromJSON(json::Value const &Params, std::map<String, String> &M,
   for (auto [k, v] : *O) {
     auto str = v.getAsString();
     if (str)
-      M[k.str()] = *str;
+      M[k.str()] = *std::move(str);
   }
   return true;
 }

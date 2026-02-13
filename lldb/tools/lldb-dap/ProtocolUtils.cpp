@@ -136,17 +136,15 @@ std::optional<protocol::Module> CreateModule(const lldb::SBTarget &target,
   const auto load_address = module.GetObjectFileHeaderAddress();
   if (const lldb::addr_t raw_address = load_address.GetLoadAddress(target);
       raw_address != LLDB_INVALID_ADDRESS)
-    p_module.addressRange = llvm::formatv("{0:x}", raw_address).str();
+    p_module.addressRange = llvm::formatv("{0:x}", raw_address);
 
   std::array<uint32_t, 3> version_nums{};
   const uint32_t num_versions =
       module.GetVersion(version_nums.data(), version_nums.size());
   if (num_versions > 0) {
-    p_module.version =
-        llvm::formatv("{:$[.]}",
-                      llvm::make_range(version_nums.begin(),
-                                       version_nums.begin() + num_versions))
-            .str();
+    p_module.version = llvm::formatv(
+        "{:$[.]}", llvm::make_range(version_nums.begin(),
+                                    version_nums.begin() + num_versions));
   }
 
   return p_module;
@@ -205,10 +203,9 @@ protocol::Thread CreateThread(lldb::SBThread &thread, lldb::SBFormat &format) {
         queue_kind_label = " (concurrent)";
 
       name = llvm::formatv("Thread {0} Queue: {1}{2}", thread.GetIndexID(),
-                           queue_name, queue_kind_label)
-                 .str();
+                           queue_name, queue_kind_label);
     } else {
-      name = llvm::formatv("Thread {0}", thread.GetIndexID()).str();
+      name = llvm::formatv("Thread {0}", thread.GetIndexID());
     }
   }
   return protocol::Thread{thread.GetThreadID(), name};
@@ -279,7 +276,7 @@ Variable CreateVariable(lldb::SBValue v, int64_t var_ref, bool format_hex,
     // expensive operation.
     if (lldb::SBValue first_child = v.GetChildAtIndex(0)) {
       llvm::StringRef first_child_name = first_child.GetName();
-      if (first_child_name.str() == "[0]") {
+      if (first_child_name == "[0]") {
         size_t num_children = v.GetNumChildren();
         // If we are creating a "[raw]" fake child for each synthetic type, we
         // have to account for it when returning indexed variables.

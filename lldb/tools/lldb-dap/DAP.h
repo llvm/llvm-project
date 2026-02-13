@@ -194,7 +194,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   /// \param[in] loop
   ///     Main loop associated with this instance.
   DAP(Log &log, const ReplMode default_repl_mode,
-      std::vector<protocol::String> pre_init_commands, bool no_lldbinit,
+      const std::vector<protocol::String> &pre_init_commands, bool no_lldbinit,
       llvm::StringRef client_name, DAPTransport &transport,
       lldb_private::MainLoop &loop);
 

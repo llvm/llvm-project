@@ -268,7 +268,7 @@ static std::optional<ExceptionDetails> FormatException(lldb::SBThread &thread) {
     return {};
 
   ExceptionDetails details;
-  raw_string_ostream OS(details.message.str());
+  raw_string_ostream OS(details.message);
 
   if (const char *name = exception.GetName())
     details.evaluateName = name;
@@ -317,7 +317,7 @@ ExceptionInfoRequestHandler::Run(const ExceptionInfoArguments &args) const {
   body.exceptionId = FormatExceptionId(dap, thread);
   body.details = FormatException(thread);
 
-  raw_string_ostream OS(body.description.str());
+  raw_string_ostream OS(body.description);
   OS << FormatStopDescription(thread);
 
   if (std::string stop_info = FormatExtendedStopInfo(thread);
