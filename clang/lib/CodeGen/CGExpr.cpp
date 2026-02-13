@@ -1701,14 +1701,6 @@ LValue CodeGenFunction::EmitLValue(const Expr *E,
   return LV;
 }
 
-static QualType getConstantExprReferredType(const FullExpr *E,
-                                            const ASTContext &Ctx) {
-  const Expr *SE = E->getSubExpr()->IgnoreImplicit();
-  if (isa<OpaqueValueExpr>(SE))
-    return SE->getType();
-  return cast<CallExpr>(SE)->getCallReturnType(Ctx)->getPointeeType();
-}
-
 LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
                                          KnownNonNull_t IsKnownNonNull) {
   ApplyDebugLocation DL(*this, E);
@@ -1746,10 +1738,8 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
     return EmitDeclRefLValue(cast<DeclRefExpr>(E));
   case Expr::ConstantExprClass: {
     const ConstantExpr *CE = cast<ConstantExpr>(E);
-    if (llvm::Value *Result = ConstantEmitter(*this).tryEmitConstantExpr(CE)) {
-      QualType RetType = getConstantExprReferredType(CE, getContext());
-      return MakeNaturalAlignAddrLValue(Result, RetType);
-    }
+    if (llvm::Value *Result = ConstantEmitter(*this).tryEmitConstantExpr(CE))
+      return MakeNaturalAlignPointeeAddrLValue(Result, CE->getType());
     return EmitLValue(cast<ConstantExpr>(E)->getSubExpr(), IsKnownNonNull);
   }
   case Expr::ParenExprClass:
