@@ -190,7 +190,6 @@ Transforms/LowerMatrixIntrinsics/multiply-fused-loops.ll
 Transforms/LowerMatrixIntrinsics/multiply-fused-loops-large-matrixes.ll
 Transforms/LowerMatrixIntrinsics/multiply-fused-multiple-blocks.ll
 Transforms/LowerMatrixIntrinsics/multiply-fused-volatile.ll
-Transforms/LowerMatrixIntrinsics/select.ll
 Transforms/LowerSwitch/2003-05-01-PHIProblem.ll
 Transforms/LowerSwitch/2004-03-13-SwitchIsDefaultCrash.ll
 Transforms/LowerSwitch/2014-06-10-SwitchContiguousOpt.ll
