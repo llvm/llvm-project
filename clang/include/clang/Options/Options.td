@@ -849,7 +849,7 @@ def O_flag : Flag<["-"], "O">, Visibility<[ClangOption, CC1Option, FC1Option]>,
 def Ofast : Joined<["-"], "Ofast">, Group<O_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpTextForVariants<[FlangOption, FC1Option],
-    "Deprecated; use '-O3 -ffast-math -fstack-arrays' for the same behavior,"
+    "Deprecated; use '-O3 -ffast-math -fstack-arrays -fno-protect-parens' for the same behavior,"
     " or '-O3 -fstack-arrays' to enable only conforming optimizations">,
   HelpText<"Deprecated; use '-O3 -ffast-math' for the same behavior,"
            " or '-O3' to enable only conforming optimizations">;
@@ -6645,6 +6645,9 @@ def _param_EQ : Joined<["--"], "param=">, Alias<_param>;
 def _precompile : Flag<["--"], "precompile">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CLOption]>,
   Group<Action_Group>, HelpText<"Only precompile the input">;
+def _precompile_reduced_bmi : Flag<["--"], "precompile-reduced-bmi">, Flags<[NoXarchOption]>,
+  Visibility<[ClangOption, CLOption]>,
+  Group<Action_Group>, HelpText<"Only precompile the input as a reduced BMI">;
 def _prefix_EQ : Joined<["--"], "prefix=">, Alias<B>;
 def _prefix : Separate<["--"], "prefix">, Alias<B>;
 def _preprocess : Flag<["--"], "preprocess">, Alias<E>;

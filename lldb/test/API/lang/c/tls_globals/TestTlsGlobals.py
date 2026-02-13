@@ -46,14 +46,13 @@ class TlsGlobalTestCase(TestBase):
         self.build()
         exe = self.getBuildArtifact("a.out")
         target = self.dbg.CreateTarget(exe)
-        if self.platformIsDarwin():
-            self.registerSharedLibrariesWithTarget(target, ["liba.dylib"])
+        env = self.registerSharedLibrariesWithTarget(target, ["a"])
 
         line1 = line_number("main.c", "// thread breakpoint")
         lldbutil.run_break_set_by_file_and_line(
             self, "main.c", line1, num_expected_locations=1, loc_exact=True
         )
-        self.runCmd("run", RUN_SUCCEEDED)
+        target.LaunchSimple(None, env, self.get_process_working_directory())
 
         # The stop reason of the thread should be breakpoint.
         self.runCmd("process status", "Get process status")
