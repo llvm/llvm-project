@@ -165,14 +165,18 @@ public:
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
       const Instruction *I = nullptr) const override;
   using BaseT::getVectorInstrCost;
-  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                     TTI::TargetCostKind CostKind,
-                                     unsigned Index, const Value *Op0,
-                                     const Value *Op1) const override;
-  InstructionCost getScalarizationOverhead(
-      VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-      TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
-      ArrayRef<Value *> VL = {}) const override;
+  InstructionCost
+  getVectorInstrCost(unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind,
+                     unsigned Index, const Value *Op0, const Value *Op1,
+                     TTI::VectorInstrContext VIC =
+                         TTI::VectorInstrContext::None) const override;
+  InstructionCost
+  getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
+                           bool Insert, bool Extract,
+                           TTI::TargetCostKind CostKind,
+                           bool ForPoisonSrc = true, ArrayRef<Value *> VL = {},
+                           TTI::VectorInstrContext VIC =
+                               TTI::VectorInstrContext::None) const override;
   InstructionCost
   getReplicationShuffleCost(Type *EltTy, int ReplicationFactor, int VF,
                             const APInt &DemandedDstElts,

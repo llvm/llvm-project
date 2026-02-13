@@ -164,12 +164,12 @@
 ; CHECK-NEXT:       Live Interval Analysis
 ; CHECK-NEXT:       Register Coalescer
 ; CHECK-NEXT:       Rename Disconnected Subregister Components
+; CHECK-NEXT:       Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Instruction Scheduler
 ; CHECK-NEXT:       PowerPC VSX FMA Mutation
-; CHECK-NEXT:       Machine Natural Loop Construction
-; CHECK-NEXT:       Machine Block Frequency Analysis
 ; CHECK-NEXT:       Debug Variable Analysis
 ; CHECK-NEXT:       Live Stack Slot Analysis
+; CHECK-NEXT:       Machine Natural Loop Construction
 ; CHECK-NEXT:       Virtual Register Map
 ; CHECK-NEXT:       Live Register Matrix
 ; CHECK-NEXT:       Bundle Machine CFG Edges

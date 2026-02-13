@@ -109,3 +109,16 @@ bb1:
 bb2:
   ret i32 0
 }
+
+define i32 @def_use_eflag(i32 %a, i32 %b, i8 %c) {
+; CHECK-LABEL: def_use_eflag:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addb $-1, %dl
+; CHECK-NEXT:    adcl %esi, %edi
+; CHECK-NEXT:    setzub %al
+; CHECK-NEXT:    retq
+  %1 = call { i8, i32 } @llvm.x86.addcarry.32(i8 %c, i32 %a, i32 %b)
+  %2 = extractvalue { i8, i32 } %1, 0
+  %3 = zext i8 %2 to i32
+  ret i32 %3
+}

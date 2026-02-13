@@ -44,6 +44,9 @@ static cl::opt<unsigned>
                              "vectorization while tail-folding."),
                     cl::init(5), cl::Hidden);
 
+static cl::opt<bool> EnableOrLikeSelectOpt("enable-riscv-or-like-select",
+                                           cl::init(true), cl::Hidden);
+
 InstructionCost
 RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
                                       TTI::TargetCostKind CostKind) const {
@@ -109,6 +112,10 @@ RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
     case RISCV::VCPOP_M:
     case RISCV::VFIRST_M:
       Cost += 1;
+      break;
+    case RISCV::VDIV_VV:
+    case RISCV::VREM_VV:
+      Cost += LMULCost * TTI::TCC_Expensive;
       break;
     default:
       Cost += LMULCost;
@@ -336,7 +343,9 @@ InstructionCost RISCVTTIImpl::getPartialReductionCost(
     unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
     ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
     TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
-    TTI::TargetCostKind CostKind) const {
+    TTI::TargetCostKind CostKind, std::optional<FastMathFlags> FMF) const {
+  if (Opcode == Instruction::FAdd)
+    return InstructionCost::getInvalid();
 
   // zve32x is broken for partial_reduce_umla, but let's make sure we
   // don't generate them.
@@ -402,14 +411,34 @@ RISCVTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   llvm_unreachable("Unsupported register kind");
 }
 
+InstructionCost RISCVTTIImpl::getStaticDataAddrGenerationCost(
+    const TTI::TargetCostKind CostKind) const {
+  switch (CostKind) {
+  case TTI::TCK_CodeSize:
+  case TTI::TCK_SizeAndLatency:
+    // Always 2 instructions
+    return 2;
+  case TTI::TCK_Latency:
+  case TTI::TCK_RecipThroughput:
+    // Depending on the memory model the address generation will
+    // require AUIPC + ADDI (medany) or LUI + ADDI (medlow). Don't
+    // have a way of getting this information here, so conservatively
+    // require both.
+    // In practice, these are generally implemented together.
+    return (ST->hasAUIPCADDIFusion() && ST->hasLUIADDIFusion()) ? 1 : 2;
+  }
+  llvm_unreachable("Unsupported cost kind");
+}
+
 InstructionCost
 RISCVTTIImpl::getConstantPoolLoadCost(Type *Ty,
                                       TTI::TargetCostKind CostKind) const {
   // Add a cost of address generation + the cost of the load. The address
   // is expected to be a PC relative offset to a constant pool entry
   // using auipc/addi.
-  return 2 + getMemoryOpCost(Instruction::Load, Ty, DL.getABITypeAlign(Ty),
-                             /*AddressSpace=*/0, CostKind);
+  return getStaticDataAddrGenerationCost(CostKind) +
+         getMemoryOpCost(Instruction::Load, Ty, DL.getABITypeAlign(Ty),
+                         /*AddressSpace=*/0, CostKind);
 }
 
 static bool isRepeatedConcatMask(ArrayRef<int> Mask, int &SubVectorSize) {
@@ -964,8 +993,8 @@ static unsigned isM1OrSmaller(MVT VT) {
 
 InstructionCost RISCVTTIImpl::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind, bool ForPoisonSrc,
-    ArrayRef<Value *> VL) const {
+    TTI::TargetCostKind CostKind, bool ForPoisonSrc, ArrayRef<Value *> VL,
+    TTI::VectorInstrContext VIC) const {
   if (isa<ScalableVectorType>(Ty))
     return InstructionCost::getInvalid();
 
@@ -1164,7 +1193,6 @@ RISCVTTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
   unsigned Opcode = IsLoad ? Instruction::Load : Instruction::Store;
   Type *DataTy = MICA.getDataType();
   Align Alignment = MICA.getAlignment();
-  const Instruction *I = MICA.getInst();
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 
@@ -1178,11 +1206,8 @@ RISCVTTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
   // scalable vectors, we use an estimate on that number since we don't
   // know exactly what VL will be.
   auto &VTy = *cast<VectorType>(DataTy);
-  InstructionCost MemOpCost =
-      getMemoryOpCost(Opcode, VTy.getElementType(), Alignment, 0, CostKind,
-                      {TTI::OK_AnyValue, TTI::OP_None}, I);
   unsigned NumLoads = getEstimatedVLFor(&VTy);
-  return NumLoads * MemOpCost;
+  return NumLoads * TTI::TCC_Basic;
 }
 
 InstructionCost RISCVTTIImpl::getExpandCompressMemoryOpCost(
@@ -1249,6 +1274,7 @@ RISCVTTIImpl::getStridedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   // Cost is proportional to the number of memory operations implied.  For
   // scalable vectors, we use an estimate on that number since we don't
   // know exactly what VL will be.
+  // FIXME: This will overcost for i64 on rv32 with +zve64x.
   auto &VTy = *cast<VectorType>(DataTy);
   InstructionCost MemOpCost =
       getMemoryOpCost(Opcode, VTy.getElementType(), Alignment, 0, CostKind,
@@ -1551,6 +1577,11 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::abs: {
     auto LT = getTypeLegalizationCost(RetTy);
     if (ST->hasVInstructions() && LT.second.isVector()) {
+      // vabs.v v10, v8
+      if (ST->hasStdExtZvabd())
+        return LT.first *
+               getRISCVInstructionCost({RISCV::VABS_V}, LT.second, CostKind);
+
       // vrsub.vi v10, v8, 0
       // vmax.vv v8, v8, v10
       return LT.first *
@@ -1601,6 +1632,19 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
              (LT.first - 1) *
                  getRISCVInstructionCost(RISCV::VADD_VX, LT.second, CostKind);
     return 1 + (LT.first - 1);
+  }
+  case Intrinsic::vector_splice_left:
+  case Intrinsic::vector_splice_right: {
+    auto LT = getTypeLegalizationCost(RetTy);
+    // Constant offsets fall through to getShuffleCost.
+    if (!ICA.isTypeBasedOnly() && isa<ConstantInt>(ICA.getArgs()[2]))
+      break;
+    if (ST->hasVInstructions() && LT.second.isVector()) {
+      return LT.first *
+             getRISCVInstructionCost({RISCV::VSLIDEDOWN_VX, RISCV::VSLIDEUP_VX},
+                                     LT.second, CostKind);
+    }
+    break;
   }
   case Intrinsic::experimental_cttz_elts: {
     Type *ArgTy = ICA.getArgTypes()[0];
@@ -2393,11 +2437,9 @@ InstructionCost RISCVTTIImpl::getCFInstrCost(unsigned Opcode,
   return 0;
 }
 
-InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
-                                                 TTI::TargetCostKind CostKind,
-                                                 unsigned Index,
-                                                 const Value *Op0,
-                                                 const Value *Op1) const {
+InstructionCost RISCVTTIImpl::getVectorInstrCost(
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    const Value *Op0, const Value *Op1, TTI::VectorInstrContext VIC) const {
   assert(Val->isVectorTy() && "This must be a vector type");
 
   // TODO: Add proper cost model for P extension fixed vectors (e.g., v4i16)
@@ -2409,7 +2451,8 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
 
   if (Opcode != Instruction::ExtractElement &&
       Opcode != Instruction::InsertElement)
-    return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1);
+    return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1,
+                                     VIC);
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Val);
@@ -2590,15 +2633,29 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
+  unsigned ISDOpcode = TLI->InstructionOpcodeToISD(Opcode);
 
   // TODO: Handle scalar type.
-  if (!LT.second.isVector())
+  if (!LT.second.isVector()) {
+    static const CostTblEntry DivTbl[]{
+        {ISD::UDIV, MVT::i32, TTI::TCC_Expensive},
+        {ISD::UDIV, MVT::i64, TTI::TCC_Expensive},
+        {ISD::SDIV, MVT::i32, TTI::TCC_Expensive},
+        {ISD::SDIV, MVT::i64, TTI::TCC_Expensive},
+        {ISD::UREM, MVT::i32, TTI::TCC_Expensive},
+        {ISD::UREM, MVT::i64, TTI::TCC_Expensive},
+        {ISD::SREM, MVT::i32, TTI::TCC_Expensive},
+        {ISD::SREM, MVT::i64, TTI::TCC_Expensive}};
+    if (TLI->isOperationLegalOrPromote(ISDOpcode, LT.second))
+      if (const auto *Entry = CostTableLookup(DivTbl, ISDOpcode, LT.second))
+        return Entry->Cost * LT.first;
+
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
                                          Args, CxtI);
+  }
 
   // f16 with zvfhmin and bf16 will be promoted to f32.
   // FIXME: nxv32[b]f16 will be custom lowered and split.
-  unsigned ISDOpcode = TLI->InstructionOpcodeToISD(Opcode);
   InstructionCost CastCost = 0;
   if ((LT.second.getVectorElementType() == MVT::f16 ||
        LT.second.getVectorElementType() == MVT::bf16) &&
@@ -3469,4 +3526,35 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
       Options.LoadSizes.insert(Options.LoadSizes.begin(), Size);
   }
   return Options;
+}
+
+bool RISCVTTIImpl::shouldTreatInstructionLikeSelect(
+    const Instruction *I) const {
+  if (EnableOrLikeSelectOpt) {
+    // For the binary operators (e.g. or) we need to be more careful than
+    // selects, here we only transform them if they are already at a natural
+    // break point in the code - the end of a block with an unconditional
+    // terminator.
+    if (I->getOpcode() == Instruction::Or &&
+        isa<BranchInst>(I->getNextNode()) &&
+        cast<BranchInst>(I->getNextNode())->isUnconditional())
+      return true;
+
+    if (I->getOpcode() == Instruction::Add ||
+        I->getOpcode() == Instruction::Sub)
+      return true;
+  }
+  return BaseT::shouldTreatInstructionLikeSelect(I);
+}
+
+bool RISCVTTIImpl::shouldCopyAttributeWhenOutliningFrom(
+    const Function *Caller, const Attribute &Attr) const {
+  // "interrupt" controls the prolog/epilog of interrupt handlers (and includes
+  // restrictions on their signatures). We can outline from the bodies of these
+  // handlers, but when we do we need to make sure we don't mark the outlined
+  // function as an interrupt handler too.
+  if (Attr.isStringAttribute() && Attr.getKindAsString() == "interrupt")
+    return false;
+
+  return BaseT::shouldCopyAttributeWhenOutliningFrom(Caller, Attr);
 }

@@ -42,6 +42,7 @@ bool RegisterContextFreeBSDKernel_arm64::ReadRegister(
   if (m_pcb_addr == LLDB_INVALID_ADDRESS)
     return false;
 
+  // https://cgit.freebsd.org/src/tree/sys/arm64/include/pcb.h
   struct {
     llvm::support::ulittle64_t x[30];
     llvm::support::ulittle64_t lr;

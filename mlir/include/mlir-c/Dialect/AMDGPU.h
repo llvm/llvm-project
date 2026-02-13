@@ -61,4 +61,6 @@ MLIR_CAPI_EXPORTED MlirStringRef mlirAMDGPUTDMGatherBaseTypeGetName(void);
 }
 #endif
 
+#include "mlir/Dialect/AMDGPU/Transforms/Passes.capi.h.inc"
+
 #endif // MLIR_C_DIALECT_AMDGPU_H

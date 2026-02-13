@@ -199,7 +199,7 @@ public:
   const CIRGenFunctionInfo &
   arrangeCIRFunctionInfo(CanQualType returnType,
                          llvm::ArrayRef<CanQualType> argTypes,
-                         RequiredArgs required);
+                         FunctionType::ExtInfo info, RequiredArgs required);
 
   const CIRGenFunctionInfo &
   arrangeFreeFunctionType(CanQual<FunctionProtoType> fpt);

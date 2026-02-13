@@ -16,7 +16,7 @@
 // notified, allowing the symbol table to be updated.
 //
 // This generic class implements the traits class.  It must be generic so that
-// it can work for all uses it, which include lists of instructions, basic
+// it can work for all its uses, which include lists of instructions, basic
 // blocks, arguments, functions, global variables, etc...
 //
 //===----------------------------------------------------------------------===//

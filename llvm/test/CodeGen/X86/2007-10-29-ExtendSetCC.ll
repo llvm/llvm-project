@@ -22,3 +22,34 @@ cond_next245:		; preds = %entry
 	%tmp256 = and i32 %tmp180181, 15		; <i32> [#uses=0]
 	ret i16 0
 }
+
+define signext i16 @t_freeze(ptr %p)   {
+; CHECK-LABEL: t_freeze:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movswl (%ecx), %eax
+; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    js .LBB1_1
+; CHECK-NEXT:  # %bb.2: # %cond_next
+; CHECK-NEXT:    andl $15, %eax
+; CHECK-NEXT:    movl %eax, (%ecx)
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retl
+; CHECK-NEXT:  .LBB1_1: # %cond_true
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retl
+entry:
+	%ld = load i16, ptr %p, align 2
+	%ld.fr = freeze i16 %ld
+	%sext = sext i16 %ld.fr to i32
+	%cmp = icmp slt i16 %ld.fr, 0
+	br i1 %cmp, label %cond_true, label %cond_next
+
+cond_true:
+	ret i16 %ld.fr
+
+cond_next:
+	%tmp2 = and i32 %sext, 15
+	store i32 %tmp2, ptr %p, align 4
+	ret i16 0
+}

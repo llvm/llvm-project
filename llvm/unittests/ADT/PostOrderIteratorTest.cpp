@@ -35,11 +35,13 @@ TEST(PostOrderIteratorTest, Compiles) {
 
   // Test above, but going through po_iterator (which inherits from template
   // base)
-  BasicBlock *NullBB = nullptr;
-  auto PI = po_end(NullBB);
-  PI.insertEdge(std::optional<BasicBlock *>(), NullBB);
-  auto PIExt = po_ext_end(NullBB, Ext);
-  PIExt.insertEdge(std::optional<BasicBlock *>(), NullBB);
+  Graph<6> G;
+  using NodeType = Graph<6>::NodeType;
+  NodeType *NullNode = nullptr;
+  auto PI = po_end(G);
+  PI.insertEdge(std::optional<NodeType *>(), NullNode);
+  auto PIExt = po_ext_end(G, Ext);
+  PIExt.insertEdge(std::optional<NodeType *>(), NullNode);
 }
 
 static_assert(

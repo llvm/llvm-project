@@ -77,31 +77,6 @@ static cl::opt<int> MinimumJumpTables("minimum-jump-tables", cl::Hidden,
                                       cl::init(5),
                                       cl::desc("Set minimum jump tables"));
 
-static cl::opt<int>
-    MaxStoresPerMemcpyCL("max-store-memcpy", cl::Hidden, cl::init(6),
-                         cl::desc("Max #stores to inline memcpy"));
-
-static cl::opt<int>
-    MaxStoresPerMemcpyOptSizeCL("max-store-memcpy-Os", cl::Hidden, cl::init(4),
-                                cl::desc("Max #stores to inline memcpy"));
-
-static cl::opt<int>
-    MaxStoresPerMemmoveCL("max-store-memmove", cl::Hidden, cl::init(6),
-                          cl::desc("Max #stores to inline memmove"));
-
-static cl::opt<int>
-    MaxStoresPerMemmoveOptSizeCL("max-store-memmove-Os", cl::Hidden,
-                                 cl::init(4),
-                                 cl::desc("Max #stores to inline memmove"));
-
-static cl::opt<int>
-    MaxStoresPerMemsetCL("max-store-memset", cl::Hidden, cl::init(8),
-                         cl::desc("Max #stores to inline memset"));
-
-static cl::opt<int>
-    MaxStoresPerMemsetOptSizeCL("max-store-memset-Os", cl::Hidden, cl::init(4),
-                                cl::desc("Max #stores to inline memset"));
-
 static cl::opt<bool>
     ConstantLoadsToImm("constant-loads-to-imm", cl::Hidden, cl::init(true),
                        cl::desc("Convert constant loads to immediate values."));
@@ -1524,12 +1499,12 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setSchedulingPreference(Sched::Source);
 
   // Limits for inline expansion of memcpy/memmove
-  MaxStoresPerMemcpy = MaxStoresPerMemcpyCL;
-  MaxStoresPerMemcpyOptSize = MaxStoresPerMemcpyOptSizeCL;
-  MaxStoresPerMemmove = MaxStoresPerMemmoveCL;
-  MaxStoresPerMemmoveOptSize = MaxStoresPerMemmoveOptSizeCL;
-  MaxStoresPerMemset = MaxStoresPerMemsetCL;
-  MaxStoresPerMemsetOptSize = MaxStoresPerMemsetOptSizeCL;
+  MaxStoresPerMemcpy = 6;
+  MaxStoresPerMemcpyOptSize = 4;
+  MaxStoresPerMemmove = 6;
+  MaxStoresPerMemmoveOptSize = 4;
+  MaxStoresPerMemset = 8;
+  MaxStoresPerMemsetOptSize = 4;
 
   //
   // Set up register classes.
@@ -2051,13 +2026,12 @@ static Value *getUnderLyingObjectForBrevLdIntr(Value *V) {
 }
 
 /// Given an intrinsic, checks if on the target the intrinsic will need to map
-/// to a MemIntrinsicNode (touches memory). If this is the case, it returns
-/// true and store the intrinsic information into the IntrinsicInfo that was
-/// passed to the function.
-bool HexagonTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                               const CallBase &I,
-                                               MachineFunction &MF,
-                                               unsigned Intrinsic) const {
+/// to a MemIntrinsicNode (touches memory). If this is the case, it stores
+/// the intrinsic information into the Infos vector.
+void HexagonTargetLowering::getTgtMemIntrinsic(
+    SmallVectorImpl<IntrinsicInfo> &Infos, const CallBase &I,
+    MachineFunction &MF, unsigned Intrinsic) const {
+  IntrinsicInfo Info;
   switch (Intrinsic) {
   case Intrinsic::hexagon_L2_loadrd_pbr:
   case Intrinsic::hexagon_L2_loadri_pbr:
@@ -2080,7 +2054,8 @@ bool HexagonTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.align = DL.getABITypeAlign(Info.memVT.getTypeForEVT(Cont));
     Info.flags = MachineMemOperand::MOLoad;
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   case Intrinsic::hexagon_V6_vgathermw:
   case Intrinsic::hexagon_V6_vgathermw_128B:
@@ -2104,15 +2079,14 @@ bool HexagonTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.align =
         MaybeAlign(M.getDataLayout().getTypeAllocSizeInBits(VecTy) / 8);
-    Info.flags = MachineMemOperand::MOLoad |
-                 MachineMemOperand::MOStore |
+    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore |
                  MachineMemOperand::MOVolatile;
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   default:
     break;
   }
-  return false;
 }
 
 bool HexagonTargetLowering::hasBitTest(SDValue X, SDValue Y) const {
@@ -2368,9 +2342,18 @@ HexagonTargetLowering::getVectorShiftByInt(SDValue Op, SelectionDAG &DAG)
     default:
       llvm_unreachable("Unexpected shift opcode");
   }
+  if (SDValue Sp = getSplatValue(Op.getOperand(1), DAG)) {
+    const SDLoc dl(Op);
+    // Canonicalize shift amount to i32 as required.
+    SDValue Sh = Sp;
+    if (Sh.getValueType() != MVT::i32)
+      Sh = DAG.getZExtOrTrunc(Sh, dl, MVT::i32);
 
-  if (SDValue Sp = getSplatValue(Op.getOperand(1), DAG))
-    return DAG.getNode(NewOpc, SDLoc(Op), ty(Op), Op.getOperand(0), Sp);
+    assert(Sh.getValueType() == MVT::i32 &&
+           "Hexagon vector shift-by-int must use i32 shift operand");
+    return DAG.getNode(NewOpc, dl, ty(Op), Op.getOperand(0), Sh);
+  }
+
   return SDValue();
 }
 
@@ -3891,7 +3874,7 @@ HexagonTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
 
 TargetLowering::AtomicExpansionKind
 HexagonTargetLowering::shouldExpandAtomicCmpXchgInIR(
-    AtomicCmpXchgInst *AI) const {
+    const AtomicCmpXchgInst *AI) const {
   return AtomicExpansionKind::LLSC;
 }
 

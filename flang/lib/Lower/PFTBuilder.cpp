@@ -28,6 +28,10 @@ static llvm::cl::opt<bool> clDisableStructuredFir(
 using namespace Fortran;
 
 namespace {
+static llvm::cl::opt<bool> lowerDoWhileToSCFWhile(
+    "lower-do-while-to-scf-while", llvm::cl::init(false),
+    llvm::cl::desc("lower structured DO WHILE loops to scf.while"),
+    llvm::cl::Hidden);
 /// Helpers to unveil parser node inside Fortran::parser::Statement<>,
 /// Fortran::parser::UnlabeledStatement, and Fortran::common::Indirection<>
 template <typename A>
@@ -142,8 +146,9 @@ public:
   ///  - 17.4p5 (The rounding modes)
   ///  - 17.6p1 (Halting)
   void checkForFPEnvironmentCalls(const parser::CallStmt &callStmt) {
+    const auto &call = std::get<parser::Call>(callStmt.t);
     const auto *callName = std::get_if<parser::Name>(
-        &std::get<parser::ProcedureDesignator>(callStmt.call.t).u);
+        &std::get<parser::ProcedureDesignator>(call.t).u);
     if (!callName)
       return;
     const Fortran::semantics::Symbol &procSym = callName->symbol->GetUltimate();
@@ -919,8 +924,9 @@ private:
           // Action statements (except IO statements)
           [&](const parser::CallStmt &s) {
             // Look for alternate return specifiers.
+            const auto &call = std::get<parser::Call>(s.t);
             const auto &args =
-                std::get<std::list<parser::ActualArgSpec>>(s.call.t);
+                std::get<std::list<parser::ActualArgSpec>>(call.t);
             for (const auto &arg : args) {
               const auto &actual = std::get<parser::ActualArg>(arg.t);
               if (const auto *altReturn =
@@ -1053,12 +1059,15 @@ private:
             eval.controlSuccessor = &evaluationList.back();
             if (const auto *bounds =
                     std::get_if<parser::LoopControl::Bounds>(&loopControl->u)) {
-              if (bounds->name.thing.symbol->GetType()->IsNumeric(
+              if (bounds->Name().thing.symbol->GetType()->IsNumeric(
                       common::TypeCategory::Real))
                 eval.isUnstructured = true; // real-valued loop control
             } else if (std::get_if<parser::ScalarLogicalExpr>(
                            &loopControl->u)) {
-              eval.isUnstructured = true; // while loop
+              // Leave DO WHILE structured when -lower-do-while-to-scf-while is
+              // enabled; branch analysis will mark unstructured cases.
+              if (!lowerDoWhileToSCFWhile)
+                eval.isUnstructured = true; // while loop
             }
           },
           [&](const parser::EndDoStmt &) {

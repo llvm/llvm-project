@@ -1162,22 +1162,13 @@ elseif(MSVC)
   endif()
 endif()
 
-# llvm_update_compile_flags adds one of these to each target.
-set(LLVM_CXXFLAGS_RTTI_DISABLE "")
-set(LLVM_CXXFLAGS_RTTI_ENABLE "")
-if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
-  set(LLVM_CXXFLAGS_RTTI_DISABLE "-fno-rtti")
-elseif(MSVC)
+if(MSVC)
   # Remove flags here, for exceptions and RTTI.
   # Each target property or source property should be responsible to control
-  # them.
-  # CL.EXE complains to override flags like "/GR /GR-".
+  # them (see llvm_update_compile_flags).
+  # CL.EXE complains to override flags like "/GR /GR-". CMake adds them by default.
   string(REGEX REPLACE "(^| ) */EH[-cs]+ *( |$)" "\\1 \\2" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
   string(REGEX REPLACE "(^| ) */GR-? *( |$)" "\\1 \\2" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-  set(LLVM_CXXFLAGS_RTTI_DISABLE "/GR-")
-  set(LLVM_CXXFLAGS_RTTI_ENABLE "/GR")
-elseif(CMAKE_CXXCOMPILER_ID MATCHES "XL")
-  set(LLVM_CXXFLAGS_RTTI_DISABLE "-qnortti")
 endif()
 
 # Provide public options to globally control RTTI and EH
@@ -1311,6 +1302,13 @@ append_if(LLVM_BUILD_INSTRUMENTED_COVERAGE "-fprofile-instr-generate=\"${LLVM_PR
 
 if (LLVM_BUILD_INSTRUMENTED AND LLVM_BUILD_INSTRUMENTED_COVERAGE)
   message(FATAL_ERROR "LLVM_BUILD_INSTRUMENTED and LLVM_BUILD_INSTRUMENTED_COVERAGE cannot both be specified")
+endif()
+
+if(NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
+  # CMake weirdly marks all PCH as system headers. This undocumented variable
+  # can be used to suppress the "#pragma clang system_header".
+  # See: https://gitlab.kitware.com/cmake/cmake/-/issues/21219
+  set(CMAKE_PCH_PROLOGUE "")
 endif()
 
 set(LLVM_THINLTO_CACHE_PATH "${PROJECT_BINARY_DIR}/lto.cache" CACHE STRING "Set ThinLTO cache path. This can be used when building LLVM from several different directiories.")

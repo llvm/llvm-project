@@ -179,6 +179,15 @@ public:
     return getPointerTo(cir::VoidType::get(getContext()), as);
   }
 
+  cir::MethodAttr getMethodAttr(cir::MethodType ty, cir::FuncOp methodFuncOp) {
+    auto methodFuncSymbolRef = mlir::FlatSymbolRefAttr::get(methodFuncOp);
+    return cir::MethodAttr::get(ty, methodFuncSymbolRef);
+  }
+
+  cir::MethodAttr getNullMethodAttr(cir::MethodType ty) {
+    return cir::MethodAttr::get(ty);
+  }
+
   cir::BoolAttr getCIRBoolAttr(bool state) {
     return cir::BoolAttr::get(getContext(), state);
   }
@@ -488,6 +497,24 @@ public:
   }
 
   //===--------------------------------------------------------------------===//
+  // Other Instructions
+  //===--------------------------------------------------------------------===//
+
+  mlir::Value createExtractElement(mlir::Location loc, mlir::Value vec,
+                                   uint64_t idx) {
+    mlir::Value idxVal =
+        getConstAPInt(loc, getUIntNTy(64), llvm::APInt(64, idx));
+    return cir::VecExtractOp::create(*this, loc, vec, idxVal);
+  }
+
+  mlir::Value createInsertElement(mlir::Location loc, mlir::Value vec,
+                                  mlir::Value newElt, uint64_t idx) {
+    mlir::Value idxVal =
+        getConstAPInt(loc, getUIntNTy(64), llvm::APInt(64, idx));
+    return cir::VecInsertOp::create(*this, loc, vec, newElt, idxVal);
+  }
+
+  //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
 
@@ -549,7 +576,7 @@ public:
   }
 
   mlir::Value createSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
-                        OverflowBehavior ob = OverflowBehavior::Saturated) {
+                        OverflowBehavior ob = OverflowBehavior::None) {
     auto op = cir::BinOp::create(*this, loc, lhs.getType(), cir::BinOpKind::Sub,
                                  lhs, rhs);
     op.setNoUnsignedWrap(
@@ -704,6 +731,36 @@ public:
   /// Create a yield operation.
   cir::YieldOp createYield(mlir::Location loc, mlir::ValueRange value = {}) {
     return cir::YieldOp::create(*this, loc, value);
+  }
+
+  struct GetMethodResults {
+    mlir::Value callee;
+    mlir::Value adjustedThis;
+  };
+
+  GetMethodResults createGetMethod(mlir::Location loc, mlir::Value method,
+                                   mlir::Value objectPtr) {
+    // Build the callee function type.
+    auto methodFuncTy =
+        mlir::cast<cir::MethodType>(method.getType()).getMemberFuncTy();
+    auto methodFuncInputTypes = methodFuncTy.getInputs();
+
+    auto objectPtrTy = mlir::cast<cir::PointerType>(objectPtr.getType());
+    mlir::Type adjustedThisTy = getVoidPtrTy(objectPtrTy.getAddrSpace());
+
+    llvm::SmallVector<mlir::Type> calleeFuncInputTypes{adjustedThisTy};
+    calleeFuncInputTypes.insert(calleeFuncInputTypes.end(),
+                                methodFuncInputTypes.begin(),
+                                methodFuncInputTypes.end());
+    cir::FuncType calleeFuncTy =
+        methodFuncTy.clone(calleeFuncInputTypes, methodFuncTy.getReturnType());
+    // TODO(cir): consider the address space of the callee.
+    assert(!cir::MissingFeatures::addressSpace());
+    cir::PointerType calleeTy = getPointerTo(calleeFuncTy);
+
+    auto op = cir::GetMethodOp::create(*this, loc, calleeTy, adjustedThisTy,
+                                       method, objectPtr);
+    return {op.getCallee(), op.getAdjustedThis()};
   }
 };
 

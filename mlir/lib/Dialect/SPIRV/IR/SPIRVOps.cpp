@@ -341,11 +341,11 @@ LogicalResult spirv::CompositeConstructOp::verify() {
   // 3. Arrays (1 constituent for each array element)
   // 4. Vectors (1 constituent (sub-)element for each vector element)
 
-  auto coopElementType =
-      llvm::TypeSwitch<Type, Type>(getType())
-          .Case<spirv::CooperativeMatrixType>(
-              [](auto coopType) { return coopType.getElementType(); })
-          .Default(nullptr);
+  auto coopElementType = llvm::TypeSwitch<Type, Type>(getType())
+                             .Case([](spirv::CooperativeMatrixType coopType) {
+                               return coopType.getElementType();
+                             })
+                             .Default(nullptr);
 
   // Case 1. -- matrices.
   if (coopElementType) {

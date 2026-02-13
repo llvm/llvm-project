@@ -7,12 +7,44 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=avx | FileCheck %s --check-prefixes=X64,X64-AVX
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=avx512f | FileCheck %s --check-prefixes=X64,X64-AVX
 
-; FIXME: crash
-; define i64 @test_llrint_i64_f16(half %x) nounwind {
-; entry:
-;   %0 = tail call i64 @llvm.llrint.i64.f16(half %x)
-;   ret i64 %0
-; }
+define i64 @test_llrint_i64_f16(half %x) nounwind {
+; X86-NOSSE-LABEL: test_llrint_i64_f16:
+; X86-NOSSE:       # %bb.0: # %entry
+; X86-NOSSE-NEXT:    pushl %eax
+; X86-NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NOSSE-NEXT:    movl %eax, (%esp)
+; X86-NOSSE-NEXT:    calll __extendhfsf2
+; X86-NOSSE-NEXT:    fstps (%esp)
+; X86-NOSSE-NEXT:    calll llrintf
+; X86-NOSSE-NEXT:    popl %ecx
+; X86-NOSSE-NEXT:    retl
+;
+; X86-SSE2-LABEL: test_llrint_i64_f16:
+; X86-SSE2:       # %bb.0: # %entry
+; X86-SSE2-NEXT:    pushl %eax
+; X86-SSE2-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
+; X86-SSE2-NEXT:    pextrw $0, %xmm0, %eax
+; X86-SSE2-NEXT:    movw %ax, (%esp)
+; X86-SSE2-NEXT:    calll __extendhfsf2
+; X86-SSE2-NEXT:    fstps (%esp)
+; X86-SSE2-NEXT:    calll llrintf
+; X86-SSE2-NEXT:    popl %ecx
+; X86-SSE2-NEXT:    retl
+;
+; X64-SSE-LABEL: test_llrint_i64_f16:
+; X64-SSE:       # %bb.0: # %entry
+; X64-SSE-NEXT:    pushq %rax
+; X64-SSE-NEXT:    callq __extendhfsf2@PLT
+; X64-SSE-NEXT:    callq rintf@PLT
+; X64-SSE-NEXT:    callq __truncsfhf2@PLT
+; X64-SSE-NEXT:    callq __extendhfsf2@PLT
+; X64-SSE-NEXT:    cvttss2si %xmm0, %rax
+; X64-SSE-NEXT:    popq %rcx
+; X64-SSE-NEXT:    retq
+entry:
+  %0 = tail call i64 @llvm.llrint.i64.f16(half %x)
+  ret i64 %0
+}
 
 define i64 @test_llrint_i64_f32(float %x) nounwind {
 ; X86-NOSSE-LABEL: test_llrint_i64_f32:
@@ -217,12 +249,44 @@ entry:
   ret i64 %0
 }
 
-; FIXME: crash
-; define i64 @test_llrint_i64_f16_strict(half %x) nounwind strictfp {
-; entry:
-;   %0 = tail call i64 @llvm.experimental.constrained.llrint.i64.f16(half %x, metadata!"round.dynamic", metadata!"fpexcept.strict")
-;   ret i64 %0
-; }
+define i64 @test_llrint_i64_f16_strict(half %x) nounwind strictfp {
+; X86-NOSSE-LABEL: test_llrint_i64_f16_strict:
+; X86-NOSSE:       # %bb.0: # %entry
+; X86-NOSSE-NEXT:    pushl %eax
+; X86-NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NOSSE-NEXT:    movl %eax, (%esp)
+; X86-NOSSE-NEXT:    calll __extendhfsf2
+; X86-NOSSE-NEXT:    fstps (%esp)
+; X86-NOSSE-NEXT:    wait
+; X86-NOSSE-NEXT:    calll llrintf
+; X86-NOSSE-NEXT:    popl %ecx
+; X86-NOSSE-NEXT:    retl
+;
+; X86-SSE2-LABEL: test_llrint_i64_f16_strict:
+; X86-SSE2:       # %bb.0: # %entry
+; X86-SSE2-NEXT:    pushl %eax
+; X86-SSE2-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
+; X86-SSE2-NEXT:    pextrw $0, %xmm0, %eax
+; X86-SSE2-NEXT:    movw %ax, (%esp)
+; X86-SSE2-NEXT:    calll __extendhfsf2
+; X86-SSE2-NEXT:    fstps (%esp)
+; X86-SSE2-NEXT:    wait
+; X86-SSE2-NEXT:    calll llrintf
+; X86-SSE2-NEXT:    popl %ecx
+; X86-SSE2-NEXT:    retl
+;
+; X64-SSE-LABEL: test_llrint_i64_f16_strict:
+; X64-SSE:       # %bb.0: # %entry
+; X64-SSE-NEXT:    pushq %rax
+; X64-SSE-NEXT:    callq __extendhfsf2@PLT
+; X64-SSE-NEXT:    callq llrintf@PLT
+; X64-SSE-NEXT:    movq %xmm0, %rax
+; X64-SSE-NEXT:    popq %rcx
+; X64-SSE-NEXT:    retq
+entry:
+  %0 = tail call i64 @llvm.experimental.constrained.llrint.i64.f16(half %x, metadata!"round.dynamic", metadata!"fpexcept.strict")
+  ret i64 %0
+}
 
 define i64 @test_llrint_i64_f32_strict(float %x) nounwind strictfp {
 ; X86-NOSSE-LABEL: test_llrint_i64_f32_strict:

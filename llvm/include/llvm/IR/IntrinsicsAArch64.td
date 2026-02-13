@@ -76,6 +76,17 @@ def int_aarch64_prefetch : Intrinsic<[],
      ]>,
     ClangBuiltin<"__builtin_arm_prefetch">;
 
+def int_aarch64_prefetch_ir : Intrinsic<[], [llvm_ptr_ty],
+    [IntrHasSideEffects, IntrInaccessibleMemOrArgMemOnly,
+     IntrWillReturn, ReadOnly<ArgIndex<0>>]>,
+    ClangBuiltin<"__builtin_arm_prefetch_ir">;
+
+def int_aarch64_range_prefetch : Intrinsic<[],
+    [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty, llvm_i64_ty],
+    [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, ReadOnly<ArgIndex<0>>,
+     ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>,
+    ClangBuiltin<"__builtin_arm_range_prefetch">;
+
 //===----------------------------------------------------------------------===//
 // Data Barrier Instructions
 
@@ -2155,6 +2166,10 @@ def int_aarch64_sve_frintn     : AdvSIMD_Merged1VectorArg_Intrinsic;
 def int_aarch64_sve_frintp     : AdvSIMD_Merged1VectorArg_Intrinsic;
 def int_aarch64_sve_frintx     : AdvSIMD_Merged1VectorArg_Intrinsic;
 def int_aarch64_sve_frintz     : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_frint32x   : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_frint32z   : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_frint64x   : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_frint64z   : AdvSIMD_Merged1VectorArg_Intrinsic;
 def int_aarch64_sve_frsqrte_x  : AdvSIMD_1VectorArg_Intrinsic;
 def int_aarch64_sve_frsqrts_x  : AdvSIMD_2VectorArg_Intrinsic;
 def int_aarch64_sve_fscale     : AdvSIMD_SVE_SCALE_Intrinsic;

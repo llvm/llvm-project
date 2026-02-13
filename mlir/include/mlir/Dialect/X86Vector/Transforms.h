@@ -100,6 +100,10 @@ void populateVectorContractBF16ToFMAPatterns(RewritePatternSet &patterns);
 // range by placing them at their earliest legal use site.
 void populateSinkVectorProducerOpsPatterns(RewritePatternSet &patterns);
 
+// Shuffles FMAs with x86vector operations as operands such that FMAs are
+// grouped with respect to odd/even packed index.
+void populateShuffleVectorFMAOpsPatterns(RewritePatternSet &patterns);
+
 //===----------------------------------------------------------------------===//
 /// Helpers extracted from:
 ///   - clang/lib/Headers/avxintrin.h

@@ -391,6 +391,21 @@ add_header_library(
     libc.src.__support.macros.attributes
 )
 
+add_header_library(
+  weak_avl
+  HDRS
+    weak_avl.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.new
+    libc.src.__support.CPP.utility
+    libc.src.__support.CPP.optional
+    libc.src.__support.libc_assert
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
 add_subdirectory(FPUtil)
 add_subdirectory(OSUtil)
 add_subdirectory(StringUtil)

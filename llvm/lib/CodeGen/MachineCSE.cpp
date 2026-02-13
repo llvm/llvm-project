@@ -136,9 +136,7 @@ class MachineCSELegacy : public MachineFunctionPass {
 public:
   static char ID; // Pass identification
 
-  MachineCSELegacy() : MachineFunctionPass(ID) {
-    initializeMachineCSELegacyPass(*PassRegistry::getPassRegistry());
-  }
+  MachineCSELegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -777,8 +775,9 @@ bool MachineCSEImpl::PerformCSE(MachineDomTreeNode *Node) {
   do {
     Node = WorkList.pop_back_val();
     Scopes.push_back(Node);
-    OpenChildren[Node] = Node->getNumChildren();
+    size_t WorkListSize = WorkList.size();
     append_range(WorkList, Node->children());
+    OpenChildren[Node] = WorkList.size() - WorkListSize; // Number of children.
   } while (!WorkList.empty());
 
   // Now perform CSE.

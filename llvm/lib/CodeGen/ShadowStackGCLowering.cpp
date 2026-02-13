@@ -141,9 +141,7 @@ INITIALIZE_PASS_END(ShadowStackGCLowering, DEBUG_TYPE,
 
 FunctionPass *llvm::createShadowStackGCLoweringPass() { return new ShadowStackGCLowering(); }
 
-ShadowStackGCLowering::ShadowStackGCLowering() : FunctionPass(ID) {
-  initializeShadowStackGCLoweringPass(*PassRegistry::getPassRegistry());
-}
+ShadowStackGCLowering::ShadowStackGCLowering() : FunctionPass(ID) {}
 
 Constant *ShadowStackGCLoweringImpl::GetFrameMap(Function &F) {
   // doInitialization creates the abstract type of this value.

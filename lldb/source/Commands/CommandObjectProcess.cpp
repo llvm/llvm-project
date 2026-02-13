@@ -1351,7 +1351,8 @@ protected:
     if (process_sp) {
       if (command.GetArgumentCount() == 1) {
         FileSpec output_file(command.GetArgumentAtIndex(0));
-        FileSystem::Instance().Resolve(output_file);
+        FileSystem::Instance().Resolve(output_file,
+                                       /*force_make_absolute=*/true);
         auto &core_dump_options = m_options.m_core_dump_options;
         core_dump_options.SetOutputFile(output_file);
         core_dump_options.SetProcess(process_sp);
@@ -1373,8 +1374,9 @@ protected:
           }
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
-          result.AppendErrorWithFormat(
-              "Failed to save core file for process: %s\n", error.AsCString());
+          result.AppendErrorWithFormatv(
+              "failed to save core file for process to '{0}': {1}\n",
+              output_file.GetPath(), error);
         }
       } else {
         result.AppendErrorWithFormat("'%s' takes one arguments:\nUsage: %s\n",

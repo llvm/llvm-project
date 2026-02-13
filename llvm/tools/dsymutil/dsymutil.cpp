@@ -315,6 +315,8 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   Options.LinkOpts.Fat64 = Args.hasArg(OPT_fat64);
   Options.LinkOpts.KeepFunctionForStatic =
       Args.hasArg(OPT_keep_func_for_static);
+  Options.LinkOpts.AllowSectionHeaderOffsetOverflow =
+      Args.hasArg(OPT_allow_section_header_offset_overflow);
 
   if (opt::Arg *ReproducerPath = Args.getLastArg(OPT_use_reproducer)) {
     Options.ReproMode = ReproducerMode::Use;
