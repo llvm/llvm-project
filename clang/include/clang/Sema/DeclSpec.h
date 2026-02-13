@@ -1358,7 +1358,7 @@ public:
 ///
 /// This is intended to be a small value object.
 struct DeclaratorChunk {
-  DeclaratorChunk() : LateAttrList(true, true, true){};
+  DeclaratorChunk() : LateAttrList(true, true, true) {};
 
   enum {
     Pointer, Reference, Array, Function, BlockPointer, MemberPointer, Paren, Pipe
