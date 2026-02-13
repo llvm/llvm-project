@@ -2708,8 +2708,6 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
   if (Arg.isIndirect()) {
     DeclPtr = Arg.getIndirectAddress();
     DeclPtr = DeclPtr.withElementType(ConvertTypeForMem(Ty));
-    // Indirect argument is in alloca address space, which may be different
-    // from the default address space.
     auto *V = DeclPtr.emitRawPointer(*this);
     AllocaPtr = RawAddress(V, DeclPtr.getElementType(), DeclPtr.getAlignment());
 
@@ -2757,26 +2755,20 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
       DeclPtr = OpenMPLocalAddr;
       AllocaPtr = DeclPtr;
     } else {
-      // Otherwise, create a temporary to hold the value, respecting the
-      // requested AS of the destination type.
-      RawAddress Result = CreateTempAlloca(
-          ConvertTypeForMem(Ty), DestLangAS, getContext().getDeclAlign(&D),
-          D.getName() + ".addr", nullptr, &AllocaPtr);
-      if (Ty->isConstantMatrixType()) {
-        auto *ArrayTy = cast<llvm::ArrayType>(Result.getElementType());
-        auto *ArrayElementTy = ArrayTy->getElementType();
-        auto ArrayElements = ArrayTy->getNumElements();
-        if (getContext().getLangOpts().HLSL) {
-          auto *VectorTy = cast<llvm::FixedVectorType>(ArrayElementTy);
-          ArrayElementTy = VectorTy->getElementType();
-          ArrayElements *= VectorTy->getNumElements();
-        }
-        auto *VectorTy =
-            llvm::FixedVectorType::get(ArrayElementTy, ArrayElements);
-
-        Result = Result.withElementType(VectorTy);
-      }
-      DeclPtr = Result;
+      // Otherwise, create a temporary to hold the value.
+      // Sema is not capable of setting the decayed addrspace for a non-decayed
+      // array, so some frontends rely on overriding the Sema type here with a
+      // different addrspace.
+      // (We could also copy CreateMemTemp here instead, or add the parameter
+      // there just for this).
+      QualType TyAS = Ty;
+      if (TyAS->isArrayType() || TyAS->isFunctionType())
+        TyAS = getContext().getDecayedType(TyAS);
+      if (Ty.getAddressSpace() != DestLangAS)
+        TyAS = getContext().getAddrSpaceQualType(
+            getContext().removeAddrSpaceQualType(TyAS), DestLangAS);
+      DeclPtr = CreateMemTemp(TyAS, getContext().getDeclAlign(&D),
+                              D.getName() + ".addr", &AllocaPtr);
     }
     DoStore = true;
   }
