@@ -75,12 +75,13 @@ public:
         HasSubminor(true), Build(Build), Subbuild(Subbuild), HasBuild(true),
         HasSubbuild(true) {}
 
+  std::tuple<unsigned, unsigned, unsigned, unsigned, unsigned> asTuple() const {
+    return {Major, Minor, Subminor, Build, Subbuild};
+  }
+
   /// Determine whether this version information is empty
   /// (e.g., all version components are zero).
-  bool empty() const {
-    return Major == 0 && Minor == 0 && Subminor == 0 && Build == 0 &&
-           Subbuild == 0;
-  }
+  bool empty() const { return *this == VersionTuple(); }
 
   /// Retrieve the major version number.
   unsigned getMajor() const { return Major; }
@@ -144,9 +145,7 @@ public:
   /// Determine if two version numbers are equivalent. If not
   /// provided, minor and subminor version numbers are considered to be zero.
   friend bool operator==(const VersionTuple &X, const VersionTuple &Y) {
-    return X.Major == Y.Major && X.Minor == Y.Minor &&
-           X.Subminor == Y.Subminor && X.Build == Y.Build &&
-           X.Subbuild == Y.Subbuild;
+    return X.asTuple() == Y.asTuple();
   }
 
   /// Determine if two version numbers are not equivalent.
@@ -162,8 +161,7 @@ public:
   /// If not provided, minor and subminor version numbers are considered to be
   /// zero.
   friend bool operator<(const VersionTuple &X, const VersionTuple &Y) {
-    return std::tie(X.Major, X.Minor, X.Subminor, X.Build, X.Subbuild) <
-           std::tie(Y.Major, Y.Minor, Y.Subminor, Y.Build, Y.Subbuild);
+    return X.asTuple() < Y.asTuple();
   }
 
   /// Determine whether one version number follows another.
