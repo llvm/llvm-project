@@ -304,9 +304,9 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
         genericOp, "contains invalid cast ops for the named matmul op");
 
   /// Codegen the different matmul variants.
-  /// maps to express transposed operands on the standard op.
-  if (numOfBatchDims)
+  if (numOfBatchDims) {
     return replaceWithMatmulVariant<BatchMatmulOp>(rewriter, genericOp, castTy);
+  }
 
   return replaceWithMatmulVariant<MatmulOp>(rewriter, genericOp, castTy);
 }
