@@ -656,34 +656,50 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
               "'zclsd' and 'zcf' extensions are incompatible");
   }
 
-  for (StringRef Input : {
-           "rv64if_zcf",        "rv64i_zilsd",      "rv64i_zclsd",
-           "rv64i_xqcia0p7",    "rv64i_xwchc",      "rv64i_xqciac0p3",
-           "rv64i_xqcibi0p2",   "rv64i_xqcibm0p8",  "rv64i_xqcicli0p3",
-           "rv64i_xqcicm0p2",   "rv64i_xqcics0p2",  "rv64i_xqcicsr0p4",
-           "rv64i_xqciint0p10", "rv64i_xqciio0p1",  "rv64i_xqcilb0p2",
-           "rv64i_xqcili0p2",   "rv64i_xqcilia0p2", "rv64i_xqcilo0p3",
-           "rv64i_xqcilsm0p6",  "rv64i_xqcisim0p2", "rv64i_xqcisls0p2",
-           "rv64i_xqcisync0p3", "rv64i_xqci0p13",
-       }) {
-    EXPECT_THAT(
-        toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-        ::testing::EndsWith(" is only supported for 'rv32'"));
+  for (StringRef Input : {"rv64i_zilsd", "rv64i_zclsd"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zilsd' is only supported for 'rv32'");
   }
 
+  // In these ISA strings, the non-rv32 extension should be last, after an
+  // underscore.
   for (StringRef Input : {
-           "rv32idc_xqciac0p3",
-           "rv32i_zcd_xqciac0p3",
-           "rv32idc_xqcicm0p2",
-           "rv32i_zcd_xqcicm0p2",
-           "rv32idc_xqccmp0p3",
-           "rv32i_zcd_xqccmp0p3",
-           "rv32idc_xqci0p13",
-           "rv32i_zcd_xqci0p13",
+           "rv64if_zcf",    "rv64i_xwchc",   "rv64i_xqcia",   "rv64i_xqciac",
+           "rv64i_xqcibi",  "rv64i_xqcibm",  "rv64i_xqcicli", "rv64i_xqcicm",
+           "rv64i_xqcics",  "rv64i_xqcicsr", "rv64i_xqciint", "rv64i_xqciio",
+           "rv64i_xqcilb",  "rv64i_xqcili",  "rv64i_xqcilia", "rv64i_xqcilo",
+           "rv64i_xqcilsm", "rv64i_xqcisim", "rv64i_xqcisls", "rv64i_xqcisync",
+           "rv64i_xqci",
        }) {
-    EXPECT_THAT(
-        toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-        ::testing::EndsWith(" and 'zcd' extensions are incompatible"));
+
+    auto [_, ConflictingExt] = Input.rsplit('_');
+    std::string Error =
+        toString(RISCVISAInfo::parseArchString(Input, true).takeError());
+
+    EXPECT_THAT(Error, ::testing::EndsWith("' is only supported for 'rv32'"));
+    EXPECT_THAT(Error, ::testing::HasSubstr(ConflictingExt));
+  }
+
+  // In these ISA strings, the non-zcd extension should be last, after an
+  // underscore.
+  for (StringRef Input : {
+           "rv32idc_xqciac",
+           "rv32i_zcd_xqciac",
+           "rv32idc_xqcicm",
+           "rv32i_zcd_xqcicm",
+           "rv32idc_xqccmp",
+           "rv32i_zcd_xqccmp",
+           "rv32idc_xqci",
+           "rv32i_zcd_xqci",
+       }) {
+
+    auto [_, ConflictingExt] = Input.rsplit('_');
+    std::string Error =
+        toString(RISCVISAInfo::parseArchString(Input, true).takeError());
+
+    EXPECT_THAT(Error,
+                ::testing::EndsWith(" and 'zcd' extensions are incompatible"));
+    EXPECT_THAT(Error, ::testing::HasSubstr(ConflictingExt));
   }
 
   for (StringRef Input : {"rv32i_zcmp_xqccmp0p3", "rv64i_zcmp_xqccmp0p3"}) {

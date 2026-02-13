@@ -780,7 +780,7 @@ Error RISCVISAInfo::checkDependency() {
   if (XLen != 32)
     for (auto Ext : RV32Only)
       if (Exts.count(Ext.str()))
-        return getError("'zcf' is only supported for 'rv32'");
+        return getError(Twine("'") + Ext + "' is only supported for 'rv32'");
 
   if (Exts.count("xwchc") != 0) {
     if (HasD)
