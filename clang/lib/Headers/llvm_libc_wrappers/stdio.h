@@ -41,7 +41,7 @@ __LIBC_ATTRS extern FILE *stdout;
 #pragma omp end declare target
 
 // Restore the original macros when compiling on the host.
-#if !defined(__NVPTX__) && !defined(__AMDGPU__) && !defined(__SPIRV__)
+#if !defined(__NVPTX__) && !defined(__AMDGPU__)
 #pragma pop_macro("stderr")
 #pragma pop_macro("stdin")
 #pragma pop_macro("stdout")
