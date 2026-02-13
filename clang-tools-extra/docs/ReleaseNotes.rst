@@ -144,6 +144,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/argument-comment>` to also check for C++11
   inherited constructors.
 
+- Improved :doc:`bugprone-bad-signal-to-kill-thread
+  <clang-tidy/checks/bugprone/bad-signal-to-kill-thread>` check by fixing false
+  negatives when the ``SIGTERM`` macro is obtained from a precompiled header.
+
 - Improved :doc:`bugprone-exception-escape
   <clang-tidy/checks/bugprone/exception-escape>` check by adding
   `TreatFunctionsWithoutSpecificationAsThrowing` option to support reporting
