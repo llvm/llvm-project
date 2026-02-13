@@ -15,6 +15,7 @@
 #include "CIRGenModule.h"
 
 #include "clang/AST/GlobalDecl.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/SaveAndRestore.h"
 
@@ -256,7 +257,7 @@ void CIRGenModule::emitCXXGlobalVarDeclInit(const VarDecl *varDecl,
   CIRGenFunction::SourceLocRAIIObject fnLoc{cgf,
                                             getLoc(varDecl->getLocation())};
 
-  assert(!cir::MissingFeatures::astVarDeclInterface());
+  addr.setAstAttr(cir::ASTVarDeclAttr::get(&getMLIRContext(), varDecl));
 
   if (!ty->isReferenceType()) {
     assert(!cir::MissingFeatures::openMP());

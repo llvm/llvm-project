@@ -830,7 +830,8 @@ mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty,
   cir::GlobalOp g = getOrCreateCIRGlobal(d, ty, isForDefinition);
   mlir::Type ptrTy = builder.getPointerTo(g.getSymType());
   return cir::GetGlobalOp::create(builder, getLoc(d->getSourceRange()), ptrTy,
-                                  g.getSymNameAttr(), tlsAccess);
+                                  g.getSymNameAttr(), tlsAccess,
+                                  g.getStaticLocal());
 }
 
 cir::GlobalViewAttr CIRGenModule::getAddrOfGlobalVarAttr(const VarDecl *d) {
