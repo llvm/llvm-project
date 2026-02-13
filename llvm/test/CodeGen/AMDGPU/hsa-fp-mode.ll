@@ -92,10 +92,10 @@ define amdgpu_kernel void @test_no_ieee_mode_no_dx10_clamp_vi(ptr addrspace(1) %
 
 attributes #0 = { nounwind "target-cpu"="kaveri" }
 attributes #1 = { nounwind "target-cpu"="fiji" }
-attributes #2 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #3 = { nounwind "denormal-fp-math-f32"="ieee,ieee" "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #4 = { nounwind "denormal-fp-math"="ieee,ieee" }
-attributes #5 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
+attributes #2 = { nounwind denormal_fpenv(float: preservesign) }
+attributes #3 = { nounwind denormal_fpenv(preservesign, float: ieee) }
+attributes #4 = { nounwind denormal_fpenv(ieee) }
+attributes #5 = { nounwind denormal_fpenv(preservesign) }
 attributes #6 = { nounwind "amdgpu-dx10-clamp"="false" "target-cpu"="fiji" }
 attributes #7 = { nounwind "amdgpu-ieee"="false" "target-cpu"="fiji" }
 attributes #8 = { nounwind "amdgpu-dx10-clamp"="false" "amdgpu-ieee"="false" "target-cpu"="fiji" }

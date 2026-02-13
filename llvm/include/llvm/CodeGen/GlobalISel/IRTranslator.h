@@ -299,7 +299,7 @@ private:
 
   bool translateIntrinsic(
       const CallBase &CB, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder,
-      const TargetLowering::IntrinsicInfo *TgtMemIntrinsicInfo = nullptr);
+      ArrayRef<TargetLowering::IntrinsicInfo> TgtMemIntrinsicInfos = {});
 
   /// When an invoke or a cleanupret unwinds to the next EH pad, there are
   /// many places it could ultimately go. In the IR, we have a single unwind

@@ -52,6 +52,7 @@ public:
 
 private:
   bool tryEraseCallInvoke(Instruction *I);
+  void eraseFromWorklist(Instruction *I);
 };
 }
 
@@ -212,7 +213,12 @@ void NoopCoroElider::visitCallBase(CallBase &CB) {
   if (ResumeOrDestroy) {
     [[maybe_unused]] bool Success = tryEraseCallInvoke(&CB);
     assert(Success && "Unexpected CallBase");
-    RecursivelyDeleteTriviallyDeadInstructions(V);
+
+    auto AboutToDeleteCallback = [this](Value *V) {
+      eraseFromWorklist(cast<Instruction>(V));
+    };
+    RecursivelyDeleteTriviallyDeadInstructions(V, nullptr, nullptr,
+                                               AboutToDeleteCallback);
   }
 }
 
@@ -227,6 +233,7 @@ void NoopCoroElider::visitIntrinsicInst(IntrinsicInst &II) {
 
 bool NoopCoroElider::tryEraseCallInvoke(Instruction *I) {
   if (auto *Call = dyn_cast<CallInst>(I)) {
+    eraseFromWorklist(Call);
     Call->eraseFromParent();
     return true;
   }
@@ -234,10 +241,17 @@ bool NoopCoroElider::tryEraseCallInvoke(Instruction *I) {
   if (auto *II = dyn_cast<InvokeInst>(I)) {
     Builder.SetInsertPoint(II);
     Builder.CreateBr(II->getNormalDest());
+    eraseFromWorklist(II);
     II->eraseFromParent();
     return true;
   }
   return false;
+}
+
+void NoopCoroElider::eraseFromWorklist(Instruction *I) {
+  erase_if(Worklist, [I](UseToVisit &U) {
+    return I == U.UseAndIsOffsetKnown.getPointer()->getUser();
+  });
 }
 
 static bool declaresCoroCleanupIntrinsics(const Module &M) {

@@ -152,7 +152,7 @@ Register llvm::constrainOperandRegClass(
                                   RegMO);
 }
 
-bool llvm::constrainSelectedInstRegOperands(MachineInstr &I,
+void llvm::constrainSelectedInstRegOperands(MachineInstr &I,
                                             const TargetInstrInfo &TII,
                                             const TargetRegisterInfo &TRI,
                                             const RegisterBankInfo &RBI) {
@@ -195,7 +195,6 @@ bool llvm::constrainSelectedInstRegOperands(MachineInstr &I,
         I.tieOperands(DefIdx, OpI);
     }
   }
-  return true;
 }
 
 bool llvm::canReplaceReg(Register DstReg, Register SrcReg,

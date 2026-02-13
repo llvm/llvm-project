@@ -350,7 +350,7 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
       "bool", "areTypesCompatible",
       (ins "::mlir::Type":$lhs, "::mlir::Type":$rhs), [{}],
       /*defaultImplementation=*/[{ return lhs == rhs; }]
-    >
+    >,
   ];
 
   let verify = [{

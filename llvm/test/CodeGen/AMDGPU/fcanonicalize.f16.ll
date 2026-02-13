@@ -4040,6 +4040,6 @@ define <64 x half> @v_test_canonicalize_var_v64f16(<64 x half> %val) #1 {
 }
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #2 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #3 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #1 = { nounwind denormal_fpenv(float: preservesign) }
+attributes #2 = { nounwind denormal_fpenv(preservesign) }
+attributes #3 = { nounwind denormal_fpenv(float: preservesign) }

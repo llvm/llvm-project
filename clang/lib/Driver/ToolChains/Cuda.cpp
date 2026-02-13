@@ -666,8 +666,7 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                    const llvm::opt::ArgList &Args,
                                    std::vector<StringRef> &Features) {
   if (Args.hasArg(options::OPT_cuda_feature_EQ)) {
-    StringRef PtxFeature =
-        Args.getLastArgValue(options::OPT_cuda_feature_EQ, "+ptx42");
+    StringRef PtxFeature = Args.getLastArgValue(options::OPT_cuda_feature_EQ);
     Features.push_back(Args.MakeArgString(PtxFeature));
     return;
   }
@@ -706,15 +705,20 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     CASE_CUDA_VERSION(92, 61);
     CASE_CUDA_VERSION(91, 61);
     CASE_CUDA_VERSION(90, 60);
+    CASE_CUDA_VERSION(80, 50);
+    CASE_CUDA_VERSION(75, 43);
+    CASE_CUDA_VERSION(70, 42);
 #undef CASE_CUDA_VERSION
   // TODO: Use specific CUDA version once it's public.
   case clang::CudaVersion::NEW:
     PtxFeature = "+ptx86";
     break;
   default:
-    PtxFeature = "+ptx42";
+    // No PTX feature specified; let the backend choose based on the target SM.
+    break;
   }
-  Features.push_back(PtxFeature);
+  if (PtxFeature)
+    Features.push_back(PtxFeature);
 }
 
 /// NVPTX toolchain. Our assembler is ptxas, and our linker is nvlink. This
@@ -862,13 +866,6 @@ void CudaToolChain::addClangTargetOptions(
   CC1Args.append({"-fcuda-is-device", "-mllvm",
                   "-enable-memcpyopt-without-libcalls",
                   "-fno-threadsafe-statics"});
-
-  // Unsized function arguments used for variadics were introduced in CUDA-9.0
-  // We still do not support generating code that actually uses variadic
-  // arguments yet, but we do need to allow parsing them as recent CUDA
-  // headers rely on that. https://github.com/llvm/llvm-project/issues/58410
-  if (CudaInstallation.version() >= CudaVersion::CUDA_90)
-    CC1Args.push_back("-fcuda-allow-variadic-functions");
 
   if (DriverArgs.hasFlag(options::OPT_fcuda_short_ptr,
                          options::OPT_fno_cuda_short_ptr, false))

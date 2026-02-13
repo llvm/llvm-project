@@ -5,11 +5,11 @@
 ; hackery:
 
 ; RUN: cat %s > %t.ftz
-; RUN: echo 'attributes #0 = { "denormal-fp-math-f32" = "preserve-sign" }' >> %t.ftz
+; RUN: echo 'attributes #0 = { denormal_fpenv(float: preservesign) }' >> %t.ftz
 ; RUN: opt < %t.ftz -passes=instcombine -mtriple=nvptx64-nvidia-cuda -S | FileCheck %s --check-prefix=CHECK --check-prefix=FTZ
 
 ; RUN: cat %s > %t.noftz
-; RUN: echo 'attributes #0 = { "denormal-fp-math-f32" = "ieee" }' >> %t.noftz
+; RUN: echo 'attributes #0 = { denormal_fpenv(float: ieee) }' >> %t.noftz
 ; RUN: opt < %t.noftz -passes=instcombine -mtriple=nvptx64-nvidia-cuda -S | FileCheck %s --check-prefix=CHECK --check-prefix=NOFTZ
 
 ; We handle nvvm intrinsics with ftz variants as follows:

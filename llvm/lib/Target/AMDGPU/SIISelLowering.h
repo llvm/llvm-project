@@ -132,6 +132,7 @@ private:
   SDValue LowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerSPONENTRY(SDValue Op, SelectionDAG &DAG) const;
   SDValue adjustLoadValueType(unsigned Opcode, MemSDNode *M,
                               SelectionDAG &DAG, ArrayRef<SDValue> Ops,
                               bool IsIntrinsic = false) const;
@@ -336,7 +337,7 @@ public:
   MVT getPointerTy(const DataLayout &DL, unsigned AS) const override;
   MVT getPointerMemTy(const DataLayout &DL, unsigned AS) const override;
 
-  bool getTgtMemIntrinsic(IntrinsicInfo &, const CallBase &,
+  void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &, const CallBase &,
                           MachineFunction &MF,
                           unsigned IntrinsicID) const override;
 
@@ -559,7 +560,7 @@ public:
                            Register N1) const override;
 
   bool isCanonicalized(SelectionDAG &DAG, SDValue Op,
-                       unsigned MaxDepth = 5) const;
+                       SDNodeFlags UserFlags = {}, unsigned MaxDepth = 5) const;
   bool isCanonicalized(Register Reg, const MachineFunction &MF,
                        unsigned MaxDepth = 5) const;
   bool denormalsEnabledForType(const SelectionDAG &DAG, EVT VT) const;
