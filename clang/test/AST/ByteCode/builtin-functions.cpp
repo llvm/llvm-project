@@ -21,6 +21,7 @@
 #error "huh?"
 #endif
 
+#define fold(x) (__builtin_constant_p(0) ? (x) : (x))
 
 inline constexpr void* operator new(__SIZE_TYPE__, void* p) noexcept { return p; }
 namespace std {
@@ -229,6 +230,9 @@ constexpr const char *a = "foo\0quux";
 
   int arr[3]; // both-note {{here}}
   int wk = arr[wcslen(L"hello")]; // both-warning {{array index 5}}
+
+  const long long longArray[] = {'b'};
+  constexpr int m = __builtin_strlen(fold((char *)longArray)); // both-error {{must be initialized by a constant expression}}
 }
 
 namespace nan {
@@ -1499,7 +1503,6 @@ namespace BuiltinMemcpy {
   }
   static_assert(memmoveOverlapping());
 
-#define fold(x) (__builtin_constant_p(0) ? (x) : (x))
   static_assert(__builtin_memcpy(&global, fold((wchar_t*)123), sizeof(wchar_t))); // both-error {{not an integral constant expression}} \
                                                                                   // both-note {{source of 'memcpy' is (void *)123}}
   static_assert(__builtin_memcpy(fold(reinterpret_cast<wchar_t*>(123)), &global, sizeof(wchar_t))); // both-error {{not an integral constant expression}} \
