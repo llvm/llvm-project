@@ -1021,35 +1021,8 @@ public:
     llvm_unreachable("Target didn't implement TargetInstrInfo::insertSelect!");
   }
 
-  /// Analyze the given select instruction, returning true if
-  /// it cannot be understood. It is assumed that MI->isSelect() is true.
-  ///
-  /// When successful, return the controlling condition and the operands that
-  /// determine the true and false result values.
-  ///
-  ///   Result = SELECT Cond, TrueOp, FalseOp
-  ///
-  /// Some targets can optimize select instructions, for example by predicating
-  /// the instruction defining one of the operands. Such targets should set
-  /// Optimizable.
-  ///
-  /// @param         MI Select instruction to analyze.
-  /// @param Cond    Condition controlling the select.
-  /// @param TrueOp  Operand number of the value selected when Cond is true.
-  /// @param FalseOp Operand number of the value selected when Cond is false.
-  /// @param Optimizable Returned as true if MI is optimizable.
-  /// @returns False on success.
-  virtual bool analyzeSelect(const MachineInstr &MI,
-                             SmallVectorImpl<MachineOperand> &Cond,
-                             unsigned &TrueOp, unsigned &FalseOp,
-                             bool &Optimizable) const {
-    assert(MI.getDesc().isSelect() && "MI must be a select instruction");
-    return true;
-  }
-
-  /// Given a select instruction that was understood by
-  /// analyzeSelect and returned Optimizable = true, attempt to optimize MI by
-  /// merging it with one of its operands. Returns NULL on failure.
+  /// Given an instruction marked as `isSelect = true`, attempt to optimize MI
+  /// by merging it with one of its operands. Returns nullptr on failure.
   ///
   /// When successful, returns the new select instruction. The client is
   /// responsible for deleting MI.
@@ -1065,8 +1038,8 @@ public:
   virtual MachineInstr *optimizeSelect(MachineInstr &MI,
                                        SmallPtrSetImpl<MachineInstr *> &NewMIs,
                                        bool PreferFalse = false) const {
-    // This function must be implemented if Optimizable is ever set.
-    llvm_unreachable("Target must implement TargetInstrInfo::optimizeSelect!");
+    assert(MI.isSelect() && "MI must be a select instruction");
+    return nullptr;
   }
 
   /// Emit instructions to copy a pair of physical registers.

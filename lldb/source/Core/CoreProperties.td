@@ -1,6 +1,6 @@
 include "../../include/lldb/Core/PropertiesBase.td"
 
-let Definition = "modulelist" in {
+let Definition = "modulelist", Path = "symbols" in {
   def EnableExternalLookup: Property<"enable-external-lookup", "Boolean">,
     Global,
     DefaultTrue,
@@ -14,6 +14,10 @@ let Definition = "modulelist" in {
     DefaultEnumValue<"eSymbolDownloadOff">,
     EnumValues<"OptionEnumValues(g_auto_download_enum_values)">,
     Desc<"On macOS, automatically download symbols with dsymForUUID (or an equivalent script/binary) for relevant images in the debug session.">;
+  def SharedCacheBinaryLoading: Property<"shared-cache-binary-loading", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"On macOS, load the binaries from a shared cache blob directly, instead of loading them from lldb's own in-process shared cache.">;
   def ClangModulesCachePath: Property<"clang-modules-cache-path", "FileSpec">,
     Global,
     DefaultStringValue<"">,
@@ -49,7 +53,7 @@ let Definition = "modulelist" in {
 }
 
 #ifndef NDEBUG
-let Definition = "testing" in {
+let Definition = "testing", Path = "testing" in {
   def InjectVarLocListError
       : Property<"inject-variable-location-error", "Boolean">,
         Global,
@@ -58,7 +62,7 @@ let Definition = "testing" in {
 }
 #endif
 
-let Definition = "debugger" in {
+let Definition = "debugger", Path = "" in {
   def AutoConfirm: Property<"auto-confirm", "Boolean">,
     Global,
     DefaultFalse,

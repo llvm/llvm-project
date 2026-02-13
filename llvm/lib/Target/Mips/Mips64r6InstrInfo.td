@@ -229,19 +229,19 @@ def : MipsPat<(select (i32 (setne i64:$cond, immZExt16_64:$imm)), i64:$t, i64:$f
 def : MipsPat<
   (select (i32 (setgt i64:$cond, immSExt16Plus1:$imm)), i64:$t, i64:$f),
   (OR64 (SELEQZ64 i64:$t,
-                  (SUBREG_TO_REG (i64 0), (SLTi64 i64:$cond, (Plus1 imm:$imm)),
+                  (SUBREG_TO_REG (SLTi64 i64:$cond, (Plus1 imm:$imm)),
                                  sub_32)),
         (SELNEZ64 i64:$f,
-                  (SUBREG_TO_REG (i64 0), (SLTi64 i64:$cond, (Plus1 imm:$imm)),
+                  (SUBREG_TO_REG (SLTi64 i64:$cond, (Plus1 imm:$imm)),
                                  sub_32)))>,
   ISA_MIPS64R6;
 def : MipsPat<
   (select (i32 (setugt i64:$cond, immSExt16Plus1:$imm)), i64:$t, i64:$f),
   (OR64 (SELEQZ64 i64:$t,
-                  (SUBREG_TO_REG (i64 0), (SLTiu64 i64:$cond, (Plus1 imm:$imm)),
+                  (SUBREG_TO_REG (SLTiu64 i64:$cond, (Plus1 imm:$imm)),
                                  sub_32)),
         (SELNEZ64 i64:$f,
-                  (SUBREG_TO_REG (i64 0), (SLTiu64 i64:$cond, (Plus1 imm:$imm)),
+                  (SUBREG_TO_REG (SLTiu64 i64:$cond, (Plus1 imm:$imm)),
                                  sub_32)))>,
   ISA_MIPS64R6;
 

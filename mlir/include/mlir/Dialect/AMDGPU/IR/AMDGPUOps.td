@@ -33,6 +33,17 @@ def AnyIntegerOrFloat : AnyTypeOf<[AnySignlessInteger, AnyFloat], "Integer or Fl
 def AnyIntegerOrFloatOr1DVector :
   AnyTypeOf<[AnyIntegerOrFloat, FixedVectorOfRankAndType<[1], [AnyIntegerOrFloat]>]>;
 
+// Types with element width up to 64 bits, used to keep dpp operands legal.
+def AMDGPU_IntOrFloatWidthLeq64 : Type<
+  CPred<"$_self.isIntOrFloat() && $_self.getIntOrFloatBitWidth() <= 64">,
+  "integer or float with element bitwidth <= 64">;
+
+def AMDGPU_IntOrFloatOr1DVectorWidthLeq64 :
+  AnyTypeOf<[
+    AMDGPU_IntOrFloatWidthLeq64,
+    FixedVectorOfRankAndType<[1], [AMDGPU_IntOrFloatWidthLeq64]>
+  ]>;
+
 //===----------------------------------------------------------------------===//
 // AMDGPU Op definitions
 //===----------------------------------------------------------------------===//
@@ -643,8 +654,8 @@ def AMDGPU_RawBufferAtomicUminOp :
 
 def AMDGPU_DPPOp : AMDGPU_Op<"dpp",
     [Pure, SameTypeOperands, AllTypesMatch<["result", "old", "src"]>]>,
-  Arguments<(ins AnyType:$old,
-                 AnyType:$src,
+  Arguments<(ins AMDGPU_IntOrFloatOr1DVectorWidthLeq64:$old,
+                 AMDGPU_IntOrFloatOr1DVectorWidthLeq64:$src,
                  AMDGPU_DPPPermAttr:$kind,
                  OptionalAttr<AnyAttrOf<[I32Attr, ArrayAttr, UnitAttr]>>:$permArgument,
                  DefaultValuedAttr<I32Attr, "0xf">:$row_mask,
@@ -1379,7 +1390,7 @@ class AMDGPU_MakeDescriptorOp<string mnemonic> :
     Optional<I1>: $early_timeout,
     Optional<I32>: $pad_amount,
     Optional<I32>: $pad_interval,
-    Optional<AnyMemRef>: $atomic_barrier_address,
+    Optional<MemRefOf<[AMDGPU_DsBarrierStateType]>>: $atomic_barrier_address,
     Variadic<Index>: $atomic_barrier_indices,
     Optional<Index>: $global_increment,
     Optional<I32>: $lds_increment,
@@ -1466,7 +1477,8 @@ def AMDGPU_MakeDmaDescriptorOp : AMDGPU_MakeDescriptorOp<"make_dma_descriptor"> 
      $pad_interval must be a power of two contained in [2, 256].
      $pad_amount must be a value contained in [1, 128].
 
-     $atomic_barrier_address must be aligned to 8 bytes.
+     If an atomic barrier is provided, it will be arrived at **once** after
+     each load/store using this descriptor is completed.
 
      2D and 3D tensors may be iterated over by setting $global_increment, $lds_increment, and $iteration_count.
      $global_increment determines how much to increment the starting global memory address per iteration in units of the $base's element type.
@@ -1538,6 +1550,222 @@ def AMDGPU_TensorStoreFromLDSOp :
 
   let assemblyFormat = [{
     $desc attr-dict `:` qualified(type($desc))
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// In-LDS Barrier Operations
+//
+// General note: any of these operations that impact memory have read and write
+// effects as a crude model of their atomic nature - we don't want "reads"
+// being hoisted out of loops.
+//===----------------------------------------------------------------------===//
+
+def AMDGPU_DsBarrierInitOp :
+    AMDGPU_Op<"ds_barrier_init">,
+    Arguments<(ins Arg<MemRefOf<[AMDGPU_DsBarrierStateType]>, "barrier(s)",
+                       [MemRead, MemWrite]>:$base,
+                   Variadic<Index>:$indices,
+                   I32:$participants)> {
+  let summary = "Initialize an in-LDS barrier.";
+  let description = [{
+    Given the location `!amdgpu.ds_barrier_state` in LDS (as specified by `base` and `indices`),
+    initialize the barrier structure so that the pending and init counts are equal to
+    `participants - 1`, which will have its high bits masked off, and its phase is equal to 0.
+
+    Note that we subtract 1 from `participants` when constructing the barrier state
+    to provide clearer high-level semantics.
+
+    The subtraction means that, when the `participant`th arrival occurs, the phase will change.
+    In practical terms, this means that you can use (for example) the number of subgroups or
+    waves per workgroup as `participants`, instead of manually needing to remove one.
+
+    While the write of the initial state will be performed atomically, no synchronization
+    between waves will be performed by this operation.
+
+    Example:
+    ```mlir
+    amdgpu.ds_barrier_init %barrier[], %c32 : memref<!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>, i32
+    ```
+
+    This operation is only available on gfx1250+.
+  }];
+
+  let assemblyFormat = [{
+    $base `[` $indices `]` `,` $participants attr-dict `:` type($base) `,` type($participants)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def AMDGPU_DsBarrierPollStateOp :
+    AMDGPU_Op<"ds_barrier_poll_state">,
+    Arguments<(ins Arg<MemRefOf<[AMDGPU_DsBarrierStateType]>, "barrier(s)",
+                       [MemRead, MemWrite]>:$base,
+                 Variadic<Index>:$indices)>,
+    Results<(outs AMDGPU_DsBarrierStateType:$out)> {
+  let summary = "Atomically read the state of an in-LDS barrier.";
+  let description = [{
+    Atomically read and return the state of the barrier at `base[indices...]`.
+
+    This will ultimately act like a `memref.load`, but this operation will ensure
+    that appropriate atomic orderings and syncscopes are set.
+
+    Example:
+    ```mlir
+    %state = amdgpu.ds_barrier_poll_state %barrier[] : memref<!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>> -> !amdgpu.ds_barrier_state
+    ```
+
+    This operation is only available on gfx1250+.
+  }];
+
+  let assemblyFormat = [{
+    $base `[` $indices `]` attr-dict `:` type($base) `->` type($out)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def AMDGPU_DsAsyncBarrierArriveOp :
+    AMDGPU_Op<"ds_async_barrier_arrive">,
+    Arguments<(ins Arg<MemRefOf<[AMDGPU_DsBarrierStateType]>, "barrier(s)",
+                       [MemRead, MemWrite]>:$base,
+                 Variadic<Index>:$indices)> {
+  let summary = "Asynchronously arrive at an in-LDS barrier.";
+  let description = [{
+    Add a arrival to the LDS barrier at `base[indices]` to the sequence of pending
+    asynchronous memory operations.
+
+    This will add an "asynchronous memory operation" to the in-order list of pending
+    asynchronous loads from global memory to LDS. When the queue of such operations
+    issued before this operation is complete, the specified barrier will be arrived at,
+    decrementing the pending count by 1 **per lane that executes it** and rolling
+    over the phase if applicable.
+
+    This operation does not return the old barrier state.
+
+    Example:
+    ```mlir
+    amdgpu.ds_async_barrier_arrive %barrier[] : memref<!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>
+    ```
+
+    This operation is only available on gfx1250+.
+  }];
+
+  let assemblyFormat = [{
+    $base `[` $indices `]` attr-dict `:` type($base)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def AMDGPU_DsBarrierArriveOp :
+    AMDGPU_Op<"ds_barrier_arrive">,
+    Arguments<(ins Arg<MemRefOf<[AMDGPU_DsBarrierStateType]>, "barrier(s)",
+                       [MemRead, MemWrite]>:$base,
+                 Variadic<Index>:$indices,
+                 I64:$count)>,
+    Results<(outs AMDGPU_DsBarrierStateType:$out)> {
+  let summary = "Arrive at an in-LDS barrier and return old state.";
+  let description = [{
+    Atomically arrive at the LDS barrier at `base[indices]` and decrement it by `count`,
+    rolling over the phase if needed and returning the old barrier state.
+
+    `count` is the number of participants that should be subtracted from the barrier's
+    pending count **per lane that executes the operation**.
+
+    Example:
+    ```mlir
+    %old_state = amdgpu.ds_barrier_arrive %barrier[], %c1 : memref<!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>, i64 -> !amdgpu.ds_barrier_state
+    ```
+
+    This operation is only available on gfx1250+.
+  }];
+
+  let assemblyFormat = [{
+    $base `[` $indices `]` `,` $count attr-dict `:` type($base) `,` type($count) `->` type($out)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def AMDGPU_DsBarrierStatePhaseOp :
+    AMDGPU_Op<"ds_barrier_state_phase", [Pure]>,
+    Arguments<(ins AMDGPU_DsBarrierStateType:$state)>,
+    Results<(outs I32:$res)> {
+  let summary = "Extract the phase of a barrier state.";
+  let description = [{
+    Extract the phase of the `!amdgpu.ds_barrier_state` `state` as a 32-bit value.
+
+    Example:
+    ```mlir
+    %phase = amdgpu.ds_barrier_state_phase %state : !amdgpu.ds_barrier_state -> i32
+    ```
+  }];
+
+  let assemblyFormat = [{
+    $state attr-dict `:` type($state) `->` type($res)
+  }];
+}
+
+def AMDGPU_DsBarrierStatePendingCountOp :
+    AMDGPU_Op<"ds_barrier_state_pending_count", [Pure]>,
+    Arguments<(ins AMDGPU_DsBarrierStateType:$state)>,
+    Results<(outs I32:$res)> {
+  let summary = "Extract the pending count of a barrier state.";
+  let description = [{
+    Extract the pending count of the `!amdgpu.ds_barrier_state` `state` as a 32-bit value.
+
+    Example:
+    ```mlir
+    %pending = amdgpu.ds_barrier_state_pending_count %state : !amdgpu.ds_barrier_state -> i32
+    ```
+  }];
+
+  let assemblyFormat = [{
+    $state attr-dict `:` type($state) `->` type($res)
+  }];
+}
+
+def AMDGPU_DsBarrierStateInitCountOp :
+    AMDGPU_Op<"ds_barrier_state_init_count", [Pure]>,
+    Arguments<(ins AMDGPU_DsBarrierStateType:$state)>,
+    Results<(outs I32:$res)> {
+  let summary = "Extract the init count of a barrier state.";
+  let description = [{
+    Extract the init count of the `!amdgpu.ds_barrier_state` `state` as a 32-bit value.
+
+    Example:
+    ```mlir
+    %init = amdgpu.ds_barrier_state_init_count %state : !amdgpu.ds_barrier_state -> i32
+    ```
+  }];
+
+  let assemblyFormat = [{
+    $state attr-dict `:` type($state) `->` type($res)
+  }];
+}
+
+def AMDGPU_DsBarrierStatePhaseParity :
+    AMDGPU_Op<"ds_barrier_state_phase_parity", [Pure]>,
+    Arguments<(ins AMDGPU_DsBarrierStateType:$state)>,
+    Results<(outs I1:$res)> {
+  let summary = "Extract the phase parity of a barrier state.";
+  let description = [{
+    Return the parity of the phase of the `!amdgpu.ds_barrier_state` `state`.
+
+    This is intended to simplify the case where the barrier is being used to repeatedly
+    track completion of a task where the precise value of the phase won't mater, only that
+    it changed since (or as a result of) the arrival.
+
+    Example:
+    ```mlir
+    %parity = amdgpu.ds_barrier_state_phase_parity %state : !amdgpu.ds_barrier_state -> i1
+    ```
+  }];
+
+  let assemblyFormat = [{
+    $state attr-dict `:` type($state) `->` type($res)
   }];
 }
 

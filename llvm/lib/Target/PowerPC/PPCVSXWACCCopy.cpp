@@ -93,8 +93,6 @@ protected:
         Register NewVReg = MRI.createVirtualRegister(SrcRC);
         BuildMI(MBB, MI, MI.getDebugLoc(),
                 TII->get(TargetOpcode::SUBREG_TO_REG), NewVReg)
-            .addImm(1) // add 1, not 0, because there is no implicit clearing
-                       // of the high bits.
             .add(SrcMO)
             .addImm(PPC::sub_64);
 
