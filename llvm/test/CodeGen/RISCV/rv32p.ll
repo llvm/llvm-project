@@ -1049,3 +1049,44 @@ define i32 @mvmn_xor_i32(i32 %b, i32 %mask, i32 %a) nounwind {
   %xor2 = xor i32 %and, %a
   ret i32 %xor2
 }
+
+; acc + zext(a) -> waddau acc, a, 0
+define i64 @waddau_zext(i64 %acc, i32 %a) nounwind {
+; CHECK-LABEL: waddau_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a3, 0
+; CHECK-NEXT:    addd a0, a0, a2
+; CHECK-NEXT:    ret
+  %ext_a = zext i32 %a to i64
+  %sum = add i64 %acc, %ext_a
+  ret i64 %sum
+}
+
+; zext(a) + acc -> waddau acc, a, 0
+define i64 @waddau_zext_commuted(i64 %acc, i32 %a) nounwind {
+; CHECK-LABEL: waddau_zext_commuted:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a3, 0
+; CHECK-NEXT:    addd a0, a2, a0
+; CHECK-NEXT:    ret
+  %ext_a = zext i32 %a to i64
+  %sum = add i64 %ext_a, %acc
+  ret i64 %sum
+}
+
+; acc + zext(a) + zext(b) -> waddau acc, a, b
+define i64 @waddau_zext_chain(i64 %acc, i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: waddau_zext_chain:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mv a4, a3
+; CHECK-NEXT:    li a3, 0
+; CHECK-NEXT:    addd a0, a0, a2
+; CHECK-NEXT:    li a5, 0
+; CHECK-NEXT:    addd a0, a0, a4
+; CHECK-NEXT:    ret
+  %ext_a = zext i32 %a to i64
+  %ext_b = zext i32 %b to i64
+  %sum1 = add i64 %acc, %ext_a
+  %sum2 = add i64 %sum1, %ext_b
+  ret i64 %sum2
+}
