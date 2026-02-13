@@ -573,26 +573,7 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
   // The CFG leaves in dead things, and we don't want the dead code paths to
   // confuse us, so we mark all live things first.
   llvm::BitVector live(cfg->getNumBlockIDs());
-  unsigned count = reachable_code::ScanReachableFromBlock(&cfg->getEntry(),
-                                                          live);
-
-  bool AddEHEdges = AC.getAddEHEdges();
-  if (!AddEHEdges && count != cfg->getNumBlockIDs())
-    // When there are things remaining dead, and we didn't add EH edges
-    // from CallExprs to the catch clauses, we have to go back and
-    // mark them as live.
-    for (const auto *B : *cfg) {
-      if (!live[B->getBlockID()]) {
-        if (B->preds().empty()) {
-          const Stmt *Term = B->getTerminatorStmt();
-          if (isa_and_nonnull<CXXTryStmt>(Term))
-            // When not adding EH edges from calls, catch clauses
-            // can otherwise seem dead.  Avoid noting them as dead.
-            count += reachable_code::ScanReachableFromBlock(B, live);
-          continue;
-        }
-      }
-    }
+  reachable_code::ScanReachableFromBlock(&cfg->getEntry(), live);
 
   // Now we know what is live, we check the live precessors of the exit block
   // and look for fall through paths, being careful to ignore normal returns,
