@@ -5858,9 +5858,9 @@ DoubleAPFloat frexp(const DoubleAPFloat &Arg, int &Exp,
 
 APInt DoubleAPFloat::getNaNPayload() const { return Floats[0].getNaNPayload(); }
 
-// class HexFloatArith implements HFP arithemtic using the conventions
-// and approaches of the arith library, and matches the behaviour
-// of the hardware.
+// class HexFloatArith implements HFP arithmetic using the conventions
+// and approaches of the arith library used by the IBM XL compiler,
+// and matches the behaviour of the hardware.
 class HexFloatArith {
 public:
   struct value_t {
