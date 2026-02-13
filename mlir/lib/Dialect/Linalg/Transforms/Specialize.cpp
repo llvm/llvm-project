@@ -307,7 +307,6 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
   if (numOfBatchDims) {
     return replaceWithMatmulVariant<BatchMatmulOp>(rewriter, genericOp, castTy);
   }
-
   return replaceWithMatmulVariant<MatmulOp>(rewriter, genericOp, castTy);
 }
 
