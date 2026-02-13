@@ -32,6 +32,7 @@ constexpr uint32_t CONST_PTR_OPCODE = 4;
 constexpr uint32_t STRING_OPCODE = 5;
 constexpr uint32_t EMPTY_OPCODE = 6;
 constexpr uint32_t DIVERGENT_OPCODE = 7;
+constexpr uint32_t ARRAY_SUM_OPCODE = 8;
 
 //===------------------------------------------------------------------------===
 // Server-side implementations.
@@ -82,6 +83,14 @@ void divergent(int *p) {
   *p = *p;
 }
 
+// 8. Array argument via array_ref.
+int sum_array(const int *arr, int n) {
+  int s = 0;
+  for (int i = 0; i < n; ++i)
+    s += arr[i];
+  return s;
+}
+
 //===------------------------------------------------------------------------===
 // RPC client dispatch.
 //===------------------------------------------------------------------------===
@@ -109,6 +118,11 @@ int empty() { return rpc::dispatch<EMPTY_OPCODE>(client, empty); }
 
 void divergent(int *p) {
   rpc::dispatch<DIVERGENT_OPCODE>(client, divergent, p);
+}
+
+int sum_array(const int *arr, int n) {
+  return rpc::dispatch<ARRAY_SUM_OPCODE>(
+      client, sum_array, rpc::array_ref<const int>{arr, uint64_t(n)}, n);
 }
 #pragma omp end declare variant
 
@@ -142,6 +156,9 @@ rpc::Status handleOpcodesImpl(rpc::Server::Port &Port) {
       assert(p);
       *p = *p;
     });
+    break;
+  case ARRAY_SUM_OPCODE:
+    rpc::invoke<NUM_LANES>(Port, sum_array);
     break;
   default:
     return rpc::RPC_UNHANDLED_OPCODE;
@@ -203,6 +220,11 @@ int main() {
     if (id % 2)
       divergent(&id);
     assert(id == omp_get_thread_num());
+
+    // 8. Array sum via array_ref.
+    int arr[4] = {1, 2, 3, 4};
+    int total = sum_array(arr, 4);
+    assert(total == 10);
   }
 
   printf("PASS\n");

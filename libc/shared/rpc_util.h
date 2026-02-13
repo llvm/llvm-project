@@ -106,6 +106,25 @@ template <typename T, typename... Args>
 RPC_ATTRS constexpr bool is_trivially_constructible_v =
     is_trivially_constructible<T>::value;
 
+/// Tag type to indicate an array of elements being passed through RPC.
+template <typename T> struct array_ref {
+  T *data;
+  uint64_t size;
+  RPC_ATTRS operator T *() const { return data; }
+};
+
+template <typename T> struct is_array_ref : type_constant<bool, false> {};
+template <typename T>
+struct is_array_ref<array_ref<T>> : type_constant<bool, true> {};
+template <typename T>
+RPC_ATTRS constexpr bool is_array_ref_v = is_array_ref<T>::value;
+
+template <typename T> struct remove_array_ref : type_identity<T> {};
+template <typename T>
+struct remove_array_ref<array_ref<T>> : type_identity<T *> {};
+template <typename T>
+using remove_array_ref_t = typename remove_array_ref<T>::type;
+
 template <bool B, typename T, typename F>
 struct conditional : type_identity<T> {};
 template <typename T, typename F>
@@ -443,6 +462,12 @@ RPC_ATTRS constexpr uint64_t string_length(const char *s) {
 /// Helper for dealing with function pointers and lambda types.
 template <typename> struct function_traits;
 template <typename R, typename... Args> struct function_traits<R (*)(Args...)> {
+  using return_type = R;
+  using arg_types = rpc::tuple<Args...>;
+  static constexpr uint64_t ARITY = sizeof...(Args);
+};
+template <typename R, typename... Args>
+struct function_traits<R (*)(Args...) noexcept> {
   using return_type = R;
   using arg_types = rpc::tuple<Args...>;
   static constexpr uint64_t ARITY = sizeof...(Args);
