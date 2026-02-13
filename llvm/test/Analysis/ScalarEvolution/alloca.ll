@@ -7,7 +7,7 @@ define i64 @alloca_non_null() {
 ; CHECK-NEXT:    %alloca = alloca i32, align 4
 ; CHECK-NEXT:    --> %alloca U: [4,-7) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %int = ptrtoint ptr %alloca to i64
-; CHECK-NEXT:    --> (ptrtoaddr ptr %alloca to i64) U: [4,-7) S: [-9223372036854775808,9223372036854775805)
+; CHECK-NEXT:    --> %int U: [0,-3) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:  Determining loop execution counts for: @alloca_non_null
 ;
   %alloca = alloca i32, align 4
@@ -21,7 +21,7 @@ define i64 @alloca_maybe_null() {
 ; CHECK-NEXT:    %alloca = alloca i32, align 4, addrspace(1)
 ; CHECK-NEXT:    --> %alloca U: [0,-7) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %int = ptrtoint ptr addrspace(1) %alloca to i64
-; CHECK-NEXT:    --> (ptrtoaddr ptr addrspace(1) %alloca to i64) U: [0,-7) S: [-9223372036854775808,9223372036854775805)
+; CHECK-NEXT:    --> %int U: [0,-3) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:  Determining loop execution counts for: @alloca_maybe_null
 ;
   %alloca = alloca i32, align 4, addrspace(1)

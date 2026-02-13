@@ -8,25 +8,98 @@
 define i32 @a(ptr readnone %b, ptr %c) {
 ; CHECK-LABEL: a:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, lr}
-; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    .save {r4, r5, r6, lr}
+; CHECK-NEXT:    push {r4, r5, r6, lr}
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
+; CHECK-NEXT:    .pad #64
+; CHECK-NEXT:    sub sp, #64
 ; CHECK-NEXT:    cmp r0, r1
-; CHECK-NEXT:    it ls
-; CHECK-NEXT:    popls {r4, pc}
-; CHECK-NEXT:  .LBB0_1: @ %while.body.preheader
-; CHECK-NEXT:    subs r4, r0, r1
-; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    mov r3, r1
-; CHECK-NEXT:    dlstp.8 lr, r4
+; CHECK-NEXT:    bls .LBB0_3
+; CHECK-NEXT:  @ %bb.1: @ %while.body.preheader
+; CHECK-NEXT:    subs r2, r0, r1
+; CHECK-NEXT:    movs r3, #1
+; CHECK-NEXT:    add.w r0, r2, #15
+; CHECK-NEXT:    vdup.32 q1, r2
+; CHECK-NEXT:    bic r0, r0, #15
+; CHECK-NEXT:    adr r2, .LCPI0_1
+; CHECK-NEXT:    subs r0, #16
+; CHECK-NEXT:    vldrw.u32 q4, [r2]
+; CHECK-NEXT:    adr r2, .LCPI0_2
+; CHECK-NEXT:    add r5, sp, #32
+; CHECK-NEXT:    add.w lr, r3, r0, lsr #4
+; CHECK-NEXT:    adr r3, .LCPI0_0
+; CHECK-NEXT:    vldrw.u32 q5, [r2]
+; CHECK-NEXT:    adr r2, .LCPI0_3
+; CHECK-NEXT:    vldrw.u32 q0, [r3]
+; CHECK-NEXT:    vldrw.u32 q6, [r2]
+; CHECK-NEXT:    add r3, sp, #16
+; CHECK-NEXT:    add r6, sp, #48
+; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    vmov.i8 q2, #0x0
+; CHECK-NEXT:    vmov.i8 q3, #0xff
+; CHECK-NEXT:    mov r2, r1
+; CHECK-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill
 ; CHECK-NEXT:  .LBB0_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    adds r0, r1, r2
-; CHECK-NEXT:    vidup.u8 q0, r0, #1
-; CHECK-NEXT:    adds r2, #16
-; CHECK-NEXT:    vstrb.8 q0, [r3], #16
-; CHECK-NEXT:    letp lr, .LBB0_2
-; CHECK-NEXT:  @ %bb.3: @ %while.end
-; CHECK-NEXT:    pop {r4, pc}
+; CHECK-NEXT:    vldrw.u32 q0, [sp] @ 16-byte Reload
+; CHECK-NEXT:    adds r4, r1, r0
+; CHECK-NEXT:    vqadd.u32 q7, q0, r0
+; CHECK-NEXT:    vcmp.u32 hi, q1, q7
+; CHECK-NEXT:    vpsel q7, q3, q2
+; CHECK-NEXT:    vstrh.32 q7, [r5, #8]
+; CHECK-NEXT:    vqadd.u32 q7, q4, r0
+; CHECK-NEXT:    vcmp.u32 hi, q1, q7
+; CHECK-NEXT:    vpsel q7, q3, q2
+; CHECK-NEXT:    vstrh.32 q7, [r5]
+; CHECK-NEXT:    vqadd.u32 q7, q5, r0
+; CHECK-NEXT:    vcmp.u32 hi, q1, q7
+; CHECK-NEXT:    vpsel q7, q3, q2
+; CHECK-NEXT:    vstrh.32 q7, [r3, #8]
+; CHECK-NEXT:    vqadd.u32 q7, q6, r0
+; CHECK-NEXT:    vcmp.u32 hi, q1, q7
+; CHECK-NEXT:    adds r0, #16
+; CHECK-NEXT:    vpsel q7, q3, q2
+; CHECK-NEXT:    vstrh.32 q7, [r3]
+; CHECK-NEXT:    vldrw.u32 q7, [r5]
+; CHECK-NEXT:    vcmp.i16 ne, q7, zr
+; CHECK-NEXT:    vpsel q7, q3, q2
+; CHECK-NEXT:    vstrb.16 q7, [r6, #8]
+; CHECK-NEXT:    vldrw.u32 q7, [r3]
+; CHECK-NEXT:    vcmp.i16 ne, q7, zr
+; CHECK-NEXT:    vpsel q7, q3, q2
+; CHECK-NEXT:    vstrb.16 q7, [r6]
+; CHECK-NEXT:    vidup.u8 q7, r4, #1
+; CHECK-NEXT:    vldrw.u32 q0, [r6]
+; CHECK-NEXT:    vpt.i8 ne, q0, zr
+; CHECK-NEXT:    vstrbt.8 q7, [r2], #16
+; CHECK-NEXT:    le lr, .LBB0_2
+; CHECK-NEXT:  .LBB0_3: @ %while.end
+; CHECK-NEXT:    add sp, #64
+; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
+; CHECK-NEXT:    pop {r4, r5, r6, pc}
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  @ %bb.4:
+; CHECK-NEXT:  .LCPI0_0:
+; CHECK-NEXT:    .long 12 @ 0xc
+; CHECK-NEXT:    .long 13 @ 0xd
+; CHECK-NEXT:    .long 14 @ 0xe
+; CHECK-NEXT:    .long 15 @ 0xf
+; CHECK-NEXT:  .LCPI0_1:
+; CHECK-NEXT:    .long 8 @ 0x8
+; CHECK-NEXT:    .long 9 @ 0x9
+; CHECK-NEXT:    .long 10 @ 0xa
+; CHECK-NEXT:    .long 11 @ 0xb
+; CHECK-NEXT:  .LCPI0_2:
+; CHECK-NEXT:    .long 4 @ 0x4
+; CHECK-NEXT:    .long 5 @ 0x5
+; CHECK-NEXT:    .long 6 @ 0x6
+; CHECK-NEXT:    .long 7 @ 0x7
+; CHECK-NEXT:  .LCPI0_3:
+; CHECK-NEXT:    .long 0 @ 0x0
+; CHECK-NEXT:    .long 1 @ 0x1
+; CHECK-NEXT:    .long 2 @ 0x2
+; CHECK-NEXT:    .long 3 @ 0x3
 entry:
   %cmp3 = icmp ugt ptr %b, %c
   br i1 %cmp3, label %while.body.preheader, label %while.end

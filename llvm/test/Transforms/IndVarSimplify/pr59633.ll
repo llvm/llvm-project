@@ -7,12 +7,13 @@ declare void @foo(i64 noundef)
 define void @pr59633(ptr noundef %ptr) {
 ; CHECK-LABEL: @pr59633(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[PTR1:%.*]] = ptrtoaddr ptr [[PTR:%.*]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[PTR1]] to i4
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i4 [[TMP0]] to i64
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
+; CHECK-NEXT:    [[PTR_ADDR_0:%.*]] = phi ptr [ [[PTR:%.*]], [[ENTRY:%.*]] ], [ [[ADD_PTR:%.*]], [[WHILE_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[PTR_ADDR_0]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 15
 ; CHECK-NEXT:    tail call void @foo(i64 noundef [[TMP1]])
+; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i8, ptr [[PTR_ADDR_0]], i64 16
 ; CHECK-NEXT:    br label [[WHILE_BODY]]
 ;
 entry:

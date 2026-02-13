@@ -227,27 +227,20 @@ define void @expand_truncated_ptrtoint(ptr %A, ptr %B) {
 ; CHECK-LABEL: define void @expand_truncated_ptrtoint(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; CHECK-NEXT:    br label %[[LOOP_1:.*]]
 ; CHECK:       [[LOOP_1]]:
-; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ [[INDVAR_NEXT:%.*]], %[[LOOP_1]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[P_0:%.*]] = phi ptr [ [[A]], %[[ENTRY]] ], [ [[P_0_NEXT:%.*]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[P_0_NEXT]] = getelementptr i8, ptr [[P_0]], i64 -1
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    [[INDVAR_NEXT]] = add i32 [[INDVAR]], 1
 ; CHECK-NEXT:    br i1 false, label %[[MIDDLE:.*]], label %[[LOOP_1]]
 ; CHECK:       [[MIDDLE]]:
-; CHECK-NEXT:    [[INDVAR_LCSSA:%.*]] = phi i32 [ [[INDVAR]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[P_0_LCSSA:%.*]] = phi ptr [ [[P_0]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[P_0_TO_INT:%.*]] = ptrtoint ptr [[P_0_LCSSA]] to i64
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[P_0_TO_INT]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[TRUNC]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i64 [[TMP0]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 0, [[TMP0]]
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[A1]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 [[INDVAR_LCSSA]], -1
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP6]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TRUNC]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP5]] to i64
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[SCEVGEP]], i8 0, i64 [[TMP4]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP_2:.*]]
