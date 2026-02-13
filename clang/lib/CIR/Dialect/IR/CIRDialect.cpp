@@ -1854,6 +1854,15 @@ cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     // be marked with tls bits.
     if (getTls() && !g.getTlsModel())
       return emitOpError("access to global not marked thread local");
+
+    // Verify that the static_local attribute on GetGlobalOp matches the
+    // static_local_guard attribute on GlobalOp. GetGlobalOp uses a UnitAttr,
+    // GlobalOp uses StaticLocalGuardAttr. Both should be present, or neither.
+    bool getGlobalIsStaticLocal = getStaticLocal();
+    bool globalIsStaticLocal = g.getStaticLocalGuard().has_value();
+    if (getGlobalIsStaticLocal != globalIsStaticLocal &&
+        !getOperation()->getParentOfType<cir::GlobalOp>())
+      return emitOpError("static_local attribute mismatch");
   } else if (auto f = dyn_cast<FuncOp>(op)) {
     symTy = f.getFunctionType();
   } else {

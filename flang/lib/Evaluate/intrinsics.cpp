@@ -2898,6 +2898,8 @@ private:
   SpecificCall HandleNull(ActualArguments &, FoldingContext &) const;
   std::optional<SpecificCall> HandleC_F_Pointer(
       ActualArguments &, FoldingContext &) const;
+  std::optional<SpecificCall> HandleC_F_Strpointer(
+      ActualArguments &, FoldingContext &) const;
   std::optional<SpecificCall> HandleC_Loc(
       ActualArguments &, FoldingContext &) const;
   std::optional<SpecificCall> HandleC_Devloc(
@@ -2940,7 +2942,7 @@ bool IntrinsicProcTable::Implementation::IsIntrinsicSubroutine(
     return true;
   }
   // special cases
-  return name == "__builtin_c_f_pointer";
+  return name == "__builtin_c_f_pointer" || name == "__builtin_c_f_strpointer";
 }
 bool IntrinsicProcTable::Implementation::IsIntrinsic(
     const std::string &name) const {
@@ -3256,6 +3258,206 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
   }
 }
 
+// Subroutine C_F_STRPOINTER from intrinsic module ISO_C_BINDING (18.2.3.5)
+// C_F_STRPOINTER(CSTRARRAY, FSTRPTR [,NCHARS]) or
+// C_F_STRPOINTER(CSTRPTR, FSTRPTR, NCHARS)
+std::optional<SpecificCall>
+IntrinsicProcTable::Implementation::HandleC_F_Strpointer(
+    ActualArguments &arguments, FoldingContext &context) const {
+  characteristics::Procedure::Attrs attrs;
+  attrs.set(characteristics::Procedure::Attr::Subroutine);
+
+  // The first argument can be either CSTRARRAY or CSTRPTR (overloaded).
+  // Assign common internal keyword "cstr" for CheckAndRearrangeArguments.
+  std::optional<std::string> firstArgKeyword;
+  for (auto &arg : arguments) {
+    if (arg && arg->keyword()) {
+      auto kw{arg->keyword()->ToString()};
+      if (kw == "cstrarray" || kw == "cstrptr") {
+        if (!firstArgKeyword) {
+          firstArgKeyword = kw;
+        }
+        static const char cstrKeyword[] = "cstr";
+        arg->set_keyword(
+            parser::CharBlock{cstrKeyword, sizeof(cstrKeyword) - 1});
+      }
+    }
+  }
+
+  static const char *const keywords[]{"cstr", "fstrptr", "nchars", nullptr};
+  characteristics::DummyArguments dummies;
+  if (CheckAndRearrangeArguments(arguments, context.messages(), keywords, 1)) {
+    CHECK(arguments.size() == 3);
+    const bool hasNchars{arguments[2].has_value()};
+    const int cCharKind = defaults_.GetDefaultKind(TypeCategory::Character);
+
+    // Check first argument (CSTRARRAY or CSTRPTR) and optional third argument
+    // (NCHARS)
+    if (const auto *expr{arguments[0].value().UnwrapExpr()}) {
+      const auto at{arguments[0]->sourceLocation()};
+      if (const auto type{expr->GetType()}) {
+        if (type->category() == TypeCategory::Derived &&
+            !type->IsPolymorphic() &&
+            (type->GetDerivedTypeSpec().typeSymbol().name() ==
+                    "__builtin_c_ptr" ||
+                type->GetDerivedTypeSpec().typeSymbol().name() ==
+                    "__builtin_c_devptr")) {
+          // First argument is C_PTR (CSTRPTR form)
+          if (firstArgKeyword && *firstArgKeyword != "cstrptr") {
+            context.messages().Say(at,
+                "Keyword CSTRARRAY= cannot be used with a C_PTR argument; use CSTRPTR= instead"_err_en_US);
+          }
+          if (!hasNchars) {
+            context.messages().Say(at,
+                "NCHARS= argument is required when CSTRPTR= appears in C_F_STRPOINTER()"_err_en_US);
+          }
+          characteristics::DummyDataObject cstrptr{
+              characteristics::TypeAndShape{*type}};
+          cstrptr.intent = common::Intent::In;
+          dummies.emplace_back("cstrptr"s, std::move(cstrptr));
+        } else if (type->category() == TypeCategory::Character) {
+          // First argument should be CSTRARRAY - rank-1 character array
+          if (firstArgKeyword && *firstArgKeyword != "cstrarray") {
+            context.messages().Say(at,
+                "Keyword CSTRPTR= cannot be used with a character array argument; use CSTRARRAY= instead"_err_en_US);
+          }
+          if (type->kind() != cCharKind) {
+            context.messages().Say(at,
+                "CSTRARRAY= argument to C_F_STRPOINTER() must be of kind C_CHAR"_err_en_US);
+          }
+          if (expr->Rank() != 1) {
+            context.messages().Say(at,
+                "CSTRARRAY= argument to C_F_STRPOINTER() must be a rank-one array"_err_en_US);
+          }
+          if (const auto len{type->GetCharLength()}) {
+            if (const auto constLen{ToInt64(*len)}) {
+              if (*constLen != 1) {
+                context.messages().Say(at,
+                    "CSTRARRAY= argument to C_F_STRPOINTER() must have length type parameter equal to one"_err_en_US);
+              }
+            }
+          }
+          // Check if CSTRARRAY is assumed-size and NCHARS is absent
+          if (auto shape{GetShape(context, *expr)}) {
+            if (shape->size() == 1) {
+              const auto &extentExpr{(*shape)[0]};
+              const auto extentInt{ToInt64(extentExpr)};
+              if ((!extentInt || *extentInt < 0) && !hasNchars) {
+                context.messages().Say(at,
+                    "NCHARS= argument is required when CSTRARRAY= is assumed-size in C_F_STRPOINTER()"_err_en_US);
+              }
+            }
+          }
+          // Check if NCHARS > size(CSTRARRAY) at compile time
+          if (hasNchars) {
+            if (const auto *ncharsExpr{arguments[2]->UnwrapExpr()}) {
+              if (const auto ncharsVal{ToInt64(*ncharsExpr)}) {
+                if (const auto shape{GetShape(context, *expr)};
+                    shape && shape->size() == 1) {
+                  if (const auto arraySize{ToInt64((*shape)[0])};
+                      arraySize && *arraySize > 0 && *ncharsVal > *arraySize) {
+                    context.messages().Say(arguments[2]->sourceLocation(),
+                        "NCHARS=%jd is greater than the size of CSTRARRAY=%jd in C_F_STRPOINTER()"_err_en_US,
+                        static_cast<std::intmax_t>(*ncharsVal),
+                        static_cast<std::intmax_t>(*arraySize));
+                  }
+                }
+              }
+            }
+          }
+          characteristics::DummyDataObject cstrarray{
+              characteristics::TypeAndShape{*type, 1}};
+          cstrarray.intent = common::Intent::In;
+          cstrarray.attrs.set(characteristics::DummyDataObject::Attr::Target);
+          dummies.emplace_back("cstrarray"s, std::move(cstrarray));
+        } else {
+          context.messages().Say(at,
+              "First argument to C_F_STRPOINTER() must be a C_PTR or a rank-one character array of kind C_CHAR"_err_en_US);
+        }
+      }
+    }
+
+    // Check FSTRPTR argument - must be scalar deferred-length character pointer
+    if (const auto *expr{arguments[1].value().UnwrapExpr()}) {
+      const auto at{arguments[1]->sourceLocation()};
+      if (const auto type{expr->GetType()}) {
+        if (type->category() != TypeCategory::Character) {
+          context.messages().Say(at,
+              "FSTRPTR= argument to C_F_STRPOINTER() must be a character pointer"_err_en_US);
+        } else {
+          if (type->kind() != cCharKind) {
+            context.messages().Say(at,
+                "FSTRPTR= argument to C_F_STRPOINTER() must be of kind C_CHAR"_err_en_US);
+          }
+          if (!type->HasDeferredTypeParameter()) {
+            context.messages().Say(at,
+                "FSTRPTR= argument to C_F_STRPOINTER() must have deferred length"_err_en_US);
+          }
+        }
+        if (ExtractCoarrayRef(*expr)) {
+          context.messages().Say(at,
+              "FSTRPTR= argument to C_F_STRPOINTER() may not be a coindexed object"_err_en_US);
+        }
+        characteristics::DummyDataObject fstrptr{
+            characteristics::TypeAndShape{*type, 0}};
+        fstrptr.intent = common::Intent::Out;
+        fstrptr.attrs.set(characteristics::DummyDataObject::Attr::Pointer);
+        dummies.emplace_back("fstrptr"s, std::move(fstrptr));
+      } else {
+        context.messages().Say(at,
+            "FSTRPTR= argument to C_F_STRPOINTER() must have a type"_err_en_US);
+      }
+    }
+
+    // Check NCHARS argument if present
+    if (hasNchars) {
+      if (const auto *expr{arguments[2].value().UnwrapExpr()}) {
+        const auto at{arguments[2]->sourceLocation()};
+        if (const auto type{expr->GetType()}) {
+          if (type->category() != TypeCategory::Integer) {
+            context.messages().Say(at,
+                "NCHARS= argument to C_F_STRPOINTER() must be an integer"_err_en_US);
+          }
+        }
+        if (expr->Rank() != 0) {
+          context.messages().Say(at,
+              "NCHARS= argument to C_F_STRPOINTER() must be a scalar"_err_en_US);
+        }
+        // Check for negative value if constant
+        if (const auto ncharsVal{ToInt64(*expr)}) {
+          if (*ncharsVal < 0) {
+            context.messages().Say(at,
+                "NCHARS= argument to C_F_STRPOINTER() must be non-negative"_err_en_US);
+          }
+        }
+      }
+    }
+  }
+  if (dummies.size() == 2) {
+    // Add NCHARS dummy
+    DynamicType ncharsType{TypeCategory::Integer, defaults_.sizeIntegerKind()};
+    if (arguments.size() >= 3 && arguments[2]) {
+      if (const auto type{arguments[2]->GetType()}) {
+        if (type->category() == TypeCategory::Integer) {
+          ncharsType = *type;
+        }
+      }
+    }
+    characteristics::DummyDataObject nchars{
+        characteristics::TypeAndShape{ncharsType}};
+    nchars.intent = common::Intent::In;
+    nchars.attrs.set(characteristics::DummyDataObject::Attr::Optional);
+    dummies.emplace_back("nchars"s, std::move(nchars));
+
+    return SpecificCall{
+        SpecificIntrinsic{"__builtin_c_f_strpointer"s,
+            characteristics::Procedure{std::move(dummies), attrs}},
+        std::move(arguments)};
+  } else {
+    return std::nullopt;
+  }
+}
+
 // Function C_LOC(X) from intrinsic module ISO_C_BINDING (18.2.3.6)
 std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
     ActualArguments &arguments, FoldingContext &context) const {
@@ -3538,6 +3740,8 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
   if (call.isSubroutineCall) {
     if (call.name == "__builtin_c_f_pointer") {
       return HandleC_F_Pointer(arguments, context);
+    } else if (call.name == "__builtin_c_f_strpointer") {
+      return HandleC_F_Strpointer(arguments, context);
     } else if (call.name == "random_seed") {
       int optionalCount{0};
       for (const auto &arg : arguments) {

@@ -138,11 +138,19 @@ Non-comprehensive list of changes in this release
   Usable in constant expressions. Implicit conversion is supported for
   class/struct types with conversion operators.
 
+- A new generic bit-reverse builtin function ``__builtin_bitreverseg`` that
+  extends bit-reversal support to all standard integers type, including
+  ``_BitInt``
+
 New Compiler Flags
 ------------------
 - New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added
   to enable or disable Microsoft's anonymous struct/union extension without
   enabling other ``-fms-extensions`` features (#GH177607).
+- New option ``--precompile-reduced-bmi`` allows build system to generate a
+  reduced BMI only for a C++20 importable module unit. Previously the users
+  can only generate the reduced BMI as a by-product, e.g, an object files or
+  a full BMI.
 
 Deprecated Compiler Flags
 -------------------------
@@ -228,6 +236,9 @@ Improvements to Clang's diagnostics
   when accessing a member function on a past-the-end array element.
   (#GH179128)
 
+- Added a missing space to the FixIt for the ``implicit-int`` group of diagnostics and 
+  made sure that only one such diagnostic and FixIt is emitted per declaration group. (#GH179354)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -279,6 +290,7 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash when using loop hint with a value dependent argument inside a
   generic lambda. (#GH172289)
 - Fixed a crash in C++ overload resolution with ``_Atomic``-qualified argument types. (#GH170433)
+- Fixed an assertion when diagnosing address-space qualified ``new``/``delete`` in language-defined address spaces such as OpenCL ``__local``. (#GH178319)
 
 OpenACC Specific Changes
 ------------------------

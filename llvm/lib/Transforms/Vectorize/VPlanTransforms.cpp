@@ -656,7 +656,8 @@ static void removeRedundantCanonicalIVs(VPlan &Plan) {
     // everything WidenNewIV's users need. That is, WidenOriginalIV will
     // generate a vector phi or all users of WidenNewIV demand the first lane
     // only.
-    if (!vputils::onlyScalarValuesUsed(WidenOriginalIV) ||
+    if (Plan.hasScalarVFOnly() ||
+        !vputils::onlyScalarValuesUsed(WidenOriginalIV) ||
         vputils::onlyFirstLaneUsed(WidenNewIV)) {
       // We are replacing a wide canonical iv with a suitable wide induction.
       // This is used to compute header mask, hence all lanes will be used and
@@ -1219,6 +1220,18 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   }
 
   VPBuilder Builder(Def);
+
+  // Avoid replacing VPInstructions with underlying values with new
+  // VPInstructions, as we would fail to create widen/replicate recpes from the
+  // new VPInstructions without an underlying value, and miss out on some
+  // transformations that only apply to widened/replicated recipes later, by
+  // doing so.
+  // TODO: We should also not replace non-VPInstructions like VPWidenRecipe with
+  // VPInstructions without underlying values, as those will get skipped during
+  // cost computation.
+  bool CanCreateNewRecipe =
+      !isa<VPInstruction>(Def) || !Def->getUnderlyingValue();
+
   VPValue *A;
   if (match(Def, m_Trunc(m_ZExtOrSExt(m_VPValue(A))))) {
     Type *TruncTy = TypeInfo.inferScalarType(Def);
@@ -1226,8 +1239,8 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     if (TruncTy == ATy) {
       Def->replaceAllUsesWith(A);
     } else {
-      // Don't replace a scalarizing recipe with a widened cast.
-      if (isa<VPReplicateRecipe>(Def))
+      // Don't replace a non-widened cast recipe with a widened cast.
+      if (!isa<VPWidenCastRecipe>(Def))
         return;
       if (ATy->getScalarSizeInBits() < TruncTy->getScalarSizeInBits()) {
 
@@ -1295,15 +1308,16 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return Def->replaceAllUsesWith(X);
 
   // x && false -> false
-  if (match(Def, m_LogicalAnd(m_VPValue(X), m_False())))
-    return Def->replaceAllUsesWith(Def->getOperand(1));
+  if (match(Def, m_c_LogicalAnd(m_VPValue(X), m_False())))
+    return Def->replaceAllUsesWith(Plan->getFalse());
 
-  // true && x -> x
-  if (match(Def, m_LogicalAnd(m_True(), m_VPValue(X))))
+  // x && true -> x
+  if (match(Def, m_c_LogicalAnd(m_VPValue(X), m_True())))
     return Def->replaceAllUsesWith(X);
 
   // (x && y) | (x && z) -> x && (y | z)
-  if (match(Def, m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
+  if (CanCreateNewRecipe &&
+      match(Def, m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
                               m_LogicalAnd(m_Deferred(X), m_VPValue(Z)))) &&
       // Simplify only if one of the operands has one use to avoid creating an
       // extra recipe.
@@ -1321,7 +1335,8 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
 
   // select c, false, true -> not c
   VPValue *C;
-  if (match(Def, m_Select(m_VPValue(C), m_False(), m_True())))
+  if (CanCreateNewRecipe &&
+      match(Def, m_Select(m_VPValue(C), m_False(), m_True())))
     return Def->replaceAllUsesWith(Builder.createNot(C));
 
   // select !c, x, y -> select c, y, x
@@ -1331,15 +1346,6 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     Def->setOperand(2, X);
     return;
   }
-
-  // Reassociate (x && y) && z -> x && (y && z) if x has multiple users. With
-  // tail folding it is likely that x is a header mask and can be simplified
-  // further.
-  if (match(Def, m_LogicalAnd(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
-                              m_VPValue(Z))) &&
-      X->hasMoreThanOneUniqueUser())
-    return Def->replaceAllUsesWith(
-        Builder.createLogicalAnd(X, Builder.createLogicalAnd(Y, Z)));
 
   if (match(Def, m_c_Add(m_VPValue(A), m_ZeroInt())))
     return Def->replaceAllUsesWith(A);
@@ -1352,7 +1358,8 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
         Def->getOperand(0) == A ? Def->getOperand(1) : Def->getOperand(0));
 
   const APInt *APC;
-  if (match(Def, m_c_Mul(m_VPValue(A), m_APInt(APC))) && APC->isPowerOf2())
+  if (CanCreateNewRecipe && match(Def, m_c_Mul(m_VPValue(A), m_APInt(APC))) &&
+      APC->isPowerOf2())
     return Def->replaceAllUsesWith(Builder.createNaryOp(
         Instruction::Shl,
         {A, Plan->getConstantInt(APC->getBitWidth(), APC->exactLogBase2())},
@@ -1362,8 +1369,8 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   // not allowed in them.
   const VPRegionBlock *ParentRegion = Def->getParent()->getParent();
   bool IsInReplicateRegion = ParentRegion && ParentRegion->isReplicator();
-  if (!IsInReplicateRegion && match(Def, m_UDiv(m_VPValue(A), m_APInt(APC))) &&
-      APC->isPowerOf2())
+  if (CanCreateNewRecipe && !IsInReplicateRegion &&
+      match(Def, m_UDiv(m_VPValue(A), m_APInt(APC))) && APC->isPowerOf2())
     return Def->replaceAllUsesWith(Builder.createNaryOp(
         Instruction::LShr,
         {A, Plan->getConstantInt(APC->getBitWidth(), APC->exactLogBase2())},
@@ -1434,7 +1441,8 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   // Fold (fcmp uno %X, %X) or (fcmp uno %Y, %Y) -> fcmp uno %X, %Y
   // This is useful for fmax/fmin without fast-math flags, where we need to
   // check if any operand is NaN.
-  if (match(Def, m_BinaryOr(m_SpecificCmp(CmpInst::FCMP_UNO, m_VPValue(X),
+  if (CanCreateNewRecipe &&
+      match(Def, m_BinaryOr(m_SpecificCmp(CmpInst::FCMP_UNO, m_VPValue(X),
                                           m_Deferred(X)),
                             m_SpecificCmp(CmpInst::FCMP_UNO, m_VPValue(Y),
                                           m_Deferred(Y))))) {
@@ -1611,6 +1619,31 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB))
       if (auto *Def = dyn_cast<VPSingleDefRecipe>(&R))
         simplifyRecipe(Def, TypeInfo);
+  }
+}
+
+/// Reassociate (headermask && x) && y -> headermask && (x && y) to allow the
+/// header mask to be simplified further, e.g. in optimizeEVLMasks.
+static void reassociateHeaderMask(VPlan &Plan) {
+  VPValue *HeaderMask = vputils::findHeaderMask(Plan);
+  if (!HeaderMask)
+    return;
+  SmallVector<VPUser *> Worklist(HeaderMask->users());
+  while (!Worklist.empty()) {
+    auto *R = dyn_cast<VPSingleDefRecipe>(Worklist.pop_back_val());
+    if (!R)
+      continue;
+    VPValue *X, *Y;
+    if (match(R, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue())))
+      Worklist.append(R->user_begin(), R->user_end());
+    else if (match(R, m_LogicalAnd(
+                          m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(X)),
+                          m_VPValue(Y)))) {
+      VPBuilder Builder(R);
+      Worklist.append(R->user_begin(), R->user_end());
+      R->replaceAllUsesWith(
+          Builder.createLogicalAnd(HeaderMask, Builder.createLogicalAnd(X, Y)));
+    }
   }
 }
 
@@ -2185,6 +2218,11 @@ static bool
 sinkRecurrenceUsersAfterPrevious(VPFirstOrderRecurrencePHIRecipe *FOR,
                                  VPRecipeBase *Previous,
                                  VPDominatorTree &VPDT) {
+  // If Previous is a live-in (no defining recipe), it naturally dominates all
+  // recipes in the loop, so no sinking is needed.
+  if (!Previous)
+    return true;
+
   // Collect recipes that need sinking.
   SmallVector<VPRecipeBase *> WorkList;
   SmallPtrSet<VPRecipeBase *, 8> Seen;
@@ -2361,8 +2399,9 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
 
     // Introduce a recipe to combine the incoming and previous values of a
     // fixed-order recurrence.
-    VPBasicBlock *InsertBlock = Previous->getParent();
-    if (isa<VPHeaderPHIRecipe>(Previous))
+    VPBasicBlock *InsertBlock =
+        Previous ? Previous->getParent() : FOR->getParent();
+    if (!Previous || isa<VPHeaderPHIRecipe>(Previous))
       LoopBuilder.setInsertPoint(InsertBlock, InsertBlock->getFirstNonPhi());
     else
       LoopBuilder.setInsertPoint(InsertBlock,
@@ -2758,12 +2797,14 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   RUN_VPLAN_PASS(removeRedundantCanonicalIVs, Plan);
   RUN_VPLAN_PASS(removeRedundantInductionCasts, Plan);
 
+  RUN_VPLAN_PASS(reassociateHeaderMask, Plan);
   RUN_VPLAN_PASS(simplifyRecipes, Plan);
   RUN_VPLAN_PASS(removeDeadRecipes, Plan);
   RUN_VPLAN_PASS(simplifyBlends, Plan);
   RUN_VPLAN_PASS(legalizeAndOptimizeInductions, Plan);
   RUN_VPLAN_PASS(narrowToSingleScalarRecipes, Plan);
   RUN_VPLAN_PASS(removeRedundantExpandSCEVRecipes, Plan);
+  RUN_VPLAN_PASS(reassociateHeaderMask, Plan);
   RUN_VPLAN_PASS(simplifyRecipes, Plan);
   RUN_VPLAN_PASS(removeBranchOnConst, Plan);
   RUN_VPLAN_PASS(removeDeadRecipes, Plan);

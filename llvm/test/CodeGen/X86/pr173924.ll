@@ -7,7 +7,7 @@ define i256 @PR173924(<8 x i256> %a0) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %edi
-; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    vmovdqu {{[0-9]+}}(%rsp), %xmm0
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %edx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %r8d

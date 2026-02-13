@@ -1750,8 +1750,9 @@ multiclass VPatMultiplyAddVL_VV_VX<SDNode op, string instruction_name> {
   }
 }
 
-multiclass VPatWidenMultiplyAddVL_VV_VX<SDNode vwmacc_op, string instr_name> {
-  foreach vtiTowti = AllWidenableIntVectors in {
+multiclass VPatWidenMultiplyAddVL_VV<SDNode vwmacc_op, string instr_name,
+                                     list<VTypeInfoToWide> vtilist = AllWidenableIntVectors> {
+  foreach vtiTowti = vtilist in {
     defvar vti = vtiTowti.Vti;
     defvar wti = vtiTowti.Wti;
     let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
@@ -1763,6 +1764,17 @@ multiclass VPatWidenMultiplyAddVL_VV_VX<SDNode vwmacc_op, string instr_name> {
                 (!cast<Instruction>(instr_name#"_VV_"#vti.LMul.MX#"_MASK")
                     wti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
                     (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+    }
+  }
+}
+
+multiclass VPatWidenMultiplyAddVL_VV_VX<SDNode vwmacc_op, string instr_name>
+    : VPatWidenMultiplyAddVL_VV<vwmacc_op, instr_name> {
+  foreach vtiTowti = AllWidenableIntVectors in {
+    defvar vti = vtiTowti.Vti;
+    defvar wti = vtiTowti.Wti;
+    let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
+                                 GetVTypePredicates<wti>.Predicates) in {
       def : Pat<(vwmacc_op (SplatPat XLenVT:$rs1),
                            (vti.Vector vti.RegClass:$rs2),
                            (wti.Vector wti.RegClass:$rd),
