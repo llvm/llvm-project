@@ -291,7 +291,7 @@ TEST(ProtocolTypesTest, Scope) {
   Scope scope;
   scope.name = "Locals";
   scope.presentationHint = Scope::eScopePresentationHintLocals;
-  scope.variablesReference = 1;
+  scope.variablesReference = var_ref_t(1);
   scope.namedVariables = 2;
   scope.indexedVariables = std::nullopt;
   scope.expensive = false;
@@ -910,7 +910,7 @@ TEST(ProtocolTypesTest, VariablePresentationHint) {
 TEST(ProtocolTypesTest, Variable) {
   Variable var;
   var.name = "var1";
-  var.variablesReference = 42;
+  var.variablesReference = var_ref_t(42);
   var.value = "value";
   var.type = "type";
 
@@ -974,12 +974,12 @@ TEST(ProtocolTypesTest, VariablesArguments) {
 TEST(ProtocolTypesTest, VariablesResponseBody) {
   Variable var1;
   var1.name = "var1";
-  var1.variablesReference = 42;
+  var1.variablesReference = var_ref_t(42);
   var1.value = "<var1-value>";
 
   Variable var2;
   var2.name = "var2";
-  var2.variablesReference = 3;
+  var2.variablesReference = var_ref_t(3);
   var2.value = "<var2-value>";
 
   VariablesResponseBody response{{var1, var2}};

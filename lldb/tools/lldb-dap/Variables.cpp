@@ -95,7 +95,8 @@ ScopeStore::GetVariables(VariableReferenceStorage &storage,
 
     const var_ref_t frame_var_ref =
         storage.InsertVariable(variable, /*is_permanent=*/false);
-    if (LLVM_UNLIKELY(frame_var_ref.Kind() == eReferenceKindInvalid)) {
+    if (LLVM_UNLIKELY(frame_var_ref.AsUInt32() >=
+                      var_ref_t::k_variables_reference_threshold)) {
       DAP_LOG(storage.log,
               "warning: scopes variablesReference threshold is reached. "
               "current: {} threshold: {}, maximum {}\n",
@@ -103,6 +104,9 @@ ScopeStore::GetVariables(VariableReferenceStorage &storage,
               var_ref_t::k_variables_reference_threshold,
               var_ref_t::k_max_variables_references);
     }
+
+    if (LLVM_UNLIKELY(frame_var_ref.Kind() == eReferenceKindInvalid))
+      break;
 
     variables.emplace_back(CreateVariable(
         variable, frame_var_ref, format_hex, config.enableAutoVariableSummaries,
@@ -249,7 +253,8 @@ ExpandableValueStore::GetVariables(VariableReferenceStorage &storage,
       return;
 
     const var_ref_t child_var_ref = storage.InsertVariable(child, is_permanent);
-    if (LLVM_UNLIKELY(child_var_ref.Kind() == eReferenceKindInvalid)) {
+    if (LLVM_UNLIKELY(child_var_ref.AsUInt32() ==
+                      var_ref_t::k_variables_reference_threshold)) {
       DAP_LOG(storage.log,
               "warning: {} variablesReference threshold is reached. "
               "current: {} threshold: {}, maximum {}\n",
@@ -258,6 +263,9 @@ ExpandableValueStore::GetVariables(VariableReferenceStorage &storage,
               var_ref_t::k_variables_reference_threshold,
               var_ref_t::k_max_variables_references);
     }
+
+    if (LLVM_UNLIKELY(child_var_ref.Kind() == eReferenceKindInvalid))
+      return;
 
     variables.emplace_back(CreateVariable(
         child, child_var_ref, hex, config.enableAutoVariableSummaries,

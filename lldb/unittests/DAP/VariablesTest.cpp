@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Variables.h"
+#include "DAPLog.h"
+#include "Protocol/DAPTypes.h"
 #include "Protocol/ProtocolTypes.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBValue.h"
@@ -15,8 +17,14 @@
 using namespace lldb_dap;
 
 class VariablesTest : public ::testing::Test {
+
+public:
+  VariablesTest() : log(llvm::nulls(), mutex), vars(log) {}
+
 protected:
   enum : bool { Permanent = true, Temporary = false };
+  Log::Mutex mutex;
+  Log log;
   VariableReferenceStorage vars;
 
   static const protocol::Scope *
@@ -34,7 +42,6 @@ TEST_F(VariablesTest, GetNewVariableReference_UniqueAndRanges) {
   const var_ref_t temp2 = vars.InsertVariable(lldb::SBValue(), Temporary);
   const var_ref_t perm1 = vars.InsertVariable(lldb::SBValue(), Permanent);
   const var_ref_t perm2 = vars.InsertVariable(lldb::SBValue(), Permanent);
-
   EXPECT_NE(temp1.AsUInt32(), temp2.AsUInt32());
   EXPECT_NE(perm1.AsUInt32(), perm2.AsUInt32());
   EXPECT_LT(temp1.AsUInt32(), perm1.AsUInt32());
@@ -61,8 +68,8 @@ TEST_F(VariablesTest, IsPermanentVariableReference) {
   const var_ref_t perm = vars.InsertVariable(lldb::SBValue(), Permanent);
   const var_ref_t temp = vars.InsertVariable(lldb::SBValue(), Temporary);
 
-  EXPECT_TRUE(VariableReferenceStorage::IsPermanentVariableReference(perm));
-  EXPECT_FALSE(VariableReferenceStorage::IsPermanentVariableReference(temp));
+  EXPECT_EQ(perm.Kind(), eReferenceKindPermanent);
+  EXPECT_EQ(temp.Kind(), eReferenceKindTemporary);
 }
 
 TEST_F(VariablesTest, Clear_RemovesTemporaryKeepsPermanent) {
@@ -105,7 +112,7 @@ TEST_F(VariablesTest, VariablesStore) {
   ASSERT_EQ(local_ref.Kind(), eReferenceKindScope);
   ASSERT_EQ(register_ref.Kind(), eReferenceKindScope);
 
-  EXPECT_EQ(vars.GetVariableStore(9999), nullptr);
+  EXPECT_EQ(vars.GetVariableStore(var_ref_t(9999)), nullptr);
 }
 
 TEST_F(VariablesTest, FindVariable_LocalsByName) {
