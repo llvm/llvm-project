@@ -1122,23 +1122,9 @@ const SCEV *ScalarEvolution::getPtrToAddrExpr(const SCEV *Op) {
 const SCEV *ScalarEvolution::getPtrToIntExpr(const SCEV *Op, Type *Ty) {
   assert(Ty->isIntegerTy() && "Target type must be an integer type!");
 
-  // It isn't legal for optimizations to construct new ptrtoint expressions
-  // for non-integral pointers.
-  if (getDataLayout().isNonIntegralPointerType(Op->getType()))
-    return getCouldNotCompute();
-
-  Type *IntPtrTy = getDataLayout().getIntPtrType(Op->getType());
-
-  // We can only trivially model ptrtoint via ptrtoaddr if SCEV's effective
-  // (integer) type is sufficiently wide to represent all possible pointer
-  // values. We could theoretically teach SCEV to truncate wider pointers, but
-  // that isn't implemented for now.
-  if (getDataLayout().getTypeSizeInBits(getEffectiveSCEVType(Op->getType())) !=
-      getDataLayout().getTypeSizeInBits(IntPtrTy))
-    return getCouldNotCompute();
-
-  const SCEV *IntOp = getPtrToAddrExpr(Op);
-  return getTruncateOrZeroExtend(IntOp, Ty);
+  // We don't model ptrtoint in SCEV. Return CouldNotCompute, which will cause
+  // callers to fall back to SCEVUnknown.
+  return getCouldNotCompute();
 }
 
 const SCEV *ScalarEvolution::getTruncateExpr(const SCEV *Op, Type *Ty,
@@ -7894,6 +7880,23 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
       SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap;
       if (BO->Op)
         Flags = getNoWrapFlagsFromUB(BO->Op);
+
+      // Special case: sub (ptrtoint p1), (ptrtoint p2) -> subtract of ptrtoaddr
+      // expressions. While we don't model ptrtoint directly in SCEV, the
+      // difference between two pointer addresses is well-defined.
+      Value *PtrLHS, *PtrRHS;
+      if (match(BO->LHS, m_PtrToInt(m_Value(PtrLHS))) &&
+          match(BO->RHS, m_PtrToInt(m_Value(PtrRHS)))) {
+        const SCEV *AddrLHS = getPtrToAddrExpr(getSCEV(PtrLHS));
+        const SCEV *AddrRHS = getPtrToAddrExpr(getSCEV(PtrRHS));
+        if (!isa<SCEVCouldNotCompute>(AddrLHS) &&
+            !isa<SCEVCouldNotCompute>(AddrRHS)) {
+          Type *Ty = BO->LHS->getType();
+          return getMinusSCEV(getTruncateOrZeroExtend(AddrLHS, Ty),
+                              getTruncateOrZeroExtend(AddrRHS, Ty), Flags);
+        }
+      }
+
       LHS = getSCEV(BO->LHS);
       RHS = getSCEV(BO->RHS);
       return getMinusSCEV(LHS, RHS, Flags);
