@@ -51,6 +51,9 @@ BasicBlock *TileInfo::CreateLoop(BasicBlock *Preheader, BasicBlock *Exit,
   Value *Cond = B.CreateICmpNE(Inc, Bound, Name + ".cond");
   auto *BR = BranchInst::Create(Header, Exit, Cond, Latch);
   if (!ProfcheckDisableMetadataFixes) {
+    assert(Step->getZExtValue() != 0 &&
+           "Expected a non-zero step size. A step size of zero produces an "
+           "infinite loop which massively skews profile data.");
     MDBuilder MDB(Preheader->getContext());
     setFittedBranchWeights(
         *BR, {Bound->getZExtValue() / Step->getZExtValue(), 1}, false);
