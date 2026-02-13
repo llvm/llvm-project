@@ -14547,7 +14547,7 @@ TreeTransform<Derived>::TransformCXXTypeidExpr(CXXTypeidExpr *E) {
   auto EvalCtx = Sema::ExpressionEvaluationContext::Unevaluated;
   if (E->isGLValue())
     if (auto *RD = Op->getType()->getAsCXXRecordDecl();
-        RD && RD->isPolymorphic())
+        RD && RD->hasDefinition() && RD->isPolymorphic())
       EvalCtx = SemaRef.ExprEvalContexts.back().Context;
 
   EnterExpressionEvaluationContext Unevaluated(SemaRef, EvalCtx,
