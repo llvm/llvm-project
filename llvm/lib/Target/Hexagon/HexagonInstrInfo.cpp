@@ -882,6 +882,13 @@ void HexagonInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       .addReg(SrcReg).addReg(SrcReg, KillFlag);
     return;
   }
+  if (Hexagon::IntRegsRegClass.contains(DestReg) &&
+      Hexagon::DoubleRegsRegClass.contains(SrcReg)) {
+    // Truncating copy: extract the low 32-bit sub-register.
+    Register SrcLo = HRI.getSubReg(SrcReg, Hexagon::isub_lo);
+    BuildMI(MBB, I, DL, get(Hexagon::A2_tfr), DestReg).addReg(SrcLo, KillFlag);
+    return;
+  }
   if (Hexagon::CtrRegsRegClass.contains(DestReg) &&
       Hexagon::IntRegsRegClass.contains(SrcReg)) {
     BuildMI(MBB, I, DL, get(Hexagon::A2_tfrrcr), DestReg)

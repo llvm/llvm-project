@@ -186,7 +186,8 @@ bool HexagonTfrCleanup::rewriteIfImm(MachineInstr *MI, ImmediateMap &IMap,
   bool Tmp, Is32;
   if (!isIntReg(DstR, Is32) || !isIntReg(SrcR, Tmp))
     return false;
-  assert(Tmp == Is32 && "Register size mismatch");
+  if (Tmp != Is32)
+    return false;
   uint64_t Val;
   bool Found = getReg(SrcR, Val, IMap);
   if (!Found)
