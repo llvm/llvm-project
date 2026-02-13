@@ -388,6 +388,8 @@ QualType Descriptor::getType() const {
 QualType Descriptor::getElemQualType() const {
   assert(isArray());
   QualType T = getType();
+  if (const auto *AT = T->getAs<AtomicType>())
+    T = AT->getValueType();
   if (T->isPointerOrReferenceType())
     T = T->getPointeeType();
 
