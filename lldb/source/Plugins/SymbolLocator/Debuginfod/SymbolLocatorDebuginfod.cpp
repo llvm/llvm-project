@@ -111,7 +111,7 @@ void SymbolLocatorDebuginfod::Initialize() {
     PluginManager::RegisterPlugin(
         GetPluginNameStatic(), GetPluginDescriptionStatic(), CreateInstance,
         LocateExecutableObjectFile, LocateExecutableSymbolFile, nullptr,
-        nullptr, SymbolLocatorDebuginfod::DebuggerInitialize);
+        nullptr, nullptr, SymbolLocatorDebuginfod::DebuggerInitialize);
     llvm::HTTPClient::initialize();
   });
 }

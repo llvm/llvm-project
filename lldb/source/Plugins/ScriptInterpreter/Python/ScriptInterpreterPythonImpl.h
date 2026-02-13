@@ -101,6 +101,9 @@ public:
 
   lldb::ScriptedFrameInterfaceSP CreateScriptedFrameInterface() override;
 
+  lldb::ScriptedSymbolLocatorInterfaceSP
+  CreateScriptedSymbolLocatorInterface() override;
+
   lldb::ScriptedThreadPlanInterfaceSP
   CreateScriptedThreadPlanInterface() override;
 

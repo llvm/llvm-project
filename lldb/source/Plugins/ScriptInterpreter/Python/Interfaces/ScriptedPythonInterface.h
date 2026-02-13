@@ -456,6 +456,10 @@ protected:
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
+  python::PythonObject Transform(lldb::ModuleSP arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
   python::PythonObject Transform(Event *arg) {
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
