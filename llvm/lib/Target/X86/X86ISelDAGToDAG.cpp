@@ -3539,7 +3539,7 @@ bool X86DAGToDAGISel::checkTCRetEnoughRegs(SDNode *N) const {
     const SDValue &BasePtr = cast<LoadSDNode>(N->getOperand(1))->getBasePtr();
     if (isa<FrameIndexSDNode>(BasePtr)) {
       LoadGPRs -= 2; // Base is fixed index off ESP; no regs needed.
-    } else if (BasePtr->getNumOperands() &&
+    } else if (BasePtr.getOpcode() == X86ISD::Wrapper &&
                isa<GlobalAddressSDNode>(BasePtr->getOperand(0))) {
       assert(!getTargetMachine().isPositionIndependent());
       LoadGPRs -= 1; // Base is a global (immediate since this is non-PIC), no
