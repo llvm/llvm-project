@@ -1151,12 +1151,15 @@ uptr asan_malloc_usable_size(const void *ptr, uptr pc, uptr bp) {
     ReportMallocUsableSizeNotOwned((uptr)ptr, &stack);
   }
 #if SANITIZER_WINDOWS
-  // Zero-size allocations are internally upgraded to size 1, but we should
-  // report the originally requested size (0) to the user via
-  // HeapSize/RtlSizeHeap.
+  // Zero-size allocations are internally upgraded to size 1 so that
+  // malloc(0)/new(0) return unique non-NULL pointers as required by the
+  // standard. Windows heap APIs (HeapSize, RtlSizeHeap, _msize) should still
+  // report the originally requested size (0).
   if (usable_size > 0 &&
-      instance.FromZeroAllocation(reinterpret_cast<uptr>(ptr)))
+      instance.FromZeroAllocation(reinterpret_cast<uptr>(ptr))) {
+    DCHECK(usable_size == 1);
     return 0;
+  }
 #endif
   return usable_size;
 }
@@ -1258,8 +1261,10 @@ uptr asan_mz_size(const void* ptr) {
   uptr size = instance.AllocationSize(reinterpret_cast<uptr>(ptr));
 
 #if SANITIZER_WINDOWS
-  if (size > 0 && instance.FromZeroAllocation(reinterpret_cast<uptr>(ptr)))
+  if (size > 0 && instance.FromZeroAllocation(reinterpret_cast<uptr>(ptr))) {
+    DCHECK(size == 1);
     return 0;
+  }
 #endif
 
   return size;

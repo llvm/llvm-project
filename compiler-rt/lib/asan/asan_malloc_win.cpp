@@ -53,14 +53,12 @@ BOOL WINAPI HeapValidate(HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem);
 
 using namespace __asan;
 
-#  if SANITIZER_WINDOWS
 // Marks an allocation as originally zero-size. Must be called on allocations
 // that were changed from size 0 to 1 outside of Allocate() (e.g.
 // SharedReAlloc).
 namespace __asan {
 void asan_mark_zero_allocation(void* ptr);
 }
-#  endif
 
 // MT: Simply defining functions with the same signature in *.obj
 // files overrides the standard functions in the CRT.
