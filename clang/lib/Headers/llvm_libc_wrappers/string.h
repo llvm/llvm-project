@@ -9,14 +9,13 @@
 #ifndef __CLANG_LLVM_LIBC_WRAPPERS_STRING_H__
 #define __CLANG_LLVM_LIBC_WRAPPERS_STRING_H__
 
-#if !defined(_OPENMP) && !defined(__HIP__) && !defined(__CUDA__) &&            \
-    !defined(__SPIRV__)
+#if !defined(_OPENMP) && !defined(__HIP__) && !defined(__CUDA__)
 #error "This file is for GPU offloading compilation only"
 #endif
 
 #include_next <string.h>
 
-#if defined(__HIP__) || defined(__CUDA__) || defined(__SPIRV__)
+#if defined(__HIP__) || defined(__CUDA__)
 #define __LIBC_ATTRS __attribute__((device))
 #else
 #define __LIBC_ATTRS
