@@ -1,0 +1,2 @@
+#define Y X
+Y
