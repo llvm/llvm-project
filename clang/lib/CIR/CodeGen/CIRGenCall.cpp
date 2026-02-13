@@ -942,42 +942,6 @@ static cir::CIRCallOpInterface emitCallLikeOp(
 
   assert(!cir::MissingFeatures::opCallSurroundingTry());
 
-  if (isInvoke) {
-    // This call may throw and requires catch and/or cleanup handling.
-    // If this call does not appear within the `try` region of an existing
-    // TryOp, we must create a synthetic TryOp to contain the call. This
-    // happens when a call that may throw appears within a cleanup
-    // scope.
-
-    // In OG, we build the landing pad for this scope. In CIR, we emit a
-    // synthetic cir.try because this didn't come from code generating from a
-    // try/catch in C++.
-    assert(cgf.curLexScope && "expected scope");
-    cir::TryOp tryOp = cgf.curLexScope->getClosestTryParent();
-    if (!tryOp) {
-      cgf.cgm.errorNYI(
-          "emitCallLikeOp: call does not have an associated cir.try");
-      return {};
-    }
-
-    if (tryOp.getSynthetic()) {
-      cgf.cgm.errorNYI("emitCallLikeOp: tryOp synthetic");
-      return {};
-    }
-
-    cir::CallOp callOpWithExceptions;
-    if (indirectFuncTy) {
-      cgf.cgm.errorNYI("emitCallLikeOp: indirect function type");
-      return {};
-    }
-
-    callOpWithExceptions =
-        builder.createCallOp(callLoc, directFuncOp, cirCallArgs);
-
-    cgf.populateCatchHandlersIfRequired(tryOp);
-    return callOpWithExceptions;
-  }
-
   assert(builder.getInsertionBlock() && "expected valid basic block");
 
   cir::CallOp op;
