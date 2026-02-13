@@ -257,9 +257,8 @@ static void convertToParamAS(ArrayRef<Use *> OldUses, Value *Param) {
     llvm_unreachable("Unsupported instruction");
   };
 
-  auto ItemsToConvert = map_to_vector(OldUses, [=](Use *U) -> IP {
-    return {U, Param};
-  });
+  auto ItemsToConvert =
+      map_to_vector(OldUses, [=](Use *U) -> IP { return {U, Param}; });
   SmallVector<Instruction *> InstructionsToDelete;
 
   while (!ItemsToConvert.empty()) {
