@@ -140,6 +140,7 @@
 #include "NVPTXTargetMachine.h"
 #include "NVPTXUtilities.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Analysis/PtrUseVisitor.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -188,14 +189,14 @@ INITIALIZE_PASS_END(NVPTXLowerArgsLegacyPass, "nvptx-lower-args",
                     "Lower arguments (NVPTX)", false, false)
 
 // =============================================================================
-// If the function had a byval struct ptr arg, say foo(%struct.x* byval %d),
+// If the function had a byval struct ptr arg, say foo(ptr byval(%struct.x) %d),
 // and we can't guarantee that the only accesses are loads,
 // then add the following instructions to the first basic block:
 //
 // %temp = alloca %struct.x, align 8
-// %tempd = addrspacecast %struct.x* %d to %struct.x addrspace(101)*
-// %tv = load %struct.x addrspace(101)* %tempd
-// store %struct.x %tv, %struct.x* %temp, align 8
+// %tempd = addrspacecast ptr %d to ptr addrspace(101)
+// %tv = load %struct.x, ptr addrspace(101) %tempd
+// store %struct.x %tv, ptr %temp, align 8
 //
 // The above code allocates some space in the stack and copies the incoming
 // struct from param space to local space.
@@ -205,49 +206,42 @@ INITIALIZE_PASS_END(NVPTXLowerArgsLegacyPass, "nvptx-lower-args",
 // ones in parameter AS, so we can access them using ld.param.
 // =============================================================================
 
-// For Loads, replaces the \p OldUse of the pointer with a Use of the same
-// pointer in parameter AS.
-// For "escapes" (to memory, a function call, or a ptrtoint), cast the OldUse to
-// generic using cvta.param.
-static void convertToParamAS(Use *OldUse, Value *Param, bool HasCvtaParam) {
-  Instruction *I = dyn_cast<Instruction>(OldUse->getUser());
-  assert(I && "OldUse must be in an instruction");
+/// Recursively convert the users of a param to the param address space.
+static void convertToParamAS(ArrayRef<Use *> OldUses, Value *Param) {
   struct IP {
     Use *OldUse;
-    Instruction *OldInstruction;
     Value *NewParam;
   };
-  SmallVector<IP> ItemsToConvert = {{OldUse, I, Param}};
-  SmallVector<Instruction *> InstructionsToDelete;
 
-  auto CloneInstInParamAS = [HasCvtaParam](const IP &I) -> Value * {
-    if (auto *LI = dyn_cast<LoadInst>(I.OldInstruction)) {
+  const auto CloneInstInParamAS = [](const IP &I) -> Value * {
+    auto *OldInst = cast<Instruction>(I.OldUse->getUser());
+    if (auto *LI = dyn_cast<LoadInst>(OldInst)) {
       LI->setOperand(0, I.NewParam);
       return LI;
     }
-    if (auto *GEP = dyn_cast<GetElementPtrInst>(I.OldInstruction)) {
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(OldInst)) {
       SmallVector<Value *, 4> Indices(GEP->indices());
       auto *NewGEP = GetElementPtrInst::Create(
           GEP->getSourceElementType(), I.NewParam, Indices, GEP->getName(),
           GEP->getIterator());
-      NewGEP->setIsInBounds(GEP->isInBounds());
+      NewGEP->setNoWrapFlags(GEP->getNoWrapFlags());
       return NewGEP;
     }
-    if (auto *BC = dyn_cast<BitCastInst>(I.OldInstruction)) {
+    if (auto *BC = dyn_cast<BitCastInst>(OldInst)) {
       auto *NewBCType = PointerType::get(BC->getContext(), ADDRESS_SPACE_PARAM);
       return BitCastInst::Create(BC->getOpcode(), I.NewParam, NewBCType,
                                  BC->getName(), BC->getIterator());
     }
-    if (auto *ASC = dyn_cast<AddrSpaceCastInst>(I.OldInstruction)) {
+    if (auto *ASC = dyn_cast<AddrSpaceCastInst>(OldInst)) {
       assert(ASC->getDestAddressSpace() == ADDRESS_SPACE_PARAM);
       (void)ASC;
       // Just pass through the argument, the old ASC is no longer needed.
       return I.NewParam;
     }
-    if (auto *MI = dyn_cast<MemTransferInst>(I.OldInstruction)) {
+    if (auto *MI = dyn_cast<MemTransferInst>(OldInst)) {
       if (MI->getRawSource() == I.OldUse->get()) {
         // convert to memcpy/memmove from param space.
-        IRBuilder<> Builder(I.OldInstruction);
+        IRBuilder<> Builder(OldInst);
         Intrinsic::ID ID = MI->getIntrinsicID();
 
         CallInst *B = Builder.CreateMemTransferInst(
@@ -258,55 +252,34 @@ static void convertToParamAS(Use *OldUse, Value *Param, bool HasCvtaParam) {
             B->addDereferenceableParamAttr(I, Bytes);
         return B;
       }
-      // We may be able to handle other cases if the argument is
-      // __grid_constant__
-    }
-
-    if (HasCvtaParam) {
-      auto GetParamAddrCastToGeneric =
-          [](Value *Addr, Instruction *OriginalUser) -> Value * {
-        IRBuilder<> IRB(OriginalUser);
-        Type *GenTy = IRB.getPtrTy(ADDRESS_SPACE_GENERIC);
-        return IRB.CreateAddrSpaceCast(Addr, GenTy, Addr->getName() + ".gen");
-      };
-      auto *ParamInGenericAS =
-          GetParamAddrCastToGeneric(I.NewParam, I.OldInstruction);
-
-      // phi/select could use generic arg pointers w/o __grid_constant__
-      if (auto *PHI = dyn_cast<PHINode>(I.OldInstruction)) {
-        for (auto [Idx, V] : enumerate(PHI->incoming_values())) {
-          if (V.get() == I.OldUse->get())
-            PHI->setIncomingValue(Idx, ParamInGenericAS);
-        }
-      }
-      if (auto *SI = dyn_cast<SelectInst>(I.OldInstruction)) {
-        if (SI->getTrueValue() == I.OldUse->get())
-          SI->setTrueValue(ParamInGenericAS);
-        if (SI->getFalseValue() == I.OldUse->get())
-          SI->setFalseValue(ParamInGenericAS);
-      }
     }
 
     llvm_unreachable("Unsupported instruction");
   };
 
+  auto ItemsToConvert = map_to_vector(OldUses, [=](Use *U) -> IP {
+    return {U, Param};
+  });
+  SmallVector<Instruction *> InstructionsToDelete;
+
   while (!ItemsToConvert.empty()) {
     IP I = ItemsToConvert.pop_back_val();
     Value *NewInst = CloneInstInParamAS(I);
+    Instruction *OldInst = cast<Instruction>(I.OldUse->getUser());
 
-    if (NewInst && NewInst != I.OldInstruction) {
+    if (NewInst && NewInst != OldInst) {
       // We've created a new instruction. Queue users of the old instruction to
       // be converted and the instruction itself to be deleted. We can't delete
       // the old instruction yet, because it's still in use by a load somewhere.
-      for (Use &U : I.OldInstruction->uses())
-        ItemsToConvert.push_back({&U, cast<Instruction>(U.getUser()), NewInst});
+      for (Use &U : OldInst->uses())
+        ItemsToConvert.push_back({&U, NewInst});
 
-      InstructionsToDelete.push_back(I.OldInstruction);
+      InstructionsToDelete.push_back(OldInst);
     }
   }
 
   // Now we know that all argument loads are using addresses in parameter space
-  // and we can finally remove the old instructions in generic AS.  Instructions
+  // and we can finally remove the old instructions in generic AS. Instructions
   // scheduled for removal should be processed in reverse order so the ones
   // closest to the load are deleted first. Otherwise they may still be in use.
   // E.g if we have Value = Load(BitCast(GEP(arg))), InstructionsToDelete will
@@ -528,7 +501,6 @@ static void handleByValParam(const NVPTXTargetMachine &TM, Argument *Arg) {
   Function *F = Arg->getParent();
   assert(isKernelFunction(*F));
   const NVPTXSubtarget *ST = TM.getSubtargetImpl(*F);
-  const bool HasCvtaParam = ST->hasCvtaParam();
 
   const DataLayout &DL = F->getDataLayout();
   IRBuilder<> IRB(&F->getEntryBlock().front());
@@ -549,14 +521,14 @@ static void handleByValParam(const NVPTXTargetMachine &TM, Argument *Arg) {
     SmallVector<Use *, 16> UsesToUpdate(llvm::make_pointer_range(Arg->uses()));
     Value *ArgInParamAS = createNVVMInternalAddrspaceWrap(IRB, *Arg);
     for (Use *U : UsesToUpdate)
-      convertToParamAS(U, ArgInParamAS, HasCvtaParam);
+      convertToParamAS(U, ArgInParamAS);
 
     propagateAlignmentToLoads(ArgInParamAS, NewArgAlign, DL);
     return;
   }
 
   // (2) If the argument is grid constant, we get to use the pointer directly.
-  if (HasCvtaParam && (ArgUseIsReadOnly || isParamGridConstant(*Arg))) {
+  if (ST->hasCvtaParam() && (ArgUseIsReadOnly || isParamGridConstant(*Arg))) {
     LLVM_DEBUG(dbgs() << "Using non-copy pointer to " << *Arg << "\n");
 
     // Cast argument to param address space. Because the backend will emit the

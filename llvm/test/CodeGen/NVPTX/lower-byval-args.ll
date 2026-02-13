@@ -67,7 +67,7 @@ define dso_local ptx_kernel void @read_only_gep(ptr nocapture noundef writeonly 
 ; LOWER-ARGS-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) "nvvm.grid_constant" [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; LOWER-ARGS-NEXT:  [[ENTRY:.*:]]
 ; LOWER-ARGS-NEXT:    [[S3:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[S]])
-; LOWER-ARGS-NEXT:    [[B4:%.*]] = getelementptr inbounds i8, ptr addrspace(101) [[S3]], i64 4
+; LOWER-ARGS-NEXT:    [[B4:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(101) [[S3]], i64 4
 ; LOWER-ARGS-NEXT:    [[I:%.*]] = load i32, ptr addrspace(101) [[B4]], align 4
 ; LOWER-ARGS-NEXT:    store i32 [[I]], ptr [[OUT]], align 4
 ; LOWER-ARGS-NEXT:    ret void
