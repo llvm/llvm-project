@@ -12,6 +12,8 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+    container:
+      image: 'ghcr.io/llvm/libc-ubuntu-24.04'
     strategy:
       fail-fast: false
       matrix:
@@ -102,19 +104,6 @@ jobs:
         max-size: 1G
         key: libc_fullbuild_${{ matrix.c_compiler }}
         variant: sccache
-    
-    # Notice:
-    # - MPFR is required by some of the mathlib tests.
-    # - Debian has a multilib setup, so we need to symlink the asm directory.
-    #   For more information, see https://wiki.debian.org/Multiarch/LibraryPathOverview
-    - name: Prepare dependencies (Ubuntu)
-      run: |
-        wget https://apt.llvm.org/llvm.sh
-        chmod +x llvm.sh
-        sudo ./llvm.sh 21
-        sudo apt-get update
-        sudo apt-get install -y libmpfr-dev libgmp-dev libmpc-dev ninja-build linux-libc-dev
-        sudo ln -sf /usr/include/$(uname -p)-linux-gnu/asm /usr/include/asm
 
     - name: Set reusable strings
       id: strings
