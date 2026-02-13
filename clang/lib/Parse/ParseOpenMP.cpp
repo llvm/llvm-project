@@ -5089,10 +5089,10 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     int Depth = 0;
 
     while (!Tok.is(tok::annot_pragma_openmp_end)) {
-      if (Tok.isOneOf(tok::l_paren, tok::l_square))
+      if (Tok.is(tok::l_paren))
         Depth++;
-      else if (Tok.isOneOf(tok::r_paren, tok::r_square)) {
-        // If depth is 0, this closing delimiter closes the num_teams clause
+      else if (Tok.is(tok::r_paren)) {
+        // If depth is 0, this closing paren closes the num_teams clause
         if (Depth == 0)
           break;
         Depth--;
