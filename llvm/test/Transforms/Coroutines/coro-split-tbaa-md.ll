@@ -2,6 +2,8 @@
 ; Tests that coro-split pass generates TBAA metadata on coroutine frame slot reloads.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
+target datalayout = "e-m:e-p:64:64-i64:64-f80:128-n8:16:32:64-S128"
+
 define ptr @f(ptr %p) presplitcoroutine {
 entry:
   %x = load i32, ptr %p, !tbaa !3
@@ -83,7 +85,7 @@ declare void @free(ptr) willreturn allockind("free") "alloc-family"="malloc"
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(24) [[HDL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_RESUME:.*:]]
 ; CHECK-NEXT:    [[X_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
-; CHECK-NEXT:    [[X_RELOAD:%.*]] = load i32, ptr [[X_RELOAD_ADDR]], align 4, !tbaa [[F.FRAME_SLOT_TBAA4:![0-9]+]]
+; CHECK-NEXT:    [[X_RELOAD:%.*]] = load i32, ptr [[X_RELOAD_ADDR]], align 4, !tbaa [[F_FRAME_SLOT_TBAA4:![0-9]+]]
 ; CHECK-NEXT:    call void @print(i32 [[X_RELOAD]])
 ; CHECK-NEXT:    call void @free(ptr [[HDL]])
 ; CHECK-NEXT:    ret void
@@ -106,6 +108,6 @@ declare void @free(ptr) willreturn allockind("free") "alloc-family"="malloc"
 ; CHECK: [[META1]] = !{!"int", [[META2:![0-9]+]], i64 0}
 ; CHECK: [[META2]] = !{!"omnipotent char", [[META3:![0-9]+]], i64 0}
 ; CHECK: [[META3]] = !{!"Simple C++ TBAA"}
-; CHECK: [[F.FRAME_SLOT_TBAA4]] = !{[[META5:![0-9]+]], [[META5]], i64 0}
+; CHECK: [[F_FRAME_SLOT_TBAA4]] = !{[[META5:![0-9]+]], [[META5]], i64 0}
 ; CHECK: [[META5]] = !{!"f.Frame Slot", [[META3]], i64 0}
 ;.
