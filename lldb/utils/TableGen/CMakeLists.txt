@@ -11,7 +11,6 @@ if (NOT DEFINED LLDB_TABLEGEN_EXE)
       DESTINATION "${CMAKE_INSTALL_BINDIR}"
       LLDBOptionDefEmitter.cpp
       LLDBPropertyDefEmitter.cpp
-      LLDBPropertyDocsEmitter.cpp
       LLDBTableGen.cpp
       LLDBTableGenUtils.cpp
       )
