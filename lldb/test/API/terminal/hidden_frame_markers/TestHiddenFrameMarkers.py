@@ -26,7 +26,7 @@ class HiddenFrameMarkerTest(TestBase):
             ],
         )
 
-        self.runCmd("f 1")
+        self.runCmd("f 2")
         self.expect(
             "bt",
             substrs=[
@@ -37,7 +37,7 @@ class HiddenFrameMarkerTest(TestBase):
             ],
         )
 
-        self.runCmd("f 7")
+        self.runCmd("f 3")
         self.expect(
             "bt",
             substrs=[
@@ -68,7 +68,7 @@ class HiddenFrameMarkerTest(TestBase):
             ],
         )
 
-        self.runCmd("f 1")
+        self.runCmd("f 2")
         self.expect(
             "bt",
             substrs=[
@@ -79,7 +79,7 @@ class HiddenFrameMarkerTest(TestBase):
             ],
         )
 
-        self.runCmd("f 7")
+        self.runCmd("f 3")
         self.expect(
             "bt",
             substrs=[
