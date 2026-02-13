@@ -5934,8 +5934,8 @@ DoubleAPFloat frexp(const DoubleAPFloat &Arg, int &Exp,
 }
 
 // class HexFloatArith implements HFP arithmetic using the conventions
-// and approaches of the arith library, and matches the behaviour
-// of the hardware.
+// and approaches of the arith library used by the IBM XL compiler,
+// and matches the behaviour of the hardware.
 class HexFloatArith {
 public:
   struct value_t {

@@ -5606,8 +5606,8 @@ TEST(APFloatTest, frexpHexFloat) {
         << " Semantics: " << APFloat::semanticsName(*S);
     EXPECT_TRUE(Frac.isZero()) << " Semantics: " << SemanticsName;
 
-    Frac = frexp(NegLargest, Exp, RM); EXPECT_EQ(252, Exp)
-        << " Semantics: " << SemanticsName;
+    Frac = frexp(NegLargest, Exp, RM);
+    EXPECT_EQ(252, Exp) << " Semantics: " << SemanticsName;
     Expected = "0x.";
     Expected.append(APFloat::semanticsPrecision(*S), 'f');
     EXPECT_EQ(APFloat::opOK, Frac.add(APFloat(*S, Expected), RM))
