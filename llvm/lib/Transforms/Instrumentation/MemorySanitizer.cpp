@@ -299,6 +299,15 @@ static cl::opt<bool>
                       cl::desc("exact handling of relational integer ICmp"),
                       cl::Hidden, cl::init(true));
 
+static cl::opt<int> ClSwitchPrecision(
+    "msan-switch-precision",
+    cl::desc("Controls the number of cases considered by MSan for LLVM switch "
+             "instructions. 0 means no UUMs detected. Higher values lead to "
+             "fewer false negatives but may impact compiler and/or "
+             "application performance. N.B. LLVM switch instructions do not "
+             "correspond exactly to C++ switch statements."),
+    cl::Hidden, cl::init(99));
+
 static cl::opt<bool> ClHandleLifetimeIntrinsics(
     "msan-handle-lifetime-intrinsics",
     cl::desc(
@@ -2493,7 +2502,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // stack overflow or excessive runtime. We limit the number of cases
     // considered, with the tradeoff of niche false negatives.
     // TODO: figure out a better solution.
-    int casesToConsider = 99;
+    int casesToConsider = ClSwitchPrecision;
 
     Value *ShadowCases = nullptr;
     for (auto Case : SI.cases()) {
