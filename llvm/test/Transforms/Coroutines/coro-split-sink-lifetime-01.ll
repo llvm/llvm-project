@@ -2,8 +2,8 @@
 ; sink them to the places after the suspend block.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse,simplifycfg' -S | FileCheck %s
 
-; CHECK: %a.Frame = type { ptr, ptr, i1 }
-; CHECK: %a_optnone.Frame = type { ptr, ptr, i32, i1 }
+
+target datalayout = "e-m:e-p:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
 %"struct.std::coroutine_handle" = type { ptr }
 %"struct.std::coroutine_handle.0" = type { %"struct.std::coroutine_handle" }

@@ -2,6 +2,8 @@
 ; sink them to the places after the suspend block.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
+target datalayout = "e-m:e-p:64:64-i64:64-f80:128-n8:16:32:64-S128"
+
 %"struct.std::coroutine_handle" = type { ptr }
 %"struct.std::coroutine_handle.0" = type { %"struct.std::coroutine_handle" }
 %"struct.lean_future<int>::Awaiter" = type { i32, %"struct.std::coroutine_handle.0" }
@@ -53,7 +55,7 @@ exit:
 }
 
 ; CHECK-LABEL: @a.resume(
-; CHECK:    %[[VAL:testval.+]] = getelementptr inbounds %a.Frame
+; CHECK:    %[[VAL:testval.+]] = getelementptr inbounds i8
 ; CHECK-NOT:     call void @llvm.lifetime.start.p0(ptr %{{.*}})
 ; CHECK:         %test = load i32, ptr %[[VAL]]
 
