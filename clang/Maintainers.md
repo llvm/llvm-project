@@ -205,9 +205,6 @@ umbrella or components used to support such tools.
 
 ### clang-format
 
-MyDeveloperDay \
-mydeveloperday@gmail.com (email), MyDeveloperDay (Phabricator), [MyDeveloperDay](https://github.com/MyDeveloperDay) (GitHub)
-
 Owen Pan \
 owenpiano@gmail.com (email), owenpan (Phabricator), [owenca](https://github.com/owenca) (GitHub)
 
@@ -355,3 +352,4 @@ Dmitri Gribenko (gribozavr@gmail.com (email), gribozavr (Phabricator), [gribozav
 Tom Honermann (tom@honermann.net (email), tahonermann (Phabricator), [tahonermann](https://github.com/tahonermann) (GitHub)) \-- Text Encodings \
 John McCall (rjmccall@apple.com (email), rjmccall (Phabricator), [rjmccall](https://github.com/rjmccall) (GitHub)) \-- Clang LLVM IR generation, Objective-C/C++ conformance, Itanium ABI \
 John Ericson (git@johnericson.me (email), Ericson2314 (Phabricator), [Ericson2314](https://github.com/Ericson2314) (GitHub)) \-- CMake Integration
+MyDeveloperDay (mydeveloperday@gmail.com (email), MyDeveloperDay (Phabricator), [MyDeveloperDay](https://github.com/MyDeveloperDay) (GitHub)) -- clang-format
