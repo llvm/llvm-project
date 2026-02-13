@@ -7472,6 +7472,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       BestVPlan, VectorPH, CM.foldTailByMasking(),
       CM.requiresScalarEpilogue(BestVF.isVector()));
   VPlanTransforms::materializeVFAndVFxUF(BestVPlan, VectorPH, BestVF);
+  VPlanTransforms::simplifyRecipes(BestVPlan);
   VPlanTransforms::cse(BestVPlan);
   VPlanTransforms::simplifyRecipes(BestVPlan);
 
