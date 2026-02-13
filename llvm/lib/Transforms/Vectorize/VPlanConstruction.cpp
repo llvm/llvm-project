@@ -633,11 +633,11 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
       if (!match(U, m_ExtractLastPart(m_VPValue())))
         continue;
       auto *ExtractLastPart = cast<VPInstruction>(U);
-      if (!match(ExtractLastPart->getSingleUser(),
-                 m_ExtractLastLane(m_VPValue())))
+      VPUser *ExtractLastPartUser = ExtractLastPart->getSingleUser();
+      assert(ExtractLastPartUser && "must have a single user");
+      if (!match(ExtractLastPartUser, m_ExtractLastLane(m_VPValue())))
         continue;
-      auto *ExtractLastLane =
-          cast<VPInstruction>(ExtractLastPart->getSingleUser());
+      auto *ExtractLastLane = cast<VPInstruction>(ExtractLastPartUser);
       assert(is_contained(ExtractLastLane->getParent()->successors(),
                           Plan.getScalarPreheader()) &&
              "last lane must be extracted in the middle block");
