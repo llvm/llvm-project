@@ -79,9 +79,10 @@ def OpenACC_KernelEnvironmentOp
 // acc.firstprivate_map
 //===----------------------------------------------------------------------===//
 
-def OpenACC_FirstprivateMapInitialOp : OpenACC_DataEntryOp<"firstprivate_map",
-    "mlir::acc::DataClause::acc_firstprivate", "", [],
-    (ins Arg<OpenACC_AnyPointerOrMappableType,"Host variable",[MemRead]>:$var)> {
+def OpenACC_FirstprivateMapInitialOp
+    : OpenACC_DataEntryOp<
+          "firstprivate_map", "mlir::acc::DataClause::acc_firstprivate", "", [],
+          (ins Arg<OpenACC_AnyPointerOrMappableType, "Host variable">:$var)> {
   let summary = "Represents the mapping of the initial value for firstprivate "
                 "semantics.";
   let description = [{
@@ -97,7 +98,7 @@ def OpenACC_FirstprivateMapInitialOp : OpenACC_DataEntryOp<"firstprivate_map",
       being accessed directly
   }];
   let results = (outs Arg<OpenACC_AnyPointerOrMappableType,
-                          "Accelerator mapped variable",[MemWrite]>:$accVar);
+                          "Accelerator mapped variable">:$accVar);
   let extraClassDeclaration = extraClassDeclarationBase;
 }
 

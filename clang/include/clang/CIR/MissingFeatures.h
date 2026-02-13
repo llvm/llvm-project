@@ -286,6 +286,7 @@ struct MissingFeatures {
   static bool getRuntimeFunctionDecl() { return false; }
   static bool globalViewIndices() { return false; }
   static bool globalViewIntLowering() { return false; }
+  static bool guardAbortOnException() { return false; }
   static bool handleBuiltinICEArguments() { return false; }
   static bool hip() { return false; }
   static bool incrementProfileCounter() { return false; }
@@ -371,15 +372,9 @@ struct MissingFeatures {
   static bool stringTypeWithDifferentArraySize() { return false; }
 
   // Future CIR operations
-  static bool awaitOp() { return false; }
   static bool callOp() { return false; }
-  static bool ifOp() { return false; }
-  static bool labelOp() { return false; }
-  static bool ptrDiffOp() { return false; }
   static bool llvmLoweringPtrDiffConsidersPointee() { return false; }
-  static bool ptrStrideOp() { return false; }
   static bool switchOp() { return false; }
-  static bool throwOp() { return false; }
   static bool tryOp() { return false; }
   static bool vecTernaryOp() { return false; }
   static bool zextOp() { return false; }

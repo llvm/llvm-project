@@ -1,0 +1,202 @@
+//===- Interpreter.cpp - Interpreter Loop for llubi -----------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements the evaluation loop for each kind of instruction.
+//
+//===----------------------------------------------------------------------===//
+
+#include "Context.h"
+#include "Value.h"
+#include "llvm/IR/InstVisitor.h"
+#include "llvm/Support/Allocator.h"
+
+namespace llvm::ubi {
+
+enum class FrameState {
+  // It is about to enter the function.
+  // Valid transition:
+  //   -> Running
+  Entry,
+  // It is executing instructions inside the function.
+  // Valid transitions:
+  //   -> Pending (on call)
+  //   -> Exit (on return)
+  Running,
+  // It is about to enter a callee or handle return value from the callee.
+  // Valid transitions:
+  //   -> Running (after returning from callee)
+  Pending,
+  // It is about to return the control to the caller.
+  Exit,
+};
+
+/// Context for a function call.
+/// This struct maintains the state during the execution of a function,
+/// including the control flow, values of executed instructions, and stack
+/// objects.
+struct Frame {
+  Function &Func;
+  Frame *LastFrame;
+  CallBase *CallSite;
+  ArrayRef<AnyValue> Args;
+  AnyValue &RetVal;
+
+  TargetLibraryInfo TLI;
+  BasicBlock *BB;
+  BasicBlock::iterator PC;
+  FrameState State = FrameState::Entry;
+  // Stack objects allocated in this frame. They will be automatically freed
+  // when the function returns.
+  SmallVector<IntrusiveRefCntPtr<MemoryObject>> Allocas;
+  // Values of arguments and executed instructions in this function.
+  DenseMap<Value *, AnyValue> ValueMap;
+
+  // Reserved for in-flight subroutines.
+  SmallVector<AnyValue> CalleeArgs;
+  AnyValue CalleeRetVal;
+
+  Frame(Function &F, CallBase *CallSite, Frame *LastFrame,
+        ArrayRef<AnyValue> Args, AnyValue &RetVal,
+        const TargetLibraryInfoImpl &TLIImpl)
+      : Func(F), LastFrame(LastFrame), CallSite(CallSite), Args(Args),
+        RetVal(RetVal), TLI(TLIImpl, &F) {
+    assert((Args.size() == F.arg_size() ||
+            (F.isVarArg() && Args.size() >= F.arg_size())) &&
+           "Expected enough arguments to call the function.");
+    BB = &Func.getEntryBlock();
+    PC = BB->begin();
+    for (Argument &Arg : F.args())
+      ValueMap[&Arg] = Args[Arg.getArgNo()];
+  }
+};
+
+/// Instruction executor using the visitor pattern.
+/// visit* methods return true on success, false on error.
+/// Unlike the Context class that manages the global state,
+/// InstExecutor only maintains the state for call frames.
+class InstExecutor : public InstVisitor<InstExecutor, bool> {
+  Context &Ctx;
+  EventHandler &Handler;
+  std::list<Frame> CallStack;
+  // Used to indicate whether the interpreter should continue execution.
+  bool Status;
+  Frame *CurrentFrame = nullptr;
+  AnyValue None;
+
+  void reportImmediateUB(StringRef Msg) {
+    // Check if we have already reported an immediate UB.
+    if (!Status)
+      return;
+    Status = false;
+    // TODO: Provide stack trace information.
+    Handler.onImmediateUB(Msg);
+  }
+
+  const AnyValue &getValue(Value *V) {
+    if (auto *C = dyn_cast<Constant>(V))
+      return Ctx.getConstantValue(C);
+    return CurrentFrame->ValueMap.at(V);
+  }
+
+public:
+  InstExecutor(Context &C, EventHandler &H, Function &F,
+               ArrayRef<AnyValue> Args, AnyValue &RetVal)
+      : Ctx(C), Handler(H), Status(true) {
+    CallStack.emplace_back(F, /*CallSite=*/nullptr, /*LastFrame=*/nullptr, Args,
+                           RetVal, Ctx.getTLIImpl());
+  }
+  bool visitReturnInst(ReturnInst &RI) {
+    if (auto *RV = RI.getReturnValue())
+      CurrentFrame->RetVal = getValue(RV);
+    CurrentFrame->State = FrameState::Exit;
+    return Handler.onInstructionExecuted(RI, None);
+  }
+  bool visitInstruction(Instruction &I) {
+    Handler.onUnrecognizedInstruction(I);
+    return false;
+  }
+
+  /// This function implements the main interpreter loop.
+  /// It handles function calls in a non-recursive manner to avoid stack
+  /// overflows.
+  bool runMainLoop() {
+    uint32_t MaxSteps = Ctx.getMaxSteps();
+    uint32_t Steps = 0;
+    while (Status && !CallStack.empty()) {
+      Frame &Top = CallStack.back();
+      CurrentFrame = &Top;
+      if (Top.State == FrameState::Entry) {
+        Handler.onFunctionEntry(Top.Func, Top.Args, Top.CallSite);
+        // TODO: Handle arg attributes
+      } else {
+        assert(Top.State == FrameState::Pending &&
+               "Expected to return from a callee.");
+      }
+
+      Top.State = FrameState::Running;
+      // Interpreter loop inside a function
+      while (Status) {
+        assert(Top.State == FrameState::Running &&
+               "Expected to be in running state.");
+        if (MaxSteps != 0 && Steps >= MaxSteps) {
+          reportImmediateUB("Exceeded maximum number of execution steps.");
+          break;
+        }
+        ++Steps;
+
+        Instruction &I = *Top.PC;
+        if (!visit(&I)) {
+          Status = false;
+          break;
+        }
+        if (!Status)
+          break;
+
+        if (Top.State != FrameState::Pending && !I.isTerminator()) {
+          if (I.getType()->isVoidTy())
+            Handler.onInstructionExecuted(I, None);
+          else
+            Handler.onInstructionExecuted(I, Top.ValueMap.at(&I));
+        }
+
+        // A function call or return has occurred.
+        // We need to exit the inner loop and switch to a different frame.
+        if (Top.State != FrameState::Running)
+          break;
+
+        // Otherwise, move to the next instruction if it is not a terminator.
+        // For terminators, the PC is updated in the visit* method.
+        if (!I.isTerminator())
+          ++Top.PC;
+      }
+
+      if (!Status)
+        break;
+
+      if (Top.State == FrameState::Exit) {
+        assert((Top.Func.getReturnType()->isVoidTy() || !Top.RetVal.isNone()) &&
+               "Expected return value to be set on function exit.");
+        // TODO:Handle retval attributes
+        Handler.onFunctionExit(Top.Func, Top.RetVal);
+        CallStack.pop_back();
+      } else {
+        assert(Top.State == FrameState::Pending &&
+               "Expected to enter a callee.");
+      }
+    }
+    return Status;
+  }
+};
+
+bool Context::runFunction(Function &F, ArrayRef<AnyValue> Args,
+                          AnyValue &RetVal, EventHandler &Handler) {
+  InstExecutor Executor(*this, Handler, F, Args, RetVal);
+  return Executor.runMainLoop();
+}
+
+} // namespace llvm::ubi

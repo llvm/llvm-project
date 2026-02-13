@@ -1127,6 +1127,12 @@ const SCEV *ScalarEvolution::getLosslessPtrToIntExpr(const SCEV *Op) {
 
 const SCEV *ScalarEvolution::getPtrToAddrExpr(const SCEV *Op) {
   assert(Op->getType()->isPointerTy() && "Op must be a pointer");
+
+  // Treat pointers with unstable representation conservatively, since the
+  // address bits may change.
+  if (DL.hasUnstableRepresentation(Op->getType()))
+    return getCouldNotCompute();
+
   Type *Ty = DL.getAddressType(Op->getType());
 
   // Use the rewriter to sink the cast down to SCEVUnknown leaves.
@@ -8175,8 +8181,12 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
       return getSCEV(U->getOperand(0));
     break;
 
-  case Instruction::PtrToAddr:
-    return getPtrToAddrExpr(getSCEV(U->getOperand(0)));
+  case Instruction::PtrToAddr: {
+    const SCEV *IntOp = getPtrToAddrExpr(getSCEV(U->getOperand(0)));
+    if (isa<SCEVCouldNotCompute>(IntOp))
+      return getUnknown(V);
+    return IntOp;
+  }
 
   case Instruction::PtrToInt: {
     // Pointer to integer cast is straight-forward, so do model it.

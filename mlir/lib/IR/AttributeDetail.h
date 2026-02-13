@@ -43,23 +43,19 @@ inline size_t getDenseElementBitWidth(Type eltType) {
 /// An attribute representing a reference to a dense vector or tensor object.
 struct DenseElementsAttributeStorage : public AttributeStorage {
 public:
-  DenseElementsAttributeStorage(ShapedType type, bool isSplat)
-      : type(type), isSplat(isSplat) {}
+  DenseElementsAttributeStorage(ShapedType type) : type(type) {}
 
   ShapedType type;
-  bool isSplat;
 };
 
 /// An attribute representing a reference to a dense vector or tensor object.
 struct DenseIntOrFPElementsAttrStorage : public DenseElementsAttributeStorage {
-  DenseIntOrFPElementsAttrStorage(ShapedType ty, ArrayRef<char> data,
-                                  bool isSplat = false)
-      : DenseElementsAttributeStorage(ty, isSplat), data(data) {}
+  DenseIntOrFPElementsAttrStorage(ShapedType ty, ArrayRef<char> data)
+      : DenseElementsAttributeStorage(ty), data(data) {}
 
   struct KeyTy {
-    KeyTy(ShapedType type, ArrayRef<char> data, llvm::hash_code hashCode,
-          bool isSplat = false)
-        : type(type), data(data), hashCode(hashCode), isSplat(isSplat) {}
+    KeyTy(ShapedType type, ArrayRef<char> data, llvm::hash_code hashCode)
+        : type(type), data(data), hashCode(hashCode) {}
 
     /// The type of the dense elements.
     ShapedType type;
@@ -69,9 +65,6 @@ struct DenseIntOrFPElementsAttrStorage : public DenseElementsAttributeStorage {
 
     /// The computed hash code for the storage data.
     llvm::hash_code hashCode;
-
-    /// A boolean that indicates if this data is a splat or not.
-    bool isSplat;
   };
 
   /// Compare this storage instance with the provided key.
@@ -79,38 +72,22 @@ struct DenseIntOrFPElementsAttrStorage : public DenseElementsAttributeStorage {
     return key.type == type && key.data == data;
   }
 
-  /// Construct a key from a shaped type, raw data buffer, and a flag that
-  /// signals if the data is already known to be a splat. Callers to this
-  /// function are expected to tag preknown splat values when possible, e.g. one
-  /// element shapes.
-  static KeyTy getKey(ShapedType ty, ArrayRef<char> data, bool isKnownSplat) {
+  /// Construct a key from a shaped type and raw data buffer.
+  static KeyTy getKey(ShapedType ty, ArrayRef<char> data) {
     // Handle an empty storage instance.
     if (data.empty())
       return KeyTy(ty, data, 0);
 
-    // If the data is already known to be a splat, the key hash value is
-    // directly the data buffer.
-    bool isBoolData = ty.getElementType().isInteger(1);
-    if (isKnownSplat) {
-      if (isBoolData)
-        return getKeyForSplatBoolData(ty, data[0] != 0);
-      return KeyTy(ty, data, llvm::hash_value(data), isKnownSplat);
-    }
-
-    // Otherwise, we need to check if the data corresponds to a splat or not.
-
-    // Handle the simple case of only one element.
-    size_t numElements = ty.getNumElements();
-    assert(numElements != 1 && "splat of 1 element should already be detected");
-
-    // Handle boolean values directly as they are packed to 1-bit.
-    if (isBoolData)
-      return getKeyForBoolData(ty, data, numElements);
-
     size_t elementWidth = getDenseElementBitWidth(ty.getElementType());
-    // Non 1-bit dense elements are padded to 8-bits.
+    // Dense elements are padded to 8-bits.
     size_t storageSize = llvm::divideCeil(elementWidth, CHAR_BIT);
-    assert(((data.size() / storageSize) == numElements) &&
+
+    // If the data buffer holds a single element, it is a known splat.
+    if (data.size() == storageSize)
+      return KeyTy(ty, data, llvm::hash_value(data));
+
+    assert(((data.size() / storageSize) ==
+            static_cast<size_t>(ty.getNumElements())) &&
            "data does not hold expected number of elements");
 
     // Create the initial hash value with just the first element.
@@ -124,46 +101,7 @@ struct DenseIntOrFPElementsAttrStorage : public DenseElementsAttributeStorage {
         return KeyTy(ty, data, llvm::hash_combine(hashVal, data.drop_front(i)));
 
     // Otherwise, this is a splat so just return the hash of the first element.
-    return KeyTy(ty, firstElt, hashVal, /*isSplat=*/true);
-  }
-
-  /// Construct a key with a set of boolean data.
-  static KeyTy getKeyForBoolData(ShapedType ty, ArrayRef<char> data,
-                                 size_t numElements) {
-    ArrayRef<char> splatData = data;
-    bool splatValue = splatData.front() & 1;
-
-    // Check the simple case where the data matches the known splat value.
-    if (splatData == ArrayRef<char>(splatValue ? kSplatTrue : kSplatFalse))
-      return getKeyForSplatBoolData(ty, splatValue);
-
-    // Handle the case where the potential splat value is 1 and the number of
-    // elements is non 8-bit aligned.
-    size_t numOddElements = numElements % CHAR_BIT;
-    if (splatValue && numOddElements != 0) {
-      // Check that all bits are set in the last value.
-      char lastElt = splatData.back();
-      if (lastElt != llvm::maskTrailingOnes<unsigned char>(numOddElements))
-        return KeyTy(ty, data, llvm::hash_value(data));
-
-      // If this is the only element, the data is known to be a splat.
-      if (splatData.size() == 1)
-        return getKeyForSplatBoolData(ty, splatValue);
-      splatData = splatData.drop_back();
-    }
-
-    // Check that the data buffer corresponds to a splat of the proper mask.
-    char mask = splatValue ? ~0 : 0;
-    return llvm::all_of(splatData, [mask](char c) { return c == mask; })
-               ? getKeyForSplatBoolData(ty, splatValue)
-               : KeyTy(ty, data, llvm::hash_value(data));
-  }
-
-  /// Return a key to use for a boolean splat of the given value.
-  static KeyTy getKeyForSplatBoolData(ShapedType type, bool splatValue) {
-    const char &splatData = splatValue ? kSplatTrue : kSplatFalse;
-    return KeyTy(type, splatData, llvm::hash_value(splatData),
-                 /*isSplat=*/true);
+    return KeyTy(ty, firstElt, hashVal);
   }
 
   /// Hash the key for the storage.
@@ -185,30 +123,21 @@ struct DenseIntOrFPElementsAttrStorage : public DenseElementsAttributeStorage {
     }
 
     return new (allocator.allocate<DenseIntOrFPElementsAttrStorage>())
-        DenseIntOrFPElementsAttrStorage(key.type, copy, key.isSplat);
+        DenseIntOrFPElementsAttrStorage(key.type, copy);
   }
 
   ArrayRef<char> data;
-
-  /// The values used to denote a boolean splat value.
-  // This is not using constexpr declaration due to compilation failure
-  // encountered with MSVC where it would inline these values, which makes it
-  // unsafe to refer by reference in KeyTy.
-  static const char kSplatTrue;
-  static const char kSplatFalse;
 };
 
 /// An attribute representing a reference to a dense vector or tensor object
 /// containing strings.
 struct DenseStringElementsAttrStorage : public DenseElementsAttributeStorage {
-  DenseStringElementsAttrStorage(ShapedType ty, ArrayRef<StringRef> data,
-                                 bool isSplat = false)
-      : DenseElementsAttributeStorage(ty, isSplat), data(data) {}
+  DenseStringElementsAttrStorage(ShapedType ty, ArrayRef<StringRef> data)
+      : DenseElementsAttributeStorage(ty), data(data) {}
 
   struct KeyTy {
-    KeyTy(ShapedType type, ArrayRef<StringRef> data, llvm::hash_code hashCode,
-          bool isSplat = false)
-        : type(type), data(data), hashCode(hashCode), isSplat(isSplat) {}
+    KeyTy(ShapedType type, ArrayRef<StringRef> data, llvm::hash_code hashCode)
+        : type(type), data(data), hashCode(hashCode) {}
 
     /// The type of the dense elements.
     ShapedType type;
@@ -218,9 +147,6 @@ struct DenseStringElementsAttrStorage : public DenseElementsAttributeStorage {
 
     /// The computed hash code for the storage data.
     llvm::hash_code hashCode;
-
-    /// A boolean that indicates if this data is a splat or not.
-    bool isSplat;
   };
 
   /// Compare this storage instance with the provided key.
@@ -233,24 +159,15 @@ struct DenseStringElementsAttrStorage : public DenseElementsAttributeStorage {
     return key.data == data;
   }
 
-  /// Construct a key from a shaped type, StringRef data buffer, and a flag that
-  /// signals if the data is already known to be a splat. Callers to this
-  /// function are expected to tag preknown splat values when possible, e.g. one
-  /// element shapes.
-  static KeyTy getKey(ShapedType ty, ArrayRef<StringRef> data,
-                      bool isKnownSplat) {
+  /// Construct a key from a shaped type and StringRef data buffer.
+  static KeyTy getKey(ShapedType ty, ArrayRef<StringRef> data) {
     // Handle an empty storage instance.
     if (data.empty())
       return KeyTy(ty, data, 0);
 
-    // If the data is already known to be a splat, the key hash value is
-    // directly the data buffer.
-    if (isKnownSplat)
-      return KeyTy(ty, data, llvm::hash_value(data.front()), isKnownSplat);
-
-    // Handle the simple case of only one element.
-    assert(ty.getNumElements() != 1 &&
-           "splat of 1 element should already be detected");
+    // If the data buffer holds a single element, it is a known splat.
+    if (data.size() == 1)
+      return KeyTy(ty, data, llvm::hash_value(data.front()));
 
     // Create the initial hash value with just the first element.
     const auto &firstElt = data.front();
@@ -258,12 +175,12 @@ struct DenseStringElementsAttrStorage : public DenseElementsAttributeStorage {
 
     // Check to see if this storage represents a splat. If it doesn't then
     // combine the hash for the data starting with the first non splat element.
-    for (size_t i = 1, e = data.size(); i != e; i++)
+    for (size_t i = 1, e = data.size(); i != e; ++i)
       if (firstElt != data[i])
         return KeyTy(ty, data, llvm::hash_combine(hashVal, data.drop_front(i)));
 
     // Otherwise, this is a splat so just return the hash of the first element.
-    return KeyTy(ty, data.take_front(), hashVal, /*isSplat=*/true);
+    return KeyTy(ty, data.take_front(), hashVal);
   }
 
   /// Hash the key for the storage.
@@ -279,15 +196,15 @@ struct DenseStringElementsAttrStorage : public DenseElementsAttributeStorage {
     ArrayRef<StringRef> copy, data = key.data;
     if (data.empty()) {
       return new (allocator.allocate<DenseStringElementsAttrStorage>())
-          DenseStringElementsAttrStorage(key.type, copy, key.isSplat);
+          DenseStringElementsAttrStorage(key.type, copy);
     }
 
-    int numEntries = key.isSplat ? 1 : data.size();
+    size_t numEntries = data.size();
 
     // Compute the amount data needed to store the ArrayRef and StringRef
     // contents.
     size_t dataSize = sizeof(StringRef) * numEntries;
-    for (int i = 0; i < numEntries; i++)
+    for (size_t i = 0; i < numEntries; ++i)
       dataSize += data[i].size();
 
     char *rawData = reinterpret_cast<char *>(
@@ -299,7 +216,7 @@ struct DenseStringElementsAttrStorage : public DenseElementsAttributeStorage {
         reinterpret_cast<StringRef *>(rawData), numEntries);
     auto *stringData = rawData + numEntries * sizeof(StringRef);
 
-    for (int i = 0; i < numEntries; i++) {
+    for (size_t i = 0; i < numEntries; ++i) {
       memcpy(stringData, data[i].data(), data[i].size());
       mutableCopy[i] = StringRef(stringData, data[i].size());
       stringData += data[i].size();
@@ -309,7 +226,7 @@ struct DenseStringElementsAttrStorage : public DenseElementsAttributeStorage {
         ArrayRef<StringRef>(reinterpret_cast<StringRef *>(rawData), numEntries);
 
     return new (allocator.allocate<DenseStringElementsAttrStorage>())
-        DenseStringElementsAttrStorage(key.type, copy, key.isSplat);
+        DenseStringElementsAttrStorage(key.type, copy);
   }
 
   ArrayRef<StringRef> data;

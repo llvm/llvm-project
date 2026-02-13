@@ -8,10 +8,10 @@ class char_traits {};
 template <typename C, typename T = std::char_traits<C>, typename A = std::allocator<C> >
 struct basic_string {
   basic_string();
-  basic_string(const C*, unsigned int size);
+  basic_string(const C*, unsigned int size, const A &a = A());
   basic_string(const C *, const A &allocator = A());
-  basic_string(unsigned int size, C c);
-  basic_string(const C*, unsigned int pos, unsigned int size);
+  basic_string(unsigned int size, C c, const A &a = A());
+  basic_string(const C*, unsigned int pos, unsigned int size, const A &a = A());
 };
 typedef basic_string<char> string;
 typedef basic_string<wchar_t> wstring;
@@ -119,6 +119,44 @@ std::string_view StringViewFromZero() {
   // CHECK-MESSAGES: [[@LINE-1]]:10: warning: constructing string from nullptr is undefined behaviour
 }
 
+void TestExplicitAllocator() {
+  std::allocator<char> a;
+
+  std::string s1('x', 5, a);
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: string constructor parameters are probably swapped; expecting string(count, character) [bugprone-string-constructor]
+  // CHECK-FIXES: std::string s1(5, 'x', a);
+  std::string s2(0, 'x', a);
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: constructor creating an empty string
+  std::string s3(-4, 'x', a);
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: negative value used as length parameter
+  std::string s4(0x1000000, 'x', a);
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: suspicious large length parameter
+
+  std::string q0("test", 0, a);
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: constructor creating an empty string
+  std::string q1(kText, -4, a);
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: negative value used as length parameter
+  std::string q2("test", 200, a);
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: length is bigger than string literal size
+  std::string q3(kText3, 0x1000000, a);
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: suspicious large length parameter
+
+  std::string r1("test", 1, 0, a);
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: constructor creating an empty string
+  std::string r2("test", 0, -4, a);
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: negative value used as length parameter
+  std::string r3("test", -4, 1, a);
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: negative value used as position of the first character parameter
+  std::string r4("test", 0, 0x1000000, a);
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: suspicious large length parameter
+  std::string r5("test", 0, 5, a);
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: length is bigger than string literal size
+  std::string r6("test", 3, 2, a);
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: length is bigger than remaining string literal size
+  std::string r7("test", 4, 1, a);
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: position of the first character parameter is bigger than string literal character range
+}
+
 void Valid() {
   std::string empty();
   std::string str(4, 'x');
@@ -131,6 +169,13 @@ void Valid() {
   std::string s7("test", 0, 4);
   std::string s8("test", 3, 1);
   std::string s9("te" "st", 1, 2);
+
+  std::allocator<char> a;
+  std::string sa1(4, 'x', a);
+  std::string sa2("test", 4, a);
+  std::string sa3("test", 3, a);
+  std::string sa4("test", 0, 4, a);
+  std::string sa5("test", 3, 1, a);
 
   std::string_view emptyv();
   std::string_view sv1("test", 4);

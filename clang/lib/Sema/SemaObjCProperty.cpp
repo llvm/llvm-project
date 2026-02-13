@@ -269,41 +269,6 @@ Decl *SemaObjC::ActOnProperty(Scope *S, SourceLocation AtLoc,
   return Res;
 }
 
-static ObjCPropertyAttribute::Kind
-makePropertyAttributesAsWritten(unsigned Attributes) {
-  unsigned attributesAsWritten = 0;
-  if (Attributes & ObjCPropertyAttribute::kind_readonly)
-    attributesAsWritten |= ObjCPropertyAttribute::kind_readonly;
-  if (Attributes & ObjCPropertyAttribute::kind_readwrite)
-    attributesAsWritten |= ObjCPropertyAttribute::kind_readwrite;
-  if (Attributes & ObjCPropertyAttribute::kind_getter)
-    attributesAsWritten |= ObjCPropertyAttribute::kind_getter;
-  if (Attributes & ObjCPropertyAttribute::kind_setter)
-    attributesAsWritten |= ObjCPropertyAttribute::kind_setter;
-  if (Attributes & ObjCPropertyAttribute::kind_assign)
-    attributesAsWritten |= ObjCPropertyAttribute::kind_assign;
-  if (Attributes & ObjCPropertyAttribute::kind_retain)
-    attributesAsWritten |= ObjCPropertyAttribute::kind_retain;
-  if (Attributes & ObjCPropertyAttribute::kind_strong)
-    attributesAsWritten |= ObjCPropertyAttribute::kind_strong;
-  if (Attributes & ObjCPropertyAttribute::kind_weak)
-    attributesAsWritten |= ObjCPropertyAttribute::kind_weak;
-  if (Attributes & ObjCPropertyAttribute::kind_copy)
-    attributesAsWritten |= ObjCPropertyAttribute::kind_copy;
-  if (Attributes & ObjCPropertyAttribute::kind_unsafe_unretained)
-    attributesAsWritten |= ObjCPropertyAttribute::kind_unsafe_unretained;
-  if (Attributes & ObjCPropertyAttribute::kind_nonatomic)
-    attributesAsWritten |= ObjCPropertyAttribute::kind_nonatomic;
-  if (Attributes & ObjCPropertyAttribute::kind_atomic)
-    attributesAsWritten |= ObjCPropertyAttribute::kind_atomic;
-  if (Attributes & ObjCPropertyAttribute::kind_class)
-    attributesAsWritten |= ObjCPropertyAttribute::kind_class;
-  if (Attributes & ObjCPropertyAttribute::kind_direct)
-    attributesAsWritten |= ObjCPropertyAttribute::kind_direct;
-
-  return (ObjCPropertyAttribute::Kind)attributesAsWritten;
-}
-
 static bool LocPropertyAttribute( ASTContext &Context, const char *attrName,
                                  SourceLocation LParenLoc, SourceLocation &Loc) {
   if (LParenLoc.isMacroID())
@@ -629,7 +594,7 @@ ObjCPropertyDecl *SemaObjC::CreatePropertyDecl(
   PDecl->setGetterName(GetterSel, GetterNameLoc);
   PDecl->setSetterName(SetterSel, SetterNameLoc);
   PDecl->setPropertyAttributesAsWritten(
-                          makePropertyAttributesAsWritten(AttributesAsWritten));
+      static_cast<ObjCPropertyAttribute::Kind>(AttributesAsWritten));
 
   SemaRef.ProcessDeclAttributes(S, PDecl, FD.D);
 

@@ -833,14 +833,14 @@ bool PeepholeOptimizer::optimizeExtInstr(
     //
     //    %reg1025 = <sext> %reg1024
     //     ...
-    //    %reg1026 = SUBREG_TO_REG 0, %reg1024, 4
+    //    %reg1026 = SUBREG_TO_REG %reg1024, 4
     //
     // into this:
     //
     //    %reg1025 = <sext> %reg1024
     //     ...
     //    %reg1027 = COPY %reg1025:4
-    //    %reg1026 = SUBREG_TO_REG 0, %reg1027, 4
+    //    %reg1026 = SUBREG_TO_REG %reg1027, 4
     //
     // The problem here is that SUBREG_TO_REG is there to assert that an
     // implicit zext occurs. It doesn't insert a zext instruction. If we allow
@@ -959,14 +959,7 @@ bool PeepholeOptimizer::optimizeCmpInstr(MachineInstr &MI) {
 /// Optimize a select instruction.
 bool PeepholeOptimizer::optimizeSelect(
     MachineInstr &MI, SmallPtrSetImpl<MachineInstr *> &LocalMIs) {
-  unsigned TrueOp = 0;
-  unsigned FalseOp = 0;
-  bool Optimizable = false;
-  SmallVector<MachineOperand, 4> Cond;
-  if (TII->analyzeSelect(MI, Cond, TrueOp, FalseOp, Optimizable))
-    return false;
-  if (!Optimizable)
-    return false;
+  assert(MI.isSelect() && "Should only be called when MI->isSelect() is true");
   if (!TII->optimizeSelect(MI, LocalMIs))
     return false;
   LLVM_DEBUG(dbgs() << "Deleting select: " << MI);
@@ -2131,21 +2124,21 @@ ValueTrackerResult ValueTracker::getNextSourceFromExtractSubreg() {
 ValueTrackerResult ValueTracker::getNextSourceFromSubregToReg() {
   assert(Def->isSubregToReg() && "Invalid definition");
   // We are looking at:
-  // Def = SUBREG_TO_REG Imm, v0, sub0
+  // Def = SUBREG_TO_REG v0, sub0
 
   // Bail if we have to compose sub registers.
   // If DefSubReg != sub0, we would have to check that all the bits
   // we track are included in sub0 and if yes, we would have to
   // determine the right subreg in v0.
-  if (DefSubReg != Def->getOperand(3).getImm())
+  if (DefSubReg != Def->getOperand(2).getImm())
     return ValueTrackerResult();
   // Bail if we have to compose sub registers.
   // Likewise, if v0.subreg != 0, we would have to compose it with sub0.
-  if (Def->getOperand(2).getSubReg())
+  if (Def->getOperand(1).getSubReg())
     return ValueTrackerResult();
 
-  return ValueTrackerResult(Def->getOperand(2).getReg(),
-                            Def->getOperand(3).getImm());
+  return ValueTrackerResult(Def->getOperand(1).getReg(),
+                            Def->getOperand(2).getImm());
 }
 
 /// Explore each PHI incoming operand and return its sources.
