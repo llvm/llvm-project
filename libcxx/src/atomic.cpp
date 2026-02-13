@@ -153,8 +153,8 @@ static void __platform_wait_on_address(void const* __ptr, void const* __val, May
     _umtx_op(const_cast<void*>(__ptr), UMTX_OP_WAIT, value, nullptr, nullptr);
   } else {
     timespec timeout{};
-    timeout.tv_sec  = __timeout_ns / 1'000'000'000;
-    timeout.tv_nsec = __timeout_ns % 1'000'000'000;
+    timeout.tv_sec  = maybe_timeout_ns / 1'000'000'000;
+    timeout.tv_nsec = maybe_timeout_ns % 1'000'000'000;
 
     _umtx_op(const_cast<void*>(__ptr),
              UMTX_OP_WAIT,
