@@ -453,6 +453,19 @@ InstructionCost WebAssemblyTTIImpl::getPartialReductionCost(
   return Invalid;
 }
 
+InstructionCost
+WebAssemblyTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                          TTI::TargetCostKind CostKind) const {
+  switch (ICA.getID()) {
+  case Intrinsic::experimental_vector_extract_last_active:
+    // TODO: Remove once the intrinsic can be lowered without crashes.
+    return InstructionCost::getInvalid();
+  default:
+    break;
+  }
+  return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+}
+
 TTI::ReductionShuffle WebAssemblyTTIImpl::getPreferredExpandedReductionShuffle(
     const IntrinsicInst *II) const {
 

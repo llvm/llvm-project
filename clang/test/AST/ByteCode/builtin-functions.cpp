@@ -1583,6 +1583,10 @@ namespace Memcmp {
   static_assert(__builtin_bcmp("abab\0banana", "abab\0canada", 6) != 0);
   static_assert(__builtin_bcmp("abab\0banana", "abab\0canada", 5) == 0);
 
+  constexpr char abc[] = /* missing */; // both-error {{expected expression}} \
+                                        // both-note {{declared here}}
+  static_assert(__builtin_bcmp(abc, abc, 2) == 0); // both-error {{not an integral constant expression}} \
+                                                   // both-note {{initializer of 'abc' is unknown}}
 
   static_assert(__builtin_wmemcmp(L"abaa", L"abba", 3) == -1);
   static_assert(__builtin_wmemcmp(L"abaa", L"abba", 2) == 0);
