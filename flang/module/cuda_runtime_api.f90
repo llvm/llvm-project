@@ -12,7 +12,7 @@ implicit none
 integer, parameter :: cuda_stream_kind = int_ptr_kind()
 
 interface cudaforgetdefaultstream
-    integer(kind=cuda_stream_kind) function cudastreamgetdefaultarg(devptr)
+    integer(kind=cuda_stream_kind) function cudagetstreamdefaultarg(devptr)
       import cuda_stream_kind
       !DIR$ IGNORE_TKR (TKR) devptr
       integer, device  :: devptr(*)

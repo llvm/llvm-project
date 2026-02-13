@@ -52,8 +52,8 @@ struct CUDAIntrinsicLibrary : IntrinsicLibrary {
   mlir::Value genClusterBlockIndex(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genClusterDimBlocks(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue
-      genCUDAForSetDefaultStreamArray(mlir::Type,
-                                      llvm::ArrayRef<fir::ExtendedValue>);
+      genCUDASetDefaultStreamArray(mlir::Type,
+                                   llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue
       genCUDAGetDefaultStreamArg(mlir::Type,
                                  llvm::ArrayRef<fir::ExtendedValue>);

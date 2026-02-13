@@ -383,15 +383,15 @@ static constexpr IntrinsicHandler cudaHandlers[]{
          &CI::genClusterDimBlocks),
      {},
      /*isElemental=*/false},
-    {"cudasetstreamarray",
-     static_cast<CUDAIntrinsicLibrary::ExtendedGenerator>(
-         &CI::genCUDAForSetDefaultStreamArray),
-     {{{"devptr", asAddr}, {"stream", asValue}}},
-     /*isElemental=*/false},
-    {"cudastreamgetdefaultarg",
+    {"cudagetstreamdefaultarg",
      static_cast<CUDAIntrinsicLibrary::ExtendedGenerator>(
          &CI::genCUDAGetDefaultStreamArg),
      {{{"devptr", asAddr}}},
+     /*isElemental=*/false},
+    {"cudasetstreamarray",
+     static_cast<CUDAIntrinsicLibrary::ExtendedGenerator>(
+         &CI::genCUDASetDefaultStreamArray),
+     {{{"devptr", asAddr}, {"stream", asValue}}},
      /*isElemental=*/false},
     {"fence_proxy_async",
      static_cast<CUDAIntrinsicLibrary::SubroutineGenerator>(
@@ -1115,7 +1115,7 @@ CUDAIntrinsicLibrary::genClusterDimBlocks(mlir::Type resultType,
 }
 
 // CUDAFORSETSTREAMARRAY
-fir::ExtendedValue CUDAIntrinsicLibrary::genCUDAForSetDefaultStreamArray(
+fir::ExtendedValue CUDAIntrinsicLibrary::genCUDASetDefaultStreamArray(
     mlir::Type resTy, llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 2);
   mlir::Value arg = fir::getBase(args[0]);
