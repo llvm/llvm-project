@@ -16,7 +16,7 @@ float function() {
   return a + b;
 }
 
-// CIR-LABEL: cir.func {{.*}} @_Z8functionv() -> !cir.float
+// CIR-LABEL: cir.func {{.*}} @_Z8functionv() -> (!cir.float {llvm.noundef})
 // CIR:  %[[RETVAL:.+]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["__retval"]
 // CIR:  %[[STRUCT:.+]] = cir.alloca !rec_some_struct, !cir.ptr<!rec_some_struct>, ["", init]
 // CIR:  %[[CONST:.+]] = cir.const #cir.const_record<{#cir.int<1> : !s32i, #cir.fp<2.000000e+00> : !cir.float}> : !rec_some_struct
@@ -31,7 +31,7 @@ float function() {
 // CIR:  %[[RET:.+]] = cir.load %[[RETVAL]] : !cir.ptr<!cir.float>, !cir.float
 // CIR:  cir.return %[[RET]] : !cir.float
 
-// LLVM-LABEL: define dso_local float @_Z8functionv()
+// LLVM-LABEL: define dso_local noundef float @_Z8functionv()
 // LLVM:  %[[RETVAL:.+]] = alloca float, i64 1
 // LLVM:  %[[STRUCT:.+]] = alloca %struct.some_struct, i64 1
 // LLVM:  store %struct.some_struct { i32 1, float 2.000000e+00 }, ptr %[[STRUCT]]

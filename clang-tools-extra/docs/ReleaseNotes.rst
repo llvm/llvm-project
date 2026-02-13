@@ -94,6 +94,11 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
+- Improved :program:`check_clang_tidy.py` script by adding the `-check-header`
+  argument to simplify testing of header files. This argument automatically
+  manages the creation of temporary header files and ensures that diagnostics
+  and fixes are verified for the specified headers.
+
 New checks
 ^^^^^^^^^^
 
@@ -143,6 +148,10 @@ Changes in existing checks
 - Improved :doc:`bugprone-argument-comment
   <clang-tidy/checks/bugprone/argument-comment>` to also check for C++11
   inherited constructors.
+
+- Improved :doc:`bugprone-bad-signal-to-kill-thread
+  <clang-tidy/checks/bugprone/bad-signal-to-kill-thread>` check by fixing false
+  negatives when the ``SIGTERM`` macro is obtained from a precompiled header.
 
 - Improved :doc:`bugprone-exception-escape
   <clang-tidy/checks/bugprone/exception-escape>` check by adding

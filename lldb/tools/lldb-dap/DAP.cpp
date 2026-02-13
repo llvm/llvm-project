@@ -849,12 +849,11 @@ bool DAP::HandleObject(const Message &M) {
     dispatcher.Set("client_data", "request_command:" + req->command);
     if (handler_pos != request_handlers.end()) {
       handler_pos->second->Run(*req);
-      return true; // Success
+    } else {
+      UnknownRequestHandler handler(*this);
+      handler.BaseRequestHandler::Run(*req);
     }
-
-    dispatcher.Set("error", "unhandled-command:" + req->command);
-    DAP_LOG(log, "error: unhandled command '{0}'", req->command);
-    return false; // Fail
+    return true; // Success
   }
 
   if (const auto *resp = std::get_if<Response>(&M)) {

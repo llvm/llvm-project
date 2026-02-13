@@ -86,7 +86,7 @@ int f(int i) {
 
 // LLVM-LABEL: define{{.*}} i32 @_Z1fi(
 // LLVM:         store %struct.A { i32 1, [2 x i32] [i32 2, i32 3], [3 x i32] [i32 4, i32 5, i32 6] }, ptr %{{.*}}
-// LLVM:         call i32 @"_ZZ1fiENK3$_0clEiM1Ai"(ptr %{{.*}}, i32 %{{.*}}, i64 0)
+// LLVM:         call{{.*}} i32 @"_ZZ1fiENK3$_0clEiM1Ai"(ptr %{{.*}}, i32 %{{.*}}, i64 0)
 
 namespace PR42276 {
   class State {
