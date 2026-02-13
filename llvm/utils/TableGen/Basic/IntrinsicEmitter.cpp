@@ -654,10 +654,6 @@ static AttributeSet getIntrinsicFnAttributeSet(LLVMContext &C, unsigned ID) {
     AttributesMapDataBitSize = 8;
   else if (AttributesMapDataBitSize > 64)
     PrintFatalError("Packed ID of IntrinsicsToAttributesMap exceeds 64b!");
-  else if (AttributesMapDataBitSize > 16)
-    PrintWarning("Packed ID of IntrinsicsToAttributesMap exceeds 16b, "
-                 "this may cause performance drop (pr106809), "
-                 "please consider redesigning intrinsic sets!");
 
   // Assign a packed ID for each intrinsic. The lower bits will be its
   // "argument attribute ID" (index in UniqAttributes) and upper bits will be

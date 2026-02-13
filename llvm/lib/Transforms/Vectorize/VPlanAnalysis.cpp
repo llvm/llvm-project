@@ -59,7 +59,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   // other operands match and cache them.
   auto SetResultTyFromOp = [this, R]() {
     Type *ResTy = inferScalarType(R->getOperand(0));
-    for (unsigned Op = 1; Op != R->getNumOperands(); ++Op) {
+    unsigned NumOperands = R->getNumOperandsWithoutMask();
+    for (unsigned Op = 1; Op != NumOperands; ++Op) {
       VPValue *OtherV = R->getOperand(Op);
       assert(inferScalarType(OtherV) == ResTy &&
              "different types inferred for different operands");
@@ -78,6 +79,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case Instruction::PHI:
   case VPInstruction::Broadcast:
   case VPInstruction::ComputeReductionResult:
+  case VPInstruction::ExitingIVValue:
   case VPInstruction::ExtractLastLane:
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::ExtractLastPart:
@@ -129,7 +131,21 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::BranchOnCount:
+  case Instruction::Store:
     return Type::getVoidTy(Ctx);
+  case Instruction::Load:
+    return cast<LoadInst>(R->getUnderlyingValue())->getType();
+  case Instruction::Alloca:
+    return cast<AllocaInst>(R->getUnderlyingValue())->getType();
+  case Instruction::Call: {
+    unsigned CallIdx = R->getNumOperandsWithoutMask() - 1;
+    return cast<Function>(R->getOperand(CallIdx)->getLiveInIRValue())
+        ->getReturnType();
+  }
+  case Instruction::GetElementPtr:
+    return inferScalarType(R->getOperand(0));
+  case Instruction::ExtractValue:
+    return cast<ExtractValueInst>(R->getUnderlyingValue())->getType();
   default:
     break;
   }

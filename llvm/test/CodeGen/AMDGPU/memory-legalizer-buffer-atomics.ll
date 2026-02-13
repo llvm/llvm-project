@@ -104,10 +104,10 @@ define float @struct_buffer_atomic_add_v2f16_ret(<2 x half> %val, <4 x i32> inre
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    scratch_store_b32 off, v2, s32 ; 4-byte Folded Spill
+; GFX1250-NEXT:    scratch_store_b32 off, v2, s32 nv ; 4-byte Folded Spill
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, v1
-; GFX1250-NEXT:    scratch_load_b32 v1, off, s32 ; 4-byte Folded Reload
+; GFX1250-NEXT:    scratch_load_b32 v1, off, s32 nv ; 4-byte Folded Reload
 ; GFX1250-NEXT:    s_mov_b32 s4, s3
 ; GFX1250-NEXT:    s_mov_b32 s5, s2
 ; GFX1250-NEXT:    s_mov_b32 s6, s1
@@ -133,10 +133,10 @@ define void @struct_buffer_atomic_add_v2f16_noret(<2 x half> %val, <4 x i32> inr
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    scratch_store_b32 off, v2, s32 ; 4-byte Folded Spill
+; GFX1250-NEXT:    scratch_store_b32 off, v2, s32 nv ; 4-byte Folded Spill
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, v1
-; GFX1250-NEXT:    scratch_load_b32 v1, off, s32 ; 4-byte Folded Reload
+; GFX1250-NEXT:    scratch_load_b32 v1, off, s32 nv ; 4-byte Folded Reload
 ; GFX1250-NEXT:    s_mov_b32 s4, s3
 ; GFX1250-NEXT:    s_mov_b32 s5, s2
 ; GFX1250-NEXT:    s_mov_b32 s6, s1

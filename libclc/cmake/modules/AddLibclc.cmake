@@ -394,12 +394,15 @@ function(add_libclc_builtin_set)
     set( libclc_builtins_lib ${library_dir}/${LIBCLC_OUTPUT_FILENAME}.spv )
     if ( LIBCLC_USE_SPIRV_BACKEND )
       add_custom_command( OUTPUT ${libclc_builtins_lib}
-        COMMAND ${clang_exe} -c --target=${ARG_TRIPLE} -x ir -o ${libclc_builtins_lib} ${builtins_link_lib}
+        COMMAND ${clang_exe} -c --target=${ARG_TRIPLE}
+                -mllvm --spirv-ext=+SPV_KHR_fma
+                -x ir -o ${libclc_builtins_lib} ${builtins_link_lib}
         DEPENDS ${clang_target} ${builtins_link_lib} ${builtins_link_lib_tgt}
       )
     else()
       add_custom_command( OUTPUT ${libclc_builtins_lib}
-        COMMAND ${llvm-spirv_exe} ${spvflags} -o ${libclc_builtins_lib} ${builtins_link_lib}
+        COMMAND ${llvm-spirv_exe} ${spvflags} --spirv-ext=+SPV_KHR_fma
+                -o ${libclc_builtins_lib} ${builtins_link_lib}
         DEPENDS ${llvm-spirv_target} ${builtins_link_lib} ${builtins_link_lib_tgt}
       )
     endif()
@@ -455,9 +458,11 @@ function(add_libclc_builtin_set)
   endif()
 
   foreach( a IN LISTS ARG_ALIASES )
+    set(target_output_dir ${LIBCLC_OUTPUT_LIBRARY_DIR}/${ARG_TRIPLE}/${a})
+
     if(CMAKE_HOST_UNIX OR LLVM_USE_SYMLINKS)
       cmake_path(RELATIVE_PATH libclc_builtins_lib
-        BASE_DIRECTORY ${LIBCLC_OUTPUT_LIBRARY_DIR}
+        BASE_DIRECTORY ${target_output_dir}
         OUTPUT_VARIABLE LIBCLC_LINK_OR_COPY_SOURCE)
       set(LIBCLC_LINK_OR_COPY create_symlink)
     else()
@@ -465,8 +470,9 @@ function(add_libclc_builtin_set)
       set(LIBCLC_LINK_OR_COPY copy)
     endif()
 
-    file( MAKE_DIRECTORY ${LIBCLC_OUTPUT_LIBRARY_DIR}/${ARG_TRIPLE}/${a} )
-    set( libclc_alias_lib ${LIBCLC_OUTPUT_LIBRARY_DIR}/${ARG_TRIPLE}/${a}/${LIBCLC_OUTPUT_FILENAME}.bc )
+    file( MAKE_DIRECTORY ${target_output_dir} )
+    set( libclc_alias_lib ${target_output_dir}/${LIBCLC_OUTPUT_FILENAME}.bc )
+
     add_custom_command(
       OUTPUT ${libclc_alias_lib}
       COMMAND ${CMAKE_COMMAND} -E ${LIBCLC_LINK_OR_COPY} ${LIBCLC_LINK_OR_COPY_SOURCE} ${libclc_alias_lib}

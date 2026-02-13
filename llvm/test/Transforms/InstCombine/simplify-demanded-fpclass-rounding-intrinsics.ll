@@ -494,6 +494,18 @@ define nofpclass(snan) float @source_known_sub_or_zero__trunc(float nofpclass(na
   ret float %result
 }
 
+define nofpclass(snan) float @source_known_sub_or_zero__trunc_insert_point(float nofpclass(nan inf norm) %sub.or.zero) {
+; CHECK-LABEL: define nofpclass(snan) float @source_known_sub_or_zero__trunc_insert_point(
+; CHECK-SAME: float nofpclass(nan inf norm) [[SUB_OR_ZERO:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[SUB_OR_ZERO]])
+; CHECK-NEXT:    [[BARRIER:%.*]] = call float @llvm.arithmetic.fence.f32(float [[RESULT]])
+; CHECK-NEXT:    ret float [[BARRIER]]
+;
+  %result = call float @llvm.trunc.f32(float %sub.or.zero)
+  %barrier = call float @llvm.arithmetic.fence.f32(float %result)
+  ret float %barrier
+}
+
 define nofpclass(snan) float @source_known_psub_or_pzero__trunc(float nofpclass(nan inf norm nsub nzero) %psub.or.pzero) {
 ; CHECK-LABEL: define nofpclass(snan) float @source_known_psub_or_pzero__trunc(
 ; CHECK-SAME: float nofpclass(nan inf nzero nsub norm) [[PSUB_OR_PZERO:%.*]]) {

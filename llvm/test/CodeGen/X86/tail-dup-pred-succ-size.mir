@@ -22,7 +22,7 @@ body:             |
   ; LIMIT-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
   ; LIMIT-NEXT:   [[SHR32ri:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 1, implicit-def dead $eflags
   ; LIMIT-NEXT:   [[AND32ri:%[0-9]+]]:gr32 = AND32ri [[SHR32ri]], 7, implicit-def dead $eflags
-  ; LIMIT-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, killed [[AND32ri]], %subreg.sub_32bit
+  ; LIMIT-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG killed [[AND32ri]], %subreg.sub_32bit
   ; LIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG]], %jump-table.0, $noreg
   ; LIMIT-NEXT: {{  $}}
   ; LIMIT-NEXT: bb.2:
@@ -61,7 +61,7 @@ body:             |
   ; LIMIT-NEXT:   [[PHI:%[0-9]+]]:gr32 = PHI [[SHR32ri3]], %bb.5, [[SHR32ri2]], %bb.4, [[SHR32ri1]], %bb.3, [[MOV32rm]], %bb.2
   ; LIMIT-NEXT:   [[SHR32ri4:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 2, implicit-def dead $eflags
   ; LIMIT-NEXT:   [[AND32ri1:%[0-9]+]]:gr32 = AND32ri [[SHR32ri4]], 7, implicit-def dead $eflags
-  ; LIMIT-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, killed [[AND32ri1]], %subreg.sub_32bit
+  ; LIMIT-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG killed [[AND32ri1]], %subreg.sub_32bit
   ; LIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG1]], %jump-table.1, $noreg
   ; LIMIT-NEXT: {{  $}}
   ; LIMIT-NEXT: bb.9:
@@ -105,7 +105,7 @@ body:             |
   ; NOLIMIT-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
   ; NOLIMIT-NEXT:   [[SHR32ri:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 1, implicit-def dead $eflags
   ; NOLIMIT-NEXT:   [[AND32ri:%[0-9]+]]:gr32 = AND32ri [[SHR32ri]], 7, implicit-def dead $eflags
-  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, killed [[AND32ri]], %subreg.sub_32bit
+  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG killed [[AND32ri]], %subreg.sub_32bit
   ; NOLIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG]], %jump-table.0, $noreg
   ; NOLIMIT-NEXT: {{  $}}
   ; NOLIMIT-NEXT: bb.2:
@@ -114,7 +114,7 @@ body:             |
   ; NOLIMIT-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY1]], 1, $noreg, 0, $noreg
   ; NOLIMIT-NEXT:   [[SHR32ri1:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 2, implicit-def dead $eflags
   ; NOLIMIT-NEXT:   [[AND32ri1:%[0-9]+]]:gr32 = AND32ri [[SHR32ri1]], 7, implicit-def dead $eflags
-  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, [[AND32ri1]], %subreg.sub_32bit
+  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG [[AND32ri1]], %subreg.sub_32bit
   ; NOLIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG1]], %jump-table.1, $noreg
   ; NOLIMIT-NEXT: {{  $}}
   ; NOLIMIT-NEXT: bb.3:
@@ -124,7 +124,7 @@ body:             |
   ; NOLIMIT-NEXT:   [[SHR32ri2:%[0-9]+]]:gr32 = SHR32ri [[MOV32rm1]], 1, implicit-def dead $eflags
   ; NOLIMIT-NEXT:   [[SHR32ri3:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 2, implicit-def dead $eflags
   ; NOLIMIT-NEXT:   [[AND32ri2:%[0-9]+]]:gr32 = AND32ri [[SHR32ri3]], 7, implicit-def dead $eflags
-  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG2:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, [[AND32ri2]], %subreg.sub_32bit
+  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG2:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG [[AND32ri2]], %subreg.sub_32bit
   ; NOLIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG2]], %jump-table.1, $noreg
   ; NOLIMIT-NEXT: {{  $}}
   ; NOLIMIT-NEXT: bb.4:
@@ -134,7 +134,7 @@ body:             |
   ; NOLIMIT-NEXT:   [[SHR32ri4:%[0-9]+]]:gr32 = SHR32ri [[MOV32rm2]], 2, implicit-def dead $eflags
   ; NOLIMIT-NEXT:   [[SHR32ri5:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 2, implicit-def dead $eflags
   ; NOLIMIT-NEXT:   [[AND32ri3:%[0-9]+]]:gr32 = AND32ri [[SHR32ri5]], 7, implicit-def dead $eflags
-  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG3:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, [[AND32ri3]], %subreg.sub_32bit
+  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG3:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG [[AND32ri3]], %subreg.sub_32bit
   ; NOLIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG3]], %jump-table.1, $noreg
   ; NOLIMIT-NEXT: {{  $}}
   ; NOLIMIT-NEXT: bb.5:
@@ -144,7 +144,7 @@ body:             |
   ; NOLIMIT-NEXT:   [[SHR32ri6:%[0-9]+]]:gr32 = SHR32ri [[MOV32rm3]], 3, implicit-def dead $eflags
   ; NOLIMIT-NEXT:   [[SHR32ri7:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 2, implicit-def dead $eflags
   ; NOLIMIT-NEXT:   [[AND32ri4:%[0-9]+]]:gr32 = AND32ri [[SHR32ri7]], 7, implicit-def dead $eflags
-  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG4:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, [[AND32ri4]], %subreg.sub_32bit
+  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG4:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG [[AND32ri4]], %subreg.sub_32bit
   ; NOLIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG4]], %jump-table.1, $noreg
   ; NOLIMIT-NEXT: {{  $}}
   ; NOLIMIT-NEXT: bb.6:
@@ -193,7 +193,7 @@ body:             |
     %10:gr64 = COPY $rdi
     %13:gr32 = SHR32ri %11, 1, implicit-def dead $eflags
     %14:gr32 = AND32ri %13, 7, implicit-def dead $eflags
-    %12:gr64_nosp = SUBREG_TO_REG 0, killed %14, %subreg.sub_32bit
+    %12:gr64_nosp = SUBREG_TO_REG killed %14, %subreg.sub_32bit
 
   bb.1:
     successors: %bb.2, %bb.3, %bb.4, %bb.5
@@ -226,7 +226,7 @@ body:             |
     %4:gr32 = PHI %3, %bb.5, %2, %bb.4, %1, %bb.3, %0, %bb.2
     %19:gr32 = SHR32ri %11, 2, implicit-def dead $eflags
     %20:gr32 = AND32ri %19, 7, implicit-def dead $eflags
-    %18:gr64_nosp = SUBREG_TO_REG 0, killed %20, %subreg.sub_32bit
+    %18:gr64_nosp = SUBREG_TO_REG killed %20, %subreg.sub_32bit
 
   bb.8:
     successors: %bb.9, %bb.10, %bb.11, %bb.12
@@ -279,7 +279,7 @@ body:             |
   ; LIMIT-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
   ; LIMIT-NEXT:   [[SHR32ri:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 1, implicit-def dead $eflags
   ; LIMIT-NEXT:   [[AND32ri:%[0-9]+]]:gr32 = AND32ri [[SHR32ri]], 7, implicit-def dead $eflags
-  ; LIMIT-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, [[AND32ri]], %subreg.sub_32bit
+  ; LIMIT-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG [[AND32ri]], %subreg.sub_32bit
   ; LIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG]], %jump-table.0, $noreg
   ; LIMIT-NEXT: {{  $}}
   ; LIMIT-NEXT: bb.2:
@@ -317,7 +317,7 @@ body:             |
   ; LIMIT-NEXT: {{  $}}
   ; LIMIT-NEXT:   [[SHR32ri4:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 2, implicit-def dead $eflags
   ; LIMIT-NEXT:   [[AND32ri1:%[0-9]+]]:gr32 = AND32ri [[SHR32ri4]], 7, implicit-def dead $eflags
-  ; LIMIT-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, [[AND32ri1]], %subreg.sub_32bit
+  ; LIMIT-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG [[AND32ri1]], %subreg.sub_32bit
   ; LIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG1]], %jump-table.1, $noreg
   ; LIMIT-NEXT: {{  $}}
   ; LIMIT-NEXT: bb.9:
@@ -362,7 +362,7 @@ body:             |
   ; NOLIMIT-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
   ; NOLIMIT-NEXT:   [[SHR32ri:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 1, implicit-def dead $eflags
   ; NOLIMIT-NEXT:   [[AND32ri:%[0-9]+]]:gr32 = AND32ri [[SHR32ri]], 7, implicit-def dead $eflags
-  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, [[AND32ri]], %subreg.sub_32bit
+  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG [[AND32ri]], %subreg.sub_32bit
   ; NOLIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG]], %jump-table.0, $noreg
   ; NOLIMIT-NEXT: {{  $}}
   ; NOLIMIT-NEXT: bb.2:
@@ -371,7 +371,7 @@ body:             |
   ; NOLIMIT-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY1]], 1, $noreg, 0, $noreg
   ; NOLIMIT-NEXT:   [[SHR32ri1:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 2, implicit-def dead $eflags
   ; NOLIMIT-NEXT:   [[AND32ri1:%[0-9]+]]:gr32 = AND32ri [[SHR32ri1]], 7, implicit-def dead $eflags
-  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, [[AND32ri1]], %subreg.sub_32bit
+  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG [[AND32ri1]], %subreg.sub_32bit
   ; NOLIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG1]], %jump-table.1, $noreg
   ; NOLIMIT-NEXT: {{  $}}
   ; NOLIMIT-NEXT: bb.3:
@@ -381,7 +381,7 @@ body:             |
   ; NOLIMIT-NEXT:   [[SHR32ri2:%[0-9]+]]:gr32 = SHR32ri [[MOV32rm1]], 1, implicit-def dead $eflags
   ; NOLIMIT-NEXT:   [[SHR32ri3:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 2, implicit-def dead $eflags
   ; NOLIMIT-NEXT:   [[AND32ri2:%[0-9]+]]:gr32 = AND32ri [[SHR32ri3]], 7, implicit-def dead $eflags
-  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG2:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, [[AND32ri2]], %subreg.sub_32bit
+  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG2:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG [[AND32ri2]], %subreg.sub_32bit
   ; NOLIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG2]], %jump-table.1, $noreg
   ; NOLIMIT-NEXT: {{  $}}
   ; NOLIMIT-NEXT: bb.4:
@@ -391,7 +391,7 @@ body:             |
   ; NOLIMIT-NEXT:   [[SHR32ri4:%[0-9]+]]:gr32 = SHR32ri [[MOV32rm2]], 2, implicit-def dead $eflags
   ; NOLIMIT-NEXT:   [[SHR32ri5:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 2, implicit-def dead $eflags
   ; NOLIMIT-NEXT:   [[AND32ri3:%[0-9]+]]:gr32 = AND32ri [[SHR32ri5]], 7, implicit-def dead $eflags
-  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG3:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, [[AND32ri3]], %subreg.sub_32bit
+  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG3:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG [[AND32ri3]], %subreg.sub_32bit
   ; NOLIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG3]], %jump-table.1, $noreg
   ; NOLIMIT-NEXT: {{  $}}
   ; NOLIMIT-NEXT: bb.5:
@@ -401,7 +401,7 @@ body:             |
   ; NOLIMIT-NEXT:   [[SHR32ri6:%[0-9]+]]:gr32 = SHR32ri [[MOV32rm3]], 3, implicit-def dead $eflags
   ; NOLIMIT-NEXT:   [[SHR32ri7:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 2, implicit-def dead $eflags
   ; NOLIMIT-NEXT:   [[AND32ri4:%[0-9]+]]:gr32 = AND32ri [[SHR32ri7]], 7, implicit-def dead $eflags
-  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG4:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, [[AND32ri4]], %subreg.sub_32bit
+  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG4:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG [[AND32ri4]], %subreg.sub_32bit
   ; NOLIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG4]], %jump-table.1, $noreg
   ; NOLIMIT-NEXT: {{  $}}
   ; NOLIMIT-NEXT: bb.6:
@@ -446,7 +446,7 @@ body:             |
     %10:gr64 = COPY $rdi
     %13:gr32 = SHR32ri %11, 1, implicit-def dead $eflags
     %14:gr32 = AND32ri %13, 7, implicit-def dead $eflags
-    %12:gr64_nosp = SUBREG_TO_REG 0, %14, %subreg.sub_32bit
+    %12:gr64_nosp = SUBREG_TO_REG %14, %subreg.sub_32bit
 
   bb.1:
     successors: %bb.2, %bb.3, %bb.4, %bb.5, %bb.9
@@ -478,7 +478,7 @@ body:             |
   bb.7:
     %19:gr32 = SHR32ri %11, 2, implicit-def dead $eflags
     %20:gr32 = AND32ri %19, 7, implicit-def dead $eflags
-    %18:gr64_nosp = SUBREG_TO_REG 0, %20, %subreg.sub_32bit
+    %18:gr64_nosp = SUBREG_TO_REG %20, %subreg.sub_32bit
 
   bb.8:
     successors: %bb.9, %bb.10, %bb.11, %bb.12
@@ -534,7 +534,7 @@ body:             |
   ; LIMIT-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
   ; LIMIT-NEXT:   [[SHR32ri:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 1, implicit-def dead $eflags
   ; LIMIT-NEXT:   [[AND32ri:%[0-9]+]]:gr32 = AND32ri [[SHR32ri]], 7, implicit-def dead $eflags
-  ; LIMIT-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, killed [[AND32ri]], %subreg.sub_32bit
+  ; LIMIT-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG killed [[AND32ri]], %subreg.sub_32bit
   ; LIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG]], %jump-table.0, $noreg
   ; LIMIT-NEXT: {{  $}}
   ; LIMIT-NEXT: bb.2:
@@ -543,7 +543,7 @@ body:             |
   ; LIMIT-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY1]], 1, $noreg, 0, $noreg
   ; LIMIT-NEXT:   [[SHR32ri1:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 2, implicit-def dead $eflags
   ; LIMIT-NEXT:   [[AND32ri1:%[0-9]+]]:gr32 = AND32ri [[SHR32ri1]], 7, implicit-def dead $eflags
-  ; LIMIT-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, [[AND32ri1]], %subreg.sub_32bit
+  ; LIMIT-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG [[AND32ri1]], %subreg.sub_32bit
   ; LIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG1]], %jump-table.1, $noreg
   ; LIMIT-NEXT: {{  $}}
   ; LIMIT-NEXT: bb.3:
@@ -553,7 +553,7 @@ body:             |
   ; LIMIT-NEXT:   [[SHR32ri2:%[0-9]+]]:gr32 = SHR32ri [[MOV32rm1]], 1, implicit-def dead $eflags
   ; LIMIT-NEXT:   [[SHR32ri3:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 2, implicit-def dead $eflags
   ; LIMIT-NEXT:   [[AND32ri2:%[0-9]+]]:gr32 = AND32ri [[SHR32ri3]], 7, implicit-def dead $eflags
-  ; LIMIT-NEXT:   [[SUBREG_TO_REG2:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, [[AND32ri2]], %subreg.sub_32bit
+  ; LIMIT-NEXT:   [[SUBREG_TO_REG2:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG [[AND32ri2]], %subreg.sub_32bit
   ; LIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG2]], %jump-table.1, $noreg
   ; LIMIT-NEXT: {{  $}}
   ; LIMIT-NEXT: bb.4:
@@ -563,7 +563,7 @@ body:             |
   ; LIMIT-NEXT:   [[SHR32ri4:%[0-9]+]]:gr32 = SHR32ri [[MOV32rm2]], 2, implicit-def dead $eflags
   ; LIMIT-NEXT:   [[SHR32ri5:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 2, implicit-def dead $eflags
   ; LIMIT-NEXT:   [[AND32ri3:%[0-9]+]]:gr32 = AND32ri [[SHR32ri5]], 7, implicit-def dead $eflags
-  ; LIMIT-NEXT:   [[SUBREG_TO_REG3:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, [[AND32ri3]], %subreg.sub_32bit
+  ; LIMIT-NEXT:   [[SUBREG_TO_REG3:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG [[AND32ri3]], %subreg.sub_32bit
   ; LIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG3]], %jump-table.1, $noreg
   ; LIMIT-NEXT: {{  $}}
   ; LIMIT-NEXT: bb.5:
@@ -573,7 +573,7 @@ body:             |
   ; LIMIT-NEXT:   [[SHR32ri6:%[0-9]+]]:gr32 = SHR32ri [[MOV32rm3]], 3, implicit-def dead $eflags
   ; LIMIT-NEXT:   [[SHR32ri7:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 2, implicit-def dead $eflags
   ; LIMIT-NEXT:   [[AND32ri4:%[0-9]+]]:gr32 = AND32ri [[SHR32ri7]], 7, implicit-def dead $eflags
-  ; LIMIT-NEXT:   [[SUBREG_TO_REG4:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, [[AND32ri4]], %subreg.sub_32bit
+  ; LIMIT-NEXT:   [[SUBREG_TO_REG4:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG [[AND32ri4]], %subreg.sub_32bit
   ; LIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG4]], %jump-table.1, $noreg
   ; LIMIT-NEXT: {{  $}}
   ; LIMIT-NEXT: bb.6:
@@ -615,7 +615,7 @@ body:             |
   ; NOLIMIT-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
   ; NOLIMIT-NEXT:   [[SHR32ri:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 1, implicit-def dead $eflags
   ; NOLIMIT-NEXT:   [[AND32ri:%[0-9]+]]:gr32 = AND32ri [[SHR32ri]], 7, implicit-def dead $eflags
-  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, killed [[AND32ri]], %subreg.sub_32bit
+  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG killed [[AND32ri]], %subreg.sub_32bit
   ; NOLIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG]], %jump-table.0, $noreg
   ; NOLIMIT-NEXT: {{  $}}
   ; NOLIMIT-NEXT: bb.2:
@@ -624,7 +624,7 @@ body:             |
   ; NOLIMIT-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY1]], 1, $noreg, 0, $noreg
   ; NOLIMIT-NEXT:   [[SHR32ri1:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 2, implicit-def dead $eflags
   ; NOLIMIT-NEXT:   [[AND32ri1:%[0-9]+]]:gr32 = AND32ri [[SHR32ri1]], 7, implicit-def dead $eflags
-  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, [[AND32ri1]], %subreg.sub_32bit
+  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG [[AND32ri1]], %subreg.sub_32bit
   ; NOLIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG1]], %jump-table.1, $noreg
   ; NOLIMIT-NEXT: {{  $}}
   ; NOLIMIT-NEXT: bb.3:
@@ -634,7 +634,7 @@ body:             |
   ; NOLIMIT-NEXT:   [[SHR32ri2:%[0-9]+]]:gr32 = SHR32ri [[MOV32rm1]], 1, implicit-def dead $eflags
   ; NOLIMIT-NEXT:   [[SHR32ri3:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 2, implicit-def dead $eflags
   ; NOLIMIT-NEXT:   [[AND32ri2:%[0-9]+]]:gr32 = AND32ri [[SHR32ri3]], 7, implicit-def dead $eflags
-  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG2:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, [[AND32ri2]], %subreg.sub_32bit
+  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG2:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG [[AND32ri2]], %subreg.sub_32bit
   ; NOLIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG2]], %jump-table.1, $noreg
   ; NOLIMIT-NEXT: {{  $}}
   ; NOLIMIT-NEXT: bb.4:
@@ -644,7 +644,7 @@ body:             |
   ; NOLIMIT-NEXT:   [[SHR32ri4:%[0-9]+]]:gr32 = SHR32ri [[MOV32rm2]], 2, implicit-def dead $eflags
   ; NOLIMIT-NEXT:   [[SHR32ri5:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 2, implicit-def dead $eflags
   ; NOLIMIT-NEXT:   [[AND32ri3:%[0-9]+]]:gr32 = AND32ri [[SHR32ri5]], 7, implicit-def dead $eflags
-  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG3:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, [[AND32ri3]], %subreg.sub_32bit
+  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG3:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG [[AND32ri3]], %subreg.sub_32bit
   ; NOLIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG3]], %jump-table.1, $noreg
   ; NOLIMIT-NEXT: {{  $}}
   ; NOLIMIT-NEXT: bb.5:
@@ -654,7 +654,7 @@ body:             |
   ; NOLIMIT-NEXT:   [[SHR32ri6:%[0-9]+]]:gr32 = SHR32ri [[MOV32rm3]], 3, implicit-def dead $eflags
   ; NOLIMIT-NEXT:   [[SHR32ri7:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 2, implicit-def dead $eflags
   ; NOLIMIT-NEXT:   [[AND32ri4:%[0-9]+]]:gr32 = AND32ri [[SHR32ri7]], 7, implicit-def dead $eflags
-  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG4:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, [[AND32ri4]], %subreg.sub_32bit
+  ; NOLIMIT-NEXT:   [[SUBREG_TO_REG4:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG [[AND32ri4]], %subreg.sub_32bit
   ; NOLIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG4]], %jump-table.1, $noreg
   ; NOLIMIT-NEXT: {{  $}}
   ; NOLIMIT-NEXT: bb.6:
@@ -693,7 +693,7 @@ body:             |
     %10:gr64 = COPY $rdi
     %13:gr32 = SHR32ri %11, 1, implicit-def dead $eflags
     %14:gr32 = AND32ri %13, 7, implicit-def dead $eflags
-    %12:gr64_nosp = SUBREG_TO_REG 0, killed %14, %subreg.sub_32bit
+    %12:gr64_nosp = SUBREG_TO_REG killed %14, %subreg.sub_32bit
 
   bb.1:
     successors: %bb.2, %bb.3, %bb.4, %bb.5
@@ -725,7 +725,7 @@ body:             |
   bb.7:
     %19:gr32 = SHR32ri %11, 2, implicit-def dead $eflags
     %20:gr32 = AND32ri %19, 7, implicit-def dead $eflags
-    %18:gr64_nosp = SUBREG_TO_REG 0, killed %20, %subreg.sub_32bit
+    %18:gr64_nosp = SUBREG_TO_REG killed %20, %subreg.sub_32bit
 
   bb.8:
     successors: %bb.9, %bb.10, %bb.11, %bb.12
