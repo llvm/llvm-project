@@ -21,12 +21,7 @@ TEST(DependencyScanningFilesystem, OpenFileAndGetBufferRepeatedly) {
   InMemoryFS->setCurrentWorkingDirectory("/");
   InMemoryFS->addFile("/foo", 0, llvm::MemoryBuffer::getMemBuffer("content"));
 
-  DependencyScanningService Service(
-      ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
-      clang::CASOptions(), nullptr, nullptr, ScanningOptimizations::Default,
-      /*EagerLoadModules=*/false,
-      /*TraceVFS=*/false, /*AsyncScanModules=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
-      /*CacheNegativeStats=*/true);
+  DependencyScanningService Service({});
   DependencyScanningWorkerFilesystem DepFS(Service, InMemoryFS);
 
   auto FileOrErr1 = DepFS.openFileForRead("foo");
@@ -60,13 +55,9 @@ TEST(DependencyScanningWorkerFilesystem, CacheStatusFailures) {
   auto InstrumentingFS =
       llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(InMemoryFS);
 
-  DependencyScanningService Service(
-      ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
-      clang::CASOptions(), nullptr, nullptr, ScanningOptimizations::Default,
-      /*EagerLoadModules=*/false,
-      /*TraceVFS=*/false, /*AsyncScanModules=*/false,
-      llvm::sys::toTimeT(std::chrono::system_clock::now()),
-      /*CacheNegativeStats=*/true);
+  DependencyScanningServiceOptions Opts;
+  Opts.CacheNegativeStats = true;
+  DependencyScanningService Service(std::move(Opts));
   DependencyScanningWorkerFilesystem DepFS(Service, InstrumentingFS);
   DependencyScanningWorkerFilesystem DepFS2(Service, InstrumentingFS);
 
@@ -92,12 +83,7 @@ TEST(DependencyScanningFilesystem, CacheGetRealPath) {
   auto InstrumentingFS =
       llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(InMemoryFS);
 
-  DependencyScanningService Service(
-      ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
-      clang::CASOptions(), nullptr, nullptr, ScanningOptimizations::Default,
-      /*EagerLoadModules=*/false,
-      /*TraceVFS=*/false, /*AsyncScanModules=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
-      /*CacheNegativeStats=*/true);
+  DependencyScanningService Service({});
   DependencyScanningWorkerFilesystem DepFS(Service, InstrumentingFS);
   DependencyScanningWorkerFilesystem DepFS2(Service, InstrumentingFS);
 
@@ -132,9 +118,7 @@ TEST(DependencyScanningFilesystem, RealPathAndStatusInvariants) {
   InMemoryFS->addFile("/foo.c", 0, llvm::MemoryBuffer::getMemBuffer(""));
   InMemoryFS->addFile("/bar.c", 0, llvm::MemoryBuffer::getMemBuffer(""));
 
-  DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
-                                    ScanningOutputFormat::Make,
-                                    clang::CASOptions(), nullptr, nullptr);
+  DependencyScanningService Service({});
   DependencyScanningWorkerFilesystem DepFS(Service, InMemoryFS);
 
   // Success.
@@ -187,12 +171,7 @@ TEST(DependencyScanningFilesystem, CacheStatOnExists) {
   InMemoryFS->setCurrentWorkingDirectory("/");
   InMemoryFS->addFile("/foo", 0, llvm::MemoryBuffer::getMemBuffer(""));
   InMemoryFS->addFile("/bar", 0, llvm::MemoryBuffer::getMemBuffer(""));
-  DependencyScanningService Service(
-      ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
-      clang::CASOptions(), nullptr, nullptr, ScanningOptimizations::Default,
-      /*EagerLoadModules=*/false,
-      /*TraceVFS=*/false, /*AsyncScanModuels=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
-      /*CacheNegativeStats=*/true);
+  DependencyScanningService Service({});
   DependencyScanningWorkerFilesystem DepFS(Service, InstrumentingFS);
 
   DepFS.status("/foo");
@@ -215,12 +194,9 @@ TEST(DependencyScanningFilesystem, CacheStatFailures) {
   auto InstrumentingFS =
       llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(InMemoryFS);
 
-  DependencyScanningService Service(
-      ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
-      clang::CASOptions(), nullptr, nullptr, ScanningOptimizations::Default,
-      /*EagerLoadModules=*/false,
-      /*TraceVFS=*/false, /*AsyncScanModules=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
-      /*CacheNegativeStats=*/true);
+  DependencyScanningServiceOptions Opts;
+  Opts.CacheNegativeStats = true;
+  DependencyScanningService Service(std::move(Opts));
   DependencyScanningWorkerFilesystem DepFS(Service, InstrumentingFS);
 
   DepFS.status("/dir");
@@ -247,12 +223,9 @@ TEST(DependencyScanningFilesystem, DiagnoseStaleStatFailures) {
   auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   InMemoryFS->setCurrentWorkingDirectory("/");
 
-  DependencyScanningService Service(
-      ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
-      clang::CASOptions(), nullptr, nullptr, ScanningOptimizations::Default,
-      /*EagerLoadModules=*/false,
-      /*TraceVFS=*/false, /*AsyncScanModules=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
-      /*CacheNegativeStats=*/true);
+  DependencyScanningServiceOptions Opts;
+  Opts.CacheNegativeStats = true;
+  DependencyScanningService Service(std::move(Opts));
   DependencyScanningWorkerFilesystem DepFS(Service, InMemoryFS);
 
   bool Path1Exists = DepFS.exists("/path1.suffix");
@@ -278,12 +251,9 @@ TEST(DependencyScanningFilesystem, DiagnoseCachedFileSizeChange) {
   InMemoryFS1->setCurrentWorkingDirectory("/");
   InMemoryFS2->setCurrentWorkingDirectory("/");
 
-  DependencyScanningService Service(
-      ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
-      clang::CASOptions(), nullptr, nullptr, ScanningOptimizations::Default,
-      /*EagerLoadModules=*/false,
-      /*TraceVFS=*/false, /*AsyncScanModules=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
-      /*CacheNegativeStats=*/true);
+  DependencyScanningServiceOptions Opts;
+  Opts.CacheNegativeStats = true;
+  DependencyScanningService Service(std::move(Opts));
   DependencyScanningWorkerFilesystem DepFS(Service, InMemoryFS1);
 
   InMemoryFS1->addFile("/path1.suffix", 0,
@@ -317,9 +287,7 @@ TEST(DependencyScanningFilesystem, DoNotDiagnoseDirSizeChange) {
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS =
       llvm::vfs::createPhysicalFileSystem();
 
-  DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
-                                    ScanningOutputFormat::Make,
-                                    clang::CASOptions(), nullptr, nullptr);
+  DependencyScanningService Service({});
   DependencyScanningWorkerFilesystem DepFS(Service, FS);
 
   // Trigger the file system cache.

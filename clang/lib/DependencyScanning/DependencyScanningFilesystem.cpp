@@ -314,7 +314,7 @@ DependencyScanningWorkerFilesystem::computeAndStoreResult(
   llvm::ErrorOr<llvm::vfs::Status> Stat =
       getUnderlyingFS().status(OriginalFilename);
   if (!Stat) {
-    if (!Service.shouldCacheNegativeStats() ||
+    if (!Service.getOpts().CacheNegativeStats ||
         !shouldCacheNegativeStatsForPath(OriginalFilename))
       return Stat.getError();
 

@@ -183,16 +183,17 @@ ScanningOutputFormat DependencyScannerServiceOptions::getFormat() const {
 
 CXDependencyScannerService
 clang_experimental_DependencyScannerService_create_v1(
-    CXDependencyScannerServiceOptions Opts) {
+    CXDependencyScannerServiceOptions WrappedOpts) {
   // FIXME: Pass default CASOpts now.
-  std::shared_ptr<llvm::cas::ObjectStore> CAS = unwrap(Opts)->CAS;
-  std::shared_ptr<llvm::cas::ActionCache> Cache = unwrap(Opts)->Cache;
-  return wrap(new DependencyScanningService(
-      ScanningMode::DependencyDirectivesScan, unwrap(Opts)->getFormat(), unwrap(Opts)->CASOpts,
-      std::move(CAS), std::move(Cache), unwrap(Opts)->OptimizeArgs, /*EagerLoadModules=*/false,
-      /*TraceVFS=*/false, /*AsyncScanModules=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
-      unwrap(Opts)->CacheNegativeStats ? *unwrap(Opts)->CacheNegativeStats
-                                       : shouldCacheNegativeStatsDefault()));
+  DependencyScanningServiceOptions Opts;
+  Opts.Format = unwrap(WrappedOpts)->getFormat();
+  Opts.CASOpts = unwrap(WrappedOpts)->CASOpts;
+  Opts.CAS = unwrap(WrappedOpts)->CAS;
+  Opts.Cache = unwrap(WrappedOpts)->Cache;
+  Opts.OptimizeArgs = unwrap(WrappedOpts)->OptimizeArgs;
+  if (unwrap(WrappedOpts)->CacheNegativeStats)
+    Opts.CacheNegativeStats = *unwrap(WrappedOpts)->CacheNegativeStats;
+  return wrap(new DependencyScanningService(std::move(Opts)));
 }
 
 void clang_experimental_DependencyScannerService_dispose_v0(
@@ -202,13 +203,13 @@ void clang_experimental_DependencyScannerService_dispose_v0(
 
 CXDependencyScannerWorker clang_experimental_DependencyScannerWorker_create_v0(
     CXDependencyScannerService S) {
-  ScanningOutputFormat Format = unwrap(S)->getFormat();
+  ScanningOutputFormat Format = unwrap(S)->getOpts().Format;
   bool IsIncludeTreeOutput = Format == ScanningOutputFormat::IncludeTree ||
                              Format == ScanningOutputFormat::FullIncludeTree;
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS =
       llvm::vfs::createPhysicalFileSystem();
   if (IsIncludeTreeOutput)
-    FS = llvm::cas::createCASProvidingFileSystem(unwrap(S)->getCAS(),
+    FS = llvm::cas::createCASProvidingFileSystem(unwrap(S)->getOpts().CAS,
                                                  std::move(FS));
 
   return wrap(new DependencyScanningWorker(*unwrap(S), FS));
@@ -790,11 +791,14 @@ enum CXErrorCode clang_experimental_DependencyScanner_generateReproducer(
 
   std::shared_ptr<llvm::cas::ObjectStore> UpstreamCAS = Opts.CAS;
   bool IsReproducerCASBased{UpstreamCAS};
-  DependencyScanningService DepsService(
-      ScanningMode::DependencyDirectivesScan,
-      IsReproducerCASBased ? ScanningOutputFormat::FullIncludeTree
-                           : ScanningOutputFormat::Full,
-      Opts.CASOpts, UpstreamCAS, Opts.Cache);
+  DependencyScanningServiceOptions ServiceOpts;
+  if (IsReproducerCASBased) {
+    ServiceOpts.Format = ScanningOutputFormat::FullIncludeTree;
+    ServiceOpts.CASOpts = Opts.CASOpts;
+    ServiceOpts.CAS = UpstreamCAS;
+    ServiceOpts.Cache = Opts.Cache;
+  }
+  DependencyScanningService DepsService(std::move(ServiceOpts));
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS =
       llvm::vfs::createPhysicalFileSystem();
   if (UpstreamCAS)
