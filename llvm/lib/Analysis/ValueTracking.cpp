@@ -715,11 +715,19 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
     }
     return true;
   };
-
+  
   // Make sure the current function cannot arrange for another thread to free on
   // its behalf.
-  if (!CtxI->getFunction()->hasNoSync())
-    return false;
+  auto hasNoSyncCalls = [](auto Range) {
+    for (const auto &[Idx, I] : enumerate(Range)) {
+      if (Idx > MaxInstrsToCheckForFree)
+        return false;
+      if (const auto *CB = dyn_cast<CallBase>(&I))
+        if (!CB->hasFnAttr(Attribute::NoSync))
+          return false;
+    }
+    return true;
+  };
 
   // Handle cross-block case: CtxI in a successor of Assume's block.
   const BasicBlock *CtxBB = CtxI->getParent();
@@ -729,7 +737,7 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
     if (CtxBB->getSinglePredecessor() != AssumeBB)
       return false;
 
-    if (!hasNoFreeCalls(make_range(CtxBB->begin(), CtxIter)))
+    if (!hasNoFreeCalls(make_range(CtxBB->begin(), CtxIter)) || !hasNoSyncCalls(make_range(CtxBB->begin(), CtxIter)))
       return false;
 
     CtxIter = AssumeBB->end();
@@ -741,7 +749,7 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
 
   // Check if there are any calls between Assume and CtxIter that may free
   // memory.
-  return hasNoFreeCalls(make_range(Assume->getIterator(), CtxIter));
+  return hasNoFreeCalls(make_range(Assume->getIterator(), CtxIter)) && hasNoSyncCalls(make_range(Assume->getIterator(), CtxIter));
 }
 
 // TODO: cmpExcludesZero misses many cases where `RHS` is non-constant but
