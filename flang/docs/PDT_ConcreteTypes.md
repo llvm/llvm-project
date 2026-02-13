@@ -262,6 +262,74 @@ for (Component &comp : components) {
 sizeInBytes = alignTo(currentOffset, maxAlignment);
 ```
 
+### Recursion and Self-Referential PDTs
+
+A PDT may reference itself through Pointer or Allocatable components:
+
+```fortran
+type :: trecurse(X)
+  integer, len :: X
+  type(trecurse(X+1)), pointer :: P
+end type
+```
+
+This does not cause infinite recursion in `GetConcreteType`; `P` has genre `Pointer`, not `Data`.
+During offset resolution, the genre determines how a component's size is computed:
+
+- Data genre: the component is stored inline, so its full size must be known.
+  For a nested PDT, this triggers a recursive `GetConcreteType` call to resolve the inner type.
+- Pointer/Allocatable genre: the component stores a fixed-size `Descriptor`,
+  regardless of the pointed-to type. The size is `Descriptor::SizeInBytes(rank, ...)`,
+  which depends only on rank and addendum — not on the target type's layout.
+
+```cpp
+    if (comp.genre() != Component::Genre::Data) {
+      // Non-Data genres (Allocatable, Pointer, Automatic): store a Descriptor
+      const DerivedType *derivedComp = comp.derivedType();
+      componentSize = Descriptor::SizeInBytes(
+          comp.rank(), true, derivedComp ? derivedComp->LenParameters() : 0);
+      alignment = alignof(Descriptor);
+    } else if (...)
+```
+
+Thus, when `GetConcreteType` resolves `trecurse` with `X=5`:
+
+```
+GetConcreteType(trecurse, instance with X=5)
+  --> ResolveComponentOffsets:
+        Component "P" (genre=Pointer, rank=0):
+          size = Descriptor::SizeInBytes(0, ...)  // fixed, ~48 bytes
+          // Does NOT recurse into trecurse(X+1)
+          // Does NOT evaluate X+1
+          // Does NOT call GetConcreteType for the pointed-to type
+        SetOffset(P, 0)
+      sizeInBytes = alignTo(48, maxAlignment)
+  --> done, no recursion
+```
+
+The concrete type for `trecurse(6)` is created lazily if/when `P` is actually allocated:
+
+```fortran
+type(trecurse(5)) :: foo
+allocate(foo%P)          !-- Runtime: AllocatableAllocate -> GetConcreteType(trecurse, X=6)
+allocate(foo%P%P)        !-- Runtime: GetConcreteType(trecurse, X=7)
+```
+
+Pointer association does not trigger concrete type creation at all — `foo%P => some_target` is a shallow descriptor copy handled by `PointerAssociate`.
+
+Note that the Fortran standard (C749) requires non-POINTER, non-ALLOCATABLE components to specify a previously defined type.
+A declaration like `type(trecurse(X+1)) :: P` (without `POINTER` or `ALLOCATABLE`) would be rejected at compile time due to
+the specified `type` not being previously defined.
+
+For the `X+1` expression, the component's `lenValue_` array encodes the mapping from parent LEN params to child LEN params. For a bare parameter reference like `type(trecurse(X))`, this is straightforward — `Value(genre=LenParameter, value=0)` referencing the parent's parameter index 0. However, `X+1` is an expression, not a bare parameter reference.
+
+Currently, the `Value` class can only encode `Genre::LenParameter` (a single parameter index) or `Genre::Explicit` (a constant). Encoding computed expressions which do not fold at compile time, like `X+1` but unlike `2+2`, is a known limitation within the front-end. To resolve this, the front-end may introduce anonymous LEN parameter slots in the descriptor's `len_[]` array to hold pre-computed expression results, allowing `lenValue_` entries to reference them via `Genre::LenParameter`.
+
+Regardless of this limitation, offset resolution for Pointer/Allocatable components is unaffected since their `lenValue_` arrays are not consulted during `ResolveComponentOffsets` — they are only relevant when the component is later allocated and the runtime needs to populate the child descriptor's `len_[]` values.
+
+For more information, see [this link](#recursion-and-self-referential-pdts).
+
+
 ### Cache Design
 
 The cache uses a custom dynamically-sized hash table (`ConcreteTypeCache`) that relies only on C-style memory management (`malloc`, `calloc`, `free`), and uses the hash value directly as the lookup key:
@@ -328,8 +396,6 @@ call @AllocatableSetDerivedLength(%desc, 1, %len1)
 call @AllocatableSetDerivedLength(%desc, 2, %len2)
 call @AllocatableAllocate(%desc)  // internally calls GetConcreteType
 ```
-
-Note that LEN parameters do not affect type identity within the cache. `SAME_TYPE_AS(pdt(4), pdt(2+2))` returns `.TRUE.` because both evaluate to the same LEN value and thus the same member offsets. Thus the Concrete type cache will automatically de-duplicate based on the resolved LEN parameter values.
 
 
 ## Integration Points

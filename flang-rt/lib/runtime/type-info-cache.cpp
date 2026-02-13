@@ -27,8 +27,8 @@ RT_API_ATTRS const DerivedType *GetConcreteType(const DerivedType &genericType,
     const Descriptor &instance, runtime::Terminator &terminator) {
   std::size_t numLenParams = genericType.LenParameters();
   // Types without LEN params or already-concrete types can pass through
-  if ((numLenParams == 0) ||
-      (genericType.uninstantiatedType() != &genericType)) {
+  const DerivedType *uninst = genericType.uninstantiatedType();
+  if ((numLenParams == 0) || (uninst != nullptr && uninst != &genericType)) {
     return &genericType;
   }
   // Cannot instantiate PDT with LEN parameters on device
@@ -335,15 +335,12 @@ static DerivedType *CreateConcreteType(const DerivedType &generic,
 RT_API_ATTRS const DerivedType *GetConcreteType(const DerivedType &genericType,
     const Descriptor &instance, runtime::Terminator &terminator) {
   std::size_t numLenParams = genericType.LenParameters();
-  // Fast path: No LEN params, or we already have a concrete type.
-  // This occurs when the descriptor's derivedType_ was previously set
-  // to a concrete type, and a subsequent operation
-  // (e.g., AllocatableAllocate) calls GetConcreteType again with that
-  // already-resolved type. Concrete types have their uninstantiatedType_
-  // pointing to the original generic, not to themselves.
-  if ((numLenParams == 0) ||
-      (genericType.uninstantiatedType() != &genericType)) {
-    return &genericType; // Already concrete, return as-is
+  // Concrete types have uninstantiatedType_ pointing to the original generic.
+  // Generic types with LEN params have uninstantiatedType_ == nullptr.
+  // Generic types without LEN params are caught by the numLenParams == 0 check.
+  const DerivedType *uninst = genericType.uninstantiatedType();
+  if ((numLenParams == 0) || (uninst != nullptr && uninst != &genericType)) {
+    return &genericType; // Already concrete or no LEN params
   }
 
   // Check that instance has addendum with LEN values

@@ -49,13 +49,18 @@ static inline RT_API_ATTRS bool MustDeallocateLHS(
     if (toDerived != fromDerived) {
       return true;
     }
-    if (fromDerived) {
-      // Distinct LEN parameters? Deallocate
-      std::size_t lenParms{fromDerived->LenParameters()};
-      for (std::size_t j{0}; j < lenParms; ++j) {
-        if (toAddendum->LenParameterValue(j) !=
-            fromAddendum->LenParameterValue(j)) {
-          return true;
+    // Fall-thru to check LEN parameters regardless of polymorphicLHS
+  }
+  // Distinct LEN parameters? Deallocate, per F2018 10.2.1.3
+  if (const DescriptorAddendum *fromAddendum{from.Addendum()}) {
+    if (const typeInfo::DerivedType *fromDerived{fromAddendum->derivedType()}) {
+      if (std::size_t lenParms{fromDerived->LenParameters()}) {
+        DescriptorAddendum *toAddendum{to.Addendum()};
+        for (std::size_t j{0}; j < lenParms; ++j) {
+          if (toAddendum->LenParameterValue(j) !=
+              fromAddendum->LenParameterValue(j)) {
+            return true;
+          }
         }
       }
     }
