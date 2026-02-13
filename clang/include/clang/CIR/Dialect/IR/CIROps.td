@@ -2386,9 +2386,10 @@ def CIR_GlobalOp : CIR_Op<"global", [
     Symbol visibility in `sym_visibility` is defined in terms of MLIR's visibility
     and verified to be in accordance to `linkage`.
 
-    The `static_local` attribute indicates that this global represents a
+    The `static_local_guard` attribute indicates that this global represents a
     function-local static variable that requires guarded initialization
     (e.g., C++ static local variables with non-constant initializers).
+    It contains the mangled name of the guard variable.
   }];
 
   // Note that both sym_name and sym_visibility are tied to Symbol trait.
@@ -2407,7 +2408,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        UnitAttr:$comdat,
                        UnitAttr:$constant,
                        UnitAttr:$dso_local,
-                       UnitAttr:$static_local,
+                       OptionalAttr<CIR_StaticLocalGuardAttr>:$static_local_guard,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<ASTVarDeclInterface>:$ast);
 
@@ -2422,7 +2423,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
     (`comdat` $comdat^)?
     ($tls_model^)?
     (`dso_local` $dso_local^)?
-    (`static_local` $static_local^)?
+    (`static_local_guard` `` $static_local_guard^)?
     $sym_name
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value,
                                         $ctorRegion, $dtorRegion)
