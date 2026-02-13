@@ -2,6 +2,8 @@
 
 ; Test that nested structs in coroutine frames have correct debug info scoping.
 
+target datalayout = "e-m:e-p:64:64-i64:64-f80:128-n8:16:32:64-S128"
+
 ; Minimal nested struct types that used to trigger a scoping issue:
 ; we used to set the wrong `scope` for the `DIDerivedType` member entries of the `DICompositeType`
 ; as well as the `scope` for `DICompositeType` for the inner struct itself.
