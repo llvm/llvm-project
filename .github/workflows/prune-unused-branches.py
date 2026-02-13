@@ -73,7 +73,10 @@ def get_branches_from_open_prs(github_token) -> list[str]:
                 user_branches.append(pr["baseRefName"])
             user_branches.append(pr["headRefName"])
         else:
-            assert pr["baseRefName"].startswith("users/")
+            # We want to skip cross-repo PRs where someone has simply used a
+            # users/ branch naming scheme for a branch in their fork.
+            if pr["baseRefName"] == "main":
+                continue
             user_branches.append(pr["baseRefName"])
     # Convert to a set to ensure we have no duplicates.
     return list(set(user_branches))
