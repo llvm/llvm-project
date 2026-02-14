@@ -804,4 +804,12 @@ def CIR_AnyType : AnyTypeOf<[
   CIR_EhTokenType, CIR_CleanupTokenType, CIR_CatchTokenType
 ]>;
 
+//===----------------------------------------------------------------------===//
+// Exception related: EhToken type
+//===----------------------------------------------------------------------===//
+
+def CIR_EhToken : CIR_Type<"EhToken", "eh_token"> {
+  let summary = "CIR Exception handling token";
+}
+
 #endif // CLANG_CIR_DIALECT_IR_CIRTYPES_TD
