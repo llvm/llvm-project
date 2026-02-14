@@ -1505,21 +1505,18 @@ void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
   CIRBaseBuilderTy builder(getContext());
 
   // Use InsertionGuard to create the global at module level.
-  {
-    mlir::OpBuilder::InsertionGuard guard(builder);
-    builder.setInsertionPointToStart(mlirModule.getBody());
+  builder.setInsertionPointToStart(mlirModule.getBody());
 
-    // If a global with this name already exists (e.g. CIRGen materializes
-    // constexpr locals as globals when their address is taken), reuse it.
-    if (!mlir::SymbolTable::lookupNearestSymbolFrom(
-            mlirModule, mlir::StringAttr::get(&getContext(), name))) {
-      auto gv = cir::GlobalOp::create(builder, op.getLoc(), name, ty,
-                                      /*isConstant=*/true,
-                                      cir::GlobalLinkageKind::PrivateLinkage);
-      mlir::SymbolTable::setSymbolVisibility(
-          gv, mlir::SymbolTable::Visibility::Private);
-      gv.setInitialValueAttr(constant);
-    }
+  // If a global with this name already exists (e.g. CIRGen materializes
+  // constexpr locals as globals when their address is taken), reuse it.
+  if (!mlir::SymbolTable::lookupNearestSymbolFrom(
+          mlirModule, mlir::StringAttr::get(&getContext(), name))) {
+    auto gv = cir::GlobalOp::create(builder, op.getLoc(), name, ty,
+                                    /*isConstant=*/true,
+                                    cir::GlobalLinkageKind::PrivateLinkage);
+    mlir::SymbolTable::setSymbolVisibility(
+        gv, mlir::SymbolTable::Visibility::Private);
+    gv.setInitialValueAttr(constant);
   }
 
   // Now replace the store with get_global + copy.
