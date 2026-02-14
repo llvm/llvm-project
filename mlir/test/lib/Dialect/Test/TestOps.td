@@ -3125,6 +3125,90 @@ def TestEffectsResult : TEST_Op<"test_effects_result"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Test Ops with multiple effects for Loop Invariant Code Motion.
+//===----------------------------------------------------------------------===//
+
+def TestResourceA : Resource<"TestResourceA">;
+def TestResourceB : Resource<"TestResourceB">;
+def TestResourceC : Resource<"TestResourceC">;
+def TestResourceD : Resource<"TestResourceD">;
+def TestResourceE : Resource<"TestResourceE">;
+def TestResourceF : Resource<"TestResourceF">;
+
+def TestEffectsWriteA : TEST_Op<"test_effects_write_A",
+  [MemoryEffects<[MemWrite<TestResourceA>]>]>;
+
+def TestEffectsWriteAWithInput : TEST_Op<"test_effects_write_A_with_input",
+  [MemoryEffects<[MemWrite<TestResourceA>]>]> {
+  
+  let arguments = (ins AnyType:$arg);
+}
+
+def TestEffectsReadA : TEST_Op<"test_effects_read_A",
+  [MemoryEffects<[MemRead<TestResourceA>]>]>;
+
+def TestEffectsReadAWriteB : TEST_Op<"test_effects_read_A_write_B",
+  [MemoryEffects<[MemRead<TestResourceA>,
+    MemWrite<TestResourceB>]>]>;
+
+def TestEffectsReadAThenWriteB : TEST_Op<"test_effects_read_A_then_write_B",
+  [MemoryEffects<[MemRead<TestResourceA, 0>,
+    MemWrite<TestResourceB, 1>]>]>;
+
+def TestEffectsWriteAThenReadB : TEST_Op<"test_effects_write_A_then_read_B",
+  [MemoryEffects<[MemWrite<TestResourceA, 0>,
+    MemRead<TestResourceB, 1>]>]>;
+
+def TestEffectsWriteB : TEST_Op<"test_effects_write_B",
+  [MemoryEffects<[MemWrite<TestResourceB>]>]>;
+
+def TestEffectsReadB : TEST_Op<"test_effects_read_B",
+  [MemoryEffects<[MemRead<TestResourceB>]>]>;
+
+def TestEffectsWriteF : TEST_Op<"test_effects_write_F",
+  [MemoryEffects<[MemWrite<TestResourceF>]>]>;
+
+def TestEffectsReadF : TEST_Op<"test_effects_read_F",
+  [MemoryEffects<[MemRead<TestResourceF>]>]>;
+
+def TestEffectsWriteAC : TEST_Op<"test_effects_write_AC",
+  [MemoryEffects<[MemWrite<TestResourceA>, MemWrite<TestResourceC>]>]>;
+
+def TestEffectsReadAC : TEST_Op<"test_effects_read_AC",
+  [MemoryEffects<[MemRead<TestResourceA>, MemRead<TestResourceC>]>]>;
+
+def TestEffectsWriteCD : TEST_Op<"test_effects_write_CD",
+  [MemoryEffects<[MemWrite<TestResourceC>, MemWrite<TestResourceD>]>]>;
+
+def TestEffectsReadCD : TEST_Op<"test_effects_read_CD",
+  [MemoryEffects<[MemRead<TestResourceC>, MemRead<TestResourceD>]>]>;
+
+def TestEffectsWriteEF : TEST_Op<"test_effects_write_EF",
+  [MemoryEffects<[MemWrite<TestResourceE>, MemWrite<TestResourceF>]>]>;
+
+def TestEffectsReadEF : TEST_Op<"test_effects_read_EF",
+  [MemoryEffects<[MemRead<TestResourceE>, MemRead<TestResourceF>]>]>;
+
+def TestEffectsInitVectorPipeline : TEST_Op<"test_effects_init_vector_pipeline",
+  [MemoryEffects<[MemWrite<TestResourceA>]>]>;
+
+def TestEffectsInitMatrixPipeline : TEST_Op<"test_effects_init_matrix_pipeline",
+  [MemoryEffects<[MemWrite<TestResourceB>, MemWrite<TestResourceC>]>]>;
+
+def TestEffectsInitSpecialPipeline : TEST_Op<"test_effects_init_special_pipeline",
+  [MemoryEffects<[MemWrite<TestResourceA>]>]>;
+
+def TestEffectsVectorOp : TEST_Op<"test_effects_vector_op",
+  [MemoryEffects<[MemRead<TestResourceA, 0>, MemRead<TestResourceD, 0>, MemWrite<TestResourceD, 1>]>]>;
+
+def TestEffectsMatrixOp : TEST_Op<"test_effects_matrix_op",
+  [MemoryEffects<[MemRead<TestResourceB, 0>, MemRead<TestResourceC, 0>, MemRead<TestResourceD, 0>, MemWrite<TestResourceD, 1>]>]>;
+
+def TestEffectsSpecialOp : TEST_Op<"test_effects_special_op",
+  [MemoryEffects<[MemRead<TestResourceA, 0>, MemRead<TestResourceD, 0>, MemWrite<TestResourceD, 1>]>]>;
+
+
+//===----------------------------------------------------------------------===//
 // Test Ops with verifiers
 //===----------------------------------------------------------------------===//
 

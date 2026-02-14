@@ -14,6 +14,7 @@
 #ifndef MLIR_INTERFACES_SIDEEFFECTINTERFACES_H
 #define MLIR_INTERFACES_SIDEEFFECTINTERFACES_H
 
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/OpDefinition.h"
 
 namespace mlir {
@@ -346,6 +347,43 @@ struct AlwaysSpeculatableImplTrait
 //===----------------------------------------------------------------------===//
 
 namespace MemoryEffects {
+/// Defines the expected evaluation priority/order of the different Memory
+/// Effects for when two Effect instances on the same op are defined with the
+/// same Stage.
+///
+/// This adds a concrete evaluation order to the Effect instances to allow us
+/// to sort the Effect Instances in the same order that they will be taking place
+/// as the op is executing. This allows us to then analyze this sequence of Memory Effects
+/// for potential conflicts in a transparent, predictable,
+/// and deterministic manner AND creates a better defined contract with users.
+/// i.e., a set of Memory Effect instances on an op could look like the
+/// following: [MemRead<rA, 0>, MemFree<rA, 0>] where the evaluation order is
+/// ambiguous based on how the user defined both effects with the same Stage.
+/// If we Read then Free, we are safe. If we Free first, then we'll Read
+/// garbage. Reordering the effects based on priority removes this ambiguity.
+/// Stage values can be leveraged by users to define the exact order that the
+/// Effect instances take place.
+///
+/// When sorting an op's MemoryEffects, we first sort the effect instances
+/// in increasing Stage order. If Stage values for two Effect instances are
+/// equal, they are then sorted in order of decreasing priority, as defined
+/// by this enum. Higher priority values indicate higher precedence.
+///
+/// Example:
+/// Op's Effects = [MemFree<rC, 2>, MemWrite<rC, 1>, MemWrite<rB, 1>,
+/// MemRead<rA, 0>, MemAlloc<rC, 1].
+///  Sort by Stage --> [MemRead<rA, 0>, MemWrite<rC, 1>, MemWrite<rB, 1>,
+///  MemAlloc<rC, 1>,  MemFree<rC, 2].
+/// Subsort by Priority --> [MemRead<rA, 0>, MemAlloc<rC, 1>, MemWrite<rC, 1>,
+/// MemWrite<rB, 1>, MemFree<rC, 2>].
+enum Priority {
+  DefaultPriority = 4,
+  AllocPriority = 3,
+  ReadPriority = 2,
+  WritePriority = 1,
+  FreePriority = 0
+};
+
 /// This class represents the base class used for memory effects.
 struct Effect : public SideEffects::Effect {
   using SideEffects::Effect::Effect;
@@ -355,28 +393,67 @@ struct Effect : public SideEffects::Effect {
   using Base = SideEffects::Effect::Base<DerivedEffect, Effect>;
 
   static bool classof(const SideEffects::Effect *effect);
+
+  /// Return the priority associated with this memory effect.
+  Priority getPriority() const { return priority; }
+
+  /// Return a human-readable name for the effect type.
+  StringRef getEffectName() const { return effectName; }
+
+protected:
+  /// Priority value for this effect. Higher numbers indicate higher precedence.
+  Priority priority = Priority::DefaultPriority;
+  StringRef effectName = "<DefaultMemEffect>";
 };
 using EffectInstance = SideEffects::EffectInstance<Effect>;
+
+/// Returns a sorted vector of the op's memory effect instances.
+///
+/// We first sort the effect instances based on their stage value
+/// in increasing order. If Stage values for two Effect instances are
+/// equal, they are then sorted in order of decreasing priority.
+llvm::SmallVector<MemoryEffects::EffectInstance>
+getMemoryEffectsSorted(Operation *op);
 
 /// The following effect indicates that the operation allocates from some
 /// resource. An 'allocate' effect implies only allocation of the resource, and
 /// not any visible mutation or dereference.
-struct Allocate : public Effect::Base<Allocate> {};
+struct Allocate : public Effect::Base<Allocate> {
+  Allocate() : Effect::Base<Allocate>() {
+    this->priority = Priority::AllocPriority;
+    this->effectName = "<MemAlloc>";
+  }
+};
 
 /// The following effect indicates that the operation frees some resource that
 /// has been allocated. An 'allocate' effect implies only de-allocation of the
 /// resource, and not any visible allocation, mutation or dereference.
-struct Free : public Effect::Base<Free> {};
+struct Free : public Effect::Base<Free> {
+  Free() : Effect::Base<Free>() {
+    this->priority = Priority::FreePriority;
+    this->effectName = "<MemFree>";
+  }
+};
 
 /// The following effect indicates that the operation reads from some resource.
 /// A 'read' effect implies only dereferencing of the resource, and not any
 /// visible mutation.
-struct Read : public Effect::Base<Read> {};
+struct Read : public Effect::Base<Read> {
+  Read() : Effect::Base<Read>() {
+    this->priority = Priority::ReadPriority;
+    this->effectName = "<MemRead>";
+  }
+};
 
 /// The following effect indicates that the operation writes to some resource. A
 /// 'write' effect implies only mutating a resource, and not any visible
 /// dereference or read.
-struct Write : public Effect::Base<Write> {};
+struct Write : public Effect::Base<Write> {
+  Write() : Effect::Base<Write>() {
+    this->priority = Priority::WritePriority;
+    this->effectName = "<MemWrite>";
+  }
+};
 } // namespace MemoryEffects
 
 //===----------------------------------------------------------------------===//
