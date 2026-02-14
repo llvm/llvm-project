@@ -95,6 +95,9 @@ public:
     bool HasExternalState;
     // Symbolic name of the address space.
     std::string AddrSpaceName;
+    /// The bit pattern of a null pointer in this address space.
+    /// All-zeros by default; can be set to all-ones via the 'o' flag.
+    APInt NullPtrValue;
 
     LLVM_ABI bool operator==(const PointerSpec &Other) const;
   };
@@ -163,7 +166,7 @@ private:
   void setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth, Align ABIAlign,
                       Align PrefAlign, uint32_t IndexBitWidth,
                       bool HasUnstableRepr, bool HasExternalState,
-                      StringRef AddrSpaceName);
+                      StringRef AddrSpaceName, APInt NullPtrValue);
 
   /// Internal helper to get alignment for integer of given bitwidth.
   LLVM_ABI Align getIntegerAlignment(uint32_t BitWidth, bool abi_or_pref) const;
@@ -436,6 +439,19 @@ public:
   bool hasExternalState(Type *Ty) const {
     auto *PTy = dyn_cast<PointerType>(Ty->getScalarType());
     return PTy && hasExternalState(PTy->getPointerAddressSpace());
+  }
+
+  /// Returns the null pointer value for the given address space.
+  /// Returns the null pointer bit pattern for the given address space.
+  /// All-zeros by default; can be all-ones for targets that use the 'o' flag.
+  const APInt &getNullPtrValue(unsigned AS) const {
+    return getPointerSpec(AS).NullPtrValue;
+  }
+
+  /// Returns true if the null pointer in the given address space has an
+  /// all-zero bit representation.
+  bool isNullPointerAllZeroes(unsigned AS) const {
+    return getNullPtrValue(AS).isZero();
   }
 
   /// Returns whether passes must avoid introducing `inttoptr` instructions

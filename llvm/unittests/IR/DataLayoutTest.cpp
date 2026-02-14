@@ -404,7 +404,7 @@ TEST(DataLayout, ParsePointerSpec) {
         DataLayout::parse(Str),
         FailedWithMessage("index size cannot be larger than the pointer size"));
 
-  // Only 'e', 'u', and 'n' flags are valid.
+  // Only 'e', 'u', 'z', 'o', 'c', and 'n' flags are valid.
   EXPECT_THAT_EXPECTED(
       DataLayout::parse("pa:32:32"),
       FailedWithMessage("'a' is not a valid pointer specification flag"));
@@ -837,6 +837,92 @@ TEST(DataLayoutTest, Equality) {
   EXPECT_EQ(DL0.getStringRepresentation(), Layout0);
   EXPECT_EQ(DL1.getStringRepresentation(), Layout1);
   EXPECT_EQ(DL0, DL1);
+}
+
+TEST(DataLayoutTest, NullPointerValue) {
+  // Default: null pointer is all-zeros for all address spaces.
+  {
+    const DataLayout DL = cantFail(DataLayout::parse(""));
+    const APInt &Val = DL.getNullPtrValue(0);
+    EXPECT_TRUE(Val.isZero());
+    EXPECT_EQ(Val.getBitWidth(), 64U); // Default pointer is 64-bit.
+    EXPECT_TRUE(DL.isNullPointerAllZeroes(0));
+  }
+
+  // Explicit 'z' flag: same as default (all-zeros).
+  {
+    const DataLayout DL = cantFail(DataLayout::parse("pz1:32:32"));
+    const APInt &Val = DL.getNullPtrValue(1);
+    EXPECT_TRUE(Val.isZero());
+    EXPECT_EQ(Val.getBitWidth(), 32U);
+    EXPECT_TRUE(DL.isNullPointerAllZeroes(1));
+  }
+
+  // 'o' flag: null pointer is all-ones.
+  {
+    const DataLayout DL = cantFail(DataLayout::parse("po1:32:32"));
+    const APInt &Val = DL.getNullPtrValue(1);
+    EXPECT_TRUE(Val.isAllOnes());
+    EXPECT_EQ(Val.getBitWidth(), 32U);
+    EXPECT_FALSE(DL.isNullPointerAllZeroes(1));
+  }
+
+  // 'o' flag with 64-bit pointer.
+  {
+    const DataLayout DL = cantFail(DataLayout::parse("po1:64:64"));
+    const APInt &Val = DL.getNullPtrValue(1);
+    EXPECT_TRUE(Val.isAllOnes());
+    EXPECT_EQ(Val.getBitWidth(), 64U);
+    EXPECT_FALSE(DL.isNullPointerAllZeroes(1));
+  }
+
+  // Unspecified AS inherits from AS 0 (default all-zeros).
+  {
+    const DataLayout DL = cantFail(DataLayout::parse(""));
+    const APInt &Val = DL.getNullPtrValue(42);
+    EXPECT_TRUE(Val.isZero());
+    EXPECT_TRUE(DL.isNullPointerAllZeroes(42));
+  }
+
+  // Combination with other flags: 'o' + 'u'.
+  {
+    const DataLayout DL = cantFail(DataLayout::parse("pou1:32:32"));
+    const APInt &Val = DL.getNullPtrValue(1);
+    EXPECT_TRUE(Val.isAllOnes());
+    EXPECT_TRUE(DL.hasUnstableRepresentation(1));
+    EXPECT_FALSE(DL.isNullPointerAllZeroes(1));
+  }
+
+  // Multiple address spaces with different null values.
+  {
+    const DataLayout DL = cantFail(DataLayout::parse("po1:32:32-pz3:32:32"));
+    // AS 1: all-ones
+    const APInt &Val1 = DL.getNullPtrValue(1);
+    EXPECT_TRUE(Val1.isAllOnes());
+    // AS 3: all-zeros
+    const APInt &Val3 = DL.getNullPtrValue(3);
+    EXPECT_TRUE(Val3.isZero());
+  }
+
+  // Error: multiple null-ptr flags.
+  for (StringRef Str : {"pzo1:32:32", "poz1:32:32", "pzoz1:32:32"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("only one of 'z' or 'o' may be specified"));
+
+  // 'c' flag is no longer supported.
+  EXPECT_THAT_EXPECTED(DataLayout::parse("pc1:32:32"),
+                       FailedWithMessage("'c' is not a valid pointer "
+                                         "specification flag"));
+
+  // Equality: different null pointer values make layouts not equal.
+  {
+    DataLayout DL1 = cantFail(DataLayout::parse("po1:32:32"));
+    DataLayout DL2 = cantFail(DataLayout::parse("pz1:32:32"));
+    DataLayout DL3 = cantFail(DataLayout::parse("po1:32:32"));
+    EXPECT_NE(DL1, DL2);
+    EXPECT_EQ(DL1, DL3);
+  }
 }
 
 } // anonymous namespace
