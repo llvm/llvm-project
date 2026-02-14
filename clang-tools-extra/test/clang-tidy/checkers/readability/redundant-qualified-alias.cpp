@@ -1,6 +1,9 @@
 // RUN: %check_clang_tidy -std=c++11-or-later %s readability-redundant-qualified-alias %t
 // RUN: %check_clang_tidy -check-suffix=NS -std=c++11-or-later %s readability-redundant-qualified-alias %t -- \
 // RUN:   -config='{CheckOptions: { readability-redundant-qualified-alias.OnlyNamespaceScope: true }}'
+// RUN: %check_clang_tidy -check-suffixes=,CXX23 -std=c++23 %s readability-redundant-qualified-alias %t
+// RUN: %check_clang_tidy -check-suffixes=NS,NS-CXX23 -std=c++23 %s readability-redundant-qualified-alias %t -- \
+// RUN:   -config='{CheckOptions: { readability-redundant-qualified-alias.OnlyNamespaceScope: true }}'
 
 namespace n1 {
 struct Foo {};
@@ -119,7 +122,6 @@ struct Derived : Base {
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: type alias is redundant; use a using-declaration instead [readability-redundant-qualified-alias]
   // CHECK-MESSAGES-NS-NOT: warning: type alias is redundant; use a using-declaration instead
   // CHECK-FIXES: using Base::T;
-  // CHECK-FIXES-NS: using T = Base::T;
 };
 
 void local_scope() {
@@ -127,5 +129,33 @@ void local_scope() {
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: type alias is redundant; use a using-declaration instead [readability-redundant-qualified-alias]
   // CHECK-MESSAGES-NS-NOT: warning: type alias is redundant; use a using-declaration instead
   // CHECK-FIXES: using n1::LocalType;
-  // CHECK-FIXES-NS: using LocalType = n1::LocalType;
 }
+
+#if __cplusplus >= 202302L
+void cxx23_init_statement_scope(bool Cond) {
+  if (using Foo = n1::Foo; Cond) {
+  }
+  // CHECK-MESSAGES-CXX23-NOT: warning: type alias is redundant; use a using-declaration instead
+  // CHECK-MESSAGES-NS-CXX23-NOT: warning: type alias is redundant; use a using-declaration instead
+
+  switch (using Bar = ::n1::Bar; 0) {
+  default:
+    break;
+  }
+  // CHECK-MESSAGES-CXX23-NOT: warning: type alias is redundant; use a using-declaration instead
+  // CHECK-MESSAGES-NS-CXX23-NOT: warning: type alias is redundant; use a using-declaration instead
+
+  for (using Deep = n2::n3::Deep; Cond;) {
+    Cond = false;
+  }
+  // CHECK-MESSAGES-CXX23-NOT: warning: type alias is redundant; use a using-declaration instead
+  // CHECK-MESSAGES-NS-CXX23-NOT: warning: type alias is redundant; use a using-declaration instead
+
+  int Values[] = {0};
+  for (using GlobalType = ::GlobalType; int V : Values) {
+    (void)V;
+  }
+  // CHECK-MESSAGES-CXX23-NOT: warning: type alias is redundant; use a using-declaration instead
+  // CHECK-MESSAGES-NS-CXX23-NOT: warning: type alias is redundant; use a using-declaration instead
+}
+#endif

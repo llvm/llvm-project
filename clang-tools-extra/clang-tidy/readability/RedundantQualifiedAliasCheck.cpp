@@ -8,12 +8,17 @@
 
 #include "RedundantQualifiedAliasCheck.h"
 #include "../utils/LexerUtils.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/Stmt.h"
+#include "clang/AST/StmtCXX.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/TypeSwitch.h"
+#include <cassert>
 #include <optional>
 
 using namespace clang::ast_matchers;
@@ -43,10 +48,6 @@ static bool hasMacroInRange(SourceRange Range, const SourceManager &SM,
 
 static std::optional<NominalTypeLocInfo> peelToNominalTypeLoc(TypeLoc TL) {
   while (!TL.isNull()) {
-    if (const auto ParenTL = TL.getAs<ParenTypeLoc>()) {
-      TL = ParenTL.getInnerLoc();
-      continue;
-    }
     if (const auto AttrTL = TL.getAs<AttributedTypeLoc>()) {
       // Preserve any attributes by rewriting only the alias name and '='.
       TL = AttrTL.getModifiedLoc();
@@ -102,6 +103,28 @@ static const NamedDecl *getNamedDeclFromNominalTypeLoc(TypeLoc TL) {
 static bool hasSameUnqualifiedName(const TypeAliasDecl *Alias,
                                    const NamedDecl *Target) {
   return Alias->getName() == Target->getName();
+}
+
+static bool isControlFlowInitParent(const DeclStmt *DeclS,
+                                    const DynTypedNode &Parent) {
+  return llvm::TypeSwitch<const Stmt *, bool>(Parent.get<Stmt>())
+      .Case<IfStmt, SwitchStmt, ForStmt, CXXForRangeStmt>(
+          [&](const auto *S) { return S->getInit() == DeclS; })
+      .Default(false);
+}
+
+static bool isInControlFlowInitStatement(const TypeAliasDecl *Alias,
+                                         ASTContext &Context) {
+  for (const DynTypedNode &AliasParent : Context.getParents(*Alias)) {
+    const auto *DeclS = AliasParent.get<DeclStmt>();
+    if (!DeclS)
+      continue;
+
+    for (const DynTypedNode &DeclSParent : Context.getParents(*DeclS))
+      if (isControlFlowInitParent(DeclS, DeclSParent))
+        return true;
+  }
+  return false;
 }
 
 static std::optional<EqualTokenInfo>
@@ -182,7 +205,6 @@ void RedundantQualifiedAliasCheck::registerMatchers(MatchFinder *Finder) {
     Finder->addMatcher(
         typeAliasDecl(
             unless(isAliasTemplate()), unless(isImplicit()),
-            unless(isExpansionInSystemHeader()),
             hasTypeLoc(hasQualifiedNominalTypeLoc()),
             hasDeclContext(anyOf(translationUnitDecl(), namespaceDecl())))
             .bind("alias"),
@@ -191,7 +213,6 @@ void RedundantQualifiedAliasCheck::registerMatchers(MatchFinder *Finder) {
   }
   Finder->addMatcher(typeAliasDecl(unless(isAliasTemplate()),
                                    unless(isImplicit()),
-                                   unless(isExpansionInSystemHeader()),
                                    hasTypeLoc(hasQualifiedNominalTypeLoc()))
                          .bind("alias"),
                      this);
@@ -200,10 +221,13 @@ void RedundantQualifiedAliasCheck::registerMatchers(MatchFinder *Finder) {
 void RedundantQualifiedAliasCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Alias = Result.Nodes.getNodeAs<TypeAliasDecl>("alias");
-  if (!Alias)
-    return;
+  assert(Alias && "matcher must bind alias");
 
   if (Alias->getLocation().isInvalid() || Alias->getLocation().isMacroID())
+    return;
+
+  assert(Result.Context && "match result should always carry ASTContext");
+  if (isInControlFlowInitStatement(Alias, *Result.Context))
     return;
 
   const TypeSourceInfo *TSI = Alias->getTypeSourceInfo();
