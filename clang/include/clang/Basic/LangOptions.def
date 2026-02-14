@@ -47,6 +47,7 @@ LANGOPT(MSVCCompat        , 1, 0, NotCompatible, "Microsoft Visual C++ full comp
 LANGOPT(Kernel            , 1, 0, NotCompatible, "Kernel mode")
 LANGOPT(MicrosoftExt      , 1, 0, NotCompatible, "Microsoft C++ extensions")
 LANGOPT(ZOSExt            , 1, 0, NotCompatible, "z/OS extensions")
+LANGOPT(MSAnonymousStructs, 1, 0, NotCompatible, "Microsoft anonymous struct and union extension")
 LANGOPT(AsmBlocks         , 1, 0, NotCompatible, "Microsoft inline asm blocks")
 LANGOPT(Borland           , 1, 0, NotCompatible, "Borland extensions")
 LANGOPT(CPlusPlus         , 1, 0, NotCompatible, "C++")
@@ -509,6 +510,7 @@ LANGOPT(EnableLifetimeSafetyInference, 1, 0, NotCompatible, "Lifetime safety inf
 LANGOPT(EnableLifetimeSafetyTUAnalysis, 1, 0, NotCompatible, "Lifetime safety at translation-unit end, analyzing functions in call graph post-order for C++")
 
 LANGOPT(PreserveVec3Type, 1, 0, NotCompatible, "Preserve 3-component vector type")
+LANGOPT(Reflection      , 1, 0, NotCompatible, "C++26 Reflection")
 
 #undef LANGOPT
 #undef ENUM_LANGOPT

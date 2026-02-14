@@ -51,6 +51,17 @@ transform.sequence failures(propagate) {
 
 // -----
 
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @foo(%arg0: !transform.any_op {transform.readonly}) {
+    // expected-error @+2 {{expected children ops to implement TransformOpInterface}}
+    // expected-note @below {{op without interface}}
+    "test.unknown_op" () : () -> ()
+    transform.yield
+  }
+}
+
+// -----
+
 // expected-error @below {{expects the types of the terminator operands to match the types of the result}}
 %0 = transform.sequence -> !transform.any_op failures(propagate) {
 ^bb0(%arg0: !transform.any_op):
@@ -500,7 +511,7 @@ module attributes { transform.with_named_sequence} {
   // expected-error @below {{expected 'transform.yield' as terminator}}
   transform.named_sequence @nested() {
     // expected-note @below {{terminator}}
-    func.call @foo() : () -> ()
+    func.return 
   }
 }
 

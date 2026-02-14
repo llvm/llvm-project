@@ -41,6 +41,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -63,10 +64,10 @@ static OpFoldResult getDimValue(OpBuilder &builder, Location loc, Value v,
 
   return getAsOpFoldResult(
       TypeSwitch<Type, Value>(v.getType())
-          .Case<RankedTensorType>([&](RankedTensorType t) -> Value {
+          .Case([&](RankedTensorType t) -> Value {
             return tensor::DimOp::create(builder, loc, v, dim);
           })
-          .Case<MemRefType>([&](MemRefType t) -> Value {
+          .Case([&](MemRefType t) -> Value {
             return memref::DimOp::create(builder, loc, v, dim);
           }));
 }
@@ -78,11 +79,11 @@ static Operation *getSlice(OpBuilder &b, Location loc, Value source,
                            ArrayRef<OpFoldResult> sizes,
                            ArrayRef<OpFoldResult> strides) {
   return TypeSwitch<Type, Operation *>(source.getType())
-      .Case<RankedTensorType>([&](RankedTensorType t) -> Operation * {
+      .Case([&](RankedTensorType t) -> Operation * {
         return tensor::ExtractSliceOp::create(b, loc, source, offsets, sizes,
                                               strides);
       })
-      .Case<MemRefType>([&](MemRefType type) -> Operation * {
+      .Case([&](MemRefType type) -> Operation * {
         return memref::SubViewOp::create(b, loc, source, offsets, sizes,
                                          strides);
       })
@@ -1130,11 +1131,11 @@ void GenericOp::build(
     ArrayRef<NamedAttribute> attributes) {
   build(builder, result, resultTensorTypes, inputs, outputs,
         builder.getAffineMapArrayAttr(indexingMaps),
-        builder.getArrayAttr(llvm::to_vector(llvm::map_range(
+        builder.getArrayAttr(llvm::map_to_vector(
             iteratorTypes,
             [&](utils::IteratorType iter) -> mlir::Attribute {
               return IteratorTypeAttr::get(builder.getContext(), iter);
-            }))),
+            })),
         doc.empty() ? StringAttr() : builder.getStringAttr(doc),
         libraryCall.empty() ? StringAttr() : builder.getStringAttr(libraryCall),
         bodyBuild, attributes);
@@ -1192,11 +1193,10 @@ void GenericOp::print(OpAsmPrinter &p) {
       // needed, because tests still use the old format when 'iterator_types'
       // attribute is represented as an array of strings.
       // TODO: Remove this conversion once tests are fixed.
-      SmallVector<Attribute> iteratorTypeNames =
-          llvm::to_vector(llvm::map_range(
-              iteratorTypes, [&](utils::IteratorType t) -> Attribute {
-                return StringAttr::get(getContext(), stringifyIteratorType(t));
-              }));
+      SmallVector<Attribute> iteratorTypeNames = llvm::map_to_vector(
+          iteratorTypes, [&](utils::IteratorType t) -> Attribute {
+            return StringAttr::get(getContext(), stringifyIteratorType(t));
+          });
 
       genericAttrs.emplace_back(
           getIteratorTypesAttrName(),

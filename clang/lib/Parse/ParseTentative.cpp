@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Parse/Parser.h"
+#include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/ParsedTemplate.h"
 using namespace clang;
 
@@ -78,6 +79,21 @@ bool Parser::isCXXDeclarationStatement(
     [[fallthrough]];
     // simple-declaration
   default:
+
+    if (DisambiguatingWithExpression) {
+      TentativeParsingAction TPA(*this, /*Unannotated=*/true);
+      // Skip early access checks to support edge cases like extern declarations
+      // involving private types. Tokens are unannotated by reverting so that
+      // access integrity is verified during the subsequent type-lookup phase.
+      SuppressAccessChecks AccessExporter(*this, /*activate=*/true);
+      if (isCXXSimpleDeclaration(/*AllowForRangeDecl=*/false)) {
+        // Do not annotate the tokens, otherwise access will be neglected later.
+        TPA.Revert();
+        return true;
+      }
+      TPA.Commit();
+      return false;
+    }
     return isCXXSimpleDeclaration(/*AllowForRangeDecl=*/false);
   }
 }
@@ -572,6 +588,9 @@ bool Parser::isCXXTypeId(TentativeCXXTypeIdContext Context, bool &isAmbiguous) {
       isAmbiguous = true;
 
     } else if (Context == TentativeCXXTypeIdContext::InTrailingReturnType) {
+      TPR = TPResult::True;
+      isAmbiguous = true;
+    } else if (Context == TentativeCXXTypeIdContext::AsReflectionOperand) {
       TPR = TPResult::True;
       isAmbiguous = true;
     } else

@@ -4762,6 +4762,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerFPTRUNC(MI);
   case G_FPOWI:
     return lowerFPOWI(MI);
+  case G_FMODF:
+    return lowerFMODF(MI);
   case G_SMIN:
   case G_SMAX:
   case G_UMIN:
@@ -7580,26 +7582,22 @@ LegalizerHelper::narrowScalarCTLS(MachineInstr &MI, unsigned TypeIdx,
   auto ShAmt = B.buildConstant(NarrowTy, NarrowSize - 1);
   auto Sign = B.buildAShr(NarrowTy, Hi, ShAmt);
 
-  auto LoSign = B.buildAShr(NarrowTy, Lo, ShAmt);
-  auto LoSameSign = B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1),
-                                LoSign.getReg(0), Sign.getReg(0));
+  auto HiIsSign = B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1), Hi, Sign);
 
-  auto HiIsSign =
-      B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1), Hi, Sign.getReg(0));
+  // Invert Lo if Hi is negative. Then count the leading zeros. If there are no
+  // leading zeros, then the MSB of Lo is different than the MSB of Hi.
+  // Otherwise the leading zeros represent additional sign bits of the original
+  // value.
+  auto LoInv = B.buildXor(DstTy, Lo, Sign);
+  auto LoCTLZ = B.buildCTLZ(DstTy, LoInv);
 
-  auto LoCTLS = B.buildCTLS(DstTy, Lo);
-  auto GNarrowSize = B.buildConstant(DstTy, NarrowSize);
-  auto HiIsSignCTLS = B.buildAdd(DstTy, LoCTLS, GNarrowSize);
-
-  // If the low half flips sign, the run of redundant bits stops at the
-  // boundary, so use (NarrowSize - 1) instead of extending into Lo.
-  auto GNarrowSizeMinus1 = B.buildConstant(DstTy, NarrowSize - 1);
-  auto HiSignResult =
-      B.buildSelect(DstTy, LoSameSign, HiIsSignCTLS, GNarrowSizeMinus1);
+  // Add NarrowSize-1 to LoCTLZ. This is the full CTLS if Hi is all sign bits.
+  auto C_NarrowSizeM1 = B.buildConstant(DstTy, NarrowSize - 1);
+  auto HiIsSignCTLS = B.buildAdd(DstTy, LoCTLZ, C_NarrowSizeM1);
 
   auto HiCTLS = B.buildCTLS(DstTy, Hi);
 
-  B.buildSelect(DstReg, HiIsSign, HiSignResult, HiCTLS);
+  B.buildSelect(DstReg, HiIsSign, HiIsSignCTLS, HiCTLS);
 
   MI.eraseFromParent();
   return Legalized;
@@ -8715,6 +8713,35 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerFPOWI(MachineInstr &MI) {
 
   auto CvtSrc1 = MIRBuilder.buildSITOFP(Ty, Src1);
   MIRBuilder.buildFPow(Dst, Src0, CvtSrc1, MI.getFlags());
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerFMODF(MachineInstr &MI) {
+  auto [DstFrac, DstInt, Src] = MI.getFirst3Regs();
+  LLT Ty = MRI.getType(Src);
+  auto Flags = MI.getFlags();
+
+  auto IntPart = MIRBuilder.buildIntrinsicTrunc(Ty, Src, Flags);
+  auto FracPart = MIRBuilder.buildFSub(Ty, Src, IntPart, Flags);
+
+  Register FracToUse;
+  if (MI.getFlag(MachineInstr::FmNoInfs)) {
+    FracToUse = FracPart.getReg(0);
+  } else {
+    auto Abs = MIRBuilder.buildFAbs(Ty, Src, Flags);
+    const fltSemantics &Semantics = getFltSemanticForLLT(Ty.getScalarType());
+    auto Inf = MIRBuilder.buildFConstant(Ty, APFloat::getInf(Semantics));
+    auto IsInf = MIRBuilder.buildFCmp(CmpInst::FCMP_OEQ,
+                                      Ty.changeElementSize(1), Abs, Inf);
+    auto Zero = MIRBuilder.buildFConstant(Ty, 0.0);
+    auto Select = MIRBuilder.buildSelect(Ty, IsInf, Zero, FracPart);
+    FracToUse = Select.getReg(0);
+  }
+
+  MIRBuilder.buildFCopysign(DstFrac, FracToUse, Src, Flags);
+  MIRBuilder.buildCopy(DstInt, IntPart.getReg(0));
+
   MI.eraseFromParent();
   return Legalized;
 }

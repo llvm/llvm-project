@@ -1693,34 +1693,6 @@ func.func @test_dim(%arg0: tensor<1x2x3x4x5x6x7x8xi32>) -> !tosa.shape<1> {
 
 // -----
 
-func.func @test_concat_shape_invalid_list_size() {
-  %0 = tosa.const_shape {values = dense<[]> : tensor<0xindex>} : () -> !tosa.shape<0>
-  // expected-error@+1 {{'tosa.concat_shape' op failed level check: length(tensor_list_shape(input)) <= MAX_TENSOR_LIST_SIZE (64), got 65}}
-  %1 = tosa.concat_shape %0, %0, %0, %0, %0, %0, %0, %0,
-                         %0, %0, %0, %0, %0, %0, %0, %0,
-                         %0, %0, %0, %0, %0, %0, %0, %0,
-                         %0, %0, %0, %0, %0, %0, %0, %0,
-                         %0, %0, %0, %0, %0, %0, %0, %0,
-                         %0, %0, %0, %0, %0, %0, %0, %0,
-                         %0, %0, %0, %0, %0, %0, %0, %0,
-                         %0, %0, %0, %0, %0, %0, %0, %0,
-                         %0 :
-                         (
-                          !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>,
-                          !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>,
-                          !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>,
-                          !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>,
-                          !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>,
-                          !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>,
-                          !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>,
-                          !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>,
-                          !tosa.shape<0>
-                         ) -> !tosa.shape<0>
-  return
-}
-
-// -----
-
 func.func @test_exp2_shape_invalid_rank() -> !tosa.shape<17> {
   %0 = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
   // expected-error@+1 {{'tosa.exp2_shape' op failed shape type level check: '!tosa.shape<17>' exceeds MAX_SHAPE_LEN}}

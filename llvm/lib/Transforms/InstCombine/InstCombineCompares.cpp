@@ -1786,11 +1786,8 @@ Instruction *InstCombinerImpl::foldICmpAndConstConst(ICmpInst &Cmp,
                                                      const APInt &C1) {
   bool isICMP_NE = Cmp.getPredicate() == ICmpInst::ICMP_NE;
 
-  // For vectors: icmp ne (and X, 1), 0 --> trunc X to N x i1
-  // TODO: We canonicalize to the longer form for scalars because we have
-  // better analysis/folds for icmp, and codegen may be better with icmp.
-  if (isICMP_NE && Cmp.getType()->isVectorTy() && C1.isZero() &&
-      match(And->getOperand(1), m_One()))
+  // icmp ne (and X, 1), 0 --> trunc X to i1
+  if (isICMP_NE && C1.isZero() && match(And->getOperand(1), m_One()))
     return new TruncInst(And->getOperand(0), Cmp.getType());
 
   const APInt *C2;
@@ -2009,8 +2006,8 @@ Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
   {
     Value *A;
     const APInt *Addend, *Msk;
-    if (match(And, m_And(m_OneUse(m_Add(m_Value(A), m_APInt(Addend))),
-                         m_LowBitMask(Msk))) &&
+    if (match(And, m_OneUse(m_And(m_OneUse(m_Add(m_Value(A), m_APInt(Addend))),
+                                  m_LowBitMask(Msk)))) &&
         C.ule(*Msk)) {
       APInt NewComperand = (C - *Addend) & *Msk;
       Value *MaskA = Builder.CreateAnd(A, ConstantInt::get(A->getType(), *Msk));
@@ -4305,6 +4302,32 @@ Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
                             II->getArgOperand(1));
     }
     break;
+  case Intrinsic::abs: {
+    if (!II->hasOneUse())
+      return nullptr;
+
+    Value *X = II->getArgOperand(0);
+    bool IsIntMinPoison =
+        cast<ConstantInt>(II->getArgOperand(1))->getValue().isOne();
+
+    // If C >= 0:
+    // abs(X) u> C --> X + C u> 2 * C
+    if (Pred == CmpInst::ICMP_UGT && C.isNonNegative()) {
+      return new ICmpInst(ICmpInst::ICMP_UGT,
+                          Builder.CreateAdd(X, ConstantInt::get(Ty, C)),
+                          ConstantInt::get(Ty, 2 * C));
+    }
+
+    // If abs(INT_MIN) is poison and C >= 1:
+    // abs(X) u< C --> X + (C - 1) u<= 2 * (C - 1)
+    if (IsIntMinPoison && Pred == CmpInst::ICMP_ULT && C.sge(1)) {
+      return new ICmpInst(ICmpInst::ICMP_ULE,
+                          Builder.CreateAdd(X, ConstantInt::get(Ty, C - 1)),
+                          ConstantInt::get(Ty, 2 * (C - 1)));
+    }
+
+    break;
+  }
   default:
     break;
   }

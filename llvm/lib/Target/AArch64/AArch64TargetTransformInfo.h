@@ -21,6 +21,7 @@
 #include "AArch64TargetMachine.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
+#include "llvm/IR/FMF.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/InstructionCost.h"
@@ -403,7 +404,7 @@ public:
     //
     // Coordinated with LDNP and STNP constraints in
     // `llvm/lib/Target/AArch64/AArch64InstrInfo.td` and
-    // `AArch64TargetLowering`
+    // `AArch64ISelLowering.cpp`
     if (!ST->isLittleEndian())
       return false;
 
@@ -441,7 +442,8 @@ public:
       unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
       ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
       TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
-      TTI::TargetCostKind CostKind) const override;
+      TTI::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const override;
 
   bool enableOrderedReductions() const override { return true; }
 

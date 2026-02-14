@@ -398,6 +398,10 @@ public:
                              bool IsCrossAddrSpaceOrdering,
                              Position Pos) const = 0;
 
+  /// Handle operations that are considered non-volatile.
+  /// See \ref isNonVolatileMemoryAccess
+  virtual bool handleNonVolatile(MachineInstr &MI) const { return false; }
+
   /// Virtual destructor to allow derivations to be deleted.
   virtual ~SICacheControl() = default;
 };
@@ -555,6 +559,8 @@ public:
                             SIAtomicAddrSpace AddrSpace) const override {
     return setAtomicScope(MI, Scope, AddrSpace);
   }
+
+  bool handleNonVolatile(MachineInstr &MI) const override;
 };
 
 class SIMemoryLegalizer final {
@@ -897,6 +903,18 @@ SIMemOpAccess::getLDSDMAInfo(const MachineBasicBlock::iterator &MI) const {
     return std::nullopt;
 
   return constructFromMIWithMMO(MI);
+}
+
+/// \returns true if \p MI has one or more MMO, and all of them are fit for
+/// being marked as non-volatile. This means that either they are accessing the
+/// constant address space, are accessing a known invariant memory location, or
+/// that they are marked with the non-volatile metadata/MMO flag.
+static bool isNonVolatileMemoryAccess(const MachineInstr &MI) {
+  if (MI.getNumMemOperands() == 0)
+    return false;
+  return all_of(MI.memoperands(), [&](const MachineMemOperand *MMO) {
+    return MMO->getFlags() & (MOThreadPrivate | MachineMemOperand::MOInvariant);
+  });
 }
 
 SICacheControl::SICacheControl(const GCNSubtarget &ST) : ST(ST) {
@@ -2061,6 +2079,17 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
   return Changed;
 }
 
+bool SIGfx12CacheControl::handleNonVolatile(MachineInstr &MI) const {
+  // On GFX12.5, set the NV CPol bit.
+  if (!ST.hasGFX1250Insts())
+    return false;
+  MachineOperand *CPol = TII->getNamedOperand(MI, OpName::cpol);
+  if (!CPol)
+    return false;
+  CPol->setImm(CPol->getImm() | AMDGPU::CPol::NV);
+  return true;
+}
+
 bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
     MachineBasicBlock::iterator &MI, SIAtomicAddrSpace AddrSpace, SIMemOp Op,
     bool IsVolatile, bool IsNonTemporal, bool IsLastUse = false) const {
@@ -2456,20 +2485,21 @@ bool SIMemoryLegalizer::run(MachineFunction &MF) {
         MI = II->getIterator();
       }
 
-      if (!(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic))
-        continue;
-
-      if (const auto &MOI = MOA.getLoadInfo(MI)) {
-        Changed |= expandLoad(*MOI, MI);
-      } else if (const auto &MOI = MOA.getStoreInfo(MI)) {
-        Changed |= expandStore(*MOI, MI);
-      } else if (const auto &MOI = MOA.getLDSDMAInfo(MI)) {
-        Changed |= expandLDSDMA(*MOI, MI);
-      } else if (const auto &MOI = MOA.getAtomicFenceInfo(MI)) {
-        Changed |= expandAtomicFence(*MOI, MI);
-      } else if (const auto &MOI = MOA.getAtomicCmpxchgOrRmwInfo(MI)) {
-        Changed |= expandAtomicCmpxchgOrRmw(*MOI, MI);
+      if (MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic) {
+        if (const auto &MOI = MOA.getLoadInfo(MI))
+          Changed |= expandLoad(*MOI, MI);
+        else if (const auto &MOI = MOA.getStoreInfo(MI))
+          Changed |= expandStore(*MOI, MI);
+        else if (const auto &MOI = MOA.getLDSDMAInfo(MI))
+          Changed |= expandLDSDMA(*MOI, MI);
+        else if (const auto &MOI = MOA.getAtomicFenceInfo(MI))
+          Changed |= expandAtomicFence(*MOI, MI);
+        else if (const auto &MOI = MOA.getAtomicCmpxchgOrRmwInfo(MI))
+          Changed |= expandAtomicCmpxchgOrRmw(*MOI, MI);
       }
+
+      if (isNonVolatileMemoryAccess(*MI))
+        Changed |= CC->handleNonVolatile(*MI);
     }
   }
 

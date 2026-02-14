@@ -12,23 +12,11 @@
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Utility/Stream.h"
 
-#ifdef _WIN32
-#include "lldb/Host/windows/windows.h"
-#endif
-
 using namespace lldb_private;
 
 // FileAction member functions
 
 FileAction::FileAction() : m_file_spec() {}
-
-#ifdef _WIN32
-HANDLE FileAction::GetHandle() const {
-  if (m_fd == -1)
-    return INVALID_HANDLE_VALUE;
-  return reinterpret_cast<HANDLE>(_get_osfhandle(m_fd));
-}
-#endif
 
 void FileAction::Clear() {
   m_action = eFileActionNone;

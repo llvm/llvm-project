@@ -1,7 +1,7 @@
 # RUN: yaml2obj %s -o %t
 # RUN: not ld.lld %t -o /dev/null 2>&1 | FileCheck %s
 
-# CHECK: {{.*}}:(.merge): string is not null terminated
+# CHECK: error: {{.*}}:(.merge): string is not null terminated
 
 !ELF
 FileHeader:

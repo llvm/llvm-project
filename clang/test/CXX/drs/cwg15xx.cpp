@@ -38,22 +38,40 @@ namespace cwg1512 { // cwg1512: 4
   template<typename A, typename B, typename C> void composite_pointer_type_is_ord() {
     composite_pointer_type_is_base<A, B, C>();
 
-    typedef __typeof(val<A>() < val<B>()) cmp; // #cwg1512-lt
-    // since-cxx17-warning@#cwg1512-lt {{ordered comparison of function pointers ('int (*)() noexcept' and 'int (*)()')}}
-    //   since-cxx17-note@#cwg1512-noexcept-1st {{in instantiation of function template specialization 'cwg1512::composite_pointer_type_is_ord<int (*)() noexcept, int (*)(), int (*)()>' requested here}}
-    // since-cxx17-warning@#cwg1512-lt {{ordered comparison of function pointers ('int (*)()' and 'int (*)() noexcept')}}
-    //   since-cxx17-note@#cwg1512-noexcept-2nd {{in instantiation of function template specialization 'cwg1512::composite_pointer_type_is_ord<int (*)(), int (*)() noexcept, int (*)()>' requested here}}
+    typedef __typeof(val<A>() < val<B>()) cmp;
     typedef __typeof(val<A>() <= val<B>()) cmp;
-    // since-cxx17-warning@-1 {{ordered comparison of function pointers ('int (*)() noexcept' and 'int (*)()')}}
-    // since-cxx17-warning@-2 {{ordered comparison of function pointers ('int (*)()' and 'int (*)() noexcept')}}
     typedef __typeof(val<A>() > val<B>()) cmp;
-    // since-cxx17-warning@-1 {{ordered comparison of function pointers ('int (*)() noexcept' and 'int (*)()')}}
-    // since-cxx17-warning@-2 {{ordered comparison of function pointers ('int (*)()' and 'int (*)() noexcept')}}
     typedef __typeof(val<A>() >= val<B>()) cmp;
-    // since-cxx17-warning@-1 {{ordered comparison of function pointers ('int (*)() noexcept' and 'int (*)()')}}
-    // since-cxx17-warning@-2 {{ordered comparison of function pointers ('int (*)()' and 'int (*)() noexcept')}}
     typedef bool cmp;
   }
+
+#if __cplusplus >= 201703L
+  void composite_pointer_type_is_ord_2() {
+    composite_pointer_type_is_base<int (*)() noexcept, int (*)(), int (*)()>();
+
+    typedef __typeof(val<int (*)() noexcept>() < val<int (*)()>()) cmp;
+    // since-cxx17-warning@-1 {{ordered comparison of function pointers ('int (*)() noexcept' and 'int (*)()')}}
+    typedef __typeof(val<int (*)() noexcept>() <= val<int (*)()>()) cmp;
+    // since-cxx17-warning@-1 {{ordered comparison of function pointers ('int (*)() noexcept' and 'int (*)()')}}
+    typedef __typeof(val<int (*)() noexcept>() > val<int (*)()>()) cmp;
+    // since-cxx17-warning@-1 {{ordered comparison of function pointers ('int (*)() noexcept' and 'int (*)()')}}
+    typedef __typeof(val<int (*)() noexcept>() >= val<int (*)()>()) cmp;
+    // since-cxx17-warning@-1 {{ordered comparison of function pointers ('int (*)() noexcept' and 'int (*)()')}}
+
+    composite_pointer_type_is_base<int (*)(), int (*)() noexcept, int (*)()>();
+
+    typedef __typeof(val<int (*)()>() < val<int (*)() noexcept>()) cmp;
+    // since-cxx17-warning@-1 {{ordered comparison of function pointers ('int (*)()' and 'int (*)() noexcept')}}
+    typedef __typeof(val<int (*)()>() <= val<int (*)() noexcept>()) cmp;
+    // since-cxx17-warning@-1 {{ordered comparison of function pointers ('int (*)()' and 'int (*)() noexcept')}}
+    typedef __typeof(val<int (*)()>() > val<int (*)() noexcept>()) cmp;
+    // since-cxx17-warning@-1 {{ordered comparison of function pointers ('int (*)()' and 'int (*)() noexcept')}}
+    typedef __typeof(val<int (*)()>() >= val<int (*)() noexcept>()) cmp;
+    // since-cxx17-warning@-1 {{ordered comparison of function pointers ('int (*)()' and 'int (*)() noexcept')}}
+
+    typedef bool cmp;
+  }
+#endif
 
   template <typename A, typename B, typename C>
   void composite_pointer_type_is_unord(int = 0) {
@@ -100,8 +118,6 @@ namespace cwg1512 { // cwg1512: 4
     // since-cxx20-warning@-1 {{volatile-qualified return type 'volatile int' is deprecated}}
 
 #if __cplusplus >= 201703L
-    composite_pointer_type_is_ord<int (*)() noexcept, int (*)(), int (*)()>(); // #cwg1512-noexcept-1st
-    composite_pointer_type_is_ord<int (*)(), int (*)() noexcept, int (*)()>(); // #cwg1512-noexcept-2nd
     composite_pointer_type_is_unord<int (A::*)() noexcept, int (A::*)(), int (A::*)()>();
     composite_pointer_type_is_unord<int (A::*)(), int (A::*)() noexcept, int (A::*)()>();
     // FIXME: This looks like a standard defect; these should probably all have type 'int (B::*)()'.
@@ -157,15 +173,15 @@ namespace cwg1512 { // cwg1512: 4
     //   since-cxx11-note@#cwg1512-Wrap {{first operand was implicitly converted to type 'std::nullptr_t'}}
     //   since-cxx11-note@#cwg1512-Wrap {{second operand was implicitly converted to type 'int *'}}
     void(Wrap<nullptr_t>() > Wrap<int*>());
-    // since-cxx11-error@-1 {{invalid operands}}
+    // since-cxx11-error@-1 {{invalid operands to binary expression ('Wrap<nullptr_t>' (aka 'Wrap<std::nullptr_t>') and 'Wrap<int *>')}}
     //   since-cxx11-note@#cwg1512-Wrap {{first operand was implicitly converted to type 'std::nullptr_t'}}
     //   since-cxx11-note@#cwg1512-Wrap{{second operand was implicitly converted to type 'int *'}}
     void(Wrap<nullptr_t>() <= Wrap<int*>());
-    // since-cxx11-error@-1 {{invalid operands}}
+    // since-cxx11-error@-1 {{invalid operands to binary expression ('Wrap<nullptr_t>' (aka 'Wrap<std::nullptr_t>') and 'Wrap<int *>')}}
     //   since-cxx11-note@#cwg1512-Wrap {{first operand was implicitly converted to type 'std::nullptr_t'}}
     //   since-cxx11-note@#cwg1512-Wrap {{second operand was implicitly converted to type 'int *'}}
     void(Wrap<nullptr_t>() >= Wrap<int*>());
-    // since-cxx11-error@-1 {{invalid operands}}
+    // since-cxx11-error@-1 {{invalid operands to binary expression ('Wrap<nullptr_t>' (aka 'Wrap<std::nullptr_t>') and 'Wrap<int *>')}}
     //   since-cxx11-note@#cwg1512-Wrap {{first operand was implicitly converted to type 'std::nullptr_t'}}
     //   since-cxx11-note@#cwg1512-Wrap {{second operand was implicitly converted to type 'int *'}}
   }
@@ -309,16 +325,14 @@ namespace std_example {
     //   since-cxx11-note@#cwg1518-x {{passing argument to parameter 't' here}}
   }
 
-  void test() {
-    f<A>(); // #cwg1518-f-A
-    f<B>(); // #cwg1518-f-B
-    f<C>(); // #cwg1518-f-C
-    f<D>(); // #cwg1518-f-D
-    g<A>(); // #cwg1518-g-A
-    g<B>(); // #cwg1518-g-B
-    g<C>(); // #cwg1518-g-C
-    g<D>(); // #cwg1518-g-D
-  }
+  template void f<A>(); // #cwg1518-f-A
+  template void f<B>(); // #cwg1518-f-B
+  template void f<C>(); // #cwg1518-f-C
+  template void f<D>(); // #cwg1518-f-D
+  template void g<A>(); // #cwg1518-g-A
+  template void g<B>(); // #cwg1518-g-B
+  template void g<C>(); // #cwg1518-g-C
+  template void g<D>(); // #cwg1518-g-D
 }
 #endif // __cplusplus >= 201103L
 } // namespace cwg1518
@@ -426,8 +440,8 @@ namespace cwg1573 { // cwg1573: 3.9
   constexpr F f = F(0);
   // since-cxx11-error@-1 {{constexpr variable 'f' must be initialized by a constant expression}}
   //   cxx11-20-note@-2 {{constructor inherited from base class 'C' cannot be used in a constant expression; derived class cannot be implicitly initialized}}
-  //   since-cxx23-note@-3 {{in implicit initialization for inherited constructor of 'F'}}
   //   since-cxx23-note@#cwg1573-F {{non-constexpr constructor 'C' cannot be used in a constant expression}}
+  //   since-cxx23-note@-4 {{in implicit initialization for inherited constructor of 'F'}}
   //   cxx11-20-note@#cwg1573-F {{declared here}}
   //   since-cxx23-note@#cwg1573-C {{declared here}}
 
@@ -564,16 +578,18 @@ namespace cwg1584 { // cwg1584: 7 drafting 2015-05
 // Deducing function types from cv-qualified types
 template<typename T> void f(const T *); // #cwg1584-f
 template<typename T> void g(T *, const T * = 0);
-template<typename T> void h(T *) { T::error; }
-// expected-error@-1 {{type 'void ()' cannot be used prior to '::' because it has no members}}
-//   expected-note@#cwg1584-h {{in instantiation of function template specialization 'cwg1584::h<void ()>' requested here}}
-template<typename T> void h(const T *);
+template<typename T> void h(T *) = delete; // #cwg1584-h-T
+// cxx98-error@-1 {{deleted function definitions are a C++11 extension}}
+template<typename T> void h(const T *);  // #cwg1584-h-const-T
 void i() {
   f(&i);
   // expected-error@-1 {{no matching function for call to 'f'}}
   //   expected-note@#cwg1584-f {{candidate template ignored: could not match 'const T *' against 'void (*)()'}}
   g(&i);
-  h(&i); // #cwg1584-h
+  h(&i);
+  // expected-error@-1 {{call to deleted function 'h'}}
+  //   expected-note@#cwg1584-h-T {{candidate function [with T = void ()] has been explicitly deleted}}
+  //   expected-note@#cwg1584-h-const-T {{candidate template ignored: could not match 'const T *' against 'void (*)()'}}
 }
 
 template<typename T> struct tuple_size {

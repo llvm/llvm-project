@@ -25,7 +25,7 @@ define float @ret_fmul_square_f32(float noundef %arg) {
 }
 
 define float @ret_fmul_square_f32_maybe_undef(float %arg) {
-; CHECK-LABEL: define float @ret_fmul_square_f32_maybe_undef(
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_fmul_square_f32_maybe_undef(
 ; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG]], [[ARG]]
 ; CHECK-NEXT:    ret float [[FMUL]]

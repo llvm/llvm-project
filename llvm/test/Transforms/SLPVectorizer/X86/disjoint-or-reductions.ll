@@ -6,9 +6,8 @@ define i64 @bswap(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr [[P1:%.*]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <8 x i8> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <8 x i8> [[TMP3]] to <8 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw <8 x i64> [[TMP4]], <i64 56, i64 48, i64 40, i64 32, i64 24, i64 16, i64 8, i64 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.or.v8i64(<8 x i64> [[TMP5]])
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP4]])
 ; CHECK-NEXT:    ret i64 [[TMP6]]
 ;
   %g1 = getelementptr i8, ptr %p, i32 1
@@ -87,9 +86,8 @@ define i64 @reorder(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr [[P1:%.*]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <8 x i8> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <8 x i8> [[TMP3]] to <8 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw <8 x i64> [[TMP4]], <i64 56, i64 16, i64 40, i64 32, i64 24, i64 48, i64 8, i64 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.or.v8i64(<8 x i64> [[TMP5]])
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> poison, <8 x i32> <i32 7, i32 6, i32 1, i32 4, i32 3, i32 2, i32 5, i32 0>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP4]] to i64
 ; CHECK-NEXT:    ret i64 [[TMP6]]
 ;
   %g1 = getelementptr i8, ptr %p, i32 1
@@ -168,9 +166,8 @@ define i64 @swap_i16(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr [[P1:%.*]], align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i16> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i16> [[TMP3]] to <4 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw <4 x i64> [[TMP4]], <i64 48, i64 32, i64 16, i64 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[TMP5]])
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP4]] to i64
 ; CHECK-NEXT:    ret i64 [[TMP6]]
 ;
   %g1 = getelementptr i16, ptr %p, i32 1
@@ -216,9 +213,8 @@ define i64 @reorder_i16(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr [[P1:%.*]], align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i16> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i16> [[TMP3]] to <4 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw <4 x i64> [[TMP4]], <i64 16, i64 32, i64 48, i64 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[TMP5]])
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> poison, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP4]] to i64
 ; CHECK-NEXT:    ret i64 [[TMP6]]
 ;
   %g1 = getelementptr i16, ptr %p, i32 1

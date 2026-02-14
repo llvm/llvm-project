@@ -10,12 +10,11 @@
 #define _LIBCPP___ALGORITHM_SWAP_RANGES_H
 
 #include <__algorithm/iterator_operations.h>
-#include <__algorithm/min.h>
+#include <__algorithm/specialized_algorithms.h>
 #include <__config>
-#include <__fwd/bit_reference.h>
+#include <__type_traits/enable_if.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
-#include <__utility/swap.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -26,162 +25,36 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Cl, class _Cr>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_iterator<_Cr, false> __swap_ranges_aligned(
-    __bit_iterator<_Cl, false> __first, __bit_iterator<_Cl, false> __last, __bit_iterator<_Cr, false> __result) {
-  using _I1             = __bit_iterator<_Cl, false>;
-  using difference_type = typename _I1::difference_type;
-  using __storage_type  = typename _I1::__storage_type;
-
-  const int __bits_per_word = _I1::__bits_per_word;
-  difference_type __n       = __last - __first;
-  if (__n > 0) {
-    // do first word
-    if (__first.__ctz_ != 0) {
-      unsigned __clz       = __bits_per_word - __first.__ctz_;
-      difference_type __dn = std::min(static_cast<difference_type>(__clz), __n);
-      __n -= __dn;
-      __storage_type __m  = (~__storage_type(0) << __first.__ctz_) & (~__storage_type(0) >> (__clz - __dn));
-      __storage_type __b1 = *__first.__seg_ & __m;
-      *__first.__seg_ &= ~__m;
-      __storage_type __b2 = *__result.__seg_ & __m;
-      *__result.__seg_ &= ~__m;
-      *__result.__seg_ |= __b1;
-      *__first.__seg_ |= __b2;
-      __result.__seg_ += (__dn + __result.__ctz_) / __bits_per_word;
-      __result.__ctz_ = static_cast<unsigned>((__dn + __result.__ctz_) % __bits_per_word);
-      ++__first.__seg_;
-      // __first.__ctz_ = 0;
-    }
-    // __first.__ctz_ == 0;
-    // do middle words
-    for (; __n >= __bits_per_word; __n -= __bits_per_word, ++__first.__seg_, ++__result.__seg_)
-      swap(*__first.__seg_, *__result.__seg_);
-    // do last word
-    if (__n > 0) {
-      __storage_type __m  = ~__storage_type(0) >> (__bits_per_word - __n);
-      __storage_type __b1 = *__first.__seg_ & __m;
-      *__first.__seg_ &= ~__m;
-      __storage_type __b2 = *__result.__seg_ & __m;
-      *__result.__seg_ &= ~__m;
-      *__result.__seg_ |= __b1;
-      *__first.__seg_ |= __b2;
-      __result.__ctz_ = static_cast<unsigned>(__n);
-    }
-  }
-  return __result;
+template <
+    class _AlgPolicy,
+    class _Iter1,
+    class _Sent1,
+    class _Iter2,
+    class _SpecialAlg =
+        __specialized_algorithm<_Algorithm::__swap_ranges, __iterator_pair<_Iter1, _Sent1>, __single_iterator<_Iter2> >,
+    __enable_if_t<_SpecialAlg::__has_algorithm, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_Iter1, _Iter2>
+__swap_ranges(_Iter1 __first1, _Sent1 __last1, _Iter2 __first2) {
+  return _SpecialAlg()(std::move(__first1), std::move(__last1), std::move(__first2));
 }
 
-template <class _Cl, class _Cr>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_iterator<_Cr, false> __swap_ranges_unaligned(
-    __bit_iterator<_Cl, false> __first, __bit_iterator<_Cl, false> __last, __bit_iterator<_Cr, false> __result) {
-  using _I1             = __bit_iterator<_Cl, false>;
-  using difference_type = typename _I1::difference_type;
-  using __storage_type  = typename _I1::__storage_type;
-
-  const int __bits_per_word = _I1::__bits_per_word;
-  difference_type __n       = __last - __first;
-  if (__n > 0) {
-    // do first word
-    if (__first.__ctz_ != 0) {
-      unsigned __clz_f     = __bits_per_word - __first.__ctz_;
-      difference_type __dn = std::min(static_cast<difference_type>(__clz_f), __n);
-      __n -= __dn;
-      __storage_type __m  = (~__storage_type(0) << __first.__ctz_) & (~__storage_type(0) >> (__clz_f - __dn));
-      __storage_type __b1 = *__first.__seg_ & __m;
-      *__first.__seg_ &= ~__m;
-      unsigned __clz_r     = __bits_per_word - __result.__ctz_;
-      __storage_type __ddn = std::min<__storage_type>(__dn, __clz_r);
-      __m                  = (~__storage_type(0) << __result.__ctz_) & (~__storage_type(0) >> (__clz_r - __ddn));
-      __storage_type __b2  = *__result.__seg_ & __m;
-      *__result.__seg_ &= ~__m;
-      if (__result.__ctz_ > __first.__ctz_) {
-        unsigned __s = __result.__ctz_ - __first.__ctz_;
-        *__result.__seg_ |= __b1 << __s;
-        *__first.__seg_ |= __b2 >> __s;
-      } else {
-        unsigned __s = __first.__ctz_ - __result.__ctz_;
-        *__result.__seg_ |= __b1 >> __s;
-        *__first.__seg_ |= __b2 << __s;
-      }
-      __result.__seg_ += (__ddn + __result.__ctz_) / __bits_per_word;
-      __result.__ctz_ = static_cast<unsigned>((__ddn + __result.__ctz_) % __bits_per_word);
-      __dn -= __ddn;
-      if (__dn > 0) {
-        __m  = ~__storage_type(0) >> (__bits_per_word - __dn);
-        __b2 = *__result.__seg_ & __m;
-        *__result.__seg_ &= ~__m;
-        unsigned __s = __first.__ctz_ + __ddn;
-        *__result.__seg_ |= __b1 >> __s;
-        *__first.__seg_ |= __b2 << __s;
-        __result.__ctz_ = static_cast<unsigned>(__dn);
-      }
-      ++__first.__seg_;
-      // __first.__ctz_ = 0;
-    }
-    // __first.__ctz_ == 0;
-    // do middle words
-    __storage_type __m = ~__storage_type(0) << __result.__ctz_;
-    unsigned __clz_r   = __bits_per_word - __result.__ctz_;
-    for (; __n >= __bits_per_word; __n -= __bits_per_word, ++__first.__seg_) {
-      __storage_type __b1 = *__first.__seg_;
-      __storage_type __b2 = *__result.__seg_ & __m;
-      *__result.__seg_ &= ~__m;
-      *__result.__seg_ |= __b1 << __result.__ctz_;
-      *__first.__seg_ = __b2 >> __result.__ctz_;
-      ++__result.__seg_;
-      __b2 = *__result.__seg_ & ~__m;
-      *__result.__seg_ &= __m;
-      *__result.__seg_ |= __b1 >> __clz_r;
-      *__first.__seg_ |= __b2 << __clz_r;
-    }
-    // do last word
-    if (__n > 0) {
-      __m                 = ~__storage_type(0) >> (__bits_per_word - __n);
-      __storage_type __b1 = *__first.__seg_ & __m;
-      *__first.__seg_ &= ~__m;
-      __storage_type __dn = std::min<__storage_type>(__n, __clz_r);
-      __m                 = (~__storage_type(0) << __result.__ctz_) & (~__storage_type(0) >> (__clz_r - __dn));
-      __storage_type __b2 = *__result.__seg_ & __m;
-      *__result.__seg_ &= ~__m;
-      *__result.__seg_ |= __b1 << __result.__ctz_;
-      *__first.__seg_ |= __b2 >> __result.__ctz_;
-      __result.__seg_ += (__dn + __result.__ctz_) / __bits_per_word;
-      __result.__ctz_ = static_cast<unsigned>((__dn + __result.__ctz_) % __bits_per_word);
-      __n -= __dn;
-      if (__n > 0) {
-        __m  = ~__storage_type(0) >> (__bits_per_word - __n);
-        __b2 = *__result.__seg_ & __m;
-        *__result.__seg_ &= ~__m;
-        *__result.__seg_ |= __b1 >> __dn;
-        *__first.__seg_ |= __b2 << __dn;
-        __result.__ctz_ = static_cast<unsigned>(__n);
-      }
-    }
-  }
-  return __result;
-}
-
-template <class, class _Cl, class _Cr>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<__bit_iterator<_Cl, false>, __bit_iterator<_Cr, false> >
-__swap_ranges(__bit_iterator<_Cl, false> __first1,
-              __bit_iterator<_Cl, false> __last1,
-              __bit_iterator<_Cr, false> __first2) {
-  if (__first1.__ctz_ == __first2.__ctz_)
-    return std::make_pair(__last1, std::__swap_ranges_aligned(__first1, __last1, __first2));
-  return std::make_pair(__last1, std::__swap_ranges_unaligned(__first1, __last1, __first2));
-}
-
-template <class _AlgPolicy, class _ForwardIterator1, class _Sentinel1, class _ForwardIterator2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_ForwardIterator1, _ForwardIterator2>
-__swap_ranges(_ForwardIterator1 __first1, _Sentinel1 __last1, _ForwardIterator2 __first2) {
+template <
+    class _AlgPolicy,
+    class _Iter1,
+    class _Sent1,
+    class _Iter2,
+    class _SpecialAlg =
+        __specialized_algorithm<_Algorithm::__swap_ranges, __iterator_pair<_Iter1, _Sent1>, __single_iterator<_Iter2> >,
+    __enable_if_t<!_SpecialAlg::__has_algorithm, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_Iter1, _Iter2>
+__swap_ranges(_Iter1 __first1, _Sent1 __last1, _Iter2 __first2) {
   while (__first1 != __last1) {
     _IterOps<_AlgPolicy>::iter_swap(__first1, __first2);
     ++__first1;
     ++__first2;
   }
 
-  return pair<_ForwardIterator1, _ForwardIterator2>(std::move(__first1), std::move(__first2));
+  return pair<_Iter1, _Iter2>(std::move(__first1), std::move(__first2));
 }
 
 template <class _ForwardIterator1, class _ForwardIterator2>

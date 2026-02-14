@@ -15,6 +15,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
+#include "lldb/ValueObject/ValueObject.h"
 #if defined(_WIN32)
 #include "lldb/Host/windows/ConnectionGenericFileWindows.h"
 #endif
@@ -160,6 +161,15 @@ ScriptInterpreter::GetOpaqueTypeFromSBExecutionContext(
 lldb::StackFrameListSP ScriptInterpreter::GetOpaqueTypeFromSBFrameList(
     const lldb::SBFrameList &frame_list) const {
   return frame_list.m_opaque_sp;
+}
+
+lldb::ValueObjectSP
+ScriptInterpreter::GetOpaqueTypeFromSBValue(const lldb::SBValue &value) const {
+  if (!value.m_opaque_sp)
+    return lldb::ValueObjectSP();
+
+  lldb_private::ValueLocker locker;
+  return locker.GetLockedSP(*value.m_opaque_sp);
 }
 
 lldb::ScriptLanguage

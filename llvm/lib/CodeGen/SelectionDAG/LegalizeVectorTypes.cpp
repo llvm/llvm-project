@@ -885,6 +885,9 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::UCMP:
     Res = ScalarizeVecOp_CMP(N);
     break;
+  case ISD::VECTOR_FIND_LAST_ACTIVE:
+    Res = ScalarizeVecOp_VECTOR_FIND_LAST_ACTIVE(N);
+    break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -1185,6 +1188,18 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_CMP(SDNode *N) {
   return DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), N->getValueType(0), Cmp);
 }
 
+SDValue DAGTypeLegalizer::ScalarizeVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N) {
+  // Since there is no "none-active" result, the only valid return for <1 x ty>
+  // is 0. Note: Since we check the high mask during splitting this is safe.
+  // As e.g., a <2 x ty> operation would split to:
+  //   any_active(%hi_mask) ? (1 + last_active(%hi_mask))
+  //                        : `last_active(%lo_mask)`
+  // Which then scalarizes to:
+  //   %mask[1] ? 1 : 0
+  EVT VT = N->getValueType(0);
+  return DAG.getConstant(0, SDLoc(N), VT);
+}
+
 //===----------------------------------------------------------------------===//
 //  Result Vector Splitting
 //===----------------------------------------------------------------------===//
@@ -1217,6 +1232,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::MERGE_VALUES: SplitRes_MERGE_VALUES(N, ResNo, Lo, Hi); break;
   case ISD::AssertZext:   SplitVecRes_AssertZext(N, Lo, Hi); break;
+  case ISD::AssertSext:   SplitVecRes_AssertSext(N, Lo, Hi); break;
   case ISD::VSELECT:
   case ISD::SELECT:
   case ISD::VP_MERGE:
@@ -3571,6 +3587,9 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::INSERT_SUBVECTOR:  Res = SplitVecOp_INSERT_SUBVECTOR(N, OpNo); break;
   case ISD::EXTRACT_VECTOR_ELT:Res = SplitVecOp_EXTRACT_VECTOR_ELT(N); break;
   case ISD::CONCAT_VECTORS:    Res = SplitVecOp_CONCAT_VECTORS(N); break;
+  case ISD::VECTOR_FIND_LAST_ACTIVE:
+    Res = SplitVecOp_VECTOR_FIND_LAST_ACTIVE(N);
+    break;
   case ISD::VP_TRUNCATE:
   case ISD::TRUNCATE:
     Res = SplitVecOp_TruncateHelper(N);
@@ -3729,6 +3748,34 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
 
   ReplaceValueWith(SDValue(N, 0), Res);
   return false;
+}
+
+SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N) {
+  SDLoc DL(N);
+
+  SDValue LoMask, HiMask;
+  GetSplitVector(N->getOperand(0), LoMask, HiMask);
+
+  EVT VT = N->getValueType(0);
+  EVT SplitVT = LoMask.getValueType();
+  ElementCount SplitEC = SplitVT.getVectorElementCount();
+
+  // Find the last active in both the low and the high masks.
+  SDValue LoFind = DAG.getNode(ISD::VECTOR_FIND_LAST_ACTIVE, DL, VT, LoMask);
+  SDValue HiFind = DAG.getNode(ISD::VECTOR_FIND_LAST_ACTIVE, DL, VT, HiMask);
+
+  // Check if any lane is active in the high mask.
+  // FIXME: This would not be necessary if VECTOR_FIND_LAST_ACTIVE returned a
+  // sentinel value for "none active".
+  SDValue AnyHiActive = DAG.getNode(ISD::VECREDUCE_OR, DL, MVT::i1, HiMask);
+  SDValue Cond = DAG.getBoolExtOrTrunc(AnyHiActive, DL,
+                                       getSetCCResultType(MVT::i1), MVT::i1);
+
+  // Return: AnyHiActive ? (HiFind + SplitEC) : LoFind;
+  return DAG.getNode(ISD::SELECT, DL, VT, Cond,
+                     DAG.getNode(ISD::ADD, DL, VT, HiFind,
+                                 DAG.getElementCount(DL, VT, SplitEC)),
+                     LoFind);
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_VSELECT(SDNode *N, unsigned OpNo) {
@@ -6603,11 +6650,14 @@ SDValue DAGTypeLegalizer::WidenVecRes_MLOAD(MaskedLoadSDNode *N) {
                       N->getMemoryVT(), N->getMemOperand());
     SDValue NewVal = NewLoad;
 
-    // Manually merge with vp.select
+    // Manually merge with vselect
     if (!N->getPassThru()->isUndef()) {
       assert(WidenVT.isScalableVector());
-      NewVal =
-          DAG.getNode(ISD::VP_SELECT, dl, WidenVT, Mask, NewVal, PassThru, EVL);
+      NewVal = DAG.getNode(ISD::VSELECT, dl, WidenVT, Mask, NewVal, PassThru);
+      // The lanes past EVL are poison.
+      NewVal = DAG.getNode(ISD::VP_MERGE, dl, WidenVT,
+                           DAG.getAllOnesConstant(dl, WideMaskVT), NewVal,
+                           DAG.getPOISON(WidenVT), EVL);
     }
 
     // Modified the chain - switch anything that used the old chain to use
@@ -6772,7 +6822,8 @@ SDValue DAGTypeLegalizer::convertMask(SDValue InMask, EVT MaskVT,
     ReplaceValueWith(InMask.getValue(1), Mask.getValue(1));
   }
   else
-    Mask = DAG.getNode(InMask->getOpcode(), SDLoc(InMask), MaskVT, Ops);
+    Mask = DAG.getNode(InMask->getOpcode(), SDLoc(InMask), MaskVT, Ops,
+                       InMask->getFlags());
 
   // If MaskVT has smaller or bigger elements than ToMaskVT, a vector sign
   // extend or truncate is needed.

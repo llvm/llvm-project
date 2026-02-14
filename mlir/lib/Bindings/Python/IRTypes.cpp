@@ -12,6 +12,7 @@
 // clang-format on
 
 #include <optional>
+#include <vector>
 
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
@@ -21,9 +22,6 @@
 namespace nb = nanobind;
 using namespace mlir;
 using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
-
-using llvm::SmallVector;
-using llvm::Twine;
 
 namespace mlir {
 namespace python {
@@ -310,10 +308,10 @@ void PyComplexType::bindDerived(ClassTy &c) {
           return PyComplexType(elementType.getContext(), t);
         }
         throw nb::value_error(
-            (Twine("invalid '") +
-             nb::cast<std::string>(nb::repr(nb::cast(elementType))) +
-             "' and expected floating point or integer type.")
-                .str()
+            nanobind::detail::join(
+                "invalid '",
+                nb::cast<std::string>(nb::repr(nb::cast(elementType))),
+                "' and expected floating point or integer type.")
                 .c_str());
       },
       "Create a complex type");
@@ -480,19 +478,24 @@ PyVectorType::getChecked(std::vector<int64_t> shape, PyType &elementType,
     if (scalable->size() != shape.size())
       throw nb::value_error("Expected len(scalable) == len(shape).");
 
-    SmallVector<bool> scalableDimFlags = llvm::to_vector(llvm::map_range(
-        *scalable, [](const nb::handle &h) { return nb::cast<bool>(h); }));
+    std::vector<char> scalableDimFlags;
+    scalableDimFlags.reserve(scalable->size());
+    for (const nb::handle &h : *scalable) {
+      scalableDimFlags.push_back(nb::cast<bool>(h) ? 1 : 0);
+    }
     type = mlirVectorTypeGetScalableChecked(
-        loc, shape.size(), shape.data(), scalableDimFlags.data(), elementType);
+        loc, shape.size(), shape.data(),
+        reinterpret_cast<const bool *>(scalableDimFlags.data()), elementType);
   } else if (scalableDims) {
-    SmallVector<bool> scalableDimFlags(shape.size(), false);
+    std::vector<char> scalableDimFlags(shape.size(), 0);
     for (int64_t dim : *scalableDims) {
       if (static_cast<size_t>(dim) >= scalableDimFlags.size() || dim < 0)
         throw nb::value_error("Scalable dimension index out of bounds.");
-      scalableDimFlags[dim] = true;
+      scalableDimFlags[dim] = 1;
     }
     type = mlirVectorTypeGetScalableChecked(
-        loc, shape.size(), shape.data(), scalableDimFlags.data(), elementType);
+        loc, shape.size(), shape.data(),
+        reinterpret_cast<const bool *>(scalableDimFlags.data()), elementType);
   } else {
     type =
         mlirVectorTypeGetChecked(loc, shape.size(), shape.data(), elementType);
@@ -517,19 +520,24 @@ PyVectorType PyVectorType::get(std::vector<int64_t> shape, PyType &elementType,
     if (scalable->size() != shape.size())
       throw nb::value_error("Expected len(scalable) == len(shape).");
 
-    SmallVector<bool> scalableDimFlags = llvm::to_vector(llvm::map_range(
-        *scalable, [](const nb::handle &h) { return nb::cast<bool>(h); }));
-    type = mlirVectorTypeGetScalable(shape.size(), shape.data(),
-                                     scalableDimFlags.data(), elementType);
+    std::vector<char> scalableDimFlags;
+    scalableDimFlags.reserve(scalable->size());
+    for (const nb::handle &h : *scalable) {
+      scalableDimFlags.push_back(nb::cast<bool>(h) ? 1 : 0);
+    }
+    type = mlirVectorTypeGetScalable(
+        shape.size(), shape.data(),
+        reinterpret_cast<const bool *>(scalableDimFlags.data()), elementType);
   } else if (scalableDims) {
-    SmallVector<bool> scalableDimFlags(shape.size(), false);
+    std::vector<char> scalableDimFlags(shape.size(), 0);
     for (int64_t dim : *scalableDims) {
       if (static_cast<size_t>(dim) >= scalableDimFlags.size() || dim < 0)
         throw nb::value_error("Scalable dimension index out of bounds.");
-      scalableDimFlags[dim] = true;
+      scalableDimFlags[dim] = 1;
     }
-    type = mlirVectorTypeGetScalable(shape.size(), shape.data(),
-                                     scalableDimFlags.data(), elementType);
+    type = mlirVectorTypeGetScalable(
+        shape.size(), shape.data(),
+        reinterpret_cast<const bool *>(scalableDimFlags.data()), elementType);
   } else {
     type = mlirVectorTypeGet(shape.size(), shape.data(), elementType);
   }

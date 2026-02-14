@@ -1071,9 +1071,11 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       EVT VecVT = getTLI()->getValueType(DL, RetTy);
       unsigned EltSizeInBytes =
           cast<ConstantInt>(ICA.getArgs()[2])->getZExtValue();
-      if (is_contained({1u, 2u, 4u, 8u}, EltSizeInBytes) &&
-          VecVT.getVectorMinNumElements() == (16 / EltSizeInBytes))
-        return 1;
+      if (!is_contained({1u, 2u, 4u, 8u}, EltSizeInBytes) ||
+          VecVT.getVectorMinNumElements() != (16 / EltSizeInBytes))
+        break;
+      // For fixed-vector types we need to AND the mask with a ptrue vl<N>.
+      return isa<FixedVectorType>(RetTy) ? 2 : 1;
     }
     break;
   }
@@ -5839,7 +5841,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
     ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
     TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
-    TTI::TargetCostKind CostKind) const {
+    TTI::TargetCostKind CostKind, std::optional<FastMathFlags> FMF) const {
   InstructionCost Invalid = InstructionCost::getInvalid();
 
   if (CostKind != TTI::TCK_RecipThroughput)
@@ -5849,9 +5851,21 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
       (!ST->isNeonAvailable() || !ST->hasDotProd()))
     return Invalid;
 
-  if ((Opcode != Instruction::Add && Opcode != Instruction::Sub) ||
+  if ((Opcode != Instruction::Add && Opcode != Instruction::Sub &&
+       Opcode != Instruction::FAdd) ||
       OpAExtend == TTI::PR_None)
     return Invalid;
+
+  // Floating-point partial reductions are invalid if `reassoc` and `contract`
+  // are not allowed.
+  if (AccumType->isFloatingPointTy()) {
+    assert(FMF && "Missing FastMathFlags for floating-point partial reduction");
+    if (!FMF->allowReassoc() || !FMF->allowContract())
+      return Invalid;
+  } else {
+    assert(!FMF &&
+           "FastMathFlags only apply to floating-point partial reductions");
+  }
 
   assert((BinOp || (OpBExtend == TTI::PR_None && !InputTypeB)) &&
          (!BinOp || (OpBExtend != TTI::PR_None && InputTypeB)) &&
@@ -5859,7 +5873,8 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
 
   // We only support multiply binary operations for now, and for muls we
   // require the types being extended to be the same.
-  if (BinOp && (*BinOp != Instruction::Mul || InputTypeA != InputTypeB))
+  if (BinOp && ((*BinOp != Instruction::Mul && *BinOp != Instruction::FMul) ||
+                InputTypeA != InputTypeB))
     return Invalid;
 
   bool IsUSDot = OpBExtend != TTI::PR_None && OpAExtend != OpBExtend;
@@ -5897,6 +5912,11 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
 
   InstructionCost Cost = InputLT.first * TTI::TCC_Basic;
 
+  // The sub/negation cannot be folded into the operands of
+  // ISD::PARTIAL_REDUCE_*MLA, so make the cost more expensive.
+  if (Opcode == Instruction::Sub)
+    Cost += 8;
+
   // Prefer using full types by costing half-full input types as more expensive.
   if (TypeSize::isKnownLT(InputVectorType->getPrimitiveSizeInBits(),
                           TypeSize::getScalable(128)))
@@ -5933,6 +5953,18 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     if (AccumLT.second.getScalarType() == MVT::i32 &&
         InputLT.second.getScalarType() == MVT::i8)
       return Cost;
+  }
+
+  // f16 -> f32 is natively supported for fdot
+  if (Opcode == Instruction::FAdd && (ST->hasSME2() || ST->hasSVE2p1())) {
+    if (AccumLT.second.getScalarType() == MVT::f32 &&
+        InputLT.second.getScalarType() == MVT::f16 &&
+        AccumLT.second.getVectorMinNumElements() == 4 &&
+        InputLT.second.getVectorMinNumElements() == 8)
+      return Cost;
+    // Floating-point types aren't promoted, so expanding the partial reduction
+    // is more expensive.
+    return Cost + 20;
   }
 
   // Add additional cost for the extends that would need to be inserted.
