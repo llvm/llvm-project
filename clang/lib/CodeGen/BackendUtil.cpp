@@ -1352,8 +1352,11 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
   assert(OptLevelOrNone && "Invalid optimization level!");
   Conf.CGOptLevel = *OptLevelOrNone;
   Conf.OptLevel = CGOpts.OptimizationLevel;
-  Conf.ModifyTargetOptions = [&](llvm::TargetOptions &TargetOpts) -> void {
+  Conf.InitTargetOptions = [&](llvm::Triple TheTriple) -> llvm::TargetOptions {
+    llvm::TargetOptions TargetOpts =
+        llvm::codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
     initTargetOptions(CI, Diags, TargetOpts);
+    return TargetOpts;
   };
   Conf.SampleProfile = std::move(SampleProfile);
   Conf.PTO.LoopUnrolling = CGOpts.UnrollLoops;

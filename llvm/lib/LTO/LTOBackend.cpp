@@ -240,9 +240,7 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   else
     CodeModel = M.getCodeModel();
 
-  TargetOptions TargetOpts =
-      codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
-  Conf.ModifyTargetOptions(TargetOpts);
+  TargetOptions TargetOpts = Conf.InitTargetOptions(TheTriple);
 
   if (TargetOpts.MCOptions.ABIName.empty()) {
     TargetOpts.MCOptions.ABIName = M.getTargetABIFromMD();

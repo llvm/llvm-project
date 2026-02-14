@@ -159,8 +159,7 @@ std::string llvm::computeLTOCacheKey(
     Hasher.update(ArrayRef<uint8_t>(&I, 1));
   };
   AddString(Conf.CPU);
-  TargetOptions Opts = codegen::InitTargetOptionsFromCodeGenFlags(TT);
-  Conf.ModifyTargetOptions(Opts);
+  TargetOptions Opts = Conf.InitTargetOptions(TT);
 
   // FIXME: Hash more of TargetOptions. For now all clients initialize
   // TargetOptions from command-line flags (which is unsupported in production),
@@ -2471,8 +2470,7 @@ public:
     auto &Ops = CodegenOptions;
 
     Ops.push_back(Saver.save("-O" + Twine(C.OptLevel)));
-    TargetOptions TO = codegen::InitTargetOptionsFromCodeGenFlags(Triple);
-    C.ModifyTargetOptions(TO);
+    TargetOptions TO = C.InitTargetOptions(Triple);
 
     if (TO.EmitAddrsig)
       Ops.push_back("-faddrsig");

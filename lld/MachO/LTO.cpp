@@ -40,8 +40,10 @@ static lto::Config createConfig() {
   lto::Config c;
 
   bool emitAddrsig = config->icfLevel == ICFLevel::safe;
-  c.ModifyTargetOptions = [emitAddrsig](TargetOptions &options) {
+  c.InitTargetOptions = [emitAddrsig](const Triple &TT) {
+    TargetOptions options = codegen::InitTargetOptionsFromCodeGenFlags(TT);
     options.EmitAddrsig = emitAddrsig;
+    return options;
   };
 
   for (StringRef C : config->mllvmOpts)

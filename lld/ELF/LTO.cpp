@@ -71,8 +71,9 @@ static lto::Config createConfig(Ctx &ctx) {
   std::shared_ptr<MemoryBuffer> mbPtr = getBBSectionsMemoryBuffer(ctx);
 
   // Set up the callback to modify TargetOptions.
-  c.ModifyTargetOptions =
-      [&ctx, mb = std::move(mbPtr)](TargetOptions &options) -> void {
+  c.InitTargetOptions =
+      [&ctx, mb = std::move(mbPtr)](const Triple &TT) -> TargetOptions {
+    TargetOptions options = codegen::InitTargetOptionsFromCodeGenFlags(TT);
     // LLD supports the new relocations and address-significance tables.
     options.EmitAddrsig = true;
     // Always emit a section per function/datum with LTO.
@@ -103,6 +104,7 @@ static lto::Config createConfig(Ctx &ctx) {
     if (ctx.arg.ltoEmitAsm) {
       options.MCOptions.AsmVerbose = true;
     }
+    return options;
   };
 
   for (StringRef C : ctx.arg.mllvmOpts)

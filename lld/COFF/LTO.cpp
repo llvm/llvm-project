@@ -24,6 +24,7 @@
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -47,7 +48,8 @@ std::string BitcodeCompiler::getThinLTOOutputFile(StringRef path) {
 lto::Config BitcodeCompiler::createConfig() {
   lto::Config c;
   bool emitAsm = ctx.config.emit == EmitKind::ASM;
-  c.ModifyTargetOptions = [emitAsm](TargetOptions &options) {
+  c.InitTargetOptions = [emitAsm](const Triple &TT) {
+    TargetOptions options = codegen::InitTargetOptionsFromCodeGenFlags(TT);
     options.EmitAddrsig = true;
     // Always emit a section per function/datum with LTO. LLVM LTO should get
     // most of the benefit of linker GC, but there are still opportunities for
@@ -57,6 +59,7 @@ lto::Config BitcodeCompiler::createConfig() {
 
     if (emitAsm)
       options.MCOptions.AsmVerbose = true;
+    return options;
   };
 
   for (StringRef C : ctx.config.mllvmOpts)
