@@ -499,6 +499,7 @@ class EnumParameter<EnumInfo enumInfo>
     !cast<EnumAttrInfo>(enumInfo).parameterParser, ?);
   let printer = !if(!isa<EnumAttrInfo>(enumInfo),
     !cast<EnumAttrInfo>(enumInfo).parameterPrinter, ?);
+  string underlyingEnumName = enumInfo.className;
 }
 
 // An attribute backed by a C++ enum. The attribute contains a single

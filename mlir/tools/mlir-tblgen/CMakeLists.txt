@@ -8,6 +8,7 @@ set(LLVM_LINK_COMPONENTS
 add_tablegen(mlir-tblgen MLIR
   DESTINATION "${MLIR_TOOLS_INSTALL_DIR}"
   EXPORT MLIR
+  AttrOrTypeCAPIGen.cpp
   AttrOrTypeDefGen.cpp
   AttrOrTypeFormatGen.cpp
   BytecodeDialectGen.cpp
