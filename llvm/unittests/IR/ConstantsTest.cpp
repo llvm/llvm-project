@@ -10,6 +10,7 @@
 #include "llvm-c/Core.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/ConstantFold.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -866,6 +867,129 @@ TEST(ConstantsTest, Float128Test) {
   EXPECT_TRUE(val7 != nullptr);
   LLVMDisposeBuilder(Builder);
   LLVMContextDispose(C);
+}
+
+TEST(ConstantsTest, ZeroValueAPIs) {
+  LLVMContext Context;
+
+  // Basic types.
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  Type *FloatTy = Type::getFloatTy(Context);
+  Type *PtrTy = PointerType::get(Context, 0);
+  Type *Ptr1Ty = PointerType::get(Context, 1);
+
+  // --- getZeroValue: currently returns same as getNullValue ---
+  EXPECT_EQ(Constant::getZeroValue(Int32Ty), Constant::getNullValue(Int32Ty));
+  EXPECT_EQ(Constant::getZeroValue(FloatTy), Constant::getNullValue(FloatTy));
+  EXPECT_EQ(Constant::getZeroValue(PtrTy), Constant::getNullValue(PtrTy));
+  EXPECT_EQ(Constant::getZeroValue(Ptr1Ty), Constant::getNullValue(Ptr1Ty));
+
+  // Aggregate types.
+  StructType *StructTy = StructType::get(Int32Ty, PtrTy);
+  ArrayType *ArrayTy = ArrayType::get(Int32Ty, 4);
+  EXPECT_EQ(Constant::getZeroValue(StructTy), Constant::getNullValue(StructTy));
+  EXPECT_EQ(Constant::getZeroValue(ArrayTy), Constant::getNullValue(ArrayTy));
+
+  // --- isZeroValue(nullptr): identity check against getZeroValue ---
+  Constant *IntZero = ConstantInt::get(Int32Ty, 0);
+  Constant *IntOne = ConstantInt::get(Int32Ty, 1);
+  Constant *FPZero = ConstantFP::get(FloatTy, 0.0);
+  Constant *FPNegZero = ConstantFP::get(FloatTy, -0.0);
+  Constant *FPOne = ConstantFP::get(FloatTy, 1.0);
+  Constant *PtrNull0 = ConstantPointerNull::get(cast<PointerType>(PtrTy));
+  Constant *PtrNull1 = ConstantPointerNull::get(cast<PointerType>(Ptr1Ty));
+  Constant *CAZ = ConstantAggregateZero::get(StructTy);
+
+  EXPECT_TRUE(IntZero->isZeroValue());
+  EXPECT_FALSE(IntOne->isZeroValue());
+  EXPECT_TRUE(FPZero->isZeroValue());
+  // -0.0 has a non-zero bit pattern (sign bit set), so it is NOT a zero value.
+  EXPECT_FALSE(FPNegZero->isZeroValue());
+  EXPECT_FALSE(FPOne->isZeroValue());
+  EXPECT_TRUE(PtrNull0->isZeroValue());
+  EXPECT_TRUE(PtrNull1->isZeroValue());
+  EXPECT_TRUE(CAZ->isZeroValue());
+
+  // --- isZeroValue: FP corner cases ---
+  // -0.0 is NOT zero (sign bit set = non-zero bit pattern).
+  // Verify consistency with isNullValue: both agree +0.0 is zero, -0.0 is not.
+  EXPECT_TRUE(FPZero->isNullValue());
+  EXPECT_FALSE(FPNegZero->isNullValue());
+  EXPECT_TRUE(FPZero->isZeroValue());
+  EXPECT_FALSE(FPNegZero->isZeroValue());
+
+  // Double precision: same behavior.
+  Type *DoubleTy = Type::getDoubleTy(Context);
+  Constant *DblZero = ConstantFP::get(DoubleTy, 0.0);
+  Constant *DblNegZero = ConstantFP::get(DoubleTy, -0.0);
+  EXPECT_TRUE(DblZero->isZeroValue());
+  EXPECT_FALSE(DblNegZero->isZeroValue());
+
+  // Vector splats of FP zeros.
+  Constant *VecPosZero =
+      ConstantVector::getSplat(ElementCount::getFixed(2), FPZero);
+  Constant *VecNegZero =
+      ConstantVector::getSplat(ElementCount::getFixed(2), FPNegZero);
+  // Splat of +0.0 collapses to CAZ, which is zero.
+  EXPECT_TRUE(isa<ConstantAggregateZero>(VecPosZero));
+  EXPECT_TRUE(VecPosZero->isZeroValue());
+  // Splat of -0.0 does NOT collapse to CAZ and is NOT zero.
+  EXPECT_FALSE(isa<ConstantAggregateZero>(VecNegZero));
+  EXPECT_FALSE(VecNegZero->isZeroValue());
+
+  // --- isZeroValue(&DL) with default DataLayout (all AS have zero null) ---
+  DataLayout DefaultDL("");
+  EXPECT_TRUE(IntZero->isZeroValue(&DefaultDL));
+  EXPECT_FALSE(IntOne->isZeroValue(&DefaultDL));
+  EXPECT_TRUE(FPZero->isZeroValue(&DefaultDL));
+  EXPECT_FALSE(FPNegZero->isZeroValue(&DefaultDL));
+  EXPECT_FALSE(FPOne->isZeroValue(&DefaultDL));
+  EXPECT_TRUE(PtrNull0->isZeroValue(&DefaultDL));
+  EXPECT_TRUE(PtrNull1->isZeroValue(&DefaultDL));
+  EXPECT_TRUE(CAZ->isZeroValue(&DefaultDL));
+
+  // --- isZeroValue(&DL) with all-ones-null AS 1 ---
+  // Format: p<flags><as>:<size>:<abi> -- flags before AS number.
+  DataLayout AllOnesDL("po1:64:64");
+  // AS 0 still has zero null, so CPN for AS 0 is still a zero value.
+  EXPECT_TRUE(PtrNull0->isZeroValue(&AllOnesDL));
+  // AS 1 has all-ones null, so CPN for AS 1 is NOT a zero value.
+  EXPECT_FALSE(PtrNull1->isZeroValue(&AllOnesDL));
+  // Non-pointer constants are unaffected by DataLayout.
+  EXPECT_TRUE(IntZero->isZeroValue(&AllOnesDL));
+  EXPECT_TRUE(FPZero->isZeroValue(&AllOnesDL));
+  EXPECT_TRUE(CAZ->isZeroValue(&AllOnesDL));
+
+  // --- getNullValue(Ty, nullptr): same as getNullValue(Ty) ---
+  EXPECT_EQ(Constant::getNullValue(Int32Ty, nullptr),
+            Constant::getNullValue(Int32Ty));
+  EXPECT_EQ(Constant::getNullValue(PtrTy, nullptr),
+            Constant::getNullValue(PtrTy));
+  EXPECT_EQ(Constant::getNullValue(StructTy, nullptr),
+            Constant::getNullValue(StructTy));
+
+  // --- getNullValue(Ty, &DL) fast path: no non-zero-null pointers ---
+  EXPECT_EQ(Constant::getNullValue(Int32Ty, &DefaultDL),
+            Constant::getNullValue(Int32Ty));
+  EXPECT_EQ(Constant::getNullValue(PtrTy, &DefaultDL),
+            Constant::getNullValue(PtrTy));
+  EXPECT_EQ(Constant::getNullValue(StructTy, &DefaultDL),
+            Constant::getNullValue(StructTy));
+  EXPECT_EQ(Constant::getNullValue(ArrayTy, &DefaultDL),
+            Constant::getNullValue(ArrayTy));
+
+  // With AllOnesDL, types that don't contain AS 1 pointers still take fast
+  // path.
+  EXPECT_EQ(Constant::getNullValue(Int32Ty, &AllOnesDL),
+            Constant::getNullValue(Int32Ty));
+  EXPECT_EQ(Constant::getNullValue(PtrTy, &AllOnesDL),
+            Constant::getNullValue(PtrTy));
+  // Struct containing AS 0 pointer -- fast path (AS 0 is zero null).
+  EXPECT_EQ(Constant::getNullValue(StructTy, &AllOnesDL),
+            Constant::getNullValue(StructTy));
+
+  // TODO: getNullValue slow path for aggregates with non-zero-null pointers is
+  // deferred to PR 3 testing (requires aggregate collapse fix).
 }
 
 } // end anonymous namespace

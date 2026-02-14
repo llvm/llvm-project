@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/ConstantFold.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
@@ -69,6 +70,27 @@ bool Constant::isNegativeZeroValue() const {
 
   // Otherwise, just use +0.0.
   return isNullValue();
+}
+
+// Return true iff this constant has an all-zero bit pattern.
+bool Constant::isZeroValue(const DataLayout *DL) const {
+  // When DataLayout is available, check if ConstantPointerNull actually has
+  // a zero bit pattern (it might not for non-zero-null address spaces).
+  if (DL) {
+    if (const auto *CPN = dyn_cast<ConstantPointerNull>(this))
+      return DL->isNullPointerAllZeroes(CPN->getType()->getAddressSpace());
+
+    // Check for vector splats of ConstantPointerNull.
+    if (getType()->isVectorTy()) {
+      if (const auto *SplatCPN =
+              dyn_cast_or_null<ConstantPointerNull>(getSplatValue())) {
+        return DL->isNullPointerAllZeroes(
+            SplatCPN->getType()->getAddressSpace());
+      }
+    }
+  }
+
+  return this == getZeroValue(getType());
 }
 
 bool Constant::isNullValue() const {
@@ -370,8 +392,11 @@ bool Constant::containsConstantExpression() const {
   return false;
 }
 
-/// Constructor to create a '0' constant of arbitrary type.
-Constant *Constant::getNullValue(Type *Ty) {
+Constant *Constant::getNullValue(Type *Ty, const DataLayout *DL) {
+  return getZeroValue(Ty);
+}
+
+Constant *Constant::getZeroValue(Type *Ty) {
   switch (Ty->getTypeID()) {
   case Type::IntegerTyID:
     return ConstantInt::get(Ty, 0);
