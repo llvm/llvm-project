@@ -11,7 +11,7 @@
 ; SUMMARY-NEXT:      Local:               false
 ; SUMMARY-NEXT:      CanAutoHide:         false
 ; SUMMARY-NEXT:      ImportType:          0
-; SUMMARY-NEXT:      RenameOnPromotion:   false
+; SUMMARY-NEXT:      NotRenameOnPromotion: false
 ; SUMMARY-NEXT:      TypeTestAssumeVCalls:
 ; SUMMARY-NEXT:        - GUID:            123
 ; SUMMARY-NEXT:          Offset:          0
@@ -40,7 +40,7 @@
 ; SUMMARY-NEXT:     Local:                 false
 ; SUMMARY-NEXT:     CanAutoHide:           false
 ; SUMMARY-NEXT:     ImportType:            1
-; SUMMARY-NEXT:     RenameOnPromotion:     true
+; SUMMARY-NEXT:     NotRenameOnPromotion:  true
 ; SUMMARY-NEXT: TypeIdMap:
 ; SUMMARY-NEXT:   typeid1:
 ; SUMMARY-NEXT:     TTRes:
