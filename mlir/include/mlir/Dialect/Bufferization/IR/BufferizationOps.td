@@ -478,6 +478,29 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
 
     bool isWritable(Value value, const AnalysisState &state);
 
+    AliasingValueList getAliasingValues(OpOperand &opOperand,
+                                        const AnalysisState &state) const {
+      // The output tensor aliases with the input memref.
+      //
+      // Note: getResult() is a non-const helper. Use const_cast here to avoid
+      // duplicating accessors while still satisfying the const interface
+      // contract of BufferizableOpInterface.
+      return {{const_cast<ToTensorOp *>(this)->getResult(),
+               BufferRelation::Equivalent}};
+    }
+
+    bool bufferizesToMemoryRead(OpOperand &opOperand,
+                                const AnalysisState &state) const {
+      // to_tensor reads from the memref.
+      return true;
+    }
+
+    bool bufferizesToMemoryWrite(OpOperand &opOperand,
+                                 const AnalysisState &state) const {
+      // to_tensor does not write to the memref.
+      return false;
+    }
+
     FailureOr<BufferLikeType> getBufferType(
         Value value, const BufferizationOptions &options,
         const BufferizationState &state, SmallVector<Value> &invocationStack) {
@@ -549,9 +572,25 @@ def Bufferization_ToBufferOp : Bufferization_Op<"to_buffer", [
       return !getReadOnly();
     }
 
+    bool resultBufferizesToMemoryWrite(OpResult opResult,
+                                       const AnalysisState &state) {
+      // The ToBufferOp result is a memref view of an existing tensor buffer.
+      // The op itself does not perform a memory write; any writes are modeled
+      // on the users of the memref. However, we need to indicate that the result
+      // may be written to if read_only is not set, so that proper copy insertion
+      // happens. Since the result is a memref (not a tensor), we cannot use
+      // getAliasingOpOperands which expects tensor types.
+      return !getReadOnly();
+    }
+
     AliasingValueList getAliasingValues(
         OpOperand &opOperand, const AnalysisState &state) const {
-      return {};
+      // The result memref aliases with the input tensor. However, getAliasingValues
+      // only returns tensor Values, so we cannot return the memref result here.
+      // The alias relationship is established in OneShotAnalysis via unionAliasSets.
+      // Returning the input tensor itself ensures that RaW conflicts are detected
+      // when the result memref is written to and the input tensor is read from.
+      return {{opOperand.get(), BufferRelation::Equivalent}};
     }
 
     LogicalResult bufferize(RewriterBase &rewriter,
