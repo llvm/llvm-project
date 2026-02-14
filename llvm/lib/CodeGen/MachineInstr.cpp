@@ -1078,8 +1078,9 @@ const TargetRegisterClass *MachineInstr::getRegClassConstraintEffect(
       CurRC = TRI->getMatchingSuperRegClass(CurRC, OpRC, SubIdx);
     else
       CurRC = TRI->getSubClassWithSubReg(CurRC, SubIdx);
-  } else if (OpRC)
+  } else if (OpRC) {
     CurRC = TRI->getCommonSubClass(CurRC, OpRC);
+  }
   return CurRC;
 }
 
