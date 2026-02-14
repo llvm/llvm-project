@@ -434,9 +434,13 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                        CSR_32_RegCall_NoSSE_RegMask);
     }
   case CallingConv::CFGuard_Check:
-    assert(!Is64Bit && "CFGuard check mechanism only used on 32-bit X86");
-    return (HasSSE ? CSR_Win32_CFGuard_Check_RegMask
-                   : CSR_Win32_CFGuard_Check_NoSSE_RegMask);
+    if (Is64Bit) {
+      return (HasSSE ? CSR_Win64_CFGuard_Check_RegMask
+                     : CSR_Win64_CFGuard_Check_NoSSE_RegMask);
+    } else {
+      return (HasSSE ? CSR_Win32_CFGuard_Check_RegMask
+                     : CSR_Win32_CFGuard_Check_NoSSE_RegMask);
+    }
   case CallingConv::Cold:
     if (Is64Bit)
       return CSR_64_MostRegs_RegMask;

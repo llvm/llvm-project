@@ -413,6 +413,7 @@ FUNCTION_PASS("bdce", BDCEPass())
 FUNCTION_PASS("break-crit-edges", BreakCriticalEdgesPass())
 FUNCTION_PASS("callbr-prepare", CallBrPreparePass())
 FUNCTION_PASS("callsite-splitting", CallSiteSplittingPass())
+FUNCTION_PASS("cfguard", CFGuardPass())
 FUNCTION_PASS("chr", ControlHeightReductionPass())
 FUNCTION_PASS("codegenprepare", CodeGenPreparePass(*TM))
 FUNCTION_PASS("complex-deinterleaving", ComplexDeinterleavingPass(*TM))
@@ -573,10 +574,6 @@ FUNCTION_PASS("wasm-eh-prepare", WasmEHPreparePass())
 #ifndef FUNCTION_PASS_WITH_PARAMS
 #define FUNCTION_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)
 #endif
-FUNCTION_PASS_WITH_PARAMS(
-    "cfguard", "CFGuardPass",
-    [](CFGuardPass::Mechanism M) { return CFGuardPass(M); },
-    parseCFGuardPassOptions, "check;dispatch")
 FUNCTION_PASS_WITH_PARAMS(
     "early-cse", "EarlyCSEPass",
     [](bool UseMemorySSA) { return EarlyCSEPass(UseMemorySSA); },

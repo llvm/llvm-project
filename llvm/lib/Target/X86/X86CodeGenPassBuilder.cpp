@@ -81,9 +81,7 @@ void X86CodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
   // Add Control Flow Guard checks.
   const Triple &TT = TM.getTargetTriple();
   if (TT.isOSWindows())
-    addFunctionPass(CFGuardPass(TT.isX86_64() ? CFGuardPass::Mechanism::Dispatch
-                                              : CFGuardPass::Mechanism::Check),
-                    PMW);
+    addFunctionPass(CFGuardPass(), PMW);
 
   if (TM.Options.JMCInstrument) {
     flushFPMsToMPM(PMW);

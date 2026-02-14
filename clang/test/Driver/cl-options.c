@@ -847,4 +847,10 @@
 // FUNCOVERRIDE: -loader-replaceable-function=override_me1
 // FUNCOVERRIDE-SAME: -loader-replaceable-function=override_me2
 
+// RUN: %clang_cl /d2guardcfgdispatch /c -### -- %s 2>&1 | FileCheck %s --check-prefix=GUARDCFGDISPATCH
+// GUARDCFGDISPATCH: -fwin-cfg-mechanism=dispatch
+
+// RUN: %clang_cl /d2guardcfgdispatch- /c -### -- %s 2>&1 | FileCheck %s --check-prefix=GUARDCFGDISPATCHNEG
+// GUARDCFGDISPATCHNEG: -fwin-cfg-mechanism=check
+
 void f(void) { }

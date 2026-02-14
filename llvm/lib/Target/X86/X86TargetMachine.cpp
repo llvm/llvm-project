@@ -442,11 +442,7 @@ void X86PassConfig::addIRPasses() {
   // Add Control Flow Guard checks.
   const Triple &TT = TM->getTargetTriple();
   if (TT.isOSWindows()) {
-    if (TT.isX86_64()) {
-      addPass(createCFGuardDispatchPass());
-    } else {
-      addPass(createCFGuardCheckPass());
-    }
+    addPass(createCFGuardPass());
   }
 
   if (TM->Options.JMCInstrument)
