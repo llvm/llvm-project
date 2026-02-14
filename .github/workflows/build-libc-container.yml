@@ -19,7 +19,12 @@ jobs:
   build-libc-container:
     name: Build libc container
     if: github.repository_owner == 'llvm'
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      matrix:
+        runs-on:
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
