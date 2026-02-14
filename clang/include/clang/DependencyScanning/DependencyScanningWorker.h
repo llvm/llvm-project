@@ -215,7 +215,9 @@ public:
       DependencyActionController &Controller, DiagnosticConsumer &DiagsConsumer,
       raw_ostream *VerboseOS, bool DiagGenerationAsCompilation);
 
-  ScanningOutputFormat getScanningFormat() const { return Service.getFormat(); }
+  ScanningOutputFormat getScanningFormat() const {
+    return Service.getOpts().Format;
+  }
 
   const CASOptions &getCASOpts() const { return CASOpts; }
   std::shared_ptr<cas::ObjectStore> getCAS() const { return CAS; }

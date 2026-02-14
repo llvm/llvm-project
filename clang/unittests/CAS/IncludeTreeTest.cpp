@@ -49,9 +49,9 @@ TEST(IncludeTree, IncludeTreeScan) {
   std::unique_ptr<llvm::vfs::FileSystem> VFS =
       llvm::cas::createCASProvidingFileSystem(DB, FS);
 
-  DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
-                                    ScanningOutputFormat::IncludeTree,
-                                    CASOptions(), nullptr, nullptr);
+  DependencyScanningServiceOptions Opts;
+  Opts.Format = ScanningOutputFormat::IncludeTree;
+  DependencyScanningService Service(std::move(Opts));
   DependencyScanningTool ScanTool(Service, std::move(VFS));
 
   TextDiagnosticBuffer DiagConsumer;

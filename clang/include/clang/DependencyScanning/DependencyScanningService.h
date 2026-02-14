@@ -14,7 +14,6 @@
 #include "clang/DependencyScanning/InProcessModuleCache.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/CAS/ActionCache.h"
-#include "llvm/Support/Chrono.h"
 
 namespace clang {
 namespace dependencies {
@@ -93,69 +92,55 @@ bool shouldCacheNegativeStatsDefault();
 ///         false otherwise.
 bool shouldCacheNegativeStatsForPath(StringRef Path);
 
+/// The configuration knobs for the dependency scanning service.
+struct DependencyScanningServiceOptions {
+  DependencyScanningServiceOptions();
+
+  /// Whether to use optimized dependency directive scan or full preprocessing.
+  ScanningMode Mode = ScanningMode::DependencyDirectivesScan;
+  /// What output format are we expected to produce.
+  ScanningOutputFormat Format = ScanningOutputFormat::Full;
+  /// The CAS configuration.
+  CASOptions CASOpts;
+  /// The CAS database to use.
+  std::shared_ptr<llvm::cas::ObjectStore> CAS;
+  /// The CAS cache to use.
+  std::shared_ptr<llvm::cas::ActionCache> Cache;
+  /// How to optimize resulting explicit module command lines.
+  ScanningOptimizations OptimizeArgs = ScanningOptimizations::Default;
+  /// Whether the resulting command lines should load explicit PCMs eagerly.
+  bool EagerLoadModules = false;
+  /// Whether to trace VFS accesses during the scan.
+  bool TraceVFS = false;
+  /// Whether to scan modules asynchronously.
+  bool AsyncScanModules = false;
+  /// The build session timestamp for validate-once-per-build-session logic.
+  std::time_t BuildSessionTimestamp; // = std::chrono::system_clock::now();
+  /// Whether the caching VFS should cache missing filesystem entries.
+  bool CacheNegativeStats = shouldCacheNegativeStatsDefault();
+};
+
 /// The dependency scanning service contains shared configuration and state that
 /// is used by the individual dependency scanning workers.
 class DependencyScanningService {
 public:
-  DependencyScanningService(
-      ScanningMode Mode, ScanningOutputFormat Format, CASOptions CASOpts,
-      std::shared_ptr<llvm::cas::ObjectStore> CAS,
-      std::shared_ptr<llvm::cas::ActionCache> Cache,
-      ScanningOptimizations OptimizeArgs = ScanningOptimizations::Default,
-      bool EagerLoadModules = false, bool TraceVFS = false,
-      bool AsyncScanModules = false,
-      std::time_t BuildSessionTimestamp =
-          llvm::sys::toTimeT(std::chrono::system_clock::now()),
-      bool CacheNegativeStats = shouldCacheNegativeStatsDefault());
+  explicit DependencyScanningService(DependencyScanningServiceOptions Opts);
 
-  ScanningMode getMode() const { return Mode; }
-
-  ScanningOutputFormat getFormat() const { return Format; }
-
-  ScanningOptimizations getOptimizeArgs() const { return OptimizeArgs; }
-
-  bool shouldEagerLoadModules() const { return EagerLoadModules; }
-
-  bool shouldTraceVFS() const { return TraceVFS; }
-
-  bool shouldScanModulesAsynchronously() const { return AsyncScanModules; }
-
-  bool shouldCacheNegativeStats() const { return CacheNegativeStats; }
+  const DependencyScanningServiceOptions &getOpts() const { return Opts; }
 
   DependencyScanningFilesystemSharedCache &getSharedCache() {
     return SharedCache;
   }
 
-  const CASOptions &getCASOpts() const { return CASOpts; }
-
-  std::shared_ptr<llvm::cas::ObjectStore> getCAS() const { return CAS; }
-  std::shared_ptr<llvm::cas::ActionCache> getCache() const { return Cache; }
-
   ModuleCacheEntries &getModuleCacheEntries() { return ModCacheEntries; }
 
-  std::time_t getBuildSessionTimestamp() const { return BuildSessionTimestamp; }
-
 private:
-  const ScanningMode Mode;
-  const ScanningOutputFormat Format;
-  CASOptions CASOpts;
-  std::shared_ptr<llvm::cas::ObjectStore> CAS;
-  std::shared_ptr<llvm::cas::ActionCache> Cache;
-  /// Whether to optimize the modules' command-line arguments.
-  ScanningOptimizations OptimizeArgs;
-  /// Whether to set up command-lines to load PCM files eagerly.
-  const bool EagerLoadModules;
-  /// Whether to trace VFS accesses.
-  const bool TraceVFS;
-  /// Whether to scan modules asynchronously.
-  const bool AsyncScanModules;
-  const bool CacheNegativeStats;
+  /// The options customizing dependency scanning behavior.
+  DependencyScanningServiceOptions Opts;
   /// The global file system cache.
   DependencyScanningFilesystemSharedCache SharedCache;
   /// The global module cache entries.
   ModuleCacheEntries ModCacheEntries;
-  /// The build session timestamp.
-  std::time_t BuildSessionTimestamp;
 };
 
 } // end namespace dependencies

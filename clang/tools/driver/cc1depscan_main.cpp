@@ -894,9 +894,12 @@ int ScanServer::listen() {
   if (!Cache)
     reportError("cannot create ActionCache");
 
-  dependencies::DependencyScanningService Service(
-      dependencies::ScanningMode::DependencyDirectivesScan,
-      dependencies::ScanningOutputFormat::IncludeTree, CASOpts, CAS, Cache);
+  dependencies::DependencyScanningServiceOptions Opts;
+  Opts.Format = dependencies::ScanningOutputFormat::IncludeTree;
+  Opts.CASOpts = CASOpts;
+  Opts.CAS = CAS;
+  Opts.Cache = Cache;
+  dependencies::DependencyScanningService Service(std::move(Opts));
 
   std::atomic<int> NumRunning(0);
 
@@ -1114,9 +1117,12 @@ scanAndUpdateCC1Inline(const char *Exec, ArrayRef<const char *> InputArgs,
   if (!DB || !Cache)
     return 1;
 
-  dependencies::DependencyScanningService Service(
-      dependencies::ScanningMode::DependencyDirectivesScan,
-      dependencies::ScanningOutputFormat::IncludeTree, CASOpts, DB, Cache);
+  dependencies::DependencyScanningServiceOptions Opts;
+  Opts.Format = dependencies::ScanningOutputFormat::IncludeTree;
+  Opts.CASOpts = CASOpts;
+  Opts.CAS = DB;
+  Opts.Cache = Cache;
+  dependencies::DependencyScanningService Service(std::move(Opts));
   auto UnderlyingFS = [] {
     auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
     return llvm::vfs::createPhysicalFileSystem();

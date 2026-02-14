@@ -232,9 +232,9 @@ TEST(DependencyScanner, ScanDepsWithFS) {
   VFS->addFile(TestPath, 0,
                llvm::MemoryBuffer::getMemBuffer("#include \"header.h\"\n"));
 
-  DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
-                                    ScanningOutputFormat::Make, CASOptions(),
-                                    nullptr, nullptr);
+  DependencyScanningServiceOptions Opts;
+  Opts.Format = ScanningOutputFormat::Make;
+  DependencyScanningService Service(std::move(Opts));
   DependencyScanningTool ScanTool(Service, VFS);
 
   TextDiagnosticBuffer DiagConsumer;
@@ -255,9 +255,7 @@ TEST(DependencyScanner, DepScanFSWithCASProvider) {
   std::unique_ptr<llvm::vfs::FileSystem> CASFS =
       llvm::cas::createCASProvidingFileSystem(DB, FS);
 
-  DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
-                                    ScanningOutputFormat::Make, CASOptions(),
-                                    nullptr, nullptr);
+  DependencyScanningService Service({});
   {
     DependencyScanningWorkerFilesystem DepFS(Service, std::move(CASFS));
     llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>> File =
@@ -343,9 +341,9 @@ TEST(DependencyScanner, ScanDepsWithModuleLookup) {
 
   auto InterceptFS = llvm::makeIntrusiveRefCnt<InterceptorFS>(VFS);
 
-  DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
-                                    ScanningOutputFormat::Make, CASOptions(),
-                                    nullptr, nullptr);
+  DependencyScanningServiceOptions Opts;
+  Opts.Format = ScanningOutputFormat::Make;
+  DependencyScanningService Service(std::move(Opts));
   DependencyScanningTool ScanTool(Service, InterceptFS);
 
   // This will fail with "fatal error: module 'Foo' not found" but it doesn't
@@ -379,12 +377,7 @@ TEST(DependencyScanner, NoNegativeCache) {
   VFS->addFile(Test1Path, 0,
                llvm::MemoryBuffer::getMemBuffer("#include \"header.h\""));
 
-  DependencyScanningService Service(
-      ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
-      CASOptions(), nullptr, nullptr, ScanningOptimizations::All,
-      /*EagerLoadModules=*/false,
-      /*TraceVFS=*/false, /*AsyncScanModules=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
-      /*CacheNegativeStats=*/false);
+  DependencyScanningService Service({});
   DependencyScanningTool ScanTool(Service, VFS);
 
   TextDiagnosticBuffer DiagConsumer;
@@ -437,12 +430,11 @@ TEST(DependencyScanner, NoNegativeCacheCAS) {
   VFS->addFile(Test1Path, 0,
                llvm::MemoryBuffer::getMemBuffer("#include \"header.h\""));
 
-  DependencyScanningService Service(
-      ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::FullIncludeTree,
-      CASOptions(), DB, Cache, ScanningOptimizations::Default,
-      /*EagerLoadModules=*/false,
-      /*TraceVFS=*/false, /*AsyncScanModules=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
-      /*CacheNegativeStats=*/false);
+  DependencyScanningServiceOptions Opts;
+  Opts.Format = ScanningOutputFormat::FullIncludeTree;
+  Opts.CAS = DB;
+  Opts.Cache = Cache;
+  DependencyScanningService Service(std::move(Opts));
   DependencyScanningTool ScanTool(Service, VFS);
 
   TextDiagnosticBuffer DiagConsumer;
