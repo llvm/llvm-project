@@ -176,7 +176,11 @@ jobs:
             test_runs_on=$build_runs_on
             ;;
           windows-11-arm)
-            build_runs_on="windows-11-arm-16core"
+            if [ "$GITHUB_EVENT_NAME" = "pull_request" ] || [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
+              build_runs_on="${{ inputs.runs-on }}"
+            else
+              build_runs_on="windows-11-arm-16core"
+            fi
             test_runs_on=$build_runs_on
             ;;
           macos-14)
