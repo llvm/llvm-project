@@ -23,6 +23,7 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
@@ -112,6 +113,9 @@ static llvm::Registry<JSONFormat::FormatInfo>::Add<
 // ============================================================================
 
 class JSONFormatTest : public ::testing::Test {
+public:
+  using PathString = SmallString<128>;
+
 protected:
   SmallString<128> TestDir;
 
@@ -123,53 +127,210 @@ protected:
 
   void TearDown() override { sys::fs::remove_directories(TestDir); }
 
-  llvm::Expected<TUSummary> readJSON(StringRef JSON,
-                                     StringRef Filename = "test.json") {
-    SmallString<128> FilePath = TestDir;
-    sys::path::append(FilePath, Filename);
+  PathString makePath(StringRef FileOrDirectoryName) const {
+    PathString FullPath = TestDir;
+    sys::path::append(FullPath, FileOrDirectoryName);
+
+    return FullPath;
+  }
+
+  PathString makePath(StringRef Dir, StringRef FileName) const {
+    PathString FullPath = TestDir;
+    sys::path::append(FullPath, Dir, FileName);
+
+    return FullPath;
+  }
+
+  Expected<PathString> makeDirectory(StringRef DirectoryName) const {
+    PathString DirPath = makePath(DirectoryName);
+
+    std::error_code EC = sys::fs::create_directory(DirPath);
+    if (EC) {
+      return createStringError(EC, "Failed to create directory '%s': %s",
+                               DirPath.c_str(), EC.message().c_str());
+    }
+
+    return DirPath;
+  }
+
+  Expected<PathString> makeSymlink(StringRef TargetFileName,
+                                   StringRef SymlinkFileName) const {
+    PathString TargetPath = makePath(TargetFileName);
+    PathString SymlinkPath = makePath(SymlinkFileName);
+
+    std::error_code EC = sys::fs::create_link(TargetPath, SymlinkPath);
+    if (EC) {
+      return createStringError(EC, "Failed to create symlink '%s' -> '%s': %s",
+                               SymlinkPath.c_str(), TargetPath.c_str(),
+                               EC.message().c_str());
+    }
+
+    return SymlinkPath;
+  }
+
+  llvm::Error setPermission(StringRef FileName,
+                            const sys::fs::perms Perms) const {
+    PathString Path = makePath(FileName);
+
+    std::error_code EC = sys::fs::setPermissions(Path, Perms);
+    if (EC) {
+      return createStringError(EC, "Failed to set permissions on '%s': %s",
+                               Path.c_str(), EC.message().c_str());
+    }
+
+    return llvm::Error::success();
+  }
+
+  Expected<json::Value> readJSONFromFile(StringRef FileName) const {
+    PathString FilePath = makePath(FileName);
+
+    auto BufferOrError = MemoryBuffer::getFile(FilePath);
+    if (!BufferOrError) {
+      return createStringError(BufferOrError.getError(),
+                               "Failed to read file: %s", FilePath.c_str());
+    }
+
+    Expected<json::Value> ExpectedValue =
+        json::parse(BufferOrError.get()->getBuffer());
+    if (!ExpectedValue)
+      return ExpectedValue.takeError();
+
+    return *ExpectedValue;
+  }
+
+  Expected<PathString> writeJSON(StringRef JSON, StringRef FileName) const {
+    PathString FilePath = makePath(FileName);
 
     std::error_code EC;
     raw_fd_ostream OS(FilePath, EC);
-    EXPECT_FALSE(EC) << "Failed to create file: " << EC.message();
+    if (EC) {
+      return createStringError(EC, "Failed to create file '%s': %s",
+                               FilePath.c_str(), EC.message().c_str());
+    }
+
     OS << JSON;
     OS.close();
+
+    if (OS.has_error()) {
+      return createStringError(OS.error(), "Failed to write to file '%s': %s",
+                               FilePath.c_str(), OS.error().message().c_str());
+    }
+
+    return FilePath;
+  }
+
+  llvm::Expected<TUSummary> readTUSummaryFromFile(StringRef FileName) const {
+    PathString FilePath = makePath(FileName);
 
     return JSONFormat().readTUSummary(FilePath);
   }
 
-  void readWriteJSON(StringRef InputJSON) {
-    // Read the input JSON
-    auto Summary1 = readJSON(InputJSON, "input.json");
-    ASSERT_THAT_EXPECTED(Summary1, Succeeded());
+  llvm::Expected<TUSummary>
+  readTUSummaryFromString(StringRef JSON,
+                          StringRef FileName = "test.json") const {
+    auto ExpectedFilePath = writeJSON(JSON, FileName);
+    if (!ExpectedFilePath)
+      return ExpectedFilePath.takeError();
 
-    // Write to first output file
-    SmallString<128> Output1Path = TestDir;
-    sys::path::append(Output1Path, "output1.json");
+    return readTUSummaryFromFile(FileName);
+  }
 
-    JSONFormat Format;
-    auto WriteErr1 = Format.writeTUSummary(*Summary1, Output1Path);
-    ASSERT_THAT_ERROR(std::move(WriteErr1), Succeeded());
+  llvm::Error writeTUSummary(const TUSummary &Summary,
+                             StringRef FileName) const {
+    PathString FilePath = makePath(FileName);
 
-    // Read back from first output
-    auto Summary2 = Format.readTUSummary(Output1Path);
-    ASSERT_THAT_EXPECTED(Summary2, Succeeded());
+    return JSONFormat().writeTUSummary(Summary, FilePath);
+  }
 
-    // Write to second output file
-    SmallString<128> Output2Path = TestDir;
-    sys::path::append(Output2Path, "output2.json");
+  // Normalize TUSummary JSON by sorting id_table by id field
+  static Expected<json::Value> normalizeTUSummaryJSON(json::Value Val) {
+    auto *Obj = Val.getAsObject();
+    if (!Obj) {
+      return createStringError(
+          inconvertibleErrorCode(),
+          "Cannot normalize TUSummary JSON: expected an object");
+    }
 
-    auto WriteErr2 = Format.writeTUSummary(*Summary2, Output2Path);
-    ASSERT_THAT_ERROR(std::move(WriteErr2), Succeeded());
+    auto *IDTable = Obj->getArray("id_table");
+    if (!IDTable) {
+      return createStringError(inconvertibleErrorCode(),
+                               "Cannot normalize TUSummary JSON: 'id_table' "
+                               "field is either missing or has the wrong type");
+    }
 
-    // Compare the two output files byte-by-byte
-    auto Buffer1 = MemoryBuffer::getFile(Output1Path);
-    ASSERT_TRUE(Buffer1) << "Failed to read output1.json";
+    // Sort id_table entries by the "id" field to ensure deterministic ordering
+    // for comparison
+    std::sort(IDTable->begin(), IDTable->end(),
+              [](const json::Value &A, const json::Value &B) {
+                const auto *AObj = A.getAsObject();
+                const auto *BObj = B.getAsObject();
+                if (!AObj || !BObj)
+                  return false;
 
-    auto Buffer2 = MemoryBuffer::getFile(Output2Path);
-    ASSERT_TRUE(Buffer2) << "Failed to read output2.json";
+                auto AID = AObj->getInteger("id");
+                auto BID = BObj->getInteger("id");
+                if (!AID || !BID)
+                  return false;
 
-    EXPECT_EQ(Buffer1.get()->getBuffer(), Buffer2.get()->getBuffer())
-        << "Serialization is not stable: first write differs from second write";
+                return *AID < *BID;
+              });
+
+    return Val;
+  }
+
+  // Compare two TUSummary JSON values with normalization
+  static Expected<bool> compareTUSummaryJSON(json::Value A, json::Value B) {
+    auto ExpectedNormalizedA = normalizeTUSummaryJSON(std::move(A));
+    if (!ExpectedNormalizedA)
+      return ExpectedNormalizedA.takeError();
+
+    auto ExpectedNormalizedB = normalizeTUSummaryJSON(std::move(B));
+    if (!ExpectedNormalizedB)
+      return ExpectedNormalizedB.takeError();
+
+    return *ExpectedNormalizedA == *ExpectedNormalizedB;
+  }
+
+  void readWriteCompareTUSummary(StringRef JSON) const {
+    const PathString InputFileName("input.json");
+    const PathString OutputFileName("output.json");
+
+    auto ExpectedInputFilePath = writeJSON(JSON, InputFileName);
+    ASSERT_THAT_EXPECTED(ExpectedInputFilePath, Succeeded());
+
+    auto ExpectedTUSummary = readTUSummaryFromFile(InputFileName);
+    ASSERT_THAT_EXPECTED(ExpectedTUSummary, Succeeded());
+
+    auto WriteError = writeTUSummary(*ExpectedTUSummary, OutputFileName);
+    ASSERT_THAT_ERROR(std::move(WriteError), Succeeded())
+        << "Failed to write to file: " << OutputFileName;
+
+    auto ExpectedInputJSON = readJSONFromFile(InputFileName);
+    ASSERT_THAT_EXPECTED(ExpectedInputJSON, Succeeded());
+    auto ExpectedOutputJSON = readJSONFromFile(OutputFileName);
+    ASSERT_THAT_EXPECTED(ExpectedOutputJSON, Succeeded());
+
+    auto ExpectedComparisonResult =
+        compareTUSummaryJSON(*ExpectedInputJSON, *ExpectedOutputJSON);
+    ASSERT_THAT_EXPECTED(ExpectedComparisonResult, Succeeded())
+        << "Failed to normalize JSON for comparison";
+
+    if (!*ExpectedComparisonResult) {
+      auto ExpectedNormalizedInput = normalizeTUSummaryJSON(*ExpectedInputJSON);
+      auto ExpectedNormalizedOutput =
+          normalizeTUSummaryJSON(*ExpectedOutputJSON);
+      FAIL() << "Serialization is broken: input JSON is different from output "
+                "json\n"
+             << "Input:  "
+             << (ExpectedNormalizedInput
+                     ? llvm::formatv("{0:2}", *ExpectedNormalizedInput).str()
+                     : "normalization failed")
+             << "\n"
+             << "Output: "
+             << (ExpectedNormalizedOutput
+                     ? llvm::formatv("{0:2}", *ExpectedNormalizedOutput).str()
+                     : "normalization failed");
+    }
   }
 };
 
@@ -178,11 +339,7 @@ protected:
 // ============================================================================
 
 TEST_F(JSONFormatTest, NonexistentFile) {
-  SmallString<128> NonexistentPath = TestDir;
-  sys::path::append(NonexistentPath, "nonexistent.json");
-
-  JSONFormat Format;
-  auto Result = Format.readTUSummary(NonexistentPath);
+  auto Result = readTUSummaryFromFile("nonexistent.json");
 
   EXPECT_THAT_EXPECTED(
       Result, FailedWithMessage(AllOf(HasSubstr("reading TUSummary from"),
@@ -190,14 +347,12 @@ TEST_F(JSONFormatTest, NonexistentFile) {
 }
 
 TEST_F(JSONFormatTest, PathIsDirectory) {
-  SmallString<128> DirPath = TestDir;
-  sys::path::append(DirPath, "test_directory.json");
+  PathString DirName("test_directory.json");
 
-  std::error_code EC = sys::fs::create_directory(DirPath);
-  ASSERT_FALSE(EC) << "Failed to create directory: " << EC.message();
+  auto ExpectedDirPath = makeDirectory(DirName);
+  ASSERT_THAT_EXPECTED(ExpectedDirPath, Succeeded());
 
-  JSONFormat Format;
-  auto Result = Format.readTUSummary(DirPath);
+  auto Result = readTUSummaryFromFile(DirName);
 
   EXPECT_THAT_EXPECTED(
       Result,
@@ -206,7 +361,12 @@ TEST_F(JSONFormatTest, PathIsDirectory) {
 }
 
 TEST_F(JSONFormatTest, NotJsonExtension) {
-  auto Result = readJSON("{}", "test.txt");
+  PathString FileName("test.txt");
+
+  auto ExpectedFilePath = writeJSON("{}", FileName);
+  ASSERT_THAT_EXPECTED(ExpectedFilePath, Succeeded());
+
+  auto Result = readTUSummaryFromFile(FileName);
 
   EXPECT_THAT_EXPECTED(
       Result, FailedWithMessage(AllOf(
@@ -216,18 +376,12 @@ TEST_F(JSONFormatTest, NotJsonExtension) {
 }
 
 TEST_F(JSONFormatTest, BrokenSymlink) {
-  SmallString<128> TargetPath = TestDir;
-  sys::path::append(TargetPath, "nonexistent_target.json");
-
-  SmallString<128> SymlinkPath = TestDir;
-  sys::path::append(SymlinkPath, "broken_symlink.json");
-
   // Create a symlink pointing to a non-existent file
-  std::error_code EC = sys::fs::create_link(TargetPath, SymlinkPath);
-  ASSERT_FALSE(EC) << "Failed to create symlink: " << EC.message();
+  auto ExpectedSymlinkPath =
+      makeSymlink("nonexistent_target.json", "broken_symlink.json");
+  ASSERT_THAT_EXPECTED(ExpectedSymlinkPath, Succeeded());
 
-  JSONFormat Format;
-  auto Result = Format.readTUSummary(SymlinkPath);
+  auto Result = readTUSummaryFromFile(*ExpectedSymlinkPath);
 
   EXPECT_THAT_EXPECTED(
       Result, FailedWithMessage(AllOf(HasSubstr("reading TUSummary from file"),
@@ -239,42 +393,36 @@ TEST_F(JSONFormatTest, NoReadPermission) {
   GTEST_SKIP() << "Permission model differs on Windows";
 #endif
 
-  SmallString<128> FilePath = TestDir;
-  sys::path::append(FilePath, "no_read_permission.json");
+  PathString FileName("no-read-permission.json");
 
-  // Create file with valid JSON
-  std::error_code EC;
-  raw_fd_ostream OS(FilePath, EC);
-  ASSERT_FALSE(EC) << "Failed to create file: " << EC.message();
-  OS << R"({
+  auto ExpectedFilePath = writeJSON(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
     },
     "id_table": [],
     "data": []
-  })";
-  OS.close();
+  })",
+                                    FileName);
+  ASSERT_THAT_EXPECTED(ExpectedFilePath, Succeeded());
 
-  // Remove read permissions
-  sys::fs::perms Perms =
-      sys::fs::perms::owner_write | sys::fs::perms::owner_exe;
-  EC = sys::fs::setPermissions(FilePath, Perms);
-  ASSERT_FALSE(EC) << "Failed to set permissions: " << EC.message();
+  auto PermError = setPermission(FileName, sys::fs::perms::owner_write |
+                                               sys::fs::perms::owner_exe);
+  ASSERT_THAT_ERROR(std::move(PermError), Succeeded());
 
-  JSONFormat Format;
-  auto Result = Format.readTUSummary(FilePath);
+  auto Result = readTUSummaryFromFile(FileName);
 
   EXPECT_THAT_EXPECTED(
       Result, FailedWithMessage(AllOf(HasSubstr("reading TUSummary from file"),
                                       HasSubstr("failed to read file"))));
 
   // Restore permissions for cleanup
-  sys::fs::setPermissions(FilePath, sys::fs::perms::all_all);
+  auto RestoreError = setPermission(FileName, sys::fs::perms::all_all);
+  EXPECT_THAT_ERROR(std::move(RestoreError), Succeeded());
 }
 
 TEST_F(JSONFormatTest, InvalidSyntax) {
-  auto Result = readJSON("{ invalid json }");
+  auto Result = readTUSummaryFromString("{ invalid json }");
 
   EXPECT_THAT_EXPECTED(
       Result, FailedWithMessage(AllOf(HasSubstr("reading TUSummary from file"),
@@ -282,7 +430,7 @@ TEST_F(JSONFormatTest, InvalidSyntax) {
 }
 
 TEST_F(JSONFormatTest, NotObject) {
-  auto Result = readJSON("[]");
+  auto Result = readTUSummaryFromString("[]");
 
   EXPECT_THAT_EXPECTED(
       Result, FailedWithMessage(AllOf(HasSubstr("reading TUSummary from file"),
@@ -295,7 +443,7 @@ TEST_F(JSONFormatTest, NotObject) {
 // ============================================================================
 
 TEST_F(JSONFormatTest, InvalidKind) {
-  auto Result = readJSON(R"({
+  auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "invalid_kind",
       "name": "test.cpp"
@@ -319,7 +467,7 @@ TEST_F(JSONFormatTest, InvalidKind) {
 // ============================================================================
 
 TEST_F(JSONFormatTest, MissingKind) {
-  auto Result = readJSON(R"({
+  auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "name": "test.cpp"
     },
@@ -337,7 +485,7 @@ TEST_F(JSONFormatTest, MissingKind) {
 }
 
 TEST_F(JSONFormatTest, MissingName) {
-  auto Result = readJSON(R"({
+  auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit"
     },
@@ -359,7 +507,7 @@ TEST_F(JSONFormatTest, MissingName) {
 // ============================================================================
 
 TEST_F(JSONFormatTest, NamespaceElementNotObject) {
-  auto Result = readJSON(R"({
+  auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -394,7 +542,7 @@ TEST_F(JSONFormatTest, NamespaceElementNotObject) {
 // ============================================================================
 
 TEST_F(JSONFormatTest, EntityNameMissingUSR) {
-  auto Result = readJSON(R"({
+  auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -422,7 +570,7 @@ TEST_F(JSONFormatTest, EntityNameMissingUSR) {
 }
 
 TEST_F(JSONFormatTest, EntityNameMissingSuffix) {
-  auto Result = readJSON(R"({
+  auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -450,7 +598,7 @@ TEST_F(JSONFormatTest, EntityNameMissingSuffix) {
 }
 
 TEST_F(JSONFormatTest, EntityNameMissingNamespace) {
-  auto Result = readJSON(R"({
+  auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -484,7 +632,7 @@ TEST_F(JSONFormatTest, EntityNameMissingNamespace) {
 // ============================================================================
 
 TEST_F(JSONFormatTest, IDTableEntryMissingID) {
-  auto Result = readJSON(R"({
+  auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -511,7 +659,7 @@ TEST_F(JSONFormatTest, IDTableEntryMissingID) {
 }
 
 TEST_F(JSONFormatTest, IDTableEntryMissingName) {
-  auto Result = readJSON(R"({
+  auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -534,7 +682,7 @@ TEST_F(JSONFormatTest, IDTableEntryMissingName) {
 }
 
 TEST_F(JSONFormatTest, IDTableEntryIDNotUInt64) {
-  auto Result = readJSON(R"({
+  auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -566,7 +714,7 @@ TEST_F(JSONFormatTest, IDTableEntryIDNotUInt64) {
 // ============================================================================
 
 TEST_F(JSONFormatTest, IDTableNotArray) {
-  auto Result = readJSON(R"({
+  auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -583,7 +731,7 @@ TEST_F(JSONFormatTest, IDTableNotArray) {
 }
 
 TEST_F(JSONFormatTest, IDTableElementNotObject) {
-  auto Result = readJSON(R"({
+  auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -602,7 +750,7 @@ TEST_F(JSONFormatTest, IDTableElementNotObject) {
 }
 
 TEST_F(JSONFormatTest, DuplicateEntity) {
-  auto Result = readJSON(R"({
+  auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -652,7 +800,7 @@ TEST_F(JSONFormatTest, DuplicateEntity) {
 // ============================================================================
 
 TEST_F(JSONFormatTest, EntitySummaryNoFormatInfo) {
-  auto Result = readJSON(R"({
+  auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -685,8 +833,12 @@ TEST_F(JSONFormatTest, EntitySummaryNoFormatInfo) {
               "no FormatInfo registered for summary 'unknown_summary_type'"))));
 }
 
-TEST_F(JSONFormatTest, PairsEntitySummaryForJSONFormatTestMissingField) {
-  auto Result = readJSON(R"({
+// ============================================================================
+// PairsEntitySummaryForJSONFormatTest Deserialization Error Tests
+// ============================================================================
+
+TEST_F(JSONFormatTest, PairsEntitySummaryForJSONFormatTestMissingPairsField) {
+  auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -717,8 +869,193 @@ TEST_F(JSONFormatTest, PairsEntitySummaryForJSONFormatTestMissingField) {
           HasSubstr("missing or invalid field 'pairs'"))));
 }
 
-TEST_F(JSONFormatTest, PairsEntitySummaryForJSONFormatTestInvalidPair) {
-  auto Result = readJSON(R"({
+TEST_F(JSONFormatTest,
+       PairsEntitySummaryForJSONFormatTestInvalidPairsFieldType) {
+  auto Result = readTUSummaryFromString(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "id_table": [],
+    "data": [
+      {
+        "summary_name": "PairsEntitySummaryForJSONFormatTest",
+        "summary_data": [
+          {
+            "entity_id": 0,
+            "entity_summary": {
+              "pairs": "not_an_array"
+            }
+          }
+        ]
+      }
+    ]
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result,
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading SummaryData entries from field 'data'"),
+          HasSubstr("reading SummaryData entry from index '0'"),
+          HasSubstr("reading EntitySummary entries from field 'summary_data'"),
+          HasSubstr("reading EntitySummary entry from index '0'"),
+          HasSubstr("reading EntitySummary from field 'entity_summary'"),
+          HasSubstr("missing or invalid field 'pairs'"))));
+}
+
+TEST_F(JSONFormatTest,
+       PairsEntitySummaryForJSONFormatTestPairsElementNotObject) {
+  auto Result = readTUSummaryFromString(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "id_table": [],
+    "data": [
+      {
+        "summary_name": "PairsEntitySummaryForJSONFormatTest",
+        "summary_data": [
+          {
+            "entity_id": 0,
+            "entity_summary": {
+              "pairs": ["not_an_object"]
+            }
+          }
+        ]
+      }
+    ]
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result,
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading SummaryData entries from field 'data'"),
+          HasSubstr("reading SummaryData entry from index '0'"),
+          HasSubstr("reading EntitySummary entries from field 'summary_data'"),
+          HasSubstr("reading EntitySummary entry from index '0'"),
+          HasSubstr("reading EntitySummary from field 'entity_summary'"),
+          HasSubstr("pairs element at index 0 is not a JSON object"))));
+}
+
+TEST_F(JSONFormatTest, PairsEntitySummaryForJSONFormatTestMissingFirstField) {
+  auto Result = readTUSummaryFromString(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "id_table": [],
+    "data": [
+      {
+        "summary_name": "PairsEntitySummaryForJSONFormatTest",
+        "summary_data": [
+          {
+            "entity_id": 0,
+            "entity_summary": {
+              "pairs": [
+                {
+                  "second": 1
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result,
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading SummaryData entries from field 'data'"),
+          HasSubstr("reading SummaryData entry from index '0'"),
+          HasSubstr("reading EntitySummary entries from field 'summary_data'"),
+          HasSubstr("reading EntitySummary entry from index '0'"),
+          HasSubstr("reading EntitySummary from field 'entity_summary'"),
+          HasSubstr("missing or invalid 'first' field at index '0'"))));
+}
+
+TEST_F(JSONFormatTest, PairsEntitySummaryForJSONFormatTestInvalidFirstField) {
+  auto Result = readTUSummaryFromString(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "id_table": [],
+    "data": [
+      {
+        "summary_name": "PairsEntitySummaryForJSONFormatTest",
+        "summary_data": [
+          {
+            "entity_id": 0,
+            "entity_summary": {
+              "pairs": [
+                {
+                  "first": "not_a_number",
+                  "second": 1
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result,
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading SummaryData entries from field 'data'"),
+          HasSubstr("reading SummaryData entry from index '0'"),
+          HasSubstr("reading EntitySummary entries from field 'summary_data'"),
+          HasSubstr("reading EntitySummary entry from index '0'"),
+          HasSubstr("reading EntitySummary from field 'entity_summary'"),
+          HasSubstr("missing or invalid 'first' field at index '0'"))));
+}
+
+TEST_F(JSONFormatTest, PairsEntitySummaryForJSONFormatTestMissingSecondField) {
+  auto Result = readTUSummaryFromString(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "id_table": [],
+    "data": [
+      {
+        "summary_name": "PairsEntitySummaryForJSONFormatTest",
+        "summary_data": [
+          {
+            "entity_id": 0,
+            "entity_summary": {
+              "pairs": [
+                {
+                  "first": 0
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result,
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading SummaryData entries from field 'data'"),
+          HasSubstr("reading SummaryData entry from index '0'"),
+          HasSubstr("reading EntitySummary entries from field 'summary_data'"),
+          HasSubstr("reading EntitySummary entry from index '0'"),
+          HasSubstr("reading EntitySummary from field 'entity_summary'"),
+          HasSubstr("missing or invalid 'second' field at index '0'"))));
+}
+
+TEST_F(JSONFormatTest, PairsEntitySummaryForJSONFormatTestInvalidSecondField) {
+  auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -761,7 +1098,7 @@ TEST_F(JSONFormatTest, PairsEntitySummaryForJSONFormatTestInvalidPair) {
 // ============================================================================
 
 TEST_F(JSONFormatTest, EntityDataMissingEntityID) {
-  auto Result = readJSON(R"({
+  auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -792,7 +1129,7 @@ TEST_F(JSONFormatTest, EntityDataMissingEntityID) {
 }
 
 TEST_F(JSONFormatTest, EntityDataMissingEntitySummary) {
-  auto Result = readJSON(R"({
+  auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -823,7 +1160,7 @@ TEST_F(JSONFormatTest, EntityDataMissingEntitySummary) {
 }
 
 TEST_F(JSONFormatTest, EntityIDNotUInt64) {
-  auto Result = readJSON(R"({
+  auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -859,7 +1196,7 @@ TEST_F(JSONFormatTest, EntityIDNotUInt64) {
 // ============================================================================
 
 TEST_F(JSONFormatTest, EntityDataElementNotObject) {
-  auto Result = readJSON(R"({
+  auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -885,7 +1222,7 @@ TEST_F(JSONFormatTest, EntityDataElementNotObject) {
 }
 
 TEST_F(JSONFormatTest, DuplicateEntityIdInDataMap) {
-  auto Result = readJSON(R"({
+  auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -937,7 +1274,7 @@ TEST_F(JSONFormatTest, DuplicateEntityIdInDataMap) {
 // ============================================================================
 
 TEST_F(JSONFormatTest, DataEntryMissingSummaryName) {
-  auto Result = readJSON(R"({
+  auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -961,7 +1298,7 @@ TEST_F(JSONFormatTest, DataEntryMissingSummaryName) {
 }
 
 TEST_F(JSONFormatTest, DataEntryMissingData) {
-  auto Result = readJSON(R"({
+  auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -990,7 +1327,7 @@ TEST_F(JSONFormatTest, DataEntryMissingData) {
 // ============================================================================
 
 TEST_F(JSONFormatTest, DataNotArray) {
-  auto Result = readJSON(R"({
+  auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -1008,7 +1345,7 @@ TEST_F(JSONFormatTest, DataNotArray) {
 }
 
 TEST_F(JSONFormatTest, DataElementNotObject) {
-  auto Result = readJSON(R"({
+  auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -1026,7 +1363,7 @@ TEST_F(JSONFormatTest, DataElementNotObject) {
 }
 
 TEST_F(JSONFormatTest, DuplicateSummaryName) {
-  auto Result = readJSON(R"({
+  auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -1058,7 +1395,7 @@ TEST_F(JSONFormatTest, DuplicateSummaryName) {
 // ============================================================================
 
 TEST_F(JSONFormatTest, MissingTUNamespace) {
-  auto Result = readJSON(R"({
+  auto Result = readTUSummaryFromString(R"({
     "id_table": [],
     "data": []
   })");
@@ -1072,7 +1409,7 @@ TEST_F(JSONFormatTest, MissingTUNamespace) {
 }
 
 TEST_F(JSONFormatTest, MissingIDTable) {
-  auto Result = readJSON(R"({
+  auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -1088,7 +1425,7 @@ TEST_F(JSONFormatTest, MissingIDTable) {
 }
 
 TEST_F(JSONFormatTest, MissingData) {
-  auto Result = readJSON(R"({
+  auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -1109,21 +1446,16 @@ TEST_F(JSONFormatTest, MissingData) {
 // ============================================================================
 
 TEST_F(JSONFormatTest, WriteFileAlreadyExists) {
-  SmallString<128> FilePath = TestDir;
-  sys::path::append(FilePath, "existing.json");
+  PathString FileName("existing.json");
 
-  // Create an existing file
-  std::error_code EC;
-  raw_fd_ostream OS(FilePath, EC);
-  ASSERT_FALSE(EC) << "Failed to create file: " << EC.message();
-  OS << "{}";
-  OS.close();
+  auto ExpectedFilePath = writeJSON("{}", FileName);
+  ASSERT_THAT_EXPECTED(ExpectedFilePath, Succeeded());
 
-  // Try to write to the same path
   TUSummary Summary(
       BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
-  JSONFormat Format;
-  auto Result = Format.writeTUSummary(Summary, FilePath);
+
+  // Try to write to the same path
+  auto Result = writeTUSummary(Summary, FileName);
 
   EXPECT_THAT_ERROR(
       std::move(Result),
@@ -1133,13 +1465,12 @@ TEST_F(JSONFormatTest, WriteFileAlreadyExists) {
 }
 
 TEST_F(JSONFormatTest, WriteParentDirectoryNotFound) {
-  SmallString<128> FilePath = TestDir;
-  sys::path::append(FilePath, "nonexistent_dir", "test.json");
+  PathString FilePath = makePath("nonexistent-dir", "test.json");
 
   TUSummary Summary(
       BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
-  JSONFormat Format;
-  auto Result = Format.writeTUSummary(Summary, FilePath);
+
+  auto Result = JSONFormat().writeTUSummary(Summary, FilePath);
 
   EXPECT_THAT_ERROR(
       std::move(Result),
@@ -1149,13 +1480,10 @@ TEST_F(JSONFormatTest, WriteParentDirectoryNotFound) {
 }
 
 TEST_F(JSONFormatTest, WriteNotJsonExtension) {
-  SmallString<128> FilePath = TestDir;
-  sys::path::append(FilePath, "test.txt");
-
   TUSummary Summary(
       BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
-  JSONFormat Format;
-  auto Result = Format.writeTUSummary(Summary, FilePath);
+
+  auto Result = writeTUSummary(Summary, "test.txt");
 
   EXPECT_THAT_ERROR(
       std::move(Result),
@@ -1170,24 +1498,21 @@ TEST_F(JSONFormatTest, WriteStreamOpenFailure) {
   GTEST_SKIP() << "Permission model differs on Windows";
 #endif
 
-  SmallString<128> DirPath = TestDir;
-  sys::path::append(DirPath, "write_protected_dir");
+  const PathString DirName("write-protected-dir");
 
-  // Create a directory without write permissions
-  std::error_code EC = sys::fs::create_directory(DirPath);
-  ASSERT_FALSE(EC) << "Failed to create directory: " << EC.message();
+  auto ExpectedDirPath = makeDirectory(DirName);
+  ASSERT_THAT_EXPECTED(ExpectedDirPath, Succeeded());
 
-  sys::fs::perms Perms = sys::fs::perms::owner_read | sys::fs::perms::owner_exe;
-  EC = sys::fs::setPermissions(DirPath, Perms);
-  ASSERT_FALSE(EC) << "Failed to set permissions: " << EC.message();
+  auto PermError = setPermission(DirName, sys::fs::perms::owner_read |
+                                              sys::fs::perms::owner_exe);
+  ASSERT_THAT_ERROR(std::move(PermError), Succeeded());
 
-  SmallString<128> FilePath = DirPath;
-  sys::path::append(FilePath, "test.json");
+  PathString FilePath = makePath(DirName, "test.json");
 
   TUSummary Summary(
       BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
-  JSONFormat Format;
-  auto Result = Format.writeTUSummary(Summary, FilePath);
+
+  auto Result = JSONFormat().writeTUSummary(Summary, FilePath);
 
   EXPECT_THAT_ERROR(
       std::move(Result),
@@ -1195,7 +1520,8 @@ TEST_F(JSONFormatTest, WriteStreamOpenFailure) {
                               HasSubstr("failed to write file"))));
 
   // Restore permissions for cleanup
-  sys::fs::setPermissions(DirPath, sys::fs::perms::all_all);
+  auto RestoreError = setPermission(DirName, sys::fs::perms::all_all);
+  EXPECT_THAT_ERROR(std::move(RestoreError), Succeeded());
 }
 
 // ============================================================================
@@ -1203,7 +1529,7 @@ TEST_F(JSONFormatTest, WriteStreamOpenFailure) {
 // ============================================================================
 
 TEST_F(JSONFormatTest, Empty) {
-  readWriteJSON(R"({
+  readWriteCompareTUSummary(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -1214,7 +1540,7 @@ TEST_F(JSONFormatTest, Empty) {
 }
 
 TEST_F(JSONFormatTest, LinkUnit) {
-  readWriteJSON(R"({
+  readWriteCompareTUSummary(R"({
     "tu_namespace": {
       "kind": "link_unit",
       "name": "libtest.so"
@@ -1225,7 +1551,7 @@ TEST_F(JSONFormatTest, LinkUnit) {
 }
 
 TEST_F(JSONFormatTest, WithIDTable) {
-  readWriteJSON(R"({
+  readWriteCompareTUSummary(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -1267,7 +1593,7 @@ TEST_F(JSONFormatTest, WithIDTable) {
 }
 
 TEST_F(JSONFormatTest, WithEmptyDataEntry) {
-  readWriteJSON(R"({
+  readWriteCompareTUSummary(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -1283,7 +1609,7 @@ TEST_F(JSONFormatTest, WithEmptyDataEntry) {
 }
 
 TEST_F(JSONFormatTest, RoundTripWithIDTable) {
-  readWriteJSON(R"({
+  readWriteCompareTUSummary(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
@@ -1308,7 +1634,7 @@ TEST_F(JSONFormatTest, RoundTripWithIDTable) {
 }
 
 TEST_F(JSONFormatTest, RoundTripPairsEntitySummaryForJSONFormatTest) {
-  readWriteJSON(R"({
+  readWriteCompareTUSummary(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
       "name": "test.cpp"
