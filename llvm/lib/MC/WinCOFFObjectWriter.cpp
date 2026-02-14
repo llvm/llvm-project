@@ -840,9 +840,12 @@ void WinCOFFWriter::executePostLayoutBinding() {
 
 void WinCOFFWriter::recordRelocation(const MCFragment &F, const MCFixup &Fixup,
                                      MCValue Target, uint64_t &FixedValue) {
-  assert(Target.getAddSym() && "Relocation must reference a symbol!");
+  auto *SymA = Target.getAddSym();
 
-  const MCSymbol &A = *Target.getAddSym();
+  if (!SymA)
+    return;
+
+  const MCSymbol &A = *SymA;
   if (!A.isRegistered()) {
     getContext().reportError(Fixup.getLoc(), Twine("symbol '") + A.getName() +
                                                  "' can not be undefined");
