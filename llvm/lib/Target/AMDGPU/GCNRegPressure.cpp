@@ -51,8 +51,32 @@ void GCNRegPressure::inc(unsigned Reg,
                          LaneBitmask PrevMask,
                          LaneBitmask NewMask,
                          const MachineRegisterInfo &MRI) {
+  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+  const SIRegisterInfo *STI = static_cast<const SIRegisterInfo *>(TRI);
+  const TargetRegisterClass *RC;
+  if (Register(Reg).isVirtual()) {
+    RC = MRI.getRegClass(Reg);
+  } else {
+    if (!MRI.isAllocatable(Reg))
+      return;
+    RC = TRI->getMinimalPhysRegClass(Reg);
+    if (!RC)
+      return;
+  }
+
+  unsigned RegKind = getRegKind(RC, STI);
   unsigned NewNumCoveredRegs = SIRegisterInfo::getNumCoveredRegs(NewMask);
   unsigned PrevNumCoveredRegs = SIRegisterInfo::getNumCoveredRegs(PrevMask);
+  // If multiple bits are set in the input masks for physical SGPRs, the
+  // expected result does not match what getNumCoveredRegs returns. This is
+  // because it returns the number of vector lanes, not the number of 32-bit
+  // regs. Hence, cap to the register's actual size so e.g. a 32-bit SGPR counts
+  // as 1 and VCC (64-bit) counts as 2, not 32.
+  if (Register(Reg).isPhysical() && RegKind == SGPR) {
+    unsigned MaxCovered = TRI->getRegSizeInBits(*RC) / 32;
+    NewNumCoveredRegs = std::min(NewNumCoveredRegs, MaxCovered);
+    PrevNumCoveredRegs = std::min(PrevNumCoveredRegs, MaxCovered);
+  }
   if (NewNumCoveredRegs == PrevNumCoveredRegs)
     return;
 
@@ -65,22 +89,6 @@ void GCNRegPressure::inc(unsigned Reg,
   assert(PrevMask < NewMask && PrevNumCoveredRegs < NewNumCoveredRegs &&
          "prev mask should always be lesser than new");
 
-  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
-  const SIRegisterInfo *STI = static_cast<const SIRegisterInfo *>(TRI);
-  const TargetRegisterClass *RC;
-  if (Register(Reg).isVirtual()) {
-    RC = MRI.getRegClass(Reg);
-  } else {
-    // For physical registers, skip non-allocatable registers (reserved,
-    // special, etc.).
-    if (!MRI.isAllocatable(Reg))
-      return;
-    // For physical registers, get the minimal register class.
-    RC = TRI->getMinimalPhysRegClass(Reg);
-    if (!RC)
-      return;
-  }
-  unsigned RegKind = getRegKind(RC, STI);
   if (TRI->getRegSizeInBits(*RC) != 32) {
     // Reg is from a tuple register class.
     if (PrevMask.none()) {
