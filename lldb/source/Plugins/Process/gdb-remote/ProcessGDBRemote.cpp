@@ -4377,7 +4377,10 @@ StructuredData::ObjectSP ProcessGDBRemote::GetSharedCacheInfo() {
 
         // Attempt to open the shared cache at sc_path, and
         // if the uuid matches, index all the files.
-        HostInfo::SharedCacheIndexFiles(sc_path, uuid);
+        HostInfo::SharedCacheIndexFiles(
+            sc_path, uuid,
+            ModuleList::GetGlobalModuleListProperties()
+                .GetSharedCacheBinaryLoading());
       }
       m_shared_cache_info_sp = response_sp;
     }
