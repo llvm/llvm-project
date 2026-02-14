@@ -303,7 +303,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::LLRINT,            MVT::f32, Custom);
     setOperationAction(ISD::LLRINT,            MVT::f64, Custom);
 
-    if (!Subtarget.is64Bit()) {
+    if (!Subtarget.is64Bit() && Subtarget.hasX87()) {
       setOperationAction(ISD::LRINT,  MVT::i64, Custom);
       setOperationAction(ISD::LLRINT, MVT::i64, Custom);
     }
@@ -22587,6 +22587,7 @@ SDValue X86TargetLowering::LowerLRINT_LLRINT(SDValue Op,
 
 SDValue X86TargetLowering::LRINT_LLRINTHelper(SDNode *N,
                                               SelectionDAG &DAG) const {
+  assert(DAG.getSubtarget<X86Subtarget>().hasX87() && "Expected X87");
   EVT DstVT = N->getValueType(0);
   SDValue Src = N->getOperand(0);
   EVT SrcVT = Src.getValueType();
