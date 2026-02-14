@@ -17,25 +17,15 @@ declare float @llvm.fabs.f32(float) #0
 declare half @llvm.fabs.f16(half) #0
 
 define half @fmed3_f32_fpext_f16(half %arg0, half %arg1, half %arg2) #1 {
-; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16:
-; GFX7-SDAG:       ; %bb.0:
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-SDAG-NEXT:    v_med3_f32 v0, v0, v1, v2
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GISEL-LABEL: fmed3_f32_fpext_f16:
-; GFX7-GISEL:       ; %bb.0:
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX7-GISEL-NEXT:    v_med3_f32 v0, v0, v1, v2
-; GFX7-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: fmed3_f32_fpext_f16:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GFX7-NEXT:    v_med3_f32 v0, v0, v1, v2
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-SDAG-LABEL: fmed3_f32_fpext_f16:
 ; GFX8-SDAG:       ; %bb.0:
@@ -73,25 +63,15 @@ define half @fmed3_f32_fpext_f16(half %arg0, half %arg1, half %arg2) #1 {
 }
 
 define half @fmed3_f32_fpext_f16_flags(half %arg0, half %arg1, half %arg2) #1 {
-; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_flags:
-; GFX7-SDAG:       ; %bb.0:
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-SDAG-NEXT:    v_med3_f32 v0, v0, v1, v2
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GISEL-LABEL: fmed3_f32_fpext_f16_flags:
-; GFX7-GISEL:       ; %bb.0:
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX7-GISEL-NEXT:    v_med3_f32 v0, v0, v1, v2
-; GFX7-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: fmed3_f32_fpext_f16_flags:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GFX7-NEXT:    v_med3_f32 v0, v0, v1, v2
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-SDAG-LABEL: fmed3_f32_fpext_f16_flags:
 ; GFX8-SDAG:       ; %bb.0:
@@ -129,29 +109,17 @@ define half @fmed3_f32_fpext_f16_flags(half %arg0, half %arg1, half %arg2) #1 {
 }
 
 define half @fmed3_f32_fpext_f16_multi_use(half %arg0, half %arg1, half %arg2, ptr addrspace(1) %ptr) #1 {
-; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_multi_use:
-; GFX7-SDAG:       ; %bb.0:
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-SDAG-NEXT:    v_med3_f32 v1, v0, v1, v2
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v1
-; GFX7-SDAG-NEXT:    flat_store_dword v[3:4], v1
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GISEL-LABEL: fmed3_f32_fpext_f16_multi_use:
-; GFX7-GISEL:       ; %bb.0:
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX7-GISEL-NEXT:    v_med3_f32 v1, v0, v1, v2
-; GFX7-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v1
-; GFX7-GISEL-NEXT:    flat_store_dword v[3:4], v1
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: fmed3_f32_fpext_f16_multi_use:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GFX7-NEXT:    v_med3_f32 v1, v0, v1, v2
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v1
+; GFX7-NEXT:    flat_store_dword v[3:4], v1
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: fmed3_f32_fpext_f16_multi_use:
 ; GFX8:       ; %bb.0:
@@ -186,23 +154,14 @@ define half @fmed3_f32_fpext_f16_multi_use(half %arg0, half %arg1, half %arg2, p
 }
 
 define half @fmed3_f32_fpext_f16_k0(half %arg1, half %arg2) #1 {
-; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_k0:
-; GFX7-SDAG:       ; %bb.0:
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-SDAG-NEXT:    v_med3_f32 v0, 2.0, v0, v1
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GISEL-LABEL: fmed3_f32_fpext_f16_k0:
-; GFX7-GISEL:       ; %bb.0:
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-GISEL-NEXT:    v_med3_f32 v0, 2.0, v0, v1
-; GFX7-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: fmed3_f32_fpext_f16_k0:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX7-NEXT:    v_med3_f32 v0, 2.0, v0, v1
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-SDAG-LABEL: fmed3_f32_fpext_f16_k0:
 ; GFX8-SDAG:       ; %bb.0:
@@ -238,23 +197,14 @@ define half @fmed3_f32_fpext_f16_k0(half %arg1, half %arg2) #1 {
 }
 
 define half @fmed3_f32_fpext_f16_k1(half %arg0, half %arg2) #1 {
-; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_k1:
-; GFX7-SDAG:       ; %bb.0:
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-SDAG-NEXT:    v_med3_f32 v0, v0, 2.0, v1
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GISEL-LABEL: fmed3_f32_fpext_f16_k1:
-; GFX7-GISEL:       ; %bb.0:
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-GISEL-NEXT:    v_med3_f32 v0, v0, 2.0, v1
-; GFX7-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: fmed3_f32_fpext_f16_k1:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX7-NEXT:    v_med3_f32 v0, v0, 2.0, v1
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-SDAG-LABEL: fmed3_f32_fpext_f16_k1:
 ; GFX8-SDAG:       ; %bb.0:
@@ -290,23 +240,14 @@ define half @fmed3_f32_fpext_f16_k1(half %arg0, half %arg2) #1 {
 }
 
 define half @fmed3_f32_fpext_f16_k2(half %arg0, half %arg1) #1 {
-; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_k2:
-; GFX7-SDAG:       ; %bb.0:
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-SDAG-NEXT:    v_med3_f32 v0, v0, v1, 2.0
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GISEL-LABEL: fmed3_f32_fpext_f16_k2:
-; GFX7-GISEL:       ; %bb.0:
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-GISEL-NEXT:    v_med3_f32 v0, v0, v1, 2.0
-; GFX7-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: fmed3_f32_fpext_f16_k2:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX7-NEXT:    v_med3_f32 v0, v0, v1, 2.0
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-SDAG-LABEL: fmed3_f32_fpext_f16_k2:
 ; GFX8-SDAG:       ; %bb.0:
@@ -526,25 +467,15 @@ define half @fmed3_fabs_f32_fpext_f16(half %arg0, half %arg1, half %arg2) #1 {
 }
 
 define half @fmed3_f32_fpext_f16_fneg(half %arg0, half %arg1, half %arg2) #1 {
-; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_fneg:
-; GFX7-SDAG:       ; %bb.0:
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-SDAG-NEXT:    v_med3_f32 v0, -v0, -v1, -v2
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GISEL-LABEL: fmed3_f32_fpext_f16_fneg:
-; GFX7-GISEL:       ; %bb.0:
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e64 v0, -v0
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e64 v1, -v1
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e64 v2, -v2
-; GFX7-GISEL-NEXT:    v_med3_f32 v0, v0, v1, v2
-; GFX7-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: fmed3_f32_fpext_f16_fneg:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f32_f16_e64 v0, -v0
+; GFX7-NEXT:    v_cvt_f32_f16_e64 v1, -v1
+; GFX7-NEXT:    v_cvt_f32_f16_e64 v2, -v2
+; GFX7-NEXT:    v_med3_f32 v0, v0, v1, v2
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-SDAG-LABEL: fmed3_f32_fpext_f16_fneg:
 ; GFX8-SDAG:       ; %bb.0:
@@ -585,45 +516,15 @@ define half @fmed3_f32_fpext_f16_fneg(half %arg0, half %arg1, half %arg2) #1 {
 }
 
 define half @fmed3_fneg_f32_fpext_f16(half %arg0, half %arg1, half %arg2) #1 {
-; GFX7-SDAG-LABEL: fmed3_fneg_f32_fpext_f16:
-; GFX7-SDAG:       ; %bb.0:
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-SDAG-NEXT:    v_med3_f32 v0, -v0, -v1, -v2
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GISEL-LABEL: fmed3_fneg_f32_fpext_f16:
-; GFX7-GISEL:       ; %bb.0:
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX7-GISEL-NEXT:    v_med3_f32 v0, -v0, -v1, -v2
-; GFX7-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX8-LABEL: fmed3_fneg_f32_fpext_f16:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX8-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX8-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX8-NEXT:    v_med3_f32 v0, -v0, -v1, -v2
-; GFX8-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX8-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9-LABEL: fmed3_fneg_f32_fpext_f16:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX9-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX9-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX9-NEXT:    v_med3_f32 v0, -v0, -v1, -v2
-; GFX9-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GCN-LABEL: fmed3_fneg_f32_fpext_f16:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GCN-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GCN-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GCN-NEXT:    v_med3_f32 v0, -v0, -v1, -v2
+; GCN-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
   %arg0.ext = fpext half %arg0 to float
   %arg1.ext = fpext half %arg1 to float
   %arg2.ext = fpext half %arg2 to float
@@ -636,25 +537,15 @@ define half @fmed3_fneg_f32_fpext_f16(half %arg0, half %arg1, half %arg2) #1 {
 }
 
 define half @fmed3_f32_fpext_f16_fneg_fabs(half %arg0, half %arg1, half %arg2) #1 {
-; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_fneg_fabs:
-; GFX7-SDAG:       ; %bb.0:
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e64 v0, |v0|
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e64 v1, |v1|
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e64 v2, |v2|
-; GFX7-SDAG-NEXT:    v_med3_f32 v0, -v0, -v1, -v2
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GISEL-LABEL: fmed3_f32_fpext_f16_fneg_fabs:
-; GFX7-GISEL:       ; %bb.0:
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e64 v0, -|v0|
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e64 v1, -|v1|
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e64 v2, -|v2|
-; GFX7-GISEL-NEXT:    v_med3_f32 v0, v0, v1, v2
-; GFX7-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: fmed3_f32_fpext_f16_fneg_fabs:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f32_f16_e64 v0, -|v0|
+; GFX7-NEXT:    v_cvt_f32_f16_e64 v1, -|v1|
+; GFX7-NEXT:    v_cvt_f32_f16_e64 v2, -|v2|
+; GFX7-NEXT:    v_med3_f32 v0, v0, v1, v2
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-SDAG-LABEL: fmed3_f32_fpext_f16_fneg_fabs:
 ; GFX8-SDAG:       ; %bb.0:
@@ -758,9 +649,9 @@ define bfloat @fmed3_f32_fpext_f16_fptrunc_bf16(half %arg0, half %arg1, half %ar
 ; GFX7-LABEL: fmed3_f32_fpext_f16_fptrunc_bf16:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GFX7-NEXT:    v_med3_f32 v0, v0, v1, v2
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
@@ -805,29 +696,17 @@ define bfloat @fmed3_f32_fpext_f16_fptrunc_bf16(half %arg0, half %arg1, half %ar
 }
 
 define half @fmed3_f32_fpext_f16_multi_use_0(half %arg0, half %arg1, half %arg2, ptr addrspace(1) %ptr) #1 {
-; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_multi_use_0:
-; GFX7-SDAG:       ; %bb.0:
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v5, v0
-; GFX7-SDAG-NEXT:    v_med3_f32 v0, v5, v1, v2
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-SDAG-NEXT:    flat_store_dword v[3:4], v5
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GISEL-LABEL: fmed3_f32_fpext_f16_multi_use_0:
-; GFX7-GISEL:       ; %bb.0:
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v5, v0
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v1
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, v2
-; GFX7-GISEL-NEXT:    flat_store_dword v[3:4], v5
-; GFX7-GISEL-NEXT:    v_med3_f32 v0, v5, v0, v1
-; GFX7-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: fmed3_f32_fpext_f16_multi_use_0:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v5, v0
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v1
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v2
+; GFX7-NEXT:    flat_store_dword v[3:4], v5
+; GFX7-NEXT:    v_med3_f32 v0, v5, v0, v1
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-SDAG-LABEL: fmed3_f32_fpext_f16_multi_use_0:
 ; GFX8-SDAG:       ; %bb.0:
@@ -874,29 +753,17 @@ define half @fmed3_f32_fpext_f16_multi_use_0(half %arg0, half %arg1, half %arg2,
 }
 
 define half @fmed3_f32_fpext_f16_multi_use_1(half %arg0, half %arg1, half %arg2, ptr addrspace(1) %ptr) #1 {
-; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_multi_use_1:
-; GFX7-SDAG:       ; %bb.0:
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-SDAG-NEXT:    v_med3_f32 v0, v0, v1, v2
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-SDAG-NEXT:    flat_store_dword v[3:4], v1
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GISEL-LABEL: fmed3_f32_fpext_f16_multi_use_1:
-; GFX7-GISEL:       ; %bb.0:
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX7-GISEL-NEXT:    flat_store_dword v[3:4], v1
-; GFX7-GISEL-NEXT:    v_med3_f32 v0, v0, v1, v2
-; GFX7-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: fmed3_f32_fpext_f16_multi_use_1:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GFX7-NEXT:    flat_store_dword v[3:4], v1
+; GFX7-NEXT:    v_med3_f32 v0, v0, v1, v2
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-SDAG-LABEL: fmed3_f32_fpext_f16_multi_use_1:
 ; GFX8-SDAG:       ; %bb.0:
@@ -943,29 +810,17 @@ define half @fmed3_f32_fpext_f16_multi_use_1(half %arg0, half %arg1, half %arg2,
 }
 
 define half @fmed3_f32_fpext_f16_multi_use_2(half %arg0, half %arg1, half %arg2, ptr addrspace(1) %ptr) #1 {
-; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_multi_use_2:
-; GFX7-SDAG:       ; %bb.0:
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX7-SDAG-NEXT:    v_med3_f32 v0, v0, v1, v2
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-SDAG-NEXT:    flat_store_dword v[3:4], v2
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GISEL-LABEL: fmed3_f32_fpext_f16_multi_use_2:
-; GFX7-GISEL:       ; %bb.0:
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX7-GISEL-NEXT:    v_med3_f32 v0, v0, v1, v2
-; GFX7-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-GISEL-NEXT:    flat_store_dword v[3:4], v2
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: fmed3_f32_fpext_f16_multi_use_2:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GFX7-NEXT:    v_med3_f32 v0, v0, v1, v2
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    flat_store_dword v[3:4], v2
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-SDAG-LABEL: fmed3_f32_fpext_f16_multi_use_2:
 ; GFX8-SDAG:       ; %bb.0:
@@ -1030,35 +885,15 @@ define half @fmed3_f32_fpext_bf16(bfloat %arg0, bfloat %arg1, bfloat %arg2) #1 {
 }
 
 define half @fmed3_f32_fpext_f16_bf16_0(bfloat %arg0, half %arg1, half %arg2) #1 {
-; GFX7-LABEL: fmed3_f32_fpext_f16_bf16_0:
-; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX7-NEXT:    v_med3_f32 v0, v0, v1, v2
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX8-LABEL: fmed3_f32_fpext_f16_bf16_0:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX8-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX8-NEXT:    v_med3_f32 v0, v0, v1, v2
-; GFX8-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX8-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9-LABEL: fmed3_f32_fpext_f16_bf16_0:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX9-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX9-NEXT:    v_med3_f32 v0, v0, v1, v2
-; GFX9-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GCN-LABEL: fmed3_f32_fpext_f16_bf16_0:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GCN-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GCN-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GCN-NEXT:    v_med3_f32 v0, v0, v1, v2
+; GCN-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
   %arg0.ext = fpext bfloat %arg0 to float
   %arg1.ext = fpext half %arg1 to float
   %arg2.ext = fpext half %arg2 to float
@@ -1068,35 +903,15 @@ define half @fmed3_f32_fpext_f16_bf16_0(bfloat %arg0, half %arg1, half %arg2) #1
 }
 
 define half @fmed3_f32_fpext_f16_bf16_1(half %arg0, bfloat %arg1, half %arg2) #1 {
-; GFX7-LABEL: fmed3_f32_fpext_f16_bf16_1:
-; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX7-NEXT:    v_med3_f32 v0, v0, v1, v2
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX8-LABEL: fmed3_f32_fpext_f16_bf16_1:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX8-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX8-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX8-NEXT:    v_med3_f32 v0, v0, v1, v2
-; GFX8-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX8-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9-LABEL: fmed3_f32_fpext_f16_bf16_1:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX9-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX9-NEXT:    v_med3_f32 v0, v0, v1, v2
-; GFX9-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GCN-LABEL: fmed3_f32_fpext_f16_bf16_1:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GCN-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GCN-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GCN-NEXT:    v_med3_f32 v0, v0, v1, v2
+; GCN-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
   %arg0.ext = fpext half %arg0 to float
   %arg1.ext = fpext bfloat %arg1 to float
   %arg2.ext = fpext half %arg2 to float
@@ -1106,35 +921,15 @@ define half @fmed3_f32_fpext_f16_bf16_1(half %arg0, bfloat %arg1, half %arg2) #1
 }
 
 define half @fmed3_f32_fpext_f16_bf16_2(half %arg0, half %arg1, bfloat %arg2) #1 {
-; GFX7-LABEL: fmed3_f32_fpext_f16_bf16_2:
-; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; GFX7-NEXT:    v_med3_f32 v0, v0, v1, v2
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX8-LABEL: fmed3_f32_fpext_f16_bf16_2:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX8-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; GFX8-NEXT:    v_med3_f32 v0, v0, v1, v2
-; GFX8-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX8-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9-LABEL: fmed3_f32_fpext_f16_bf16_2:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX9-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; GFX9-NEXT:    v_med3_f32 v0, v0, v1, v2
-; GFX9-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GCN-LABEL: fmed3_f32_fpext_f16_bf16_2:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GCN-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GCN-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GCN-NEXT:    v_med3_f32 v0, v0, v1, v2
+; GCN-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
   %arg0.ext = fpext half %arg0 to float
   %arg1.ext = fpext half %arg1 to float
   %arg2.ext = fpext bfloat %arg2 to float
@@ -1147,8 +942,8 @@ define half @fmed3_f32_fpext_f16_unrepresentable_k0(half %arg1, half %arg2) #1 {
 ; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_unrepresentable_k0:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX7-SDAG-NEXT:    s_mov_b32 s4, 0x4f800000
 ; GFX7-SDAG-NEXT:    v_med3_f32 v0, s4, v0, v1
 ; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
@@ -1214,8 +1009,8 @@ define half @fmed3_f32_fpext_f16_unrepresentable_k1(half %arg0, half %arg2) #1 {
 ; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_unrepresentable_k1:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX7-SDAG-NEXT:    s_mov_b32 s4, 0x4f800000
 ; GFX7-SDAG-NEXT:    v_med3_f32 v0, v0, s4, v1
 ; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
@@ -1281,8 +1076,8 @@ define half @fmed3_f32_fpext_f16_unrepresentable_k2(half %arg0, half %arg1) #1 {
 ; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_unrepresentable_k2:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX7-SDAG-NEXT:    s_mov_b32 s4, 0x4f800000
 ; GFX7-SDAG-NEXT:    v_med3_f32 v0, v0, v1, s4
 ; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0

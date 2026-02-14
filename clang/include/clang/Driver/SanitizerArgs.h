@@ -68,6 +68,7 @@ class SanitizerArgs {
   bool TsanFuncEntryExit = true;
   bool TsanAtomics = true;
   bool MinimalRuntime = false;
+  bool TrapLoop = false;
   bool TysanOutlineInstrumentation = true;
   bool HandlerPreserveAllRegs = false;
   // True if cross-dso CFI support if provided by the system (i.e. Android).
@@ -110,6 +111,7 @@ public:
   bool needsUbsanRt() const;
   bool needsUbsanCXXRt() const;
   bool requiresMinimalRuntime() const { return MinimalRuntime; }
+  bool needsUbsanLoopDetectRt() const { return TrapLoop; }
   bool needsDfsanRt() const { return Sanitizers.has(SanitizerKind::DataFlow); }
   bool needsSafeStackRt() const { return SafeStackRuntime; }
   bool needsCfiCrossDsoRt() const;

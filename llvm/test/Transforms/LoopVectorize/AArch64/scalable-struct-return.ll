@@ -127,9 +127,9 @@ define void @struct_return_f32_widen_rt_checks(ptr %in, ptr writeonly %out_a, pt
 ; CHECK-LABEL: define void @struct_return_f32_widen_rt_checks(
 ; CHECK-SAME: ptr [[IN:%.*]], ptr writeonly [[OUT_A:%.*]], ptr writeonly [[OUT_B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[IN3:%.*]] = ptrtoint ptr [[IN]] to i64
-; CHECK-NEXT:    [[OUT_A2:%.*]] = ptrtoint ptr [[OUT_A]] to i64
-; CHECK-NEXT:    [[OUT_B1:%.*]] = ptrtoint ptr [[OUT_B]] to i64
+; CHECK-NEXT:    [[IN3:%.*]] = ptrtoaddr ptr [[IN]] to i64
+; CHECK-NEXT:    [[OUT_A2:%.*]] = ptrtoaddr ptr [[OUT_A]] to i64
+; CHECK-NEXT:    [[OUT_B1:%.*]] = ptrtoaddr ptr [[OUT_B]] to i64
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()

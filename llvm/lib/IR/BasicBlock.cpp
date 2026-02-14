@@ -552,11 +552,7 @@ bool BasicBlock::isEntryBlock() const {
   return this == &F->getEntryBlock();
 }
 
-BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName,
-                                        bool Before) {
-  if (Before)
-    return splitBasicBlockBefore(I, BBName);
-
+BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName) {
   assert(getTerminator() && "Can't use splitBasicBlock on degenerate BB!");
   assert(I != InstList.end() &&
          "Trying to get me to create degenerate basic block!");

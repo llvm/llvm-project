@@ -31,8 +31,8 @@ define nofpclass(nan inf) double @monte_simple(i32 noundef %nblocks, i32 noundef
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD19:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = fpext <4 x float> [[WIDE_LOAD]] to <4 x double>
-; CHECK-NEXT:    [[TMP3:%.*]] = fpext <4 x float> [[WIDE_LOAD19]] to <4 x double>
+; CHECK-NEXT:    [[TMP2:%.*]] = fpext nnan ninf <4 x float> [[WIDE_LOAD]] to <4 x double>
+; CHECK-NEXT:    [[TMP3:%.*]] = fpext nnan ninf <4 x float> [[WIDE_LOAD19]] to <4 x double>
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <4 x double> [[BROADCAST_SPLAT]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <4 x double> [[BROADCAST_SPLAT]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fsub fast <4 x double> [[TMP4]], [[BROADCAST_SPLAT15]]
@@ -70,7 +70,7 @@ define nofpclass(nan inf) double @monte_simple(i32 noundef %nblocks, i32 noundef
 ; CHECK-NEXT:    [[V0_011:%.*]] = phi double [ [[V0_2:%.*]], %[[FOR_BODY]] ], [ [[V0_010_PH]], %[[FOR_BODY_PREHEADER22]] ]
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw float, ptr [[SAMPLES]], i64 [[INDVARS_IV1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX1]], align 4
-; CHECK-NEXT:    [[CONV:%.*]] = fpext float [[TMP0]] to double
+; CHECK-NEXT:    [[CONV:%.*]] = fpext nnan ninf float [[TMP0]] to double
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[Y]], [[CONV]]
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub fast double [[MUL]], [[Z]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp fast ogt double [[SUB]], 0.000000e+00
@@ -217,8 +217,8 @@ define nofpclass(nan inf) double @monte_exp(i32 noundef %nblocks, i32 noundef %R
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX_US]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[ARRAYIDX_US]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD34:%.*]] = load <4 x float>, ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = fpext <4 x float> [[WIDE_LOAD]] to <4 x double>
-; CHECK-NEXT:    [[TMP5:%.*]] = fpext <4 x float> [[WIDE_LOAD34]] to <4 x double>
+; CHECK-NEXT:    [[TMP4:%.*]] = fpext nnan <4 x float> [[WIDE_LOAD]] to <4 x double>
+; CHECK-NEXT:    [[TMP5:%.*]] = fpext nnan <4 x float> [[WIDE_LOAD34]] to <4 x double>
 ; CHECK-NEXT:    [[TMP6:%.*]] = tail call fast <4 x double> @llvm.exp2.v4f64(<4 x double> [[TMP4]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = tail call fast <4 x double> @llvm.exp2.v4f64(<4 x double> [[TMP5]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <4 x double> [[TMP6]], [[BROADCAST_SPLAT]]
@@ -257,7 +257,7 @@ define nofpclass(nan inf) double @monte_exp(i32 noundef %nblocks, i32 noundef %R
 ; CHECK-NEXT:    [[V0_115_US:%.*]] = phi double [ [[V0_2_US:%.*]], %[[FOR_BODY3_US]] ], [ [[V0_113_US_PH]], %[[FOR_BODY3_US_PREHEADER]] ]
 ; CHECK-NEXT:    [[ARRAYIDX_US1:%.*]] = getelementptr inbounds nuw float, ptr [[SAMPLES]], i64 [[INDVARS_IV1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX_US1]], align 4
-; CHECK-NEXT:    [[CONV_US:%.*]] = fpext float [[TMP0]] to double
+; CHECK-NEXT:    [[CONV_US:%.*]] = fpext nnan float [[TMP0]] to double
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast double @llvm.exp2.f64(double [[CONV_US]])
 ; CHECK-NEXT:    [[MUL_US:%.*]] = fmul fast double [[TMP1]], [[Y]]
 ; CHECK-NEXT:    [[SUB_US:%.*]] = fsub fast double [[MUL_US]], [[Z]]

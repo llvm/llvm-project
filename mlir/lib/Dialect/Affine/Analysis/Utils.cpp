@@ -22,6 +22,7 @@
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/IntegerSet.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/raw_ostream.h"
@@ -1055,12 +1056,6 @@ std::optional<bool> ComputationSliceState::isSliceValid() const {
     LDBG() << "Unable to compute source's domain";
     return std::nullopt;
   }
-  // As the set difference utility currently cannot handle symbols in its
-  // operands, validity of the slice cannot be determined.
-  if (srcConstraints.getNumSymbolVars() > 0) {
-    LDBG() << "Cannot handle symbols in source domain";
-    return std::nullopt;
-  }
   // TODO: Handle local vars in the source domains while using the 'projectOut'
   // utility below. Currently, aligning is not done assuming that there will be
   // no local vars in the source domain.
@@ -1081,6 +1076,8 @@ std::optional<bool> ComputationSliceState::isSliceValid() const {
   // domain completely in terms of source's IVs.
   sliceConstraints.projectOut(ivs.size(),
                               sliceConstraints.getNumVars() - ivs.size());
+  srcConstraints.projectOut(ivs.size(),
+                            srcConstraints.getNumVars() - ivs.size());
 
   LDBG() << "Domain of the source of the slice:\n"
          << "Source constraints:" << srcConstraints
@@ -2211,10 +2208,9 @@ IntegerSet mlir::affine::simplifyIntegerSet(IntegerSet set) {
 
 static void unpackOptionalValues(ArrayRef<std::optional<Value>> source,
                                  SmallVector<Value> &target) {
-  target =
-      llvm::to_vector<4>(llvm::map_range(source, [](std::optional<Value> val) {
-        return val.has_value() ? *val : Value();
-      }));
+  target = llvm::map_to_vector<4>(source, [](std::optional<Value> val) {
+    return val.has_value() ? *val : Value();
+  });
 }
 
 /// Bound an identifier `pos` in a given FlatAffineValueConstraints with

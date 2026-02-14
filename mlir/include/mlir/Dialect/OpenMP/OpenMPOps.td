@@ -905,9 +905,9 @@ def TaskOp
                 traits = [AttrSizedOperandSegments, AutomaticAllocationScope,
                           OutlineableOpenMPOpInterface],
                 clauses = [
-                    // TODO: Complete clause list (affinity, detach).
-                    OpenMP_AllocateClause, OpenMP_DependClause,
-                    OpenMP_FinalClause, OpenMP_IfClause,
+                    // TODO: Complete clause list (detach).
+                    OpenMP_AffinityClause, OpenMP_AllocateClause,
+                    OpenMP_DependClause, OpenMP_FinalClause, OpenMP_IfClause,
                     OpenMP_InReductionClause, OpenMP_MergeableClause,
                     OpenMP_PriorityClause, OpenMP_PrivateClause,
                     OpenMP_UntiedClause, OpenMP_DetachClause],
@@ -2247,7 +2247,8 @@ def WorkdistributeOp : OpenMP_Op<"workdistribute"> {
 
 def DeclareSimdOp
     : OpenMP_Op<"declare_simd", traits = [AttrSizedOperandSegments],
-                clauses = [OpenMP_AlignedClause, OpenMP_LinearClause,
+                clauses = [OpenMP_AlignedClause, OpenMP_InbranchClause,
+                           OpenMP_LinearClause, OpenMP_NotinbranchClause,
                            OpenMP_SimdlenClause, OpenMP_UniformClause]> {
   let summary = "declare simd directive";
   let description = [{

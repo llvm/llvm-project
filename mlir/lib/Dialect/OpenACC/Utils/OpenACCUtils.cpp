@@ -9,6 +9,7 @@
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/SymbolTable.h"
@@ -92,6 +93,10 @@ std::string mlir::acc::getVariableName(mlir::Value v) {
 
   // Walk through view operations until a name is found or can't go further
   while (Operation *definingOp = current.getDefiningOp()) {
+    // For integer constants, return their value as a string.
+    if (std::optional<int64_t> constVal = getConstantIntValue(current))
+      return std::to_string(*constVal);
+
     // Check for `acc.var_name` attribute
     if (auto varNameAttr =
             definingOp->getAttrOfType<VarNameAttr>(getVarNameAttrName()))
@@ -331,7 +336,8 @@ mlir::acc::getDominatingDataClauses(mlir::Operation *computeConstructOp,
 }
 
 mlir::remark::detail::InFlightRemark
-mlir::acc::emitRemark(mlir::Operation *op, const llvm::Twine &message,
+mlir::acc::emitRemark(mlir::Operation *op,
+                      const std::function<std::string()> &messageFn,
                       llvm::StringRef category) {
   using namespace mlir::remark;
   mlir::Location loc = op->getLoc();
@@ -351,6 +357,6 @@ mlir::acc::emitRemark(mlir::Operation *op, const llvm::Twine &message,
 
   auto remark = engine->emitOptimizationRemark(loc, opts);
   if (remark)
-    remark << message.str();
+    remark << messageFn();
   return remark;
 }

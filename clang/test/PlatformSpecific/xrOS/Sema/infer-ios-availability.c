@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple arm64-apple-xros1 -verify=ios -isysroot %S/Inputs/XROS.sdk %s 2>&1
-// RUN: %clang_cc1 -triple arm64-apple-xros1 -fapplication-extension -verify=ios,ext -isysroot %S/Inputs/XROS.sdk %s 2>&1
+// RUN: %clang_cc1 -triple arm64-apple-xros1 -verify=ios -isysroot %S/Inputs/XROS1.0.sdk %s 2>&1
+// RUN: %clang_cc1 -triple arm64-apple-xros1 -fapplication-extension -verify=ios,ext -isysroot %S/Inputs/XROS1.0.sdk %s 2>&1
 
-// RUN: %clang_cc1 -triple arm64-apple-xros2 -DXROS2 -verify=ios -isysroot %S/Inputs/XROS.sdk  %s 2>&1
+// RUN: %clang_cc1 -triple arm64-apple-xros2 -DXROS2 -verify=ios -isysroot %S/Inputs/XROS1.0.sdk  %s 2>&1
 
 __attribute__((availability(ios, unavailable)))
 void ios_unavail(); // ios-note {{}}

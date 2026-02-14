@@ -1042,6 +1042,81 @@ class LinuxCoreTestCase(TestBase):
         cstr = var.GetSummary()
         self.assertEqual(cstr, '"_start"')
 
+    @skipIfLLVMTargetMissing("X86")
+    @skipIfWindows
+    def test_linux_no_exe(self):
+        """
+        Test that we are able to get the shared library list when loading a
+        linux core file without an executable. This tests LLDB's ability to
+        create memory object files when the ELF header is available for the
+        binary in the shared library list, and to create place holder object
+        files for any files we weren't able to locate or load from memory. It
+        also tests the dynamic loader's ability to find the list of shared
+        libraries from the PT_DYNAMIC section's DT_DEBUG entry. The core file
+        used in this test has the ELF header for the main executable "elf-crash"
+        and for "/libxx/libm.so.6". This test will verify that all shared
+        libraries are available. The "image list" output should look like:
+
+        (lldb) image list
+        [  0] 7BCC1101 0x000055bb04288000 /data/users/gclayton/args/elf-crash (0x000055bb04288000)
+        [  1]                                      0x00007f27db200000 /libxx/libstdc++.so.6
+        [  2] AF275675-4671-8B49-24C8-A9A657D74115-C80DEE65 0x00007f27db51b000 /libxx/libm.so.6 (0x00007f27db51b000)
+        [  3]                                      0x00007f27db4fe000 /libxx/libgcc_s.so.1
+        [  4]                                      0x00007f27dae00000 /libxx/libc.so.6
+        [  5]                                      0x00007f27db606000 /libxx/ld-linux-x86-64.so.2
+        """
+        target = self.dbg.CreateTarget(None)
+        process = target.LoadCore("linux-x86_64-no-exe.core")
+        self.assertTrue(process, PROCESS_IS_VALID)
+        num_modules = target.GetNumModules()
+        self.assertEqual(num_modules, 6)
+
+        m = target.module["/data/users/gclayton/args/elf-crash"]
+        self.assertTrue(m.IsValid())
+        self.assertEqual(
+            m.GetObjectFileHeaderAddress().GetLoadAddress(target), 0x000055BB04288000
+        )
+        self.assertEqual(m.GetUUIDString(), "7BCC1101")
+
+        m = target.module["/libxx/libstdc++.so.6"]
+        self.assertTrue(m.IsValid())
+        self.assertEqual(
+            m.GetObjectFileHeaderAddress().GetLoadAddress(target), 0x00007F27DB200000
+        )
+        self.assertEqual(m.GetUUIDString(), None)
+
+        m = target.module["/libxx/libm.so.6"]
+        self.assertTrue(m.IsValid())
+        self.assertEqual(
+            m.GetObjectFileHeaderAddress().GetLoadAddress(target), 0x00007F27DB51B000
+        )
+        self.assertEqual(
+            m.GetUUIDString(), "AF275675-4671-8B49-24C8-A9A657D74115-C80DEE65"
+        )
+
+        m = target.module["/libxx/libgcc_s.so.1"]
+        self.assertTrue(m.IsValid())
+        self.assertEqual(
+            m.GetObjectFileHeaderAddress().GetLoadAddress(target), 0x00007F27DB4FE000
+        )
+        self.assertEqual(m.GetUUIDString(), None)
+
+        m = target.module["/libxx/libc.so.6"]
+        self.assertTrue(m.IsValid())
+        self.assertEqual(
+            m.GetObjectFileHeaderAddress().GetLoadAddress(target), 0x00007F27DAE00000
+        )
+        self.assertEqual(m.GetUUIDString(), None)
+
+        m = target.module["/libxx/ld-linux-x86-64.so.2"]
+        self.assertTrue(m.IsValid())
+        self.assertEqual(
+            m.GetObjectFileHeaderAddress().GetLoadAddress(target), 0x00007F27DB606000
+        )
+        self.assertEqual(m.GetUUIDString(), None)
+
+        self.dbg.DeleteTarget(target)
+
     def check_memory_regions(self, process, region_count):
         region_list = process.GetMemoryRegions()
         self.assertEqual(region_list.GetSize(), region_count)

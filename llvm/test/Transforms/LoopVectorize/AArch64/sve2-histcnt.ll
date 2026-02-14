@@ -602,8 +602,8 @@ define void @simple_histogram_rtdepcheck(ptr noalias %buckets, ptr %array, ptr %
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[ARRAY1:%.*]] = ptrtoint ptr [[ARRAY]] to i64
-; CHECK-NEXT:    [[INDICES2:%.*]] = ptrtoint ptr [[INDICES]] to i64
+; CHECK-NEXT:    [[ARRAY1:%.*]] = ptrtoaddr ptr [[ARRAY]] to i64
+; CHECK-NEXT:    [[INDICES2:%.*]] = ptrtoaddr ptr [[INDICES]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP3]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[ARRAY1]], [[INDICES2]]

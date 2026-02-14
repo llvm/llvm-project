@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -ffreestanding %s -emit-llvm -o - | FileCheck %s
+// RUN: %if clang-target-64-bits %{ %clang_cc1 -ffreestanding %s -emit-llvm -o - | FileCheck %s --check-prefix=INT128 %}
 
 #include<stdint.h>
 
@@ -303,9 +304,9 @@ void test_wider_shift_amount(uint8_t u8, uint16_t u16, uint32_t u32, unsigned _B
 }
 
 #ifdef __SIZEOF_INT128__
-// CHECK-LABEL: test_int128_rotate
-// CHECK:  call i128 @llvm.fshl.i128(i128 %{{.*}}, i128 %{{.*}}, i128 32)
-// CHECK:  call i128 @llvm.fshr.i128(i128 %{{.*}}, i128 %{{.*}}, i128 32)
+// INT128-LABEL: test_int128_rotate
+// INT128:  call i128 @llvm.fshl.i128(i128 %{{.*}}, i128 %{{.*}}, i128 32)
+// INT128:  call i128 @llvm.fshr.i128(i128 %{{.*}}, i128 %{{.*}}, i128 32)
 void test_int128_rotate(unsigned __int128 u128) {
   volatile unsigned __int128 result_u128;
   result_u128 = __builtin_stdc_rotate_left(u128, 32);

@@ -1,29 +1,14 @@
-//===- llvm/unittests/Transforms/Vectorize/VPlanVerifierTest.cpp ----------===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-
-#include "../lib/Transforms/Vectorize/VPlanVerifier.h"
-#include "../lib/Transforms/Vectorize/VPlan.h"
-#include "../lib/Transforms/Vectorize/VPlanCFG.h"
-#include "VPlanTestBase.h"
-#include "llvm/IR/Instruction.h"
-#include "llvm/IR/Instructions.h"
-#include "gtest/gtest.h"
-
-using namespace llvm;
-
-using VPVerifierTest = VPlanTestBase;
 
 namespace {
 TEST_F(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
   VPlan &Plan = getPlan();
   VPIRValue *Zero = Plan.getConstantInt(32, 0);
-  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero, Zero});
-  VPInstruction *UseI = new VPInstruction(Instruction::Sub, {DefI, Zero});
+  VPInstruction *DefI =
+      new VPInstruction(Instruction::Add, {Zero, Zero},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
+  VPInstruction *UseI =
+      new VPInstruction(Instruction::Sub, {DefI, Zero},
+                        VPIRFlags::getDefaultFlags(Instruction::Sub));
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
   VPBB1->appendRecipe(UseI);
@@ -59,8 +44,12 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
 TEST_F(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
   VPlan &Plan = getPlan();
   VPIRValue *Zero = Plan.getConstantInt(32, 0);
-  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero, Zero});
-  VPInstruction *UseI = new VPInstruction(Instruction::Sub, {DefI, Zero});
+  VPInstruction *DefI =
+      new VPInstruction(Instruction::Add, {Zero, Zero},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
+  VPInstruction *UseI =
+      new VPInstruction(Instruction::Sub, {DefI, Zero},
+                        VPIRFlags::getDefaultFlags(Instruction::Sub));
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {UseI});
 
@@ -100,10 +89,12 @@ TEST_F(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
   auto *Phi = PHINode::Create(Int32, 1);
   VPIRValue *Zero = Plan.getConstantInt(Int32, 0);
 
-  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero, Zero});
+  VPInstruction *DefI =
+      new VPInstruction(Instruction::Add, {Zero, Zero},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {DefI});
-  auto *Blend = new VPBlendRecipe(Phi, {DefI, Plan.getTrue()}, {});
+  auto *Blend = new VPBlendRecipe(Phi, {DefI, Plan.getTrue()}, {}, {});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
@@ -153,8 +144,10 @@ TEST_F(VPVerifierTest, VPPhiIncomingValueDoesntDominateIncomingBlock) {
   VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
   VPBasicBlock *VPBB4 = Plan.createVPBasicBlock("");
 
-  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero, Zero});
-  VPPhi *Phi = new VPPhi({DefI}, {});
+  VPInstruction *DefI =
+      new VPInstruction(Instruction::Add, {Zero, Zero},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
+  VPPhi *Phi = new VPPhi({DefI}, {}, {});
   VPBB2->appendRecipe(Phi);
   VPBB2->appendRecipe(DefI);
 
@@ -184,7 +177,9 @@ TEST_F(VPVerifierTest, VPPhiIncomingValueDoesntDominateIncomingBlock) {
 TEST_F(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
   VPlan &Plan = getPlan();
   VPIRValue *Zero = Plan.getConstantInt(32, 0);
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {Zero, Zero});
+  VPInstruction *I1 =
+      new VPInstruction(Instruction::Add, {Zero, Zero},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {I1});
   VPInstruction *BranchOnCond2 =
@@ -217,7 +212,9 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
 TEST_F(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
   VPlan &Plan = getPlan();
   VPIRValue *Zero = Plan.getConstantInt(32, 0);
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {Zero, Zero});
+  VPInstruction *I1 =
+      new VPInstruction(Instruction::Add, {Zero, Zero},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {I1});
   VPInstruction *BranchOnCond2 =
@@ -258,7 +255,9 @@ TEST_F(VPVerifierTest, BlockOutsideRegionWithParent) {
 
   VPValue *Zero = Plan.getConstantInt(32, 0);
 
-  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero, Zero});
+  VPInstruction *DefI =
+      new VPInstruction(Instruction::Add, {Zero, Zero},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {DefI});
 

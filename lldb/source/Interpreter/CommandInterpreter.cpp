@@ -148,7 +148,7 @@ CommandInterpreter::CommandInterpreter(Debugger &debugger,
   SetEventName(eBroadcastBitQuitCommandReceived, "quit");
   SetSynchronous(synchronous_execution);
   CheckInWithManager();
-  m_collection_sp->Initialize(g_interpreter_properties);
+  m_collection_sp->Initialize(g_interpreter_properties_def);
 }
 
 bool CommandInterpreter::GetExpandRegexAliases() const {

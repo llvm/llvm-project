@@ -1225,7 +1225,13 @@ struct DSEState {
     auto IBounded = InvisibleToCallerAfterRetBounded.find(V);
     if (IBounded != InvisibleToCallerAfterRetBounded.end()) {
       int64_t ValueOffset;
-      assert(GetPointerBaseWithConstantOffset(Ptr, ValueOffset, DL) == V);
+      [[maybe_unused]] const Value *BaseValue =
+          GetPointerBaseWithConstantOffset(Ptr, ValueOffset, DL);
+      // If we are not able to find a constant offset from the UO, we have to
+      // pessimistically assume that the store writes to memory out of the
+      // dead_on_return bounds.
+      if (BaseValue != V)
+        return false;
       // This store is only invisible after return if we are in bounds of the
       // range marked dead.
       if (StoreSize.hasValue() &&

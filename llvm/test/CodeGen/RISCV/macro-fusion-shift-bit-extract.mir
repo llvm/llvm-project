@@ -1,0 +1,132 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=riscv64-linux-gnu -x=mir < %s \
+# RUN:   -debug-only=machine-scheduler -start-before=machine-scheduler 2>&1 \
+# RUN:   -mattr=+fusion-shift-bit-extract | FileCheck %s
+
+# Test shift-bit-extract fusion: SLLI + SRLI/SRAI
+# This fusion combines left shift followed by right shift with the constraint
+# that the first immediate must be less than or equal to the second immediate.
+# It also checks that both instructions have the same width (W suffix or not).
+
+# CHECK: slli_srli
+# CHECK: Macro fuse: {{.*}}SLLI - SRLI
+---
+name: slli_srli
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10
+    %1:gpr = COPY $x10
+    %2:gpr = SLLI %1, 8
+    %3:gpr = XORI %1, 3
+    %4:gpr = SRLI %2, 16
+    $x10 = COPY %3
+    $x11 = COPY %4
+    PseudoRET
+...
+
+# CHECK: slli_srai
+# CHECK: Macro fuse: {{.*}}SLLI - SRAI
+---
+name: slli_srai
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10
+    %1:gpr = COPY $x10
+    %2:gpr = SLLI %1, 4
+    %3:gpr = XORI %1, 3
+    %4:gpr = SRAI %2, 8
+    $x10 = COPY %3
+    $x11 = COPY %4
+    PseudoRET
+...
+
+# Test with equal immediates
+# CHECK: slli_srai_equal
+# CHECK: Macro fuse: {{.*}}SLLI - SRAI
+---
+name: slli_srai_equal
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10
+    %1:gpr = COPY $x10
+    %2:gpr = SLLI %1, 12
+    %3:gpr = XORI %1, 3
+    %4:gpr = SRAI %2, 12
+    $x10 = COPY %3
+    $x11 = COPY %4
+    PseudoRET
+...
+
+# Test W-suffix variants (32-bit operations on RV64)
+# CHECK: slliw_srliw
+# CHECK: Macro fuse: {{.*}}SLLIW - SRLIW
+---
+name: slliw_srliw
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10
+    %1:gpr = COPY $x10
+    %2:gpr = SLLIW %1, 8
+    %3:gpr = XORI %1, 3
+    %4:gpr = SRLIW %2, 16
+    $x10 = COPY %3
+    $x11 = COPY %4
+    PseudoRET
+...
+
+# CHECK: slliw_sraiw
+# CHECK: Macro fuse: {{.*}}SLLIW - SRAIW
+---
+name: slliw_sraiw
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10
+    %1:gpr = COPY $x10
+    %2:gpr = SLLIW %1, 4
+    %3:gpr = XORI %1, 3
+    %4:gpr = SRAIW %2, 8
+    $x10 = COPY %3
+    $x11 = COPY %4
+    PseudoRET
+...
+
+# Test that fusion does not happen with different widths
+# CHECK: slli_srliw_no_fusion
+# CHECK-NOT: Macro fuse: {{.*}}SLLI - SRLIW
+---
+name: slli_srliw_no_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10
+    %1:gpr = COPY $x10
+    %2:gpr = SLLI %1, 8
+    %3:gpr = XORI %1, 3
+    %4:gpr = SRLIW %2, 16
+    $x10 = COPY %3
+    $x11 = COPY %4
+    PseudoRET
+...
+
+# Test that fusion does not happen when imm1 > imm2
+# CHECK: slli_srli_no_fusion
+# CHECK-NOT: Macro fuse: {{.*}}SLLI - SRLI
+---
+name: slli_srli_no_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10
+    %1:gpr = COPY $x10
+    %2:gpr = SLLI %1, 16
+    %3:gpr = XORI %1, 3
+    %4:gpr = SRLI %2, 8
+    $x10 = COPY %3
+    $x11 = COPY %4
+    PseudoRET
+...

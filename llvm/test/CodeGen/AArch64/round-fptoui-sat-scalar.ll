@@ -87,8 +87,7 @@ define i32 @testmuwh(half %a) {
 ;
 ; CHECK-GI-FP16-LABEL: testmuwh:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintm h0, h0
-; CHECK-GI-FP16-NEXT:    fcvtzu w0, h0
+; CHECK-GI-FP16-NEXT:    fcvtmu w0, h0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %r = call half @llvm.floor.f16(half %a)
@@ -122,8 +121,7 @@ define i64 @testmuxh(half %a) {
 ;
 ; CHECK-GI-FP16-LABEL: testmuxh:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintm h0, h0
-; CHECK-GI-FP16-NEXT:    fcvtzu x0, h0
+; CHECK-GI-FP16-NEXT:    fcvtmu x0, h0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %r = call half @llvm.floor.f16(half %a)
@@ -132,27 +130,10 @@ entry:
 }
 
 define i32 @testmuws(float %a) {
-; CHECK-CVT-LABEL: testmuws:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtmu w0, s0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testmuws:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtmu w0, s0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testmuws:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frintm s0, s0
-; CHECK-GI-NEXT:    fcvtzu w0, s0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testmuws:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintm s0, s0
-; CHECK-GI-FP16-NEXT:    fcvtzu w0, s0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testmuws:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtmu w0, s0
+; CHECK-NEXT:    ret
 entry:
   %r = call float @llvm.floor.f32(float %a)
   %i = call i32 @llvm.fptoui.sat.i32.f32(float %r)
@@ -160,27 +141,10 @@ entry:
 }
 
 define i64 @testmuxs(float %a) {
-; CHECK-CVT-LABEL: testmuxs:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtmu x0, s0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testmuxs:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtmu x0, s0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testmuxs:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frintm s0, s0
-; CHECK-GI-NEXT:    fcvtzu x0, s0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testmuxs:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintm s0, s0
-; CHECK-GI-FP16-NEXT:    fcvtzu x0, s0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testmuxs:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtmu x0, s0
+; CHECK-NEXT:    ret
 entry:
   %r = call float @llvm.floor.f32(float %a)
   %i = call i64 @llvm.fptoui.sat.i64.f32(float %r)
@@ -188,27 +152,10 @@ entry:
 }
 
 define i32 @testmuwd(double %a) {
-; CHECK-CVT-LABEL: testmuwd:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtmu w0, d0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testmuwd:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtmu w0, d0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testmuwd:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frintm d0, d0
-; CHECK-GI-NEXT:    fcvtzu w0, d0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testmuwd:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintm d0, d0
-; CHECK-GI-FP16-NEXT:    fcvtzu w0, d0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testmuwd:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtmu w0, d0
+; CHECK-NEXT:    ret
 entry:
   %r = call double @llvm.floor.f64(double %a)
   %i = call i32 @llvm.fptoui.sat.i32.f64(double %r)
@@ -216,27 +163,10 @@ entry:
 }
 
 define i64 @testmuxd(double %a) {
-; CHECK-CVT-LABEL: testmuxd:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtmu x0, d0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testmuxd:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtmu x0, d0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testmuxd:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frintm d0, d0
-; CHECK-GI-NEXT:    fcvtzu x0, d0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testmuxd:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintm d0, d0
-; CHECK-GI-FP16-NEXT:    fcvtzu x0, d0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testmuxd:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtmu x0, d0
+; CHECK-NEXT:    ret
 entry:
   %r = call double @llvm.floor.f64(double %a)
   %i = call i64 @llvm.fptoui.sat.i64.f64(double %r)
@@ -315,8 +245,7 @@ define i32 @testpuwh(half %a) {
 ;
 ; CHECK-GI-FP16-LABEL: testpuwh:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintp h0, h0
-; CHECK-GI-FP16-NEXT:    fcvtzu w0, h0
+; CHECK-GI-FP16-NEXT:    fcvtpu w0, h0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %r = call half @llvm.ceil.f16(half %a)
@@ -350,8 +279,7 @@ define i64 @testpuxh(half %a) {
 ;
 ; CHECK-GI-FP16-LABEL: testpuxh:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintp h0, h0
-; CHECK-GI-FP16-NEXT:    fcvtzu x0, h0
+; CHECK-GI-FP16-NEXT:    fcvtpu x0, h0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %r = call half @llvm.ceil.f16(half %a)
@@ -360,27 +288,10 @@ entry:
 }
 
 define i32 @testpuws(float %a) {
-; CHECK-CVT-LABEL: testpuws:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtpu w0, s0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testpuws:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtpu w0, s0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testpuws:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frintp s0, s0
-; CHECK-GI-NEXT:    fcvtzu w0, s0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testpuws:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintp s0, s0
-; CHECK-GI-FP16-NEXT:    fcvtzu w0, s0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testpuws:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtpu w0, s0
+; CHECK-NEXT:    ret
 entry:
   %r = call float @llvm.ceil.f32(float %a)
   %i = call i32 @llvm.fptoui.sat.i32.f32(float %r)
@@ -388,27 +299,10 @@ entry:
 }
 
 define i64 @testpuxs(float %a) {
-; CHECK-CVT-LABEL: testpuxs:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtpu x0, s0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testpuxs:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtpu x0, s0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testpuxs:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frintp s0, s0
-; CHECK-GI-NEXT:    fcvtzu x0, s0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testpuxs:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintp s0, s0
-; CHECK-GI-FP16-NEXT:    fcvtzu x0, s0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testpuxs:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtpu x0, s0
+; CHECK-NEXT:    ret
 entry:
   %r = call float @llvm.ceil.f32(float %a)
   %i = call i64 @llvm.fptoui.sat.i64.f32(float %r)
@@ -416,27 +310,10 @@ entry:
 }
 
 define i32 @testpuwd(double %a) {
-; CHECK-CVT-LABEL: testpuwd:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtpu w0, d0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testpuwd:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtpu w0, d0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testpuwd:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frintp d0, d0
-; CHECK-GI-NEXT:    fcvtzu w0, d0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testpuwd:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintp d0, d0
-; CHECK-GI-FP16-NEXT:    fcvtzu w0, d0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testpuwd:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtpu w0, d0
+; CHECK-NEXT:    ret
 entry:
   %r = call double @llvm.ceil.f64(double %a)
   %i = call i32 @llvm.fptoui.sat.i32.f64(double %r)
@@ -444,27 +321,10 @@ entry:
 }
 
 define i64 @testpuxd(double %a) {
-; CHECK-CVT-LABEL: testpuxd:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtpu x0, d0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testpuxd:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtpu x0, d0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testpuxd:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frintp d0, d0
-; CHECK-GI-NEXT:    fcvtzu x0, d0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testpuxd:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintp d0, d0
-; CHECK-GI-FP16-NEXT:    fcvtzu x0, d0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testpuxd:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtpu x0, d0
+; CHECK-NEXT:    ret
 entry:
   %r = call double @llvm.ceil.f64(double %a)
   %i = call i64 @llvm.fptoui.sat.i64.f64(double %r)
@@ -543,7 +403,6 @@ define i32 @testzuwh(half %a) {
 ;
 ; CHECK-GI-FP16-LABEL: testzuwh:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintz h0, h0
 ; CHECK-GI-FP16-NEXT:    fcvtzu w0, h0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
@@ -578,7 +437,6 @@ define i64 @testzuxh(half %a) {
 ;
 ; CHECK-GI-FP16-LABEL: testzuxh:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintz h0, h0
 ; CHECK-GI-FP16-NEXT:    fcvtzu x0, h0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
@@ -588,27 +446,10 @@ entry:
 }
 
 define i32 @testzuws(float %a) {
-; CHECK-CVT-LABEL: testzuws:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtzu w0, s0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testzuws:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtzu w0, s0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testzuws:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frintz s0, s0
-; CHECK-GI-NEXT:    fcvtzu w0, s0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testzuws:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintz s0, s0
-; CHECK-GI-FP16-NEXT:    fcvtzu w0, s0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testzuws:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzu w0, s0
+; CHECK-NEXT:    ret
 entry:
   %r = call float @llvm.trunc.f32(float %a)
   %i = call i32 @llvm.fptoui.sat.i32.f32(float %r)
@@ -616,27 +457,10 @@ entry:
 }
 
 define i64 @testzuxs(float %a) {
-; CHECK-CVT-LABEL: testzuxs:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtzu x0, s0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testzuxs:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtzu x0, s0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testzuxs:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frintz s0, s0
-; CHECK-GI-NEXT:    fcvtzu x0, s0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testzuxs:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintz s0, s0
-; CHECK-GI-FP16-NEXT:    fcvtzu x0, s0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testzuxs:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzu x0, s0
+; CHECK-NEXT:    ret
 entry:
   %r = call float @llvm.trunc.f32(float %a)
   %i = call i64 @llvm.fptoui.sat.i64.f32(float %r)
@@ -644,27 +468,10 @@ entry:
 }
 
 define i32 @testzuwd(double %a) {
-; CHECK-CVT-LABEL: testzuwd:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtzu w0, d0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testzuwd:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtzu w0, d0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testzuwd:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frintz d0, d0
-; CHECK-GI-NEXT:    fcvtzu w0, d0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testzuwd:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintz d0, d0
-; CHECK-GI-FP16-NEXT:    fcvtzu w0, d0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testzuwd:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzu w0, d0
+; CHECK-NEXT:    ret
 entry:
   %r = call double @llvm.trunc.f64(double %a)
   %i = call i32 @llvm.fptoui.sat.i32.f64(double %r)
@@ -672,27 +479,10 @@ entry:
 }
 
 define i64 @testzuxd(double %a) {
-; CHECK-CVT-LABEL: testzuxd:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtzu x0, d0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testzuxd:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtzu x0, d0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testzuxd:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frintz d0, d0
-; CHECK-GI-NEXT:    fcvtzu x0, d0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testzuxd:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintz d0, d0
-; CHECK-GI-FP16-NEXT:    fcvtzu x0, d0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testzuxd:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzu x0, d0
+; CHECK-NEXT:    ret
 entry:
   %r = call double @llvm.trunc.f64(double %a)
   %i = call i64 @llvm.fptoui.sat.i64.f64(double %r)
@@ -771,8 +561,7 @@ define i32 @testauwh(half %a) {
 ;
 ; CHECK-GI-FP16-LABEL: testauwh:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frinta h0, h0
-; CHECK-GI-FP16-NEXT:    fcvtzu w0, h0
+; CHECK-GI-FP16-NEXT:    fcvtau w0, h0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %r = call half @llvm.round.f16(half %a)
@@ -806,8 +595,7 @@ define i64 @testauxh(half %a) {
 ;
 ; CHECK-GI-FP16-LABEL: testauxh:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frinta h0, h0
-; CHECK-GI-FP16-NEXT:    fcvtzu x0, h0
+; CHECK-GI-FP16-NEXT:    fcvtau x0, h0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %r = call half @llvm.round.f16(half %a)
@@ -816,27 +604,10 @@ entry:
 }
 
 define i32 @testauws(float %a) {
-; CHECK-CVT-LABEL: testauws:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtau w0, s0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testauws:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtau w0, s0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testauws:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frinta s0, s0
-; CHECK-GI-NEXT:    fcvtzu w0, s0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testauws:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frinta s0, s0
-; CHECK-GI-FP16-NEXT:    fcvtzu w0, s0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testauws:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtau w0, s0
+; CHECK-NEXT:    ret
 entry:
   %r = call float @llvm.round.f32(float %a)
   %i = call i32 @llvm.fptoui.sat.i32.f32(float %r)
@@ -844,27 +615,10 @@ entry:
 }
 
 define i64 @testauxs(float %a) {
-; CHECK-CVT-LABEL: testauxs:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtau x0, s0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testauxs:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtau x0, s0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testauxs:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frinta s0, s0
-; CHECK-GI-NEXT:    fcvtzu x0, s0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testauxs:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frinta s0, s0
-; CHECK-GI-FP16-NEXT:    fcvtzu x0, s0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testauxs:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtau x0, s0
+; CHECK-NEXT:    ret
 entry:
   %r = call float @llvm.round.f32(float %a)
   %i = call i64 @llvm.fptoui.sat.i64.f32(float %r)
@@ -872,27 +626,10 @@ entry:
 }
 
 define i32 @testauwd(double %a) {
-; CHECK-CVT-LABEL: testauwd:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtau w0, d0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testauwd:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtau w0, d0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testauwd:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frinta d0, d0
-; CHECK-GI-NEXT:    fcvtzu w0, d0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testauwd:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frinta d0, d0
-; CHECK-GI-FP16-NEXT:    fcvtzu w0, d0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testauwd:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtau w0, d0
+; CHECK-NEXT:    ret
 entry:
   %r = call double @llvm.round.f64(double %a)
   %i = call i32 @llvm.fptoui.sat.i32.f64(double %r)
@@ -900,27 +637,10 @@ entry:
 }
 
 define i64 @testauxd(double %a) {
-; CHECK-CVT-LABEL: testauxd:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtau x0, d0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testauxd:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtau x0, d0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testauxd:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    frinta d0, d0
-; CHECK-GI-NEXT:    fcvtzu x0, d0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testauxd:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frinta d0, d0
-; CHECK-GI-FP16-NEXT:    fcvtzu x0, d0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testauxd:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtau x0, d0
+; CHECK-NEXT:    ret
 entry:
   %r = call double @llvm.round.f64(double %a)
   %i = call i64 @llvm.fptoui.sat.i64.f64(double %r)
@@ -985,8 +705,7 @@ define i32 @testnuwh(half %a) {
 ;
 ; CHECK-FP16-LABEL: testnuwh:
 ; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    frintn h0, h0
-; CHECK-FP16-NEXT:    fcvtzu w0, h0
+; CHECK-FP16-NEXT:    fcvtnu w0, h0
 ; CHECK-FP16-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: testnuwh:
@@ -1000,8 +719,7 @@ define i32 @testnuwh(half %a) {
 ;
 ; CHECK-GI-FP16-LABEL: testnuwh:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintn h0, h0
-; CHECK-GI-FP16-NEXT:    fcvtzu w0, h0
+; CHECK-GI-FP16-NEXT:    fcvtnu w0, h0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %r = call half @llvm.roundeven.f16(half %a)
@@ -1021,8 +739,7 @@ define i64 @testnuxh(half %a) {
 ;
 ; CHECK-FP16-LABEL: testnuxh:
 ; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    frintn h0, h0
-; CHECK-FP16-NEXT:    fcvtzu x0, h0
+; CHECK-FP16-NEXT:    fcvtnu x0, h0
 ; CHECK-FP16-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: testnuxh:
@@ -1036,8 +753,7 @@ define i64 @testnuxh(half %a) {
 ;
 ; CHECK-GI-FP16-LABEL: testnuxh:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    frintn h0, h0
-; CHECK-GI-FP16-NEXT:    fcvtzu x0, h0
+; CHECK-GI-FP16-NEXT:    fcvtnu x0, h0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %r = call half @llvm.roundeven.f16(half %a)
@@ -1048,8 +764,7 @@ entry:
 define i32 @testnuws(float %a) {
 ; CHECK-LABEL: testnuws:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    frintn s0, s0
-; CHECK-NEXT:    fcvtzu w0, s0
+; CHECK-NEXT:    fcvtnu w0, s0
 ; CHECK-NEXT:    ret
 entry:
   %r = call float @llvm.roundeven.f32(float %a)
@@ -1060,8 +775,7 @@ entry:
 define i64 @testnuxs(float %a) {
 ; CHECK-LABEL: testnuxs:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    frintn s0, s0
-; CHECK-NEXT:    fcvtzu x0, s0
+; CHECK-NEXT:    fcvtnu x0, s0
 ; CHECK-NEXT:    ret
 entry:
   %r = call float @llvm.roundeven.f32(float %a)
@@ -1072,8 +786,7 @@ entry:
 define i32 @testnuwd(double %a) {
 ; CHECK-LABEL: testnuwd:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    frintn d0, d0
-; CHECK-NEXT:    fcvtzu w0, d0
+; CHECK-NEXT:    fcvtnu w0, d0
 ; CHECK-NEXT:    ret
 entry:
   %r = call double @llvm.roundeven.f64(double %a)
@@ -1084,8 +797,7 @@ entry:
 define i64 @testnuxd(double %a) {
 ; CHECK-LABEL: testnuxd:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    frintn d0, d0
-; CHECK-NEXT:    fcvtzu x0, d0
+; CHECK-NEXT:    fcvtnu x0, d0
 ; CHECK-NEXT:    ret
 entry:
   %r = call double @llvm.roundeven.f64(double %a)
