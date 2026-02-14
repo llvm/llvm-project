@@ -94,7 +94,7 @@ suspend:
 ; CHECK-NEXT:    call void @print(i32 1)
 ; CHECK-NEXT:    ret void
 ;
-define void @simplify_destroy() presplitcoroutine personality i32 0 {
+define void @simplify_destroy() presplitcoroutine personality ptr @__gxx_personality_v0 {
 entry:
   %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)
@@ -256,7 +256,7 @@ suspend:
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:     llvm.coro.id
 
-define void @cannot_simplify_calls_in_terminator() presplitcoroutine personality i32 0 {
+define void @cannot_simplify_calls_in_terminator() presplitcoroutine personality ptr @__gxx_personality_v0 {
 entry:
   %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)
@@ -353,7 +353,7 @@ suspend:
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:     llvm.coro.id
 ;
-define void @cannot_simplify_final_suspend() presplitcoroutine personality i32 0 {
+define void @cannot_simplify_final_suspend() presplitcoroutine personality ptr @__gxx_personality_v0 {
 entry:
   %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)
@@ -398,6 +398,7 @@ lpad:
   resume { ptr, i32 } %lpval
 }
 
+declare i32 @__gxx_personality_v0(...)
 declare ptr @malloc(i32) allockind("alloc,uninitialized") allocsize(0)
 declare void @free(ptr) willreturn allockind("free")
 declare void @print(i32)

@@ -2,7 +2,7 @@
 
 ; CHECK-LABEL: Printing analysis {{.*}} for function 'loop_with_invoke':
 ; CHECK-NEXT: block-frequency-info: loop_with_invoke
-define void @loop_with_invoke(i32 %n) personality i8 0 {
+define void @loop_with_invoke(i32 %n) personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT: entry: float = 1.0, int = [[ENTRY:[0-9]+]]
 entry:
   br label %loop
@@ -29,6 +29,7 @@ exit:
   ret void
 }
 
+declare i32 @__gxx_personality_v0(...)
 declare void @foo()
 
 !0 = !{!"branch_weights", i32 9999, i32 1}

@@ -50,6 +50,7 @@ target triple = "x86_64-apple-macosx10.11.0"
 ; STACKMAPS-NEXT: Stack Maps: 		Loc 3: Constant 55	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 55]
 ; STACKMAPS-NEXT: Stack Maps: 	has 0 live-out registers
 
+declare i32 @__gxx_personality_v0(...)
 declare i32 @callee_0()
 declare i32 @callee_1(i32)
 declare i32 @callee_vararg(...)
@@ -84,7 +85,7 @@ entry:
   ret i32 %v
 }
 
-define i32 @invoker_0() personality i8 0 {
+define i32 @invoker_0() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: _invoker_0
 entry:
   %v = invoke i32 @callee_0() [ "deopt"(i32 2) ]
@@ -105,7 +106,7 @@ uw:
 ; CHECK:	retq
 }
 
-define i32 @invoker_1() personality i8 0 {
+define i32 @invoker_1() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: _invoker_1
 entry:
   %v = invoke i32 @callee_1(i32 45) "statepoint-num-patch-bytes"="9" [ "deopt"(i32 3) ]

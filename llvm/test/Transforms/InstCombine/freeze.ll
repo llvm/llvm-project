@@ -30,6 +30,7 @@ define i32 @and_freeze_undef(i32 %x) {
   ret i32 %res
 }
 
+declare i32 @__gxx_personality_v0(...)
 declare void @use_i32(i32)
 declare void @use_p32(ptr)
 
@@ -410,9 +411,9 @@ join:
   ret i32 %phi
 }
 
-define i32 @freeze_invoke_use_in_phi(i1 %c) personality ptr undef {
+define i32 @freeze_invoke_use_in_phi(i1 %c) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: define i32 @freeze_invoke_use_in_phi(
-; CHECK-SAME: i1 [[C:%.*]]) personality ptr undef {
+; CHECK-SAME: i1 [[C:%.*]]) personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[X:%.*]] = invoke i32 @get_i32()
 ; CHECK-NEXT:            to label %[[INVOKE_CONT:.*]] unwind label %[[INVOKE_UNWIND:.*]]
@@ -443,9 +444,9 @@ invoke.unwind:
   unreachable
 }
 
-define i32 @freeze_invoke_use_after_phi(i1 %c) personality ptr undef {
+define i32 @freeze_invoke_use_after_phi(i1 %c) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: define i32 @freeze_invoke_use_after_phi(
-; CHECK-SAME: i1 [[C:%.*]]) personality ptr undef {
+; CHECK-SAME: i1 [[C:%.*]]) personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[X:%.*]] = invoke i32 @get_i32()
 ; CHECK-NEXT:            to label %[[INVOKE_CONT:.*]] unwind label %[[INVOKE_UNWIND:.*]]
@@ -1248,9 +1249,9 @@ exit:
 
 ; When the phi input comes from an invoke, we need to be careful the freeze
 ; isn't pushed after the invoke.
-define void @fold_phi_noundef_start_value_with_invoke(ptr noundef %init, i1 %cond.0, i1 %cond.1) personality ptr undef {
+define void @fold_phi_noundef_start_value_with_invoke(ptr noundef %init, i1 %cond.0, i1 %cond.1) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: define void @fold_phi_noundef_start_value_with_invoke(
-; CHECK-SAME: ptr noundef [[INIT:%.*]], i1 [[COND_0:%.*]], i1 [[COND_1:%.*]]) personality ptr undef {
+; CHECK-SAME: ptr noundef [[INIT:%.*]], i1 [[COND_0:%.*]], i1 [[COND_1:%.*]]) personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
@@ -1302,9 +1303,9 @@ exit:
   ret void
 }
 
-define void @fold_phi_invoke_start_value(i32 %n) personality ptr undef {
+define void @fold_phi_invoke_start_value(i32 %n) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: define void @fold_phi_invoke_start_value(
-; CHECK-SAME: i32 [[N:%.*]]) personality ptr undef {
+; CHECK-SAME: i32 [[N:%.*]]) personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[INIT:%.*]] = invoke i32 @get_i32()
 ; CHECK-NEXT:            to label %[[LOOP:.*]] unwind label %[[UNWIND:.*]]
@@ -1340,9 +1341,9 @@ exit:
   ret void
 }
 
-define void @fold_phi_invoke_noundef_start_value(i32 %n) personality ptr undef {
+define void @fold_phi_invoke_noundef_start_value(i32 %n) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: define void @fold_phi_invoke_noundef_start_value(
-; CHECK-SAME: i32 [[N:%.*]]) personality ptr undef {
+; CHECK-SAME: i32 [[N:%.*]]) personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[INIT:%.*]] = invoke noundef i32 @get_i32()
 ; CHECK-NEXT:            to label %[[LOOP:.*]] unwind label %[[UNWIND:.*]]

@@ -3,10 +3,11 @@
 ; We should treat non-Function personalities as the unknown personality, which
 ; is usually Itanium.
 
+declare i32 @__gxx_personality_v0(...)
 declare void @g()
 declare void @terminate(ptr)
 
-define void @f() personality ptr null {
+define void @f() personality ptr @__gxx_personality_v0 {
   invoke void @g()
     to label %ret unwind label %lpad
 ret:

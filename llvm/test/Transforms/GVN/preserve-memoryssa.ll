@@ -3,6 +3,7 @@
 
 ; REQUIRES: asserts
 
+declare i32 @__gxx_personality_v0(...)
 declare void @use(i32) readnone
 
 define i32 @test(ptr %ptr.0, ptr %ptr.1, i1 %c) {
@@ -140,7 +141,7 @@ define i32 @test_assume_false_to_store_undef_3(ptr %ptr, ptr %ptr.2) {
 }
 
 ; Test case for PR48616.
-define void @rename_unreachable_block(i1 %c) personality ptr undef {
+define void @rename_unreachable_block(i1 %c) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @rename_unreachable_block(
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb1:

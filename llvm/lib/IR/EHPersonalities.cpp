@@ -20,14 +20,12 @@ using namespace llvm;
 
 /// See if the given exception handling personality function is one that we
 /// understand.  If so, return a description of it; otherwise return Unknown.
-EHPersonality llvm::classifyEHPersonality(const Value *Pers) {
-  const GlobalValue *F =
-      Pers ? dyn_cast<GlobalValue>(Pers->stripPointerCasts()) : nullptr;
-  if (!F || !F->getValueType() || !F->getValueType()->isFunctionTy())
+EHPersonality llvm::classifyEHPersonality(const Function *Pers) {
+  if (!Pers)
     return EHPersonality::Unknown;
 
-  StringRef Name = F->getName();
-  if (F->getParent()->getTargetTriple().isWindowsArm64EC()) {
+  StringRef Name = Pers->getName();
+  if (Pers->getParent()->getTargetTriple().isWindowsArm64EC()) {
     // ARM64EC function symbols are mangled by prefixing them with "#".
     // Demangle them by skipping this prefix.
     Name.consume_front("#");

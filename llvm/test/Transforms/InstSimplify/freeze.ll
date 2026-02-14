@@ -266,7 +266,7 @@ define ptr @call_noundef_ptr(ptr %ptr) {
   ret ptr %q
 }
 
-define ptr @invoke_noundef_ptr(ptr %ptr) personality i8 1 {
+define ptr @invoke_noundef_ptr(ptr %ptr) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @invoke_noundef_ptr(
 ; CHECK-NEXT:    invoke void @f3(ptr noundef [[PTR:%.*]])
 ; CHECK-NEXT:    to label [[NORMAL:%.*]] unwind label [[UNWIND:%.*]]
@@ -459,6 +459,7 @@ EXIT:
   ret i32 %fr2
 }
 
+declare i32 @__gxx_personality_v0(...)
 declare i32 @any_num()
 
 define i32 @brcond_call() {

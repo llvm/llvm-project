@@ -223,6 +223,7 @@ for.end:
   ret i32 %sum.0
 }
 
+declare i32 @__gxx_personality_v0(...)
 declare i32 @fn1(i8 signext)
 
 ; PR21030
@@ -738,7 +739,7 @@ declare void @test14a-callee(i1 %cond)
 
 ; Same as @test14 but with unwind exit.
 ; Trunc instructions must be added below the landing pad.
-define i32 @test14a(i32 %start, ptr %p, ptr %q, i1 %c) personality i1 1 {
+define i32 @test14a(i32 %start, ptr %p, ptr %q, i1 %c) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @test14a(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[START:%.*]] to i64

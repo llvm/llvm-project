@@ -1,7 +1,7 @@
 ; Verifies that phi and invoke definitions before CoroBegin are spilled properly.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse,simplifycfg' -S | FileCheck %s
 
-define ptr @f(i1 %n) presplitcoroutine personality i32 0 {
+define ptr @f(i1 %n) presplitcoroutine personality ptr @__gxx_personality_v0 {
 entry:
   %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   %size = call i32 @llvm.coro.size.i32()
@@ -61,6 +61,7 @@ lpad:
 ; CHECK-NEXT:  %value_phi.spill.addr = getelementptr inbounds %f.Frame, ptr %hdl, i32 0, i32 2
 ; CHECK-NEXT:  store i32 %spec.select, ptr %value_phi.spill.addr
 
+declare i32 @__gxx_personality_v0(...)
 declare ptr @llvm.coro.free(token, ptr)
 declare i32 @llvm.coro.size.i32()
 declare i8  @llvm.coro.suspend(token, i1)

@@ -5,7 +5,7 @@
 
 ; CHECK:     define {{[^@]*}} @f.resume(ptr {{[^%]*}} %[[HDL:.+]])
 ; CHECK:       %[[AWAITER:.+]] = getelementptr inbounds %f.Frame, ptr %[[HDL]], i32 0, i32 0
-define void @f() presplitcoroutine personality i32 0 {
+define void @f() presplitcoroutine personality ptr @__gxx_personality_v0 {
 entry:
   %awaiter = alloca %Awaiter
   %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
@@ -96,6 +96,7 @@ ret:
 ; CHECK-LABEL: @f.destroy(
 ; CHECK-LABEL: @f.cleanup(
 
+declare i32 @__gxx_personality_v0(...)
 declare void @await_suspend_wrapper_void(ptr, ptr)
 declare i1 @await_suspend_wrapper_bool(ptr, ptr)
 declare ptr @await_suspend_wrapper_handle(ptr, ptr)

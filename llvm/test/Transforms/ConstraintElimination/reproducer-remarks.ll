@@ -2,6 +2,7 @@
 
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
+declare i32 @__gxx_personality_v0(...)
 declare void @use(i1)
 
 declare void @llvm.assume(i1)
@@ -202,7 +203,7 @@ exit:
   ret i32 0
 }
 
-define i32 @test_invoke(i32 %a) personality ptr null {
+define i32 @test_invoke(i32 %a) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: define i1 @"{{.+}}test_invokerepro"(i32 %l, i32 %a) {
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT:  %0 = icmp slt i32 %a, %l

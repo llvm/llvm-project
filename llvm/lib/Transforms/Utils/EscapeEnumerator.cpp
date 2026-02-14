@@ -19,12 +19,14 @@
 
 using namespace llvm;
 
-static FunctionCallee getDefaultPersonalityFn(Module *M) {
+static Function *getDefaultPersonalityFn(Module *M) {
   LLVMContext &C = M->getContext();
   Triple T(M->getTargetTriple());
   EHPersonality Pers = getDefaultEHPersonality(T);
-  return M->getOrInsertFunction(getEHPersonalityName(Pers),
-                                FunctionType::get(Type::getInt32Ty(C), true));
+  return cast<Function>(
+      M->getOrInsertFunction(getEHPersonalityName(Pers),
+                             FunctionType::get(Type::getInt32Ty(C), true))
+          .getCallee());
 }
 
 IRBuilder<> *EscapeEnumerator::Next() {
@@ -72,8 +74,7 @@ IRBuilder<> *EscapeEnumerator::Next() {
   BasicBlock *CleanupBB = BasicBlock::Create(C, CleanupBBName, &F);
   Type *ExnTy = StructType::get(PointerType::getUnqual(C), Type::getInt32Ty(C));
   if (!F.hasPersonalityFn()) {
-    FunctionCallee PersFn = getDefaultPersonalityFn(F.getParent());
-    F.setPersonalityFn(cast<Constant>(PersFn.getCallee()));
+    F.setPersonalityFn(getDefaultPersonalityFn(F.getParent()));
   }
 
   if (isScopedEHPersonality(classifyEHPersonality(F.getPersonalityFn()))) {

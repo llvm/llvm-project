@@ -2488,7 +2488,7 @@ LLVMValueRef LLVMGetPersonalityFn(LLVMValueRef Fn) {
 
 void LLVMSetPersonalityFn(LLVMValueRef Fn, LLVMValueRef PersonalityFn) {
   unwrap<Function>(Fn)->setPersonalityFn(
-      PersonalityFn ? unwrap<Constant>(PersonalityFn) : nullptr);
+      PersonalityFn ? unwrap<Function>(PersonalityFn) : nullptr);
 }
 
 unsigned LLVMGetIntrinsicID(LLVMValueRef Fn) {

@@ -3,9 +3,10 @@
 
 ; SCCP should never remove landingpads.
 
+declare i32 @__gxx_personality_v0(...)
 declare void @fn()
 
-define void @test() personality ptr null {
+define void @test() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    invoke void @fn()
 ; CHECK-NEXT:    to label [[SUCCESS:%.*]] unwind label [[FAILURE:%.*]]

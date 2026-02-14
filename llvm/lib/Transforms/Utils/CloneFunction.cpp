@@ -194,9 +194,9 @@ void llvm::CloneFunctionAttributesInto(Function *NewFunc,
 
   // Fix up the personality function that got copied over.
   if (OldFunc->hasPersonalityFn())
-    NewFunc->setPersonalityFn(MapValue(OldFunc->getPersonalityFn(), VMap,
-                                       FuncGlobalRefFlags, TypeMapper,
-                                       Materializer));
+    NewFunc->setPersonalityFn(
+        cast<Function>(MapValue(OldFunc->getPersonalityFn(), VMap,
+                                FuncGlobalRefFlags, TypeMapper, Materializer)));
 
   if (OldFunc->hasPrefixData()) {
     NewFunc->setPrefixData(MapValue(OldFunc->getPrefixData(), VMap,

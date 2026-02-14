@@ -2,7 +2,7 @@
 ; and retains it in the start function.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
-define ptr @f2(i1 %val) presplitcoroutine personality i32 4 {
+define ptr @f2(i1 %val) presplitcoroutine personality ptr @__gxx_personality_v0 {
 entry:
   %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
@@ -65,6 +65,7 @@ cleanup.cont:
 ; CHECK-NEXT:   store ptr null, ptr %hdl, align 8
 ; CHECK-NEXT:   cleanupret from %tok unwind to caller
 
+declare i32 @__gxx_personality_v0(...)
 declare ptr @llvm.coro.free(token, ptr)
 declare i32 @llvm.coro.size.i32()
 declare i8  @llvm.coro.suspend(token, i1)

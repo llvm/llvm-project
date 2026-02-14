@@ -4,9 +4,11 @@
 ;; "resume" instruction with a branch to the landing pad block, we also transfer
 ;; the resume's source location to the branch.
 
-define void @widget() personality ptr null !dbg !11 {
+declare i32 @__gxx_personality_v0(...)
+
+define void @widget() personality ptr @__gxx_personality_v0 !dbg !11 {
 ; CHECK-LABEL: define void @widget(
-; CHECK-SAME: ) personality ptr null !dbg [[DBG4:![0-9]+]] {
+; CHECK-SAME: ) personality ptr @__gxx_personality_v0 !dbg [[DBG4:![0-9]+]] {
 ; CHECK-NEXT:  [[BAZ_EXIT:.*]]:
 ; CHECK-NEXT:    br label %[[BB2_BODY:.*]], !dbg [[DBG7:![0-9]+]]
 ; CHECK:       [[BAZ_EXIT1:.*:]]
@@ -34,9 +36,9 @@ bb2:                                              ; preds = %bb
   br label %bb1
 }
 
-define i32 @baz(ptr %arg, ptr %arg1) personality ptr null !dbg !14 {
+define i32 @baz(ptr %arg, ptr %arg1) personality ptr @__gxx_personality_v0 !dbg !14 {
 ; CHECK-LABEL: define i32 @baz(
-; CHECK-SAME: ptr [[ARG:%.*]], ptr [[ARG1:%.*]]) personality ptr null !dbg [[DBG8:![0-9]+]] {
+; CHECK-SAME: ptr [[ARG:%.*]], ptr [[ARG1:%.*]]) personality ptr @__gxx_personality_v0 !dbg [[DBG8:![0-9]+]] {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    resume { ptr, i32 } zeroinitializer, !dbg [[DBG10:![0-9]+]]
 ;

@@ -35,9 +35,10 @@ return:
   ret i32 1
 }
 
+declare i32 @__gxx_personality_v0(...)
 declare void @func()
 
-define void @f_3(i1 %B) personality i8 42 {
+define void @f_3(i1 %B) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @f_3(
 entry:
   invoke void @func()

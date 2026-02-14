@@ -1,6 +1,7 @@
 ; RUN: opt %s -passes='cgscc(inline)' -S | FileCheck %s
 ; RUN: opt %s -passes='module-inline' -S | FileCheck %s
 
+declare i32 @__gxx_personality_v0(...)
 declare void @external_func()
 declare void @abort()
 
@@ -13,7 +14,7 @@ declare void @abort()
 ; inlined function caused "catch ptr @exception_outer" to appear
 ; multiple times in the resulting landingpad.
 
-define internal void @inner_multiple_resume() personality ptr null {
+define internal void @inner_multiple_resume() personality ptr @__gxx_personality_v0 {
   invoke void @external_func()
       to label %cont unwind label %lpad
 cont:
@@ -29,7 +30,7 @@ resume2:
   resume i32 2
 }
 
-define void @outer_multiple_resume() personality ptr null {
+define void @outer_multiple_resume() personality ptr @__gxx_personality_v0 {
   invoke void @inner_multiple_resume()
       to label %cont unwind label %lpad
 cont:
@@ -51,7 +52,7 @@ lpad:
 ; inlined function caused "catch ptr @exception_outer" to appear
 ; multiple times in the resulting landingpad.
 
-define internal void @inner_resume_and_call() personality ptr null {
+define internal void @inner_resume_and_call() personality ptr @__gxx_personality_v0 {
   call void @external_func()
   invoke void @external_func()
       to label %cont unwind label %lpad
@@ -63,7 +64,7 @@ lpad:
   resume i32 %lp
 }
 
-define void @outer_resume_and_call() personality ptr null {
+define void @outer_resume_and_call() personality ptr @__gxx_personality_v0 {
   invoke void @inner_resume_and_call()
       to label %cont unwind label %lpad
 cont:
@@ -87,7 +88,7 @@ lpad:
 ; function (since the outer function's landingpad will not be
 ; reachable), but it's OK to include this clause.
 
-define internal void @inner_no_resume_or_call() personality ptr null {
+define internal void @inner_no_resume_or_call() personality ptr @__gxx_personality_v0 {
   invoke void @external_func()
       to label %cont unwind label %lpad
 cont:
@@ -100,7 +101,7 @@ lpad:
   unreachable
 }
 
-define void @outer_no_resume_or_call() personality ptr null {
+define void @outer_no_resume_or_call() personality ptr @__gxx_personality_v0 {
   invoke void @inner_no_resume_or_call()
       to label %cont unwind label %lpad
 cont:

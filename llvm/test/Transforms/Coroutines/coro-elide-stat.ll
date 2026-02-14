@@ -14,6 +14,7 @@
 ; FILE: Elide f in callResume
 ; FILE: Elide f in callResumeMultiRetDommmed
 
+declare i32 @__gxx_personality_v0(...)
 declare void @print(i32) nounwind
 
 ; resume part of the coroutine
@@ -94,7 +95,7 @@ ret:
   ret void
 }
 
-define void @eh() personality ptr null {
+define void @eh() personality ptr @__gxx_personality_v0 {
 entry:
   %hdl = call ptr @f()
 

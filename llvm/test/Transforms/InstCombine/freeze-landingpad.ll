@@ -2,7 +2,9 @@
 ; Check that no freeze instruction gets inserted before landingpad in a basic block
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
-define i32 @propagate_freeze_in_landingpad() personality ptr null {
+declare i32 @__gxx_personality_v0(...)
+
+define i32 @propagate_freeze_in_landingpad() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @propagate_freeze_in_landingpad(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[INVOKE_BB1:%.*]]

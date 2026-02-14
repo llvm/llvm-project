@@ -28763,7 +28763,7 @@ SDValue X86TargetLowering::LowerFRAME_TO_ARGS_OFFSET(SDValue Op,
 }
 
 Register X86TargetLowering::getExceptionPointerRegister(
-    const Constant *PersonalityFn) const {
+    const Function *PersonalityFn) const {
   if (classifyEHPersonality(PersonalityFn) == EHPersonality::CoreCLR)
     return Subtarget.isTarget64BitLP64() ? X86::RDX : X86::EDX;
 
@@ -28771,7 +28771,7 @@ Register X86TargetLowering::getExceptionPointerRegister(
 }
 
 Register X86TargetLowering::getExceptionSelectorRegister(
-    const Constant *PersonalityFn) const {
+    const Function *PersonalityFn) const {
   // Funclet personalities don't use selectors (the runtime does the selection).
   if (isFuncletEHPersonality(classifyEHPersonality(PersonalityFn)))
     return X86::NoRegister;

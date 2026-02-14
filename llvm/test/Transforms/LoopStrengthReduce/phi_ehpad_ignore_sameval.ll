@@ -12,7 +12,7 @@ target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:6:
 %"class.std::allocator" = type { i8 }
 %"class.absl::Storage" = type {}
 
-define void @0() personality ptr undef {
+define void @0() personality ptr @__gxx_personality_v0 {
 init1:
   %i14 = invoke ptr undef(ptr null, i8 0)
           to label %init2 unwind label %unwind
@@ -53,3 +53,5 @@ unwind:                                           ; preds = %caught, %loop.unwin
   %i33 = cleanuppad within none []
   cleanupret from %i33 unwind to caller
 }
+
+declare i32 @__gxx_personality_v0(...)

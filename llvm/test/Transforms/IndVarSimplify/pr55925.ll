@@ -6,9 +6,10 @@
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
+declare i32 @__gxx_personality_v0(...)
 declare i32 @foo(i32)
 
-define void @test(ptr %p) personality ptr undef {
+define void @test(ptr %p) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -48,7 +49,7 @@ exit:
   ret void
 }
 
-define void @test_critedge(i1 %c, ptr %p) personality ptr undef {
+define void @test_critedge(i1 %c, ptr %p) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @test_critedge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]

@@ -20,7 +20,7 @@ define i32 @test1() {
 
 }
 
-define i32 @as_invoke(i1 %c) personality ptr undef {
+define i32 @as_invoke(i1 %c) personality ptr @__gxx_personality_v0 {
 bb3:
   %mem = invoke noalias ptr @calloc(i64 1, i64 4)
   to label %bb4 unwind label %bb1
@@ -43,4 +43,5 @@ bb4:
 ; CHECK_NO_LIBCALLS: ret i32 %
 }
 
+declare i32 @__gxx_personality_v0(...)
 declare noalias ptr @calloc(i64, i64) allockind("alloc,zeroed") allocsize(0,1)

@@ -68,6 +68,7 @@ use_aggregate:
   ret { i32, i32 } %val
 }
 
+declare i32 @__gxx_personality_v0(...)
 declare void @callee(i32)
 
 ; Case 3: the insertvalue meant %in was live if ret-slot-1 was, but we were only
@@ -170,7 +171,7 @@ entry:
 ; CHECK: %[[invoke:.*]] = invoke i32 @agg_ret()
 ; CHECK: %[[oldret:.*]] = insertvalue { i32 } poison, i32 %[[invoke]], 0
 ; CHECK: phi { i32 } [ %[[oldret]],
-define void @PR24906() personality ptr poison {
+define void @PR24906() personality ptr @__gxx_personality_v0 {
 entry:
   %tmp2 = invoke { i32 } @agg_ret()
           to label %bb3 unwind label %bb4

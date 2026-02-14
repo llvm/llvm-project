@@ -1,5 +1,6 @@
 ; RUN: opt -S -passes=always-inline < %s | FileCheck %s
 
+declare i32 @__gxx_personality_v0(...)
 declare void @f()
 declare i32 @g()
 declare fastcc i32 @g.fastcc()
@@ -63,7 +64,7 @@ define i32 @callee_3() alwaysinline {
   ret i32 %v
 }
 
-define i32 @caller_3() personality i8 3 {
+define i32 @caller_3() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @caller_3(
  entry:
   %x = invoke i32 @callee_3() [ "deopt"(i32 7) ] to label %normal unwind label %unwind
@@ -77,7 +78,7 @@ define i32 @caller_3() personality i8 3 {
   ret i32 101
 }
 
-define i32 @callee_4() alwaysinline personality i8 3 {
+define i32 @callee_4() alwaysinline personality ptr @__gxx_personality_v0 {
  entry:
   %v = invoke i32 @g() [ "deopt"(i32 0, i32 1), "foo"(double 0.0) ] to label %normal unwind label %unwind
 
@@ -97,7 +98,7 @@ define i32 @caller_4() {
   ret i32 %x
 }
 
-define i32 @callee_5() alwaysinline personality i8 3 {
+define i32 @callee_5() alwaysinline personality ptr @__gxx_personality_v0 {
  entry:
   %v = invoke fastcc i32 @g.fastcc() #0 [ "deopt"(i32 0, i32 1), "foo"(double 0.0) ] to label %normal unwind label %unwind
 
@@ -117,7 +118,7 @@ define i32 @caller_5() {
   ret i32 %x
 }
 
-define i32 @callee_6() alwaysinline personality i8 3 {
+define i32 @callee_6() alwaysinline personality ptr @__gxx_personality_v0 {
  entry:
   %v = call fastcc i32 @g.fastcc() #0 [ "deopt"(i32 0, i32 1), "foo"(double 0.0) ]
   ret i32 %v
@@ -131,7 +132,7 @@ define i32 @caller_6() {
   ret i32 %x
 }
 
-define i32 @callee_7(i1 %val) alwaysinline personality i8 3 {
+define i32 @callee_7(i1 %val) alwaysinline personality ptr @__gxx_personality_v0 {
 ; We want something that PruningFunctionCloner is not smart enough to
 ; recognize, but can be recognized by recursivelySimplifyInstruction.
 
@@ -162,7 +163,7 @@ define i32 @caller_7() {
   ret i32 %x
 }
 
-define i32 @callee_8(i1 %val) alwaysinline personality i8 3 {
+define i32 @callee_8(i1 %val) alwaysinline personality ptr @__gxx_personality_v0 {
 ; We want something that PruningFunctionCloner is not smart enough to
 ; recognize, but can be recognized by recursivelySimplifyInstruction.
 

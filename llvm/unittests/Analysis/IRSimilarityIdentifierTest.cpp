@@ -1458,8 +1458,9 @@ TEST(IRInstructionMapper, ExceptionHandlingExceptionPointerIllegal) {
 TEST(IRInstructionMapper, CatchpadIllegal) {
   StringRef ModuleString = R"(
     declare void @llvm.donothing() nounwind readnone
+    declare i32 @__gxx_personality_v0(...)
 
-    define void @function() personality i8 3 {
+    define void @function() personality ptr @__gxx_personality_v0 {
       entry:
         invoke void @llvm.donothing() to label %normal unwind label %exception
       exception:
@@ -1490,8 +1491,9 @@ TEST(IRInstructionMapper, CatchpadIllegal) {
 TEST(IRInstructionMapper, CleanuppadIllegal) {
   StringRef ModuleString = R"(
     declare void @llvm.donothing() nounwind readnone
+    declare i32 @__gxx_personality_v0(...)
 
-    define void @function() personality i8 3 {
+    define void @function() personality ptr @__gxx_personality_v0 {
       entry:
         invoke void @llvm.donothing() to label %normal unwind label %exception
       exception:

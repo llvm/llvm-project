@@ -4,6 +4,7 @@
 ; Globalopt should be able to evaluate an invoke.
 ; CHECK: @tmp = local_unnamed_addr global i32 1
 
+declare i32 @__gxx_personality_v0(...)
 @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__I_a, ptr null }]
 @tmp = global i32 0
 
@@ -11,7 +12,7 @@ define i32 @one() {
   ret i32 1
 }
 
-define void @_GLOBAL__I_a() personality ptr undef {
+define void @_GLOBAL__I_a() personality ptr @__gxx_personality_v0 {
 bb:
   %tmp1 = invoke i32 @one()
           to label %bb2 unwind label %bb4

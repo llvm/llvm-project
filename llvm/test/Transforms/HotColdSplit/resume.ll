@@ -8,9 +8,10 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; CHECK-LABEL: define {{.*}}@foo.cold.1(
 ; CHECK: call {{.*}}@sink(
 
+declare i32 @__gxx_personality_v0(...)
 declare void @sink() cold
 
-define i32 @foo() personality i8 0 {
+define i32 @foo() personality ptr @__gxx_personality_v0 {
 entry:
   br i1 undef, label %pre-resume-eh, label %normal
 

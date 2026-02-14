@@ -1293,6 +1293,10 @@ bool LLParser::parseAliasOrIFunc(const std::string &Name, unsigned NameID,
     NumberedVals.add(NameID, GV);
 
   if (GVal) {
+    if (isa<Function>(GVal))
+      return error(NameLoc,
+                   "forward reference used as personality must be a function");
+
     // Verify that types agree.
     if (GVal->getType() != GV->getType())
       return error(
@@ -1450,6 +1454,10 @@ bool LLParser::parseGlobal(const std::string &Name, unsigned NameID,
   GV->setUnnamedAddr(UnnamedAddr);
 
   if (GVal) {
+    if (isa<Function>(GVal))
+      return error(NameLoc,
+                   "forward reference used as personality must be a function");
+
     if (GVal->getAddressSpace() != AddrSpace)
       return error(
           TyLoc,
@@ -1786,9 +1794,14 @@ bool LLParser::parseFnAttributeValuePairs(AttrBuilder &B,
 // GlobalValue Reference/Resolution Routines.
 //===----------------------------------------------------------------------===//
 
-static inline GlobalValue *createGlobalFwdRef(Module *M, PointerType *PTy) {
+static inline GlobalValue *createGlobalFwdRef(Module *M, PointerType *PTy,
+                                              bool ExpectFunction = false) {
   // The used global type does not matter. We will later RAUW it with a
   // global/function of the correct type.
+  if (ExpectFunction)
+    return Function::Create(
+        FunctionType::get(Type::getVoidTy(M->getContext()), false),
+        GlobalValue::ExternalWeakLinkage, PTy->getAddressSpace(), "", M);
   return new GlobalVariable(*M, Type::getInt8Ty(M->getContext()), false,
                             GlobalValue::ExternalWeakLinkage, nullptr, "",
                             nullptr, GlobalVariable::NotThreadLocal,
@@ -1813,7 +1826,7 @@ Value *LLParser::checkValidVariableType(LocTy Loc, const Twine &Name, Type *Ty,
 /// forward reference record if needed.  This can return null if the value
 /// exists but does not have the right type.
 GlobalValue *LLParser::getGlobalVal(const std::string &Name, Type *Ty,
-                                    LocTy Loc) {
+                                    LocTy Loc, bool ExpectFunction) {
   PointerType *PTy = dyn_cast<PointerType>(Ty);
   if (!PTy) {
     error(Loc, "global variable reference must have pointer type");
@@ -1828,8 +1841,17 @@ GlobalValue *LLParser::getGlobalVal(const std::string &Name, Type *Ty,
   // forward ref record.
   if (!Val) {
     auto I = ForwardRefVals.find(Name);
-    if (I != ForwardRefVals.end())
+    if (I != ForwardRefVals.end()) {
       Val = I->second.first;
+      // If we expect a function but the forward ref is not one, RAUW it.
+      if (ExpectFunction && !isa<Function>(Val)) {
+        GlobalValue *FwdVal = createGlobalFwdRef(M, PTy, /*ExpectFunction=*/true);
+        Val->replaceAllUsesWith(FwdVal);
+        Val->eraseFromParent();
+        ForwardRefVals[Name] = std::make_pair(FwdVal, I->second.second);
+        return FwdVal;
+      }
+    }
   }
 
   // If we have the value in the symbol table or fwd-ref table, return it.
@@ -1838,12 +1860,13 @@ GlobalValue *LLParser::getGlobalVal(const std::string &Name, Type *Ty,
         checkValidVariableType(Loc, "@" + Name, Ty, Val));
 
   // Otherwise, create a new forward reference for this value and remember it.
-  GlobalValue *FwdVal = createGlobalFwdRef(M, PTy);
+  GlobalValue *FwdVal = createGlobalFwdRef(M, PTy, ExpectFunction);
   ForwardRefVals[Name] = std::make_pair(FwdVal, Loc);
   return FwdVal;
 }
 
-GlobalValue *LLParser::getGlobalVal(unsigned ID, Type *Ty, LocTy Loc) {
+GlobalValue *LLParser::getGlobalVal(unsigned ID, Type *Ty, LocTy Loc,
+                                    bool ExpectFunction) {
   PointerType *PTy = dyn_cast<PointerType>(Ty);
   if (!PTy) {
     error(Loc, "global variable reference must have pointer type");
@@ -1856,8 +1879,17 @@ GlobalValue *LLParser::getGlobalVal(unsigned ID, Type *Ty, LocTy Loc) {
   // forward ref record.
   if (!Val) {
     auto I = ForwardRefValIDs.find(ID);
-    if (I != ForwardRefValIDs.end())
+    if (I != ForwardRefValIDs.end()) {
       Val = I->second.first;
+      // If we expect a function but the forward ref is not one, RAUW it.
+      if (ExpectFunction && !isa<Function>(Val)) {
+        GlobalValue *FwdVal = createGlobalFwdRef(M, PTy, /*ExpectFunction=*/true);
+        Val->replaceAllUsesWith(FwdVal);
+        Val->eraseFromParent();
+        ForwardRefValIDs[ID] = std::make_pair(FwdVal, I->second.second);
+        return FwdVal;
+      }
+    }
   }
 
   // If we have the value in the symbol table or fwd-ref table, return it.
@@ -1866,7 +1898,7 @@ GlobalValue *LLParser::getGlobalVal(unsigned ID, Type *Ty, LocTy Loc) {
         checkValidVariableType(Loc, "@" + Twine(ID), Ty, Val));
 
   // Otherwise, create a new forward reference for this value and remember it.
-  GlobalValue *FwdVal = createGlobalFwdRef(M, PTy);
+  GlobalValue *FwdVal = createGlobalFwdRef(M, PTy, ExpectFunction);
   ForwardRefValIDs[ID] = std::make_pair(FwdVal, Loc);
   return FwdVal;
 }
@@ -4756,6 +4788,31 @@ bool LLParser::parseGlobalTypeAndValue(Constant *&V) {
   return parseType(Ty) || parseGlobalValue(Ty, V);
 }
 
+/// parsePersonality
+///   ::= TypeAndValue (expecting a function, null, undef, or poison)
+bool LLParser::parsePersonality(Function *&F) {
+  Type *Ty = nullptr;
+  if (parseType(Ty))
+    return true;
+  F = nullptr;
+  ValID ID;
+  Value *V = nullptr;
+  LocTy Loc = Lex.getLoc();
+  bool Parsed = parseValID(ID, /*PFS=*/nullptr, Ty) ||
+                convertValIDToValue(Ty, ID, V, nullptr, /*ExpectFunction=*/true);
+  if (Parsed)
+    return true;
+  if (!V)
+    return false;
+  // Allow null/zero/undef/poison constants and treat them as nullptr (no personality) for parsing legacy IR.
+  if (isa<ConstantPointerNull>(V) || isa<UndefValue>(V) ||
+      (isa<Constant>(V) && cast<Constant>(V)->isNullValue()))
+    return false;
+  if (!(F = dyn_cast<Function>(V)))
+    return error(Loc, "expected function");
+  return false;
+}
+
 bool LLParser::parseOptionalComdat(StringRef GlobalName, Comdat *&C) {
   C = nullptr;
 
@@ -6639,7 +6696,8 @@ bool LLParser::parseMetadata(Metadata *&MD, PerFunctionState *PFS) {
 //===----------------------------------------------------------------------===//
 
 bool LLParser::convertValIDToValue(Type *Ty, ValID &ID, Value *&V,
-                                   PerFunctionState *PFS) {
+                                   PerFunctionState *PFS,
+                                   bool ExpectFunction) {
   if (Ty->isFunctionTy())
     return error(ID.Loc, "functions are not values, refer to them as pointers");
 
@@ -6665,12 +6723,12 @@ bool LLParser::convertValIDToValue(Type *Ty, ValID &ID, Value *&V,
     return false;
   }
   case ValID::t_GlobalName:
-    V = getGlobalVal(ID.StrVal, Ty, ID.Loc);
+    V = getGlobalVal(ID.StrVal, Ty, ID.Loc, ExpectFunction);
     if (V && ID.NoCFI)
       V = NoCFIValue::get(cast<GlobalValue>(V));
     return V == nullptr;
   case ValID::t_GlobalID:
-    V = getGlobalVal(ID.UIntVal, Ty, ID.Loc);
+    V = getGlobalVal(ID.UIntVal, Ty, ID.Loc, ExpectFunction);
     if (V && ID.NoCFI)
       V = NoCFIValue::get(cast<GlobalValue>(V));
     return V == nullptr;
@@ -6959,7 +7017,7 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
   unsigned AddrSpace = 0;
   Constant *Prefix = nullptr;
   Constant *Prologue = nullptr;
-  Constant *PersonalityFn = nullptr;
+  Function *PersonalityFn = nullptr;
   Comdat *C;
 
   if (parseArgumentList(ArgList, UnnamedArgNums, IsVarArg) ||
@@ -6975,7 +7033,7 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
       (EatIfPresent(lltok::kw_prefix) && parseGlobalTypeAndValue(Prefix)) ||
       (EatIfPresent(lltok::kw_prologue) && parseGlobalTypeAndValue(Prologue)) ||
       (EatIfPresent(lltok::kw_personality) &&
-       parseGlobalTypeAndValue(PersonalityFn)))
+       parsePersonality(PersonalityFn)))
     return true;
 
   if (FuncAttrs.contains(Attribute::Builtin))

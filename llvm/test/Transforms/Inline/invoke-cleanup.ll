@@ -1,13 +1,14 @@
 ; RUN: opt %s -passes=inline -S | FileCheck %s
 ; RUN: opt %s -passes='module-inline' -S | FileCheck %s
 
+declare i32 @__gxx_personality_v0(...)
 declare void @external_func()
 
 @exception_type1 = external global i8
 @exception_type2 = external global i8
 
 
-define internal void @inner() personality ptr null {
+define internal void @inner() personality ptr @__gxx_personality_v0 {
   invoke void @external_func()
       to label %cont unwind label %lpad
 cont:
@@ -22,7 +23,7 @@ lpad:
 ; this call site (PR17872), otherwise C++ destructors will not be
 ; called when they should be.
 
-define void @outer() personality ptr null {
+define void @outer() personality ptr @__gxx_personality_v0 {
   invoke void @inner()
       to label %cont unwind label %lpad
 cont:

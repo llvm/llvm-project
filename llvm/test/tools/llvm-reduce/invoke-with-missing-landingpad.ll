@@ -3,7 +3,7 @@
 
 ; CHECK-INTERESTINGNESS: call void @foo()
 
-; CHECK: define void @test() personality ptr null {
+; CHECK: define void @test() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT:   br label %cont
 ; CHECK-EMPTY:
@@ -15,7 +15,7 @@
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: }
 
-define void @test() personality ptr null {
+define void @test() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @foo()
           to label %cont unwind label %lpad
@@ -34,4 +34,5 @@ exit:
   ret void
 }
 
+declare i32 @__gxx_personality_v0(...)
 declare void @foo()

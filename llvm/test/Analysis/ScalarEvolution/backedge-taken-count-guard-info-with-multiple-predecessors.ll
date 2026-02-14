@@ -1,5 +1,7 @@
 ; RUN: opt < %s -disable-output "-passes=print<scalar-evolution>" -scalar-evolution-max-iterations=0  -scalar-evolution-classify-expressions=0  2>&1 | FileCheck %s
 
+declare i32 @__gxx_personality_v0(...)
+
 define void @slt(i16 %a, i16 %b, i1 %c) {
 ; CHECK-LABEL: 'slt'
 ; CHECK-NEXT:  Determining loop execution counts for: @slt
@@ -365,7 +367,7 @@ exit:
   ret void
 }
 
-define void @hang_due_to_unreachable_phi_inblock() personality ptr null {
+define void @hang_due_to_unreachable_phi_inblock() personality ptr @__gxx_personality_v0 {
 bb:
   br label %bb6
 

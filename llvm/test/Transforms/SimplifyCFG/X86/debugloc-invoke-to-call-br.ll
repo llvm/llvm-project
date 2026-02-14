@@ -8,9 +8,9 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @widget(i1 %arg) personality ptr null !dbg !5 {
+define void @widget(i1 %arg) personality ptr @__gxx_personality_v0 !dbg !5 {
 ; CHECK-LABEL: define void @widget(
-; CHECK-SAME: i1 [[ARG:%.*]]) personality ptr null !dbg [[DBG5:![0-9]+]] {
+; CHECK-SAME: i1 [[ARG:%.*]]) personality ptr @__gxx_personality_v0 !dbg [[DBG5:![0-9]+]] {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    br i1 [[ARG]], label %[[BB2:.*]], label %[[BB1:.*]]
 ; CHECK:       [[BB1]]:
@@ -36,6 +36,7 @@ bb3:                                              ; preds = %bb1
   ret void
 }
 
+declare i32 @__gxx_personality_v0(...)
 declare void @baz(ptr)
 
 !llvm.dbg.cu = !{!0}

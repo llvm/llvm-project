@@ -1,6 +1,7 @@
 ; Test the static branch probability heuristics for no-return functions.
 ; RUN: opt < %s -passes='print<branch-prob>' --disable-output 2>&1 | FileCheck %s
 
+declare i32 @__gxx_personality_v0(...)
 declare void @g1()
 declare void @g2()
 declare void @g3()
@@ -490,7 +491,7 @@ for.inc:
 
 ; The loop heuristic should not overwrite the invoke heuristic. The unwind destination
 ; of an invoke should be considered VERY rare even in a loop.
-define void @test12(i32 %a) personality i8 0 {
+define void @test12(i32 %a) personality ptr @__gxx_personality_v0 {
 entry:
   br label %loop
 ; CHECK: edge %entry -> %loop probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]

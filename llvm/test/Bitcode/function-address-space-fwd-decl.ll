@@ -16,7 +16,9 @@ entry:
 }
 
 
-define i32 @invoked() personality i8* null {
+declare i32 @__gxx_personality_v0(...)
+
+define i32 @invoked() personality ptr @__gxx_personality_v0 {
 entry:
   %0 = invoke addrspace(40) i32 @foo() to label %l1 unwind label %lpad
   ; CHECK: invoke addrspace(40) i32 @foo()

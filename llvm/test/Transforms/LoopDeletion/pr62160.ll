@@ -5,9 +5,9 @@
 ; branch to it. We would need a different approach here that still retains
 ; the invoke.
 
-define i32 @test() mustprogress personality ptr poison {
+define i32 @test() mustprogress personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: define i32 @test
-; CHECK-SAME: () #[[ATTR0:[0-9]+]] personality ptr poison {
+; CHECK-SAME: () #[[ATTR0:[0-9]+]] personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -36,4 +36,5 @@ loop.latch:
   br label %loop
 }
 
+declare i32 @__gxx_personality_v0(...)
 declare void @llvm.donothing()

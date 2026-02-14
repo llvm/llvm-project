@@ -316,8 +316,9 @@ TEST(CodeExtractor, StoreOutputInvokeResultAfterEHPad) {
   SMDiagnostic Err;
   std::unique_ptr<Module> M(parseAssemblyString(R"invalid(
     declare i8 @hoge()
+    declare i32 @__gxx_personality_v0(...)
 
-    define i32 @foo() personality ptr null {
+    define i32 @foo() personality ptr @__gxx_personality_v0 {
       entry:
         %call = invoke i8 @hoge()
                 to label %invoke.cont unwind label %lpad
@@ -383,8 +384,9 @@ TEST(CodeExtractor, StoreOutputInvokeResultInExitStub) {
   SMDiagnostic Err;
   std::unique_ptr<Module> M(parseAssemblyString(R"invalid(
     declare i32 @bar()
+    declare i32 @__gxx_personality_v0(...)
 
-    define i32 @foo() personality ptr null {
+    define i32 @foo() personality ptr @__gxx_personality_v0 {
     entry:
       %0 = invoke i32 @bar() to label %exit unwind label %lpad
 

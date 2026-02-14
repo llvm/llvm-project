@@ -1,6 +1,7 @@
 ; RUN: not opt -passes=verify < %s 2>&1 | FileCheck %s
 
 %0 = type opaque
+declare i32 @__gxx_personality_v0(...)
 declare void @g()
 declare ptr @foo0()
 declare i8 @foo1()
@@ -21,7 +22,7 @@ define void @f0(ptr %ptr) {
   ret void
 }
 
-define void @f1(ptr %ptr) personality i8 3 {
+define void @f1(ptr %ptr) personality ptr @__gxx_personality_v0 {
 ; CHECK: Instruction does not dominate all uses!
 ; CHECK-NEXT:  %x = add i32 42, 1
 ; CHECK-NEXT:  invoke void @g() [ "foo"(i32 42, i64 100, i32 %x), "bar"(float 0.000000e+00, i64 100, i32 %l) ]

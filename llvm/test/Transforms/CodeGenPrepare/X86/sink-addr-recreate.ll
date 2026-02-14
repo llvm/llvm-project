@@ -5,12 +5,13 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:
 target triple = "x86_64-grtev4-linux-gnu"
 
 @globalptr = external global ptr
+declare i32 @__gxx_personality_v0(...)
 declare ptr @get_ptr(i64)
 
 ; Can't recreate invoke instruction
 
-define void @addr_from_invoke() personality ptr null {
-; CHECK-LABEL: define void @addr_from_invoke() personality ptr null {
+define void @addr_from_invoke() personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: define void @addr_from_invoke() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[PTR:%.*]] = invoke ptr @get_ptr(i64 0)
 ; CHECK-NEXT:            to label %[[BODY_1:.*]] unwind label %[[EHCLEANUP:.*]]

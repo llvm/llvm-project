@@ -316,7 +316,7 @@ entry:
 ;         <ResultType> @<FunctionName> ([argument list])
 ;         [(unnamed_addr|local_unnamed_addr)] [fn Attrs] [section "name"] [comdat [($name)]]
 ;         [align N] [gc] [prefix Constant] [prologue Constant]
-;         [personality Constant] { ... }
+;         [personality Function] { ... }
 
 ; Functions -- Simple
 declare void @f1 ()
@@ -782,8 +782,8 @@ declare void @f.prologuearray() prologue [4 x i32] [i32 0, i32 1, i32 2, i32 3]
 ; Functions -- Personality constant
 declare void @llvm.donothing() nounwind readnone
 ; CHECK: declare void @llvm.donothing() #35
-define void @f.no_personality() personality i8 3 {
-; CHECK: define void @f.no_personality() personality i8 3
+define void @f.no_personality() personality ptr @f.personality_handler {
+; CHECK: define void @f.no_personality() personality ptr @f.personality_handler
   invoke void @llvm.donothing() to label %normal unwind label %exception
 exception:
   %cleanup = landingpad i8 cleanup
@@ -1289,7 +1289,7 @@ define void @inlineasm(i32 %arg) {
 ;; Instructions
 
 ; Instructions -- Terminators
-define void @instructions.terminators(i8 %val) personality i32 -10 {
+define void @instructions.terminators(i8 %val) personality ptr @f.personality_handler {
   br i1 false, label %iftrue, label %iffalse
   ; CHECK: br i1 false, label %iftrue, label %iffalse
   br label %iftrue
@@ -1339,7 +1339,7 @@ exc:
   ret void
 }
 
-define i32 @instructions.win_eh.1() personality i32 -3 {
+define i32 @instructions.win_eh.1() personality ptr @f.personality_handler {
 entry:
   %arg1 = alloca i32
   %arg2 = alloca i32
@@ -1384,7 +1384,7 @@ normal:
   ret i32 0
 }
 ;
-define i32 @instructions.win_eh.2() personality i32 -4 {
+define i32 @instructions.win_eh.2() personality ptr @f.personality_handler {
 entry:
   invoke void @f.ccc() to label %invoke.cont unwind label %catchswitch
 
@@ -1756,7 +1756,7 @@ define void @instructions.call_notail() {
   ret void
 }
 
-define void @instructions.landingpad() personality i32 -2 {
+define void @instructions.landingpad() personality ptr @f.personality_handler {
   invoke void @llvm.donothing() to label %proceed unwind label %catch1
   invoke void @llvm.donothing() to label %proceed unwind label %catch2
   invoke void @llvm.donothing() to label %proceed unwind label %catch3
@@ -1984,7 +1984,7 @@ define void @call_with_operand_bundle4(ptr %ptr) {
 ; Invoke versions of the above tests:
 
 
-define void @invoke_with_operand_bundle0(ptr %ptr) personality i8 3 {
+define void @invoke_with_operand_bundle0(ptr %ptr) personality ptr @f.personality_handler {
 ; CHECK-LABEL: @invoke_with_operand_bundle0(
  entry:
   %l = load i32, ptr %ptr
@@ -1999,7 +1999,7 @@ normal:
   ret void
 }
 
-define void @invoke_with_operand_bundle1(ptr %ptr) personality i8 3 {
+define void @invoke_with_operand_bundle1(ptr %ptr) personality ptr @f.personality_handler {
 ; CHECK-LABEL: @invoke_with_operand_bundle1(
  entry:
   %l = load i32, ptr %ptr
@@ -2032,7 +2032,7 @@ normal2:
   ret void
 }
 
-define void @invoke_with_operand_bundle2(ptr %ptr) personality i8 3 {
+define void @invoke_with_operand_bundle2(ptr %ptr) personality ptr @f.personality_handler {
 ; CHECK-LABEL: @invoke_with_operand_bundle2(
  entry:
   invoke void @op_bundle_callee_0() [ "foo"() ] to label %normal unwind label %exception
@@ -2045,7 +2045,7 @@ normal:
   ret void
 }
 
-define void @invoke_with_operand_bundle3(ptr %ptr) personality i8 3 {
+define void @invoke_with_operand_bundle3(ptr %ptr) personality ptr @f.personality_handler {
 ; CHECK-LABEL: @invoke_with_operand_bundle3(
  entry:
   %l = load i32, ptr %ptr
@@ -2060,7 +2060,7 @@ normal:
   ret void
 }
 
-define void @invoke_with_operand_bundle4(ptr %ptr) personality i8 3 {
+define void @invoke_with_operand_bundle4(ptr %ptr) personality ptr @f.personality_handler {
 ; CHECK-LABEL: @invoke_with_operand_bundle4(
  entry:
   %l = load i32, ptr %ptr
@@ -2077,7 +2077,7 @@ normal:
 }
 
 declare void @vaargs_func(...)
-define void @invoke_with_operand_bundle_vaarg(ptr %ptr) personality i8 3 {
+define void @invoke_with_operand_bundle_vaarg(ptr %ptr) personality ptr @f.personality_handler {
 ; CHECK-LABEL: @invoke_with_operand_bundle_vaarg(
  entry:
   %l = load i32, ptr %ptr

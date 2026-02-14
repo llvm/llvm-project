@@ -986,7 +986,7 @@ Syntax::
            <ResultType> @<FunctionName> ([argument list])
            [(unnamed_addr|local_unnamed_addr)] [AddrSpace] [fn Attrs]
            [section "name"] [partition "name"] [comdat [($name)]] [align N]
-           [gc] [prefix Constant] [prologue Constant] [personality Constant]
+           [gc] [prefix Constant] [prologue Constant] [personality Function]
            (!name !N)* { ... }
 
 The argument list is a comma-separated sequence of arguments where each

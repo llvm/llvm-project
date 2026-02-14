@@ -1,5 +1,6 @@
 ; RUN: not opt -passes=verify < %s 2>&1 | FileCheck %s
 
+declare i32 @__gxx_personality_v0(...)
 declare i8 @llvm.experimental.deoptimize.i8(...)
 declare void @llvm.experimental.deoptimize.isVoid(...)
 declare cc40 void @llvm.experimental.deoptimize.double(...)
@@ -21,7 +22,7 @@ entry:
   ret void
 }
 
-define void @f_invoke() personality i8 3 {
+define void @f_invoke() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void(...) @llvm.experimental.deoptimize.isVoid(i32 0, float 0.0) to label %ok unwind label %not_ok
 ; CHECK: experimental_deoptimize cannot be invoked

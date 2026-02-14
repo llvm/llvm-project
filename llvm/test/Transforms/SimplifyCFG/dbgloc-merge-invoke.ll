@@ -8,11 +8,12 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
+declare i32 @__gxx_personality_v0(...)
 declare ptr @baz()
 
-define i32 @foo(i1 %call66, ptr %.str.8) personality ptr null {
+define i32 @foo(i1 %call66, ptr %.str.8) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: define i32 @foo(
-; CHECK-SAME: i1 [[CALL66:%.*]], ptr [[DOTSTR_8:%.*]]) personality ptr null {
+; CHECK-SAME: i1 [[CALL66:%.*]], ptr [[DOTSTR_8:%.*]]) personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CALL661:%.*]] = invoke i1 @bar(ptr null)
 ; CHECK-NEXT:            to label %[[INVOKE_CONT65:.*]] unwind label %[[LPAD45_LOOPEXIT_SPLIT_LP_LOOPEXIT_SPLIT_LP:.*]]

@@ -252,7 +252,7 @@ declare void @g.f1()
 ;         <ResultType> @<FunctionName> ([argument list])
 ;         [unnamed_addr] [fn Attrs] [section "name"] [comdat [($name)]]
 ;         [align N] [gc] [prefix Constant] [prologue Constant]
-;         [personality Constant] { ... }
+;         [personality Function] { ... }
 
 ; Functions -- Simple
 declare void @f1 ()
@@ -588,7 +588,7 @@ declare void @f.prologuearray() prologue [4 x i32] [i32 0, i32 1, i32 2, i32 3]
 declare void @llvm.donothing() nounwind readnone
 ; CHECK: declare void @llvm.donothing() #35
 define void @f.no_personality() personality i8 3 {
-; CHECK: define void @f.no_personality() personality i8 3
+; CHECK: define void @f.no_personality() {
   invoke void @llvm.donothing() to label %normal unwind label %exception
 exception:
   %cleanup = landingpad i8 cleanup

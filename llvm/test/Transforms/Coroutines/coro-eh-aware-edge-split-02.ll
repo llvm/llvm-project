@@ -5,7 +5,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK-LABEL: define internal fastcc void @h.resume(
-define void @h(i1 %cond, i32 %x, i32 %y) presplitcoroutine personality i32 0 {
+define void @h(i1 %cond, i32 %x, i32 %y) presplitcoroutine personality ptr @__gxx_personality_v0 {
 entry:
   %id = call token @llvm.coro.id(i32 16, ptr null, ptr null, ptr null)
   %size = tail call i64 @llvm.coro.size.i64()
@@ -64,6 +64,7 @@ coro.ret:
 }
 
 ; Function Attrs: argmemonly nounwind readonly
+declare i32 @__gxx_personality_v0(...)
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr)
 declare noalias ptr @malloc(i64)
 declare i64 @llvm.coro.size.i64()

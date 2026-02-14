@@ -3,10 +3,12 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -O0 -global-isel=1 -global-isel-abort=0 < %s | FileCheck %s --check-prefix=GISEL
 
 ; Test that z0 is saved/restored, as the unwinder may only retain the low 64bits (d0).
-define <vscale x 4 x i32> @invoke_callee_may_throw_sve(<vscale x 4 x i32> %v) uwtable personality i8 0 {
+define <vscale x 4 x i32> @invoke_callee_may_throw_sve(<vscale x 4 x i32> %v) uwtable personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: invoke_callee_may_throw_sve:
 ; CHECK:       .Lfunc_begin0:
 ; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:    .cfi_personality 156, DW.ref.__gxx_personality_v0
+; CHECK-NEXT:    .cfi_lsda 28, .Lexception0
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -159,6 +161,8 @@ define <vscale x 4 x i32> @invoke_callee_may_throw_sve(<vscale x 4 x i32> %v) uw
 ; GISEL-LABEL: invoke_callee_may_throw_sve:
 ; GISEL:       .Lfunc_begin0:
 ; GISEL-NEXT:    .cfi_startproc
+; GISEL-NEXT:    .cfi_personality 156, DW.ref.__gxx_personality_v0
+; GISEL-NEXT:    .cfi_lsda 28, .Lexception0
 ; GISEL-NEXT:  // %bb.0:
 ; GISEL-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
 ; GISEL-NEXT:    .cfi_def_cfa_offset 16
@@ -315,14 +319,17 @@ define <vscale x 4 x i32> @invoke_callee_may_throw_sve(<vscale x 4 x i32> %v) uw
   ret <vscale x 4 x i32> %v;
 }
 
+declare i32 @__gxx_personality_v0(...)
 declare <vscale x 4 x i32> @may_throw_sve(<vscale x 4 x i32> %v);
 
 
 ; Test that q0 is saved/restored, as the unwinder may only retain the low 64bits (d0).
-define aarch64_vector_pcs <4 x i32> @invoke_callee_may_throw_neon(<4 x i32> %v) uwtable personality i8 0 {
+define aarch64_vector_pcs <4 x i32> @invoke_callee_may_throw_neon(<4 x i32> %v) uwtable personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: invoke_callee_may_throw_neon:
 ; CHECK:       .Lfunc_begin1:
 ; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:    .cfi_personality 156, DW.ref.__gxx_personality_v0
+; CHECK-NEXT:    .cfi_lsda 28, .Lexception1
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #304
 ; CHECK-NEXT:    .cfi_def_cfa_offset 304
@@ -430,6 +437,8 @@ define aarch64_vector_pcs <4 x i32> @invoke_callee_may_throw_neon(<4 x i32> %v) 
 ; GISEL-LABEL: invoke_callee_may_throw_neon:
 ; GISEL:       .Lfunc_begin1:
 ; GISEL-NEXT:    .cfi_startproc
+; GISEL-NEXT:    .cfi_personality 156, DW.ref.__gxx_personality_v0
+; GISEL-NEXT:    .cfi_lsda 28, .Lexception1
 ; GISEL-NEXT:  // %bb.0:
 ; GISEL-NEXT:    sub sp, sp, #304
 ; GISEL-NEXT:    .cfi_def_cfa_offset 304

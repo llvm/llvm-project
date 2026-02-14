@@ -25787,12 +25787,12 @@ ISD::NodeType RISCVTargetLowering::getExtendForAtomicRMWArg(unsigned Op) const {
 }
 
 Register RISCVTargetLowering::getExceptionPointerRegister(
-    const Constant *PersonalityFn) const {
+    const Function *PersonalityFn) const {
   return RISCV::X10;
 }
 
 Register RISCVTargetLowering::getExceptionSelectorRegister(
-    const Constant *PersonalityFn) const {
+    const Function *PersonalityFn) const {
   return RISCV::X11;
 }
 

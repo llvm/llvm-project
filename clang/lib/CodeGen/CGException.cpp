@@ -270,10 +270,10 @@ static llvm::FunctionCallee getPersonalityFn(CodeGenModule &CGM,
                                    llvm::AttributeList(), /*Local=*/true);
 }
 
-static llvm::Constant *getOpaquePersonalityFn(CodeGenModule &CGM,
-                                        const EHPersonality &Personality) {
+static llvm::Function *getOpaquePersonalityFn(CodeGenModule &CGM,
+                                              const EHPersonality &Personality) {
   llvm::FunctionCallee Fn = getPersonalityFn(CGM, Personality);
-  return cast<llvm::Constant>(Fn.getCallee());
+  return cast<llvm::Function>(Fn.getCallee());
 }
 
 /// Check whether a landingpad instruction only uses C++ features.

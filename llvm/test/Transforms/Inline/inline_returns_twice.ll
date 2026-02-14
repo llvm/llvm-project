@@ -3,6 +3,7 @@
 ; Check that functions with "returns_twice" calls are only inlined,
 ; if they are themselves marked as such.
 
+declare i32 @__gxx_personality_v0(...)
 declare i32 @a() returns_twice
 
 define i32 @inner1() {
@@ -37,7 +38,7 @@ entry:
   ret i32 %add
 }
 
-define i32 @inner3() personality ptr null {
+define i32 @inner3() personality ptr @__gxx_personality_v0 {
 entry:
   %invoke = invoke i32 @a() returns_twice
       to label %cont unwind label %lpad
@@ -60,7 +61,7 @@ entry:
   ret i32 %add
 }
 
-define i32 @inner4() returns_twice personality ptr null {
+define i32 @inner4() returns_twice personality ptr @__gxx_personality_v0 {
 entry:
   %invoke = invoke i32 @a() returns_twice
       to label %cont unwind label %lpad

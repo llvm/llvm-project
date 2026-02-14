@@ -2616,9 +2616,9 @@ if.end:
   ret void
 }
 
-define void @dont_merge_different_immargs(i1 %c1) gc "statepoint-example" personality ptr null {
+define void @dont_merge_different_immargs(i1 %c1) gc "statepoint-example" personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: define void @dont_merge_different_immargs(
-; CHECK-SAME: i1 [[C1:%.*]]) gc "statepoint-example" personality ptr null {
+; CHECK-SAME: i1 [[C1:%.*]]) gc "statepoint-example" personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br i1 [[C1]], label %[[IF:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[IF]]:
 ; CHECK-NEXT:    [[T1:%.*]] = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 1, i32 0, ptr elementtype(void (ptr addrspace(1))) null, i32 1, i32 0, ptr addrspace(1) null, i64 0, i64 0)

@@ -34,6 +34,7 @@ entry:
   ret i32 %add
 }
 
+declare i32 @__gxx_personality_v0(...)
 declare void @escape(ptr)
 
 declare i32 @getval()
@@ -622,7 +623,7 @@ bb:
 }
 
 
-define void @test_invoke_captures() personality ptr undef {
+define void @test_invoke_captures() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @test_invoke_captures(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
