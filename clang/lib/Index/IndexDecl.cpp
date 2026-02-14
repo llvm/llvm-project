@@ -40,10 +40,10 @@ public:
   explicit IndexingDeclVisitor(IndexingContext &indexCtx)
     : IndexCtx(indexCtx) { }
 
-  bool Handled = true;
-
+  // Default handler for declarations not matched by more specific Visit*
   bool VisitDecl(const Decl *D) {
-    Handled = false;
+    if (isa<DeclContext>(D))
+      return IndexCtx.indexDeclContext(cast<DeclContext>(D));
     return true;
   }
 
@@ -784,15 +784,9 @@ bool IndexingContext::indexDecl(const Decl *D) {
   if (isTemplateImplicitInstantiation(D) && !shouldIndexImplicitInstantiation())
     return true;
 
+  // Dispatch the Decl by kind to specific Visit* that index the whole subtree.
   IndexingDeclVisitor Visitor(*this);
-  bool ShouldContinue = Visitor.Visit(D);
-  if (!ShouldContinue)
-    return false;
-
-  if (!Visitor.Handled && isa<DeclContext>(D))
-    return indexDeclContext(cast<DeclContext>(D));
-
-  return true;
+  return Visitor.Visit(D);
 }
 
 bool IndexingContext::indexDeclContext(const DeclContext *DC) {
