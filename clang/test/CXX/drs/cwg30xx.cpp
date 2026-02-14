@@ -17,7 +17,7 @@ void f(
 {
     int _;
     // expected-error@-1 {{redefinition of '_'}}
-    // expected-note@#cwg3005-first-param {{previous definition is here}}
+    //   expected-note@#cwg3005-first-param {{previous definition is here}}
 }
 
 } // namespace cwg3005

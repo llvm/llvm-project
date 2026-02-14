@@ -333,6 +333,16 @@ add_header_library(
 )
 
 add_header_library(
+  bf16addf128
+  HDRS
+    bf16addf128.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   cbrt
   HDRS
     cbrt.h
@@ -614,12 +624,32 @@ add_header_library(
 )
 
 add_header_library(
+  f16sqrtf
+  HDRS
+    f16sqrtf.h
+  DEPENDS
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.include.llvm-libc-macros.float16_macros
+)
+
+add_header_library(
   f16sqrtl
   HDRS
     f16sqrtl.h
   DEPENDS
     libc.src.__support.FPUtil.generic.sqrt
     libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  ffma
+  HDRS
+    ffma.h
+  DEPENDS
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -1132,6 +1162,21 @@ add_header_library(
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  hypotf16
+  HDRS
+    hypotf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
+    libc.include.llvm-libc-macros.float16_macros
 )
 
 add_header_library(
@@ -1693,4 +1738,19 @@ add_header_library(
     libc.src.__support.FPUtil.nearest_integer
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  tanhf
+  HDRS
+    tanhf.h
+  DEPENDS
+    .exp10f_utils
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
 )

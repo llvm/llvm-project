@@ -903,33 +903,27 @@ void VPlanTransforms::handleEarlyExits(VPlan &Plan,
   auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
   VPBlockBase *HeaderVPB = cast<VPBasicBlock>(LatchVPBB->getSuccessors()[1]);
 
-  // Disconnect all early exits from the loop leaving it with a single exit from
-  // the latch. Early exits that are countable are left for a scalar epilog. The
-  // condition of uncountable early exits (currently at most one is supported)
-  // is fused into the latch exit, and used to branch from middle block to the
-  // early exit destination.
-  [[maybe_unused]] bool HandledUncountableEarlyExit = false;
+  if (HasUncountableEarlyExit) {
+    handleUncountableEarlyExits(Plan, cast<VPBasicBlock>(HeaderVPB), LatchVPBB,
+                                MiddleVPBB);
+    return;
+  }
+
+  // Disconnect countable early exits from the loop, leaving it with a single
+  // exit from the latch. Countable early exits are left for a scalar epilog.
   for (VPIRBasicBlock *EB : Plan.getExitBlocks()) {
     for (VPBlockBase *Pred : to_vector(EB->getPredecessors())) {
       if (Pred == MiddleVPBB)
         continue;
-      if (HasUncountableEarlyExit) {
-        assert(!HandledUncountableEarlyExit &&
-               "can handle exactly one uncountable early exit");
-        handleUncountableEarlyExit(cast<VPBasicBlock>(Pred), EB, Plan,
-                                   cast<VPBasicBlock>(HeaderVPB), LatchVPBB);
-        HandledUncountableEarlyExit = true;
-      } else {
-        for (VPRecipeBase &R : EB->phis())
-          cast<VPIRPhi>(&R)->removeIncomingValueFor(Pred);
-      }
-      cast<VPBasicBlock>(Pred)->getTerminator()->eraseFromParent();
+
+      // Remove phi operands for the early exiting block.
+      for (VPRecipeBase &R : EB->phis())
+        cast<VPIRPhi>(&R)->removeIncomingValueFor(Pred);
+      auto *EarlyExitingVPBB = cast<VPBasicBlock>(Pred);
+      EarlyExitingVPBB->getTerminator()->eraseFromParent();
       VPBlockUtils::disconnectBlocks(Pred, EB);
     }
   }
-
-  assert((!HasUncountableEarlyExit || HandledUncountableEarlyExit) &&
-         "missed an uncountable exit that must be handled");
 }
 
 void VPlanTransforms::addMiddleCheck(VPlan &Plan,
