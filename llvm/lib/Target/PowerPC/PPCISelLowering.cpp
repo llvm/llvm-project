@@ -18643,6 +18643,10 @@ void PPCTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::ppc_atomicrmw_or_i128:
   case Intrinsic::ppc_atomicrmw_xor_i128:
   case Intrinsic::ppc_cmpxchg_i128:
+  case Intrinsic::ppc_atomicrmw_max_i128:
+  case Intrinsic::ppc_atomicrmw_umax_i128:
+  case Intrinsic::ppc_atomicrmw_min_i128:
+  case Intrinsic::ppc_atomicrmw_umin_i128:
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::i128;
     Info.ptrVal = I.getArgOperand(0);
@@ -20376,6 +20380,14 @@ getIntrinsicForAtomicRMWBinOp128(AtomicRMWInst::BinOp BinOp) {
     return Intrinsic::ppc_atomicrmw_xor_i128;
   case AtomicRMWInst::Nand:
     return Intrinsic::ppc_atomicrmw_nand_i128;
+  case AtomicRMWInst::Max:
+    return Intrinsic::ppc_atomicrmw_max_i128;
+  case AtomicRMWInst::UMax:
+    return Intrinsic::ppc_atomicrmw_umax_i128;
+  case AtomicRMWInst::Min:
+    return Intrinsic::ppc_atomicrmw_min_i128;
+  case AtomicRMWInst::UMin:
+    return Intrinsic::ppc_atomicrmw_umin_i128;
   }
 }
 
