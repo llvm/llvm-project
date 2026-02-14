@@ -868,8 +868,10 @@ void ClangExpressionDeclMap::LookUpLldbClass(NameSearchContext &context) {
   // creates decls for function templates by attaching them to the TU instead
   // of a class context. So we can actually have template methods scoped
   // outside of a class. Once we fix that, we can remove this code-path.
-
-  VariableList *vars = frame->GetVariableList(false, nullptr);
+  // Additionally, we exclude extended variables from here. Clang-based
+  // languages are unlikely candidates for extended variables anyway, and
+  // especially in this case, we're looking for something specific to C++.
+  VariableList *vars = frame->GetVariableList(false, false, nullptr);
 
   lldb::VariableSP this_var = vars->FindVariable(ConstString("this"));
 
@@ -955,7 +957,10 @@ void ClangExpressionDeclMap::LookUpLldbObjCClass(NameSearchContext &context) {
   // In that case, just look up the "self" variable in the current scope
   // and use its type.
 
-  VariableList *vars = frame->GetVariableList(false, nullptr);
+  // We exclude extended variables from here. Like above, it's highly unlikely
+  // we care about synthetic variables here, and indeed this code is looking for
+  // an obj-C specific construct.
+  VariableList *vars = frame->GetVariableList(false, false, nullptr);
 
   lldb::VariableSP self_var = vars->FindVariable(ConstString("self"));
 

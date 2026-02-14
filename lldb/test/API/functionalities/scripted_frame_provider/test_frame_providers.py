@@ -500,6 +500,8 @@ class ValueProvidingFrame(ScriptedFrame):
         """"""
         out = lldb.SBValueList()
         out.Append(self.variable)
+        # Produce a fake value to be displayed.
+        out.Append(self.variable.CreateValueFromExpression("_handler_one", "(uint32_t)1"))
         return out
 
     def get_value_for_variable_expression(self, expr, options, error: lldb.SBError):

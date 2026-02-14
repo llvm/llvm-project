@@ -30,6 +30,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/ValueObject/ValueObject.h"
+#include "lldb/lldb-enumerations.h"
 
 #include <memory>
 #include <optional>
@@ -337,9 +338,9 @@ protected:
           // The request went past the stack, so handle that case:
           const uint32_t num_frames = thread->GetStackFrameCount();
           if (static_cast<int32_t>(num_frames - frame_idx) >
-              *m_options.relative_frame_offset)
-          frame_idx += *m_options.relative_frame_offset;
-          else {
+              *m_options.relative_frame_offset) {
+            frame_idx += *m_options.relative_frame_offset;
+          } else {
             if (frame_idx == num_frames - 1) {
               // If we are already at the top of the stack, just warn and don't
               // reset the frame.
@@ -439,17 +440,23 @@ protected:
     if (!var_sp)
       return llvm::StringRef();
 
-    switch (var_sp->GetScope()) {
+    auto vt = var_sp->GetScope();
+    bool is_extended = vt & ValueTypeExtendedMask;
+    // Clear the bit so the rest works correctly.
+    if (is_extended)
+      vt = ValueType(vt ^ ValueTypeExtendedMask);
+
+    switch (vt) {
     case eValueTypeVariableGlobal:
-      return "GLOBAL: ";
+      return is_extended ? "(ext) GLOBAL: " : "GLOBAL: ";
     case eValueTypeVariableStatic:
-      return "STATIC: ";
+      return is_extended ? "(ext) STATIC: " : "STATIC: ";
     case eValueTypeVariableArgument:
-      return "ARG: ";
+      return is_extended ? "(ext) ARG: " : "ARG: ";
     case eValueTypeVariableLocal:
-      return "LOCAL: ";
+      return is_extended ? "(ext) LOCAL: " : "LOCAL: ";
     case eValueTypeVariableThreadLocal:
-      return "THREAD: ";
+      return is_extended ? "(ext) THREAD: " : "THREAD: ";
     default:
       break;
     }
@@ -459,6 +466,14 @@ protected:
 
   /// Returns true if `scope` matches any of the options in `m_option_variable`.
   bool ScopeRequested(lldb::ValueType scope) {
+    // If it's an extended variable, check if we want to show those first.
+    bool is_extended = scope & ValueTypeExtendedMask;
+    if (is_extended) {
+      if (!m_option_variable.show_extended)
+        return false;
+
+      scope = ValueType(scope ^ ValueTypeExtendedMask);
+    }
     switch (scope) {
     case eValueTypeVariableGlobal:
     case eValueTypeVariableStatic:
@@ -474,7 +489,10 @@ protected:
     case eValueTypeVariableThreadLocal:
     case eValueTypeVTable:
     case eValueTypeVTableEntry:
-      return false;
+      // The default for all other value types is !is_extended. Aside from the
+      // modifiers above that should apply equally to extended and normal
+      // variables, any other extended variable we should default to showing.
+      return !is_extended;
     }
     llvm_unreachable("Unexpected scope value");
   }
@@ -521,7 +539,8 @@ protected:
 
     Status error;
     VariableList *variable_list =
-        frame->GetVariableList(m_option_variable.show_globals, &error);
+        frame->GetVariableList(m_option_variable.show_globals,
+                               m_option_variable.show_extended, &error);
 
     if (error.Fail() && (!variable_list || variable_list->GetSize() == 0)) {
       result.AppendError(error.AsCString());

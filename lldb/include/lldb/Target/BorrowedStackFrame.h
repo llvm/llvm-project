@@ -78,10 +78,12 @@ public:
   lldb::RegisterContextSP GetRegisterContext() override;
 
   VariableList *GetVariableList(bool get_file_globals,
+                                bool include_extended_vars,
                                 Status *error_ptr) override;
 
   lldb::VariableListSP
   GetInScopeVariableList(bool get_file_globals,
+                         bool include_extended_vars = true,
                          bool must_have_valid_location = false) override;
 
   lldb::ValueObjectSP GetValueForVariableExpressionPath(
