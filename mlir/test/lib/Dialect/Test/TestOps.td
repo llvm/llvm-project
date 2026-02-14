@@ -861,6 +861,7 @@ def ParentOp : TEST_Op<"parent"> {
     let regions = (region AnyRegion);
 }
 def ChildOp : TEST_Op<"child", [HasParent<"ParentOp">]>;
+def NotChildOp : TEST_Op<"not_child", [HasParentNotOf<"ParentOp">]>;
 
 // ParentOneOf trait
 def ParentOp1 : TEST_Op<"parent1"> {
@@ -868,6 +869,8 @@ def ParentOp1 : TEST_Op<"parent1"> {
 }
 def ChildWithParentOneOf : TEST_Op<"child_with_parent_one_of",
                                 [ParentOneOf<["ParentOp", "ParentOp1"]>]>;
+def NotChildWithParentOneOf : TEST_Op<"child_with_parent_not_one_of",
+                                [ParentNotOneOf<["ParentOp", "ParentOp1"]>]>;
 
 def TerminatorOp : TEST_Op<"finish", [Terminator]>;
 def SingleBlockImplicitTerminatorOp : TEST_Op<"SingleBlockImplicitTerminator",

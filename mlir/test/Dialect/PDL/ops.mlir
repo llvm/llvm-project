@@ -173,3 +173,29 @@ pdl.pattern @attribute_with_loc : benefit(1) {
   %root = operation {"attribute" = %attr}
   rewrite %root with "rewriter"
 }
+
+// -----
+
+// Check that non-materializable patterns allow non-PDL operations in their
+// bodies.
+func.func @pattern_body() -> (!pdl.type, !pdl.type, !pdl.operation) {
+  %type1 = pdl.type : i32
+  %type2 = pdl.type
+  %root = pdl.operation -> (%type1, %type2 : !pdl.type, !pdl.type)
+  return %type1, %type2, %root : !pdl.type, !pdl.type, !pdl.operation
+}
+
+func.func @rewrite_body(%type1: !pdl.type, %type2: !pdl.type, %root: !pdl.operation) {
+  %newOp = pdl.operation "foo.op" -> (%type1, %type2 : !pdl.type, !pdl.type)
+  pdl.apply_native_rewrite "NativeRewrite"(%newOp, %root : !pdl.operation, !pdl.operation)
+  return
+}
+
+pdl.pattern @nonmaterializable_pattern : benefit(1) nonmaterializable {
+  %type1, %type2, %root = func.call @pattern_body()
+    : () -> (!pdl.type, !pdl.type, !pdl.operation)
+  rewrite %root {
+    func.call @rewrite_body(%type1, %type2, %root)
+      : (!pdl.type, !pdl.type, !pdl.operation) -> ()
+  }
+}
