@@ -1394,9 +1394,53 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
       return false;
   }
 
+  // When the scheduler found no Order (memory) dependency between a
+  // store-load pair — either because there is no DAG edge at all, or
+  // because the only edges are Anti/register deps — the pair can land in
+  // the same V65+ packet.  Re-check aliasing without TBAA (TBAA may have
+  // been the reason the scheduler omitted the Order edge) and, if the
+  // accesses may alias, mark the packet :mem_noshuf so the hardware does
+  // not reorder the memory operations.
+  auto CheckMemNoshufForSlot1Store = [&]() {
+    if (!Slot1Store || !MF.getSubtarget<HexagonSubtarget>().hasV65Ops())
+      return;
+    bool LoadJ = J.mayLoad(), StoreJ = J.mayStore();
+    bool LoadI = I.mayLoad(), StoreI = I.mayStore();
+    bool NVStoreJ = HII->isNewValueStore(J);
+    bool NVStoreI = HII->isNewValueStore(I);
+    bool IsVecJ = HII->isHVXVec(J);
+    bool IsVecI = HII->isHVXVec(I);
+
+    if (((LoadJ && StoreI && !NVStoreI) || (StoreJ && LoadI && !NVStoreJ)) &&
+        (J.getOpcode() != Hexagon::S2_allocframe &&
+         I.getOpcode() != Hexagon::S2_allocframe) &&
+        (J.getOpcode() != Hexagon::L2_deallocframe &&
+         I.getOpcode() != Hexagon::L2_deallocframe) &&
+        (!HII->isMemOp(J) && !HII->isMemOp(I)) && (!IsVecJ && !IsVecI)) {
+      // If either instruction accesses a stack slot, constant pool, GOT,
+      // or jump table (PseudoSourceValue), the scheduler's TBAA-based
+      // NoAlias result is reliable — skip the re-check.  TBAA false
+      // positives only affect heap-to-heap accesses through different
+      // pointer types (e.g. libc++ tree node pointer casts).
+      auto HasPSV = [](const MachineInstr &MI) {
+        for (const MachineMemOperand *MMO : MI.memoperands())
+          if (MMO->getPseudoValue())
+            return true;
+        return false;
+      };
+      if (HasPSV(J) || HasPSV(I))
+        return;
+
+      if (J.mayAlias(AA, I, /*UseTBAA=*/false))
+        setmemShufDisabled(true);
+    }
+  };
+
   // There no dependency between a prolog instruction and its successor.
-  if (!SUJ->isSucc(SUI))
+  if (!SUJ->isSucc(SUI)) {
+    CheckMemNoshufForSlot1Store();
     return true;
+  }
 
   for (unsigned i = 0; i < SUJ->Succs.size(); ++i) {
     if (FoundSequentialDependence)
@@ -1628,6 +1672,11 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
     return false;
   }
 
+  // The dependency loop found no blocking dependence — only Anti deps
+  // (or Order deps that the V65 Slot1Store path already handled).
+  // Still need to guard against a store-load pair whose Order dep was
+  // omitted by the scheduler due to TBAA.
+  CheckMemNoshufForSlot1Store();
   return true;
 }
 
