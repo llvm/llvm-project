@@ -64,15 +64,18 @@ public:
   lldb::RegisterContextSP GetRegisterContext() override;
 
   VariableList *GetVariableList(bool get_file_globals,
+                                bool include_extended_vars,
                                 lldb_private::Status *error_ptr) override;
 
   lldb::VariableListSP
-  GetInScopeVariableList(bool get_file_globals,
+  GetInScopeVariableList(bool get_file_globals, bool include_extended_vars,
                          bool must_have_valid_location = false) override;
 
   lldb::ValueObjectSP
   GetValueObjectForFrameVariable(const lldb::VariableSP &variable_sp,
                                  lldb::DynamicValueType use_dynamic) override;
+
+  lldb::ValueObjectSP FindVariable(ConstString name) override;
 
   lldb::ValueObjectSP GetValueForVariableExpressionPath(
       llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
@@ -90,10 +93,12 @@ private:
   CreateRegisterContext(ScriptedFrameInterface &interface, Thread &thread,
                         lldb::user_id_t frame_id);
 
-  // Populate m_variable_list_sp from the scripted frame interface. Right now
-  // this doesn't take any options because the implementation can't really do
-  // anything with those options anyway, so there's no point.
-  void PopulateVariableListFromInterface();
+  // Populate m_variable_list_sp from the scripted frame interface. The boolean
+  // controls if we should try to fabricate Variable objects for each of the
+  // ValueObjects that we have. This defaults to 'true' because this is a
+  // scripted frame, so kind of the whole point is to provide extended variables
+  // to the user.
+  void PopulateVariableListFromInterface(bool include_extended_vars = true);
 
   ScriptedFrame(const ScriptedFrame &) = delete;
   const ScriptedFrame &operator=(const ScriptedFrame &) = delete;

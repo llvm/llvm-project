@@ -769,17 +769,37 @@ class ScriptedFrameProviderTestCase(TestBase):
         # Check that we can get variables from this frame.
         frame0 = thread.GetFrameAtIndex(0)
         self.assertIsNotNone(frame0)
-        # Get every variable visible at this point
-        variables = frame0.GetVariables(True, True, True, False)
-        self.assertTrue(variables.IsValid() and variables.GetSize() == 1)
+
+        # Ensure that we can get extended variables with `SetIncludeExtended`.
+        options = lldb.SBVariablesOptions()
+        options.SetIncludeExtended(True)
+        variables = frame0.GetVariables(options)
+        self.assertTrue(variables.IsValid())
+        self.assertTrue(variables.GetValueAtIndex(0).name == "_handler_one")
+
+        # Check the `frame variable` command(s) handle extended variables the
+        # way we expect by printing them.
+        self.expect("frame var", substrs=["variable_in_main", "_handler_one"])
+
+        # Then, try and run it without extended variables and ensure we don't
+        # get any, but we still get the others.
+        interp = self.dbg.GetCommandInterpreter()
+        command_result = lldb.SBCommandReturnObject()
+        result = interp.HandleCommand("frame var -e", command_result)
+        self.assertEqual(
+            result, lldb.eReturnStatusSuccessFinishResult, "frame var -e didn't succeed"
+        )
+        output = command_result.GetOutput()
+        self.assertIn("variable_in_main", output, "Didn't find a regular variable")
+        self.assertNotIn("_handler_one", output, "Found an extended variable")
 
         # Check that we can get values from paths. `_handler_one` is a special
         # value we provide through only our expression handler in the frame
-        # implementation.
+        # implementation. We can't evaluate expressions on the special value
+        # just because the test implementation doesn't handle it, and we
+        # delegate all expression handling to the implementation.
         one = frame0.GetValueForVariablePath("_handler_one")
         self.assertEqual(one.unsigned, 1)
-        var = frame0.GetValueForVariablePath("variable_in_main")
-        # The names won't necessarily match, but the values should (the frame renames the SBValue)
-        self.assertEqual(var.unsigned, variables.GetValueAtIndex(0).unsigned)
+        # Ensure I can still access and do arithmetic on regular variables.
         varp1 = frame0.GetValueForVariablePath("variable_in_main + 1")
         self.assertEqual(varp1.unsigned, 124)

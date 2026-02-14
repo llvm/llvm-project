@@ -12,6 +12,7 @@
 
 #include "lldb/API/SBFrame.h"
 
+#include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-types.h"
 
 #include "Utils.h"
@@ -498,7 +499,11 @@ SBValue SBFrame::FindValue(const char *name, ValueType value_type,
 
   VariableList variable_list;
 
-  switch (value_type) {
+  bool include_extended_vars = value_type & ValueTypeExtendedMask;
+  // Switch on the value_type without the mask, but keep it in the value type so
+  // we can use it later when we look for variables in the list.
+  auto base_value_type = value_type & ~ValueTypeExtendedMask;
+  switch (base_value_type) {
   case eValueTypeVariableGlobal:        // global variable
   case eValueTypeVariableStatic:        // static variable
   case eValueTypeVariableArgument:      // function argument variables
@@ -514,14 +519,17 @@ SBValue SBFrame::FindValue(const char *name, ValueType value_type,
       sc.block->AppendVariables(
           can_create, get_parent_variables, stop_if_block_is_inlined_function,
           [frame](Variable *v) { return v->IsInScope(frame); }, &variable_list);
-    if (value_type == eValueTypeVariableGlobal ||
-        value_type == eValueTypeVariableStatic) {
+    // Fetch variables from the frame if we need to get globals/statics/extended
+    // variables.
+    if (base_value_type == eValueTypeVariableGlobal ||
+        base_value_type == eValueTypeVariableStatic || include_extended_vars) {
       const bool get_file_globals = true;
-      VariableList *frame_vars =
-          frame->GetVariableList(get_file_globals, nullptr);
+      VariableList *frame_vars = frame->GetVariableList(
+          get_file_globals, include_extended_vars, nullptr);
       if (frame_vars)
         frame_vars->AppendVariablesIfUnique(variable_list);
     }
+
     ConstString const_name(name);
     VariableSP variable_sp(variable_list.FindVariable(const_name, value_type));
     if (variable_sp) {
@@ -686,8 +694,22 @@ lldb::SBValueList SBFrame::GetVariables(bool arguments, bool locals,
 
 /// Returns true if the variable is in any of the requested scopes.
 static bool IsInRequestedScope(bool statics, bool arguments, bool locals,
-                               Variable &var) {
-  switch (var.GetScope()) {
+                               bool extended, Variable &var) {
+  auto value_type = var.GetScope();
+  // Check if the variable is 'extended' first.
+  bool is_extended = value_type & ValueTypeExtendedMask;
+  if (is_extended) {
+    // If the variable is extended but we don't want those, then it's
+    // automatically out of scope.
+    if (!extended)
+      return false;
+
+    // Clear the ValueTypeExtendedMask bit so the rest of the switch works
+    // correctly.
+    value_type = ValueType(value_type ^ ValueTypeExtendedMask);
+  }
+
+  switch (value_type) {
   case eValueTypeVariableGlobal:
   case eValueTypeVariableStatic:
   case eValueTypeVariableThreadLocal:
@@ -702,7 +724,13 @@ static bool IsInRequestedScope(bool statics, bool arguments, bool locals,
   default:
     break;
   }
-  return false;
+
+  // The default for all other value types is !is_extended. At this point, if we
+  // didn't want extended variables we'd have exited by now anyway, so we must
+  // want them. Aside from the modifiers above that should apply equally to
+  // extended and normal variables, any other extended variable we should
+  // default to showing.
+  return !is_extended;
 }
 
 enum WasInterrupted { Yes, No };
@@ -718,13 +746,15 @@ static std::pair<WasInterrupted, Status> FetchVariablesUnlessInterrupted(
   const bool statics = options.GetIncludeStatics();
   const bool arguments = options.GetIncludeArguments();
   const bool locals = options.GetIncludeLocals();
+  const bool extended = options.GetIncludeExtended();
   const bool in_scope_only = options.GetInScopeOnly();
   const bool include_runtime_support_values =
       options.GetIncludeRuntimeSupportValues();
   const lldb::DynamicValueType use_dynamic = options.GetUseDynamic();
 
   Status var_error;
-  VariableList *variable_list = frame.GetVariableList(true, &var_error);
+  // Fetch all variables available and filter them later.
+  VariableList *variable_list = frame.GetVariableList(true, true, &var_error);
 
   std::set<VariableSP> variable_set;
 
@@ -734,7 +764,7 @@ static std::pair<WasInterrupted, Status> FetchVariablesUnlessInterrupted(
   size_t num_produced = 0;
   for (const VariableSP &variable_sp : *variable_list) {
     if (!variable_sp ||
-        !IsInRequestedScope(statics, arguments, locals, *variable_sp))
+        !IsInRequestedScope(statics, arguments, locals, extended, *variable_sp))
       continue;
 
     if (INTERRUPT_REQUESTED(

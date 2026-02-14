@@ -86,15 +86,18 @@ RegisterContextSP BorrowedStackFrame::GetRegisterContext() {
 }
 
 VariableList *BorrowedStackFrame::GetVariableList(bool get_file_globals,
+                                                  bool include_extended_vars,
                                                   Status *error_ptr) {
-  return m_borrowed_frame_sp->GetVariableList(get_file_globals, error_ptr);
+  return m_borrowed_frame_sp->GetVariableList(get_file_globals,
+                                              include_extended_vars, error_ptr);
 }
 
 VariableListSP
 BorrowedStackFrame::GetInScopeVariableList(bool get_file_globals,
+                                           bool include_extended_vars,
                                            bool must_have_valid_location) {
-  return m_borrowed_frame_sp->GetInScopeVariableList(get_file_globals,
-                                                     must_have_valid_location);
+  return m_borrowed_frame_sp->GetInScopeVariableList(
+      get_file_globals, include_extended_vars, must_have_valid_location);
 }
 
 ValueObjectSP BorrowedStackFrame::GetValueForVariableExpressionPath(

@@ -590,9 +590,10 @@ static void PrivateAutoComplete(
     } else {
       if (frame) {
         const bool get_file_globals = true;
+        const bool include_extended_vars = true;
 
-        VariableList *variable_list = frame->GetVariableList(get_file_globals,
-                                                             nullptr);
+        VariableList *variable_list = frame->GetVariableList(
+            get_file_globals, include_extended_vars, nullptr);
 
         if (variable_list) {
           for (const VariableSP &var_sp : *variable_list)
@@ -686,9 +687,10 @@ static void PrivateAutoComplete(
         } else if (frame) {
           // We haven't found our variable yet
           const bool get_file_globals = true;
+          const bool include_extended_vars = true;
 
-          VariableList *variable_list =
-              frame->GetVariableList(get_file_globals, nullptr);
+          VariableList *variable_list = frame->GetVariableList(
+              get_file_globals, include_extended_vars, nullptr);
 
           if (!variable_list)
             break;
