@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Scalable/Analyses/UnsafeBufferUsage/UnsafeBufferUsage.h"
+#include "clang/Analysis/Scalable/Analyses/UnsafeBufferUsage/UnsafeBufferUsageBuilder.h"
 #include "clang/Analysis/Scalable/Model/EntityId.h"
 #include "clang/Analysis/Scalable/Model/EntityIdTable.h"
 #include "gtest/gtest.h"
-#include <memory>
 
 using namespace clang;
 using namespace ssaf;
@@ -30,14 +30,14 @@ protected:
 #define EXPECT_CONTAINS(Set, Elt) EXPECT_NE((Set)->find(Elt), (Set)->end());
 #define EXPECT_EXCLUDES(Set, Elt) EXPECT_EQ((Set)->find(Elt), (Set)->end());
 
-TEST_F(UnsafeBufferUsageTest, PointerKindVariableComparison) {
+TEST_F(UnsafeBufferUsageTest, EntityPointerLevelComparison) {
   EntityId E1 = Table.getId({"c:@F@foo", "", {}});
   EntityId E2 = Table.getId({"c:@F@bar", "", {}});
 
-  auto P1 = Builder.buildPointerKindVariable(E1, 2);
-  auto P2 = Builder.buildPointerKindVariable(E1, 2);
-  auto P3 = Builder.buildPointerKindVariable(E1, 1);
-  auto P4 = Builder.buildPointerKindVariable(E2, 2);
+  auto P1 = Builder.buildEntityPointerLevel(E1, 2);
+  auto P2 = Builder.buildEntityPointerLevel(E1, 2);
+  auto P3 = Builder.buildEntityPointerLevel(E1, 1);
+  auto P4 = Builder.buildEntityPointerLevel(E2, 2);
 
   EXPECT_EQ(P1, P2);
   EXPECT_NE(P1, P3);
@@ -54,14 +54,14 @@ TEST_F(UnsafeBufferUsageTest, UnsafeBufferUsageEntitySummaryTest) {
   EntityId E2 = Table.getId({"c:@F@bar", "", {}});
   EntityId E3 = Table.getId({"c:@F@baz", "", {}});
 
-  auto P1 = Builder.buildPointerKindVariable(E1, 1);
-  auto P2 = Builder.buildPointerKindVariable(E1, 2);
-  auto P3 = Builder.buildPointerKindVariable(E2, 1);
-  auto P4 = Builder.buildPointerKindVariable(E2, 2);
-  auto P5 = Builder.buildPointerKindVariable(E3, 1);
-  auto P6 = Builder.buildPointerKindVariable(E3, 2);
+  auto P1 = Builder.buildEntityPointerLevel(E1, 1);
+  auto P2 = Builder.buildEntityPointerLevel(E1, 2);
+  auto P3 = Builder.buildEntityPointerLevel(E2, 1);
+  auto P4 = Builder.buildEntityPointerLevel(E2, 2);
+  auto P5 = Builder.buildEntityPointerLevel(E3, 1);
+  auto P6 = Builder.buildEntityPointerLevel(E3, 2);
 
-  PointerKindVariableSet Set{P1, P2, P3, P4, P5};
+  EntityPointerLevelSet Set{P1, P2, P3, P4, P5};
   auto ES = Builder.buildUnsafeBufferUsageEntitySummary(std::move(Set));
 
   EXPECT_CONTAINS(ES, P1);
@@ -71,22 +71,22 @@ TEST_F(UnsafeBufferUsageTest, UnsafeBufferUsageEntitySummaryTest) {
   EXPECT_CONTAINS(ES, P5);
   EXPECT_EXCLUDES(ES, P6);
 
-  PointerKindVariableSet Subset1{ES->getSubsetOf(E1).begin(),
-                                 ES->getSubsetOf(E1).end()};
+  EntityPointerLevelSet Subset1{ES->getSubsetOf(E1).begin(),
+                                ES->getSubsetOf(E1).end()};
 
   EXPECT_CONTAINS(&Subset1, P1);
   EXPECT_CONTAINS(&Subset1, P2);
   EXPECT_EQ(Subset1.size(), 2U);
 
-  PointerKindVariableSet Subset2{ES->getSubsetOf(E2).begin(),
-                                 ES->getSubsetOf(E2).end()};
+  EntityPointerLevelSet Subset2{ES->getSubsetOf(E2).begin(),
+                                ES->getSubsetOf(E2).end()};
 
   EXPECT_CONTAINS(&Subset2, P3);
   EXPECT_CONTAINS(&Subset2, P4);
   EXPECT_EQ(Subset2.size(), 2U);
 
-  PointerKindVariableSet Subset3{ES->getSubsetOf(E3).begin(),
-                                 ES->getSubsetOf(E3).end()};
+  EntityPointerLevelSet Subset3{ES->getSubsetOf(E3).begin(),
+                                ES->getSubsetOf(E3).end()};
 
   EXPECT_CONTAINS(&Subset3, P5);
   EXPECT_EXCLUDES(&Subset3, P6);
