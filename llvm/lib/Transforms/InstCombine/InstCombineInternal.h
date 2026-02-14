@@ -800,6 +800,7 @@ public:
   Instruction *foldICmpWithTrunc(ICmpInst &Cmp);
   Instruction *foldICmpCommutative(CmpPredicate Pred, Value *Op0, Value *Op1,
                                    ICmpInst &CxtI);
+  Instruction *foldICmpsToSignedSubOverflow(Instruction &I);
 
   // Helpers of visitSelectInst().
   Instruction *foldSelectOfBools(SelectInst &SI);
