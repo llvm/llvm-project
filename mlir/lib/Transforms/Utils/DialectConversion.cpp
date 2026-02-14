@@ -25,7 +25,9 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/raw_ostream.h"
 #include <optional>
+#include <string>
 #include <utility>
 
 using namespace mlir;
@@ -55,6 +57,20 @@ static void logFailure(llvm::ScopedPrinter &os, StringRef fmt, Args &&...args) {
                    << llvm::formatv(fmt.data(), std::forward<Args>(args)...)
                    << "\n";
   });
+}
+
+/// Format a conversion pattern as "root-op -> (generated-op, ...)".
+static std::string formatPatternForDiagnostics(const Pattern &pattern) {
+  std::string patternStr;
+  llvm::raw_string_ostream os(patternStr);
+  if (std::optional<OperationName> root = pattern.getRootKind())
+    os << root->getStringRef();
+  else
+    os << "*";
+  os << " -> (";
+  llvm::interleaveComma(pattern.getGeneratedOps(), os);
+  os << ")";
+  return patternStr;
 }
 
 /// Helper function that computes an insertion point where the given value is
@@ -2434,6 +2450,10 @@ public:
   /// was legalized, failure otherwise.
   LogicalResult legalize(Operation *op);
 
+  /// Returns the most recently attempted conversion pattern on this operation
+  /// that failed to match.
+  std::optional<StringRef> getLastFailurePattern(Operation *op) const;
+
   /// Returns the conversion target in use by the legalizer.
   const ConversionTarget &getTarget() { return target; }
 
@@ -2510,6 +2530,9 @@ private:
 
   /// The pattern applicator to use for conversions.
   PatternApplicator applicator;
+
+  /// The last conversion pattern that failed to match for a given op.
+  DenseMap<Operation *, std::string> failedPatternByOp;
 };
 } // namespace
 
@@ -2530,6 +2553,14 @@ bool OperationLegalizer::isIllegal(Operation *op) const {
   return target.isIllegal(op);
 }
 
+std::optional<StringRef>
+OperationLegalizer::getLastFailurePattern(Operation *op) const {
+  auto it = failedPatternByOp.find(op);
+  if (it == failedPatternByOp.end())
+    return std::nullopt;
+  return StringRef(it->second);
+}
+
 LogicalResult OperationLegalizer::legalize(Operation *op) {
 #ifndef NDEBUG
   const char *logLineComment =
@@ -2540,6 +2571,7 @@ LogicalResult OperationLegalizer::legalize(Operation *op) {
 
   // Check to see if the operation is ignored and doesn't need to be converted.
   bool isIgnored = rewriter.getImpl().isOpIgnored(op);
+  failedPatternByOp.erase(op);
 
   LLVM_DEBUG({
     logger.getOStream() << "\n";
@@ -2761,6 +2793,7 @@ LogicalResult OperationLegalizer::legalizeWithPattern(Operation *op) {
   RewriterState curState = rewriterImpl.getCurrentState();
   auto onFailure = [&](const Pattern &pattern) {
     assert(rewriterImpl.pendingRootUpdates.empty() && "dangling root updates");
+    failedPatternByOp[op] = formatPatternForDiagnostics(pattern);
     if (!rewriterImpl.config.allowPatternRollback) {
       // Erase all unresolved materializations.
       for (auto op : rewriterImpl.patternMaterializations) {
@@ -2824,6 +2857,8 @@ LogicalResult OperationLegalizer::legalizeWithPattern(Operation *op) {
     }
     if (config.listener)
       config.listener->notifyPatternEnd(pattern, result);
+    if (succeeded(result))
+      failedPatternByOp.erase(op);
     return result;
   };
 
@@ -3304,6 +3339,22 @@ private:
 LogicalResult OperationConverter::convert(Operation *op,
                                           bool isRecursiveLegalization) {
   const ConversionConfig &config = rewriter.getConfig();
+  auto emitFailedToLegalizeDiag = [&](bool wasExplicitlyIllegal) {
+    InFlightDiagnostic diag =
+        op->emitError() << "failed to legalize operation '" << op->getName()
+                        << "'";
+    if (wasExplicitlyIllegal)
+      diag << " that was explicitly marked illegal";
+
+    diag << "; operands (" << op->getOperandTypes() << "), results ("
+         << op->getResultTypes() << ")";
+    if (std::optional<StringRef> pattern =
+            opLegalizer.getLastFailurePattern(op)) {
+      diag << "; rejected by conversion pattern '" << *pattern << "'";
+    } else {
+      diag << "; no conversion pattern matched";
+    }
+  };
 
   // Legalize the given operation.
   if (failed(opLegalizer.legalize(op))) {
@@ -3311,8 +3362,7 @@ LogicalResult OperationConverter::convert(Operation *op,
     // Full conversions expect all operations to be converted.
     if (mode == OpConversionMode::Full) {
       if (!isRecursiveLegalization)
-        op->emitError() << "failed to legalize operation '" << op->getName()
-                        << "'";
+        emitFailedToLegalizeDiag(/*wasExplicitlyIllegal=*/false);
       return failure();
     }
     // Partial conversions allow conversions to fail iff the operation was not
@@ -3321,8 +3371,7 @@ LogicalResult OperationConverter::convert(Operation *op,
     if (mode == OpConversionMode::Partial) {
       if (opLegalizer.isIllegal(op)) {
         if (!isRecursiveLegalization)
-          op->emitError() << "failed to legalize operation '" << op->getName()
-                          << "' that was explicitly marked illegal";
+          emitFailedToLegalizeDiag(/*wasExplicitlyIllegal=*/true);
         return failure();
       }
       if (config.unlegalizedOps && !isRecursiveLegalization)

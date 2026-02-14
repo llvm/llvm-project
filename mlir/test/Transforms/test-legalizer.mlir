@@ -432,7 +432,7 @@ func.func @test_lookup_without_converter() {
 // expected-remark@-1 {{applyPartialConversion failed}}
 
 func.func @test_skip_1to1_pattern(%arg0: f32) {
-  // expected-error@+1 {{failed to legalize operation 'test.type_consumer'}}
+  // expected-error@+1 {{failed to legalize operation 'test.type_consumer'.*operands \(f32\), results \(\).*rejected by conversion pattern 'test.type_consumer -> \(\)'}}
   "test.type_consumer"(%arg0) : (f32) -> ()
   return
 }
