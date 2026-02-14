@@ -1357,8 +1357,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     Address buf = emitPointerWithAlignment(e->getArg(0));
     mlir::Location loc = getLoc(e->getExprLoc());
 
-    cir::PointerType ppTy = builder.getPointerTo(builder.getVoidPtrTy());
-    mlir::Value castBuf = builder.createBitcast(buf.getPointer(), ppTy);
+    cir::PointerType voidPtrTy = builder.getVoidPtrTy();
+    cir::PointerType ppTy = builder.getPointerTo(voidPtrTy);
+    Adddress castBuf = buf.withElementType(voidPtrTy);
 
     assert(!cir::MissingFeatures::emitCheckedInBoundsGEP());
     if (getTarget().getTriple().isSystemZ()) {
@@ -1377,8 +1378,10 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         cir::StackSaveOp::create(builder, loc, builder.getVoidPtrTy())
             .getResult();
     cir::PtrStrideOp stackSaveSlot = cir::PtrStrideOp::create(
-        builder, loc, ppTy, castBuf, builder.getSInt32(2, loc));
-    builder.createStore(loc, stacksave, stackSaveSlot);
+        builder, loc, ppTy, castBuf.getPointer(), builder.getSInt32(2, loc));
+    CharUnits slotAlign = castBuf.getAlignment().alignmentAtOffset(2*cgm.getDataLayout().getTypeAllocSize(voidPtrTy));
+    Address slotAddr = Address(castBuf.getPointer(), voidPtrTy, slotAlign);
+    builder.createStore(loc, stacksave, slotAddr);
     auto op = cir::EhSetjmpOp::create(builder, loc, castBuf);
     return RValue::get(op);
   }
