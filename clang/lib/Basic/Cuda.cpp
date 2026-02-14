@@ -75,7 +75,7 @@ CudaVersion ToCudaVersion(llvm::VersionTuple Version) {
 }
 
 CudaVersion MinVersionForOffloadArch(OffloadArch A) {
-  if (A == OffloadArch::UNKNOWN)
+  if (A == OffloadArch::Unknown)
     return CudaVersion::UNKNOWN;
 
   // AMD GPUs do not depend on CUDA versions.
@@ -141,7 +141,7 @@ CudaVersion MaxVersionForOffloadArch(OffloadArch A) {
     return CudaVersion::NEW;
 
   switch (A) {
-  case OffloadArch::UNKNOWN:
+  case OffloadArch::Unknown:
     return CudaVersion::UNKNOWN;
   case OffloadArch::SM_20:
   case OffloadArch::SM_21:
