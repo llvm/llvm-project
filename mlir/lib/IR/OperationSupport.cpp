@@ -803,7 +803,16 @@ struct ValueEquivalenceCache {
     };
     auto lhsSorted = sortValues({lhsIt, lhsRange.end()});
     auto rhsSorted = sortValues({rhsIt, rhsRange.end()});
-    return success(lhsSorted == rhsSorted);
+    if (lhsSorted == rhsSorted) {
+      return success();
+    }
+    for (auto operandPair : llvm::zip(lhsSorted, rhsSorted)) {
+      Value lhs = std::get<0>(operandPair);
+      Value rhs = std::get<1>(operandPair);
+      if (failed(checkEquivalent(lhs, rhs)))
+        return failure();
+    }
+    return success();
   }
   void markEquivalent(Value lhsResult, Value rhsResult) {
     auto insertion = equivalentValues.insert({lhsResult, rhsResult});
