@@ -623,9 +623,11 @@ static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
            BuiltinType == SemaARM::ArmStreaming)
     S.Diag(TheCall->getBeginLoc(), diag::err_attribute_arm_sm_incompat_builtin)
         << TheCall->getSourceRange() << "streaming";
-  else
+  else {
+    if (BuiltinType == SemaARM::ArmNonStreaming)
+      S.ARM().setFunctionContainsExprNotSafeForStreamingMode(FD);
     return false;
-
+  }
   return true;
 }
 
