@@ -52,6 +52,11 @@ struct OneShotBufferizationOptions : public BufferizationOptions {
   /// `AnalysisHeuristic::Fuzzer`. The fuzzer should be used only with
   /// `testAnalysisOnly = true`.
   unsigned analysisFuzzerSeed = 0;
+
+  /// Maximum number of iterations for inter-procedural fixed-point analysis.
+  /// This limits the number of iterations to prevent infinite loops in
+  /// recursive call graphs. Default is 10.
+  int maxFixedPointIterations = 10;
 };
 
 /// State for analysis-enabled bufferization. This class keeps track of alias

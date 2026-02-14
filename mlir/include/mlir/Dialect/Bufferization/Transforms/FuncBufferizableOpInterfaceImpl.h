@@ -75,6 +75,23 @@ struct FuncAnalysisState : public OneShotAnalysisState::Extension {
   /// This function is called right before analyzing the given FuncOp. It
   /// initializes the data structures for the FuncOp in this state object.
   void startFunctionAnalysis(FuncOp funcOp);
+
+  // === Inter-procedural Fixed-Point Analysis (PR2) ===
+
+  /// Call graph: mapping from caller FuncOp to callees.
+  DenseMap<FuncOp, SmallVector<FuncOp>> callGraph;
+
+  /// Reverse call graph: mapping from callee FuncOp to callers.
+  DenseMap<FuncOp, SmallVector<FuncOp>> reverseCallGraph;
+
+  /// Iteration count for fixed-point analysis (for convergence tracking).
+  DenseMap<FuncOp, int> iterationCount;
+
+  /// Worklist of functions that need to be reanalyzed.
+  DenseSet<FuncOp> inWorklist;
+
+  /// Whether the call graph contains recursive calls.
+  bool hasRecursiveCall = false;
 };
 
 void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry);
