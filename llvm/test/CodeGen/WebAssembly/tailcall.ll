@@ -582,6 +582,7 @@ define i32 @unique_caller(ptr %p) {
 }
 
 ; CHECK-LABEL: .section .custom_section.target_features
-; CHECK:       .ascii "reference-types"
-; CHECK:       .ascii "tail-call"
-; CHECK-LABEL: .section .text.unique_caller
+; CHECK: .ascii  "sign-ext"
+; CHECK-NEXT: .int8   43
+; CHECK-NEXT: .int8   9
+; CHECK-NEXT: .ascii  "tail-call"
