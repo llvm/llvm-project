@@ -39,18 +39,12 @@ using namespace PatternMatch;
 static cl::opt<bool> UseConstantIntForFixedLengthSplat(
     "use-constant-int-for-fixed-length-splat", cl::init(false), cl::Hidden,
     cl::desc("Use ConstantInt's native fixed-length vector splat support."));
-static cl::opt<bool> UseConstantByteForFixedLengthSplat(
-    "use-constant-byte-for-fixed-length-splat", cl::init(false), cl::Hidden,
-    cl::desc("Use ConstantByte's native fixed-length vector splat support."));
 static cl::opt<bool> UseConstantFPForFixedLengthSplat(
     "use-constant-fp-for-fixed-length-splat", cl::init(false), cl::Hidden,
     cl::desc("Use ConstantFP's native fixed-length vector splat support."));
 static cl::opt<bool> UseConstantIntForScalableSplat(
     "use-constant-int-for-scalable-splat", cl::init(false), cl::Hidden,
     cl::desc("Use ConstantInt's native scalable vector splat support."));
-static cl::opt<bool> UseConstantByteForScalableSplat(
-    "use-constant-byte-for-scalable-splat", cl::init(false), cl::Hidden,
-    cl::desc("Use ConstantByte's native scalable vector splat support."));
 static cl::opt<bool> UseConstantFPForScalableSplat(
     "use-constant-fp-for-scalable-splat", cl::init(false), cl::Hidden,
     cl::desc("Use ConstantFP's native scalable vector splat support."));
@@ -1052,44 +1046,6 @@ ConstantByte::ConstantByte(Type *Ty, const APInt &V)
          "Invalid constant for type");
 }
 
-ConstantByte *ConstantByte::getTrue(LLVMContext &Context) {
-  LLVMContextImpl *pImpl = Context.pImpl;
-  if (!pImpl->TheTrueByteVal)
-    pImpl->TheTrueByteVal = ConstantByte::get(Type::getByte1Ty(Context), 1);
-  return pImpl->TheTrueByteVal;
-}
-
-ConstantByte *ConstantByte::getFalse(LLVMContext &Context) {
-  LLVMContextImpl *pImpl = Context.pImpl;
-  if (!pImpl->TheFalseByteVal)
-    pImpl->TheFalseByteVal = ConstantByte::get(Type::getByte1Ty(Context), 0);
-  return pImpl->TheFalseByteVal;
-}
-
-ConstantByte *ConstantByte::getBool(LLVMContext &Context, bool V) {
-  return V ? getTrue(Context) : getFalse(Context);
-}
-
-Constant *ConstantByte::getTrue(Type *Ty) {
-  assert(Ty->isByteOrByteVectorTy(1) && "Type not i1 or vector of i1.");
-  ConstantByte *TrueC = ConstantByte::getTrue(Ty->getContext());
-  if (auto *VTy = dyn_cast<VectorType>(Ty))
-    return ConstantVector::getSplat(VTy->getElementCount(), TrueC);
-  return TrueC;
-}
-
-Constant *ConstantByte::getFalse(Type *Ty) {
-  assert(Ty->isByteOrByteVectorTy(1) && "Type not i1 or vector of i1.");
-  ConstantByte *FalseC = ConstantByte::getFalse(Ty->getContext());
-  if (auto *VTy = dyn_cast<VectorType>(Ty))
-    return ConstantVector::getSplat(VTy->getElementCount(), FalseC);
-  return FalseC;
-}
-
-Constant *ConstantByte::getBool(Type *Ty, bool V) {
-  return V ? getTrue(Ty) : getFalse(Ty);
-}
-
 // Get a ConstantByte from an APInt.
 ConstantByte *ConstantByte::get(LLVMContext &Context, const APInt &V) {
   // get an existing value or the insertion position
@@ -1650,7 +1606,7 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
   bool isPoison = isa<PoisonValue>(C);
   bool isSplatFP = UseConstantFPForFixedLengthSplat && isa<ConstantFP>(C);
   bool isSplatInt = UseConstantIntForFixedLengthSplat && isa<ConstantInt>(C);
-  bool isSplatByte = UseConstantByteForFixedLengthSplat && isa<ConstantByte>(C);
+  bool isSplatByte = isa<ConstantByte>(C);
 
   if (isZero || isUndef || isSplatFP || isSplatInt || isSplatByte) {
     for (unsigned i = 1, e = V.size(); i != e; ++i)
@@ -1694,7 +1650,7 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
       if (UseConstantIntForFixedLengthSplat && isa<ConstantInt>(V))
         return ConstantInt::get(V->getContext(), EC,
                                 cast<ConstantInt>(V)->getValue());
-      if (UseConstantByteForFixedLengthSplat && isa<ConstantByte>(V))
+      if (isa<ConstantByte>(V))
         return ConstantByte::get(V->getContext(), EC,
                                  cast<ConstantByte>(V)->getValue());
       if (UseConstantFPForFixedLengthSplat && isa<ConstantFP>(V))
@@ -1717,7 +1673,7 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
     if (UseConstantIntForScalableSplat && isa<ConstantInt>(V))
       return ConstantInt::get(V->getContext(), EC,
                               cast<ConstantInt>(V)->getValue());
-    if (UseConstantByteForScalableSplat && isa<ConstantByte>(V))
+    if (isa<ConstantByte>(V))
       return ConstantByte::get(V->getContext(), EC,
                                cast<ConstantByte>(V)->getValue());
     if (UseConstantFPForScalableSplat && isa<ConstantFP>(V))
@@ -1833,10 +1789,6 @@ bool ConstantInt::isValueValidForType(Type *Ty, int64_t Val) {
   if (Ty->isIntegerTy(1))
     return Val == 0 || Val == 1 || Val == -1;
   return isIntN(NumBits, Val);
-}
-
-bool ConstantByte::isValueValidForType(Type *Ty, uint64_t Val) {
-  return isUIntN(Ty->getByteBitWidth(), Val);
 }
 
 bool ConstantFP::isValueValidForType(Type *Ty, const APFloat& Val) {

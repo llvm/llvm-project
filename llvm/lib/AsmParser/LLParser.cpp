@@ -4096,7 +4096,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   }
   case lltok::kw_c: { // c "foo"
     Lex.Lex();
-    ArrayType *ATy = static_cast<ArrayType *>(ExpectedTy);
+    ArrayType *ATy = cast<ArrayType>(ExpectedTy);
     ID.ConstantVal = ConstantDataArray::getString(
         Context, Lex.getStrVal(), false, ATy->getElementType()->isByteTy());
     if (parseToken(lltok::StringConstant, "expected string"))

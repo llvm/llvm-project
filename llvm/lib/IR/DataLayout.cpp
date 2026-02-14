@@ -986,15 +986,6 @@ Type *DataLayout::getIntPtrType(Type *Ty) const {
   return IntTy;
 }
 
-Type *DataLayout::getIntByteType(Type *Ty) const {
-  assert(Ty->isByteOrByteVectorTy() && "Expected a byte or byte vector type.");
-  unsigned NumBits = Ty->getScalarSizeInBits();
-  IntegerType *IntTy = IntegerType::get(Ty->getContext(), NumBits);
-  if (VectorType *VecTy = dyn_cast<VectorType>(Ty))
-    return VectorType::get(IntTy, VecTy);
-  return IntTy;
-}
-
 ByteType *DataLayout::getBytePtrType(LLVMContext &C,
                                      unsigned AddressSpace) const {
   return ByteType::get(C, getPointerSizeInBits(AddressSpace));
@@ -1004,16 +995,6 @@ Type *DataLayout::getBytePtrType(Type *Ty) const {
   assert(Ty->isPtrOrPtrVectorTy() &&
          "Expected a pointer or pointer vector type.");
   unsigned NumBits = getPointerTypeSizeInBits(Ty);
-  ByteType *ByteTy = ByteType::get(Ty->getContext(), NumBits);
-  if (VectorType *VecTy = dyn_cast<VectorType>(Ty))
-    return VectorType::get(ByteTy, VecTy);
-  return ByteTy;
-}
-
-Type *DataLayout::getByteIntType(Type *Ty) const {
-  assert(!Ty->isPtrOrPtrVectorTy() &&
-         "Expected a non-pointer or non-pointer vector type.");
-  unsigned NumBits = Ty->getScalarSizeInBits();
   ByteType *ByteTy = ByteType::get(Ty->getContext(), NumBits);
   if (VectorType *VecTy = dyn_cast<VectorType>(Ty))
     return VectorType::get(ByteTy, VecTy);

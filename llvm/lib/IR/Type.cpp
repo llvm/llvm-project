@@ -318,6 +318,25 @@ IntegerType *Type::getIntNTy(LLVMContext &C, unsigned N) {
   return IntegerType::get(C, N);
 }
 
+Type *Type::getIntByteType(Type *Ty) {
+  assert(Ty->isByteOrByteVectorTy() && "Expected a byte or byte vector type.");
+  unsigned NumBits = Ty->getScalarSizeInBits();
+  IntegerType *IntTy = IntegerType::get(Ty->getContext(), NumBits);
+  if (VectorType *VecTy = dyn_cast<VectorType>(Ty))
+    return VectorType::get(IntTy, VecTy);
+  return IntTy;
+}
+
+Type *Type::getByteIntType(Type *Ty) {
+  assert(!Ty->isPtrOrPtrVectorTy() &&
+         "Expected a non-pointer or non-pointer vector type.");
+  unsigned NumBits = Ty->getScalarSizeInBits();
+  ByteType *ByteTy = ByteType::get(Ty->getContext(), NumBits);
+  if (VectorType *VecTy = dyn_cast<VectorType>(Ty))
+    return VectorType::get(ByteTy, VecTy);
+  return ByteTy;
+}
+
 Type *Type::getWasm_ExternrefTy(LLVMContext &C) {
   // opaque pointer in addrspace(10)
   return PointerType::get(C, 10);

@@ -1380,24 +1380,9 @@ LLVM_C_ABI char *LLVMPrintTypeToString(LLVMTypeRef Val);
 /**
  * Obtain a byte type from a context with specified bit width.
  */
-LLVMTypeRef LLVMByte8TypeInContext(LLVMContextRef C);
-LLVMTypeRef LLVMByte16TypeInContext(LLVMContextRef C);
-LLVMTypeRef LLVMByte32TypeInContext(LLVMContextRef C);
-LLVMTypeRef LLVMByte64TypeInContext(LLVMContextRef C);
-LLVMTypeRef LLVMByte128TypeInContext(LLVMContextRef C);
-LLVMTypeRef LLVMByteTypeInContext(LLVMContextRef C, unsigned NumBits);
-
-/**
- * Obtain a byte type from the global context with a specified bit
- * width.
- */
-LLVMTypeRef LLVMByte8Type(void);
-LLVMTypeRef LLVMByte16Type(void);
-LLVMTypeRef LLVMByte32Type(void);
-LLVMTypeRef LLVMByte64Type(void);
-LLVMTypeRef LLVMByte128Type(void);
-LLVMTypeRef LLVMByteType(unsigned NumBits);
-unsigned LLVMGetByteTypeWidth(LLVMTypeRef ByteTy);
+LLVM_C_ABI LLVMTypeRef LLVMByteTypeInContext(LLVMContextRef C,
+                                             unsigned NumBits);
+LLVM_C_ABI unsigned LLVMGetByteTypeWidth(LLVMTypeRef ByteTy);
 
 /**
  * @defgroup LLVMCCoreTypeInt Integer Types
@@ -2437,36 +2422,25 @@ LLVM_C_ABI LLVMValueRef LLVMConstIntOfStringAndSize(LLVMTypeRef IntTy,
  * @param ByteTy Byte type to obtain value of.
  * @param N The value the returned instance should refer to.
  */
-LLVMValueRef LLVMConstByte(LLVMTypeRef ByteTy, unsigned long long N);
+LLVM_C_ABI LLVMValueRef LLVMConstByte(LLVMTypeRef ByteTy, unsigned long long N);
 
 /**
  * Obtain a constant value for a byte of arbitrary precision.
  *
  * @see llvm::ConstantByte::get()
  */
-LLVMValueRef LLVMConstByteOfArbitraryPrecision(LLVMTypeRef ByteTy,
-                                               unsigned NumWords,
-                                               const uint64_t Words[]);
-
-/**
- * Obtain a constant value for a byte parsed from a string.
- *
- * A similar API, LLVMConstByteOfStringAndSize is also available. If the
- * string's length is available, it is preferred to call that function
- * instead.
- *
- * @see llvm::ConstantByte::get()
- */
-LLVMValueRef LLVMConstByteOfString(LLVMTypeRef ByteTy, const char *Text,
-                                   uint8_t Radix);
+LLVM_C_ABI LLVMValueRef LLVMConstByteOfArbitraryPrecision(
+    LLVMTypeRef ByteTy, unsigned NumWords, const uint64_t Words[]);
 
 /**
  * Obtain a constant value for a byte parsed from a string with specified
  * length.
  * @see llvm::ConstantByte::get()
  */
-LLVMValueRef LLVMConstByteOfStringAndSize(LLVMTypeRef ByteTy, const char *Text,
-                                          unsigned SLen, uint8_t Radix);
+LLVM_C_ABI LLVMValueRef LLVMConstByteOfStringAndSize(LLVMTypeRef ByteTy,
+                                                     const char *Text,
+                                                     unsigned SLen,
+                                                     uint8_t Radix);
 
 /**
  * Obtain a constant value referring to a double floating point value.

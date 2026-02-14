@@ -502,6 +502,17 @@ public:
                                            const fltSemantics &S);
 
   //===--------------------------------------------------------------------===//
+  // Convenience methods for getting byte/integer types.
+  //
+  /// Returns an integer (vector of integer) type with the same size of a byte
+  /// of the given byte (vector of byte) type.
+  LLVM_ABI static Type *getIntByteType(Type *);
+
+  /// Returns a byte (vector of byte) type with the same size of an integer of
+  /// the given integer (vector of integer) type.
+  LLVM_ABI static Type *getByteIntType(Type *);
+
+  //===--------------------------------------------------------------------===//
   // Convenience methods for getting pointer types.
   //
   LLVM_ABI static Type *getWasm_ExternrefTy(LLVMContext &C);

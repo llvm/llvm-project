@@ -637,8 +637,8 @@ public:
   /// This is always at least as good as the ABI alignment.
   LLVM_ABI Align getPrefTypeAlign(Type *Ty) const;
 
-  /// Returns a byte type with size at least as big as that of a
-  /// pointer in the given address space.
+  /// Returns a byte type with the same size of a pointer in the given address
+  /// space.
   LLVM_ABI ByteType *getBytePtrType(LLVMContext &C,
                                     unsigned AddressSpace = 0) const;
 
@@ -651,17 +651,9 @@ public:
   /// big as that of a pointer of the given pointer (vector of pointer) type.
   LLVM_ABI Type *getIntPtrType(Type *) const;
 
-  /// Returns an integer (vector of integer) type with size at least as
-  /// big as that of a byte of the given byte (vector of byte) type.
-  LLVM_ABI Type *getIntByteType(Type *) const;
-
-  /// Returns a byte (vector of byte) type with size at least as big as that of
-  /// a pointer of the given pointer (vector of pointer) type.
+  /// Returns a byte (vector of byte) type with the same size of a pointer of
+  /// the given pointer (vector of pointer) type.
   LLVM_ABI Type *getBytePtrType(Type *) const;
-
-  /// Returns a byte (vector of byte) type with size at least as big as that of
-  /// an integer of the given integer (vector of integer) type.
-  LLVM_ABI Type *getByteIntType(Type *) const;
 
   /// Returns the smallest integer type with size at least as big as
   /// Width bits.

@@ -13037,10 +13037,10 @@ The '``bitcast``' instruction takes a value to cast, which must be a
 non-aggregate first class value, and a type to cast it to, which must
 also be a non-aggregate :ref:`first class <t_firstclass>` type. The
 bit sizes of ``value`` and the destination type, ``ty2``, must be
-identical. If the source type is a pointer, the destination type must
-also be a pointer of the same size. This instruction supports bitwise
-conversion of vectors to integers and to vectors of other types (as
-long as they have the same size).
+identical. If the source type is a pointer, the destination type must also be a
+pointer or a byte (vector of bytes) of the same size. This instruction supports
+bitwise conversion of vectors to integers and to vectors of other types (as long
+as they have the same size).
 
 Semantics:
 """"""""""
@@ -13062,7 +13062,14 @@ element zero ends up in the most significant bits for big-endian.
 If ``value`` is of the :ref:`byte type <t_byte>`:
 
 * If ``value`` contains at least one ``poison`` bit, the cast result is
-  ``poison``.
+
+    * ``poison``, if ``ty2`` is a scalar type.
+
+    * a vector where only the lanes containing at least one ``poison`` bit are
+      ``poison``, if ``ty2`` is a vector type. The values of the remaining
+      non-``poison`` lanes are given by bitcasting the bits of ``value``
+      corresponding to each lane (according to the target's endianness) to the
+      lane element type.
 
 * If ``value`` is any mix of (non-``poison``) pointer and non-pointer bits:
 
@@ -13072,7 +13079,8 @@ If ``value`` is of the :ref:`byte type <t_byte>`:
 
     * If ``ty2`` is a pointer type, then if all bits of ``value`` are from the
       same pointer and are correctly ordered (there were no pointer bit swaps),
-      the cast result is that pointer. If ``value`` is a mix of bits from
+      the cast result is that pointer. If all the bits are from the same pointer
+      and these are not correctly ordered, or if ``value`` is a mix of bits from
       different pointers or a mix of pointer and non-pointer bits, the result is
       a pointer without provenance. This pointer cannot be dereferenced, but can
       be used in comparisons or :ref:`getelementptr <i_getelementptr>`
@@ -13098,6 +13106,8 @@ Example:
 
       %e = bitcast <2 x b32> %v to i64  ; reinterprets the raw bytes as an integer
       %f = bitcast <2 x b32> %v to ptr  ; reinterprets the raw bytes as a pointer
+
+      %g = bitcast <2 x b32> %v to <4 x i16> ; reinterprets the raw bytes as integers
 
 .. _i_addrspacecast:
 
