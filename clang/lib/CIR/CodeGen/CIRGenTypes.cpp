@@ -547,11 +547,10 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       mlir::Type memberTy = convertType(mpt->getPointeeType());
       resultType = cir::DataMemberType::get(memberTy, clsTy);
     } else {
-      auto memberFuncTy =
-          getFunctionType(cgm.getTypes().arrangeCXXMethodType(
-              mptNNS.getAsRecordDecl(),
-              mpt->getPointeeType()->getAs<clang::FunctionProtoType>(),
-              /*methodDecl=*/nullptr));
+      auto memberFuncTy = getFunctionType(cgm.getTypes().arrangeCXXMethodType(
+          mptNNS.getAsRecordDecl(),
+          mpt->getPointeeType()->getAs<clang::FunctionProtoType>(),
+          /*methodDecl=*/nullptr));
       resultType = cir::MethodType::get(memberFuncTy, clsTy);
     }
     break;
