@@ -38,7 +38,7 @@
 ;;                                     n x (valueid, hotness+tailcall)]
 ;; NOTE vtables and functions from Derived class are dropped in the base case
 ;; because `-icp-max-num-vtables` and `-icp-max-prom` are both set to one.
-; SUMMARY-NEXT:   <PERMODULE_PROFILE {{.*}} op0=0 op1=2048 op2=4 op3=256 op4=1 op5=1 op6=0 op7=[[VTABLEBASE]] op8=[[VFUNCBASE]] op9=3
+; SUMMARY-NEXT:   <PERMODULE_PROFILE {{.*}} op0=0 op1=0 op2=4 op3=256 op4=1 op5=1 op6=0 op7=[[VTABLEBASE]] op8=[[VFUNCBASE]] op9=3
 ;; With -module-summary-max-indirect-edges=2 we do get the Derived class
 ;; function in the summary.
 ; SUMMARY2-SAME:  op10=[[VFUNCDER]] op11=2

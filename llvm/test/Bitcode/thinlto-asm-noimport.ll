@@ -8,8 +8,8 @@ target triple = "thumbv7--linux-android"
 module asm "asm:"
 module asm "bx lr"
 
-; NotEligibleToImporti, renameOnPromotion
-; CHECK: <PERMODULE_PROFILE {{.*}} op1=2064
+; NotEligibleToImporti
+; CHECK: <PERMODULE_PROFILE {{.*}} op1=16
 define void @f() {
   call void asm sideeffect "bl asm\0A", ""()
   ret void

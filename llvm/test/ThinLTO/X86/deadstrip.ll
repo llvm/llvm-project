@@ -36,24 +36,24 @@
 ; RUN: llvm-nm %t.out.1 | FileCheck %s --check-prefix=CHECK2-NM
 
 ; RUN: llvm-bcanalyzer -dump %t.out.index.bc | FileCheck %s --check-prefix=COMBINED
-; Live, NotEligibleForImport, dso_local, Internal, renameOnPromotion
-; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=2145
+; Live, NotEligibleForImport, dso_local, Internal
+; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=97
 ; Live, dso_local, Internal
-; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=2112
+; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=64
 ; Live, Local, WeakODR
-; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=2147
+; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=99
 ; Live, Local, LinkOnceODR
-; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=2147
+; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=99
 ; Live, Local, AvailableExternally
-; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=2144
+; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=96
 ; Live, Local, External
-; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=2147
-; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=2112
-; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=2112
+; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=99
+; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=64
+; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=64
 ; Local, (Dead)
-; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=2149
-; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=2151
-; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=2144
+; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=101
+; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=103
+; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=96
 
 ; Dead-stripping on the index allows to internalize these,
 ; and limit the import of @baz thanks to early pruning.

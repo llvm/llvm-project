@@ -5,57 +5,57 @@
 ; RUN: llvm-bcanalyzer -dump %t2.thinlto.bc | FileCheck %s --check-prefix=COMBINED
 
 define private void @private()
-; CHECK: <PERMODULE_PROFILE {{.*}} op1=2120
-; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=2120
+; CHECK: <PERMODULE_PROFILE {{.*}} op1=72
+; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=72
 {
   ret void
 }
 
 define internal void @internal()
-; CHECK: <PERMODULE_PROFILE {{.*}} op1=2119
-; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=2119
+; CHECK: <PERMODULE_PROFILE {{.*}} op1=71
+; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=71
 {
   ret void
 }
 
 define available_externally void @available_externally()
-; CHECK: <PERMODULE_PROFILE {{.*}} op1=2049
-; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=2049
+; CHECK: <PERMODULE_PROFILE {{.*}} op1=1
+; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=1
 {
   ret void
 }
 
 define linkonce void @linkonce()
-; CHECK: <PERMODULE_PROFILE {{.*}} op1=2050
-; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=2050
+; CHECK: <PERMODULE_PROFILE {{.*}} op1=2
+; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=2
 {
   ret void
 }
 
 define weak void @weak()
-; CHECK: <PERMODULE_PROFILE {{.*}} op1=2052
-; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=2052
+; CHECK: <PERMODULE_PROFILE {{.*}} op1=4
+; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=4
 {
   ret void
 }
 
 define linkonce_odr void @linkonce_odr()
-; CHECK: <PERMODULE_PROFILE {{.*}} op1=2051
-; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=2051
+; CHECK: <PERMODULE_PROFILE {{.*}} op1=3
+; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=3
 {
   ret void
 }
 
 define weak_odr void @weak_odr()
-; CHECK: <PERMODULE_PROFILE {{.*}} op1=2053
-; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=2053
+; CHECK: <PERMODULE_PROFILE {{.*}} op1=5
+; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=5
 {
   ret void
 }
 
 define external void @external()
-; CHECK: <PERMODULE_PROFILE {{.*}} op1=2048
-; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=2048
+; CHECK: <PERMODULE_PROFILE {{.*}} op1=0
+; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=0
 {
   ret void
 }
