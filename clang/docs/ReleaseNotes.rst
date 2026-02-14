@@ -274,6 +274,7 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash when using loop hint with a value dependent argument inside a
   generic lambda. (#GH172289)
 - Fixed a crash in C++ overload resolution with ``_Atomic``-qualified argument types. (#GH170433)
+- Fixed a crash when subscripting a vector type with large unsigned integer values. (#GH180563)
 
 OpenACC Specific Changes
 ------------------------
