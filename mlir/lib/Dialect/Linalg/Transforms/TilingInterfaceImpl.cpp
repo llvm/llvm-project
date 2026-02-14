@@ -430,74 +430,93 @@ struct InitSliceInfo {
 /// Return the result shape, offsets, sizes and strides of the slice of the
 /// `initValue` to use as the destination of the partial reduction op generated
 /// with outer reduction strategy.
-static InitSliceInfo getInitSliceInfoForOuterReduction(
-    MLIRContext *context, ArrayRef<OpFoldResult> offsets,
+static FailureOr<InitSliceInfo> getInitSliceInfoForOuterReduction(
+    Operation *op, MLIRContext *context, ArrayRef<OpFoldResult> offsets,
     ArrayRef<OpFoldResult> sizes, const SetVector<unsigned> &reductionDims,
     ArrayRef<OpFoldResult> splitReductionIvs, AffineMap partialReductionMap) {
   int64_t initRank = partialReductionMap.getNumResults();
   SmallVector<OpFoldResult> initOffsets, initSizes;
-  Attribute zero = IntegerAttr::get(IndexType::get(context), 0);
-  Attribute one = IntegerAttr::get(IndexType::get(context), 1);
+  Type idxType = IndexType::get(context);
+  Attribute zero = IntegerAttr::get(idxType, 0);
+  Attribute one = IntegerAttr::get(idxType, 1);
   SmallVector<OpFoldResult> initStrides(initRank, one);
-  for (AffineExpr dimExpr : partialReductionMap.getResults()) {
-    unsigned dim = cast<AffineDimExpr>(dimExpr).getPosition();
-    if (reductionDims.contains(dim)) {
-      initOffsets.push_back(zero);
+  for (AffineExpr expr : partialReductionMap.getResults()) {
+    if (auto dimExpr = dyn_cast<AffineDimExpr>(expr)) {
+      unsigned dim = dimExpr.getPosition();
+      if (reductionDims.contains(dim)) {
+        initOffsets.push_back(zero);
+      } else {
+        initOffsets.push_back(offsets[dim]);
+      }
+      initSizes.push_back(sizes[dim]);
+    } else if (auto cstExpr = dyn_cast<AffineConstantExpr>(expr)) {
+      initOffsets.push_back(IntegerAttr::get(idxType, cstExpr.getValue()));
+      initSizes.push_back(one);
     } else {
-      initOffsets.push_back(offsets[dim]);
+      return op->emitOpError(
+          "Unexpected affine expression type: only dimension and constant "
+          "expressions are supported");
     }
-    initSizes.push_back(sizes[dim]);
   }
   SmallVector<int64_t> resultShape;
   std::tie(resultShape, std::ignore) = decomposeMixedValues(initSizes);
-  return {resultShape, initOffsets, initSizes, initStrides};
+  return InitSliceInfo{resultShape, initOffsets, initSizes, initStrides};
 }
 
 /// Return the result shape, offsets, sizes and strides of the slice of the
 /// `initValue` to use as destination of the partial reduction op generated with
 /// outer parallel strategy.
-static InitSliceInfo getInitSliceInfoForOuterParallel(
-    MLIRContext *context, ArrayRef<OpFoldResult> offsets,
+static FailureOr<InitSliceInfo> getInitSliceInfoForOuterParallel(
+    Operation *op, MLIRContext *context, ArrayRef<OpFoldResult> offsets,
     ArrayRef<OpFoldResult> sizes, const SetVector<unsigned> &reductionDims,
     ArrayRef<OpFoldResult> splitReductionIvs, AffineMap partialReductionMap) {
   int64_t initRank = partialReductionMap.getNumResults();
   SmallVector<OpFoldResult> initOffsets, initSizes;
-  Attribute one = IntegerAttr::get(IndexType::get(context), 1);
+  Type idxType = IndexType::get(context);
+  Attribute one = IntegerAttr::get(idxType, 1);
   SmallVector<OpFoldResult> initStrides(initRank, one);
   SmallVector<OpFoldResult> resultShape;
-  for (AffineExpr dimExpr : partialReductionMap.getResults()) {
-    unsigned dim = cast<AffineDimExpr>(dimExpr).getPosition();
-    if (std::optional<unsigned> dimPos = getPositionIn(reductionDims, dim)) {
-      initOffsets.push_back(splitReductionIvs[dimPos.value()]);
+  for (AffineExpr expr : partialReductionMap.getResults()) {
+    if (auto dimExpr = dyn_cast<AffineDimExpr>(expr)) {
+      unsigned dim = dimExpr.getPosition();
+      if (std::optional<unsigned> dimPos = getPositionIn(reductionDims, dim)) {
+        initOffsets.push_back(splitReductionIvs[dimPos.value()]);
+        initSizes.push_back(one);
+      } else {
+        initOffsets.push_back(offsets[dim]);
+        initSizes.push_back(sizes[dim]);
+        resultShape.push_back(sizes[dim]);
+      }
+    } else if (auto cstExpr = dyn_cast<AffineConstantExpr>(expr)) {
+      initOffsets.push_back(IntegerAttr::get(idxType, cstExpr.getValue()));
       initSizes.push_back(one);
+      resultShape.push_back(one);
     } else {
-      initOffsets.push_back(offsets[dim]);
-      initSizes.push_back(sizes[dim]);
-      resultShape.push_back(sizes[dim]);
+      return op->emitOpError(
+          "Unexpected affine expression type: only dimension and constant "
+          "expressions are supported");
     }
   }
   SmallVector<int64_t> staticShapes;
   std::tie(staticShapes, std::ignore) = decomposeMixedValues(resultShape);
-  return {staticShapes, initOffsets, initSizes, initStrides};
+  return InitSliceInfo{staticShapes, initOffsets, initSizes, initStrides};
 }
 
 /// Return the result shape, offsets, sizes and strides of the slice of the
 /// `initValue` to use as destination of the partial reduction op.
-static InitSliceInfo getInitSliceInfo(MLIRContext *context,
-                                      ReductionTilingStrategy strategy,
-                                      ArrayRef<OpFoldResult> offsets,
-                                      ArrayRef<OpFoldResult> sizes,
-                                      const SetVector<unsigned> &reductionDims,
-                                      ArrayRef<OpFoldResult> splitReductionIvs,
-                                      AffineMap partialReductionMap) {
+static FailureOr<InitSliceInfo> getInitSliceInfo(
+    Operation *op, MLIRContext *context, ReductionTilingStrategy strategy,
+    ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes,
+    const SetVector<unsigned> &reductionDims,
+    ArrayRef<OpFoldResult> splitReductionIvs, AffineMap partialReductionMap) {
   if (strategy == ReductionTilingStrategy::PartialReductionOuterReduction) {
-    return getInitSliceInfoForOuterReduction(context, offsets, sizes,
+    return getInitSliceInfoForOuterReduction(op, context, offsets, sizes,
                                              reductionDims, splitReductionIvs,
                                              partialReductionMap);
   }
   assert(strategy == ReductionTilingStrategy::PartialReductionOuterParallel &&
          "unexpected ReductionTilingStrategy");
-  return getInitSliceInfoForOuterParallel(context, offsets, sizes,
+  return getInitSliceInfoForOuterParallel(op, context, offsets, sizes,
                                           reductionDims, splitReductionIvs,
                                           partialReductionMap);
 }
@@ -538,8 +557,11 @@ struct LinalgOpPartialReductionInterface
       // Append the new partial result dimensions.
       SmallVector<OpFoldResult> partialResultShape;
       for (AffineExpr dimExpr : partialMap.getResults()) {
-        auto dim = cast<AffineDimExpr>(dimExpr);
-        partialResultShape.push_back(sizes[dim.getPosition()]);
+        if (auto dim = dyn_cast<AffineDimExpr>(dimExpr)) {
+          partialResultShape.push_back(sizes[dim.getPosition()]);
+        } else {
+          partialResultShape.push_back(b.getIndexAttr(1));
+        }
       }
 
       Type elType = getElementTypeOrSelf(result.getType());
@@ -592,16 +614,18 @@ struct LinalgOpPartialReductionInterface
     SmallVector<Value, 1> tiledInits;
     for (auto [partialReductionMap, valueToTile] :
          llvm::zip_equal(partialReductionMaps, init)) {
-      InitSliceInfo sliceInfo = getInitSliceInfo(
-          b.getContext(), tilingStrategy, offsets, sizes, reductionDims,
+      FailureOr<InitSliceInfo> sliceInfo = getInitSliceInfo(
+          op, b.getContext(), tilingStrategy, offsets, sizes, reductionDims,
           splitReductionIvs, partialReductionMap);
+      if (failed(sliceInfo))
+        return failure();
       auto valueToTileType = cast<RankedTensorType>(valueToTile.getType());
       RankedTensorType sliceResultType = RankedTensorType::get(
-          sliceInfo.resultShape, valueToTileType.getElementType(),
+          sliceInfo->resultShape, valueToTileType.getElementType(),
           valueToTileType.getEncoding());
       auto sliceOp = tensor::ExtractSliceOp::create(
-          b, loc, sliceResultType, valueToTile, sliceInfo.offsets,
-          sliceInfo.sizes, sliceInfo.strides);
+          b, loc, sliceResultType, valueToTile, sliceInfo->offsets,
+          sliceInfo->sizes, sliceInfo->strides);
       tiledInits.push_back(sliceOp.getResult());
       generatedSlices.push_back(sliceOp);
     }
@@ -667,9 +691,10 @@ struct LinalgOpPartialReductionInterface
       SmallVector<int64_t> partialReductionDims;
       for (auto [resultNum, dimExpr] :
            llvm::enumerate(partialMap.getResults())) {
-        unsigned dim = cast<AffineDimExpr>(dimExpr).getPosition();
-        if (llvm::is_contained(reductionDims, dim)) {
-          partialReductionDims.push_back(resultNum);
+        if (auto dim = dyn_cast<AffineDimExpr>(dimExpr)) {
+          if (llvm::is_contained(reductionDims, dim.getPosition())) {
+            partialReductionDims.push_back(resultNum);
+          }
         }
       }
 
@@ -704,11 +729,13 @@ struct LinalgOpPartialReductionInterface
     auto linalgOp = cast<LinalgOp>(op);
     SmallVector<AffineMap> partialReductionMaps =
         getPartialResultAffineMaps(linalgOp, reductionDims);
-    InitSliceInfo sliceInfo = getInitSliceInfo(
-        b.getContext(), tilingStrategy, offsets, sizes, reductionDims,
+    FailureOr<InitSliceInfo> sliceInfo = getInitSliceInfo(
+        op, b.getContext(), tilingStrategy, offsets, sizes, reductionDims,
         splitReductionIvs, partialReductionMaps[resultNumber]);
-    std::swap(resultOffsets, sliceInfo.offsets);
-    std::swap(resultSizes, sliceInfo.sizes);
+    if (failed(sliceInfo))
+      return failure();
+    std::swap(resultOffsets, sliceInfo->offsets);
+    std::swap(resultSizes, sliceInfo->sizes);
 
     return success();
   }
