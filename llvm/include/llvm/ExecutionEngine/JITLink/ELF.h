@@ -18,6 +18,12 @@
 namespace llvm {
 namespace jitlink {
 
+/// If an ELF LinkGraph is built from an ELF object file, then this function
+/// can be called to get a pointer to a special section containing the content
+/// of the original object file.
+/// If no original content exists then this function will return null.
+Section* getOriginalELFObjectSection(LinkGraph &G);
+  
 /// Create a LinkGraph from an ELF relocatable object.
 ///
 /// Note: The graph does not take ownership of the underlying buffer, nor copy

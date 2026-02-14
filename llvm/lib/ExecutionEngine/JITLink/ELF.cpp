@@ -24,12 +24,19 @@
 #include "llvm/Object/ELF.h"
 #include <cstring>
 
+#include "ELFLinkGraphBuilder.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "jitlink"
 
 namespace llvm {
 namespace jitlink {
+
+Section* getOriginalELFObjectSection(LinkGraph &G) {
+  return G.findSectionByName(
+      ELFLinkGraphBuilderBase::OriginalObjectContentSectionName);
+}
 
 Expected<uint16_t> readTargetMachineArch(StringRef Buffer) {
   const char *Data = Buffer.data();
