@@ -208,6 +208,9 @@ DataLayout::DataLayout(StringRef LayoutString) : DataLayout() {
 }
 
 DataLayout &DataLayout::operator=(const DataLayout &Other) {
+  if (this == &Other)
+    return *this;
+
   delete static_cast<StructLayoutMap *>(LayoutMap);
   LayoutMap = nullptr;
   StringRepresentation = Other.StringRepresentation;

@@ -2669,8 +2669,12 @@ adjustCallerStackProbeSize(Function &Caller, const Function &Callee) {
     Attribute CallerAttr = Caller.getFnAttribute("stack-probe-size");
     if (CallerAttr.isValid()) {
       uint64_t CallerStackProbeSize, CalleeStackProbeSize;
-      CallerAttr.getValueAsString().getAsInteger(0, CallerStackProbeSize);
-      CalleeAttr.getValueAsString().getAsInteger(0, CalleeStackProbeSize);
+      bool CallerParseError =
+          CallerAttr.getValueAsString().getAsInteger(0, CallerStackProbeSize);
+      bool CalleeParseError =
+          CalleeAttr.getValueAsString().getAsInteger(0, CalleeStackProbeSize);
+      assert((!CallerParseError && !CalleeParseError) &&
+             "Failed to parse stack-probe-size as integer");
 
       if (CallerStackProbeSize > CalleeStackProbeSize) {
         Caller.addFnAttr(CalleeAttr);
