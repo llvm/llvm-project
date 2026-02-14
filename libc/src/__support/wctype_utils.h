@@ -16,6 +16,10 @@
 #define LIBC_WCTYPE_MODE_ASCII 0
 #define LIBC_WCTYPE_MODE_UTF8 1
 
+#ifndef LIBC_CONF_WCTYPE_MODE
+#define LIBC_CONF_WCTYPE_MODE LIBC_WCTYPE_MODE_ASCII
+#endif
+
 #if LIBC_CONF_WCTYPE_MODE == LIBC_WCTYPE_MODE_UTF8
 #include "src/__support/wctype/wctype_classification_utils.h"
 #endif
