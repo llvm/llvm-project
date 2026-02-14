@@ -5733,31 +5733,107 @@ the configuration (without a prefix: ``Auto``).
 
 .. _PointerAlignment:
 
-**PointerAlignment** (``PointerAlignmentStyle``) :versionbadge:`clang-format 3.7` :ref:`¶ <PointerAlignment>`
+**PointerAlignment** (``PointerAlignmentOptions``) :versionbadge:`clang-format 3.7` :ref:`¶ <PointerAlignment>`
   Pointer and reference alignment style.
 
-  Possible values:
+  Acceptable values (configured as a single string or with suboptions):
+  * ``Left``
+  * ``Right``
+  * ``Middle``
 
-  * ``PAS_Left`` (in configuration: ``Left``)
-    Align pointer to the left.
+  For example, to configure left pointer alignment:
 
-    .. code-block:: c++
+  .. code-block:: yaml
 
-      int* a;
+    PointerAlignment: Left
 
-  * ``PAS_Right`` (in configuration: ``Right``)
-    Align pointer to the right.
+    # or
 
-    .. code-block:: c++
+    PointerAlignment:
+      Default: Left
 
-      int *a;
+  Nested configuration flags:
 
-  * ``PAS_Middle`` (in configuration: ``Middle``)
-    Align pointer in the middle.
+  Pointer and reference alignment options.
 
-    .. code-block:: c++
+  * ``PointerAlignmentStyle Default``
+    The default alignment for pointers and references.
 
-      int * a;
+    Possible values:
+
+    * ``PAS_Left`` (in configuration: ``Left``)
+      Align pointer to the left.
+
+      .. code-block:: c++
+
+        int* a;
+
+    * ``PAS_Right`` (in configuration: ``Right``)
+      Align pointer to the right.
+
+      .. code-block:: c++
+
+        int *a;
+
+    * ``PAS_Middle`` (in configuration: ``Middle``)
+      Align pointer in the middle.
+
+      .. code-block:: c++
+
+        int * a;
+
+
+  * ``ReturnTypeAlignmentStyle ReturnType``
+    The alignment for pointers in function return types.
+
+    Possible values:
+
+    * ``RTAS_Default`` (in configuration: ``Default``)
+      Use default alignment.
+
+    * ``RTAS_Left`` (in configuration: ``Left``)
+      Align pointer/reference to the left.
+
+      .. code-block:: c++
+
+        int* a(void);
+
+    * ``RTAS_Right`` (in configuration: ``Right``)
+      Align pointer/reference to the right.
+
+      .. code-block:: c++
+
+        int *a(void);
+
+    * ``RTAS_Middle`` (in configuration: ``Middle``)
+      Align pointer/reference in the middle.
+
+      .. code-block:: c++
+
+        int * a(void);
+
+
+  * ``CastAlignmentStyle CStyleCast``
+    The alignment for pointers in C-style casts.
+
+    Possible values:
+
+    * ``CAS_Default`` (in configuration: ``Default``)
+      Use default alignment.
+
+    * ``CAS_Left`` (in configuration: ``Left``)
+      Align pointer/reference to the left.
+
+      .. code-block:: c++
+
+        (char*)s;
+
+    * ``CAS_Right`` (in configuration: ``Right``)
+      Align pointer/reference to the right.
+
+      .. code-block:: c++
+
+        (char *)s;
 
 
 
@@ -5889,34 +5965,111 @@ the configuration (without a prefix: ``Auto``).
 
 .. _ReferenceAlignment:
 
-**ReferenceAlignment** (``ReferenceAlignmentStyle``) :versionbadge:`clang-format 13` :ref:`¶ <ReferenceAlignment>`
+**ReferenceAlignment** (``ReferenceAlignmentOptions``) :versionbadge:`clang-format 13` :ref:`¶ <ReferenceAlignment>`
   Reference alignment style (overrides ``PointerAlignment`` for references).
 
-  Possible values:
+  Acceptable values (configured as a single string or with suboptions):
+  * ``Pointer``
+  * ``Left``
+  * ``Right``
+  * ``Middle``
 
-  * ``RAS_Pointer`` (in configuration: ``Pointer``)
-    Align reference like ``PointerAlignment``.
+  For example, to configure right reference alignment:
 
-  * ``RAS_Left`` (in configuration: ``Left``)
-    Align reference to the left.
+  .. code-block:: yaml
 
-    .. code-block:: c++
+    ReferenceAlignment: Right
 
-      int& a;
+    # or
 
-  * ``RAS_Right`` (in configuration: ``Right``)
-    Align reference to the right.
+    ReferenceAlignment:
+      Default: Right
 
-    .. code-block:: c++
+  Nested configuration flags:
 
-      int &a;
+  Reference alignment options.
 
-  * ``RAS_Middle`` (in configuration: ``Middle``)
-    Align reference in the middle.
+  * ``ReferenceAlignmentStyle Default``
+    The default alignment for references.
 
-    .. code-block:: c++
+    Possible values:
 
-      int & a;
+    * ``RAS_Pointer`` (in configuration: ``Pointer``)
+      Align reference like ``PointerAlignment``.
+
+    * ``RAS_Left`` (in configuration: ``Left``)
+      Align reference to the left.
+
+      .. code-block:: c++
+
+        int& a;
+
+    * ``RAS_Right`` (in configuration: ``Right``)
+      Align reference to the right.
+
+      .. code-block:: c++
+
+        int &a;
+
+    * ``RAS_Middle`` (in configuration: ``Middle``)
+      Align reference in the middle.
+
+      .. code-block:: c++
+
+        int & a;
+
+
+  * ``ReturnTypeAlignmentStyle ReturnType``
+    The alignment for references in function return types.
+
+    Possible values:
+
+    * ``RTAS_Default`` (in configuration: ``Default``)
+      Use default alignment.
+
+    * ``RTAS_Left`` (in configuration: ``Left``)
+      Align pointer/reference to the left.
+
+      .. code-block:: c++
+
+        int* a(void);
+
+    * ``RTAS_Right`` (in configuration: ``Right``)
+      Align pointer/reference to the right.
+
+      .. code-block:: c++
+
+        int *a(void);
+
+    * ``RTAS_Middle`` (in configuration: ``Middle``)
+      Align pointer/reference in the middle.
+
+      .. code-block:: c++
+
+        int * a(void);
+
+
+  * ``CastAlignmentStyle CStyleCast``
+    The alignment for references in C-style casts.
+
+    Possible values:
+
+    * ``CAS_Default`` (in configuration: ``Default``)
+      Use default alignment.
+
+    * ``CAS_Left`` (in configuration: ``Left``)
+      Align pointer/reference to the left.
+
+      .. code-block:: c++
+
+        (char*)s;
+
+    * ``CAS_Right`` (in configuration: ``Right``)
+      Align pointer/reference to the right.
+
+      .. code-block:: c++
+
+        (char *)s;
 
 
 

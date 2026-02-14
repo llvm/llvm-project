@@ -2047,8 +2047,8 @@ TEST_F(FormatTest, ElseIf) {
 
 TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
   FormatStyle Style = getLLVMStyle();
-  EXPECT_EQ(Style.PointerAlignment, FormatStyle::PAS_Right);
-  EXPECT_EQ(Style.ReferenceAlignment, FormatStyle::RAS_Pointer);
+  EXPECT_EQ(Style.PointerAlignment.Default, FormatStyle::PAS_Right);
+  EXPECT_EQ(Style.ReferenceAlignment.Default, FormatStyle::RAS_Pointer);
   verifyFormat("int *f1(int *a, int &b, int &&c);", Style);
   verifyFormat("int &f2(int &&c, int *a, int &b);", Style);
   verifyFormat("int &&f3(int &b, int &&c, int *a);", Style);
@@ -2104,7 +2104,7 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
                "Const unsigned   h;",
                Style);
 
-  Style.PointerAlignment = FormatStyle::PAS_Left;
+  Style.PointerAlignment.Default = FormatStyle::PAS_Left;
   verifyFormat("int* f1(int* a, int& b, int&& c);", Style);
   verifyFormat("int& f2(int&& c, int* a, int& b);", Style);
   verifyFormat("int&& f3(int& b, int&& c, int* a);", Style);
@@ -2162,8 +2162,8 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
                "Const unsigned   h;",
                Style);
 
-  Style.PointerAlignment = FormatStyle::PAS_Right;
-  Style.ReferenceAlignment = FormatStyle::RAS_Left;
+  Style.PointerAlignment.Default = FormatStyle::PAS_Right;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Left;
   verifyFormat("int *f1(int *a, int& b, int&& c);", Style);
   verifyFormat("int& f2(int&& c, int *a, int& b);", Style);
   verifyFormat("int&& f3(int& b, int&& c, int *a);", Style);
@@ -2200,8 +2200,8 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
                "Const unsigned   h;",
                Style);
 
-  Style.PointerAlignment = FormatStyle::PAS_Left;
-  Style.ReferenceAlignment = FormatStyle::RAS_Middle;
+  Style.PointerAlignment.Default = FormatStyle::PAS_Left;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Middle;
   verifyFormat("int* f1(int* a, int & b, int && c);", Style);
   verifyFormat("int & f2(int && c, int* a, int & b);", Style);
   verifyFormat("int && f3(int & b, int && c, int* a);", Style);
@@ -2253,8 +2253,8 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
                "Const unsigned    h;",
                Style);
 
-  Style.PointerAlignment = FormatStyle::PAS_Middle;
-  Style.ReferenceAlignment = FormatStyle::RAS_Right;
+  Style.PointerAlignment.Default = FormatStyle::PAS_Middle;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Right;
   verifyFormat("int * f1(int * a, int &b, int &&c);", Style);
   verifyFormat("int &f2(int &&c, int * a, int &b);", Style);
   verifyFormat("int &&f3(int &b, int &&c, int * a);", Style);
@@ -2294,6 +2294,305 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
   // FIXME: we don't handle this yet, so output may be arbitrary until it's
   // specifically handled
   // verifyFormat("int Add2(BTree * &Root, char * szToAdd)", Style);
+}
+
+TEST_F(FormatTest, ReturnTypeAlignment) {
+  // Test that ReturnType overrides PointerAlignment for return types.
+  FormatStyle Style = getLLVMStyle();
+  Style.PointerAlignment.Default = FormatStyle::PAS_Right;
+  Style.PointerAlignment.ReturnType = FormatStyle::RTAS_Left;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
+  Style.ReferenceAlignment.ReturnType = FormatStyle::RTAS_Left;
+
+  // Return type pointers should be left-aligned despite PAS_Right.
+  verifyFormat("int* f1(int *a, int *b);", Style);
+  verifyFormat("int& f2(int &a, int &b);", Style);
+  verifyFormat("int&& f3(int &&a, int &&b);", Style);
+
+  // Multiple pointers in return type.
+  verifyFormat("int** f4(int **a);", Style);
+  verifyFormat("const int* f5(const int *a);", Style);
+  verifyFormat("int*** f6(int ***a);", Style);
+
+  // Multiple pointers with const qualifiers.
+  verifyFormat("const int** f7(const int **a);", Style);
+  verifyFormat("int* const* f8(int *const *a);", Style);
+  verifyFormat("const int* const* f9(const int *const *a);", Style);
+  verifyFormat("int** const f10(int **const a);", Style);
+  verifyFormat("const int** const f11(const int **const a);", Style);
+
+  // Complex return types.
+  verifyFormat("std::vector<int>* f16(std::vector<int> *a);", Style);
+  verifyFormat("const char* f17(const char *str);", Style);
+  verifyFormat("const char** f18(const char **argv);", Style);
+  verifyFormat("char* const* f19(char *const *envp);", Style);
+
+  // Member functions.
+  verifyFormat("int* Class::method(int *a);", Style);
+  verifyFormat("int& Class::method(int &a);", Style);
+  verifyFormat("int* (*f8())(int *a);", Style);
+
+  // Variables should still follow the default alignment.
+  verifyFormat("int *a = nullptr;", Style);
+  verifyFormat("int *b = f1(a, a);", Style);
+
+  // Now test with PAS_Left base and RTAS_Right return type.
+  Style.PointerAlignment.Default = FormatStyle::PAS_Left;
+  Style.PointerAlignment.ReturnType = FormatStyle::RTAS_Right;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
+  Style.ReferenceAlignment.ReturnType = FormatStyle::RTAS_Right;
+
+  // Return type pointers should be right-aligned despite PAS_Left.
+  verifyFormat("int *f1(int* a, int* b);", Style);
+  verifyFormat("int &f2(int& a, int& b);", Style);
+  verifyFormat("int &&f3(int&& a, int&& b);", Style);
+
+  // Multiple pointers with right alignment in return type.
+  verifyFormat("int **f4(int** a);", Style);
+  verifyFormat("const int *f5(const int* a);", Style);
+  verifyFormat("int ***f6(int*** a);", Style);
+
+  // Multiple pointers with const qualifiers, right-aligned return type.
+  verifyFormat("const int **f7(const int** a);", Style);
+  verifyFormat("int *const *f8(int* const* a);", Style);
+  verifyFormat("const int *const *f9(const int* const* a);", Style);
+  verifyFormat("int **const f10(int** const a);", Style);
+  verifyFormat("const char **f11(const char** argv);", Style);
+
+  // Variables should still follow PointerAlignment (PAS_Left).
+  verifyFormat("int* a = nullptr;", Style);
+  verifyFormat("int* b = f1(a, a);", Style);
+
+  // Test with RTAS_Middle.
+  Style.PointerAlignment.Default = FormatStyle::PAS_Right;
+  Style.PointerAlignment.ReturnType = FormatStyle::RTAS_Middle;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
+  Style.ReferenceAlignment.ReturnType = FormatStyle::RTAS_Middle;
+
+  verifyFormat("int * f1(int *a, int *b);", Style);
+  verifyFormat("int & f2(int &a, int &b);", Style);
+  verifyFormat("int && f3(int &&a, int &&b);", Style);
+
+  // Multiple pointers with const qualifiers, middle-aligned return type.
+  verifyFormat("const int * f6(const int *a);", Style);
+  verifyFormat("const int ** f7(const int **a);", Style);
+  verifyFormat("int * const * f8(int *const *a);", Style);
+  verifyFormat("const int * const * f9(const int *const *a);", Style);
+  verifyFormat("int ** const f10(int **const a);", Style);
+  verifyFormat("const char ** f11(const char **argv);", Style);
+
+  // Variables should still follow PointerAlignment (PAS_Right).
+  verifyFormat("int *a = nullptr;", Style);
+
+  // Test that default alignment is used when ReturnType is RTAS_Default.
+  Style.PointerAlignment.Default = FormatStyle::PAS_Left;
+  Style.PointerAlignment.ReturnType = FormatStyle::RTAS_Default;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
+  Style.ReferenceAlignment.ReturnType = FormatStyle::RTAS_Default;
+
+  verifyFormat("int* f1(int* a, int* b);", Style);
+  verifyFormat("int& f2(int& a, int& b);", Style);
+
+  // Test with ReferenceAlignment override.
+  Style.PointerAlignment.Default = FormatStyle::PAS_Right;
+  Style.PointerAlignment.ReturnType = FormatStyle::RTAS_Left;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
+  Style.ReferenceAlignment.ReturnType = FormatStyle::RTAS_Right;
+
+  verifyFormat("int* f1(int *a, int &b);", Style);
+  verifyFormat("int &f2(int &a, int *b);", Style);
+  verifyFormat("int &&f3(int &&a, int *b);", Style);
+
+  // Test trailing return types with PAS_Right and RTAS_Left.
+  Style.PointerAlignment.Default = FormatStyle::PAS_Right;
+  Style.PointerAlignment.ReturnType = FormatStyle::RTAS_Left;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
+  Style.ReferenceAlignment.ReturnType = FormatStyle::RTAS_Left;
+
+  verifyFormat("auto f1(int *a, int *b) -> int*;", Style);
+  verifyFormat("auto f2(int &a, int &b) -> int&;", Style);
+  verifyFormat("auto f3(int &&a, int &&b) -> int&&;", Style);
+
+  // Multiple pointers in trailing return type.
+  verifyFormat("auto f4(int **a) -> int**;", Style);
+  verifyFormat("auto f5(const int *a) -> const int*;", Style);
+  verifyFormat("auto f6(int ***a) -> int***;", Style);
+
+  // Multiple pointers with const qualifiers.
+  verifyFormat("auto f7(const int **a) -> const int**;", Style);
+  verifyFormat("auto f8(int *const *a) -> int* const*;", Style);
+  verifyFormat("auto f9(const int *const *a) -> const int* const*;", Style);
+  verifyFormat("auto f10(int **const a) -> int** const;", Style);
+  verifyFormat("auto f11(const int **const a) -> const int** const;", Style);
+
+  // Complex trailing return types.
+  verifyFormat("auto f16(std::vector<int> *a) -> std::vector<int>*;", Style);
+  verifyFormat("auto f17(const char *str) -> const char*;", Style);
+  verifyFormat("auto f18(const char **argv) -> const char**;", Style);
+  verifyFormat("auto f19(char *const *envp) -> char* const*;", Style);
+
+  // Member functions with trailing return types.
+  verifyFormat("auto Class::method(int *a) -> int*;", Style);
+  verifyFormat("auto Class::method(int &a) -> int&;", Style);
+
+  // Now test with PAS_Left base and RTAS_Right trailing return type.
+  Style.PointerAlignment.Default = FormatStyle::PAS_Left;
+  Style.PointerAlignment.ReturnType = FormatStyle::RTAS_Right;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
+  Style.ReferenceAlignment.ReturnType = FormatStyle::RTAS_Right;
+
+  verifyFormat("auto f1(int* a, int* b) -> int *;", Style);
+  verifyFormat("auto f2(int& a, int& b) -> int &;", Style);
+  verifyFormat("auto f3(int&& a, int&& b) -> int &&;", Style);
+
+  // Multiple pointers with right alignment in trailing return type.
+  verifyFormat("auto f4(int** a) -> int **;", Style);
+  verifyFormat("auto f5(const int* a) -> const int *;", Style);
+  verifyFormat("auto f6(int*** a) -> int ***;", Style);
+
+  // Multiple pointers with const qualifiers, right-aligned trailing return
+  // type.
+  verifyFormat("auto f7(const int** a) -> const int **;", Style);
+  verifyFormat("auto f8(int* const* a) -> int *const *;", Style);
+  verifyFormat("auto f9(const int* const* a) -> const int *const *;", Style);
+  verifyFormat("auto f10(int** const a) -> int **const;", Style);
+  verifyFormat("auto f11(const char** argv) -> const char **;", Style);
+
+  // Test with RTAS_Middle trailing return type.
+  Style.PointerAlignment.Default = FormatStyle::PAS_Right;
+  Style.PointerAlignment.ReturnType = FormatStyle::RTAS_Middle;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
+  Style.ReferenceAlignment.ReturnType = FormatStyle::RTAS_Middle;
+
+  verifyFormat("auto f1(int *a, int *b) -> int *;", Style);
+  verifyFormat("auto f2(int &a, int &b) -> int &;", Style);
+  verifyFormat("auto f3(int &&a, int &&b) -> int &&;", Style);
+
+  // Multiple pointers with const qualifiers, middle-aligned trailing return
+  // type.
+  verifyFormat("auto f6(const int *a) -> const int *;", Style);
+  verifyFormat("auto f7(const int **a) -> const int **;", Style);
+  verifyFormat("auto f8(int *const *a) -> int * const *;", Style);
+  verifyFormat("auto f9(const int *const *a) -> const int * const *;", Style);
+  verifyFormat("auto f10(int **const a) -> int ** const;", Style);
+  verifyFormat("auto f11(const char **argv) -> const char **;", Style);
+
+  // Test that default alignment is used when ReturnType is RTAS_Default.
+  Style.PointerAlignment.Default = FormatStyle::PAS_Left;
+  Style.PointerAlignment.ReturnType = FormatStyle::RTAS_Default;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
+  Style.ReferenceAlignment.ReturnType = FormatStyle::RTAS_Default;
+
+  verifyFormat("auto f1(int* a, int* b) -> int*;", Style);
+  verifyFormat("auto f2(int& a, int& b) -> int&;", Style);
+
+  // Test with ReferenceAlignment override for trailing return types.
+  Style.PointerAlignment.Default = FormatStyle::PAS_Right;
+  Style.PointerAlignment.ReturnType = FormatStyle::RTAS_Left;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
+  Style.ReferenceAlignment.ReturnType = FormatStyle::RTAS_Right;
+
+  verifyFormat("auto f1(int *a, int &b) -> int*;", Style);
+  verifyFormat("auto f2(int &a, int *b) -> int &;", Style);
+  verifyFormat("auto f3(int &&a, int *b) -> int &&;", Style);
+}
+
+TEST_F(FormatTest, CStyleCastAlignment) {
+  // Test that CStyleCast overrides PointerAlignment for C-style casts.
+  FormatStyle Style = getLLVMStyle();
+  Style.PointerAlignment.Default = FormatStyle::PAS_Right;
+  Style.PointerAlignment.CStyleCast = FormatStyle::CAS_Left;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
+  Style.ReferenceAlignment.CStyleCast = FormatStyle::CAS_Left;
+
+  // Basic C-style casts with pointers should be left-aligned despite PAS_Right.
+  verifyFormat("int *a = (int*)b;", Style);
+  verifyFormat("int &c = (int&)d;", Style);
+  verifyFormat("int &&e = (int&&)f;", Style);
+
+  // Multiple pointers in C-style casts.
+  verifyFormat("int **a = (int**)b;", Style);
+  verifyFormat("const int *c = (const int*)d;", Style);
+  verifyFormat("int ***e = (int***)f;", Style);
+
+  // Multiple pointers with const qualifiers.
+  verifyFormat("const int **a = (const int**)b;", Style);
+  verifyFormat("int *const *c = (int* const*)d;", Style);
+  verifyFormat("const int *const *e = (const int* const*)f;", Style);
+  verifyFormat("int **const g = (int** const)h;", Style);
+  verifyFormat("const int **const i = (const int** const)j;", Style);
+
+  // Complex types in C-style casts.
+  verifyFormat("std::vector<int> *a = (std::vector<int>*)b;", Style);
+  verifyFormat("const char *c = (const char*)d;", Style);
+  verifyFormat("const char **e = (const char**)f;", Style);
+  verifyFormat("char *const *g = (char* const*)h;", Style);
+
+  // Variables should still follow the default alignment.
+  verifyFormat("int *a = nullptr;", Style);
+  verifyFormat("int *b = (int*)c;", Style);
+
+  // Now test with PAS_Left base and CAS_Right cast.
+  Style.PointerAlignment.Default = FormatStyle::PAS_Left;
+  Style.PointerAlignment.CStyleCast = FormatStyle::CAS_Right;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
+  Style.ReferenceAlignment.CStyleCast = FormatStyle::CAS_Right;
+
+  // C-style casts should be right-aligned despite PAS_Left.
+  verifyFormat("int* a = (int *)b;", Style);
+  verifyFormat("int& c = (int &)d;", Style);
+  verifyFormat("int&& e = (int &&)f;", Style);
+
+  // Multiple pointers with right alignment in casts.
+  verifyFormat("int** a = (int **)b;", Style);
+  verifyFormat("const int* c = (const int *)d;", Style);
+  verifyFormat("int*** e = (int ***)f;", Style);
+
+  // Multiple pointers with const qualifiers, right-aligned casts.
+  verifyFormat("const int** a = (const int **)b;", Style);
+  verifyFormat("int* const* c = (int *const *)d;", Style);
+  verifyFormat("const int* const* e = (const int *const *)f;", Style);
+  verifyFormat("int** const g = (int **const)h;", Style);
+  verifyFormat("const char** i = (const char **)j;", Style);
+
+  // Variables should still follow PointerAlignment (PAS_Left).
+  verifyFormat("int* a = nullptr;", Style);
+  verifyFormat("int* b = (int *)c;", Style);
+
+  // Test that default alignment is used when CStyleCast is CAS_Default.
+  Style.PointerAlignment.Default = FormatStyle::PAS_Left;
+  Style.PointerAlignment.CStyleCast = FormatStyle::CAS_Default;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
+  Style.ReferenceAlignment.CStyleCast = FormatStyle::CAS_Default;
+
+  verifyFormat("int* a = (int*)b;", Style);
+  verifyFormat("int& c = (int&)d;", Style);
+
+  // Test with ReferenceAlignment override.
+  Style.PointerAlignment.Default = FormatStyle::PAS_Right;
+  Style.PointerAlignment.CStyleCast = FormatStyle::CAS_Left;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
+  Style.ReferenceAlignment.CStyleCast = FormatStyle::CAS_Right;
+
+  verifyFormat("int *a = (int*)b;", Style);
+  verifyFormat("int &c = (int &)d;", Style);
+  verifyFormat("int &&e = (int &&)f;", Style);
+
+  // Chained casts.
+  verifyFormat("int *a = (int*)(void*)b;", Style);
+  verifyFormat("const char *c = (const char*)(void*)d;", Style);
+
+  // Casts with arithmetic.
+  verifyFormat("int *a = (int*)b + 1;", Style);
+  verifyFormat("void *c = (void*)(d + sizeof(int));", Style);
+
+  // Test function calls with casts.
+  verifyFormat("foo((int*)bar);", Style);
+  verifyFormat("foo((int &)bar, (int*)baz);", Style);
+
+  // Test C-style casts in expressions.
+  verifyFormat("if ((int*)a == b)\n  return;", Style);
+  verifyFormat("return (int*)a;", Style);
 }
 
 TEST_F(FormatTest, FormatsForLoop) {
@@ -2376,7 +2675,7 @@ TEST_F(FormatTest, FormatsForLoop) {
       NoBinPacking);
 
   FormatStyle AlignLeft = getLLVMStyle();
-  AlignLeft.PointerAlignment = FormatStyle::PAS_Left;
+  AlignLeft.PointerAlignment.Default = FormatStyle::PAS_Left;
   verifyFormat("for (A* a = start; a < end; ++a, ++value) {\n}", AlignLeft);
 }
 
@@ -8638,7 +8937,7 @@ TEST_F(FormatTest, BreaksFunctionDeclarations) {
                "    void f();");
 
   auto Style = getLLVMStyle();
-  Style.PointerAlignment = FormatStyle::PAS_Left;
+  Style.PointerAlignment.Default = FormatStyle::PAS_Left;
   verifyFormat("void aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
                "    aaaaaaaaaaaaaaaaaaaaaaaaa* const aaaaaaaaaaaa) {}",
                Style);
@@ -9975,7 +10274,7 @@ TEST_F(FormatTest, DeclarationsOfMultipleVariables) {
                "          ***c = ccccccccccccccccccc, ***d = ddddddddddddddd;");
 
   FormatStyle Style = getGoogleStyle();
-  Style.PointerAlignment = FormatStyle::PAS_Left;
+  Style.PointerAlignment.Default = FormatStyle::PAS_Left;
   Style.DerivePointerAlignment = false;
   verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                "    *aaaaaaaaaaaaaaaaaaaaaaaaaaaaa = aaaaaaaaaaaaaaaaaaa,\n"
@@ -11465,15 +11764,15 @@ TEST_F(FormatTest, UnderstandsPointersToMembers) {
       "    aaaaaaaaaaaaaaaaaaaaaaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaaaa));");
 
   FormatStyle Style = getLLVMStyle();
-  EXPECT_EQ(Style.PointerAlignment, FormatStyle::PAS_Right);
+  EXPECT_EQ(Style.PointerAlignment.Default, FormatStyle::PAS_Right);
   verifyFormat("typedef bool *(Class::*Member)() const;", Style);
   verifyFormat("void f(int A::*p) { int A::*v = &A::B; }", Style);
 
-  Style.PointerAlignment = FormatStyle::PAS_Left;
+  Style.PointerAlignment.Default = FormatStyle::PAS_Left;
   verifyFormat("typedef bool* (Class::*Member)() const;", Style);
   verifyFormat("void f(int A::* p) { int A::* v = &A::B; }", Style);
 
-  Style.PointerAlignment = FormatStyle::PAS_Middle;
+  Style.PointerAlignment.Default = FormatStyle::PAS_Middle;
   verifyFormat("typedef bool * (Class::*Member)() const;", Style);
   verifyFormat("void f(int A::* p) { int A::* v = &A::B; }", Style);
 }
@@ -11533,7 +11832,7 @@ TEST_F(FormatTest, UnderstandsUnaryOperators) {
   // Check that * is not treated as a binary operator when we set
   // PointerAlignment as PAS_Left after a keyword and not a declaration.
   FormatStyle PASLeftStyle = getLLVMStyle();
-  PASLeftStyle.PointerAlignment = FormatStyle::PAS_Left;
+  PASLeftStyle.PointerAlignment.Default = FormatStyle::PAS_Left;
   verifyFormat("co_return *a;", PASLeftStyle);
   verifyFormat("co_await *a;", PASLeftStyle);
   verifyFormat("co_yield *a", PASLeftStyle);
@@ -11661,7 +11960,7 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
   verifyFormat("template <typename T> void operator=(T) && {}");
 
   FormatStyle AlignLeft = getLLVMStyle();
-  AlignLeft.PointerAlignment = FormatStyle::PAS_Left;
+  AlignLeft.PointerAlignment.Default = FormatStyle::PAS_Left;
   verifyFormat("void A::b() && {}", AlignLeft);
   verifyFormat("void A::b() && noexcept {}", AlignLeft);
   verifyFormat("Deleted& operator=(const Deleted&) & = default;", AlignLeft);
@@ -11693,7 +11992,7 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
   verifyFormat("for (foo<void() &&>& cb : X)", AlignLeft);
 
   FormatStyle AlignMiddle = getLLVMStyle();
-  AlignMiddle.PointerAlignment = FormatStyle::PAS_Middle;
+  AlignMiddle.PointerAlignment.Default = FormatStyle::PAS_Middle;
   verifyFormat("void A::b() && {}", AlignMiddle);
   verifyFormat("void A::b() && noexcept {}", AlignMiddle);
   verifyFormat("Deleted & operator=(const Deleted &) & = default;",
@@ -11776,7 +12075,7 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
 
   FormatStyle AlignLeftBreakTemplate = getLLVMStyle();
   AlignLeftBreakTemplate.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
-  AlignLeftBreakTemplate.PointerAlignment = FormatStyle::PAS_Left;
+  AlignLeftBreakTemplate.PointerAlignment.Default = FormatStyle::PAS_Left;
 
   verifyFormat("struct f {\n"
                "  template <class T>\n"
@@ -11860,19 +12159,19 @@ TEST_F(FormatTest, PointerAlignmentFallback) {
                            "int *q;\n"
                            "int * r;");
 
-  EXPECT_EQ(Style.PointerAlignment, FormatStyle::PAS_Right);
+  EXPECT_EQ(Style.PointerAlignment.Default, FormatStyle::PAS_Right);
   verifyFormat("int *p;\n"
                "int *q;\n"
                "int *r;",
                Code, Style);
 
-  Style.PointerAlignment = FormatStyle::PAS_Left;
+  Style.PointerAlignment.Default = FormatStyle::PAS_Left;
   verifyFormat("int* p;\n"
                "int* q;\n"
                "int* r;",
                Code, Style);
 
-  Style.PointerAlignment = FormatStyle::PAS_Middle;
+  Style.PointerAlignment.Default = FormatStyle::PAS_Middle;
   verifyFormat("int * p;\n"
                "int * q;\n"
                "int * r;",
@@ -12068,7 +12367,7 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
                      "void f(int i = 0, SomeType** temps = NULL);");
 
   FormatStyle Left = getLLVMStyle();
-  Left.PointerAlignment = FormatStyle::PAS_Left;
+  Left.PointerAlignment.Default = FormatStyle::PAS_Left;
   verifyFormat("x = *a(x) = *a(y);", Left);
   verifyFormat("for (;; *a = b) {\n}", Left);
   verifyFormat("return *this += 1;", Left);
@@ -12214,7 +12513,7 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
       getGoogleStyleWithColumns(68));
 
   FormatStyle Style = getLLVMStyle();
-  Style.PointerAlignment = FormatStyle::PAS_Left;
+  Style.PointerAlignment.Default = FormatStyle::PAS_Left;
   verifyFormat("struct {\n"
                "}* ptr;",
                Style);
@@ -12238,7 +12537,7 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
                Style);
   verifyFormat("bool b = 3 == int{3} && true;");
 
-  Style.PointerAlignment = FormatStyle::PAS_Middle;
+  Style.PointerAlignment.Default = FormatStyle::PAS_Middle;
   verifyFormat("struct {\n"
                "} * ptr;",
                Style);
@@ -12258,7 +12557,7 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
                "} && ptr = {};",
                Style);
 
-  Style.PointerAlignment = FormatStyle::PAS_Right;
+  Style.PointerAlignment.Default = FormatStyle::PAS_Right;
   verifyFormat("struct {\n"
                "} *ptr;",
                Style);
@@ -12278,7 +12577,7 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
                "} &&ptr = {};",
                Style);
 
-  Style.PointerAlignment = FormatStyle::PAS_Left;
+  Style.PointerAlignment.Default = FormatStyle::PAS_Left;
   verifyFormat("delete[] *ptr;", Style);
   verifyFormat("delete[] **ptr;", Style);
   verifyFormat("delete[] *(ptr);", Style);
@@ -12369,7 +12668,7 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyFormat("foo<a<b && c> d> v;");
 
   FormatStyle PointerMiddle = getLLVMStyle();
-  PointerMiddle.PointerAlignment = FormatStyle::PAS_Middle;
+  PointerMiddle.PointerAlignment.Default = FormatStyle::PAS_Middle;
   verifyFormat("delete *x;", PointerMiddle);
   verifyFormat("int * x;", PointerMiddle);
   verifyFormat("int *[] x;", PointerMiddle);
@@ -12476,7 +12775,7 @@ TEST_F(FormatTest, UnderstandsAttributes) {
 
   auto Style = getLLVMStyleWithColumns(60);
   Style.AttributeMacros.push_back("my_fancy_attr");
-  Style.PointerAlignment = FormatStyle::PAS_Left;
+  Style.PointerAlignment.Default = FormatStyle::PAS_Left;
   verifyFormat("void foo(const MyLongTypeNameeeeeeeeeeeee* my_fancy_attr\n"
                "             testttttttttt);",
                Style);
@@ -12504,7 +12803,7 @@ TEST_F(FormatTest, UnderstandsPointerQualifiersInCast) {
   // determine that the expression is a cast to a pointer type.
   FormatStyle LongPointerRight = getLLVMStyleWithColumns(999);
   FormatStyle LongPointerLeft = getLLVMStyleWithColumns(999);
-  LongPointerLeft.PointerAlignment = FormatStyle::PAS_Left;
+  LongPointerLeft.PointerAlignment.Default = FormatStyle::PAS_Left;
   StringRef AllQualifiers =
       "const volatile restrict __attribute__((foo)) _Nonnull _Null_unspecified "
       "_Nullable [[clang::attr]] __ptr32 __ptr64 __capability";
@@ -12640,12 +12939,12 @@ TEST_F(FormatTest, UnderstandsEllipsis) {
 
   verifyFormat("template <int *...PP> a;", Style);
 
-  Style.PointerAlignment = FormatStyle::PAS_Left;
+  Style.PointerAlignment.Default = FormatStyle::PAS_Left;
   verifyFormat("template <class... Ts> void Foo(Ts*... ts) {}", Style);
 
   verifyFormat("template <int*... PP> a;", Style);
 
-  Style.PointerAlignment = FormatStyle::PAS_Middle;
+  Style.PointerAlignment.Default = FormatStyle::PAS_Middle;
   verifyFormat("template <int *... PP> a;", Style);
 }
 
@@ -16261,15 +16560,15 @@ TEST_F(FormatTest, ConfigurableUseOfTab) {
 
   FormatStyle TabAlignment = Tab;
   TabAlignment.AlignConsecutiveDeclarations.Enabled = true;
-  TabAlignment.PointerAlignment = FormatStyle::PAS_Left;
+  TabAlignment.PointerAlignment.Default = FormatStyle::PAS_Left;
   verifyFormat("unsigned long long big;\n"
                "char*\t\t   ptr;",
                TabAlignment);
-  TabAlignment.PointerAlignment = FormatStyle::PAS_Middle;
+  TabAlignment.PointerAlignment.Default = FormatStyle::PAS_Middle;
   verifyFormat("unsigned long long big;\n"
                "char *\t\t   ptr;",
                TabAlignment);
-  TabAlignment.PointerAlignment = FormatStyle::PAS_Right;
+  TabAlignment.PointerAlignment.Default = FormatStyle::PAS_Right;
   verifyFormat("unsigned long long big;\n"
                "char\t\t  *ptr;",
                TabAlignment);
@@ -16317,19 +16616,19 @@ TEST_F(FormatTest, ConfigurableUseOfTab) {
                Tab);
 
   TabAlignment.UseTab = FormatStyle::UT_ForIndentation;
-  TabAlignment.PointerAlignment = FormatStyle::PAS_Left;
+  TabAlignment.PointerAlignment.Default = FormatStyle::PAS_Left;
   verifyFormat("void f() {\n"
                "\tunsigned long long big;\n"
                "\tchar*              ptr;\n"
                "}",
                TabAlignment);
-  TabAlignment.PointerAlignment = FormatStyle::PAS_Middle;
+  TabAlignment.PointerAlignment.Default = FormatStyle::PAS_Middle;
   verifyFormat("void f() {\n"
                "\tunsigned long long big;\n"
                "\tchar *             ptr;\n"
                "}",
                TabAlignment);
-  TabAlignment.PointerAlignment = FormatStyle::PAS_Right;
+  TabAlignment.PointerAlignment.Default = FormatStyle::PAS_Right;
   verifyFormat("void f() {\n"
                "\tunsigned long long big;\n"
                "\tchar              *ptr;\n"
@@ -18235,13 +18534,13 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeColon) {
 TEST_F(FormatTest, ConfigurableSpaceAroundPointerQualifiers) {
   FormatStyle Style = getLLVMStyle();
 
-  Style.PointerAlignment = FormatStyle::PAS_Left;
+  Style.PointerAlignment.Default = FormatStyle::PAS_Left;
   Style.SpaceAroundPointerQualifiers = FormatStyle::SAPQ_Default;
   verifyFormat("void* const* x = NULL;", Style);
 
 #define verifyQualifierSpaces(Code, Pointers, Qualifiers)                      \
   do {                                                                         \
-    Style.PointerAlignment = FormatStyle::Pointers;                            \
+    Style.PointerAlignment.Default = FormatStyle::Pointers;                    \
     Style.SpaceAroundPointerQualifiers = FormatStyle::Qualifiers;              \
     verifyFormat(Code, Style);                                                 \
   } while (false)
@@ -18287,7 +18586,7 @@ TEST_F(FormatTest, ConfigurableSpaceAroundPointerQualifiers) {
 
   FormatStyle Spaces = getLLVMStyle();
   Spaces.AttributeMacros.push_back("qualified");
-  Spaces.PointerAlignment = FormatStyle::PAS_Right;
+  Spaces.PointerAlignment.Default = FormatStyle::PAS_Right;
   Spaces.SpaceAroundPointerQualifiers = FormatStyle::SAPQ_Default;
   verifyFormat("SomeType *volatile *a = NULL;", Spaces);
   verifyFormat("SomeType *__attribute__((attr)) *a = NULL;", Spaces);
@@ -18302,7 +18601,7 @@ TEST_F(FormatTest, ConfigurableSpaceAroundPointerQualifiers) {
   verifyFormat("std::vector<SomeVar * NotAQualifier> x;", Spaces);
 
   // Check that SAPQ_Before doesn't result in extra spaces for PAS_Left.
-  Spaces.PointerAlignment = FormatStyle::PAS_Left;
+  Spaces.PointerAlignment.Default = FormatStyle::PAS_Left;
   Spaces.SpaceAroundPointerQualifiers = FormatStyle::SAPQ_Before;
   verifyFormat("SomeType* volatile* a = NULL;", Spaces);
   verifyFormat("SomeType* __attribute__((attr))* a = NULL;", Spaces);
@@ -18318,7 +18617,7 @@ TEST_F(FormatTest, ConfigurableSpaceAroundPointerQualifiers) {
   verifyFormat("std::vector<SomeVar * NotAQualifier> x;", Spaces);
 
   // PAS_Middle should not have any noticeable changes even for SAPQ_Both
-  Spaces.PointerAlignment = FormatStyle::PAS_Middle;
+  Spaces.PointerAlignment.Default = FormatStyle::PAS_Middle;
   Spaces.SpaceAroundPointerQualifiers = FormatStyle::SAPQ_After;
   verifyFormat("SomeType * volatile * a = NULL;", Spaces);
   verifyFormat("SomeType * __attribute__((attr)) * a = NULL;", Spaces);
@@ -19764,7 +20063,7 @@ TEST_F(FormatTest, AlignConsecutiveBitFields) {
 TEST_F(FormatTest, AlignConsecutiveDeclarations) {
   FormatStyle Alignment = getLLVMStyle();
   Alignment.AlignConsecutiveMacros.Enabled = true;
-  Alignment.PointerAlignment = FormatStyle::PAS_Right;
+  Alignment.PointerAlignment.Default = FormatStyle::PAS_Right;
   verifyFormat("float const a = 5;\n"
                "int oneTwoThree = 123;",
                Alignment);
@@ -20031,7 +20330,7 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
 
   // PAS_Left
   FormatStyle AlignmentLeft = Alignment;
-  AlignmentLeft.PointerAlignment = FormatStyle::PAS_Left;
+  AlignmentLeft.PointerAlignment.Default = FormatStyle::PAS_Left;
   verifyFormat("void SomeFunction(int parameter = 0) {\n"
                "  int const i   = 1;\n"
                "  int*      j   = 2;\n"
@@ -20105,7 +20404,7 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
 
   // PAS_Middle
   FormatStyle AlignmentMiddle = Alignment;
-  AlignmentMiddle.PointerAlignment = FormatStyle::PAS_Middle;
+  AlignmentMiddle.PointerAlignment.Default = FormatStyle::PAS_Middle;
   verifyFormat("void SomeFunction(int parameter = 0) {\n"
                "  int const i   = 1;\n"
                "  int *     j   = 2;\n"
@@ -20321,14 +20620,14 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
   Alignment.ColumnLimit = 80;
 
   // Bug 33507
-  Alignment.PointerAlignment = FormatStyle::PAS_Middle;
+  Alignment.PointerAlignment.Default = FormatStyle::PAS_Middle;
   verifyFormat(
       "auto found = range::find_if(vsProducts, [&](auto * aProduct) {\n"
       "  static const Version verVs2017;\n"
       "  return true;\n"
       "});",
       Alignment);
-  Alignment.PointerAlignment = FormatStyle::PAS_Right;
+  Alignment.PointerAlignment.Default = FormatStyle::PAS_Right;
 
   // See llvm.org/PR35641
   Alignment.AlignConsecutiveDeclarations.Enabled = true;
@@ -20345,7 +20644,7 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "foo(int a);",
                "DECOR1 /**/ int8_t /**/ DECOR2 /**/ foo (int a);", Style);
 
-  Alignment.PointerAlignment = FormatStyle::PAS_Left;
+  Alignment.PointerAlignment.Default = FormatStyle::PAS_Left;
   verifyFormat("unsigned int*       a;\n"
                "int*                b;\n"
                "unsigned int Const* c;\n"
@@ -20361,7 +20660,7 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "Const unsigned      h;",
                Alignment);
 
-  Alignment.PointerAlignment = FormatStyle::PAS_Middle;
+  Alignment.PointerAlignment.Default = FormatStyle::PAS_Middle;
   verifyFormat("unsigned int *       a;\n"
                "int *                b;\n"
                "unsigned int Const * c;\n"
@@ -25177,7 +25476,7 @@ TEST_F(FormatTest, StructuredBindings) {
 
   // Make sure we don't mistake structured bindings for lambdas.
   FormatStyle PointerMiddle = getLLVMStyle();
-  PointerMiddle.PointerAlignment = FormatStyle::PAS_Middle;
+  PointerMiddle.PointerAlignment.Default = FormatStyle::PAS_Middle;
   verifyGoogleFormat("auto [a1, b]{A * i};");
   verifyFormat("auto [a2, b]{A * i};");
   verifyFormat("auto [a3, b]{A * i};", PointerMiddle);
@@ -25421,7 +25720,7 @@ TEST_F(FormatTest, TypenameMacros) {
   verifyFormat("vector<LIST(uint64_t) *attr> x;", Macros);
   verifyFormat("vector<LIST(uint64_t) *const> f(LIST(uint64_t) *arg);", Macros);
 
-  Macros.PointerAlignment = FormatStyle::PAS_Left;
+  Macros.PointerAlignment.Default = FormatStyle::PAS_Left;
   verifyFormat("STACK_OF(int)* a;", Macros);
   verifyFormat("STACK_OF(int*)* a;", Macros);
   verifyFormat("x = (STACK_OF(uint64_t))*a;", Macros);
@@ -25452,7 +25751,7 @@ TEST_F(FormatTest, AtomicQualifier) {
   verifyFormat("_Atomic(uint64_t) *s(InitValue);");
   verifyFormat("_Atomic(uint64_t) *s{InitValue};");
   FormatStyle Style = getLLVMStyle();
-  Style.PointerAlignment = FormatStyle::PAS_Left;
+  Style.PointerAlignment.Default = FormatStyle::PAS_Left;
   verifyFormat("_Atomic(uint64_t)* s(InitValue);", Style);
   verifyFormat("_Atomic(uint64_t)* s{InitValue};", Style);
   verifyFormat("_Atomic(int)* a;", Style);
@@ -25515,9 +25814,9 @@ TEST_F(FormatTest, C11Generic) {
 TEST_F(FormatTest, AmbersandInLamda) {
   // Test case reported in https://bugs.llvm.org/show_bug.cgi?id=41899
   FormatStyle AlignStyle = getLLVMStyle();
-  AlignStyle.PointerAlignment = FormatStyle::PAS_Left;
+  AlignStyle.PointerAlignment.Default = FormatStyle::PAS_Left;
   verifyFormat("auto lambda = [&a = a]() { a = 2; };", AlignStyle);
-  AlignStyle.PointerAlignment = FormatStyle::PAS_Right;
+  AlignStyle.PointerAlignment.Default = FormatStyle::PAS_Right;
   verifyFormat("auto lambda = [&a = a]() { a = 2; };", AlignStyle);
 }
 
@@ -25645,7 +25944,7 @@ TEST_F(FormatTest, STLWhileNotDefineChed) {
 
 TEST_F(FormatTest, OperatorSpacing) {
   FormatStyle Style = getLLVMStyle();
-  Style.PointerAlignment = FormatStyle::PAS_Right;
+  Style.PointerAlignment.Default = FormatStyle::PAS_Right;
   verifyFormat("Foo::operator*();", Style);
   verifyFormat("Foo::operator void *();", Style);
   verifyFormat("Foo::operator void **();", Style);
@@ -25701,7 +26000,7 @@ TEST_F(FormatTest, OperatorSpacing) {
   verifyFormat("operator const FooRight<Object> *&()", Style);
   verifyFormat("operator const FooRight<Object> *&&()", Style);
 
-  Style.PointerAlignment = FormatStyle::PAS_Left;
+  Style.PointerAlignment.Default = FormatStyle::PAS_Left;
   verifyFormat("Foo::operator*();", Style);
   verifyFormat("Foo::operator**();", Style);
   verifyFormat("Foo::operator void*();", Style);
@@ -25772,7 +26071,7 @@ TEST_F(FormatTest, OperatorSpacing) {
   verifyFormat("operator/*a*/ const /*b*/ Foo /*c*/<X> /*d*/ ::Bar<Y>*();",
                Style);
 
-  Style.PointerAlignment = FormatStyle::PAS_Middle;
+  Style.PointerAlignment.Default = FormatStyle::PAS_Middle;
   verifyFormat("Foo::operator*();", Style);
   verifyFormat("Foo::operator void *();", Style);
   verifyFormat("Foo::operator()(void *);", Style);
@@ -28032,7 +28331,7 @@ TEST_F(FormatTest, BreakAfterAttributes) {
                "Foo &operator-(Foo &);",
                Style);
 
-  Style.ReferenceAlignment = FormatStyle::RAS_Left;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Left;
   verifyFormat("[[nodiscard]]\n"
                "Foo& operator-(Foo&);",
                Style);

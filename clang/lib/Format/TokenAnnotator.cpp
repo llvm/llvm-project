@@ -4796,7 +4796,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     if (BeforeLeft->is(tok::coloncolon)) {
       if (Left.isNot(tok::star))
         return false;
-      assert(Style.PointerAlignment != FormatStyle::PAS_Right);
+      assert(Style.PointerAlignment.Default != FormatStyle::PAS_Right);
       if (!Right.startsSequence(tok::identifier, tok::r_paren))
         return true;
       assert(Right.Next);
@@ -4808,7 +4808,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   // Ensure right pointer alignment with ellipsis e.g. int *...P
   if (Left.is(tok::ellipsis) && BeforeLeft &&
       BeforeLeft->isPointerOrReference()) {
-    return Style.PointerAlignment != FormatStyle::PAS_Right;
+    return Style.PointerAlignment.Default != FormatStyle::PAS_Right;
   }
 
   if (Right.is(tok::star) && Left.is(tok::l_paren))
@@ -4846,9 +4846,9 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     // dependent on PointerAlignment style.
     if (Previous) {
       if (Previous->endsSequence(tok::kw_operator))
-        return Style.PointerAlignment != FormatStyle::PAS_Left;
+        return Style.PointerAlignment.Default != FormatStyle::PAS_Left;
       if (Previous->isOneOf(tok::kw_const, tok::kw_volatile)) {
-        return (Style.PointerAlignment != FormatStyle::PAS_Left) ||
+        return (Style.PointerAlignment.Default != FormatStyle::PAS_Left) ||
                (Style.SpaceAroundPointerQualifiers ==
                 FormatStyle::SAPQ_After) ||
                (Style.SpaceAroundPointerQualifiers == FormatStyle::SAPQ_Both);
@@ -6607,12 +6607,120 @@ void TokenAnnotator::printDebugInfo(const AnnotatedLine &Line) const {
   llvm::errs() << "----\n";
 }
 
+static bool isReturnType(const FormatToken &Tok, const LangOptions &LangOpts) {
+  // Look forward to see if there's a function declaration paren.
+  for (const FormatToken *Next = Tok.Next; Next;
+       Next = Next->getNextNonComment()) {
+    if (Next->isOneOf(TT_FunctionDeclarationName, TT_FunctionDeclarationLParen,
+                      TT_FunctionTypeLParen)) {
+      return true;
+    }
+
+    if (Next->is(TT_TemplateOpener) && Next->MatchingParen) {
+      Next = Next->MatchingParen;
+      continue;
+    }
+
+    if (Next->isPointerOrReference() || Next->isTypeName(LangOpts) ||
+        Next->isOneOf(tok::identifier, tok::coloncolon) ||
+        Next->canBePointerOrReferenceQualifier()) {
+      continue;
+    }
+
+    break;
+  }
+
+  // Look backward to see if there's a trailing return arrow.
+  for (const FormatToken *Prev = Tok.Previous; Prev;
+       Prev = Prev->getPreviousNonComment()) {
+    if (Prev->is(TT_TrailingReturnArrow))
+      return true;
+
+    if (Prev->is(TT_TemplateCloser) && Prev->MatchingParen) {
+      Prev = Prev->MatchingParen;
+      continue;
+    }
+
+    if (Prev->isPointerOrReference() || Prev->isTypeName(LangOpts) ||
+        Prev->isOneOf(tok::identifier, tok::coloncolon) ||
+        Prev->canBePointerOrReferenceQualifier()) {
+      continue;
+    }
+
+    break;
+  }
+
+  return false;
+}
+
+static bool isCStyleCast(const FormatToken &Tok, const LangOptions &LangOpts) {
+  // Look forward to see if there's a TT_CastRParen.
+  for (const FormatToken *Next = Tok.Next; Next;
+       Next = Next->getNextNonComment()) {
+    if (Next->is(TT_CastRParen))
+      return true;
+
+    if (Next->is(TT_TemplateOpener) && Next->MatchingParen) {
+      Next = Next->MatchingParen;
+      continue;
+    }
+
+    if (Next->isPointerOrReference() || Next->isTypeName(LangOpts) ||
+        Next->isOneOf(tok::identifier, tok::coloncolon) ||
+        Next->canBePointerOrReferenceQualifier()) {
+      continue;
+    }
+
+    break;
+  }
+  return false;
+}
+
+static FormatStyle::PointerAlignmentStyle
+mapReturnTypeAlignmentStyle(FormatStyle::ReturnTypeAlignmentStyle Style) {
+  switch (Style) {
+  case FormatStyle::RTAS_Left:
+    return FormatStyle::PAS_Left;
+  case FormatStyle::RTAS_Right:
+    return FormatStyle::PAS_Right;
+  case FormatStyle::RTAS_Middle:
+    return FormatStyle::PAS_Middle;
+  case FormatStyle::RTAS_Default:
+    assert(false);
+  }
+  llvm_unreachable("Unknown FormatStyle::ReturnTypeAlignmentStyle enum");
+}
+
+static FormatStyle::PointerAlignmentStyle
+mapCastAlignmentStyle(FormatStyle::CastAlignmentStyle Style) {
+  switch (Style) {
+  case FormatStyle::CAS_Left:
+    return FormatStyle::PAS_Left;
+  case FormatStyle::CAS_Right:
+    return FormatStyle::PAS_Right;
+  case FormatStyle::CAS_Default:
+    assert(false);
+  }
+  llvm_unreachable("Unknown FormatStyle::CastAlignmentStyle enum");
+}
+
 FormatStyle::PointerAlignmentStyle
 TokenAnnotator::getTokenReferenceAlignment(const FormatToken &Reference) const {
   assert(Reference.isOneOf(tok::amp, tok::ampamp));
-  switch (Style.ReferenceAlignment) {
+
+  if (Style.ReferenceAlignment.ReturnType != FormatStyle::RTAS_Default &&
+      isReturnType(Reference, LangOpts)) {
+    return mapReturnTypeAlignmentStyle(Style.ReferenceAlignment.ReturnType);
+  }
+
+  if (Style.ReferenceAlignment.CStyleCast != FormatStyle::CAS_Default &&
+      isCStyleCast(Reference, LangOpts)) {
+    return mapCastAlignmentStyle(Style.ReferenceAlignment.CStyleCast);
+  }
+
+  switch (Style.ReferenceAlignment.Default) {
   case FormatStyle::RAS_Pointer:
-    return Style.PointerAlignment;
+    return Style.PointerAlignment.Default;
   case FormatStyle::RAS_Left:
     return FormatStyle::PAS_Left;
   case FormatStyle::RAS_Right:
@@ -6620,8 +6728,7 @@ TokenAnnotator::getTokenReferenceAlignment(const FormatToken &Reference) const {
   case FormatStyle::RAS_Middle:
     return FormatStyle::PAS_Middle;
   }
-  assert(0); //"Unhandled value of ReferenceAlignment"
-  return Style.PointerAlignment;
+  llvm_unreachable("Unknown FormatStyle::ReferenceAlignmentStyle enum");
 }
 
 FormatStyle::PointerAlignmentStyle
@@ -6630,7 +6737,18 @@ TokenAnnotator::getTokenPointerOrReferenceAlignment(
   if (PointerOrReference.isOneOf(tok::amp, tok::ampamp))
     return getTokenReferenceAlignment(PointerOrReference);
   assert(PointerOrReference.is(tok::star));
-  return Style.PointerAlignment;
+
+  if (Style.PointerAlignment.ReturnType != FormatStyle::RTAS_Default &&
+      isReturnType(PointerOrReference, LangOpts)) {
+    return mapReturnTypeAlignmentStyle(Style.PointerAlignment.ReturnType);
+  }
+
+  if (Style.PointerAlignment.CStyleCast != FormatStyle::CAS_Default &&
+      isCStyleCast(PointerOrReference, LangOpts)) {
+    return mapCastAlignmentStyle(Style.PointerAlignment.CStyleCast);
+  }
+
+  return Style.PointerAlignment.Default;
 }
 
 } // namespace format

@@ -4103,9 +4103,78 @@ struct FormatStyle {
     PAS_Middle
   };
 
+  /// \brief The pointer/reference alignment style for function return types.
+  enum ReturnTypeAlignmentStyle : int8_t {
+    /// Use default alignment.
+    RTAS_Default,
+    /// Align pointer/reference to the left.
+    /// \code
+    ///   int* a(void);
+    /// \endcode
+    RTAS_Left,
+    /// Align pointer/reference to the right.
+    /// \code
+    ///   int *a(void);
+    /// \endcode
+    RTAS_Right,
+    /// Align pointer/reference in the middle.
+    /// \code
+    ///   int * a(void);
+    /// \endcode
+    RTAS_Middle
+  };
+
+  /// \brief The pointer/reference alignment style for C-style casts.
+  enum CastAlignmentStyle : int8_t {
+    /// Use default alignment.
+    CAS_Default,
+    /// Align pointer/reference to the left.
+    /// \code
+    ///   (char*)s;
+    /// \endcode
+    CAS_Left,
+    /// Align pointer/reference to the right.
+    /// \code
+    ///   (char *)s;
+    /// \endcode
+    CAS_Right,
+  };
+
+  /// Pointer and reference alignment options.
+  struct PointerAlignmentOptions {
+    /// The default alignment for pointers and references.
+    PointerAlignmentStyle Default;
+    /// The alignment for pointers in function return types.
+    ReturnTypeAlignmentStyle ReturnType;
+    /// The alignment for pointers in C-style casts.
+    CastAlignmentStyle CStyleCast;
+    bool operator==(const PointerAlignmentOptions &R) const {
+      return Default == R.Default && ReturnType == R.ReturnType &&
+             CStyleCast == R.CStyleCast;
+    }
+    bool operator!=(const PointerAlignmentOptions &R) const {
+      return !(*this == R);
+    }
+  };
+
   /// Pointer and reference alignment style.
+  ///
+  /// Acceptable values (configured as a single string or with suboptions):
+  /// * ``Left``
+  /// * ``Right``
+  /// * ``Middle``
+  ///
+  /// For example, to configure left pointer alignment:
+  /// \code{.yaml}
+  ///   PointerAlignment: Left
+  ///
+  ///   # or
+  ///
+  ///   PointerAlignment:
+  ///     Default: Left
+  /// \endcode
   /// \version 3.7
-  PointerAlignmentStyle PointerAlignment;
+  PointerAlignmentOptions PointerAlignment;
 
   /// The number of columns to use for indentation of preprocessor statements.
   /// When set to -1 (default) ``IndentWidth`` is used also for preprocessor
@@ -4275,9 +4344,42 @@ struct FormatStyle {
     RAS_Middle
   };
 
+  /// Reference alignment options.
+  struct ReferenceAlignmentOptions {
+    /// The default alignment for references.
+    ReferenceAlignmentStyle Default;
+    /// The alignment for references in function return types.
+    ReturnTypeAlignmentStyle ReturnType;
+    /// The alignment for references in C-style casts.
+    CastAlignmentStyle CStyleCast;
+    bool operator==(const ReferenceAlignmentOptions &R) const {
+      return Default == R.Default && ReturnType == R.ReturnType &&
+             CStyleCast == R.CStyleCast;
+    }
+    bool operator!=(const ReferenceAlignmentOptions &R) const {
+      return !(*this == R);
+    }
+  };
+
   /// Reference alignment style (overrides ``PointerAlignment`` for references).
+  ///
+  /// Acceptable values (configured as a single string or with suboptions):
+  /// * ``Pointer``
+  /// * ``Left``
+  /// * ``Right``
+  /// * ``Middle``
+  ///
+  /// For example, to configure right reference alignment:
+  /// \code{.yaml}
+  ///   ReferenceAlignment: Right
+  ///
+  ///   # or
+  ///
+  ///   ReferenceAlignment:
+  ///     Default: Right
+  /// \endcode
   /// \version 13
-  ReferenceAlignmentStyle ReferenceAlignment;
+  ReferenceAlignmentOptions ReferenceAlignment;
 
   // clang-format off
   /// Types of comment reflow style.

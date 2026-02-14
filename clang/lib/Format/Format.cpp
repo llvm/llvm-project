@@ -549,10 +549,63 @@ template <> struct ScalarEnumerationTraits<FormatStyle::PointerAlignmentStyle> {
     IO.enumCase(Value, "Middle", FormatStyle::PAS_Middle);
     IO.enumCase(Value, "Left", FormatStyle::PAS_Left);
     IO.enumCase(Value, "Right", FormatStyle::PAS_Right);
+  }
+};
+
+template <>
+struct ScalarEnumerationTraits<FormatStyle::ReturnTypeAlignmentStyle> {
+  static void enumeration(IO &IO,
+                          FormatStyle::ReturnTypeAlignmentStyle &Value) {
+    IO.enumCase(Value, "Default", FormatStyle::RTAS_Default);
+    IO.enumCase(Value, "Middle", FormatStyle::RTAS_Middle);
+    IO.enumCase(Value, "Left", FormatStyle::RTAS_Left);
+    IO.enumCase(Value, "Right", FormatStyle::RTAS_Right);
+  }
+};
+
+template <> struct ScalarEnumerationTraits<FormatStyle::CastAlignmentStyle> {
+  static void enumeration(IO &IO, FormatStyle::CastAlignmentStyle &Value) {
+    IO.enumCase(Value, "Default", FormatStyle::CAS_Default);
+    IO.enumCase(Value, "Left", FormatStyle::CAS_Left);
+    IO.enumCase(Value, "Right", FormatStyle::CAS_Right);
+  }
+};
+
+template <> struct MappingTraits<FormatStyle::PointerAlignmentOptions> {
+  static void enumInput(IO &IO, FormatStyle::PointerAlignmentOptions &Value) {
+    IO.enumCase(Value, "Middle",
+                FormatStyle::PointerAlignmentOptions(
+                    {/*Default=*/FormatStyle::PAS_Middle,
+                     /*ReturnType=*/FormatStyle::RTAS_Default,
+                     /*CStyleCast=*/FormatStyle::CAS_Default}));
+    IO.enumCase(Value, "Left",
+                FormatStyle::PointerAlignmentOptions(
+                    {/*Default=*/FormatStyle::PAS_Left,
+                     /*ReturnType=*/FormatStyle::RTAS_Default,
+                     /*CStyleCast=*/FormatStyle::CAS_Default}));
+    IO.enumCase(Value, "Right",
+                FormatStyle::PointerAlignmentOptions(
+                    {/*Default=*/FormatStyle::PAS_Right,
+                     /*ReturnType=*/FormatStyle::RTAS_Default,
+                     /*CStyleCast=*/FormatStyle::CAS_Default}));
 
     // For backward compatibility.
-    IO.enumCase(Value, "true", FormatStyle::PAS_Left);
-    IO.enumCase(Value, "false", FormatStyle::PAS_Right);
+    IO.enumCase(Value, "true",
+                FormatStyle::PointerAlignmentOptions(
+                    {/*Default=*/FormatStyle::PAS_Left,
+                     /*ReturnType=*/FormatStyle::RTAS_Default,
+                     /*CStyleCast=*/FormatStyle::CAS_Default}));
+    IO.enumCase(Value, "false",
+                FormatStyle::PointerAlignmentOptions(
+                    {/*Default=*/FormatStyle::PAS_Right,
+                     /*ReturnType=*/FormatStyle::RTAS_Default,
+                     /*CStyleCast=*/FormatStyle::CAS_Default}));
+  }
+
+  static void mapping(IO &IO, FormatStyle::PointerAlignmentOptions &Value) {
+    IO.mapOptional("Default", Value.Default);
+    IO.mapOptional("ReturnType", Value.ReturnType);
+    IO.mapOptional("CStyleCast", Value.CStyleCast);
   }
 };
 
@@ -594,6 +647,37 @@ template <> struct ScalarEnumerationTraits<FormatStyle::ReflowCommentsStyle> {
     // For backward compatibility:
     IO.enumCase(Value, "false", FormatStyle::RCS_Never);
     IO.enumCase(Value, "true", FormatStyle::RCS_Always);
+  }
+};
+
+template <> struct MappingTraits<FormatStyle::ReferenceAlignmentOptions> {
+  static void enumInput(IO &IO, FormatStyle::ReferenceAlignmentOptions &Value) {
+    IO.enumCase(Value, "Pointer",
+                FormatStyle::ReferenceAlignmentOptions(
+                    {/*Default=*/FormatStyle::RAS_Pointer,
+                     /*ReturnType=*/FormatStyle::RTAS_Default,
+                     /*CStyleCast=*/FormatStyle::CAS_Default}));
+    IO.enumCase(Value, "Middle",
+                FormatStyle::ReferenceAlignmentOptions(
+                    {/*Default=*/FormatStyle::RAS_Middle,
+                     /*ReturnType=*/FormatStyle::RTAS_Default,
+                     /*CStyleCast=*/FormatStyle::CAS_Default}));
+    IO.enumCase(Value, "Left",
+                FormatStyle::ReferenceAlignmentOptions(
+                    {/*Default=*/FormatStyle::RAS_Left,
+                     /*ReturnType=*/FormatStyle::RTAS_Default,
+                     /*CStyleCast=*/FormatStyle::CAS_Default}));
+    IO.enumCase(Value, "Right",
+                FormatStyle::ReferenceAlignmentOptions(
+                    {/*Default=*/FormatStyle::RAS_Right,
+                     /*ReturnType=*/FormatStyle::RTAS_Default,
+                     /*CStyleCast=*/FormatStyle::CAS_Default}));
+  }
+
+  static void mapping(IO &IO, FormatStyle::ReferenceAlignmentOptions &Value) {
+    IO.mapOptional("Default", Value.Default);
+    IO.mapOptional("ReturnType", Value.ReturnType);
+    IO.mapOptional("CStyleCast", Value.CStyleCast);
   }
 };
 
@@ -1793,10 +1877,14 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.ObjCSpaceAfterProperty = false;
   LLVMStyle.ObjCSpaceBeforeProtocolList = true;
   LLVMStyle.PackConstructorInitializers = FormatStyle::PCIS_BinPack;
-  LLVMStyle.PointerAlignment = FormatStyle::PAS_Right;
+  LLVMStyle.PointerAlignment = {/*Default=*/FormatStyle::PAS_Right,
+                                /*ReturnType=*/FormatStyle::RTAS_Default,
+                                /*CStyleCast=*/FormatStyle::CAS_Default};
   LLVMStyle.PPIndentWidth = -1;
   LLVMStyle.QualifierAlignment = FormatStyle::QAS_Leave;
-  LLVMStyle.ReferenceAlignment = FormatStyle::RAS_Pointer;
+  LLVMStyle.ReferenceAlignment = {/*Default=*/FormatStyle::RAS_Pointer,
+                                  /*ReturnType=*/FormatStyle::RTAS_Default,
+                                  /*CStyleCast=*/FormatStyle::CAS_Default};
   LLVMStyle.ReflowComments = FormatStyle::RCS_Always;
   LLVMStyle.RemoveBracesLLVM = false;
   LLVMStyle.RemoveEmptyLinesInUnwrappedLines = false;
@@ -1918,7 +2006,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   GoogleStyle.ObjCSpaceAfterProperty = false;
   GoogleStyle.ObjCSpaceBeforeProtocolList = true;
   GoogleStyle.PackConstructorInitializers = FormatStyle::PCIS_NextLine;
-  GoogleStyle.PointerAlignment = FormatStyle::PAS_Left;
+  GoogleStyle.PointerAlignment.Default = FormatStyle::PAS_Left;
   GoogleStyle.RawStringFormats = {
       {
           FormatStyle::LK_Cpp,
@@ -2113,7 +2201,7 @@ FormatStyle getMozillaStyle() {
   MozillaStyle.ObjCSpaceAfterProperty = true;
   MozillaStyle.ObjCSpaceBeforeProtocolList = false;
   MozillaStyle.PenaltyReturnTypeOnItsOwnLine = 200;
-  MozillaStyle.PointerAlignment = FormatStyle::PAS_Left;
+  MozillaStyle.PointerAlignment.Default = FormatStyle::PAS_Left;
   MozillaStyle.SpaceAfterTemplateKeyword = false;
   return MozillaStyle;
 }
@@ -2136,7 +2224,7 @@ FormatStyle getWebKitStyle() {
   Style.NamespaceIndentation = FormatStyle::NI_Inner;
   Style.ObjCBlockIndentWidth = 4;
   Style.ObjCSpaceAfterProperty = true;
-  Style.PointerAlignment = FormatStyle::PAS_Left;
+  Style.PointerAlignment.Default = FormatStyle::PAS_Left;
   Style.SpaceBeforeCpp11BracedList = true;
   Style.SpaceInEmptyBraces = FormatStyle::SIEB_Always;
   return Style;
@@ -2870,10 +2958,10 @@ private:
     if (Style.DerivePointerAlignment) {
       const auto NetRightCount = countVariableAlignments(AnnotatedLines);
       if (NetRightCount > 0)
-        Style.PointerAlignment = FormatStyle::PAS_Right;
+        Style.PointerAlignment.Default = FormatStyle::PAS_Right;
       else if (NetRightCount < 0)
-        Style.PointerAlignment = FormatStyle::PAS_Left;
-      Style.ReferenceAlignment = FormatStyle::RAS_Pointer;
+        Style.PointerAlignment.Default = FormatStyle::PAS_Left;
+      Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
     }
     if (Style.Standard == FormatStyle::LS_Auto) {
       Style.Standard = hasCpp03IncompatibleFormat(AnnotatedLines)
