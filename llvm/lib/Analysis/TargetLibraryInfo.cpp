@@ -1468,6 +1468,15 @@ unsigned TargetLibraryInfoImpl::getSizeTSize(const Module &M) const {
   return M.getDataLayout().getIndexSizeInBits(/*AddressSpace=*/0);
 }
 
+bool TargetLibraryInfoImpl::isErrnoLocationFunction(Function *F) const {
+  static constexpr auto ErrnoFnNames = {"__errno_location", "_errno", "__errno",
+                                        "___errno", "__llvm_libc_errno"};
+  assert(F && "Expecting existing Function.");
+  if (F->hasName() && is_contained(ErrnoFnNames, F->getName()))
+    return true;
+  return false;
+}
+
 TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass()
     : ImmutablePass(ID), TLA(TargetLibraryInfoImpl(Triple())) {}
 

@@ -31,6 +31,7 @@
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
@@ -123,7 +124,8 @@ using SCCNodeSet = SmallSetVector<Function *, 8>;
 } // end anonymous namespace
 
 static void addLocAccess(MemoryEffects &ME, const MemoryLocation &Loc,
-                         ModRefInfo MR, AAResults &AAR) {
+                         ModRefInfo MR, AAResults &AAR,
+                         const TargetLibraryInfo &TLI) {
   // Ignore accesses to known-invariant or local memory.
   MR &= AAR.getModRefInfoMask(Loc, /*IgnoreLocal=*/true);
   if (isNoModRef(MR))
@@ -136,6 +138,13 @@ static void addLocAccess(MemoryEffects &ME, const MemoryLocation &Loc,
     ME |= MemoryEffects::argMemOnly(MR);
     return;
   }
+  if (auto *CI = dyn_cast<CallInst>(UO)) {
+    auto *Callee = CI->getCalledFunction();
+    if (Callee && TLI.isErrnoLocationFunction(Callee)) {
+      ME |= MemoryEffects::errnoMemOnly(MR);
+      return;
+    }
+  }
 
   // If it's not an identified object, it might be an argument.
   if (!isIdentifiedObject(UO))
@@ -145,14 +154,15 @@ static void addLocAccess(MemoryEffects &ME, const MemoryLocation &Loc,
 }
 
 static void addArgLocs(MemoryEffects &ME, const CallBase *Call,
-                       ModRefInfo ArgMR, AAResults &AAR) {
+                       ModRefInfo ArgMR, AAResults &AAR,
+                       const TargetLibraryInfo &TLI) {
   for (const Value *Arg : Call->args()) {
     if (!Arg->getType()->isPtrOrPtrVectorTy())
       continue;
 
     addLocAccess(ME,
                  MemoryLocation::getBeforeOrAfter(Arg, Call->getAAMetadata()),
-                 ArgMR, AAR);
+                 ArgMR, AAR, TLI);
   }
 }
 
@@ -170,6 +180,7 @@ static void addArgLocs(MemoryEffects &ME, const CallBase *Call,
 /// can access argmem.
 static std::pair<MemoryEffects, MemoryEffects>
 checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
+                          const TargetLibraryInfo &TLI,
                           const SCCNodeSet &SCCNodes) {
   MemoryEffects OrigME = AAR.getMemoryEffects(&F);
   if (OrigME.doesNotAccessMemory())
@@ -202,7 +213,7 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
           SCCNodes.count(Call->getCalledFunction())) {
         // Keep track of which additional locations are accessed if the SCC
         // turns out to access argmem.
-        addArgLocs(RecursiveArgME, Call, ModRefInfo::ModRef, AAR);
+        addArgLocs(RecursiveArgME, Call, ModRefInfo::ModRef, AAR, TLI);
         continue;
       }
 
@@ -217,6 +228,12 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
       // tag to prevent itself being removed by optimizations and not block
       // other instructions being optimized.
       if (isa<PseudoProbeInst>(I))
+        continue;
+
+      // __errno_location itself does not access memory, it only returns the
+      // address of errno. Handle this separately.
+      if (auto *Callee = Call->getCalledFunction();
+          Callee && TLI.isErrnoLocationFunction(Callee))
         continue;
 
       // Merge callee's memory effects into caller's ones, including
@@ -234,7 +251,7 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
       // ignore calls that only access local memory.
       ModRefInfo ArgMR = CallME.getModRef(IRMemLocation::ArgMem);
       if (ArgMR != ModRefInfo::NoModRef)
-        addArgLocs(ME, Call, ArgMR, AAR);
+        addArgLocs(ME, Call, ArgMR, AAR, TLI);
       continue;
     }
 
@@ -258,31 +275,36 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
     if (I.isVolatile())
       ME |= MemoryEffects::inaccessibleMemOnly(MR);
 
-    addLocAccess(ME, *Loc, MR, AAR);
+    // Refine memory effects for the given location.
+    addLocAccess(ME, *Loc, MR, AAR, TLI);
   }
 
   return {OrigME & ME, RecursiveArgME};
 }
 
-MemoryEffects llvm::computeFunctionBodyMemoryAccess(Function &F,
-                                                    AAResults &AAR) {
-  return checkFunctionMemoryAccess(F, /*ThisBody=*/true, AAR, {}).first;
+MemoryEffects
+llvm::computeFunctionBodyMemoryAccess(Function &F, AAResults &AAR,
+                                      const TargetLibraryInfo &TLI) {
+  return checkFunctionMemoryAccess(F, /*ThisBody=*/true, AAR, TLI, {}).first;
 }
 
 /// Deduce readonly/readnone/writeonly attributes for the SCC.
 template <typename AARGetterT>
-static void addMemoryAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter,
-                           SmallPtrSet<Function *, 8> &Changed) {
+static void
+addMemoryAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter,
+               function_ref<const TargetLibraryInfo &(Function &F)> TLIGetter,
+               SmallPtrSet<Function *, 8> &Changed) {
   MemoryEffects ME = MemoryEffects::none();
   MemoryEffects RecursiveArgME = MemoryEffects::none();
   for (Function *F : SCCNodes) {
     // Call the callable parameter to look up AA results for this function.
     AAResults &AAR = AARGetter(*F);
+    const TargetLibraryInfo &TLI = TLIGetter(*F);
     // Non-exact function definitions may not be selected at link time, and an
     // alternative version that writes to memory may be selected.  See the
     // comment on GlobalValue::isDefinitionExact for more details.
-    auto [FnME, FnRecursiveArgME] =
-        checkFunctionMemoryAccess(*F, F->hasExactDefinition(), AAR, SCCNodes);
+    auto [FnME, FnRecursiveArgME] = checkFunctionMemoryAccess(
+        *F, F->hasExactDefinition(), AAR, TLI, SCCNodes);
     ME |= FnME;
     RecursiveArgME |= FnRecursiveArgME;
     // Reached bottom of the lattice, we will not be able to improve the result.
@@ -2254,9 +2276,10 @@ static SCCNodesResult createSCCNodeSet(ArrayRef<Function *> Functions) {
 }
 
 template <typename AARGetterT>
-static SmallPtrSet<Function *, 8>
-deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
-                       bool ArgAttrsOnly) {
+static SmallPtrSet<Function *, 8> deriveAttrsInPostOrder(
+    ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
+    function_ref<const TargetLibraryInfo &(Function &F)> TLIGetter,
+    bool ArgAttrsOnly) {
   SCCNodesResult Nodes = createSCCNodeSet(Functions);
 
   // Bail if the SCC only contains optnone functions.
@@ -2273,7 +2296,7 @@ deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
   }
 
   addArgumentReturnedAttrs(Nodes.SCCNodes, Changed);
-  addMemoryAttrs(Nodes.SCCNodes, AARGetter, Changed);
+  addMemoryAttrs(Nodes.SCCNodes, AARGetter, TLIGetter, Changed);
   addArgumentAttrs(Nodes.SCCNodes, Changed, /*SkipInitializes=*/false);
   inferConvergent(Nodes.SCCNodes, Changed);
   addNoReturnAttrs(Nodes.SCCNodes, Changed);
@@ -2320,13 +2343,17 @@ PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
     return FAM.getResult<AAManager>(F);
   };
 
+  auto TLIGetter = [&](Function &F) -> const TargetLibraryInfo & {
+    return FAM.getResult<TargetLibraryAnalysis>(F);
+  };
+
   SmallVector<Function *, 8> Functions;
   for (LazyCallGraph::Node &N : C) {
     Functions.push_back(&N.getFunction());
   }
 
   auto ChangedFunctions =
-      deriveAttrsInPostOrder(Functions, AARGetter, ArgAttrsOnly);
+      deriveAttrsInPostOrder(Functions, AARGetter, TLIGetter, ArgAttrsOnly);
   if (ChangedFunctions.empty())
     return PreservedAnalyses::all();
 

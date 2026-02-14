@@ -280,7 +280,8 @@ bool mustEmitToMergedModule(const GlobalValue *GV) {
 // regular LTO bitcode file to OS.
 void splitAndWriteThinLTOBitcode(
     raw_ostream &OS, raw_ostream *ThinLinkOS,
-    function_ref<AAResults &(Function &)> AARGetter, Module &M,
+    function_ref<AAResults &(Function &)> AARGetter,
+    function_ref<const TargetLibraryInfo &(Function &F)> TLIGetter, Module &M,
     const bool ShouldPreserveUseListOrder) {
   std::string ModuleId = getUniqueModuleId(&M);
   if (ModuleId.empty()) {
@@ -350,7 +351,7 @@ void splitAndWriteThinLTOBitcode(
             return;
         }
         if (!F->isDeclaration() &&
-            computeFunctionBodyMemoryAccess(*F, AARGetter(*F))
+            computeFunctionBodyMemoryAccess(*F, AARGetter(*F), TLIGetter(*F))
                 .doesNotAccessMemory())
           EligibleVirtualFns.insert(F);
       });
@@ -540,16 +541,17 @@ bool requiresSplit(Module &M) {
   return false;
 }
 
-bool writeThinLTOBitcode(raw_ostream &OS, raw_ostream *ThinLinkOS,
-                         function_ref<AAResults &(Function &)> AARGetter,
-                         Module &M, const ModuleSummaryIndex *Index,
-                         const bool ShouldPreserveUseListOrder) {
+bool writeThinLTOBitcode(
+    raw_ostream &OS, raw_ostream *ThinLinkOS,
+    function_ref<AAResults &(Function &)> AARGetter,
+    function_ref<const TargetLibraryInfo &(Function &F)> TLIGetter, Module &M,
+    const ModuleSummaryIndex *Index, const bool ShouldPreserveUseListOrder) {
   std::unique_ptr<ModuleSummaryIndex> NewIndex = nullptr;
   // See if this module needs to be split. If so, we try to split it
   // or at least promote type ids to enable WPD.
   if (requiresSplit(M)) {
     if (enableSplitLTOUnit(M)) {
-      splitAndWriteThinLTOBitcode(OS, ThinLinkOS, AARGetter, M,
+      splitAndWriteThinLTOBitcode(OS, ThinLinkOS, AARGetter, TLIGetter, M,
                                   ShouldPreserveUseListOrder);
       return true;
     }
@@ -601,6 +603,9 @@ llvm::ThinLTOBitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
       OS, ThinLinkOS,
       [&FAM](Function &F) -> AAResults & {
         return FAM.getResult<AAManager>(F);
+      },
+      [&FAM](Function &F) -> const TargetLibraryInfo & {
+        return FAM.getResult<TargetLibraryAnalysis>(F);
       },
       M, &AM.getResult<ModuleSummaryIndexAnalysis>(M),
       ShouldPreserveUseListOrder);
