@@ -215,6 +215,7 @@ bool GIMatchTableExecutor::executeMatchTable(
 
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
       unsigned Opcode = State.MIs[InsnID]->getOpcode();
+
       DEBUG_WITH_TYPE(TgtExecutor::getName(), {
         dbgs() << CurrentIdx << ": GIM_CheckOpcode(MIs[" << InsnID
                << "], ExpectedOpcode=" << Expected0;
