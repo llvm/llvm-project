@@ -273,6 +273,7 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     DataMember,
     InlineVariable,
     TemplatedVariable,
+    ExternallyVisibleVariableInModulePurview,
     Concept,
   } Kind = Normal;
 
@@ -308,9 +309,11 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
         if (LexicalDC->isRecord())
           return DefaultArgument;
     } else if (VarDecl *Var = dyn_cast<VarDecl>(ManglingContextDecl)) {
-      if (Var->getMostRecentDecl()->isInline() ||
-          IsExternallyVisibleInModulePurview(Var))
+      if (Var->getMostRecentDecl()->isInline())
         return InlineVariable;
+
+      if (IsExternallyVisibleInModulePurview(Var))
+        return ExternallyVisibleVariableInModulePurview;
 
       if (Var->getDeclContext()->isRecord() && IsInNonspecializedTemplate)
         return TemplatedVariable;
@@ -348,12 +351,15 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     return false;
   };
 
-  // Itanium ABI [5.1.7]:
+  // Itanium ABI [5.1.8]:
   //   In the following contexts [...] the one-definition rule requires closure
   //   types in different translation units to "correspond":
   switch (Kind) {
   case Normal: {
     //  -- the bodies of inline or templated functions
+    //  -- the bodies of externally visible functions in a module purview
+    //     (note: this is not yet part of the Itanium ABI, see the linked Github
+    //     discussion above)
     if ((IsInNonspecializedTemplate &&
          !(ManglingContextDecl && isa<ParmVarDecl>(ManglingContextDecl))) ||
         IsInFunctionThatRequiresMangling(CurContext)) {
@@ -375,8 +381,12 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
   case DefaultArgument:
     //  -- default arguments appearing in class definitions
   case InlineVariable:
+  case ExternallyVisibleVariableInModulePurview:
   case TemplatedVariable:
     //  -- the initializers of inline or templated variables
+    //  -- the initializers of externally visible variables in a module purview
+    //     (note: this is not yet part of the Itanium ABI, see the linked Github
+    //     discussion above)
     return std::make_tuple(
         &Context.getManglingNumberContext(ASTContext::NeedExtraManglingDecl,
                                           ManglingContextDecl),
