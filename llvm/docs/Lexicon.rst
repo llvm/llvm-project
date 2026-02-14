@@ -242,6 +242,38 @@ P
 **PRE**
     Partial Redundancy Elimination
 
+Q
+-
+
+.. _qoi:
+
+**QoI**
+    Quality of Implementation.
+
+    In contexts where software implements some standard, such as the C++
+    standard, QoI is used to refer to bits that add additional value beyond just
+    what is mandated by that standard.
+
+    In the context of the LLVM project, for example, the Clang compiler is
+    mandated to successfully translate C programs that strictly conform to the C
+    standard. However, when given invalid programs as input, it prints detailed
+    error messages, as well as "fix-it" hints that correct issues when applied.
+    All of these are "QoI" -- that is, not strictly necessary to conform to the
+    standard, but very nice to have.
+
+    Although the terms may be used interchangeably in many contexts, this is
+    technically distinct from `QoL`_.
+
+.. _qol:
+
+**QoL**
+    Quality of Life.
+
+    Outside of the LLVM project,
+    `quality of life (QoL) <https://en.wikipedia.org/wiki/Quality_of_life>`_ is,
+    by far, used much more commonly than `QoI`_. However, within LLVM, it is
+    most likely a typo, used where an author meant to write `QoI`_.
+
 R
 -
 
