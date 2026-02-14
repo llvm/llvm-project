@@ -3971,7 +3971,7 @@ libc_support_library(
         ":llvm_libc_macros_float16_macros",
     ],
 )
- 
+
 ############################### complex targets ################################
 
 libc_function(
