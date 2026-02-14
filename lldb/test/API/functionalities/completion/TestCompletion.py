@@ -139,6 +139,12 @@ class CommandLineCompletionTestCase(TestBase):
         interp = self.dbg.GetCommandInterpreter()
         match_strings = lldb.SBStringList()
         num_matches = interp.HandleCompletion(input, len(input), 0, -1, match_strings)
+        if match_strings.GetSize() > 0:
+            self.assertEqual(match_strings[0], match_strings.GetStringAtIndex(0))
+            self.assertEqual(
+                match_strings[-1],
+                match_strings.GetStringAtIndex(match_strings.GetSize() - 1),
+            )
         found_needle = False
         for match in match_strings:
             if needle in match:
