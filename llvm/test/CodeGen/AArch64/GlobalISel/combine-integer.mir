@@ -418,7 +418,7 @@ body:             |
 name:   APlusBPlusCMinusB
 body:             |
   bb.0:
-    liveins: $w0, $w1
+    liveins: $x0, $x1, $x2
 
     ; CHECK-LABEL: name: APlusBPlusCMinusB
     ; CHECK: liveins: $w0, $w1
