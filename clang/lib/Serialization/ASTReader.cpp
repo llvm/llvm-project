@@ -2999,7 +2999,8 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
               << ImportStack[I - 1]->FileName << ImportStack[I]->FileName;
       }
 
-      Diag(diag::note_ast_file_rebuild_required) << TopLevelASTFileName;
+      if (F.InputFilesValidationStatus == InputFilesValidation::Disabled)
+        Diag(diag::note_ast_file_rebuild_required) << TopLevelASTFileName;
       Diag(diag::note_ast_file_input_files_validation_status)
           << F.InputFilesValidationStatus;
     }
