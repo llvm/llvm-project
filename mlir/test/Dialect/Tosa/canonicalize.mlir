@@ -411,6 +411,38 @@ func.func @concat_fold_cast(%arg0: tensor<?x1xf32>) -> tensor<?x?xf32> {
 
 // -----
 
+// CHECK-LABEL: @fold_relaxing_cast_into_transpose
+func.func @fold_relaxing_cast_into_transpose(%arg0: tensor<6x256x40xi8>) -> tensor<6x?x256xi8> {
+// CHECK:           %[[VAL_1:.*]] = tosa.transpose %arg0 {perms = array<i32: 0, 2, 1>} : (tensor<6x256x40xi8>) -> tensor<6x40x256xi8>
+// CHECK:           tensor.cast %[[VAL_1]] : tensor<6x40x256xi8> to tensor<6x?x256xi8>
+  %0 = tensor.cast %arg0 : tensor<6x256x40xi8> to tensor<6x256x?xi8>
+  %1 = tosa.transpose %0 {perms = array<i32: 0, 2, 1>} : (tensor<6x256x?xi8>) -> tensor<6x?x256xi8>
+  return %1 : tensor<6x?x256xi8>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @no_fold_refining_cast_into_transpose(
+func.func @no_fold_refining_cast_into_transpose(%arg0: tensor<?x?x256xf32>) -> tensor<?x256x8xf32> {
+// CHECK:           %[[VAL_1:.*]] = tensor.cast %arg0 : tensor<?x?x256xf32> to tensor<?x8x256xf32>
+// CHECK:           tosa.transpose %[[VAL_1]] {perms = array<i32: 0, 2, 1>} : (tensor<?x8x256xf32>) -> tensor<?x256x8xf32>
+  %0 = tensor.cast %arg0 : tensor<?x?x256xf32> to tensor<?x8x256xf32>
+  %1 = tosa.transpose %0 {perms = array<i32: 0, 2, 1>} : (tensor<?x8x256xf32>) -> tensor<?x256x8xf32>
+  return %1 : tensor<?x256x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @elide_identity_cast_before_transpose
+func.func @elide_identity_cast_before_transpose(%arg0: tensor<?x8x256xf32>) -> tensor<?x256x8xf32> {
+// CHECK-NOT:           tensor.cast
+  %0 = tensor.cast %arg0 : tensor<?x8x256xf32> to tensor<?x8x256xf32>
+  %1 = tosa.transpose %0 {perms = array<i32: 0, 2, 1>} : (tensor<?x8x256xf32>) -> tensor<?x256x8xf32>
+  return %1 : tensor<?x256x8xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @conv2d_stride_2
 func.func @conv2d_stride_2(%arg0: tensor<4x11x11x2xf32>) -> tensor<4x6x6x3xf32> {
   // CHECK: tosa.conv2d

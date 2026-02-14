@@ -411,9 +411,65 @@ struct TransposeIsReshape : public OpRewritePattern<tosa::TransposeOp> {
   }
 };
 
+/// Pattern to fold a tensor.cast into a tosa.transpose operation.
+///
+/// This pattern pushes tensor.cast operations past transpose when the cast
+/// goes from a more static type to a less static (more dynamic) type. This
+/// allows the transpose to operate on more refined types, enabling better
+/// optimizations and type inference in downstream operations.
+///
+/// The pattern adds a cast back to the original result type for compatibility
+/// with existing users.
+///
+/// Example:
+/// ```
+///   %cast = tensor.cast %input : tensor<6x256x40xi8> to tensor<6x256x?xi8>
+///   %transpose = tosa.transpose %cast {perms = [0, 2, 1]}
+///     : (tensor<6x256x?xi8>) -> tensor<6x?x256xi8>
+/// ```
+/// is canonicalized to:
+/// ```
+///   %transpose = tosa.transpose %input {perms = [0, 2, 1]}
+///     : (tensor<6x256x40xi8>) -> tensor<6x40x256xi8>
+///   %cast = tensor.cast %transpose
+///     : tensor<6x40x256xi8> to tensor<6x?x256xi8>
+/// ```
+struct TransposeOpCastFolder : public OpRewritePattern<tosa::TransposeOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::TransposeOp transposeOp,
+                                PatternRewriter &rewriter) const override {
+    if (!tensor::hasFoldableTensorCastOperand(transposeOp))
+      return rewriter.notifyMatchFailure(transposeOp,
+                                         "no foldable cast operand");
+
+    auto castOp = cast<tensor::CastOp>(transposeOp.getInput1().getDefiningOp());
+    auto srcType = cast<RankedTensorType>(castOp.getSource().getType());
+    auto oldResultType = cast<RankedTensorType>(transposeOp.getType());
+
+    ArrayRef<int32_t> perms = transposeOp.getPerms();
+    assert(perms.size() == static_cast<size_t>(srcType.getRank()) &&
+           "permutation size must match source rank");
+    SmallVector<int64_t> newShape;
+    newShape.reserve(srcType.getRank());
+    for (int32_t perm : perms)
+      newShape.push_back(srcType.getDimSize(perm));
+    auto newResultType = RankedTensorType::get(
+        newShape, srcType.getElementType(), srcType.getEncoding());
+    auto newTransposeOp =
+        tosa::TransposeOp::create(rewriter, transposeOp.getLoc(), newResultType,
+                                  castOp.getSource(), perms);
+
+    rewriter.replaceOpWithNewOp<tensor::CastOp>(transposeOp, oldResultType,
+                                                newTransposeOp);
+    return success();
+  }
+};
+
 void TransposeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.add<ConsolidateTransposeOptimization, TransposeIsReshape>(context);
+  results.add<ConsolidateTransposeOptimization, TransposeIsReshape,
+              TransposeOpCastFolder>(context);
 }
 
 struct ClampIsNoOp : public OpRewritePattern<tosa::ClampOp> {
