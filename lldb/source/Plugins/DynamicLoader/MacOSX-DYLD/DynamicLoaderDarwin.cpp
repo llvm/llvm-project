@@ -141,14 +141,16 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
     LazyBool using_sc;
     LazyBool private_sc;
     FileSpec sc_path;
+    SymbolSharedCacheUse sc_mode = ModuleList::GetGlobalModuleListProperties()
+                                       .GetSharedCacheBinaryLoading();
     if (GetSharedCacheInformation(sc_base_addr, sc_uuid, using_sc, private_sc,
                                   sc_path) &&
         sc_uuid)
       image_info = HostInfo::GetSharedCacheImageInfo(
-          module_spec.GetFileSpec().GetPath(), sc_uuid);
+          module_spec.GetFileSpec().GetPath(), sc_uuid, sc_mode);
     else
       image_info = HostInfo::GetSharedCacheImageInfo(
-          module_spec.GetFileSpec().GetPath());
+          module_spec.GetFileSpec().GetPath(), sc_mode);
 
     // If we found it and it has the correct UUID, let's proceed with
     // creating a module from the memory contents.
