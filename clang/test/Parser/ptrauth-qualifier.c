@@ -15,4 +15,4 @@ int nonConstantGlobal = 5;
 
 __ptrauth int invalid0; // expected-error{{expected '('}}
 __ptrauth() int invalid1; // expected-error{{expected expression}}
-int * __ptrauth(VALID_DATA_KEY, 1, 1000, 12) invalid12; // expected-error{{qualifier must take between 1 and 3 arguments}}
+int * __ptrauth(VALID_DATA_KEY, 1, 1000, 12, 24) invalid12; // expected-error{{qualifier must take between 1 and 4 arguments}}

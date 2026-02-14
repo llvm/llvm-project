@@ -19,6 +19,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Basic/ObjCRuntime.h"
+#include "clang/Basic/PointerAuthOptions.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/Visibility.h"
@@ -58,13 +59,6 @@ enum class ShaderStage {
   Mesh,
   Amplification,
   Invalid,
-};
-
-enum class PointerAuthenticationMode : unsigned {
-  None,
-  Strip,
-  SignAndStrip,
-  SignAndAuth
 };
 
 /// Bitfields of LangOptions, split out from LangOptions in order to ensure that

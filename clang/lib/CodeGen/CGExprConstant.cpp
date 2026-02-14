@@ -2127,6 +2127,13 @@ private:
 
 }
 
+static bool shouldSignPointer(const PointerAuthQualifier &PointerAuth) {
+  PointerAuthenticationMode AuthenticationMode =
+      PointerAuth.getAuthenticationMode();
+  return AuthenticationMode == PointerAuthenticationMode::SignAndStrip ||
+         AuthenticationMode == PointerAuthenticationMode::SignAndAuth;
+}
+
 llvm::Constant *ConstantLValueEmitter::tryEmit() {
   const APValue::LValueBase &base = Value.getLValueBase();
 
@@ -2160,7 +2167,8 @@ llvm::Constant *ConstantLValueEmitter::tryEmit() {
 
   // Apply pointer-auth signing from the destination type.
   if (PointerAuthQualifier PointerAuth = DestType.getPointerAuth();
-      PointerAuth && !result.HasDestPointerAuth) {
+      PointerAuth && !result.HasDestPointerAuth &&
+      shouldSignPointer(PointerAuth)) {
     value = Emitter.tryEmitConstantSignedPointer(value, PointerAuth);
     if (!value)
       return nullptr;
@@ -2208,8 +2216,9 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
     if (D->hasAttr<WeakRefAttr>())
       return CGM.GetWeakRefReference(D).getPointer();
 
-    auto PtrAuthSign = [&](llvm::Constant *C) {
-      if (PointerAuthQualifier PointerAuth = DestType.getPointerAuth()) {
+    auto PtrAuthSign = [&](llvm::Constant *C, bool IsFunction) {
+      if (PointerAuthQualifier PointerAuth = DestType.getPointerAuth();
+          PointerAuth && shouldSignPointer(PointerAuth)) {
         C = applyOffset(C);
         C = Emitter.tryEmitConstantSignedPointer(C, PointerAuth);
         return ConstantLValue(C, /*applied offset*/ true, /*signed*/ true);
@@ -2217,7 +2226,7 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
 
       CGPointerAuthInfo AuthInfo;
 
-      if (EnablePtrAuthFunctionTypeDiscrimination)
+      if (IsFunction && EnablePtrAuthFunctionTypeDiscrimination)
         AuthInfo = CGM.getFunctionPointerAuthInfo(DestType);
 
       if (AuthInfo) {
@@ -2238,18 +2247,19 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
       llvm::Constant *C = CGM.getRawFunctionPointer(FD);
       if (FD->getType()->isCFIUncheckedCalleeFunctionType())
         C = llvm::NoCFIValue::get(cast<llvm::GlobalValue>(C));
-      return PtrAuthSign(C);
+      return PtrAuthSign(C, /*IsFunction=*/true);
     }
 
     if (const auto *VD = dyn_cast<VarDecl>(D)) {
       // We can never refer to a variable with local storage.
       if (!VD->hasLocalStorage()) {
         if (VD->isFileVarDecl() || VD->hasExternalStorage())
-          return CGM.GetAddrOfGlobalVar(VD);
+          return PtrAuthSign(CGM.GetAddrOfGlobalVar(VD), /*IsFunction=*/false);
 
         if (VD->isLocalVarDecl()) {
-          return CGM.getOrCreateStaticVarDecl(
+          llvm::Constant *C = CGM.getOrCreateStaticVarDecl(
               *VD, CGM.getLLVMLinkageVarDefinition(VD));
+          return PtrAuthSign(C, /*IsFunction=*/false);
         }
       }
     }

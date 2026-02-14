@@ -2581,7 +2581,37 @@ void PointerAuthQualifier::print(raw_ostream &OS,
   OS << "__ptrauth(";
   OS << getKey();
   OS << "," << unsigned(isAddressDiscriminated()) << ","
-     << getExtraDiscriminator() << ")";
+     << getExtraDiscriminator();
+
+  bool HasAppendedOption = false;
+  auto AppendOption = [&](StringRef Option) {
+    OS << ",";
+    if (!HasAppendedOption)
+      OS << '"';
+    HasAppendedOption = true;
+    OS << Option;
+  };
+  switch (auto AuthenticationMode = getAuthenticationMode()) {
+  case PointerAuthenticationMode::None:
+    llvm_unreachable("Mode is unauthenticated but claims to be present");
+    return;
+  case PointerAuthenticationMode::Strip:
+  case PointerAuthenticationMode::SignAndStrip:
+    AppendOption(nameOfPointerAuthenticationMode(AuthenticationMode));
+    break;
+  case clang::PointerAuthenticationMode::SignAndAuth:
+    // Don't emit default authentication mode
+    break;
+  }
+  if (isIsaPointer())
+    AppendOption(PointerAuthenticationOption::IsaPointerName);
+  if (authenticatesNullValues())
+    AppendOption(PointerAuthenticationOption::AuthenticatesNullValuesName);
+
+  if (HasAppendedOption)
+    OS << '"';
+
+  OS << ")";
 }
 
 std::string Qualifiers::getAsString() const {
