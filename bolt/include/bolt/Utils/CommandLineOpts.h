@@ -130,9 +130,26 @@ bool processAllFunctions();
 /// Return true if we should dump dot graphs for the given function.
 bool shouldDumpDot(const llvm::bolt::BinaryFunction &Function);
 
-enum GadgetScannerKind { GS_PACRET, GS_PAUTH, GS_ALL };
+enum GadgetScannerKind : uint64_t {
+  /// Scan for unprotected backward control-flow (return instructions).
+  GS_PTRAUTH_RETURN_TARGETS = (1 << 0),
+  /// Scan for tail calls performed with untrusted link register.
+  GS_PTRAUTH_TAIL_CALLS = (1 << 1),
+  /// Scan for unprotected forward control-flow (branch and call instructions).
+  GS_PTRAUTH_BRANCH_AND_CALL_TARGETS = (1 << 2),
+  /// Scan for signing oracles.
+  GS_PTRAUTH_SIGN_ORACLES = (1 << 3),
+  /// Scan for authentication oracles.
+  GS_PTRAUTH_AUTH_ORACLES = (1 << 4),
 
-extern llvm::cl::bits<GadgetScannerKind> GadgetScannersToRun;
+  /// Scan for all Pointer Authentication issues.
+  GS_PTRAUTH_ALL_MASK = GS_PTRAUTH_RETURN_TARGETS | GS_PTRAUTH_TAIL_CALLS |
+                        GS_PTRAUTH_BRANCH_AND_CALL_TARGETS |
+                        GS_PTRAUTH_SIGN_ORACLES | GS_PTRAUTH_AUTH_ORACLES,
+
+  /// Run all implemented scanners.
+  GS_ALL_MASK = GS_PTRAUTH_ALL_MASK,
+};
 
 } // namespace opts
 
