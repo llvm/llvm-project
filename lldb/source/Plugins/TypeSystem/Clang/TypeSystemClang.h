@@ -104,6 +104,16 @@ public:
   /// \}
 };
 
+/// Return result of GetIndexForRecordChild
+struct RecordChildResult {
+  /// child index in `record_decl`
+  uint32_t index = UINT32_MAX;
+  /// true if canonical_decl is an IndirectFieldDecl via an anonymous aggregate
+  bool has_inner = false;
+  /// if has_inner is true, this is the index within the anonymous aggregate
+  uint32_t inner_index = UINT32_MAX;
+};
+
 /// A TypeSystem implementation based on Clang.
 ///
 /// This class uses a single clang::ASTContext as the backend for storing
@@ -321,6 +331,12 @@ public:
   uint32_t GetIndexForRecordChild(const clang::RecordDecl *record_decl,
                                   clang::NamedDecl *canonical_decl,
                                   bool omit_empty_base_classes);
+
+  bool GetIndexForRecordChild(const clang::RecordDecl *record_decl,
+                              clang::NamedDecl *canonical_decl,
+                              bool omit_empty_base_classes,
+                              bool check_anonymous_bases,
+                              RecordChildResult &result);
 
   uint32_t GetIndexForRecordBase(const clang::RecordDecl *record_decl,
                                  const clang::CXXBaseSpecifier *base_spec,
