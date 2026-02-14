@@ -34,9 +34,8 @@ define void @shufflevector_bswap_d(ptr %res, ptr %a) nounwind {
 ; CHECK-LABEL: shufflevector_bswap_d:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI2_0)
-; CHECK-NEXT:    vld $vr1, $a1, %pc_lo12(.LCPI2_0)
-; CHECK-NEXT:    vshuf.b $vr0, $vr0, $vr0, $vr1
+; CHECK-NEXT:    vshuf4i.b $vr0, $vr0, 27
+; CHECK-NEXT:    vshuf4i.w $vr0, $vr0, 177
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
