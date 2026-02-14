@@ -195,7 +195,7 @@ public:
     void ConstructorHelper(clang::FPOptions FPFeatures);
     CIRGenFunction &cgf;
     clang::FPOptions oldFPFeatures;
-    cir::fp::ExceptionBehavior oldExcept;
+    llvm::fp::ExceptionBehavior oldExcept;
     llvm::RoundingMode oldRounding;
   };
   clang::FPOptions curFPFeatures;

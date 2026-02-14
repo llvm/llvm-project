@@ -4,7 +4,6 @@ add_clang_library(MLIRCIR
   CIRMemorySlot.cpp
   CIRTypes.cpp
   CIRDataLayout.cpp
-  FPEnv.cpp
 
   DEPENDS
   MLIRCIROpsIncGen

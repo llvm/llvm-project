@@ -19,8 +19,8 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/GlobalDecl.h"
-#include "clang/CIR/Dialect/IR/FPEnv.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/IR/FPEnv.h"
 
 #include <cassert>
 
@@ -959,17 +959,17 @@ LValue CIRGenFunction::makeNaturalAlignAddrLValue(mlir::Value val,
 
 // Map the LangOption for exception behavior into the corresponding enum in
 // the IR.
-static cir::fp::ExceptionBehavior
+static llvm::fp::ExceptionBehavior
 toConstrainedExceptMd(LangOptions::FPExceptionModeKind kind) {
   switch (kind) {
   case LangOptions::FPE_Ignore:
-    return cir::fp::ebIgnore;
+    return llvm::fp::ebIgnore;
   case LangOptions::FPE_MayTrap:
-    return cir::fp::ebMayTrap;
+    return llvm::fp::ebMayTrap;
   case LangOptions::FPE_Strict:
-    return cir::fp::ebStrict;
+    return llvm::fp::ebStrict;
   default:
-    llvm_unreachable("Unsupported FP Exception Behavior");
+    llvm_unreachable("unsupported FP exception behavior");
   }
 }
 
@@ -1164,7 +1164,7 @@ void CIRGenFunction::CIRGenFPOptionsRAII::ConstructorHelper(
 
   llvm::RoundingMode newRoundingBehavior = fpFeatures.getRoundingMode();
   // TODO(cir): override rounding behaviour once FM configs are guarded.
-  auto newExceptionBehavior =
+  llvm::fp::ExceptionBehavior newExceptionBehavior =
       toConstrainedExceptMd(static_cast<LangOptions::FPExceptionModeKind>(
           fpFeatures.getExceptionMode()));
   // TODO(cir): override exception behaviour once FM configs are guarded.
@@ -1175,7 +1175,7 @@ void CIRGenFunction::CIRGenFPOptionsRAII::ConstructorHelper(
   assert((cgf.curFuncDecl == nullptr || cgf.builder.getIsFPConstrained() ||
           isa<CXXConstructorDecl>(cgf.curFuncDecl) ||
           isa<CXXDestructorDecl>(cgf.curFuncDecl) ||
-          (newExceptionBehavior == cir::fp::ebIgnore &&
+          (newExceptionBehavior == llvm::fp::ebIgnore &&
            newRoundingBehavior == llvm::RoundingMode::NearestTiesToEven)) &&
          "FPConstrained should be enabled on entire function");
 
