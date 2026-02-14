@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass lowers callbrs and inline asm in LLVM IR in order to to assist
+// This pass lowers callbrs and inline asm in LLVM IR in order to assist
 // SelectionDAG's codegen.
 //
 // CallBrInst:
@@ -119,16 +119,22 @@ ConvertConstraintsToMemory(StringRef ConstraintStr) {
       O << *I;
       IsOutput = true;
       ++I;
+      if (I != E)
+        return {};
     }
     if (*I == '*') {
       O << '*';
       HasIndirect = true;
       ++I;
+      if (I != E)
+        return {};
     }
     if (*I == '+') {
       O << '+';
       IsOutput = true;
       ++I;
+      if (I != E)
+        return {};
     }
 
     auto Comma = std::find(I, E, ',');
@@ -148,7 +154,7 @@ ConvertConstraintsToMemory(StringRef ConstraintStr) {
     I = Comma + 1;
   }
 
-  return std::make_pair(Out, HasRegMem);
+  return {Out, HasRegMem};
 }
 
 /// Build a map of tied constraints. TiedOutput[i] = j means Constraint i is an
@@ -348,7 +354,10 @@ static bool ProcessInlineAsm(Function &F, CallBase *CB) {
   SmallVector<Type *, 2> NewRetTypes;
   SmallVector<std::pair<unsigned, Type *>, 8> ElementTypeAttrs;
 
-  // Track allocas created for converted outputs.
+  // Track allocas created for converted outputs. Indexed by position in the
+  // flat Constraints list (not by output index), so that both
+  // ProcessOutputConstraint and ReconstructReturnValue can look up entries
+  // using the same constraint index.
   SmallVector<AllocaInst *, 8> OutputAllocas(Constraints.size(), nullptr);
 
   // Build tied constraint map.
@@ -541,9 +550,12 @@ static bool runImpl(Function &F, ArrayRef<CallBase *> IAs, DominatorTree *DT) {
   return Changed;
 }
 
-/// Find all inline assembly calls in the given function.
-static SmallVector<CallBase *, 4> FindInlineAsms(Function &F,
-                                                 const TargetMachine *TM) {
+/// Find all inline assembly calls that need preparation. This always collects
+/// CallBrInsts (which need SSA fixups), and at -O0 also collects regular
+/// inline asm calls (which need "rm" to "m" constraint conversion for the fast
+/// register allocator).
+static SmallVector<CallBase *, 4>
+FindInlineAsmCandidates(Function &F, const TargetMachine *TM) {
   bool isOptLevelNone = TM->getOptLevel() == CodeGenOptLevel::None;
   SmallVector<CallBase *, 4> InlineAsms;
 
@@ -567,7 +579,7 @@ static SmallVector<CallBase *, 4> FindInlineAsms(Function &F,
 
 bool InlineAsmPrepare::runOnFunction(Function &F) {
   const auto *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
-  SmallVector<CallBase *, 4> IAs = FindInlineAsms(F, TM);
+  SmallVector<CallBase *, 4> IAs = FindInlineAsmCandidates(F, TM);
   if (IAs.empty())
     return false;
 
@@ -592,7 +604,7 @@ bool InlineAsmPrepare::runOnFunction(Function &F) {
 
 PreservedAnalyses InlineAsmPreparePass::run(Function &F,
                                             FunctionAnalysisManager &FAM) {
-  SmallVector<CallBase *, 4> IAs = FindInlineAsms(F, TM);
+  SmallVector<CallBase *, 4> IAs = FindInlineAsmCandidates(F, TM);
   if (IAs.empty())
     return PreservedAnalyses::all();
 

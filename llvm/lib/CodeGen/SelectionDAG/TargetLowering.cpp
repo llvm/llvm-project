@@ -23,7 +23,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAG.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -6283,8 +6282,8 @@ TargetLowering::ConstraintWeight
 ///  2) Special processing is done for the "rm" constraint. If specified, we
 ///     opt for the 'r' constraint, but mark the operand as being "foldable."
 ///     In the face of register exhaustion, the register allocator is free to
-///     choose to use a stack slot. This only applies to the greedy and default
-///     register allocators. FIXME: Support other allocators (fast?).
+///     choose to use a stack slot. The fast register allocator is handled
+///     separately via the InlineAsmPrepare pass.
 ///  3) Otherwise, pick the most general constraint present.  This prefers
 ///     'm' over 'r', for example.
 ///
@@ -6301,9 +6300,7 @@ TargetLowering::ConstraintGroup TargetLowering::getConstraintPreferences(
   // using the memory constriaint. This should be reviewed at some point to
   // remove that assumption from the back-end.
   const TargetMachine &TM = getTargetMachine();
-  if (TM.getOptLevel() != CodeGenOptLevel::None && OpInfo.MayFoldRegister &&
-      llvm::is_contained(OpInfo.Codes, "r") &&
-      llvm::is_contained(OpInfo.Codes, "m")) {
+  if (TM.getOptLevel() != CodeGenOptLevel::None && OpInfo.MayFoldRegister) {
     Ret.emplace_back(ConstraintPair("r", getConstraintType("r")));
     Ret.emplace_back(ConstraintPair("m", getConstraintType("m")));
     return Ret;
