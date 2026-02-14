@@ -90,7 +90,8 @@ initializeRecordStreamer(const Module &M,
   if (!MAI)
     return;
 
-  std::unique_ptr<MCSubtargetInfo> STI(T->createMCSubtargetInfo(TT, "", ""));
+  std::unique_ptr<MCSubtargetInfo> STI(
+      T->createMCSubtargetInfo(TT, "", "+all"));
   if (!STI)
     return;
 
