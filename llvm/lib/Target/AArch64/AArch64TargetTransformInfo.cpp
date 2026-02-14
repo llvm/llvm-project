@@ -463,6 +463,10 @@ InstructionCost AArch64TTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
   case Instruction::Store:
     ImmIdx = 0;
     break;
+  case Instruction::Xor:
+    if (Imm.isAllOnes())
+      return TTI::TCC_Free; // xor a, -1 can be folded to MVN
+  [[fallthrough]];
   case Instruction::Add:
   case Instruction::Sub:
   case Instruction::Mul:
@@ -470,9 +474,7 @@ InstructionCost AArch64TTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
   case Instruction::SDiv:
   case Instruction::URem:
   case Instruction::SRem:
-  case Instruction::And:
   case Instruction::Or:
-  case Instruction::Xor:
   case Instruction::ICmp:
     ImmIdx = 1;
     break;
@@ -494,6 +496,11 @@ InstructionCost AArch64TTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
   case Instruction::Select:
   case Instruction::Ret:
   case Instruction::Load:
+    break;
+  case Instruction::And:
+    if (Imm == 255 || Imm == 65535)
+      return TTI::TCC_Free;
+    ImmIdx = 1;
     break;
   }
 
