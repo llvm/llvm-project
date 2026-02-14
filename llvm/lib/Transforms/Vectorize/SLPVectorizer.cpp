@@ -1096,7 +1096,8 @@ class BinOpSameOpcodeHelper {
       Constant *RHS;
       switch (FromOpcode) {
       case Instruction::Shl:
-        if (ToOpcode == Instruction::Mul) {
+      case Instruction::LShr:
+        if (ToOpcode == Instruction::Mul || ToOpcode == Instruction::UDiv) {
           RHS = ConstantInt::get(
               RHSType, APInt::getOneBitSet(FromCIValueBitWidth,
                                            FromCIValue.getZExtValue()));
@@ -1109,7 +1110,7 @@ class BinOpSameOpcodeHelper {
       case Instruction::Mul:
       case Instruction::UDiv:
         assert(FromCIValue.isPowerOf2() && "Cannot convert the instruction.");
-        if (ToOpcode == Instruction::Shl) {
+        if (ToOpcode == Instruction::Shl || ToOpcode == Instruction::LShr) {
           RHS = ConstantInt::get(
               RHSType, APInt(FromCIValueBitWidth, FromCIValue.logBase2()));
         } else {
@@ -1226,13 +1227,22 @@ public:
         if (CIValue.ult(CIValue.getBitWidth()))
           InterchangeableMask = CIValue.isZero() ? CanBeAll : MulBIT | ShlBIT;
         break;
+      case Instruction::LShr:
+        if (CIValue.ult(CIValue.getBitWidth()))
+          InterchangeableMask = CIValue.isZero() ? CanBeAll : UDivBIT | LShrBIT;
+        break;
       case Instruction::Mul:
+      case Instruction::UDiv:
         if (CIValue.isOne()) {
           InterchangeableMask = CanBeAll;
           break;
         }
-        if (CIValue.isPowerOf2())
-          InterchangeableMask = MulBIT | ShlBIT;
+        if (CIValue.isPowerOf2()) {
+          if (Opcode == Instruction::Mul)
+            InterchangeableMask = MulBIT | ShlBIT;
+          else // Instruction::UDiv
+            InterchangeableMask = UDivBIT | LShrBIT;
+        }
         break;
       case Instruction::Add:
       case Instruction::Sub:
