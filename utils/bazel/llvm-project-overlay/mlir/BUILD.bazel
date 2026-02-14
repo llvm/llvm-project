@@ -1128,6 +1128,15 @@ filegroup(
 )
 
 cc_library(
+    name = "MLIRBindingsPythonLibHeaders",
+    includes = ["lib/Bindings/Python"],
+    textual_hdrs = [":MLIRBindingsPythonCoreHeaders"],
+    deps = [
+        ":MLIRBindingsPythonNanobindHeaders",
+    ],
+)
+
+cc_library(
     name = "MLIRBindingsPythonCore",
     srcs = [":MLIRBindingsPythonSourceFiles"],
     copts = PYBIND11_COPTS,

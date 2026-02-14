@@ -1496,6 +1496,13 @@ template<class ForwardIterator>
     shift_right(ForwardIterator first, ForwardIterator last,
                 typename iterator_traits<ForwardIterator>::difference_type n); // C++20
 
+  template<permutable I, sentinel_for<I> S>
+    constexpr subrange<I> ranges::shift_right(I first, S last, iter_difference_t<I> n);              // since C++23
+
+  template<forward_range R>
+    requires permutable<iterator_t<R>>
+    constexpr borrowed_subrange_t<R> ranges::shift_right(R&& r, range_difference_t<R> n)             // since C++23
+
 template <class InputIterator, class Predicate>
     constexpr bool  // constexpr since C++20
     is_partitioned(InputIterator first, InputIterator last, Predicate pred);
@@ -2043,6 +2050,7 @@ template <class BidirectionalIterator, class Compare>
 #    include <__algorithm/ranges_find_last.h>
 #    include <__algorithm/ranges_fold.h>
 #    include <__algorithm/ranges_shift_left.h>
+#    include <__algorithm/ranges_shift_right.h>
 #    include <__algorithm/ranges_starts_with.h>
 #  endif // _LIBCPP_STD_VER >= 23
 

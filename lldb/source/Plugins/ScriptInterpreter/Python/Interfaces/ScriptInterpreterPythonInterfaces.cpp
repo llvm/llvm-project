@@ -6,13 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/PluginManager.h"
 #include "lldb/Host/Config.h"
 #include "lldb/lldb-enumerations.h"
 
 #if LLDB_ENABLE_PYTHON
 
+// Include lldb-python.h first to define NO_PID_T on Windows before any
+// LLDB header transitively pulls in PosixApi.h.
+#include "../lldb-python.h"
+
 #include "ScriptInterpreterPythonInterfaces.h"
+
+#include "lldb/Core/PluginManager.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -32,6 +37,7 @@ void ScriptInterpreterPythonInterfaces::Initialize() {
   ScriptedBreakpointPythonInterface::Initialize();
   ScriptedThreadPlanPythonInterface::Initialize();
   ScriptedFrameProviderPythonInterface::Initialize();
+  ScriptedSymbolLocatorPythonInterface::Initialize();
 }
 
 void ScriptInterpreterPythonInterfaces::Terminate() {
@@ -42,6 +48,7 @@ void ScriptInterpreterPythonInterfaces::Terminate() {
   ScriptedBreakpointPythonInterface::Terminate();
   ScriptedThreadPlanPythonInterface::Terminate();
   ScriptedFrameProviderPythonInterface::Terminate();
+  ScriptedSymbolLocatorPythonInterface::Terminate();
 }
 
 #endif
