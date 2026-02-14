@@ -10,6 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <algorithm>
+#include <string>
+#include <vector>
+
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
@@ -354,20 +358,118 @@ static void PrintFilename(raw_ostream &OS, StringRef Filename,
   }
 }
 
+static std::vector<std::string> SplitToLines(llvm::StringRef &Dep) {
+  std::vector<std::string> Deps;
+
+  for (const auto &line : llvm::split(Dep, '\n'))
+    // Remove empty lines and comment lines
+    if (!line.empty() && line[0] != '#')
+      Deps.push_back(line.str());
+
+  return Deps;
+}
+
+static std::string GetKernelDepFileName(std::string &HostDepFileName) {
+
+  // merge host dependency file (*.d.CUID.host)
+  // to kernel dependency file (*.d) for tops target
+  // for example, abc.d -> abc.d.2282B80C.host
+  const int CUIDLEN = 9;
+  llvm::StringRef SubStr = ".host";
+  SmallString<128> OutputFileS(HostDepFileName);
+  size_t Pos = OutputFileS.find(SubStr);
+  // for tops target, trim .CUID.host in dep file name
+  if (Pos != llvm::StringRef::npos)
+    // abc.d.2282B80C.host -> abc.d
+    return std::string(OutputFileS.substr(0, Pos - CUIDLEN));
+  else
+    return "";
+}
+
+static void TryMergeDependencyFile(std::vector<std::string> &KD,
+                                   std::vector<std::string> &HD,
+                                   llvm::raw_fd_ostream &DF,
+                                   DiagnosticsEngine &Diags) {
+  std::error_code EC;
+  // both kernel and host dep file must not be empty
+  assert(!HD.empty() && !KD.empty());
+
+  // if object file name is different, maybe comes from two test
+  // cases, just write host dep file to merged dep file
+  if (KD.front() != HD.front())
+    for (const auto &DL : HD)
+      DF << DL << "\n";
+  else {
+    // Write first line, which is the object file name
+    DF << KD.front() << "\n";
+    // add a splash at the end of each last line
+    KD.back() = KD.back() + " \\";
+    HD.back() = HD.back() + " \\";
+    // merge kernel and host dep file except first line
+    std::vector<std::string> D(KD.size() - 1 + HD.size() - 1);
+    auto E = std::set_union(KD.begin() + 1, KD.end(), HD.begin() + 1, HD.end(),
+                            D.begin());
+    D.resize(E - D.begin());
+    // remove the redundent splash
+    D.back() = D.back().substr(0, D.back().size() - 2);
+    for (const auto &DL : D)
+      DF << DL << "\n";
+  }
+}
+
 void DependencyFileGenerator::outputDependencyFile(DiagnosticsEngine &Diags) {
   if (SeenMissingHeader) {
     llvm::sys::fs::remove(OutputFile);
     return;
   }
 
+  std::string KDFN = GetKernelDepFileName(OutputFile);
   std::error_code EC;
-  llvm::raw_fd_ostream OS(OutputFile, EC, llvm::sys::fs::OF_TextWithCRLF);
-  if (EC) {
-    Diags.Report(diag::err_fe_error_opening) << OutputFile << EC.message();
-    return;
-  }
+  // if need to merge kernel and host dep file
+  if (KDFN != "") {
+    // Read kernel dep file
+    std::vector<std::string> KD;
+    {
+      llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> KDF =
+          llvm::MemoryBuffer::getFile(KDFN);
+      if (KDF) {
+        llvm::StringRef KDC = KDF.get()->getBuffer();
+        KD = SplitToLines(KDC);
+      }
+    }
 
-  outputDependencyFile(OS);
+    // open merged dep file
+    llvm::raw_fd_ostream DF(KDFN, EC, llvm::sys::fs::OF_Text);
+    if (EC) {
+      Diags.Report(diag::err_fe_error_opening) << KDFN << EC.message();
+      return;
+    }
+    // if KD is empty, just write host dep file to merged dep file
+    if (KD.empty())
+      outputDependencyFile(DF);
+    else {
+      // Get host dep file
+      std::vector<std::string> HD;
+      std::string HDC;
+      llvm::raw_string_ostream OSS(HDC);
+      outputDependencyFile(OSS);
+      llvm::StringRef HDCR(OSS.str());
+      if (!HDCR.empty()) {
+        HD = SplitToLines(HDCR);
+        // Merge kernel and host dep file
+        TryMergeDependencyFile(KD, HD, DF, Diags);
+      }
+    }
+  } else {
+    // merge is not needed, just write the dep file
+    llvm::raw_fd_ostream OS(OutputFile, EC, llvm::sys::fs::OF_Text);
+    if (EC) {
+      Diags.Report(diag::err_fe_error_opening) << OutputFile << EC.message();
+      return;
+    }
+
+    outputDependencyFile(OS);
+  }
 }
 
 void DependencyFileGenerator::outputDependencyFile(llvm::raw_ostream &OS) {
