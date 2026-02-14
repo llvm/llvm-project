@@ -325,7 +325,8 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
       FileSpec sc_path;
       if (process->GetDynamicLoader()->GetSharedCacheInformation(
               sc_base_addr, sc_uuid, using_sc, private_sc, sc_path)) {
-        image_info = HostInfo::GetSharedCacheImageInfo(module_spec, sc_uuid, sc_mode);
+        image_info =
+            HostInfo::GetSharedCacheImageInfo(module_spec, sc_uuid, sc_mode);
       }
     }
 

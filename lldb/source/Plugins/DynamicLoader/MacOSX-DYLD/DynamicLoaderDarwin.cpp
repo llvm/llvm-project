@@ -147,7 +147,8 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
     if (GetSharedCacheInformation(sc_base_addr, sc_uuid, using_sc, private_sc,
                                   sc_path) &&
         sc_uuid) {
-      image_info = HostInfo::GetSharedCacheImageInfo(module_spec, sc_uuid, sc_mode);
+      image_info =
+          HostInfo::GetSharedCacheImageInfo(module_spec, sc_uuid, sc_mode);
     } else {
       // Fall back to looking lldb's own shared cache by filename
       image_info = HostInfo::GetSharedCacheImageInfo(module_spec, sc_mode);
