@@ -94,6 +94,11 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
+- Improved :program:`check_clang_tidy.py` script by adding the `-check-header`
+  argument to simplify testing of header files. This argument automatically
+  manages the creation of temporary header files and ensures that diagnostics
+  and fixes are verified for the specified headers.
+
 New checks
 ^^^^^^^^^^
 
@@ -144,6 +149,16 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/argument-comment>` to also check for C++11
   inherited constructors.
 
+- Improved :doc:`bugprone-bad-signal-to-kill-thread
+  <clang-tidy/checks/bugprone/bad-signal-to-kill-thread>` check by fixing false
+  negatives when the ``SIGTERM`` macro is obtained from a precompiled header.
+
+- Improved :doc:`bugprone-exception-escape
+  <clang-tidy/checks/bugprone/exception-escape>` check by adding
+  `TreatFunctionsWithoutSpecificationAsThrowing` option to support reporting
+  for unannotated functions, enabling reporting when no explicit ``throw``
+  is seen and allowing separate tuning for known and unknown implementations.
+
 - Improved :doc:`bugprone-macro-parentheses
   <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
   definition in the warning message if the macro is defined on command line.
@@ -162,6 +177,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/use-after-move>` check by including the name of
   the invalidating function in the warning message when a custom invalidation
   function is used (via the `InvalidationFunctions` option).
+
+- Improved :doc:`cppcoreguidelines-init-variables
+  <clang-tidy/checks/cppcoreguidelines/init-variables>` check by ensuring that
+  member pointers are correctly flagged as uninitialized.
 
 - Improved :doc:`cppcoreguidelines-pro-type-vararg
   <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>` check by no longer
@@ -207,6 +226,10 @@ Changes in existing checks
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check by avoiding false
   positives on parameters used in dependent expressions.
+
+- Improved :doc:`readability-simplify-boolean-expr
+  <clang-tidy/checks/readability/simplify-boolean-expr>` check to provide valid
+  fix suggestions for C23 and later by not using ``static_cast``.
 
 - Improved :doc:`readability-suspicious-call-argument
   <clang-tidy/checks/readability/suspicious-call-argument>` check by avoiding a
