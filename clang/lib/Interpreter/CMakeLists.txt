@@ -1,19 +1,35 @@
-set(LLVM_LINK_COMPONENTS
-   core
-   native
-   MC
-   Option
-   OrcJit
-   OrcDebugging
-   OrcShared
-   OrcTargetProcess
-   Support
-   Target
-   TargetParser
-   TransformUtils
-   )
+if (EMSCRIPTEN)
+  set(LLVM_LINK_COMPONENTS
+     core
+     native
+     MC
+     Option
+     Support
+     Target
+     TargetParser
+     TransformUtils
+     )
+else()
+  set(LLVM_LINK_COMPONENTS
+     core
+     native
+     MC
+     Option
+     OrcJit
+     OrcDebugging
+     OrcShared
+     OrcTargetProcess
+     Support
+     Target
+     TargetParser
+     TransformUtils
+     )
+endif()
+
+set(ORC_SRC OrcIncrementalExecutor.cpp)
 
 if (EMSCRIPTEN AND "lld" IN_LIST LLVM_ENABLE_PROJECTS)
+  set(ORC_SRC )
   set(WASM_SRC Wasm.cpp)
   set(WASM_LINK lldWasm)
   set(COMMON_LINK lldCommon)
@@ -24,13 +40,12 @@ add_clang_library(clangInterpreter
   CodeCompletion.cpp
   IncrementalAction.cpp
   IncrementalExecutor.cpp
-  OrcIncrementalExecutor.cpp
+  ${ORC_SRC}
   IncrementalParser.cpp
   Interpreter.cpp
   InterpreterValuePrinter.cpp
   InterpreterUtils.cpp
   Value.cpp
-  InterpreterValuePrinter.cpp
   ${WASM_SRC}
   PARTIAL_SOURCES_INTENDED
 

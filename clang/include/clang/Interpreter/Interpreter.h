@@ -16,23 +16,16 @@
 
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Interpreter/IncrementalExecutor.h"
+#include "clang/Interpreter/ExecutorAddress.h"
+#include "clang/Interpreter/ThreadSafeContext.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "clang/Interpreter/Value.h"
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
-#include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <memory>
 #include <vector>
-
-namespace llvm {
-namespace orc {
-class ThreadSafeContext;
-} // namespace orc
-} // namespace llvm
 
 namespace clang {
 
@@ -99,7 +92,7 @@ class Interpreter {
   friend class Value;
   friend InProcessPrintingASTConsumer;
 
-  std::unique_ptr<llvm::orc::ThreadSafeContext> TSCtx;
+  std::unique_ptr<clang::ThreadSafeContext> TSCtx;
   /// Long-lived, incremental parsing action.
   std::unique_ptr<IncrementalAction> Act;
   std::unique_ptr<IncrementalParser> IncrParser;
@@ -166,18 +159,18 @@ public:
   /// Link a dynamic library
   llvm::Error LoadDynamicLibrary(const char *name);
 
-  /// \returns the \c ExecutorAddr of a \c GlobalDecl. This interface uses
+  /// \returns the \c ExecutorAddress of a \c GlobalDecl. This interface uses
   /// the CodeGenModule's internal mangling cache to avoid recomputing the
   /// mangled name.
-  llvm::Expected<llvm::orc::ExecutorAddr> getSymbolAddress(GlobalDecl GD) const;
+  llvm::Expected<clang::ExecutorAddress> getSymbolAddress(GlobalDecl GD) const;
 
-  /// \returns the \c ExecutorAddr of a given name as written in the IR.
-  llvm::Expected<llvm::orc::ExecutorAddr>
+  /// \returns the \c ExecutorAddress of a given name as written in the IR.
+  llvm::Expected<clang::ExecutorAddress>
   getSymbolAddress(llvm::StringRef IRName) const;
 
-  /// \returns the \c ExecutorAddr of a given name as written in the object
+  /// \returns the \c ExecutorAddress of a given name as written in the object
   /// file.
-  llvm::Expected<llvm::orc::ExecutorAddr>
+  llvm::Expected<clang::ExecutorAddress>
   getSymbolAddressFromLinkerName(llvm::StringRef LinkerName) const;
 
   const IncrementalExecutorBuilder &getIncrementalExecutorBuilder() const {
@@ -190,7 +183,7 @@ private:
 
   // A cache for the compiled destructors used to for de-allocation of managed
   // clang::Values.
-  mutable llvm::DenseMap<CXXRecordDecl *, llvm::orc::ExecutorAddr> Dtors;
+  mutable llvm::DenseMap<CXXRecordDecl *, clang::ExecutorAddress> Dtors;
 
   std::array<Expr *, 4> ValuePrintingInfo = {0};
 
@@ -207,7 +200,7 @@ private:
 
   // When we deallocate clang::Value we need to run the destructor of the type.
   // This function forces emission of the needed dtor.
-  llvm::Expected<llvm::orc::ExecutorAddr>
+  llvm::Expected<clang::ExecutorAddress>
   CompileDtorCall(CXXRecordDecl *CXXRD) const;
 };
 } // namespace clang

@@ -148,7 +148,7 @@ Value::Value(const Interpreter *In, void *Ty) : Interp(In), OpaqueType(Ty) {
         ElementsSize = static_cast<size_t>(ArrSize.getZExtValue());
       }
       if (auto *CXXRD = DtorTy->getAsCXXRecordDecl()) {
-        if (llvm::Expected<llvm::orc::ExecutorAddr> Addr =
+        if (llvm::Expected<clang::ExecutorAddress> Addr =
                 Interp.CompileDtorCall(CXXRD))
           DtorF = reinterpret_cast<void *>(Addr->getValue());
         else
