@@ -130,8 +130,12 @@ private:
   // Per-node adjacency in the region (excluding edges to Entry).
   SmallVector<SmallVector<unsigned, 4>, 0> Succs;
   SmallVector<bool, 0> SelfLoop;
-  SmallVector<unsigned, 0> SccId;
-  SmallVector<unsigned, 0> SccSize;
+
+  // SCC = Strongly-connected component
+  // Map of an MBB's index (provided by `BlockIndex`) to it's assigned SCC
+  SmallVector<unsigned, 0> SccId; 
+  // The number of elements in each SCC
+  SmallVector<unsigned, 0> SccSize; 
 
   unsigned getIndex(MachineBasicBlock *MBB) const {
     auto It = BlockIndex.find(MBB);
