@@ -35,7 +35,6 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <cstdio>
 
 namespace llvm {
 
@@ -51,8 +50,6 @@ bool GIMatchTableExecutor::executeMatchTable(
     const PredicateBitset &AvailableFeatures,
     CodeGenCoverage *CoverageInfo) const {
   
-  printf("\nHALO\n");
-
   uint64_t CurrentIdx = 0;
   SmallVector<uint64_t, 4> OnFailResumeAt;
   NewMIVector OutMIs;
@@ -233,7 +230,6 @@ bool GIMatchTableExecutor::executeMatchTable(
       }
       break;
     }
-    
     case GIM_SwitchOpcode: {
       uint64_t InsnID = readULEB();
       uint16_t LowerBound = readU16();
@@ -242,7 +238,6 @@ bool GIMatchTableExecutor::executeMatchTable(
 
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
       const int64_t Opcode = State.MIs[InsnID]->getOpcode();
-
       DEBUG_WITH_TYPE(TgtExecutor::getName(), {
         dbgs() << CurrentIdx << ": GIM_SwitchOpcode(MIs[" << InsnID << "], ["
                << LowerBound << ", " << UpperBound << "), Default=" << Default
@@ -464,7 +459,6 @@ bool GIMatchTableExecutor::executeMatchTable(
       // Note: we don't check for invalid here because this is purely a hook to
       // allow some executors (such as the combiner) to check arbitrary,
       // contextless predicates, such as whether a rule is enabled or not.
-      
       uint16_t Predicate = readU16();
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx
@@ -1156,9 +1150,6 @@ bool GIMatchTableExecutor::executeMatchTable(
     }
 
     case GIR_CopySubReg: {
-      
-      printf("\nGIR_CopySubReg\n");
-      
       uint64_t NewInsnID = readULEB();
       uint64_t OldInsnID = readULEB();
       uint64_t OpIdx = readULEB();
@@ -1267,9 +1258,6 @@ bool GIMatchTableExecutor::executeMatchTable(
     case GIR_AddSimpleTempRegister:
     case GIR_AddTempRegister:
     case GIR_AddTempSubRegister: {
-      
-      printf("\nGIR_AddTempSubRegister\n");
-      
       uint64_t InsnID = readULEB();
       uint64_t TempRegID = readULEB();
       RegState TempRegFlags = {};
@@ -1334,9 +1322,6 @@ bool GIMatchTableExecutor::executeMatchTable(
       break;
     }
     case GIR_ComplexSubOperandRenderer: {
-      
-      printf("\nGIR_ComplexSubOperandRenderer\n");
-      
       uint64_t InsnID = readULEB();
       uint16_t RendererID = readU16();
       uint64_t RenderOpID = readULEB();
@@ -1350,9 +1335,6 @@ bool GIMatchTableExecutor::executeMatchTable(
       break;
     }
     case GIR_ComplexSubOperandSubRegRenderer: {
-      
-      printf("\nGIR_ComplexSubOperandSubRegRenderer\n");
-      
       uint64_t InsnID = readULEB();
       uint16_t RendererID = readU16();
       uint64_t RenderOpID = readULEB();
