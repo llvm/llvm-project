@@ -199,9 +199,8 @@ define void @test_sdiv_both_invariant_nonconst(ptr noalias %a, i64 %b, i64 %b2, 
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
 ; IF-EVL-NEXT:    br label %[[VECTOR_PH:.*]]
 ; IF-EVL:       [[VECTOR_PH]]:
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B]], i64 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B2]], i64 0
+; IF-EVL-NEXT:    [[TMP0:%.*]] = sdiv i64 [[B]], [[B2]]
+; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP0]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IF-EVL:       [[VECTOR_BODY]]:
@@ -210,9 +209,7 @@ define void @test_sdiv_both_invariant_nonconst(ptr noalias %a, i64 %b, i64 %b2, 
 ; IF-EVL-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
 ; IF-EVL-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[A]], i64 [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[TMP2]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP1]])
-; IF-EVL-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[BROADCAST_SPLAT2]], <vscale x 2 x i64> splat (i64 1), i32 [[TMP1]])
-; IF-EVL-NEXT:    [[TMP8:%.*]] = sdiv <vscale x 2 x i64> [[BROADCAST_SPLAT]], [[TMP7]]
-; IF-EVL-NEXT:    [[TMP3:%.*]] = add <vscale x 2 x i64> [[VP_OP_LOAD]], [[TMP8]]
+; IF-EVL-NEXT:    [[TMP3:%.*]] = add <vscale x 2 x i64> [[VP_OP_LOAD]], [[BROADCAST_SPLAT2]]
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[C]], i64 [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP3]], ptr align 8 [[TMP4]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP1]])
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP1]] to i64
