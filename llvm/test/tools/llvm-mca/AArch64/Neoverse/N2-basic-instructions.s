@@ -1245,10 +1245,10 @@
 # CHECK-NEXT:  2      1     0.50                        bl	test
 # CHECK-NEXT:  1      1     0.50                        br	x20
 # CHECK-NEXT:  2      1     0.50                        blr	xzr
-# CHECK-NEXT:  1      1     0.50                  U     ret	x10
-# CHECK-NEXT:  1      1     0.50                  U     ret
-# CHECK-NEXT:  1      1     0.50                  U     eret
-# CHECK-NEXT:  1      1     0.50                  U     drps
+# CHECK-NEXT:  1      1     0.50                        ret	x10
+# CHECK-NEXT:  1      1     0.50                        ret
+# CHECK-NEXT:  1      1     0.50                        eret
+# CHECK-NEXT:  1      1     0.50                        drps
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - N2UnitB

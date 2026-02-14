@@ -1245,10 +1245,10 @@
 # CHECK-NEXT:  2      1     0.33                        bl	test
 # CHECK-NEXT:  1      1     0.33                        br	x20
 # CHECK-NEXT:  2      1     0.33                        blr	xzr
-# CHECK-NEXT:  1      1     0.33                  U     ret	x10
-# CHECK-NEXT:  1      1     0.33                  U     ret
-# CHECK-NEXT:  1      1     0.33                  U     eret
-# CHECK-NEXT:  1      1     0.33                  U     drps
+# CHECK-NEXT:  1      1     0.33                        ret	x10
+# CHECK-NEXT:  1      1     0.33                        ret
+# CHECK-NEXT:  1      1     0.33                        eret
+# CHECK-NEXT:  1      1     0.33                        drps
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - V3UnitB
