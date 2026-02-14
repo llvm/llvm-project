@@ -97,10 +97,8 @@ public:
 
     // Reverse the context stack so that the most recent context appears first
     // and the wrapped error (if any) appears last
-    std::vector<std::string> ReversedContext(ContextStack.rbegin(),
-                                             ContextStack.rend());
-    std::string FinalMessage = llvm::join(ReversedContext, "\n");
-    return llvm::createStringError(Code, "%s", FinalMessage.c_str());
+    return llvm::createStringError(
+        llvm::join(llvm::reverse(ContextStack), "\n"), Code);
   }
 };
 
@@ -438,7 +436,7 @@ JSONFormat::entityNameFromJSON(const Object &EntityNameObject) const {
   auto ExpectedNamespace = nestedBuildNamespaceFromJSON(*OptNamespaceArray);
   if (!ExpectedNamespace) {
     return ErrorBuilder::wrap(ExpectedNamespace.takeError())
-        .context(ErrorMessages::ReadingFromField, "NesteBuildNamespace",
+        .context(ErrorMessages::ReadingFromField, "NestedBuildNamespace",
                  "namespace")
         .build();
   }

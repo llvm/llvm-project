@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "clang/Analysis/Scalable/Serialization/JSONFormat.h"
 #include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
 #include "llvm/ADT/SmallString.h"
@@ -527,14 +526,124 @@ TEST_F(JSONFormatTest, NamespaceElementNotObject) {
 
   EXPECT_THAT_EXPECTED(
       Result,
-      FailedWithMessage(
-          AllOf(HasSubstr("reading TUSummary from file"),
-                HasSubstr("reading IdTable from field 'id_table'"),
-                HasSubstr("reading EntityIdTable entry from index '0'"),
-                HasSubstr("reading EntityName from field 'name'"),
-                HasSubstr("reading NesteBuildNamespace from field 'namespace'"),
-                HasSubstr("failed to read BuildNamespace from index '0'"),
-                HasSubstr("expected JSON object"))));
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading IdTable from field 'id_table'"),
+          HasSubstr("reading EntityIdTable entry from index '0'"),
+          HasSubstr("reading EntityName from field 'name'"),
+          HasSubstr("reading NestedBuildNamespace from field 'namespace'"),
+          HasSubstr("failed to read BuildNamespace from index '0'"),
+          HasSubstr("expected JSON object"))));
+}
+
+TEST_F(JSONFormatTest, NamespaceElementMissingKind) {
+  auto Result = readTUSummaryFromString(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "id_table": [
+      {
+        "id": 0,
+        "name": {
+          "usr": "c:@F@foo",
+          "suffix": "",
+          "namespace": [
+            {
+              "name": "test.cpp"
+            }
+          ]
+        }
+      }
+    ],
+    "data": []
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result,
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading IdTable from field 'id_table'"),
+          HasSubstr("reading EntityIdTable entry from index '0'"),
+          HasSubstr("reading EntityName from field 'name'"),
+          HasSubstr("reading NestedBuildNamespace from field 'namespace'"),
+          HasSubstr("reading BuildNamespace from index '0'"),
+          HasSubstr("failed to read BuildNamespaceKind from field 'kind'"),
+          HasSubstr("expected JSON string"))));
+}
+
+TEST_F(JSONFormatTest, NamespaceElementInvalidKind) {
+  auto Result = readTUSummaryFromString(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "id_table": [
+      {
+        "id": 0,
+        "name": {
+          "usr": "c:@F@foo",
+          "suffix": "",
+          "namespace": [
+            {
+              "kind": "invalid_kind",
+              "name": "test.cpp"
+            }
+          ]
+        }
+      }
+    ],
+    "data": []
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result,
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading IdTable from field 'id_table'"),
+          HasSubstr("reading EntityIdTable entry from index '0'"),
+          HasSubstr("reading EntityName from field 'name'"),
+          HasSubstr("reading NestedBuildNamespace from field 'namespace'"),
+          HasSubstr("reading BuildNamespace from index '0'"),
+          HasSubstr("reading BuildNamespaceKind from field 'kind'"),
+          HasSubstr(
+              "invalid 'kind' BuildNamespaceKind value 'invalid_kind'"))));
+}
+
+TEST_F(JSONFormatTest, NamespaceElementMissingName) {
+  auto Result = readTUSummaryFromString(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "id_table": [
+      {
+        "id": 0,
+        "name": {
+          "usr": "c:@F@foo",
+          "suffix": "",
+          "namespace": [
+            {
+              "kind": "compilation_unit"
+            }
+          ]
+        }
+      }
+    ],
+    "data": []
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result,
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading IdTable from field 'id_table'"),
+          HasSubstr("reading EntityIdTable entry from index '0'"),
+          HasSubstr("reading EntityName from field 'name'"),
+          HasSubstr("reading NestedBuildNamespace from field 'namespace'"),
+          HasSubstr("reading BuildNamespace from index '0'"),
+          HasSubstr("failed to read BuildNamespaceName from field 'name'"),
+          HasSubstr("expected JSON string"))));
 }
 
 // ============================================================================
