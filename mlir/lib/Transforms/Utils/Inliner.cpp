@@ -682,7 +682,14 @@ Inliner::Impl::inlineCallsInSCC(InlinerInterfaceImpl &inlinerIface,
     useList.mergeUsesAfterInlining(it.targetNode, it.sourceNode);
 
     // then erase the call.
-    call.erase();
+    if (call.getOperation()->use_empty()) {
+      call.erase();
+    } else {
+      LDBG() << "CallOpInterface is still in use. call = " << call
+             << " returning failure";
+      call->emitError("not all uses of call were replaced");
+      return failure();
+    }
 
     // If we inlined in place, mark the node for deletion.
     if (inlineInPlace) {
