@@ -5,93 +5,27 @@ define void @test() {
 ; CHECK-LABEL: define void @test() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr null, align 1
-; CHECK-NEXT:    [[CMP8_8_I:%.*]] = icmp ult i8 [[TMP0]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 [[TMP0]], 0
-; CHECK-NEXT:    [[NARROW_8_I:%.*]] = select i1 [[CMP8_8_I]], i8 0, i8 [[TMP1]]
 ; CHECK-NEXT:    [[ARRAYIDX13_8_I:%.*]] = getelementptr i8, ptr null, i64 16
-; CHECK-NEXT:    store i8 [[NARROW_8_I]], ptr [[ARRAYIDX13_8_I]], align 1
-; CHECK-NEXT:    [[CMP15_8_I:%.*]] = icmp ult i8 [[TMP0]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP0]], 0
-; CHECK-NEXT:    [[NARROW31_8_I:%.*]] = select i1 [[CMP15_8_I]], i8 0, i8 [[TMP2]]
-; CHECK-NEXT:    [[ARRAYIDX25_8_I:%.*]] = getelementptr i8, ptr null, i64 17
-; CHECK-NEXT:    store i8 [[NARROW31_8_I]], ptr [[ARRAYIDX25_8_I]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr null, align 1
-; CHECK-NEXT:    [[CMP8_9_I:%.*]] = icmp ult i8 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i8 [[TMP3]], 0
-; CHECK-NEXT:    [[NARROW_9_I:%.*]] = select i1 [[CMP8_9_I]], i8 0, i8 [[TMP4]]
-; CHECK-NEXT:    [[ARRAYIDX13_9_I:%.*]] = getelementptr i8, ptr null, i64 18
-; CHECK-NEXT:    store i8 [[NARROW_9_I]], ptr [[ARRAYIDX13_9_I]], align 1
-; CHECK-NEXT:    [[CMP15_9_I:%.*]] = icmp ult i8 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = and i8 [[TMP3]], 0
-; CHECK-NEXT:    [[NARROW31_9_I:%.*]] = select i1 [[CMP15_9_I]], i8 0, i8 [[TMP5]]
-; CHECK-NEXT:    [[ARRAYIDX25_9_I:%.*]] = getelementptr i8, ptr null, i64 19
-; CHECK-NEXT:    store i8 [[NARROW31_9_I]], ptr [[ARRAYIDX25_9_I]], align 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr null, align 1
-; CHECK-NEXT:    [[CMP8_10_I:%.*]] = icmp ult i8 [[TMP6]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = lshr i8 [[TMP6]], 0
-; CHECK-NEXT:    [[NARROW_10_I:%.*]] = select i1 [[CMP8_10_I]], i8 0, i8 [[TMP7]]
-; CHECK-NEXT:    [[ARRAYIDX13_10_I:%.*]] = getelementptr i8, ptr null, i64 20
-; CHECK-NEXT:    store i8 [[NARROW_10_I]], ptr [[ARRAYIDX13_10_I]], align 1
-; CHECK-NEXT:    [[CMP15_10_I:%.*]] = icmp ult i8 [[TMP6]], 0
-; CHECK-NEXT:    [[TMP8:%.*]] = and i8 [[TMP6]], 0
-; CHECK-NEXT:    [[NARROW31_10_I:%.*]] = select i1 [[CMP15_10_I]], i8 0, i8 [[TMP8]]
-; CHECK-NEXT:    [[ARRAYIDX25_10_I:%.*]] = getelementptr i8, ptr null, i64 21
-; CHECK-NEXT:    store i8 [[NARROW31_10_I]], ptr [[ARRAYIDX25_10_I]], align 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i8, ptr null, align 1
-; CHECK-NEXT:    [[CMP8_11_I:%.*]] = icmp ult i8 [[TMP9]], 0
-; CHECK-NEXT:    [[TMP10:%.*]] = lshr i8 [[TMP9]], 0
-; CHECK-NEXT:    [[NARROW_11_I:%.*]] = select i1 [[CMP8_11_I]], i8 0, i8 [[TMP10]]
-; CHECK-NEXT:    [[ARRAYIDX13_11_I:%.*]] = getelementptr i8, ptr null, i64 22
-; CHECK-NEXT:    store i8 [[NARROW_11_I]], ptr [[ARRAYIDX13_11_I]], align 1
-; CHECK-NEXT:    [[CMP15_11_I:%.*]] = icmp ult i8 [[TMP9]], 0
-; CHECK-NEXT:    [[TMP11:%.*]] = and i8 [[TMP9]], 0
-; CHECK-NEXT:    [[NARROW31_11_I:%.*]] = select i1 [[CMP15_11_I]], i8 0, i8 [[TMP11]]
-; CHECK-NEXT:    [[ARRAYIDX25_11_I:%.*]] = getelementptr i8, ptr null, i64 23
-; CHECK-NEXT:    store i8 [[NARROW31_11_I]], ptr [[ARRAYIDX25_11_I]], align 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr null, align 1
-; CHECK-NEXT:    [[CMP8_12_I:%.*]] = icmp ult i8 [[TMP12]], 0
-; CHECK-NEXT:    [[TMP13:%.*]] = lshr i8 [[TMP12]], 0
-; CHECK-NEXT:    [[NARROW_12_I:%.*]] = select i1 [[CMP8_12_I]], i8 0, i8 [[TMP13]]
-; CHECK-NEXT:    [[ARRAYIDX13_12_I:%.*]] = getelementptr i8, ptr null, i64 24
-; CHECK-NEXT:    store i8 [[NARROW_12_I]], ptr [[ARRAYIDX13_12_I]], align 1
-; CHECK-NEXT:    [[CMP15_12_I:%.*]] = icmp ult i8 [[TMP12]], 0
-; CHECK-NEXT:    [[TMP14:%.*]] = and i8 [[TMP12]], 0
-; CHECK-NEXT:    [[NARROW31_12_I:%.*]] = select i1 [[CMP15_12_I]], i8 0, i8 [[TMP14]]
-; CHECK-NEXT:    [[ARRAYIDX25_12_I:%.*]] = getelementptr i8, ptr null, i64 25
-; CHECK-NEXT:    store i8 [[NARROW31_12_I]], ptr [[ARRAYIDX25_12_I]], align 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i8, ptr null, align 1
-; CHECK-NEXT:    [[CMP8_13_I:%.*]] = icmp ult i8 [[TMP15]], 0
-; CHECK-NEXT:    [[TMP16:%.*]] = lshr i8 [[TMP15]], 0
-; CHECK-NEXT:    [[NARROW_13_I:%.*]] = select i1 [[CMP8_13_I]], i8 0, i8 [[TMP16]]
-; CHECK-NEXT:    [[ARRAYIDX13_13_I:%.*]] = getelementptr i8, ptr null, i64 26
-; CHECK-NEXT:    store i8 [[NARROW_13_I]], ptr [[ARRAYIDX13_13_I]], align 1
-; CHECK-NEXT:    [[CMP15_13_I:%.*]] = icmp ult i8 [[TMP15]], 0
-; CHECK-NEXT:    [[TMP17:%.*]] = and i8 [[TMP15]], 0
-; CHECK-NEXT:    [[NARROW31_13_I:%.*]] = select i1 [[CMP15_13_I]], i8 0, i8 [[TMP17]]
-; CHECK-NEXT:    [[ARRAYIDX25_13_I:%.*]] = getelementptr i8, ptr null, i64 27
-; CHECK-NEXT:    store i8 [[NARROW31_13_I]], ptr [[ARRAYIDX25_13_I]], align 1
 ; CHECK-NEXT:    [[TMP18:%.*]] = load i8, ptr null, align 1
-; CHECK-NEXT:    [[CMP8_14_I:%.*]] = icmp ult i8 [[TMP18]], 0
-; CHECK-NEXT:    [[TMP19:%.*]] = lshr i8 [[TMP18]], 0
-; CHECK-NEXT:    [[NARROW_14_I:%.*]] = select i1 [[CMP8_14_I]], i8 0, i8 [[TMP19]]
-; CHECK-NEXT:    [[ARRAYIDX13_14_I:%.*]] = getelementptr i8, ptr null, i64 28
-; CHECK-NEXT:    store i8 [[NARROW_14_I]], ptr [[ARRAYIDX13_14_I]], align 1
-; CHECK-NEXT:    [[CMP15_14_I:%.*]] = icmp ult i8 [[TMP18]], 0
-; CHECK-NEXT:    [[TMP20:%.*]] = and i8 [[TMP18]], 0
-; CHECK-NEXT:    [[NARROW31_14_I:%.*]] = select i1 [[CMP15_14_I]], i8 0, i8 [[TMP20]]
-; CHECK-NEXT:    [[ARRAYIDX25_14_I:%.*]] = getelementptr i8, ptr null, i64 29
-; CHECK-NEXT:    store i8 [[NARROW31_14_I]], ptr [[ARRAYIDX25_14_I]], align 1
 ; CHECK-NEXT:    [[TMP21:%.*]] = load i8, ptr null, align 1
-; CHECK-NEXT:    [[CMP8_15_I:%.*]] = icmp ult i8 [[TMP21]], 0
-; CHECK-NEXT:    [[TMP22:%.*]] = lshr i8 [[TMP21]], 0
-; CHECK-NEXT:    [[NARROW_15_I:%.*]] = select i1 [[CMP8_15_I]], i8 0, i8 [[TMP22]]
-; CHECK-NEXT:    [[ARRAYIDX13_15_I:%.*]] = getelementptr i8, ptr null, i64 30
-; CHECK-NEXT:    store i8 [[NARROW_15_I]], ptr [[ARRAYIDX13_15_I]], align 1
-; CHECK-NEXT:    [[CMP15_15_I:%.*]] = icmp ult i8 [[TMP21]], 0
-; CHECK-NEXT:    [[TMP23:%.*]] = and i8 [[TMP21]], 0
-; CHECK-NEXT:    [[NARROW31_15_I:%.*]] = select i1 [[CMP15_15_I]], i8 0, i8 [[TMP23]]
-; CHECK-NEXT:    [[ARRAYIDX25_15_I:%.*]] = getelementptr i8, ptr null, i64 31
-; CHECK-NEXT:    store i8 [[NARROW31_15_I]], ptr [[ARRAYIDX25_15_I]], align 1
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <16 x i8> poison, i8 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <16 x i8> [[TMP8]], i8 [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <16 x i8> [[TMP20]], i8 [[TMP6]], i32 2
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <16 x i8> [[TMP10]], i8 [[TMP9]], i32 3
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <16 x i8> [[TMP11]], i8 [[TMP12]], i32 4
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <16 x i8> [[TMP22]], i8 [[TMP15]], i32 5
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <16 x i8> [[TMP13]], i8 [[TMP18]], i32 6
+; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <16 x i8> [[TMP14]], i8 [[TMP21]], i32 7
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <16 x i8> [[TMP23]], <16 x i8> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp ult <16 x i8> [[TMP16]], zeroinitializer
+; CHECK-NEXT:    [[TMP24:%.*]] = and <16 x i8> [[TMP16]], <i8 -1, i8 0, i8 -1, i8 0, i8 -1, i8 0, i8 -1, i8 0, i8 -1, i8 0, i8 -1, i8 0, i8 -1, i8 0, i8 -1, i8 0>
+; CHECK-NEXT:    [[TMP19:%.*]] = select <16 x i1> [[TMP17]], <16 x i8> zeroinitializer, <16 x i8> [[TMP24]]
+; CHECK-NEXT:    store <16 x i8> [[TMP19]], ptr [[ARRAYIDX13_8_I]], align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
