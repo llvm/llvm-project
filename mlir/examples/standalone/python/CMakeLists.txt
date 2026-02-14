@@ -18,7 +18,8 @@ declare_mlir_dialect_python_bindings(
   SOURCES
     dialects/standalone_nanobind.py
     _mlir_libs/_standaloneDialectsNanobind/py.typed
-  DIALECT_NAME standalone)
+  DIALECT_NAME standalone
+  MLIR_PYTHON_PACKAGE "${MLIR_PYTHON_PACKAGE_PREFIX}")
 
 declare_mlir_python_extension(StandalonePythonSources.NanobindExtension
   MODULE_NAME _standaloneDialectsNanobind
