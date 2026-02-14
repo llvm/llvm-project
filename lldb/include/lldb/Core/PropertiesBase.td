@@ -3,6 +3,7 @@ class Property<string name, string type> {
   string Name = name;
   string Type = type;
   string Definition;
+  string Path;
 }
 
 // Sets the description for the property that should be displayed to the user.
