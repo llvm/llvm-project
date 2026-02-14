@@ -659,8 +659,12 @@ public:
   ///
   /// This is used to indiciate instructions that come from compiler
   /// instrumentation.
-  llvm::DILocation *CreateSyntheticInlineAt(llvm::DebugLoc Location,
-                                            StringRef FuncName);
+  llvm::DILocation *
+  CreateSyntheticInlineAt(llvm::DebugLoc ParentLocation,
+                          llvm::DISubprogram *SynthSubprogram);
+  llvm::DILocation *CreateSyntheticInlineAt(llvm::DebugLoc ParentLocation,
+                                            StringRef SynthFuncName,
+                                            llvm::DIFile *SynthFile);
 
   /// Reset internal state.
   void completeFunction();
