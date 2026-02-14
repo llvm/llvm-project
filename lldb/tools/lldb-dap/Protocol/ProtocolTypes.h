@@ -168,24 +168,24 @@ struct CompletionItem {
   /// whether it is 0- or 1-based. If the start position is omitted the text
   /// is added at the location specified by the `column` attribute of the
   /// `completions` request.
-  int64_t start = 0;
+  uint64_t start = 0;
 
   /// Length determines how many characters are overwritten by the completion
   /// text and it is measured in UTF-16 code units. If missing the value 0 is
   /// assumed which results in the completion text being inserted.
-  int64_t length = 0;
+  uint64_t length = 0;
 
   /// Determines the start of the new selection after the text has been
   /// inserted (or replaced). `selectionStart` is measured in UTF-16 code
   /// units and must be in the range 0 and length of the completion text. If
   /// omitted the selection starts at the end of the completion text.
-  int64_t selectionStart = 0;
+  uint64_t selectionStart = 0;
 
   /// Determines the length of the new selection after the text has been
   /// inserted (or replaced) and it is measured in UTF-16 code units. The
   /// selection can not extend beyond the bounds of the completion text. If
   /// omitted the length is assumed to be 0.
-  int64_t selectionLength = 0;
+  uint64_t selectionLength = 0;
 };
 bool fromJSON(const llvm::json::Value &, CompletionItem &, llvm::json::Path);
 llvm::json::Value toJSON(const CompletionItem &);

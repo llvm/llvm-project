@@ -120,7 +120,7 @@ multiclass subvec_zero_lowering<string MoveStr,
                                 ValueType SrcTy, SubRegIndex SubIdx> {
   def : Pat<(DstTy (insert_subvector immAllZerosV,
                                      (SrcTy RC:$src), (iPTR 0))),
-            (SUBREG_TO_REG (i64 0),
+            (SUBREG_TO_REG
              (SrcTy (!cast<Instruction>("VMOV"#MoveStr#"rr") RC:$src)), SubIdx)>;
 }
 

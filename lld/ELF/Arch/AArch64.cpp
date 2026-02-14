@@ -48,6 +48,11 @@ bool elf::isAArch64BTILandingPad(Ctx &ctx, Symbol &s, int64_t a) {
   if (off >= isec->getSize())
     return true;
   const uint8_t *buf = isec->content().begin();
+  // Synthetic sections may have a size but empty data - Assume that they won't
+  // contain a landing pad
+  if (buf == nullptr && isa<SyntheticSection>(isec))
+    return false;
+
   const uint32_t instr = read32le(buf + off);
   // All BTI instructions are HINT instructions which all have same encoding
   // apart from bits [11:5]
@@ -926,9 +931,10 @@ static bool needsGotForMemtag(const Relocation &rel) {
 
 void AArch64::relocateAlloc(InputSection &sec, uint8_t *buf) const {
   uint64_t secAddr = sec.getOutputSection()->addr + sec.outSecOff;
-  AArch64Relaxer relaxer(ctx, sec.relocs());
-  for (size_t i = 0, size = sec.relocs().size(); i != size; ++i) {
-    const Relocation &rel = sec.relocs()[i];
+  const ArrayRef<Relocation> relocs = sec.relocs();
+  AArch64Relaxer relaxer(ctx, relocs);
+  for (size_t i = 0, size = relocs.size(); i != size; ++i) {
+    const Relocation &rel = relocs[i];
     if (rel.expr == R_NONE) // See finalizeAddressDependentContent()
       continue;
     uint8_t *loc = buf + rel.offset;
@@ -942,14 +948,14 @@ void AArch64::relocateAlloc(InputSection &sec, uint8_t *buf) const {
     switch (rel.expr) {
     case RE_AARCH64_GOT_PAGE_PC:
       if (i + 1 < size &&
-          relaxer.tryRelaxAdrpLdr(rel, sec.relocs()[i + 1], secAddr, buf)) {
+          relaxer.tryRelaxAdrpLdr(rel, relocs[i + 1], secAddr, buf)) {
         ++i;
         continue;
       }
       break;
     case RE_AARCH64_PAGE_PC:
       if (i + 1 < size &&
-          relaxer.tryRelaxAdrpAdd(rel, sec.relocs()[i + 1], secAddr, buf)) {
+          relaxer.tryRelaxAdrpAdd(rel, relocs[i + 1], secAddr, buf)) {
         ++i;
         continue;
       }

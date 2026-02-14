@@ -551,6 +551,11 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
       os << "ehfunclet-entry";
       hasAttributes = true;
     }
+    if (isEHScopeEntry()) {
+      os << (hasAttributes ? ", " : " (");
+      os << "ehscope-entry";
+      hasAttributes = true;
+    }
     if (getAlignment() != Align(1)) {
       os << (hasAttributes ? ", " : " (");
       os << "align " << getAlignment().value();

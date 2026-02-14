@@ -325,7 +325,7 @@ public:
 
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Return true if this is a store to a volatile memory location.
   bool isVolatile() const { return getSubclassData<VolatileField>(); }
@@ -449,7 +449,7 @@ public:
 
   // allocate space for exactly zero operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Returns the ordering constraint of this fence instruction.
   AtomicOrdering getOrdering() const {
@@ -530,7 +530,7 @@ public:
 
   // allocate space for exactly three operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   using VolatileField = BoolBitfieldElementT<0>;
   using WeakField = BoolBitfieldElementT<VolatileField::NextBit>;
@@ -806,7 +806,7 @@ public:
 
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   using VolatileField = BoolBitfieldElementT<0>;
   using AtomicOrderingField =
@@ -1958,7 +1958,9 @@ public:
                              InsertPosition InsertBefore = nullptr);
 
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { return User::operator delete(Ptr); }
+  void operator delete(void *Ptr) {
+    return User::operator delete(Ptr, AllocMarker);
+  }
 
   /// Swap the operands and adjust the mask to preserve the semantics
   /// of the instruction.
@@ -2553,7 +2555,7 @@ protected:
 public:
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   static InsertValueInst *Create(Value *Agg, Value *Val,
                                  ArrayRef<unsigned> Idxs,
@@ -2906,7 +2908,7 @@ protected:
   LLVM_ABI LandingPadInst *cloneImpl() const;
 
 public:
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Constructors - NumReservedClauses is a hint for the number of incoming
   /// clauses that this landingpad will have (use 0 if you really have no idea).
@@ -3233,7 +3235,7 @@ protected:
   }
 
 public:
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   // -2
   static const unsigned DefaultPseudoIndex = static_cast<unsigned>(~0L-1);
@@ -3623,7 +3625,7 @@ protected:
   LLVM_ABI IndirectBrInst *cloneImpl() const;
 
 public:
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Iterator type that casts an operand to a basic block.
   ///
@@ -4145,7 +4147,9 @@ protected:
   LLVM_ABI CatchSwitchInst *cloneImpl() const;
 
 public:
-  void operator delete(void *Ptr) { return User::operator delete(Ptr); }
+  void operator delete(void *Ptr) {
+    return User::operator delete(Ptr, AllocMarker);
+  }
 
   static CatchSwitchInst *Create(Value *ParentPad, BasicBlock *UnwindDest,
                                  unsigned NumHandlers,
@@ -4532,7 +4536,7 @@ public:
 
   // allocate space for exactly zero operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   unsigned getNumSuccessors() const { return 0; }
 

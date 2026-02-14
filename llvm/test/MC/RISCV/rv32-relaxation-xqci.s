@@ -40,7 +40,7 @@ start:
 # CHECK: qc.e.j {{0x[0-9a-f]+}} <EXT_JUMP_NEGATIVE>
   c.j undef
 # CHECK: qc.e.j {{0x[0-9a-f]+}} <start+{{0x[0-9a-f]+}}>
-# CHECK: R_RISCV_CUSTOM195 undef
+# CHECK: R_RISCV_QC_E_CALL_PLT undef
 
   c.jal NEAR
 # CHECK: c.jal {{0x[0-9a-f]+}} <NEAR>
@@ -56,7 +56,7 @@ start:
 # CHECK: qc.e.jal {{0x[0-9a-f]+}} <EXT_JUMP_NEGATIVE>
   c.jal undef
 # CHECK: qc.e.jal {{0x[0-9a-f]+}} <start+{{0x[0-9a-f]+}}>
-# CHECK: R_RISCV_CUSTOM195 undef
+# CHECK: R_RISCV_QC_E_CALL_PLT undef
 
   jal zero, NEAR
 # CHECK: c.j {{0x[0-9a-f]+}} <NEAR>
@@ -72,7 +72,7 @@ start:
 # CHECK: qc.e.j {{0x[0-9a-f]+}} <EXT_JUMP_NEGATIVE>
   jal zero, undef
 # CHECK: qc.e.j {{0x[0-9a-f]+}} <start+{{0x[0-9a-f]+}}>
-# CHECK: R_RISCV_CUSTOM195 undef
+# CHECK: R_RISCV_QC_E_CALL_PLT undef
 
   jal ra, NEAR
 # CHECK: c.jal {{0x[0-9a-f]+}} <NEAR>
@@ -88,7 +88,7 @@ start:
 # CHECK: qc.e.jal {{0x[0-9a-f]+}} <EXT_JUMP_NEGATIVE>
   jal ra, undef
 # CHECK: qc.e.jal {{0x[0-9a-f]+}} <start+{{0x[0-9a-f]+}}>
-# CHECK: R_RISCV_CUSTOM195 undef
+# CHECK: R_RISCV_QC_E_CALL_PLT undef
 
   qc.e.j NEAR
 # CHECK: c.j {{0x[0-9a-f]+}} <NEAR>
@@ -104,7 +104,7 @@ start:
 # CHECK: qc.e.j {{0x[0-9a-f]+}} <EXT_JUMP_NEGATIVE>
   qc.e.j undef
 # CHECK: qc.e.j {{0x[0-9a-f]+}} <start+{{0x[0-9a-f]+}}>
-# CHECK: R_RISCV_CUSTOM195 undef
+# CHECK: R_RISCV_QC_E_CALL_PLT undef
 
   qc.e.jal NEAR
 # CHECK: c.jal {{0x[0-9a-f]+}} <NEAR>
@@ -120,7 +120,7 @@ start:
 # CHECK: qc.e.jal {{0x[0-9a-f]+}} <EXT_JUMP_NEGATIVE>
   qc.e.jal undef
 # CHECK: qc.e.jal {{0x[0-9a-f]+}} <start+{{0x[0-9a-f]+}}>
-# CHECK: R_RISCV_CUSTOM195 undef
+# CHECK: R_RISCV_QC_E_CALL_PLT undef
 
 
 

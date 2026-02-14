@@ -14,7 +14,6 @@
 #ifndef BOLT_CORE_MCPLUSBUILDER_H
 #define BOLT_CORE_MCPLUSBUILDER_H
 
-#include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Core/Relocation.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -1748,6 +1747,12 @@ public:
     return false;
   }
 
+  /// AArch64 uses this to perform diagnostics in the LongJmp pass.
+  virtual bool isShortRangeBranch(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
   /// Receives a list of MCInst of the basic block to analyze and interpret the
   /// terminators of this basic block. TBB must be initialized with the original
   /// fall-through for this BB.
@@ -1782,6 +1787,25 @@ public:
                                    uint64_t BeginPC) const {
     llvm_unreachable("not implemented");
     return 0;
+  }
+
+  virtual void patchPLTEntryForBTI(BinaryFunction &PLTFunction, MCInst &Call) {
+    llvm_unreachable("not implemented");
+  }
+
+  virtual void applyBTIFixupToTarget(BinaryBasicBlock &StubBB) {
+    llvm_unreachable("not implemented");
+  }
+
+  virtual void applyBTIFixupToSymbol(BinaryContext &BC, const MCSymbol *Symbol,
+                                     MCInst &Call) {
+    llvm_unreachable("not implemented");
+  }
+
+  virtual void applyBTIFixupCommon(const MCSymbol *RealTargetSym,
+                                   BinaryFunction *TgtFunction,
+                                   BinaryBasicBlock *TgtBB, MCInst &Call) {
+    llvm_unreachable("not implemented");
   }
 
   virtual bool analyzeVirtualMethodCall(InstructionIterator Begin,
@@ -2042,7 +2066,7 @@ public:
   /// targets).
   virtual std::optional<uint64_t>
   findMemcpySizeInBytes(const BinaryBasicBlock &BB,
-                        BinaryBasicBlock::iterator CallInst) const {
+                        InstructionListType::iterator CallInst) const {
     return std::nullopt;
   }
 

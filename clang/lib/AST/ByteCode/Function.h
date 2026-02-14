@@ -85,6 +85,17 @@ using FunctionDeclTy =
 /// After the function has been called, it will remove all arguments,
 /// including RVO and This pointer, from the stack.
 ///
+/// The parameters saved in a clang::intepr::Function include both the
+/// instance pointer as well as the RVO pointer.
+///
+/// \verbatim
+///    Stack position when calling  ─────┐
+///    this Function                     │
+///                                      ▼
+/// ┌─────┬──────┬────────┬────────┬─────┬────────────────────┐
+/// │ RVO │ This │ Param1 │ Param2 │ ... │                    │
+/// └─────┴──────┴────────┴────────┴─────┴────────────────────┘
+/// \endverbatim
 class Function final {
 public:
   enum class FunctionKind {
@@ -95,7 +106,14 @@ public:
     LambdaCallOperator,
     CopyOrMoveOperator,
   };
-  using ParamDescriptor = std::pair<PrimType, Descriptor *>;
+
+  struct ParamDescriptor {
+    const Descriptor *Desc;
+    unsigned Offset;
+    PrimType T;
+    ParamDescriptor(const Descriptor *Desc, unsigned Offset, PrimType T)
+        : Desc(Desc), Offset(Offset), T(T) {}
+  };
 
   /// Returns the size of the function's local stack.
   unsigned getFrameSize() const { return FrameSize; }
@@ -140,9 +158,9 @@ public:
 
   /// Range over argument types.
   using arg_reverse_iterator =
-      SmallVectorImpl<PrimType>::const_reverse_iterator;
+      SmallVectorImpl<ParamDescriptor>::const_reverse_iterator;
   llvm::iterator_range<arg_reverse_iterator> args_reverse() const {
-    return llvm::reverse(ParamTypes);
+    return llvm::reverse(ParamDescriptors);
   }
 
   /// Returns a specific scope.
@@ -202,7 +220,7 @@ public:
 
   bool isVariadic() const { return Variadic; }
 
-  unsigned getNumParams() const { return ParamTypes.size(); }
+  unsigned getNumParams() const { return ParamDescriptors.size(); }
 
   /// Returns the number of parameter this function takes when it's called,
   /// i.e excluding the instance pointer and the RVO pointer.
@@ -222,31 +240,30 @@ public:
   }
 
   unsigned getParamOffset(unsigned ParamIndex) const {
-    return ParamOffsets[ParamIndex];
+    return ParamDescriptors[ParamIndex].Offset;
   }
 
   PrimType getParamType(unsigned ParamIndex) const {
-    return ParamTypes[ParamIndex];
+    return ParamDescriptors[ParamIndex].T;
   }
 
 private:
   /// Construct a function representing an actual function.
   Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
-           llvm::SmallVectorImpl<PrimType> &&ParamTypes,
-           llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
-           llvm::SmallVectorImpl<unsigned> &&ParamOffsets, bool HasThisPointer,
-           bool HasRVO, bool IsLambdaStaticInvoker);
+           llvm::SmallVectorImpl<ParamDescriptor> &&ParamDescriptors,
+           bool HasThisPointer, bool HasRVO, bool IsLambdaStaticInvoker);
 
   /// Sets the code of a function.
   void setCode(FunctionDeclTy Source, unsigned NewFrameSize,
                llvm::SmallVector<std::byte> &&NewCode, SourceMap &&NewSrcMap,
-               llvm::SmallVector<Scope, 2> &&NewScopes, bool NewHasBody) {
+               llvm::SmallVector<Scope, 2> &&NewScopes, bool NewHasBody,
+               bool NewIsValid) {
     this->Source = Source;
     FrameSize = NewFrameSize;
     Code = std::move(NewCode);
     SrcMap = std::move(NewSrcMap);
     Scopes = std::move(NewScopes);
-    IsValid = true;
+    IsValid = NewIsValid;
     HasBody = NewHasBody;
   }
 
@@ -274,12 +291,10 @@ private:
   SourceMap SrcMap;
   /// List of block descriptors.
   llvm::SmallVector<Scope, 2> Scopes;
-  /// List of argument types.
-  llvm::SmallVector<PrimType, 8> ParamTypes;
-  /// Map from byte offset to parameter descriptor.
+  /// List of all parameters, including RVO and instance pointer.
+  llvm::SmallVector<ParamDescriptor> ParamDescriptors;
+  /// Map from Parameter offset to parameter descriptor.
   llvm::DenseMap<unsigned, ParamDescriptor> Params;
-  /// List of parameter offsets.
-  llvm::SmallVector<unsigned, 8> ParamOffsets;
   /// Flag to indicate if the function is valid.
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsValid : 1;

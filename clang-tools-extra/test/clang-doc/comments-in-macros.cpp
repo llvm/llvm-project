@@ -23,8 +23,8 @@
 
 
 // HTML-MYCLASS: <pre><code class="language-cpp code-clang-doc">int Add (int a, int b)</code></pre>
-// HTML-MYCLASS: <div>
-// HTML-MYCLASS:     <div>
+// HTML-MYCLASS: <div class="doc-card">
+// HTML-MYCLASS:     <div class="nested-delimiter-container">
 // HTML-MYCLASS:         <p> Declare a method to calculate the sum of two numbers</p>
 // HTML-MYCLASS:     </div>
 

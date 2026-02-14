@@ -1,3 +1,4 @@
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -49,7 +50,7 @@ template <typename T>
 struct TestIncrementDecrement {
   void operator()() const {
     if constexpr (std::is_integral_v<T>) {
-      T x(T(1));
+      alignas(std::atomic_ref<T>::required_alignment) T x(T(1));
       std::atomic_ref<T> const a(x);
 
       {
@@ -82,7 +83,7 @@ struct TestIncrementDecrement {
     } else if constexpr (std::is_pointer_v<T>) {
       using U = std::remove_pointer_t<T>;
       U t[9]  = {};
-      T p{&t[1]};
+      alignas(std::atomic_ref<T>::required_alignment) T p{&t[1]};
       std::atomic_ref<T> const a(p);
 
       {

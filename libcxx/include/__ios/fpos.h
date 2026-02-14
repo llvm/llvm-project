@@ -28,7 +28,7 @@ private:
 public:
   _LIBCPP_HIDE_FROM_ABI fpos(streamoff __off = streamoff()) : __st_(), __off_(__off) {}
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI operator streamoff() const { return __off_; }
+  _LIBCPP_HIDE_FROM_ABI operator streamoff() const { return __off_; }
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _StateT state() const { return __st_; }
   _LIBCPP_HIDE_FROM_ABI void state(_StateT __st) { __st_ = __st; }

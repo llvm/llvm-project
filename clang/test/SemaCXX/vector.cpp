@@ -799,3 +799,8 @@ template <int N> using templated_v_size = int  __attribute__((vector_size(N))); 
 templated_v_size<-8> templated_v_neg_size; //expected-note{{in instantiation of template type alias 'templated_v_size' requested here}}
 
 #endif
+
+namespace GH173347 {
+typedef short __attribute__((__vector_size__(8))) V;
+template <int N> V test(V x) { return (x % 5) * N; }
+}

@@ -70,9 +70,9 @@ define <4 x i1> @vfptosi_v4i1_v4f64(<4 x double> %va, <4 x i1> %m, i32 zeroext %
 ; CHECK-LABEL: vfptosi_v4i1_v4f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; CHECK-NEXT:    vfcvt.rtz.x.f.v v10, v8, v0.t
-; CHECK-NEXT:    vmsne.vi v8, v10, 0, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vfcvt.rtz.x.f.v v8, v8, v0.t
+; CHECK-NEXT:    vmsne.vi v10, v8, 0, v0.t
+; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
   %v = call <4 x i1> @llvm.vp.fptosi.v4i1.v4f64(<4 x double> %va, <4 x i1> %m, i32 %evl)
   ret <4 x i1> %v

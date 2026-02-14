@@ -652,6 +652,34 @@ def testOperationAttributes():
     # CHECK: Dict mapping {'dependent': 'text', 'other.attribute': 3.0, 'some.attribute': 1}
     print("Dict mapping", d)
 
+    # Structural pattern matching test using Mapping
+
+    # CHECK: Matched Mapping Attribute 'some.attribute': 1
+    # CHECK: Matched Mapping Attribute 'other.attribute': 3.0
+    # CHECK: Matched Mapping Attribute 'dependent': text
+    match op:
+        case OpView(attributes={"does_not_exist": a0}):
+            assert False
+        case OpView(
+            attributes={
+                "some.attribute": IntegerAttr(value=some_attr_val) as some_attr,
+                "other.attribute": FloatAttr() as other_attr,
+                "dependent": StringAttr() as dep_attr,
+                **other_attributes,
+            }
+        ):
+            print(f"Matched Mapping Attribute 'some.attribute': {some_attr_val}")
+            print(f"Matched Mapping Attribute 'other.attribute': {other_attr.value}")
+            print(f"Matched Mapping Attribute 'dependent': {dep_attr.value}")
+            assert type(other_attributes) == dict
+            assert len(other_attributes) == 0
+            assert some_attr == op.attributes.get("some.attribute")
+            assert other_attr == op.attributes.get("other.attribute", None)
+            assert dep_attr == op.attributes.get("dependent", "Default value")
+        case _:
+            print("Did not match!")
+            assert False
+
     # Check that exceptions are raised as expected.
     try:
         op.attributes["does_not_exist"]
@@ -666,6 +694,41 @@ def testOperationAttributes():
         pass
     else:
         assert False, "expected IndexError on accessing an out-of-bounds attribute"
+
+    # Check that exceptions are raised when `get` is used with non-str arg.
+    try:
+        op.attributes.get(0)
+    except TypeError:
+        pass
+    else:
+        assert False, "expected TypeError using int as key for get()"
+
+    try:
+        op.attributes.get(0, None)
+    except TypeError:
+        pass
+    else:
+        assert False, "expected TypeError using int as key for get()"
+
+    try:
+        op.attributes.get([], None)
+    except TypeError:
+        pass
+    else:
+        assert False, "expected TypeError using list as key for get()"
+
+    try:
+        match op:
+            case OpView(attributes={0: a}):
+                assert False
+    except TypeError:
+        pass
+    else:
+        assert False, "expected TypeError matching OpAttributeMap with int-key "
+
+    # get() does not throw for non existent attributes.
+    assert op.attributes.get("does_not_exist") is None
+    assert op.attributes.get("does_not_exist", "default_value") == "default_value"
 
 
 # CHECK-LABEL: TEST: testOperationPrint

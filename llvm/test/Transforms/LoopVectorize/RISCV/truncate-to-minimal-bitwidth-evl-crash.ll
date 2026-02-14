@@ -56,7 +56,7 @@ define void @truncate_i16_to_i8_cse(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 4294967296, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 4294967296, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[N_VEC]] to i32

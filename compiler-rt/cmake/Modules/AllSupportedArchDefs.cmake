@@ -17,6 +17,16 @@ set(WASM32 wasm32)
 set(WASM64 wasm64)
 set(VE ve)
 
+if (COMPILER_RT_PROFILE_BAREMETAL)
+  set(ARM32
+    arm
+    armhf
+    armv4t
+    armv5te
+    armv6m
+  )
+endif()
+
 if(APPLE)
   set(ARM64 arm64)
   set(ARM32 armv7 armv7s armv7k)
@@ -35,7 +45,8 @@ set(ALL_ASAN_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64} ${RISCV64}
     ${MIPS32} ${MIPS64} ${PPC64} ${S390X} ${SPARC} ${SPARCV9} ${HEXAGON}
     ${LOONGARCH64})
 set(ALL_ASAN_ABI_SUPPORTED_ARCH ${X86_64} ${ARM64} ${ARM64_32})
-set(ALL_DFSAN_SUPPORTED_ARCH ${X86_64} ${MIPS64} ${ARM64} ${LOONGARCH64})
+set(ALL_DFSAN_SUPPORTED_ARCH ${X86_64} ${MIPS64} ${ARM64} ${LOONGARCH64}
+    ${S390X})
 set(ALL_RTSAN_SUPPORTED_ARCH ${X86_64} ${ARM64})
 
 if(ANDROID)

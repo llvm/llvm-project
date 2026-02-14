@@ -716,6 +716,55 @@ public:
     return Insts;
   }
 
+  bool isCompAndBranch(const MCInst &Inst) const {
+    const unsigned Opcode = Inst.getOpcode();
+    switch (Opcode) {
+    // Compare register with immediate and branch.
+    case AArch64::CBGTWri:
+    case AArch64::CBGTXri:
+    case AArch64::CBLTWri:
+    case AArch64::CBLTXri:
+    case AArch64::CBHIWri:
+    case AArch64::CBHIXri:
+    case AArch64::CBLOWri:
+    case AArch64::CBLOXri:
+    case AArch64::CBEQWri:
+    case AArch64::CBEQXri:
+    case AArch64::CBNEWri:
+    case AArch64::CBNEXri:
+    // Compare registers and branch.
+    case AArch64::CBGTWrr:
+    case AArch64::CBGTXrr:
+    case AArch64::CBGEWrr:
+    case AArch64::CBGEXrr:
+    case AArch64::CBHIWrr:
+    case AArch64::CBHIXrr:
+    case AArch64::CBHSWrr:
+    case AArch64::CBHSXrr:
+    case AArch64::CBEQWrr:
+    case AArch64::CBEQXrr:
+    case AArch64::CBNEWrr:
+    case AArch64::CBNEXrr:
+    // Compare bytes and branch.
+    case AArch64::CBBGTWrr:
+    case AArch64::CBBGEWrr:
+    case AArch64::CBBHIWrr:
+    case AArch64::CBBHSWrr:
+    case AArch64::CBBEQWrr:
+    case AArch64::CBBNEWrr:
+    // Compare halfwords and branch.
+    case AArch64::CBHGTWrr:
+    case AArch64::CBHGEWrr:
+    case AArch64::CBHHIWrr:
+    case AArch64::CBHHSWrr:
+    case AArch64::CBHEQWrr:
+    case AArch64::CBHNEWrr:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   bool isTB(const MCInst &Inst) const {
     return (Inst.getOpcode() == AArch64::TBNZW ||
             Inst.getOpcode() == AArch64::TBNZX ||
@@ -1260,7 +1309,7 @@ public:
       if (isConditionalBranch(Inst) || isADR(Inst) || isADRP(Inst) ||
           isMOVW(Inst))
         OpNum = 1;
-      if (isTB(Inst) || isAddXri(Inst))
+      if (isTB(Inst) || isAddXri(Inst) || isCompAndBranch(Inst))
         OpNum = 2;
     }
 
@@ -1329,7 +1378,7 @@ public:
       ++OI;
     }
 
-    if (isTB(Inst)) {
+    if (isTB(Inst) || isCompAndBranch(Inst)) {
       assert(MCPlus::getNumPrimeOperands(Inst) >= 3 &&
              "Invalid number of operands");
       OI = Inst.begin() + 2;
@@ -1669,7 +1718,136 @@ public:
     return Base + Offset;
   }
 
+  /// This function is used to patch PLT entries to include a BTI instruction.
+  /// This currently only works for binaries linked using LLD.
+  ///
+  /// PLT entry before patching:
+  ///
+  ///    adrp x16, Page(&(.got.plt[n]))
+  ///    ldr  x17, [x16, Offset(&(.got.plt[n]))]
+  ///    add  x16, x16, Offset(&(.got.plt[n]))
+  ///    br   x17
+  ///    nop
+  ///    nop
+  ///
+  /// PLT entry after patching:
+  ///
+  ///    bti c
+  ///    adrp x16, Page(&(.got.plt[n]))
+  ///    ldr  x17, [x16, Offset(&(.got.plt[n]))]
+  ///    add  x16, x16, Offset(&(.got.plt[n]))
+  ///    br   x17
+  ///    nop
+  ///
+  /// Safety considerations:
+  ///
+  /// The PLT entry will become incorrect if shifting the ADRP by one
+  /// instruction (4 bytes) moves it across a page boundary.
+  ///
+  /// The PLT entry is 24 bytes, and page size is 4096 (or 16384) bytes.
+  /// Their GCD is 8 bytes, meaning that shifting the ADRP is safe, as long as
+  /// it is shifted by less than 8 bytes.
+  ///
+  /// If the PLT entry does not contain extra nops, this function will create an
+  /// error. This can happen in binaries linked using BFD.
+  void patchPLTEntryForBTI(BinaryFunction &PLTFunction, MCInst &Call) override {
+    BinaryContext &BC = PLTFunction.getBinaryContext();
+    assert(PLTFunction.isPLTFunction() &&
+           "patchPLTEntryForBTI called on a non-PLT function");
+    // Checking if the PLT entry already starts with the BTI needed for Call.
+    auto FirstBBI = PLTFunction.begin();
+    auto FirstII = FirstBBI->begin();
+    assert(FirstII != FirstBBI->end() && "Cannot patch empty PLT entry");
+    if (isCallCoveredByBTI(Call, *FirstII))
+      return;
+    // Checking if there are extra nops at the end. If not, BOLT cannot patch
+    // the PLT entry.
+    auto LastBBI = std::prev(PLTFunction.end());
+    auto LastII = std::prev(LastBBI->end());
+    if (!isNoop(*LastII)) {
+      errs() << "BOLT-ERROR: Cannot patch PLT entry "
+             << PLTFunction.getPrintName()
+             << " to have a BTI landing pad. Relink the binary using LLD.\n";
+      exit(1);
+    }
+    // If the PLT does not have a BTI, and it has nops, create a new instruction
+    // sequence to patch the entry with.
+    InstructionListType NewPLTSeq;
+    MCInst BTIInst;
+    createBTI(BTIInst, BTIKind::C);
+    NewPLTSeq.push_back(BTIInst);
+    // Only adding the instructions from the first BB (adrp, ldr, add, br) to
+    // NewPLTSeq.
+    NewPLTSeq.insert(NewPLTSeq.end(), FirstBBI->begin(), FirstBBI->end());
+    BC.createInstructionPatch(PLTFunction.getAddress(), NewPLTSeq);
+  }
+
+  void applyBTIFixupToSymbol(BinaryContext &BC, const MCSymbol *TargetSymbol,
+                             MCInst &Call) override {
+    BinaryFunction *TargetFunction = BC.getFunctionForSymbol(TargetSymbol);
+    applyBTIFixupCommon(TargetSymbol, TargetFunction, nullptr, Call);
+  }
+
+  void applyBTIFixupToTarget(BinaryBasicBlock &StubBB) override {
+    BinaryFunction &Func = *StubBB.getFunction();
+    BinaryContext &BC = Func.getBinaryContext();
+    const MCSymbol *RealTargetSym = BC.MIB->getTargetSymbol(*StubBB.begin());
+    BinaryFunction *TargetFunction = BC.getFunctionForSymbol(RealTargetSym);
+    BinaryBasicBlock *TgtBB = Func.getBasicBlockForLabel(RealTargetSym);
+    applyBTIFixupCommon(RealTargetSym, TargetFunction, TgtBB,
+                        *StubBB.getLastNonPseudoInstr());
+  }
+
+  void applyBTIFixupCommon(const MCSymbol *RealTargetSym,
+                           BinaryFunction *TargetFunction,
+                           BinaryBasicBlock *TargetBB, MCInst &Call) override {
+    // TODO: add support for editing each type, and remove errors.
+    if (!TargetFunction && !TargetBB) {
+      errs() << "BOLT-ERROR: Cannot add BTI to function with symbol "
+             << RealTargetSym->getName() << "\n";
+      exit(1);
+    }
+    if (TargetFunction && TargetFunction->isPLTFunction()) {
+      patchPLTEntryForBTI(*TargetFunction, Call);
+      return;
+    }
+    if (TargetFunction && TargetFunction->isIgnored()) {
+      errs() << "BOLT-ERROR: Cannot add BTI landing pad to ignored function "
+             << TargetFunction->getPrintName() << "\n";
+      exit(1);
+    }
+    if (TargetFunction && !TargetFunction->hasCFG()) {
+      if (TargetFunction->hasInstructions()) {
+        auto FirstII = TargetFunction->instrs().begin();
+        MCInst FirstInst = FirstII->second;
+        if (isCallCoveredByBTI(Call, FirstInst))
+          return;
+      }
+      errs()
+          << "BOLT-ERROR: Cannot add BTI landing pad to function without CFG: "
+          << TargetFunction->getPrintName() << "\n";
+      exit(1);
+    }
+    if (!TargetBB)
+      // No need to check TargetFunction for nullptr, because
+      // !TargetBB &&!TargetFunction has already been checked.
+      TargetBB = &*TargetFunction->begin();
+    if (TargetBB) {
+      if (!TargetBB->hasParent()) {
+        errs() << "BOLT-ERROR: Cannot add BTI to block with no parent "
+                  "function. Targeted symbol: "
+               << RealTargetSym->getName() << "\n";
+        exit(1);
+      }
+      insertBTI(*TargetBB, Call);
+      return;
+    }
+    errs() << "BOLT-ERROR: unhandled case when applying BTI fixup\n";
+    exit(1);
+  }
+
   unsigned getInvertedBranchOpcode(unsigned Opcode) const {
+    // clang-format off
     switch (Opcode) {
     default:
       llvm_unreachable("Failed to invert branch opcode");
@@ -1682,7 +1860,48 @@ public:
     case AArch64::CBZX:     return AArch64::CBNZX;
     case AArch64::CBNZW:    return AArch64::CBZW;
     case AArch64::CBNZX:    return AArch64::CBZX;
+    // Compare register with immediate and branch.
+    case AArch64::CBGTWri:  return AArch64::CBLTWri; // +1
+    case AArch64::CBGTXri:  return AArch64::CBLTXri; // +1
+    case AArch64::CBLTWri:  return AArch64::CBGTWri; // -1
+    case AArch64::CBLTXri:  return AArch64::CBGTXri; // -1
+    case AArch64::CBHIWri:  return AArch64::CBLOWri; // +1
+    case AArch64::CBHIXri:  return AArch64::CBLOXri; // +1
+    case AArch64::CBLOWri:  return AArch64::CBHIWri; // -1
+    case AArch64::CBLOXri:  return AArch64::CBHIXri; // -1
+    case AArch64::CBEQWri:  return AArch64::CBNEWri;
+    case AArch64::CBEQXri:  return AArch64::CBNEXri;
+    case AArch64::CBNEWri:  return AArch64::CBEQWri;
+    case AArch64::CBNEXri:  return AArch64::CBEQXri;
+    // Compare registers and branch.
+    case AArch64::CBGTWrr:  return AArch64::CBGEWrr; // swap
+    case AArch64::CBGTXrr:  return AArch64::CBGEXrr; // swap
+    case AArch64::CBGEWrr:  return AArch64::CBGTWrr; // swap
+    case AArch64::CBGEXrr:  return AArch64::CBGTXrr; // swap
+    case AArch64::CBHIWrr:  return AArch64::CBHSWrr; // swap
+    case AArch64::CBHIXrr:  return AArch64::CBHSXrr; // swap
+    case AArch64::CBHSWrr:  return AArch64::CBHIWrr; // swap
+    case AArch64::CBHSXrr:  return AArch64::CBHIXrr; // swap
+    case AArch64::CBEQWrr:  return AArch64::CBNEWrr;
+    case AArch64::CBEQXrr:  return AArch64::CBNEXrr;
+    case AArch64::CBNEWrr:  return AArch64::CBEQWrr;
+    case AArch64::CBNEXrr:  return AArch64::CBEQXrr;
+    // Compare bytes and branch.
+    case AArch64::CBBGTWrr: return AArch64::CBBGEWrr; // swap
+    case AArch64::CBBGEWrr: return AArch64::CBBGTWrr; // swap
+    case AArch64::CBBHIWrr: return AArch64::CBBHSWrr; // swap
+    case AArch64::CBBHSWrr: return AArch64::CBBHIWrr; // swap
+    case AArch64::CBBEQWrr: return AArch64::CBBNEWrr;
+    case AArch64::CBBNEWrr: return AArch64::CBBEQWrr;
+    // Compare halfwords and branch.
+    case AArch64::CBHGTWrr: return AArch64::CBHGEWrr; // swap
+    case AArch64::CBHGEWrr: return AArch64::CBHGTWrr; // swap
+    case AArch64::CBHHIWrr: return AArch64::CBHHSWrr; // swap
+    case AArch64::CBHHSWrr: return AArch64::CBHHIWrr; // swap
+    case AArch64::CBHEQWrr: return AArch64::CBHNEWrr;
+    case AArch64::CBHNEWrr: return AArch64::CBHEQWrr;
     }
+    // clang-format on
   }
 
   unsigned getCondCode(const MCInst &Inst) const override {
@@ -1702,11 +1921,89 @@ public:
     }
   }
 
+  bool needsRegSwap(unsigned Opcode) const {
+    switch (Opcode) {
+    default:
+      return false;
+    // Compare registers and branch.
+    case AArch64::CBGTWrr:
+    case AArch64::CBGTXrr:
+    case AArch64::CBGEWrr:
+    case AArch64::CBGEXrr:
+    case AArch64::CBHIWrr:
+    case AArch64::CBHIXrr:
+    case AArch64::CBHSWrr:
+    case AArch64::CBHSXrr:
+    // Compare bytes and branch.
+    case AArch64::CBBGTWrr:
+    case AArch64::CBBGEWrr:
+    case AArch64::CBBHIWrr:
+    case AArch64::CBBHSWrr:
+    // Compare halfwords and branch.
+    case AArch64::CBHGTWrr:
+    case AArch64::CBHGEWrr:
+    case AArch64::CBHHIWrr:
+    case AArch64::CBHHSWrr:
+      return true;
+    }
+  }
+
+  bool needsImmDec(unsigned Opcode) const {
+    switch (Opcode) {
+    default:
+      return false;
+    case AArch64::CBGTWri:
+    case AArch64::CBGTXri:
+    case AArch64::CBHIWri:
+    case AArch64::CBHIXri:
+      return true;
+    }
+  }
+
+  bool needsImmInc(unsigned Opcode) const {
+    switch (Opcode) {
+    default:
+      return false;
+    case AArch64::CBLTWri:
+    case AArch64::CBLTXri:
+    case AArch64::CBLOWri:
+    case AArch64::CBLOXri:
+      return true;
+    }
+  }
+
+  bool isReversibleBranch(const MCInst &Inst) const override {
+    if (isCompAndBranch(Inst)) {
+      unsigned InvertedOpcode = getInvertedBranchOpcode(Inst.getOpcode());
+      if (needsImmDec(InvertedOpcode) && Inst.getOperand(1).getImm() == 0)
+        return false;
+      if (needsImmInc(InvertedOpcode) && Inst.getOperand(1).getImm() == 63)
+        return false;
+    }
+    return MCPlusBuilder::isReversibleBranch(Inst);
+  }
+
   void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
                               MCContext *Ctx) const override {
-    if (isTB(Inst) || isCB(Inst)) {
-      Inst.setOpcode(getInvertedBranchOpcode(Inst.getOpcode()));
+    if (!isReversibleBranch(Inst)) {
+      errs() << "BOLT-ERROR: Cannot reverse branch " << Inst << "\n";
+      exit(1);
+    }
+
+    if (isTB(Inst) || isCB(Inst) || isCompAndBranch(Inst)) {
+      unsigned InvertedOpcode = getInvertedBranchOpcode(Inst.getOpcode());
+      Inst.setOpcode(InvertedOpcode);
       assert(Inst.getOpcode() != 0 && "Invalid branch instruction");
+      // The FEAT_CMPBR compare-and-branch instructions cannot encode all
+      // the possible condition codes, therefore we either have to adjust
+      // the immediate value by +-1, or to swap the register operands
+      // when reversing the branch condition.
+      if (needsRegSwap(InvertedOpcode))
+        std::swap(Inst.getOperand(0), Inst.getOperand(1));
+      else if (needsImmDec(InvertedOpcode))
+        Inst.getOperand(1).setImm(Inst.getOperand(1).getImm() - 1);
+      else if (needsImmInc(InvertedOpcode))
+        Inst.getOperand(1).setImm(Inst.getOperand(1).getImm() + 1);
     } else if (Inst.getOpcode() == AArch64::Bcc) {
       Inst.getOperand(0).setImm(AArch64CC::getInvertedCondCode(
           static_cast<AArch64CC::CondCode>(Inst.getOperand(0).getImm())));
@@ -1721,18 +2018,16 @@ public:
   }
 
   int getPCRelEncodingSize(const MCInst &Inst) const override {
+    if (isCompAndBranch(Inst))
+      return 11;
+    if (isTB(Inst))
+      return 16;
+    if (isCB(Inst))
+      return 21;
     switch (Inst.getOpcode()) {
     default:
       llvm_unreachable("Failed to get pcrel encoding size");
       return 0;
-    case AArch64::TBZW:     return 16;
-    case AArch64::TBZX:     return 16;
-    case AArch64::TBNZW:    return 16;
-    case AArch64::TBNZX:    return 16;
-    case AArch64::CBZW:     return 21;
-    case AArch64::CBZX:     return 21;
-    case AArch64::CBNZW:    return 21;
-    case AArch64::CBNZX:    return 21;
     case AArch64::B:        return 28;
     case AArch64::BL:       return 28;
     case AArch64::Bcc:      return 21;
@@ -2114,6 +2409,10 @@ public:
       convertJmpToTailCall(Inst);
   }
 
+  bool isShortRangeBranch(const MCInst &Inst) const override {
+    return isCompAndBranch(Inst);
+  }
+
   bool analyzeBranch(InstructionIterator Begin, InstructionIterator End,
                      const MCSymbol *&TBB, const MCSymbol *&FBB,
                      MCInst *&CondBranch,
@@ -2274,7 +2573,7 @@ public:
         !I->getOperand(1).isImm() || I->getOperand(0).getReg() != AArch64::X16)
       return 0;
     TargetHiBits = &*I;
-    Addr |= (Address + ((int64_t)I->getOperand(1).getImm() << 12)) &
+    Addr |= (Address + ((uint64_t)I->getOperand(1).getImm() << 12)) &
             0xFFFFFFFFFFFFF000ULL;
     Target = Addr;
     return 3;
@@ -2788,9 +3087,10 @@ public:
     bool CallTarget = BTI == BTIKind::C || BTI == BTIKind::JC;
     bool JumpTarget = BTI == BTIKind::J || BTI == BTIKind::JC;
     unsigned HintNum = getBTIHintNum(CallTarget, JumpTarget);
-    bool IsExplicitBTI =
-        Inst.getOpcode() == AArch64::HINT && Inst.getNumOperands() == 1 &&
-        Inst.getOperand(0).isImm() && Inst.getOperand(0).getImm() == HintNum;
+    bool IsExplicitBTI = Inst.getOpcode() == AArch64::HINT &&
+                         MCPlus::getNumPrimeOperands(Inst) == 1 &&
+                         Inst.getOperand(0).isImm() &&
+                         Inst.getOperand(0).getImm() == HintNum;
 
     // Only "BTI C" can be implicit.
     bool IsImplicitBTI =
@@ -2818,7 +3118,7 @@ public:
     // x16 or x17. If the operand is not x16 or x17, it can be accepted by a BTI
     // j or BTI jc (and not BTI c).
     if (isIndirectBranch(Call)) {
-      assert(Call.getNumOperands() == 1 &&
+      assert(MCPlus::getNumPrimeOperands(Call) == 1 &&
              "Indirect branch needs to have 1 operand.");
       assert(Call.getOperand(0).isReg() &&
              "Indirect branch does not have a register operand.");
@@ -2856,7 +3156,7 @@ public:
     // x16 or x17. If the operand is not x16 or x17, it can be accepted by a
     // BTI j or BTI jc (and not BTI c).
     if (isIndirectBranch(Call)) {
-      assert(Call.getNumOperands() == 1 &&
+      assert(MCPlus::getNumPrimeOperands(Call) == 1 &&
              "Indirect branch needs to have 1 operand.");
       assert(Call.getOperand(0).isReg() &&
              "Indirect branch does not have a register operand.");
@@ -2971,7 +3271,7 @@ public:
 
   std::optional<uint64_t>
   findMemcpySizeInBytes(const BinaryBasicBlock &BB,
-                        BinaryBasicBlock::iterator CallInst) const override {
+                        InstructionListType::iterator CallInst) const override {
     MCPhysReg SizeReg = getIntArgRegister(2);
     if (SizeReg == getNoRegister())
       return std::nullopt;

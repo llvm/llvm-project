@@ -15,9 +15,9 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr64 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.sub_32
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG [[COPY]], %subreg.sub_32
     ; CHECK-NEXT: [[BFMXri:%[0-9]+]]:gpr64 = BFMXri [[DEF]], [[SUBREG_TO_REG]], 0, 31
-    ; CHECK-NEXT: [[SUBREG_TO_REG1:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.sub_32
+    ; CHECK-NEXT: [[SUBREG_TO_REG1:%[0-9]+]]:gpr64 = SUBREG_TO_REG [[COPY]], %subreg.sub_32
     ; CHECK-NEXT: [[BFMXri1:%[0-9]+]]:gpr64 = BFMXri [[DEF]], [[SUBREG_TO_REG1]], 51, 31
     ; CHECK-NEXT: $x0 = COPY [[BFMXri]]
     ; CHECK-NEXT: $x1 = COPY [[BFMXri1]]

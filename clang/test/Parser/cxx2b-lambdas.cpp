@@ -27,6 +27,10 @@ auto L6 = [s = 1] mutable {};
 auto L7 = [s = 1] constexpr mutable noexcept {}; // cxx11-error {{return type 'void' is not a literal type}}
 #endif
 auto L8 = [] -> bool { return true; };
+#if __cplusplus >= 201103L
+template <typename> struct PR176256 {};
+PR176256<void> token = [] -> decltype(token) { return {}; }();
+#endif
 auto L9 = []<typename T> { return true; };
 #if __cplusplus >= 201103L
 auto L10 = []<typename T> noexcept { return true; };

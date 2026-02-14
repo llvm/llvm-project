@@ -114,6 +114,7 @@
 // CHECK-NEXT: optin.osx.cocoa.localizability.NonLocalizedStringChecker:AggressiveReport = false
 // CHECK-NEXT: optin.performance.Padding:AllowedPad = 24
 // CHECK-NEXT: optin.taint.TaintPropagation:Config = ""
+// CHECK-NEXT: optin.taint.TaintPropagation:EnableDefaultConfig = true
 // CHECK-NEXT: osx.NumberObjectConversion:Pedantic = false
 // CHECK-NEXT: osx.cocoa.RetainCount:TrackNSCFStartParam = false
 // CHECK-NEXT: prune-paths = true
@@ -122,6 +123,7 @@
 // CHECK-NEXT: region-store-small-struct-limit = 2
 // CHECK-NEXT: report-in-main-source-file = false
 // CHECK-NEXT: security.cert.env.InvalidPtr:InvalidatingGetEnv = false
+// CHECK-NEXT: security.insecureAPI.DeprecatedOrUnsafeBufferHandling:ReportMode = c11-only
 // CHECK-NEXT: serialize-stats = false
 // CHECK-NEXT: silence-checkers = ""
 // CHECK-NEXT: stable-report-filename = false

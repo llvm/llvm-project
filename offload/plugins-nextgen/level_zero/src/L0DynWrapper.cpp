@@ -12,6 +12,8 @@
 #include "Shared/Debug.h"
 #include "llvm/Support/DynamicLibrary.h"
 
+using namespace llvm::offload::debug;
+
 DLWRAP_INITIALIZE()
 
 DLWRAP_INTERNAL(zeInit, 1)
@@ -103,16 +105,42 @@ DLWRAP_FINALIZE()
 #endif
 
 static bool loadLevelZero() {
-  const char *L0Library = LEVEL_ZERO_LIBRARY;
+  std::string L0Library{LEVEL_ZERO_LIBRARY};
   std::string ErrMsg;
 
-  DP("Trying to load %s\n", L0Library);
+  ODBG(OLDT_Init) << "Trying to load " << L0Library;
   auto DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
-      llvm::sys::DynamicLibrary::getPermanentLibrary(L0Library, &ErrMsg));
+      llvm::sys::DynamicLibrary::getPermanentLibrary(L0Library.c_str(),
+                                                     &ErrMsg));
+
+  // Update the following comment and the MinVersion when the plugin starts to
+  // use a new Level Zero API routine.
+  // zeCommandListHostSynchronize was introduced in loader 1.10.0 (API 1.6.0).
+  constexpr uint32_t MinVersion{ZE_MAKE_VERSION(1, 10)};
+  auto emitCheckVersion = [&]() {
+    ODBG(OLDT_Init) << "Level Zero Loader compatible with version "
+                    << ZE_MAJOR_VERSION(MinVersion) << "."
+                    << ZE_MINOR_VERSION(MinVersion) << " is required";
+  };
+
+#ifndef _WIN32
+  if (!DynlibHandle->isValid()) {
+    // Try to open loader with major version number on Linux.
+    L0Library +=
+        std::string{"."} + std::to_string(ZE_MAJOR_VERSION(MinVersion));
+    ErrMsg.clear();
+    ODBG(OLDT_Init) << "Trying to load " << L0Library;
+    DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
+        llvm::sys::DynamicLibrary::getPermanentLibrary(L0Library.c_str(),
+                                                       &ErrMsg));
+  }
+#endif
   if (!DynlibHandle->isValid()) {
     if (ErrMsg.empty())
       ErrMsg = "unknown error";
-    DP("Unable to load library '%s': %s!\n", L0Library, ErrMsg.c_str());
+    ODBG(OLDT_Init) << "Unable to load library '" << L0Library
+                    << "': " << ErrMsg << "!";
+    emitCheckVersion();
     return false;
   }
 
@@ -121,10 +149,13 @@ static bool loadLevelZero() {
 
     void *P = DynlibHandle->getAddressOfSymbol(Sym);
     if (P == nullptr) {
-      DP("Unable to find '%s' in '%s'!\n", Sym, L0Library);
+      ODBG(OLDT_Init) << "Unable to find '" << Sym << "' in '" << L0Library
+                      << "'!";
+      emitCheckVersion();
       return false;
     }
-    DP("Implementing %s with dlsym(%s) -> %p\n", Sym, Sym, P);
+    ODBG(OLDT_Init) << "Implementing " << Sym << " with dlsym(" << Sym
+                    << ") -> " << P;
 
     *dlwrap::pointer(I) = P;
   }

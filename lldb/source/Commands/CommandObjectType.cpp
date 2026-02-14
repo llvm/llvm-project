@@ -2534,7 +2534,7 @@ protected:
     if (lang_type != lldb::eLanguageTypeUnknown)
       return lang_type;
 
-    Symbol *s = frame->GetSymbolContext(eSymbolContextSymbol).symbol;
+    const Symbol *s = frame->GetSymbolContext(eSymbolContextSymbol).symbol;
     if (s)
       lang_type = s->GetMangled().GuessLanguage();
 

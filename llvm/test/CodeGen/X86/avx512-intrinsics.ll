@@ -5518,6 +5518,15 @@ define <4 x float>@test_int_x86_avx512_mask_fixupimm_ss(<4 x float> %x0, <4 x fl
   ret <4 x float> %res4
 }
 
+define <4 x float>@test_int_x86_avx512_mask_fixupimm_ss_passthrough_zero_mask(<4 x float> %x0, <4 x float> %x1, <4 x i32> %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_fixupimm_ss_passthrough_zero_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <4 x float> @llvm.x86.avx512.mask.fixupimm.ss(<4 x float> %x0, <4 x float> %x1, <4 x i32> %x2, i32 5, i8 -2, i32 4)
+  ret <4 x float> %res
+}
+
 declare <4 x float> @llvm.x86.avx512.maskz.fixupimm.ss(<4 x float>, <4 x float>, <4 x i32>, i32, i8, i32)
 
 define <4 x float>@test_int_x86_avx512_maskz_fixupimm_ss(<4 x float> %x0, <4 x float> %x1, <4 x i32> %x2, i8 %x4) {
@@ -5553,6 +5562,16 @@ define <4 x float>@test_int_x86_avx512_maskz_fixupimm_ss(<4 x float> %x0, <4 x f
   %res3 = fadd <4 x float> %res, %res1
   %res4 = fadd <4 x float> %res3, %res2
   ret <4 x float> %res4
+}
+
+define <4 x float>@test_int_x86_avx512_maskz_fixupimm_ss_passthrough_zero_mask(<4 x float> %x0, <4 x float> %x1, <4 x i32> %x2) {
+; CHECK-LABEL: test_int_x86_avx512_maskz_fixupimm_ss_passthrough_zero_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <4 x float> @llvm.x86.avx512.maskz.fixupimm.ss(<4 x float> %x0, <4 x float> %x1, <4 x i32> %x2, i32 5, i8 -2, i32 4)
+  ret <4 x float> %res
 }
 
 declare <16 x float> @llvm.x86.avx512.mask.fixupimm.ps.512(<16 x float>, <16 x float>, <16 x i32>, i32, i16, i32)
@@ -5680,6 +5699,15 @@ define <2 x double>@test_int_x86_avx512_mask_fixupimm_sd(<2 x double> %x0, <2 x 
   ret <2 x double> %res4
 }
 
+define <2 x double>@test_int_x86_avx512_mask_fixupimm_sd_passthrough_zero_mask(<2 x double> %x0, <2 x double> %x1, <2 x i64> %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_fixupimm_sd_passthrough_zero_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <2 x double> @llvm.x86.avx512.mask.fixupimm.sd(<2 x double> %x0, <2 x double> %x1, <2 x i64> %x2, i32 5, i8 -2, i32 4)
+  ret <2 x double> %res
+}
+
 declare <2 x double> @llvm.x86.avx512.maskz.fixupimm.sd(<2 x double>, <2 x double>, <2 x i64>, i32, i8, i32)
 
 define <2 x double>@test_int_x86_avx512_maskz_fixupimm_sd(<2 x double> %x0, <2 x double> %x1, <2 x i64> %x2, i8 %x4) {
@@ -5715,6 +5743,16 @@ define <2 x double>@test_int_x86_avx512_maskz_fixupimm_sd(<2 x double> %x0, <2 x
   %res3 = fadd <2 x double> %res, %res1
   %res4 = fadd <2 x double> %res3, %res2
   ret <2 x double> %res4
+}
+
+define <2 x double>@test_int_x86_avx512_maskz_fixupimm_sd_passthrough_zero_mask(<2 x double> %x0, <2 x double> %x1, <2 x i64> %x2) {
+; CHECK-LABEL: test_int_x86_avx512_maskz_fixupimm_sd_passthrough_zero_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <2 x double> @llvm.x86.avx512.maskz.fixupimm.sd(<2 x double> %x0, <2 x double> %x1, <2 x i64> %x2, i32 5, i8 -2, i32 4)
+  ret <2 x double> %res
 }
 
 declare double @llvm.fma.f64(double, double, double) #1

@@ -181,6 +181,14 @@ public:
     bool hasArg() const {
       return Type == isInput || (Type == isOutput && isIndirect);
     }
+
+    /// hasRegMemConstraints - Returns true if and only if the constraint
+    /// codes are "rm". This is useful when converting between a register form
+    /// to a memory form.
+    bool hasRegMemConstraints() const {
+      return Codes.size() == 2 && is_contained(Codes, "r") &&
+             is_contained(Codes, "m");
+    }
   };
 
   /// ParseConstraints - Split up the constraint string into the specific
@@ -220,6 +228,7 @@ public:
     Extra_MayLoad = 8,
     Extra_MayStore = 16,
     Extra_IsConvergent = 32,
+    Extra_MayUnwind = 64,
   };
 
   // Inline asm operands map to multiple SDNode / MachineInstr operands.
@@ -455,6 +464,8 @@ public:
       Result.push_back("isconvergent");
     if (ExtraInfo & InlineAsm::Extra_IsAlignStack)
       Result.push_back("alignstack");
+    if (ExtraInfo & InlineAsm::Extra_MayUnwind)
+      Result.push_back("unwind");
 
     AsmDialect Dialect =
         InlineAsm::AsmDialect((ExtraInfo & InlineAsm::Extra_AsmDialect));

@@ -297,7 +297,8 @@ class PPCInstrInfo : public PPCGenInstrInfo {
   // Replace the instruction with single LI if possible. \p DefMI must be LI or
   // LI8.
   bool simplifyToLI(MachineInstr &MI, MachineInstr &DefMI,
-                    unsigned OpNoForForwarding, MachineInstr **KilledDef) const;
+                    unsigned OpNoForForwarding, MachineInstr **KilledDef,
+                    SmallSet<Register, 4> *RegsToUpdate = nullptr) const;
   // If the inst is imm-form and its register operand is produced by a ADDI, put
   // the imm into the inst directly and remove the ADDI if possible.
   bool transformToNewImmFormFedByAdd(MachineInstr &MI, MachineInstr &DefMI,
@@ -585,8 +586,7 @@ public:
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
       Register DestReg, int FrameIndex, const TargetRegisterClass *RC,
-
-      Register VReg,
+      Register VReg, unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   // Emits a register reload without updating the register class for vector

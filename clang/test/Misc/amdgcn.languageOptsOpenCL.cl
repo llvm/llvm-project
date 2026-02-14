@@ -121,7 +121,7 @@
 #pragma OPENCL EXTENSION cl_khr_gl_msaa_sharing: enable
 // expected-warning@-1{{unsupported OpenCL extension 'cl_khr_gl_msaa_sharing' - ignoring}}
 
-#if (__OPENCL_C_VERSION__ >= 200)
+#if defined(__OPENCL_C_VERSION__)
 #ifndef cl_khr_mipmap_image
 #error "Missing cl_khr_mipmap_image define"
 #endif
@@ -139,7 +139,7 @@
 #pragma OPENCL EXTENSION cl_khr_srgb_image_writes: enable
 // expected-warning@-1{{unsupported OpenCL extension 'cl_khr_srgb_image_writes' - ignoring}}
 
-#if (__OPENCL_C_VERSION__ >= 200)
+#if defined(__OPENCL_C_VERSION__)
 #ifndef cl_khr_subgroups
 #error "Missing cl_khr_subgroups define"
 #endif

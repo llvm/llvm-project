@@ -6,16 +6,13 @@
 define i32 @foo(i32 %treemap) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    negl %ecx
 ; CHECK-NEXT:    andl %eax, %ecx
-; CHECK-NEXT:    movl %ecx, (%esp)
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    bsfl (%esp), %eax
+; CHECK-NEXT:    bsfl %ecx, %eax
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    popl %ecx
 ; CHECK-NEXT:    retl
 entry:
   %sub = sub i32 0, %treemap

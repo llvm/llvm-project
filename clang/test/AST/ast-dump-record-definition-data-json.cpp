@@ -408,7 +408,11 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {},
+// CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "offset": 190,
+// CHECK-NEXT:      "col": 26,
+// CHECK-NEXT:      "tokLen": 1
+// CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "offset": 199,
 // CHECK-NEXT:      "col": 35,
@@ -523,7 +527,11 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {},
+// CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "offset": 190,
+// CHECK-NEXT:      "col": 26,
+// CHECK-NEXT:      "tokLen": 1
+// CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "offset": 199,
 // CHECK-NEXT:      "col": 35,
@@ -598,7 +606,11 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {},
+// CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "offset": 190,
+// CHECK-NEXT:      "col": 26,
+// CHECK-NEXT:      "tokLen": 1
+// CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "offset": 199,
 // CHECK-NEXT:      "col": 35,

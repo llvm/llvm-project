@@ -1727,7 +1727,7 @@ define i32 @fcmp_0_mult_select1(ptr noalias %x, i32 %N) nounwind readonly {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[X]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = mul <4 x i32> [[VEC_PHI]], splat (i32 2)
+; CHECK-NEXT:    [[TMP4:%.*]] = shl <4 x i32> [[VEC_PHI]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP5]] = select <4 x i1> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

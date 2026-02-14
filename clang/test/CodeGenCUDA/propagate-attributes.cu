@@ -53,14 +53,14 @@ __global__ void kernel() { lib_fn(); }
 // line.
 
 // Check the attribute list for kernel.
+// NOFTZ-NOT: denormal_fpenv
+
 // CHECK: attributes [[kattr]] = {
 
 // CHECK-SAME: convergent
 // CHECK-SAME: norecurse
 
-// FTZ-NOT: "denormal-fp-math"
-// FTZ-SAME: "denormal-fp-math-f32"="preserve-sign,preserve-sign"
-// NOFTZ-NOT: "denormal-fp-math-f32"
+// FTZ-SAME: denormal_fpenv(float: preservesign)
 
 // CHECK-SAME: "no-trapping-math"="true"
 
@@ -69,11 +69,5 @@ __global__ void kernel() { lib_fn(); }
 
 // CHECK-SAME: convergent
 // CHECK-NOT: norecurse
-
-// FTZ-NOT: "denormal-fp-math"
-// NOFTZ-NOT: "denormal-fp-math"
-
-// FTZ-SAME: "denormal-fp-math-f32"="preserve-sign,preserve-sign"
-// NOFTZ-NOT: "denormal-fp-math-f32"
 
 // CHECK-SAME: "no-trapping-math"="true"

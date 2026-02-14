@@ -19,6 +19,7 @@
 
 #include <__assert>
 #include <__atomic/atomic_sync.h>
+#include <__atomic/atomic_waitable_traits.h>
 #include <__atomic/check_memory_order.h>
 #include <__atomic/floating_point_helper.h>
 #include <__atomic/memory_order.h>

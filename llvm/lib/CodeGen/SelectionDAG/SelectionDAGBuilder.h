@@ -633,6 +633,7 @@ private:
   bool visitStrCmpCall(const CallInst &I);
   bool visitStrLenCall(const CallInst &I);
   bool visitStrNLenCall(const CallInst &I);
+  bool visitStrstrCall(const CallInst &I);
   bool visitUnaryFloatCall(const CallInst &I, unsigned Opcode);
   bool visitBinaryFloatCall(const CallInst &I, unsigned Opcode);
   void visitAtomicLoad(const LoadInst &I);
@@ -821,8 +822,9 @@ struct RegsForValue {
   /// code marker, matching input operand index (if applicable), and includes
   /// the number of values added into it.
   void AddInlineAsmOperands(InlineAsm::Kind Code, bool HasMatching,
-                            unsigned MatchingIdx, const SDLoc &dl,
-                            SelectionDAG &DAG, std::vector<SDValue> &Ops) const;
+                            unsigned MatchingIdx, bool MayFoldRegister,
+                            const SDLoc &dl, SelectionDAG &DAG,
+                            std::vector<SDValue> &Ops) const;
 
   /// Check if the total RegCount is greater than one.
   bool occupiesMultipleRegs() const {

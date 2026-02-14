@@ -411,8 +411,8 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
       if (OptPrimType T = Ctx.classify(ElemTy)) {
         // Arrays of primitives.
         unsigned ElemSize = primSize(*T);
-        if (std::numeric_limits<unsigned>::max() / ElemSize <= NumElems) {
-          return {};
+        if ((Descriptor::MaxArrayElemBytes / ElemSize) < NumElems) {
+          return nullptr;
         }
         return allocateDescriptor(D, *T, MDSize, NumElems, IsConst, IsTemporary,
                                   IsMutable);
@@ -425,7 +425,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
           return nullptr;
         unsigned ElemSize = ElemDesc->getAllocSize() + sizeof(InlineDescriptor);
         if (std::numeric_limits<unsigned>::max() / ElemSize <= NumElems)
-          return {};
+          return nullptr;
         return allocateDescriptor(D, Ty, ElemDesc, MDSize, NumElems, IsConst,
                                   IsTemporary, IsMutable);
     }

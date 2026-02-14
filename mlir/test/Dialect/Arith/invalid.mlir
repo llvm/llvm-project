@@ -74,7 +74,7 @@ func.func @constant_out_of_range() {
 
 func.func @constant_invalid_scalable_1d_vec_initialization() {
 ^bb0:
-  // expected-error@+1 {{'arith.constant' op intializing scalable vectors with elements attribute is not supported unless it's a vector splat}}
+  // expected-error@+1 {{'arith.constant' op initializing scalable vectors with elements attribute is not supported unless it's a vector splat}}
   %c = arith.constant dense<[0, 1]> : vector<[2] x i32>
   return
 }
@@ -83,7 +83,7 @@ func.func @constant_invalid_scalable_1d_vec_initialization() {
 
 func.func @constant_invalid_scalable_2d_vec_initialization() {
 ^bb0:
-  // expected-error@+1 {{'arith.constant' op intializing scalable vectors with elements attribute is not supported unless it's a vector splat}}
+  // expected-error@+1 {{'arith.constant' op initializing scalable vectors with elements attribute is not supported unless it's a vector splat}}
   %c = arith.constant dense<[[3, 3], [1, 1]]> : vector<2 x [2] x i32>
   return
 }
@@ -868,4 +868,12 @@ func.func @bitcast_index_1(%arg0 : index) -> i64 {
   // expected-error @+1 {{'arith.bitcast' op operand #0 must be signless-integer-or-float-like or memref of signless-integer or float, but got 'index'}}
   %0 = arith.bitcast %arg0 : index to i64
   return %0 : i64
+}
+
+// -----
+
+func.func @select_vector_condition_scalar_operands(%arg0: vector<1xi1>, %arg1: i32) {
+  // expected-error @+1 {{'arith.select' op failed to verify that condition is signless i1 or has matching shape}}
+  %0 = arith.select %arg0, %arg1, %arg1 : vector<1xi1>, i32
+  return
 }

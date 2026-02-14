@@ -96,14 +96,20 @@ InstrumentationBoundsSafetyStopInfo::InstrumentationBoundsSafetyStopInfo(
   // No additional data describing the reason for stopping.
   m_extended_info = nullptr;
   m_description = SOFT_TRAP_FALLBACK_CATEGORY;
+  Log *log_category = GetLog(LLDBLog::InstrumentationRuntime);
 
   bool warning_emitted_for_failure = false;
   auto [MaybeDescription, MaybeSuggestedStackIndex] =
       ComputeStopReasonAndSuggestedStackFrame(warning_emitted_for_failure);
   if (MaybeDescription)
     m_description = MaybeDescription.value();
+  else
+    LLDB_LOG(log_category, "failed to compute description");
+
   if (MaybeSuggestedStackIndex)
     m_value = MaybeSuggestedStackIndex.value();
+  else
+    LLDB_LOG(log_category, "failed to compute suggested stack index");
 
   // Emit warning about the failure to compute the stop info if one wasn't
   // already emitted.
@@ -116,6 +122,11 @@ InstrumentationBoundsSafetyStopInfo::InstrumentationBoundsSafetyStopInfo(
           debugger_id);
     }
   }
+
+  LLDB_LOG(log_category,
+           "computed InstrumentationBoundsSafetyStopInfo: stack index: {0}, "
+           "description:\"{1}\"",
+           m_value, m_description);
 }
 
 // Helper functions to make it convenient to log a failure and then return.
@@ -134,6 +145,7 @@ ComputedStopInfo
 InstrumentationBoundsSafetyStopInfo::ComputeStopReasonAndSuggestedStackFrame(
     bool &warning_emitted_for_failure) {
   ThreadSP thread_sp = GetThread();
+  Log *log_category = GetLog(LLDBLog::InstrumentationRuntime);
   if (!thread_sp)
     return LogFailedCSI("failed to get thread while stopped");
 
@@ -144,12 +156,21 @@ InstrumentationBoundsSafetyStopInfo::ComputeStopReasonAndSuggestedStackFrame(
   if (!parent_sf)
     return LogFailedCSI("got nullptr when fetching stackframe at index 1");
 
-  if (parent_sf->HasDebugInformation())
+  if (parent_sf->HasDebugInformation()) {
+    LLDB_LOG(log_category,
+             "frame {0} has debug info so trying to compute "
+             "BoundsSafety stop info from debug info",
+             parent_sf->GetFrameIndex());
     return ComputeStopReasonAndSuggestedStackFrameWithDebugInfo(
         parent_sf, debugger_id, warning_emitted_for_failure);
+  }
 
   // If the debug info is missing we can still get some information
   // from the parameter in the soft trap runtime call.
+  LLDB_LOG(log_category,
+           "frame {0} has no debug info so trying to compute "
+           "BoundsSafety stop info from registers",
+           parent_sf->GetFrameIndex());
   return ComputeStopReasonAndSuggestedStackFrameWithoutDebugInfo(
       thread_sp, debugger_id, warning_emitted_for_failure);
 }
@@ -372,13 +393,13 @@ bool InstrumentationRuntimeBoundsSafety::CheckIfRuntimeIsValid(
                                                   lldb::eSymbolTypeAny)) {
       LLDB_LOG(log_category, "found \"{0}\" in {1}",
                test_sym.AsCString("<unknown symbol>"),
-               module_sp->GetObjectName().AsCString("<unknown module>"));
+               module_sp->GetFileSpec().GetPath());
       return true;
     }
   }
   LLDB_LOG(log_category,
            "did not find BoundsSafety soft trap functions in module {0}",
-           module_sp->GetObjectName().AsCString("<unknown module>"));
+           module_sp->GetFileSpec().GetPath());
   return false;
 }
 
@@ -470,9 +491,14 @@ void InstrumentationRuntimeBoundsSafety::Deactivate() {
   if (ProcessSP process_sp = GetProcessSP()) {
     bool success =
         process_sp->GetTarget().RemoveBreakpointByID(GetBreakpointID());
+    // FIXME: GetBreakPointID() uses `lldb::user_id_t` which is an unsigned
+    // type but it should be using `break_id_t` which is a signed type. For now
+    // just use the right type in the format string so the breakpoint ID is
+    // printed correctly.
     LLDB_LOG(log_category,
              "{0}removed breakpoint {1} for BoundsSafety soft traps",
-             success ? "" : "failed to ", GetBreakpointID());
+             success ? "" : "failed to ",
+             static_cast<break_id_t>(GetBreakpointID()));
   } else {
     LLDB_LOG(log_category, "no process available during Deactivate()");
   }
