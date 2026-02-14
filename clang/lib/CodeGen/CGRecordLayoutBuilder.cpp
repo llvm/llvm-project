@@ -434,16 +434,22 @@ CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
           if (Tail > BitOffset) {
             CharUnits RunBytes = bitsToCharUnits(BitOffset) -
                                  bitsToCharUnits(StartBitOffset);
-            llvm::Type *ClippedType = getByteArrayType(RunBytes);
-            // Walk backward through Members to find and replace the
-            // storage member for the current run.
-            CharUnits RunStart = bitsToCharUnits(StartBitOffset);
-            for (size_t I = Members.size(); I > 0; --I) {
-              if (Members[I - 1].Data &&
-                  Members[I - 1].Offset == RunStart) {
-                Members[I - 1].Data = ClippedType;
-                break;
+            if (!RunBytes.isZero()) {
+              llvm::Type *ClippedType = getByteArrayType(RunBytes);
+              // Walk backward through Members to find and replace the
+              // storage member for the current run.
+              CharUnits RunStart = bitsToCharUnits(StartBitOffset);
+              bool Found = false;
+              for (size_t I = Members.size(); I > 0; --I) {
+                if (Members[I - 1].Data &&
+                    Members[I - 1].Offset == RunStart) {
+                  Members[I - 1].Data = ClippedType;
+                  Found = true;
+                  break;
+                }
               }
+              assert(Found &&
+                     "Failed to find storage member to clip");
             }
           }
         }
