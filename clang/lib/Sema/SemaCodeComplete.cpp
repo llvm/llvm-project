@@ -5152,7 +5152,7 @@ void SemaCodeCompletion::CodeCompletePostfixExpression(Scope *S, ExprResult E,
                                                        QualType PreferredType) {
   if (E.isInvalid())
     CodeCompleteExpression(S, PreferredType);
-  else if (getLangOpts().ObjC && !E.get()->getType().isNull())
+  else if (getLangOpts().ObjC)
     CodeCompleteObjCInstanceMessage(S, E.get(), {}, false);
 }
 
@@ -8438,6 +8438,11 @@ void SemaCodeCompletion::CodeCompleteObjCInstanceMessage(
     bool AtArgumentExpression, ObjCInterfaceDecl *Super) {
   typedef CodeCompletionResult Result;
   ASTContext &Context = getASTContext();
+
+  // If the receiver expression has no type (e.g., a parenthesized C-style cast
+  // that hasn't been resolved), bail out to avoid dereferencing a null type.
+  if (RecExpr && RecExpr->getType().isNull())
+    return;
 
   // If necessary, apply function/array conversion to the receiver.
   // C99 6.7.5.3p[7,8].
