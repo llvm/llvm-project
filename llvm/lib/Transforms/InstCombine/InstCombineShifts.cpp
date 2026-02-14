@@ -758,8 +758,8 @@ static Value *getShiftedValue(Value *V, unsigned NumBits, bool isLeftShift,
     IC.InsertNewInstWith(Neg, I->getIterator());
     unsigned TypeWidth = I->getType()->getScalarSizeInBits();
     APInt Mask = APInt::getLowBitsSet(TypeWidth, TypeWidth - NumBits);
-    auto *And = BinaryOperator::CreateAnd(Neg,
-                                          ConstantInt::get(I->getType(), Mask));
+    auto *And =
+        BinaryOperator::CreateAnd(Neg, ConstantInt::get(I->getType(), Mask));
     And->takeName(I);
     return IC.InsertNewInstWith(And, I->getIterator());
   }
@@ -1641,6 +1641,30 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       return BinaryOperator::CreateLShr(NewShl, Shl1_Op1);
     }
   }
+
+  // Fold ((X << A) + C) >>u B  -->  (X << (A - B)) + (C >>u B)
+  // when the shift is exact and the add has nuw.
+  const APInt *ShAmtAPInt, *ShlAmt, *AddC;
+  if (match(Op1, m_APInt(ShAmtAPInt)) && I.isExact() &&
+      match(Op0,
+            m_c_NUWAdd(m_NUWShl(m_Value(X), m_APInt(ShlAmt)), m_APInt(AddC))) &&
+      ShlAmt->uge(*ShAmtAPInt)) {
+    unsigned ShAmt = ShAmtAPInt->getZExtValue();
+    // Check if C is divisible by (1 << ShAmt)
+    if (AddC->isShiftedMask() || AddC->countTrailingZeros() >= ShAmt ||
+        AddC->lshr(ShAmt).shl(ShAmt) == *AddC) {
+      // X << (A - B)
+      Constant *NewShlAmt = ConstantInt::get(Ty, *ShlAmt - ShAmt);
+      Value *NewShl = Builder.CreateShl(X, NewShlAmt);
+
+      // C >>u B
+      Constant *NewAddC = ConstantInt::get(Ty, AddC->lshr(ShAmt));
+
+      // (X << (A - B)) + (C >>u B)
+      return BinaryOperator::CreateAdd(NewShl, NewAddC);
+    }
+  }
+
   return nullptr;
 }
 
@@ -1808,6 +1832,28 @@ Instruction *InstCombinerImpl::visitAShr(BinaryOperator &I) {
       NewAdd->setHasNoUnsignedWrap(
           cast<OverflowingBinaryOperator>(Op0)->hasNoUnsignedWrap());
       return NewAdd;
+    }
+
+    // Fold ((X << A) + C) >>s B  -->  (X << (A - B)) + (C >>s B)
+    // when the shift is exact and the add has nsw.
+    const APInt *ShlAmt, *AddC;
+    if (I.isExact() &&
+        match(Op0, m_c_NSWAdd(m_NSWShl(m_Value(X), m_APInt(ShlAmt)),
+                              m_APInt(AddC))) &&
+        ShlAmt->uge(ShAmt)) {
+      // Check if C is divisible by (1 << ShAmt)
+      if (AddC->isShiftedMask() || AddC->countTrailingZeros() >= ShAmt ||
+          AddC->ashr(ShAmt).shl(ShAmt) == *AddC) {
+        // X << (A - B)
+        Constant *NewShlAmt = ConstantInt::get(Ty, *ShlAmt - ShAmt);
+        Value *NewShl = Builder.CreateShl(X, NewShlAmt);
+
+        // C >>s B
+        Constant *NewAddC = ConstantInt::get(Ty, AddC->ashr(ShAmt));
+
+        // (X << (A - B)) + (C >>s B)
+        return BinaryOperator::CreateAdd(NewShl, NewAddC);
+      }
     }
   }
 
