@@ -109,8 +109,8 @@ jobs:
       id: strings
       shell: bash
       run: |
-        echo "build-output-dir=/home/gha/llvm-project/build" >> "$GITHUB_OUTPUT"
-        echo "build-install-dir=/home/gha/llvm-project/install" >> "$GITHUB_OUTPUT"
+        echo "build-output-dir=/__w/llvm-project/llvm-project/build" >> "$GITHUB_OUTPUT"
+        echo "build-install-dir=/__w/llvm-project/llvm-project/install" >> "$GITHUB_OUTPUT"
     
     # Configure libc fullbuild with scudo.
     # Use MinSizeRel to reduce the size of the build.
@@ -122,7 +122,7 @@ jobs:
 
         export CMAKE_FLAGS="
           -G Ninja
-          -S /home/gha/llvm-project/runtimes
+          -S /__w/llvm-project/llvm-project/runtimes
           -B ${{ steps.strings.outputs.build-output-dir }}
           -DCMAKE_ASM_COMPILER=${{ matrix.c_compiler }}
           -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
@@ -144,7 +144,7 @@ jobs:
         case "${{ matrix.target }}" in
           *-none-eabi|riscv32-unknown-elf)
             cmake $CMAKE_FLAGS \
-              -C /home/gha/llvm-project/libc/cmake/caches/${{ matrix.target }}.cmake
+              -C /__w/llvm-project/llvm-project/libc/cmake/caches/${{ matrix.target }}.cmake
             ;;
           *)
             cmake -DLLVM_RUNTIME_TARGETS=${{ matrix.target }} \
