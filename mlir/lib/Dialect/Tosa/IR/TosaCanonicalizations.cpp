@@ -416,6 +416,58 @@ void TransposeOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<ConsolidateTransposeOptimization, TransposeIsReshape>(context);
 }
 
+/// Fold `tensor.cast` into `tosa.table`.
+///
+/// This pattern pushes tensor.cast operations past table when the cast
+/// goes from a more static type to a less static (more dynamic) type. This
+/// allows the table to operate on more refined types, enabling better
+/// optimizations and type inference in downstream operations.
+/// The pattern adds a cast back to the original result type for compatibility
+/// with existing users.
+/// For example:
+/// ```mlir
+///   %cast = tensor.cast %input : tensor<6x256xi8> to tensor<?x256xi8>
+///   %table_out = tosa.table %cast, %table_tensor
+///     : (tensor<?x256xi8>, tensor<256xi8>) -> tensor<?x256xi8>
+/// ```
+/// Can be folded to:
+/// ```mlir
+///   %table_out = tosa.table %input, %table_tensor
+///     : (tensor<6x256xi8>, tensor<256xi8>) -> tensor<6x256xi8>
+///   %cast = tensor.cast %table_out
+///     : tensor<6x256xi8> to tensor<?x256xi8>
+/// ```
+/// The result cast may be folded away in subsequent canonicalization if users
+/// can accept the more static type.
+struct TableOpCastFolder : public OpRewritePattern<tosa::TableOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::TableOp tableOp,
+                                PatternRewriter &rewriter) const override {
+    if (!tensor::hasFoldableTensorCastOperand(tableOp))
+      return rewriter.notifyMatchFailure(tableOp, "no foldable cast operand");
+    auto castOp = cast<tensor::CastOp>(tableOp.getInput1().getDefiningOp());
+    auto srcType = cast<RankedTensorType>(castOp.getSource().getType());
+    auto oldResultType = cast<RankedTensorType>(tableOp.getType());
+    auto newResultType = RankedTensorType::get(srcType.getShape(),
+                                               oldResultType.getElementType(),
+                                               oldResultType.getEncoding());
+
+    auto newTableOp =
+        tosa::TableOp::create(rewriter, tableOp.getLoc(), newResultType,
+                              castOp.getSource(), tableOp.getTable());
+
+    rewriter.replaceOpWithNewOp<tensor::CastOp>(tableOp, oldResultType,
+                                                newTableOp);
+    return success();
+  }
+};
+
+void TableOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                          MLIRContext *context) {
+  results.add<TableOpCastFolder>(context);
+}
+
 struct ClampIsNoOp : public OpRewritePattern<tosa::ClampOp> {
   using OpRewritePattern::OpRewritePattern;
 
