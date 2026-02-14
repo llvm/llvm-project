@@ -5129,8 +5129,7 @@ static SDValue simplifyDivRem(SDNode *N, SelectionDAG &DAG) {
 
   // 0 / X -> 0
   // 0 % X -> 0
-  ConstantSDNode *N0C = isConstOrConstSplat(N0);
-  if (N0C && N0C->isZero())
+  if (isZeroOrZeroSplat(N0))
     return N0;
 
   // X / X -> 1
