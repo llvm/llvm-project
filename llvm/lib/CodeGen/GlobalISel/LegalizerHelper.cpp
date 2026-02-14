@@ -6326,8 +6326,9 @@ Register LegalizerHelper::buildVariableShiftPart(unsigned Opcode,
   // For G_ASHR, individual parts don't have their own sign bit, only the
   // complete value does. So we use LSHR for the main operand shift in ASHR
   // context.
-  unsigned MainOpcode =
-      (Opcode == TargetOpcode::G_ASHR) ? TargetOpcode::G_LSHR : Opcode;
+  unsigned MainOpcode = (Opcode == TargetOpcode::G_ASHR)
+                            ? static_cast<unsigned>(TargetOpcode::G_LSHR)
+                            : Opcode;
 
   // Perform the primary shift on the main operand
   Register MainShifted =
