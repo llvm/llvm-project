@@ -422,6 +422,13 @@ bool Type::isPackedVectorBoolType(const ASTContext &ctx) const {
   return isExtVectorBoolType();
 }
 
+bool Type::isPackedBitIntVectorType(const ASTContext &ctx) const {
+  if (ctx.getLangOpts().HLSL)
+    return false;
+  return isVectorType() &&
+         cast<VectorType>(CanonicalType)->getElementType()->isBitIntType();
+}
+
 BitIntType::BitIntType(bool IsUnsigned, unsigned NumBits)
     : Type(BitInt, QualType{}, TypeDependence::None), IsUnsigned(IsUnsigned),
       NumBits(NumBits) {}
