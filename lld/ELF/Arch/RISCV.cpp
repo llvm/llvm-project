@@ -379,7 +379,7 @@ void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       expr = RE_RISCV_ADD;
       break;
 
-    // PC-relative:
+    // PC-relative relocations:
     case R_RISCV_JAL:
     case R_RISCV_BRANCH:
     case R_RISCV_PCREL_HI20:
