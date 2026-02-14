@@ -49,7 +49,7 @@ struct SharedCacheImageInfo {
       m_extractor_sp = m_create_data_extractor(m_image_baton);
     return m_extractor_sp;
   }
- ConstString GetFilename() const { return m_filename; }
+  ConstString GetFilename() const { return m_filename; }
   const UUID &GetUUID() const { return m_uuid; }
   void *GetImageBaton();
   void SetExtractor(lldb::DataExtractorSP extractor_sp) {
