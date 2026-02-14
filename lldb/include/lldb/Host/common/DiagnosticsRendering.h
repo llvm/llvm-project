@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILITY_DIAGNOSTICSRENDERING_H
-#define LLDB_UTILITY_DIAGNOSTICSRENDERING_H
+#ifndef LLDB_HOST_COMMON_DIAGNOSTICSRENDERING_H
+#define LLDB_HOST_COMMON_DIAGNOSTICSRENDERING_H
 
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"

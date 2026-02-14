@@ -840,6 +840,92 @@ define void @call_alloc_size_2() {
   call void @f(i32 0, i32 0) allocsize(1, 0)
   ret void
 }
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_minsize
+define void @call_minsize() {
+; CHECK: llvm.call @f() {minsize}
+  call void @f() minsize
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_optsize
+define void @call_optsize() {
+; CHECK: llvm.call @f() {optsize}
+  call void @f() optsize
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_save_reg_params
+define void @call_save_reg_params() {
+; CHECK: llvm.call @f() {save_reg_params}
+  call void @f() "save-reg-params"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_zero_call_used_regs
+define void @call_zero_call_used_regs() {
+; CHECK: llvm.call @f() {zero_call_used_regs = "used"}
+  call void @f() "zero-call-used-regs"="used"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_trap_func_name
+define void @call_trap_func_name() {
+; CHECK: llvm.call @f() {trap_func_name = "something"}
+  call void @f() "trap-func-name"="something"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; Note: the 'default-func-attrs' aren't recoverable due to the way they lower
+; to LLVM-IR, and 'call' operations don't have passthrough, so these would be
+; lost in translation.
+; CHECK-LABEL: @call_default_func_attrs
+define void @call_default_func_attrs() {
+; CHECK: llvm.call @f() : () -> ()
+  call void @f() "key"="value" "key"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_nobuiltin
+define void @call_nobuiltin() {
+; CHECK: llvm.call @f() {nobuiltin}
+  call void @f() nobuiltin
+  ret void
+}
 
 ; // -----
 

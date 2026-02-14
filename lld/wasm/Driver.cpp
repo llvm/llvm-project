@@ -988,8 +988,11 @@ static void createOptionalSymbols() {
 
   ctx.sym.dsoHandle = symtab->addOptionalDataSymbol("__dso_handle");
 
-  if (!ctx.arg.shared)
+  if (!ctx.arg.shared) {
     ctx.sym.dataEnd = symtab->addOptionalDataSymbol("__data_end");
+    ctx.sym.rodataStart = symtab->addOptionalDataSymbol("__rodata_start");
+    ctx.sym.rodataEnd = symtab->addOptionalDataSymbol("__rodata_end");
+  }
 
   if (!ctx.isPic) {
     ctx.sym.stackLow = symtab->addOptionalDataSymbol("__stack_low");

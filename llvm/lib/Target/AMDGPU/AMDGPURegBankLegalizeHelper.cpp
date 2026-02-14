@@ -1197,6 +1197,21 @@ LLT RegBankLegalizeHelper::getBTyFromID(RegBankLLTMappingApplyID ID, LLT Ty) {
         Ty == LLT::fixed_vector(8, 64))
       return Ty;
     return LLT();
+  case SgprBRC: {
+    const SIRegisterInfo *TRI =
+        static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
+    unsigned LLTSize = Ty.getSizeInBits();
+    if (LLTSize >= 32 && TRI->getSGPRClassForBitWidth(LLTSize))
+      return Ty;
+    return LLT();
+  }
+  case VgprBRC: {
+    const SIRegisterInfo *TRI =
+        static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
+    if (TRI->getSGPRClassForBitWidth(Ty.getSizeInBits()))
+      return Ty;
+    return LLT();
+  }
   default:
     return LLT();
   }
@@ -1232,6 +1247,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case SgprB128:
   case SgprB256:
   case SgprB512:
+  case SgprBRC:
   case UniInVcc:
   case UniInVgprS16:
   case UniInVgprS32:
@@ -1278,6 +1294,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case VgprB160:
   case VgprB256:
   case VgprB512:
+  case VgprBRC:
   case Vgpr32AExt:
   case Vgpr32SExt:
   case Vgpr32ZExt:
@@ -1341,6 +1358,7 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case SgprB128:
     case SgprB256:
     case SgprB512:
+    case SgprBRC:
     case SgprPtr32:
     case SgprPtr64:
     case SgprPtr128:
@@ -1351,6 +1369,7 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case VgprB160:
     case VgprB256:
     case VgprB512:
+    case VgprBRC:
     case VgprPtr32:
     case VgprPtr64:
     case VgprPtr128: {
@@ -1487,6 +1506,7 @@ bool RegBankLegalizeHelper::applyMappingSrc(
     case SgprB128:
     case SgprB256:
     case SgprB512:
+    case SgprBRC:
     case SgprPtr32:
     case SgprPtr64:
     case SgprPtr128: {
@@ -1525,6 +1545,7 @@ bool RegBankLegalizeHelper::applyMappingSrc(
     case VgprB160:
     case VgprB256:
     case VgprB512:
+    case VgprBRC:
     case VgprPtr32:
     case VgprPtr64:
     case VgprPtr128: {
