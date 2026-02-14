@@ -872,14 +872,18 @@ bool Decl::isWeakImported() const {
   if (!canBeWeakImported(IsDefinition))
     return false;
 
-  for (const auto *A : getMostRecentDecl()->attrs()) {
-    if (isa<WeakImportAttr>(A))
-      return true;
-
-    if (const auto *Availability = dyn_cast<AvailabilityAttr>(A)) {
-      if (CheckAvailability(getASTContext(), Availability, nullptr,
-                            VersionTuple()) == AR_NotYetIntroduced)
+  // Traverse the entire redeclaration chain, since availability attributes
+  // may not be present on the most recent declaration (e.g., a @class forward
+  // declaration may lack the availability attribute from the @interface).
+  for (const auto *D : redecls()) {
+    for (const auto *A : D->attrs()) {
+      if (isa<WeakImportAttr>(A))
         return true;
+
+      if (const auto *Availability = dyn_cast<AvailabilityAttr>(A))
+        if (CheckAvailability(getASTContext(), Availability, nullptr,
+                              VersionTuple()) == AR_NotYetIntroduced)
+          return true;
     }
   }
 
