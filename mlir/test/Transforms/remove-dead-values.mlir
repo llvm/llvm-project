@@ -796,3 +796,32 @@ func.func @scf_while_dead_iter_args() -> i32 {
   }
   return %result#0 : i32
 }
+
+// -----
+
+  // CHECK-LABEL: gpu.func @k
+  // CHECK: scf.if
+  // CHECK: gpu.barrier
+  // CHECK-NOT: arith.addi
+  // CHECK: gpu.return
+
+  // NVVM-LABEL: llvm.func @k
+  // NVVM: scf.if
+  // NVVM: nvvm.barrier0
+  // NVVM-NOT: arith.addi
+  // NVVM: llvm.return
+  module {
+    gpu.module @m {
+      gpu.func @k(%data: memref<?xi32>) kernel attributes {sym_visibility = "private"} {
+        %c0 = arith.constant 0 : index
+        %len = memref.dim %data, %c0 : memref<?xi32>
+        %p = arith.cmpi ult, %c0, %len : index
+        scf.if %p {
+          gpu.barrier
+        } else {
+          arith.addi %c0, %c0 : index
+        }
+        gpu.return
+      }
+    }
+  }
