@@ -448,7 +448,8 @@ size_t YAMLProfileReader::matchWithExactName() {
     // the profile.
     Function.setExecutionCount(BinaryFunction::COUNT_NO_PROFILE);
 
-    if (profileMatches(YamlBF, Function)) {
+    // Allow mismatching profile when stale matching is enabled.
+    if (profileMatches(YamlBF, Function) || opts::InferStaleProfile) {
       matchProfileToFunction(YamlBF, Function);
       ++MatchedWithExactName;
     }
