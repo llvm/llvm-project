@@ -170,7 +170,9 @@ static RT_API_ATTRS bool HandleSubscripts(IoStatementState &io,
   std::size_t byteCount{0};
   common::optional<char32_t> ch{io.GetNextNonBlank(byteCount)};
   char32_t comma{GetComma(io)};
-  for (; ch && *ch != ')'; ++j) {
+
+  // Read subscripts, but don't exceed rank to prevent buffer overrun.
+  for (int Rank = source.rank(); ch && *ch != ')' && j <= Rank; ++j) {
     SubscriptValue dimLower{0}, dimUpper{0}, dimStride{0};
     if (j < maxRank && j < source.rank()) {
       const Dimension &dim{source.GetDimension(j)};
