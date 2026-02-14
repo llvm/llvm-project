@@ -616,7 +616,6 @@ PPC64::PPC64(Ctx &ctx) : TargetInfo(ctx) {
   write32(ctx, trapInstr.data(), 0x7fe00008);
 }
 
-
 static uint32_t getEFlags(InputFile *file) {
   if (file->ekind == ELF64BEKind)
     return cast<ObjFile<ELF64BE>>(file)->getObj().getHeader().e_flags;
@@ -1346,14 +1345,9 @@ void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       }
       continue;
     }
-    // TLS GD/LD markers: A __tls_get_addr call instruction is marked with
-    // 2 relocations:
-    //
-    //   R_PPC64_TLSGD / R_PPC64_TLSLD: marker relocation
-    //   R_PPC64_REL24: __tls_get_addr
-    //
-    // After the relaxation we no longer call __tls_get_addr and should
-    // skip both relocations to not create a false dependence on
+    // bl __tls_get_addr(x@tlsgd) is relocated by R_PPC64_TLSGD and
+    // R_PPC64_REL24. After optimization we no longer call __tls_get_addr
+    // and should skip both relocations to avoid a false dependence on
     // __tls_get_addr being defined.
     case R_PPC64_TLSGD:
     case R_PPC64_TLSLD: {
@@ -1366,8 +1360,8 @@ void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
         printLocation(diag, sec, sym, offset);
         continue;
       }
-      // Offset the 4-byte aligned marker by one byte in the NOTOC case,
-      // so we can discern it later from the toc-case.
+      // Increment the offset for the NOTOC case so that relaxTlsGdToIe
+      // and relaxTlsGdToLe can distinguish it from the TOC case.
       if (it1->getType(false) == R_PPC64_REL24_NOTOC)
         ++offset;
       if (execOptimize) {
@@ -1397,8 +1391,6 @@ void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
              offset, addend, &sym});
       }
       continue;
-    // TLS DTPREL (LD offset). Both the optimized (LD->LE) and non-optimized
-    // paths compute the same value and call relocate(), so R_DTPREL suffices.
     case R_PPC64_DTPREL16:
     case R_PPC64_DTPREL16_DS:
     case R_PPC64_DTPREL16_HA:
@@ -1663,7 +1655,6 @@ bool PPC64::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
     return isInt<26>(offset);
   llvm_unreachable("unsupported relocation type used in branch");
 }
-
 
 RelExpr PPC64::adjustGotPcExpr(RelType type, int64_t addend,
                                const uint8_t *loc) const {
