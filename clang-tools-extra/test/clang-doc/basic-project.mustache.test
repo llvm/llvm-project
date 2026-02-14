@@ -7,38 +7,22 @@
 // RUN: FileCheck %s -input-file=%t/docs/html/GlobalNamespace/_ZTV9Rectangle.html -check-prefix=HTML-RECTANGLE
 // RUN: FileCheck %s -input-file=%t/docs/html/GlobalNamespace/_ZTV6Circle.html -check-prefix=HTML-CIRCLE
 
-HTML-SHAPE: <html lang="en-US">
-HTML-SHAPE-NEXT: <head>
-HTML-SHAPE-NEXT:     <meta charset="utf-8"/>
-HTML-SHAPE-NEXT:     <title>Shape</title>
-HTML-SHAPE-NEXT:         <link rel="stylesheet" type="text/css" href="../clang-doc-mustache.css"/>
-HTML-SHAPE-NEXT:         <script src="../mustache-index.js"></script>
-HTML-SHAPE-NEXT:     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
-HTML-SHAPE-NEXT:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-HTML-SHAPE-NEXT:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
-HTML-SHAPE-NEXT: </head>
-HTML-SHAPE-NEXT: <body>
+HTML-SHAPE-LABEL:<html lang="en-US">
+HTML-SHAPE-LABEL:<head>
+HTML-SHAPE:      </head>
+HTML-SHAPE-LABEL:<body>
 HTML-SHAPE-NEXT: <header>
-HTML-SHAPE-NEXT: <nav class="navbar">
-HTML-SHAPE-NEXT:     <div class="navbar__container">
-HTML-SHAPE-NEXT:             <div class="navbar__logo">
-HTML-SHAPE-NEXT:                 {{^ +$}}
-HTML-SHAPE-NEXT:             </div>
-HTML-SHAPE-NEXT:         <div class="navbar__menu">
-HTML-SHAPE-NEXT:             <ul class="navbar__links">
-HTML-SHAPE-NEXT:                 <li class="navbar__item">
-HTML-SHAPE-NEXT:                     <a href="../index.html" class="navbar__link">Home</a>
-HTML-SHAPE-NEXT:                 </li>
-HTML-SHAPE-NEXT:             </ul>
-HTML-SHAPE-NEXT:         </div>
-HTML-SHAPE-NEXT:     </div>
-HTML-SHAPE-NEXT:     <div class="navbar-breadcrumb-container">
-HTML-SHAPE-NEXT:         <a href="./index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
-HTML-SHAPE-NEXT:     </div>
-HTML-SHAPE-NEXT: </nav>
-HTML-SHAPE-NEXT: </header>
-HTML-SHAPE-NEXT: <main>
-HTML-SHAPE-NEXT:     <div class="container">
+HTML-SHAPE-LABEL: <nav class="navbar">
+HTML-SHAPE:           <div class="navbar__container">
+HTML-SHAPE:                  <div class="navbar__logo">
+HTML-SHAPE:                  <div class="navbar__menu">
+HTML-SHAPE:                     <a href="../index.html" class="navbar__link">Home</a>
+HTML-SHAPE:           <div class="navbar-breadcrumb-container">
+HTML-SHAPE:               <a href="./index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
+HTML-SHAPE:       </nav>
+HTML-SHAPE-LABEL:</header>
+HTML-SHAPE-LABEL:<main>
+HTML-SHAPE:         <div class="container">
 HTML-SHAPE-NEXT:         <div class="sidebar">
 HTML-SHAPE-NEXT:             <h2>class Shape</h2>
 HTML-SHAPE-NEXT:             <ul>
@@ -62,7 +46,7 @@ HTML-SHAPE-NEXT:                     </details>
 HTML-SHAPE-NEXT:                 </li>
 HTML-SHAPE-NEXT:             </ul>
 HTML-SHAPE-NEXT:         </div>
-HTML-SHAPE-NEXT:         <div class="resizer" id="resizer"></div>
+HTML-SHAPE:              <div class="resizer" id="resizer"></div>
 HTML-SHAPE-NEXT:         <div class="content">
 HTML-SHAPE-NEXT:             <section class="hero section-container">
 HTML-SHAPE-NEXT:                 <div class="hero__title">
@@ -77,9 +61,9 @@ HTML-SHAPE-NEXT:                         </div>
 HTML-SHAPE-NEXT:                     </div>
 HTML-SHAPE-NEXT:                 </div>
 HTML-SHAPE-NEXT:             </section>
-HTML-SHAPE-NEXT:             <section id="PublicMethods" class="section-container">
+HTML-SHAPE:                  <section id="PublicMethods" class="section-container">
 HTML-SHAPE-NEXT:                 <h2>Public Methods</h2>
-HTML-SHAPE-NEXT:                         <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+HTML-SHAPE:                              <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 HTML-SHAPE-NEXT:                             <pre><code class="language-cpp code-clang-doc">double area ()</code></pre>
 HTML-SHAPE-NEXT:                             <div class="doc-card">
 HTML-SHAPE-NEXT:                                 <div class="nested-delimiter-container">
@@ -91,7 +75,7 @@ HTML-SHAPE-NEXT:                                     <p> double The area of the 
 HTML-SHAPE-NEXT:                                 </div>
 HTML-SHAPE-NEXT:                             </div>
 HTML-SHAPE-NEXT:                         </div>
-HTML-SHAPE-NEXT:                         <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+HTML-SHAPE:                              <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 HTML-SHAPE-NEXT:                             <pre><code class="language-cpp code-clang-doc">double perimeter ()</code></pre>
 HTML-SHAPE-NEXT:                             <div class="doc-card">
 HTML-SHAPE-NEXT:                                 <div class="nested-delimiter-container">
@@ -103,48 +87,37 @@ HTML-SHAPE-NEXT:                                     <p> double The perimeter of
 HTML-SHAPE-NEXT:                                 </div>
 HTML-SHAPE-NEXT:                             </div>
 HTML-SHAPE-NEXT:                         </div>
-HTML-SHAPE-NEXT:                         <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+HTML-SHAPE:                              <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 HTML-SHAPE-NEXT:                             <pre><code class="language-cpp code-clang-doc">void ~Shape ()</code></pre>
 HTML-SHAPE-NEXT:                             <div class="doc-card">
 HTML-SHAPE-NEXT:                                 <div class="nested-delimiter-container">
 HTML-SHAPE-NEXT:                                     <p> Virtual destructor.</p>
 HTML-SHAPE-NEXT:                                 </div>
 HTML-SHAPE-NEXT:                             </div>
+HTML-SHAPE:                              </div>
+HTML-SHAPE:                  </section>
+HTML-SHAPE:          </div> 
+HTML-SHAPE:      </main>
+HTML-SHAPE:      </body>
+HTML-SHAPE:      </html>
 
 
-HTML-CALC: <!DOCTYPE html>
-HTML-CALC-NEXT: <html lang="en-US">
-HTML-CALC-NEXT: <head>
-HTML-CALC-NEXT:     <meta charset="utf-8"/>
-HTML-CALC-NEXT:     <title>Calculator</title>
-HTML-CALC-NEXT:         <link rel="stylesheet" type="text/css" href="../clang-doc-mustache.css"/>
-HTML-CALC-NEXT:         <script src="../mustache-index.js"></script>
-HTML-CALC-NEXT:     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
-HTML-CALC-NEXT:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-HTML-CALC-NEXT:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
-HTML-CALC-NEXT: </head>
-HTML-CALC-NEXT: <body>
+HTML-CALC-LABEL:<html lang="en-US">
+HTML-CALC-LABEL:<head>
+HTML-CALC:      </head>
+HTML-CALC-LABEL:<body>
 HTML-CALC-NEXT: <header>
-HTML-CALC-NEXT: <nav class="navbar">
-HTML-CALC-NEXT:     <div class="navbar__container">
-HTML-CALC-NEXT:             <div class="navbar__logo">
-HTML-CALC-NEXT:                 {{^ +$}}
-HTML-CALC-NEXT:             </div>
-HTML-CALC-NEXT:         <div class="navbar__menu">
-HTML-CALC-NEXT:             <ul class="navbar__links">
-HTML-CALC-NEXT:                 <li class="navbar__item">
-HTML-CALC-NEXT:                     <a href="../index.html" class="navbar__link">Home</a>
-HTML-CALC-NEXT:                 </li>
-HTML-CALC-NEXT:             </ul>
-HTML-CALC-NEXT:         </div>
-HTML-CALC-NEXT:     </div>
-HTML-CALC-NEXT:     <div class="navbar-breadcrumb-container">
-HTML-CALC-NEXT:         <a href="./index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
-HTML-CALC-NEXT:     </div>
-HTML-CALC-NEXT: </nav>
-HTML-CALC-NEXT: </header>
-HTML-CALC-NEXT: <main>
-HTML-CALC-NEXT:     <div class="container">
+HTML-CALC-LABEL: <nav class="navbar">
+HTML-CALC:           <div class="navbar__container">
+HTML-CALC:                  <div class="navbar__logo">
+HTML-CALC:                  <div class="navbar__menu">
+HTML-CALC:                     <a href="../index.html" class="navbar__link">Home</a>
+HTML-CALC:           <div class="navbar-breadcrumb-container">
+HTML-CALC:               <a href="./index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
+HTML-CALC:       </nav>
+HTML-CALC-LABEL:</header>
+HTML-CALC-LABEL:<main>
+HTML-CALC:          <div class="container">
 HTML-CALC-NEXT:         <div class="sidebar">
 HTML-CALC-NEXT:             <h2>class Calculator</h2>
 HTML-CALC-NEXT:             <ul>
@@ -189,9 +162,9 @@ HTML-CALC-NEXT:                     </details>
 HTML-CALC-NEXT:                 </li>
 HTML-CALC-NEXT:             </ul>
 HTML-CALC-NEXT:         </div>
-HTML-CALC-NEXT:         <div class="resizer" id="resizer"></div>
-HTML-CALC-NEXT:         <div class="content">
-HTML-CALC-NEXT:             <section class="hero section-container">
+HTML-CALC:              <div class="resizer" id="resizer"></div>
+HTML-CALC:              <div class="content">
+HTML-CALC:                 <section class="hero section-container">
 HTML-CALC-NEXT:                 <div class="hero__title">
 HTML-CALC-NEXT:                     <h1 class="hero__title-large">class Calculator</h1>
 HTML-CALC:                          <div class="doc-card">
@@ -204,7 +177,7 @@ HTML-CALC-NEXT:                         </div>
 HTML-CALC-NEXT:                     </div>
 HTML-CALC-NEXT:                 </div>
 HTML-CALC-NEXT:             </section>
-HTML-CALC-NEXT:             <section id="PublicMembers" class="section-container">
+HTML-CALC:                 <section id="PublicMembers" class="section-container">
 HTML-CALC-NEXT:                 <h2>Public Members</h2>
 HTML-CALC-NEXT:                 <div>
 HTML-CALC-NEXT:                     <div id="public_val" class="delimiter-container">
@@ -215,9 +188,9 @@ HTML-CALC-NEXT:                         <pre><code class="language-cpp code-clan
 HTML-CALC-NEXT:                     </div>
 HTML-CALC-NEXT:                 </div>
 HTML-CALC-NEXT:             </section>
-HTML-CALC-NEXT:             <section id="PublicMethods" class="section-container">
+HTML-CALC:                 <section id="PublicMethods" class="section-container">
 HTML-CALC-NEXT:                 <h2>Public Methods</h2>
-HTML-CALC-NEXT:                 <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+HTML-CALC:                      <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 HTML-CALC-NEXT:                     <pre><code class="language-cpp code-clang-doc">int add (int a, int b)</code></pre>
 HTML-CALC-NEXT:                     <div class="doc-card">
 HTML-CALC-NEXT:                         <div class="nested-delimiter-container">
@@ -324,47 +297,29 @@ HTML-CALC-NEXT:                             <p> The result of a % b.</p>
 HTML-CALC-NEXT:                         </div>
 HTML-CALC-NEXT:                     </div>
 HTML-CALC:                      </div>
-HTML-CALC-NEXT:      </section>
-HTML-CALC-NEXT:    </div>
-HTML-CALC-NEXT:  </div>
-HTML-CALC-NEXT: </main>
-HTML-CALC-NEXT: </body>
-HTML-CALC-NEXT: </html>
+HTML-CALC:                  </section>
+HTML-CALC:         </div>
+HTML-CALC:      </main>
+HTML-CALC:      </body>
+HTML-CALC:      </html>
 
 
-HTML-RECTANGLE: <!DOCTYPE html>
-HTML-RECTANGLE-NEXT: <html lang="en-US">
-HTML-RECTANGLE-NEXT: <head>
-HTML-RECTANGLE-NEXT:     <meta charset="utf-8"/>
-HTML-RECTANGLE-NEXT:     <title>Rectangle</title>
-HTML-RECTANGLE-NEXT:         <link rel="stylesheet" type="text/css" href="../clang-doc-mustache.css"/>
-HTML-RECTANGLE-NEXT:         <script src="../mustache-index.js"></script>
-HTML-RECTANGLE-NEXT:     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
-HTML-RECTANGLE-NEXT:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-HTML-RECTANGLE-NEXT:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
-HTML-RECTANGLE-NEXT: </head>
-HTML-RECTANGLE-NEXT: <body>
+HTML-RECTANGLE-LABEL:<html lang="en-US">
+HTML-RECTANGLE-LABEL:<head>
+HTML-RECTANGLE:      </head>
+HTML-RECTANGLE-LABEL:<body>
 HTML-RECTANGLE-NEXT: <header>
-HTML-RECTANGLE-NEXT: <nav class="navbar">
-HTML-RECTANGLE-NEXT:     <div class="navbar__container">
-HTML-RECTANGLE-NEXT:             <div class="navbar__logo">
-HTML-RECTANGLE-NEXT:                 {{^ +$}}
-HTML-RECTANGLE-NEXT:             </div>
-HTML-RECTANGLE-NEXT:         <div class="navbar__menu">
-HTML-RECTANGLE-NEXT:             <ul class="navbar__links">
-HTML-RECTANGLE-NEXT:                 <li class="navbar__item">
-HTML-RECTANGLE-NEXT:                     <a href="../index.html" class="navbar__link">Home</a>
-HTML-RECTANGLE-NEXT:                 </li>
-HTML-RECTANGLE-NEXT:             </ul>
-HTML-RECTANGLE-NEXT:         </div>
-HTML-RECTANGLE-NEXT:     </div>
-HTML-RECTANGLE-NEXT:     <div class="navbar-breadcrumb-container">
-HTML-RECTANGLE-NEXT:         <a href="./index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
-HTML-RECTANGLE-NEXT:     </div>
-HTML-RECTANGLE-NEXT: </nav>
-HTML-RECTANGLE-NEXT: </header>
-HTML-RECTANGLE-NEXT: <main>
-HTML-RECTANGLE-NEXT:     <div class="container">
+HTML-RECTANGLE-LABEL: <nav class="navbar">
+HTML-RECTANGLE:           <div class="navbar__container">
+HTML-RECTANGLE:                  <div class="navbar__logo">
+HTML-RECTANGLE:                  <div class="navbar__menu">
+HTML-RECTANGLE:                     <a href="../index.html" class="navbar__link">Home</a>
+HTML-RECTANGLE:           <div class="navbar-breadcrumb-container">
+HTML-RECTANGLE:               <a href="./index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
+HTML-RECTANGLE:       </nav>
+HTML-RECTANGLE-LABEL:</header>
+HTML-RECTANGLE-LABEL:<main>
+HTML-RECTANGLE:          <div class="container">
 HTML-RECTANGLE-NEXT:         <div class="sidebar">
 HTML-RECTANGLE-NEXT:             <h2>class Rectangle</h2>
 HTML-RECTANGLE-NEXT:             <ul>
@@ -388,9 +343,9 @@ HTML-RECTANGLE-NEXT:                     </details>
 HTML-RECTANGLE-NEXT:                 </li>
 HTML-RECTANGLE-NEXT:             </ul>
 HTML-RECTANGLE-NEXT:         </div>
-HTML-RECTANGLE-NEXT:         <div class="resizer" id="resizer"></div>
+HTML-RECTANGLE:              <div class="resizer" id="resizer"></div>
 HTML-RECTANGLE-NEXT:         <div class="content">
-HTML-RECTANGLE-NEXT:             <section class="hero section-container">
+HTML-RECTANGLE:                  <section class="hero section-container">
 HTML-RECTANGLE-NEXT:                 <div class="hero__title">
 HTML-RECTANGLE-NEXT:                     <h1 class="hero__title-large">class Rectangle</h1>
 HTML-RECTANGLE:                     <div class="doc-card">
@@ -403,7 +358,7 @@ HTML-RECTANGLE-NEXT:                         </div>
 HTML-RECTANGLE-NEXT:                     </div>
 HTML-RECTANGLE-NEXT:                 </div>
 HTML-RECTANGLE-NEXT:             </section>
-HTML-RECTANGLE-NEXT:             <section id="PublicMethods" class="section-container">
+HTML-RECTANGLE:                  <section id="PublicMethods" class="section-container">
 HTML-RECTANGLE-NEXT:                 <h2>Public Methods</h2>
 HTML-RECTANGLE-NEXT:                 <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 HTML-RECTANGLE-NEXT:                     <pre><code class="language-cpp code-clang-doc">void Rectangle (double width, double height)</code></pre>
@@ -443,48 +398,30 @@ HTML-RECTANGLE-NEXT:                             <h3>Returns</h3>
 HTML-RECTANGLE-NEXT:                             <p> double The perimeter of the rectangle.</p>
 HTML-RECTANGLE-NEXT:                         </div>
 HTML-RECTANGLE-NEXT:                     </div>
-HTML-RECTANGLE:                              </div>
-HTML-RECTANGLE-NEXT:             </section>
-HTML-RECTANGLE-NEXT:         </div>
-HTML-RECTANGLE-NEXT:     </div>
-HTML-RECTANGLE-NEXT: </main>
-HTML-RECTANGLE-NEXT: </body>
-HTML-RECTANGLE-NEXT: </html>
+HTML-RECTANGLE:                      </div>
+HTML-RECTANGLE:                  </section>
+HTML-RECTANGLE:          </div>
+HTML-RECTANGLE:      </main>
+HTML-RECTANGLE:      </body>
+HTML-RECTANGLE:      </html>
 
 
-HTML-CIRCLE: <!DOCTYPE html>
-HTML-CIRCLE-NEXT: <html lang="en-US">
-HTML-CIRCLE-NEXT: <head>
-HTML-CIRCLE-NEXT:     <meta charset="utf-8"/>
-HTML-CIRCLE-NEXT:     <title>Circle</title>
-HTML-CIRCLE-NEXT:         <link rel="stylesheet" type="text/css" href="../clang-doc-mustache.css"/>
-HTML-CIRCLE-NEXT:         <script src="../mustache-index.js"></script>
-HTML-CIRCLE-NEXT:     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
-HTML-CIRCLE-NEXT:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-HTML-CIRCLE-NEXT:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
-HTML-CIRCLE-NEXT: </head>
-HTML-CIRCLE-NEXT: <body>
+HTML-CIRCLE-LABEL:<html lang="en-US">
+HTML-CIRCLE-LABEL:<head>
+HTML-CIRCLE:      </head>
+HTML-CIRCLE-LABEL:<body>
 HTML-CIRCLE-NEXT: <header>
-HTML-CIRCLE-NEXT: <nav class="navbar">
-HTML-CIRCLE-NEXT:     <div class="navbar__container">
-HTML-CIRCLE-NEXT:             <div class="navbar__logo">
-HTML-CIRCLE-NEXT:                 {{^ +$}}
-HTML-CIRCLE-NEXT:             </div>
-HTML-CIRCLE-NEXT:         <div class="navbar__menu">
-HTML-CIRCLE-NEXT:             <ul class="navbar__links">
-HTML-CIRCLE-NEXT:                 <li class="navbar__item">
-HTML-CIRCLE-NEXT:                     <a href="../index.html" class="navbar__link">Home</a>
-HTML-CIRCLE-NEXT:                 </li>
-HTML-CIRCLE-NEXT:             </ul>
-HTML-CIRCLE-NEXT:         </div>
-HTML-CIRCLE-NEXT:     </div>
-HTML-CIRCLE-NEXT:     <div class="navbar-breadcrumb-container">
-HTML-CIRCLE-NEXT:         <a href="./index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
-HTML-CIRCLE-NEXT:     </div>
-HTML-CIRCLE-NEXT: </nav>
-HTML-CIRCLE-NEXT: </header>
-HTML-CIRCLE-NEXT: <main>
-HTML-CIRCLE-NEXT:     <div class="container">
+HTML-CIRCLE-LABEL: <nav class="navbar">
+HTML-CIRCLE:           <div class="navbar__container">
+HTML-CIRCLE:                  <div class="navbar__logo">
+HTML-CIRCLE:                  <div class="navbar__menu">
+HTML-CIRCLE:                     <a href="../index.html" class="navbar__link">Home</a>
+HTML-CIRCLE:           <div class="navbar-breadcrumb-container">
+HTML-CIRCLE:               <a href="./index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
+HTML-CIRCLE:       </nav>
+HTML-CIRCLE-LABEL:</header>
+HTML-CIRCLE-LABEL:<main>
+HTML-CIRCLE:          <div class="container">
 HTML-CIRCLE-NEXT:         <div class="sidebar">
 HTML-CIRCLE-NEXT:             <h2>class Circle</h2>
 HTML-CIRCLE-NEXT:             <ul>
@@ -508,7 +445,7 @@ HTML-CIRCLE-NEXT:                     </details>
 HTML-CIRCLE-NEXT:                 </li>
 HTML-CIRCLE-NEXT:             </ul>
 HTML-CIRCLE-NEXT:         </div>
-HTML-CIRCLE-NEXT:         <div class="resizer" id="resizer"></div>
+HTML-CIRCLE:              <div class="resizer" id="resizer"></div>
 HTML-CIRCLE-NEXT:         <div class="content">
 HTML-CIRCLE-NEXT:             <section class="hero section-container">
 HTML-CIRCLE-NEXT:                 <div class="hero__title">
@@ -523,9 +460,9 @@ HTML-CIRCLE-NEXT:                         </div>
 HTML-CIRCLE-NEXT:                     </div>
 HTML-CIRCLE-NEXT:                 </div>
 HTML-CIRCLE-NEXT:             </section>
-HTML-CIRCLE-NEXT:             <section id="PublicMethods" class="section-container">
+HTML-CIRCLE:                  <section id="PublicMethods" class="section-container">
 HTML-CIRCLE-NEXT:                 <h2>Public Methods</h2>
-HTML-CIRCLE-NEXT:                 <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+HTML-CIRCLE:                      <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 HTML-CIRCLE-NEXT:                     <pre><code class="language-cpp code-clang-doc">void Circle (double radius)</code></pre>
 HTML-CIRCLE-NEXT:                     <div class="doc-card">
 HTML-CIRCLE-NEXT:                         <div class="nested-delimiter-container">
@@ -570,9 +507,8 @@ HTML-CIRCLE-NEXT:                                 </pre>
 HTML-CIRCLE-NEXT:                             </div>
 HTML-CIRCLE-NEXT:                     </div>
 HTML-CIRCLE:                       </div>
-HTML-CIRCLE-NEXT:             </section>
-HTML-CIRCLE-NEXT:         </div>
-HTML-CIRCLE-NEXT:     </div>
-HTML-CIRCLE-NEXT: </main>
-HTML-CIRCLE-NEXT: </body>
-HTML-CIRCLE-NEXT: </html>
+HTML-CIRCLE:                  </section>
+HTML-CIRCLE:          </div>
+HTML-CIRCLE:      </main>
+HTML-CIRCLE:      </body>
+HTML-CIRCLE:      </html>
