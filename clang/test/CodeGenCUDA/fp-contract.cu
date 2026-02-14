@@ -268,8 +268,7 @@ __host__ __device__ float func2(float a, float b, float c) {
 // COMMON-LABEL: _Z5func3fff
 // NV-OPT-FAST: fma.rn.f32
 // NV-OPT-FAST-NEXT: st.param.b32
-// NV-OPT-FASTSTD: mul.rn.f32
-// NV-OPT-FASTSTD: add.rn.f32
+// NV-OPT-FASTSTD: fma.rn.f32
 // NV-OPT-FASTSTD-NEXT: st.param.b32
 // NV-OPT-ON: mul.rn.f32
 // NV-OPT-ON: add.rn.f32
@@ -278,8 +277,8 @@ __host__ __device__ float func2(float a, float b, float c) {
 // NV-OPT-OFF: add.rn.f32
 // NV-OPT-OFF-NEXT: st.param.b32
 
-// AMD-OPT-FAST-IR: fmul float
-// AMD-OPT-FAST-IR: fadd float
+// AMD-OPT-FAST-IR: fmul contract float
+// AMD-OPT-FAST-IR: fadd contract float
 // AMD-OPT-ON-IR: fmul float
 // AMD-OPT-ON-IR: fadd float
 // AMD-OPT-OFF-IR: fmul float
@@ -287,9 +286,8 @@ __host__ __device__ float func2(float a, float b, float c) {
 
 // AMD-OPT-FAST: v_fmac_f32_e32
 // AMD-OPT-FAST-NEXT: s_setpc_b64
-// AMD-OPT-FASTSTD: v_mul_f32_e32
-// AMD-OPT-FASTSTD-NEXT: v_add_f32_e32
-// AMD-OPT-FASTSTD-NEXT: s_setpc_b64
+// AMD-OPT-FASTSTD: v_fmac_f32_e32
+// AMD-OPT-FASTSTD: s_setpc_b64
 // AMD-OPT-ON: v_mul_f32_e32
 // AMD-OPT-ON-NEXT: v_add_f32_e32
 // AMD-OPT-ON-NEXT: s_setpc_b64
