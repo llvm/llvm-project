@@ -238,6 +238,7 @@ bool GIMatchTableExecutor::executeMatchTable(
 
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
       const int64_t Opcode = State.MIs[InsnID]->getOpcode();
+
       DEBUG_WITH_TYPE(TgtExecutor::getName(), {
         dbgs() << CurrentIdx << ": GIM_SwitchOpcode(MIs[" << InsnID << "], ["
                << LowerBound << ", " << UpperBound << "), Default=" << Default
