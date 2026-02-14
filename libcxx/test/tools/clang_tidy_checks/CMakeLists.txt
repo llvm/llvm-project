@@ -97,6 +97,7 @@ set(SOURCES
     proper_version_checks.cpp
     robust_against_adl.cpp
     robust_against_operator_ampersand.cpp
+    static_in_constexpr.cpp
     uglify_attributes.cpp
 
     libcpp_module.cpp
