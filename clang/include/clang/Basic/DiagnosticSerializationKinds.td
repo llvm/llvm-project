@@ -29,9 +29,9 @@ def note_ast_file_rebuild_required
     : Note<"please rebuild precompiled file '%0'">;
 def note_module_cache_path : Note<
     "after modifying system headers, please delete the module cache at '%0'">;
-def note_ast_file_input_files_validation_status : Note<"input file validation "
-    "%select{has not been started|was disabled for this kind of precompiled file|"
-    "has already been done in the current build session|"
+def note_ast_file_input_files_validation_status : Note<"earlier input file validation "
+    "%select{was not performed|was disabled for this kind of precompiled file|"
+    "was skipped for the current build session|"
     "has covered only user files|has covered all files}0">;
 
 def err_ast_file_targetopt_mismatch : Error<
