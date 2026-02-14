@@ -181,6 +181,14 @@ public:
     bool hasArg() const {
       return Type == isInput || (Type == isOutput && isIndirect);
     }
+
+    /// hasRegMemConstraints - Returns true if and only if the constraint
+    /// codes are "rm". This is useful when converting between a register form
+    /// to a memory form.
+    bool hasRegMemConstraints() const {
+      return Codes.size() == 2 && is_contained(Codes, "r") &&
+             is_contained(Codes, "m");
+    }
   };
 
   /// ParseConstraints - Split up the constraint string into the specific
