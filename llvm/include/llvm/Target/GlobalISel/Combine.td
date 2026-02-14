@@ -1887,7 +1887,7 @@ def APlusBPlusCMinusB : GICombineRule<
          (G_SUB $root, $add2, $B),
              [{ return MRI.hasOneNonDBGUse(${add1}.getReg()) &&
                        MRI.hasOneNonDBGUse(${add2}.getReg()); }]),
-  (apply (G_ADD $root, $x, $n))>;
+  (apply (G_ADD $root, $A, $C))>;
 
 // fold ((A-(B-C))-C) -> A-B
 def AMinusBMinusCMinusC : GICombineRule<
