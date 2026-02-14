@@ -12,6 +12,7 @@
                 </li>
             </ul>
         </div>
+        <button id="theme-toggle"><span class="material-symbols-rounded">routine</span></button>
     </div>
     {{#HasContexts}}
     <div class="navbar-breadcrumb-container">
@@ -21,3 +22,53 @@
     </div>
     {{/HasContexts}}
 </nav>
+<script>
+    const root = document.documentElement;
+    const toggle = document.getElementById("theme-toggle");
+    const hlLight = document.getElementById("hljs-light-theme");
+    const hlDark = document.getElementById("hljs-dark-theme");
+
+    function changeHighlightJS(theme) {
+      if (theme === "dark") {
+        hlDark.disabled = false;
+        hlLight.disabled = true;
+      } else {
+        hlDark.disabled = true;
+        hlLight.disabled = false;
+      }
+    }
+
+    // Listen to system theme changes.
+    // If the user manually toggles the theme, the theme wont change according
+    // to system changes.
+    const themeQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    themeQuery.addEventListener("change", (event) => {
+      if (savedTheme === null) {
+        return;
+      } else if (event.matches) {
+        changeHighlightJS("dark");
+      } else {
+        changeHighlightJS("light");
+      }
+    });
+
+    toggle.onclick = () => {
+      const currentTheme = root.getAttribute("color-scheme");
+      const next = currentTheme === "dark" ? "light" : "dark";
+      changeHighlightJS(next);
+      root.setAttribute("color-scheme", next);
+      localStorage.setItem("theme", next);
+    };
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const savedTheme = localStorage.getItem("theme");
+      const currentTheme = root.getAttribute("color-scheme");
+      if (savedTheme !== null) {
+        root.setAttribute("color-scheme", savedTheme);
+        changeHighlightJS(savedTheme);
+      } else {
+        root.setAttribute("color-scheme", currentTheme);
+        changeHighlightJS(currentTheme);
+      }
+    });
+</script>
