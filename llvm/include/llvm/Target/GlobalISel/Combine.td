@@ -2016,20 +2016,20 @@ def AMinusC1PlusC2: GICombineRule<
 def integer_reassoc_combines: GICombineGroup<[
   APlusBMinusCMinusB,
   APlusBPlusCMinusB,
-  // AMinusBMinusCMinusC,
-  // ZeroMinusAPlusB,
-  // APlusZeroMinusB,
-  // APlusBMinusB,
-  // BMinusAPlusA,
-  // AMinusBPlusCMinusA,
-  // AMinusBPlusBMinusC,
-  // APlusBMinusAplusC,
-  // APlusBMinusCPlusA,
-  // APlusC1MinusC2,
-  // C2MinusAPlusC1,
-  // AMinusC1MinusC2,
-  // C1Minus2MinusC2,
-  // AMinusC1PlusC2
+  AMinusBMinusCMinusC,
+  ZeroMinusAPlusB,
+  APlusZeroMinusB,
+  APlusBMinusB,
+  BMinusAPlusA,
+  AMinusBPlusCMinusA,
+  AMinusBPlusBMinusC,
+  APlusBMinusAplusC,
+  APlusBMinusCPlusA,
+  APlusC1MinusC2,
+  C2MinusAPlusC1,
+  AMinusC1MinusC2,
+  C1Minus2MinusC2,
+  AMinusC1PlusC2
 ]>;
 
 // fold (A+(shl (0-B), C)) -> (A-(shl B, C))
