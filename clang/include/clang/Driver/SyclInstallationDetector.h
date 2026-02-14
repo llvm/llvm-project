@@ -21,6 +21,14 @@ public:
 
   void addSYCLIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                           llvm::opt::ArgStringList &CC1Args) const;
+
+  // Return the filesystem path to the SYCL runtime library (libsycl.so), that
+  // was detected.
+  StringRef getSYCLRTLibPath() const { return SYCLRTLibPath; }
+
+private:
+  const Driver &D;
+  SmallString<0> SYCLRTLibPath;
 };
 
 } // namespace driver
