@@ -37,8 +37,8 @@ TEST_F(ObjectFileMachOTest, ModuleFromSharedCacheInfo) {
 
   Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
 
-  SharedCacheImageInfo image_info =
-      HostInfo::GetSharedCacheImageInfo("/usr/lib/libobjc.A.dylib");
+  SharedCacheImageInfo image_info = HostInfo::GetSharedCacheImageInfo(
+      "/usr/lib/libobjc.A.dylib", lldb::eSymbolSharedCacheUseHostSharedCache);
   EXPECT_TRUE(image_info.GetUUID());
   EXPECT_TRUE(image_info.GetExtractor());
 
@@ -86,7 +86,8 @@ TEST_F(ObjectFileMachOTest, ModuleFromSharedCacheInfo) {
 
 TEST_F(ObjectFileMachOTest, IndirectSymbolsInTheSharedCache) {
   SharedCacheImageInfo image_info = HostInfo::GetSharedCacheImageInfo(
-      "/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit");
+      "/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit",
+      lldb::eSymbolSharedCacheUseHostSharedCache);
   ModuleSpec spec(FileSpec(), UUID(), image_info.GetExtractor());
   lldb::ModuleSP module = std::make_shared<Module>(spec);
 

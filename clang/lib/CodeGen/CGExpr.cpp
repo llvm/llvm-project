@@ -1706,14 +1706,6 @@ LValue CodeGenFunction::EmitLValue(const Expr *E,
   return LV;
 }
 
-static QualType getConstantExprReferredType(const FullExpr *E,
-                                            const ASTContext &Ctx) {
-  const Expr *SE = E->getSubExpr()->IgnoreImplicit();
-  if (isa<OpaqueValueExpr>(SE))
-    return SE->getType();
-  return cast<CallExpr>(SE)->getCallReturnType(Ctx)->getPointeeType();
-}
-
 LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
                                          KnownNonNull_t IsKnownNonNull) {
   ApplyDebugLocation DL(*this, E);
@@ -1751,10 +1743,8 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
     return EmitDeclRefLValue(cast<DeclRefExpr>(E));
   case Expr::ConstantExprClass: {
     const ConstantExpr *CE = cast<ConstantExpr>(E);
-    if (llvm::Value *Result = ConstantEmitter(*this).tryEmitConstantExpr(CE)) {
-      QualType RetType = getConstantExprReferredType(CE, getContext());
-      return MakeNaturalAlignAddrLValue(Result, RetType);
-    }
+    if (llvm::Value *Result = ConstantEmitter(*this).tryEmitConstantExpr(CE))
+      return MakeNaturalAlignPointeeAddrLValue(Result, CE->getType());
     return EmitLValue(cast<ConstantExpr>(E)->getSubExpr(), IsKnownNonNull);
   }
   case Expr::ParenExprClass:
@@ -4448,12 +4438,6 @@ void CodeGenFunction::EmitUnreachable(SourceLocation Loc) {
 void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
                                     SanitizerHandler CheckHandlerID,
                                     bool NoMerge, const TrapReason *TR) {
-  if (CGM.getCodeGenOpts().SanitizeTrapLoop) {
-    Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::cond_loop),
-                       Builder.CreateNot(Checked));
-    return;
-  }
-
   llvm::BasicBlock *Cont = createBasicBlock("cont");
 
   // If we're optimizing, collapse all calls to trap down to just one per
@@ -4505,9 +4489,14 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
 
     ApplyDebugLocation applyTrapDI(*this, TrapLocation);
 
-    llvm::CallInst *TrapCall =
-        Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::ubsantrap),
-                           llvm::ConstantInt::get(CGM.Int8Ty, CheckHandlerID));
+    llvm::CallInst *TrapCall;
+    if (CGM.getCodeGenOpts().SanitizeTrapLoop)
+      TrapCall =
+          Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::looptrap));
+    else
+      TrapCall = Builder.CreateCall(
+          CGM.getIntrinsic(llvm::Intrinsic::ubsantrap),
+          llvm::ConstantInt::get(CGM.Int8Ty, CheckHandlerID));
 
     if (!CGM.getCodeGenOpts().TrapFuncName.empty()) {
       auto A = llvm::Attribute::get(getLLVMContext(), "trap-func-name",

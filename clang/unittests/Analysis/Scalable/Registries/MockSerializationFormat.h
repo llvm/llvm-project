@@ -12,13 +12,11 @@
 #include "clang/Analysis/Scalable/Model/SummaryName.h"
 #include "clang/Analysis/Scalable/Serialization/SerializationFormat.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
-#include "llvm/Support/ExtensibleRTTI.h"
 #include <string>
 
 namespace clang::ssaf {
 
-class MockSerializationFormat final
-    : public llvm::RTTIExtends<MockSerializationFormat, SerializationFormat> {
+class MockSerializationFormat final : public SerializationFormat {
 public:
   MockSerializationFormat();
 
