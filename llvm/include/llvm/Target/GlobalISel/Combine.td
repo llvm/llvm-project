@@ -1883,8 +1883,8 @@ def APlusBMinusCMinusB : GICombineRule<
 def APlusBPlusCMinusB : GICombineRule<
   (defs root:$root),
   (match (G_ADD $add1, $B, $C),
-          (G_ADD $add2, $A, $add1),
-          (G_SUB $root, $add2, $B),
+         (G_ADD $add2, $A, $add1),
+         (G_SUB $root, $add2, $B),
              [{ return MRI.hasOneNonDBGUse(${add1}.getReg()) &&
                        MRI.hasOneNonDBGUse(${add2}.getReg()); }]),
   (apply (G_ADD $root, $x, $n))>;
