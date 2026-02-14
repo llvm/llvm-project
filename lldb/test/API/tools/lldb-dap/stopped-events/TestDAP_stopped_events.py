@@ -14,9 +14,9 @@ class TestDAP_stopped_events(lldbdap_testcase.DAPTestCaseBase):
 
     ANY_THREAD = {}
 
-    def matches(self, a: dict, b: dict) -> bool:
-        """Returns true if 'b' is a subset of 'a', otherwise false."""
-        return a | b == a
+    def is_subdict(self, small: dict, big: dict) -> bool:
+        """Returns true if 'small' is a subset of 'big', otherwise false."""
+        return big | small == big
 
     def verify_threads(self, expected_threads):
         threads_resp = self.dap_server.request_threads()
@@ -26,7 +26,7 @@ class TestDAP_stopped_events(lldbdap_testcase.DAPTestCaseBase):
         for idx, expected_thread in enumerate(expected_threads):
             thread = threads[idx]
             self.assertTrue(
-                self.matches(thread, expected_thread),
+                self.is_subdict(thread, expected_thread),
                 f"Invalid thread state in {threads_resp}",
             )
 
