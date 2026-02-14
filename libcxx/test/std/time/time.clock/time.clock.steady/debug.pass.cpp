@@ -46,16 +46,16 @@ static steady_clock::time_point __libcpp_steady_clock_now() {
   auto seconds   = counter.QuadPart / freq.QuadPart;
   auto fractions = counter.QuadPart % freq.QuadPart;
   auto dur       = seconds * nano::den + fractions * nano::den / freq.QuadPart;
-  std::cout << "counter.QuadPart: " << counter.QuadPart << ", freq.QuadPart: " << freq.QuadPart
+  std::cerr << "counter.QuadPart: " << counter.QuadPart << ", freq.QuadPart: " << freq.QuadPart
             << "\n seconds: " << seconds << ", fractions: " << fractions << "\n nano::den: " << nano::den
             << ", dur: " << dur << std::endl;
-  return steady_clock::time_point(steady_clock::duration(dur));
+  return std::steady_clock::time_point(steady_clock::duration(dur));
 }
 
 int main(int, char**) {
   int iteration = 100;
   for (int i = 0; i < iteration; ++i) {
-    std::cout << "Iteration: " << i << std::endl;
+    std::cerr << "Iteration: " << i << std::endl;
     auto t1 = __libcpp_steady_clock_now();
     auto t2 = __libcpp_steady_clock_now();
     assert(t2 >= t1);
