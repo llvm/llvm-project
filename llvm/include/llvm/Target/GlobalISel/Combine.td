@@ -1892,7 +1892,11 @@ def APlusBPlusCMinusB_frags : GICombinePatFrag<
 
 def APlusBPlusCMinusB : GICombineRule<
   (defs root:$root),
-  (match (APlusBPlusCMinusB_frags $root, $x, $y, $n)),
+  (match (G_ADD $add1, $B, $C),
+          (G_ADD $add2, $A, $add1),
+          (G_SUB $root, $add2, $B),
+             [{ return MRI.hasOneNonDBGUse(${add1}.getReg()) &&
+                       MRI.hasOneNonDBGUse(${add2}.getReg()); }]),
   (apply (G_ADD $root, $x, $n))>;
 
 // fold ((A-(B-C))-C) -> A-B
