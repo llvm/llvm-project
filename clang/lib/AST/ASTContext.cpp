@@ -1640,22 +1640,26 @@ ASTContext::findPointerAuthContent(QualType T) const {
 
   T = T.getCanonicalType();
   if (T->isDependentType())
-    return PointerAuthContent::None;
+    return PointerAuthContent::ContainsNone;
 
+  PointerAuthContent Result = PointerAuthContent::ContainsNone;
   if (T.hasAddressDiscriminatedPointerAuth())
-    return PointerAuthContent::AddressDiscriminatedData;
+    Result = Result | PointerAuthContent::ContainsAddressDiscriminatedData;
+  if (T->isFunctionPointerType()) {
+    PointerAuthQualifier ExplicitQualifier = T.getPointerAuth();
+    if (!ExplicitQualifier.isPresent() || !ExplicitQualifier.isAddressDiscriminated())
+      Result = Result | PointerAuthContent::ContainsDefaultAuthenticatedFunction;
+  }
   const RecordDecl *RD = T->getAsRecordDecl();
   if (!RD)
-    return PointerAuthContent::None;
+    return Result;
 
   if (RD->isInvalidDecl())
-    return PointerAuthContent::None;
+    return PointerAuthContent::ContainsNone;
 
   if (auto Existing = RecordContainsAddressDiscriminatedPointerAuth.find(RD);
       Existing != RecordContainsAddressDiscriminatedPointerAuth.end())
     return Existing->second;
-
-  PointerAuthContent Result = PointerAuthContent::None;
 
   auto SaveResultAndReturn = [&]() -> PointerAuthContent {
     auto [ResultIter, DidAdd] =
@@ -1665,19 +1669,16 @@ ASTContext::findPointerAuthContent(QualType T) const {
     assert(DidAdd);
     return Result;
   };
-  auto ShouldContinueAfterUpdate = [&](PointerAuthContent NewResult) {
-    static_assert(PointerAuthContent::None <
-                  PointerAuthContent::AddressDiscriminatedVTable);
-    static_assert(PointerAuthContent::AddressDiscriminatedVTable <
-                  PointerAuthContent::AddressDiscriminatedData);
-    if (NewResult > Result)
-      Result = NewResult;
-    return Result != PointerAuthContent::AddressDiscriminatedData;
+  auto ShouldContinueAfterUpdate = [&](PointerAuthContent NewFlag) {
+    Result = Result | NewFlag;
+    if ((NewFlag & PointerAuthContent::ContainsAddressDiscriminatedVTable) != PointerAuthContent::ContainsNone)
+      Result = Result | PointerAuthContent::ContainsAddressDiscriminatedData;
+    return Result != PointerAuthContent::ContainsAllFlags;
   };
   if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
     if (primaryBaseHaseAddressDiscriminatedVTableAuthentication(*this, CXXRD) &&
         !ShouldContinueAfterUpdate(
-            PointerAuthContent::AddressDiscriminatedVTable))
+            PointerAuthContent::ContainsAddressDiscriminatedVTable))
       return SaveResultAndReturn();
     for (auto Base : CXXRD->bases()) {
       if (!ShouldContinueAfterUpdate(findPointerAuthContent(Base.getType())))
