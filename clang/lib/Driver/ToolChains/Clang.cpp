@@ -6181,7 +6181,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Arg *A = Args.getLastArg(options::OPT_fbasic_block_address_map,
                                options::OPT_fno_basic_block_address_map)) {
-    if ((Triple.isX86() || Triple.isAArch64()) && Triple.isOSBinFormatELF()) {
+    if ((Triple.isX86() || Triple.isAArch64() || Triple.isRISCV()) && Triple.isOSBinFormatELF()) {
       if (A->getOption().matches(options::OPT_fbasic_block_address_map))
         A->render(Args, CmdArgs);
     } else {
@@ -6206,6 +6206,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     } else if (Triple.isAArch64() && Triple.isOSBinFormatELF()) {
       // "all" is not supported on AArch64 since branch relaxation creates new
       // basic blocks for some cross-section branches.
+      if (Val != "labels" && Val != "none" && !Val.starts_with("list="))
+        D.Diag(diag::err_drv_invalid_value)
+            << A->getAsString(Args) << A->getValue();
+      else
+        A->render(Args, CmdArgs);
+    } else if (Triple.isRISCV() && Triple.isOSBinFormatELF()) {
+      // Add RISC-V support for basic block sections
       if (Val != "labels" && Val != "none" && !Val.starts_with("list="))
         D.Diag(diag::err_drv_invalid_value)
             << A->getAsString(Args) << A->getValue();
