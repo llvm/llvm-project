@@ -581,8 +581,11 @@ KernelLaunchParamsTy GenericKernelTy::prepareArgs(
   }
 
   for (uint32_t I = KLEOffset; I < NumArgs; ++I) {
-    Args[I] =
-        (void *)((intptr_t)ArgPtrs[I - KLEOffset] + ArgOffsets[I - KLEOffset]);
+    if (ArgOffsets == nullptr)
+      Args[I] = ArgPtrs[I - KLEOffset];
+    else
+      Args[I] = (void *)((intptr_t)ArgPtrs[I - KLEOffset] +
+                         ArgOffsets[I - KLEOffset]);
     Ptrs[I] = &Args[I];
   }
   return KernelLaunchParamsTy{sizeof(void *) * NumArgs, &Args[0], &Ptrs[0]};

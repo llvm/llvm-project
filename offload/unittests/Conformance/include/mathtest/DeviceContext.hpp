@@ -126,8 +126,9 @@ private:
                   llvm::StringRef KernelName) const noexcept;
 
   void launchKernelImpl(ol_symbol_handle_t KernelHandle, uint32_t NumGroups,
-                        uint32_t GroupSize, const void *KernelArgs,
-                        std::size_t KernelArgsSize) const noexcept;
+                        uint32_t GroupSize, const void **KernelArgs,
+                        const int64_t *KernelArgsSizes,
+                        std::size_t KernelArgsNum) const noexcept;
 
   std::size_t GlobalDeviceId;
   ol_device_handle_t DeviceHandle;
