@@ -64,10 +64,6 @@ Semantic Highlighting
 Compile flags
 ^^^^^^^^^^^^^
 
-- There are a new pair of flags for riscv32 called ``-mzilsd-4byte-align`` and
-  ``-mzilsd-4byte-align`` which control whether Zilsd accesses are allowed to be
-  aligned to 4-bytes rather than fully unaligned or fully (8-byte) aligned.
-
 Hover
 ^^^^^
 
