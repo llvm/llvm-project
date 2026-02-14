@@ -618,6 +618,7 @@ def LaunchIndx : AnyTypeOf<[Index, I32, I64]>;
 
 def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
       GPU_AsyncOpInterface, AttrSizedOperandSegments,
+      DeclareOpInterfaceMethods<SymbolUserOpInterface>,
       AllTypesMatch<["gridSizeX", "gridSizeY", "gridSizeZ", "blockSizeX",
                      "blockSizeY", "blockSizeZ"]>]>,
     Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
