@@ -33,28 +33,28 @@ func.func @permute() {
 
 // CHECK-LABEL: func @alloca
 func.func @alloca(%idx : index) {
-  // CHECK-NEXT: memref.alloca() : memref<65xf32>
+  // CHECK-NEXT: memref.alloca() : memref<64xf32, #map>
   %A = memref.alloca() : memref<64xf32, affine_map<(d0) -> (d0 + 1)>>
-  // CHECK-NEXT: affine.load %{{.*}}[symbol(%arg0) + 1] : memref<65xf32>
+  // CHECK-NEXT: affine.load %{{.*}}[%arg0] : memref<64xf32, #map>
   affine.load %A[%idx] : memref<64xf32, affine_map<(d0) -> (d0 + 1)>>
   affine.for %i = 0 to 64 {
     %1 = affine.load %A[%i] : memref<64xf32, affine_map<(d0) -> (d0 + 1)>>
     "prevent.dce"(%1) : (f32) -> ()
-    // CHECK: %{{.*}} = affine.load %{{.*}}[%arg{{.*}} + 1] : memref<65xf32>
+    // CHECK: %{{.*}} = affine.load %{{.*}}[%arg{{.*}}] : memref<64xf32, #map>
   }
   return
 }
 
 // CHECK-LABEL: func @shift
 func.func @shift(%idx : index) {
-  // CHECK-NEXT: memref.alloc() : memref<65xf32>
+  // CHECK-NEXT: memref.alloc() : memref<64xf32, #map>
   %A = memref.alloc() : memref<64xf32, affine_map<(d0) -> (d0 + 1)>>
-  // CHECK-NEXT: affine.load %{{.*}}[symbol(%arg0) + 1] : memref<65xf32>
+  // CHECK-NEXT: affine.load %{{.*}}[%arg0] : memref<64xf32, #map>
   affine.load %A[%idx] : memref<64xf32, affine_map<(d0) -> (d0 + 1)>>
   affine.for %i = 0 to 64 {
     %1 = affine.load %A[%i] : memref<64xf32, affine_map<(d0) -> (d0 + 1)>>
     "prevent.dce"(%1) : (f32) -> ()
-    // CHECK: %{{.*}} = affine.load %{{.*}}[%arg{{.*}} + 1] : memref<65xf32>
+    // CHECK: %{{.*}} = affine.load %{{.*}}[%arg{{.*}}] : memref<64xf32, #map>
   }
   return
 }
@@ -120,7 +120,7 @@ func.func @strided_cumulative() {
   affine.for %i = 0 to 2 {
     // CHECK: affine.for %[[IV1:.*]] =
     affine.for %j = 0 to 5 {
-      // CHECK: affine.load %{{.*}}[%[[IV0]] * 3 + %[[IV1]] * 17] : memref<72xf32>
+      // CHECK: affine.load %{{.*}}[%[[IV0]], %[[IV1]]] : memref<2x5xf32, #map3>
       %1 = affine.load %A[%i, %j]  : memref<2x5xf32, affine_map<(d0, d1) -> (3*d0 + 17*d1)>>
       "prevent.dce"(%1) : (f32) -> ()
     }
