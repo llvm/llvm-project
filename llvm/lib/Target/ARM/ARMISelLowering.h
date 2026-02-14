@@ -221,6 +221,8 @@ class VectorType;
                                        const SelectionDAG &DAG,
                                        unsigned Depth) const override;
 
+    bool isTargetCanonicalConstantNode(SDValue Op) const override;
+
     bool targetShrinkDemandedConstant(SDValue Op, const APInt &DemandedBits,
                                       const APInt &DemandedElts,
                                       TargetLoweringOpt &TLO) const override;
