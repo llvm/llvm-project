@@ -287,6 +287,8 @@ Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a bug where explicit nullability property attributes were not stored in AST nodes in Objective-C. (#GH179703)
 
+- Fixed assertion crash in bytecode interpreter when checking initialization of
+  constexpr pointer arrays with GlobalInlineDescriptor. (#GH175432)
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed the arguments of the format attribute on ``__builtin_os_log_format``.  Previously, they were off by 1.
