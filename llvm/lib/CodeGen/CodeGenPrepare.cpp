@@ -583,7 +583,7 @@ bool CodeGenPrepare::_run(Function &F) {
   if (BBSectionsGuidedSectionPrefix && BBSectionsProfileReader &&
       BBSectionsProfileReader->isFunctionHot(F.getName())) {
     (void)F.setSectionPrefix("hot");
-  } else if (ProfileGuidedSectionPrefix) {
+  } else if (ProfileGuidedSectionPrefix && PSI) {
     // The hot attribute overwrites profile count based hotness while profile
     // counts based hotness overwrite the cold attribute.
     // This is a conservative behabvior.
@@ -603,7 +603,8 @@ bool CodeGenPrepare::_run(Function &F) {
 
   /// This optimization identifies DIV instructions that can be
   /// profitably bypassed and carried out with a shorter, faster divide.
-  if (!OptSize && !PSI->hasHugeWorkingSetSize() && TLI->isSlowDivBypassed()) {
+  if (!OptSize && PSI && !PSI->hasHugeWorkingSetSize() &&
+      TLI->isSlowDivBypassed()) {
     const DenseMap<unsigned int, unsigned int> &BypassWidths =
         TLI->getBypassSlowDivWidths();
     BasicBlock *BB = &*F.begin();
