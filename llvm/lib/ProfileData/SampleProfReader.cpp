@@ -945,13 +945,15 @@ bool SampleProfileReaderExtBinaryBase::useFuncOffsetList() const {
 
 std::error_code
 SampleProfileReaderExtBinaryBase::read(const DenseSet<StringRef> &FuncsToUse,
-                                       SampleProfileMap &Profiles) {
+                                       SampleProfileMap &Profiles,
+                                       bool IgnoreRemapper) {
   if (FuncsToUse.empty())
     return sampleprof_error::success;
 
   Data = ProfileSecRange.first;
   End = ProfileSecRange.second;
-  if (std::error_code EC = readFuncProfiles(FuncsToUse, Profiles))
+  if (std::error_code EC =
+          readFuncProfiles(FuncsToUse, Profiles, IgnoreRemapper))
     return EC;
   End = Data;
   DenseSet<FunctionSamples *> ProfilesToReadMetadata;
@@ -1014,10 +1016,11 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncOffsetTable() {
 }
 
 std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
-    const DenseSet<StringRef> &FuncsToUse, SampleProfileMap &Profiles) {
+    const DenseSet<StringRef> &FuncsToUse, SampleProfileMap &Profiles,
+    bool IgnoreRemapper) {
   const uint8_t *Start = Data;
 
-  if (Remapper) {
+  if (Remapper && !IgnoreRemapper) {
     for (auto Name : FuncsToUse) {
       Remapper->insert(Name);
     }
@@ -1050,8 +1053,9 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
       // context. This can be used to load itself and its child and
       // sibling contexts.
       if ((useMD5() && FuncGuidsToUse.count(FName.getHashCode())) ||
-          (!useMD5() && (FuncsToUse.count(FNameString) ||
-                         (Remapper && Remapper->exist(FNameString))))) {
+          (!useMD5() &&
+           (FuncsToUse.count(FNameString) ||
+            (Remapper && !IgnoreRemapper && Remapper->exist(FNameString))))) {
         if (!CommonContext || !CommonContext->isPrefixOf(FContext))
           CommonContext = &FContext;
       }
@@ -1082,8 +1086,10 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
       SampleContext FContext(NameOffset.first);
       auto FuncName = FContext.getFunction();
       StringRef FuncNameStr = FuncName.stringRef();
-      if (!FuncsToUse.count(FuncNameStr) && !Remapper->exist(FuncNameStr))
+      if (!FuncsToUse.count(FuncNameStr) &&
+          (IgnoreRemapper || !Remapper->exist(FuncNameStr)))
         continue;
+
       const uint8_t *FuncProfileAddr = Start + NameOffset.second;
       if (std::error_code EC = readFuncProfile(FuncProfileAddr, Profiles))
         return EC;
