@@ -961,10 +961,10 @@ namespace cwg460 { // cwg460: 2.7
     // expected-error@-1 {{using declaration requires a qualified name}}
     using cwg460::X;
     // expected-error@-1 {{using declaration cannot refer to a namespace}}
-    // expected-note@-2 {{did you mean 'using namespace'?}}
+    //   expected-note@-2 {{did you mean 'using namespace'?}}
     using X::Q;
     // expected-error@-1 {{using declaration cannot refer to a namespace}}
-    // expected-note@-2 {{did you mean 'using namespace'?}}
+    //   expected-note@-2 {{did you mean 'using namespace'?}}
   }
 } // namespace cwg460
 

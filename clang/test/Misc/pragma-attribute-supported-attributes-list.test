@@ -130,6 +130,7 @@
 // CHECK-NEXT: NoMerge (SubjectMatchRule_function, SubjectMatchRule_variable)
 // CHECK-NEXT: NoMicroMips (SubjectMatchRule_function)
 // CHECK-NEXT: NoMips16 (SubjectMatchRule_function)
+// CHECK-NEXT: NoOutline (SubjectMatchRule_function, SubjectMatchRule_objc_method, SubjectMatchRule_block)
 // CHECK-NEXT: NoProfileFunction (SubjectMatchRule_function)
 // CHECK-NEXT: NoRandomizeLayout (SubjectMatchRule_record)
 // CHECK-NEXT: NoSanitize (SubjectMatchRule_function, SubjectMatchRule_objc_method, SubjectMatchRule_variable_is_global)
