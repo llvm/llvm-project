@@ -679,7 +679,7 @@ multiclass VWMAC_MV_V_X<string opcodestr, bits<6> funct6>
                          "ReadVIWMulAddV">;
 }
 
-multiclass VALU_MV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1> {
+multiclass VEXT_MV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1> {
   def "" : VALUVs2<funct6, vs1, OPMVV, opcodestr>,
            SchedUnaryMC<"WriteVExtV", "ReadVExtV">;
 }
@@ -1215,12 +1215,12 @@ def : InstAlias<"vwcvtu.x.x.v $vd, $vs",
                 (VWADDU_VX VR:$vd, VR:$vs, X0, zero_reg)>;
 
 // Vector Integer Extension
-defm VZEXT_VF8 : VALU_MV_VS2<"vzext.vf8", 0b010010, 0b00010>;
-defm VSEXT_VF8 : VALU_MV_VS2<"vsext.vf8", 0b010010, 0b00011>;
-defm VZEXT_VF4 : VALU_MV_VS2<"vzext.vf4", 0b010010, 0b00100>;
-defm VSEXT_VF4 : VALU_MV_VS2<"vsext.vf4", 0b010010, 0b00101>;
-defm VZEXT_VF2 : VALU_MV_VS2<"vzext.vf2", 0b010010, 0b00110>;
-defm VSEXT_VF2 : VALU_MV_VS2<"vsext.vf2", 0b010010, 0b00111>;
+defm VZEXT_VF8 : VEXT_MV_VS2<"vzext.vf8", 0b010010, 0b00010>;
+defm VSEXT_VF8 : VEXT_MV_VS2<"vsext.vf8", 0b010010, 0b00011>;
+defm VZEXT_VF4 : VEXT_MV_VS2<"vzext.vf4", 0b010010, 0b00100>;
+defm VSEXT_VF4 : VEXT_MV_VS2<"vsext.vf4", 0b010010, 0b00101>;
+defm VZEXT_VF2 : VEXT_MV_VS2<"vzext.vf2", 0b010010, 0b00110>;
+defm VSEXT_VF2 : VEXT_MV_VS2<"vsext.vf2", 0b010010, 0b00111>;
 
 // Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
 defm VADC_V : VALUm_IV_V_X_I<"vadc", 0b010000>;
