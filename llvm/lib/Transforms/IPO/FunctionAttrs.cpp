@@ -1909,7 +1909,6 @@ static bool InstrBreaksNoFree(Instruction &I, const SCCNodeSet &SCCNodes) {
   return true;
 }
 
-
 static bool InstrBreaksNoSync(Instruction &I, const SCCNodeSet &SCCNodes) {
   // Volatile may synchronize
   if (I.isVolatile())
