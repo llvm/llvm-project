@@ -1571,7 +1571,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   // Simplify unrolled VectorPointer without offset, or with zero offset, to
   // just the pointer operand.
   if (auto *VPR = dyn_cast<VPVectorPointerRecipe>(Def))
-    if (!VPR->getOffset() || match(VPR->getOffset(), m_ZeroInt()))
+    if (!VPR->getVFxPart() || match(VPR->getVFxPart(), m_ZeroInt()))
       return VPR->replaceAllUsesWith(VPR->getOperand(0));
 
   // VPScalarIVSteps after unrolling can be replaced by their start value, if
@@ -3025,6 +3025,19 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
         TypeInfo.inferScalarType(LoadR), {}, {}, DL);
   }
 
+  VPValue *Stride;
+  if (match(&CurRecipe, m_Intrinsic<Intrinsic::experimental_vp_strided_load>(
+                            m_VPValue(Addr), m_VPValue(Stride),
+                            m_RemoveMask(HeaderMask, Mask),
+                            m_TruncOrSelf(m_Specific(&Plan->getVF()))))) {
+    auto *I = cast<VPWidenIntrinsicRecipe>(&CurRecipe);
+    if (!Mask)
+      Mask = Plan->getTrue();
+    return new VPWidenMemIntrinsicRecipe(
+        *cast<LoadInst>(I->getUnderlyingInstr()), {Addr, Stride, Mask, &EVL},
+        *I, I->getDebugLoc());
+  }
+
   VPValue *StoredVal;
   if (match(&CurRecipe, m_MaskedStore(m_VPValue(Addr), m_VPValue(StoredVal),
                                       m_RemoveMask(HeaderMask, Mask))) &&
@@ -3128,8 +3141,16 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
   assert(all_of(Plan.getVF().users(),
-                IsaPred<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
-                        VPWidenIntOrFpInductionRecipe>) &&
+                [&Plan](VPUser *U) {
+                  auto IsAllowedUser =
+                      IsaPred<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
+                              VPWidenIntOrFpInductionRecipe,
+                              VPWidenMemIntrinsicRecipe>;
+                  if (match(U, m_Trunc(m_Specific(&Plan.getVF()))))
+                    return all_of(cast<VPSingleDefRecipe>(U)->users(),
+                                  IsAllowedUser);
+                  return IsAllowedUser(U);
+                }) &&
          "User of VF that we can't transform to EVL.");
   Plan.getVF().replaceUsesWithIf(&EVL, [](VPUser &U, unsigned Idx) {
     return isa<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe>(U);
@@ -5109,6 +5130,10 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
     auto *ExpSCEV = dyn_cast<VPExpandSCEVRecipe>(&R);
     if (!ExpSCEV)
       break;
+    if (ExpSCEV->getNumUsers() == 0) {
+      ExpSCEV->eraseFromParent();
+      continue;
+    }
     const SCEV *Expr = ExpSCEV->getSCEV();
     Value *Res =
         Expander.expandCodeFor(Expr, Expr->getType(), EntryBB->getTerminator());
@@ -6113,5 +6138,109 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
     RecurKind RK = cast<VPReductionPHIRecipe>(Phi)->getRecurrenceKind();
     for (const VPPartialReductionChain &Chain : Chains)
       transformToPartialReduction(Chain, CostCtx.Types, Plan, Phi, RK);
+  }
+}
+
+void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
+                                               PredicatedScalarEvolution &PSE,
+                                               Loop &L, VPCostContext &Ctx,
+                                               VFRange &Range) {
+  if (Plan.hasScalarVFOnly())
+    return;
+
+  VPTypeAnalysis TypeInfo(Plan);
+  VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
+  SmallVector<VPWidenMemoryRecipe *> ToErase;
+  VPValue *I32VF = nullptr;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(VectorLoop->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *LoadR = dyn_cast<VPWidenLoadRecipe>(&R);
+      // TODO: Support strided store.
+      // TODO: Transform reverse access into strided access with -1 stride.
+      // TODO: Transform gather/scatter with uniform address into strided access
+      // with 0 stride.
+      // TODO: Transform interleave access into multiple strided accesses.
+      if (!LoadR || LoadR->isConsecutive())
+        continue;
+
+      auto *Ptr = dyn_cast<VPWidenGEPRecipe>(LoadR->getAddr());
+      if (!Ptr)
+        continue;
+
+      Instruction &Ingredient = LoadR->getIngredient();
+      auto IsProfitable = [&](ElementCount VF) -> bool {
+        Type *DataTy = toVectorTy(getLoadStoreType(&Ingredient), VF);
+        const Align Alignment = getLoadStoreAlignment(&Ingredient);
+        if (!Ctx.TTI.isLegalStridedLoadStore(DataTy, Alignment))
+          return false;
+        const InstructionCost CurrentCost = LoadR->computeCost(VF, Ctx);
+        const InstructionCost StridedLoadStoreCost =
+            Ctx.TTI.getMemIntrinsicInstrCost(
+                MemIntrinsicCostAttributes(
+                    Intrinsic::experimental_vp_strided_load, DataTy,
+                    Ptr->getUnderlyingValue(), LoadR->isMasked(), Alignment,
+                    &Ingredient),
+                Ctx.CostKind);
+        return StridedLoadStoreCost < CurrentCost;
+      };
+
+      if (!LoopVectorizationPlanner::getDecisionAndClampRange(IsProfitable,
+                                                              Range))
+        continue;
+
+      const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, &L);
+      const SCEV *Start;
+      const APInt *Step;
+      // TODO: Support loop invariant stride.
+      if (!match(PtrSCEV,
+                 m_scev_AffineAddRec(m_SCEV(Start), m_scev_APInt(Step))))
+        continue;
+
+      // Add VF of i32 version for EVL.
+      if (!I32VF) {
+        VPBuilder Builder(Plan.getVectorPreheader());
+        I32VF = Builder.createScalarZExtOrTrunc(
+            &Plan.getVF(), Type::getInt32Ty(Plan.getContext()),
+            TypeInfo.inferScalarType(&Plan.getVF()), DebugLoc::getUnknown());
+      }
+
+      VPBuilder Builder(LoadR);
+      // Create the base pointer of strided access.
+      VPValue *StartVPV = vputils::getOrCreateVPValueForSCEVExpr(Plan, Start);
+      VPValue *StrideInBytes =
+          Plan.getConstantInt(VectorLoop->getCanonicalIVType(),
+                              Step->getSExtValue(), /*IsSigned=*/true);
+      auto *AddRecPtr = cast<SCEVAddRecExpr>(PtrSCEV);
+      auto *Offset = Builder.createOverflowingOp(
+          Instruction::Mul, {VectorLoop->getCanonicalIV(), StrideInBytes},
+          {AddRecPtr->hasNoUnsignedWrap(), AddRecPtr->hasNoSignedWrap()});
+      auto *BasePtr = Builder.createNoWrapPtrAdd(
+          StartVPV, Offset,
+          AddRecPtr->hasNoUnsignedWrap() ? GEPNoWrapFlags::noUnsignedWrap()
+                                         : GEPNoWrapFlags::none());
+
+      // Create a new vector pointer for strided access.
+      VPValue *NewPtr = Builder.createVectorPointer(
+          BasePtr, Type::getInt8Ty(Plan.getContext()), StrideInBytes,
+          Ptr->getGEPNoWrapFlags(), Ptr->getDebugLoc());
+
+      VPValue *Mask = LoadR->getMask();
+      if (!Mask)
+        Mask = Plan.getTrue();
+      auto *StridedLoad = Builder.createWidenMemIntrinsic(
+          *cast<LoadInst>(&Ingredient), {NewPtr, StrideInBytes, Mask, I32VF},
+          *LoadR, LoadR->getDebugLoc());
+      LoadR->replaceAllUsesWith(StridedLoad);
+
+      ToErase.push_back(LoadR);
+    }
+  }
+
+  // Clean up dead recipes.
+  for (auto *R : ToErase) {
+    VPValue *Addr = R->getAddr();
+    R->eraseFromParent();
+    recursivelyDeleteDeadRecipes(Addr);
   }
 }

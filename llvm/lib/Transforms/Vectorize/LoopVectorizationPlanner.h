@@ -382,6 +382,20 @@ public:
     return tryInsertInstruction(new VPExpandSCEVRecipe(Expr));
   }
 
+  VPVectorPointerRecipe *
+  createVectorPointer(VPValue *Ptr, Type *SourceElementTy, VPValue *Stride,
+                      GEPNoWrapFlags GEPFlags, DebugLoc DL) {
+    return tryInsertInstruction(
+        new VPVectorPointerRecipe(Ptr, SourceElementTy, Stride, GEPFlags, DL));
+  }
+
+  VPWidenMemIntrinsicRecipe *
+  createWidenMemIntrinsic(LoadInst &LI, ArrayRef<VPValue *> CallArguments,
+                          const VPIRMetadata &MD, DebugLoc DL) {
+    return tryInsertInstruction(
+        new VPWidenMemIntrinsicRecipe(LI, CallArguments, MD, DL));
+  }
+
   //===--------------------------------------------------------------------===//
   // RAII helpers.
   //===--------------------------------------------------------------------===//

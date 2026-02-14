@@ -344,6 +344,7 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
           Instruction::Mul, {VF, Plan.getConstantInt(IndexTy, Part)},
           {true, true});
       Copy->setOperand(0, VPR->getOperand(0));
+      Copy->setOperand(1, VPR->getOperand(1));
       Copy->addOperand(VFxPart);
       continue;
     }

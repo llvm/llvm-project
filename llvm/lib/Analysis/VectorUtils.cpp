@@ -170,6 +170,8 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
     return (ScalarOpdIdx == 2);
   case Intrinsic::experimental_vp_splice:
     return ScalarOpdIdx == 2 || ScalarOpdIdx == 4;
+  case Intrinsic::experimental_vp_strided_load:
+    return ScalarOpdIdx == 0 || ScalarOpdIdx == 1;
   default:
     return false;
   }
@@ -207,6 +209,8 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   case Intrinsic::powi:
   case Intrinsic::ldexp:
     return OpdIdx == -1 || OpdIdx == 1;
+  case Intrinsic::experimental_vp_strided_load:
+    return OpdIdx == -1 || OpdIdx == 0 || OpdIdx == 1;
   default:
     return OpdIdx == -1;
   }

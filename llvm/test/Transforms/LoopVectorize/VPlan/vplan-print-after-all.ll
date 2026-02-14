@@ -11,6 +11,7 @@
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::handleFindLastReductions
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::createPartialReductions
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::convertToAbstractRecipes
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::convertToStridedAccesses
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::createInterleaveGroups
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::replaceSymbolicStrides
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::dropPoisonGeneratingRecipes
