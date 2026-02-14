@@ -3493,6 +3493,12 @@ ScriptedSymbolLocatorInterfaceSP Target::GetScriptedSymbolLocatorInterface() {
   return m_scripted_symbol_locator_interface_sp;
 }
 
+llvm::StringRef Target::GetScriptedSymbolLocatorClassName() const {
+  return m_scripted_symbol_locator_metadata_sp
+             ? m_scripted_symbol_locator_metadata_sp->GetClassName()
+             : "";
+}
+
 bool Target::LookupScriptedSourceFileCache(
     llvm::StringRef key, std::optional<FileSpec> &result) const {
   auto it = m_scripted_source_file_cache.find(key);

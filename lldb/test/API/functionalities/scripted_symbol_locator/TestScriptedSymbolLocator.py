@@ -70,11 +70,9 @@ class ScriptedSymbolLocatorTestCase(TestBase):
 
         # Launch and stop at the breakpoint so ApplyFileMappings runs on
         # the main thread via StackFrame::GetSymbolContext.
-        process = target.LaunchSimple(None, None, os.getcwd())
-        self.assertIsNotNone(process)
-        self.assertState(process.GetState(), lldb.eStateStopped)
-
-        thread = process.GetSelectedThread()
+        (target, process, thread, bkpt) = lldbutil.run_to_breakpoint_do_run(
+            self, target, bp
+        )
         frame = thread.GetSelectedFrame()
         line_entry = frame.GetLineEntry()
         self.assertTrue(line_entry and line_entry.IsValid(), "Line entry is valid")
