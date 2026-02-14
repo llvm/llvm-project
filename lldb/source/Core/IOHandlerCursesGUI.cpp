@@ -6581,6 +6581,14 @@ public:
 
   ~ApplicationDelegate() override = default;
 
+  WindowDelegateSP GetConsoleDelegate() {
+    if (!m_console_delegate_sp) {
+      m_console_delegate_sp =
+          WindowDelegateSP(new ConsoleOutputWindowDelegate(m_debugger));
+    }
+    return m_console_delegate_sp;
+  }
+
   bool WindowDelegateDraw(Window &window, bool force) override {
     return false; // Drawing not handled, let standard window drawing happen
   }
@@ -6978,8 +6986,7 @@ public:
         }
         WindowSP new_window_sp =
             main_window_sp->CreateSubWindow("Console", new_console_rect, false);
-        new_window_sp->SetDelegate(
-            WindowDelegateSP(new ConsoleOutputWindowDelegate(m_debugger)));
+        new_window_sp->SetDelegate(GetConsoleDelegate());
       }
       touchwin(stdscr);
     }
@@ -7032,6 +7039,7 @@ public:
 protected:
   Application &m_app;
   Debugger &m_debugger;
+  WindowDelegateSP m_console_delegate_sp;
 };
 
 class StatusBarWindowDelegate : public WindowDelegate {
@@ -8001,8 +8009,7 @@ void IOHandlerCursesGUI::Activate() {
         WindowDelegateSP(new SourceFileWindowDelegate(m_debugger)));
     variables_window_sp->SetDelegate(
         WindowDelegateSP(new FrameVariablesWindowDelegate(m_debugger)));
-    console_window_sp->SetDelegate(
-        WindowDelegateSP(new ConsoleOutputWindowDelegate(m_debugger)));
+    console_window_sp->SetDelegate(app_delegate_sp->GetConsoleDelegate());
     TreeDelegateSP thread_delegate_sp(new ThreadsTreeDelegate(m_debugger));
     threads_window_sp->SetDelegate(WindowDelegateSP(
         new TreeWindowDelegate(m_debugger, thread_delegate_sp)));
