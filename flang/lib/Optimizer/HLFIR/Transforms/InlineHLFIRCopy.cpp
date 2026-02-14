@@ -53,7 +53,7 @@ public:
 static void inlineCopyOut(fir::FirOpBuilder &builder, mlir::Location loc,
                           mlir::Value tempBox, mlir::Value wasCopied,
                           mlir::Value copyBackDest, mlir::Value shape,
-                          mlir::Type sequenceType) {
+                          mlir::Type sequenceType, hlfir::CopyOutOp copyOut) {
   builder.genIfOp(loc, {}, wasCopied, /*withElseRegion=*/false).genThen([&]() {
     mlir::Value box = fir::LoadOp::create(builder, loc, tempBox);
 
@@ -65,7 +65,8 @@ static void inlineCopyOut(fir::FirOpBuilder &builder, mlir::Location loc,
           hlfir::getIndexExtents(loc, builder, shape);
       hlfir::LoopNest loopNest =
           hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true,
-                             /*workshare=*/false, /*couldVectorize=*/false);
+                             flangomp::shouldUseWorkshareLowering(copyOut),
+                             /*couldVectorize=*/false);
       builder.setInsertionPointToStart(loopNest.body);
       hlfir::Entity tempElem =
           hlfir::getElementAt(loc, builder, temp, loopNest.oneBasedIndices);
@@ -212,7 +213,7 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
   rewriter.setInsertionPoint(copyOut);
   fir::FirOpBuilder copyOutBuilder(rewriter, copyOut.getOperation());
   inlineCopyOut(copyOutBuilder, copyOut.getLoc(), alloca, needsCleanup,
-                copyBackDest, shape, sequenceType);
+                copyBackDest, shape, sequenceType, copyOut);
 
   // Erase the copyOut since we've inlined it
   rewriter.eraseOp(copyOut);
