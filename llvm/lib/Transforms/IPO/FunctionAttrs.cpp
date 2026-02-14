@@ -1932,8 +1932,24 @@ static bool InstrBreaksNoFree(Instruction &I, const SCCNodeSet &SCCNodes) {
   return true;
 }
 
+<<<<<<< HEAD
 static bool InstrBreaksNoSync(Instruction &I, const SCCNodeSet &SCCNodes) {
   if (!I.maySynchronize())
+=======
+
+static bool InstrBreaksNoSync(Instruction &I, const SCCNodeSet &SCCNodes) {
+  // Volatile may synchronize
+  if (I.isVolatile())
+    return true;
+
+  // An ordered atomic may synchronize.  (See comment about on monotonic.)
+  if (llvm::isOrderedAtomic(&I))
+    return true;
+
+  auto *CB = dyn_cast<CallBase>(&I);
+  if (!CB)
+    // Non call site cases covered by the two checks above
+>>>>>>> 780bf98dc5cc (Shared isOrderedAtomic function)
     return false;
 
   // Optimistically assume calls within the SCC are nosync: if nothing else in
