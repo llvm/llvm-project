@@ -318,7 +318,7 @@ static cl::opt<bool> EnableLoadStoreRuntimeInterleave(
         "Enable runtime interleaving until load/store ports are saturated"));
 
 /// The number of stores in a loop that are allowed to need predication.
-static cl::opt<unsigned> NumberOfStoresToPredicate(
+cl::opt<unsigned> NumberOfStoresToPredicate(
     "vectorize-num-stores-pred", cl::init(1), cl::Hidden,
     cl::desc("Max number of stores to be predicated behind an if."));
 
@@ -6890,10 +6890,6 @@ unsigned VPCostContext::getPredBlockCostDivisor(BasicBlock *BB) const {
   return CM.getPredBlockCostDivisor(CostKind, BB);
 }
 
-bool VPCostContext::useEmulatedMaskMemRefHack(Instruction *I, ElementCount VF) {
-  return CM.useEmulatedMaskMemRefHack(I, VF);
-}
-
 InstructionCost
 LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
                                           VPCostContext &CostCtx) const {
@@ -9508,15 +9504,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       reportVectorizationFailure("Auto-vectorization of loops with uncountable "
                                  "early exit is not enabled",
                                  "UncountableEarlyExitLoopsDisabled", ORE, L);
-      return false;
-    }
-    SmallVector<BasicBlock *, 8> ExitingBlocks;
-    L->getExitingBlocks(ExitingBlocks);
-    // TODO: Support multiple uncountable early exits.
-    if (ExitingBlocks.size() - LVL.getCountableExitingBlocks().size() > 1) {
-      reportVectorizationFailure("Auto-vectorization of loops with multiple "
-                                 "uncountable early exits is not yet supported",
-                                 "MultipleUncountableEarlyExits", ORE, L);
       return false;
     }
   }

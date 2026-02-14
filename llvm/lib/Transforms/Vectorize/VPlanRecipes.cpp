@@ -468,6 +468,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::ExitingIVValue:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
+  case VPInstruction::LogicalOr:
   case VPInstruction::PtrAdd:
   case VPInstruction::WidePtrAdd:
   case VPInstruction::WideIVStep:
@@ -812,6 +813,11 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *A = State.get(getOperand(0));
     Value *B = State.get(getOperand(1));
     return Builder.CreateLogicalAnd(A, B, Name);
+  }
+  case VPInstruction::LogicalOr: {
+    Value *A = State.get(getOperand(0));
+    Value *B = State.get(getOperand(1));
+    return Builder.CreateLogicalOr(A, B, Name);
   }
   case VPInstruction::PtrAdd: {
     assert((State.VF.isScalar() || vputils::onlyFirstLaneUsed(this)) &&
@@ -1339,6 +1345,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::ExtractLastActive:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
+  case VPInstruction::LogicalOr:
   case VPInstruction::Not:
   case VPInstruction::PtrAdd:
   case VPInstruction::WideIVStep:
@@ -1505,6 +1512,9 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::LogicalAnd:
     O << "logical-and";
+    break;
+  case VPInstruction::LogicalOr:
+    O << "logical-or";
     break;
   case VPInstruction::PtrAdd:
     O << "ptradd";
@@ -1703,6 +1713,14 @@ void VPPhiAccessors::removeIncomingValueFor(VPBlockBase *IncomingBlock) const {
          "Number of phi operands must match number of predecessors");
   unsigned Position = R->getParent()->getIndexForPredecessor(IncomingBlock);
   R->removeOperand(Position);
+}
+
+VPValue *
+VPPhiAccessors::getIncomingValueForBlock(const VPBasicBlock *VPBB) const {
+  for (unsigned Idx = 0; Idx != getNumIncoming(); ++Idx)
+    if (getIncomingBlock(Idx) == VPBB)
+      return getIncomingValue(Idx);
+  llvm_unreachable("VPBB is not an incoming block");
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3552,7 +3570,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
           VecI1Ty, APInt::getAllOnes(VF.getFixedValue()),
           /*Insert=*/false, /*Extract=*/true, Ctx.CostKind);
 
-      if (Ctx.useEmulatedMaskMemRefHack(UI, VF)) {
+      if (Ctx.useEmulatedMaskMemRefHack(this, VF)) {
         // Artificially setting to a high enough value to practically disable
         // vectorization with such operations.
         return 3000000;

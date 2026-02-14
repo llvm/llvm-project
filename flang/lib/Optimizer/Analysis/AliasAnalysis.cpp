@@ -495,18 +495,40 @@ static bool isSavedLocal(const fir::AliasAnalysis::Source &src) {
   return false;
 }
 
-static bool isCallToFortranUserProcedure(fir::CallOp call) {
+bool AliasAnalysis::isCallToFortranUserProcedure(Operation *op) {
+  fir::CallOp call = dyn_cast<fir::CallOp>(op);
+  if (!call)
+    return false;
+
   // TODO: indirect calls are excluded by these checks. Maybe some attribute is
   // needed to flag user calls in this case.
   if (fir::hasBindcAttr(call))
     return true;
-  if (std::optional<mlir::SymbolRefAttr> callee = call.getCallee())
-    return fir::NameUniquer::deconstruct(callee->getLeafReference().getValue())
-               .first == fir::NameUniquer::NameKind::PROCEDURE;
+  if (std::optional<SymbolRefAttr> callee = call.getCallee()) {
+    if (fir::NameUniquer::deconstruct(callee->getLeafReference().getValue())
+            .first == fir::NameUniquer::NameKind::PROCEDURE)
+      return true;
+
+    const SymbolTable *symTab = getNearestSymbolTable(call);
+    if (!symTab)
+      return false;
+
+    if (auto funcOp =
+            symTab->lookup<FunctionOpInterface>(callee->getLeafReference()))
+      if (auto name = funcOp->getAttrOfType<StringAttr>(
+              fir::getInternalFuncNameAttrName()))
+        if (fir::NameUniquer::deconstruct(name.getValue()).first ==
+            fir::NameUniquer::NameKind::PROCEDURE)
+          return true;
+  }
   return false;
 }
 
-static ModRefResult getCallModRef(fir::CallOp call, mlir::Value var) {
+ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
+  auto call = dyn_cast<fir::CallOp>(op);
+  if (!call)
+    return ModRefResult::getModAndRef();
+
   // TODO: limit to Fortran functions??
   // 1. Detect variables that can be accessed indirectly.
   fir::AliasAnalysis aliasAnalysis;

@@ -863,6 +863,8 @@ void Linux::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
   llvm::SmallVector<std::pair<StringRef, StringRef>> Libraries;
   if (ActiveKinds & Action::OFK_HIP)
     Libraries.emplace_back(RocmInstallation->getLibPath(), "libamdhip64.so");
+  else if (ActiveKinds & Action::OFK_SYCL)
+    Libraries.emplace_back(SYCLInstallation->getSYCLRTLibPath(), "libsycl.so");
 
   for (auto [Path, Library] : Libraries) {
     if (Args.hasFlag(options::OPT_frtlib_add_rpath,
