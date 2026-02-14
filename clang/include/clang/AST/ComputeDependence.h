@@ -45,6 +45,7 @@ class ArrayInitLoopExpr;
 class ImplicitValueInitExpr;
 class InitListExpr;
 class ExtVectorElementExpr;
+class MatrixElementExpr;
 class BlockExpr;
 class AsTypeExpr;
 class DeclRefExpr;
@@ -135,6 +136,7 @@ ExprDependence computeDependence(ArrayInitLoopExpr *E);
 ExprDependence computeDependence(ImplicitValueInitExpr *E);
 ExprDependence computeDependence(InitListExpr *E);
 ExprDependence computeDependence(ExtVectorElementExpr *E);
+ExprDependence computeDependence(MatrixElementExpr *E);
 ExprDependence computeDependence(BlockExpr *E,
                                  bool ContainsUnexpandedParameterPack);
 ExprDependence computeDependence(AsTypeExpr *E);

@@ -22,7 +22,7 @@ define <4 x i32> @smmla.v4i32.v16i8(<4 x i32> %r, <16 x i8> %a, <16 x i8> %b) sa
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext <16 x i1> [[TMP3]] to <16 x i8>
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <16 x i8> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <16 x i1> [[TMP5]] to <16 x i8>
-; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i32> @llvm.aarch64.neon.smmla.v4i32.v16i8(<4 x i32> zeroinitializer, <16 x i8> [[TMP4]], <16 x i8> [[TMP6]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i32> @llvm.aarch64.neon.ummla.v4i32.v16i8(<4 x i32> zeroinitializer, <16 x i8> [[TMP4]], <16 x i8> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <4 x i32> [[TMP7]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i1> [[TMP8]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne <4 x i32> [[TMP0]], zeroinitializer
@@ -76,7 +76,7 @@ define <4 x i32> @usmmla.v4i32.v16i8(<4 x i32> %r, <16 x i8> %a, <16 x i8> %b) s
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext <16 x i1> [[TMP3]] to <16 x i8>
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <16 x i8> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <16 x i1> [[TMP5]] to <16 x i8>
-; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i32> @llvm.aarch64.neon.usmmla.v4i32.v16i8(<4 x i32> zeroinitializer, <16 x i8> [[TMP4]], <16 x i8> [[TMP6]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i32> @llvm.aarch64.neon.ummla.v4i32.v16i8(<4 x i32> zeroinitializer, <16 x i8> [[TMP4]], <16 x i8> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <4 x i32> [[TMP7]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i1> [[TMP8]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne <4 x i32> [[TMP0]], zeroinitializer

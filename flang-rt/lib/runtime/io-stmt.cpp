@@ -264,9 +264,9 @@ int ExternalIoStatementBase::EndIoStatement() {
   unit_.EndIoStatement(); // annihilates *this in unit_.u_
   if (destroy_) {
     if (ExternalFileUnit *
-        toClose{ExternalFileUnit::LookUpForClose(unitNumber)}) {
+        toClose{ExternalFileUnit::LookUpForClose(unitNumber, *this)}) {
       toClose->Close(CloseStatus::Delete, *this);
-      toClose->DestroyClosed();
+      toClose->DestroyClosed(*this);
     }
   }
 #else
@@ -377,7 +377,7 @@ int CloseStatementState::EndIoStatement() {
   CompleteOperation();
   int result{ExternalIoStatementBase::EndIoStatement()};
   unit().CloseUnit(status_, *this);
-  unit().DestroyClosed();
+  unit().DestroyClosed(*this);
   return result;
 }
 
