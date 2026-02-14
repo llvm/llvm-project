@@ -297,13 +297,6 @@ class ConstantByte final : public ConstantData {
 public:
   ConstantByte(const ConstantByte &) = delete;
 
-  LLVM_ABI static ConstantByte *getTrue(LLVMContext &Context);
-  LLVM_ABI static ConstantByte *getFalse(LLVMContext &Context);
-  LLVM_ABI static ConstantByte *getBool(LLVMContext &Context, bool V);
-  LLVM_ABI static Constant *getTrue(Type *Ty);
-  LLVM_ABI static Constant *getFalse(Type *Ty);
-  LLVM_ABI static Constant *getBool(Type *Ty, bool V);
-
   /// If Ty is a vector type, return a Constant with a splat of the given
   /// value. Otherwise return a ConstantByte for the given value.
   /// \param ImplicitTrunc Whether to allow implicit truncation of the value.
@@ -366,20 +359,6 @@ public:
   /// Return the sign extended value.
   inline int64_t getSExtValue() const { return Val.getSExtValue(); }
 
-  /// Return the constant as an llvm::MaybeAlign.
-  /// Note that this method can assert if the value does not fit in 64 bits or
-  /// is not a power of two.
-  inline MaybeAlign getMaybeAlignValue() const {
-    return MaybeAlign(getZExtValue());
-  }
-
-  /// Return the constant as an llvm::Align, interpreting `0` as `Align(1)`.
-  /// Note that this method can assert if the value does not fit in 64 bits or
-  /// is not a power of two.
-  inline Align getAlignValue() const {
-    return getMaybeAlignValue().valueOrOne();
-  }
-
   /// A helper method that can be used to determine if the constant contained
   /// within is equal to a constant.  This only works for very small values,
   /// because this is all that can be represented with all types.
@@ -391,18 +370,6 @@ public:
   inline ByteType *getByteType() const {
     return cast<ByteType>(Value::getType());
   }
-
-  /// This static method returns true if the type Ty is big enough to
-  /// represent the value V. This can be used to avoid having the get method
-  /// assert when V is larger than Ty can represent. Note that there are two
-  /// versions of this method, one for unsigned and one for signed integers.
-  /// Although ConstantByte canonicalizes everything to an unsigned integer,
-  /// the signed version avoids callers having to convert a signed quantity
-  /// to the appropriate unsigned type before calling the method.
-  /// @returns true if V is a valid value for type Ty
-  /// Determine if the value is in range for the given type.
-  LLVM_ABI static bool isValueValidForType(Type *Ty, uint64_t V);
-  LLVM_ABI static bool isValueValidForType(Type *Ty, int64_t V);
 
   bool isNegative() const { return Val.isNegative(); }
 
@@ -453,15 +420,6 @@ public:
   /// @returns true iff this constant is greater or equal to the given number.
   /// Determine if the value is greater or equal to the given number.
   bool uge(uint64_t Num) const { return Val.uge(Num); }
-
-  /// getLimitedValue - If the value is smaller than the specified limit,
-  /// return it, otherwise return the limit value.  This causes the value
-  /// to saturate to the limit.
-  /// @returns the min of the value of the constant and the specified value
-  /// Get the constant's value with a saturation limit
-  uint64_t getLimitedValue(uint64_t Limit = ~0ULL) const {
-    return Val.getLimitedValue(Limit);
-  }
 
   /// Methods to support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Value *V) {

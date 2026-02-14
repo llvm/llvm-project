@@ -100,10 +100,7 @@ unsigned Type::getIntegerBitWidth() const {
   return cast<IntegerType>(this)->getBitWidth();
 }
 
-/// Class to represent byte types. Note that this class is also used to
-/// represent the built-in byte types: Byte8Ty, Byte16Ty, Byte32Ty and
-/// Byte64Ty.
-/// Byte representation type
+/// Class to represent byte types.
 class ByteType : public Type {
   friend class LLVMContextImpl;
 
