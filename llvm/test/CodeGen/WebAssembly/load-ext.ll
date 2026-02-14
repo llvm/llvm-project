@@ -8,13 +8,9 @@
 ; CHECK-LABEL: sext_i8_i32:
 ; SLOW: i32.load8_s $push0=, 0($0){{$}}
 ; SLOW-NEXT: return $pop0{{$}}
-; FAST:        i32.load8_u $push[[NUM1:[0-9]+]]=, 0($0)
-; FAST-NEXT:        i32.const   $push[[NUM2:[0-9]+]]=, 24
-; FAST-NEXT:        i32.shl     $push[[NUM3:[0-9]+]]=, $pop[[NUM1]], $pop[[NUM2]]
-; FAST-NEXT:        i32.const   $push[[NUM4:[0-9]+]]=, 24
-; FAST-NEXT:        i32.shr_s   $push[[NUM5:[0-9]+]]=, $pop[[NUM3]], $pop[[NUM4]]
-; FAST-NEXT:        return      $pop[[NUM5]]
-; CHECK:       end_function
+; FAST:      i32.load8_u   $push[[L:[0-9]+]]=, 0($0)
+; FAST-NEXT: i32.extend8_s $push[[EXT:[0-9]+]]=, $pop[[L]]
+; FAST-NEXT: return        $pop[[EXT]]
 define i32 @sext_i8_i32(ptr %p) {
   %v = load i8, ptr %p
   %e = sext i8 %v to i32
@@ -37,12 +33,9 @@ define i32 @zext_i8_i32(ptr %p) {
 ; CHECK-LABEL: sext_i16_i32:
 ; SLOW: i32.load16_s $push0=, 0($0){{$}}
 ; SLOW-NEXT: return $pop0{{$}}
-; FAST:      i32.load16_u $push[[L:[0-9]+]]=, 0($0)
-; FAST-NEXT: i32.const    $push[[C1:[0-9]+]]=, 16
-; FAST-NEXT: i32.shl      $push[[SHL:[0-9]+]]=, $pop[[L]], $pop[[C1]]
-; FAST-NEXT: i32.const    $push[[C2:[0-9]+]]=, 16
-; FAST-NEXT: i32.shr_s    $push[[SHR:[0-9]+]]=, $pop[[SHL]], $pop[[C2]]
-; FAST-NEXT: return       $pop[[SHR]]
+; FAST:      i32.load16_u   $push[[L:[0-9]+]]=, 0($0)
+; FAST-NEXT: i32.extend16_s $push[[EXT:[0-9]+]]=, $pop[[L]]
+; FAST-NEXT: return         $pop[[EXT]]
 define i32 @sext_i16_i32(ptr %p) {
   %v = load i16, ptr %p
   %e = sext i16 %v to i32
@@ -66,12 +59,9 @@ define i32 @zext_i16_i32(ptr %p) {
 ; SLOW: i64.load8_s $push0=, 0($0){{$}}
 ; SLOW-NEXT: return $pop0{{$}}
 ; FAST:      i32.load8_u      $push[[L:[0-9]+]]=, 0($0)
-; FAST-NEXT: i32.const        $push[[C1:[0-9]+]]=, 24
-; FAST-NEXT: i32.shl          $push[[SHL:[0-9]+]]=, $pop[[L]], $pop[[C1]]
-; FAST-NEXT: i32.const        $push[[C2:[0-9]+]]=, 24
-; FAST-NEXT: i32.shr_s        $push[[SHR:[0-9]+]]=, $pop[[SHL]], $pop[[C2]]
-; FAST-NEXT: i64.extend_i32_s $push[[EXT:[0-9]+]]=, $pop[[SHR]]
-; FAST-NEXT: return           $pop[[EXT]]
+; FAST-NEXT: i64.extend_i32_u $push[[EXT32:[0-9]+]]=, $pop[[L]]
+; FAST-NEXT: i64.extend8_s    $push[[EXT8:[0-9]+]]=, $pop[[EXT32]]
+; FAST-NEXT: return           $pop[[EXT8]]
 define i64 @sext_i8_i64(ptr %p) {
   %v = load i8, ptr %p
   %e = sext i8 %v to i64
@@ -96,12 +86,9 @@ define i64 @zext_i8_i64(ptr %p) {
 ; SLOW: i64.load16_s $push0=, 0($0){{$}}
 ; SLOW-NEXT: return $pop0{{$}}
 ; FAST:      i32.load16_u     $push[[L:[0-9]+]]=, 0($0)
-; FAST-NEXT: i32.const        $push[[C1:[0-9]+]]=, 16
-; FAST-NEXT: i32.shl          $push[[SHL:[0-9]+]]=, $pop[[L]], $pop[[C1]]
-; FAST-NEXT: i32.const        $push[[C2:[0-9]+]]=, 16
-; FAST-NEXT: i32.shr_s        $push[[SHR:[0-9]+]]=, $pop[[SHL]], $pop[[C2]]
-; FAST-NEXT: i64.extend_i32_s $push[[EXT:[0-9]+]]=, $pop[[SHR]]
-; FAST-NEXT: return           $pop[[EXT]]
+; FAST-NEXT: i64.extend_i32_u $push[[EXT32:[0-9]+]]=, $pop[[L]]
+; FAST-NEXT: i64.extend16_s   $push[[EXT16:[0-9]+]]=, $pop[[EXT32]]
+; FAST-NEXT: return           $pop[[EXT16]]
 define i64 @sext_i16_i64(ptr %p) {
   %v = load i16, ptr %p
   %e = sext i16 %v to i64
