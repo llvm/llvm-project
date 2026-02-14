@@ -435,3 +435,27 @@ exit:
   %res = phi i64 [ %min.idx.next, %loop ]
   ret i64 %res
 }
+
+
+define i64 @select_argmin_iv_not_canonical(i64 %num, ptr %src) {
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 1, %entry ], [ %inc.i, %loop ]
+  %min.idx = phi i64 [ 0, %entry ], [ %min.idx.next, %loop ]
+  %min.val = phi i8 [ 0, %entry ], [ %min.val.next, %loop ]
+  %gep = getelementptr i64, ptr %src, i64 %iv
+  %l = load i8, ptr %gep
+  %min.val.next = tail call i8 @llvm.umin.i8(i8 %l, i8 %min.val)
+  %cmp = icmp ult i8 %l, %min.val
+  %min.idx.next = select i1 %cmp, i64 %iv, i64 %min.idx
+  %inc.i = add nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv, %num
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i64 %min.idx.next
+}
+
+attributes #0 = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
