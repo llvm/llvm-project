@@ -1275,20 +1275,25 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       MD && !MD->isStatic()) {
     bool IsInLambda =
         MD->getParent()->isLambda() && MD->getOverloadedOperator() == OO_Call;
-    if (MD->isImplicitObjectMemberFunction())
+
+    const FunctionDecl *FD = dyn_cast_if_present<FunctionDecl>(D);
+    bool IsNaked = FD && FD->hasAttr<NakedAttr>();
+    if (!IsNaked && MD->isImplicitObjectMemberFunction())
       CGM.getCXXABI().EmitInstanceFunctionProlog(*this);
-    if (IsInLambda) {
+
+    if (!IsNaked && IsInLambda) {
       // We're in a lambda; figure out the captures.
       MD->getParent()->getCaptureFields(LambdaCaptureFields,
                                         LambdaThisCaptureField);
       if (LambdaThisCaptureField) {
-        // If the lambda captures the object referred to by '*this' - either by
-        // value or by reference, make sure CXXThisValue points to the correct
-        // object.
+        // If the lambda captures the object referred to by '*this' - either
+        // by value or by reference, make sure CXXThisValue points to the
+        // correct object.
 
-        // Get the lvalue for the field (which is a copy of the enclosing object
-        // or contains the address of the enclosing object).
-        LValue ThisFieldLValue = EmitLValueForLambdaField(LambdaThisCaptureField);
+        // Get the lvalue for the field (which is a copy of the enclosing
+        // object or contains the address of the enclosing object).
+        LValue ThisFieldLValue =
+            EmitLValueForLambdaField(LambdaThisCaptureField);
         if (!LambdaThisCaptureField->getType()->isPointerType()) {
           // If the enclosing object was captured by value, just use its
           // address. Sign this pointer.
@@ -1296,14 +1301,16 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
         } else {
           // Load the lvalue pointed to by the field, since '*this' was captured
           // by reference.
-          CXXThisValue =
-              EmitLoadOfLValue(ThisFieldLValue, SourceLocation()).getScalarVal();
+          CXXThisValue = EmitLoadOfLValue(ThisFieldLValue, SourceLocation())
+                             .getScalarVal();
         }
       }
+
       for (auto *FD : MD->getParent()->fields()) {
         if (FD->hasCapturedVLAType()) {
-          auto *ExprArg = EmitLoadOfLValue(EmitLValueForLambdaField(FD),
-                                           SourceLocation()).getScalarVal();
+          auto *ExprArg =
+              EmitLoadOfLValue(EmitLValueForLambdaField(FD), SourceLocation())
+                  .getScalarVal();
           auto VAT = FD->getCapturedVLAType();
           VLASizeMap[VAT->getSizeExpr()] = ExprArg;
         }
@@ -1313,6 +1320,11 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       // FIXME: Should we generate a new load for each use of 'this'?  The
       // fast register allocator would be happier...
       CXXThisValue = CXXABIThisValue;
+    } else if (!IsNaked && IsInLambda && MD->isImplicitObjectMemberFunction()) {
+      // Populate capture fields metadata for analysis. We skip
+      // EmitInstanceProlog to avoid emitting prologue code.
+      MD->getParent()->getCaptureFields(LambdaCaptureFields,
+                                        LambdaThisCaptureField);
     }
 
     // Check the 'this' pointer once per function, if it's available.

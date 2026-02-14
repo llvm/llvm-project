@@ -2343,6 +2343,22 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc,
     maybeAddDeclWithEffects(LSI->CallOperator);
   }
 
+  // Naked functions cannot have prologues to set up lambda captures.
+  // GCC silently removes the naked attribute when captures are ODR-used;
+  // we emit an error instead to catch this at compile time.
+  if (CallOperator->hasAttr<NakedAttr>() && !Captures.empty()) {
+    // Check if any captures are ODR-used by examining the capture list
+    // that was already analyzed during semantic analysis.
+    for (const Capture &Cap : LSI->Captures) {
+      if (Cap.isODRUsed()) {
+        Diag(CallOperator->getAttr<NakedAttr>()->getLocation(),
+             diag::err_naked_attribute_on_lambda_with_captures);
+        CallOperator->dropAttr<NakedAttr>();
+        break;
+      }
+    }
+  }
+
   return MaybeBindToTemporary(Lambda);
 }
 
