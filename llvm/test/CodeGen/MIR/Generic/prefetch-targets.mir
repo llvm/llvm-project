@@ -1,0 +1,23 @@
+# RUN: llc -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses the prefetch-targets attribute
+# correctly.
+
+--- |
+
+  define void @prefetch() {
+  entry:
+    ret void
+  }
+
+...
+---
+# CHECK-LABEL: name: prefetch
+# CHECK:       bb.0.entry:
+# CHECK-NEXT:    liveins: $edi
+# CHECK-NEXT:    prefetch-targets: 0, 1, 2
+name: prefetch
+body: |
+  bb.0.entry:
+    prefetch-targets: 0, 1, 2
+    liveins: $edi
+...

@@ -722,8 +722,8 @@ public:
     return PrefetchTargetCallsiteIndexes;
   }
 
-  void setPrefetchTargetCallsiteIndexes(const SmallVector<unsigned> &V) {
-    PrefetchTargetCallsiteIndexes = V;
+  void setPrefetchTargetCallsiteIndexes(ArrayRef<unsigned> V) {
+    PrefetchTargetCallsiteIndexes.assign(V.begin(), V.end());
   }
 
   /// Returns the section ID of this basic block.
