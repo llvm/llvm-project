@@ -981,6 +981,50 @@ program test_etime
 end program test_etime
 ```
 
+### Non-Standard Intrinsics: ABORT
+
+#### Description
+`ABORT()` terminates the program execution. If backtrace support is available, prints a backtrace.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine
+- **Syntax:** `CALL ABORT()`
+
+#### Example
+```Fortran
+program call_abort
+  print *, "Aborting..."
+  call abort()
+end
+```
+
+### Non-Standard Intrinsics: EXIT
+
+#### Description
+`EXIT([STATUS])` terminates the program execution.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine
+- **Syntax:** `CALL EXIT([STATUS])`
+- **Arguments:**
+
+| Argument | Description |
+|----------|-------------|
+| `STATUS` | (Optional) Scalar INTEGER argument. If not present, then default success code is returned (usually, 0). |
+
+#### Example
+```Fortran
+program call_exit
+  integer :: status = 42
+  print *, "Exiting..."
+  call exit(status)
+end
+```
+
 ### Non-Standard Intrinsics: GETCWD
 
 #### Description
