@@ -116,6 +116,8 @@ jobs:
     # Use MinSizeRel to reduce the size of the build.
     - name: Configure CMake
       run: |
+        pwd
+        ls
         export RUNTIMES="libc"
 
         export CMAKE_FLAGS="
