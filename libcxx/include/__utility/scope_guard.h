@@ -37,7 +37,10 @@ public:
 // C++14 doesn't have mandatory RVO, so we have to provide a declaration even though no compiler will ever generate
 // a call to the move constructor.
 #if _LIBCPP_STD_VER <= 14
+  _LIBCPP_DIAGNOSTIC_PUSH
+  _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wundefined-internal")
   __scope_guard(__scope_guard&&);
+  _LIBCPP_DIAGNOSTIC_POP
 #else
   __scope_guard(__scope_guard&&) = delete;
 #endif
