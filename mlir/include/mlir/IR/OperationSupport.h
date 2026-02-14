@@ -1348,8 +1348,8 @@ struct OperationEquivalence {
   /// Helper that can be used with `computeHash` above to ignore operation
   /// operands/result mapping.
   static llvm::hash_code ignoreHashValue(Value) { return llvm::hash_code{}; }
-  /// Helper that can be used with `computeHash` above to ignore operation
-  /// operands/result mapping.
+  /// Helper that can be used with `computeHash` to compute the hash value
+  /// of operands/results directly.
   static llvm::hash_code directHashValue(Value v) { return hash_value(v); }
 
   /// Compare two operations (including their regions) and return if they are
