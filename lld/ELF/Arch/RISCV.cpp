@@ -319,11 +319,27 @@ void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
   // Many relocations end up in sec.relocations.
   sec.relocations.reserve(rels.size());
 
+  StringRef rvVendor;
   for (auto it = rels.begin(); it != rels.end(); ++it) {
     RelType type = it->getType(false);
     uint32_t symIndex = it->getSymbol(false);
     Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIndex);
     uint64_t offset = it->r_offset;
+
+    if (type == R_RISCV_VENDOR) {
+      if (!rvVendor.empty())
+        Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
+                 << "malformed consecutive R_RISCV_VENDOR relocations";
+      rvVendor = sym.getName();
+      continue;
+    } else if (!rvVendor.empty()) {
+      Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
+               << "unknown vendor-specific relocation (" << type.v
+               << ") in namespace '" << rvVendor << "' against symbol '" << &sym
+               << "'";
+      rvVendor = "";
+      continue;
+    }
 
     if (sym.isUndefined() && symIndex != 0 &&
         rs.maybeReportUndefined(cast<Undefined>(sym), offset))
