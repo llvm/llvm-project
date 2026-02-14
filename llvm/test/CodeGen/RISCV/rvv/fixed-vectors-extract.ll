@@ -883,16 +883,16 @@ define i32 @extractelt_v32i32_idx(ptr %x, i32 zeroext %idx) nounwind {
 ; RV32NOM-NEXT:    addi sp, sp, -256
 ; RV32NOM-NEXT:    sw ra, 252(sp) # 4-byte Folded Spill
 ; RV32NOM-NEXT:    sw s0, 248(sp) # 4-byte Folded Spill
-; RV32NOM-NEXT:    sw s2, 244(sp) # 4-byte Folded Spill
+; RV32NOM-NEXT:    sw s1, 244(sp) # 4-byte Folded Spill
 ; RV32NOM-NEXT:    addi s0, sp, 256
 ; RV32NOM-NEXT:    andi sp, sp, -128
-; RV32NOM-NEXT:    mv s2, a0
+; RV32NOM-NEXT:    mv s1, a0
 ; RV32NOM-NEXT:    andi a0, a1, 31
 ; RV32NOM-NEXT:    li a1, 4
 ; RV32NOM-NEXT:    call __mulsi3
 ; RV32NOM-NEXT:    li a1, 32
 ; RV32NOM-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
-; RV32NOM-NEXT:    vle32.v v8, (s2)
+; RV32NOM-NEXT:    vle32.v v8, (s1)
 ; RV32NOM-NEXT:    mv a1, sp
 ; RV32NOM-NEXT:    add a0, a1, a0
 ; RV32NOM-NEXT:    vadd.vv v8, v8, v8
@@ -901,7 +901,7 @@ define i32 @extractelt_v32i32_idx(ptr %x, i32 zeroext %idx) nounwind {
 ; RV32NOM-NEXT:    addi sp, s0, -256
 ; RV32NOM-NEXT:    lw ra, 252(sp) # 4-byte Folded Reload
 ; RV32NOM-NEXT:    lw s0, 248(sp) # 4-byte Folded Reload
-; RV32NOM-NEXT:    lw s2, 244(sp) # 4-byte Folded Reload
+; RV32NOM-NEXT:    lw s1, 244(sp) # 4-byte Folded Reload
 ; RV32NOM-NEXT:    addi sp, sp, 256
 ; RV32NOM-NEXT:    ret
 ;
@@ -933,16 +933,16 @@ define i32 @extractelt_v32i32_idx(ptr %x, i32 zeroext %idx) nounwind {
 ; RV64NOM-NEXT:    addi sp, sp, -256
 ; RV64NOM-NEXT:    sd ra, 248(sp) # 8-byte Folded Spill
 ; RV64NOM-NEXT:    sd s0, 240(sp) # 8-byte Folded Spill
-; RV64NOM-NEXT:    sd s2, 232(sp) # 8-byte Folded Spill
+; RV64NOM-NEXT:    sd s1, 232(sp) # 8-byte Folded Spill
 ; RV64NOM-NEXT:    addi s0, sp, 256
 ; RV64NOM-NEXT:    andi sp, sp, -128
-; RV64NOM-NEXT:    mv s2, a0
+; RV64NOM-NEXT:    mv s1, a0
 ; RV64NOM-NEXT:    andi a0, a1, 31
 ; RV64NOM-NEXT:    li a1, 4
 ; RV64NOM-NEXT:    call __muldi3
 ; RV64NOM-NEXT:    li a1, 32
 ; RV64NOM-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
-; RV64NOM-NEXT:    vle32.v v8, (s2)
+; RV64NOM-NEXT:    vle32.v v8, (s1)
 ; RV64NOM-NEXT:    mv a1, sp
 ; RV64NOM-NEXT:    add a0, a1, a0
 ; RV64NOM-NEXT:    vadd.vv v8, v8, v8
@@ -951,7 +951,7 @@ define i32 @extractelt_v32i32_idx(ptr %x, i32 zeroext %idx) nounwind {
 ; RV64NOM-NEXT:    addi sp, s0, -256
 ; RV64NOM-NEXT:    ld ra, 248(sp) # 8-byte Folded Reload
 ; RV64NOM-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
-; RV64NOM-NEXT:    ld s2, 232(sp) # 8-byte Folded Reload
+; RV64NOM-NEXT:    ld s1, 232(sp) # 8-byte Folded Reload
 ; RV64NOM-NEXT:    addi sp, sp, 256
 ; RV64NOM-NEXT:    ret
 ;
