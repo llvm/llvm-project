@@ -731,8 +731,6 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
       if (auto *MI = dyn_cast<MemIntrinsic>(&I))
         if (MI->isVolatile())
           return false;
-
-      return false;
     }
     return true;
   };
