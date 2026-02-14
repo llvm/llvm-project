@@ -957,6 +957,18 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_UITOFP:
     return selectIToF(ResVReg, ResType, I, false, SPIRV::OpConvertUToF);
 
+  case TargetOpcode::G_STRICT_SITOFP:
+    return selectUnOp(ResVReg, ResType, I, SPIRV::OpConvertSToF);
+  case TargetOpcode::G_STRICT_UITOFP:
+    return selectUnOp(ResVReg, ResType, I, SPIRV::OpConvertUToF);
+  case TargetOpcode::G_STRICT_FPTOSI:
+    return selectUnOp(ResVReg, ResType, I, SPIRV::OpConvertFToS);
+  case TargetOpcode::G_STRICT_FPTOUI:
+    return selectUnOp(ResVReg, ResType, I, SPIRV::OpConvertFToU);
+  case TargetOpcode::G_STRICT_FPEXT:
+  case TargetOpcode::G_STRICT_FPTRUNC:
+    return selectUnOp(ResVReg, ResType, I, SPIRV::OpFConvert);
+
   case TargetOpcode::G_CTPOP:
     return selectUnOp(ResVReg, ResType, I, SPIRV::OpBitCount);
   case TargetOpcode::G_SMIN:
