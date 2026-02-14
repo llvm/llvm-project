@@ -722,7 +722,8 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
       auto *CB = dyn_cast<CallBase>(&I);
       if (CB) {
         // Non call site cases covered by the two checks above
-        if (!CB->hasFnAttr(Attribute::NoSync) || !CB->hasFnAttr(Attribute::NoFree))
+        if (!CB->hasFnAttr(Attribute::NoSync) ||
+            !CB->hasFnAttr(Attribute::NoFree))
           return false;
       }
 
