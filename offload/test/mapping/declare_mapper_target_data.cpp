@@ -11,7 +11,7 @@ public:
   int *a;
 };
 
-#pragma omp declare mapper(id : C s) map(s.a[0 : NUM])
+#pragma omp declare mapper(id : C s) map(alloc : s.a) map(s.a[0 : NUM])
 
 int main() {
   C c;
