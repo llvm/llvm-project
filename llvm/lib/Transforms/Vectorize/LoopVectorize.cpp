@@ -4355,11 +4355,14 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
 }
 #endif
 
-/// Returns true if the VPlan contains a VPReductionPHIRecipe with
-/// FindLast recurrence kind.
-static bool hasFindLastReductionPhi(VPlan &Plan) {
+/// Returns true if the VPlan contains header phi recipes that are not currently
+/// supported for epilogue vectorization.
+static bool hasUnsupportedHeaderPhiRecipe(VPlan &Plan) {
   return any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
                 [](VPRecipeBase &R) {
+                  if (auto *WidenInd =
+                          dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
+                    return !WidenInd->getPHINode();
                   auto *RedPhi = dyn_cast<VPReductionPHIRecipe>(&R);
                   return RedPhi &&
                          RecurrenceDescriptor::isFindLastRecurrenceKind(
@@ -4380,9 +4383,9 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
       }))
     return false;
 
-  // FindLast reductions require special handling for the synthesized mask PHI
-  // and are currently unsupported for epilogue vectorization.
-  if (hasFindLastReductionPhi(getPlanFor(VF)))
+  // FindLast reductions and inductions without underlying PHI require special
+  // handling and are currently not supported for epilogue vectorization.
+  if (hasUnsupportedHeaderPhiRecipe(getPlanFor(VF)))
     return false;
 
   // Phis with uses outside of the loop require special handling and are
@@ -4639,6 +4642,18 @@ void LoopVectorizationCostModel::collectElementTypesForWidening() {
       ElementTypesInLoop.insert(T);
     }
   }
+}
+
+/// Returns true if the VPlan contains a VPReductionPHIRecipe with
+/// FindLast recurrence kind.
+static bool hasFindLastReductionPhi(VPlan &Plan) {
+  return any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
+                [](VPRecipeBase &R) {
+                  auto *RedPhi = dyn_cast<VPReductionPHIRecipe>(&R);
+                  return RedPhi &&
+                         RecurrenceDescriptor::isFindLastRecurrenceKind(
+                             RedPhi->getRecurrenceKind());
+                });
 }
 
 unsigned
