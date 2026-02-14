@@ -713,7 +713,7 @@ static void computeFunctionSummary(
       F.getLinkage(), F.getVisibility(), NotEligibleForImport,
       /* Live = */ false, F.isDSOLocal(), F.canBeOmittedFromSymbolTable(),
       GlobalValueSummary::ImportKind::Definition,
-      /* RenameOnPromotion = */ true);
+      /* NotRenameOnPromotion = */ false);
   FunctionSummary::FFlags FunFlags{
       F.doesNotAccessMemory(), F.onlyReadsMemory() && !F.doesNotAccessMemory(),
       F.hasFnAttribute(Attribute::NoRecurse), F.returnDoesNotAlias(),
@@ -871,7 +871,7 @@ static void computeVariableSummary(ModuleSummaryIndex &Index,
   GlobalValueSummary::GVFlags Flags(
       V.getLinkage(), V.getVisibility(), NonRenamableLocal,
       /* Live = */ false, V.isDSOLocal(), V.canBeOmittedFromSymbolTable(),
-      GlobalValueSummary::Definition, /* RenameOnPromotion = */ true);
+      GlobalValueSummary::Definition, /* NotRenameOnPromotion = */ false);
 
   VTableFuncList VTableFuncs;
   // If splitting is not enabled, then we compute the summary information
@@ -918,7 +918,7 @@ static void computeAliasSummary(ModuleSummaryIndex &Index, const GlobalAlias &A,
   GlobalValueSummary::GVFlags Flags(
       A.getLinkage(), A.getVisibility(), NonRenamableLocal,
       /* Live = */ false, A.isDSOLocal(), A.canBeOmittedFromSymbolTable(),
-      GlobalValueSummary::Definition, /* RenameOnPromotion = */ true);
+      GlobalValueSummary::Definition, /* NotRenameOnPromotion = */ false);
   auto AS = std::make_unique<AliasSummary>(Flags);
   auto AliaseeVI = Index.getValueInfo(Aliasee->getGUID());
   assert(AliaseeVI && "Alias expects aliasee summary to be available");
@@ -1000,7 +1000,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
               /* NotEligibleToImport = */ true,
               /* Live = */ true,
               /* Local */ GV->isDSOLocal(), GV->canBeOmittedFromSymbolTable(),
-              GlobalValueSummary::Definition, /* RenameOnPromotion = */ true);
+              GlobalValueSummary::Definition,
+              /* NotRenameOnPromotion = */ false);
           CantBePromoted.insert(GV->getGUID());
           // Create the appropriate summary type.
           if (Function *F = dyn_cast<Function>(GV)) {

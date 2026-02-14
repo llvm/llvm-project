@@ -19,11 +19,11 @@
 ; BC: <GLOBALVAL_SUMMARY_BLOCK
 ; BC-NEXT: <VERSION
 ; BC-NEXT: <FLAGS
-; BC-NEXT: <PERMODULE_PROFILE {{.*}} op0=1 op1=2048
-; BC-NEXT: <PERMODULE_PROFILE {{.*}} op0=2 op1=2048
-; BC-NEXT: <PERMODULE_PROFILE {{.*}} op0=3 op1=2119
-; BC-NEXT: <PERMODULE_PROFILE {{.*}} op0=4 op1=2048 op2=4 op3=0
-; BC-NEXT: <ALIAS {{.*}} op0=6 op1=2048 op2=3
+; BC-NEXT: <PERMODULE_PROFILE {{.*}} op0=1 op1=0
+; BC-NEXT: <PERMODULE_PROFILE {{.*}} op0=2 op1=0
+; BC-NEXT: <PERMODULE_PROFILE {{.*}} op0=3 op1=71
+; BC-NEXT: <PERMODULE_PROFILE {{.*}} op0=4 op1=0 op2=4 op3=0
+; BC-NEXT: <ALIAS {{.*}} op0=6 op1=0 op2=3
 ; BC-NEXT: </GLOBALVAL_SUMMARY_BLOCK
 ; BC: <STRTAB_BLOCK
 ; BC-NEXT: blob data = 'hfoobaranon.{{................................}}.0variadicllvm.va_start.p{{[0-9]+}}f{{.*}}'
