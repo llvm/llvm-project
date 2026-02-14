@@ -12484,9 +12484,12 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
     assert(HowLong == 0 && !Signed && !Unsigned && "Bad modifiers for 'b'!");
     Type = Context.BoolTy;
     break;
-  case 'z':  // size_t.
-    assert(HowLong == 0 && !Signed && !Unsigned && "Bad modifiers for 'z'!");
-    Type = Context.getSizeType();
+  case 'z': // size_t and ssize_t.
+    assert(HowLong == 0 && "Bad modifiers for 'z'!");
+    if (Signed)
+      Type = Context.getSignedSizeType();
+    else
+      Type = Context.getSizeType();
     break;
   case 'w':  // wchar_t.
     assert(HowLong == 0 && !Signed && !Unsigned && "Bad modifiers for 'w'!");

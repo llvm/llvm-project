@@ -21,6 +21,6 @@ static_assert(std::__constexpr_wmemcmp(L"Banane", L"Bananf", 6) == -1, "");
 
 constexpr bool test_constexpr_wmemchr() {
   const wchar_t str[] = L"Banane";
-  return std::__constexpr_wmemchr(str, 'n', 6) == str + 2;
+  return std::__constexpr_wmemchr(str, L'n', 6) == str + 2;
 }
 static_assert(test_constexpr_wmemchr(), "");
