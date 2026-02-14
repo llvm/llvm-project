@@ -119,21 +119,21 @@ ConvertConstraintsToMemory(StringRef ConstraintStr) {
       O << *I;
       IsOutput = true;
       ++I;
-      if (I != E)
+      if (I == E)
         return {};
     }
     if (*I == '*') {
       O << '*';
       HasIndirect = true;
       ++I;
-      if (I != E)
+      if (I == E)
         return {};
     }
     if (*I == '+') {
       O << '+';
       IsOutput = true;
       ++I;
-      if (I != E)
+      if (I == E)
         return {};
     }
 
