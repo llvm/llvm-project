@@ -565,7 +565,9 @@ static void serializeInfo(const EnumInfo &I, json::Object &Obj,
   if (I.BaseType) {
     json::Value BaseTypeVal = Object();
     auto &BaseTypeObj = *BaseTypeVal.getAsObject();
-    BaseTypeObj["Name"] = I.BaseType->Type.QualName;
+    BaseTypeObj["Name"] = I.BaseType->Type.Name;
+    BaseTypeObj["QualName"] = I.BaseType->Type.QualName;
+    BaseTypeObj["USR"] = toHex(toStringRef(I.BaseType->Type.USR));
     Obj["BaseType"] = BaseTypeVal;
   }
 
