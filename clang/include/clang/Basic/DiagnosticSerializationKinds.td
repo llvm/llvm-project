@@ -30,7 +30,7 @@ def note_ast_file_rebuild_required
 def note_module_cache_path : Note<
     "after modifying system headers, please delete the module cache at '%0'">;
 def note_ast_file_input_files_validation_status : Note<"input file validation "
-    "%select{has not been started|is disabled for this kind of module|"
+    "%select{has not been started|was disabled for this kind of precompiled file|"
     "has already been done in the current build session|"
     "has covered only user files|has covered all files}0">;
 
