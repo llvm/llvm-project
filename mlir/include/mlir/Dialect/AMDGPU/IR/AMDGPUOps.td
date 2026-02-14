@@ -33,6 +33,17 @@ def AnyIntegerOrFloat : AnyTypeOf<[AnySignlessInteger, AnyFloat], "Integer or Fl
 def AnyIntegerOrFloatOr1DVector :
   AnyTypeOf<[AnyIntegerOrFloat, FixedVectorOfRankAndType<[1], [AnyIntegerOrFloat]>]>;
 
+// Types with element width up to 64 bits, used to keep dpp operands legal.
+def AMDGPU_IntOrFloatWidthLeq64 : Type<
+  CPred<"$_self.isIntOrFloat() && $_self.getIntOrFloatBitWidth() <= 64">,
+  "integer or float with element bitwidth <= 64">;
+
+def AMDGPU_IntOrFloatOr1DVectorWidthLeq64 :
+  AnyTypeOf<[
+    AMDGPU_IntOrFloatWidthLeq64,
+    FixedVectorOfRankAndType<[1], [AMDGPU_IntOrFloatWidthLeq64]>
+  ]>;
+
 //===----------------------------------------------------------------------===//
 // AMDGPU Op definitions
 //===----------------------------------------------------------------------===//
@@ -643,8 +654,8 @@ def AMDGPU_RawBufferAtomicUminOp :
 
 def AMDGPU_DPPOp : AMDGPU_Op<"dpp",
     [Pure, SameTypeOperands, AllTypesMatch<["result", "old", "src"]>]>,
-  Arguments<(ins AnyType:$old,
-                 AnyType:$src,
+  Arguments<(ins AMDGPU_IntOrFloatOr1DVectorWidthLeq64:$old,
+                 AMDGPU_IntOrFloatOr1DVectorWidthLeq64:$src,
                  AMDGPU_DPPPermAttr:$kind,
                  OptionalAttr<AnyAttrOf<[I32Attr, ArrayAttr, UnitAttr]>>:$permArgument,
                  DefaultValuedAttr<I32Attr, "0xf">:$row_mask,
@@ -1379,7 +1390,7 @@ class AMDGPU_MakeDescriptorOp<string mnemonic> :
     Optional<I1>: $early_timeout,
     Optional<I32>: $pad_amount,
     Optional<I32>: $pad_interval,
-    Optional<AnyMemRef>: $atomic_barrier_address,
+    Optional<MemRefOf<[AMDGPU_DsBarrierStateType]>>: $atomic_barrier_address,
     Variadic<Index>: $atomic_barrier_indices,
     Optional<Index>: $global_increment,
     Optional<I32>: $lds_increment,
@@ -1466,7 +1477,8 @@ def AMDGPU_MakeDmaDescriptorOp : AMDGPU_MakeDescriptorOp<"make_dma_descriptor"> 
      $pad_interval must be a power of two contained in [2, 256].
      $pad_amount must be a value contained in [1, 128].
 
-     $atomic_barrier_address must be aligned to 8 bytes.
+     If an atomic barrier is provided, it will be arrived at **once** after
+     each load/store using this descriptor is completed.
 
      2D and 3D tensors may be iterated over by setting $global_increment, $lds_increment, and $iteration_count.
      $global_increment determines how much to increment the starting global memory address per iteration in units of the $base's element type.
