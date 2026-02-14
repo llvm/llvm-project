@@ -1317,7 +1317,6 @@ void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       rs.handleTlsIe(R_GOT_PC, type, offset, addend, sym);
       continue;
     case R_PPC64_TLS:
-      ctx.hasTlsIe.store(true, std::memory_order_relaxed);
       if (!ctx.arg.shared && !sym.isPreemptible)
         sec.addReloc({R_TPREL, type, offset, addend, &sym});
       continue;
