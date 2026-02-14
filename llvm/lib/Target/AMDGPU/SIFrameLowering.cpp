@@ -1395,7 +1395,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
   Register FramePtrRegScratchCopy;
   Register SGPRForFPSaveRestoreCopy =
       FuncInfo->getScratchSGPRCopyDstReg(FramePtrReg);
-  if (FPSaved) {
+  if (FPSaved && !FuncInfo->isChainFunction()) {
     // CSR spill restores should use FP as base register. If
     // SGPRForFPSaveRestoreCopy is not true, restore the previous value of FP
     // into a new scratch register and copy to FP later when other registers are
@@ -1414,9 +1414,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
 
     emitCSRSpillRestores(MF, MBB, MBBI, DL, LiveUnits, FramePtrReg,
                          FramePtrRegScratchCopy);
-  }
 
-  if (FPSaved) {
     // Insert the copy to restore FP.
     Register SrcReg = SGPRForFPSaveRestoreCopy ? SGPRForFPSaveRestoreCopy
                                                : FramePtrRegScratchCopy;
@@ -2168,13 +2166,13 @@ bool SIFrameLowering::hasFPImpl(const MachineFunction &MF) const {
     return MFI.getStackSize() != 0;
   }
 
-  return (frameTriviallyRequiresSP(MFI) &&
-          !MF.getInfo<SIMachineFunctionInfo>()->isChainFunction()) ||
-         MFI.isFrameAddressTaken() ||
-         MF.getSubtarget<GCNSubtarget>().getRegisterInfo()->hasStackRealignment(
-             MF) ||
-         mayReserveScratchForCWSR(MF) ||
-         MF.getTarget().Options.DisableFramePointerElim(MF);
+  return !MF.getInfo<SIMachineFunctionInfo>()->isChainFunction() &&
+         (frameTriviallyRequiresSP(MFI) || MFI.isFrameAddressTaken() ||
+          MF.getSubtarget<GCNSubtarget>()
+              .getRegisterInfo()
+              ->hasStackRealignment(MF) ||
+          mayReserveScratchForCWSR(MF) ||
+          MF.getTarget().Options.DisableFramePointerElim(MF));
 }
 
 bool SIFrameLowering::mayReserveScratchForCWSR(

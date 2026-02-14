@@ -508,3 +508,28 @@ define amdgpu_cs_chain void @test_call_and_alloca_var(i32 %count) {
   store i32 0, ptr addrspace(5) %v, align 4
   ret void
 }
+
+define amdgpu_cs_chain void @test_fp_all() #0 {
+; GFX12-LABEL: test_fp_all:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-NEXT:    scratch_store_b32 off, v0, off
+; GFX12-NEXT:    s_endpgm
+;
+; GFX942-LABEL: test_fp_all:
+; GFX942:       ; %bb.0:
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-NEXT:    v_mov_b32_e32 v0, 0
+; GFX942-NEXT:    scratch_store_dword off, v0, off
+; GFX942-NEXT:    s_endpgm
+  %v = alloca i32, align 4, addrspace(5)
+  store i32 0, ptr addrspace(5) %v, align 4
+  ret void
+}
+
+attributes #0 = { "frame-pointer"="all" }
