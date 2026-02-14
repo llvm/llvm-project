@@ -676,8 +676,9 @@ bool CodeGenPrepare::_run(Function &F) {
   while (MadeChange) {
     MadeChange = false;
 
-    // Flush pending updates as we may delete BasicBlocks in previous iteration
-    // of the current loop.
+    // This is required because optimizeBlock() calls getDT() inside the loop
+    // below, which flushes pending updates and may delete dead blocks, leading
+    // to iterator invalidation.
     DTU->flush();
 
     for (BasicBlock &BB : llvm::make_early_inc_range(F)) {
