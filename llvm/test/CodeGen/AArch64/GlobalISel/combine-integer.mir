@@ -35,7 +35,10 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %a:_(s64) = COPY $x0
     ; CHECK-NEXT: %b:_(s64) = COPY $x1
-    ; CHECK-NEXT: %sub:_(s64) = G_SUB %a, %b
+    ; CHECK-NEXT: %c:_(s64) = COPY $x2
+    ; CHECK-NEXT: %sub1:_(s64) = G_SUB %b, %c
+    ; CHECK-NEXT: %sub2:_(s64) = G_SUB %a, %sub1
+    ; CHECK-NEXT: %sub:_(s64) = G_SUB %sub2, %c
     ; CHECK-NEXT: $x0 = COPY %sub(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %a:_(s64) = COPY $x0
@@ -175,9 +178,12 @@ body:             |
     ; CHECK-LABEL: name: AMinusBPlusCMinusA
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(s64) = COPY $x0
     ; CHECK-NEXT: %b:_(s64) = COPY $x1
     ; CHECK-NEXT: %c:_(s64) = COPY $x2
-    ; CHECK-NEXT: %add:_(s64) = G_SUB %c, %b
+    ; CHECK-NEXT: %sub2:_(s64) = G_SUB %c, %a
+    ; CHECK-NEXT: %sub1:_(s64) = G_SUB %a, %b
+    ; CHECK-NEXT: %add:_(s64) = G_ADD %sub1, %sub2
     ; CHECK-NEXT: $x0 = COPY %add(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %a:_(s64) = COPY $x0
@@ -201,8 +207,11 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %a:_(s64) = COPY $x0
+    ; CHECK-NEXT: %b:_(s64) = COPY $x1
     ; CHECK-NEXT: %c:_(s64) = COPY $x2
-    ; CHECK-NEXT: %add:_(s64) = G_SUB %a, %c
+    ; CHECK-NEXT: %sub2:_(s64) = G_SUB %b, %c
+    ; CHECK-NEXT: %sub1:_(s64) = G_SUB %a, %b
+    ; CHECK-NEXT: %add:_(s64) = G_ADD %sub1, %sub2
     ; CHECK-NEXT: $x0 = COPY %add(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %a:_(s64) = COPY $x0
@@ -226,9 +235,12 @@ body:             |
     ; CHECK-LABEL: name: APlusBMinusAplusC
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(s64) = COPY $x0
     ; CHECK-NEXT: %b:_(s64) = COPY $x1
     ; CHECK-NEXT: %c:_(s64) = COPY $x2
-    ; CHECK-NEXT: %add:_(s64) = G_SUB %b, %c
+    ; CHECK-NEXT: %add1:_(s64) = G_ADD %a, %c
+    ; CHECK-NEXT: %sub1:_(s64) = G_SUB %b, %add1
+    ; CHECK-NEXT: %add:_(s64) = G_ADD %a, %sub1
     ; CHECK-NEXT: $x0 = COPY %add(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %a:_(s64) = COPY $x0
@@ -251,9 +263,12 @@ body:             |
     ; CHECK-LABEL: name: APlusBMinusCPlusA
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(s64) = COPY $x0
     ; CHECK-NEXT: %b:_(s64) = COPY $x1
     ; CHECK-NEXT: %c:_(s64) = COPY $x2
-    ; CHECK-NEXT: %add:_(s64) = G_SUB %b, %c
+    ; CHECK-NEXT: %add1:_(s64) = G_ADD %c, %a
+    ; CHECK-NEXT: %sub1:_(s64) = G_SUB %b, %add1
+    ; CHECK-NEXT: %add:_(s64) = G_ADD %a, %sub1
     ; CHECK-NEXT: $x0 = COPY %add(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %a:_(s64) = COPY $x0
@@ -279,9 +294,12 @@ body:             |
     ; CHECK-NEXT: %a1:_(s64) = COPY $x0
     ; CHECK-NEXT: %b1:_(s64) = COPY $x1
     ; CHECK-NEXT: %c1:_(s64) = COPY $x2
+    ; CHECK-NEXT: %a:_(<2 x s64>) = G_BUILD_VECTOR %a1(s64), %b1(s64)
     ; CHECK-NEXT: %b:_(<2 x s64>) = G_BUILD_VECTOR %b1(s64), %ba:_(s64)
     ; CHECK-NEXT: %c:_(<2 x s64>) = G_BUILD_VECTOR %a1(s64), %c1(s64)
-    ; CHECK-NEXT: %add:_(<2 x s64>) = G_SUB %b, %c
+    ; CHECK-NEXT: %add1:_(<2 x s64>) = G_ADD %c, %a
+    ; CHECK-NEXT: %sub1:_(<2 x s64>) = G_SUB %b, %add1
+    ; CHECK-NEXT: %add:_(<2 x s64>) = G_ADD %a, %sub1
     ; CHECK-NEXT: $q0 = COPY %add(<2 x s64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %a1:_(s64) = COPY $x0
@@ -331,8 +349,10 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %a:_(s64) = COPY $x0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 5
-    ; CHECK-NEXT: %sub:_(s64) = G_SUB [[C]], %a
+    ; CHECK-NEXT: %c1:_(s64) = G_CONSTANT i64 4
+    ; CHECK-NEXT: %c2:_(s64) = G_CONSTANT i64 9
+    ; CHECK-NEXT: %add:_(s64) = G_ADD %a, %c1
+    ; CHECK-NEXT: %sub:_(s64) = G_SUB %c2, %add
     ; CHECK-NEXT: $x0 = COPY %sub(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %a:_(s64) = COPY $x0
@@ -377,8 +397,10 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %a:_(s64) = COPY $x0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -49
-    ; CHECK-NEXT: %sub:_(s64) = G_SUB [[C]], %a
+    ; CHECK-NEXT: %c1:_(s64) = G_CONSTANT i64 11
+    ; CHECK-NEXT: %sub1:_(s64) = G_SUB %c1, %a
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -60
+    ; CHECK-NEXT: %sub:_(s64) = G_ADD %sub1, [[C]]
     ; CHECK-NEXT: $x0 = COPY %sub(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %a:_(s64) = COPY $x0
@@ -411,5 +433,29 @@ body:             |
     %sub:_(s64) = G_SUB %a, %c1
     %add:_(s64) = G_ADD %sub, %c2
     $x0 = COPY %add
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:   APlusBPlusCMinusB
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+
+    ; CHECK-LABEL: name: APlusBPlusCMinusB
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(s64) = COPY $x0
+    ; CHECK-NEXT: %c:_(s64) = COPY $x2
+    ; CHECK-NEXT: %sub1:_(s64) = G_ADD %a, %c
+    ; CHECK-NEXT: $x0 = COPY %sub1(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %a:_(s64) = COPY $x0
+    %b:_(s64) = COPY $x1
+    %c:_(s64) = COPY $x2
+    %add1:_(s64) = G_ADD %b, %c
+    %add2:_(s64) = G_ADD %a, %add1
+    %sub1:_(s64) = G_SUB %add2, %b
+    $x0 = COPY %sub1
     RET_ReallyLR implicit $x0
 

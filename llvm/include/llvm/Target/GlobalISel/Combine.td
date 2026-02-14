@@ -1879,6 +1879,22 @@ def APlusBMinusCMinusB : GICombineRule<
           (G_SUB $root, $add1, $B)),
    (apply (G_SUB $root, $A, $C))>;
 
+// fold ((A+(B+C))-B) -> A+C
+def APlusBPlusCMinusB_frags : GICombinePatFrag<
+  (outs root:$root), (ins $x, $y, $n),
+  [
+    (pattern (G_ADD $add1, $y, $n),
+              (G_ADD $add2, $x, $add1),
+              (G_SUB $root, $add2, $y),
+             [{ return MRI.hasOneNonDBGUse(${add2}.getReg()) &&
+                       MRI.hasOneNonDBGUse(${add1}.getReg()); }]),
+  ]>;
+
+def APlusBPlusCMinusB : GICombineRule<
+  (defs root:$root),
+  (match (APlusBPlusCMinusB_frags $root, $x, $y, $n)),
+  (apply (G_ADD $root, $x, $n))>;
+
 // fold ((A-(B-C))-C) -> A-B
 def AMinusBMinusCMinusC : GICombineRule<
     (defs root:$root),
@@ -1999,20 +2015,21 @@ def AMinusC1PlusC2: GICombineRule<
 
 def integer_reassoc_combines: GICombineGroup<[
   APlusBMinusCMinusB,
-  AMinusBMinusCMinusC,
-  ZeroMinusAPlusB,
-  APlusZeroMinusB,
-  APlusBMinusB,
-  BMinusAPlusA,
-  AMinusBPlusCMinusA,
-  AMinusBPlusBMinusC,
-  APlusBMinusAplusC,
-  APlusBMinusCPlusA,
-  APlusC1MinusC2,
-  C2MinusAPlusC1,
-  AMinusC1MinusC2,
-  C1Minus2MinusC2,
-  AMinusC1PlusC2
+  APlusBPlusCMinusB,
+  // AMinusBMinusCMinusC,
+  // ZeroMinusAPlusB,
+  // APlusZeroMinusB,
+  // APlusBMinusB,
+  // BMinusAPlusA,
+  // AMinusBPlusCMinusA,
+  // AMinusBPlusBMinusC,
+  // APlusBMinusAplusC,
+  // APlusBMinusCPlusA,
+  // APlusC1MinusC2,
+  // C2MinusAPlusC1,
+  // AMinusC1MinusC2,
+  // C1Minus2MinusC2,
+  // AMinusC1PlusC2
 ]>;
 
 // fold (A+(shl (0-B), C)) -> (A-(shl B, C))
