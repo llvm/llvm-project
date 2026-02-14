@@ -47,6 +47,18 @@ class GenericEnum {
   // If ValueField is not set, enum values will be assigned automatically,
   // starting at 0, according to a lexicographical sort of the entry names.
   string ValueField;
+
+  // If true, emit the enum as a scoped C++ enum class.
+  bit Scoped = 0;
+
+  // (Optional) Bit width of the underlying integral type when emitting a scoped
+  // enum class. When unset, the compiler's default underlying type is used.
+  // Supported widths are 8, 16, 32, and 64.
+  int Size = ?;
+}
+
+class GenericEnumClass : GenericEnum {
+  let Scoped = 1;
 }
 
 // Define a record derived from this class to generate a generic table. This

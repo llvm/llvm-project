@@ -19,6 +19,13 @@ include "llvm/TableGen/SearchableTable.td"
 // CHECK:   CFoo
 // CHECK: }
 
+// CHECK-LABEL: GET_FEnum_DECL
+// CHECK: enum class FEnum {
+// CHECK:   FApple = 0,
+// CHECK:   FBanana = 1,
+// CHECK:   FCherry = 2,
+// CHECK: }
+
 // CHECK-LABEL: GET_ATable_DECL
 // CHECK: const AEntry *lookupATableByValues(uint8_t Val1, uint16_t Val2);
 
@@ -236,4 +243,95 @@ def EEntryOddTable : GenericTable {
   let Fields = ["Value"];
   let PrimaryKey = ["Value"];
   let PrimaryKeyName = "lookupEEntryOddTableByValue";
+}
+
+// CHECK-LABEL: GET_FTable_DECL
+// CHECK: const FTableEntry *lookupFTableByEnum(FEnum Enum);
+// CHECK: const FTableEntry *lookupFTableByEnumAndValue(FEnum Enum, uint32_t Value);
+
+// CHECK-LABEL: GET_FTable_IMPL
+// CHECK: constexpr FTableEntry FTable[] = {
+// CHECK:   { FEnum::FApple, 0x1 },
+// CHECK:   { FEnum::FBanana, 0x2 },
+// CHECK:   { FEnum::FCherry, 0x3 },
+// CHECK: };
+// CHECK: const FTableEntry *lookupFTableByEnum(FEnum Enum) {
+// CHECK:   if ((FEnum)Enum != std::clamp((FEnum)Enum, (FEnum)FEnum::FApple, (FEnum)FEnum::FCherry))
+// CHECK:     return nullptr;
+// CHECK: const FTableEntry *lookupFTableByEnumAndValue(FEnum Enum, uint32_t Value) {
+// CHECK:   struct IndexType {
+// CHECK:     FEnum Enum;
+// CHECK:     uint32_t Value;
+// CHECK:     unsigned _index;
+// CHECK:   };
+// CHECK:   static const struct IndexType Index[] = {
+// CHECK:     { FEnum::FApple, 0x1, 0 },
+// CHECK:     { FEnum::FBanana, 0x2, 1 },
+// CHECK:     { FEnum::FCherry, 0x3, 2 },
+// CHECK:   };
+// CHECK:   struct KeyType {
+// CHECK:     FEnum Enum;
+// CHECK:     uint32_t Value;
+// CHECK:   };
+// CHECK:   return &FTable[Idx->_index];
+
+// CHECK-LABEL: GET_FTableContiguous_DECL
+// CHECK: const FTableEntry *lookupFTableContiguousByEnum(FEnum Enum);
+
+// CHECK-LABEL: GET_FTableContiguous_IMPL
+// CHECK: constexpr FTableEntry FTableContiguous[] = {
+// CHECK:   { FEnum::FApple, 0x1 },
+// CHECK:   { FEnum::FBanana, 0x2 },
+// CHECK:   { FEnum::FCherry, 0x3 },
+// CHECK: };
+// CHECK: const FTableEntry *lookupFTableContiguousByEnum(FEnum Enum) {
+// CHECK:   if ((FEnum)Enum != std::clamp((FEnum)Enum, (FEnum)FEnum::FApple, (FEnum)FEnum::FCherry))
+// CHECK:     return nullptr;
+// CHECK:   auto Table = ArrayRef(FTableContiguous);
+// CHECK:   size_t Idx = (unsigned)Enum - (unsigned)FEnum::FApple;
+// CHECK:   return &Table[Idx];
+
+class FEntry;
+
+def FApple : FEntry;
+def FBanana : FEntry;
+def FCherry : FEntry;
+
+def FEnum : GenericEnumClass {
+  let FilterClass = "FEntry";
+}
+
+class FTableEntry<FEntry EnumValue, int val> {
+  FEntry Enum = EnumValue;
+  bits<32> Value = val;
+}
+
+def FAppleEntry : FTableEntry<FApple, 1>;
+def FBananaEntry : FTableEntry<FBanana, 2>;
+def FCherryEntry : FTableEntry<FCherry, 3>;
+
+def FTable : GenericTable {
+  let FilterClass = "FTableEntry";
+  let Fields = ["Enum", "Value"];
+
+  string TypeOf_Enum = "FEnum";
+
+  let PrimaryKey = ["Enum"];
+  let PrimaryKeyName = "lookupFTableByEnum";
+  let PrimaryKeyEarlyOut = 1;
+}
+
+def lookupFTableByEnumAndValue : SearchIndex {
+  let Table = FTable;
+  let Key = ["Enum", "Value"];
+}
+
+def FTableContiguous : GenericTable {
+  let FilterClass = "FTableEntry";
+  let Fields = ["Enum", "Value"];
+
+  string TypeOf_Enum = "FEnum";
+
+  let PrimaryKey = ["Enum"];
+  let PrimaryKeyName = "lookupFTableContiguousByEnum";
 }
