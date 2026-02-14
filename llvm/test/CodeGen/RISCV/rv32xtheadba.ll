@@ -723,8 +723,8 @@ define i32 @srli_1_sh2add(ptr %0, i32 %1) {
 ;
 ; RV32XTHEADBA-LABEL: srli_1_sh2add:
 ; RV32XTHEADBA:       # %bb.0:
-; RV32XTHEADBA-NEXT:    srli a1, a1, 1
-; RV32XTHEADBA-NEXT:    th.addsl a0, a0, a1, 2
+; RV32XTHEADBA-NEXT:    andi a1, a1, -2
+; RV32XTHEADBA-NEXT:    th.addsl a0, a0, a1, 1
 ; RV32XTHEADBA-NEXT:    lw a0, 0(a0)
 ; RV32XTHEADBA-NEXT:    ret
   %3 = lshr i32 %1, 1
@@ -745,8 +745,8 @@ define i64 @srli_2_sh3add(ptr %0, i32 %1) {
 ;
 ; RV32XTHEADBA-LABEL: srli_2_sh3add:
 ; RV32XTHEADBA:       # %bb.0:
-; RV32XTHEADBA-NEXT:    srli a1, a1, 2
-; RV32XTHEADBA-NEXT:    th.addsl a1, a0, a1, 3
+; RV32XTHEADBA-NEXT:    andi a1, a1, -4
+; RV32XTHEADBA-NEXT:    th.addsl a1, a0, a1, 1
 ; RV32XTHEADBA-NEXT:    lw a0, 0(a1)
 ; RV32XTHEADBA-NEXT:    lw a1, 4(a1)
 ; RV32XTHEADBA-NEXT:    ret
