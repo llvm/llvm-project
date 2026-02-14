@@ -1281,6 +1281,9 @@ add_header_library(
     sinpif16.h
   DEPENDS
     .sincosf16_utils
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.include.llvm-libc-macros.float16_macros
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
@@ -1288,6 +1291,7 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
+    libc.src.__support.math.sincosf16_utils
 )
 
 add_header_library(
