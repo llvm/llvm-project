@@ -137,6 +137,7 @@ Changes to the RISC-V Backend
   extensions.
 * Adds experimental assembler support for the 'Zvabd` (RISC-V Integer Vector
   Absolute Difference) extension.
+* `-mcpu=spacemit-a100` was added.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -182,9 +183,18 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------
 
-* Support for FreeBSD on MIPS64 has been removed.
-* The minimum assumed version of FreeBSD is now 14. The effect of which is that watchpoints are
+### FreeBSD
+
+#### Userspace Debugging
+
+* Support for MIPS64 has been removed.
+* The minimum assumed FreeBSD version is now 14. The effect of which is that watchpoints are
   assumed to be supported.
+
+#### Kernel Debugging
+
+* The crashed thread is now automatically selected on start.
+* Threads are listed in incrmental order by pid then by tid.
 
 Changes to BOLT
 ---------------

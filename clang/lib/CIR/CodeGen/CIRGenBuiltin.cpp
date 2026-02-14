@@ -157,8 +157,8 @@ static mlir::Value makeBinaryAtomicValue(
 
   auto rmwi = cir::AtomicFetchOp::create(
       builder, cgf.getLoc(expr->getSourceRange()), destValue, val, kind,
-      ordering, false, /* is volatile */
-      true);           /* fetch first */
+      ordering, cir::SyncScopeKind::System, false, /* is volatile */
+      true);                                       /* fetch first */
   return rmwi->getResult(0);
 }
 

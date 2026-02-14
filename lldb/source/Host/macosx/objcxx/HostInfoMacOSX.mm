@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/macosx/HostInfoMacOSX.h"
-#include "lldb/Core/ModuleList.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
@@ -702,7 +701,7 @@ public:
   /// system, open it and add all of the binary images to m_caches.
   bool CreateSharedCacheImageList(UUID uuid, std::string filepath);
 
-  SharedCacheInfo();
+  SharedCacheInfo(SymbolSharedCacheUse sc_mode);
 
 private:
   bool CreateSharedCacheInfoWithInstrospectionSPIs();
@@ -721,7 +720,7 @@ private:
 
 } // namespace
 
-SharedCacheInfo::SharedCacheInfo() {
+SharedCacheInfo::SharedCacheInfo(SymbolSharedCacheUse sc_mode) {
   // macOS 26.4 and newer
   m_dyld_image_retain_4HWTrace =
       (void (*)(void *))dlsym(RTLD_DEFAULT, "dyld_image_retain_4HWTrace");
@@ -735,14 +734,25 @@ SharedCacheInfo::SharedCacheInfo() {
   _dyld_get_shared_cache_uuid(dsc_uuid);
   m_host_uuid = UUID(dsc_uuid);
 
-  if (ModuleList::GetGlobalModuleListProperties()
-          .GetSharedCacheBinaryLoading() &&
-      CreateHostSharedCacheImageList())
+  // Don't scan/index lldb's own shared cache at all, in-memory or
+  // via libdyld SPI.
+  if (sc_mode == eSymbolSharedCacheUseInferiorSharedCacheOnly)
     return;
 
+  // Check if the settings allow the use of the libdyld SPI.
+  bool use_libdyld_spi =
+      sc_mode == eSymbolSharedCacheUseHostSharedCache ||
+      sc_mode == eSymbolSharedCacheUseHostAndInferiorSharedCache;
+  if (use_libdyld_spi && CreateHostSharedCacheImageList())
+    return;
+
+  // Scan lldb's shared cache memory if we're built against the
+  // internal SDK and have those headers.
   if (CreateSharedCacheInfoWithInstrospectionSPIs())
     return;
 
+  // Scan lldb's shared cache memory if we're built against the public
+  // SDK.
   CreateSharedCacheInfoLLDBsVirtualMemory();
 }
 
@@ -973,32 +983,38 @@ void SharedCacheInfo::CreateSharedCacheInfoLLDBsVirtualMemory() {
       });
 }
 
-SharedCacheInfo &GetSharedCacheSingleton() {
-  static SharedCacheInfo g_shared_cache_info;
+SharedCacheInfo &GetSharedCacheSingleton(SymbolSharedCacheUse sc_mode) {
+  static SharedCacheInfo g_shared_cache_info(sc_mode);
   return g_shared_cache_info;
 }
 
 SharedCacheImageInfo
-HostInfoMacOSX::GetSharedCacheImageInfo(llvm::StringRef image_name) {
-  return GetSharedCacheSingleton().GetImages().lookup(image_name);
+HostInfoMacOSX::GetSharedCacheImageInfo(llvm::StringRef image_name,
+                                        SymbolSharedCacheUse sc_mode) {
+  return GetSharedCacheSingleton(sc_mode).GetImages().lookup(image_name);
 }
 
 SharedCacheImageInfo
 HostInfoMacOSX::GetSharedCacheImageInfo(llvm::StringRef image_name,
-                                        const UUID &uuid) {
+                                        const UUID &uuid,
+                                        SymbolSharedCacheUse sc_mode) {
   llvm::StringMap<SharedCacheImageInfo> *shared_cache_info;
-  if (GetSharedCacheSingleton().GetImages(&shared_cache_info, uuid))
+  if (GetSharedCacheSingleton(sc_mode).GetImages(&shared_cache_info, uuid))
     return shared_cache_info->lookup(image_name);
   return {};
 }
 
-bool HostInfoMacOSX::SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid) {
+bool HostInfoMacOSX::SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid,
+                                           SymbolSharedCacheUse sc_mode) {
+  if (sc_mode == eSymbolSharedCacheUseHostLLDBMemory)
+    return false;
+
   // There is a libdyld SPI to iterate over all installed shared caches,
   // but it can have performance problems if an older Simulator SDK shared
   // cache is installed.  So require that we are given a filepath of
   // the shared cache.
   if (FileSystem::Instance().Exists(filepath))
-    return GetSharedCacheSingleton().CreateSharedCacheImageList(
+    return GetSharedCacheSingleton(sc_mode).CreateSharedCacheImageList(
         uuid, filepath.GetPath());
   return false;
 }

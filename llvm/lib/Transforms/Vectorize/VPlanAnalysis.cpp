@@ -124,14 +124,29 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::LastActiveLane:
     return Type::getIntNTy(Ctx, 64);
   case VPInstruction::LogicalAnd:
+  case VPInstruction::LogicalOr:
     assert(inferScalarType(R->getOperand(0))->isIntegerTy(1) &&
            inferScalarType(R->getOperand(1))->isIntegerTy(1) &&
-           "LogicalAnd operands should be bool");
+           "LogicalAnd/Or operands should be bool");
     return IntegerType::get(Ctx, 1);
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::BranchOnCount:
+  case Instruction::Store:
     return Type::getVoidTy(Ctx);
+  case Instruction::Load:
+    return cast<LoadInst>(R->getUnderlyingValue())->getType();
+  case Instruction::Alloca:
+    return cast<AllocaInst>(R->getUnderlyingValue())->getType();
+  case Instruction::Call: {
+    unsigned CallIdx = R->getNumOperandsWithoutMask() - 1;
+    return cast<Function>(R->getOperand(CallIdx)->getLiveInIRValue())
+        ->getReturnType();
+  }
+  case Instruction::GetElementPtr:
+    return inferScalarType(R->getOperand(0));
+  case Instruction::ExtractValue:
+    return cast<ExtractValueInst>(R->getUnderlyingValue())->getType();
   default:
     break;
   }
