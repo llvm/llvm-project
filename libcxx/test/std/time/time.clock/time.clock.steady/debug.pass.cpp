@@ -38,18 +38,18 @@ static LARGE_INTEGER __QueryPerformanceFrequency() {
   return val;
 }
 
-static steady_clock::time_point __libcpp_steady_clock_now() {
+static std::chrono::steady_clock::time_point __libcpp_steady_clock_now() {
   static const LARGE_INTEGER freq = __QueryPerformanceFrequency();
 
   LARGE_INTEGER counter;
   (void)QueryPerformanceCounter(&counter);
   auto seconds   = counter.QuadPart / freq.QuadPart;
   auto fractions = counter.QuadPart % freq.QuadPart;
-  auto dur       = seconds * nano::den + fractions * nano::den / freq.QuadPart;
+  auto dur       = seconds * std::nano::den + fractions * std::nano::den / freq.QuadPart;
   std::cerr << "counter.QuadPart: " << counter.QuadPart << ", freq.QuadPart: " << freq.QuadPart
-            << "\n seconds: " << seconds << ", fractions: " << fractions << "\n nano::den: " << nano::den
+            << "\n seconds: " << seconds << ", fractions: " << fractions << "\n nano::den: " << std::nano::den
             << ", dur: " << dur << std::endl;
-  return std::steady_clock::time_point(steady_clock::duration(dur));
+  return std::chrono::steady_clock::time_point(std::chrono::steady_clock::duration(dur));
 }
 
 int main(int, char**) {
