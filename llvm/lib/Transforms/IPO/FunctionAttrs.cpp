@@ -1933,10 +1933,13 @@ static bool InstrBreaksNoFree(Instruction &I, const SCCNodeSet &SCCNodes) {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 static bool InstrBreaksNoSync(Instruction &I, const SCCNodeSet &SCCNodes) {
   if (!I.maySynchronize())
 =======
 
+=======
+>>>>>>> 45326fab2153 (nit)
 static bool InstrBreaksNoSync(Instruction &I, const SCCNodeSet &SCCNodes) {
   // Volatile may synchronize
   if (I.isVolatile())
