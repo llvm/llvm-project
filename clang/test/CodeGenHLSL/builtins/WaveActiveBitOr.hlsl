@@ -59,7 +59,7 @@ uint64_t test_uint64_t(uint64_t expr) {
 // CHECK: declare [[TY]] @llvm.[[ICF]].wave.reduce.or.i64([[TY]]) #[[#attr:]]
 
 // CHECK-LABEL: test_uint64_t2
-uint64_t2 test_uint64_t(uint64_t2 expr) {
+uint64_t2 test_uint64_t2(uint64_t2 expr) {
   // DXCHECK:  %[[RET:.*]] = call [[TY:.*]] @llvm.[[ICF:dx]].wave.reduce.or.v2i64([[TY]] %[[#]])
   // SPVCHECK:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.[[ICF:spv]].wave.reduce.or.v2i64([[TY]] %[[#]])
   // CHECK:  ret [[TY]] %[[RET]]
@@ -69,7 +69,7 @@ uint64_t2 test_uint64_t(uint64_t2 expr) {
 // CHECK: declare [[TY]] @llvm.[[ICF]].wave.reduce.or.v2i64([[TY]]) #[[#attr:]]
 
 // CHECK-LABEL: test_uint64_t3
-uint64_t3 test_uint64_t(uint64_t3 expr) {
+uint64_t3 test_uint64_t3(uint64_t3 expr) {
   // DXCHECK:  %[[RET:.*]] = call [[TY:.*]] @llvm.[[ICF:dx]].wave.reduce.or.v3i64([[TY]] %[[#]])
   // SPVCHECK:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.[[ICF:spv]].wave.reduce.or.v3i64([[TY]] %[[#]])
   // CHECK:  ret [[TY]] %[[RET]]

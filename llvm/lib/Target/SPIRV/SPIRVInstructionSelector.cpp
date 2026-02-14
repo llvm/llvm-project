@@ -2924,7 +2924,7 @@ bool SPIRVInstructionSelector::selectWaveReduceOp(Register ResVReg,
                                                   const SPIRVType *ResType,
                                                   MachineInstr &I,
                                                   unsigned Opcode) {
-  return selectWaveReduceOp(
+  return selectWaveReduce(
       ResVReg, ResType, I, false,
       [&](Register InputRegister, bool IsUnsigned) { return Opcode; });
 }
