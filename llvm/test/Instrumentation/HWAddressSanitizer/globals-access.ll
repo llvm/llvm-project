@@ -32,7 +32,7 @@ define dso_local noundef i32 @_Z3tmpv() sanitize_hwaddress {
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP2]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP7]], align 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne i8 [[TMP4]], [[TMP8]]
-; CHECK-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       10:
 ; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP2]], ptr @x, i32 2)
 ; CHECK-NEXT:    br label [[TMP11]]
