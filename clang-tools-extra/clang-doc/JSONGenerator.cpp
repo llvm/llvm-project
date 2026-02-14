@@ -565,13 +565,7 @@ static void serializeInfo(const EnumInfo &I, json::Object &Obj,
   if (I.BaseType) {
     json::Value BaseTypeVal = Object();
     auto &BaseTypeObj = *BaseTypeVal.getAsObject();
-    // Create a nested 'Type' object so the template can find {{Type.Name}}
-    json::Value TypeVal = Object();
-    auto &TypeObj = *TypeVal.getAsObject();
-    TypeObj["Name"] = I.BaseType->Type.Name;
-    TypeObj["QualName"] = I.BaseType->Type.QualName;
-    TypeObj["USR"] = toHex(toStringRef(I.BaseType->Type.USR));
-    BaseTypeObj["Type"] = TypeVal;
+    BaseTypeObj["Name"] = I.BaseType->Type.QualName;
     Obj["BaseType"] = BaseTypeVal;
   }
 
