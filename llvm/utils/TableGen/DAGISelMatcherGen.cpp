@@ -92,12 +92,12 @@ class MatcherGen {
   /// second is the recorded slot number the input pattern match saved it in.
   SmallVector<std::pair<const Record *, unsigned>, 2> PhysRegInputs;
 
-  /// This is the top level of the generated matcher, the result.
-  MatcherList TheMatcher;
+  /// Matcher - This is the top level of the generated matcher, the result.
+  Matcher *TheMatcher = nullptr;
 
-  /// As we emit matcher nodes, this points to the latest check which should
-  /// have future checks inserted after it.
-  MatcherList::iterator InsertPt;
+  /// CurPredicate - As we emit matcher nodes, this points to the latest check
+  /// which should have future checks stuck into its Next position.
+  Matcher *CurPredicate = nullptr;
 
 public:
   MatcherGen(const PatternToMatch &pattern, const CodeGenDAGPatterns &cgp);
@@ -105,7 +105,7 @@ public:
   bool EmitMatcherCode(unsigned Variant);
   void EmitResultCode();
 
-  MatcherList GetMatcher() { return std::move(TheMatcher); }
+  Matcher *GetMatcher() const { return TheMatcher; }
 
 private:
   void AddMatcher(Matcher *NewNode);
@@ -146,7 +146,7 @@ private:
 
 MatcherGen::MatcherGen(const PatternToMatch &pattern,
                        const CodeGenDAGPatterns &cgp)
-    : Pattern(pattern), CGP(cgp), InsertPt(TheMatcher.before_begin()) {
+    : Pattern(pattern), CGP(cgp) {
   // We need to produce the matcher tree for the patterns source pattern.  To
   // do this we need to match the structure as well as the types.  To do the
   // type matching, we want to figure out the fewest number of type checks we
@@ -184,7 +184,11 @@ void MatcherGen::InferPossibleTypes() {
 
 /// AddMatcher - Add a matcher node to the current graph we're building.
 void MatcherGen::AddMatcher(Matcher *NewNode) {
-  InsertPt = TheMatcher.insert_after(InsertPt, NewNode);
+  if (CurPredicate)
+    CurPredicate->setNext(NewNode);
+  else
+    TheMatcher = NewNode;
+  CurPredicate = NewNode;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1052,16 +1056,15 @@ void MatcherGen::EmitResultCode() {
 }
 
 /// ConvertPatternToMatcher - Create the matcher for the specified pattern with
-/// the specified variant.  If the variant number is invalid, this returns an
-/// empty MatcherList.
-MatcherList llvm::ConvertPatternToMatcher(const PatternToMatch &Pattern,
-                                          unsigned Variant,
-                                          const CodeGenDAGPatterns &CGP) {
+/// the specified variant.  If the variant number is invalid, this returns null.
+Matcher *llvm::ConvertPatternToMatcher(const PatternToMatch &Pattern,
+                                       unsigned Variant,
+                                       const CodeGenDAGPatterns &CGP) {
   MatcherGen Gen(Pattern, CGP);
 
   // Generate the code for the matcher.
   if (Gen.EmitMatcherCode(Variant))
-    return MatcherList();
+    return nullptr;
 
   // FIXME2: Kill extra MoveParent commands at the end of the matcher sequence.
   // FIXME2: Split result code out to another table, and make the matcher end
