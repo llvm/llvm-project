@@ -521,10 +521,14 @@ void LookupResult::resolveKind() {
 
   llvm::SmallVector<const NamedDecl *, 4> EquivalentNonFunctions;
   llvm::BitVector RemovedDecls(N);
+  llvm::BitVector UnresolvedUsingDecls(N);
 
   for (unsigned I = 0; I < N; I++) {
     const NamedDecl *D = Decls[I]->getUnderlyingDecl();
     D = cast<NamedDecl>(D->getCanonicalDecl());
+
+    if (isa<UnresolvedUsingIfExistsDecl>(D))
+      UnresolvedUsingDecls.set(I);
 
     // Ignore an invalid declaration unless it's the only one left.
     // Also ignore HLSLBufferDecl which not have name conflict with other Decls.
@@ -633,16 +637,23 @@ void LookupResult::resolveKind() {
     getSema().diagnoseEquivalentInternalLinkageDeclarations(
         getNameLoc(), HasNonFunction, EquivalentNonFunctions);
 
+  if ((HasNonFunction && (HasFunction || HasUnresolved)) ||
+      (HideTags && HasTag && (HasFunction || HasNonFunction || HasUnresolved)))
+    Ambiguous = true;
+
+  if (Ambiguous && UnresolvedUsingDecls.count()) {
+    // If we would have an ambiguous reference but any of them are
+    // using_if_exist decls, ignore them since they are unresolved.
+    RemovedDecls |= UnresolvedUsingDecls;
+    Ambiguous = false;
+  }
+
   // Remove decls by replacing them with decls from the end (which
   // means that we need to iterate from the end) and then truncating
   // to the new size.
   for (int I = RemovedDecls.find_last(); I >= 0; I = RemovedDecls.find_prev(I))
     Decls[I] = Decls[--N];
   Decls.truncate(N);
-
-  if ((HasNonFunction && (HasFunction || HasUnresolved)) ||
-      (HideTags && HasTag && (HasFunction || HasNonFunction || HasUnresolved)))
-    Ambiguous = true;
 
   if (Ambiguous && ReferenceToPlaceHolderVariable)
     setAmbiguous(LookupAmbiguityKind::AmbiguousReferenceToPlaceholderVariable);
