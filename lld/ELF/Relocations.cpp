@@ -670,6 +670,12 @@ bool RelocScan::maybeReportUndefined(Undefined &sym, uint64_t offset) {
   if (ctx.arg.unresolvedSymbols == UnresolvedPolicy::Ignore && canBeExternal)
     return false;
 
+  // Prefetch target symbols are specified through profiling which can be
+  // inaccurate.
+  if (sym.getName().starts_with(prefetchSymbolPrefix)) {
+    return false;
+  }
+
   // clang (as of 2019-06-12) / gcc (as of 8.2.1) PPC64 may emit a .rela.toc
   // which references a switch table in a discarded .rodata/.text section. The
   // .toc and the .rela.toc are incorrectly not placed in the comdat. The ELF
@@ -955,6 +961,14 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
     sym.isExported = true;
     ctx.mainPart->relaDyn->addSymbolReloc(type, *sec, offset, sym, addend,
                                           type);
+    return;
+  }
+
+  if (sym.getName().starts_with(prefetchSymbolPrefix)) {
+    sec->addReloc({expr, type, offset, addend, &sym});
+    // Prefetch target symbols may be undefined due to inaccurate profiles.
+    // The unresolved relocation will result in 0x0, effectively prefetching the
+    // next instruction.
     return;
   }
 

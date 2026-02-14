@@ -16,6 +16,9 @@
 #include <vector>
 
 namespace lld::elf {
+
+constexpr const char prefetchSymbolPrefix[] = "__llvm_prefetch_target_";
+
 struct Ctx;
 struct ELFSyncStream;
 class Defined;
