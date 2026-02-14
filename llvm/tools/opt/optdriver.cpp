@@ -378,7 +378,7 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "structurizecfg",
       "fix-irreducible",
       "expand-ir-insts",
-      "inline-asm-prepare",
+      "callbrprepare",
       "scalarizer",
   };
   for (StringLiteral P : PassNamePrefix)
@@ -432,7 +432,7 @@ optMain(int argc, char **argv,
   initializeExpandMemCmpLegacyPassPass(Registry);
   initializeScalarizeMaskedMemIntrinLegacyPassPass(Registry);
   initializeSelectOptimizePass(Registry);
-  initializeInlineAsmPreparePass(Registry);
+  initializeCallBrPreparePass(Registry);
   initializeCodeGenPrepareLegacyPassPass(Registry);
   initializeAtomicExpandLegacyPass(Registry);
   initializeWinEHPreparePass(Registry);

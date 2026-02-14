@@ -196,6 +196,7 @@ class ScriptedProcessInterface;
 class ScriptedStopHookInterface;
 class ScriptedThreadInterface;
 class ScriptedThreadPlanInterface;
+class ScriptedSymbolLocatorInterface;
 class ScriptedSyntheticChildren;
 class SearchFilter;
 class Section;
@@ -431,6 +432,8 @@ typedef std::shared_ptr<lldb_private::ScriptedThreadPlanInterface>
     ScriptedThreadPlanInterfaceSP;
 typedef std::shared_ptr<lldb_private::ScriptedBreakpointInterface>
     ScriptedBreakpointInterfaceSP;
+typedef std::shared_ptr<lldb_private::ScriptedSymbolLocatorInterface>
+    ScriptedSymbolLocatorInterfaceSP;
 typedef std::shared_ptr<lldb_private::Section> SectionSP;
 typedef std::unique_ptr<lldb_private::SectionList> SectionListUP;
 typedef std::weak_ptr<lldb_private::Section> SectionWP;
