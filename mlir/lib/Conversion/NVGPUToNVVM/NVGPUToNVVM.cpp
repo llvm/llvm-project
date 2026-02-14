@@ -340,7 +340,7 @@ struct MmaSyncOptoNVVM : public ConvertOpToLLVMPattern<nvgpu::MmaSyncOp> {
     VectorType bType = op.getMatrixA().getType();
     VectorType cType = op.getMatrixC().getType();
 
-    std::array<int64_t, 3> gemmShape = op.getMmaShapeAsArray();
+    ArrayRef<int64_t> gemmShape = op.getMmaShape();
 
     // Tensor Cores (mma.sync) on F32 works only with TensorFloat32 (TF32).
     bool tf32Enabled = op->hasAttr(op.getTf32EnabledAttrName());
@@ -485,7 +485,7 @@ static std::string buildMmaSparseAsmConstraintString(unsigned matASize,
 /// it's expected that the provided parameters correspond to a valid
 /// instruction.
 static std::string buildMmaSparseAsmString(
-    const std::array<int64_t, 3> &shape, unsigned matASize, unsigned matBSize,
+    ArrayRef<int64_t> shape, unsigned matASize, unsigned matBSize,
     unsigned matCSize, NVVM::MMATypes ptxTypeA, NVVM::MMATypes ptxTypeB,
     NVVM::MMATypes ptxTypeC, NVVM::MMATypes ptxTypeD,
     std::optional<NVVM::MMAIntOverflow> overflow, unsigned metaDataSelector) {
@@ -495,6 +495,7 @@ static std::string buildMmaSparseAsmString(
 
   std::string asmStr;
   llvm::raw_string_ostream ss(asmStr);
+  assert(shape.size() == 3 && "mmaShape should be three integers");
   ss << "mma.sp.sync.aligned.m" << shape[0] << "n" << shape[1] << "k"
      << shape[2] << ".row.col.";
 
@@ -526,7 +527,7 @@ static FailureOr<LLVM::InlineAsmOp> emitMmaSparseSyncOpAsm(
     NVVM::MMATypes ptxTypeC, NVVM::MMATypes ptxTypeD,
     std::optional<NVVM::MMAIntOverflow> overflow, ArrayRef<Value> unpackedAData,
     ArrayRef<Value> unpackedB, ArrayRef<Value> unpackedC, Value indexData,
-    int64_t metadataSelector, const std::array<int64_t, 3> &shape,
+    int64_t metadataSelector, ArrayRef<int64_t> shape,
     Type intrinsicResultType) {
   auto asmDialectAttr =
       LLVM::AsmDialectAttr::get(b.getContext(), LLVM::AsmDialect::AD_ATT);
@@ -618,7 +619,7 @@ struct NVGPUMmaSparseSyncLowering
 
     FailureOr<LLVM::InlineAsmOp> intrinsicResult = emitMmaSparseSyncOpAsm(
         b, *ptxTypeA, *ptxTypeB, *ptxTypeC, *ptxTypeC, overflow, matA, matB,
-        matC, sparseMetadata, op.getSparsitySelector(), op.getMmaShapeAsArray(),
+        matC, sparseMetadata, op.getSparsitySelector(), op.getMmaShape(),
         intrinsicResTy);
     if (failed(intrinsicResult))
       return failure();
