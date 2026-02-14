@@ -8678,7 +8678,12 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       if (Store->isTruncatingStore())
         return SDValue();
 
-      if (Store->getAlign() < Subtarget.getZilsdAlign())
+      // Expand non-volatile or misaligned stores.
+      // Keep stores of 0 since that doesn't constrain the register allocator.
+      if (!(Store->isVolatile() ||
+            (isa<ConstantSDNode>(StoredVal) &&
+             cast<ConstantSDNode>(StoredVal)->isZero())) ||
+          Store->getAlign() < Subtarget.getZilsdAlign())
         return SDValue();
 
       SDLoc DL(Op);
@@ -15213,7 +15218,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       assert(Subtarget.hasStdExtZilsd() && !Subtarget.is64Bit() &&
              "Unexpected custom legalisation");
 
-      if (Ld->getAlign() < Subtarget.getZilsdAlign())
+      if (!Ld->isVolatile() || Ld->getAlign() < Subtarget.getZilsdAlign())
         return;
 
       SDLoc DL(N);
