@@ -39,7 +39,7 @@ namespace LIBC_NAMESPACE_DECL {
       bx lr)");
 }
 
-#else // Thumb2 or ARM
+#elif defined(__thumb__) && __ARM_ARCH_ISA_THUMB == 2
 
 // TODO(https://github.com/llvm/llvm-project/issues/94061): fp registers
 // (d0-d16)
@@ -53,6 +53,21 @@ namespace LIBC_NAMESPACE_DECL {
 
       # Store r4, r5, r6, r7, r8, r9, r10, r11, sp, and lr into buf.
       stm r0, {r4-r12, lr}
+
+      # Return zero.
+      mov r0, #0
+      bx lr)");
+}
+
+#else // ARM
+
+// TODO(https://github.com/llvm/llvm-project/issues/94061): fp registers
+// (d0-d16)
+// TODO(https://github.com/llvm/llvm-project/issues/94062): pac+bti
+[[gnu::naked]] LLVM_LIBC_FUNCTION(int, setjmp, (jmp_buf buf)) {
+  asm(R"(
+      # Store r4, r5, r6, r7, r8, r9, r10, r11, sp, and lr into buf.
+      stm r0, {r4-r11, sp, lr}
 
       # Return zero.
       mov r0, #0

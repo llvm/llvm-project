@@ -49,7 +49,7 @@ namespace LIBC_NAMESPACE_DECL {
       bx lr)");
 }
 
-#else // Thumb2 or ARM
+#elif defined(__thumb__) && __ARM_ARCH_ISA_THUMB == 2
 
 // TODO(https://github.com/llvm/llvm-project/issues/94061): fp registers
 // (d0-d16)
@@ -59,13 +59,28 @@ namespace LIBC_NAMESPACE_DECL {
       # While sp may appear in a register list for ARM mode, it may not for
       # Thumb2 mode. Just load the previous value of sp into r12 then move it
       # into sp, so that this code is portable between ARM and Thumb2.
-
       ldm r0, {r4-r12, lr}
       mov sp, r12
 
       # return val ?: 1;
       movs r0, r1
       it eq
+      moveq r0, #1
+      bx lr)");
+}
+
+#else // ARM
+
+// TODO(https://github.com/llvm/llvm-project/issues/94061): fp registers
+// (d0-d16)
+// TODO(https://github.com/llvm/llvm-project/issues/94062): pac+bti
+[[gnu::naked]] LLVM_LIBC_FUNCTION(void, longjmp, (jmp_buf buf, int val)) {
+  asm(R"(
+      # Store r4, r5, r6, r7, r8, r9, r10, r11, sp, and lr into buf.
+      ldm r0, {r4-r11, sp, lr}
+
+      # return val ?: 1;
+      movs r0, r1
       moveq r0, #1
       bx lr)");
 }
