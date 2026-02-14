@@ -49,7 +49,6 @@ bool GIMatchTableExecutor::executeMatchTable(
     const TargetRegisterInfo &TRI, const RegisterBankInfo &RBI,
     const PredicateBitset &AvailableFeatures,
     CodeGenCoverage *CoverageInfo) const {
-  
   uint64_t CurrentIdx = 0;
   SmallVector<uint64_t, 4> OnFailResumeAt;
   NewMIVector OutMIs;
@@ -215,7 +214,6 @@ bool GIMatchTableExecutor::executeMatchTable(
 
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
       unsigned Opcode = State.MIs[InsnID]->getOpcode();
-      
       DEBUG_WITH_TYPE(TgtExecutor::getName(), {
         dbgs() << CurrentIdx << ": GIM_CheckOpcode(MIs[" << InsnID
                << "], ExpectedOpcode=" << Expected0;
@@ -238,6 +236,7 @@ bool GIMatchTableExecutor::executeMatchTable(
 
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
       const int64_t Opcode = State.MIs[InsnID]->getOpcode();
+      
       DEBUG_WITH_TYPE(TgtExecutor::getName(), {
         dbgs() << CurrentIdx << ": GIM_SwitchOpcode(MIs[" << InsnID << "], ["
                << LowerBound << ", " << UpperBound << "), Default=" << Default
@@ -1454,9 +1453,6 @@ bool GIMatchTableExecutor::executeMatchTable(
 
     case GIR_RootConstrainSelectedInstOperands:
     case GIR_ConstrainSelectedInstOperands: {
-      
-      printf("GIR_ConstrainSelectedInstOperands at index %lu\n", CurrentIdx);
-      
       uint64_t InsnID = (MatcherOpcode == GIR_RootConstrainSelectedInstOperands)
                             ? 0
                             : readULEB();
