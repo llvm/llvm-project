@@ -1228,6 +1228,9 @@ private:
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
 
+  void canonicalizeMnemonic(OperandVector &Operands,
+                            std::string &NameStorage) override;
+
   void MatchFPUWaitAlias(SMLoc IDLoc, X86Operand &Op, OperandVector &Operands,
                          MCStreamer &Out, bool MatchingInlineAsm);
 
@@ -3312,7 +3315,6 @@ bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
       } else {
         if (getLexer().isNot(AsmToken::Identifier))
           return Error(Parser.getTok().getLoc(), "Expected identifier");
-        // FIXME: The mnemonic won't match correctly if its not in lower case.
         Name = Parser.getTok().getString();
         Parser.Lex();
       }
@@ -3332,7 +3334,6 @@ bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
       if (ForcedOpcodePrefix != OpcodePrefix_Default) {
         if (getLexer().isNot(AsmToken::Identifier))
           return Error(Parser.getTok().getLoc(), "Expected identifier");
-        // FIXME: The mnemonic won't match correctly if its not in lower case.
         Name = Parser.getTok().getString();
         NameLoc = Parser.getTok().getLoc();
         Parser.Lex();
@@ -3560,7 +3561,6 @@ bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
       Flags = X86::IP_NO_PREFIX;
       break;
     }
-    // FIXME: The mnemonic won't match correctly if its not in lower case.
     Name = Parser.getTok().getString();
     Parser.Lex(); // eat the prefix
     // Hack: we could have something like "rep # some comment" or
@@ -3568,7 +3568,6 @@ bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
     while (Name.starts_with(";") || Name.starts_with("\n") ||
            Name.starts_with("#") || Name.starts_with("\t") ||
            Name.starts_with("/")) {
-      // FIXME: The mnemonic won't match correctly if its not in lower case.
       Name = Parser.getTok().getString();
       Parser.Lex(); // go to next prefix or instr
     }
@@ -4248,6 +4247,15 @@ bool X86AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                             ErrorInfo, MatchingInlineAsm)
              : matchAndEmitATTInstruction(IDLoc, Opcode, Inst, Operands, Out,
                                           ErrorInfo, MatchingInlineAsm);
+}
+
+void X86AsmParser::canonicalizeMnemonic(OperandVector &Operands,
+                                        std::string &NameStorage) {
+  if (Operands.size() == 0)
+    return;
+  NameStorage = static_cast<X86Operand &>(*Operands[0]).getToken().lower();
+  Operands[0] =
+      X86Operand::CreateToken(NameStorage, Operands[0]->getStartLoc());
 }
 
 void X86AsmParser::MatchFPUWaitAlias(SMLoc IDLoc, X86Operand &Op,
