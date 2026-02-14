@@ -205,7 +205,6 @@ TEST(AllocatableAsyncTest, SetStreamTest) {
 
   // REAL(4), DEVICE, ALLOCATABLE :: b(:) - unallocated, base_addr is null
   auto b{createAllocatable(TypeCategory::Real, 4)};
-  int stat2 = RTDECL(CUFSetAssociatedStream)(
-      b->raw().base_addr, stream, true, nullptr, __FILE__, __LINE__);
+  int stat2 = RTDECL(CUFSetAssociatedStream)(b->raw().base_addr, stream);
   EXPECT_EQ(stat2, StatBaseNull);
 }

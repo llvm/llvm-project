@@ -531,6 +531,7 @@ mlir_c_api_cc_library(
         ":config",
         ":FuncTransformsPassIncGen",
         ":Rewrite",
+        ":SideEffectInterfaces",
         "//llvm:Support",
     ],
     includes = ["include"],
@@ -541,7 +542,6 @@ mlir_c_api_cc_library(
         ":IRDLDialect",
         ":InferTypeOpInterface",
         ":Parser",
-        ":SideEffectInterfaces",
         ":TransformsPassIncGen",
     ],
 )
@@ -860,11 +860,13 @@ mlir_c_api_cc_library(
         "include/mlir/CAPI/Dialect/Transform.h",
     ],
     capi_deps = [":CAPIIR"],
-    header_deps = [":TransformDialectTransformsIncGen"],
+    header_deps = [
+        ":TransformDialectInterfaces",
+        ":TransformDialectTransformsIncGen",
+    ],
     includes = ["include"],
     deps = [
         ":TransformDialect",
-        ":TransformDialectInterfaces",
         "//llvm:Support",
     ],
 )
@@ -1123,6 +1125,15 @@ filegroup(
     srcs = glob([
         "lib/Bindings/Python/*.h",
     ]),
+)
+
+cc_library(
+    name = "MLIRBindingsPythonLibHeaders",
+    includes = ["lib/Bindings/Python"],
+    textual_hdrs = [":MLIRBindingsPythonCoreHeaders"],
+    deps = [
+        ":MLIRBindingsPythonNanobindHeaders",
+    ],
 )
 
 cc_library(
@@ -12191,6 +12202,7 @@ cc_library(
     name = "TransformDialectInterfaces",
     srcs = glob(["lib/Dialect/Transform/Interfaces/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/Transform/Interfaces/*.h"]),
+    includes = ["include"],
     deps = [
         ":CastInterfaces",
         ":IR",
@@ -12210,6 +12222,7 @@ cc_library(
     name = "TransformDialect",
     srcs = glob(["lib/Dialect/Transform/IR/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/Transform/IR/*.h"]),
+    includes = ["include"],
     deps = [
         ":Analysis",
         ":BytecodeOpInterface",
