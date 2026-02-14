@@ -315,10 +315,8 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
 
   if (CheckLocalSharedCache()) {
 
-    // If we have a shared cache filepath and UUID, ask HostInfo
-    // if it can provide the SourceCacheImageInfo for the binary
-    // out of that shared cache.  Search by the Module's UUID if
-    // available, else the filepath.
+    SymbolSharedCacheUse sc_mode = ModuleList::GetGlobalModuleListProperties()
+                                       .GetSharedCacheBinaryLoading();
     SharedCacheImageInfo image_info;
     if (process && process->GetDynamicLoader()) {
       addr_t sc_base_addr;
@@ -327,13 +325,13 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
       FileSpec sc_path;
       if (process->GetDynamicLoader()->GetSharedCacheInformation(
               sc_base_addr, sc_uuid, using_sc, private_sc, sc_path)) {
-        image_info = HostInfo::GetSharedCacheImageInfo(module_spec, sc_uuid);
+        image_info = HostInfo::GetSharedCacheImageInfo(module_spec, sc_uuid, sc_mode);
       }
     }
 
     // Fall back to looking for the file in lldb's own shared cache.
     if (!image_info.GetUUID())
-      image_info = HostInfo::GetSharedCacheImageInfo(module_spec);
+      image_info = HostInfo::GetSharedCacheImageInfo(module_spec, sc_mode);
 
     // If we found it and it has the correct UUID, let's proceed with
     // creating a module from the memory contents.

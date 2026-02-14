@@ -189,15 +189,39 @@ public:
 
   /// Return information about module \p spec if it is loaded in
   /// the current process's address space.
-  static SharedCacheImageInfo GetSharedCacheImageInfo(const ModuleSpec &spec) {
+  ///
+  /// \param[in] sc_mode
+  ///     Flag to control if this method can try to read a shared
+  ///     cache binary blob directly, needed to keep user settings out of
+  ///     Host.
+  static SharedCacheImageInfo GetSharedCacheImageInfo(const ModuleSpec &spec,
+                                                      lldb::SymbolSharedCacheUse sc_mode) {
     return {};
   }
 
-  /// Return information about module with UUID \p file_uuid, if it is loaded in
+  /// Return information about module \p spec, if it is loaded in
   /// the current process's address space using shared cache \p sc_uuid.
   /// The shared cache must have been previously indexed.
+  ///
+  /// \param[in] sc_mode
+  ///     Flag to control if this method can try to read a shared
+  ///     cache binary blob directly, needed to keep user settings out of
+  ///     Host.
   static SharedCacheImageInfo GetSharedCacheImageInfo(const ModuleSpec &spec,
-                                                      const UUID &sc_uuid) {
+                                                      const UUID &sc_uuid,
+                                                      lldb::SymbolSharedCacheUse sc_mode) {
+
+  /// Return information about module \p image_name if it is loaded in
+  /// the current process's address space using shared cache \p uuid.
+  /// The shared cache UUID must have been previously indexed.
+  ///
+  /// \param[in] use_sc_binary_directly
+  ///     Flag to control if this method can try to read a shared
+  ///     cache binary blob directly, needed to keep user settings out of
+  ///     Host.
+  static SharedCacheImageInfo
+  GetSharedCacheImageInfo(llvm::StringRef image_name, const UUID &uuid,
+                          lldb::SymbolSharedCacheUse sc_mode) {
     return {};
   }
 
@@ -205,7 +229,8 @@ public:
   /// on the debug host.
   /// Returns false if the shared cache filepath did not exist, or uuid
   /// did not match.
-  static bool SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid) {
+  static bool SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid,
+                                    lldb::SymbolSharedCacheUse sc_mode) {
     return false;
   }
 

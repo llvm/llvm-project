@@ -42,12 +42,15 @@ public:
                                                      llvm::StringRef tool);
 
   /// Shared cache utilities
-  static SharedCacheImageInfo GetSharedCacheImageInfo(const ModuleSpec &spec);
+  static SharedCacheImageInfo GetSharedCacheImageInfo(const ModuleSpec &spec
+                                                     lldb::SymbolSharedCacheUse sc_mode);
 
   static SharedCacheImageInfo GetSharedCacheImageInfo(const ModuleSpec &spec,
-                                                      const UUID &sc_uuid);
+                                                      const UUID &sc_uuid,
+                                                      lldb::SymbolSharedCacheUse sc_mode);
 
-  static bool SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid);
+  static bool SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid,
+                                    lldb::SymbolSharedCacheUse sc_mode);
 
 protected:
   static bool ComputeSupportExeDirectory(FileSpec &file_spec);
