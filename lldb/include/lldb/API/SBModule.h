@@ -265,8 +265,8 @@ public:
   ///     this value is zero, then the return value will indicate
   ///     how many version numbers there are in total so another call
   ///     to this function can be make with adequate storage in
-  ///     \a versions to get all of the version numbers. If \a
-  ///     num_versions is less than the actual number of version
+  ///     \a versions to get all of the version numbers. If
+  ///     \a num_versions is less than the actual number of version
   ///     numbers in this object file, only \a num_versions will be
   ///     filled into \a versions (if \a versions is non-NULL).
   ///

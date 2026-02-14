@@ -16,7 +16,7 @@ class ScriptedFrameProvider(metaclass=ABCMeta):
     - Adding diagnostic or synthetic frames for debugging
     - Visualizing state machines or async execution contexts
 
-    Most of the base class methods are `@abstractmethod` that need to be
+    Most of the base class methods are ``@abstractmethod`` that need to be
     overwritten by the inheriting class.
 
     The constructor of this class sets up the following attributes:
@@ -49,10 +49,10 @@ class ScriptedFrameProvider(metaclass=ABCMeta):
             debugger.HandleCommand(f"target frame-provider register -C {__name__}.MyFrameProvider")
 
         if __name__ == '__main__':
-            print("This script should be loaded from LLDB using `command script import <filename>`")
+            print("This script should be loaded from LLDB using ``command script import <filename>``")
 
     You can register your frame provider either via the CLI command ``target frame-provider register`` or
-    via the API ``SBThread.RegisterScriptedFrameProvider``.
+    via the API ``lldb.SBThread.RegisterScriptedFrameProvider``.
     """
 
     @staticmethod

@@ -1,10 +1,8 @@
 %feature("docstring",
 "API clients can get information about memory regions in processes.
 
-For Python users, `len()` is overriden to output the size of the memory region in bytes.
-For Python users, `str()` is overriden with the results of the GetDescription function-
-        produces a formatted string that describes a memory range in the form: 
-        [Hex start - Hex End) with associated permissions (RWX)"
+For Python users, ``len()``  is overriden to output the size of the memory region in bytes.
+For Python users, ``str()`` is overriden with the results of the `GetDescription` function."
 ) lldb::SBMemoryRegionInfo;
 
 %feature("docstring", "

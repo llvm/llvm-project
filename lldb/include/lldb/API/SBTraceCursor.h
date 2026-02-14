@@ -72,13 +72,14 @@ public:
   /// it.
   ///
   /// Requirements:
+  ///
   /// - For a given thread, no two instructions have the same id.
   /// - In terms of efficiency, moving the cursor to a given id should be as
   ///   fast as possible, but not necessarily O(1). That's why the recommended
-  ///   way to traverse sequential instructions is to use the \a
-  ///   SBTraceCursor::Next() method and only use \a SBTraceCursor::GoToId(id)
-  ///   sparingly.
-
+  ///   way to traverse sequential instructions is to use the
+  ///   \a SBTraceCursor::Next() method and only use
+  ///   \a SBTraceCursor::GoToId(id) sparingly.
+  ///
   /// Make the cursor point to the item whose identifier is \p id.
   ///
   /// \return
@@ -88,8 +89,8 @@ public:
   bool GoToId(lldb::user_id_t id);
 
   /// \return
-  ///     \b true if and only if there's an instruction item with the given \p
-  ///     id.
+  ///     \b true if and only if there's an instruction item with the given
+  ///     \p id.
   bool HasId(lldb::user_id_t id) const;
 
   /// \return
@@ -109,9 +110,9 @@ public:
   ///
   /// \param[in] offset
   ///     How many items to move forwards (if positive) or backwards (if
-  ///     negative) from the given origin point. For example, if origin is \b
-  ///     End, then a negative offset would move backward in the trace, but a
-  ///     positive offset would move past the trace to an invalid item.
+  ///     negative) from the given origin point. For example, if origin is
+  ///     \b End, then a negative offset would move backward in the trace, but
+  ///     a positive offset would move past the trace to an invalid item.
   ///
   /// \param[in] origin
   ///     The reference point to use when moving the cursor.
