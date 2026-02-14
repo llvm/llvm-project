@@ -2995,4 +2995,54 @@ def DecomposeWinogradOp : Op<Transform_Dialect,
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// Hoist Extract to Linalg Argument
+//===----------------------------------------------------------------------===//
+
+def HoistExtractToArgumentOp : Op<Transform_Dialect, "structured.hoist_extract_to_argument",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     TransformOpInterface, TransformEachOpTrait,
+     ReportTrackingListenerFailuresOpTrait]> {
+  let summary = "Hoists a tensor.extract operation from the body of a linalg.generic to an input argument";
+  let description = [{
+    This transform hoists a `tensor.extract` operation from the body of a `linalg.generic`
+    operation to become an input argument of the generic operation. This transformation is
+    applicable when the extract operation's indices can be expressed as affine expressions
+    of the loop induction variables.
+
+    An extract operation is hoistable if all its indices are produced by:
+    - `linalg.index` operations (mapping to loop dimensions)
+    - `arith.constant_index` operations (constant indices)
+    - `arith.index_cast` operations that cast from block arguments corresponding to
+      constant input operands
+
+    #### Return modes
+
+    This operation only applies to `linalg.generic` operations. If the target is not a
+    `linalg.generic`, the transform succeeds but returns the original operation unchanged.
+
+    If no hoistable extract operation is found in the generic's body, the transform succeeds
+    but returns the original operation unchanged.
+
+    If a hoistable extract is found and successfully hoisted, the transform succeeds and
+    returns the transformed `linalg.generic` operation.
+
+    The transform produces a silenceable failure if the hoisting transformation fails for
+    any reason.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs TransformHandleTypeInterface:$transformed);
+   let assemblyFormat =
+    "$target attr-dict `:` functional-type($target, results)";
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::linalg::LinalgOp target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
 #endif // LINALG_TRANSFORM_OPS
