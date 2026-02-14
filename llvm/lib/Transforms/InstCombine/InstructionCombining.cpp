@@ -320,7 +320,7 @@ bool InstCombinerImpl::shouldChangeType(unsigned FromWidth,
   if (ToWidth < FromWidth && isDesirableIntType(ToWidth))
     return true;
 
-  // If this is a legal or desiable integer from type, and the result would be
+  // If this is a legal or desirable integer from type, and the result would be
   // an illegal type, don't do the transformation.
   if ((FromLegal || isDesirableIntType(FromWidth)) && !ToLegal)
     return false;
