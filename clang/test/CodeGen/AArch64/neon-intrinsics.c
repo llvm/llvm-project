@@ -17463,16 +17463,6 @@ int64_t test_vqabsd_s64(int64_t a) {
   return (int64_t)vqabsd_s64(a);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_vnegd_s64(
-// CHECK-SAME: i64 noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VNEGD_I:%.*]] = sub i64 0, [[A]]
-// CHECK-NEXT:    ret i64 [[VNEGD_I]]
-//
-int64_t test_vnegd_s64(int64_t a) {
-  return (int64_t)vnegd_s64(a);
-}
-
 // CHECK-LABEL: define dso_local i8 @test_vqnegb_s8(
 // CHECK-SAME: i8 noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]

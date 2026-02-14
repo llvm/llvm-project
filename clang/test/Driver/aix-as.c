@@ -94,3 +94,25 @@
 // CHECK-NOIAS: InstalledDir
 // CHECK-NOIAS: -no-integrated-as
 // CHECK-NOIAS: "-a64"
+
+// Check that modern-aix-as feature is enabled with integrated assembler (default).
+// RUN: %clang %s -### -c 2>&1 \
+// RUN:         --target=powerpc-ibm-aix7.1.0.0 \
+// RUN:   | FileCheck --check-prefixes=CHECK-MODERN-AS-ENABLED %s
+
+// RUN: %clang %s -### -c 2>&1 \
+// RUN:         --target=powerpc64-ibm-aix7.1.0.0 \
+// RUN:   | FileCheck --check-prefixes=CHECK-MODERN-AS-ENABLED %s
+
+// Check that modern-aix-as feature is enabled by default with explicit -fintegrated-as.
+// RUN: %clang %s -### -c -fintegrated-as 2>&1 \
+// RUN:         --target=powerpc-ibm-aix7.1.0.0 \
+// RUN:   | FileCheck --check-prefixes=CHECK-MODERN-AS-ENABLED %s
+
+// Check that modern-aix-as feature is not enabled with -fno-integrated-as.
+// RUN: %clang %s -### -c -fno-integrated-as 2>&1 \
+// RUN:         --target=powerpc-ibm-aix7.1.0.0 \
+// RUN:   | FileCheck --check-prefixes=CHECK-MODERN-AS-DISABLED %s
+
+// CHECK-MODERN-AS-ENABLED: "-target-feature" "+modern-aix-as"
+// CHECK-MODERN-AS-DISABLED-NOT: "+modern-aix-as"
