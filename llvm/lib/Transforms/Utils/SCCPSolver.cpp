@@ -476,7 +476,7 @@ bool SCCPSolver::removeNonFeasibleEdges(BasicBlock *BB, DomTreeUpdater &DTU,
 static void inferAttribute(Function *F, unsigned AttrIndex,
                            const ValueLatticeElement &Val) {
   // If there is a known constant range for the value, add range attribute.
-  if (Val.isConstantRange() && !Val.getConstantRange().isSingleElement()) {
+  if (Val.isConstantRange()) {
     // Do not add range attribute if the value may include undef.
     if (Val.isConstantRangeIncludingUndef())
       return;
