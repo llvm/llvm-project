@@ -293,9 +293,9 @@ public:
 
   /// Captures the high-level result of validating input files.
   ///
-  /// Useful when encountering an invalid input file. This way, we can check what kind
-  /// of validation has been done already and can try to figure out why an
-  /// invalid file hasn't been discovered earlier.
+  /// Useful when encountering a changed input file. This way, we can check
+  /// what kind of validation has been done already and can try to figure out
+  /// why a changed file hasn't been discovered earlier.
   InputFilesValidation InputFilesValidationStatus =
       InputFilesValidation::NotStarted;
 
