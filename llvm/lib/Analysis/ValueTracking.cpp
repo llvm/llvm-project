@@ -715,28 +715,9 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
         return false;
       }
 
-      auto isOrderedAtomic = [](const Instruction *Inst) {
-        if (!Inst->isAtomic())
-          return false;
-
-        if (auto *FI = dyn_cast<FenceInst>(Inst))
-          // All legal orderings for fence are stronger than monotonic.
-          return FI->getSyncScopeID() != SyncScope::SingleThread;
-        else if (isa<AtomicCmpXchgInst>(Inst) || isa<AtomicRMWInst>(Inst))
-          return true;
-        else if (auto *SI = dyn_cast<StoreInst>(Inst))
-          return !SI->isUnordered();
-        else if (auto *LI = dyn_cast<LoadInst>(Inst))
-          return !LI->isUnordered();
-        else {
-          llvm_unreachable("unknown atomic instruction?");
-        }
-      };
-
       // An ordered atomic may synchronize.
-      if (isOrderedAtomic(&I)) {
+      if (llvm::isOrderedAtomic(&I))
         return false;
-      }
 
       auto *CB = dyn_cast<CallBase>(&I);
       if (!CB)
@@ -7878,6 +7859,29 @@ bool llvm::isGuaranteedNotToBeUndef(const Value *V, AssumptionCache *AC,
                                     const DominatorTree *DT, unsigned Depth) {
   return ::isGuaranteedNotToBeUndefOrPoison(V, AC, CtxI, DT, Depth,
                                             UndefPoisonKind::UndefOnly);
+}
+
+// Return true if this is an atomic which has an ordering stronger than
+// unordered.  Note that this is different than the predicate we use in
+// Attributor.  Here we chose to be conservative and consider monotonic
+// operations potentially synchronizing.  We generally don't do much with
+// monotonic operations, so this is simply risk reduction.
+bool llvm::isOrderedAtomic(const Instruction *I) {
+  if (!I->isAtomic())
+    return false;
+
+  if (auto *FI = dyn_cast<FenceInst>(I))
+    // All legal orderings for fence are stronger than monotonic.
+    return FI->getSyncScopeID() != SyncScope::SingleThread;
+  else if (isa<AtomicCmpXchgInst>(I) || isa<AtomicRMWInst>(I))
+    return true;
+  else if (auto *SI = dyn_cast<StoreInst>(I))
+    return !SI->isUnordered();
+  else if (auto *LI = dyn_cast<LoadInst>(I))
+    return !LI->isUnordered();
+  else {
+    llvm_unreachable("unknown atomic instruction?");
+  }
 }
 
 /// Return true if undefined behavior would provably be executed on the path to
