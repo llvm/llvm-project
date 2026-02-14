@@ -11,8 +11,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-// For targets where conversion from float to float16 has to be
-// emulated, fputil::hypot<float16> is faster
 LLVM_LIBC_FUNCTION(float16, hypotf16, (float16 x, float16 y)) {
   return math::hypotf16(x, y);
 }

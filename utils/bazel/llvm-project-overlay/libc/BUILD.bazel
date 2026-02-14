@@ -4903,7 +4903,6 @@ libc_math_function(
     name = "hypotf16",
     additional_deps = [
         ":__support_math_hypotf16",
-        ":errno",
     ],
 )
 

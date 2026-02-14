@@ -3181,7 +3181,6 @@ add_entrypoint_object(
     ../hypotf16.h
   DEPENDS
     libc.src.__support.math.hypotf16
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
