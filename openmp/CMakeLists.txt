@@ -29,6 +29,10 @@ if (OPENMP_STANDALONE_BUILD)
     set(CMAKE_BUILD_TYPE Release)
   endif()
 
+  if (LLVM_ENABLE_SPHINX)
+    include(AddLLVM)
+  endif()
+
   # Group common settings.
   set(OPENMP_ENABLE_WERROR FALSE CACHE BOOL
     "Enable -Werror flags to turn warnings into errors for supporting compilers.")
