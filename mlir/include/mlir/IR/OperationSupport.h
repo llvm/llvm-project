@@ -1331,7 +1331,11 @@ struct OperationEquivalence {
     // When provided, the properties attached to the operation are ignored.
     IgnoreProperties = 4,
 
-    LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ IgnoreProperties)
+    // When provided, the commutativity of the operation is ignored, and
+    // operands are compared in an order-sensitive way.
+    IgnoreCommutativity = 8,
+
+    LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ IgnoreCommutativity)
   };
 
   /// Compute a hash for the given operation.
