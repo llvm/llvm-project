@@ -1,0 +1,36 @@
+# RUN: llvm-ifs --input-format=IFS --output-ifs - %s | \
+# RUN: FileCheck %s --check-prefixes=CHECK-IFS
+
+# RUN: llvm-ifs --input-format=IFS --output-elf - %s | \
+# RUN: llvm-readelf --all - | FileCheck %s --check-prefixes=CHECK-ELF
+
+# CHECK-IFS: --- !ifs-v1
+# CHECK-IFS-NEXT: IfsVersion: 3.0
+# CHECK-IFS-NEXT: SoName: libfoo.so
+# CHECK-IFS-NEXT: Target:          x86_64-unknown-linux-gnu
+# CHECK-IFS-NEXT: Symbols:
+# CHECK-IFS-NEXT:   - { Name: VER, Version: VER, Type: Object, Size: 0, Default: true }
+# CHECK-IFS-NEXT:   - { Name: def, Version: VER, Type: Func, Default: true }
+# CHECK-IFS-NEXT:   - { Name: func, Version: VER, Type: Func }
+# CHECK-IFS-NEXT: VersionDefinitions:
+# CHECK-IFS-NEXT:   - { Name: VER }
+# CHECK-IFS-NEXT: ...
+
+# CHECK-ELF: OBJECT  GLOBAL DEFAULT  1 VER@@VER
+# CHECK-ELF: FUNC    GLOBAL DEFAULT  1 def@@VER
+# CHECK-ELF: FUNC    GLOBAL DEFAULT  1 func@VER
+
+# CHECK-ELF: Rev: 1  Flags: BASE  Index: 1  Cnt: 1  Name: libfoo.so
+# CHECK-ELF: Rev: 1  Flags: none  Index: 2  Cnt: 1  Name: VER
+
+--- !ifs-v1
+IfsVersion: 3.0
+SoName: libfoo.so
+Target: x86_64-unknown-linux-gnu
+Symbols:
+  - { Name: VER, Version: VER, Type: Object, Size: 0, Default: true }
+  - { Name: func, Version: VER, Type: Func }
+  - { Name: def, Version: VER, Type: Func, Default: true }
+VersionDefinitions:
+  - { Name: VER }
+...
