@@ -6917,12 +6917,7 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
       Result = DAG.getNode(ISD::TRUNCATE, dl, VT, High);
     }
 
-    // Handle divisor == 1 case with SELECT
-    EVT SetCCVT =
-        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
-    SDValue One = DAG.getConstant(1, dl, VT);
-    SDValue IsOne = DAG.getSetCC(dl, SetCCVT, N1, One, ISD::SETEQ);
-    return DAG.getSelect(dl, VT, IsOne, N0, Result);
+    return Result;
   }
 
   SDValue Q = N0;
