@@ -7,20 +7,16 @@
 define float @test_sincos_f32(float %f) nounwind {
 ; CHECK-LABEL: test_sincos_f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs1, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fmv.s fs0, fa0
-; CHECK-NEXT:    call sinf
-; CHECK-NEXT:    fmv.s fs1, fa0
-; CHECK-NEXT:    fmv.s fa0, fs0
-; CHECK-NEXT:    call cosf
-; CHECK-NEXT:    fadd.s fa0, fs1, fa0
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 32
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    addi a0, sp, 4
+; CHECK-NEXT:    mv a1, sp
+; CHECK-NEXT:    call sincosf
+; CHECK-NEXT:    flw fa5, 0(sp)
+; CHECK-NEXT:    flw fa4, 4(sp)
+; CHECK-NEXT:    fadd.s fa0, fa4, fa5
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %sin = call float @sinf(float %f) readnone
   %cos = call float @cosf(float %f) readnone
@@ -57,17 +53,13 @@ define double @test_sincos_f64(double %f) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs1, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fmv.d fs0, fa0
-; CHECK-NEXT:    call sin
-; CHECK-NEXT:    fmv.d fs1, fa0
-; CHECK-NEXT:    fmv.d fa0, fs0
-; CHECK-NEXT:    call cos
-; CHECK-NEXT:    fadd.d fa0, fs1, fa0
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    addi a1, sp, 8
+; CHECK-NEXT:    call sincos
+; CHECK-NEXT:    fld fa5, 8(sp)
+; CHECK-NEXT:    fld fa4, 16(sp)
+; CHECK-NEXT:    fadd.d fa0, fa4, fa5
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
   %sin = call double @sin(double %f) readnone
