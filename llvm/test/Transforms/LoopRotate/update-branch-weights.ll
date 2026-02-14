@@ -70,9 +70,9 @@ outer_loop_exit:
 
 ; BFI_AFTER-LABEL: block-frequency-info: func1
 ; BFI_AFTER: - entry: {{.*}} count = 1024
-; BFI_AFTER: - loop_body.lr.ph: {{.*}} count = 1016
+; BFI_AFTER: - loop_body.lr.ph: {{.*}} count = 512
 ; BFI_AFTER: - loop_body: {{.*}} count = 20480
-; BFI_AFTER: - loop_header.loop_exit_crit_edge: {{.*}} count = 1016
+; BFI_AFTER: - loop_header.loop_exit_crit_edge: {{.*}} count = 512
 ; BFI_AFTER: - loop_exit: {{.*}} count = 1024
 
 ; IR-LABEL: define void @func1
@@ -285,8 +285,8 @@ loop_exit:
 
 ; IR: [[PROF_FUNC0_0]] = !{!"branch_weights", i32 2000, i32 1000}
 ; IR: [[PROF_FUNC0_1]] = !{!"branch_weights", i32 999, i32 1}
-; IR: [[PROF_FUNC1_0]] = !{!"branch_weights", i32 127, i32 1}
-; IR: [[PROF_FUNC1_1]] = !{!"branch_weights", i32 2433, i32 127}
+; IR: [[PROF_FUNC1_0]] = !{!"branch_weights", i32 1, i32 1}
+; IR: [[PROF_FUNC1_1]] = !{!"branch_weights", i32 39, i32 1}
 ; IR: [[PROF_FUNC2_0]] = !{!"branch_weights", i32 9920, i32 320}
 ; IR: [[PROF_FUNC2_1]] = !{!"branch_weights", i32 320, i32 0}
 ; IR: [[PROF_FUNC3_0]] = !{!"branch_weights", i32 0, i32 1}

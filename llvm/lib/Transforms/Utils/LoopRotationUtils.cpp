@@ -46,9 +46,6 @@ STATISTIC(NumInstrsHoisted,
 STATISTIC(NumInstrsDuplicated,
           "Number of instructions cloned into loop preheader");
 
-// Probability that a rotated loop has zero trip count / is never entered.
-static constexpr uint32_t ZeroTripCountWeights[] = {1, 127};
-
 namespace {
 /// A simple loop rotation transformation.
 class LoopRotate {
@@ -200,7 +197,8 @@ static bool profitableToRotateLoopExitingLatch(Loop *L) {
   return false;
 }
 
-static void updateBranchWeights(BranchInst &PreHeaderBI, BranchInst &LoopBI,
+static void updateBranchWeights(Loop *L, BranchInst &PreHeaderBI,
+                                BranchInst &LoopBI,
                                 bool HasConditionalPreHeader,
                                 bool SuccsSwapped) {
   MDNode *WeightMD = getBranchWeightMDNode(PreHeaderBI);
@@ -218,12 +216,49 @@ static void updateBranchWeights(BranchInst &PreHeaderBI, BranchInst &LoopBI,
   if (Weights.size() != 2)
     return;
   uint32_t OrigLoopExitWeight = Weights[0];
-  uint32_t OrigLoopBackedgeWeight = Weights[1];
+  uint32_t OrigLoopEnterWeight = Weights[1];
 
   if (SuccsSwapped)
-    std::swap(OrigLoopExitWeight, OrigLoopBackedgeWeight);
+    std::swap(OrigLoopExitWeight, OrigLoopEnterWeight);
 
-  // Update branch weights. Consider the following edge-counts:
+  // For a multiple-exit loop, find the total weight of other exits.
+  uint32_t OtherLoopExitWeight = 0;
+  SmallVector<BasicBlock *, 16> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
+  for (BasicBlock *ExitingBB : ExitingBlocks) {
+    Instruction *TI = ExitingBB->getTerminator();
+    if (TI == &LoopBI)
+      continue;
+
+    if (!(isa<BranchInst>(TI) || isa<SwitchInst>(TI) ||
+          isa<IndirectBrInst>(TI) || isa<InvokeInst>(TI) ||
+          isa<CallBrInst>(TI)))
+      continue;
+
+    MDNode *WeightsNode = getValidBranchWeightMDNode(*TI);
+    if (!WeightsNode)
+      continue;
+
+    SmallVector<uint32_t, 2> Weights;
+    extractBranchWeights(WeightsNode, Weights);
+    for (unsigned I = 0, E = Weights.size(); I != E; ++I) {
+      BasicBlock *Exit = TI->getSuccessor(I);
+      if (L->contains(Exit))
+        continue;
+
+      OtherLoopExitWeight += Weights[I];
+    }
+  }
+
+  // Adjust OtherLoopExitWeight as it should not be larger than the loop enter
+  // weight.
+  if (OtherLoopExitWeight > OrigLoopEnterWeight)
+    OtherLoopExitWeight = OrigLoopEnterWeight;
+
+  uint32_t OrigLoopBackedgeWeight = OrigLoopEnterWeight - OtherLoopExitWeight;
+
+  // Update branch weights. Consider the following edge-counts (z for multiple
+  // exit loop):
   //
   //    |  |--------             |
   //    V  V       |             V
@@ -231,16 +266,18 @@ static void updateBranchWeights(BranchInst &PreHeaderBI, BranchInst &LoopBI,
   //   |       |   |            |     |
   //  x|      y|   |  becomes:  |   y0|  |-----
   //   V       V   |            |     V  V    |
-  // Exit    Loop  |            |    Loop     |
-  //           |   |            |   Br i1 ... |
+  // Exit <- Loop  |            |    Loop     |
+  //      z    |   |            |   Br i1 ... |
   //           -----            |   |      |  |
   //                          x0| x1|   y1 |  |
   //                            V   V      ----
-  //                            Exit
+  //                            Exit  <----|
+  //                                    z
   //
   // The following must hold:
   //  -  x == x0 + x1        # counts to "exit" must stay the same.
-  //  - y0 == x - x0 == x1   # how often loop was entered at all.
+  //  - y0 == x - x0 + z     # how often loop was entered at all.
+  //       == x1 + z
   //  - y1 == y - y0         # How often loop was repeated (after first iter.).
   //
   // We cannot generally deduce how often we had a zero-trip count loop so we
@@ -255,19 +292,12 @@ static void updateBranchWeights(BranchInst &PreHeaderBI, BranchInst &LoopBI,
     if (HasConditionalPreHeader) {
       // Here we cannot know how many 0-trip count loops we have, so we guess:
       if (OrigLoopBackedgeWeight >= OrigLoopExitWeight) {
-        // If the loop count is bigger than the exit count then we set
-        // probabilities as if 0-trip count nearly never happens.
-        ExitWeight0 = ZeroTripCountWeights[0];
-        // Scale up counts if necessary so we can match `ZeroTripCountWeights`
-        // for the `ExitWeight0`:`ExitWeight1` (aka `x0`:`x1` ratio`) ratio.
-        while (OrigLoopExitWeight < ZeroTripCountWeights[1] + ExitWeight0) {
-          // ... but don't overflow.
-          uint32_t const HighBit = uint32_t{1} << (sizeof(uint32_t) * 8 - 1);
-          if ((OrigLoopBackedgeWeight & HighBit) != 0 ||
-              (OrigLoopExitWeight & HighBit) != 0)
-            break;
-          OrigLoopBackedgeWeight <<= 1;
-          OrigLoopExitWeight <<= 1;
+        ExitWeight0 =
+            (OrigLoopExitWeight * (OrigLoopExitWeight + OtherLoopExitWeight)) /
+            (OrigLoopExitWeight + OrigLoopEnterWeight);
+        // Minimum ExitWeight0 1
+        if (ExitWeight0 == 0) {
+          ExitWeight0 = 1;
         }
       } else {
         // If there's a higher exit-count than backedge-count then we set
@@ -280,36 +310,38 @@ static void updateBranchWeights(BranchInst &PreHeaderBI, BranchInst &LoopBI,
       // weight collected by sampling-based PGO may be not very accurate due to
       // sampling. Therefore this workaround is required here to avoid underflow
       // of unsigned in following update of branch weight.
-      if (OrigLoopExitWeight > OrigLoopBackedgeWeight)
+      if (OrigLoopExitWeight > OrigLoopBackedgeWeight) {
         OrigLoopBackedgeWeight = OrigLoopExitWeight;
+        OrigLoopEnterWeight = OrigLoopBackedgeWeight + OtherLoopExitWeight;
+      }
     }
     assert(OrigLoopExitWeight >= ExitWeight0 && "Bad branch weight");
     ExitWeight1 = OrigLoopExitWeight - ExitWeight0;
-    EnterWeight = ExitWeight1;
-    assert(OrigLoopBackedgeWeight >= EnterWeight && "Bad branch weight");
-    LoopBackWeight = OrigLoopBackedgeWeight - EnterWeight;
+    EnterWeight = ExitWeight1 + OtherLoopExitWeight;
+    assert(OrigLoopEnterWeight >= EnterWeight && "Bad branch weight");
+    LoopBackWeight = OrigLoopEnterWeight - EnterWeight;
   } else if (OrigLoopExitWeight == 0) {
     if (OrigLoopBackedgeWeight == 0) {
       // degenerate case... keep everything zero...
       ExitWeight0 = 0;
       ExitWeight1 = 0;
-      EnterWeight = 0;
+      EnterWeight = OtherLoopExitWeight;
       LoopBackWeight = 0;
     } else {
       // Special case "LoopExitWeight == 0" weights which behaves like an
-      // endless where we don't want loop-enttry (y0) to be the same as
+      // endless where we don't want loop-entry (y0) to be the same as
       // loop-exit (x1).
       ExitWeight0 = 0;
       ExitWeight1 = 0;
-      EnterWeight = 1;
+      EnterWeight = (OtherLoopExitWeight != 0) ? OtherLoopExitWeight : 1;
       LoopBackWeight = OrigLoopBackedgeWeight;
     }
   } else {
     // loop is never entered.
     assert(OrigLoopBackedgeWeight == 0 && "remaining case is backedge zero");
-    ExitWeight0 = 1;
+    ExitWeight0 = OrigLoopExitWeight;
     ExitWeight1 = 1;
-    EnterWeight = 0;
+    EnterWeight = OtherLoopExitWeight;
     LoopBackWeight = 0;
   }
 
@@ -748,7 +780,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       !isa<ConstantInt>(Cond) ||
       PHBI->getSuccessor(cast<ConstantInt>(Cond)->isZero()) != NewHeader;
 
-  updateBranchWeights(*PHBI, *BI, HasConditionalPreHeader, BISuccsSwapped);
+  updateBranchWeights(L, *PHBI, *BI, HasConditionalPreHeader, BISuccsSwapped);
 
   if (HasConditionalPreHeader) {
     // The conditional branch can't be folded, handle the general case.
