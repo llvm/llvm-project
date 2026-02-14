@@ -888,10 +888,7 @@ public:
 
           markUsedByKernel(func, N);
 
-          auto *emptyCharArray = ArrayType::get(Type::getInt8Ty(Ctx), 0);
-          auto *GEP = ConstantExpr::getGetElementPtr(
-              emptyCharArray, N, ConstantInt::get(I32, 0), true);
-          newDynamicLDS.push_back(ConstantExpr::getPtrToInt(GEP, I32));
+          newDynamicLDS.push_back(ConstantExpr::getPtrToInt(N, I32));
         } else {
           newDynamicLDS.push_back(PoisonValue::get(I32));
         }

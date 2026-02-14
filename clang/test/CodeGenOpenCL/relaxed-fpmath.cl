@@ -30,32 +30,26 @@ float spscalardiv(float a, float b) {
 // CHECK: attributes
 
 // NORMAL-NOT: "less-precise-fpmad"
-// NORMAL-NOT: "no-infs-fp-math"
 // NORMAL-NOT: "no-nans-fp-math"
 // NORMAL-NOT: "no-signed-zeros-fp-math"
 
 // FAST: "less-precise-fpmad"="true"
-// FAST: "no-infs-fp-math"="true"
 // FAST: "no-nans-fp-math"="true"
 // FAST: "no-signed-zeros-fp-math"="true"
 
 // FINITE-NOT: "less-precise-fpmad"
-// FINITE: "no-infs-fp-math"="true"
 // FINITE: "no-nans-fp-math"="true"
 // FINITE-NOT: "no-signed-zeros-fp-math"
 
 // UNSAFE: "less-precise-fpmad"="true"
-// UNSAFE-NOT: "no-infs-fp-math"
 // UNSAFE-NOT: "no-nans-fp-math"
 // UNSAFE: "no-signed-zeros-fp-math"="true"
 
 // MAD: "less-precise-fpmad"="true"
-// MAD-NOT: "no-infs-fp-math"
 // MAD-NOT: "no-nans-fp-math"
 // MAD-NOT: "no-signed-zeros-fp-math"
 
 // NOSIGNED-NOT: "less-precise-fpmad"
-// NOSIGNED-NOT: "no-infs-fp-math"
 // NOSIGNED-NOT: "no-nans-fp-math"
 // NOSIGNED: "no-signed-zeros-fp-math"="true"
 
