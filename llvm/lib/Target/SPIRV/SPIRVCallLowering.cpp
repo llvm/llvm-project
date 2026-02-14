@@ -418,6 +418,7 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     buildOpDecorate(FuncVReg, MIRBuilder, SPIRV::Decoration::LinkageAttributes,
                     {static_cast<uint32_t>(*LnkTy)}, F.getName());
   }
+  emitLinkageAsUserSemantic(FuncVReg, F, MIRBuilder);
 
   // Handle function pointers decoration
   bool hasFunctionPointers =
