@@ -15,67 +15,22 @@ define i64 @notVectorizingTest(ptr noundef nonnull readonly align 8 captures(non
 ; CHECK-NEXT:    [[__END__I:%.*]] = getelementptr inbounds nuw i8, ptr [[V]], i64 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[__END__I]], align 8
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP1]], i64 4) ]
-; CHECK-NEXT:    [[COERCE_VAL_PI_I_I14:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP0]], i64 4) ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP1]], i64 4) ]
 ; CHECK-NEXT:    [[CMP_I_I7_NOT11_I:%.*]] = icmp eq ptr [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    br i1 [[CMP_I_I7_NOT11_I]], label %[[BR1:.*]], label %[[FOR_BODY_I_PREHEADER:.*]]
-; CHECK:       [[FOR_BODY_I_PREHEADER]]:
-; CHECK-NEXT:    [[COERCE_VAL_PI_I_I:%.*]] = ptrtoint ptr [[TMP0]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[COERCE_VAL_PI_I_I14]], -4
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], [[COERCE_VAL_PI_I_I]]
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr exact i64 [[TMP3]], 2
-; CHECK-NEXT:    [[TMP5:%.*]] = add nuw nsw i64 [[TMP4]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 12
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[FOR_BODY_I_PREHEADER6:.*]], label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP5]], 9223372036854775804
-; CHECK-NEXT:    [[TMP6:%.*]] = shl i64 [[N_VEC]], 2
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[TMP6]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[NEXT_GEP]], align 4
-; CHECK-NEXT:    [[WIDE_LOAD_FR:%.*]] = freeze <4 x i32> [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD_FR]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <4 x i1> [[TMP8]] to i4
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i4 [[TMP9]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT]], label %[[VECTOR_BODY_INTERIM]], label %[[VECTOR_EARLY_EXIT:.*]]
-; CHECK:       [[VECTOR_BODY_INTERIM]]:
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP5]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label %[[BR1]], label %[[FOR_BODY_I_PREHEADER6]]
-; CHECK:       [[FOR_BODY_I_PREHEADER6]]:
-; CHECK-NEXT:    [[__FIRST_SROA_0_012_I_PH:%.*]] = phi ptr [ [[TMP0]], %[[FOR_BODY_I_PREHEADER]] ], [ [[TMP7]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    br label %[[FOR_BODY_I:.*]]
-; CHECK:       [[VECTOR_EARLY_EXIT]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = tail call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP8]], i1 false)
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = shl i64 [[TMP12]], 2
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[TMP13]]
-; CHECK-NEXT:    br label %[[FOR_BODY_FOR_END_LOOPEXIT_CRIT_EDGE_I:.*]]
+; CHECK-NEXT:    br i1 [[CMP_I_I7_NOT11_I]], label %[[FOR_BODY_FOR_END_LOOPEXIT_CRIT_EDGE_I:.*]], label %[[FOR_BODY_I:.*]]
 ; CHECK:       [[FOR_BODY_I]]:
-; CHECK-NEXT:    [[__FIRST_SROA_0_012_I:%.*]] = phi ptr [ [[INCDEC_PTR_I_I:%.*]], %[[FOR_INC_I:.*]] ], [ [[__FIRST_SROA_0_012_I_PH]], %[[FOR_BODY_I_PREHEADER6]] ]
+; CHECK-NEXT:    [[__FIRST_SROA_0_012_I:%.*]] = phi ptr [ [[INCDEC_PTR_I_I:%.*]], %[[FOR_INC_I:.*]] ], [ [[TMP0]], %[[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[__FIRST_SROA_0_012_I]], align 4
 ; CHECK-NEXT:    [[CMP_I_I:%.*]] = icmp slt i32 [[TMP15]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP_I_I]], label %[[FOR_BODY_FOR_END_LOOPEXIT_CRIT_EDGE_I]], label %[[FOR_INC_I]]
-; CHECK:       [[FOR_BODY_FOR_END_LOOPEXIT_CRIT_EDGE_I]]:
-; CHECK-NEXT:    [[__FIRST_SROA_0_012_I_LCSSA:%.*]] = phi ptr [ [[TMP14]], %[[VECTOR_EARLY_EXIT]] ], [ [[__FIRST_SROA_0_012_I]], %[[FOR_BODY_I]] ]
-; CHECK-NEXT:    [[DOTPRE14_I:%.*]] = ptrtoint ptr [[__FIRST_SROA_0_012_I_LCSSA]] to i64
-; CHECK-NEXT:    br label %[[BR1]]
 ; CHECK:       [[FOR_INC_I]]:
 ; CHECK-NEXT:    [[INCDEC_PTR_I_I]] = getelementptr inbounds nuw i8, ptr [[__FIRST_SROA_0_012_I]], i64 4
 ; CHECK-NEXT:    [[CMP_I_I7_NOT_I:%.*]] = icmp eq ptr [[INCDEC_PTR_I_I]], [[TMP1]]
-; CHECK-NEXT:    br i1 [[CMP_I_I7_NOT_I]], label %[[BR1]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP3:![0-9]+]]
-; CHECK:       [[BR1]]:
-; CHECK-NEXT:    [[COERCE_VAL_PI_PRE_PHI_I:%.*]] = phi i64 [ [[COERCE_VAL_PI_I_I14]], %[[ENTRY]] ], [ [[DOTPRE14_I]], %[[FOR_BODY_FOR_END_LOOPEXIT_CRIT_EDGE_I]] ], [ [[COERCE_VAL_PI_I_I14]], %[[MIDDLE_BLOCK]] ], [ [[COERCE_VAL_PI_I_I14]], %[[FOR_INC_I]] ]
+; CHECK-NEXT:    br i1 [[CMP_I_I7_NOT_I]], label %[[FOR_BODY_FOR_END_LOOPEXIT_CRIT_EDGE_I]], label %[[FOR_BODY_I]]
+; CHECK:       [[FOR_BODY_FOR_END_LOOPEXIT_CRIT_EDGE_I]]:
+; CHECK-NEXT:    [[COERCE_VAL_PI_PRE_PHI_I_IN:%.*]] = phi ptr [ [[TMP1]], %[[ENTRY]] ], [ [[TMP1]], %[[FOR_INC_I]] ], [ [[__FIRST_SROA_0_012_I]], %[[FOR_BODY_I]] ]
+; CHECK-NEXT:    [[COERCE_VAL_PI_PRE_PHI_I:%.*]] = ptrtoint ptr [[COERCE_VAL_PI_PRE_PHI_I_IN]] to i64
 ; CHECK-NEXT:    ret i64 [[COERCE_VAL_PI_PRE_PHI_I]]
 ;
 entry:
@@ -344,9 +299,3 @@ declare void @llvm.assume(i1 noundef) #1
 
 attributes #0 = { mustprogress nounwind ssp memory(read, inaccessiblemem: write, target_mem0: none, target_mem1: none) uwtable(sync) "frame-pointer"="non-leaf-no-reserve" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #1 = { mustprogress nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
-;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
-; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
-;.
