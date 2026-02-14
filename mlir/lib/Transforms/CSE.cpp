@@ -135,6 +135,8 @@ private:
 };
 } // namespace
 
+/// Returns true if the path between block 'a' and block 'b' in the region
+/// hierarchy crosses an operation with the 'IsIsolatedFromAbove' trait.
 static bool isBlockCrossIsIsolatedFromAbove(DominanceInfo *dominate, Block *a,
                                             Block *b) {
   if (a == b)
@@ -154,7 +156,7 @@ static bool isBlockCrossIsIsolatedFromAbove(DominanceInfo *dominate, Block *a,
   return false;
 }
 
-/// Hoist the pure ops to the location of the Nearest Common Dominator
+/// Hoist the pure ops to the location of the Nearest Common Dominator.
 LogicalResult CSEDriver::hoistPureOp(Operation *existing, Operation *op) {
   Block *ancestorBlock =
       domInfo->findNearestCommonDominator(existing->getBlock(), op->getBlock());
@@ -165,6 +167,9 @@ LogicalResult CSEDriver::hoistPureOp(Operation *existing, Operation *op) {
     return failure();
   }
 
+  // If the ancestorBlock is in a different region than the existing operation,
+  // we need to check if the parentOp of the ancestorBlock can contain hoisted
+  // ops.
   if (ancestorBlock->getParent() != existing->getParentRegion() &&
       !canContainHoistedOps(ancestorBlock->getParentOp()))
     return failure();
@@ -173,6 +178,7 @@ LogicalResult CSEDriver::hoistPureOp(Operation *existing, Operation *op) {
                                       existing->getBlock()))
     return failure();
 
+  // Find the insertion point based on dominance relationships.
   Operation *insertPoint = nullptr;
   for (Value operand : op->getOperands()) {
     if (domInfo->properlyDominates(operand, &ancestorBlock->front()))
@@ -502,7 +508,8 @@ void CSEDriver::simplifyRegion(ScopedMapTy &knownValues,
 }
 
 void CSEDriver::simplify(Operation *op, bool *changed) {
-  /// Simplify all regions.
+  /// Simplify all regions. Added a new scope using curly braces to release the
+  /// knownPureOps scope before deleting the operation.
   {
     ScopedMapTy knownValues;
     ScopedMapTy knownPureOps;
