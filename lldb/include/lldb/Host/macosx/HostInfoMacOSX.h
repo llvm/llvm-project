@@ -43,7 +43,7 @@ public:
 
   /// Shared cache utilities
   static SharedCacheImageInfo GetSharedCacheImageInfo(
-      const ModuleSpec &spec lldb::SymbolSharedCacheUse sc_mode);
+      const ModuleSpec &spec, lldb::SymbolSharedCacheUse sc_mode);
 
   static SharedCacheImageInfo
   GetSharedCacheImageInfo(const ModuleSpec &spec, const UUID &sc_uuid,
