@@ -592,7 +592,7 @@ if( MSVC )
 
   if (LLVM_WINSYSROOT)
     if (NOT CLANG_CL)
-      message(ERROR "LLVM_WINSYSROOT requires clang-cl")
+      message(SEND_ERROR "LLVM_WINSYSROOT requires clang-cl")
     endif()
     append("/winsysroot${LLVM_WINSYSROOT}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
     if (LINKER_IS_LLD_LINK)
