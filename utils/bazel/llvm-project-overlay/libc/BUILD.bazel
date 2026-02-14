@@ -4315,13 +4315,13 @@ libc_math_function(
 )
 
 libc_math_function(
-<<<<<<< HEAD
-    name = "bf16addf128",
-    additional_deps = [":__support_math_bf16addf128"],
-=======
     name = "bf16add",
     additional_deps = [":__support_math_bf16add"],
->>>>>>> 18f1f1467e4e (initial commit)
+)
+
+libc_math_function(
+    name = "bf16addf128",
+    additional_deps = [":__support_math_bf16addf128"],
 )
 
 libc_math_function(name = "canonicalize")
