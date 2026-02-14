@@ -348,6 +348,11 @@ unsigned TargetTransformInfo::getAssumedAddrSpace(const Value *V) const {
   return TTIImpl->getAssumedAddrSpace(V);
 }
 
+unsigned
+TargetTransformInfo::getAssumedLiveOnEntryDefAddrSpace(const Value *V) const {
+  return TTIImpl->getAssumedLiveOnEntryDefAddrSpace(V);
+}
+
 bool TargetTransformInfo::isSingleThreaded() const {
   return TTIImpl->isSingleThreaded();
 }
@@ -360,6 +365,10 @@ TargetTransformInfo::getPredicatedAddrSpace(const Value *V) const {
 Value *TargetTransformInfo::rewriteIntrinsicWithAddressSpace(
     IntrinsicInst *II, Value *OldV, Value *NewV) const {
   return TTIImpl->rewriteIntrinsicWithAddressSpace(II, OldV, NewV);
+}
+
+bool TargetTransformInfo::isArtificialClobber(Intrinsic::ID IID) const {
+  return TTIImpl->isArtificialClobber(IID);
 }
 
 bool TargetTransformInfo::isLoweredToCall(const Function *F) const {

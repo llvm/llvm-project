@@ -378,6 +378,14 @@ public:
   /// properties.
   virtual unsigned getAssumedAddrSpace(const Value *V) const { return -1; }
 
+  /// LiveOnEntryDef same as MemorySSA's concept.
+  /// Loads and stores from pointer arguments and other global values may be
+  /// defined by memory operations that do not occur in the current function.
+  /// Return the assumed address space for such memory operations.
+  virtual unsigned getAssumedLiveOnEntryDefAddrSpace(const Value *V) const {
+    return -1;
+  }
+
   /// If the specified predicate checks whether a generic pointer falls within
   /// a specified address space, return that generic pointer and the address
   /// space being queried.
