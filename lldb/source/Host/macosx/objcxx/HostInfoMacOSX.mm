@@ -1031,37 +1031,44 @@ SharedCacheInfo &GetSharedCacheSingleton(SymbolSharedCacheUse sc_mode) {
 }
 
 SharedCacheImageInfo
-HostInfoMacOSX::GetSharedCacheImageInfo(const ModuleSpec &spec, SymbolSharedCacheUse sc_mode) {
-  SharedCacheImageInfo *entry = nullptr;
-  if (spec.GetUUID())
-    entry = GetSharedCacheSingleton(sc_mode).GetHostSCUUIDToImageInfoMap().lookup(
-        spec.GetUUID());
-  else
-    entry = GetSharedCacheSingleton(sc_mode).GetHostSCFilenameToImageInfoMap().lookup(
-        spec.GetFileSpec().GetPathAsConstString());
-  if (entry)
+HostInfoMacOSX::GetSharedCacheImageInfo(ConstString filepath,
+                                        SymbolSharedCacheUse sc_mode) {
+  if (SharedCacheImageInfo *entry = GetSharedCacheSingleton(sc_mode)
+                                        .GetHostSCFilenameToImageInfoMap()
+                                        .lookup(filepath))
     return *entry;
   return {};
 }
 
 SharedCacheImageInfo
-HostInfoMacOSX::GetSharedCacheImageInfo(const ModuleSpec &spec,
-                                        const UUID &sc_uuid,
+HostInfoMacOSX::GetSharedCacheImageInfo(const UUID &file_uuid,
                                         SymbolSharedCacheUse sc_mode) {
-  llvm::DenseMap<UUID, SharedCacheImageInfo *> *uuid_to_fileinfos =
-      GetSharedCacheSingleton(sc_mode).GetUUIDToImageInfoMap(sc_uuid);
+  if (SharedCacheImageInfo *entry =
+          GetSharedCacheSingleton(sc_mode).GetHostSCUUIDToImageInfoMap().lookup(
+              file_uuid))
+    return *entry;
+  return {};
+}
+
+SharedCacheImageInfo HostInfoMacOSX::GetSharedCacheImageInfo(
+    ConstString filepath, const UUID &sc_uuid, SymbolSharedCacheUse sc_mode) {
   llvm::DenseMap<ConstString, SharedCacheImageInfo *> *filename_to_fileinfos =
       GetSharedCacheSingleton(sc_mode).GetFilenameToImageInfoMap(sc_uuid);
 
-  SharedCacheImageInfo *entry = nullptr;
-  if (uuid_to_fileinfos && spec.GetUUID())
-    entry = uuid_to_fileinfos->lookup(spec.GetUUID());
-  else if (filename_to_fileinfos)
-    entry = filename_to_fileinfos->lookup(
-        spec.GetFileSpec().GetPathAsConstString());
+  if (filename_to_fileinfos)
+    if (SharedCacheImageInfo *entry = filename_to_fileinfos->lookup(filepath))
+      return *entry;
 
-  if (entry)
-    return *entry;
+  return {};
+}
+
+SharedCacheImageInfo HostInfoMacOSX::GetSharedCacheImageInfo(
+    const UUID &file_uuid, const UUID &sc_uuid, SymbolSharedCacheUse sc_mode) {
+  llvm::DenseMap<UUID, SharedCacheImageInfo *> *uuid_to_fileinfos =
+      GetSharedCacheSingleton(sc_mode).GetUUIDToImageInfoMap(sc_uuid);
+  if (uuid_to_fileinfos)
+    if (SharedCacheImageInfo *entry = uuid_to_fileinfos->lookup(file_uuid))
+      return *entry;
   return {};
 }
 

@@ -187,7 +187,7 @@ public:
     return llvm::errorCodeToError(llvm::errc::no_such_file_or_directory);
   }
 
-  /// Return information about module \p spec if it is loaded in
+  /// Return information about module \p filepath if it is loaded in
   /// the current process's address space.
   ///
   /// \param[in] sc_mode
@@ -195,12 +195,25 @@ public:
   ///     cache binary blob directly, needed to keep user settings out of
   ///     Host.
   static SharedCacheImageInfo
-  GetSharedCacheImageInfo(const ModuleSpec &spec,
+  GetSharedCacheImageInfo(ConstString filepath,
                           lldb::SymbolSharedCacheUse sc_mode) {
     return {};
   }
 
-  /// Return information about module \p spec, if it is loaded in
+  /// Return information about module \p uuid if it is loaded in
+  /// the current process's address space.
+  ///
+  /// \param[in] sc_mode
+  ///     Flag to control if this method can try to read a shared
+  ///     cache binary blob directly, needed to keep user settings out of
+  ///     Host.
+  static SharedCacheImageInfo
+  GetSharedCacheImageInfo(const UUID &uuid,
+                          lldb::SymbolSharedCacheUse sc_mode) {
+    return {};
+  }
+
+  /// Return information about module \p filepath, if it is loaded in
   /// the current process's address space using shared cache \p sc_uuid.
   /// The shared cache must have been previously indexed.
   ///
@@ -209,7 +222,21 @@ public:
   ///     cache binary blob directly, needed to keep user settings out of
   ///     Host.
   static SharedCacheImageInfo
-  GetSharedCacheImageInfo(const ModuleSpec &spec, const UUID &sc_uuid,
+  GetSharedCacheImageInfo(ConstString filepath, const UUID &sc_uuid,
+                          lldb::SymbolSharedCacheUse sc_mode) {
+    return {};
+  }
+
+  /// Return information about module \p uuid, if it is loaded in
+  /// the current process's address space using shared cache \p sc_uuid.
+  /// The shared cache must have been previously indexed.
+  ///
+  /// \param[in] sc_mode
+  ///     Flag to control if this method can try to read a shared
+  ///     cache binary blob directly, needed to keep user settings out of
+  ///     Host.
+  static SharedCacheImageInfo
+  GetSharedCacheImageInfo(const UUID &uuid, const UUID &sc_uuid,
                           lldb::SymbolSharedCacheUse sc_mode) {
     return {};
   }
