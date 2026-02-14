@@ -16088,6 +16088,9 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
     }
 
     const SCEV *visitAddExpr(const SCEVAddExpr *Expr) {
+      if (const SCEV *S = Map.lookup(Expr))
+        return S;
+
       // Helper to check if S is a subtraction (A - B) where A != B, and if so,
       // return UMax(S, 1).
       auto RewriteSubtraction = [&](const SCEV *S) -> const SCEV * {
@@ -16112,17 +16115,31 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
       // (Const + A + B). There may be guard info for A + B, and if so, apply
       // it.
       // TODO: Could more generally apply guards to Add sub-expressions.
-      if (isa<SCEVConstant>(Expr->getOperand(0)) &&
-          Expr->getNumOperands() == 3) {
-        const SCEV *Add =
-            SE.getAddExpr(Expr->getOperand(1), Expr->getOperand(2));
-        if (const SCEV *Rewritten = RewriteSubtraction(Add))
-          return SE.getAddExpr(
-              Expr->getOperand(0), Rewritten,
-              ScalarEvolution::maskFlags(Expr->getNoWrapFlags(), FlagMask));
-        if (const SCEV *S = Map.lookup(Add))
-          return SE.getAddExpr(Expr->getOperand(0), S);
+      if (isa<SCEVConstant>(Expr->getOperand(0))) {
+        if (Expr->getNumOperands() == 3) {
+          const SCEV *Add =
+              SE.getAddExpr(Expr->getOperand(1), Expr->getOperand(2));
+          if (const SCEV *Rewritten = RewriteSubtraction(Add))
+            return SE.getAddExpr(
+                Expr->getOperand(0), Rewritten,
+                ScalarEvolution::maskFlags(Expr->getNoWrapFlags(), FlagMask));
+          if (const SCEV *S = Map.lookup(Add))
+            return SE.getAddExpr(Expr->getOperand(0), S);
+        }
+
+        // For expressions of the form (Const + A), check if we have guard info
+        // for (Const + 1 + A), and rewrite to ((Const + 1 + A) - 1). This makes
+        // sure we don't lose information when rewriting expressions based on
+        // back-edge taken counts in some cases.
+        if (Expr->getNumOperands() == 2) {
+          auto *NewC =
+              SE.getAddExpr(Expr->getOperand(0), SE.getOne(Expr->getType()));
+          if (const SCEV *S =
+                  Map.lookup(SE.getAddExpr(NewC, Expr->getOperand(1))))
+            return SE.getAddExpr(S, SE.getMinusOne(Expr->getType()));
+        }
       }
+
       SmallVector<const SCEV *, 2> Operands;
       bool Changed = false;
       for (const auto *Op : Expr->operands()) {

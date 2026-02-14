@@ -102,12 +102,12 @@ define void @umax(i32 noundef %a, i32 noundef %b) {
 ; CHECK-NEXT:    %cond = select i1 %cmp, i32 %mul, i32 %mul1
 ; CHECK-NEXT:    --> ((2 * %a) umax (4 * %b)) U: [0,-1) S: [-2147483648,2147483647)
 ; CHECK-NEXT:    %i.011 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body> U: [0,-2147483648) S: [0,-2147483648) Exits: (-1 + ((2 * %a) umax (4 * %b))) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body> U: [0,2147483647) S: [0,2147483647) Exits: (-1 + ((2 * %a) umax (4 * %b))) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %inc = add nuw nsw i32 %i.011, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><%for.body> U: [1,-1) S: [1,-1) Exits: ((2 * %a) umax (4 * %b)) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.body> U: [1,-2147483648) S: [1,-2147483648) Exits: ((2 * %a) umax (4 * %b)) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @umax
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + ((2 * %a) umax (4 * %b)))
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -3
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 2147483646
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + ((2 * %a) umax (4 * %b)))
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 2
 ;
@@ -197,12 +197,12 @@ define void @smax(i32 noundef %a, i32 noundef %b) {
 ; CHECK-NEXT:    %cond = select i1 %cmp, i32 %mul, i32 %mul1
 ; CHECK-NEXT:    --> ((2 * %a)<nsw> smax (4 * %b)<nsw>) U: [0,-1) S: [-2147483648,2147483647)
 ; CHECK-NEXT:    %i.011 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body> U: [0,-2147483648) S: [0,-2147483648) Exits: (-1 + ((2 * %a)<nsw> smax (4 * %b)<nsw>)) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body> U: [0,2147483647) S: [0,2147483647) Exits: (-1 + ((2 * %a)<nsw> smax (4 * %b)<nsw>)) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %inc = add nuw nsw i32 %i.011, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><%for.body> U: [1,-1) S: [1,-1) Exits: ((2 * %a)<nsw> smax (4 * %b)<nsw>) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.body> U: [1,-2147483648) S: [1,-2147483648) Exits: ((2 * %a)<nsw> smax (4 * %b)<nsw>) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @smax
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + ((2 * %a)<nsw> smax (4 * %b)<nsw>))
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -3
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 2147483646
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + ((2 * %a)<nsw> smax (4 * %b)<nsw>))
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 2
 ;
