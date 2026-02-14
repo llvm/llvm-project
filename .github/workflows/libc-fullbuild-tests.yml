@@ -13,7 +13,7 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
     container:
-      image: ${{ (startsWith(matrix.runs-on, 'ubuntu-24.04-arm') && 'ghcr.io/llvm/arm64v8/libc-ubuntu-24.04') || 'ghcr.io/llvm/libc-ubuntu-24.04'}}
+      image: ${{ (startsWith(matrix.os, 'ubuntu-24.04-arm') && 'ghcr.io/llvm/arm64v8/libc-ubuntu-24.04') || 'ghcr.io/llvm/libc-ubuntu-24.04'}}
       # We need to enable privileged containers so that certain libc tests
       # have the necessary permissions (like SYS_TIME). There are no security
       # implications as we are already running in an isolated VM.
