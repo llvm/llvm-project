@@ -3053,81 +3053,75 @@ define <16 x i8> @shl_v16i8(<16 x i8> %v, i8 %x) {
 ; NO-SIMD128-LABEL: shl_v16i8:
 ; NO-SIMD128:         .functype shl_v16i8 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
-; NO-SIMD128-NEXT:    i32.const $push0=, 255
-; NO-SIMD128-NEXT:    i32.and $push18=, $17, $pop0
-; NO-SIMD128-NEXT:    local.tee $push17=, $17=, $pop18
-; NO-SIMD128-NEXT:    i32.shl $push1=, $16, $pop17
-; NO-SIMD128-NEXT:    i32.store8 15($0), $pop1
-; NO-SIMD128-NEXT:    i32.shl $push2=, $15, $17
-; NO-SIMD128-NEXT:    i32.store8 14($0), $pop2
-; NO-SIMD128-NEXT:    i32.shl $push3=, $14, $17
-; NO-SIMD128-NEXT:    i32.store8 13($0), $pop3
-; NO-SIMD128-NEXT:    i32.shl $push4=, $13, $17
-; NO-SIMD128-NEXT:    i32.store8 12($0), $pop4
-; NO-SIMD128-NEXT:    i32.shl $push5=, $12, $17
-; NO-SIMD128-NEXT:    i32.store8 11($0), $pop5
-; NO-SIMD128-NEXT:    i32.shl $push6=, $11, $17
-; NO-SIMD128-NEXT:    i32.store8 10($0), $pop6
-; NO-SIMD128-NEXT:    i32.shl $push7=, $10, $17
-; NO-SIMD128-NEXT:    i32.store8 9($0), $pop7
-; NO-SIMD128-NEXT:    i32.shl $push8=, $9, $17
-; NO-SIMD128-NEXT:    i32.store8 8($0), $pop8
-; NO-SIMD128-NEXT:    i32.shl $push9=, $8, $17
-; NO-SIMD128-NEXT:    i32.store8 7($0), $pop9
-; NO-SIMD128-NEXT:    i32.shl $push10=, $7, $17
-; NO-SIMD128-NEXT:    i32.store8 6($0), $pop10
-; NO-SIMD128-NEXT:    i32.shl $push11=, $6, $17
-; NO-SIMD128-NEXT:    i32.store8 5($0), $pop11
-; NO-SIMD128-NEXT:    i32.shl $push12=, $5, $17
-; NO-SIMD128-NEXT:    i32.store8 4($0), $pop12
-; NO-SIMD128-NEXT:    i32.shl $push13=, $4, $17
-; NO-SIMD128-NEXT:    i32.store8 3($0), $pop13
-; NO-SIMD128-NEXT:    i32.shl $push14=, $3, $17
-; NO-SIMD128-NEXT:    i32.store8 2($0), $pop14
-; NO-SIMD128-NEXT:    i32.shl $push15=, $2, $17
-; NO-SIMD128-NEXT:    i32.store8 1($0), $pop15
-; NO-SIMD128-NEXT:    i32.shl $push16=, $1, $17
-; NO-SIMD128-NEXT:    i32.store8 0($0), $pop16
+; NO-SIMD128-NEXT:    i32.shl $push0=, $16, $17
+; NO-SIMD128-NEXT:    i32.store8 15($0), $pop0
+; NO-SIMD128-NEXT:    i32.shl $push1=, $15, $17
+; NO-SIMD128-NEXT:    i32.store8 14($0), $pop1
+; NO-SIMD128-NEXT:    i32.shl $push2=, $14, $17
+; NO-SIMD128-NEXT:    i32.store8 13($0), $pop2
+; NO-SIMD128-NEXT:    i32.shl $push3=, $13, $17
+; NO-SIMD128-NEXT:    i32.store8 12($0), $pop3
+; NO-SIMD128-NEXT:    i32.shl $push4=, $12, $17
+; NO-SIMD128-NEXT:    i32.store8 11($0), $pop4
+; NO-SIMD128-NEXT:    i32.shl $push5=, $11, $17
+; NO-SIMD128-NEXT:    i32.store8 10($0), $pop5
+; NO-SIMD128-NEXT:    i32.shl $push6=, $10, $17
+; NO-SIMD128-NEXT:    i32.store8 9($0), $pop6
+; NO-SIMD128-NEXT:    i32.shl $push7=, $9, $17
+; NO-SIMD128-NEXT:    i32.store8 8($0), $pop7
+; NO-SIMD128-NEXT:    i32.shl $push8=, $8, $17
+; NO-SIMD128-NEXT:    i32.store8 7($0), $pop8
+; NO-SIMD128-NEXT:    i32.shl $push9=, $7, $17
+; NO-SIMD128-NEXT:    i32.store8 6($0), $pop9
+; NO-SIMD128-NEXT:    i32.shl $push10=, $6, $17
+; NO-SIMD128-NEXT:    i32.store8 5($0), $pop10
+; NO-SIMD128-NEXT:    i32.shl $push11=, $5, $17
+; NO-SIMD128-NEXT:    i32.store8 4($0), $pop11
+; NO-SIMD128-NEXT:    i32.shl $push12=, $4, $17
+; NO-SIMD128-NEXT:    i32.store8 3($0), $pop12
+; NO-SIMD128-NEXT:    i32.shl $push13=, $3, $17
+; NO-SIMD128-NEXT:    i32.store8 2($0), $pop13
+; NO-SIMD128-NEXT:    i32.shl $push14=, $2, $17
+; NO-SIMD128-NEXT:    i32.store8 1($0), $pop14
+; NO-SIMD128-NEXT:    i32.shl $push15=, $1, $17
+; NO-SIMD128-NEXT:    i32.store8 0($0), $pop15
 ; NO-SIMD128-NEXT:    return
 ;
 ; NO-SIMD128-FAST-LABEL: shl_v16i8:
 ; NO-SIMD128-FAST:         .functype shl_v16i8 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-FAST-NEXT:  # %bb.0:
-; NO-SIMD128-FAST-NEXT:    i32.const $push0=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push18=, $17, $pop0
-; NO-SIMD128-FAST-NEXT:    local.tee $push17=, $17=, $pop18
-; NO-SIMD128-FAST-NEXT:    i32.shl $push1=, $2, $pop17
+; NO-SIMD128-FAST-NEXT:    i32.shl $push0=, $1, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 0($0), $pop0
+; NO-SIMD128-FAST-NEXT:    i32.shl $push1=, $2, $17
 ; NO-SIMD128-FAST-NEXT:    i32.store8 1($0), $pop1
-; NO-SIMD128-FAST-NEXT:    i32.shl $push2=, $1, $17
-; NO-SIMD128-FAST-NEXT:    i32.store8 0($0), $pop2
-; NO-SIMD128-FAST-NEXT:    i32.shl $push3=, $3, $17
-; NO-SIMD128-FAST-NEXT:    i32.store8 2($0), $pop3
-; NO-SIMD128-FAST-NEXT:    i32.shl $push4=, $4, $17
-; NO-SIMD128-FAST-NEXT:    i32.store8 3($0), $pop4
-; NO-SIMD128-FAST-NEXT:    i32.shl $push5=, $5, $17
-; NO-SIMD128-FAST-NEXT:    i32.store8 4($0), $pop5
-; NO-SIMD128-FAST-NEXT:    i32.shl $push6=, $6, $17
-; NO-SIMD128-FAST-NEXT:    i32.store8 5($0), $pop6
-; NO-SIMD128-FAST-NEXT:    i32.shl $push7=, $7, $17
-; NO-SIMD128-FAST-NEXT:    i32.store8 6($0), $pop7
-; NO-SIMD128-FAST-NEXT:    i32.shl $push8=, $8, $17
-; NO-SIMD128-FAST-NEXT:    i32.store8 7($0), $pop8
-; NO-SIMD128-FAST-NEXT:    i32.shl $push9=, $9, $17
-; NO-SIMD128-FAST-NEXT:    i32.store8 8($0), $pop9
-; NO-SIMD128-FAST-NEXT:    i32.shl $push10=, $10, $17
-; NO-SIMD128-FAST-NEXT:    i32.store8 9($0), $pop10
-; NO-SIMD128-FAST-NEXT:    i32.shl $push11=, $11, $17
-; NO-SIMD128-FAST-NEXT:    i32.store8 10($0), $pop11
-; NO-SIMD128-FAST-NEXT:    i32.shl $push12=, $12, $17
-; NO-SIMD128-FAST-NEXT:    i32.store8 11($0), $pop12
-; NO-SIMD128-FAST-NEXT:    i32.shl $push13=, $13, $17
-; NO-SIMD128-FAST-NEXT:    i32.store8 12($0), $pop13
-; NO-SIMD128-FAST-NEXT:    i32.shl $push14=, $14, $17
-; NO-SIMD128-FAST-NEXT:    i32.store8 13($0), $pop14
-; NO-SIMD128-FAST-NEXT:    i32.shl $push15=, $15, $17
-; NO-SIMD128-FAST-NEXT:    i32.store8 14($0), $pop15
-; NO-SIMD128-FAST-NEXT:    i32.shl $push16=, $16, $17
-; NO-SIMD128-FAST-NEXT:    i32.store8 15($0), $pop16
+; NO-SIMD128-FAST-NEXT:    i32.shl $push2=, $3, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 2($0), $pop2
+; NO-SIMD128-FAST-NEXT:    i32.shl $push3=, $4, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 3($0), $pop3
+; NO-SIMD128-FAST-NEXT:    i32.shl $push4=, $5, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 4($0), $pop4
+; NO-SIMD128-FAST-NEXT:    i32.shl $push5=, $6, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 5($0), $pop5
+; NO-SIMD128-FAST-NEXT:    i32.shl $push6=, $7, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 6($0), $pop6
+; NO-SIMD128-FAST-NEXT:    i32.shl $push7=, $8, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 7($0), $pop7
+; NO-SIMD128-FAST-NEXT:    i32.shl $push8=, $9, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 8($0), $pop8
+; NO-SIMD128-FAST-NEXT:    i32.shl $push9=, $10, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 9($0), $pop9
+; NO-SIMD128-FAST-NEXT:    i32.shl $push10=, $11, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 10($0), $pop10
+; NO-SIMD128-FAST-NEXT:    i32.shl $push11=, $12, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 11($0), $pop11
+; NO-SIMD128-FAST-NEXT:    i32.shl $push12=, $13, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 12($0), $pop12
+; NO-SIMD128-FAST-NEXT:    i32.shl $push13=, $14, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 13($0), $pop13
+; NO-SIMD128-FAST-NEXT:    i32.shl $push14=, $15, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 14($0), $pop14
+; NO-SIMD128-FAST-NEXT:    i32.shl $push15=, $16, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 15($0), $pop15
 ; NO-SIMD128-FAST-NEXT:    return
   %t = insertelement <16 x i8> undef, i8 %x, i32 0
   %s = shufflevector <16 x i8> %t, <16 x i8> undef,
@@ -3469,139 +3463,75 @@ define <16 x i8> @shl_vec_v16i8(<16 x i8> %v, <16 x i8> %x) {
 ; NO-SIMD128-LABEL: shl_vec_v16i8:
 ; NO-SIMD128:         .functype shl_vec_v16i8 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
-; NO-SIMD128-NEXT:    i32.const $push0=, 255
-; NO-SIMD128-NEXT:    i32.and $push1=, $32, $pop0
-; NO-SIMD128-NEXT:    i32.shl $push2=, $16, $pop1
-; NO-SIMD128-NEXT:    i32.store8 15($0), $pop2
-; NO-SIMD128-NEXT:    i32.const $push47=, 255
-; NO-SIMD128-NEXT:    i32.and $push3=, $31, $pop47
-; NO-SIMD128-NEXT:    i32.shl $push4=, $15, $pop3
-; NO-SIMD128-NEXT:    i32.store8 14($0), $pop4
-; NO-SIMD128-NEXT:    i32.const $push46=, 255
-; NO-SIMD128-NEXT:    i32.and $push5=, $30, $pop46
-; NO-SIMD128-NEXT:    i32.shl $push6=, $14, $pop5
-; NO-SIMD128-NEXT:    i32.store8 13($0), $pop6
-; NO-SIMD128-NEXT:    i32.const $push45=, 255
-; NO-SIMD128-NEXT:    i32.and $push7=, $29, $pop45
-; NO-SIMD128-NEXT:    i32.shl $push8=, $13, $pop7
-; NO-SIMD128-NEXT:    i32.store8 12($0), $pop8
-; NO-SIMD128-NEXT:    i32.const $push44=, 255
-; NO-SIMD128-NEXT:    i32.and $push9=, $28, $pop44
-; NO-SIMD128-NEXT:    i32.shl $push10=, $12, $pop9
-; NO-SIMD128-NEXT:    i32.store8 11($0), $pop10
-; NO-SIMD128-NEXT:    i32.const $push43=, 255
-; NO-SIMD128-NEXT:    i32.and $push11=, $27, $pop43
-; NO-SIMD128-NEXT:    i32.shl $push12=, $11, $pop11
-; NO-SIMD128-NEXT:    i32.store8 10($0), $pop12
-; NO-SIMD128-NEXT:    i32.const $push42=, 255
-; NO-SIMD128-NEXT:    i32.and $push13=, $26, $pop42
-; NO-SIMD128-NEXT:    i32.shl $push14=, $10, $pop13
-; NO-SIMD128-NEXT:    i32.store8 9($0), $pop14
-; NO-SIMD128-NEXT:    i32.const $push41=, 255
-; NO-SIMD128-NEXT:    i32.and $push15=, $25, $pop41
-; NO-SIMD128-NEXT:    i32.shl $push16=, $9, $pop15
-; NO-SIMD128-NEXT:    i32.store8 8($0), $pop16
-; NO-SIMD128-NEXT:    i32.const $push40=, 255
-; NO-SIMD128-NEXT:    i32.and $push17=, $24, $pop40
-; NO-SIMD128-NEXT:    i32.shl $push18=, $8, $pop17
-; NO-SIMD128-NEXT:    i32.store8 7($0), $pop18
-; NO-SIMD128-NEXT:    i32.const $push39=, 255
-; NO-SIMD128-NEXT:    i32.and $push19=, $23, $pop39
-; NO-SIMD128-NEXT:    i32.shl $push20=, $7, $pop19
-; NO-SIMD128-NEXT:    i32.store8 6($0), $pop20
-; NO-SIMD128-NEXT:    i32.const $push38=, 255
-; NO-SIMD128-NEXT:    i32.and $push21=, $22, $pop38
-; NO-SIMD128-NEXT:    i32.shl $push22=, $6, $pop21
-; NO-SIMD128-NEXT:    i32.store8 5($0), $pop22
-; NO-SIMD128-NEXT:    i32.const $push37=, 255
-; NO-SIMD128-NEXT:    i32.and $push23=, $21, $pop37
-; NO-SIMD128-NEXT:    i32.shl $push24=, $5, $pop23
-; NO-SIMD128-NEXT:    i32.store8 4($0), $pop24
-; NO-SIMD128-NEXT:    i32.const $push36=, 255
-; NO-SIMD128-NEXT:    i32.and $push25=, $20, $pop36
-; NO-SIMD128-NEXT:    i32.shl $push26=, $4, $pop25
-; NO-SIMD128-NEXT:    i32.store8 3($0), $pop26
-; NO-SIMD128-NEXT:    i32.const $push35=, 255
-; NO-SIMD128-NEXT:    i32.and $push27=, $19, $pop35
-; NO-SIMD128-NEXT:    i32.shl $push28=, $3, $pop27
-; NO-SIMD128-NEXT:    i32.store8 2($0), $pop28
-; NO-SIMD128-NEXT:    i32.const $push34=, 255
-; NO-SIMD128-NEXT:    i32.and $push29=, $18, $pop34
-; NO-SIMD128-NEXT:    i32.shl $push30=, $2, $pop29
-; NO-SIMD128-NEXT:    i32.store8 1($0), $pop30
-; NO-SIMD128-NEXT:    i32.const $push33=, 255
-; NO-SIMD128-NEXT:    i32.and $push31=, $17, $pop33
-; NO-SIMD128-NEXT:    i32.shl $push32=, $1, $pop31
-; NO-SIMD128-NEXT:    i32.store8 0($0), $pop32
+; NO-SIMD128-NEXT:    i32.shl $push0=, $16, $32
+; NO-SIMD128-NEXT:    i32.store8 15($0), $pop0
+; NO-SIMD128-NEXT:    i32.shl $push1=, $15, $31
+; NO-SIMD128-NEXT:    i32.store8 14($0), $pop1
+; NO-SIMD128-NEXT:    i32.shl $push2=, $14, $30
+; NO-SIMD128-NEXT:    i32.store8 13($0), $pop2
+; NO-SIMD128-NEXT:    i32.shl $push3=, $13, $29
+; NO-SIMD128-NEXT:    i32.store8 12($0), $pop3
+; NO-SIMD128-NEXT:    i32.shl $push4=, $12, $28
+; NO-SIMD128-NEXT:    i32.store8 11($0), $pop4
+; NO-SIMD128-NEXT:    i32.shl $push5=, $11, $27
+; NO-SIMD128-NEXT:    i32.store8 10($0), $pop5
+; NO-SIMD128-NEXT:    i32.shl $push6=, $10, $26
+; NO-SIMD128-NEXT:    i32.store8 9($0), $pop6
+; NO-SIMD128-NEXT:    i32.shl $push7=, $9, $25
+; NO-SIMD128-NEXT:    i32.store8 8($0), $pop7
+; NO-SIMD128-NEXT:    i32.shl $push8=, $8, $24
+; NO-SIMD128-NEXT:    i32.store8 7($0), $pop8
+; NO-SIMD128-NEXT:    i32.shl $push9=, $7, $23
+; NO-SIMD128-NEXT:    i32.store8 6($0), $pop9
+; NO-SIMD128-NEXT:    i32.shl $push10=, $6, $22
+; NO-SIMD128-NEXT:    i32.store8 5($0), $pop10
+; NO-SIMD128-NEXT:    i32.shl $push11=, $5, $21
+; NO-SIMD128-NEXT:    i32.store8 4($0), $pop11
+; NO-SIMD128-NEXT:    i32.shl $push12=, $4, $20
+; NO-SIMD128-NEXT:    i32.store8 3($0), $pop12
+; NO-SIMD128-NEXT:    i32.shl $push13=, $3, $19
+; NO-SIMD128-NEXT:    i32.store8 2($0), $pop13
+; NO-SIMD128-NEXT:    i32.shl $push14=, $2, $18
+; NO-SIMD128-NEXT:    i32.store8 1($0), $pop14
+; NO-SIMD128-NEXT:    i32.shl $push15=, $1, $17
+; NO-SIMD128-NEXT:    i32.store8 0($0), $pop15
 ; NO-SIMD128-NEXT:    return
 ;
 ; NO-SIMD128-FAST-LABEL: shl_vec_v16i8:
 ; NO-SIMD128-FAST:         .functype shl_vec_v16i8 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-FAST-NEXT:  # %bb.0:
-; NO-SIMD128-FAST-NEXT:    i32.const $push0=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push1=, $17, $pop0
-; NO-SIMD128-FAST-NEXT:    i32.shl $push2=, $1, $pop1
-; NO-SIMD128-FAST-NEXT:    i32.store8 0($0), $pop2
-; NO-SIMD128-FAST-NEXT:    i32.const $push47=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push3=, $18, $pop47
-; NO-SIMD128-FAST-NEXT:    i32.shl $push4=, $2, $pop3
-; NO-SIMD128-FAST-NEXT:    i32.store8 1($0), $pop4
-; NO-SIMD128-FAST-NEXT:    i32.const $push46=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push5=, $19, $pop46
-; NO-SIMD128-FAST-NEXT:    i32.shl $push6=, $3, $pop5
-; NO-SIMD128-FAST-NEXT:    i32.store8 2($0), $pop6
-; NO-SIMD128-FAST-NEXT:    i32.const $push45=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push7=, $20, $pop45
-; NO-SIMD128-FAST-NEXT:    i32.shl $push8=, $4, $pop7
-; NO-SIMD128-FAST-NEXT:    i32.store8 3($0), $pop8
-; NO-SIMD128-FAST-NEXT:    i32.const $push44=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push9=, $21, $pop44
-; NO-SIMD128-FAST-NEXT:    i32.shl $push10=, $5, $pop9
-; NO-SIMD128-FAST-NEXT:    i32.store8 4($0), $pop10
-; NO-SIMD128-FAST-NEXT:    i32.const $push43=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push11=, $22, $pop43
-; NO-SIMD128-FAST-NEXT:    i32.shl $push12=, $6, $pop11
-; NO-SIMD128-FAST-NEXT:    i32.store8 5($0), $pop12
-; NO-SIMD128-FAST-NEXT:    i32.const $push42=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push13=, $23, $pop42
-; NO-SIMD128-FAST-NEXT:    i32.shl $push14=, $7, $pop13
-; NO-SIMD128-FAST-NEXT:    i32.store8 6($0), $pop14
-; NO-SIMD128-FAST-NEXT:    i32.const $push41=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push15=, $24, $pop41
-; NO-SIMD128-FAST-NEXT:    i32.shl $push16=, $8, $pop15
-; NO-SIMD128-FAST-NEXT:    i32.store8 7($0), $pop16
-; NO-SIMD128-FAST-NEXT:    i32.const $push40=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push17=, $25, $pop40
-; NO-SIMD128-FAST-NEXT:    i32.shl $push18=, $9, $pop17
-; NO-SIMD128-FAST-NEXT:    i32.store8 8($0), $pop18
-; NO-SIMD128-FAST-NEXT:    i32.const $push39=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push19=, $26, $pop39
-; NO-SIMD128-FAST-NEXT:    i32.shl $push20=, $10, $pop19
-; NO-SIMD128-FAST-NEXT:    i32.store8 9($0), $pop20
-; NO-SIMD128-FAST-NEXT:    i32.const $push38=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push21=, $27, $pop38
-; NO-SIMD128-FAST-NEXT:    i32.shl $push22=, $11, $pop21
-; NO-SIMD128-FAST-NEXT:    i32.store8 10($0), $pop22
-; NO-SIMD128-FAST-NEXT:    i32.const $push37=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push23=, $28, $pop37
-; NO-SIMD128-FAST-NEXT:    i32.shl $push24=, $12, $pop23
-; NO-SIMD128-FAST-NEXT:    i32.store8 11($0), $pop24
-; NO-SIMD128-FAST-NEXT:    i32.const $push36=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push25=, $29, $pop36
-; NO-SIMD128-FAST-NEXT:    i32.shl $push26=, $13, $pop25
-; NO-SIMD128-FAST-NEXT:    i32.store8 12($0), $pop26
-; NO-SIMD128-FAST-NEXT:    i32.const $push35=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push27=, $30, $pop35
-; NO-SIMD128-FAST-NEXT:    i32.shl $push28=, $14, $pop27
-; NO-SIMD128-FAST-NEXT:    i32.store8 13($0), $pop28
-; NO-SIMD128-FAST-NEXT:    i32.const $push34=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push29=, $31, $pop34
-; NO-SIMD128-FAST-NEXT:    i32.shl $push30=, $15, $pop29
-; NO-SIMD128-FAST-NEXT:    i32.store8 14($0), $pop30
-; NO-SIMD128-FAST-NEXT:    i32.const $push33=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push31=, $32, $pop33
-; NO-SIMD128-FAST-NEXT:    i32.shl $push32=, $16, $pop31
-; NO-SIMD128-FAST-NEXT:    i32.store8 15($0), $pop32
+; NO-SIMD128-FAST-NEXT:    i32.shl $push0=, $1, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 0($0), $pop0
+; NO-SIMD128-FAST-NEXT:    i32.shl $push1=, $2, $18
+; NO-SIMD128-FAST-NEXT:    i32.store8 1($0), $pop1
+; NO-SIMD128-FAST-NEXT:    i32.shl $push2=, $3, $19
+; NO-SIMD128-FAST-NEXT:    i32.store8 2($0), $pop2
+; NO-SIMD128-FAST-NEXT:    i32.shl $push3=, $4, $20
+; NO-SIMD128-FAST-NEXT:    i32.store8 3($0), $pop3
+; NO-SIMD128-FAST-NEXT:    i32.shl $push4=, $5, $21
+; NO-SIMD128-FAST-NEXT:    i32.store8 4($0), $pop4
+; NO-SIMD128-FAST-NEXT:    i32.shl $push5=, $6, $22
+; NO-SIMD128-FAST-NEXT:    i32.store8 5($0), $pop5
+; NO-SIMD128-FAST-NEXT:    i32.shl $push6=, $7, $23
+; NO-SIMD128-FAST-NEXT:    i32.store8 6($0), $pop6
+; NO-SIMD128-FAST-NEXT:    i32.shl $push7=, $8, $24
+; NO-SIMD128-FAST-NEXT:    i32.store8 7($0), $pop7
+; NO-SIMD128-FAST-NEXT:    i32.shl $push8=, $9, $25
+; NO-SIMD128-FAST-NEXT:    i32.store8 8($0), $pop8
+; NO-SIMD128-FAST-NEXT:    i32.shl $push9=, $10, $26
+; NO-SIMD128-FAST-NEXT:    i32.store8 9($0), $pop9
+; NO-SIMD128-FAST-NEXT:    i32.shl $push10=, $11, $27
+; NO-SIMD128-FAST-NEXT:    i32.store8 10($0), $pop10
+; NO-SIMD128-FAST-NEXT:    i32.shl $push11=, $12, $28
+; NO-SIMD128-FAST-NEXT:    i32.store8 11($0), $pop11
+; NO-SIMD128-FAST-NEXT:    i32.shl $push12=, $13, $29
+; NO-SIMD128-FAST-NEXT:    i32.store8 12($0), $pop12
+; NO-SIMD128-FAST-NEXT:    i32.shl $push13=, $14, $30
+; NO-SIMD128-FAST-NEXT:    i32.store8 13($0), $pop13
+; NO-SIMD128-FAST-NEXT:    i32.shl $push14=, $15, $31
+; NO-SIMD128-FAST-NEXT:    i32.store8 14($0), $pop14
+; NO-SIMD128-FAST-NEXT:    i32.shl $push15=, $16, $32
+; NO-SIMD128-FAST-NEXT:    i32.store8 15($0), $pop15
 ; NO-SIMD128-FAST-NEXT:    return
   %a = shl <16 x i8> %v, %x
   ret <16 x i8> %a
@@ -3623,113 +3553,107 @@ define <16 x i8> @shr_s_v16i8(<16 x i8> %v, i8 %x) {
 ; NO-SIMD128-LABEL: shr_s_v16i8:
 ; NO-SIMD128:         .functype shr_s_v16i8 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
-; NO-SIMD128-NEXT:    i32.extend8_s $push1=, $16
-; NO-SIMD128-NEXT:    i32.const $push0=, 255
-; NO-SIMD128-NEXT:    i32.and $push34=, $17, $pop0
-; NO-SIMD128-NEXT:    local.tee $push33=, $17=, $pop34
-; NO-SIMD128-NEXT:    i32.shr_s $push2=, $pop1, $pop33
-; NO-SIMD128-NEXT:    i32.store8 15($0), $pop2
-; NO-SIMD128-NEXT:    i32.extend8_s $push3=, $15
-; NO-SIMD128-NEXT:    i32.shr_s $push4=, $pop3, $17
-; NO-SIMD128-NEXT:    i32.store8 14($0), $pop4
-; NO-SIMD128-NEXT:    i32.extend8_s $push5=, $14
-; NO-SIMD128-NEXT:    i32.shr_s $push6=, $pop5, $17
-; NO-SIMD128-NEXT:    i32.store8 13($0), $pop6
-; NO-SIMD128-NEXT:    i32.extend8_s $push7=, $13
-; NO-SIMD128-NEXT:    i32.shr_s $push8=, $pop7, $17
-; NO-SIMD128-NEXT:    i32.store8 12($0), $pop8
-; NO-SIMD128-NEXT:    i32.extend8_s $push9=, $12
-; NO-SIMD128-NEXT:    i32.shr_s $push10=, $pop9, $17
-; NO-SIMD128-NEXT:    i32.store8 11($0), $pop10
-; NO-SIMD128-NEXT:    i32.extend8_s $push11=, $11
-; NO-SIMD128-NEXT:    i32.shr_s $push12=, $pop11, $17
-; NO-SIMD128-NEXT:    i32.store8 10($0), $pop12
-; NO-SIMD128-NEXT:    i32.extend8_s $push13=, $10
-; NO-SIMD128-NEXT:    i32.shr_s $push14=, $pop13, $17
-; NO-SIMD128-NEXT:    i32.store8 9($0), $pop14
-; NO-SIMD128-NEXT:    i32.extend8_s $push15=, $9
-; NO-SIMD128-NEXT:    i32.shr_s $push16=, $pop15, $17
-; NO-SIMD128-NEXT:    i32.store8 8($0), $pop16
-; NO-SIMD128-NEXT:    i32.extend8_s $push17=, $8
-; NO-SIMD128-NEXT:    i32.shr_s $push18=, $pop17, $17
-; NO-SIMD128-NEXT:    i32.store8 7($0), $pop18
-; NO-SIMD128-NEXT:    i32.extend8_s $push19=, $7
-; NO-SIMD128-NEXT:    i32.shr_s $push20=, $pop19, $17
-; NO-SIMD128-NEXT:    i32.store8 6($0), $pop20
-; NO-SIMD128-NEXT:    i32.extend8_s $push21=, $6
-; NO-SIMD128-NEXT:    i32.shr_s $push22=, $pop21, $17
-; NO-SIMD128-NEXT:    i32.store8 5($0), $pop22
-; NO-SIMD128-NEXT:    i32.extend8_s $push23=, $5
-; NO-SIMD128-NEXT:    i32.shr_s $push24=, $pop23, $17
-; NO-SIMD128-NEXT:    i32.store8 4($0), $pop24
-; NO-SIMD128-NEXT:    i32.extend8_s $push25=, $4
-; NO-SIMD128-NEXT:    i32.shr_s $push26=, $pop25, $17
-; NO-SIMD128-NEXT:    i32.store8 3($0), $pop26
-; NO-SIMD128-NEXT:    i32.extend8_s $push27=, $3
-; NO-SIMD128-NEXT:    i32.shr_s $push28=, $pop27, $17
-; NO-SIMD128-NEXT:    i32.store8 2($0), $pop28
-; NO-SIMD128-NEXT:    i32.extend8_s $push29=, $2
-; NO-SIMD128-NEXT:    i32.shr_s $push30=, $pop29, $17
-; NO-SIMD128-NEXT:    i32.store8 1($0), $pop30
-; NO-SIMD128-NEXT:    i32.extend8_s $push31=, $1
-; NO-SIMD128-NEXT:    i32.shr_s $push32=, $pop31, $17
-; NO-SIMD128-NEXT:    i32.store8 0($0), $pop32
+; NO-SIMD128-NEXT:    i32.extend8_s $push0=, $16
+; NO-SIMD128-NEXT:    i32.shr_s $push1=, $pop0, $17
+; NO-SIMD128-NEXT:    i32.store8 15($0), $pop1
+; NO-SIMD128-NEXT:    i32.extend8_s $push2=, $15
+; NO-SIMD128-NEXT:    i32.shr_s $push3=, $pop2, $17
+; NO-SIMD128-NEXT:    i32.store8 14($0), $pop3
+; NO-SIMD128-NEXT:    i32.extend8_s $push4=, $14
+; NO-SIMD128-NEXT:    i32.shr_s $push5=, $pop4, $17
+; NO-SIMD128-NEXT:    i32.store8 13($0), $pop5
+; NO-SIMD128-NEXT:    i32.extend8_s $push6=, $13
+; NO-SIMD128-NEXT:    i32.shr_s $push7=, $pop6, $17
+; NO-SIMD128-NEXT:    i32.store8 12($0), $pop7
+; NO-SIMD128-NEXT:    i32.extend8_s $push8=, $12
+; NO-SIMD128-NEXT:    i32.shr_s $push9=, $pop8, $17
+; NO-SIMD128-NEXT:    i32.store8 11($0), $pop9
+; NO-SIMD128-NEXT:    i32.extend8_s $push10=, $11
+; NO-SIMD128-NEXT:    i32.shr_s $push11=, $pop10, $17
+; NO-SIMD128-NEXT:    i32.store8 10($0), $pop11
+; NO-SIMD128-NEXT:    i32.extend8_s $push12=, $10
+; NO-SIMD128-NEXT:    i32.shr_s $push13=, $pop12, $17
+; NO-SIMD128-NEXT:    i32.store8 9($0), $pop13
+; NO-SIMD128-NEXT:    i32.extend8_s $push14=, $9
+; NO-SIMD128-NEXT:    i32.shr_s $push15=, $pop14, $17
+; NO-SIMD128-NEXT:    i32.store8 8($0), $pop15
+; NO-SIMD128-NEXT:    i32.extend8_s $push16=, $8
+; NO-SIMD128-NEXT:    i32.shr_s $push17=, $pop16, $17
+; NO-SIMD128-NEXT:    i32.store8 7($0), $pop17
+; NO-SIMD128-NEXT:    i32.extend8_s $push18=, $7
+; NO-SIMD128-NEXT:    i32.shr_s $push19=, $pop18, $17
+; NO-SIMD128-NEXT:    i32.store8 6($0), $pop19
+; NO-SIMD128-NEXT:    i32.extend8_s $push20=, $6
+; NO-SIMD128-NEXT:    i32.shr_s $push21=, $pop20, $17
+; NO-SIMD128-NEXT:    i32.store8 5($0), $pop21
+; NO-SIMD128-NEXT:    i32.extend8_s $push22=, $5
+; NO-SIMD128-NEXT:    i32.shr_s $push23=, $pop22, $17
+; NO-SIMD128-NEXT:    i32.store8 4($0), $pop23
+; NO-SIMD128-NEXT:    i32.extend8_s $push24=, $4
+; NO-SIMD128-NEXT:    i32.shr_s $push25=, $pop24, $17
+; NO-SIMD128-NEXT:    i32.store8 3($0), $pop25
+; NO-SIMD128-NEXT:    i32.extend8_s $push26=, $3
+; NO-SIMD128-NEXT:    i32.shr_s $push27=, $pop26, $17
+; NO-SIMD128-NEXT:    i32.store8 2($0), $pop27
+; NO-SIMD128-NEXT:    i32.extend8_s $push28=, $2
+; NO-SIMD128-NEXT:    i32.shr_s $push29=, $pop28, $17
+; NO-SIMD128-NEXT:    i32.store8 1($0), $pop29
+; NO-SIMD128-NEXT:    i32.extend8_s $push30=, $1
+; NO-SIMD128-NEXT:    i32.shr_s $push31=, $pop30, $17
+; NO-SIMD128-NEXT:    i32.store8 0($0), $pop31
 ; NO-SIMD128-NEXT:    return
 ;
 ; NO-SIMD128-FAST-LABEL: shr_s_v16i8:
 ; NO-SIMD128-FAST:         .functype shr_s_v16i8 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-FAST-NEXT:  # %bb.0:
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push1=, $1
-; NO-SIMD128-FAST-NEXT:    i32.const $push0=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push34=, $17, $pop0
-; NO-SIMD128-FAST-NEXT:    local.tee $push33=, $1=, $pop34
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push2=, $pop1, $pop33
-; NO-SIMD128-FAST-NEXT:    i32.store8 0($0), $pop2
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push3=, $2
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push4=, $pop3, $1
-; NO-SIMD128-FAST-NEXT:    i32.store8 1($0), $pop4
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push5=, $3
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push6=, $pop5, $1
-; NO-SIMD128-FAST-NEXT:    i32.store8 2($0), $pop6
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push7=, $4
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push8=, $pop7, $1
-; NO-SIMD128-FAST-NEXT:    i32.store8 3($0), $pop8
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push9=, $5
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push10=, $pop9, $1
-; NO-SIMD128-FAST-NEXT:    i32.store8 4($0), $pop10
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push11=, $6
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push12=, $pop11, $1
-; NO-SIMD128-FAST-NEXT:    i32.store8 5($0), $pop12
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push13=, $7
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push14=, $pop13, $1
-; NO-SIMD128-FAST-NEXT:    i32.store8 6($0), $pop14
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push15=, $8
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push16=, $pop15, $1
-; NO-SIMD128-FAST-NEXT:    i32.store8 7($0), $pop16
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push17=, $9
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push18=, $pop17, $1
-; NO-SIMD128-FAST-NEXT:    i32.store8 8($0), $pop18
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push19=, $10
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push20=, $pop19, $1
-; NO-SIMD128-FAST-NEXT:    i32.store8 9($0), $pop20
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push21=, $11
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push22=, $pop21, $1
-; NO-SIMD128-FAST-NEXT:    i32.store8 10($0), $pop22
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push23=, $12
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push24=, $pop23, $1
-; NO-SIMD128-FAST-NEXT:    i32.store8 11($0), $pop24
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push25=, $13
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push26=, $pop25, $1
-; NO-SIMD128-FAST-NEXT:    i32.store8 12($0), $pop26
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push27=, $14
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push28=, $pop27, $1
-; NO-SIMD128-FAST-NEXT:    i32.store8 13($0), $pop28
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push29=, $15
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push30=, $pop29, $1
-; NO-SIMD128-FAST-NEXT:    i32.store8 14($0), $pop30
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push31=, $16
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push32=, $pop31, $1
-; NO-SIMD128-FAST-NEXT:    i32.store8 15($0), $pop32
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push0=, $1
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push1=, $pop0, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 0($0), $pop1
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push2=, $2
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push3=, $pop2, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 1($0), $pop3
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push4=, $3
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push5=, $pop4, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 2($0), $pop5
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push6=, $4
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push7=, $pop6, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 3($0), $pop7
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push8=, $5
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push9=, $pop8, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 4($0), $pop9
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push10=, $6
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push11=, $pop10, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 5($0), $pop11
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push12=, $7
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push13=, $pop12, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 6($0), $pop13
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push14=, $8
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push15=, $pop14, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 7($0), $pop15
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push16=, $9
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push17=, $pop16, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 8($0), $pop17
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push18=, $10
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push19=, $pop18, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 9($0), $pop19
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push20=, $11
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push21=, $pop20, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 10($0), $pop21
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push22=, $12
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push23=, $pop22, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 11($0), $pop23
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push24=, $13
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push25=, $pop24, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 12($0), $pop25
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push26=, $14
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push27=, $pop26, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 13($0), $pop27
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push28=, $15
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push29=, $pop28, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 14($0), $pop29
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push30=, $16
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push31=, $pop30, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 15($0), $pop31
 ; NO-SIMD128-FAST-NEXT:    return
   %t = insertelement <16 x i8> undef, i8 %x, i32 0
   %s = shufflevector <16 x i8> %t, <16 x i8> undef,
@@ -3945,171 +3869,107 @@ define <16 x i8> @shr_s_vec_v16i8(<16 x i8> %v, <16 x i8> %x) {
 ; NO-SIMD128-LABEL: shr_s_vec_v16i8:
 ; NO-SIMD128:         .functype shr_s_vec_v16i8 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
-; NO-SIMD128-NEXT:    i32.extend8_s $push2=, $16
-; NO-SIMD128-NEXT:    i32.const $push0=, 255
-; NO-SIMD128-NEXT:    i32.and $push1=, $32, $pop0
-; NO-SIMD128-NEXT:    i32.shr_s $push3=, $pop2, $pop1
-; NO-SIMD128-NEXT:    i32.store8 15($0), $pop3
-; NO-SIMD128-NEXT:    i32.extend8_s $push5=, $15
-; NO-SIMD128-NEXT:    i32.const $push63=, 255
-; NO-SIMD128-NEXT:    i32.and $push4=, $31, $pop63
-; NO-SIMD128-NEXT:    i32.shr_s $push6=, $pop5, $pop4
-; NO-SIMD128-NEXT:    i32.store8 14($0), $pop6
-; NO-SIMD128-NEXT:    i32.extend8_s $push8=, $14
-; NO-SIMD128-NEXT:    i32.const $push62=, 255
-; NO-SIMD128-NEXT:    i32.and $push7=, $30, $pop62
-; NO-SIMD128-NEXT:    i32.shr_s $push9=, $pop8, $pop7
-; NO-SIMD128-NEXT:    i32.store8 13($0), $pop9
-; NO-SIMD128-NEXT:    i32.extend8_s $push11=, $13
-; NO-SIMD128-NEXT:    i32.const $push61=, 255
-; NO-SIMD128-NEXT:    i32.and $push10=, $29, $pop61
-; NO-SIMD128-NEXT:    i32.shr_s $push12=, $pop11, $pop10
-; NO-SIMD128-NEXT:    i32.store8 12($0), $pop12
-; NO-SIMD128-NEXT:    i32.extend8_s $push14=, $12
-; NO-SIMD128-NEXT:    i32.const $push60=, 255
-; NO-SIMD128-NEXT:    i32.and $push13=, $28, $pop60
-; NO-SIMD128-NEXT:    i32.shr_s $push15=, $pop14, $pop13
-; NO-SIMD128-NEXT:    i32.store8 11($0), $pop15
-; NO-SIMD128-NEXT:    i32.extend8_s $push17=, $11
-; NO-SIMD128-NEXT:    i32.const $push59=, 255
-; NO-SIMD128-NEXT:    i32.and $push16=, $27, $pop59
-; NO-SIMD128-NEXT:    i32.shr_s $push18=, $pop17, $pop16
-; NO-SIMD128-NEXT:    i32.store8 10($0), $pop18
-; NO-SIMD128-NEXT:    i32.extend8_s $push20=, $10
-; NO-SIMD128-NEXT:    i32.const $push58=, 255
-; NO-SIMD128-NEXT:    i32.and $push19=, $26, $pop58
-; NO-SIMD128-NEXT:    i32.shr_s $push21=, $pop20, $pop19
-; NO-SIMD128-NEXT:    i32.store8 9($0), $pop21
-; NO-SIMD128-NEXT:    i32.extend8_s $push23=, $9
-; NO-SIMD128-NEXT:    i32.const $push57=, 255
-; NO-SIMD128-NEXT:    i32.and $push22=, $25, $pop57
-; NO-SIMD128-NEXT:    i32.shr_s $push24=, $pop23, $pop22
-; NO-SIMD128-NEXT:    i32.store8 8($0), $pop24
-; NO-SIMD128-NEXT:    i32.extend8_s $push26=, $8
-; NO-SIMD128-NEXT:    i32.const $push56=, 255
-; NO-SIMD128-NEXT:    i32.and $push25=, $24, $pop56
-; NO-SIMD128-NEXT:    i32.shr_s $push27=, $pop26, $pop25
-; NO-SIMD128-NEXT:    i32.store8 7($0), $pop27
-; NO-SIMD128-NEXT:    i32.extend8_s $push29=, $7
-; NO-SIMD128-NEXT:    i32.const $push55=, 255
-; NO-SIMD128-NEXT:    i32.and $push28=, $23, $pop55
-; NO-SIMD128-NEXT:    i32.shr_s $push30=, $pop29, $pop28
-; NO-SIMD128-NEXT:    i32.store8 6($0), $pop30
-; NO-SIMD128-NEXT:    i32.extend8_s $push32=, $6
-; NO-SIMD128-NEXT:    i32.const $push54=, 255
-; NO-SIMD128-NEXT:    i32.and $push31=, $22, $pop54
-; NO-SIMD128-NEXT:    i32.shr_s $push33=, $pop32, $pop31
-; NO-SIMD128-NEXT:    i32.store8 5($0), $pop33
-; NO-SIMD128-NEXT:    i32.extend8_s $push35=, $5
-; NO-SIMD128-NEXT:    i32.const $push53=, 255
-; NO-SIMD128-NEXT:    i32.and $push34=, $21, $pop53
-; NO-SIMD128-NEXT:    i32.shr_s $push36=, $pop35, $pop34
-; NO-SIMD128-NEXT:    i32.store8 4($0), $pop36
-; NO-SIMD128-NEXT:    i32.extend8_s $push38=, $4
-; NO-SIMD128-NEXT:    i32.const $push52=, 255
-; NO-SIMD128-NEXT:    i32.and $push37=, $20, $pop52
-; NO-SIMD128-NEXT:    i32.shr_s $push39=, $pop38, $pop37
-; NO-SIMD128-NEXT:    i32.store8 3($0), $pop39
-; NO-SIMD128-NEXT:    i32.extend8_s $push41=, $3
-; NO-SIMD128-NEXT:    i32.const $push51=, 255
-; NO-SIMD128-NEXT:    i32.and $push40=, $19, $pop51
-; NO-SIMD128-NEXT:    i32.shr_s $push42=, $pop41, $pop40
-; NO-SIMD128-NEXT:    i32.store8 2($0), $pop42
-; NO-SIMD128-NEXT:    i32.extend8_s $push44=, $2
-; NO-SIMD128-NEXT:    i32.const $push50=, 255
-; NO-SIMD128-NEXT:    i32.and $push43=, $18, $pop50
-; NO-SIMD128-NEXT:    i32.shr_s $push45=, $pop44, $pop43
-; NO-SIMD128-NEXT:    i32.store8 1($0), $pop45
-; NO-SIMD128-NEXT:    i32.extend8_s $push47=, $1
-; NO-SIMD128-NEXT:    i32.const $push49=, 255
-; NO-SIMD128-NEXT:    i32.and $push46=, $17, $pop49
-; NO-SIMD128-NEXT:    i32.shr_s $push48=, $pop47, $pop46
-; NO-SIMD128-NEXT:    i32.store8 0($0), $pop48
+; NO-SIMD128-NEXT:    i32.extend8_s $push0=, $16
+; NO-SIMD128-NEXT:    i32.shr_s $push1=, $pop0, $32
+; NO-SIMD128-NEXT:    i32.store8 15($0), $pop1
+; NO-SIMD128-NEXT:    i32.extend8_s $push2=, $15
+; NO-SIMD128-NEXT:    i32.shr_s $push3=, $pop2, $31
+; NO-SIMD128-NEXT:    i32.store8 14($0), $pop3
+; NO-SIMD128-NEXT:    i32.extend8_s $push4=, $14
+; NO-SIMD128-NEXT:    i32.shr_s $push5=, $pop4, $30
+; NO-SIMD128-NEXT:    i32.store8 13($0), $pop5
+; NO-SIMD128-NEXT:    i32.extend8_s $push6=, $13
+; NO-SIMD128-NEXT:    i32.shr_s $push7=, $pop6, $29
+; NO-SIMD128-NEXT:    i32.store8 12($0), $pop7
+; NO-SIMD128-NEXT:    i32.extend8_s $push8=, $12
+; NO-SIMD128-NEXT:    i32.shr_s $push9=, $pop8, $28
+; NO-SIMD128-NEXT:    i32.store8 11($0), $pop9
+; NO-SIMD128-NEXT:    i32.extend8_s $push10=, $11
+; NO-SIMD128-NEXT:    i32.shr_s $push11=, $pop10, $27
+; NO-SIMD128-NEXT:    i32.store8 10($0), $pop11
+; NO-SIMD128-NEXT:    i32.extend8_s $push12=, $10
+; NO-SIMD128-NEXT:    i32.shr_s $push13=, $pop12, $26
+; NO-SIMD128-NEXT:    i32.store8 9($0), $pop13
+; NO-SIMD128-NEXT:    i32.extend8_s $push14=, $9
+; NO-SIMD128-NEXT:    i32.shr_s $push15=, $pop14, $25
+; NO-SIMD128-NEXT:    i32.store8 8($0), $pop15
+; NO-SIMD128-NEXT:    i32.extend8_s $push16=, $8
+; NO-SIMD128-NEXT:    i32.shr_s $push17=, $pop16, $24
+; NO-SIMD128-NEXT:    i32.store8 7($0), $pop17
+; NO-SIMD128-NEXT:    i32.extend8_s $push18=, $7
+; NO-SIMD128-NEXT:    i32.shr_s $push19=, $pop18, $23
+; NO-SIMD128-NEXT:    i32.store8 6($0), $pop19
+; NO-SIMD128-NEXT:    i32.extend8_s $push20=, $6
+; NO-SIMD128-NEXT:    i32.shr_s $push21=, $pop20, $22
+; NO-SIMD128-NEXT:    i32.store8 5($0), $pop21
+; NO-SIMD128-NEXT:    i32.extend8_s $push22=, $5
+; NO-SIMD128-NEXT:    i32.shr_s $push23=, $pop22, $21
+; NO-SIMD128-NEXT:    i32.store8 4($0), $pop23
+; NO-SIMD128-NEXT:    i32.extend8_s $push24=, $4
+; NO-SIMD128-NEXT:    i32.shr_s $push25=, $pop24, $20
+; NO-SIMD128-NEXT:    i32.store8 3($0), $pop25
+; NO-SIMD128-NEXT:    i32.extend8_s $push26=, $3
+; NO-SIMD128-NEXT:    i32.shr_s $push27=, $pop26, $19
+; NO-SIMD128-NEXT:    i32.store8 2($0), $pop27
+; NO-SIMD128-NEXT:    i32.extend8_s $push28=, $2
+; NO-SIMD128-NEXT:    i32.shr_s $push29=, $pop28, $18
+; NO-SIMD128-NEXT:    i32.store8 1($0), $pop29
+; NO-SIMD128-NEXT:    i32.extend8_s $push30=, $1
+; NO-SIMD128-NEXT:    i32.shr_s $push31=, $pop30, $17
+; NO-SIMD128-NEXT:    i32.store8 0($0), $pop31
 ; NO-SIMD128-NEXT:    return
 ;
 ; NO-SIMD128-FAST-LABEL: shr_s_vec_v16i8:
 ; NO-SIMD128-FAST:         .functype shr_s_vec_v16i8 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-FAST-NEXT:  # %bb.0:
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push2=, $1
-; NO-SIMD128-FAST-NEXT:    i32.const $push0=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push1=, $17, $pop0
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push3=, $pop2, $pop1
-; NO-SIMD128-FAST-NEXT:    i32.store8 0($0), $pop3
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push5=, $2
-; NO-SIMD128-FAST-NEXT:    i32.const $push63=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push4=, $18, $pop63
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push6=, $pop5, $pop4
-; NO-SIMD128-FAST-NEXT:    i32.store8 1($0), $pop6
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push8=, $3
-; NO-SIMD128-FAST-NEXT:    i32.const $push62=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push7=, $19, $pop62
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push9=, $pop8, $pop7
-; NO-SIMD128-FAST-NEXT:    i32.store8 2($0), $pop9
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push11=, $4
-; NO-SIMD128-FAST-NEXT:    i32.const $push61=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push10=, $20, $pop61
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push12=, $pop11, $pop10
-; NO-SIMD128-FAST-NEXT:    i32.store8 3($0), $pop12
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push14=, $5
-; NO-SIMD128-FAST-NEXT:    i32.const $push60=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push13=, $21, $pop60
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push15=, $pop14, $pop13
-; NO-SIMD128-FAST-NEXT:    i32.store8 4($0), $pop15
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push17=, $6
-; NO-SIMD128-FAST-NEXT:    i32.const $push59=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push16=, $22, $pop59
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push18=, $pop17, $pop16
-; NO-SIMD128-FAST-NEXT:    i32.store8 5($0), $pop18
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push20=, $7
-; NO-SIMD128-FAST-NEXT:    i32.const $push58=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push19=, $23, $pop58
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push21=, $pop20, $pop19
-; NO-SIMD128-FAST-NEXT:    i32.store8 6($0), $pop21
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push23=, $8
-; NO-SIMD128-FAST-NEXT:    i32.const $push57=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push22=, $24, $pop57
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push24=, $pop23, $pop22
-; NO-SIMD128-FAST-NEXT:    i32.store8 7($0), $pop24
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push26=, $9
-; NO-SIMD128-FAST-NEXT:    i32.const $push56=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push25=, $25, $pop56
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push27=, $pop26, $pop25
-; NO-SIMD128-FAST-NEXT:    i32.store8 8($0), $pop27
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push29=, $10
-; NO-SIMD128-FAST-NEXT:    i32.const $push55=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push28=, $26, $pop55
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push30=, $pop29, $pop28
-; NO-SIMD128-FAST-NEXT:    i32.store8 9($0), $pop30
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push32=, $11
-; NO-SIMD128-FAST-NEXT:    i32.const $push54=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push31=, $27, $pop54
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push33=, $pop32, $pop31
-; NO-SIMD128-FAST-NEXT:    i32.store8 10($0), $pop33
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push35=, $12
-; NO-SIMD128-FAST-NEXT:    i32.const $push53=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push34=, $28, $pop53
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push36=, $pop35, $pop34
-; NO-SIMD128-FAST-NEXT:    i32.store8 11($0), $pop36
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push38=, $13
-; NO-SIMD128-FAST-NEXT:    i32.const $push52=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push37=, $29, $pop52
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push39=, $pop38, $pop37
-; NO-SIMD128-FAST-NEXT:    i32.store8 12($0), $pop39
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push41=, $14
-; NO-SIMD128-FAST-NEXT:    i32.const $push51=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push40=, $30, $pop51
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push42=, $pop41, $pop40
-; NO-SIMD128-FAST-NEXT:    i32.store8 13($0), $pop42
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push44=, $15
-; NO-SIMD128-FAST-NEXT:    i32.const $push50=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push43=, $31, $pop50
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push45=, $pop44, $pop43
-; NO-SIMD128-FAST-NEXT:    i32.store8 14($0), $pop45
-; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push47=, $16
-; NO-SIMD128-FAST-NEXT:    i32.const $push49=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push46=, $32, $pop49
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push48=, $pop47, $pop46
-; NO-SIMD128-FAST-NEXT:    i32.store8 15($0), $pop48
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push0=, $1
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push1=, $pop0, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 0($0), $pop1
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push2=, $2
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push3=, $pop2, $18
+; NO-SIMD128-FAST-NEXT:    i32.store8 1($0), $pop3
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push4=, $3
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push5=, $pop4, $19
+; NO-SIMD128-FAST-NEXT:    i32.store8 2($0), $pop5
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push6=, $4
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push7=, $pop6, $20
+; NO-SIMD128-FAST-NEXT:    i32.store8 3($0), $pop7
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push8=, $5
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push9=, $pop8, $21
+; NO-SIMD128-FAST-NEXT:    i32.store8 4($0), $pop9
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push10=, $6
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push11=, $pop10, $22
+; NO-SIMD128-FAST-NEXT:    i32.store8 5($0), $pop11
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push12=, $7
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push13=, $pop12, $23
+; NO-SIMD128-FAST-NEXT:    i32.store8 6($0), $pop13
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push14=, $8
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push15=, $pop14, $24
+; NO-SIMD128-FAST-NEXT:    i32.store8 7($0), $pop15
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push16=, $9
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push17=, $pop16, $25
+; NO-SIMD128-FAST-NEXT:    i32.store8 8($0), $pop17
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push18=, $10
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push19=, $pop18, $26
+; NO-SIMD128-FAST-NEXT:    i32.store8 9($0), $pop19
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push20=, $11
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push21=, $pop20, $27
+; NO-SIMD128-FAST-NEXT:    i32.store8 10($0), $pop21
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push22=, $12
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push23=, $pop22, $28
+; NO-SIMD128-FAST-NEXT:    i32.store8 11($0), $pop23
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push24=, $13
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push25=, $pop24, $29
+; NO-SIMD128-FAST-NEXT:    i32.store8 12($0), $pop25
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push26=, $14
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push27=, $pop26, $30
+; NO-SIMD128-FAST-NEXT:    i32.store8 13($0), $pop27
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push28=, $15
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push29=, $pop28, $31
+; NO-SIMD128-FAST-NEXT:    i32.store8 14($0), $pop29
+; NO-SIMD128-FAST-NEXT:    i32.extend8_s $push30=, $16
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push31=, $pop30, $32
+; NO-SIMD128-FAST-NEXT:    i32.store8 15($0), $pop31
 ; NO-SIMD128-FAST-NEXT:    return
   %a = ashr <16 x i8> %v, %x
   ret <16 x i8> %a
@@ -4133,10 +3993,7 @@ define <16 x i8> @shr_u_v16i8(<16 x i8> %v, i8 %x) {
 ; NO-SIMD128-NEXT:  # %bb.0:
 ; NO-SIMD128-NEXT:    i32.const $push0=, 255
 ; NO-SIMD128-NEXT:    i32.and $push1=, $16, $pop0
-; NO-SIMD128-NEXT:    i32.const $push50=, 255
-; NO-SIMD128-NEXT:    i32.and $push49=, $17, $pop50
-; NO-SIMD128-NEXT:    local.tee $push48=, $17=, $pop49
-; NO-SIMD128-NEXT:    i32.shr_u $push2=, $pop1, $pop48
+; NO-SIMD128-NEXT:    i32.shr_u $push2=, $pop1, $17
 ; NO-SIMD128-NEXT:    i32.store8 15($0), $pop2
 ; NO-SIMD128-NEXT:    i32.const $push47=, 255
 ; NO-SIMD128-NEXT:    i32.and $push3=, $15, $pop47
@@ -4205,70 +4062,67 @@ define <16 x i8> @shr_u_v16i8(<16 x i8> %v, i8 %x) {
 ; NO-SIMD128-FAST-NEXT:  # %bb.0:
 ; NO-SIMD128-FAST-NEXT:    i32.const $push0=, 255
 ; NO-SIMD128-FAST-NEXT:    i32.and $push1=, $1, $pop0
-; NO-SIMD128-FAST-NEXT:    i32.const $push50=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push49=, $17, $pop50
-; NO-SIMD128-FAST-NEXT:    local.tee $push48=, $1=, $pop49
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push2=, $pop1, $pop48
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push2=, $pop1, $17
 ; NO-SIMD128-FAST-NEXT:    i32.store8 0($0), $pop2
 ; NO-SIMD128-FAST-NEXT:    i32.const $push47=, 255
 ; NO-SIMD128-FAST-NEXT:    i32.and $push3=, $2, $pop47
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push4=, $pop3, $1
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push4=, $pop3, $17
 ; NO-SIMD128-FAST-NEXT:    i32.store8 1($0), $pop4
 ; NO-SIMD128-FAST-NEXT:    i32.const $push46=, 255
 ; NO-SIMD128-FAST-NEXT:    i32.and $push5=, $3, $pop46
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push6=, $pop5, $1
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push6=, $pop5, $17
 ; NO-SIMD128-FAST-NEXT:    i32.store8 2($0), $pop6
 ; NO-SIMD128-FAST-NEXT:    i32.const $push45=, 255
 ; NO-SIMD128-FAST-NEXT:    i32.and $push7=, $4, $pop45
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push8=, $pop7, $1
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push8=, $pop7, $17
 ; NO-SIMD128-FAST-NEXT:    i32.store8 3($0), $pop8
 ; NO-SIMD128-FAST-NEXT:    i32.const $push44=, 255
 ; NO-SIMD128-FAST-NEXT:    i32.and $push9=, $5, $pop44
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push10=, $pop9, $1
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push10=, $pop9, $17
 ; NO-SIMD128-FAST-NEXT:    i32.store8 4($0), $pop10
 ; NO-SIMD128-FAST-NEXT:    i32.const $push43=, 255
 ; NO-SIMD128-FAST-NEXT:    i32.and $push11=, $6, $pop43
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push12=, $pop11, $1
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push12=, $pop11, $17
 ; NO-SIMD128-FAST-NEXT:    i32.store8 5($0), $pop12
 ; NO-SIMD128-FAST-NEXT:    i32.const $push42=, 255
 ; NO-SIMD128-FAST-NEXT:    i32.and $push13=, $7, $pop42
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push14=, $pop13, $1
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push14=, $pop13, $17
 ; NO-SIMD128-FAST-NEXT:    i32.store8 6($0), $pop14
 ; NO-SIMD128-FAST-NEXT:    i32.const $push41=, 255
 ; NO-SIMD128-FAST-NEXT:    i32.and $push15=, $8, $pop41
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push16=, $pop15, $1
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push16=, $pop15, $17
 ; NO-SIMD128-FAST-NEXT:    i32.store8 7($0), $pop16
 ; NO-SIMD128-FAST-NEXT:    i32.const $push40=, 255
 ; NO-SIMD128-FAST-NEXT:    i32.and $push17=, $9, $pop40
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push18=, $pop17, $1
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push18=, $pop17, $17
 ; NO-SIMD128-FAST-NEXT:    i32.store8 8($0), $pop18
 ; NO-SIMD128-FAST-NEXT:    i32.const $push39=, 255
 ; NO-SIMD128-FAST-NEXT:    i32.and $push19=, $10, $pop39
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push20=, $pop19, $1
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push20=, $pop19, $17
 ; NO-SIMD128-FAST-NEXT:    i32.store8 9($0), $pop20
 ; NO-SIMD128-FAST-NEXT:    i32.const $push38=, 255
 ; NO-SIMD128-FAST-NEXT:    i32.and $push21=, $11, $pop38
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push22=, $pop21, $1
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push22=, $pop21, $17
 ; NO-SIMD128-FAST-NEXT:    i32.store8 10($0), $pop22
 ; NO-SIMD128-FAST-NEXT:    i32.const $push37=, 255
 ; NO-SIMD128-FAST-NEXT:    i32.and $push23=, $12, $pop37
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push24=, $pop23, $1
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push24=, $pop23, $17
 ; NO-SIMD128-FAST-NEXT:    i32.store8 11($0), $pop24
 ; NO-SIMD128-FAST-NEXT:    i32.const $push36=, 255
 ; NO-SIMD128-FAST-NEXT:    i32.and $push25=, $13, $pop36
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push26=, $pop25, $1
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push26=, $pop25, $17
 ; NO-SIMD128-FAST-NEXT:    i32.store8 12($0), $pop26
 ; NO-SIMD128-FAST-NEXT:    i32.const $push35=, 255
 ; NO-SIMD128-FAST-NEXT:    i32.and $push27=, $14, $pop35
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push28=, $pop27, $1
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push28=, $pop27, $17
 ; NO-SIMD128-FAST-NEXT:    i32.store8 13($0), $pop28
 ; NO-SIMD128-FAST-NEXT:    i32.const $push34=, 255
 ; NO-SIMD128-FAST-NEXT:    i32.and $push29=, $15, $pop34
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push30=, $pop29, $1
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push30=, $pop29, $17
 ; NO-SIMD128-FAST-NEXT:    i32.store8 14($0), $pop30
 ; NO-SIMD128-FAST-NEXT:    i32.const $push33=, 255
 ; NO-SIMD128-FAST-NEXT:    i32.and $push31=, $16, $pop33
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push32=, $pop31, $1
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push32=, $pop31, $17
 ; NO-SIMD128-FAST-NEXT:    i32.store8 15($0), $pop32
 ; NO-SIMD128-FAST-NEXT:    return
   %t = insertelement <16 x i8> undef, i8 %x, i32 0
@@ -4486,202 +4340,138 @@ define <16 x i8> @shr_u_vec_v16i8(<16 x i8> %v, <16 x i8> %x) {
 ; NO-SIMD128:         .functype shr_u_vec_v16i8 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
 ; NO-SIMD128-NEXT:    i32.const $push0=, 255
-; NO-SIMD128-NEXT:    i32.and $push2=, $16, $pop0
-; NO-SIMD128-NEXT:    i32.const $push79=, 255
-; NO-SIMD128-NEXT:    i32.and $push1=, $32, $pop79
-; NO-SIMD128-NEXT:    i32.shr_u $push3=, $pop2, $pop1
-; NO-SIMD128-NEXT:    i32.store8 15($0), $pop3
-; NO-SIMD128-NEXT:    i32.const $push78=, 255
-; NO-SIMD128-NEXT:    i32.and $push5=, $15, $pop78
-; NO-SIMD128-NEXT:    i32.const $push77=, 255
-; NO-SIMD128-NEXT:    i32.and $push4=, $31, $pop77
-; NO-SIMD128-NEXT:    i32.shr_u $push6=, $pop5, $pop4
-; NO-SIMD128-NEXT:    i32.store8 14($0), $pop6
-; NO-SIMD128-NEXT:    i32.const $push76=, 255
-; NO-SIMD128-NEXT:    i32.and $push8=, $14, $pop76
-; NO-SIMD128-NEXT:    i32.const $push75=, 255
-; NO-SIMD128-NEXT:    i32.and $push7=, $30, $pop75
-; NO-SIMD128-NEXT:    i32.shr_u $push9=, $pop8, $pop7
-; NO-SIMD128-NEXT:    i32.store8 13($0), $pop9
-; NO-SIMD128-NEXT:    i32.const $push74=, 255
-; NO-SIMD128-NEXT:    i32.and $push11=, $13, $pop74
-; NO-SIMD128-NEXT:    i32.const $push73=, 255
-; NO-SIMD128-NEXT:    i32.and $push10=, $29, $pop73
-; NO-SIMD128-NEXT:    i32.shr_u $push12=, $pop11, $pop10
-; NO-SIMD128-NEXT:    i32.store8 12($0), $pop12
-; NO-SIMD128-NEXT:    i32.const $push72=, 255
-; NO-SIMD128-NEXT:    i32.and $push14=, $12, $pop72
-; NO-SIMD128-NEXT:    i32.const $push71=, 255
-; NO-SIMD128-NEXT:    i32.and $push13=, $28, $pop71
-; NO-SIMD128-NEXT:    i32.shr_u $push15=, $pop14, $pop13
-; NO-SIMD128-NEXT:    i32.store8 11($0), $pop15
-; NO-SIMD128-NEXT:    i32.const $push70=, 255
-; NO-SIMD128-NEXT:    i32.and $push17=, $11, $pop70
-; NO-SIMD128-NEXT:    i32.const $push69=, 255
-; NO-SIMD128-NEXT:    i32.and $push16=, $27, $pop69
-; NO-SIMD128-NEXT:    i32.shr_u $push18=, $pop17, $pop16
-; NO-SIMD128-NEXT:    i32.store8 10($0), $pop18
-; NO-SIMD128-NEXT:    i32.const $push68=, 255
-; NO-SIMD128-NEXT:    i32.and $push20=, $10, $pop68
-; NO-SIMD128-NEXT:    i32.const $push67=, 255
-; NO-SIMD128-NEXT:    i32.and $push19=, $26, $pop67
-; NO-SIMD128-NEXT:    i32.shr_u $push21=, $pop20, $pop19
-; NO-SIMD128-NEXT:    i32.store8 9($0), $pop21
-; NO-SIMD128-NEXT:    i32.const $push66=, 255
-; NO-SIMD128-NEXT:    i32.and $push23=, $9, $pop66
-; NO-SIMD128-NEXT:    i32.const $push65=, 255
-; NO-SIMD128-NEXT:    i32.and $push22=, $25, $pop65
-; NO-SIMD128-NEXT:    i32.shr_u $push24=, $pop23, $pop22
-; NO-SIMD128-NEXT:    i32.store8 8($0), $pop24
-; NO-SIMD128-NEXT:    i32.const $push64=, 255
-; NO-SIMD128-NEXT:    i32.and $push26=, $8, $pop64
-; NO-SIMD128-NEXT:    i32.const $push63=, 255
-; NO-SIMD128-NEXT:    i32.and $push25=, $24, $pop63
-; NO-SIMD128-NEXT:    i32.shr_u $push27=, $pop26, $pop25
-; NO-SIMD128-NEXT:    i32.store8 7($0), $pop27
-; NO-SIMD128-NEXT:    i32.const $push62=, 255
-; NO-SIMD128-NEXT:    i32.and $push29=, $7, $pop62
-; NO-SIMD128-NEXT:    i32.const $push61=, 255
-; NO-SIMD128-NEXT:    i32.and $push28=, $23, $pop61
-; NO-SIMD128-NEXT:    i32.shr_u $push30=, $pop29, $pop28
-; NO-SIMD128-NEXT:    i32.store8 6($0), $pop30
-; NO-SIMD128-NEXT:    i32.const $push60=, 255
-; NO-SIMD128-NEXT:    i32.and $push32=, $6, $pop60
-; NO-SIMD128-NEXT:    i32.const $push59=, 255
-; NO-SIMD128-NEXT:    i32.and $push31=, $22, $pop59
-; NO-SIMD128-NEXT:    i32.shr_u $push33=, $pop32, $pop31
-; NO-SIMD128-NEXT:    i32.store8 5($0), $pop33
-; NO-SIMD128-NEXT:    i32.const $push58=, 255
-; NO-SIMD128-NEXT:    i32.and $push35=, $5, $pop58
-; NO-SIMD128-NEXT:    i32.const $push57=, 255
-; NO-SIMD128-NEXT:    i32.and $push34=, $21, $pop57
-; NO-SIMD128-NEXT:    i32.shr_u $push36=, $pop35, $pop34
-; NO-SIMD128-NEXT:    i32.store8 4($0), $pop36
-; NO-SIMD128-NEXT:    i32.const $push56=, 255
-; NO-SIMD128-NEXT:    i32.and $push38=, $4, $pop56
-; NO-SIMD128-NEXT:    i32.const $push55=, 255
-; NO-SIMD128-NEXT:    i32.and $push37=, $20, $pop55
-; NO-SIMD128-NEXT:    i32.shr_u $push39=, $pop38, $pop37
-; NO-SIMD128-NEXT:    i32.store8 3($0), $pop39
-; NO-SIMD128-NEXT:    i32.const $push54=, 255
-; NO-SIMD128-NEXT:    i32.and $push41=, $3, $pop54
-; NO-SIMD128-NEXT:    i32.const $push53=, 255
-; NO-SIMD128-NEXT:    i32.and $push40=, $19, $pop53
-; NO-SIMD128-NEXT:    i32.shr_u $push42=, $pop41, $pop40
-; NO-SIMD128-NEXT:    i32.store8 2($0), $pop42
-; NO-SIMD128-NEXT:    i32.const $push52=, 255
-; NO-SIMD128-NEXT:    i32.and $push44=, $2, $pop52
-; NO-SIMD128-NEXT:    i32.const $push51=, 255
-; NO-SIMD128-NEXT:    i32.and $push43=, $18, $pop51
-; NO-SIMD128-NEXT:    i32.shr_u $push45=, $pop44, $pop43
-; NO-SIMD128-NEXT:    i32.store8 1($0), $pop45
-; NO-SIMD128-NEXT:    i32.const $push50=, 255
-; NO-SIMD128-NEXT:    i32.and $push47=, $1, $pop50
-; NO-SIMD128-NEXT:    i32.const $push49=, 255
-; NO-SIMD128-NEXT:    i32.and $push46=, $17, $pop49
-; NO-SIMD128-NEXT:    i32.shr_u $push48=, $pop47, $pop46
-; NO-SIMD128-NEXT:    i32.store8 0($0), $pop48
+; NO-SIMD128-NEXT:    i32.and $push1=, $16, $pop0
+; NO-SIMD128-NEXT:    i32.shr_u $push2=, $pop1, $32
+; NO-SIMD128-NEXT:    i32.store8 15($0), $pop2
+; NO-SIMD128-NEXT:    i32.const $push47=, 255
+; NO-SIMD128-NEXT:    i32.and $push3=, $15, $pop47
+; NO-SIMD128-NEXT:    i32.shr_u $push4=, $pop3, $31
+; NO-SIMD128-NEXT:    i32.store8 14($0), $pop4
+; NO-SIMD128-NEXT:    i32.const $push46=, 255
+; NO-SIMD128-NEXT:    i32.and $push5=, $14, $pop46
+; NO-SIMD128-NEXT:    i32.shr_u $push6=, $pop5, $30
+; NO-SIMD128-NEXT:    i32.store8 13($0), $pop6
+; NO-SIMD128-NEXT:    i32.const $push45=, 255
+; NO-SIMD128-NEXT:    i32.and $push7=, $13, $pop45
+; NO-SIMD128-NEXT:    i32.shr_u $push8=, $pop7, $29
+; NO-SIMD128-NEXT:    i32.store8 12($0), $pop8
+; NO-SIMD128-NEXT:    i32.const $push44=, 255
+; NO-SIMD128-NEXT:    i32.and $push9=, $12, $pop44
+; NO-SIMD128-NEXT:    i32.shr_u $push10=, $pop9, $28
+; NO-SIMD128-NEXT:    i32.store8 11($0), $pop10
+; NO-SIMD128-NEXT:    i32.const $push43=, 255
+; NO-SIMD128-NEXT:    i32.and $push11=, $11, $pop43
+; NO-SIMD128-NEXT:    i32.shr_u $push12=, $pop11, $27
+; NO-SIMD128-NEXT:    i32.store8 10($0), $pop12
+; NO-SIMD128-NEXT:    i32.const $push42=, 255
+; NO-SIMD128-NEXT:    i32.and $push13=, $10, $pop42
+; NO-SIMD128-NEXT:    i32.shr_u $push14=, $pop13, $26
+; NO-SIMD128-NEXT:    i32.store8 9($0), $pop14
+; NO-SIMD128-NEXT:    i32.const $push41=, 255
+; NO-SIMD128-NEXT:    i32.and $push15=, $9, $pop41
+; NO-SIMD128-NEXT:    i32.shr_u $push16=, $pop15, $25
+; NO-SIMD128-NEXT:    i32.store8 8($0), $pop16
+; NO-SIMD128-NEXT:    i32.const $push40=, 255
+; NO-SIMD128-NEXT:    i32.and $push17=, $8, $pop40
+; NO-SIMD128-NEXT:    i32.shr_u $push18=, $pop17, $24
+; NO-SIMD128-NEXT:    i32.store8 7($0), $pop18
+; NO-SIMD128-NEXT:    i32.const $push39=, 255
+; NO-SIMD128-NEXT:    i32.and $push19=, $7, $pop39
+; NO-SIMD128-NEXT:    i32.shr_u $push20=, $pop19, $23
+; NO-SIMD128-NEXT:    i32.store8 6($0), $pop20
+; NO-SIMD128-NEXT:    i32.const $push38=, 255
+; NO-SIMD128-NEXT:    i32.and $push21=, $6, $pop38
+; NO-SIMD128-NEXT:    i32.shr_u $push22=, $pop21, $22
+; NO-SIMD128-NEXT:    i32.store8 5($0), $pop22
+; NO-SIMD128-NEXT:    i32.const $push37=, 255
+; NO-SIMD128-NEXT:    i32.and $push23=, $5, $pop37
+; NO-SIMD128-NEXT:    i32.shr_u $push24=, $pop23, $21
+; NO-SIMD128-NEXT:    i32.store8 4($0), $pop24
+; NO-SIMD128-NEXT:    i32.const $push36=, 255
+; NO-SIMD128-NEXT:    i32.and $push25=, $4, $pop36
+; NO-SIMD128-NEXT:    i32.shr_u $push26=, $pop25, $20
+; NO-SIMD128-NEXT:    i32.store8 3($0), $pop26
+; NO-SIMD128-NEXT:    i32.const $push35=, 255
+; NO-SIMD128-NEXT:    i32.and $push27=, $3, $pop35
+; NO-SIMD128-NEXT:    i32.shr_u $push28=, $pop27, $19
+; NO-SIMD128-NEXT:    i32.store8 2($0), $pop28
+; NO-SIMD128-NEXT:    i32.const $push34=, 255
+; NO-SIMD128-NEXT:    i32.and $push29=, $2, $pop34
+; NO-SIMD128-NEXT:    i32.shr_u $push30=, $pop29, $18
+; NO-SIMD128-NEXT:    i32.store8 1($0), $pop30
+; NO-SIMD128-NEXT:    i32.const $push33=, 255
+; NO-SIMD128-NEXT:    i32.and $push31=, $1, $pop33
+; NO-SIMD128-NEXT:    i32.shr_u $push32=, $pop31, $17
+; NO-SIMD128-NEXT:    i32.store8 0($0), $pop32
 ; NO-SIMD128-NEXT:    return
 ;
 ; NO-SIMD128-FAST-LABEL: shr_u_vec_v16i8:
 ; NO-SIMD128-FAST:         .functype shr_u_vec_v16i8 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-FAST-NEXT:  # %bb.0:
 ; NO-SIMD128-FAST-NEXT:    i32.const $push0=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push2=, $1, $pop0
-; NO-SIMD128-FAST-NEXT:    i32.const $push79=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push1=, $17, $pop79
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push3=, $pop2, $pop1
-; NO-SIMD128-FAST-NEXT:    i32.store8 0($0), $pop3
-; NO-SIMD128-FAST-NEXT:    i32.const $push78=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push5=, $2, $pop78
-; NO-SIMD128-FAST-NEXT:    i32.const $push77=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push4=, $18, $pop77
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push6=, $pop5, $pop4
-; NO-SIMD128-FAST-NEXT:    i32.store8 1($0), $pop6
-; NO-SIMD128-FAST-NEXT:    i32.const $push76=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push8=, $3, $pop76
-; NO-SIMD128-FAST-NEXT:    i32.const $push75=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push7=, $19, $pop75
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push9=, $pop8, $pop7
-; NO-SIMD128-FAST-NEXT:    i32.store8 2($0), $pop9
-; NO-SIMD128-FAST-NEXT:    i32.const $push74=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push11=, $4, $pop74
-; NO-SIMD128-FAST-NEXT:    i32.const $push73=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push10=, $20, $pop73
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push12=, $pop11, $pop10
-; NO-SIMD128-FAST-NEXT:    i32.store8 3($0), $pop12
-; NO-SIMD128-FAST-NEXT:    i32.const $push72=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push14=, $5, $pop72
-; NO-SIMD128-FAST-NEXT:    i32.const $push71=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push13=, $21, $pop71
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push15=, $pop14, $pop13
-; NO-SIMD128-FAST-NEXT:    i32.store8 4($0), $pop15
-; NO-SIMD128-FAST-NEXT:    i32.const $push70=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push17=, $6, $pop70
-; NO-SIMD128-FAST-NEXT:    i32.const $push69=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push16=, $22, $pop69
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push18=, $pop17, $pop16
-; NO-SIMD128-FAST-NEXT:    i32.store8 5($0), $pop18
-; NO-SIMD128-FAST-NEXT:    i32.const $push68=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push20=, $7, $pop68
-; NO-SIMD128-FAST-NEXT:    i32.const $push67=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push19=, $23, $pop67
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push21=, $pop20, $pop19
-; NO-SIMD128-FAST-NEXT:    i32.store8 6($0), $pop21
-; NO-SIMD128-FAST-NEXT:    i32.const $push66=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push23=, $8, $pop66
-; NO-SIMD128-FAST-NEXT:    i32.const $push65=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push22=, $24, $pop65
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push24=, $pop23, $pop22
-; NO-SIMD128-FAST-NEXT:    i32.store8 7($0), $pop24
-; NO-SIMD128-FAST-NEXT:    i32.const $push64=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push26=, $9, $pop64
-; NO-SIMD128-FAST-NEXT:    i32.const $push63=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push25=, $25, $pop63
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push27=, $pop26, $pop25
-; NO-SIMD128-FAST-NEXT:    i32.store8 8($0), $pop27
-; NO-SIMD128-FAST-NEXT:    i32.const $push62=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push29=, $10, $pop62
-; NO-SIMD128-FAST-NEXT:    i32.const $push61=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push28=, $26, $pop61
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push30=, $pop29, $pop28
-; NO-SIMD128-FAST-NEXT:    i32.store8 9($0), $pop30
-; NO-SIMD128-FAST-NEXT:    i32.const $push60=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push32=, $11, $pop60
-; NO-SIMD128-FAST-NEXT:    i32.const $push59=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push31=, $27, $pop59
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push33=, $pop32, $pop31
-; NO-SIMD128-FAST-NEXT:    i32.store8 10($0), $pop33
-; NO-SIMD128-FAST-NEXT:    i32.const $push58=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push35=, $12, $pop58
-; NO-SIMD128-FAST-NEXT:    i32.const $push57=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push34=, $28, $pop57
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push36=, $pop35, $pop34
-; NO-SIMD128-FAST-NEXT:    i32.store8 11($0), $pop36
-; NO-SIMD128-FAST-NEXT:    i32.const $push56=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push38=, $13, $pop56
-; NO-SIMD128-FAST-NEXT:    i32.const $push55=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push37=, $29, $pop55
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push39=, $pop38, $pop37
-; NO-SIMD128-FAST-NEXT:    i32.store8 12($0), $pop39
-; NO-SIMD128-FAST-NEXT:    i32.const $push54=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push41=, $14, $pop54
-; NO-SIMD128-FAST-NEXT:    i32.const $push53=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push40=, $30, $pop53
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push42=, $pop41, $pop40
-; NO-SIMD128-FAST-NEXT:    i32.store8 13($0), $pop42
-; NO-SIMD128-FAST-NEXT:    i32.const $push52=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push44=, $15, $pop52
-; NO-SIMD128-FAST-NEXT:    i32.const $push51=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push43=, $31, $pop51
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push45=, $pop44, $pop43
-; NO-SIMD128-FAST-NEXT:    i32.store8 14($0), $pop45
-; NO-SIMD128-FAST-NEXT:    i32.const $push50=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push47=, $16, $pop50
-; NO-SIMD128-FAST-NEXT:    i32.const $push49=, 255
-; NO-SIMD128-FAST-NEXT:    i32.and $push46=, $32, $pop49
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push48=, $pop47, $pop46
-; NO-SIMD128-FAST-NEXT:    i32.store8 15($0), $pop48
+; NO-SIMD128-FAST-NEXT:    i32.and $push1=, $1, $pop0
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push2=, $pop1, $17
+; NO-SIMD128-FAST-NEXT:    i32.store8 0($0), $pop2
+; NO-SIMD128-FAST-NEXT:    i32.const $push47=, 255
+; NO-SIMD128-FAST-NEXT:    i32.and $push3=, $2, $pop47
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push4=, $pop3, $18
+; NO-SIMD128-FAST-NEXT:    i32.store8 1($0), $pop4
+; NO-SIMD128-FAST-NEXT:    i32.const $push46=, 255
+; NO-SIMD128-FAST-NEXT:    i32.and $push5=, $3, $pop46
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push6=, $pop5, $19
+; NO-SIMD128-FAST-NEXT:    i32.store8 2($0), $pop6
+; NO-SIMD128-FAST-NEXT:    i32.const $push45=, 255
+; NO-SIMD128-FAST-NEXT:    i32.and $push7=, $4, $pop45
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push8=, $pop7, $20
+; NO-SIMD128-FAST-NEXT:    i32.store8 3($0), $pop8
+; NO-SIMD128-FAST-NEXT:    i32.const $push44=, 255
+; NO-SIMD128-FAST-NEXT:    i32.and $push9=, $5, $pop44
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push10=, $pop9, $21
+; NO-SIMD128-FAST-NEXT:    i32.store8 4($0), $pop10
+; NO-SIMD128-FAST-NEXT:    i32.const $push43=, 255
+; NO-SIMD128-FAST-NEXT:    i32.and $push11=, $6, $pop43
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push12=, $pop11, $22
+; NO-SIMD128-FAST-NEXT:    i32.store8 5($0), $pop12
+; NO-SIMD128-FAST-NEXT:    i32.const $push42=, 255
+; NO-SIMD128-FAST-NEXT:    i32.and $push13=, $7, $pop42
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push14=, $pop13, $23
+; NO-SIMD128-FAST-NEXT:    i32.store8 6($0), $pop14
+; NO-SIMD128-FAST-NEXT:    i32.const $push41=, 255
+; NO-SIMD128-FAST-NEXT:    i32.and $push15=, $8, $pop41
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push16=, $pop15, $24
+; NO-SIMD128-FAST-NEXT:    i32.store8 7($0), $pop16
+; NO-SIMD128-FAST-NEXT:    i32.const $push40=, 255
+; NO-SIMD128-FAST-NEXT:    i32.and $push17=, $9, $pop40
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push18=, $pop17, $25
+; NO-SIMD128-FAST-NEXT:    i32.store8 8($0), $pop18
+; NO-SIMD128-FAST-NEXT:    i32.const $push39=, 255
+; NO-SIMD128-FAST-NEXT:    i32.and $push19=, $10, $pop39
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push20=, $pop19, $26
+; NO-SIMD128-FAST-NEXT:    i32.store8 9($0), $pop20
+; NO-SIMD128-FAST-NEXT:    i32.const $push38=, 255
+; NO-SIMD128-FAST-NEXT:    i32.and $push21=, $11, $pop38
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push22=, $pop21, $27
+; NO-SIMD128-FAST-NEXT:    i32.store8 10($0), $pop22
+; NO-SIMD128-FAST-NEXT:    i32.const $push37=, 255
+; NO-SIMD128-FAST-NEXT:    i32.and $push23=, $12, $pop37
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push24=, $pop23, $28
+; NO-SIMD128-FAST-NEXT:    i32.store8 11($0), $pop24
+; NO-SIMD128-FAST-NEXT:    i32.const $push36=, 255
+; NO-SIMD128-FAST-NEXT:    i32.and $push25=, $13, $pop36
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push26=, $pop25, $29
+; NO-SIMD128-FAST-NEXT:    i32.store8 12($0), $pop26
+; NO-SIMD128-FAST-NEXT:    i32.const $push35=, 255
+; NO-SIMD128-FAST-NEXT:    i32.and $push27=, $14, $pop35
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push28=, $pop27, $30
+; NO-SIMD128-FAST-NEXT:    i32.store8 13($0), $pop28
+; NO-SIMD128-FAST-NEXT:    i32.const $push34=, 255
+; NO-SIMD128-FAST-NEXT:    i32.and $push29=, $15, $pop34
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push30=, $pop29, $31
+; NO-SIMD128-FAST-NEXT:    i32.store8 14($0), $pop30
+; NO-SIMD128-FAST-NEXT:    i32.const $push33=, 255
+; NO-SIMD128-FAST-NEXT:    i32.and $push31=, $16, $pop33
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push32=, $pop31, $32
+; NO-SIMD128-FAST-NEXT:    i32.store8 15($0), $pop32
 ; NO-SIMD128-FAST-NEXT:    return
   %a = lshr <16 x i8> %v, %x
   ret <16 x i8> %a
@@ -7005,49 +6795,43 @@ define <8 x i16> @shl_v8i16(<8 x i16> %v, i16 %x) {
 ; NO-SIMD128-LABEL: shl_v8i16:
 ; NO-SIMD128:         .functype shl_v8i16 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
-; NO-SIMD128-NEXT:    i32.const $push0=, 65535
-; NO-SIMD128-NEXT:    i32.and $push10=, $9, $pop0
-; NO-SIMD128-NEXT:    local.tee $push9=, $9=, $pop10
-; NO-SIMD128-NEXT:    i32.shl $push1=, $8, $pop9
-; NO-SIMD128-NEXT:    i32.store16 14($0), $pop1
-; NO-SIMD128-NEXT:    i32.shl $push2=, $7, $9
-; NO-SIMD128-NEXT:    i32.store16 12($0), $pop2
-; NO-SIMD128-NEXT:    i32.shl $push3=, $6, $9
-; NO-SIMD128-NEXT:    i32.store16 10($0), $pop3
-; NO-SIMD128-NEXT:    i32.shl $push4=, $5, $9
-; NO-SIMD128-NEXT:    i32.store16 8($0), $pop4
-; NO-SIMD128-NEXT:    i32.shl $push5=, $4, $9
-; NO-SIMD128-NEXT:    i32.store16 6($0), $pop5
-; NO-SIMD128-NEXT:    i32.shl $push6=, $3, $9
-; NO-SIMD128-NEXT:    i32.store16 4($0), $pop6
-; NO-SIMD128-NEXT:    i32.shl $push7=, $2, $9
-; NO-SIMD128-NEXT:    i32.store16 2($0), $pop7
-; NO-SIMD128-NEXT:    i32.shl $push8=, $1, $9
-; NO-SIMD128-NEXT:    i32.store16 0($0), $pop8
+; NO-SIMD128-NEXT:    i32.shl $push0=, $8, $9
+; NO-SIMD128-NEXT:    i32.store16 14($0), $pop0
+; NO-SIMD128-NEXT:    i32.shl $push1=, $7, $9
+; NO-SIMD128-NEXT:    i32.store16 12($0), $pop1
+; NO-SIMD128-NEXT:    i32.shl $push2=, $6, $9
+; NO-SIMD128-NEXT:    i32.store16 10($0), $pop2
+; NO-SIMD128-NEXT:    i32.shl $push3=, $5, $9
+; NO-SIMD128-NEXT:    i32.store16 8($0), $pop3
+; NO-SIMD128-NEXT:    i32.shl $push4=, $4, $9
+; NO-SIMD128-NEXT:    i32.store16 6($0), $pop4
+; NO-SIMD128-NEXT:    i32.shl $push5=, $3, $9
+; NO-SIMD128-NEXT:    i32.store16 4($0), $pop5
+; NO-SIMD128-NEXT:    i32.shl $push6=, $2, $9
+; NO-SIMD128-NEXT:    i32.store16 2($0), $pop6
+; NO-SIMD128-NEXT:    i32.shl $push7=, $1, $9
+; NO-SIMD128-NEXT:    i32.store16 0($0), $pop7
 ; NO-SIMD128-NEXT:    return
 ;
 ; NO-SIMD128-FAST-LABEL: shl_v8i16:
 ; NO-SIMD128-FAST:         .functype shl_v8i16 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-FAST-NEXT:  # %bb.0:
-; NO-SIMD128-FAST-NEXT:    i32.const $push0=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push10=, $9, $pop0
-; NO-SIMD128-FAST-NEXT:    local.tee $push9=, $9=, $pop10
-; NO-SIMD128-FAST-NEXT:    i32.shl $push1=, $2, $pop9
+; NO-SIMD128-FAST-NEXT:    i32.shl $push0=, $1, $9
+; NO-SIMD128-FAST-NEXT:    i32.store16 0($0), $pop0
+; NO-SIMD128-FAST-NEXT:    i32.shl $push1=, $2, $9
 ; NO-SIMD128-FAST-NEXT:    i32.store16 2($0), $pop1
-; NO-SIMD128-FAST-NEXT:    i32.shl $push2=, $1, $9
-; NO-SIMD128-FAST-NEXT:    i32.store16 0($0), $pop2
-; NO-SIMD128-FAST-NEXT:    i32.shl $push3=, $3, $9
-; NO-SIMD128-FAST-NEXT:    i32.store16 4($0), $pop3
-; NO-SIMD128-FAST-NEXT:    i32.shl $push4=, $4, $9
-; NO-SIMD128-FAST-NEXT:    i32.store16 6($0), $pop4
-; NO-SIMD128-FAST-NEXT:    i32.shl $push5=, $5, $9
-; NO-SIMD128-FAST-NEXT:    i32.store16 8($0), $pop5
-; NO-SIMD128-FAST-NEXT:    i32.shl $push6=, $6, $9
-; NO-SIMD128-FAST-NEXT:    i32.store16 10($0), $pop6
-; NO-SIMD128-FAST-NEXT:    i32.shl $push7=, $7, $9
-; NO-SIMD128-FAST-NEXT:    i32.store16 12($0), $pop7
-; NO-SIMD128-FAST-NEXT:    i32.shl $push8=, $8, $9
-; NO-SIMD128-FAST-NEXT:    i32.store16 14($0), $pop8
+; NO-SIMD128-FAST-NEXT:    i32.shl $push2=, $3, $9
+; NO-SIMD128-FAST-NEXT:    i32.store16 4($0), $pop2
+; NO-SIMD128-FAST-NEXT:    i32.shl $push3=, $4, $9
+; NO-SIMD128-FAST-NEXT:    i32.store16 6($0), $pop3
+; NO-SIMD128-FAST-NEXT:    i32.shl $push4=, $5, $9
+; NO-SIMD128-FAST-NEXT:    i32.store16 8($0), $pop4
+; NO-SIMD128-FAST-NEXT:    i32.shl $push5=, $6, $9
+; NO-SIMD128-FAST-NEXT:    i32.store16 10($0), $pop5
+; NO-SIMD128-FAST-NEXT:    i32.shl $push6=, $7, $9
+; NO-SIMD128-FAST-NEXT:    i32.store16 12($0), $pop6
+; NO-SIMD128-FAST-NEXT:    i32.shl $push7=, $8, $9
+; NO-SIMD128-FAST-NEXT:    i32.store16 14($0), $pop7
 ; NO-SIMD128-FAST-NEXT:    return
   %t = insertelement <8 x i16> undef, i16 %x, i32 0
   %s = shufflevector <8 x i16> %t, <8 x i16> undef,
@@ -7243,75 +7027,43 @@ define <8 x i16> @shl_vec_v8i16(<8 x i16> %v, <8 x i16> %x) {
 ; NO-SIMD128-LABEL: shl_vec_v8i16:
 ; NO-SIMD128:         .functype shl_vec_v8i16 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
-; NO-SIMD128-NEXT:    i32.const $push0=, 65535
-; NO-SIMD128-NEXT:    i32.and $push1=, $16, $pop0
-; NO-SIMD128-NEXT:    i32.shl $push2=, $8, $pop1
-; NO-SIMD128-NEXT:    i32.store16 14($0), $pop2
-; NO-SIMD128-NEXT:    i32.const $push23=, 65535
-; NO-SIMD128-NEXT:    i32.and $push3=, $15, $pop23
-; NO-SIMD128-NEXT:    i32.shl $push4=, $7, $pop3
-; NO-SIMD128-NEXT:    i32.store16 12($0), $pop4
-; NO-SIMD128-NEXT:    i32.const $push22=, 65535
-; NO-SIMD128-NEXT:    i32.and $push5=, $14, $pop22
-; NO-SIMD128-NEXT:    i32.shl $push6=, $6, $pop5
-; NO-SIMD128-NEXT:    i32.store16 10($0), $pop6
-; NO-SIMD128-NEXT:    i32.const $push21=, 65535
-; NO-SIMD128-NEXT:    i32.and $push7=, $13, $pop21
-; NO-SIMD128-NEXT:    i32.shl $push8=, $5, $pop7
-; NO-SIMD128-NEXT:    i32.store16 8($0), $pop8
-; NO-SIMD128-NEXT:    i32.const $push20=, 65535
-; NO-SIMD128-NEXT:    i32.and $push9=, $12, $pop20
-; NO-SIMD128-NEXT:    i32.shl $push10=, $4, $pop9
-; NO-SIMD128-NEXT:    i32.store16 6($0), $pop10
-; NO-SIMD128-NEXT:    i32.const $push19=, 65535
-; NO-SIMD128-NEXT:    i32.and $push11=, $11, $pop19
-; NO-SIMD128-NEXT:    i32.shl $push12=, $3, $pop11
-; NO-SIMD128-NEXT:    i32.store16 4($0), $pop12
-; NO-SIMD128-NEXT:    i32.const $push18=, 65535
-; NO-SIMD128-NEXT:    i32.and $push13=, $10, $pop18
-; NO-SIMD128-NEXT:    i32.shl $push14=, $2, $pop13
-; NO-SIMD128-NEXT:    i32.store16 2($0), $pop14
-; NO-SIMD128-NEXT:    i32.const $push17=, 65535
-; NO-SIMD128-NEXT:    i32.and $push15=, $9, $pop17
-; NO-SIMD128-NEXT:    i32.shl $push16=, $1, $pop15
-; NO-SIMD128-NEXT:    i32.store16 0($0), $pop16
+; NO-SIMD128-NEXT:    i32.shl $push0=, $8, $16
+; NO-SIMD128-NEXT:    i32.store16 14($0), $pop0
+; NO-SIMD128-NEXT:    i32.shl $push1=, $7, $15
+; NO-SIMD128-NEXT:    i32.store16 12($0), $pop1
+; NO-SIMD128-NEXT:    i32.shl $push2=, $6, $14
+; NO-SIMD128-NEXT:    i32.store16 10($0), $pop2
+; NO-SIMD128-NEXT:    i32.shl $push3=, $5, $13
+; NO-SIMD128-NEXT:    i32.store16 8($0), $pop3
+; NO-SIMD128-NEXT:    i32.shl $push4=, $4, $12
+; NO-SIMD128-NEXT:    i32.store16 6($0), $pop4
+; NO-SIMD128-NEXT:    i32.shl $push5=, $3, $11
+; NO-SIMD128-NEXT:    i32.store16 4($0), $pop5
+; NO-SIMD128-NEXT:    i32.shl $push6=, $2, $10
+; NO-SIMD128-NEXT:    i32.store16 2($0), $pop6
+; NO-SIMD128-NEXT:    i32.shl $push7=, $1, $9
+; NO-SIMD128-NEXT:    i32.store16 0($0), $pop7
 ; NO-SIMD128-NEXT:    return
 ;
 ; NO-SIMD128-FAST-LABEL: shl_vec_v8i16:
 ; NO-SIMD128-FAST:         .functype shl_vec_v8i16 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-FAST-NEXT:  # %bb.0:
-; NO-SIMD128-FAST-NEXT:    i32.const $push0=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push1=, $9, $pop0
-; NO-SIMD128-FAST-NEXT:    i32.shl $push2=, $1, $pop1
-; NO-SIMD128-FAST-NEXT:    i32.store16 0($0), $pop2
-; NO-SIMD128-FAST-NEXT:    i32.const $push23=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push3=, $10, $pop23
-; NO-SIMD128-FAST-NEXT:    i32.shl $push4=, $2, $pop3
-; NO-SIMD128-FAST-NEXT:    i32.store16 2($0), $pop4
-; NO-SIMD128-FAST-NEXT:    i32.const $push22=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push5=, $11, $pop22
-; NO-SIMD128-FAST-NEXT:    i32.shl $push6=, $3, $pop5
-; NO-SIMD128-FAST-NEXT:    i32.store16 4($0), $pop6
-; NO-SIMD128-FAST-NEXT:    i32.const $push21=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push7=, $12, $pop21
-; NO-SIMD128-FAST-NEXT:    i32.shl $push8=, $4, $pop7
-; NO-SIMD128-FAST-NEXT:    i32.store16 6($0), $pop8
-; NO-SIMD128-FAST-NEXT:    i32.const $push20=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push9=, $13, $pop20
-; NO-SIMD128-FAST-NEXT:    i32.shl $push10=, $5, $pop9
-; NO-SIMD128-FAST-NEXT:    i32.store16 8($0), $pop10
-; NO-SIMD128-FAST-NEXT:    i32.const $push19=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push11=, $14, $pop19
-; NO-SIMD128-FAST-NEXT:    i32.shl $push12=, $6, $pop11
-; NO-SIMD128-FAST-NEXT:    i32.store16 10($0), $pop12
-; NO-SIMD128-FAST-NEXT:    i32.const $push18=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push13=, $15, $pop18
-; NO-SIMD128-FAST-NEXT:    i32.shl $push14=, $7, $pop13
-; NO-SIMD128-FAST-NEXT:    i32.store16 12($0), $pop14
-; NO-SIMD128-FAST-NEXT:    i32.const $push17=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push15=, $16, $pop17
-; NO-SIMD128-FAST-NEXT:    i32.shl $push16=, $8, $pop15
-; NO-SIMD128-FAST-NEXT:    i32.store16 14($0), $pop16
+; NO-SIMD128-FAST-NEXT:    i32.shl $push0=, $1, $9
+; NO-SIMD128-FAST-NEXT:    i32.store16 0($0), $pop0
+; NO-SIMD128-FAST-NEXT:    i32.shl $push1=, $2, $10
+; NO-SIMD128-FAST-NEXT:    i32.store16 2($0), $pop1
+; NO-SIMD128-FAST-NEXT:    i32.shl $push2=, $3, $11
+; NO-SIMD128-FAST-NEXT:    i32.store16 4($0), $pop2
+; NO-SIMD128-FAST-NEXT:    i32.shl $push3=, $4, $12
+; NO-SIMD128-FAST-NEXT:    i32.store16 6($0), $pop3
+; NO-SIMD128-FAST-NEXT:    i32.shl $push4=, $5, $13
+; NO-SIMD128-FAST-NEXT:    i32.store16 8($0), $pop4
+; NO-SIMD128-FAST-NEXT:    i32.shl $push5=, $6, $14
+; NO-SIMD128-FAST-NEXT:    i32.store16 10($0), $pop5
+; NO-SIMD128-FAST-NEXT:    i32.shl $push6=, $7, $15
+; NO-SIMD128-FAST-NEXT:    i32.store16 12($0), $pop6
+; NO-SIMD128-FAST-NEXT:    i32.shl $push7=, $8, $16
+; NO-SIMD128-FAST-NEXT:    i32.store16 14($0), $pop7
 ; NO-SIMD128-FAST-NEXT:    return
   %a = shl <8 x i16> %v, %x
   ret <8 x i16> %a
@@ -7333,65 +7085,59 @@ define <8 x i16> @shr_s_v8i16(<8 x i16> %v, i16 %x) {
 ; NO-SIMD128-LABEL: shr_s_v8i16:
 ; NO-SIMD128:         .functype shr_s_v8i16 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
-; NO-SIMD128-NEXT:    i32.extend16_s $push1=, $8
-; NO-SIMD128-NEXT:    i32.const $push0=, 65535
-; NO-SIMD128-NEXT:    i32.and $push18=, $9, $pop0
-; NO-SIMD128-NEXT:    local.tee $push17=, $9=, $pop18
-; NO-SIMD128-NEXT:    i32.shr_s $push2=, $pop1, $pop17
-; NO-SIMD128-NEXT:    i32.store16 14($0), $pop2
-; NO-SIMD128-NEXT:    i32.extend16_s $push3=, $7
-; NO-SIMD128-NEXT:    i32.shr_s $push4=, $pop3, $9
-; NO-SIMD128-NEXT:    i32.store16 12($0), $pop4
-; NO-SIMD128-NEXT:    i32.extend16_s $push5=, $6
-; NO-SIMD128-NEXT:    i32.shr_s $push6=, $pop5, $9
-; NO-SIMD128-NEXT:    i32.store16 10($0), $pop6
-; NO-SIMD128-NEXT:    i32.extend16_s $push7=, $5
-; NO-SIMD128-NEXT:    i32.shr_s $push8=, $pop7, $9
-; NO-SIMD128-NEXT:    i32.store16 8($0), $pop8
-; NO-SIMD128-NEXT:    i32.extend16_s $push9=, $4
-; NO-SIMD128-NEXT:    i32.shr_s $push10=, $pop9, $9
-; NO-SIMD128-NEXT:    i32.store16 6($0), $pop10
-; NO-SIMD128-NEXT:    i32.extend16_s $push11=, $3
-; NO-SIMD128-NEXT:    i32.shr_s $push12=, $pop11, $9
-; NO-SIMD128-NEXT:    i32.store16 4($0), $pop12
-; NO-SIMD128-NEXT:    i32.extend16_s $push13=, $2
-; NO-SIMD128-NEXT:    i32.shr_s $push14=, $pop13, $9
-; NO-SIMD128-NEXT:    i32.store16 2($0), $pop14
-; NO-SIMD128-NEXT:    i32.extend16_s $push15=, $1
-; NO-SIMD128-NEXT:    i32.shr_s $push16=, $pop15, $9
-; NO-SIMD128-NEXT:    i32.store16 0($0), $pop16
+; NO-SIMD128-NEXT:    i32.extend16_s $push0=, $8
+; NO-SIMD128-NEXT:    i32.shr_s $push1=, $pop0, $9
+; NO-SIMD128-NEXT:    i32.store16 14($0), $pop1
+; NO-SIMD128-NEXT:    i32.extend16_s $push2=, $7
+; NO-SIMD128-NEXT:    i32.shr_s $push3=, $pop2, $9
+; NO-SIMD128-NEXT:    i32.store16 12($0), $pop3
+; NO-SIMD128-NEXT:    i32.extend16_s $push4=, $6
+; NO-SIMD128-NEXT:    i32.shr_s $push5=, $pop4, $9
+; NO-SIMD128-NEXT:    i32.store16 10($0), $pop5
+; NO-SIMD128-NEXT:    i32.extend16_s $push6=, $5
+; NO-SIMD128-NEXT:    i32.shr_s $push7=, $pop6, $9
+; NO-SIMD128-NEXT:    i32.store16 8($0), $pop7
+; NO-SIMD128-NEXT:    i32.extend16_s $push8=, $4
+; NO-SIMD128-NEXT:    i32.shr_s $push9=, $pop8, $9
+; NO-SIMD128-NEXT:    i32.store16 6($0), $pop9
+; NO-SIMD128-NEXT:    i32.extend16_s $push10=, $3
+; NO-SIMD128-NEXT:    i32.shr_s $push11=, $pop10, $9
+; NO-SIMD128-NEXT:    i32.store16 4($0), $pop11
+; NO-SIMD128-NEXT:    i32.extend16_s $push12=, $2
+; NO-SIMD128-NEXT:    i32.shr_s $push13=, $pop12, $9
+; NO-SIMD128-NEXT:    i32.store16 2($0), $pop13
+; NO-SIMD128-NEXT:    i32.extend16_s $push14=, $1
+; NO-SIMD128-NEXT:    i32.shr_s $push15=, $pop14, $9
+; NO-SIMD128-NEXT:    i32.store16 0($0), $pop15
 ; NO-SIMD128-NEXT:    return
 ;
 ; NO-SIMD128-FAST-LABEL: shr_s_v8i16:
 ; NO-SIMD128-FAST:         .functype shr_s_v8i16 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-FAST-NEXT:  # %bb.0:
-; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push1=, $1
-; NO-SIMD128-FAST-NEXT:    i32.const $push0=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push18=, $9, $pop0
-; NO-SIMD128-FAST-NEXT:    local.tee $push17=, $1=, $pop18
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push2=, $pop1, $pop17
-; NO-SIMD128-FAST-NEXT:    i32.store16 0($0), $pop2
-; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push3=, $2
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push4=, $pop3, $1
-; NO-SIMD128-FAST-NEXT:    i32.store16 2($0), $pop4
-; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push5=, $3
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push6=, $pop5, $1
-; NO-SIMD128-FAST-NEXT:    i32.store16 4($0), $pop6
-; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push7=, $4
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push8=, $pop7, $1
-; NO-SIMD128-FAST-NEXT:    i32.store16 6($0), $pop8
-; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push9=, $5
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push10=, $pop9, $1
-; NO-SIMD128-FAST-NEXT:    i32.store16 8($0), $pop10
-; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push11=, $6
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push12=, $pop11, $1
-; NO-SIMD128-FAST-NEXT:    i32.store16 10($0), $pop12
-; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push13=, $7
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push14=, $pop13, $1
-; NO-SIMD128-FAST-NEXT:    i32.store16 12($0), $pop14
-; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push15=, $8
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push16=, $pop15, $1
-; NO-SIMD128-FAST-NEXT:    i32.store16 14($0), $pop16
+; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push0=, $1
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push1=, $pop0, $9
+; NO-SIMD128-FAST-NEXT:    i32.store16 0($0), $pop1
+; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push2=, $2
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push3=, $pop2, $9
+; NO-SIMD128-FAST-NEXT:    i32.store16 2($0), $pop3
+; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push4=, $3
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push5=, $pop4, $9
+; NO-SIMD128-FAST-NEXT:    i32.store16 4($0), $pop5
+; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push6=, $4
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push7=, $pop6, $9
+; NO-SIMD128-FAST-NEXT:    i32.store16 6($0), $pop7
+; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push8=, $5
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push9=, $pop8, $9
+; NO-SIMD128-FAST-NEXT:    i32.store16 8($0), $pop9
+; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push10=, $6
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push11=, $pop10, $9
+; NO-SIMD128-FAST-NEXT:    i32.store16 10($0), $pop11
+; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push12=, $7
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push13=, $pop12, $9
+; NO-SIMD128-FAST-NEXT:    i32.store16 12($0), $pop13
+; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push14=, $8
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push15=, $pop14, $9
+; NO-SIMD128-FAST-NEXT:    i32.store16 14($0), $pop15
 ; NO-SIMD128-FAST-NEXT:    return
   %t = insertelement <8 x i16> undef, i16 %x, i32 0
   %s = shufflevector <8 x i16> %t, <8 x i16> undef,
@@ -7510,91 +7256,59 @@ define <8 x i16> @shr_s_vec_v8i16(<8 x i16> %v, <8 x i16> %x) {
 ; NO-SIMD128-LABEL: shr_s_vec_v8i16:
 ; NO-SIMD128:         .functype shr_s_vec_v8i16 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
-; NO-SIMD128-NEXT:    i32.extend16_s $push2=, $8
-; NO-SIMD128-NEXT:    i32.const $push0=, 65535
-; NO-SIMD128-NEXT:    i32.and $push1=, $16, $pop0
-; NO-SIMD128-NEXT:    i32.shr_s $push3=, $pop2, $pop1
-; NO-SIMD128-NEXT:    i32.store16 14($0), $pop3
-; NO-SIMD128-NEXT:    i32.extend16_s $push5=, $7
-; NO-SIMD128-NEXT:    i32.const $push31=, 65535
-; NO-SIMD128-NEXT:    i32.and $push4=, $15, $pop31
-; NO-SIMD128-NEXT:    i32.shr_s $push6=, $pop5, $pop4
-; NO-SIMD128-NEXT:    i32.store16 12($0), $pop6
-; NO-SIMD128-NEXT:    i32.extend16_s $push8=, $6
-; NO-SIMD128-NEXT:    i32.const $push30=, 65535
-; NO-SIMD128-NEXT:    i32.and $push7=, $14, $pop30
-; NO-SIMD128-NEXT:    i32.shr_s $push9=, $pop8, $pop7
-; NO-SIMD128-NEXT:    i32.store16 10($0), $pop9
-; NO-SIMD128-NEXT:    i32.extend16_s $push11=, $5
-; NO-SIMD128-NEXT:    i32.const $push29=, 65535
-; NO-SIMD128-NEXT:    i32.and $push10=, $13, $pop29
-; NO-SIMD128-NEXT:    i32.shr_s $push12=, $pop11, $pop10
-; NO-SIMD128-NEXT:    i32.store16 8($0), $pop12
-; NO-SIMD128-NEXT:    i32.extend16_s $push14=, $4
-; NO-SIMD128-NEXT:    i32.const $push28=, 65535
-; NO-SIMD128-NEXT:    i32.and $push13=, $12, $pop28
-; NO-SIMD128-NEXT:    i32.shr_s $push15=, $pop14, $pop13
-; NO-SIMD128-NEXT:    i32.store16 6($0), $pop15
-; NO-SIMD128-NEXT:    i32.extend16_s $push17=, $3
-; NO-SIMD128-NEXT:    i32.const $push27=, 65535
-; NO-SIMD128-NEXT:    i32.and $push16=, $11, $pop27
-; NO-SIMD128-NEXT:    i32.shr_s $push18=, $pop17, $pop16
-; NO-SIMD128-NEXT:    i32.store16 4($0), $pop18
-; NO-SIMD128-NEXT:    i32.extend16_s $push20=, $2
-; NO-SIMD128-NEXT:    i32.const $push26=, 65535
-; NO-SIMD128-NEXT:    i32.and $push19=, $10, $pop26
-; NO-SIMD128-NEXT:    i32.shr_s $push21=, $pop20, $pop19
-; NO-SIMD128-NEXT:    i32.store16 2($0), $pop21
-; NO-SIMD128-NEXT:    i32.extend16_s $push23=, $1
-; NO-SIMD128-NEXT:    i32.const $push25=, 65535
-; NO-SIMD128-NEXT:    i32.and $push22=, $9, $pop25
-; NO-SIMD128-NEXT:    i32.shr_s $push24=, $pop23, $pop22
-; NO-SIMD128-NEXT:    i32.store16 0($0), $pop24
+; NO-SIMD128-NEXT:    i32.extend16_s $push0=, $8
+; NO-SIMD128-NEXT:    i32.shr_s $push1=, $pop0, $16
+; NO-SIMD128-NEXT:    i32.store16 14($0), $pop1
+; NO-SIMD128-NEXT:    i32.extend16_s $push2=, $7
+; NO-SIMD128-NEXT:    i32.shr_s $push3=, $pop2, $15
+; NO-SIMD128-NEXT:    i32.store16 12($0), $pop3
+; NO-SIMD128-NEXT:    i32.extend16_s $push4=, $6
+; NO-SIMD128-NEXT:    i32.shr_s $push5=, $pop4, $14
+; NO-SIMD128-NEXT:    i32.store16 10($0), $pop5
+; NO-SIMD128-NEXT:    i32.extend16_s $push6=, $5
+; NO-SIMD128-NEXT:    i32.shr_s $push7=, $pop6, $13
+; NO-SIMD128-NEXT:    i32.store16 8($0), $pop7
+; NO-SIMD128-NEXT:    i32.extend16_s $push8=, $4
+; NO-SIMD128-NEXT:    i32.shr_s $push9=, $pop8, $12
+; NO-SIMD128-NEXT:    i32.store16 6($0), $pop9
+; NO-SIMD128-NEXT:    i32.extend16_s $push10=, $3
+; NO-SIMD128-NEXT:    i32.shr_s $push11=, $pop10, $11
+; NO-SIMD128-NEXT:    i32.store16 4($0), $pop11
+; NO-SIMD128-NEXT:    i32.extend16_s $push12=, $2
+; NO-SIMD128-NEXT:    i32.shr_s $push13=, $pop12, $10
+; NO-SIMD128-NEXT:    i32.store16 2($0), $pop13
+; NO-SIMD128-NEXT:    i32.extend16_s $push14=, $1
+; NO-SIMD128-NEXT:    i32.shr_s $push15=, $pop14, $9
+; NO-SIMD128-NEXT:    i32.store16 0($0), $pop15
 ; NO-SIMD128-NEXT:    return
 ;
 ; NO-SIMD128-FAST-LABEL: shr_s_vec_v8i16:
 ; NO-SIMD128-FAST:         .functype shr_s_vec_v8i16 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-FAST-NEXT:  # %bb.0:
-; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push2=, $1
-; NO-SIMD128-FAST-NEXT:    i32.const $push0=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push1=, $9, $pop0
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push3=, $pop2, $pop1
-; NO-SIMD128-FAST-NEXT:    i32.store16 0($0), $pop3
-; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push5=, $2
-; NO-SIMD128-FAST-NEXT:    i32.const $push31=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push4=, $10, $pop31
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push6=, $pop5, $pop4
-; NO-SIMD128-FAST-NEXT:    i32.store16 2($0), $pop6
-; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push8=, $3
-; NO-SIMD128-FAST-NEXT:    i32.const $push30=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push7=, $11, $pop30
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push9=, $pop8, $pop7
-; NO-SIMD128-FAST-NEXT:    i32.store16 4($0), $pop9
-; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push11=, $4
-; NO-SIMD128-FAST-NEXT:    i32.const $push29=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push10=, $12, $pop29
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push12=, $pop11, $pop10
-; NO-SIMD128-FAST-NEXT:    i32.store16 6($0), $pop12
-; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push14=, $5
-; NO-SIMD128-FAST-NEXT:    i32.const $push28=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push13=, $13, $pop28
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push15=, $pop14, $pop13
-; NO-SIMD128-FAST-NEXT:    i32.store16 8($0), $pop15
-; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push17=, $6
-; NO-SIMD128-FAST-NEXT:    i32.const $push27=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push16=, $14, $pop27
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push18=, $pop17, $pop16
-; NO-SIMD128-FAST-NEXT:    i32.store16 10($0), $pop18
-; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push20=, $7
-; NO-SIMD128-FAST-NEXT:    i32.const $push26=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push19=, $15, $pop26
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push21=, $pop20, $pop19
-; NO-SIMD128-FAST-NEXT:    i32.store16 12($0), $pop21
-; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push23=, $8
-; NO-SIMD128-FAST-NEXT:    i32.const $push25=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push22=, $16, $pop25
-; NO-SIMD128-FAST-NEXT:    i32.shr_s $push24=, $pop23, $pop22
-; NO-SIMD128-FAST-NEXT:    i32.store16 14($0), $pop24
+; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push0=, $1
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push1=, $pop0, $9
+; NO-SIMD128-FAST-NEXT:    i32.store16 0($0), $pop1
+; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push2=, $2
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push3=, $pop2, $10
+; NO-SIMD128-FAST-NEXT:    i32.store16 2($0), $pop3
+; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push4=, $3
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push5=, $pop4, $11
+; NO-SIMD128-FAST-NEXT:    i32.store16 4($0), $pop5
+; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push6=, $4
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push7=, $pop6, $12
+; NO-SIMD128-FAST-NEXT:    i32.store16 6($0), $pop7
+; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push8=, $5
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push9=, $pop8, $13
+; NO-SIMD128-FAST-NEXT:    i32.store16 8($0), $pop9
+; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push10=, $6
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push11=, $pop10, $14
+; NO-SIMD128-FAST-NEXT:    i32.store16 10($0), $pop11
+; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push12=, $7
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push13=, $pop12, $15
+; NO-SIMD128-FAST-NEXT:    i32.store16 12($0), $pop13
+; NO-SIMD128-FAST-NEXT:    i32.extend16_s $push14=, $8
+; NO-SIMD128-FAST-NEXT:    i32.shr_s $push15=, $pop14, $16
+; NO-SIMD128-FAST-NEXT:    i32.store16 14($0), $pop15
 ; NO-SIMD128-FAST-NEXT:    return
   %a = ashr <8 x i16> %v, %x
   ret <8 x i16> %a
@@ -7618,10 +7332,7 @@ define <8 x i16> @shr_u_v8i16(<8 x i16> %v, i16 %x) {
 ; NO-SIMD128-NEXT:  # %bb.0:
 ; NO-SIMD128-NEXT:    i32.const $push0=, 65535
 ; NO-SIMD128-NEXT:    i32.and $push1=, $8, $pop0
-; NO-SIMD128-NEXT:    i32.const $push26=, 65535
-; NO-SIMD128-NEXT:    i32.and $push25=, $9, $pop26
-; NO-SIMD128-NEXT:    local.tee $push24=, $9=, $pop25
-; NO-SIMD128-NEXT:    i32.shr_u $push2=, $pop1, $pop24
+; NO-SIMD128-NEXT:    i32.shr_u $push2=, $pop1, $9
 ; NO-SIMD128-NEXT:    i32.store16 14($0), $pop2
 ; NO-SIMD128-NEXT:    i32.const $push23=, 65535
 ; NO-SIMD128-NEXT:    i32.and $push3=, $7, $pop23
@@ -7658,38 +7369,35 @@ define <8 x i16> @shr_u_v8i16(<8 x i16> %v, i16 %x) {
 ; NO-SIMD128-FAST-NEXT:  # %bb.0:
 ; NO-SIMD128-FAST-NEXT:    i32.const $push0=, 65535
 ; NO-SIMD128-FAST-NEXT:    i32.and $push1=, $1, $pop0
-; NO-SIMD128-FAST-NEXT:    i32.const $push26=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push25=, $9, $pop26
-; NO-SIMD128-FAST-NEXT:    local.tee $push24=, $1=, $pop25
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push2=, $pop1, $pop24
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push2=, $pop1, $9
 ; NO-SIMD128-FAST-NEXT:    i32.store16 0($0), $pop2
 ; NO-SIMD128-FAST-NEXT:    i32.const $push23=, 65535
 ; NO-SIMD128-FAST-NEXT:    i32.and $push3=, $2, $pop23
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push4=, $pop3, $1
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push4=, $pop3, $9
 ; NO-SIMD128-FAST-NEXT:    i32.store16 2($0), $pop4
 ; NO-SIMD128-FAST-NEXT:    i32.const $push22=, 65535
 ; NO-SIMD128-FAST-NEXT:    i32.and $push5=, $3, $pop22
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push6=, $pop5, $1
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push6=, $pop5, $9
 ; NO-SIMD128-FAST-NEXT:    i32.store16 4($0), $pop6
 ; NO-SIMD128-FAST-NEXT:    i32.const $push21=, 65535
 ; NO-SIMD128-FAST-NEXT:    i32.and $push7=, $4, $pop21
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push8=, $pop7, $1
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push8=, $pop7, $9
 ; NO-SIMD128-FAST-NEXT:    i32.store16 6($0), $pop8
 ; NO-SIMD128-FAST-NEXT:    i32.const $push20=, 65535
 ; NO-SIMD128-FAST-NEXT:    i32.and $push9=, $5, $pop20
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push10=, $pop9, $1
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push10=, $pop9, $9
 ; NO-SIMD128-FAST-NEXT:    i32.store16 8($0), $pop10
 ; NO-SIMD128-FAST-NEXT:    i32.const $push19=, 65535
 ; NO-SIMD128-FAST-NEXT:    i32.and $push11=, $6, $pop19
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push12=, $pop11, $1
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push12=, $pop11, $9
 ; NO-SIMD128-FAST-NEXT:    i32.store16 10($0), $pop12
 ; NO-SIMD128-FAST-NEXT:    i32.const $push18=, 65535
 ; NO-SIMD128-FAST-NEXT:    i32.and $push13=, $7, $pop18
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push14=, $pop13, $1
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push14=, $pop13, $9
 ; NO-SIMD128-FAST-NEXT:    i32.store16 12($0), $pop14
 ; NO-SIMD128-FAST-NEXT:    i32.const $push17=, 65535
 ; NO-SIMD128-FAST-NEXT:    i32.and $push15=, $8, $pop17
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push16=, $pop15, $1
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push16=, $pop15, $9
 ; NO-SIMD128-FAST-NEXT:    i32.store16 14($0), $pop16
 ; NO-SIMD128-FAST-NEXT:    return
   %t = insertelement <8 x i16> undef, i16 %x, i32 0
@@ -7810,106 +7518,74 @@ define <8 x i16> @shr_u_vec_v8i16(<8 x i16> %v, <8 x i16> %x) {
 ; NO-SIMD128:         .functype shr_u_vec_v8i16 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
 ; NO-SIMD128-NEXT:    i32.const $push0=, 65535
-; NO-SIMD128-NEXT:    i32.and $push2=, $8, $pop0
-; NO-SIMD128-NEXT:    i32.const $push39=, 65535
-; NO-SIMD128-NEXT:    i32.and $push1=, $16, $pop39
-; NO-SIMD128-NEXT:    i32.shr_u $push3=, $pop2, $pop1
-; NO-SIMD128-NEXT:    i32.store16 14($0), $pop3
-; NO-SIMD128-NEXT:    i32.const $push38=, 65535
-; NO-SIMD128-NEXT:    i32.and $push5=, $7, $pop38
-; NO-SIMD128-NEXT:    i32.const $push37=, 65535
-; NO-SIMD128-NEXT:    i32.and $push4=, $15, $pop37
-; NO-SIMD128-NEXT:    i32.shr_u $push6=, $pop5, $pop4
-; NO-SIMD128-NEXT:    i32.store16 12($0), $pop6
-; NO-SIMD128-NEXT:    i32.const $push36=, 65535
-; NO-SIMD128-NEXT:    i32.and $push8=, $6, $pop36
-; NO-SIMD128-NEXT:    i32.const $push35=, 65535
-; NO-SIMD128-NEXT:    i32.and $push7=, $14, $pop35
-; NO-SIMD128-NEXT:    i32.shr_u $push9=, $pop8, $pop7
-; NO-SIMD128-NEXT:    i32.store16 10($0), $pop9
-; NO-SIMD128-NEXT:    i32.const $push34=, 65535
-; NO-SIMD128-NEXT:    i32.and $push11=, $5, $pop34
-; NO-SIMD128-NEXT:    i32.const $push33=, 65535
-; NO-SIMD128-NEXT:    i32.and $push10=, $13, $pop33
-; NO-SIMD128-NEXT:    i32.shr_u $push12=, $pop11, $pop10
-; NO-SIMD128-NEXT:    i32.store16 8($0), $pop12
-; NO-SIMD128-NEXT:    i32.const $push32=, 65535
-; NO-SIMD128-NEXT:    i32.and $push14=, $4, $pop32
-; NO-SIMD128-NEXT:    i32.const $push31=, 65535
-; NO-SIMD128-NEXT:    i32.and $push13=, $12, $pop31
-; NO-SIMD128-NEXT:    i32.shr_u $push15=, $pop14, $pop13
-; NO-SIMD128-NEXT:    i32.store16 6($0), $pop15
-; NO-SIMD128-NEXT:    i32.const $push30=, 65535
-; NO-SIMD128-NEXT:    i32.and $push17=, $3, $pop30
-; NO-SIMD128-NEXT:    i32.const $push29=, 65535
-; NO-SIMD128-NEXT:    i32.and $push16=, $11, $pop29
-; NO-SIMD128-NEXT:    i32.shr_u $push18=, $pop17, $pop16
-; NO-SIMD128-NEXT:    i32.store16 4($0), $pop18
-; NO-SIMD128-NEXT:    i32.const $push28=, 65535
-; NO-SIMD128-NEXT:    i32.and $push20=, $2, $pop28
-; NO-SIMD128-NEXT:    i32.const $push27=, 65535
-; NO-SIMD128-NEXT:    i32.and $push19=, $10, $pop27
-; NO-SIMD128-NEXT:    i32.shr_u $push21=, $pop20, $pop19
-; NO-SIMD128-NEXT:    i32.store16 2($0), $pop21
-; NO-SIMD128-NEXT:    i32.const $push26=, 65535
-; NO-SIMD128-NEXT:    i32.and $push23=, $1, $pop26
-; NO-SIMD128-NEXT:    i32.const $push25=, 65535
-; NO-SIMD128-NEXT:    i32.and $push22=, $9, $pop25
-; NO-SIMD128-NEXT:    i32.shr_u $push24=, $pop23, $pop22
-; NO-SIMD128-NEXT:    i32.store16 0($0), $pop24
+; NO-SIMD128-NEXT:    i32.and $push1=, $8, $pop0
+; NO-SIMD128-NEXT:    i32.shr_u $push2=, $pop1, $16
+; NO-SIMD128-NEXT:    i32.store16 14($0), $pop2
+; NO-SIMD128-NEXT:    i32.const $push23=, 65535
+; NO-SIMD128-NEXT:    i32.and $push3=, $7, $pop23
+; NO-SIMD128-NEXT:    i32.shr_u $push4=, $pop3, $15
+; NO-SIMD128-NEXT:    i32.store16 12($0), $pop4
+; NO-SIMD128-NEXT:    i32.const $push22=, 65535
+; NO-SIMD128-NEXT:    i32.and $push5=, $6, $pop22
+; NO-SIMD128-NEXT:    i32.shr_u $push6=, $pop5, $14
+; NO-SIMD128-NEXT:    i32.store16 10($0), $pop6
+; NO-SIMD128-NEXT:    i32.const $push21=, 65535
+; NO-SIMD128-NEXT:    i32.and $push7=, $5, $pop21
+; NO-SIMD128-NEXT:    i32.shr_u $push8=, $pop7, $13
+; NO-SIMD128-NEXT:    i32.store16 8($0), $pop8
+; NO-SIMD128-NEXT:    i32.const $push20=, 65535
+; NO-SIMD128-NEXT:    i32.and $push9=, $4, $pop20
+; NO-SIMD128-NEXT:    i32.shr_u $push10=, $pop9, $12
+; NO-SIMD128-NEXT:    i32.store16 6($0), $pop10
+; NO-SIMD128-NEXT:    i32.const $push19=, 65535
+; NO-SIMD128-NEXT:    i32.and $push11=, $3, $pop19
+; NO-SIMD128-NEXT:    i32.shr_u $push12=, $pop11, $11
+; NO-SIMD128-NEXT:    i32.store16 4($0), $pop12
+; NO-SIMD128-NEXT:    i32.const $push18=, 65535
+; NO-SIMD128-NEXT:    i32.and $push13=, $2, $pop18
+; NO-SIMD128-NEXT:    i32.shr_u $push14=, $pop13, $10
+; NO-SIMD128-NEXT:    i32.store16 2($0), $pop14
+; NO-SIMD128-NEXT:    i32.const $push17=, 65535
+; NO-SIMD128-NEXT:    i32.and $push15=, $1, $pop17
+; NO-SIMD128-NEXT:    i32.shr_u $push16=, $pop15, $9
+; NO-SIMD128-NEXT:    i32.store16 0($0), $pop16
 ; NO-SIMD128-NEXT:    return
 ;
 ; NO-SIMD128-FAST-LABEL: shr_u_vec_v8i16:
 ; NO-SIMD128-FAST:         .functype shr_u_vec_v8i16 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-FAST-NEXT:  # %bb.0:
 ; NO-SIMD128-FAST-NEXT:    i32.const $push0=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push2=, $1, $pop0
-; NO-SIMD128-FAST-NEXT:    i32.const $push39=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push1=, $9, $pop39
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push3=, $pop2, $pop1
-; NO-SIMD128-FAST-NEXT:    i32.store16 0($0), $pop3
-; NO-SIMD128-FAST-NEXT:    i32.const $push38=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push5=, $2, $pop38
-; NO-SIMD128-FAST-NEXT:    i32.const $push37=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push4=, $10, $pop37
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push6=, $pop5, $pop4
-; NO-SIMD128-FAST-NEXT:    i32.store16 2($0), $pop6
-; NO-SIMD128-FAST-NEXT:    i32.const $push36=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push8=, $3, $pop36
-; NO-SIMD128-FAST-NEXT:    i32.const $push35=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push7=, $11, $pop35
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push9=, $pop8, $pop7
-; NO-SIMD128-FAST-NEXT:    i32.store16 4($0), $pop9
-; NO-SIMD128-FAST-NEXT:    i32.const $push34=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push11=, $4, $pop34
-; NO-SIMD128-FAST-NEXT:    i32.const $push33=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push10=, $12, $pop33
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push12=, $pop11, $pop10
-; NO-SIMD128-FAST-NEXT:    i32.store16 6($0), $pop12
-; NO-SIMD128-FAST-NEXT:    i32.const $push32=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push14=, $5, $pop32
-; NO-SIMD128-FAST-NEXT:    i32.const $push31=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push13=, $13, $pop31
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push15=, $pop14, $pop13
-; NO-SIMD128-FAST-NEXT:    i32.store16 8($0), $pop15
-; NO-SIMD128-FAST-NEXT:    i32.const $push30=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push17=, $6, $pop30
-; NO-SIMD128-FAST-NEXT:    i32.const $push29=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push16=, $14, $pop29
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push18=, $pop17, $pop16
-; NO-SIMD128-FAST-NEXT:    i32.store16 10($0), $pop18
-; NO-SIMD128-FAST-NEXT:    i32.const $push28=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push20=, $7, $pop28
-; NO-SIMD128-FAST-NEXT:    i32.const $push27=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push19=, $15, $pop27
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push21=, $pop20, $pop19
-; NO-SIMD128-FAST-NEXT:    i32.store16 12($0), $pop21
-; NO-SIMD128-FAST-NEXT:    i32.const $push26=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push23=, $8, $pop26
-; NO-SIMD128-FAST-NEXT:    i32.const $push25=, 65535
-; NO-SIMD128-FAST-NEXT:    i32.and $push22=, $16, $pop25
-; NO-SIMD128-FAST-NEXT:    i32.shr_u $push24=, $pop23, $pop22
-; NO-SIMD128-FAST-NEXT:    i32.store16 14($0), $pop24
+; NO-SIMD128-FAST-NEXT:    i32.and $push1=, $1, $pop0
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push2=, $pop1, $9
+; NO-SIMD128-FAST-NEXT:    i32.store16 0($0), $pop2
+; NO-SIMD128-FAST-NEXT:    i32.const $push23=, 65535
+; NO-SIMD128-FAST-NEXT:    i32.and $push3=, $2, $pop23
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push4=, $pop3, $10
+; NO-SIMD128-FAST-NEXT:    i32.store16 2($0), $pop4
+; NO-SIMD128-FAST-NEXT:    i32.const $push22=, 65535
+; NO-SIMD128-FAST-NEXT:    i32.and $push5=, $3, $pop22
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push6=, $pop5, $11
+; NO-SIMD128-FAST-NEXT:    i32.store16 4($0), $pop6
+; NO-SIMD128-FAST-NEXT:    i32.const $push21=, 65535
+; NO-SIMD128-FAST-NEXT:    i32.and $push7=, $4, $pop21
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push8=, $pop7, $12
+; NO-SIMD128-FAST-NEXT:    i32.store16 6($0), $pop8
+; NO-SIMD128-FAST-NEXT:    i32.const $push20=, 65535
+; NO-SIMD128-FAST-NEXT:    i32.and $push9=, $5, $pop20
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push10=, $pop9, $13
+; NO-SIMD128-FAST-NEXT:    i32.store16 8($0), $pop10
+; NO-SIMD128-FAST-NEXT:    i32.const $push19=, 65535
+; NO-SIMD128-FAST-NEXT:    i32.and $push11=, $6, $pop19
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push12=, $pop11, $14
+; NO-SIMD128-FAST-NEXT:    i32.store16 10($0), $pop12
+; NO-SIMD128-FAST-NEXT:    i32.const $push18=, 65535
+; NO-SIMD128-FAST-NEXT:    i32.and $push13=, $7, $pop18
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push14=, $pop13, $15
+; NO-SIMD128-FAST-NEXT:    i32.store16 12($0), $pop14
+; NO-SIMD128-FAST-NEXT:    i32.const $push17=, 65535
+; NO-SIMD128-FAST-NEXT:    i32.and $push15=, $8, $pop17
+; NO-SIMD128-FAST-NEXT:    i32.shr_u $push16=, $pop15, $16
+; NO-SIMD128-FAST-NEXT:    i32.store16 14($0), $pop16
 ; NO-SIMD128-FAST-NEXT:    return
   %a = lshr <8 x i16> %v, %x
   ret <8 x i16> %a

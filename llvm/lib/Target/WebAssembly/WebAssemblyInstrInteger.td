@@ -44,6 +44,10 @@ multiclass ComparisonInt<CondCode cond, string name, bits<32> i32Inst, bits<32> 
                 !strconcat("i64.", name), i64Inst>;
 }
 
+// ComplexPattern
+def shiftMask32 : ComplexPattern<i32, 1, "selectShiftMask32", [], [], 0>;
+def shiftMask64 : ComplexPattern<i64, 1, "selectShiftMask64", [], [], 0>;
+
 // The spaces after the names are for aesthetic purposes only, to make
 // operands line up vertically after tab expansion.
 let isCommutable = 1 in
@@ -94,25 +98,18 @@ defm EQZ_I64 : I<(outs I32:$dst), (ins I64:$src), (outs), (ins),
                  "i64.eqz \t$dst, $src", "i64.eqz", 0x50>;
 
 // Optimize away an explicit mask on a shift count.
-def : Pat<(shl I32:$lhs, (and I32:$rhs, 31)), (SHL_I32 I32:$lhs, I32:$rhs)>;
-def : Pat<(sra I32:$lhs, (and I32:$rhs, 31)), (SHR_S_I32 I32:$lhs, I32:$rhs)>;
-def : Pat<(srl I32:$lhs, (and I32:$rhs, 31)), (SHR_U_I32 I32:$lhs, I32:$rhs)>;
-def : Pat<(shl I64:$lhs, (and I64:$rhs, 63)), (SHL_I64 I64:$lhs, I64:$rhs)>;
-def : Pat<(sra I64:$lhs, (and I64:$rhs, 63)), (SHR_S_I64 I64:$lhs, I64:$rhs)>;
-def : Pat<(srl I64:$lhs, (and I64:$rhs, 63)), (SHR_U_I64 I64:$lhs, I64:$rhs)>;
+def : Pat<(shl I32:$lhs, (shiftMask32 I32:$rhs)), (SHL_I32 I32:$lhs, I32:$rhs)>;
+def : Pat<(sra I32:$lhs, (shiftMask32 I32:$rhs)), (SHR_S_I32 I32:$lhs, I32:$rhs)>;
+def : Pat<(srl I32:$lhs, (shiftMask32 I32:$rhs)), (SHR_U_I32 I32:$lhs, I32:$rhs)>;
+def : Pat<(shl I64:$lhs, (shiftMask64 I64:$rhs)), (SHL_I64 I64:$lhs, I64:$rhs)>;
+def : Pat<(sra I64:$lhs, (shiftMask64 I64:$rhs)), (SHR_S_I64 I64:$lhs, I64:$rhs)>;
+def : Pat<(srl I64:$lhs, (shiftMask64 I64:$rhs)), (SHR_U_I64 I64:$lhs, I64:$rhs)>;
 
 // Optimize away an explicit mask on a rotate count.
 def : Pat<(rotl I32:$lhs, (and I32:$rhs, 31)), (ROTL_I32 I32:$lhs, I32:$rhs)>;
 def : Pat<(rotr I32:$lhs, (and I32:$rhs, 31)), (ROTR_I32 I32:$lhs, I32:$rhs)>;
 def : Pat<(rotl I64:$lhs, (and I64:$rhs, 63)), (ROTL_I64 I64:$lhs, I64:$rhs)>;
 def : Pat<(rotr I64:$lhs, (and I64:$rhs, 63)), (ROTR_I64 I64:$lhs, I64:$rhs)>;
-
-def : Pat<(shl I64:$lhs, (zext (and I32:$rhs, 63))),
-                               (SHL_I64 I64:$lhs, (I64_EXTEND_U_I32 I32:$rhs))>;
-def : Pat<(sra I64:$lhs, (zext (and I32:$rhs, 63))),
-                               (SHR_S_I64 I64:$lhs, (I64_EXTEND_U_I32 I32:$rhs))>;
-def : Pat<(srl I64:$lhs, (zext (and I32:$rhs, 63))),
-                               (SHR_U_I64 I64:$lhs, (I64_EXTEND_U_I32 I32:$rhs))>;
 
 defm SELECT_I32 : I<(outs I32:$dst), (ins I32:$lhs, I32:$rhs, I32:$cond),
                     (outs), (ins),
