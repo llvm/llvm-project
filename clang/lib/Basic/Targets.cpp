@@ -917,3 +917,5 @@ bool TargetInfo::validateOpenCLTarget(const LangOptions &Opts,
   return OpenCLOptions::diagnoseUnsupportedFeatureDependencies(*this, Diags) &&
          OpenCLOptions::diagnoseFeatureExtensionDifferences(*this, Diags);
 }
+
+bool TargetInfo::isValidSYCLDeviceTarget() const { return false; }
