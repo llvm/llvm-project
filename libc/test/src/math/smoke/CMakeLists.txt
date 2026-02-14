@@ -4704,10 +4704,30 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  asinpi_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    asinpi_test.cpp
+  DEPENDS
+    libc.src.math.asinpi
+)
+
+add_fp_unittest(
+  asinpif_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    asinpif_test.cpp
+  DEPENDS
+    libc.src.math.asinpif
+)
+
+add_fp_unittest(
   asinpif16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     asinpif16_test.cpp
   DEPENDS

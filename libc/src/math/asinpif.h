@@ -1,4 +1,4 @@
-//===-- Half-precision asinpif16(x) function ------------------------------===//
+//===-- Implementation header for asinpif -----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/math/asinpif16.h"
-#include "src/math/asinpif16.h"
+#ifndef LLVM_LIBC_SRC_MATH_ASINPIF_H
+#define LLVM_LIBC_SRC_MATH_ASINPIF_H
+
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
-  return math::asinpif16(x);
-}
+float asinpif(float x);
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC_MATH_ASINPIF_H
