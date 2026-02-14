@@ -961,7 +961,55 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
 
     return std::make_unique<SDWADstPreserveOperand>(
       OrDst, OrSDWADef, OrOtherDef, DstSel);
+  }
 
+    // Eliminate V_PACK_B32_F16_e64 by changing the second operand
+    // to SDWA form writing its result to the upper word of the output
+    // and preserving the lower word of the first operand.
+    //
+    // Example input:
+    // %2:vgpr_32 = V_ADD_F16_e32 %0, %0, implicit $mode, implicit $exec
+    // %3:vgpr_32 = V_MUL_F16_e32 %1, %0, implicit $mode, implicit $exec
+    // %4:vgpr_32 = V_PACK_B32_F16_e64 0, %2, 0, %3, 0, 0, implicit $exec,
+    //                                                     implicit $mode
+    //
+    // Transformed:
+    // %2:vgpr_32 = V_ADD_F16_e32 %0, %0, implicit $mode, implicit $exec
+    // %4:vgpr_32 = V_MUL_F16_sdwa 0, %1, 0, %0, 0,
+    //                             0, 5, 2, 6, 6,
+    //                            implicit $mode, implicit $exec,
+    //                            implicit %2(tied-def 0)
+  case AMDGPU::V_PACK_B32_F16_e64: {
+    MachineOperand *Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
+    MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
+    MachineOperand *Src2 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
+
+    if (!Src1->isReg() || !Src2->isReg())
+      break;
+
+    Register Reg1 = Src1->getReg();
+    Register Reg2 = Src2->getReg();
+    unsigned SubReg1 = Src1->getSubReg();
+    unsigned SubReg2 = Src2->getSubReg();
+
+    // Need separate defining instructions writing to the upper and
+    // lower words; copying is not profitable.
+    if (Reg1 == Reg2 || Reg1.isPhysical() || Reg2.isPhysical() || SubReg1 ||
+        SubReg2)
+      break;
+
+    // The modified Src2 will write to Src1 hence other direct uses.
+    // might become invalid.
+    if (!MRI->hasOneNonDBGUse(Src1->getReg()) ||
+        !MRI->hasOneNonDBGUse(Src2->getReg()))
+      break;
+
+    // Cannot translate MI modifiers to modifiers on the operands and
+    // materializing them is unprofitable.
+    if (TII->hasAnyModifiersSet(MI))
+      break;
+
+    return std::make_unique<SDWADstPreserveOperand>(Dst, Src1, Src2, WORD_1);
   }
   }
 

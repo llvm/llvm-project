@@ -977,16 +977,15 @@ define amdgpu_kernel void @round_v2f16(ptr addrspace(1) %out, i32 %in.arg) #0 {
 ; GFX9-NEXT:    v_cndmask_b32_e32 v2, 0, v0, vcc
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s4
 ; GFX9-NEXT:    v_bfi_b32 v2, s5, v2, v3
-; GFX9-NEXT:    v_add_f16_e32 v1, v1, v2
-; GFX9-NEXT:    v_trunc_f16_e32 v2, s6
-; GFX9-NEXT:    v_sub_f16_e32 v3, s6, v2
-; GFX9-NEXT:    v_cmp_ge_f16_e64 vcc, |v3|, 0.5
+; GFX9-NEXT:    v_trunc_f16_e32 v3, s6
+; GFX9-NEXT:    v_sub_f16_e32 v4, s6, v3
+; GFX9-NEXT:    v_cmp_ge_f16_e64 vcc, |v4|, 0.5
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
-; GFX9-NEXT:    v_mov_b32_e32 v3, s6
-; GFX9-NEXT:    v_bfi_b32 v0, s5, v0, v3
-; GFX9-NEXT:    v_add_f16_e32 v0, v2, v0
+; GFX9-NEXT:    v_mov_b32_e32 v4, s6
+; GFX9-NEXT:    v_bfi_b32 v0, s5, v0, v4
+; GFX9-NEXT:    v_add_f16_e32 v0, v3, v0
 ; GFX9-NEXT:    s_mov_b32 s2, -1
-; GFX9-NEXT:    v_pack_b32_f16 v0, v0, v1
+; GFX9-NEXT:    v_add_f16_sdwa v0, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:DWORD src1_sel:DWORD
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
 ;

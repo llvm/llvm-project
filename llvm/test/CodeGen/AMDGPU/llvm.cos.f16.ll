@@ -189,9 +189,8 @@ define amdgpu_kernel void @cos_v2f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_pk_mul_f16 v1, v1, 0.15915494 op_sel_hi:[1,0]
 ; GFX9-NEXT:    v_cos_f16_e32 v2, v1
-; GFX9-NEXT:    v_cos_f16_sdwa v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9-NEXT:    v_pack_b32_f16 v1, v2, v1
-; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX9-NEXT:    v_cos_f16_sdwa v2, v1 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
+; GFX9-NEXT:    global_store_dword v0, v2, s[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: cos_v2f16:
@@ -203,9 +202,8 @@ define amdgpu_kernel void @cos_v2f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_pk_mul_f16 v1, v1, 0.15915494 op_sel_hi:[1,0]
 ; GFX10-NEXT:    v_cos_f16_e32 v2, v1
-; GFX10-NEXT:    v_cos_f16_sdwa v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX10-NEXT:    v_pack_b32_f16 v1, v2, v1
-; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    v_cos_f16_sdwa v2, v1 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
+; GFX10-NEXT:    global_store_dword v0, v2, s[0:1]
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-TRUE16-LABEL: cos_v2f16:
