@@ -20,8 +20,8 @@ class VariablesOptionsImpl {
 public:
   VariablesOptionsImpl()
       : m_include_arguments(false), m_include_locals(false),
-        m_include_statics(false), m_in_scope_only(false),
-        m_include_runtime_support_values(false) {}
+        m_include_statics(false), m_include_extended(false),
+        m_in_scope_only(false), m_include_runtime_support_values(false) {}
 
   VariablesOptionsImpl(const VariablesOptionsImpl &) = default;
 
@@ -51,6 +51,10 @@ public:
 
   void SetIncludeStatics(bool b) { m_include_statics = b; }
 
+  bool GetIncludeExtended() const { return m_include_extended; }
+
+  void SetIncludeExtended(bool b) { m_include_extended = b; }
+
   bool GetInScopeOnly() const { return m_in_scope_only; }
 
   void SetInScopeOnly(bool b) { m_in_scope_only = b; }
@@ -71,6 +75,7 @@ private:
   bool m_include_arguments : 1;
   bool m_include_locals : 1;
   bool m_include_statics : 1;
+  bool m_include_extended : 1;
   bool m_in_scope_only : 1;
   bool m_include_runtime_support_values : 1;
   LazyBool m_include_recognized_arguments =
@@ -155,6 +160,18 @@ void SBVariablesOptions::SetIncludeStatics(bool statics) {
   LLDB_INSTRUMENT_VA(this, statics);
 
   m_opaque_up->SetIncludeStatics(statics);
+}
+
+bool SBVariablesOptions::GetIncludeExtended() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  return m_opaque_up->GetIncludeExtended();
+}
+
+void SBVariablesOptions::SetIncludeExtended(bool extended) {
+  LLDB_INSTRUMENT_VA(this, extended);
+
+  m_opaque_up->SetIncludeExtended(extended);
 }
 
 bool SBVariablesOptions::GetInScopeOnly() const {
