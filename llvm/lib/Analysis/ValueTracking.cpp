@@ -741,17 +741,17 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
         return false;
 
       auto *CB = dyn_cast<CallBase>(&I);
-      if (!CB)
+      if (CB) {
         // Non call site cases covered by the two checks above
-        continue;
-
-      if (CB->hasFnAttr(Attribute::NoSync) || CB->hasFnAttr(Attribute::NoFree))
-        continue;
+        if (!CB->hasFnAttr(Attribute::NoSync) || !CB->hasFnAttr(Attribute::NoFree))
+          return false;
+      }
 
       // Non volatile memset/memcpy/memmoves are nosync
       if (auto *MI = dyn_cast<MemIntrinsic>(&I))
-        if (!MI->isVolatile())
-          continue;
+        if (MI->isVolatile())
+          return false;
+
       return false;
 >>>>>>> ff0f1335be44 (Fixed hasNoSync logic and added negative tests)
     }
