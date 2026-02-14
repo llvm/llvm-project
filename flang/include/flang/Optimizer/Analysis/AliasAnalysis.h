@@ -248,6 +248,15 @@ private:
   bool symbolMayHaveTargetAttr(mlir::SymbolRefAttr symbol,
                                mlir::Operation *from);
 
+  /// Return true if the given operation is a call to a Fortran user
+  /// procedure.
+  bool isCallToFortranUserProcedure(mlir::Operation *op);
+
+  /// Returns the modify-reference behavior of the given call
+  /// operation `op` on `var`. If `op` is not a fir.call, then
+  /// it returns the conservative ModAndRef result.
+  mlir::ModRefResult getCallModRef(mlir::Operation *op, mlir::Value var);
+
   /// A map between operations with OpTrait::SymbolTable
   /// and the SymbolTable objects associated with them.
   /// TODO: it might be better to initialize just a single SymbolTable

@@ -259,7 +259,7 @@ void t31(int len) {
   __asm__ volatile(""
                    : "+%%rm"(len), "+rm"(len));
   // CHECK: @t31
-  // CHECK: call void asm sideeffect "", "=*%rm,=*rm,0,1,~{dirflag},~{fpsr},~{flags}"
+  // CHECK: call i32 asm sideeffect "", "=*%rm,=rm,0,1,~{dirflag},~{fpsr},~{flags}"
 }
 
 // CHECK: @t32
