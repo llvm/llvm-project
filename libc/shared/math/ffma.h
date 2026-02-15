@@ -1,4 +1,4 @@
-//===-- Implementation of ffma function -----------------------------------===//
+//===-- Shared ffma function ------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/ffma.h"
+#ifndef LLVM_LIBC_SHARED_MATH_FFMA_H
+#define LLVM_LIBC_SHARED_MATH_FFMA_H
+
+#include "shared/libc_common.h"
 #include "src/__support/math/ffma.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(float, ffma, (double x, double y, double z)) {
-  return math::ffma(x, y, z);
-}
+using math::ffma;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_FFMA_H
