@@ -4640,17 +4640,42 @@ SelectionDAG::computeOverflowForSignedMul(SDValue N0, SDValue N1) const {
   return OFK_Sometime;
 }
 
-bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth) const {
+bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val, bool OrZero,
+                                          unsigned Depth) const {
+  EVT VT = Val.getValueType();
+
+  // Since the number of lanes in a scalable vector is unknown at compile time,
+  // we track one bit which is implicitly broadcast to all lanes.  This means
+  // that all lanes in a scalable vector are considered demanded.
+  APInt DemandedElts = VT.isFixedLengthVector()
+                           ? APInt::getAllOnes(VT.getVectorNumElements())
+                           : APInt(1, 1);
+
+  return isKnownToBeAPowerOfTwo(Val, DemandedElts, OrZero, Depth);
+}
+
+bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
+                                          const APInt &DemandedElts,
+                                          bool OrZero, unsigned Depth) const {
   if (Depth >= MaxRecursionDepth)
     return false; // Limit search depth.
 
   EVT OpVT = Val.getValueType();
   unsigned BitWidth = OpVT.getScalarSizeInBits();
+  unsigned NumElts = DemandedElts.getBitWidth();
+  assert((!OpVT.isScalableVector() || NumElts == 1) &&
+         "DemandedElts for scalable vectors must be 1 to represent all lanes");
+  assert(
+      (!OpVT.isFixedLengthVector() || NumElts == OpVT.getVectorNumElements()) &&
+      "Unexpected vector size");
 
-  // Is the constant a known power of 2?
-  if (ISD::matchUnaryPredicate(Val, [BitWidth](ConstantSDNode *C) {
-        return C->getAPIntValue().zextOrTrunc(BitWidth).isPowerOf2();
-      }))
+  auto IsPowerOfTwoOrZero = [BitWidth, OrZero](const ConstantSDNode *C) {
+    APInt V = C->getAPIntValue().zextOrTrunc(BitWidth);
+    return (OrZero && V.isZero()) || V.isPowerOf2();
+  };
+
+  // Is the constant a known power of 2 or zero?
+  if (ISD::matchUnaryPredicate(Val, IsPowerOfTwoOrZero))
     return true;
 
   // A left-shift of a constant one will have exactly one bit set because
@@ -4659,7 +4684,8 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth) const {
     auto *C = isConstOrConstSplat(Val.getOperand(0));
     if (C && C->getAPIntValue() == 1)
       return true;
-    return isKnownToBeAPowerOfTwo(Val.getOperand(0), Depth + 1) &&
+    return isKnownToBeAPowerOfTwo(Val.getOperand(0), /*OrZero=*/false,
+                                  Depth + 1) &&
            isKnownNeverZero(Val, Depth);
   }
 
@@ -4669,42 +4695,47 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth) const {
     auto *C = isConstOrConstSplat(Val.getOperand(0));
     if (C && C->getAPIntValue().isSignMask())
       return true;
-    return isKnownToBeAPowerOfTwo(Val.getOperand(0), Depth + 1) &&
+    return isKnownToBeAPowerOfTwo(Val.getOperand(0), /*OrZero=*/false,
+                                  Depth + 1) &&
            isKnownNeverZero(Val, Depth);
   }
 
   if (Val.getOpcode() == ISD::ROTL || Val.getOpcode() == ISD::ROTR)
-    return isKnownToBeAPowerOfTwo(Val.getOperand(0), Depth + 1);
+    return isKnownToBeAPowerOfTwo(Val.getOperand(0), /*OrZero=*/false,
+                                  Depth + 1);
 
-  // Are all operands of a build vector constant powers of two?
-  if (Val.getOpcode() == ISD::BUILD_VECTOR)
-    if (llvm::all_of(Val->ops(), [BitWidth](SDValue E) {
-          if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(E))
-            return C->getAPIntValue().zextOrTrunc(BitWidth).isPowerOf2();
-          return false;
-        }))
-      return true;
+  // Are all operands of a build vector constant powers of two or zero?
+  if (Val.getOpcode() == ISD::BUILD_VECTOR &&
+      all_of(enumerate(Val->ops()), [&](auto P) {
+        auto *C = dyn_cast<ConstantSDNode>(P.value());
+        return !DemandedElts[P.index()] || (C && IsPowerOfTwoOrZero(C));
+      }))
+    return true;
 
   // Is the operand of a splat vector a constant power of two?
   if (Val.getOpcode() == ISD::SPLAT_VECTOR)
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Val->getOperand(0)))
-      if (C->getAPIntValue().zextOrTrunc(BitWidth).isPowerOf2())
+      if (IsPowerOfTwoOrZero(C))
         return true;
 
   // vscale(power-of-two) is a power-of-two for some targets
   if (Val.getOpcode() == ISD::VSCALE &&
       getTargetLoweringInfo().isVScaleKnownToBeAPowerOfTwo() &&
-      isKnownToBeAPowerOfTwo(Val.getOperand(0), Depth + 1))
+      isKnownToBeAPowerOfTwo(Val.getOperand(0), /*OrZero=*/false, Depth + 1))
     return true;
 
   if (Val.getOpcode() == ISD::SMIN || Val.getOpcode() == ISD::SMAX ||
       Val.getOpcode() == ISD::UMIN || Val.getOpcode() == ISD::UMAX)
-    return isKnownToBeAPowerOfTwo(Val.getOperand(1), Depth + 1) &&
-           isKnownToBeAPowerOfTwo(Val.getOperand(0), Depth + 1);
+    return isKnownToBeAPowerOfTwo(Val.getOperand(1), /*OrZero=*/false,
+                                  Depth + 1) &&
+           isKnownToBeAPowerOfTwo(Val.getOperand(0), /*OrZero=*/false,
+                                  Depth + 1);
 
   if (Val.getOpcode() == ISD::SELECT || Val.getOpcode() == ISD::VSELECT)
-    return isKnownToBeAPowerOfTwo(Val.getOperand(2), Depth + 1) &&
-           isKnownToBeAPowerOfTwo(Val.getOperand(1), Depth + 1);
+    return isKnownToBeAPowerOfTwo(Val.getOperand(2), /*OrZero=*/false,
+                                  Depth + 1) &&
+           isKnownToBeAPowerOfTwo(Val.getOperand(1), /*OrZero=*/false,
+                                  Depth + 1);
 
   // Looking for `x & -x` pattern:
   // If x == 0:
@@ -4712,12 +4743,14 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth) const {
   // If x != 0:
   //    x & -x -> non-zero pow2
   // so if we find the pattern return whether we know `x` is non-zero.
+  // TODO OrZero handling
   SDValue X;
   if (sd_match(Val, m_And(m_Value(X), m_Neg(m_Deferred(X)))))
     return isKnownNeverZero(X, Depth);
 
   if (Val.getOpcode() == ISD::ZERO_EXTEND)
-    return isKnownToBeAPowerOfTwo(Val.getOperand(0), Depth + 1);
+    return isKnownToBeAPowerOfTwo(Val.getOperand(0), /*OrZero=*/false,
+                                  Depth + 1);
 
   // More could be done here, though the above checks are enough
   // to handle some common cases.
