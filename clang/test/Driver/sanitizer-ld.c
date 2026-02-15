@@ -1400,4 +1400,6 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck %s --check-prefix=CHECK-FUZZER-WITH-SHARED-ASAN-ORDER
 //
-// CHECK-FUZZER-WITH-SHARED-ASAN-ORDER: "{{.*}}libclang_rt.asan.so" "--whole-archive" "{{.*}}libclang_rt.fuzzer.a" "--no-whole-archive" "-lstdc++"
+// CHECK-FUZZER-WITH-SHARED-ASAN-ORDER: "{{.*}}libclang_rt.asan.so"
+// CHECK-FUZZER-WITH-SHARED-ASAN-ORDER-SAME: "--whole-archive" "{{.*}}libclang_rt.fuzzer.a" "--no-whole-archive"
+// CHECK-FUZZER-WITH-SHARED-ASAN-ORDER-SAME: "-l{{(std)?}}c++"

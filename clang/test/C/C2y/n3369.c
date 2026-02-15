@@ -35,6 +35,10 @@ void test_semantic_failures() {
   int non_array;
   (void)_Countof non_array;  // expected-error {{'_Countof' requires an argument of array type; 'int' invalid}}  
   (void)_Countof(int);       // expected-error {{'_Countof' requires an argument of array type; 'int' invalid}}  
+  (void)_Countof(void);      // expected-error {{invalid application of '_Countof' to an incomplete type 'void'}}
+  int arr2[_Countof(void)];  // expected-error {{invalid application of '_Countof' to an incomplete type 'void'}}
+  void *vp = &non_array;
+  (void)_Countof(*vp);       // expected-error {{invalid application of '_Countof' to an incomplete type 'void'}}
   (void)_Countof(test_semantic_failures); // expected-error {{invalid application of '_Countof' to a function type}}
   (void)_Countof(struct S);  // expected-error {{invalid application of '_Countof' to an incomplete type 'struct S'}} \
                                 expected-note {{forward declaration of 'struct S'}}

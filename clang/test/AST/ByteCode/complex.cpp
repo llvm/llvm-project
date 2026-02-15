@@ -162,6 +162,7 @@ static_assert(__real(Doubles[3]) == 0.0, "");
 static_assert(__imag(Doubles[3]) == 0.0, "");
 
 static_assert(~(0.5 + 1.5j) == (0.5 + -1.5j), "");
+int array[~(1i) == 2000.0];
 
 void func(void) {
   __complex__ int arr;
@@ -466,4 +467,13 @@ namespace Discard {
     return 0;
   }
   static_assert(discardedMulDiv() == 0, "");
+}
+
+namespace MemcpyOp {
+  const double x = 0.;
+
+  void foo() {
+    _Complex double z;
+    z = *(_Complex double *)&x;
+  };
 }

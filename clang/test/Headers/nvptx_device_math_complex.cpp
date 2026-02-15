@@ -22,7 +22,9 @@
 // CHECK-DAG: call i1 @llvm.is.fpclass.f64(double %{{.+}}, i32 504)
 // CHECK-DAG: call double @llvm.copysign.f64(
 // CHECK-DAG: call double @__nv_scalbn(
-// CHECK-DAG: call double @llvm.fabs.f64(
+// CHECK-DAG: call nsz double @llvm.fabs.f64(
+// CHECK-DAG: call nsz double @llvm.fabs.f64(
+// CHECK-DAG: call nsz double @llvm.maxnum.f64(
 // CHECK-DAG: call double @__nv_logb(
 
 // CHECK: define weak {{.*}} @__divsc3
@@ -31,7 +33,9 @@
 // CHECK-DAG: call i1 @llvm.is.fpclass.f32(float %{{.+}}, i32 504)
 // CHECK-DAG: call float @llvm.copysign.f32(
 // CHECK-DAG: call float @__nv_scalbnf(
-// CHECK-DAG: call float @llvm.fabs.f32(
+// CHECK-DAG: call nsz float @llvm.fabs.f32(
+// CHECK-DAG: call nsz float @llvm.fabs.f32(
+// CHECK-DAG: call nsz float @llvm.maxnum.f32(
 // CHECK-DAG: call float @__nv_logbf(
 
 // We actually check that there are no declarations of non-OpenMP functions.
