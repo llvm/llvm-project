@@ -137,10 +137,10 @@ using ATTR_USE alignas(4)ATTR_USE ns::i;          // expected-warning 2 {{ISO C+
                                                                    expected-error 2 {{'ATTR_NAME' only applies to non-K&R-style functions}}
 using ATTR_USE alignas(4) ATTR_USE foobar = int; // expected-error {{'ATTR_NAME' cannot appear here}} \
                                                                   expected-error {{'alignas' attribute only applies to}} \
-                                                                  expected-error 2 {{'ATTR_NAME' only applies to function types}}
+                                                                  expected-error 2 {{'ATTR_NAME' only applies to non-K&R-style functions}}
 
 ATTR_USE using T = int; // expected-error {{'ATTR_NAME' cannot appear here}}
-using T ATTR_USE = int; // expected-error {{'ATTR_NAME' only applies to function types}}
+using T ATTR_USE = int; // expected-error {{'ATTR_NAME' only applies to non-K&R-style functions}}
 template<typename T> using U ATTR_USE = T; // expected-error {{'ATTR_NAME' only applies to function types}}
 using ns::i ATTR_USE; // expected-warning {{ISO C++}} \
                                 expected-error {{'ATTR_NAME' only applies to non-K&R-style functions}}
@@ -162,7 +162,7 @@ struct using_in_struct : using_in_struct_base {
 using ATTR_USE ns::i; // expected-warning {{ISO C++}} \
                                 expected-error {{'ATTR_NAME' cannot appear here}} \
                                 expected-error {{'ATTR_NAME' only applies to non-K&R-style functions}}
-using T ATTR_USE = int; // expected-error {{'ATTR_NAME' only applies to function types}}
+using T ATTR_USE = int; // expected-error {{'ATTR_NAME' only applies to non-K&R-style functions}}
 
 auto trailing() -> ATTR_USE const int; // expected-error {{'ATTR_NAME' cannot appear here}}
 auto trailing() -> const ATTR_USE int; // expected-error {{'ATTR_NAME' cannot appear here}}

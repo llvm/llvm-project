@@ -238,3 +238,5 @@ void lambdas() {
 CFI_UNCHECKED_CALLEE
 void func(void);
 void func(void) {}  // No warning expected.
+
+using CfiCheckFunction [[clang::cfi_unchecked_callee]] = void(void* entry, const void* diag_data);
