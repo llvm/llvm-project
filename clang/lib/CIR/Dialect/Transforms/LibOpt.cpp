@@ -58,13 +58,7 @@ struct LibOptPass : public impl::LibOptBase<LibOptPass> {
     }
 
     void parseOptions(LibOptPass &pass) {
-      if (isOptionsParsed)
-        return;
-
-      for (const llvm::StringRef remark : pass.remarksList)
-        parseOption(remark);
-
-      isOptionsParsed = true;
+      // To be implemented
     }
 
     bool emitRemarkAll() { return value & RemarkAll; }
@@ -74,14 +68,11 @@ struct LibOptPass : public impl::LibOptBase<LibOptPass> {
 
   private:
     unsigned value = None;
-    bool isOptionsParsed = false;
   };
 
   PassOptions passOptions;
 
-  ///
-  /// AST related
-  /// -----------
+  // For now the AST Context is optional for this pass.
   clang::ASTContext *astCtx;
   void setASTContext(clang::ASTContext *c) { astCtx = c; }
 

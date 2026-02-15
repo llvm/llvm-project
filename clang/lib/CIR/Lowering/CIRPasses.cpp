@@ -20,7 +20,8 @@ namespace cir {
 mlir::LogicalResult
 runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
                   clang::ASTContext &astContext, bool enableVerifier,
-                  bool enableCIRSimplify, llvm::StringRef libOptOptions) {
+                  bool enableLibOpt, bool enableCIRSimplify,
+                  llvm::StringRef libOptOptions) {
 
   llvm::TimeTraceScope scope("CIR To CIR Passes");
 
@@ -37,12 +38,15 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
   if (enableCIRSimplify)
     pm.addPass(mlir::createCIRSimplifyPass());
 
-  auto libOptPass = mlir::createLibOptPass();
-  if (libOptPass->initializeOptions(libOptOptions, errorHandler).failed()) {
-    return mlir::failure();
+  if (enableLibOpt) {
+    auto libOptPass = mlir::createLibOptPass();
+    if (libOptPass->initializeOptions(libOptOptions, errorHandler).failed()) {
+      return mlir::failure();
+    }
+
+    pm.addPass(std::move(libOptPass));
   }
 
-  pm.addPass(std::move(libOptPass));
   pm.addPass(mlir::createTargetLoweringPass());
   pm.addPass(mlir::createCXXABILoweringPass());
   pm.addPass(mlir::createLoweringPreparePass(&astContext));

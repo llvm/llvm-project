@@ -422,6 +422,10 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned ClangIRDisableCIRVerifier : 1;
 
+  /// Disable Clang IR (CIR) library optimizations
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ClangIREnableLibOpt : 1;
+
   // Options to control ClangIR library optimization
   std::string clangIRLibOptOptions;
 
@@ -555,8 +559,8 @@ public:
         EmitSymbolGraphSymbolLabelsForTesting(false),
         EmitPrettySymbolGraphs(false), GenReducedBMI(false),
         UseClangIRPipeline(false), ClangIRDisablePasses(false),
-        ClangIRDisableCIRVerifier(false), TimeTraceGranularity(500),
-        TimeTraceVerbose(false) {}
+        ClangIRDisableCIRVerifier(false), ClangIREnableLibOpt(false),
+        TimeTraceGranularity(500), TimeTraceVerbose(false) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.
