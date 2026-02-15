@@ -29,8 +29,9 @@ struct BPOrdererELF : lld::BPOrderer<BPOrdererELF> {
   DenseMap<const InputSectionBase *, Defined *> secToSym;
 
   static uint64_t getSize(const Section &sec) { return sec.getSize(); }
-  static bool isCodeSection(const Section &sec) {
-    return sec.flags & ELF::SHF_EXECINSTR;
+  static std::string getSectionName(const Section &sec) {
+    // return (sec.getSegName() + sec.getName()).str();
+    return "TODO";
   }
   ArrayRef<Defined *> getSymbols(const Section &sec) {
     auto it = secToSym.find(&sec);
@@ -94,8 +95,7 @@ DenseMap<const InputSectionBase *, int> elf::runBalancedPartitioning(
   for (ELFFileBase *file : ctx.objectFiles)
     for (Symbol *sym : file->getLocalSymbols())
       addSection(*sym);
-  return orderer.computeOrder(profilePath, forFunctionCompression,
-                              forDataCompression,
+  return orderer.computeOrder(profilePath, {/*TODO*/},
                               compressionSortStartupFunctions, verbose,
                               sections, rootSymbolToSectionIdxs);
 }
