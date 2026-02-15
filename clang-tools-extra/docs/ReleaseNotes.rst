@@ -100,7 +100,8 @@ New checks
 - New :doc:`bugprone-smart-ptr-initialization
   <clang-tidy/checks/bugprone/smart-ptr-initialization>` check.
 
-  FIXME: Write a short description.
+  Detects dangerous initialization of smart pointers with raw pointers that are
+  already owned elsewhere, which can lead to double deletion.
 
 - New :doc:`llvm-type-switch-case-types
   <clang-tidy/checks/llvm/type-switch-case-types>` check.
