@@ -96,6 +96,15 @@ LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
     "LLVMGetBitcodeModuleInContext2 instead");
 
 /**
+ * Reads the producer string from the bitcode header in the given memory
+ * buffer. Returns 0 on success. The produced string must be disposed with
+ * LLVMDisposeMessage.
+ */
+LLVM_C_ABI LLVMBool LLVMGetBitcodeProducerString(LLVMMemoryBufferRef MemBuf,
+                                                 char **OutProducer,
+                                                 char **OutMessage);
+
+/**
  * @}
  */
 
