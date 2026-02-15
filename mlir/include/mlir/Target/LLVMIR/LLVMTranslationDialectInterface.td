@@ -1,7 +1,6 @@
 #ifndef MLIR_INTERFACES_LLVMTRANSLATIONDIALECTINTERFACE
 #define MLIR_INTERFACES_LLVMTRANSLATIONDIALECTINTERFACE
 
-
 include "mlir/IR/Interfaces.td"
 
 def LLVMTranslationDialectInterface : DialectInterface<"LLVMTranslationDialectInterface"> {
