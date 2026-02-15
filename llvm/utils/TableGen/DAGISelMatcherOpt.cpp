@@ -337,8 +337,6 @@ static bool canMoveToFront(const MatcherList &ML,
   llvm_unreachable("M not part of list?");
 }
 
-static void FactorNodes(MatcherList &ML);
-
 /// Turn matches like this:
 ///   Scope
 ///     OPC_CheckType i32
@@ -351,10 +349,23 @@ static void FactorNodes(MatcherList &ML);
 ///       ABC
 ///       XYZ
 ///
-/// \p ML is a list that ends with a ScopeMatcher. \p Prev is the iterator
-/// before the ScopeMatcher in \p ML.
-static void FactorScope(MatcherList &ML, MatcherList::iterator Prev) {
-  ScopeMatcher *Scope = cast<ScopeMatcher>(*std::next(Prev));
+/// \p ML is a list that ends with a ScopeMatcher.
+static void FactorNodes(MatcherList &ML) {
+  auto Prev = ML.before_begin();
+  auto Curr = std::next(Prev);
+
+  ScopeMatcher *Scope = nullptr;
+
+  while (true) {
+    if (Curr == ML.end())
+      return;
+
+    if ((Scope = dyn_cast<ScopeMatcher>(*Curr)))
+      break;
+
+    Prev = Curr;
+    ++Curr;
+  }
 
   SmallVectorImpl<MatcherList> &OptionsToMatch = Scope->getChildren();
 
@@ -491,7 +502,7 @@ static void FactorScope(MatcherList &ML, MatcherList::iterator Prev) {
                           new ScopeMatcher(std::move(EqualMatchers)));
 
       // Recursively factor the newly created node.
-      FactorScope(Shared, Shared.begin());
+      FactorNodes(Shared);
     }
 
     // Put the new Matcher where we started in OptionsToMatch.
@@ -615,7 +626,7 @@ static void FactorScope(MatcherList &ML, MatcherList::iterator Prev) {
     // Make sure we recursively factor any scopes we may have created.
     for (auto &M : Cases) {
       if (isa<ScopeMatcher>(M.second.front())) {
-        FactorScope(M.second, M.second.before_begin());
+        FactorNodes(M.second);
         assert(!M.second.empty() && "empty matcher list");
       }
     }
@@ -629,20 +640,6 @@ static void FactorScope(MatcherList &ML, MatcherList::iterator Prev) {
       ML.splice_after(I, Cases[0].second);
     }
     return;
-  }
-}
-
-/// Search a ScopeMatcher to factor with FactorScope.
-static void FactorNodes(MatcherList &ML) {
-  auto P = ML.before_begin();
-  auto I = std::next(P);
-
-  while (I != ML.end()) {
-    if (isa<ScopeMatcher>(*I))
-      return FactorScope(ML, P);
-
-    P = I;
-    ++I;
   }
 }
 
