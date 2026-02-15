@@ -24,6 +24,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include <optional>
@@ -66,6 +67,7 @@ private:
   MachineInstr *createSDWAVersion(MachineInstr &MI);
   bool convertToSDWA(MachineInstr &MI, const SDWAOperandsVector &SDWAOperands);
   void legalizeScalarOperands(MachineInstr &MI, const GCNSubtarget &ST) const;
+  bool strengthReduceCSelect64(MachineFunction &MF);
 
 public:
   bool run(MachineFunction &MF);
@@ -1361,6 +1363,46 @@ void SIPeepholeSDWA::legalizeScalarOperands(MachineInstr &MI,
   }
 }
 
+bool SIPeepholeSDWA::strengthReduceCSelect64(MachineFunction &MF) {
+  bool Changed = false;
+
+  for (MachineBasicBlock &MBB : MF)
+    for (MachineInstr &MI : make_early_inc_range(MBB)) {
+      if (MI.getOpcode() != AMDGPU::S_CSELECT_B64 ||
+          !MI.getOperand(1).isImm() || !MI.getOperand(2).isImm() ||
+          (MI.getOperand(1).getImm() != 0 && MI.getOperand(2).getImm() != 0))
+        continue;
+
+      Register Reg = MI.getOperand(0).getReg();
+      MachineInstr *MustBeVCNDMASK = MRI->getOneNonDBGUser(Reg);
+      if (!MustBeVCNDMASK ||
+          MustBeVCNDMASK->getOpcode() != AMDGPU::V_CNDMASK_B32_e64 ||
+          !MustBeVCNDMASK->getOperand(1).isImm() ||
+          !MustBeVCNDMASK->getOperand(2).isImm())
+        continue;
+
+      MachineInstr *MustBeVREADFIRSTLANE =
+          MRI->getOneNonDBGUser(MustBeVCNDMASK->getOperand(0).getReg());
+      if (!MustBeVREADFIRSTLANE ||
+          MustBeVREADFIRSTLANE->getOpcode() != AMDGPU::V_READFIRSTLANE_B32)
+        continue;
+
+      unsigned CSelectZeroOpIdx = MI.getOperand(1).getImm() ? 2 : 1;
+
+      BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(AMDGPU::S_CSELECT_B32),
+              MustBeVREADFIRSTLANE->getOperand(0).getReg())
+          .addImm(MustBeVCNDMASK->getOperand(CSelectZeroOpIdx + 2).getImm())
+          .addImm(
+              MustBeVCNDMASK->getOperand((CSelectZeroOpIdx == 1 ? 2 : 1) + 2)
+                  .getImm())
+          .addReg(AMDGPU::SCC, RegState::Implicit);
+
+      MustBeVREADFIRSTLANE->eraseFromParent();
+    }
+
+  return Changed;
+}
+
 bool SIPeepholeSDWALegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
@@ -1434,6 +1476,9 @@ bool SIPeepholeSDWA::run(MachineFunction &MF) {
         legalizeScalarOperands(*ConvertedInstructions.pop_back_val(), ST);
     } while (Changed);
   }
+
+  // Other target-specific SSA-form peephole optimizations
+  Ret |= strengthReduceCSelect64(MF);
 
   return Ret;
 }
