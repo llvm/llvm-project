@@ -20,8 +20,8 @@ namespace cir {
 mlir::LogicalResult runCIRToCIRPasses(mlir::ModuleOp theModule,
                                       mlir::MLIRContext &mlirContext,
                                       clang::ASTContext &astContext,
-                                      bool enableVerifier, bool enableLibOpt,
-                                      bool enableCIRSimplify,
+                                      bool enableVerifier,
+                                      bool enableCIRSimplify, bool enableLibOpt,
                                       llvm::StringRef libOptOptions) {
 
   llvm::TimeTraceScope scope("CIR To CIR Passes");

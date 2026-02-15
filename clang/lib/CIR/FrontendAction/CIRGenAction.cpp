@@ -117,10 +117,11 @@ public:
       std::string libOptOptions = FEOptions.clangIRLibOptOptions;
 
       // Setup and run CIR pipeline.
-      if (runCIRToCIRPasses(MlirModule, MlirCtx, C,
-                            !FEOptions.ClangIRDisableCIRVerifier,
-                            FEOptions.ClangIREnableLibOpt,
-                            CGO.OptimizationLevel > 0, libOptOptions)
+      const bool enableLibOpt =
+          FEOptions.ClangIRLibOptEnabled && (CGO.OptimizationLevel > 0);
+      if (runCIRToCIRPasses(
+              MlirModule, MlirCtx, C, !FEOptions.ClangIRDisableCIRVerifier,
+              CGO.OptimizationLevel > 0, enableLibOpt, libOptOptions)
               .failed()) {
         CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
         return;
