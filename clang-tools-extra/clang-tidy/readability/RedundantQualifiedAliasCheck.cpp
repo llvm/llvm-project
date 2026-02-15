@@ -47,35 +47,29 @@ static bool hasMacroInRange(SourceRange Range, const SourceManager &SM,
 }
 
 static std::optional<NominalTypeLocInfo> peelToNominalTypeLoc(TypeLoc TL) {
-  while (!TL.isNull()) {
-    if (const auto AttrTL = TL.getAs<AttributedTypeLoc>()) {
-      // Preserve any attributes by rewriting only the alias name and '='.
-      TL = AttrTL.getModifiedLoc();
-      continue;
-    }
-
-    if (const auto TypedefTL = TL.getAs<TypedefTypeLoc>()) {
-      // Avoid rewriting aliases that use an elaborated keyword
-      // (class/struct/enum).
-      if (TypedefTL.getElaboratedKeywordLoc().isValid())
-        return std::nullopt;
-      const bool HasQualifier = static_cast<bool>(
-          TypedefTL.getQualifierLoc().getNestedNameSpecifier());
-      return NominalTypeLocInfo{TypedefTL, HasQualifier};
-    }
-
-    if (const auto TagTL = TL.getAs<TagTypeLoc>()) {
-      // Avoid rewriting aliases that use an elaborated keyword
-      // (class/struct/enum).
-      if (TagTL.getElaboratedKeywordLoc().isValid())
-        return std::nullopt;
-      const bool HasQualifier =
-          static_cast<bool>(TagTL.getQualifierLoc().getNestedNameSpecifier());
-      return NominalTypeLocInfo{TagTL, HasQualifier};
-    }
-
+  if (TL.isNull())
     return std::nullopt;
+
+  if (const auto TypedefTL = TL.getAs<TypedefTypeLoc>()) {
+    // Avoid rewriting aliases that use an elaborated keyword
+    // (class/struct/enum).
+    if (TypedefTL.getElaboratedKeywordLoc().isValid())
+      return std::nullopt;
+    const bool HasQualifier =
+        static_cast<bool>(TypedefTL.getQualifierLoc().getNestedNameSpecifier());
+    return NominalTypeLocInfo{TypedefTL, HasQualifier};
   }
+
+  if (const auto TagTL = TL.getAs<TagTypeLoc>()) {
+    // Avoid rewriting aliases that use an elaborated keyword
+    // (class/struct/enum).
+    if (TagTL.getElaboratedKeywordLoc().isValid())
+      return std::nullopt;
+    const bool HasQualifier =
+        static_cast<bool>(TagTL.getQualifierLoc().getNestedNameSpecifier());
+    return NominalTypeLocInfo{TagTL, HasQualifier};
+  }
+
   return std::nullopt;
 }
 
@@ -190,6 +184,27 @@ static std::optional<FixItHint> buildRemovalFixItAfterEqual(
   return FixItHint::CreateRemoval(RemovalRange);
 }
 
+static bool hasAliasAttributes(const TypeAliasDecl *Alias, TypeLoc TL) {
+  if (Alias->hasAttrs())
+    return true;
+  for (TypeLoc CurTL = TL; !CurTL.isNull(); CurTL = CurTL.getNextTypeLoc())
+    if (CurTL.getAs<AttributedTypeLoc>())
+      return true;
+  return false;
+}
+
+static bool hasTrailingSyntaxAfterRhsType(TypeLoc TL, const SourceManager &SM,
+                                          const LangOptions &LangOpts) {
+  const SourceLocation TypeEndLoc = TL.getEndLoc();
+  if (TypeEndLoc.isInvalid())
+    return true;
+  if (TypeEndLoc.isMacroID())
+    return true;
+  const std::optional<Token> NextToken =
+      utils::lexer::findNextTokenSkippingComments(TypeEndLoc, SM, LangOpts);
+  return !NextToken || NextToken->isNot(tok::semi);
+}
+
 RedundantQualifiedAliasCheck::RedundantQualifiedAliasCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
@@ -238,12 +253,20 @@ void RedundantQualifiedAliasCheck::check(
   if (WrittenTL.isNull())
     return;
 
+  // Keep aliases that carry AST-visible attributes.
+  if (hasAliasAttributes(Alias, WrittenTL))
+    return;
+
   if (WrittenTL.getType()->isDependentType())
     return;
 
   const SourceManager &SM = *Result.SourceManager;
   const LangOptions &LangOpts = getLangOpts();
   if (hasMacroInRange(WrittenTL.getSourceRange(), SM, LangOpts))
+    return;
+  // Clang extensions can add tokens after the RHS type that are not reflected
+  // in AST TypeLoc; keep such aliases conservatively.
+  if (hasTrailingSyntaxAfterRhsType(WrittenTL, SM, LangOpts))
     return;
 
   const std::optional<NominalTypeLocInfo> NominalInfo =

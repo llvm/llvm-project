@@ -10,6 +10,7 @@ struct Foo {};
 struct Bar {};
 struct Attr {};
 struct Commented {};
+struct AfterType {};
 struct Elab {};
 struct MacroEq {};
 struct MacroType {};
@@ -40,9 +41,12 @@ using Bar = ::n1::Bar;
 // CHECK-FIXES: using ::n1::Bar;
 
 using Attr = n1::Attr __attribute__((aligned(8)));
-// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: type alias is redundant; use a using-declaration instead [readability-redundant-qualified-alias]
-// CHECK-MESSAGES-NS: :[[@LINE-2]]:7: warning: type alias is redundant; use a using-declaration instead [readability-redundant-qualified-alias]
-// CHECK-FIXES: using n1::Attr __attribute__((aligned(8)));
+// CHECK-MESSAGES-NOT: warning: type alias is redundant; use a using-declaration instead
+// CHECK-MESSAGES-NS-NOT: warning: type alias is redundant; use a using-declaration instead
+
+using AliasDeprecated [[deprecated("alias attr")]] = n1::Foo;
+// CHECK-MESSAGES-NOT: warning: type alias is redundant; use a using-declaration instead
+// CHECK-MESSAGES-NS-NOT: warning: type alias is redundant; use a using-declaration instead
 
 using Deep = n2::n3::Deep;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: type alias is redundant; use a using-declaration instead [readability-redundant-qualified-alias]
@@ -98,6 +102,17 @@ using Commented /*comment*/ = n1::Commented;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: type alias is redundant; use a using-declaration instead [readability-redundant-qualified-alias]
 // CHECK-MESSAGES-NS: :[[@LINE-2]]:7: warning: type alias is redundant; use a using-declaration instead [readability-redundant-qualified-alias]
 // CHECK-FIXES: using Commented /*comment*/ = n1::Commented;
+
+using AfterType = n1::AfterType /*rhs-comment*/;
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: type alias is redundant; use a using-declaration instead [readability-redundant-qualified-alias]
+// CHECK-MESSAGES-NS: :[[@LINE-2]]:7: warning: type alias is redundant; use a using-declaration instead [readability-redundant-qualified-alias]
+// CHECK-FIXES: using n1::AfterType /*rhs-comment*/;
+
+#define DECL_END ;
+using MacroDeclEnd = n1::MacroType DECL_END
+// CHECK-MESSAGES-NOT: warning: type alias is redundant; use a using-declaration instead
+// CHECK-MESSAGES-NS-NOT: warning: type alias is redundant; use a using-declaration instead
+
 #define ALIAS MacroType
 using ALIAS = n1::MacroType;
 // CHECK-MESSAGES-NOT: warning: type alias is redundant; use a using-declaration instead
