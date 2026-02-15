@@ -250,27 +250,6 @@ protected:
     return D.getName().empty() && getTypedefName(&D).empty() &&
            D.isEmbeddedInDeclarator() && !D.isFreeStanding();
   }
-
-  void maybeMergeWithAnonymousTag(const DeclaratorDecl &D,
-                                  RecordContext *NewRecordContext) {
-    if (!NewRecordContext)
-      return;
-    auto *Tag = D.getType()->getAsTagDecl();
-    if (!Tag) {
-      if (const auto *AT = D.getASTContext().getAsArrayType(D.getType())) {
-        Tag = AT->getElementType()->getAsTagDecl();
-      }
-    }
-    SmallString<128> TagUSR;
-    clang::index::generateUSRForDecl(Tag, TagUSR);
-    if (auto *Record = llvm::dyn_cast_if_present<TagRecord>(
-            API.findRecordForUSR(TagUSR))) {
-      if (Record->IsEmbeddedInVarDeclarator) {
-        NewRecordContext->stealRecordChain(*Record);
-        API.removeRecord(Record);
-      }
-    }
-  }
 };
 
 template <typename Derived>
@@ -322,14 +301,10 @@ bool ExtractAPIVisitorBase<Derived>::VisitVarDecl(const VarDecl *Decl) {
         SubHeading, Access, isInSystemHeader(Decl));
   } else {
     // Add the global variable record to the API set.
-    auto *NewRecord = API.createRecord<GlobalVariableRecord>(
+    API.createRecord<GlobalVariableRecord>(
         USR, Name, createHierarchyInformationForDecl(*Decl), Loc,
         AvailabilityInfo::createFromDecl(Decl), Linkage, Comment, Declaration,
         SubHeading, isInSystemHeader(Decl));
-
-    // If this global variable has a non typedef'd anonymous tag type let's
-    // pretend the type's child records are under us in the hierarchy.
-    maybeMergeWithAnonymousTag(*Decl, NewRecord);
   }
 
   return true;
@@ -565,15 +540,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitNamespaceDecl(
 
 template <typename Derived>
 bool ExtractAPIVisitorBase<Derived>::TraverseRecordDecl(RecordDecl *Decl) {
-  bool Ret = Base::TraverseRecordDecl(Decl);
-
-  if (!isEmbeddedInVarDeclarator(*Decl) && Decl->isAnonymousStructOrUnion()) {
-    SmallString<128> USR;
-    index::generateUSRForDecl(Decl, USR);
-    API.removeRecord(USR);
-  }
-
-  return Ret;
+  return Base::TraverseRecordDecl(Decl);
 }
 
 template <typename Derived>
@@ -620,13 +587,7 @@ template <typename Derived>
 bool ExtractAPIVisitorBase<Derived>::TraverseCXXRecordDecl(
     CXXRecordDecl *Decl) {
   bool Ret = Base::TraverseCXXRecordDecl(Decl);
-
-  if (!isEmbeddedInVarDeclarator(*Decl) && Decl->isAnonymousStructOrUnion()) {
-    SmallString<128> USR;
-    index::generateUSRForDecl(Decl, USR);
-    API.removeRecord(USR);
-  }
-
+  // Keep anonymous structs in the hierarchy to preserve path components
   return Ret;
 }
 
@@ -643,6 +604,11 @@ bool ExtractAPIVisitorBase<Derived>::VisitCXXRecordDecl(
 
   SmallString<128> USR;
   index::generateUSRForDecl(Decl, USR);
+
+  if (API.findRecordForUSR(USR)) {
+    return true;
+  }
+
   PresumedLoc Loc =
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
   DocComment Comment;
@@ -678,6 +644,13 @@ bool ExtractAPIVisitorBase<Derived>::VisitCXXRecordDecl(
 
   Record->KindForDisplay = getKindForDisplay(Decl);
   Record->Bases = getBases(Decl);
+
+  // Visit nested records
+  for (const auto *NestedDecl : Decl->decls()) {
+    if (auto *NestedRecord = dyn_cast<CXXRecordDecl>(NestedDecl)) {
+      VisitCXXRecordDecl(NestedRecord);
+    }
+  }
 
   return true;
 }
@@ -1320,30 +1293,25 @@ bool ExtractAPIVisitorBase<Derived>::VisitFieldDecl(const FieldDecl *Decl) {
   DeclarationFragments SubHeading =
       DeclarationFragmentsBuilder::getSubHeading(Decl);
 
-  RecordContext *NewRecord = nullptr;
   if (isa<CXXRecordDecl>(Decl->getDeclContext())) {
     AccessControl Access = DeclarationFragmentsBuilder::getAccessControl(Decl);
 
-    NewRecord = API.createRecord<CXXFieldRecord>(
+    API.createRecord<CXXFieldRecord>(
         USR, Name, createHierarchyInformationForDecl(*Decl), Loc,
         AvailabilityInfo::createFromDecl(Decl), Comment, Declaration,
         SubHeading, Access, isInSystemHeader(Decl));
   } else if (auto *RD = dyn_cast<RecordDecl>(Decl->getDeclContext())) {
     if (RD->isUnion())
-      NewRecord = API.createRecord<UnionFieldRecord>(
+      API.createRecord<UnionFieldRecord>(
           USR, Name, createHierarchyInformationForDecl(*Decl), Loc,
           AvailabilityInfo::createFromDecl(Decl), Comment, Declaration,
           SubHeading, isInSystemHeader(Decl));
     else
-      NewRecord = API.createRecord<StructFieldRecord>(
+      API.createRecord<StructFieldRecord>(
           USR, Name, createHierarchyInformationForDecl(*Decl), Loc,
           AvailabilityInfo::createFromDecl(Decl), Comment, Declaration,
           SubHeading, isInSystemHeader(Decl));
   }
-
-  // If this field has a non typedef'd anonymous tag type let's pretend the
-  // type's child records are under us in the hierarchy.
-  maybeMergeWithAnonymousTag(*Decl, NewRecord);
 
   return true;
 }
