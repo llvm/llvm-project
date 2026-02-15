@@ -1087,7 +1087,8 @@ static llvm::Constant *constStructWithPadding(CodeGenModule &CGM,
   }
   if (NestedIntact && Values.size() == STy->getNumElements())
     return constant;
-  return llvm::ConstantStruct::getAnon(Values, STy->isPacked());
+  return llvm::ConstantStruct::getAnon(Values, STy->isPacked(),
+                                       &CGM.getDataLayout());
 }
 
 /// Replace all padding bytes in a given constant with either a pattern byte or
@@ -1120,7 +1121,7 @@ static llvm::Constant *constWithPadding(CodeGenModule &CGM, IsPattern isPattern,
     if (NewElemTy == ElemTy)
       return constant;
     auto *NewArrayTy = llvm::ArrayType::get(NewElemTy, Size);
-    return llvm::ConstantArray::get(NewArrayTy, Values);
+    return llvm::ConstantArray::get(NewArrayTy, Values, &CGM.getDataLayout());
   }
   // FIXME: Add handling for tail padding in vectors. Vectors don't
   // have padding between or inside elements, but the total amount of
@@ -1335,11 +1336,13 @@ static llvm::Constant *replaceUndef(CodeGenModule &CGM, IsPattern isPattern,
     Values[Op] = replaceUndef(CGM, isPattern, OpValue);
   }
   if (Ty->isStructTy())
-    return llvm::ConstantStruct::get(cast<llvm::StructType>(Ty), Values);
+    return llvm::ConstantStruct::get(cast<llvm::StructType>(Ty), Values,
+                                     &CGM.getDataLayout());
   if (Ty->isArrayTy())
-    return llvm::ConstantArray::get(cast<llvm::ArrayType>(Ty), Values);
+    return llvm::ConstantArray::get(cast<llvm::ArrayType>(Ty), Values,
+                                    &CGM.getDataLayout());
   assert(Ty->isVectorTy());
-  return llvm::ConstantVector::get(Values);
+  return llvm::ConstantVector::get(Values, &CGM.getDataLayout());
 }
 
 /// EmitAutoVarDecl - Emit code and set up an entry in LocalDeclMap for a

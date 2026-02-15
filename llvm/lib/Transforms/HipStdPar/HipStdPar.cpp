@@ -185,11 +185,14 @@ appendIndirectedGlobal(const GlobalVariable *IndirectionTable,
   Type *NameTy = SymbolListTy->getElementType(0);
   Type *IndirectTy = SymbolListTy->getElementType(1);
 
+  const auto &DL = M->getDataLayout();
   Constant *NameG = getGlobalForName(ToIndirect);
   Constant *IndirectG = getIndirectionGlobal(M);
   Constant *Entry = ConstantStruct::get(
-      SymbolListTy, {ConstantExpr::getAddrSpaceCast(NameG, NameTy),
-                     ConstantExpr::getAddrSpaceCast(IndirectG, IndirectTy)});
+      SymbolListTy,
+      {ConstantExpr::getAddrSpaceCast(NameG, NameTy),
+       ConstantExpr::getAddrSpaceCast(IndirectG, IndirectTy)},
+      &DL);
   SymbolIndirections.push_back(Entry);
 
   return IndirectG;
@@ -208,14 +211,15 @@ static void fillIndirectionTable(GlobalVariable *IndirectionTable,
   M->removeGlobalVariable(IndirectionTable);
   GlobalVariable *Symbols =
       M->getOrInsertGlobal("", ArrayType::get(SymbolTy, SymCnt));
+  const auto &DL = M->getDataLayout();
   Symbols->setLinkage(GlobalValue::LinkageTypes::PrivateLinkage);
-  Symbols->setInitializer(
-      ConstantArray::get(ArrayType::get(SymbolTy, SymCnt), {Indirections}));
+  Symbols->setInitializer(ConstantArray::get(ArrayType::get(SymbolTy, SymCnt),
+                                             {Indirections}, &DL));
   Symbols->setConstant(true);
 
   Constant *ASCSymbols = ConstantExpr::getAddrSpaceCast(Symbols, SymbolListTy);
   Constant *Init = ConstantStruct::get(
-      InitTy, {Count, ASCSymbols, PoisonValue::get(SymbolTy)});
+      InitTy, {Count, ASCSymbols, PoisonValue::get(SymbolTy)}, &DL);
   M->insertGlobalVariable(IndirectionTable);
   IndirectionTable->setInitializer(Init);
 }

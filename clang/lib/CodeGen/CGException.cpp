@@ -942,7 +942,8 @@ llvm::BasicBlock *CodeGenFunction::EmitLandingPad() {
 
     for (llvm::Value *filterType : filterTypes)
       Filters.push_back(cast<llvm::Constant>(filterType));
-    llvm::Constant *FilterArray = llvm::ConstantArray::get(AType, Filters);
+    llvm::Constant *FilterArray =
+        llvm::ConstantArray::get(AType, Filters, &CGM.getDataLayout());
     LPadInst->addClause(FilterArray);
 
     // Also check whether we need a cleanup.

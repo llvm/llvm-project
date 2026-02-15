@@ -1685,7 +1685,8 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
             if (Op->getType() != Ty)
               return error("Incorrect type in struct initializer");
 
-          C = ConstantStruct::get(ST, ConstOps);
+          const auto *DL = TheModule ? &TheModule->getDataLayout() : nullptr;
+          C = ConstantStruct::get(ST, ConstOps, DL);
           break;
         }
         case BitcodeConstant::ConstantArrayOpcode: {
@@ -1697,7 +1698,8 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
             if (Op->getType() != AT->getElementType())
               return error("Incorrect type in array initializer");
 
-          C = ConstantArray::get(AT, ConstOps);
+          const auto *DL = TheModule ? &TheModule->getDataLayout() : nullptr;
+          C = ConstantArray::get(AT, ConstOps, DL);
           break;
         }
         case BitcodeConstant::ConstantVectorOpcode: {
@@ -1709,7 +1711,8 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
             if (Op->getType() != VT->getElementType())
               return error("Incorrect type in vector initializer");
 
-          C = ConstantVector::get(ConstOps);
+          const auto *DL = TheModule ? &TheModule->getDataLayout() : nullptr;
+          C = ConstantVector::get(ConstOps, DL);
           break;
         }
         case Instruction::GetElementPtr:

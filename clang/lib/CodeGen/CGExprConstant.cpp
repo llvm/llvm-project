@@ -521,7 +521,8 @@ llvm::Constant *ConstantAggregateBuilder::buildFrom(
       STy = DesiredSTy;
   }
 
-  return llvm::ConstantStruct::get(STy, Packed ? PackedElems : UnpackedElems);
+  return llvm::ConstantStruct::get(STy, Packed ? PackedElems : UnpackedElems,
+                                   &CGM.getDataLayout());
 }
 
 void ConstantAggregateBuilder::condense(CharUnits Offset,
@@ -549,7 +550,8 @@ void ConstantAggregateBuilder::condense(CharUnits Offset,
     auto *STy = dyn_cast<llvm::StructType>(DesiredTy);
     if (STy && STy->getNumElements() == 1 &&
         STy->getElementType(0) == Elems[First]->getType())
-      Elems[First] = llvm::ConstantStruct::get(STy, Elems[First]);
+      Elems[First] =
+          llvm::ConstantStruct::get(STy, Elems[First], &CGM.getDataLayout());
     return;
   }
 
@@ -1106,7 +1108,7 @@ EmitArrayConstant(CodeGenModule &CGM, llvm::ArrayType *DesiredType,
     if (CommonElementType && NonzeroLength >= 8) {
       llvm::Constant *Initial = llvm::ConstantArray::get(
           llvm::ArrayType::get(CommonElementType, NonzeroLength),
-          ArrayRef(Elements).take_front(NonzeroLength));
+          ArrayRef(Elements).take_front(NonzeroLength), &CGM.getDataLayout());
       Elements.resize(2);
       Elements[0] = Initial;
     } else {
@@ -1128,7 +1130,8 @@ EmitArrayConstant(CodeGenModule &CGM, llvm::ArrayType *DesiredType,
   // If all elements have the same type, just emit an array constant.
   if (CommonElementType)
     return llvm::ConstantArray::get(
-        llvm::ArrayType::get(CommonElementType, ArrayBound), Elements);
+        llvm::ArrayType::get(CommonElementType, ArrayBound), Elements,
+        &CGM.getDataLayout());
 
   // We have mixed types. Use a packed struct.
   llvm::SmallVector<llvm::Type *, 16> Types;
@@ -1137,7 +1140,7 @@ EmitArrayConstant(CodeGenModule &CGM, llvm::ArrayType *DesiredType,
     Types.push_back(Elt->getType());
   llvm::StructType *SType =
       llvm::StructType::get(CGM.getLLVMContext(), Types, true);
-  return llvm::ConstantStruct::get(SType, Elements);
+  return llvm::ConstantStruct::get(SType, Elements, &CGM.getDataLayout());
 }
 
 // This class only needs to handle arrays, structs and unions. Outside C++11
@@ -1247,7 +1250,7 @@ public:
       }
 
       llvm::StructType *STy = llvm::StructType::get(VMContext, Types, false);
-      return llvm::ConstantStruct::get(STy, Elts);
+      return llvm::ConstantStruct::get(STy, Elts, &CGM.getDataLayout());
     }
 
     case CK_AddressSpaceConversion: {
@@ -2015,7 +2018,7 @@ llvm::Constant *ConstantEmitter::emitForMemory(CodeGenModule &CGM,
       llvm::ConstantAggregateZero::get(
           llvm::ArrayType::get(CGM.Int8Ty, (outerSize - innerSize) / 8))
     };
-    return llvm::ConstantStruct::getAnon(elts);
+    return llvm::ConstantStruct::getAnon(elts, false, &CGM.getDataLayout());
   }
 
   // Zero-extend bool.
@@ -2505,7 +2508,7 @@ ConstantEmitter::tryEmitPrivate(const APValue &Value, QualType DestType,
     // FIXME: the target may want to specify that this is packed.
     llvm::StructType *STy =
         llvm::StructType::get(Complex[0]->getType(), Complex[1]->getType());
-    return llvm::ConstantStruct::get(STy, Complex);
+    return llvm::ConstantStruct::get(STy, Complex, &CGM.getDataLayout());
   }
   case APValue::Float: {
     const llvm::APFloat &Init = Value.getFloat();
@@ -2528,7 +2531,7 @@ ConstantEmitter::tryEmitPrivate(const APValue &Value, QualType DestType,
     // FIXME: the target may want to specify that this is packed.
     llvm::StructType *STy =
         llvm::StructType::get(Complex[0]->getType(), Complex[1]->getType());
-    return llvm::ConstantStruct::get(STy, Complex);
+    return llvm::ConstantStruct::get(STy, Complex, &CGM.getDataLayout());
   }
   case APValue::Vector: {
     unsigned NumElts = Value.getVectorLength();
@@ -2546,7 +2549,7 @@ ConstantEmitter::tryEmitPrivate(const APValue &Value, QualType DestType,
       else
         llvm_unreachable("unsupported vector element type");
     }
-    return llvm::ConstantVector::get(Inits);
+    return llvm::ConstantVector::get(Inits, &CGM.getDataLayout());
   }
   case APValue::AddrLabelDiff: {
     const AddrLabelExpr *LHSExpr = Value.getAddrLabelDiffLHS();
@@ -2739,7 +2742,7 @@ static llvm::Constant *EmitNullConstant(CodeGenModule &CGM,
       elements[i] = llvm::Constant::getNullValue(structure->getElementType(i));
   }
 
-  return llvm::ConstantStruct::get(structure, elements);
+  return llvm::ConstantStruct::get(structure, elements, &CGM.getDataLayout());
 }
 
 /// Emit the null constant for a base subobject.
@@ -2779,7 +2782,7 @@ llvm::Constant *CodeGenModule::EmitNullConstant(QualType T) {
       ConstantEmitter::emitNullForMemory(*this, ElementTy);
     unsigned NumElements = CAT->getZExtSize();
     SmallVector<llvm::Constant *, 8> Array(NumElements, Element);
-    return llvm::ConstantArray::get(ATy, Array);
+    return llvm::ConstantArray::get(ATy, Array, &getDataLayout());
   }
 
   if (const auto *RD = T->getAsRecordDecl())

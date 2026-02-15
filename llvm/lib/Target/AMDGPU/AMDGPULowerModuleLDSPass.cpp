@@ -312,7 +312,8 @@ public:
 
   static Constant *getAddressesOfVariablesInKernel(
       LLVMContext &Ctx, ArrayRef<GlobalVariable *> Variables,
-      const DenseMap<GlobalVariable *, Constant *> &LDSVarsToConstantGEP) {
+      const DenseMap<GlobalVariable *, Constant *> &LDSVarsToConstantGEP,
+      const DataLayout *DL) {
     // Create a ConstantArray containing the address of each Variable within the
     // kernel corresponding to LDSVarsToConstantGEP, or poison if that kernel
     // does not allocate it
@@ -329,7 +330,7 @@ public:
         Elements.push_back(PoisonValue::get(LocalPtrTy));
       }
     }
-    return ConstantArray::get(KernelOffsetsType, Elements);
+    return ConstantArray::get(KernelOffsetsType, Elements, DL);
   }
 
   static GlobalVariable *buildLookupTable(
@@ -358,11 +359,12 @@ public:
           (Replacement == KernelToReplacement.end())
               ? Missing
               : getAddressesOfVariablesInKernel(
-                    Ctx, Variables, Replacement->second.LDSVarsToConstantGEP);
+                    Ctx, Variables, Replacement->second.LDSVarsToConstantGEP,
+                    &M.getDataLayout());
     }
 
-    Constant *init =
-        ConstantArray::get(AllKernelsOffsetsType, overallConstantExprElts);
+    Constant *init = ConstantArray::get(
+        AllKernelsOffsetsType, overallConstantExprElts, &M.getDataLayout());
 
     return new GlobalVariable(
         M, AllKernelsOffsetsType, true, GlobalValue::InternalLinkage, init,
@@ -889,7 +891,7 @@ public:
       assert(OrderedKernels.size() == newDynamicLDS.size());
 
       ArrayType *t = ArrayType::get(LocalPtrTy, newDynamicLDS.size());
-      Constant *init = ConstantArray::get(t, newDynamicLDS);
+      Constant *init = ConstantArray::get(t, newDynamicLDS, &M.getDataLayout());
       GlobalVariable *table = new GlobalVariable(
           M, t, true, GlobalValue::InternalLinkage, init,
           "llvm.amdgcn.dynlds.offset.table", nullptr,

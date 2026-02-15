@@ -2763,7 +2763,8 @@ static void tagGlobalDefinition(Module &M, GlobalVariable *G) {
     llvm::SmallVector<uint8_t> Init(NewSize - SizeInBytes, 0);
     Constant *Padding = ConstantDataArray::get(M.getContext(), Init);
     Constant *Initializer = G->getInitializer();
-    Initializer = ConstantStruct::getAnon({Initializer, Padding});
+    Initializer = ConstantStruct::getAnon({Initializer, Padding},
+                                          /*Packed=*/false, &M.getDataLayout());
     auto *NewGV = new GlobalVariable(
         M, Initializer->getType(), G->isConstant(), G->getLinkage(),
         Initializer, "", G, G->getThreadLocalMode(), G->getAddressSpace());

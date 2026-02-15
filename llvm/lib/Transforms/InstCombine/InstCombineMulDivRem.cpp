@@ -2552,7 +2552,7 @@ Instruction *InstCombinerImpl::visitSRem(BinaryOperator &I) {
         }
       }
 
-      Constant *NewRHSV = ConstantVector::get(Elts);
+      Constant *NewRHSV = ConstantVector::get(Elts, &getDataLayout());
       if (NewRHSV != C)  // Don't loop on -MININT
         return replaceOperand(I, 1, NewRHSV);
     }

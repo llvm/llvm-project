@@ -616,8 +616,9 @@ Register SPIRVGlobalRegistry::getOrCreateConstVector(const APInt &Val,
   assert(LLVMBaseTy->isIntegerTy() &&
          "Expected integer element type for APInt constant vector");
   auto *ConstVal = cast<ConstantInt>(ConstantInt::get(LLVMBaseTy, Val));
+  const DataLayout &DL = CurMF->getFunction().getParent()->getDataLayout();
   auto *ConstVec =
-      ConstantVector::getSplat(LLVMVecTy->getElementCount(), ConstVal);
+      ConstantVector::getSplat(LLVMVecTy->getElementCount(), ConstVal, &DL);
   unsigned BW = getScalarOrVectorBitWidth(SpvType);
   return getOrCreateCompositeOrNull(ConstVal, I, SpvType, TII, ConstVec, BW,
                                     SpvType->getOperand(2).getImm(),
@@ -635,8 +636,9 @@ Register SPIRVGlobalRegistry::getOrCreateConstVector(APFloat Val,
   Type *LLVMBaseTy = LLVMVecTy->getElementType();
   assert(LLVMBaseTy->isFloatingPointTy());
   auto *ConstVal = ConstantFP::get(LLVMBaseTy, Val);
+  const DataLayout &DL = CurMF->getFunction().getParent()->getDataLayout();
   auto *ConstVec =
-      ConstantVector::getSplat(LLVMVecTy->getElementCount(), ConstVal);
+      ConstantVector::getSplat(LLVMVecTy->getElementCount(), ConstVal, &DL);
   unsigned BW = getScalarOrVectorBitWidth(SpvType);
   return getOrCreateCompositeOrNull(ConstVal, I, SpvType, TII, ConstVec, BW,
                                     SpvType->getOperand(2).getImm(),
@@ -663,9 +665,11 @@ Register SPIRVGlobalRegistry::getOrCreateConstIntArray(
   // the creation of constants of arbitrary length (that is, the parameter of
   // memset) which were missing in the original module.
   Type *I64Ty = Type::getInt64Ty(LLVMBaseTy->getContext());
+  const DataLayout &DL = CurMF->getFunction().getParent()->getDataLayout();
   Constant *UniqueKey = ConstantStruct::getAnon(
       {PoisonValue::get(const_cast<ArrayType *>(LLVMArrTy)),
-       ConstantInt::get(LLVMBaseTy, Val), ConstantInt::get(I64Ty, Num)});
+       ConstantInt::get(LLVMBaseTy, Val), ConstantInt::get(I64Ty, Num)},
+      /*Packed=*/false, &DL);
   return getOrCreateCompositeOrNull(CI, I, SpvType, TII, UniqueKey, BW,
                                     LLVMArrTy->getNumElements());
 }
@@ -717,8 +721,9 @@ Register SPIRVGlobalRegistry::getOrCreateConsIntVector(
   const FixedVectorType *LLVMVecTy = cast<FixedVectorType>(LLVMTy);
   Type *LLVMBaseTy = LLVMVecTy->getElementType();
   const auto ConstInt = ConstantInt::get(LLVMBaseTy, Val);
+  const DataLayout &DL = CurMF->getFunction().getParent()->getDataLayout();
   auto ConstVec =
-      ConstantVector::getSplat(LLVMVecTy->getElementCount(), ConstInt);
+      ConstantVector::getSplat(LLVMVecTy->getElementCount(), ConstInt, &DL);
   unsigned BW = getScalarOrVectorBitWidth(SpvType);
   return getOrCreateIntCompositeOrNull(Val, MIRBuilder, SpvType, EmitIR,
                                        ConstVec, BW,

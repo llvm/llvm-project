@@ -1358,8 +1358,8 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
   llvm::Constant *GenerateProtocolList(ArrayRef<llvm::Constant*> Protocols) {
     llvm::ArrayType *ProtocolArrayTy = llvm::ArrayType::get(ProtocolPtrTy,
         Protocols.size());
-    llvm::Constant * ProtocolArray = llvm::ConstantArray::get(ProtocolArrayTy,
-        Protocols);
+    llvm::Constant *ProtocolArray = llvm::ConstantArray::get(
+        ProtocolArrayTy, Protocols, &CGM.getDataLayout());
     ConstantInitBuilder builder(CGM);
     auto ProtocolBuilder = builder.beginStruct();
     ProtocolBuilder.addNullPointer(PtrTy);

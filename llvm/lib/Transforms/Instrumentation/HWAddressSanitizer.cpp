@@ -613,11 +613,13 @@ void HWAddressSanitizer::createHwasanNote() {
                              ConstantExpr::getPtrToInt(Note, Int64Ty)),
         Int32Ty);
   };
+  const auto &DL = M.getDataLayout();
   Note->setInitializer(ConstantStruct::getAnon(
       {ConstantInt::get(Int32Ty, 8),                           // n_namesz
        ConstantInt::get(Int32Ty, 8),                           // n_descsz
        ConstantInt::get(Int32Ty, ELF::NT_LLVM_HWASAN_GLOBALS), // n_type
-       Name, CreateRelPtr(Start), CreateRelPtr(Stop)}));
+       Name, CreateRelPtr(Start), CreateRelPtr(Stop)},
+      /*Packed=*/false, &DL));
   appendToCompilerUsed(M, Note);
 
   // Create a zero-length global in hwasan_globals so that the linker will
@@ -1723,7 +1725,9 @@ void HWAddressSanitizer::instrumentGlobal(GlobalVariable *GV, uint8_t Tag) {
     std::vector<uint8_t> Init(NewSize - SizeInBytes, 0);
     Init.back() = Tag;
     Constant *Padding = ConstantDataArray::get(*C, Init);
-    Initializer = ConstantStruct::getAnon({Initializer, Padding});
+    const auto &DL = M.getDataLayout();
+    Initializer = ConstantStruct::getAnon({Initializer, Padding},
+                                          /*Packed=*/false, &DL);
   }
 
   auto *NewGV = new GlobalVariable(M, Initializer->getType(), GV->isConstant(),
@@ -1768,7 +1772,9 @@ void HWAddressSanitizer::instrumentGlobal(GlobalVariable *GV, uint8_t Tag) {
     uint32_t Size = std::min(SizeInBytes - DescriptorPos, MaxDescriptorSize);
     auto *SizeAndTag = ConstantInt::get(Int32Ty, Size | (uint32_t(Tag) << 24));
     Descriptor->setComdat(NewGV->getComdat());
-    Descriptor->setInitializer(ConstantStruct::getAnon({GVRelPtr, SizeAndTag}));
+    const auto &DL = M.getDataLayout();
+    Descriptor->setInitializer(
+        ConstantStruct::getAnon({GVRelPtr, SizeAndTag}, /*Packed=*/false, &DL));
     Descriptor->setSection("hwasan_globals");
     Descriptor->setMetadata(LLVMContext::MD_associated,
                             MDNode::get(*C, ValueAsMetadata::get(NewGV)));

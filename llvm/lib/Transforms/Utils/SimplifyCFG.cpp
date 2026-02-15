@@ -6962,7 +6962,7 @@ SwitchReplacement::SwitchReplacement(
 
   // Store the table in an array.
   auto *TableTy = ArrayType::get(ValueType, TableSize);
-  Initializer = ConstantArray::get(TableTy, TableContents);
+  Initializer = ConstantArray::get(TableTy, TableContents, &DL);
 
   Kind = LookupTableKind;
 }

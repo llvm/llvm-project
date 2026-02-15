@@ -862,7 +862,8 @@ void LowerTypeTestsModule::buildBitSetsFromGlobalVariables(
       DesiredPadding = alignTo(InitSize, 32) - InitSize;
   }
 
-  Constant *NewInit = ConstantStruct::getAnon(M.getContext(), GlobalInits);
+  Constant *NewInit = ConstantStruct::getAnon(M.getContext(), GlobalInits,
+                                              /*Packed=*/false, &DL);
   auto *CombinedGlobal =
       new GlobalVariable(M, NewInit->getType(), /*isConstant=*/true,
                          GlobalValue::PrivateLinkage, NewInit);

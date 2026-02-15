@@ -62,7 +62,8 @@ static Value *handleHlslClip(const CallExpr *E, CodeGenFunction *CGF) {
 
   if (const auto *VecTy = E->getArg(0)->getType()->getAs<clang::VectorType>()) {
     FZeroConst = ConstantVector::getSplat(
-        ElementCount::getFixed(VecTy->getNumElements()), FZeroConst);
+        ElementCount::getFixed(VecTy->getNumElements()), FZeroConst,
+        &CGF->CGM.getDataLayout());
     auto *FCompInst = CGF->Builder.CreateFCmpOLT(Op0, FZeroConst);
     CMP = CGF->Builder.CreateIntrinsic(
         CGF->Builder.getInt1Ty(), CGF->CGM.getHLSLRuntime().getAnyIntrinsic(),
@@ -1016,7 +1017,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                         ? ConstantVector::getSplat(
                               ElementCount::getFixed(
                                   cast<FixedVectorType>(Ty)->getNumElements()),
-                              ConstantFP::get(EltTy, 1.0))
+                              ConstantFP::get(EltTy, 1.0), &CGM.getDataLayout())
                         : ConstantFP::get(EltTy, 1.0);
     return Builder.CreateFDiv(One, Op0, "hlsl.rcp");
   }

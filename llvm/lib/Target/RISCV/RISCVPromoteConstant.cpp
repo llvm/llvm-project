@@ -149,8 +149,9 @@ bool RISCVPromoteConstant::runOnFunction(Function &F,
     ConstantVector.push_back(Pair.first);
 
   ArrayType *ArrayTy = ArrayType::get(DoubleTy, ConstantVector.size());
+  const DataLayout &DL = M->getDataLayout();
   Constant *GlobalArrayInitializer =
-      ConstantArray::get(ArrayTy, ConstantVector);
+      ConstantArray::get(ArrayTy, ConstantVector, &DL);
 
   auto *GlobalArray = new GlobalVariable(
       *M, ArrayTy,

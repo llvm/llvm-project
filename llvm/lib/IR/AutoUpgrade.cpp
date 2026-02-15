@@ -1913,16 +1913,20 @@ GlobalVariable *llvm::UpgradeGlobalVariable(GlobalVariable *GV) {
   IRBuilder<> IRB(C);
   auto EltTy = StructType::get(STy->getElementType(0), STy->getElementType(1),
                                IRB.getPtrTy());
+  const auto &DL = GV->getParent()->getDataLayout();
   Constant *Init = GV->getInitializer();
   unsigned N = Init->getNumOperands();
   std::vector<Constant *> NewCtors(N);
   for (unsigned i = 0; i != N; ++i) {
     auto Ctor = cast<Constant>(Init->getOperand(i));
-    NewCtors[i] = ConstantStruct::get(EltTy, Ctor->getAggregateElement(0u),
-                                      Ctor->getAggregateElement(1),
-                                      ConstantPointerNull::get(IRB.getPtrTy()));
+    NewCtors[i] = ConstantStruct::get(
+        EltTy,
+        {Ctor->getAggregateElement(0u), Ctor->getAggregateElement(1),
+         ConstantPointerNull::get(IRB.getPtrTy())},
+        &DL);
   }
-  Constant *NewInit = ConstantArray::get(ArrayType::get(EltTy, N), NewCtors);
+  Constant *NewInit =
+      ConstantArray::get(ArrayType::get(EltTy, N), NewCtors, &DL);
 
   return new GlobalVariable(NewInit->getType(), false, GV->getLinkage(),
                             NewInit, GV->getName());

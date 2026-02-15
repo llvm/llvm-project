@@ -67,6 +67,7 @@ offloading::getOffloadingEntryInitializer(Module &M, object::OffloadKind Kind,
   MD->addOperand(llvm::MDNode::get(M.getContext(), MDVals));
 
   // Construct the offloading entry.
+  const auto &DL = M.getDataLayout();
   Constant *EntryData[] = {
       ConstantExpr::getNullValue(Int64Ty),
       ConstantInt::get(Int16Ty, 1),
@@ -78,7 +79,8 @@ offloading::getOffloadingEntryInitializer(Module &M, object::OffloadKind Kind,
       ConstantInt::get(Int64Ty, Data),
       AuxAddr ? ConstantExpr::getPointerBitCastOrAddrSpaceCast(AuxAddr, PtrTy)
               : ConstantExpr::getNullValue(PtrTy)};
-  Constant *EntryInitializer = ConstantStruct::get(getEntryTy(M), EntryData);
+  Constant *EntryInitializer =
+      ConstantStruct::get(getEntryTy(M), EntryData, &DL);
   return {EntryInitializer, Str};
 }
 

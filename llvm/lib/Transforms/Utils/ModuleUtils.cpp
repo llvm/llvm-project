@@ -13,6 +13,7 @@
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -71,11 +72,13 @@ static void appendToGlobalArray(StringRef ArrayName, Module &M, Function *F,
                            GlobalValue::AppendingLinkage, NewInit, ArrayName);
 }
 
-void llvm::appendToGlobalCtors(Module &M, Function *F, int Priority, Constant *Data) {
+void llvm::appendToGlobalCtors(Module &M, Function *F, int Priority,
+                               Constant *Data) {
   appendToGlobalArray("llvm.global_ctors", M, F, Priority, Data);
 }
 
-void llvm::appendToGlobalDtors(Module &M, Function *F, int Priority, Constant *Data) {
+void llvm::appendToGlobalDtors(Module &M, Function *F, int Priority,
+                               Constant *Data) {
   appendToGlobalArray("llvm.global_dtors", M, F, Priority, Data);
 }
 
@@ -106,8 +109,9 @@ static void transformGlobalArray(StringRef ArrayName, Module &M,
   GVCtor->eraseFromParent();
 
   // Create a new initializer.
+  const auto &DL = M.getDataLayout();
   ArrayType *AT = ArrayType::get(EltTy, CurrentCtors.size());
-  Constant *NewInit = ConstantArray::get(AT, CurrentCtors);
+  Constant *NewInit = ConstantArray::get(AT, CurrentCtors, &DL);
 
   // Create the new global variable and replace all uses of
   // the old global variable with the new one.
@@ -133,7 +137,9 @@ static void collectUsedGlobals(GlobalVariable *GV,
     Init.insert(cast<Constant>(Op));
 }
 
-static void appendToUsedList(Module &M, StringRef Name, ArrayRef<GlobalValue *> Values) {
+static void appendToUsedList(Module &M, StringRef Name,
+                             ArrayRef<GlobalValue *> Values) {
+  const auto &DL = M.getDataLayout();
   GlobalVariable *GV = M.getGlobalVariable(Name);
 
   SmallSetVector<Constant *, 16> Init;
@@ -149,9 +155,9 @@ static void appendToUsedList(Module &M, StringRef Name, ArrayRef<GlobalValue *> 
     return;
 
   ArrayType *ATy = ArrayType::get(ArrayEltTy, Init.size());
-  GV = new llvm::GlobalVariable(M, ATy, false, GlobalValue::AppendingLinkage,
-                                ConstantArray::get(ATy, Init.getArrayRef()),
-                                Name);
+  GV = new llvm::GlobalVariable(
+      M, ATy, false, GlobalValue::AppendingLinkage,
+      ConstantArray::get(ATy, Init.getArrayRef(), &DL), Name);
   GV->setSection("llvm.metadata");
 }
 
@@ -165,6 +171,7 @@ void llvm::appendToCompilerUsed(Module &M, ArrayRef<GlobalValue *> Values) {
 
 static void removeFromUsedList(Module &M, StringRef Name,
                                function_ref<bool(Constant *)> ShouldRemove) {
+  const auto &DL = M.getDataLayout();
   GlobalVariable *GV = M.getNamedGlobal(Name);
   if (!GV)
     return;
@@ -184,7 +191,7 @@ static void removeFromUsedList(Module &M, StringRef Name,
     ArrayType *ATy = ArrayType::get(ArrayEltTy, NewInit.size());
     GlobalVariable *NewGV =
         new GlobalVariable(M, ATy, false, GlobalValue::AppendingLinkage,
-                           ConstantArray::get(ATy, NewInit), "", GV,
+                           ConstantArray::get(ATy, NewInit, &DL), "", GV,
                            GV->getThreadLocalMode(), GV->getAddressSpace());
     NewGV->setSection(GV->getSection());
     NewGV->takeName(GV);

@@ -39,7 +39,7 @@ public:
 
   bool runOnModule(Module &M) override;
 };
-}
+} // namespace
 
 static bool addEmuTlsVar(Module &M, const GlobalVariable *GV);
 
@@ -94,7 +94,7 @@ bool LowerEmuTLS::runOnModule(Module &M) {
     return false;
 
   bool Changed = false;
-  SmallVector<const GlobalVariable*, 8> TlsVars;
+  SmallVector<const GlobalVariable *, 8> TlsVars;
   for (const auto &G : M.globals()) {
     if (G.isThreadLocal())
       TlsVars.append({&G});
@@ -111,7 +111,7 @@ bool addEmuTlsVar(Module &M, const GlobalVariable *GV) {
   std::string EmuTlsVarName = ("__emutls_v." + GV->getName()).str();
   GlobalVariable *EmuTlsVar = M.getNamedGlobal(EmuTlsVarName);
   if (EmuTlsVar)
-    return false;  // It has been added before.
+    return false; // It has been added before.
 
   const DataLayout &DL = M.getDataLayout();
   Constant *NullPtr = ConstantPointerNull::get(VoidPtrType);
@@ -155,7 +155,7 @@ bool addEmuTlsVar(Module &M, const GlobalVariable *GV) {
     EmuTlsTmplVar = M.getOrInsertGlobal(EmuTlsTmplName, GVType);
     assert(EmuTlsTmplVar && "Failed to create emualted TLS initializer");
     EmuTlsTmplVar->setConstant(true);
-    EmuTlsTmplVar->setInitializer(const_cast<Constant*>(InitValue));
+    EmuTlsTmplVar->setInitializer(const_cast<Constant *>(InitValue));
     EmuTlsTmplVar->setAlignment(GVAlignment);
     copyLinkageVisibility(M, GV, EmuTlsTmplVar);
   }
@@ -165,7 +165,8 @@ bool addEmuTlsVar(Module &M, const GlobalVariable *GV) {
       ConstantInt::get(WordType, DL.getTypeStoreSize(GVType)),
       ConstantInt::get(WordType, GVAlignment.value()), NullPtr,
       EmuTlsTmplVar ? EmuTlsTmplVar : NullPtr};
-  EmuTlsVar->setInitializer(ConstantStruct::get(EmuTlsVarType, ElementValues));
+  EmuTlsVar->setInitializer(
+      ConstantStruct::get(EmuTlsVarType, ElementValues, &DL));
   Align MaxAlignment =
       std::max(DL.getABITypeAlign(WordType), DL.getABITypeAlign(VoidPtrType));
   EmuTlsVar->setAlignment(MaxAlignment);

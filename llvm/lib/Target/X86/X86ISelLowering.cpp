@@ -7946,7 +7946,8 @@ static SDValue combineToConsecutiveLoads(EVT VT, SDValue Op, const SDLoc &DL,
 }
 
 static Constant *getConstantVector(MVT VT, ArrayRef<APInt> Bits,
-                                   const APInt &Undefs, LLVMContext &C) {
+                                   const APInt &Undefs, LLVMContext &C,
+                                   const DataLayout *DL) {
   unsigned ScalarSize = VT.getScalarSizeInBits();
   Type *Ty = EVT(VT.getScalarType()).getTypeForEVT(C);
 
@@ -7967,11 +7968,12 @@ static Constant *getConstantVector(MVT VT, ArrayRef<APInt> Bits,
     ConstantVec.push_back(Undefs[I] ? UndefValue::get(Ty)
                                     : getConstantScalar(Bits[I]));
 
-  return ConstantVector::get(ArrayRef<Constant *>(ConstantVec));
+  return ConstantVector::get(ArrayRef<Constant *>(ConstantVec), DL);
 }
 
 static Constant *getConstantVector(MVT VT, const APInt &SplatValue,
-                                   unsigned SplatBitSize, LLVMContext &C) {
+                                   unsigned SplatBitSize, LLVMContext &C,
+                                   const DataLayout *DL) {
   unsigned ScalarSize = VT.getScalarSizeInBits();
 
   auto getConstantScalar = [&](const APInt &Val) -> Constant * {
@@ -7995,7 +7997,7 @@ static Constant *getConstantVector(MVT VT, const APInt &SplatValue,
     APInt Val = SplatValue.extractBits(ScalarSize, ScalarSize * I);
     ConstantVec.push_back(getConstantScalar(Val));
   }
-  return ConstantVector::get(ArrayRef<Constant *>(ConstantVec));
+  return ConstantVector::get(ArrayRef<Constant *>(ConstantVec), DL);
 }
 
 static bool isFoldableUseOfShuffle(SDNode *N) {
@@ -8125,7 +8127,8 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
           (SplatBitSize < 32 && Subtarget.hasAVX2())) {
         // Load the constant scalar/subvector and broadcast it.
         MVT CVT = MVT::getIntegerVT(SplatBitSize);
-        Constant *C = getConstantVector(VT, SplatValue, SplatBitSize, *Ctx);
+        Constant *C = getConstantVector(VT, SplatValue, SplatBitSize, *Ctx,
+                                        &DAG.getDataLayout());
         SDValue CP = DAG.getConstantPool(C, PVT);
         unsigned Repeat = VT.getSizeInBits() / SplatBitSize;
 
@@ -8141,7 +8144,8 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
       }
       if (SplatBitSize > 64) {
         // Load the vector of constants and broadcast it.
-        Constant *VecC = getConstantVector(VT, SplatValue, SplatBitSize, *Ctx);
+        Constant *VecC = getConstantVector(VT, SplatValue, SplatBitSize, *Ctx,
+                                           &DAG.getDataLayout());
         SDValue VCP = DAG.getConstantPool(VecC, PVT);
         unsigned NumElm = SplatBitSize / VT.getScalarSizeInBits();
         MVT VVT = MVT::getVectorVT(VT.getScalarType(), NumElm);
@@ -9813,7 +9817,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
         InsIndex = DAG.getVectorIdxConstant(i, dl);
       }
     }
-    Constant *CV = ConstantVector::get(ConstVecOps);
+    Constant *CV = ConstantVector::get(ConstVecOps, &DAG.getDataLayout());
     SDValue DAGConstVec = DAG.getConstantPool(CV, VT);
 
     // The constants we just created may not be legal (eg, floating point). We
@@ -20861,7 +20865,7 @@ static SDValue LowerUINT_TO_FP_i64(SDValue Op, const SDLoc &dl,
   CV1.push_back(
     ConstantFP::get(*Context, APFloat(APFloat::IEEEdouble(),
                                       APInt(64, 0x4530000000000000ULL))));
-  Constant *C1 = ConstantVector::get(CV1);
+  Constant *C1 = ConstantVector::get(CV1, &DAG.getDataLayout());
   SDValue CPIdx1 = DAG.getConstantPool(C1, PtrVT, Align(16));
 
   // Load the 64-bit value into an XMM register.
@@ -29278,7 +29282,8 @@ SDValue X86TargetLowering::LowerRESET_FPENV(SDValue Op,
   // MXCSR: mask all floating-point exceptions, sets rounding to nearest, clear
   // all exceptions, sets DAZ and FTZ to 0.
   FPEnvVals.push_back(ConstantInt::get(ItemTy, 0x1F80));
-  Constant *FPEnvBits = ConstantArray::get(FPEnvTy, FPEnvVals);
+  Constant *FPEnvBits =
+      ConstantArray::get(FPEnvTy, FPEnvVals, &DAG.getDataLayout());
   MVT PtrVT = DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
   SDValue Env = DAG.getConstantPool(FPEnvBits, PtrVT);
   MachinePointerInfo MPI =
@@ -43254,7 +43259,8 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
 
         // Load the vector constant from constant pool.
         MVT PVT = TLI.getPointerTy(DAG.getDataLayout());
-        SDValue CP = DAG.getConstantPool(ConstantVector::get(ConstantVec), PVT);
+        SDValue CP = DAG.getConstantPool(
+            ConstantVector::get(ConstantVec, &DAG.getDataLayout()), PVT);
         MachinePointerInfo MPI =
             MachinePointerInfo::getConstantPool(DAG.getMachineFunction());
         Align Alignment = cast<ConstantPoolSDNode>(CP)->getAlign();
@@ -44214,7 +44220,8 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetShuffle(
 
   // Generate new constant pool entry + legalize immediately for the load.
   SDLoc DL(Op);
-  SDValue CV = TLO.DAG.getConstantPool(ConstantVector::get(ConstVecOps), BCVT);
+  SDValue CV = TLO.DAG.getConstantPool(
+      ConstantVector::get(ConstVecOps, &TLO.DAG.getDataLayout()), BCVT);
   SDValue LegalCV = LowerConstantPool(CV, TLO.DAG);
   SDValue NewMask = TLO.DAG.getLoad(
       BCVT, DL, TLO.DAG.getEntryNode(), LegalCV,
@@ -60757,7 +60764,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       UndefElts.insertBits(OpUndefElts, I * OpUndefElts.getBitWidth());
     }
     if (EltBits.size() == VT.getVectorNumElements()) {
-      Constant *C = getConstantVector(VT, EltBits, UndefElts, Ctx);
+      Constant *C =
+          getConstantVector(VT, EltBits, UndefElts, Ctx, &DAG.getDataLayout());
       MVT PVT = TLI.getPointerTy(DAG.getDataLayout());
       SDValue CV = DAG.getConstantPool(C, PVT);
       MachineFunction &MF = DAG.getMachineFunction();

@@ -80,8 +80,8 @@ private:
                                       Type *Ty, Value *BasePtr, int Idx1,
                                       const char *Name);
   static GetElementPtrInst *CreateGEP(LLVMContext &Context, IRBuilder<> &B,
-                                      Type *Ty, Value *BasePtr, int Idx1, int Idx2,
-                                      const char *Name);
+                                      Type *Ty, Value *BasePtr, int Idx1,
+                                      int Idx2, const char *Name);
 };
 
 class ShadowStackGCLowering : public FunctionPass {
@@ -139,11 +139,14 @@ INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_END(ShadowStackGCLowering, DEBUG_TYPE,
                     "Shadow Stack GC Lowering", false, false)
 
-FunctionPass *llvm::createShadowStackGCLoweringPass() { return new ShadowStackGCLowering(); }
+FunctionPass *llvm::createShadowStackGCLoweringPass() {
+  return new ShadowStackGCLowering();
+}
 
 ShadowStackGCLowering::ShadowStackGCLowering() : FunctionPass(ID) {}
 
 Constant *ShadowStackGCLoweringImpl::GetFrameMap(Function &F) {
+  const auto &DL = F.getDataLayout();
   // doInitialization creates the abstract type of this value.
   Type *VoidPtr = PointerType::getUnqual(F.getContext());
 
@@ -166,13 +169,13 @@ Constant *ShadowStackGCLoweringImpl::GetFrameMap(Function &F) {
   };
 
   Constant *DescriptorElts[] = {
-      ConstantStruct::get(FrameMapTy, BaseElts),
-      ConstantArray::get(ArrayType::get(VoidPtr, NumMeta), Metadata)};
+      ConstantStruct::get(FrameMapTy, BaseElts, &DL),
+      ConstantArray::get(ArrayType::get(VoidPtr, NumMeta), Metadata, &DL)};
 
   Type *EltTys[] = {DescriptorElts[0]->getType(), DescriptorElts[1]->getType()};
   StructType *STy = StructType::create(EltTys, "gc_map." + utostr(NumMeta));
 
-  Constant *FrameMap = ConstantStruct::get(STy, DescriptorElts);
+  Constant *FrameMap = ConstantStruct::get(STy, DescriptorElts, &DL);
 
   // FIXME: Is this actually dangerous as WritingAnLLVMPass.html claims? Seems
   //        that, short of multithreaded LLVM, it should be safe; all that is
@@ -188,8 +191,8 @@ Constant *ShadowStackGCLoweringImpl::GetFrameMap(Function &F) {
   //        (which uses a FunctionPassManager (which segfaults (not asserts) if
   //        provided a ModulePass))).
   return new GlobalVariable(*F.getParent(), FrameMap->getType(), true,
-                                    GlobalVariable::InternalLinkage, FrameMap,
-                                    "__gc_" + F.getName());
+                            GlobalVariable::InternalLinkage, FrameMap,
+                            "__gc_" + F.getName());
 }
 
 Type *ShadowStackGCLoweringImpl::GetConcreteStackEntryType(Function &F) {

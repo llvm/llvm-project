@@ -2507,9 +2507,12 @@ void ModuleAddressSanitizer::InstrumentGlobalsMachO(
 
     // On recent Mach-O platforms, we emit the global metadata in a way that
     // allows the linker to properly strip dead globals.
+    const auto &DL = M.getDataLayout();
     auto LivenessBinder =
-        ConstantStruct::get(LivenessTy, Initializer->getAggregateElement(0u),
-                            ConstantExpr::getPointerCast(Metadata, IntptrTy));
+        ConstantStruct::get(LivenessTy,
+                            {Initializer->getAggregateElement(0u),
+                             ConstantExpr::getPointerCast(Metadata, IntptrTy)},
+                            &DL);
     GlobalVariable *Liveness = new GlobalVariable(
         M, LivenessTy, false, GlobalVariable::InternalLinkage, LivenessBinder,
         Twine("__asan_binder_") + G->getName());

@@ -4203,7 +4203,8 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
                                       " is not of type '" +
                                       getTypeString(Elts[0]->getType()));
 
-    ID.ConstantVal = ConstantVector::get(Elts);
+    const auto &DL = M->getDataLayout();
+    ID.ConstantVal = ConstantVector::get(Elts, &DL);
     ID.Kind = ValID::t_Constant;
     return false;
   }
@@ -6816,8 +6817,9 @@ bool LLParser::convertValIDToValue(Type *Ty, ValID &ID, Value *&V,
               "element " + Twine(i) +
                   " of struct initializer doesn't match struct element type");
 
+      const auto &DL = M->getDataLayout();
       V = ConstantStruct::get(
-          ST, ArrayRef(ID.ConstantStructElts.get(), ID.UIntVal));
+          ST, ArrayRef(ID.ConstantStructElts.get(), ID.UIntVal), &DL);
     } else
       return error(ID.Loc, "constant expression type mismatch");
     return false;

@@ -408,7 +408,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     SmallVector<Constant *, 16> Consts;
     for (int Idx = 0; Idx < 16; Idx++)
       Consts.push_back(Builder.getInt8(NumBytes + Idx));
-    Value *Mask2 = ConstantVector::get(Consts);
+    Value *Mask2 = ConstantVector::get(Consts, &CGM.getDataLayout());
     return Builder.CreateBitCast(
         Builder.CreateCall(Vperm, {Zero, AllElts, Mask2}, "shuffle2"), ResTy);
   }

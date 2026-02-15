@@ -623,8 +623,7 @@ static void replaceSwiftErrorOps(Function &F, coro::Shape &Shape,
 }
 
 /// Returns all debug records in F.
-static SmallVector<DbgVariableRecord *>
-collectDbgVariableRecords(Function &F) {
+static SmallVector<DbgVariableRecord *> collectDbgVariableRecords(Function &F) {
   SmallVector<DbgVariableRecord *> DbgVariableRecords;
   for (auto &I : instructions(F)) {
     for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
@@ -1112,8 +1111,10 @@ static void updateAsyncFuncPointerContextSize(coro::Shape &Shape) {
   auto *OrigContextSize = FuncPtrStruct->getOperand(1);
   auto *NewContextSize = ConstantInt::get(OrigContextSize->getType(),
                                           Shape.AsyncLowering.ContextSize);
+  const auto &DL =
+      Shape.AsyncLowering.AsyncFuncPointer->getParent()->getDataLayout();
   auto *NewFuncPtrStruct = ConstantStruct::get(
-      FuncPtrStruct->getType(), OrigRelativeFunOffset, NewContextSize);
+      FuncPtrStruct->getType(), {OrigRelativeFunOffset, NewContextSize}, &DL);
 
   Shape.AsyncLowering.AsyncFuncPointer->setInitializer(NewFuncPtrStruct);
 }
@@ -1651,9 +1652,10 @@ private:
     assert(!Args.empty());
     Function *Part = *Fns.begin();
     Module *M = Part->getParent();
+    const auto &DL = M->getDataLayout();
     auto *ArrTy = ArrayType::get(Part->getType(), Args.size());
 
-    auto *ConstVal = ConstantArray::get(ArrTy, Args);
+    auto *ConstVal = ConstantArray::get(ArrTy, Args, &DL);
     auto *GV = new GlobalVariable(*M, ConstVal->getType(), /*isConstant=*/true,
                                   GlobalVariable::PrivateLinkage, ConstVal,
                                   F.getName() + Twine(".resumers"));

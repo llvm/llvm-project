@@ -1797,9 +1797,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   Constant *constToIntPtr(Type *IntPtrTy, uint64_t C) const {
     if (VectorType *VectTy = dyn_cast<VectorType>(IntPtrTy)) {
+      const auto &DL = F.getDataLayout();
       return ConstantVector::getSplat(
-          VectTy->getElementCount(),
-          constToIntPtr(VectTy->getElementType(), C));
+          VectTy->getElementCount(), constToIntPtr(VectTy->getElementType(), C),
+          &DL);
     }
     assert(IntPtrTy == MS.IntptrTy);
     // TODO: Avoid implicit trunc?
@@ -2017,16 +2018,17 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     assert(ShadowTy);
     if (isa<IntegerType>(ShadowTy) || isa<VectorType>(ShadowTy))
       return Constant::getAllOnesValue(ShadowTy);
+    const auto &DL = F.getDataLayout();
     if (ArrayType *AT = dyn_cast<ArrayType>(ShadowTy)) {
       SmallVector<Constant *, 4> Vals(AT->getNumElements(),
                                       getPoisonedShadow(AT->getElementType()));
-      return ConstantArray::get(AT, Vals);
+      return ConstantArray::get(AT, Vals, &DL);
     }
     if (StructType *ST = dyn_cast<StructType>(ShadowTy)) {
       SmallVector<Constant *, 4> Vals;
       for (unsigned i = 0, n = ST->getNumElements(); i < n; i++)
         Vals.push_back(getPoisonedShadow(ST->getElementType(i)));
-      return ConstantStruct::get(ST, Vals);
+      return ConstantStruct::get(ST, Vals, &DL);
     }
     llvm_unreachable("Unexpected shadow type");
   }
@@ -2168,7 +2170,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                                 : getCleanShadow(Elem);
       }
 
-      Value *ShadowConstant = ConstantVector::get(ShadowVector);
+      const auto &DL = F.getDataLayout();
+      Value *ShadowConstant = ConstantVector::get(ShadowVector, &DL);
       LLVM_DEBUG(dbgs() << "Partial undef constant vector: " << *V << " ==> "
                         << *ShadowConstant << "\n");
 
@@ -3033,7 +3036,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
           Elements.push_back(ConstantInt::get(EltTy, 1));
         }
       }
-      ShadowMul = ConstantVector::get(Elements);
+      const auto &DL = I.getModule()->getDataLayout();
+      ShadowMul = ConstantVector::get(Elements, &DL);
     } else {
       if (ConstantInt *Elt = dyn_cast<ConstantInt>(ConstArg)) {
         const APInt &V = Elt->getValue();
@@ -3910,7 +3914,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       M = ConstantInt::getBool(F.getContext(), Mask & 1);
       Mask >>= 1;
     }
-    return ConstantVector::get(R);
+    const auto &DL = F.getDataLayout();
+    return ConstantVector::get(R, &DL);
   }
 
   // Calculate output shadow as array of booleans `<n x i1>`, assuming if any
@@ -5657,9 +5662,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // ummla multiplies a 2x8 matrix with an 8x2 matrix. If all entries of the
     // input matrices are equal to 0x1, all entries of the output matrix will
     // be 0x8.
+    const auto &DL = F.getDataLayout();
     Value *FullyInit = ConstantVector::getSplat(
         ExpectedRTy->getElementCount(),
-        ConstantInt::get(ExpectedRTy->getElementType(), 0x8));
+        ConstantInt::get(ExpectedRTy->getElementType(), 0x8), &DL);
 
     ShadowAB = IRB.CreateSExt(IRB.CreateICmpNE(ShadowAB, FullyInit),
                               ShadowAB->getType());

@@ -75,7 +75,7 @@ public:
 
 private:
   Type *legalizeType(Type *Ty);
-  Constant *legalizeConstant(Constant *C);
+  Constant *legalizeConstant(Constant *C, const DataLayout *DL);
 
   const SPIRVTargetMachine &TM;
   DenseMap<Type *, Type *> TypeMap;

@@ -5924,9 +5924,10 @@ void llvm::embedBitcodeInModule(llvm::Module &M, llvm::MemoryBufferRef Buf,
     return;
 
   // Recreate llvm.compiler.used.
+  const auto &DL = M.getDataLayout();
   ArrayType *ATy = ArrayType::get(UsedElementType, UsedArray.size());
   auto *NewUsed = new GlobalVariable(
       M, ATy, false, llvm::GlobalValue::AppendingLinkage,
-      llvm::ConstantArray::get(ATy, UsedArray), "llvm.compiler.used");
+      llvm::ConstantArray::get(ATy, UsedArray, &DL), "llvm.compiler.used");
   NewUsed->setSection("llvm.metadata");
 }

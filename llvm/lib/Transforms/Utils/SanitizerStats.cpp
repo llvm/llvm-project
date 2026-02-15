@@ -46,13 +46,15 @@ void SanitizerStatReport::create(IRBuilder<> &B, SanitizerStatKind SK) {
   IntegerType *IntPtrTy = B.getIntPtrTy(M->getDataLayout());
   ArrayType *StatTy = ArrayType::get(PtrTy, 2);
 
+  const auto &DL = M->getDataLayout();
   Inits.push_back(ConstantArray::get(
       StatTy,
       {Constant::getNullValue(PtrTy),
        ConstantExpr::getIntToPtr(
            ConstantInt::get(IntPtrTy, uint64_t(SK) << (IntPtrTy->getBitWidth() -
                                                        kSanitizerStatKindBits)),
-           PtrTy)}));
+           PtrTy)},
+      &DL));
 
   FunctionType *StatReportTy = FunctionType::get(B.getVoidTy(), PtrTy, false);
   FunctionCallee StatReport =
@@ -73,6 +75,7 @@ void SanitizerStatReport::finish() {
     return;
   }
 
+  const auto &DL = M->getDataLayout();
   PointerType *Int8PtrTy = PointerType::getUnqual(M->getContext());
   IntegerType *Int32Ty = Type::getInt32Ty(M->getContext());
   Type *VoidTy = Type::getVoidTy(M->getContext());
@@ -84,7 +87,8 @@ void SanitizerStatReport::finish() {
       ConstantStruct::getAnon(
           {Constant::getNullValue(Int8PtrTy),
            ConstantInt::get(Int32Ty, Inits.size()),
-           ConstantArray::get(makeModuleStatsArrayTy(), Inits)}));
+           ConstantArray::get(makeModuleStatsArrayTy(), Inits, &DL)},
+          /*Packed=*/false, &DL));
   ModuleStatsGV->replaceAllUsesWith(NewModuleStatsGV);
   ModuleStatsGV->eraseFromParent();
 

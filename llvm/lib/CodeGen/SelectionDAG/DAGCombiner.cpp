@@ -29850,7 +29850,7 @@ SDValue DAGCombiner::convertSelectOfFPConstantsToLoadOffset(
   const DataLayout &TD = DAG.getDataLayout();
 
   // Create a ConstantArray of the two constants.
-  Constant *CA = ConstantArray::get(ArrayType::get(FPTy, 2), Elts);
+  Constant *CA = ConstantArray::get(ArrayType::get(FPTy, 2), Elts, &TD);
   SDValue CPIdx = DAG.getConstantPool(CA, TLI.getPointerTy(DAG.getDataLayout()),
                                       TD.getPrefTypeAlign(FPTy));
   Align Alignment = cast<ConstantPoolSDNode>(CPIdx)->getAlign();

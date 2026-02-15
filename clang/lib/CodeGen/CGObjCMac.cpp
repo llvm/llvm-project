@@ -3233,7 +3233,8 @@ llvm::Constant *CGObjCCommonMac::EmitProtocolMethodTypes(
 
   llvm::ArrayType *AT =
       llvm::ArrayType::get(ObjCTypes.Int8PtrTy, MethodTypes.size());
-  llvm::Constant *Init = llvm::ConstantArray::get(AT, MethodTypes);
+  llvm::Constant *Init =
+      llvm::ConstantArray::get(AT, MethodTypes, &CGM.getDataLayout());
 
   StringRef Section;
   if (CGM.getTriple().isOSBinFormatMachO() && ObjCABI == 2)
@@ -6120,7 +6121,8 @@ void CGObjCNonFragileABIMac::AddModuleClassList(
     Symbols[i] = Container[i];
 
   llvm::Constant *Init = llvm::ConstantArray::get(
-      llvm::ArrayType::get(ObjCTypes.Int8PtrTy, Symbols.size()), Symbols);
+      llvm::ArrayType::get(ObjCTypes.Int8PtrTy, Symbols.size()), Symbols,
+      &CGM.getDataLayout());
 
   // Section name is obtained by calling GetSectionName, which returns
   // sections in the __DATA segment on MachO.

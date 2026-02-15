@@ -1041,10 +1041,11 @@ void GCOVProfiler::emitModuleInitFunctionPtrs(
 #include "llvm/ProfileData/InstrProfData.inc"
   };
 
+  const auto &DL = M->getDataLayout();
   auto *CovInitGV =
       new GlobalVariable(*M, STy, false, GlobalValue::PrivateLinkage, nullptr,
                          "__llvm_covinit_functions");
-  CovInitGV->setInitializer(ConstantStruct::get(STy, InitFuncPtrs));
+  CovInitGV->setInitializer(ConstantStruct::get(STy, InitFuncPtrs, &DL));
   CovInitGV->setVisibility(GlobalValue::VisibilityTypes::DefaultVisibility);
   CovInitGV->setSection(getInstrProfSectionName(
       IPSK_covinit, M->getTargetTriple().getObjectFormat()));
@@ -1122,6 +1123,7 @@ Function *GCOVProfiler::insertCounterWriteout(
 
   // Collect the relevant data into a large constant data structure that we can
   // walk to write out everything.
+  const auto &DL = M->getDataLayout();
   StructType *StartFileCallArgsTy = StructType::create(
       {Builder.getPtrTy(), Builder.getInt32Ty(), Builder.getInt32Ty()},
       "start_file_args_ty");
@@ -1148,7 +1150,8 @@ Function *GCOVProfiler::insertCounterWriteout(
         StartFileCallArgsTy,
         {Builder.CreateGlobalString(FilenameGcda),
          Builder.getInt32(endian::read32be(Options.Version)),
-         Builder.getInt32(CfgChecksum)});
+         Builder.getInt32(CfgChecksum)},
+        &DL);
 
     SmallVector<Constant *, 8> EmitFunctionCallArgsArray;
     SmallVector<Constant *, 8> EmitArcsCallArgsArray;
@@ -1156,14 +1159,14 @@ Function *GCOVProfiler::insertCounterWriteout(
       uint32_t FuncChecksum = Funcs.empty() ? 0 : Funcs[j]->getFuncChecksum();
       EmitFunctionCallArgsArray.push_back(ConstantStruct::get(
           EmitFunctionCallArgsTy,
-          {Builder.getInt32(j),
-           Builder.getInt32(FuncChecksum),
-           Builder.getInt32(CfgChecksum)}));
+          {Builder.getInt32(j), Builder.getInt32(FuncChecksum),
+           Builder.getInt32(CfgChecksum)},
+          &DL));
 
       GlobalVariable *GV = CountersBySP[j].first;
       unsigned Arcs = cast<ArrayType>(GV->getValueType())->getNumElements();
       EmitArcsCallArgsArray.push_back(ConstantStruct::get(
-          EmitArcsCallArgsTy, {Builder.getInt32(Arcs), GV}));
+          EmitArcsCallArgsTy, {Builder.getInt32(Arcs), GV}, &DL));
     }
     // Create global arrays for the two emit calls.
     int CountersSize = CountersBySP.size();
@@ -1177,7 +1180,7 @@ Function *GCOVProfiler::insertCounterWriteout(
         *M, EmitFunctionCallArgsArrayTy, /*isConstant*/ true,
         GlobalValue::InternalLinkage,
         ConstantArray::get(EmitFunctionCallArgsArrayTy,
-                           EmitFunctionCallArgsArray),
+                           EmitFunctionCallArgsArray, &DL),
         Twine("__llvm_internal_gcov_emit_function_args.") + Twine(i));
     auto *EmitArcsCallArgsArrayTy =
         ArrayType::get(EmitArcsCallArgsTy, CountersSize);
@@ -1186,13 +1189,15 @@ Function *GCOVProfiler::insertCounterWriteout(
     auto *EmitArcsCallArgsArrayGV = new GlobalVariable(
         *M, EmitArcsCallArgsArrayTy, /*isConstant*/ true,
         GlobalValue::InternalLinkage,
-        ConstantArray::get(EmitArcsCallArgsArrayTy, EmitArcsCallArgsArray),
+        ConstantArray::get(EmitArcsCallArgsArrayTy, EmitArcsCallArgsArray, &DL),
         Twine("__llvm_internal_gcov_emit_arcs_args.") + Twine(i));
     EmitArcsCallArgsArrayGV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
 
     FileInfos.push_back(ConstantStruct::get(
-        FileInfoTy, {StartFileCallArgs, Builder.getInt32(CountersSize),
-                     EmitFunctionCallArgsArrayGV, EmitArcsCallArgsArrayGV}));
+        FileInfoTy,
+        {StartFileCallArgs, Builder.getInt32(CountersSize),
+         EmitFunctionCallArgsArrayGV, EmitArcsCallArgsArrayGV},
+        &DL));
   }
 
   // If we didn't find anything to actually emit, bail on out.
@@ -1214,7 +1219,7 @@ Function *GCOVProfiler::insertCounterWriteout(
   auto *FileInfoArrayTy = ArrayType::get(FileInfoTy, FileInfos.size());
   auto *FileInfoArrayGV = new GlobalVariable(
       *M, FileInfoArrayTy, /*isConstant*/ true, GlobalValue::InternalLinkage,
-      ConstantArray::get(FileInfoArrayTy, FileInfos),
+      ConstantArray::get(FileInfoArrayTy, FileInfos, &DL),
       "__llvm_internal_gcov_emit_file_info");
   FileInfoArrayGV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
 

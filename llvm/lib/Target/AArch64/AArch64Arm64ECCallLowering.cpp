@@ -922,16 +922,18 @@ bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
   }
 
   if (!ThunkMapping.empty()) {
+    const DataLayout &DL = Mod.getDataLayout();
     SmallVector<Constant *> ThunkMappingArrayElems;
     for (ThunkInfo &Thunk : ThunkMapping) {
       ThunkMappingArrayElems.push_back(ConstantStruct::getAnon(
           {Thunk.Src, Thunk.Dst,
-           ConstantInt::get(M->getContext(), APInt(32, uint8_t(Thunk.Kind)))}));
+           ConstantInt::get(M->getContext(), APInt(32, uint8_t(Thunk.Kind)))},
+          /*Packed=*/false, &DL));
     }
     Constant *ThunkMappingArray = ConstantArray::get(
         llvm::ArrayType::get(ThunkMappingArrayElems[0]->getType(),
                              ThunkMappingArrayElems.size()),
-        ThunkMappingArrayElems);
+        ThunkMappingArrayElems, &DL);
     new GlobalVariable(Mod, ThunkMappingArray->getType(), /*isConstant*/ false,
                        GlobalValue::ExternalLinkage, ThunkMappingArray,
                        "llvm.arm64ec.symbolmap");

@@ -449,9 +449,10 @@ void AMDGPUSwLowerLDS::populateSwMetadataGlobal(Function *Func) {
               ConstantInt::get(Int32Ty, AlignedSize);
           // Align MallocSize
           MallocSize = alignTo(MallocSize, MaxAlignment);
-          Constant *InitItem =
-              ConstantStruct::get(LDSItemTy, {ItemStartOffset, SizeInBytesConst,
-                                              AlignedSizeInBytesConst});
+          Constant *InitItem = ConstantStruct::get(
+              LDSItemTy,
+              {ItemStartOffset, SizeInBytesConst, AlignedSizeInBytesConst},
+              &DL);
           Initializers.push_back(InitItem);
         }
       };
@@ -480,7 +481,7 @@ void AMDGPUSwLowerLDS::populateSwMetadataGlobal(Function *Func) {
       M, MetadataStructType, false, GlobalValue::InternalLinkage,
       PoisonValue::get(MetadataStructType), MDOS.str(), nullptr,
       GlobalValue::NotThreadLocal, AMDGPUAS::GLOBAL_ADDRESS, false);
-  Constant *data = ConstantStruct::get(MetadataStructType, Initializers);
+  Constant *data = ConstantStruct::get(MetadataStructType, Initializers, &DL);
   LDSParams.SwLDSMetadata->setInitializer(data);
   assert(LDSParams.SwLDS);
   // Set the alignment to MaxAlignment for SwLDS.
@@ -979,7 +980,8 @@ Constant *AMDGPUSwLowerLDS::getAddressesOfVariablesInKernel(
                                                    SwLDSMetadata, GEPIdx, true);
     Elements.push_back(GEP);
   }
-  return ConstantArray::get(KernelOffsetsType, Elements);
+  const DataLayout &DL = M.getDataLayout();
+  return ConstantArray::get(KernelOffsetsType, Elements, &DL);
 }
 
 void AMDGPUSwLowerLDS::buildNonKernelLDSBaseTable(
@@ -999,8 +1001,9 @@ void AMDGPUSwLowerLDS::buildNonKernelLDSBaseTable(
     auto &LDSParams = FuncLDSAccessInfo.KernelToLDSParametersMap[Func];
     OverallConstantExprElts[i] = LDSParams.SwLDS;
   }
+  const DataLayout &DL = M.getDataLayout();
   Constant *init =
-      ConstantArray::get(AllKernelsOffsetsType, OverallConstantExprElts);
+      ConstantArray::get(AllKernelsOffsetsType, OverallConstantExprElts, &DL);
   NKLDSParams.LDSBaseTable = new GlobalVariable(
       M, AllKernelsOffsetsType, true, GlobalValue::InternalLinkage, init,
       "llvm.amdgcn.sw.lds.base.table", nullptr, GlobalValue::NotThreadLocal,
@@ -1037,8 +1040,9 @@ void AMDGPUSwLowerLDS::buildNonKernelLDSOffsetTable(
     overallConstantExprElts[i] =
         getAddressesOfVariablesInKernel(Func, Variables);
   }
+  const DataLayout &DL = M.getDataLayout();
   Constant *Init =
-      ConstantArray::get(AllKernelsOffsetsType, overallConstantExprElts);
+      ConstantArray::get(AllKernelsOffsetsType, overallConstantExprElts, &DL);
   NKLDSParams.LDSOffsetTable = new GlobalVariable(
       M, AllKernelsOffsetsType, true, GlobalValue::InternalLinkage, Init,
       "llvm.amdgcn.sw.lds.offset.table", nullptr, GlobalValue::NotThreadLocal,

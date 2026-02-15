@@ -54,7 +54,7 @@ private:
   bool tryEraseCallInvoke(Instruction *I);
   void eraseFromWorklist(Instruction *I);
 };
-}
+} // namespace
 
 static void lowerSubFn(IRBuilder<> &Builder, CoroSubFnInst *SubFn) {
   Builder.SetInsertPoint(SubFn);
@@ -149,8 +149,9 @@ bool Lowerer::lower(Function &F) {
           break;
         }
         auto *TargetRelativeFunOffset = Target->getOperand(0);
+        const auto &DL = II->getModule()->getDataLayout();
         auto *NewFuncPtrStruct = ConstantStruct::get(
-            Target->getType(), TargetRelativeFunOffset, SourceSize);
+            Target->getType(), {TargetRelativeFunOffset, SourceSize}, &DL);
         Target->replaceAllUsesWith(NewFuncPtrStruct);
         break;
       }
@@ -188,7 +189,8 @@ void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
 
     // Create a constant struct for the frame.
     Constant *Values[] = {NoopFn, NoopFn};
-    Constant *NoopCoroConst = ConstantStruct::get(FrameTy, Values);
+    const auto &DL = M.getDataLayout();
+    Constant *NoopCoroConst = ConstantStruct::get(FrameTy, Values, &DL);
     NoopCoro = new GlobalVariable(
         M, NoopCoroConst->getType(), /*isConstant=*/true,
         GlobalVariable::PrivateLinkage, NoopCoroConst, "NoopCoro.Frame.Const");
@@ -264,8 +266,7 @@ static bool declaresCoroCleanupIntrinsics(const Module &M) {
        Intrinsic::coro_async_resume, Intrinsic::coro_begin_custom_abi});
 }
 
-PreservedAnalyses CoroCleanupPass::run(Module &M,
-                                       ModuleAnalysisManager &MAM) {
+PreservedAnalyses CoroCleanupPass::run(Module &M, ModuleAnalysisManager &MAM) {
   if (!declaresCoroCleanupIntrinsics(M))
     return PreservedAnalyses::all();
 

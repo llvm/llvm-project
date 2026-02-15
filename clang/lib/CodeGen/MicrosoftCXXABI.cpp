@@ -401,7 +401,8 @@ public:
       return nullptr;
 
     llvm::ArrayType *VDispMapTy = llvm::ArrayType::get(CGM.IntTy, Map.size());
-    llvm::Constant *Init = llvm::ConstantArray::get(VDispMapTy, Map);
+    llvm::Constant *Init =
+        llvm::ConstantArray::get(VDispMapTy, Map, &CGM.getDataLayout());
     llvm::GlobalValue::LinkageTypes Linkage =
         SrcRD->isExternallyVisible() && DstRD->isExternallyVisible()
             ? llvm::GlobalValue::LinkOnceODRLinkage
@@ -2894,7 +2895,8 @@ MicrosoftCXXABI::EmitNullMemberPointer(const MemberPointerType *MPT) {
   GetNullMemberPointerFields(MPT, fields);
   if (fields.size() == 1)
     return fields[0];
-  llvm::Constant *Res = llvm::ConstantStruct::getAnon(fields);
+  llvm::Constant *Res =
+      llvm::ConstantStruct::getAnon(fields, false, &CGM.getDataLayout());
   assert(Res->getType() == ConvertMemberPointerType(MPT));
   return Res;
 }
@@ -2930,7 +2932,7 @@ MicrosoftCXXABI::EmitFullMemberPointer(llvm::Constant *FirstField,
   if (inheritanceModelHasVBTableOffsetField(Inheritance))
     fields.push_back(llvm::ConstantInt::get(CGM.IntTy, VBTableIndex));
 
-  return llvm::ConstantStruct::getAnon(fields);
+  return llvm::ConstantStruct::getAnon(fields, false, &CGM.getDataLayout());
 }
 
 llvm::Constant *
@@ -3840,7 +3842,8 @@ llvm::GlobalVariable *MSRTTIBuilder::getClassHierarchyDescriptor() {
           Bases->getValueType(), Bases,
           llvm::ArrayRef<llvm::Value *>(GEPIndices))),
   };
-  CHD->setInitializer(llvm::ConstantStruct::get(Type, Fields));
+  CHD->setInitializer(
+      llvm::ConstantStruct::get(Type, Fields, &CGM.getDataLayout()));
   return CHD;
 }
 
@@ -3872,7 +3875,8 @@ MSRTTIBuilder::getBaseClassArray(SmallVectorImpl<MSRTTIClass> &Classes) {
     BaseClassArrayData.push_back(
         ABI.getImageRelativeConstant(getBaseClassDescriptor(Class)));
   BaseClassArrayData.push_back(llvm::Constant::getNullValue(PtrType));
-  BCA->setInitializer(llvm::ConstantArray::get(ArrType, BaseClassArrayData));
+  BCA->setInitializer(llvm::ConstantArray::get(ArrType, BaseClassArrayData,
+                                               &CGM.getDataLayout()));
   return BCA;
 }
 
@@ -3920,7 +3924,8 @@ MSRTTIBuilder::getBaseClassDescriptor(const MSRTTIClass &Class) {
       ABI.getImageRelativeConstant(
           MSRTTIBuilder(ABI, Class.RD).getClassHierarchyDescriptor()),
   };
-  BCD->setInitializer(llvm::ConstantStruct::get(Type, Fields));
+  BCD->setInitializer(
+      llvm::ConstantStruct::get(Type, Fields, &CGM.getDataLayout()));
   return BCD;
 }
 
@@ -3965,7 +3970,8 @@ MSRTTIBuilder::getCompleteObjectLocator(const VPtrInfo &Info) {
   llvm::ArrayRef<llvm::Constant *> FieldsRef(Fields);
   if (!ABI.isImageRelative())
     FieldsRef = FieldsRef.drop_back();
-  COL->setInitializer(llvm::ConstantStruct::get(Type, FieldsRef));
+  COL->setInitializer(
+      llvm::ConstantStruct::get(Type, FieldsRef, &CGM.getDataLayout()));
   if (COL->isWeakForLinker())
     COL->setComdat(CGM.getModule().getOrInsertComdat(COL->getName()));
   return COL;
@@ -4067,7 +4073,8 @@ llvm::Constant *MicrosoftCXXABI::getAddrOfRTTIDescriptor(QualType Type) {
   auto *Var = new llvm::GlobalVariable(
       CGM.getModule(), TypeDescriptorType, /*isConstant=*/false,
       getLinkageForRTTI(Type),
-      llvm::ConstantStruct::get(TypeDescriptorType, Fields),
+      llvm::ConstantStruct::get(TypeDescriptorType, Fields,
+                                &CGM.getDataLayout()),
       MangledName);
   if (Var->isWeakForLinker())
     Var->setComdat(CGM.getModule().getOrInsertComdat(Var->getName()));
@@ -4315,7 +4322,8 @@ llvm::Constant *MicrosoftCXXABI::getCatchableType(QualType T,
   llvm::StructType *CTType = getCatchableTypeType();
   auto *GV = new llvm::GlobalVariable(
       CGM.getModule(), CTType, /*isConstant=*/true, getLinkageForRTTI(T),
-      llvm::ConstantStruct::get(CTType, Fields), MangledName);
+      llvm::ConstantStruct::get(CTType, Fields, &CGM.getDataLayout()),
+      MangledName);
   GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   GV->setSection(".xdata");
   if (GV->isWeakForLinker())
@@ -4422,8 +4430,8 @@ llvm::GlobalVariable *MicrosoftCXXABI::getCatchableTypeArray(QualType T) {
   llvm::Constant *Fields[] = {
       llvm::ConstantInt::get(CGM.IntTy, NumEntries), // NumEntries
       llvm::ConstantArray::get(
-          AT, llvm::ArrayRef(CatchableTypes.begin(),
-                             CatchableTypes.end())) // CatchableTypes
+          AT, llvm::ArrayRef(CatchableTypes.begin(), CatchableTypes.end()),
+          &CGM.getDataLayout()) // CatchableTypes
   };
   SmallString<256> MangledName;
   {
@@ -4432,7 +4440,8 @@ llvm::GlobalVariable *MicrosoftCXXABI::getCatchableTypeArray(QualType T) {
   }
   CTA = new llvm::GlobalVariable(
       CGM.getModule(), CTAType, /*isConstant=*/true, getLinkageForRTTI(T),
-      llvm::ConstantStruct::get(CTAType, Fields), MangledName);
+      llvm::ConstantStruct::get(CTAType, Fields, &CGM.getDataLayout()),
+      MangledName);
   CTA->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   CTA->setSection(".xdata");
   if (CTA->isWeakForLinker())
@@ -4498,7 +4507,8 @@ llvm::GlobalVariable *MicrosoftCXXABI::getThrowInfo(QualType T) {
   };
   auto *GV = new llvm::GlobalVariable(
       CGM.getModule(), TIType, /*isConstant=*/true, getLinkageForRTTI(T),
-      llvm::ConstantStruct::get(TIType, Fields), MangledName.str());
+      llvm::ConstantStruct::get(TIType, Fields, &CGM.getDataLayout()),
+      MangledName.str());
   GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   GV->setSection(".xdata");
   if (GV->isWeakForLinker())
