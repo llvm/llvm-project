@@ -14,8 +14,10 @@
 
 // BEFORE: #cmp3way_info_partial_ltn1eq0gt1unn127 = #cir.cmp3way_info<partial, lt = -1, eq = 0, gt = 1, unordered = -127>
 // BEFORE: #cmp3way_info_strong_ltn1eq0gt1 = #cir.cmp3way_info<strong, lt = -1, eq = 0, gt = 1>
+// BEFORE: #cmp3way_info_weak_ltn1eq0gt1 = #cir.cmp3way_info<weak, lt = -1, eq = 0, gt = 1>
 // BEFORE: !rec_std3A3A__13A3Apartial_ordering = !cir.record<class "std::__1::partial_ordering" {!s8i}>
 // BEFORE: !rec_std3A3A__13A3Astrong_ordering = !cir.record<class "std::__1::strong_ordering" {!s8i}>
+// BEFORE: !rec_std3A3A__13A3Aweak_ordering = !cir.record<class "std::__1::weak_ordering" {!s8i}>
 
 auto three_way_total(int x, int y) {
   return x <=> y;
