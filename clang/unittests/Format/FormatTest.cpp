@@ -28725,6 +28725,14 @@ TEST_F(FormatTest, BreakBinaryOperationsPerOperator) {
   verifyFormat("int total = unitBasePrice + shippingCostPerItem +\n"
                "            applicableTaxAmount + handlingFeePerUnit;",
                Style);
+
+  // | OnePerLine with << sub-expressions: << stays grouped.
+  Style.BreakBinaryOperations.PerOperator = {BitwiseOrRule};
+  verifyFormat("std::uint32_t a = byte_buffer[0] |\n"
+               "                  byte_buffer[1] << 8 |\n"
+               "                  byte_buffer[2] << 16 |\n"
+               "                  byte_buffer[3] << 24;",
+               Style);
 }
 
 TEST_F(FormatTest, BreakBinaryOperationsMinChainLength) {

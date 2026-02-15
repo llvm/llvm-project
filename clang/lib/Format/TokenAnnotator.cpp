@@ -3278,16 +3278,17 @@ public:
       int CurrentPrecedence = getCurrentPrecedence();
       if (CurrentPrecedence > prec::Conditional &&
           CurrentPrecedence < prec::PointerToMember) {
-        // Check whether this operator's effective style is OnePerLine.
-        // If so, override precedence to avoid adding fake parenthesis which
-        // could group operations of a different precedence level on the same
-        // line.
-        const auto OperatorBreakStyle =
-            Current ? Style.BreakBinaryOperations.getStyleForOperator(
-                          Current->Tok.getKind())
-                    : Style.BreakBinaryOperations.Default;
-        if (OperatorBreakStyle == FormatStyle::BBO_OnePerLine)
+        // When BreakBinaryOperations is globally OnePerLine (no per-operator
+        // rules), flatten all precedence levels so that every operator is
+        // treated equally for line-breaking purposes. With per-operator rules
+        // we must preserve natural precedence so that higher-precedence
+        // sub-expressions (e.g. `x << 8` inside a `|` chain) stay grouped;
+        // mustBreakBinaryOperation() handles the forced breaks instead.
+        if (Style.BreakBinaryOperations.PerOperator.empty() &&
+            Style.BreakBinaryOperations.Default ==
+                FormatStyle::BBO_OnePerLine) {
           CurrentPrecedence = prec::Additive;
+        }
       }
 
       if (Precedence == CurrentPrecedence && Current &&
