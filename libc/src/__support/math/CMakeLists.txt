@@ -441,6 +441,16 @@ add_header_library(
 
 
 add_header_library(
+  bf16divl
+  HDRS
+    bf16divl.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   cbrt
   HDRS
     cbrt.h
