@@ -369,10 +369,11 @@ func.func private @execute_region_test(%t1 : tensor<?xf32>)
   // CHECK-NOT: alloc
   // CHECK-NOT: copy
   // CHECK: memref.store %{{.*}}, %[[m1]][%{{.*}}]
-  %0, %1, %2 = scf.execute_region -> (f32, tensor<?xf32>, f32) {
+  %0, %1, %2 = scf.execute_region -> (f32, tensor<?xf32>, f32) no_inline {
     %t2 = tensor.insert %f2 into %t1[%idx] : tensor<?xf32>
     scf.yield %f1, %t2, %f2 : f32, tensor<?xf32>, f32
-  }
+  // CHECK: {test.custom_attr = "custom_value"}
+  } {test.custom_attr = "custom_value"}
 
   // CHECK: return %{{.*}}, %{{.*}} : f32, f32
   return %0, %1, %2 : f32, tensor<?xf32>, f32
