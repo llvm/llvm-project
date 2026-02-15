@@ -23,7 +23,7 @@ struct A {
   // COVMAP: section "__llvm_covfun", comdat
   // COVMAP: section "__llvm_covfun", comdat
   // COVMAP: section "__llvm_covfun", comdat
-  // COVMAP: @__llvm_coverage_mapping = {{.*}} { { i32, i32, i32, i32 }
+  // COVMAP: @__llvm_coverage_mapping = {{.*}} { { i32, i32, i32, i32, i32 }
   B b;
 };
 

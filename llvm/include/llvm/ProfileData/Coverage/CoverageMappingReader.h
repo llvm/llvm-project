@@ -104,6 +104,10 @@ public:
   virtual Error readNextRecord(CoverageMappingRecord &Record) = 0;
   CoverageMappingIterator begin() { return CoverageMappingIterator(this); }
   CoverageMappingIterator end() { return CoverageMappingIterator(); }
+
+  /// Returns the instrumentation levels for which the code was originally
+  /// instrumented.
+  virtual CoverageCapabilities coverageCapabilities() const = 0;
 };
 
 /// Base class for the raw coverage mapping and filenames data readers.
@@ -188,6 +192,7 @@ private:
   std::vector<ProfileMappingRecord> MappingRecords;
   std::unique_ptr<InstrProfSymtab> ProfileNames;
   size_t CurrentRecord = 0;
+  CoverageCapabilities AvailableCapabilities;
   std::vector<StringRef> FunctionsFilenames;
   std::vector<CounterExpression> Expressions;
   std::vector<CounterMappingRegion> MappingRegions;
@@ -205,7 +210,9 @@ private:
   BinaryCoverageReader(std::unique_ptr<InstrProfSymtab> Symtab,
                        FuncRecordsStorage &&FuncRecords,
                        CoverageMapCopyStorage &&CoverageMapCopy)
-      : ProfileNames(std::move(Symtab)), FuncRecords(std::move(FuncRecords)),
+      : ProfileNames(std::move(Symtab)),
+        AvailableCapabilities(CoverageCapabilities::all()),
+        FuncRecords(std::move(FuncRecords)),
         CoverageMapCopy(std::move(CoverageMapCopy)) {}
 
 public:
@@ -226,6 +233,10 @@ public:
       llvm::endianness Endian, StringRef CompilationDir = "");
 
   Error readNextRecord(CoverageMappingRecord &Record) override;
+
+  CoverageCapabilities coverageCapabilities() const override {
+    return this->AvailableCapabilities;
+  };
 };
 
 /// Reader for the raw coverage filenames.
