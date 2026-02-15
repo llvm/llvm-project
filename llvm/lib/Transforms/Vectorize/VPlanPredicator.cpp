@@ -14,6 +14,7 @@
 #include "VPRecipeBuilder.h"
 #include "VPlan.h"
 #include "VPlanCFG.h"
+#include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
 #include "VPlanUtils.h"
@@ -272,6 +273,9 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
   auto *Latch = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
   auto *Header = cast<VPBasicBlock>(Latch->getSuccessors().back());
 
+  auto IsExitingBlock = [](VPBasicBlock *VPBB) {
+    return any_of(VPBB->getSuccessors(), IsaPred<VPIRBasicBlock>);
+  };
   auto IsLoopBlock = [&](VPBasicBlock *VPBB) {
     return VPBB != MiddleVPBB &&
            !all_of(VPBB->getSuccessors(), IsaPred<VPIRBasicBlock>);
@@ -283,6 +287,12 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
       Header);
   auto LoopBlocks = make_filter_range(
       VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT), IsLoopBlock);
+  // Check if all exiting blocks dominate the latch. If so, early exit
+  // conditions don't need masking.
+  VPDominatorTree VPDT(Plan);
+  bool AllExitsDominateLatch = all_of(LoopBlocks, [&](VPBasicBlock *VPBB) {
+    return !IsExitingBlock(VPBB) || VPDT.properlyDominates(VPBB, Latch);
+  });
   VPPredicator Predicator;
   for (VPBasicBlock *VPBB : LoopBlocks) {
     // Introduce the mask for VPBB, which may introduce needed edge masks, and
@@ -299,10 +309,16 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
     if (!BlockMask)
       continue;
 
-    // Mask all VPInstructions in the block.
+    // Mask all VPInstructions in the block. For early exits, add the mask if
+    // not all exits dominate the latch.
+    bool NeedExitMask = IsExitingBlock(VPBB) && !AllExitsDominateLatch;
     for (VPRecipeBase &R : *VPBB) {
-      if (auto *VPI = dyn_cast<VPInstruction>(&R))
-        VPI->addMask(BlockMask);
+      auto *VPI = dyn_cast<VPInstruction>(&R);
+      if (!VPI)
+        continue;
+      if (VPI->getOpcode() == VPInstruction::BranchOnCond && !NeedExitMask)
+        continue;
+      VPI->addMask(BlockMask);
     }
   }
 
@@ -310,8 +326,7 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
   // exit blocks) keep their terminators for handleEarlyExits to process.
   VPBlockBase *PrevVPBB = nullptr;
   for (VPBasicBlock *VPBB : LoopBlocks) {
-    bool IsExiting =
-        any_of(VPBB->getSuccessors(), IsaPred<VPIRBasicBlock>) || VPBB == Latch;
+    bool IsExiting = IsExitingBlock(VPBB) || VPBB == Latch;
     if (!IsExiting) {
       auto Successors = to_vector(VPBB->getSuccessors());
       if (Successors.size() > 1)

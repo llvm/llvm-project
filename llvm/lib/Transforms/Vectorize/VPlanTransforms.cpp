@@ -4061,13 +4061,18 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
       auto *EarlyExitingVPBB = cast<VPBasicBlock>(Pred);
       VPBlockBase *TrueSucc = EarlyExitingVPBB->getSuccessors()[0];
       VPValue *CondOfEarlyExitingVPBB;
+      auto *TermVPI = cast<VPInstruction>(EarlyExitingVPBB->getTerminator());
       [[maybe_unused]] bool Matched =
-          match(EarlyExitingVPBB->getTerminator(),
-                m_BranchOnCond(m_VPValue(CondOfEarlyExitingVPBB)));
+          match(TermVPI, m_BranchOnCond(m_VPValue(CondOfEarlyExitingVPBB)));
       assert(Matched && "Terminator must be BranchOnCond");
       auto *CondToEarlyExit = TrueSucc == ExitBlock
                                   ? CondOfEarlyExitingVPBB
                                   : Builder.createNot(CondOfEarlyExitingVPBB);
+
+      // For predicated early exits, AND the condition with the block mask.
+      if (VPValue *BlockMask = TermVPI->getMask())
+        CondToEarlyExit = Builder.createLogicalAnd(BlockMask, CondToEarlyExit);
+
       assert((isa<VPIRValue>(CondOfEarlyExitingVPBB) ||
               VPDT.properlyDominates(
                   CondOfEarlyExitingVPBB->getDefiningRecipe()->getParent(),

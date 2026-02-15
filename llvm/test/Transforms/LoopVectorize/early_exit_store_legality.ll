@@ -461,7 +461,7 @@ exit:
 
 define void @loop_contains_store_uncounted_exit_is_not_guaranteed_to_execute(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_uncounted_exit_is_not_guaranteed_to_execute'
-; CHECK:       LV: Not vectorizing: Last early exiting block in the chain is not the latch predecessor.
+; CHECK:       LV: Not vectorizing: Load for uncountable exit not guaranteed to execute.
 entry:
   br label %for.body
 

@@ -1305,6 +1305,10 @@ private:
 
   /// Returns true if the VPInstruction does not need masking.
   bool alwaysUnmasked() const {
+    // BranchOnCond can carry a mask for predicated early exits.
+    if (Opcode == VPInstruction::BranchOnCond)
+      return false;
+
     // For now only VPInstructions with underlying values use masks.
     // TODO: provide masks to VPInstructions w/o underlying values.
     if (!getUnderlyingValue())

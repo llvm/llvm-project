@@ -1766,7 +1766,16 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   }
 
   BasicBlock *LatchPredBB = LatchBB->getUniquePredecessor();
-  if (LatchPredBB != UncountableExitingBlocks.back()) {
+  // For predicated early exits, we only support a single early exit for now.
+  if (!LatchPredBB) {
+    if (UncountableExitingBlocks.size() != 1) {
+      reportVectorizationFailure(
+          "Only a single predicated early exiting block is supported",
+          "Cannot vectorize early exit loop", "MultiplePredicatedEarlyExits",
+          ORE, TheLoop);
+      return false;
+    }
+  } else if (LatchPredBB != UncountableExitingBlocks.back()) {
     reportVectorizationFailure(
         "Last early exiting block in the chain is not the latch predecessor",
         "Cannot vectorize early exit loop", "EarlyExitNotLatchPredecessor", ORE,

@@ -232,35 +232,35 @@ loop.end:
 
 define i64 @chain_of_3_exits() {
 ; CHECK-LABEL: define i64 @chain_of_3_exits() {
-; CHECK-NEXT:  [[VECTOR_PH:.*]]:
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ], [ 0, %[[VECTOR_PH]] ]
+; CHECK-NEXT:  [[VECTOR_BODY:.*]]:
+; CHECK-NEXT:    br label %[[VECTOR_EARLY_EXIT_CHECK:.*]]
+; CHECK:       [[VECTOR_EARLY_EXIT_CHECK]]:
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], %[[VECTOR_EARLY_EXIT_1:.*]] ], [ 0, %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr @p1, i64 [[INDEX1]]
 ; CHECK-NEXT:    [[LD1:%.*]] = load i8, ptr [[TMP0]], align 1
-; CHECK-NEXT:    [[TMP18:%.*]] = icmp slt i8 [[LD1]], 0
-; CHECK-NEXT:    br i1 [[TMP18]], label %[[VECTOR_EARLY_EXIT_CHECK:.*]], label %[[VECTOR_BODY_INTERIM]]
-; CHECK:       [[VECTOR_EARLY_EXIT_CHECK]]:
+; CHECK-NEXT:    [[CMP_B:%.*]] = icmp slt i8 [[LD1]], 0
+; CHECK-NEXT:    br i1 [[CMP_B]], label %[[VECTOR_EARLY_EXIT_0:.*]], label %[[VECTOR_EARLY_EXIT_1]]
+; CHECK:       [[VECTOR_EARLY_EXIT_0]]:
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr @p2, i64 [[INDEX1]]
 ; CHECK-NEXT:    [[LD2:%.*]] = load i8, ptr [[GEP2]], align 1
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i8 [[LD1]], [[LD2]]
-; CHECK-NEXT:    br i1 [[TMP20]], label %[[VECTOR_EARLY_EXIT_0:.*]], label %[[VECTOR_EARLY_EXIT_CHECK_0:.*]]
-; CHECK:       [[VECTOR_EARLY_EXIT_CHECK_0]]:
+; CHECK-NEXT:    br i1 [[TMP20]], label %[[VECTOR_EARLY_EXIT_3:.*]], label %[[VECTOR_BODY_INTERIM:.*]]
+; CHECK:       [[VECTOR_BODY_INTERIM]]:
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i8, ptr @p3, i64 [[INDEX1]]
 ; CHECK-NEXT:    [[LD3:%.*]] = load i8, ptr [[GEP3]], align 1
-; CHECK-NEXT:    [[CMP_B:%.*]] = icmp eq i8 [[LD1]], [[LD3]]
-; CHECK-NEXT:    br i1 [[CMP_B]], label %[[VECTOR_EARLY_EXIT_0]], label %[[VECTOR_EARLY_EXIT_1:.*]]
-; CHECK:       [[VECTOR_EARLY_EXIT_1]]:
+; CHECK-NEXT:    [[CMP_B1:%.*]] = icmp eq i8 [[LD1]], [[LD3]]
+; CHECK-NEXT:    br i1 [[CMP_B1]], label %[[VECTOR_EARLY_EXIT_3]], label %[[VECTOR_EARLY_EXIT_4:.*]]
+; CHECK:       [[VECTOR_EARLY_EXIT_4]]:
 ; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr inbounds i8, ptr @p4, i64 [[INDEX1]]
 ; CHECK-NEXT:    [[LD4:%.*]] = load i8, ptr [[GEP4]], align 1
 ; CHECK-NEXT:    [[CMP_C:%.*]] = icmp eq i8 [[LD1]], [[LD4]]
-; CHECK-NEXT:    br i1 [[CMP_C]], label %[[VECTOR_EARLY_EXIT_0]], label %[[VECTOR_BODY_INTERIM]]
-; CHECK:       [[VECTOR_BODY_INTERIM]]:
+; CHECK-NEXT:    br i1 [[CMP_C]], label %[[VECTOR_EARLY_EXIT_3]], label %[[VECTOR_EARLY_EXIT_1]]
+; CHECK:       [[VECTOR_EARLY_EXIT_1]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX1]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 64
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[VECTOR_BODY]], label %[[VECTOR_EARLY_EXIT_0]]
-; CHECK:       [[VECTOR_EARLY_EXIT_0]]:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ 1, %[[VECTOR_EARLY_EXIT_CHECK]] ], [ 2, %[[VECTOR_EARLY_EXIT_CHECK_0]] ], [ 3, %[[VECTOR_EARLY_EXIT_1]] ], [ 0, %[[VECTOR_BODY_INTERIM]] ]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[VECTOR_EARLY_EXIT_CHECK]], label %[[VECTOR_EARLY_EXIT_3]]
+; CHECK:       [[VECTOR_EARLY_EXIT_3]]:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ 1, %[[VECTOR_EARLY_EXIT_0]] ], [ 2, %[[VECTOR_BODY_INTERIM]] ], [ 3, %[[VECTOR_EARLY_EXIT_4]] ], [ 0, %[[VECTOR_EARLY_EXIT_1]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
