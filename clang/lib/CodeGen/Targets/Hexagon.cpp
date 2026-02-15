@@ -33,8 +33,6 @@ private:
                    AggValueSlot Slot) const override;
   Address EmitVAArgFromMemory(CodeGenFunction &CFG, Address VAListAddr,
                               QualType Ty) const;
-  Address EmitVAArgForHexagon(CodeGenFunction &CFG, Address VAListAddr,
-                              QualType Ty) const;
   Address EmitVAArgForHexagonLinux(CodeGenFunction &CFG, Address VAListAddr,
                                    QualType Ty) const;
 };
@@ -234,34 +232,6 @@ Address HexagonABIInfo::EmitVAArgFromMemory(CodeGenFunction &CGF,
   return AddrTyped;
 }
 
-Address HexagonABIInfo::EmitVAArgForHexagon(CodeGenFunction &CGF,
-                                            Address VAListAddr,
-                                            QualType Ty) const {
-  // FIXME: Need to handle alignment
-  llvm::Type *BP = CGF.Int8PtrTy;
-  CGBuilderTy &Builder = CGF.Builder;
-  Address VAListAddrAsBPP = VAListAddr.withElementType(BP);
-  llvm::Value *Addr = Builder.CreateLoad(VAListAddrAsBPP, "ap.cur");
-  // Handle address alignment for type alignment > 32 bits
-  uint64_t TyAlign = CGF.getContext().getTypeAlign(Ty) / 8;
-  if (TyAlign > 4) {
-    assert((TyAlign & (TyAlign - 1)) == 0 && "Alignment is not power of 2!");
-    llvm::Value *AddrAsInt = Builder.CreatePtrToInt(Addr, CGF.Int32Ty);
-    AddrAsInt = Builder.CreateAdd(AddrAsInt, Builder.getInt32(TyAlign - 1));
-    AddrAsInt = Builder.CreateAnd(AddrAsInt, Builder.getInt32(~(TyAlign - 1)));
-    Addr = Builder.CreateIntToPtr(AddrAsInt, BP);
-  }
-  Address AddrTyped =
-      Address(Addr, CGF.ConvertType(Ty), CharUnits::fromQuantity(TyAlign));
-
-  uint64_t Offset = llvm::alignTo(CGF.getContext().getTypeSize(Ty) / 8, 4);
-  llvm::Value *NextAddr = Builder.CreateGEP(
-      CGF.Int8Ty, Addr, llvm::ConstantInt::get(CGF.Int32Ty, Offset), "ap.next");
-  Builder.CreateStore(NextAddr, VAListAddrAsBPP);
-
-  return AddrTyped;
-}
-
 Address HexagonABIInfo::EmitVAArgForHexagonLinux(CodeGenFunction &CGF,
                                                  Address VAListAddr,
                                                  QualType Ty) const {
@@ -412,8 +382,11 @@ RValue HexagonABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
         CGF.MakeAddrLValue(EmitVAArgForHexagonLinux(CGF, VAListAddr, Ty), Ty),
         Slot);
 
-  return CGF.EmitLoadOfAnyValue(
-      CGF.MakeAddrLValue(EmitVAArgForHexagon(CGF, VAListAddr, Ty), Ty), Slot);
+  // Use emitVoidPtrVAArg for non-hexagon-linux-musl targets
+  bool IsIndirect = false; // Hexagon passes arguments directly
+  return emitVoidPtrVAArg(
+      CGF, VAListAddr, Ty, IsIndirect, getContext().getTypeInfoInChars(Ty),
+      CharUnits::fromQuantity(4), /*AllowHigherAlign=*/true, Slot);
 }
 
 std::unique_ptr<TargetCodeGenInfo>
