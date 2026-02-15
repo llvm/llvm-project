@@ -24,6 +24,8 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/Support/MathExtras.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_SCFFORLOOPPEELING
@@ -223,7 +225,7 @@ LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
   auto stepInt = getConstantIntValue(forOp.getStep());
 
   // Peeling is not needed if there is one or less iteration.
-  if (lbInt && ubInt && stepInt && ceil(float(*ubInt - *lbInt) / *stepInt) <= 1)
+  if (lbInt && ubInt && stepInt && llvm::divideCeil(*ubInt - *lbInt, *stepInt) <= 1)
     return failure();
 
   AffineExpr lbSymbol, stepSymbol;
@@ -249,6 +251,48 @@ LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
     forOp.getInitArgsMutable().assign(firstIteration->getResults());
     forOp.getLowerBoundMutable().assign(splitBound);
   });
+
+  return success();
+}
+
+LogicalResult mlir::scf::peelForLoopLastIteration(RewriterBase &b, ForOp forOp,
+                                                   ForOp &lastIteration) {
+  RewriterBase::InsertionGuard guard(b);
+  auto lbInt = getConstantIntValue(forOp.getLowerBound());
+  auto ubInt = getConstantIntValue(forOp.getUpperBound());
+  auto stepInt = getConstantIntValue(forOp.getStep());
+
+  // Peeling is not needed if there is one or less iteration.
+  if (lbInt && ubInt && stepInt && llvm::divideCeil(*ubInt - *lbInt, *stepInt) <= 1)
+    return failure();
+
+  AffineExpr ubSymbol, stepSymbol;
+  bindSymbols(b.getContext(), ubSymbol, stepSymbol);
+
+  // New upper bound for main loop: %ub - %step
+  auto ubMap = AffineMap::get(0, 2, {ubSymbol - stepSymbol});
+  b.setInsertionPoint(forOp);
+  auto loc = forOp.getLoc();
+  Value splitBound = b.createOrFold<AffineApplyOp>(
+      loc, ubMap, ValueRange{forOp.getUpperBound(), forOp.getStep()});
+
+  b.setInsertionPointAfter(forOp);
+
+  // Peel the last iteration.
+  IRMapping map;
+  map.map(forOp.getLowerBound(), splitBound);
+  lastIteration = cast<ForOp>(b.clone(*forOp.getOperation(), map));
+  b.replaceAllUsesWith(forOp.getResults(), lastIteration->getResults());
+  // This has to be done after the replace above, so that replace does not change it
+  lastIteration.getInitArgsMutable().assign(forOp->getResults());
+
+  // Update main loop with new upper bound.
+  b.modifyOpInPlace(forOp, [&]() {
+    forOp.getUpperBoundMutable().assign(splitBound);
+  });
+
+  // Rewrite affine.min and affine.max ops.
+  rewriteAffineOpAfterPeeling(b, forOp, lastIteration, lastIteration.getUpperBound());
 
   return success();
 }
