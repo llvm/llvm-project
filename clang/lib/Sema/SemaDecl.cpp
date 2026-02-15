@@ -20,13 +20,13 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/MangleNumberingContext.h"
 #include "clang/AST/NonTrivialTypeVisitor.h"
 #include "clang/AST/Randstruct.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/Builtins.h"
@@ -10113,13 +10113,13 @@ void Sema::DiagnoseVlaSizeParameter(
     if (!VAT)
       return;
 
-    class DeclRefFinder : public RecursiveASTVisitor<DeclRefFinder> {
+    class DeclRefFinder : public ConstDynamicRecursiveASTVisitor {
       SmallVectorImpl<const DeclRefExpr *> &Found;
 
     public:
       DeclRefFinder(SmallVectorImpl<const DeclRefExpr *> &Found)
           : Found(Found) {}
-      bool VisitDeclRefExpr(const DeclRefExpr *DRE) {
+      bool VisitDeclRefExpr(const DeclRefExpr *DRE) override {
         Found.push_back(DRE);
         return true;
       }
