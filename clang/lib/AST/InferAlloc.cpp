@@ -34,10 +34,10 @@ typeContainsPointer(QualType T,
   for (QualType CurrentT = T; const auto *TT = CurrentT->getAs<TypedefType>();
        CurrentT = TT->getDecl()->getUnderlyingType()) {
     const IdentifierInfo *II = TT->getDecl()->getIdentifier();
-    // Special Case: Syntactically uintptr_t is not a pointer; semantically,
-    // however, very likely used as such. Therefore, classify uintptr_t as a
-    // pointer, too.
-    if (II && II->isStr("uintptr_t"))
+    // Special Case: Syntactically intptr and uintptr_t are not pointers;
+    // semantically, however, very likely used as such. Therefore, classify
+    // intptr_t and uintptr_t as pointers, too.
+    if (II && (II->isStr("intptr_t") || II->isStr("uintptr_t")))
       return true;
   }
 
