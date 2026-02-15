@@ -9,6 +9,7 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_VARIABLES_H
 #define LLDB_TOOLS_LLDB_DAP_VARIABLES_H
 
+#include "DAPForward.h"
 #include "DAPLog.h"
 #include "Protocol/DAPTypes.h"
 #include "Protocol/ProtocolRequests.h"
@@ -146,7 +147,7 @@ private:
   ///
   /// \tparam ReferenceKind
   ///     The reference kind created in this pool
-  template <typename VariableStoreType, ReferenceKind Kind>
+  template <typename VariableStoreType, protocol::ReferenceKind Kind>
   class ReferenceKindPool {
 
   public:
@@ -154,8 +155,8 @@ private:
 
     /// Resets the count to zero and clears the pool,
     /// disabled for permanent reference kind.
-    template <ReferenceKind LHS = Kind,
-              ReferenceKind RHS = eReferenceKindPermanent>
+    template <protocol::ReferenceKind LHS = Kind,
+              protocol::ReferenceKind RHS = protocol::eReferenceKindPermanent>
     std::enable_if_t<LHS != RHS, void> Clear() {
       reference_count = 0;
       m_pool.clear();
@@ -176,7 +177,7 @@ private:
       if (LLVM_UNLIKELY(reference_count >=
                         var_ref_t::k_max_variables_references)) {
         // We cannot add new variables to the pool;
-        return var_ref_t(LLDB_DAP_INVALID_VAR_REF);
+        return var_ref_t(var_ref_t::k_invalid_var_ref);
       }
 
       m_pool.emplace_back(std::forward<Args>(args)...);
@@ -205,13 +206,14 @@ private:
 
   /// Variables that are alive in this stop state.
   /// Will be cleared when debuggee resumes.
-  ReferenceKindPool<ExpandableValueStore, eReferenceKindTemporary>
+  ReferenceKindPool<ExpandableValueStore, protocol::eReferenceKindTemporary>
       m_temporary_kind_pool;
   /// Variables that persist across entire debug session.
   /// These are the variables evaluated from debug console REPL.
-  ReferenceKindPool<ExpandableValueStore, eReferenceKindPermanent>
+  ReferenceKindPool<ExpandableValueStore, protocol::eReferenceKindPermanent>
       m_permanent_kind_pool;
-  ReferenceKindPool<ScopeStore, eReferenceKindScope> m_scope_kind_pool;
+  ReferenceKindPool<ScopeStore, protocol::eReferenceKindScope>
+      m_scope_kind_pool;
 };
 
 } // namespace lldb_dap

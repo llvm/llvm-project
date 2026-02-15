@@ -15,6 +15,7 @@
 #include "gtest/gtest.h"
 
 using namespace lldb_dap;
+using namespace lldb_dap::protocol;
 
 class VariablesTest : public ::testing::Test {
 

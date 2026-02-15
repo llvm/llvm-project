@@ -98,8 +98,8 @@ ScopeStore::GetVariables(VariableReferenceStorage &storage,
     if (LLVM_UNLIKELY(frame_var_ref.AsUInt32() >=
                       var_ref_t::k_variables_reference_threshold)) {
       DAP_LOG(storage.log,
-              "warning: scopes variablesReference threshold is reached. "
-              "current: {} threshold: {}, maximum {}\n",
+              "warning: scopes variablesReference threshold reached. "
+              "current: {} threshold: {}, maximum {}.",
               frame_var_ref.AsUInt32(),
               var_ref_t::k_variables_reference_threshold,
               var_ref_t::k_max_variables_references);
@@ -216,7 +216,7 @@ void ScopeStore::AddReturnValue(VariableReferenceStorage &storage,
   if (stop_return_value.IsValid() &&
       (selected_thread.GetSelectedFrame().GetFrameID() == 0)) {
     auto renamed_return_value = stop_return_value.Clone("(Return Value)");
-    var_ref_t return_var_ref{0};
+    var_ref_t return_var_ref{var_ref_t::k_no_child};
 
     if (stop_return_value.MightHaveChildren() ||
         stop_return_value.IsSynthetic()) {
@@ -256,16 +256,20 @@ ExpandableValueStore::GetVariables(VariableReferenceStorage &storage,
     if (LLVM_UNLIKELY(child_var_ref.AsUInt32() ==
                       var_ref_t::k_variables_reference_threshold)) {
       DAP_LOG(storage.log,
-              "warning: {} variablesReference threshold is reached. "
-              "current: {} threshold: {}, maximum {}\n",
+              "warning: {} variablesReference threshold reached. "
+              "current: {} threshold: {}, maximum {}.",
               (is_permanent ? "permanent" : "temporary"),
               child_var_ref.AsUInt32(),
               var_ref_t::k_variables_reference_threshold,
               var_ref_t::k_max_variables_references);
     }
 
-    if (LLVM_UNLIKELY(child_var_ref.Kind() == eReferenceKindInvalid))
+    if (LLVM_UNLIKELY(child_var_ref.Kind() == eReferenceKindInvalid)) {
+      DAP_LOG(storage.log,
+              "error: invalid variablesReference created for {} variable {}.",
+              (is_permanent ? "permanent" : "temporary"), variable.GetName());
       return;
+    }
 
     variables.emplace_back(CreateVariable(
         child, child_var_ref, hex, config.enableAutoVariableSummaries,
@@ -292,16 +296,15 @@ ExpandableValueStore::GetVariables(VariableReferenceStorage &storage,
 
 lldb::SBValue ExpandableValueStore::FindVariable(llvm::StringRef name) {
   lldb::SBValue variable = m_value.GetChildMemberWithName(name.data());
-  if (!variable.IsValid()) {
-    if (name.starts_with('[') && name.ends_with(']')) {
-      llvm::StringRef index_str(name.drop_front().drop_back());
-      uint64_t index = 0;
-      if (!index_str.consumeInteger(0, index)) {
-        variable = m_value.GetChildAtIndex(index);
-      }
+  if (variable.IsValid())
+    return variable;
+
+  if (name.consume_front('[') && name.consume_back("]")) {
+    uint64_t index = 0;
+    if (!name.consumeInteger(0, index)) {
+      variable = m_value.GetChildAtIndex(index);
     }
   }
-
   return variable;
 }
 

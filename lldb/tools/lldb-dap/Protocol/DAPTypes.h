@@ -1,4 +1,4 @@
-//===-- ProtocolTypes.h ---------------------------------------------------===//
+//===-- DAPTypes.h ---------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,15 +19,12 @@
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 #include "llvm/Support/JSON.h"
+#include <cstdint>
 #include <optional>
 #include <string>
 
-#define LLDB_DAP_INVALID_VAR_REF UINT32_MAX
-#define LLDB_DAP_INVALID_SRC_REF 0
-#define LLDB_DAP_INVALID_VALUE_LOC 0
-#define LLDB_DAP_INVALID_STACK_FRAME_ID UINT64_MAX
+namespace lldb_dap::protocol {
 
-namespace lldb_dap {
 enum ReferenceKind : uint8_t {
   eReferenceKindTemporary = 0,
   eReferenceKindPermanent = 1,
@@ -47,23 +44,33 @@ private:
   static constexpr uint32_t k_kind_mask = 0xFF;
 
 public:
-  explicit var_ref_t(uint32_t reference, ReferenceKind kind)
+  static constexpr uint32_t k_invalid_var_ref = UINT32_MAX;
+  static constexpr uint32_t k_no_child = 0;
+
+  explicit constexpr var_ref_t(uint32_t reference, ReferenceKind kind)
       : reference(reference), kind(kind) {}
-  explicit var_ref_t(uint32_t masked_ref = LLDB_DAP_INVALID_VAR_REF)
+
+  explicit constexpr var_ref_t(uint32_t masked_ref = k_invalid_var_ref)
       : reference(masked_ref & k_reference_bit_mask),
         kind((masked_ref >> k_reference_bit_size) & k_kind_mask) {}
 
-  [[nodiscard]] uint32_t AsUInt32() const {
-    uint32_t result = 0;
-    std::memcpy(&result, this, sizeof(result));
-    return result;
+  [[nodiscard]] constexpr uint32_t AsUInt32() const {
+    return (kind << k_reference_bit_size) | reference;
   };
 
-  [[nodiscard]] ReferenceKind Kind() const {
-    return static_cast<ReferenceKind>(kind);
+  [[nodiscard]] constexpr ReferenceKind Kind() const {
+    const auto current_kind = static_cast<ReferenceKind>(kind);
+    switch (current_kind) {
+    case eReferenceKindTemporary:
+    case eReferenceKindPermanent:
+    case eReferenceKindScope:
+      return current_kind;
+    default:
+      return eReferenceKindInvalid;
+    }
   }
 
-  [[nodiscard]] uint32_t Reference() const { return reference; }
+  [[nodiscard]] constexpr uint32_t Reference() const { return reference; }
 
   // We should be able to store at least 8 million variables for each store
   // type at every stopped state.
@@ -85,10 +92,6 @@ bool fromJSON(const llvm::json::Value &, var_ref_t &, llvm::json::Path);
 inline llvm::json::Value toJSON(const var_ref_t &var_ref) {
   return var_ref.AsUInt32();
 }
-
-} // namespace lldb_dap
-
-namespace lldb_dap::protocol {
 
 /// Data used to help lldb-dap resolve breakpoints persistently across different
 /// sessions. This information is especially useful for assembly breakpoints,
