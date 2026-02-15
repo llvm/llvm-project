@@ -13,14 +13,15 @@
 #include "flang/Support/Timing.h"
 #include "llvm/Support/Format.h"
 
-class OutputStrategyText : public mlir::OutputStrategy {
+class OutputStrategyText : public mlir::timing::OutputStrategy {
 protected:
   static constexpr llvm::StringLiteral header = "Flang execution timing report";
 
 public:
-  OutputStrategyText(llvm::raw_ostream &os) : mlir::OutputStrategy(os) {}
+  OutputStrategyText(llvm::raw_ostream &os)
+      : mlir::timing::OutputStrategy(os) {}
 
-  void printHeader(const mlir::TimeRecord &total) override {
+  void printHeader(const mlir::timing::TimeRecord &total) override {
     // Figure out how many spaces to description name.
     unsigned padding = (80 - header.size()) / 2;
     os << "===" << std::string(73, '-') << "===\n";
@@ -34,22 +35,24 @@ public:
 
   void printFooter() override { os.flush(); }
 
-  void printTime(
-      const mlir::TimeRecord &time, const mlir::TimeRecord &total) override {
+  void printTime(const mlir::timing::TimeRecord &time,
+      const mlir::timing::TimeRecord &total) override {
     os << llvm::format(
         "  %8.4f (%5.1f%%)", time.user, 100.0 * time.user / total.user);
     os << llvm::format(
         "  %8.4f (%5.1f%%)  ", time.wall, 100.0 * time.wall / total.wall);
   }
 
-  void printListEntry(llvm::StringRef name, const mlir::TimeRecord &time,
-      const mlir::TimeRecord &total, bool lastEntry) override {
+  void printListEntry(llvm::StringRef name,
+      const mlir::timing::TimeRecord &time,
+      const mlir::timing::TimeRecord &total, bool lastEntry) override {
     printTime(time, total);
     os << name << "\n";
   }
 
   void printTreeEntry(unsigned indent, llvm::StringRef name,
-      const mlir::TimeRecord &time, const mlir::TimeRecord &total) override {
+      const mlir::timing::TimeRecord &time,
+      const mlir::timing::TimeRecord &total) override {
     printTime(time, total);
     os.indent(indent) << name << "\n";
   }
@@ -59,7 +62,7 @@ public:
 
 namespace Fortran::support {
 
-std::unique_ptr<mlir::OutputStrategy> createTimingFormatterText(
+std::unique_ptr<mlir::timing::OutputStrategy> createTimingFormatterText(
     llvm::raw_ostream &os) {
   return std::make_unique<OutputStrategyText>(os);
 }
