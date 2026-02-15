@@ -135,6 +135,14 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
     Handler.onImmediateUB(Msg);
   }
 
+  void reportError(StringRef Msg) {
+    // Check if we have already reported an error message.
+    if (!Status)
+      return;
+    Status = false;
+    Handler.onError(Msg);
+  }
+
   const AnyValue &getValue(Value *V) {
     if (auto *C = dyn_cast<Constant>(V))
       return Ctx.getConstantValue(C);
@@ -207,8 +215,10 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
   }
 
   void jumpTo(Instruction &Terminator, BasicBlock *DestBB) {
-    if (!Handler.onBBJump(Terminator, *DestBB))
+    if (!Handler.onBBJump(Terminator, *DestBB)) {
+      Status = false;
       return;
+    }
     BasicBlock *From = CurrentFrame->BB;
     CurrentFrame->BB = DestBB;
     CurrentFrame->PC = DestBB->begin();
@@ -220,11 +230,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
     PHINode *PHI = nullptr;
     while ((PHI = dyn_cast<PHINode>(CurrentFrame->PC))) {
       Value *Incoming = PHI->getIncomingValueForBlock(From);
-      // Bail out on the self-referential value.
-      if (Incoming != PHI) {
-        // TODO: handle fast-math flags.
-        IncomingValues.emplace_back(PHI, getValue(Incoming));
-      }
+      // TODO: handle fast-math flags.
+      IncomingValues.emplace_back(PHI, getValue(Incoming));
       ++CurrentFrame->PC;
     }
     for (auto &[K, V] : IncomingValues)
@@ -375,7 +382,8 @@ public:
     // applied if available).
     // TODO: handle byval/initializes
     auto &CalleeArgs = CurrentFrame->CalleeArgs;
-    CalleeArgs.clear();
+    assert(CalleeArgs.empty() &&
+           "Forgot to call returnFromCallee before entering a new call.");
     for (Value *Arg : CB.args())
       CalleeArgs.push_back(getValue(Arg));
 
@@ -385,7 +393,9 @@ public:
         CurrentFrame->ResolvedCallee = nullptr;
         returnFromCallee();
         return;
-      } else if (isa<InlineAsm>(CalledOperand)) {
+      }
+
+      if (isa<InlineAsm>(CalledOperand)) {
         Handler.onUnrecognizedInstruction(CB);
         Status = false;
         return;
@@ -401,9 +411,17 @@ public:
         reportImmediateUB("Indirect call through invalid function pointer.");
         return;
       }
+      if (Callee->getFunctionType() != CB.getFunctionType()) {
+        reportImmediateUB("Indirect call through a function pointer with "
+                          "mismatched signature.");
+        return;
+      }
     }
 
     assert(Callee && "Expected a resolved callee function.");
+    assert(
+        Callee->getFunctionType() == CB.getFunctionType() &&
+        "Expected the callee function type to match the call site signature.");
     CurrentFrame->ResolvedCallee = Callee;
     if (Callee->isIntrinsic()) {
       CurrentFrame->CalleeRetVal = callIntrinsic(CB);
@@ -416,7 +434,7 @@ public:
     } else {
       uint32_t MaxStackDepth = Ctx.getMaxStackDepth();
       if (MaxStackDepth && CallStack.size() >= MaxStackDepth) {
-        reportImmediateUB("Maximum stack depth exceeded.");
+        reportError("Maximum stack depth exceeded.");
         return;
       }
       assert(!Callee->empty() && "Expected a defined function.");
@@ -724,7 +742,7 @@ public:
         assert(Top.State == FrameState::Running &&
                "Expected to be in running state.");
         if (MaxSteps != 0 && Steps >= MaxSteps) {
-          reportImmediateUB("Exceeded maximum number of execution steps.");
+          reportError("Exceeded maximum number of execution steps.");
           break;
         }
         ++Steps;

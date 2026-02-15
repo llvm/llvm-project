@@ -90,6 +90,7 @@ public:
   virtual bool onInstructionExecuted(Instruction &I, const AnyValue &Result) {
     return true;
   }
+  virtual void onError(StringRef Msg) {}
   virtual void onUnrecognizedInstruction(Instruction &I) {}
   virtual void onImmediateUB(StringRef Msg) {}
   virtual bool onBBJump(Instruction &I, BasicBlock &To) { return true; }
@@ -181,6 +182,11 @@ public:
   Function *getTargetFunction(const Pointer &Ptr);
   BasicBlock *getTargetBlock(const Pointer &Ptr);
 
+  /// Initialize global variables and function/block objects. This function
+  /// should be called before executing any function. Returns false if the
+  /// initialization fails (e.g., the memory limit is exceeded during
+  /// initialization).
+  bool initGlobalValues();
   /// Execute the function \p F with arguments \p Args, and store the return
   /// value in \p RetVal if the function is not void.
   /// Returns true if the function executed successfully. False indicates an

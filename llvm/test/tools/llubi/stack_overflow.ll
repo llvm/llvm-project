@@ -103,5 +103,5 @@ entry:
 ; CHECK-NEXT:   br i1 %cmp, label %if.then, label %if.else jump to %if.then
 ; CHECK-NEXT:   %sub1 = sub i32 %n, 1 => i32 41
 ; CHECK-NEXT:   %sub2 = sub i32 %n, 2 => i32 40
-; CHECK-NEXT: Immediate UB detected: Maximum stack depth exceeded.
+; CHECK-NEXT: Error: Maximum stack depth exceeded.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

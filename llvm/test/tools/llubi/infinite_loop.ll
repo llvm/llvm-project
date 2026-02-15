@@ -19,5 +19,5 @@ loop:
 ; CHECK-NEXT:   br label %loop jump to %loop
 ; CHECK-NEXT:   br label %loop jump to %loop
 ; CHECK-NEXT:   br label %loop jump to %loop
-; CHECK-NEXT: Immediate UB detected: Exceeded maximum number of execution steps.
+; CHECK-NEXT: Error: Exceeded maximum number of execution steps.
 ; CHECK-NEXT: error: Execution of function 'main' failed.
