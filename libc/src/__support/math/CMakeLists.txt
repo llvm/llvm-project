@@ -357,6 +357,7 @@ add_header_library(
     canonicalize.h
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -366,9 +367,7 @@ add_header_library(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.common
     libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
 )
 
 add_header_library(
@@ -377,6 +376,7 @@ add_header_library(
     canonicalizef.h
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -384,8 +384,9 @@ add_header_library(
   HDRS
     canonicalizef128.h
   DEPENDS
+    libc.include.llvm-libc-types.float128
     libc.src.__support.FPUtil.basic_operations
-    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -393,8 +394,9 @@ add_header_library(
   HDRS
     canonicalizef16.h
   DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
     libc.src.__support.FPUtil.basic_operations
-    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -403,6 +405,7 @@ add_header_library(
     canonicalizel.h
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
 )
 
 

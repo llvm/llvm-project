@@ -14,7 +14,6 @@
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
 #include "src/__support/FPUtil/BasicOperations.h"
-#include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
