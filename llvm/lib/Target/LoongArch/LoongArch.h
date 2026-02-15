@@ -37,6 +37,7 @@ FunctionPass *createLoongArchDeadRegisterDefinitionsPass();
 FunctionPass *createLoongArchExpandAtomicPseudoPass();
 FunctionPass *createLoongArchISelDag(LoongArchTargetMachine &TM,
                                      CodeGenOptLevel OptLevel);
+FunctionPass *createLoongArchLateBranchOptPass();
 FunctionPass *createLoongArchMergeBaseOffsetOptPass();
 FunctionPass *createLoongArchOptWInstrsPass();
 FunctionPass *createLoongArchPreRAExpandPseudoPass();
@@ -45,6 +46,7 @@ void initializeLoongArchAsmPrinterPass(PassRegistry &);
 void initializeLoongArchDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeLoongArchDeadRegisterDefinitionsPass(PassRegistry &);
 void initializeLoongArchExpandAtomicPseudoPass(PassRegistry &);
+void initializeLoongArchLateBranchOptPass(PassRegistry &);
 void initializeLoongArchMergeBaseOffsetOptPass(PassRegistry &);
 void initializeLoongArchOptWInstrsPass(PassRegistry &);
 void initializeLoongArchPreRAExpandPseudoPass(PassRegistry &);

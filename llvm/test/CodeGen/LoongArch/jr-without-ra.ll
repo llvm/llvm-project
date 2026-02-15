@@ -74,7 +74,6 @@ define void @jr_without_ra(ptr %rtwdev, ptr %chan, ptr %h2c, i8 %.pre, i1 %cmp.i
 ; CHECK-NEXT:  # %bb.5: # %calc_6g.i
 ; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
 ; CHECK-NEXT:    move $s7, $zero
-; CHECK-NEXT:    bnez $zero, .LBB0_8
 ; CHECK-NEXT:  # %bb.6: # %calc_6g.i
 ; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
 ; CHECK-NEXT:    slli.d $s8, $zero, 3
@@ -120,7 +119,6 @@ define void @jr_without_ra(ptr %rtwdev, ptr %chan, ptr %h2c, i8 %.pre, i1 %cmp.i
 ; CHECK-NEXT:    bnez $s3, .LBB0_1
 ; CHECK-NEXT:  # %bb.14: # %phy_tssi_get_ofdm_trim_de.exit
 ; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
-; CHECK-NEXT:    bnez $zero, .LBB0_3
 ; CHECK-NEXT:    b .LBB0_2
 ; CHECK-NEXT:  .LBB0_15: # %sw.bb9.i.i
 ; CHECK-NEXT:    ld.d $s8, $sp, 8 # 8-byte Folded Reload

@@ -166,6 +166,7 @@
 ; LAXX-NEXT:       Insert fentry calls
 ; LAXX-NEXT:       Insert XRay ops
 ; LAXX-NEXT:       Implement the 'patchable-function' attribute
+; LAXX-NEXT:       LoongArch Late Branch Optimisation Pass
 ; LAXX-NEXT:       Branch relaxation pass
 ; LAXX-NEXT:       Contiguously Lay Out Funclets
 ; LAXX-NEXT:       Remove Loads Into Fake Uses
