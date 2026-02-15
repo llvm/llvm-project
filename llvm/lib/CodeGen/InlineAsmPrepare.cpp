@@ -74,7 +74,6 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetPassConfig>();
     AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.setPreservesCFG();
   }
   bool runOnFunction(Function &F) override;
 
@@ -613,7 +612,6 @@ PreservedAnalyses InlineAsmPreparePass::run(Function &F,
   if (runImpl(F, IAs, DT)) {
     PreservedAnalyses PA;
     PA.preserve<DominatorTreeAnalysis>();
-    PA.preserveSet<CFGAnalyses>();
     return PA;
   }
 
