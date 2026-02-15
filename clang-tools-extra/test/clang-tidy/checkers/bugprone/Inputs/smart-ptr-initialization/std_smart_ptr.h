@@ -82,16 +82,20 @@ public:
   void reset(T* p, Deleter d) {}
 };
 
-template <typename T>
-shared_ptr<T> make_shared();
+template<typename T>
+  struct remove_reference
+  { using type = T; };
 
-template <typename T>
-shared_ptr<T[]> make_shared(std::size_t n);
+template<typename T>
+  struct remove_reference<T&>
+  { using type = T; };
 
-template <typename T>
-unique_ptr<T> make_unique();
+template<typename T>
+  struct remove_reference<T&&>
+  { using type = T; };
 
-template <typename T>
-unique_ptr<T[]> make_unique(std::size_t n);
+template<typename T>
+  constexpr typename std::remove_reference<T>::type&&
+  move(T&& t) noexcept;
 
 } // namespace std
