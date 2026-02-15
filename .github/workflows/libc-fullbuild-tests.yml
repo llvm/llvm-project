@@ -12,6 +12,13 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+    container:
+      image: ${{ (startsWith(matrix.os, 'ubuntu-24.04-arm') && 'ghcr.io/llvm/arm64v8/libc-ubuntu-24.04') || 'ghcr.io/llvm/libc-ubuntu-24.04'}}
+      # We need to enable privileged containers so that certain libc tests
+      # have the necessary permissions (like SYS_TIME). There are no security
+      # implications as we are already running in an isolated VM.
+      options: >-
+        --privileged
     strategy:
       fail-fast: false
       matrix:
@@ -102,26 +109,13 @@ jobs:
         max-size: 1G
         key: libc_fullbuild_${{ matrix.c_compiler }}
         variant: sccache
-    
-    # Notice:
-    # - MPFR is required by some of the mathlib tests.
-    # - Debian has a multilib setup, so we need to symlink the asm directory.
-    #   For more information, see https://wiki.debian.org/Multiarch/LibraryPathOverview
-    - name: Prepare dependencies (Ubuntu)
-      run: |
-        wget https://apt.llvm.org/llvm.sh
-        chmod +x llvm.sh
-        sudo ./llvm.sh 21
-        sudo apt-get update
-        sudo apt-get install -y libmpfr-dev libgmp-dev libmpc-dev ninja-build linux-libc-dev
-        sudo ln -sf /usr/include/$(uname -p)-linux-gnu/asm /usr/include/asm
 
     - name: Set reusable strings
       id: strings
       shell: bash
       run: |
-        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-        echo "build-install-dir=${{ github.workspace }}/install" >> "$GITHUB_OUTPUT"
+        echo "build-output-dir=/__w/llvm-project/llvm-project/build" >> "$GITHUB_OUTPUT"
+        echo "build-install-dir=/__w/llvm-project/llvm-project/install" >> "$GITHUB_OUTPUT"
     
     # Configure libc fullbuild with scudo.
     # Use MinSizeRel to reduce the size of the build.
@@ -131,7 +125,7 @@ jobs:
 
         export CMAKE_FLAGS="
           -G Ninja
-          -S ${{ github.workspace }}/runtimes
+          -S /__w/llvm-project/llvm-project/runtimes
           -B ${{ steps.strings.outputs.build-output-dir }}
           -DCMAKE_ASM_COMPILER=${{ matrix.c_compiler }}
           -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
@@ -153,7 +147,7 @@ jobs:
         case "${{ matrix.target }}" in
           *-none-eabi|riscv32-unknown-elf)
             cmake $CMAKE_FLAGS \
-              -C ${{ github.workspace }}/libc/cmake/caches/${{ matrix.target }}.cmake
+              -C /__w/llvm-project/llvm-project/libc/cmake/caches/${{ matrix.target }}.cmake
             ;;
           *)
             cmake -DLLVM_RUNTIME_TARGETS=${{ matrix.target }} \
