@@ -88,10 +88,12 @@ ClangExpressionDeclMap::ClangExpressionDeclMap(
     bool keep_result_in_memory,
     Materializer::PersistentVariableDelegate *result_delegate,
     const lldb::TargetSP &target,
-    const std::shared_ptr<ClangASTImporter> &importer, ValueObject *ctx_obj)
+    const std::shared_ptr<ClangASTImporter> &importer, ValueObject *ctx_obj,
+    bool ignore_context_qualifiers)
     : ClangASTSource(target, importer), m_found_entities(), m_struct_members(),
       m_keep_result_in_memory(keep_result_in_memory),
-      m_result_delegate(result_delegate), m_ctx_obj(ctx_obj), m_parser_vars(),
+      m_result_delegate(result_delegate), m_ctx_obj(ctx_obj),
+      m_ignore_context_qualifiers(ignore_context_qualifiers), m_parser_vars(),
       m_struct_vars() {
   EnableStructVars();
 }
@@ -1997,7 +1999,8 @@ void ClangExpressionDeclMap::AddContextClassType(NameSearchContext &context,
     std::array<CompilerType, 1> args{void_clang_type.GetPointerType()};
 
     CompilerType method_type = m_clang_ast_context->CreateFunctionType(
-        void_clang_type, args, false, ut.GetTypeQualifiers());
+        void_clang_type, args, false,
+        m_ignore_context_qualifiers ? 0 : ut.GetTypeQualifiers());
 
     const bool is_virtual = false;
     const bool is_static = false;

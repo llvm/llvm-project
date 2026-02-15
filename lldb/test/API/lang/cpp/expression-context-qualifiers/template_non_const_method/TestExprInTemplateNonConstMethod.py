@@ -32,9 +32,15 @@ class TestCase(TestBase):
             "expression x = 7.0",
             error=True,
             substrs=[
-                "cannot assign to non-static data member within const member function"
+                "cannot assign to non-static data member within const member function",
+                "note: Possibly trying to mutate object in a const context. Try running the expression with",
+                "expression --c++-ignore-context-qualifiers -- x = 7.0",
             ],
         )
+
+        options = lldb.SBExpressionOptions()
+        options.SetBooleanLanguageOption("c++-ignore-context-qualifiers", True)
+        self.expect_expr("x = 6.0; x", options=options, result_value="6")
 
         lldbutil.continue_to_source_breakpoint(
             self,

@@ -419,6 +419,43 @@ define i1 @nonnull5(ptr %a) {
   ret i1 %rval
 }
 
+define void @redundant_nonnull1(ptr nonnull %ptr) {
+; CHECK-LABEL: @redundant_nonnull1(
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr) ]
+  ret void
+}
+
+define void @redundant_nonnull2(ptr %ptr) {
+; CHECK-LABEL: @redundant_nonnull2(
+; CHECK-NEXT:    [[NULL_CMP_NOT:%.*]] = icmp eq ptr [[PTR:%.*]], null
+; CHECK-NEXT:    br i1 [[NULL_CMP_NOT]], label [[FALSE:%.*]], label [[TRUE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    ret void
+; CHECK:       false:
+; CHECK-NEXT:    ret void
+;
+  %cmp = icmp ne ptr %ptr, null
+  br i1 %cmp, label %true, label %false
+true:
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr) ]
+  ret void
+
+false:
+  ret void
+}
+
+define void @redundant_nonnull3(ptr %ptr) {
+; CHECK-LABEL: @redundant_nonnull3(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR:%.*]]) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr) ]
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr) ]
+  ret void
+}
+
 ; PR35846 - https://bugs.llvm.org/show_bug.cgi?id=35846
 
 define i32 @assumption_conflicts_with_known_bits(i32 %a, i32 %b) {

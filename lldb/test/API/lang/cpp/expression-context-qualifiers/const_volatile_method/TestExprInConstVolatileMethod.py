@@ -17,7 +17,21 @@ class TestCase(TestBase):
         self.expect(
             "expression volatile_method()",
             error=True,
-            substrs=["has type 'const Foo'", "but function is not marked const"],
+            substrs=[
+                "has type 'const Foo'",
+                "but function is not marked const",
+                "note: Possibly trying to mutate object in a const context. Try running the expression with",
+            ],
+        )
+
+        options = lldb.SBExpressionOptions()
+        options.SetBooleanLanguageOption("c++-ignore-context-qualifiers", True)
+        options.SetIgnoreBreakpoints(True)
+        self.expect_expr("volatile_method()", options=options)
+        self.expect(
+            "expression --c++-ignore-context-qualifiers -- bar()",
+            error=True,
+            substrs=["call to member function 'bar' is ambiguous"],
         )
 
         lldbutil.continue_to_source_breakpoint(
@@ -31,9 +45,20 @@ class TestCase(TestBase):
         self.expect(
             "expression const_method()",
             error=True,
-            substrs=["has type 'volatile Foo'", "but function is not marked volatile"],
+            substrs=[
+                "has type 'volatile Foo'",
+                "but function is not marked volatile",
+                "note: Possibly trying to mutate object in a const context. Try running the expression with",
+            ],
         )
         self.expect_expr("volatile_method()")
+
+        self.expect_expr("const_method()", options=options)
+        self.expect(
+            "expression --c++-ignore-context-qualifiers -- bar()",
+            error=True,
+            substrs=["call to member function 'bar' is ambiguous"],
+        )
 
         lldbutil.continue_to_source_breakpoint(
             self, process, "Break here: const volatile", lldb.SBFileSpec("main.cpp")
@@ -48,6 +73,7 @@ class TestCase(TestBase):
             substrs=[
                 "has type 'const volatile Foo'",
                 "but function is not marked const or volatile",
+                "note: Possibly trying to mutate object in a const context. Try running the expression with",
             ],
         )
         self.expect(
@@ -56,5 +82,14 @@ class TestCase(TestBase):
             substrs=[
                 "has type 'const volatile Foo'",
                 "but function is not marked const or volatile",
+                "note: Possibly trying to mutate object in a const context. Try running the expression with",
             ],
+        )
+
+        self.expect_expr("const_method()", options=options)
+        self.expect_expr("volatile_method()", options=options)
+        self.expect(
+            "expression --c++-ignore-context-qualifiers -- bar()",
+            error=True,
+            substrs=["call to member function 'bar' is ambiguous"],
         )

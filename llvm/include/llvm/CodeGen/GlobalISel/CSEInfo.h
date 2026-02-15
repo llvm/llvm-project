@@ -218,8 +218,7 @@ public:
   /// If CSEConfig is already set, and the CSE Analysis has been preserved,
   /// it will not use the new CSEOpt(use Recompute to force using the new
   /// CSEOpt).
-  LLVM_ABI GISelCSEInfo &get(std::unique_ptr<CSEConfigBase> CSEOpt,
-                             bool ReCompute = false);
+  LLVM_ABI GISelCSEInfo &get(std::unique_ptr<CSEConfigBase> CSEOpt);
   void setMF(MachineFunction &MFunc) { MF = &MFunc; }
   void setComputed(bool Computed) { AlreadyComputed = Computed; }
   void releaseMemory() { Info.releaseMemory(); }

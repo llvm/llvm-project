@@ -363,9 +363,12 @@ void ClangExpressionSourceCode::AddLocalVariableDecls(StreamString &stream,
   }
 }
 
-bool ClangExpressionSourceCode::GetText(
-    std::string &text, ExecutionContext &exe_ctx, bool add_locals,
-    bool force_add_all_locals, llvm::ArrayRef<std::string> modules) const {
+bool ClangExpressionSourceCode::GetText(std::string &text,
+                                        ExecutionContext &exe_ctx,
+                                        bool add_locals,
+                                        bool force_add_all_locals,
+                                        llvm::ArrayRef<std::string> modules,
+                                        bool ignore_context_qualifiers) const {
   const char *target_specific_defines = "typedef signed char BOOL;\n";
   std::string module_macros;
   llvm::raw_string_ostream module_macros_stream(module_macros);
@@ -486,17 +489,20 @@ bool ClangExpressionSourceCode::GetText(
                          lldb_local_var_decls.GetData(), tagged_body.c_str());
       break;
     case WrapKind::CppMemberFunction:
-      wrap_stream.Printf(
-          "%s"
-          "void                                    \n"
-          "$__lldb_class::%s(void *$__lldb_arg) %s \n"
-          "{                                       \n"
-          "    %s;                                 \n"
-          "%s"
-          "}                                       \n",
-          module_imports.c_str(), m_name.c_str(),
-          GetFrameCVQualifiers(exe_ctx.GetFramePtr()).getAsString().c_str(),
-          lldb_local_var_decls.GetData(), tagged_body.c_str());
+      wrap_stream.Printf("%s"
+                         "void                                    \n"
+                         "$__lldb_class::%s(void *$__lldb_arg) %s \n"
+                         "{                                       \n"
+                         "    %s;                                 \n"
+                         "%s"
+                         "}                                       \n",
+                         module_imports.c_str(), m_name.c_str(),
+                         ignore_context_qualifiers
+                             ? ""
+                             : GetFrameCVQualifiers(exe_ctx.GetFramePtr())
+                                   .getAsString()
+                                   .c_str(),
+                         lldb_local_var_decls.GetData(), tagged_body.c_str());
       break;
     case WrapKind::ObjCInstanceMethod:
       wrap_stream.Printf(

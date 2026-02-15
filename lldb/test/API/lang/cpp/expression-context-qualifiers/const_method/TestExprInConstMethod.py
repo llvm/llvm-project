@@ -16,17 +16,38 @@ class TestCase(TestBase):
             "expression m_const_mem = 2.0",
             error=True,
             substrs=[
-                "cannot assign to non-static data member",
-                "with const-qualified type",
+                "note: Possibly trying to mutate object in a const context. Try running the expression with",
             ],
+            matching=False,
         )
         self.expect(
             "expression m_mem = 2.0",
             error=True,
             substrs=[
-                "cannot assign to non-static data member within const member function"
+                "cannot assign to non-static data member within const member function",
+                "note: Possibly trying to mutate object in a const context. Try running the expression with",
             ],
         )
+        self.expect_expr("m_mem", result_value="-2")
+
+        # Test short and long --c++-ignore-context-qualifiers option.
+        self.expect(
+            "expression --c++-ignore-context-qualifiers -- m_mem = 3.0",
+            error=False,
+        )
+        self.expect_expr("m_mem", result_value="3")
+
+        self.expect(
+            "expression -Q -- m_mem = 4.0",
+            error=False,
+        )
+        self.expect_expr("m_mem", result_value="4")
+
+        # Test --c++-ignore-context-qualifiers via SBExpressionOptions.
+        options = lldb.SBExpressionOptions()
+        options.SetBooleanLanguageOption("c++-ignore-context-qualifiers", True)
+        self.expect_expr("m_mem = -2.0; m_mem", options=options, result_value="-2")
+
         self.expect_expr("((Foo*)this)->bar()", result_type="double", result_value="5")
 
         lldbutil.continue_to_source_breakpoint(
@@ -40,9 +61,13 @@ class TestCase(TestBase):
             "expression x = 7.0",
             error=True,
             substrs=[
-                "cannot assign to non-static data member within const member function"
+                "cannot assign to non-static data member within const member function",
+                "note: Possibly trying to mutate object in a const context. Try running the expression with",
             ],
         )
+        self.expect_expr("x", result_value="2")
+
+        self.expect_expr("x = -5; x", options=options, result_value="-5")
 
         lldbutil.continue_to_source_breakpoint(
             self,
@@ -64,18 +89,22 @@ class TestCase(TestBase):
             "expression m_const_mem = 2.0",
             error=True,
             substrs=[
-                "cannot assign to non-static data member",
-                "with const-qualified type",
+                "note: Possibly trying to mutate object in a const context. Try running the expression with",
             ],
+            matching=False,
         )
         self.expect(
             "expression m_mem = 2.0",
             error=True,
             substrs=[
-                "cannot assign to non-static data member within const member function"
+                "cannot assign to non-static data member within const member function",
+                "note: Possibly trying to mutate object in a const context. Try running the expression with",
             ],
         )
         self.expect_expr("m_mem", result_value="-2")
+
+        self.expect_expr("m_mem = -1; m_mem", options=options, result_value="-1")
+
         self.expect_expr("((Foo*)this)->bar()", result_type="double", result_value="5")
 
         lldbutil.continue_to_source_breakpoint(
@@ -91,15 +120,18 @@ class TestCase(TestBase):
             "expression m_const_mem = 2.0",
             error=True,
             substrs=[
-                "cannot assign to non-static data member",
-                "with const-qualified type",
+                "note: Possibly trying to mutate object in a const context. Try running the expression with",
             ],
+            matching=False,
         )
         self.expect(
             "expression m_mem = 2.0",
             error=True,
             substrs=[
-                "cannot assign to non-static data member within const member function"
+                "cannot assign to non-static data member within const member function",
+                "note: Possibly trying to mutate object in a const context. Try running the expression with",
             ],
         )
-        self.expect_expr("m_mem", result_value="-2")
+        self.expect_expr("m_mem", result_value="-1")
+
+        self.expect_expr("m_mem = -2; m_mem", options=options, result_value="-2")

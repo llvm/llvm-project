@@ -159,9 +159,9 @@ class MTBUF_Real <MTBUF_Pseudo ps, string real_name = ps.Mnemonic> :
 }
 
 class getMTBUFInsDA<list<RegisterOperand> vdataList,
-                    list<RegisterClass> vaddrList=[], bit hasRestrictedSOffset> {
+                    list<RegisterOperand> vaddrList=[], bit hasRestrictedSOffset> {
   RegisterOperand vdata_op = !if(!empty(vdataList), ?, !head(vdataList));
-  RegisterClass vaddrClass = !if(!empty(vaddrList), ?, !head(vaddrList));
+  RegisterOperand vaddr_op = !if(!empty(vaddrList), ?, !head(vaddrList));
 
   dag SOffset = !if(hasRestrictedSOffset, (ins SReg_32:$soffset),
                                  (ins SCSrc_b32:$soffset));
@@ -171,7 +171,7 @@ class getMTBUFInsDA<list<RegisterOperand> vdataList,
 
   dag Inputs = !if(!empty(vaddrList),
                    NonVaddrInputs,
-                   !con((ins vaddrClass:$vaddr), NonVaddrInputs));
+                   !con((ins vaddr_op:$vaddr), NonVaddrInputs));
   dag ret = !if(!empty(vdataList),
                 Inputs,
                 !con((ins vdata_op:$vdata), Inputs));
@@ -180,10 +180,10 @@ class getMTBUFInsDA<list<RegisterOperand> vdataList,
 class getMTBUFIns<int addrKind, list<RegisterOperand> vdataList=[], bit hasRestrictedSOffset> {
   dag ret =
     !if(!eq(addrKind, BUFAddrKind.Offset), getMTBUFInsDA<vdataList, [], hasRestrictedSOffset>.ret,
-    !if(!eq(addrKind, BUFAddrKind.OffEn),  getMTBUFInsDA<vdataList, [VGPR_32], hasRestrictedSOffset>.ret,
-    !if(!eq(addrKind, BUFAddrKind.IdxEn),  getMTBUFInsDA<vdataList, [VGPR_32], hasRestrictedSOffset>.ret,
-    !if(!eq(addrKind, BUFAddrKind.BothEn), getMTBUFInsDA<vdataList, [VReg_64], hasRestrictedSOffset>.ret,
-    !if(!eq(addrKind, BUFAddrKind.Addr64), getMTBUFInsDA<vdataList, [VReg_64], hasRestrictedSOffset>.ret,
+    !if(!eq(addrKind, BUFAddrKind.OffEn),  getMTBUFInsDA<vdataList, [VGPROp_32], hasRestrictedSOffset>.ret,
+    !if(!eq(addrKind, BUFAddrKind.IdxEn),  getMTBUFInsDA<vdataList, [VGPROp_32], hasRestrictedSOffset>.ret,
+    !if(!eq(addrKind, BUFAddrKind.BothEn), getMTBUFInsDA<vdataList, [VGPROp_64], hasRestrictedSOffset>.ret,
+    !if(!eq(addrKind, BUFAddrKind.Addr64), getMTBUFInsDA<vdataList, [VGPROp_64], hasRestrictedSOffset>.ret,
     (ins))))));
 }
 
@@ -417,15 +417,17 @@ class getBUFVDataRegisterOperandForOp<RegisterOperand Op, bit isTFE> {
 }
 
 class getMUBUFInsDA<list<RegisterOperand> vdataList,
-                    list<RegisterClassLike> vaddrList, bit isTFE, bit hasRestrictedSOffset, bit isTrue16 = false> {
+                    list<RegisterOperand> vaddrList, bit isTFE, bit hasRestrictedSOffset,
+                    bit isTrue16, bit isLds> {
   RegisterOperand vdataClass = !if(!empty(vdataList), ?, !head(vdataList));
-  RegisterClassLike vaddrClass = !if(!empty(vaddrList), ?, !head(vaddrList));
+  RegisterOperand vaddr_op = !if(!empty(vaddrList), ?, !head(vaddrList));
   RegisterOperand vdata_op = getBUFVDataRegisterOperand<!cast<SIRegisterClassLike>(vdataClass.RegClass).Size, isTFE, isTrue16>.ret;
 
   dag SOffset = !if(hasRestrictedSOffset, (ins SReg_32:$soffset), (ins SCSrc_b32:$soffset));
-  dag NonVaddrInputs = !con((ins SReg_128_XNULL:$srsrc), SOffset, (ins Offset:$offset, CPol_0:$cpol, i1imm_0:$swz));
+  dag IsAsyncOpnd = !if(isLds, (ins i1imm_0:$IsAsync), (ins));
+  dag NonVaddrInputs = !con((ins SReg_128_XNULL:$srsrc), SOffset, (ins Offset:$offset, CPol_0:$cpol, i1imm_0:$swz), IsAsyncOpnd);
 
-  dag Inputs = !if(!empty(vaddrList), NonVaddrInputs, !con((ins vaddrClass:$vaddr), NonVaddrInputs));
+  dag Inputs = !if(!empty(vaddrList), NonVaddrInputs, !con((ins vaddr_op:$vaddr), NonVaddrInputs));
   dag ret = !if(!empty(vdataList), Inputs, !con((ins vdata_op:$vdata), Inputs));
 }
 
@@ -448,13 +450,14 @@ class getMUBUFElements<ValueType vt> {
     );
 }
 
-class getMUBUFIns<int addrKind, list<RegisterOperand> vdataList, bit isTFE, bit hasRestrictedSOffset, bit isTrue16 = false> {
+class getMUBUFIns<int addrKind, list<RegisterOperand> vdataList, bit isTFE,
+                  bit hasRestrictedSOffset, bit isTrue16, bit isLds> {
   dag ret =
-    !if(!eq(addrKind, BUFAddrKind.Offset), getMUBUFInsDA<vdataList, [], isTFE, hasRestrictedSOffset, isTrue16>.ret,
-    !if(!eq(addrKind, BUFAddrKind.OffEn),  getMUBUFInsDA<vdataList, [VGPR_32], isTFE, hasRestrictedSOffset, isTrue16>.ret,
-    !if(!eq(addrKind, BUFAddrKind.IdxEn),  getMUBUFInsDA<vdataList, [VGPR_32], isTFE, hasRestrictedSOffset, isTrue16>.ret,
-    !if(!eq(addrKind, BUFAddrKind.BothEn), getMUBUFInsDA<vdataList, [VReg_64_AlignTarget], isTFE, hasRestrictedSOffset, isTrue16>.ret,
-    !if(!eq(addrKind, BUFAddrKind.Addr64), getMUBUFInsDA<vdataList, [VReg_64_AlignTarget], isTFE, hasRestrictedSOffset, isTrue16>.ret,
+    !if(!eq(addrKind, BUFAddrKind.Offset), getMUBUFInsDA<vdataList, [], isTFE, hasRestrictedSOffset, isTrue16, isLds>.ret,
+    !if(!eq(addrKind, BUFAddrKind.OffEn),  getMUBUFInsDA<vdataList, [VGPROp_32], isTFE, hasRestrictedSOffset, isTrue16, isLds>.ret,
+    !if(!eq(addrKind, BUFAddrKind.IdxEn),  getMUBUFInsDA<vdataList, [VGPROp_32], isTFE, hasRestrictedSOffset, isTrue16, isLds>.ret,
+    !if(!eq(addrKind, BUFAddrKind.BothEn), getMUBUFInsDA<vdataList, [VGPROp_64], isTFE, hasRestrictedSOffset, isTrue16, isLds>.ret,
+    !if(!eq(addrKind, BUFAddrKind.Addr64), getMUBUFInsDA<vdataList, [VGPROp_64], isTFE, hasRestrictedSOffset, isTrue16, isLds>.ret,
     (ins))))));
 }
 
@@ -499,7 +502,7 @@ class MUBUF_Load_Pseudo <string opName,
                          RegisterOperand vdata_op = getBUFVDataRegisterOperand<vdata_vt.Size, isTFE>.ret>
   : MUBUF_Pseudo<opName,
                  !if(!or(isLds, isLdsOpc), (outs), (outs vdata_op:$vdata)),
-                 !con(getMUBUFIns<addrKind, [], isTFE, hasRestrictedSOffset>.ret,
+                 !con(getMUBUFIns<addrKind, [], isTFE, hasRestrictedSOffset, 0, isLds>.ret,
                       !if(HasTiedDest, (ins vdata_op:$vdata_in), (ins))),
                  getMUBUFAsmOps<addrKind, !or(isLds, isLdsOpc), isLds, isTFE>.ret,
                  pattern>,
@@ -509,7 +512,7 @@ class MUBUF_Load_Pseudo <string opName,
   let AsmMatchConverter = "cvtMubuf";
 
   let Constraints = !if(HasTiedDest, "$vdata = $vdata_in", "");
-  let LGKM_CNT = isLds;
+  let LGKM_CNT = 0;
   let has_vdata = !not(!or(isLds, isLdsOpc));
   let mayLoad = 1;
   let mayStore = isLds;
@@ -643,7 +646,7 @@ class MUBUF_Store_Pseudo <string opName,
                           bit isTrue16 = false>
   : MUBUF_Pseudo<opName,
                  (outs),
-                 getMUBUFIns<addrKind, [getVregSrcForVT<store_vt, isTrue16, 0>.ret], isTFE, hasRestrictedSOffset, isTrue16>.ret,
+                 getMUBUFIns<addrKind, [getVregSrcForVT<store_vt, isTrue16, 0>.ret], isTFE, hasRestrictedSOffset, isTrue16, 0>.ret,
                  getMUBUFAsmOps<addrKind, 0, 0, isTFE>.ret,
                  pattern>,
     MUBUF_SetupAddr<addrKind> {
@@ -765,11 +768,11 @@ class MUBUF_Pseudo_Store_Lds<string opName>
 }
 
 class getMUBUFAtomicInsDA<RegisterOperand vdata_op, bit vdata_in, bit hasRestrictedSOffset,
-                          list<RegisterClassLike> vaddrList=[]> {
-  RegisterClassLike vaddrClass = !if(!empty(vaddrList), ?, !head(vaddrList));
+                          list<RegisterOperand> vaddrList=[]> {
+  RegisterOperand vaddr_op = !if(!empty(vaddrList), ?, !head(vaddrList));
 
   dag VData = !if(vdata_in, (ins vdata_op:$vdata_in), (ins vdata_op:$vdata));
-  dag Data = !if(!empty(vaddrList), VData, !con(VData, (ins vaddrClass:$vaddr)));
+  dag Data = !if(!empty(vaddrList), VData, !con(VData, (ins vaddr_op:$vaddr)));
   dag SOffset = !if(hasRestrictedSOffset, (ins SReg_32:$soffset), (ins SCSrc_b32:$soffset));
   dag MainInputs = !con((ins SReg_128_XNULL:$srsrc), SOffset, (ins Offset:$offset));
   dag CPol = !if(vdata_in, (ins CPol_GLC_WithDefault:$cpol),
@@ -786,13 +789,13 @@ class getMUBUFAtomicIns<int addrKind,
     !if(!eq(addrKind, BUFAddrKind.Offset),
             getMUBUFAtomicInsDA<vdataClass, vdata_in, hasRestrictedSOffset>.ret,
     !if(!eq(addrKind, BUFAddrKind.OffEn),
-            getMUBUFAtomicInsDA<vdataClass, vdata_in, hasRestrictedSOffset, [VGPR_32]>.ret,
+            getMUBUFAtomicInsDA<vdataClass, vdata_in, hasRestrictedSOffset, [VGPROp_32]>.ret,
     !if(!eq(addrKind, BUFAddrKind.IdxEn),
-            getMUBUFAtomicInsDA<vdataClass, vdata_in, hasRestrictedSOffset, [VGPR_32]>.ret,
+            getMUBUFAtomicInsDA<vdataClass, vdata_in, hasRestrictedSOffset, [VGPROp_32]>.ret,
     !if(!eq(addrKind, BUFAddrKind.BothEn),
-            getMUBUFAtomicInsDA<vdataClass, vdata_in, hasRestrictedSOffset, [VReg_64_AlignTarget]>.ret,
+            getMUBUFAtomicInsDA<vdataClass, vdata_in, hasRestrictedSOffset, [VGPROp_64]>.ret,
     !if(!eq(addrKind, BUFAddrKind.Addr64),
-            getMUBUFAtomicInsDA<vdataClass, vdata_in, hasRestrictedSOffset, [VReg_64_AlignTarget]>.ret,
+            getMUBUFAtomicInsDA<vdataClass, vdata_in, hasRestrictedSOffset, [VGPROp_64]>.ret,
     (ins))))));
 }
 
