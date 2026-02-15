@@ -180,6 +180,7 @@ static_library("Support") {
     "WithColor.cpp",
     "YAMLParser.cpp",
     "YAMLTraits.cpp",
+    "YAMLGenerateSchema.cpp",
     "Z3Solver.cpp",
     "circular_raw_ostream.cpp",
     "raw_os_ostream.cpp",
