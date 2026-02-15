@@ -7,16 +7,25 @@ bool Bool();
 namespace SimpleResize {
 void IteratorInvalidAfterResize(int new_size) {
   std::vector<int> v;
-  auto it = std::begin(v);  // expected-warning {{object whose reference is captured is later invalidated}}
-  v.resize(new_size);       // expected-note {{invalidated here}}
-  *it;                      // expected-note {{later used here}}
+  auto it = v.begin();  // expected-warning {{object whose reference is captured is later invalidated}}
+  v.resize(new_size);   // expected-note {{invalidated here}}
+  *it;                  // expected-note {{later used here}}
+}
+
+void IteratorInvalidAfterResizeNotDetected(int new_size) {
+  std::vector<int> v;
+  // FIXME: We do not currently handle non-member lifetimebound functions to return an interior path.
+  // Currently 'it' will have loan with path 'v'. We want it to instead have 'v.*' inorder to be later invalidated.
+  auto it = std::begin(v);
+  v.resize(new_size);
+  *it;
 }
 
 void IteratorValidAfterResize(int new_size) {
   std::vector<int> v;
-  auto it = std::begin(v);
+  auto it = v.begin();
   v.resize(new_size);
-  it = std::begin(v);
+  it = v.begin();
   if (it != std::end(v)) {
     *it;  // ok
   }
@@ -39,17 +48,18 @@ void PointerToContainerTest() {
   auto it = v->begin();
   *it = 0;  // not-ok
 }
-void PointerToContainerTest(std::vector<int>* v) {
-  // FIXME: Handle placeholder loans.
+
+void PointerToContainerTest(std::vector<int>* v) { // expected-warning {{parameter is later invalidated}}
   auto it = v->begin();
-  *it = 0;  // not-ok
+  v->push_back(42); // expected-note {{invalidated here}}
+  *it = 0;          // expected-note {{later used here}}
 }
 }  // namespace PointerToContainer
 
 namespace InvalidateBeforeSwap {
 void InvalidateBeforeSwapIterators(std::vector<int> v1, std::vector<int> v2) {
-  auto it1 = std::begin(v1); // expected-warning {{object whose reference is captured is later invalidated}}
-  auto it2 = std::begin(v2);
+  auto it1 = v1.begin(); // expected-warning {{object whose reference is captured is later invalidated}}
+  auto it2 = v2.begin();
   if (it1 == std::end(v1) || it2 == std::end(v2)) return;
   *it1 = 0;     // ok
   *it2 = 0;     // ok
@@ -62,8 +72,8 @@ void InvalidateBeforeSwapIterators(std::vector<int> v1, std::vector<int> v2) {
 }
 
 void InvalidateBeforeSwapContainers(std::vector<int> v1, std::vector<int> v2) {
-  auto it1 = std::begin(v1);  // expected-warning {{object whose reference is captured is later invalidated}}
-  auto it2 = std::begin(v2);
+  auto it1 = v1.begin();  // expected-warning {{object whose reference is captured is later invalidated}}
+  auto it2 = v2.begin();
   if (it1 == std::end(v1) || it2 == std::end(v2)) return;
   *it1 = 0;     // ok
   *it2 = 0;     // ok
@@ -119,7 +129,7 @@ void MergeWithDifferentContainerValuesInvalidated() {
 
 namespace InvalidationInLoops {
 void IteratorInvalidationInAForLoop(std::vector<int> v) {
-  for (auto it = std::begin(v);  // expected-warning {{object whose reference is captured is later invalidated}}
+  for (auto it = v.begin();  // expected-warning {{object whose reference is captured is later invalidated}}
        it != std::end(v);
        ++it) {  // expected-note {{later used here}}
     if (Bool()) {
@@ -129,7 +139,7 @@ void IteratorInvalidationInAForLoop(std::vector<int> v) {
 }
 
 void IteratorInvalidationInAWhileLoop(std::vector<int> v) {
-  auto it = std::begin(v);  // expected-warning {{object whose reference is captured is later invalidated}}
+  auto it = v.begin();  // expected-warning {{object whose reference is captured is later invalidated}}
   while (it != std::end(v)) {
     if (Bool()) {
       v.erase(it);  // expected-note {{invalidated here}}
@@ -161,14 +171,14 @@ void StdVectorPopBackInvalid(std::vector<int> v) {
 
 namespace SimpleStdFind {
 void IteratorCheckedAfterFind(std::vector<int> v) {
-  auto it = std::find(std::begin(v), std::end(v), 3);
+  auto it = std::find(v.begin(), std::end(v), 3);
   if (it != std::end(v)) {
     *it;  // ok
   }
 }
 
 void IteratorCheckedAfterFindThenErased(std::vector<int> v) {
-  auto it = std::find(std::begin(v), std::end(v), 3); // expected-warning {{object whose reference is captured is later invalidated}}
+  auto it = std::find(v.begin(), std::end(v), 3); // expected-warning {{object whose reference is captured is later invalidated}}
   if (it != std::end(v)) {
     v.erase(it); // expected-note {{invalidated here}}
   }
@@ -178,7 +188,7 @@ void IteratorCheckedAfterFindThenErased(std::vector<int> v) {
 
 namespace SimpleInsert {
 void UseReturnedIteratorAfterInsert(std::vector<int> v) {
-  auto it = std::begin(v);
+  auto it = v.begin();
   it = v.insert(it, 10);
   if (it != std::end(v)) {
     *it;  // ok
@@ -186,7 +196,7 @@ void UseReturnedIteratorAfterInsert(std::vector<int> v) {
 }
 
 void UseInvalidIteratorAfterInsert(std::vector<int> v) {
-  auto it = std::begin(v);  // expected-warning {{object whose reference is captured is later invalidated}}
+  auto it = v.begin();  // expected-warning {{object whose reference is captured is later invalidated}}
   v.insert(it, 10);         // expected-note {{invalidated here}}
   if (it != std::end(v)) {  // expected-note {{later used here}}
     *it;
@@ -196,24 +206,24 @@ void UseInvalidIteratorAfterInsert(std::vector<int> v) {
 
 namespace SimpleStdInsert {
 void IteratorValidAfterInsert(std::vector<int> v) {
-  auto it = std::begin(v);
+  auto it = v.begin();
   v.insert(it, 0);
-  it = std::begin(v);
+  it = v.begin();
   if (it != std::end(v)) {
     *it;  // ok
   }
 }
 
 void IteratorInvalidAfterInsert(std::vector<int> v, int value) {
-  auto it = std::begin(v);  // expected-warning {{object whose reference is captured is later invalidated}}
-  v.insert(it, 0);          // expected-note {{invalidated here}}
-  *it;                      // expected-note {{later used here}}
+  auto it = v.begin();  // expected-warning {{object whose reference is captured is later invalidated}}
+  v.insert(it, 0);      // expected-note {{invalidated here}}
+  *it;                  // expected-note {{later used here}}
 }
 }  // namespace SimpleStdInsert
 
 namespace SimpleInvalidIterators {
 void IteratorUsedAfterErase(std::vector<int> v) {
-  auto it = std::begin(v);          // expected-warning {{object whose reference is captured is later invalidated}}
+  auto it = v.begin();              // expected-warning {{object whose reference is captured is later invalidated}}
   for (; it != std::end(v); ++it) { // expected-note {{later used here}}
     if (*it > 3) {
       v.erase(it);                  // expected-note {{invalidated here}}
@@ -221,17 +231,16 @@ void IteratorUsedAfterErase(std::vector<int> v) {
   }
 }
 
-// FIXME: Detect this. We currently skip invalidation through ref/pointers to containers.
-void IteratorUsedAfterPushBackParam(std::vector<int>& v) {
-  auto it = std::begin(v);
+void IteratorUsedAfterPushBackParam(std::vector<int>& v) { // expected-warning {{parameter is later invalidated}}
+  auto it = v.begin();
   if (it != std::end(v) && *it == 3) {
-    v.push_back(4);
+    v.push_back(4);   // expected-note {{invalidated here}}
   }
-  ++it;
+  ++it;               // expected-note {{later used here}}
 }
 
 void IteratorUsedAfterPushBack(std::vector<int> v) {
-  auto it = std::begin(v); // expected-warning {{object whose reference is captured is later invalidated}}
+  auto it = v.begin(); // expected-warning {{object whose reference is captured is later invalidated}}
   if (it != std::end(v) && *it == 3) {
     v.push_back(4); // expected-note {{invalidated here}}
   }
@@ -259,6 +268,14 @@ void PointerToVectorElement() {
   *ptr = 10;         // expected-note {{later used here}}
 }
 
+struct SField { int a; int b;};
+void PointerToVectorElementField() {
+  std::vector<SField> v = {{1, 2}, {3, 4}};
+  int* ptr = &v[0].a;  // expected-warning {{object whose reference is captured is later invalidated}}
+  v.resize(100);     // expected-note {{invalidated here}}
+  *ptr = 10;         // expected-note {{later used here}}
+}
+
 void SelfInvalidatingMap() {
   std::unordered_map<int, int> mp;
   mp[1] = 1;
@@ -278,6 +295,18 @@ void reassign(std::string str, std::string str2) {
   str = str2;                   // expected-note {{invalidated here}}
   (void)view;                   // expected-note {{later used here}}
 }
+
+void append_call(std::string str) {
+  std::string_view view = str;  // expected-warning {{object whose reference is captured is later invalidated}}
+  str.append("456");            // expected-note {{invalidated here}}
+  (void)view;                   // expected-note {{later used here}}
+}
+
+void replace_call(std::string str) {
+  std::string_view view = str;  // expected-warning {{object whose reference is captured is later invalidated}}
+  str.replace(0, 1, "456");     // expected-note {{invalidated here}}
+  (void)view;                   // expected-note {{later used here}}
+}
 } // namespace Strings
 
 // FIXME: This should be diagnosed as use-after-invalidation but with potential move.
@@ -294,51 +323,123 @@ struct S {
   std::vector<std::string> strings1;
   std::vector<std::string> strings2;
 };
-// FIXME: Make Paths more precise to reason at field granularity.
-//        Currently we only detect invalidations to direct declarations and not members.
+
 void Invalidate1Use1IsInvalid() {
-  // FIXME: Detect this.
   S s;
-  auto it = s.strings1.begin();
-  s.strings1.push_back("1");
-  *it;
+  auto it = s.strings1.begin(); // expected-warning {{object whose reference is captured is later invalidated}}
+  s.strings1.push_back("1");    // expected-note {{invalidated here}}
+  *it;                          // expected-note {{later used here}}
 }
+
 void Invalidate1Use2IsOk() {
     S s;
     auto it = s.strings1.begin();
     s.strings2.push_back("1");
     *it;
-}void Invalidate1Use2ViaRefIsOk() {
-    S s;
-    auto it = s.strings2.begin();
-    auto& strings2 = s.strings2;
-    strings2.push_back("1");
-    *it;
 }
+
+void Invalidate1Use2ViaRefIsOk() {
+    S s;
+    auto it1 = s.strings1.begin();
+    auto it2 = s.strings2.begin();  // expected-warning {{object whose reference is captured is later invalidated}}
+    auto& strings2 = s.strings2;
+    strings2.push_back("1");        // expected-note {{invalidated here}}
+    *it1;
+    *it2;                           // expected-note {{later used here}}
+}
+
+void InvalidateBothInASingleExpression(bool cond) {
+    S s;
+    auto it1 = s.strings1.begin();  // expected-warning {{object whose reference is captured is later invalidated}}
+    auto it2 = s.strings2.begin();  // expected-warning {{object whose reference is captured is later invalidated}}
+    auto& both = cond ? s.strings1 : s.strings2;
+    both.push_back("1");            // expected-note 2 {{invalidated here}}
+    *it1;                           // expected-note {{later used here}}
+    *it2;                           // expected-note {{later used here}}
+}
+
 void Invalidate1UseSIsOk() {
   S s;
   S* p = &s;
   s.strings2.push_back("1");
   (void)*p;
 }
+
+// FIXME: Detect invalidation of fields.
+// https://github.com/llvm/llvm-project/issues/180992
+struct InvalidateMemberFields {
+  InvalidateMemberFields();
+  void invalidateField() {
+    auto it = container.begin();
+    container.push_back("1");
+    *it;
+  }
+  void invalidateFieldRef() {
+    auto it = contiainerRef.begin();
+    contiainerRef.push_back("1");
+    *it;
+  }
+private:
+  std::vector<std::string> container;
+  std::vector<std::string>& contiainerRef;
+};
+} // namespace ContainersAsFields
+
 void PointerToContainerIsOk() {
   std::vector<std::string> s;
   std::vector<std::string>* p = &s;
   p->push_back("1");
   (void)*p;
 }
+
 void IteratorFromPointerToContainerIsInvalidated() {
-  // FIXME: Detect this.
   std::vector<std::string> s;
-  std::vector<std::string>* p = &s;
+  std::vector<std::string>* p = &s; // expected-warning {{object whose reference is captured is later invalidated}}
   auto it = p->begin();
-  p->push_back("1");
-  *it;
+  p->push_back("1");                // expected-note {{invalidated here}}
+  *it;                              // expected-note {{later used here}}
 }
+
 void ChangingRegionOwnedByContainerIsOk() {
   std::vector<std::string> subdirs;
   for (std::string& path : subdirs)
     path = std::string();
 }
 
-} // namespace ContainersAsFields
+namespace MapInvalidations {
+void MapOperatorBracket() {
+    std::unordered_map<int, int> m;
+    auto it = m.begin();  // expected-warning {{object whose reference is captured is later invalidated}}
+    m[1];                 // expected-note {{invalidated here}}
+    *it;                  // expected-note {{later used here}}
+}
+} // namespace MapInvalidations
+
+namespace NestedContainers {
+// FIXME: Maybe come up with a access path representation to detect this.
+void InnerIteratorInvalidated() {
+  std::vector<std::vector<int>> v;
+  v.resize(1);
+  // We cannot differentiate between v.* and v.*.*.
+  // An annotation system along with lifetimebound could be helpful to describe the paths returned.
+  auto it = v[0].begin();
+  v[0].push_back(1);
+  *it;
+}
+void InnerIteratorInvalidatedOneUseOtherIsStillBad() {
+  std::vector<std::vector<int>> v;
+  v.resize(100);
+  // We have no way to differentiate between v[0] and v[1] regions.
+  auto it = v[0].begin();
+  v[1].push_back(1);
+  *it;
+}
+
+void OuterIteratorNotInvalidated() {
+  std::vector<std::vector<int>> v;
+  v.resize(1);
+  auto it = v.begin();
+  v[0].push_back(1);
+  it->clear(); // OK
+}
+} // namespace NestedContainers

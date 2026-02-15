@@ -24,7 +24,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
 
@@ -125,87 +124,68 @@ public:
     };
     for (LoanID LID : EscapedLoans) {
       const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
-      const auto *PL = dyn_cast<PlaceholderLoan>(L);
-      if (!PL)
+      const PlaceholderBase *PB = L->getAccessPath().getAsPlaceholderBase();
+      if (!PB)
         continue;
-      if (const auto *PVD = PL->getParmVarDecl())
+      if (const auto *PVD = PB->getParmVarDecl())
         CheckParam(PVD);
-      else if (const auto *MD = PL->getMethodDecl())
+      else if (const auto *MD = PB->getMethodDecl())
         CheckImplicitThis(MD);
     }
   }
 
-  /// Checks for use-after-free & use-after-return errors when a loan expires.
+  /// Checks for use-after-free & use-after-return errors when an access path
+  /// expires (e.g., a variable goes out of scope).
   ///
-  /// This method examines all live origins at the expiry point and determines
-  /// if any of them hold the expiring loan. If so, it creates a pending
-  /// warning with the appropriate confidence level based on the liveness
-  /// information. The confidence reflects whether the origin is definitely
-  /// or maybe live at this point.
-  ///
-  /// Note: This implementation considers only the confidence of origin
-  /// liveness. Future enhancements could also consider the confidence of loan
-  /// propagation (e.g., a loan may only be held on some execution paths).
+  /// When a path expires, all loans prefixed by that path expire. For example,
+  /// if `x` expires, loans to `x`, `x.field`, and `x.field.*` all expire.
+  /// This method examines all live origins and reports warnings for loans they
+  /// hold that are prefixed by the expired path.
   void checkExpiry(const ExpireFact *EF) {
-    LoanID ExpiredLoan = EF->getLoanID();
-    const Expr *MovedExpr = nullptr;
-    if (auto *ME = MovedLoans.getMovedLoans(EF).lookup(ExpiredLoan))
-      MovedExpr = *ME;
+    const AccessPath &ExpiredPath = EF->getAccessPath();
 
     LivenessMap Origins = LiveOrigins.getLiveOriginsAt(EF);
-    Confidence CurConfidence = Confidence::None;
-    // The UseFact or OriginEscapesFact most indicative of a lifetime error,
-    // prioritized by earlier source location.
-    llvm::PointerUnion<const UseFact *, const OriginEscapesFact *>
-        BestCausingFact = nullptr;
 
     for (auto &[OID, LiveInfo] : Origins) {
       LoanSet HeldLoans = LoanPropagation.getLoans(OID, EF);
-      if (!HeldLoans.contains(ExpiredLoan))
-        continue;
-      // Loan is defaulted.
-      Confidence NewConfidence = livenessKindToConfidence(LiveInfo.Kind);
-      if (CurConfidence < NewConfidence) {
-        CurConfidence = NewConfidence;
-        BestCausingFact = LiveInfo.CausingFact;
+      for (LoanID HeldLoanID : HeldLoans) {
+        const Loan *HeldLoan = FactMgr.getLoanMgr().getLoan(HeldLoanID);
+        if (ExpiredPath.isPrefixOf(HeldLoan->getAccessPath())) {
+          // HeldLoan is expired because its base or itself is expired.
+          const Expr *MovedExpr = nullptr;
+          if (auto *ME = MovedLoans.getMovedLoans(EF).lookup(HeldLoanID))
+            MovedExpr = *ME;
+
+          Confidence NewConfidence = livenessKindToConfidence(LiveInfo.Kind);
+          Confidence LastConf =
+              FinalWarningsMap.lookup(HeldLoanID).ConfidenceLevel;
+          if (LastConf >= NewConfidence)
+            continue;
+
+          FinalWarningsMap[HeldLoanID] = {EF->getExpiryLoc(),
+                                          LiveInfo.CausingFact, MovedExpr,
+                                          nullptr, NewConfidence};
+        }
       }
     }
-    if (!BestCausingFact)
-      return;
-    // We have a use-after-free.
-    Confidence LastConf = FinalWarningsMap.lookup(ExpiredLoan).ConfidenceLevel;
-    if (LastConf >= CurConfidence)
-      return;
-    FinalWarningsMap[ExpiredLoan] = {/*ExpiryLoc=*/EF->getExpiryLoc(),
-                                     /*BestCausingFact=*/BestCausingFact,
-                                     /*MovedExpr=*/MovedExpr,
-                                     /*InvalidatedByExpr=*/nullptr,
-                                     /*ConfidenceLevel=*/CurConfidence};
   }
 
   /// Checks for use-after-invalidation errors when a container is modified.
   ///
-  /// This method identifies origins that are live at the point of invalidation
-  /// and checks if they hold loans that are invalidated by the operation
-  /// (e.g., iterators into a vector that is being pushed to).
+  /// When a container is invalidated, loans pointing into its interior are
+  /// invalidated. For example, if container `v` is invalidated, iterators with
+  /// loans to `v.*` are invalidated. This method finds live origins holding
+  /// such loans and reports warnings. A loan is invalidated if its path extends
+  /// an invalidated container's path (e.g., `v.*` extends `v`).
   void checkInvalidation(const InvalidateOriginFact *IOF) {
     OriginID InvalidatedOrigin = IOF->getInvalidatedOrigin();
     /// Get loans directly pointing to the invalidated container
     LoanSet DirectlyInvalidatedLoans =
         LoanPropagation.getLoans(InvalidatedOrigin, IOF);
     auto IsInvalidated = [&](const Loan *L) {
-      auto *PathL = dyn_cast<PathLoan>(L);
-      auto *PlaceholderL = dyn_cast<PlaceholderLoan>(L);
       for (LoanID InvalidID : DirectlyInvalidatedLoans) {
-        const Loan *L = FactMgr.getLoanMgr().getLoan(InvalidID);
-        auto *InvalidPathL = dyn_cast<PathLoan>(L);
-        auto *InvalidPlaceholderL = dyn_cast<PlaceholderLoan>(L);
-        if (PathL && InvalidPathL &&
-            PathL->getAccessPath() == InvalidPathL->getAccessPath())
-          return true;
-        if (PlaceholderL && InvalidPlaceholderL &&
-            PlaceholderL->getParmVarDecl() ==
-                InvalidPlaceholderL->getParmVarDecl())
+        const Loan *InvalidL = FactMgr.getLoanMgr().getLoan(InvalidID);
+        if (InvalidL->getAccessPath().isStrictPrefixOf(L->getAccessPath()))
           return true;
       }
       return false;
@@ -237,12 +217,10 @@ public:
     for (const auto &[LID, Warning] : FinalWarningsMap) {
       const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
 
-      const Expr *IssueExpr = nullptr;
-      if (const auto *BL = dyn_cast<PathLoan>(L))
-        IssueExpr = BL->getIssueExpr();
+      const Expr *IssueExpr = L->getIssueExpr();
       const ParmVarDecl *InvalidatedPVD = nullptr;
-      if (const auto *PL = dyn_cast<PlaceholderLoan>(L))
-        InvalidatedPVD = PL->getParmVarDecl();
+      if (const PlaceholderBase *PB = L->getAccessPath().getAsPlaceholderBase())
+        InvalidatedPVD = PB->getParmVarDecl();
       llvm::PointerUnion<const UseFact *, const OriginEscapesFact *>
           CausingFact = Warning.CausingFact;
       Confidence Confidence = Warning.ConfidenceLevel;
@@ -251,22 +229,28 @@ public:
 
       if (const auto *UF = CausingFact.dyn_cast<const UseFact *>()) {
         if (Warning.InvalidatedByExpr) {
+          // Use-after-invalidation of an object on stack.
           if (IssueExpr)
             SemaHelper->reportUseAfterInvalidation(IssueExpr, UF->getUseExpr(),
                                                    Warning.InvalidatedByExpr);
-          if (InvalidatedPVD)
+          // Use-after-invalidation of a parameter.
+          if (InvalidatedPVD) {
             SemaHelper->reportUseAfterInvalidation(
                 InvalidatedPVD, UF->getUseExpr(), Warning.InvalidatedByExpr);
-
-        } else
+          }
+        } else {
+          // Scope-based expiry (use-after-scope).
           SemaHelper->reportUseAfterFree(IssueExpr, UF->getUseExpr(), MovedExpr,
                                          ExpiryLoc, Confidence);
+        }
       } else if (const auto *OEF =
                      CausingFact.dyn_cast<const OriginEscapesFact *>()) {
+        // Return stack address.
         if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF))
           SemaHelper->reportUseAfterReturn(IssueExpr,
                                            RetEscape->getReturnExpr(),
                                            MovedExpr, ExpiryLoc, Confidence);
+        // Dangling field.
         else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF))
           SemaHelper->reportDanglingField(
               IssueExpr, FieldEscape->getFieldDecl(), MovedExpr, ExpiryLoc);

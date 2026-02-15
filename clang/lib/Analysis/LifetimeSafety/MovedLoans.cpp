@@ -80,10 +80,7 @@ public:
     auto IsInvalidated = [&](const AccessPath &Path) {
       for (LoanID LID : ImmediatelyMovedLoans) {
         const Loan *MovedLoan = LoanMgr.getLoan(LID);
-        auto *PL = dyn_cast<PathLoan>(MovedLoan);
-        if (!PL)
-          continue;
-        if (PL->getAccessPath() == Path)
+        if (MovedLoan->getAccessPath().isPrefixOf(Path))
           return true;
       }
       return false;
@@ -91,10 +88,7 @@ public:
     for (auto [O, _] : LiveOrigins.getLiveOriginsAt(&F))
       for (LoanID LiveLoan : LoanPropagation.getLoans(O, &F)) {
         const Loan *LiveLoanPtr = LoanMgr.getLoan(LiveLoan);
-        auto *PL = dyn_cast<PathLoan>(LiveLoanPtr);
-        if (!PL)
-          continue;
-        if (IsInvalidated(PL->getAccessPath()))
+        if (IsInvalidated(LiveLoanPtr->getAccessPath()))
           MovedLoans =
               MovedLoansMapFactory.add(MovedLoans, LiveLoan, F.getMoveExpr());
       }

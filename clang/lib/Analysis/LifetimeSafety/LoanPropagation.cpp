@@ -169,14 +169,28 @@ public:
   /// A flow from source to destination. If `KillDest` is true, this replaces
   /// the destination's loans with the source's. Otherwise, the source's loans
   /// are merged into the destination's.
+  /// If OriginFlowFact has a PathElement, loans from source are extended
+  /// before propagating (e.g., loan to `x` becomes loan to `x.field`).
   Lattice transfer(Lattice In, const OriginFlowFact &F) {
     OriginID DestOID = F.getDestOriginID();
     OriginID SrcOID = F.getSrcOriginID();
 
+    LoanSet SrcLoans = getLoans(In, SrcOID);
+    LoanSet LoansToFlow = SrcLoans;
+
+    // Extend loans if a path element is specified (e.g., for field access).
+    if (auto Element = F.getPathElement()) {
+      LoansToFlow = LoanSetFactory.getEmptySet();
+      for (LoanID LID : SrcLoans) {
+        Loan *ExtendedLoan =
+            FactMgr.getLoanMgr().getOrCreateExtendedLoan(LID, *Element);
+        LoansToFlow = LoanSetFactory.add(LoansToFlow, ExtendedLoan->getID());
+      }
+    }
+
     LoanSet DestLoans =
         F.getKillDest() ? LoanSetFactory.getEmptySet() : getLoans(In, DestOID);
-    LoanSet SrcLoans = getLoans(In, SrcOID);
-    LoanSet MergedLoans = utils::join(DestLoans, SrcLoans, LoanSetFactory);
+    LoanSet MergedLoans = utils::join(DestLoans, LoansToFlow, LoanSetFactory);
 
     return setLoans(In, DestOID, MergedLoans);
   }
