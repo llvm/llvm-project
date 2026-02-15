@@ -73,7 +73,7 @@
 # DIS2-NEXT:    addi 3, 3, -32760
 # DIS2-NEXT:    bl [[#TGA]]
 
-## IE to LE is relaxed even when ppc64DisableTLSRelax is set,
+## IE to LE is relaxed even when GD/LD relaxation is disabled,
 ## since IE does not involve __tls_get_addr.
 # DIS2-LABEL: <InitialExec>:
 # DIS2-NEXT:    nop
