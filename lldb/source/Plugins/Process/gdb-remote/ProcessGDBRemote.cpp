@@ -4383,10 +4383,7 @@ StructuredData::ObjectSP ProcessGDBRemote::GetSharedCacheInfo() {
             sc_mode == eSymbolSharedCacheUseInferiorSharedCacheOnly) {
           // Attempt to open the shared cache at sc_path, and
           // if the uuid matches, index all the files.
-          HostInfo::SharedCacheIndexFiles(
-              sc_path, uuid,
-              ModuleList::GetGlobalModuleListProperties()
-                  .GetSharedCacheBinaryLoading());
+          HostInfo::SharedCacheIndexFiles(sc_path, uuid, sc_mode);
         }
       }
       m_shared_cache_info_sp = response_sp;
