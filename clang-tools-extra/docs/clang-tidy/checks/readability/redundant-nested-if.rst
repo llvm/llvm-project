@@ -68,21 +68,31 @@ Safety rules
 The check only transforms chains where:
 
 - Neither outer nor nested ``if`` has an ``else`` branch.
+
 - Nested merged ``if`` statements do not use condition variables.
+
 - In C++17 and later, the outermost ``if`` may use a condition variable if it
   can be rewritten to an init-statement form, for example
   ``if (auto v = f())`` to ``if (auto v = f(); v && ...)``.
+
 - When the outermost statement is already in ``if (init; cond)`` form, the
   check keeps ``init`` unchanged and merges only into ``cond``.
+
 - By default, merged conditions avoid user-defined ``bool`` conversions to
   preserve short-circuit semantics. This can be changed with
-  `UserDefinedBoolConversionMode`.
+  :option:`UserDefinedBoolConversionMode`.
+
 - Only the outermost ``if`` may have an init-statement.
+
 - No merged ``if`` is ``if consteval``.
+
 - All merged ``if`` statements are either all ``if constexpr`` or all regular
   ``if``.
+
 - No merged ``if`` statement has statement attributes.
+
 - All rewritten ranges are free of macro/preprocessor-sensitive edits.
+
 - Fix-its are suppressed when comments in removed nested headers cannot be
   preserved safely. Comments inside conditions are preserved, while
   other comments between the ``ifs`` disable fix-its.
