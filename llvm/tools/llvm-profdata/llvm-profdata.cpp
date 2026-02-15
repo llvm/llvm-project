@@ -42,6 +42,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -3325,9 +3326,6 @@ static bool validateSubcommandOptions(const opt::InputArgList &Args,
     if (A->getOption().matches(OPT_UNKNOWN) ||
         A->getOption().matches(OPT_INPUT))
       continue;
-    // Options without an explicit subcommand are available everywhere.
-    if (A->getOption().matches(OPT_help) || A->getOption().matches(OPT_version))
-      continue;
     if (A->getOption().isRegisteredSC(Subcommand))
       continue;
     reportCmdLineError(Twine("unknown command line argument '") +
@@ -3697,28 +3695,26 @@ int llvm_profdata_main(int argc, char **argv, const llvm::ToolContext &) {
     return 1;
   }
 
-  ArrayRef<StringRef> Positionals = OtherPositionals;
-
   if (!validateSubcommandOptions(Args, Subcommand))
     return 1;
 
   if (Subcommand == "merge") {
-    if (!parseMergeOptions(Args, Positionals))
+    if (!parseMergeOptions(Args, OtherPositionals))
       return 1;
     return merge_main(ProgramName);
   }
   if (Subcommand == "show") {
-    if (!parseShowOptions(Args, Positionals))
+    if (!parseShowOptions(Args, OtherPositionals))
       return 1;
     return show_main(ProgramName);
   }
   if (Subcommand == "overlap") {
-    if (!parseOverlapOptions(Args, Positionals))
+    if (!parseOverlapOptions(Args, OtherPositionals))
       return 1;
     return overlap_main();
   }
   if (Subcommand == "order") {
-    if (!parseOrderOptions(Args, Positionals))
+    if (!parseOrderOptions(Args, OtherPositionals))
       return 1;
     return order_main();
   }
@@ -3726,4 +3722,9 @@ int llvm_profdata_main(int argc, char **argv, const llvm::ToolContext &) {
   errs() << ProgramName << ": Unknown command. Run " << ProgramName
          << " --help for usage.\n";
   return 1;
+}
+
+int main(int argc, char **argv) {
+  InitLLVM X(argc, argv);
+  return llvm_profdata_main(argc, argv, {argv[0], nullptr, false});
 }
