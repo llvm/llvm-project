@@ -2468,13 +2468,19 @@ INTERCEPTOR(int, timespec_get, struct __sanitizer_timespec *ts, int base) {
 #endif
 
 #if SANITIZER_INTERCEPT_GLOB
-static void unpoison_glob_t(void *ctx, __sanitizer_glob_t *pglob) {
+static void unpoison_glob_t(void* ctx, int flags, __sanitizer_glob_t* pglob) {
+  SIZE_T offs = 0;
   COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pglob, sizeof(*pglob));
+#  ifdef __SANITIZER_GLOB_DOOFFS
+  if (flags & __SANITIZER_GLOB_DOOFFS)
+    offs = pglob->gl_offs;
+#  endif
   // +1 for NULL pointer at the end.
   if (pglob->gl_pathv)
     COMMON_INTERCEPTOR_WRITE_RANGE(
-        ctx, pglob->gl_pathv, (pglob->gl_pathc + 1) * sizeof(*pglob->gl_pathv));
-  for (SIZE_T i = 0; i < pglob->gl_pathc; ++i) {
+        ctx, pglob->gl_pathv,
+        (offs + pglob->gl_pathc + 1) * sizeof(*pglob->gl_pathv));
+  for (SIZE_T i = offs; i < offs + pglob->gl_pathc; ++i) {
     char *p = pglob->gl_pathv[i];
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p, internal_strlen(p) + 1);
   }
@@ -2488,7 +2494,8 @@ INTERCEPTOR(int, glob, const char *pattern, int flags,
   COMMON_INTERCEPTOR_ENTER(ctx, glob, pattern, flags, errfunc, pglob);
   COMMON_INTERCEPTOR_READ_STRING(ctx, pattern, 0);
   int res = REAL(glob)(pattern, flags, errfunc, pglob);
-  if ((!res || res == glob_nomatch) && pglob) unpoison_glob_t(ctx, pglob);
+  if ((!res || res == glob_nomatch) && pglob)
+    unpoison_glob_t(ctx, flags, pglob);
   return res;
 }
 #else
@@ -2552,7 +2559,8 @@ INTERCEPTOR(int, glob, const char *pattern, int flags,
     Swap(pglob->gl_stat, glob_copy.gl_stat);
   }
   pglob_copy = 0;
-  if ((!res || res == glob_nomatch) && pglob) unpoison_glob_t(ctx, pglob);
+  if ((!res || res == glob_nomatch) && pglob)
+    unpoison_glob_t(ctx, flags, pglob);
   return res;
 }
 #endif  // SANITIZER_SOLARIS
@@ -2588,7 +2596,8 @@ INTERCEPTOR(int, glob64, const char *pattern, int flags,
     Swap(pglob->gl_stat, glob_copy.gl_stat);
   }
   pglob_copy = 0;
-  if ((!res || res == glob_nomatch) && pglob) unpoison_glob_t(ctx, pglob);
+  if ((!res || res == glob_nomatch) && pglob)
+    unpoison_glob_t(ctx, flags, pglob);
   return res;
 }
 #define INIT_GLOB64                \
