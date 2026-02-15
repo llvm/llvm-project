@@ -1782,6 +1782,16 @@ public:
     return RecursiveASTVisitor::TraverseBinaryOperator(BO);
   }
 
+  bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
+    if (Init) {
+      if (const FieldDecl *FD = Init->getMember()) {
+        if (FD == TargetParam)
+          HasWrite = true;
+      }
+    }
+    return RecursiveASTVisitor::TraverseConstructorInitializer(Init);
+  }
+
   bool TraverseUnaryOperator(UnaryOperator *UO) {
     if (UO->isIncrementDecrementOp()) {
       auto *SubExpr = UO->getSubExpr()->IgnoreParenImpCasts();
@@ -1821,14 +1831,17 @@ public:
 static std::vector<ReferenceTag> analyseParameterUsage(const FunctionDecl *FD,
                                                        const ValueDecl *PVD) {
   std::vector<ReferenceTag> Result;
-  const Stmt *Body = FD->getBody();
-  if (!Body)
-    return Result; // No definition available
-
-  // Walk the body and determine read/write usage of the referenced variable
-  // within this function.
   ParamUsageVisitor Visitor(PVD);
-  Visitor.TraverseStmt(const_cast<Stmt *>(Body));
+
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(FD)) {
+    Visitor.TraverseDecl(const_cast<CXXConstructorDecl *>(Ctor));
+  } else if (const Stmt *Body = FD->getBody()) {
+    // Walk the body and determine read/write usage of the referenced variable
+    // within this function.
+    Visitor.TraverseStmt(const_cast<Stmt *>(Body));
+  } else
+    return Result;
+
   if (Visitor.HasWrite)
     Result.push_back(ReferenceTag::Write);
   if (Visitor.HasRead)
