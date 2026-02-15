@@ -656,11 +656,11 @@ public:
     return cir::StackRestoreOp::create(*this, loc, v);
   }
 
-  cir::CmpThreeWayOp createThreeWayCmpTotal(mlir::Location loc,
-                                             mlir::Value lhs, mlir::Value rhs,
-                                             const llvm::APSInt &ltRes,
-                                             const llvm::APSInt &eqRes,
-                                             const llvm::APSInt &gtRes) {
+  cir::CmpThreeWayOp createThreeWayCmpTotal(mlir::Location loc, mlir::Value lhs,
+                                            mlir::Value rhs,
+                                            const llvm::APSInt &ltRes,
+                                            const llvm::APSInt &eqRes,
+                                            const llvm::APSInt &gtRes) {
     assert(ltRes.getBitWidth() == eqRes.getBitWidth() &&
            ltRes.getBitWidth() == gtRes.getBitWidth() &&
            "the three comparison results must have the same bit width");
