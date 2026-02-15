@@ -24,6 +24,7 @@
 namespace llvm {
 
 class Constant;
+class DataLayout;
 class DIBuilder;
 class DbgRecord;
 class Function;
@@ -167,7 +168,8 @@ public:
   LLVM_ABI ValueMapper(ValueToValueMapTy &VM, RemapFlags Flags = RF_None,
                        ValueMapTypeRemapper *TypeMapper = nullptr,
                        ValueMaterializer *Materializer = nullptr,
-                       const MetadataPredicate *IdentityMD = nullptr);
+                       const MetadataPredicate *IdentityMD = nullptr,
+                       const DataLayout *DL = nullptr);
   ValueMapper(ValueMapper &&) = delete;
   ValueMapper(const ValueMapper &) = delete;
   ValueMapper &operator=(ValueMapper &&) = delete;
@@ -237,8 +239,9 @@ inline Value *MapValue(const Value *V, ValueToValueMapTy &VM,
                        RemapFlags Flags = RF_None,
                        ValueMapTypeRemapper *TypeMapper = nullptr,
                        ValueMaterializer *Materializer = nullptr,
-                       const MetadataPredicate *IdentityMD = nullptr) {
-  return ValueMapper(VM, Flags, TypeMapper, Materializer, IdentityMD)
+                       const MetadataPredicate *IdentityMD = nullptr,
+                       const DataLayout *DL = nullptr) {
+  return ValueMapper(VM, Flags, TypeMapper, Materializer, IdentityMD, DL)
       .mapValue(*V);
 }
 
@@ -263,8 +266,9 @@ inline Metadata *MapMetadata(const Metadata *MD, ValueToValueMapTy &VM,
                              RemapFlags Flags = RF_None,
                              ValueMapTypeRemapper *TypeMapper = nullptr,
                              ValueMaterializer *Materializer = nullptr,
-                             const MetadataPredicate *IdentityMD = nullptr) {
-  return ValueMapper(VM, Flags, TypeMapper, Materializer, IdentityMD)
+                             const MetadataPredicate *IdentityMD = nullptr,
+                             const DataLayout *DL = nullptr) {
+  return ValueMapper(VM, Flags, TypeMapper, Materializer, IdentityMD, DL)
       .mapMetadata(*MD);
 }
 
@@ -273,8 +277,9 @@ inline MDNode *MapMetadata(const MDNode *MD, ValueToValueMapTy &VM,
                            RemapFlags Flags = RF_None,
                            ValueMapTypeRemapper *TypeMapper = nullptr,
                            ValueMaterializer *Materializer = nullptr,
-                           const MetadataPredicate *IdentityMD = nullptr) {
-  return ValueMapper(VM, Flags, TypeMapper, Materializer, IdentityMD)
+                           const MetadataPredicate *IdentityMD = nullptr,
+                           const DataLayout *DL = nullptr) {
+  return ValueMapper(VM, Flags, TypeMapper, Materializer, IdentityMD, DL)
       .mapMDNode(*MD);
 }
 
@@ -290,8 +295,9 @@ inline void RemapInstruction(Instruction *I, ValueToValueMapTy &VM,
                              RemapFlags Flags = RF_None,
                              ValueMapTypeRemapper *TypeMapper = nullptr,
                              ValueMaterializer *Materializer = nullptr,
-                             const MetadataPredicate *IdentityMD = nullptr) {
-  ValueMapper(VM, Flags, TypeMapper, Materializer, IdentityMD)
+                             const MetadataPredicate *IdentityMD = nullptr,
+                             const DataLayout *DL = nullptr) {
+  ValueMapper(VM, Flags, TypeMapper, Materializer, IdentityMD, DL)
       .remapInstruction(*I);
 }
 
@@ -307,8 +313,9 @@ inline void RemapDbgRecord(Module *M, DbgRecord *DR, ValueToValueMapTy &VM,
                            RemapFlags Flags = RF_None,
                            ValueMapTypeRemapper *TypeMapper = nullptr,
                            ValueMaterializer *Materializer = nullptr,
-                           const MetadataPredicate *IdentityMD = nullptr) {
-  ValueMapper(VM, Flags, TypeMapper, Materializer, IdentityMD)
+                           const MetadataPredicate *IdentityMD = nullptr,
+                           const DataLayout *DL = nullptr) {
+  ValueMapper(VM, Flags, TypeMapper, Materializer, IdentityMD, DL)
       .remapDbgRecord(M, *DR);
 }
 
@@ -320,8 +327,9 @@ inline void RemapDbgRecordRange(Module *M,
                                 RemapFlags Flags = RF_None,
                                 ValueMapTypeRemapper *TypeMapper = nullptr,
                                 ValueMaterializer *Materializer = nullptr,
-                                const MetadataPredicate *IdentityMD = nullptr) {
-  ValueMapper(VM, Flags, TypeMapper, Materializer, IdentityMD)
+                                const MetadataPredicate *IdentityMD = nullptr,
+                                const DataLayout *DL = nullptr) {
+  ValueMapper(VM, Flags, TypeMapper, Materializer, IdentityMD, DL)
       .remapDbgRecordRange(M, Range);
 }
 
@@ -335,8 +343,10 @@ inline void RemapFunction(Function &F, ValueToValueMapTy &VM,
                           RemapFlags Flags = RF_None,
                           ValueMapTypeRemapper *TypeMapper = nullptr,
                           ValueMaterializer *Materializer = nullptr,
-                          const MetadataPredicate *IdentityMD = nullptr) {
-  ValueMapper(VM, Flags, TypeMapper, Materializer, IdentityMD).remapFunction(F);
+                          const MetadataPredicate *IdentityMD = nullptr,
+                          const DataLayout *DL = nullptr) {
+  ValueMapper(VM, Flags, TypeMapper, Materializer, IdentityMD, DL)
+      .remapFunction(F);
 }
 
 /// Version of MapValue with type safety for Constant.
@@ -344,8 +354,9 @@ inline Constant *MapValue(const Constant *V, ValueToValueMapTy &VM,
                           RemapFlags Flags = RF_None,
                           ValueMapTypeRemapper *TypeMapper = nullptr,
                           ValueMaterializer *Materializer = nullptr,
-                          const MetadataPredicate *IdentityMD = nullptr) {
-  return ValueMapper(VM, Flags, TypeMapper, Materializer, IdentityMD)
+                          const MetadataPredicate *IdentityMD = nullptr,
+                          const DataLayout *DL = nullptr) {
+  return ValueMapper(VM, Flags, TypeMapper, Materializer, IdentityMD, DL)
       .mapConstant(*V);
 }
 

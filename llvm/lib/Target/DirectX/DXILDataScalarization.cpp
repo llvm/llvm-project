@@ -352,7 +352,8 @@ bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
 }
 
 static Constant *transformInitializer(Constant *Init, Type *OrigType,
-                                      Type *NewType, LLVMContext &Ctx) {
+                                      Type *NewType, LLVMContext &Ctx,
+                                      const DataLayout *DL) {
   // Handle ConstantAggregateZero (zero-initialized constants)
   if (isa<ConstantAggregateZero>(Init)) {
     return ConstantAggregateZero::get(NewType);
@@ -375,7 +376,7 @@ static Constant *transformInitializer(Constant *Init, Type *OrigType,
 
     assert(ArrayElements.size() == E &&
            "Expected fixed length constant aggregate for vector initializer!");
-    return ConstantArray::get(cast<ArrayType>(NewType), ArrayElements);
+    return ConstantArray::get(cast<ArrayType>(NewType), ArrayElements, DL);
   }
 
   // Handle array of vectors transformation
@@ -388,11 +389,11 @@ static Constant *transformInitializer(Constant *Init, Type *OrigType,
       // Recursively transform array elements
       Constant *NewElemInit = transformInitializer(
           ArrayInit->getOperand(I), ArrayTy->getElementType(),
-          cast<ArrayType>(NewType)->getElementType(), Ctx);
+          cast<ArrayType>(NewType)->getElementType(), Ctx, DL);
       NewArrayElements.push_back(NewElemInit);
     }
 
-    return ConstantArray::get(cast<ArrayType>(NewType), NewArrayElements);
+    return ConstantArray::get(cast<ArrayType>(NewType), NewArrayElements, DL);
   }
 
   // If not a vector or array, return the original initializer
@@ -425,7 +426,8 @@ static bool findAndReplaceVectors(Module &M) {
 
       if (G.hasInitializer()) {
         Constant *Init = G.getInitializer();
-        Constant *NewInit = transformInitializer(Init, OrigType, NewType, Ctx);
+        Constant *NewInit = transformInitializer(Init, OrigType, NewType, Ctx,
+                                                 &M.getDataLayout());
         NewGlobal->setInitializer(NewInit);
       }
 

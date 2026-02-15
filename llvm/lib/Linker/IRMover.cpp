@@ -447,7 +447,8 @@ public:
         GValMaterializer(*this), LValMaterializer(*this), SharedMDs(SharedMDs),
         IsPerformingImport(IsPerformingImport),
         Mapper(ValueMap, RF_ReuseAndMutateDistinctMDs | RF_IgnoreMissingLocals,
-               &TypeMap, &GValMaterializer),
+               &TypeMap, &GValMaterializer, /*IdentityMD=*/nullptr,
+               &DstM.getDataLayout()),
         IndirectSymbolMCID(Mapper.registerAlternateMappingContext(
             IndirectSymbolValueMap, &LValMaterializer)) {
     ValueMap.getMDMap() = std::move(SharedMDs);
