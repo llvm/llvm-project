@@ -9,7 +9,7 @@ The Kaleidoscope Language
 =========================
 
 This tutorial is illustrated with a toy language called
-"`Kaleidoscope <http://en.wikipedia.org/wiki/Kaleidoscope>`_" (derived
+"`Kaleidoscope <https://en.wikipedia.org/wiki/Kaleidoscope_(programming_language)>`_" (derived
 from "meaning beautiful, form, and view"). Kaleidoscope is a procedural
 language that allows you to define functions, use conditionals, math,
 etc. Over the course of the tutorial, we'll extend Kaleidoscope to
