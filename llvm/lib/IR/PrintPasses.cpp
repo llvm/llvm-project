@@ -7,11 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/PrintPasses.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/Threading.h"
+#include <atomic>
 #include <unordered_set>
 
 using namespace llvm;
@@ -32,6 +37,27 @@ static cl::opt<bool> PrintBeforeAll("print-before-all",
 static cl::opt<bool> PrintAfterAll("print-after-all",
                                    llvm::cl::desc("Print IR after each pass"),
                                    cl::init(false), cl::Hidden);
+
+static cl::opt<std::string> IRDumpDirectory(
+    "ir-dump-directory",
+    cl::desc("If specified, IR printed using the "
+             "-print-[before|after]{-all} options will be dumped into "
+             "files in this directory rather than written to stderr"),
+    cl::Hidden, cl::value_desc("filename"));
+
+StringRef llvm::irDumpDirectory() { return IRDumpDirectory; }
+
+static cl::opt<std::string> IRDumpFilenameFormat(
+    "ir-dump-filename-format",
+    cl::desc("Specifies how filenames are generated when dumping IR to files."
+             " Supported values are 'default' and 'sortable'."),
+    cl::Hidden, cl::init("default"));
+
+static cl::opt<bool> IRDumpFilenamePrependThreadId(
+    "ir-dump-filename-prepend-thread-id",
+    cl::desc("Prepend the filename with the current thread id. Usefule for"
+             " multi-threaded LTO compiles"),
+    cl::Hidden);
 
 // Print out the IR after passes, similar to -print-after-all except that it
 // only prints the IR after passes that change the IR. Those passes that do not
@@ -251,3 +277,150 @@ std::string llvm::doSystemDiff(StringRef Before, StringRef After,
 
   return Diff;
 }
+
+namespace {
+const char *getFileSuffix(IRDumpFileSuffixType Type) {
+  if (Type == IRDumpFileSuffixType::Before)
+    return "before";
+  if (Type == IRDumpFileSuffixType::After)
+    return "after";
+  if (Type == IRDumpFileSuffixType::Invalidated)
+    return "invalidated";
+  return "unknown";
+}
+} // namespace
+
+std::string llvm::irDumpFilename(StringRef Kind, StringRef PassNameIn,
+                                 std::optional<unsigned> PassNumber,
+                                 IRDumpFileSuffixType SuffixType) {
+
+  // sanitize PassName
+  std::string PassName = PassNameIn.str();
+  for (char &c : PassName) {
+    if (!isAlnum(c) && c != '-')
+      c = '_';
+  }
+
+  // One-time initialization of format string and generation of placeholders
+  static std::string Fmt;
+  static std::once_flag InitFmtFlag;
+  static auto InitFmt = []() {
+    static const char *FmtTidPrefix = "{6,0+8}-";
+    static const char *FmtDefault = "{1}-{2}-{3}-{5}.ll";
+    static const char *FmtSortable = "{0,0+8}-{1,0+8}-{2}-{3}-{4}-{5}.ll";
+    if (IRDumpFilenamePrependThreadId)
+      Fmt += FmtTidPrefix;
+    if (IRDumpFilenameFormat == "sortable")
+      Fmt += FmtSortable;
+    else if (IRDumpFilenameFormat == "default")
+      Fmt += FmtDefault;
+    else {
+      Fmt += FmtDefault;
+      errs() << "warning: invalid value for -ir-dump-filename-format '"
+             << IRDumpFilenameFormat << "'; using 'default'\n";
+    }
+  };
+  std::call_once(InitFmtFlag, InitFmt);
+
+  // Generate filename
+  static std::atomic<int> Ordinal;
+  int Ord = Ordinal++;
+  std::string Filename = formatv(false, Fmt.c_str(),
+                                 /* 0 */ Ord,
+                                 /* 1 */ PassNumber.value_or(Ord),
+                                 /* 2 */ Kind,
+                                 /* 3 */ PassName,
+                                 /* 4 */ static_cast<size_t>(SuffixType),
+                                 /* 5 */ getFileSuffix(SuffixType),
+                                 /* 6 */ llvm::get_threadid());
+
+  // Generate path
+  const StringRef DumpDir = irDumpDirectory();
+  assert(!DumpDir.empty() &&
+         "The flag -ir-dump-directory must be passed to dump IR to files");
+  SmallString<128> ResultPath;
+  sys::path::append(ResultPath, DumpDir, Filename);
+  return std::string(ResultPath);
+}
+
+std::string llvm::IRDumpStream::buildBanner(llvm::StringRef PassName,
+                                            llvm::StringRef PassID,
+                                            IRDumpFileSuffixType SuffixType) {
+
+  const char *Suffix = "Unknown";
+  if (SuffixType == IRDumpFileSuffixType::Before)
+    Suffix = "Before";
+  else if (SuffixType == IRDumpFileSuffixType::After)
+    Suffix = "After";
+  else if (SuffixType == IRDumpFileSuffixType::Invalidated)
+    Suffix = "Invalidated";
+
+  return formatv("*** IR Dump {0} {1} ({2}) ***", Suffix, PassName, PassID)
+      .str();
+}
+
+static std::string extractPassName(StringRef Banner,
+                                   IRDumpFileSuffixType &PhaseOut) {
+  if (Banner.consume_front("*** IR Dump Before ")) {
+    PhaseOut = IRDumpFileSuffixType::Before;
+  } else if (Banner.consume_front("*** IR Dump After ")) {
+    PhaseOut = IRDumpFileSuffixType::After;
+  } else {
+    return std::string();
+  }
+
+  size_t open = Banner.find(" (");
+  if (open == StringRef::npos) {
+    return std::string();
+  }
+
+  open += 2;
+  size_t close = Banner.find(')', open);
+  if (close == StringRef::npos) {
+    return std::string();
+  }
+
+  return Banner.substr(open, close - open).str();
+}
+
+llvm::IRDumpStream::IRDumpStream(StringRef Kind, StringRef Banner,
+                                 raw_ostream &fallback)
+    : fstream(nullptr), fallback(fallback) {
+
+  IRDumpFileSuffixType Phase;
+  std::string PassName = extractPassName(Banner, Phase);
+
+  StringRef Dir = irDumpDirectory();
+  if (Dir.empty() || PassName.empty())
+    return;
+
+  std::string DumpIRFilename =
+      irDumpFilename(Kind, PassName, std::nullopt, Phase);
+
+  std::error_code EC = llvm::sys::fs::create_directories(Dir);
+  if (EC) {
+    report_fatal_error(Twine("Failed to create directory ") + Dir +
+                       " to support -ir-dump-directory: " + EC.message());
+  }
+  if (sys::fs::exists(DumpIRFilename)) {
+    errs() << "warning: overwriting existing file '" << DumpIRFilename << "'\n";
+  }
+  int FD = 0;
+  EC = sys::fs::openFile(DumpIRFilename, FD, sys::fs::CD_OpenAlways,
+                         sys::fs::FA_Write, sys::fs::OF_Text);
+  if (EC) {
+    report_fatal_error(Twine("Failed to open ") + DumpIRFilename +
+                       " to support -ir-dump-directory: " + EC.message());
+  }
+  // return FD;
+  fstream = new raw_fd_ostream(FD, /* shouldClose */ true);
+}
+
+llvm::IRDumpStream::~IRDumpStream() {
+  if (fstream) {
+    fstream->close();
+    delete fstream;
+  }
+}
+
+raw_ostream &llvm::IRDumpStream::os() { return fstream ? *fstream : fallback; }

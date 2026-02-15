@@ -25,6 +25,7 @@
 #include "llvm/IR/DroppedVariableStatsIR.h"
 #include "llvm/IR/OptBisect.h"
 #include "llvm/IR/PassTimingInfo.h"
+#include "llvm/IR/PrintPasses.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -81,14 +82,6 @@ private:
   void pushPassRunDescriptor(StringRef PassID, Any IR, unsigned PassNumber);
   PassRunDescriptor popPassRunDescriptor(StringRef PassID);
 
-  enum class IRDumpFileSuffixType {
-    Before,
-    After,
-    Invalidated,
-  };
-
-  static StringRef
-  getFileSuffix(PrintIRInstrumentation::IRDumpFileSuffixType Type);
   std::string fetchDumpFilename(StringRef PassId, StringRef IRFileDisplayName,
                                 unsigned PassNumber,
                                 IRDumpFileSuffixType SuffixType);
