@@ -154,10 +154,7 @@ void VectorizerTestPass::testBackwardSlicing(llvm::raw_ostream &outs) {
   patternTestSlicingOps().match(f, &matches);
   for (auto m : matches) {
     SetVector<Operation *> backwardSlice;
-    LogicalResult result =
-        getBackwardSlice(m.getMatchedOperation(), &backwardSlice);
-    assert(result.succeeded() && "expected a backward slice");
-    (void)result;
+    getBackwardSlice(m.getMatchedOperation(), &backwardSlice);
     outs << "\nmatched: " << *m.getMatchedOperation()
          << " backward static slice: ";
     for (auto *op : backwardSlice)
