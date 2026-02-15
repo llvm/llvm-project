@@ -3580,24 +3580,25 @@ define i1 @icmp_ult_add_lshr_neg_no_nuw(i32 %arg0) {
   ret i1 %v2
 }
 
-define i1 @fold-icmp-sum-of-extended-i1(i16 %0, i16 %1, i16 %2, i16 %3) {
+define i1 @fold-icmp-sum-of-extended-i1(i16 %v0, i16 %v1, i16 %v2, i16 %v3) {
 ; CHECK-LABEL: @fold-icmp-sum-of-extended-i1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i16 [[TMP0:%.*]], [[TMP2:%.*]]
-; CHECK-NEXT:    [[_0:%.*]] = icmp ult i16 [[TMP1:%.*]], [[TMP3:%.*]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i16 [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[_0_0:%.*]] = select i1 [[TMP4]], i1 [[_0]], i1 [[TMP5]]
-; CHECK-NEXT:    ret i1 [[_0_0]]
+; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i16 [[V0:%.*]], [[V2:%.*]]
+; CHECK-NEXT:    [[V1_LT_V3:%.*]] = icmp ult i16 [[V1:%.*]], [[V3:%.*]]
+; CHECK-NEXT:    [[LESS_THAN:%.*]] = icmp slt i16 [[V0]], [[V2]]
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[EQ]], i1 [[V1_LT_V3]], i1 [[LESS_THAN]]
+; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
 entry:
-  %lhs = icmp sgt i16 %0, %2
-  %rhs = icmp slt i16 %0, %2
-  %self1 = zext i1 %lhs to i8
-  %rhs2.neg = sext i1 %rhs to i8
-  %diff = add nsw i8 %rhs2.neg, %self1
-  %4 = icmp eq i8 %diff, 0
-  %_0 = icmp ult i16 %1, %3
-  %5 = icmp slt i8 %diff, 0
-  %_0.0 = select i1 %4, i1 %_0, i1 %5
-  ret i1 %_0.0
+  ; Determines if (v0, v1) is lexicographically less than (v2, v3)
+  %is_gt = icmp sgt i16 %v0, %v2
+  %is_lt = icmp slt i16 %v0, %v2
+  %is_gt_i8 = zext i1 %is_gt to i8 ; 1 if v0 > v2, 0 otherwise
+  %is_lt_i8_neg = sext i1 %is_lt to i8 ; -1 if v0 < v2, 0 otherwise
+  %cmp3 = add nsw i8 %is_lt_i8_neg, %is_gt_i8 ; result of the three-way comparison of v0 and v2
+  %eq = icmp eq i8 %cmp3, 0
+  %v1_lt_v3 = icmp ult i16 %v1, %v3
+  %less_than = icmp slt i8 %cmp3, 0
+  %result = select i1 %eq, i1 %v1_lt_v3, i1 %less_than
+  ret i1 %result
 }
