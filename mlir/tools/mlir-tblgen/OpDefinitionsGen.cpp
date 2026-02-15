@@ -2702,7 +2702,7 @@ void OpEmitter::genSeparateArgParamBuilder() {
                       {1}.regions, inferredReturnTypes)))
           {1}.addTypes(inferredReturnTypes);
         else
-          ::mlir::detail::reportFatalInferReturnTypesError({1});
+          ::mlir::detail::emitInferReturnTypesError({1});
         )",
                       opClass.getClassName(), builderOpState);
       return;
@@ -2988,10 +2988,11 @@ void OpEmitter::genInferredTypeCollectiveParamBuilder(
          << "u && \"mismatched number of return types\");";
   body << "\n    " << builderOpState << ".addTypes(inferredReturnTypes);";
 
-  body << R"(
+  body << formatv(R"(
   } else {
-    ::llvm::report_fatal_error("Failed to infer result type(s).");
-  })";
+    ::mlir::detail::emitInferReturnTypesError({0});
+  })",
+                  builderOpState);
 }
 
 void OpEmitter::genUseOperandAsResultTypeSeparateParamBuilder() {
