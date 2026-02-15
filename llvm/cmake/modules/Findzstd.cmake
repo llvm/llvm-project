@@ -6,9 +6,13 @@
 # zstd_STATIC_LIBRARY
 # zstd_FOUND
 #
-# Additionally, one of the following import targets will be defined:
+# Additionally, at least one of the following import targets will be defined:
 # zstd::libzstd_shared
 # zstd::libzstd_static
+#
+# The zstd::libzstd interface target will also be defined if either of the above
+# targets are created, for compatibility with zstd 1.5.6 and newer. It prefers
+# the shared library unless LLVM_USE_STATIC_ZSTD is set.
 
 if(MSVC OR "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
   set(zstd_STATIC_LIBRARY_SUFFIX "_static\\${CMAKE_STATIC_LIBRARY_SUFFIX}$")
@@ -60,6 +64,19 @@ if(zstd_FOUND)
     set_target_properties(zstd::libzstd_static PROPERTIES
         INTERFACE_INCLUDE_DIRECTORIES "${zstd_INCLUDE_DIR}"
         IMPORTED_LOCATION "${zstd_STATIC_LIBRARY}")
+  endif()
+
+  if(NOT TARGET zstd::libzstd)
+    add_library(zstd::libzstd INTERFACE IMPORTED)
+    set_target_properties(zstd::libzstd PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${zstd_INCLUDE_DIR}")
+    if(TARGET zstd::libzstd_shared AND NOT LLVM_USE_STATIC_ZSTD)
+      set_target_properties(zstd::libzstd PROPERTIES
+          INTERFACE_LINK_LIBRARIES zstd::libzstd_shared)
+    elseif(TARGET zstd::libzstd_static)
+      set_target_properties(zstd::libzstd PROPERTIES
+          INTERFACE_LINK_LIBRARIES zstd::libzstd_static)
+    endif()
   endif()
 endif()
 
