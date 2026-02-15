@@ -92,7 +92,7 @@ Options
    ignored. Default value is `::std::default_delete`.
 
 Limitations
-----------
+-----------
 
 This check only supports smart pointers with shared and unique ownership
 semantics. Smart pointers with different semantics, such as
