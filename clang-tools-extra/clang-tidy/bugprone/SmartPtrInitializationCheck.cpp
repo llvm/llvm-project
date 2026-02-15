@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SmartPtrInitializationCheck.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -18,35 +19,62 @@ namespace clang::tidy::bugprone {
 
 namespace {
 
-// TODO: all types must be in config
-// TODO: boost::shared_ptr and boost::unique_ptr
-// TODO: reset and release must be in config
+const auto DefaultSharedPointers = "::std::shared_ptr;::boost::shared_ptr";
+const auto DefaultUniquePointers = "::std::unique_ptr";
+const auto DefaultDefaultDeleters = "::std::default_delete";
 
 } // namespace
+
+SmartPtrInitializationCheck::SmartPtrInitializationCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      SharedPointers(utils::options::parseStringList(
+          Options.get("SharedPointers", DefaultSharedPointers))),
+      UniquePointers(utils::options::parseStringList(
+          Options.get("UniquePointers", DefaultUniquePointers))),
+      DefaultDeleters(utils::options::parseStringList(
+          Options.get("DefaultDeleters", DefaultDefaultDeleters))) {}
+
+void SmartPtrInitializationCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "SharedPointers",
+                utils::options::serializeStringList(SharedPointers));
+  Options.store(Opts, "UniquePointers",
+                utils::options::serializeStringList(UniquePointers));
+  Options.store(Opts, "DefaultDeleters",
+                utils::options::serializeStringList(DefaultDeleters));
+}
 
 void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
   auto ReleaseCallMatcher =
       cxxMemberCallExpr(callee(cxxMethodDecl(hasName("release"))));
 
+  // Build matchers for the smart pointer types
+  auto SharedPtrMatcher = hasAnyName(SharedPointers);
+  auto UniquePtrMatcher = hasAnyName(UniquePointers);
+  auto AllSmartPtrMatcher = anyOf(SharedPtrMatcher, UniquePtrMatcher);
+
+  // Matcher for unique_ptr types with custom deleters
+  auto DefaultDeleterMatcher = hasAnyName(DefaultDeleters);
   auto UniquePtrWithCustomDeleter = classTemplateSpecializationDecl(
-    hasName("std::unique_ptr"), templateArgumentCountIs(2),
-    hasTemplateArgument(1, refersToType(unless(hasDeclaration(cxxRecordDecl(
-                               hasName("std::default_delete")))))));
+      UniquePtrMatcher, templateArgumentCountIs(2),
+      hasTemplateArgument(1, refersToType(unless(hasDeclaration(cxxRecordDecl(
+                                 DefaultDeleterMatcher))))));
 
   // Matcher for smart pointer constructors
   // Exclude constructors with custom deleters:
   // - shared_ptr with 2+ arguments (second is deleter)
   // - unique_ptr with 2+ template args where second is not default_delete
   auto HasCustomDeleter = anyOf(
-      allOf(hasDeclaration(
-                cxxConstructorDecl(ofClass(hasName("std::shared_ptr")))),
+      allOf(hasDeclaration(cxxConstructorDecl(
+                ofClass(SharedPtrMatcher))),
             hasArgument(1, anything())),
       hasDeclaration(cxxConstructorDecl(ofClass(UniquePtrWithCustomDeleter))));
 
   auto smartPtrConstructorMatcher =
       cxxConstructExpr(
           hasDeclaration(cxxConstructorDecl(
-              ofClass(hasAnyName("std::shared_ptr", "std::unique_ptr")),
+              ofClass(AllSmartPtrMatcher),
               unless(anyOf(isCopyConstructor(), isMoveConstructor())))),
           hasArgument(0,
                       expr(unless(nullPointerConstant())).bind("pointer-arg")),
@@ -60,14 +88,13 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
   // - unique_ptr with custom deleter type (2+ template args where second is not
   // default_delete)
   auto HasCustomDeleterInReset =
-      anyOf(allOf(on(hasType(cxxRecordDecl(hasName("std::shared_ptr")))),
+      anyOf(allOf(on(hasType(cxxRecordDecl(SharedPtrMatcher))),
                   hasArgument(1, anything())),
             on(hasType(qualType(hasDeclaration(UniquePtrWithCustomDeleter)))));
 
   auto resetCallMatcher =
       cxxMemberCallExpr(
-          on(hasType(
-              cxxRecordDecl(hasAnyName("std::shared_ptr", "std::unique_ptr")))),
+          on(hasType(cxxRecordDecl(AllSmartPtrMatcher))),
           callee(cxxMethodDecl(hasName("reset"))),
           hasArgument(0,
                       expr(unless(nullPointerConstant())).bind("pointer-arg")),

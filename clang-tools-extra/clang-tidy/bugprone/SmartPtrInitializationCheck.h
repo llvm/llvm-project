@@ -20,14 +20,17 @@ namespace clang::tidy::bugprone {
 /// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/smart-ptr-initialization.html
 class SmartPtrInitializationCheck : public ClangTidyCheck {
 public:
-  SmartPtrInitializationCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  SmartPtrInitializationCheck(StringRef Name, ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
 private:
   std::string getPointerDescription(const Expr *PointerExpr, 
                                     ASTContext &Context);
+  const std::vector<StringRef> SharedPointers;
+  const std::vector<StringRef> UniquePointers;
+  const std::vector<StringRef> DefaultDeleters;
 };
 
 } // namespace clang::tidy::bugprone
