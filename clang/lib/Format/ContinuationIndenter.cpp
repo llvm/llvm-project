@@ -144,12 +144,13 @@ static bool startsNextOperand(const FormatToken &Current) {
   return isAlignableBinaryOperator(Previous) && !Current.isTrailingComment();
 }
 
-// Returns the number of operators in the chain containing \c Op.
+// Returns the number of operands in the chain containing \c Op.
+// For example, `a && b && c` has 3 operands (and 2 operators).
 static unsigned getChainLength(const FormatToken &Op) {
   const FormatToken *Last = &Op;
   while (Last->NextOperator)
     Last = Last->NextOperator;
-  return Last->OperatorIndex + 1;
+  return Last->OperatorIndex + 2;
 }
 
 // Returns \c true if \c Current is a binary operation that must break.

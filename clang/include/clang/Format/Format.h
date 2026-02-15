@@ -2460,7 +2460,8 @@ struct FormatStyle {
     std::vector<tok::TokenKind> Operators;
     /// The break style for these operators (defaults to ``OnePerLine``).
     BreakBinaryOperationsStyle Style;
-    /// Minimum number of chained operators before the rule triggers.
+    /// Minimum number of operands in a chain before the rule triggers.
+    /// For example, ``a && b && c`` is a chain of length 3.
     /// ``0`` means always break (when the line is too long).
     unsigned MinChainLength;
     bool operator==(const BinaryOperationBreakRule &R) const {
