@@ -229,7 +229,8 @@ Changes in existing checks
 
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check by avoiding false
-  positives on parameters used in dependent expressions.
+  positives on parameters used in dependent expressions (e.g. inside generic
+  lambdas).
 
 - Improved :doc:`readability-simplify-boolean-expr
   <clang-tidy/checks/readability/simplify-boolean-expr>` check to provide valid
