@@ -6,5 +6,4 @@ cert-mem56-cpp
 ==============
 
 The `cert-mem56-cpp` check is an alias, please see
-:doc:`bugprone-smart-ptr-initialization.html
-<../bugprone/smart-ptr-initialization.html>` for more information.
+:doc:`bugprone-smart-ptr-initialization <../bugprone/smart-ptr-initialization>` for more information.
