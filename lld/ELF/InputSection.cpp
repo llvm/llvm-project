@@ -806,7 +806,6 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   switch (r.expr) {
   case R_ABS:
   case R_DTPREL:
-  case R_RELAX_TLS_LD_TO_LE_ABS:
   case R_RELAX_GOT_PC_NOPIC:
   case RE_AARCH64_AUTH:
   case RE_RISCV_ADD:
