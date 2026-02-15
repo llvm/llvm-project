@@ -15,8 +15,10 @@
 // template<class I, sized_sentinel_for<decay_t<I>> S>
 //   constexpr iter_difference_t<I> ranges::distance(const I& first, S last);
 
-#include <iterator>
 #include <cassert>
+#include <iterator>
+#include <type_traits>
+#include <utility>
 
 #include "test_iterators.h"
 

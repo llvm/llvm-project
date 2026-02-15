@@ -29,6 +29,7 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
 #include <deque>
 #include <ranges>
 #include <vector>
@@ -36,6 +37,7 @@
 #include "almost_satisfies_types.h"
 #include "sized_allocator.h"
 #include "test_iterators.h"
+#include "type_algorithms.h"
 
 struct NotEqualityComparable {};
 

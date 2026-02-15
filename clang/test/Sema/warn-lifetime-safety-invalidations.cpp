@@ -138,6 +138,21 @@ void IteratorInvalidationInAWhileLoop(std::vector<int> v) {
   }
 }
 
+void NoIteratorInvalidationInAWhileLoopErase(std::unordered_map<int, int> mp) {
+  auto it = mp.begin();
+  while (it != std::end(mp)) {
+    if (Bool()) {
+      auto next = it;
+      ++next;
+      mp.erase(it); // Ok. 'next' remains valid.
+      it = next;
+    }
+    else {
+      ++it;
+    }
+  }
+}
+
 void IteratorInvalidationInAForeachLoop(std::vector<int> v) {
   for (int& x : v) { // expected-warning {{object whose reference is captured is later invalidated}} \
                      // expected-note {{later used here}}
