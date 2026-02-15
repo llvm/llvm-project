@@ -184,7 +184,7 @@ namespace cwg522 { // cwg522: 2.7
     b2(am);
     b2a(am);
     // expected-error@-1 {{no matching function for call to 'b2a'}}
-    //   expected-note@#cwg522-b2a {{candidate template ignored: deduced type 'volatile int *S::*const *' of 1st parameter does not match adjusted type 'int *S::**' of argument}}
+    //   expected-note@#cwg522-b2a {{candidate template ignored: deduced type 'volatile int *S::*const *' of 1st parameter does not match adjusted type 'int *S::**' of argument [with T = int]}}
     b3(d);
     b3(cd);
   }
@@ -348,11 +348,11 @@ namespace cwg531 { // cwg531: partial
     void A<int>::f(int) {}
     // expected-error@-1 {{template specialization requires 'template<>'}}
     template<typename U> void A<int>::g(int, U) {}
-    // expected-error@-1 {{template parameter list matching the non-templated nested type 'cwg531::bad::A<int>' should be empty}}
+    // expected-error@-1 {{template parameter list matching the non-templated nested type 'cwg531::bad::A<int>' should be empty ('template<>')}}
     struct A<int>::B {};
     // expected-error@-1 {{template specialization requires 'template<>'}}
     template<typename U> struct A<int>::C {};
-    // expected-error@-1 {{template parameter list matching the non-templated nested type 'cwg531::bad::A<int>' should be empty}}
+    // expected-error@-1 {{template parameter list matching the non-templated nested type 'cwg531::bad::A<int>' should be empty ('template<>')}}
     // expected-error@-2 {{redefinition of 'C' as different kind of symbol}}
     //   expected-note@#cwg531-C {{previous definition is here}}
     int A<int>::n = 0;
@@ -475,10 +475,9 @@ namespace cwg535 { // cwg535: 3.1
 // cwg538: na
 
 namespace cwg539 { // cwg539: 3.4
-const f(
-// expected-error@-1 {{a type specifier is required for all declarations}}
-    const a) {
-    // expected-error@-1 {{unknown type name 'a'}}
+const f(const a) {
+// expected-error@-1 {{unknown type name 'a'}}
+// expected-error@-2 {{a type specifier is required for all declarations}}
   const b;
   // expected-error@-1 {{a type specifier is required for all declarations}}
   new const;
@@ -512,8 +511,14 @@ const f(
   { for (const n // #cwg539-for
   // since-cxx11-error@-1 {{unknown type name 'n'}}
          : arr) ; {} }
-         // since-cxx11-error@-1 +{{}}
-         //   since-cxx11-note@#cwg539-for {{}}
+         // since-cxx11-error-re@-1 {{{{.*}}}}
+         // since-cxx11-error-re@-2 {{{{.*}}}}
+         // since-cxx11-error-re@-3 {{{{.*}}}}
+         // since-cxx11-error-re@-4 {{{{.*}}}}
+         // since-cxx11-error-re@-5 {{{{.*}}}}
+         // since-cxx11-error-re@-6 {{{{.*}}}}
+         //   since-cxx11-note-re@#cwg539-for {{{{.*}}}}
+         // since-cxx11-error-re@-8 {{{{.*}}}}
   (void) [](const) {};
   // since-cxx11-error@-1 {{a type specifier is required for all declarations}}
   (void) [](const n) {};
@@ -537,9 +542,9 @@ namespace cwg540 { // cwg540: 2.7
   typedef const a &c; // #cwg540-typedef-a-c
   // expected-warning@-1 {{'const' qualifier on reference type 'a' (aka 'int &') has no effect}}
   typedef const b &c; // #cwg540-typedef-b-c
+  // expected-warning@#cwg540-typedef-b-c {{'const' qualifier on reference type 'b' (aka 'const int &') has no effect}}
   // expected-error@#cwg540-typedef-b-c {{typedef redefinition with different types ('const int &' vs 'int &')}}
   //   expected-note@#cwg540-typedef-a-c {{previous definition is here}}
-  // expected-warning@#cwg540-typedef-b-c {{'const' qualifier on reference type 'b' (aka 'const int &') has no effect}}
 } // namespace cwg540
 
 namespace cwg541 { // cwg541: 2.7
@@ -880,7 +885,7 @@ namespace cwg569 { // cwg569: 2.7 c++11
   // FIXME: This is a DR issue against C++98, so should probably apply there
   // too.
   ;;;;;
-  // cxx98-error@-1 {{C++11 extension}}
+  // cxx98-error@-1 {{extra ';' outside of a function is a C++11 extension}}
 } // namespace cwg569
 
 namespace cwg570 { // cwg570: dup 633
@@ -957,7 +962,7 @@ namespace cwg574 { // cwg574: 3.0
 #elif __cplusplus >= 201103L
     // FIXME: We shouldn't produce the 'cannot overload' diagnostics here.
     friend C &C::operator=(const C&); // #cwg574-test-C
-    // since-cxx11-error@#cwg574-test-C {{cannot overload}}
+    // since-cxx11-error@#cwg574-test-C {{cannot overload a member function without a ref-qualifier with a member function with ref-qualifier '&'}}
     //   since-cxx11-note@#cwg574-C-copy-assign {{previous declaration is here}}
     // since-cxx11-error@#cwg574-test-C {{friend declaration of 'operator=' does not match any declaration in 'cwg574::C'}}
     //   since-cxx11-note@#cwg574-C-copy-assign {{candidate function}}
@@ -1150,12 +1155,12 @@ namespace cwg588 { // cwg588: 2.7
     int a = s.f();
     int b = s.n;
     // expected-error@-1 {{member 'n' found in multiple base classes of different types}}
-    //   expected-note@#cwg588-k {{in instantiation of function template specialization 'cwg588::f<cwg588::B>' requested here}}
+    //   expected-note@#cwg588-inst {{in instantiation of function template specialization 'cwg588::f<cwg588::B>' requested here}}
     //   expected-note@#cwg588-A {{member found by ambiguous name lookup}}
     //   expected-note@#cwg588-B {{member found by ambiguous name lookup}}
   }
   struct B { int n; }; // #cwg588-B
-  int k = f<B>(); // #cwg588-k
+  template int f<B>(); // #cwg588-inst
 } // namespace cwg588
 
 namespace cwg589 { // cwg589: 2.7
@@ -1238,7 +1243,7 @@ namespace cwg591 { // cwg591: 20
 
   template<typename T> struct A<T>::B::D : A<T*> {
     M m;
-    // expected-error@-1 {{field has incomplete type 'M' (aka 'void'}}
+    // expected-error@-1 {{field has incomplete type 'M' (aka 'void')}}
   };
 
   template<typename T>
@@ -1246,7 +1251,7 @@ namespace cwg591 { // cwg591: 20
   template<typename F>
   struct H<T>::B<U>::C<F>::P : B<F> {
     M m;
-    // expected-error@-1 {{field has incomplete type 'M' (aka 'void'}}
+    // expected-error@-1 {{field has incomplete type 'M' (aka 'void')}}
   };
 } // namespace cwg591
 

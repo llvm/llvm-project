@@ -117,9 +117,10 @@ class NVVM_Op<string mnemonic, list<Trait> traits = []> :
 }
 
 /// Base class that defines BasicPtxBuilderOpInterface. 
-class NVVM_PTXBuilder_Op<string mnemonic, 
-  list<Trait> traits = [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]> :
-  LLVM_OpBase<NVVM_Dialect, mnemonic, traits> {
+class NVVM_PTXBuilder_Op<string mnemonic, list<Trait> extraTraits = []> :
+  LLVM_OpBase<NVVM_Dialect, mnemonic,
+              !listconcat([DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>],
+                          extraTraits)> {
 }
 
 //===----------------------------------------------------------------------===//
@@ -4049,8 +4050,7 @@ def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp :
 
 def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOp : 
   NVVM_PTXBuilder_Op<"cp.async.bulk.tensor.global.shared.cta",
-  [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>,
-  AttrSizedOperandSegments]>,
+  [AttrSizedOperandSegments]>,
   Arguments<(ins LLVM_PointerGeneric:$tmaDescriptor,
                  LLVM_PointerShared:$srcMem,
                  Variadic<I32>:$coordinates,
@@ -6465,8 +6465,8 @@ def NVVM_TargetAttr : NVVM_Attr<"NVVMTarget", "target",
   let parameters = (ins
     DefaultValuedParameter<"int", "2", "Optimization level to apply.">:$O,
     StringRefParameter<"Target triple.", "\"nvptx64-nvidia-cuda\"">:$triple,
-    StringRefParameter<"Target chip.", "\"sm_50\"">:$chip,
-    StringRefParameter<"Target chip features.", "\"+ptx60\"">:$features,
+    StringRefParameter<"Target chip.", "\"sm_75\"">:$chip,
+    StringRefParameter<"Target chip features.", "\"\"">:$features,
     OptionalParameter<"DictionaryAttr", "Target specific flags.">:$flags,
     OptionalParameter<"ArrayAttr", "Files to link to the LLVM module.">:$link,
     DefaultValuedParameter<"bool", "true", "Perform SM version check on Ops.">:$verifyTarget
@@ -6477,14 +6477,13 @@ def NVVM_TargetAttr : NVVM_Attr<"NVVMTarget", "target",
   let builders = [
     AttrBuilder<(ins CArg<"int", "2">:$optLevel,
                      CArg<"StringRef", "\"nvptx64-nvidia-cuda\"">:$triple,
-                     CArg<"StringRef", "\"sm_50\"">:$chip,
-                     CArg<"StringRef", "\"+ptx60\"">:$features,
+                     CArg<"StringRef", "\"sm_75\"">:$chip,
+                     CArg<"StringRef", "\"\"">:$features,
                      CArg<"DictionaryAttr", "nullptr">:$targetFlags,
                      CArg<"ArrayAttr", "nullptr">:$linkFiles,
                      CArg<"bool", "true">:$verifyTarget), [{
       return $_get($_ctxt, optLevel, triple, chip, features, targetFlags, linkFiles, verifyTarget);
-    }]>
-  ];
+    }]>];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;
   let extraClassDeclaration = [{

@@ -40,6 +40,7 @@ bool RegisterContextFreeBSDKernel_i386::ReadRegister(
   if (m_pcb_addr == LLDB_INVALID_ADDRESS)
     return false;
 
+  // https://cgit.freebsd.org/src/tree/sys/i386/include/pcb.h
   struct {
     llvm::support::ulittle32_t edi;
     llvm::support::ulittle32_t esi;
@@ -58,7 +59,7 @@ bool RegisterContextFreeBSDKernel_i386::ReadRegister(
   uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
   switch (reg) {
 #define REG(x)                                                                 \
-  case lldb_##x##_i386:                                                      \
+  case lldb_##x##_i386:                                                        \
     value = pcb.x;                                                             \
     break;
 

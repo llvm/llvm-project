@@ -40,7 +40,7 @@ public:
 
   PluginProperties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_symbollocatordebuginfod_properties);
+    m_collection_sp->Initialize(g_symbollocatordebuginfod_properties_def);
 
     // We need to read the default value first to read the environment variable.
     llvm::SmallVector<llvm::StringRef> urls = llvm::getDefaultDebuginfodUrls();
@@ -111,7 +111,7 @@ void SymbolLocatorDebuginfod::Initialize() {
     PluginManager::RegisterPlugin(
         GetPluginNameStatic(), GetPluginDescriptionStatic(), CreateInstance,
         LocateExecutableObjectFile, LocateExecutableSymbolFile, nullptr,
-        nullptr, SymbolLocatorDebuginfod::DebuggerInitialize);
+        nullptr, nullptr, SymbolLocatorDebuginfod::DebuggerInitialize);
     llvm::HTTPClient::initialize();
   });
 }

@@ -402,3 +402,19 @@ define <16 x i8> @shuffle_v16_v16i8_r0_31(ptr %arg) {
   %shuf = shufflevector <16 x i8> %load, <16 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i8> %shuf
 }
+
+; Verify that dead shuffle uses (with indices outside the range of used
+; shuffles) are properly skipped when shrinking loads.
+define <2 x double> @shuffle_with_dead_use(ptr %p) {
+; CHECK-LABEL: define <2 x double> @shuffle_with_dead_use(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[LOAD:%.*]] = load <3 x double>, ptr [[P]], align 8
+; CHECK-NEXT:    [[SHUF1:%.*]] = shufflevector <3 x double> [[LOAD]], <3 x double> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[SHUF2:%.*]] = shufflevector <3 x double> [[LOAD]], <3 x double> poison, <2 x i32> <i32 2, i32 2>
+; CHECK-NEXT:    ret <2 x double> [[SHUF2]]
+;
+  %load = load <3 x double>, ptr %p, align 8
+  %shuf1 = shufflevector <3 x double> %load, <3 x double> poison, <2 x i32> <i32 0, i32 2>
+  %shuf2 = shufflevector <3 x double> %load, <3 x double> poison, <2 x i32> <i32 2, i32 2>
+  ret <2 x double> %shuf2
+}

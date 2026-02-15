@@ -47,6 +47,9 @@
 // RUN: %clang -### --hip-link -no-hip-rt --target=x86_64-linux-gnu \
 // RUN:   --rocm-path=%S/Inputs/rocm %t.o 2>&1 \
 // RUN:   | FileCheck -check-prefixes=NOHIPRT %s
+// RUN: %clang -### --hip-link --no-offloadlib --target=x86_64-linux-gnu \
+// RUN:   --rocm-path=%S/Inputs/rocm %t.o 2>&1 \
+// RUN:   | FileCheck -check-prefixes=NOHIPRT %s
 
 // Test HIP runtime lib is not linked with -r.
 // RUN: %clang -### --hip-link -r --target=x86_64-linux-gnu \
@@ -54,8 +57,8 @@
 // RUN:   | FileCheck -check-prefixes=NOHIPRT %s
 
 // Test HIP runtime lib is linked without hip-link if there is HIP input file.
-// RUN: %clang -### --target=x86_64-linux-gnu -nogpuinc -nogpulib \
-// RUN:   --rocm-path=%S/Inputs/rocm %s 2>&1 \
+// RUN: %clang -### --target=x86_64-linux-gnu -nogpuinc \
+// RUN:   --offload-arch=gfx908 --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=ROCM-PATH %s
 
 // ROCM-PATH: "{{.*/Inputs/rocm/lib/libamdhip64.so}}" "-L[[HIPRT:.*/Inputs/rocm/lib]]"

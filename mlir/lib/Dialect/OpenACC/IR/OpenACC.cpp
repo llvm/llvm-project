@@ -306,7 +306,11 @@ struct MemrefGlobalVariableModel
 
 struct GPULaunchOffloadRegionModel
     : public acc::OffloadRegionOpInterface::ExternalModel<
-          GPULaunchOffloadRegionModel, gpu::LaunchOp> {};
+          GPULaunchOffloadRegionModel, gpu::LaunchOp> {
+  mlir::Region &getOffloadRegion(mlir::Operation *op) const {
+    return cast<gpu::LaunchOp>(op).getBody();
+  }
+};
 
 /// Helper function for any of the times we need to modify an ArrayAttr based on
 /// a device type list.  Returns a new ArrayAttr with all of the
@@ -1218,6 +1222,270 @@ bool acc::CacheOp::isCacheReadonly() {
   return getDataClause() == acc::DataClause::acc_cache_readonly ||
          acc::bitEnumContainsAny(getModifiers(),
                                  acc::DataClauseModifier::readonly);
+}
+
+//===----------------------------------------------------------------------===//
+// Data entry/exit operations - getEffects implementations
+//===----------------------------------------------------------------------===//
+
+// This function returns true iff the given operation is enclosed
+// in any ACC_COMPUTE_CONSTRUCT_OPS operation.
+// It is quite alike acc::getEnclosingComputeOp() utility,
+// but we cannot use it here.
+static bool isEnclosedIntoComputeOp(mlir::Operation *op) {
+  mlir::Operation *parentOp = op->getParentOp();
+  while (parentOp) {
+    if (mlir::isa<ACC_COMPUTE_CONSTRUCT_OPS>(parentOp))
+      return true;
+    parentOp = parentOp->getParentOp();
+  }
+  return false;
+}
+
+/// Helper to add an effect on an operand, referenced by its mutable range.
+template <typename EffectTy>
+static void addOperandEffect(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects,
+    MutableOperandRange operand) {
+  for (unsigned i = 0, e = operand.size(); i < e; ++i)
+    effects.emplace_back(EffectTy::get(), &operand[i]);
+}
+
+/// Helper to add an effect on a result value.
+template <typename EffectTy>
+static void addResultEffect(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects,
+    Value result) {
+  effects.emplace_back(EffectTy::get(), mlir::cast<mlir::OpResult>(result));
+}
+
+// PrivateOp: accVar result write.
+void acc::PrivateOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  // If acc.private is enclosed into a compute operation,
+  // then it denotes the device side privatization, hence
+  // it does not access the CurrentDeviceIdResource.
+  if (!isEnclosedIntoComputeOp(getOperation()))
+    effects.emplace_back(MemoryEffects::Read::get(),
+                         acc::CurrentDeviceIdResource::get());
+  // TODO: should this be MemoryEffects::Allocate?
+  addResultEffect<MemoryEffects::Write>(effects, getAccVar());
+}
+
+// FirstprivateOp: var read, accVar result write.
+void acc::FirstprivateOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  // If acc.firstprivate is enclosed into a compute operation,
+  // then it denotes the device side privatization, hence
+  // it does not access the CurrentDeviceIdResource.
+  if (!isEnclosedIntoComputeOp(getOperation()))
+    effects.emplace_back(MemoryEffects::Read::get(),
+                         acc::CurrentDeviceIdResource::get());
+  addOperandEffect<MemoryEffects::Read>(effects, getVarMutable());
+  addResultEffect<MemoryEffects::Write>(effects, getAccVar());
+}
+
+// FirstprivateMapInitialOp: var read, accVar result write.
+void acc::FirstprivateMapInitialOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+  addOperandEffect<MemoryEffects::Read>(effects, getVarMutable());
+  addResultEffect<MemoryEffects::Write>(effects, getAccVar());
+}
+
+// ReductionOp: var read, accVar result write.
+void acc::ReductionOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  // If acc.reduction is enclosed into a compute operation,
+  // then it denotes the device side reduction, hence
+  // it does not access the CurrentDeviceIdResource.
+  if (!isEnclosedIntoComputeOp(getOperation()))
+    effects.emplace_back(MemoryEffects::Read::get(),
+                         acc::CurrentDeviceIdResource::get());
+  addOperandEffect<MemoryEffects::Read>(effects, getVarMutable());
+  addResultEffect<MemoryEffects::Write>(effects, getAccVar());
+}
+
+// DevicePtrOp: RuntimeCounters read.
+void acc::DevicePtrOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+}
+
+// PresentOp: RuntimeCounters read+write.
+void acc::PresentOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+}
+
+// CopyinOp: RuntimeCounters read+write, var read, accVar result write.
+void acc::CopyinOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+  addOperandEffect<MemoryEffects::Read>(effects, getVarMutable());
+  addResultEffect<MemoryEffects::Write>(effects, getAccVar());
+}
+
+// CreateOp: RuntimeCounters read+write, accVar result write.
+void acc::CreateOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+  // TODO: should this be MemoryEffects::Allocate?
+  addResultEffect<MemoryEffects::Write>(effects, getAccVar());
+}
+
+// NoCreateOp: RuntimeCounters read+write.
+void acc::NoCreateOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+}
+
+// AttachOp: RuntimeCounters read+write, var read.
+void acc::AttachOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+  // TODO: should we also add MemoryEffects::Write?
+  addOperandEffect<MemoryEffects::Read>(effects, getVarMutable());
+}
+
+// GetDevicePtrOp: RuntimeCounters read.
+void acc::GetDevicePtrOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+}
+
+// UpdateDeviceOp: var read, accVar result write.
+void acc::UpdateDeviceOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+  addOperandEffect<MemoryEffects::Read>(effects, getVarMutable());
+  addResultEffect<MemoryEffects::Write>(effects, getAccVar());
+}
+
+// UseDeviceOp: RuntimeCounters read.
+void acc::UseDeviceOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+}
+
+// DeclareDeviceResidentOp: RuntimeCounters write, var read.
+void acc::DeclareDeviceResidentOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+  addOperandEffect<MemoryEffects::Read>(effects, getVarMutable());
+}
+
+// DeclareLinkOp: RuntimeCounters write, var read.
+void acc::DeclareLinkOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+  addOperandEffect<MemoryEffects::Read>(effects, getVarMutable());
+}
+
+// CacheOp: NoMemoryEffect
+void acc::CacheOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {}
+
+// CopyoutOp: RuntimeCounters read+write, accVar read, var write.
+void acc::CopyoutOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+  addOperandEffect<MemoryEffects::Read>(effects, getAccVarMutable());
+  addOperandEffect<MemoryEffects::Write>(effects, getVarMutable());
+}
+
+// DeleteOp: RuntimeCounters read+write, accVar read.
+void acc::DeleteOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+  addOperandEffect<MemoryEffects::Read>(effects, getAccVarMutable());
+}
+
+// DetachOp: RuntimeCounters read+write, accVar read.
+void acc::DetachOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+  addOperandEffect<MemoryEffects::Read>(effects, getAccVarMutable());
+}
+
+// UpdateHostOp: RuntimeCounters read+write, accVar read, var write.
+void acc::UpdateHostOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+  addOperandEffect<MemoryEffects::Read>(effects, getAccVarMutable());
+  addOperandEffect<MemoryEffects::Write>(effects, getVarMutable());
 }
 
 template <typename StructureOp>

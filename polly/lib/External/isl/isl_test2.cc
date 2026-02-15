@@ -101,6 +101,9 @@ struct ternary {
  * The spelling depends on the isl type and
  * in particular on whether an equality method is available or
  * whether only obvious equality can be tested.
+ *
+ * Since isl::multi_val has both an is_equal and a plain_is_equal,
+ * use a specific overload for isl::multi_val that calls is_equal.
  */
 template <typename T, typename std::decay<decltype(
 	std::declval<T>().is_equal(std::declval<T>()))>::type = true>
@@ -113,6 +116,10 @@ template <typename T, typename std::decay<decltype(
 static bool is_equal(const T &a, const T &b)
 {
 	return a.plain_is_equal(b);
+}
+static bool is_equal(const isl::multi_val &a, const isl::multi_val &b)
+{
+	return a.is_equal(b);
 }
 
 /* A helper macro for throwing an isl::exception_invalid with message "msg".
@@ -428,6 +435,52 @@ static void test_fixed_power(isl::ctx ctx)
 	    "[0, 15, 1, 1, 1] -> [1, 0, 0, 0, 0] }",
 	  "128",
 	  "{ [0, b = 0:15, c = 0:1, d = 0:1, e = 0:1] -> [1, b, c, d, e] }" },
+	});
+}
+
+/* Perform basic simple fixed box hull tests.
+ */
+static void test_box_hull(isl::ctx ctx)
+{
+	C(&isl::set::simple_fixed_box_hull, {
+	{ "{ S[x, y] : 0 <= x, y < 10 }",
+	  "{ offset: { S[0, 0] }, size: { S[10, 10] } }" },
+	{ "[N] -> { S[x, y] : N <= x, y < N + 10 }",
+	  "{ offset: [N] -> { S[(N), (N)] }, size: { S[10, 10] } }" },
+	{ "{ S[x, y] : 0 <= x + y, x - y < 10 }",
+	  "{ offset: { S[0, -4] }, size: { S[10, 9] } }" },
+	{ "{ [i=0:10] : exists (e0, e1: 3e1 >= 1 + 2e0 and "
+	    "8e1 <= -1 + 5i - 5e0 and 2e1 >= 1 + 2i - 5e0) }",
+	  "{ offset: { [3] }, size: { [8] } }" },
+	{ "[N] -> { [w = 0:17] : exists (e0: w < 2N and "
+	    "-1 + w <= e0 <= w and 2e0 >= N + w and w <= 2e0 <= 15 + w) }",
+	  "{ offset: [N] -> { [N] }, size: { [9] } }" },
+	{ "[N] -> { [N//2:N//2+4] }",
+	  "{ offset: [N] -> { [N//2] }, size: { [5] } }" },
+	{ "[N] -> { [N//2+N//3:N//2+N//3+4] }",
+	  "{ offset: [N] -> { [N//2+N//3] }, size: { [5] } }" },
+	{ "[N] -> { [a=0:59, b=0:1] : 15N - a <= 60b <= 59 + 15N - a and "
+	    "-22 + 20b <= 20*floor((-1 + 15N - a)/60) < 20b and "
+	    "60*floor((-1 + 15N - a)/60) <= -46 + 15N - a }",
+	  "{ offset: [N] -> { [(15*((N) mod 4)), (floor((N)/4))] }, "
+	    "size: { [15, 1] } }" },
+	{ "{ [i=-3:7] : i mod 4 = 0 }",
+	  "{ offset: { [(0)] }, size: { [5] } }" },
+	{ "[N] -> { [i, N - 4i] : -14 + N <= 16i <= 1 + N }",
+	  "{ offset: [N] -> { [(floor((1 + N)/16)), "
+			      "(4 + N + 4*floor((-2 - N)/16))] }, "
+	    "size: { [1, 1] } }" },
+	});
+
+	C(&isl::map::range_simple_fixed_box_hull, {
+	{ "{ [N] -> [i, N - 4i] : -14 + N <= 16i <= 1 + N }",
+	  "{ offset: { [N] -> [(floor((1 + N)/16)), "
+			      "(4 + N + 4*floor((-2 - N)/16))] }, "
+	    "size: { [1, 1] } }" },
+	{ "{ [N] -> [i, j] : 4j = N - i and -1 + 3N <= 4i <= 14 + 3N }",
+	  "{ offset: { [N] -> [(4 + N + 4*floor((-2 - N)/16)), "
+			      "(floor((1 + N)/16))] }, "
+	    "size: { [1, 1] } }" },
 	});
 }
 
@@ -913,6 +966,7 @@ static std::vector<std::pair<const char *, void (*)(isl::ctx)>> tests =
 	{ "conversion", &test_conversion },
 	{ "preimage", &test_preimage },
 	{ "fixed power", &test_fixed_power },
+	{ "box hull", &test_box_hull },
 	{ "intersect", &test_intersect },
 	{ "lexmin", &test_lexmin },
 	{ "gist", &test_gist },

@@ -1,4 +1,4 @@
-// REQUIRES: linux || windows
+// REQUIRES: linux || windows || darwin
 // Default
 // RUN: %clang -o %t.normal -fprofile-instr-generate -fcoverage-mapping %S/Inputs/instrprof-debug-info-correlate-main.cpp %S/Inputs/instrprof-debug-info-correlate-foo.cpp
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t.normal

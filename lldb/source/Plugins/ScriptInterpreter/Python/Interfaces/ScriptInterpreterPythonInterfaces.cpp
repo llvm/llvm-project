@@ -6,13 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/PluginManager.h"
 #include "lldb/Host/Config.h"
 #include "lldb/lldb-enumerations.h"
 
 #if LLDB_ENABLE_PYTHON
 
+// LLDB Python header must be included first.
+#include "../lldb-python.h"
+
 #include "ScriptInterpreterPythonInterfaces.h"
+
+#include "lldb/Core/PluginManager.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -32,6 +36,7 @@ void ScriptInterpreterPythonInterfaces::Initialize() {
   ScriptedBreakpointPythonInterface::Initialize();
   ScriptedThreadPlanPythonInterface::Initialize();
   ScriptedFrameProviderPythonInterface::Initialize();
+  ScriptedSymbolLocatorPythonInterface::Initialize();
 }
 
 void ScriptInterpreterPythonInterfaces::Terminate() {
@@ -42,6 +47,7 @@ void ScriptInterpreterPythonInterfaces::Terminate() {
   ScriptedBreakpointPythonInterface::Terminate();
   ScriptedThreadPlanPythonInterface::Terminate();
   ScriptedFrameProviderPythonInterface::Terminate();
+  ScriptedSymbolLocatorPythonInterface::Terminate();
 }
 
 #endif
