@@ -58,18 +58,19 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
   auto ReleaseMethod = cxxMethodDecl(hasName("release"));
   auto ResetMethod = cxxMethodDecl(hasName("reset"));
 
-  auto ReleaseCallMatcher =
-      cxxMemberCallExpr(callee(ReleaseMethod));
+  auto ReleaseCallMatcher = cxxMemberCallExpr(callee(ReleaseMethod));
 
-  auto PointerArg = expr(unless(nullPointerConstant())).bind("pointer-arg");
+  // Array automatically decays to pointer
+  auto PointerArg = expr(anyOf(hasType(pointerType()), hasType(arrayType())))
+                        .bind("pointer-arg");
 
   // Matcher for unique_ptr types with custom deleters
   auto UniquePtrWithCustomDeleter = classTemplateSpecializationDecl(
       IsUniquePtr, templateArgumentCountIs(2),
-      hasTemplateArgument(1, refersToType(unless(hasUnqualifiedDesugaredType(
-                                 recordType(hasDeclaration(
-                                     classTemplateSpecializationDecl(
-                                         IsDefaultDeleter))))))));
+      hasTemplateArgument(
+          1, refersToType(
+                 unless(hasUnqualifiedDesugaredType(recordType(hasDeclaration(
+                     classTemplateSpecializationDecl(IsDefaultDeleter))))))));
 
   // Matcher for smart pointer constructors
   // Exclude constructors with custom deleters:
@@ -84,11 +85,9 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
 
   auto SmartPtrConstructorMatcher =
       cxxConstructExpr(
-          hasDeclaration(cxxConstructorDecl(
-              ofClass(IsSmartPtrRecord),
-              unless(anyOf(isCopyConstructor(), isMoveConstructor())))),
-          hasArgument(0, PointerArg),
-          unless(HasCustomDeleter), unless(hasArgument(0, cxxNewExpr())),
+          hasDeclaration(cxxConstructorDecl(ofClass(IsSmartPtrRecord))),
+          hasArgument(0, PointerArg), unless(HasCustomDeleter),
+          unless(hasArgument(0, cxxNewExpr())),
           unless(hasArgument(0, ReleaseCallMatcher)))
           .bind("constructor");
 
@@ -97,21 +96,18 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
   // - shared_ptr with 2+ arguments (second is deleter)
   // - unique_ptr with custom deleter type (2+ template args where second is not
   // default_delete)
-  auto HasCustomDeleterInReset =
-      anyOf(allOf(on(hasType(hasUnqualifiedDesugaredType(
-                      recordType(hasDeclaration(
-                          classTemplateSpecializationDecl(IsSharedPtr)))))),
-                  hasArgument(1, anything())),
-            on(hasType(hasUnqualifiedDesugaredType(
-                recordType(hasDeclaration(UniquePtrWithCustomDeleter))))));
+  auto HasCustomDeleterInReset = anyOf(
+      allOf(on(hasType(hasUnqualifiedDesugaredType(recordType(hasDeclaration(
+                classTemplateSpecializationDecl(IsSharedPtr)))))),
+            hasArgument(1, anything())),
+      on(hasType(hasUnqualifiedDesugaredType(
+          recordType(hasDeclaration(UniquePtrWithCustomDeleter))))));
 
   auto ResetCallMatcher =
       cxxMemberCallExpr(
-          on(hasType(hasUnqualifiedDesugaredType(
-              recordType(hasDeclaration(
-                  classTemplateSpecializationDecl(IsSmartPtr)))))),
-          callee(ResetMethod),
-          hasArgument(0, PointerArg),
+          on(hasType(hasUnqualifiedDesugaredType(recordType(
+              hasDeclaration(classTemplateSpecializationDecl(IsSmartPtr)))))),
+          callee(ResetMethod), hasArgument(0, PointerArg),
           unless(HasCustomDeleterInReset), unless(hasArgument(0, cxxNewExpr())),
           unless(hasArgument(0, ReleaseCallMatcher)))
           .bind("reset-call");
