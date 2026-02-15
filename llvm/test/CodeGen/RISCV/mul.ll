@@ -1679,13 +1679,17 @@ define i128 @muli128_m3840(i128 %a) nounwind {
 ;
 ; RV64IM-LABEL: muli128_m3840:
 ; RV64IM:       # %bb.0:
+; RV64IM-NEXT:    slli a2, a1, 12
+; RV64IM-NEXT:    slli a1, a1, 8
+; RV64IM-NEXT:    sub a1, a1, a2
 ; RV64IM-NEXT:    li a2, -15
 ; RV64IM-NEXT:    slli a2, a2, 8
-; RV64IM-NEXT:    mul a1, a1, a2
-; RV64IM-NEXT:    mulhu a3, a0, a2
-; RV64IM-NEXT:    sub a3, a3, a0
-; RV64IM-NEXT:    add a1, a3, a1
-; RV64IM-NEXT:    mul a0, a0, a2
+; RV64IM-NEXT:    mulhu a2, a0, a2
+; RV64IM-NEXT:    sub a1, a0, a1
+; RV64IM-NEXT:    sub a1, a2, a1
+; RV64IM-NEXT:    slli a2, a0, 12
+; RV64IM-NEXT:    slli a0, a0, 8
+; RV64IM-NEXT:    sub a0, a0, a2
 ; RV64IM-NEXT:    ret
   %1 = mul i128 %a, -3840
   ret i128 %1
