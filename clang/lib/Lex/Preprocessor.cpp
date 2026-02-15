@@ -61,6 +61,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Capacity.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -240,14 +241,21 @@ void Preprocessor::FinalizeForModelFile() {
 }
 
 void Preprocessor::DumpToken(const Token &Tok, bool DumpFlags) const {
-  llvm::errs() << tok::getTokenName(Tok.getKind());
+  llvm::errs() << llvm::formatv("{0,-16} ", tok::getTokenName(Tok.getKind()));
 
-  if (!Tok.isAnnotation())
-    llvm::errs() << " '" << getSpelling(Tok) << "'";
+  std::string Spelling;
+  if (!Tok.isAnnotation()) {
+    Spelling = "'" + getSpelling(Tok) + "'";
+  }
+
+  llvm::errs() << llvm::formatv("{0,-32} ", Spelling);
 
   if (!DumpFlags) return;
 
-  llvm::errs() << "\t";
+  llvm::errs() << "Loc=<";
+  DumpLocation(Tok.getLocation());
+  llvm::errs() << ">";
+
   if (Tok.isAtStartOfLine())
     llvm::errs() << " [StartOfLine]";
   if (Tok.hasLeadingSpace())
@@ -259,10 +267,6 @@ void Preprocessor::DumpToken(const Token &Tok, bool DumpFlags) const {
     llvm::errs() << " [UnClean='" << StringRef(Start, Tok.getLength())
                  << "']";
   }
-
-  llvm::errs() << "\tLoc=<";
-  DumpLocation(Tok.getLocation());
-  llvm::errs() << ">";
 }
 
 void Preprocessor::DumpLocation(SourceLocation Loc) const {
