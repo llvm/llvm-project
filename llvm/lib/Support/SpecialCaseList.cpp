@@ -26,8 +26,10 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/VirtualFileSystem.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/WithColor.h"
+#include <cassert>
 #include <memory>
+#include <mutex>
 #include <stdio.h>
 #include <string>
 #include <system_error>
@@ -44,6 +46,7 @@ class RegexMatcher {
 public:
   Error insert(StringRef Pattern, unsigned LineNumber);
   unsigned match(StringRef Query) const;
+  StringRef findRule(unsigned LineNo) const;
 
 private:
   struct Reg {
@@ -61,6 +64,7 @@ class GlobMatcher {
 public:
   Error insert(StringRef Pattern, unsigned LineNumber);
   unsigned match(StringRef Query) const;
+  StringRef findRule(unsigned LineNo) const;
 
 private:
   struct Glob {
@@ -90,15 +94,25 @@ private:
 /// Represents a set of patterns and their line numbers
 class Matcher {
 public:
-  Matcher(bool UseGlobs, bool RemoveDotSlash);
+  enum class QueryOptions {
+    kUnchanged,
+    kNoSlashDot,
+    kNoSlashDotWithFallback,
+  };
+
+  Matcher(bool UseGlobs, QueryOptions QOpts = QueryOptions::kUnchanged);
 
   Error insert(StringRef Pattern, unsigned LineNumber);
   unsigned match(StringRef Query) const;
 
   bool matchAny(StringRef Query) const { return match(Query); }
 
+private:
+  unsigned matchInternal(StringRef Query) const;
+  StringRef findRule(unsigned LineNo) const;
+
   std::variant<RegexMatcher, GlobMatcher> M;
-  bool RemoveDotSlash;
+  QueryOptions Options;
 };
 
 Error RegexMatcher::insert(StringRef Pattern, unsigned LineNumber) {
@@ -130,6 +144,14 @@ unsigned RegexMatcher::match(StringRef Query) const {
     if (R.Rg.match(Query))
       return R.LineNo;
   return 0;
+}
+
+StringRef RegexMatcher::findRule(unsigned LineNo) const {
+  for (const auto &R : RegExes)
+    if (R.LineNo == LineNo)
+      return R.Name;
+  assert(!"`findRule` should be called only with correct `LineNo`");
+  return {};
 }
 
 Error GlobMatcher::insert(StringRef Pattern, unsigned LineNumber) {
@@ -218,8 +240,15 @@ unsigned GlobMatcher::match(StringRef Query) const {
   return Best < 0 ? 0 : Globs[Best].LineNo;
 }
 
-Matcher::Matcher(bool UseGlobs, bool RemoveDotSlash)
-    : RemoveDotSlash(RemoveDotSlash) {
+StringRef GlobMatcher::findRule(unsigned LineNo) const {
+  for (const auto &G : Globs)
+    if (G.LineNo == LineNo)
+      return G.Name;
+  assert(!"`findRule` should be called only with correct `LineNo`");
+  return {};
+}
+
+Matcher::Matcher(bool UseGlobs, QueryOptions QOpts) : Options(QOpts) {
   if (UseGlobs)
     M.emplace<GlobMatcher>();
   else
@@ -231,10 +260,42 @@ Error Matcher::insert(StringRef Pattern, unsigned LineNumber) {
 }
 
 unsigned Matcher::match(StringRef Query) const {
-  if (RemoveDotSlash)
-    Query = llvm::sys::path::remove_leading_dotslash(Query);
+  switch (Options) {
+  case QueryOptions::kUnchanged:
+    return matchInternal(Query);
+  case QueryOptions::kNoSlashDot:
+    return matchInternal(llvm::sys::path::remove_leading_dotslash(Query));
+  case QueryOptions::kNoSlashDotWithFallback:
+    break;
+  }
+
+  StringRef FixedQuery = llvm::sys::path::remove_leading_dotslash(Query);
+  unsigned FixedMatched = matchInternal(FixedQuery);
+  if (FixedQuery == Query)
+    return FixedMatched;
+
+  unsigned OriginalMatch = matchInternal(Query);
+  if (OriginalMatch > FixedMatched) {
+    static std::once_flag Warned;
+    std::call_once(Warned, [&]() {
+      WithColor::warning() << "Deprecated behaviour: '"
+                           << findRule(OriginalMatch) << "' matches '" << Query
+                           << "', but it should match '" << FixedQuery
+                           << "'.\n";
+    });
+  }
+  return std::max(OriginalMatch, FixedMatched);
+}
+
+unsigned Matcher::matchInternal(StringRef Query) const {
   return std::visit([&](auto &V) -> unsigned { return V.match(Query); }, M);
 }
+
+StringRef Matcher::findRule(unsigned LineNo) const {
+  return std::visit([&](auto &V) -> StringRef { return V.findRule(LineNo); },
+                    M);
+}
+
 } // namespace
 
 class SpecialCaseList::Section::SectionImpl {
@@ -243,8 +304,7 @@ public:
 
   using SectionEntries = StringMap<StringMap<Matcher>>;
 
-  explicit SectionImpl(bool UseGlobs)
-      : SectionMatcher(UseGlobs, /*RemoveDotSlash=*/false) {}
+  explicit SectionImpl(bool UseGlobs) : SectionMatcher(UseGlobs) {}
 
   Matcher SectionMatcher;
   SectionEntries Entries;
@@ -335,8 +395,6 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
   // https://discourse.llvm.org/t/use-glob-instead-of-regex-for-specialcaselists/71666
   bool UseGlobs = Version > 1;
 
-  bool RemoveDotSlash = Version > 2;
-
   auto ErrOrSection = addSection("*", FileIdx, 1, true);
   if (auto Err = ErrOrSection.takeError()) {
     Error = toString(std::move(Err));
@@ -382,10 +440,17 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
       return false;
     }
 
+    Matcher::QueryOptions QOpts = Matcher::QueryOptions::kUnchanged;
+    if (llvm::is_contained(PathPrefixes, Prefix)) {
+      if (Version == 3)
+        QOpts = Matcher::QueryOptions::kNoSlashDotWithFallback;
+      else if (Version > 4)
+        QOpts = Matcher::QueryOptions::kNoSlashDot;
+    }
+
     auto [Pattern, Category] = Postfix.split("=");
-    auto [It, _] = CurrentImpl->Entries[Prefix].try_emplace(
-        Category, UseGlobs,
-        RemoveDotSlash && llvm::is_contained(PathPrefixes, Prefix));
+    auto [It, _] =
+        CurrentImpl->Entries[Prefix].try_emplace(Category, UseGlobs, QOpts);
     Pattern = Pattern.copy(StrAlloc);
     if (auto Err = It->second.insert(Pattern, LineNo)) {
       Error =
