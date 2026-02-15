@@ -2497,6 +2497,14 @@ struct FormatStyle {
       for (const auto &Rule : PerOperator) {
         if (llvm::find(Rule.Operators, Kind) != Rule.Operators.end())
           return &Rule;
+        // clang-format splits ">>" into two ">" tokens for template parsing.
+        // Match ">" against ">>" rules so that per-operator rules for ">>"
+        // (stream extraction / right shift) work correctly.
+        if (Kind == tok::greater &&
+            llvm::find(Rule.Operators, tok::greatergreater) !=
+                Rule.Operators.end()) {
+          return &Rule;
+        }
       }
       return nullptr;
     }

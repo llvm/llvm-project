@@ -28733,6 +28733,21 @@ TEST_F(FormatTest, BreakBinaryOperationsPerOperator) {
                "                  byte_buffer[2] << 16 |\n"
                "                  byte_buffer[3] << 24;",
                Style);
+
+  // >> (stream extraction) OnePerLine: clang-format splits >> into two >
+  // tokens, but per-operator rules for >> must still work.
+  FormatStyle::BinaryOperationBreakRule ShiftRightRule;
+  ShiftRightRule.Operators = {tok::greatergreater};
+  ShiftRightRule.Style = FormatStyle::BBO_OnePerLine;
+  ShiftRightRule.MinChainLength = 0;
+
+  Style.BreakBinaryOperations.PerOperator = {ShiftRightRule};
+  verifyFormat("in >>\n"
+               "    packet_id >>\n"
+               "    packet_version >>\n"
+               "    packet_number >>\n"
+               "    packet_scale;",
+               Style);
 }
 
 TEST_F(FormatTest, BreakBinaryOperationsMinChainLength) {
