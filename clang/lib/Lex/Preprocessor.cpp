@@ -1456,6 +1456,8 @@ void Preprocessor::makeModuleVisible(Module *M, SourceLocation Loc,
             << Message;
       });
 
+  CurSubmoduleState->IncludedFiles.insert_range(M->Includes);
+
   // Add this module to the imports list of the currently-built submodule.
   if (!BuildingSubmoduleStack.empty() && M != BuildingSubmoduleStack.back().M)
     BuildingSubmoduleStack.back().M->Imports.insert(M);

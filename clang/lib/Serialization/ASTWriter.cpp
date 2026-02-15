@@ -2104,14 +2104,15 @@ namespace {
         llvm::PointerIntPair<Module *, 2, ModuleMap::ModuleHeaderRole>;
 
     struct data_type {
-      data_type(const HeaderFileInfo &HFI, bool AlreadyIncluded,
+      data_type(const HeaderFileInfo &HFI,
+                std::vector<const Module *> &&Includers,
                 ArrayRef<ModuleMap::KnownHeader> KnownHeaders,
                 UnresolvedModule Unresolved)
-          : HFI(HFI), AlreadyIncluded(AlreadyIncluded),
+          : HFI(HFI), Includers(std::move(Includers)),
             KnownHeaders(KnownHeaders), Unresolved(Unresolved) {}
 
       HeaderFileInfo HFI;
-      bool AlreadyIncluded;
+      std::vector<const Module *> Includers;
       SmallVector<ModuleMap::KnownHeader, 1> KnownHeaders;
       UnresolvedModule Unresolved;
     };
@@ -2134,6 +2135,12 @@ namespace {
     EmitKeyDataLength(raw_ostream& Out, key_type_ref key, data_type_ref Data) {
       unsigned KeyLen = key.Filename.size() + 1 + 8 + 8;
       unsigned DataLen = 1 + sizeof(IdentifierID);
+
+      DataLen += 4;
+      for (const Module *M : Data.Includers)
+        if (!M || Writer.getLocalOrImportedSubmoduleID(M))
+          DataLen += 4;
+
       for (auto ModInfo : Data.KnownHeaders)
         if (Writer.getLocalOrImportedSubmoduleID(ModInfo.getModule()))
           DataLen += 4;
@@ -2160,11 +2167,11 @@ namespace {
       endian::Writer LE(Out, llvm::endianness::little);
       uint64_t Start = Out.tell(); (void)Start;
 
-      unsigned char Flags = (Data.AlreadyIncluded << 6)
-                          | (Data.HFI.isImport << 5)
-                          | (Writer.isWritingStdCXXNamedModules() ? 0 :
-                             Data.HFI.isPragmaOnce << 4)
-                          | (Data.HFI.DirInfo << 1);
+      unsigned char Flags =
+          (Data.HFI.isImport << 5) |
+          (Writer.isWritingStdCXXNamedModules() ? 0
+                                                : Data.HFI.isPragmaOnce << 4) |
+          (Data.HFI.DirInfo << 1);
       LE.write<uint8_t>(Flags);
 
       if (Data.HFI.LazyControllingMacro.isID())
@@ -2172,6 +2179,14 @@ namespace {
       else
         LE.write<IdentifierID>(
             Writer.getIdentifierRef(Data.HFI.LazyControllingMacro.getPtr()));
+
+      LE.write<uint32_t>(Data.Includers.size());
+      for (const Module *M : Data.Includers) {
+        if (!M)
+          LE.write<uint32_t>(0);
+        else if (uint32_t ModID = Writer.getLocalOrImportedSubmoduleID(M))
+          LE.write<uint32_t>(ModID);
+      }
 
       auto EmitModule = [&](Module *M, ModuleMap::ModuleHeaderRole Role) {
         if (uint32_t ModID = Writer.getLocalOrImportedSubmoduleID(M)) {
@@ -2244,7 +2259,7 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
         HeaderFileInfoTrait::key_type Key = {
             FilenameDup, *U.Size, IncludeTimestamps ? *U.ModTime : 0};
         HeaderFileInfoTrait::data_type Data = {
-            Empty, false, {}, {M, ModuleMap::headerKindToRole(U.Kind)}};
+            Empty, {}, {}, {M, ModuleMap::headerKindToRole(U.Kind)}};
         // FIXME: Deal with cases where there are multiple unresolved header
         // directives in different submodules for the same header.
         Generator.insert(Key, Data, GeneratorTrait);
@@ -2284,14 +2299,30 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
       SavedStrings.push_back(Filename.data());
     }
 
-    bool Included = HFI->IsLocallyIncluded || PP->alreadyIncluded(*File);
+    std::vector<const Module *> Includers;
+    if (WritingModule) {
+      llvm::DenseSet<const Module *> Seen;
+      std::function<void(const Module *)> Visit = [&](const Module *M) {
+        if (!Seen.insert(M).second)
+          return;
+        if (M->Includes.contains(*File))
+          Includers.push_back(M);
+        for (const Module *SubM : M->submodules())
+          Visit(SubM);
+      };
+      Visit(WritingModule);
+    } else if (PP->getTopLevelIncludes().contains(*File)) {
+      Includers.push_back(nullptr);
+    }
 
     HeaderFileInfoTrait::key_type Key = {
       Filename, File->getSize(), getTimestampForOutput(*File)
     };
     HeaderFileInfoTrait::data_type Data = {
-      *HFI, Included, HS.getModuleMap().findResolvedModulesForHeader(*File), {}
-    };
+        *HFI,
+        std::move(Includers),
+        HS.getModuleMap().findResolvedModulesForHeader(*File),
+        {}};
     Generator.insert(Key, Data, GeneratorTrait);
     ++NumHeaderSearchEntries;
   }
