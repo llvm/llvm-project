@@ -527,6 +527,10 @@ public:
         return true;
       if (FnDecl->isVirtualAsWritten())
         return false;
+      for (auto* Param : FnDecl->parameters()) {
+        if (!HasTrivialDestructor(Param))
+          return false;
+      }
     }
     return WithCachedResult(D, [&]() {
       if (auto *CtorDecl = dyn_cast<CXXConstructorDecl>(D)) {
@@ -540,6 +544,45 @@ public:
         return false;
       return Visit(Body);
     });
+  }
+  
+  bool HasTrivialDestructor(const VarDecl *VD) {
+    auto QT = VD->getType();
+    if (QT.isPODType(VD->getASTContext()))
+      return true;
+    auto *Type = QT.getTypePtrOrNull();
+    if (!Type)
+      return false;
+    const CXXRecordDecl *R = Type->getAsCXXRecordDecl();
+    if (!R) {
+      if (isa<LValueReferenceType>(Type))
+          return true; // T& does not run its destructor.
+      if (auto *RT = dyn_cast<RValueReferenceType>(Type)) {
+        // For T&&, we evaluate the destructor of T.
+        QT = RT->getPointeeType();
+        Type = QT.getTypePtrOrNull();
+        if (!Type)
+          return false;
+        R = Type->getAsCXXRecordDecl();
+      }
+    }
+    if (!R) {
+      if (auto *AT = dyn_cast<ConstantArrayType>(Type)) {
+        QT = AT->getElementType();
+        Type = QT.getTypePtrOrNull();
+        if (!Type)
+          return false;
+        if (isa<PointerType>(Type)) // An array of pointer does not have a destructor.
+          return true;
+        R = Type->getAsCXXRecordDecl();
+      }
+    }
+    if (!R)
+      return false;
+    auto *Dtor = R->getDestructor();
+    if (!Dtor || Dtor->isTrivial())
+      return true;
+    return IsFunctionTrivial(Dtor);
   }
 
   bool IsStatementTrivial(const Stmt *S) {
@@ -579,7 +622,15 @@ public:
     return true;
   }
 
-  bool VisitDeclStmt(const DeclStmt *DS) { return VisitChildren(DS); }
+  bool VisitDeclStmt(const DeclStmt *DS) {
+    for (auto& Decl : DS->decls()) {
+      if (auto *VD = dyn_cast<VarDecl>(Decl)) {
+        if (!HasTrivialDestructor(VD))
+          return false;
+      }
+    }
+    return VisitChildren(DS);
+  }
   bool VisitDoStmt(const DoStmt *DS) { return VisitChildren(DS); }
   bool VisitIfStmt(const IfStmt *IS) {
     return WithCachedResult(IS, [&]() { return VisitChildren(IS); });
@@ -731,6 +782,10 @@ public:
     return true;
   }
 
+  bool VisitCXXDefaultInitExpr(const CXXDefaultInitExpr* E) {
+    return Visit(E->getExpr());
+  }
+
   bool checkArguments(const CallExpr *CE) {
     for (const Expr *Arg : CE->arguments()) {
       if (Arg && !Visit(Arg))
@@ -769,7 +824,7 @@ public:
 
   bool VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE) {
     if (auto *Temp = BTE->getTemporary()) {
-      if (!TrivialFunctionAnalysis::isTrivialImpl(Temp->getDestructor(), Cache))
+      if (!IsFunctionTrivial(Temp->getDestructor()))
         return false;
     }
     return Visit(BTE->getSubExpr());
@@ -855,6 +910,12 @@ bool TrivialFunctionAnalysis::isTrivialImpl(
     const Stmt *S, TrivialFunctionAnalysis::CacheTy &Cache) {
   TrivialFunctionAnalysisVisitor V(Cache);
   return V.IsStatementTrivial(S);
+}
+
+bool TrivialFunctionAnalysis::hasTrivialDtorImpl(
+    const VarDecl *VD, CacheTy &Cache) {
+  TrivialFunctionAnalysisVisitor V(Cache);
+  return V.HasTrivialDestructor(VD);
 }
 
 } // namespace clang

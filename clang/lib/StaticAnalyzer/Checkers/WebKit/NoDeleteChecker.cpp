@@ -92,7 +92,18 @@ public:
       return;
 
     auto Body = FD->getBody();
-    if (!Body || TFA.isTrivial(Body))
+    if (!Body)
+      return;
+
+    bool ParamHaveTrivialDtors = true;
+    for (auto* Param : FD->parameters()) {
+      if (!TFA.hasTrivialDtor(Param)) {
+        ParamHaveTrivialDtors = false;
+        break;
+      }
+    }
+
+    if (ParamHaveTrivialDtors && TFA.isTrivial(Body))
       return;
 
     SmallString<100> Buf;

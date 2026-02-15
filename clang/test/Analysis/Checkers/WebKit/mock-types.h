@@ -227,12 +227,19 @@ template <typename T> bool operator!=(const RefPtr<T> &, T &) { return false; }
 struct RefCountable {
   static Ref<RefCountable> create();
   static std::unique_ptr<RefCountable> makeUnique();
-  void ref() {}
-  void deref() {}
+  void ref() { ++m_refCount; }
+  void deref() {
+    --m_refCount;
+    if (!--m_refCount)
+      delete this;
+  }
   void method();
   void constMethod() const;
   int trivial() { return 123; }
   RefCountable* next();
+  
+private:
+  unsigned m_refCount { 0 };
 };
 
 template <typename T> T *downcast(T *t) { return t; }
@@ -280,11 +287,14 @@ public:
 
 class CheckedObj {
 public:
-  void incrementCheckedPtrCount();
-  void decrementCheckedPtrCount();
+  void incrementCheckedPtrCount() { ++m_ptrCount; }
+  void decrementCheckedPtrCount() { --m_ptrCount; }
   void method();
   int trivial() { return 123; }
   CheckedObj* next();
+
+private:
+  unsigned m_ptrCount { 0 };
 };
 
 class RefCountableAndCheckable {
