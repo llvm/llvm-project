@@ -2,7 +2,10 @@
 ; DW_TAG_namelist_item attributes are emitted correctly.
 ;
 ; RUN: llc -O0 -mtriple=x86_64-unknown-linux-gnu %s -filetype=obj -o %t.o
-; RUN: llvm-dwarfdump %t.o | FileCheck %s
+; RUN: llvm-dwarfdump %t.o | FileCheck %s --implicit-check-not=DW_TAG_subprogram
+;
+; Ensure that a single DW_TAG_subprogram is produced.
+; CHECK:                    DW_TAG_subprogram
 ;
 ; CHECK: [[ITEM1:0x.+]]:       DW_TAG_variable
 ; CHECK:                          DW_AT_name  ("a")

@@ -16,11 +16,11 @@
 ; Check that there are only two typedefs, a and c.
 ; CHECK:        .short  4360        # Record kind: S_UDT
 ; CHECK:        .long   {{.*}}      # Type
-; CHECK:        .asciz  "a"
+; CHECK:        .asciz  "c"
 ; CHECK:        .p2align        2
 ; CHECK:        .short  4360        # Record kind: S_UDT
 ; CHECK:        .long   {{.*}}      # Type
-; CHECK:        .asciz  "c"
+; CHECK:        .asciz  "a"
 ; CHECK:        .p2align        2
 ;   No other S_UDTs.
 ; CHECK-NOT: S_UDT

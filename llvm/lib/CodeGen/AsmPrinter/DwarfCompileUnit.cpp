@@ -178,7 +178,7 @@ unsigned DwarfCompileUnit::getOrCreateSourceID(const DIFile *File) {
 DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
     const DIGlobalVariable *GV, ArrayRef<GlobalExpr> GlobalExprs) {
   // Check for pre-existence.
-  if (DIE *Die = getDIE(GV))
+  if (DIE *Die = getDIEs(GV).getVariableDIE(GV))
     return Die;
 
   assert(GV);
@@ -797,7 +797,9 @@ DIE *DwarfCompileUnit::getOrCreateLexicalBlockDIE(LexicalScope *Scope,
 
 DIE *DwarfCompileUnit::constructVariableDIE(DbgVariable &DV, bool Abstract) {
   auto *VariableDie = DIE::get(DIEValueAllocator, DV.getTag());
-  insertDIE(DV.getVariable(), VariableDie);
+  getDIEs(DV.getVariable())
+      .getLVs()
+      .insertDIE(DV.getVariable(), &DV, VariableDie, Abstract);
   DV.setDIE(*VariableDie);
   // Abstract variables don't get common attributes later, so apply them now.
   if (Abstract) {
@@ -1012,7 +1014,9 @@ DIE *DwarfCompileUnit::constructVariableDIE(DbgVariable &DV,
 DIE *DwarfCompileUnit::constructLabelDIE(DbgLabel &DL,
                                          const LexicalScope &Scope) {
   auto LabelDie = DIE::get(DIEValueAllocator, DL.getTag());
-  insertDIE(DL.getLabel(), LabelDie);
+  getDIEs(DL.getLabel())
+      .getLabels()
+      .insertDIE(DL.getLabel(), &DL, LabelDie, Scope.isAbstractScope());
   DL.setDIE(*LabelDie);
 
   if (Scope.isAbstractScope())
@@ -1490,8 +1494,9 @@ DIE *DwarfCompileUnit::getOrCreateImportedEntityDIE(
   return IMDie;
 }
 
-void DwarfCompileUnit::finishSubprogramDefinition(const DISubprogram *SP) {
-  DIE *D = getDIE(SP);
+void DwarfCompileUnit::finishSubprogramDefinition(const DISubprogram *SP,
+                                                  const Function *F) {
+  DIE *D = getDIEs(SP).getLocalScopes().getConcreteDIE(SP, F);
   if (DIE *AbsSPDIE = getAbstractScopeDIEs().lookup(SP)) {
     if (D)
       // If this subprogram has an abstract definition, reference that
@@ -1879,14 +1884,16 @@ DIE *DwarfCompileUnit::getOrCreateSubprogramDIE(const DISubprogram *SP,
                                                 const Function *F,
                                                 bool Minimal) {
   if (!F && SP->isDefinition()) {
-    F = DD->getLexicalScopes().getFunction(SP);
+    const auto *Fs = DD->getLexicalScopes().getFunctions(SP);
 
-    if (!F) {
+    if (!Fs || Fs->size() != 1) {
       // SP may belong to another CU. Determine the CU similarly
       // to DwarfDebug::constructAbstractSubprogramScopeDIE.
       return &DD->getOrCreateAbstractSubprogramCU(SP, *this)
                   .getOrCreateAbstractSubprogramDIE(SP);
     }
+
+    F = *Fs->begin();
   }
 
   return DwarfUnit::getOrCreateSubprogramDIE(SP, F, Minimal);

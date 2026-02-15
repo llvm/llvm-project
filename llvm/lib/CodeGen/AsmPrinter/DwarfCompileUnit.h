@@ -79,15 +79,9 @@ class DwarfCompileUnit final : public DwarfUnit {
   // List of concrete lexical block scopes belong to subprograms within this CU.
   DenseMap<const DILocalScope *, DIE *> LexicalBlockDIEs;
 
-  // List of abstract local scopes (either DISubprogram or DILexicalBlock).
-  DenseMap<const DILocalScope *, DIE *> AbstractLocalScopeDIEs;
-  SmallPtrSet<const DISubprogram *, 8> FinalizedAbstractSubprograms;
-
   // List of inlined lexical block scopes that belong to subprograms within this
   // CU.
   DenseMap<const DILocalScope *, SmallVector<DIE *, 2>> InlinedLocalScopeDIEs;
-
-  DenseMap<const DINode *, std::unique_ptr<DbgEntity>> AbstractEntities;
 
   /// DWO ID for correlating skeleton and split units.
   uint64_t DWOId = 0;
@@ -126,22 +120,20 @@ class DwarfCompileUnit final : public DwarfUnit {
 
   bool isDwoUnit() const override;
 
-  DenseMap<const DILocalScope *, DIE *> &getAbstractScopeDIEs() {
-    if (isDwoUnit() && !DD->shareAcrossDWOCUs())
-      return AbstractLocalScopeDIEs;
-    return DU->getAbstractScopeDIEs();
+  DwarfInfoHolder &getDIEs(const DINode *N) { return DwarfUnit::getDIEs(N); }
+
+  DwarfInfoHolder &getDIEs() { return getDIEs(nullptr); }
+
+  DwarfInfoHolder::AbstractScopeMapT &getAbstractScopeDIEs() {
+    return getDIEs().getLocalScopes().getAbstractDIEs();
   }
 
   DenseMap<const DINode *, std::unique_ptr<DbgEntity>> &getAbstractEntities() {
-    if (isDwoUnit() && !DD->shareAcrossDWOCUs())
-      return AbstractEntities;
-    return DU->getAbstractEntities();
+    return getDIEs().getAbstractEntities();
   }
 
   auto &getFinalizedAbstractSubprograms() {
-    if (isDwoUnit() && !DD->shareAcrossDWOCUs())
-      return FinalizedAbstractSubprograms;
-    return DU->getFinalizedAbstractSubprograms();
+    return getDIEs().getFinalizedAbstractSubprograms();
   }
 
   void finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) override;
@@ -335,7 +327,7 @@ public:
   DIE *getOrCreateImportedEntityDIE(const DIImportedEntity *IE);
   DIE *constructImportedEntityDIE(const DIImportedEntity *IE);
 
-  void finishSubprogramDefinition(const DISubprogram *SP);
+  void finishSubprogramDefinition(const DISubprogram *SP, const Function *F);
   void finishEntityDefinition(const DbgEntity *Entity);
   void attachLexicalScopesAbstractOrigins();
 
