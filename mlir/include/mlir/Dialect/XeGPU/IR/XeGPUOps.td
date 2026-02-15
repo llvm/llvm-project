@@ -1593,9 +1593,8 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
   }];
 
   let description = [{
-    This operation loads a 2D block of data from shared local memory (SLM) as specified
-    by the provided 2D `mem_desc`. Only 2D memory descriptors are supported; use the
-    subview operation to obtain a compatible 2D `mem_desc` from a higher-rank descriptor if needed.
+    This operation loads an nD block of data from shared local memory (SLM) as specified
+    by the provided nD `mem_desc`. Memory descriptors of any rank are supported.
 
     This operation serves as an anchor through which users assign a layout attribute
     to govern computation distribution.
@@ -1665,9 +1664,8 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
   let assemblyFormat = [{ $data `,` $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
                           prop-dict attr-dict `` `:` type(operands)}];
   let description = [{
-    This operation stores a 2D `data` fragment into the shared local memory region
-    specified by a 2D `mem_desc`. Only 2D memory descriptors are supported; use the
-    subview operation to obtain a 2D `mem_desc` from a higher-rank descriptor if needed.
+    This operation stores an nD `data` fragment into the shared local memory region
+    specified by an nD `mem_desc`. Memory descriptors of any rank are supported.
 
     This operation serves as an anchor through which users assign a layout attribute
     to govern computation distribution.
