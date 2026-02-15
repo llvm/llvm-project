@@ -313,19 +313,19 @@ def ldxr_8 : PatFrag<(ops node:$ptr), (int_aarch64_ldxr node:$ptr), [{
 }
 
 def : Pat<(ldxr_1 GPR64sp:$addr),
-          (SUBREG_TO_REG (i64 0), (LDXRB GPR64sp:$addr), sub_32)>;
+          (SUBREG_TO_REG (LDXRB GPR64sp:$addr), sub_32)>;
 def : Pat<(ldxr_2 GPR64sp:$addr),
-          (SUBREG_TO_REG (i64 0), (LDXRH GPR64sp:$addr), sub_32)>;
+          (SUBREG_TO_REG (LDXRH GPR64sp:$addr), sub_32)>;
 def : Pat<(ldxr_4 GPR64sp:$addr),
-          (SUBREG_TO_REG (i64 0), (LDXRW GPR64sp:$addr), sub_32)>;
+          (SUBREG_TO_REG (LDXRW GPR64sp:$addr), sub_32)>;
 def : Pat<(ldxr_8 GPR64sp:$addr), (LDXRX GPR64sp:$addr)>;
 
 def : Pat<(and (ldxr_1 GPR64sp:$addr), 0xff),
-          (SUBREG_TO_REG (i64 0), (LDXRB GPR64sp:$addr), sub_32)>;
+          (SUBREG_TO_REG (LDXRB GPR64sp:$addr), sub_32)>;
 def : Pat<(and (ldxr_2 GPR64sp:$addr), 0xffff),
-          (SUBREG_TO_REG (i64 0), (LDXRH GPR64sp:$addr), sub_32)>;
+          (SUBREG_TO_REG (LDXRH GPR64sp:$addr), sub_32)>;
 def : Pat<(and (ldxr_4 GPR64sp:$addr), 0xffffffff),
-          (SUBREG_TO_REG (i64 0), (LDXRW GPR64sp:$addr), sub_32)>;
+          (SUBREG_TO_REG (LDXRW GPR64sp:$addr), sub_32)>;
 
 // Load-exclusives.
 
@@ -354,19 +354,19 @@ def ldaxr_8 : PatFrag<(ops node:$ptr), (int_aarch64_ldaxr node:$ptr), [{
 }
 
 def : Pat<(ldaxr_1 GPR64sp:$addr),
-          (SUBREG_TO_REG (i64 0), (LDAXRB GPR64sp:$addr), sub_32)>;
+          (SUBREG_TO_REG (LDAXRB GPR64sp:$addr), sub_32)>;
 def : Pat<(ldaxr_2 GPR64sp:$addr),
-          (SUBREG_TO_REG (i64 0), (LDAXRH GPR64sp:$addr), sub_32)>;
+          (SUBREG_TO_REG (LDAXRH GPR64sp:$addr), sub_32)>;
 def : Pat<(ldaxr_4 GPR64sp:$addr),
-          (SUBREG_TO_REG (i64 0), (LDAXRW GPR64sp:$addr), sub_32)>;
+          (SUBREG_TO_REG (LDAXRW GPR64sp:$addr), sub_32)>;
 def : Pat<(ldaxr_8 GPR64sp:$addr), (LDAXRX GPR64sp:$addr)>;
 
 def : Pat<(and (ldaxr_1 GPR64sp:$addr), 0xff),
-          (SUBREG_TO_REG (i64 0), (LDAXRB GPR64sp:$addr), sub_32)>;
+          (SUBREG_TO_REG (LDAXRB GPR64sp:$addr), sub_32)>;
 def : Pat<(and (ldaxr_2 GPR64sp:$addr), 0xffff),
-          (SUBREG_TO_REG (i64 0), (LDAXRH GPR64sp:$addr), sub_32)>;
+          (SUBREG_TO_REG (LDAXRH GPR64sp:$addr), sub_32)>;
 def : Pat<(and (ldaxr_4 GPR64sp:$addr), 0xffffffff),
-          (SUBREG_TO_REG (i64 0), (LDAXRW GPR64sp:$addr), sub_32)>;
+          (SUBREG_TO_REG (LDAXRW GPR64sp:$addr), sub_32)>;
 
 // Store-exclusives.
 
@@ -596,7 +596,7 @@ let Predicates = [HasRCPC3, HasNEON] in {
   // by the patterns above. We only need to cover the v1f64 case manually.
   def : Pat<(releasing_store<atomic_store_64> GPR64sp:$Rn,
                 (i64 (bitconvert (v1f64 VecListOne64:$Vt)))),
-            (STL1 (SUBREG_TO_REG (i64 0), VecListOne64:$Vt, dsub), (i64 0), GPR64sp:$Rn)>;
+            (STL1 (SUBREG_TO_REG VecListOne64:$Vt, dsub), (i64 0), GPR64sp:$Rn)>;
 }
 
 // v8.4a FEAT_LRCPC2 patterns

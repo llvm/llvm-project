@@ -8,9 +8,10 @@ define <8 x i7> @vminu_vv_v8i7(<8 x i7> %va, <8 x i7> %b, <8 x i1> %m, i32 zeroe
 ; CHECK-LABEL: vminu_vv_v8i7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 127
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vand.vx v9, v9, a1
+; CHECK-NEXT:    vand.vx v8, v8, a1
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
-; CHECK-NEXT:    vand.vx v9, v9, a1, v0.t
-; CHECK-NEXT:    vand.vx v8, v8, a1, v0.t
 ; CHECK-NEXT:    vminu.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %v = call <8 x i7> @llvm.vp.umin.v8i7(<8 x i7> %va, <8 x i7> %b, <8 x i1> %m, i32 %evl)
@@ -986,28 +987,59 @@ define <16 x i64> @vminu_vx_v16i64_unmasked(<16 x i64> %va, i64 %b, i32 zeroext 
 
 ; Test that split-legalization works as expected.
 
-define <32 x i64> @vminu_vx_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vminu_vx_v32i64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 16
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v24, v0, 2
-; CHECK-NEXT:    mv a1, a0
-; CHECK-NEXT:    bltu a0, a2, .LBB74_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a1, 16
-; CHECK-NEXT:  .LBB74_2:
-; CHECK-NEXT:    li a2, -1
-; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
-; CHECK-NEXT:    vminu.vx v8, v8, a2, v0.t
-; CHECK-NEXT:    addi a1, a0, -16
-; CHECK-NEXT:    sltu a0, a0, a1
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    vmv1r.v v0, v24
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    vminu.vx v16, v16, a2, v0.t
-; CHECK-NEXT:    ret
-  %v = call <32 x i64> @llvm.vp.umin.v32i64(<32 x i64> %va, <32 x i64> splat (i64 -1), <32 x i1> %m, i32 %evl)
+define <32 x i64> @vminu_vx_v32i64(<32 x i64> %va, <32 x i1> %m, i64 %x, i32 zeroext %evl) {
+; RV32-LABEL: vminu_vx_v32i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; RV32-NEXT:    vlse64.v v24, (a0), zero
+; RV32-NEXT:    li a1, 16
+; RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
+; RV32-NEXT:    vslidedown.vi v7, v0, 2
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    bltu a2, a1, .LBB74_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    li a0, 16
+; RV32-NEXT:  .LBB74_2:
+; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; RV32-NEXT:    vminu.vv v8, v8, v24, v0.t
+; RV32-NEXT:    addi a0, a2, -16
+; RV32-NEXT:    sltu a1, a2, a0
+; RV32-NEXT:    addi a1, a1, -1
+; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    vmv1r.v v0, v7
+; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; RV32-NEXT:    vminu.vv v16, v16, v24, v0.t
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vminu_vx_v32i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a3, 16
+; RV64-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
+; RV64-NEXT:    vslidedown.vi v24, v0, 2
+; RV64-NEXT:    mv a2, a1
+; RV64-NEXT:    bltu a1, a3, .LBB74_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    li a2, 16
+; RV64-NEXT:  .LBB74_2:
+; RV64-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
+; RV64-NEXT:    vminu.vx v8, v8, a0, v0.t
+; RV64-NEXT:    addi a2, a1, -16
+; RV64-NEXT:    sltu a1, a1, a2
+; RV64-NEXT:    addi a1, a1, -1
+; RV64-NEXT:    and a1, a1, a2
+; RV64-NEXT:    vmv1r.v v0, v24
+; RV64-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; RV64-NEXT:    vminu.vx v16, v16, a0, v0.t
+; RV64-NEXT:    ret
+  %elt.head = insertelement <32 x i64> poison, i64 %x, i32 0
+  %vb = shufflevector <32 x i64> %elt.head, <32 x i64> poison, <32 x i32> zeroinitializer
+  %v = call <32 x i64> @llvm.vp.umin.v32i64(<32 x i64> %va, <32 x i64> %vb, <32 x i1> %m, i32 %evl)
   ret <32 x i64> %v
 }

@@ -81,7 +81,7 @@ struct B : A {
 } b;
 void foo() {
   b.A::operator T(); // FIXME: qualified lookup should find T in A.
-  // expected-error@-1 {{unknown type name 'T'}}
+  // expected-error@-1 {{unknown type name 'T'; did you mean 'A::T'?}}
   //   expected-note@#cwg1111-A-T {{'A::T' declared here}}
 }
 } // namespace example4
@@ -107,7 +107,7 @@ namespace cwg1113 { // cwg1113: partial
   namespace named {
     extern int a; // #cwg1113-a
     static int a;
-    // expected-error@-1 {{static declaration of 'a' follows non-static}}
+    // expected-error@-1 {{static declaration of 'a' follows non-static declaration}}
     //   expected-note@#cwg1113-a {{previous declaration is here}}
   }
   namespace {

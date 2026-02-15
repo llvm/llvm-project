@@ -1506,10 +1506,8 @@ void test_s_wakeup_barrier(void *bar)
 
 // CHECK-LABEL: @test_global_add_f32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca float, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[ADDR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR_ADDR]] to ptr
 // CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X_ADDR]] to ptr
 // CHECK-NEXT:    store ptr addrspace(1) [[ADDR:%.*]], ptr [[ADDR_ADDR_ASCAST]], align 8
@@ -1525,10 +1523,8 @@ float test_global_add_f32(global float *addr, float x) {
 
 // CHECK-LABEL: @test_global_add_half2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <2 x half>, align 4, addrspace(5)
 // CHECK-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca <2 x half>, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[ADDR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR_ADDR]] to ptr
 // CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X_ADDR]] to ptr
 // CHECK-NEXT:    store ptr addrspace(1) [[ADDR:%.*]], ptr [[ADDR_ADDR_ASCAST]], align 8
@@ -1544,10 +1540,8 @@ half2 test_global_add_half2(global half2 *addr, half2 x) {
 
 // CHECK-LABEL: @test_flat_add_2f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <2 x half>, align 4, addrspace(5)
 // CHECK-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca <2 x half>, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[ADDR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR_ADDR]] to ptr
 // CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X_ADDR]] to ptr
 // CHECK-NEXT:    store ptr [[ADDR:%.*]], ptr [[ADDR_ADDR_ASCAST]], align 8
@@ -1563,10 +1557,8 @@ half2 test_flat_add_2f16(generic half2 *addr, half2 x) {
 
 // CHECK-LABEL: @test_flat_add_2bf16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <2 x i16>, align 4, addrspace(5)
 // CHECK-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca <2 x i16>, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[ADDR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR_ADDR]] to ptr
 // CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X_ADDR]] to ptr
 // CHECK-NEXT:    store ptr [[ADDR:%.*]], ptr [[ADDR_ADDR_ASCAST]], align 8
@@ -1584,10 +1576,8 @@ short2 test_flat_add_2bf16(generic short2 *addr, short2 x) {
 
 // CHECK-LABEL: @test_global_add_2bf16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <2 x i16>, align 4, addrspace(5)
 // CHECK-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca <2 x i16>, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[ADDR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR_ADDR]] to ptr
 // CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X_ADDR]] to ptr
 // CHECK-NEXT:    store ptr addrspace(1) [[ADDR:%.*]], ptr [[ADDR_ADDR_ASCAST]], align 8
@@ -1605,10 +1595,8 @@ short2 test_global_add_2bf16(global short2 *addr, short2 x) {
 
 // CHECK-LABEL: @test_local_add_2f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <2 x i16>, align 4, addrspace(5)
 // CHECK-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr addrspace(3), align 4, addrspace(5)
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca <2 x i16>, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[ADDR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR_ADDR]] to ptr
 // CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X_ADDR]] to ptr
 // CHECK-NEXT:    store ptr addrspace(3) [[ADDR:%.*]], ptr [[ADDR_ADDR_ASCAST]], align 4
@@ -1626,10 +1614,8 @@ short2 test_local_add_2f16(local short2 *addr, short2 x) {
 
 // CHECK-LABEL: @test_local_add_2bf16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <2 x half>, align 4, addrspace(5)
 // CHECK-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr addrspace(3), align 4, addrspace(5)
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca <2 x half>, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[ADDR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR_ADDR]] to ptr
 // CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X_ADDR]] to ptr
 // CHECK-NEXT:    store ptr addrspace(3) [[ADDR:%.*]], ptr [[ADDR_ADDR_ASCAST]], align 4

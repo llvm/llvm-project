@@ -30,15 +30,16 @@ def int_my_fadd_f32 : DefaultAttrsIntrinsic<
      ArgInfo<ArgIndex<2>, [ArgName<"rounding_mode">, ImmArgPrinter<"printRoundingMode">]>,
      ArgInfo<ArgIndex<3>, [ArgName<"saturation_mode">]>]>;
 
-// CHECK: #ifdef GET_INTRINSIC_PRETTY_PRINT_TABLE
-// CHECK-NEXT: static constexpr uint8_t PPTable[] = {
+// CHECK:      #ifdef GET_INTRINSIC_PRETTY_PRINT_TABLE
+// CHECK-NEXT: #undef GET_INTRINSIC_PRETTY_PRINT_TABLE
+// CHECK:      static constexpr uint8_t PPTable[] = {
+// CHECK:      #endif // GET_INTRINSIC_PRETTY_PRINT_TABLE
 
-// CHECK: #endif // GET_INTRINSIC_PRETTY_PRINT_TABLE
+// CHECK:      #ifdef GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS
+// CHECK-NEXT: #undef GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS
+// CHECK:      void Intrinsic::printImmArg(ID IID, unsigned ArgIdx, raw_ostream &OS, const Constant *ImmArgVal) {
 
-// CHECK: #ifdef GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS
-// CHECK: void Intrinsic::printImmArg(ID IID, unsigned ArgIdx, raw_ostream &OS, const Constant *ImmArgVal) {
-
-// CHECK: case dummy_foo_bar:
+// CHECK:      case dummy_foo_bar:
 // CHECK-NEXT: switch (ArgIdx) {
 
 // CHECK-NEXT: case 1:
@@ -53,7 +54,7 @@ def int_my_fadd_f32 : DefaultAttrsIntrinsic<
 // CHECK-NEXT: }
 // CHECK-NEXT: break;
 
-// CHECK: case my_fadd_f32:
+// CHECK:      case my_fadd_f32:
 // CHECK-NEXT: switch (ArgIdx) {
 
 // CHECK-NEXT: case 2:
@@ -68,4 +69,4 @@ def int_my_fadd_f32 : DefaultAttrsIntrinsic<
 // CHECK-NEXT: }
 // CHECK-NEXT: break;
 
-// CHECK: #endif // GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS
+// CHECK:      #endif // GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS

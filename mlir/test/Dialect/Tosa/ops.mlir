@@ -1500,16 +1500,6 @@ func.func @test_concat_shape() -> !tosa.shape<5> {
 }
 
 // -----
-// CHECK-LABEL: test_concat_shape_rank_0
-func.func @test_concat_shape_rank_0() -> !tosa.shape<0> {
-  %0 = tosa.const_shape {values = dense<[]> : tensor<0xindex>} : () -> !tosa.shape<0>
-  %1 = tosa.const_shape {values = dense<[]> : tensor<0xindex>} : () -> !tosa.shape<0>
-  %2 = tosa.const_shape {values = dense<[]> : tensor<0xindex>} : () -> !tosa.shape<0>
-  %3 = tosa.concat_shape %0, %1, %2 : (!tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>) -> !tosa.shape<0>
-  return %3 : !tosa.shape<0>
-}
-
-// -----
 // CHECK-LABEL: test_slice_shape
 func.func @test_slice_shape() -> !tosa.shape<3> {
   %0 = tosa.const_shape {values = dense<[4, 5, 6, 7, 8, 9]> : tensor<6xindex>} : () -> !tosa.shape<6>

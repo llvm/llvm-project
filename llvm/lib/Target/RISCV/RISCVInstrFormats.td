@@ -61,13 +61,13 @@ def InstFormatNDS_BRANCH_10 : InstFormat<27>;
 def InstFormatOther         : InstFormat<31>;
 
 
-class RISCVVConstraint<bits<3> val> {
-  bits<3> Value = val;
+class RISCVVConstraint<bit VS2 = 0, bit VS1 = 0, bit VM = 0> {
+  bits<3> Value = {VM, VS1, VS2};
 }
-def NoConstraint  : RISCVVConstraint<0b000>;
-def VS2Constraint : RISCVVConstraint<0b001>;
-def VS1Constraint : RISCVVConstraint<0b010>;
-def VMConstraint  : RISCVVConstraint<0b100>;
+def NoConstraint  : RISCVVConstraint<>;
+def VS2Constraint : RISCVVConstraint<VS2 = 1>;
+def VS1Constraint : RISCVVConstraint<VS1 = 1>;
+def VMConstraint  : RISCVVConstraint<VM = 1>;
 
 // Illegal instructions:
 //
@@ -100,26 +100,15 @@ def VMConstraint  : RISCVVConstraint<0b100>;
 //
 // * vcompress: The destination vector register group cannot overlap the
 // source vector register group or the source mask register
-def WidenVNoMask : RISCVVConstraint<!or(VS2Constraint.Value,
-                                        VS1Constraint.Value)>;
-def WidenV       : RISCVVConstraint<!or(VS2Constraint.Value,
-                                        VS1Constraint.Value,
-                                        VMConstraint.Value)>;
-def WidenW       : RISCVVConstraint<!or(VS1Constraint.Value,
-                                        VMConstraint.Value)>;
-def WidenCvt     : RISCVVConstraint<!or(VS2Constraint.Value,
-                                        VMConstraint.Value)>;
-def Iota         : RISCVVConstraint<!or(VS2Constraint.Value,
-                                        VMConstraint.Value)>;
-def SlideUp      : RISCVVConstraint<!or(VS2Constraint.Value,
-                                        VMConstraint.Value)>;
-def Vrgather     : RISCVVConstraint<!or(VS2Constraint.Value,
-                                        VS1Constraint.Value,
-                                        VMConstraint.Value)>;
-def Vcompress    : RISCVVConstraint<!or(VS2Constraint.Value,
-                                        VS1Constraint.Value)>;
-def Sha2Constraint : RISCVVConstraint<!or(VS2Constraint.Value,
-                                          VS1Constraint.Value)>;
+def WidenVNoMask : RISCVVConstraint<VS2 = 1, VS1 = 1>;
+def WidenV       : RISCVVConstraint<VS2 = 1, VS1 = 1, VM = 1>;
+def WidenW       : RISCVVConstraint<VS1 = 1, VM = 1>;
+def WidenCvt     : RISCVVConstraint<VS2 = 1, VM = 1>;
+def Iota         : RISCVVConstraint<VS2 = 1, VM = 1>;
+def SlideUp      : RISCVVConstraint<VS2 = 1, VM = 1>;
+def Vrgather     : RISCVVConstraint<VS2 = 1, VS1 = 1, VM = 1>;
+def Vcompress    : RISCVVConstraint<VS2 = 1, VS1 = 1>;
+def Sha2Constraint : RISCVVConstraint<VS2 = 1, VS1 = 1>;
 
 // The following opcode names match those given in Table 19.1 in the
 // RISC-V User-level ISA specification ("RISC-V base opcode map").

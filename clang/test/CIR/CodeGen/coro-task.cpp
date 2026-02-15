@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-llvm  -disable-llvm-passes %s -o %t-cir.ll
+// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=OGCG
 
 namespace std {
 
@@ -129,6 +131,10 @@ co_invoke_fn co_invoke;
 // CIR-DAG: ![[CoroHandlePromiseInt:rec_.*]] = !cir.record<struct "std::coroutine_handle<folly::coro::Task<int>::promise_type>" padded {!u8i}>
 // CIR-DAG: ![[SuspendAlways:.*]] = !cir.record<struct "std::suspend_always" padded {!u8i}>
 
+// OGCG-DAG: %[[VoidPromisse:"struct.folly::coro::Task<void>::promise_type"]] = type { i8 }
+// OGCG-DAG: %[[VoidTask:"struct.folly::coro::Task"]] = type { i8 }
+// OGCG-DAG: %[[SuspendAlways:"struct.std::suspend_always"]] = type { i8 }
+
 // CIR: module {{.*}} {
 // CIR-NEXT: cir.global external @_ZN5folly4coro9co_invokeE = #cir.zero : !rec_folly3A3Acoro3A3Aco_invoke_fn
 
@@ -148,11 +154,17 @@ VoidTask silly_task() {
 // CIR: %[[SavedFrameAddr:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["__coro_frame_addr"]
 // CIR: %[[VoidPromisseAddr:.*]] = cir.alloca ![[VoidPromisse]], {{.*}}, ["__promise"]
 
+// OGCG: %[[VoidPromisseAddr:.*]] = alloca %[[VoidPromisse]], align 1
+// OGCG: %[[VoidTaskAddr:.*]] = alloca %[[VoidTask]], align 1
+// OGCG: %[[SuspendAlwaysAddr:.*]] = alloca %[[SuspendAlways]], align 1
+
 // Get coroutine id with __builtin_coro_id.
 
 // CIR: %[[NullPtr:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
 // CIR: %[[Align:.*]] = cir.const #cir.int<16> : !u32i
 // CIR: %[[CoroId:.*]] = cir.call @__builtin_coro_id(%[[Align]], %[[NullPtr]], %[[NullPtr]], %[[NullPtr]])
+
+// OGCG: %[[CoroId:.*]] = call token @llvm.coro.id(i32 16, ptr %[[VoidPromisseAddr]], ptr null, ptr null)
 
 // Perform allocation calling operator 'new' depending on __builtin_coro_alloc and
 // call __builtin_coro_begin for the final coroutine frame address.
@@ -160,17 +172,34 @@ VoidTask silly_task() {
 // CIR: %[[ShouldAlloc:.*]] = cir.call @__builtin_coro_alloc(%[[CoroId]]) : (!u32i) -> !cir.bool
 // CIR: cir.store{{.*}} %[[NullPtr]], %[[SavedFrameAddr]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CIR: cir.if %[[ShouldAlloc]] {
-// CIR:   %[[CoroSize:.*]] = cir.call @__builtin_coro_size() : () -> !u64i
-// CIR:   %[[AllocAddr:.*]] = cir.call @_Znwm(%[[CoroSize]]) : (!u64i) -> !cir.ptr<!void>
+// CIR:   %[[CoroSize:.*]] = cir.call @__builtin_coro_size() : () -> (!u64i {llvm.noundef})
+// CIR:   %[[AllocAddr:.*]] = cir.call @_Znwm(%[[CoroSize]]) {allocsize = array<i32: 0>} : (!u64i) -> (!cir.ptr<!void> {llvm.noundef})
 // CIR:   cir.store{{.*}} %[[AllocAddr]], %[[SavedFrameAddr]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CIR: }
 // CIR: %[[Load0:.*]] = cir.load{{.*}} %[[SavedFrameAddr]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CIR: %[[CoroFrameAddr:.*]] = cir.call @__builtin_coro_begin(%[[CoroId]], %[[Load0]])
 
+// OGCG: %[[ShouldAlloc:.*]]  = call i1 @llvm.coro.alloc(token %[[CoroId]])
+// OGCG: br i1 %[[ShouldAlloc]], label %coro.alloc, label %coro.init
+
+// OGCG: coro.alloc:
+// OGCG:   %[[CoroSize:.*]] = call i64 @llvm.coro.size.i64()
+// OGCG:   %[[Alloc_Frame:.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef %[[CoroSize]])
+// OGCG:   br label %coro.init
+
+// OGCG: coro.init:
+// OGCG:   %[[PtrToFramr:.*]] = phi ptr [ null, %entry ], [ %[[Alloc_Frame]], %coro.alloc ]
+// OGCG:   %[[CoroFrameAddr:.*]] = call ptr @llvm.coro.begin(token %[[CoroId]], ptr %[[PtrToFramr]])
+
 // Call promise.get_return_object() to retrieve the task object.
 
 // CIR: %[[RetObj:.*]] = cir.call @_ZN5folly4coro4TaskIvE12promise_type17get_return_objectEv(%[[VoidPromisseAddr]]) nothrow : {{.*}} -> ![[VoidTask]]
 // CIR: cir.store{{.*}} %[[RetObj]], %[[VoidTaskAddr]] : ![[VoidTask]]
+
+// OGCG: call void @llvm.lifetime.start.p0(ptr %[[VoidPromisseAddr]])
+// OGCG: call void @_ZN5folly4coro4TaskIvE12promise_type17get_return_objectEv(ptr noundef nonnull align 1 dereferenceable(1) %[[VoidPromisseAddr]])
+// OGCG: call void @llvm.lifetime.start.p0(ptr %[[SuspendAlwaysAddr]])
+
 // Start a new scope for the actual codegen for co_await, create temporary allocas for
 // holding coroutine handle and the suspend_always struct.
 
@@ -186,6 +215,8 @@ VoidTask silly_task() {
 // CIR:   %[[Tmp0:.*]] = cir.call @_ZN5folly4coro4TaskIvE12promise_type15initial_suspendEv(%[[VoidPromisseAddr]])
 // CIR:   cir.store{{.*}} %[[Tmp0:.*]], %[[SuspendAlwaysAddr]]
 
+// OGCG: call void @_ZN5folly4coro4TaskIvE12promise_type15initial_suspendEv(ptr noundef nonnull align 1 dereferenceable(1) %[[VoidPromisseAddr]])
+
 //
 // Here we start mapping co_await to cir.await.
 //
@@ -198,6 +229,9 @@ VoidTask silly_task() {
 // CIR:       cir.yield %[[TmpCallRes:.*]] : !cir.bool
 // CIR:     }
 // CIR:     cir.condition(%[[ReadyVeto]])
+
+// OGCG: %[[Tmp0:.*]] = call noundef zeroext i1 @_ZNSt14suspend_always11await_readyEv(ptr noundef nonnull align 1 dereferenceable(1) %[[SuspendAlwaysAddr]])
+// OGCG: br i1 %[[Tmp0]], label %init.ready, label %init.suspend
 
 // Second region `suspend` contains the actual suspend logic.
 //
@@ -217,6 +251,15 @@ VoidTask silly_task() {
 // CIR:     cir.call @_ZNSt14suspend_always13await_suspendESt16coroutine_handleIvE(%[[SuspendAlwaysAddr]], %[[CoroHandleVoidReload]])
 // CIR:     cir.yield
 
+// OGCG: init.suspend:
+// OGCG:   %[[Save:.*]] = call token @llvm.coro.save(ptr null)
+// OGCG:   call void @llvm.coro.await.suspend.void(ptr %[[SuspendAlwaysAddr]], ptr %[[CoroFrameAddr]], ptr @_Z10silly_taskv.__await_suspend_wrapper__init)
+// OGCG:   %[[TMP1:.*]] = call i8 @llvm.coro.suspend(token %[[Save]], i1 false)
+// OGCG:   switch i8 %[[TMP1]], label %coro.ret [
+// OGCG:     i8 0, label %init.ready
+// OGCG:     i8 1, label %init.cleanup
+// OGCG:   ]
+
 // Third region `resume` handles coroutine resuming logic.
 
 // CIR:   }, resume : {
@@ -224,6 +267,10 @@ VoidTask silly_task() {
 // CIR:     cir.yield
 // CIR:   },)
 // CIR: }
+
+// OGCG: init.ready:
+// OGCG:   call void @_ZNSt14suspend_always12await_resumeEv(ptr noundef nonnull align 1 dereferenceable(1) %[[SuspendAlwaysAddr]]
+// OGCG:   br label %cleanup
 
 // Since we already tested cir.await guts above, the remaining checks for:
 // - The actual user written co_await
@@ -239,8 +286,14 @@ VoidTask silly_task() {
 // CIR:   },)
 // CIR: }
 
+// OGCG: cleanup.cont
+// OGCG: await.suspend:
+// OGCG: await.ready:
+
 // The promise call
 // CHECK: cir.call @_ZN5folly4coro4TaskIvE12promise_type11return_voidEv(%[[VoidPromisseAddr]])
+
+// OGCG: call void @_ZN5folly4coro4TaskIvE12promise_type11return_voidEv(ptr noundef nonnull align 1 dereferenceable(1) %[[VoidPromisseAddr]])
 
 // The final suspend co_await
 // CIR: cir.scope {
@@ -249,6 +302,10 @@ VoidTask silly_task() {
 // CIR:   }, resume : {
 // CIR:   },)
 // CIR: }
+
+// OGCG: coro.final:
+// OGCG: final.suspend:
+// OGCG: final.ready:
 
 // Call builtin coro end and return
 
@@ -259,6 +316,10 @@ VoidTask silly_task() {
 // CIR: %[[Tmp1:.*]] = cir.load{{.*}} %[[VoidTaskAddr]]
 // CIR-NEXT: cir.return %[[Tmp1]]
 // CIR-NEXT: }
+
+// OGCG: coro.ret:
+// OGCG:   call void @llvm.coro.end(ptr null, i1 false, token none)
+// OGCG:   ret void
 
 folly::coro::Task<int> byRef(const std::string& s) {
   co_return s.size();
@@ -357,7 +418,7 @@ folly::coro::Task<void> yield1() {
 // CIR-NEXT:   cir.store{{.*}} %[[SUSPEND]], %[[SUSPEND_PTR]] : ![[SuspendAlways]], !cir.ptr<![[SuspendAlways]]>
 // CIR-NEXT:   cir.await(yield, ready : {
 // CIR-NEXT:     %[[READY:.*]] = cir.scope {
-// CIR-NEXT:       %[[A:.*]] = cir.call @_ZNSt14suspend_always11await_readyEv(%[[SUSPEND_PTR]]) nothrow : (!cir.ptr<![[SuspendAlways]]>) -> !cir.bool
+// CIR-NEXT:       %[[A:.*]] = cir.call @_ZNSt14suspend_always11await_readyEv(%[[SUSPEND_PTR]]) nothrow : (!cir.ptr<![[SuspendAlways]]>) -> (!cir.bool {llvm.noundef})
 // CIR-NEXT:       cir.yield %[[A]] : !cir.bool
 // CIR-NEXT:     } : !cir.bool
 // CIR-NEXT:     cir.condition(%[[READY]])
@@ -445,7 +506,7 @@ folly::coro::Task<int> go4() {
 // CIR:   %[[LAMBDA:.*]] = cir.alloca !rec_anon2E2, !cir.ptr<!rec_anon2E2>, ["ref.tmp1"] {alignment = 1 : i64}
 
 // Get the lambda invoker ptr via `lambda operator folly::coro::Task<int> (*)(int const&)()`
-// CIR:   %[[INVOKER:.*]] = cir.call @_ZZ3go4vENK3$_0cvPFN5folly4coro4TaskIiEERKiEEv(%[[LAMBDA]]) nothrow : (!cir.ptr<!rec_anon2E2>) -> !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>
+// CIR:   %[[INVOKER:.*]] = cir.call @_ZZ3go4vENK3$_0cvPFN5folly4coro4TaskIiEERKiEEv(%[[LAMBDA]]) nothrow : (!cir.ptr<!rec_anon2E2>) -> (!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>> {llvm.noundef})
 // CIR:   %[[PLUS:.*]] = cir.unary(plus, %[[INVOKER]]) : !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>, !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>
 // CIR:   cir.yield %[[PLUS]] : !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>
 // CIR: }
@@ -466,3 +527,18 @@ folly::coro::Task<int> go4() {
 // CIR:   }, resume : {
 // CIR:   },)
 // CIR: }
+
+// OGCG: define {{.*}}__await_suspend_wrapper__init(ptr noundef nonnull %[[Awaiter:.*]], ptr noundef %[[Handle:.*]])
+// OGCG: entry:
+// OGCG:   %[[AwaiterAddr:.*]] = alloca ptr
+// OGCG:   %[[HandleAddr:.*]] = alloca ptr
+// OGCG:   %[[CoroHandleVoidAddr:.*]] = alloca %"struct.std::coroutine_handle"
+// OGCG:   store ptr %[[Awaiter:.*]], ptr %[[AwaiterAddr]]
+// OGCG:   store ptr %[[Handle:.*]], ptr %[[HandleAddr]]
+// OGCG:   %[[AwaiterReload:.*]] = load ptr, ptr %[[AwaiterAddr]]
+// OGCG:   %[[CoroFrameAddr:.*]] = load ptr, ptr %[[HandleAddr]]
+// OGCG:   call void @_ZNSt16coroutine_handleIN5folly4coro4TaskIvE12promise_typeEE12from_addressEPv(ptr noundef %[[CoroFrameAddr]])
+// OGCG:   call void @_ZNSt16coroutine_handleIvEC1IN5folly4coro4TaskIvE12promise_typeEEES_IT_E(ptr noundef nonnull align 1 dereferenceable(1) %[[CoroHandleVoidAddr]])
+// OGCG:   call void @_ZNSt14suspend_always13await_suspendESt16coroutine_handleIvE(ptr noundef nonnull align 1 dereferenceable(1) %[[AwaiterReload]])
+// OGCG:   ret void
+// OGCG: }

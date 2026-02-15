@@ -170,6 +170,67 @@ struct GPUSubgroupSizeOpToROCDL : ConvertOpToLLVMPattern<gpu::SubgroupSizeOp> {
   const amdgpu::Chipset chipset;
 };
 
+struct GPUSubgroupIdOpToROCDL : ConvertOpToLLVMPattern<gpu::SubgroupIdOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  GPUSubgroupIdOpToROCDL(const LLVMTypeConverter &converter,
+                         amdgpu::Chipset chipset)
+      : ConvertOpToLLVMPattern<gpu::SubgroupIdOp>(converter), chipset(chipset) {
+  }
+
+  LogicalResult
+  matchAndRewrite(gpu::SubgroupIdOp op, gpu::SubgroupIdOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    auto int32Type = rewriter.getI32Type();
+
+    Value subgroupId;
+    if (chipset.majorVersion >= 12) {
+      // For gfx12+, use the hardware wave.id register directly.
+      LLVM::ConstantRangeAttr bounds;
+      if (auto upperBoundAttr = op.getUpperBoundAttr())
+        bounds = rewriter.getAttr<LLVM::ConstantRangeAttr>(
+            /*bitWidth=*/32, /*lower=*/0,
+            /*upper=*/upperBoundAttr.getInt());
+      subgroupId = ROCDL::WaveId::create(rewriter, loc, int32Type, bounds);
+    } else {
+      // For older architectures, compute:
+      // subgroup_id = linearized_thread_id / subgroup_size
+      // where linearized_thread_id = tid.x + dim.x * (tid.y + dim.y * tid.z)
+      Value tidX = ROCDL::ThreadIdXOp::create(rewriter, loc, int32Type);
+      Value tidY = ROCDL::ThreadIdYOp::create(rewriter, loc, int32Type);
+      Value tidZ = ROCDL::ThreadIdZOp::create(rewriter, loc, int32Type);
+      Value dimX = ROCDL::BlockDimXOp::create(rewriter, loc, int32Type);
+      Value dimY = ROCDL::BlockDimYOp::create(rewriter, loc, int32Type);
+
+      // linearized = tid.x + dim.x * (tid.y + dim.y * tid.z)
+      // Thread IDs and dimensions are non-negative and small, so use nuw+nsw.
+      auto flags =
+          LLVM::IntegerOverflowFlags::nsw | LLVM::IntegerOverflowFlags::nuw;
+      Value dimYxTidZ =
+          LLVM::MulOp::create(rewriter, loc, int32Type, dimY, tidZ, flags);
+      Value tidYPlusDimYxTidZ =
+          LLVM::AddOp::create(rewriter, loc, int32Type, tidY, dimYxTidZ, flags);
+      Value dimXxInner = LLVM::MulOp::create(rewriter, loc, int32Type, dimX,
+                                             tidYPlusDimYxTidZ, flags);
+      Value linearized = LLVM::AddOp::create(rewriter, loc, int32Type, tidX,
+                                             dimXxInner, flags);
+
+      Value subgroupSize =
+          ROCDL::WavefrontSizeOp::create(rewriter, loc, int32Type);
+      subgroupId = LLVM::UDivOp::create(rewriter, loc, int32Type, linearized,
+                                        subgroupSize);
+    }
+
+    subgroupId =
+        truncOrExtToLLVMType(rewriter, loc, subgroupId, *getTypeConverter());
+    rewriter.replaceOp(op, subgroupId);
+    return success();
+  }
+
+  const amdgpu::Chipset chipset;
+};
+
 static bool isSupportedReadLaneType(Type type) {
   // https://llvm.org/docs/AMDGPUUsage.html#llvm-ir-intrinsics
   if (isa<Float16Type, BFloat16Type, Float32Type, Float64Type,
@@ -586,8 +647,8 @@ void mlir::populateGpuToROCDLConversionPatterns(
 
   patterns.add<GPUShuffleOpLowering, GPULaneIdOpToROCDL,
                GPUSubgroupBroadcastOpToROCDL>(converter);
-  patterns.add<GPUSubgroupSizeOpToROCDL, GPUBarrierOpLowering>(converter,
-                                                               chipset);
+  patterns.add<GPUSubgroupIdOpToROCDL, GPUSubgroupSizeOpToROCDL,
+               GPUBarrierOpLowering>(converter, chipset);
 
   populateMathToROCDLConversionPatterns(converter, patterns, chipset);
 }

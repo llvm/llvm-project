@@ -203,11 +203,11 @@ define void @test(ptr %__last.addr.011.i.i, ptr %call3) {
 ; CHECK-NEXT:    [[TMP101:%.*]] = load float, ptr [[INCDEC_PTR2_I_I_20]], align 4
 ; CHECK-NEXT:    store float [[TMP101]], ptr [[__LAST_ADDR_0_I_I_20]], align 4
 ; CHECK-NEXT:    store float [[TMP102]], ptr [[INCDEC_PTR2_I_I_20]], align 4
+; CHECK-NEXT:    [[__LAST_ADDR_0_I_I_31:%.*]] = getelementptr inbounds i8, ptr [[INCDEC_PTR2_I_I_20]], i32 -4
 ; CHECK-NEXT:    [[TMP52:%.*]] = insertelement <2 x ptr> poison, ptr [[__LAST_ADDR_0_I_I_20]], i32 0
 ; CHECK-NEXT:    [[TMP53:%.*]] = insertelement <2 x ptr> [[TMP52]], ptr [[INCDEC_PTR2_I_I_20]], i32 1
 ; CHECK-NEXT:    [[TMP92:%.*]] = getelementptr i8, <2 x ptr> [[TMP53]], <2 x i32> <i32 4, i32 -4>
-; CHECK-NEXT:    [[INCDEC_PTR2_I_I_31:%.*]] = extractelement <2 x ptr> [[TMP92]], i32 0
-; CHECK-NEXT:    [[__LAST_ADDR_0_I_I_31:%.*]] = extractelement <2 x ptr> [[TMP92]], i32 1
+; CHECK-NEXT:    [[INCDEC_PTR2_I_I_31:%.*]] = getelementptr inbounds nuw i8, ptr [[__LAST_ADDR_0_I_I_20]], i32 4
 ; CHECK-NEXT:    [[CMP1_I_I_31:%.*]] = icmp ult ptr [[INCDEC_PTR2_I_I_31]], [[__LAST_ADDR_0_I_I_31]]
 ; CHECK-NEXT:    [[TMP76]] = shufflevector <2 x ptr> [[TMP92]], <2 x ptr> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    br i1 [[CMP1_I_I_31]], label %[[WHILE_BODY_I_I]], label %[[INVOKE_CONT21_EXITSTUB:.*]]
