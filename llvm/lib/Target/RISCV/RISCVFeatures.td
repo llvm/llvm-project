@@ -445,7 +445,7 @@ def FeatureStdExtZcmp
                      "sequenced instructions for code-size reduction",
                      [FeatureStdExtZca]>,
       RISCVExtensionBitmask<1, 10>;
-def HasStdExtZcmp : Predicate<"Subtarget->hasStdExtZcmp() && !Subtarget->hasStdExtC()">,
+def HasStdExtZcmp : Predicate<"Subtarget->hasStdExtZcmp()">,
                     AssemblerPredicate<(all_of FeatureStdExtZcmp),
                         "'Zcmp' (sequenced instructions for code-size reduction)">;
 
