@@ -8,11 +8,11 @@
 define void @patatino(i1 %arg) {
 ; CHECK-LABEL: @patatino(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %arg, label [[IF_END24:%.*]], label [[FOR_COND16:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[IF_END24:%.*]], label [[FOR_COND16:%.*]]
 ; CHECK:       for.cond2thread-pre-split:
 ; CHECK-NEXT:    br i1 false, label [[FOR_BODY:%.*]], label [[FOR_COND8_PREHEADER:%.*]]
 ; CHECK:       for.cond8.preheader:
-; CHECK-NEXT:    br i1 %arg, label [[L1:%.*]], label [[FOR_COND11THREAD_PRE_SPLIT_LR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[L1:%.*]], label [[FOR_COND11THREAD_PRE_SPLIT_LR_PH:%.*]]
 ; CHECK:       for.cond11thread-pre-split.lr.ph:
 ; CHECK-NEXT:    br label [[L1]]
 ; CHECK:       for.body:
@@ -32,7 +32,7 @@ define void @patatino(i1 %arg) {
 ; CHECK-NEXT:    br label [[FOR_BODY]]
 ; CHECK:       for.cond16:
 ; CHECK-NEXT:    [[J_0:%.*]] = phi ptr [ @f, [[ENTRY:%.*]] ], [ poison, [[FOR_COND20:%.*]] ], [ @e, [[FOR_COND16]] ]
-; CHECK-NEXT:    br i1 %arg, label [[FOR_COND20]], label [[FOR_COND16]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[FOR_COND20]], label [[FOR_COND16]]
 ; CHECK:       for.cond20:
 ; CHECK-NEXT:    [[J_2:%.*]] = phi ptr [ [[J_0]], [[FOR_COND16]] ], [ poison, [[IF_END24]] ]
 ; CHECK-NEXT:    br i1 true, label [[IF_END24]], label [[FOR_COND16]]

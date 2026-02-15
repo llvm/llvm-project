@@ -9,9 +9,9 @@ define void @b(i1 %arg) {
 ; CHECK:       while.d:
 ; CHECK-NEXT:    br label [[F:%.*]]
 ; CHECK:       f:
-; CHECK-NEXT:    br i1 %arg, label [[IF_E:%.*]], label [[C]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[IF_E:%.*]], label [[C]]
 ; CHECK:       c:
-; CHECK-NEXT:    br i1 %arg, label [[IF_G:%.*]], label [[IF_E]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[IF_G:%.*]], label [[IF_E]]
 ; CHECK:       if.g:
 ; CHECK-NEXT:    store i32 undef, ptr @a, align 4
 ; CHECK-NEXT:    br label [[WHILE_D]]
