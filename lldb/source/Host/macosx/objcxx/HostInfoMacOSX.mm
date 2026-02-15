@@ -718,7 +718,10 @@ private:
   void CreateSharedCacheInfoLLDBsVirtualMemory();
   bool CreateHostSharedCacheImageList();
 
-  std::vector<SharedCacheImageInfo> m_file_infos;
+  // These three ivars have an initial key of a shared cache UUID.
+  // All of the entries for a given shared cache are in m_file_infos.
+  // m_filename_map and m_uuid_map have pointers into those entries.
+  llvm::SmallDenseMap<UUID, std::vector<SharedCacheImageInfo>> m_file_infos;
   llvm::SmallDenseMap<UUID, llvm::DenseMap<ConstString, SharedCacheImageInfo *>>
       m_filename_map;
   llvm::SmallDenseMap<UUID, llvm::DenseMap<UUID, SharedCacheImageInfo *>>
@@ -748,9 +751,6 @@ SharedCacheInfo::SharedCacheInfo(SymbolSharedCacheUse sc_mode) {
   uuid_t dsc_uuid;
   _dyld_get_shared_cache_uuid(dsc_uuid);
   m_host_uuid = UUID(dsc_uuid);
-
-  // In macOS 26, a shared cache has around 3500 files.
-  m_file_infos.reserve(4000);
 
   // Don't scan/index lldb's own shared cache at all, in-memory or
   // via libdyld SPI.
@@ -865,7 +865,7 @@ static DataExtractorSP map_shared_cache_binary_segments(void *image) {
 // Scan the binaries in the specified shared cache filepath
 // if the UUID matches, using the macOS 26.4 libdyld SPI,
 // create a new entry in m_caches.
-bool SharedCacheInfo::CreateSharedCacheImageList(UUID uuid,
+bool SharedCacheInfo::CreateSharedCacheImageList(UUID sc_uuid,
                                                  std::string filepath) {
   if (!m_dyld_image_retain_4HWTrace || !m_dyld_image_release_4HWTrace ||
       !m_dyld_image_segment_data_4HWTrace)
@@ -875,18 +875,29 @@ bool SharedCacheInfo::CreateSharedCacheImageList(UUID uuid,
     return false;
 
   Log *log = GetLog(LLDBLog::Modules);
+
+  // Have we already indexed this shared cache.
+  if (m_file_infos.contains(sc_uuid)) {
+    LLDB_LOGF(log, "Have already indexed shared cache UUID %s",
+              sc_uuid.GetAsString().c_str());
+    return true;
+  }
+
   LLDB_LOGF(log, "Opening shared cache at %s to check for matching UUID %s",
-            filepath.c_str(), uuid.GetAsString().c_str());
+            filepath.c_str(), sc_uuid.GetAsString().c_str());
 
   __block bool return_failed = false;
   dyld_shared_cache_for_file(filepath.c_str(), ^(dyld_shared_cache_t cache) {
-    uuid_t sc_uuid;
-    dyld_shared_cache_copy_uuid(cache, &sc_uuid);
-    UUID this_cache(sc_uuid, sizeof(uuid_t));
-    if (this_cache != uuid) {
+    uuid_t uuid;
+    dyld_shared_cache_copy_uuid(cache, &uuid);
+    UUID this_cache(uuid, sizeof(uuid_t));
+    if (this_cache != sc_uuid) {
       return_failed = true;
       return;
     }
+
+    // In macOS 26, a shared cache has around 3500 files.
+    m_file_infos[sc_uuid].reserve(4000);
 
     dyld_shared_cache_for_each_image(cache, ^(dyld_image_t image) {
       uuid_t uuid_tmp;
@@ -903,7 +914,7 @@ bool SharedCacheInfo::CreateSharedCacheImageList(UUID uuid,
                   (void *)image);
 
       m_dyld_image_retain_4HWTrace(image);
-      m_file_infos.push_back(SharedCacheImageInfo(
+      m_file_infos[sc_uuid].push_back(SharedCacheImageInfo(
           installname, image_uuid, map_shared_cache_binary_segments, image));
     });
   });
@@ -912,11 +923,11 @@ bool SharedCacheInfo::CreateSharedCacheImageList(UUID uuid,
 
   // Vector of SharedCacheImageInfos has been fully populated, we can
   // take pointers to the objects now.
-  size_t file_info_size = m_file_infos.size();
+  size_t file_info_size = m_file_infos[sc_uuid].size();
   for (size_t i = 0; i < file_info_size; i++) {
-    SharedCacheImageInfo *entry = &m_file_infos[i];
-    m_filename_map[m_host_uuid][entry->GetFilename()] = entry;
-    m_uuid_map[m_host_uuid][entry->GetUUID()] = entry;
+    SharedCacheImageInfo *entry = &m_file_infos[sc_uuid][i];
+    m_filename_map[sc_uuid][entry->GetFilename()] = entry;
+    m_uuid_map[sc_uuid][entry->GetUUID()] = entry;
   }
 
   return true;
@@ -965,6 +976,9 @@ bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
   if (!shared_cache)
     return false;
 
+  // In macOS 26, a shared cache has around 3500 files.
+  m_file_infos[m_host_uuid].reserve(4000);
+
   dyld_shared_cache_for_each_image(shared_cache, ^(dyld_image_t image) {
     __block uint64_t minVmAddr = UINT64_MAX;
     __block uint64_t maxVmAddr = 0;
@@ -986,9 +1000,18 @@ bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
     // Copy the filename into the const string pool to
     // ensure lifetime.
     ConstString installname(dyld_image_get_installname(image));
-    m_caches[m_host_uuid][installname.GetStringRef()] =
-        SharedCacheImageInfo{UUID(uuid, 16), extractor_sp};
+    m_file_infos[m_host_uuid].push_back(SharedCacheImageInfo(
+        SharedCacheImageInfo{UUID(uuid, 16), extractor_sp}));
   });
+
+  // std::vector of SharedCacheImageInfos has been fully populated, we can
+  // take pointers to the objects now.
+  size_t file_info_size = m_file_infos[m_host_uuid].size();
+  for (size_t i = 0; i < file_info_size; i++) {
+    SharedCacheImageInfo *entry = &m_file_infos[m_host_uuid][i];
+    m_filename_map[m_host_uuid][entry->GetFilename()] = entry;
+    m_uuid_map[m_host_uuid][entry->GetUUID()] = entry;
+  }
   return true;
 #endif
   return false;
@@ -1002,6 +1025,9 @@ void SharedCacheInfo::CreateSharedCacheInfoLLDBsVirtualMemory() {
   uint8_t *shared_cache_start =
       _dyld_get_shared_cache_range(&shared_cache_size);
 
+  // In macOS 26, a shared cache has around 3500 files.
+  m_file_infos[m_host_uuid].reserve(4000);
+
   dyld_shared_cache_iterate_text(
       m_host_uuid.GetBytes().data(),
       ^(const dyld_shared_cache_dylib_text_info *info) {
@@ -1011,15 +1037,15 @@ void SharedCacheInfo::CreateSharedCacheInfoLLDBsVirtualMemory() {
         lldb::DataExtractorSP extractor_sp =
             std::make_shared<DataExtractor>(buffer_sp);
         ConstString filepath(info->path);
-        m_file_infos.push_back(SharedCacheImageInfo(
+        m_file_infos[m_host_uuid].push_back(SharedCacheImageInfo(
             filepath, UUID(info->dylibUuid, 16), extractor_sp));
       });
 
   // std::vector of SharedCacheImageInfos has been fully populated, we can
   // take pointers to the objects now.
-  size_t file_info_size = m_file_infos.size();
+  size_t file_info_size = m_file_infos[m_host_uuid].size();
   for (size_t i = 0; i < file_info_size; i++) {
-    SharedCacheImageInfo *entry = &m_file_infos[i];
+    SharedCacheImageInfo *entry = &m_file_infos[m_host_uuid][i];
     m_filename_map[m_host_uuid][entry->GetFilename()] = entry;
     m_uuid_map[m_host_uuid][entry->GetUUID()] = entry;
   }
