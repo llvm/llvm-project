@@ -3401,13 +3401,13 @@ void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
   if (match(LatchBr, m_BranchOnCond(m_True())))
     return;
 
-  assert(
-/*      match(LatchBr,*/
-            /*m_BranchOnCond(m_SpecificCmp(*/
-                /*CmpInst::ICMP_EQ, m_Specific(CanIV->getIncomingValue(1)),*/
-                /*m_Specific(&Plan.getVectorTripCount())))) &&*/
-      "Expected BranchOnCond with ICmp comparing CanIV increment with vector "
-      "trip count");
+  VPValue *CanIVInc = LoopRegion->getCanonicalIVIncrement();
+  assert(CanIVInc &&
+         match(LatchBr, m_BranchOnCond(m_SpecificCmp(
+                            CmpInst::ICMP_EQ, m_Specific(CanIVInc),
+                            m_Specific(&Plan.getVectorTripCount())))) &&
+         "Expected BranchOnCond with ICmp comparing CanIV increment with vector "
+         "trip count");
 
   Type *AVLTy = VPTypeAnalysis(Plan).inferScalarType(AVLNext);
   VPBuilder Builder(LatchBr);
@@ -4081,7 +4081,7 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
   assert(!Exits.empty() && "must have at least one early exit");
   // Sort exits by dominance to get the correct program order.
   llvm::sort(Exits, [&VPDT](const EarlyExitInfo &A, const EarlyExitInfo &B) {
-    return VPDT.dominates(A.EarlyExitingVPBB, B.EarlyExitingVPBB);
+    return VPDT.properlyDominates(A.EarlyExitingVPBB, B.EarlyExitingVPBB);
   });
 
   // Build the AnyOf condition for the latch terminator using logical OR
@@ -5276,9 +5276,6 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
 
   SmallVector<VPInterleaveRecipe *> StoreGroups;
   for (auto &R : *VectorLoop->getEntryBasicBlock()) {
-    if (match(&R, m_BranchOnCount(m_VPValue(), m_VPValue())))
-      continue;
-
     if (isa<VPDerivedIVRecipe, VPScalarIVStepsRecipe>(&R) &&
         vputils::onlyFirstLaneUsed(cast<VPSingleDefRecipe>(&R)))
       continue;

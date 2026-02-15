@@ -1,9 +1,9 @@
-; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize -force-vector-width=4 \
+; RUN: opt -passes=loop-vectorize -vplan-print-after="optimize$" -force-vector-width=4 \
 ; RUN: -force-tail-folding-style=data-with-evl \
 ; RUN: -prefer-predicate-over-epilogue=predicate-dont-vectorize \
 ; RUN: -mtriple=x86_64 -mattr=+avx512f -disable-output < %s 2>&1 | FileCheck --check-prefix=IF-EVL %s
 
-; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize -force-vector-width=4 \
+; RUN: opt -passes=loop-vectorize -vplan-print-after="optimize$" -force-vector-width=4 \
 ; RUN: -force-tail-folding-style=none \
 ; RUN: -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
 ; RUN: -mtriple=x86_64 -mattr=+avx512f -disable-output < %s 2>&1 | FileCheck --check-prefix=NO-VP %s

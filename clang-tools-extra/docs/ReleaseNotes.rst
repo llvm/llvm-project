@@ -199,6 +199,10 @@ Changes in existing checks
   - Added support for analyzing function parameters with the `AnalyzeParameters`
     option.
 
+- Improved :doc:`modernize-pass-by-value
+  <clang-tidy/checks/modernize/pass-by-value>` check by adding `IgnoreMacros`
+  option to suppress warnings in macros.
+
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check by fixing a crash
   when an argument is part of a macro expansion.
@@ -225,7 +229,8 @@ Changes in existing checks
 
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check by avoiding false
-  positives on parameters used in dependent expressions.
+  positives on parameters used in dependent expressions (e.g. inside generic
+  lambdas).
 
 - Improved :doc:`readability-simplify-boolean-expr
   <clang-tidy/checks/readability/simplify-boolean-expr>` check to provide valid

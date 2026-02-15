@@ -895,31 +895,29 @@ VPInstruction *VPRegionBlock::getCanonicalIVIncrement() {
   auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
   VPValue *CanIV = getCanonicalIV();
   assert(CanIV && "Expected a canonical IV");
+
+  // Match CanIV + Step or (CanIV + ResumeVal) + Step for epilogue loops.
+  auto m_CanIVIncrement = [CanIV]() {
+    return m_c_Add(
+        m_CombineOr(m_Specific(CanIV), m_c_Add(m_Specific(CanIV), m_LiveIn())),
+        m_VPValue());
+  };
+
   auto *ExitingTerm = ExitingLatch->getTerminator();
   VPInstruction *CanIVInc = nullptr;
-  if (match(ExitingTerm,
-            m_BranchOnCount(m_VPInstruction(CanIVInc), m_VPValue()))) {
-    // Matched.
-  } else if (VPValue *Cond = nullptr;
-             match(ExitingTerm, m_BranchOnCond(m_VPValue(Cond))) &&
-             match(Cond, m_SpecificICmp(CmpInst::ICMP_EQ,
-                                        m_VPInstruction(CanIVInc),
-                                        m_VPValue())) &&
-             match(CanIVInc,
-                   m_c_Add(m_CombineOr(m_Specific(CanIV),
-                                       m_c_Add(m_Specific(CanIV), m_LiveIn())),
-                           m_VPValue()))) {
-    // Match branch-on-cond(icmp eq(increment, trip_count)) for epilogue loop.
-    // Only match if the increment is actually an Add of the canonical IV.
-  } else {
-    CanIVInc = nullptr;
+  // Try to match BranchOnCount(increment, trip_count) for main loop.
+  if (!match(ExitingTerm,
+             m_BranchOnCount(m_VPInstruction(CanIVInc), m_VPValue()))) {
+    // Try to match BranchOnCond(ICmp EQ(increment, trip_count)) for epilogue.
+    VPValue *Cond = nullptr;
+    if (!(match(ExitingTerm, m_BranchOnCond(m_VPValue(Cond))) &&
+          match(Cond, m_SpecificICmp(CmpInst::ICMP_EQ,
+                                     m_VPInstruction(CanIVInc), m_VPValue())) &&
+          match(CanIVInc, m_CanIVIncrement())))
+      CanIVInc = nullptr;
   }
-  assert(
-      !CanIVInc ||
-      match(CanIVInc, m_c_Add(m_CombineOr(m_Specific(CanIV),
-                                          m_c_Add(m_Specific(CanIV), m_LiveIn())),
-                              m_VPValue())) &&
-          "invalid existing IV increment");
+  assert(!CanIVInc || match(CanIVInc, m_CanIVIncrement()) &&
+                          "invalid existing IV increment");
   return CanIVInc;
 }
 
