@@ -907,6 +907,13 @@ private:
                                          TargetLoweringOpt &TLO,
                                          unsigned Depth) const override;
 
+  bool SimplifyDemandedVectorEltsForTargetNode(SDValue Op,
+                                          const APInt &DemandedElts,
+                                          APInt &KnownUndef,
+                                          APInt &KnownZero,
+                                          TargetLoweringOpt &TLO,
+                                          unsigned Depth) const override;
+
   bool canCreateUndefOrPoisonForTargetNode(SDValue Op,
                                            const APInt &DemandedElts,
                                            const SelectionDAG &DAG,
