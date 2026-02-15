@@ -3579,3 +3579,25 @@ define i1 @icmp_ult_add_lshr_neg_no_nuw(i32 %arg0) {
   %v2 = icmp ult i32 %v1, 256
   ret i1 %v2
 }
+
+define i1 @fold-icmp-sum-of-extended-i1(i16 %0, i16 %1, i16 %2, i16 %3) {
+; CHECK-LABEL: @fold-icmp-sum-of-extended-i1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i16 [[TMP0:%.*]], [[TMP2:%.*]]
+; CHECK-NEXT:    [[_0:%.*]] = icmp ult i16 [[TMP1:%.*]], [[TMP3:%.*]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i16 [[TMP0]], [[TMP2]]
+; CHECK-NEXT:    [[_0_0:%.*]] = select i1 [[TMP4]], i1 [[_0]], i1 [[TMP5]]
+; CHECK-NEXT:    ret i1 [[_0_0]]
+;
+entry:
+  %lhs = icmp sgt i16 %0, %2
+  %rhs = icmp slt i16 %0, %2
+  %self1 = zext i1 %lhs to i8
+  %rhs2.neg = sext i1 %rhs to i8
+  %diff = add nsw i8 %rhs2.neg, %self1
+  %4 = icmp eq i8 %diff, 0
+  %_0 = icmp ult i16 %1, %3
+  %5 = icmp slt i8 %diff, 0
+  %_0.0 = select i1 %4, i1 %_0, i1 %5
+  ret i1 %_0.0
+}
