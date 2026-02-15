@@ -12637,8 +12637,7 @@ SDValue DAGCombiner::foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
     if (sd_match(True, m_AnyOf(m_Sub(m_Specific(RHS), m_Specific(LHS)),
                                m_Add(m_Specific(RHS), m_SpecificNeg(LHS)))) &&
         sd_match(False, m_AnyOf(m_Sub(m_Specific(LHS), m_Specific(RHS)),
-                                m_Add(m_Specific(LHS), m_SpecificNeg(RHS)))) &&
-        hasOperation(ABDOpc, VT))
+                                m_Add(m_Specific(LHS), m_SpecificNeg(RHS)))))
       return DAG.getNegative(DAG.getNode(ABDOpc, DL, VT, LHS, RHS), DL, VT);
     break;
   case ISD::SETLT:
@@ -12653,8 +12652,7 @@ SDValue DAGCombiner::foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
     if (sd_match(True, m_AnyOf(m_Sub(m_Specific(LHS), m_Specific(RHS)),
                                m_Add(m_Specific(LHS), m_SpecificNeg(RHS)))) &&
         sd_match(False, m_AnyOf(m_Sub(m_Specific(RHS), m_Specific(LHS)),
-                                m_Add(m_Specific(RHS), m_SpecificNeg(LHS)))) &&
-        hasOperation(ABDOpc, VT))
+                                m_Add(m_Specific(RHS), m_SpecificNeg(LHS)))))
       return DAG.getNegative(DAG.getNode(ABDOpc, DL, VT, LHS, RHS), DL, VT);
     break;
   default:
