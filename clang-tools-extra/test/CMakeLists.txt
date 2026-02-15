@@ -51,6 +51,9 @@ set(CLANG_TOOLS_TEST_DEPS
   clang-resource-headers
 
   clang-tidy
+
+  # Some tests invoke clang directly (e.g., to precompile modules).
+  clang
 )
 
 # Add lit test dependencies.
