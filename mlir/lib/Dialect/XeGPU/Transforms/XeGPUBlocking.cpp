@@ -138,13 +138,10 @@ template <typename T, typename>
 std::optional<SmallVector<int64_t>>
 XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
   Value value;
-  Operation *ownerOp;
   if constexpr (std::is_same_v<T, OpOperand>) {
     value = operandOrResult.get();
-    ownerOp = operandOrResult.getOwner();
   } else {
     value = (Value)operandOrResult;
-    ownerOp = value.getDefiningOp();
   }
 
   xegpu::DistributeLayoutAttr layout =
@@ -152,26 +149,8 @@ XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
   if (layout && layout.isForSubgroup()) {
     if (!layout.getEffectiveInstDataAsInt().empty()) {
       SmallVector<int64_t> instData = layout.getEffectiveInstDataAsInt();
-      // Remove leading unit dimensions from inst_data for non-rank-sensitive
-      // ops. For example, if the inst_data is [1, 1, 32] it will pass [32] as
-      // the unroll/blocking size.
-      // Skip it for rank-sensitive ops, whose semantics depend on the tensor
-      // rank (and consequently its shape), and therefore must not alter the
-      // input tile rank or shape, such as by dropping leading dimensions.
-      bool skipLeadingUnitDimRemoval =
-          ownerOp &&
-          (isa<xegpu::CreateNdDescOp, xegpu::DpasOp, xegpu::ConvertLayoutOp,
-               xegpu::LoadMatrixOp, xegpu::StoreMatrixOp, xegpu::AtomicRMWOp,
-               xegpu::LoadNdOp, xegpu::StoreNdOp, xegpu::PrefetchNdOp,
-               vector::TransposeOp, vector::ShapeCastOp,
-               vector::MultiDimReductionOp, vector::BroadcastOp>(ownerOp));
-      if (!skipLeadingUnitDimRemoval) {
-        auto it = llvm::find_if(instData, [](auto val) { return val != 1; });
-        instData.erase(instData.begin(), it);
-      }
       return instData;
     }
-
     if (auto type = dyn_cast<ShapedType>(value.getType()))
       return llvm::to_vector(type.getShape());
   }
@@ -350,13 +329,6 @@ void XeGPUBlockingPass::runOnOperation() {
 
   xegpu::doSCFStructuralTypeConversionWithTensorType(op, converter);
 
-  // Remove leading unit dimensions from vector ops and then
-  // do the unrolling.
-  {
-    RewritePatternSet patterns(ctx);
-    vector::populateCastAwayVectorLeadingOneDimPatterns(patterns);
-    (void)applyPatternsGreedily(op, std::move(patterns));
-  }
   xegpu::UnrollOptions options;
   options.setFilterConstraint(
       [&](Operation *op) -> LogicalResult { return success(needsUnroll(op)); });

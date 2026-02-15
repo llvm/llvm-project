@@ -146,9 +146,9 @@ bool lld::elf::needsGot(RelExpr expr) {
 // file (PC, or GOT for example).
 static bool isRelExpr(RelExpr expr) {
   return oneof<R_PC, R_GOTREL, R_GOTPLTREL, RE_ARM_PCA, RE_MIPS_GOTREL,
-               RE_PPC64_CALL, RE_PPC64_RELAX_TOC, RE_AARCH64_PAGE_PC,
-               R_RELAX_GOT_PC, RE_RISCV_PC_INDIRECT, RE_PPC64_RELAX_GOT_PC,
-               RE_LOONGARCH_PAGE_PC, RE_LOONGARCH_PC_INDIRECT>(expr);
+               RE_PPC64_CALL, RE_AARCH64_PAGE_PC, R_RELAX_GOT_PC,
+               RE_RISCV_PC_INDIRECT, RE_LOONGARCH_PAGE_PC,
+               RE_LOONGARCH_PC_INDIRECT>(expr);
 }
 
 static RelExpr toPlt(RelExpr expr) {
@@ -841,15 +841,15 @@ bool RelocScan::isStaticLinkTimeConstant(RelExpr e, RelType type,
                                          const Symbol &sym,
                                          uint64_t relOff) const {
   // These expressions always compute a constant
-  if (oneof<
-          R_GOTPLT, R_GOT_OFF, R_RELAX_HINT, RE_MIPS_GOT_LOCAL_PAGE,
-          RE_MIPS_GOTREL, RE_MIPS_GOT_OFF, RE_MIPS_GOT_OFF32, RE_MIPS_GOT_GP_PC,
-          RE_AARCH64_GOT_PAGE_PC, RE_AARCH64_AUTH_GOT_PAGE_PC, R_GOT_PC,
-          R_GOTONLY_PC, R_GOTPLTONLY_PC, R_PLT_PC, R_PLT_GOTREL, R_PLT_GOTPLT,
-          R_GOTPLT_GOTREL, R_GOTPLT_PC, RE_PPC32_PLTREL, RE_PPC64_CALL_PLT,
-          RE_PPC64_RELAX_TOC, RE_RISCV_ADD, RE_AARCH64_GOT_PAGE,
-          RE_AARCH64_AUTH_GOT, RE_AARCH64_AUTH_GOT_PC, RE_LOONGARCH_PLT_PAGE_PC,
-          RE_LOONGARCH_GOT, RE_LOONGARCH_GOT_PAGE_PC>(e))
+  if (oneof<R_GOTPLT, R_GOT_OFF, R_RELAX_HINT, RE_MIPS_GOT_LOCAL_PAGE,
+            RE_MIPS_GOTREL, RE_MIPS_GOT_OFF, RE_MIPS_GOT_OFF32,
+            RE_MIPS_GOT_GP_PC, RE_AARCH64_GOT_PAGE_PC,
+            RE_AARCH64_AUTH_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC,
+            R_GOTPLTONLY_PC, R_PLT_PC, R_PLT_GOTREL, R_PLT_GOTPLT,
+            R_GOTPLT_GOTREL, R_GOTPLT_PC, RE_PPC32_PLTREL, RE_PPC64_CALL_PLT,
+            RE_RISCV_ADD, RE_AARCH64_GOT_PAGE, RE_AARCH64_AUTH_GOT,
+            RE_AARCH64_AUTH_GOT_PC, RE_LOONGARCH_PLT_PAGE_PC, RE_LOONGARCH_GOT,
+            RE_LOONGARCH_GOT_PAGE_PC>(e))
     return true;
 
   // These never do, except if the entire file is position dependent or if
@@ -926,10 +926,6 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
   const bool isIfunc = sym.isGnuIFunc();
   if (!sym.isPreemptible && !isIfunc) {
     if (expr != R_GOT_PC) {
-      // The 0x8000 bit of r_addend of R_PPC_PLTREL24 is used to choose call
-      // stub type. It should be ignored if optimized to R_PC.
-      if (ctx.arg.emachine == EM_PPC && expr == RE_PPC32_PLTREL)
-        addend &= ~0x8000;
       // R_HEX_GD_PLT_B22_PCREL (call a@GDPLT) is transformed into
       // call __tls_get_addr even if the symbol is non-preemptible.
       if (!(ctx.arg.emachine == EM_HEXAGON &&
@@ -937,8 +933,7 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
              type == R_HEX_GD_PLT_B22_PCREL_X ||
              type == R_HEX_GD_PLT_B32_PCREL_X)))
         expr = fromPlt(expr);
-    } else if (!isAbsoluteOrTls(sym) ||
-               (type == R_PPC64_PCREL_OPT && ctx.arg.emachine == EM_PPC64)) {
+    } else if (!isAbsoluteOrTls(sym)) {
       expr = ctx.target->adjustGotPcExpr(type, addend,
                                          sec->content().data() + offset);
       // If the target adjusted the expression to R_RELAX_GOT_PC, we may end up
@@ -1218,8 +1213,7 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
       !ctx.arg.shared && ctx.arg.emachine != EM_ARM &&
       ctx.arg.emachine != EM_HEXAGON &&
       (ctx.arg.emachine != EM_LOONGARCH || execOptimizeInLoongArch) &&
-      !(isRISCV && expr != R_TLSDESC_PC && expr != R_TLSDESC_CALL) &&
-      !sec->file->ppc64DisableTLSRelax;
+      !(isRISCV && expr != R_TLSDESC_PC && expr != R_TLSDESC_CALL);
 
   // If we are producing an executable and the symbol is non-preemptable, it
   // must be defined and the code sequence can be optimized to use Local-Exec.
@@ -1252,15 +1246,6 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
   if (expr == R_DTPREL) {
     if (execOptimize)
       expr = ctx.target->adjustTlsExpr(type, R_RELAX_TLS_LD_TO_LE);
-    sec->addReloc({expr, type, offset, addend, &sym});
-    return 1;
-  }
-
-  // Local-Dynamic sequence where offset of tls variable relative to dynamic
-  // thread pointer is stored in the got. This cannot be optimized to
-  // Local-Exec.
-  if (expr == R_TLSLD_GOT_OFF) {
-    sym.setFlags(NEEDS_GOT_DTPREL);
     sec->addReloc({expr, type, offset, addend, &sym});
     return 1;
   }
@@ -1354,10 +1339,9 @@ void TargetInfo::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
   }
 
   // Sort relocations by offset for more efficient searching for
-  // R_RISCV_PCREL_HI20, ALIGN relocations, R_PPC64_ADDR64 and the
-  // branch-to-branch optimization.
+  // R_RISCV_PCREL_HI20, ALIGN relocations and the branch-to-branch
+  // optimization.
   if (is_contained({EM_RISCV, EM_LOONGARCH}, ctx.arg.emachine) ||
-      (ctx.arg.emachine == EM_PPC64 && sec.name == ".toc") ||
       ctx.arg.branchToBranch)
     llvm::stable_sort(sec.relocs(),
                       [](const Relocation &lhs, const Relocation &rhs) {

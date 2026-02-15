@@ -45,9 +45,10 @@ public:
     bool ModificationTimeIsStale() const;
     bool PathRemappingIsStale() const;
 
-    size_t DisplaySourceLines(uint32_t line, std::optional<size_t> column,
-                              uint32_t context_before, uint32_t context_after,
-                              Stream *s);
+    size_t DisplaySourceLines(
+        uint32_t line, std::optional<size_t> column, uint32_t context_before,
+        uint32_t context_after, Stream *s,
+        lldb::LanguageType language_type = lldb::eLanguageTypeUnknown);
     void FindLinesMatchingRegex(RegularExpression &regex, uint32_t start_line,
                                 uint32_t end_line,
                                 std::vector<uint32_t> &match_lines);
@@ -166,16 +167,20 @@ public:
       SupportFileNSP support_file_nsp, uint32_t line, uint32_t column,
       uint32_t context_before, uint32_t context_after,
       const char *current_line_cstr, Stream *s,
-      const SymbolContextList *bp_locs = nullptr);
+      const SymbolContextList *bp_locs = nullptr,
+      lldb::LanguageType language_type = lldb::eLanguageTypeUnknown);
 
   // This variant uses the last file we visited.
   size_t DisplaySourceLinesWithLineNumbersUsingLastFile(
       uint32_t start_line, uint32_t count, uint32_t curr_line, uint32_t column,
       const char *current_line_cstr, Stream *s,
-      const SymbolContextList *bp_locs = nullptr);
+      const SymbolContextList *bp_locs = nullptr,
+      lldb::LanguageType language_type = lldb::eLanguageTypeUnknown);
 
-  size_t DisplayMoreWithLineNumbers(Stream *s, uint32_t count, bool reverse,
-                                    const SymbolContextList *bp_locs = nullptr);
+  size_t DisplayMoreWithLineNumbers(
+      Stream *s, uint32_t count, bool reverse,
+      const SymbolContextList *bp_locs = nullptr,
+      lldb::LanguageType language_type = lldb::eLanguageTypeUnknown);
 
   bool SetDefaultFileAndLine(SupportFileNSP support_file_nsp, uint32_t line);
 

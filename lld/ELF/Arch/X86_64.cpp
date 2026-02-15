@@ -355,7 +355,7 @@ bool X86_64::relaxOnce(int pass) const {
   return changed;
 }
 
-// Only needed to support relocations used by relocateNonAlloc and relocateEH.
+// Only needed to support relocations used by relocateNonAlloc and relocateEh.
 RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
                            const uint8_t *loc) const {
   switch (type) {
@@ -371,11 +371,6 @@ RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
   case R_X86_64_DTPOFF32:
   case R_X86_64_DTPOFF64:
     return R_DTPREL;
-  case R_X86_64_TPOFF32:
-  case R_X86_64_TPOFF64:
-    return R_TPREL;
-  case R_X86_64_PLT32:
-    return R_PLT_PC;
   case R_X86_64_PC8:
   case R_X86_64_PC16:
   case R_X86_64_PC32:
@@ -464,6 +459,9 @@ void X86_64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       continue;
     int64_t addend = rs.getAddend<ELFT>(rel, type);
     RelExpr expr;
+    // Relocation types that only need a RelExpr set `expr` and break out of
+    // the switch to reach rs.process(). Types that need special handling
+    // (fast-path helpers, TLS) call a handler and use `continue`.
     switch (type) {
     case R_X86_64_NONE:
       continue;

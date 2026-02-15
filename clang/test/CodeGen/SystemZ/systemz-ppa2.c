@@ -5,23 +5,21 @@
 //     We try to cover all cases, and use substitution blocks to
 //     help write the tests. The contents of the PPA2 itself should
 //     not be different.
-//   + the [[:space:]] combines the two .byte lines into one pattern.
-//     This is necessary because if the lines were separated, the first
-//     .byte (i.e., the one for the 3) would, it seems, also match
-//     the .byte line below for the 34.
 
 // REQUIRES: systemz-registered-target
 
 // RUN: %clang_cc1 -triple s390x-ibm-zos -xc -S -o - %s | FileCheck %s --check-prefix CHECK-C
-// CHECK-C:        [[PPA2:(.L)|(L#)PPA2]]:
-// CHECK-C-NEXT:   .byte        3{{[[:space:]]*}}.byte 0
-// CHECK-C-NEXT:   .byte        34{{$}}
-// CHECK-C-NEXT:   .byte        {{4}}
-// CHECK-C-NEXT:   .long        {{(CELQSTRT)}}-[[PPA2]]
+// CHECK-C:        [[PPA2:(.L)|(L#)PPA2]] DS 0H
+// CHECK-C-NEXT:   DC  XL1'03'
+// CHECK-C-NEXT:   DC  XL1'00'
+// CHECK-C-NEXT:   DC  XL1'22'
+// CHECK-C-NEXT:   DC  XL1'04'
+// CHECK-C-NEXT:   DC AD(CELQSTRT-[[PPA2]])
 
 // RUN: %clang_cc1 -triple s390x-ibm-zos -xc++ -S -o - %s | FileCheck %s --check-prefix CHECK-CXX
-// CHECK-CXX:        [[PPA2:(.L)|(L#)PPA2]]:
-// CHECK-CXX-NEXT:   .byte      3{{[[:space:]]*}}.byte 1
-// CHECK-CXX-NEXT:   .byte      34{{$}}
-// CHECK-CXX-NEXT:   .byte      {{4}}
-// CHECK-CXX-NEXT:   .long      {{(CELQSTRT)}}-[[PPA2]]
+// CHECK-CXX:        [[PPA2:(.L)|(L#)PPA2]] DS 0H
+// CHECK-CXX-NEXT:   DC  XL1'03'
+// CHECK-CXX-NEXT:   DC  XL1'01'
+// CHECK-CXX-NEXT:   DC  XL1'22'
+// CHECK-CXX-NEXT:   DC  XL1'04'
+// CHECK-CXX-NEXT:   DC AD(CELQSTRT-[[PPA2]])
