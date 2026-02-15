@@ -4156,6 +4156,8 @@ BlockTagOp BlockAddressOp::getBlockTagOp() {
   if (!sym)
     return nullptr;
   auto funcOp = dyn_cast<LLVMFuncOp>(sym);
+  if (!funcOp)
+    return nullptr;
   BlockTagOp blockTagOp = nullptr;
   funcOp.walk([&](LLVM::BlockTagOp labelOp) {
     if (labelOp.getTag() == getBlockAddr().getTag()) {
