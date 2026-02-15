@@ -122,6 +122,7 @@
 #include "math/sqrtf16.h"
 #include "math/tan.h"
 #include "math/tanf.h"
+#include "math/tanf16.h"
 #include "math/tanhf.h"
 #include "math/tanhf16.h"
 
