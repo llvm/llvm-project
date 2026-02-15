@@ -278,7 +278,8 @@ RelType RISCV::getDynRel(RelType type) const {
                                          : static_cast<RelType>(R_RISCV_NONE);
 }
 
-// Only needed to support relocations used by relocateNonAlloc and relocateEh.
+// Only needed to support relocations used by relocateNonAlloc and
+// preprocessRelocs.
 RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
                           const uint8_t *loc) const {
   switch (type) {
