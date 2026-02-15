@@ -1438,6 +1438,15 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     }
   }
 
+  if (match(Def, m_VPInstruction<VPInstruction::MaskedCond>())) {
+    if (Def->getNumOperands() == 2) {
+      VPValue *And = Builder.createNaryOp(
+          VPInstruction::LogicalAnd, {Def->getOperand(0), Def->getOperand(1)});
+      return Def->replaceAllUsesWith(And);
+    }
+    return Def->replaceAllUsesWith(Def->getOperand(0));
+  }
+
   // Fold (fcmp uno %X, %X) or (fcmp uno %Y, %Y) -> fcmp uno %X, %Y
   // This is useful for fmax/fmin without fast-math flags, where we need to
   // check if any operand is NaN.
@@ -4080,10 +4089,17 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
           match(EarlyExitingVPBB->getTerminator(),
                 m_BranchOnCond(m_VPValue(CondOfEarlyExitingVPBB)));
       assert(Matched && "Terminator must be BranchOnCond");
-      auto *CondToEarlyExit = TrueSucc == ExitBlock
-                                  ? CondOfEarlyExitingVPBB
-                                  : Builder.createNot(CondOfEarlyExitingVPBB);
+
+      // Insert the MaskedCond in the EarlyExitingVPBB so the predicator adds
+      // the correct block mask.
+      VPBuilder EarlyExitBuilder(EarlyExitingVPBB->getTerminator());
+      auto *CondToEarlyExit = EarlyExitBuilder.createNaryOp(
+          VPInstruction::MaskedCond,
+          TrueSucc == ExitBlock
+              ? CondOfEarlyExitingVPBB
+              : EarlyExitBuilder.createNot(CondOfEarlyExitingVPBB));
       assert((isa<VPIRValue>(CondOfEarlyExitingVPBB) ||
+              !VPDT.properlyDominates(EarlyExitingVPBB, LatchVPBB) ||
               VPDT.properlyDominates(
                   CondOfEarlyExitingVPBB->getDefiningRecipe()->getParent(),
                   LatchVPBB)) &&
