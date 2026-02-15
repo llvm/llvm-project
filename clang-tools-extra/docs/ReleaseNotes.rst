@@ -142,6 +142,11 @@ New checks
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
+- New alias :doc:`cert-mem56-cpp <clang-tidy/checks/cert/mem56-cpp>` to
+  :doc:`bugprone-smart-ptr-initialization
+  <clang-tidy/checks/bugprone/smart-ptr-initialization>`
+  was added.
+
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
