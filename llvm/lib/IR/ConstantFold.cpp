@@ -188,7 +188,7 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
       if (!Res)
         return nullptr;
       return ConstantVector::getSplat(
-          cast<VectorType>(DestTy)->getElementCount(), Res);
+          cast<VectorType>(DestTy)->getElementCount(), Res, DL);
     }
     if (isa<ScalableVectorType>(DestTy))
       return nullptr;
@@ -203,7 +203,7 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
         return nullptr;
       res.push_back(Casted);
     }
-    return ConstantVector::get(res);
+    return ConstantVector::get(res, DL);
   }
 
   // We actually have to do a cast now. Perform the cast according to the
@@ -1207,7 +1207,7 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
       if (Constant *C2Splat = C2->getSplatValue())
         if (Constant *Elt =
                 ConstantFoldCompareInstruction(Predicate, C1Splat, C2Splat, DL))
-          return ConstantVector::getSplat(C1VTy->getElementCount(), Elt);
+          return ConstantVector::getSplat(C1VTy->getElementCount(), Elt, DL);
 
     // Do not iterate on scalable vector. The number of elements is unknown at
     // compile-time.
@@ -1232,7 +1232,7 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
       ResElts.push_back(Elt);
     }
 
-    return ConstantVector::get(ResElts);
+    return ConstantVector::get(ResElts, DL);
   }
 
   if (C1->getType()->isFPOrFPVectorTy()) {
@@ -1371,7 +1371,7 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
   if (IsNoOp())
     return GEPTy->isVectorTy() && !C->getType()->isVectorTy()
                ? ConstantVector::getSplat(
-                     cast<VectorType>(GEPTy)->getElementCount(), C)
+                     cast<VectorType>(GEPTy)->getElementCount(), C, DL)
                : C;
 
   return nullptr;

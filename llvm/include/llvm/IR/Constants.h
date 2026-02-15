@@ -446,10 +446,12 @@ class ConstantArray final : public ConstantAggregate {
 
 public:
   // ConstantArray accessors
-  LLVM_ABI static Constant *get(ArrayType *T, ArrayRef<Constant *> V);
+  LLVM_ABI static Constant *get(ArrayType *T, ArrayRef<Constant *> V,
+                                const DataLayout *DL = nullptr);
 
 private:
-  static Constant *getImpl(ArrayType *T, ArrayRef<Constant *> V);
+  static Constant *getImpl(ArrayType *T, ArrayRef<Constant *> V,
+                           const DataLayout *DL = nullptr);
 
 public:
   /// Specialize the getType() method to always return an ArrayType,
@@ -478,7 +480,8 @@ class ConstantStruct final : public ConstantAggregate {
 
 public:
   // ConstantStruct accessors
-  LLVM_ABI static Constant *get(StructType *T, ArrayRef<Constant *> V);
+  LLVM_ABI static Constant *get(StructType *T, ArrayRef<Constant *> V,
+                                const DataLayout *DL = nullptr);
 
   template <typename... Csts>
   static std::enable_if_t<are_base_of<Constant, Csts...>::value, Constant *>
@@ -488,12 +491,14 @@ public:
 
   /// Return an anonymous struct that has the specified elements.
   /// If the struct is possibly empty, then you must specify a context.
-  static Constant *getAnon(ArrayRef<Constant *> V, bool Packed = false) {
-    return get(getTypeForElements(V, Packed), V);
+  static Constant *getAnon(ArrayRef<Constant *> V, bool Packed = false,
+                           const DataLayout *DL = nullptr) {
+    return get(getTypeForElements(V, Packed), V, DL);
   }
   static Constant *getAnon(LLVMContext &Ctx, ArrayRef<Constant *> V,
-                           bool Packed = false) {
-    return get(getTypeForElements(Ctx, V, Packed), V);
+                           bool Packed = false,
+                           const DataLayout *DL = nullptr) {
+    return get(getTypeForElements(Ctx, V, Packed), V, DL);
   }
 
   /// Return an anonymous struct type to use for a constant with the specified
@@ -530,15 +535,18 @@ class ConstantVector final : public ConstantAggregate {
 
 public:
   // ConstantVector accessors
-  LLVM_ABI static Constant *get(ArrayRef<Constant *> V);
+  LLVM_ABI static Constant *get(ArrayRef<Constant *> V,
+                                const DataLayout *DL = nullptr);
 
 private:
-  static Constant *getImpl(ArrayRef<Constant *> V);
+  static Constant *getImpl(ArrayRef<Constant *> V,
+                           const DataLayout *DL = nullptr);
 
 public:
   /// Return a ConstantVector with the specified constant in each element.
   /// Note that this might not return an instance of ConstantVector
-  LLVM_ABI static Constant *getSplat(ElementCount EC, Constant *Elt);
+  LLVM_ABI static Constant *getSplat(ElementCount EC, Constant *Elt,
+                                     const DataLayout *DL = nullptr);
 
   /// Specialize the getType() method to always return a FixedVectorType,
   /// which reduces the amount of casting needed in parts of the compiler.
