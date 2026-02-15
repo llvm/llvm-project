@@ -173,6 +173,10 @@ Attribute Changes in Clang
 - Added a new attribute, ``[[clang::no_outline]]`` to suppress outlining from
   annotated functions. This uses the LLVM `nooutline` attribute.
 
+- The malloc attribute can now be applied to functions returning span-like structures (structs
+  containing a pointer field and a size integer field). Currently, this is primarily used for
+  Allocation Token instrumentation.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Added ``-Wlifetime-safety`` to enable lifetime safety analysis,
