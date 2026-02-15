@@ -4552,7 +4552,6 @@ cc_library(
     includes = ["include"],
     deps = [
         ":DataLayoutInterfacesIncGen",
-        ":DialectFoldInterfaceIncGen",
         ":IR",
         "//llvm:Support",
     ],
@@ -7916,6 +7915,7 @@ gentbl_cc_library(
     tbl_outs = {
         "include/mlir/Interfaces/DataLayoutAttrInterface.h.inc": ["-gen-attr-interface-decls"],
         "include/mlir/Interfaces/DataLayoutAttrInterface.cpp.inc": ["-gen-attr-interface-defs"],
+        "include/mlir/Interfaces/DataLayoutDialectInterface.h.inc": ["-gen-dialect-interface-decls"],
         "include/mlir/Interfaces/DataLayoutOpInterface.h.inc": ["-gen-op-interface-decls"],
         "include/mlir/Interfaces/DataLayoutOpInterface.cpp.inc": ["-gen-op-interface-defs"],
         "include/mlir/Interfaces/DataLayoutTypeInterface.h.inc": ["-gen-type-interface-decls"],
