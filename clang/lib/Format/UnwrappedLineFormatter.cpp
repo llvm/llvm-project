@@ -132,9 +132,15 @@ private:
       return Style.IndentAccessModifiers ? -Style.IndentWidth
                                          : Style.AccessModifierOffset;
     }
+
+    if(Line.First->is(tok::identifier) && Line.First->Next && Line.First->Next->is(TT_GotoLabelColon)){
+      if(Style.IndentGotoLabelsToCurrentScope){
+        return Style.IndentWidth;
+      }
+    }
     return 0;
   }
-
+  
   /// Get the indent of \p Level from \p IndentForLevel.
   ///
   /// \p IndentForLevel must contain the indent for the level \c l
