@@ -37,6 +37,7 @@ add_llvm_component_library(LLVMCodeGen
   BasicBlockSectionsProfileReader.cpp
   BasicBlockMatchingAndInference.cpp
   CalcSpillWeights.cpp
+  CallBrPrepare.cpp
   CallingConvLower.cpp
   CFGuardLongjmp.cpp
   CFIFixup.cpp
@@ -76,7 +77,6 @@ add_llvm_component_library(LLVMCodeGen
   IfConversion.cpp
   ImplicitNullChecks.cpp
   IndirectBrExpandPass.cpp
-  InlineAsmPrepare.cpp
   InitUndef.cpp
   InlineSpiller.cpp
   InsertCodePrefetch.cpp
