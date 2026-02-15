@@ -548,18 +548,14 @@ ljmp	$0x7ace,$0x7ace
 
 // CHECK: calll a
 // CHECK: calll a
-// CHECK: calll a
 // CHECK: callw 42
 // CHECK: encoding: [0xe8,A,A]
  calll a
 data32 call a
-data32 callw a
 callw 42
 
 // CHECK:      ljmpl $1, $2
-// CHECK-NEXT: ljmpl $1, $2
 data32 ljmp $1, $2
-data32 ljmpw $1, $2
 
 // CHECK:	incb	%al # encoding: [0xfe,0xc0]
 	incb %al
@@ -1060,3 +1056,15 @@ xresldtrk
 // CHECK:  encoding: [0x66,0x8b,0x1e,A,A]
 // CHECK:  fixup A - offset: 3, value: nearer, kind: FK_Data_2
 movl    nearer, %ebx
+
+// CHECK: pushl $8
+// CHECK:  encoding: [0x66,0x6a,0x08]
+data32 push $8
+
+// CHECK: pushl $8
+// CHECK:  encoding: [0x66,0x6a,0x08]
+pushl $8
+
+// CHECK: pushw $8
+// CHECK:  encoding: [0x6a,0x08]
+push $8
