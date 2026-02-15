@@ -109,6 +109,7 @@ public:
   void print(raw_ostream &OS) const;
 
   static AnyValue poison() { return AnyValue(PoisonTag{}); }
+  static AnyValue boolean(bool Val) { return AnyValue(APInt(1, Val)); }
   static AnyValue getPoisonValue(Context &Ctx, Type *Ty);
   static AnyValue getNullValue(Context &Ctx, Type *Ty);
 
