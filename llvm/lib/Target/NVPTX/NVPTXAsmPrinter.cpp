@@ -1573,8 +1573,9 @@ void NVPTXAsmPrinter::printScalarConstant(const Constant *CPV, raw_ostream &O) {
     printFPConstant(CFP, O);
     return;
   }
-  if (isa<ConstantPointerNull>(CPV)) {
-    O << "0";
+  if (auto *CPN = dyn_cast<ConstantPointerNull>(CPV)) {
+    unsigned AS = CPN->getType()->getAddressSpace();
+    O << getDataLayout().getNullPtrValue(AS);
     return;
   }
   if (const GlobalValue *GVar = dyn_cast<GlobalValue>(CPV)) {
@@ -1745,6 +1746,12 @@ const MCExpr *
 NVPTXAsmPrinter::lowerConstantForGV(const Constant *CV,
                                     bool ProcessingGeneric) const {
   MCContext &Ctx = OutContext;
+
+  if (auto *CPN = dyn_cast<ConstantPointerNull>(CV)) {
+    unsigned AS = CPN->getType()->getAddressSpace();
+    return MCConstantExpr::create(
+        getDataLayout().getNullPtrValue(AS).getZExtValue(), Ctx);
+  }
 
   if (CV->isNullValue() || isa<UndefValue>(CV))
     return MCConstantExpr::create(0, Ctx);

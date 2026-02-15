@@ -1138,8 +1138,8 @@ TEST(Local, ExpressionForConstant) {
         Ty, false, GlobalValue::ExternalLinkage, C, "GV");
     EXPECT_NE(GV, nullptr);
 
-    DIExpression *Expr = getExpressionForConstant(DIB, *GV->getInitializer(),
-                                                  *GV->getValueType());
+    DIExpression *Expr = getExpressionForConstant(
+        DIB, *GV->getInitializer(), *GV->getValueType(), M.getDataLayout());
     if (Expr) {
       EXPECT_EQ(Expr->getNumElements(), 3u);
       EXPECT_EQ(Expr->getElement(0), dwarf::DW_OP_constu);

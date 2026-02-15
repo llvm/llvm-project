@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -736,7 +737,8 @@ InstrEmitter::EmitDbgValue(SDDbgValue *SD,
   return EmitDbgValueFromSingleOp(SD, VRBaseMap);
 }
 
-MachineOperand GetMOForConstDbgOp(const SDDbgOperand &Op) {
+MachineOperand GetMOForConstDbgOp(const SDDbgOperand &Op,
+                                  const DataLayout &DL) {
   const Value *V = Op.getConst();
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
     if (CI->getBitWidth() > 64)
@@ -747,9 +749,10 @@ MachineOperand GetMOForConstDbgOp(const SDDbgOperand &Op) {
   }
   if (const ConstantFP *CF = dyn_cast<ConstantFP>(V))
     return MachineOperand::CreateFPImm(CF);
-  // Note: This assumes that all nullptr constants are zero-valued.
-  if (isa<ConstantPointerNull>(V))
-    return MachineOperand::CreateImm(0);
+  if (auto *CPN = dyn_cast<ConstantPointerNull>(V)) {
+    unsigned AS = CPN->getType()->getAddressSpace();
+    return MachineOperand::CreateImm(DL.getNullPtrValue(AS).getZExtValue());
+  }
   // Undef or unhandled value type, so return an undef operand.
   return MachineOperand::CreateReg(
       /* Reg */ 0U, /* isDef */ false, /* isImp */ false,
@@ -784,7 +787,7 @@ void InstrEmitter::AddDbgValueLocationOps(
                    /*IsDebug=*/true, /*IsClone=*/false, /*IsCloned=*/false);
     } break;
     case SDDbgOperand::CONST:
-      MIB.add(GetMOForConstDbgOp(Op));
+      MIB.add(GetMOForConstDbgOp(Op, MF->getDataLayout()));
       break;
     }
   }
@@ -886,7 +889,7 @@ InstrEmitter::EmitDbgInstrRef(SDDbgValue *SD,
       DefMI = &*MRI->def_instr_begin(VReg);
     } else {
       assert(DbgOperand.getKind() == SDDbgOperand::CONST);
-      MOs.push_back(GetMOForConstDbgOp(DbgOperand));
+      MOs.push_back(GetMOForConstDbgOp(DbgOperand, MF->getDataLayout()));
       continue;
     }
 

@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 
 using namespace llvm;
@@ -117,8 +118,9 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
       MIB.addImm(CI->getSExtValue());
   } else if (auto *CFP = dyn_cast<ConstantFP>(NumericConstant)) {
     MIB.addFPImm(CFP);
-  } else if (isa<ConstantPointerNull>(NumericConstant)) {
-    MIB.addImm(0);
+  } else if (auto *CPN = dyn_cast<ConstantPointerNull>(NumericConstant)) {
+    unsigned AS = CPN->getType()->getAddressSpace();
+    MIB.addImm(getDataLayout().getNullPtrValue(AS).getZExtValue());
   } else {
     // Insert $noreg if we didn't find a usable constant and had to drop it.
     MIB.addReg(Register());

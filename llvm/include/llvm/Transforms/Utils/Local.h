@@ -514,7 +514,8 @@ LLVM_ABI void hoistAllInstructionsInto(BasicBlock *DomBlock,
 
 /// Given a constant, create a debug information expression.
 LLVM_ABI DIExpression *getExpressionForConstant(DIBuilder &DIB,
-                                                const Constant &C, Type &Ty);
+                                                const Constant &C, Type &Ty,
+                                                const DataLayout &DL);
 
 /// Remap the operands of the debug records attached to \p Inst, and the
 /// operands of \p Inst itself if it's a debug intrinsic.

@@ -3761,6 +3761,12 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV,
                                         uint64_t Offset) {
   MCContext &Ctx = OutContext;
 
+  if (auto *CPN = dyn_cast<ConstantPointerNull>(CV)) {
+    unsigned AS = CPN->getType()->getAddressSpace();
+    return MCConstantExpr::create(
+        getDataLayout().getNullPtrValue(AS).getZExtValue(), Ctx);
+  }
+
   if (CV->isNullValue() || isa<UndefValue>(CV))
     return MCConstantExpr::create(0, Ctx);
 
@@ -4396,8 +4402,9 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
       return emitGlobalConstantFP(CFP, AP);
   }
 
-  if (isa<ConstantPointerNull>(CV)) {
-    AP.OutStreamer->emitIntValue(0, Size);
+  if (auto *CPN = dyn_cast<ConstantPointerNull>(CV)) {
+    unsigned AS = CPN->getType()->getAddressSpace();
+    AP.OutStreamer->emitIntValue(DL.getNullPtrValue(AS).getZExtValue(), Size);
     return;
   }
 

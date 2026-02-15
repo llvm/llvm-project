@@ -3442,7 +3442,7 @@ void llvm::hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
 }
 
 DIExpression *llvm::getExpressionForConstant(DIBuilder &DIB, const Constant &C,
-                                             Type &Ty) {
+                                             Type &Ty, const DataLayout &DL) {
   // Create integer constant expression.
   auto createIntegerExpression = [&DIB](const Constant &CV) -> DIExpression * {
     const APInt &API = cast<ConstantInt>(&CV)->getValue();
@@ -3471,8 +3471,11 @@ DIExpression *llvm::getExpressionForConstant(DIBuilder &DIB, const Constant &C,
   if (!Ty.isPointerTy())
     return nullptr;
 
-  if (isa<ConstantPointerNull>(C))
-    return DIB.createConstantValueExpression(0);
+  if (auto *CPN = dyn_cast<ConstantPointerNull>(&C)) {
+    unsigned AS = CPN->getType()->getAddressSpace();
+    return DIB.createConstantValueExpression(
+        DL.getNullPtrValue(AS).getZExtValue());
+  }
 
   if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(&C))
     if (CE->getOpcode() == Instruction::IntToPtr) {
