@@ -155,12 +155,13 @@ void DemandedBits::determineLiveOperandBits(
             AB = AOut.shl(BitWidth - ShiftAmt);
         } else {
           ComputeKnownBits(BitWidth, UserI->getOperand(2), nullptr);
-          if (!Known.getMaxValue().ult(BitWidth)) {
+          APInt APIntMax = Known.getMaxValue();
+          if (!APIntMax.ult(BitWidth)) {
             AB = APInt::getAllOnes(BitWidth);
             return;
           }
           uint64_t Min = Known.getMinValue().getZExtValue();
-          uint64_t Max = Known.getMaxValue().getZExtValue();
+          uint64_t Max = APIntMax.getZExtValue();
           bool IsFShr = II->getIntrinsicID() == Intrinsic::fshr;
           bool ShiftLeft = false;
           uint64_t SMin = Min, SMax = Max;
@@ -186,21 +187,33 @@ void DemandedBits::determineLiveOperandBits(
           // a2 a1 b4 b3
           // fshr(a,b,k) = (a >> k) | (b << (BW - k))
 
-          // Normalize to funnel shift left.
-          if (IsFShr) {
-            SMin = BitWidth - Max - 1;
-            SMax = BitWidth - Min - 1;
+          // Skip poison shifts.
+          if (((IsFShr && OperandNo == 0) || (!IsFShr && OperandNo == 1)) &&
+              Min == 0) {
+            AB = APInt::getAllOnes(BitWidth);
+            return;
           }
-          if (OperandNo == 0) {
-            ShiftLeft = false;
-          } else if (OperandNo == 1) {
-            ShiftLeft = true;
-            auto NewSMin = BitWidth - SMax - 1;
-            auto NewSMax = BitWidth - SMin - 1;
-            SMin = NewSMin;
-            SMax = NewSMax;
+
+          // IsFSHR and Op1 == ShiftLeft: true
+          // IsFSHR and Op0 == ShiftLeft: false
+          // !IsFSHR and Op0 == ShiftLeft: false
+          // !IsFShr and Op1 == ShiftLeft: true;
+          ShiftLeft = OperandNo == 1;
+
+          // ComplementShit
+          // ISFSHR and Op0 == True.
+          // ISFSHR and Op1 == False.
+          // !ISFSHR and Op0 == False.
+          // !ISFSHR and Op1 == true;
+          bool ComplementShift = IsFShr ^ (OperandNo == 1);
+
+          if (ComplementShift) {
+            SMin = BitWidth - Max;
+            SMax = BitWidth - Min;
+            Min = SMin;
+            Max = SMax;
           }
-          GetShiftedRange(SMin, SMax, ShiftLeft);
+          GetShiftedRange(Min, Max, ShiftLeft);
         }
         break;
       }
