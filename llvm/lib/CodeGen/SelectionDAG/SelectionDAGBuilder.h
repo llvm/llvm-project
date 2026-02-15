@@ -822,8 +822,9 @@ struct RegsForValue {
   /// code marker, matching input operand index (if applicable), and includes
   /// the number of values added into it.
   void AddInlineAsmOperands(InlineAsm::Kind Code, bool HasMatching,
-                            unsigned MatchingIdx, const SDLoc &dl,
-                            SelectionDAG &DAG, std::vector<SDValue> &Ops) const;
+                            unsigned MatchingIdx, bool MayFoldRegister,
+                            const SDLoc &dl, SelectionDAG &DAG,
+                            std::vector<SDValue> &Ops) const;
 
   /// Check if the total RegCount is greater than one.
   bool occupiesMultipleRegs() const {
