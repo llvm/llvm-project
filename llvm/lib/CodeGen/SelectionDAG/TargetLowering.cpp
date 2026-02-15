@@ -10066,17 +10066,28 @@ SDValue TargetLowering::expandBSWAP(SDNode *N, SelectionDAG &DAG) const {
     // Use a rotate by 8. This can be further expanded if necessary.
     return DAG.getNode(ISD::ROTL, dl, VT, Op, DAG.getConstant(8, dl, SHVT));
   case MVT::i32:
-    // This is meant for ARM speficially, which has ROTR but no ROTL.
+    // This is meant for ARM specifically, which has ROTR but no ROTL.
     if (isOperationLegalOrCustom(ISD::ROTR, VT)) {
-      SDValue Mask = DAG.getConstant(0x00FF00FF, dl, VT);
-      // (x & 0x00FF00FF) rotr 8 | (x rotl 8) & 0x00FF00FF
-      SDValue And = DAG.getNode(ISD::AND, dl, VT, Op, Mask);
-      SDValue Rotr =
-          DAG.getNode(ISD::ROTR, dl, VT, And, DAG.getConstant(8, dl, SHVT));
-      SDValue Rotl =
-          DAG.getNode(ISD::ROTR, dl, VT, Op, DAG.getConstant(24, dl, SHVT));
-      SDValue And2 = DAG.getNode(ISD::AND, dl, VT, Rotl, Mask);
-      return DAG.getNode(ISD::OR, dl, VT, Rotr, And2);
+      // eor r3, r0, r0, ror #16
+      SDValue Ror16 =
+          DAG.getNode(ISD::ROTR, dl, VT, Op, DAG.getConstant(16, dl, SHVT));
+      SDValue Xor1 = DAG.getNode(ISD::XOR, dl, VT, Op, Ror16);
+
+      // lsr r3, r3, #8
+      SDValue Lsr8 =
+          DAG.getNode(ISD::SRL, dl, VT, Xor1, DAG.getConstant(8, dl, SHVT));
+
+      // bic r3, r3, #65280  (0xFF00)
+      // So we need the negated value: ~0x0000FF00 = 0xFFFF00FF
+      SDValue Mask = DAG.getConstant(0xFFFF00FFu, dl, VT);
+      SDValue BicResult = DAG.getNode(ISD::AND, dl, VT, Lsr8, Mask);
+
+      // ror r0, r0, #8
+      SDValue Ror8 =
+          DAG.getNode(ISD::ROTR, dl, VT, Op, DAG.getConstant(8, dl, SHVT));
+
+      // eor r0, r3, r0, ror #8
+      return DAG.getNode(ISD::XOR, dl, VT, BicResult, Ror8);
     }
     Tmp4 = DAG.getNode(ISD::SHL, dl, VT, Op, DAG.getConstant(24, dl, SHVT));
     Tmp3 = DAG.getNode(ISD::AND, dl, VT, Op,
