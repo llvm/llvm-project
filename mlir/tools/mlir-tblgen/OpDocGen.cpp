@@ -194,6 +194,57 @@ static StringRef resolveAttrDescription(const Attribute &attr) {
   return description;
 }
 
+/// Preprocesses op description.
+///
+/// 1. `mlir_example` code block tag is replaced with `mlir`.
+///
+/// 2. Lines starting with commentMarker inside code blocks (between
+/// snippetStart and snippetEnd) are completely removed.
+static std::string preprocessOpDescription(StringRef description,
+                                           StringRef snippetStart,
+                                           StringRef snippetEnd,
+                                           StringRef commentMarker) {
+  std::string result;
+  raw_string_ostream os(result);
+
+  SmallVector<StringRef> lines;
+  description.split(lines, '\n', -1, false);
+
+  bool insideSnippet = false;
+
+  for (StringRef line : lines) {
+    StringRef trimmedLine = line.ltrim();
+
+    // Check if we're entering a code snippet block
+    if (trimmedLine.starts_with(snippetStart)) {
+      insideSnippet = true;
+      os << "```mlir" << "\n";
+      continue;
+    }
+
+    // Check if we're exiting a code snippet block
+    if (trimmedLine.starts_with(snippetEnd) && insideSnippet) {
+      insideSnippet = false;
+      os << line << "\n";
+      continue;
+    }
+
+    // If we're inside a snippet and the line starts with the comment marker,
+    // skip it
+    if (insideSnippet) {
+      if (trimmedLine.starts_with(commentMarker))
+        continue;
+      else
+        line = line.ltrim();
+    }
+
+    // Otherwise, keep the line as-is
+    os << line << "\n";
+  }
+
+  return result;
+}
+
 static void emitOpDoc(const Operator &op, raw_ostream &os) {
   std::string classNameStr = op.getQualCppClassName();
   StringRef className = classNameStr;
@@ -206,8 +257,11 @@ static void emitOpDoc(const Operator &op, raw_ostream &os) {
   if (op.hasAssemblyFormat())
     emitAssemblyFormat(op.getOperationName(), op.getAssemblyFormat().trim(),
                        os);
-  if (op.hasDescription())
-    mlir::tblgen::emitDescription(op.getDescription(), os);
+  if (op.hasDescription()) {
+    auto preprocessedDescription = preprocessOpDescription(
+        op.getDescription(), "```mlir_example", "```", "#");
+    mlir::tblgen::emitDescription(preprocessedDescription, os);
+  }
 
   emitOpTraitsDoc(op, os);
 
@@ -453,7 +507,9 @@ static void emitBlock(ArrayRef<Attribute> attributes, StringRef inputFilename,
           [&](raw_ostream &os) {
             if (nested) {
               os << "\n## " << StringRef(grouping.summary).trim() << "\n";
-              emitDescription(grouping.description, os);
+              auto preprocessedDescription = preprocessOpDescription(
+                  grouping.description, "```mlir_example", "```", "#");
+              emitDescription(preprocessedDescription, os);
               os << "\n";
             }
             for (const Operator &op : grouping.ops) {

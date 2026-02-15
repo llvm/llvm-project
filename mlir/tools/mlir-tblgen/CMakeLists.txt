@@ -17,6 +17,7 @@ add_tablegen(mlir-tblgen MLIR
   EnumsGen.cpp
   EnumPythonBindingGen.cpp
   FormatGen.cpp
+  LitTestGen.cpp
   LLVMIRConversionGen.cpp
   LLVMIRIntrinsicGen.cpp
   mlir-tblgen.cpp
