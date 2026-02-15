@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/ObjectStore.h"
+#include "OnDiskCommonUtils.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/ThreadPool.h"
@@ -269,6 +271,47 @@ TEST_P(CASTest, NodesBig) {
 
   for (auto ID : CreatedNodes)
     ASSERT_THAT_ERROR(CAS->validateObject(CAS->getID(ID)), Succeeded());
+}
+
+TEST_P(CASTest, FileAPIs) {
+  std::unique_ptr<ObjectStore> CAS = createObjectStore();
+
+  auto runCommonTests =
+      [&CAS](function_ref<std::unique_ptr<unittest::TempFile>(char)>
+                 createFileFn) {
+        auto TmpFile = createFileFn('a');
+        auto Path = TmpFile->path();
+
+        std::optional<ObjectRef> ID1;
+        ASSERT_THAT_ERROR(CAS->storeFromFile(Path).moveInto(ID1), Succeeded());
+        std::optional<ObjectProxy> Obj1;
+        ASSERT_THAT_ERROR(CAS->getProxy(*ID1).moveInto(Obj1), Succeeded());
+        EXPECT_EQ(Obj1->getNumReferences(), size_t(0));
+        StringRef Contents = Obj1->getData();
+        {
+          ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
+              MemoryBuffer::getFile(Path);
+          ASSERT_TRUE(!!MB);
+          ASSERT_NE(*MB, nullptr);
+          EXPECT_EQ((*MB)->getBuffer(), Contents);
+        }
+
+        unittest::TempFile TmpFile2("somefile.o", /*Suffix=*/"",
+                                    /*Contents=*/"",
+                                    /*Unique=*/true);
+        ASSERT_THAT_ERROR(Obj1->exportDataToFile(TmpFile2.path()), Succeeded());
+        {
+          ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
+              MemoryBuffer::getFile(TmpFile2.path());
+          ASSERT_TRUE(!!MB);
+          ASSERT_NE(*MB, nullptr);
+          EXPECT_EQ((*MB)->getBuffer(), Contents);
+        }
+      };
+
+  runCommonTests(createSmallFile);
+  runCommonTests(createLargeFile);
+  runCommonTests(createLargePageAlignedFile);
 }
 
 #if LLVM_ENABLE_THREADS

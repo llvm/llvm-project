@@ -218,6 +218,10 @@ void writeTableType(raw_ostream &os, const WasmTableType &type) {
 
 void writeImport(raw_ostream &os, const WasmImport &import) {
   writeStr(os, import.Module, "import module name");
+  writeCompactImport(os, import);
+}
+
+void writeCompactImport(raw_ostream &os, const WasmImport &import) {
   writeStr(os, import.Field, "import field name");
   writeU8(os, import.Kind, "import kind");
   switch (import.Kind) {

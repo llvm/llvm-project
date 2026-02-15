@@ -17,10 +17,10 @@ define void @loop_dependence_war_mask(ptr %a, ptr %b) {
 ; CHECK-EXPANDED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-LABEL: 'loop_dependence_war_mask'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res1 = call <16 x i1> @llvm.loop.dependence.war.mask.v16i1(ptr %a, ptr %b, i64 1)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res2 = call <8 x i1> @llvm.loop.dependence.war.mask.v8i1(ptr %a, ptr %b, i64 2)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res3 = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1(ptr %a, ptr %b, i64 4)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res4 = call <2 x i1> @llvm.loop.dependence.war.mask.v2i1(ptr %a, ptr %b, i64 8)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res1 = call <16 x i1> @llvm.loop.dependence.war.mask.v16i1(ptr %a, ptr %b, i64 1)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res2 = call <8 x i1> @llvm.loop.dependence.war.mask.v8i1(ptr %a, ptr %b, i64 2)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res3 = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1(ptr %a, ptr %b, i64 4)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res4 = call <2 x i1> @llvm.loop.dependence.war.mask.v2i1(ptr %a, ptr %b, i64 8)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res5 = call <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1(ptr %a, ptr %b, i64 1)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res6 = call <vscale x 8 x i1> @llvm.loop.dependence.war.mask.nxv8i1(ptr %a, ptr %b, i64 2)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res7 = call <vscale x 4 x i1> @llvm.loop.dependence.war.mask.nxv4i1(ptr %a, ptr %b, i64 4)
@@ -54,10 +54,10 @@ define void @loop_dependence_raw_mask(ptr %a, ptr %b) {
 ; CHECK-EXPANDED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-LABEL: 'loop_dependence_raw_mask'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res1 = call <16 x i1> @llvm.loop.dependence.raw.mask.v16i1(ptr %a, ptr %b, i64 1)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res2 = call <8 x i1> @llvm.loop.dependence.raw.mask.v8i1(ptr %a, ptr %b, i64 2)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res3 = call <4 x i1> @llvm.loop.dependence.raw.mask.v4i1(ptr %a, ptr %b, i64 4)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res4 = call <2 x i1> @llvm.loop.dependence.raw.mask.v2i1(ptr %a, ptr %b, i64 8)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res1 = call <16 x i1> @llvm.loop.dependence.raw.mask.v16i1(ptr %a, ptr %b, i64 1)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res2 = call <8 x i1> @llvm.loop.dependence.raw.mask.v8i1(ptr %a, ptr %b, i64 2)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res3 = call <4 x i1> @llvm.loop.dependence.raw.mask.v4i1(ptr %a, ptr %b, i64 4)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res4 = call <2 x i1> @llvm.loop.dependence.raw.mask.v2i1(ptr %a, ptr %b, i64 8)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res5 = call <vscale x 16 x i1> @llvm.loop.dependence.raw.mask.nxv16i1(ptr %a, ptr %b, i64 1)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res6 = call <vscale x 8 x i1> @llvm.loop.dependence.raw.mask.nxv8i1(ptr %a, ptr %b, i64 2)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res7 = call <vscale x 4 x i1> @llvm.loop.dependence.raw.mask.nxv4i1(ptr %a, ptr %b, i64 4)
