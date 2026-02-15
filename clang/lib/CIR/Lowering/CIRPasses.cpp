@@ -31,7 +31,7 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
     pm.addPass(mlir::createCIRSimplifyPass());
 
   if (enableIdiomRecognizer)
-    pm.addPass(mlir::createIdiomRecognizerPass());
+    pm.addPass(mlir::createIdiomRecognizerPass(&astContext));
 
   pm.addPass(mlir::createTargetLoweringPass());
   pm.addPass(mlir::createCXXABILoweringPass());
