@@ -245,6 +245,10 @@ Improvements to Clang's diagnostics
 - The ``-Wloop-analysis`` warning has been extended to catch more cases of
   variable modification inside lambda expressions (#GH132038).
 
+- The warning about static local variables declared inside `inline` 
+  functions is now correctly converted to an error if `-pedantic-errors` is 
+  passed (#GH39524).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
