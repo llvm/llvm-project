@@ -116,6 +116,8 @@
 ; CHECK-O-NEXT: Running analysis: ScopedNoAliasAA
 ; CHECK-O-NEXT: Running analysis: TypeBasedAA
 ; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy
+; CHECK-O23SZ-NEXT: Running pass: IsolatePathPass
+; CHECK-O23SZ-NEXT: Running analysis: PostDominatorTreeAnalysis
 ; CHECK-O23SZ-NEXT: Running pass: SpeculativeExecutionPass
 ; CHECK-O23SZ-NEXT: Running pass: JumpThreadingPass
 ; CHECK-O23SZ-NEXT: Running analysis: LazyValueAnalysis
@@ -127,7 +129,7 @@
 ; CHECK-O-NEXT: Running analysis: BlockFrequencyAnalysis on foo
 ; CHECK-O-NEXT: Running analysis: BranchProbabilityAnalysis on foo
 ; CHECK-O-NEXT: Running analysis: LoopAnalysis on foo
-; CHECK-O-NEXT: Running analysis: PostDominatorTreeAnalysis on foo
+; CHECK-O1-NEXT: Running analysis: PostDominatorTreeAnalysis on foo
 ; CHECK-O23SZ-NEXT: Running pass: AggressiveInstCombinePass
 ; CHECK-O1-NEXT: Running pass: LibCallsShrinkWrapPass
 ; CHECK-O2-NEXT: Running pass: LibCallsShrinkWrapPass
