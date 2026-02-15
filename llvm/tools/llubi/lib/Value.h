@@ -137,6 +137,12 @@ public:
     return AggVal;
   }
 
+  std::vector<AnyValue> &asAggregate() {
+    assert(Kind == StorageKind::Aggregate &&
+           "Expect an aggregate/vector value");
+    return AggVal;
+  }
+
   // Helper function for C++ 17 structured bindings.
   template <size_t I> const AnyValue &get() const {
     assert(Kind == StorageKind::Aggregate &&
