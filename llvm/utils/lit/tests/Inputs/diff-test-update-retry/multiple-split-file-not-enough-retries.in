@@ -3,10 +3,10 @@
 # RUN: split-file %s %t
 # RUN: cp %S/1.in %t/out.txt
 
-# RUN: diff %t/test2.expected %t/out.txt
-# RUN: diff %t/test3.expected %t/out.txt
-# RUN: diff %t/test4.expected %t/out.txt
-# RUN: diff %t/test5.expected %t/out.txt
+# RUN: diff --strip-trailing-cr %t/test2.expected %t/out.txt
+# RUN: diff --strip-trailing-cr %t/test3.expected %t/out.txt
+# RUN: diff --strip-trailing-cr %t/test4.expected %t/out.txt
+# RUN: diff --strip-trailing-cr %t/test5.expected %t/out.txt
 
 #--- test1.expected
 unrelated
