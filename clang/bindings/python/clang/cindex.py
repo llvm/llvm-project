@@ -93,7 +93,6 @@ from typing import (
     Generic,
     Iterator,
     Literal,
-    NoReturn,
     Optional,
     Sequence,
     Type as TType,
@@ -213,12 +212,12 @@ class TranslationUnitSaveError(Exception):
         if enumeration < 1 or enumeration > 3:
             raise Exception(
                 "Encountered undefined TranslationUnit save error "
-                "constant: {}. Please file a bug to have this "
-                "value supported.".format(enumeration)
+                "constant: %d. Please file a bug to have this "
+                "value supported." % enumeration
             )
 
         self.save_error = enumeration
-        Exception.__init__(self, "Error {}: {}".format(enumeration, message))
+        Exception.__init__(self, "Error %d: %s" % (enumeration, message))
 
 
 ### Structures and Utility Classes ###
@@ -247,9 +246,7 @@ class CachedProperty(Generic[TInstance, TResult]):
             property_name = self.wrapped.__name__
             class_name = instance_type.__name__
             raise TypeError(
-                "'{}' is not a static attribute of '{}'".format(
-                    property_name, class_name
-                )
+                f"'{property_name}' is not a static attribute of '{class_name}'"
             )
 
         value = self.wrapped(instance)
@@ -360,8 +357,10 @@ class SourceLocation(Structure):
             filename = self.file.name
         else:
             filename = None
-        return "<SourceLocation file {}, line {}, column {}>".format(
-            repr(filename), repr(self.line), repr(self.column)
+        return "<SourceLocation file %r, line %r, column %r>" % (
+            filename,
+            self.line,
+            self.column,
         )
 
 
@@ -546,8 +545,10 @@ class Diagnostic:
         return _CXString.from_result(conf.lib.clang_formatDiagnostic(self, options))
 
     def __repr__(self):
-        return "<Diagnostic severity {}, location {}, spelling {}>".format(
-            repr(self.severity), repr(self.location), repr(self.spelling)
+        return "<Diagnostic severity %r, location %r, spelling %r>" % (
+            self.severity,
+            self.location,
+            self.spelling,
         )
 
     def __str__(self):
@@ -569,7 +570,7 @@ class FixIt:
         self.value = value
 
     def __repr__(self):
-        return "<FixIt range {}, value {}>".format(repr(self.range), repr(self.value))
+        return "<FixIt range %r, value %r>" % (self.range, self.value)
 
 
 class TokenGroup:
@@ -643,7 +644,10 @@ class BaseEnumeration(Enum):
         return cls(id)
 
     def __repr__(self):
-        return "{}.{}".format(self.__class__.__name__, self.name)
+        return "%s.%s" % (
+            self.__class__.__name__,
+            self.name,
+        )
 
 
 class TokenKind(BaseEnumeration):
@@ -2725,9 +2729,8 @@ class Type(Structure):
 
                 if key >= len(self):
                     raise IndexError(
-                        "Index greater than container length: {} > {}".format(
-                            key, len(self)
-                        )
+                        "Index greater than container length: "
+                        "%d > %d" % (key, len(self))
                     )
 
                 result = Type.from_result(
@@ -3088,14 +3091,14 @@ class CompletionChunk:
             "will be removed in a future release."
         )
 
-        def __getattr__(self, _: Any) -> NoReturn:
+        def __getattr__(self, _):
             raise AttributeError(self.deprecation_message)
 
-        def __getitem__(self, value: int) -> str:
+        def __getitem__(self, value: int):
             warnings.warn(self.deprecation_message, DeprecationWarning)
             return CompletionChunk.SPELLING_CACHE[CompletionChunkKind.from_id(value)]
 
-        def __contains__(self, value: int) -> bool:
+        def __contains__(self, value: int):
             warnings.warn(self.deprecation_message, DeprecationWarning)
             return CompletionChunkKind.from_id(value) in CompletionChunk.SPELLING_CACHE
 
@@ -3131,7 +3134,7 @@ class CompletionChunk:
         self.key = key
 
     def __repr__(self) -> str:
-        return "{{'{}', {}}}".format(self.spelling, self.kind)
+        return "{'" + self.spelling + "', " + str(self.kind) + "}"
 
     @CachedProperty
     def spelling(self) -> str:
@@ -3291,11 +3294,14 @@ class CompletionString(ClangObject):
         return _CXString.from_result(conf.lib.clang_getCompletionBriefComment(self.obj))
 
     def __repr__(self) -> str:
-        return "{chunks} || Priority: {priority} || Availability: {availability} || Brief comment: {comment}".format(
-            chunks=" | ".join(str(a) for a in self),
-            priority=self.priority,
-            availability=self.availability,
-            comment=self.briefComment,
+        return (
+            " | ".join([str(a) for a in self])
+            + " || Priority: "
+            + str(self.priority)
+            + " || Availability: "
+            + str(self.availability)
+            + " || Brief comment: "
+            + str(self.briefComment)
         )
 
 
@@ -3716,7 +3722,7 @@ class TranslationUnit(ClangObject):
             )
         )
         if result != 0:
-            msg = "Error reparsing translation unit. Error code: {}".format(result)
+            msg = "Error reparsing translation unit. Error code: " + str(result)
             raise TranslationUnitLoadError(msg)
 
     def save(self, filename):
@@ -3834,7 +3840,7 @@ class File(ClangObject):
         return self.name
 
     def __repr__(self):
-        return "<File: {}>".format(self.name)
+        return "<File: %s>" % (self.name)
 
     def __eq__(self, other) -> bool:
         return isinstance(other, File) and bool(
@@ -3894,12 +3900,13 @@ class CompilationDatabaseError(Exception):
 
         if enumeration > 1:
             raise Exception(
-                "Encountered undefined CompilationDatabase error constant: {}."
-                "Please file a bug to have this value supported.".format(enumeration)
+                "Encountered undefined CompilationDatabase error "
+                "constant: %d. Please file a bug to have this "
+                "value supported." % enumeration
             )
 
         self.cdb_error = enumeration
-        Exception.__init__(self, "Error {}: {}".format(enumeration, message))
+        Exception.__init__(self, "Error %d: %s" % (enumeration, message))
 
 
 class CompileCommand:
