@@ -8,9 +8,9 @@
 // RUN: FileCheck %s -input-file=%t/docs/html/GlobalNamespace/_ZTV6Circle.html -check-prefix=HTML-CIRCLE
 
 HTML-SHAPE-LABEL:<html lang="en-US">
-HTML-SHAPE-LABEL:<head>
+HTML-SHAPE:      <head>
 HTML-SHAPE:      </head>
-HTML-SHAPE-LABEL:<body>
+HTML-SHAPE:      <body>
 HTML-SHAPE-NEXT: <header>
 HTML-SHAPE-LABEL: <nav class="navbar">
 HTML-SHAPE:           <div class="navbar__container">
@@ -20,9 +20,9 @@ HTML-SHAPE:                     <a href="../index.html" class="navbar__link">Hom
 HTML-SHAPE:           <div class="navbar-breadcrumb-container">
 HTML-SHAPE:               <a href="./index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
 HTML-SHAPE:       </nav>
-HTML-SHAPE-LABEL:</header>
+HTML-SHAPE:       </header>
 HTML-SHAPE-LABEL:<main>
-HTML-SHAPE:         <div class="container">
+HTML-SHAPE-NEXT:    <div class="container">
 HTML-SHAPE-NEXT:         <div class="sidebar">
 HTML-SHAPE-NEXT:             <h2>class Shape</h2>
 HTML-SHAPE-NEXT:             <ul>
@@ -46,12 +46,13 @@ HTML-SHAPE-NEXT:                     </details>
 HTML-SHAPE-NEXT:                 </li>
 HTML-SHAPE-NEXT:             </ul>
 HTML-SHAPE-NEXT:         </div>
-HTML-SHAPE:              <div class="resizer" id="resizer"></div>
+HTML-SHAPE-LABEL:        <div class="resizer" id="resizer"></div>
 HTML-SHAPE-NEXT:         <div class="content">
 HTML-SHAPE-NEXT:             <section class="hero section-container">
 HTML-SHAPE-NEXT:                 <div class="hero__title">
 HTML-SHAPE-NEXT:                     <h1 class="hero__title-large">class Shape</h1>
-HTML-SHAPE:                          <div class="doc-card">
+HTML-SHAPE-NEXT:                     <p>Defined at line {{[0-9]+}} of file {{.*}}include{{[\/]}}Shape.h</p>
+HTML-SHAPE-NEXT:                     <div class="doc-card">
 HTML-SHAPE-NEXT:                         <div class="nested-delimiter-container">
 HTML-SHAPE-NEXT:                             <p> Abstract base class for shapes.</p>
 HTML-SHAPE-NEXT:                         </div>
@@ -61,9 +62,9 @@ HTML-SHAPE-NEXT:                         </div>
 HTML-SHAPE-NEXT:                     </div>
 HTML-SHAPE-NEXT:                 </div>
 HTML-SHAPE-NEXT:             </section>
-HTML-SHAPE:                  <section id="PublicMethods" class="section-container">
+HTML-SHAPE-NEXT:             <section id="PublicMethods" class="section-container">
 HTML-SHAPE-NEXT:                 <h2>Public Methods</h2>
-HTML-SHAPE:                              <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+HTML-SHAPE-LABEL:                       <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 HTML-SHAPE-NEXT:                             <pre><code class="language-cpp code-clang-doc">double area ()</code></pre>
 HTML-SHAPE-NEXT:                             <div class="doc-card">
 HTML-SHAPE-NEXT:                                 <div class="nested-delimiter-container">
@@ -75,7 +76,7 @@ HTML-SHAPE-NEXT:                                     <p> double The area of the 
 HTML-SHAPE-NEXT:                                 </div>
 HTML-SHAPE-NEXT:                             </div>
 HTML-SHAPE-NEXT:                         </div>
-HTML-SHAPE:                              <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+HTML-SHAPE-LABEL:                        <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 HTML-SHAPE-NEXT:                             <pre><code class="language-cpp code-clang-doc">double perimeter ()</code></pre>
 HTML-SHAPE-NEXT:                             <div class="doc-card">
 HTML-SHAPE-NEXT:                                 <div class="nested-delimiter-container">
@@ -87,25 +88,26 @@ HTML-SHAPE-NEXT:                                     <p> double The perimeter of
 HTML-SHAPE-NEXT:                                 </div>
 HTML-SHAPE-NEXT:                             </div>
 HTML-SHAPE-NEXT:                         </div>
-HTML-SHAPE:                              <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+HTML-SHAPE-LABEL:                        <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 HTML-SHAPE-NEXT:                             <pre><code class="language-cpp code-clang-doc">void ~Shape ()</code></pre>
 HTML-SHAPE-NEXT:                             <div class="doc-card">
 HTML-SHAPE-NEXT:                                 <div class="nested-delimiter-container">
 HTML-SHAPE-NEXT:                                     <p> Virtual destructor.</p>
 HTML-SHAPE-NEXT:                                 </div>
 HTML-SHAPE-NEXT:                             </div>
-HTML-SHAPE:                              </div>
-HTML-SHAPE:                  </section>
-HTML-SHAPE:          </div> 
+HTML-SHAPE-NEXT:                         <p>Defined at line {{[0-9]+}} of file {{.*}}include{{[/\\]}}Shape.h</p>
+HTML-SHAPE-NEXT:                         </div>
+HTML-SHAPE-NEXT:             </section>
+HTML-SHAPE-NEXT:     </div> 
 HTML-SHAPE:      </main>
 HTML-SHAPE:      </body>
 HTML-SHAPE:      </html>
 
 
 HTML-CALC-LABEL:<html lang="en-US">
-HTML-CALC-LABEL:<head>
+HTML-CALC:      <head>
 HTML-CALC:      </head>
-HTML-CALC-LABEL:<body>
+HTML-CALC:      <body>
 HTML-CALC-NEXT: <header>
 HTML-CALC-LABEL: <nav class="navbar">
 HTML-CALC:           <div class="navbar__container">
@@ -115,9 +117,9 @@ HTML-CALC:                     <a href="../index.html" class="navbar__link">Home
 HTML-CALC:           <div class="navbar-breadcrumb-container">
 HTML-CALC:               <a href="./index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
 HTML-CALC:       </nav>
-HTML-CALC-LABEL:</header>
+HTML-CALC:      </header>
 HTML-CALC-LABEL:<main>
-HTML-CALC:          <div class="container">
+HTML-CALC-NEXT:     <div class="container">
 HTML-CALC-NEXT:         <div class="sidebar">
 HTML-CALC-NEXT:             <h2>class Calculator</h2>
 HTML-CALC-NEXT:             <ul>
@@ -162,12 +164,13 @@ HTML-CALC-NEXT:                     </details>
 HTML-CALC-NEXT:                 </li>
 HTML-CALC-NEXT:             </ul>
 HTML-CALC-NEXT:         </div>
-HTML-CALC:              <div class="resizer" id="resizer"></div>
-HTML-CALC:              <div class="content">
-HTML-CALC:                 <section class="hero section-container">
+HTML-CALC-LABEL:        <div class="resizer" id="resizer"></div>
+HTML-CALC-NEXT:         <div class="content">
+HTML-CALC-NEXT:         <section class="hero section-container">
 HTML-CALC-NEXT:                 <div class="hero__title">
 HTML-CALC-NEXT:                     <h1 class="hero__title-large">class Calculator</h1>
-HTML-CALC:                          <div class="doc-card">
+HTML-CALC-NEXT:                     <p>Defined at line {{[0-9]+}} of file {{.*}}include{{[/\\]}}Calculator.h</p>
+HTML-CALC-NEXT:                     <div class="doc-card">
 HTML-CALC-NEXT:                         <div class="nested-delimiter-container">
 HTML-CALC-NEXT:                             <p> A simple calculator class.</p>
 HTML-CALC-NEXT:                         </div>
@@ -176,8 +179,8 @@ HTML-CALC-NEXT:                             <p> Provides basic arithmetic operat
 HTML-CALC-NEXT:                         </div>
 HTML-CALC-NEXT:                     </div>
 HTML-CALC-NEXT:                 </div>
-HTML-CALC-NEXT:             </section>
-HTML-CALC:                 <section id="PublicMembers" class="section-container">
+HTML-CALC-NEXT:            </section>
+HTML-CALC-NEXT:            <section id="PublicMembers" class="section-container">
 HTML-CALC-NEXT:                 <h2>Public Members</h2>
 HTML-CALC-NEXT:                 <div>
 HTML-CALC-NEXT:                     <div id="public_val" class="delimiter-container">
@@ -187,10 +190,10 @@ HTML-CALC-NEXT:                     <div id="static_val" class="delimiter-contai
 HTML-CALC-NEXT:                         <pre><code class="language-cpp code-clang-doc" >static const int static_val</code></pre>
 HTML-CALC-NEXT:                     </div>
 HTML-CALC-NEXT:                 </div>
-HTML-CALC-NEXT:             </section>
-HTML-CALC:                 <section id="PublicMethods" class="section-container">
+HTML-CALC-NEXT:            </section>
+HTML-CALC-NEXT:           <section id="PublicMethods" class="section-container">
 HTML-CALC-NEXT:                 <h2>Public Methods</h2>
-HTML-CALC:                      <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+HTML-CALC-LABEL:                <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 HTML-CALC-NEXT:                     <pre><code class="language-cpp code-clang-doc">int add (int a, int b)</code></pre>
 HTML-CALC-NEXT:                     <div class="doc-card">
 HTML-CALC-NEXT:                         <div class="nested-delimiter-container">
@@ -210,7 +213,7 @@ HTML-CALC-NEXT:                             <h3>Returns</h3>
 HTML-CALC-NEXT:                             <p> int The sum of a and b.</p>
 HTML-CALC-NEXT:                         </div>
 HTML-CALC-NEXT:                     </div>
-HTML-CALC:                      <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+HTML-CALC-LABEL:                <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 HTML-CALC-NEXT:                     <pre><code class="language-cpp code-clang-doc">int subtract (int a, int b)</code></pre>
 HTML-CALC-NEXT:                     <div class="doc-card">
 HTML-CALC-NEXT:                         <div class="nested-delimiter-container">
@@ -230,7 +233,7 @@ HTML-CALC-NEXT:                             <h3>Returns</h3>
 HTML-CALC-NEXT:                             <p> int The result of a - b.</p>
 HTML-CALC-NEXT:                         </div>
 HTML-CALC-NEXT:                     </div>
-HTML-CALC:                      <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+HTML-CALC-LABEL:                <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 HTML-CALC-NEXT:                     <pre><code class="language-cpp code-clang-doc">int multiply (int a, int b)</code></pre>
 HTML-CALC-NEXT:                     <div class="doc-card">
 HTML-CALC-NEXT:                         <div class="nested-delimiter-container">
@@ -250,7 +253,7 @@ HTML-CALC-NEXT:                             <h3>Returns</h3>
 HTML-CALC-NEXT:                             <p> int The product of a and b.</p>
 HTML-CALC-NEXT:                         </div>
 HTML-CALC-NEXT:                     </div>
-HTML-CALC:                      <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+HTML-CALC-LABEL:                <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 HTML-CALC-NEXT:                     <pre><code class="language-cpp code-clang-doc">double divide (int a, int b)</code></pre>
 HTML-CALC-NEXT:                     <div class="doc-card">
 HTML-CALC-NEXT:                         <div class="nested-delimiter-container">
@@ -276,7 +279,7 @@ HTML-CALC-NEXT:                                 <b>std::invalid_argument</b> if 
 HTML-CALC-NEXT:                             </div>
 HTML-CALC-NEXT:                         </div>
 HTML-CALC-NEXT:                     </div>
-HTML-CALC:                      <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+HTML-CALC-LABEL:                <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 HTML-CALC-NEXT:                     <pre><code class="language-cpp code-clang-doc">int mod (int a, int b)</code></pre>
 HTML-CALC-NEXT:                     <div class="doc-card">
 HTML-CALC-NEXT:                         <div class="nested-delimiter-container">
@@ -296,18 +299,20 @@ HTML-CALC-NEXT:                             <h3>Returns</h3>
 HTML-CALC-NEXT:                             <p> The result of a % b.</p>
 HTML-CALC-NEXT:                         </div>
 HTML-CALC-NEXT:                     </div>
-HTML-CALC:                      </div>
-HTML-CALC:                  </section>
-HTML-CALC:         </div>
-HTML-CALC:      </main>
+HTML-CALC-NEXT:                 <p>Defined at line {{[0-9]+}} of file {{.*}}include{{[/\\]}}Calculator.h</p>
+HTML-CALC-NEXT:                 </div>
+HTML-CALC-NEXT:             </section>
+HTML-CALC-NEXT:         </div>
+HTML-CALC-NEXT:    </div>
+HTML-CALC-NEXT: </main>
 HTML-CALC:      </body>
 HTML-CALC:      </html>
 
 
 HTML-RECTANGLE-LABEL:<html lang="en-US">
-HTML-RECTANGLE-LABEL:<head>
+HTML-RECTANGLE:      <head>
 HTML-RECTANGLE:      </head>
-HTML-RECTANGLE-LABEL:<body>
+HTML-RECTANGLE:      <body>
 HTML-RECTANGLE-NEXT: <header>
 HTML-RECTANGLE-LABEL: <nav class="navbar">
 HTML-RECTANGLE:           <div class="navbar__container">
@@ -317,9 +322,9 @@ HTML-RECTANGLE:                     <a href="../index.html" class="navbar__link"
 HTML-RECTANGLE:           <div class="navbar-breadcrumb-container">
 HTML-RECTANGLE:               <a href="./index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
 HTML-RECTANGLE:       </nav>
-HTML-RECTANGLE-LABEL:</header>
+HTML-RECTANGLE:       </header>
 HTML-RECTANGLE-LABEL:<main>
-HTML-RECTANGLE:          <div class="container">
+HTML-RECTANGLE-NEXT:    <div class="container">
 HTML-RECTANGLE-NEXT:         <div class="sidebar">
 HTML-RECTANGLE-NEXT:             <h2>class Rectangle</h2>
 HTML-RECTANGLE-NEXT:             <ul>
@@ -343,12 +348,13 @@ HTML-RECTANGLE-NEXT:                     </details>
 HTML-RECTANGLE-NEXT:                 </li>
 HTML-RECTANGLE-NEXT:             </ul>
 HTML-RECTANGLE-NEXT:         </div>
-HTML-RECTANGLE:              <div class="resizer" id="resizer"></div>
+HTML-RECTANGLE-LABEL:        <div class="resizer" id="resizer"></div>
 HTML-RECTANGLE-NEXT:         <div class="content">
-HTML-RECTANGLE:                  <section class="hero section-container">
+HTML-RECTANGLE-NEXT:             <section class="hero section-container">
 HTML-RECTANGLE-NEXT:                 <div class="hero__title">
 HTML-RECTANGLE-NEXT:                     <h1 class="hero__title-large">class Rectangle</h1>
-HTML-RECTANGLE:                     <div class="doc-card">
+HTML-RECTANGLE-NEXT:                     <p>Defined at line {{[0-9]+}} of file {{.*}}include{{[/\\]}}Rectangle.h</p>
+HTML-RECTANGLE-NEXT:                     <div class="doc-card">
 HTML-RECTANGLE-NEXT:                         <div class="nested-delimiter-container">
 HTML-RECTANGLE-NEXT:                             <p> Rectangle class derived from Shape.</p>
 HTML-RECTANGLE-NEXT:                         </div>
@@ -358,9 +364,9 @@ HTML-RECTANGLE-NEXT:                         </div>
 HTML-RECTANGLE-NEXT:                     </div>
 HTML-RECTANGLE-NEXT:                 </div>
 HTML-RECTANGLE-NEXT:             </section>
-HTML-RECTANGLE:                  <section id="PublicMethods" class="section-container">
+HTML-RECTANGLE-NEXT:             <section id="PublicMethods" class="section-container">
 HTML-RECTANGLE-NEXT:                 <h2>Public Methods</h2>
-HTML-RECTANGLE-NEXT:                 <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+HTML-RECTANGLE-LABEL:                <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 HTML-RECTANGLE-NEXT:                     <pre><code class="language-cpp code-clang-doc">void Rectangle (double width, double height)</code></pre>
 HTML-RECTANGLE-NEXT:                     <div class="doc-card">
 HTML-RECTANGLE-NEXT:                         <div class="nested-delimiter-container">
@@ -376,7 +382,7 @@ HTML-RECTANGLE-NEXT:                                 <b>height</b>   Height of t
 HTML-RECTANGLE-NEXT:                             </div>
 HTML-RECTANGLE-NEXT:                         </div>
 HTML-RECTANGLE-NEXT:                     </div>
-HTML-RECTANGLE:                      <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+HTML-RECTANGLE-LABEL:                <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 HTML-RECTANGLE-NEXT:                     <pre><code class="language-cpp code-clang-doc">double area ()</code></pre>
 HTML-RECTANGLE-NEXT:                     <div class="doc-card">
 HTML-RECTANGLE-NEXT:                         <div class="nested-delimiter-container">
@@ -387,7 +393,7 @@ HTML-RECTANGLE-NEXT:                             <h3>Returns</h3>
 HTML-RECTANGLE-NEXT:                             <p> double The area of the rectangle.</p>
 HTML-RECTANGLE-NEXT:                         </div>
 HTML-RECTANGLE-NEXT:                     </div>
-HTML-RECTANGLE:                      <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+HTML-RECTANGLE-LABEL:                <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 HTML-RECTANGLE-NEXT:                     <pre><code class="language-cpp code-clang-doc">double perimeter ()</code></pre>
 HTML-RECTANGLE-NEXT:                     <div class="doc-card">
 HTML-RECTANGLE-NEXT:                         <div class="nested-delimiter-container">
@@ -398,18 +404,20 @@ HTML-RECTANGLE-NEXT:                             <h3>Returns</h3>
 HTML-RECTANGLE-NEXT:                             <p> double The perimeter of the rectangle.</p>
 HTML-RECTANGLE-NEXT:                         </div>
 HTML-RECTANGLE-NEXT:                     </div>
-HTML-RECTANGLE:                      </div>
-HTML-RECTANGLE:                  </section>
-HTML-RECTANGLE:          </div>
-HTML-RECTANGLE:      </main>
+HTML-RECTANGLE-NEXT:                 <p>Defined at line {{[0-9]+}} of file {{.*}}src{{[/\\]}}Rectangle.cpp</p>
+HTML-RECTANGLE-NEXT:                 </div>
+HTML-RECTANGLE-NEXT:             </section>
+HTML-RECTANGLE-NEXT:         </div>
+HTML-RECTANGLE-NEXT:    </div>
+HTML-RECTANGLE-NEXT: </main>
 HTML-RECTANGLE:      </body>
 HTML-RECTANGLE:      </html>
 
 
 HTML-CIRCLE-LABEL:<html lang="en-US">
-HTML-CIRCLE-LABEL:<head>
+HTML-CIRCLE:      <head>
 HTML-CIRCLE:      </head>
-HTML-CIRCLE-LABEL:<body>
+HTML-CIRCLE:      <body>
 HTML-CIRCLE-NEXT: <header>
 HTML-CIRCLE-LABEL: <nav class="navbar">
 HTML-CIRCLE:           <div class="navbar__container">
@@ -419,9 +427,9 @@ HTML-CIRCLE:                     <a href="../index.html" class="navbar__link">Ho
 HTML-CIRCLE:           <div class="navbar-breadcrumb-container">
 HTML-CIRCLE:               <a href="./index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
 HTML-CIRCLE:       </nav>
-HTML-CIRCLE-LABEL:</header>
+HTML-CIRCLE:       </header>
 HTML-CIRCLE-LABEL:<main>
-HTML-CIRCLE:          <div class="container">
+HTML-CIRCLE-NEXT:     <div class="container">
 HTML-CIRCLE-NEXT:         <div class="sidebar">
 HTML-CIRCLE-NEXT:             <h2>class Circle</h2>
 HTML-CIRCLE-NEXT:             <ul>
@@ -445,12 +453,13 @@ HTML-CIRCLE-NEXT:                     </details>
 HTML-CIRCLE-NEXT:                 </li>
 HTML-CIRCLE-NEXT:             </ul>
 HTML-CIRCLE-NEXT:         </div>
-HTML-CIRCLE:              <div class="resizer" id="resizer"></div>
+HTML-CIRCLE-LABEL:        <div class="resizer" id="resizer"></div>
 HTML-CIRCLE-NEXT:         <div class="content">
 HTML-CIRCLE-NEXT:             <section class="hero section-container">
 HTML-CIRCLE-NEXT:                 <div class="hero__title">
 HTML-CIRCLE-NEXT:                     <h1 class="hero__title-large">class Circle</h1>
-HTML-CIRCLE:                     <div class="doc-card">
+HTML-CIRCLE-NEXT:                     <p>Defined at line {{[0-9]+}} of file {{.*}}include{{[/\\]}}Circle.h</p>
+HTML-CIRCLE-NEXT:                     <div class="doc-card">
 HTML-CIRCLE-NEXT:                         <div class="nested-delimiter-container">
 HTML-CIRCLE-NEXT:                             <p> Circle class derived from Shape.</p>
 HTML-CIRCLE-NEXT:                         </div>
@@ -460,9 +469,9 @@ HTML-CIRCLE-NEXT:                         </div>
 HTML-CIRCLE-NEXT:                     </div>
 HTML-CIRCLE-NEXT:                 </div>
 HTML-CIRCLE-NEXT:             </section>
-HTML-CIRCLE:                  <section id="PublicMethods" class="section-container">
+HTML-CIRCLE-NEXT:             <section id="PublicMethods" class="section-container">
 HTML-CIRCLE-NEXT:                 <h2>Public Methods</h2>
-HTML-CIRCLE:                      <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+HTML-CIRCLE-LABEL:                <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 HTML-CIRCLE-NEXT:                     <pre><code class="language-cpp code-clang-doc">void Circle (double radius)</code></pre>
 HTML-CIRCLE-NEXT:                     <div class="doc-card">
 HTML-CIRCLE-NEXT:                         <div class="nested-delimiter-container">
@@ -475,7 +484,7 @@ HTML-CIRCLE-NEXT:                                 <b>radius</b>   Radius of the 
 HTML-CIRCLE-NEXT:                             </div>
 HTML-CIRCLE-NEXT:                         </div>
 HTML-CIRCLE-NEXT:                     </div>
-HTML-CIRCLE:                      <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+HTML-CIRCLE-LABEL:                <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 HTML-CIRCLE-NEXT:                     <pre><code class="language-cpp code-clang-doc">double area ()</code></pre>
 HTML-CIRCLE-NEXT:                     <div class="doc-card">
 HTML-CIRCLE-NEXT:                         <div class="nested-delimiter-container">
@@ -486,7 +495,7 @@ HTML-CIRCLE-NEXT:                             <h3>Returns</h3>
 HTML-CIRCLE-NEXT:                             <p> double The area of the circle.</p>
 HTML-CIRCLE-NEXT:                         </div>
 HTML-CIRCLE-NEXT:                     </div>
-HTML-CIRCLE:                      <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+HTML-CIRCLE-LABEL:                <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 HTML-CIRCLE-NEXT:                     <pre><code class="language-cpp code-clang-doc">double perimeter ()</code></pre>
 HTML-CIRCLE-NEXT:                     <div class="doc-card">
 HTML-CIRCLE-NEXT:                         <div class="nested-delimiter-container">
@@ -506,9 +515,11 @@ HTML-CIRCLE-NEXT:                                     </code>
 HTML-CIRCLE-NEXT:                                 </pre>
 HTML-CIRCLE-NEXT:                             </div>
 HTML-CIRCLE-NEXT:                     </div>
-HTML-CIRCLE:                       </div>
-HTML-CIRCLE:                  </section>
-HTML-CIRCLE:          </div>
-HTML-CIRCLE:      </main>
+HTML-CIRCLE-NEXT:                 <p>Defined at line {{[0-9]+}} of file {{.*}}src{{[/\\]}}Circle.cpp</p>
+HTML-CIRCLE-NEXT:                 </div>
+HTML-CIRCLE-NEXT:             </section>
+HTML-CIRCLE-NEXT:         </div>
+HTML-CIRCLE-NEXT:     </div>
+HTML-CIRCLE-NEXT: </main>
 HTML-CIRCLE:      </body>
 HTML-CIRCLE:      </html>
