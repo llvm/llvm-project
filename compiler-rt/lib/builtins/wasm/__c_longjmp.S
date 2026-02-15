@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements __c_longjmp which LLVM uses to implenmet setjmp/longjmp
+// This file implements __c_longjmp which LLVM uses to implement setjmp/longjmp
 // when Wasm EH is enabled.
 //
 //===----------------------------------------------------------------------===//
