@@ -656,27 +656,28 @@ public:
     return cir::StackRestoreOp::create(*this, loc, v);
   }
 
-  cir::CmpThreeWayOp createThreeWayCmpTotal(mlir::Location loc, mlir::Value lhs,
-                                            mlir::Value rhs,
-                                            const llvm::APSInt &ltRes,
-                                            const llvm::APSInt &eqRes,
-                                            const llvm::APSInt &gtRes) {
+  cir::CmpThreeWayOp createThreeWayCmpTotalOrdering(
+      mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
+      const llvm::APSInt &ltRes, const llvm::APSInt &eqRes,
+      const llvm::APSInt &gtRes, cir::CmpOrdering ordering) {
     assert(ltRes.getBitWidth() == eqRes.getBitWidth() &&
            ltRes.getBitWidth() == gtRes.getBitWidth() &&
            "the three comparison results must have the same bit width");
+    assert((ordering == cir::CmpOrdering::Strong ||
+            ordering == cir::CmpOrdering::Weak) &&
+           "total ordering must be strong or weak");
     cir::IntType cmpResultTy = getSIntNTy(ltRes.getBitWidth());
     auto infoAttr = cir::CmpThreeWayInfoAttr::get(
-        getContext(), ltRes.getSExtValue(), eqRes.getSExtValue(),
+        getContext(), ordering, ltRes.getSExtValue(), eqRes.getSExtValue(),
         gtRes.getSExtValue());
     return cir::CmpThreeWayOp::create(*this, loc, cmpResultTy, lhs, rhs,
                                       infoAttr);
   }
 
-  cir::CmpThreeWayOp
-  createThreeWayCmpPartial(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
-                           const llvm::APSInt &ltRes, const llvm::APSInt &eqRes,
-                           const llvm::APSInt &gtRes,
-                           const llvm::APSInt &unorderedRes) {
+  cir::CmpThreeWayOp createThreeWayCmpPartialOrdering(
+      mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
+      const llvm::APSInt &ltRes, const llvm::APSInt &eqRes,
+      const llvm::APSInt &gtRes, const llvm::APSInt &unorderedRes) {
     assert(ltRes.getBitWidth() == eqRes.getBitWidth() &&
            ltRes.getBitWidth() == gtRes.getBitWidth() &&
            ltRes.getBitWidth() == unorderedRes.getBitWidth() &&

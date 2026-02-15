@@ -359,13 +359,15 @@ public:
       llvm::APSInt eqRes = cmpInfo.getEqualOrEquiv()->getIntValue();
       llvm::APSInt gtRes = cmpInfo.getGreater()->getIntValue();
       if (!cmpInfo.isPartial()) {
-        // Total ordering.
-        resultScalar =
-            builder.createThreeWayCmpTotal(loc, lhs, rhs, ltRes, eqRes, gtRes);
+        cir::CmpOrdering ordering = cmpInfo.isStrong()
+                                        ? cir::CmpOrdering::Strong
+                                        : cir::CmpOrdering::Weak;
+        resultScalar = builder.createThreeWayCmpTotalOrdering(
+            loc, lhs, rhs, ltRes, eqRes, gtRes, ordering);
       } else {
         // Partial ordering.
         llvm::APSInt unorderedRes = cmpInfo.getUnordered()->getIntValue();
-        resultScalar = builder.createThreeWayCmpPartial(
+        resultScalar = builder.createThreeWayCmpPartialOrdering(
             loc, lhs, rhs, ltRes, eqRes, gtRes, unorderedRes);
       }
     }

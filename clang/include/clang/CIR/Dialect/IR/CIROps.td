@@ -1243,6 +1243,7 @@ def CIR_CleanupScopeOp : CIR_Op<"cleanup.scope", [
 
   let hasLLVMLowering = false;
 }
+
 //===----------------------------------------------------------------------===//
 // CmpThreeWayOp
 //===----------------------------------------------------------------------===//
@@ -1250,14 +1251,14 @@ def CIR_CleanupScopeOp : CIR_Op<"cleanup.scope", [
 def CIR_CmpThreeWayOp : CIR_Op<"cmp3way", [Pure, SameTypeOperands]> {
   let summary = "Compare two values with C++ three-way comparison semantics";
   let description = [{
-    The `cir.cmp3way` operation models the `<=>` operator in C++20. It takes two
-    operands with the same type and produces a result indicating the ordering
-    between the two input operands.
+    The `cir.cmp3way` operation models the builtin `<=>` operator in C++20.
+    It takes two operands with the same type and produces a result indicating
+    the ordering between the two input operands.
 
     The result of the operation is a signed integer that indicates the ordering
     between the two input operands.
 
-    There are two kinds of ordering: strong ordering and partial ordering.
+    There are three kinds of ordering: strong, weak and partial ordering.
     Comparing different types of values yields different kinds of orderings.
     The `info` parameter gives the ordering kind and other necessary information
     about the comparison.
@@ -1269,12 +1270,12 @@ def CIR_CmpThreeWayOp : CIR_Op<"cmp3way", [Pure, SameTypeOperands]> {
 
     #cmp3way_info_partial_ltn1eq0gt1unn127 =
       #cir.cmp3way_info<partial, lt = -1, eq = 0, gt = 1, unordered = -127>
-    #cmp3way_info_total_ltn1eq0gt1 =
-      #cir.cmp3way_info<total, lt = -1, eq = 0, gt = 1>
+    #cmp3way_info_strong_ltn1eq0gt1 =
+      #cir.cmp3way_info<strong, lt = -1, eq = 0, gt = 1>
 
     %0 = cir.const #cir.int<0> : !s32i
     %1 = cir.const #cir.int<1> : !s32i
-    %2 = cir.cmp3way #cmp3way_info_total_ltn1eq0gt1 %0, %1 : !s32i -> !s8i
+    %2 = cir.cmp3way #cmp3way_info_strong_ltn1eq0gt1 %0, %1 : !s32i -> !s8i
 
     %3 = cir.const #cir.fp<0.0> : !cir.float
     %4 = cir.const #cir.fp<1.0> : !cir.float
@@ -1296,9 +1297,10 @@ def CIR_CmpThreeWayOp : CIR_Op<"cmp3way", [Pure, SameTypeOperands]> {
   }];
 
   let extraClassDeclaration = [{
-    /// Determine whether this three-way comparison produces a total ordering.
-    bool isTotalOrdering() {
-      return getInfo().getOrdering() == cir::CmpOrdering::Total;
+    /// Determine whether this three-way comparison produces a partial ordering
+    bool isPartialOrdering() {
+      cir::CmpOrdering o = getInfo().getOrdering();
+      return o == cir::CmpOrdering::Partial;
     }
 
     /// Determine whether this three-way comparison compares integral operands.
