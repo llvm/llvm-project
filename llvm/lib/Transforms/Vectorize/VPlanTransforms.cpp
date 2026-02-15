@@ -2122,8 +2122,8 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
       HeaderR.getVPSingleValue()->replaceAllUsesWith(Phi->getIncomingValue(0));
       HeaderR.eraseFromParent();
     }
-    VectorRegion->getCanonicalIV()->replaceAllUsesWith(Plan.getOrAddLiveIn(
-        ConstantInt::getNullValue(VectorRegion->getCanonicalIVType())));
+    VectorRegion->getCanonicalIV()->replaceAllUsesWith(
+        Plan.getConstantInt(VectorRegion->getCanonicalIVType(), 0));
 
     VPBlockBase *Preheader = VectorRegion->getSinglePredecessor();
     SmallVector<VPBlockBase *> Exits = to_vector(VectorRegion->getSuccessors());
@@ -2856,9 +2856,8 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *EB = TopRegion->getExitingBasicBlock();
   VPValue *CanonicalIV = TopRegion->getCanonicalIV();
-  VPValue *StartV = Plan.getOrAddLiveIn(
-      Constant::getNullValue(TopRegion->getCanonicalIVType()));
-  auto *CanonicalIVIncrement = TopRegion->getCanonicalIVIncrement();
+  VPValue *StartV = Plan.getConstantInt(TopRegion->getCanonicalIVType(), 0);
+  auto *CanonicalIVIncrement = TopRegion->getOrCreateCanonicalIVIncrement();
   // TODO: Check if dropping the flags is needed if
   // !DataAndControlFlowWithoutRuntimeCheck.
   CanonicalIVIncrement->dropPoisonGeneratingFlags();
@@ -2935,9 +2934,8 @@ void VPlanTransforms::addActiveLaneMask(
          "UseActiveLaneMaskForControlFlow");
 
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  auto *CanonicalIV = LoopRegion->getCanonicalIV();
-  auto *FoundWidenCanonicalIVUser =
-      find_if(CanonicalIV->users(), IsaPred<VPWidenCanonicalIVRecipe>);
+  auto *FoundWidenCanonicalIVUser = find_if(
+      LoopRegion->getCanonicalIV()->users(), IsaPred<VPWidenCanonicalIVRecipe>);
   assert(FoundWidenCanonicalIVUser &&
          "Must have widened canonical IV when tail folding!");
   VPSingleDefRecipe *HeaderMask = vputils::findHeaderMask(Plan);
@@ -3273,10 +3271,9 @@ void VPlanTransforms::addExplicitVectorLength(
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
   auto *CanonicalIV = cast<VPRegionValue>(LoopRegion->getCanonicalIV());
-  auto &CanIVInfo = LoopRegion->getCanonicalIVInfo();
   auto *CanIVTy = CanonicalIV->getType();
-  VPValue *StartV = Plan.getOrAddLiveIn(ConstantInt::getNullValue(CanIVTy));
-  auto *CanonicalIVIncrement = LoopRegion->getCanonicalIVIncrement();
+  VPValue *StartV = Plan.getConstantInt(CanIVTy, 0);
+  auto *CanonicalIVIncrement = LoopRegion->getOrCreateCanonicalIVIncrement();
 
   // Create the ExplicitVectorLengthPhi recipe in the main loop.
   auto *EVLPhi = new VPEVLBasedIVPHIRecipe(StartV, DebugLoc::getUnknown());
@@ -3306,8 +3303,8 @@ void VPlanTransforms::addExplicitVectorLength(
       OpVPEVL, CanIVTy, I32Ty, CanonicalIVIncrement->getDebugLoc());
 
   auto *NextEVLIV = Builder.createAdd(
-      OpVPEVL, EVLPhi,
-      CanonicalIVIncrement->getDebugLoc(), "index.evl.next", {CanIVInfo.hasNUW(), /*HasNSW=*/false});
+      OpVPEVL, EVLPhi, CanonicalIVIncrement->getDebugLoc(), "index.evl.next",
+      {LoopRegion->hasCanonicalIVNUW(), /*HasNSW=*/false});
   EVLPhi->addOperand(NextEVLIV);
 
   VPValue *NextAVL =
@@ -3401,7 +3398,7 @@ void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
   if (match(LatchBr, m_BranchOnCond(m_True())))
     return;
 
-  VPValue *CanIVInc = LoopRegion->getCanonicalIVIncrement();
+  VPValue *CanIVInc = LoopRegion->getOrCreateCanonicalIVIncrement();
   assert(CanIVInc &&
          match(LatchBr, m_BranchOnCond(m_SpecificCmp(
                             CmpInst::ICMP_EQ, m_Specific(CanIVInc),
@@ -5378,8 +5375,12 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
   // Adjust induction to reflect that the transformed plan only processes one
   // original iteration.
   Type *CanIVTy = VectorLoop->getCanonicalIVType();
-  auto *Inc = cast<VPInstruction>(
-      VectorLoop->getExitingBasicBlock()->getTerminator()->getOperand(0));
+  VPInstruction *Inc;
+  [[maybe_unused]] bool SupportedTerminator =
+      match(VectorLoop->getExitingBasicBlock()->getTerminator(),
+            m_BranchOnCount(m_VPInstruction(Inc),
+                            m_Specific(&Plan.getVectorTripCount())));
+  assert(SupportedTerminator && "supported terminator");
   VPBuilder PHBuilder(Plan.getVectorPreheader());
 
   VPValue *UF = Plan.getOrAddLiveIn(

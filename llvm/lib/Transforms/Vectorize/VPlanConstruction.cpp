@@ -428,22 +428,22 @@ static bool canonicalHeaderAndLatch(VPBlockBase *HeaderVPB,
 
 /// Create a new VPRegionBlock for the loop starting at \p HeaderVPB.
 static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
-  auto *PreheaderVPBB = HeaderVPB->getPredecessors()[0];
-  auto *LatchVPBB = HeaderVPB->getPredecessors()[1];
-
-  VPBlockUtils::disconnectBlocks(PreheaderVPBB, HeaderVPB);
-  VPBlockUtils::disconnectBlocks(LatchVPBB, HeaderVPB);
-
   VPPhi *ScalarCanIV = nullptr;
   Type *CanIVTy = nullptr;
   DebugLoc DL = DebugLoc::getCompilerGenerated();
   // Get type info and debug location from the scalar phi corresponding to the
   // canonical IV for outermost loops.
-  if (PreheaderVPBB->getSinglePredecessor() == Plan.getEntry()) {
-    ScalarCanIV = cast<VPPhi>(&*cast<VPBasicBlock>(HeaderVPB)->begin());
-    CanIVTy = ScalarCanIV->getOperand(0)->getLiveInIRValue()->getType();
-    DL = ScalarCanIV->getDebugLoc();
-  }
+  auto *OutermostHeaderVPBB = cast<VPBasicBlock>(
+      Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor());
+  ScalarCanIV = cast<VPPhi>(&OutermostHeaderVPBB->front());
+  CanIVTy = ScalarCanIV->getOperand(0)->getLiveInIRValue()->getType();
+  DL = ScalarCanIV->getDebugLoc();
+
+  auto *PreheaderVPBB = HeaderVPB->getPredecessors()[0];
+  auto *LatchVPBB = HeaderVPB->getPredecessors()[1];
+
+  VPBlockUtils::disconnectBlocks(PreheaderVPBB, HeaderVPB);
+  VPBlockUtils::disconnectBlocks(LatchVPBB, HeaderVPB);
 
   // Create an empty region first and insert it between PreheaderVPBB and
   // LatchExitVPB, taking care to preserve the original predecessor & successor
@@ -458,7 +458,7 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   R->setEntry(HeaderVPB);
   R->setExiting(LatchVPBB);
 
-  if (ScalarCanIV) {
+  if (Plan.getEntry() == PreheaderVPBB->getSinglePredecessor()) {
     ScalarCanIV->replaceAllUsesWith(R->getCanonicalIV());
     ScalarCanIV->eraseFromParent();
   }

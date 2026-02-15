@@ -4283,7 +4283,9 @@ public:
   }
 
   VPRegionValue *getVPValue() { return CanIV.get(); }
+
   bool hasNUW() const { return HasNUW; }
+
   void clearNUW() { HasNUW = false; }
 };
 
@@ -4308,7 +4310,7 @@ class LLVM_ABI_FOR_TEST VPRegionBlock : public VPBlockBase {
   /// Holds the Canonical IV of the loop region along with additional
   /// information. If CanIVInfo is nullptr, the region is a replicating region.
   /// Loop regions retain their canonical IVs until they are dissolved, even if
-  /// they may not have any users.
+  /// they have no users.
   std::unique_ptr<VPCanonicalIVInfo> CanIVInfo;
 
   /// Use VPlan::createVPRegionBlock to create VPRegionBlocks.
@@ -4402,24 +4404,32 @@ public:
   void dissolveToCFGLoop();
 
   /// Get the canonical IV increment instruction. If the exiting terminator
-  /// is a BranchOnCount with an IV increment, return it. Otherwise, return
-  /// nullptr.
-  VPInstruction *getCanonicalIVIncrement();
+  /// is a BranchOnCount with an IV increment, return this increment. Otherwise,
+  /// return nullptr.
+  VPInstruction *getOrCreateCanonicalIVIncrement();
 
   /// Return the canonical induction variable of the region, null for
   /// replicating regions.
-  VPRegionValue *getCanonicalIV() { return CanIVInfo->getVPValue(); }
-  const VPRegionValue *getCanonicalIV() const { return CanIVInfo->getVPValue(); }
+  VPRegionValue *getCanonicalIV() {
+    return CanIVInfo ? CanIVInfo->getVPValue() : nullptr;
+  }
+  const VPRegionValue *getCanonicalIV() const {
+    return CanIVInfo ? CanIVInfo->getVPValue() : nullptr;
+  }
 
+  /// Return the type of the canonical IV for loop regions
   Type *getCanonicalIVType() const { return CanIVInfo->getVPValue()->getType(); }
-
-  const VPCanonicalIVInfo &getCanonicalIVInfo() const { return *CanIVInfo; }
 
   DebugLoc getCanonicalIVDebugLoc() const {
     return CanIVInfo->getVPValue()->getDebugLoc();
   }
+
   bool hasCanonicalIVNUW() const { return CanIVInfo->hasNUW(); }
+
   void clearCanonicalIVNUW() { CanIVInfo->clearNUW(); }
+
+protected:
+  const VPCanonicalIVInfo &getCanonicalIVInfo() const { return *CanIVInfo; }
 };
 
 inline VPRegionBlock *VPRecipeBase::getRegion() {
@@ -4751,9 +4761,10 @@ public:
     return VPB;
   }
 
-  /// Create a new loop region with \p Name and entry and exiting blocks set
-  /// to \p Entry and \p Exiting respectively, if set. The returned block is
-  /// owned by the VPlan and deleted once the VPlan is destroyed.
+  /// Create a new loop region with a canonical IV using \p CanIVTy and DL. Use
+  /// \p Name as the regions name and set entry and exiting blocks to \p Entry
+  /// and \p Exiting respectively, if provided. The returned block is owned by
+  /// the VPlan and deleted once the VPlan is destroyed.
   VPRegionBlock *createLoopRegion(Type *CanIVTy, DebugLoc DL,
                                   const std::string &Name = "",
                                   VPBlockBase *Entry = nullptr,

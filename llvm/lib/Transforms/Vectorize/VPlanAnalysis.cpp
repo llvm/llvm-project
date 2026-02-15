@@ -449,13 +449,11 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
         // FIXME: Might need some motivation why these values are ignored. If
         // for example an argument is used inside the loop it will increase the
         // register pressure (so shouldn't we add it to LoopInvariants).
-        auto *IRV = dyn_cast<VPIRValue>(U);
-        if (!DefR && (!IRV || !isa<Instruction>(IRV->getValue())))
-          continue;
-
-        // If this recipe is outside the loop then record it and continue.
-        if (!DefR && !isa<VPRegionValue>(U)) {
-          LoopInvariants.insert(U);
+        if (!DefR) {
+          auto *IRV = dyn_cast<VPIRValue>(U);
+          // If this recipe is outside the loop then record it and continue.
+          if (IRV && isa<Instruction>(IRV->getValue()))
+            LoopInvariants.insert(U);
           continue;
         }
 

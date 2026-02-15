@@ -861,12 +861,11 @@ void VPRegionBlock::dissolveToCFGLoop() {
   auto *CanIV = cast<VPRegionValue>(getCanonicalIV());
   if (CanIV->getNumUsers() > 0) {
     VPlan &Plan = *getPlan();
-    VPInstruction *CanIVInc = getCanonicalIVIncrement();
+    VPInstruction *CanIVInc = getOrCreateCanonicalIVIncrement();
     // If the increment doesn't exist yet, create it.
     if (!CanIVInc) {
-      auto *ExitingTerm = ExitingLatch->getTerminator();
       CanIVInc =
-          VPBuilder(ExitingTerm)
+          VPBuilder(ExitingLatch->getTerminator())
               .createOverflowingOp(Instruction::Add, {CanIV, &Plan.getVFxUF()},
                                    {CanIVInfo->hasNUW(), /* HasNSW */ false},
                                    CanIV->getDebugLoc(), "index.next");
@@ -890,7 +889,7 @@ void VPRegionBlock::dissolveToCFGLoop() {
   VPBlockUtils::connectBlocks(ExitingLatch, Header);
 }
 
-VPInstruction *VPRegionBlock::getCanonicalIVIncrement() {
+VPInstruction *VPRegionBlock::getOrCreateCanonicalIVIncrement() {
   // TODO: Represent the increment as VPRegionValue as well.
   auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
   VPValue *CanIV = getCanonicalIV();
@@ -945,9 +944,8 @@ VPlan::~VPlan() {
         for (unsigned I = 0, E = R.getNumOperands(); I != E; I++)
           R.setOperand(I, &DummyValue);
       }
-    } else if (!cast<VPRegionBlock>(VPB)->isReplicator()) {
-      cast<VPRegionBlock>(VPB)->getCanonicalIV()->replaceAllUsesWith(
-          &DummyValue);
+    } else if (auto *CanIV = cast<VPRegionBlock>(VPB)->getCanonicalIV()) {
+      CanIV->replaceAllUsesWith(&DummyValue);
     }
 
     delete VPB;
@@ -1562,8 +1560,8 @@ void VPSlotTracker::assignNames(const VPlan &Plan) {
   for (const VPBlockBase *VPB : RPOT) {
     if (auto *VPBB = dyn_cast<VPBasicBlock>(VPB))
       assignNames(VPBB);
-    else if (!cast<VPRegionBlock>(VPB)->isReplicator())
-      assignName(cast<VPRegionBlock>(VPB)->getCanonicalIV());
+    else if (auto *CanIV = cast<VPRegionBlock>(VPB)->getCanonicalIV())
+      assignName(CanIV);
   }
 }
 

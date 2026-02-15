@@ -149,7 +149,8 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
   }
 
   if (auto *RV = dyn_cast<VPRegionValue>(V)) {
-    assert(RV == RV->getDefiningRegion()->getCanonicalIV());
+    assert(RV == RV->getDefiningRegion()->getCanonicalIV() &&
+           "RegionValue must be canonical IV");
     if (!L)
       return SE.getCouldNotCompute();
     const SCEV *Start = SE.getZero(RV->getDefiningRegion()->getCanonicalIVType());
