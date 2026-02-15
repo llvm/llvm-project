@@ -270,8 +270,6 @@ template <class ELFT, class RelTy>
 void PPC::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
   RelocScan rs(ctx, &sec);
   sec.relocations.reserve(rels.size());
-  bool execOptimize = !ctx.arg.shared;
-
   for (auto it = rels.begin(); it != rels.end(); ++it) {
     const RelTy &rel = *it;
     uint32_t symIdx = rel.getSymbol(false);
@@ -360,7 +358,7 @@ void PPC::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       continue;
     case R_PPC_TLSGD:
     case R_PPC_TLSLD:
-      if (execOptimize) {
+      if (!ctx.arg.shared) {
         sec.addReloc({sym.isPreemptible ? R_GOT_OFF : R_TPREL, type, offset,
                       addend, &sym});
         ++it; // Skip REL24
@@ -369,12 +367,7 @@ void PPC::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
 
     // TLS LD:
     case R_PPC_GOT_TLSLD16:
-      if (execOptimize) {
-        sec.addReloc({R_TPREL, type, offset, addend, &sym});
-      } else {
-        ctx.needsTlsLd.store(true, std::memory_order_relaxed);
-        sec.addReloc({R_TLSLD_GOT, type, offset, addend, &sym});
-      }
+      rs.handleTlsLd(R_TLSLD_GOT, type, offset, addend, sym);
       continue;
     case R_PPC_DTPREL16:
     case R_PPC_DTPREL16_HA:
