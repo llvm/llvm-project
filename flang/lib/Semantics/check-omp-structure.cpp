@@ -649,15 +649,14 @@ bool OmpStructureChecker::IsCombinedParallelWorksharing(
 }
 
 bool OmpStructureChecker::HasInvalidWorksharingNesting(
-    const parser::CharBlock &source, const OmpDirectiveSet &set,
-    llvm::omp::Directive directive) {
+    const parser::OmpDirectiveName &name, const OmpDirectiveSet &set) {
   // set contains all the invalid closely nested directives
   // for the given directive (`source` here)
-  if (IsCombinedParallelWorksharing(directive)) {
+  if (IsCombinedParallelWorksharing(name.v)) {
     return false;
   }
   if (IsCloselyNestedRegion(set)) {
-    context_.Say(source,
+    context_.Say(name.source,
         "A worksharing region may not be closely nested inside a "
         "worksharing, explicit task, taskloop, critical, ordered, atomic, or "
         "master region"_err_en_US);
@@ -1074,7 +1073,8 @@ void OmpStructureChecker::Enter(const parser::OmpBlockConstruct &x) {
   case llvm::omp::OMPD_parallel_workshare:
     CheckWorkshareBlockStmts(block, beginSpec.source);
     HasInvalidWorksharingNesting(
-        beginSpec.source, llvm::omp::nestedWorkshareErrSet, beginSpec.DirId());
+        std::get<parser::OmpDirectiveName>(beginSpec.t),
+        llvm::omp::nestedWorkshareErrSet);
     break;
   case llvm::omp::OMPD_workdistribute:
     if (!CurrentDirectiveIsNested()) {
@@ -1092,7 +1092,8 @@ void OmpStructureChecker::Enter(const parser::OmpBlockConstruct &x) {
     // TODO: This check needs to be extended while implementing nesting of
     // regions checks.
     HasInvalidWorksharingNesting(
-        beginSpec.source, llvm::omp::nestedWorkshareErrSet, beginSpec.DirId());
+        std::get<parser::OmpDirectiveName>(beginSpec.t),
+        llvm::omp::nestedWorkshareErrSet);
     break;
   case llvm::omp::Directive::OMPD_task:
     for (const auto &clause : beginSpec.Clauses().v) {
@@ -1251,8 +1252,8 @@ void OmpStructureChecker::Enter(const parser::OpenMPSectionsConstruct &x) {
     CheckNoBranching(
         std::get<parser::Block>(section.t), beginName.v, beginName.source);
   }
-  HasInvalidWorksharingNesting(
-      beginName.source, llvm::omp::nestedWorkshareErrSet, beginSpec.DirId());
+  HasInvalidWorksharingNesting(std::get<parser::OmpDirectiveName>(beginSpec.t),
+      llvm::omp::nestedWorkshareErrSet);
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPSectionsConstruct &) {
