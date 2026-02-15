@@ -719,6 +719,70 @@ public:
     Status = false;
   }
 
+  void visitExtractValueInst(ExtractValueInst &EVI) {
+    auto &Res = getValue(EVI.getAggregateOperand());
+    const AnyValue *Pos = &Res;
+    for (unsigned Idx : EVI.indices())
+      Pos = &Pos->asAggregate()[Idx];
+    setResult(EVI, *Pos);
+  }
+
+  void visitInsertValueInst(InsertValueInst &IVI) {
+    AnyValue Res = getValue(IVI.getAggregateOperand());
+    AnyValue *Pos = &Res;
+    for (unsigned Idx : IVI.indices())
+      Pos = &Pos->asAggregate()[Idx];
+    *Pos = getValue(IVI.getInsertedValueOperand());
+    setResult(IVI, std::move(Res));
+  }
+
+  void visitInsertElementInst(InsertElementInst &IEI) {
+    auto Res = getValue(IEI.getOperand(0));
+    auto &ResVec = Res.asAggregate();
+    auto &Idx = getValue(IEI.getOperand(2));
+    if (Idx.isPoison() || Idx.asInteger().uge(ResVec.size())) {
+      setResult(IEI, AnyValue::getPoisonValue(Ctx, IEI.getType()));
+      return;
+    }
+    ResVec[Idx.asInteger().getZExtValue()] = getValue(IEI.getOperand(1));
+    setResult(IEI, std::move(Res));
+  }
+
+  void visitExtractElementInst(ExtractElementInst &EEI) {
+    auto &SrcVec = getValue(EEI.getOperand(0)).asAggregate();
+    auto &Idx = getValue(EEI.getOperand(1));
+    if (Idx.isPoison() || Idx.asInteger().uge(SrcVec.size())) {
+      setResult(EEI, AnyValue::getPoisonValue(Ctx, EEI.getType()));
+      return;
+    }
+    setResult(EEI, SrcVec[Idx.asInteger().getZExtValue()]);
+  }
+
+  void visitShuffleVectorInst(ShuffleVectorInst &SVI) {
+    auto &LHSVec = getValue(SVI.getOperand(0)).asAggregate();
+    auto &RHSVec = getValue(SVI.getOperand(1)).asAggregate();
+    uint32_t Size = cast<VectorType>(SVI.getOperand(0)->getType())
+                        ->getElementCount()
+                        .getKnownMinValue();
+    std::vector<AnyValue> Res;
+    uint32_t DstLen = Ctx.getEVL(SVI.getType()->getElementCount());
+    Res.reserve(DstLen);
+    uint32_t Stride = SVI.getShuffleMask().size();
+    // For scalable vectors, we need to repeat the shuffle mask until we fill
+    // the destination vector.
+    for (uint32_t Off = 0; Off != DstLen; Off += Stride) {
+      for (int Idx : SVI.getShuffleMask()) {
+        if (Idx == PoisonMaskElem)
+          Res.push_back(AnyValue::poison());
+        else if (Idx < static_cast<int>(Size))
+          Res.push_back(LHSVec[Idx]);
+        else
+          Res.push_back(RHSVec[Idx - Size]);
+      }
+    }
+    setResult(SVI, std::move(Res));
+  }
+
   /// This function implements the main interpreter loop.
   /// It handles function calls in a non-recursive manner to avoid stack
   /// overflows.
