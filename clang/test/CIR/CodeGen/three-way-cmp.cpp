@@ -14,20 +14,18 @@
 
 // BEFORE: #cmp3way_info_partial_ltn1eq0gt1unn127 = #cir.cmp3way_info<partial, lt = -1, eq = 0, gt = 1, unordered = -127>
 // BEFORE: #cmp3way_info_strong_ltn1eq0gt1 = #cir.cmp3way_info<strong, lt = -1, eq = 0, gt = 1>
-// BEFORE: #cmp3way_info_weak_ltn1eq0gt1 = #cir.cmp3way_info<weak, lt = -1, eq = 0, gt = 1>
 // BEFORE: !rec_std3A3A__13A3Apartial_ordering = !cir.record<class "std::__1::partial_ordering" {!s8i}>
 // BEFORE: !rec_std3A3A__13A3Astrong_ordering = !cir.record<class "std::__1::strong_ordering" {!s8i}>
-// BEFORE: !rec_std3A3A__13A3Aweak_ordering = !cir.record<class "std::__1::weak_ordering" {!s8i}>
 
-auto three_way_total(int x, int y) {
+auto three_way_strong(int x, int y) {
   return x <=> y;
 }
 
-// BEFORE: cir.func {{.*}} @_Z15three_way_totalii
+// BEFORE: cir.func {{.*}} @_Z16three_way_strongii
 // BEFORE:   %{{.+}} = cir.cmp3way #cmp3way_info_strong_ltn1eq0gt1 %{{.+}}, %{{.+}} : !s32i -> !s8i
 // BEFORE: }
 
-//      AFTER:   cir.func {{.*}} @_Z15three_way_totalii{{.*}}
+//      AFTER:   cir.func {{.*}} @_Z16three_way_strongii{{.*}}
 //      AFTER:   %[[LHS:.*]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i{{.*}}
 // AFTER-NEXT:   %[[RHS:.*]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i{{.*}}
 // AFTER-NEXT:   %[[LT:.*]] = cir.const #cir.int<-1> : !s8i{{.*}}
