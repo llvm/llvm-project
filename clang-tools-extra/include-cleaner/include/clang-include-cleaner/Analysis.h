@@ -25,6 +25,7 @@
 
 namespace clang {
 class SourceLocation;
+class FileID;
 class SourceManager;
 class Decl;
 class FileEntry;
@@ -60,6 +61,12 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
               llvm::ArrayRef<SymbolReference> MacroRefs,
               const PragmaIncludes *PI, const Preprocessor &PP,
               UsedSymbolCB CB);
+/// Overload that allows customizing which FileIDs are treated as "main file".
+/// The predicate is evaluated on the spelling file of a reference.
+void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
+              llvm::ArrayRef<SymbolReference> MacroRefs,
+              const PragmaIncludes *PI, const Preprocessor &PP, UsedSymbolCB CB,
+              llvm::function_ref<bool(FileID)> IsMainFile);
 
 struct AnalysisResults {
   std::vector<const Include *> Unused;
