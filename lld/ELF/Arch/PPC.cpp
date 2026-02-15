@@ -312,14 +312,11 @@ void PPC::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       expr = R_GOT_OFF;
       break;
 
-    // PLT-generating calls:
+    // PLT-generating relocations:
     case R_PPC_LOCAL24PC:
     case R_PPC_REL24:
       rs.processR_PLT_PC(type, offset, addend, sym);
       continue;
-
-    // The 0x8000 bit of r_addend selects call stub
-    // type; mask it for direct calls.
     case R_PPC_PLTREL24:
       ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
       if (LLVM_UNLIKELY(sym.isGnuIFunc())) {
@@ -328,6 +325,8 @@ void PPC::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
         sym.setFlags(NEEDS_PLT);
         sec.addReloc({RE_PPC32_PLTREL, type, offset, addend, &sym});
       } else {
+        // The 0x8000 bit of r_addend selects call stub type; mask it for direct
+        // calls.
         addend &= ~0x8000;
         rs.processAux(R_PC, type, offset, sym, addend);
       }
