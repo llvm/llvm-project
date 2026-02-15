@@ -667,16 +667,16 @@ public:
   /// remove pseudo-registers that should be ignored).
   virtual void adjustStackMapLiveOutMask(uint32_t *Mask) const {}
 
-  /// Return a super-register of the specified register
-  /// Reg so its sub-register of index SubIdx is Reg.
+  /// Return a super-register of the register \p Reg so its sub-register of
+  /// index \p SubIdx is \p Reg.
   MCRegister getMatchingSuperReg(MCRegister Reg, unsigned SubIdx,
                                  const TargetRegisterClass *RC) const {
     return MCRegisterInfo::getMatchingSuperReg(Reg, SubIdx, RC->MC);
   }
 
-  /// Return a subclass of the specified register
-  /// class A so that each register in it has a sub-register of the
-  /// specified sub-register index which is in the specified register class B.
+  /// Return a subclass of the register class \p A so that each register in it
+  /// has a sub-register of the sub-register index \p Idx which is in the
+  /// register class \p B.
   ///
   /// TableGen will synthesize missing A sub-classes.
   virtual const TargetRegisterClass *
@@ -735,19 +735,15 @@ public:
     return nullptr;
   }
 
-  /// Returns true if sub-register \p Idx can be used with register class
-  /// \p RC.
+  /// Returns true if sub-register \p Idx can be used with register class \p RC.
   bool isSubRegValidForRegClass(const TargetRegisterClass *RC,
-                                unsigned Idx) const {
-    // NoSubRegister is always valid.
-    if (!Idx)
-      return true;
+                                unsigned Idx) const;
 
-    // `Idx` is valid if the largest subclass of `RC` that supports
-    // sub-register index `Idx` is same as `RC`. That is, every physical
-    // register in `RC` support sub-register index `Idx`.
-    return getSubClassWithSubReg(RC, Idx) == RC;
-  }
+  /// Returns true if sub-register \p Idx can be used with register class \p RC
+  /// and the resulting set of registers is a sub-class of \p DRC.
+  bool isSubRegValidForRegClass(const TargetRegisterClass *RC,
+                                const TargetRegisterClass *DRC,
+                                unsigned Idx) const;
 
   /// Return the subregister index you get from composing
   /// two subregister indices.

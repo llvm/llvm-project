@@ -442,6 +442,37 @@ const TargetRegisterClass *TargetRegisterInfo::findCommonRegClass(
   return getCommonSubClass(DefRC, SrcRC);
 }
 
+bool TargetRegisterInfo::isSubRegValidForRegClass(const TargetRegisterClass *RC,
+                                                  unsigned Idx) const {
+  // NoSubRegister is always valid.
+  if (!Idx)
+    return true;
+
+  // `Idx` is valid if the largest subclass of `RC` that supports
+  // sub-register index `Idx` is same as `RC`. That is, every physical
+  // register in `RC` support sub-register index `Idx`.
+  return getSubClassWithSubReg(RC, Idx) == RC;
+}
+
+bool TargetRegisterInfo::isSubRegValidForRegClass(
+    const TargetRegisterClass *RC, const TargetRegisterClass *DRC,
+    unsigned Idx) const {
+  // If no sub-register index is used, return true if `DRC` is a super-class
+  // of `RC`.
+  if (!Idx)
+    return RC->hasSuperClassEq(DRC);
+
+  // Other, find the largest sub-class of `RC` that can be used with
+  // sub-register `Idx` such that the resulting sub-registers are in register
+  // class `DRC`.
+  const TargetRegisterClass *SuperRC = getMatchingSuperRegClass(RC, DRC, Idx);
+
+  // Return true if this class is same as RC, that is, for all physical
+  // registers in RC, sub-register index `Idx` can be used and the resulting
+  // sub-register is in register class `DRC`.
+  return SuperRC == RC;
+}
+
 float TargetRegisterInfo::getSpillWeightScaleFactor(
     const TargetRegisterClass *RC) const {
   return 1.0;
