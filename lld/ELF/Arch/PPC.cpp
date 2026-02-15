@@ -52,8 +52,6 @@ public:
   bool inBranchRange(RelType type, uint64_t src, uint64_t dst) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
-  void relocateAlloc(InputSection &sec, uint8_t *buf) const override;
-
 private:
   void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
   void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
@@ -431,12 +429,35 @@ void PPC::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     write16(ctx, loc, val);
     break;
   case R_PPC_GOT16:
-  case R_PPC_GOT_TLSGD16:
-  case R_PPC_GOT_TLSLD16:
-  case R_PPC_GOT_TPREL16:
   case R_PPC_TPREL16:
     checkInt(ctx, loc, val, 16, rel);
     write16(ctx, loc, val);
+    break;
+  case R_PPC_GOT_TLSGD16:
+    if (rel.expr == R_TPREL)
+      relaxTlsGdToLe(loc, rel, val);
+    else if (rel.expr == R_GOT_OFF)
+      relaxTlsGdToIe(loc, rel, val);
+    else {
+      checkInt(ctx, loc, val, 16, rel);
+      write16(ctx, loc, val);
+    }
+    break;
+  case R_PPC_GOT_TLSLD16:
+    if (rel.expr == R_TPREL)
+      relaxTlsLdToLe(loc, rel, val);
+    else {
+      checkInt(ctx, loc, val, 16, rel);
+      write16(ctx, loc, val);
+    }
+    break;
+  case R_PPC_GOT_TPREL16:
+    if (rel.expr == R_TPREL)
+      relaxTlsIeToLe(loc, rel, val);
+    else {
+      checkInt(ctx, loc, val, 16, rel);
+      write16(ctx, loc, val);
+    }
     break;
   case R_PPC_ADDR16_HA:
   case R_PPC_DTPREL16_HA:
@@ -486,6 +507,20 @@ void PPC::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     write32(ctx, loc, (read32(ctx, loc) & ~mask) | (val & mask));
     break;
   }
+  case R_PPC_TLSGD:
+    if (rel.expr == R_TPREL)
+      relaxTlsGdToLe(loc, rel, val);
+    else if (rel.expr == R_GOT_OFF)
+      relaxTlsGdToIe(loc, rel, val);
+    break;
+  case R_PPC_TLSLD:
+    if (rel.expr == R_TPREL)
+      relaxTlsLdToLe(loc, rel, val);
+    break;
+  case R_PPC_TLS:
+    if (rel.expr == R_TPREL)
+      relaxTlsIeToLe(loc, rel, val);
+    break;
   default:
     llvm_unreachable("unknown relocation");
   }
@@ -570,43 +605,6 @@ void PPC::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
   }
   default:
     llvm_unreachable("unsupported relocation for TLS IE to LE relaxation");
-  }
-}
-
-void PPC::relocateAlloc(InputSection &sec, uint8_t *buf) const {
-  uint64_t secAddr = sec.getOutputSection()->addr + sec.outSecOff;
-  for (const Relocation &rel : sec.relocs()) {
-    uint8_t *loc = buf + rel.offset;
-    const uint64_t val =
-        SignExtend64(sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset), 32);
-    switch (rel.type) {
-    case R_PPC_GOT_TLSGD16:
-    case R_PPC_TLSGD:
-      if (rel.expr == R_TPREL)
-        relaxTlsGdToLe(loc, rel, val);
-      else if (rel.expr == R_GOT_OFF)
-        relaxTlsGdToIe(loc, rel, val);
-      else
-        relocate(loc, rel, val);
-      break;
-    case R_PPC_GOT_TLSLD16:
-    case R_PPC_TLSLD:
-      if (rel.expr == R_TPREL)
-        relaxTlsLdToLe(loc, rel, val);
-      else
-        relocate(loc, rel, val);
-      break;
-    case R_PPC_GOT_TPREL16:
-    case R_PPC_TLS:
-      if (rel.expr == R_TPREL)
-        relaxTlsIeToLe(loc, rel, val);
-      else
-        relocate(loc, rel, val);
-      break;
-    default:
-      relocate(loc, rel, val);
-      break;
-    }
   }
 }
 
