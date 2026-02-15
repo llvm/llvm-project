@@ -45,8 +45,30 @@ void LiveRegUnits::stepBackward(const MachineInstr &MI) {
   // Remove defined registers and regmask kills from the set.
   for (const MachineOperand &MOP : MI.operands()) {
     if (MOP.isReg()) {
-      if (MOP.isDef() && MOP.getReg().isPhysical())
+      if (MOP.isDef() && MOP.getReg().isPhysical()) {
+        // Skip implicit defs of super-registers when a sub-register is
+        // also defined by this instruction. The implicit def is an
+        // annotation of partial modification, not a full redefinition of
+        // the super-register. Removing the super-register from the live
+        // set would incorrectly clear the liveness of sibling
+        // sub-registers that may still be live.
+        if (MOP.isImplicit()) {
+          MCRegister Reg = MOP.getReg().asMCReg();
+          bool HasSubRegDef = false;
+          for (const MachineOperand &MOP2 : MI.operands()) {
+            if (!MOP2.isReg() || !MOP2.isDef() || !MOP2.getReg().isPhysical())
+              continue;
+            if (MOP2.getReg() != Reg &&
+                TRI->isSubRegister(Reg, MOP2.getReg().asMCReg())) {
+              HasSubRegDef = true;
+              break;
+            }
+          }
+          if (HasSubRegDef)
+            continue;
+        }
         removeReg(MOP.getReg());
+      }
       continue;
     }
 
