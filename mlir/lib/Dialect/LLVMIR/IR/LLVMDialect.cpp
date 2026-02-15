@@ -4151,11 +4151,11 @@ LLVMFuncOp BlockAddressOp::getFunction(SymbolTableCollection &symbolTable) {
 }
 
 BlockTagOp BlockAddressOp::getBlockTagOp() {
-  auto funcOp = dyn_cast<LLVMFuncOp>(mlir::SymbolTable::lookupNearestSymbolFrom(
-      parentLLVMModule(*this), getBlockAddr().getFunction()));
-  if (!funcOp)
+  Operation *sym = mlir::SymbolTable::lookupNearestSymbolFrom(
+      parentLLVMModule(*this), getBlockAddr().getFunction());
+  if (!sym)
     return nullptr;
-
+  auto funcOp = dyn_cast<LLVMFuncOp>(sym);
   BlockTagOp blockTagOp = nullptr;
   funcOp.walk([&](LLVM::BlockTagOp labelOp) {
     if (labelOp.getTag() == getBlockAddr().getTag()) {
