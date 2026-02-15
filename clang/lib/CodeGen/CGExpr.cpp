@@ -5003,12 +5003,6 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
                                     SanitizerHandler CheckHandlerID,
                                     bool NoMerge, const TrapReason *TR,
                                     StringRef Annotation) {
-  if (CGM.getCodeGenOpts().SanitizeTrapLoop) {
-    Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::cond_loop),
-                       Builder.CreateNot(Checked));
-    return;
-  }
-
   llvm::BasicBlock *Cont = createBasicBlock("cont");
 
   // If we're optimizing, collapse all calls to trap down to just one per
@@ -5173,9 +5167,13 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
       TrapCall = EmitNounwindRuntimeCall(TrapFunc, {TrapID});
       Builder.CreateBr(Cont);
     } else {
-      TrapCall = Builder.CreateCall(
-          CGM.getIntrinsic(llvm::Intrinsic::ubsantrap),
-          llvm::ConstantInt::get(CGM.Int8Ty, CheckHandlerID));
+      if (CGM.getCodeGenOpts().SanitizeTrapLoop)
+        TrapCall =
+            Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::looptrap));
+      else
+        TrapCall = Builder.CreateCall(
+            CGM.getIntrinsic(llvm::Intrinsic::ubsantrap),
+            llvm::ConstantInt::get(CGM.Int8Ty, CheckHandlerID));
 
       if (!CGM.getCodeGenOpts().TrapFuncName.empty()) {
         auto A = llvm::Attribute::get(getLLVMContext(), "trap-func-name",
