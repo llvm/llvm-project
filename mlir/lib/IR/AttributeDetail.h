@@ -47,8 +47,8 @@ public:
 };
 
 /// An attribute representing a reference to a dense vector or tensor object.
-struct DenseIntOrFPElementsAttrStorage : public DenseElementsAttributeStorage {
-  DenseIntOrFPElementsAttrStorage(ShapedType ty, ArrayRef<char> data)
+struct DenseElementsAttrStorage : public DenseElementsAttributeStorage {
+  DenseElementsAttrStorage(ShapedType ty, ArrayRef<char> data)
       : DenseElementsAttributeStorage(ty), data(data) {}
 
   struct KeyTy {
@@ -108,7 +108,7 @@ struct DenseIntOrFPElementsAttrStorage : public DenseElementsAttributeStorage {
   }
 
   /// Construct a new storage instance.
-  static DenseIntOrFPElementsAttrStorage *
+  static DenseElementsAttrStorage *
   construct(AttributeStorageAllocator &allocator, KeyTy key) {
     // If the data buffer is non-empty, we copy it into the allocator with a
     // 64-bit alignment.
@@ -120,8 +120,8 @@ struct DenseIntOrFPElementsAttrStorage : public DenseElementsAttributeStorage {
       copy = ArrayRef<char>(rawData, data.size());
     }
 
-    return new (allocator.allocate<DenseIntOrFPElementsAttrStorage>())
-        DenseIntOrFPElementsAttrStorage(key.type, copy);
+    return new (allocator.allocate<DenseElementsAttrStorage>())
+        DenseElementsAttrStorage(key.type, copy);
   }
 
   ArrayRef<char> data;

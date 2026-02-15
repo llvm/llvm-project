@@ -115,7 +115,7 @@ public:
 
     // All inputs should be constants.
     int numInputs = linalgOp.getNumDpsInputs();
-    SmallVector<DenseIntOrFPElementsAttr> inputValues(numInputs);
+    SmallVector<DenseElementsAttr> inputValues(numInputs);
     for (const auto &en : llvm::enumerate(linalgOp.getDpsInputOperands())) {
       if (!matchPattern(en.value()->get(),
                         m_Constant(&inputValues[en.index()])))

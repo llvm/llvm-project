@@ -241,7 +241,7 @@ operation. This operation will represent a constant value in the Toy language.
 ```
 
 This operation takes zero operands, a
-[dense elements](../../Dialects/Builtin.md/#denseintorfpelementsattr) attribute named
+[dense elements](../../Dialects/Builtin.md/#denseelementsattr) attribute named
 `value` to represent the constant value, and returns a single result of
 [RankedTensorType](../../Dialects/Builtin.md/#rankedtensortype). An operation class
 inherits from the [CRTP](https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern)
