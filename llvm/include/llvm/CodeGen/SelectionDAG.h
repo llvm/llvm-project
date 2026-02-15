@@ -2250,10 +2250,9 @@ public:
 
   /// Test if the given value is known to have exactly one bit set. This differs
   /// from computeKnownBits in that it doesn't necessarily determine which bit
-  /// is set. The DemandedElts argument allows
-  /// us to only collect the minimum sign bits of the requested vector
-  /// elements.If 'OrZero' is set, then return true if the given value is either
-  /// a power of two or zero.
+  /// is set. The DemandedElts argument allows us to only collect the minimum
+  /// sign bits of the requested vector elements. If 'OrZero' is set, then
+  /// return true if the given value is either a power of two or zero.
   LLVM_ABI bool isKnownToBeAPowerOfTwo(SDValue Val, const APInt &DemandedElts,
                                        bool OrZero = false,
                                        unsigned Depth = 0) const;
