@@ -346,7 +346,7 @@ void VPTransformState::setDebugLocFrom(DebugLoc DL) {
           ->shouldEmitDebugInfoForProfiling() &&
       !EnableFSDiscriminator) {
     // FIXME: For scalable vectors, assume vscale=1.
-    unsigned UF = Plan->getUF();
+    unsigned UF = Plan->getConcreteUF();
     auto NewDIL =
         DIL->cloneByMultiplyingDuplicationFactor(UF * VF.getKnownMinValue());
     if (NewDIL)
@@ -936,7 +936,7 @@ void VPlan::execute(VPTransformState *State) {
       {{DominatorTree::Delete, VectorPreHeader, State->CFG.ExitBB}});
 
   LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << State->VF
-                    << ", UF=" << getUF() << '\n');
+                    << ", UF=" << getConcreteUF() << '\n');
   setName("Final VPlan");
   // TODO: RUN_VPLAN_PASS/VPlanTransforms::runPass should automatically dump
   // VPlans after some specific stages when "-debug" is specified, but that
@@ -1053,6 +1053,12 @@ void VPlan::printLiveIns(raw_ostream &O) const {
     O << "\nLive-in ";
     VF.printAsOperand(O, SlotTracker);
     O << " = VF";
+  }
+
+  if (UF.getNumUsers() > 0) {
+    O << "\nLive-in ";
+    UF.printAsOperand(O, SlotTracker);
+    O << " = UF";
   }
 
   if (VFxUF.getNumUsers() > 0) {
@@ -1195,6 +1201,7 @@ VPlan *VPlan::duplicate() {
     Old2NewVPValues[OldLiveIn] = NewPlan->getOrAddLiveIn(OldLiveIn);
   Old2NewVPValues[&VectorTripCount] = &NewPlan->VectorTripCount;
   Old2NewVPValues[&VF] = &NewPlan->VF;
+  Old2NewVPValues[&UF] = &NewPlan->UF;
   Old2NewVPValues[&VFxUF] = &NewPlan->VFxUF;
   if (BackedgeTakenCount) {
     NewPlan->BackedgeTakenCount = new VPSymbolicValue();
@@ -1484,6 +1491,8 @@ void VPSlotTracker::assignName(const VPValue *V) {
 void VPSlotTracker::assignNames(const VPlan &Plan) {
   if (Plan.VF.getNumUsers() > 0)
     assignName(&Plan.VF);
+  if (Plan.UF.getNumUsers() > 0)
+    assignName(&Plan.UF);
   if (Plan.VFxUF.getNumUsers() > 0)
     assignName(&Plan.VFxUF);
   assignName(&Plan.VectorTripCount);

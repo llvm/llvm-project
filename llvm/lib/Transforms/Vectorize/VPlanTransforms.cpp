@@ -1607,7 +1607,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return Def->replaceAllUsesWith(A);
   }
 
-  if (Plan->getUF() == 1 && match(Def, m_ExtractLastPart(m_VPValue(A))))
+  if (Plan->getConcreteUF() == 1 && match(Def, m_ExtractLastPart(m_VPValue(A))))
     return Def->replaceAllUsesWith(A);
 }
 
@@ -2205,7 +2205,7 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
 
   if (MadeChange) {
     Plan.setVF(BestVF);
-    assert(Plan.getUF() == BestUF && "BestUF must match the Plan's UF");
+    assert(Plan.getConcreteUF() == BestUF && "BestUF must match the Plan's UF");
   }
 }
 
@@ -5057,8 +5057,8 @@ void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
   VectorTC.replaceAllUsesWith(Res);
 }
 
-void VPlanTransforms::materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
-                                            ElementCount VFEC) {
+void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
+                                         ElementCount VFEC) {
   VPBuilder Builder(VectorPH, VectorPH->begin());
   Type *TCTy = VPTypeAnalysis(Plan).inferScalarType(Plan.getTripCount());
   VPValue &VF = Plan.getVF();
@@ -5067,11 +5067,15 @@ void VPlanTransforms::materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
   // used.
   // TODO: Assert that they aren't used.
 
+  VPValue *UF =
+      Plan.getOrAddLiveIn(ConstantInt::get(TCTy, Plan.getConcreteUF()));
+  Plan.getUF().replaceAllUsesWith(UF);
+
   // If there are no users of the runtime VF, compute VFxUF by constant folding
   // the multiplication of VF and UF.
   if (VF.getNumUsers() == 0) {
     VPValue *RuntimeVFxUF =
-        Builder.createElementCount(TCTy, VFEC * Plan.getUF());
+        Builder.createElementCount(TCTy, VFEC * Plan.getConcreteUF());
     VFxUF.replaceAllUsesWith(RuntimeVFxUF);
     return;
   }
@@ -5086,7 +5090,6 @@ void VPlanTransforms::materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
   }
   VF.replaceAllUsesWith(RuntimeVF);
 
-  VPValue *UF = Plan.getConstantInt(TCTy, Plan.getUF());
   VPValue *MulByUF = Builder.createOverflowingOp(
       Instruction::Mul, {RuntimeVF, UF}, {true, false});
   VFxUF.replaceAllUsesWith(MulByUF);
@@ -5294,7 +5297,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     // VPTransformState.
     // TODO: Remove restriction once the VF for the VectorPointer offset is
     // modeled explicitly as operand.
-    if (isa<VPVectorPointerRecipe>(&R) && Plan.getUF() > 1)
+    if (isa<VPVectorPointerRecipe>(&R) && Plan.getConcreteUF() > 1)
       return;
 
     // All other ops are allowed, but we reject uses that cannot be converted
@@ -5379,8 +5382,8 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
   auto *Inc = cast<VPInstruction>(CanIV->getBackedgeValue());
   VPBuilder PHBuilder(Plan.getVectorPreheader());
 
-  VPValue *UF =
-      Plan.getConstantInt(VectorLoop->getCanonicalIVType(), Plan.getUF());
+  VPValue *UF = Plan.getConstantInt(VectorLoop->getCanonicalIVType(),
+                                    Plan.getConcreteUF());
   if (VF.isScalable()) {
     VPValue *VScale = PHBuilder.createElementCount(
         VectorLoop->getCanonicalIVType(), ElementCount::getScalable(1));
@@ -5410,7 +5413,7 @@ void VPlanTransforms::addBranchWeightToMiddleTerminator(
   assert(MiddleTerm->getOpcode() == VPInstruction::BranchOnCond &&
          "must have a BranchOnCond");
   // Assume that `TripCount % VectorStep ` is equally distributed.
-  unsigned VectorStep = Plan.getUF() * VF.getKnownMinValue();
+  unsigned VectorStep = Plan.getConcreteUF() * VF.getKnownMinValue();
   if (VF.isScalable() && VScaleForTuning.has_value())
     VectorStep *= *VScaleForTuning;
   assert(VectorStep > 0 && "trip count should not be zero");
