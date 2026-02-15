@@ -4080,7 +4080,7 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
   assert(!Exits.empty() && "must have at least one early exit");
   // Sort exits by dominance to get the correct program order.
   llvm::sort(Exits, [&VPDT](const EarlyExitInfo &A, const EarlyExitInfo &B) {
-    return VPDT.dominates(A.EarlyExitingVPBB, B.EarlyExitingVPBB);
+    return VPDT.properlyDominates(A.EarlyExitingVPBB, B.EarlyExitingVPBB);
   });
 
   // Build the AnyOf condition for the latch terminator using logical OR
