@@ -105,7 +105,7 @@ constant ``true``.
 Options
 -------
 
-.. option:: `UserDefinedBoolConversionMode`
+.. option:: UserDefinedBoolConversionMode
 
    Controls how chains with an outer condition that relies on user-defined
    ``bool`` conversion are handled.
@@ -119,7 +119,7 @@ Options
 
    Default is `None`.
 
-.. option:: `WarnOnDependentConstexprIf`
+.. option:: WarnOnDependentConstexprIf
 
    When set to `true`, the check also emits diagnostics for remaining unsafe
    ``if constexpr`` chains (for example, with instantiation-dependent nested
