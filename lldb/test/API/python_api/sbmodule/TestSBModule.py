@@ -39,6 +39,16 @@ class SBModuleAPICase(TestBase):
         self.assertGreater(
             module_specs.GetSize(), 0, "Archive should have at least one module spec"
         )
+        self.assertEqual(
+            module_specs[0].GetObjectName(),
+            module_specs.GetSpecAtIndex(0).GetObjectName(),
+            "subscript [0] matches GetSpecAtIndex(0)",
+        )
+        self.assertEqual(
+            module_specs[-1].GetObjectName(),
+            module_specs.GetSpecAtIndex(module_specs.GetSize() - 1).GetObjectName(),
+            "subscript [-1] matches last item",
+        )
         found = set()
         expected = {"a.o", "b.o"}
         for i in range(module_specs.GetSize()):

@@ -170,6 +170,9 @@ Attribute Changes in Clang
   will still generate a stack protector if other local variables or command line flags
   require it.
 
+- Added a new attribute, ``[[clang::no_outline]]`` to suppress outlining from
+  annotated functions. This uses the LLVM `nooutline` attribute.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Added ``-Wlifetime-safety`` to enable lifetime safety analysis,
@@ -296,6 +299,7 @@ Miscellaneous Clang Crashes Fixed
   generic lambda. (#GH172289)
 - Fixed a crash in C++ overload resolution with ``_Atomic``-qualified argument types. (#GH170433)
 - Fixed an assertion when diagnosing address-space qualified ``new``/``delete`` in language-defined address spaces such as OpenCL ``__local``. (#GH178319)
+- Fixed an assertion failure in ObjC++ ARC when binding a rvalue reference to reference with different lifetimes (#GH178524)
 
 OpenACC Specific Changes
 ------------------------

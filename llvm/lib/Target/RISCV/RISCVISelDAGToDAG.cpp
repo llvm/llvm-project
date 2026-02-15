@@ -1989,7 +1989,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     // Fall through to regular ADDD selection.
     [[fallthrough]];
   case RISCVISD::SUBD:
-  case RISCVISD::PPAIRE_DB: {
+  case RISCVISD::PPAIRE_DB:
+  case RISCVISD::WADDAU: {
     assert(!Subtarget->is64Bit() && "Unexpected opcode");
     assert((Node->getOpcode() != RISCVISD::PPAIRE_DB ||
             Subtarget->enablePExtSIMDCodeGen()) &&
@@ -2007,25 +2008,33 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
     SDValue Op1Lo = Node->getOperand(2);
     SDValue Op1Hi = Node->getOperand(3);
-    SDValue Op1 = buildGPRPair(CurDAG, DL, MVT::Untyped, Op1Lo, Op1Hi);
 
-    unsigned Opc;
-    switch (Node->getOpcode()) {
-    default:
-      llvm_unreachable("Unexpected opcode");
-    case RISCVISD::ADDD:
-      Opc = RISCV::ADDD;
-      break;
-    case RISCVISD::SUBD:
-      Opc = RISCV::SUBD;
-      break;
-    case RISCVISD::PPAIRE_DB:
-      Opc = RISCV::PPAIRE_DB;
-      break;
+    MachineSDNode *New;
+    if (Node->getOpcode() == RISCVISD::WADDAU) {
+      // WADDAU: rd = rd + zext(rs1) + zext(rs2)
+      // Op0 is the accumulator (GPRPair), Op1Lo and Op1Hi are the two 32-bit
+      // values to add.
+      New = CurDAG->getMachineNode(RISCV::WADDAU, DL, MVT::Untyped, Op0, Op1Lo,
+                                   Op1Hi);
+    } else {
+      SDValue Op1 = buildGPRPair(CurDAG, DL, MVT::Untyped, Op1Lo, Op1Hi);
+
+      unsigned Opc;
+      switch (Node->getOpcode()) {
+      default:
+        llvm_unreachable("Unexpected opcode");
+      case RISCVISD::ADDD:
+        Opc = RISCV::ADDD;
+        break;
+      case RISCVISD::SUBD:
+        Opc = RISCV::SUBD;
+        break;
+      case RISCVISD::PPAIRE_DB:
+        Opc = RISCV::PPAIRE_DB;
+        break;
+      }
+      New = CurDAG->getMachineNode(Opc, DL, MVT::Untyped, Op0, Op1);
     }
-
-    MachineSDNode *New =
-        CurDAG->getMachineNode(Opc, DL, MVT::Untyped, Op0, Op1);
 
     auto [Lo, Hi] = extractGPRPair(CurDAG, DL, SDValue(New, 0));
     ReplaceUses(SDValue(Node, 0), Lo);
@@ -4057,6 +4066,8 @@ bool RISCVDAGToDAGISel::selectNegImm(SDValue N, SDValue &Val) {
     return false;
   int64_t Imm = cast<ConstantSDNode>(N)->getSExtValue();
   if (isInt<32>(Imm))
+    return false;
+  if (Imm == INT64_MIN)
     return false;
 
   for (const SDNode *U : N->users()) {

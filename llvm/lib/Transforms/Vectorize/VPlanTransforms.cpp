@@ -1607,7 +1607,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return Def->replaceAllUsesWith(A);
   }
 
-  if (Plan->getUF() == 1 && match(Def, m_ExtractLastPart(m_VPValue(A))))
+  if (Plan->getConcreteUF() == 1 && match(Def, m_ExtractLastPart(m_VPValue(A))))
     return Def->replaceAllUsesWith(A);
 }
 
@@ -1990,9 +1990,7 @@ static bool tryToReplaceALMWithWideALM(VPlan &Plan, ElementCount VF,
     DebugLoc DL = ALM->getDebugLoc();
     for (unsigned Part = 0; Part < UF; ++Part) {
       SmallVector<VPValue *> Ops;
-      Ops.append({ALM, Plan.getOrAddLiveIn(
-                           ConstantInt::get(IntegerType::getInt64Ty(Ctx),
-                                            VF.getKnownMinValue() * Part))});
+      Ops.append({ALM, Plan.getConstantInt(64, VF.getKnownMinValue() * Part)});
       auto *Ext =
           new VPWidenIntrinsicRecipe(Intrinsic::vector_extract, Ops,
                                      IntegerType::getInt1Ty(Ctx), {}, {}, DL);
@@ -2207,7 +2205,7 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
 
   if (MadeChange) {
     Plan.setVF(BestVF);
-    assert(Plan.getUF() == BestUF && "BestUF must match the Plan's UF");
+    assert(Plan.getConcreteUF() == BestUF && "BestUF must match the Plan's UF");
   }
 }
 
@@ -2427,9 +2425,8 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
 
       VPBuilder B(cast<VPInstruction>(U));
       VPValue *LastActiveLane = cast<VPInstruction>(U)->getOperand(0);
-      Type *I64Ty = Type::getInt64Ty(Plan.getContext());
-      VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(I64Ty, 0));
-      VPValue *One = Plan.getOrAddLiveIn(ConstantInt::get(I64Ty, 1));
+      VPValue *Zero = Plan.getConstantInt(64, 0);
+      VPValue *One = Plan.getConstantInt(64, 1);
       VPValue *PenultimateIndex = B.createSub(LastActiveLane, One);
       VPValue *PenultimateLastIter =
           B.createNaryOp(VPInstruction::ExtractLane,
@@ -2944,8 +2941,8 @@ void VPlanTransforms::addActiveLaneMask(
         Plan, DataAndControlFlowWithoutRuntimeCheck);
   } else {
     VPBuilder B = VPBuilder::getToInsertAfter(WideCanonicalIV);
-    VPValue *ALMMultiplier = Plan.getOrAddLiveIn(
-        ConstantInt::get(LoopRegion->getCanonicalIVType(), 1));
+    VPValue *ALMMultiplier =
+        Plan.getConstantInt(LoopRegion->getCanonicalIVType(), 1);
     LaneMask =
         B.createNaryOp(VPInstruction::ActiveLaneMask,
                        {WideCanonicalIV, Plan.getTripCount(), ALMMultiplier},
@@ -3970,8 +3967,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
             LastActiveL->getDebugLoc(), "first.inactive.lane");
 
         // Subtract 1 to get the last active lane.
-        VPValue *One = Plan.getOrAddLiveIn(
-            ConstantInt::get(Type::getInt64Ty(Plan.getContext()), 1));
+        VPValue *One = Plan.getConstantInt(64, 1);
         VPValue *LastLane =
             Builder.createSub(FirstInactiveLane, One,
                               LastActiveL->getDebugLoc(), "last.active.lane");
@@ -4080,7 +4076,7 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
   assert(!Exits.empty() && "must have at least one early exit");
   // Sort exits by dominance to get the correct program order.
   llvm::sort(Exits, [&VPDT](const EarlyExitInfo &A, const EarlyExitInfo &B) {
-    return VPDT.dominates(A.EarlyExitingVPBB, B.EarlyExitingVPBB);
+    return VPDT.properlyDominates(A.EarlyExitingVPBB, B.EarlyExitingVPBB);
   });
 
   // Build the AnyOf condition for the latch terminator using logical OR
@@ -5061,8 +5057,8 @@ void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
   VectorTC.replaceAllUsesWith(Res);
 }
 
-void VPlanTransforms::materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
-                                            ElementCount VFEC) {
+void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
+                                         ElementCount VFEC) {
   VPBuilder Builder(VectorPH, VectorPH->begin());
   Type *TCTy = VPTypeAnalysis(Plan).inferScalarType(Plan.getTripCount());
   VPValue &VF = Plan.getVF();
@@ -5071,11 +5067,15 @@ void VPlanTransforms::materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
   // used.
   // TODO: Assert that they aren't used.
 
+  VPValue *UF =
+      Plan.getOrAddLiveIn(ConstantInt::get(TCTy, Plan.getConcreteUF()));
+  Plan.getUF().replaceAllUsesWith(UF);
+
   // If there are no users of the runtime VF, compute VFxUF by constant folding
   // the multiplication of VF and UF.
   if (VF.getNumUsers() == 0) {
     VPValue *RuntimeVFxUF =
-        Builder.createElementCount(TCTy, VFEC * Plan.getUF());
+        Builder.createElementCount(TCTy, VFEC * Plan.getConcreteUF());
     VFxUF.replaceAllUsesWith(RuntimeVFxUF);
     return;
   }
@@ -5090,7 +5090,6 @@ void VPlanTransforms::materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
   }
   VF.replaceAllUsesWith(RuntimeVF);
 
-  VPValue *UF = Plan.getConstantInt(TCTy, Plan.getUF());
   VPValue *MulByUF = Builder.createOverflowingOp(
       Instruction::Mul, {RuntimeVF, UF}, {true, false});
   VFxUF.replaceAllUsesWith(MulByUF);
@@ -5298,7 +5297,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     // VPTransformState.
     // TODO: Remove restriction once the VF for the VectorPointer offset is
     // modeled explicitly as operand.
-    if (isa<VPVectorPointerRecipe>(&R) && Plan.getUF() > 1)
+    if (isa<VPVectorPointerRecipe>(&R) && Plan.getConcreteUF() > 1)
       return;
 
     // All other ops are allowed, but we reject uses that cannot be converted
@@ -5383,8 +5382,8 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
   auto *Inc = cast<VPInstruction>(CanIV->getBackedgeValue());
   VPBuilder PHBuilder(Plan.getVectorPreheader());
 
-  VPValue *UF = Plan.getOrAddLiveIn(
-      ConstantInt::get(VectorLoop->getCanonicalIVType(), 1 * Plan.getUF()));
+  VPValue *UF = Plan.getConstantInt(VectorLoop->getCanonicalIVType(),
+                                    Plan.getConcreteUF());
   if (VF.isScalable()) {
     VPValue *VScale = PHBuilder.createElementCount(
         VectorLoop->getCanonicalIVType(), ElementCount::getScalable(1));
@@ -5414,7 +5413,7 @@ void VPlanTransforms::addBranchWeightToMiddleTerminator(
   assert(MiddleTerm->getOpcode() == VPInstruction::BranchOnCond &&
          "must have a BranchOnCond");
   // Assume that `TripCount % VectorStep ` is equally distributed.
-  unsigned VectorStep = Plan.getUF() * VF.getKnownMinValue();
+  unsigned VectorStep = Plan.getConcreteUF() * VF.getKnownMinValue();
   if (VF.isScalable() && VScaleForTuning.has_value())
     VectorStep *= *VScaleForTuning;
   assert(VectorStep > 0 && "trip count should not be zero");

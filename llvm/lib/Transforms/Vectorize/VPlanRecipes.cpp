@@ -627,7 +627,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateVectorSpliceRight(V1, V2, 1, Name);
   }
   case VPInstruction::CalculateTripCountMinusVF: {
-    unsigned UF = getParent()->getPlan()->getUF();
+    unsigned UF = getParent()->getPlan()->getConcreteUF();
     Value *ScalarTC = State.get(getOperand(0), VPLane(0));
     Value *Step = createStepForVF(Builder, ScalarTC->getType(), State.VF, UF);
     Value *Sub = Builder.CreateSub(ScalarTC, Step);
@@ -3570,7 +3570,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
           VecI1Ty, APInt::getAllOnes(VF.getFixedValue()),
           /*Insert=*/false, /*Extract=*/true, Ctx.CostKind);
 
-      if (Ctx.useEmulatedMaskMemRefHack(UI, VF)) {
+      if (Ctx.useEmulatedMaskMemRefHack(this, VF)) {
         // Artificially setting to a high enough value to practically disable
         // vectorization with such operations.
         return 3000000;
