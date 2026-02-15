@@ -4679,6 +4679,12 @@ public:
     VFs.insert(VF);
   }
 
+  /// Remove \p VF from the plan.
+  void removeVF(ElementCount VF) {
+    assert(hasVF(VF) && "tried to remove VF not present in plan");
+    VFs.remove(VF);
+  }
+
   bool hasVF(ElementCount VF) const { return VFs.count(VF); }
   bool hasScalableVF() const {
     return any_of(VFs, [](ElementCount VF) { return VF.isScalable(); });
