@@ -305,7 +305,9 @@ def Builtin_DenseElementsAttr : Builtin_Attr<
               typename = std::enable_if_t<std::numeric_limits<T>::is_integer ||
                                           is_valid_cpp_fp_type<T>::value ||
                                           detail::is_complex_t<T>::value>>
-    static DenseElementsAttr get(const ShapedType &type, T value);
+    static DenseElementsAttr get(const ShapedType &type, T value) {
+      return get(type, llvm::ArrayRef(value));
+    }
     template <typename T, typename ElementT = typename T::value_type,
               typename = std::enable_if_t<detail::is_complex_t<T>::value &&
                                     (std::numeric_limits<ElementT>::is_integer ||
@@ -320,7 +322,9 @@ def Builtin_DenseElementsAttr : Builtin_Attr<
                                  ArrayRef<std::complex<APFloat>> values);
     template <typename T>
     static DenseElementsAttr get(const ShapedType &type,
-                                const std::initializer_list<T> &list);
+                                const std::initializer_list<T> &list) {
+      return get(type, ArrayRef<T>(list));
+    }
     static DenseElementsAttr getFromRawBuffer(ShapedType type,
                                               ArrayRef<char> rawBuffer);
     static bool isValidRawBuffer(ShapedType type, ArrayRef<char> rawBuffer);
@@ -424,7 +428,9 @@ def Builtin_DenseElementsAttr : Builtin_Attr<
     std::enable_if_t<std::is_base_of<Attribute, T>::value &&
                          !std::is_same<Attribute, T>::value,
                      T>
-    getSplatValue() const;
+    getSplatValue() const {
+      return llvm::cast<T>(getSplatValue<Attribute>());
+    }
     template <typename T>
     auto try_value_begin() const;
     template <typename T>
@@ -432,9 +438,9 @@ def Builtin_DenseElementsAttr : Builtin_Attr<
     template <typename T>
     auto getValues() const;
     template <typename T>
-    auto value_begin() const;
+    auto value_begin() const { return getValues<T>().begin(); }
     template <typename T>
-    auto value_end() const;
+    auto value_end() const { return getValues<T>().end(); }
 
     template <typename T>
     using IntFloatValueTemplateCheckT =
@@ -488,18 +494,20 @@ def Builtin_DenseElementsAttr : Builtin_Attr<
         std::enable_if_t<std::is_same<T, std::complex<APInt>>::value>;
     template <typename T, typename = ComplexAPIntValueTemplateCheckT<T>>
     FailureOr<iterator_range_impl<ComplexIntElementIterator>>
-    tryGetValues() const;
+    tryGetValues() const { return tryGetComplexIntValues(); }
     template <typename T>
     using APFloatValueTemplateCheckT =
         std::enable_if_t<std::is_same<T, APFloat>::value>;
     template <typename T, typename = APFloatValueTemplateCheckT<T>>
-    FailureOr<iterator_range_impl<FloatElementIterator>> tryGetValues() const;
+    FailureOr<iterator_range_impl<FloatElementIterator>> tryGetValues() const {
+      return tryGetFloatValues();
+    }
     template <typename T>
     using ComplexAPFloatValueTemplateCheckT =
         std::enable_if_t<std::is_same<T, std::complex<APFloat>>::value>;
     template <typename T, typename = ComplexAPFloatValueTemplateCheckT<T>>
     FailureOr<iterator_range_impl<ComplexFloatElementIterator>>
-    tryGetValues() const;
+    tryGetValues() const { return tryGetComplexFloatValues(); }
 
     ArrayRef<char> getRawData() const;
     ShapedType getType() const;

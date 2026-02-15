@@ -100,10 +100,6 @@ DenseElementsAttr DenseElementsAttr::get(const ShapedType &type,
                           sizeof(T), std::numeric_limits<T>::is_integer,
                           std::numeric_limits<T>::is_signed);
 }
-template <typename T, typename>
-DenseElementsAttr DenseElementsAttr::get(const ShapedType &type, T value) {
-  return get(type, llvm::ArrayRef(value));
-}
 template <typename T, typename ElementT, typename>
 DenseElementsAttr DenseElementsAttr::get(const ShapedType &type,
                                          ArrayRef<T> values) {
@@ -113,24 +109,12 @@ DenseElementsAttr DenseElementsAttr::get(const ShapedType &type,
                        std::numeric_limits<ElementT>::is_signed);
 }
 template <typename T>
-DenseElementsAttr DenseElementsAttr::get(const ShapedType &type,
-                                         const std::initializer_list<T> &list) {
-  return get(type, ArrayRef<T>(list));
-}
-template <typename T>
 std::enable_if_t<!std::is_base_of<Attribute, T>::value ||
                      std::is_same<Attribute, T>::value,
                  T>
 DenseElementsAttr::getSplatValue() const {
   assert(isSplat() && "expected the attribute to be a splat");
   return *value_begin<T>();
-}
-template <typename T>
-std::enable_if_t<std::is_base_of<Attribute, T>::value &&
-                     !std::is_same<Attribute, T>::value,
-                 T>
-DenseElementsAttr::getSplatValue() const {
-  return llvm::cast<T>(getSplatValue<Attribute>());
 }
 template <typename T>
 auto DenseElementsAttr::try_value_begin() const {
@@ -149,14 +133,6 @@ auto DenseElementsAttr::getValues() const {
   auto range = tryGetValues<T>();
   assert(succeeded(range) && "element type cannot be iterated");
   return std::move(*range);
-}
-template <typename T>
-auto DenseElementsAttr::value_begin() const {
-  return getValues<T>().begin();
-}
-template <typename T>
-auto DenseElementsAttr::value_end() const {
-  return getValues<T>().end();
 }
 
 // tryGetValues template definitions (required for instantiation in other TUs).
@@ -221,24 +197,6 @@ DenseElementsAttr::tryGetValues() const {
     return failure();
   return iterator_range_impl<IntElementIterator>(getType(), raw_int_begin(),
                                                  raw_int_end());
-}
-template <typename T, typename>
-FailureOr<DenseElementsAttr::iterator_range_impl<
-    DenseElementsAttr::ComplexIntElementIterator>>
-DenseElementsAttr::tryGetValues() const {
-  return tryGetComplexIntValues();
-}
-template <typename T, typename>
-FailureOr<DenseElementsAttr::iterator_range_impl<
-    DenseElementsAttr::FloatElementIterator>>
-DenseElementsAttr::tryGetValues() const {
-  return tryGetFloatValues();
-}
-template <typename T, typename>
-FailureOr<DenseElementsAttr::iterator_range_impl<
-    DenseElementsAttr::ComplexFloatElementIterator>>
-DenseElementsAttr::tryGetValues() const {
-  return tryGetComplexFloatValues();
 }
 
 /// An attribute that represents a reference to a splat vector or tensor
