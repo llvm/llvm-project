@@ -271,10 +271,12 @@ void CIRGenFunction::LexicalScope::cleanup() {
     // Leverage and defers to RunCleanupsScope's dtor and scope handling.
     applyCleanup();
 
+    mlir::Block *currentBlock = builder.getBlock();
+
     // If we now have one after `applyCleanup`, hook it up properly.
     if (!cleanupBlock && localScope->getCleanupBlock(builder)) {
       cleanupBlock = localScope->getCleanupBlock(builder);
-      cir::BrOp::create(builder, insPt->back().getLoc(), cleanupBlock);
+      cir::BrOp::create(builder, currentBlock->back().getLoc(), cleanupBlock);
       if (!cleanupBlock->mightHaveTerminator()) {
         mlir::OpBuilder::InsertionGuard guard(builder);
         builder.setInsertionPointToEnd(cleanupBlock);
@@ -310,7 +312,7 @@ void CIRGenFunction::LexicalScope::cleanup() {
     // End of any local scope != function
     // Ternary ops have to deal with matching arms for yielding types
     // and do return a value, it must do its own cir.yield insertion.
-    if (!localScope->isTernary() && !insPt->mightHaveTerminator()) {
+    if (!localScope->isTernary() && !currentBlock->mightHaveTerminator()) {
       !retVal ? cir::YieldOp::create(builder, localScope->endLoc)
               : cir::YieldOp::create(builder, localScope->endLoc, retVal);
     }

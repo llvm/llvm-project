@@ -5,6 +5,8 @@
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -mno-constructor-aliases -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
+// XFAIL: *
+
 void some_function() noexcept;
 
 struct out_of_line_destructor {

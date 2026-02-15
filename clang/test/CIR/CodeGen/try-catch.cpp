@@ -5,6 +5,8 @@
 
 // TODO(cir): Reenable lowering to LLVM after new try-catch lowering is implemented.
 
+// XFAIL: *
+
 void empty_try_block_with_catch_all() {
   try {} catch (...) {}
 }

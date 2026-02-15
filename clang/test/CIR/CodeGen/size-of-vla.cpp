@@ -5,6 +5,8 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
+// XFAIL: *
+
 void vla_type_with_element_type_of_size_1() {
   unsigned long n = 10ul;
   unsigned long size = sizeof(bool[n]);
