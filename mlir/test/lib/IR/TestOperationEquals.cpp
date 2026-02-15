@@ -35,6 +35,8 @@ struct TestOperationEqualPass
     OperationEquivalence::Flags flags{};
     if (!first->hasAttr("strict_loc_check"))
       flags |= OperationEquivalence::IgnoreLocations;
+    if (first->hasAttr("ignore_commutativity"))
+      flags |= OperationEquivalence::IgnoreCommutativity;
     if (OperationEquivalence::isEquivalentTo(first, &module.getBody()->back(),
                                              flags))
       llvm::outs() << " compares equals.\n";
