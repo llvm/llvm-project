@@ -23,7 +23,7 @@
 #include <thread>
 #endif
 
-#ifdef HAVE_BACKTRACE
+#if defined(HAVE_BACKTRACE) && !defined(__AMDGPU__) && !defined(__NVPTX__)
 #include BACKTRACE_HEADER
 #endif
 
@@ -219,7 +219,7 @@ void RTNAME(RegisterFailImageCallback)(void (*callback)(void)) {
 }
 
 static RT_NOINLINE_ATTR void PrintBacktrace() {
-#ifdef HAVE_BACKTRACE
+#if defined(HAVE_BACKTRACE) && !defined(__AMDGPU__) && !defined(__NVPTX__)
   // TODO: Need to parse DWARF information to print function line numbers
   constexpr int MAX_CALL_STACK{999};
   void *buffer[MAX_CALL_STACK];
