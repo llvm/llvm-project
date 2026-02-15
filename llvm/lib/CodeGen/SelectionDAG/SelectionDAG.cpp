@@ -4669,7 +4669,7 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
       (!OpVT.isFixedLengthVector() || NumElts == OpVT.getVectorNumElements()) &&
       "Unexpected vector size");
 
-  auto IsPowerOfTwoOrZero = [BitWidth, OrZero](ConstantSDNode *C) {
+  auto IsPowerOfTwoOrZero = [BitWidth, OrZero](const ConstantSDNode *C) {
     APInt V = C->getAPIntValue().zextOrTrunc(BitWidth);
     return (OrZero && V.isZero()) || V.isPowerOf2();
   };
@@ -4705,16 +4705,12 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
                                   Depth + 1);
 
   // Are all operands of a build vector constant powers of two or zero?
-  if (Val.getOpcode() == ISD::BUILD_VECTOR) {
-    bool AllPowersOfTwoOrZero = true;
-    for (unsigned I = 0; I != NumElts && AllPowersOfTwoOrZero; ++I)
-      if (DemandedElts[I]) {
-        auto *C = dyn_cast<ConstantSDNode>(Val.getOperand(I));
-        AllPowersOfTwoOrZero &= C && IsPowerOfTwoOrZero(C);
-      }
-    if (AllPowersOfTwoOrZero)
-      return true;
-  }
+  if (Val.getOpcode() == ISD::BUILD_VECTOR &&
+      all_of(enumerate(Val->ops()), [&](auto P) {
+        auto *C = dyn_cast<ConstantSDNode>(P.value());
+        return !DemandedElts[P.index()] || (C && IsPowerOfTwoOrZero(C));
+      }))
+    return true;
 
   // Is the operand of a splat vector a constant power of two?
   if (Val.getOpcode() == ISD::SPLAT_VECTOR)
