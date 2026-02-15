@@ -1153,11 +1153,15 @@ bool HexagonFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   if (HasAlloca || HasExtraAlign)
     return true;
 
+  // If FP-elimination is disabled, we have to use FP. This must not be
+  // gated on stack size: the user/ABI-requested frame pointer is needed
+  // regardless of whether the function currently has a stack frame.
+  // Every other target checks DisableFramePointerElim unconditionally.
+  const TargetMachine &TM = MF.getTarget();
+  if (TM.Options.DisableFramePointerElim(MF) || !EliminateFramePointer)
+    return true;
+
   if (MFI.getStackSize() > 0) {
-    // If FP-elimination is disabled, we have to use FP at this point.
-    const TargetMachine &TM = MF.getTarget();
-    if (TM.Options.DisableFramePointerElim(MF) || !EliminateFramePointer)
-      return true;
     if (EnableStackOVFSanitizer)
       return true;
   }
