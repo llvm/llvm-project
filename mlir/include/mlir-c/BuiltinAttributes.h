@@ -469,7 +469,7 @@ MLIR_CAPI_EXPORTED bool mlirAttributeIsADenseIntElements(MlirAttribute attr);
 MLIR_CAPI_EXPORTED bool mlirAttributeIsADenseFPElements(MlirAttribute attr);
 
 /// Returns the typeID of an DenseIntOrFPElements attribute.
-MLIR_CAPI_EXPORTED MlirTypeID mlirDenseIntOrFPElementsAttrGetTypeID(void);
+MLIR_CAPI_EXPORTED MlirTypeID mlirDenseElementsAttrGetTypeID(void);
 
 /// Creates a dense elements attribute with the given Shaped type and elements
 /// in the same context as the type.

@@ -481,13 +481,13 @@ static void copyAPIntToArrayForBEmachine(APInt value, size_t numBytes,
   // ex. last word of `value` (BE): |------ij|  ==> `valueLE` (LE): |ji------|
   size_t lastWordPos = numFilledWords;
   SmallVector<char, 8> valueLE(APInt::APINT_WORD_SIZE);
-  DenseIntOrFPElementsAttr::convertEndianOfCharForBEmachine(
+  DenseElementsAttr::convertEndianOfCharForBEmachine(
       reinterpret_cast<const char *>(value.getRawData()) + lastWordPos,
       valueLE.begin(), APInt::APINT_BITS_PER_WORD, 1);
   // Extract actual APInt data from `valueLE`, convert endianness to BE format,
   // and store it in `result`.
   // ex. `valueLE` (LE): |ji------|  ==> `result` (BE): |abcdefgh|ij|
-  DenseIntOrFPElementsAttr::convertEndianOfCharForBEmachine(
+  DenseElementsAttr::convertEndianOfCharForBEmachine(
       valueLE.begin(), result + lastWordPos,
       (numBytes - lastWordPos) * CHAR_BIT, 1);
 }
@@ -514,13 +514,13 @@ static void copyArrayToAPIntForBEmachine(const char *inArray, size_t numBytes,
   // ex. `inArray` (last two bytes, BE): |ij|  ==> `inArrayLE` (LE): |ji------|
   size_t lastWordPos = numFilledWords;
   SmallVector<char, 8> inArrayLE(APInt::APINT_WORD_SIZE);
-  DenseIntOrFPElementsAttr::convertEndianOfCharForBEmachine(
+  DenseElementsAttr::convertEndianOfCharForBEmachine(
       inArray + lastWordPos, inArrayLE.begin(),
       (numBytes - lastWordPos) * CHAR_BIT, 1);
 
   // Convert `inArrayLE` to BE format, and store it in last word of `result`.
   // ex. `inArrayLE` (LE): |ji------|  ==> `result` (BE): |abcdefgh|------ij|
-  DenseIntOrFPElementsAttr::convertEndianOfCharForBEmachine(
+  DenseElementsAttr::convertEndianOfCharForBEmachine(
       inArrayLE.begin(),
       const_cast<char *>(reinterpret_cast<const char *>(result.getRawData())) +
           lastWordPos,
@@ -853,11 +853,6 @@ template class DenseArrayAttrImpl<double>;
 // DenseElementsAttr
 //===----------------------------------------------------------------------===//
 
-/// Method for support type inquiry through isa, cast and dyn_cast.
-bool DenseElementsAttr::classof(Attribute attr) {
-  return llvm::isa<DenseIntOrFPElementsAttr>(attr);
-}
-
 DenseElementsAttr DenseElementsAttr::get(ShapedType type,
                                          ArrayRef<Attribute> values) {
   assert(hasSameNumElementsOrSplat(type, values));
@@ -870,14 +865,14 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
     if (failed(result))
       return {};
   }
-  return DenseIntOrFPElementsAttr::getRaw(type, data);
+  return DenseElementsAttr::getRaw(type, data);
 }
 
 DenseElementsAttr DenseElementsAttr::get(ShapedType type,
                                          ArrayRef<bool> values) {
   assert(hasSameNumElementsOrSplat(type, values));
   assert(type.getElementType().isInteger(1));
-  return DenseIntOrFPElementsAttr::getRaw(
+  return DenseElementsAttr::getRaw(
       type, ArrayRef<char>(reinterpret_cast<const char *>(values.data()),
                            values.size()));
 }
@@ -890,7 +885,7 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
   assert(type.getElementType().isIntOrIndex());
   assert(hasSameNumElementsOrSplat(type, values));
   size_t storageBitWidth = getDenseElementStorageWidth(type.getElementType());
-  return DenseIntOrFPElementsAttr::getRaw(type, storageBitWidth, values);
+  return DenseElementsAttr::getRaw(type, storageBitWidth, values);
 }
 DenseElementsAttr DenseElementsAttr::get(ShapedType type,
                                          ArrayRef<std::complex<APInt>> values) {
@@ -900,7 +895,7 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
   size_t storageBitWidth = getDenseElementStorageWidth(complex) / 2;
   ArrayRef<APInt> intVals(reinterpret_cast<const APInt *>(values.data()),
                           values.size() * 2);
-  return DenseIntOrFPElementsAttr::getRaw(type, storageBitWidth, intVals);
+  return DenseElementsAttr::getRaw(type, storageBitWidth, intVals);
 }
 
 // Constructs a dense float elements attribute from an array of APFloat
@@ -911,7 +906,7 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
   assert(llvm::isa<FloatType>(type.getElementType()));
   assert(hasSameNumElementsOrSplat(type, values));
   size_t storageBitWidth = getDenseElementStorageWidth(type.getElementType());
-  return DenseIntOrFPElementsAttr::getRaw(type, storageBitWidth, values);
+  return DenseElementsAttr::getRaw(type, storageBitWidth, values);
 }
 DenseElementsAttr
 DenseElementsAttr::get(ShapedType type,
@@ -922,7 +917,7 @@ DenseElementsAttr::get(ShapedType type,
   ArrayRef<APFloat> apVals(reinterpret_cast<const APFloat *>(values.data()),
                            values.size() * 2);
   size_t storageBitWidth = getDenseElementStorageWidth(complex) / 2;
-  return DenseIntOrFPElementsAttr::getRaw(type, storageBitWidth, apVals);
+  return DenseElementsAttr::getRaw(type, storageBitWidth, apVals);
 }
 
 /// Construct a dense elements attribute from a raw buffer representing the
@@ -930,7 +925,7 @@ DenseElementsAttr::get(ShapedType type,
 /// the expected buffer format may not be a form the user expects.
 DenseElementsAttr
 DenseElementsAttr::getFromRawBuffer(ShapedType type, ArrayRef<char> rawBuffer) {
-  return DenseIntOrFPElementsAttr::getRaw(type, rawBuffer);
+  return DenseElementsAttr::getRaw(type, rawBuffer);
 }
 
 /// Returns true if the given buffer is a valid raw buffer for the given type.
@@ -984,23 +979,6 @@ static bool isValidIntOrFloat(Type type, int64_t dataEltSize, bool isInt,
   if (!valid)
     LDBG() << "expected signedness " << isSigned << " to match type " << type;
   return valid;
-}
-
-/// Defaults down the subclass implementation.
-DenseElementsAttr DenseElementsAttr::getRawComplex(ShapedType type,
-                                                   ArrayRef<char> data,
-                                                   int64_t dataEltSize,
-                                                   bool isInt, bool isSigned) {
-  return DenseIntOrFPElementsAttr::getRawComplex(type, data, dataEltSize, isInt,
-                                                 isSigned);
-}
-DenseElementsAttr DenseElementsAttr::getRawIntOrFloat(ShapedType type,
-                                                      ArrayRef<char> data,
-                                                      int64_t dataEltSize,
-                                                      bool isInt,
-                                                      bool isSigned) {
-  return DenseIntOrFPElementsAttr::getRawIntOrFloat(type, data, dataEltSize,
-                                                    isInt, isSigned);
 }
 
 bool DenseElementsAttr::isValidIntOrFloat(int64_t dataEltSize, bool isInt,
@@ -1064,7 +1042,7 @@ auto DenseElementsAttr::tryGetComplexFloatValues() const
 
 /// Return the raw storage data held by this attribute.
 ArrayRef<char> DenseElementsAttr::getRawData() const {
-  return static_cast<DenseIntOrFPElementsAttrStorage *>(impl)->data;
+  return static_cast<DenseElementsAttrStorage *>(impl)->data;
 }
 
 /// Return a new DenseElementsAttr that has the same data as the current
@@ -1079,7 +1057,7 @@ DenseElementsAttr DenseElementsAttr::reshape(ShapedType newType) {
          "expected the same element type");
   assert(newType.getNumElements() == curType.getNumElements() &&
          "expected the same number of elements");
-  return DenseIntOrFPElementsAttr::getRaw(newType, getRawData());
+  return DenseElementsAttr::getRaw(newType, getRawData());
 }
 
 DenseElementsAttr DenseElementsAttr::resizeSplat(ShapedType newType) {
@@ -1091,7 +1069,7 @@ DenseElementsAttr DenseElementsAttr::resizeSplat(ShapedType newType) {
 
   assert(newType.getElementType() == curType.getElementType() &&
          "expected the same element type");
-  return DenseIntOrFPElementsAttr::getRaw(newType, getRawData());
+  return DenseElementsAttr::getRaw(newType, getRawData());
 }
 
 /// Return a new DenseElementsAttr that has the same data as the current
@@ -1107,8 +1085,7 @@ DenseElementsAttr DenseElementsAttr::bitcast(Type newElType) {
   assert(getDenseElementBitWidth(newElType) ==
              getDenseElementBitWidth(curElType) &&
          "expected element types with the same bitwidth");
-  return DenseIntOrFPElementsAttr::getRaw(curType.clone(newElType),
-                                          getRawData());
+  return DenseElementsAttr::getRaw(curType.clone(newElType), getRawData());
 }
 
 DenseElementsAttr
@@ -1137,7 +1114,7 @@ int64_t DenseElementsAttr::getNumElements() const {
 }
 
 //===----------------------------------------------------------------------===//
-// DenseIntOrFPElementsAttr
+// DenseElementsAttr
 //===----------------------------------------------------------------------===//
 
 /// Utility method to write a range of APInt values to a buffer.
@@ -1158,28 +1135,28 @@ static void writeAPIntsToBuffer(size_t storageWidth,
 /// Constructs a dense elements attribute from an array of raw APFloat values.
 /// Each APFloat value is expected to have the same bitwidth as the element
 /// type of 'type'. 'type' must be a vector or tensor with static shape.
-DenseElementsAttr DenseIntOrFPElementsAttr::getRaw(ShapedType type,
-                                                   size_t storageWidth,
-                                                   ArrayRef<APFloat> values) {
+DenseElementsAttr DenseElementsAttr::getRaw(ShapedType type,
+                                            size_t storageWidth,
+                                            ArrayRef<APFloat> values) {
   SmallVector<char> data;
   auto unwrapFloat = [](const APFloat &val) { return val.bitcastToAPInt(); };
   writeAPIntsToBuffer(storageWidth, data, llvm::map_range(values, unwrapFloat));
-  return DenseIntOrFPElementsAttr::getRaw(type, data);
+  return DenseElementsAttr::getRaw(type, data);
 }
 
 /// Constructs a dense elements attribute from an array of raw APInt values.
 /// Each APInt value is expected to have the same bitwidth as the element type
 /// of 'type'.
-DenseElementsAttr DenseIntOrFPElementsAttr::getRaw(ShapedType type,
-                                                   size_t storageWidth,
-                                                   ArrayRef<APInt> values) {
+DenseElementsAttr DenseElementsAttr::getRaw(ShapedType type,
+                                            size_t storageWidth,
+                                            ArrayRef<APInt> values) {
   SmallVector<char> data;
   writeAPIntsToBuffer(storageWidth, data, values);
-  return DenseIntOrFPElementsAttr::getRaw(type, data);
+  return DenseElementsAttr::getRaw(type, data);
 }
 
-DenseElementsAttr DenseIntOrFPElementsAttr::getRaw(ShapedType type,
-                                                   ArrayRef<char> data) {
+DenseElementsAttr DenseElementsAttr::getRaw(ShapedType type,
+                                            ArrayRef<char> data) {
   assert(type.hasStaticShape() && "type must have static shape");
   assert(isValidRawBuffer(type, data));
   return Base::get(type.getContext(), type, data);
@@ -1188,11 +1165,10 @@ DenseElementsAttr DenseIntOrFPElementsAttr::getRaw(ShapedType type,
 /// Overload of the raw 'get' method that asserts that the given type is of
 /// complex type. This method is used to verify type invariants that the
 /// templatized 'get' method cannot.
-DenseElementsAttr DenseIntOrFPElementsAttr::getRawComplex(ShapedType type,
-                                                          ArrayRef<char> data,
-                                                          int64_t dataEltSize,
-                                                          bool isInt,
-                                                          bool isSigned) {
+DenseElementsAttr DenseElementsAttr::getRawComplex(ShapedType type,
+                                                   ArrayRef<char> data,
+                                                   int64_t dataEltSize,
+                                                   bool isInt, bool isSigned) {
   assert(::isValidIntOrFloat(
              llvm::cast<ComplexType>(type.getElementType()).getElementType(),
              dataEltSize / 2, isInt, isSigned) &&
@@ -1207,10 +1183,11 @@ DenseElementsAttr DenseIntOrFPElementsAttr::getRawComplex(ShapedType type,
 /// Overload of the 'getRaw' method that asserts that the given type is of
 /// integer type. This method is used to verify type invariants that the
 /// templatized 'get' method cannot.
-DenseElementsAttr
-DenseIntOrFPElementsAttr::getRawIntOrFloat(ShapedType type, ArrayRef<char> data,
-                                           int64_t dataEltSize, bool isInt,
-                                           bool isSigned) {
+DenseElementsAttr DenseElementsAttr::getRawIntOrFloat(ShapedType type,
+                                                      ArrayRef<char> data,
+                                                      int64_t dataEltSize,
+                                                      bool isInt,
+                                                      bool isSigned) {
   assert(::isValidIntOrFloat(type.getElementType(), dataEltSize, isInt,
                              isSigned) &&
          "Try re-running with -debug-only=builtinattributes");
@@ -1221,9 +1198,10 @@ DenseIntOrFPElementsAttr::getRawIntOrFloat(ShapedType type, ArrayRef<char> data,
   return getRaw(type, data);
 }
 
-void DenseIntOrFPElementsAttr::convertEndianOfCharForBEmachine(
-    const char *inRawData, char *outRawData, size_t elementBitWidth,
-    size_t numElements) {
+void DenseElementsAttr::convertEndianOfCharForBEmachine(const char *inRawData,
+                                                        char *outRawData,
+                                                        size_t elementBitWidth,
+                                                        size_t numElements) {
   using llvm::support::ulittle16_t;
   using llvm::support::ulittle32_t;
   using llvm::support::ulittle64_t;
@@ -1263,7 +1241,7 @@ void DenseIntOrFPElementsAttr::convertEndianOfCharForBEmachine(
   }
 }
 
-void DenseIntOrFPElementsAttr::convertEndianOfArrayRefForBEmachine(
+void DenseElementsAttr::convertEndianOfArrayRefForBEmachine(
     ArrayRef<char> inRawData, MutableArrayRef<char> outRawData,
     ShapedType type) {
   size_t numElements = type.getNumElements();

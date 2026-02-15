@@ -172,8 +172,7 @@ def DenseArrayAttr : DialectAttribute<(attr
   Blob:$rawData
 )>;
 
-def DenseElementsAttr : WithType<"DenseElementsAttr", Attribute>;
-def DenseIntOrFPElementsAttr : DialectAttribute<(attr
+def DenseElementsAttr : DialectAttribute<(attr
   ShapedType:$type,
   Blob:$rawData
 )> {
@@ -333,7 +332,7 @@ def BuiltinDialectAttributes : DialectAttributes<"Builtin"> {
     UnknownLoc,
     DenseResourceElementsAttr,
     DenseArrayAttr,
-    DenseIntOrFPElementsAttr,
+    DenseElementsAttr,
     DenseStringElementsAttr,
     SparseElementsAttr,
     DistinctAttr,

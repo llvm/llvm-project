@@ -1300,8 +1300,7 @@ nb::object denseIntOrFPElementsAttributeCaster(PyAttribute &pyAttribute) {
   if (PyDenseIntElementsAttribute::isaFunction(pyAttribute))
     return nb::cast(PyDenseIntElementsAttribute(pyAttribute));
   std::string msg =
-      std::string(
-          "Can't cast unknown element type DenseIntOrFPElementsAttr (") +
+      std::string("Can't cast unknown element type DenseElementsAttr (") +
       nb::cast<std::string>(nb::repr(nb::cast(pyAttribute))) + ")";
   throw nb::type_error(msg.c_str());
 }
@@ -1399,7 +1398,7 @@ void populateIRAttributes(nb::module_ &m) {
   PyDenseFPElementsAttribute::bind(m);
   PyDenseIntElementsAttribute::bind(m);
   PyGlobals::get().registerTypeCaster(
-      mlirDenseIntOrFPElementsAttrGetTypeID(),
+      mlirDenseElementsAttrGetTypeID(),
       nb::cast<nb::callable>(
           nb::cpp_function(denseIntOrFPElementsAttributeCaster)));
   PyDenseResourceElementsAttribute::bind(m);
