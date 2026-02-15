@@ -152,7 +152,7 @@ static bool CanProveNotTakenFirstIteration(const BasicBlock *ExitBlock,
   if (!SimpleCst)
     return false;
   if (ExitBlock == BI->getSuccessor(0))
-    return SimpleCst->isZeroValue();
+    return SimpleCst->isNullValue();
   assert(ExitBlock == BI->getSuccessor(1) && "implied by above");
   return SimpleCst->isAllOnesValue();
 }
