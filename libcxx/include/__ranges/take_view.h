@@ -120,7 +120,7 @@ public:
   {
     if constexpr (sized_range<_View>) {
       if constexpr (random_access_range<_View>) {
-        return ranges::begin(__base_) + size();
+        return ranges::begin(__base_) + range_difference_t<_View>(size());
       } else {
         return default_sentinel;
       }
@@ -134,7 +134,7 @@ public:
   {
     if constexpr (sized_range<const _View>) {
       if constexpr (random_access_range<const _View>) {
-        return ranges::begin(__base_) + size();
+        return ranges::begin(__base_) + range_difference_t<_View>(size());
       } else {
         return default_sentinel;
       }
