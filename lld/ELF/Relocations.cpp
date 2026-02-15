@@ -926,10 +926,6 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
   const bool isIfunc = sym.isGnuIFunc();
   if (!sym.isPreemptible && !isIfunc) {
     if (expr != R_GOT_PC) {
-      // The 0x8000 bit of r_addend of R_PPC_PLTREL24 is used to choose call
-      // stub type. It should be ignored if optimized to R_PC.
-      if (ctx.arg.emachine == EM_PPC && expr == RE_PPC32_PLTREL)
-        addend &= ~0x8000;
       // R_HEX_GD_PLT_B22_PCREL (call a@GDPLT) is transformed into
       // call __tls_get_addr even if the symbol is non-preemptible.
       if (!(ctx.arg.emachine == EM_HEXAGON &&
