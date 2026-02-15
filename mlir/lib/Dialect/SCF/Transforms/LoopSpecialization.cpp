@@ -279,12 +279,11 @@ LogicalResult mlir::scf::peelForLoopLastIteration(RewriterBase &b, ForOp forOp,
   b.setInsertionPointAfter(forOp);
 
   // Peel the last iteration.
-  IRMapping map;
-  map.map(forOp.getLowerBound(), splitBound);
-  lastIteration = cast<ForOp>(b.clone(*forOp.getOperation(), map));
+  lastIteration = cast<ForOp>(b.clone(*forOp.getOperation()));
   b.replaceAllUsesWith(forOp.getResults(), lastIteration->getResults());
   // This has to be done after the replace above, so that replace does not change it
   lastIteration.getInitArgsMutable().assign(forOp->getResults());
+  lastIteration.getLowerBoundMutable().assign(splitBound);
 
   // Update main loop with new upper bound.
   b.modifyOpInPlace(forOp, [&]() {
