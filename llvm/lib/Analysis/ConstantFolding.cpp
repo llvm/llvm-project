@@ -1308,7 +1308,7 @@ Constant *llvm::ConstantFoldCompareInstOperands(
       return nullptr;
   }
 
-  return ConstantFoldCompareInstruction(Predicate, Ops0, Ops1);
+  return ConstantFoldCompareInstruction(Predicate, Ops0, Ops1, &DL);
 }
 
 Constant *llvm::ConstantFoldUnaryOpOperand(unsigned Opcode, Constant *Op,
@@ -1579,9 +1579,25 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
     return FoldBitCast(C, DestTy, DL);
   }
 
+  // DL-aware null folding for pointer casts. ConstantExpr::getCast below does
+  // not have DataLayout, so handle the null case here to ensure casts involving
+  // null pointers (e.g., inttoptr(0) -> null, ptrtoint(null) -> 0) still fold
+  // correctly when DataLayout confirms null is zero for the address space.
+  if (C->isNullValue() && !DestTy->isX86_AMXTy() &&
+      Opcode != Instruction::AddrSpaceCast) {
+    bool SrcIsPtr = C->getType()->isPtrOrPtrVectorTy();
+    bool DstIsPtr = DestTy->isPtrOrPtrVectorTy();
+    if (SrcIsPtr || DstIsPtr) {
+      unsigned AS = SrcIsPtr ? C->getType()->getPointerAddressSpace()
+                             : DestTy->getPointerAddressSpace();
+      if (DL.isNullPointerAllZeroes(AS))
+        return Constant::getNullValue(DestTy);
+    }
+  }
+
   if (ConstantExpr::isDesirableCastOp(Opcode))
     return ConstantExpr::getCast(Opcode, C, DestTy);
-  return ConstantFoldCastInstruction(Opcode, C, DestTy);
+  return ConstantFoldCastInstruction(Opcode, C, DestTy, &DL);
 }
 
 Constant *llvm::ConstantFoldIntegerCast(Constant *C, Type *DestTy,

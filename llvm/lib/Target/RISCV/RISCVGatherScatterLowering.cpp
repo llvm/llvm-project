@@ -421,9 +421,11 @@ RISCVGatherScatterLowering::determineBaseAndStride(Instruction *Ptr,
     if (!VecIndexC)
       return std::make_pair(nullptr, nullptr);
     if (VecIndex->getType()->getScalarSizeInBits() > VecIntPtrTy->getScalarSizeInBits())
-      VecIndex = ConstantFoldCastInstruction(Instruction::Trunc, VecIndexC, VecIntPtrTy);
+      VecIndex = ConstantFoldCastInstruction(Instruction::Trunc, VecIndexC,
+                                             VecIntPtrTy, DL);
     else
-      VecIndex = ConstantFoldCastInstruction(Instruction::SExt, VecIndexC, VecIntPtrTy);
+      VecIndex = ConstantFoldCastInstruction(Instruction::SExt, VecIndexC,
+                                             VecIntPtrTy, DL);
   }
 
   // Handle the non-recursive case.  This is what we see if the vectorizer

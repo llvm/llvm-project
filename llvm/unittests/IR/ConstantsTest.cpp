@@ -989,7 +989,192 @@ TEST(ConstantsTest, ZeroValueAPIs) {
             Constant::getNullValue(StructTy));
 
   // TODO: getNullValue slow path for aggregates with non-zero-null pointers is
-  // deferred to PR 3 testing (requires aggregate collapse fix).
+  // deferred to PR 4 testing (requires ConstantPointerNull semantic change).
+}
+
+TEST(ConstantsTest, AggregateCollapseAndCAZExtraction) {
+  LLVMContext Context;
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  Type *FloatTy = Type::getFloatTy(Context);
+  PointerType *PtrTy = PointerType::get(Context, 0);
+
+  // --- ConstantAggregateZero element extraction returns getZeroValue ---
+  auto *ArrTy = ArrayType::get(Int32Ty, 3);
+  auto *CAZ = ConstantAggregateZero::get(ArrTy);
+  Constant *Elt = CAZ->getSequentialElement();
+  EXPECT_EQ(Elt, Constant::getZeroValue(Int32Ty));
+  // For pointer element types.
+  auto *PtrArrTy = ArrayType::get(PtrTy, 2);
+  auto *PtrCAZ = ConstantAggregateZero::get(PtrArrTy);
+  Constant *PtrElt = PtrCAZ->getSequentialElement();
+  EXPECT_EQ(PtrElt, Constant::getZeroValue(PtrTy));
+
+  // Struct element extraction.
+  auto *StructTy = StructType::get(Int32Ty, PtrTy, FloatTy);
+  auto *StructCAZ = ConstantAggregateZero::get(StructTy);
+  EXPECT_EQ(StructCAZ->getStructElement(0), Constant::getZeroValue(Int32Ty));
+  EXPECT_EQ(StructCAZ->getStructElement(1), Constant::getZeroValue(PtrTy));
+  EXPECT_EQ(StructCAZ->getStructElement(2), Constant::getZeroValue(FloatTy));
+
+  // --- Zero-valued aggregates collapse to ConstantAggregateZero ---
+  Constant *ZeroI32 = Constant::getZeroValue(Int32Ty);
+  Constant *ZeroFloat = Constant::getZeroValue(FloatTy);
+  Constant *ZeroPtr = Constant::getZeroValue(PtrTy);
+
+  // Array of zero ints collapses.
+  Constant *ZeroArr = ConstantArray::get(ArrTy, {ZeroI32, ZeroI32, ZeroI32});
+  EXPECT_TRUE(isa<ConstantAggregateZero>(ZeroArr));
+
+  // Vector of zero ints collapses.
+  Constant *ZeroVec = ConstantVector::get({ZeroI32, ZeroI32, ZeroI32, ZeroI32});
+  EXPECT_TRUE(isa<ConstantAggregateZero>(ZeroVec));
+
+  // Struct of zeros collapses.
+  Constant *ZeroStruct =
+      ConstantStruct::get(StructTy, {ZeroI32, ZeroPtr, ZeroFloat});
+  EXPECT_TRUE(isa<ConstantAggregateZero>(ZeroStruct));
+
+  // Splat of zero collapses.
+  Constant *SplatZero =
+      ConstantVector::getSplat(ElementCount::getFixed(4), ZeroI32);
+  EXPECT_TRUE(isa<ConstantAggregateZero>(SplatZero));
+
+  // --- FP -0.0 does NOT collapse to ConstantAggregateZero ---
+  // -0.0 has a non-zero bit pattern (sign bit set), so it must not collapse.
+  Constant *NegZeroFP = ConstantFP::get(
+      FloatTy, APFloat::getZero(APFloat::IEEEsingle(), /*Negative=*/true));
+  EXPECT_NE(NegZeroFP, Constant::getZeroValue(FloatTy));
+
+  auto *FloatArrTy = ArrayType::get(FloatTy, 2);
+  Constant *NegZeroArr = ConstantArray::get(FloatArrTy, {NegZeroFP, NegZeroFP});
+  EXPECT_FALSE(isa<ConstantAggregateZero>(NegZeroArr));
+
+  Constant *NegZeroVec = ConstantVector::get({NegZeroFP, NegZeroFP});
+  EXPECT_FALSE(isa<ConstantAggregateZero>(NegZeroVec));
+
+  auto *FloatStructTy = StructType::get(FloatTy, FloatTy);
+  Constant *NegZeroStruct =
+      ConstantStruct::get(FloatStructTy, {NegZeroFP, NegZeroFP});
+  EXPECT_FALSE(isa<ConstantAggregateZero>(NegZeroStruct));
+
+  Constant *NegZeroSplat =
+      ConstantVector::getSplat(ElementCount::getFixed(4), NegZeroFP);
+  EXPECT_FALSE(isa<ConstantAggregateZero>(NegZeroSplat));
+
+  // --- getSplatValue for CAZ returns getZeroValue ---
+  auto *IntVecTy = FixedVectorType::get(Int32Ty, 4);
+  auto *IntVecCAZ = ConstantAggregateZero::get(IntVecTy);
+  Constant *SplatVal = IntVecCAZ->getSplatValue();
+  EXPECT_EQ(SplatVal, Constant::getZeroValue(Int32Ty));
+
+  auto *PtrVecTy = FixedVectorType::get(PtrTy, 2);
+  auto *PtrVecCAZ = ConstantAggregateZero::get(PtrVecTy);
+  Constant *PtrSplatVal = PtrVecCAZ->getSplatValue();
+  EXPECT_EQ(PtrSplatVal, Constant::getZeroValue(PtrTy));
+}
+
+TEST(ConstantsTest, ConstantFoldCastWithDL) {
+  LLVMContext Context;
+  // A DataLayout where AS 1 has all-ones null pointer.
+  DataLayout AllOnesDL("e-po1:64:64");
+  // A DataLayout where all address spaces have zero null (the default).
+  DataLayout DefaultDL("e-p:64:64");
+
+  Type *Int64Ty = Type::getInt64Ty(Context);
+  PointerType *PtrTy0 = PointerType::get(Context, 0);
+  PointerType *PtrTy1 = PointerType::get(Context, 1);
+
+  // --- Without DL, null pointer casts fold normally ---
+  Constant *NullPtr0 = ConstantPointerNull::get(PtrTy0);
+  Constant *NullPtr1 = ConstantPointerNull::get(PtrTy1);
+
+  // ptrtoint(null AS0) -> 0 (no DL)
+  Constant *Result =
+      ConstantFoldCastInstruction(Instruction::PtrToInt, NullPtr0, Int64Ty);
+  ASSERT_NE(Result, nullptr);
+  EXPECT_TRUE(Result->isNullValue());
+
+  // ptrtoint(null AS1) -> 0 (no DL, backward compat)
+  Result =
+      ConstantFoldCastInstruction(Instruction::PtrToInt, NullPtr1, Int64Ty);
+  ASSERT_NE(Result, nullptr);
+  EXPECT_TRUE(Result->isNullValue());
+
+  // --- With DefaultDL, null pointer casts still fold (AS 0 is zero null) ---
+  Result = ConstantFoldCastInstruction(Instruction::PtrToInt, NullPtr0, Int64Ty,
+                                       &DefaultDL);
+  ASSERT_NE(Result, nullptr);
+  EXPECT_TRUE(Result->isNullValue());
+
+  // --- With AllOnesDL, AS 1 null cast is deferred ---
+  // ptrtoint(null AS1) should return nullptr (defer to DL-aware folder).
+  Result = ConstantFoldCastInstruction(Instruction::PtrToInt, NullPtr1, Int64Ty,
+                                       &AllOnesDL);
+  EXPECT_EQ(Result, nullptr);
+
+  // inttoptr(0, AS1) should also be deferred.
+  Constant *ZeroI64 = ConstantInt::get(Int64Ty, 0);
+  Result = ConstantFoldCastInstruction(Instruction::IntToPtr, ZeroI64, PtrTy1,
+                                       &AllOnesDL);
+  EXPECT_EQ(Result, nullptr);
+
+  // But AS 0 with AllOnesDL still folds fine.
+  Result = ConstantFoldCastInstruction(Instruction::PtrToInt, NullPtr0, Int64Ty,
+                                       &AllOnesDL);
+  ASSERT_NE(Result, nullptr);
+  EXPECT_TRUE(Result->isNullValue());
+}
+
+TEST(ConstantsTest, ConstantFoldCompareWithDL) {
+  LLVMContext Context;
+  DataLayout AllOnesDL("e-po1:64:64");
+  DataLayout DefaultDL("e-p:64:64");
+
+  PointerType *PtrTy0 = PointerType::get(Context, 0);
+  PointerType *PtrTy1 = PointerType::get(Context, 1);
+
+  Constant *NullPtr0 = ConstantPointerNull::get(PtrTy0);
+  Constant *NullPtr1 = ConstantPointerNull::get(PtrTy1);
+
+  // Create a non-null pointer constant expression for comparison.
+  Type *Int64Ty = Type::getInt64Ty(Context);
+  Constant *One = ConstantInt::get(Int64Ty, 1);
+  Constant *NonNullPtr0 = ConstantExpr::getIntToPtr(One, PtrTy0);
+  Constant *NonNullPtr1 = ConstantExpr::getIntToPtr(One, PtrTy1);
+
+  // --- Without DL, unsigned null comparisons fold ---
+  // ptr >= null -> true (always, since null is the unsigned minimum)
+  Constant *Result =
+      ConstantFoldCompareInstruction(CmpInst::ICMP_UGE, NonNullPtr0, NullPtr0);
+  ASSERT_NE(Result, nullptr);
+  EXPECT_TRUE(Result->isAllOnesValue());
+
+  // ptr < null -> false
+  Result =
+      ConstantFoldCompareInstruction(CmpInst::ICMP_ULT, NonNullPtr0, NullPtr0);
+  ASSERT_NE(Result, nullptr);
+  EXPECT_TRUE(Result->isNullValue());
+
+  // --- With AllOnesDL, AS 1 unsigned null comparisons are deferred ---
+  Result = ConstantFoldCompareInstruction(CmpInst::ICMP_UGE, NonNullPtr1,
+                                          NullPtr1, &AllOnesDL);
+  EXPECT_EQ(Result, nullptr);
+
+  Result = ConstantFoldCompareInstruction(CmpInst::ICMP_ULT, NonNullPtr1,
+                                          NullPtr1, &AllOnesDL);
+  EXPECT_EQ(Result, nullptr);
+
+  // --- With AllOnesDL, AS 0 still folds (zero null) ---
+  Result = ConstantFoldCompareInstruction(CmpInst::ICMP_UGE, NonNullPtr0,
+                                          NullPtr0, &AllOnesDL);
+  ASSERT_NE(Result, nullptr);
+  EXPECT_TRUE(Result->isAllOnesValue());
+
+  // --- With DefaultDL, everything folds normally ---
+  Result = ConstantFoldCompareInstruction(CmpInst::ICMP_UGE, NonNullPtr0,
+                                          NullPtr0, &DefaultDL);
+  ASSERT_NE(Result, nullptr);
+  EXPECT_TRUE(Result->isAllOnesValue());
 }
 
 } // end anonymous namespace
