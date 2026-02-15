@@ -122,5 +122,6 @@
 #include "math/tan.h"
 #include "math/tanf.h"
 #include "math/tanhf.h"
+#include "math/tanhf16.h"
 
 #endif // LLVM_LIBC_SHARED_MATH_H
