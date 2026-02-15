@@ -30,6 +30,7 @@
 #include "math/atanf16.h"
 #include "math/atanhf.h"
 #include "math/atanhf16.h"
+#include "math/bf16add.h"
 #include "math/bf16addf128.h"
 #include "math/cbrt.h"
 #include "math/cbrtf.h"
@@ -122,5 +123,6 @@
 #include "math/tan.h"
 #include "math/tanf.h"
 #include "math/tanhf.h"
+#include "math/tanhf16.h"
 
 #endif // LLVM_LIBC_SHARED_MATH_H
