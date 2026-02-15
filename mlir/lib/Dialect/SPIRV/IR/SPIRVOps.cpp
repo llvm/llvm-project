@@ -575,7 +575,7 @@ static LogicalResult verifyConstantType(spirv::ConstantOp op, Attribute value,
              << opType << ") does not match value type (" << valueType << ")";
     return success();
   }
-  if (isa<DenseIntOrFPElementsAttr, SparseElementsAttr>(value)) {
+  if (isa<DenseElementsAttr, SparseElementsAttr>(value)) {
     auto valueType = cast<TypedAttr>(value).getType();
     if (valueType == opType)
       return success();
