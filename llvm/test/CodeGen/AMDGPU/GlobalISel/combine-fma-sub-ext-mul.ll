@@ -44,10 +44,10 @@ define amdgpu_vs <4 x float> @test_v4f16_to_v4f32_sub_ext_mul(<4 x half> %x, <4 
 ; GFX9-DENORM:       ; %bb.0: ; %entry
 ; GFX9-DENORM-NEXT:    v_pk_mul_f16 v2, v0, v2
 ; GFX9-DENORM-NEXT:    v_pk_mul_f16 v3, v1, v3
-; GFX9-DENORM-NEXT:    v_mad_mix_f32 v0, v2, 1.0, -v4 op_sel_hi:[1,1,0]
-; GFX9-DENORM-NEXT:    v_mad_mix_f32 v1, v2, 1.0, -v5 op_sel:[1,0,0] op_sel_hi:[1,1,0]
-; GFX9-DENORM-NEXT:    v_mad_mix_f32 v2, v3, 1.0, -v6 op_sel_hi:[1,1,0]
-; GFX9-DENORM-NEXT:    v_mad_mix_f32 v3, v3, 1.0, -v7 op_sel:[1,0,0] op_sel_hi:[1,1,0]
+; GFX9-DENORM-NEXT:    v_mad_mix_f32 v0, v4, -1.0, v2 op_sel_hi:[0,1,1]
+; GFX9-DENORM-NEXT:    v_mad_mix_f32 v1, v5, -1.0, v2 op_sel:[0,0,1] op_sel_hi:[0,1,1]
+; GFX9-DENORM-NEXT:    v_mad_mix_f32 v2, v6, -1.0, v3 op_sel_hi:[0,1,1]
+; GFX9-DENORM-NEXT:    v_mad_mix_f32 v3, v7, -1.0, v3 op_sel:[0,0,1] op_sel_hi:[0,1,1]
 ; GFX9-DENORM-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-DENORM-LABEL: test_v4f16_to_v4f32_sub_ext_mul:
@@ -72,10 +72,10 @@ define amdgpu_vs <4 x float> @test_v4f16_to_v4f32_sub_ext_mul_rhs(<4 x float> %x
 ; GFX9-DENORM:       ; %bb.0: ; %.entry
 ; GFX9-DENORM-NEXT:    v_pk_mul_f16 v4, v4, v6
 ; GFX9-DENORM-NEXT:    v_pk_mul_f16 v5, v5, v7
-; GFX9-DENORM-NEXT:    v_mad_mix_f32 v0, -v0, 1.0, v4 op_sel_hi:[0,1,1]
-; GFX9-DENORM-NEXT:    v_mad_mix_f32 v1, -v1, 1.0, v4 op_sel:[0,0,1] op_sel_hi:[0,1,1]
-; GFX9-DENORM-NEXT:    v_mad_mix_f32 v2, -v2, 1.0, v5 op_sel_hi:[0,1,1]
-; GFX9-DENORM-NEXT:    v_mad_mix_f32 v3, -v3, 1.0, v5 op_sel:[0,0,1] op_sel_hi:[0,1,1]
+; GFX9-DENORM-NEXT:    v_mad_mix_f32 v0, v4, -1.0, v0 op_sel_hi:[1,1,0]
+; GFX9-DENORM-NEXT:    v_mad_mix_f32 v1, v4, -1.0, v1 op_sel:[1,0,0] op_sel_hi:[1,1,0]
+; GFX9-DENORM-NEXT:    v_mad_mix_f32 v2, v5, -1.0, v2 op_sel_hi:[1,1,0]
+; GFX9-DENORM-NEXT:    v_mad_mix_f32 v3, v5, -1.0, v3 op_sel:[1,0,0] op_sel_hi:[1,1,0]
 ; GFX9-DENORM-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-DENORM-LABEL: test_v4f16_to_v4f32_sub_ext_mul_rhs:

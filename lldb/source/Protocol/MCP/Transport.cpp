@@ -13,9 +13,10 @@
 using namespace lldb_protocol::mcp;
 using namespace llvm;
 
-Transport::Transport(lldb::IOObjectSP in, lldb::IOObjectSP out,
-                     LogCallback log_callback)
-    : JSONRPCTransport(in, out), m_log_callback(std::move(log_callback)) {}
+Transport::Transport(lldb_private::MainLoop &loop, lldb::IOObjectSP in,
+                     lldb::IOObjectSP out, LogCallback log_callback)
+    : JSONRPCTransport(loop, in, out), m_log_callback(std::move(log_callback)) {
+}
 
 void Transport::Log(StringRef message) {
   if (m_log_callback)

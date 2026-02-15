@@ -20,20 +20,26 @@ func.func @rocdl_special_regs() -> i32 {
   %7 = rocdl.cluster.id.y : i32
   // CHECK: rocdl.cluster.id.z : i32
   %8 = rocdl.cluster.id.z : i32
+  // CHECK: rocdl.cluster.workgroup.id.x : i32
+  %9 = rocdl.cluster.workgroup.id.x : i32
+  // CHECK: rocdl.cluster.workgroup.id.y : i32
+  %10 = rocdl.cluster.workgroup.id.y : i32
+  // CHECK: rocdl.cluster.workgroup.id.z : i32
+  %11 = rocdl.cluster.workgroup.id.z : i32
   // CHECK: rocdl.workgroup.dim.x : i32
-  %9 = rocdl.workgroup.dim.x : i32
+  %12 = rocdl.workgroup.dim.x : i32
   // CHECK: rocdl.workgroup.dim.y : i32
-  %10 = rocdl.workgroup.dim.y : i32
+  %13 = rocdl.workgroup.dim.y : i32
   // CHECK: rocdl.workgroup.dim.z : i32
-  %11 = rocdl.workgroup.dim.z : i32
+  %14 = rocdl.workgroup.dim.z : i32
   // CHECK: rocdl.grid.dim.x : i32
-  %12 = rocdl.grid.dim.x : i32
+  %15 = rocdl.grid.dim.x : i32
   // CHECK: rocdl.grid.dim.y : i32
-  %13 = rocdl.grid.dim.y : i32
+  %16 = rocdl.grid.dim.y : i32
   // CHECK: rocdl.grid.dim.z : i32
-  %14 = rocdl.grid.dim.z : i32
+  %17 = rocdl.grid.dim.z : i32
   // CHECK: rocdl.wave.id : i32
-  %15 = rocdl.wave.id : i32
+  %18 = rocdl.wave.id : i32
   llvm.return %0 : i32
 }
 
@@ -1247,6 +1253,20 @@ llvm.func @rocdl.s.wait.tensorcnt() {
   // CHECK-LABEL: rocdl.s.wait.tensorcnt
   // CHECK: rocdl.s.wait.tensorcnt 0
   rocdl.s.wait.tensorcnt 0
+  llvm.return
+}
+
+llvm.func @rocdl.asyncmark() {
+  // CHECK-LABEL: rocdl.asyncmark
+  // CHECK: rocdl.asyncmark
+  rocdl.asyncmark
+  llvm.return
+}
+
+llvm.func @rocdl.wait.asyncmark() {
+  // CHECK-LABEL: rocdl.wait.asyncmark
+  // CHECK: rocdl.wait.asyncmark 0
+  rocdl.wait.asyncmark 0
   llvm.return
 }
 

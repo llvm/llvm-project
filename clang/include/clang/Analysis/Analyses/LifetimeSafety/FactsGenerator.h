@@ -83,6 +83,11 @@ private:
                           ArrayRef<const Expr *> Args,
                           bool IsGslConstruction = false);
 
+  // Detect container methods that invalidate iterators/references.
+  // For instance methods, Args[0] is the implicit 'this' pointer.
+  void handleInvalidatingCall(const Expr *Call, const FunctionDecl *FD,
+                              ArrayRef<const Expr *> Args);
+
   template <typename Destination, typename Source>
   void flowOrigin(const Destination &D, const Source &S) {
     flow(getOriginsList(D), getOriginsList(S), /*Kill=*/false);

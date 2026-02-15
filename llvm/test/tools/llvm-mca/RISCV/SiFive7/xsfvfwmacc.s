@@ -19,7 +19,7 @@ sf.vfwmacc.4x4x4 v16, v0, v8
 # CHECK-NEXT: [2]   - VLEN512SiFive7PipeA:1
 # CHECK-NEXT: [3]   - VLEN512SiFive7PipeAB:2 VLEN512SiFive7PipeA, VLEN512SiFive7PipeB
 # CHECK-NEXT: [4]   - VLEN512SiFive7PipeB:1
-# CHECK-NEXT: [5]   - VLEN512SiFive7VA:1
+# CHECK-NEXT: [5]   - VLEN512SiFive7VA1:1
 # CHECK-NEXT: [6]   - VLEN512SiFive7VCQ:1
 # CHECK-NEXT: [7]   - VLEN512SiFive7VL:1
 # CHECK-NEXT: [8]   - VLEN512SiFive7VS:1
@@ -37,22 +37,22 @@ sf.vfwmacc.4x4x4 v16, v0, v8
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]                                        [9]                        Instructions:
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, mf4, ta, ma
-# CHECK-NEXT:  1      8     1.00                         8     VLEN512SiFive7VA[1,2],VLEN512SiFive7VCQ    SF_VFWMACC_4x4x4           sf.vfwmacc.4x4x4	v16, v0, v8
+# CHECK-NEXT:  1      8     1.00                         8     VLEN512SiFive7VA1[1,2],VLEN512SiFive7VCQ   SF_VFWMACC_4x4x4           sf.vfwmacc.4x4x4	v16, v0, v8
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, mf2, ta, ma
-# CHECK-NEXT:  1      8     1.00                         8     VLEN512SiFive7VA[1,2],VLEN512SiFive7VCQ    SF_VFWMACC_4x4x4           sf.vfwmacc.4x4x4	v16, v0, v8
+# CHECK-NEXT:  1      8     1.00                         8     VLEN512SiFive7VA1[1,2],VLEN512SiFive7VCQ   SF_VFWMACC_4x4x4           sf.vfwmacc.4x4x4	v16, v0, v8
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, m1, ta, ma
-# CHECK-NEXT:  1      8     2.00                         8     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    SF_VFWMACC_4x4x4           sf.vfwmacc.4x4x4	v16, v0, v8
+# CHECK-NEXT:  1      8     2.00                         8     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   SF_VFWMACC_4x4x4           sf.vfwmacc.4x4x4	v16, v0, v8
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, m2, ta, ma
-# CHECK-NEXT:  1      8     4.00                         8     VLEN512SiFive7VA[1,5],VLEN512SiFive7VCQ    SF_VFWMACC_4x4x4           sf.vfwmacc.4x4x4	v16, v0, v8
+# CHECK-NEXT:  1      8     4.00                         8     VLEN512SiFive7VA1[1,5],VLEN512SiFive7VCQ   SF_VFWMACC_4x4x4           sf.vfwmacc.4x4x4	v16, v0, v8
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, m4, ta, ma
-# CHECK-NEXT:  1      8     8.00                         8     VLEN512SiFive7VA[1,9],VLEN512SiFive7VCQ    SF_VFWMACC_4x4x4           sf.vfwmacc.4x4x4	v16, v0, v8
+# CHECK-NEXT:  1      8     8.00                         8     VLEN512SiFive7VA1[1,9],VLEN512SiFive7VCQ   SF_VFWMACC_4x4x4           sf.vfwmacc.4x4x4	v16, v0, v8
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - VLEN512SiFive7FDiv
 # CHECK-NEXT: [1]   - VLEN512SiFive7IDiv
 # CHECK-NEXT: [2]   - VLEN512SiFive7PipeA
 # CHECK-NEXT: [3]   - VLEN512SiFive7PipeB
-# CHECK-NEXT: [4]   - VLEN512SiFive7VA
+# CHECK-NEXT: [4]   - VLEN512SiFive7VA1
 # CHECK-NEXT: [5]   - VLEN512SiFive7VCQ
 # CHECK-NEXT: [6]   - VLEN512SiFive7VL
 # CHECK-NEXT: [7]   - VLEN512SiFive7VS

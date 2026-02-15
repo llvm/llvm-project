@@ -20,16 +20,15 @@
 
 namespace llvm {
 
-template <typename Callable> class scope_exit {
+template <typename Callable> class [[nodiscard]] scope_exit {
   Callable ExitFunction;
   bool Engaged = true; // False once moved-from or release()d.
 
 public:
   template <typename Fp>
-  [[nodiscard]] explicit scope_exit(Fp &&F)
-      : ExitFunction(std::forward<Fp>(F)) {}
+  explicit scope_exit(Fp &&F) : ExitFunction(std::forward<Fp>(F)) {}
 
-  [[nodiscard]] scope_exit(scope_exit &&Rhs)
+  scope_exit(scope_exit &&Rhs)
       : ExitFunction(std::move(Rhs.ExitFunction)), Engaged(Rhs.Engaged) {
     Rhs.release();
   }

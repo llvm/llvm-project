@@ -1569,9 +1569,6 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
         getLLVMContext(), attr->getMinRange().getInt(),
         attr->getMaxRange().getInt()));
 
-  if (auto noInfsFpMath = func.getNoInfsFpMath())
-    llvmFunc->addFnAttr("no-infs-fp-math", llvm::toStringRef(*noInfsFpMath));
-
   if (auto noNansFpMath = func.getNoNansFpMath())
     llvmFunc->addFnAttr("no-nans-fp-math", llvm::toStringRef(*noNansFpMath));
 
@@ -1713,6 +1710,12 @@ static void convertFunctionAttributes(ModuleTranslation &mod, LLVMFuncOp func,
     llvmFunc->addFnAttr(llvm::Attribute::WillReturn);
   if (func.getNoreturnAttr())
     llvmFunc->addFnAttr(llvm::Attribute::NoReturn);
+  if (func.getOptsizeAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::OptimizeForSize);
+  if (func.getMinsizeAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::MinSize);
+  if (func.getSaveRegParamsAttr())
+    llvmFunc->addFnAttr("save-reg-params");
   if (func.getNoCallerSavedRegistersAttr())
     llvmFunc->addFnAttr("no_caller_saved_registers");
   if (func.getNocallbackAttr())
@@ -1727,14 +1730,19 @@ static void convertFunctionAttributes(ModuleTranslation &mod, LLVMFuncOp func,
   if (UWTableKindAttr uwTableKindAttr = func.getUwtableKindAttr())
     llvmFunc->setUWTableKind(
         convertUWTableKindToLLVM(uwTableKindAttr.getUwtableKind()));
+  if (StringAttr zcsr = func.getZeroCallUsedRegsAttr())
+    llvmFunc->addFnAttr("zero-call-used-regs", zcsr.getValue());
 
   if (ArrayAttr noBuiltins = func.getNobuiltinsAttr()) {
     if (noBuiltins.empty())
       llvmFunc->addFnAttr("no-builtins");
 
-    mod.convertFunctionArrayAttr(noBuiltins, llvmFunc,
-                                 ModuleTranslation::convertNoBuiltin);
+    mod.convertFunctionAttrCollection(noBuiltins, llvmFunc,
+                                      ModuleTranslation::convertNoBuiltin);
   }
+
+  mod.convertFunctionAttrCollection(func.getDefaultFuncAttrsAttr(), llvmFunc,
+                                    ModuleTranslation::convertDefaultFuncAttr);
 
   if (llvm::Attribute attr = mod.convertAllocsizeAttr(func.getAllocsizeAttr());
       attr.isValid())
@@ -1877,6 +1885,26 @@ LogicalResult ModuleTranslation::convertArgAndResultAttrs(
   }
 
   return success();
+}
+
+std::optional<llvm::Attribute>
+ModuleTranslation::convertNoBuiltin(llvm::LLVMContext &ctx, mlir::Attribute a) {
+  if (auto str = dyn_cast<StringAttr>(a))
+    return llvm::Attribute::get(ctx, ("no-builtin-" + str.getValue()).str());
+  return std::nullopt;
+}
+
+std::optional<llvm::Attribute>
+ModuleTranslation::convertDefaultFuncAttr(llvm::LLVMContext &ctx,
+                                          mlir::NamedAttribute namedAttr) {
+  StringAttr name = namedAttr.getName();
+  Attribute value = namedAttr.getValue();
+
+  if (auto strVal = dyn_cast<StringAttr>(value))
+    return llvm::Attribute::get(ctx, name.getValue(), strVal.getValue());
+  if (mlir::isa<UnitAttr>(value))
+    return llvm::Attribute::get(ctx, name.getValue());
+  return std::nullopt;
 }
 
 FailureOr<llvm::AttrBuilder>

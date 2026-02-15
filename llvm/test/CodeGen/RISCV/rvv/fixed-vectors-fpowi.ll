@@ -605,55 +605,55 @@ define <16 x float> @powi_v16f32(<16 x float> %x, i32 %y) nounwind {
 ; RV32-NEXT:    addi sp, sp, -272
 ; RV32-NEXT:    sw ra, 268(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s0, 264(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s2, 260(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s1, 260(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    addi s0, sp, 272
 ; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    slli a1, a1, 2
 ; RV32-NEXT:    sub sp, sp, a1
 ; RV32-NEXT:    andi sp, sp, -64
-; RV32-NEXT:    mv s2, a0
+; RV32-NEXT:    mv s1, a0
 ; RV32-NEXT:    addi a0, sp, 256
 ; RV32-NEXT:    vs4r.v v8, (a0) # vscale x 32-byte Folded Spill
 ; RV32-NEXT:    addi a0, sp, 64
 ; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vse32.v v8, (a0)
 ; RV32-NEXT:    flw fa0, 124(sp)
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call __powisf2
 ; RV32-NEXT:    fsw fa0, 188(sp)
 ; RV32-NEXT:    flw fa0, 120(sp)
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call __powisf2
 ; RV32-NEXT:    fsw fa0, 184(sp)
 ; RV32-NEXT:    flw fa0, 116(sp)
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call __powisf2
 ; RV32-NEXT:    fsw fa0, 180(sp)
 ; RV32-NEXT:    flw fa0, 112(sp)
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call __powisf2
 ; RV32-NEXT:    fsw fa0, 176(sp)
 ; RV32-NEXT:    flw fa0, 108(sp)
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call __powisf2
 ; RV32-NEXT:    fsw fa0, 172(sp)
 ; RV32-NEXT:    flw fa0, 104(sp)
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call __powisf2
 ; RV32-NEXT:    fsw fa0, 168(sp)
 ; RV32-NEXT:    flw fa0, 100(sp)
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call __powisf2
 ; RV32-NEXT:    fsw fa0, 164(sp)
 ; RV32-NEXT:    flw fa0, 96(sp)
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call __powisf2
 ; RV32-NEXT:    fsw fa0, 160(sp)
 ; RV32-NEXT:    addi a0, sp, 256
 ; RV32-NEXT:    vl4r.v v8, (a0) # vscale x 32-byte Folded Reload
 ; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32-NEXT:    vfmv.f.s fa0, v8
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call __powisf2
 ; RV32-NEXT:    fsw fa0, 128(sp)
 ; RV32-NEXT:    addi a0, sp, 256
@@ -661,7 +661,7 @@ define <16 x float> @powi_v16f32(<16 x float> %x, i32 %y) nounwind {
 ; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32-NEXT:    vslidedown.vi v8, v8, 3
 ; RV32-NEXT:    vfmv.f.s fa0, v8
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call __powisf2
 ; RV32-NEXT:    fsw fa0, 140(sp)
 ; RV32-NEXT:    addi a0, sp, 256
@@ -669,7 +669,7 @@ define <16 x float> @powi_v16f32(<16 x float> %x, i32 %y) nounwind {
 ; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32-NEXT:    vslidedown.vi v8, v8, 2
 ; RV32-NEXT:    vfmv.f.s fa0, v8
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call __powisf2
 ; RV32-NEXT:    fsw fa0, 136(sp)
 ; RV32-NEXT:    addi a0, sp, 256
@@ -677,7 +677,7 @@ define <16 x float> @powi_v16f32(<16 x float> %x, i32 %y) nounwind {
 ; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32-NEXT:    vslidedown.vi v8, v8, 1
 ; RV32-NEXT:    vfmv.f.s fa0, v8
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call __powisf2
 ; RV32-NEXT:    fsw fa0, 132(sp)
 ; RV32-NEXT:    addi a0, sp, 256
@@ -685,7 +685,7 @@ define <16 x float> @powi_v16f32(<16 x float> %x, i32 %y) nounwind {
 ; RV32-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; RV32-NEXT:    vslidedown.vi v8, v8, 7
 ; RV32-NEXT:    vfmv.f.s fa0, v8
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call __powisf2
 ; RV32-NEXT:    fsw fa0, 156(sp)
 ; RV32-NEXT:    addi a0, sp, 256
@@ -693,7 +693,7 @@ define <16 x float> @powi_v16f32(<16 x float> %x, i32 %y) nounwind {
 ; RV32-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; RV32-NEXT:    vslidedown.vi v8, v8, 6
 ; RV32-NEXT:    vfmv.f.s fa0, v8
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call __powisf2
 ; RV32-NEXT:    fsw fa0, 152(sp)
 ; RV32-NEXT:    addi a0, sp, 256
@@ -701,7 +701,7 @@ define <16 x float> @powi_v16f32(<16 x float> %x, i32 %y) nounwind {
 ; RV32-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; RV32-NEXT:    vslidedown.vi v8, v8, 5
 ; RV32-NEXT:    vfmv.f.s fa0, v8
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call __powisf2
 ; RV32-NEXT:    fsw fa0, 148(sp)
 ; RV32-NEXT:    addi a0, sp, 256
@@ -709,7 +709,7 @@ define <16 x float> @powi_v16f32(<16 x float> %x, i32 %y) nounwind {
 ; RV32-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; RV32-NEXT:    vslidedown.vi v8, v8, 4
 ; RV32-NEXT:    vfmv.f.s fa0, v8
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call __powisf2
 ; RV32-NEXT:    fsw fa0, 144(sp)
 ; RV32-NEXT:    addi a0, sp, 128
@@ -718,7 +718,7 @@ define <16 x float> @powi_v16f32(<16 x float> %x, i32 %y) nounwind {
 ; RV32-NEXT:    addi sp, s0, -272
 ; RV32-NEXT:    lw ra, 268(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 264(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s2, 260(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 260(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 272
 ; RV32-NEXT:    ret
 ;
@@ -727,7 +727,7 @@ define <16 x float> @powi_v16f32(<16 x float> %x, i32 %y) nounwind {
 ; RV64-NEXT:    addi sp, sp, -272
 ; RV64-NEXT:    sd ra, 264(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s0, 256(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s2, 248(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s1, 248(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    addi s0, sp, 272
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    slli a1, a1, 2
@@ -739,43 +739,43 @@ define <16 x float> @powi_v16f32(<16 x float> %x, i32 %y) nounwind {
 ; RV64-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV64-NEXT:    vse32.v v8, (a1)
 ; RV64-NEXT:    flw fa0, 124(sp)
-; RV64-NEXT:    sext.w s2, a0
-; RV64-NEXT:    mv a0, s2
+; RV64-NEXT:    sext.w s1, a0
+; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:    call __powisf2
 ; RV64-NEXT:    fsw fa0, 188(sp)
 ; RV64-NEXT:    flw fa0, 120(sp)
-; RV64-NEXT:    mv a0, s2
+; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:    call __powisf2
 ; RV64-NEXT:    fsw fa0, 184(sp)
 ; RV64-NEXT:    flw fa0, 116(sp)
-; RV64-NEXT:    mv a0, s2
+; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:    call __powisf2
 ; RV64-NEXT:    fsw fa0, 180(sp)
 ; RV64-NEXT:    flw fa0, 112(sp)
-; RV64-NEXT:    mv a0, s2
+; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:    call __powisf2
 ; RV64-NEXT:    fsw fa0, 176(sp)
 ; RV64-NEXT:    flw fa0, 108(sp)
-; RV64-NEXT:    mv a0, s2
+; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:    call __powisf2
 ; RV64-NEXT:    fsw fa0, 172(sp)
 ; RV64-NEXT:    flw fa0, 104(sp)
-; RV64-NEXT:    mv a0, s2
+; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:    call __powisf2
 ; RV64-NEXT:    fsw fa0, 168(sp)
 ; RV64-NEXT:    flw fa0, 100(sp)
-; RV64-NEXT:    mv a0, s2
+; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:    call __powisf2
 ; RV64-NEXT:    fsw fa0, 164(sp)
 ; RV64-NEXT:    flw fa0, 96(sp)
-; RV64-NEXT:    mv a0, s2
+; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:    call __powisf2
 ; RV64-NEXT:    fsw fa0, 160(sp)
 ; RV64-NEXT:    addi a0, sp, 240
 ; RV64-NEXT:    vl4r.v v8, (a0) # vscale x 32-byte Folded Reload
 ; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64-NEXT:    vfmv.f.s fa0, v8
-; RV64-NEXT:    mv a0, s2
+; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:    call __powisf2
 ; RV64-NEXT:    fsw fa0, 128(sp)
 ; RV64-NEXT:    addi a0, sp, 240
@@ -783,7 +783,7 @@ define <16 x float> @powi_v16f32(<16 x float> %x, i32 %y) nounwind {
 ; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vi v8, v8, 3
 ; RV64-NEXT:    vfmv.f.s fa0, v8
-; RV64-NEXT:    mv a0, s2
+; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:    call __powisf2
 ; RV64-NEXT:    fsw fa0, 140(sp)
 ; RV64-NEXT:    addi a0, sp, 240
@@ -791,7 +791,7 @@ define <16 x float> @powi_v16f32(<16 x float> %x, i32 %y) nounwind {
 ; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vi v8, v8, 2
 ; RV64-NEXT:    vfmv.f.s fa0, v8
-; RV64-NEXT:    mv a0, s2
+; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:    call __powisf2
 ; RV64-NEXT:    fsw fa0, 136(sp)
 ; RV64-NEXT:    addi a0, sp, 240
@@ -799,7 +799,7 @@ define <16 x float> @powi_v16f32(<16 x float> %x, i32 %y) nounwind {
 ; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vi v8, v8, 1
 ; RV64-NEXT:    vfmv.f.s fa0, v8
-; RV64-NEXT:    mv a0, s2
+; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:    call __powisf2
 ; RV64-NEXT:    fsw fa0, 132(sp)
 ; RV64-NEXT:    addi a0, sp, 240
@@ -807,7 +807,7 @@ define <16 x float> @powi_v16f32(<16 x float> %x, i32 %y) nounwind {
 ; RV64-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; RV64-NEXT:    vslidedown.vi v8, v8, 7
 ; RV64-NEXT:    vfmv.f.s fa0, v8
-; RV64-NEXT:    mv a0, s2
+; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:    call __powisf2
 ; RV64-NEXT:    fsw fa0, 156(sp)
 ; RV64-NEXT:    addi a0, sp, 240
@@ -815,7 +815,7 @@ define <16 x float> @powi_v16f32(<16 x float> %x, i32 %y) nounwind {
 ; RV64-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; RV64-NEXT:    vslidedown.vi v8, v8, 6
 ; RV64-NEXT:    vfmv.f.s fa0, v8
-; RV64-NEXT:    mv a0, s2
+; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:    call __powisf2
 ; RV64-NEXT:    fsw fa0, 152(sp)
 ; RV64-NEXT:    addi a0, sp, 240
@@ -823,7 +823,7 @@ define <16 x float> @powi_v16f32(<16 x float> %x, i32 %y) nounwind {
 ; RV64-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; RV64-NEXT:    vslidedown.vi v8, v8, 5
 ; RV64-NEXT:    vfmv.f.s fa0, v8
-; RV64-NEXT:    mv a0, s2
+; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:    call __powisf2
 ; RV64-NEXT:    fsw fa0, 148(sp)
 ; RV64-NEXT:    addi a0, sp, 240
@@ -831,7 +831,7 @@ define <16 x float> @powi_v16f32(<16 x float> %x, i32 %y) nounwind {
 ; RV64-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; RV64-NEXT:    vslidedown.vi v8, v8, 4
 ; RV64-NEXT:    vfmv.f.s fa0, v8
-; RV64-NEXT:    mv a0, s2
+; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:    call __powisf2
 ; RV64-NEXT:    fsw fa0, 144(sp)
 ; RV64-NEXT:    addi a0, sp, 128
@@ -840,7 +840,7 @@ define <16 x float> @powi_v16f32(<16 x float> %x, i32 %y) nounwind {
 ; RV64-NEXT:    addi sp, s0, -272
 ; RV64-NEXT:    ld ra, 264(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 256(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s2, 248(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s1, 248(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 272
 ; RV64-NEXT:    ret
   %a = call <16 x float> @llvm.powi.v16f32.i32(<16 x float> %x, i32 %y)
@@ -1094,39 +1094,39 @@ define <8 x double> @powi_v8f64(<8 x double> %x, i32 %y) nounwind {
 ; RV32-NEXT:    addi sp, sp, -272
 ; RV32-NEXT:    sw ra, 268(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s0, 264(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s2, 260(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s1, 260(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    addi s0, sp, 272
 ; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    slli a1, a1, 2
 ; RV32-NEXT:    sub sp, sp, a1
 ; RV32-NEXT:    andi sp, sp, -64
-; RV32-NEXT:    mv s2, a0
+; RV32-NEXT:    mv s1, a0
 ; RV32-NEXT:    addi a0, sp, 256
 ; RV32-NEXT:    vs4r.v v8, (a0) # vscale x 32-byte Folded Spill
 ; RV32-NEXT:    addi a0, sp, 64
 ; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32-NEXT:    vse64.v v8, (a0)
 ; RV32-NEXT:    fld fa0, 120(sp)
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call __powidf2
 ; RV32-NEXT:    fsd fa0, 184(sp)
 ; RV32-NEXT:    fld fa0, 112(sp)
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call __powidf2
 ; RV32-NEXT:    fsd fa0, 176(sp)
 ; RV32-NEXT:    fld fa0, 104(sp)
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call __powidf2
 ; RV32-NEXT:    fsd fa0, 168(sp)
 ; RV32-NEXT:    fld fa0, 96(sp)
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call __powidf2
 ; RV32-NEXT:    fsd fa0, 160(sp)
 ; RV32-NEXT:    addi a0, sp, 256
 ; RV32-NEXT:    vl4r.v v8, (a0) # vscale x 32-byte Folded Reload
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV32-NEXT:    vfmv.f.s fa0, v8
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call __powidf2
 ; RV32-NEXT:    fsd fa0, 128(sp)
 ; RV32-NEXT:    addi a0, sp, 256
@@ -1134,7 +1134,7 @@ define <8 x double> @powi_v8f64(<8 x double> %x, i32 %y) nounwind {
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV32-NEXT:    vslidedown.vi v8, v8, 1
 ; RV32-NEXT:    vfmv.f.s fa0, v8
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call __powidf2
 ; RV32-NEXT:    fsd fa0, 136(sp)
 ; RV32-NEXT:    addi a0, sp, 256
@@ -1142,7 +1142,7 @@ define <8 x double> @powi_v8f64(<8 x double> %x, i32 %y) nounwind {
 ; RV32-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
 ; RV32-NEXT:    vslidedown.vi v8, v8, 3
 ; RV32-NEXT:    vfmv.f.s fa0, v8
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call __powidf2
 ; RV32-NEXT:    fsd fa0, 152(sp)
 ; RV32-NEXT:    addi a0, sp, 256
@@ -1150,7 +1150,7 @@ define <8 x double> @powi_v8f64(<8 x double> %x, i32 %y) nounwind {
 ; RV32-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
 ; RV32-NEXT:    vslidedown.vi v8, v8, 2
 ; RV32-NEXT:    vfmv.f.s fa0, v8
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call __powidf2
 ; RV32-NEXT:    fsd fa0, 144(sp)
 ; RV32-NEXT:    addi a0, sp, 128
@@ -1159,7 +1159,7 @@ define <8 x double> @powi_v8f64(<8 x double> %x, i32 %y) nounwind {
 ; RV32-NEXT:    addi sp, s0, -272
 ; RV32-NEXT:    lw ra, 268(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 264(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s2, 260(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 260(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 272
 ; RV32-NEXT:    ret
 ;
@@ -1168,7 +1168,7 @@ define <8 x double> @powi_v8f64(<8 x double> %x, i32 %y) nounwind {
 ; RV64-NEXT:    addi sp, sp, -272
 ; RV64-NEXT:    sd ra, 264(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s0, 256(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s2, 248(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s1, 248(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    addi s0, sp, 272
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    slli a1, a1, 2
@@ -1180,27 +1180,27 @@ define <8 x double> @powi_v8f64(<8 x double> %x, i32 %y) nounwind {
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vse64.v v8, (a1)
 ; RV64-NEXT:    fld fa0, 120(sp)
-; RV64-NEXT:    sext.w s2, a0
-; RV64-NEXT:    mv a0, s2
+; RV64-NEXT:    sext.w s1, a0
+; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:    call __powidf2
 ; RV64-NEXT:    fsd fa0, 184(sp)
 ; RV64-NEXT:    fld fa0, 112(sp)
-; RV64-NEXT:    mv a0, s2
+; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:    call __powidf2
 ; RV64-NEXT:    fsd fa0, 176(sp)
 ; RV64-NEXT:    fld fa0, 104(sp)
-; RV64-NEXT:    mv a0, s2
+; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:    call __powidf2
 ; RV64-NEXT:    fsd fa0, 168(sp)
 ; RV64-NEXT:    fld fa0, 96(sp)
-; RV64-NEXT:    mv a0, s2
+; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:    call __powidf2
 ; RV64-NEXT:    fsd fa0, 160(sp)
 ; RV64-NEXT:    addi a0, sp, 240
 ; RV64-NEXT:    vl4r.v v8, (a0) # vscale x 32-byte Folded Reload
 ; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-NEXT:    vfmv.f.s fa0, v8
-; RV64-NEXT:    mv a0, s2
+; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:    call __powidf2
 ; RV64-NEXT:    fsd fa0, 128(sp)
 ; RV64-NEXT:    addi a0, sp, 240
@@ -1208,7 +1208,7 @@ define <8 x double> @powi_v8f64(<8 x double> %x, i32 %y) nounwind {
 ; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vi v8, v8, 1
 ; RV64-NEXT:    vfmv.f.s fa0, v8
-; RV64-NEXT:    mv a0, s2
+; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:    call __powidf2
 ; RV64-NEXT:    fsd fa0, 136(sp)
 ; RV64-NEXT:    addi a0, sp, 240
@@ -1216,7 +1216,7 @@ define <8 x double> @powi_v8f64(<8 x double> %x, i32 %y) nounwind {
 ; RV64-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
 ; RV64-NEXT:    vslidedown.vi v8, v8, 3
 ; RV64-NEXT:    vfmv.f.s fa0, v8
-; RV64-NEXT:    mv a0, s2
+; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:    call __powidf2
 ; RV64-NEXT:    fsd fa0, 152(sp)
 ; RV64-NEXT:    addi a0, sp, 240
@@ -1224,7 +1224,7 @@ define <8 x double> @powi_v8f64(<8 x double> %x, i32 %y) nounwind {
 ; RV64-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
 ; RV64-NEXT:    vslidedown.vi v8, v8, 2
 ; RV64-NEXT:    vfmv.f.s fa0, v8
-; RV64-NEXT:    mv a0, s2
+; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:    call __powidf2
 ; RV64-NEXT:    fsd fa0, 144(sp)
 ; RV64-NEXT:    addi a0, sp, 128
@@ -1233,7 +1233,7 @@ define <8 x double> @powi_v8f64(<8 x double> %x, i32 %y) nounwind {
 ; RV64-NEXT:    addi sp, s0, -272
 ; RV64-NEXT:    ld ra, 264(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 256(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s2, 248(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s1, 248(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 272
 ; RV64-NEXT:    ret
   %a = call <8 x double> @llvm.powi.v8f64.i32(<8 x double> %x, i32 %y)
