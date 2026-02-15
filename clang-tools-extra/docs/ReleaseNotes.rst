@@ -147,8 +147,10 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-argument-comment
   <clang-tidy/checks/bugprone/argument-comment>`:
+  
   - Also checks for C++11 inherited constructors.
-  - Adds ``CommentAnonymousInitLists`` and ``CommentTypedInitLists`` options
+
+  - Adds `CommentAnonymousInitLists` and `CommentTypedInitLists` options
     to comment braced-init list arguments (for example, ``{}`` and
     ``Type{}``).
 
