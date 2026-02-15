@@ -1575,59 +1575,6 @@ mlir::LogicalResult CIRToLLVMGetElementOpLowering::matchAndRewrite(
   return mlir::failure();
 }
 
-static std::string getThreeWayCmpIntrinsicName(bool signedCmp,
-                                               unsigned operandWidth,
-                                               unsigned resultWidth) {
-  // The intrinsic's name takes the form:
-  // `llvm.<scmp|ucmp>.i<resultWidth>.i<operandWidth>`
-
-  std::string result = "llvm.";
-
-  if (signedCmp)
-    result.append("scmp.");
-  else
-    result.append("ucmp.");
-
-  // Result type part.
-  result.push_back('i');
-  result.append(std::to_string(resultWidth));
-  result.push_back('.');
-
-  // Operand type part.
-  result.push_back('i');
-  result.append(std::to_string(operandWidth));
-
-  return result;
-}
-
-mlir::LogicalResult CIRToLLVMCmpThreeWayOpLowering::matchAndRewrite(
-    cir::CmpThreeWayOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  if (!op.isIntegralComparison() || !op.isStrongOrdering()) {
-    op.emitError() << "unsupported three-way comparison type";
-    return mlir::failure();
-  }
-
-  cir::CmpThreeWayInfoAttr cmpInfo = op.getInfo();
-  assert(cmpInfo.getLt() == -1 && cmpInfo.getEq() == 0 && cmpInfo.getGt() == 1);
-
-  auto operandTy = mlir::cast<cir::IntType>(op.getLhs().getType());
-  cir::IntType resultTy = op.getType();
-  std::string llvmIntrinsicName = getThreeWayCmpIntrinsicName(
-      operandTy.isSigned(), operandTy.getWidth(), resultTy.getWidth());
-
-  rewriter.setInsertionPoint(op);
-
-  mlir::Value llvmLhs = adaptor.getLhs();
-  mlir::Value llvmRhs = adaptor.getRhs();
-  mlir::Type llvmResultTy = getTypeConverter()->convertType(resultTy);
-  mlir::LLVM::CallIntrinsicOp callIntrinsicOp =
-      createCallLLVMIntrinsicOp(rewriter, op.getLoc(), llvmIntrinsicName,
-                                llvmResultTy, {llvmLhs, llvmRhs});
-
-  return mlir::success();
-}
-
 mlir::LogicalResult CIRToLLVMBaseClassAddrOpLowering::matchAndRewrite(
     cir::BaseClassAddrOp baseClassOp, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {

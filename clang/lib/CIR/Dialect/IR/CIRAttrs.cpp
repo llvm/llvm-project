@@ -256,8 +256,8 @@ LogicalResult FPAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 std::string CmpThreeWayInfoAttr::getAlias() const {
   std::string alias = "cmp3way_info";
 
-  if (getOrdering() == CmpOrdering::Strong)
-    alias.append("_strong_");
+  if (getOrdering() == CmpOrdering::Total)
+    alias.append("_total_");
   else
     alias.append("_partial_");
 
@@ -289,8 +289,8 @@ CmpThreeWayInfoAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                             CmpOrdering ordering, int64_t lt, int64_t eq,
                             int64_t gt, std::optional<int64_t> unordered) {
   // The presense of unordered must match the value of ordering.
-  if (ordering == CmpOrdering::Strong && unordered) {
-    emitError() << "strong ordering does not include unordered ordering";
+  if (ordering == CmpOrdering::Total && unordered) {
+    emitError() << "total ordering does not include unordered ordering";
     return failure();
   }
   if (ordering == CmpOrdering::Partial && !unordered) {

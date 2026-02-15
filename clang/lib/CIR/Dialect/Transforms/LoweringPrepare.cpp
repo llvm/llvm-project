@@ -1302,8 +1302,8 @@ void LoweringPreparePass::lowerThreeWayCmpOp(CmpThreeWayOp op) {
       builder.createCompare(loc, CmpOpKind::eq, op.getLhs(), op.getRhs());
 
   mlir::Value transformedResult;
-  if (cmpInfo.getOrdering() == CmpOrdering::Strong) {
-    // Strong ordering.
+  if (cmpInfo.getOrdering() == CmpOrdering::Total) {
+    // Total ordering.
     mlir::Value selectOnEq = builder.createSelect(loc, eq, eqRes, gtRes);
     transformedResult = builder.createSelect(loc, lt, ltRes, selectOnEq);
   } else {
@@ -1542,7 +1542,7 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
       globalCtorList.emplace_back(fnOp.getName(), globalCtor.value());
     else if (auto globalDtor = fnOp.getGlobalDtorPriority())
       globalDtorList.emplace_back(fnOp.getName(), globalDtor.value());
-  } else if (auto threeWayCmp = dyn_cast<CmpThreeWayOp>(op)) {
+  } else if (auto threeWayCmp = dyn_cast<cir::CmpThreeWayOp>(op)) {
     lowerThreeWayCmpOp(threeWayCmp);
   }
 }

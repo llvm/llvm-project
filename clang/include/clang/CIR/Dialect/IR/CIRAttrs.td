@@ -578,20 +578,21 @@ def CIR_MethodAttr : CIR_Attr<"Method", "method", [TypedAttrInterface]> {
 
 def CIR_CmpOrdering : CIR_I32EnumAttr<
   "CmpOrdering", "three-way comparison ordering kind", [
-    I32EnumAttrCase<"Strong", 0, "strong">,
+    I32EnumAttrCase<"Total", 0, "total">,
     I32EnumAttrCase<"Partial", 1, "partial">
 ]> {
   let genSpecializedAttr = 0;
 }
 
-def CIR_CmpThreeWayInfoAttr : CIR_Attr<"CmpThreeWayInfo", "cmpinfo"> {
+def CIR_CmpThreeWayInfoAttr : CIR_Attr<"CmpThreeWayInfo", "cmp3way_info"> {
   let summary = "Holds information about a three-way comparison operation";
   let description = [{
-    The `#cmpinfo` attribute contains information about a three-way
+    The `#cmp3way_info` attribute contains information about a three-way
     comparison operation `cir.cmp3way`.
 
     The `ordering` parameter gives the ordering kind of the three-way comparison
-    operation. It may be either strong ordering or partial ordering.
+    operation. It may be either total ordering (which includes both strong and
+    weak orderings) or partial ordering.
 
     Given the two input operands of the three-way comparison operation `lhs` and
     `rhs`, the `lt`, `eq`, `gt`, and `unordered` parameters gives the result
@@ -605,11 +606,11 @@ def CIR_CmpThreeWayInfoAttr : CIR_Attr<"CmpThreeWayInfo", "cmpinfo"> {
     !s32i = !cir.int<s, 32>
 
     #cmp3way_info_partial_ltn1eq0gt1unn127 = #cir.cmp3way_info<partial, lt = -1, eq = 0, gt = 1, unordered = -127>
-    #cmp3way_info_strong_ltn1eq0gt1 = #cir.cmp3way_info<strong, lt = -1, eq = 0, gt = 1>
+    #cmp3way_info_total_ltn1eq0gt1 = #cir.cmp3way_info<total, lt = -1, eq = 0, gt = 1>
 
     %0 = cir.const #cir.int<0> : !s32i
     %1 = cir.const #cir.int<1> : !s32i
-    %2 = cir.cmp3way(%0 : !s32i, %1, #cmp3way_info_strong_ltn1eq0gt1) : !s8i
+    %2 = cir.cmp3way(%0 : !s32i, %1, #cmp3way_info_total_ltn1eq0gt1) : !s8i
 
     %3 = cir.const #cir.fp<0.0> : !cir.float
     %4 = cir.const #cir.fp<1.0> : !cir.float
@@ -625,7 +626,7 @@ def CIR_CmpThreeWayInfoAttr : CIR_Attr<"CmpThreeWayInfo", "cmpinfo"> {
 
   let builders = [
     AttrBuilder<(ins "int64_t":$lt, "int64_t":$eq, "int64_t":$gt), [{
-      return $_get($_ctxt, CmpOrdering::Strong, lt, eq, gt, std::nullopt);
+      return $_get($_ctxt, CmpOrdering::Total, lt, eq, gt, std::nullopt);
     }]>,
     AttrBuilder<(ins "int64_t":$lt, "int64_t":$eq, "int64_t":$gt,
                      "int64_t":$unordered), [{

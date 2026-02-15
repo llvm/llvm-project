@@ -656,7 +656,7 @@ public:
     return cir::StackRestoreOp::create(*this, loc, v);
   }
 
-  cir::CmpThreeWayOp createThreeWayCmpStrong(mlir::Location loc,
+  cir::CmpThreeWayOp createThreeWayCmpTotal(mlir::Location loc,
                                              mlir::Value lhs, mlir::Value rhs,
                                              const llvm::APSInt &ltRes,
                                              const llvm::APSInt &eqRes,

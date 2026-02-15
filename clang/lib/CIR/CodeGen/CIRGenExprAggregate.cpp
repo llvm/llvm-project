@@ -359,9 +359,9 @@ public:
       llvm::APSInt eqRes = cmpInfo.getEqualOrEquiv()->getIntValue();
       llvm::APSInt gtRes = cmpInfo.getGreater()->getIntValue();
       if (!cmpInfo.isPartial()) {
-        // Strong ordering.
+        // Total ordering.
         resultScalar =
-            builder.createThreeWayCmpStrong(loc, lhs, rhs, ltRes, eqRes, gtRes);
+            builder.createThreeWayCmpTotal(loc, lhs, rhs, ltRes, eqRes, gtRes);
       } else {
         // Partial ordering.
         llvm::APSInt unorderedRes = cmpInfo.getUnordered()->getIntValue();
