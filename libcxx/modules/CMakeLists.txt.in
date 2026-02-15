@@ -43,10 +43,6 @@ target_sources(std
 
 target_include_directories(std SYSTEM PUBLIC @LIBCXX_CONFIGURED_INCLUDE_DIRS@)
 
-if (NOT @LIBCXX_ENABLE_EXCEPTIONS@)
-  target_compile_options(std PUBLIC -fno-exceptions)
-endif()
-
 target_compile_options(std
   PUBLIC
     -nostdinc++
@@ -58,7 +54,7 @@ target_compile_options(std
     -Wno-reserved-user-defined-literal
 )
 target_link_options(std PUBLIC -nostdlib++ -Wl,-rpath,@LIBCXX_LIBRARY_DIR@ -L@LIBCXX_LIBRARY_DIR@)
-target_link_libraries(std c++)
+target_link_libraries(std c++ runtimes-language-flags)
 set_target_properties(std
   PROPERTIES
     OUTPUT_NAME   "c++std"
@@ -73,10 +69,6 @@ target_sources(std.compat
 )
 
 target_include_directories(std.compat SYSTEM PUBLIC @LIBCXX_CONFIGURED_INCLUDE_DIRS@)
-
-if (NOT @LIBCXX_ENABLE_EXCEPTIONS@)
-  target_compile_options(std.compat PUBLIC -fno-exceptions)
-endif()
 
 target_compile_options(std.compat
   PUBLIC
