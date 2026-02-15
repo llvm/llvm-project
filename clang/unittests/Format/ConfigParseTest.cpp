@@ -483,7 +483,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
                    .value());
   EXPECT_EQ(Style.BreakBinaryOperations.Default, FormatStyle::BBO_Never);
   ASSERT_EQ(Style.BreakBinaryOperations.PerOperator.size(), 1u);
-  std::vector<std::string> ExpectedOps = {"&&", "||"};
+  std::vector<tok::TokenKind> ExpectedOps = {tok::ampamp, tok::pipepipe};
   EXPECT_EQ(Style.BreakBinaryOperations.PerOperator[0].Operators, ExpectedOps);
   EXPECT_EQ(Style.BreakBinaryOperations.PerOperator[0].Style,
             FormatStyle::BBO_OnePerLine);

@@ -15,6 +15,7 @@
 #define LLVM_CLANG_FORMAT_FORMAT_H
 
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Inclusions/IncludeStyle.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -2453,9 +2454,10 @@ struct FormatStyle {
   /// A rule that specifies how to break a specific set of binary operators.
   /// \version 23
   struct BinaryOperationBreakRule {
-    /// The list of operator tokens this rule applies to,
-    /// e.g. ``["&&", "||"]``.
-    std::vector<std::string> Operators;
+    /// The list of operator token kinds this rule applies to.
+    /// Stored as ``tok::TokenKind`` so that alternative spellings
+    /// (e.g. ``and`` vs ``&&``) are handled automatically.
+    std::vector<tok::TokenKind> Operators;
     /// The break style for these operators (defaults to ``OnePerLine``).
     BreakBinaryOperationsStyle Style;
     /// Minimum number of chained operators before the rule triggers.
@@ -2490,21 +2492,21 @@ struct FormatStyle {
     BreakBinaryOperationsStyle Default;
     /// Per-operator override rules.
     std::vector<BinaryOperationBreakRule> PerOperator;
-    const BinaryOperationBreakRule *findRuleForOperator(StringRef Op) const {
+    const BinaryOperationBreakRule *
+    findRuleForOperator(tok::TokenKind Kind) const {
       for (const auto &Rule : PerOperator) {
-        for (const auto &O : Rule.Operators)
-          if (O == Op)
-            return &Rule;
+        if (llvm::find(Rule.Operators, Kind) != Rule.Operators.end())
+          return &Rule;
       }
       return nullptr;
     }
-    BreakBinaryOperationsStyle getStyleForOperator(StringRef Op) const {
-      if (const auto *Rule = findRuleForOperator(Op))
+    BreakBinaryOperationsStyle getStyleForOperator(tok::TokenKind Kind) const {
+      if (const auto *Rule = findRuleForOperator(Kind))
         return Rule->Style;
       return Default;
     }
-    unsigned getMinChainLengthForOperator(StringRef Op) const {
-      if (const auto *Rule = findRuleForOperator(Op))
+    unsigned getMinChainLengthForOperator(tok::TokenKind Kind) const {
+      if (const auto *Rule = findRuleForOperator(Kind))
         return Rule->MinChainLength;
       return 0;
     }

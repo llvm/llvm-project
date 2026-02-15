@@ -176,18 +176,16 @@ static bool mustBreakBinaryOperation(const FormatToken &Current,
   }
 
   // Look up per-operator rule or fall back to Default.
-  auto EffStyle =
-      Style.BreakBinaryOperations.getStyleForOperator(OpToken->TokenText);
-  if (EffStyle == FormatStyle::BBO_Never)
+  const auto OperatorBreakStyle =
+      Style.BreakBinaryOperations.getStyleForOperator(OpToken->Tok.getKind());
+  if (OperatorBreakStyle == FormatStyle::BBO_Never)
     return false;
 
   // Check MinChainLength: if the chain is too short, don't force a break.
-  unsigned MinChain = Style.BreakBinaryOperations.getMinChainLengthForOperator(
-      OpToken->TokenText);
-  if (MinChain > 0 && getChainLength(*OpToken) < MinChain)
-    return false;
-
-  return true;
+  const unsigned MinChain =
+      Style.BreakBinaryOperations.getMinChainLengthForOperator(
+          OpToken->Tok.getKind());
+  return MinChain == 0 || getChainLength(*OpToken) >= MinChain;
 }
 
 static bool opensProtoMessageField(const FormatToken &LessTok,

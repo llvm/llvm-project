@@ -28680,7 +28680,7 @@ TEST_F(FormatTest, BreakBinaryOperationsPerOperator) {
 
   // Per-operator override: && and || are OnePerLine, rest is Never (default).
   FormatStyle::BinaryOperationBreakRule LogicalRule;
-  LogicalRule.Operators = {"&&", "||"};
+  LogicalRule.Operators = {tok::ampamp, tok::pipepipe};
   LogicalRule.Style = FormatStyle::BBO_OnePerLine;
   LogicalRule.MinChainLength = 0;
 
@@ -28688,42 +28688,42 @@ TEST_F(FormatTest, BreakBinaryOperationsPerOperator) {
   Style.BreakBinaryOperations.PerOperator = {LogicalRule};
 
   // Logical operators break one-per-line when line is too long.
-  verifyFormat("bool x = loooooooooooooongcondition1 &&\n"
-               "         loooooooooooooongcondition2 &&\n"
-               "         loooooooooooooongcondition3;",
+  verifyFormat("bool valid = isConnectionReady() &&\n"
+               "             isSessionNotExpired() &&\n"
+               "             hasRequiredPermission();",
                Style);
 
-  // Arithmetic operators stay with default (Never) — no forced break.
-  verifyFormat("int x = loooooooooooooongop1 + looooooooongop2 +\n"
-               "        loooooooooooooooooooooongop3;",
+  // Arithmetic operators stay with default (Never).
+  verifyFormat("int total = unitBasePrice + shippingCostPerItem +\n"
+               "            applicableTaxAmount + handlingFeePerUnit;",
                Style);
 
-  // Short logical chain that fits on one line stays on one line.
+  // Short logical chain that fits stays on one line.
   verifyFormat("bool x = a && b && c;", Style);
 
   // Multiple PerOperator groups: && and || plus | operators.
   FormatStyle::BinaryOperationBreakRule BitwiseOrRule;
-  BitwiseOrRule.Operators = {"|"};
+  BitwiseOrRule.Operators = {tok::pipe};
   BitwiseOrRule.Style = FormatStyle::BBO_OnePerLine;
   BitwiseOrRule.MinChainLength = 0;
 
   Style.BreakBinaryOperations.PerOperator = {LogicalRule, BitwiseOrRule};
 
   // | operators should break one-per-line.
-  verifyFormat("int x = loooooooooooooooooongval1 |\n"
-               "        loooooooooooooooooongval2 |\n"
-               "        loooooooooooooooooongval3;",
+  verifyFormat("int flags = OPTION_VERBOSE_OUTPUT |\n"
+               "            OPTION_RECURSIVE_SCAN |\n"
+               "            OPTION_FORCE_OVERWRITE;",
                Style);
 
   // && still works in multi-group configuration.
-  verifyFormat("bool x = loooooooooooooongcondition1 &&\n"
-               "         loooooooooooooongcondition2 &&\n"
-               "         loooooooooooooongcondition3;",
+  verifyFormat("bool valid = isConnectionReady() &&\n"
+               "             isSessionNotExpired() &&\n"
+               "             hasRequiredPermission();",
                Style);
 
-  // + operators stay with default (Never) even with multi-group.
-  verifyFormat("int x = loooooooooooooongop1 + looooooooongop2 +\n"
-               "        loooooooooooooooooooooongop3;",
+  // + stays with default (Never) even with multi-group.
+  verifyFormat("int total = unitBasePrice + shippingCostPerItem +\n"
+               "            applicableTaxAmount + handlingFeePerUnit;",
                Style);
 }
 
@@ -28732,29 +28732,29 @@ TEST_F(FormatTest, BreakBinaryOperationsMinChainLength) {
 
   // MinChainLength = 3: chains shorter than 3 don't force breaks.
   FormatStyle::BinaryOperationBreakRule LogicalRule;
-  LogicalRule.Operators = {"&&", "||"};
+  LogicalRule.Operators = {tok::ampamp, tok::pipepipe};
   LogicalRule.Style = FormatStyle::BBO_OnePerLine;
   LogicalRule.MinChainLength = 3;
 
   Style.BreakBinaryOperations.Default = FormatStyle::BBO_Never;
   Style.BreakBinaryOperations.PerOperator = {LogicalRule};
 
-  // Chain of 2 — should NOT force one-per-line (below MinChainLength).
-  verifyFormat("bool x = loooooooooooooongcondition1 &&\n"
-               "         loooooooooooooongcondition2;",
+  // Chain of 2 — below MinChainLength, no forced one-per-line.
+  verifyFormat("bool ok =\n"
+               "    isConnectionReady(cfg) && isSessionNotExpired(cfg);",
                Style);
 
-  // Chain of 3 — should force one-per-line.
-  verifyFormat("bool x = loooooooooooooongcondition1 &&\n"
-               "         loooooooooooooongcondition2 &&\n"
-               "         loooooooooooooongcondition3;",
+  // Chain of 3 — meets MinChainLength, one-per-line.
+  verifyFormat("bool ok = isConnectionReady(cfg) &&\n"
+               "          isSessionNotExpired(cfg) &&\n"
+               "          hasRequiredPermission(cfg);",
                Style);
 
-  // Chain of 4 — should force one-per-line.
-  verifyFormat("bool x = looooooooooongcondition1 &&\n"
-               "         looooooooooongcondition2 &&\n"
-               "         looooooooooongcondition3 &&\n"
-               "         looooooooooongcondition4;",
+  // Chain of 4 — above MinChainLength, one-per-line.
+  verifyFormat("bool ok = isConnectionReady(cfg) &&\n"
+               "          isSessionNotExpired(cfg) &&\n"
+               "          hasRequiredPermission(cfg) &&\n"
+               "          isFeatureEnabled(cfg);",
                Style);
 }
 

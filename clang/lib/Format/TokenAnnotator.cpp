@@ -3282,15 +3282,11 @@ public:
         // If so, override precedence to avoid adding fake parenthesis which
         // could group operations of a different precedence level on the same
         // line.
-        auto EffStyle = Style.BreakBinaryOperations.Default;
-        if (Current) {
-          if (const auto *Rule =
-                  Style.BreakBinaryOperations.findRuleForOperator(
-                      Current->TokenText)) {
-            EffStyle = Rule->Style;
-          }
-        }
-        if (EffStyle == FormatStyle::BBO_OnePerLine)
+        const auto OperatorBreakStyle =
+            Current ? Style.BreakBinaryOperations.getStyleForOperator(
+                          Current->Tok.getKind())
+                    : Style.BreakBinaryOperations.Default;
+        if (OperatorBreakStyle == FormatStyle::BBO_OnePerLine)
           CurrentPrecedence = prec::Additive;
       }
 

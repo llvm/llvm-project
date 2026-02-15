@@ -32,6 +32,7 @@ using clang::format::FormatStyle;
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(FormatStyle::RawStringFormat)
 LLVM_YAML_IS_SEQUENCE_VECTOR(FormatStyle::BinaryOperationBreakRule)
+LLVM_YAML_IS_SEQUENCE_VECTOR(clang::tok::TokenKind)
 
 enum BracketAlignmentStyle : int8_t {
   BAS_Align,
@@ -274,6 +275,30 @@ struct ScalarEnumerationTraits<FormatStyle::BreakBinaryOperationsStyle> {
     IO.enumCase(Value, "OnePerLine", FormatStyle::BBO_OnePerLine);
     IO.enumCase(Value, "RespectPrecedence", FormatStyle::BBO_RespectPrecedence);
   }
+};
+
+template <> struct ScalarTraits<clang::tok::TokenKind> {
+  static void output(const clang::tok::TokenKind &Value, void *,
+                     llvm::raw_ostream &Out) {
+    if (const char *Spelling = clang::tok::getPunctuatorSpelling(Value))
+      Out << Spelling;
+    else
+      Out << clang::tok::getTokenName(Value);
+  }
+
+  static StringRef input(StringRef Scalar, void *,
+                         clang::tok::TokenKind &Value) {
+    // Map operator spelling strings to tok::TokenKind.
+#define PUNCTUATOR(Name, Spelling)                                             \
+  if (Scalar == Spelling) {                                                    \
+    Value = clang::tok::Name;                                                  \
+    return {};                                                                 \
+  }
+#include "clang/Basic/TokenKinds.def"
+    return "unknown operator";
+  }
+
+  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };
 
 template <> struct MappingTraits<FormatStyle::BinaryOperationBreakRule> {
