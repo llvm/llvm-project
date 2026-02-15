@@ -58,20 +58,19 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
   auto DefaultDeleterMatcher = hasAnyName(DefaultDeleters);
   auto UniquePtrWithCustomDeleter = classTemplateSpecializationDecl(
       UniquePtrMatcher, templateArgumentCountIs(2),
-      hasTemplateArgument(1, refersToType(unless(hasDeclaration(cxxRecordDecl(
-                                 DefaultDeleterMatcher))))));
+      hasTemplateArgument(1, refersToType(unless(hasDeclaration(
+                                 cxxRecordDecl(DefaultDeleterMatcher))))));
 
   // Matcher for smart pointer constructors
   // Exclude constructors with custom deleters:
   // - shared_ptr with 2+ arguments (second is deleter)
   // - unique_ptr with 2+ template args where second is not default_delete
   auto HasCustomDeleter = anyOf(
-      allOf(hasDeclaration(cxxConstructorDecl(
-                ofClass(SharedPtrMatcher))),
+      allOf(hasDeclaration(cxxConstructorDecl(ofClass(SharedPtrMatcher))),
             hasArgument(1, anything())),
       hasDeclaration(cxxConstructorDecl(ofClass(UniquePtrWithCustomDeleter))));
 
-  auto smartPtrConstructorMatcher =
+  auto SmartPtrConstructorMatcher =
       cxxConstructExpr(
           hasDeclaration(cxxConstructorDecl(
               ofClass(AllSmartPtrMatcher),
@@ -92,7 +91,7 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
                   hasArgument(1, anything())),
             on(hasType(qualType(hasDeclaration(UniquePtrWithCustomDeleter)))));
 
-  auto resetCallMatcher =
+  auto ResetCallMatcher =
       cxxMemberCallExpr(
           on(hasType(cxxRecordDecl(AllSmartPtrMatcher))),
           callee(cxxMethodDecl(hasName("reset"))),
@@ -102,41 +101,41 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
           unless(hasArgument(0, ReleaseCallMatcher)))
           .bind("reset-call");
 
-  Finder->addMatcher(smartPtrConstructorMatcher, this);
-  Finder->addMatcher(resetCallMatcher, this);
+  Finder->addMatcher(SmartPtrConstructorMatcher, this);
+  Finder->addMatcher(ResetCallMatcher, this);
 }
 
 void SmartPtrInitializationCheck::check(
     const MatchFinder::MatchResult &Result) {
-  const auto *pointerArg = Result.Nodes.getNodeAs<Expr>("pointer-arg");
-  const auto *constructor =
+  const auto *PointerArg = Result.Nodes.getNodeAs<Expr>("pointer-arg");
+  const auto *Constructor =
       Result.Nodes.getNodeAs<CXXConstructExpr>("constructor");
   const auto *ResetCall =
       Result.Nodes.getNodeAs<CXXMemberCallExpr>("reset-call");
-  assert(pointerArg);
+  assert(PointerArg);
 
-  const SourceLocation loc = pointerArg->getBeginLoc();
-  const CXXMethodDecl *MD =
-      constructor ? constructor->getConstructor()
+  const SourceLocation Loc = PointerArg->getBeginLoc();
+  const CXXMethodDecl *MethodDecl =
+      Constructor ? Constructor->getConstructor()
                   : (ResetCall ? ResetCall->getMethodDecl() : nullptr);
-  if (!MD)
+  if (!MethodDecl)
     return;
 
-  const auto *record = MD->getParent();
-  if (!record)
+  const auto *Record = MethodDecl->getParent();
+  if (!Record)
     return;
 
-  const std::string typeName = record->getQualifiedNameAsString();
-  diag(loc, "passing a raw pointer '%0' to %1%2 may cause double deletion")
-      << getPointerDescription(pointerArg, *Result.Context) << typeName
-      << (constructor ? " constructor" : "::reset()");
+  const std::string TypeName = Record->getQualifiedNameAsString();
+  diag(Loc, "passing a raw pointer '%0' to %1%2 may cause double deletion")
+      << getPointerDescription(PointerArg, *Result.Context) << TypeName
+      << (Constructor ? " constructor" : "::reset()");
 }
 
 std::string
 SmartPtrInitializationCheck::getPointerDescription(const Expr *PointerExpr,
                                                    ASTContext &Context) {
-  std::string Desc;
-  llvm::raw_string_ostream OS(Desc);
+  std::string Description;
+  llvm::raw_string_ostream OS(Description);
 
   // Try to get a readable representation of the expression
   PrintingPolicy Policy(Context.getLangOpts());

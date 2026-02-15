@@ -26,7 +26,7 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
 private:
-  std::string getPointerDescription(const Expr *PointerExpr, 
+  std::string getPointerDescription(const Expr *PointerExpr,
                                     ASTContext &Context);
   const std::vector<StringRef> SharedPointers;
   const std::vector<StringRef> UniquePointers;
