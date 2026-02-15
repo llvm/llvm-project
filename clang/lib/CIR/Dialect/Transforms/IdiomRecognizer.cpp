@@ -60,6 +60,17 @@ void IdiomRecognizerPass::recognizeStandardLibraryCall(CallOp call) {
 }
 
 void IdiomRecognizerPass::runOnOperation() {
+  // The AST context will be used to provide additional information such as
+  // namespaces and template parameter lists that are lost after lowering to
+  // CIR. This information is necessary to recognize many idioms, such as calls
+  // to standard library functions.
+
+  // For now, the AST will be required to allow for faster prototyping and
+  // exploring of new optimizations. In the future, it may be preferable to
+  // make it optional to reduce memory pressure and allow this pass to run
+  // on standalone CIR assembly (Possibly generated from non-Clang front ends).
+
+  assert(astCtx && "Missing ASTContext, please construct with the right ctor");
   theModule = getOperation();
 
   // Process call operations

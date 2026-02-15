@@ -21,6 +21,7 @@ mlir::LogicalResult runCIRToCIRPasses(mlir::ModuleOp theModule,
                                       mlir::MLIRContext &mlirContext,
                                       clang::ASTContext &astContext,
                                       bool enableVerifier,
+                                      bool enableIdiomRecognizer,
                                       bool enableCIRSimplify) {
 
   llvm::TimeTraceScope scope("CIR To CIR Passes");
@@ -31,7 +32,9 @@ mlir::LogicalResult runCIRToCIRPasses(mlir::ModuleOp theModule,
   if (enableCIRSimplify)
     pm.addPass(mlir::createCIRSimplifyPass());
 
-  pm.addPass(mlir::createIdiomRecognizerPass());
+  if (enableIdiomRecognizer)
+    pm.addPass(mlir::createIdiomRecognizerPass());
+
   pm.addPass(mlir::createTargetLoweringPass());
   pm.addPass(mlir::createCXXABILoweringPass());
   pm.addPass(mlir::createLoweringPreparePass(&astContext));
